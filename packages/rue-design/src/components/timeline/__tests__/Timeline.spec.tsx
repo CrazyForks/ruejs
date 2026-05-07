@@ -1,107 +1,203 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h } from '@rue-js/rue'
-import { render } from '@rue-js/rue'
-import { Timeline } from '@rue-js/design'
+import { render, setReactiveScheduling } from '@rue-js/rue'
+import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+import Timeline from '../index'
+
+setReactiveScheduling('sync')
+
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active = (globalThis as any).__rue
+}
 
 afterEach(() => {
   document.body.innerHTML = ''
 })
 
 describe('Timeline', () => {
-  it('renders with base class and children', () => {
-    const c = document.createElement('div')
+  it('renders with base class and children', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
     render(
-      h(
-        Timeline,
-        null,
-        h('li', null, h(Timeline.Middle, null, h('div', { id: 'm' }, 'M')), h('hr', null)),
-      ),
-      c,
+      <Timeline>
+        <li>
+          <Timeline.Middle>
+            <div id="m">M</div>
+          </Timeline.Middle>
+          <hr />
+        </li>
+      </Timeline>,
+      container,
     )
-    const el = c.querySelector('ul.timeline') as HTMLElement
-    expect(el).toBeTruthy()
-    expect(el.classList.contains('timeline')).toBe(true)
-    expect(c.querySelector('#m')?.textContent).toBe('M')
+
+    await waitForContent(() => {
+      const element = container.querySelector('ul.timeline') as HTMLElement
+      expect(element).toBeTruthy()
+      expect(element.classList.contains('timeline')).toBe(true)
+      expect(container.querySelector('#m')?.textContent).toBe('M')
+    })
   })
 
-  it('applies direction, snapIcon, compact and custom className', () => {
-    const c = document.createElement('div')
-    render(
-      h(Timeline, { direction: 'vertical', snapIcon: true, compact: true, className: 'w-64' }),
-      c,
-    )
-    const el = c.querySelector('ul.timeline') as HTMLElement
-    expect(el.classList.contains('timeline-vertical')).toBe(true)
-    expect(el.classList.contains('timeline-snap-icon')).toBe(true)
-    expect(el.classList.contains('timeline-compact')).toBe(true)
-    expect(el.classList.contains('w-64')).toBe(true)
+  it('applies direction, orientation alias, snapIcon, compact and custom className', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(<Timeline orientation="vertical" snapIcon compact className="w-64" />, container)
+
+    await waitForContent(() => {
+      const element = container.querySelector('ul.timeline') as HTMLElement
+      expect(element.classList.contains('timeline-vertical')).toBe(true)
+      expect(element.classList.contains('timeline-snap-icon')).toBe(true)
+      expect(element.classList.contains('timeline-compact')).toBe(true)
+      expect(element.classList.contains('w-64')).toBe(true)
+    })
   })
 
-  it('renders Start, Middle, End parts with optional box', () => {
-    const c = document.createElement('div')
+  it('renders Start, Middle, End parts with optional box', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
     render(
-      h(
-        Timeline,
-        null,
-        h(
-          'li',
-          null,
-          h(Timeline.Start, { box: true }, h('div', { id: 's' }, 'S')),
-          h(Timeline.Middle, null, h('div', { id: 'mi' }, 'MI')),
-          h(Timeline.End, { box: true }, h('div', { id: 'e' }, 'E')),
-          h('hr', null),
-        ),
-      ),
-      c,
+      <Timeline>
+        <li>
+          <Timeline.Start box>
+            <div id="s">S</div>
+          </Timeline.Start>
+          <Timeline.Middle>
+            <div id="mi">MI</div>
+          </Timeline.Middle>
+          <Timeline.End box>
+            <div id="e">E</div>
+          </Timeline.End>
+          <hr />
+        </li>
+      </Timeline>,
+      container,
     )
-    const s = c.querySelector('.timeline-start') as HTMLElement
-    const m = c.querySelector('.timeline-middle') as HTMLElement
-    const e = c.querySelector('.timeline-end') as HTMLElement
-    expect(s).toBeTruthy()
-    expect(s.classList.contains('timeline-box')).toBe(true)
-    expect(m).toBeTruthy()
-    expect(e).toBeTruthy()
-    expect(e.classList.contains('timeline-box')).toBe(true)
-    expect(c.querySelector('#s')?.textContent).toBe('S')
-    expect(c.querySelector('#mi')?.textContent).toBe('MI')
-    expect(c.querySelector('#e')?.textContent).toBe('E')
+
+    await waitForContent(() => {
+      const start = container.querySelector('.timeline-start') as HTMLElement
+      const middle = container.querySelector('.timeline-middle') as HTMLElement
+      const end = container.querySelector('.timeline-end') as HTMLElement
+      expect(start).toBeTruthy()
+      expect(start.classList.contains('timeline-box')).toBe(true)
+      expect(middle).toBeTruthy()
+      expect(end).toBeTruthy()
+      expect(end.classList.contains('timeline-box')).toBe(true)
+      expect(container.querySelector('#s')?.textContent).toBe('S')
+      expect(container.querySelector('#mi')?.textContent).toBe('MI')
+      expect(container.querySelector('#e')?.textContent).toBe('E')
+    })
   })
 
-  it('renders items array with lines and parts', () => {
-    const c = document.createElement('div')
+  it('renders legacy items arrays with explicit lines and parts', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
     const items = [
       {
         beforeLine: true,
-        start: { box: true, content: h('div', { id: 'is' }, 'IS') },
+        start: { box: true, content: <div id="is">IS</div> },
         middle: {
-          content: h(
-            'svg',
-            { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 20 20', fill: 'currentColor' },
-            h('path', { d: 'M10 18a8 8 0 100-16 8 8 0 000 16z' }),
+          content: (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 18a8 8 0 100-16 8 8 0 000 16z" />
+            </svg>
           ),
         },
-        end: { box: true, content: h('div', { id: 'ie' }, 'IE') },
+        end: { box: true, content: <div id="ie">IE</div> },
         afterLine: true,
       },
       {
         beforeLine: true,
-        middle: { content: h('div', { id: 'im' }, 'IM') },
+        middle: { content: <div id="im">IM</div> },
         afterLine: true,
       },
     ] as const
-    render(h(Timeline, { items }), c)
-    const el = c.querySelector('ul.timeline') as HTMLElement
-    expect(el).toBeTruthy()
-    const s = c.querySelector('.timeline-start') as HTMLElement
-    const m = c.querySelectorAll('.timeline-middle')
-    const e = c.querySelector('.timeline-end') as HTMLElement
-    const hrs = c.querySelectorAll('hr')
-    expect(s).toBeTruthy()
-    expect(m.length).toBe(2)
-    expect(e).toBeTruthy()
-    expect(hrs.length).toBe(4)
-    expect(c.querySelector('#is')?.textContent).toBe('IS')
-    expect(c.querySelector('#im')?.textContent).toBe('IM')
-    expect(c.querySelector('#ie')?.textContent).toBe('IE')
+
+    render(<Timeline items={items} />, container)
+
+    await waitForContent(() => {
+      const element = container.querySelector('ul.timeline') as HTMLElement
+      const start = container.querySelector('.timeline-start') as HTMLElement
+      const middle = container.querySelectorAll('.timeline-middle')
+      const end = container.querySelector('.timeline-end') as HTMLElement
+      const hrs = container.querySelectorAll('hr')
+      expect(element).toBeTruthy()
+      expect(start).toBeTruthy()
+      expect(middle.length).toBe(2)
+      expect(end).toBeTruthy()
+      expect(hrs.length).toBe(4)
+      expect(container.querySelector('#is')?.textContent).toBe('IS')
+      expect(container.querySelector('#im')?.textContent).toBe('IM')
+      expect(container.querySelector('#ie')?.textContent).toBe('IE')
+    })
+  })
+
+  it('normalizes title and content into timeline sides automatically', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Timeline
+        items={[
+          {
+            title: <span id="auto-title">Planning</span>,
+            content: <div id="auto-content">Draft roadmap</div>,
+            contentBox: true,
+          },
+        ]}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const start = container.querySelector('.timeline-start') as HTMLElement
+      const end = container.querySelector('.timeline-end') as HTMLElement
+      const middle = container.querySelector('.timeline-middle') as HTMLElement
+      expect(start?.textContent).toContain('Planning')
+      expect(end?.classList.contains('timeline-box')).toBe(true)
+      expect(container.querySelector('#auto-content')?.textContent).toBe('Draft roadmap')
+      expect(middle).toBeTruthy()
+    })
+  })
+
+  it('supports reverse, pending and semantic item colors together', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Timeline
+        mode="alternate"
+        reverse
+        pending="Waiting review"
+        items={[
+          {
+            key: 'draft',
+            title: 'Q1',
+            content: <div id="draft-content">Launch prep</div>,
+            contentBox: true,
+          },
+          {
+            key: 'build',
+            content: <div id="build-content">Build</div>,
+            color: 'success',
+            contentBox: true,
+          },
+        ]}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const listItems = Array.from(container.querySelectorAll('ul.timeline > li'))
+      expect(listItems).toHaveLength(3)
+      expect(listItems[0].querySelector('.timeline-start')?.textContent).toContain('Waiting review')
+      expect(listItems[1].querySelector('.timeline-end')?.textContent).toContain('Build')
+      expect(listItems[1].querySelector('.timeline-middle')?.classList.contains('text-success')).toBe(true)
+      expect(listItems[1].querySelector('hr')?.classList.contains('bg-success')).toBe(true)
+      expect(listItems[2].querySelector('.timeline-start')?.textContent).toContain('Launch prep')
+      expect(listItems[2].querySelector('.timeline-end')?.textContent).toContain('Q1')
+    })
   })
 })

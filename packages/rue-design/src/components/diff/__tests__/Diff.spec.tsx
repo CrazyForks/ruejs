@@ -1,33 +1,55 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import { h } from '@rue-js/rue'
-import { render } from '@rue-js/rue'
-import { Diff } from '@rue-js/design'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { h, render, setReactiveScheduling } from '@rue-js/rue'
+import Diff from '..'
+import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+
+setReactiveScheduling('sync')
+
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active = (globalThis as any).__rue
+}
 
 afterEach(() => {
   document.body.innerHTML = ''
 })
 
 describe('Diff', () => {
-  it('renders with base class and children', () => {
-    const c = document.createElement('div')
-    render(h(Diff, null, 'x'), c)
-    const el = c.querySelector('.diff') as HTMLElement
-    expect(el).toBeTruthy()
-    expect(el.classList.contains('diff')).toBe(true)
-    expect(el.textContent).toContain('x')
+  it('renders with base class and children in legacy compound mode', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(h(Diff, null, 'x'), container)
+
+    await waitForContent(() => {
+      const element = container.querySelector('.diff') as HTMLElement
+      expect(element).toBeTruthy()
+      expect(element.classList.contains('diff')).toBe(true)
+      expect(element.textContent).toContain('x')
+    })
   })
 
-  it('applies custom className and tabIndex', () => {
-    const c = document.createElement('div')
-    render(h(Diff, { className: 'rounded-field aspect-16/9', tabIndex: 0 }, 'y'), c)
-    const el = c.querySelector('figure.diff') as HTMLElement
-    expect(el.classList.contains('rounded-field')).toBe(true)
-    expect(el.classList.contains('aspect-16/9')).toBe(true)
-    expect(el.getAttribute('tabindex')).toBe('0')
+  it('applies custom className and tabIndex in legacy mode', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(h(Diff, { className: 'rounded-field aspect-16/9', tabIndex: 0 }, 'y'), container)
+
+    await waitForContent(() => {
+      const element = container.querySelector('figure.diff') as HTMLElement
+      const styleAttr = element.getAttribute('style') ?? ''
+      expect(element.classList.contains('rounded-field')).toBe(true)
+      expect(element.classList.contains('aspect-16/9')).toBe(true)
+      expect(element.tabIndex).toBe(0)
+      expect(styleAttr).toContain('display:grid')
+      expect(styleAttr).toContain('justify-content:normal')
+      expect(styleAttr).toContain('align-items:stretch')
+    })
   })
 
-  it('renders Item1, Item2, and Resizer subcomponents', () => {
-    const c = document.createElement('div')
+  it('renders Item1, Item2, and Resizer subcomponents', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
     render(
       h(
         Diff,
@@ -36,18 +58,107 @@ describe('Diff', () => {
         h(Diff.Item2, { role: 'img' }, h('div', { id: 'b' }, 'B')),
         h(Diff.Resizer, null),
       ),
-      c,
+      container,
     )
-    const i1 = c.querySelector('.diff-item-1') as HTMLElement
-    const i2 = c.querySelector('.diff-item-2') as HTMLElement
-    const res = c.querySelector('.diff-resizer') as HTMLElement
-    expect(i1).toBeTruthy()
-    expect(i1.getAttribute('role')).toBe('img')
-    expect(i1.getAttribute('tabindex')).toBe('0')
-    expect(i2).toBeTruthy()
-    expect(i2.getAttribute('role')).toBe('img')
-    expect(res).toBeTruthy()
-    expect(c.querySelector('#a')?.textContent).toBe('A')
-    expect(c.querySelector('#b')?.textContent).toBe('B')
+
+    await waitForContent(() => {
+      const item1 = container.querySelector('.diff-item-1') as HTMLElement
+      const item2 = container.querySelector('.diff-item-2') as HTMLElement
+      const resizer = container.querySelector('.diff-resizer') as HTMLElement
+      expect(item1).toBeTruthy()
+      expect(item1.getAttribute('role')).toBe('img')
+      expect(item1.tabIndex).toBe(0)
+      expect(item2).toBeTruthy()
+      expect(item2.getAttribute('role')).toBe('img')
+      expect(resizer).toBeTruthy()
+      expect(container.querySelector('#a')?.textContent).toBe('A')
+      expect(container.querySelector('#b')?.textContent).toBe('B')
+    })
+  })
+
+  it('renders quick mode with labels, resizer content and range input', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Diff
+        className="aspect-16/9"
+        value={30}
+        item1={<div id="before">Before</div>}
+        item2={<div id="after">After</div>}
+        item1Label="Before"
+        item2Label="After"
+        resizerContent="vs"
+        aria-label="Demo diff"
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const input = container.querySelector('input[type="range"]') as HTMLInputElement
+      const root = container.querySelector('figure.diff') as HTMLElement
+      const item1 = container.querySelector('.diff-item-1') as HTMLElement
+      const item2 = container.querySelector('.diff-item-2') as HTMLElement
+      const resizer = container.querySelector('.diff-resizer') as HTMLElement
+      const rootStyle = root.getAttribute('style') ?? ''
+      const item1Style = item1.getAttribute('style') ?? ''
+      const item2Style = item2.getAttribute('style') ?? ''
+      const resizerStyle = resizer.getAttribute('style') ?? ''
+      expect(input).toBeTruthy()
+      expect(input.value).toBe('30')
+      expect(input.getAttribute('aria-label')).toBe('Demo diff')
+      expect(rootStyle).toContain('display:grid')
+      expect(rootStyle).toContain('justify-content:normal')
+      expect(rootStyle).toContain('align-items:stretch')
+      expect(item1.classList.contains('absolute')).toBe(true)
+      expect(item2.classList.contains('absolute')).toBe(true)
+      expect(item1Style).toContain('clip-path:inset(0 70% 0 0)')
+      expect(item2Style).toContain('clip-path:inset(0 0 0 30%)')
+      expect(resizerStyle).toContain('left:30%')
+      expect(resizerStyle).toContain('width:0')
+      expect(container.textContent).toContain('Before')
+      expect(container.textContent).toContain('After')
+      expect(container.textContent).toContain('vs')
+    })
+  })
+
+  it('updates uncontrolled quick mode value and emits onChange', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const handleChange = vi.fn()
+
+    render(
+      <Diff
+        defaultValue={25}
+        item1={<div>Alpha</div>}
+        item2={<div>Beta</div>}
+        onChange={handleChange}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const input = container.querySelector('input[type="range"]') as HTMLInputElement
+      expect(input.value).toBe('25')
+    })
+
+    const input = container.querySelector('input[type="range"]') as HTMLInputElement
+    input.value = '80'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+
+    await waitForContent(() => {
+      const item1 = container.querySelector('.diff-item-1') as HTMLElement
+      const item2 = container.querySelector('.diff-item-2') as HTMLElement
+      const resizer = container.querySelector('.diff-resizer') as HTMLElement
+      const item1Style = item1.getAttribute('style') ?? ''
+      const item2Style = item2.getAttribute('style') ?? ''
+      const resizerStyle = resizer.getAttribute('style') ?? ''
+      expect(handleChange).toHaveBeenCalledTimes(1)
+      expect(handleChange).toHaveBeenCalledWith(80, expect.any(Event))
+      expect(item1Style).toContain('clip-path:inset(0 20% 0 0)')
+      expect(item2Style).toContain('clip-path:inset(0 0 0 80%)')
+      expect(resizerStyle).toContain('left:80%')
+      expect(resizerStyle).toContain('width:0')
+    })
   })
 })

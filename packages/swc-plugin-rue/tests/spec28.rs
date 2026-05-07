@@ -32,9 +32,8 @@ export default Chain
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
-import { type FC, ref } from '@rue-js/rue';
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
 const Chain: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const a = _$vaporWithHookId("ref:1:0", ()=>ref(true));

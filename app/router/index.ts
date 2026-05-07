@@ -21,18 +21,82 @@ const routes: RouteRecord[] = [
     path: '/jsx/attributes-and-props',
     component: useComponent(() => import('../pages/jsx/AttributesAndProps')),
   },
+  { path: '/design/select', component: useComponent(() => import('../pages/design/Select')) },
+  {
+    path: '/design/skeleton',
+    component: useComponent(() => import('../pages/design/Skeleton')),
+  },
+  { path: '/design/stack', component: useComponent(() => import('../pages/design/Stack')) },
+  { path: '/design/steps', component: useComponent(() => import('../pages/design/Steps')) },
+  { path: '/design/swap', component: useComponent(() => import('../pages/design/Swap')) },
   { path: '/jsx/spread-props', component: useComponent(() => import('../pages/jsx/SpreadProps')) },
   {
     path: '/jsx/conditional-rendering',
     component: useComponent(() => import('../pages/jsx/ConditionalRendering')),
   },
   {
+    path: '/jsx/v-if-r-if',
+    component: useComponent(() => import('../pages/jsx/VIfAndRIf')),
+  },
+  {
+    path: '/jsx/v-show-r-show',
+    component: useComponent(() => import('../pages/jsx/VShowAndRShow')),
+  },
+  {
+    path: '/jsx/v-pre-r-pre',
+    component: useComponent(() => import('../pages/jsx/VPreAndRPre')),
+  },
+  {
+    path: '/jsx/v-once-r-once',
+    component: useComponent(() => import('../pages/jsx/VOnceAndROnce')),
+  },
+  {
+    path: '/jsx/v-memo-r-memo',
+    component: useComponent(() => import('../pages/jsx/VMemoAndRMemo')),
+  },
+  {
+    path: '/jsx/v-text-r-text',
+    component: useComponent(() => import('../pages/jsx/VTextAndRText')),
+  },
+  {
+    path: '/jsx/v-html-r-html',
+    component: useComponent(() => import('../pages/jsx/VHtmlAndRHtml')),
+  },
+  {
+    path: '/jsx/v-on-r-on',
+    component: useComponent(() => import('../pages/jsx/VOnAndROn')),
+  },
+  {
+    path: '/jsx/v-model-r-model',
+    component: useComponent(() => import('../pages/jsx/VModelAndRModel')),
+  },
+  {
     path: '/jsx/lists-and-keys',
     component: useComponent(() => import('../pages/jsx/ListsAndKeys')),
+  },
+  {
+    path: '/jsx/v-for-r-for',
+    component: useComponent(() => import('../pages/jsx/VForAndRFor')),
+  },
+  {
+    path: '/jsx/template',
+    component: useComponent(() => import('../pages/jsx/TemplateDemo')),
   },
   { path: '/jsx/fragments', component: useComponent(() => import('../pages/jsx/Fragments')) },
   { path: '/jsx/children', component: useComponent(() => import('../pages/jsx/Children')) },
   { path: '/jsx/components', component: useComponent(() => import('../pages/jsx/Components')) },
+  {
+    path: '/jsx/dynamic-component',
+    component: useComponent(() => import('../pages/jsx/DynamicComponent')),
+  },
+  {
+    path: '/jsx/suspense',
+    component: useComponent(() => import('../pages/jsx/SuspenseDemo')),
+  },
+  {
+    path: '/jsx/keep-alive',
+    component: useComponent(() => import('../pages/jsx/KeepAliveDemo')),
+  },
   { path: '/jsx/events', component: useComponent(() => import('../pages/jsx/Events')) },
   {
     path: '/jsx/controlled-inputs',
@@ -62,6 +126,10 @@ const routes: RouteRecord[] = [
   {
     path: '/examples/simple-component',
     component: useComponent(() => import('../pages/examples/SimpleComponent')),
+  },
+  {
+    path: '/examples/slots',
+    component: useComponent(() => import('../pages/examples/Slots')),
   },
   {
     path: '/examples/web-components',
@@ -97,9 +165,14 @@ const routes: RouteRecord[] = [
     component: useComponent(() => import('../pages/examples/ListTransition')),
   },
   { path: '/design/button', component: useComponent(() => import('../pages/design/Button')) },
+  {
+    path: '/design/typography',
+    component: useComponent(() => import('../pages/design/Typography')),
+  },
   { path: '/design/tabs', component: useComponent(() => import('../pages/design/Tabs')) },
   { path: '/design/alert', component: useComponent(() => import('../pages/design/Alert')) },
   { path: '/design/card', component: useComponent(() => import('../pages/design/Card')) },
+  { path: '/design/calendar', component: useComponent(() => import('../pages/design/Calendar')) },
   { path: '/design/collapse', component: useComponent(() => import('../pages/design/Collapse')) },
   { path: '/design/countdown', component: useComponent(() => import('../pages/design/Countdown')) },
   {
@@ -110,11 +183,50 @@ const routes: RouteRecord[] = [
   { path: '/design/list', component: useComponent(() => import('../pages/design/List')) },
   { path: '/design/table', component: useComponent(() => import('../pages/design/Table')) },
   { path: '/design/chat', component: useComponent(() => import('../pages/design/Chat')) },
+  { path: '/design/checkbox', component: useComponent(() => import('../pages/design/Checkbox')) },
   { path: '/design/badge', component: useComponent(() => import('../pages/design/Badge')) },
   { path: '/design/divider', component: useComponent(() => import('../pages/design/Divider')) },
   { path: '/design/diff', component: useComponent(() => import('../pages/design/Diff')) },
   { path: '/design/carousel', component: useComponent(() => import('../pages/design/Carousel')) },
+  { path: '/design/dropdown', component: useComponent(() => import('../pages/design/Dropdown')) },
+  { path: '/design/fab', component: useComponent(() => import('../pages/design/Fab')) },
+  { path: '/design/modal', component: useComponent(() => import('../pages/design/Modal')) },
   { path: '/design/footer', component: useComponent(() => import('../pages/design/Footer')) },
+  { path: '/design/fieldset', component: useComponent(() => import('../pages/design/Fieldset')) },
+  {
+    path: '/design/file-input',
+    component: useComponent(() => import('../pages/design/FileInput')),
+  },
+  { path: '/design/filter', component: useComponent(() => import('../pages/design/Filter')) },
+  { path: '/design/drawer', component: useComponent(() => import('../pages/design/Drawer')) },
+  { path: '/design/hero', component: useComponent(() => import('../pages/design/Hero')) },
+  { path: '/design/indicator', component: useComponent(() => import('../pages/design/Indicator')) },
+  { path: '/design/input', component: useComponent(() => import('../pages/design/Input')) },
+  { path: '/design/join', component: useComponent(() => import('../pages/design/Join')) },
+  { path: '/design/label', component: useComponent(() => import('../pages/design/Label')) },
+  { path: '/design/loading', component: useComponent(() => import('../pages/design/Loading')) },
+  { path: '/design/mask', component: useComponent(() => import('../pages/design/Mask')) },
+  {
+    path: '/design/mockup-browser',
+    component: useComponent(() => import('../pages/design/MockupBrowser')),
+  },
+  {
+    path: '/design/mockup-code',
+    component: useComponent(() => import('../pages/design/MockupCode')),
+  },
+  {
+    path: '/design/mockup-phone',
+    component: useComponent(() => import('../pages/design/MockupPhone')),
+  },
+  {
+    path: '/design/mockup-window',
+    component: useComponent(() => import('../pages/design/MockupWindow')),
+  },
+  { path: '/design/navbar', component: useComponent(() => import('../pages/design/Navbar')) },
+  {
+    path: '/design/pagination',
+    component: useComponent(() => import('../pages/design/Pagination')),
+  },
   { path: '/design/accordion', component: useComponent(() => import('../pages/design/Accordion')) },
   { path: '/design/avatar', component: useComponent(() => import('../pages/design/Avatar')) },
   { path: '/design/hover-3d', component: useComponent(() => import('../pages/design/Hover3D')) },
@@ -125,6 +237,14 @@ const routes: RouteRecord[] = [
   },
   { path: '/design/status', component: useComponent(() => import('../pages/design/Status')) },
   { path: '/design/stat', component: useComponent(() => import('../pages/design/Stat')) },
+  { path: '/design/progress', component: useComponent(() => import('../pages/design/Progress')) },
+  {
+    path: '/design/radial-progress',
+    component: useComponent(() => import('../pages/design/RadialProgress')),
+  },
+  { path: '/design/radio', component: useComponent(() => import('../pages/design/Radio')) },
+  { path: '/design/range', component: useComponent(() => import('../pages/design/Range')) },
+  { path: '/design/rating', component: useComponent(() => import('../pages/design/Rating')) },
   {
     path: '/design/breadcrumbs',
     component: useComponent(() => import('../pages/design/Breadcrumbs')),
@@ -132,6 +252,19 @@ const routes: RouteRecord[] = [
   { path: '/design/link', component: useComponent(() => import('../pages/design/Link')) },
   { path: '/design/dock', component: useComponent(() => import('../pages/design/Dock')) },
   { path: '/design/menu', component: useComponent(() => import('../pages/design/Menu')) },
+  { path: '/design/textarea', component: useComponent(() => import('../pages/design/Textarea')) },
+  {
+    path: '/design/theme-controller',
+    component: useComponent(() => import('../pages/design/ThemeController')),
+  },
+  { path: '/design/toast', component: useComponent(() => import('../pages/design/Toast')) },
+  { path: '/design/toggle', component: useComponent(() => import('../pages/design/Toggle')) },
+  { path: '/design/tooltip', component: useComponent(() => import('../pages/design/Tooltip')) },
+  { path: '/design/validator', component: useComponent(() => import('../pages/design/Validator')) },
+  {
+    path: '/design/:slug',
+    component: useComponent(() => import('../pages/design/DesignPlaceholder')),
+  },
   { path: '/e2e/tdz', component: useComponent(() => import('../pages/e2e/TDZMemo')) },
   {
     path: '/e2e/router-unmount-a',

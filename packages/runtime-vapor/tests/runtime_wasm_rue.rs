@@ -1,254 +1,95 @@
-use js_sys::{Array, Function, Object, Promise, Reflect};
+use js_sys::{Array, Function, Object, Reflect};
 use rue_runtime_vapor::createRue;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
-use wasm_bindgen_futures::JsFuture;
 use wasm_bindgen_test::*;
+mod common;
 
-fn make_adapter() -> JsValue {
-    let obj = Object::new();
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("createElement"),
-        &Function::new_with_args("tag", "return { tag, children: [] }").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("createTextNode"),
-        &Function::new_with_args("text", "return { tag: '#text', text }").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("createDocumentFragment"),
-        &Function::new_no_args("return { tag: 'fragment', children: [] }").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("isFragment"),
-        &Function::new_with_args("el", "return !!el && el.tag === 'fragment'").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("collectFragmentChildren"),
-        &Function::new_with_args("el", "return Array.from(el && el.children || [])").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("setTextContent"),
-        &Function::new_with_args("el,text", "el.text = text").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("appendChild"),
-        &Function::new_with_args("p,c", "p.children = p.children||[]; p.children.push(c)").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("insertBefore"),
-        &Function::new_with_args("p,c,b", "p.children = p.children||[]; p.children.push(c)").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("removeChild"),
-        &Function::new_with_args("p,c", "p.children = (p.children||[]).filter(x=>x!==c)").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("contains"),
-        &Function::new_with_args("p,c", "return p===c || (p.children||[]).includes(c)").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("setClassName"),
-        &Function::new_with_args("el,v", "el.class = v").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("patchStyle"),
-        &Function::new_with_args(
-            "el,old,newv",
-            "Object.keys(newv).forEach(k=>{ el.style = el.style||{}; el.style[k]=newv[k]; })",
-        )
-        .into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("setInnerHTML"),
-        &Function::new_with_args("el,html", "el.children=[]; el.text=html").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("setValue"),
-        &Function::new_with_args("el,v", "el.value = v").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("setChecked"),
-        &Function::new_with_args("el,b", "el.checked = !!b").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("setDisabled"),
-        &Function::new_with_args("el,b", "el.disabled = !!b").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("clearRef"),
-        &Function::new_with_args("r", "return").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("applyRef"),
-        &Function::new_with_args("el,r", "return").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("setAttribute"),
-        &Function::new_with_args("el,k,v", "el.attrs = el.attrs||{}; el.attrs[k]=v").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("removeAttribute"),
-        &Function::new_with_args("el,k", "if(el.attrs) delete el.attrs[k]").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("getTagName"),
-        &Function::new_with_args("el", "return el.tag||''").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("addEventListener"),
-        &Function::new_with_args("el,evt,h", "return").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("removeEventListener"),
-        &Function::new_with_args("el,evt,h", "return").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("hasValueProperty"),
-        &Function::new_with_args("el", "return 'value' in el").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("isSelectMultiple"),
-        &Function::new_with_args("el", "return el.tag==='SELECT' && !!el.multiple").into(),
-    );
-    let _ = Reflect::set(
-        &obj,
-        &JsValue::from_str("querySelector"),
-        &Function::new_with_args("sel", "return { tag: sel, children: [] }").into(),
-    );
-    obj.into()
-}
+use common::{js_obj, make_wasm_adapter as make_adapter, setup_range, tick};
 
-fn js_obj() -> JsValue {
-    Object::new().into()
+fn attach_error_collector(rue: &rue_runtime_vapor::WasmRue) -> Array {
+    let errors = Array::new();
+    let errors_for_handler = errors.clone();
+    let on_error = wasm_bindgen::closure::Closure::wrap(Box::new(move |err: JsValue| {
+        errors_for_handler.push(&err);
+    }) as Box<dyn FnMut(JsValue)>);
+    rue.on_error(on_error.as_ref().clone().into());
+    on_error.forget();
+    errors
 }
 
 // Note: Lifecycle hook registration via WasmRue inside component functions
 // would reenter a mutable borrow of the same Rue. End-to-end lifecycle tests
 // are covered in Rust unit tests in runtime_render.rs to avoid reentrancy.
 
-async fn tick() {
-    let p = Promise::resolve(&JsValue::UNDEFINED);
-    let _ = JsFuture::from(p).await;
-}
-
 #[wasm_bindgen_test(async)]
-async fn wasm_render_async_flush_appends() {
+async fn wasm_render_rejects_raw_array_fragment_input() {
     let adapter = make_adapter();
     let rue = createRue(adapter.clone());
     let container = js_obj();
-    // element handle: <span class="x">hello</span>
-    let props = Object::new();
-    let _ = Reflect::set(&props, &JsValue::from_str("className"), &JsValue::from_str("x"));
-    let children = Array::new();
-    children.push(&JsValue::from_str("hello"));
-    let id = rue.create_element_wasm(JsValue::from_str("span"), props.into(), children.into());
-    rue.render_wasm(id.clone(), container.clone());
-    let arr0v =
-        Reflect::get(&container, &JsValue::from_str("children")).unwrap_or(JsValue::UNDEFINED);
-    let arr0: Array = if arr0v.is_object() { Array::from(&arr0v) } else { Array::new() };
-    assert_eq!(arr0.length(), 0);
+    let errors = attach_error_collector(&rue);
+
+    let raw_fragment = Array::new();
+    raw_fragment.push(&JsValue::from_str("A"));
+    raw_fragment.push(&JsValue::from_f64(4.0));
+
+    rue.render_wasm(raw_fragment.into(), container.clone());
     tick().await;
-    let arv =
-        Reflect::get(&container, &JsValue::from_str("children")).unwrap_or(JsValue::UNDEFINED);
-    let arr: Array = if arv.is_object() { Array::from(&arv) } else { Array::new() };
-    assert_eq!(arr.length(), 1);
-    let child = arr.get(0);
-    let class = Reflect::get(&child, &JsValue::from_str("class"))
-        .unwrap_or(JsValue::UNDEFINED)
-        .as_string()
-        .unwrap_or_default();
-    assert_eq!(class, "x");
+
+    let children =
+        Reflect::get(&container, &JsValue::from_str("children")).unwrap_or(Array::new().into());
+    let children: Array = children.unchecked_into();
+    assert_eq!(children.length(), 0);
+    assert_eq!(errors.length(), 1);
+    assert_eq!(errors.get(0).as_string().unwrap_or_default(), "Rue runtime: render input not supported on the default path");
 }
 
 #[wasm_bindgen_test(async)]
-async fn wasm_render_between_async_insert_and_fallback() {
+async fn wasm_render_clears_container_on_null_without_error() {
     let adapter = make_adapter();
     let rue = createRue(adapter.clone());
-    let parent = {
-        let f = Reflect::get(&adapter, &JsValue::from_str("createDocumentFragment")).unwrap();
-        let func = f.unchecked_ref::<Function>();
-        func.call0(&adapter).unwrap()
-    };
-    let start = {
-        let f = Reflect::get(&adapter, &JsValue::from_str("createElement")).unwrap();
-        let func = f.unchecked_ref::<Function>();
-        func.call1(&adapter, &JsValue::from_str("comment_start")).unwrap()
-    };
-    let end = {
-        let f = Reflect::get(&adapter, &JsValue::from_str("createElement")).unwrap();
-        let func = f.unchecked_ref::<Function>();
-        func.call1(&adapter, &JsValue::from_str("comment_end")).unwrap()
-    };
-    {
-        let append = Reflect::get(&adapter, &JsValue::from_str("appendChild")).unwrap();
-        let func = append.unchecked_ref::<Function>();
-        let _ = func.call2(&adapter, &parent, &start);
-        let _ = func.call2(&adapter, &parent, &end);
-    }
-    // element handle: <span>B</span>
+    let container = js_obj();
+    let errors = attach_error_collector(&rue);
+
+    let setup = Function::new_with_args("", "const el = { tag: 'span', children: [] }; return el");
+    let id = rue.vapor_wasm(setup.into());
+    rue.render_wasm(id, container.clone());
+    tick().await;
+
+    rue.render_wasm(JsValue::NULL, container.clone());
+    tick().await;
+
+    let children = Reflect::get(&container, &JsValue::from_str("children"))
+        .unwrap_or(Array::new().into())
+        .unchecked_into::<Array>();
+    assert_eq!(children.length(), 0);
+    assert_eq!(errors.length(), 0);
+}
+
+#[wasm_bindgen_test(async)]
+async fn wasm_render_rejects_raw_vnode_object_input() {
+    let adapter = make_adapter();
+    let rue = createRue(adapter.clone());
+    let container = js_obj();
+
     let children = Array::new();
-    children.push(&JsValue::from_str("B"));
-    let id =
-        rue.create_element_wasm(JsValue::from_str("span"), JsValue::UNDEFINED, children.into());
-    rue.render_between_wasm(id.clone(), parent.clone(), start.clone(), end.clone());
-    let arr0 = Reflect::get(&parent, &JsValue::from_str("children")).unwrap_or(Array::new().into());
-    let arr0: Array = arr0.unchecked_into();
-    assert!(arr0.iter().all(|c| c.is_object()
-        && Reflect::get(&c, &JsValue::from_str("tag")).unwrap().as_string().unwrap() != "span"));
+    children.push(&JsValue::from_str("A"));
+
+    let props = Object::new();
+    let _ = Reflect::set(&props, &JsValue::from_str("className"), &JsValue::from_str("raw"));
+
+    let vnode = Object::new();
+    let _ = Reflect::set(&vnode, &JsValue::from_str("type"), &JsValue::from_str("div"));
+    let _ = Reflect::set(&vnode, &JsValue::from_str("props"), &props);
+    let _ = Reflect::set(&vnode, &JsValue::from_str("children"), &children.into());
+
+    rue.render_wasm(vnode.into(), container.clone());
     tick().await;
-    let arr = Reflect::get(&parent, &JsValue::from_str("children")).unwrap_or(Array::new().into());
-    let arr: Array = arr.unchecked_into();
-    assert!(arr.iter().any(|c| {
-        Reflect::get(&c, &JsValue::from_str("tag")).unwrap().as_string().unwrap() == "span"
-    }));
-    // fallback: move end to another parent, next renderBetween should append
-    let other = {
-        let f = Reflect::get(&adapter, &JsValue::from_str("createDocumentFragment")).unwrap();
-        let func = f.unchecked_ref::<Function>();
-        func.call0(&adapter).unwrap()
-    };
-    {
-        let append = Reflect::get(&adapter, &JsValue::from_str("appendChild")).unwrap();
-        let func = append.unchecked_ref::<Function>();
-        let _ = func.call2(&adapter, &other, &end);
-    }
-    let children2 = Array::new();
-    children2.push(&JsValue::from_str("C"));
-    let id2 =
-        rue.create_element_wasm(JsValue::from_str("span"), JsValue::UNDEFINED, children2.into());
-    rue.render_between_wasm(id2.clone(), parent.clone(), start.clone(), end.clone());
-    tick().await;
-    let arr2 = Reflect::get(&parent, &JsValue::from_str("children")).unwrap_or(Array::new().into());
-    let arr2: Array = arr2.unchecked_into();
-    assert!(arr2.iter().any(|c| {
-        Reflect::get(&c, &JsValue::from_str("tag")).unwrap().as_string().unwrap() == "span"
-    }));
+
+    let children =
+        Reflect::get(&container, &JsValue::from_str("children")).unwrap_or(Array::new().into());
+    let children: Array = children.unchecked_into();
+    assert_eq!(children.length(), 0);
 }
 
 #[wasm_bindgen_test]
@@ -262,43 +103,162 @@ fn create_rue_sets_global_dom_adapter() {
 }
 
 #[wasm_bindgen_test(async)]
-async fn wasm_create_element_function_component_executes_on_render_not_on_create() {
+async fn wasm_render_rejects_raw_function_component_input_on_container_entry() {
     let adapter = make_adapter();
     let rue = createRue(adapter.clone());
     let container = js_obj();
 
-    let _ =
-        Reflect::set(&js_sys::global(), &JsValue::from_str("_fcCount"), &JsValue::from_f64(0.0));
+    let _ = Reflect::set(
+        &js_sys::global(),
+        &JsValue::from_str("_renderFcCount"),
+        &JsValue::from_f64(0.0),
+    );
     let fc = Function::new_no_args(
-        "globalThis._fcCount = (globalThis._fcCount||0) + 1; return { type: 'div', props: { className: 'ok' }, children: ['x'] }",
+        "globalThis._renderFcCount = (globalThis._renderFcCount||0) + 1; return { type: 'div', props: {}, children: ['x'] }",
     );
 
-    let id = rue.create_element_wasm(fc.into(), JsValue::UNDEFINED, JsValue::UNDEFINED);
-    let count0 = Reflect::get(&js_sys::global(), &JsValue::from_str("_fcCount"))
-        .unwrap()
-        .as_f64()
-        .unwrap_or(0.0);
-    assert_eq!(count0 as i32, 0);
-
-    rue.render_wasm(id, container.clone());
+    rue.render_wasm(fc.into(), container.clone());
     tick().await;
 
-    let count1 = Reflect::get(&js_sys::global(), &JsValue::from_str("_fcCount"))
-        .unwrap()
+    let count = Reflect::get(&js_sys::global(), &JsValue::from_str("_renderFcCount"))
+        .unwrap_or(JsValue::UNDEFINED)
         .as_f64()
         .unwrap_or(0.0);
-    assert_eq!(count1 as i32, 1);
+    assert_eq!(count as i32, 0);
 
     let children =
         Reflect::get(&container, &JsValue::from_str("children")).unwrap_or(Array::new().into());
     let children: Array = children.unchecked_into();
-    assert_eq!(children.length(), 1);
-    let el = children.get(0);
-    let class = Reflect::get(&el, &JsValue::from_str("class"))
+    assert_eq!(children.length(), 0);
+}
+
+#[wasm_bindgen_test(async)]
+async fn wasm_render_between_rejects_raw_function_component_input() {
+    let adapter = make_adapter();
+    let rue = createRue(adapter.clone());
+    let (parent, start, end) = setup_range(&adapter);
+    let errors = attach_error_collector(&rue);
+
+    let _ = Reflect::set(
+        &js_sys::global(),
+        &JsValue::from_str("_betweenFcCount"),
+        &JsValue::from_f64(0.0),
+    );
+    let fc = Function::new_no_args(
+        "globalThis._betweenFcCount = (globalThis._betweenFcCount||0) + 1; return { type: 'div', props: { className: 'between-ok' }, children: ['B'] }",
+    );
+
+    rue.render_between_wasm(fc.into(), parent.clone(), start.clone(), end.clone());
+    tick().await;
+
+    let count = Reflect::get(&js_sys::global(), &JsValue::from_str("_betweenFcCount"))
         .unwrap_or(JsValue::UNDEFINED)
-        .as_string()
-        .unwrap_or_default();
-    assert_eq!(class, "ok");
+        .as_f64()
+        .unwrap_or(0.0);
+    assert_eq!(count as i32, 0);
+
+    let children =
+        Reflect::get(&parent, &JsValue::from_str("children")).unwrap_or(Array::new().into());
+    let children: Array = children.unchecked_into();
+    assert!(!children.iter().any(|child| {
+        Reflect::get(&child, &JsValue::from_str("class"))
+            .unwrap_or(JsValue::UNDEFINED)
+            .as_string()
+            .unwrap_or_default()
+            == "between-ok"
+    }));
+    assert_eq!(errors.length(), 1);
+    assert_eq!(errors.get(0).as_string().unwrap_or_default(), "Rue runtime: renderBetween input not supported on the default path");
+}
+
+#[wasm_bindgen_test(async)]
+async fn wasm_render_between_clears_range_on_null_without_error() {
+    let adapter = make_adapter();
+    let rue = createRue(adapter.clone());
+    let (parent, start, end) = setup_range(&adapter);
+    let errors = attach_error_collector(&rue);
+
+    let setup = Function::new_with_args("", "const el = { tag: 'span', children: [] }; return el");
+    let id = rue.vapor_wasm(setup.into());
+    rue.render_between_wasm(id, parent.clone(), start.clone(), end.clone());
+    tick().await;
+
+    rue.render_between_wasm(JsValue::NULL, parent.clone(), start.clone(), end.clone());
+    tick().await;
+
+    let children = Reflect::get(&parent, &JsValue::from_str("children"))
+        .unwrap_or(Array::new().into())
+        .unchecked_into::<Array>();
+    assert!(!children.iter().any(|child| {
+        Reflect::get(&child, &JsValue::from_str("tag"))
+            .unwrap_or(JsValue::UNDEFINED)
+            .as_string()
+            .unwrap_or_default()
+            == "span"
+    }));
+    assert_eq!(errors.length(), 0);
+}
+
+#[wasm_bindgen_test(async)]
+async fn wasm_render_anchor_reports_unsupported_default_surface_input() {
+    let adapter = make_adapter();
+    let rue = createRue(adapter.clone());
+    let (parent, _start, anchor) = setup_range(&adapter);
+    let errors = attach_error_collector(&rue);
+
+    let raw_vnode = Object::new();
+    let _ = Reflect::set(&raw_vnode, &JsValue::from_str("type"), &JsValue::from_str("div"));
+
+    rue.render_anchor_wasm(raw_vnode.into(), parent.clone(), anchor.clone());
+    tick().await;
+
+    assert_eq!(errors.length(), 1);
+    assert_eq!(errors.get(0).as_string().unwrap_or_default(), "Rue runtime: renderAnchor input not supported on the default path");
+}
+
+#[wasm_bindgen_test(async)]
+async fn wasm_render_anchor_clears_on_null_without_error() {
+    let adapter = make_adapter();
+    let rue = createRue(adapter.clone());
+    let (parent, _start, anchor) = setup_range(&adapter);
+    let errors = attach_error_collector(&rue);
+
+    let setup = Function::new_with_args("", "const el = { tag: 'span', children: [] }; return el");
+    let id = rue.vapor_wasm(setup.into());
+    rue.render_anchor_wasm(id, parent.clone(), anchor.clone());
+    tick().await;
+
+    rue.render_anchor_wasm(JsValue::NULL, parent.clone(), anchor.clone());
+    tick().await;
+
+    let children = Reflect::get(&parent, &JsValue::from_str("children"))
+        .unwrap_or(Array::new().into())
+        .unchecked_into::<Array>();
+    assert!(!children.iter().any(|child| {
+        Reflect::get(&child, &JsValue::from_str("tag"))
+            .unwrap_or(JsValue::UNDEFINED)
+            .as_string()
+            .unwrap_or_default()
+            == "span"
+    }));
+    assert_eq!(errors.length(), 0);
+}
+
+#[wasm_bindgen_test(async)]
+async fn wasm_render_static_reports_unsupported_default_surface_input() {
+    let adapter = make_adapter();
+    let rue = createRue(adapter.clone());
+    let (parent, _start, anchor) = setup_range(&adapter);
+    let errors = attach_error_collector(&rue);
+
+    let raw_vnode = Object::new();
+    let _ = Reflect::set(&raw_vnode, &JsValue::from_str("type"), &JsValue::from_str("div"));
+
+    rue.render_static_wasm(raw_vnode.into(), parent, anchor);
+    tick().await;
+
+    assert_eq!(errors.length(), 1);
+    assert_eq!(errors.get(0).as_string().unwrap_or_default(), "Rue runtime: renderStatic input not supported on the default path");
 }
 
 #[wasm_bindgen_test(async)]
@@ -307,10 +267,7 @@ async fn wasm_vapor_wasm_renders_host_element() {
     let rue = createRue(adapter.clone());
     let container = js_obj();
 
-    let setup = Function::new_with_args(
-        "",
-        "const el = { tag: 'span', children: [] }; return el",
-    );
+    let setup = Function::new_with_args("", "const el = { tag: 'span', children: [] }; return el");
     let id = rue.vapor_wasm(setup.into());
     rue.render_wasm(id, container.clone());
     tick().await;
@@ -328,75 +285,49 @@ async fn wasm_vapor_wasm_renders_host_element() {
 }
 
 #[wasm_bindgen_test(async)]
+async fn wasm_vapor_wasm_rejects_legacy_vapor_wrapper_return() {
+    let adapter = make_adapter();
+    let rue = createRue(adapter.clone());
+    let container = js_obj();
+    let errors = Array::new();
+
+    let errors_for_handler = errors.clone();
+    let on_error = wasm_bindgen::closure::Closure::wrap(Box::new(move |err: JsValue| {
+        errors_for_handler.push(&err);
+    }) as Box<dyn FnMut(JsValue)>);
+    rue.on_error(on_error.as_ref().clone().into());
+    on_error.forget();
+
+    let setup = Function::new_no_args(
+        "return { vaporElement: { tag: 'span', children: [], nodeType: 1 } }",
+    );
+    let id = rue.vapor_wasm(setup.into());
+    rue.render_wasm(id, container.clone());
+    tick().await;
+
+    assert_eq!(errors.length(), 1);
+    let message = errors.get(0).as_string().unwrap_or_default();
+    assert!(message.contains("Unsupported object returns are no longer accepted for vapor setup"));
+    let children = Reflect::get(&container, &JsValue::from_str("children"))
+        .unwrap_or(JsValue::UNDEFINED);
+    let children: Array = if children.is_object() {
+        Array::from(&children)
+    } else {
+        Array::new()
+    };
+    assert_eq!(children.length(), 0);
+}
+
+#[wasm_bindgen_test(async)]
 async fn wasm_get_current_container_returns_last_render_container() {
     let adapter = make_adapter();
     let rue = createRue(adapter.clone());
     let container = js_obj();
 
-    let id =
-        rue.create_element_wasm(JsValue::from_str("div"), JsValue::UNDEFINED, Array::new().into());
+    let setup = Function::new_with_args("", "const el = { tag: 'div', children: [] }; return el");
+    let id = rue.vapor_wasm(setup.into());
     rue.render_wasm(id, container.clone());
     let got = rue.get_current_container_wasm();
     assert!(got.is_object());
     tick().await;
-}
-
-#[wasm_bindgen_test(async)]
-async fn wasm_create_element_flattens_nested_array_children() {
-    let adapter = make_adapter();
-    let rue = createRue(adapter.clone());
-    let container = js_obj();
-
-    let child_a_children = Array::new();
-    child_a_children.push(&JsValue::from_str("A"));
-    let child_a = rue.create_element_wasm(
-        JsValue::from_str("span"),
-        JsValue::UNDEFINED,
-        child_a_children.into(),
-    );
-
-    let child_b_children = Array::new();
-    child_b_children.push(&JsValue::from_str("B"));
-    let child_b = rue.create_element_wasm(
-        JsValue::from_str("span"),
-        JsValue::UNDEFINED,
-        child_b_children.into(),
-    );
-
-    let nested = Array::new();
-    nested.push(&child_a);
-    nested.push(&child_b);
-
-    let parent_children = Array::new();
-    parent_children.push(&nested);
-    let parent = rue.create_element_wasm(
-        JsValue::from_str("div"),
-        JsValue::UNDEFINED,
-        parent_children.into(),
-    );
-
-    rue.render_wasm(parent, container.clone());
-    tick().await;
-
-    let children =
-        Reflect::get(&container, &JsValue::from_str("children")).unwrap_or(Array::new().into());
-    let children: Array = children.unchecked_into();
-    assert_eq!(children.length(), 1);
-
-    let parent_el = children.get(0);
-    let parent_kids =
-        Reflect::get(&parent_el, &JsValue::from_str("children")).unwrap_or(Array::new().into());
-    let parent_kids: Array = parent_kids.unchecked_into();
-    assert_eq!(parent_kids.length(), 2);
-
-    let first_tag = Reflect::get(&parent_kids.get(0), &JsValue::from_str("tag"))
-        .unwrap_or(JsValue::UNDEFINED)
-        .as_string()
-        .unwrap_or_default();
-    let second_tag = Reflect::get(&parent_kids.get(1), &JsValue::from_str("tag"))
-        .unwrap_or(JsValue::UNDEFINED)
-        .as_string()
-        .unwrap_or_default();
-    assert_eq!(first_tag, "span");
-    assert_eq!(second_tag, "span");
 }

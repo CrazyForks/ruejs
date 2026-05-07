@@ -1,0 +1,524 @@
+/*
+Checkbox 组件概述
+- 保留 Rue 当前 checkbox 视觉类，同时补齐受控/非受控、children 标签包装、indeterminate 能力。
+- Checkbox.Group 以 options 为主，兼容 children 直出，并提供受控/非受控选中值管理。
+*/
+import type { FC } from '@rue-js/rue'
+import { h, onMounted, ref, useRef, watch } from '@rue-js/rue'
+
+export type CheckboxColor =
+  | 'primary'
+  | 'secondary'
+  | 'accent'
+  | 'neutral'
+  | 'success'
+  | 'warning'
+  | 'info'
+  | 'error'
+
+export type CheckboxSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+export type CheckboxValue = string | number | boolean
+
+export interface CheckboxChangeMeta {
+  checked: boolean
+  indeterminate: boolean
+  value?: CheckboxValue
+}
+
+export interface CheckboxProps {
+  color?: CheckboxColor
+  size?: CheckboxSize
+  checked?: boolean
+  defaultChecked?: boolean
+  disabled?: boolean
+  indeterminate?: boolean
+  value?: CheckboxValue
+  className?: string
+  rootClassName?: string
+  contentClassName?: string
+  style?: any
+  rootStyle?: any
+  children?: any
+  onChange?: (event: Event, meta: CheckboxChangeMeta) => void
+  onCheckedChange?: (checked: boolean, event: Event) => void
+  [key: string]: any
+}
+
+export interface CheckboxOption {
+  label: any
+  value: CheckboxValue
+  disabled?: boolean
+  className?: string
+  style?: any
+  title?: string
+  id?: string
+  indeterminate?: boolean
+}
+
+export interface CheckboxGroupProps {
+  value?: CheckboxValue[]
+  defaultValue?: CheckboxValue[]
+  options?: ReadonlyArray<CheckboxOption | CheckboxValue>
+  disabled?: boolean
+  name?: string
+  className?: string
+  style?: any
+  children?: any
+  onChange?: (checkedValue: CheckboxValue[]) => void
+  [key: string]: any
+}
+
+interface NormalizedCheckboxOption extends CheckboxOption {}
+
+let checkboxContentIdSeed = 0
+
+const appendClassName = (base: string, className?: string) => {
+  return className ? `${base} ${className}` : base
+}
+
+const buildInputClassName = (color?: CheckboxColor, size?: CheckboxSize, className?: string) => {
+  let cls = 'checkbox'
+  if (color) cls += ` checkbox-${color}`
+  if (size) cls += ` checkbox-${size}`
+  if (className) cls += ` ${className}`
+  return cls
+}
+
+const buildRootClassName = (disabled?: boolean, rootClassName?: string) => {
+  let cls = 'inline-flex items-start gap-3 text-sm leading-5 text-base-content'
+  if (disabled) cls += ' cursor-not-allowed opacity-60'
+  else cls += ' cursor-pointer'
+  if (rootClassName) cls += ` ${rootClassName}`
+  return cls
+}
+
+const buildContentClassName = (contentClassName?: string) => {
+  return appendClassName('min-w-0 flex-1', contentClassName)
+}
+
+const toChildArray = (children: any): any[] => {
+  if (Array.isArray(children)) {
+    return children.flatMap(item => toChildArray(item))
+  }
+
+  return children == null || typeof children === 'boolean' ? [] : [children]
+}
+
+const serializeValue = (value: CheckboxValue) => {
+  switch (typeof value) {
+    case 'number':
+      return `number:${value}`
+    case 'boolean':
+      return `boolean:${value ? 'true' : 'false'}`
+    default:
+      return `string:${value}`
+  }
+}
+
+const deserializeValue = (serialized?: string): CheckboxValue | undefined => {
+  if (!serialized) return undefined
+  const separatorIndex = serialized.indexOf(':')
+  if (separatorIndex === -1) return serialized
+  const type = serialized.slice(0, separatorIndex)
+  const rawValue = serialized.slice(separatorIndex + 1)
+  if (type === 'number') return Number(rawValue)
+  if (type === 'boolean') return rawValue === 'true'
+  return rawValue
+}
+
+const normalizeValueList = (values?: ReadonlyArray<CheckboxValue>) => {
+  const next: CheckboxValue[] = []
+  ;(values ?? []).forEach(value => {
+    if (!next.some(current => current === value)) {
+      next.push(value)
+    }
+  })
+  return next
+}
+
+const normalizeOptions = (options?: ReadonlyArray<CheckboxOption | CheckboxValue>) => {
+  return (options ?? []).map<NormalizedCheckboxOption>(option => {
+    if (typeof option === 'string' || typeof option === 'number' || typeof option === 'boolean') {
+      return {
+        label: String(option),
+        value: option,
+      }
+    }
+    return option
+  })
+}
+
+const Checkbox: FC<CheckboxProps> = ({
+  color,
+  size,
+  checked,
+  defaultChecked,
+  disabled,
+  indeterminate,
+  value,
+  className,
+  rootClassName,
+  contentClassName,
+  style,
+  rootStyle,
+  children,
+  onChange,
+  onCheckedChange,
+  ...rest
+}) => {
+  const inputRef = useRef<HTMLInputElement>()
+  const contentIdRef = useRef<string>()
+
+  if (!contentIdRef.current) {
+    contentIdRef.current = `rue-checkbox-content-${checkboxContentIdSeed++}`
+  }
+
+  const contentId = children != null ? (rest['aria-labelledby'] ?? contentIdRef.current) : undefined
+
+  const syncIndeterminate = () => {
+    if (inputRef.current) {
+      inputRef.current.indeterminate = !!indeterminate
+    }
+  }
+
+  const handleChange = (event: Event) => {
+    const target = event.target as HTMLInputElement | null
+    const nextChecked = target?.checked === true
+
+    if (typeof checked === 'boolean' && inputRef.current) {
+      inputRef.current.checked = checked
+    }
+
+    if (indeterminate) {
+      syncIndeterminate()
+    }
+
+    if (onChange) {
+      onChange(event, {
+        checked: nextChecked,
+        indeterminate: !!indeterminate,
+        value,
+      })
+    }
+    if (onCheckedChange) {
+      onCheckedChange(nextChecked, event)
+    }
+  }
+
+  const emitDirectToggle = (event: Event, nextChecked: boolean) => {
+    if (typeof checked !== 'boolean' && inputRef.current) {
+      inputRef.current.checked = nextChecked
+    }
+
+    if (indeterminate) {
+      syncIndeterminate()
+    }
+
+    if (onChange) {
+      onChange(event, {
+        checked: nextChecked,
+        indeterminate: !!indeterminate,
+        value,
+      })
+    }
+
+    if (onCheckedChange) {
+      onCheckedChange(nextChecked, event)
+    }
+  }
+
+  const handleRootClick = (event: Event) => {
+    const target = event.target as HTMLElement | null
+
+    if (!inputRef.current || disabled || target === inputRef.current) {
+      return
+    }
+
+    event.preventDefault()
+
+    const input = inputRef.current
+    const nextChecked = !input.checked
+    const shouldBubbleNativeChange =
+      checked === undefined &&
+      !onChange &&
+      !onCheckedChange &&
+      !!input.closest('[data-rue-checkbox-group="true"]')
+
+    if (shouldBubbleNativeChange) {
+      input.checked = nextChecked
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+      return
+    }
+
+    emitDirectToggle(event, nextChecked)
+  }
+
+  onMounted(() => {
+    syncIndeterminate()
+  })
+
+  watch(
+    () => indeterminate,
+    () => {
+      syncIndeterminate()
+    },
+    { immediate: true },
+  )
+
+  watch(
+    () => checked,
+    () => {
+      if (typeof checked === 'boolean' && inputRef.current) {
+        inputRef.current.checked = checked
+      }
+      if (indeterminate) {
+        syncIndeterminate()
+      }
+    },
+    { immediate: true },
+  )
+
+  const inputNode = (
+    <input
+      {...rest}
+      ref={inputRef}
+      type="checkbox"
+      value={value as any}
+      checked={checked}
+      defaultChecked={defaultChecked}
+      disabled={disabled}
+      style={style}
+      className={buildInputClassName(color, size, className)}
+      aria-labelledby={contentId}
+      aria-checked={indeterminate ? 'mixed' : rest['aria-checked']}
+      data-rue-checkbox-input="true"
+      data-rue-checkbox-disabled={disabled ? 'true' : 'false'}
+      data-rue-checkbox-value={value !== undefined ? serializeValue(value) : undefined}
+      onChange={handleChange}
+    />
+  )
+
+  if (children == null && !rootClassName && !rootStyle && !contentClassName) {
+    return inputNode
+  }
+
+  const contentNode =
+    children != null
+      ? h(
+          'span',
+          {
+            id: contentId,
+            className: buildContentClassName(contentClassName),
+            'data-rue-checkbox-content': 'true',
+          },
+          ...toChildArray(children),
+        )
+      : null
+
+  return (
+    <div
+      className={buildRootClassName(disabled, rootClassName)}
+      style={rootStyle}
+      data-rue-checkbox-root="true"
+      onClick={handleRootClick}
+    >
+      <span className="shrink-0 pt-0.5">{inputNode}</span>
+      {contentNode}
+    </div>
+  )
+}
+
+const Group: FC<CheckboxGroupProps> = ({
+  value,
+  defaultValue,
+  options,
+  disabled,
+  name,
+  className,
+  style,
+  children,
+  onChange,
+  ...rest
+}) => {
+  const groupRef = useRef<HTMLDivElement>()
+  const normalizedOptions = normalizeOptions(options)
+  const selectedValues = ref(normalizeValueList(value ?? defaultValue))
+
+  const syncChildInputs = () => {
+    const container = groupRef.current
+    if (!container) return
+    const selectedSet = new Set(selectedValues.value.map(serializeValue))
+    const inputs = Array.from(
+      container.querySelectorAll<HTMLInputElement>('input[type="checkbox"][data-rue-checkbox-input="true"]'),
+    )
+
+    inputs.forEach(input => {
+      const serializedValue = input.dataset.rueCheckboxValue
+      if (serializedValue) {
+        input.checked = selectedSet.has(serializedValue)
+      }
+      if (name) {
+        input.name = name
+      }
+      if (disabled) {
+        input.disabled = true
+      } else {
+        input.disabled = input.dataset.rueCheckboxDisabled === 'true'
+      }
+    })
+  }
+
+  const sortValuesByDomOrder = (values: ReadonlyArray<CheckboxValue>) => {
+    const container = groupRef.current
+    if (!container) return normalizeValueList(values)
+    const order = Array.from(
+      container.querySelectorAll<HTMLInputElement>('input[type="checkbox"][data-rue-checkbox-input="true"]'),
+    )
+      .map(input => input.dataset.rueCheckboxValue)
+      .filter((item): item is string => !!item)
+
+    if (!order.length) return normalizeValueList(values)
+
+    const orderMap = new Map(order.map((item, index) => [item, index]))
+    return normalizeValueList(values).sort((left, right) => {
+      return (orderMap.get(serializeValue(left)) ?? Number.MAX_SAFE_INTEGER) - (orderMap.get(serializeValue(right)) ?? Number.MAX_SAFE_INTEGER)
+    })
+  }
+
+  const commitValue = (nextValue: ReadonlyArray<CheckboxValue>, controlled?: boolean) => {
+    const sortedValue = sortValuesByDomOrder(nextValue)
+    if (!controlled) {
+      selectedValues.value = sortedValue
+    }
+    if (onChange) {
+      onChange(sortedValue)
+    }
+    return sortedValue
+  }
+
+  const toggleOption = (optionValue: CheckboxValue, nextChecked: boolean, controlled?: boolean) => {
+    const currentValue = controlled ? normalizeValueList(value) : selectedValues.value
+    const hasValue = currentValue.some(item => item === optionValue)
+    if (nextChecked && hasValue) {
+      return commitValue(currentValue, controlled)
+    }
+    if (!nextChecked && !hasValue) {
+      return commitValue(currentValue, controlled)
+    }
+    if (nextChecked) {
+      return commitValue([...currentValue, optionValue], controlled)
+    }
+    return commitValue(
+      currentValue.filter(item => item !== optionValue),
+      controlled,
+    )
+  }
+
+  const handleChildrenChange = (event: Event) => {
+    const target = event.target as HTMLInputElement | null
+    if (!target || target.type !== 'checkbox' || target.dataset.rueCheckboxInput !== 'true') {
+      return
+    }
+    const resolvedValue = deserializeValue(target.dataset.rueCheckboxValue)
+    if (resolvedValue === undefined) {
+      return
+    }
+    const isControlled = value !== undefined
+    toggleOption(resolvedValue, target.checked, isControlled)
+    if (isControlled) {
+      syncChildInputs()
+    }
+  }
+
+  onMounted(() => {
+    syncChildInputs()
+    Promise.resolve().then(() => {
+      syncChildInputs()
+    })
+  })
+
+  watch(
+    () => value,
+    nextValue => {
+      if (nextValue !== undefined) {
+        selectedValues.value = normalizeValueList(nextValue)
+      }
+      syncChildInputs()
+    },
+    { immediate: true },
+  )
+
+  watch(
+    () => selectedValues.value,
+    () => {
+      syncChildInputs()
+    },
+    { immediate: true },
+  )
+
+  watch(
+    () => disabled,
+    () => {
+      syncChildInputs()
+    },
+    { immediate: true },
+  )
+
+  watch(
+    () => name,
+    () => {
+      syncChildInputs()
+    },
+    { immediate: true },
+  )
+
+  const currentValue = value !== undefined ? normalizeValueList(value) : selectedValues.value
+  const groupClassName = appendClassName('flex flex-col gap-3', className)
+
+  return (
+    <div
+      {...rest}
+      ref={groupRef}
+      role={rest.role ?? 'group'}
+      className={groupClassName}
+      style={style}
+      data-rue-checkbox-group="true"
+      onChange={normalizedOptions.length ? rest.onChange : handleChildrenChange}
+    >
+      {normalizedOptions.length
+        ? normalizedOptions.map(option => (
+            <Checkbox
+              key={serializeValue(option.value)}
+              value={option.value}
+              checked={currentValue.some(item => item === option.value)}
+              disabled={disabled || option.disabled}
+              name={name}
+              title={option.title}
+              id={option.id}
+              indeterminate={option.indeterminate}
+              rootClassName={option.className}
+              rootStyle={option.style}
+              onChange={(event, meta) => {
+                toggleOption(option.value, meta.checked, value !== undefined)
+                if (value !== undefined) {
+                  syncChildInputs()
+                }
+              }}
+            >
+              {option.label}
+            </Checkbox>
+          ))
+        : children}
+    </div>
+  )
+}
+
+type CheckboxCompound = FC<CheckboxProps> & {
+  Group: FC<CheckboxGroupProps>
+}
+
+const CheckboxCompound: CheckboxCompound = Object.assign(Checkbox, {
+  Group,
+})
+
+export default CheckboxCompound

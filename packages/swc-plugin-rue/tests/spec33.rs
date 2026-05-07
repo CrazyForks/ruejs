@@ -124,9 +124,8 @@ export default HelloWorld
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
-import { type FC, ref } from '@rue-js/rue';
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
 const ThemePicker: FC<{
     value: string;
     onChange: (t: string) => void;
@@ -283,10 +282,13 @@ const HelloWorld: FC = ()=>{
         const _list3 = _$createComment("rue:component:anchor");
         _$appendChild(_el6, _list3);
         watchEffect(()=>{
-            const __slot4 = <ThemePicker value={theme.value} onChange={(t)=>{
-                theme.value = t;
-                document.documentElement.setAttribute('data-theme', t);
-            }}/>;
+            const __slot4 = _$createComponent(ThemePicker, {
+                value: theme.value,
+                onChange: (t)=>{
+                    theme.value = t;
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            });
             renderAnchor(__slot4, _el6, _list3);
         });
         const _el7 = _$createElement("span");

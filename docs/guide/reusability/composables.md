@@ -1,9 +1,15 @@
 # 可复用性 - Composables {#composables}
 
-<script setup>
+```tsx
+import { type FC } from '@rue-js/rue'
 import { useMouse } from './mouse'
-const { x, y } = useMouse()
-</script>
+
+const MouseTracker: FC = () => {
+  const { x, y } = useMouse()
+
+  return <div>鼠标位置在：{x.value}, {y.value}</div>
+}
+```
 
 :::tip
 本章节假设你已经具备 Composition API 的基础知识。如果你只学习过 Options API，可以将 API 偏好设置为 Composition API（使用左侧边栏顶部的切换按钮），然后重新阅读[响应式基础](/guide/essentials/reactivity-fundamentals)和[生命周期钩子](/guide/essentials/lifecycle)章节。
@@ -308,7 +314,7 @@ console.log(mouse.x)
 
 ### 使用限制 {#usage-restrictions}
 
-Composables 应该只在 `<script setup>` 或 `setup()` 钩子中调用。它们还应该在这些上下文中**同步**调用。在某些情况下，你也可以在 `onMounted()` 等生命周期钩子中调用它们。
+Composables 应该只在组件函数或组件初始化入口中调用。它们还应该在这些上下文中**同步**调用。在某些情况下，你也可以在 `onMounted()` 等生命周期钩子中调用它们。
 
 这些限制很重要，因为这些是 Rue 能够确定当前活动组件实例的上下文。访问活动组件实例是必要的，以便：
 
@@ -317,7 +323,7 @@ Composables 应该只在 `<script setup>` 或 `setup()` 钩子中调用。它们
 2. 计算属性和监视器可以链接到它，以便在实例卸载时被销毁，防止内存泄漏。
 
 :::tip
-`<script setup>` 是唯一一个你可以在使用 `await` 之后调用 composables 的地方。编译器会自动在异步操作后为你恢复活动实例上下文。
+一旦跨过 `await`，当前活动组件实例上下文就可能已经丢失。因此，依赖生命周期钩子、provide / inject 或自动清理能力的 composable，最稳妥的做法是在第一次 `await` 之前完成调用。
 :::
 
 ## 提取 Composables 以组织代码 {#extracting-composables-for-code-organization}

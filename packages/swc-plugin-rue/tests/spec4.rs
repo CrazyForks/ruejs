@@ -17,9 +17,8 @@ export default C;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { vapor, _$createElement, _$createTextNode, _$appendChild } from "@rue-js/rue/vapor";
-import { type FC, h, ref } from '@rue-js/rue';
+    let expected_fragment = r##"import { ref, vapor, _$createElement, _$createTextNode, _$appendChild } from "@rue-js/rue/vapor";
+import { type FC, h } from '@rue-js/rue';
 const C: FC = ()=>vapor(()=>{
         const _root = _$createElement("div");
         _$appendChild(_root, _$createTextNode("ok"));

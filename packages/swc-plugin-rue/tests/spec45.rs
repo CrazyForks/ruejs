@@ -30,7 +30,7 @@ useApp(RootApp).use(router).mount('#app')
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, renderAnchor, _$createComment, _$createDocumentFragment, _$appendChild } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createComment, _$createDocumentFragment, _$appendChild } from "@rue-js/rue/vapor";
 import { type FC, useError, useApp } from '@rue-js/rue';
 import { RouterView } from '@rue-js/router';
 import router from './router';
@@ -48,11 +48,13 @@ const RootApp: FC = ()=>{
             const _root = _$createDocumentFragment();
             const _list1 = _$createComment("rue:component:anchor");
             _$appendChild(_root, _list1);
-            const __slot2 = <RouterView/>;
+            const __slot2 = _$createComponent(RouterView, {});
             renderAnchor(__slot2, _root, _list1);
             return _root;
         });
-        const __slot4 = <SiteLayout children={__child1}/>;
+        const __slot4 = _$createComponent(SiteLayout, {
+            children: __child1
+        });
         renderAnchor(__slot4, _root, _list3);
         return _root;
     });

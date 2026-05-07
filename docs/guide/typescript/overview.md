@@ -89,7 +89,7 @@ const App: FC = defineComponent({
 })
 ```
 
-`defineComponent()` 还支持在不使用 `<script setup>` 使用 Composition API 时推断传递给 `setup()` 的 props：
+如果你仍然需要显式声明运行时 `props` 选项，`defineComponent()` 也能为这些选项提供类型推断：
 
 ```ts
 import { defineComponent } from '@rue-js/rue'
@@ -100,8 +100,8 @@ const App: FC = defineComponent({
   props: {
     message: String,
   },
-  setup(props) {
-    props.message // 类型: string | undefined
+  mounted() {
+    this.message // 类型: string | undefined
   },
 })
 ```
@@ -139,30 +139,26 @@ const App: FC = defineComponent({
 </template>
 ```
 
-`lang="ts"` 也可以与 `<script setup>` 一起使用：
+如果你的项目主要使用 TSX，那么更常见的写法是直接在组件函数中声明响应式状态：
 
-```vue
-<script setup lang="ts">
-// 启用 TypeScript
-import { ref } from '@rue-js/rue'
+```tsx
+import { type FC, ref } from '@rue-js/rue'
 
-const count = ref(1)
-</script>
+const Counter: FC = () => {
+  const count = ref(1)
 
-<template>
-  <!-- 启用类型检查和自动完成 -->
-  {{ count.toFixed(2) }}
-</template>
+  return <div>{count.value.toFixed(2)}</div>
+}
 ```
 
 ### 模板中的 TypeScript {#typescript-in-templates}
 
-当使用 `<script lang="ts">` 或 `<script setup lang="ts">` 时，`<template>` 也支持在绑定表达式中使用 TypeScript。这在需要在模板表达式中执行类型转换的情况下很有用。
+当使用 `<script lang="ts">` 时，`<template>` 也支持在绑定表达式中使用 TypeScript。这在需要在模板表达式中执行类型转换的情况下很有用。
 
 这里有一个有点做作的例子：
 
 ```vue
-<script setup lang="ts">
+<script lang="ts">
 let x: string | number = 1
 </script>
 
@@ -175,7 +171,7 @@ let x: string | number = 1
 这可以通过内联类型转换来解决：
 
 ```vue{6}
-<script setup lang="ts">
+<script lang="ts">
 let x: string | number = 1
 </script>
 
@@ -194,10 +190,7 @@ Rue 还支持使用 JSX / TSX 编写组件。详细信息在[渲染函数与 JSX
 
 ## 泛型组件 {#generic-components}
 
-泛型组件在两种情况下受支持：
-
-- 在 SFC 中：[`带 generic 属性的 <script setup>`](/api/sfc-script-setup.html#generics)
-- 渲染函数 / JSX 组件：[`defineComponent()` 的函数签名](/api/general.html#function-signature)
+泛型组件在渲染函数 / JSX 组件中受支持，详见 [`defineComponent()` 的函数签名](/api/general.html#function-signature)。
 
 ## API 特定配方 {#api-specific-recipes}
 

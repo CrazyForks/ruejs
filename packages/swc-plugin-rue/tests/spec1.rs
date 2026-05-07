@@ -28,9 +28,8 @@ export default VaporJSXDemo;
     // - 事件：onClick → addEventListener('click', handler)
     // - 受控文本：span 内使用 _$createTextWrapper + _$settextContent + watch 显示 count.value
     // - hook：ref(0) 被 _$vaporWithHookId 包裹，生成稳定作用域与索引
-    let expected_fragment = r##"
-import { _$vaporWithHookId, vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
-import { type FC, ref, h } from '@rue-js/rue';
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { type FC, h } from '@rue-js/rue';
 const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
 const VaporJSXDemo: FC = ()=>vapor(()=>{
         const _root = _$createElement("div");

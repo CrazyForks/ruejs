@@ -23,6 +23,8 @@ h(Transition, {
 
 为**单个**元素或组件提供动画过渡效果。
 
+当前实现会在渲染区间内寻找第一个元素节点，并把进入 / 离开类名与回调应用到该元素上。它适合单个根元素，或最终只落成一个根元素节点的组件。
+
 - **Props**
 
   ```ts
@@ -51,11 +53,6 @@ h(Transition, {
      */
     duration?: number | { enter: number; leave: number }
     /**
-     * 控制离开/进入过渡的时间序列。
-     * 默认行为是同时进行。
-     */
-    mode?: 'in-out' | 'out-in' | 'default'
-    /**
      * 是否在初始渲染时应用过渡。
      * 默认值：false
      */
@@ -74,21 +71,39 @@ h(Transition, {
     leaveFromClass?: string
     leaveActiveClass?: string
     leaveToClass?: string
+
+    onBeforeEnter?: (el: HTMLElement) => void
+    onEnter?: (el: HTMLElement, done: () => void) => void
+    onAfterEnter?: (el: HTMLElement) => void
+    onEnterCancelled?: (el: HTMLElement) => void
+    onBeforeLeave?: (el: HTMLElement) => void
+    onLeave?: (el: HTMLElement, done: () => void) => void
+    onAfterLeave?: (el: HTMLElement) => void
+    onLeaveCancelled?: (el: HTMLElement) => void
+    onBeforeAppear?: (el: HTMLElement) => void
+    onAppear?: (el: HTMLElement, done: () => void) => void
+    onAfterAppear?: (el: HTMLElement) => void
+    onAppearCancelled?: (el: HTMLElement) => void
   }
   ```
 
-- **事件**
-  - `@before-enter`
-  - `@before-leave`
-  - `@enter`
-  - `@leave`
-  - `@appear`
-  - `@after-enter`
-  - `@after-leave`
-  - `@after-appear`
-  - `@enter-cancelled`
-  - `@leave-cancelled` (`v-show` 专用)
-  - `@appear-cancelled`
+- **回调 props**
+  - `onBeforeEnter`
+  - `onEnter`
+  - `onAfterEnter`
+  - `onEnterCancelled`
+  - `onBeforeLeave`
+  - `onLeave`
+  - `onAfterLeave`
+  - `onLeaveCancelled`
+  - `onBeforeAppear`
+  - `onAppear`
+  - `onAfterAppear`
+  - `onAppearCancelled`
+
+- **详情**
+
+  当前实现不支持 `mode`；当子节点发生切换时，不会额外编排 `out-in` / `in-out` 这样的时序。
 
 - **示例**
 
@@ -106,10 +121,10 @@ h(Transition, {
   </Transition>
   ```
 
-  动态组件，带过渡模式 + 首次渲染时动画：
+  动态组件，首次渲染时动画：
 
   ```tsx
-  <Transition name="fade" mode="out-in" appear>
+  <Transition name="fade" appear>
     {view}
   </Transition>
   ```
@@ -128,10 +143,10 @@ h(Transition, {
 
 - **Props**
 
-  `<TransitionGroup>` 接受与 `<Transition>` 相同的 props，除了 `mode`，外加两个额外的 props：
+  `<TransitionGroup>` 接受与 `<Transition>` 相同的 props，外加两个额外的 props：
 
   ```ts
-  interface TransitionGroupProps extends Omit<TransitionProps, 'mode'> {
+  interface TransitionGroupProps extends TransitionProps {
     /**
      * 如果未定义，则渲染为片段。
      */
@@ -150,7 +165,7 @@ h(Transition, {
 
 - **详情**
 
-  默认情况下，`<TransitionGroup>` 不渲染包装 DOM 元素，但可以通过 `tag` prop 定义一个。
+  默认情况下，`<TransitionGroup>` 会使用一个 `display: contents` 的稳定容器来承载子节点，因此通常不会引入额外布局盒；如果提供 `tag`，则渲染该标签对应的包装元素。
 
   注意，`<transition-group>` 中的每个子元素必须[**具有唯一的 key**](/guide/essentials/list#maintaining-state-with-key)，动画才能正常工作。
 
@@ -168,9 +183,9 @@ h(Transition, {
 
 - **另请参阅** [指南 - TransitionGroup](/guide/built-ins/transition-group)
 
-## `<KeepAlive>` {#keepalive} @todo
+## `<KeepAlive>` {#keepalive}
 
-缓存内部动态切换的组件。
+缓存动态切换的**单个直接子树**，在切换离开时保留其实例和 DOM 区间。
 
 - **Props**
 
@@ -180,28 +195,34 @@ h(Transition, {
      * 如果指定，只有名称与
      * `include` 匹配的组件才会被缓存。
      */
-    include?: MatchPattern
+    include?: KeepAliveMatchPattern
     /**
      * 名称与 `exclude` 匹配的任何组件
      * 将不会被缓存。
      */
-    exclude?: MatchPattern
+    exclude?: KeepAliveMatchPattern
     /**
      * 要缓存的组件实例的最大数量。
      */
     max?: number | string
   }
 
-  type MatchPattern = string | RegExp | (string | RegExp)[]
+  type KeepAliveMatchPattern = string | RegExp | (string | RegExp)[]
   ```
 
 - **详情**
 
-  当包裹在动态组件周围时，`<KeepAlive>` 会缓存不活动的组件实例而不销毁它们。
+  当包裹在动态组件周围时，`<KeepAlive>` 会在子树切走时把对应 DOM 区间移动到离线片段中，而不是立即卸载它。
 
-  任何时候，`<KeepAlive>` 的直接子级中只能有一个活动的组件实例。
+  任何时候，`<KeepAlive>` 的直接子级中只能有一个活动实例。当前实现会先扁平化 `children`，并只处理第一个非空子节点。
 
-  当在 `<KeepAlive>` 内部切换组件时，其 `activated` 和 `deactivated` 生命周期钩子将相应地被调用，作为 `mounted` 和 `unmounted` 的替代，后者不会被调用。这适用于 `<KeepAlive>` 的直接子级及其所有后代。
+  `include` / `exclude` 的匹配目标是缓存项的名称。当前实现优先使用直接子节点显式传入的 `key`（字符串 / 数字），其次才会回退到子节点上的 `name` 或内部挂载标识。因此，如果你需要稳定地控制缓存命中，最稳妥的方式是给动态子节点显式设置字符串 key。
+
+  `max` 会按最近最少使用（LRU）的顺序淘汰缓存项。
+
+  当 `max={0}` 时，缓存会被完全禁用，子树切换时会直接卸载而不是保留。
+
+  当前实现**没有**额外暴露 `activated` / `deactivated` 专用生命周期钩子。
 
 - **示例**
 
@@ -261,10 +282,10 @@ h(Transition, {
   ```ts
   interface TeleportProps {
     /**
-     * 必需。指定目标容器。
+     * 指定目标容器。
      * 可以是选择器或实际元素。
      */
-    to: string | HTMLElement
+    to?: string | HTMLElement
     /**
      * 当为 `true` 时，内容将保留在其原始
      * 位置，而不是移动到目标容器。
@@ -272,12 +293,18 @@ h(Transition, {
      */
     disabled?: boolean
     /**
-     * 当为 `true` 时，Teleport 将延迟直到
-     * 应用程序的其他部分挂载后再解析其目标。(3.5+)
+     * 当前类型中已保留该属性，但运行时尚未使用它。
+     * 传入 `defer` 目前不会改变目标解析时机。
      */
     defer?: boolean
   }
   ```
+
+- **详情**
+
+  实际使用时应始终提供 `to`。如果目标未解析成功，当前实现不会回退到原位置渲染，而是不会输出传送内容。
+
+  当 `disabled` 为 `true` 时，内容会直接渲染在组件当前位置；切回 `false` 后，同一段内容会被移动到目标容器。
 
 - **示例**
 
@@ -297,22 +324,9 @@ h(Transition, {
   </Teleport>
   ```
 
-  延迟目标解析 <sup class="vt-badge" data-text="3.5+" />：
-
-  ```tsx
-  ;<Teleport defer to="#late-div">
-    ...
-  </Teleport>
-
-  {
-    /* 模板中稍后某处 */
-  }
-  ;<div id="late-div"></div>
-  ```
-
 - **另请参阅** [指南 - Teleport](/guide/built-ins/teleport)
 
-## `<Suspense>` <sup class="vt-badge experimental" /> {#suspense} @todo
+## `<Suspense>` <sup class="vt-badge experimental" /> {#suspense}
 
 用于协调组件树中的嵌套异步依赖项。
 
@@ -320,22 +334,38 @@ h(Transition, {
 
   ```ts
   interface SuspenseProps {
+    fallback?: unknown
     timeout?: string | number
-    suspensible?: boolean
+    onPending?: () => void
+    onResolve?: () => void
+    onFallback?: () => void
   }
   ```
 
-- **事件**
-  - `@resolve`
-  - `@pending`
-  - `@fallback`
+- **回调 props**
+  - `onPending`
+  - `onResolve`
+  - `onFallback`
 
 - **详情**
 
-  `<Suspense>` 接受两个插槽：`#default` 插槽和 `#fallback` 插槽。它将在内存中渲染默认插槽时显示后备插槽的内容。
+  在 JSX / TSX 中，`<Suspense>` 通过 `children` 和 `fallback` prop 工作。它会先在隐藏容器中渲染 `children`，并在等待异步依赖解析时显示 `fallback`。
 
-  如果在渲染默认插槽时遇到异步依赖项（[异步组件](/guide/components/async)和带有 [`async setup()`](/guide/built-ins/suspense#async-setup) 的组件），它将等待直到所有依赖项都解析完成后再显示默认插槽。
+  当前实现会跟踪两类异步依赖：
 
-  通过将 Suspense 设置为 `suspensible`，所有异步依赖项处理将由父级 Suspense 处理。参见[实现细节](https://github.com/hunzhiwange/ruejs/pull/6736)
+  - `useComponent()` 在 pending 状态下登记到最近 Suspense 边界的 Promise
+  - 渲染过程中直接抛出的 thenable
+
+  `timeout` 控制的是：当组件已经显示过一次内容、随后又进入 pending 时，要等待多久才从旧内容切换到 `fallback`。`timeout={0}` 表示立即显示 `fallback`。
+
+  当前实现的 `<Suspense>` 本身**不支持** `suspensible` prop；如果你需要让异步组件退出 Suspense 控制，应在 `useComponent()` 上设置 `suspensible: false`。
+
+- **示例**
+
+  ```tsx
+  <Suspense fallback={<div>加载中...</div>} onResolve={handleResolved}>
+    <Dashboard />
+  </Suspense>
+  ```
 
 - **另请参阅** [指南 - Suspense](/guide/built-ins/suspense)

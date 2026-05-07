@@ -15,6 +15,7 @@ import rue, {
   markRuntimeDOMBridge,
   runWithRuntime,
 } from '../rue'
+import { registerRuntimeComponent } from '../component-registry'
 import { BrowserDOMAdapter, setDOMAdapter } from '../dom'
 import type { DomElementLike } from '../dom'
 import { querySelector, settextContent, setAttribute } from '../dom'
@@ -37,7 +38,7 @@ const ensureRuntimeDOMBridge = (runtime: Rue) => {
 /** 创建应用管理器
  * @param AppOrOptions 组件或 {setup, render} 配置
  * @param runtime 可选自定义 Rue 实例
- * @returns 含 use/mount/unmount 的应用控制对象
+ * @returns 含 use/component/mount/unmount 的应用控制对象
  */
 export function useApp(
   AppOrOptions:
@@ -87,6 +88,11 @@ export function useApp(
       runWithRuntime(appRue, () => {
         appRue.use(plugin, ...options)
       })
+      return this
+    },
+    /** 注册运行时组件名，供 <component is="Foo" /> 解析使用 */
+    component(name: string, component: ComponentInstance) {
+      registerRuntimeComponent(appRue, name, component)
       return this
     },
     /** 挂载应用到容器 */

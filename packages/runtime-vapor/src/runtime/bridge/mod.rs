@@ -7,7 +7,6 @@
 use crate::reactive::core::dispose_effect_scope;
 use crate::reactive::effect::EffectHandle;
 use crate::runtime::core::Rue;
-use crate::runtime::globals::MOUNT_INPUT_REGISTRY;
 use crate::runtime::js_adapter::JsDomAdapter;
 use crate::runtime::types::MountInput;
 use js_sys::Promise;
@@ -69,11 +68,7 @@ impl WasmRue {
         loop {
             let r = {
                 let mut queue = self.pending_render.borrow_mut();
-                if queue.is_empty() {
-                    None
-                } else {
-                    Some(queue.remove(0))
-                }
+                if queue.is_empty() { None } else { Some(queue.remove(0)) }
             };
             if let Some((vnode_r, cont_r)) = r {
                 match self.inner.try_borrow_mut() {
@@ -90,17 +85,18 @@ impl WasmRue {
             }
             let b = {
                 let mut queue = self.pending_between.borrow_mut();
-                if queue.is_empty() {
-                    None
-                } else {
-                    Some(queue.remove(0))
-                }
+                if queue.is_empty() { None } else { Some(queue.remove(0)) }
             };
             if let Some((vnode_b, p_b, s_b, e_b)) = b {
                 match self.inner.try_borrow_mut() {
                     Ok(mut inner_b) => {
                         let mut pb = p_b.clone();
-                        inner_b.render_between_input(vnode_b, (&mut pb).into(), s_b.into(), e_b.into());
+                        inner_b.render_between_input(
+                            vnode_b,
+                            (&mut pb).into(),
+                            s_b.into(),
+                            e_b.into(),
+                        );
                     }
                     Err(_) => {
                         self.pending_between.borrow_mut().push((vnode_b, p_b, s_b, e_b));
@@ -111,11 +107,7 @@ impl WasmRue {
             }
             let a = {
                 let mut queue = self.pending_anchor.borrow_mut();
-                if queue.is_empty() {
-                    None
-                } else {
-                    Some(queue.remove(0))
-                }
+                if queue.is_empty() { None } else { Some(queue.remove(0)) }
             };
             if let Some((vnode_a, p_a, anchor_a)) = a {
                 match self.inner.try_borrow_mut() {
@@ -132,11 +124,7 @@ impl WasmRue {
             }
             let s = {
                 let mut queue = self.pending_static.borrow_mut();
-                if queue.is_empty() {
-                    None
-                } else {
-                    Some(queue.remove(0))
-                }
+                if queue.is_empty() { None } else { Some(queue.remove(0)) }
             };
             if let Some((vnode_s, p_s, a_s)) = s {
                 match self.inner.try_borrow_mut() {
@@ -199,18 +187,5 @@ impl WasmRue {
         }
         self.root_effect.borrow_mut().take();
         self.root_effect_closure.borrow_mut().take();
-    }
-
-    /// 从默认输入注册表按 id 取出 MountInput（并置空其槽位）
-    pub(super) fn take_mount_input_from_registry(idv: &JsValue) -> Option<MountInput<JsDomAdapter>> {
-        if let Some(idf) = idv.as_f64() {
-            let idx = idf as usize;
-            MOUNT_INPUT_REGISTRY.with(|reg| {
-                let mut r = reg.borrow_mut();
-                if idx < r.len() { r[idx].take() } else { None }
-            })
-        } else {
-            None
-        }
     }
 }

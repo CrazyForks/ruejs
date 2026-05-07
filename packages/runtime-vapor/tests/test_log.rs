@@ -1,3 +1,5 @@
+#![cfg(feature = "log")]
+
 use js_sys::{Array, Function, Object, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;

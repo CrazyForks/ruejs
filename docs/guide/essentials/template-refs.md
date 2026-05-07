@@ -10,38 +10,36 @@
 
 ## 访问引用 {#accessing-the-refs}
 
-要获取引用，我们可以在组件中使用 `ref()`：
+要获取引用，通常在组件中使用 `useRef()`：
 
 ```tsx
-import { ref, onMounted } from '@rue-js/rue'
+import { onMounted, useRef } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
 const InputFocus: FC = () => {
-  // 声明一个 ref 来保存元素引用
-  // 名称必须与模板 ref 值匹配
-  const input = ref<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>()
 
   onMounted(() => {
-    input.value?.focus()
+    inputRef.current?.focus?.()
   })
 
-  return <input ref={input} />
+  return <input ref={inputRef} />
 }
 ```
 
-注意你只能**在组件挂载后**访问 ref。如果你尝试在模板表达式中访问 `input.value`，在第一次渲染时它将是 `null`。这是因为在第一次渲染之前元素不存在！
+注意你只能**在组件挂载后**访问 ref。在第一次渲染之前元素还不存在，因此 `current` 通常是 `undefined`；元素卸载后它也会被清空。
 
-如果你试图观察模板 ref 的变化，请务必考虑 ref 值为 `null` 的情况：
+`useRef()` 返回的是稳定但**非响应式**的容器。它适合命令式访问 DOM 或组件实例；如果你需要在 ref 写入后执行逻辑，请使用 `onMounted()`、`onUpdated()` 或函数 ref，而不是依赖 `watchEffect()` 追踪 `current`。
+
+例如：
 
 ```tsx
-import { watchEffect } from '@rue-js/rue'
+import { onUpdated, useRef } from '@rue-js/rue'
 
-watchEffect(() => {
-  if (input.value) {
-    input.value.focus()
-  } else {
-    // 尚未挂载，或元素已被卸载（例如被条件渲染）
-  }
+const inputRef = useRef<HTMLInputElement>()
+
+onUpdated(() => {
+  inputRef.current?.focus?.()
 })
 ```
 
@@ -54,16 +52,21 @@ watchEffect(() => {
 `ref` 也可以在子组件上使用。在这种情况下，引用将是组件实例：
 
 ```tsx
-import { ref, onMounted } from '@rue-js/rue'
+import { onMounted, useRef } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 import Child from './Child'
 
+type ChildExpose = {
+  focus: () => void
+}
+
 const Parent: FC = () => {
-  const childRef = ref<InstanceType<typeof Child>>(null)
+  const childRef = useRef<ChildExpose>()
 
   onMounted(() => {
-    // childRef.value 将持有 <Child /> 的实例
+    // childRef.current 将持有 <Child /> 的实例
     // 可以访问子组件的公开方法和属性
+    childRef.current?.focus()
   })
 
   return <Child ref={childRef} />
@@ -110,30 +113,30 @@ export default Child
 当在列表渲染中使用 `ref` 时，相应的 ref 应该包含一个数组值，在挂载后会被填充元素：
 
 ```tsx
-import { ref, onMounted } from '@rue-js/rue'
+import { onMounted, useRef } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
 const ListWithRefs: FC = () => {
-  const list = ref([
+  const list = [
     { id: 1, name: '项目 1' },
     { id: 2, name: '项目 2' },
     { id: 3, name: '项目 3' },
-  ])
+  ]
 
-  const itemRefs = ref<HTMLLIElement[]>([])
+  const itemRefs = useRef<Array<HTMLLIElement | null>>([])
 
   onMounted(() => {
-    console.log(itemRefs.value)
+    console.log(itemRefs.current)
     // [li, li, li]
   })
 
   return (
     <ul>
-      {list.value.map((item, index) => (
+      {list.map((item, index) => (
         <li
           key={item.id}
           ref={el => {
-            if (el) itemRefs.value[index] = el
+            if (itemRefs.current) itemRefs.current[index] = el
           }}
         >
           {item.name}
@@ -146,48 +149,47 @@ const ListWithRefs: FC = () => {
 
 需要注意的是，ref 数组**不**保证与源数组顺序相同。
 
+另外，`useRef()` 里的数组只是一个命令式容器；写入它不会触发重新渲染。
+
 ## 函数式引用 {#function-refs}
 
-除了字符串键，`ref` 属性也可以绑定到一个函数，该函数将在每次组件更新时被调用，并给你完全的灵活性来决定在哪里存储元素引用。该函数接收元素引用作为第一个参数：
+除了把 `ref` 绑定到 `useRef()` 返回的对象，`ref` 属性也可以直接绑定到一个函数。该函数会在挂载和更新时收到元素引用，在卸载时再次以 `null` 调用：
 
 ```tsx
-const elementRef = ref<HTMLInputElement>(null)
+const elementRef = useRef<HTMLInputElement>()
 
 return (
   <input
     ref={el => {
-      // 将 el 赋值给属性或 ref
-      elementRef.value = el
+      elementRef.current = el ?? undefined
     }}
   />
 )
 ```
 
-注意我们使用了一个函数作为 `ref` 绑定，这样我们可以传递一个函数而不是 ref 名称字符串。当元素卸载时，参数将是 `null`。当然，你也可以使用方法代替内联函数。
+这样你可以完全控制引用存储方式。当然，你也可以使用方法代替内联函数。
 
 ### 清理函数 {#cleanup-function}
 
-当元素卸载时，你可以通过返回一个清理函数来处理清理逻辑：
+函数 ref 的返回值不会被运行时使用。若要在元素卸载时清理，请在回调收到 `null` 时处理：
 
 ```tsx
 const ItemList: FC = () => {
   const itemRefs = new Map<number, HTMLLIElement>()
 
-  const setItemRef = (el: HTMLLIElement | null, id: number) => {
-    if (el) {
-      itemRefs.set(id, el)
+  const setItemRef = (id: number) => (el: HTMLLIElement | null) => {
+    if (!el) {
+      itemRefs.delete(id)
+      return
     }
 
-    // 返回清理函数
-    return () => {
-      itemRefs.delete(id)
-    }
+    itemRefs.set(id, el)
   }
 
   return (
     <ul>
       {items.value.map(item => (
-        <li key={item.id} ref={el => setItemRef(el, item.id)}>
+        <li key={item.id} ref={setItemRef(item.id)}>
           {item.name}
         </li>
       ))}
@@ -201,6 +203,12 @@ const ItemList: FC = () => {
 当你需要调用子组件的方法时，模板引用特别有用：
 
 ```tsx
+import { useRef } from '@rue-js/rue'
+
+type ChildExpose = {
+  doSomething: () => string
+}
+
 // 子组件
 const ChildComponent: FC = () => {
   const internalData = ref('内部数据')
@@ -216,11 +224,11 @@ const ChildComponent: FC = () => {
 
 // 父组件
 const ParentComponent: FC = () => {
-  const childRef = ref<InstanceType<typeof ChildComponent>>(null)
+  const childRef = useRef<ChildExpose>()
 
   const handleClick = () => {
     // 调用子组件的方法
-    const result = childRef.value?.doSomething()
+    const result = childRef.current?.doSomething()
     console.log('结果：', result)
   }
 

@@ -42,34 +42,27 @@
 
 表示[模板 ref](/guide/essentials/template-refs)。
 
-- **期望类型：** `string | Function`
+- **期望类型：** `Function | { current: unknown }`
 
 - **详情**
 
   `ref` 用于注册对元素或子组件的引用。
 
-  > @todo `useTemplateRef()` 尚未实现
-
-  在选项式 API 中，引用将在组件的 `this.$refs` 对象下注册：
-
-  ```vue-html
-  <!-- 存储为 this.$refs.p -->
-  <p ref="p">hello</p>
-  ```
-
-  在组合式 API 中，引用将存储在同名的 ref 中：
+  在当前的 JSX / TSX 路径中，推荐使用 `useRef()` 返回的容器保存引用：
 
   ```tsx
-  import { useTemplateRef } from '@rue-js/rue'
+  import { useRef } from '@rue-js/rue'
 
-  const pRef = useTemplateRef('p')
+  const pRef = useRef<HTMLParagraphElement>()
   ```
 
   ```tsx
   <p ref={pRef}>hello</p>
   ```
 
-  如果用于普通 DOM 元素，引用将是该元素；如果用于子组件，引用将是子组件实例。
+  如果用于普通 DOM 元素，`current` 将指向该元素；如果用于子组件，`current` 将指向子组件实例。
+
+  Rue 当前直接支持函数 ref 和对象 ref；不会把字符串 ref 自动收集到同名变量或 `$refs` 对象中。
 
   或者，`ref` 可以接受一个函数值，该函数提供对存储引用位置的完全控制：
 
@@ -78,8 +71,6 @@
   ```
 
   关于 ref 注册时间的重要说明：由于 refs 本身是渲染函数的结果，因此必须等到组件挂载后才能访问它们。
-
-  `this.$refs` 也是非响应式的，因此不应尝试在模板中将其用于数据绑定。
 
 - **另请参阅**
   - [指南 - 模板 Refs](/guide/essentials/template-refs)
@@ -93,8 +84,7 @@
 - **期望类型：** `string | Component`
 
 - **在原生元素上的使用**
-  - 仅在 3.1+ 中支持
-
+ 
   当在原生 HTML 元素上使用 `is` 属性时，它将被解释为[自定义内置元素](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-customized-builtin-example)，这是一个原生 Web 平台功能。
 
   但是，在某些用例中，您可能需要 Rue 用 Rue 组件替换原生元素，如在[DOM 内模板解析注意事项](/guide/essentials/component-basics#in-dom-template-parsing-caveats)中所述。您可以在 `is` 属性的值前加上 `rue:` 前缀，以便 Rue 将该元素作为 Rue 组件而不是自定义内置元素渲染：

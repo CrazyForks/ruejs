@@ -163,9 +163,8 @@ export default DocDetail
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setInnerHTML } from "@rue-js/rue/vapor";
-import { type FC, useEffect, useState } from '@rue-js/rue';
+    let expected_fragment = r##"import { useState, useEffect, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setInnerHTML } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
 import { RouterLink, useRoute } from '@rue-js/router';
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlayground';
 import MarkdownIt from 'markdown-it';
@@ -405,7 +404,10 @@ const DocDetail: FC = ()=>{
             return _root;
         });
         watchEffect(()=>{
-            const __slot5 = <SidebarPlayground type={sidebarType} children={__child1}/>;
+            const __slot5 = _$createComponent(SidebarPlayground, {
+                type: sidebarType,
+                children: __child1
+            });
             renderAnchor(__slot5, _root, _list4);
         });
         return _root;

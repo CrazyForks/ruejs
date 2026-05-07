@@ -146,6 +146,195 @@ const App: FC = () => {
 }
 ```
 
+### 使用 signal {#using-signal}
+
+`signal` 是 Rue 提供的另一种创建响应式状态的方式，灵感来自 Solid.js 和 Angular Signals。与 `ref` 使用 `.value` 属性不同，`signal` 使用 `.get()` 和 `.set()` 方法来读写值，语义更加明确，特别适合习惯函数式编程风格的开发者。
+
+#### 基本用法
+
+```tsx
+import { type FC, signal } from '@rue-js/rue'
+
+const App: FC = () => {
+  const count = signal(0)
+  const name = signal('Rue')
+
+  return (
+    <div>
+      <p>
+        {name.get()} 的计数：{count.get()}
+      </p>
+      <button onClick={() => count.set(count.get() + 1)}>加一</button>
+      <button onClick={() => count.set(count.get() - 1)}>减一</button>
+      <button onClick={() => count.set(0)}>重置</button>
+    </div>
+  )
+}
+```
+
+#### 与 computed 配合
+
+`signal` 与 `computed` 无缝配合，计算属性会自动追踪所有访问过的 `signal` 依赖：
+
+```tsx
+import { type FC, signal, computed } from '@rue-js/rue'
+
+const App: FC = () => {
+  const firstName = signal('张')
+  const lastName = signal('三')
+
+  // computed 自动追踪 firstName 和 lastName 的变化
+  const fullName = computed(() => `${firstName.get()}${lastName.get()}`)
+  const greeting = computed(() => `你好，${fullName.value}！`)
+  const initials = computed(() => `${firstName.get()[0]}${lastName.get()[0]}`)
+
+  return (
+    <div>
+      <div>
+        <input
+          value={firstName.get()}
+          onInput={e => firstName.set((e.target as HTMLInputElement).value)}
+          placeholder="姓"
+        />
+        <input
+          value={lastName.get()}
+          onInput={e => lastName.set((e.target as HTMLInputElement).value)}
+          placeholder="名"
+        />
+      </div>
+      <p>{greeting.value}</p>
+      <p>缩写：{initials.value}</p>
+    </div>
+  )
+}
+```
+
+#### 与 watch / watchEffect 配合
+
+`signal` 可以直接传入 `watch` 进行监听，也可以在 `watchEffect` 中被自动追踪：
+
+```tsx
+import { type FC, signal, watch, watchEffect } from '@rue-js/rue'
+
+const App: FC = () => {
+  const count = signal(0)
+  const keyword = signal('')
+
+  // 监听单个 signal：第一个参数传入 signal 本身
+  watch(count, (newVal, oldVal) => {
+    console.log(`count 从 ${oldVal} 变为 ${newVal}`)
+  })
+
+  // 同时监听多个 signal
+  watch([count, keyword], ([newCount, newKeyword], [oldCount, oldKeyword]) => {
+    console.log(`count: ${oldCount} → ${newCount}`)
+    console.log(`keyword: "${oldKeyword}" → "${newKeyword}"`)
+  })
+
+  // watchEffect 自动追踪内部用到的所有 signal
+  watchEffect(() => {
+    if (keyword.get()) {
+      console.log(`正在搜索"${keyword.get()}"，当前计数：${count.get()}`)
+    }
+  })
+
+  return (
+    <div>
+      <input
+        value={keyword.get()}
+        onInput={e => keyword.set((e.target as HTMLInputElement).value)}
+        placeholder="搜索关键词"
+      />
+      <p>计数：{count.get()}</p>
+      <button onClick={() => count.set(count.get() + 1)}>加一</button>
+    </div>
+  )
+}
+```
+
+#### 对象与数组类型
+
+`signal` 可以存储任意类型的值，包括对象和数组。更新引用类型时，传入新的引用以触发响应式更新：
+
+```tsx
+import { type FC, signal, computed } from '@rue-js/rue'
+
+interface Todo {
+  id: number
+  text: string
+  done: boolean
+}
+
+const TodoApp: FC = () => {
+  const todos = signal<Todo[]>([
+    { id: 1, text: '学习 Rue', done: false },
+    { id: 2, text: '构建应用', done: false },
+  ])
+  const input = signal('')
+
+  // 从 signal 派生计算属性
+  const remaining = computed(() => todos.get().filter(t => !t.done).length)
+  const total = computed(() => todos.get().length)
+
+  const addTodo = () => {
+    if (!input.get().trim()) return
+    // 传入新数组引用来触发更新
+    todos.set([...todos.get(), { id: Date.now(), text: input.get(), done: false }])
+    input.set('')
+  }
+
+  const toggleTodo = (id: number) => {
+    todos.set(todos.get().map(t => (t.id === id ? { ...t, done: !t.done } : t)))
+  }
+
+  const removeTodo = (id: number) => {
+    todos.set(todos.get().filter(t => t.id !== id))
+  }
+
+  return (
+    <div>
+      <h3>
+        待完成：{remaining.value} / {total.value}
+      </h3>
+      <div>
+        <input
+          value={input.get()}
+          onInput={e => input.set((e.target as HTMLInputElement).value)}
+          onKeyDown={e => e.key === 'Enter' && addTodo()}
+          placeholder="新待办事项，回车确认"
+        />
+        <button onClick={addTodo}>添加</button>
+      </div>
+      <ul>
+        {todos.get().map(todo => (
+          <li key={todo.id}>
+            <span
+              style={{ textDecoration: todo.done ? 'line-through' : 'none', cursor: 'pointer' }}
+              onClick={() => toggleTodo(todo.id)}
+            >
+              {todo.text}
+            </span>
+            <button onClick={() => removeTodo(todo.id)}>删除</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+#### signal 与 ref 的对比
+
+| 特性 | `signal` | `ref` |
+| ---- | -------- | ----- |
+| 读取值 | `count.get()` | `count.value` |
+| 写入值 | `count.set(newVal)` | `count.value = newVal` |
+| 类型风格 | getter / setter 函数 | 属性访问 |
+| 灵感来源 | Solid.js / Angular | Vue 3 |
+| 适合场景 | 函数式编程偏好 | 属性访问偏好 |
+
+两者在响应式追踪能力上完全等价，可以在同一个项目中混合使用，按团队偏好选择即可。
+
 ### 使用 watch 和 watchEffect
 
 Rue 提供了 `watch` 和 `watchEffect` 来监听响应式状态的变化：

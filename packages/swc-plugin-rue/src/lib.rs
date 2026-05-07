@@ -79,6 +79,7 @@ pub fn transform(program: Program, _metadata: TransformPluginProgramMetadata) ->
         next_list: 0,
         next_map: 0,
         next_child: 0,
+        once_depth: 0,
         did_transform: false,
         el_tag_by_ident: std::collections::HashMap::new(),
     });
@@ -96,6 +97,7 @@ pub fn apply(program: Program) -> Program {
         next_list: 0,
         next_map: 0,
         next_child: 0,
+        once_depth: 0,
         did_transform: false,
         el_tag_by_ident: std::collections::HashMap::new(),
     });

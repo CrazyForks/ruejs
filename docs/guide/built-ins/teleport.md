@@ -139,26 +139,14 @@ const MyModal: FC = () => {
 </div>
 ```
 
-## 延迟传送门 <sup class="vt-badge" data-text="3.5+" /> (Deferred Teleport) {#deferred-teleport}
+## 关于 `defer` {#deferred-teleport}
 
-在 Rue 3.5 及以上版本中，我们可以使用 `defer` prop 将 Teleport 的目标解析延迟到应用的其他部分挂载之后。这允许 Teleport 目标是由 Rue 渲染的容器元素，但在组件树的后面部分：
+`TeleportProps` 类型里目前仍然保留了 `defer` 字段，但当前运行时实现还没有实际使用它。也就是说，传入 `defer` 现在**不会**延迟目标解析，也不能让 Teleport 等待后面才出现的目标容器。
 
-```tsx
-;<Teleport defer to="#late-div">
-  ...
-</Teleport>
-
-{
-  /* 模板后面某处 */
-}
-;<div id="late-div"></div>
-```
-
-注意，目标元素必须与 Teleport 在同一挂载/更新周期内渲染 - 即，如果 `<div>` 在一秒后挂载，Teleport 仍然会报告错误。defer 的工作方式类似于 `mounted` 生命周期钩子。
+因此，当前使用 `<Teleport>` 时仍然应该保证目标元素在 Teleport 挂载前就已经存在于 DOM 中。
 
 ---
 
 **相关**
 
 - [`<Teleport>` API 参考](/api/built-in-components#teleport)
-- [在 SSR 中处理 Teleports](/guide/scaling-up/ssr#teleports)

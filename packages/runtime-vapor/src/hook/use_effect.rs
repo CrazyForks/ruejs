@@ -21,7 +21,9 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 
-use crate::reactive::context::{get_current_instance, with_current_instance_hook_scope, with_hook_slot};
+use crate::reactive::context::{
+    get_current_instance, with_current_instance_hook_scope, with_hook_slot,
+};
 use crate::reactive::effect::on_cleanup;
 use crate::reactive::watch::watch;
 
@@ -90,8 +92,8 @@ fn is_dynamic_dep_source(value: &JsValue) -> bool {
         if getter.is_function() {
             return true;
         }
-        let value_prop = Reflect::get(value, &JsValue::from_str("value"))
-            .unwrap_or(JsValue::UNDEFINED);
+        let value_prop =
+            Reflect::get(value, &JsValue::from_str("value")).unwrap_or(JsValue::UNDEFINED);
         if !value_prop.is_undefined() {
             return true;
         }
@@ -229,7 +231,11 @@ pub fn use_effect(effect: Function, deps: Option<JsValue>, options: Option<JsVal
     let scheduler_for_factory = scheduler.clone();
     let slot_factory = Closure::wrap(Box::new(move || {
         let slot = Object::new();
-        let _ = Reflect::set(&slot, &JsValue::from_str("effect"), &JsValue::from(effect_for_factory.clone()));
+        let _ = Reflect::set(
+            &slot,
+            &JsValue::from_str("effect"),
+            &JsValue::from(effect_for_factory.clone()),
+        );
         let handle = with_current_instance_hook_scope(|| {
             create_use_effect_watch(
                 &slot,
@@ -254,15 +260,18 @@ pub fn use_effect(effect: Function, deps: Option<JsValue>, options: Option<JsVal
     let _ = Reflect::set(&slot, &JsValue::from_str("effect"), &JsValue::from(effect));
 
     let prev_deps = Reflect::get(&slot, &JsValue::from_str("deps")).unwrap_or(JsValue::UNDEFINED);
-    let prev_equals = Reflect::get(&slot, &JsValue::from_str("equals")).unwrap_or(JsValue::UNDEFINED);
-    let prev_scheduler = Reflect::get(&slot, &JsValue::from_str("scheduler")).unwrap_or(JsValue::UNDEFINED);
+    let prev_equals =
+        Reflect::get(&slot, &JsValue::from_str("equals")).unwrap_or(JsValue::UNDEFINED);
+    let prev_scheduler =
+        Reflect::get(&slot, &JsValue::from_str("scheduler")).unwrap_or(JsValue::UNDEFINED);
 
     let should_recreate = !same_dep_array(&prev_deps, &raw_deps)
         || !same_optional_function(&prev_equals, equals.as_ref())
         || !same_optional_function(&prev_scheduler, scheduler.as_ref());
 
     if should_recreate {
-        let prev_handle = Reflect::get(&slot, &JsValue::from_str("handle")).unwrap_or(JsValue::UNDEFINED);
+        let prev_handle =
+            Reflect::get(&slot, &JsValue::from_str("handle")).unwrap_or(JsValue::UNDEFINED);
         dispose_effect_handle_value(&prev_handle);
         let handle = with_current_instance_hook_scope(|| {
             create_use_effect_watch(&slot, &raw_deps, equals.clone(), scheduler.clone())

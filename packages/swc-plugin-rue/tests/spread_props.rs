@@ -33,7 +33,7 @@ export default SpreadProps;
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const Button: FC<{
@@ -76,7 +76,10 @@ const SpreadProps: FC = ()=>{
         const _list2 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list2);
         watchEffect(()=>{
-            const __slot3 = <Button {...base} {...extra}/>;
+            const __slot3 = _$createComponent(Button, {
+                ...base,
+                ...extra
+            });
             renderAnchor(__slot3, _root, _list2);
         });
         const _el2 = _$createElement("a");

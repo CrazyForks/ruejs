@@ -116,7 +116,7 @@ const App: FC = () => {
 
 ## 与其他组件结合使用 (Combining with Other Components) {#combining-with-other-components}
 
-通常希望将 `<Suspense>` 与 [`<Transition>`](./transition) 和 [`<KeepAlive>`](./keep-alive) 组件结合使用。这些组件的嵌套顺序对于使它们都正常工作很重要。
+通常希望将 `<Suspense>` 与 [`<Transition>`](./transition) 和 [`<KeepAlive>`](./keep-alive) 组件结合使用。不过需要注意，这里的组合能力应以 Rue 当前实现为准，而不是直接套用 Vue 文档中的全部语义。
 
 此外，这些组件通常与来自 [Rue Router](https://router.vuejs.org/) 的 `<RouterView>` 组件结合使用。
 
@@ -132,7 +132,7 @@ const App: FC = () => {
     <RouterView>
       {({ Component }) =>
         Component && (
-          <Transition mode="outIn">
+          <Transition>
             <KeepAlive>
               <Suspense fallback={<div>加载中...</div>}>
                 <Component />
@@ -162,19 +162,21 @@ Rue Router 内置支持使用动态导入 [懒加载组件](https://router.vuejs
 
 `<Suspense>` 创建一个边界，将解析树中的所有异步组件，如预期的那样。但是，当我们更改 `DynamicOuter` 时，`<Suspense>` 正确地等待它，但当我们更改 `DynamicInner` 时，嵌套的 `DynamicInner` 在解析完成之前渲染一个空节点（而不是之前的节点或 fallback 插槽）。
 
-为了解决这个问题，我们可以有一个嵌套的 suspense 来处理嵌套组件的补丁：
+Rue 当前可以嵌套多个 `<Suspense>` 边界，但 `<Suspense>` 本身还没有实现 Vue 文档中那种通过 `suspensible` prop 把依赖处理权继续上交给父边界的行为。
+
+也就是说，下面这种写法在当前实现里并不会额外启用父子 Suspense 之间的“依赖接管”语义：
 
 ```tsx
 <Suspense>
   <DynamicOuter>
-    <Suspense suspensible>
+    <Suspense>
       <DynamicInner />
     </Suspense>
   </DynamicOuter>
 </Suspense>
 ```
 
-如果您不设置 `suspensible` prop，内部的 `<Suspense>` 将被父 `<Suspense>` 视为同步组件。这意味着它有自己的 fallback 插槽，如果两个 `Dynamic` 组件同时更改，在子 `<Suspense>` 加载其自己的依赖树时可能会有空节点和多个补丁周期，这可能不是期望的。设置后，所有异步依赖处理都交给父 `<Suspense>`（包括发出的事件），内部 `<Suspense>` 仅作为依赖解析和补丁的另一个边界。
+如果你需要控制某个异步组件是否向最近的 Suspense 边界登记 pending 状态，当前应该通过 `useComponent({ suspensible: false })` 来做，而不是给 `<Suspense>` 传 `suspensible`。
 
 ---
 

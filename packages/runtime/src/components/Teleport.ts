@@ -23,7 +23,7 @@ import {
   settextContent,
 } from '../dom'
 import type { DomElementLike, DomNodeLike } from '../dom'
-import { useSetup } from '@rue-js/runtime-vapor'
+import { useSetup } from '@rue-js/runtime-vapor/reactive'
 
 export interface TeleportProps {
   to?: string | HTMLElement

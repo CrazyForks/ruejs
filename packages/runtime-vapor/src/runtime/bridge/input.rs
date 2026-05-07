@@ -1,186 +1,262 @@
 use super::WasmRue;
-use crate::runtime::DEFAULT_MOUNT_HANDLE_KEY;
-use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::js_adapter::JsDomAdapter;
-use crate::runtime::types::{ComponentProps, MountInput, MountInputType};
-use js_sys::{Array, Object, Reflect};
+use crate::runtime::transport;
+use crate::runtime::types::MountInput;
+#[cfg(feature = "compat")]
+use crate::runtime::vnode_helpers::{
+    compat_children_from_value as shared_compat_children_from_value,
+    compat_input_from_values as shared_compat_input_from_values,
+    compat_object_to_input as shared_compat_object_to_input,
+};
+#[cfg(feature = "compat")]
+use js_sys::Function;
+#[cfg(feature = "compat")]
+use crate::runtime::types::MountInputChild;
+#[cfg(feature = "compat")]
+use js_sys::Array;
+#[cfg(feature = "compat")]
+use js_sys::Object;
+#[cfg(feature = "compat")]
+use js_sys::Reflect;
+#[cfg(feature = "compat")]
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
+#[derive(Clone, Copy)]
+pub(super) enum CompatEntryPolicy {
+    #[cfg(feature = "compat")]
+    LegacyRawElementInput,
+    LegacyArrayOrRawElementInput,
+    LegacyArrayRawElementOrFunctionComponentInput,
+}
+
+#[cfg(feature = "compat")]
+impl CompatEntryPolicy {
+    fn allows_array(self) -> bool {
+        matches!(
+            self,
+            Self::LegacyArrayOrRawElementInput
+                | Self::LegacyArrayRawElementOrFunctionComponentInput
+        )
+    }
+
+    fn allows_raw_element(self) -> bool {
+        matches!(
+            self,
+            Self::LegacyRawElementInput
+                | Self::LegacyArrayOrRawElementInput
+                | Self::LegacyArrayRawElementOrFunctionComponentInput
+        )
+    }
+
+    fn allows_function_component(self) -> bool {
+        matches!(self, Self::LegacyArrayRawElementOrFunctionComponentInput)
+    }
+}
+
 impl WasmRue {
-    fn registry_handle_value(&self, obj: &Object) -> JsValue {
-        Reflect::get(obj, &JsValue::from_str(DEFAULT_MOUNT_HANDLE_KEY))
-            .unwrap_or(JsValue::UNDEFINED)
+    #[cfg(feature = "compat")]
+    pub(super) fn compat_children_from_array(
+        &self,
+        arr: &Array,
+        compat_entry_policy: CompatEntryPolicy,
+    ) -> Vec<MountInputChild<JsDomAdapter>> {
+        self.compat_children_from_value(&JsValue::from(arr.clone()), compat_entry_policy)
     }
 
-    fn host_node_value(&self, obj: &Object) -> JsValue {
-        Reflect::get(obj, &JsValue::from_str("__rue_host_node")).unwrap_or(JsValue::UNDEFINED)
+    #[cfg(feature = "compat")]
+    pub(super) fn compat_children_from_value(
+        &self,
+        item: &JsValue,
+        compat_entry_policy: CompatEntryPolicy,
+    ) -> Vec<MountInputChild<JsDomAdapter>> {
+        shared_compat_children_from_value::<JsDomAdapter, _>(item, |child_value| {
+            self.mount_input_from_input(child_value, compat_entry_policy)
+        })
     }
 
+    #[cfg(feature = "compat")]
     fn mount_input_from_array(&self, input_array: &JsValue) -> Option<MountInput<JsDomAdapter>> {
         if !Array::is_array(input_array) {
             return None;
         }
 
-        let empty_props = Object::new();
-        let id = self.create_element_wasm(
-            JsValue::from_str(crate::runtime::types::FRAGMENT),
-            empty_props.into(),
-            input_array.clone(),
-        );
-        let id_unwrapped = self.mount_registry_id(&id);
-        let mut input = WasmRue::take_mount_input_from_registry(&id_unwrapped)?;
-
         let source = Object::from(input_array.clone());
+        let child_vec = self.compat_children_from_array(
+            &Array::from(input_array),
+            CompatEntryPolicy::LegacyRawElementInput,
+        );
+        let mut input = MountInput::new_normalized(
+            crate::runtime::types::MountInputType::<JsDomAdapter>::Fragment,
+            Default::default(),
+            child_vec,
+        );
         input.attach_mount_metadata_from_source(&source);
 
         Some(input)
     }
 
-    pub(super) fn mount_registry_id(&self, vnode_id: &JsValue) -> JsValue {
-        if vnode_id.as_f64().is_some() {
-            vnode_id.clone()
-        } else if let Some(text) = vnode_id.as_string() {
-            match text.parse::<f64>() {
-                Ok(number) => JsValue::from_f64(number),
-                Err(_) => JsValue::UNDEFINED,
-            }
-        } else if vnode_id.is_object() {
-            let obj = Object::from(vnode_id.clone());
-            self.registry_handle_value(&obj)
-        } else {
-            JsValue::UNDEFINED
-        }
-    }
-
+    #[cfg(feature = "compat")]
     pub(super) fn mount_input_from_function_component(
         &self,
         vnode_id: &JsValue,
     ) -> Option<MountInput<JsDomAdapter>> {
-        if !vnode_id.is_function() {
-            return None;
-        }
-
-        let empty_props = Object::new();
-        let id = self.create_element_wasm(vnode_id.clone(), empty_props.into(), JsValue::UNDEFINED);
-        let id_unwrapped = self.mount_registry_id(&id);
-        WasmRue::take_mount_input_from_registry(&id_unwrapped)
+        let func = vnode_id.dyn_ref::<Function>()?.clone();
+        Some(MountInput::new_normalized(
+            crate::runtime::types::MountInputType::<JsDomAdapter>::Component(func.into()),
+            Default::default(),
+            Vec::new(),
+        ))
     }
 
-    fn props_from_vapor_source(
+    #[cfg(feature = "compat")]
+    fn compat_mount_input_from_values(
         &self,
-        _source: &Object,
-        el: &<JsDomAdapter as DomAdapter>::Element,
-    ) -> ComponentProps {
-        let mut props = ComponentProps::new();
-
-        if let Ok(inner) = self.inner.try_borrow() {
-            if let Some(adapter) = inner.get_dom_adapter() {
-                if adapter.is_fragment(el) {
-                    let nodes = adapter.collect_fragment_children(el);
-                    let arr = Array::new();
-                    for node in nodes.into_iter() {
-                        arr.push(&node);
-                    }
-                    props.insert("__fragNodes".to_string(), arr.clone().into());
-
-                    let el_js: JsValue = el.clone().into();
-                    let _ = Reflect::set(
-                        &el_js,
-                        &JsValue::from_str("__rue_frag_nodes_ref"),
-                        &arr,
-                    );
-                }
-            }
-        }
-
-        props
-    }
-
-    fn mount_input_from_host_node_object(
-        &self,
-        obj: &Object,
+        type_tag: &JsValue,
+        props_value: &JsValue,
+        children_value: &JsValue,
+        fallback_unknown_element: Option<&str>,
+        compat_entry_policy: CompatEntryPolicy,
     ) -> Option<MountInput<JsDomAdapter>> {
-        let host = self.host_node_value(obj);
-        if host.is_undefined() || host.is_null() {
-            return None;
-        }
-
-        let el: <JsDomAdapter as DomAdapter>::Element = host.into();
-        let props = self.props_from_vapor_source(obj, &el);
-        let mut input = MountInput {
-            r#type: MountInputType::<JsDomAdapter>::Vapor,
-            props,
-            children: vec![],
-            key: None,
-            mount_cleanup_bucket: None,
-            mount_effect_scope_id: None,
-            el_hint: Some(el),
-        };
-        input.attach_mount_metadata_from_source(obj);
-        Some(input)
+        shared_compat_input_from_values::<JsDomAdapter, _>(
+            type_tag,
+            props_value,
+            children_value,
+            fallback_unknown_element,
+            |effective_children| {
+                self.compat_children_from_value(effective_children, compat_entry_policy)
+            },
+        )
     }
 
-    fn mount_input_from_raw_element(
+    #[cfg(feature = "compat")]
+    pub(super) fn compat_mount_input_from_create_element(
         &self,
-        vnode_id: &JsValue,
-    ) -> Option<MountInput<JsDomAdapter>> {
+        type_tag: &JsValue,
+        props_value: &JsValue,
+        children_value: &JsValue,
+    ) -> MountInput<JsDomAdapter> {
+        self.compat_mount_input_from_values(
+            type_tag,
+            props_value,
+            children_value,
+            Some("div"),
+            CompatEntryPolicy::LegacyRawElementInput,
+        )
+        .expect("createElement compat input should always normalize")
+    }
+
+    #[cfg(feature = "compat")]
+    fn mount_input_from_raw_element(&self, vnode_id: &JsValue) -> Option<MountInput<JsDomAdapter>> {
         if !vnode_id.is_object() {
             return None;
         }
 
         let obj = Object::from(vnode_id.clone());
-        let node_type = Reflect::get(&obj, &JsValue::from_str("nodeType"))
-            .unwrap_or(JsValue::UNDEFINED);
+        let node_type =
+            Reflect::get(&obj, &JsValue::from_str("nodeType")).unwrap_or(JsValue::UNDEFINED);
         if node_type.as_f64().is_none() {
             return None;
         }
 
-        let el: <JsDomAdapter as DomAdapter>::Element = vnode_id.clone().into();
-        let props = self.props_from_vapor_source(&obj, &el);
-        let mut input = MountInput {
-            r#type: MountInputType::<JsDomAdapter>::Vapor,
-            props,
-            children: vec![],
-            key: None,
-            mount_cleanup_bucket: None,
-            mount_effect_scope_id: None,
-            el_hint: Some(el),
-        };
-        input.attach_mount_metadata_from_source(&obj);
-        Some(input)
+        let inner = self.inner.try_borrow().ok()?;
+        Some(transport::element_value_to_vapor_input(
+            &inner,
+            &obj,
+            vnode_id.clone(),
+        ))
     }
 
-    pub(super) fn default_mount_input_from_input(
+    #[cfg(feature = "compat")]
+    fn mount_input_from_compat_object(
         &self,
         input_value: &JsValue,
-        allow_function_component: bool,
+        compat_entry_policy: CompatEntryPolicy,
     ) -> Option<MountInput<JsDomAdapter>> {
-        let id_value = self.mount_registry_id(input_value);
-        if let Some(mut input) = WasmRue::take_mount_input_from_registry(&id_value) {
-            if input_value.is_object() {
-                let source = Object::from(input_value.clone());
-                input.attach_mount_metadata_from_source(&source);
+        shared_compat_object_to_input::<JsDomAdapter, _, _>(
+            input_value,
+            None,
+            |type_value| compat_entry_policy.allows_function_component() || !type_value.is_function(),
+            |effective_children| {
+                self.compat_children_from_value(
+                    effective_children,
+                    CompatEntryPolicy::LegacyRawElementInput,
+                )
+            },
+        )
+    }
+
+    fn default_surface_mount_input_from_input(
+        &self,
+        input_value: &JsValue,
+    ) -> Option<MountInput<JsDomAdapter>> {
+        if let Some(input) = transport::default_handle_input(input_value) {
+            return Some(input);
+        }
+
+        if input_value.is_object() {
+            let obj = js_sys::Object::from(input_value.clone());
+            if let Some(input) = transport::portable_object_input::<JsDomAdapter>(&obj) {
+                return Some(input);
             }
-            return Some(input);
+
+            let inner = self.inner.try_borrow().ok()?;
+            if let Some(input) = transport::default_input(&inner, input_value) {
+                return Some(input);
+            }
         }
 
-        if let Some(input) = self.mount_input_from_array(input_value) {
-            return Some(input);
+        None
+    }
+
+    #[cfg(feature = "compat")]
+    fn compat_extension_mount_input_from_input(
+        &self,
+        input_value: &JsValue,
+        compat_entry_policy: CompatEntryPolicy,
+    ) -> Option<MountInput<JsDomAdapter>> {
+        if compat_entry_policy.allows_array() {
+            if let Some(input) = self.mount_input_from_array(input_value) {
+                return Some(input);
+            }
         }
 
-        if allow_function_component {
+        if compat_entry_policy.allows_function_component() {
             if let Some(input) = self.mount_input_from_function_component(input_value) {
                 return Some(input);
             }
         }
 
-        if input_value.is_object() {
-            let obj = Object::from(input_value.clone());
-            return self
-                .mount_input_from_host_node_object(&obj)
-                .or_else(|| self.mount_input_from_raw_element(input_value));
+        if compat_entry_policy.allows_raw_element() && input_value.is_object() {
+            if let Some(input) = self.mount_input_from_raw_element(input_value) {
+                return Some(input);
+            }
+        }
+
+        if let Some(input) = self.mount_input_from_compat_object(input_value, compat_entry_policy)
+        {
+            return Some(input);
         }
 
         None
+    }
+
+    #[cfg(feature = "compat")]
+    pub(super) fn mount_input_from_input(
+        &self,
+        input_value: &JsValue,
+        compat_entry_policy: CompatEntryPolicy,
+    ) -> Option<MountInput<JsDomAdapter>> {
+        self.default_surface_mount_input_from_input(input_value)
+            .or_else(|| self.compat_extension_mount_input_from_input(input_value, compat_entry_policy))
+    }
+
+    #[cfg(not(feature = "compat"))]
+    pub(super) fn mount_input_from_input(
+        &self,
+        input_value: &JsValue,
+        _compat_entry_policy: CompatEntryPolicy,
+    ) -> Option<MountInput<JsDomAdapter>> {
+        self.default_surface_mount_input_from_input(input_value)
     }
 }

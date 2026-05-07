@@ -15,7 +15,9 @@ wasm-bindgen-test = "0.3"
 wasm-bindgen-futures = "0.4"
 
 [features]
-default = []
+default = ["runtime", "compat"]
+runtime = []
+compat = ["runtime"]
 dom = []
 log = []
 dev = []

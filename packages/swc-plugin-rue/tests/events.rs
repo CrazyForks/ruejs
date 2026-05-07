@@ -120,9 +120,8 @@ export default Events;
     // - 文本插值：count/list/user/format 的值以 _$createTextWrapper + _$settextContent + watch 更新
     // - disabled：基于 list.length 的 watch 控制
     // - 函数状态：调用 valueOf() 的格式化函数再 watch 更新
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue, _$setDisabled } from "@rue-js/rue/vapor";
-import { type FC, useState } from '@rue-js/rue';
+    let expected_fragment = r##"import { useState, _$vaporWithHookId, useSetup, vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue, _$setDisabled } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const DEC_FORMAT = (n: number)=>String(n);
 const HEX_FORMAT = (n: number)=>'0x' + n.toString(16);

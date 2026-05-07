@@ -16,7 +16,9 @@
 */
 
 // 提供获取/设置当前实例，并在有实例时为 Hook 分配稳定的“插槽索引”。
+#[cfg(feature = "runtime")]
 use crate::ComponentInternalInstance;
+#[cfg(feature = "runtime")]
 use crate::DomAdapter;
 #[cfg(feature = "dev")]
 use crate::log::{log, want_log};
@@ -90,6 +92,7 @@ pub fn get_current_instance() -> JsValue {
 /// 内部：将当前实例设置为给定的组件实例对象，并准备 Hook 容器
 /// - 复位 __hooks.index = 0，确保本次更新周期的 Hook 对齐
 /// - 写入 propsRO，便于 JS 侧访问
+#[cfg(feature = "runtime")]
 pub(crate) fn set_current_instance_ci<A: DomAdapter>(inst: &mut ComponentInternalInstance<A>) {
     let idx = inst.index;
     let wrapper_js = CI_WRAPPERS.with(|wr| {
@@ -128,8 +131,8 @@ pub(crate) fn ensure_current_instance_hook_scope() -> Option<usize> {
         return None;
     }
     let obj = Object::from(inst);
-    let existing = Reflect::get(&obj, &JsValue::from_str(HOOK_EFFECT_SCOPE_KEY))
-        .unwrap_or(JsValue::UNDEFINED);
+    let existing =
+        Reflect::get(&obj, &JsValue::from_str(HOOK_EFFECT_SCOPE_KEY)).unwrap_or(JsValue::UNDEFINED);
     if let Some(scope_id) = existing.as_f64() {
         return Some(scope_id as usize);
     }
@@ -153,6 +156,7 @@ pub(crate) fn with_current_instance_hook_scope<T>(runner: impl FnOnce() -> T) ->
     }
 }
 
+#[cfg(feature = "runtime")]
 pub(crate) fn dispose_component_hook_scope(inst_index: usize) {
     let scope_id = CI_WRAPPERS.with(|wr| {
         wr.borrow().get(&inst_index).and_then(|wrapper| {
@@ -162,17 +166,37 @@ pub(crate) fn dispose_component_hook_scope(inst_index: usize) {
             let obj = Object::from(wrapper.clone());
             let value = Reflect::get(&obj, &JsValue::from_str(HOOK_EFFECT_SCOPE_KEY))
                 .unwrap_or(JsValue::UNDEFINED);
-            let _ = Reflect::set(
-                &obj,
-                &JsValue::from_str(HOOK_EFFECT_SCOPE_KEY),
-                &JsValue::UNDEFINED,
-            );
+            let _ =
+                Reflect::set(&obj, &JsValue::from_str(HOOK_EFFECT_SCOPE_KEY), &JsValue::UNDEFINED);
             value.as_f64().map(|v| v as usize)
         })
     });
     if let Some(scope_id) = scope_id {
         dispose_effect_scope(scope_id);
     }
+}
+
+fn dispose_hook_scope_on_wrapper(wrapper: &JsValue) {
+    if !wrapper.is_object() {
+        return;
+    }
+    let obj = Object::from(wrapper.clone());
+    let value =
+        Reflect::get(&obj, &JsValue::from_str(HOOK_EFFECT_SCOPE_KEY)).unwrap_or(JsValue::UNDEFINED);
+    let _ = Reflect::set(&obj, &JsValue::from_str(HOOK_EFFECT_SCOPE_KEY), &JsValue::UNDEFINED);
+    if let Some(scope_id) = value.as_f64().map(|v| v as usize) {
+        dispose_effect_scope(scope_id);
+    }
+}
+
+#[wasm_bindgen(js_name = "__rueDisposeHookScopeForInstance")]
+pub fn dispose_hook_scope_for_instance(instance: JsValue) {
+    dispose_hook_scope_on_wrapper(&instance);
+}
+
+#[cfg(feature = "runtime")]
+pub(crate) fn component_instance_wrapper(inst_index: usize) -> Option<JsValue> {
+    CI_WRAPPERS.with(|wr| wr.borrow().get(&inst_index).cloned())
 }
 
 /// 在当前实例上为 Hook 分配/复用一个插槽

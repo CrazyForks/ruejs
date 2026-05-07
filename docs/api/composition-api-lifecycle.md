@@ -1,7 +1,7 @@
 # 组合式 API：生命周期钩子 {#composition-api-lifecycle-hooks}
 
 :::info 使用说明
-本页列出的所有 API 必须在组件的 `setup()` 阶段同步调用。有关更多详细信息，请参阅[指南 - 生命周期钩子](/guide/essentials/lifecycle)。
+本页列出的所有 API 都必须在组件初始化阶段同步调用。在函数组件里，这通常就是组件函数同步执行期间；在对象形式组件里，则对应 `setup()` 的同步执行期间。有关更多详细信息，请参阅[指南 - 生命周期钩子](/guide/essentials/lifecycle)。
 :::
 
 ## onMounted() {#onmounted}
@@ -30,12 +30,12 @@
   通过模板 ref 访问元素：
 
   ```js
-  import { ref, onMounted } from '@rue-js/rue'
+  import { onMounted, useRef } from '@rue-js/rue'
 
-  const el = ref()
+  const el = useRef<HTMLDivElement>()
 
   onMounted(() => {
-    el.value // <div>
+    el.current // <div>
   })
   ```
 
@@ -91,7 +91,7 @@
   组件在以下情况下被视为已卸载：
   - 所有其子组件都已卸载。
 
-  - 所有其关联的响应式 effect（渲染 effect 和在 `setup()` 期间创建的 computed/watchers）都已停止。
+  - 所有其关联的响应式 effect（渲染 effect 和在组件初始化阶段创建的 computed/watchers）都已停止。
 
   使用此钩子清理手动创建的副作用，如计时器、DOM 事件监听器或服务器连接。
 
@@ -182,7 +182,7 @@
   - 组件渲染
   - 事件处理器
   - 生命周期钩子
-  - `setup()` 函数
+  - 组件初始化入口
   - Watchers
   - 自定义指令钩子
   - 过渡钩子

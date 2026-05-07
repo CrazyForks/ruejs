@@ -97,9 +97,8 @@ export default ControlledInputs
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
-import { type FC, ref, useState } from '@rue-js/rue';
+    let expected_fragment = r##"import { useState, ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
 import SidebarPlayground from '../site/SidebarPlayground';
 import Code from '../site/components/Code';
 const ControlledInputs: FC = ()=>{

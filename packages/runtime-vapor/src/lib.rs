@@ -19,6 +19,10 @@ pub mod log;
 #[path = "log_disabled.rs"]
 pub mod log;
 pub mod reactive;
+#[cfg(feature = "runtime")]
+pub mod runtime;
+#[cfg(not(feature = "runtime"))]
+#[path = "runtime_stub.rs"]
 pub mod runtime;
 // 便捷导出：直接将 reactive 内的公共 API 暴露到顶层
 pub use hook::*;

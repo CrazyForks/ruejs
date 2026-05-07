@@ -64,3 +64,27 @@ const Demo: FC<{ ok: boolean; label: string }> = props => (
     assert!(out.contains(&utils::normalize(": \"\";")));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1);")));
 }
+
+#[test]
+fn lowers_memoized_jsx_child_to_slot_render() {
+    let src = r##"
+import { type FC, ref } from '@rue-js/rue'
+
+const Demo: FC = () => {
+  const msg = ref('initial')
+  return <div><span v-once>{msg.value}</span></div>
+}
+"##;
+
+    let out = compile(src, "expr_memoized_jsx_child_slot");
+
+    assert!(out.contains("_$vaporWithHookId(\"useMemo:"));
+    assert!(out.contains(&utils::normalize("const __slot2 = _$vaporWithHookId(")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot2, _root, _list1);")));
+    assert!(out.contains(&utils::normalize("_$settextContent(_el2, msg.value);")));
+    assert!(
+        !out.contains(&utils::normalize("watchEffect(()=>{ const __slot = _$vaporWithHookId("))
+    );
+    assert!(!out.contains(&utils::normalize("watchEffect(()=>{ _$settextContent")));
+    assert!(!out.contains("_$settextContent(_el1, _$vaporWithHookId"));
+}

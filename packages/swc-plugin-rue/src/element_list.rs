@@ -1,6 +1,6 @@
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
-use swc_core::ecma::visit::{Visit, VisitWith};
+use swc_core::ecma::visit::{Visit, VisitMut, VisitMutWith, VisitWith};
 
 use crate::elements::build_element;
 use crate::emit::*;
@@ -165,6 +165,177 @@ fn collect_declared_idents_from_pat(pat: &Pat, out: &mut std::collections::HashS
         Pat::Rest(rest) => collect_declared_idents_from_pat(&rest.arg, out),
         _ => {}
     }
+}
+
+fn fresh_ident_avoiding(base: &str, used: &std::collections::HashSet<String>) -> Ident {
+    if !used.contains(base) {
+        return ident(base);
+    }
+
+    let mut counter = 1usize;
+    loop {
+        let candidate = format!("__rue_{}{}", base, counter);
+        if !used.contains(&candidate) {
+            return ident(&candidate);
+        }
+        counter += 1;
+    }
+}
+
+fn tuple_index_expr(base: Expr, index: usize) -> Expr {
+    Expr::Member(MemberExpr {
+        span: DUMMY_SP,
+        obj: Box::new(base),
+        prop: MemberProp::Computed(ComputedPropName {
+            span: DUMMY_SP,
+            expr: Box::new(Expr::Lit(Lit::Num(Number {
+                span: DUMMY_SP,
+                value: index as f64,
+                raw: None,
+            }))),
+        }),
+    })
+}
+
+fn prop_access_expr(base: Expr, key: &PropName) -> Expr {
+    match key {
+        PropName::Ident(id) => Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(base),
+            prop: MemberProp::Ident(id.clone().into()),
+        }),
+        PropName::Str(s) => Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(base),
+            prop: MemberProp::Computed(ComputedPropName {
+                span: DUMMY_SP,
+                expr: Box::new(Expr::Lit(Lit::Str(s.clone()))),
+            }),
+        }),
+        PropName::Num(n) => Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(base),
+            prop: MemberProp::Computed(ComputedPropName {
+                span: DUMMY_SP,
+                expr: Box::new(Expr::Lit(Lit::Num(n.clone()))),
+            }),
+        }),
+        PropName::Computed(computed) => Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(base),
+            prop: MemberProp::Computed(computed.clone()),
+        }),
+        PropName::BigInt(bigint) => Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(base),
+            prop: MemberProp::Computed(ComputedPropName {
+                span: DUMMY_SP,
+                expr: Box::new(Expr::Lit(Lit::BigInt(bigint.clone()))),
+            }),
+        }),
+    }
+}
+
+fn collect_alias_exprs_from_pat(
+    pat: &Pat,
+    source_expr: Expr,
+    out: &mut std::collections::HashMap<String, Expr>,
+) {
+    match pat {
+        Pat::Ident(binding) => {
+            out.insert(binding.id.sym.to_string(), source_expr);
+        }
+        Pat::Array(arr) => {
+            for (index, elem) in arr.elems.iter().enumerate() {
+                if let Some(elem) = elem {
+                    collect_alias_exprs_from_pat(
+                        elem,
+                        tuple_index_expr(source_expr.clone(), index),
+                        out,
+                    );
+                }
+            }
+        }
+        Pat::Object(obj) => {
+            for prop in &obj.props {
+                match prop {
+                    ObjectPatProp::Assign(assign) => {
+                        out.insert(
+                            assign.key.sym.to_string(),
+                            prop_access_expr(
+                                source_expr.clone(),
+                                &PropName::Ident(assign.key.clone().into()),
+                            ),
+                        );
+                    }
+                    ObjectPatProp::KeyValue(kv) => {
+                        collect_alias_exprs_from_pat(
+                            &kv.value,
+                            prop_access_expr(source_expr.clone(), &kv.key),
+                            out,
+                        );
+                    }
+                    ObjectPatProp::Rest(rest) => {
+                        collect_alias_exprs_from_pat(&rest.arg, source_expr.clone(), out);
+                    }
+                }
+            }
+        }
+        Pat::Assign(assign) => collect_alias_exprs_from_pat(&assign.left, source_expr, out),
+        Pat::Rest(rest) => collect_alias_exprs_from_pat(&rest.arg, source_expr, out),
+        _ => {}
+    }
+}
+
+struct AliasExprRewriter<'a> {
+    alias_exprs: &'a std::collections::HashMap<String, Expr>,
+}
+
+impl VisitMut for AliasExprRewriter<'_> {
+    fn visit_mut_expr(&mut self, expr: &mut Expr) {
+        if let Expr::Ident(ident) = expr {
+            if let Some(rewritten) = self.alias_exprs.get(ident.sym.as_ref()) {
+                *expr = rewritten.clone();
+                return;
+            }
+        }
+        expr.visit_mut_children_with(self);
+    }
+
+    fn visit_mut_prop(&mut self, prop: &mut Prop) {
+        if let Prop::Shorthand(ident) = prop {
+            if let Some(rewritten) = self.alias_exprs.get(ident.sym.as_ref()) {
+                *prop = Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident.clone().into()),
+                    value: Box::new(rewritten.clone()),
+                });
+                return;
+            }
+        }
+        prop.visit_mut_children_with(self);
+    }
+}
+
+fn rewrite_alias_exprs_in_expr(
+    expr: &mut Expr,
+    alias_exprs: &std::collections::HashMap<String, Expr>,
+) {
+    if alias_exprs.is_empty() {
+        return;
+    }
+    let mut rewriter = AliasExprRewriter { alias_exprs };
+    expr.visit_mut_with(&mut rewriter);
+}
+
+fn rewrite_alias_exprs_in_stmt(
+    stmt: &mut Stmt,
+    alias_exprs: &std::collections::HashMap<String, Expr>,
+) {
+    if alias_exprs.is_empty() {
+        return;
+    }
+    let mut rewriter = AliasExprRewriter { alias_exprs };
+    stmt.visit_mut_with(&mut rewriter);
 }
 
 /// 从一组语句里收集所有“由声明引入的标识符名”。
@@ -384,6 +555,10 @@ pub(crate) fn try_build_list_from_map(
                 let mut idx_ident = ident("idx");
                 let mut item_ident = ident("item");
                 let mut item_param_pattern: Option<Pat> = None;
+                let mut parent_param_ident = ident("parent");
+                let mut start_param_ident = ident("start");
+                let mut end_param_ident = ident("end");
+                let mut item_alias_exprs = std::collections::HashMap::new();
                 if let Expr::Arrow(ArrowExpr { params, body, .. }) = cb_expr {
                     if !params.is_empty() {
                         match &params[0] {
@@ -400,6 +575,33 @@ pub(crate) fn try_build_list_from_map(
                         if let Pat::Ident(bi) = &params[1] {
                             idx_ident = bi.id.clone();
                         }
+                    }
+                    if let Some(pat) = &item_param_pattern {
+                        let mut pattern_bound_idents = std::collections::HashSet::new();
+                        collect_declared_idents_from_pat(pat, &mut pattern_bound_idents);
+
+                        let mut internal_param_names = pattern_bound_idents.clone();
+                        item_ident = fresh_ident_avoiding("item", &internal_param_names);
+                        internal_param_names.insert(item_ident.sym.to_string());
+
+                        if params.len() < 2 {
+                            idx_ident = fresh_ident_avoiding("idx", &internal_param_names);
+                        }
+                        internal_param_names.insert(idx_ident.sym.to_string());
+
+                        parent_param_ident = fresh_ident_avoiding("parent", &internal_param_names);
+                        internal_param_names.insert(parent_param_ident.sym.to_string());
+
+                        start_param_ident = fresh_ident_avoiding("start", &internal_param_names);
+                        internal_param_names.insert(start_param_ident.sym.to_string());
+
+                        end_param_ident = fresh_ident_avoiding("end", &internal_param_names);
+
+                        collect_alias_exprs_from_pat(
+                            pat,
+                            Expr::Ident(item_ident.clone()),
+                            &mut item_alias_exprs,
+                        );
                     }
                     // 提取 JSX 根 key 表达式（若无则使用 idx）
                     let mut item_key_expr: Expr = Expr::Ident(idx_ident.clone());
@@ -450,9 +652,15 @@ pub(crate) fn try_build_list_from_map(
                     }
 
                     // getKey 箭头函数
-                    // 若 `map` 参数是对象/数组解构，这里生成块体箭头：
-                    // - `const { ... } = item; return <key-expr>;`
-                    // 否则直接返回表达式即可，避免额外包裹
+                    // 若 `map` 参数是对象/数组解构，这里不再手动插入
+                    // `const { ... } = item; return <key-expr>;`。
+                    // 这种“拆成声明 + 表达式”的重组方式，在后续打包重命名时
+                    // 可能让 key 表达式里的别名引用和解构声明脱钩。
+                    //
+                    // 改为保留原始 pattern 作为一个立即调用的箭头函数参数：
+                    // - `(__rue_item)=>(([item, index])=>item.id)(__rue_item)`
+                    // 这样 key 表达式和解构绑定仍在同一棵 AST 子树里，
+                    // 后续改名时不会再出现 `const [item1] = ...; return item.id` 这类悬空引用。
                     let simple_block_render = match &**body {
                         // 只有“纯声明前缀 + 最后 return”的简单 block，
                         // 才允许走 direct vapor 快路径。
@@ -467,8 +675,18 @@ pub(crate) fn try_build_list_from_map(
                         .map(|(prefix, _)| prefix.clone())
                         .unwrap_or_default();
 
-                    let key_needs_prefix_scope =
-                        expr_uses_declared_prefix(&item_key_expr, &callback_prefix_stmts);
+                    let mut rewritten_callback_prefix_stmts = callback_prefix_stmts.clone();
+                    for stmt in &mut rewritten_callback_prefix_stmts {
+                        rewrite_alias_exprs_in_stmt(stmt, &item_alias_exprs);
+                    }
+
+                    let mut rewritten_item_key_expr = item_key_expr.clone();
+                    rewrite_alias_exprs_in_expr(&mut rewritten_item_key_expr, &item_alias_exprs);
+
+                    let key_needs_prefix_scope = expr_uses_declared_prefix(
+                        &rewritten_item_key_expr,
+                        &rewritten_callback_prefix_stmts,
+                    );
                     // 这里不再因为“callback 是 block body”就无脑生成块体 getKey。
                     // 现在只有两种情况才会包块：
                     // 1. 参数本身是解构，需要先把 item 解构出来；
@@ -476,32 +694,12 @@ pub(crate) fn try_build_list_from_map(
                     //
                     // 这样可以把这次修复范围收窄到“作用域真正需要的部分”，
                     // 避免为了兼容 block body 而让所有 getKey 都发生额外 codegen 变化。
-                    let should_block_wrap_get_key =
-                        item_param_pattern.is_some() || key_needs_prefix_scope;
-
-                    let get_key_body = if should_block_wrap_get_key {
+                    let get_key_body = if key_needs_prefix_scope {
                         let mut get_key_stmts: Vec<Stmt> = Vec::new();
-                        if let Some(pat) = &item_param_pattern {
-                            let destruct_decl = Stmt::Decl(Decl::Var(Box::new(VarDecl {
-                                span: DUMMY_SP,
-                                ctxt: SyntaxContext::empty(),
-                                kind: VarDeclKind::Const,
-                                declare: false,
-                                decls: vec![VarDeclarator {
-                                    span: DUMMY_SP,
-                                    name: pat.clone(),
-                                    init: Some(Box::new(Expr::Ident(item_ident.clone()))),
-                                    definite: false,
-                                }],
-                            })));
-                            get_key_stmts.push(destruct_decl);
-                        }
-                        if key_needs_prefix_scope {
-                            get_key_stmts.extend(callback_prefix_stmts.iter().cloned());
-                        }
+                        get_key_stmts.extend(rewritten_callback_prefix_stmts.iter().cloned());
                         get_key_stmts.push(Stmt::Return(ReturnStmt {
                             span: DUMMY_SP,
-                            arg: Some(Box::new(item_key_expr.clone())),
+                            arg: Some(Box::new(rewritten_item_key_expr.clone())),
                         }));
                         BlockStmtOrExpr::BlockStmt(BlockStmt {
                             span: DUMMY_SP,
@@ -509,7 +707,7 @@ pub(crate) fn try_build_list_from_map(
                             stmts: get_key_stmts,
                         })
                     } else {
-                        BlockStmtOrExpr::Expr(Box::new(item_key_expr.clone()))
+                        BlockStmtOrExpr::Expr(Box::new(rewritten_item_key_expr.clone()))
                     };
                     let get_key_arrow = Expr::Arrow(ArrowExpr {
                         span: DUMMY_SP,
@@ -534,8 +732,6 @@ pub(crate) fn try_build_list_from_map(
                     // - `start`/`end`：锚点注释，用于片段插入边界
                     // - `idx`：当前索引
                     // 渲染策略：使用 `renderBetween(vapor(()=>{ ... }), parent, start, end)`
-                    let start_param_ident = ident("start");
-                    let end_param_ident = ident("end");
                     let mut render_item_stmts: Vec<Stmt> = Vec::new();
                     let direct_render_expr = match &**body {
                         BlockStmtOrExpr::Expr(ret_expr) => {
@@ -545,6 +741,11 @@ pub(crate) fn try_build_list_from_map(
                             simple_block_render.as_ref().map(|(_, ret_expr)| ret_expr.clone())
                         }
                     };
+
+                    let direct_render_expr = direct_render_expr.map(|mut expr| {
+                        rewrite_alias_exprs_in_expr(&mut expr, &item_alias_exprs);
+                        expr
+                    });
 
                     if let Some(inner_ret) = direct_render_expr.as_ref() {
                         if let Expr::JSXElement(jsx_el) = inner_ret {
@@ -558,26 +759,14 @@ pub(crate) fn try_build_list_from_map(
                                         vt,
                                         &mut component_el,
                                     );
-                                let slot_expr = rewrite
-                                    .direct_render_expr
-                                    .clone()
-                                    .unwrap_or_else(|| Expr::JSXElement(Box::new(component_el)));
-                                if let Some(pat) = &item_param_pattern {
-                                    let destruct_decl = Stmt::Decl(Decl::Var(Box::new(VarDecl {
-                                        span: DUMMY_SP,
-                                        ctxt: SyntaxContext::empty(),
-                                        kind: VarDeclKind::Const,
-                                        declare: false,
-                                        decls: vec![VarDeclarator {
-                                            span: DUMMY_SP,
-                                            name: pat.clone(),
-                                            init: Some(Box::new(Expr::Ident(item_ident.clone()))),
-                                            definite: false,
-                                        }],
-                                    })));
-                                    render_item_stmts.push(destruct_decl);
-                                }
-                                render_item_stmts.extend(callback_prefix_stmts.iter().cloned());
+                                let slot_expr =
+                                    rewrite.direct_render_expr.clone().unwrap_or_else(|| {
+                                        crate::element_component::build_component_mount_expr(
+                                            &component_el,
+                                        )
+                                    });
+                                render_item_stmts
+                                    .extend(rewritten_callback_prefix_stmts.iter().cloned());
                                 render_item_stmts.extend(rewrite.stmts);
                                 if builtin_fragment_single_root {
                                     use_single_root_anchor = true;
@@ -595,7 +784,9 @@ pub(crate) fn try_build_list_from_map(
                                             },
                                             ExprOrSpread {
                                                 spread: None,
-                                                expr: Box::new(Expr::Ident(ident("parent"))),
+                                                expr: Box::new(Expr::Ident(
+                                                    parent_param_ident.clone(),
+                                                )),
                                             },
                                             ExprOrSpread {
                                                 spread: None,
@@ -620,7 +811,9 @@ pub(crate) fn try_build_list_from_map(
                                             },
                                             ExprOrSpread {
                                                 spread: None,
-                                                expr: Box::new(Expr::Ident(ident("parent"))),
+                                                expr: Box::new(Expr::Ident(
+                                                    parent_param_ident.clone(),
+                                                )),
                                             },
                                             ExprOrSpread {
                                                 spread: None,
@@ -654,22 +847,7 @@ pub(crate) fn try_build_list_from_map(
                                     child_root.clone(),
                                     call_ident("_$createDocumentFragment", vec![]),
                                 )];
-                                if let Some(pat) = &item_param_pattern {
-                                    let destruct_decl = Stmt::Decl(Decl::Var(Box::new(VarDecl {
-                                        span: DUMMY_SP,
-                                        ctxt: SyntaxContext::empty(),
-                                        kind: VarDeclKind::Const,
-                                        declare: false,
-                                        decls: vec![VarDeclarator {
-                                            span: DUMMY_SP,
-                                            name: pat.clone(),
-                                            init: Some(Box::new(Expr::Ident(item_ident.clone()))),
-                                            definite: false,
-                                        }],
-                                    })));
-                                    child_body.push(destruct_decl);
-                                }
-                                child_body.extend(callback_prefix_stmts.iter().cloned());
+                                child_body.extend(rewritten_callback_prefix_stmts.iter().cloned());
                                 if is_native_single_root_jsx_element(jsx_el) {
                                     use_single_root_anchor = true;
                                 }
@@ -703,7 +881,9 @@ pub(crate) fn try_build_list_from_map(
                                             },
                                             ExprOrSpread {
                                                 spread: None,
-                                                expr: Box::new(Expr::Ident(ident("parent"))),
+                                                expr: Box::new(Expr::Ident(
+                                                    parent_param_ident.clone(),
+                                                )),
                                             },
                                             ExprOrSpread {
                                                 spread: None,
@@ -728,7 +908,9 @@ pub(crate) fn try_build_list_from_map(
                                             },
                                             ExprOrSpread {
                                                 spread: None,
-                                                expr: Box::new(Expr::Ident(ident("parent"))),
+                                                expr: Box::new(Expr::Ident(
+                                                    parent_param_ident.clone(),
+                                                )),
                                             },
                                             ExprOrSpread {
                                                 spread: None,
@@ -754,6 +936,39 @@ pub(crate) fn try_build_list_from_map(
                                     expr: Box::new(render_item_call),
                                 }));
                             }
+                        } else if crate::element_expr::contains_jsx_in_expr(inner_ret) {
+                            let slot_expr = crate::element_expr::make_expr_for_slot(vt, inner_ret);
+                            let render_item_call = Expr::Call(CallExpr {
+                                span: DUMMY_SP,
+                                callee: Callee::Expr(Box::new(Expr::Ident(ident("renderBetween")))),
+                                args: vec![
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(ident("__slot"))),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(parent_param_ident.clone())),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(start_param_ident.clone())),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(end_param_ident.clone())),
+                                    },
+                                ],
+                                type_args: None,
+                                ctxt: SyntaxContext::empty(),
+                            });
+                            render_item_stmts
+                                .extend(rewritten_callback_prefix_stmts.iter().cloned());
+                            render_item_stmts.push(const_decl(ident("__slot"), slot_expr));
+                            render_item_stmts.push(Stmt::Expr(ExprStmt {
+                                span: DUMMY_SP,
+                                expr: Box::new(render_item_call),
+                            }));
                         } else {
                             // direct vapor 快路径：
                             // 只适用于表达式体，或“纯声明前缀 + 最后 return”的简单 block。
@@ -823,7 +1038,7 @@ pub(crate) fn try_build_list_from_map(
                                         },
                                         ExprOrSpread {
                                             spread: None,
-                                            expr: Box::new(Expr::Ident(ident("parent"))),
+                                            expr: Box::new(Expr::Ident(parent_param_ident.clone())),
                                         },
                                         ExprOrSpread {
                                             spread: None,
@@ -846,7 +1061,7 @@ pub(crate) fn try_build_list_from_map(
                                         },
                                         ExprOrSpread {
                                             spread: None,
-                                            expr: Box::new(Expr::Ident(ident("parent"))),
+                                            expr: Box::new(Expr::Ident(parent_param_ident.clone())),
                                         },
                                         ExprOrSpread {
                                             spread: None,
@@ -881,23 +1096,11 @@ pub(crate) fn try_build_list_from_map(
                         // 2. 不需要继续扩张“前缀语句搬运”的规则；
                         // 3. 列表主路径不再额外依赖旧的中间对象 helper 生成包装值。
                         let mut slot_block_stmts: Vec<Stmt> = Vec::new();
-                        if let Some(pat) = &item_param_pattern {
-                            let destruct_decl = Stmt::Decl(Decl::Var(Box::new(VarDecl {
-                                span: DUMMY_SP,
-                                ctxt: SyntaxContext::empty(),
-                                kind: VarDeclKind::Const,
-                                declare: false,
-                                decls: vec![VarDeclarator {
-                                    span: DUMMY_SP,
-                                    name: pat.clone(),
-                                    init: Some(Box::new(Expr::Ident(item_ident.clone()))),
-                                    definite: false,
-                                }],
-                            })));
-                            slot_block_stmts.push(destruct_decl);
-                        }
                         if let BlockStmtOrExpr::BlockStmt(block) = &**body {
                             slot_block_stmts.extend(block.stmts.iter().cloned());
+                            for stmt in &mut slot_block_stmts {
+                                rewrite_alias_exprs_in_stmt(stmt, &item_alias_exprs);
+                            }
                         }
                         let slot_arrow = Expr::Arrow(ArrowExpr {
                             span: DUMMY_SP,
@@ -933,7 +1136,7 @@ pub(crate) fn try_build_list_from_map(
                                 },
                                 ExprOrSpread {
                                     spread: None,
-                                    expr: Box::new(Expr::Ident(ident("parent"))),
+                                    expr: Box::new(Expr::Ident(parent_param_ident.clone())),
                                 },
                                 ExprOrSpread {
                                     spread: None,
@@ -957,7 +1160,10 @@ pub(crate) fn try_build_list_from_map(
                         span: DUMMY_SP,
                         params: vec![
                             Pat::Ident(BindingIdent { id: item_ident.clone(), type_ann: None }),
-                            Pat::Ident(BindingIdent { id: ident("parent"), type_ann: None }),
+                            Pat::Ident(BindingIdent {
+                                id: parent_param_ident.clone(),
+                                type_ann: None,
+                            }),
                             Pat::Ident(BindingIdent {
                                 id: start_param_ident.clone(),
                                 type_ann: None,

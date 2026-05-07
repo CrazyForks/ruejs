@@ -1,63 +1,204 @@
 /*
 Table 组件概述
-- 数据驱动：基于 columns 与 dataSource 渲染表格，支持排序、筛选、分页、选择与展开。
-- 固定布局：当列开启 ellipsis 或指定 tableLayout/fixed 时，自动使用固定布局优化。
+- 数据驱动：基于 columns 与 dataSource 渲染表格，支持排序、筛选、分页、选择、展开与分组表头。
+- 状态模型：排序、筛选、分页、选择与展开同时支持受控与非受控两类写法。
 - 复合组件：Head/Body/Foot/TR/TH/TD 便于自定义结构；也可直接传 children。
 */
 import type { FC } from '@rue-js/rue'
-/* 函数组件类型：约束 Table 组件签名 */
+import { useState } from '@rue-js/rue'
+import Dropdown from '../dropdown/index'
 
-type TableSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+type TableSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'large'
+type TableKey = string | number
+type SortOrder = 'ascend' | 'descend' | null
+type ColumnAlign = 'left' | 'right' | 'center'
+type PaginationPlacement =
+  | 'topStart'
+  | 'topCenter'
+  | 'topEnd'
+  | 'bottomStart'
+  | 'bottomCenter'
+  | 'bottomEnd'
+  | 'none'
+type PaginationPosition =
+  | 'topLeft'
+  | 'topCenter'
+  | 'topRight'
+  | 'bottomLeft'
+  | 'bottomCenter'
+  | 'bottomRight'
+  | 'none'
+type SorterTooltipTarget = 'full-header' | 'sorter-icon'
+type ShowSorterTooltip = boolean | { target?: SorterTooltipTarget; title?: any }
+
+interface TableLocale {
+  emptyText?: any
+  filterConfirm?: any
+  filterReset?: any
+  triggerAsc?: string
+  triggerDesc?: string
+  cancelSort?: string
+}
+
+interface TableClassNames {
+  root?: string
+  wrapper?: string
+  table?: string
+  title?: string
+  footer?: string
+  thead?: string
+  tbody?: string
+  tfoot?: string
+  headerRow?: string
+  bodyRow?: string
+  headerCell?: string
+  cell?: string
+  summary?: string
+  pager?: string
+  empty?: string
+  loading?: string
+}
+
+interface TableStyles {
+  root?: Record<string, any>
+  wrapper?: Record<string, any>
+  table?: Record<string, any>
+  title?: Record<string, any>
+  footer?: Record<string, any>
+  thead?: Record<string, any>
+  tbody?: Record<string, any>
+  tfoot?: Record<string, any>
+  headerRow?: Record<string, any>
+  bodyRow?: Record<string, any>
+  headerCell?: Record<string, any>
+  cell?: Record<string, any>
+  summary?: Record<string, any>
+  pager?: Record<string, any>
+  empty?: Record<string, any>
+  loading?: Record<string, any>
+}
+
+type SemanticRecord<T> = T | ((info: { props: TableProps }) => T)
+
+interface FilterItem {
+  text: any
+  value: any
+  children?: FilterItem[]
+}
+
+interface ColumnTitleContext {
+  sortOrder: SortOrder
+  filteredValue: any[]
+  sortColumns: Array<{ column: any; columnKey: string; order: SortOrder }>
+  filters: Record<string, any[]>
+}
+
+interface SorterConfig {
+  compare?: (a: any, b: any) => number
+  multiple?: number
+}
 
 interface ColumnItem {
   key?: string
-  title?: any
+  title?: any | ((context: ColumnTitleContext) => any)
   dataIndex?: string | string[]
-  align?: 'left' | 'right' | 'center'
+  align?: ColumnAlign
   className?: string
   width?: string | number
-  ellipsis?: boolean
+  minWidth?: string | number
+  ellipsis?: boolean | { showTitle?: boolean }
   render?: (value: any, record: any, index: number) => any
-  sorter?: boolean | ((a: any, b: any) => number)
-  defaultSortOrder?: 'ascend' | 'descend'
-  sortOrder?: 'ascend' | 'descend' | null
-  filters?: Array<{ text: any; value: any }>
+  sorter?: boolean | ((a: any, b: any) => number) | SorterConfig
+  defaultSortOrder?: SortOrder
+  sortOrder?: SortOrder
+  sortDirections?: Array<Exclude<SortOrder, null>>
+  sortIcon?: (props: { sortOrder: SortOrder }) => any
+  showSorterTooltip?: ShowSorterTooltip
+  filtered?: boolean
+  filters?: FilterItem[]
   onFilter?: (value: any, record: any) => boolean
-  filteredValue?: any[]
-  defaultFilteredValue?: any[]
+  filteredValue?: any[] | null
+  defaultFilteredValue?: any[] | null
   filterMultiple?: boolean
   filterCombine?: 'or' | 'and'
   filterOnClose?: boolean
   filterResetToDefaultFilteredValue?: boolean
+  filterDropdown?: any | ((props: FilterDropdownRenderProps) => any)
+  filterDropdownOpen?: boolean
+  filterDropdownProps?: TableFilterDropdownProps
+  filterMode?: 'menu' | 'tree'
+  onFilterDropdownOpenChange?: (visible: boolean) => void
+  filterSearch?: boolean | ((input: string, item: FilterItem) => boolean)
+  filterIcon?: any | ((filtered: boolean) => any)
   hidden?: boolean
   onHeaderCell?: (column: ColumnItem, index: number) => Record<string, any>
   onCell?: (record: any, rowIndex: number) => Record<string, any>
+  rowScope?: 'row' | 'rowgroup'
   fixedCol?: boolean
+  fixed?: boolean | 'left' | 'right' | 'start' | 'end'
+  colSpan?: number
+  rowSpan?: number
+  children?: ColumnItem[]
 }
 
 interface RowSelection {
   type?: 'checkbox' | 'radio'
-  selectedRowKeys?: Array<string | number>
-  defaultSelectedRowKeys?: Array<string | number>
+  selectedRowKeys?: TableKey[]
+  defaultSelectedRowKeys?: TableKey[]
   columnWidth?: number | string
+  columnTitle?: any | ((originalNode: any) => any)
+  align?: ColumnAlign
+  hideSelectAll?: boolean
   disabled?: boolean
-  onChange?: (selectedRowKeys: Array<string | number>, selectedRows: any[], info?: any) => void
+  fixed?: boolean | 'left' | 'right' | 'start' | 'end'
+  onChange?: (selectedRowKeys: TableKey[], selectedRows: any[], info?: any) => void
+  onSelect?: (record: any, selected: boolean, selectedRows: any[], nativeEvent?: Event) => void
   getCheckboxProps?: (record: any) => Record<string, any>
+  getTitleCheckboxProps?: () => Record<string, any>
   onSelectAll?: (selected: boolean, selectedRows: any[]) => void
+  preserveSelectedRowKeys?: boolean
+  renderCell?: (checked: boolean, record: any, index: number, originNode: any) => any
 }
 
 interface PaginationConfig {
   current?: number
+  defaultCurrent?: number
   pageSize?: number
+  defaultPageSize?: number
   hideOnSinglePage?: boolean
+  placement?: PaginationPlacement[]
+  position?: PaginationPosition[]
   onChange?: (page: number, pageSize: number) => void
 }
 
 interface ExpandableConfig {
-  expandedRowRender?: (record: any, index: number) => any
-  expandedRowKeys?: Array<string | number>
+  expandedRowRender?: (record: any, index: number, indent: number, expanded: boolean) => any
+  expandedRowKeys?: TableKey[]
+  defaultExpandedRowKeys?: TableKey[]
   defaultExpandAllRows?: boolean
+  expandRowByClick?: boolean
+  rowExpandable?: (record: any) => boolean
+  showExpandColumn?: boolean
+  columnTitle?: any
+  columnWidth?: number | string
+  childrenColumnName?: string
+  expandedRowClassName?: string | ((record: any, index: number, indent: number) => string)
+  expandIcon?: (props: {
+    expanded: boolean
+    expandable: boolean
+    record: any
+    onExpand: (record: any, event?: any) => void
+  }) => any
+  indentSize?: number
+  fixed?: boolean | 'left' | 'right' | 'start' | 'end'
   onExpand?: (expanded: boolean, record: any) => void
+  onExpandedRowsChange?: (expandedRowKeys: TableKey[]) => void
+}
+
+interface ScrollConfig {
+  x?: string | number | true
+  y?: string | number
+  scrollToFirstRowOnChange?: boolean
 }
 
 interface TableProps {
@@ -65,11 +206,14 @@ interface TableProps {
   zebra?: boolean
   pinRows?: boolean
   pinCols?: boolean
+  bordered?: boolean
   className?: string
+  classNames?: SemanticRecord<TableClassNames>
+  styles?: SemanticRecord<TableStyles>
   children?: any
   dataSource?: any[]
   columns?: ColumnItem[]
-  rowKey?: string | ((record: any) => string)
+  rowKey?: string | ((record: any) => TableKey)
   showHeader?: boolean
   onRow?: (record: any, index: number) => Record<string, any>
   onHeaderRow?: (columns: ColumnItem[], index: number) => Record<string, any>
@@ -80,1117 +224,1737 @@ interface TableProps {
   rowClassName?: (record: any, index: number) => string
   summary?: (currentData: any[], info?: { total: number; page: number; pageSize: number }) => any
   emptyText?: any
+  locale?: TableLocale
   title?: (currentData: any[]) => any
   footer?: (currentData: any[]) => any
+  loading?: boolean | { spinning?: boolean; tip?: any }
   rowHoverable?: boolean
   rowHoverClass?: string
   tableLayout?: 'auto' | 'fixed'
-  scroll?: { x?: string | number | true; y?: string | number }
+  sortDirections?: Array<Exclude<SortOrder, null>>
+  showSorterTooltip?: ShowSorterTooltip
+  scroll?: ScrollConfig
+  sticky?: boolean | { offsetHeader?: number; offsetScroll?: number; getContainer?: () => HTMLElement }
   height?: string | number
   onScroll?: (event: any) => void
 }
 
-/** 从记录中读取 dataIndex 对应的值（支持多级数组路径） */
+interface FilterConfirmOptions {
+  closeDropdown?: boolean
+}
+
+interface FilterClearOptions {
+  confirm?: boolean
+  closeDropdown?: boolean
+}
+
+interface FilterDropdownRenderProps {
+  setSelectedKeys: (selectedKeys: any[]) => void
+  selectedKeys: any[]
+  confirm: (options?: FilterConfirmOptions) => void
+  clearFilters?: (options?: FilterClearOptions) => void
+  filters?: FilterItem[]
+  close: () => void
+  visible: boolean
+}
+
+interface TableFilterDropdownProps {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  [key: string]: any
+}
+
+interface HeaderCellMeta {
+  column: ColumnItem
+  index: number
+  key: string
+  colSpan: number
+  rowSpan: number
+}
+
+interface SortState {
+  key: string
+  order: SortOrder
+  multiple?: number
+}
+
+interface FlattenRow {
+  key: TableKey
+  record: any
+  indent: number
+  hasTreeChildren: boolean
+}
+
+let tableSeed = 0
+
+const defaultTableLocale: Required<TableLocale> = {
+  emptyText: 'No Data',
+  filterConfirm: '应用',
+  filterReset: '重置',
+  triggerAsc: '切换为升序',
+  triggerDesc: '切换为降序',
+  cancelSort: '取消排序',
+}
+
 const getVal = (record: any, dataIndex?: string | string[]) => {
   if (!dataIndex) return undefined
   if (Array.isArray(dataIndex)) {
     let cur = record
-    for (const k of dataIndex) {
+    for (const segment of dataIndex) {
       if (cur == null) return undefined
-      cur = cur[k]
+      cur = cur[segment]
     }
     return cur
   }
   return record?.[dataIndex]
 }
 
-/** 单元格对齐类名 */
-const alignClass = (align?: 'left' | 'right' | 'center') => {
+const alignClass = (align?: ColumnAlign) => {
   if (align === 'right') return 'text-right'
   if (align === 'center') return 'text-center'
   return 'text-left'
 }
 
-/** 高级表格组件：支持排序/筛选/分页/选择/展开/滚动等 */
-const Table: FC<TableProps> = ({
-  size,
-  zebra,
-  pinRows,
-  pinCols,
-  className,
-  children,
-  dataSource,
-  columns,
-  rowKey = 'key',
-  showHeader = true,
-  onRow,
-  onHeaderRow,
-  onChange,
-  rowSelection,
-  pagination,
-  expandable,
-  rowClassName,
-  summary,
-  emptyText,
-  title,
-  footer,
-  rowHoverable = false,
-  rowHoverClass,
-  tableLayout,
-  scroll,
-  height,
-  onScroll,
+const mergeClassNames = (...parts: Array<string | undefined>) => {
+  const cls = parts.filter(Boolean).join(' ').trim()
+  return cls || undefined
+}
+
+const mergeStyles = (...styles: Array<Record<string, any> | undefined>) => {
+  let merged: Record<string, any> | undefined
+  styles.forEach(style => {
+    if (!style) return
+    merged = merged ? { ...merged, ...style } : { ...style }
+  })
+  return merged
+}
+
+const normalizeFilterValues = (value: any): any[] => {
+  if (value == null || value === false) return []
+  if (Array.isArray(value)) return [...value]
+  if (typeof value !== 'string' && typeof value?.[Symbol.iterator] === 'function') {
+    return Array.from(value as Iterable<any>)
+  }
+  return [value]
+}
+
+const getColumnKey = (column: ColumnItem, indexPath: number[]) => {
+  if (column.key) return column.key
+  if (typeof column.dataIndex === 'string') return column.dataIndex
+  if (Array.isArray(column.dataIndex) && column.dataIndex.length > 0)
+    return column.dataIndex.join('.')
+  return `column-${indexPath.join('-')}`
+}
+
+const getVisibleChildren = (column: ColumnItem) =>
+  (column.children ?? []).filter(child => !child.hidden)
+
+const countLeafColumns = (columns: ColumnItem[]) => {
+  return columns.reduce((count, column) => {
+    if (column.hidden) return count
+    const children = getVisibleChildren(column)
+    if (children.length === 0) return count + 1
+    return count + countLeafColumns(children)
+  }, 0)
+}
+
+const getColumnDepth = (columns: ColumnItem[]) => {
+  let maxDepth = 1
+  columns.forEach(column => {
+    if (column.hidden) return
+    const children = getVisibleChildren(column)
+    if (children.length > 0) {
+      maxDepth = Math.max(maxDepth, 1 + getColumnDepth(children))
+    }
+  })
+  return maxDepth
+}
+
+const flattenLeafColumns = (columns: ColumnItem[], path: number[] = []) => {
+  const result: Array<{ column: ColumnItem; indexPath: number[]; key: string }> = []
+  columns.forEach((column, index) => {
+    if (column.hidden) return
+    const indexPath = [...path, index]
+    const children = getVisibleChildren(column)
+    if (children.length > 0) {
+      result.push(...flattenLeafColumns(children, indexPath))
+      return
+    }
+    result.push({ column, indexPath, key: getColumnKey(column, indexPath) })
+  })
+  return result
+}
+
+const buildHeaderRows = (columns: ColumnItem[]) => {
+  const visibleColumns = columns.filter(column => !column.hidden)
+  const depth = getColumnDepth(visibleColumns)
+  const rows: HeaderCellMeta[][] = Array.from({ length: depth }, () => [])
+
+  const walk = (items: ColumnItem[], level: number, parentPath: number[] = []) => {
+    items.forEach((column, index) => {
+      if (column.hidden) return
+      const path = [...parentPath, index]
+      const children = getVisibleChildren(column)
+      const defaultColSpan = children.length > 0 ? countLeafColumns(children) : 1
+      const colSpan = column.colSpan ?? defaultColSpan
+      if (colSpan === 0) return
+      const rowSpan = column.rowSpan ?? (children.length > 0 ? 1 : depth - level)
+      rows[level].push({
+        column,
+        index,
+        key: getColumnKey(column, path),
+        colSpan,
+        rowSpan,
+      })
+      if (children.length > 0) walk(children, level + 1, path)
+    })
+  }
+
+  walk(visibleColumns, 0)
+  return rows
+}
+
+const resolveFixedColumn = (column: ColumnItem) => {
+  return !!(
+    column.fixedCol ||
+    column.fixed === true ||
+    column.fixed === 'left' ||
+    column.fixed === 'start'
+  )
+}
+
+const isSorterConfig = (sorter: ColumnItem['sorter']): sorter is SorterConfig => {
+  return typeof sorter === 'object' && sorter !== null
+}
+
+const getSorterMultiple = (column: ColumnItem) => {
+  if (!isSorterConfig(column.sorter)) return undefined
+  return column.sorter.multiple
+}
+
+const normalizeSortStates = (sortStates: SortState[]) => {
+  return sortStates
+    .filter((state): state is SortState => !!state?.order)
+    .sort((a, b) => {
+      const multipleA = a.multiple ?? 0
+      const multipleB = b.multiple ?? 0
+      if (multipleA === multipleB) return 0
+      return multipleB - multipleA
+    })
+}
+
+const resolveInitialSort = (leafColumns: Array<{ column: ColumnItem; key: string }>) => {
+  const controlledStates = normalizeSortStates(
+    leafColumns
+      .filter(leaf => leaf.column.sortOrder !== undefined)
+      .map(leaf => ({
+        key: leaf.key,
+        order: leaf.column.sortOrder,
+        multiple: getSorterMultiple(leaf.column),
+      })),
+  )
+  if (controlledStates.length > 0) return controlledStates
+  return normalizeSortStates(
+    leafColumns
+      .filter(leaf => !!leaf.column.defaultSortOrder)
+      .map(leaf => ({
+        key: leaf.key,
+        order: leaf.column.defaultSortOrder,
+        multiple: getSorterMultiple(leaf.column),
+      })),
+  )
+}
+
+const resolveInitialFilters = (leafColumns: Array<{ column: ColumnItem; key: string }>) => {
+  const filters: Record<string, any[]> = {}
+  leafColumns.forEach(({ column, key }) => {
+    if (column.filteredValue !== undefined) {
+      filters[key] = normalizeFilterValues(column.filteredValue)
+      return
+    }
+    if (column.defaultFilteredValue !== undefined) {
+      filters[key] = normalizeFilterValues(column.defaultFilteredValue)
+    }
+  })
+  return filters
+}
+
+const clampPage = (page: number, pageCount: number) => {
+  if (page <= 1) return 1
+  if (page >= pageCount) return pageCount
+  return page
+}
+
+const asCssSize = (value?: string | number) => {
+  if (typeof value === 'number') return `${value}px`
+  return value
+}
+
+const resolveTableSizeClass = (size?: TableSize) => {
+  switch (size) {
+    case 'small':
+      return 'table-sm'
+    case 'middle':
+      return 'table-md'
+    case 'large':
+      return 'table-lg'
+    case 'xs':
+    case 'sm':
+    case 'md':
+    case 'lg':
+    case 'xl':
+      return `table-${size}`
+    default:
+      return undefined
+  }
+}
+
+const resolveLocale = (locale?: TableLocale) => ({
+  ...defaultTableLocale,
+  ...(locale ?? {}),
+})
+
+const resolveSemanticValue = <T extends Record<string, any>>(
+  value: SemanticRecord<T> | undefined,
+  props: TableProps,
+): T => {
+  if (typeof value === 'function') return value({ props }) ?? ({} as T)
+  return (value ?? {}) as T
+}
+
+const isEllipsisConfig = (ellipsis: ColumnItem['ellipsis']): ellipsis is { showTitle?: boolean } => {
+  return typeof ellipsis === 'object' && ellipsis !== null
+}
+
+const shouldShowEllipsisTitle = (ellipsis?: ColumnItem['ellipsis']) => {
+  if (!ellipsis) return false
+  if (ellipsis === true) return true
+  return ellipsis.showTitle !== false
+}
+
+const mapPaginationPosition = (position: PaginationPosition): PaginationPlacement => {
+  switch (position) {
+    case 'topLeft':
+      return 'topStart'
+    case 'topCenter':
+      return 'topCenter'
+    case 'topRight':
+      return 'topEnd'
+    case 'bottomLeft':
+      return 'bottomStart'
+    case 'bottomCenter':
+      return 'bottomCenter'
+    case 'bottomRight':
+      return 'bottomEnd'
+    case 'none':
+    default:
+      return 'none'
+  }
+}
+
+const resolvePaginationPlacements = (pagination?: false | PaginationConfig) => {
+  if (!pagination || pagination === false) return [] as PaginationPlacement[]
+  const placements = pagination.placement?.length
+    ? pagination.placement
+    : pagination.position?.length
+      ? pagination.position.map(mapPaginationPosition)
+      : (['bottomEnd'] as PaginationPlacement[])
+  return placements.filter((placement, index, source) => {
+    if (placement === 'none') return source.length === 1
+    return source.indexOf(placement) === index
+  })
+}
+
+const getPaginationPlacementClass = (placement: PaginationPlacement) => {
+  switch (placement) {
+    case 'topStart':
+    case 'bottomStart':
+      return 'justify-start'
+    case 'topCenter':
+    case 'bottomCenter':
+      return 'justify-center'
+    case 'topEnd':
+    case 'bottomEnd':
+    default:
+      return 'justify-end'
+  }
+}
+
+const getTreeChildren = (record: any, childrenColumnName: string) => {
+  const children = record?.[childrenColumnName]
+  return Array.isArray(children) ? children : []
+}
+
+const hasTreeChildren = (record: any, childrenColumnName: string) => {
+  return getTreeChildren(record, childrenColumnName).length > 0
+}
+
+const RenderTableSection: FC<{ render?: ((currentData: any[]) => any) | null; data: any[] }> = ({
+  render,
+  data,
 }) => {
+  if (typeof render !== 'function') return null
+  return render(data)
+}
+
+const isPrimitiveNode = (value: any) => {
+  const type = typeof value
+  return type === 'string' || type === 'number'
+}
+
+const Table: FC<TableProps> = props => {
+  const {
+    size,
+    zebra,
+    pinRows,
+    pinCols,
+    bordered,
+    className,
+    classNames,
+    styles,
+    children,
+    dataSource,
+    columns,
+    rowKey = 'key',
+    showHeader = true,
+    onRow,
+    onHeaderRow,
+    onChange,
+    rowSelection,
+    pagination,
+    expandable,
+    rowClassName,
+    summary,
+    emptyText,
+    locale,
+    title: titleRender,
+    footer: footerRender,
+    loading,
+    rowHoverable = false,
+    rowHoverClass,
+    tableLayout,
+    sortDirections,
+    showSorterTooltip,
+    scroll,
+    sticky,
+    height,
+    onScroll,
+  } = props
+
+  const localeText = resolveLocale(locale)
+  const semanticClasses = resolveSemanticValue(classNames, props)
+  const semanticStyles = resolveSemanticValue(styles, props)
+  const loadingConfig =
+    typeof loading === 'object'
+      ? { spinning: loading.spinning !== false, tip: loading.tip }
+      : { spinning: !!loading, tip: undefined }
+  const childrenColumnName = expandable?.childrenColumnName ?? 'children'
+  const indentSize = expandable?.indentSize ?? 15
+
+  const getRecordKey = (record: any, fallback: TableKey): TableKey => {
+    const rawKey = typeof rowKey === 'function' ? rowKey(record) : record?.[rowKey]
+    return (rawKey ?? fallback) as TableKey
+  }
+
+  const collectExpandedKeys = (
+    records: any[],
+    parentPath: Array<string | number> = [],
+  ): TableKey[] => {
+    return records.flatMap((record, index) => {
+      const path = [...parentPath, index]
+      const key = getRecordKey(record, `row-${path.join('-')}`)
+      const children = getTreeChildren(record, childrenColumnName)
+      if (children.length === 0) return []
+      return [key, ...collectExpandedKeys(children, path)]
+    })
+  }
+
   let cls = 'table'
-  /* 表大小与斑马纹/固定行列 */
-  if (size) cls += ` table-${size}`
-  if (zebra) cls += ` table-zebra`
-  if (pinRows) cls += ` table-pin-rows`
-  if (pinCols) cls += ` table-pin-cols`
-  /* 附加类名 */
+  const sizeClass = resolveTableSizeClass(size)
+  if (sizeClass) cls += ` ${sizeClass}`
+  if (zebra) cls += ' table-zebra'
+  if (pinRows || sticky) cls += ' table-pin-rows'
+  if (pinCols) cls += ' table-pin-cols'
+  if (bordered) cls += ' border-separate border-spacing-0'
+  if (semanticClasses.table) cls += ` ${semanticClasses.table}`
   if (className) cls += ` ${className}`
+
   const hasChildren = !(
     children === undefined ||
     children === null ||
     (Array.isArray(children) && children.length === 0)
   )
-  /* children 模式：直接渲染表 */
-  if (hasChildren) return <table className={cls}>{children}</table>
-  if (Array.isArray(columns) && Array.isArray(dataSource)) {
-    /* 受控数据模式：计算列、排序、筛选、分页等 */
-    const tableId = Math.random().toString(36).slice(2)
-    const headerProps = onHeaderRow ? onHeaderRow(columns, 0) || {} : {}
-    const visibleColumns = columns.filter(col => !col.hidden)
-    /* 排序初始状态：优先使用 sortOrder，否则 defaultSortOrder */
-    let sortColIndex: number | null = null
-    let sortOrder: 'ascend' | 'descend' | null = null
-    visibleColumns.forEach((col, i) => {
-      if (col.sortOrder != null) {
-        sortColIndex = i
-        sortOrder = col.sortOrder
-      } else if (sortColIndex == null && col.defaultSortOrder) {
-        sortColIndex = i
-        sortOrder = col.defaultSortOrder
-      }
-    })
-    let workingData = dataSource.slice()
-    const activeFilters: Record<string, any[]> = {}
-    const getColKey = (col: ColumnItem) =>
-      (typeof col.dataIndex === 'string'
-        ? col.dataIndex
-        : Array.isArray(col.dataIndex)
-          ? col.dataIndex.join('.')
-          : col.key) as string
+  if (hasChildren) return <table className={cls} style={semanticStyles.table}>{children}</table>
 
-    /* 筛选：组合 onFilter 或直接等值匹配 */
-    visibleColumns.forEach(col => {
-      const vals = col.filteredValue ?? col.defaultFilteredValue
-      if (Array.isArray(vals) && vals.length > 0) {
-        const key = getColKey(col)
-        if (key) activeFilters[key] = vals
-        workingData = workingData.filter(rec => {
-          if (col.onFilter) {
-            if (col.filterCombine === 'and') {
-              return vals.every(v => col.onFilter!(v, rec))
+  const initialLeafColumns = Array.isArray(columns) ? flattenLeafColumns(columns) : []
+  const [tableId] = useState(`rue-table-${tableSeed++}`)
+  const [sortStateRef, setSortStateRef] = useState<SortState[]>(
+    resolveInitialSort(initialLeafColumns),
+    {
+      kind: 'ref',
+    },
+  )
+  const [filterStateRef, setFilterStateRef] = useState<Record<string, any[]>>(
+    resolveInitialFilters(initialLeafColumns),
+    { kind: 'ref' },
+  )
+  const [draftFilterStateRef, setDraftFilterStateRef] = useState<Record<string, any[]>>(
+    {},
+    { kind: 'ref' },
+  )
+  const [filterSearchRef, setFilterSearchRef] = useState<Record<string, string>>(
+    {},
+    { kind: 'ref' },
+  )
+  const [openFilterMenuKey, setOpenFilterMenuKey] = useState<string | null>(null)
+  const [stateVersion, setStateVersion] = useState(0)
+  const [selectedRowKeysRef, setSelectedRowKeysRef] = useState<TableKey[]>(
+    rowSelection?.defaultSelectedRowKeys ? [...rowSelection.defaultSelectedRowKeys] : [],
+    { kind: 'ref' },
+  )
+  const [uncontrolledPageRef, setUncontrolledPageRef] = useState(
+    pagination && pagination !== false ? (pagination.current ?? pagination.defaultCurrent ?? 1) : 1,
+  )
+  const [uncontrolledPageSizeRef] = useState(
+    pagination && pagination !== false
+      ? (pagination.pageSize ?? pagination.defaultPageSize ?? 10)
+      : Math.max(dataSource?.length ?? 0, 1),
+  )
+  const [expandedRowKeysRef, setExpandedRowKeysRef] = useState<TableKey[]>(
+    expandable?.defaultExpandedRowKeys
+      ? [...expandable.defaultExpandedRowKeys]
+      : expandable?.defaultExpandAllRows && Array.isArray(dataSource)
+        ? dataSource.flatMap((record, index) => {
+            const key = getRecordKey(record, `row-${index}`)
+            const children = getTreeChildren(record, childrenColumnName)
+            if (expandable?.expandedRowRender) {
+              return [key, ...collectExpandedKeys(children, [index])]
             }
-            return vals.some(v => col.onFilter!(v, rec))
+            if (children.length > 0) {
+              return [key, ...collectExpandedKeys(children, [index])]
+            }
+            return []
+          })
+        : [],
+    { kind: 'ref' },
+  )
+
+  if (Array.isArray(columns) && Array.isArray(dataSource)) {
+    const headerRows = buildHeaderRows(columns)
+    const leafColumns = flattenLeafColumns(columns)
+    const leafColumnMap = new Map(leafColumns.map(leaf => [leaf.key, leaf] as const))
+
+    const bumpStateVersion = () => {
+      setStateVersion(stateVersion.value + 1)
+    }
+
+    const hasControlledSort = leafColumns.some(leaf => leaf.column.sortOrder !== undefined)
+    const activeSortStates = hasControlledSort
+      ? normalizeSortStates(
+          leafColumns
+            .filter(leaf => leaf.column.sortOrder !== undefined)
+            .map(leaf => ({
+              key: leaf.key,
+              order: leaf.column.sortOrder,
+              multiple: getSorterMultiple(leaf.column),
+            })),
+        )
+      : normalizeSortStates(sortStateRef.value)
+    const activeSortStateMap = new Map(activeSortStates.map(state => [state.key, state] as const))
+
+    const currentFilters = leafColumns.reduce<Record<string, any[]>>((acc, leaf) => {
+      const controlledValue = leaf.column.filteredValue
+      if (controlledValue !== undefined) {
+        acc[leaf.key] = normalizeFilterValues(controlledValue)
+        return acc
+      }
+      acc[leaf.key] = normalizeFilterValues(filterStateRef.value[leaf.key])
+      return acc
+    }, {})
+
+    const buildActiveFilters = (filters: Record<string, any[]>) => {
+      const next: Record<string, any[]> = {}
+      Object.keys(filters).forEach(key => {
+        if (Array.isArray(filters[key]) && filters[key].length > 0) next[key] = [...filters[key]]
+      })
+      return next
+    }
+
+    const activeFilters = buildActiveFilters(currentFilters)
+
+    const buildSortComparator = (column: ColumnItem) => {
+      if (typeof column.sorter === 'function') return column.sorter
+      if (isSorterConfig(column.sorter) && typeof column.sorter.compare === 'function') {
+        return column.sorter.compare
+      }
+      return (a: any, b: any) => {
+        const va = getVal(a, column.dataIndex)
+        const vb = getVal(b, column.dataIndex)
+        if (va == null && vb == null) return 0
+        if (va == null) return -1
+        if (vb == null) return 1
+        if (va > vb) return 1
+        if (va < vb) return -1
+        return 0
+      }
+    }
+
+    const compareRecords = (a: any, b: any, sortStates: SortState[]) => {
+      for (const sortState of normalizeSortStates(sortStates)) {
+        const activeLeaf = leafColumnMap.get(sortState.key)
+        if (!activeLeaf?.column.sorter) continue
+        const comparator = buildSortComparator(activeLeaf.column)
+        const result = sortState.order === 'ascend' ? comparator(a, b) : -comparator(a, b)
+        if (result !== 0) return result
+      }
+      return 0
+    }
+
+    const recordMatchesFilters = (record: any, filters: Record<string, any[]>) => {
+      return leafColumns.every(leaf => {
+        const values = filters[leaf.key] ?? []
+        if (!Array.isArray(values) || values.length === 0) return true
+        const combine = leaf.column.filterCombine ?? 'or'
+        if (leaf.column.onFilter) {
+          if (combine === 'and') return values.every(value => leaf.column.onFilter!(value, record))
+          return values.some(value => leaf.column.onFilter!(value, record))
+        }
+        const cellValue = getVal(record, leaf.column.dataIndex)
+        if (combine === 'and') return values.every(value => value === cellValue)
+        return values.includes(cellValue)
+      })
+    }
+
+    const buildProcessedData = (filters: Record<string, any[]>, sortStates: SortState[]) => {
+      const processRecords = (records: any[]): any[] => {
+        let workingData = records.flatMap(record => {
+          const rawChildren = getTreeChildren(record, childrenColumnName)
+          const processedChildren = rawChildren.length > 0 ? processRecords(rawChildren) : []
+          const keepSelf = recordMatchesFilters(record, filters)
+          if (!keepSelf && processedChildren.length === 0) return []
+          if (rawChildren.length > 0) {
+            return [
+              {
+                ...record,
+                [childrenColumnName]: processedChildren,
+              },
+            ]
           }
-          const rv = getVal(rec, col.dataIndex)
-          return vals.includes(rv)
+          return [record]
+        })
+        if (normalizeSortStates(sortStates).length > 0) {
+          workingData = workingData.slice().sort((a, b) => compareRecords(a, b, sortStates))
+        }
+        return workingData
+      }
+      return processRecords(dataSource)
+    }
+
+    const expandedRowKeys = expandable?.expandedRowKeys
+      ? [...expandable.expandedRowKeys]
+      : [...expandedRowKeysRef.value]
+    const expandedRowKeySet = new Set(expandedRowKeys)
+
+    const flattenRows = (
+      records: any[],
+      indent = 0,
+      parentPath: Array<string | number> = [],
+      forceExpand = false,
+    ): FlattenRow[] => {
+      return records.flatMap((record, index) => {
+        const path = [...parentPath, index]
+        const key = getRecordKey(record, `row-${path.join('-')}`)
+        const children = getTreeChildren(record, childrenColumnName)
+        const row = {
+          key,
+          record,
+          indent,
+          hasTreeChildren: children.length > 0,
+        }
+        if (children.length > 0 && (forceExpand || expandedRowKeySet.has(key))) {
+          return [row, ...flattenRows(children, indent + 1, path, forceExpand)]
+        }
+        return [row]
+      })
+    }
+
+    const allRows = flattenRows(dataSource, 0, [], true)
+    const hasTreeData = allRows.some(row => row.hasTreeChildren)
+    const processedData = buildProcessedData(currentFilters, activeSortStates)
+    const visibleRows = flattenRows(processedData)
+    const total = visibleRows.length
+    const paginationEnabled = pagination !== false && pagination != null
+    const resolvedPageSize = paginationEnabled
+      ? Math.max(1, pagination.pageSize ?? uncontrolledPageSizeRef.value)
+      : Math.max(total, 1)
+    const pageCount = paginationEnabled ? Math.max(1, Math.ceil(total / resolvedPageSize)) : 1
+    const currentPage = paginationEnabled
+      ? clampPage(pagination.current ?? uncontrolledPageRef.value, pageCount)
+      : 1
+    const pageRows = paginationEnabled
+      ? visibleRows.slice((currentPage - 1) * resolvedPageSize, currentPage * resolvedPageSize)
+      : visibleRows
+    const pageData = pageRows.map(row => row.record)
+
+    const selectedRowKeys = rowSelection?.selectedRowKeys
+      ? [...rowSelection.selectedRowKeys]
+      : [...selectedRowKeysRef.value]
+    const selectedRowKeySet = new Set(selectedRowKeys)
+
+    const selectionAlign = rowSelection?.align ?? 'center'
+    const hasSelection = !!rowSelection
+    const hasExpandedRowRender = !!expandable?.expandedRowRender
+    const hasExpand = hasExpandedRowRender || hasTreeData
+    const expandColumnVisible = hasExpand && expandable?.showExpandColumn !== false
+    const extraColumnCount = (hasSelection ? 1 : 0) + (expandColumnVisible ? 1 : 0)
+    const bodyColSpan = leafColumns.length + extraColumnCount
+
+    const wrapperStyle = mergeStyles(
+      semanticStyles.wrapper,
+      typeof scroll?.y !== 'undefined' ? { maxHeight: asCssSize(scroll.y) } : undefined,
+      typeof height !== 'undefined' ? { height: asCssSize(height) } : undefined,
+      sticky && typeof sticky === 'object' && sticky.offsetScroll !== undefined
+        ? { top: asCssSize(sticky.offsetScroll) }
+        : undefined,
+    )
+    const wrapperCls = mergeClassNames(
+      scroll?.x ? 'overflow-x-auto' : undefined,
+      scroll?.y || typeof height !== 'undefined' ? 'overflow-y-auto' : undefined,
+      semanticClasses.wrapper,
+    )
+
+    const tableStyle = mergeStyles(semanticStyles.table) ?? {}
+    const needFixedLayout = leafColumns.some(({ column }) => !!column.ellipsis)
+    if (tableLayout) tableStyle.tableLayout = tableLayout
+    else if (needFixedLayout || scroll?.x) tableStyle.tableLayout = 'fixed'
+    if (scroll?.x === true) {
+      tableStyle.width = 'max-content'
+      tableStyle.minWidth = '100%'
+    } else if (typeof scroll?.x !== 'undefined') {
+      tableStyle.width = asCssSize(scroll.x as string | number)
+      tableStyle.minWidth = '100%'
+    }
+
+    const ensureOutsideCloseRegistered = () => {
+      const globalValue: any = globalThis
+      const registryKey = `__rue_table_outside_close_${tableId.value}`
+      if (globalValue[registryKey]) return
+      const handler = (event: any) => {
+        const target = event?.target as HTMLElement | null
+        if (!target) return
+        if (target.closest(`[data-rue-table-root="${tableId.value}"]`)) return
+        setOpenFilterMenuKey(null)
+        bumpStateVersion()
+      }
+      if (globalValue?.addEventListener) globalValue.addEventListener('pointerdown', handler)
+      globalValue[registryKey] = handler
+    }
+    ensureOutsideCloseRegistered()
+
+    const scrollToTopIfNeeded = () => {
+      if (!scroll?.scrollToFirstRowOnChange) return
+      const root = document.querySelector(
+        `[data-rue-table-scroll="${tableId.value}"]`,
+      ) as HTMLElement | null
+      if (root) root.scrollTop = 0
+    }
+
+    const sortColumnsContext = normalizeSortStates(activeSortStates)
+      .map(sortState => {
+        const leaf = leafColumnMap.get(sortState.key)
+        if (!leaf) return null
+        return {
+          column: leaf.column,
+          columnKey: sortState.key,
+          order: sortState.order,
+        }
+      })
+      .filter(Boolean) as Array<{ column: ColumnItem; columnKey: string; order: SortOrder }>
+
+    const getColumnTitleNode = (column: ColumnItem, key: string) => {
+      const titleValue = column.title
+      if (typeof titleValue === 'function') {
+        return titleValue({
+          sortOrder: activeSortStateMap.get(key)?.order ?? null,
+          filteredValue: currentFilters[key] ?? [],
+          sortColumns: sortColumnsContext,
+          filters: activeFilters,
         })
       }
-    })
-    /* 排序：自定义比较或默认比较 */
-    if (sortColIndex != null && sortOrder && visibleColumns[sortColIndex]) {
-      const col = visibleColumns[sortColIndex]
-      const cmp =
-        typeof col.sorter === 'function'
-          ? col.sorter
-          : (a: any, b: any) => {
-              const va = getVal(a, col.dataIndex)
-              const vb = getVal(b, col.dataIndex)
-              if (va == null && vb == null) return 0
-              if (va == null) return -1
-              if (vb == null) return 1
-              if (va > vb) return 1
-              if (va < vb) return -1
-              return 0
-            }
-      workingData.sort((a, b) => (sortOrder === 'ascend' ? cmp(a, b) : -cmp(a, b)))
+      return titleValue
     }
-    /* 分页：计算页码与切片数据 */
-    let page = 1
-    let pageSize = workingData.length
-    if (pagination !== false && pagination != null) {
-      page = pagination.current || 1
-      pageSize = pagination.pageSize || 10
+
+    const buildSorterResult = (sortStates: SortState[]) => {
+      const normalizedSortStates = normalizeSortStates(sortStates)
+      const sorters = normalizedSortStates
+        .map(sortState => {
+          const leaf = leafColumnMap.get(sortState.key)
+          if (!leaf) return null
+          return {
+            column: leaf.column,
+            order: sortState.order,
+            columnKey: sortState.key,
+            field: leaf.column.dataIndex,
+            multiple: sortState.multiple,
+          }
+        })
+        .filter(Boolean)
+      if (sorters.length === 0) return { column: null, order: null }
+      return sorters.length === 1 ? sorters[0] : sorters
     }
-    const total = workingData.length
-    const pageCount = Math.ceil(total / pageSize) || 1
-    const start = (page - 1) * pageSize
-    const end = start + pageSize
-    const pageData = workingData.slice(start, end)
-    /* 选择/展开：计算当前页 keys 与展开集合 */
-    const hasSelection = !!rowSelection
-    const hasExpand = !!expandable && typeof expandable.expandedRowRender === 'function'
-    const expKeys = new Set<string | number>(
-      expandable?.expandedRowKeys ||
-        (expandable?.defaultExpandAllRows
-          ? workingData.map(rec => (typeof rowKey === 'function' ? rowKey(rec) : rec?.[rowKey]))
-          : []),
-    )
-    const selectedBase = (rowSelection?.selectedRowKeys ??
-      rowSelection?.defaultSelectedRowKeys ??
-      []) as Array<string | number>
-    const isSelected = (key: any) => Array.isArray(selectedBase) && selectedBase.includes(key)
-    /* 交互：点击表头单元格触发排序 */
-    const onHeaderSortClick = (i: number) => {
-      const col = visibleColumns[i]
-      if (!col.sorter) return
-      let next: 'ascend' | 'descend' | null = 'ascend'
-      if (sortColIndex === i && sortOrder === 'ascend') next = 'descend'
-      else if (sortColIndex === i && sortOrder === 'descend') next = null
-      if (onChange)
-        onChange(
-          { current: page, pageSize },
-          activeFilters,
-          { column: col, order: next },
-          { action: 'sort', currentDataSource: pageData },
-        )
-    }
-    /* 交互：页码改变 */
-    const onPageChange = (p: number) => {
-      if (pagination !== false && pagination != null && pagination.onChange)
-        pagination.onChange(p, pageSize)
-      if (onChange)
-        onChange(
-          { current: p, pageSize },
-          activeFilters,
-          { order: sortOrder, column: sortColIndex != null ? visibleColumns[sortColIndex] : null },
-          { action: 'paginate', currentDataSource: pageData },
-        )
-    }
-    /* 交互：表头排序箭头点击 */
-    const onHeaderSetSort = (i: number, order: 'ascend' | 'descend' | null) => {
-      const col = visibleColumns[i]
-      if (!col.sorter) return
-      if (onChange)
-        onChange(
-          { current: page, pageSize },
-          activeFilters,
-          { column: col, order },
-          { action: 'sort', currentDataSource: pageData },
-        )
-    }
-    /* 工具：重置筛选菜单到默认选中值 */
-    const resetHeaderFilterMenu = (i: number, menuEl?: HTMLElement) => {
-      const col = visibleColumns[i]
-      const el = menuEl || (document.getElementById(`table-filter-menu-${i}`) as HTMLElement | null)
-      if (!col || !el) return
-      const defaults = (
-        col.filterResetToDefaultFilteredValue ? (col.defaultFilteredValue ?? []) : []
-      ) as any[]
-      const inputs = el.querySelectorAll<HTMLInputElement>(
-        'input[type="checkbox"], input[type="radio"]',
+
+    const emitTableChange = (
+      action: 'paginate' | 'sort' | 'filter',
+      nextPage: number,
+      nextPageSize: number,
+      nextFilters: Record<string, any[]>,
+      nextSortStates: SortState[],
+    ) => {
+      if (!onChange) return
+      const nextProcessedData = buildProcessedData(nextFilters, nextSortStates)
+      const nextVisibleRows = flattenRows(nextProcessedData)
+      const nextPageCount = paginationEnabled
+        ? Math.max(1, Math.ceil(nextVisibleRows.length / nextPageSize))
+        : 1
+      const safePage = paginationEnabled ? clampPage(nextPage, nextPageCount) : 1
+      const currentDataSource = paginationEnabled
+        ? nextVisibleRows
+            .slice((safePage - 1) * nextPageSize, safePage * nextPageSize)
+            .map(row => row.record)
+        : nextVisibleRows.map(row => row.record)
+      onChange(
+        paginationEnabled ? { current: safePage, pageSize: nextPageSize } : false,
+        buildActiveFilters(nextFilters),
+        buildSorterResult(nextSortStates),
+        { action, currentDataSource },
       )
-      inputs.forEach(inp => {
-        const v = (inp.getAttribute('data-value') || inp.value) as any
-        if (inp.type === 'checkbox') {
-          inp.checked = defaults.includes(v)
-        } else {
-          inp.checked = defaults[0] === v
+    }
+
+    const updateSortState = (columnKey: string, order: SortOrder) => {
+      const column = leafColumnMap.get(columnKey)?.column
+      if (!column?.sorter) return
+      const multiple = getSorterMultiple(column)
+      const nextSortStates = (() => {
+        if (multiple != null) {
+          const next = activeSortStates
+            .filter(state => {
+              const stateColumn = leafColumnMap.get(state.key)?.column
+              return getSorterMultiple(stateColumn ?? ({} as ColumnItem)) != null && state.key !== columnKey
+            })
+            .map(state => ({ ...state }))
+          if (order) next.push({ key: columnKey, order, multiple })
+          return normalizeSortStates(next)
         }
+        if (!order) return []
+        return [{ key: columnKey, order, multiple }]
+      })()
+      if (!hasControlledSort) setSortStateRef(nextSortStates)
+      bumpStateVersion()
+      if (paginationEnabled && pagination.current === undefined) setUncontrolledPageRef(1)
+      scrollToTopIfNeeded()
+      emitTableChange(
+        'sort',
+        paginationEnabled ? 1 : currentPage,
+        resolvedPageSize,
+        currentFilters,
+        nextSortStates,
+      )
+    }
+
+    const updateFilterState = (columnKey: string, values: any[], closeMenu: boolean) => {
+      const nextValues = normalizeFilterValues(values)
+      const nextFilters = { ...currentFilters, [columnKey]: nextValues }
+      const column = leafColumns.find(leaf => leaf.key === columnKey)?.column
+      if (column?.filteredValue === undefined) setFilterStateRef(nextFilters)
+      setDraftFilterStateRef({ ...draftFilterStateRef.value, [columnKey]: nextValues })
+      bumpStateVersion()
+      if (paginationEnabled && pagination.current === undefined) setUncontrolledPageRef(1)
+      if (closeMenu) setOpenFilterMenuKey(null)
+      scrollToTopIfNeeded()
+      emitTableChange(
+        'filter',
+        paginationEnabled ? 1 : currentPage,
+        resolvedPageSize,
+        nextFilters,
+        activeSortStates,
+      )
+    }
+
+    const updatePage = (nextPage: number) => {
+      const safePage = clampPage(nextPage, pageCount)
+      if (paginationEnabled && pagination.current === undefined) setUncontrolledPageRef(safePage)
+      bumpStateVersion()
+      if (paginationEnabled && pagination.onChange) pagination.onChange(safePage, resolvedPageSize)
+      scrollToTopIfNeeded()
+      emitTableChange('paginate', safePage, resolvedPageSize, currentFilters, activeSortStates)
+    }
+
+    const getSelectableRows = (rows: FlattenRow[]) => {
+      return rows.filter(row => {
+        if (rowSelection?.disabled) return false
+        const checkboxProps = rowSelection?.getCheckboxProps
+          ? rowSelection.getCheckboxProps(row.record)
+          : {}
+        return !checkboxProps?.disabled
       })
     }
-    /* 注册外部点击关闭筛选菜单（一次性） */
-    const ensureOutsideCloseRegistered = (id: string) => {
-      const g: any = globalThis
-      const key = `__rue_table_outside_close_${id}`
-      if (g[key]) return
-      const handler = (e: any) => {
-        const target = e.target as HTMLElement
-        const withinIcon = target.closest(`[data-rue-table-id="${id}"] .rue-table-filter-icon`)
-        const withinMenu = target.closest(`[data-rue-table-id="${id}"] .rue-table-filter-menu`)
-        if (!withinIcon && !withinMenu) {
-          const tableEl = document.querySelector(
-            `table[data-rue-table-id="${id}"]`,
-          ) as HTMLElement | null
-          if (!tableEl) return
-          const menus = tableEl.querySelectorAll<HTMLElement>('.rue-table-filter-menu')
-          menus.forEach(m => (m.style.display = 'none'))
-        }
+
+    const selectablePageRows = getSelectableRows(pageRows)
+    const selectablePageKeys = selectablePageRows.map(row => row.key)
+    const allSelectedOnPage =
+      selectablePageKeys.length > 0 && selectablePageKeys.every(key => selectedRowKeySet.has(key))
+    const someSelectedOnPage =
+      selectablePageKeys.some(key => selectedRowKeySet.has(key)) && !allSelectedOnPage
+
+    const updateSelectedKeys = (
+      nextKeys: TableKey[],
+      info: { type: 'checkbox' | 'radio' },
+      record?: any,
+      selected?: boolean,
+      nativeEvent?: Event,
+    ) => {
+      if (rowSelection?.selectedRowKeys === undefined) setSelectedRowKeysRef([...nextKeys])
+      bumpStateVersion()
+      const selectedRows = allRows
+        .filter(row => nextKeys.includes(row.key))
+        .map(row => row.record)
+      if (record !== undefined && rowSelection?.onSelect && typeof selected === 'boolean') {
+        rowSelection.onSelect(record, selected, selectedRows, nativeEvent)
       }
-      if (g && g.addEventListener) g.addEventListener('pointerdown', handler)
-      g[key] = handler
+      if (rowSelection?.onChange) rowSelection.onChange([...nextKeys], selectedRows, info)
     }
-    ensureOutsideCloseRegistered(tableId)
-    /* 打开/关闭并定位筛选菜单 */
-    const toggleHeaderFilterMenu = (i: number, open?: boolean, anchor?: HTMLElement) => {
-      let el: HTMLElement | null = null
-      if (anchor) {
-        const cell = anchor.closest('th, td') as HTMLElement | null
-        el = cell ? (cell.querySelector('.rue-table-filter-menu') as HTMLElement | null) : null
-      }
-      if (!el) el = document.getElementById(`table-filter-menu-${i}`) as HTMLElement | null
-      if (!el) return
-      const hidden = el.style.display === 'none'
-      const shouldOpen = open != null ? open : hidden
-      if (!shouldOpen) {
-        el.style.display = 'none'
-        return
-      }
-      // Position as overlay relative to viewport
-      el.style.position = 'fixed'
-      el.style.visibility = 'hidden'
-      el.style.display = ''
-      const anchorEl = anchor || el
-      const rect = anchorEl.getBoundingClientRect()
-      const menuW = el.offsetWidth || 176
-      const menuH = el.offsetHeight || 160
-      const gap = 8
-      const vw = window.innerWidth
-      const vh = window.innerHeight
-      let top = rect.bottom + gap
-      let left = rect.left
-      if (vh - rect.bottom < menuH + gap) top = Math.max(8, rect.top - menuH - gap)
-      if (vw - rect.left < menuW + 8) left = Math.max(8, rect.right - menuW)
-      el.style.visibility = ''
-      el.style.top = `${top}px`
-      el.style.left = `${left}px`
-      el.style.maxHeight = 'calc(100vh - 16px)'
-      el.style.overflow = 'auto'
-      el.style.zIndex = '50'
-    }
-    /* 收集筛选菜单当前选中值 */
-    const collectHeaderFilterValues = (i: number, menuEl?: HTMLElement) => {
-      const el = menuEl || (document.getElementById(`table-filter-menu-${i}`) as HTMLElement | null)
-      if (!el) return [] as any[]
-      const inputs = el.querySelectorAll<HTMLInputElement>(
-        'input[type="checkbox"], input[type="radio"]',
-      )
-      const vals: any[] = []
-      inputs.forEach(inp => {
-        const v = (inp.getAttribute('data-value') || inp.value) as any
-        if (inp.checked) vals.push(v)
-      })
-      return vals
-    }
-    /* 应用筛选并关闭菜单 */
-    const onHeaderFilterApply = (i: number, vals?: any[], menuEl?: HTMLElement) => {
-      const col = visibleColumns[i]
-      if (!col || !Array.isArray(col.filters) || col.filters.length === 0) return
-      const key = getColKey(col)
-      const cur = Array.isArray(vals) ? vals : collectHeaderFilterValues(i, menuEl)
-      const nextFilters = { ...activeFilters }
-      if (key) nextFilters[key] = cur
-      if (onChange)
-        onChange(
-          { current: page, pageSize },
-          nextFilters,
-          { order: sortOrder, column: sortColIndex != null ? visibleColumns[sortColIndex] : null },
-          { action: 'filter', currentDataSource: pageData },
-        )
-      toggleHeaderFilterMenu(i, false, menuEl || undefined)
-    }
-    /* 展开行：切换显示并通知回调 */
-    const toggleExpand = (key: any, record: any, e?: any) => {
-      const btnEl = e?.currentTarget as HTMLElement | undefined
-      const rowEl = btnEl ? (btnEl.closest('tr') as HTMLElement | null) : null
-      const expRow = rowEl?.nextElementSibling as HTMLElement | null
-      if (expRow) {
-        const hidden = expRow.style.display === 'none'
-        expRow.style.display = hidden ? '' : 'none'
-        if (btnEl) btnEl.textContent = hidden ? '-' : '+'
-      }
-      const has = expKeys.has(key)
-      if (expandable?.onExpand) expandable.onExpand(!has, record)
-    }
-    /* 选择：全选/清空 */
+
     const selectAll = (checked: boolean) => {
       if (!rowSelection || rowSelection.type === 'radio') return
-      const keys = checked
-        ? pageData.map(rec => (typeof rowKey === 'function' ? rowKey(rec) : rec?.[rowKey]))
-        : []
-      if (rowSelection.onChange) {
-        const rows = workingData.filter(rec =>
-          keys.includes(typeof rowKey === 'function' ? rowKey(rec) : rec?.[rowKey]),
-        )
-        rowSelection.onChange(keys, rows, { type: 'checkbox' })
-      }
+      const pageKeySet = new Set(selectablePageKeys)
+      const existingKeys = (rowSelection.selectedRowKeys ?? selectedRowKeysRef.value) as TableKey[]
+      const nextKeySet = new Set(existingKeys)
+      pageKeySet.forEach(key => {
+        if (checked) nextKeySet.add(key)
+        else nextKeySet.delete(key)
+      })
+      const nextKeys = Array.from(nextKeySet)
+      updateSelectedKeys(nextKeys, { type: 'checkbox' })
       if (rowSelection.onSelectAll) {
-        const rows = workingData.filter(rec =>
-          keys.includes(typeof rowKey === 'function' ? rowKey(rec) : rec?.[rowKey]),
-        )
-        rowSelection.onSelectAll(checked, rows)
+        const nextRows = allRows.filter(row => nextKeys.includes(row.key)).map(row => row.record)
+        rowSelection.onSelectAll(checked, nextRows)
       }
     }
-    const pageKeys = pageData.map(rec =>
-      typeof rowKey === 'function' ? rowKey(rec) : rec?.[rowKey],
-    )
-    const allSelectedOnPage = pageKeys.length > 0 && pageKeys.every(k => isSelected(k))
-    const someSelectedOnPage = pageKeys.some(k => isSelected(k)) && !allSelectedOnPage
-    const tableStyle: Record<string, any> = {}
-    const needFixedLayout = visibleColumns.some(c => !!c.ellipsis)
-    /* 布局：固定/自动 */
-    if (tableLayout) tableStyle.tableLayout = tableLayout
-    else if (needFixedLayout) tableStyle.tableLayout = 'fixed'
-    /* 包裹层：滚动与高度 */
-    const wrapperNeeded = !!(scroll?.x || scroll?.y || typeof height !== 'undefined' || onScroll)
-    const wrapperStyle: Record<string, any> = {}
-    const wrapperCls =
-      `${scroll?.x ? 'overflow-x-auto' : ''} ${scroll?.y || typeof height !== 'undefined' ? 'overflow-y-auto' : ''}`.trim() ||
-      undefined
-    if (typeof scroll?.y !== 'undefined') {
-      const maxH = typeof scroll!.y === 'number' ? `${scroll!.y}px` : (scroll!.y as any)
-      wrapperStyle.maxHeight = maxH
+
+    const getExpandableState = (row: FlattenRow, rowIndex: number) => {
+      const canExpandExtra = !!expandable?.expandedRowRender &&
+        (expandable?.rowExpandable ? expandable.rowExpandable(row.record) : true)
+      const enabled = row.hasTreeChildren || canExpandExtra
+      return {
+        key: row.key,
+        enabled,
+        expanded: expandedRowKeySet.has(row.key),
+        hasExpandedRowRender: canExpandExtra,
+        indent: row.indent,
+        rowIndex,
+      }
     }
-    if (typeof height !== 'undefined') {
-      const h = typeof height === 'number' ? `${height}px` : (height as any)
-      wrapperStyle.height = h
+
+    const toggleExpandedRow = (row: FlattenRow, rowIndex: number) => {
+      const state = getExpandableState(row, rowIndex)
+      if (!state.enabled) return
+      const nextKeySet = new Set(expandedRowKeys)
+      if (state.expanded) nextKeySet.delete(state.key)
+      else nextKeySet.add(state.key)
+      const nextKeys = Array.from(nextKeySet)
+      if (expandable?.expandedRowKeys === undefined) setExpandedRowKeysRef(nextKeys)
+      bumpStateVersion()
+      if (expandable?.onExpand) expandable.onExpand(!state.expanded, row.record)
+      if (expandable?.onExpandedRowsChange) expandable.onExpandedRowsChange(nextKeys)
     }
-    return wrapperNeeded ? (
-      <div className={wrapperCls} style={wrapperStyle} onScroll={onScroll}>
-        {/* 标题区域：可选 */}
-        {typeof title === 'function' ? <div className="p-2">{title(pageData)}</div> : null}
-        <table className={cls} style={tableStyle} data-rue-table-id={tableId}>
-          {showHeader ? (
-            <thead {...headerProps}>
-              <tr>
-                {/* 展开列与选择列（可选） */}
-                {hasExpand ? <th className={alignClass('center')}></th> : null}
-                {hasSelection ? (
-                  <th
-                    style={
-                      rowSelection?.columnWidth
-                        ? { width: rowSelection.columnWidth as any }
-                        : undefined
-                    }
-                    className={alignClass('center')}
-                  >
-                    {rowSelection?.type !== 'radio' ? (
-                      <label>
-                        <input
-                          type="checkbox"
-                          className="checkbox"
-                          checked={allSelectedOnPage}
-                          aria-checked={
-                            someSelectedOnPage ? 'mixed' : allSelectedOnPage ? 'true' : 'false'
-                          }
-                          disabled={!!rowSelection?.disabled}
-                          onChange={(e: any) => selectAll((e.target as HTMLInputElement).checked)}
-                        />
-                      </label>
-                    ) : null}
-                  </th>
-                ) : null}
-                {visibleColumns.map((col, i) => {
-                  const cellProps = col.onHeaderCell ? col.onHeaderCell(col, i) || {} : {}
-                  const keyVal = (col.key ?? col.dataIndex ?? i) as any
-                  const className =
-                    `${alignClass(col.align)}${col.className ? ` ${col.className}` : ''}${cellProps.className ? ` ${cellProps.className}` : ''}`.trim() ||
-                    undefined
-                  const style = col.width ? { width: col.width as any } : (cellProps.style as any)
-                  if (pinCols && !col.fixedCol) {
-                    return (
-                      <td
-                        key={keyVal}
-                        className={className}
-                        style={style}
-                        onClick={() => onHeaderSortClick(i)}
-                        {...cellProps}
-                      >
-                        {col.title}
-                      </td>
-                    )
-                  }
+
+    const getSortCycle = (column: ColumnItem) => {
+      const directions = column.sortDirections ?? sortDirections ?? ['ascend', 'descend']
+      return [...directions, null] as SortOrder[]
+    }
+
+    const getNextSortOrder = (columnKey: string, column: ColumnItem) => {
+      const cycle = getSortCycle(column)
+      const currentOrder = activeSortStateMap.get(columnKey)?.order ?? null
+      const currentIndex = cycle.findIndex(order => order === currentOrder)
+      return cycle[(currentIndex + 1 + cycle.length) % cycle.length]
+    }
+
+    const resolveFilterDropdownOpen = (column: ColumnItem, columnKey: string) => {
+      const controlledOpen = column.filterDropdownProps?.open ?? column.filterDropdownOpen
+      if (controlledOpen !== undefined) return !!controlledOpen
+      return openFilterMenuKey.value === columnKey
+    }
+
+    const getDraftFilterValues = (columnKey: string, column?: ColumnItem) => {
+      const visible = column
+        ? resolveFilterDropdownOpen(column, columnKey)
+        : openFilterMenuKey.value === columnKey
+      if (visible) {
+        return normalizeFilterValues(
+          draftFilterStateRef.value[columnKey] ?? currentFilters[columnKey],
+        )
+      }
+      return normalizeFilterValues(currentFilters[columnKey])
+    }
+
+    const setDraftFilterValues = (columnKey: string, values: any[]) => {
+      setDraftFilterStateRef({
+        ...draftFilterStateRef.value,
+        [columnKey]: normalizeFilterValues(values),
+      })
+      bumpStateVersion()
+    }
+
+    const syncFilterDropdownVisible = (leafKey: string, column: ColumnItem, visible: boolean) => {
+      const wasVisible = resolveFilterDropdownOpen(column, leafKey)
+      if (visible) {
+        setDraftFilterStateRef({
+          ...draftFilterStateRef.value,
+          [leafKey]: normalizeFilterValues(currentFilters[leafKey]),
+        })
+      }
+      if (
+        column.filterDropdownProps?.open === undefined &&
+        column.filterDropdownOpen === undefined
+      ) {
+        setOpenFilterMenuKey(
+          visible ? leafKey : openFilterMenuKey.value === leafKey ? null : openFilterMenuKey.value,
+        )
+      }
+      if (wasVisible !== visible || visible) bumpStateVersion()
+      column.filterDropdownProps?.onOpenChange?.(visible)
+      column.onFilterDropdownOpenChange?.(visible)
+    }
+
+    const closeFilterDropdown = (leafKey: string, column: ColumnItem) => {
+      syncFilterDropdownVisible(leafKey, column, false)
+    }
+
+    const confirmFilterValues = (
+      leafKey: string,
+      column: ColumnItem,
+      options?: FilterConfirmOptions,
+    ) => {
+      updateFilterState(
+        leafKey,
+        getDraftFilterValues(leafKey, column),
+        options?.closeDropdown ?? true,
+      )
+    }
+
+    const clearFilterValues = (
+      leafKey: string,
+      column: ColumnItem,
+      options?: FilterClearOptions,
+    ) => {
+      const defaults = column.filterResetToDefaultFilteredValue
+        ? normalizeFilterValues(column.defaultFilteredValue)
+        : []
+      setDraftFilterValues(leafKey, defaults)
+      if (options?.confirm) {
+        updateFilterState(leafKey, defaults, options.closeDropdown ?? true)
+        return
+      }
+      if (options?.closeDropdown) closeFilterDropdown(leafKey, column)
+    }
+
+    const renderFilterIcon = (column: ColumnItem, filtered: boolean) => {
+      if (typeof column.filterIcon === 'function') return column.filterIcon(filtered)
+      if (column.filterIcon !== undefined) return column.filterIcon
+      return '☰'
+    }
+
+    const renderSortIcon = (column: ColumnItem, sortOrder: SortOrder) => {
+      if (typeof column.sortIcon === 'function') return column.sortIcon({ sortOrder })
+      return (
+        <span
+          className={mergeClassNames(
+            'inline-flex flex-col leading-none',
+            sortOrder ? 'text-base-content' : 'opacity-60',
+          )}
+        >
+          <span
+            className={mergeClassNames(sortOrder === 'ascend' ? 'text-base-content' : 'opacity-40')}
+          >
+            ▲
+          </span>
+          <span
+            className={mergeClassNames(
+              '-mt-0.5',
+              sortOrder === 'descend' ? 'text-base-content' : 'opacity-40',
+            )}
+          >
+            ▼
+          </span>
+        </span>
+      )
+    }
+
+    const filterItemsBySearch = (items: FilterItem[], query: string, column: ColumnItem) => {
+      if (!query) return items
+      return items
+        .map(item => {
+          const selfMatched =
+            typeof column.filterSearch === 'function'
+              ? column.filterSearch(query, item)
+              : String(item.text).toLowerCase().includes(query.toLowerCase())
+          const matchedChildren = Array.isArray(item.children)
+            ? filterItemsBySearch(item.children, query, column)
+            : undefined
+          if (selfMatched || (matchedChildren && matchedChildren.length > 0)) {
+            return matchedChildren && matchedChildren.length > 0
+              ? { ...item, children: matchedChildren }
+              : item
+          }
+          return null
+        })
+        .filter(Boolean) as FilterItem[]
+    }
+
+    const renderDefaultFilterItems = (
+      items: FilterItem[],
+      column: ColumnItem,
+      leafKey: string,
+      draftValues: any[],
+      depth = 0,
+    ): any[] => {
+      return items.flatMap(item => {
+        const checked = draftValues.includes(item.value)
+        const childNodes =
+          Array.isArray(item.children) && item.children.length > 0
+            ? renderDefaultFilterItems(item.children, column, leafKey, draftValues, depth + 1)
+            : []
+        const labelNode = (
+          <label
+            key={`${String(item.value)}-${depth}`}
+            className="flex items-center gap-2 text-sm"
+            style={depth > 0 ? { paddingLeft: `${depth * 12}px` } : undefined}
+          >
+            <input
+              type={column.filterMultiple === false ? 'radio' : 'checkbox'}
+              name={`rue-table-filter-${tableId.value}-${leafKey}`}
+              className={
+                column.filterMultiple === false ? 'radio radio-xs' : 'checkbox checkbox-xs'
+              }
+              checked={checked}
+              onChange={(event: any) => {
+                const input = event.target as HTMLInputElement
+                let nextValues: any[]
+                if (column.filterMultiple === false) {
+                  nextValues = input.checked ? [item.value] : []
+                } else {
+                  const nextSet = new Set(draftValues)
+                  if (input.checked) nextSet.add(item.value)
+                  else nextSet.delete(item.value)
+                  nextValues = Array.from(nextSet)
+                }
+                setDraftFilterValues(leafKey, nextValues)
+                if (column.filterOnClose === false) updateFilterState(leafKey, nextValues, false)
+              }}
+            />
+            <span>{item.text}</span>
+          </label>
+        )
+        return childNodes.length > 0 ? [labelNode, ...childNodes] : [labelNode]
+      })
+    }
+
+    const renderFilterDropdownContent = (
+      leafKey: string,
+      column: ColumnItem,
+      visible: boolean,
+      draftValues: any[],
+      menuItems: FilterItem[],
+    ) => {
+      if (typeof column.filterDropdown === 'function') {
+        return column.filterDropdown({
+          setSelectedKeys: (selectedKeys: any[]) => setDraftFilterValues(leafKey, selectedKeys),
+          selectedKeys: draftValues,
+          confirm: (options?: FilterConfirmOptions) =>
+            confirmFilterValues(leafKey, column, options),
+          clearFilters: (options?: FilterClearOptions) =>
+            clearFilterValues(leafKey, column, options),
+          filters: column.filters,
+          close: () => closeFilterDropdown(leafKey, column),
+          visible,
+        })
+      }
+      if (column.filterDropdown !== undefined) return column.filterDropdown
+      return (
+        <div className="w-56 rounded-box border border-base-content/10 bg-base-100 p-3 shadow-xl">
+          {column.filterSearch ? (
+            <input
+              type="text"
+              className="input input-bordered input-xs mb-2 w-full"
+              placeholder="搜索筛选项"
+              value={filterSearchRef.value[leafKey] ?? ''}
+              onInput={(event: any) => {
+                setFilterSearchRef({
+                  ...filterSearchRef.value,
+                  [leafKey]: (event.target as HTMLInputElement).value,
+                })
+                bumpStateVersion()
+              }}
+            />
+          ) : null}
+          <div className="max-h-56 space-y-2 overflow-auto">
+            {renderDefaultFilterItems(menuItems, column, leafKey, draftValues)}
+            {menuItems.length === 0 ? <div className="text-sm opacity-60">暂无匹配项</div> : null}
+          </div>
+          {column.filterOnClose === false ? null : (
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                className="btn btn-ghost btn-xs"
+                onClick={() => clearFilterValues(leafKey, column, { confirm: true })}
+              >
+                {localeText.filterReset}
+              </button>
+              <button
+                className="btn btn-primary btn-xs"
+                onClick={() => confirmFilterValues(leafKey, column)}
+              >
+                {localeText.filterConfirm}
+              </button>
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    const resolveSorterTooltipTitle = (column: ColumnItem, leafKey: string) => {
+      const tooltipConfig = column.showSorterTooltip ?? showSorterTooltip
+      if (tooltipConfig === false) return undefined
+      if (typeof tooltipConfig === 'object' && tooltipConfig?.title !== undefined) {
+        return tooltipConfig.title
+      }
+      const nextOrder = getNextSortOrder(leafKey, column)
+      if (nextOrder === 'ascend') return localeText.triggerAsc
+      if (nextOrder === 'descend') return localeText.triggerDesc
+      return localeText.cancelSort
+    }
+
+    const renderHeaderCellContent = (leafKey: string, column: ColumnItem) => {
+      const titleNode = getColumnTitleNode(column, leafKey)
+      const filtered = column.filtered ?? (currentFilters[leafKey] ?? []).length > 0
+      const sortOrder = activeSortStateMap.get(leafKey)?.order ?? null
+      const draftValues = getDraftFilterValues(leafKey, column)
+      const filterSearchValue = filterSearchRef.value[leafKey] ?? ''
+      const visible = resolveFilterDropdownOpen(column, leafKey)
+      const menuItems = filterItemsBySearch(column.filters ?? [], filterSearchValue, column)
+      const sorterTooltipTitle = resolveSorterTooltipTitle(column, leafKey)
+      const {
+        open: _dropdownOpen,
+        onOpenChange: _dropdownOnOpenChange,
+        children: _dropdownChildren,
+        content: _dropdownContent,
+        overlay: _dropdownOverlay,
+        items: _dropdownItems,
+        menu: _dropdownMenu,
+        popupRender: _dropdownPopupRender,
+        ...dropdownProps
+      } = column.filterDropdownProps ?? {}
+
+      return (
+        <div className="relative flex items-center gap-2">
+          <span>{titleNode}</span>
+          {column.sorter ? (
+            <button
+              type="button"
+              aria-label={`sort-${leafKey}`}
+              title={sorterTooltipTitle}
+              className="btn btn-ghost btn-xs h-auto min-h-0 px-1 py-0.5"
+              onClick={(event: any) => {
+                event.stopPropagation()
+                updateSortState(leafKey, getNextSortOrder(leafKey, column))
+              }}
+            >
+              {renderSortIcon(column, sortOrder)}
+            </button>
+          ) : null}
+          {(Array.isArray(column.filters) && column.filters.length > 0) ||
+          column.filterDropdown !== undefined ? (
+            <Dropdown
+              trigger="click"
+              open={visible}
+              closeOnClick={false}
+              align="start"
+              {...dropdownProps}
+              onOpenChange={(nextOpen: boolean) =>
+                syncFilterDropdownVisible(leafKey, column, nextOpen)
+              }
+            >
+              <Dropdown.Trigger
+                as="button"
+                type="button"
+                aria-label={`filter-${leafKey}`}
+                className={mergeClassNames(
+                  'btn btn-ghost btn-xs h-auto min-h-0 px-1 py-0.5 select-none',
+                  filtered ? 'text-base-content' : 'opacity-40',
+                )}
+              >
+                {renderFilterIcon(column, filtered)}
+              </Dropdown.Trigger>
+              <Dropdown.Content
+                className="dropdown-content z-50 mt-2 p-0"
+                onClick={(event: any) => event.stopPropagation()}
+              >
+                {renderFilterDropdownContent(leafKey, column, visible, draftValues, menuItems)}
+              </Dropdown.Content>
+            </Dropdown>
+          ) : null}
+        </div>
+      )
+    }
+
+    const renderHeaderCell = (meta: HeaderCellMeta, level: number) => {
+      const cellProps = meta.column.onHeaderCell
+        ? meta.column.onHeaderCell(meta.column, meta.index) || {}
+        : {}
+      const children = getVisibleChildren(meta.column)
+      const isLeaf = children.length === 0
+      const leaf = isLeaf ? (leafColumnMap.get(meta.key) ?? null) : null
+      const key = leaf?.key ?? meta.key
+      const colSpan = cellProps.colSpan ?? meta.colSpan
+      const rowSpan = cellProps.rowSpan ?? meta.rowSpan
+      if (colSpan === 0 || rowSpan === 0) return null
+      const { className: cellPropClassName, style: cellPropStyle, ...restCellProps } = cellProps
+      const className = mergeClassNames(
+        semanticClasses.headerCell,
+        alignClass(meta.column.align),
+        meta.column.className,
+        cellPropClassName,
+      )
+      const style = mergeStyles(
+        semanticStyles.headerCell,
+        meta.column.width || meta.column.minWidth
+          ? {
+              ...(meta.column.width ? { width: meta.column.width as any } : {}),
+              ...(meta.column.minWidth ? { minWidth: meta.column.minWidth as any } : {}),
+            }
+          : undefined,
+        cellPropStyle as Record<string, any> | undefined,
+      )
+      const content = leaf
+        ? renderHeaderCellContent(key, meta.column)
+        : getColumnTitleNode(meta.column, meta.key)
+      return (
+        <th
+          key={`${level}-${meta.key}`}
+          colSpan={colSpan}
+          rowSpan={rowSpan}
+          className={className}
+          style={style}
+          {...restCellProps}
+        >
+          {content}
+        </th>
+      )
+    }
+
+    const renderSelectionCell = (row: FlattenRow, rowIndex: number) => {
+      if (!rowSelection) return null
+      const checkboxProps = rowSelection.getCheckboxProps
+        ? { ...rowSelection.getCheckboxProps(row.record) }
+        : {}
+      if (rowSelection.disabled) checkboxProps.disabled = true
+      const checked = selectedRowKeySet.has(row.key)
+      const inputClassName = rowSelection.type === 'radio' ? 'radio' : 'checkbox'
+      const onChangeHandler = (event: any) => {
+        const input = event.target as HTMLInputElement
+        if (rowSelection.type === 'radio') {
+          updateSelectedKeys([row.key], { type: 'radio' }, row.record, true, event)
+          return
+        }
+        const baseKeys = rowSelection.selectedRowKeys ?? selectedRowKeysRef.value
+        const nextKeySet = new Set(baseKeys)
+        if (input.checked) nextKeySet.add(row.key)
+        else nextKeySet.delete(row.key)
+        updateSelectedKeys(
+          Array.from(nextKeySet),
+          { type: 'checkbox' },
+          row.record,
+          input.checked,
+          event,
+        )
+      }
+      const originNode = (
+        <label onClick={(event: any) => event.stopPropagation()}>
+          <input
+            type={rowSelection.type === 'radio' ? 'radio' : 'checkbox'}
+            className={inputClassName}
+            checked={checked}
+            onChange={onChangeHandler}
+            {...checkboxProps}
+          />
+        </label>
+      )
+      const content = rowSelection.renderCell
+        ? rowSelection.renderCell(checked, row.record, rowIndex, originNode)
+        : originNode
+      const SelectionCellTag = pinCols && rowSelection.fixed ? 'th' : 'td'
+      return (
+        <SelectionCellTag
+          className={mergeClassNames(semanticClasses.cell, alignClass(selectionAlign))}
+          style={mergeStyles(
+            semanticStyles.cell,
+            rowSelection.columnWidth ? { width: rowSelection.columnWidth as any } : undefined,
+          )}
+        >
+          {content}
+        </SelectionCellTag>
+      )
+    }
+
+    const renderExpandControl = (
+      row: FlattenRow,
+      rowIndex: number,
+      state: ReturnType<typeof getExpandableState>,
+    ) => {
+      if (!state.enabled) return null
+      if (expandable?.expandIcon) {
+        return expandable.expandIcon({
+          expanded: state.expanded,
+          expandable: state.enabled,
+          record: row.record,
+          onExpand: (_record: any, event?: any) => {
+            event?.stopPropagation?.()
+            toggleExpandedRow(row, rowIndex)
+          },
+        })
+      }
+      return (
+        <button
+          className="btn btn-ghost btn-xs"
+          onClick={(event: any) => {
+            event.stopPropagation()
+            toggleExpandedRow(row, rowIndex)
+          }}
+        >
+          {state.expanded ? '-' : '+'}
+        </button>
+      )
+    }
+
+    const summaryInfo = { total, page: currentPage, pageSize: resolvedPageSize }
+    const pageDataWithTotal: any = pageData.slice()
+    ;(pageDataWithTotal as any).total = total
+    const summaryNode =
+      typeof summary === 'function' ? summary(pageDataWithTotal, summaryInfo) : null
+    const titleNode = titleRender ? <RenderTableSection render={titleRender} data={pageData} /> : null
+    const footerNode = footerRender ? <RenderTableSection render={footerRender} data={pageData} /> : null
+    const pagerPlacements = resolvePaginationPlacements(pagination)
+    const showPager =
+      paginationEnabled &&
+      !(pagination.hideOnSinglePage && pageCount <= 1) &&
+      !(pagerPlacements.length === 1 && pagerPlacements[0] === 'none')
+
+    const renderPager = (placement: PaginationPlacement) => {
+      return (
+        <div
+          key={`pager-${placement}`}
+          data-rue-table-pager={placement}
+          className={mergeClassNames(
+            'flex items-center gap-2 p-2',
+            getPaginationPlacementClass(placement),
+            semanticClasses.pager,
+          )}
+          style={semanticStyles.pager}
+        >
+          <button
+            className="btn btn-ghost btn-xs"
+            disabled={currentPage <= 1}
+            onClick={() => updatePage(currentPage - 1)}
+          >
+            Prev
+          </button>
+          {Array.from({ length: pageCount }).map((_, index) => (
+            <button
+              key={`page-${placement}-${index + 1}`}
+              className={`btn btn-ghost btn-xs${currentPage === index + 1 ? ' btn-active' : ''}`}
+              onClick={() => updatePage(index + 1)}
+            >
+              {index + 1}
+            </button>
+          ))}
+          <button
+            className="btn btn-ghost btn-xs"
+            disabled={currentPage >= pageCount}
+            onClick={() => updatePage(currentPage + 1)}
+          >
+            Next
+          </button>
+        </div>
+      )
+    }
+
+    const headerCheckboxProps = rowSelection?.getTitleCheckboxProps?.() ?? {}
+    const selectionHeaderOriginNode =
+      rowSelection?.type === 'radio' || rowSelection?.hideSelectAll ? null : (
+        <label>
+          <input
+            type="checkbox"
+            className="checkbox"
+            checked={allSelectedOnPage}
+            aria-checked={someSelectedOnPage ? 'mixed' : allSelectedOnPage ? 'true' : 'false'}
+            disabled={rowSelection?.disabled || selectablePageKeys.length === 0}
+            onChange={(event: any) => selectAll((event.target as HTMLInputElement).checked)}
+            {...headerCheckboxProps}
+          />
+        </label>
+      )
+    const selectionHeaderNode =
+      rowSelection?.columnTitle !== undefined
+        ? typeof rowSelection.columnTitle === 'function'
+          ? rowSelection.columnTitle(selectionHeaderOriginNode)
+          : rowSelection.columnTitle
+        : selectionHeaderOriginNode
+
+    return (
+      <div
+        data-rue-table-root={tableId.value}
+        data-rue-table-scroll={tableId.value}
+        data-rue-table-version={stateVersion.value}
+        className={mergeClassNames(
+          'relative',
+          bordered ? 'rounded-box border border-base-300 bg-base-100' : undefined,
+          semanticClasses.root,
+          wrapperCls,
+        )}
+        style={mergeStyles(semanticStyles.root, wrapperStyle)}
+        onScroll={onScroll}
+      >
+        {showPager
+          ? pagerPlacements.filter(placement => placement.startsWith('top')).map(renderPager)
+          : null}
+        {titleNode ? (
+          <div className={mergeClassNames('p-2', semanticClasses.title)} style={semanticStyles.title}>
+            {titleNode}
+          </div>
+        ) : null}
+        <table className={cls} style={tableStyle} data-rue-table-id={tableId.value}>
+            {showHeader ? (
+              <thead className={semanticClasses.thead} style={semanticStyles.thead}>
+                {headerRows.map((row, rowIndex) => {
+                  const headerRowProps = onHeaderRow ? onHeaderRow(row.map(meta => meta.column), rowIndex) || {} : {}
+                  const {
+                    className: headerRowClassName,
+                    style: headerRowStyle,
+                    ...restHeaderRowProps
+                  } = headerRowProps
                   return (
-                    <th
-                      key={keyVal}
-                      className={className}
-                      style={style}
-                      onClick={() => onHeaderSortClick(i)}
-                      {...cellProps}
+                    <tr
+                      key={`header-row-${rowIndex}`}
+                      className={mergeClassNames(semanticClasses.headerRow, headerRowClassName)}
+                      style={mergeStyles(semanticStyles.headerRow, headerRowStyle as Record<string, any> | undefined)}
+                      {...restHeaderRowProps}
                     >
-                      {/* 表头内容：标题/排序/筛选触发与菜单 */}
-                      {col.title}
-                    </th>
+                      {rowIndex === 0 && expandColumnVisible ? (
+                        <th
+                          rowSpan={headerRows.length}
+                          className={mergeClassNames(semanticClasses.headerCell, alignClass('center'))}
+                          style={mergeStyles(
+                            semanticStyles.headerCell,
+                            expandable?.columnWidth ? { width: expandable.columnWidth as any } : undefined,
+                          )}
+                        >
+                          {expandable?.columnTitle}
+                        </th>
+                      ) : null}
+                      {rowIndex === 0 && hasSelection ? (
+                        <th
+                          rowSpan={headerRows.length}
+                          className={mergeClassNames(semanticClasses.headerCell, alignClass(selectionAlign))}
+                          style={mergeStyles(
+                            semanticStyles.headerCell,
+                            rowSelection?.columnWidth ? { width: rowSelection.columnWidth as any } : undefined,
+                          )}
+                        >
+                          {selectionHeaderNode}
+                        </th>
+                      ) : null}
+                      {row.map(meta => renderHeaderCell(meta, rowIndex))}
+                    </tr>
                   )
                 })}
-              </tr>
-            </thead>
-          ) : null}
-          <tbody>
-            {pageData.map((record, rowIndex) => {
-              const key = typeof rowKey === 'function' ? rowKey(record) : record?.[rowKey]
-              const rowProps = onRow ? onRow(record, rowIndex) || {} : {}
-              const baseCls =
-                typeof rowClassName === 'function' ? rowClassName(record, rowIndex) : ''
-              const hoverCls = rowHoverable ? rowHoverClass || 'hover:bg-base-200' : ''
-              const rowCls = `${baseCls}${hoverCls ? ` ${hoverCls}` : ''}`.trim() || undefined
-              const colSpan =
-                (visibleColumns.length || 0) + (hasSelection ? 1 : 0) + (hasExpand ? 1 : 0)
-              return (
-                <>
+              </thead>
+            ) : null}
+            <tbody key={`body-${stateVersion.value}`} className={semanticClasses.tbody} style={semanticStyles.tbody}>
+              {pageRows.flatMap((row, rowIndex) => {
+                const expandableState = getExpandableState(row, rowIndex)
+                const rowProps = onRow ? onRow(row.record, rowIndex) || {} : {}
+                const {
+                  className: rowPropClassName,
+                  style: rowPropStyle,
+                  onClick: rowClickHandler,
+                  ...restRowProps
+                } = rowProps
+                const baseRowClassName =
+                  typeof rowClassName === 'function' ? rowClassName(row.record, rowIndex) : ''
+                const hoverClassName = rowHoverable ? rowHoverClass || 'hover:bg-base-200' : ''
+                const mergedRowClick = (event: any) => {
+                  if (rowClickHandler) rowClickHandler(event)
+                  if (!expandable?.expandRowByClick || !expandableState.enabled) return
+                  const target = event?.target as HTMLElement | null
+                  if (target?.closest('button, input, a, label')) return
+                  toggleExpandedRow(row, rowIndex)
+                }
+                const rows = [
                   <tr
-                    key={(key ?? rowIndex) as any}
-                    {...rowProps}
-                    className={rowCls || rowProps.className}
+                    key={`row-${String(row.key)}`}
+                    {...restRowProps}
+                    onClick={mergedRowClick}
+                    className={mergeClassNames(
+                      semanticClasses.bodyRow,
+                      rowPropClassName,
+                      baseRowClassName,
+                      hoverClassName,
+                    )}
+                    style={mergeStyles(semanticStyles.bodyRow, rowPropStyle as Record<string, any> | undefined)}
                   >
-                    {hasExpand ? (
-                      <td className={alignClass('center')}>
-                        <button
-                          className="btn btn-ghost btn-xs"
-                          onClick={(e: any) => toggleExpand(key, record, e)}
-                        >
-                          {expKeys.has(key) ? '-' : '+'}
-                        </button>
-                      </td>
-                    ) : null}
-                    {hasSelection ? (
+                    {expandColumnVisible ? (
                       <td
-                        className={alignClass('center')}
-                        style={
-                          rowSelection?.columnWidth
-                            ? { width: rowSelection.columnWidth as any }
-                            : undefined
-                        }
+                        className={mergeClassNames(semanticClasses.cell, alignClass('center'))}
+                        style={mergeStyles(
+                          semanticStyles.cell,
+                          expandable?.columnWidth ? { width: expandable.columnWidth as any } : undefined,
+                          row.indent > 0 ? { paddingLeft: `${row.indent * indentSize}px` } : undefined,
+                        )}
                       >
-                        <label>
-                          {rowSelection?.type === 'radio' ? (
-                            <input
-                              type="radio"
-                              className="radio"
-                              checked={!!isSelected(key)}
-                              onChange={() => {
-                                const keys = [key]
-                                if (rowSelection?.onChange) {
-                                  const rows = workingData.filter(rec =>
-                                    keys.includes(
-                                      typeof rowKey === 'function' ? rowKey(rec) : rec?.[rowKey],
-                                    ),
-                                  )
-                                  rowSelection.onChange(keys, rows, { type: 'radio' })
-                                }
-                              }}
-                              {...(rowSelection?.getCheckboxProps
-                                ? rowSelection.getCheckboxProps(record)
-                                : {})}
-                            />
-                          ) : (
-                            <input
-                              type="checkbox"
-                              className="checkbox"
-                              checked={!!isSelected(key)}
-                              onChange={(e: any) => {
-                                const checked = (e.target as HTMLInputElement).checked
-                                const base = (rowSelection?.selectedRowKeys ??
-                                  rowSelection?.defaultSelectedRowKeys ??
-                                  []) as Array<string | number>
-                                const set = new Set(base)
-                                if (checked) set.add(key)
-                                else set.delete(key)
-                                const keys = Array.from(set)
-                                if (rowSelection?.onChange) {
-                                  const rows = workingData.filter(rec =>
-                                    keys.includes(
-                                      typeof rowKey === 'function' ? rowKey(rec) : rec?.[rowKey],
-                                    ),
-                                  )
-                                  rowSelection.onChange(keys, rows, { type: 'checkbox' })
-                                }
-                              }}
-                              {...(rowSelection?.getCheckboxProps
-                                ? rowSelection.getCheckboxProps(record)
-                                : {})}
-                            />
-                          )}
-                        </label>
+                        {renderExpandControl(row, rowIndex, expandableState)}
                       </td>
                     ) : null}
-                    {visibleColumns.map((col, colIndex) => {
-                      const val = getVal(record, col.dataIndex)
-                      const node = col.render ? col.render(val, record, rowIndex) : val
-                      const cellCls = `${alignClass(col.align)}${col.className ? ` ${col.className}` : ''}${col.ellipsis ? ' truncate' : ''}`
-                      const cellProps = col.onCell ? col.onCell(record, rowIndex) || {} : {}
-                      const keyVal = (col.key ?? `${rowIndex}-${colIndex}`) as any
-                      const className =
-                        `${cellCls}${cellProps.className ? ` ${cellProps.className}` : ''}`.trim() ||
-                        undefined
-                      const style = col.width
-                        ? { width: col.width as any }
-                        : (cellProps.style as any)
-                      if (pinCols && col.fixedCol) {
-                        return (
-                          <th key={keyVal} className={className} style={style} {...cellProps}>
-                            {node}
-                          </th>
-                        )
-                      }
+                    {hasSelection ? renderSelectionCell(row, rowIndex) : null}
+                    {leafColumns.map((leaf, colIndex) => {
+                      const value = getVal(row.record, leaf.column.dataIndex)
+                      const rendered = leaf.column.render
+                        ? leaf.column.render(value, row.record, rowIndex)
+                        : value
+                      const cellProps = leaf.column.onCell
+                        ? leaf.column.onCell(row.record, rowIndex) || {}
+                        : {}
+                      const { className: cellPropClassName, style: cellPropStyle, ...restCellProps } = cellProps
+                      const colSpan = cellProps.colSpan ?? 1
+                      const rowSpan = cellProps.rowSpan ?? 1
+                      if (colSpan === 0 || rowSpan === 0) return null
+                      const inlineExpand = !expandColumnVisible && colIndex === 0
+                      const CellTag = leaf.column.rowScope || (pinCols && resolveFixedColumn(leaf.column)) ? 'th' : 'td'
+                      const className = mergeClassNames(
+                        semanticClasses.cell,
+                        alignClass(leaf.column.align),
+                        leaf.column.className,
+                        leaf.column.ellipsis ? 'truncate' : undefined,
+                        cellPropClassName,
+                      )
+                      const style = mergeStyles(
+                        semanticStyles.cell,
+                        leaf.column.width || leaf.column.minWidth
+                          ? {
+                              ...(leaf.column.width ? { width: leaf.column.width as any } : {}),
+                              ...(leaf.column.minWidth ? { minWidth: leaf.column.minWidth as any } : {}),
+                            }
+                          : undefined,
+                        inlineExpand && row.indent > 0 ? { paddingLeft: `${row.indent * indentSize}px` } : undefined,
+                        cellPropStyle as Record<string, any> | undefined,
+                      )
+                      const cellTitle =
+                        leaf.column.ellipsis && shouldShowEllipsisTitle(leaf.column.ellipsis) && isPrimitiveNode(rendered)
+                          ? String(rendered)
+                          : undefined
+                      const content = inlineExpand ? (
+                        <div className="flex items-center gap-2">
+                          {renderExpandControl(row, rowIndex, expandableState)}
+                          <span className={leaf.column.ellipsis ? 'truncate' : undefined}>{rendered}</span>
+                        </div>
+                      ) : (
+                        rendered
+                      )
                       return (
-                        <td key={keyVal} className={className} style={style} {...cellProps}>
-                          {node}
-                        </td>
+                        <CellTag
+                          key={`cell-${String(row.key)}-${leaf.key}-${colIndex}`}
+                          className={className}
+                          style={style}
+                          title={cellTitle}
+                          colSpan={colSpan}
+                          rowSpan={rowSpan}
+                          scope={leaf.column.rowScope}
+                          data-rue-table-indent={inlineExpand && row.indent > 0 ? String(row.indent) : undefined}
+                          {...restCellProps}
+                        >
+                          {content}
+                        </CellTag>
                       )
                     })}
-                  </tr>
-                  {hasExpand && expandable?.expandedRowRender ? (
-                    <tr key={`expanded-${key}`} style={{ display: expKeys.has(key) ? '' : 'none' }}>
-                      <td colSpan={colSpan}>{expandable!.expandedRowRender!(record, rowIndex)}</td>
-                    </tr>
-                  ) : null}
-                </>
-              )
-            })}
-            {pageData.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={
-                    (visibleColumns.length || 0) + (hasSelection ? 1 : 0) + (hasExpand ? 1 : 0)
-                  }
-                  className={alignClass('center')}
-                >
-                  {typeof (emptyText as any) !== 'undefined' ? emptyText : 'No Data'}
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-          {(() => {
-            const colSpan =
-              (visibleColumns.length || 0) + (hasSelection ? 1 : 0) + (hasExpand ? 1 : 0)
-            const summaryInfo = { total, page, pageSize }
-            const pageDataWithTotal: any = pageData.slice()
-            ;(pageDataWithTotal as any).total = total
-            const summaryNode =
-              typeof summary === 'function' ? summary(pageDataWithTotal, summaryInfo) : null
-            const showPager =
-              pagination !== false &&
-              pagination != null &&
-              !(pagination.hideOnSinglePage && pageCount <= 1)
-            if (!summaryNode && !showPager) return null
-            return (
-              <tfoot>
-                {/* 汇总行：可选 */}
-                {summaryNode ? (
-                  <tr>
-                    <td colSpan={colSpan}>{summaryNode}</td>
-                  </tr>
-                ) : null}
-                {/* 分页器：页码与前后按钮 */}
-                {showPager ? (
-                  <tr>
-                    <td colSpan={colSpan}>
-                      <div className="flex items-center justify-end gap-2 p-2">
-                        <button
-                          className="btn btn-ghost btn-xs"
-                          disabled={page <= 1}
-                          onClick={() => onPageChange(page - 1)}
-                        >
-                          Prev
-                        </button>
-                        {Array.from({ length: pageCount }).map((_, i) => (
-                          <button
-                            key={i}
-                            className={`btn btn-ghost btn-xs${page === i + 1 ? ' btn-active' : ''}`}
-                            onClick={() => onPageChange(i + 1)}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                        <button
-                          className="btn btn-ghost btn-xs"
-                          disabled={page >= pageCount}
-                          onClick={() => onPageChange(page + 1)}
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ) : null}
-              </tfoot>
-            )
-          })()}
-        </table>
-        {/* 表尾区域：可选 */}
-        {typeof footer === 'function' ? <div className="p-2">{footer(pageData)}</div> : null}
-      </div>
-    ) : (
-      <table className={cls} style={tableStyle} data-rue-table-id={tableId}>
-        {showHeader ? (
-          <thead {...headerProps}>
-            <tr>
-              {hasExpand ? <th className={alignClass('center')}></th> : null}
-              {hasSelection ? (
-                <th
-                  style={
-                    rowSelection?.columnWidth
-                      ? { width: rowSelection.columnWidth as any }
-                      : undefined
-                  }
-                  className={alignClass('center')}
-                >
-                  {rowSelection?.type !== 'radio' ? (
-                    <label>
-                      <input
-                        type="checkbox"
-                        className="checkbox"
-                        checked={allSelectedOnPage}
-                        aria-checked={
-                          someSelectedOnPage ? 'mixed' : allSelectedOnPage ? 'true' : 'false'
-                        }
-                        disabled={!!rowSelection?.disabled}
-                        onChange={(e: any) => selectAll((e.target as HTMLInputElement).checked)}
-                      />
-                    </label>
-                  ) : null}
-                </th>
-              ) : null}
-              {visibleColumns.map((col, i) => {
-                const cellProps = col.onHeaderCell ? col.onHeaderCell(col, i) || {} : {}
-                const keyVal = (col.key ?? col.dataIndex ?? i) as any
-                const className =
-                  `${alignClass(col.align)}${col.className ? ` ${col.className}` : ''}${cellProps.className ? ` ${cellProps.className}` : ''}`.trim() ||
-                  undefined
-                const style = col.width ? { width: col.width as any } : (cellProps.style as any)
-                if (pinCols && !col.fixedCol) {
-                  return (
-                    <td
-                      key={keyVal}
-                      className={className}
-                      style={style}
-                      onClick={() => onHeaderSortClick(i)}
-                      {...cellProps}
-                    >
-                      <div className="flex items-center relative">
-                        <span>{col.title}</span>
-                        {col.sorter ? (
-                          <span className="ml-1 inline-flex flex-col leading-none">
-                            <span
-                              className={`${sortColIndex === i && sortOrder === 'ascend' ? 'text-base-content' : 'opacity-40'} cursor-pointer`}
-                              onClick={(e: any) => {
-                                e.stopPropagation()
-                                onHeaderSetSort(i, 'ascend')
-                              }}
-                            >
-                              ▲
-                            </span>
-                            <span
-                              className={`${sortColIndex === i && sortOrder === 'descend' ? 'text-base-content' : 'opacity-40'} cursor-pointer -mt-0.5`}
-                              onClick={(e: any) => {
-                                e.stopPropagation()
-                                onHeaderSetSort(i, 'descend')
-                              }}
-                            >
-                              ▼
-                            </span>
-                          </span>
-                        ) : null}
-                        {Array.isArray(col.filters) && col.filters.length > 0 ? (
-                          <span
-                            className={`rue-table-filter-icon ml-2 cursor-pointer ${activeFilters[getColKey(col)]?.length ? 'text-base-content' : 'opacity-40'}`}
-                            onClick={(e: any) => {
-                              e.stopPropagation()
-                              toggleHeaderFilterMenu(i, undefined, e.currentTarget as HTMLElement)
-                            }}
-                          >
-                            ☰
-                          </span>
-                        ) : null}
-                      </div>
-                      {Array.isArray(col.filters) && col.filters.length > 0
-                        ? (() => {
-                            const menuGroup = `header-filter-${i}-${Math.random().toString(36).slice(2)}`
-                            return (
-                              <div
-                                id={`table-filter-menu-${i}`}
-                                className="rue-table-filter-menu fixed z-50 w-44 rounded-box border border-base-content/10 bg-base-100 p-2 shadow"
-                                style={{ display: 'none' }}
-                              >
-                                <div className="space-y-1">
-                                  {col.filters.map(f => (
-                                    <label
-                                      key={(f.value as any) ?? String(f.text)}
-                                      className="flex items-center gap-2"
-                                    >
-                                      <input
-                                        type={col.filterMultiple === false ? 'radio' : 'checkbox'}
-                                        name={menuGroup}
-                                        className={
-                                          col.filterMultiple === false
-                                            ? 'radio radio-xs'
-                                            : 'checkbox checkbox-xs'
-                                        }
-                                        defaultChecked={(
-                                          activeFilters[getColKey(col)] ??
-                                          col.defaultFilteredValue ??
-                                          []
-                                        ).includes(f.value)}
-                                        data-value={String(f.value)}
-                                        onChange={(e: any) => {
-                                          if (col.filterOnClose) return
-                                          const menuEl = (e.currentTarget as HTMLElement).closest(
-                                            '.rue-table-filter-menu',
-                                          ) as HTMLElement | null
-                                          onHeaderFilterApply(i, undefined, menuEl || undefined)
-                                        }}
-                                      />
-                                      <span className="text-sm">{f.text}</span>
-                                    </label>
-                                  ))}
-                                </div>
-                                {col.filterOnClose ? (
-                                  <div className="mt-2 flex justify-end gap-2">
-                                    <button
-                                      className="btn btn-ghost btn-xs"
-                                      onClick={(e: any) => {
-                                        const menuEl = (e.currentTarget as HTMLElement).closest(
-                                          '.rue-table-filter-menu',
-                                        ) as HTMLElement | null
-                                        resetHeaderFilterMenu(i, menuEl || undefined)
-                                      }}
-                                    >
-                                      重置
-                                    </button>
-                                    <button
-                                      className="btn btn-primary btn-xs"
-                                      onClick={(e: any) => {
-                                        const menuEl = (e.currentTarget as HTMLElement).closest(
-                                          '.rue-table-filter-menu',
-                                        ) as HTMLElement | null
-                                        onHeaderFilterApply(i, undefined, menuEl || undefined)
-                                      }}
-                                    >
-                                      应用
-                                    </button>
-                                  </div>
-                                ) : null}
-                              </div>
-                            )
-                          })()
-                        : null}
-                    </td>
+                  </tr>,
+                ]
+                if (hasExpandedRowRender && expandableState.hasExpandedRowRender && expandableState.expanded) {
+                  const expandedRowClassName =
+                    typeof expandable?.expandedRowClassName === 'function'
+                      ? expandable.expandedRowClassName(row.record, rowIndex, row.indent)
+                      : expandable?.expandedRowClassName
+                  rows.push(
+                    <tr key={`expanded-${String(row.key)}`} className={expandedRowClassName}>
+                      <td colSpan={bodyColSpan}>
+                        {expandable!.expandedRowRender!(row.record, rowIndex, row.indent, true)}
+                      </td>
+                    </tr>,
                   )
                 }
-                return (
-                  <th
-                    key={keyVal}
-                    className={className}
-                    style={style}
-                    onClick={() => onHeaderSortClick(i)}
-                    {...cellProps}
-                  >
-                    <div className="flex items-center relative">
-                      <span>{col.title}</span>
-                      {col.sorter ? (
-                        <span className="ml-1 inline-flex flex-col leading-none">
-                          <span
-                            className={`${sortColIndex === i && sortOrder === 'ascend' ? 'text-base-content' : 'opacity-40'} cursor-pointer`}
-                            onClick={(e: any) => {
-                              e.stopPropagation()
-                              onHeaderSetSort(i, 'ascend')
-                            }}
-                          >
-                            ▲
-                          </span>
-                          <span
-                            className={`${sortColIndex === i && sortOrder === 'descend' ? 'text-base-content' : 'opacity-40'} cursor-pointer -mt-0.5`}
-                            onClick={(e: any) => {
-                              e.stopPropagation()
-                              onHeaderSetSort(i, 'descend')
-                            }}
-                          >
-                            ▼
-                          </span>
-                        </span>
-                      ) : null}
-                      {Array.isArray(col.filters) && col.filters.length > 0 ? (
-                        <span
-                          className={`rue-table-filter-icon ml-2 cursor-pointer ${activeFilters[getColKey(col)]?.length ? 'text-base-content' : 'opacity-40'}`}
-                          onClick={(e: any) => {
-                            e.stopPropagation()
-                            toggleHeaderFilterMenu(i, undefined, e.currentTarget as HTMLElement)
-                          }}
-                        >
-                          ☰
-                        </span>
-                      ) : null}
-                      {Array.isArray(col.filters) && col.filters.length > 0
-                        ? (() => {
-                            const menuGroup = `header-filter-${i}-${Math.random().toString(36).slice(2)}`
-                            return (
-                              <div
-                                id={`table-filter-menu-${i}`}
-                                className="rue-table-filter-menu fixed z-50 w-44 rounded-box border border-base-content/10 bg-base-100 p-2 shadow"
-                                style={{ display: 'none' }}
-                              >
-                                <div className="space-y-1">
-                                  {col.filters.map(f => (
-                                    <label
-                                      key={(f.value as any) ?? String(f.text)}
-                                      className="flex items-center gap-2"
-                                    >
-                                      <input
-                                        type={col.filterMultiple === false ? 'radio' : 'checkbox'}
-                                        name={menuGroup}
-                                        className={
-                                          col.filterMultiple === false
-                                            ? 'radio radio-xs'
-                                            : 'checkbox checkbox-xs'
-                                        }
-                                        defaultChecked={(
-                                          activeFilters[getColKey(col)] ??
-                                          col.defaultFilteredValue ??
-                                          []
-                                        ).includes(f.value)}
-                                        data-value={String(f.value)}
-                                        onChange={(e: any) => {
-                                          if (col.filterOnClose) return
-                                          const menuEl = (e.currentTarget as HTMLElement).closest(
-                                            '.rue-table-filter-menu',
-                                          ) as HTMLElement | null
-                                          onHeaderFilterApply(i, undefined, menuEl || undefined)
-                                        }}
-                                      />
-                                      <span className="text-sm">{f.text}</span>
-                                    </label>
-                                  ))}
-                                </div>
-                                {col.filterOnClose ? (
-                                  <div className="mt-2 flex justify-end gap-2">
-                                    <button
-                                      className="btn btn-ghost btn-xs"
-                                      onClick={(e: any) => {
-                                        const menuEl = (e.currentTarget as HTMLElement).closest(
-                                          '.rue-table-filter-menu',
-                                        ) as HTMLElement | null
-                                        resetHeaderFilterMenu(i, menuEl || undefined)
-                                      }}
-                                    >
-                                      重置
-                                    </button>
-                                    <button
-                                      className="btn btn-primary btn-xs"
-                                      onClick={(e: any) => {
-                                        const menuEl = (e.currentTarget as HTMLElement).closest(
-                                          '.rue-table-filter-menu',
-                                        ) as HTMLElement | null
-                                        onHeaderFilterApply(i, undefined, menuEl || undefined)
-                                      }}
-                                    >
-                                      应用
-                                    </button>
-                                  </div>
-                                ) : null}
-                              </div>
-                            )
-                          })()
-                        : null}
-                    </div>
-                  </th>
-                )
+                return rows
               })}
-            </tr>
-          </thead>
-        ) : null}
-        <tbody>
-          {pageData.map((record, rowIndex) => {
-            const key = typeof rowKey === 'function' ? rowKey(record) : record?.[rowKey]
-            const rowProps = onRow ? onRow(record, rowIndex) || {} : {}
-            const baseCls = typeof rowClassName === 'function' ? rowClassName(record, rowIndex) : ''
-            const hoverCls = rowHoverable ? rowHoverClass || 'hover:bg-base-200' : ''
-            const rowCls = `${baseCls}${hoverCls ? ` ${hoverCls}` : ''}`.trim() || undefined
-            return (
-              <>
-                <tr
-                  key={(key ?? rowIndex) as any}
-                  {...rowProps}
-                  className={rowCls || rowProps.className}
-                >
-                  {hasExpand ? (
-                    <td className={alignClass('center')}>
-                      <button
-                        className="btn btn-ghost btn-xs"
-                        onClick={(e: any) => toggleExpand(key, record, e)}
-                      >
-                        {expKeys.has(key) ? '-' : '+'}
-                      </button>
-                    </td>
-                  ) : null}
-                  {hasSelection ? (
-                    <td
-                      className={alignClass('center')}
-                      style={
-                        rowSelection?.columnWidth
-                          ? { width: rowSelection.columnWidth as any }
-                          : undefined
-                      }
-                    >
-                      <label>
-                        {(() => {
-                          const cbProps = rowSelection?.getCheckboxProps
-                            ? { ...(rowSelection.getCheckboxProps(record) as any) }
-                            : ({} as any)
-                          if (rowSelection?.disabled) cbProps.disabled = true
-                          if (rowSelection?.type === 'radio') {
-                            return (
-                              <input
-                                type="radio"
-                                className="radio"
-                                checked={!!isSelected(key)}
-                                onChange={() => {
-                                  const keys = [key]
-                                  if (rowSelection?.onChange) {
-                                    const rows = workingData.filter(rec =>
-                                      keys.includes(
-                                        typeof rowKey === 'function' ? rowKey(rec) : rec?.[rowKey],
-                                      ),
-                                    )
-                                    rowSelection.onChange(keys, rows, { type: 'radio' })
-                                  }
-                                }}
-                                {...cbProps}
-                              />
-                            )
-                          }
-                          return (
-                            <input
-                              type="checkbox"
-                              className="checkbox"
-                              checked={!!isSelected(key)}
-                              onChange={(e: any) => {
-                                const checked = (e.target as HTMLInputElement).checked
-                                const base = (rowSelection?.selectedRowKeys ??
-                                  rowSelection?.defaultSelectedRowKeys ??
-                                  []) as Array<string | number>
-                                const set = new Set(base)
-                                if (checked) set.add(key)
-                                else set.delete(key)
-                                const keys = Array.from(set)
-                                if (rowSelection?.onChange) {
-                                  const rows = workingData.filter(rec =>
-                                    keys.includes(
-                                      typeof rowKey === 'function' ? rowKey(rec) : rec?.[rowKey],
-                                    ),
-                                  )
-                                  rowSelection.onChange(keys, rows, { type: 'checkbox' })
-                                }
-                              }}
-                              {...cbProps}
-                            />
-                          )
-                        })()}
-                      </label>
-                    </td>
-                  ) : null}
-                  {visibleColumns.map((col, colIndex) => {
-                    const val = getVal(record, col.dataIndex)
-                    const node = col.render ? col.render(val, record, rowIndex) : val
-                    const cellCls = `${alignClass(col.align)}${col.className ? ` ${col.className}` : ''}${col.ellipsis ? ' truncate' : ''}`
-                    const cellProps = col.onCell ? col.onCell(record, rowIndex) || {} : {}
-                    const keyVal = (col.key ?? `${rowIndex}-${colIndex}`) as any
-                    const className =
-                      `${cellCls}${cellProps.className ? ` ${cellProps.className}` : ''}`.trim() ||
-                      undefined
-                    const style = col.width ? { width: col.width as any } : (cellProps.style as any)
-                    if (pinCols && col.fixedCol) {
-                      return (
-                        <th key={keyVal} className={className} style={style} {...cellProps}>
-                          {node}
-                        </th>
-                      )
-                    }
-                    return (
-                      <td key={keyVal} className={className} style={style} {...cellProps}>
-                        {node}
-                      </td>
-                    )
-                  })}
-                </tr>
-                {hasExpand && expandable?.expandedRowRender ? (
-                  <tr key={`expanded-${key}`} style={{ display: expKeys.has(key) ? '' : 'none' }}>
-                    <td
-                      colSpan={
-                        (visibleColumns.length || 0) + (hasSelection ? 1 : 0) + (hasExpand ? 1 : 0)
-                      }
-                    >
-                      {expandable!.expandedRowRender!(record, rowIndex)}
-                    </td>
-                  </tr>
-                ) : null}
-              </>
-            )
-          })}
-          {pageData.length === 0 ? (
-            <tr>
-              <td
-                colSpan={
-                  (visibleColumns.length || 0) + (hasSelection ? 1 : 0) + (hasExpand ? 1 : 0)
-                }
-                className={alignClass('center')}
-              >
-                {typeof (emptyText as any) !== 'undefined' ? emptyText : 'No Data'}
-              </td>
-            </tr>
-          ) : null}
-        </tbody>
-        {(() => {
-          const colSpan =
-            (visibleColumns.length || 0) + (hasSelection ? 1 : 0) + (hasExpand ? 1 : 0)
-          const summaryInfo = { total, page, pageSize }
-          const pageDataWithTotal: any = pageData.slice()
-          ;(pageDataWithTotal as any).total = total
-          const summaryNode =
-            typeof summary === 'function' ? summary(pageDataWithTotal, summaryInfo) : null
-          const showPager =
-            pagination !== false &&
-            pagination != null &&
-            !(pagination.hideOnSinglePage && pageCount <= 1)
-          if (!summaryNode && !showPager) return null
-          return (
-            <tfoot>
-              {summaryNode ? (
+              {pageRows.length === 0 ? (
                 <tr>
-                  <td colSpan={colSpan}>{summaryNode}</td>
-                </tr>
-              ) : null}
-              {showPager ? (
-                <tr>
-                  <td colSpan={colSpan}>
-                    <div className="flex items-center justify-end gap-2 p-2">
-                      <button
-                        className="btn btn-ghost btn-xs"
-                        disabled={page <= 1}
-                        onClick={() => onPageChange(page - 1)}
-                      >
-                        Prev
-                      </button>
-                      {Array.from({ length: pageCount }).map((_, i) => (
-                        <button
-                          key={i}
-                          className={`btn btn-ghost btn-xs${page === i + 1 ? ' btn-active' : ''}`}
-                          onClick={() => onPageChange(i + 1)}
-                        >
-                          {i + 1}
-                        </button>
-                      ))}
-                      <button
-                        className="btn btn-ghost btn-xs"
-                        disabled={page >= pageCount}
-                        onClick={() => onPageChange(page + 1)}
-                      >
-                        Next
-                      </button>
-                    </div>
+                  <td
+                    colSpan={bodyColSpan}
+                    className={mergeClassNames(semanticClasses.empty, alignClass('center'))}
+                    style={semanticStyles.empty}
+                  >
+                    {typeof emptyText !== 'undefined' ? emptyText : localeText.emptyText}
                   </td>
                 </tr>
               ) : null}
-            </tfoot>
-          )
-        })()}
-      </table>
+            </tbody>
+            {summaryNode || (showPager && pagerPlacements.some(placement => placement.startsWith('bottom'))) ? (
+              <tfoot className={semanticClasses.tfoot} style={semanticStyles.tfoot}>
+                {summaryNode ? (
+                  <tr className={semanticClasses.summary} style={semanticStyles.summary}>
+                    <td colSpan={bodyColSpan}>{summaryNode}</td>
+                  </tr>
+                ) : null}
+                {showPager
+                  ? pagerPlacements
+                      .filter(placement => placement.startsWith('bottom'))
+                      .map(placement => (
+                        <tr key={`pager-row-${placement}`}>
+                          <td colSpan={bodyColSpan}>{renderPager(placement)}</td>
+                        </tr>
+                      ))
+                  : null}
+              </tfoot>
+            ) : null}
+        </table>
+        {footerNode ? (
+          <div className={mergeClassNames('p-2', semanticClasses.footer)} style={semanticStyles.footer}>
+            {footerNode}
+          </div>
+        ) : null}
+        {loadingConfig.spinning ? (
+          <div
+            className={mergeClassNames(
+              'absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-box bg-base-100/70',
+              semanticClasses.loading,
+            )}
+            style={semanticStyles.loading}
+          >
+            <span className="loading loading-spinner loading-md"></span>
+            {loadingConfig.tip ? <div className="text-sm opacity-70">{loadingConfig.tip}</div> : null}
+          </div>
+        ) : null}
+      </div>
     )
   }
-  return <table className={cls} />
+
+  return <table className={cls} style={semanticStyles.table} />
 }
 
 interface TablePartProps {
@@ -1198,42 +1962,28 @@ interface TablePartProps {
   children?: any
 }
 
-/** 表头容器 */
 const Head: FC<TablePartProps> = ({ className, children }) => {
-  const cls = className ? className : undefined
-  return <thead className={cls}>{children}</thead>
+  return <thead className={className || undefined}>{children}</thead>
 }
 
-/** 表体容器 */
 const Body: FC<TablePartProps> = ({ className, children }) => {
-  const cls = className ? className : undefined
-  return <tbody className={cls}>{children}</tbody>
+  return <tbody className={className || undefined}>{children}</tbody>
 }
 
-/** 表尾容器 */
 const Foot: FC<TablePartProps> = ({ className, children }) => {
-  const cls = className ? className : undefined
-  return <tfoot className={cls}>{children}</tfoot>
+  return <tfoot className={className || undefined}>{children}</tfoot>
 }
 
-/** 行容器 */
 const TR: FC<TablePartProps> = ({ className, children }) => {
-  const cls = className ? className : undefined
-  return <tr className={cls}>{children}</tr>
+  return <tr className={className || undefined}>{children}</tr>
 }
 
-/** 表头单元格 */
 const TH: FC<TablePartProps> = ({ className, children }) => {
-  let cls = ''
-  if (className) cls += ` ${className}`
-  return <th className={cls.trim() || undefined}>{children}</th>
+  return <th className={className || undefined}>{children}</th>
 }
 
-/** 表体单元格 */
 const TD: FC<TablePartProps> = ({ className, children }) => {
-  let cls = ''
-  if (className) cls += ` ${className}`
-  return <td className={cls.trim() || undefined}>{children}</td>
+  return <td className={className || undefined}>{children}</td>
 }
 
 type TableCompound = FC<TableProps> & {

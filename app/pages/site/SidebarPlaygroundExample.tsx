@@ -1,11 +1,6 @@
-import { type FC, useState, computed } from '@rue-js/rue'
-import { extend } from '@rue-js/shared'
-import { RouterLink, useRoute } from '@rue-js/router'
+import { createPersistentSidebarPlayground, type SidebarSection } from './persistentSidebarPlayground'
 
-type Item = { id: string; title: string; href?: string; children?: Item[] }
-type Section = { id: string; title: string; items: Item[] }
-
-export const SECTIONS_BY_TYPE: Record<'examples', Section[]> = {
+export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
   examples: [
     {
       id: 'examples1',
@@ -42,6 +37,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', Section[]> = {
           href: '/examples/simple-component',
         },
         {
+          id: 'slots',
+          title: 'Slots 插槽',
+          href: '/examples/slots',
+        },
+        {
           id: 'web-components',
           title: '原生 Web Components',
           href: '/examples/web-components',
@@ -74,9 +74,64 @@ export const SECTIONS_BY_TYPE: Record<'examples', Section[]> = {
           href: '/jsx/conditional-rendering',
         },
         {
+          id: 'v-if-r-if',
+          title: 'v-if / r-if 指令',
+          href: '/jsx/v-if-r-if',
+        },
+        {
+          id: 'v-show-r-show',
+          title: 'v-show / r-show 指令',
+          href: '/jsx/v-show-r-show',
+        },
+        {
+          id: 'v-pre-r-pre',
+          title: 'v-pre / r-pre 指令',
+          href: '/jsx/v-pre-r-pre',
+        },
+        {
+          id: 'v-once-r-once',
+          title: 'v-once / r-once 指令',
+          href: '/jsx/v-once-r-once',
+        },
+        {
+          id: 'v-memo-r-memo',
+          title: 'v-memo / r-memo 指令',
+          href: '/jsx/v-memo-r-memo',
+        },
+        {
+          id: 'v-text-r-text',
+          title: 'v-text / r-text 指令',
+          href: '/jsx/v-text-r-text',
+        },
+        {
+          id: 'v-html-r-html',
+          title: 'v-html / r-html 指令',
+          href: '/jsx/v-html-r-html',
+        },
+        {
+          id: 'v-on-r-on',
+          title: 'v-on / r-on 指令',
+          href: '/jsx/v-on-r-on',
+        },
+        {
+          id: 'v-model-r-model',
+          title: 'v-model / r-model 指令',
+          href: '/jsx/v-model-r-model',
+        },
+        {
           id: 'lists-and-keys',
           title: '列表渲染与 key',
           href: '/jsx/lists-and-keys',
+        },
+        {
+          id: 'v-for-r-for',
+          title: 'v-for / r-for 指令',
+          href: '/jsx/v-for-r-for',
+        },
+        {
+          id: 'template',
+          title: 'Template 无包装容器',
+          href: '/jsx/template',
         },
         {
           id: 'fragments',
@@ -88,6 +143,16 @@ export const SECTIONS_BY_TYPE: Record<'examples', Section[]> = {
           id: 'components',
           title: '组件与 Props 传递',
           href: '/jsx/components',
+        },
+        {
+          id: 'dynamic-component',
+          title: '动态组件（Component）',
+          href: '/jsx/dynamic-component',
+        },
+        {
+          id: 'suspense',
+          title: 'Suspense 异步边界',
+          href: '/jsx/suspense',
         },
         { id: 'events', title: '事件处理', href: '/jsx/events' },
         {
@@ -135,87 +200,7 @@ export const SECTIONS_BY_TYPE: Record<'examples', Section[]> = {
   ],
 }
 
-const SidebarPlayground: FC = p => {
-  const route = useRoute()
-
-  const pathname = computed(() => {
-    const r = route.get()
-    return (r && r.path) || ''
-  })
-
-  const currentType = 'examples'
-  const sections = SECTIONS_BY_TYPE[currentType]
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
-    const init: Record<string, boolean> = {}
-    sections.forEach(s => (init[s.id] = true))
-    return init
-  })
-
-  const toggleSection = (id: string) => {
-    setOpenSections(prev => extend(prev, { [id]: !prev[id] }))
-  }
-
-  return (
-    <div className="sidebar-playground md:flex md:items-start md:gap-6">
-      <aside className="md:w-45 shrink-0">
-        <div className="sticky top-20">
-          <nav className="space-y-3 w-full">
-            {sections.map(sec => (
-              <div
-                key={sec.id}
-                className={`collapse collapse-arrow bg-base-100 rounded-box shadow w-full ${
-                  openSections[sec.id] ? 'collapse-open' : ''
-                }`}
-              >
-                <button
-                  className="collapse-title px-3 py-2 font-medium text-base-content w-full text-left"
-                  onClick={() => toggleSection(sec.id)}
-                >
-                  {sec.title}
-                </button>
-                <div className="collapse-content px-0">
-                  <ul className="menu menu-sm bg-transparent rounded-box w-full">
-                    {sec.items.map(it => (
-                      <li key={it.id}>
-                        {it.children && it.children.length ? (
-                          <div>
-                            <div className="px-3 py-2 font-medium text-base-content/80">
-                              {it.title}
-                            </div>
-                            <ul className="menu menu-sm bg-transparent rounded-box w-full">
-                              {it.children.map(child => (
-                                <li key={child.id}>
-                                  <RouterLink
-                                    to={`${child.href}`}
-                                    className={`${pathname.get() === child.href ? 'active' : ''} w-full`}
-                                  >
-                                    {child.title}
-                                  </RouterLink>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : (
-                          <RouterLink
-                            to={`${it.href}`}
-                            className={`${pathname.get() === it.href ? 'active' : ''} w-full`}
-                          >
-                            {it.title}
-                          </RouterLink>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
-          </nav>
-        </div>
-      </aside>
-
-      <article class="component-preview">{p.children}</article>
-    </div>
-  )
-}
-
-export default SidebarPlayground
+export default createPersistentSidebarPlayground({
+  sections: SECTIONS_BY_TYPE.examples,
+  wrapperClassName: 'sidebar-playground-examples',
+})

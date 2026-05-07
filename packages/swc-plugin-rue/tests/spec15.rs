@@ -122,9 +122,8 @@ export default ListTransitionExample
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$vaporWithKey, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
-import { type FC, TransitionGroup, ref } from '@rue-js/rue';
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$vaporWithKey, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { type FC, TransitionGroup } from '@rue-js/rue';
 const ListTransitionExample: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const items = _$vaporWithHookId("ref:1:0", ()=>ref<number[]>([
@@ -248,7 +247,9 @@ const ListTransitionExample: FC = ()=>{
         const _list1 = _$createComment("rue:component:anchor");
         _$appendChild(_el8, _list1);
         watchEffect(()=>{
-            const __slot2 = <TransitionGroup name="fade" children={items.value.map((item)=>_$vaporWithKey(vapor(()=>{
+            const __slot2 = _$createComponent(TransitionGroup, {
+                name: "fade",
+                children: items.value.map((item)=>_$vaporWithKey(vapor(()=>{
                 const _root = _$createDocumentFragment();
                 const _el9 = _$createElement("li");
                 _$appendChild(_root, _el9);
@@ -270,7 +271,8 @@ const ListTransitionExample: FC = ()=>{
                 _$addEventListener(_el12, "click", (()=>remove(item)));
                 _$appendChild(_el12, _$createTextNode("x"));
                 return _root;
-            }), item))}/>;
+            }), item))
+            });
             renderAnchor(__slot2, _el8, _list1);
         });
         return _root;

@@ -13,9 +13,11 @@ import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,
   type CustomElementEmitBridge,
 } from './custom-elements.shared'
+import { withParentContextProps } from './context'
+import { Component as DynamicComponent } from './components/Component'
 import { getDOMAdapter, getParentNode } from './dom'
 import { mountNormalizedRenderableToTarget } from './renderable-bridge'
-import { runOwnerCleanupBucket } from './renderable-lifecycle'
+import { registerOwnerCleanup, runOwnerCleanupBucket } from './renderable-lifecycle'
 import { normalizeRenderable } from './renderable-normalize'
 import type { NormalizedRenderable, Renderable } from './renderable'
 
@@ -25,9 +27,17 @@ export interface ComponentProps {
   [key: string]: any
   children?: ChildInput
 }
-export interface RueMountHandle {
-  __rue_mount_id: unknown
-}
+export type RueMountHandle =
+  | {
+      __rue_mount_id: unknown
+    }
+  | {
+      __rue_component_type: unknown
+      props?: unknown
+    }
+  | {
+      __rue_vapor_setup: unknown
+    }
 
 export type RenderableInput = Renderable | RueMountHandle | ReadonlyArray<RenderableInput>
 export type RenderableOutput = Renderable | RueMountHandle | ReadonlyArray<RenderableOutput>
@@ -41,7 +51,17 @@ export type FC<P = {}> = (props: PropsWithChildren<P>) => RenderableOutput
 export type ComponentInstance<P = {}> = FC<P>
 export type Rue = any
 
+type SharedRuntimeBridge = {
+  beginVaporScope(owner: unknown): boolean
+  endVaporScope(didPush: boolean): void
+  disposeVaporScope(owner: unknown): void
+}
+
 const runtimeDOMBridgeByInstance = new WeakMap<object, unknown>()
+const RUE_MOUNT_ID_KEY = '__rue_mount_id'
+const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
+const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
+const RUE_VAPOR_PREFERRED_RUNTIME_KEY = '__rue_vapor_preferred'
 
 const canTrackRuntime = (runtime: unknown): runtime is object =>
   (typeof runtime === 'object' || typeof runtime === 'function') && runtime != null
@@ -83,11 +103,17 @@ export const runWithRuntime = <T>(runtime: unknown, runner: () => T): T => {
   }
 }
 
+const getSharedRuntimeBridge = () =>
+  (globalThis as typeof globalThis & {
+    __rue_runtime_vapor_shared_bridge?: SharedRuntimeBridge
+  }).__rue_runtime_vapor_shared_bridge
+
 /** 当前 Rue 实例（若不存在则按需初始化） */
 const initialDOMBridge = (globalThis as any).__rue_dom
 const rue: any = ((globalThis as any).__rue ||
   ((globalThis as any).__rue = createRueWasm(initialDOMBridge))) as any
 markRuntimeDOMBridge(rue, initialDOMBridge)
+;(globalThis as any)[RUE_VAPOR_PREFERRED_RUNTIME_KEY] = rue
 /** 获取激活的 Rue 实例：优先 __rue_active，其次默认 __rue */
 const getRue = () => (globalThis as any).__rue_active || (globalThis as any).__rue
 
@@ -119,8 +145,6 @@ const syncRenderableOwner = (owners: WeakMap<object, unknown>, key: object, next
 
 const DEFAULT_UNSUPPORTED_OBJECT_INPUT_ERROR =
   'Unsupported object inputs are no longer accepted on the default @rue-js/runtime entry.'
-
-const RUE_MOUNT_ID_KEY = '__rue_mount_id'
 
 const isDirectRenderableOwner = (value: unknown): value is { nodes: readonly DomNodeLike[] } =>
   !!value && typeof value === 'object' && Array.isArray((value as { nodes?: unknown }).nodes)
@@ -159,7 +183,11 @@ type DefaultRenderableAnalysis =
     }
 
 const isMountHandle = (value: unknown): value is RueMountHandle =>
-  !!value && typeof value === 'object' && RUE_MOUNT_ID_KEY in (value as Record<string, unknown>)
+  !!value &&
+  typeof value === 'object' &&
+  (RUE_MOUNT_ID_KEY in (value as Record<string, unknown>) ||
+    RUE_PORTABLE_COMPONENT_TYPE_KEY in (value as Record<string, unknown>) ||
+    RUE_PORTABLE_VAPOR_SETUP_KEY in (value as Record<string, unknown>))
 
 const analyzeDefaultRenderableInput = (value: unknown): DefaultRenderableAnalysis => {
   if (isMountHandle(value)) {
@@ -237,7 +265,13 @@ const markAnchorRemountableMountHandle = <P = {}>(
   const builtinName = typeof type === 'function' ? (type as Function).name : ''
   const shouldForceRemount =
     typeof type === 'function' &&
-    (builtinName === 'Transition' || hasDomNodeLikeChildren || hasDomNodeLikeProp)
+    (
+      builtinName === 'Transition' ||
+      builtinName === 'Template' ||
+      builtinName === 'Suspense' ||
+      hasDomNodeLikeChildren ||
+      hasDomNodeLikeProp
+    )
   if (
     typeof type === 'function' &&
     effectiveChildren.length > 0 &&
@@ -265,6 +299,9 @@ const normalizeCreateElementChild = (value: ChildInput): ChildInput => {
 const normalizeCreateElementChildren = (children: ChildInput[]): ChildInput[] =>
   children.map(child => normalizeCreateElementChild(child))
 
+const resolveCreateElementType = <P = {}>(type: string | ComponentInstance<P>) =>
+  type === 'component' ? (DynamicComponent as ComponentInstance<P>) : type
+
 const assertDefaultChildren = (props: ComponentProps | null, children: ChildInput[]) => {
   for (const child of getEffectiveChildren(props, children)) {
     analyzeDefaultRenderableInput(child)
@@ -288,10 +325,32 @@ export const createElement = <P = {}>(
   props: ComponentProps | null,
   ...children: ChildInput[]
 ) => {
+  const resolvedType = resolveCreateElementType(type)
+  const contextualProps = withParentContextProps(
+    resolvedType as string | ((props: Record<string, unknown>) => unknown),
+    props as Record<string, unknown> | null,
+  ) as ComponentProps | null
   const normalizedChildren = normalizeCreateElementChildren(children)
-  assertDefaultChildren(props, normalizedChildren)
-  const vnode = getRue().createElement(type, props, normalizedChildren as any) as RenderableOutput
-  return markAnchorRemountableMountHandle(type, props, normalizedChildren, vnode)
+  assertDefaultChildren(contextualProps, normalizedChildren)
+  const vnode = getRue().createElement(
+    resolvedType,
+    contextualProps,
+    normalizedChildren as any,
+  ) as RenderableOutput
+  return markAnchorRemountableMountHandle(resolvedType, contextualProps, normalizedChildren, vnode)
+}
+
+export const createComponent = <P = {}>(
+  type: ComponentInstance<P>,
+  props: ComponentProps | null,
+) => {
+  const contextualProps = withParentContextProps(
+    type as (props: Record<string, unknown>) => unknown,
+    props as Record<string, unknown> | null,
+  ) as ComponentProps | null
+  assertDefaultChildren(contextualProps, [])
+  const vnode = getRue().createComponent(type, contextualProps) as RenderableOutput
+  return markAnchorRemountableMountHandle(type, contextualProps, [], vnode)
 }
 /** 渲染到容器 */
 export const render = (value: RenderableInput, container: DomElementLike) => {
@@ -476,7 +535,23 @@ export const emitted = (props: ComponentProps) => {
   }
 }
 /** Vapor 块模式：返回 runtime-vapor 的最小挂载句柄，而不是旧的 type/props dev object */
-export const vapor = (setup: () => VaporSetupResult) => getRue().vapor(setup) as RenderableOutput
+export const vapor = (setup: () => VaporSetupResult) => {
+  const bridge = getSharedRuntimeBridge()
+  const owner = {}
+  const wrappedSetup = () => {
+    const didPush = bridge?.beginVaporScope(owner) ?? false
+    try {
+      return setup()
+    } finally {
+      bridge?.endVaporScope(didPush)
+    }
+  }
+  const handle = getRue().vapor(wrappedSetup) as RenderableOutput
+  registerOwnerCleanup(handle, () => {
+    bridge?.disposeVaporScope(owner)
+  })
+  return handle
+}
 /** 生命周期：创建前 */
 export const onBeforeCreate = (fn: () => void) => getRue().onBeforeCreate(fn)
 /** 生命周期：已创建 */
@@ -519,10 +594,15 @@ export function h<P = {}>(
   props: ComponentProps | null,
   ...children: ChildInput[]
 ): RenderableOutput {
+  const resolvedType = resolveCreateElementType(type)
   const normalizedChildren = normalizeCreateElementChildren(children)
   assertDefaultChildren(props, normalizedChildren)
-  const vnode = getRue().createElement(type, props, normalizedChildren as any) as RenderableOutput
-  return markAnchorRemountableMountHandle(type, props, normalizedChildren, vnode)
+  const vnode = getRue().createElement(
+    resolvedType,
+    props,
+    normalizedChildren as any,
+  ) as RenderableOutput
+  return markAnchorRemountableMountHandle(resolvedType, props, normalizedChildren, vnode)
 }
 /** 片段标记：用于 JSX 片段渲染 */
 export const Fragment = 'fragment'

@@ -19,7 +19,19 @@
     "directory": "packages/runtime-vapor"
   },
   "files": [
-    "pkg"
+    "pkg",
+    "pkg-node",
+    "pkg-reactive",
+    "pkg-node-reactive",
+    "pkg-vapor",
+    "pkg-node-vapor",
+    "reactive.js",
+    "reactive.node.js",
+    "reactive.d.ts",
+    "vapor.js",
+    "vapor.node.js",
+    "vapor-bridge.js",
+    "vapor.d.ts"
   ],
   "type": "module",
   "types": "./pkg/rue_runtime_vapor.d.ts",
@@ -29,18 +41,44 @@
       "development": "./pkg/rue_runtime_vapor.js",
       "import": "./pkg/rue_runtime_vapor.js",
       "default": "./pkg/rue_runtime_vapor.js"
+    },
+    "./reactive": {
+      "types": "./reactive.d.ts",
+      "development": "./reactive.js",
+      "node": {
+        "development": "./reactive.node.js",
+        "default": "./reactive.node.js"
+      },
+      "import": "./reactive.js",
+      "default": "./reactive.js"
+    },
+    "./vapor": {
+      "types": "./vapor.d.ts",
+      "development": "./vapor.js",
+      "node": {
+        "development": "./vapor.node.js",
+        "default": "./vapor.node.js"
+      },
+      "import": "./vapor.js",
+      "default": "./vapor.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "cleanup-wasm-pack": "node -e \"const fs=require('fs');for(const p of ['pkg/.gitignore','pkg-node/.gitignore']){if(fs.existsSync(p))fs.unlinkSync(p)}\"",
+    "cleanup-wasm-pack": "node -e \"const fs=require('fs');for(const p of ['pkg/.gitignore','pkg-node/.gitignore','pkg-reactive/.gitignore','pkg-node-reactive/.gitignore','pkg-vapor/.gitignore','pkg-node-vapor/.gitignore']){if(fs.existsSync(p))fs.unlinkSync(p)}\"",
     "build-dev": "wasm-pack build --release --target bundler --out-dir pkg --features dev --features log && npm run cleanup-wasm-pack",
     "build": "wasm-pack build --release --target bundler --out-dir pkg && npm run cleanup-wasm-pack",
     "build-node": "wasm-pack build --release --target nodejs --out-dir pkg-node --features log --features dev && npm run cleanup-wasm-pack",
-    "prepublishOnly": "npm run build",
-    "prepack": "npm run build",
+    "build-reactive-dev": "wasm-pack build --release --target bundler --out-dir pkg-reactive --no-default-features --features dev --features log && npm run cleanup-wasm-pack",
+    "build-reactive": "wasm-pack build --release --target bundler --out-dir pkg-reactive --no-default-features && npm run cleanup-wasm-pack",
+    "build-node-reactive": "wasm-pack build --release --target nodejs --out-dir pkg-node-reactive --no-default-features --features log --features dev && npm run cleanup-wasm-pack",
+    "build-vapor-dev": "wasm-pack build --release --target bundler --out-dir pkg-vapor --no-default-features --features runtime --features dev --features log && npm run cleanup-wasm-pack",
+    "build-vapor": "wasm-pack build --release --target bundler --out-dir pkg-vapor --no-default-features --features runtime && npm run cleanup-wasm-pack",
+    "build-node-vapor": "wasm-pack build --release --target nodejs --out-dir pkg-node-vapor --no-default-features --features runtime --features log --features dev && npm run cleanup-wasm-pack",
+    "prepublishOnly": "npm run build && npm run build-reactive && npm run build-vapor",
+    "prepack": "npm run build && npm run build-reactive && npm run build-vapor",
     "dev": "wasm-pack watch",
     "docs": "cargo doc --no-deps",
     "test": "wasm-pack test --node",

@@ -6,15 +6,13 @@
 
 ### 应用创建 {#application-creation}
 
-- [createApp()](/api/application#createapp)
-- [createSSRApp()](/api/application#createssrapp)
+- [useApp()](/api/application#useapp)
 
 ### 通用 {#general}
 
 - [version](/api/general#version)
 - [nextTick()](/api/general#nexttick)
-- [defineComponent()](/api/general#definecomponent)
-- [defineAsyncComponent()](/api/general#defineasynccomponent)
+- [useComponent()](/api/general#usecomponent)
 
 ## 组合式 API {#composition-api}
 
@@ -68,56 +66,6 @@
 - [onDeactivated()](/api/composition-api-lifecycle#ondeactivated)
 - [onServerPrefetch()](/api/composition-api-lifecycle#onserverprefetch)
 
-## 选项式 API {#options-api}
-
-### 状态选项 {#state-options}
-
-- [data](/api/options-state#data)
-- [props](/api/options-state#props)
-- [computed](/api/options-state#computed)
-- [methods](/api/options-state#methods)
-- [watch](/api/options-state#watch)
-- [emits](/api/options-state#emits)
-- [expose](/api/options-state#expose)
-
-### 渲染选项 {#rendering-options}
-
-- [template](/api/options-rendering#template)
-- [render](/api/options-rendering#render)
-- [compilerOptions](/api/options-rendering#compileroptions)
-- [slots](/api/options-rendering#slots)
-
-### 生命周期钩子 {#options-lifecycle-hooks}
-
-- [beforeCreate](/api/options-lifecycle#beforecreate)
-- [created](/api/options-lifecycle#created)
-- [beforeMount](/api/options-lifecycle#beforemount)
-- [mounted](/api/options-lifecycle#mounted)
-- [beforeUpdate](/api/options-lifecycle#beforeupdate)
-- [updated](/api/options-lifecycle#updated)
-- [beforeUnmount](/api/options-lifecycle#beforeunmount)
-- [unmounted](/api/options-lifecycle#unmounted)
-- [errorCaptured](/api/options-lifecycle#errorcaptured)
-- [renderTracked](/api/options-lifecycle#rendertracked)
-- [renderTriggered](/api/options-lifecycle#rendertriggered)
-- [activated](/api/options-lifecycle#activated)
-- [deactivated](/api/options-lifecycle#deactivated)
-- [serverPrefetch](/api/options-lifecycle#serverprefetch)
-
-### 组合选项 {#composition-options}
-
-- [provide](/api/options-composition#provide)
-- [inject](/api/options-composition#inject)
-- [mixins](/api/options-composition#mixins)
-- [extends](/api/options-composition#extends)
-
-### 其他选项 {#misc-options}
-
-- [name](/api/options-misc#name)
-- [inheritAttrs](/api/options-misc#inheritattrs)
-- [components](/api/options-misc#components)
-- [directives](/api/options-misc#directives)
-
 ## 组件实例 {#component-instance}
 
 - [$data](/api/component-instance#data)
@@ -152,17 +100,14 @@
 - [v-else-if](/api/built-in-directives#v-else-if)
 - [v-for](/api/built-in-directives#v-for)
 - [v-on](/api/built-in-directives#v-on)
-- [v-bind](/api/built-in-directives#v-bind)
 - [v-model](/api/built-in-directives#v-model)
 - [v-slot](/api/built-in-directives#v-slot)
 - [v-pre](/api/built-in-directives#v-pre)
 - [v-once](/api/built-in-directives#v-once)
 - [v-memo](/api/built-in-directives#v-memo)
-- [v-cloak](/api/built-in-directives#v-cloak)
 
 ## 高级 API {#advanced-apis}
 
 - [渲染函数](/api/render-function)
 - [TypeScript 工具类型](/api/utility-types)
-- [自定义渲染器](/api/custom-renderer)
 - [自定义元素](/api/custom-elements)

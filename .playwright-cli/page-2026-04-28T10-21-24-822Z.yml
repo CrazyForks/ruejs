@@ -1,0 +1,108 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "R 后悔药 Rue.js" [ref=e7] [cursor=pointer]:
+        - /url: "#/"
+        - generic [ref=e9]: R
+        - generic [ref=e10]: 后悔药 Rue.js
+      - list [ref=e12]:
+        - listitem [ref=e13]:
+          - link "首页" [ref=e14] [cursor=pointer]:
+            - /url: "#/"
+        - listitem [ref=e15]:
+          - generic [ref=e16] [cursor=pointer]: 文档
+        - listitem [ref=e17]:
+          - link "API" [ref=e18] [cursor=pointer]:
+            - /url: "#/api/api/index"
+        - listitem [ref=e19]:
+          - generic [ref=e20] [cursor=pointer]: 生态
+        - listitem [ref=e21]:
+          - generic [ref=e22] [cursor=pointer]: 关于
+        - listitem [ref=e23]:
+          - link "赞助" [ref=e24] [cursor=pointer]:
+            - /url: "#/page/sponsor/index"
+        - listitem [ref=e25]:
+          - link "合作伙伴" [ref=e26] [cursor=pointer]:
+            - /url: "#/page/partners/index"
+      - combobox "切换主题" [ref=e29]:
+        - option [selected]
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+  - main [ref=e30]
+  - contentinfo [ref=e32]:
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - generic [ref=e35]: 文档
+        - list [ref=e36]:
+          - listitem [ref=e37]:
+            - link "深度指南" [ref=e38] [cursor=pointer]:
+              - /url: "#/jsx/basic-elements"
+          - listitem [ref=e39]:
+            - link "实战例子" [ref=e40] [cursor=pointer]:
+              - /url: "#/examples/hello-world"
+          - listitem [ref=e41]:
+            - link "快速上手" [ref=e42] [cursor=pointer]:
+              - /url: "#/guide/guide/quick-start"
+          - listitem [ref=e43]:
+            - link "术语表" [ref=e44] [cursor=pointer]:
+              - /url: "#/page/glossary/index"
+          - listitem [ref=e45]:
+            - link "错误码参照表" [ref=e46] [cursor=pointer]:
+              - /url: "#/page/error-reference/index"
+      - generic [ref=e47]:
+        - generic [ref=e48]: 关于
+        - list [ref=e49]:
+          - listitem [ref=e50]:
+            - link "常见问题" [ref=e51] [cursor=pointer]:
+              - /url: "#/page/about/faq"
+          - listitem [ref=e52]:
+            - link "团队" [ref=e53] [cursor=pointer]:
+              - /url: "#/page/about/team"
+          - listitem [ref=e54]:
+            - link "版本发布" [ref=e55] [cursor=pointer]:
+              - /url: "#/page/about/releases"
+          - listitem [ref=e56]:
+            - link "社区指南" [ref=e57] [cursor=pointer]:
+              - /url: "#/page/about/community-guide"
+      - generic [ref=e58]:
+        - generic [ref=e59]: 生态
+        - list [ref=e60]:
+          - listitem [ref=e61]:
+            - link "插件" [ref=e62] [cursor=pointer]:
+              - /url: "#/plugins"
+          - listitem [ref=e63]:
+            - link "组件库" [ref=e64] [cursor=pointer]:
+              - /url: "#/design/button"
+          - listitem [ref=e65]:
+            - link "路由指南" [ref=e66] [cursor=pointer]:
+              - /url: "#/page/routing"
+    - generic [ref=e68]: © 2024-2026 Xiangmin Liu

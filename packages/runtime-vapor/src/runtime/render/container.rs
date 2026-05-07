@@ -2,10 +2,10 @@ use super::super::Rue;
 use super::super::types::{ContainerMountState, MountInput, MountedState};
 #[cfg(feature = "dev")]
 use crate::log::{log, want_log};
+use crate::reactive::core::batch_scope;
 use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
-use crate::reactive::core::batch_scope;
 
 // 容器渲染入口（render）：
 // - 维护 container_map，将容器与其当前挂载状态绑定，支持后续增量更新
@@ -115,36 +115,6 @@ where
                     entry.take_mount()
                 };
                 match taken {
-                    Some(MountedState::Element(old_element)) => {
-                        let mut old_patch = old_element.into_patch_state();
-                        let mut parent = container.clone();
-                        self.call_hooks("before_update");
-                        #[cfg(feature = "dev")]
-                        {
-                            if want_log("debug", "runtime:render patch") {
-                                log("debug", "runtime:render patch");
-                            }
-                        }
-                        self.patch(&mut old_patch, input, &mut parent);
-                        self.call_hooks("updated");
-                        let entry = self.container_map.get_mut(idx).unwrap();
-                        entry.store_mount(MountedState::from_subtree_root(old_patch));
-                    }
-                    Some(MountedState::Component(old_component)) => {
-                        let mut parent = container.clone();
-                        let mut old_patch = old_component.into_patch_state();
-                        self.call_hooks("before_update");
-                        #[cfg(feature = "dev")]
-                        {
-                            if want_log("debug", "runtime:render patch component boundary") {
-                                log("debug", "runtime:render patch component boundary");
-                            }
-                        }
-                        self.patch(&mut old_patch, input, &mut parent);
-                        self.call_hooks("updated");
-                        let entry = self.container_map.get_mut(idx).unwrap();
-                        entry.store_mount(MountedState::from_subtree_root(old_patch));
-                    }
                     Some(MountedState::Block(old_block)) => {
                         self.call_hooks("before_update");
                         self.clear_mounted_state(container, MountedState::Block(old_block));
@@ -153,6 +123,18 @@ where
                             let entry = self.container_map.get_mut(idx).unwrap();
                             entry.store_mount(mounted);
                         }
+                    }
+                    Some(old_mount) => {
+                        let mut parent = container.clone();
+                        #[cfg(feature = "dev")]
+                        {
+                            if want_log("debug", "runtime:render patch root boundary") {
+                                log("debug", "runtime:render patch root boundary");
+                            }
+                        }
+                        let mounted = self.patch_root_mounted_state(old_mount, input, &mut parent);
+                        let entry = self.container_map.get_mut(idx).unwrap();
+                        entry.store_mount(mounted);
                     }
                     None => {
                         #[cfg(feature = "dev")]
@@ -200,10 +182,8 @@ where
             let Some(el) = mounted.host_cloned() else {
                 return None;
             };
-            let is_fragment = self
-                .get_dom_adapter()
-                .map(|adapter| adapter.is_fragment(&el))
-                .unwrap_or(false);
+            let is_fragment =
+                self.get_dom_adapter().map(|adapter| adapter.is_fragment(&el)).unwrap_or(false);
 
             if is_fragment {
                 if let Some(adapter) = self.get_dom_adapter_mut() {

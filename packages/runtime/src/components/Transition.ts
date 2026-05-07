@@ -6,18 +6,20 @@ Transition 组件概述
 */
 // 参考 Vue3 的 Transition 设计思路，结合 Rue 的信号与默认区间渲染机制
 import {
-  type FC,
   onMounted,
   onUnmounted,
-  type PropsWithChildren,
   renderBetween,
   vapor,
-} from '../rue'
+} from '../vapor-runtime'
+import type { FC as VaporFC, PropsWithChildren as VaporPropsWithChildren } from '../rue'
 import { signal, watchEffect } from '../reactivity'
 import { type BaseTransitionProps, createTransitionRunner } from './BaseTransition'
 import { createElement, createComment, appendChild } from '../dom'
 import type { DomNodeLike } from '../dom'
-import { useSetup } from '@rue-js/runtime-vapor'
+import { useSetup } from '@rue-js/runtime-vapor/reactive'
+
+type FC<P = {}> = VaporFC<P>
+type PropsWithChildren<P = {}> = VaporPropsWithChildren<P>
 
 export type TransitionProps = PropsWithChildren<BaseTransitionProps>
 

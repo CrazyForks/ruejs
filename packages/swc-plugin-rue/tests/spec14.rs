@@ -118,9 +118,8 @@ export default FetchingData;
     // - 受控 inputs：radio 的 value/checked/onChange 走适配器与事件绑定
     // - 文本插值：_$createTextWrapper + _$settextContent + watch
     // - 条件插槽：commits.length > 0 → vapor 片段；否则 ""；统一转为 vnode 并 renderAnchor
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue, _$setChecked } from "@rue-js/rue/vapor";
-import { FC, ref, useEffect } from '@rue-js/rue';
+    let expected_fragment = r##"import { useEffect, ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue, _$setChecked } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
 type CommitItem = {
     html_url: string;
     sha: string;

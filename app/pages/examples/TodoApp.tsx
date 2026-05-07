@@ -1,4 +1,4 @@
-import { type FC, computed, ref } from '@rue-js/rue'
+import { type FC, computed, ref, useState } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -87,8 +87,44 @@ const STATUS_META: Record<
   },
 }
 
+const EditingTitleInput: FC<{
+  initialTitle: string
+  onSave: (title: string) => void
+  onCancel: () => void
+}> = props => {
+  const [title, setTitle] = useState(props.initialTitle)
+
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row">
+      <input
+        className="input input-bordered w-full"
+        value={title.value}
+        onInput={(e: any) => {
+          setTitle((e.target as HTMLInputElement).value)
+        }}
+        onKeydown={(e: KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            props.onSave(title.value.trim())
+          }
+          if (e.key === 'Escape') {
+            props.onCancel()
+          }
+        }}
+      />
+      <div className="flex gap-2">
+        <button className="btn btn-primary btn-sm" onClick={() => props.onSave(title.value.trim())}>
+          保存
+        </button>
+        <button className="btn btn-ghost btn-sm" onClick={props.onCancel}>
+          取消
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const SOURCE_CODE = [
-  "import { type FC, computed, ref } from '@rue-js/rue';",
+  "import { type FC, computed, ref, useState } from '@rue-js/rue';",
   '',
   "type TodoStatus = 'todo' | 'doing' | 'done';",
   "type TodoFilter = 'all' | 'todo' | 'doing' | 'done' | 'archived';",
@@ -128,13 +164,40 @@ const SOURCE_CODE = [
   "  done: { label: '已完成', badgeClass: 'badge badge-success badge-outline', dotClass: 'bg-success', cardClass: 'border-success/30' },",
   '};',
   '',
+  'const EditingTitleInput: FC<{',
+  '  initialTitle: string;',
+  '  onSave: (title: string) => void;',
+  '  onCancel: () => void;',
+  '}> = props => {',
+  '  const [title, setTitle] = useState(props.initialTitle);',
+  '',
+  '  return (',
+  '    <div className="flex flex-col gap-3 sm:flex-row">',
+  '      <input',
+  '        className="input input-bordered w-full"',
+  '        value={title.value}',
+  '        onInput={(e: any) => {',
+  '          setTitle((e.target as HTMLInputElement).value);',
+  '        }}',
+  '        onKeydown={(e: KeyboardEvent) => {',
+  "          if (e.key === 'Enter') props.onSave(title.value.trim());",
+  "          if (e.key === 'Escape') props.onCancel();",
+  '        }}',
+  '      />',
+  '      <div className="flex gap-2">',
+  '        <button className="btn btn-primary btn-sm" onClick={() => props.onSave(title.value.trim())}>保存</button>',
+  '        <button className="btn btn-ghost btn-sm" onClick={props.onCancel}>取消</button>',
+  '      </div>',
+  '    </div>',
+  '  );',
+  '};',
+  '',
   'const PreviewPanel: FC = () => {',
   '  const todos = ref<TodoItem[]>(INITIAL_TODOS);',
   "  const draft = ref('');",
   "  const search = ref('');",
   "  const activeFilter = ref<TodoFilter>('all');",
   '  const editingId = ref<number | null>(null);',
-  "  const editingTitle = ref('');",
   '  const nextId = ref(INITIAL_TODOS.length + 1);',
   '',
   '  const counts = computed(() => ({',
@@ -177,7 +240,6 @@ const SOURCE_CODE = [
   '    todos.value = todos.value.filter(item => item.id !== id);',
   '    if (editingId.value === id) {',
   '      editingId.value = null;',
-  "      editingTitle.value = '';",
   '    }',
   '  };',
   '',
@@ -191,16 +253,13 @@ const SOURCE_CODE = [
   '',
   '  const startEditing = (item: TodoItem) => {',
   '    editingId.value = item.id;',
-  '    editingTitle.value = item.title;',
   '  };',
   '',
   '  const cancelEditing = () => {',
   '    editingId.value = null;',
-  "    editingTitle.value = '';",
   '  };',
   '',
-  '  const saveEditing = (id: number) => {',
-  '    const title = editingTitle.value.trim();',
+  '  const saveEditing = (id: number, title: string) => {',
   '    if (!title) return;',
   '    todos.value = todos.value.map(item => (item.id === id ? { ...item, title } : item));',
   '    cancelEditing();',
@@ -293,21 +352,12 @@ const SOURCE_CODE = [
   '                      )}',
   '',
   '                      {isEditing && (',
-  '                        <div className="flex flex-col gap-3 sm:flex-row">',
-  '                          <input',
-  '                            className="input input-bordered w-full"',
-  '                            value={editingTitle.value}',
-  '                            onInput={(e: any) => { editingTitle.value = (e.target as HTMLInputElement).value; }}',
-  '                            onKeydown={(e: KeyboardEvent) => {',
-  "                              if (e.key === 'Enter') saveEditing(item.id);",
-  "                              if (e.key === 'Escape') cancelEditing();",
-  '                            }}',
-  '                          />',
-  '                          <div className="flex gap-2">',
-  '                            <button className="btn btn-primary btn-sm" onClick={() => saveEditing(item.id)}>保存</button>',
-  '                            <button className="btn btn-ghost btn-sm" onClick={cancelEditing}>取消</button>',
-  '                          </div>',
-  '                        </div>',
+  '                        <EditingTitleInput',
+  '                          key={item.id}',
+  '                          initialTitle={item.title}',
+  '                          onSave={title => saveEditing(item.id, title)}',
+  '                          onCancel={cancelEditing}',
+  '                        />',
   '                      )}',
   '',
   '                      <div className="flex flex-wrap gap-2">',
@@ -353,7 +403,6 @@ const PreviewPanel: FC = () => {
   const search = ref('')
   const activeFilter = ref<TodoFilter>('all')
   const editingId = ref<number | null>(null)
-  const editingTitle = ref('')
   const nextId = ref(INITIAL_TODOS.length + 1)
 
   const counts = computed(() => ({
@@ -412,7 +461,6 @@ const PreviewPanel: FC = () => {
     todos.value = todos.value.filter(item => item.id !== id)
     if (editingId.value === id) {
       editingId.value = null
-      editingTitle.value = ''
     }
   }
 
@@ -430,16 +478,13 @@ const PreviewPanel: FC = () => {
 
   const startEditing = (item: TodoItem) => {
     editingId.value = item.id
-    editingTitle.value = item.title
   }
 
   const cancelEditing = () => {
     editingId.value = null
-    editingTitle.value = ''
   }
 
-  const saveEditing = (id: number) => {
-    const title = editingTitle.value.trim()
+  const saveEditing = (id: number, title: string) => {
     if (!title) {
       return
     }
@@ -594,34 +639,12 @@ const PreviewPanel: FC = () => {
                       )}
 
                       {isEditing && (
-                        <div className="flex flex-col gap-3 sm:flex-row">
-                          <input
-                            className="input input-bordered w-full"
-                            value={editingTitle.value}
-                            onInput={(e: any) => {
-                              editingTitle.value = (e.target as HTMLInputElement).value
-                            }}
-                            onKeydown={(e: KeyboardEvent) => {
-                              if (e.key === 'Enter') {
-                                saveEditing(item.id)
-                              }
-                              if (e.key === 'Escape') {
-                                cancelEditing()
-                              }
-                            }}
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              className="btn btn-primary btn-sm"
-                              onClick={() => saveEditing(item.id)}
-                            >
-                              保存
-                            </button>
-                            <button className="btn btn-ghost btn-sm" onClick={cancelEditing}>
-                              取消
-                            </button>
-                          </div>
-                        </div>
+                        <EditingTitleInput
+                          key={item.id}
+                          initialTitle={item.title}
+                          onSave={title => saveEditing(item.id, title)}
+                          onCancel={cancelEditing}
+                        />
                       )}
 
                       <div className="flex flex-wrap gap-2">

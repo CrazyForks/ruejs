@@ -8,7 +8,9 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 
 use crate::reactive::computed::create_computed;
-use crate::reactive::context::{get_current_instance, with_current_instance_hook_scope, with_hook_slot};
+use crate::reactive::context::{
+    get_current_instance, with_current_instance_hook_scope, with_hook_slot,
+};
 use crate::reactive::core::schedule_effect_run;
 use crate::reactive::signal::{SignalHandle, collect_affected_subscribers};
 
@@ -27,14 +29,14 @@ fn arg_has_setter(arg: &JsValue) -> bool {
 fn make_dynamic_computed_arg(holder: &Object, writable: bool) -> JsValue {
     let getter_holder = holder.clone();
     let getter = Closure::wrap(Box::new(move || {
-        let current = Reflect::get(&getter_holder, &JsValue::from_str("arg"))
-            .unwrap_or(JsValue::UNDEFINED);
+        let current =
+            Reflect::get(&getter_holder, &JsValue::from_str("arg")).unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = current.dyn_ref::<Function>() {
             return func.call0(&JsValue::NULL).unwrap_or(JsValue::UNDEFINED);
         }
         if current.is_object() {
-            let getter = Reflect::get(&current, &JsValue::from_str("get"))
-                .unwrap_or(JsValue::UNDEFINED);
+            let getter =
+                Reflect::get(&current, &JsValue::from_str("get")).unwrap_or(JsValue::UNDEFINED);
             if let Some(func) = getter.dyn_ref::<Function>() {
                 return func.call0(&JsValue::NULL).unwrap_or(JsValue::UNDEFINED);
             }
@@ -53,8 +55,8 @@ fn make_dynamic_computed_arg(holder: &Object, writable: bool) -> JsValue {
             let current = Reflect::get(&setter_holder, &JsValue::from_str("arg"))
                 .unwrap_or(JsValue::UNDEFINED);
             if current.is_object() {
-                let setter = Reflect::get(&current, &JsValue::from_str("set"))
-                    .unwrap_or(JsValue::UNDEFINED);
+                let setter =
+                    Reflect::get(&current, &JsValue::from_str("set")).unwrap_or(JsValue::UNDEFINED);
                 if let Some(func) = setter.dyn_ref::<Function>() {
                     let _ = func.call1(&JsValue::NULL, &value);
                 }
@@ -120,7 +122,8 @@ pub fn computed_js(arg: JsValue, force_global: Option<bool>) -> SignalHandle {
     make.forget();
 
     let slot_obj = Object::from(slot);
-    let holder = Reflect::get(&slot_obj, &JsValue::from_str("holder")).unwrap_or(JsValue::UNDEFINED);
+    let holder =
+        Reflect::get(&slot_obj, &JsValue::from_str("holder")).unwrap_or(JsValue::UNDEFINED);
     if holder.is_object() {
         let holder_obj = Object::from(holder);
         let _ = Reflect::set(&holder_obj, &JsValue::from_str("arg"), &arg);

@@ -24,7 +24,40 @@ const Index: FC = () => (
             <RouterLink to="/jsx/conditional-rendering">条件渲染（?:、&&、null）</RouterLink>
           </li>
           <li>
+            <RouterLink to="/jsx/v-if-r-if">v-if / r-if 指令</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/v-show-r-show">v-show / r-show 指令</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/v-pre-r-pre">v-pre / r-pre 指令</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/v-once-r-once">v-once / r-once 指令</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/v-memo-r-memo">v-memo / r-memo 指令</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/v-text-r-text">v-text / r-text 指令</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/v-html-r-html">v-html / r-html 指令</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/v-on-r-on">v-on / r-on 指令</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/v-model-r-model">v-model / r-model 指令</RouterLink>
+          </li>
+          <li>
             <RouterLink to="/jsx/lists-and-keys">列表渲染与 key</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/v-for-r-for">v-for / r-for 指令</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/template">Template 无包装容器</RouterLink>
           </li>
           <li>
             <RouterLink to="/jsx/fragments">
@@ -36,6 +69,15 @@ const Index: FC = () => (
           </li>
           <li>
             <RouterLink to="/jsx/components">组件与 Props 传递</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/dynamic-component">动态组件（Component）</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/suspense">Suspense 异步边界</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/keep-alive">KeepAlive 缓存组件</RouterLink>
           </li>
           <li>
             <RouterLink to="/jsx/events">事件处理</RouterLink>

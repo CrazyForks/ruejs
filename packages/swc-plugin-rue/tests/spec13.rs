@@ -50,9 +50,8 @@ export default MarkdownEditor;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, _$createElement, _$appendChild, watchEffect, _$addEventListener, _$setClassName, _$setInnerHTML, _$setValue } from "@rue-js/rue/vapor";
-import { FC, ref } from '@rue-js/rue';
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createElement, _$appendChild, watchEffect, _$addEventListener, _$setClassName, _$setInnerHTML, _$setValue } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
 import MarkdownIt from 'markdown-it';
 const md = new MarkdownIt({
     html: true,

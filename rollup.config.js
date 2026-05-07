@@ -249,10 +249,10 @@ function createConfig(format, output, plugins = [], buildEntry = buildEntries[0]
 
       // feature flags
       __FEATURE_SUSPENSE__: `true`,
-      __FEATURE_OPTIONS_API__: isBundlerESMBuild ? `__VUE_OPTIONS_API__` : `true`,
-      __FEATURE_PROD_DEVTOOLS__: isBundlerESMBuild ? `__VUE_PROD_DEVTOOLS__` : `false`,
+      __FEATURE_OPTIONS_API__: isBundlerESMBuild ? `__RUE_OPTIONS_API__` : `true`,
+      __FEATURE_PROD_DEVTOOLS__: isBundlerESMBuild ? `__RUE_PROD_DEVTOOLS__` : `false`,
       __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: isBundlerESMBuild
-        ? `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__`
+        ? `__RUE_PROD_HYDRATION_MISMATCH_DETAILS__`
         : `false`,
     }
 

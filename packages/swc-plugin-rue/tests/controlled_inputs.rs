@@ -38,9 +38,8 @@ export default ControlledInputs;
     // 期望输出要点对照：
     // - 受控 input：value 走 watch；onInput 绑定更新 state
     // - 文本回显：_$createTextWrapper + _$settextContent + watch
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
-import { type FC, useState } from '@rue-js/rue';
+    let expected_fragment = r##"import { useState, _$vaporWithHookId, useSetup, vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const ControlledInputs: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{

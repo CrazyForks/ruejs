@@ -1,21 +1,5 @@
 # 工具链
 
-## 在线体验
-
-如果你只是想快速试用 Rue 组件与 SFC 语法，无需在本机安装复杂环境。你可以：
-
-- 使用任意在线 Vite 沙盒（如 StackBlitz / CodeSandbox），安装 Rue 相关依赖后即可运行
-- 在本仓库构建示例 SFC Playground 并本地打开
-
-本地构建并预览：
-
-```sh [pnpm]
-$ pnpm run build-sfc-playground
-$ pnpm serve
-```
-
-在线沙盒适合快速复现与问题报告；复杂场景建议使用本地 Vite 环境。
-
 ## 项目搭建
 
 ### Vite
@@ -25,25 +9,25 @@ $ pnpm serve
 使用 Vite 创建新项目，并接入 Rue：
 
 ```sh [npm]
-$ npm create vite@latest my-rue-app -- --template vanilla-ts
+$ npm create vite@latest my-rue-app
 $ cd my-rue-app
 $ npm i @rue-js/runtime @rue-js/vite-plugin-rue
 ```
 
 ```sh [pnpm]
-$ pnpm create vite@latest my-rue-app -- --template vanilla-ts
+$ pnpm create vite@latest my-rue-app
 $ cd my-rue-app
 $ pnpm add @rue-js/runtime @rue-js/vite-plugin-rue
 ```
 
 ```sh [yarn]
-$ yarn create vite my-rue-app --template vanilla-ts
+$ yarn create vite my-rue-app
 $ cd my-rue-app
 $ yarn add @rue-js/runtime @rue-js/vite-plugin-rue
 ```
 
 ```sh [bun]
-$ bun create vite my-rue-app --template vanilla-ts
+$ bun create vite my-rue-app
 $ cd my-rue-app
 $ bun add @rue-js/runtime @rue-js/vite-plugin-rue
 ```
@@ -138,13 +122,6 @@ $ pnpm format
 $ pnpm format-check
 ```
 
-## SFC 自定义块
-
-Rue 的 SFC 可包含自定义块。它们会在构建时按资源查询被转换为同文件的导入，由底层构建工具 Vite 负责处理。
-
-- 使用 Vite 时，建议通过自定义插件将匹配的块转换为可执行 JS
-- Rue 官方提供的 `@rue-js/vite-plugin-rue` 覆盖了常见用例，扩展场景可自行添加插件
-
 ## 底层包与生态
 
 以下包在 Rue 项目中常用：
@@ -157,12 +134,3 @@ Rue 的 SFC 可包含自定义块。它们会在构建时按资源查询被转�
 - `@rue-js/runtime-vapor`：针对特定运行模式的优化实现
 
 你可以在本仓库的脚本中查看它们的构建方式与使用姿势。
-
-## 其他在线沙盒
-
-- [Vite on StackBlitz](https://vite.new/)
-- [Vite on Repl.it](https://replit.com/@templates/Vite)
-- [Vite on CodeSandbox](https://codesandbox.io/)
-- [CodePen](https://codepen.io/)
-
-在这些平台创建 Vite 工程后，安装 Rue 依赖即可运行基础示例。

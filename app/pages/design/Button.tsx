@@ -1,985 +1,909 @@
 import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
+import { Button, Tabs } from '@rue-js/design'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
-import { Button, Tabs } from '@rue-js/design'
+
+type TabMode = 'preview' | 'code'
+
+interface ExampleBlockProps {
+  title: string
+  summary?: string
+  tab: { value: TabMode }
+  preview: () => any
+  code: string
+}
+
+interface ApiRow {
+  prop: string
+  description: string
+  type: string
+  defaultValue: string
+}
+
+type DemoTone = 'neutral' | 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'
+type DemoVariant = 'filled' | 'outlined' | 'dashed'
+
+interface ToneExample {
+  label: string
+  color?: DemoTone
+}
+
+interface StyleExample {
+  label: string
+  variant: DemoVariant
+}
+
+const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
+  return (
+    <div className="component-preview not-prose text-base-content my-6 lg:my-12">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold"># {title}</h2>
+          {summary ? <p className="m-0 text-sm opacity-70">{summary}</p> : null}
+        </div>
+      </div>
+      <Tabs
+        style="box"
+        items={[
+          { key: 'preview', label: '预览' },
+          { key: 'code', label: 'JSX代码' },
+        ]}
+        activeKey={tab.value}
+        onChange={key => (tab.value = key as TabMode)}
+        className="mb-3 mt-4"
+      />
+      {tab.value === 'preview' ? preview() : <Code className="mt-2" lang="tsx" code={code} />}
+    </div>
+  )
+}
+
+const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
+  return (
+    <div className="not-prose overflow-x-auto rounded-box border border-base-300 bg-base-100">
+      <table className="table table-zebra">
+        <thead>
+          <tr>
+            <th>属性</th>
+            <th>说明</th>
+            <th>类型</th>
+            <th>默认值</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => (
+            <tr key={row.prop}>
+              <td>
+                <code>{row.prop}</code>
+              </td>
+              <td>{row.description}</td>
+              <td>
+                <code>{row.type}</code>
+              </td>
+              <td>
+                <code>{row.defaultValue}</code>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+const PlusIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="size-[1.05em]"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+  </svg>
+)
+
+const ArrowRightIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="size-[1.05em]"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="m13 6 6 6-6 6" />
+  </svg>
+)
+
+const HeartIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="size-[1.05em]"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10Z"
+    />
+  </svg>
+)
+
+const RocketIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="size-[1.05em]"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5 9 15l6 6" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 9c0-3.5 2.5-6 6-6 0 3.5-2.5 6-6 6Z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 9 9 15" />
+    <circle cx="14" cy="10" r="1" fill="currentColor" stroke="none" />
+  </svg>
+)
+
+const MailIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="size-[1.05em]"
+  >
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="m4 7 8 6 8-6" />
+  </svg>
+)
+
+const SparkIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="size-[1.05em]"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 18h.01M19 18h.01M12 21h.01" />
+  </svg>
+)
+
+const toneExamples: ToneExample[] = [
+  { label: 'Default' },
+  { label: 'Neutral', color: 'neutral' },
+  { label: 'Primary', color: 'primary' },
+  { label: 'Secondary', color: 'secondary' },
+  { label: 'Accent', color: 'accent' },
+  { label: 'Info', color: 'info' },
+  { label: 'Success', color: 'success' },
+  { label: 'Warning', color: 'warning' },
+  { label: 'Error', color: 'error' },
+] 
+
+const styleExamples: StyleExample[] = [
+  { label: 'Filled', variant: 'filled' },
+  { label: 'Outlined', variant: 'outlined' },
+  { label: 'Dashed', variant: 'dashed' },
+]
+
+const loginExamples = [
+  {
+    label: 'Login with Email',
+    icon: '@',
+    className: 'bg-white text-base-content border-base-300',
+    iconClassName: 'bg-base-200 text-base-content',
+  },
+  {
+    label: 'Login with GitHub',
+    icon: 'GH',
+    className: 'bg-neutral text-neutral-content border-neutral',
+    iconClassName: 'bg-white/15 text-white',
+  },
+  {
+    label: 'Login with Google',
+    icon: 'G',
+    className: 'bg-white text-base-content border-base-300',
+    iconClassName: 'bg-red-100 text-red-700',
+  },
+  {
+    label: 'Login with Facebook',
+    icon: 'f',
+    className: 'bg-[#1A77F2] text-white border-[#005fd8]',
+    iconClassName: 'bg-white/15 text-white',
+  },
+  {
+    label: 'Login with X',
+    icon: 'X',
+    className: 'bg-black text-white border-black',
+    iconClassName: 'bg-white/15 text-white',
+  },
+  {
+    label: 'Login with Apple',
+    icon: 'A',
+    className: 'bg-black text-white border-black',
+    iconClassName: 'bg-white/15 text-white',
+  },
+  {
+    label: 'Login with Slack',
+    icon: 'S',
+    className: 'bg-[#622069] text-white border-[#591660]',
+    iconClassName: 'bg-white/15 text-white',
+  },
+  {
+    label: 'Login with Microsoft',
+    icon: 'M',
+    className: 'bg-[#2F2F2F] text-white border-black',
+    iconClassName: 'bg-white/15 text-white',
+  },
+  {
+    label: 'Login with LINE',
+    icon: 'L',
+    className: 'bg-[#03C755] text-white border-[#00b544]',
+    iconClassName: 'bg-white/15 text-white',
+  },
+  {
+    label: 'Login with MetaMask',
+    icon: 'MM',
+    className: 'bg-white text-base-content border-base-300',
+    iconClassName: 'bg-orange-100 text-orange-700',
+  },
+] as const
+
+const BrandMark: FC<{ text: string; className?: string }> = ({ text, className }) => {
+  return (
+    <span
+      className={`inline-grid h-5 min-w-5 place-items-center rounded-full px-1 text-[0.55rem] leading-none font-bold ${className ?? 'bg-base-200 text-base-content'}`}
+    >
+      {text}
+    </span>
+  )
+}
+
+const apiRows: ApiRow[] = [
+  {
+    prop: 'active',
+    description: '激活态，追加 btn-active',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
+  {
+    prop: 'as',
+    description: '指定渲染标签，可选 button、a、div',
+    type: `'button' | 'a' | 'div'`,
+    defaultValue: `'button'`,
+  },
+  {
+    prop: 'block',
+    description: '整行按钮，宽度撑满容器',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
+  {
+    prop: 'color',
+    description: '颜色层，danger 会映射到 error 按钮色',
+    type: `'default' | 'danger' | 'neutral' | 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'`,
+    defaultValue: `'default'`,
+  },
+  {
+    prop: 'danger',
+    description: '危险态快捷开关，未设置 color 时等价于 color="danger"',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
+  {
+    prop: 'disabled',
+    description: '禁用按钮；a 和 div 根节点也会输出禁用语义',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
+  {
+    prop: 'href',
+    description: '传入后默认以 a 标签渲染',
+    type: 'string',
+    defaultValue: '-',
+  },
+  {
+    prop: 'htmlType',
+    description: '原生 button 的 type',
+    type: `'button' | 'submit' | 'reset'`,
+    defaultValue: `'button'`,
+  },
+  {
+    prop: 'icon',
+    description: '图标节点',
+    type: 'any',
+    defaultValue: '-',
+  },
+  {
+    prop: 'iconPlacement',
+    description: '图标位置',
+    type: `'start' | 'end'`,
+    defaultValue: `'start'`,
+  },
+  {
+    prop: 'loading',
+    description: '支持 boolean 或对象写法，可自定义加载图标',
+    type: `boolean | { delay?: number; icon?: any }`,
+    defaultValue: 'false',
+  },
+  {
+    prop: 'shape',
+    description: '按钮形状',
+    type: `'default' | 'square' | 'circle' | 'round'`,
+    defaultValue: `'default'`,
+  },
+  {
+    prop: 'size',
+    description: '尺寸，支持 xs 到 xl，以及 small / middle / large 别名',
+    type: `'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'`,
+    defaultValue: '-',
+  },
+  {
+    prop: 'target',
+    description: '链接目标窗口，仅 a 标签生效',
+    type: 'string',
+    defaultValue: '-',
+  },
+  {
+    prop: 'type',
+    description: '视觉类型，直接替代旧的 variant 语义',
+    type: `'solid' | 'filled' | 'outlined' | 'dashed' | 'text' | 'link'`,
+    defaultValue: `'solid'`,
+  },
+  {
+    prop: 'wide',
+    description: '宽按钮，追加 btn-wide',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
+]
 
 const ButtonDemo: FC = () => {
-  const tabButton = ref<'preview' | 'code'>('preview')
-  const tabSizes = ref<'preview' | 'code'>('preview')
-  const tabColors = ref<'preview' | 'code'>('preview')
-  const tabSoft = ref<'preview' | 'code'>('preview')
-  const tabOutline = ref<'preview' | 'code'>('preview')
-  const tabDash = ref<'preview' | 'code'>('preview')
-  const tabNeutralStyle = ref<'preview' | 'code'>('preview')
-  const tabActive = ref<'preview' | 'code'>('preview')
-  const tabGhostLink = ref<'preview' | 'code'>('preview')
-  const tabWide = ref<'preview' | 'code'>('preview')
-  const tabResponsive = ref<'preview' | 'code'>('preview')
-  const tabAnyTags = ref<'preview' | 'code'>('preview')
-  const tabDisabled = ref<'preview' | 'code'>('preview')
-  const tabSquareCircle = ref<'preview' | 'code'>('preview')
-  const tabWithIcon = ref<'preview' | 'code'>('preview')
-  const tabBlock = ref<'preview' | 'code'>('preview')
-  const tabLoading = ref<'preview' | 'code'>('preview')
-  const tabLogin = ref<'preview' | 'code'>('preview')
-  const tabEvents = ref<'preview' | 'code'>('preview')
-  const clickCount = ref<number>(0)
+  const tabTypes = ref<TabMode>('preview')
+  const tabResponsive = ref<TabMode>('preview')
+  const tabPalette = ref<TabMode>('preview')
+  const tabVariants = ref<TabMode>('preview')
+  const tabDanger = ref<TabMode>('preview')
+  const tabIcons = ref<TabMode>('preview')
+  const tabLoading = ref<TabMode>('preview')
+  const tabSizes = ref<TabMode>('preview')
+  const tabStates = ref<TabMode>('preview')
+  const tabFormLink = ref<TabMode>('preview')
+  const tabRecipes = ref<TabMode>('preview')
+  const tabLogin = ref<TabMode>('preview')
+  const submitCount = ref(0)
 
   return (
     <SidebarPlayground>
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Button 按钮</h1>
-        <p className="text-sm mt-3 mb-3">按钮（Button）允许用户执行操作或做出选择。</p>
-        <div className="text-sm">
+        <p className="text-sm mt-3 mb-3">
+          <code>type</code> 负责视觉类型，
+          <code>color</code> 负责主题色，再用 <code>shape</code>、<code>icon</code>、<code>loading</code> 补足交互细节。
+        </p>
+
+        <div className="text-sm flex flex-wrap gap-4">
           <a href="https://daisyui.com/components/button/" target="_blank">
             查看 Button 静态样式
           </a>
         </div>
 
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold"># Button</h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabButton.value}
-            onChange={k => (tabButton.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabButton.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button>Default</Button>
+        <h2>何时使用</h2>
+        <ul>
+          <li>需要一个通用操作按钮，并希望颜色、类型、形状和状态能拆开表达。</li>
+          <li>需要在表单里区分视觉类型 <code>type</code> 和原生提交类型 <code>htmlType</code>。</li>
+          <li>需要统一处理图标按钮、加载按钮、链接按钮和整行按钮。</li>
+        </ul>
+
+        <ExampleBlock
+          title="类型"
+          summary="type 现在直接对应视觉类型。"
+          tab={tabTypes}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body flex flex-row flex-wrap items-center gap-2">
+                <Button>Solid</Button>
+                <Button type="outlined">Outlined</Button>
+                <Button type="dashed">Dashed</Button>
+                <Button type="filled">Filled</Button>
+                <Button type="text">Text</Button>
+                <Button type="link">Link</Button>
               </div>
             </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`import { Button } from '@rue-js/design';
-export default () => <Button>Default</Button>;`}
-            />
           )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Button sizes
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabSizes.value}
-            onChange={k => (tabSizes.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabSizes.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button size="xs">Xsmall</Button>
-                <Button size="sm">Small</Button>
-                <Button>Medium</Button>
-                <Button size="lg">Large</Button>
-                <Button size="xl">Xlarge</Button>
-              </div>
-            </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`import { Button } from '@rue-js/design';
-export default () => (
-  <>
-    <Button size="xs">Xsmall</Button>
-    <Button size="sm">Small</Button>
-    <Button>Medium</Button>
-    <Button size="lg">Large</Button>
-    <Button size="xl">Xlarge</Button>
-  </>
-);`}
-            />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Responsive button
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabResponsive.value}
-            onChange={k => (tabResponsive.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabResponsive.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body">
+            code={`<Button>Solid</Button>
+        <Button type="outlined">Outlined</Button>
+<Button type="dashed">Dashed</Button>
+        <Button type="filled">Filled</Button>
+<Button type="text">Text</Button>
+<Button type="link">Link</Button>`}
+        />
+
+        <ExampleBlock
+          title="响应式尺寸"
+          summary="把原来的响应式按钮演示保留回来，统一改成 size + className 的方式。"
+          tab={tabResponsive}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body flex flex-row flex-wrap items-center gap-2">
                 <Button size="xs" className="sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl">
                   Responsive
                 </Button>
               </div>
             </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button size="xs" className="sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl">Responsive</Button>`}
-            />
           )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Button events
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabEvents.value}
-            onChange={k => (tabEvents.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabEvents.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap items-center gap-3">
-                <div>count: {clickCount.value}</div>
-                <Button onClick={() => (clickCount.value = clickCount.value + 1)}>Click Me</Button>
-                <Button loading onClick={() => (clickCount.value = clickCount.value + 1)}>
-                  <span className="loading loading-spinner"></span>
-                  Loading (disabled)
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`const count = ref(0)
-<div>count: {count.value}</div>
-<Button onClick={() => (count.value = count.value + 1)}>Click Me</Button>
-<Button loading onClick={() => (count.value = count.value + 1)}>
-  <span className="loading loading-spinner"></span>
-  Loading (disabled)
+          code={`<Button size="xs" className="sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl">
+  Responsive
 </Button>`}
-            />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Buttons colors
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabColors.value}
-            onChange={k => (tabColors.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabColors.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button variant="neutral">Neutral</Button>
-                <Button variant="primary">Primary</Button>
-                <Button variant="secondary">Secondary</Button>
-                <Button variant="accent">Accent</Button>
-                <Button variant="info">Info</Button>
-                <Button variant="success">Success</Button>
-                <Button variant="warning">Warning</Button>
-                <Button variant="error">Error</Button>
+        />
+
+        <ExampleBlock
+          title="颜色色板"
+          summary="原来的颜色演示继续保留，但统一改成 color 语义。"
+          tab={tabPalette}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body flex flex-row flex-wrap items-center gap-2">
+                {toneExamples.map(tone => (
+                  <Button key={tone.label} color={tone.color}>
+                    {tone.label}
+                  </Button>
+                ))}
               </div>
             </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button variant="neutral">Neutral</Button>
-<Button variant="primary">Primary</Button>
-<Button variant="secondary">Secondary</Button>
-<Button variant="accent">Accent</Button>
-<Button variant="info">Info</Button>
-<Button variant="success">Success</Button>
-<Button variant="warning">Warning</Button>
-<Button variant="error">Error</Button>`}
-            />
           )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Soft buttons
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabSoft.value}
-            onChange={k => (tabSoft.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabSoft.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button soft>Default</Button>
-                <Button soft variant="primary">
-                  Primary
-                </Button>
-                <Button soft variant="secondary">
-                  Secondary
-                </Button>
-                <Button soft variant="accent">
-                  Accent
-                </Button>
-                <Button soft variant="info">
-                  Info
-                </Button>
-                <Button soft variant="success">
-                  Success
-                </Button>
-                <Button soft variant="warning">
-                  Warning
-                </Button>
-                <Button soft variant="error">
-                  Error
-                </Button>
+          code={`const tones = [
+  { label: 'Default' },
+  { label: 'Neutral', color: 'neutral' },
+  { label: 'Primary', color: 'primary' },
+  { label: 'Secondary', color: 'secondary' },
+  { label: 'Accent', color: 'accent' },
+  { label: 'Info', color: 'info' },
+  { label: 'Success', color: 'success' },
+  { label: 'Warning', color: 'warning' },
+  { label: 'Error', color: 'error' },
+] as const
+
+<div className="flex flex-wrap gap-2">
+  {tones.map(tone => (
+    <Button key={tone.label} color={tone.color}>
+      {tone.label}
+    </Button>
+  ))}
+</div>`}
+        />
+
+        <ExampleBlock
+          title="风格矩阵"
+          summary="把原来的 soft、outline、dash 演示融合成统一的 type 展示。"
+          tab={tabVariants}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body gap-5">
+                {styleExamples.map(style => (
+                  <div key={style.label}>
+                    <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">{style.label}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {toneExamples.map(tone => (
+                        <Button key={`${style.label}-${tone.label}`} color={tone.color} type={style.variant}>
+                          {tone.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="rounded-box bg-white p-4 text-black">
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-black/60">Neutral on light surface</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button color="neutral" type="outlined">Outline</Button>
+                    <Button color="neutral" type="dashed">Dash</Button>
+                  </div>
+                </div>
               </div>
             </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button soft>Default</Button>
-<Button soft variant="primary">Primary</Button>
-<Button soft variant="secondary">Secondary</Button>
-<Button soft variant="accent">Accent</Button>
-<Button soft variant="info">Info</Button>
-<Button soft variant="success">Success</Button>
-<Button soft variant="warning">Warning</Button>
-<Button soft variant="error">Error</Button>`}
-            />
           )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Outline buttons
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabOutline.value}
-            onChange={k => (tabOutline.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabOutline.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button outline>Default</Button>
-                <Button outline variant="primary">
-                  Primary
+          code={`const tones = [
+  { label: 'Default' },
+  { label: 'Neutral', color: 'neutral' },
+  { label: 'Primary', color: 'primary' },
+  { label: 'Secondary', color: 'secondary' },
+  { label: 'Accent', color: 'accent' },
+  { label: 'Info', color: 'info' },
+  { label: 'Success', color: 'success' },
+  { label: 'Warning', color: 'warning' },
+  { label: 'Error', color: 'error' },
+] as const
+
+const styles = [
+  { label: 'Filled', variant: 'filled' },
+  { label: 'Outlined', variant: 'outlined' },
+  { label: 'Dashed', variant: 'dashed' },
+] as const
+
+{styles.map(style => (
+  <div key={style.label}>
+    <div className="flex flex-wrap gap-2">
+      {tones.map(tone => (
+        <Button key={style.label + '-' + tone.label} color={tone.color} type={style.variant}>
+          {tone.label}
+        </Button>
+      ))}
+    </div>
+  </div>
+))}
+
+<div className="bg-white p-4 rounded-box">
+  <Button color="neutral" type="outlined">Outline</Button>
+  <Button color="neutral" type="dashed">Dash</Button>
+</div>`}
+        />
+
+        <ExampleBlock
+          title="危险态"
+          summary="danger 是快捷开关，也可以直接通过 color='danger' 控制。"
+          tab={tabDanger}
+          preview={() => (
+            <div className="card bg-neutral text-neutral-content shadow-sm">
+              <div className="card-body flex flex-row flex-wrap items-center gap-2">
+                <Button color="danger">
+                  Delete forever
                 </Button>
-                <Button outline variant="secondary">
-                  Secondary
+                <Button color="danger" type="outlined">
+                  Remove access
                 </Button>
-                <Button outline variant="accent">
-                  Accent
+                <Button color="danger" type="filled">
+                  Archive branch
                 </Button>
-                <Button outline variant="info">
-                  Info
-                </Button>
-                <Button outline variant="success">
-                  Success
-                </Button>
-                <Button outline variant="warning">
-                  Warning
-                </Button>
-                <Button outline variant="error">
-                  Error
+                <Button color="danger" type="text">
+                  Clear cache
                 </Button>
               </div>
             </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button outline>Default</Button>
-<Button outline variant="primary">Primary</Button>
-<Button outline variant="secondary">Secondary</Button>
-<Button outline variant="accent">Accent</Button>
-<Button outline variant="info">Info</Button>
-<Button outline variant="success">Success</Button>
-<Button outline variant="warning">Warning</Button>
-<Button outline variant="error">Error</Button>`}
-            />
           )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Dash buttons
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabDash.value}
-            onChange={k => (tabDash.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabDash.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button dash>Default</Button>
-                <Button dash variant="primary">
-                  Primary
+            code={`<Button color="danger">Delete forever</Button>
+        <Button color="danger" type="outlined">Remove access</Button>
+        <Button color="danger" type="filled">Archive branch</Button>
+        <Button color="danger" type="text">Clear cache</Button>`}
+        />
+
+        <ExampleBlock
+          title="图标与图标位置"
+          summary="icon 和 iconPlacement 用来组织图标按钮与带文案按钮。"
+          tab={tabIcons}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body flex flex-row flex-wrap items-center gap-2">
+                <Button color="primary" icon={<PlusIcon />}>
+                  Create project
                 </Button>
-                <Button dash variant="secondary">
-                  Secondary
+                <Button color="secondary" type="outlined" icon={<ArrowRightIcon />} iconPlacement="end">
+                  Continue
                 </Button>
-                <Button dash variant="accent">
-                  Accent
-                </Button>
-                <Button dash variant="info">
-                  Info
-                </Button>
-                <Button dash variant="success">
-                  Success
-                </Button>
-                <Button dash variant="warning">
-                  Warning
-                </Button>
-                <Button dash variant="error">
-                  Error
-                </Button>
+                <Button color="accent" shape="circle" icon={<HeartIcon />} aria-label="收藏" />
+                <Button color="info" shape="square" icon={<SparkIcon />} aria-label="高亮" />
               </div>
             </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button dash>Default</Button>
-<Button dash variant="primary">Primary</Button>
-<Button dash variant="secondary">Secondary</Button>
-<Button dash variant="accent">Accent</Button>
-<Button dash variant="info">Info</Button>
-<Button dash variant="success">Success</Button>
-<Button dash variant="warning">Warning</Button>
-<Button dash variant="error">Error</Button>`}
-            />
           )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # neutral button with outline or dash style
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabNeutralStyle.value}
-            onChange={k => (tabNeutralStyle.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabNeutralStyle.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex gap-2 justify-center">
-                <Button variant="neutral" outline>
-                  Outline
-                </Button>
-                <Button variant="neutral" dash>
-                  Dash
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button variant="neutral" outline>Outline</Button>
-<Button variant="neutral" dash>Dash</Button>`}
-            />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Active buttons
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabActive.value}
-            onChange={k => (tabActive.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabActive.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button active>Default</Button>
-                <Button active variant="primary">
-                  Primary
-                </Button>
-                <Button active variant="secondary">
-                  Secondary
-                </Button>
-                <Button active variant="accent">
-                  Accent
-                </Button>
-                <Button active variant="info">
-                  Info
-                </Button>
-                <Button active variant="success">
-                  Success
-                </Button>
-                <Button active variant="warning">
-                  Warning
-                </Button>
-                <Button active variant="error">
-                  Error
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button active>Default</Button>
-<Button active variant="primary">Primary</Button>
-<Button active variant="secondary">Secondary</Button>
-<Button active variant="accent">Accent</Button>
-<Button active variant="info">Info</Button>
-<Button active variant="success">Success</Button>
-<Button active variant="warning">Warning</Button>
-<Button active variant="error">Error</Button>`}
-            />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Buttons ghost and button link
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabGhostLink.value}
-            onChange={k => (tabGhostLink.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabGhostLink.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button ghost>Ghost</Button>
-                <Button link>Link</Button>
-              </div>
-            </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button ghost>Ghost</Button>
-<Button link>Link</Button>`}
-            />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold"># Wide button</h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabWide.value}
-            onChange={k => (tabWide.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabWide.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body">
-                <Button wide>Wide</Button>
-              </div>
-            </div>
-          ) : (
-            <Code className="mt-2" lang="tsx" code={`<Button wide>Wide</Button>`} />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Buttons with any HTML tags
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'HTML代码' },
-            ]}
-            activeKey={tabAnyTags.value}
-            onChange={k => (tabAnyTags.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabAnyTags.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body grid gap-2">
-                <a role="button" className="btn">
-                  Link
-                </a>
-                <button type="submit" className="btn">
-                  Button
-                </button>
-                <input type="button" value="Input" className="btn" />
-                <input type="submit" value="Submit" className="btn" />
-                <input type="radio" aria-label="Radio" className="btn" />
-                <input type="checkbox" aria-label="Checkbox" className="btn" />
-                <input type="reset" value="Reset" className="btn" />
-              </div>
-            </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="html"
-              code={`<a role="button" class="btn">Link</a>
-<button type="submit" class="btn">Button</button>
-<input type="button" value="Input" class="btn" />
-<input type="submit" value="Submit" class="btn" />
-<input type="radio" aria-label="Radio" class="btn" />
-<input type="checkbox" aria-label="Checkbox" class="btn" />
-<input type="reset" value="Reset" class="btn" />`}
-            />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Disabled buttons
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabDisabled.value}
-            onChange={k => (tabDisabled.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabDisabled.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button disabled>Disabled using attribute</Button>
-                <Button disabledClass>Disabled using class name</Button>
-              </div>
-            </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button disabled>Disabled using attribute</Button>
-<Button disabledClass>Disabled using class name</Button>`}
-            />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Square button and circle button
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabSquareCircle.value}
-            onChange={k => (tabSquareCircle.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabSquareCircle.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button square>■</Button>
-                <Button circle>●</Button>
-              </div>
-            </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button square>■</Button>
-<Button circle>●</Button>`}
-            />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Button with Icon
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabWithIcon.value}
-            onChange={k => (tabWithIcon.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabWithIcon.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    className="size-[1.2em]"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
-                    />
-                  </svg>
-                  Like
-                </Button>
-                <Button>
-                  Like
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    className="size-[1.2em]"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
-                    />
-                  </svg>
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button>
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="size-[1.2em]" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" /></svg>
-  Like
+          code={`<Button color="primary" icon={<span>+</span>}>
+  Create project
 </Button>
-<Button>
-  Like
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="size-[1.2em]" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" /></svg>
-</Button>`}
-            />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Button block
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabBlock.value}
-            onChange={k => (tabBlock.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabBlock.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body">
-                <Button block>block</Button>
-              </div>
-            </div>
-          ) : (
-            <Code className="mt-2" lang="tsx" code={`<Button block>block</Button>`} />
-          )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Button with loading spinner
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabLoading.value}
-            onChange={k => (tabLoading.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabLoading.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body flex flex-wrap gap-2">
-                <Button square>
-                  <span className="loading loading-spinner"></span>
-                </Button>
-                <Button>
-                  <span className="loading loading-spinner"></span>
-                  loading
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button square>
-  <span className="loading loading-spinner"></span>
+
+<Button color="secondary" type="outlined" icon={<span>→</span>} iconPlacement="end">
+  Continue
 </Button>
-<Button>
-  <span className="loading loading-spinner"></span>
-  loading
-</Button>`}
-            />
+
+<Button color="accent" shape="circle" icon={<span>♥</span>} aria-label="收藏" />`}
+        />
+
+        <ExampleBlock
+          title="加载状态"
+          summary="loading 会锁定按钮；对象写法可以替换默认加载图标。"
+          tab={tabLoading}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body flex flex-row flex-wrap items-center gap-2">
+                <Button color="primary" loading>
+                  Saving
+                </Button>
+                <Button type="outlined" loading={{ icon: <span className="loading loading-dots loading-xs" /> }}>
+                  Syncing
+                </Button>
+                <Button color="success" icon={<RocketIcon />}>
+                  Ready to publish
+                </Button>
+              </div>
+            </div>
           )}
-        </div>
-        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
-          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # Login buttons
-          </h2>
-          <Tabs
-            style="box"
-            items={[
-              { key: 'preview', label: '预览' },
-              { key: 'code', label: 'JSX代码' },
-            ]}
-            activeKey={tabLogin.value}
-            onChange={k => (tabLogin.value = k as 'preview' | 'code')}
-            className="mb-3"
-          />
-          {tabLogin.value === 'preview' ? (
-            <div className="card bg-base-100 shadow">
-              <div className="card-body grid gap-3">
-                <Button className="bg-white text-black border-[#e5e5e5]">
-                  <svg
-                    aria-label="Email icon"
-                    width="16"
-                    height="16"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                  >
-                    <g
-                      stroke-linejoin="round"
-                      stroke-linecap="round"
-                      stroke-width="2"
-                      fill="none"
-                      stroke="black"
+          code={`<Button color="primary" loading>Saving</Button>
+
+<Button
+  type="outlined"
+  loading={{ icon: <span className="loading loading-dots loading-xs" /> }}
+>
+  Syncing
+</Button>`}
+        />
+
+        <ExampleBlock
+          title="尺寸与形状"
+          summary="size 管尺寸，shape 管轮廓形态。"
+          tab={tabSizes}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body gap-5">
+                <div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Sizes</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button size="small">Small</Button>
+                    <Button>Default</Button>
+                    <Button size="large" color="primary">
+                      Large
+                    </Button>
+                    <Button size="xs" type="outlined">
+                      XS
+                    </Button>
+                    <Button size="xl" color="secondary">
+                      XL
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Shapes</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button color="primary" shape="round">
+                      Round action
+                    </Button>
+                    <Button color="secondary" shape="square" icon={<SparkIcon />} aria-label="square" />
+                    <Button color="accent" shape="circle" icon={<HeartIcon />} aria-label="circle" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          code={`<Button size="small">Small</Button>
+<Button>Default</Button>
+<Button size="large" color="primary">Large</Button>
+<Button size="xs" type="outlined">XS</Button>
+<Button size="xl" color="secondary">XL</Button>
+
+<Button color="primary" shape="round">Round action</Button>
+<Button color="secondary" shape="square" icon={<span>⋯</span>} />
+<Button color="accent" shape="circle" icon={<span>♥</span>} />`}
+        />
+
+        <ExampleBlock
+          title="状态与布局"
+          summary="把原来的 active、disabled、wide、block 示例也融合到当前页面。"
+          tab={tabStates}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body gap-5">
+                <div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">States</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button active>Active</Button>
+                    <Button color="primary" active>
+                      Primary active
+                    </Button>
+                    <Button disabled>Disabled</Button>
+                    <Button href="#button-api" disabled>
+                      Disabled link
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Layout</div>
+                  <div className="flex flex-col gap-2 sm:max-w-sm">
+                    <Button wide>Wide button</Button>
+                    <Button block color="primary">
+                      Block button
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          code={`<div className="flex flex-wrap gap-2">
+  <Button active>Active</Button>
+  <Button color="primary" active>Primary active</Button>
+  <Button disabled>Disabled</Button>
+  <Button href="#button-api" disabled>Disabled link</Button>
+</div>
+
+<div className="flex flex-col gap-2 sm:max-w-sm">
+  <Button wide>Wide button</Button>
+  <Button block color="primary">Block button</Button>
+</div>`}
+        />
+
+        <ExampleBlock
+          title="根节点与表单行为"
+          summary="默认渲染 button，同时保留链接根节点、div 根节点和表单行为示例。"
+          tab={tabFormLink}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body gap-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button>Native button</Button>
+                  <Button href="#button-api">Anchor</Button>
+                  <Button as="div" type="text">Div button</Button>
+                </div>
+                <div className="text-sm opacity-70">submit count: {submitCount.value}</div>
+                <form
+                  className="flex flex-wrap items-center gap-2"
+                  onSubmit={(event: Event) => {
+                    event.preventDefault()
+                    submitCount.value = submitCount.value + 1
+                  }}
+                >
+                  <Button color="primary" htmlType="submit">
+                    Submit form
+                  </Button>
+                  <Button type="outlined" htmlType="reset">
+                    Reset form
+                  </Button>
+                  <Button href="#button-api" type="link">
+                    Jump to API
+                  </Button>
+                </form>
+              </div>
+            </div>
+          )}
+          code={`const submitCount = ref(0)
+
+<div className="flex flex-wrap gap-2">
+  <Button>Native button</Button>
+  <Button href="#button-api">Anchor</Button>
+  <Button as="div" type="text">Div button</Button>
+</div>
+
+<form
+  onSubmit={event => {
+    event.preventDefault()
+    submitCount.value = submitCount.value + 1
+  }}
+>
+  <Button color="primary" htmlType="submit">Submit form</Button>
+  <Button type="outlined" htmlType="reset">Reset form</Button>
+  <Button href="#button-api" type="link">Jump to API</Button>
+</form>`}
+        />
+
+        <ExampleBlock
+          title="场景组合"
+          summary="把图标、变体、布局属性组合在一起，可以很快搭出操作条。"
+          tab={tabRecipes}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body gap-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button color="primary" icon={<RocketIcon />}>
+                    Publish
+                  </Button>
+                  <Button type="outlined" icon={<ArrowRightIcon />} iconPlacement="end">
+                    Preview
+                  </Button>
+                  <Button type="text" icon={<SparkIcon />}>
+                    Save draft
+                  </Button>
+                </div>
+
+                <div className="grid gap-2 md:grid-cols-2">
+                  <Button block className="justify-start bg-white text-base-content border-base-300" icon={<MailIcon />}>
+                    Continue with Email
+                  </Button>
+                  <Button block color="primary" className="justify-start" icon={<SparkIcon />}>
+                    Continue with Rue ID
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          code={`<div className="flex flex-wrap gap-2">
+  <Button color="primary" icon={<span>🚀</span>}>Publish</Button>
+  <Button type="outlined" icon={<span>→</span>} iconPlacement="end">Preview</Button>
+  <Button type="text" icon={<span>✦</span>}>Save draft</Button>
+</div>
+
+<div className="grid gap-2 md:grid-cols-2">
+  <Button block className="justify-start bg-white text-base-content border-base-300" icon={<span>✉</span>}>
+    Continue with Email
+  </Button>
+  <Button block color="primary" className="justify-start" icon={<span>✦</span>}>
+    Continue with Rue ID
+  </Button>
+</div>`}
+        />
+
+        <ExampleBlock
+          title="登录按钮"
+          summary="把原来的 provider 登录按钮演示融合回来，统一改成 icon + block + className 的新 API 写法。"
+          tab={tabLogin}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body">
+                <div className="grid gap-2 md:grid-cols-2">
+                  {loginExamples.map(item => (
+                    <Button
+                      key={item.label}
+                      block
+                      className={`justify-start ${item.className}`}
+                      icon={<BrandMark text={item.icon} className={item.iconClassName} />}
                     >
-                      <rect width="20" height="16" x="2" y="4" rx="2"></rect>
-                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-                    </g>
-                  </svg>
-                  Login with Email
-                </Button>
-                <Button className="bg-black text-white border-[#e5e5e5]">
-                  <svg
-                    aria-label="GitHub logo"
-                    width="16"
-                    height="16"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      fill="white"
-                      d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z"
-                    ></path>
-                  </svg>
-                  Login with GitHub
-                </Button>
-                <Button className="bg-white text-black border-[#e5e5e5]">
-                  <svg
-                    aria-label="Google logo"
-                    width="16"
-                    height="16"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 512 512"
-                  >
-                    <g>
-                      <path d="m0 0H512V512H0" fill="#fff"></path>
-                      <path
-                        fill="#34a853"
-                        d="M153 292c30 82 118 95 171 60h62v48A192 192 0 0190 341"
-                      ></path>
-                      <path
-                        fill="#4285f4"
-                        d="m386 400a140 175 0 0053-179H260v74h102q-7 37-38 57"
-                      ></path>
-                      <path fill="#fbbc02" d="m90 341a208 200 0 010-171l63 49q-12 37 0 73"></path>
-                      <path
-                        fill="#ea4335"
-                        d="m153 219c22-69 116-109 179-50l55-54c-78-75-230-72-297 55"
-                      ></path>
-                    </g>
-                  </svg>
-                  Login with Google
-                </Button>
-                <Button className="bg-[#1A77F2] text-white border-[#005fd8]">
-                  <svg
-                    aria-label="Facebook logo"
-                    width="16"
-                    height="16"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 32 32"
-                  >
-                    <path
-                      fill="white"
-                      d="M8 12h5V8c0-6 4-7 11-6v5c-4 0-5 0-5 3v2h5l-1 6h-4v12h-6V18H8z"
-                    ></path>
-                  </svg>
-                  Login with Facebook
-                </Button>
-                <Button className="bg-black text-white border-[#e5e5e5]">
-                  <svg
-                    aria-label="Apple logo"
-                    width="16"
-                    height="16"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 1195 1195"
-                  >
-                    <path
-                      fill="white"
-                      d="M1006.933 812.8c-32 153.6-115.2 211.2-147.2 249.6-32 25.6-121.6 25.6-153.6 6.4-38.4-25.6-134.4-25.6-166.4 0-44.8 32-115.2 19.2-128 12.8-256-179.2-352-716.8 12.8-774.4 64-12.8 134.4 32 134.4 32 51.2 25.6 70.4 12.8 115.2-6.4 96-44.8 243.2-44.8 313.6 76.8-147.2 96-153.6 294.4 19.2 403.2zM802.133 64c12.8 70.4-64 224-204.8 230.4-12.8-38.4 32-217.6 204.8-230.4z"
-                    ></path>
-                  </svg>
-                  Login with Apple
-                </Button>
-                <Button className="bg-[#FF9900] text-black border-[#e17d00]">
-                  <svg
-                    aria-label="Amazon logo"
-                    width="16"
-                    height="16"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 16 16"
-                  >
-                    <g fill="black">
-                      <path d="M14.463 13.831c-1.753 1.294-4.291 1.981-6.478 1.981-3.066 0-5.825-1.131-7.912-3.019-.163-.147-.019-.35.178-.234 2.253 1.313 5.041 2.1 7.919 2.1 1.941 0 4.075-.403 6.041-1.238.294-.125.544.197.253.409z"></path>
-                      <path d="M15.191 13c-.225-.287-1.481-.137-2.047-.069-.172.019-.197-.128-.044-.238 1.003-.703 2.647-.5 2.838-.266.194.238-.05 1.884-.991 2.672-.144.122-.281.056-.219-.103.216-.528.688-1.709.463-1.997zM11.053 11.838l.003.003c.387-.341 1.084-.95 1.478-1.278.156-.125.128-.334.006-.509-.353-.488-.728-.884-.728-1.784v-3c0-1.272.088-2.438-.847-3.313-.738-.706-1.963-.956-2.9-.956-1.831 0-3.875.684-4.303 2.947-.047.241.131.369.287.403l1.866.203c.175-.009.3-.181.334-.356.159-.778.813-1.156 1.547-1.156.397 0 .847.144 1.081.5.269.397.234.938.234 1.397v.25c-1.116.125-2.575.206-3.619.666-1.206.522-2.053 1.584-2.053 3.147 0 2 1.259 3 2.881 3 1.369 0 2.116-.322 3.172-1.403.35.506.463.753 1.103 1.284a.395.395 0 0 0 .456-.044zm-1.94-4.694c0 .75.019 1.375-.359 2.041-.306.544-.791.875-1.331.875-.737 0-1.169-.563-1.169-1.394 0-1.641 1.472-1.938 2.863-1.938v.416z"></path>
-                    </g>
-                  </svg>
-                  Login with Amazon
-                </Button>
-                <Button className="bg-[#2F2F2F] text-white border-[#e5e5e5]">
-                  <svg
-                    aria-label="Microsoft logo"
-                    width="16"
-                    height="16"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 512 512"
-                  >
-                    <path d="M96 96H247V247H96" fill="#f24f23"></path>
-                    <path d="M265 96V247H416V96" fill="#7eba03"></path>
-                    <path d="M96 265H247V416H96" fill="#3ca4ef"></path>
-                    <path d="M265 265H416V416H265" fill="#f9ba00"></path>
-                  </svg>
-                  Login with Microsoft
-                </Button>
-                <Button className="bg-[#03C755] text-white border-[#00b544]">
-                  <svg
-                    aria-label="Line logo"
-                    width="16"
-                    height="16"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 16 16"
-                  >
-                    <g fill-rule="evenodd" stroke-linejoin="round" fill="white">
-                      <path
-                        fill-rule="nonzero"
-                        d="M12.91 6.57c.232 0 .42.19.42.42 0 .23-.188.42-.42.42h-1.17v.75h1.17a.42.42 0 1 1 0 .84h-1.59a.42.42 0 0 1-.418-.42V5.4c0-.23.188-.42.42-.42h1.59a.42.42 0 0 1-.002.84h-1.17v.75h1.17zm-2.57 2.01a.421.421 0 0 1-.757.251l-1.63-2.217V8.58a.42.42 0 0 1-.42.42.42.42 0 0 1-.418-.42V5.4a.418.418 0 0 1 .755-.249L9.5 7.366V5.4c0-.23.188-.42.42-.42.23 0 .42.19.42.42v3.18zm-3.828 0c0 .23-.188.42-.42.42a.42.42 0 0 1-.418-.42V5.4c0-.23.188-.42.42-.42.23 0 .418.19.418.42v3.18zM4.868 9h-1.59c-.23 0-.42-.19-.42-.42V5.4c0-.23.19-.42.42-.42.232 0 .42.19.42.42v2.76h1.17a.42.42 0 1 1 0 .84M16 6.87C16 3.29 12.41.376 8 .376S0 3.29 0 6.87c0 3.208 2.846 5.896 6.69 6.405.26.056.615.172.705.394.08.2.053.518.026.722 0 0-.092.565-.113.685-.035.203-.16.79.693.432.854-.36 4.607-2.714 6.285-4.646C15.445 9.594 16 8.302 16 6.87"
-                      ></path>
-                    </g>
-                  </svg>
-                  Login with LINE
-                </Button>
-                <Button className="bg-[#0967C2] text-white border-[#0059b3]">
-                  <svg
-                    aria-label="LinkedIn logo"
-                    width="16"
-                    height="16"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 32 32"
-                  >
-                    <path
-                      fill="white"
-                      d="M26.111,3H5.889c-1.595,0-2.889,1.293-2.889,2.889V26.111c0,1.595,1.293,2.889,2.889,2.889H26.111c1.595,0,2.889-1.293,2.889-2.889V5.889c0-1.595-1.293-2.889-2.889-2.889ZM10.861,25.389h-3.877V12.87h3.877v12.519Zm-1.957-14.158c-1.267,0-2.293-1.034-2.293-2.31s1.026-2.31,2.293-2.31,2.292,1.034,2.292,2.31-1.026,2.31-2.292,2.31Zm16.485,14.158h-3.858v-6.571c0-1.802-.685-2.809-2.111-2.809-1.551,0-2.362,1.048-2.362,2.809v6.571h-3.718V12.87h3.718v1.686s1.118-2.069,3.775-2.069,4.556,1.621,4.556,4.975v7.926Z"
-                      fill-rule="evenodd"
-                    ></path>
-                  </svg>
-                  Login with LinkedIn
-                </Button>
+                      {item.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
-          ) : (
-            <Code
-              className="mt-2"
-              lang="tsx"
-              code={`<Button className="bg-white text-black border-[#e5e5e5]">
-  <svg aria-label="Email icon" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="black"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></g></svg>
-  Login with Email
-</Button>
-<Button className="bg-black text-white border-[#e5e5e5]">
-  <svg aria-label="GitHub logo" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z"></path></svg>
-  Login with GitHub
-</Button>
-<Button className="bg-white text-black border-[#e5e5e5]">
-  <svg aria-label="Google logo" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g><path d="m0 0H512V512H0" fill="#fff"></path><path fill="#34a853" d="M153 292c30 82 118 95 171 60h62v48A192 192 0 0190 341"></path><path fill="#4285f4" d="m386 400a140 175 0 0053-179H260v74h102q-7 37-38 57"></path><path fill="#fbbc02" d="m90 341a208 200 0 010-171l63 49q-12 37 0 73"></path><path fill="#ea4335" d="m153 219c22-69 116-109 179-50l55-54c-78-75-230-72-297 55"></path></g></svg>
-  Login with Google
-</Button>
-<Button className="bg-[#1A77F2] text-white border-[#005fd8]">
-  <svg aria-label="Facebook logo" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="white" d="M8 12h5V8c0-6 4-7 11-6v5c-4 0-5 0-5 3v2h5l-1 6h-4v12h-6V18H8z"></path></svg>
-  Login with Facebook
-</Button>
-<Button className="bg-black text-white border-[#e5e5e5]">
-  <svg aria-label="Apple logo" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1195 1195"><path fill="white" d="M1006.933 812.8c-32 153.6-115.2 211.2-147.2 249.6-32 25.6-121.6 25.6-153.6 6.4-38.4-25.6-134.4-25.6-166.4 0-44.8 32-115.2 19.2-128 12.8-256-179.2-352-716.8 12.8-774.4 64-12.8 134.4 32 134.4 32 51.2 25.6 70.4 12.8 115.2-6.4 96-44.8 243.2-44.8 313.6 76.8-147.2 96-153.6 294.4 19.2 403.2zM802.133 64c12.8 70.4-64 224-204.8 230.4-12.8-38.4 32-217.6 204.8-230.4z"></path></svg>
-  Login with Apple
-</Button>
-<Button className="bg-[#FF9900] text-black border-[#e17d00]">
-  <svg aria-label="Amazon logo" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g fill="black"><path d="M14.463 13.831c-1.753 1.294-4.291 1.981-6.478 1.981-3.066 0-5.825-1.131-7.912-3.019-.163-.147-.019-.35.178-.234 2.253 1.313 5.041 2.1 7.919 2.1 1.941 0 4.075-.403 6.041-1.238.294-.125.544.197.253.409z"></path><path d="M15.191 13c-.225-.287-1.481-.137-2.047-.069-.172.019-.197-.128-.044-.238 1.003-.703 2.647-.5 2.838-.266.194.238-.05 1.884-.991 2.672-.144.122-.281.056-.219-.103.216-.528.688-1.709.463-1.997zM11.053 11.838l.003.003c.387-.341 1.084-.95 1.478-1.278.156-.125.128-.334.006-.509-.353-.488-.728-.884-.728-1.784v-3c0-1.272.088-2.438-.847-3.313-.738-.706-1.963-.956-2.9-.956-1.831 0-3.875.684-4.303 2.947-.047.241.131.369.287.403l1.866.203c.175-.009.3-.181.334-.356.159-.778.813-1.156 1.547-1.156.397 0 .847.144 1.081.5.269.397.234.938.234 1.397v.25c-1.116.125-2.575.206-3.619.666-1.206.522-2.053 1.584-2.053 3.147 0 2 1.259 3 2.881 3 1.369 0 2.116-.322 3.172-1.403.35.506.463.753 1.103 1.284a.395.395 0 0 0 .456-.044zm-1.94-4.694c0 .75.019 1.375-.359 2.041-.306.544-.791.875-1.331.875-.737 0-1.169-.563-1.169-1.394 0-1.641 1.472-1.938 2.863-1.938v.416z"></path></g></svg>
-  Login with Amazon
-</Button>
-<Button className="bg-[#2F2F2F] text-white border-[#e5e5e5]">
-  <svg aria-label="Microsoft logo" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M96 96H247V247H96" fill="#f24f23"></path><path d="M265 96V247H416V96" fill="#7eba03"></path><path d="M96 265H247V416H96" fill="#3ca4ef"></path><path d="M265 265H416V416H265" fill="#f9ba00"></path></svg>
-  Login with Microsoft
-</Button>
-<Button className="bg-[#03C755] text-white border-[#00b544]">
-  <svg aria-label="Line logo" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g fill-rule="evenodd" stroke-linejoin="round" fill="white"><path fill-rule="nonzero" d="M12.91 6.57c.232 0 .42.19.42.42 0 .23-.188.42-.42.42h-1.17v.75h1.17a.42.42 0 1 1 0 .84h-1.59a.42.42 0 0 1-.418-.42V5.4c0-.23.188-.42.42-.42h1.59a.42.42 0 0 1-.002.84h-1.17v.75h1.17zm-2.57 2.01a.421.421 0 0 1-.757.251l-1.63-2.217V8.58a.42.42 0 0 1-.42.42.42.42 0 0 1-.418-.42V5.4a.418.418 0 0 1 .755-.249L9.5 7.366V5.4c0-.23.188-.42.42-.42.23 0 .42.19.42.42v3.18zm-3.828 0c0 .23-.188.42-.42.42a.42.42 0 0 1-.418-.42V5.4c0-.23.188-.42.42-.42.23 0 .418.19.418.42v3.18zM4.868 9h-1.59c-.23 0-.42-.19-.42-.42V5.4c0-.23.19-.42.42-.42.232 0 .42.19.42.42v2.76h1.17a.42.42 0 1 1 0 .84M16 6.87C16 3.29 12.41.376 8 .376S0 3.29 0 6.87c0 3.208 2.846 5.896 6.69 6.405.26.056.615.172.705.394.08.2.053.518.026.722 0 0-.092.565-.113.685-.035.203-.16.79.693.432.854-.36 4.607-2.714 6.285-4.646C15.445 9.594 16 8.302 16 6.87"></path></g></svg>
-  Login with LINE
-</Button>
-<Button className="bg-[#0967C2] text-white border-[#0059b3]">
-  <svg aria-label="LinkedIn logo" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="white" d="M26.111,3H5.889c-1.595,0-2.889,1.293-2.889,2.889V26.111c0,1.595,1.293,2.889,2.889,2.889H26.111c1.595,0,2.889-1.293,2.889-2.889V5.889c0-1.595-1.293-2.889-2.889-2.889ZM10.861,25.389h-3.877V12.87h3.877v12.519Zm-1.957-14.158c-1.267,0-2.293-1.034-2.293-2.31s1.026-2.31,2.293-2.31,2.292,1.034,2.292,2.31-1.026,2.31-2.292,2.31Zm16.485,14.158h-3.858v-6.571c0-1.802-.685-2.809-2.111-2.809-1.551,0-2.362,1.048-2.362,2.809v6.571h-3.718V12.87h3.718v1.686s1.118-2.069,3.775-2.069,4.556,1.621,4.556,4.975v7.926Z" fill-rule="evenodd"></path></svg>
-  Login with LinkedIn
-</Button>`}
-            />
           )}
-        </div>
+          code={`const loginButtons = [
+  { label: 'Login with Email', icon: '@', className: 'bg-white text-base-content border-base-300', iconClassName: 'bg-base-200 text-base-content' },
+  { label: 'Login with GitHub', icon: 'GH', className: 'bg-neutral text-neutral-content border-neutral', iconClassName: 'bg-white/15 text-white' },
+  { label: 'Login with Google', icon: 'G', className: 'bg-white text-base-content border-base-300', iconClassName: 'bg-red-100 text-red-700' },
+  { label: 'Login with Slack', icon: 'S', className: 'bg-[#622069] text-white border-[#591660]', iconClassName: 'bg-white/15 text-white' },
+] as const
+
+<div className="grid gap-2 md:grid-cols-2">
+  {loginButtons.map(item => (
+    <Button
+      key={item.label}
+      block
+      className={'justify-start ' + item.className}
+      icon={<BrandMark text={item.icon} className={item.iconClassName} />}
+    >
+      {item.label}
+    </Button>
+  ))}
+</div>`}
+        />
+
+        <h2 id="button-api">API</h2>
+        <p>当前页面展示的是 Button 的完整可用 API。</p>
+        <p>
+          推荐使用顺序：<code>type</code> -&gt; <code>color</code> -&gt; <code>shape</code> -&gt; <code>size</code> -&gt;{' '}
+          <code>loading</code> -&gt; <code>disabled</code>。
+        </p>
+
+        <ApiTable rows={apiRows} />
+
+        <h2>FAQ</h2>
+
+        <h3>为什么有 type 还需要 htmlType？</h3>
+        <p>
+          <code>type</code> 负责按钮视觉类型，<code>htmlType</code> 负责原生 button 行为。视觉和提交语义拆开之后，
+          表单场景会更直接。
+        </p>
+
+        <h3>type 和 color 应该怎么分工？</h3>
+        <p>
+          <code>type</code> 负责视觉类型，比如 <code>outlined</code>、<code>filled</code>、<code>text</code>。
+          <code>color</code> 负责主题色，比如 <code>primary</code>、<code>secondary</code>、<code>danger</code>。
+        </p>
+        <p>
+          大多数场景可以先定颜色，
+          再根据密度和层级选择 <code>solid</code>、<code>outlined</code>、<code>filled</code> 或 <code>text</code>。
+        </p>
+
+        <h3>loading 对象里的 delay 会生效吗？</h3>
+        <p>
+          当前版本已经支持 <code>loading</code> 的对象写法和自定义 <code>icon</code>。<code>delay</code>
+          字段已保留在配置结构里，后续如果补充延迟显示策略，可以直接在现有接口上继续扩展。
+        </p>
       </div>
     </SidebarPlayground>
   )

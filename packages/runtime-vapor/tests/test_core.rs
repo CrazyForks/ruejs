@@ -1,7 +1,5 @@
 use js_sys::{Function, Promise};
-use rue_runtime_vapor::{
-    create_computed, create_effect, create_signal, set_reactive_scheduling,
-};
+use rue_runtime_vapor::{create_computed, create_effect, create_signal, set_reactive_scheduling};
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;

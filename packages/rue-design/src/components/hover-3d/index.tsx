@@ -1,68 +1,101 @@
 /*
 Hover3D 组件概述
-- 行为：提供 3D 悬浮视觉效果，可选叠加 overlay divs。
-- 标签：支持渲染为 div 或 a。
+- 保持 daisyUI 所需的 9 个直系子节点结构，同时补齐链接语义、根节点透传和 surface 包装层能力。
+- 默认仍是最轻量的包裹器；只有在需要控制第一层倾斜面板时，才额外创建 surface wrapper。
 */
 import type { FC } from '@rue-js/rue'
-/* 引入 FC 类型用于定义函数式组件 */
 
-type Hover3DAs = 'div' | 'a'
-/* 组件可渲染为 div 或 a，便于作为链接使用 */
+export type Hover3DAs = 'div' | 'a'
 
-interface Hover3DProps {
+export interface Hover3DSurfaceProps {
+  [key: string]: any
+}
+
+export interface Hover3DProps {
   as?: Hover3DAs
   href?: string
+  target?: string
+  rel?: string
   className?: string
+  surfaceAs?: string
+  surfaceClassName?: string
+  surfaceProps?: Hover3DSurfaceProps
   overlays?: boolean
+  overlayClassName?: string
   children?: any
+  [key: string]: any
 }
-/* props:
- - as: 渲染标签
- - href: 当 as='a' 时的链接
- - overlays: 是否渲染 8 层覆盖 div
-*/
 
-const OverlayDivs = () => (
+const mergeClassName = (...classNames: Array<string | undefined | false>) => {
+  return classNames.filter(Boolean).join(' ')
+}
+
+const OverlayDivs: FC<{ className?: string }> = ({ className }) => (
   <>
-    {/* 第 1 层覆盖：参与 3D 叠层效果 */}
-    <div></div>
-    {/* 第 2 层覆盖：参与 3D 叠层效果 */}
-    <div></div>
-    {/* 第 3 层覆盖：参与 3D 叠层效果 */}
-    <div></div>
-    {/* 第 4 层覆盖：参与 3D 叠层效果 */}
-    <div></div>
-    {/* 第 5 层覆盖：参与 3D 叠层效果 */}
-    <div></div>
-    <div></div>
-    {/* 第 6/7 层覆盖：参与 3D 叠层效果 */}
-    <div></div>
-    <div></div>
-    {/* 第 8 层覆盖：参与 3D 叠层效果 */}
+    <div aria-hidden="true" data-hover3d-overlay="" className={className}></div>
+    <div aria-hidden="true" data-hover3d-overlay="" className={className}></div>
+    <div aria-hidden="true" data-hover3d-overlay="" className={className}></div>
+    <div aria-hidden="true" data-hover3d-overlay="" className={className}></div>
+    <div aria-hidden="true" data-hover3d-overlay="" className={className}></div>
+    <div aria-hidden="true" data-hover3d-overlay="" className={className}></div>
+    <div aria-hidden="true" data-hover3d-overlay="" className={className}></div>
+    <div aria-hidden="true" data-hover3d-overlay="" className={className}></div>
   </>
 )
 
-/** 3D 悬浮组件：支持 overlays 覆盖层 */
-const Hover3D: FC<Hover3DProps> = ({ as = 'div', href, className, overlays = true, children }) => {
-  const cls = className ? `hover-3d ${className}` : 'hover-3d'
-  /* 组合类名：外层使用 hover-3d，允许追加自定义类 */
-  if (as === 'a') {
-    return (
-      <a href={href} className={cls}>
-        {/* 子内容：内嵌实际展示节点 */}
-        {children}
-        {/* 叠层：根据 overlays 开关渲染 */}
-        {overlays ? <OverlayDivs /> : null}
-      </a>
-    )
+const renderSurface = (
+  children: any,
+  surfaceAs?: string,
+  surfaceClassName?: string,
+  surfaceProps?: Hover3DSurfaceProps,
+) => {
+  if (!surfaceAs && !surfaceClassName && !surfaceProps) {
+    return children
   }
+
+  const { className: surfacePropClassName, children: _surfaceChildren, ...surfaceRest } = surfaceProps ?? {}
+  const Surface = (surfaceAs ?? 'div') as any
+  const mergedClassName = mergeClassName(surfacePropClassName, surfaceClassName)
+
   return (
-    <div className={cls}>
-      {/* 子内容：内嵌实际展示节点 */}
+    <Surface
+      {...surfaceRest}
+      data-hover3d-surface=""
+      className={mergedClassName || undefined}
+    >
       {children}
-      {/* 叠层：根据 overlays 开关渲染 */}
-      {overlays ? <OverlayDivs /> : null}
-    </div>
+    </Surface>
+  )
+}
+
+const Hover3D: FC<Hover3DProps> = ({
+  as,
+  href,
+  target,
+  rel,
+  className,
+  surfaceAs,
+  surfaceClassName,
+  surfaceProps,
+  overlays = true,
+  overlayClassName,
+  children,
+  ...rest
+}) => {
+  const Component = (as ?? (href ? 'a' : 'div')) as any
+  const mergedRel = target === '_blank' && !rel ? 'noreferrer' : rel
+
+  return (
+    <Component
+      {...rest}
+      {...(Component === 'a' && href != null ? { href } : {})}
+      target={Component === 'a' ? target : undefined}
+      rel={Component === 'a' ? mergedRel : undefined}
+      className={mergeClassName('hover-3d', className)}
+    >
+      {renderSurface(children, surfaceAs, surfaceClassName, surfaceProps)}
+      {overlays ? <OverlayDivs className={overlayClassName} /> : null}
+    </Component>
   )
 }
 

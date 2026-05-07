@@ -230,52 +230,6 @@
   console.log(toRaw(reactiveFoo) === foo) // true
   ```
 
-## markRaw() {#markraw} @todo
-
-标记一个对象，使其永远不会被转换为代理。返回对象本身。
-
-- **类型**
-
-  ```ts
-  function markRaw<T extends object>(value: T): T
-  ```
-
-- **示例**
-
-  ```js
-  const foo = markRaw({})
-  console.log(isReactive(reactive(foo))) // false
-
-  // 在嵌套在其他响应式对象中时同样有效
-  const bar = reactive({ foo })
-  console.log(isReactive(bar.foo)) // false
-  ```
-
-  :::warning 谨慎使用
-  `markRaw()` 和浅层 API（如 `shallowReactive()`）允许你有选择地退出默认的深层响应式/只读转换，并在你的状态图中嵌入原始的非代理对象。它们可以用于各种原因：
-  - 有些值根本不应该被设为响应式，例如复杂的第三方类实例或 Vue 组件对象。
-
-  - 当渲染具有不可变数据源的大型列表时，跳过代理转换可以提供性能改进。
-
-  它们被认为是高级功能，因为原始退出只在根级别，所以如果你将一个嵌套的、未标记的原始对象设置到响应式对象中，然后再次访问它，你会得到代理版本。这可能导致**身份风险**——即执行依赖于对象身份的操作，但使用同一对象的原始版本和代理版本：
-
-  ```js
-  const foo = markRaw({
-    nested: {},
-  })
-
-  const bar = reactive({
-    // 虽然 `foo` 被标记为原始，但 foo.nested 不是。
-    nested: foo.nested,
-  })
-
-  console.log(foo.nested === bar.nested) // false
-  ```
-
-  身份风险通常很少见。然而，要正确利用这些 API 同时安全地避免身份风险，需要对响应式系统的工作原理有扎实的理解。
-
-  :::
-
 ## effectScope() {#effectscope} @todo
 
 创建一个 effect 作用域对象，可以捕获在其中创建的响应式 effect（即 computed 和 watchers），以便这些 effect 可以一起被处置。有关此 API 的详细用例，请参阅相应的 [RFC](https://github.com/vuejs/rfcs/blob/master/active-rfcs/0041-reactivity-effect-scope.md)。

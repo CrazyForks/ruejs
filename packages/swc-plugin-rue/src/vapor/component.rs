@@ -30,7 +30,7 @@ pub fn emit_component_root(transform: &mut VaporTransform, el: &JSXElement) -> B
     let slot_init_expr = rewrite
         .direct_render_expr
         .clone()
-        .unwrap_or_else(|| Expr::JSXElement(Box::new(comp_el.clone())));
+        .unwrap_or_else(|| crate::element_component::build_component_mount_expr(&comp_el));
 
     // 静态判断：无动态 props/children 的组件直接一次性渲染（renderAnchor），否则走 watch 包裹
     let is_static = !crate::utils::is_transition_group_component(&comp_el)

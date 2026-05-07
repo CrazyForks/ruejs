@@ -2,6 +2,7 @@
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 // SWC ECMAScript AST 节点类型集合（JSXExprContainer/CondExpr/BinExpr/ArrowExpr 等）
 use swc_core::ecma::ast::*;
+use swc_core::ecma::visit::VisitMutWith;
 
 use crate::emit::*;
 use crate::log;
@@ -40,6 +41,9 @@ fn jsx_element_to_slot_expr(vt: &mut VaporTransform, jsx_el: &JSXElement) -> Exp
     let mut child_body: Vec<Stmt> =
         vec![const_decl(child_root.clone(), call_ident("_$createDocumentFragment", vec![]))];
     crate::elements::build_element(vt, jsx_el, &child_root, &mut child_body);
+    if vt.is_once_context() {
+        crate::vapor::flatten_once_watch_effects(&mut child_body);
+    }
     child_body.push(return_root(child_root.clone()));
     make_vapor_expr_from_child_body(child_body)
 }
@@ -54,6 +58,9 @@ fn jsx_fragment_to_slot_expr(vt: &mut VaporTransform, frag: &JSXFragment) -> Exp
         &frag.children,
         &mut child_body,
     );
+    if vt.is_once_context() {
+        crate::vapor::flatten_once_watch_effects(&mut child_body);
+    }
     child_body.push(return_root(child_root.clone()));
     make_vapor_expr_from_child_body(child_body)
 }
@@ -64,6 +71,240 @@ fn jsx_expr_to_slot_expr(vt: &mut VaporTransform, inner: &Expr) -> Option<Expr> 
         Expr::JSXFragment(frag) => Some(jsx_fragment_to_slot_expr(vt, frag)),
         _ => None,
     }
+}
+
+fn call_callee_ident_name(call: &CallExpr) -> Option<&str> {
+    match &call.callee {
+        Callee::Expr(expr) => match crate::utils::unwrap_expr(expr.as_ref()) {
+            Expr::Ident(id) => Some(id.sym.as_ref()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn arrow_expr_body_expr(arrow: &ArrowExpr) -> Option<&Expr> {
+    match arrow.body.as_ref() {
+        BlockStmtOrExpr::Expr(expr) => Some(crate::utils::unwrap_expr(expr.as_ref())),
+        _ => None,
+    }
+}
+
+fn stmt_returns_jsx_renderable(stmt: &Stmt) -> bool {
+    match stmt {
+        Stmt::Return(ret) => {
+            ret.arg.as_ref().map(|expr| expr_returns_jsx_renderable(expr.as_ref())).unwrap_or(false)
+        }
+        Stmt::Block(block) => block_returns_jsx_renderable(block),
+        Stmt::If(if_stmt) => {
+            stmt_returns_jsx_renderable(if_stmt.cons.as_ref())
+                || if_stmt
+                    .alt
+                    .as_ref()
+                    .map(|alt| stmt_returns_jsx_renderable(alt.as_ref()))
+                    .unwrap_or(false)
+        }
+        Stmt::Switch(switch_stmt) => {
+            switch_stmt.cases.iter().any(|case| case.cons.iter().any(stmt_returns_jsx_renderable))
+        }
+        Stmt::Try(try_stmt) => {
+            block_returns_jsx_renderable(&try_stmt.block)
+                || try_stmt
+                    .handler
+                    .as_ref()
+                    .map(|handler| block_returns_jsx_renderable(&handler.body))
+                    .unwrap_or(false)
+                || try_stmt.finalizer.as_ref().map(block_returns_jsx_renderable).unwrap_or(false)
+        }
+        Stmt::While(while_stmt) => stmt_returns_jsx_renderable(while_stmt.body.as_ref()),
+        Stmt::DoWhile(do_while_stmt) => stmt_returns_jsx_renderable(do_while_stmt.body.as_ref()),
+        Stmt::For(for_stmt) => stmt_returns_jsx_renderable(for_stmt.body.as_ref()),
+        Stmt::ForIn(for_in_stmt) => stmt_returns_jsx_renderable(for_in_stmt.body.as_ref()),
+        Stmt::ForOf(for_of_stmt) => stmt_returns_jsx_renderable(for_of_stmt.body.as_ref()),
+        Stmt::Labeled(labeled_stmt) => stmt_returns_jsx_renderable(labeled_stmt.body.as_ref()),
+        _ => false,
+    }
+}
+
+fn block_returns_jsx_renderable(block: &BlockStmt) -> bool {
+    block.stmts.iter().any(stmt_returns_jsx_renderable)
+}
+
+fn expr_returns_jsx_renderable(expr: &Expr) -> bool {
+    let inner = crate::utils::unwrap_expr(expr);
+    match inner {
+        Expr::JSXElement(_) | Expr::JSXFragment(_) => true,
+        Expr::Cond(CondExpr { cons, alt, .. }) => {
+            expr_returns_jsx_renderable(cons.as_ref()) || expr_returns_jsx_renderable(alt.as_ref())
+        }
+        Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, right, .. }) => {
+            expr_returns_jsx_renderable(right.as_ref())
+        }
+        Expr::Call(call) => call_returns_jsx_renderable(call),
+        _ => false,
+    }
+}
+
+fn arrow_returns_jsx_renderable(expr: &Expr) -> bool {
+    match crate::utils::unwrap_expr(expr) {
+        Expr::Arrow(arrow) => match arrow.body.as_ref() {
+            BlockStmtOrExpr::Expr(expr) => expr_returns_jsx_renderable(expr.as_ref()),
+            BlockStmtOrExpr::BlockStmt(block) => block_returns_jsx_renderable(block),
+        },
+        Expr::Fn(fn_expr) => {
+            fn_expr.function.body.as_ref().map(block_returns_jsx_renderable).unwrap_or(false)
+        }
+        _ => false,
+    }
+}
+
+fn map_call_returns_jsx_renderable(call: &CallExpr) -> bool {
+    let Callee::Expr(callee) = &call.callee else {
+        return false;
+    };
+
+    let Expr::Member(MemberExpr { prop: MemberProp::Ident(prop_ident), .. }) =
+        crate::utils::unwrap_expr(callee.as_ref())
+    else {
+        return false;
+    };
+
+    prop_ident.sym.as_ref() == "map"
+        && call
+            .args
+            .first()
+            .map(|arg| arrow_returns_jsx_renderable(arg.expr.as_ref()))
+            .unwrap_or(false)
+}
+
+fn use_memo_call_returns_jsx_renderable(call: &CallExpr) -> bool {
+    call_callee_ident_name(call) == Some("useMemo")
+        && call
+            .args
+            .first()
+            .map(|arg| arrow_returns_jsx_renderable(arg.expr.as_ref()))
+            .unwrap_or(false)
+}
+
+fn hook_wrapped_call_returns_jsx_renderable(call: &CallExpr) -> bool {
+    if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+        return false;
+    }
+
+    call.args.get(1).map(|arg| arrow_returns_jsx_renderable(arg.expr.as_ref())).unwrap_or(false)
+}
+
+fn call_returns_jsx_renderable(call: &CallExpr) -> bool {
+    use_memo_call_returns_jsx_renderable(call)
+        || hook_wrapped_call_returns_jsx_renderable(call)
+        || map_call_returns_jsx_renderable(call)
+}
+
+fn use_memo_call_has_empty_deps(call: &CallExpr) -> bool {
+    call_callee_ident_name(call) == Some("useMemo")
+        && call.args.get(1).map(|arg| {
+            matches!(crate::utils::unwrap_expr(arg.expr.as_ref()), Expr::Array(arr) if arr.elems.is_empty())
+        }).unwrap_or(false)
+}
+
+fn hook_wrapped_call_has_empty_memo_deps(call: &CallExpr) -> bool {
+    if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+        return false;
+    }
+
+    let Some(runner) = call.args.get(1) else {
+        return false;
+    };
+    let Expr::Arrow(arrow) = crate::utils::unwrap_expr(runner.expr.as_ref()) else {
+        return false;
+    };
+    let Some(body_expr) = arrow_expr_body_expr(arrow) else {
+        return false;
+    };
+    let Expr::Call(memo_call) = crate::utils::unwrap_expr(body_expr) else {
+        return false;
+    };
+    use_memo_call_has_empty_deps(memo_call)
+}
+
+fn is_empty_deps_memoized_jsx_expr(expr: &Expr) -> bool {
+    match crate::utils::unwrap_expr(expr) {
+        Expr::Call(call) => {
+            use_memo_call_has_empty_deps(call)
+                || hook_wrapped_call_has_empty_memo_deps(call)
+                || call.args.iter().any(|arg| is_empty_deps_memoized_jsx_expr(arg.expr.as_ref()))
+        }
+        Expr::Arrow(arrow) => {
+            arrow_expr_body_expr(arrow).map(is_empty_deps_memoized_jsx_expr).unwrap_or(false)
+        }
+        Expr::Cond(CondExpr { cons, alt, .. }) => {
+            is_empty_deps_memoized_jsx_expr(cons.as_ref())
+                || is_empty_deps_memoized_jsx_expr(alt.as_ref())
+        }
+        Expr::Bin(BinExpr { left, right, .. }) => {
+            is_empty_deps_memoized_jsx_expr(left.as_ref())
+                || is_empty_deps_memoized_jsx_expr(right.as_ref())
+        }
+        _ => false,
+    }
+}
+
+fn rewrite_arrow_expr_body_for_slot(vt: &mut VaporTransform, expr: &Expr) -> Option<Expr> {
+    match crate::utils::unwrap_expr(expr) {
+        Expr::Arrow(arrow) => {
+            let body_expr = arrow_expr_body_expr(arrow)?;
+            if !expr_returns_jsx_renderable(body_expr) {
+                return None;
+            }
+
+            let mut next = arrow.clone();
+            next.body =
+                Box::new(BlockStmtOrExpr::Expr(Box::new(make_expr_for_slot(vt, body_expr))));
+            Some(Expr::Arrow(next))
+        }
+        _ => None,
+    }
+}
+
+fn rewrite_use_memo_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
+    if call_callee_ident_name(call) != Some("useMemo") {
+        return None;
+    }
+
+    let mut next = call.clone();
+    let first = next.args.first_mut()?;
+    let rewritten =
+        vt.with_once_context(|vt| rewrite_arrow_expr_body_for_slot(vt, first.expr.as_ref()))?;
+    first.expr = Box::new(rewritten);
+    Some(Expr::Call(next))
+}
+
+fn rewrite_hook_wrapped_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
+    if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+        return None;
+    }
+
+    let mut next = call.clone();
+    let runner = next.args.get_mut(1)?;
+    let rewritten = rewrite_arrow_expr_body_for_slot(vt, runner.expr.as_ref())?;
+    runner.expr = Box::new(rewritten);
+    Some(Expr::Call(next))
+}
+
+fn rewrite_map_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
+    if !map_call_returns_jsx_renderable(call) {
+        return None;
+    }
+
+    let mut next = call.clone();
+    next.visit_mut_children_with(vt);
+    Some(Expr::Call(next))
+}
+
+fn rewrite_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
+    rewrite_use_memo_call_for_slot(vt, call)
+        .or_else(|| rewrite_hook_wrapped_call_for_slot(vt, call))
+        .or_else(|| rewrite_map_call_for_slot(vt, call))
 }
 
 fn is_svg_tag(tag: &str) -> bool {
@@ -130,6 +371,8 @@ pub fn make_expr_for_slot(vt: &mut VaporTransform, inner: &Expr) -> Expr {
             let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
             let new_cons: Expr = if let Some(slot_expr) = jsx_expr_to_slot_expr(vt, cons_inner) {
                 slot_expr
+            } else if expr_returns_jsx_renderable(cons_inner) {
+                make_expr_for_slot(vt, cons_inner)
             } else if is_static_empty_like(cons_inner) {
                 string_expr("")
             } else {
@@ -137,6 +380,8 @@ pub fn make_expr_for_slot(vt: &mut VaporTransform, inner: &Expr) -> Expr {
             };
             let new_alt: Expr = if let Some(slot_expr) = jsx_expr_to_slot_expr(vt, alt_inner) {
                 slot_expr
+            } else if expr_returns_jsx_renderable(alt_inner) {
+                make_expr_for_slot(vt, alt_inner)
             } else if is_static_empty_like(alt_inner) {
                 string_expr("")
             } else {
@@ -155,6 +400,8 @@ pub fn make_expr_for_slot(vt: &mut VaporTransform, inner: &Expr) -> Expr {
             let right_inner = crate::utils::unwrap_expr(right.as_ref());
             let new_cons: Expr = if let Some(slot_expr) = jsx_expr_to_slot_expr(vt, right_inner) {
                 slot_expr
+            } else if expr_returns_jsx_renderable(right_inner) {
+                make_expr_for_slot(vt, right_inner)
             } else {
                 *right.clone()
             };
@@ -171,6 +418,10 @@ pub fn make_expr_for_slot(vt: &mut VaporTransform, inner: &Expr) -> Expr {
                 alt: Box::new(new_alt),
             })
         }
+        Expr::Call(call) if call_returns_jsx_renderable(call) => {
+            log::debug("element_expr: slot CallExpr");
+            rewrite_call_for_slot(vt, call).unwrap_or_else(|| inner.clone())
+        }
         _ => inner.clone(),
     }
 }
@@ -186,13 +437,13 @@ pub fn contains_jsx_in_expr(inner_top: &Expr) -> bool {
         Expr::Cond(CondExpr { cons, alt, .. }) => {
             let cons_inner = crate::utils::unwrap_expr(cons.as_ref());
             let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
-            matches!(cons_inner, Expr::JSXElement(_) | Expr::JSXFragment(_))
-                || matches!(alt_inner, Expr::JSXElement(_) | Expr::JSXFragment(_))
+            expr_returns_jsx_renderable(cons_inner) || expr_returns_jsx_renderable(alt_inner)
         }
         Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, right, .. }) => {
             let right_inner = crate::utils::unwrap_expr(right.as_ref());
-            matches!(right_inner, Expr::JSXElement(_) | Expr::JSXFragment(_))
+            expr_returns_jsx_renderable(right_inner)
         }
+        Expr::Call(call) => call_returns_jsx_renderable(call),
         Expr::Paren(ParenExpr { expr, .. }) => {
             let inner = crate::utils::unwrap_expr(expr.as_ref());
             match inner {
@@ -200,13 +451,14 @@ pub fn contains_jsx_in_expr(inner_top: &Expr) -> bool {
                 Expr::Cond(CondExpr { cons, alt, .. }) => {
                     let cons_inner = crate::utils::unwrap_expr(cons.as_ref());
                     let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
-                    matches!(cons_inner, Expr::JSXElement(_) | Expr::JSXFragment(_))
-                        || matches!(alt_inner, Expr::JSXElement(_) | Expr::JSXFragment(_))
+                    expr_returns_jsx_renderable(cons_inner)
+                        || expr_returns_jsx_renderable(alt_inner)
                 }
                 Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, right, .. }) => {
                     let right_inner = crate::utils::unwrap_expr(right.as_ref());
-                    matches!(right_inner, Expr::JSXElement(_) | Expr::JSXFragment(_))
+                    expr_returns_jsx_renderable(right_inner)
                 }
+                Expr::Call(call) => call_returns_jsx_renderable(call),
                 _ => false,
             }
         }
@@ -264,13 +516,24 @@ pub fn emit_element_expr_container_child(
                 {
                     log::debug("element_expr: contains JSX -> slot");
                     let expr_for_slot = crate::element_expr::make_expr_for_slot(vt, &inner_top);
-                    crate::element_slot::render_between_for_slot(
-                        vt,
-                        el_ident,
-                        &expr_for_slot,
-                        false,
-                        stmts,
-                    );
+                    let render_once = is_empty_deps_memoized_jsx_expr(&inner_top)
+                        || is_empty_deps_memoized_jsx_expr(&expr_for_slot);
+                    if render_once {
+                        crate::element_slot::render_once_for_slot(
+                            vt,
+                            el_ident,
+                            &expr_for_slot,
+                            stmts,
+                        );
+                    } else {
+                        crate::element_slot::render_between_for_slot(
+                            vt,
+                            el_ident,
+                            &expr_for_slot,
+                            false,
+                            stmts,
+                        );
+                    }
                 } else {
                     log::debug("element_expr: text content path");
                     if matches!(parent_tag.as_deref(), Some("style")) {
@@ -344,6 +607,13 @@ pub fn emit_element_expr_container_child(
                                 type_args: None,
                                 ctxt: SyntaxContext::empty(),
                             });
+                            if vt.is_once_context() {
+                                stmts.push(Stmt::Expr(ExprStmt {
+                                    span: DUMMY_SP,
+                                    expr: Box::new(set_text),
+                                }));
+                                return;
+                            }
                             let arrow = Expr::Arrow(ArrowExpr {
                                 span: DUMMY_SP,
                                 params: vec![],

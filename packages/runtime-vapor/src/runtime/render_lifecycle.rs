@@ -1,7 +1,9 @@
 use super::Rue;
-use super::types::{ComponentProps, MountInput, MountInputType, MountLifecycleKind, MountLifecycleRecord};
+use super::types::{ComponentProps, MountInput, MountInputType, MountLifecycleRecord};
+use crate::reactive::context::component_instance_wrapper;
 use crate::reactive::core::dispose_effect_scope;
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::shared_runtime_bridge;
 use js_sys::{Array, Function};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
@@ -11,6 +13,9 @@ where
     A::Element: Clone,
 {
     fn dispose_mounted_component_scopes(&mut self, inst_index: usize) {
+        if let Some(instance_wrapper) = component_instance_wrapper(inst_index) {
+            shared_runtime_bridge::dispose_component(&instance_wrapper);
+        }
         self.dispose_component_render_scope(inst_index);
         crate::reactive::context::dispose_component_hook_scope(inst_index);
     }
@@ -159,53 +164,35 @@ where
         self.call_hooks("unmounted");
     }
 
-    /// 按 mount lifecycle record 执行 before_unmount。
     pub(crate) fn invoke_before_unmount_record(&mut self, record: &MountLifecycleRecord) {
-        match record.kind {
-            MountLifecycleKind::Vapor => {
-                self.invoke_mount_owned_resources(record);
+        if record.kind.invokes_mount_owned_resources_before_unmount() {
+            self.invoke_mount_owned_resources(record);
+        }
+
+        if record.kind.invokes_component_before_unmount() {
+            self.call_lifecycle_hooks(&record.component_before_unmount_hooks);
+            if let Some(inst_index) = record.component_inst_index {
+                self.dispose_mounted_component_scopes(inst_index);
             }
-            MountLifecycleKind::Fragment => {
-                self.invoke_mount_owned_resources(record);
-                for child in record.children.iter() {
-                    self.invoke_before_unmount_record(child);
-                }
-            }
-            MountLifecycleKind::Element => {
-                for child in record.children.iter() {
-                    self.invoke_before_unmount_record(child);
-                }
-            }
-            MountLifecycleKind::Component => {
-                self.call_lifecycle_hooks(&record.component_before_unmount_hooks);
-                if let Some(inst_index) = record.component_inst_index {
-                    self.dispose_mounted_component_scopes(inst_index);
-                }
-                for child in record.children.iter() {
-                    self.invoke_before_unmount_record(child);
-                }
-            }
-            MountLifecycleKind::Other => {
-                self.invoke_mount_owned_resources(record);
+        }
+
+        if record.kind.recurses_before_unmount_children() {
+            for child in record.children.iter() {
+                self.invoke_before_unmount_record(child);
             }
         }
     }
 
     /// 按 mount lifecycle record 执行 unmounted。
     pub(crate) fn invoke_unmounted_record(&mut self, record: &MountLifecycleRecord) {
-        match record.kind {
-            MountLifecycleKind::Component => {
-                for child in record.children.iter() {
-                    self.invoke_unmounted_record(child);
-                }
-                self.call_lifecycle_hooks(&record.component_unmounted_hooks);
+        if record.kind.recurses_unmounted_children() {
+            for child in record.children.iter() {
+                self.invoke_unmounted_record(child);
             }
-            MountLifecycleKind::Fragment | MountLifecycleKind::Element => {
-                for child in record.children.iter() {
-                    self.invoke_unmounted_record(child);
-                }
-            }
-            MountLifecycleKind::Vapor | MountLifecycleKind::Other => {}
+        }
+
+        if record.kind.invokes_component_unmounted() {
+            self.call_lifecycle_hooks(&record.component_unmounted_hooks);
         }
     }
 
@@ -294,11 +281,8 @@ where
                 }
                 props.insert("__fragNodes".to_string(), arr.clone().into());
                 let el_js: JsValue = el.clone().into();
-                let _ = js_sys::Reflect::set(
-                    &el_js,
-                    &JsValue::from_str("__rue_frag_nodes_ref"),
-                    &arr,
-                );
+                let _ =
+                    js_sys::Reflect::set(&el_js, &JsValue::from_str("__rue_frag_nodes_ref"), &arr);
             }
         }
         MountInput {

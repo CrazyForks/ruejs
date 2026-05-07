@@ -66,3 +66,37 @@ pub fn render_between_for_slot(
     let watch = call_ident("watchEffect", vec![arrow]);
     stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
 }
+
+pub fn render_once_for_slot(
+    vt: &mut VaporTransform,
+    el_ident: &Ident,
+    inner_expr: &Expr,
+    stmts: &mut Vec<Stmt>,
+) {
+    let anchor = vt.next_list_ident();
+    let make_anchor = call_ident("_$createComment", vec![string_expr("rue:slot:anchor")]);
+    stmts.push(const_decl(anchor.clone(), make_anchor));
+    stmts.push(append_child(el_ident.clone(), Expr::Ident(anchor.clone())));
+
+    let slot_ident = vt.next_list_ident();
+    let expr_for_slot = match inner_expr.clone() {
+        Expr::Member(_) | Expr::Ident(_) => {
+            Expr::Paren(ParenExpr { span: DUMMY_SP, expr: Box::new(inner_expr.clone()) })
+        }
+        _ => inner_expr.clone(),
+    };
+    stmts.push(const_decl(slot_ident.clone(), expr_for_slot));
+
+    let render_call = Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee: Callee::Expr(Box::new(Expr::Ident(ident("renderAnchor")))),
+        args: vec![
+            ExprOrSpread { spread: None, expr: Box::new(Expr::Ident(slot_ident)) },
+            ExprOrSpread { spread: None, expr: Box::new(Expr::Ident(el_ident.clone())) },
+            ExprOrSpread { spread: None, expr: Box::new(Expr::Ident(anchor)) },
+        ],
+        type_args: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(render_call) }));
+}

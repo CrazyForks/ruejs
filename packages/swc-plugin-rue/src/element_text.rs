@@ -93,6 +93,22 @@ pub fn render_text_between_with_watch(
         }
     }
 
+    // once 子树中的动态表达式只在首次创建时赋值，不建立后续响应式更新。
+    if vt.is_once_context() {
+        let set_text = Expr::Call(CallExpr {
+            span: DUMMY_SP,
+            callee: Callee::Expr(Box::new(Expr::Ident(ident("_$settextContent")))),
+            args: vec![
+                ExprOrSpread { spread: None, expr: Box::new(Expr::Ident(expr_wrapper.clone())) },
+                ExprOrSpread { spread: None, expr: Box::new(inner_expr.clone()) },
+            ],
+            type_args: None,
+            ctxt: SyntaxContext::empty(),
+        });
+        stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(set_text) }));
+        return;
+    }
+
     // 其它动态表达式：watch 包裹
     // 动态表达式：在 watch 中更新 textContent
     // - set_text：`_$settextContent(wrapper, expr)`

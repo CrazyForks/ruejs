@@ -1,25 +1,39 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h } from '@rue-js/rue'
-import { render } from '@rue-js/rue'
-import { Status } from '@rue-js/design'
+import { h, render, setReactiveScheduling } from '@rue-js/rue'
+import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+import Status from '../index'
+
+setReactiveScheduling('sync')
+
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active = (globalThis as any).__rue
+}
+
+const renderAndWait = async (node: any) => {
+  const container = mountContainer()
+  resetActiveRuntime()
+  render(node, container)
+  await waitForContent(() => {
+    expect(container.childNodes.length).toBeGreaterThan(0)
+  })
+  return container
+}
 
 afterEach(() => {
   document.body.innerHTML = ''
 })
 
 describe('Status', () => {
-  it('renders default as span with base class', () => {
-    const c = document.createElement('div')
-    render(h(Status, null), c)
+  it('renders default as span with base class', async () => {
+    const c = await renderAndWait(h(Status, null))
     const el = c.querySelector('.status') as HTMLElement
     expect(el).toBeTruthy()
     expect(el.tagName).toBe('SPAN')
     expect(el.classList.contains('status')).toBe(true)
   })
 
-  it('supports as=div, size and color variants', () => {
-    const c = document.createElement('div')
-    render(h(Status, { as: 'div', ariaLabel: 'status', size: 'lg', color: 'primary' }), c)
+  it('supports as=div, size and color variants', async () => {
+    const c = await renderAndWait(h(Status, { as: 'div', ariaLabel: 'status', size: 'lg', color: 'primary' }))
     const el = c.querySelector('.status') as HTMLElement
     expect(el).toBeTruthy()
     expect(el.tagName).toBe('DIV')
@@ -28,10 +42,44 @@ describe('Status', () => {
     expect(el.classList.contains('status-primary')).toBe(true)
   })
 
-  it('appends custom className', () => {
-    const c = document.createElement('div')
-    render(h(Status, { className: 'animate-bounce' }), c)
+  it('appends custom className', async () => {
+    const c = await renderAndWait(h(Status, { className: 'animate-bounce' }))
     const el = c.querySelector('.status') as HTMLElement
     expect(el.classList.contains('animate-bounce')).toBe(true)
+  })
+
+  it('renders standalone count text in right-top indicator mode', async () => {
+    const c = await renderAndWait(h(Status, { count: 7, text: '待审核', color: '#f97316' }))
+
+    const wrapper = c.querySelector('.indicator') as HTMLElement
+    const indicator = c.querySelector('.indicator-item') as HTMLElement
+    const content = wrapper.querySelector('.pe-6') as HTMLElement
+    const leadingDot = Array.from(content.querySelectorAll('.status')).find(node => !node.classList.contains('indicator-item')) as
+      | HTMLElement
+      | undefined
+
+    expect(wrapper).toBeTruthy()
+    expect(indicator).toBeTruthy()
+    expect(indicator.textContent).toBe('7')
+    expect(content).toBeTruthy()
+    expect(content.textContent).toBe('待审核')
+    expect(leadingDot).toBeTruthy()
+    expect(leadingDot?.style.backgroundColor).toBe('rgb(249, 115, 22)')
+  })
+
+  it('renders standalone dot text in right-top indicator mode', async () => {
+    const c = await renderAndWait(h(Status, { dot: true, text: '处理中', color: 'warning' }))
+
+    const wrapper = c.querySelector('.indicator') as HTMLElement
+    const dot = c.querySelector('.indicator-item.status') as HTMLElement
+    const content = Array.from(wrapper.querySelectorAll('span')).find(node =>
+      (node as HTMLElement).classList.contains('pe-3.5'),
+    ) as HTMLElement
+
+    expect(wrapper).toBeTruthy()
+    expect(dot).toBeTruthy()
+    expect(dot.classList.contains('status-warning')).toBe(true)
+    expect(content).toBeTruthy()
+    expect(content.textContent).toBe('处理中')
   })
 })

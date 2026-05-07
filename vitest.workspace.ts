@@ -29,6 +29,15 @@ export default defineWorkspace([
   {
     extends: './vite.config.ts',
     test: {
+      name: 'rue-design-jsdom',
+      include: ['packages/rue-design/**/*.{test,spec}.{js,ts,jsx,tsx,mjs,cjs}'],
+      exclude: [...configDefaults.exclude, '**/e2e/**'],
+      environment: 'jsdom',
+    },
+  },
+  {
+    extends: './vite.config.ts',
+    test: {
       name: 'e2e',
       environment: 'jsdom',
       poolOptions: {

@@ -36,9 +36,8 @@ export default Goods;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild } from "@rue-js/rue/vapor";
-import { type FC, ref, h } from '@rue-js/rue';
+    let expected_fragment = r##"import { ref, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild } from "@rue-js/rue/vapor";
+import { type FC, h } from '@rue-js/rue';
 const Hello: FC = ()=>{
     return vapor(()=>{
         const _root = _$createElement("div");
@@ -60,11 +59,11 @@ const Goods: FC = ()=>vapor(()=>{
         _$appendChild(_el1, _$createTextNode("Rue 响应式框架示例"));
         const _list1 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list1);
-        const __slot2 = <Hello/>;
+        const __slot2 = _$createComponent(Hello, {});
         renderAnchor(__slot2, _root, _list1);
         const _list3 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list3);
-        const __slot4 = <World/>;
+        const __slot4 = _$createComponent(World, {});
         renderAnchor(__slot4, _root, _list3);
         return _root;
     });

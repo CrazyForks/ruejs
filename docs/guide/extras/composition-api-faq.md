@@ -14,7 +14,7 @@ Composition API 是一组 API，允许我们使用导入的函数而不是声明
 
 - [依赖注入](/api/composition-api-dependency-injection)，即 `provide()` 和 `inject()`，允许我们在使用 Reactivity API 时利用 Rue 的依赖注入系统。
 
-Composition API 是 Rue 3 和 [Rue 2.7](https://blog.@rue-js/ruejs.org/posts/rue-2-7-naruto.html) 的内置功能。对于较旧的 Rue 2 版本，请使用官方维护的 [`rue-composition-api`](https://github.com/@rue-js/ruejs/composition-api) 插件。在 Rue 3 中，它主要与单文件组件中的 [`<script setup>`](/api/sfc-script-setup) 语法一起使用。以下是使用 Composition API 的组件的基本示例：
+Composition API 是 Rue 3 和 [Rue 2.7](https://blog.@rue-js/ruejs.org/posts/rue-2-7-naruto.html) 的内置功能。对于较旧的 Rue 2 版本，请使用官方维护的 [`rue-composition-api`](https://github.com/@rue-js/ruejs/composition-api) 插件。在 Rue 3 中，它更常见的用法是直接在组件函数里导入并调用这些 API。以下是使用 Composition API 的组件的基本示例：
 
 ```tsx
 import { ref, onMounted } from '@rue-js/rue'
@@ -85,7 +85,7 @@ Composition API 的逻辑复用能力催生了令人印象深刻的社区项目�
 
 ### 更小的生产包和更少的开销 {#smaller-production-bundle-and-less-overhead}
 
-使用 Composition API 和 `<script setup>` 编写的代码也比等效的 Options API 更高效且更易于压缩。这是因为 `<script setup>` 组件中的模板被编译为内联在 `<script setup>` 代码同一作用域中的函数。与从 `this` 进行属性访问不同，编译后的模板代码可以直接访问 `<script setup>` 内部声明的变量，而无需实例代理在中间。这也带来了更好的压缩效果，因为所有变量名都可以安全地缩短。
+使用 Composition API 编写的代码也往往比等效的 Options API 更直接且更易于压缩。这是因为响应式状态、派生状态和事件处理通常直接声明在组件函数的同一作用域里，而不是经由组件实例代理访问。渲染逻辑可以直接闭包访问这些局部变量，因此少了一层间接访问，也给压缩器留下了更大的优化空间。
 
 ## 与 Options API 的关系 {#relationship-with-options-api}
 
@@ -103,7 +103,7 @@ Options API 确实允许你在编写组件代码时"少想一些"，这就是为
 
 :::tip
 
-从 3.3 版本开始，你可以直接在 `<script setup>` 中使用 `defineOptions` 来设置组件名称或 `inheritAttrs` 属性
+如果你的构建链路支持 SFC 宏，也可以用 `defineOptions` 来设置组件名称或 `inheritAttrs` 属性；在当前更常见的 TSX / 函数组件写法里，这类配置通常仍作为组件定义层的附加选项处理。
 
 :::
 
@@ -111,7 +111,7 @@ Options API 确实允许你在编写组件代码时"少想一些"，这就是为
 
 ### 可以在同一组件中使用两种 API 吗？ {#can-i-use-both-apis-in-the-same-component}
 
-可以。你可以通过 Options API 组件中的 [`setup()`](/api/composition-api-setup) 选项使用 Composition API。
+可以。你可以在 Options API 组件里引入 Composition API 逻辑，常见方式是通过组件定义中的 [`setup()`](/api/composition-api-setup) 入口。
 
 但是，我们只建议在你有现有的 Options API 代码库需要与用 Composition API 编写的新功能/外部库集成时才这样做。
 
@@ -143,7 +143,7 @@ React Hooks 在每次组件更新时都会重复调用。这产生了许多可�
 
 相比之下，Rue Composition API：
 
-- 只调用一次 `setup()` 或 `<script setup>` 代码。这使得代码更符合习惯用法的 JavaScript 使用直觉，因为不必担心陈旧的闭包。Composition API 调用也对调用顺序不敏感，可以是条件性的。
+- 组件的组合式逻辑通常只在初始化阶段执行一次。这使得代码更符合习惯用法的 JavaScript 使用直觉，因为不必担心陈旧的闭包。Composition API 调用也对调用顺序不敏感，可以是条件性的。
 
 - Rue 的运行时响应式系统自动收集计算属性和 watchers 中使用的响应式依赖，因此无需手动声明依赖。
 

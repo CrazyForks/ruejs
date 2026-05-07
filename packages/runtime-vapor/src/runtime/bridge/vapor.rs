@@ -1,9 +1,9 @@
 use super::WasmRue;
 use crate::reactive::core::create_effect_scope;
-use crate::runtime::DEFAULT_MOUNT_HANDLE_KEY;
+use crate::runtime::transport::DefaultMountHandleStorePolicy;
 use crate::runtime::js_adapter::JsDomAdapter;
 use crate::runtime::types::{ComponentProps, MountInput, MountInputType};
-use js_sys::{Function, Object, Reflect};
+use js_sys::Function;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
@@ -50,17 +50,10 @@ impl WasmRue {
             }
         };
         // 写入默认输入注册表并返回默认 mount handle。
-        let id = crate::runtime::MOUNT_INPUT_REGISTRY.with(|reg| {
-            let mut r = reg.borrow_mut();
-            r.push(Some(input));
-            (r.len() - 1) as u32
-        });
-        let out = Object::new();
-        let _ = Reflect::set(
-            &out,
-            &JsValue::from_str(DEFAULT_MOUNT_HANDLE_KEY),
-            &JsValue::from_f64(id as f64),
-        );
-        out.into()
+        crate::runtime::transport::store_default_mount_input(
+            input,
+            DefaultMountHandleStorePolicy::Append,
+        )
+        .value
     }
 }

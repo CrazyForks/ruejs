@@ -3,17 +3,23 @@
 - 职责：在 SWC 的遍历阶段对源码进行“预处理改写”，为后续 Vapor 化与运行时绑定做准备。
 - 组成：
   - helpers：辅助逻辑（如检测函数体是否返回 JSX、收集安全语句、注入 useSetup 包裹与解构绑定、组件识别等）。
+  - for_directive：将元素上的 v-for / r-for 指令改写为标准 map 调用表达式，复用现有 TSX 列表路径。
   - if_directive：将兄弟 JSX 元素上的 v-if / v-else-if / v-else 指令改写为条件表达式容器（{ cond ? <A/> : <B/> }）。
+  - model_directive：将 v-model / r-model 指令改写为 Rue 现有受控 props / 事件模型。
   - on_setup：构造 useSetup(()=>{ ...; return { ... }}) 以及 const/let 的解构绑定声明。
   - show_directive：将 v-show 类指令改写为受控显示逻辑（具体见该文件）。
   - side_effect：纯度/副作用分析与标识符收集，帮助判定哪些语句可安全搬迁。
   - transform：统一入口，组织遍历流程与调用上述改写。
 */
+mod for_directive;
 mod helpers;
 mod if_directive;
+mod model_directive;
+mod on_directive;
 mod on_setup;
 mod show_directive;
 mod side_effect;
+mod template_directive;
 mod transform;
 
 /// 对外暴露的预处理入口：

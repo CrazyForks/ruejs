@@ -10,19 +10,25 @@ use swc_core::ecma::ast::*;
 // SWC 可变访问器与驱动接口
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
+use super::for_directive;
 use super::helpers::{
     has_jsx_return_in_block, is_fc_pat, is_untyped_arrow_component_decl, process_fn_decl,
     process_function, process_var_decl, should_transform_fn_decl,
 };
 use super::if_directive;
+use super::model_directive;
+use super::on_directive;
 use super::show_directive;
+use super::template_directive;
 
 /*
 预处理（浅编译）阶段说明：
 - 目标：在不生成原生 DOM 的前提下，对指令与组件 useSetup 进行形态规整，使后续 Vapor 深编译更简单。
 - 功能：
   1) 指令处理：
+                - `v-on/r-on/@` 事件指令 → 改写为标准 `onClick/onInput` 或组件 native 标记，复用现有事件编译路径
     - `v-show/r-show` → 改写为统一的 `style` 表达式，运行时 `_$vaporShowStyle` 决定隐藏显示
+        - `v-for/r-for` → 改写为标准 `map(...)` 表达式，继续走现有 TSX 列表编译路径
     - `v-if/v-else-if/v-else` 与 `r-if/r-else-if/r-else` → 连续兄弟 JSX 改写为一个条件表达式容器
   2) 组件 useSetup 注入：
      - 收集 return 之前的“安全声明与副作用”（常量/函数/已知 watcher 等），插入到返回 JSX 前
@@ -97,14 +103,36 @@ impl VisitMut for PreTransform {
     }
 
     fn visit_mut_jsx_opening_element(&mut self, opening: &mut JSXOpeningElement) {
+        // v-on/r-on/@ 事件指令 → 标准 onX 事件属性或组件 native 事件标记
+        on_directive::transform_opening(opening);
+        // v-model/r-model → 受控 props / 事件写回
+        model_directive::transform_opening(opening);
         // v-show/r-show → 样式驱动显示控制
         show_directive::transform_opening(opening);
     }
 
     fn visit_mut_jsx_element(&mut self, el: &mut JSXElement) {
+        if if_directive::has_pre_directive(el) {
+            return;
+        }
+
         el.visit_mut_children_with(self);
+        // 小写 <template v-if / v-for / slot> 预先改写为现有的 Template 组件，
+        // 以复用后续已有的条件、列表与 slot lowering 路径。
+        template_directive::transform_element(el);
+        // v-for/r-for → 标准 map 表达式容器
+        for_directive::transform_element(el);
         // v-if/v-else-if/v-else 与 r-if/r-else-if/r-else → 条件表达式容器
         if_directive::transform_element(el);
+    }
+
+    fn visit_mut_expr(&mut self, expr: &mut Expr) {
+        expr.visit_mut_children_with(self);
+        if let Expr::JSXElement(el) = expr {
+            if let Some(memo_expr) = if_directive::memo_or_once_element_expr(el.as_ref()) {
+                *expr = memo_expr;
+            }
+        }
     }
 
     fn visit_mut_function(&mut self, func: &mut Function) {

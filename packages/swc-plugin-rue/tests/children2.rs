@@ -33,7 +33,7 @@ export default Children;
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Box: FC<{
     title: string;
@@ -74,7 +74,10 @@ const Children: FC = ()=>vapor(()=>{
             _$appendChild(_el6, _$createTextNode("嵌套子元素"));
             return _root;
         });
-        const __slot3 = <Box title="外层" children={__child1}/>;
+        const __slot3 = _$createComponent(Box, {
+            title: "外层",
+            children: __child1
+        });
         renderAnchor(__slot3, _root, _list2);
         return _root;
     });

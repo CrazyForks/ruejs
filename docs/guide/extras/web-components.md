@@ -352,7 +352,7 @@ declare module '@rue-js/rue' {
 假设 `some-lib` 将其源 TypeScript 文件构建到 `dist/` 文件夹中。`some-lib` 的用户然后可以导入 `SomeElement` 并在 Rue SFC 中使用它，如下所示：
 
 ```vue [SomeElementImpl.vue]
-<script setup lang="ts">
+<script lang="ts">
 // 这将创建并向浏览器注册元素。
 import 'some-lib/dist/SomeElement.js'
 
@@ -361,24 +361,24 @@ import 'some-lib/dist/SomeElement.js'
 // 导入其他框架特定的类型定义）。
 import type {} from 'some-lib/dist/SomeElement.rue.js'
 
-import { useTemplateRef, onMounted } from '@rue-js/rue'
+import { onMounted, useRef } from '@rue-js/rue'
 
-const el = useTemplateRef('el')
+const el = useRef<SomeElement>()
 
 onMounted(() => {
-  console.log(el.value!.foo, el.value!.bar, el.value!.lorem, el.value!.someMethod())
+  console.log(el.current!.foo, el.current!.bar, el.current!.lorem, el.current!.someMethod())
 
   // 不要使用这些 props，它们是 `undefined`
   // IDE 会显示它们被划线
-  el.$props
-  el.$emit
+  el.current!.$props
+  el.current!.$emit
 })
 </script>
 
 <template>
   <!-- 现在我们可以使用元素并进行类型检查： -->
   <some-element
-    ref="el"
+    :ref="el"
     :foo="456"
     :blah="'hello'"
     @apple-fell="
@@ -432,7 +432,6 @@ declare module '@rue-js/rue' {
 
 - 一个声明式和高效的模板系统；
 - 一个响应式状态管理系统，便于跨组件逻辑提取和复用；
-- 一种在服务器上渲染组件并在客户端水合它们的高性能方式（SSR），这对 SEO 和 [Web Vitals 指标如 LCP](https://web.dev/vitals/) 很重要。原生自定义元素 SSR 通常涉及在 Node.js 中模拟 DOM 然后序列化变异的 DOM，而 Rue SSR 尽可能编译为字符串连接，这要高效得多。
 
 Rue 的组件模型将这些需求设计为一个连贯的系统。
 
@@ -443,7 +442,5 @@ Rue 的组件模型将这些需求设计为一个连贯的系统。
 我们还发现自定义元素在某些方面有限制：
 
 - 急切的插槽评估阻碍了组件组合。Rue 的[作用域插槽](/guide/components/slots#scoped-slots)是一种强大的组件组合机制，由于原生插槽的急切特性，无法被自定义元素支持。急切的插槽也意味着接收组件无法控制何时或是否渲染一段插槽内容。
-
-- 今天使用 shadow DOM 交付带有作用域 CSS 的自定义元素需要将 CSS 嵌入 JavaScript 中，以便它们可以在运行时注入到 shadow root 中。它们在 SSR 场景中也导致标记中的重复样式。有[平台功能](https://github.com/whatwg/html/pull/4898/)正在这个领域开发——但截至目前它们尚未普遍支持，并且仍有生产性能/SSR 问题需要解决。与此同时，Rue SFC 提供支持将样式提取到纯 CSS 文件的 [CSS 作用域机制](/api/sfc-css-features)。
 
 Rue 将始终与 Web 平台的最新标准保持同步，如果平台提供的任何东西能让我们的工作更轻松，我们将很乐意利用它。然而，我们的目标是提供今天运行良好且有效的解决方案。这意味着我们必须以批判的态度纳入新平台功能——这涉及在标准仍有不足时填补空白。

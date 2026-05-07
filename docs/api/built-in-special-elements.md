@@ -1,10 +1,12 @@
 # 内置特殊元素 {#built-in-special-elements}
 
 :::info 不是组件
-`<component>`、`<slot>` 和 `<template>` 是类似组件的功能，是模板语法的一部分。它们不是真正的组件，在模板编译期间会被编译掉。因此，它们在模板中通常用小写字母书写。
+`<component>`、`<slot>` 和 `<template>` 是模板语法中的特殊元素，不会按普通组件解析。模板编译器会把它们转换为对应的运行时能力，因此在模板中通常用小写字母书写。
+
+在 JSX / TSX 中，Rue 另外提供了与之对应的运行时导出：`Component`、`Slot` 和 `Template`。它们表达的是同一套语义，只是调用方式更接近普通组件。
 :::
 
-## `<component>` {#component} @todo
+## `<component>` {#component}
 
 用于渲染动态组件或元素的"元组件"。
 
@@ -12,16 +14,22 @@
 
   ```ts
   interface DynamicComponentProps {
-    is: string | Component
+    is?: string | Component | null
+    [key: string]: unknown
   }
   ```
 
 - **详情**
 
   实际要渲染的组件由 `is` prop 决定。
-  - 当 `is` 是字符串时，它可以是 HTML 标签名或组件的注册名称。
 
-  - 或者，`is` 也可以直接绑定到组件的定义。
+  当 `is` 是字符串时，Rue 会先尝试把它解析为当前运行时中已注册的组件；如果未命中，就将它当作原生 HTML 标签名处理。
+
+  `is` 也可以直接绑定到组件定义本身，此时不会经过名称注册表。
+
+  当 `is` 为 `null` 或 `undefined` 时，`<component>` 不渲染任何内容。
+
+  除 `is` 之外的所有 props 和子节点都会原样透传给最终解析出的组件或元素。
 
 - **示例**
 
@@ -49,33 +57,33 @@
   ```tsx
   import { Transition, TransitionGroup } from '@rue-js/rue'
 
-  // 需要注册
-  ;<component is={isGroup ? TransitionGroup : Transition}>...</component>
+  <component is={isGroup ? TransitionGroup : Transition}>...</component>
   ```
 
-  如果您将组件本身传递给 `is` 而不是其名称，则不需要注册，例如在函数组件中。
+  如果通过字符串名称传递内置组件或用户组件，则它们需要先在当前运行时中注册；如果直接把组件对象传给 `is`，则不需要注册。
 
-  如果在 `<component>` 标签上使用 `v-model` 等效模式，模板编译器会将其扩展为 `modelValue` prop 和 `onUpdate:modelValue` 事件监听器，就像对其他任何组件一样。但是，这不适用于原生 HTML 元素，例如 `<input>` 或 `<select>`。因此，使用动态创建的原生元素将无法工作：
+  当 `is` 最终解析为原生表单元素时，仍应按原生元素的属性和事件自行处理数据同步，而不是依赖组件式的 `v-model` 约定。例如：
 
   ```tsx
-  import { useState } from '@rue-js/rue'
+  import { ref } from '@rue-js/rue'
 
-  const [tag, setTag] = useState('input')
-  const [username, setUsername] = useState('')
+  const tag = ref<'input' | 'textarea'>('input')
+  const username = ref('')
 
-  // 这不适用于原生 HTML 元素
   <component
-    is={tag}
-    value={username}
-    onChange={(e) => setUsername(e.target.value)}
+    is={tag.value}
+    value={username.value}
+    onInput={e => {
+      username.value = (e.target as HTMLInputElement | HTMLTextAreaElement).value
+    }}
   />
   ```
 
-  实际上，这种边缘情况并不常见，因为原生表单字段通常在真实应用程序中包装在组件中。如果您确实需要直接使用原生元素，可以手动将逻辑拆分为属性和事件。
+  在 JSX / TSX 中直接使用时，对应的运行时组件名为 `Component`。
 
 - **另请参阅** [动态组件](/guide/essentials/component-basics#dynamic-components)
 
-## `<slot>` {#slot} @todo
+## `<slot>` {#slot}
 
 表示模板中的插槽内容出口。
 
@@ -83,31 +91,65 @@
 
   ```ts
   interface SlotProps {
-    /**
-     * 传递给 <slot> 的任何 props 都作为参数
-     * 传递给作用域插槽
-     */
-    [key: string]: any
-    /**
-     * 保留用于指定插槽名称。
-     */
     name?: string
+    props?: Record<string, unknown>
+    source?: Record<string, unknown> | null
+    children?: RenderableOutput
   }
   ```
 
 - **详情**
 
-  `<slot>` 元素可以使用 `name` 属性来指定插槽名称。当没有指定 `name` 时，它将渲染默认插槽。传递给插槽元素的额外属性将作为插槽 props 传递给父级中定义的作用域插槽。
+  `<slot>` 元素可以使用 `name` 属性指定插槽名称。不传时渲染默认插槽。
+
+  对于具名插槽和作用域插槽，Rue 会优先从内部的 slot bag 中读取内容；如果没有，再兼容读取同名普通 prop。默认插槽则优先读取内部 `default` 槽位，回退到 `children`。
+
+  如果匹配的插槽不存在，或者插槽值为空，`<slot>` 会渲染自身的后备内容。
+
+  当匹配到的是作用域插槽函数时，Rue 会用 `props` 中提供的对象作为参数调用它。
 
   该元素本身将被其匹配的插槽内容替换。
 
   Rue 模板中的 `<slot>` 元素被编译为 JavaScript，因此不应与[原生 `<slot>` 元素](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/slot)混淆。
 
+  在模板里，传给 `<slot>` 的额外属性会被编译器整理为作用域插槽参数；在 JSX / TSX 中直接使用运行时 `Slot` 组件时，需要显式通过 `props` 传入这些参数。
+
+- **示例**
+
+  默认插槽与后备内容：
+
+  ```tsx
+  <slot>
+    <p>fallback content</p>
+  </slot>
+  ```
+
+  具名插槽：
+
+  ```tsx
+  <slot name="header" />
+  ```
+
+  作用域插槽：
+
+  ```tsx
+  <slot name="item" item={post} index={index} />
+  ```
+
 - **另请参阅** [组件 - 插槽](/guide/components/slots)
 
-## `<template>` {#template} @todo
+## `<template>` / `<Template>` {#template}
 
-`<template>` 标签在我们想使用内置指令而不在 DOM 中渲染元素时用作占位符。
+`<template>` 在模板中用作不产生额外 DOM 元素的占位符；在 JSX / TSX 中，对应的运行时组件名为 `Template`。
+
+- **Props**
+
+  ```ts
+  type TemplateProps = {
+    children?: RenderableOutput
+    [key: string]: unknown
+  }
+  ```
 
 - **详情**
 
@@ -116,11 +158,35 @@
   - 列表渲染的 Rue 等效实现
   - 插槽的 Rue 等效实现
 
-  如果这些指令都不存在，它将被渲染为[原生 `<template>` 元素](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template)。
+  如果这些指令都不存在，编译器应保留它并将其视为[原生 `<template>` 元素](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template)。
 
-  具有列表渲染的 `<template>` 也可以具有 [`key` 属性](/api/built-in-special-attributes#key)。所有其他属性和指令将被丢弃，因为它们在没有相应元素的情况下没有意义。
+  带有列表渲染的 `<template>` 也可以具有 [key 属性](/api/built-in-special-attributes#key)。除这一类控制边界的语义外，其余属性和指令在没有实际元素节点时都会被忽略。
 
-  单文件组件使用[顶级 `<template>` 标签](/api/sfc-spec#language-blocks)来包装整个模板。该用法与上述 `<template>` 的用法分开。该顶级标签不是模板本身的一部分，不支持模板语法，例如指令。
+  在 JSX / TSX 中直接使用 `Template` 时，它会只渲染子节点本身，不引入额外包装元素；除 `children` 之外的其他 props 在运行时会被忽略。
+
+  单文件组件使用[顶级 `<template>` 标签](/api/sfc-spec#language-blocks)来包装整个模板。该用法与上述 `<template>` 的用法分开。该顶级标签不是模板本身的一部分，也不支持模板语法，例如指令。
+
+- **示例**
+
+  在 JSX / TSX 中分组多个子节点而不引入包装元素：
+
+  ```tsx
+  <Template>
+    <h1>Title</h1>
+    <p>Content</p>
+  </Template>
+  ```
+
+  与列表渲染组合使用：
+
+  ```tsx
+  {todos.map(todo => (
+    <Template key={todo.id}>
+      <li>{todo.text}</li>
+      <li className="divider" />
+    </Template>
+  ))}
+  ```
 
 - **另请参阅**
   - [指南 - 条件渲染中的 `<template>`](/guide/essentials/conditional#v-if-on-template)

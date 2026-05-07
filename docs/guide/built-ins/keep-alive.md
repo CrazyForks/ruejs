@@ -75,7 +75,7 @@ const App: FC = () => {
 </KeepAlive>
 ```
 
-匹配是针对组件的 `displayName` 进行检查的，因此需要被 `KeepAlive` 条件缓存的组件必须显式声明一个 `displayName`。
+当前实现的匹配目标不是组件的 `displayName`。`include` / `exclude` 会优先匹配直接子节点显式传入的字符串 / 数字 `key`，其次才会回退到子节点上的 `name` 或内部挂载标识。因此，如果你需要稳定地命中缓存规则，最稳妥的做法是给动态子节点显式设置字符串 key。
 
 ## 最大缓存实例数 (Max Cached Instances) {#max-cached-instances}
 
@@ -89,36 +89,9 @@ const App: FC = () => {
 
 ## 缓存实例的生命周期 (Lifecycle of Cached Instance) {#lifecycle-of-cached-instance}
 
-当组件实例从 DOM 中移除但属于 `<KeepAlive>` 缓存的组件树的一部分时，它进入 **停用** 状态而不是被卸载。当组件实例作为缓存树的一部分插入到 DOM 中时，它被 **激活**。
+当前实现会在组件切走时保留实例和 DOM 区间，并在重新命中缓存时把这段 DOM 挪回活动容器。
 
-被 keep-alive 的组件可以使用生命周期钩子注册这两个状态：
-
-```tsx
-import { useEffect } from '@rue-js/rue'
-import type { FC } from '@rue-js/rue'
-
-const MyComponent: FC = () => {
-  useEffect(() => {
-    // 在初始挂载时调用
-    // 以及每次从缓存中重新插入时
-    console.log('组件被激活')
-
-    return () => {
-      // 在从 DOM 移除到缓存时调用
-      // 以及在卸载时
-      console.log('组件被停用')
-    }
-  }, [])
-
-  return <div>我的组件</div>
-}
-```
-
-注意：
-
-- 激活钩子也在挂载时调用，停用钩子在卸载时调用。
-
-- 两个钩子不仅适用于 `<KeepAlive>` 缓存的根组件，也适用于缓存树中的后代组件。
+需要注意的是，Rue 当前并没有额外暴露 Vue 风格的 `activated` / `deactivated` 专用生命周期钩子。也就是说，`<KeepAlive>` 目前提供的是“缓存与复用”语义，而不是一组新的生命周期 API。
 
 ---
 

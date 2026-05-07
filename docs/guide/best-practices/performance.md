@@ -34,10 +34,6 @@ Rue 旨在在大多数常见用例中具有良好的性能，无需太多手动�
 
 有许多与框架无关的方面可以优化页面加载性能 - 查看 [此 web.dev 指南](https://web.dev/fast/) 以获取全面的总结。在这里，我们将主要关注 Rue 特定的技术。
 
-### 选择正确的架构 (Choosing the Right Architecture) {#choosing-the-right-architecture}
-
-如果您的用例对页面加载性能敏感，请避免将其作为纯客户端 SPA 交付。您希望服务器直接发送包含用户想要看到的内容的 HTML。纯客户端渲染存在内容到达时间慢的问题。这可以通过 [服务器端渲染 (SSR)](/guide/extras/ways-of-using-rue#fullstack-ssr) 或 [静态站点生成 (SSG)](/guide/extras/ways-of-using-rue#jamstack-ssg) 来缓解。查阅 [SSR 指南](/guide/scaling-up/ssr) 了解如何使用 Rue 执行 SSR。如果您的应用没有丰富的交互需求，您还可以使用传统的后端服务器来渲染 HTML 并在客户端用 Rue 增强它。
-
 如果您的主应用必须是 SPA，但有营销页面（落地页、关于、博客），请将它们分开部署！您的营销页面最好使用 SSG 部署为具有最少 JS 的静态 HTML。
 
 ### 包大小和 Tree-shaking (Bundle Size and Tree-shaking) {#bundle-size-and-tree-shaking}

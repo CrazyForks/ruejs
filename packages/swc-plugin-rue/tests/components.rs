@@ -33,7 +33,7 @@ export default Components;
     // - 父组件：组件元素以注释锚点占位，renderAnchor 插入 <Hello/>
     // - 文本与属性：静态文本使用 _$createTextNode；className 使用 setAttribute
     let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const Hello: FC<{
@@ -58,11 +58,15 @@ const Components: FC = ()=>vapor(()=>{
         _$appendChild(_el1, _$createTextNode("组件与 Props 传递"));
         const _list2 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list2);
-        const __slot3 = <Hello name="Rue"/>;
+        const __slot3 = _$createComponent(Hello, {
+            name: "Rue"
+        });
         renderAnchor(__slot3, _root, _list2);
         const _list4 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list4);
-        const __slot5 = <Hello name="World"/>;
+        const __slot5 = _$createComponent(Hello, {
+            name: "World"
+        });
         renderAnchor(__slot5, _root, _list4);
         const _el2 = _$createElement("a");
         _$appendChild(_root, _el2);

@@ -5,10 +5,10 @@
 //   3) 依赖为 Ref（含 value 字段）：当 value 改变时触发
 //   4) 自定义数组相等性（equals）：当 equals 返回 true 时不触发
 use js_sys::{Array, Function, Object, Reflect};
-use rue_runtime_vapor::reactive::signal::create_ref;
 use rue_runtime_vapor::reactive::core::{
     create_effect_scope, dispose_effect_scope, pop_effect_scope, push_effect_scope,
 };
+use rue_runtime_vapor::reactive::signal::create_ref;
 use rue_runtime_vapor::{
     create_signal, set_current_instance, set_reactive_scheduling, use_effect, vapor_with_hook_id,
 };

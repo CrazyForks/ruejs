@@ -15,7 +15,7 @@ import {
   type RenderableOutput,
 } from './rue'
 import { ref, shallowReactive, watchEffect } from './reactivity'
-import { useSetup } from '@rue-js/runtime-vapor'
+import { useSetup } from '@rue-js/runtime-vapor/reactive'
 import { appendChild, createComment, createElement as createDomElement } from './dom'
 import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,

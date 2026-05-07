@@ -87,7 +87,7 @@ const Page: FC = () => (
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
     assert!(out.contains(&utils::normalize(
-        "<Collapse.Title className=\"font-semibold\" children={__child1}/>"
+        "_$createComponent(Collapse.Title, { className: \"font-semibold\", children: __child1 })"
     )));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(out.contains(&utils::normalize("rue:component:anchor")));
@@ -111,7 +111,9 @@ const Page: FC<{ items: string[] }> = props => (
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
-    assert!(out.contains(&utils::normalize("<TransitionGroup children={props.items.map")));
+    assert!(out.contains(&utils::normalize(
+        "_$createComponent(TransitionGroup, { children: props.items.map"
+    )));
     assert!(out.contains("props.items.map"));
     assert!(out.contains("_$vaporWithKey"));
     assert!(out.contains("_$createElement(\"span\")"));
@@ -138,7 +140,9 @@ const Page: FC<{ items: string[] }> = props => (
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
-    assert!(out.contains(&utils::normalize("<TransitionGroup children={props.items.map")));
+    assert!(out.contains(&utils::normalize(
+        "_$createComponent(TransitionGroup, { children: props.items.map"
+    )));
     assert!(out.contains("props.items.map"));
     assert!(out.contains("_$vaporWithKey"));
     assert!(out.contains("_$createElement(\"span\")"));
@@ -174,6 +178,6 @@ const Page: FC = () => (
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
     assert!(out.contains(&utils::normalize("const __child1 = icons[0].node;")));
-    assert!(out.contains(&utils::normalize("<IconHost children={__child1}/>")));
+    assert!(out.contains(&utils::normalize("_$createComponent(IconHost, { children: __child1 })")));
     assert!(!out.contains(&utils::normalize("_$settextContent(_el2, icons[0].node);")));
 }

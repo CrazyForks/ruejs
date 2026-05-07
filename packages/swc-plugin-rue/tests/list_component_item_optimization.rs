@@ -20,7 +20,9 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
-    assert!(out.contains(&utils::normalize("const __slot = <Row key={item.id} item={item}/>;")));
+    assert!(out.contains(&utils::normalize(
+        "const __slot = _$createComponent(Row, { key: item.id, item: item });"
+    )));
     assert!(out.contains(&utils::normalize("renderBetween(__slot, parent, start, end);")));
     assert!(!out.contains(&utils::normalize(
         "renderItem: (item, parent, start, end, idx)=>{ const __slot = vapor(()=>"
@@ -55,7 +57,7 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
 
     assert!(out.contains(&utils::normalize("const __child1 = vapor(()=>")));
     assert!(out.contains(&utils::normalize(
-        "const __slot = <Row key={item.id} item={item} children={__child1}/>;"
+        "const __slot = _$createComponent(Row, { key: item.id, item: item, children: __child1 });"
     )));
     assert!(out.contains(&utils::normalize("renderBetween(__slot, parent, start, end);")));
     assert!(!out.contains(&utils::normalize(
@@ -85,7 +87,7 @@ const Page: FC<{ items: number[] }> = props => (
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
     assert!(out.contains(&utils::normalize(
-        "const label = `#${item}`; const __slot = <Row key={item} label={label}/>;"
+        "const label = `#${item}`; const __slot = _$createComponent(Row, { key: item, label: label });"
     )));
     assert!(out.contains(&utils::normalize("renderBetween(__slot, parent, start, end);")));
     assert!(

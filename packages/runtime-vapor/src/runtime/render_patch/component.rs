@@ -1,11 +1,12 @@
 use super::super::Rue;
 use super::super::types::{
-    MountInput, MountInputType, MountedPatchSubtree, MountedPatchSubtreeType,
-    MountedSubtreeState,
+    MountInput, MountInputType, MountedPatchSubtree, MountedPatchSubtreeType, MountedSubtreeState,
 };
 use crate::hook::reactive::props_reactive_js;
+use crate::reactive::context::get_current_instance;
 use crate::reactive::core::{pop_effect_scope, push_effect_scope};
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::shared_runtime_bridge;
 use js_sys::{Function, Object, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
@@ -25,11 +26,7 @@ where
         let existing_idx = old_inst_index;
         let (stored_props_ro, stored_host, stored_hooks) = if let Some(idx) = existing_idx {
             if let Some(inst) = self.instance_store.get(&idx) {
-                (
-                    Some(inst.props_ro.clone()),
-                    Some(inst.host.clone()),
-                    Some(inst.hooks.0.clone()),
-                )
+                (Some(inst.props_ro.clone()), Some(inst.host.clone()), Some(inst.hooks.0.clone()))
             } else {
                 (None, None, None)
             }
@@ -39,12 +36,11 @@ where
 
         let props_ro = stored_props_ro.unwrap_or_else(|| {
             let props_js = self.props_with_children_input_to_jsobject(new);
-            props_reactive_js(props_js.clone(), Some(true))
+            shared_runtime_bridge::props_reactive(&props_js)
+                .unwrap_or_else(|| props_reactive_js(props_js.clone(), Some(true)))
         });
-        let host: Object = stored_host
-            .filter(|h| h.is_object())
-            .map(Object::from)
-            .unwrap_or_else(Object::new);
+        let host: Object =
+            stored_host.filter(|h| h.is_object()).map(Object::from).unwrap_or_else(Object::new);
         let _ = Reflect::set(&host, &JsValue::from_str("propsRO"), &props_ro);
         Self::reset_hook_index(&host);
 
@@ -93,12 +89,15 @@ where
         idx: usize,
     ) -> JsValue {
         let func = render_fn.dyn_ref::<Function>().unwrap();
+        let shared_instance = get_current_instance();
+        shared_runtime_bridge::begin_component_render(&shared_instance);
         let render_scope_id = self.renew_component_render_scope(idx);
         push_effect_scope(render_scope_id);
         let ret = match func.call1(&JsValue::UNDEFINED, props_ro) {
             Ok(v) => v,
             Err(e) => {
                 let _ = pop_effect_scope();
+                shared_runtime_bridge::end_component_render();
                 self.handle_error(e.clone());
                 self.instance_stack.pop();
                 if let Some(top_idx) = self.instance_stack.last() {
@@ -114,6 +113,7 @@ where
             }
         };
         let _ = pop_effect_scope();
+        shared_runtime_bridge::end_component_render();
         let pending = crate::runtime::take_pending_hooks();
         if let Some(top_idx) = self.instance_stack.last() {
             if let Some(inst) = self.instance_store.get_mut(top_idx) {
@@ -130,11 +130,16 @@ where
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        if let Some(input) = self.compat_value_to_input(ret) {
+        if let Some(input) = self.value_to_input(ret) {
             Some(input)
         } else if ret.is_object() {
+            #[cfg(feature = "compat")]
             let error = JsValue::from_str(
                 "Unsupported object returns are no longer accepted on the default component path. Return a raw node, fragment, or mount handle instead.",
+            );
+            #[cfg(not(feature = "compat"))]
+            let error = JsValue::from_str(
+                "Unsupported object returns are no longer accepted on the default component path. Return a host-node bridge, portable handle, or mount handle instead.",
             );
             self.handle_error(error.clone());
             wasm_bindgen::throw_val(error);
@@ -237,13 +242,9 @@ where
         }
         let hooks = self.comp_finalize();
         old.key = new.key.clone();
-        old.mount_cleanup_bucket = new.mount_cleanup_bucket.clone();
-        old.mount_effect_scope_id = new.mount_effect_scope_id;
         old.comp_inst_index = Some(idx);
-        old.component_before_unmount_hooks = hooks
-            .get("before_unmount")
-            .cloned()
-            .unwrap_or_default();
+        old.component_before_unmount_hooks =
+            hooks.get("before_unmount").cloned().unwrap_or_default();
         old.component_unmounted_hooks = hooks.get("unmounted").cloned().unwrap_or_default();
 
         if let Some(subtree) = mounted_subtree {

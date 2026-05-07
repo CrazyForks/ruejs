@@ -1,9 +1,12 @@
+use super::super::Rue;
 use super::super::types::{
     MountInput, MountedSubtreeState, MountedVaporSubtree, MountedVaporSubtreeType,
 };
-use super::super::Rue;
+#[cfg(feature = "compat")]
+use super::compat_vapor_wrapper::setup_return_uses_legacy_vapor_wrapper;
 use crate::reactive::core::{create_effect_scope, pop_effect_scope, push_effect_scope};
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::transport;
 use js_sys::{Function, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 
@@ -15,8 +18,7 @@ where
     pub(super) fn parse_vapor_with_setup_return(&self, ret: &JsValue) -> Option<A::Element> {
         if ret.is_object() {
             let obj = Object::from(ret.clone());
-            let host = Reflect::get(&obj, &JsValue::from_str("__rue_host_node"))
-                .unwrap_or(JsValue::UNDEFINED);
+            let host = transport::host_node_value(&obj);
             if !host.is_undefined() && !host.is_null() {
                 let el: A::Element = host.into();
                 return Some(el);
@@ -25,18 +27,10 @@ where
         None
     }
 
-    pub(super) fn setup_return_uses_legacy_vapor_wrapper(&self, ret: &JsValue) -> bool {
-        if ret.is_object() {
-            let obj = Object::from(ret.clone());
-            let legacy = Reflect::get(&obj, &JsValue::from_str("vaporElement"))
-                .unwrap_or(JsValue::UNDEFINED);
-            return !legacy.is_undefined() && !legacy.is_null();
-        }
-
-        false
-    }
-
-    /// 非对象返回时：直接将 setup 返回值强制转换为元素类型
+    /// Vapor setup 主路径由编译器直接返回可挂载块根节点，这里保留该薄协议。
+    ///
+    /// 与组件默认返回面不同，setup 不要求额外包成 host-node bridge；
+    /// 只要返回值本身就是宿主节点/片段节点，就直接把它视为可挂载元素。
     pub(super) fn coerce_setup_return_to_element(&self, ret: &JsValue) -> A::Element {
         ret.clone().into()
     }
@@ -121,7 +115,8 @@ where
                     }));
                 }
 
-                if rue.setup_return_uses_legacy_vapor_wrapper(&ret) {
+                #[cfg(feature = "compat")]
+                if setup_return_uses_legacy_vapor_wrapper(&ret) {
                     let error = JsValue::from_str(
                         "Unsupported object returns are no longer accepted for vapor setup on the default path. Return a raw node, fragment, or mount handle instead.",
                     );
@@ -129,6 +124,7 @@ where
                     wasm_bindgen::throw_val(error);
                 }
 
+                // 编译器生成的 Vapor setup 默认直接 `return _root`，这里继续接受该块根节点。
                 let el: A::Element = rue.coerce_setup_return_to_element(&ret);
                 rue.set_owner_scope_on_element(Some(scope_id), &el);
                 let fragment_nodes = rue.fragment_nodes_for_element(&el);
@@ -160,8 +156,6 @@ where
         }));
     }
 
-    rue.handle_error(JsValue::from_str(
-        "runtime:mount VaporWithSetup fallback no adapter",
-    ));
+    rue.handle_error(JsValue::from_str("runtime:mount VaporWithSetup fallback no adapter"));
     None
 }

@@ -1,4 +1,4 @@
-import { type FC, ref, watchEffect, useState } from '@rue-js/rue'
+import { type FC, onBeforeUnmount, onCleanup, ref, watchEffect, useState } from '@rue-js/rue'
 import { createHighlighterCoreSync } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
 import jsLang from '@shikijs/langs/javascript'
@@ -27,11 +27,31 @@ function escapeHtml(s: string): string {
 const Code: FC<{ code: string; lang?: string; className?: string; title?: string }> = p => {
   const html = ref<string>('')
   const [copied, setCopied] = useState(false)
+  const rootClassName = p.className ? `code-block ${p.className}` : 'code-block'
+  let copyResetTimer: ReturnType<typeof setTimeout> | null = null
+
+  const clearCopyResetTimer = () => {
+    if (copyResetTimer == null) {
+      return
+    }
+
+    clearTimeout(copyResetTimer)
+    copyResetTimer = null
+  }
+
+  onBeforeUnmount(() => {
+    clearCopyResetTimer()
+  })
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(p.code || '')
       setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      clearCopyResetTimer()
+      copyResetTimer = setTimeout(() => {
+        copyResetTimer = null
+        setCopied(false)
+      }, 1500)
     } catch {}
   }
 
@@ -41,7 +61,12 @@ const Code: FC<{ code: string; lang?: string; className?: string; title?: string
     const useLang = allow.has(lang) ? lang : 'javascript'
     const normalized = useLang === 'js' ? 'javascript' : useLang === 'ts' ? 'typescript' : useLang
     const highlighter = getHl()
-    setTimeout(() => {
+    let disposed = false
+    const highlightTimer = setTimeout(() => {
+      if (disposed) {
+        return
+      }
+
       let out = ''
       if (typeof (highlighter as any).highlight === 'function') {
         out = (highlighter as any).highlight(p.code, { lang: normalized, theme: tokyoNight })
@@ -50,12 +75,22 @@ const Code: FC<{ code: string; lang?: string; className?: string; title?: string
       } else {
         out = `<pre><code>${escapeHtml(p.code)}</code></pre>`
       }
+
+      if (disposed) {
+        return
+      }
+
       html.value = out
     }, 0)
+
+    onCleanup(() => {
+      disposed = true
+      clearTimeout(highlightTimer)
+    })
   })
 
   return (
-    <div className={p.className}>
+    <div className={rootClassName}>
       <div className="relative group">
         <button
           className="absolute top-2 right-2 z-50 px-2 py-1 bg-black/70 text-white rounded text-xs opacity-80 hover:opacity-100 focus:opacity-100 transition"

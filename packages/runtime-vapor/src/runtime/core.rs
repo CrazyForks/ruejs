@@ -17,41 +17,45 @@ where
     A::Element: Clone,
 {
     /// 容器与其当前挂载记录的映射
-    pub container_map: Vec<ContainerMountState<A>>,
+    pub(crate) container_map: Vec<ContainerMountState<A>>,
     /// 单锚点渲染映射（anchor -> mount），用于组件等可由尾锚点定位的增量更新
-    pub anchor_map: Vec<AnchorMountState<A>>,
+    pub(crate) anchor_map: Vec<AnchorMountState<A>>,
     /// 当前活跃组件实例（用于钩子、错误处理等）
-    pub current_instance: Option<ComponentInternalInstance<A>>,
+    pub(crate) current_instance: Option<ComponentInternalInstance<A>>,
     /// 当前已关联的容器计数
-    pub current_container_count: usize,
+    #[allow(dead_code)]
+    pub(crate) current_container_count: usize,
     /// 组件实例栈（用于嵌套组件钩子上下文）
-    pub instance_stack: Vec<usize>,
+    pub(crate) instance_stack: Vec<usize>,
     /// 实例存储（索引 -> 实例）
-    pub instance_store: HashMap<usize, ComponentInternalInstance<A>>,
+    pub(crate) instance_store: HashMap<usize, ComponentInternalInstance<A>>,
     /// 挂载完成后需要执行的队列（如 onMounted）
-    pub mounted_queue: Vec<Box<dyn FnMut()>>,
+    #[allow(dead_code)]
+    pub(crate) mounted_queue: Vec<Box<dyn FnMut()>>,
     /// 区间渲染的挂载映射（start/end -> mount）
-    pub range_map: Vec<RangeMountState<A>>,
+    pub(crate) range_map: Vec<RangeMountState<A>>,
     /// 当前区间锚点（渲染 Between 时使用）
-    pub current_anchor: Option<A::Element>,
+    pub(crate) current_anchor: Option<A::Element>,
     /// 错误处理器集合（按实例索引）
-    pub error_handlers: HashSet<usize>,
+    #[allow(dead_code)]
+    pub(crate) error_handlers: HashSet<usize>,
     /// 当前渲染的容器
-    pub current_container: Option<A::Element>,
+    pub(crate) current_container: Option<A::Element>,
     /// 延迟执行队列（插件安装等）
-    pub deferred_queue: Vec<Box<dyn FnMut()>>,
+    pub(crate) deferred_queue: Vec<Box<dyn FnMut()>>,
     /// 已安装插件及其参数（按实例索引）
-    pub installed_plugins: HashMap<usize, Vec<JsValue>>,
+    #[allow(dead_code)]
+    pub(crate) installed_plugins: HashMap<usize, Vec<JsValue>>,
     /// 运行时是否已崩溃（全局标记）
-    pub crashed: bool,
+    pub(crate) crashed: bool,
     /// DOM 适配器（可选，需先设置）
-    pub dom_adapter: Option<A>,
+    pub(crate) dom_adapter: Option<A>,
     /// 最近一次错误（用于上报与调试）
-    pub last_error: Option<JsValue>,
+    pub(crate) last_error: Option<JsValue>,
     /// 全局错误处理器列表
-    pub global_error_handlers: Vec<JsValue>,
+    pub(crate) global_error_handlers: Vec<JsValue>,
     /// 全局生命周期钩子（名称 -> JS 函数列表）
-    pub lifecycle_hooks: HashMap<String, Vec<JsValue>>,
+    pub(crate) lifecycle_hooks: HashMap<String, Vec<JsValue>>,
 }
 
 impl<A: DomAdapter> Rue<A>
@@ -96,5 +100,16 @@ where
     pub fn get_dom_adapter_mut(&mut self) -> Option<&mut A> {
         self.dom_adapter.as_mut()
     }
-}
 
+    pub fn container_mount_count(&self) -> usize {
+        self.container_map.len()
+    }
+
+    pub fn anchor_mount_count(&self) -> usize {
+        self.anchor_map.len()
+    }
+
+    pub fn range_mount_count(&self) -> usize {
+        self.range_map.len()
+    }
+}

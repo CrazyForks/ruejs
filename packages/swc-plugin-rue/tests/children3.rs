@@ -41,7 +41,7 @@ export default Children;
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Box: FC<{
     title: string;
@@ -90,7 +90,10 @@ const Children: FC = ()=>vapor(()=>{
                 _$appendChild(_el7, _$createTextNode("内部1-子元素"));
                 return _root;
             });
-            const __slot3 = <Box title="内部1" children={__child2}/>;
+            const __slot3 = _$createComponent(Box, {
+                title: "内部1",
+                children: __child2
+            });
             renderAnchor(__slot3, _root, _list2);
             const _list4 = _$createComment("rue:component:anchor");
             _$appendChild(_root, _list4);
@@ -102,11 +105,17 @@ const Children: FC = ()=>vapor(()=>{
                 _$appendChild(_el8, _$createTextNode("内部2-子元素"));
                 return _root;
             });
-            const __slot5 = <Box title="内部2" children={__child3}/>;
+            const __slot5 = _$createComponent(Box, {
+                title: "内部2",
+                children: __child3
+            });
             renderAnchor(__slot5, _root, _list4);
             return _root;
         });
-        const __slot7 = <Box title="外层" children={__child1}/>;
+        const __slot7 = _$createComponent(Box, {
+            title: "外层",
+            children: __child1
+        });
         renderAnchor(__slot7, _root, _list6);
         return _root;
     });

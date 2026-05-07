@@ -1,12 +1,13 @@
-use super::super::types::{
-    MountInput, MountInputChild, MountedPatchSubtree, MountedPatchSubtreeType,
-    MountedSubtreeChild, MountedSubtreeState,
+use crate::runtime::Rue;
+use crate::runtime::types::compat_state::MountedCompatPatchKind;
+use crate::runtime::types::{
+    MountInput, MountInputChild, MountedPatchSubtree, MountedSubtreeChild,
+    MountedSubtreeState,
 };
-use super::super::Rue;
 use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
 
-pub(crate) fn mount_fragment<A: DomAdapter>(
+pub(super) fn mount_fragment<A: DomAdapter>(
     rue: &mut Rue<A>,
     input: &MountInput<A>,
 ) -> Option<MountedSubtreeState<A>>
@@ -39,7 +40,7 @@ where
                     let tn = adapter.create_text_node(text);
                     adapter.append_child(&mut frag, &tn);
                     mounted_children.push(MountedSubtreeChild::Subtree(MountedSubtreeState::Text(
-                        super::super::types::MountedTextSubtree {
+                        crate::runtime::types::MountedTextSubtree {
                             host: Some(tn),
                             key: None,
                             cleanup_bucket: None,
@@ -61,18 +62,14 @@ where
         Vec::new()
     };
 
-    Some(MountedSubtreeState::Patch(MountedPatchSubtree {
-        r#type: MountedPatchSubtreeType::Fragment,
-        props: input.props.clone(),
-        children: mounted_children,
-        el: Some(frag),
-        key: input.key.clone(),
+    Some(MountedSubtreeState::Patch(MountedPatchSubtree::new_compat(
+        MountedCompatPatchKind::Fragment,
+        input.props.clone(),
+        mounted_children,
+        Some(frag),
+        input.key.clone(),
         fragment_nodes,
-        mount_cleanup_bucket: input.mount_cleanup_bucket.clone(),
-        mount_effect_scope_id: input.mount_effect_scope_id,
-        component_before_unmount_hooks: Vec::new(),
-        component_unmounted_hooks: Vec::new(),
-        comp_subtree: None,
-        comp_inst_index: None,
-    }))
+        input.mount_cleanup_bucket.clone(),
+        input.mount_effect_scope_id,
+    )))
 }

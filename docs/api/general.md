@@ -82,116 +82,21 @@
 
 - **另请参阅** [`this.$nextTick()`](/api/component-instance#nexttick)
 
-## defineComponent() {#definecomponent} @todo
+## useComponent() {#usecomponent}
 
-用于定义具有类型推断的 Vue 组件的类型帮助函数。
-
-- **类型**
-
-  ```ts
-  // 选项语法
-  function defineComponent(component: ComponentOptions): ComponentConstructor
-
-  // 函数语法
-  function defineComponent(
-    setup: ComponentOptions['setup'],
-    extraOptions?: ComponentOptions,
-  ): () => any
-  ```
-
-  > 为便于阅读，类型已简化。
-
-- **详情**
-
-  第一个参数期望一个组件选项对象。返回值将是相同的选项对象，因为该函数本质上只是一个用于类型推断的运行时空操作。
-
-  注意，返回类型有点特殊：它将是一个构造函数类型，其实例类型是基于选项推断的组件实例类型。这用于在 TSX 中将返回类型用作标签时的类型推断。
-
-  你可以像这样从 `defineComponent()` 的返回类型中提取组件的实例类型（等同于其选项中 `this` 的类型）：
-
-  ```ts
-  const Foo = defineComponent(/* ... */)
-
-  type FooInstance = InstanceType<typeof Foo>
-  ```
-
-  ### 函数签名 {#function-signature}
-
-  `defineComponent()` 还有一个替代签名，用于与组合式 API 和[渲染函数或 JSX](/guide/extras/render-function.html) 一起使用。
-
-  不是传递选项对象，而是期望一个函数。此函数的工作方式与组合式 API [`setup()`](/api/composition-api-setup.html#composition-api-setup) 函数相同：它接收 props 和 setup 上下文。返回值应该是一个渲染函数——支持 `h()` 和 JSX：
-
-  ```js
-  import { ref, h } from '@rue-js/rue'
-
-  const Comp = defineComponent(
-    props => {
-      // 像使用 script setup 一样在这里使用组合式 API
-      const count = ref(0)
-
-      return () => {
-        // 渲染函数或 JSX
-        return h('div', count.value)
-      }
-    },
-    // 额外选项，例如声明 props 和 emits
-    {
-      props: {
-        /* ... */
-      },
-    },
-  )
-  ```
-
-  此签名的主要用例是与 TypeScript（特别是 TSX）一起使用，因为它支持泛型：
-
-  ```tsx
-  const Comp = defineComponent(
-    <T extends string | number>(props: { msg: T; list: T[] }) => {
-      // 像使用 script setup 一样在这里使用组合式 API
-      const count = ref(0)
-
-      return () => {
-        // 渲染函数或 JSX
-        return <div>{count.value}</div>
-      }
-    },
-    // 目前仍需要手动运行时 props 声明。
-    {
-      props: ['msg', 'list'],
-    },
-  )
-  ```
-
-  未来，我们计划提供一个 Babel 插件，自动推断并注入运行时 props（就像 SFC 中的 `defineProps` 一样），以便可以省略运行时 props 声明。
-
-  ### 关于 webpack Tree Shaking 的说明 {#note-on-webpack-treeshaking}
-
-  因为 `defineComponent()` 是一个函数调用，它可能会对某些构建工具（例如 webpack）产生副作用。这将阻止组件被 tree-shake，即使从未使用过该组件。
-
-  要告诉 webpack 此函数调用可以安全地进行 tree-shake，你可以在函数调用前添加 `/*#__PURE__*/` 注释标记：
-
-  ```js
-  export default /*#__PURE__*/ defineComponent(/* ... */)
-  ```
-
-  注意，如果你使用 Vite，则不需要这样做，因为 Rollup（Vite 使用的底层生产打包工具）足够智能，可以在没有手动注释的情况下确定 `defineComponent()` 实际上是无副作用的。
-
-- **另请参阅** [指南 - 使用 TypeScript 配合 Vue](/guide/typescript/overview#general-usage-notes)
-
-## defineAsyncComponent() {#defineasynccomponent} @todo
-
-定义一个仅在渲染时延迟加载的异步组件。参数可以是加载函数，也可以是用于更高级控制加载行为的选项对象。
+定义一个仅在渲染时延迟加载的异步组件。参数既可以是加载函数，也可以是包含 `loader` 的选项对象。
 
 - **类型**
 
   ```ts
-  function defineAsyncComponent(source: AsyncComponentLoader | AsyncComponentOptions): Component
+  function useComponent(loader: AsyncComponentLoader, options?: UseComponentOptions): Component
+  function useComponent(options: AsyncComponentOptions): Component
 
-  type AsyncComponentLoader = () => Promise<Component>
+  type AsyncComponentLoader = () => Promise<{ default: Component } | Component>
 
-  interface AsyncComponentOptions {
-    loader: AsyncComponentLoader
+  interface UseComponentOptions {
+    loading?: Component
+    error?: Component
     loadingComponent?: Component
     errorComponent?: Component
     delay?: number
@@ -199,6 +104,58 @@
     suspensible?: boolean
     onError?: (error: Error, retry: () => void, fail: () => void, attempts: number) => any
   }
+
+  interface AsyncComponentOptions extends UseComponentOptions {
+    loader: AsyncComponentLoader
+  }
+  ```
+
+- **详情**
+
+  `useComponent()` 返回一个包装组件。它只会在实际渲染时触发 `loader`，并接受两种成功返回值：
+
+  1. 组件本身
+  2. 形如 `{ default: Component }` 的 ES 模块对象
+
+  当前实现的行为如下：
+
+  - `loadingComponent` 只有在异步加载仍未完成时才会渲染。
+  - 旧写法中的 `loading` / `error` 仍然可用，分别对应 `loadingComponent` / `errorComponent`。
+  - 如果提供了 `loadingComponent` 但没有显式传入 `delay`，默认会等待 `200ms` 后再显示，避免极快请求导致的闪烁。
+  - 如果使用旧写法 `useComponent(loader, { loading })`，则默认立即显示 loading，不会套用 `200ms` 延迟。
+  - 如果没有提供 `loadingComponent`，加载期间默认不渲染任何占位内容。
+  - `timeout` 默认为 `Infinity`。超时后会进入错误分支，并向 `errorComponent` 传入错误对象。
+  - `onError` 会收到 `error`、`retry`、`fail` 和当前重试次数 `attempts`。当前实现要求在回调中显式调用 `retry()` 或 `fail()`；如果都不调用，则会按 `fail()` 处理。
+  - `suspensible` 默认为 `true`。当组件位于 `<Suspense>` 内部时，pending Promise 会登记到最近的 Suspense 边界；设置为 `false` 可退出该行为。
+
+- **示例**
+
+  ```tsx
+  import { useComponent } from '@rue-js/rue'
+
+  const AsyncUserCard = useComponent({
+    loader: () => import('./UserCard.tsx'),
+    loadingComponent: () => <p>Loading user card...</p>,
+    errorComponent: ({ error }) => <p>Load failed: {error.message}</p>,
+    timeout: 3000,
+    onError(error, retry, fail, attempts) {
+      if (/fetch|network/i.test(error.message) && attempts < 3) {
+        retry()
+        return
+      }
+      fail()
+    },
+  })
+  ```
+
+  ```tsx
+  import { useComponent } from '@rue-js/rue'
+
+  const AsyncUserCard = useComponent(() => import('./UserCard.tsx'), {
+    loading: () => <p>Loading user card...</p>,
+    error: ({ error }) => <p>Load failed: {error.message}</p>,
+    suspensible: false,
+  })
   ```
 
 - **另请参阅** [指南 - 异步组件](/guide/components/async)

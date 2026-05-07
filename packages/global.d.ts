@@ -40,6 +40,11 @@ declare module 'shiki' {
   export function codeToHtml(code: string, options?: any): string
 }
 
+declare module 'pikaday' {
+  const Pikaday: any
+  export default Pikaday
+}
+
 interface ImportMeta {
   env: any
 }

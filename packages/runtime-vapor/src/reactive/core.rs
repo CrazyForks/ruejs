@@ -154,6 +154,11 @@ pub fn create_detached_effect_scope() -> usize {
     create_effect_scope_with_parent(None)
 }
 
+#[wasm_bindgen(js_name = "__rueCreateDetachedEffectScope")]
+pub fn create_detached_effect_scope_wasm() -> usize {
+    create_detached_effect_scope()
+}
+
 /// 将 scope 压入当前执行上下文栈
 ///
 /// 用途：
@@ -172,6 +177,11 @@ pub fn push_effect_scope(id: usize) {
     }
 }
 
+#[wasm_bindgen(js_name = "__ruePushEffectScope")]
+pub fn push_effect_scope_wasm(id: usize) {
+    push_effect_scope(id);
+}
+
 /// 将当前执行上下文栈顶 scope 弹出
 ///
 /// 返回：
@@ -186,6 +196,13 @@ pub fn pop_effect_scope() -> Option<usize> {
         }
     }
     out
+}
+
+#[wasm_bindgen(js_name = "__ruePopEffectScope")]
+pub fn pop_effect_scope_wasm() -> JsValue {
+    pop_effect_scope()
+        .map(|scope_id| JsValue::from_f64(scope_id as f64))
+        .unwrap_or(JsValue::UNDEFINED)
 }
 
 /// 读取当前执行上下文的 scope（栈顶）
@@ -283,6 +300,11 @@ pub fn dispose_effect_scope(scope_id: usize) {
     }
 }
 
+#[wasm_bindgen(js_name = "__rueDisposeEffectScope")]
+pub fn dispose_effect_scope_wasm(scope_id: usize) {
+    dispose_effect_scope(scope_id);
+}
+
 /// 信号实体
 /// value: 当前值（JsValue）
 /// subs: 订阅该信号的副作用 id 集合
@@ -353,11 +375,7 @@ pub(crate) fn run_effect(id: usize) {
     // 导致外层渲染 effect 失去订阅（界面不再随信号变化重新渲染）。
     let prev_effect = CURRENT_EFFECT.with(|c| c.borrow().clone());
     CURRENT_EFFECT.with(|c| *c.borrow_mut() = Some(id));
-    let scope_id = EFFECTS.with(|m| {
-        m.borrow()
-            .get(&id)
-            .and_then(|e| e.scope_id)
-    });
+    let scope_id = EFFECTS.with(|m| m.borrow().get(&id).and_then(|e| e.scope_id));
     if let Some(sid) = scope_id {
         push_effect_scope(sid);
     }
@@ -537,13 +555,9 @@ pub(crate) fn schedule_effect_run(id: usize) {
     });
     // 是否已由自定义调度器处理
     let scheduler = EFFECTS.with(|m| {
-        m.borrow().get(&id).and_then(|effect| {
-            if effect.disposed {
-                None
-            } else {
-                effect.scheduler.clone()
-            }
-        })
+        m.borrow()
+            .get(&id)
+            .and_then(|effect| if effect.disposed { None } else { effect.scheduler.clone() })
     });
     let mut handled = false;
     if let Some(s) = scheduler {

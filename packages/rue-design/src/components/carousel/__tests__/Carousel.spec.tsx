@@ -1,104 +1,146 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h } from '@rue-js/rue'
-import { render } from '@rue-js/rue'
+import { h, render, setReactiveScheduling } from '@rue-js/rue'
 import { Carousel } from '@rue-js/design'
+import { click, mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+
+setReactiveScheduling('sync')
+
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active = (globalThis as any).__rue
+}
 
 afterEach(() => {
   document.body.innerHTML = ''
 })
 
 describe('Carousel', () => {
-  it('renders with base class', () => {
-    const c = document.createElement('div')
+  it('renders with base class', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+
     render(h(Carousel, null, 'hello'), c)
-    const el = c.querySelector('.carousel') as HTMLElement
-    expect(el).toBeTruthy()
-    expect(el.classList.contains('carousel')).toBe(true)
-    expect(el.textContent).toContain('hello')
+
+    await waitForContent(() => {
+      const el = c.querySelector('.carousel') as HTMLElement
+      expect(el).toBeTruthy()
+      expect(el.classList.contains('carousel')).toBe(true)
+      expect(el.textContent).toContain('hello')
+    })
   })
 
-  it('applies align and direction classes', () => {
-    const c = document.createElement('div')
-    render(h(Carousel, { align: 'center', direction: 'horizontal' }, 'x'), c)
-    let el = c.querySelector('.carousel') as HTMLElement
-    expect(el.classList.contains('carousel-center')).toBe(true)
-    expect(el.classList.contains('carousel-horizontal')).toBe(true)
-    render(h(Carousel, { align: 'end', direction: 'vertical' }, 'x'), c)
-    el = c.querySelector('.carousel') as HTMLElement
-    expect(el.classList.contains('carousel-end')).toBe(true)
-    expect(el.classList.contains('carousel-vertical')).toBe(true)
-  })
+  it('applies align, direction and custom classes, and renders Item subcomponent', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
 
-  it('appends custom className', () => {
-    const c = document.createElement('div')
-    render(h(Carousel, { className: 'rounded-box w-64' }, 'x'), c)
-    const el = c.querySelector('.carousel') as HTMLElement
-    expect(el.classList.contains('rounded-box')).toBe(true)
-    expect(el.classList.contains('w-64')).toBe(true)
-  })
-
-  it('renders Item subcomponent', () => {
-    const c = document.createElement('div')
     render(
       h(
         Carousel,
-        null,
+        { align: 'end', direction: 'vertical', className: 'rounded-box w-64' },
         h(Carousel.Item, null, h('img', { src: 'x', alt: 'y' })),
         h(Carousel.Item, null, h('img', { src: 'x2', alt: 'y2' })),
       ),
       c,
     )
-    const items = c.querySelectorAll('.carousel-item')
-    expect(items.length).toBe(2)
+
+    await waitForContent(() => {
+      const el = c.querySelector('.carousel') as HTMLElement
+      expect(el.classList.contains('carousel-end')).toBe(true)
+      expect(el.classList.contains('carousel-vertical')).toBe(true)
+      expect(el.classList.contains('rounded-box')).toBe(true)
+      expect(el.classList.contains('w-64')).toBe(true)
+      const items = c.querySelectorAll('.carousel-item')
+      expect(items.length).toBe(2)
+    })
   })
 
-  it('supports next/prev via updating activeIndex prop', () => {
-    const c = document.createElement('div')
+  it('supports initial activeIndex prop', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Carousel
+        items={[
+          { content: h('div', { className: 'h-24 w-full bg-base-200' }, '1') },
+          { content: h('div', { className: 'h-24 w-full bg-base-200' }, '2') },
+          { content: h('div', { className: 'h-24 w-full bg-base-200' }, '3') },
+        ]}
+        activeIndex={2}
+        dots
+        speed={0}
+      />,
+      c,
+    )
+
+    await waitForContent(() => {
+      const root = c.querySelector('.carousel') as HTMLElement
+      expect(root.getAttribute('data-rue-carousel-current')).toBe('2')
+      const activeDot = c.querySelector('[aria-current="true"]') as HTMLElement
+      expect(activeDot.getAttribute('aria-label')).toBe('Go to slide 3')
+    })
+  })
+
+  it('supports arrows and dots in uncontrolled mode', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+
     const spy = vi.fn()
-    const children = [
-      h(Carousel.Item, null, h('div', { id: 's1' }, '1')),
-      h(Carousel.Item, null, h('div', { id: 's2' }, '2')),
-      h(Carousel.Item, null, h('div', { id: 's3' }, '3')),
-      h(Carousel.Item, null, h('div', { id: 's4' }, '4')),
+    const items = [
+      { content: h('div', { className: 'h-24 w-full bg-base-200' }, '1') },
+      { content: h('div', { className: 'h-24 w-full bg-base-200' }, '2') },
+      { content: h('div', { className: 'h-24 w-full bg-base-200' }, '3') },
     ]
-    render(h(Carousel, { activeIndex: 0, onIndexChange: spy }, children), c)
-    render(h(Carousel, { activeIndex: 1, onIndexChange: spy }, children), c)
-    render(h(Carousel, { activeIndex: 2, onIndexChange: spy }, children), c)
-    render(h(Carousel, { activeIndex: 1, onIndexChange: spy }, children), c)
-    const calls = spy.mock.calls.map(args => args[0])
-    expect(calls).toEqual([1, 2, 1])
+
+    render(h(Carousel, { items, arrows: true, dots: true, speed: 0, onIndexChange: spy }, null), c)
+
+    await waitForContent(() => {
+      expect(c.querySelector('.carousel')).toBeTruthy()
+      expect(c.querySelectorAll('.carousel-item').length).toBe(3)
+      expect(c.querySelector('[aria-current="true"]')).toBeTruthy()
+    })
+
+    await click(c.querySelector('[aria-label="Next slide"]'))
+
+    await waitForContent(() => {
+      expect(spy).toHaveBeenCalledWith(1)
+      const activeDot = c.querySelector('[aria-current="true"]') as HTMLElement
+      expect(activeDot).toBeTruthy()
+      expect(activeDot.getAttribute('aria-label')).toBe('Go to slide 2')
+    })
   })
 
-  it('mimics doc next/prev circular navigation', () => {
-    const c = document.createElement('div')
-    const spy = vi.fn()
-    const children = [
-      h(Carousel.Item, null, h('div', { id: 'slide1' }, '1')),
-      h(Carousel.Item, null, h('div', { id: 'slide2' }, '2')),
-      h(Carousel.Item, null, h('div', { id: 'slide3' }, '3')),
-      h(Carousel.Item, null, h('div', { id: 'slide4' }, '4')),
-    ]
-    render(h(Carousel, { activeIndex: 0, onIndexChange: spy }, children), c)
-    render(h(Carousel, { activeIndex: 3, onIndexChange: spy }, children), c)
-    render(h(Carousel, { activeIndex: 0, onIndexChange: spy }, children), c)
-    render(h(Carousel, { activeIndex: 1, onIndexChange: spy }, children), c)
-    const calls = spy.mock.calls.map(args => args[0])
-    expect(calls).toEqual([3, 0, 1])
-  })
+  it('renders from items array and exposes ref methods', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
 
-  it('renders from items array', () => {
-    const c = document.createElement('div')
+    const carouselRef: { current?: any } = { current: undefined }
     const items = [
       { content: h('div', { id: 's1' }, '1') },
       { content: h('div', { id: 's2' }, '2'), className: 'w-full' },
       { content: h('img', { src: 'x', alt: 'y' }) },
     ]
-    render(h(Carousel, { items, align: 'center', direction: 'horizontal' }), c)
-    const wrapper = c.querySelector('.carousel') as HTMLElement
-    expect(wrapper.classList.contains('carousel-center')).toBe(true)
-    expect(wrapper.classList.contains('carousel-horizontal')).toBe(true)
-    const els = c.querySelectorAll('.carousel-item')
-    expect(els.length).toBe(3)
-    expect((els[1] as HTMLElement).classList.contains('w-full')).toBe(true)
+
+    render(
+      h(Carousel, { items, align: 'center', direction: 'horizontal', dots: true, speed: 0, apiRef: carouselRef }),
+      c,
+    )
+
+    await waitForContent(() => {
+      const wrapper = c.querySelector('.carousel') as HTMLElement
+      expect(wrapper.classList.contains('carousel-center')).toBe(true)
+      expect(wrapper.classList.contains('carousel-horizontal')).toBe(true)
+      const els = c.querySelectorAll('.carousel-item')
+      expect(els.length).toBe(3)
+      expect((els[1] as HTMLElement).classList.contains('w-full')).toBe(true)
+      expect(typeof carouselRef.current?.goTo).toBe('function')
+      expect(typeof carouselRef.current?.next).toBe('function')
+      expect(typeof carouselRef.current?.prev).toBe('function')
+    })
+
+    carouselRef.current.goTo(2, true)
+
+    await waitForContent(() => {
+      const activeDot = c.querySelector('[aria-current="true"]') as HTMLElement
+      expect(activeDot.getAttribute('aria-label')).toBe('Go to slide 3')
+    })
   })
 })

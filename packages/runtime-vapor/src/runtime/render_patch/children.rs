@@ -13,17 +13,11 @@ where
         &self,
         mounted: &MountedSubtreeState<A>,
     ) -> Option<A::Element> {
-        match mounted {
-            MountedSubtreeState::Vapor(vapor) if !vapor.fragment_nodes.is_empty() => {
-                vapor.fragment_nodes.first().cloned().or_else(|| vapor.host.clone())
-            }
-            MountedSubtreeState::Patch(node)
-                if matches!(
-                    node.r#type,
-                    super::super::types::MountedPatchSubtreeType::Fragment
-                ) => node.fragment_nodes.first().cloned().or_else(|| node.el.clone()),
-            _ => mounted.host_cloned(),
-        }
+        mounted
+            .fragment_nodes()
+            .first()
+            .cloned()
+            .or_else(|| mounted.host_cloned())
     }
 
     fn keyed_insert_text(
@@ -112,21 +106,8 @@ where
             self.patch(oldv, nc, parent);
             let mounted = oldv.clone();
             let mut node_for_move: Option<A::Element> = None;
-            let fragment_move = match &mounted {
-                MountedSubtreeState::Vapor(vapor) if !vapor.fragment_nodes.is_empty() => {
-                    Some((vapor.fragment_nodes.as_slice(), vapor.host.as_ref()))
-                }
-                MountedSubtreeState::Patch(node)
-                    if matches!(
-                        node.r#type,
-                        super::super::types::MountedPatchSubtreeType::Fragment
-                    ) =>
-                {
-                    Some((node.fragment_nodes.as_slice(), node.el.as_ref()))
-                }
-                _ => None,
-            };
-            if let Some((fragment_nodes, host_opt)) = fragment_move {
+            let fragment_nodes = mounted.fragment_nodes();
+            if !fragment_nodes.is_empty() {
                 if let Some(am) = self.get_dom_adapter_mut() {
                     for n in fragment_nodes.iter() {
                         match cursor {
@@ -141,7 +122,10 @@ where
                         }
                     }
                 }
-                node_for_move = fragment_nodes.first().cloned().or_else(|| host_opt.cloned());
+                node_for_move = fragment_nodes
+                    .first()
+                    .cloned()
+                    .or_else(|| mounted.host_cloned());
             }
 
             if node_for_move.is_none() {
@@ -180,21 +164,8 @@ where
     {
         if let Some(mounted) = self.mount_from_input(nc) {
             let first_dom_node = self.keyed_first_dom_node_for_mounted(&mounted);
-            let fragment_insert = match &mounted {
-                MountedSubtreeState::Vapor(vapor) if !vapor.fragment_nodes.is_empty() => {
-                    Some(vapor.fragment_nodes.as_slice())
-                }
-                MountedSubtreeState::Patch(node)
-                    if matches!(
-                        node.r#type,
-                        super::super::types::MountedPatchSubtreeType::Fragment
-                    ) =>
-                {
-                    Some(node.fragment_nodes.as_slice())
-                }
-                _ => None,
-            };
-            if let Some(fragment_nodes) = fragment_insert {
+            let fragment_nodes = mounted.fragment_nodes();
+            if !fragment_nodes.is_empty() {
                 if let Some(am) = self.get_dom_adapter_mut() {
                     for n in fragment_nodes.iter() {
                         match cursor {
@@ -274,11 +245,7 @@ where
                 } else {
                     false
                 };
-                if use_anchor {
-                    Some(anchor)
-                } else {
-                    None
-                }
+                if use_anchor { Some(anchor) } else { None }
             }
             None => None,
         };
@@ -344,8 +311,10 @@ where
                             if oldv.key().is_none() {
                                 reused_old_indexes.insert(i as usize);
                                 self.patch(oldv, nc, parent);
-                                cursor = self.keyed_first_dom_node_for_mounted(oldv).or(cursor.clone());
-                                mounted_children_rev.push(MountedSubtreeChild::Subtree(oldv.clone()));
+                                cursor =
+                                    self.keyed_first_dom_node_for_mounted(oldv).or(cursor.clone());
+                                mounted_children_rev
+                                    .push(MountedSubtreeChild::Subtree(oldv.clone()));
                                 i -= 1;
                                 continue;
                             }

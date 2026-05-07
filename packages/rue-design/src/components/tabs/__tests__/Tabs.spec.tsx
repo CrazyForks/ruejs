@@ -1,0 +1,269 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { h } from '@rue-js/rue'
+import { render, setReactiveScheduling } from '@rue-js/rue'
+import { Tabs } from '@rue-js/design'
+import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+
+setReactiveScheduling('sync')
+
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active = (globalThis as any).__rue
+}
+
+const findTabByLabel = (root: ParentNode, label: string) => {
+  return (
+    Array.from(root.querySelectorAll('button[role="tab"]')).find(button =>
+      button.textContent?.includes(label),
+    ) ?? null
+  )
+}
+
+const findPanelByText = (root: ParentNode, text: string) => {
+  return (
+    Array.from(root.querySelectorAll('[role="tabpanel"]')).find(panel =>
+      panel.textContent?.includes(text),
+    ) ?? null
+  )
+}
+
+afterEach(() => {
+  document.body.innerHTML = ''
+})
+
+describe('Tabs', () => {
+  it('renders controlled tabs with style and active panel', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      h(Tabs, {
+        style: 'lift',
+        activeKey: 'metrics',
+        items: [
+          { key: 'overview', label: 'Overview', children: 'Overview panel' },
+          { key: 'metrics', label: 'Metrics', children: 'Metrics panel' },
+        ],
+      }),
+      c,
+    )
+
+    await waitForContent(() => {
+      const tablist = c.querySelector('[role="tablist"]') as HTMLElement
+      expect(tablist.classList.contains('tabs')).toBe(true)
+      expect(tablist.classList.contains('tabs-lift')).toBe(true)
+
+      const activeTab = findTabByLabel(c, 'Metrics') as HTMLElement
+      expect(activeTab.getAttribute('aria-selected')).toBe('true')
+
+      const activePanel = findPanelByText(c, 'Metrics panel') as HTMLElement
+      expect(activePanel.classList.contains('hidden')).toBe(false)
+      expect(activePanel.getAttribute('aria-hidden')).toBe('false')
+      expect(activePanel.textContent).toContain('Metrics panel')
+    })
+  })
+
+  it('supports defaultActiveKey and switches panel in uncontrolled mode', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+    const spy = vi.fn()
+
+    render(
+      h(Tabs, {
+        defaultActiveKey: 'guide',
+        onChange: spy,
+        items: [
+          { key: 'guide', label: 'Guide', children: 'Guide panel' },
+          { key: 'api', label: 'API', children: 'API panel' },
+        ],
+      }),
+      c,
+    )
+
+    await waitForContent(() => {
+      expect(findTabByLabel(c, 'Guide')).not.toBeNull()
+      expect(findPanelByText(c, 'Guide panel')).not.toBeNull()
+    })
+
+    const apiTab = findTabByLabel(c, 'API') as HTMLButtonElement
+    apiTab.click()
+
+    await waitForContent(() => {
+      const activeApiTab = findTabByLabel(c, 'API') as HTMLButtonElement
+      const apiPanel = findPanelByText(c, 'API panel') as HTMLElement
+      const guidePanel = findPanelByText(c, 'Guide panel') as HTMLElement
+
+      expect(activeApiTab.getAttribute('aria-selected')).toBe('true')
+      expect(apiPanel.classList.contains('hidden')).toBe(false)
+      expect(apiPanel.getAttribute('aria-hidden')).toBe('false')
+      expect(guidePanel.classList.contains('hidden')).toBe(true)
+      expect(guidePanel.getAttribute('aria-hidden')).toBe('true')
+      expect(spy).toHaveBeenCalledWith('api')
+    })
+  })
+
+  it('renders tabBarExtraContent on both sides', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      h(Tabs, {
+        items: [{ key: 'overview', label: 'Overview' }],
+        tabBarExtraContent: {
+          left: h('span', { id: 'tabs-left-extra' }, 'Left'),
+          right: h('span', { id: 'tabs-right-extra' }, 'Right'),
+        },
+      }),
+      c,
+    )
+
+    await waitForContent(() => {
+      expect((c.querySelector('#tabs-left-extra') as HTMLElement).textContent).toBe('Left')
+      expect((c.querySelector('#tabs-right-extra') as HTMLElement).textContent).toBe('Right')
+    })
+  })
+
+  it('supports editable-card add and remove actions', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+    const spy = vi.fn()
+
+    render(
+      h(Tabs, {
+        type: 'editable-card',
+        onEdit: spy,
+        items: [
+          { key: 'todo', label: 'Todo' },
+          { key: 'done', label: 'Done', closable: false },
+        ],
+      }),
+      c,
+    )
+
+    await waitForContent(() => {
+      expect(c.querySelector('button[aria-label="新增标签"]')).not.toBeNull()
+    })
+
+    const addButton = c.querySelector('button[aria-label="新增标签"]') as HTMLButtonElement
+    addButton.click()
+
+    const removeTrigger = c.querySelector('[aria-label="移除 todo"]') as HTMLElement
+    removeTrigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(spy).toHaveBeenCalledTimes(2)
+    expect(spy.mock.calls[0][1]).toBe('add')
+    expect(spy.mock.calls[1]).toEqual(['todo', 'remove'])
+    expect(c.querySelector('[aria-label="移除 done"]')).toBeNull()
+  })
+
+  it('unmounts inactive panels when destroyOnHidden is enabled', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      h(Tabs, {
+        defaultActiveKey: 'overview',
+        destroyOnHidden: true,
+        items: [
+          { key: 'overview', label: 'Overview', children: 'Overview panel' },
+          { key: 'metrics', label: 'Metrics', children: 'Metrics panel' },
+        ],
+      }),
+      c,
+    )
+
+    await waitForContent(() => {
+      expect(findPanelByText(c, 'Overview panel')).not.toBeNull()
+      expect(findPanelByText(c, 'Metrics panel')).toBeNull()
+    })
+
+    const metricsTab = findTabByLabel(c, 'Metrics') as HTMLButtonElement
+    metricsTab.click()
+
+    await waitForContent(() => {
+      expect(findPanelByText(c, 'Overview panel')).toBeNull()
+      expect((findPanelByText(c, 'Metrics panel') as HTMLElement)?.textContent).toContain(
+        'Metrics panel',
+      )
+      expect(c.querySelectorAll('[role="tabpanel"]').length).toBe(1)
+    })
+  })
+
+  it('restores complex panel children after switching back with destroyOnHidden', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      h(Tabs, {
+        defaultActiveKey: 'overview',
+        destroyOnHidden: true,
+        items: [
+          {
+            key: 'overview',
+            label: 'Overview',
+            children: h(
+              'div',
+              { className: 'space-y-2' },
+              h('div', null, 'Velocity'),
+              h('div', null, 'Overview body'),
+            ),
+          },
+          {
+            key: 'activity',
+            label: 'Activity',
+            children: h(
+              'div',
+              { className: 'space-y-2' },
+              h('div', null, 'Activity title'),
+              h('div', null, 'Activity body'),
+            ),
+          },
+        ],
+      }),
+      c,
+    )
+
+    await waitForContent(() => {
+      expect(findPanelByText(c, 'Velocity')).not.toBeNull()
+      expect(findPanelByText(c, 'Activity title')).toBeNull()
+    })
+
+    ;(findTabByLabel(c, 'Activity') as HTMLButtonElement).click()
+
+    await waitForContent(() => {
+      expect(findPanelByText(c, 'Velocity')).toBeNull()
+      expect(findPanelByText(c, 'Activity title')).not.toBeNull()
+    })
+
+    ;(findTabByLabel(c, 'Overview') as HTMLButtonElement).click()
+
+    await waitForContent(() => {
+      const overviewPanel = findPanelByText(c, 'Velocity') as HTMLElement | null
+      expect(overviewPanel).not.toBeNull()
+      expect(overviewPanel?.textContent).toContain('Overview body')
+      expect(findPanelByText(c, 'Activity title')).toBeNull()
+    })
+  })
+
+  it('suppresses default border underline when custom indicator is rendered', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      h(Tabs, {
+        type: 'line',
+        activeKey: 'metrics',
+        indicator: { align: 'center', size: 24 },
+        items: [
+          { key: 'overview', label: 'Overview' },
+          { key: 'metrics', label: 'Metrics' },
+        ],
+      }),
+      c,
+    )
+
+    await waitForContent(() => {
+      const activeTab = findTabByLabel(c, 'Metrics') as HTMLElement
+      expect(activeTab.classList.contains('rue-tabs-indicator-active')).toBe(true)
+    })
+  })
+})

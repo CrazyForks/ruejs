@@ -36,7 +36,6 @@ const presets = [
   {
     name: 'createApp (CAPI only)',
     imports: ['createApp'],
-    replace: { __RUE_OPTIONS_API__: 'false' },
   },
   { name: 'createApp', imports: ['createApp'] },
   { name: 'useCustomElement', imports: ['useCustomElement'] },
@@ -104,9 +103,6 @@ async function generateBundle(preset) {
       nodeResolve(),
       replace({
         'process.env.NODE_ENV': '"production"',
-        __RUE_PROD_DEVTOOLS__: 'false',
-        __RUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
-        __RUE_OPTIONS_API__: 'true',
         preventAssignment: true,
         ...preset.replace,
       }),

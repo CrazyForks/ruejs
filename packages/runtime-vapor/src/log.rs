@@ -169,11 +169,8 @@ fn should_log(level: u8, msg: &str) -> bool {
         return false;
     }
     let includes = LOG_INCLUDE.with(|f| f.borrow().clone());
-    let include_match = if includes.is_empty() {
-        false
-    } else {
-        includes.iter().any(|s| msg.contains(s))
-    };
+    let include_match =
+        if includes.is_empty() { false } else { includes.iter().any(|s| msg.contains(s)) };
     if !includes.is_empty() {
         if !include_match {
             return false;

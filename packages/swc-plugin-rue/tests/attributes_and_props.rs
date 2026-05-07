@@ -34,7 +34,7 @@ export default AttributesAndProps;
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$setStyle, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$setStyle, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const Badge: FC<{
@@ -78,11 +78,16 @@ const AttributesAndProps: FC = ()=>vapor(()=>{
         _$appendChild(_el3, _$createTextNode("内联样式对象"));
         const _list2 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list2);
-        const __slot3 = <Badge label="默认"/>;
+        const __slot3 = _$createComponent(Badge, {
+            label: "默认"
+        });
         renderAnchor(__slot3, _root, _list2);
         const _list4 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list4);
-        const __slot5 = <Badge label="自定义色" color="#cde"/>;
+        const __slot5 = _$createComponent(Badge, {
+            label: "自定义色",
+            color: "#cde"
+        });
         renderAnchor(__slot5, _root, _list4);
         const _el4 = _$createElement("a");
         _$appendChild(_root, _el4);
@@ -105,4 +110,26 @@ export default AttributesAndProps;
         utils::normalize(&utils::strip_marker(&out)),
         utils::normalize(&utils::strip_marker(expected_fragment))
     );
+}
+
+#[test]
+fn quotes_hyphenated_component_prop_names() {
+    let src = r##"
+import { type FC } from '@rue-js/rue';
+
+const TooltipHost: FC<{ [key: string]: unknown }> = (props) => <div>{props.children}</div>;
+
+const Demo: FC = () => <TooltipHost data-tip="Home" aria-label="导航">Home</TooltipHost>;
+
+export default Demo;
+"##;
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply(program);
+    let out = utils::emit(program, cm);
+
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"_$createComponent(TooltipHost, { "data-tip": "Home", "aria-label": "导航", children: "Home" })"#,
+    )));
 }

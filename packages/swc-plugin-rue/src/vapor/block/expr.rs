@@ -4,6 +4,7 @@
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 // SWC ECMAScript AST 节点类型集合（Expr/CondExpr/BinExpr/JSXElement 等）
 use swc_core::ecma::ast::*;
+use swc_core::ecma::visit::VisitMutWith;
 
 use crate::elements::build_element;
 use crate::emit::*;
@@ -43,6 +44,9 @@ fn jsx_element_to_slot_value_expr(this: &mut VaporTransform, jsx_el: &JSXElement
         vec![const_decl(child_root.clone(), call_ident("_$createDocumentFragment", vec![]))];
     // 将子 JSX 元素构建到 child_root 下面
     build_element(this, jsx_el, &child_root, &mut child_body);
+    if this.is_once_context() {
+        crate::vapor::flatten_once_watch_effects(&mut child_body);
+    }
     // 返回统一的可挂载槽值
     child_body.push(return_root(child_root.clone()));
     // vapor 包裹以形成可执行块体
@@ -59,6 +63,9 @@ fn jsx_fragment_to_slot_value_expr(this: &mut VaporTransform, frag: &JSXFragment
         &frag.children,
         &mut child_body,
     );
+    if this.is_once_context() {
+        crate::vapor::flatten_once_watch_effects(&mut child_body);
+    }
     child_body.push(return_root(child_root.clone()));
     make_vapor_slot_expr(child_body)
 }
@@ -69,6 +76,239 @@ fn jsxish_to_slot_value_expr(this: &mut VaporTransform, expr: &Expr) -> Option<E
         Expr::JSXFragment(frag) => Some(jsx_fragment_to_slot_value_expr(this, frag)),
         _ => None,
     }
+}
+
+fn call_callee_ident_name(call: &CallExpr) -> Option<&str> {
+    match &call.callee {
+        Callee::Expr(expr) => match unwrap_expr(expr.as_ref()) {
+            Expr::Ident(id) => Some(id.sym.as_ref()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn arrow_expr_body_expr(arrow: &ArrowExpr) -> Option<&Expr> {
+    match arrow.body.as_ref() {
+        BlockStmtOrExpr::Expr(expr) => Some(unwrap_expr(expr.as_ref())),
+        _ => None,
+    }
+}
+
+fn stmt_returns_jsx_renderable(stmt: &Stmt) -> bool {
+    match stmt {
+        Stmt::Return(ret) => {
+            ret.arg.as_ref().map(|expr| expr_returns_jsx_renderable(expr.as_ref())).unwrap_or(false)
+        }
+        Stmt::Block(block) => block_returns_jsx_renderable(block),
+        Stmt::If(if_stmt) => {
+            stmt_returns_jsx_renderable(if_stmt.cons.as_ref())
+                || if_stmt
+                    .alt
+                    .as_ref()
+                    .map(|alt| stmt_returns_jsx_renderable(alt.as_ref()))
+                    .unwrap_or(false)
+        }
+        Stmt::Switch(switch_stmt) => {
+            switch_stmt.cases.iter().any(|case| case.cons.iter().any(stmt_returns_jsx_renderable))
+        }
+        Stmt::Try(try_stmt) => {
+            block_returns_jsx_renderable(&try_stmt.block)
+                || try_stmt
+                    .handler
+                    .as_ref()
+                    .map(|handler| block_returns_jsx_renderable(&handler.body))
+                    .unwrap_or(false)
+                || try_stmt.finalizer.as_ref().map(block_returns_jsx_renderable).unwrap_or(false)
+        }
+        Stmt::While(while_stmt) => stmt_returns_jsx_renderable(while_stmt.body.as_ref()),
+        Stmt::DoWhile(do_while_stmt) => stmt_returns_jsx_renderable(do_while_stmt.body.as_ref()),
+        Stmt::For(for_stmt) => stmt_returns_jsx_renderable(for_stmt.body.as_ref()),
+        Stmt::ForIn(for_in_stmt) => stmt_returns_jsx_renderable(for_in_stmt.body.as_ref()),
+        Stmt::ForOf(for_of_stmt) => stmt_returns_jsx_renderable(for_of_stmt.body.as_ref()),
+        Stmt::Labeled(labeled_stmt) => stmt_returns_jsx_renderable(labeled_stmt.body.as_ref()),
+        _ => false,
+    }
+}
+
+fn block_returns_jsx_renderable(block: &BlockStmt) -> bool {
+    block.stmts.iter().any(stmt_returns_jsx_renderable)
+}
+
+fn expr_returns_jsx_renderable(expr: &Expr) -> bool {
+    match unwrap_expr(expr) {
+        Expr::JSXElement(_) | Expr::JSXFragment(_) => true,
+        Expr::Cond(CondExpr { cons, alt, .. }) => {
+            expr_returns_jsx_renderable(cons.as_ref()) || expr_returns_jsx_renderable(alt.as_ref())
+        }
+        Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, right, .. }) => {
+            expr_returns_jsx_renderable(right.as_ref())
+        }
+        Expr::Call(call) => call_returns_jsx_renderable(call),
+        _ => false,
+    }
+}
+
+fn arrow_returns_jsx_renderable(expr: &Expr) -> bool {
+    match unwrap_expr(expr) {
+        Expr::Arrow(arrow) => match arrow.body.as_ref() {
+            BlockStmtOrExpr::Expr(expr) => expr_returns_jsx_renderable(expr.as_ref()),
+            BlockStmtOrExpr::BlockStmt(block) => block_returns_jsx_renderable(block),
+        },
+        Expr::Fn(fn_expr) => {
+            fn_expr.function.body.as_ref().map(block_returns_jsx_renderable).unwrap_or(false)
+        }
+        _ => false,
+    }
+}
+
+fn map_call_returns_jsx_renderable(call: &CallExpr) -> bool {
+    let Callee::Expr(callee) = &call.callee else {
+        return false;
+    };
+
+    let Expr::Member(MemberExpr { prop: MemberProp::Ident(prop_ident), .. }) =
+        unwrap_expr(callee.as_ref())
+    else {
+        return false;
+    };
+
+    prop_ident.sym.as_ref() == "map"
+        && call
+            .args
+            .first()
+            .map(|arg| arrow_returns_jsx_renderable(arg.expr.as_ref()))
+            .unwrap_or(false)
+}
+
+fn use_memo_call_returns_jsx_renderable(call: &CallExpr) -> bool {
+    call_callee_ident_name(call) == Some("useMemo")
+        && call
+            .args
+            .first()
+            .map(|arg| arrow_returns_jsx_renderable(arg.expr.as_ref()))
+            .unwrap_or(false)
+}
+
+fn hook_wrapped_call_returns_jsx_renderable(call: &CallExpr) -> bool {
+    call_callee_ident_name(call) == Some("_$vaporWithHookId")
+        && call
+            .args
+            .get(1)
+            .map(|arg| arrow_returns_jsx_renderable(arg.expr.as_ref()))
+            .unwrap_or(false)
+}
+
+fn call_returns_jsx_renderable(call: &CallExpr) -> bool {
+    use_memo_call_returns_jsx_renderable(call)
+        || hook_wrapped_call_returns_jsx_renderable(call)
+        || map_call_returns_jsx_renderable(call)
+}
+
+fn use_memo_call_has_empty_deps(call: &CallExpr) -> bool {
+    call_callee_ident_name(call) == Some("useMemo")
+        && call
+            .args
+            .get(1)
+            .map(|arg| matches!(unwrap_expr(arg.expr.as_ref()), Expr::Array(arr) if arr.elems.is_empty()))
+            .unwrap_or(false)
+}
+
+fn arrow_contains_empty_deps_memo(expr: &Expr) -> bool {
+    match unwrap_expr(expr) {
+        Expr::Arrow(arrow) => {
+            arrow_expr_body_expr(arrow).map(is_empty_deps_memoized_jsx_expr).unwrap_or(false)
+        }
+        _ => false,
+    }
+}
+
+fn hook_wrapped_call_has_empty_memo_deps(call: &CallExpr) -> bool {
+    call_callee_ident_name(call) == Some("_$vaporWithHookId")
+        && call
+            .args
+            .get(1)
+            .map(|arg| arrow_contains_empty_deps_memo(arg.expr.as_ref()))
+            .unwrap_or(false)
+}
+
+pub(crate) fn is_empty_deps_memoized_jsx_expr(expr: &Expr) -> bool {
+    match unwrap_expr(expr) {
+        Expr::Call(call) => {
+            use_memo_call_has_empty_deps(call)
+                || hook_wrapped_call_has_empty_memo_deps(call)
+                || call.args.iter().any(|arg| is_empty_deps_memoized_jsx_expr(arg.expr.as_ref()))
+        }
+        Expr::Arrow(arrow) => {
+            arrow_expr_body_expr(arrow).map(is_empty_deps_memoized_jsx_expr).unwrap_or(false)
+        }
+        Expr::Cond(CondExpr { cons, alt, .. }) => {
+            is_empty_deps_memoized_jsx_expr(cons.as_ref())
+                || is_empty_deps_memoized_jsx_expr(alt.as_ref())
+        }
+        Expr::Bin(BinExpr { left, right, .. }) => {
+            is_empty_deps_memoized_jsx_expr(left.as_ref())
+                || is_empty_deps_memoized_jsx_expr(right.as_ref())
+        }
+        _ => false,
+    }
+}
+
+fn rewrite_arrow_expr_body_for_slot(this: &mut VaporTransform, expr: &Expr) -> Option<Expr> {
+    match unwrap_expr(expr) {
+        Expr::Arrow(arrow) => {
+            let body_expr = arrow_expr_body_expr(arrow)?;
+            if !expr_returns_jsx_renderable(body_expr) {
+                return None;
+            }
+
+            let mut next = arrow.clone();
+            next.body = Box::new(BlockStmtOrExpr::Expr(Box::new(build_slot_expr(this, body_expr))));
+            Some(Expr::Arrow(next))
+        }
+        _ => None,
+    }
+}
+
+fn rewrite_use_memo_call_for_slot(this: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
+    if call_callee_ident_name(call) != Some("useMemo") {
+        return None;
+    }
+
+    let mut next = call.clone();
+    let first = next.args.first_mut()?;
+    let rewritten =
+        this.with_once_context(|this| rewrite_arrow_expr_body_for_slot(this, first.expr.as_ref()))?;
+    first.expr = Box::new(rewritten);
+    Some(Expr::Call(next))
+}
+
+fn rewrite_hook_wrapped_call_for_slot(this: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
+    if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+        return None;
+    }
+
+    let mut next = call.clone();
+    let runner = next.args.get_mut(1)?;
+    let rewritten = rewrite_arrow_expr_body_for_slot(this, runner.expr.as_ref())?;
+    runner.expr = Box::new(rewritten);
+    Some(Expr::Call(next))
+}
+
+fn rewrite_map_call_for_slot(this: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
+    if !map_call_returns_jsx_renderable(call) {
+        return None;
+    }
+
+    let mut next = call.clone();
+    next.visit_mut_children_with(this);
+    Some(Expr::Call(next))
+}
+
+fn rewrite_call_for_slot(this: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
+    rewrite_use_memo_call_for_slot(this, call)
+        .or_else(|| rewrite_hook_wrapped_call_for_slot(this, call))
+        .or_else(|| rewrite_map_call_for_slot(this, call))
 }
 
 pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
@@ -82,6 +322,8 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
             let new_cons: Expr =
                 if let Some(slot_expr) = jsxish_to_slot_value_expr(this, cons_inner) {
                     slot_expr
+                } else if expr_returns_jsx_renderable(cons_inner) {
+                    build_slot_expr(this, cons_inner)
                 } else {
                     match cons_inner {
                         Expr::Cond(_)
@@ -102,6 +344,8 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
             let new_alt: Expr = if let Some(slot_expr) = jsxish_to_slot_value_expr(this, alt_inner)
             {
                 slot_expr
+            } else if expr_returns_jsx_renderable(alt_inner) {
+                build_slot_expr(this, alt_inner)
             } else {
                 match alt_inner {
                     Expr::Cond(_)
@@ -128,6 +372,8 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
             let new_cons: Expr =
                 if let Some(slot_expr) = jsxish_to_slot_value_expr(this, right_inner) {
                     slot_expr
+                } else if expr_returns_jsx_renderable(right_inner) {
+                    build_slot_expr(this, right_inner)
                 } else {
                     *right.clone()
                 };
@@ -151,6 +397,8 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
             let new_right: Expr =
                 if let Some(slot_expr) = jsxish_to_slot_value_expr(this, right_inner) {
                     slot_expr
+                } else if expr_returns_jsx_renderable(right_inner) {
+                    build_slot_expr(this, right_inner)
                 } else {
                     match right_inner {
                         Expr::Cond(_)
@@ -167,6 +415,9 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
                 left: (*left).clone(),
                 right: Box::new(new_right),
             })
+        }
+        Expr::Call(call) if call_returns_jsx_renderable(call) => {
+            rewrite_call_for_slot(this, call).unwrap_or_else(|| inner.clone())
         }
         Expr::Member(_) | Expr::Ident(_) => {
             // 简单成员/标识符：包裹括号，确保后续拼接插入稳定

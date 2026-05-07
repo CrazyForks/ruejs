@@ -4,7 +4,101 @@ import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import { Badge, Menu, Tabs } from '@rue-js/design'
 
+interface ApiRow {
+  prop: string
+  description: string
+  type: string
+  defaultValue: string
+}
+
+const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
+  return (
+    <div className="not-prose overflow-x-auto rounded-box border border-base-300 bg-base-100">
+      <table className="table table-zebra">
+        <thead>
+          <tr>
+            <th>属性</th>
+            <th>说明</th>
+            <th>类型</th>
+            <th>默认值</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => (
+            <tr key={row.prop}>
+              <td>
+                <code>{row.prop}</code>
+              </td>
+              <td>{row.description}</td>
+              <td>
+                <code>{row.type}</code>
+              </td>
+              <td>
+                <code>{row.defaultValue}</code>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+const menuItemLinkApiRows: ApiRow[] = [
+  {
+    prop: 'as',
+    description: '指定交互节点类型；传入 to / href 时通常保持默认 a，纯动作项可改成 button 或 span。',
+    type: "'a' | 'button' | 'span'",
+    defaultValue: "'a'",
+  },
+  {
+    prop: 'href',
+    description: '外链或普通锚点地址；存在 href 且未传 to 时渲染原生 a 标签。',
+    type: 'string',
+    defaultValue: '-',
+  },
+  {
+    prop: 'to',
+    description: 'Rue Router 路由地址；传入后渲染 RouterLink，适合站内导航菜单。',
+    type: 'string',
+    defaultValue: '-',
+  },
+  {
+    prop: 'target / rel',
+    description: '外链透传属性；target="_blank" 且未传 rel 时，会自动补上安全的 rel。',
+    type: 'string',
+    defaultValue: '-',
+  },
+  {
+    prop: 'title',
+    description: '透传到交互节点的 title，适合长文案或补充说明。',
+    type: 'string',
+    defaultValue: '-',
+  },
+  {
+    prop: 'disabled',
+    description: '禁用点击与导航；会移除 href / to 的实际跳转并输出 aria-disabled。',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
+  {
+    prop: 'onClick',
+    description: '点击回调；可与 href / to 共用，也可配合 preventDefault 自定义拦截逻辑。',
+    type: '(event: MouseEvent) => void',
+    defaultValue: '-',
+  },
+  {
+    prop: 'icon / extra',
+    description: '菜单项前置图标与右侧补充内容，适合链接导航里展示状态、快捷键或徽标。',
+    type: 'any',
+    defaultValue: '-',
+  },
+]
+
 const MenuDemo: FC = () => {
+  const tRecommended = ref<'preview' | 'code'>('preview')
+  const tMultipleEnhanced = ref<'preview' | 'code'>('preview')
+  const tCompoundEnhanced = ref<'preview' | 'code'>('preview')
   const tBasic = ref<'preview' | 'code'>('preview')
   const tResponsive = ref<'preview' | 'code'>('preview')
   const tIconOnly = ref<'preview' | 'code'>('preview')
@@ -30,6 +124,21 @@ const MenuDemo: FC = () => {
   const tArray = ref<'preview' | 'code'>('preview')
   const tArrayInternal = ref<'preview' | 'code'>('preview')
   const tNavigation = ref<'preview' | 'code'>('preview')
+  const recommendedSelectedKeys = ref<string[]>(['overview'])
+  const recommendedOpenKeys = ref<string[]>(['workspace'])
+  const multipleSelectedKeys = ref<string[]>(['mentions', 'archived'])
+  const compoundSelectedKeys = ref<string[]>(['profile'])
+  const compoundOpenKeys = ref<string[]>(['settings'])
+
+  const toggleDropdownByClass = (event: MouseEvent) => {
+    const toggle = event.currentTarget as HTMLElement | null
+    const dropdown = toggle?.nextElementSibling as HTMLElement | null
+    if (!toggle || !dropdown) return
+    const nextOpen = !toggle.classList.contains('menu-dropdown-show')
+    toggle.classList.toggle('menu-dropdown-show', nextOpen)
+    dropdown.classList.toggle('menu-dropdown-show', nextOpen)
+    toggle.setAttribute('aria-expanded', nextOpen ? 'true' : 'false')
+  }
 
   const menuData = [
     {
@@ -115,15 +224,349 @@ const MenuDemo: FC = () => {
     },
   ] as any
 
+  const recommendedItems = [
+    {
+      type: 'group',
+      label: 'Console',
+      children: [
+        {
+          key: 'overview',
+          label: 'Overview',
+          icon: <span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />,
+          extra: (
+            <Badge size="xs" variant="info">
+              Live
+            </Badge>
+          ),
+        },
+        {
+          type: 'submenu',
+          key: 'workspace',
+          label: 'Workspace',
+          icon: <span className="inline-flex h-2.5 w-2.5 rounded-full bg-secondary" />,
+          children: [
+            { key: 'projects', label: 'Projects' },
+            { key: 'deployments', label: 'Deployments' },
+            {
+              key: 'activity',
+              label: 'Activity Feed',
+              extra: (
+                <Badge size="xs" variant="warning">
+                  12
+                </Badge>
+              ),
+            },
+          ],
+        },
+      ],
+    },
+    { type: 'divider' },
+    {
+      type: 'group',
+      label: 'Team',
+      children: [
+        {
+          key: 'billing',
+          label: 'Billing',
+          extra: 'Cmd+B',
+        },
+        {
+          key: 'members',
+          label: 'Members',
+          extra: (
+            <Badge size="xs" variant="success">
+              8
+            </Badge>
+          ),
+        },
+        {
+          key: 'danger-zone',
+          label: 'Danger Zone',
+          danger: true,
+        },
+      ],
+    },
+  ] as any
+
+  const multipleItems = [
+    {
+      type: 'group',
+      label: 'Inbox',
+      children: [
+        {
+          key: 'mentions',
+          label: 'Mentions',
+          extra: (
+            <Badge size="xs" variant="error">
+              3
+            </Badge>
+          ),
+        },
+        {
+          key: 'reviews',
+          label: 'Code Reviews',
+          extra: (
+            <Badge size="xs" variant="warning">
+              5
+            </Badge>
+          ),
+        },
+      ],
+    },
+    { type: 'divider', dashed: true },
+    {
+      type: 'group',
+      label: 'Archive',
+      children: [
+        { key: 'archived', label: 'Archived Threads' },
+        { key: 'muted', label: 'Muted Channels', disabled: true },
+      ],
+    },
+  ] as any
+
   return (
     <SidebarPlayground>
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Menu 菜单</h1>
-        <p className="text-sm mt-3 mb-3">Menu 用于垂直或水平展示导航链接。</p>
+        <p className="text-sm mt-3 mb-3">
+          Menu 用于垂直或水平展示导航链接。Rue 现在同时支持经典静态结构，以及更接近成熟组件库的
+          `items / selectedKeys / openKeys / group / divider / extra` 增强 API。
+        </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/menu/" target="_blank">
             查看 Menu 静态样式
           </a>
+        </div>
+        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
+          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
+            # 推荐：items 数据驱动导航
+          </h2>
+          <p className="mb-3 text-sm text-base-content/70">
+            适合后台导航、设置菜单、侧边栏这类需要受控选中态和展开态的场景。
+          </p>
+          <Tabs
+            style="box"
+            items={[
+              { key: 'preview', label: '预览' },
+              { key: 'code', label: 'JSX代码' },
+            ]}
+            activeKey={tRecommended.value}
+            onChange={k => (tRecommended.value = k as 'preview' | 'code')}
+            className="mb-3"
+          />
+          {tRecommended.value === 'preview' ? (
+            <Menu
+              mode="inline"
+              className="bg-base-200 rounded-box w-80"
+              items={recommendedItems}
+              selectedKeys={recommendedSelectedKeys.value}
+              openKeys={recommendedOpenKeys.value}
+              onSelect={info => (recommendedSelectedKeys.value = info.selectedKeys as string[])}
+              onOpenChange={keys => (recommendedOpenKeys.value = keys as string[])}
+            />
+          ) : (
+            <Code
+              className="mt-2"
+              lang="tsx"
+              code={`import { Badge, Menu } from '@rue-js/design';
+import { ref } from '@rue-js/rue';
+
+const selectedKeys = ref(['overview']);
+const openKeys = ref(['workspace']);
+
+const items = [
+  {
+    type: 'group',
+    label: 'Console',
+    children: [
+      {
+        key: 'overview',
+        label: 'Overview',
+        icon: <span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />,
+        extra: <Badge size="xs" variant="info">Live</Badge>,
+      },
+      {
+        type: 'submenu',
+        key: 'workspace',
+        label: 'Workspace',
+        icon: <span className="inline-flex h-2.5 w-2.5 rounded-full bg-secondary" />,
+        children: [
+          { key: 'projects', label: 'Projects' },
+          { key: 'deployments', label: 'Deployments' },
+          { key: 'activity', label: 'Activity Feed', extra: <Badge size="xs" variant="warning">12</Badge> },
+        ],
+      },
+    ],
+  },
+  { type: 'divider' },
+  {
+    type: 'group',
+    label: 'Team',
+    children: [
+      { key: 'billing', label: 'Billing', extra: 'Cmd+B' },
+      { key: 'members', label: 'Members', extra: <Badge size="xs" variant="success">8</Badge> },
+      { key: 'danger-zone', label: 'Danger Zone', danger: true },
+    ],
+  },
+];
+
+<Menu
+  mode="inline"
+  className="bg-base-200 rounded-box w-80"
+  items={items}
+  selectedKeys={selectedKeys.value}
+  openKeys={openKeys.value}
+  onSelect={info => (selectedKeys.value = info.selectedKeys as string[])}
+  onOpenChange={keys => (openKeys.value = keys as string[])}
+/>`}
+            />
+          )}
+        </div>
+        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
+          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
+            # 推荐：多选、分组与分割线
+          </h2>
+          <p className="mb-3 text-sm text-base-content/70">
+            对照 ant-design 的 `multiple + group + divider` 思路，适合消息筛选、标签面板一类场景。
+          </p>
+          <Tabs
+            style="box"
+            items={[
+              { key: 'preview', label: '预览' },
+              { key: 'code', label: 'JSX代码' },
+            ]}
+            activeKey={tMultipleEnhanced.value}
+            onChange={k => (tMultipleEnhanced.value = k as 'preview' | 'code')}
+            className="mb-3"
+          />
+          {tMultipleEnhanced.value === 'preview' ? (
+            <Menu
+              className="bg-base-200 rounded-box w-80"
+              items={multipleItems}
+              multiple
+              selectedKeys={multipleSelectedKeys.value}
+              onSelect={info => (multipleSelectedKeys.value = info.selectedKeys as string[])}
+              onDeselect={info => (multipleSelectedKeys.value = info.selectedKeys as string[])}
+            />
+          ) : (
+            <Code
+              className="mt-2"
+              lang="tsx"
+              code={`const selectedKeys = ref(['mentions', 'archived']);
+
+const items = [
+  {
+    type: 'group',
+    label: 'Inbox',
+    children: [
+      { key: 'mentions', label: 'Mentions', extra: <Badge size="xs" variant="error">3</Badge> },
+      { key: 'reviews', label: 'Code Reviews', extra: <Badge size="xs" variant="warning">5</Badge> },
+    ],
+  },
+  { type: 'divider', dashed: true },
+  {
+    type: 'group',
+    label: 'Archive',
+    children: [
+      { key: 'archived', label: 'Archived Threads' },
+      { key: 'muted', label: 'Muted Channels', disabled: true },
+    ],
+  },
+];
+
+<Menu
+  className="bg-base-200 rounded-box w-80"
+  items={items}
+  multiple
+  selectedKeys={selectedKeys.value}
+  onSelect={info => (selectedKeys.value = info.selectedKeys as string[])}
+  onDeselect={info => (selectedKeys.value = info.selectedKeys as string[])}
+/>`}
+            />
+          )}
+        </div>
+        <div className="component-preview not-prose text-base-content my-6 lg:my-12">
+          <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
+            # 推荐：组合式增强 API
+          </h2>
+          <p className="mb-3 text-sm text-base-content/70">
+            如果你更喜欢手写 JSX 结构，可以直接使用 `Menu.SubMenu / Menu.ItemGroup / Menu.Divider`。
+          </p>
+          <Tabs
+            style="box"
+            items={[
+              { key: 'preview', label: '预览' },
+              { key: 'code', label: 'JSX代码' },
+            ]}
+            activeKey={tCompoundEnhanced.value}
+            onChange={k => (tCompoundEnhanced.value = k as 'preview' | 'code')}
+            className="mb-3"
+          />
+          {tCompoundEnhanced.value === 'preview' ? (
+            <Menu
+              className="bg-base-200 rounded-box w-80"
+              selectedKeys={compoundSelectedKeys.value}
+              openKeys={compoundOpenKeys.value}
+              onSelect={info => (compoundSelectedKeys.value = info.selectedKeys as string[])}
+              onOpenChange={keys => (compoundOpenKeys.value = keys as string[])}
+            >
+              <Menu.ItemGroup title="Account">
+                <Menu.Item eventKey="profile" icon={<span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />}>
+                  Profile
+                </Menu.Item>
+                <Menu.Item eventKey="notifications" extra={<Badge size="xs">2</Badge>}>
+                  Notifications
+                </Menu.Item>
+              </Menu.ItemGroup>
+              <Menu.Divider />
+              <Menu.SubMenu
+                eventKey="settings"
+                title="Settings"
+                icon={<span className="inline-flex h-2.5 w-2.5 rounded-full bg-accent" />}
+              >
+                <Menu.Item eventKey="security">Security</Menu.Item>
+                <Menu.Item eventKey="tokens" extra="Beta">
+                  API Tokens
+                </Menu.Item>
+              </Menu.SubMenu>
+            </Menu>
+          ) : (
+            <Code
+              className="mt-2"
+              lang="tsx"
+              code={`const selectedKeys = ref(['profile']);
+const openKeys = ref(['settings']);
+
+<Menu
+  className="bg-base-200 rounded-box w-80"
+  selectedKeys={selectedKeys.value}
+  openKeys={openKeys.value}
+  onSelect={info => (selectedKeys.value = info.selectedKeys as string[])}
+  onOpenChange={keys => (openKeys.value = keys as string[])}
+>
+  <Menu.ItemGroup title="Account">
+    <Menu.Item eventKey="profile" icon={<span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />}>
+      Profile
+    </Menu.Item>
+    <Menu.Item eventKey="notifications" extra={<Badge size="xs">2</Badge>}>
+      Notifications
+    </Menu.Item>
+  </Menu.ItemGroup>
+  <Menu.Divider />
+  <Menu.SubMenu
+    eventKey="settings"
+    title="Settings"
+    icon={<span className="inline-flex h-2.5 w-2.5 rounded-full bg-accent" />}
+  >
+    <Menu.Item eventKey="security">Security</Menu.Item>
+    <Menu.Item eventKey="tokens" extra="Beta">API Tokens</Menu.Item>
+  </Menu.SubMenu>
+</Menu>`}
+            />
+          )}
+        </div>
+        <div className="my-8 rounded-box border border-base-300/60 bg-base-100 px-4 py-3 text-sm text-base-content/70 not-prose">
+          下面的示例全部保留 Rue 现有静态/原始结构写法，用于展示 daisyUI 风格能力与兼容性。
         </div>
         <div className="component-preview not-prose text-base-content my-6 lg:my-12">
           <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold"># 导航跳转</h2>
@@ -1217,7 +1660,7 @@ const menuItems = [
               <Menu className="bg-base-200 rounded-box w-56">
                 <Menu.Item>Item 1</Menu.Item>
                 <li>
-                  <Menu.DropdownToggle>Parent</Menu.DropdownToggle>
+                  <Menu.DropdownToggle onClick={toggleDropdownByClass}>Parent</Menu.DropdownToggle>
                   <Menu.Dropdown>
                     <Menu.Item>Submenu 1</Menu.Item>
                     <Menu.Item>Submenu 2</Menu.Item>
@@ -1227,8 +1670,10 @@ const menuItems = [
               <Menu className="bg-base-200 rounded-box w-56">
                 <Menu.Item>Item 1</Menu.Item>
                 <li>
-                  <Menu.DropdownToggle visible>Parent</Menu.DropdownToggle>
-                  <Menu.Dropdown visible>
+                  <Menu.DropdownToggle show onClick={toggleDropdownByClass}>
+                    Parent
+                  </Menu.DropdownToggle>
+                  <Menu.Dropdown show>
                     <Menu.Item>Submenu 1</Menu.Item>
                     <Menu.Item>Submenu 2</Menu.Item>
                   </Menu.Dropdown>
@@ -1239,21 +1684,34 @@ const menuItems = [
             <Code
               className="mt-2"
               lang="tsx"
-              code={`<Menu className="bg-base-200 rounded-box w-56">
+              code={`import { Menu } from '@rue-js/design';
+
+const toggleDropdownByClass = (event: MouseEvent) => {
+  const toggle = event.currentTarget as HTMLElement | null;
+  const dropdown = toggle?.nextElementSibling as HTMLElement | null;
+  if (!toggle || !dropdown) return;
+  const nextOpen = !toggle.classList.contains('menu-dropdown-show');
+  toggle.classList.toggle('menu-dropdown-show', nextOpen);
+  dropdown.classList.toggle('menu-dropdown-show', nextOpen);
+  toggle.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+};
+
+<Menu className="bg-base-200 rounded-box w-56">
   <Menu.Item>Item 1</Menu.Item>
   <li>
-    <Menu.DropdownToggle>Parent</Menu.DropdownToggle>
+    <Menu.DropdownToggle onClick={toggleDropdownByClass}>Parent</Menu.DropdownToggle>
     <Menu.Dropdown>
       <Menu.Item>Submenu 1</Menu.Item>
       <Menu.Item>Submenu 2</Menu.Item>
     </Menu.Dropdown>
   </li>
 </Menu>
+
 <Menu className="bg-base-200 rounded-box w-56">
   <Menu.Item>Item 1</Menu.Item>
   <li>
-    <Menu.DropdownToggle visible>Parent</Menu.DropdownToggle>
-    <Menu.Dropdown visible>
+    <Menu.DropdownToggle show onClick={toggleDropdownByClass}>Parent</Menu.DropdownToggle>
+    <Menu.Dropdown show>
       <Menu.Item>Submenu 1</Menu.Item>
       <Menu.Item>Submenu 2</Menu.Item>
     </Menu.Dropdown>
@@ -1828,6 +2286,13 @@ const menuItems = [
             />
           )}
         </div>
+
+        <h2>API</h2>
+        <p className="text-sm text-base-content/70">
+          `Menu.Item` 内置了常用链接能力，导航跳转示例里出现的 `to`、`href`、`target` 等属性可直接用于菜单项。
+        </p>
+        <h3>Menu.Item 链接相关</h3>
+        <ApiTable rows={menuItemLinkApiRows} />
       </div>
     </SidebarPlayground>
   )

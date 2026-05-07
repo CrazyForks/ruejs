@@ -1,4 +1,8 @@
 use js_sys::{Function, Object, Reflect};
+use rue_runtime_vapor::reactive::core::{
+    create_effect_scope, dispose_effect_scope, pop_effect_scope, push_effect_scope,
+};
+use rue_runtime_vapor::reactive::signal::SignalHandle;
 use rue_runtime_vapor::{
     computed_js as computed_hook, is_reactive as is_reactive_hook, reactive_js as reactive_hook,
     readonly_js as readonly_hook, ref_js as ref_hook, set_current_instance,
@@ -6,10 +10,6 @@ use rue_runtime_vapor::{
     shallow_readonly_js as shallow_readonly_hook, signal_js as signal_hook,
     to_raw_js as to_raw_hook,
 };
-use rue_runtime_vapor::reactive::core::{
-    create_effect_scope, dispose_effect_scope, pop_effect_scope, push_effect_scope,
-};
-use rue_runtime_vapor::reactive::signal::SignalHandle;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_test::*;
@@ -115,7 +115,8 @@ fn hook_computed_reuses_handle_across_render_scopes_and_refreshes_getter() {
     let getter1_fn: Function = getter1.as_ref().clone().unchecked_into();
     let handle1_store_for_render = handle1_store.clone();
     let render1 = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-        *handle1_store_for_render.borrow_mut() = Some(computed_hook(getter1_fn.clone().into(), None));
+        *handle1_store_for_render.borrow_mut() =
+            Some(computed_hook(getter1_fn.clone().into(), None));
         JsValue::UNDEFINED
     }) as Box<dyn FnMut() -> JsValue>);
     let _ = vapor_with_hook_id(
@@ -140,7 +141,8 @@ fn hook_computed_reuses_handle_across_render_scopes_and_refreshes_getter() {
     let getter2_fn: Function = getter2.as_ref().clone().unchecked_into();
     let handle2_store_for_render = handle2_store.clone();
     let render2 = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-        *handle2_store_for_render.borrow_mut() = Some(computed_hook(getter2_fn.clone().into(), None));
+        *handle2_store_for_render.borrow_mut() =
+            Some(computed_hook(getter2_fn.clone().into(), None));
         JsValue::UNDEFINED
     }) as Box<dyn FnMut() -> JsValue>);
     let _ = vapor_with_hook_id(

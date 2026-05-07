@@ -1,8 +1,9 @@
-use super::super::types::{
-    MountInput, MountInputChild, MountedPatchSubtree, MountedPatchSubtreeType,
-    MountedSubtreeChild, MountedSubtreeState, MountedTextSubtree,
+use crate::runtime::Rue;
+use crate::runtime::types::compat_state::MountedCompatPatchKind;
+use crate::runtime::types::{
+    MountInput, MountInputChild, MountedPatchSubtree, MountedSubtreeChild,
+    MountedSubtreeState, MountedTextSubtree,
 };
-use super::super::Rue;
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::props::{Props as RuntimeProps, patch_props, post_patch_element};
 use wasm_bindgen::JsValue;
@@ -85,7 +86,7 @@ where
     mounted_children
 }
 
-pub(crate) fn mount_element<A: DomAdapter>(
+pub(super) fn mount_element<A: DomAdapter>(
     rue: &mut Rue<A>,
     input: &MountInput<A>,
     tag: &String,
@@ -106,20 +107,16 @@ where
     };
     post_patch(rue, &mut el, &new_props);
 
-    Some(MountedSubtreeState::Patch(MountedPatchSubtree {
-        r#type: MountedPatchSubtreeType::Element(tag.clone()),
-        props: input.props.clone(),
-        children: mounted_children,
-        el: Some(el),
-        key: input.key.clone(),
-        fragment_nodes: Vec::new(),
-        mount_cleanup_bucket: None,
-        mount_effect_scope_id: None,
-        component_before_unmount_hooks: Vec::new(),
-        component_unmounted_hooks: Vec::new(),
-        comp_subtree: None,
-        comp_inst_index: None,
-    }))
+    Some(MountedSubtreeState::Patch(MountedPatchSubtree::new_compat(
+        MountedCompatPatchKind::Element(tag.clone()),
+        input.props.clone(),
+        mounted_children,
+        Some(el),
+        input.key.clone(),
+        Vec::new(),
+        None,
+        None,
+    )))
 }
 
 /// 元素级别后置补丁：执行元素特定的最终处理

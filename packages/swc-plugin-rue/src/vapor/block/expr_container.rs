@@ -48,8 +48,10 @@ pub(crate) fn handle_expr_container(
             let anchor = super::utils::emit_markers(vt, root, is_children, stmts);
             let expr_for_slot =
                 if is_children { inner.clone() } else { super::expr::build_slot_expr(vt, inner) };
+            let render_once = super::expr::is_empty_deps_memoized_jsx_expr(inner)
+                || super::expr::is_empty_deps_memoized_jsx_expr(&expr_for_slot);
 
-            if maybe_static {
+            if maybe_static || render_once {
                 // 静态插槽：直接 renderAnchor，无需 watchEffect 包裹
                 let slot_ident = vt.next_slot_ident();
                 let decl_slot = const_decl(slot_ident.clone(), expr_for_slot.clone());

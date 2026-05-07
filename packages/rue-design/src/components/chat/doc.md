@@ -45,6 +45,8 @@ classnames:
   import Translate from "$components/Translate.svelte"
 </script>
 
+> Rue enhancement: besides the static chat markup below, the Rue Chat component now also supports semantic props such as `message`, `author`, `timestamp`, `avatar`, `typing`, and `items`, while still rendering to the same `chat-*` class structure.
+
 ### ~chat-start and chat-end
 
 <div class="w-full">
@@ -66,6 +68,68 @@ classnames:
 </div>
 <div class="$$chat $$chat-end">
   <div class="$$chat-bubble">You underestimate my power!</div>
+</div>
+```
+
+### ~Semantic message with typing
+
+<div class="w-full">
+  <div class="chat chat-start">
+    <div class="chat-image avatar">
+      <div class="w-10 rounded-full bg-neutral text-neutral-content grid place-items-center text-xs font-semibold">AI</div>
+    </div>
+    <div class="chat-header">
+      Rue Agent
+      <time class="text-xs opacity-50">09:28</time>
+    </div>
+    <div class="chat-bubble">Build finished, I am summarizing the result.</div>
+    <div class="chat-footer opacity-50">Preview ready</div>
+  </div>
+  <div class="chat chat-start">
+    <div class="chat-image avatar">
+      <div class="w-10 rounded-full bg-info text-info-content grid place-items-center text-[11px] font-semibold">OPS</div>
+    </div>
+    <div class="chat-header">
+      Deploy Agent
+      <time class="text-xs opacity-50">Just now</time>
+    </div>
+    <div class="chat-bubble">
+      <span class="inline-flex items-center gap-2">
+        <span class="loading loading-dots loading-xs"></span>
+        <span class="text-xs opacity-70">Streaming output</span>
+      </span>
+    </div>
+    <div class="chat-footer opacity-50">Monitoring</div>
+  </div>
+</div>
+
+```html
+<div class="$$chat $$chat-start">
+  <div class="$$chat-image $$avatar">
+    <div class="w-10 rounded-full bg-neutral text-neutral-content grid place-items-center text-xs font-semibold">AI</div>
+  </div>
+  <div class="$$chat-header">
+    Rue Agent
+    <time class="text-xs opacity-50">09:28</time>
+  </div>
+  <div class="$$chat-bubble">Build finished, I am summarizing the result.</div>
+  <div class="$$chat-footer opacity-50">Preview ready</div>
+</div>
+<div class="$$chat $$chat-start">
+  <div class="$$chat-image $$avatar">
+    <div class="w-10 rounded-full bg-info text-info-content grid place-items-center text-[11px] font-semibold">OPS</div>
+  </div>
+  <div class="$$chat-header">
+    Deploy Agent
+    <time class="text-xs opacity-50">Just now</time>
+  </div>
+  <div class="$$chat-bubble">
+    <span class="inline-flex items-center gap-2">
+      <span class="$$loading $$loading-dots $$loading-xs"></span>
+      <span class="text-xs opacity-70">Streaming output</span>
+    </span>
+  </div>
+  <div class="$$chat-footer opacity-50">Monitoring</div>
 </div>
 ```
 

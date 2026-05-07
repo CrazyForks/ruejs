@@ -402,9 +402,8 @@ export default SiteLayout
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
-import { type FC, useEffect, useState } from '@rue-js/rue';
+    let expected_fragment = r##"import { useState, useEffect, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
 import { RouterLink, useRoute } from '@rue-js/router';
 const ThemePicker: FC<{
     value: string;

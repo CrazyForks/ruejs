@@ -2,7 +2,7 @@
 
 ## useAttrs() {#useattrs}
 
-返回 [Setup Context](/api/composition-api-setup#setup-context) 中的 `attrs` 对象，其中包括当前组件的[透传属性](/guide/components/attrs#fallthrough-attributes)。这旨在在 `<script setup>` 中使用，其中 setup 上下文对象不可用。
+返回 [Setup Context](/api/composition-api-setup#setup-context) 中的 `attrs` 对象，其中包括当前组件的[透传属性](/guide/components/attrs#fallthrough-attributes)。它适用于那些需要读取 `attrs`，但没有直接持有 `context` 对象的组件写法。
 
 - **类型**
 
@@ -12,9 +12,9 @@
 
 ## useSlots() {#useslots}
 
-返回 [Setup Context](/api/composition-api-setup#setup-context) 中的 `slots` 对象，其中包括父级传递的可调用插槽函数。这旨在在 `<script setup>` 中使用，其中 setup 上下文对象不可用。
+返回 [Setup Context](/api/composition-api-setup#setup-context) 中的 `slots` 对象，其中包括父级传递的可调用插槽函数。它适用于那些需要读取插槽，但没有直接持有 `context` 对象的组件写法。
 
-如果使用 TypeScript，应优先使用 [`defineSlots()`](/api/sfc-script-setup#defineslots)。
+如果你的构建链路支持编译期宏，也可以使用 [`defineSlots()`](/api/sfc-script-setup#defineslots)。
 
 - **类型**
 
@@ -26,7 +26,7 @@
 
 ## useModel() {#usemodel}
 
-这是支持 [`defineModel()`](/api/sfc-script-setup#definemodel) 的底层辅助函数。如果使用 `<script setup>`，应优先使用 `defineModel()`。
+这是模型双向绑定的底层辅助函数。如果你的构建链路支持编译期宏，也可以改用 [`defineModel()`](/api/sfc-script-setup#definemodel)。
 
 - 仅在 3.4+ 中可用
 
@@ -59,27 +59,27 @@
 
 - **详情**
 
-  `useModel()` 可用于非 SFC 组件，例如使用原始 `setup()` 函数时。它期望 `props` 对象作为第一个参数，模型名称作为第二个参数。可选的第三个参数可用于声明结果模型 ref 的自定义 getter 和 setter。请注意，与 `defineModel()` 不同，您需要自己声明 props 和 emits。
+  `useModel()` 可用于对象形式组件或其他显式持有 `props` 的场景。它期望 `props` 对象作为第一个参数，模型名称作为第二个参数。可选的第三个参数可用于声明结果模型 ref 的自定义 getter 和 setter。请注意，与 `defineModel()` 不同，你需要自己声明 props 和 emits。
 
-## useTemplateRef() <sup class="vt-badge" data-text="3.5+" /> {#usetemplateref}
+## 模板 Refs {#template-refs-helper-note}
 
-返回一个浅层 ref，其值将与具有匹配 ref 属性的模板元素或组件同步。
+在当前的 JSX / TSX 写法中，推荐直接使用 `useRef()` 来持有元素或组件实例引用，而不是依赖额外的模板 ref 辅助函数。
 
 - **类型**
 
   ```ts
-  function useTemplateRef<T>(key: string): Readonly<ShallowRef<T | null>>
+  function useRef<T = any>(initial?: T): { current: T | undefined }
   ```
 
 - **示例**
 
   ```tsx
-  import { useTemplateRef, useEffect } from '@rue-js/rue'
+  import { useEffect, useRef } from '@rue-js/rue'
 
-  const inputRef = useTemplateRef<HTMLInputElement>('input')
+  const inputRef = useRef<HTMLInputElement>()
 
   useEffect(() => {
-    inputRef.current?.focus()
+    inputRef.current?.focus?.()
   }, [])
 
   return <input ref={inputRef} />
@@ -118,8 +118,6 @@
 - **详情**
 
   `useId()` 生成的 ID 是每个应用程序唯一的。它可以用于生成表单元素和无障碍属性的 ID。在同一组件中多次调用将生成不同的 ID；同一组件的多个实例调用 `useId()` 也将具有不同的 ID。
-
-  `useId()` 生成的 ID 也保证在服务器和客户端渲染之间保持稳定，因此它们可以在 SSR 应用程序中使用而不会导致 hydration 不匹配。
 
   如果您在同一页面上有多个 Rue 应用程序实例，可以通过 [`app.config.idPrefix`](/api/application#app-config-idprefix) 为每个应用程序提供 ID 前缀来避免 ID 冲突。
 

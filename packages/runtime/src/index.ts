@@ -8,8 +8,19 @@ export * from './rue'
 export * from './renderable'
 export * from './renderable-normalize'
 export * from './custom-elements'
+export {
+  createContext,
+  useContext,
+  type RueContext,
+  type ContextProviderProps,
+} from './context'
 
 // 内置组件
+export { Slot, type SlotBag, type SlotProps, type SlotValue } from './components/Slot'
+export { Component, type DynamicComponentProps } from './components/Component'
+export { KeepAlive, type KeepAliveMatchPattern, type KeepAliveProps } from './components/KeepAlive'
+export { Suspense, type SuspenseProps } from './components/Suspense'
+export { Template, type TemplateProps } from './components/Template'
 export { Teleport, type TeleportProps } from './components/Teleport'
 export { createTransitionRunner, type BaseTransitionProps } from './components/BaseTransition'
 export * as TransitionUtils from './components/transitionUtils'
@@ -48,7 +59,7 @@ export {
   vaporShowStyle as _$vaporShowStyle,
   vaporWithKey as _$vaporWithKey,
 } from './vapor-helpers'
-export { vaporWithHookId as _$vaporWithHookId } from '@rue-js/runtime-vapor'
+export { vaporWithHookId as _$vaporWithHookId } from '@rue-js/runtime-vapor/reactive'
 
 export { Transition, type TransitionProps } from './components/Transition'
 export { TransitionGroup, type TransitionGroupProps } from './components/TransitionGroup'
@@ -58,8 +69,21 @@ export * from './reactivity'
 // Hooks
 export { useApp } from './hooks/useApp'
 export { useError } from './hooks/useError'
-export { useComponent } from './hooks/useComponent'
+export {
+  useComponent,
+  type AsyncComponentLoader,
+  type AsyncComponentOptions,
+  type UseComponentOptions,
+} from './hooks/useComponent'
 
 // Vapor hooks passthrough
-export { useMemo, useCallback, useSetup, useRef, toRaw, unref } from '@rue-js/runtime-vapor'
-export { createRue, setReactiveScheduling } from '@rue-js/runtime-vapor'
+export {
+  useMemo,
+  useCallback,
+  useSetup,
+  useRef,
+  toRaw,
+  unref,
+  setReactiveScheduling,
+} from '@rue-js/runtime-vapor/reactive'
+export { createRue } from '@rue-js/runtime-vapor'

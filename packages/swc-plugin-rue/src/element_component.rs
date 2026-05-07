@@ -5,6 +5,8 @@ use swc_core::ecma::atoms::Atom;
 use crate::emit::*;
 use crate::vapor::VaporTransform;
 
+const COMPONENT_NATIVE_EVENT_PREFIX: &str = "__rueNativeOn";
+
 /*
 元素级组件编译：
 - 目标：在父元素下以注释锚点占位，结合 renderBetween 将组件输出插入其间；
@@ -15,6 +17,497 @@ use crate::vapor::VaporTransform;
 pub(crate) struct ComponentChildrenRewrite {
     pub(crate) stmts: Vec<Stmt>,
     pub(crate) direct_render_expr: Option<Expr>,
+}
+
+fn jsx_name_to_expr(name: &JSXElementName) -> Option<Expr> {
+    fn jsx_object_to_expr(obj: &JSXObject) -> Option<Expr> {
+        match obj {
+            JSXObject::Ident(id) => Some(Expr::Ident(id.clone().into())),
+            JSXObject::JSXMemberExpr(member) => Some(Expr::Member(MemberExpr {
+                span: DUMMY_SP,
+                obj: Box::new(jsx_object_to_expr(&member.obj)?),
+                prop: MemberProp::Ident(member.prop.clone()),
+            })),
+        }
+    }
+
+    match name {
+        JSXElementName::Ident(id) => Some(Expr::Ident(id.clone().into())),
+        JSXElementName::JSXMemberExpr(member) => Some(Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(jsx_object_to_expr(&member.obj)?),
+            prop: MemberProp::Ident(member.prop.clone()),
+        })),
+        JSXElementName::JSXNamespacedName(_) => None,
+    }
+}
+
+fn jsx_attr_value_to_expr(value: &JSXAttrValue) -> Option<Expr> {
+    match value {
+        JSXAttrValue::Str(s) => {
+            Some(Expr::Lit(Lit::Str(Str { span: DUMMY_SP, value: s.value.clone(), raw: None })))
+        }
+        JSXAttrValue::JSXExprContainer(ec) => match &ec.expr {
+            JSXExpr::Expr(expr) => Some(crate::utils::unwrap_expr(expr.as_ref()).clone()),
+            JSXExpr::JSXEmptyExpr(_) => None,
+        },
+        JSXAttrValue::JSXElement(el) => Some(Expr::JSXElement(el.clone())),
+        JSXAttrValue::JSXFragment(frag) => Some(Expr::JSXFragment(frag.clone())),
+    }
+}
+
+fn is_safe_prop_ident(name: &str) -> bool {
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+
+    let is_ident_start = |ch: char| ch == '$' || ch == '_' || ch.is_ascii_alphabetic();
+    let is_ident_continue = |ch: char| is_ident_start(ch) || ch.is_ascii_digit();
+
+    is_ident_start(first) && chars.all(is_ident_continue)
+}
+
+fn jsx_attr_name_to_prop_name(name: &JSXAttrName) -> Option<PropName> {
+    match name {
+        JSXAttrName::Ident(id) => {
+            let raw = id.sym.as_ref();
+            if is_safe_prop_ident(raw) {
+                Some(PropName::Ident(id.clone().into()))
+            } else {
+                Some(PropName::Str(str_lit(raw)))
+            }
+        }
+        JSXAttrName::JSXNamespacedName(_) => None,
+    }
+}
+
+fn jsx_attrs_has_ident(attrs: &[JSXAttrOrSpread], name: &str) -> bool {
+    attrs.iter().any(|attr| {
+        matches!(attr, JSXAttrOrSpread::JSXAttr(JSXAttr {
+            name: JSXAttrName::Ident(id),
+            ..
+        }) if id.sym.as_ref() == name)
+    })
+}
+
+fn remove_jsx_attr_ident(attrs: &mut Vec<JSXAttrOrSpread>, name: &str) {
+    attrs.retain(|attr| {
+        !matches!(attr, JSXAttrOrSpread::JSXAttr(JSXAttr {
+            name: JSXAttrName::Ident(id),
+            ..
+        }) if id.sym.as_ref() == name)
+    });
+}
+
+fn extract_slot_name_expr(attrs: &[JSXAttrOrSpread]) -> Option<Expr> {
+    for attr in attrs {
+        let JSXAttrOrSpread::JSXAttr(attr) = attr else {
+            continue;
+        };
+        let JSXAttrName::Ident(name) = &attr.name else {
+            continue;
+        };
+        if name.sym.as_ref() != "slot" {
+            continue;
+        }
+        return attr.value.as_ref().and_then(jsx_attr_value_to_expr);
+    }
+    None
+}
+
+fn is_slot_component(el: &JSXElement) -> bool {
+    match &el.opening.name {
+        JSXElementName::Ident(id) => id.sym.as_ref() == "Slot",
+        JSXElementName::JSXMemberExpr(expr) => expr.prop.sym.as_ref() == "Slot",
+        _ => false,
+    }
+}
+
+fn is_template_component(el: &JSXElement) -> bool {
+    match &el.opening.name {
+        JSXElementName::Ident(id) => id.sym.as_ref() == "Template",
+        JSXElementName::JSXMemberExpr(expr) => expr.prop.sym.as_ref() == "Template",
+        _ => false,
+    }
+}
+
+fn is_slot_carrier_wrapper(el: &JSXElement) -> bool {
+    crate::utils::is_builtin_fragment_element(el) || is_template_component(el)
+}
+
+fn current_instance_props_ro_expr() -> Expr {
+    let current_instance_call = Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee: Callee::Expr(Box::new(Expr::Ident(ident("getCurrentInstance")))),
+        args: vec![],
+        type_args: None,
+        ctxt: SyntaxContext::empty(),
+    });
+
+    Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::LogicalAnd,
+        left: Box::new(current_instance_call.clone()),
+        right: Box::new(Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(current_instance_call),
+            prop: MemberProp::Ident(ident_name("propsRO")),
+        })),
+    })
+}
+
+fn make_source_attr() -> JSXAttrOrSpread {
+    JSXAttrOrSpread::JSXAttr(JSXAttr {
+        span: DUMMY_SP,
+        name: JSXAttrName::Ident(IdentName { span: DUMMY_SP, sym: Atom::from("source") }),
+        value: Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+            span: DUMMY_SP,
+            expr: JSXExpr::Expr(Box::new(current_instance_props_ro_expr())),
+        })),
+    })
+}
+
+fn is_function_literal_expr(expr: &Expr) -> bool {
+    matches!(crate::utils::unwrap_expr(expr), Expr::Arrow(_) | Expr::Fn(_))
+}
+
+struct LoweredSlotValue {
+    stmts: Vec<Stmt>,
+    expr: Expr,
+    is_function: bool,
+}
+
+fn undefined_expr() -> Expr {
+    Expr::Ident(ident("undefined"))
+}
+
+fn is_substantive_slot_child(child: &JSXElementChild) -> bool {
+    match child {
+        JSXElementChild::JSXText(text) => {
+            !crate::text::normalize_text(&text.value).trim().is_empty()
+        }
+        JSXElementChild::JSXExprContainer(ec) => match &ec.expr {
+            JSXExpr::JSXEmptyExpr(_) => false,
+            JSXExpr::Expr(expr) => {
+                !crate::utils::is_static_empty_like(crate::utils::unwrap_expr(expr.as_ref()))
+            }
+        },
+        _ => true,
+    }
+}
+
+fn lower_expr_slot_value(vt: &mut VaporTransform, expr: &Expr) -> Option<LoweredSlotValue> {
+    match crate::utils::unwrap_expr(expr) {
+        Expr::JSXElement(jsx_el) => {
+            let wrapped = vec![JSXElementChild::JSXElement(jsx_el.clone())];
+            lower_slot_value(vt, &wrapped)
+        }
+        Expr::JSXFragment(jsx_frag) => {
+            let wrapped = vec![JSXElementChild::JSXFragment(jsx_frag.clone())];
+            lower_slot_value(vt, &wrapped)
+        }
+        Expr::Cond(CondExpr { test, cons, alt, .. }) => {
+            let cons_inner = crate::utils::unwrap_expr(cons.as_ref());
+            let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
+
+            if let Some(lowered_cons) = lower_expr_slot_value(vt, cons_inner) {
+                if crate::utils::is_static_empty_like(alt_inner) {
+                    return Some(LoweredSlotValue {
+                        stmts: lowered_cons.stmts,
+                        expr: Expr::Cond(CondExpr {
+                            span: DUMMY_SP,
+                            test: test.clone(),
+                            cons: Box::new(lowered_cons.expr),
+                            alt: Box::new(undefined_expr()),
+                        }),
+                        is_function: false,
+                    });
+                }
+            }
+
+            if let Some(lowered_alt) = lower_expr_slot_value(vt, alt_inner) {
+                if crate::utils::is_static_empty_like(cons_inner) {
+                    return Some(LoweredSlotValue {
+                        stmts: lowered_alt.stmts,
+                        expr: Expr::Cond(CondExpr {
+                            span: DUMMY_SP,
+                            test: test.clone(),
+                            cons: Box::new(undefined_expr()),
+                            alt: Box::new(lowered_alt.expr),
+                        }),
+                        is_function: false,
+                    });
+                }
+            }
+
+            None
+        }
+        Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, left, right, .. }) => {
+            let lowered_right =
+                lower_expr_slot_value(vt, crate::utils::unwrap_expr(right.as_ref()))?;
+
+            Some(LoweredSlotValue {
+                stmts: lowered_right.stmts,
+                expr: Expr::Cond(CondExpr {
+                    span: DUMMY_SP,
+                    test: left.clone(),
+                    cons: Box::new(lowered_right.expr),
+                    alt: Box::new(undefined_expr()),
+                }),
+                is_function: false,
+            })
+        }
+        Expr::Call(call)
+            if crate::element_expr::contains_jsx_in_expr(&Expr::Call(call.clone())) =>
+        {
+            Some(LoweredSlotValue {
+                stmts: vec![],
+                expr: crate::element_expr::make_expr_for_slot(vt, expr),
+                is_function: false,
+            })
+        }
+        _ => None,
+    }
+}
+
+fn lower_slot_value(
+    vt: &mut VaporTransform,
+    children: &[JSXElementChild],
+) -> Option<LoweredSlotValue> {
+    let has_substantive_child = children.iter().any(is_substantive_slot_child);
+
+    if !has_substantive_child {
+        return None;
+    }
+
+    let simple_children: Vec<&JSXElementChild> =
+        children.iter().filter(|child| is_substantive_slot_child(child)).collect();
+
+    if simple_children.len() == 1 {
+        match simple_children[0] {
+            JSXElementChild::JSXText(text) => {
+                let normalized = crate::text::normalize_text(&text.value);
+                if let Some(content) =
+                    crate::text::compute_jsx_text_content(children, 0, &normalized)
+                {
+                    return Some(LoweredSlotValue {
+                        stmts: vec![],
+                        expr: string_expr(&content),
+                        is_function: false,
+                    });
+                }
+            }
+            JSXElementChild::JSXExprContainer(ec) => {
+                if let JSXExpr::Expr(expr) = &ec.expr {
+                    let inner = crate::utils::unwrap_expr(expr.as_ref());
+                    if let Some(lowered) = lower_expr_slot_value(vt, inner) {
+                        return Some(lowered);
+                    }
+                    match inner {
+                        Expr::Lit(Lit::Str(_)) | Expr::Lit(Lit::Num(_)) => {
+                            return Some(LoweredSlotValue {
+                                stmts: vec![],
+                                expr: inner.clone(),
+                                is_function: false,
+                            });
+                        }
+                        _ if !crate::element_expr::contains_jsx_in_expr(inner) => {
+                            return Some(LoweredSlotValue {
+                                stmts: vec![],
+                                expr: inner.clone(),
+                                is_function: is_function_literal_expr(inner),
+                            });
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let child_ident = vt.next_child_ident();
+    let child_root = ident("_root");
+    let mut child_body: Vec<Stmt> =
+        vec![const_decl(child_root.clone(), call_ident("_$createDocumentFragment", vec![]))];
+    crate::element_children::emit_element_children(vt, &child_root, children, &mut child_body);
+    child_body.push(return_root(child_root.clone()));
+    let arrow = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            stmts: child_body,
+        })),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    let child_vapor = call_ident("vapor", vec![arrow]);
+
+    Some(LoweredSlotValue {
+        stmts: vec![const_decl(child_ident.clone(), child_vapor)],
+        expr: Expr::Ident(child_ident),
+        is_function: false,
+    })
+}
+
+fn lower_named_slot_element(
+    vt: &mut VaporTransform,
+    jsx_el: &JSXElement,
+) -> Option<(Expr, LoweredSlotValue)> {
+    let slot_name_expr = extract_slot_name_expr(&jsx_el.opening.attrs)?;
+    let mut slot_el = jsx_el.clone();
+    remove_jsx_attr_ident(&mut slot_el.opening.attrs, "slot");
+    let lowered = if is_slot_carrier_wrapper(&slot_el) {
+        lower_slot_value(vt, &slot_el.children)
+    } else {
+        let wrapped = vec![JSXElementChild::JSXElement(Box::new(slot_el))];
+        lower_slot_value(vt, &wrapped)
+    }?;
+    Some((slot_name_expr, lowered))
+}
+
+fn lower_named_slot_expr(vt: &mut VaporTransform, expr: &Expr) -> Option<(Expr, LoweredSlotValue)> {
+    match crate::utils::unwrap_expr(expr) {
+        Expr::JSXElement(jsx_el) => lower_named_slot_element(vt, jsx_el),
+        Expr::Cond(CondExpr { test, cons, alt, .. }) => {
+            let cons_inner = crate::utils::unwrap_expr(cons.as_ref());
+            let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
+
+            if let Some((slot_name_expr, lowered_cons)) = lower_named_slot_expr(vt, cons_inner) {
+                if crate::utils::is_static_empty_like(alt_inner) {
+                    return Some((
+                        slot_name_expr,
+                        LoweredSlotValue {
+                            stmts: lowered_cons.stmts,
+                            expr: Expr::Cond(CondExpr {
+                                span: DUMMY_SP,
+                                test: test.clone(),
+                                cons: Box::new(lowered_cons.expr),
+                                alt: Box::new(undefined_expr()),
+                            }),
+                            is_function: false,
+                        },
+                    ));
+                }
+            }
+
+            if let Some((slot_name_expr, lowered_alt)) = lower_named_slot_expr(vt, alt_inner) {
+                if crate::utils::is_static_empty_like(cons_inner) {
+                    return Some((
+                        slot_name_expr,
+                        LoweredSlotValue {
+                            stmts: lowered_alt.stmts,
+                            expr: Expr::Cond(CondExpr {
+                                span: DUMMY_SP,
+                                test: test.clone(),
+                                cons: Box::new(undefined_expr()),
+                                alt: Box::new(lowered_alt.expr),
+                            }),
+                            is_function: false,
+                        },
+                    ));
+                }
+            }
+
+            None
+        }
+        Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, left, right, .. }) => {
+            let (slot_name_expr, lowered_right) =
+                lower_named_slot_expr(vt, crate::utils::unwrap_expr(right.as_ref()))?;
+
+            Some((
+                slot_name_expr,
+                LoweredSlotValue {
+                    stmts: lowered_right.stmts,
+                    expr: Expr::Cond(CondExpr {
+                        span: DUMMY_SP,
+                        test: left.clone(),
+                        cons: Box::new(lowered_right.expr),
+                        alt: Box::new(undefined_expr()),
+                    }),
+                    is_function: false,
+                },
+            ))
+        }
+        _ => None,
+    }
+}
+
+fn slot_prop_name(name_expr: Expr) -> PropName {
+    match crate::utils::unwrap_expr(&name_expr) {
+        Expr::Lit(Lit::Str(str_lit)) => PropName::Str(str_lit.clone()),
+        _ => PropName::Computed(ComputedPropName { span: DUMMY_SP, expr: Box::new(name_expr) }),
+    }
+}
+
+pub(crate) fn build_component_mount_expr(comp_el: &JSXElement) -> Expr {
+    let type_expr = jsx_name_to_expr(&comp_el.opening.name).unwrap_or_else(|| string_expr("div"));
+    let mut native_events: Vec<(String, Expr)> = Vec::new();
+    let mut attrs = comp_el.opening.attrs.clone();
+    if is_slot_component(comp_el) && !jsx_attrs_has_ident(&attrs, "source") {
+        attrs.push(make_source_attr());
+    }
+    let props = attrs
+        .iter()
+        .filter_map(|attr| match attr {
+            JSXAttrOrSpread::SpreadElement(spread) => Some(PropOrSpread::Spread(SpreadElement {
+                dot3_token: DUMMY_SP,
+                expr: spread.expr.clone(),
+            })),
+            JSXAttrOrSpread::JSXAttr(attr) => {
+                let value = match &attr.value {
+                    Some(value) => jsx_attr_value_to_expr(value)?,
+                    None => Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })),
+                };
+
+                if let JSXAttrName::Ident(name) = &attr.name {
+                    if let Some(event_name) =
+                        name.sym.as_ref().strip_prefix(COMPONENT_NATIVE_EVENT_PREFIX)
+                    {
+                        native_events.push((event_name.to_ascii_lowercase(), value));
+                        return None;
+                    }
+                }
+
+                let key = jsx_attr_name_to_prop_name(&attr.name)?;
+                Some(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key,
+                    value: Box::new(value),
+                }))))
+            }
+        })
+        .collect();
+    let props_expr = Expr::Object(ObjectLit { span: DUMMY_SP, props });
+    let mount_expr = call_ident("_$createComponent", vec![type_expr, props_expr]);
+
+    if native_events.is_empty() {
+        return mount_expr;
+    }
+
+    let native_events_expr = Expr::Object(ObjectLit {
+        span: DUMMY_SP,
+        props: native_events
+            .into_iter()
+            .map(|(event_name, handler)| {
+                PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Str(Str {
+                        span: DUMMY_SP,
+                        value: Atom::from(event_name.as_str()).into(),
+                        raw: None,
+                    }),
+                    value: Box::new(handler),
+                })))
+            })
+            .collect(),
+    });
+
+    call_ident("_$vaporWithNativeEvents", vec![mount_expr, native_events_expr])
 }
 
 fn extract_jsx_key_expr(jsx_el: &JSXElement) -> Option<Expr> {
@@ -261,94 +754,114 @@ pub(crate) fn rewrite_component_children_to_props(
     }
 
     if !comp_el.children.is_empty() {
-        let child_ident = vt.next_child_ident();
-        let mut used_simple = false;
-        let mut meaningful: Vec<&JSXElementChild> = vec![];
-        for c in &comp_el.children {
-            match c {
-                JSXElementChild::JSXText(t) => {
-                    let txt = crate::text::normalize_text(&t.value);
-                    if !txt.is_empty() {
-                        meaningful.push(c);
+        let mut default_children: Vec<JSXElementChild> = Vec::new();
+        let mut named_slots: Vec<(Expr, LoweredSlotValue)> = Vec::new();
+
+        for child in comp_el.children.iter().cloned() {
+            match child {
+                JSXElementChild::JSXElement(el_box) => {
+                    let slot_name = extract_slot_name_expr(&el_box.opening.attrs);
+                    if let Some(slot_name_expr) = slot_name {
+                        let mut slot_el = (*el_box).clone();
+                        remove_jsx_attr_ident(&mut slot_el.opening.attrs, "slot");
+                        let lowered = if is_slot_carrier_wrapper(&slot_el) {
+                            lower_slot_value(vt, &slot_el.children)
+                        } else {
+                            let wrapped = vec![JSXElementChild::JSXElement(Box::new(slot_el))];
+                            lower_slot_value(vt, &wrapped)
+                        };
+                        if let Some(lowered) = lowered {
+                            named_slots.push((slot_name_expr, lowered));
+                        }
+                        continue;
                     }
-                }
-                _ => meaningful.push(c),
-            }
-        }
-        if meaningful.len() == 1 {
-            match meaningful[0] {
-                JSXElementChild::JSXText(t) => {
-                    let txt = crate::text::normalize_text(&t.value);
-                    if let Some(content) =
-                        crate::text::compute_jsx_text_content(&comp_el.children, 0, &txt)
-                    {
-                        child_stmts.push(const_decl(child_ident.clone(), string_expr(&content)));
-                        used_simple = true;
-                    }
+                    default_children.push(JSXElementChild::JSXElement(el_box));
                 }
                 JSXElementChild::JSXExprContainer(ec) => {
                     if let JSXExpr::Expr(expr) = &ec.expr {
-                        let inner = crate::utils::unwrap_expr(expr.as_ref());
-                        match inner {
-                            Expr::Lit(Lit::Str(_)) | Expr::Lit(Lit::Num(_)) => {
-                                child_stmts.push(const_decl(child_ident.clone(), inner.clone()));
-                                used_simple = true;
-                            }
-                            _ if !crate::element_expr::contains_jsx_in_expr(inner) => {
-                                child_stmts.push(const_decl(child_ident.clone(), inner.clone()));
-                                used_simple = true;
-                            }
-                            _ => {}
+                        if let Some((slot_name_expr, lowered)) =
+                            lower_named_slot_expr(vt, expr.as_ref())
+                        {
+                            named_slots.push((slot_name_expr, lowered));
+                            continue;
                         }
                     }
+                    default_children.push(JSXElementChild::JSXExprContainer(ec));
                 }
-                _ => {}
+                other => default_children.push(other),
             }
         }
-        if !used_simple {
-            let child_root = ident("_root");
-            let mut child_body: Vec<Stmt> = vec![const_decl(
-                child_root.clone(),
-                call_ident("_$createDocumentFragment", vec![]),
-            )];
-            crate::element_children::emit_element_children(
-                vt,
-                &child_root,
-                &comp_el.children,
-                &mut child_body,
-            );
-            child_body.push(return_root(child_root.clone()));
-            let arrow = Expr::Arrow(ArrowExpr {
-                span: DUMMY_SP,
-                params: vec![],
-                body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
-                    span: DUMMY_SP,
-                    ctxt: SyntaxContext::empty(),
-                    stmts: child_body,
-                })),
-                is_async: false,
-                is_generator: false,
-                type_params: None,
-                return_type: None,
-                ctxt: SyntaxContext::empty(),
-            });
-            let child_vapor = call_ident("vapor", vec![arrow]);
-            child_stmts.push(const_decl(child_ident.clone(), child_vapor));
-        }
 
-        if crate::utils::is_builtin_fragment_element(comp_el) {
-            direct_render_expr = Some(Expr::Ident(child_ident.clone()));
-        }
+        let default_slot = lower_slot_value(vt, &default_children);
+        let has_named_slots = !named_slots.is_empty();
+        let default_requires_slot_bag =
+            default_slot.as_ref().map(|slot| slot.is_function).unwrap_or(false);
 
         let mut new_attrs = comp_el.opening.attrs.clone();
-        new_attrs.push(JSXAttrOrSpread::JSXAttr(JSXAttr {
-            span: DUMMY_SP,
-            name: JSXAttrName::Ident(IdentName { span: DUMMY_SP, sym: Atom::from("children") }),
-            value: Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+
+        let default_in_slot_bag = has_named_slots || default_requires_slot_bag;
+
+        if default_in_slot_bag {
+            let mut slot_props: Vec<PropOrSpread> = Vec::new();
+
+            if let Some(default_slot_value) = &default_slot {
+                child_stmts.extend(default_slot_value.stmts.iter().cloned());
+                slot_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Str(Str {
+                        span: DUMMY_SP,
+                        value: Atom::from("default").into(),
+                        raw: None,
+                    }),
+                    value: Box::new(default_slot_value.expr.clone()),
+                }))));
+            }
+
+            for (slot_name_expr, lowered) in named_slots {
+                child_stmts.extend(lowered.stmts);
+                slot_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: slot_prop_name(slot_name_expr),
+                    value: Box::new(lowered.expr),
+                }))));
+            }
+
+            new_attrs.push(JSXAttrOrSpread::JSXAttr(JSXAttr {
                 span: DUMMY_SP,
-                expr: JSXExpr::Expr(Box::new(Expr::Ident(child_ident.clone()))),
-            })),
-        }));
+                name: JSXAttrName::Ident(IdentName {
+                    span: DUMMY_SP,
+                    sym: Atom::from("__rue_slots"),
+                }),
+                value: Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                    span: DUMMY_SP,
+                    expr: JSXExpr::Expr(Box::new(Expr::Object(ObjectLit {
+                        span: DUMMY_SP,
+                        props: slot_props,
+                    }))),
+                })),
+            }));
+        }
+
+        if let Some(default_slot_value) = default_slot {
+            if !default_slot_value.is_function {
+                if !default_in_slot_bag {
+                    child_stmts.extend(default_slot_value.stmts.iter().cloned());
+                }
+                if crate::utils::is_builtin_fragment_element(comp_el) {
+                    direct_render_expr = Some(default_slot_value.expr.clone());
+                }
+                new_attrs.push(JSXAttrOrSpread::JSXAttr(JSXAttr {
+                    span: DUMMY_SP,
+                    name: JSXAttrName::Ident(IdentName {
+                        span: DUMMY_SP,
+                        sym: Atom::from("children"),
+                    }),
+                    value: Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                        span: DUMMY_SP,
+                        expr: JSXExpr::Expr(Box::new(default_slot_value.expr)),
+                    })),
+                }));
+            }
+        }
+
         comp_el.opening.attrs = new_attrs;
         comp_el.children = vec![];
         comp_el.opening.self_closing = true;
@@ -366,10 +879,8 @@ pub fn build_component_element(
 ) {
     let mut comp_el = jsx_el.clone();
     let rewrite = rewrite_component_children_to_props(vt, &mut comp_el);
-    let slot_init_expr = rewrite
-        .direct_render_expr
-        .clone()
-        .unwrap_or_else(|| Expr::JSXElement(Box::new(comp_el.clone())));
+    let slot_init_expr =
+        rewrite.direct_render_expr.clone().unwrap_or_else(|| build_component_mount_expr(&comp_el));
 
     let is_static = !crate::utils::is_transition_group_component(&comp_el)
         && (crate::utils::is_static_component_without_props(&comp_el)

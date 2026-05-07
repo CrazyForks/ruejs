@@ -44,7 +44,9 @@ struct ParsedOptions {
 
 /// 创建防抖调度器
 fn create_debounce_scheduler(delay: f64) -> Function {
-    Function::new_with_args("delay", r#"
+    Function::new_with_args(
+        "delay",
+        r#"
         let timer = null;
         return function(run) {
             if (timer) clearTimeout(timer);
@@ -53,7 +55,11 @@ fn create_debounce_scheduler(delay: f64) -> Function {
                 run();
             }, delay);
         }
-    "#).call1(&JsValue::NULL, &JsValue::from_f64(delay)).unwrap().unchecked_into()
+    "#,
+    )
+    .call1(&JsValue::NULL, &JsValue::from_f64(delay))
+    .unwrap()
+    .unchecked_into()
 }
 
 fn parse_options(options: Option<JsValue>) -> ParsedOptions {
@@ -491,7 +497,8 @@ pub fn watch(source: JsValue, handler: Function, options_raw: Option<JsValue>) -
             }) as Box<dyn FnMut() -> JsValue>);
             let getter_fn: Function = getter.as_ref().clone().unchecked_into();
             // 解析选项：首次触发、调度器、自定义等值比较
-            let ParsedOptions { immediate, scheduler, equals, debounce } = parse_options(options_raw.clone());
+            let ParsedOptions { immediate, scheduler, equals, debounce } =
+                parse_options(options_raw.clone());
             let mut final_scheduler = scheduler;
             if final_scheduler.is_none() {
                 if let Some(delay) = debounce {
@@ -514,7 +521,8 @@ pub fn watch(source: JsValue, handler: Function, options_raw: Option<JsValue>) -
     }
     if js_sys::Array::is_array(&source) {
         // 数组形态：支持混合来源（函数 / 含 get 的对象 / 常量）
-        let ParsedOptions { immediate, scheduler, equals, debounce } = parse_options(options_raw.clone());
+        let ParsedOptions { immediate, scheduler, equals, debounce } =
+            parse_options(options_raw.clone());
         let mut final_scheduler = scheduler;
         if final_scheduler.is_none() {
             if let Some(delay) = debounce {
@@ -583,7 +591,8 @@ pub fn watch(source: JsValue, handler: Function, options_raw: Option<JsValue>) -
         return create_effect(func, Some(opts.into()));
     }
     // 其余情况：视为“常量来源”，以闭包返回固定值进行比较
-    let ParsedOptions { immediate, scheduler, equals, debounce } = parse_options(options_raw.clone());
+    let ParsedOptions { immediate, scheduler, equals, debounce } =
+        parse_options(options_raw.clone());
     let mut final_scheduler = scheduler;
     if final_scheduler.is_none() {
         if let Some(delay) = debounce {

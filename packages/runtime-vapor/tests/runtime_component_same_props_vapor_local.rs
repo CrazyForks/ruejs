@@ -1,3 +1,5 @@
+#![cfg(feature = "compat")]
+
 //! 同一组件在 props 更新时返回的 VaporWithSetup 子树应重建并反映新的局部值
 //!
 //! 复现模式：
@@ -20,6 +22,21 @@ async fn tick() {
     let _ = JsFuture::from(p).await;
 }
 
+fn ensure_fake_document() {
+    let global = js_sys::global();
+    let document = Reflect::get(&global, &JsValue::from_str("document"))
+        .unwrap_or(JsValue::UNDEFINED);
+    if document.is_undefined() || document.is_null() {
+        let _ = Reflect::set(&global, &JsValue::from_str("document"), &Object::new().into());
+    }
+}
+
+fn active_element() -> JsValue {
+    let global = js_sys::global();
+    let document = Reflect::get(&global, &JsValue::from_str("document")).unwrap();
+    Reflect::get(&document, &JsValue::from_str("activeElement")).unwrap_or(JsValue::UNDEFINED)
+}
+
 /// 为父节点补全 previousSibling / nextSibling / parentNode，便于范围更新逻辑工作
 fn update_siblings(parent: &JsValue) {
     let children =
@@ -28,11 +45,7 @@ fn update_siblings(parent: &JsValue) {
     for i in 0..arr.length() {
         let cur = arr.get(i);
         let prev = if i > 0 { arr.get(i - 1) } else { JsValue::NULL };
-        let next = if i + 1 < arr.length() {
-            arr.get(i + 1)
-        } else {
-            JsValue::NULL
-        };
+        let next = if i + 1 < arr.length() { arr.get(i + 1) } else { JsValue::NULL };
         let _ = Reflect::set(&cur, &JsValue::from_str("previousSibling"), &prev);
         let _ = Reflect::set(&cur, &JsValue::from_str("nextSibling"), &next);
         let _ = Reflect::set(&cur, &JsValue::from_str("parentNode"), parent);
@@ -236,11 +249,7 @@ async fn render_between_same_component_props_update_rebuilds_vapor_local_capture
     );
 
     let props_closed = Object::new();
-    let _ = Reflect::set(
-        &props_closed,
-        &JsValue::from_str("show"),
-        &JsValue::from_bool(false),
-    );
+    let _ = Reflect::set(&props_closed, &JsValue::from_str("show"), &JsValue::from_bool(false));
     let vnode_closed =
         rue.create_element_wasm(component.clone().into(), props_closed.into(), JsValue::UNDEFINED);
     rue.render_between_wasm(vnode_closed, parent.clone(), start.clone(), end.clone());
@@ -248,11 +257,7 @@ async fn render_between_same_component_props_update_rebuilds_vapor_local_capture
     update_siblings(&parent);
 
     let props_open = Object::new();
-    let _ = Reflect::set(
-        &props_open,
-        &JsValue::from_str("show"),
-        &JsValue::from_bool(true),
-    );
+    let _ = Reflect::set(&props_open, &JsValue::from_str("show"), &JsValue::from_bool(true));
     let vnode_open =
         rue.create_element_wasm(component.into(), props_open.into(), JsValue::UNDEFINED);
     rue.render_between_wasm(vnode_open, parent.clone(), start.clone(), end.clone());
@@ -319,11 +324,7 @@ async fn render_anchor_same_component_props_update_rebuilds_vapor_local_capture(
     );
 
     let props_closed = Object::new();
-    let _ = Reflect::set(
-        &props_closed,
-        &JsValue::from_str("show"),
-        &JsValue::from_bool(false),
-    );
+    let _ = Reflect::set(&props_closed, &JsValue::from_str("show"), &JsValue::from_bool(false));
     let vnode_closed =
         rue.create_element_wasm(component.clone().into(), props_closed.into(), JsValue::UNDEFINED);
     rue.render_anchor_wasm(vnode_closed, parent.clone(), anchor.clone());
@@ -331,11 +332,7 @@ async fn render_anchor_same_component_props_update_rebuilds_vapor_local_capture(
     update_siblings(&parent);
 
     let props_open = Object::new();
-    let _ = Reflect::set(
-        &props_open,
-        &JsValue::from_str("show"),
-        &JsValue::from_bool(true),
-    );
+    let _ = Reflect::set(&props_open, &JsValue::from_str("show"), &JsValue::from_bool(true));
     let vnode_open =
         rue.create_element_wasm(component.into(), props_open.into(), JsValue::UNDEFINED);
     rue.render_anchor_wasm(vnode_open, parent.clone(), anchor.clone());
@@ -364,6 +361,110 @@ async fn render_anchor_same_component_props_update_rebuilds_vapor_local_capture(
 }
 
 #[wasm_bindgen_test(async)]
+async fn render_anchor_same_component_props_update_restores_active_input_focus() {
+    ensure_fake_document();
+
+    let adapter = make_linked_adapter();
+    let rue = createRue(adapter.clone());
+    let parent = {
+        let f = Reflect::get(&adapter, &JsValue::from_str("createDocumentFragment")).unwrap();
+        let func = f.unchecked_ref::<Function>();
+        func.call0(&adapter).unwrap()
+    };
+    let anchor = {
+        let f = Reflect::get(&adapter, &JsValue::from_str("createElement")).unwrap();
+        let func = f.unchecked_ref::<Function>();
+        func.call1(&adapter, &JsValue::from_str("comment_anchor")).unwrap()
+    };
+    {
+        let append = Reflect::get(&adapter, &JsValue::from_str("appendChild")).unwrap();
+        let func = append.unchecked_ref::<Function>();
+        let _ = func.call2(&adapter, &parent, &anchor);
+        update_siblings(&parent);
+    }
+
+    let component = Function::new_with_args(
+        "props",
+        "const input = { \
+           nodeType: 1, \
+           tag: 'INPUT', \
+           type: 'text', \
+           value: props.value || '', \
+           selectionStart: (props.value || '').length, \
+           selectionEnd: (props.value || '').length, \
+           children: [], \
+           focus: function() { globalThis.document.activeElement = this; } \
+         }; \
+         const hint = { nodeType: 1, tag: 'SPAN', children: [] }; \
+         return { nodeType: 1, tag: 'LABEL', children: [hint, input] };",
+    );
+
+    let props_a = Object::new();
+    let _ = Reflect::set(&props_a, &JsValue::from_str("value"), &JsValue::from_str("A"));
+    let vnode_a =
+        rue.create_element_wasm(component.clone().into(), props_a.into(), JsValue::UNDEFINED);
+    rue.render_anchor_wasm(vnode_a, parent.clone(), anchor.clone());
+    tick().await;
+    update_siblings(&parent);
+
+    let parent_children = Reflect::get(&parent, &JsValue::from_str("children")).unwrap();
+    let parent_children: Array = parent_children.unchecked_into();
+    let old_root = parent_children.get(0);
+    let old_root_children = Reflect::get(&old_root, &JsValue::from_str("children")).unwrap();
+    let old_root_children: Array = old_root_children.unchecked_into();
+    let old_input = old_root_children.get(1);
+    let focus = Reflect::get(&old_input, &JsValue::from_str("focus")).unwrap();
+    let focus = focus.unchecked_ref::<Function>();
+    let _ = focus.call0(&old_input);
+    let _ = Reflect::set(
+        &old_input,
+        &JsValue::from_str("selectionStart"),
+        &JsValue::from_f64(1.0),
+    );
+    let _ = Reflect::set(
+        &old_input,
+        &JsValue::from_str("selectionEnd"),
+        &JsValue::from_f64(1.0),
+    );
+
+    let props_ab = Object::new();
+    let _ = Reflect::set(&props_ab, &JsValue::from_str("value"), &JsValue::from_str("AB"));
+    let vnode_ab =
+        rue.create_element_wasm(component.into(), props_ab.into(), JsValue::UNDEFINED);
+    rue.render_anchor_wasm(vnode_ab, parent.clone(), anchor.clone());
+    tick().await;
+    update_siblings(&parent);
+
+    let parent_children = Reflect::get(&parent, &JsValue::from_str("children")).unwrap();
+    let parent_children: Array = parent_children.unchecked_into();
+    let new_root = parent_children.get(0);
+    let new_root_children = Reflect::get(&new_root, &JsValue::from_str("children")).unwrap();
+    let new_root_children: Array = new_root_children.unchecked_into();
+    let new_input = new_root_children.get(1);
+
+    assert!(
+        !Object::is(&old_input, &new_input),
+        "same component props update should still replace the raw vapor input node in this path"
+    );
+    assert!(
+        Object::is(&active_element(), &new_input),
+        "focus should be restored onto the replacement input"
+    );
+    assert_eq!(
+        Reflect::get(&new_input, &JsValue::from_str("selectionStart"))
+            .unwrap_or(JsValue::UNDEFINED)
+            .as_f64(),
+        Some(1.0)
+    );
+    assert_eq!(
+        Reflect::get(&new_input, &JsValue::from_str("selectionEnd"))
+            .unwrap_or(JsValue::UNDEFINED)
+            .as_f64(),
+        Some(1.0)
+    );
+}
+
+#[wasm_bindgen_test(async)]
 async fn render_anchor_component_element_component_toggle_keeps_single_root() {
     let adapter = make_linked_adapter();
     let rue = createRue(adapter.clone());
@@ -387,21 +488,28 @@ async fn render_anchor_component_element_component_toggle_keeps_single_root() {
     let code_component = Function::new_no_args(
         "return { type: 'div', props: { className: 'code-root' }, children: ['CODE'] };",
     );
-    let code_vnode1 =
-        rue.create_element_wasm(code_component.clone().into(), JsValue::UNDEFINED, JsValue::UNDEFINED);
+    let code_vnode1 = rue.create_element_wasm(
+        code_component.clone().into(),
+        JsValue::UNDEFINED,
+        JsValue::UNDEFINED,
+    );
     rue.render_anchor_wasm(code_vnode1, parent.clone(), anchor.clone());
     tick().await;
     update_siblings(&parent);
 
     let preview_children = Array::new();
     preview_children.push(&JsValue::from_str("PREVIEW"));
-    let preview_vnode =
-        rue.create_element_wasm(JsValue::from_str("div"), JsValue::UNDEFINED, preview_children.into());
+    let preview_vnode = rue.create_element_wasm(
+        JsValue::from_str("div"),
+        JsValue::UNDEFINED,
+        preview_children.into(),
+    );
     rue.render_anchor_wasm(preview_vnode, parent.clone(), anchor.clone());
     tick().await;
     update_siblings(&parent);
 
-    let after_preview = Reflect::get(&parent, &JsValue::from_str("children")).unwrap_or(Array::new().into());
+    let after_preview =
+        Reflect::get(&parent, &JsValue::from_str("children")).unwrap_or(Array::new().into());
     let after_preview: Array = after_preview.unchecked_into();
     let preview_divs: Vec<JsValue> = after_preview
         .iter()
@@ -429,7 +537,8 @@ async fn render_anchor_component_element_component_toggle_keeps_single_root() {
     tick().await;
     update_siblings(&parent);
 
-    let final_children = Reflect::get(&parent, &JsValue::from_str("children")).unwrap_or(Array::new().into());
+    let final_children =
+        Reflect::get(&parent, &JsValue::from_str("children")).unwrap_or(Array::new().into());
     let final_children: Array = final_children.unchecked_into();
     let code_divs: Vec<JsValue> = final_children
         .iter()
@@ -441,9 +550,13 @@ async fn render_anchor_component_element_component_toggle_keeps_single_root() {
                 == "div"
         })
         .collect();
-    assert_eq!(code_divs.len(), 1, "element -> component should not append a second component root");
-    let code_children = Reflect::get(&code_divs[0], &JsValue::from_str("children"))
-        .unwrap_or(Array::new().into());
+    assert_eq!(
+        code_divs.len(),
+        1,
+        "element -> component should not append a second component root"
+    );
+    let code_children =
+        Reflect::get(&code_divs[0], &JsValue::from_str("children")).unwrap_or(Array::new().into());
     let code_children: Array = code_children.unchecked_into();
     let code_text = Reflect::get(&code_children.get(0), &JsValue::from_str("text"))
         .unwrap_or(JsValue::UNDEFINED)

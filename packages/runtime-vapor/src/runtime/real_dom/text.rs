@@ -1,5 +1,5 @@
-use super::super::types::{MountInput, MountInputType, MountedSubtreeState, MountedTextSubtree};
 use super::super::Rue;
+use super::super::types::{MountInput, MountInputType, MountedSubtreeState, MountedTextSubtree};
 use crate::runtime::dom_adapter::DomAdapter;
 
 fn text_content_from_input<A: DomAdapter>(input: &MountInput<A>) -> String {

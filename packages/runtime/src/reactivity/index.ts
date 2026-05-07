@@ -28,4 +28,4 @@ export {
   shallowReadonly,
   toRaw,
   propsReactive,
-} from '@rue-js/runtime-vapor'
+} from '@rue-js/runtime-vapor/reactive'

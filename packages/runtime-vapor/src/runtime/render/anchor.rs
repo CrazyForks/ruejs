@@ -2,8 +2,8 @@ use super::super::Rue;
 use super::super::types::{AnchorMountState, MountInput, MountedState};
 #[cfg(feature = "dev")]
 use crate::log::{log, want_log};
-use crate::runtime::dom_adapter::DomAdapter;
 use crate::reactive::core::batch_scope;
+use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
 
@@ -103,26 +103,6 @@ where
                     entry.take_mount()
                 };
                 match taken {
-                    Some(MountedState::Element(old_element)) => {
-                        let mut old_patch = old_element.into_patch_state();
-                        let mut parent_clone = parent.clone();
-                        self.call_hooks("before_update");
-                        self.patch(&mut old_patch, input, &mut parent_clone);
-                        self.call_hooks("updated");
-                        if let Some(entry) = self.anchor_map.get_mut(idx) {
-                            entry.store_mount(MountedState::from_subtree_root(old_patch));
-                        }
-                    }
-                    Some(MountedState::Component(old_component)) => {
-                        let mut parent_clone = parent.clone();
-                        let mut old_patch = old_component.into_patch_state();
-                        self.call_hooks("before_update");
-                        self.patch(&mut old_patch, input, &mut parent_clone);
-                        self.call_hooks("updated");
-                        if let Some(entry) = self.anchor_map.get_mut(idx) {
-                            entry.store_mount(MountedState::from_subtree_root(old_patch));
-                        }
-                    }
                     Some(MountedState::Block(old_block)) => {
                         let mut dest_parent = self.resolve_dest_parent_for_end(parent, &anchor);
                         self.call_hooks("before_update");
@@ -132,6 +112,17 @@ where
                             if let Some(entry) = self.anchor_map.get_mut(idx) {
                                 entry.store_mount(mounted);
                             }
+                        }
+                    }
+                    Some(old_mount) => {
+                        let mut parent_clone = parent.clone();
+                        let mounted = self.patch_root_mounted_state(
+                            old_mount,
+                            input,
+                            &mut parent_clone,
+                        );
+                        if let Some(entry) = self.anchor_map.get_mut(idx) {
+                            entry.store_mount(mounted);
                         }
                     }
                     None => {
@@ -146,7 +137,10 @@ where
                 #[cfg(feature = "dev")]
                 {
                     if want_log("debug", "runtime:renderAnchor anchor_map miss") {
-                        log("debug", "runtime:renderAnchor anchor_map miss, creating new anchor entry");
+                        log(
+                            "debug",
+                            "runtime:renderAnchor anchor_map miss, creating new anchor entry",
+                        );
                     }
                 }
                 if let Some(mounted) = self.render_anchor_mount(input, parent, &anchor) {

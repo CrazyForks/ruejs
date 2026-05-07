@@ -46,8 +46,9 @@
 */
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::types::ComponentProps;
-use js_sys::{Array, Object, Reflect};
+use js_sys::{Array, Function, Object, Reflect};
 use std::collections::HashMap;
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
 pub type Props = ComponentProps;
@@ -196,7 +197,8 @@ pub fn patch_props<A: DomAdapter>(
         if key == "className" {
             // Demo：新 { className: "btn" }
             // 调用：set_class_name(el, "btn")
-            adapter.set_class_name(el, new_val.as_string().unwrap_or_default().as_str());
+            let class_name = js_value_to_dom_string(new_val);
+            adapter.set_class_name(el, class_name.as_str());
         } else if key == "style" {
             // Demo：新 { style: { color: "blue", width: 100 } }
             // 调用：patch_style(el, {}, { color: "blue", width: "100" })
@@ -236,7 +238,8 @@ pub fn patch_props<A: DomAdapter>(
             // 通用属性：以字符串形式写入
             // Demo：新 { data-id: "1" }
             // 调用：set_attribute(el, "data-id", "1")
-            adapter.set_attribute(el, key, new_val.as_string().unwrap_or_default().as_str());
+            let attr_value = js_value_to_dom_string(new_val);
+            adapter.set_attribute(el, key, attr_value.as_str());
         }
     }
     Ok(())
@@ -281,6 +284,39 @@ fn js_style_to_map(val: &JsValue) -> Result<HashMap<String, String>, JsValue> {
         }
     }
     Ok(map)
+}
+
+fn js_value_to_dom_string(val: &JsValue) -> String {
+    if let Some(text) = val.as_string() {
+        return text;
+    }
+    if let Some(number) = val.as_f64() {
+        return number.to_string();
+    }
+    if let Some(boolean) = val.as_bool() {
+        return if boolean { "true".to_string() } else { "false".to_string() };
+    }
+    if val.is_null() {
+        return "null".to_string();
+    }
+    if val.is_undefined() {
+        return "undefined".to_string();
+    }
+
+    let global = js_sys::global();
+    let string_ctor = Reflect::get(&global, &JsValue::from_str("String"))
+        .ok()
+        .and_then(|value| value.dyn_into::<Function>().ok());
+
+    if let Some(string_ctor) = string_ctor {
+        if let Ok(result) = string_ctor.call1(&JsValue::UNDEFINED, val) {
+            if let Some(text) = result.as_string() {
+                return text;
+            }
+        }
+    }
+
+    String::new()
 }
 
 fn extract_inner_html(val: &JsValue) -> Result<String, JsValue> {

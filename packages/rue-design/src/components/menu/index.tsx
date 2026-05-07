@@ -1,169 +1,167 @@
 /*
 Menu 组件概述
-- 形态：方向与尺寸控制菜单布局（vertical/horizontal、xs~xl）。
-- 数据驱动：支持 Title/Item/Dropdown/Submenu 组合；或使用复合子组件。
+- 保留 Rue 当前 menu 视觉结构，并补齐更接近成熟组件库的导航能力。
+- 同时支持 children 组合写法、旧版 kind 数据结构，以及 items 驱动的增强写法。
 */
 import type { FC } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 import { RouterLink } from '@rue-js/router'
-/* 引入 RouterLink 以支持路由内部跳转 */
 
-type MenuSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
-type MenuDirection = 'vertical' | 'horizontal'
+export type MenuKey = string | number
+export type MenuSize =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | 'small'
+  | 'middle'
+  | 'medium'
+  | 'large'
+export type MenuDirection = 'vertical' | 'horizontal'
+export type MenuMode = 'vertical' | 'horizontal' | 'inline'
+export type MenuTriggerSubMenuAction = 'hover' | 'click'
 
-interface MenuDataTitle {
+export interface MenuClickInfo {
+  key?: MenuKey
+  keyPath: MenuKey[]
+  item?: MenuDataEntry
+  domEvent: MouseEvent
+}
+
+export interface MenuSelectInfo extends MenuClickInfo {
+  key: MenuKey
+  selectedKeys: MenuKey[]
+}
+
+export interface MenuTitleData {
   kind: 'title'
   as?: 'li' | 'h2'
   className?: string
   children?: any
 }
 
-interface MenuDataDropdownToggle {
+export interface MenuDropdownToggleData {
+  show?: boolean
   visible?: boolean
   className?: string
+  onClick?: (event: MouseEvent) => void
   children?: any
 }
 
-interface MenuDataDropdown {
+export interface MenuDropdownData {
+  show?: boolean
   visible?: boolean
   className?: string
   items?: ReadonlyArray<MenuDataEntry>
 }
 
-interface MenuDataSubmenu {
+export interface MenuLegacySubmenuData {
   className?: string
   items?: ReadonlyArray<MenuDataEntry>
 }
 
-interface MenuDataItem {
-  kind: 'item'
+export interface MenuItemData {
+  kind?: 'item'
+  type?: undefined
+  key?: MenuKey
   as?: 'a' | 'button' | 'span'
   href?: string
   to?: string
   target?: string
   rel?: string
-  onClick?: (e: any) => void
+  title?: string
+  label?: any
+  icon?: any
+  extra?: any
+  danger?: boolean
+  onClick?: (event: MouseEvent) => void
   disabled?: boolean
   active?: boolean
+  selected?: boolean
   focus?: boolean
   liClassName?: string
   className?: string
   children?: any
-  dropdownToggle?: MenuDataDropdownToggle
-  dropdown?: MenuDataDropdown
-  submenu?: MenuDataSubmenu
+  dropdownToggle?: MenuDropdownToggleData
+  dropdown?: MenuDropdownData
+  submenu?: MenuLegacySubmenuData
   [key: string]: any
 }
 
-type MenuDataEntry = MenuDataTitle | MenuDataItem
+export interface MenuSubMenuData {
+  type: 'submenu'
+  key?: MenuKey
+  label?: any
+  icon?: any
+  extra?: any
+  title?: string
+  disabled?: boolean
+  className?: string
+  popupClassName?: string
+  children?: ReadonlyArray<MenuDataEntry>
+  onTitleClick?: (info: { key?: MenuKey; domEvent: MouseEvent }) => void
+}
 
-interface MenuProps {
+export interface MenuGroupData {
+  type: 'group'
+  key?: MenuKey
+  label?: any
+  className?: string
+  children?: ReadonlyArray<MenuDataEntry>
+}
+
+export interface MenuDividerData {
+  type: 'divider'
+  key?: MenuKey
+  className?: string
+  dashed?: boolean
+}
+
+export type MenuDataEntry =
+  | MenuTitleData
+  | MenuItemData
+  | MenuSubMenuData
+  | MenuGroupData
+  | MenuDividerData
+
+export interface MenuProps {
   size?: MenuSize
   direction?: MenuDirection
+  mode?: MenuMode
   className?: string
+  style?: any
+  selectable?: boolean
+  multiple?: boolean
+  inlineIndent?: number
+  triggerSubMenuAction?: MenuTriggerSubMenuAction
+  selectedKeys?: ReadonlyArray<MenuKey>
+  defaultSelectedKeys?: ReadonlyArray<MenuKey>
+  openKeys?: ReadonlyArray<MenuKey>
+  defaultOpenKeys?: ReadonlyArray<MenuKey>
+  onClick?: (info: MenuClickInfo) => void
+  onSelect?: (info: MenuSelectInfo) => void
+  onDeselect?: (info: MenuSelectInfo) => void
+  onOpenChange?: (openKeys: MenuKey[]) => void
   children?: any
   items?: ReadonlyArray<MenuDataEntry>
 }
 
-/** 渲染数据项为菜单结构 */
-const renderEntry = (m: MenuDataEntry, idx: number) => {
-  if (m.kind === 'title') {
-    /* 标题项：使用 Title 子组件渲染 */
-    return (
-      <Title key={idx} as={m.as} className={m.className}>
-        {m.children}
-      </Title>
-    )
-  }
-  /* 普通项：组合禁用/激活/聚焦与自定义类 */
-  const innerClasses = [
-    m.disabled ? 'menu-disabled' : '',
-    m.active ? 'menu-active' : '',
-    m.focus ? 'menu-focus' : '',
-    m.className ?? '',
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .trim()
-  /* li 容器类（可选） */
-  const liCls = m.liClassName ? m.liClassName : undefined
-  return (
-    <li className={liCls} key={idx}>
-      {/* 渲染不同标签类型：button/span/RouterLink/a */}
-      {m.as === 'button' ? (
-        <button className={innerClasses || undefined} {...m}>
-          {m.children}
-        </button>
-      ) : m.as === 'span' ? (
-        <span className={innerClasses || undefined} {...m}>
-          {m.children}
-        </span>
-      ) : m.to ? (
-        <RouterLink className={innerClasses || undefined} to={m.to} onClick={m.onClick}>
-          {m.children}
-        </RouterLink>
-      ) : m.href ? (
-        <a
-          className={innerClasses || undefined}
-          href={m.href}
-          target={m.target}
-          rel={m.rel}
-          onClick={m.onClick}
-        >
-          {m.children}
-        </a>
-      ) : (
-        <a className={innerClasses || undefined} onClick={m.onClick}>
-          {m.children}
-        </a>
-      )}
-      {/* 下拉切换：可见性与样式 */}
-      {m.dropdownToggle ? (
-        <DropdownToggle visible={m.dropdownToggle.visible} className={m.dropdownToggle.className}>
-          {m.dropdownToggle.children}
-        </DropdownToggle>
-      ) : null}
-      {/* 下拉菜单：递归渲染子项 */}
-      {m.dropdown ? (
-        <Dropdown visible={m.dropdown.visible} className={m.dropdown.className}>
-          {m.dropdown.items?.map((child, i) => renderEntry(child, i))}
-        </Dropdown>
-      ) : null}
-      {/* 子菜单：递归渲染子项 */}
-      {m.submenu ? (
-        <Submenu className={m.submenu.className}>
-          {m.submenu.items?.map((child, i) => renderEntry(child, i))}
-        </Submenu>
-      ) : null}
-    </li>
-  )
-}
-
-/** 菜单组件：数据驱动或 children 渲染 */
-const Menu: FC<MenuProps> = ({ size, direction = 'vertical', className, children, items }) => {
-  let cls = 'menu'
-  /* 布局方向类名 */
-  if (direction === 'horizontal') cls += ` menu-horizontal`
-  else if (direction === 'vertical') cls += ` menu-vertical`
-  /* 尺寸类名 */
-  if (size) cls += ` menu-${size}`
-  /* 附加类名 */
-  if (className) cls += ` ${className}`
-  /* 数据驱动渲染 */
-  if (items && items.length)
-    return <ul className={cls}>{items.map((m, i) => renderEntry(m, i))}</ul>
-  /* children 形式 */
-  return <ul className={cls}>{children}</ul>
-}
-
-interface MenuItemProps {
+export interface MenuItemProps {
+  eventKey?: MenuKey
   as?: 'a' | 'button' | 'span'
   href?: string
   to?: string
   target?: string
   rel?: string
-  onClick?: (e: any) => void
+  title?: string
+  icon?: any
+  extra?: any
+  danger?: boolean
+  onClick?: (event: MouseEvent) => void
   disabled?: boolean
   active?: boolean
+  selected?: boolean
   focus?: boolean
   liClassName?: string
   className?: string
@@ -171,118 +169,764 @@ interface MenuItemProps {
   [key: string]: any
 }
 
-/** 菜单项子组件：支持 a/button/span 与 RouterLink */
-const Item: FC<MenuItemProps> = ({
-  as = 'a',
-  href,
-  to,
-  target,
-  rel,
-  onClick,
-  disabled,
-  active,
-  focus,
-  liClassName,
-  className,
-  children,
-  ...rest
-}) => {
-  const innerClasses = [
-    disabled ? 'menu-disabled' : '',
-    active ? 'menu-active' : '',
-    focus ? 'menu-focus' : '',
-    className ?? '',
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .trim()
-
-  const liCls = liClassName ? liClassName : undefined
-  return (
-    <li className={liCls}>
-      {as === 'button' ? (
-        <button className={innerClasses || undefined} onClick={onClick} {...rest}>
-          {children}
-        </button>
-      ) : as === 'span' ? (
-        <span className={innerClasses || undefined} onClick={onClick} {...rest}>
-          {children}
-        </span>
-      ) : to ? (
-        <RouterLink className={innerClasses || undefined} to={to} onClick={onClick}>
-          {children}
-        </RouterLink>
-      ) : href ? (
-        <a
-          className={innerClasses || undefined}
-          href={href}
-          target={target}
-          rel={rel}
-          onClick={onClick}
-          {...rest}
-        >
-          {children}
-        </a>
-      ) : (
-        <a className={innerClasses || undefined} onClick={onClick} {...rest}>
-          {children}
-        </a>
-      )}
-    </li>
-  )
-}
-
-interface MenuTitleProps {
+export interface MenuTitleProps {
   as?: 'li' | 'h2'
   className?: string
   children?: any
 }
 
-/** 标题子组件：li 或 h2 */
-const Title: FC<MenuTitleProps> = ({ as = 'li', className, children }) => {
-  let cls = 'menu-title'
+export interface MenuDropdownProps {
+  show?: boolean
+  visible?: boolean
+  className?: string
+  children?: any
+}
+
+export interface MenuDropdownToggleProps {
+  show?: boolean
+  visible?: boolean
+  className?: string
+  onClick?: (event: MouseEvent) => void
+  children?: any
+}
+
+export interface SubmenuProps {
+  className?: string
+  children?: any
+}
+
+export interface MenuSubMenuProps {
+  eventKey?: MenuKey
+  title?: any
+  icon?: any
+  extra?: any
+  disabled?: boolean
+  className?: string
+  popupClassName?: string
+  open?: boolean
+  defaultOpen?: boolean
+  onTitleClick?: (info: { key?: MenuKey; domEvent: MouseEvent }) => void
+  onOpenChange?: (open: boolean) => void
+  children?: any
+}
+
+export interface MenuItemGroupProps {
+  title?: any
+  className?: string
+  children?: any
+}
+
+export interface MenuDividerProps {
+  className?: string
+  dashed?: boolean
+}
+
+interface MenuContextValue {
+  mode: MenuMode
+  inlineIndent: number
+  selectable: boolean
+  multiple: boolean
+  triggerSubMenuAction: MenuTriggerSubMenuAction
+  selectedKeys: MenuKey[]
+  openKeys: MenuKey[]
+  isSelected: (key?: MenuKey, explicit?: boolean) => boolean
+  isOpen: (key?: MenuKey, explicit?: boolean) => boolean
+  onItemClick: (event: MouseEvent, item: Partial<MenuItemData>, keyPath?: MenuKey[]) => void
+  onSubMenuToggle: (
+    key: MenuKey,
+    nextOpen: boolean,
+    event: MouseEvent,
+    item?: Partial<MenuSubMenuData>,
+  ) => void
+}
+
+const RUE_COMPONENT_TYPE_KEY = '__rue_component_type'
+const MENU_CONTEXT_PROP = '__menuContext'
+
+const appendClassName = (base: string, className?: string) =>
+  className ? `${base} ${className}` : base
+
+const resolveSizeClass = (size?: MenuSize) => {
+  switch (size) {
+    case 'small':
+      return 'sm'
+    case 'middle':
+    case 'medium':
+      return 'md'
+    case 'large':
+      return 'lg'
+    default:
+      return size
+  }
+}
+
+const normalizeKeys = (keys?: ReadonlyArray<MenuKey>) => {
+  return Array.isArray(keys) ? [...keys] : []
+}
+
+const hasKey = (keys: ReadonlyArray<MenuKey>, target?: MenuKey) => {
+  if (target === undefined) return false
+  return keys.some(key => key === target)
+}
+
+const isRenderableNode = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object'
+
+const injectMenuContext = (value: unknown, menuContext: MenuContextValue): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(child => injectMenuContext(child, menuContext))
+  }
+  if (!isRenderableNode(value)) {
+    return value
+  }
+
+  const props = value.props
+  if (!props || typeof props !== 'object') {
+    return value
+  }
+
+  const nextProps = {
+    ...(props as Record<string, unknown>),
+  }
+  if ('children' in nextProps) {
+    nextProps.children = injectMenuContext(nextProps.children, menuContext)
+  }
+
+  const type = value[RUE_COMPONENT_TYPE_KEY]
+  if (type === Item || type === SubMenu) {
+    nextProps[MENU_CONTEXT_PROP] = menuContext
+  }
+
+  value.props = nextProps
+  return value
+}
+
+const toggleKey = (keys: ReadonlyArray<MenuKey>, target: MenuKey) => {
+  return hasKey(keys, target) ? keys.filter(key => key !== target) : [...keys, target]
+}
+
+const getMenuMode = (mode?: MenuMode, direction?: MenuDirection): MenuMode => {
+  if (mode) return mode
+  if (direction === 'horizontal') return 'horizontal'
+  return 'vertical'
+}
+
+const getAnchorRel = (target?: string, rel?: string) => {
+  if (target === '_blank' && !rel) return 'noreferrer'
+  return rel
+}
+
+const getItemClassName = ({
+  disabled,
+  selected,
+  focus,
+  danger,
+  className,
+}: {
+  disabled?: boolean
+  selected?: boolean
+  focus?: boolean
+  danger?: boolean
+  className?: string
+}) => {
+  let cls = ''
+  if (disabled) cls += ' menu-disabled'
+  if (selected) cls += ' menu-active'
+  if (focus) cls += ' menu-focus'
+  if (danger) cls += ' text-error'
   if (className) cls += ` ${className}`
+  return cls.trim() || undefined
+}
+
+const renderItemContent = ({
+  icon,
+  content,
+  extra,
+  suffix,
+}: {
+  icon?: any
+  content?: any
+  extra?: any
+  suffix?: any
+}) => {
+  const hasIcon = icon != null
+  const hasExtra = extra != null || suffix != null
+  return (
+    <>
+      {hasIcon ? <span className="inline-flex shrink-0 items-center justify-center">{icon}</span> : null}
+      {content != null ? (
+        <span className={appendClassName(hasExtra ? 'min-w-0 flex-1' : '', hasIcon ? '' : undefined)}>
+          {content}
+        </span>
+      ) : null}
+      {extra != null ? <span className="ml-auto shrink-0 pl-3 text-xs opacity-70">{extra}</span> : null}
+      {suffix != null ? <span className="ml-2 shrink-0 opacity-60">{suffix}</span> : null}
+    </>
+  )
+}
+
+const renderMenuAction = (
+  props: MenuItemProps,
+  menuContext: MenuContextValue | null,
+  itemMeta?: Partial<MenuDataEntry>,
+  keyPath?: MenuKey[],
+) => {
+  const {
+    eventKey,
+    as = 'a',
+    href,
+    to,
+    target,
+    rel,
+    title,
+    icon,
+    extra,
+    onClick,
+    disabled,
+    active,
+    selected,
+    focus,
+    danger,
+    className,
+    children,
+    ...rest
+  } = props
+
+  const mergedSelected = menuContext?.isSelected(eventKey, selected ?? active) ?? !!(selected ?? active)
+  const innerClassName = getItemClassName({
+    disabled,
+    selected: mergedSelected,
+    focus,
+    danger,
+    className,
+  })
+
+  const handleClick = (event: MouseEvent) => {
+    if (disabled) {
+      if (typeof (event as any).preventDefault === 'function') {
+        ;(event as any).preventDefault()
+      }
+      if (typeof (event as any).stopPropagation === 'function') {
+        ;(event as any).stopPropagation()
+      }
+      return
+    }
+    if (onClick) onClick(event)
+    if (menuContext) {
+      menuContext.onItemClick(
+        event,
+        {
+          key: eventKey,
+          label: children,
+          icon,
+          extra,
+          title,
+          danger,
+          disabled,
+          active,
+          selected,
+          focus,
+          className,
+          ...(itemMeta as any),
+        },
+        keyPath,
+      )
+    }
+  }
+
+  const contentNode = renderItemContent({
+    icon,
+    content: children,
+    extra,
+  })
+
+  if (as === 'button') {
+    return (
+      <button
+        {...rest}
+        type={rest.type ?? 'button'}
+        className={innerClassName}
+        title={title}
+        disabled={disabled}
+        aria-current={mergedSelected ? 'page' : undefined}
+        onClick={handleClick}
+      >
+        {contentNode}
+      </button>
+    )
+  }
+
+  if (as === 'span') {
+    return (
+      <span
+        {...rest}
+        className={innerClassName}
+        title={title}
+        role={rest.role ?? 'menuitem'}
+        tabIndex={disabled ? -1 : (rest.tabIndex ?? 0)}
+        aria-current={mergedSelected ? 'page' : undefined}
+        aria-disabled={disabled ? 'true' : undefined}
+        onClick={handleClick}
+      >
+        {contentNode}
+      </span>
+    )
+  }
+
+  if (to) {
+    return (
+      <RouterLink
+        className={innerClassName}
+        to={disabled ? undefined : to}
+        title={title}
+        aria-current={mergedSelected ? 'page' : undefined}
+        aria-disabled={disabled ? 'true' : undefined}
+        onClick={handleClick}
+      >
+        {contentNode}
+      </RouterLink>
+    )
+  }
+
+  if (href) {
+    return (
+      <a
+        {...rest}
+        className={innerClassName}
+        href={disabled ? undefined : href}
+        target={target}
+        rel={getAnchorRel(target, rel)}
+        title={title}
+        aria-current={mergedSelected ? 'page' : undefined}
+        aria-disabled={disabled ? 'true' : undefined}
+        onClick={handleClick}
+      >
+        {contentNode}
+      </a>
+    )
+  }
+
+  return (
+    <a
+      {...rest}
+      className={innerClassName}
+      title={title}
+      aria-current={mergedSelected ? 'page' : undefined}
+      aria-disabled={disabled ? 'true' : undefined}
+      onClick={handleClick}
+    >
+      {contentNode}
+    </a>
+  )
+}
+
+const Title: FC<MenuTitleProps> = ({ as = 'li', className, children }) => {
+  const cls = appendClassName('menu-title', className)
   if (as === 'h2') return <h2 className={cls}>{children}</h2>
   return <li className={cls}>{children}</li>
 }
 
-interface MenuDropdownProps {
-  visible?: boolean
-  className?: string
-  children?: any
-}
-
-/** 下拉菜单子组件 */
-const Dropdown: FC<MenuDropdownProps> = ({ visible, className, children }) => {
+const Dropdown: FC<MenuDropdownProps> = ({ show, visible, className, children }) => {
+  const mergedVisible = visible ?? show
   let cls = 'menu-dropdown'
-  if (visible) cls += ` menu-dropdown-visible`
+  if (mergedVisible) cls += ' menu-dropdown-show'
   if (className) cls += ` ${className}`
   return <ul className={cls}>{children}</ul>
 }
 
-interface MenuDropdownToggleProps {
-  visible?: boolean
-  className?: string
-  children?: any
-}
-
-/** 下拉切换子组件 */
-const DropdownToggle: FC<MenuDropdownToggleProps> = ({ visible, className, children }) => {
+const DropdownToggle: FC<MenuDropdownToggleProps> = ({ show, visible, className, onClick, children }) => {
+  const mergedVisible = visible ?? show
   let cls = 'menu-dropdown-toggle'
-  if (visible) cls += ` menu-dropdown-visible`
+  if (mergedVisible) cls += ' menu-dropdown-show'
   if (className) cls += ` ${className}`
-  return <span className={cls}>{children}</span>
+  return (
+    <span
+      className={cls}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-expanded={onClick ? (mergedVisible ? 'true' : 'false') : undefined}
+      onClick={onClick}
+      onKeyDown={event => {
+        if (!onClick) return
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        if (typeof (event as any).preventDefault === 'function') {
+          ;(event as any).preventDefault()
+        }
+        onClick(event as any)
+      }}
+    >
+      {children}
+    </span>
+  )
 }
 
-interface SubmenuProps {
-  className?: string
-  children?: any
-}
-
-/** 子菜单容器组件 */
 const Submenu: FC<SubmenuProps> = ({ className, children }) => {
-  const cls = className ? className : undefined
-  return <ul className={cls}>{children}</ul>
+  return <ul className={className}>{children}</ul>
+}
+
+const Item: FC<MenuItemProps & { __menuContext?: MenuContextValue | null }> = ({
+  liClassName,
+  __menuContext = null,
+  ...rest
+}) => {
+  const menuContext = __menuContext
+  return <li className={liClassName}>{renderMenuAction(rest, menuContext)}</li>
+}
+
+const Divider: FC<MenuDividerProps> = ({ className, dashed }) => {
+  return (
+    <li
+      role="separator"
+      className={appendClassName(
+        appendClassName('mx-2 my-1 h-px list-none bg-base-300/80', dashed ? 'border-t border-dashed border-base-300 bg-transparent' : undefined),
+        className,
+      )}
+    />
+  )
+}
+
+const ItemGroup: FC<MenuItemGroupProps> = ({ title, className, children }) => {
+  return (
+    <li className={className}>
+      <div className="menu-title">{title}</div>
+      <ul>{children}</ul>
+    </li>
+  )
+}
+
+const SubMenu: FC<MenuSubMenuProps> = ({
+  eventKey,
+  title,
+  icon,
+  extra,
+  disabled,
+  className,
+  popupClassName,
+  open,
+  defaultOpen,
+  onTitleClick,
+  onOpenChange,
+  children,
+  __menuContext = null,
+}) => {
+  const menuContext = __menuContext
+  const uncontrolledOpen = ref(!!defaultOpen)
+  const mergedOpen =
+    eventKey !== undefined && menuContext
+      ? menuContext.isOpen(eventKey, open)
+      : (open ?? uncontrolledOpen.value)
+  const triggerAction =
+    menuContext?.mode === 'inline' ? 'click' : (menuContext?.triggerSubMenuAction ?? 'click')
+
+  const commitOpen = (nextOpen: boolean, event: MouseEvent) => {
+    if (disabled) return
+    if (onTitleClick) onTitleClick({ key: eventKey, domEvent: event })
+    if (eventKey !== undefined && menuContext) {
+      menuContext.onSubMenuToggle(
+        eventKey,
+        nextOpen,
+        event,
+        { key: eventKey, label: title, icon, extra, disabled, className, popupClassName },
+      )
+    } else if (open === undefined) {
+      uncontrolledOpen.value = nextOpen
+    }
+    if (onOpenChange) onOpenChange(nextOpen)
+  }
+
+  return (
+    <li
+      className={className}
+      onMouseEnter={event => {
+        if (triggerAction === 'hover') commitOpen(true, event as any)
+      }}
+      onMouseLeave={event => {
+        if (triggerAction === 'hover') commitOpen(false, event as any)
+      }}
+    >
+      <button
+        type="button"
+        className={getItemClassName({
+          disabled,
+          selected: mergedOpen,
+        })}
+        aria-expanded={mergedOpen ? 'true' : 'false'}
+        aria-disabled={disabled ? 'true' : undefined}
+        onClick={event => {
+          if (triggerAction !== 'click') return
+          commitOpen(!mergedOpen, event as any)
+        }}
+      >
+        {renderItemContent({
+          icon,
+          content: title,
+          extra,
+          suffix: <span>{mergedOpen ? '▾' : '▸'}</span>,
+        })}
+      </button>
+      <ul
+        className={appendClassName(mergedOpen ? '' : 'hidden', popupClassName)}
+        style={menuContext?.mode === 'inline' ? { paddingInlineStart: `${menuContext.inlineIndent}px` } : undefined}
+      >
+        {children}
+      </ul>
+    </li>
+  )
+}
+
+const renderDataEntry = (
+  entry: MenuDataEntry,
+  index: number,
+  menuContext: MenuContextValue,
+  parentKeyPath: MenuKey[] = [],
+): any => {
+  const entryKey = (entry as any).key ?? `${parentKeyPath.join('-') || 'root'}-${index}`
+
+  if ((entry as MenuTitleData).kind === 'title') {
+    const titleEntry = entry as MenuTitleData
+    return (
+      <Title key={entryKey} as={titleEntry.as} className={titleEntry.className}>
+        {titleEntry.children}
+      </Title>
+    )
+  }
+
+  if ((entry as MenuDividerData).type === 'divider') {
+    const dividerEntry = entry as MenuDividerData
+    return <Divider key={entryKey} className={dividerEntry.className} dashed={dividerEntry.dashed} />
+  }
+
+  if ((entry as MenuGroupData).type === 'group') {
+    const groupEntry = entry as MenuGroupData
+    return (
+      <ItemGroup key={entryKey} title={groupEntry.label} className={groupEntry.className}>
+        {groupEntry.children?.map((child, childIndex) =>
+          renderDataEntry(child, childIndex, menuContext, groupEntry.key !== undefined ? [...parentKeyPath, groupEntry.key] : parentKeyPath),
+        )}
+      </ItemGroup>
+    )
+  }
+
+  if ((entry as MenuSubMenuData).type === 'submenu') {
+    const subMenuEntry = entry as MenuSubMenuData
+    const keyPath =
+      subMenuEntry.key !== undefined ? [...parentKeyPath, subMenuEntry.key] : parentKeyPath
+    return (
+      <SubMenu
+        key={entryKey}
+        eventKey={subMenuEntry.key}
+        title={subMenuEntry.label}
+        icon={subMenuEntry.icon}
+        extra={subMenuEntry.extra}
+        disabled={subMenuEntry.disabled}
+        className={subMenuEntry.className}
+        popupClassName={subMenuEntry.popupClassName}
+        onTitleClick={subMenuEntry.onTitleClick}
+      >
+        {subMenuEntry.children?.map((child, childIndex) =>
+          renderDataEntry(child, childIndex, menuContext, keyPath),
+        )}
+      </SubMenu>
+    )
+  }
+
+  const itemEntry = entry as MenuItemData
+  const content = itemEntry.label ?? itemEntry.children
+  const keyPath = itemEntry.key !== undefined ? [...parentKeyPath, itemEntry.key] : parentKeyPath
+
+  if (itemEntry.dropdown || itemEntry.submenu || itemEntry.dropdownToggle) {
+    return (
+      <li className={itemEntry.liClassName} key={entryKey}>
+        {renderMenuAction(
+          {
+            eventKey: itemEntry.key,
+            as: itemEntry.as,
+            href: itemEntry.href,
+            to: itemEntry.to,
+            target: itemEntry.target,
+            rel: itemEntry.rel,
+            title: itemEntry.title,
+            icon: itemEntry.icon,
+            extra: itemEntry.extra,
+            danger: itemEntry.danger,
+            onClick: itemEntry.onClick,
+            disabled: itemEntry.disabled,
+            active: itemEntry.active,
+            selected: itemEntry.selected,
+            focus: itemEntry.focus,
+            className: itemEntry.className,
+            children: content,
+          },
+          menuContext,
+          itemEntry,
+          keyPath,
+        )}
+        {itemEntry.dropdownToggle ? (
+          <DropdownToggle
+            show={(itemEntry.dropdownToggle as any).show}
+            visible={itemEntry.dropdownToggle.visible}
+            className={itemEntry.dropdownToggle.className}
+            onClick={itemEntry.dropdownToggle.onClick}
+          >
+            {itemEntry.dropdownToggle.children}
+          </DropdownToggle>
+        ) : null}
+        {itemEntry.dropdown ? (
+          <Dropdown
+            show={(itemEntry.dropdown as any).show}
+            visible={itemEntry.dropdown.visible}
+            className={itemEntry.dropdown.className}
+          >
+            {itemEntry.dropdown.items?.map((child, childIndex) =>
+              renderDataEntry(child, childIndex, menuContext, keyPath),
+            )}
+          </Dropdown>
+        ) : null}
+        {itemEntry.submenu ? (
+          <Submenu className={itemEntry.submenu.className}>
+            {itemEntry.submenu.items?.map((child, childIndex) =>
+              renderDataEntry(child, childIndex, menuContext, keyPath),
+            )}
+          </Submenu>
+        ) : null}
+      </li>
+    )
+  }
+
+  return (
+    <Item
+      key={entryKey}
+      eventKey={itemEntry.key}
+      as={itemEntry.as}
+      href={itemEntry.href}
+      to={itemEntry.to}
+      target={itemEntry.target}
+      rel={itemEntry.rel}
+      title={itemEntry.title}
+      icon={itemEntry.icon}
+      extra={itemEntry.extra}
+      danger={itemEntry.danger}
+      onClick={itemEntry.onClick}
+      disabled={itemEntry.disabled}
+      active={itemEntry.active}
+      selected={itemEntry.selected}
+      focus={itemEntry.focus}
+      liClassName={itemEntry.liClassName}
+      className={itemEntry.className}
+    >
+      {content}
+    </Item>
+  )
+}
+
+const Menu: FC<MenuProps> = ({
+  size,
+  direction = 'vertical',
+  mode,
+  className,
+  style,
+  selectable = true,
+  multiple = false,
+  inlineIndent = 24,
+  triggerSubMenuAction = 'hover',
+  selectedKeys,
+  defaultSelectedKeys,
+  openKeys,
+  defaultOpenKeys,
+  onClick,
+  onSelect,
+  onDeselect,
+  onOpenChange,
+  children,
+  items,
+}) => {
+  const resolvedMode = getMenuMode(mode, direction)
+  const uncontrolledSelectedKeys = ref(normalizeKeys(defaultSelectedKeys ?? selectedKeys))
+  const uncontrolledOpenKeys = ref(normalizeKeys(defaultOpenKeys ?? openKeys))
+  const mergedSelectedKeys =
+    selectedKeys !== undefined ? normalizeKeys(selectedKeys) : uncontrolledSelectedKeys.value
+  const mergedOpenKeys = openKeys !== undefined ? normalizeKeys(openKeys) : uncontrolledOpenKeys.value
+
+  const commitSelectedKeys = (nextSelectedKeys: MenuKey[]) => {
+    if (selectedKeys === undefined) uncontrolledSelectedKeys.value = nextSelectedKeys
+  }
+
+  const commitOpenKeys = (nextOpenKeys: MenuKey[]) => {
+    if (openKeys === undefined) uncontrolledOpenKeys.value = nextOpenKeys
+    if (onOpenChange) onOpenChange(nextOpenKeys)
+  }
+
+  const menuContextValue: MenuContextValue = {
+    mode: resolvedMode,
+    inlineIndent,
+    selectable,
+    multiple,
+    triggerSubMenuAction,
+    selectedKeys: mergedSelectedKeys,
+    openKeys: mergedOpenKeys,
+    isSelected: (key, explicit) => explicit ?? hasKey(mergedSelectedKeys, key),
+    isOpen: (key, explicit) => explicit ?? hasKey(mergedOpenKeys, key),
+    onItemClick: (event, item, keyPath = item.key !== undefined ? [item.key] : []) => {
+      const info: MenuClickInfo = {
+        key: item.key,
+        keyPath,
+        item: item as MenuDataEntry,
+        domEvent: event,
+      }
+      if (onClick) onClick(info)
+      if (!selectable || item.key === undefined) return
+
+      const nextSelectedKeys = multiple
+        ? toggleKey(mergedSelectedKeys, item.key)
+        : [item.key]
+      const isSelected = hasKey(mergedSelectedKeys, item.key)
+      commitSelectedKeys(nextSelectedKeys)
+
+      const selectInfo: MenuSelectInfo = {
+        ...info,
+        key: item.key,
+        selectedKeys: nextSelectedKeys,
+      }
+
+      if (multiple && isSelected) {
+        if (onDeselect) onDeselect(selectInfo)
+        return
+      }
+      if (!multiple && isSelected && mergedSelectedKeys.length === 1) return
+      if (onSelect) onSelect(selectInfo)
+    },
+    onSubMenuToggle: (key, nextOpen, _event, _item) => {
+      const nextOpenKeys = nextOpen
+        ? hasKey(mergedOpenKeys, key)
+          ? mergedOpenKeys
+          : [...mergedOpenKeys, key]
+        : mergedOpenKeys.filter(openKey => openKey !== key)
+      commitOpenKeys(nextOpenKeys)
+    },
+  }
+
+  let cls = 'menu'
+  if (resolvedMode === 'horizontal') cls += ' menu-horizontal'
+  else cls += ' menu-vertical'
+  const resolvedSize = resolveSizeClass(size)
+  if (resolvedSize) cls += ` menu-${resolvedSize}`
+  if (className) cls += ` ${className}`
+
+  const content =
+    items && items.length
+      ? items.map((entry, index) => renderDataEntry(entry, index, menuContextValue))
+      : injectMenuContext(children, menuContextValue)
+
+  return (
+    <ul
+      className={cls}
+      style={style}
+      role={resolvedMode === 'horizontal' ? 'menubar' : 'menu'}
+      aria-orientation={resolvedMode === 'horizontal' ? 'horizontal' : 'vertical'}
+    >
+      {content}
+    </ul>
+  )
 }
 
 type MenuCompound = FC<MenuProps> & {
@@ -291,6 +935,9 @@ type MenuCompound = FC<MenuProps> & {
   Dropdown: FC<MenuDropdownProps>
   DropdownToggle: FC<MenuDropdownToggleProps>
   Submenu: FC<SubmenuProps>
+  SubMenu: FC<MenuSubMenuProps>
+  ItemGroup: FC<MenuItemGroupProps>
+  Divider: FC<MenuDividerProps>
 }
 
 const MenuCompound: MenuCompound = Object.assign(Menu, {
@@ -299,6 +946,9 @@ const MenuCompound: MenuCompound = Object.assign(Menu, {
   Dropdown,
   DropdownToggle,
   Submenu,
+  SubMenu,
+  ItemGroup,
+  Divider,
 })
 
 export default MenuCompound

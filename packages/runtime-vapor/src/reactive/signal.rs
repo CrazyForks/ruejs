@@ -518,7 +518,12 @@ impl SignalHandle {
 }
 
 /// 工具：不可变设置路径，返回新的根对象/数组
-fn set_path_immutable(owner: &SignalHandle, root: &JsValue, path: &Array, value: JsValue) -> JsValue {
+fn set_path_immutable(
+    owner: &SignalHandle,
+    root: &JsValue,
+    path: &Array,
+    value: JsValue,
+) -> JsValue {
     let root = unwrap_proxy_raw_for_signal(root, owner);
     let value = unwrap_proxy_raw_for_signal(&value, owner);
     // 生成根的浅拷贝作为更新基准
@@ -596,8 +601,8 @@ fn normalize_path_to_array(input: &JsValue) -> Array {
 
 fn unwrap_proxy_raw(val: &JsValue) -> JsValue {
     if val.is_object() {
-        let raw = Reflect::get(val, &JsValue::from_str("__rue_raw__"))
-            .unwrap_or(JsValue::UNDEFINED);
+        let raw =
+            Reflect::get(val, &JsValue::from_str("__rue_raw__")).unwrap_or(JsValue::UNDEFINED);
         if !raw.is_undefined() {
             return raw;
         }
@@ -605,11 +610,9 @@ fn unwrap_proxy_raw(val: &JsValue) -> JsValue {
     val.clone()
 }
 
-fn unwrap_proxy_raw_for_signal(val: &JsValue, owner: &SignalHandle) -> JsValue {
-    if let Some(proxy_signal) = signal_from_proxy(val) {
-        if !js_sys::Object::is(&proxy_signal, &JsValue::from(owner.clone())) {
-            return val.clone();
-        }
+fn unwrap_proxy_raw_for_signal(val: &JsValue, _owner: &SignalHandle) -> JsValue {
+    if signal_from_proxy(val).is_some() {
+        return unwrap_proxy_raw(val);
     }
     unwrap_proxy_raw(val)
 }
@@ -992,31 +995,32 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
                 // 每次调用时重新获取当前路径对应的底层对象，作为 `this`
                 let s_get2 = s_get.clone();
                 let p_get2 = p_get.clone();
-                                let s_set2 = s_get.clone();
-                                let p_set2 = p_get.clone();
+                let s_set2 = s_get.clone();
+                let p_set2 = p_get.clone();
                 let t_method = target_for_methods.clone();
                 let get_base = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
                     s_get2.get_path_js(p_get2.clone().into())
                 })
                     as Box<dyn FnMut() -> JsValue>);
-                                let set_base = wasm_bindgen::closure::Closure::wrap(Box::new(move |next_base: JsValue| {
-                                        s_set2.set_path_js(p_set2.clone().into(), next_base.clone());
-                                        sync_proxy_target_snapshot(&t_method, &next_base);
-                                })
-                                        as Box<dyn FnMut(JsValue)>);
-                                let method_name = key.as_string().unwrap_or_default();
-                                let is_mutating_array_method = matches!(
-                                        method_name.as_str(),
-                                        "copyWithin"
-                                                | "fill"
-                                                | "pop"
-                                                | "push"
-                                                | "reverse"
-                                                | "shift"
-                                                | "sort"
-                                                | "splice"
-                                                | "unshift"
-                                );
+                let set_base =
+                    wasm_bindgen::closure::Closure::wrap(Box::new(move |next_base: JsValue| {
+                        s_set2.set_path_js(p_set2.clone().into(), next_base.clone());
+                        sync_proxy_target_snapshot(&t_method, &next_base);
+                    })
+                        as Box<dyn FnMut(JsValue)>);
+                let method_name = key.as_string().unwrap_or_default();
+                let is_mutating_array_method = matches!(
+                    method_name.as_str(),
+                    "copyWithin"
+                        | "fill"
+                        | "pop"
+                        | "push"
+                        | "reverse"
+                        | "shift"
+                        | "sort"
+                        | "splice"
+                        | "unshift"
+                );
                 // 构造包装器：(...args) => func.apply(base, args)
                 // readonly 模式下：对 base 进行浅克隆，避免对真实值造成原地修改
                 // 设计说明（修改点）：
@@ -1025,7 +1029,7 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
                 // - 采用 base.slice() 为 Array 与 TypedArray 统一生成可变副本，
                 //   使只读代理上的变异方法在副本上执行，从而不影响真实值（__rue_raw__ 保持不变）。
                 let factory = Function::new_with_args(
-                                        "fn,getBase,setBase,readonly,mutating",
+                    "fn,getBase,setBase,readonly,mutating",
                     "return function(){ \
                        var args = Array.prototype.slice.call(arguments); \
                        var base = getBase(); \
@@ -1061,17 +1065,17 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
                      }",
                 );
                 let wrapped = factory
-                                        .call5(
+                    .call5(
                         &JsValue::NULL,
                         &func.clone().into(),
                         &get_base.as_ref().clone().into(),
-                                                &set_base.as_ref().clone().into(),
+                        &set_base.as_ref().clone().into(),
                         &JsValue::from_bool(readonly_flag),
-                                                &JsValue::from_bool(is_mutating_array_method),
+                        &JsValue::from_bool(is_mutating_array_method),
                     )
                     .unwrap_or(JsValue::UNDEFINED);
                 get_base.forget();
-                                set_base.forget();
+                set_base.forget();
                 return wrapped;
             }
             // 递归代理：当非浅代理且读取到子对象时，为其生成子代理
@@ -1133,7 +1137,8 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
 
         if target_obj.is_object() {
             let target: Object = target_obj.clone().unchecked_into();
-            let target_keys = js_sys::Reflect::own_keys(&target_obj).unwrap_or(js_sys::Array::new());
+            let target_keys =
+                js_sys::Reflect::own_keys(&target_obj).unwrap_or(js_sys::Array::new());
             for i in 0..target_keys.length() {
                 let tk = target_keys.get(i);
                 let td = js_sys::Object::get_own_property_descriptor(&target, &tk);
@@ -1171,8 +1176,8 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
 
     let s_desc = sig.clone();
     let p_desc = path.clone();
-    let desc_trap = wasm_bindgen::closure::Closure::wrap(Box::new(
-        move |target_obj: JsValue, key: JsValue| {
+    let desc_trap =
+        wasm_bindgen::closure::Closure::wrap(Box::new(move |target_obj: JsValue, key: JsValue| {
             // 属性描述符获取：优先返回 Proxy target 上的真实描述符，
             // 避免数组 `length` 等非可配置属性违反 Proxy 不变式。
             if target_obj.is_object() {
@@ -1204,8 +1209,8 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
             } else {
                 JsValue::UNDEFINED
             }
-        },
-    ) as Box<dyn FnMut(JsValue, JsValue) -> JsValue>);
+        })
+            as Box<dyn FnMut(JsValue, JsValue) -> JsValue>);
 
     let handler = Object::new();
     // 将各个 trap 方法挂入 handler

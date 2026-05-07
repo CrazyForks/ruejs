@@ -7,7 +7,7 @@ Vapor 运行时辅助概述
 */
 import { onBeforeUnmount } from './rue'
 import { signal, untrack, watchEffect } from './reactivity'
-import { getCurrentInstance } from '@rue-js/runtime-vapor'
+import { getCurrentInstance } from '@rue-js/runtime-vapor/reactive'
 import {
   createComment,
   createDocumentFragment,
@@ -107,6 +107,7 @@ export const vaporKeyedList = <T>(args: {
     const item = items[index]
     const key = getKey(item, index)
     let range = elements.get(key)
+    const isNewRange = !range
     let start: DomNodeLike
     let end: DomNodeLike
 
@@ -142,7 +143,9 @@ export const vaporKeyedList = <T>(args: {
       end = range.end
     }
 
-    const blockStart = resolveStartNode(range)
+    // New single-root entries mount through renderAnchor after this loop turn, so their
+    // tail anchor is the only stable cursor until the DOM child lands.
+    const blockStart = isNewRange && range.singleRoot ? range.end : resolveStartNode(range)
 
     if ((end as any).nextSibling !== cursor && cursor !== blockStart) {
       const block = createDocumentFragment()

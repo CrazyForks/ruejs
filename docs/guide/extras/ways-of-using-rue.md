@@ -27,28 +27,6 @@ Rue 提供了核心库和[全面的工具支持](/guide/scaling-up/tooling)，�
 
 SPA 通常需要后端暴露 API 端点——但你也可以将 Rue 与 [Inertia.js](https://inertiajs.com) 等解决方案配对，在保留以服务器为中心的开发模型的同时获得 SPA 的好处。
 
-## 全栈 / SSR {#fullstack-ssr}
-
-纯客户端 SPA 在应用程序对 SEO 和首屏内容时间敏感时会有问题。这是因为浏览器将收到一个几乎为空的 HTML 页面，并且必须等到 JavaScript 加载后才能渲染任何内容。
-
-Rue 提供了一流 API，用于在服务器上将 Rue 应用"渲染"为 HTML 字符串。这允许服务器发送已经渲染好的 HTML，让最终用户在 JavaScript 下载时立即看到内容。然后 Rue 将在客户端"水合"应用程序以使其具有交互性。这称为[服务器端渲染（SSR）](/guide/scaling-up/ssr)，它大大改善了 Core Web Vital 指标，如[最大内容绘制（LCP）](https://web.dev/lcp/)。
-
-有一些基于这种范式构建的更高级别的 Rue 框架，如 [Nuxt](https://nuxt.com/)，允许你使用 Rue 和 JavaScript 开发全栈应用程序。
-
-## JAMStack / SSG {#jamstack-ssg}
-
-如果所需数据是静态的，可以提前进行服务器端渲染。这意味着我们可以将整个应用程序预渲染成 HTML 并作为静态文件提供。这提高了网站性能，并使部署变得更加简单，因为我们不再需要在每次请求时动态渲染页面。Rue 仍然可以水合此类应用程序以在客户端提供丰富的交互性。这种技术通常称为静态站点生成（SSG），也称为 [JAMStack](https://jamstack.org/what-is-jamstack/)。
-
-SSG 有两种风格：单页和多页。两者都将站点预渲染为静态 HTML，区别在于：
-
-- 在初始页面加载后，单页 SSG 将页面"水合"成 SPA。这需要更多的前期 JS 负载和水合成本，但后续导航会更快，因为它只需要部分更新页面内容而不是重新加载整个页面。
-
-- 多页 SSG 在每次导航时加载一个新页面。好处是它可以提供最少的 JS——如果页面不需要交互，甚至可以完全不提供 JS！一些多页 SSG 框架，如 [Astro](https://astro.build/)，还支持"部分水合"——允许你使用 Rue 组件在静态 HTML 中创建交互式"岛屿"。
-
-如果你期望有丰富的交互性、长会话或在导航之间持久化的元素/状态，单页 SSG 更合适。否则，多页 SSG 会是更好的选择。
-
-Rue 团队还维护着一个名为 [VitePress](https://vitepress.dev/) 的静态站点生成器，它现在正为你提供这个网站！VitePress 支持两种 SSG 风格。[Nuxt](https://nuxt.com/) 也支持 SSG。你甚至可以在同一个 Nuxt 应用中为不同路由混合使用 SSR 和 SSG。
-
 ## 超越网络 {#beyond-the-web}
 
 虽然 Rue 主要是为构建 Web 应用程序而设计的，但它绝不仅限于浏览器。你可以：

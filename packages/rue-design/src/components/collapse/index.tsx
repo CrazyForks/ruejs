@@ -1,71 +1,695 @@
 /*
 Collapse 组件概述
-- 形态：arrow/plus/open/close 类名控制视觉与初始状态。
-- 标签：支持渲染为 div 或 details；Title/Content 子组件组合内容。
+- 兼容旧版 daisyUI 风格的 children 组合写法。
+- 新增 items 驱动的分组折叠能力，支持受控/非受控、手风琴、额外信息与尺寸等增强 API。
 */
 import type { FC } from '@rue-js/rue'
-/* 函数组件类型：约束 Collapse 组件签名 */
+import { ref } from '@rue-js/rue'
 
-interface CollapseProps {
+let collapseGroupSeed = 0
+
+export type CollapseItemKey = string | number
+export type CollapseIcon = 'arrow' | 'plus'
+export type CollapseSize = 'sm' | 'md' | 'lg' | 'small' | 'middle' | 'large'
+export type CollapseCollapsible = 'header' | 'icon' | 'disabled'
+
+export interface CollapseItem {
+  key?: CollapseItemKey
+  label?: any
+  title?: any
+  description?: any
+  extra?: any
+  children?: any
+  content?: any
+  className?: string
+  titleClassName?: string
+  contentClassName?: string
+  descriptionClassName?: string
+  extraClassName?: string
+  icon?: CollapseIcon
+  showArrow?: boolean
+  open?: boolean
+  disabled?: boolean
+  collapsible?: CollapseCollapsible
+}
+
+export interface CollapseChangeContext {
+  key: CollapseItemKey
+  index: number
+  open: boolean
+  item?: CollapseItem
+}
+
+export interface CollapseProps {
+  icon?: CollapseIcon
   arrow?: boolean
   plus?: boolean
+  showArrow?: boolean
   open?: boolean
   close?: boolean
+  defaultOpen?: boolean
+  activeKey?: CollapseItemKey | ReadonlyArray<CollapseItemKey> | null
+  defaultActiveKey?: CollapseItemKey | ReadonlyArray<CollapseItemKey> | null
+  accordion?: boolean
+  bordered?: boolean
+  ghost?: boolean
+  disabled?: boolean
+  collapsible?: CollapseCollapsible
+  size?: CollapseSize
+  expandIconPlacement?: 'start' | 'end'
   tabIndex?: number
   tag?: 'div' | 'details'
   className?: string
+  titleClassName?: string
+  contentClassName?: string
+  items?: ReadonlyArray<CollapseItem>
   children?: any
-}
-
-/** 折叠组件：根据 props 组合类名与标签 */
-const Collapse: FC<CollapseProps> = ({
-  arrow,
-  plus,
-  open,
-  close,
-  tabIndex,
-  tag = 'div',
-  className,
-  children,
-}) => {
-  let cls = 'collapse'
-  /* 箭头/加号样式选择 */
-  if (arrow) cls += ' collapse-arrow'
-  if (plus) cls += ' collapse-plus'
-  /* 初始展开/收起状态 */
-  if (open) cls += ' collapse-open'
-  if (close) cls += ' collapse-close'
-  /* 追加自定义类名 */
-  if (className) cls += ` ${className}`
-  if (tag === 'details') {
-    /* details 语义结构 */
-    return <details className={cls}>{children}</details>
-  }
-  const props: any = { className: cls }
-  /* 接收 tabIndex 提升可访问性 */
-  if (typeof tabIndex === 'number') props.tabIndex = tabIndex
-  return <div {...props}>{children}</div>
+  onChange?: (
+    nextValue: CollapseItemKey | ReadonlyArray<CollapseItemKey> | null,
+    context: CollapseChangeContext,
+  ) => void
 }
 
 interface CollapsePartProps {
   as?: 'div' | 'summary'
   className?: string
+  description?: any
+  extra?: any
+  descriptionClassName?: string
+  extraClassName?: string
   children?: any
 }
 
-/** 标题子组件：div 或 summary */
-const Title: FC<CollapsePartProps> = ({ as = 'div', className, children }) => {
-  let cls = 'collapse-title'
-  if (className) cls += ` ${className}`
-  if (as === 'summary') return <summary className={cls}>{children}</summary>
-  return <div className={cls}>{children}</div>
+interface NormalizedCollapseItem extends CollapseItem {
+  key: CollapseItemKey
+  index: number
+  label: any
+  content: any
 }
 
-/** 内容子组件：collapse-content */
-const Content: FC<CollapsePartProps> = ({ className, children }) => {
-  let cls = 'collapse-content'
+const appendClassName = (base: string, className?: string) => {
+  return className ? `${base} ${className}` : base
+}
+
+const getCollapseGroupRoots = (groupName: string, source?: Element | null) => {
+  const queryRoot = source?.getRootNode?.()
+  const scope = queryRoot && 'querySelectorAll' in queryRoot
+    ? queryRoot
+    : typeof document !== 'undefined'
+      ? document
+      : null
+
+  if (!scope) return []
+
+  return Array.from(scope.querySelectorAll<HTMLElement>('[data-rue-collapse-group]')).filter(
+    root => root.dataset.rueCollapseGroup === groupName,
+  )
+}
+
+const getDirectCollapseTitle = (root: Element) => {
+  return Array.from(root.children).find(
+    child => child instanceof HTMLElement && child.classList.contains('collapse-title'),
+  ) as HTMLElement | undefined
+}
+
+const isTitleTriggerTarget = (root: Element, target: EventTarget | null) => {
+  if (!(target instanceof Node)) return false
+  const title = getDirectCollapseTitle(root)
+  return !!title?.contains(target)
+}
+
+const getDirectCollapseInput = (root: Element) => {
+  return Array.from(root.children).find(
+    child => child instanceof HTMLInputElement && (child.type === 'checkbox' || child.type === 'radio'),
+  ) as HTMLInputElement | undefined
+}
+
+const syncCollapsePanelState = (root: Element, open: boolean) => {
+  if (!(root instanceof HTMLElement)) return
+
+  root.classList.remove('collapse-open', 'collapse-close')
+  root.classList.add(open ? 'collapse-open' : 'collapse-close')
+
+  const title = getDirectCollapseTitle(root)
+  if (title) {
+    title.setAttribute('aria-expanded', open ? 'true' : 'false')
+  }
+
+  const arrowIcon = root.querySelector<HTMLElement>('[data-rue-collapse-arrow-icon]')
+  if (arrowIcon) {
+    arrowIcon.classList.toggle('rotate-90', open)
+  }
+
+  const plusVertical = root.querySelector<HTMLElement>('[data-rue-collapse-plus-vertical]')
+  if (plusVertical) {
+    plusVertical.classList.remove('opacity-0', 'opacity-100')
+    plusVertical.classList.add(open ? 'opacity-0' : 'opacity-100')
+  }
+
+  const iconTrigger = root.querySelector<HTMLElement>('[data-rue-collapse-icon-trigger]')
+  if (iconTrigger) {
+    iconTrigger.setAttribute('aria-label', open ? '收起' : '展开')
+  }
+}
+
+const syncLegacyInteractiveState = (root: HTMLDivElement, open: boolean) => {
+  root.classList.remove('collapse-open', 'collapse-close')
+  root.classList.add(open ? 'collapse-open' : 'collapse-close')
+
+  const title = getDirectCollapseTitle(root)
+  if (title) {
+    title.setAttribute('aria-expanded', open ? 'true' : 'false')
+  }
+}
+
+const uniqueKeys = (keys: ReadonlyArray<CollapseItemKey>) => {
+  const next: CollapseItemKey[] = []
+  keys.forEach(key => {
+    if (!next.some(current => current === key)) {
+      next.push(key)
+    }
+  })
+  return next
+}
+
+const normalizeSize = (size?: CollapseSize) => {
+  switch (size) {
+    case 'small':
+      return 'sm'
+    case 'middle':
+      return 'md'
+    case 'large':
+      return 'lg'
+    default:
+      return size
+  }
+}
+
+const normalizeIcon = (
+  icon: CollapseIcon | undefined,
+  arrow: boolean | undefined,
+  plus: boolean | undefined,
+) => {
+  if (icon) return icon
+  if (plus) return 'plus'
+  if (arrow) return 'arrow'
+  return undefined
+}
+
+const keyValueToArray = (
+  value: CollapseItemKey | ReadonlyArray<CollapseItemKey> | null | undefined,
+) => {
+  if (Array.isArray(value)) return value
+  if (value == null) return []
+  return [value]
+}
+
+const normalizeOpenKeys = (
+  value: CollapseItemKey | ReadonlyArray<CollapseItemKey> | null | undefined,
+  accordion?: boolean,
+) => {
+  const normalized = uniqueKeys(keyValueToArray(value))
+  return accordion ? normalized.slice(0, 1) : normalized
+}
+
+const resolveTitleSizeClass = (size?: CollapseSize) => {
+  switch (normalizeSize(size)) {
+    case 'sm':
+      return 'min-h-0 py-3 text-sm'
+    case 'lg':
+      return 'min-h-0 py-5 text-lg'
+    default:
+      return ''
+  }
+}
+
+const resolveContentSizeClass = (size?: CollapseSize) => {
+  switch (normalizeSize(size)) {
+    case 'sm':
+      return 'pt-0 pb-3 text-sm'
+    case 'lg':
+      return 'pt-0 pb-5 text-base'
+    default:
+      return ''
+  }
+}
+
+const resolveLegacyStateClass = (
+  open: boolean | undefined,
+  close: boolean | undefined,
+  defaultOpen: boolean | undefined,
+) => {
+  if (open) return 'collapse-open'
+  if (close) return 'collapse-close'
+  if (defaultOpen) return 'collapse-open'
+  return ''
+}
+
+const resolveItemsDefaultOpenKeys = (
+  items: ReadonlyArray<NormalizedCollapseItem>,
+  defaultActiveKey: CollapseProps['defaultActiveKey'],
+  accordion?: boolean,
+) => {
+  if (defaultActiveKey !== undefined) {
+    return normalizeOpenKeys(defaultActiveKey, accordion)
+  }
+  return normalizeOpenKeys(
+    items.filter(item => item.open).map(item => item.key),
+    accordion,
+  )
+}
+
+const buildNextOpenKeys = (
+  currentKeys: ReadonlyArray<CollapseItemKey>,
+  key: CollapseItemKey,
+  shouldOpen: boolean,
+  accordion?: boolean,
+) => {
+  if (accordion) {
+    return shouldOpen ? [key] : []
+  }
+  if (shouldOpen) {
+    return uniqueKeys([...currentKeys, key])
+  }
+  return currentKeys.filter(current => current !== key)
+}
+
+const resolveGroupClassName = (bordered: boolean, ghost: boolean | undefined, className?: string) => {
+  let cls = bordered
+    ? 'overflow-hidden rounded-box border border-base-300 bg-base-100 divide-y divide-base-300'
+    : 'space-y-3'
+  if (ghost) {
+    cls += ' bg-transparent'
+  }
+  return appendClassName(cls, className)
+}
+
+const resolvePanelSurfaceClass = (bordered: boolean, ghost: boolean | undefined) => {
+  if (bordered) return ''
+  if (ghost) return 'bg-transparent'
+  return 'rounded-box border border-base-300 bg-base-100'
+}
+
+const ArrowIcon: FC<{ open: boolean }> = ({ open }) => {
+  return (
+    <span
+      data-rue-collapse-arrow-icon="true"
+      aria-hidden="true"
+      className={`inline-flex size-5 items-center justify-center transition-transform duration-200 ${open ? 'rotate-90' : ''}`.trim()}
+    >
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-4">
+        <path strokeLinecap="round" strokeLinejoin="round" d="m7 4 6 6-6 6" />
+      </svg>
+    </span>
+  )
+}
+
+const PlusIcon: FC<{ open: boolean }> = ({ open }) => {
+  return (
+    <span aria-hidden="true" className="relative inline-flex size-5 items-center justify-center">
+      <span className="absolute h-0.5 w-3 rounded-full bg-current" />
+      <span
+        data-rue-collapse-plus-vertical="true"
+        className={`absolute h-3 w-0.5 rounded-full bg-current transition-opacity duration-200 ${open ? 'opacity-0' : 'opacity-100'}`.trim()}
+      />
+    </span>
+  )
+}
+
+const renderExpandIcon = (icon: CollapseIcon, open: boolean) => {
+  return icon === 'plus' ? <PlusIcon open={open} /> : <ArrowIcon open={open} />
+}
+
+const renderTitleBody = (
+  title: any,
+  description: any,
+  extra: any,
+  descriptionClassName?: string,
+  extraClassName?: string,
+) => {
+  if (description == null && extra == null) {
+    return title
+  }
+
+  return (
+    <div className="flex w-full items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <div>{title}</div>
+        {description != null ? (
+          <div className={appendClassName('mt-1 text-xs opacity-70', descriptionClassName)}>
+            {description}
+          </div>
+        ) : null}
+      </div>
+      {extra != null ? (
+        <div
+          className={appendClassName('shrink-0 text-xs opacity-70', extraClassName)}
+          onClick={event => event.stopPropagation()}
+          onKeyDown={event => event.stopPropagation()}
+        >
+          {extra}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/** items 模式统一使用状态类驱动展开，增强布局与交互能力。 */
+const Collapse: FC<CollapseProps> = ({
+  icon,
+  arrow,
+  plus,
+  showArrow,
+  open,
+  close,
+  defaultOpen,
+  activeKey,
+  defaultActiveKey,
+  accordion,
+  bordered,
+  ghost,
+  disabled,
+  collapsible,
+  size,
+  expandIconPlacement = 'end',
+  tabIndex,
+  tag = 'div',
+  className,
+  titleClassName,
+  contentClassName,
+  items,
+  children,
+  onChange,
+}) => {
+  const normalizedItems: NormalizedCollapseItem[] =
+    items?.map((item, index) => ({
+      ...item,
+      key: item.key ?? index,
+      index,
+      label: item.label ?? item.title,
+      content: item.children ?? item.content,
+    })) ?? []
+  const hasItems = normalizedItems.length > 0
+  const resolvedBordered = bordered ?? hasItems
+  const resolvedIcon = normalizeIcon(icon, arrow, plus)
+  const hasManagedIcon = showArrow === false ? false : !!resolvedIcon
+  const generatedGroupName = ref(`rue-collapse-${collapseGroupSeed++}`)
+  const uncontrolledOpenKeys = ref(
+    resolveItemsDefaultOpenKeys(normalizedItems, defaultActiveKey, accordion),
+  )
+  const getCurrentOpenKeys = () =>
+    activeKey !== undefined ? normalizeOpenKeys(activeKey, accordion) : uncontrolledOpenKeys.value
+  const currentOpenKeys = getCurrentOpenKeys()
+
+  if (hasItems) {
+    const groupName = generatedGroupName.value
+
+    const syncItemsDom = (
+      nextOpenKeys: ReadonlyArray<CollapseItemKey>,
+      source?: Element | null,
+    ) => {
+      getCollapseGroupRoots(groupName, source).forEach(root => {
+        const index = Number(root.dataset.rueCollapseIndex)
+        const currentItem = normalizedItems[index]
+        if (!currentItem) return
+
+        syncCollapsePanelState(
+          root,
+          nextOpenKeys.some(key => key === currentItem.key),
+        )
+      })
+    }
+
+    const commitChange = (item: NormalizedCollapseItem, nextOpen: boolean, source?: Element | null) => {
+      const nextOpenKeys = buildNextOpenKeys(getCurrentOpenKeys(), item.key, nextOpen, accordion)
+      const itemOpen = nextOpenKeys.some(key => key === item.key)
+
+      if (activeKey === undefined) {
+        uncontrolledOpenKeys.value = nextOpenKeys
+        syncItemsDom(nextOpenKeys, source)
+      }
+
+      if (onChange) {
+        onChange(accordion ? nextOpenKeys[0] ?? null : nextOpenKeys, {
+          key: item.key,
+          index: item.index,
+          open: itemOpen,
+          item,
+        })
+      }
+    }
+
+    return (
+      <div className={resolveGroupClassName(resolvedBordered, ghost, className)}>
+        {normalizedItems.map(item => {
+          const itemIcon = item.icon ?? resolvedIcon
+          const itemShowArrow = item.showArrow ?? hasManagedIcon
+          const itemCollapsible = disabled || item.disabled
+            ? 'disabled'
+            : item.collapsible ?? collapsible ?? 'header'
+          const itemOpen = currentOpenKeys.some(key => key === item.key)
+          const hasHeaderMeta = item.description != null || item.extra != null
+          const iconOffsetClassName = hasHeaderMeta ? 'pt-1' : 'mt-0.5'
+          const panelSurfaceClass = resolvePanelSurfaceClass(resolvedBordered, ghost)
+          const panelClassName = appendClassName(
+            appendClassName(
+              appendClassName('collapse', itemOpen ? 'collapse-open' : 'collapse-close'),
+              panelSurfaceClass,
+            ),
+            item.className,
+          )
+          const mergedTitleClassName = appendClassName(
+            appendClassName('collapse-title', resolveTitleSizeClass(size)),
+            appendClassName(titleClassName, item.titleClassName),
+          )
+          const mergedContentClassName = appendClassName(
+            appendClassName('collapse-content', resolveContentSizeClass(size)),
+            appendClassName(contentClassName, item.contentClassName),
+          )
+          const headerBody = renderTitleBody(
+            item.label,
+            item.description,
+            item.extra,
+            item.descriptionClassName,
+            item.extraClassName,
+          )
+          const toggle = (source?: Element | null) => {
+            if (itemCollapsible === 'disabled') return
+            const nextOpen = !getCurrentOpenKeys().some(key => key === item.key)
+            commitChange(item, nextOpen, source)
+          }
+          const headerInteractiveProps =
+            itemCollapsible === 'header'
+              ? {
+                  role: 'button',
+                  tabIndex: 0,
+                  onClick: (event: MouseEvent) => toggle(event.currentTarget as Element),
+                  onKeyDown: (event: KeyboardEvent) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      toggle(event.currentTarget as Element)
+                    }
+                  },
+                }
+              : {}
+
+          return (
+            <div
+              className={panelClassName}
+              key={item.key}
+              data-rue-collapse-group={groupName}
+              data-rue-collapse-index={String(item.index)}
+            >
+              <div
+                className={appendClassName(
+                  mergedTitleClassName,
+                  itemCollapsible === 'header' ? 'cursor-pointer select-none' : '',
+                )}
+                aria-expanded={itemOpen ? 'true' : 'false'}
+                {...headerInteractiveProps}
+              >
+                <div className="flex w-full items-start gap-3">
+                  {itemShowArrow && itemIcon && expandIconPlacement === 'start' ? (
+                    itemCollapsible === 'icon' ? (
+                      <button
+                        data-rue-collapse-icon-trigger="true"
+                        type="button"
+                        className={appendClassName(
+                          'inline-flex size-7 shrink-0 self-start items-center justify-center rounded-full border border-transparent transition-colors hover:bg-base-200/70',
+                          iconOffsetClassName,
+                        )}
+                        aria-label={itemOpen ? '收起' : '展开'}
+                        onClick={event => {
+                          event.stopPropagation()
+                          toggle(event.currentTarget as Element)
+                        }}
+                      >
+                        {renderExpandIcon(itemIcon, itemOpen)}
+                      </button>
+                    ) : (
+                      <span
+                        className={appendClassName(
+                          'inline-flex size-7 shrink-0 self-start items-center justify-center',
+                          iconOffsetClassName,
+                        )}
+                      >
+                        {renderExpandIcon(itemIcon, itemOpen)}
+                      </span>
+                    )
+                  ) : null}
+                  <div className="min-w-0 flex-1">{headerBody}</div>
+                  {itemShowArrow && itemIcon && expandIconPlacement === 'end' ? (
+                    itemCollapsible === 'icon' ? (
+                      <button
+                        data-rue-collapse-icon-trigger="true"
+                        type="button"
+                        className={appendClassName(
+                          'inline-flex size-7 shrink-0 self-start items-center justify-center rounded-full border border-transparent transition-colors hover:bg-base-200/70',
+                          iconOffsetClassName,
+                        )}
+                        aria-label={itemOpen ? '收起' : '展开'}
+                        onClick={event => {
+                          event.stopPropagation()
+                          toggle(event.currentTarget as Element)
+                        }}
+                      >
+                        {renderExpandIcon(itemIcon, itemOpen)}
+                      </button>
+                    ) : (
+                      <span
+                        className={appendClassName(
+                          'inline-flex size-7 shrink-0 self-start items-center justify-center',
+                          iconOffsetClassName,
+                        )}
+                      >
+                        {renderExpandIcon(itemIcon, itemOpen)}
+                      </span>
+                    )
+                  ) : null}
+                </div>
+              </div>
+              <div className={mergedContentClassName}>{item.content}</div>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  let cls = 'collapse'
+  if (showArrow !== false && (arrow || resolvedIcon === 'arrow')) cls += ' collapse-arrow'
+  if (showArrow !== false && (plus || resolvedIcon === 'plus')) cls += ' collapse-plus'
+  if (open) cls += ' collapse-open'
+  if (close) cls += ' collapse-close'
+  if (!open && !close && defaultOpen) cls += ' collapse-open'
+  if (disabled) cls += ' opacity-70'
+  const panelSurfaceClass = resolvePanelSurfaceClass(!!resolvedBordered, ghost)
+  if (panelSurfaceClass) cls += ` ${panelSurfaceClass}`
   if (className) cls += ` ${className}`
-  return <div className={cls}>{children}</div>
+
+  if (tag === 'details') {
+    return (
+      <details className={cls} open={open || (!close && defaultOpen) ? true : undefined}>
+        {children}
+      </details>
+    )
+  }
+
+  const resolvedTabIndex = typeof tabIndex === 'number' ? tabIndex : undefined
+  const hasForcedLegacyState = !!open || !!close || !!defaultOpen
+
+  return (
+    <div
+      className={cls}
+      tabindex={resolvedTabIndex === undefined ? undefined : String(resolvedTabIndex)}
+      onMouseDown={event => {
+        const root = event.currentTarget as HTMLDivElement
+        root.dataset.rueCollapsePointerDown = 'true'
+      }}
+      onClick={event => {
+        const root = event.currentTarget as HTMLDivElement
+        const target = event.target
+        const input = getDirectCollapseInput(root)
+        const clickedTitle = isTitleTriggerTarget(root, target)
+        const clickedInput = target instanceof HTMLInputElement && target === input
+
+        if (!clickedTitle && !clickedInput) {
+          delete root.dataset.rueCollapsePointerDown
+          return
+        }
+
+        if (resolvedTabIndex !== undefined) {
+          root.tabIndex = resolvedTabIndex
+          root.setAttribute('tabindex', String(resolvedTabIndex))
+          root.focus()
+        }
+        if (!hasForcedLegacyState) {
+          if (input) {
+            if (!clickedInput) {
+              if (input.type === 'checkbox') {
+                input.checked = !input.checked
+              } else if (input.type === 'radio') {
+                input.checked = true
+              }
+            }
+            syncLegacyInteractiveState(root, input.checked)
+          } else {
+            syncLegacyInteractiveState(root, !root.classList.contains('collapse-open'))
+          }
+        }
+        delete root.dataset.rueCollapsePointerDown
+      }}
+      onFocus={event => {
+        if (resolvedTabIndex === undefined || hasForcedLegacyState) return
+        const root = event.currentTarget as HTMLDivElement
+        if (root.dataset.rueCollapsePointerDown === 'true') return
+        syncLegacyInteractiveState(root, true)
+      }}
+      onBlur={event => {
+        delete (event.currentTarget as HTMLDivElement).dataset.rueCollapsePointerDown
+        if (resolvedTabIndex === undefined || hasForcedLegacyState) return
+        syncLegacyInteractiveState(event.currentTarget as HTMLDivElement, false)
+      }}
+      onKeyDown={event => {
+        if (resolvedTabIndex === undefined || hasForcedLegacyState) return
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        if (!isTitleTriggerTarget(event.currentTarget as HTMLDivElement, event.target)) return
+
+        event.preventDefault()
+        const root = event.currentTarget as HTMLDivElement
+        syncLegacyInteractiveState(root, !root.classList.contains('collapse-open'))
+      }}
+      onChange={event => {
+        if (hasForcedLegacyState) return
+        const target = event.target as HTMLInputElement | null
+        if (!target || (target.type !== 'checkbox' && target.type !== 'radio')) return
+        syncLegacyInteractiveState(event.currentTarget as HTMLDivElement, target.checked)
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** 标题子组件：支持简单标题，也支持 description / extra 复合头部。 */
+const Title: FC<CollapsePartProps> = ({
+  as = 'div',
+  className,
+  description,
+  extra,
+  descriptionClassName,
+  extraClassName,
+  children,
+}) => {
+  const cls = appendClassName('collapse-title', className)
+  const body = renderTitleBody(children, description, extra, descriptionClassName, extraClassName)
+  if (as === 'summary') return <summary className={cls}>{body}</summary>
+  return <div className={cls}>{body}</div>
+}
+
+/** 内容子组件：统一输出 collapse-content，便于旧写法与增强写法复用。 */
+const Content: FC<CollapsePartProps> = ({ className, children }) => {
+  return <div className={appendClassName('collapse-content', className)}>{children}</div>
 }
 
 type CollapseCompound = FC<CollapseProps> & {

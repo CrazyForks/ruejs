@@ -29,9 +29,8 @@ export default Comp;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute } from "@rue-js/rue/vapor";
-import { type FC, ref, h } from '@rue-js/rue';
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute } from "@rue-js/rue/vapor";
+import { type FC, h } from '@rue-js/rue';
 const count = _$vaporWithHookId("ref:1:0", ()=>ref(22));
 const Comp: FC = ()=>vapor(()=>{
         const _root = _$createElement("div");

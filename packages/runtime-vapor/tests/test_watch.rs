@@ -136,7 +136,7 @@ async fn watch_fn_custom_scheduler_runs_immediately() {
     wasm_bindgen_futures::JsFuture::from(Promise::resolve(&JsValue::UNDEFINED)).await.unwrap();
     // 调度器未被调用（因为是同步首轮），所以此处不应增加
     assert_eq!(*hits.borrow(), 1);
-    
+
     // 触发更新，应走调度器
     sig.set_js(JsValue::from_f64(1.0));
     assert_eq!(*hits.borrow(), 1); // 尚未执行
@@ -211,16 +211,16 @@ async fn watch_effect_custom_scheduler_defers() {
     let _eh = watch_effect(f, Some(options.into()));
     // 初始运行必须是同步的以收集依赖
     assert_eq!(*hits.borrow(), 1);
-    
+
     // 触发更新
     sig.set_js(JsValue::from_f64(1.0));
     // 更新应被调度器推迟
     assert_eq!(*hits.borrow(), 1);
-    
+
     wasm_bindgen_futures::JsFuture::from(Promise::resolve(&JsValue::UNDEFINED)).await.unwrap();
     // 调度执行后增加
     assert_eq!(*hits.borrow(), 2);
-    
+
     cb.forget();
     scheduler.forget();
 }
@@ -457,23 +457,24 @@ async fn watch_debounce_merges_rapid_changes() {
     let handler = wasm_bindgen::closure::Closure::wrap(Box::new(move |_n: JsValue, _o: JsValue| {
         *rec.borrow_mut() += 1;
         JsValue::UNDEFINED
-    }) as Box<dyn FnMut(JsValue, JsValue) -> JsValue>);
+    })
+        as Box<dyn FnMut(JsValue, JsValue) -> JsValue>);
     let h: Function = handler.as_ref().clone().into();
-    
+
     let options = Object::new();
     // 设置 20ms 防抖
     Reflect::set(&options, &JsValue::from_str("debounce"), &JsValue::from_f64(20.0)).unwrap();
-    
+
     let _eh = watch_signal(&sig, h, Some(options.into()));
-    
+
     // 连续触发多次
     for i in 1..=10 {
         sig.set_js(JsValue::from_f64(i as f64));
     }
-    
+
     // 此时应该还未触发（防抖计时中）
     assert_eq!(*hits.borrow(), 0);
-    
+
     // 等待 100ms 确保防抖结束
     let promise = Promise::new(&mut |resolve, _| {
         let win = js_sys::global();
@@ -482,10 +483,10 @@ async fn watch_debounce_merges_rapid_changes() {
         let _ = set_timeout_fn.call2(&JsValue::NULL, &resolve, &JsValue::from_f64(100.0));
     });
     wasm_bindgen_futures::JsFuture::from(promise).await.unwrap();
-    
+
     // 应该只触发一次
     let count = *hits.borrow();
     assert_eq!(count, 1, "debounce failed: hits={}", count);
-    
+
     handler.forget();
 }

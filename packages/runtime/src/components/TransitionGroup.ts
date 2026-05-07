@@ -8,7 +8,7 @@ TransitionGroup 组件概述
 
 import { type FC, h, onUnmounted, type PropsWithChildren } from '../rue'
 import { appendChild, contains } from '../dom'
-import { useRef, useSetup } from '@rue-js/runtime-vapor'
+import { useRef, useSetup } from '@rue-js/runtime-vapor/reactive'
 import type { BaseTransitionProps } from './BaseTransition'
 import { createTransitionRunner } from './BaseTransition'
 import * as TransitionUtils from './transitionUtils'

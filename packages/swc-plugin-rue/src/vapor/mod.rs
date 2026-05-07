@@ -3,6 +3,9 @@ mod component;
 mod helpers;
 mod visitor;
 
+use swc_core::common::DUMMY_SP;
+use swc_core::ecma::ast::*;
+
 /*
 Vapor 深编译转换器说明：
 - 职责：遍历箭头函数与返回 JSX 的位置，替换为 `vapor(() => { ... })`，并在块体中生成原生 DOM 构造语句。
@@ -14,6 +17,7 @@ Vapor 深编译转换器说明：
 结构体字段说明：
 - next_el/next_list/next_map/next_child：各类计数器用于生成稳定名称；
 - did_transform：标记是否发生 Vapor 转换，模块访问阶段据此注入运行时 import；
+- once_depth：当前是否处于 v-once/r-once 子树编译上下文；
 - el_tag_by_ident：记录元素标识符与标签名的映射，便于特殊处理（如 style 文本）。
 */
 
@@ -31,10 +35,69 @@ pub struct VaporTransform {
     pub next_map: usize,
     /// 递增的 children 片段计数，用于生成 `__childX` 名称
     pub next_child: usize,
+    /// v-once/r-once 子树编译深度；大于 0 时动态内容只做首次赋值
+    pub once_depth: usize,
     /// 标记当前模块是否发生过 Vapor 转换，用于触发运行时 import 注入
     pub did_transform: bool,
     /// 记录已创建元素的标识符与标签名，用于特殊处理（例如 style 子文本）
     pub el_tag_by_ident: std::collections::HashMap<String, String>,
 }
 
-impl VaporTransform {}
+impl VaporTransform {
+    pub(crate) fn is_once_context(&self) -> bool {
+        self.once_depth > 0
+    }
+
+    pub(crate) fn with_once_context<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.once_depth += 1;
+        let out = f(self);
+        self.once_depth -= 1;
+        out
+    }
+}
+
+pub(crate) fn flatten_once_watch_effects(stmts: &mut Vec<Stmt>) {
+    let mut next = Vec::with_capacity(stmts.len());
+    for stmt in std::mem::take(stmts) {
+        if let Some(mut body) = watch_effect_body(&stmt) {
+            flatten_once_watch_effects(&mut body);
+            next.push(Stmt::Block(BlockStmt {
+                span: DUMMY_SP,
+                ctxt: swc_core::common::SyntaxContext::empty(),
+                stmts: body,
+            }));
+        } else {
+            next.push(stmt);
+        }
+    }
+    *stmts = next;
+}
+
+fn watch_effect_body(stmt: &Stmt) -> Option<Vec<Stmt>> {
+    let Stmt::Expr(ExprStmt { expr, .. }) = stmt else {
+        return None;
+    };
+    let Expr::Call(call) = expr.as_ref() else {
+        return None;
+    };
+    let Callee::Expr(callee) = &call.callee else {
+        return None;
+    };
+    let Expr::Ident(id) = callee.as_ref() else {
+        return None;
+    };
+    if id.sym.as_ref() != "watchEffect" {
+        return None;
+    }
+
+    let first = call.args.first()?;
+    let Expr::Arrow(arrow) = first.expr.as_ref() else {
+        return None;
+    };
+    match arrow.body.as_ref() {
+        BlockStmtOrExpr::BlockStmt(block) => Some(block.stmts.clone()),
+        BlockStmtOrExpr::Expr(expr) => {
+            Some(vec![Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: expr.clone() })])
+        }
+    }
+}

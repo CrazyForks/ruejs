@@ -42,6 +42,7 @@ where
         }
     }
 
+    #[allow(dead_code)]
     pub(super) fn clear_mounted_dom_identity(
         &mut self,
         parent: &mut A::Element,
@@ -57,37 +58,11 @@ where
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        match mounted {
-            MountedState::Block(block) => {
-                let lifecycle = block.lifecycle;
+        let (lifecycle, host, fragment_nodes) = mounted.into_dom_identity();
 
-                self.invoke_before_unmount_record(&lifecycle);
-                self.clear_mounted_block_dom(
-                    parent,
-                    block.host.as_ref(),
-                    &block.fragment_nodes,
-                );
-                self.invoke_unmounted_record(&lifecycle);
-            }
-            MountedState::Element(element) => {
-                let lifecycle = element.lifecycle;
-
-                self.invoke_before_unmount_record(&lifecycle);
-                self.clear_mounted_block_dom(parent, element.host.as_ref(), &[]);
-                self.invoke_unmounted_record(&lifecycle);
-            }
-            MountedState::Component(component) => {
-                let lifecycle = component.lifecycle;
-
-                self.invoke_before_unmount_record(&lifecycle);
-                self.clear_mounted_block_dom(
-                    parent,
-                    component.host.as_ref(),
-                    &component.fragment_nodes,
-                );
-                self.invoke_unmounted_record(&lifecycle);
-            }
-        }
+        self.invoke_before_unmount_record(&lifecycle);
+        self.clear_mounted_block_dom(parent, host.as_ref(), &fragment_nodes);
+        self.invoke_unmounted_record(&lifecycle);
     }
 
     /// 若某个待删除的片段节点本身是 renderAnchor 管理的锚点，

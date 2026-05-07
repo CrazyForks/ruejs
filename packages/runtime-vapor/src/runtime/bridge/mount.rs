@@ -1,5 +1,10 @@
 use super::WasmRue;
-use js_sys::{Array, Function, Object};
+#[cfg(not(feature = "compat"))]
+use crate::runtime::dom_adapter::DomAdapter;
+#[cfg(not(feature = "compat"))]
+use crate::runtime::types::ComponentProps;
+use crate::runtime::types::{MountInput, MountInputType};
+use js_sys::{Function, Object};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
@@ -66,7 +71,8 @@ impl WasmRue {
                     }
                 }
                 // 将 app 的返回值交给 render_wasm：
-                // - v 可以是 registry id / raw DOM node / fragment / mount handle 等
+                // - 默认路径接受 host-node bridge / portable handle / tagged mount handle
+                // - compat 构建额外接受 raw DOM node / fragment array 等旧输入
                 // - render_wasm 会解析成 MountInput 并入队，随后通过 Promise.then 异步 flush
                 self.render_wasm(v, cont.clone());
                 return true;
@@ -77,16 +83,33 @@ impl WasmRue {
 
     /// 渲染一个空 Fragment 到容器，用于无 app 场景
     fn render_empty_fragment_to(&self, cont: &JsValue) {
-        let mount_handle = self.create_element_wasm(
-            JsValue::from_str("fragment"),
-            JsValue::UNDEFINED,
-            Array::new().into(),
-        );
-        let mount_id = self.mount_registry_id(&mount_handle);
-        if let Some(input) = super::WasmRue::take_mount_input_from_registry(&mount_id) {
-            self.pending_render.borrow_mut().push((input, cont.clone()));
-            self.schedule_flush();
-        }
+        let input = {
+            #[cfg(feature = "compat")]
+            {
+                MountInput::new_normalized(MountInputType::Fragment, Default::default(), vec![])
+            }
+
+            #[cfg(not(feature = "compat"))]
+            {
+                let mut inner = self.inner.borrow_mut();
+                let Some(adapter) = inner.get_dom_adapter_mut() else {
+                    return;
+                };
+                let fragment = adapter.create_document_fragment();
+                MountInput {
+                    r#type: MountInputType::Vapor,
+                    props: ComponentProps::new(),
+                    children: vec![],
+                    key: None,
+                    mount_cleanup_bucket: None,
+                    mount_effect_scope_id: None,
+                    el_hint: Some(fragment),
+                }
+            }
+        };
+
+        self.pending_render.borrow_mut().push((input, cont.clone()));
+        self.schedule_flush();
     }
 
     #[wasm_bindgen(js_name = "mount")]

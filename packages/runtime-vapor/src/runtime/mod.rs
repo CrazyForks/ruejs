@@ -9,9 +9,10 @@ mod real_dom;
 mod render;
 mod render_lifecycle;
 mod render_patch;
+mod shared_runtime_bridge;
+mod transport;
 mod types;
-
-pub(crate) const DEFAULT_MOUNT_HANDLE_KEY: &str = "__rue_mount_id";
+mod vnode_helpers;
 
 pub use bridge::{WasmRue, createRue};
 pub use core::Rue;
@@ -22,9 +23,6 @@ pub use instance::*;
 pub use js_adapter::JsDomAdapter;
 pub use props::*;
 pub use types::{
-	AnchorMountState, ComponentProps, ContainerMountState, FC, FRAGMENT, MountInput,
-	MountInputChild, MountInputType, MountLifecycleKind, MountLifecycleRecord, MountedBlock,
-	MountedComponent, MountedElement, MountedPatchSubtree, MountedPatchSubtreeType,
-	MountedState, MountedSubtreeChild, MountedSubtreeState, MountedTextSubtree,
-	MountedVaporSubtree, MountedVaporSubtreeType, PropsWithChildren, RangeMountState,
+    ComponentProps, FC, FRAGMENT, MountInput, MountInputChild, MountInputType,
+    PropsWithChildren,
 };

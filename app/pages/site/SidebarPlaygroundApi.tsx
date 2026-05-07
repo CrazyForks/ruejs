@@ -1,11 +1,6 @@
-import { type FC, useState, computed } from '@rue-js/rue'
-import { extend } from '@rue-js/shared'
-import { RouterLink, useRoute } from '@rue-js/router'
+import { createPersistentSidebarPlayground, type SidebarSection } from './persistentSidebarPlayground'
 
-type Item = { id: string; title: string; href?: string; children?: Item[] }
-type Section = { id: string; title: string; items: Item[] }
-
-export const SECTIONS_BY_TYPE: Record<'api', Section[]> = {
+export const SECTIONS_BY_TYPE: Record<'api', SidebarSection[]> = {
   api: [
     {
       id: 'docs-api',
@@ -33,11 +28,6 @@ export const SECTIONS_BY_TYPE: Record<'api', Section[]> = {
           href: '/api/api/built-in-special-elements',
         },
         {
-          id: 'api/compile-time-flags',
-          title: '编译时标志',
-          href: '/api/api/compile-time-flags',
-        },
-        {
           id: 'api/component-instance',
           title: '组件实例',
           href: '/api/api/component-instance',
@@ -57,31 +47,9 @@ export const SECTIONS_BY_TYPE: Record<'api', Section[]> = {
           title: '生命周期',
           href: '/api/api/composition-api-lifecycle',
         },
-        {
-          id: 'api/composition-api-setup',
-          title: 'setup',
-          href: '/api/api/composition-api-setup',
-        },
         { id: 'api/custom-elements', title: '自定义元素', href: '/api/api/custom-elements' },
         { id: 'api/custom-renderer', title: '自定义渲染器', href: '/api/api/custom-renderer' },
         { id: 'api/general', title: '通用', href: '/api/api/general' },
-        {
-          id: 'api/options-composition',
-          title: '选项式组合',
-          href: '/api/api/options-composition',
-        },
-        {
-          id: 'api/options-lifecycle',
-          title: '选项式生命周期',
-          href: '/api/api/options-lifecycle',
-        },
-        { id: 'api/options-misc', title: '选项式其他', href: '/api/api/options-misc' },
-        {
-          id: 'api/options-rendering',
-          title: '选项式渲染',
-          href: '/api/api/options-rendering',
-        },
-        { id: 'api/options-state', title: '选项式状态', href: '/api/api/options-state' },
         {
           id: 'api/reactivity-advanced',
           title: '响应式进阶',
@@ -100,87 +68,6 @@ export const SECTIONS_BY_TYPE: Record<'api', Section[]> = {
   ],
 }
 
-const SidebarPlayground: FC = p => {
-  const route = useRoute()
-
-  const pathname = computed(() => {
-    const r = route.get()
-    return (r && r.path) || ''
-  })
-
-  const currentType = 'api'
-  const sections = SECTIONS_BY_TYPE[currentType]
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
-    const init: Record<string, boolean> = {}
-    sections.forEach(s => (init[s.id] = true))
-    return init
-  })
-
-  const toggleSection = (id: string) => {
-    setOpenSections(prev => extend(prev, { [id]: !prev[id] }))
-  }
-
-  return (
-    <div className="sidebar-playground md:flex md:items-start md:gap-6">
-      <aside className="md:w-45 shrink-0">
-        <div className="sticky top-20">
-          <nav className="space-y-3 w-full">
-            {sections.map(sec => (
-              <div
-                key={sec.id}
-                className={`collapse collapse-arrow bg-base-100 rounded-box shadow w-full ${
-                  openSections[sec.id] ? 'collapse-open' : ''
-                }`}
-              >
-                <button
-                  className="collapse-title px-3 py-2 font-medium text-base-content w-full text-left"
-                  onClick={() => toggleSection(sec.id)}
-                >
-                  {sec.title}
-                </button>
-                <div className="collapse-content px-0">
-                  <ul className="menu menu-sm bg-transparent rounded-box w-full">
-                    {sec.items.map(it => (
-                      <li key={it.id}>
-                        {it.children && it.children.length ? (
-                          <div>
-                            <div className="px-3 py-2 font-medium text-base-content/80">
-                              {it.title}
-                            </div>
-                            <ul className="menu menu-sm bg-transparent rounded-box w-full">
-                              {it.children.map(child => (
-                                <li key={child.id}>
-                                  <RouterLink
-                                    to={`${child.href}`}
-                                    className={`${pathname.get() === child.href ? 'active' : ''} w-full`}
-                                  >
-                                    {child.title}
-                                  </RouterLink>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : (
-                          <RouterLink
-                            to={`${it.href}`}
-                            className={`${pathname.get() === it.href ? 'active' : ''} w-full`}
-                          >
-                            {it.title}
-                          </RouterLink>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
-          </nav>
-        </div>
-      </aside>
-
-      <article class="component-preview">{p.children}</article>
-    </div>
-  )
-}
-
-export default SidebarPlayground
+export default createPersistentSidebarPlayground({
+  sections: SECTIONS_BY_TYPE.api,
+})

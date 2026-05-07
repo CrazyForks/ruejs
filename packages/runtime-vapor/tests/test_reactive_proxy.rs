@@ -141,23 +141,16 @@ fn reactive_array_indexof_proxy_child_and_splice_trigger_effect() {
     assert_eq!(*hits.borrow(), 1);
 
     let first_item_proxy = Reflect::get(&items, &JsValue::from_f64(0.0)).unwrap();
-    let index_of: Function = Reflect::get(&items, &JsValue::from_str("indexOf"))
-        .unwrap()
-        .unchecked_into();
+    let index_of: Function =
+        Reflect::get(&items, &JsValue::from_str("indexOf")).unwrap().unchecked_into();
     let idx = index_of.call1(&JsValue::NULL, &first_item_proxy).unwrap();
     assert_eq!(idx.as_f64().unwrap(), 0.0);
 
-    let splice: Function = Reflect::get(&items, &JsValue::from_str("splice"))
-        .unwrap()
-        .unchecked_into();
-    splice
-        .call2(&JsValue::NULL, &JsValue::from_f64(0.0), &JsValue::from_f64(1.0))
-        .unwrap();
+    let splice: Function =
+        Reflect::get(&items, &JsValue::from_str("splice")).unwrap().unchecked_into();
+    splice.call2(&JsValue::NULL, &JsValue::from_f64(0.0), &JsValue::from_f64(1.0)).unwrap();
 
-    let len = Reflect::get(&items, &JsValue::from_str("length"))
-        .unwrap()
-        .as_f64()
-        .unwrap();
+    let len = Reflect::get(&items, &JsValue::from_str("length")).unwrap().as_f64().unwrap();
     assert_eq!(len, 1.0);
     assert_eq!(*hits.borrow(), 2);
 
@@ -185,15 +178,10 @@ fn reactive_array_push_triggers_effect() {
 
     assert_eq!(*hits.borrow(), 1);
 
-    let push: Function = Reflect::get(&items, &JsValue::from_str("push"))
-        .unwrap()
-        .unchecked_into();
+    let push: Function = Reflect::get(&items, &JsValue::from_str("push")).unwrap().unchecked_into();
     push.call1(&JsValue::NULL, &JsValue::from_str("B")).unwrap();
 
-    let len = Reflect::get(&items, &JsValue::from_str("length"))
-        .unwrap()
-        .as_f64()
-        .unwrap();
+    let len = Reflect::get(&items, &JsValue::from_str("length")).unwrap().as_f64().unwrap();
     assert_eq!(len, 2.0);
     assert_eq!(*hits.borrow(), 2);
 
@@ -219,10 +207,8 @@ fn reactive_array_json_stringify_tracks_mutations() {
     let items_for_effect = items.clone();
     let effect = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
         *hits2.borrow_mut() += 1;
-        let text = js_sys::JSON::stringify(&items_for_effect)
-            .unwrap()
-            .as_string()
-            .unwrap_or_default();
+        let text =
+            js_sys::JSON::stringify(&items_for_effect).unwrap().as_string().unwrap_or_default();
         *last_json2.borrow_mut() = text;
     }) as Box<dyn FnMut()>);
     let effect_fn: Function = effect.as_ref().clone().into();
@@ -231,9 +217,7 @@ fn reactive_array_json_stringify_tracks_mutations() {
     assert_eq!(*hits.borrow(), 1);
     assert!(last_json.borrow().contains("\"A\""));
 
-    let push: Function = Reflect::get(&items, &JsValue::from_str("push"))
-        .unwrap()
-        .unchecked_into();
+    let push: Function = Reflect::get(&items, &JsValue::from_str("push")).unwrap().unchecked_into();
     let item_b = Object::new();
     Reflect::set(&item_b, &JsValue::from_str("label"), &JsValue::from_str("B")).unwrap();
     push.call1(&JsValue::NULL, &item_b.into()).unwrap();
@@ -348,10 +332,8 @@ fn props_reactive_nested_array_length_accessible() {
     let props = props_reactive_js(props_obj.into(), Some(true));
     let props_model = Reflect::get(&props, &JsValue::from_str("model")).unwrap();
     let props_children = Reflect::get(&props_model, &JsValue::from_str("children")).unwrap();
-    let len = Reflect::get(&props_children, &JsValue::from_str("length"))
-        .unwrap()
-        .as_f64()
-        .unwrap();
+    let len =
+        Reflect::get(&props_children, &JsValue::from_str("length")).unwrap().as_f64().unwrap();
 
     assert_eq!(len, 2.0);
 }
@@ -360,12 +342,7 @@ fn props_reactive_nested_array_length_accessible() {
 #[wasm_bindgen_test]
 fn props_reactive_keeps_host_node_prop_raw() {
     let host_node = Object::new();
-    Reflect::set(
-        &host_node,
-        &JsValue::from_str("nodeType"),
-        &JsValue::from_f64(1.0),
-    )
-    .unwrap();
+    Reflect::set(&host_node, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
 
     let renderable_owner = Object::new();
     Reflect::set(
@@ -413,14 +390,280 @@ fn shallow_equal_prop_prefers_host_node_identity() {
     let other_host = Object::new();
     Reflect::set(&other_host, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
     let third = Object::new();
+    Reflect::set(&third, &JsValue::from_str("__rue_host_node"), &other_host.clone().into())
+        .unwrap();
+
+    assert!(!shallow_equal_prop(&left.into(), &third.into()));
+}
+
+/// shallow_equal_prop 需要把 tagged mount handle 视作 renderable identity，
+/// 这样 props.children 在 bare handle 与单元素数组之间来回归一化时不会被误判为变更。
+#[wasm_bindgen_test]
+fn shallow_equal_prop_prefers_mount_handle_identity() {
+    let left = Object::new();
+    Reflect::set(
+        &left,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(7.0),
+    )
+    .unwrap();
+    Reflect::set(&left, &JsValue::from_str("key"), &JsValue::from_str("left")).unwrap();
+
+    let right = Object::new();
+    Reflect::set(
+        &right,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(7.0),
+    )
+    .unwrap();
+    Reflect::set(
+        &right,
+        &JsValue::from_str("key"),
+        &JsValue::from_str("right"),
+    )
+    .unwrap();
+
+    assert!(shallow_equal_prop(&left.clone().into(), &right.clone().into()));
+
+    let singleton = Array::new();
+    singleton.push(&left.clone().into());
+    let singleton_value: JsValue = singleton.into();
+    assert!(shallow_equal_prop(&singleton_value, &right.clone().into()));
+    assert!(shallow_equal_prop(&right.clone().into(), &singleton_value));
+
+    let third = Object::new();
     Reflect::set(
         &third,
-        &JsValue::from_str("__rue_host_node"),
-        &other_host.clone().into(),
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(8.0),
     )
     .unwrap();
 
     assert!(!shallow_equal_prop(&left.into(), &third.into()));
+}
+
+/// renderable 判定应当是 identity-first：多层 singleton 包装最终应归一到同一个底层 handle。
+#[wasm_bindgen_test]
+fn shallow_equal_prop_normalizes_nested_singleton_mount_handle_identity() {
+    let left = Object::new();
+    Reflect::set(
+        &left,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(17.0),
+    )
+    .unwrap();
+
+    let right = Object::new();
+    Reflect::set(
+        &right,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(17.0),
+    )
+    .unwrap();
+
+    let singleton = Array::new();
+    singleton.push(&left.clone().into());
+
+    let nested_singleton = Array::new();
+    nested_singleton.push(&singleton.into());
+    let nested_singleton_value: JsValue = nested_singleton.into();
+
+    assert!(shallow_equal_prop(
+        &nested_singleton_value,
+        &right.clone().into()
+    ));
+
+    let flat_array = Array::new();
+    flat_array.push(&right.clone().into());
+    let flat_array_value: JsValue = flat_array.into();
+    assert!(shallow_equal_prop(&nested_singleton_value, &flat_array_value));
+
+    let third = Object::new();
+    Reflect::set(
+        &third,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(18.0),
+    )
+    .unwrap();
+
+    assert!(!shallow_equal_prop(&nested_singleton_value, &third.into()));
+}
+
+/// renderable 数组内部的多层 singleton 包装也应按底层 identity 递归归一。
+#[wasm_bindgen_test]
+fn shallow_equal_prop_normalizes_nested_singletons_inside_renderable_arrays() {
+    let left_first = Object::new();
+    Reflect::set(
+        &left_first,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(21.0),
+    )
+    .unwrap();
+
+    let left_second = Object::new();
+    Reflect::set(
+        &left_second,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(22.0),
+    )
+    .unwrap();
+
+    let left_first_singleton = Array::new();
+    left_first_singleton.push(&left_first.clone().into());
+    let left_second_singleton = Array::new();
+    left_second_singleton.push(&left_second.clone().into());
+
+    let left_items = Array::new();
+    left_items.push(&left_first_singleton.into());
+    left_items.push(&left_second_singleton.into());
+    let left_items_value: JsValue = left_items.into();
+
+    let right_first = Object::new();
+    Reflect::set(
+        &right_first,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(21.0),
+    )
+    .unwrap();
+
+    let right_second = Object::new();
+    Reflect::set(
+        &right_second,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(22.0),
+    )
+    .unwrap();
+
+    let right_items = Array::new();
+    right_items.push(&right_first.into());
+    right_items.push(&right_second.into());
+    let right_items_value: JsValue = right_items.into();
+
+    assert!(shallow_equal_prop(&left_items_value, &right_items_value));
+
+    let different_second = Object::new();
+    Reflect::set(
+        &different_second,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(23.0),
+    )
+    .unwrap();
+
+    let different_items = Array::new();
+    different_items.push(&left_first.into());
+    different_items.push(&different_second.into());
+    let different_items_value: JsValue = different_items.into();
+
+    assert!(!shallow_equal_prop(&left_items_value, &different_items_value));
+}
+
+/// shallow_equal_prop 应该在对象字段内部复用同一套 renderable array 比较，
+/// 而不是把 renderable 数组退回到普通 Object.is。
+#[wasm_bindgen_test]
+fn shallow_equal_prop_compares_renderable_arrays_inside_objects() {
+    let left_first = Object::new();
+    Reflect::set(
+        &left_first,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(11.0),
+    )
+    .unwrap();
+    Reflect::set(&left_first, &JsValue::from_str("key"), &JsValue::from_str("left-a")).unwrap();
+
+    let left_second = Object::new();
+    Reflect::set(
+        &left_second,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(12.0),
+    )
+    .unwrap();
+    Reflect::set(&left_second, &JsValue::from_str("key"), &JsValue::from_str("left-b")).unwrap();
+
+    let right_first = Object::new();
+    Reflect::set(
+        &right_first,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(11.0),
+    )
+    .unwrap();
+    Reflect::set(
+        &right_first,
+        &JsValue::from_str("key"),
+        &JsValue::from_str("right-a"),
+    )
+    .unwrap();
+
+    let right_second = Object::new();
+    Reflect::set(
+        &right_second,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(12.0),
+    )
+    .unwrap();
+    Reflect::set(
+        &right_second,
+        &JsValue::from_str("key"),
+        &JsValue::from_str("right-b"),
+    )
+    .unwrap();
+
+    let left_items = Array::new();
+    left_items.push(&left_first.into());
+    left_items.push(&left_second.into());
+
+    let right_items = Array::new();
+    right_items.push(&right_first.into());
+    right_items.push(&right_second.into());
+
+    let left = Object::new();
+    Reflect::set(&left, &JsValue::from_str("items"), &left_items.into()).unwrap();
+
+    let right = Object::new();
+    Reflect::set(&right, &JsValue::from_str("items"), &right_items.into()).unwrap();
+
+    assert!(shallow_equal_prop(&left.clone().into(), &right.clone().into()));
+
+    let different = Object::new();
+    let different_items = Array::new();
+    let different_first = Object::new();
+    Reflect::set(
+        &different_first,
+        &JsValue::from_str("__rue_mount_id"),
+        &JsValue::from_f64(13.0),
+    )
+    .unwrap();
+    different_items.push(&different_first.into());
+    Reflect::set(&different, &JsValue::from_str("items"), &different_items.into()).unwrap();
+
+    assert!(!shallow_equal_prop(&left.into(), &different.into()));
+}
+
+/// block-factory 仍然是公开 renderable shape；singleton array 归一化应保留这条路径，
+/// 但不同 factory 不能因为 shape 相同就被误判为相等。
+#[wasm_bindgen_test]
+fn shallow_equal_prop_normalizes_singleton_block_factory_identity() {
+    let factory = Function::new_no_args("return null;");
+    Reflect::set(
+        &factory,
+        &JsValue::from_str("kind"),
+        &JsValue::from_str("block-factory"),
+    )
+    .unwrap();
+
+    let singleton = Array::new();
+    singleton.push(&factory.clone().into());
+    let singleton_value: JsValue = singleton.into();
+    assert!(shallow_equal_prop(&singleton_value, &factory.clone().into()));
+
+    let other_factory = Function::new_no_args("return null;");
+    Reflect::set(
+        &other_factory,
+        &JsValue::from_str("kind"),
+        &JsValue::from_str("block-factory"),
+    )
+    .unwrap();
+
+    assert!(!shallow_equal_prop(&factory.into(), &other_factory.into()));
 }
 
 /// 只读代理：写入被拒绝（返回 false/不生效），原始快照保持不变
@@ -502,9 +745,8 @@ fn reactive_array_proxy_self_assignment_preserves_push() {
     let children = Reflect::get(&proxy, &JsValue::from_str("children")).unwrap();
     Reflect::set(&proxy, &JsValue::from_str("children"), &children).unwrap();
 
-    let push: Function = Reflect::get(&children, &JsValue::from_str("push"))
-        .unwrap()
-        .unchecked_into();
+    let push: Function =
+        Reflect::get(&children, &JsValue::from_str("push")).unwrap().unchecked_into();
     push.call1(&JsValue::NULL, &JsValue::from_str("z")).unwrap();
 
     let raw = Reflect::get(&proxy, &JsValue::from_str("__rue_raw__")).unwrap();

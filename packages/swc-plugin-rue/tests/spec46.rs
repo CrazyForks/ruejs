@@ -38,7 +38,7 @@ useApp(RootApp).use(router).mount('#app')
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC, useError, useApp } from '@rue-js/rue';
 import { RouterView } from '@rue-js/router';
 import router from './router';
@@ -71,11 +71,13 @@ const RootApp: FC = ()=>{
             const _root = _$createDocumentFragment();
             const _list2 = _$createComment("rue:component:anchor");
             _$appendChild(_root, _list2);
-            const __slot3 = <RouterView/>;
+            const __slot3 = _$createComponent(RouterView, {});
             renderAnchor(__slot3, _root, _list2);
             return _root;
         });
-        const __slot5 = <ParentBox children={__child1}/>;
+        const __slot5 = _$createComponent(ParentBox, {
+            children: __child1
+        });
         renderAnchor(__slot5, _root, _list4);
         return _root;
     });

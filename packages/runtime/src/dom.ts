@@ -298,12 +298,22 @@ export class BrowserDOMAdapter implements DOMAdapter {
   removeAttribute(el: DomElementLike, name: string) {
     ;(el as any).removeAttribute(name)
   }
-  /** 添加事件监听：el.addEventListener(eventName, listener) */
+  /** 添加事件监听：支持由 listener.__rue_options 携带的原生监听选项 */
   addEventListener(el: DomElementLike, eventName: string, listener: DOMEventHandler) {
+    const options = listener?.__rue_options
+    if (options !== undefined) {
+      ;(el as any).addEventListener(eventName, listener, options)
+      return
+    }
     ;(el as any).addEventListener(eventName, listener)
   }
-  /** 移除事件监听：el.removeEventListener(eventName, listener) */
+  /** 移除事件监听：移除时复用 listener.__rue_options 里的 capture 信息 */
   removeEventListener(el: DomElementLike, eventName: string, listener: DOMEventHandler) {
+    const options = listener?.__rue_options
+    if (options !== undefined) {
+      ;(el as any).removeEventListener(eventName, listener, options)
+      return
+    }
     ;(el as any).removeEventListener(eventName, listener)
   }
   /** 设置类名：SVG 用属性 'class'，HTML 用 className */
@@ -344,6 +354,10 @@ export class BrowserDOMAdapter implements DOMAdapter {
       } else {
         anyEl.value = value
       }
+      return
+    }
+    if (tag === 'PROGRESS') {
+      anyEl.setAttribute('value', String(value))
       return
     }
     if (anyEl.value !== undefined) {
@@ -613,4 +627,8 @@ export const collectFragmentChildren = (node: DomNodeLike) =>
 export const applyRef = (el: DomElementLike, ref: any) => CURRENT_ADAPTER.applyRef(el, ref)
 /** 清理 ref（便捷函数） */
 export const clearRef = (ref: any) => CURRENT_ADAPTER.clearRef(ref)
-export type DOMEventHandler = (evt: any) => void
+export type DOMEventListenerOptions = boolean | AddEventListenerOptions | undefined
+
+export type DOMEventHandler = ((evt: any) => void) & {
+  __rue_options?: DOMEventListenerOptions
+}

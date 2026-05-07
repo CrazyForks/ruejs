@@ -468,7 +468,7 @@ Rue 当前默认主入口没有额外公开的 render-function 指令包装 help
 
 ### 模板 Refs {#template-refs}
 
-模板 ref 当前更适合在模板或 JSX 路径中使用。对于手写 `h()` 边界，如需获取节点引用，优先通过显式回调 props、原始 DOM 节点或 mount handle 来建模，而不是继续依赖未公开的字符串 ref helper。
+模板 ref 当前更适合在模板或 JSX 路径中使用。对于手写 `h()` 边界，如需获取节点引用，优先通过显式回调 props、对象 ref、原始 DOM 节点或 mount handle 来建模，而不是再假设存在额外的旧式 ref 收集机制。
 
 ## 函数式组件 {#functional-components}
 

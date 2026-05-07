@@ -1,0 +1,152 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { h, render, setReactiveScheduling } from '@rue-js/rue'
+import Loading from '../index'
+import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+
+setReactiveScheduling('sync')
+
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active = (globalThis as any).__rue
+}
+
+afterEach(() => {
+  document.body.innerHTML = ''
+  vi.useRealTimers()
+  Loading.setDefaultIndicator(undefined)
+})
+
+describe('Loading', () => {
+  it('renders the base loading host', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(<Loading data-testid="loading-base" />, container)
+
+    await waitForContent(() => {
+      const el = container.querySelector('[data-testid="loading-base"]') as HTMLElement
+      expect(el.tagName.toLowerCase()).toBe('span')
+      expect(el.classList.contains('loading')).toBe(true)
+      expect(el.classList.contains('loading-spinner')).toBe(true)
+      expect(el.classList.contains('loading-md')).toBe(true)
+      expect(el.getAttribute('role')).toBe('status')
+      expect(el.getAttribute('aria-busy')).toBe('true')
+    })
+  })
+
+  it('applies style and size modifiers with custom className', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(<Loading style="spinner" size="lg" className="text-primary" />, container)
+
+    await waitForContent(() => {
+      const el = container.querySelector('.loading') as HTMLElement
+      expect(el.classList.contains('loading-spinner')).toBe(true)
+      expect(el.classList.contains('loading-lg')).toBe(true)
+      expect(el.classList.contains('text-primary')).toBe(true)
+    })
+  })
+
+  it('supports rendering as another lightweight host', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(<Loading as="div" style="dots" data-testid="loading-div" />, container)
+
+    await waitForContent(() => {
+      const el = container.querySelector('[data-testid="loading-div"]') as HTMLElement
+      expect(el.tagName.toLowerCase()).toBe('div')
+      expect(el.classList.contains('loading-dots')).toBe(true)
+    })
+  })
+
+  it('wraps children with a busy overlay and description', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Loading spinning description="Fetching workspace" data-testid="loading-wrap">
+        <article data-testid="loading-content">Workspace card</article>
+      </Loading>,
+      container,
+    )
+
+    await waitForContent(() => {
+      const root = container.querySelector('[data-testid="loading-wrap"]') as HTMLElement
+      expect(root.getAttribute('aria-busy')).toBe('true')
+      expect(root.querySelector('[data-rue-loading-section="true"]')).toBeTruthy()
+      expect(root.querySelector('[data-rue-loading-container="true"]')?.textContent).toContain('Workspace card')
+      expect(root.textContent).toContain('Fetching workspace')
+    })
+  })
+
+  it('keeps nested content mounted when spinning is false', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Loading spinning={false} data-testid="loading-idle">
+        <span data-testid="idle-content">Ready</span>
+      </Loading>,
+      container,
+    )
+
+    await waitForContent(() => {
+      const root = container.querySelector('[data-testid="loading-idle"]') as HTMLElement
+      expect(root.getAttribute('aria-busy')).toBe('false')
+      expect(root.querySelector('[data-rue-loading-section="true"]')).toBeNull()
+      expect(root.querySelector('[data-testid="idle-content"]')).toBeTruthy()
+    })
+  })
+
+  it('renders custom indicators with percent feedback', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Loading
+        percent={42}
+        description="Uploading"
+        indicator={({ percent }) => <span data-testid="custom-indicator">{Math.round(percent ?? 0)}</span>}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-testid="custom-indicator"]')?.textContent).toBe('42')
+      expect(container.querySelector('progress')?.getAttribute('value')).toBe('42')
+      expect(container.textContent).toContain('Uploading')
+    })
+  })
+
+  it('supports a global default indicator', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    Loading.setDefaultIndicator(h('span', { 'data-testid': 'global-indicator' }, 'G'))
+    render(<Loading description="Global" />, container)
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-testid="global-indicator"]')).toBeTruthy()
+      expect(container.textContent).toContain('Global')
+    })
+  })
+
+  it('delays standalone loading visibility', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(<Loading delay={80} data-testid="delayed-loading" />, container)
+
+    await new Promise(resolve => setTimeout(resolve, 10))
+    const delayed = container.querySelector('[data-testid="delayed-loading"]') as HTMLElement
+    expect(delayed.classList.contains('loading')).toBe(true)
+    expect(delayed.classList.contains('opacity-0')).toBe(true)
+
+    await new Promise(resolve => setTimeout(resolve, 90))
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-testid="delayed-loading"]')?.classList.contains('opacity-0')).toBe(false)
+    })
+  })
+})

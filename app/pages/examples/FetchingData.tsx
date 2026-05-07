@@ -114,7 +114,7 @@ const SOURCE_CODE = [
   '          ))}',
   '        </div>',
   '',
-  '        <p className="text-sm text-base-content/70">vuejs/core@{currentBranch.value}</p>',
+  '        <p className="text-sm text-base-content/70">rust@{currentBranch.value}</p>',
   '',
   '        {loading.value && <p className="text-base-content/70">加载中...</p>}',
   '',
@@ -233,7 +233,7 @@ const PreviewPanel: FC = () => {
           ))}
         </div>
 
-        <p className="text-sm text-base-content/70">vuejs/core@{currentBranch.value}</p>
+        <p className="text-sm text-base-content/70">rust@{currentBranch.value}</p>
 
         {loading.value && <p className="text-base-content/70">加载中...</p>}
 

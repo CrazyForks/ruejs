@@ -1,4 +1,5 @@
 use super::WasmRue;
+use super::input::CompatEntryPolicy;
 use crate::runtime::js_adapter::JsDomAdapter;
 use crate::runtime::types::MountInput;
 use wasm_bindgen::JsValue;
@@ -13,7 +14,9 @@ impl WasmRue {
     }
 
     #[wasm_bindgen(js_name = "render")]
-    /// 渲染入口：接受 mount handle、raw node 或合法数组，解析为 MountInput 并异步提交
+    /// 渲染入口：
+    /// - 默认接受 tagged mount handle、portable handle、host-node bridge
+    /// - compat 构建额外接受历史 raw node / array 输入
     pub fn render_wasm(&self, input_value: JsValue, container: JsValue) {
         #[cfg(feature = "dev")]
         {
@@ -22,11 +25,17 @@ impl WasmRue {
                 let has_cont = !container.is_undefined() && !container.is_null();
                 crate::log::log(
                     "debug",
-                    &format!("runtime:render has_input_value={} has_container={}", has_id, has_cont),
+                    &format!(
+                        "runtime:render has_input_value={} has_container={}",
+                        has_id, has_cont
+                    ),
                 );
             }
         }
-        let Some(input) = self.default_mount_input_from_input(&input_value, false) else {
+        let Some(input) = self.mount_input_from_input(
+            &input_value,
+            CompatEntryPolicy::LegacyArrayOrRawElementInput,
+        ) else {
             #[cfg(feature = "dev")]
             {
                 crate::log::warning("Rue runtime: render input not supported on the default path");

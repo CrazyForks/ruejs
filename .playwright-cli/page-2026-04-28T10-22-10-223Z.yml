@@ -1,0 +1,258 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "R 后悔药 Rue.js" [ref=e7] [cursor=pointer]:
+        - /url: "#/"
+        - generic [ref=e9]: R
+        - generic [ref=e10]: 后悔药 Rue.js
+      - list [ref=e12]:
+        - listitem [ref=e13]:
+          - link "首页" [ref=e14] [cursor=pointer]:
+            - /url: "#/"
+        - listitem [ref=e15]:
+          - generic [ref=e16] [cursor=pointer]: 文档
+        - listitem [ref=e17]:
+          - link "API" [ref=e18] [cursor=pointer]:
+            - /url: "#/api/api/index"
+        - listitem [ref=e19]:
+          - generic [ref=e20] [cursor=pointer]: 生态
+        - listitem [ref=e21]:
+          - generic [ref=e22] [cursor=pointer]: 关于
+        - listitem [ref=e23]:
+          - link "赞助" [ref=e24] [cursor=pointer]:
+            - /url: "#/page/sponsor/index"
+        - listitem [ref=e25]:
+          - link "合作伙伴" [ref=e26] [cursor=pointer]:
+            - /url: "#/page/partners/index"
+      - combobox "切换主题" [ref=e29]:
+        - option [selected]
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+        - option
+  - main [ref=e30]:
+    - generic [ref=e70]:
+      - complementary [ref=e71]:
+        - navigation [ref=e73]:
+          - generic [ref=e74]:
+            - button "基础" [ref=e75] [cursor=pointer]
+            - list [ref=e77]:
+              - listitem [ref=e78]:
+                - link "你好，世界" [ref=e79] [cursor=pointer]:
+                  - /url: "#/examples/hello-world"
+              - listitem [ref=e80]:
+                - link "处理输入" [ref=e81] [cursor=pointer]:
+                  - /url: "#/examples/handling-input"
+              - listitem [ref=e82]:
+                - link "Attribute 绑定" [ref=e83] [cursor=pointer]:
+                  - /url: "#/examples/attribute-bindings"
+              - listitem [ref=e84]:
+                - link "条件与循环" [ref=e85] [cursor=pointer]:
+                  - /url: "#/examples/conditionals-and-loops"
+              - listitem [ref=e86]:
+                - link "表单绑定" [ref=e87] [cursor=pointer]:
+                  - /url: "#/examples/form-bindings"
+              - listitem [ref=e88]:
+                - link "简单组件" [ref=e89] [cursor=pointer]:
+                  - /url: "#/examples/simple-component"
+              - listitem [ref=e90]:
+                - link "Slots 插槽" [ref=e91] [cursor=pointer]:
+                  - /url: "#/examples/slots"
+              - listitem [ref=e92]:
+                - link "原生 Web Components" [ref=e93] [cursor=pointer]:
+                  - /url: "#/examples/web-components"
+          - generic [ref=e94]:
+            - button "JSX" [ref=e95] [cursor=pointer]
+            - list [ref=e97]:
+              - listitem [ref=e98]:
+                - link "基础元素与自闭合标签" [ref=e99] [cursor=pointer]:
+                  - /url: "#/jsx/basic-elements"
+              - listitem [ref=e100]:
+                - link "表达式与插值" [ref=e101] [cursor=pointer]:
+                  - /url: "#/jsx/expressions"
+              - listitem [ref=e102]:
+                - link "属性、className、style 与 Props" [ref=e103] [cursor=pointer]:
+                  - /url: "#/jsx/attributes-and-props"
+              - listitem [ref=e104]:
+                - link "对象展开属性（spread props）" [ref=e105] [cursor=pointer]:
+                  - /url: "#/jsx/spread-props"
+              - listitem [ref=e106]:
+                - link "条件渲染（?:、&&、null）" [ref=e107] [cursor=pointer]:
+                  - /url: "#/jsx/conditional-rendering"
+              - listitem [ref=e108]:
+                - link "v-if / r-if 指令" [ref=e109] [cursor=pointer]:
+                  - /url: "#/jsx/v-if-r-if"
+              - listitem [ref=e110]:
+                - link "v-show / r-show 指令" [ref=e111] [cursor=pointer]:
+                  - /url: "#/jsx/v-show-r-show"
+              - listitem [ref=e112]:
+                - link "v-pre / r-pre 指令" [ref=e113] [cursor=pointer]:
+                  - /url: "#/jsx/v-pre-r-pre"
+              - listitem [ref=e114]:
+                - link "v-once / r-once 指令" [ref=e115] [cursor=pointer]:
+                  - /url: "#/jsx/v-once-r-once"
+              - listitem [ref=e116]:
+                - link "v-memo / r-memo 指令" [ref=e117] [cursor=pointer]:
+                  - /url: "#/jsx/v-memo-r-memo"
+              - listitem [ref=e118]:
+                - link "v-text / r-text 指令" [ref=e119] [cursor=pointer]:
+                  - /url: "#/jsx/v-text-r-text"
+              - listitem [ref=e120]:
+                - link "v-html / r-html 指令" [ref=e121] [cursor=pointer]:
+                  - /url: "#/jsx/v-html-r-html"
+              - listitem [ref=e122]:
+                - link "v-on / r-on 指令" [ref=e123] [cursor=pointer]:
+                  - /url: "#/jsx/v-on-r-on"
+              - listitem [ref=e124]:
+                - link "v-model / r-model 指令" [ref=e125] [cursor=pointer]:
+                  - /url: "#/jsx/v-model-r-model"
+              - listitem [ref=e126]:
+                - link "列表渲染与 key" [ref=e127] [cursor=pointer]:
+                  - /url: "#/jsx/lists-and-keys"
+              - listitem [ref=e128]:
+                - link "v-for / r-for 指令" [ref=e129] [cursor=pointer]:
+                  - /url: "#/jsx/v-for-r-for"
+              - listitem [ref=e130]:
+                - link "Template 无包装容器" [ref=e131] [cursor=pointer]:
+                  - /url: "#/jsx/template"
+              - listitem [ref=e132]:
+                - link "Fragments（<> … </>）" [ref=e133] [cursor=pointer]:
+                  - /url: "#/jsx/fragments"
+              - listitem [ref=e134]:
+                - link "children 插槽与嵌套" [ref=e135] [cursor=pointer]:
+                  - /url: "#/jsx/children"
+              - listitem [ref=e136]:
+                - link "组件与 Props 传递" [ref=e137] [cursor=pointer]:
+                  - /url: "#/jsx/components"
+              - listitem [ref=e138]:
+                - link "动态组件（component / Component）" [ref=e139] [cursor=pointer]:
+                  - /url: "#/jsx/dynamic-component"
+              - listitem [ref=e140]:
+                - link "事件处理" [ref=e141] [cursor=pointer]:
+                  - /url: "#/jsx/events"
+              - listitem [ref=e142]:
+                - link "受控输入" [ref=e143] [cursor=pointer]:
+                  - /url: "#/jsx/controlled-inputs"
+              - listitem [ref=e144]:
+                - link "Refs 基础" [ref=e145] [cursor=pointer]:
+                  - /url: "#/jsx/refs"
+          - generic [ref=e146]:
+            - button "实战" [ref=e147] [cursor=pointer]
+            - list [ref=e149]:
+              - listitem [ref=e150]:
+                - link "Markdown 编辑器" [ref=e151] [cursor=pointer]:
+                  - /url: "#/examples/markdown-editor"
+              - listitem [ref=e152]:
+                - link "获取数据" [ref=e153] [cursor=pointer]:
+                  - /url: "#/examples/fetching-data"
+              - listitem [ref=e154]:
+                - link "Todo 应用" [ref=e155] [cursor=pointer]:
+                  - /url: "#/examples/todo-app"
+              - listitem [ref=e156]:
+                - link "排序、筛选与网格" [ref=e157] [cursor=pointer]:
+                  - /url: "#/examples/sort-filter-grid"
+              - listitem [ref=e158]:
+                - link "树状视图" [ref=e159] [cursor=pointer]:
+                  - /url: "#/examples/tree-view"
+              - listitem [ref=e160]:
+                - link "SVG 图表" [ref=e161] [cursor=pointer]:
+                  - /url: "#/examples/svg-graph"
+              - listitem [ref=e162]:
+                - link "带过渡动效的模态框" [ref=e163] [cursor=pointer]:
+                  - /url: "#/examples/modal"
+              - listitem [ref=e164]:
+                - link "过渡动效" [ref=e165] [cursor=pointer]:
+                  - /url: "#/examples/list-transition"
+      - article [ref=e166]:
+        - heading "v-once / r-once" [level=1] [ref=e167]
+        - tablist [ref=e168]:
+          - tab "效果" [ref=e169] [cursor=pointer]
+          - tab "代码" [ref=e170] [cursor=pointer]
+        - generic [ref=e215]:
+          - generic [ref=e216]:
+            - heading "v-once / r-once" [level=2] [ref=e217]
+            - button "更新数据" [active] [ref=e218] [cursor=pointer]
+          - generic [ref=e219]:
+            - generic [ref=e220]:
+              - generic [ref=e221]: 当前值：已更新 1 次
+              - generic [ref=e223]: 首次渲染
+            - generic [ref=e224]:
+              - generic [ref=e225]: 当前计数：1
+              - generic [ref=e226]:
+                - text: "count:"
+                - generic [ref=e227]: "0"
+  - contentinfo [ref=e32]:
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - generic [ref=e35]: 文档
+        - list [ref=e36]:
+          - listitem [ref=e37]:
+            - link "深度指南" [ref=e38] [cursor=pointer]:
+              - /url: "#/jsx/basic-elements"
+          - listitem [ref=e39]:
+            - link "实战例子" [ref=e40] [cursor=pointer]:
+              - /url: "#/examples/hello-world"
+          - listitem [ref=e41]:
+            - link "快速上手" [ref=e42] [cursor=pointer]:
+              - /url: "#/guide/guide/quick-start"
+          - listitem [ref=e43]:
+            - link "术语表" [ref=e44] [cursor=pointer]:
+              - /url: "#/page/glossary/index"
+          - listitem [ref=e45]:
+            - link "错误码参照表" [ref=e46] [cursor=pointer]:
+              - /url: "#/page/error-reference/index"
+      - generic [ref=e47]:
+        - generic [ref=e48]: 关于
+        - list [ref=e49]:
+          - listitem [ref=e50]:
+            - link "常见问题" [ref=e51] [cursor=pointer]:
+              - /url: "#/page/about/faq"
+          - listitem [ref=e52]:
+            - link "团队" [ref=e53] [cursor=pointer]:
+              - /url: "#/page/about/team"
+          - listitem [ref=e54]:
+            - link "版本发布" [ref=e55] [cursor=pointer]:
+              - /url: "#/page/about/releases"
+          - listitem [ref=e56]:
+            - link "社区指南" [ref=e57] [cursor=pointer]:
+              - /url: "#/page/about/community-guide"
+      - generic [ref=e58]:
+        - generic [ref=e59]: 生态
+        - list [ref=e60]:
+          - listitem [ref=e61]:
+            - link "插件" [ref=e62] [cursor=pointer]:
+              - /url: "#/plugins"
+          - listitem [ref=e63]:
+            - link "组件库" [ref=e64] [cursor=pointer]:
+              - /url: "#/design/button"
+          - listitem [ref=e65]:
+            - link "路由指南" [ref=e66] [cursor=pointer]:
+              - /url: "#/page/routing"
+    - generic [ref=e68]: © 2024-2026 Xiangmin Liu

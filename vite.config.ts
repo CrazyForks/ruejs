@@ -24,7 +24,7 @@ export default defineConfig({
       include: ['/app/'],
       debug: true,
     }),
-    dts(),
+    !process.env.VITEST && dts(),
     {
       name: 'copy-docs',
       apply: 'build',
@@ -44,7 +44,7 @@ export default defineConfig({
         await copy(src, dest)
       },
     },
-  ],
+  ].filter(Boolean),
   css: {
     devSourcemap: true,
   },
@@ -96,6 +96,12 @@ export default defineConfig({
   resolve: {
     conditions: ['development', 'browser'],
     alias: {
+      '@rue-js/runtime-vapor/vapor': process.env.VITEST
+        ? path.resolve(rootDir, 'packages/runtime-vapor/vapor.node.js')
+        : path.resolve(rootDir, 'packages/runtime-vapor/vapor.js'),
+      '@rue-js/runtime-vapor/reactive': process.env.VITEST
+        ? path.resolve(rootDir, 'packages/runtime-vapor/reactive.node.js')
+        : path.resolve(rootDir, 'packages/runtime-vapor/reactive.js'),
       '@rue-js/rue': path.resolve(rootDir, 'packages/rue/src'),
       '@rue-js/router': path.resolve(rootDir, 'packages/router/src'),
       '@rue-js/jsx-runtime': path.resolve(rootDir, 'packages/jsx-runtime/src'),

@@ -1,5 +1,5 @@
 use super::super::Rue;
-use super::super::types::{AnchorMountState, ComponentProps, RangeMountState};
+use super::super::types::{AnchorMountState, ComponentProps, MountInput, MountedState, RangeMountState};
 use crate::reactive::core::{create_effect_scope, dispose_effect_scope};
 use crate::reactive::signal::signal_from_proxy;
 use crate::runtime::dom_adapter::DomAdapter;
@@ -18,6 +18,24 @@ impl<A: DomAdapter> Rue<A>
 where
     A::Element: Clone,
 {
+    pub(super) fn patch_root_mounted_state(
+        &mut self,
+        old_mount: MountedState<A>,
+        input: &MountInput<A>,
+        parent: &mut A::Element,
+    ) -> MountedState<A>
+    where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let Some(mut old_patch) = old_mount.into_patch_state() else {
+            unreachable!("root patch helper expects non-block mounted state")
+        };
+        self.call_hooks("before_update");
+        self.patch(&mut old_patch, input, parent);
+        self.call_hooks("updated");
+        MountedState::from_subtree_root(old_patch)
+    }
+
     /// 为组件开启新一轮渲染作用域，并回收上一轮渲染期间创建的副作用。
     ///
     /// 这层作用域专门解决“组件函数每次重跑都再次创建 computed/useEffect/watchEffect，
@@ -134,9 +152,8 @@ where
             }
 
             let av: JsValue = entry.anchor.clone().into();
-            let connected = Reflect::get(&av, &JsValue::from_str("isConnected"))
-                .ok()
-                .and_then(|v| v.as_bool());
+            let connected =
+                Reflect::get(&av, &JsValue::from_str("isConnected")).ok().and_then(|v| v.as_bool());
             let keep = match connected {
                 Some(true) => true,
                 Some(false) | None => {
@@ -349,11 +366,10 @@ where
         &self,
         props_ro: &JsValue,
         new_props: &ComponentProps,
-        new_children: &Vec<super::super::types::MountInputChild<A>>,
+        new_children: &[super::super::types::MountInputChild<A>],
     ) where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue> + Clone,
     {
-        use super::super::types::{MountInputChild, MountInputType};
         use crate::hook::reactive::shallow_equal_prop;
 
         let sig = match signal_from_proxy(props_ro) {
@@ -383,55 +399,17 @@ where
             }
         }
 
-        let next_children = if new_children.is_empty() {
-            if let Some(existing_children) = new_props.get("children") {
-                if Array::is_array(existing_children) {
-                    Array::from(existing_children)
-                } else if existing_children.is_undefined() || existing_children.is_null() {
-                    Array::new()
-                } else {
-                    let arr = Array::new();
-                    arr.push(existing_children);
-                    arr
-                }
-            } else {
-                Array::new()
-            }
-        } else {
-            let arr = Array::new();
-            for child in new_children.iter() {
-                match child {
-                    MountInputChild::Text(text) => {
-                        arr.push(&JsValue::from_str(text));
-                    }
-                    MountInputChild::Input(node) => match &node.r#type {
-                        MountInputType::Text(text) => {
-                            arr.push(&JsValue::from_str(text));
-                        }
-                        _ => {
-                            let handle = self.input_to_mount_handle_value(node);
-                            arr.push(&handle);
-                        }
-                    },
-                }
-            }
-            arr
-        };
+        let next_children = self.normalized_children_input_array(new_props, new_children);
 
         let path_children = Array::new();
         path_children.push(&JsValue::from_str("children"));
-        let old_children = peek_f
-            .call1(&sig, &path_children.clone().into())
-            .unwrap_or(JsValue::UNDEFINED);
+        let old_children =
+            peek_f.call1(&sig, &path_children.clone().into()).unwrap_or(JsValue::UNDEFINED);
         let skip_empty_children_write =
             (old_children.is_undefined() || old_children.is_null()) && next_children.length() == 0;
         let next_children_value: JsValue = next_children.clone().into();
         if !skip_empty_children_write && !shallow_equal_prop(&old_children, &next_children_value) {
-            let _ = set_f.call2(
-                &sig,
-                &path_children.clone().into(),
-                &next_children_value,
-            );
+            let _ = set_f.call2(&sig, &path_children.clone().into(), &next_children_value);
         }
     }
 
@@ -470,7 +448,8 @@ where
                 return Some(i);
             }
             if let Some(adapter) = self.get_dom_adapter() {
-                if adapter.contains(&entry.anchor, anchor) && adapter.contains(anchor, &entry.anchor)
+                if adapter.contains(&entry.anchor, anchor)
+                    && adapter.contains(anchor, &entry.anchor)
                 {
                     return Some(i);
                 }

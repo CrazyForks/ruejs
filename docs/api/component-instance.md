@@ -53,7 +53,6 @@
   `$el` 在组件[挂载](./options-lifecycle#mounted)之前将是 `undefined`。
   - 对于具有单个根元素的组件，`$el` 将指向该元素。
   - 对于具有文本根的组件，`$el` 将指向文本节点。
-  - 对于具有多个根节点的组件，`$el` 将是 Vue 用于跟踪组件在 DOM 中位置的占位 DOM 节点（文本节点，或在 SSR 水合模式下的注释节点）。
 
   :::tip
   为了一致性，建议使用[模板 ref](/guide/essentials/template-refs)直接访问元素，而不是依赖 `$el`。
@@ -141,17 +140,9 @@
 
 - **另请参阅** [渲染函数 - 渲染插槽](/guide/extras/render-function#rendering-slots)
 
-## $refs {#refs}
+## $refs {#refs} @todo
 
-通过[模板 refs](/guide/essentials/template-refs)注册的 DOM 元素和组件实例的对象。
-
-- **类型**
-
-  ```ts
-  interface ComponentPublicInstance {
-    $refs: { [name: string]: Element | ComponentPublicInstance | null }
-  }
-  ```
+Rue 当前的 Composition API / FC / JSX 路径不提供 Vue 风格的 `$refs` 实例对象收集。获取模板引用时，请直接使用 `useRef()` 或函数 ref。
 
 - **另请参阅**
   - [模板 refs](/guide/essentials/template-refs)

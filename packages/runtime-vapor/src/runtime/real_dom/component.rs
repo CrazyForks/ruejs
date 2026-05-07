@@ -1,9 +1,12 @@
-use super::super::types::{MountInput, MountedPatchSubtree, MountedPatchSubtreeType, MountedSubtreeState};
+use super::super::types::{
+    MountInput, MountedPatchSubtree, MountedSubtreeState,
+};
 use super::super::{ComponentInternalInstance, Rue};
 use crate::hook::reactive::props_reactive_js;
+use crate::reactive::context::{get_current_instance, set_current_instance_ci};
 use crate::reactive::core::{pop_effect_scope, push_effect_scope};
-use crate::reactive::context::set_current_instance_ci;
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::shared_runtime_bridge;
 use js_sys::{Function, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 
@@ -17,13 +20,16 @@ where
 {
     let props_js = rue.props_with_children_input_to_jsobject(input);
     let (_host, props_ro, idx) = prepare_instance_from_input(rue, props_js);
+    let shared_instance = get_current_instance();
     let render_scope_id = rue.renew_component_render_scope(idx);
+    shared_runtime_bridge::begin_component_render(&shared_instance);
     push_effect_scope(render_scope_id);
     let func = render_fn.dyn_ref::<Function>().unwrap();
     let ret = match func.call1(&JsValue::UNDEFINED, &props_ro) {
         Ok(value) => value,
         Err(error) => {
             let _ = pop_effect_scope();
+            shared_runtime_bridge::end_component_render();
             rue.handle_error(error.clone());
             rue.instance_stack.pop();
             if let Some(top_idx) = rue.instance_stack.last() {
@@ -39,17 +45,23 @@ where
         }
     };
     let _ = pop_effect_scope();
+    shared_runtime_bridge::end_component_render();
 
     merge_pending_hooks(rue);
     rue.call_hooks("before_create");
     rue.call_hooks("created");
     rue.call_hooks("before_mount");
 
-    let mounted_subtree = if let Some(sub_input) = rue.compat_value_to_input(&ret) {
+    let mounted_subtree = if let Some(sub_input) = rue.value_to_input(&ret) {
         rue.mount_from_input(&sub_input)
     } else if ret.is_object() {
+        #[cfg(feature = "compat")]
         let error = JsValue::from_str(
             "Unsupported object returns are no longer accepted on the default component path. Return a raw node, fragment, or mount handle instead.",
+        );
+        #[cfg(not(feature = "compat"))]
+        let error = JsValue::from_str(
+            "Unsupported object returns are no longer accepted on the default component path. Return a host-node bridge, portable handle, or mount handle instead.",
         );
         rue.handle_error(error.clone());
         wasm_bindgen::throw_val(error);
@@ -68,11 +80,7 @@ where
     let (before_unmount_hooks, unmounted_hooks) = if let Some(top_idx) = rue.instance_stack.last() {
         if let Some(ci) = rue.instance_store.get(top_idx) {
             (
-                ci.hooks
-                    .0
-                    .get("before_unmount")
-                    .cloned()
-                    .unwrap_or_default(),
+                ci.hooks.0.get("before_unmount").cloned().unwrap_or_default(),
                 ci.hooks.0.get("unmounted").cloned().unwrap_or_default(),
             )
         } else {
@@ -94,20 +102,16 @@ where
         crate::set_current_instance(JsValue::UNDEFINED);
     }
 
-    Some(MountedSubtreeState::Patch(MountedPatchSubtree {
-        r#type: MountedPatchSubtreeType::Component(render_fn.clone()),
-        props: input.props.clone(),
-        children: Vec::new(),
-        el: mounted_subtree.host_cloned(),
-        key: input.key.clone(),
-        fragment_nodes: mounted_subtree.fragment_nodes_cloned(),
-        mount_cleanup_bucket: None,
-        mount_effect_scope_id: None,
-        component_before_unmount_hooks: before_unmount_hooks,
-        component_unmounted_hooks: unmounted_hooks,
-        comp_subtree: Some(Box::new(mounted_subtree)),
-        comp_inst_index: Some(idx),
-    }))
+    Some(MountedSubtreeState::Patch(MountedPatchSubtree::new_component(
+        render_fn.clone(),
+        mounted_subtree.host_cloned(),
+        input.key.clone(),
+        mounted_subtree.fragment_nodes_cloned(),
+        before_unmount_hooks,
+        unmounted_hooks,
+        Some(Box::new(mounted_subtree)),
+        Some(idx),
+    )))
 }
 
 /// 挂载阶段根据 MountInput 准备组件实例。
@@ -121,7 +125,8 @@ fn prepare_instance_from_input<A: DomAdapter>(
 where
     A::Element: From<JsValue> + Into<JsValue> + Clone,
 {
-    let props_ro = props_reactive_js(props_js.clone(), Some(true));
+    let props_ro = shared_runtime_bridge::props_reactive(&props_js)
+        .unwrap_or_else(|| props_reactive_js(props_js.clone(), Some(true)));
     let host = Object::new();
     let _ = Reflect::set(&host, &JsValue::from_str("propsRO"), &props_ro);
     super::helpers::reset_hook_index(&host);
@@ -166,4 +171,3 @@ fn merge_pending_hooks<A: DomAdapter>(rue: &mut Rue<A>) {
         }
     }
 }
-

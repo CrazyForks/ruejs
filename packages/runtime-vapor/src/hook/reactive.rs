@@ -11,6 +11,7 @@ use crate::reactive::context::{get_current_instance, with_hook_slot};
 use crate::reactive::signal::create_reactive as create_reactive_impl;
 
 const RUE_HOST_NODE_KEY: &str = "__rue_host_node";
+const RUE_MOUNT_HANDLE_KEY: &str = "__rue_mount_id";
 
 fn get_object_field(obj: &Object, key: &str) -> JsValue {
     Reflect::get(obj, &JsValue::from_str(key)).unwrap_or(JsValue::UNDEFINED)
@@ -38,6 +39,11 @@ fn renderable_identity(v: &JsValue) -> Option<JsValue> {
     let host_node = get_object_field(&obj, RUE_HOST_NODE_KEY);
     if !host_node.is_undefined() && !host_node.is_null() {
         return Some(host_node);
+    }
+
+    let mount_handle_id = get_object_field(&obj, RUE_MOUNT_HANDLE_KEY);
+    if !mount_handle_id.is_undefined() && !mount_handle_id.is_null() {
+        return Some(mount_handle_id);
     }
 
     let nodes = get_object_field(&obj, "nodes");
@@ -75,51 +81,102 @@ fn is_block_factory_like(v: &JsValue) -> bool {
     kind.as_string().as_deref() == Some("block-factory")
 }
 
-fn is_renderable_reference(v: &JsValue) -> bool {
-    renderable_identity(v).is_some() || is_block_instance_like(v) || is_block_factory_like(v)
+fn renderable_reference_identity(v: &JsValue) -> Option<JsValue> {
+    if let Some(identity) = renderable_identity(v) {
+        return Some(identity);
+    }
+
+    if is_block_instance_like(v) || is_block_factory_like(v) {
+        return Some(v.clone());
+    }
+
+    None
 }
 
 fn same_renderable_reference(a: &JsValue, b: &JsValue) -> bool {
-    let a_identity = renderable_identity(a);
-    let b_identity = renderable_identity(b);
-    if a_identity.is_some() || b_identity.is_some() {
-        return match (a_identity, b_identity) {
-            (Some(left), Some(right)) => js_sys::Object::is(&left, &right),
-            _ => false,
-        };
+    match (
+        renderable_reference_identity(a),
+        renderable_reference_identity(b),
+    ) {
+        (Some(left), Some(right)) => js_sys::Object::is(&left, &right),
+        _ => false,
     }
-
-    if is_block_instance_like(a)
-        || is_block_instance_like(b)
-        || is_block_factory_like(a)
-        || is_block_factory_like(b)
-    {
-        return js_sys::Object::is(a, b);
-    }
-
-    false
 }
 
-fn is_renderable_like(v: &JsValue) -> bool {
-    if is_renderable_reference(v) {
-        return true;
+fn normalized_renderable_scalar(v: &JsValue) -> Option<JsValue> {
+    if renderable_reference_identity(v).is_some() {
+        return Some(v.clone());
     }
 
     if !Array::is_array(v) {
-        return false;
+        return None;
+    }
+
+    let arr = Array::from(v);
+    if arr.length() != 1 {
+        return None;
+    }
+
+    normalized_renderable_scalar(&arr.get(0))
+}
+
+fn normalized_renderable_array(v: &JsValue) -> Option<Array> {
+    if !Array::is_array(v) {
+        return None;
     }
 
     let arr = Array::from(v);
     let len = arr.length();
     let mut index = 0;
     while index < len {
-        if !is_renderable_reference(&arr.get(index)) {
-            return false;
+        let item = arr.get(index);
+        if normalized_renderable_scalar(&item).is_none()
+            && normalized_renderable_array(&item).is_none()
+        {
+            return None;
         }
         index += 1;
     }
 
-    true
+    Some(arr)
+}
+
+fn shallow_equal_renderable_like(a: &JsValue, b: &JsValue) -> Option<bool> {
+    let a_scalar = normalized_renderable_scalar(a);
+    let b_scalar = normalized_renderable_scalar(b);
+
+    if a_scalar.is_some() || b_scalar.is_some() {
+        return Some(match (a_scalar, b_scalar) {
+            (Some(left), Some(right)) => same_renderable_reference(&left, &right),
+            _ => false,
+        });
+    }
+
+    let (Some(aa), Some(bb)) = (normalized_renderable_array(a), normalized_renderable_array(b))
+    else {
+        return None;
+    };
+
+    if aa.length() != bb.length() {
+        return Some(false);
+    }
+
+    let len = aa.length();
+    let mut i = 0;
+    while i < len {
+        let ai = aa.get(i);
+        let bi = bb.get(i);
+        if let Some(equal) = shallow_equal_renderable_like(&ai, &bi) {
+            if !equal {
+                return Some(false);
+            }
+        } else if !js_sys::Object::is(&ai, &bi) {
+            return Some(false);
+        }
+        i += 1;
+    }
+
+    Some(true)
 }
 
 // props / children 的浅相等判断：
@@ -130,54 +187,8 @@ pub fn shallow_equal_prop(a: &JsValue, b: &JsValue) -> bool {
     if js_sys::Object::is(a, b) {
         return true;
     }
-    let a_is_arr = Array::is_array(a);
-    let b_is_arr = Array::is_array(b);
-    if a_is_arr && is_renderable_like(b) {
-        let arr = Array::from(a);
-        if arr.length() == 1 {
-            let ai = arr.get(0);
-            let bj = b.clone();
-            if is_renderable_like(&ai) && is_renderable_like(&bj) {
-                return same_renderable_reference(&ai, &bj);
-            }
-            return js_sys::Object::is(&ai, &bj);
-        }
-    }
-    if b_is_arr && is_renderable_like(a) {
-        let arr = Array::from(b);
-        if arr.length() == 1 {
-            let bi = arr.get(0);
-            let aj = a.clone();
-            if is_renderable_like(&bi) && is_renderable_like(&aj) {
-                return same_renderable_reference(&bi, &aj);
-            }
-            return js_sys::Object::is(&bi, &aj);
-        }
-    }
-    if a_is_arr && b_is_arr {
-        let aa = Array::from(a);
-        let bb = Array::from(b);
-        if aa.length() != bb.length() {
-            return false;
-        }
-        let len = aa.length();
-        let mut i = 0;
-        while i < len {
-            let ai = aa.get(i);
-            let bi = bb.get(i);
-            if is_renderable_like(&ai) && is_renderable_like(&bi) {
-                if !same_renderable_reference(&ai, &bi) {
-                    return false;
-                }
-            } else if !js_sys::Object::is(&ai, &bi) {
-                return false;
-            }
-            i += 1;
-        }
-        return true;
-    }
-    if is_renderable_like(a) && is_renderable_like(b) {
-        return same_renderable_reference(a, b);
+    if let Some(equal) = shallow_equal_renderable_like(a, b) {
+        return equal;
     }
     if is_dom_node_like(a) || is_dom_node_like(b) {
         return js_sys::Object::is(a, b);
@@ -208,8 +219,8 @@ pub fn shallow_equal_prop(a: &JsValue, b: &JsValue) -> bool {
             }
             let av = js_sys::Reflect::get(&ao, &key_js).unwrap_or(JsValue::UNDEFINED);
             let bv = js_sys::Reflect::get(&bo, &key_js).unwrap_or(JsValue::UNDEFINED);
-            if is_renderable_like(&av) && is_renderable_like(&bv) {
-                if !same_renderable_reference(&av, &bv) {
+            if let Some(equal) = shallow_equal_renderable_like(&av, &bv) {
+                if !equal {
                     return false;
                 }
             } else if !js_sys::Object::is(&av, &bv) {

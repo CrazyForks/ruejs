@@ -44,9 +44,8 @@ export default HelloWorld
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper } from "@rue-js/rue/vapor";
-import { type FC, ref } from '@rue-js/rue';
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
 const HelloWorld: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const World: FC = ()=>{
@@ -101,11 +100,11 @@ const HelloWorld: FC = ()=>{
         const _root = _$createElement("div");
         const _list1 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list1);
-        const __slot2 = <World/>;
+        const __slot2 = _$createComponent(World, {});
         renderAnchor(__slot2, _root, _list1);
         const _list3 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list3);
-        const __slot4 = <Goods/>;
+        const __slot4 = _$createComponent(Goods, {});
         renderAnchor(__slot4, _root, _list3);
         return _root;
     });

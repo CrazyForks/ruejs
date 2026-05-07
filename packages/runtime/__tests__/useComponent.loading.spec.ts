@@ -64,6 +64,7 @@ vi.mock('../src/dom.ts', () => {
     appendChild: appendChildMock,
     createComment: createCommentMock,
     createElement: createElementMock,
+    getParentNode: (node: any) => node?.parentNode ?? null,
   }
 })
 
@@ -101,6 +102,7 @@ afterEach(() => {
   appendChildMock.mockClear()
   onBeforeUnmountCallbacks.length = 0
   activeEffect = null
+  vi.useRealTimers()
   vi.resetModules()
 })
 
@@ -189,5 +191,64 @@ describe('useComponent loading behavior', () => {
     expect(renderBetweenMock).toHaveBeenCalledTimes(1)
     expect(renderBetweenMock.mock.calls[0][0].type).toBe(ErrorView)
     expect(renderBetweenMock.mock.calls[0][0].props).toEqual({ error })
+  })
+
+  it('supports object-style loadingComponent with delayed fallback', async () => {
+    vi.useFakeTimers()
+
+    const deferred: { resolve?: (value: LoadedModule) => void } = {}
+    const loader = () =>
+      new Promise<LoadedModule>(resolve => {
+        deferred.resolve = resolve
+      })
+    const Loading = (() => null) as any
+
+    const { useComponent } = await import('../src/hooks/useComponent')
+    const Async = useComponent({
+      loader,
+      loadingComponent: Loading,
+    })
+
+    Async({ id: 1 })
+    expect(renderBetweenMock).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(199)
+    expect(renderBetweenMock).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(renderBetweenMock).toHaveBeenCalledTimes(1)
+    expect(renderBetweenMock.mock.calls[0][0].type).toBe(Loading)
+
+    deferred.resolve?.({
+      default: (props: any) => ({ type: 'resolved', props, children: [] }),
+    })
+    await flushMicrotasks()
+
+    expect(renderBetweenMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('supports object-style errorComponent and timeout options', async () => {
+    vi.useFakeTimers()
+
+    const loader = () => new Promise<LoadedModule>(() => {})
+    const ErrorView = (() => null) as any
+
+    const { useComponent } = await import('../src/hooks/useComponent')
+    const Async = useComponent({
+      loader,
+      errorComponent: ErrorView,
+      timeout: 50,
+    })
+
+    Async({ id: 1 })
+    await vi.advanceTimersByTimeAsync(50)
+    await flushMicrotasks()
+
+    expect(handleErrorMock).toHaveBeenCalledTimes(1)
+    expect((handleErrorMock.mock.calls[0][0] as Error).message).toBe(
+      'Async component timed out after 50ms.',
+    )
+    expect(renderBetweenMock).toHaveBeenCalledTimes(1)
+    expect(renderBetweenMock.mock.calls[0][0].type).toBe(ErrorView)
   })
 })

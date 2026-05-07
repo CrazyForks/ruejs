@@ -2,10 +2,10 @@ use super::super::Rue;
 use super::super::types::{MountInput, MountedState, RangeMountState};
 #[cfg(feature = "dev")]
 use crate::log::{log, want_log};
+use crate::reactive::core::batch_scope;
 use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
-use crate::reactive::core::batch_scope;
 
 // 区间渲染（render_between）：
 // - 在父元素的 start/end 两个锚点之间渲染输入子树，适合片段/动态局部更新
@@ -17,12 +17,8 @@ impl<A: DomAdapter> Rue<A>
 where
     A::Element: Clone,
 {
-    pub fn clear_range(
-        &mut self,
-        parent: &mut A::Element,
-        start: A::Element,
-        end: A::Element,
-    ) where
+    pub fn clear_range(&mut self, parent: &mut A::Element, start: A::Element, end: A::Element)
+    where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         if self.crashed || crate::runtime::is_runtime_crashed() {
@@ -178,29 +174,13 @@ where
                         self.current_anchor = None;
                     }
                 }
-                MountedState::Component(old_component) => {
+                old_mount => {
                     let mut parent_clone = parent.clone();
-                    let mut old_patch = old_component.into_patch_state();
-                    self.call_hooks("before_update");
-                    self.patch(&mut old_patch, input, &mut parent_clone);
-                    self.call_hooks("updated");
+                    let mounted = self.patch_root_mounted_state(old_mount, input, &mut parent_clone);
                     let entry_opt = self.range_map.get_mut(idx);
                     if let Some(entry) = entry_opt {
                         entry.end = end.clone();
-                        entry.store_mount(MountedState::from_subtree_root(old_patch));
-                    }
-                }
-                MountedState::Element(old_element) => {
-                    let mut parent_clone = parent.clone();
-                    let mut old_patch = old_element.into_patch_state();
-                    // 常规路径：更新前钩子 -> patch -> 更新后钩子，写回映射
-                    self.call_hooks("before_update");
-                    self.patch(&mut old_patch, input, &mut parent_clone);
-                    self.call_hooks("updated");
-                    let entry_opt = self.range_map.get_mut(idx);
-                    if let Some(entry) = entry_opt {
-                        entry.end = end.clone();
-                        entry.store_mount(MountedState::from_subtree_root(old_patch));
+                        entry.store_mount(mounted);
                     }
                 }
             }

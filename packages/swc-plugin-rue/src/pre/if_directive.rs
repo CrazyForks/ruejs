@@ -1,9 +1,19 @@
-use swc_core::common::DUMMY_SP;
+use std::sync::Arc;
+
+use swc_core::common::{DUMMY_SP, FileName, SourceMap};
 use swc_core::ecma::ast::*;
+use swc_core::ecma::parser::{Parser, StringInput, Syntax, TsSyntax};
+
+use crate::emit;
 
 const IF_DIRECTIVE_NAMES: &[&str] = &["v-if", "r-if"];
 const ELSE_IF_DIRECTIVE_NAMES: &[&str] = &["v-else-if", "r-else-if"];
 const ELSE_DIRECTIVE_NAMES: &[&str] = &["v-else", "r-else"];
+const TEXT_DIRECTIVE_NAMES: &[&str] = &["v-text", "r-text"];
+const HTML_DIRECTIVE_NAMES: &[&str] = &["v-html", "r-html"];
+const PRE_DIRECTIVE_NAMES: &[&str] = &["v-pre", "r-pre"];
+const ONCE_DIRECTIVE_NAMES: &[&str] = &["v-once", "r-once"];
+const MEMO_DIRECTIVE_NAMES: &[&str] = &["v-memo", "r-memo"];
 
 /*
 `v-if / v-else-if / v-else` 与 `r-if / r-else-if / r-else` 指令改写：
@@ -59,6 +69,29 @@ fn get_attr_value_expr(attr: &JSXAttr) -> Option<Expr> {
     }
 }
 
+fn parse_expr(src: &str) -> Option<Expr> {
+    let cm = Arc::new(SourceMap::default());
+    let fm = cm.new_source_file(FileName::Custom("v-text-expr.tsx".into()).into(), src.to_string());
+    let mut parser = Parser::new(
+        Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
+        StringInput::from(&*fm),
+        None,
+    );
+    let expr = parser.parse_expr().ok()?;
+    Some(*expr)
+}
+
+fn get_text_attr_value_expr(attr: &JSXAttr) -> Option<Expr> {
+    match &attr.value {
+        Some(JSXAttrValue::JSXExprContainer(ec)) => match &ec.expr {
+            JSXExpr::Expr(e) => Some(*e.clone()),
+            _ => None,
+        },
+        Some(JSXAttrValue::Str(s)) => parse_expr(&s.value.to_string_lossy()),
+        _ => None,
+    }
+}
+
 /// 在给定元素的属性列表中查找一个条件指令属性
 /// names：要匹配的属性名集合（如 ["v-if", "r-if"] 或 ["v-else", "r-else"]）
 fn get_directive_attr<'a>(el: &'a JSXElement, names: &[&str]) -> Option<&'a JSXAttr> {
@@ -73,6 +106,18 @@ fn get_directive_attr<'a>(el: &'a JSXElement, names: &[&str]) -> Option<&'a JSXA
         }
     }
     None
+}
+
+pub fn has_pre_directive(el: &JSXElement) -> bool {
+    get_directive_attr(el, PRE_DIRECTIVE_NAMES).is_some()
+}
+
+fn has_once_directive(el: &JSXElement) -> bool {
+    get_directive_attr(el, ONCE_DIRECTIVE_NAMES).is_some()
+}
+
+fn has_memo_directive(el: &JSXElement) -> bool {
+    get_directive_attr(el, MEMO_DIRECTIVE_NAMES).is_some()
 }
 
 /// 从元素上移除所有条件指令属性（仅支持 v-* 与 r-* 变体）
@@ -95,6 +140,176 @@ fn remove_directives(el: &mut JSXElement) {
     });
 }
 
+fn remove_text_directives(el: &mut JSXElement) {
+    el.opening.attrs.retain(|a| match a {
+        JSXAttrOrSpread::JSXAttr(attr) => match &attr.name {
+            JSXAttrName::Ident(n) => {
+                let name = n.sym.as_ref();
+                !(name == "v-text" || name == "r-text")
+            }
+            _ => true,
+        },
+        _ => true,
+    });
+}
+
+fn remove_html_directives(el: &mut JSXElement) {
+    el.opening.attrs.retain(|a| match a {
+        JSXAttrOrSpread::JSXAttr(attr) => match &attr.name {
+            JSXAttrName::Ident(n) => {
+                let name = n.sym.as_ref();
+                !(name == "v-html" || name == "r-html")
+            }
+            _ => true,
+        },
+        _ => true,
+    });
+}
+
+fn remove_once_directives(el: &mut JSXElement) {
+    el.opening.attrs.retain(|a| match a {
+        JSXAttrOrSpread::JSXAttr(attr) => match &attr.name {
+            JSXAttrName::Ident(n) => {
+                let name = n.sym.as_ref();
+                !(name == "v-once" || name == "r-once")
+            }
+            _ => true,
+        },
+        _ => true,
+    });
+}
+
+fn remove_memo_directives(el: &mut JSXElement) {
+    el.opening.attrs.retain(|a| match a {
+        JSXAttrOrSpread::JSXAttr(attr) => match &attr.name {
+            JSXAttrName::Ident(n) => {
+                let name = n.sym.as_ref();
+                !(name == "v-memo" || name == "r-memo")
+            }
+            _ => true,
+        },
+        _ => true,
+    });
+}
+
+fn empty_array_expr() -> Expr {
+    Expr::Array(ArrayLit { span: DUMMY_SP, elems: vec![] })
+}
+
+fn use_memo_expr(el: JSXElement, deps: Expr) -> Expr {
+    let hook_id = emit::string_expr(&format!("useMemo:{}:{}", el.span.lo.0, el.span.hi.0));
+    let arrow = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(Expr::JSXElement(Box::new(el))))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: swc_core::common::SyntaxContext::empty(),
+    });
+
+    let memo_call = Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee: Callee::Expr(Box::new(Expr::Ident(emit::ident("useMemo")))),
+        args: vec![
+            ExprOrSpread { spread: None, expr: Box::new(arrow) },
+            ExprOrSpread { spread: None, expr: Box::new(deps) },
+        ],
+        type_args: None,
+        ctxt: swc_core::common::SyntaxContext::empty(),
+    });
+
+    let runner = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(memo_call))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: swc_core::common::SyntaxContext::empty(),
+    });
+
+    Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee: Callee::Expr(Box::new(Expr::Ident(emit::ident("_$vaporWithHookId")))),
+        args: vec![
+            ExprOrSpread { spread: None, expr: Box::new(hook_id) },
+            ExprOrSpread { spread: None, expr: Box::new(runner) },
+        ],
+        type_args: None,
+        ctxt: swc_core::common::SyntaxContext::empty(),
+    })
+}
+
+fn jsx_element_or_memo_expr(mut el: JSXElement) -> Expr {
+    if let Some(deps) =
+        get_directive_attr(&el, MEMO_DIRECTIVE_NAMES).and_then(get_text_attr_value_expr)
+    {
+        remove_memo_directives(&mut el);
+        return use_memo_expr(el, deps);
+    }
+
+    if has_once_directive(&el) {
+        remove_once_directives(&mut el);
+        return use_memo_expr(el, empty_array_expr());
+    }
+
+    Expr::JSXElement(Box::new(el))
+}
+
+pub fn memo_or_once_element_expr(el: &JSXElement) -> Option<Expr> {
+    if has_pre_directive(el) || (!has_memo_directive(el) && !has_once_directive(el)) {
+        return None;
+    }
+
+    Some(jsx_element_or_memo_expr(el.clone()))
+}
+
+fn transform_text_directive(el: &mut JSXElement) {
+    let Some(text_expr) =
+        get_directive_attr(el, TEXT_DIRECTIVE_NAMES).and_then(get_text_attr_value_expr)
+    else {
+        return;
+    };
+
+    remove_text_directives(el);
+    el.children = vec![JSXElementChild::JSXExprContainer(JSXExprContainer {
+        span: DUMMY_SP,
+        expr: JSXExpr::Expr(Box::new(text_expr)),
+    })];
+}
+
+fn dangerously_set_inner_html_attr(html_expr: Expr) -> JSXAttrOrSpread {
+    JSXAttrOrSpread::JSXAttr(JSXAttr {
+        span: DUMMY_SP,
+        name: JSXAttrName::Ident(emit::ident("dangerouslySetInnerHTML").into()),
+        value: Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+            span: DUMMY_SP,
+            expr: JSXExpr::Expr(Box::new(Expr::Object(ObjectLit {
+                span: DUMMY_SP,
+                props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(emit::ident_name("__html")),
+                    value: Box::new(html_expr),
+                })))],
+            }))),
+        })),
+    })
+}
+
+fn transform_html_directive(el: &mut JSXElement) {
+    let Some(html_expr) =
+        get_directive_attr(el, HTML_DIRECTIVE_NAMES).and_then(get_text_attr_value_expr)
+    else {
+        return;
+    };
+
+    remove_html_directives(el);
+    el.opening.attrs.push(dangerously_set_inner_html_attr(html_expr));
+    el.children.clear();
+}
+
 /// 将条件链构造成嵌套的三元表达式（CondExpr）
 /// 输入：chain 为若干 (元素, 条件表达式) 的列表；最后一个若条件为 None，则视为 else 分支
 /// 过程：
@@ -105,12 +320,12 @@ fn build_cond_expr(chain: &[(JSXElement, Option<Expr>)]) -> Expr {
     let mut alt: Expr = Expr::Lit(Lit::Null(Null { span: DUMMY_SP }));
     if let Some((el_last, test_last)) = chain.last() {
         if test_last.is_none() {
-            alt = Expr::JSXElement(Box::new(el_last.clone()));
+            alt = jsx_element_or_memo_expr(el_last.clone());
         }
     }
     for (el, test) in chain.iter().rev() {
         if let Some(t) = test {
-            let cons = Expr::JSXElement(Box::new(el.clone()));
+            let cons = jsx_element_or_memo_expr(el.clone());
             alt = Expr::Cond(CondExpr {
                 span: DUMMY_SP,
                 test: Box::new(t.clone()),
@@ -118,7 +333,7 @@ fn build_cond_expr(chain: &[(JSXElement, Option<Expr>)]) -> Expr {
                 alt: Box::new(alt.clone()),
             });
         } else {
-            let cons = Expr::JSXElement(Box::new(el.clone()));
+            let cons = jsx_element_or_memo_expr(el.clone());
             alt = cons;
         }
     }
@@ -132,17 +347,37 @@ fn build_cond_expr(chain: &[(JSXElement, Option<Expr>)]) -> Expr {
 /// - 移除链上每个元素的条件指令属性，再生成条件表达式；
 /// - 用一个 JSXExprContainer 替换掉原链范围。
 pub fn transform_element(el: &mut JSXElement) {
+    if has_pre_directive(el) {
+        return;
+    }
+
+    // v-text/r-text 等价于把元素内容替换为一个文本表达式：
+    // <span v-text="msg"></span> -> <span>{msg}</span>
+    transform_text_directive(el);
+    // v-html/r-html 等价于 React 的 dangerouslySetInnerHTML：
+    // <div v-html="html"></div> -> <div dangerouslySetInnerHTML={{ __html: html }}></div>
+    transform_html_directive(el);
+
     let mut i = 0;
     while i < el.children.len() {
         // 当前 child 是否是带 v-if/r-if 的元素
         let start_is_if = match &el.children[i] {
             JSXElementChild::JSXElement(e) => {
                 let e_ref: &JSXElement = e.as_ref();
-                get_directive_attr(e_ref, IF_DIRECTIVE_NAMES).is_some()
+                !has_pre_directive(e_ref) && get_directive_attr(e_ref, IF_DIRECTIVE_NAMES).is_some()
             }
             _ => false,
         };
         if !start_is_if {
+            if let JSXElementChild::JSXElement(e_box) = &el.children[i] {
+                let e_ref: &JSXElement = e_box.as_ref();
+                if let Some(expr) = memo_or_once_element_expr(e_ref) {
+                    el.children[i] = JSXElementChild::JSXExprContainer(JSXExprContainer {
+                        span: DUMMY_SP,
+                        expr: JSXExpr::Expr(Box::new(expr)),
+                    });
+                }
+            }
             i += 1;
             continue;
         }
@@ -162,6 +397,9 @@ pub fn transform_element(el: &mut JSXElement) {
                 }
                 JSXElementChild::JSXElement(e_box) => {
                     let e_ref: &JSXElement = e_box.as_ref();
+                    if has_pre_directive(e_ref) {
+                        break;
+                    }
                     let a_if = get_directive_attr(e_ref, IF_DIRECTIVE_NAMES);
                     let a_elseif = get_directive_attr(e_ref, ELSE_IF_DIRECTIVE_NAMES);
                     let a_else = get_directive_attr(e_ref, ELSE_DIRECTIVE_NAMES);

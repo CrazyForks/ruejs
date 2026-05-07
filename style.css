@@ -15,6 +15,22 @@
   .prose a {
     @apply text-base-content;
   }
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: currentColor;
+    caret-color: currentColor;
+    transition: background-color 9999s ease-out 0s;
+    -webkit-box-shadow: 0 0 0 1000px transparent inset;
+    box-shadow: 0 0 0 1000px transparent inset;
+  }
 }
 
 @plugin "daisyui" {
@@ -300,6 +316,16 @@ pre.shiki::after {
 pre.shiki code,
 .shiki code {
   display: block;
+}
+
+.sidebar-playground-examples .card:has(.code-block) {
+  overflow: visible;
+  height: auto;
+}
+
+.sidebar-playground-examples .code-block .shiki,
+.sidebar-playground-examples .code-block pre.shiki {
+  overflow: hidden;
 }
 
 /* 在文件末尾追加，覆盖旧 Logo 样式 */

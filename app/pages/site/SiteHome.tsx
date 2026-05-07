@@ -195,7 +195,7 @@ const SiteHome: FC = () => (
     <section className="grid md:grid-cols-3 gap-6 max-w-[1100px] mx-auto">
       <FeatureCard
         title="简洁易用"
-        desc="基于标准 HTML/CSS/TSX/WebAssembly，编译驱动与原生 DOM 双路径渲染，组件语法直观，开发体验轻松高效。"
+        desc="基于标准 HTML/CSS/TSX/WebAssembly，编译驱动的原生 DOM 渲染，组件语法直观，开发体验轻松高效。"
         icon="✅"
       />
       <FeatureCard

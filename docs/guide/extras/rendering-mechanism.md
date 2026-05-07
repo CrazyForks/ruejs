@@ -89,16 +89,6 @@ Rue 的核心优势在于同时掌控编译器与运行时。编译器可以提�
 
 遇到 `v-if`、`v-for`、`Teleport`、`Transition` 之类结构性边界时，Rue 会把它们当作独立的 block / range 处理，并通过锚点定位插入、移动和清理范围。
 
-### 对 SSR 水合的影响 {#impact-on-ssr-hydration}
-
-同样的编译期提示也会影响 SSR 水合。客户端不需要把服务端 HTML 再还原成完整对象树后重跑 diff，而是可以按 block、动态节点和锚点边界接管现有 DOM。
-
-这意味着：
-
-- 静态片段可以更快跳过
-- 动态节点可以直接进入对应更新路径
-- 结构化边界可以在更小的粒度上完成接管与后续更新
-
 ## compat 与迁移边界
 
 显式 compat 子路径已经删除。默认主入口也不再保留 compat-only helper。新代码应优先沿用模板、普通 JSX、`props.children` 与 render prop 等 Rue 当前主路径；旧的手写渲染 helper 则需要直接重写为默认 Renderable / raw node / mount handle 方案。

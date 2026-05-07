@@ -18,6 +18,7 @@
     "types": ["vitest/globals"],
     "declaration": true,
     "outDir": "./dist",
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@rue-js/rue": ["packages/rue/src"],
@@ -28,7 +29,9 @@
       "@rue-js/vite-plugin-rue": ["packages/vite-plugin-rue/index.mjs"],
       "@rue-js/shared": ["packages/shared/src"],
       "@rue-js/design": ["packages/rue-design/src"],
-      "@rue-js/runtime-vapor": ["packages/runtime-vapor/pkg/rue_runtime_vapor.d.ts"]
+      "@rue-js/runtime-vapor": ["packages/runtime-vapor/pkg/rue_runtime_vapor.d.ts"],
+      "@rue-js/runtime-vapor/reactive": ["packages/runtime-vapor/reactive.d.ts"],
+      "@rue-js/runtime-vapor/vapor": ["packages/runtime-vapor/vapor.d.ts"]
     },
     "noImplicitAny": true,
     "noImplicitReturns": true,

@@ -1,20 +1,49 @@
 use super::WasmRue;
-use crate::runtime::DEFAULT_MOUNT_HANDLE_KEY;
+#[cfg(feature = "compat")]
+use crate::runtime::transport::DefaultMountHandleStorePolicy;
 #[cfg(feature = "dev")]
+#[cfg(feature = "compat")]
 use crate::runtime::js_adapter::JsDomAdapter;
-use crate::runtime::types::MountInput;
+use crate::runtime::vnode_helpers::props_with_children;
 #[cfg(feature = "dev")]
+#[cfg(feature = "compat")]
 use crate::runtime::types::MountInputType;
-use js_sys::{Array, Function, Object, Reflect};
+use js_sys::Function;
+#[cfg(feature = "dev")]
+#[cfg(feature = "compat")]
+use js_sys::Array;
+#[cfg(feature = "dev")]
+#[cfg(feature = "compat")]
+use js_sys::Object;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
+#[cfg(not(feature = "compat"))]
+use wasm_bindgen::throw_str;
 
-mod create_element_children;
 mod create_element_handle_out;
-mod create_element_helpers;
 
 #[wasm_bindgen]
 impl WasmRue {
+    #[wasm_bindgen(js_name = "createComponent")]
+    pub fn create_component_wasm(&self, type_tag: JsValue, props: JsValue) -> JsValue {
+        if !type_tag.is_function() {
+            #[cfg(feature = "compat")]
+            return self.create_element_wasm(type_tag, props, JsValue::UNDEFINED);
+
+            #[cfg(not(feature = "compat"))]
+            {
+                let _ = props;
+                let _ = type_tag;
+                throw_str("Rue vapor runtime: createComponent expects a function component");
+            }
+        }
+
+        let props_map = props_with_children(&props, &JsValue::UNDEFINED);
+        let func = type_tag.dyn_ref::<Function>().unwrap().clone();
+        create_element_handle_out::create_function_component_out(self, func, props_map)
+    }
+
+    #[cfg(feature = "compat")]
     #[wasm_bindgen(js_name = "createElement")]
     /// 创建元素/组件的默认挂载输入句柄（tagged mount handle）。
     ///
@@ -58,20 +87,19 @@ impl WasmRue {
                     crate::log::log("debug", "runtime:createElement function_component");
                 }
             }
-            let props_map = create_element_helpers::build_props_map(self, &props, &children);
+            let props_map = props_with_children(&props, &children);
             let func = type_tag.dyn_ref::<Function>().unwrap().clone();
             return create_element_handle_out::create_function_component_out(self, func, props_map);
         }
-        // 普通标签：构建 props 映射（children 单独交由 effective_children 处理）
-        let props_map = create_element_helpers::build_props_map(self, &props, &JsValue::UNDEFINED);
-        let tt = create_element_helpers::resolve_type(self, &type_tag, &props_map);
+        // 普通标签：走共享 compat normalize 边界，避免 createElement 自己重做旧协议解析。
+        let input = self.compat_mount_input_from_create_element(&type_tag, &props, &children);
         #[cfg(feature = "dev")]
         {
             if crate::log::want_log("debug", "runtime:createElement mount_input_build") {
                 crate::log::log("debug", "runtime:createElement mount_input_build");
             }
             if crate::log::want_log("debug", "runtime:createElement tag_resolved") {
-                let ty = match &tt {
+                let ty = match &input.r#type {
                     MountInputType::<JsDomAdapter>::Text(_) => "Text",
                     MountInputType::<JsDomAdapter>::Fragment => "Fragment",
                     MountInputType::<JsDomAdapter>::Vapor => "Vapor",
@@ -86,54 +114,22 @@ impl WasmRue {
                 );
             }
         }
-        // 计算 children 的有效值：优先显式传入，否则回退到 props.children
-        let children_eff = create_element_helpers::effective_children(self, &children, &props_map);
-        // children 归一化为 MountInputChild：数组或单值两种路径
-        let child_vec = if Array::is_array(&children_eff) {
-            create_element_children::build_children_vec_array(self, Array::from(&children_eff))
-        } else {
-            create_element_children::build_children_vec_single(self, children_eff.clone())
-        };
-        let input = MountInput::new_normalized(tt, props_map, child_vec);
-        let key = input.key.clone();
-        let id = crate::runtime::MOUNT_INPUT_REGISTRY.with(|reg| {
-            let mut r = reg.borrow_mut();
-            let mut idx = None;
-            for (i, slot) in r.iter().enumerate() {
-                if slot.is_none() {
-                    idx = Some(i);
-                    break;
-                }
-            }
-            match idx {
-                Some(i) => {
-                    r[i] = Some(input);
-                    i as u32
-                }
-                None => {
-                    r.push(Some(input));
-                    (r.len() - 1) as u32
-                }
-            }
-        });
+        let handle = crate::runtime::transport::store_default_mount_input(
+            input,
+            DefaultMountHandleStorePolicy::ReuseEmptySlot,
+        );
         #[cfg(feature = "dev")]
         {
             if crate::log::want_log("debug", "runtime:createElement id") {
-                crate::log::log("debug", &format!("runtime:createElement id={}", id));
+                crate::log::log("debug", &format!("runtime:createElement id={}", handle.id));
             }
             if crate::log::want_log("debug", "runtime:createElement id_info") {
-                crate::log::log("debug", &format!("runtime:createElement id_info id={}", id));
+                crate::log::log(
+                    "debug",
+                    &format!("runtime:createElement id_info id={}", handle.id),
+                );
             }
         }
-        let out = Object::new();
-        let _ = Reflect::set(
-            &out,
-            &JsValue::from_str(DEFAULT_MOUNT_HANDLE_KEY),
-            &JsValue::from_f64(id as f64),
-        );
-        if let Some(key) = key {
-            let _ = Reflect::set(&out, &JsValue::from_str("key"), &JsValue::from_str(&key));
-        }
-        out.into()
+        handle.value
     }
 }
