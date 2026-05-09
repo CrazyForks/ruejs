@@ -52,3 +52,4 @@ packages/runtime-vapor/pkg-vapor/
 /memory/
 /state/
 /.playwright-cli
+/.vite/

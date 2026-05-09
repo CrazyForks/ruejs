@@ -184,6 +184,10 @@ const releaseCheckSnapshots = isCheckOnly
   : null
 
 async function ensureRuntimeVaporBuilt() {
+  const runtimeVaporBrowserEntry = path.resolve(
+    __dirname,
+    '../packages/runtime-vapor/pkg/rue_runtime_vapor.js',
+  )
   const runtimeVaporEntry = path.resolve(
     __dirname,
     '../packages/runtime-vapor/pkg-node/rue_runtime_vapor.js',
@@ -197,6 +201,7 @@ async function ensureRuntimeVaporBuilt() {
     '../packages/runtime-vapor/pkg-node-vapor/rue_runtime_vapor.js',
   )
   if (
+    fs.existsSync(runtimeVaporBrowserEntry) &&
     fs.existsSync(runtimeVaporEntry) &&
     fs.existsSync(runtimeVaporReactiveEntry) &&
     fs.existsSync(runtimeVaporVaporEntry)
@@ -206,6 +211,7 @@ async function ensureRuntimeVaporBuilt() {
 
   step('\nBuilding @rue-js/runtime-vapor...')
   if (shouldRunValidationCommands) {
+    await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build'])
     await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node'])
     await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node-reactive'])
     await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node-vapor'])

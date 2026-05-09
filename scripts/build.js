@@ -90,6 +90,7 @@ async function run() {
     const resolvedTargets = targets.length
       ? fuzzyMatchTarget(targets, buildAllMatching)
       : allTargets
+    await ensureRuntimeVaporBuilt(resolvedTargets)
     await ensureSwcPluginRueBuilt(resolvedTargets)
     await buildAll(resolvedTargets)
     await checkAllSizes(resolvedTargets)
@@ -108,6 +109,50 @@ async function run() {
     }
   } finally {
     removeCache()
+  }
+}
+
+/**
+ * @param {Array<string>} targets
+ * @returns {Promise<void>}
+ */
+async function ensureRuntimeVaporBuilt(targets) {
+  if (!targets.some(target => target === 'runtime' || target === 'rue')) {
+    return
+  }
+
+  const requiredArtifacts = [
+    {
+      filePath: path.resolve('packages/runtime-vapor/pkg/rue_runtime_vapor.js'),
+      label: 'bundler package',
+      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build'],
+    },
+    {
+      filePath: path.resolve('packages/runtime-vapor/pkg-node/rue_runtime_vapor.js'),
+      label: 'node package',
+      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node'],
+    },
+    {
+      filePath: path.resolve('packages/runtime-vapor/pkg-node-reactive/rue_runtime_vapor.js'),
+      label: 'node reactive package',
+      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node-reactive'],
+    },
+    {
+      filePath: path.resolve('packages/runtime-vapor/pkg-node-vapor/rue_runtime_vapor.js'),
+      label: 'node vapor package',
+      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node-vapor'],
+    },
+  ]
+
+  for (const artifact of requiredArtifacts) {
+    if (fs.existsSync(artifact.filePath)) {
+      continue
+    }
+
+    console.log(pico.cyan(`\nBuilding @rue-js/runtime-vapor ${artifact.label}...`))
+    await exec('pnpm', artifact.command, {
+      stdio: 'inherit',
+    })
   }
 }
 
