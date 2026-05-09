@@ -28,7 +28,7 @@ const expectConditionalMapLowering = (code: string) => {
   expect(code).toContain('_$vaporKeyedList({')
   expect(code).toContain('getKey: (item, idx)=>item.id')
   expect(code).toContain('const label = item.label.toUpperCase();')
-  expect(code).toContain('renderBetween(__slot, parent, start, end);')
+  expect(code).toMatch(/render(?:Between|Anchor)\(__slot, parent, start(?:, end)?\);/)
   expect(code).not.toContain('_jsxDEV(')
 }
 

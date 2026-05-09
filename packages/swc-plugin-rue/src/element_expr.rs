@@ -2,7 +2,6 @@
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 // SWC ECMAScript AST 节点类型集合（JSXExprContainer/CondExpr/BinExpr/ArrowExpr 等）
 use swc_core::ecma::ast::*;
-use swc_core::ecma::visit::VisitMutWith;
 
 use crate::emit::*;
 use crate::log;
@@ -296,8 +295,7 @@ fn rewrite_map_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option
         return None;
     }
 
-    let mut next = call.clone();
-    next.visit_mut_children_with(vt);
+    let next = call.clone();
 
     let fragment = JSXFragment {
         span: DUMMY_SP,
