@@ -1,3 +1,11 @@
+## [0.0.39](https://github.com/hunzhiwange/ruejs/compare/v0.0.37...v0.0.39) (2026-05-09)
+
+
+### Bug Fixes
+
+* fix release ([f9fd6a9](https://github.com/hunzhiwange/ruejs/commit/f9fd6a9a97d35f1d9a2f82e5ca3bd874f6388bf3))
+* fix release ([ff465ae](https://github.com/hunzhiwange/ruejs/commit/ff465ae92e88e847e835046cf91fb373f9845186))
+
 ## [0.0.37](https://github.com/hunzhiwange/ruejs/compare/v0.0.36...v0.0.37) (2026-05-09)
 
 
