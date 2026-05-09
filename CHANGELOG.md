@@ -1,3 +1,10 @@
+## [0.0.36](https://github.com/hunzhiwange/ruejs/compare/v0.0.33...v0.0.36) (2026-05-09)
+
+
+### Bug Fixes
+
+* fix rue design ([f994ef7](https://github.com/hunzhiwange/ruejs/commit/f994ef76a102c03e81d276b9f782a8931469be65))
+
 ## [0.0.34](https://github.com/hunzhiwange/ruejs/compare/v0.0.33...v0.0.34) (2026-05-09)
 
 
