@@ -1,3 +1,10 @@
+## [0.0.37](https://github.com/hunzhiwange/ruejs/compare/v0.0.36...v0.0.37) (2026-05-09)
+
+
+### Bug Fixes
+
+* 修复测试超时错误 ([f065c67](https://github.com/hunzhiwange/ruejs/commit/f065c67fea44fe79228d9c6e5d7be95ccfa658bc))
+
 ## [0.0.36](https://github.com/hunzhiwange/ruejs/compare/v0.0.33...v0.0.36) (2026-05-09)
 
 
