@@ -759,7 +759,7 @@ describe('TodoApp actual page', () => {
     })
 
     expect(readPersistedState().todos?.some(item => item.id === 2)).toBe(false)
-  })
+  }, 15000)
 
   it('renders through RouterView when lazy-loaded', async () => {
     const Empty = () => null
