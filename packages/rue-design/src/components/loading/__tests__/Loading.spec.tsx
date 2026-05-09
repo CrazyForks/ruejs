@@ -75,7 +75,9 @@ describe('Loading', () => {
       const root = container.querySelector('[data-testid="loading-wrap"]') as HTMLElement
       expect(root.getAttribute('aria-busy')).toBe('true')
       expect(root.querySelector('[data-rue-loading-section="true"]')).toBeTruthy()
-      expect(root.querySelector('[data-rue-loading-container="true"]')?.textContent).toContain('Workspace card')
+      expect(root.querySelector('[data-rue-loading-container="true"]')?.textContent).toContain(
+        'Workspace card',
+      )
       expect(root.textContent).toContain('Fetching workspace')
     })
   })
@@ -107,7 +109,9 @@ describe('Loading', () => {
       <Loading
         percent={42}
         description="Uploading"
-        indicator={({ percent }) => <span data-testid="custom-indicator">{Math.round(percent ?? 0)}</span>}
+        indicator={({ percent }: { percent?: number }) => (
+          <span data-testid="custom-indicator">{Math.round(percent ?? 0)}</span>
+        )}
       />,
       container,
     )
@@ -146,7 +150,9 @@ describe('Loading', () => {
     await new Promise(resolve => setTimeout(resolve, 90))
 
     await waitForContent(() => {
-      expect(container.querySelector('[data-testid="delayed-loading"]')?.classList.contains('opacity-0')).toBe(false)
+      expect(
+        container.querySelector('[data-testid="delayed-loading"]')?.classList.contains('opacity-0'),
+      ).toBe(false)
     })
   })
 })

@@ -204,8 +204,9 @@ const JoinPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Join 组合容器</h1>
         <p className="text-sm mt-3 mb-3">
-          Join 用来把一组操作或输入控件拼成连续整体。当前版本保留原有 <code>children + Join.Item</code>{' '}
-          组合写法，同时补充了 <code>items</code> 数据驱动入口、根节点自定义和基础状态语义，让工具条、筛选器和紧凑表单更容易组织。
+          Join 用来把一组操作或输入控件拼成连续整体。当前版本保留原有{' '}
+          <code>children + Join.Item</code> 组合写法，同时补充了 <code>items</code>{' '}
+          数据驱动入口、根节点自定义和基础状态语义，让工具条、筛选器和紧凑表单更容易组织。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -229,7 +230,8 @@ const JoinPage: FC = () => {
               <div className="card-body gap-4">
                 <Join items={actionItems} itemClassName="btn" data-testid="join-items-preview" />
                 <p className="m-0 text-sm opacity-70">
-                  推荐把公共样式放到 <code>itemClassName</code>，把强调项放到单个 item 的 <code>className</code>。
+                  推荐把公共样式放到 <code>itemClassName</code>，把强调项放到单个 item 的{' '}
+                  <code>className</code>。
                 </p>
               </div>
             </div>
@@ -261,7 +263,8 @@ const JoinPage: FC = () => {
                   data-testid="join-stateful-preview"
                 />
                 <p className="m-0 text-sm opacity-70">
-                  需要响应式方向时，仍然可以直接在 <code>className</code> 里叠加 <code>lg:join-horizontal</code> 这类类名。
+                  需要响应式方向时，仍然可以直接在 <code>className</code> 里叠加{' '}
+                  <code>lg:join-horizontal</code> 这类类名。
                 </p>
               </div>
             </div>
@@ -437,9 +440,27 @@ const JoinPage: FC = () => {
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body">
                 <Join>
-                  <Join.Item tag="input" className="btn" type="radio" name="join-options" aria-label="Radio 1" />
-                  <Join.Item tag="input" className="btn" type="radio" name="join-options" aria-label="Radio 2" />
-                  <Join.Item tag="input" className="btn" type="radio" name="join-options" aria-label="Radio 3" />
+                  <Join.Item
+                    tag="input"
+                    className="btn"
+                    type="radio"
+                    name="join-options"
+                    aria-label="Radio 1"
+                  />
+                  <Join.Item
+                    tag="input"
+                    className="btn"
+                    type="radio"
+                    name="join-options"
+                    aria-label="Radio 2"
+                  />
+                  <Join.Item
+                    tag="input"
+                    className="btn"
+                    type="radio"
+                    name="join-options"
+                    aria-label="Radio 3"
+                  />
                 </Join>
               </div>
             </div>
@@ -482,20 +503,21 @@ const JoinPage: FC = () => {
 
         <h3>什么时候用 items，什么时候继续写 Join.Item？</h3>
         <p>
-          如果是一组结构稳定、可以直接由数组描述的操作，优先用 <code>items</code>。如果内部包含额外布局、
-          指示器、嵌套容器或复杂表单结构，继续使用 <code>children + Join.Item</code> 会更直接。
+          如果是一组结构稳定、可以直接由数组描述的操作，优先用 <code>items</code>
+          。如果内部包含额外布局、 指示器、嵌套容器或复杂表单结构，继续使用{' '}
+          <code>children + Join.Item</code> 会更直接。
         </p>
 
         <h3>as 和 tag 有什么区别？</h3>
         <p>
-          两者都能切换渲染标签。<code>as</code> 是当前推荐写法，适合新的调用方式；<code>tag</code> 继续保留，
-          用来兼容旧代码和现有 demo。
+          两者都能切换渲染标签。<code>as</code> 是当前推荐写法，适合新的调用方式；<code>tag</code>{' '}
+          继续保留， 用来兼容旧代码和现有 demo。
         </p>
 
         <h3>Join 会不会接管按钮尺寸、颜色和圆角？</h3>
         <p>
-          不会。Join 只负责组合关系和少量容器语义，具体视觉仍然由每个子项自己的 <code>className</code> 决定，
-          这样可以继续保持 Rue 当前的视觉风格和可组合性。
+          不会。Join 只负责组合关系和少量容器语义，具体视觉仍然由每个子项自己的{' '}
+          <code>className</code> 决定， 这样可以继续保持 Rue 当前的视觉风格和可组合性。
         </p>
       </div>
     </SidebarPlayground>

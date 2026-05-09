@@ -56,8 +56,7 @@
 
   ```tsx
   import { Transition, TransitionGroup } from '@rue-js/rue'
-
-  <component is={isGroup ? TransitionGroup : Transition}>...</component>
+  ;<component is={isGroup ? TransitionGroup : Transition}>...</component>
   ```
 
   如果通过字符串名称传递内置组件或用户组件，则它们需要先在当前运行时中注册；如果直接把组件对象传给 `is`，则不需要注册。
@@ -180,12 +179,14 @@
   与列表渲染组合使用：
 
   ```tsx
-  {todos.map(todo => (
-    <Template key={todo.id}>
-      <li>{todo.text}</li>
-      <li className="divider" />
-    </Template>
-  ))}
+  {
+    todos.map(todo => (
+      <Template key={todo.id}>
+        <li>{todo.text}</li>
+        <li className="divider" />
+      </Template>
+    ))
+  }
   ```
 
 - **另请参阅**

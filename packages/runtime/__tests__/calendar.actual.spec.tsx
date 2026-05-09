@@ -95,10 +95,16 @@ describe('Calendar actual page', () => {
       expect(basicPreview?.textContent).toContain('date')
     })
 
-    await click(Array.from(customHeaderPreview!.querySelectorAll('button')).find(button => button.textContent?.trim() === '年视图'))
+    await click(
+      Array.from(customHeaderPreview!.querySelectorAll('button')).find(
+        button => button.textContent?.trim() === '年视图',
+      ) ?? null,
+    )
 
     await waitForContent(() => {
-      const headerCalendar = customHeaderPreview!.querySelector('[data-testid="custom-header-calendar"]') as HTMLElement
+      const headerCalendar = customHeaderPreview!.querySelector(
+        '[data-testid="custom-header-calendar"]',
+      ) as HTMLElement
       expect(headerCalendar.getAttribute('data-rue-calendar-mode')).toBe('year')
       expect(customHeaderPreview?.textContent).toContain('year')
     })
@@ -119,7 +125,9 @@ describe('Calendar actual page', () => {
       ).not.toContain('hidden')
     })
 
-    const pickerCalendar = callyPickerPreview!.querySelector('[data-testid="cally-picker-calendar"]') as any
+    const pickerCalendar = callyPickerPreview!.querySelector(
+      '[data-testid="cally-picker-calendar"]',
+    ) as any
     pickerCalendar.value = '2026-04-24'
     pickerCalendar.dispatchEvent(new Event('change', { bubbles: true }))
 
@@ -133,13 +141,15 @@ describe('Calendar actual page', () => {
     await click(findTabButton(basicPreview!, 'JSX代码'))
 
     await waitForContent(() => {
-      expect(basicPreview!.querySelector('[data-testid="basic-calendar"]')).toBeNull()
+      const basicPreviewInCode = findPreviewBlock(container, 'Basic calendar')
+      expect(basicPreviewInCode!.querySelector('[data-testid="basic-calendar"]')).toBeNull()
     })
 
-    await click(findTabButton(basicPreview!, '预览'))
+    await click(findTabButton(findPreviewBlock(container, 'Basic calendar')!, '预览'))
 
     await waitForContent(() => {
-      expect(basicPreview!.querySelector('[data-testid="basic-calendar"]')).not.toBeNull()
+      const restoredBasicPreview = findPreviewBlock(container, 'Basic calendar')
+      expect(restoredBasicPreview!.querySelector('[data-testid="basic-calendar"]')).not.toBeNull()
     })
   })
 })

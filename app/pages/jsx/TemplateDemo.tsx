@@ -27,7 +27,9 @@ const DashboardShell: FC<DashboardShellProps> = props => (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-base-200 px-4 py-4">
       <div className="min-w-0 space-y-2">
         <div className="text-xs uppercase tracking-[0.22em] opacity-55">named slot</div>
-        <Slot source={props} name="header">未提供 header</Slot>
+        <Slot source={props} name="header">
+          未提供 header
+        </Slot>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Slot source={props} name="actions" />
@@ -228,10 +230,13 @@ export default Demo;`
             <div role="alert" className="alert alert-success">
               <div className="space-y-2">
                 <div>
-                  这个页面改成了显式导入 <strong>{'<Template>'}</strong> 组件的写法，不再依赖小写 template lowering。
+                  这个页面改成了显式导入 <strong>{'<Template>'}</strong> 组件的写法，不再依赖小写
+                  template lowering。
                 </div>
                 <div className="text-sm opacity-80">
-                  当前示例覆盖命名 slot、{'<Template v-if>'}、{'<Template v-if / v-else-if / v-else>'} 和列表片段四种写法，运行时同样不会额外生成包装节点。
+                  当前示例覆盖命名 slot、{'<Template v-if>'}、
+                  {'<Template v-if / v-else-if / v-else>'}{' '}
+                  和列表片段四种写法，运行时同样不会额外生成包装节点。
                 </div>
               </div>
             </div>
@@ -241,7 +246,9 @@ export default Demo;`
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 className="card-title">切换场景</h2>
-                    <p className="text-sm opacity-70">观察中间两张卡片出现时，网格项数量是否被额外包裹影响。</p>
+                    <p className="text-sm opacity-70">
+                      观察中间两张卡片出现时，网格项数量是否被额外包裹影响。
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
                     <div className="join">
@@ -279,7 +286,9 @@ export default Demo;`
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <h3 className="font-semibold">普通 div 包裹</h3>
-                        <p className="text-sm opacity-70">中间两张卡片会先进入一个额外 grid item。</p>
+                        <p className="text-sm opacity-70">
+                          中间两张卡片会先进入一个额外 grid item。
+                        </p>
                       </div>
                       <span className="badge badge-warning badge-outline">
                         直接网格项: {showBurst.value ? 3 : 2}
@@ -290,8 +299,16 @@ export default Demo;`
                       <Tile title={cards.head.title} meta={cards.head.meta} tone="base" />
                       {showBurst.value && (
                         <div className="grid gap-3 rounded-box border border-warning/50 bg-base-100 p-3">
-                          <Tile title={cards.burst[0].title} meta={cards.burst[0].meta} tone="primary" />
-                          <Tile title={cards.burst[1].title} meta={cards.burst[1].meta} tone="accent" />
+                          <Tile
+                            title={cards.burst[0].title}
+                            meta={cards.burst[0].meta}
+                            tone="primary"
+                          />
+                          <Tile
+                            title={cards.burst[1].title}
+                            meta={cards.burst[1].meta}
+                            tone="accent"
+                          />
                         </div>
                       )}
                       <Tile title={cards.tail.title} meta={cards.tail.meta} tone="base" />
@@ -302,7 +319,9 @@ export default Demo;`
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <h3 className="font-semibold">显式 {'<Template v-if>'} 条件片段</h3>
-                        <p className="text-sm opacity-70">中间两张卡片通过 Template 指令直接成为兄弟 grid item，不多套一层 DOM。</p>
+                        <p className="text-sm opacity-70">
+                          中间两张卡片通过 Template 指令直接成为兄弟 grid item，不多套一层 DOM。
+                        </p>
                       </div>
                       <span className="badge badge-success badge-outline">
                         直接网格项: {showBurst.value ? 4 : 2}
@@ -312,8 +331,16 @@ export default Demo;`
                     <div className="grid gap-3 md:grid-cols-2">
                       <Tile title={cards.head.title} meta={cards.head.meta} tone="base" />
                       <Template v-if={showBurst.value}>
-                        <Tile title={cards.burst[0].title} meta={cards.burst[0].meta} tone="primary" />
-                        <Tile title={cards.burst[1].title} meta={cards.burst[1].meta} tone="accent" />
+                        <Tile
+                          title={cards.burst[0].title}
+                          meta={cards.burst[0].meta}
+                          tone="primary"
+                        />
+                        <Tile
+                          title={cards.burst[1].title}
+                          meta={cards.burst[1].meta}
+                          tone="accent"
+                        />
                       </Template>
                       <Tile title={cards.tail.title} meta={cards.tail.meta} tone="base" />
                     </div>
@@ -323,8 +350,13 @@ export default Demo;`
                 <section className="space-y-4 rounded-box border border-info/30 bg-info/10 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h3 className="font-semibold">显式 {'<Template v-if>'} / {'<Template v-else-if>'} / {'<Template v-else>'} 分支链</h3>
-                      <p className="text-sm opacity-70">这组三个连续兄弟 Template 节点直接组成条件链，而不是手写三元表达式。</p>
+                      <h3 className="font-semibold">
+                        显式 {'<Template v-if>'} / {'<Template v-else-if>'} / {'<Template v-else>'}{' '}
+                        分支链
+                      </h3>
+                      <p className="text-sm opacity-70">
+                        这组三个连续兄弟 Template 节点直接组成条件链，而不是手写三元表达式。
+                      </p>
                     </div>
 
                     <div className="join">
@@ -355,7 +387,9 @@ export default Demo;`
                     </div>
                   </div>
 
-                  <div className="badge badge-info badge-outline">当前分支: {branchState.value}</div>
+                  <div className="badge badge-info badge-outline">
+                    当前分支: {branchState.value}
+                  </div>
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <Template v-if={branchState.value === 'healthy'}>
@@ -377,7 +411,10 @@ export default Demo;`
                   <section className="space-y-4 rounded-box border border-secondary/30 bg-secondary/10 p-4">
                     <div>
                       <h3 className="font-semibold">显式 {'<Template slot="...">'} 命名片段</h3>
-                      <p className="text-sm opacity-70">header 和 actions 都通过 Template slot 注入，actions slot 里放了两个兄弟节点。</p>
+                      <p className="text-sm opacity-70">
+                        header 和 actions 都通过 Template slot 注入，actions slot
+                        里放了两个兄弟节点。
+                      </p>
                     </div>
 
                     <DashboardShell>
@@ -387,7 +424,9 @@ export default Demo;`
                           <h4 className="mt-2 text-lg font-semibold">
                             {mode.value === 'ops' ? '运维场景面板' : '增长场景面板'}
                           </h4>
-                          <p className="text-sm opacity-70">这个 header 本身来自 template 命名插槽，不会生成额外包装节点。</p>
+                          <p className="text-sm opacity-70">
+                            这个 header 本身来自 template 命名插槽，不会生成额外包装节点。
+                          </p>
                         </div>
                       </Template>
 
@@ -424,8 +463,16 @@ export default Demo;`
                         <Tile title={cards.head.title} meta={cards.head.meta} tone="base" />
                         {showSummary.value && (
                           <Template>
-                            <Tile title="命名插槽内摘要 A" meta="header / actions 都来自 slot prop" tone="primary" />
-                            <Tile title="命名插槽内摘要 B" meta="body 仍然是默认 slot 内容" tone="accent" />
+                            <Tile
+                              title="命名插槽内摘要 A"
+                              meta="header / actions 都来自 slot prop"
+                              tone="primary"
+                            />
+                            <Tile
+                              title="命名插槽内摘要 B"
+                              meta="body 仍然是默认 slot 内容"
+                              tone="accent"
+                            />
                           </Template>
                         )}
                         <Tile title={cards.tail.title} meta={cards.tail.meta} tone="base" />
@@ -436,7 +483,9 @@ export default Demo;`
                   <section className="space-y-4 rounded-box border border-primary/30 bg-primary/10 p-4">
                     <div>
                       <h3 className="font-semibold">显式 {'<Template>'} 列表片段</h3>
-                      <p className="text-sm opacity-70">每条数据都会展开成两条兄弟节点，来源是手工导入的 Template 列表项。</p>
+                      <p className="text-sm opacity-70">
+                        每条数据都会展开成两条兄弟节点，来源是手工导入的 Template 列表项。
+                      </p>
                     </div>
 
                     <ul className="list rounded-box bg-base-100 shadow-sm">
@@ -447,7 +496,9 @@ export default Demo;`
                               <div className="font-medium">{row.title}</div>
                               <div className="text-sm opacity-70">{row.meta}</div>
                             </div>
-                            <span className="badge badge-outline whitespace-nowrap">{row.status}</span>
+                            <span className="badge badge-outline whitespace-nowrap">
+                              {row.status}
+                            </span>
                           </li>
                           <li className="px-4 pb-3 text-[11px] uppercase tracking-[0.22em] opacity-45">
                             同一条数据额外展开的第二个兄弟节点

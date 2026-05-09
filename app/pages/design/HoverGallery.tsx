@@ -89,12 +89,7 @@ const classicGalleryItems = [
     label: '2',
   },
   {
-    node: (
-      <img
-        src="https://img.daisyui.com/images/stock/daisyui-hat-3.webp"
-        alt="帽子背面"
-      />
-    ),
+    node: <img src="https://img.daisyui.com/images/stock/daisyui-hat-3.webp" alt="帽子背面" />,
     label: '3',
   },
   {
@@ -288,8 +283,10 @@ const HoverGalleryDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Hover Gallery 悬浮画廊</h1>
         <p className="text-sm mt-3 mb-3">
-          Hover Gallery 适合做商品多视角缩略图。Rue 这一版把原本散落在 demo 里的结构提炼成组件 API：既能继续直接写
-          <code>children</code>，也能切到 <code>items</code> 数据驱动，并把导览遮罩和图片层样式统一收口到组件里。
+          Hover Gallery 适合做商品多视角缩略图。Rue 这一版把原本散落在 demo 里的结构提炼成组件
+          API：既能继续直接写
+          <code>children</code>，也能切到 <code>items</code>{' '}
+          数据驱动，并把导览遮罩和图片层样式统一收口到组件里。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -329,22 +326,10 @@ const HoverGalleryDemo: FC = () => {
           preview={() => (
             <div className="flex justify-center">
               <HoverGallery as="figure" className="max-w-60">
-                <img
-                  src="https://img.daisyui.com/images/stock/daisyui-hat-1.webp"
-                  alt="帽子正面"
-                />
-                <img
-                  src="https://img.daisyui.com/images/stock/daisyui-hat-2.webp"
-                  alt="帽子侧面"
-                />
-                <img
-                  src="https://img.daisyui.com/images/stock/daisyui-hat-3.webp"
-                  alt="帽子背面"
-                />
-                <img
-                  src="https://img.daisyui.com/images/stock/daisyui-hat-4.webp"
-                  alt="帽子细节"
-                />
+                <img src="https://img.daisyui.com/images/stock/daisyui-hat-1.webp" alt="帽子正面" />
+                <img src="https://img.daisyui.com/images/stock/daisyui-hat-2.webp" alt="帽子侧面" />
+                <img src="https://img.daisyui.com/images/stock/daisyui-hat-3.webp" alt="帽子背面" />
+                <img src="https://img.daisyui.com/images/stock/daisyui-hat-4.webp" alt="帽子细节" />
               </HoverGallery>
             </div>
           )}
@@ -382,8 +367,8 @@ const HoverGalleryDemo: FC = () => {
                   items={labeledGalleryItems}
                 />
                 <p className="m-0 text-xs opacity-70">
-                  这一组更适合做详情页的角度预览，统一的 <code>fit</code> 和 <code>imageClassName</code>{' '}
-                  可以把不同来源的图片先收敛到同一版式里。
+                  这一组更适合做详情页的角度预览，统一的 <code>fit</code> 和{' '}
+                  <code>imageClassName</code> 可以把不同来源的图片先收敛到同一版式里。
                 </p>
               </div>
             </div>

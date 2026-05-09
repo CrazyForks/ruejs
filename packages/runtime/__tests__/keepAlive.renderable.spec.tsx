@@ -23,12 +23,14 @@ const flush = async () => {
   await Promise.resolve()
 }
 
-const createInputView = (name: string): FC => () => (
-  <label data-testid={`panel-${name}`}>
-    {name}
-    <input data-testid={`input-${name}`} />
-  </label>
-)
+const createInputView =
+  (name: string): FC =>
+  () => (
+    <label data-testid={`panel-${name}`}>
+      {name}
+      <input data-testid={`input-${name}`} />
+    </label>
+  )
 
 const mountKeepAliveSwitch = (
   host: HTMLElement,

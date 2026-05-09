@@ -21,12 +21,18 @@ const toChildArray = (children: any): any[] => {
   return [children]
 }
 
-
 const GlyphIcon: FC<{ label: string; glyph: string }> = ({ label, glyph }) => {
   return (
     <svg aria-label={label} viewBox="0 0 24 24" className="size-5 fill-current">
       <circle cx="12" cy="12" r="10" opacity="0.18" />
-      <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700">
+      <text
+        x="12"
+        y="12"
+        text-anchor="middle"
+        dominant-baseline="central"
+        font-size="10"
+        font-weight="700"
+      >
         {glyph}
       </text>
     </svg>
@@ -102,7 +108,11 @@ const ControlledFabPreview: FC = () => {
             items={[
               { key: 'draft', icon: <GlyphIcon label="Draft" glyph="D" />, tooltip: '保存草稿' },
               { key: 'review', icon: <GlyphIcon label="Review" glyph="R" />, tooltip: '提交评审' },
-              { key: 'publish', icon: <GlyphIcon label="Publish" glyph="P" />, tooltip: '直接发布' },
+              {
+                key: 'publish',
+                icon: <GlyphIcon label="Publish" glyph="P" />,
+                tooltip: '直接发布',
+              },
             ]}
           />
         </div>
@@ -110,7 +120,8 @@ const ControlledFabPreview: FC = () => {
       <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
         <div className="text-sm font-medium">受控模式</div>
         <p className="mt-2 text-sm opacity-70">
-          用 <code>open</code> + <code>onOpenChange</code> 接入业务状态，同步外部抽屉、埋点或二次确认流程。
+          用 <code>open</code> + <code>onOpenChange</code>{' '}
+          接入业务状态，同步外部抽屉、埋点或二次确认流程。
         </p>
         <button className="btn btn-primary btn-sm mt-3" onClick={() => (open.value = !open.value)}>
           {open.value ? '关闭 FAB' : '打开 FAB'}
@@ -157,13 +168,15 @@ const PlacementFabPreview: FC = () => {
 const mainApiRows: ApiRow[] = [
   {
     prop: 'icon / children / content / description',
-    description: '根级按钮支持图标与文字内容；推荐直接写 children，有内容时默认切到 square 形态，content / description 继续作为语义化补充。',
+    description:
+      '根级按钮支持图标与文字内容；推荐直接写 children，有内容时默认切到 square 形态，content / description 继续作为语义化补充。',
     type: 'any',
     defaultValue: '-',
   },
   {
     prop: 'items',
-    description: '数据驱动的子按钮配置，适合快速搭建悬浮操作菜单；每项支持 icon、tooltip、badge、href、onClick。',
+    description:
+      '数据驱动的子按钮配置，适合快速搭建悬浮操作菜单；每项支持 icon、tooltip、badge、href、onClick。',
     type: 'FabActionProps[]',
     defaultValue: '[]',
   },
@@ -181,7 +194,8 @@ const mainApiRows: ApiRow[] = [
   },
   {
     prop: 'type / color / shape',
-    description: '保留 Rue 自己的按钮视觉语义；type 提供 default 与 primary 快捷入口，color 支持更细粒度主题色。',
+    description:
+      '保留 Rue 自己的按钮视觉语义；type 提供 default 与 primary 快捷入口，color 支持更细粒度主题色。',
     type: "'default' | 'primary' / ButtonColor / 'circle' | 'square'",
     defaultValue: "'default' / - / 自动推导",
   },
@@ -240,8 +254,9 @@ const FabPage: FC = () => {
         <h1>Fab 悬浮操作按钮</h1>
         <p className="text-sm mt-3 mb-3">
           Rue 的 Fab 现在同时支持两类路径：一类是保留 daisyUI 的 <code>.fab</code> 结构兼容写法；
-          另一类是更接近 ant-design FloatButton 的增强 API，直接支持 <code>items</code>、<code>trigger</code>、
-          <code>placement</code>、<code>open</code>、<code>tooltip</code> 和 <code>badge</code>。
+          另一类是更贴近常见悬浮操作按钮的增强 API，直接支持 <code>items</code>、
+          <code>trigger</code>、<code>placement</code>、<code>open</code>、<code>tooltip</code> 和{' '}
+          <code>badge</code>。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/fab/" target="_blank">
@@ -251,21 +266,29 @@ const FabPage: FC = () => {
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-primary">推荐写法</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-primary">
+              推荐写法
+            </div>
             <div className="mt-2 text-sm font-medium">直接用数据驱动菜单</div>
             <p className="mt-2 text-sm opacity-70">
-              用 <code>icon</code>、<code>items</code>、<code>trigger</code> 和 <code>placement</code> 一次描述完整行为。
+              用 <code>icon</code>、<code>items</code>、<code>trigger</code> 和{' '}
+              <code>placement</code> 一次描述完整行为。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">兼容旧 demo</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              兼容旧 demo
+            </div>
             <div className="mt-2 text-sm font-medium">原有 compound 结构继续可用</div>
             <p className="mt-2 text-sm opacity-70">
-              <code>Fab.Trigger</code>、<code>Fab.Close</code>、<code>Fab.MainAction</code> 和 flower 布局全部保留。
+              <code>Fab.Trigger</code>、<code>Fab.Close</code>、<code>Fab.MainAction</code> 和
+              flower 布局全部保留。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-accent">交互补齐</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-accent">
+              交互补齐
+            </div>
             <div className="mt-2 text-sm font-medium">受控、点击外部关闭、方向展开</div>
             <p className="mt-2 text-sm opacity-70">
               适合消息入口、创建入口、移动端快捷发布和带状态提示的全局操作。
@@ -337,7 +360,11 @@ const FabPage: FC = () => {
                 closeIcon={<GlyphIcon label="Close" glyph="x" />}
                 items={[
                   { key: 'camera', icon: <GlyphIcon label="Camera" glyph="C" />, tooltip: '拍照' },
-                  { key: 'gallery', icon: <GlyphIcon label="Gallery" glyph="G" />, tooltip: '相册' },
+                  {
+                    key: 'gallery',
+                    icon: <GlyphIcon label="Gallery" glyph="G" />,
+                    tooltip: '相册',
+                  },
                   { key: 'voice', icon: <GlyphIcon label="Voice" glyph="V" />, tooltip: '语音' },
                 ]}
               />
@@ -772,21 +799,24 @@ const FabPage: FC = () => {
           <div className="rounded-box border border-base-300 bg-base-100 p-4">
             <div className="font-medium">推荐直接用哪种写法？</div>
             <p className="mt-2 mb-0 text-sm opacity-70">
-              新业务优先用根级增强 API：单按钮只传 <code>icon</code>，菜单场景再补 <code>items</code> 与
-              <code>trigger</code>。旧页面若已经依赖 <code>Fab.Trigger</code> 结构，可以保持不动。
+              新业务优先用根级增强 API：单按钮只传 <code>icon</code>，菜单场景再补{' '}
+              <code>items</code> 与<code>trigger</code>。旧页面若已经依赖 <code>Fab.Trigger</code>{' '}
+              结构，可以保持不动。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4">
             <div className="font-medium">什么时候用 square？</div>
             <p className="mt-2 mb-0 text-sm opacity-70">
-              需要显示文案、计数或收件箱这类语义入口时更适合 <code>shape="square"</code>；纯图标快捷入口优先
+              需要显示文案、计数或收件箱这类语义入口时更适合 <code>shape="square"</code>
+              ；纯图标快捷入口优先
               <code>circle</code>。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4">
             <div className="font-medium">flower 模式适合增强 API 还是旧结构？</div>
             <p className="mt-2 mb-0 text-sm opacity-70">
-              两种都支持，但需要完全自定义每个节点结构时，旧的 compound 写法仍然最灵活；数据驱动更适合快速搭建统一菜单。
+              两种都支持，但需要完全自定义每个节点结构时，旧的 compound
+              写法仍然最灵活；数据驱动更适合快速搭建统一菜单。
             </p>
           </div>
         </div>

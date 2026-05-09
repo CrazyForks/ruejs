@@ -1,23 +1,26 @@
 # Browser Mockup
 
 ## AI 提示词
+
 请为 Rue Design 规划 Browser Mockup 组件的完整落地方案直接实现代码。严格遵循 [plan.md](./plan.md) 的通用约束，并对齐 [Browser Mockup 文档源](../../packages/rue-design/src/components/mockup-browser/doc.md)。
 
 - 公共导出名：`MockupBrowser`
 - 组件实现文件：[packages/rue-design/src/components/mockup-browser/index.tsx](../../packages/rue-design/src/components/mockup-browser/index.tsx)
-- 单元测试：[packages/rue-design/src/components/mockup-browser/__tests__/MockupBrowser.spec.tsx](../../packages/rue-design/src/components/mockup-browser/__tests__/MockupBrowser.spec.tsx)
+- 单元测试：[packages/rue-design/src/components/mockup-browser/**tests**/MockupBrowser.spec.tsx](../../packages/rue-design/src/components/mockup-browser/__tests__/MockupBrowser.spec.tsx)
 - Demo 页面：[app/pages/design/MockupBrowser.tsx](../../app/pages/design/MockupBrowser.tsx)
-- Actual 测试：[packages/runtime/__tests__/mockup-browser.actual.spec.tsx](../../packages/runtime/__tests__/mockup-browser.actual.spec.tsx)
+- Actual 测试：[packages/runtime/**tests**/mockup-browser.actual.spec.tsx](../../packages/runtime/__tests__/mockup-browser.actual.spec.tsx)
 - 路由：`/design/mockup-browser`
 - 组件模式：compound 结构封装
 
 ### 组件特定要求
+
 1. 要体现 root 与 `mockup-browser-toolbar` 的结构关系。
 2. 规划时保持展示容器语义，不扩展成浏览器行为模拟器。
 3. demo 至少覆盖带地址栏和带任意内部内容的 mockup。
 
 ### 计划输出格式
+
 1. 实现文件清单
-3. demo 覆盖清单
-4. 单测
-5. actual 测试
+2. demo 覆盖清单
+3. 单测
+4. actual 测试

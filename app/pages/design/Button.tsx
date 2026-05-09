@@ -21,7 +21,15 @@ interface ApiRow {
   defaultValue: string
 }
 
-type DemoTone = 'neutral' | 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'
+type DemoTone =
+  | 'neutral'
+  | 'primary'
+  | 'secondary'
+  | 'accent'
+  | 'info'
+  | 'success'
+  | 'warning'
+  | 'error'
 type DemoVariant = 'filled' | 'outlined' | 'dashed'
 
 interface ToneExample {
@@ -174,7 +182,11 @@ const SparkIcon = () => (
     strokeWidth="2"
     className="size-[1.05em]"
   >
-    <path strokeLinecap="round" strokeLinejoin="round" d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z"
+    />
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 18h.01M19 18h.01M12 21h.01" />
   </svg>
 )
@@ -189,7 +201,7 @@ const toneExamples: ToneExample[] = [
   { label: 'Success', color: 'success' },
   { label: 'Warning', color: 'warning' },
   { label: 'Error', color: 'error' },
-] 
+]
 
 const styleExamples: StyleExample[] = [
   { label: 'Filled', variant: 'filled' },
@@ -390,7 +402,8 @@ const ButtonDemo: FC = () => {
         <h1>Button 按钮</h1>
         <p className="text-sm mt-3 mb-3">
           <code>type</code> 负责视觉类型，
-          <code>color</code> 负责主题色，再用 <code>shape</code>、<code>icon</code>、<code>loading</code> 补足交互细节。
+          <code>color</code> 负责主题色，再用 <code>shape</code>、<code>icon</code>、
+          <code>loading</code> 补足交互细节。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -402,7 +415,9 @@ const ButtonDemo: FC = () => {
         <h2>何时使用</h2>
         <ul>
           <li>需要一个通用操作按钮，并希望颜色、类型、形状和状态能拆开表达。</li>
-          <li>需要在表单里区分视觉类型 <code>type</code> 和原生提交类型 <code>htmlType</code>。</li>
+          <li>
+            需要在表单里区分视觉类型 <code>type</code> 和原生提交类型 <code>htmlType</code>。
+          </li>
           <li>需要统一处理图标按钮、加载按钮、链接按钮和整行按钮。</li>
         </ul>
 
@@ -422,7 +437,7 @@ const ButtonDemo: FC = () => {
               </div>
             </div>
           )}
-            code={`<Button>Solid</Button>
+          code={`<Button>Solid</Button>
         <Button type="outlined">Outlined</Button>
 <Button type="dashed">Dashed</Button>
         <Button type="filled">Filled</Button>
@@ -493,10 +508,16 @@ const ButtonDemo: FC = () => {
               <div className="card-body gap-5">
                 {styleExamples.map(style => (
                   <div key={style.label}>
-                    <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">{style.label}</div>
+                    <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                      {style.label}
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {toneExamples.map(tone => (
-                        <Button key={`${style.label}-${tone.label}`} color={tone.color} type={style.variant}>
+                        <Button
+                          key={`${style.label}-${tone.label}`}
+                          color={tone.color}
+                          type={style.variant}
+                        >
                           {tone.label}
                         </Button>
                       ))}
@@ -505,10 +526,16 @@ const ButtonDemo: FC = () => {
                 ))}
 
                 <div className="rounded-box bg-white p-4 text-black">
-                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-black/60">Neutral on light surface</div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-black/60">
+                    Neutral on light surface
+                  </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button color="neutral" type="outlined">Outline</Button>
-                    <Button color="neutral" type="dashed">Dash</Button>
+                    <Button color="neutral" type="outlined">
+                      Outline
+                    </Button>
+                    <Button color="neutral" type="dashed">
+                      Dash
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -557,9 +584,7 @@ const styles = [
           preview={() => (
             <div className="card bg-neutral text-neutral-content shadow-sm">
               <div className="card-body flex flex-row flex-wrap items-center gap-2">
-                <Button color="danger">
-                  Delete forever
-                </Button>
+                <Button color="danger">Delete forever</Button>
                 <Button color="danger" type="outlined">
                   Remove access
                 </Button>
@@ -572,7 +597,7 @@ const styles = [
               </div>
             </div>
           )}
-            code={`<Button color="danger">Delete forever</Button>
+          code={`<Button color="danger">Delete forever</Button>
         <Button color="danger" type="outlined">Remove access</Button>
         <Button color="danger" type="filled">Archive branch</Button>
         <Button color="danger" type="text">Clear cache</Button>`}
@@ -588,7 +613,12 @@ const styles = [
                 <Button color="primary" icon={<PlusIcon />}>
                   Create project
                 </Button>
-                <Button color="secondary" type="outlined" icon={<ArrowRightIcon />} iconPlacement="end">
+                <Button
+                  color="secondary"
+                  type="outlined"
+                  icon={<ArrowRightIcon />}
+                  iconPlacement="end"
+                >
                   Continue
                 </Button>
                 <Button color="accent" shape="circle" icon={<HeartIcon />} aria-label="收藏" />
@@ -617,7 +647,10 @@ const styles = [
                 <Button color="primary" loading>
                   Saving
                 </Button>
-                <Button type="outlined" loading={{ icon: <span className="loading loading-dots loading-xs" /> }}>
+                <Button
+                  type="outlined"
+                  loading={{ icon: <span className="loading loading-dots loading-xs" /> }}
+                >
                   Syncing
                 </Button>
                 <Button color="success" icon={<RocketIcon />}>
@@ -644,7 +677,9 @@ const styles = [
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body gap-5">
                 <div>
-                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Sizes</div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Sizes
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button size="small">Small</Button>
                     <Button>Default</Button>
@@ -661,13 +696,25 @@ const styles = [
                 </div>
 
                 <div>
-                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Shapes</div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Shapes
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button color="primary" shape="round">
                       Round action
                     </Button>
-                    <Button color="secondary" shape="square" icon={<SparkIcon />} aria-label="square" />
-                    <Button color="accent" shape="circle" icon={<HeartIcon />} aria-label="circle" />
+                    <Button
+                      color="secondary"
+                      shape="square"
+                      icon={<SparkIcon />}
+                      aria-label="square"
+                    />
+                    <Button
+                      color="accent"
+                      shape="circle"
+                      icon={<HeartIcon />}
+                      aria-label="circle"
+                    />
                   </div>
                 </div>
               </div>
@@ -692,7 +739,9 @@ const styles = [
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body gap-5">
                 <div>
-                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">States</div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    States
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     <Button active>Active</Button>
                     <Button color="primary" active>
@@ -706,7 +755,9 @@ const styles = [
                 </div>
 
                 <div>
-                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Layout</div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Layout
+                  </div>
                   <div className="flex flex-col gap-2 sm:max-w-sm">
                     <Button wide>Wide button</Button>
                     <Button block color="primary">
@@ -740,7 +791,9 @@ const styles = [
                 <div className="flex flex-wrap gap-2">
                   <Button>Native button</Button>
                   <Button href="#button-api">Anchor</Button>
-                  <Button as="div" type="text">Div button</Button>
+                  <Button as="div" type="text">
+                    Div button
+                  </Button>
                 </div>
                 <div className="text-sm opacity-70">submit count: {submitCount.value}</div>
                 <form
@@ -803,7 +856,11 @@ const styles = [
                 </div>
 
                 <div className="grid gap-2 md:grid-cols-2">
-                  <Button block className="justify-start bg-white text-base-content border-base-300" icon={<MailIcon />}>
+                  <Button
+                    block
+                    className="justify-start bg-white text-base-content border-base-300"
+                    icon={<MailIcon />}
+                  >
                     Continue with Email
                   </Button>
                   <Button block color="primary" className="justify-start" icon={<SparkIcon />}>
@@ -875,8 +932,8 @@ const styles = [
         <h2 id="button-api">API</h2>
         <p>当前页面展示的是 Button 的完整可用 API。</p>
         <p>
-          推荐使用顺序：<code>type</code> -&gt; <code>color</code> -&gt; <code>shape</code> -&gt; <code>size</code> -&gt;{' '}
-          <code>loading</code> -&gt; <code>disabled</code>。
+          推荐使用顺序：<code>type</code> -&gt; <code>color</code> -&gt; <code>shape</code> -&gt;{' '}
+          <code>size</code> -&gt; <code>loading</code> -&gt; <code>disabled</code>。
         </p>
 
         <ApiTable rows={apiRows} />
@@ -885,23 +942,25 @@ const styles = [
 
         <h3>为什么有 type 还需要 htmlType？</h3>
         <p>
-          <code>type</code> 负责按钮视觉类型，<code>htmlType</code> 负责原生 button 行为。视觉和提交语义拆开之后，
-          表单场景会更直接。
+          <code>type</code> 负责按钮视觉类型，<code>htmlType</code> 负责原生 button
+          行为。视觉和提交语义拆开之后， 表单场景会更直接。
         </p>
 
         <h3>type 和 color 应该怎么分工？</h3>
         <p>
-          <code>type</code> 负责视觉类型，比如 <code>outlined</code>、<code>filled</code>、<code>text</code>。
-          <code>color</code> 负责主题色，比如 <code>primary</code>、<code>secondary</code>、<code>danger</code>。
+          <code>type</code> 负责视觉类型，比如 <code>outlined</code>、<code>filled</code>、
+          <code>text</code>。<code>color</code> 负责主题色，比如 <code>primary</code>、
+          <code>secondary</code>、<code>danger</code>。
         </p>
         <p>
-          大多数场景可以先定颜色，
-          再根据密度和层级选择 <code>solid</code>、<code>outlined</code>、<code>filled</code> 或 <code>text</code>。
+          大多数场景可以先定颜色， 再根据密度和层级选择 <code>solid</code>、<code>outlined</code>、
+          <code>filled</code> 或 <code>text</code>。
         </p>
 
         <h3>loading 对象里的 delay 会生效吗？</h3>
         <p>
-          当前版本已经支持 <code>loading</code> 的对象写法和自定义 <code>icon</code>。<code>delay</code>
+          当前版本已经支持 <code>loading</code> 的对象写法和自定义 <code>icon</code>。
+          <code>delay</code>
           字段已保留在配置结构里，后续如果补充延迟显示策略，可以直接在现有接口上继续扩展。
         </p>
       </div>

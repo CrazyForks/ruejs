@@ -5,7 +5,9 @@ import SVGGraph from '../../../app/pages/examples/SVGGraph'
 import { click, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
-  default: (props: { children?: unknown }) => <div data-testid="mock-sidebar-example">{props.children}</div>,
+  default: (props: { children?: unknown }) => (
+    <div data-testid="mock-sidebar-example">{props.children}</div>
+  ),
 }))
 
 vi.mock('../../../app/pages/site/components/Code', () => ({
@@ -24,7 +26,9 @@ const findTab = (root: ParentNode, label: string) =>
   ) ?? null
 
 const findButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === label) ?? null
+  Array.from(root.querySelectorAll('button')).find(
+    button => button.textContent?.trim() === label,
+  ) ?? null
 
 const findStatRow = (root: ParentNode, label: string) =>
   Array.from(root.querySelectorAll('div.flex.items-center.gap-3')).find(

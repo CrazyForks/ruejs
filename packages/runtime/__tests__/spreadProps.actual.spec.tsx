@@ -44,7 +44,9 @@ describe('SpreadProps actual page', () => {
     await click(findTab(container, '效果'))
 
     await waitForContent(() => {
-      const button = container.querySelector('.card-body.grid.gap-4 > button') as HTMLButtonElement | null
+      const button = container.querySelector(
+        '.card-body.grid.gap-4 > button',
+      ) as HTMLButtonElement | null
       expect(button).not.toBeNull()
       expect(button!.textContent?.trim()).toBe('确定按钮')
       expect(button!.className).toContain('btn')

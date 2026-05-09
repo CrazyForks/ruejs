@@ -117,10 +117,10 @@ export default Events;
 
     // 期望输出要点对照：
     // - 事件：button onClick → addEventListener('click', handler)
-    // - 文本插值：count/list/user/format 的值以 _$createTextWrapper + _$settextContent + watch 更新
+    // - 文本插值：普通文本值走 _$createTextWrapper；对象成员等可渲染表达式走 slot-anchor + renderAnchor
     // - disabled：基于 list.length 的 watch 控制
     // - 函数状态：调用 valueOf() 的格式化函数再 watch 更新
-    let expected_fragment = r##"import { useState, _$vaporWithHookId, useSetup, vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue, _$setDisabled } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { useState, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue, _$setDisabled } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const DEC_FORMAT = (n: number)=>String(n);
@@ -216,77 +216,79 @@ const Events: FC = ()=>{
         const _el13 = _$createElement("div");
         _$appendChild(_root, _el13);
         _$appendChild(_el13, _$createTextNode("name: "));
-        const _el14 = _$createTextWrapper(_el13);
-        _$appendChild(_el13, _el14);
+        const _list1 = _$createComment("rue:slot:anchor");
+        _$appendChild(_el13, _list1);
         watchEffect(()=>{
-            _$settextContent(_el14, user.name);
+          const __slot = (user.name);
+          renderAnchor(__slot, _el13, _list1);
         });
         _$appendChild(_el13, _$createTextNode(", age: "));
-        const _el15 = _$createTextWrapper(_el13);
-        _$appendChild(_el13, _el15);
+        const _list2 = _$createComment("rue:slot:anchor");
+        _$appendChild(_el13, _list2);
         watchEffect(()=>{
-            _$settextContent(_el15, user.age);
+          const __slot = (user.age);
+          renderAnchor(__slot, _el13, _list2);
         });
-        const _el16 = _$createElement("div");
-        _$appendChild(_root, _el16);
-        _$setClassName(_el16, "space-x-2");
-        const _el17 = _$createElement("button");
-        _$appendChild(_el16, _el17);
-        _$setClassName(_el17, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el17, "click", (()=>setUser((u)=>({
+        const _el14 = _$createElement("div");
+        _$appendChild(_root, _el14);
+        _$setClassName(_el14, "space-x-2");
+        const _el15 = _$createElement("button");
+        _$appendChild(_el14, _el15);
+        _$setClassName(_el15, "px-3 py-2 rounded-md bg-gray-100 border");
+        _$addEventListener(_el15, "click", (()=>setUser((u)=>({
                     ...u,
                     age: u.age + 1
                 }))));
-        _$appendChild(_el17, _$createTextNode("年龄 +1"));
-        const _el18 = _$createElement("input");
-        _$appendChild(_el16, _el18);
-        _$setClassName(_el18, "px-3 py-2 rounded-md border");
+        _$appendChild(_el15, _$createTextNode("年龄 +1"));
+        const _el16 = _$createElement("input");
+        _$appendChild(_el14, _el16);
+        _$setClassName(_el16, "px-3 py-2 rounded-md border");
         watchEffect(()=>{
-            _$setValue(_el18, user.name);
+          _$setValue(_el16, user.name);
         });
-        _$addEventListener(_el18, "input", ((e: any)=>setUser((u)=>({
+        _$addEventListener(_el16, "input", ((e: any)=>setUser((u)=>({
                     ...u,
                     name: (e.target as HTMLInputElement).value
                 }))));
-        _$setAttribute(_el18, "placeholder", "修改 name");
-        const _el19 = _$createElement("h3");
-        _$appendChild(_root, _el19);
-        _$setClassName(_el19, "text-xl font-semibold");
-        _$appendChild(_el19, _$createTextNode("函数状态"));
+        _$setAttribute(_el16, "placeholder", "修改 name");
+        const _el17 = _$createElement("h3");
+        _$appendChild(_root, _el17);
+        _$setClassName(_el17, "text-xl font-semibold");
+        _$appendChild(_el17, _$createTextNode("函数状态"));
+        const _el18 = _$createElement("div");
+        _$appendChild(_root, _el18);
+        _$appendChild(_el18, _$createTextNode("formatted count: "));
+        const _el19 = _$createTextWrapper(_el18);
+        _$appendChild(_el18, _el19);
+        watchEffect(()=>{
+          _$settextContent(_el19, ((format as any).valueOf())(count));
+        });
         const _el20 = _$createElement("div");
         _$appendChild(_root, _el20);
-        _$appendChild(_el20, _$createTextNode("formatted count: "));
-        const _el21 = _$createTextWrapper(_el20);
+        _$setClassName(_el20, "space-x-2");
+        const _el21 = _$createElement("button");
         _$appendChild(_el20, _el21);
-        watchEffect(()=>{
-            _$settextContent(_el21, ((format as any).valueOf())(count));
-        });
-        const _el22 = _$createElement("div");
-        _$appendChild(_root, _el22);
-        _$setClassName(_el22, "space-x-2");
+        _$setClassName(_el21, "px-3 py-2 rounded-md bg-gray-100 border");
+        _$addEventListener(_el21, "click", (()=>setFormat((prev: (n: number) => string)=>(prev === DEC_FORMAT ? HEX_FORMAT : DEC_FORMAT))));
+        _$appendChild(_el21, _$createTextNode("切换十进制/十六进制"));
+        const _el22 = _$createElement("button");
+        _$appendChild(_el20, _el22);
+        _$setClassName(_el22, "px-3 py-2 rounded-md bg-gray-100 border");
+        _$addEventListener(_el22, "click", (()=>setFormat(()=>DEC_FORMAT)));
+        _$appendChild(_el22, _$createTextNode("使用十进制"));
         const _el23 = _$createElement("button");
-        _$appendChild(_el22, _el23);
+        _$appendChild(_el20, _el23);
         _$setClassName(_el23, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el23, "click", (()=>setFormat((prev: (n: number) => string)=>(prev === DEC_FORMAT ? HEX_FORMAT : DEC_FORMAT))));
-        _$appendChild(_el23, _$createTextNode("切换十进制/十六进制"));
-        const _el24 = _$createElement("button");
-        _$appendChild(_el22, _el24);
-        _$setClassName(_el24, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el24, "click", (()=>setFormat(()=>DEC_FORMAT)));
-        _$appendChild(_el24, _$createTextNode("使用十进制"));
-        const _el25 = _$createElement("button");
-        _$appendChild(_el22, _el25);
-        _$setClassName(_el25, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el25, "click", (()=>setFormat(()=>HEX_FORMAT)));
-        _$appendChild(_el25, _$createTextNode("使用十六进制"));
-        const _el26 = _$createElement("a");
-        _$appendChild(_root, _el26);
+        _$addEventListener(_el23, "click", (()=>setFormat(()=>HEX_FORMAT)));
+        _$appendChild(_el23, _$createTextNode("使用十六进制"));
+        const _el24 = _$createElement("a");
+        _$appendChild(_root, _el24);
         watchEffect(()=>{
-            _$setAttribute(_el26, "href", String(RouterLink.__rueHref("/jsx")));
+          _$setAttribute(_el24, "href", String(RouterLink.__rueHref("/jsx")));
         });
-        _$addEventListener(_el26, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
-        _$setClassName(_el26, "text-blue-600 hover:underline");
-        _$appendChild(_el26, _$createTextNode("返回目录"));
+        _$addEventListener(_el24, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
+        _$setClassName(_el24, "text-blue-600 hover:underline");
+        _$appendChild(_el24, _$createTextNode("返回目录"));
         return _root;
     });
 };

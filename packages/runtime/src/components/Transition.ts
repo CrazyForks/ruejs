@@ -5,12 +5,7 @@ Transition 组件概述
 - 容器策略：默认以 display: contents 的 span 作为占位容器，保持文档语义与样式继承的稳定。
 */
 // 参考 Vue3 的 Transition 设计思路，结合 Rue 的信号与默认区间渲染机制
-import {
-  onMounted,
-  onUnmounted,
-  renderBetween,
-  vapor,
-} from '../vapor-runtime'
+import { onMounted, onUnmounted, renderBetween, vapor } from '../vapor-runtime'
 import type { FC as VaporFC, PropsWithChildren as VaporPropsWithChildren } from '../rue'
 import { signal, watchEffect } from '../reactivity'
 import { type BaseTransitionProps, createTransitionRunner } from './BaseTransition'

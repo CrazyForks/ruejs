@@ -326,16 +326,8 @@ pub fn update_siblings(parent: &JsValue) {
     let arr: Array = children.unchecked_into();
     for index in 0..arr.length() {
         let cur = arr.get(index);
-        let prev = if index > 0 {
-            arr.get(index - 1)
-        } else {
-            JsValue::NULL
-        };
-        let next = if index + 1 < arr.length() {
-            arr.get(index + 1)
-        } else {
-            JsValue::NULL
-        };
+        let prev = if index > 0 { arr.get(index - 1) } else { JsValue::NULL };
+        let next = if index + 1 < arr.length() { arr.get(index + 1) } else { JsValue::NULL };
         let _ = Reflect::set(&cur, &JsValue::from_str("previousSibling"), &prev);
         let _ = Reflect::set(&cur, &JsValue::from_str("nextSibling"), &next);
         let _ = Reflect::set(&cur, &JsValue::from_str("parentNode"), parent);
@@ -882,11 +874,7 @@ pub fn setup_container(adapter: &JsValue) -> JsValue {
 fn direct_children(parent: &JsValue) -> Array {
     let children =
         Reflect::get(parent, &JsValue::from_str("children")).unwrap_or(Array::new().into());
-    if children.is_object() {
-        Array::from(&children)
-    } else {
-        Array::new()
-    }
+    if children.is_object() { Array::from(&children) } else { Array::new() }
 }
 
 #[allow(dead_code)]
@@ -931,15 +919,10 @@ pub fn first_child_text(el: &JsValue) -> String {
 
 #[allow(dead_code)]
 pub fn first_child_with_tag(parent: &JsValue, tag: &str) -> Option<JsValue> {
-    direct_children(parent)
-        .iter()
-        .find(|item| tag_name(item) == tag)
+    direct_children(parent).iter().find(|item| tag_name(item) == tag)
 }
 
 #[allow(dead_code)]
 pub fn count_children_with_tag(parent: &JsValue, tag: &str) -> usize {
-    direct_children(parent)
-        .iter()
-        .filter(|item| tag_name(item) == tag)
-        .count()
+    direct_children(parent).iter().filter(|item| tag_name(item) == tag).count()
 }

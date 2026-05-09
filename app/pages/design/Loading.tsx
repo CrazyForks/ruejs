@@ -91,7 +91,11 @@ const SparkIndicator = () => (
       strokeWidth="2"
       className="size-5"
     >
-      <path strokeLinecap="round" strokeLinejoin="round" d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z"
+      />
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 18h.01M19 18h.01M12 21h.01" />
     </svg>
   </span>
@@ -201,7 +205,8 @@ const LoadingPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Loading 加载指示器</h1>
         <p className="text-sm mt-3 mb-3">
-          Loading 现在既可以作为轻量 daisyUI 动效使用，也可以像 Spin 一样包裹内容、展示描述、进度和全屏遮罩。
+          Loading 现在既可以作为轻量 daisyUI 动效使用，也可以像 Spin
+          一样包裹内容、展示描述、进度和全屏遮罩。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/loading/" target="_blank">
@@ -215,7 +220,10 @@ const LoadingPage: FC = () => {
           tab={tabBasic}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
-              <div className="card-body flex flex-wrap items-center gap-6" data-testid="loading-basic-demo">
+              <div
+                className="card-body flex flex-wrap items-center gap-6"
+                data-testid="loading-basic-demo"
+              >
                 <Loading />
                 <Loading size="large" className="text-primary" />
                 <Loading indicatorStyle="dots" size="large" className="text-secondary" />
@@ -236,17 +244,27 @@ const LoadingPage: FC = () => {
           preview={() => (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
-                <button className="btn btn-sm" onClick={() => (nestedSpinning.value = !nestedSpinning.value)}>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => (nestedSpinning.value = !nestedSpinning.value)}
+                >
                   {nestedSpinning.value ? '停止加载' : '开始加载'}
                 </button>
               </div>
-              <Loading spinning={nestedSpinning.value} description="正在拉取洞察" className="rounded-box" data-testid="loading-nested-demo">
+              <Loading
+                spinning={nestedSpinning.value}
+                description="正在拉取洞察"
+                className="rounded-box"
+                data-testid="loading-nested-demo"
+              >
                 <div className="card border border-base-300 bg-base-100 shadow-sm">
                   <div className="card-body">
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <h3 className="card-title text-base">North Star Metrics</h3>
-                        <p className="text-sm opacity-70">Revenue pipeline and activation are syncing.</p>
+                        <p className="text-sm opacity-70">
+                          Revenue pipeline and activation are syncing.
+                        </p>
                       </div>
                       <div className="badge badge-primary badge-outline">Live</div>
                     </div>
@@ -288,10 +306,18 @@ const LoadingPage: FC = () => {
           tab={tabDescription}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
-              <div className="card-body flex flex-wrap items-center gap-10" data-testid="loading-description-demo">
+              <div
+                className="card-body flex flex-wrap items-center gap-10"
+                data-testid="loading-description-demo"
+              >
                 <Loading description="同步中" size="small" />
                 <Loading description="Preparing workspace" size="middle" className="text-primary" />
-                <Loading tip="Deploying edge cache" indicatorStyle="ring" size="large" className="text-accent" />
+                <Loading
+                  tip="Deploying edge cache"
+                  indicatorStyle="ring"
+                  size="large"
+                  className="text-accent"
+                />
               </div>
             </div>
           )}
@@ -306,7 +332,10 @@ const LoadingPage: FC = () => {
           tab={tabDelay}
           preview={() => (
             <div className="space-y-4" data-testid="loading-delay-demo">
-              <button className="btn btn-sm" onClick={() => (delayedSpinning.value = !delayedSpinning.value)}>
+              <button
+                className="btn btn-sm"
+                onClick={() => (delayedSpinning.value = !delayedSpinning.value)}
+              >
                 {delayedSpinning.value ? '结束请求' : '模拟请求'}
               </button>
               <Loading spinning={delayedSpinning.value} delay={600} description="延迟 600ms 后出现">
@@ -335,7 +364,10 @@ const LoadingPage: FC = () => {
           tab={tabCustom}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
-              <div className="card-body flex flex-wrap items-center gap-10" data-testid="loading-custom-demo">
+              <div
+                className="card-body flex flex-wrap items-center gap-10"
+                data-testid="loading-custom-demo"
+              >
                 <Loading indicator={<SparkIndicator />} description="Mapping signals" />
                 <Loading
                   percent={64}
@@ -370,11 +402,24 @@ const LoadingPage: FC = () => {
           tab={tabPercent}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
-              <div className="card-body flex flex-wrap items-center gap-10" data-testid="loading-percent-demo">
+              <div
+                className="card-body flex flex-wrap items-center gap-10"
+                data-testid="loading-percent-demo"
+              >
                 <Loading percent={18} description="Queued" size="small" />
                 <Loading percent={58} description="Uploading" className="text-primary" />
-                <Loading percent={92} description="Almost there" indicatorStyle="ring" className="text-success" />
-                <Loading percent="auto" description="Auto estimate" indicatorStyle="dots" className="text-accent" />
+                <Loading
+                  percent={92}
+                  description="Almost there"
+                  indicatorStyle="ring"
+                  className="text-success"
+                />
+                <Loading
+                  percent="auto"
+                  description="Auto estimate"
+                  indicatorStyle="dots"
+                  className="text-accent"
+                />
               </div>
             </div>
           )}
@@ -391,7 +436,10 @@ const LoadingPage: FC = () => {
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body items-start gap-4" data-testid="loading-fullscreen-demo">
-                <button className="btn btn-primary" onClick={() => (fullscreenSpinning.value = true)}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => (fullscreenSpinning.value = true)}
+                >
                   Show fullscreen
                 </button>
                 <p className="m-0 text-sm opacity-70">打开后点击遮罩关闭，避免示例页被永久盖住。</p>
@@ -440,7 +488,9 @@ const LoadingPage: FC = () => {
             >
               <div className="rounded-box bg-base-100 p-6 shadow-sm">
                 <div className="font-semibold">Container slot</div>
-                <p className="m-0 mt-1 text-sm opacity-70">The wrapped content keeps its own surface while the loader owns the overlay.</p>
+                <p className="m-0 mt-1 text-sm opacity-70">
+                  The wrapped content keeps its own surface while the loader owns the overlay.
+                </p>
               </div>
             </Loading>
           )}
@@ -460,19 +510,76 @@ const LoadingPage: FC = () => {
 </Loading>`}
         />
 
-        <ExampleBlock title="Loading spinner" tab={tabSpinner} preview={() => <div className="card bg-base-100 shadow-sm"><div className="card-body">{sizeRow('spinner', 'loading-spinner-demo')}</div></div>} code={styleCode('spinner')} />
-        <ExampleBlock title="Loading dots" tab={tabDots} preview={() => <div className="card bg-base-100 shadow-sm"><div className="card-body">{sizeRow('dots')}</div></div>} code={styleCode('dots')} />
-        <ExampleBlock title="Loading ring" tab={tabRing} preview={() => <div className="card bg-base-100 shadow-sm"><div className="card-body">{sizeRow('ring')}</div></div>} code={styleCode('ring')} />
-        <ExampleBlock title="Loading ball" tab={tabBall} preview={() => <div className="card bg-base-100 shadow-sm"><div className="card-body">{sizeRow('ball')}</div></div>} code={styleCode('ball')} />
-        <ExampleBlock title="Loading bars" tab={tabBars} preview={() => <div className="card bg-base-100 shadow-sm"><div className="card-body">{sizeRow('bars')}</div></div>} code={styleCode('bars')} />
-        <ExampleBlock title="Loading infinity" tab={tabInfinity} preview={() => <div className="card bg-base-100 shadow-sm"><div className="card-body">{sizeRow('infinity')}</div></div>} code={styleCode('infinity')} />
+        <ExampleBlock
+          title="Loading spinner"
+          tab={tabSpinner}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body">{sizeRow('spinner', 'loading-spinner-demo')}</div>
+            </div>
+          )}
+          code={styleCode('spinner')}
+        />
+        <ExampleBlock
+          title="Loading dots"
+          tab={tabDots}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body">{sizeRow('dots')}</div>
+            </div>
+          )}
+          code={styleCode('dots')}
+        />
+        <ExampleBlock
+          title="Loading ring"
+          tab={tabRing}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body">{sizeRow('ring')}</div>
+            </div>
+          )}
+          code={styleCode('ring')}
+        />
+        <ExampleBlock
+          title="Loading ball"
+          tab={tabBall}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body">{sizeRow('ball')}</div>
+            </div>
+          )}
+          code={styleCode('ball')}
+        />
+        <ExampleBlock
+          title="Loading bars"
+          tab={tabBars}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body">{sizeRow('bars')}</div>
+            </div>
+          )}
+          code={styleCode('bars')}
+        />
+        <ExampleBlock
+          title="Loading infinity"
+          tab={tabInfinity}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body">{sizeRow('infinity')}</div>
+            </div>
+          )}
+          code={styleCode('infinity')}
+        />
 
         <ExampleBlock
           title="Loading with colors"
           tab={tabColors}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
-              <div className="card-body flex flex-wrap items-center gap-4" data-testid="loading-colors-demo">
+              <div
+                className="card-body flex flex-wrap items-center gap-4"
+                data-testid="loading-colors-demo"
+              >
                 <Loading style="spinner" className="text-primary" />
                 <Loading style="spinner" className="text-secondary" />
                 <Loading style="spinner" className="text-accent" />

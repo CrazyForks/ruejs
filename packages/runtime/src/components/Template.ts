@@ -5,13 +5,7 @@ Template 组件概述
 - 属性语义：除 children 外的属性在运行时均忽略；普通原生 <template> 应由编译器保留为原生元素。
 */
 
-import {
-	type FC,
-	type PropsWithChildren,
-	renderAnchor,
-	renderBetween,
-	vapor,
-} from '../rue'
+import { type FC, type PropsWithChildren, renderAnchor, renderBetween, vapor } from '../rue'
 import { appendChild, createComment, createDocumentFragment } from '../dom'
 
 export type TemplateProps = PropsWithChildren<Record<string, unknown>>
@@ -19,19 +13,19 @@ export type TemplateProps = PropsWithChildren<Record<string, unknown>>
 type TemplateChildInput = Parameters<typeof renderBetween>[0]
 
 const toRenderable = (children: unknown): TemplateChildInput => {
-	if (Array.isArray(children)) {
-		return children.filter(child => child != null) as TemplateChildInput
-	}
-	return (children ?? []) as TemplateChildInput
+  if (Array.isArray(children)) {
+    return children.filter(child => child != null) as TemplateChildInput
+  }
+  return (children ?? []) as TemplateChildInput
 }
 
 export const Template: FC<TemplateProps> = props => {
-	return vapor(() => {
-		const root = createDocumentFragment()
-		const anchor = createComment('rue-template-anchor')
+  return vapor(() => {
+    const root = createDocumentFragment()
+    const anchor = createComment('rue-template-anchor')
 
-		appendChild(root, anchor)
-		renderAnchor(toRenderable(props.children) as any, root as any, anchor as any)
-		return root as any
-	})
+    appendChild(root, anchor)
+    renderAnchor(toRenderable(props.children) as any, root as any, anchor as any)
+    return root as any
+  })
 }

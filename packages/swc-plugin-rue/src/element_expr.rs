@@ -298,7 +298,18 @@ fn rewrite_map_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option
 
     let mut next = call.clone();
     next.visit_mut_children_with(vt);
-    Some(Expr::Call(next))
+
+    let fragment = JSXFragment {
+        span: DUMMY_SP,
+        opening: JSXOpeningFragment { span: DUMMY_SP },
+        children: vec![JSXElementChild::JSXExprContainer(JSXExprContainer {
+            span: DUMMY_SP,
+            expr: JSXExpr::Expr(Box::new(Expr::Call(next))),
+        })],
+        closing: JSXClosingFragment { span: DUMMY_SP },
+    };
+
+    Some(jsx_fragment_to_slot_expr(vt, &fragment))
 }
 
 fn rewrite_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {

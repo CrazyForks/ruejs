@@ -1,5 +1,7 @@
 use super::super::Rue;
-use super::super::types::{AnchorMountState, ComponentProps, MountInput, MountedState, RangeMountState};
+use super::super::types::{
+    AnchorMountState, ComponentProps, MountInput, MountedState, RangeMountState,
+};
 use crate::reactive::core::{create_effect_scope, dispose_effect_scope};
 use crate::reactive::signal::signal_from_proxy;
 use crate::runtime::dom_adapter::DomAdapter;

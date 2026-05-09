@@ -95,19 +95,37 @@ const BrandGlyph: FC<{ size?: number; className?: string }> = ({ size = 40, clas
 }
 
 const XIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" className="fill-current">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    className="fill-current"
+  >
     <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"></path>
   </svg>
 )
 
 const VideoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" className="fill-current">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    className="fill-current"
+  >
     <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"></path>
   </svg>
 )
 
 const CommunityIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" className="fill-current">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    className="fill-current"
+  >
     <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"></path>
   </svg>
 )
@@ -152,12 +170,7 @@ const exploreLinks = [
   { label: 'Pricing' },
 ]
 
-const appLinks = [
-  { label: 'Mac' },
-  { label: 'Windows' },
-  { label: 'Linux' },
-  { label: 'Android' },
-]
+const appLinks = [{ label: 'Mac' }, { label: 'Windows' }, { label: 'Linux' }, { label: 'Android' }]
 
 const baseSections: SectionConfig[] = [
   { key: 'services', title: 'Services', items: serviceLinks },
@@ -286,8 +299,9 @@ const FooterDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Footer 页脚</h1>
         <p className="text-sm mt-3 mb-3">
-          Footer 现在同时支持两种组织方式：可以继续像以前一样直接写 <code>nav</code>、<code>aside</code> 和
-          自定义 class，也可以改用 <code>brand</code>、<code>sections</code> 与 <code>Footer.Section</code>
+          Footer 现在同时支持两种组织方式：可以继续像以前一样直接写 <code>nav</code>、
+          <code>aside</code> 和 自定义 class，也可以改用 <code>brand</code>、<code>sections</code>{' '}
+          与 <code>Footer.Section</code>
           这组结构化 API，把品牌区、链接列和表单区拆开表达。
         </p>
 
@@ -308,7 +322,10 @@ const FooterDemo: FC = () => {
           summary="把最常见的三列 footer 改成 sections 数据驱动，仍然保留原来的视觉类名和响应式方向。"
           tab={tabRecommended}
           preview={() => (
-            <Footer className="p-10 bg-neutral text-neutral-content rounded sm:footer-horizontal" sections={baseSections} />
+            <Footer
+              className="p-10 bg-neutral text-neutral-content rounded sm:footer-horizontal"
+              sections={baseSections}
+            />
           )}
           code={`const sections = [
   {
@@ -408,7 +425,10 @@ const FooterDemo: FC = () => {
           summary="原始基础 demo 继续保留，这里改用 sections 表达同一个场景。"
           tab={tabBasic}
           preview={() => (
-            <Footer className="p-10 bg-neutral text-neutral-content rounded sm:footer-horizontal" sections={baseSections} />
+            <Footer
+              className="p-10 bg-neutral text-neutral-content rounded sm:footer-horizontal"
+              sections={baseSections}
+            />
           )}
           code={`<Footer className="p-10 bg-neutral text-neutral-content rounded sm:footer-horizontal" sections={sections} />`}
         />
@@ -645,7 +665,10 @@ const FooterDemo: FC = () => {
           summary="保留居中品牌场景；这里演示 center + 复合内容的组合。"
           tab={tabCenteredBrand}
           preview={() => (
-            <Footer className="bg-primary text-primary-content p-10 rounded footer-horizontal" center>
+            <Footer
+              className="bg-primary text-primary-content p-10 rounded footer-horizontal"
+              center
+            >
               <aside>
                 <BrandGlyph size={50} className="inline-block fill-current" />
                 <p className="font-bold">
@@ -653,7 +676,9 @@ const FooterDemo: FC = () => {
                   <br />
                   Providing reliable tech since 1992
                 </p>
-                <p className="text-sm mt-3 mb-3">Copyright © {new Date().getFullYear()} - All right reserved</p>
+                <p className="text-sm mt-3 mb-3">
+                  Copyright © {new Date().getFullYear()} - All right reserved
+                </p>
               </aside>
               <nav>
                 <div className="grid grid-flow-col gap-4">
@@ -740,7 +765,10 @@ const FooterDemo: FC = () => {
           tab={tabTwo}
           preview={() => (
             <div className="w-full">
-              <Footer className="bg-base-200 text-base-content p-10 sm:footer-horizontal" sections={baseSections} />
+              <Footer
+                className="bg-base-200 text-base-content p-10 sm:footer-horizontal"
+                sections={baseSections}
+              />
               <Footer className="bg-base-200 text-base-content px-10 py-4 border-t border-base-300">
                 <aside className="grid-flow-col items-center">
                   <BrandGlyph size={24} />
@@ -807,7 +835,8 @@ const FooterDemo: FC = () => {
               <code>Footer.Link</code>：默认输出带 <code>link link-hover</code> 的文本链接
             </div>
             <div>
-              <code>Footer.Section</code>：单列容器，支持 <code>title</code>、<code>items</code>、<code>content</code>
+              <code>Footer.Section</code>：单列容器，支持 <code>title</code>、<code>items</code>、
+              <code>content</code>
             </div>
           </div>
         </div>
@@ -816,19 +845,22 @@ const FooterDemo: FC = () => {
 
         <h3>什么时候用 sections，什么时候继续写 children？</h3>
         <p>
-          列结构比较规则时，优先用 <code>sections</code>，维护成本更低；如果某一列需要完全自定义布局，或者你已经有现成的
+          列结构比较规则时，优先用 <code>sections</code>
+          ，维护成本更低；如果某一列需要完全自定义布局，或者你已经有现成的
           <code>nav</code>/<code>aside</code> 模板，也可以继续直接写 <code>children</code>。
         </p>
 
         <h3>社交图标和订阅表单怎么放进去？</h3>
         <p>
-          这类内容更适合放到 <code>Footer.Section</code> 的 <code>content</code> 里；如果只是普通文本链接，再用
+          这类内容更适合放到 <code>Footer.Section</code> 的 <code>content</code>{' '}
+          里；如果只是普通文本链接，再用
           <code>items</code> 会更省代码。
         </p>
 
         <h3>direction 和 center 还需要保留吗？</h3>
         <p>
-          需要。它们仍然是最轻量的布局开关，适合和现有的 <code>sm:footer-horizontal</code>、<code>footer-center</code>
+          需要。它们仍然是最轻量的布局开关，适合和现有的 <code>sm:footer-horizontal</code>、
+          <code>footer-center</code>
           类名习惯一起工作，不会破坏旧页面的视觉结果。
         </p>
       </div>

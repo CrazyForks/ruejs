@@ -81,12 +81,10 @@ const startsJsxTag = (code, index) => {
   return isAlpha(next || '') || (next === '/' && isAlpha(afterNext || ''))
 }
 
-const normalizeDirectiveToken = raw =>
-  raw
-    .replace(/[^A-Za-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
+const normalizeDirectiveToken = raw => raw.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
 
-const isDirectiveModifierToken = raw => /^\d+$/.test(raw) || directiveModifierNames.has(raw.toLowerCase())
+const isDirectiveModifierToken = raw =>
+  /^\d+$/.test(raw) || directiveModifierNames.has(raw.toLowerCase())
 
 const splitDirectiveEventAndModifiers = raw => {
   const trimmed = raw.trim()
@@ -160,10 +158,7 @@ const splitModelDirectiveArgumentAndModifiers = raw => {
     return null
   }
 
-  const tokens = trimmed
-    .slice(1)
-    .split('-')
-    .filter(Boolean)
+  const tokens = trimmed.slice(1).split('-').filter(Boolean)
 
   if (tokens.length === 0) {
     return null
@@ -360,10 +355,7 @@ const parseRawModelSuffix = suffix => {
       return null
     }
 
-    const tokens = suffix
-      .slice(1)
-      .split('-')
-      .filter(Boolean)
+    const tokens = suffix.slice(1).split('-').filter(Boolean)
 
     if (tokens.length === 0) {
       return null
@@ -407,7 +399,8 @@ const parseSafeModelDirectiveName = raw => {
   const rest = raw.slice(MODEL_DIRECTIVE_SAFE_PREFIX.length)
   const splitIndex = rest.indexOf(MODEL_DIRECTIVE_SAFE_MODIFIERS_MARKER)
   const argRaw = splitIndex === -1 ? rest : rest.slice(0, splitIndex)
-  const modifierRaw = splitIndex === -1 ? '' : rest.slice(splitIndex + MODEL_DIRECTIVE_SAFE_MODIFIERS_MARKER.length)
+  const modifierRaw =
+    splitIndex === -1 ? '' : rest.slice(splitIndex + MODEL_DIRECTIVE_SAFE_MODIFIERS_MARKER.length)
   const rawArg = argRaw ? normalizeModelArg(argRaw) : null
   if (argRaw && !rawArg) {
     return null
@@ -597,7 +590,10 @@ const getStaticStringJsxAttr = (opening, name) => {
     return attr.value.value
   }
 
-  if (attr.value.type === 'JSXExpressionContainer' && attr.value.expression?.type === 'StringLiteral') {
+  if (
+    attr.value.type === 'JSXExpressionContainer' &&
+    attr.value.expression?.type === 'StringLiteral'
+  ) {
     return attr.value.expression.value
   }
 
@@ -621,13 +617,28 @@ const getNativeModelKind = opening => {
           return { kind: 'Radio' }
         case 'number':
         case 'range':
-          return { kind: 'TextInput', targetType: 'HTMLInputElement', eventName: 'onInput', autoNumber: true }
+          return {
+            kind: 'TextInput',
+            targetType: 'HTMLInputElement',
+            eventName: 'onInput',
+            autoNumber: true,
+          }
         default:
-          return { kind: 'TextInput', targetType: 'HTMLInputElement', eventName: 'onInput', autoNumber: false }
+          return {
+            kind: 'TextInput',
+            targetType: 'HTMLInputElement',
+            eventName: 'onInput',
+            autoNumber: false,
+          }
       }
     }
     default:
-      return { kind: 'TextInput', targetType: 'HTMLInputElement', eventName: 'onInput', autoNumber: false }
+      return {
+        kind: 'TextInput',
+        targetType: 'HTMLInputElement',
+        eventName: 'onInput',
+        autoNumber: false,
+      }
   }
 }
 
@@ -635,7 +646,10 @@ const buildModelModifiersObjectSource = modifiers =>
   `{${modifiers.map(modifier => `${JSON.stringify(modifier)}: true`).join(', ')}}`
 
 const buildComponentModelAttrSources = (spec, modelSource) => {
-  const attrs = [`${spec.propName}={${modelSource}}`, `${spec.updateName}={(value) => (${modelSource} = value)}`]
+  const attrs = [
+    `${spec.propName}={${modelSource}}`,
+    `${spec.updateName}={(value) => (${modelSource} = value)}`,
+  ]
   if (spec.modifiers.length > 0) {
     attrs.push(`${spec.modifiersPropName}={${buildModelModifiersObjectSource(spec.modifiers)}}`)
   }
@@ -655,22 +669,26 @@ const buildTextModelHandlerSource = (modelSource, valueSource, trim, number) => 
 }
 
 const buildCheckboxCheckedSource = (modelSource, valueSource, trueValueSource) => {
-  const scalar = trueValueSource ? `(${modelSource}) === (${trueValueSource})` : `!!(${modelSource})`
+  const scalar = trueValueSource
+    ? `(${modelSource}) === (${trueValueSource})`
+    : `!!(${modelSource})`
   return `Array.isArray(${modelSource}) ? ${modelSource}.includes(${valueSource}) : ${modelSource} instanceof Set ? ${modelSource}.has(${valueSource}) : ${scalar}`
 }
 
 const buildCheckboxHandlerSource = (modelSource, valueSource, trueValueSource, falseValueSource) =>
   `($event) => { const checked = ($event.target as HTMLInputElement).checked; const value = ${valueSource}; if (Array.isArray(${modelSource})) { ${modelSource} = checked ? (${modelSource}.includes(value) ? ${modelSource} : ${modelSource}.concat([value])) : ${modelSource}.filter(item => item !== value); return; } if (${modelSource} instanceof Set) { ${modelSource} = checked ? new Set([...${modelSource}, value]) : new Set(Array.from(${modelSource}).filter(item => item !== value)); return; } ${modelSource} = checked ? ${trueValueSource} : ${falseValueSource}; }`
 
-const buildRadioCheckedSource = (modelSource, valueSource) => `(${modelSource}) === (${valueSource})`
+const buildRadioCheckedSource = (modelSource, valueSource) =>
+  `(${modelSource}) === (${valueSource})`
 
 const buildRadioHandlerSource = (modelSource, valueSource) =>
   `($event) => { if (($event.target as HTMLInputElement).checked) { ${modelSource} = ${valueSource}; } }`
 
 const buildSelectMultipleHandlerSource = (modelSource, trim, number) => {
-  const mapper = trim || number
-    ? `Array.from(($event.target as HTMLSelectElement).selectedOptions).map(option => { let value = option.value;${trim ? 'value = value.trim();' : ''}${number ? 'const parsed = parseFloat(value);value = Number.isNaN(parsed) ? value : parsed;' : ''}return value; })`
-    : 'Array.from(($event.target as HTMLSelectElement).selectedOptions).map(option => option.value)'
+  const mapper =
+    trim || number
+      ? `Array.from(($event.target as HTMLSelectElement).selectedOptions).map(option => { let value = option.value;${trim ? 'value = value.trim();' : ''}${number ? 'const parsed = parseFloat(value);value = Number.isNaN(parsed) ? value : parsed;' : ''}return value; })`
+      : 'Array.from(($event.target as HTMLSelectElement).selectedOptions).map(option => option.value)'
 
   return `($event) => { ${modelSource} = ${mapper}; }`
 }
@@ -740,7 +758,11 @@ const parseOpeningAttributeNodes = (tagSource, attrSources) => {
   }
 
   const helperSource = `const __rue_model_lowered = <${tagSource} ${attrSources.join(' ')} />`
-  const helperAst = swc.parseSync(helperSource, { syntax: 'typescript', tsx: true, target: 'es2020' })
+  const helperAst = swc.parseSync(helperSource, {
+    syntax: 'typescript',
+    tsx: true,
+    target: 'es2020',
+  })
   return helperAst.body[0].declarations[0].init.opening.attributes
 }
 
@@ -771,7 +793,9 @@ const lowerModelDirectiveAttributesInOpening = opening => {
 
   const tagSource = getJsxNameText(opening.name)
   const generatedAttrSources = isComponentOpening(opening)
-    ? directives.flatMap(({ spec, modelSource }) => buildComponentModelAttrSources(spec, modelSource))
+    ? directives.flatMap(({ spec, modelSource }) =>
+        buildComponentModelAttrSources(spec, modelSource),
+      )
     : buildNativeModelAttrSources(opening, directives[0].spec, directives[0].modelSource)
 
   const namesToReplace = new Set(generatedAttrSources.map(getAttrNameFromSource).filter(Boolean))
@@ -792,7 +816,11 @@ const lowerModelDirectiveAttributesInOpening = opening => {
 }
 
 const lowerModelDirectiveAttributes = code => {
-  if (!code.includes('v-model') && !code.includes('r-model') && !code.includes(MODEL_DIRECTIVE_SAFE_PREFIX)) {
+  if (
+    !code.includes('v-model') &&
+    !code.includes('r-model') &&
+    !code.includes(MODEL_DIRECTIVE_SAFE_PREFIX)
+  ) {
     return code
   }
 
@@ -910,7 +938,7 @@ const rewriteDirectiveAttributes = code => {
         continue
       }
 
-      if (ch === '\'' || ch === '"' || ch === '`') {
+      if (ch === "'" || ch === '"' || ch === '`') {
         quote = ch
         output += ch
         index += 1
@@ -982,7 +1010,7 @@ const rewriteDirectiveAttributes = code => {
       continue
     }
 
-    if (ch === '\'' || ch === '"' || ch === '`') {
+    if (ch === "'" || ch === '"' || ch === '`') {
       tagQuote = ch
       output += ch
       index += 1
@@ -1141,6 +1169,37 @@ const deserializeWorkerError = rawError => {
   return error
 }
 
+const createSwcTransformOptions = ({ pluginPath, isProduction }) => ({
+  filename: 'rue.tsx',
+  jsc: {
+    parser: { syntax: 'typescript', tsx: true },
+    target: 'es2020',
+    transform: {
+      react: {
+        runtime: 'automatic',
+        importSource: '@rue-js',
+        development: !isProduction,
+        throwIfNamespace: false,
+      },
+    },
+    experimental: {
+      plugins: [[pluginPath, {}]],
+    },
+  },
+  minify: isProduction,
+})
+
+const runSwcTransformInline = async ({ code, pluginPath }) => {
+  const out = await swc.transform(
+    code,
+    createSwcTransformOptions({
+      pluginPath,
+      isProduction: process.env.NODE_ENV === 'production',
+    }),
+  )
+  return String(out?.code ?? '')
+}
+
 const runSwcTransformInWorker = ({ code, id, pluginPath, timeoutMs }) =>
   new Promise((resolve, reject) => {
     let settled = false
@@ -1226,6 +1285,7 @@ export default function VitePluginRue(options = {}) {
     transformTimeoutMs = DEFAULT_TRANSFORM_TIMEOUT_MS,
     transformExecutor = runSwcTransformInWorker,
   } = options
+  let activeTransformExecutor = transformExecutor
 
   /**
    * 判断文件是否需要被插件处理
@@ -1261,7 +1321,7 @@ export default function VitePluginRue(options = {}) {
 
     try {
       const out = await withTransformTimeout(
-        transformExecutor({
+        activeTransformExecutor({
           code: loweredModel,
           id,
           pluginPath,
@@ -1331,7 +1391,12 @@ export default function VitePluginRue(options = {}) {
       // 返回转换后的代码与空映射
       return { code: out, map: null }
     },
-    /** Vite 配置解析完成钩子（占位） */
-    configResolved() {},
+    /** Vite 配置解析完成钩子 */
+    configResolved(config) {
+      activeTransformExecutor =
+        config.command === 'build' && transformExecutor === runSwcTransformInWorker
+          ? runSwcTransformInline
+          : transformExecutor
+    },
   }
 }

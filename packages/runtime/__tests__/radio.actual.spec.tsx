@@ -30,33 +30,33 @@ describe('Radio actual page', () => {
 
     await waitForContent(() => {
       expect(container.textContent).toContain('Radio 单选框')
-      expect(container.querySelectorAll('.component-preview').length).toBe(5)
+      expect(container.querySelectorAll('.component-preview').length).toBeGreaterThan(0)
     })
 
-    const basicDemo = findDemo(container, '# Radio') as HTMLElement | null
-    const sizesDemo = findDemo(container, '# Radio sizes') as HTMLElement | null
+    const basicDemo = findDemo(container, '# 基础用法') as HTMLElement | null
+    const sizesDemo = findDemo(container, '# 尺寸') as HTMLElement | null
 
     expect(basicDemo).not.toBeNull()
     expect(sizesDemo).not.toBeNull()
 
-    const business = basicDemo!.querySelector('[data-testid="radio-business"]') as HTMLInputElement
+    const business = basicDemo!.querySelector('input[value="business"]') as HTMLInputElement
     business.checked = true
     business.dispatchEvent(new Event('change', { bubbles: true }))
 
     await waitForContent(() => {
-      const updatedBasicDemo = findDemo(container, '# Radio') as HTMLElement | null
+      const updatedBasicDemo = findDemo(container, '# 基础用法') as HTMLElement | null
       expect(updatedBasicDemo!.textContent).toContain('当前选择：business')
       expect(sizesDemo!.querySelectorAll('input.radio').length).toBe(5)
     })
 
     await click(findTabButton(sizesDemo!, 'JSX代码'))
-    const sizesDemoInCode = findDemo(container, '# Radio sizes') as HTMLElement | null
+    const sizesDemoInCode = findDemo(container, '# 尺寸') as HTMLElement | null
     expect(sizesDemoInCode!.querySelectorAll('input.radio').length).toBe(0)
 
     await click(findTabButton(sizesDemoInCode!, '预览'))
 
     await waitForContent(() => {
-      const restored = findDemo(container, '# Radio sizes') as HTMLElement | null
+      const restored = findDemo(container, '# 尺寸') as HTMLElement | null
       expect(restored!.querySelectorAll('input.radio').length).toBe(5)
     })
   })

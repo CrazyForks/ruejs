@@ -1,8 +1,8 @@
 use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
 
-use super::mounted::{MountLifecycleRecord, MountedSubtreeChild};
 use super::ComponentProps;
+use super::mounted::{MountLifecycleRecord, MountedSubtreeChild};
 
 #[derive(Clone)]
 pub(crate) enum MountedCompatLifecycleKind {
@@ -46,13 +46,7 @@ impl<A: DomAdapter> MountedCompatPatchState<A> {
         mount_cleanup_bucket: Option<JsValue>,
         mount_effect_scope_id: Option<usize>,
     ) -> Self {
-        Self {
-            kind: Some(kind),
-            props,
-            children,
-            mount_cleanup_bucket,
-            mount_effect_scope_id,
-        }
+        Self { kind: Some(kind), props, children, mount_cleanup_bucket, mount_effect_scope_id }
     }
 
     pub fn empty() -> Self {

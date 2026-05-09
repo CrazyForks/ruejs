@@ -93,7 +93,11 @@ const EyeIcon = () => (
     strokeWidth="2"
     className="size-4"
   >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"
+    />
     <circle cx="12" cy="12" r="3" />
   </svg>
 )
@@ -107,7 +111,11 @@ const SparkIcon = () => (
     strokeWidth="2"
     className="size-4"
   >
-    <path strokeLinecap="round" strokeLinejoin="round" d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z"
+    />
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 19h.01M12 21h.01M19 19h.01" />
   </svg>
 )
@@ -282,7 +290,7 @@ const cardApiRows: ApiRow[] = [
   {
     prop: 'tabList',
     description: '头部 tabs 配置列表，支持 disabled 与 className',
-    type: "Array<{ key: string; label?: any; tab?: any; disabled?: boolean; className?: string }>",
+    type: 'Array<{ key: string; label?: any; tab?: any; disabled?: boolean; className?: string }>',
     defaultValue: '-',
   },
   {
@@ -616,9 +624,12 @@ const CardDemo: FC = () => {
     <SidebarPlayground>
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Card 卡片</h1>
-        <p className="text-sm mt-3 mb-3">Card 用于把内容、媒体、操作和状态浓缩进一块易读的表面里。</p>
+        <p className="text-sm mt-3 mb-3">
+          Card 用于把内容、媒体、操作和状态浓缩进一块易读的表面里。
+        </p>
         <p className="text-sm my-3 opacity-75">
-          这一轮增强保留了 Rue 当前的视觉语气和 daisyUI class 直连能力，同时补上更接近业务组件的头部、封面、操作栏、Meta、Grid、loading 和 tabs API。
+          这一轮增强保留了 Rue 当前的视觉语气和 daisyUI class
+          直连能力，同时补上更接近业务组件的头部、封面、操作栏、Meta、Grid、loading 和 tabs API。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/card/" target="_blank">
@@ -636,7 +647,13 @@ const CardDemo: FC = () => {
               <Card
                 title="Q2 产品指标"
                 extra={<Badge variant="secondary">Live</Badge>}
-                cover={<img src={workspaceImage} alt="Workspace dashboard" className="h-56 w-full object-cover" />}
+                cover={
+                  <img
+                    src={workspaceImage}
+                    alt="Workspace dashboard"
+                    className="h-56 w-full object-cover"
+                  />
+                }
                 actions={[
                   <Button type="text" size="sm">
                     <span className="inline-flex items-center gap-2">
@@ -665,7 +682,8 @@ const CardDemo: FC = () => {
               </Card>
               <Card type="inner" title="为什么要这样用" className="bg-base-100 shadow-sm">
                 <p className="text-sm leading-6 opacity-75">
-                  语义化 API 适合把常见结构固定下来，减少反复手写 header、body、actions 和 tabs 布局。
+                  语义化 API 适合把常见结构固定下来，减少反复手写 header、body、actions 和 tabs
+                  布局。
                 </p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-box bg-base-200/70 p-4">
@@ -712,11 +730,19 @@ const CardDemo: FC = () => {
           code={metaCode}
           preview={() => (
             <Card
-              cover={<img src={reportImage} alt="Team workspace" className="h-52 w-full object-cover" />}
+              cover={
+                <img src={reportImage} alt="Team workspace" className="h-52 w-full object-cover" />
+              }
               actions={[
-                <Button type="text" size="sm">收藏</Button>,
-                <Button type="text" size="sm">分享</Button>,
-                <Button color="primary" size="sm">打开空间</Button>,
+                <Button type="text" size="sm">
+                  收藏
+                </Button>,
+                <Button type="text" size="sm">
+                  分享
+                </Button>,
+                <Button color="primary" size="sm">
+                  打开空间
+                </Button>,
               ]}
               className="overflow-hidden bg-base-100 shadow-sm"
             >
@@ -733,7 +759,8 @@ const CardDemo: FC = () => {
                   </div>
                 </Card.Meta>
                 <div className="rounded-box bg-base-200/60 p-4 text-sm leading-6 opacity-80">
-                  这类卡片适合团队空间、作者信息、文章摘要、资源入口等需要“头像 + 文案 + 操作”的场景。
+                  这类卡片适合团队空间、作者信息、文章摘要、资源入口等需要“头像 + 文案 +
+                  操作”的场景。
                 </div>
               </Card.Body>
             </Card>
@@ -806,7 +833,10 @@ const CardDemo: FC = () => {
                 <div className="grid gap-3 sm:grid-cols-3">
                   {['UI', 'DX', 'QA'].map(label => (
                     <div key={label} className="rounded-box bg-base-200/70 p-4 text-center">
-                      <MiniAvatar text={label} className="mx-auto bg-secondary text-secondary-content" />
+                      <MiniAvatar
+                        text={label}
+                        className="mx-auto bg-secondary text-secondary-content"
+                      />
                       <div className="mt-3 font-medium">{label} Owner</div>
                     </div>
                   ))}
@@ -826,7 +856,8 @@ const CardDemo: FC = () => {
               <Card loading title="同步远程指标" className="bg-base-100 shadow-sm" />
               <Card type="inner" title="内嵌提示" className="bg-base-100 shadow-sm">
                 <p className="text-sm leading-6 opacity-75">
-                  inner 卡片更适合放在正文、抽屉或主卡片内部作为次级说明层，不会抢掉主信息面的视觉焦点。
+                  inner
+                  卡片更适合放在正文、抽屉或主卡片内部作为次级说明层，不会抢掉主信息面的视觉焦点。
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Badge outline>发布前检查</Badge>
@@ -843,7 +874,11 @@ const CardDemo: FC = () => {
           tab={tabGrid}
           code={gridCode}
           preview={() => (
-            <Card title="常用入口" bodyClassName="!p-0" className="overflow-hidden bg-base-100 shadow-sm">
+            <Card
+              title="常用入口"
+              bodyClassName="!p-0"
+              className="overflow-hidden bg-base-100 shadow-sm"
+            >
               <div className="grid gap-px bg-base-300/70 sm:grid-cols-2 xl:grid-cols-4">
                 <Card.Grid>
                   <div className="text-xs uppercase tracking-[0.16em] opacity-60">Docs</div>
@@ -935,7 +970,9 @@ const CardDemo: FC = () => {
               <Card size="xl" className="bg-base-100 shadow-sm lg:col-span-2">
                 <Card.Body>
                   <Card.Title>Xlarge Card</Card.Title>
-                  <p className="text-sm leading-6 opacity-75">适合宽幅内容摘要、品牌故事和大段说明。</p>
+                  <p className="text-sm leading-6 opacity-75">
+                    适合宽幅内容摘要、品牌故事和大段说明。
+                  </p>
                 </Card.Body>
               </Card>
             </div>
@@ -949,7 +986,10 @@ const CardDemo: FC = () => {
           code={contentCode}
           preview={() => (
             <div className="grid gap-6 xl:grid-cols-3">
-              <Card className="overflow-hidden bg-base-100 shadow-sm" cover={<img src={shoeImage} alt="Shoes" />}>
+              <Card
+                className="overflow-hidden bg-base-100 shadow-sm"
+                cover={<img src={shoeImage} alt="Shoes" />}
+              >
                 <Card.Body>
                   <Card.Title>
                     Card Title <Badge variant="secondary">NEW</Badge>
@@ -1002,13 +1042,17 @@ const CardDemo: FC = () => {
               <Card variant="outlined" className="bg-base-100">
                 <Card.Body>
                   <Card.Title>Outlined</Card.Title>
-                  <p className="text-sm leading-6 opacity-75">经典描边信息卡，适合列表页和设置页。</p>
+                  <p className="text-sm leading-6 opacity-75">
+                    经典描边信息卡，适合列表页和设置页。
+                  </p>
                 </Card.Body>
               </Card>
               <Card variant="dashed" className="bg-base-100">
                 <Card.Body>
                   <Card.Title>Dashed</Card.Title>
-                  <p className="text-sm leading-6 opacity-75">更像引导态或占位态，用来提示下一步动作。</p>
+                  <p className="text-sm leading-6 opacity-75">
+                    更像引导态或占位态，用来提示下一步动作。
+                  </p>
                 </Card.Body>
               </Card>
               <Card className="bg-primary text-primary-content shadow-sm">
@@ -1049,7 +1093,10 @@ const CardDemo: FC = () => {
           code={mediaCode}
           preview={() => (
             <div className="grid gap-6 xl:grid-cols-2">
-              <Card className="overflow-hidden bg-base-100 shadow-sm" cover={<img src={shoeImage} alt="Shoes" />}>
+              <Card
+                className="overflow-hidden bg-base-100 shadow-sm"
+                cover={<img src={shoeImage} alt="Shoes" />}
+              >
                 <Card.Body>
                   <Card.Title>Card Title</Card.Title>
                   <p className="text-sm leading-6 opacity-75">最常见的顶部封面布局。</p>
@@ -1062,7 +1109,9 @@ const CardDemo: FC = () => {
               <Card className="bg-base-100 shadow-sm">
                 <Card.Body>
                   <Card.Title>Bottom Image</Card.Title>
-                  <p className="text-sm leading-6 opacity-75">把媒体放到内容之后，适合做故事卡片。</p>
+                  <p className="text-sm leading-6 opacity-75">
+                    把媒体放到内容之后，适合做故事卡片。
+                  </p>
                 </Card.Body>
                 <figure>
                   <img src={shoeImage} alt="Shoes" />
@@ -1082,10 +1131,16 @@ const CardDemo: FC = () => {
                 </Card.Body>
               </Card>
 
-              <Card imageFull className="overflow-hidden bg-base-100 shadow-sm" cover={<img src={shoeImage} alt="Shoes" />}>
+              <Card
+                imageFull
+                className="overflow-hidden bg-base-100 shadow-sm"
+                cover={<img src={shoeImage} alt="Shoes" />}
+              >
                 <Card.Body>
                   <Card.Title>Image Overlay</Card.Title>
-                  <p className="text-sm leading-6 opacity-90">imageFull 让封面进入背景层，适合做大图氛围卡。</p>
+                  <p className="text-sm leading-6 opacity-90">
+                    imageFull 让封面进入背景层，适合做大图氛围卡。
+                  </p>
                   <Card.Actions className="justify-end">
                     <Button color="primary">Buy Now</Button>
                   </Card.Actions>
@@ -1108,7 +1163,9 @@ const CardDemo: FC = () => {
                 </figure>
                 <Card.Body>
                   <Card.Title>New movie is released!</Card.Title>
-                  <p className="text-sm leading-6 opacity-75">Click the button to watch on Jetflix app.</p>
+                  <p className="text-sm leading-6 opacity-75">
+                    Click the button to watch on Jetflix app.
+                  </p>
                   <Card.Actions className="justify-end">
                     <Button color="primary">Watch</Button>
                   </Card.Actions>
@@ -1121,7 +1178,9 @@ const CardDemo: FC = () => {
                 </figure>
                 <Card.Body>
                   <Card.Title>New album is released!</Card.Title>
-                  <p className="text-sm leading-6 opacity-75">Click the button to listen on Spotiwhy app.</p>
+                  <p className="text-sm leading-6 opacity-75">
+                    Click the button to listen on Spotiwhy app.
+                  </p>
                   <Card.Actions className="justify-end">
                     <Button color="primary">Listen</Button>
                   </Card.Actions>
@@ -1135,7 +1194,8 @@ const CardDemo: FC = () => {
           <div>
             <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold"># API</h2>
             <p className="m-0 text-sm opacity-70">
-              Rue Card 现在同时支持“语义化根组件 API”和“低层复合子组件 API”。如果你已经习惯直接写 daisyUI 结构，也仍然可以继续混用。 
+              Rue Card 现在同时支持“语义化根组件 API”和“低层复合子组件 API”。如果你已经习惯直接写
+              daisyUI 结构，也仍然可以继续混用。
             </p>
           </div>
 
@@ -1156,9 +1216,12 @@ const CardDemo: FC = () => {
 
           <div className="rounded-box border border-base-300 bg-base-100 p-5 text-sm leading-7">
             <div className="text-xs uppercase tracking-[0.18em] opacity-60">低层复合结构</div>
-            <div className="mt-3 font-medium">Card.Body / Card.Title / Card.Actions / Card.Figure</div>
+            <div className="mt-3 font-medium">
+              Card.Body / Card.Title / Card.Actions / Card.Figure
+            </div>
             <p className="mt-2 mb-0 opacity-75">
-              这四个子组件保持和旧版一样的职责：当你想完全接管布局顺序时，继续直接拼结构即可；当你只想快速生成头部、封面和操作区时，再切到根组件的语义化 props。
+              这四个子组件保持和旧版一样的职责：当你想完全接管布局顺序时，继续直接拼结构即可；当你只想快速生成头部、封面和操作区时，再切到根组件的语义化
+              props。
             </p>
           </div>
         </div>

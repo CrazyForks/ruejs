@@ -1,12 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { h, ref, render, setReactiveScheduling } from '../src'
-import {
-  _$createComponent,
-  renderAnchor,
-  vapor,
-  watchEffect,
-} from '../src/vapor'
+import { _$createComponent, renderAnchor, vapor, watchEffect } from '../src/vapor'
 
 setReactiveScheduling('sync')
 

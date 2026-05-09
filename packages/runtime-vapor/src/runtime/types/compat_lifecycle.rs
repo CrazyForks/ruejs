@@ -38,7 +38,7 @@ where
             (MountLifecycleKind::Compat(MountedCompatLifecycleKind::Element), None, None)
         }
         (MountedPatchSubtreeType::Component(_), _) | (MountedPatchSubtreeType::Compat, None) => {
-            return None
+            return None;
         }
     };
 

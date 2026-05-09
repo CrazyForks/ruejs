@@ -199,7 +199,8 @@ const DiffDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Diff 对比</h1>
         <p className="text-sm mt-3 mb-3">
-          Diff 现在除了保留原来的组合式结构，还补上一套更顺手的快捷 API。可以直接传内容和位置值，也可以继续用
+          Diff 现在除了保留原来的组合式结构，还补上一套更顺手的快捷
+          API。可以直接传内容和位置值，也可以继续用
           <code>Diff.Item1</code>、<code>Diff.Item2</code>、<code>Diff.Resizer</code> 自己拼装。
         </p>
 
@@ -233,7 +234,9 @@ const DiffDemo: FC = () => {
                     <div className="h-full w-full bg-[#112031] p-6 text-white">
                       <div className="flex h-full flex-col justify-between">
                         <div className="space-y-3">
-                          <div className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Rue Cloud</div>
+                          <div className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">
+                            Rue Cloud
+                          </div>
                           <div className="max-w-[14rem] text-3xl font-semibold leading-tight">
                             Ship design changes with one source of truth
                           </div>
@@ -256,7 +259,9 @@ const DiffDemo: FC = () => {
                     <div className="h-full w-full bg-base-200 p-6 text-base-content">
                       <div className="flex h-full flex-col justify-between rounded-box border border-base-300 bg-base-100 p-5 shadow-sm">
                         <div className="space-y-3">
-                          <div className="text-xs uppercase tracking-[0.3em] opacity-60">Rue Cloud</div>
+                          <div className="text-xs uppercase tracking-[0.3em] opacity-60">
+                            Rue Cloud
+                          </div>
                           <div className="max-w-[14rem] text-3xl font-semibold leading-tight">
                             Design review feels calmer and more editorial
                           </div>
@@ -377,7 +382,9 @@ const DiffDemo: FC = () => {
                   item1={
                     <div className="grid h-full w-full place-content-center bg-slate-950 text-center text-white">
                       <div className="space-y-2">
-                        <div className="text-xs uppercase tracking-[0.35em] text-fuchsia-200/70">Old palette</div>
+                        <div className="text-xs uppercase tracking-[0.35em] text-fuchsia-200/70">
+                          Old palette
+                        </div>
                         <div className="text-5xl font-black">RUE</div>
                         <div className="mx-auto h-2 w-28 rounded-full bg-fuchsia-500" />
                       </div>
@@ -386,7 +393,9 @@ const DiffDemo: FC = () => {
                   item2={
                     <div className="grid h-full w-full place-content-center bg-neutral-100 text-center text-slate-900">
                       <div className="space-y-2">
-                        <div className="text-xs uppercase tracking-[0.35em] text-cyan-700/60">New palette</div>
+                        <div className="text-xs uppercase tracking-[0.35em] text-cyan-700/60">
+                          New palette
+                        </div>
                         <div className="text-5xl font-black">RUE</div>
                         <div className="mx-auto h-2 w-28 rounded-full bg-cyan-500" />
                       </div>
@@ -460,7 +469,10 @@ const DiffDemo: FC = () => {
                     <div className="h-full w-full bg-base-300 p-4 text-xs text-base-content">
                       <div className="grid h-full grid-cols-3 gap-2">
                         {Array.from({ length: 12 }).map((_, index) => (
-                          <div key={index} className="rounded-box border border-base-100 bg-base-100 p-2">
+                          <div
+                            key={index}
+                            className="rounded-box border border-base-100 bg-base-100 p-2"
+                          >
                             <div className="h-2 w-8 rounded-full bg-primary/70" />
                             <div className="mt-2 space-y-1">
                               <div className="h-1.5 rounded-full bg-base-300" />
@@ -622,7 +634,8 @@ const DiffDemo: FC = () => {
               <code>item1 / item2</code> 适合快速搭 demo、做受控联动、补标签和默认手柄内容。
             </div>
             <div>
-              <code>children + Diff.Item1 / Item2 / Resizer</code> 适合保留旧结构，或自己完全掌控内部布局。
+              <code>children + Diff.Item1 / Item2 / Resizer</code>{' '}
+              适合保留旧结构，或自己完全掌控内部布局。
             </div>
           </div>
         </div>
@@ -631,19 +644,22 @@ const DiffDemo: FC = () => {
 
         <h3>快捷模式和组合式模式怎么选？</h3>
         <p>
-          如果你只是想比较两个内容块，优先用 <code>item1</code> 和 <code>item2</code>。如果你已经有现成结构，
-          或者需要完全接管内部节点顺序，就继续用旧的组合式写法。
+          如果你只是想比较两个内容块，优先用 <code>item1</code> 和 <code>item2</code>
+          。如果你已经有现成结构， 或者需要完全接管内部节点顺序，就继续用旧的组合式写法。
         </p>
 
         <h3>value 和 defaultValue 有什么区别？</h3>
         <p>
-          <code>value</code> 是受控值，外部状态说了算；<code>defaultValue</code> 只决定初始位置，之后由组件内部维护。
+          <code>value</code> 是受控值，外部状态说了算；<code>defaultValue</code>{' '}
+          只决定初始位置，之后由组件内部维护。
         </p>
 
         <h3>传了 children 之后 value 还会生效吗？</h3>
         <p>
-          当前版本里，<code>children</code> 会切换到组合式模式，因此 <code>value</code>、<code>defaultValue</code>
-          这些快捷模式能力不会接管内部布局。需要受控拖动时，优先使用 <code>item1</code> / <code>item2</code>。
+          当前版本里，<code>children</code> 会切换到组合式模式，因此 <code>value</code>、
+          <code>defaultValue</code>
+          这些快捷模式能力不会接管内部布局。需要受控拖动时，优先使用 <code>item1</code> /{' '}
+          <code>item2</code>。
         </p>
       </div>
     </SidebarPlayground>

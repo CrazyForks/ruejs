@@ -76,7 +76,7 @@ export const withParentContextProps = <T extends Record<string, unknown> | null>
   return props
 }
 
-export const createContext = <T,>(defaultValue: T): RueContext<T> => {
+export const createContext = <T>(defaultValue: T): RueContext<T> => {
   const context = {
     defaultValue,
     Provider: (props: ContextProviderProps<T>) => {
@@ -90,7 +90,7 @@ export const createContext = <T,>(defaultValue: T): RueContext<T> => {
   return context
 }
 
-export const useContext = <T,>(context: RueContext<T>): T => {
+export const useContext = <T>(context: RueContext<T>): T => {
   const currentInstance = getCurrentInstance()
   const store = getContextValueStore(currentInstance)
 

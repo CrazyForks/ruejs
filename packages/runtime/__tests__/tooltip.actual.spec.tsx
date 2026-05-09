@@ -41,9 +41,11 @@ describe('Tooltip actual page', () => {
     expect(openDemo).not.toBeNull()
 
     await waitForContent(() => {
-      expect((basicDemo!.querySelector('[data-testid="tooltip-basic"]') as HTMLElement).getAttribute('data-tip')).toBe(
-        '用于解释按钮含义',
-      )
+      expect(
+        (basicDemo!.querySelector('[data-testid="tooltip-basic"]') as HTMLElement).getAttribute(
+          'data-tip',
+        ),
+      ).toBe('用于解释按钮含义')
       expect(placementsDemo!.querySelectorAll('.tooltip').length).toBe(4)
       expect(openDemo!.querySelector('.tooltip-open')).not.toBeNull()
     })

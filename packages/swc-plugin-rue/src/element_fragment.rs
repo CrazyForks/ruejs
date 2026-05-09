@@ -37,6 +37,19 @@ pub fn emit_fragment_children(
                         false
                     };
 
+                    if !is_children {
+                        if let Expr::Call(call) = inner_top {
+                            if crate::element_list::try_build_list_from_map(
+                                vt,
+                                parent_ident,
+                                call,
+                                stmts,
+                            ) {
+                                continue;
+                            }
+                        }
+                    }
+
                     // children 槽值直接渲染；其它表达式统一改写为可挂载槽值表达式
                     let expr_for_slot = if is_children {
                         inner_top.clone()

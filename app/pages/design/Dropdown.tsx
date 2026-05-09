@@ -68,7 +68,11 @@ const ControlledDropdownPreview: FC = () => {
             ],
           }}
         >
-          <button type="button" className="btn btn-primary" data-testid="dropdown-controlled-trigger">
+          <button
+            type="button"
+            className="btn btn-primary"
+            data-testid="dropdown-controlled-trigger"
+          >
             {open.value ? '关闭菜单' : '打开菜单'}
           </button>
         </Dropdown>
@@ -108,7 +112,8 @@ const ControlledDropdownPreview: FC = () => {
 const rootApiRows: ApiRow[] = [
   {
     prop: 'menu / items',
-    description: '推荐的数据驱动入口。直接渲染命令菜单，支持 divider、group、submenu、selectable 等能力。',
+    description:
+      '推荐的数据驱动入口。直接渲染命令菜单，支持 divider、group、submenu、selectable 等能力。',
     type: 'DropdownMenuProps / MenuDataEntry[]',
     defaultValue: '-',
   },
@@ -120,7 +125,8 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'open / defaultOpen / onOpenChange',
-    description: '受控与非受控显隐；回调会额外返回 source，便于区分 trigger、menu、outside、escape。',
+    description:
+      '受控与非受控显隐；回调会额外返回 source，便于区分 trigger、menu、outside、escape。',
     type: 'boolean / boolean / (open, info) => void',
     defaultValue: 'false / false / -',
   },
@@ -205,7 +211,11 @@ const DropdownPage: FC = () => {
       type: 'group',
       label: 'Workspace',
       children: [
-        { key: 'overview', label: 'Overview', extra: <span className="badge badge-primary badge-xs">Live</span> },
+        {
+          key: 'overview',
+          label: 'Overview',
+          extra: <span className="badge badge-primary badge-xs">Live</span>,
+        },
         { key: 'activity', label: 'Activity Feed' },
       ],
     },
@@ -235,9 +245,10 @@ const DropdownPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Dropdown 下拉菜单</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue 的 Dropdown 现在同时支持两条路径：一条是保留当前视觉风格与 daisyUI 原生结构的兼容写法；另一条是更接近
-          ant-design 的增强 API，直接支持 <code>menu / items</code>、<code>trigger</code>、<code>placement</code>、
-          <code>open</code>、<code>popupRender</code> 和右键菜单。
+          Rue 的 Dropdown 现在同时支持两条路径：一条是保留当前视觉风格与 daisyUI
+          原生结构的兼容写法；另一条是更贴近业务组件习惯的增强 API，直接支持{' '}
+          <code>menu / items</code>、<code>trigger</code>、<code>placement</code>、<code>open</code>
+          、<code>popupRender</code> 和右键菜单。
         </p>
         <div className="text-sm flex flex-wrap gap-4">
           <a href="https://daisyui.com/components/dropdown/" target="_blank">
@@ -247,21 +258,28 @@ const DropdownPage: FC = () => {
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-primary">推荐写法</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-primary">
+              推荐写法
+            </div>
             <div className="mt-2 text-sm font-medium">用 menu / items 描述命令菜单</div>
             <p className="mt-2 text-sm opacity-70">
               更适合操作菜单、用户菜单、列表行操作和上下文菜单，不必再手写浮层结构。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">daisyUI 原始写法</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              daisyUI 原始写法
+            </div>
             <div className="mt-2 text-sm font-medium">原始写法可用</div>
             <p className="mt-2 text-sm opacity-70">
-              <code>details</code>、<code>popover</code>、<code>focus</code>、位置类和 modifier 都没有删除。
+              <code>details</code>、<code>popover</code>、<code>focus</code>、位置类和 modifier
+              都没有删除。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-accent">交互补齐</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-accent">
+              交互补齐
+            </div>
             <div className="mt-2 text-sm font-medium">受控、右键、可选中、自定义面板</div>
             <p className="mt-2 text-sm opacity-70">
               适合业务菜单、筛选菜单、带说明区的弹层菜单，以及需要区分关闭来源的场景。
@@ -395,7 +413,8 @@ const source = ref('trigger');
                 <div>单选：{selectedKeys.value.join(', ') || '未选中'}</div>
                 <div className="mt-2">多选：{filterKeys.value.join(', ') || '未选中'}</div>
                 <p className="mt-3 text-base-content/70">
-                  这类筛选面板通常会把 <code>closeOnClick</code> 设为 <code>false</code>，让用户连续选择。
+                  这类筛选面板通常会把 <code>closeOnClick</code> 设为 <code>false</code>
+                  ，让用户连续选择。
                 </p>
               </div>
             </div>
@@ -450,7 +469,9 @@ const filterKeys = ref(['mentions', 'comment']);
                 overlay={
                   <div className="p-4">
                     <div className="text-sm font-medium">Editor shortcuts</div>
-                    <div className="mt-2 text-sm text-base-content/70">Publish, share and manage visibility in one place.</div>
+                    <div className="mt-2 text-sm text-base-content/70">
+                      Publish, share and manage visibility in one place.
+                    </div>
                   </div>
                 }
                 popupRender={originNode => (
@@ -542,9 +563,16 @@ const filterKeys = ref(['mentions', 'comment']);
           preview={() => (
             <Dropdown as="details" className="mb-32" data-testid="dropdown-details">
               <summary className="btn m-1">open or close</summary>
-              <Dropdown.Content as="ul" className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
-                <li><button>Item 1</button></li>
-                <li><button>Item 2</button></li>
+              <Dropdown.Content
+                as="ul"
+                className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
+              >
+                <li>
+                  <button>Item 1</button>
+                </li>
+                <li>
+                  <button>Item 2</button>
+                </li>
               </Dropdown.Content>
             </Dropdown>
           )}
@@ -562,7 +590,11 @@ const filterKeys = ref(['mentions', 'comment']);
           tab={tabs.popover}
           preview={() => (
             <div className="flex items-start gap-4">
-              <button className="btn" popovertarget="dropdown-popover-1" style={{ anchorName: '--dropdown-anchor-1' }}>
+              <button
+                className="btn"
+                popovertarget="dropdown-popover-1"
+                style={{ anchorName: '--dropdown-anchor-1' }}
+              >
                 Button
               </button>
               <Dropdown
@@ -572,8 +604,12 @@ const filterKeys = ref(['mentions', 'comment']);
                 className="menu w-52 rounded-box bg-base-100 shadow-sm"
                 style={{ positionAnchor: '--dropdown-anchor-1' }}
               >
-                <li><button>Item 1</button></li>
-                <li><button>Item 2</button></li>
+                <li>
+                  <button>Item 1</button>
+                </li>
+                <li>
+                  <button>Item 2</button>
+                </li>
               </Dropdown>
             </div>
           )}
@@ -597,12 +633,25 @@ const filterKeys = ref(['mentions', 'comment']);
           tab={tabs.focus}
           preview={() => (
             <Dropdown className="mb-32">
-              <Dropdown.Trigger as="button" type="button" className="btn m-1" data-testid="dropdown-focus-trigger">
+              <Dropdown.Trigger
+                as="button"
+                type="button"
+                className="btn m-1"
+                data-testid="dropdown-focus-trigger"
+              >
                 Click to open
               </Dropdown.Trigger>
-              <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
-                <li><button>Item 1</button></li>
-                <li><button>Item 2</button></li>
+              <Dropdown.Content
+                as="ul"
+                tabIndex={-1}
+                className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
+              >
+                <li>
+                  <button>Item 1</button>
+                </li>
+                <li>
+                  <button>Item 2</button>
+                </li>
               </Dropdown.Content>
             </Dropdown>
           )}
@@ -623,30 +672,69 @@ const filterKeys = ref(['mentions', 'comment']);
           preview={() => (
             <div className="flex flex-wrap gap-12 py-20">
               <Dropdown align="start">
-                <Dropdown.Trigger as="button" type="button" className="btn m-1" data-testid="dropdown-position-start">
+                <Dropdown.Trigger
+                  as="button"
+                  type="button"
+                  className="btn m-1"
+                  data-testid="dropdown-position-start"
+                >
                   Start
                 </Dropdown.Trigger>
-                <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
-                  <li><button>Item 1</button></li>
-                  <li><button>Item 2</button></li>
+                <Dropdown.Content
+                  as="ul"
+                  tabIndex={-1}
+                  className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
+                >
+                  <li>
+                    <button>Item 1</button>
+                  </li>
+                  <li>
+                    <button>Item 2</button>
+                  </li>
                 </Dropdown.Content>
               </Dropdown>
               <Dropdown align="center" direction="top">
-                <Dropdown.Trigger as="button" type="button" className="btn m-1" data-testid="dropdown-position-top-center">
+                <Dropdown.Trigger
+                  as="button"
+                  type="button"
+                  className="btn m-1"
+                  data-testid="dropdown-position-top-center"
+                >
                   Top Center
                 </Dropdown.Trigger>
-                <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
-                  <li><button>Item 1</button></li>
-                  <li><button>Item 2</button></li>
+                <Dropdown.Content
+                  as="ul"
+                  tabIndex={-1}
+                  className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
+                >
+                  <li>
+                    <button>Item 1</button>
+                  </li>
+                  <li>
+                    <button>Item 2</button>
+                  </li>
                 </Dropdown.Content>
               </Dropdown>
               <Dropdown direction="left" align="end">
-                <Dropdown.Trigger as="button" type="button" className="btn m-1" data-testid="dropdown-position-left-end">
+                <Dropdown.Trigger
+                  as="button"
+                  type="button"
+                  className="btn m-1"
+                  data-testid="dropdown-position-left-end"
+                >
                   Left End
                 </Dropdown.Trigger>
-                <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
-                  <li><button>Item 1</button></li>
-                  <li><button>Item 2</button></li>
+                <Dropdown.Content
+                  as="ul"
+                  tabIndex={-1}
+                  className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
+                >
+                  <li>
+                    <button>Item 1</button>
+                  </li>
+                  <li>
+                    <button>Item 2</button>
+                  </li>
                 </Dropdown.Content>
               </Dropdown>
             </div>
@@ -672,10 +760,20 @@ const filterKeys = ref(['mentions', 'comment']);
           tab={tabs.modifiers}
           preview={() => (
             <Dropdown hover forceOpen>
-              <div tabIndex={0} role="button" className="btn m-1">Always visible</div>
-              <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
-                <li><button>Item 1</button></li>
-                <li><button>Item 2</button></li>
+              <div tabIndex={0} role="button" className="btn m-1">
+                Always visible
+              </div>
+              <Dropdown.Content
+                as="ul"
+                tabIndex={-1}
+                className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
+              >
+                <li>
+                  <button>Item 1</button>
+                </li>
+                <li>
+                  <button>Item 2</button>
+                </li>
               </Dropdown.Content>
             </Dropdown>
           )}
@@ -687,7 +785,7 @@ const filterKeys = ref(['mentions', 'comment']);
   </Dropdown.Content>
 </Dropdown>`}
         />
-        
+
         <br />
 
         <h2 id="dropdown-api">API</h2>
@@ -697,10 +795,21 @@ const filterKeys = ref(['mentions', 'comment']);
 
         <h2>FAQ</h2>
         <ul>
-          <li>想做业务菜单、用户菜单、右键菜单时，优先用 <code>menu</code> 或 <code>items</code>。</li>
-          <li>想保留完全原生的 HTML 结构时，继续使用 <code>Dropdown.Trigger</code> + <code>Dropdown.Content</code>，或直接写 details / summary。</li>
-          <li>需要筛选面板、多选菜单时，通常把 <code>closeOnClick</code> 设为 <code>false</code>，并配合 <code>menu.selectable</code>。</li>
-          <li>需要在面板里追加说明、底部操作区或二次确认按钮时，使用 <code>popupRender</code> 包住原始内容。</li>
+          <li>
+            想做业务菜单、用户菜单、右键菜单时，优先用 <code>menu</code> 或 <code>items</code>。
+          </li>
+          <li>
+            想保留完全原生的 HTML 结构时，继续使用 <code>Dropdown.Trigger</code> +{' '}
+            <code>Dropdown.Content</code>，或直接写 details / summary。
+          </li>
+          <li>
+            需要筛选面板、多选菜单时，通常把 <code>closeOnClick</code> 设为 <code>false</code>
+            ，并配合 <code>menu.selectable</code>。
+          </li>
+          <li>
+            需要在面板里追加说明、底部操作区或二次确认按钮时，使用 <code>popupRender</code>{' '}
+            包住原始内容。
+          </li>
         </ul>
       </div>
     </SidebarPlayground>

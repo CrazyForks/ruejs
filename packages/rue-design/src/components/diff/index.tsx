@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 
@@ -247,11 +248,7 @@ const Resizer: FC<DiffResizerProps> = ({ className, style, children, ...rest }) 
   }
 
   return (
-    <div
-      {...rest}
-      ref={applyRef}
-      className={mergeClassName('diff-resizer', className)}
-    >
+    <div {...rest} ref={applyRef} className={mergeClassName('diff-resizer', className)}>
       {children}
     </div>
   )
@@ -282,7 +279,9 @@ const Diff: FC<DiffProps> = ({
   }
   const bounds = resolveBounds(min, max)
   const rangeStep = resolveStep(step)
-  const uncontrolledValue = ref(resolveValue(defaultValue ?? value ?? 50, bounds.min, bounds.max, 50))
+  const uncontrolledValue = ref(
+    resolveValue(defaultValue ?? value ?? 50, bounds.min, bounds.max, 50),
+  )
   const controlled = value !== undefined
   const currentValue = controlled
     ? resolveValue(value, bounds.min, bounds.max, uncontrolledValue.value)
@@ -386,7 +385,7 @@ const Diff: FC<DiffProps> = ({
       {...rest}
       ref={applyRootRef}
       className={rootClassName}
-        tabIndex={undefined}
+      tabIndex={undefined}
       aria-disabled={disabled ? 'true' : undefined}
     >
       <Item1

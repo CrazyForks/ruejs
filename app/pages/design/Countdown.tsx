@@ -128,7 +128,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'format',
-    description: '按 ant-design Countdown 风格拆分时间段，支持 `[]` 保留字面量。',
+    description: '按常见倒计时组件的格式拆分时间段，支持 `[]` 保留字面量。',
     type: 'string',
     defaultValue: 'HH:mm:ss',
   },
@@ -412,7 +412,9 @@ const CountdownDemo: FC = () => {
                   callbackStatus.value = '已完成'
                 }}
               />
-              <div className="text-sm opacity-70">最近一次 onChange: {callbackRemaining.value} ms</div>
+              <div className="text-sm opacity-70">
+                最近一次 onChange: {callbackRemaining.value} ms
+              </div>
               <div className="text-sm opacity-70">onFinish 状态: {callbackStatus.value}</div>
               <button className="btn btn-sm btn-outline" onClick={restartCallbackDemo}>
                 重置 10 秒示例
@@ -487,8 +489,16 @@ const lastRemaining = ref(10_000)
           title="Clock Countdown"
           tab={tabClock}
           preview={() => (
-            <Countdown key={`${comboHours.value}:${comboMinutes.value}:${comboSeconds.value}`} className="font-mono text-2xl">
-              <Countdown.Value key={`h:${comboHours.value}`} value={comboHours.value} ariaLabel={`${comboHours.value} hours`} />h
+            <Countdown
+              key={`${comboHours.value}:${comboMinutes.value}:${comboSeconds.value}`}
+              className="font-mono text-2xl"
+            >
+              <Countdown.Value
+                key={`h:${comboHours.value}`}
+                value={comboHours.value}
+                ariaLabel={`${comboHours.value} hours`}
+              />
+              h
               <Countdown.Value
                 key={`m:${comboMinutes.value}`}
                 value={comboMinutes.value}
@@ -608,16 +618,32 @@ const lastRemaining = ref(10_000)
           tab={tabLabelsUnder}
           preview={() => (
             <div className="grid grid-flow-col gap-5 text-center auto-cols-max">
-              <CountTile className="flex flex-col" label="days" countdownClassName="font-mono text-5xl">
+              <CountTile
+                className="flex flex-col"
+                label="days"
+                countdownClassName="font-mono text-5xl"
+              >
                 <Countdown.Value value={15} ariaLabel="15" />
               </CountTile>
-              <CountTile className="flex flex-col" label="hours" countdownClassName="font-mono text-5xl">
+              <CountTile
+                className="flex flex-col"
+                label="hours"
+                countdownClassName="font-mono text-5xl"
+              >
                 <Countdown.Value value={10} ariaLabel="10" />
               </CountTile>
-              <CountTile className="flex flex-col" label="min" countdownClassName="font-mono text-5xl">
+              <CountTile
+                className="flex flex-col"
+                label="min"
+                countdownClassName="font-mono text-5xl"
+              >
                 <Countdown.Value value={24} ariaLabel="24" />
               </CountTile>
-              <CountTile className="flex flex-col" label="sec" countdownClassName="font-mono text-5xl">
+              <CountTile
+                className="flex flex-col"
+                label="sec"
+                countdownClassName="font-mono text-5xl"
+              >
                 <Countdown.Value value={counter.value} ariaLabel={String(counter.value)} />
               </CountTile>
             </div>

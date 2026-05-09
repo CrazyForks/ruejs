@@ -2,10 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h } from '@rue-js/rue'
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import List from '../index'
+import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 
 setReactiveScheduling('sync')
 
 const waitListRender = () => new Promise(resolve => setTimeout(resolve, 0))
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active =
+    (globalThis as any).__rue_vapor_preferred ?? (globalThis as any).__rue
+}
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -227,29 +232,32 @@ describe('List', () => {
   })
 
   it('renders pagination controls and page content', async () => {
-    const c = document.createElement('div')
+    const c = mountContainer()
     const onChange = vi.fn()
+    resetActiveRuntime()
     render(
       h(List, {
         dataSource: ['One', 'Two', 'Three'],
-        pagination: { defaultPageSize: 2, align: 'center', onChange },
+        pagination: { pageSize: 2, align: 'center', onChange },
       }),
       c,
     )
-    await waitListRender()
-    expect(c.textContent).toContain('One')
-    expect(c.textContent).toContain('Two')
-    expect(c.textContent).not.toContain('Three')
-    expect(c.querySelector('.join .btn-active')?.textContent).toContain('1')
-    expect(c.querySelectorAll('.join button').length).toBe(4)
+    await waitForContent(() => {
+      expect(c.textContent).toContain('One')
+      expect(c.textContent).toContain('Two')
+      expect(c.textContent).not.toContain('Three')
+      expect(c.querySelector('.join .btn-active')?.textContent).toContain('1')
+      expect(c.querySelectorAll('.join button').length).toBe(4)
+    })
 
     const pageTwo = Array.from(c.querySelectorAll('.join button')).find(
       button => button.textContent === '2',
     ) as HTMLButtonElement
     pageTwo.click()
-    await waitListRender()
-    expect(onChange).toHaveBeenCalledWith(2, 2)
-    expect(c.textContent).toContain('Three')
-    expect(c.querySelector('.join .btn-active')?.textContent).toContain('2')
+    await waitForContent(() => {
+      expect(onChange).toHaveBeenCalledWith(2, 2)
+      expect(c.textContent).toContain('Three')
+      expect(c.querySelector('.join .btn-active')?.textContent).toContain('2')
+    })
   })
 })

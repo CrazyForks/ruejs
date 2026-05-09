@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Footer 组件概述
 - 保留原有 `children + className` 直出方式，继续兼容 daisyUI 风格拼装。
@@ -72,7 +73,8 @@ export interface FooterProps {
   [key: string]: any
 }
 
-const joinClassName = (...values: Array<string | undefined | false>) => values.filter(Boolean).join(' ')
+const joinClassName = (...values: Array<string | undefined | false>) =>
+  values.filter(Boolean).join(' ')
 
 const hasRenderableContent = (value: any): boolean => {
   if (value == null) return false
@@ -105,7 +107,13 @@ const Link: FC<FooterLinkProps> = ({
 
   if (Component === 'a') {
     return (
-      <a {...rest} href={href} target={target} rel={anchorRel} className={joinClassName('link', hover && 'link-hover', className)}>
+      <a
+        {...rest}
+        href={href}
+        target={target}
+        rel={anchorRel}
+        className={joinClassName('link', hover && 'link-hover', className)}
+      >
         {content ?? children}
       </a>
     )
@@ -182,12 +190,16 @@ const Section: FC<FooterSectionProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const renderedItems = (items ?? []).map((item, index) => renderFooterItem(item, index)).filter(Boolean)
+  const renderedItems = (items ?? [])
+    .map((item, index) => renderFooterItem(item, index))
+    .filter(Boolean)
   const body =
     hasRenderableContent(content) || hasRenderableContent(children) ? (
-      content ?? children
+      (content ?? children)
     ) : inline ? (
-      <div className={joinClassName('grid grid-flow-col auto-cols-max gap-4', contentClassName)}>{renderedItems}</div>
+      <div className={joinClassName('grid grid-flow-col auto-cols-max gap-4', contentClassName)}>
+        {renderedItems}
+      </div>
     ) : (
       renderedItems
     )

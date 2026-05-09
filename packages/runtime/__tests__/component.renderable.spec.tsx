@@ -12,6 +12,7 @@ import {
   watchEffect,
   type FC,
 } from '../src'
+import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
 
@@ -116,13 +117,14 @@ describe('Component renderable boundary', () => {
     document.body.appendChild(host)
 
     const CardView: FC = props => <article data-testid="card">{props.children}</article>
-    const App: FC = () => <component is="CardView">registered</component>
+    const App: FC = () => <Component is="CardView">registered</Component>
 
     useApp(App).component('CardView', CardView).mount(host)
-    await flush()
 
-    expect(host.querySelector('[data-testid="card"]')?.tagName.toLowerCase()).toBe('article')
-    expect(host.textContent).toBe('registered')
+    await waitForContent(() => {
+      expect(host.querySelector('[data-testid="card"]')?.tagName.toLowerCase()).toBe('article')
+      expect(host.textContent).toBe('registered')
+    })
   })
 
   it('updates wrapper props when a component renders svg children', async () => {
@@ -169,8 +171,9 @@ describe('Component renderable boundary', () => {
     await flush()
 
     expect((host.querySelector('[data-testid="shell"]') as HTMLElement).className).toContain('off')
-    expect((host.querySelector('[data-testid="shell"]') as HTMLElement).className).not.toContain('on')
+    expect((host.querySelector('[data-testid="shell"]') as HTMLElement).className).not.toContain(
+      'on',
+    )
     expect(host.querySelectorAll('[data-testid="shell-icon"]')).toHaveLength(1)
   })
-
 })

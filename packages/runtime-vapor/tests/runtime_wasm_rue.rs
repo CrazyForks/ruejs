@@ -41,7 +41,10 @@ async fn wasm_render_rejects_raw_array_fragment_input() {
     let children: Array = children.unchecked_into();
     assert_eq!(children.length(), 0);
     assert_eq!(errors.length(), 1);
-    assert_eq!(errors.get(0).as_string().unwrap_or_default(), "Rue runtime: render input not supported on the default path");
+    assert_eq!(
+        errors.get(0).as_string().unwrap_or_default(),
+        "Rue runtime: render input not supported on the default path"
+    );
 }
 
 #[wasm_bindgen_test(async)]
@@ -168,7 +171,10 @@ async fn wasm_render_between_rejects_raw_function_component_input() {
             == "between-ok"
     }));
     assert_eq!(errors.length(), 1);
-    assert_eq!(errors.get(0).as_string().unwrap_or_default(), "Rue runtime: renderBetween input not supported on the default path");
+    assert_eq!(
+        errors.get(0).as_string().unwrap_or_default(),
+        "Rue runtime: renderBetween input not supported on the default path"
+    );
 }
 
 #[wasm_bindgen_test(async)]
@@ -206,14 +212,20 @@ async fn wasm_render_anchor_reports_unsupported_default_surface_input() {
     let (parent, _start, anchor) = setup_range(&adapter);
     let errors = attach_error_collector(&rue);
 
-    let raw_vnode = Object::new();
-    let _ = Reflect::set(&raw_vnode, &JsValue::from_str("type"), &JsValue::from_str("div"));
+    let unsupported_function_component = Function::new_no_args("return null");
 
-    rue.render_anchor_wasm(raw_vnode.into(), parent.clone(), anchor.clone());
+    rue.render_anchor_wasm(
+        unsupported_function_component.into(),
+        parent.clone(),
+        anchor.clone(),
+    );
     tick().await;
 
     assert_eq!(errors.length(), 1);
-    assert_eq!(errors.get(0).as_string().unwrap_or_default(), "Rue runtime: renderAnchor input not supported on the default path");
+    assert_eq!(
+        errors.get(0).as_string().unwrap_or_default(),
+        "Rue runtime: renderAnchor input not supported on the default path"
+    );
 }
 
 #[wasm_bindgen_test(async)]
@@ -258,7 +270,10 @@ async fn wasm_render_static_reports_unsupported_default_surface_input() {
     tick().await;
 
     assert_eq!(errors.length(), 1);
-    assert_eq!(errors.get(0).as_string().unwrap_or_default(), "Rue runtime: renderStatic input not supported on the default path");
+    assert_eq!(
+        errors.get(0).as_string().unwrap_or_default(),
+        "Rue runtime: renderStatic input not supported on the default path"
+    );
 }
 
 #[wasm_bindgen_test(async)]
@@ -308,13 +323,9 @@ async fn wasm_vapor_wasm_rejects_legacy_vapor_wrapper_return() {
     assert_eq!(errors.length(), 1);
     let message = errors.get(0).as_string().unwrap_or_default();
     assert!(message.contains("Unsupported object returns are no longer accepted for vapor setup"));
-    let children = Reflect::get(&container, &JsValue::from_str("children"))
-        .unwrap_or(JsValue::UNDEFINED);
-    let children: Array = if children.is_object() {
-        Array::from(&children)
-    } else {
-        Array::new()
-    };
+    let children =
+        Reflect::get(&container, &JsValue::from_str("children")).unwrap_or(JsValue::UNDEFINED);
+    let children: Array = if children.is_object() { Array::from(&children) } else { Array::new() };
     assert_eq!(children.length(), 0);
 }
 

@@ -1,8 +1,7 @@
 use super::super::Rue;
 use super::super::types::compat_state::MountedCompatPatchKind;
 use super::super::types::{
-    MountInput, MountInputType, MountedPatchSubtree, MountedPatchSubtreeType,
-    MountedSubtreeState,
+    MountInput, MountInputType, MountedPatchSubtree, MountedPatchSubtreeType, MountedSubtreeState,
 };
 use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
@@ -46,10 +45,12 @@ where
             CompatPatchSameOutcome::Replaced(mounted) => {
                 CompatPatchBoundaryOutcome::Replaced(mounted)
             }
-            CompatPatchSameOutcome::NotHandled => match self.patch_rebuild_same(old_host, new, parent) {
-                Some(mounted) => CompatPatchBoundaryOutcome::Replaced(mounted),
-                None => CompatPatchBoundaryOutcome::Handled,
-            },
+            CompatPatchSameOutcome::NotHandled => {
+                match self.patch_rebuild_same(old_host, new, parent) {
+                    Some(mounted) => CompatPatchBoundaryOutcome::Replaced(mounted),
+                    None => CompatPatchBoundaryOutcome::Handled,
+                }
+            }
         }
     }
 

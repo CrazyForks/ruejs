@@ -3,7 +3,10 @@ import { ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import PreviewBlock, { type PreviewTabMode } from './PreviewBlock'
 import { Button, FileInput } from '@rue-js/design'
-import type { FileInputChangeInfo, FileInputFile } from '../../../packages/rue-design/src/components/file-input/index'
+import type {
+  FileInputChangeInfo,
+  FileInputFile,
+} from '../../../packages/rue-design/src/components/file-input/index'
 
 interface ApiRow {
   prop: string
@@ -11,7 +14,6 @@ interface ApiRow {
   type: string
   defaultValue: string
 }
-
 
 const createImageDataUrl = (label: string, background: string, foreground = '#ffffff') => {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
@@ -78,13 +80,15 @@ const pictureSeed: FileInputFile[] = [
 const apiRows: ApiRow[] = [
   {
     prop: 'variant / size / ghost',
-    description: '原始 daisyUI `file-input-*` 风格入口继续保留；不传增强 API 时仍直接渲染原生 input。',
+    description:
+      '原始 daisyUI `file-input-*` 风格入口继续保留；不传增强 API 时仍直接渲染原生 input。',
     type: 'FileInputVariant / FileInputSize / boolean',
     defaultValue: '-',
   },
   {
     prop: 'fileList / defaultFileList',
-    description: '受控与非受控文件列表；条目支持 `uid/name/status/url/thumbUrl/originFileObj/description`。',
+    description:
+      '受控与非受控文件列表；条目支持 `uid/name/status/url/thumbUrl/originFileObj/description`。',
     type: 'FileInputFile[]',
     defaultValue: '-',
   },
@@ -210,7 +214,7 @@ const FileInputDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>File Input 文件选择</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue File Input 继续保留原始 <code>file-input</code> 样式入口，同时参考 ant-design Upload
+          Rue File Input 继续保留原始 <code>file-input</code> 样式入口，同时补齐更常用的
           补齐更常用的文件列表、拖拽、图片卡片、受控/非受控和选择前校验能力。
         </p>
         <div className="text-sm flex flex-wrap gap-4">
@@ -221,18 +225,30 @@ const FileInputDemo: FC = () => {
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-primary">兼容优先</div>
-            <p className="mt-2 mb-0 text-sm text-base-content/70">不传增强 API 时，仍然直出原生文件输入框。</p>
+            <div className="text-xs font-semibold uppercase tracking-wide text-primary">
+              兼容优先
+            </div>
+            <p className="mt-2 mb-0 text-sm text-base-content/70">
+              不传增强 API 时，仍然直出原生文件输入框。
+            </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">推荐增强</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              推荐增强
+            </div>
             <div className="mt-2 text-sm font-medium">列表、拖拽、图片卡片</div>
-            <p className="mt-2 mb-0 text-sm text-base-content/70">把最常见的 Upload 场景收敛到一个组件里，业务只关心列表状态。</p>
+            <p className="mt-2 mb-0 text-sm text-base-content/70">
+              把最常见的 Upload 场景收敛到一个组件里，业务只关心列表状态。
+            </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-accent">业务可接管</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-accent">
+              业务可接管
+            </div>
             <div className="mt-2 text-sm font-medium">拦截、预览、删除都可自定义</div>
-            <p className="mt-2 mb-0 text-sm text-base-content/70">适合手动上传、服务端校验和媒体素材管理等场景。</p>
+            <p className="mt-2 mb-0 text-sm text-base-content/70">
+              适合手动上传、服务端校验和媒体素材管理等场景。
+            </p>
           </div>
         </div>
 
@@ -250,7 +266,7 @@ const FileInputDemo: FC = () => {
                 hint="PDF / PNG / MP4，最多 3 个文件"
                 buttonText="选择素材"
                 showUploadList={{
-                  extra: file => file.description ?? '待处理',
+                  extra: (file: FileInputFile) => file.description ?? '待处理',
                 }}
               />
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm text-base-content/70">
@@ -293,12 +309,16 @@ const defaultFileList = [
                 <Button color="primary" onClick={() => (controlledFiles.value = [])}>
                   清空列表
                 </Button>
-                <Button onClick={() => (controlledFiles.value = cloneFiles(controlledSeed))}>恢复示例</Button>
+                <Button onClick={() => (controlledFiles.value = cloneFiles(controlledSeed))}>
+                  恢复示例
+                </Button>
               </div>
               <FileInput
                 fileList={controlledFiles.value}
-                onChange={info => handleControlledChange(info as FileInputChangeInfo)}
-                onRemove={file => {
+                onChange={(info: FileInputChangeInfo | Event) =>
+                  handleControlledChange(info as FileInputChangeInfo)
+                }
+                onRemove={(file: FileInputFile) => {
                   controlledMessage.value = `已请求移除：${file.name}`
                 }}
                 multiple
@@ -306,7 +326,7 @@ const defaultFileList = [
                 buttonText="追加文件"
                 hint="由业务状态托管 fileList，适合手动上传流程"
                 showUploadList={{
-                  extra: file => file.description ?? '待处理',
+                  extra: (file: FileInputFile) => file.description ?? '待处理',
                 }}
               />
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm text-base-content/70">
@@ -351,7 +371,7 @@ const fileList = ref([
               description="适合把工单、表单、内容后台里的附件区直接做成拖拽投放面板。"
               hint="支持多文件，列表会自动显示在下方"
               showUploadList={{
-                extra: file => file.description ?? '待上传',
+                extra: (file: FileInputFile) => file.description ?? '待上传',
               }}
             />
           }
@@ -377,11 +397,11 @@ const fileList = ref([
                 defaultFileList={cloneFiles(pictureSeed)}
                 buttonText="添加画面"
                 hint="封面图、详情图、海报等都适合用卡片布局"
-                onPreview={file => {
+                onPreview={(file: FileInputFile) => {
                   previewMessage.value = `最近预览：${file.name}`
                 }}
                 showUploadList={{
-                  extra: file => file.description,
+                  extra: (file: FileInputFile) => file.description,
                 }}
               />
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm text-base-content/70">
@@ -429,20 +449,22 @@ const fileList = [
                 title="选择前校验图片格式和大小"
                 buttonText="添加图片"
                 hint="仅 image/*，单个文件不超过 2MB"
-                beforeUpload={file => {
-                  if (!file.type.startsWith('image/')) {
+                beforeUpload={(file: FileInputFile) => {
+                  if (!file.type?.startsWith('image/')) {
                     validationMessage.value = `已拦截 ${file.name}：只允许图片类型`
                     return FileInput.LIST_IGNORE
                   }
-                  if (file.size > 2 * 1024 * 1024) {
+                  if ((file.size ?? 0) > 2 * 1024 * 1024) {
                     validationMessage.value = `已拦截 ${file.name}：超过 2MB`
                     return FileInput.LIST_IGNORE
                   }
                   return true
                 }}
-                onChange={info => handleValidationChange(info as FileInputChangeInfo)}
+                onChange={(info: FileInputChangeInfo | Event) =>
+                  handleValidationChange(info as FileInputChangeInfo)
+                }
                 showUploadList={{
-                  extra: file => file.description ?? '通过校验',
+                  extra: (file: FileInputFile) => file.description ?? '通过校验',
                 }}
               />
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm text-base-content/70">
@@ -562,7 +584,9 @@ const fileList = ref([])
           code={`<FileInput disabled />`}
         />
 
-        <h2 id="file-input-api" className="mt-10">API</h2>
+        <h2 id="file-input-api" className="mt-10">
+          API
+        </h2>
         <p className="text-sm mt-3 mb-4">
           增强模式尽量贴近 Upload 的核心组织方式，但仍然保留 Rue 的视觉和更轻的心智负担。
         </p>
@@ -581,13 +605,14 @@ const fileList = ref([])
             <div className="text-sm font-medium">怎样阻止文件进入列表？</div>
             <p className="mt-2 mb-0 text-sm text-base-content/70">
               在 <code>beforeUpload</code> 中返回 <code>FileInput.LIST_IGNORE</code>
-              ，即可像 ant-design Upload 一样把非法文件直接挡在列表外。
+              ，即可把非法文件直接挡在列表外。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-sm font-medium">旧项目需要迁移吗？</div>
             <p className="mt-2 mb-0 text-sm text-base-content/70">
-              不需要。旧的 <code>variant / size / ghost / disabled</code> 写法继续可用，按需渐进切换到增强模式即可。
+              不需要。旧的 <code>variant / size / ghost / disabled</code>{' '}
+              写法继续可用，按需渐进切换到增强模式即可。
             </p>
           </div>
         </div>

@@ -290,7 +290,10 @@ describe('Modal', () => {
   it('renders loading skeleton and hides footer actions', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(Modal, { open: true, title: 'Loading modal', loading: true, onClose: vi.fn() }, 'content'), c)
+    render(
+      h(Modal, { open: true, title: 'Loading modal', loading: true, onClose: vi.fn() }, 'content'),
+      c,
+    )
 
     await waitForContent(() => {
       const loadingBody = c.querySelector('[data-rue-modal-loading="true"]') as HTMLElement

@@ -33,7 +33,7 @@ export default Children;
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Box: FC<{
     title: string;
@@ -43,42 +43,43 @@ const Box: FC<{
         const _el1 = _$createElement("div");
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "font-semibold");
-        const _el2 = _$createTextWrapper(_el1);
-        _$appendChild(_el1, _el2);
+        const _list1 = _$createComment("rue:slot:anchor");
+        _$appendChild(_el1, _list1);
         watchEffect(()=>{
-            _$settextContent(_el2, props.title);
+            const __slot = (props.title);
+            renderAnchor(__slot, _el1, _list1);
         });
-        const _el3 = _$createElement("div");
-        _$appendChild(_root, _el3);
-        const _list1 = _$createComment("rue:children:anchor");
-        _$appendChild(_el3, _list1);
+        const _el2 = _$createElement("div");
+        _$appendChild(_root, _el2);
+        const _list2 = _$createComment("rue:children:anchor");
+        _$appendChild(_el2, _list2);
         watchEffect(()=>{
             const __slot = (props.children);
-            renderAnchor(__slot, _el3, _list1);
+            renderAnchor(__slot, _el2, _list2);
         });
         return _root;
     });
 const Children: FC = ()=>vapor(()=>{
         const _root = _$createDocumentFragment();
-        const _list2 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list2);
+        const _list3 = _$createComment("rue:component:anchor");
+        _$appendChild(_root, _list3);
         const __child1 = vapor(()=>{
             const _root = _$createDocumentFragment();
-            const _el4 = _$createElement("div");
-            _$appendChild(_root, _el4);
+            const _el3 = _$createElement("div");
+            _$appendChild(_root, _el3);
+            const _el4 = _$createElement("span");
+            _$appendChild(_el3, _el4);
+            _$appendChild(_el4, _$createTextNode("hello"));
             const _el5 = _$createElement("span");
-            _$appendChild(_el4, _el5);
-            _$appendChild(_el5, _$createTextNode("hello"));
-            const _el6 = _$createElement("span");
-            _$appendChild(_el4, _el6);
-            _$appendChild(_el6, _$createTextNode("嵌套子元素"));
+            _$appendChild(_el3, _el5);
+            _$appendChild(_el5, _$createTextNode("嵌套子元素"));
             return _root;
         });
-        const __slot3 = _$createComponent(Box, {
+        const __slot4 = _$createComponent(Box, {
             title: "外层",
             children: __child1
         });
-        renderAnchor(__slot3, _root, _list2);
+        renderAnchor(__slot4, _root, _list3);
         return _root;
     });
 export default Children;

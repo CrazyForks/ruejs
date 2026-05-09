@@ -285,7 +285,7 @@ const createRouteComponentBlock = (
 
       const parent = start.parentNode
       if (parent && end.parentNode === parent) {
-        renderBetween([] as any, parent as any, start as any, end as any)
+        renderBetween(null as any, parent as any, start as any, end as any)
 
         let current = start.nextSibling
         while (current && current !== end) {
@@ -317,7 +317,7 @@ export const RouterView: FC = () => {
       const parent = (anchorEl as any).parentNode || container
 
       if (!data) {
-        renderAnchor([] as any, parent, anchorEl)
+        renderAnchor(null as any, parent, anchorEl)
       } else {
         renderAnchor(
           createRouteComponentBlock(data.record.component, data.params) as any,

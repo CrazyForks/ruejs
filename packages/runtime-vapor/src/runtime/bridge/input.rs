@@ -3,17 +3,17 @@ use crate::runtime::js_adapter::JsDomAdapter;
 use crate::runtime::transport;
 use crate::runtime::types::MountInput;
 #[cfg(feature = "compat")]
+use crate::runtime::types::MountInputChild;
+#[cfg(feature = "compat")]
 use crate::runtime::vnode_helpers::{
     compat_children_from_value as shared_compat_children_from_value,
     compat_input_from_values as shared_compat_input_from_values,
     compat_object_to_input as shared_compat_object_to_input,
 };
 #[cfg(feature = "compat")]
-use js_sys::Function;
-#[cfg(feature = "compat")]
-use crate::runtime::types::MountInputChild;
-#[cfg(feature = "compat")]
 use js_sys::Array;
+#[cfg(feature = "compat")]
+use js_sys::Function;
 #[cfg(feature = "compat")]
 use js_sys::Object;
 #[cfg(feature = "compat")]
@@ -24,33 +24,27 @@ use wasm_bindgen::JsValue;
 
 #[derive(Clone, Copy)]
 pub(super) enum CompatEntryPolicy {
+    DefaultSurfaceOnly,
     #[cfg(feature = "compat")]
     LegacyRawElementInput,
-    LegacyArrayOrRawElementInput,
-    LegacyArrayRawElementOrFunctionComponentInput,
 }
 
 #[cfg(feature = "compat")]
 impl CompatEntryPolicy {
     fn allows_array(self) -> bool {
-        matches!(
-            self,
-            Self::LegacyArrayOrRawElementInput
-                | Self::LegacyArrayRawElementOrFunctionComponentInput
-        )
+        matches!(self, Self::DefaultSurfaceOnly) && false
+    }
+
+    fn allows_compat_object(self) -> bool {
+        matches!(self, Self::LegacyRawElementInput)
     }
 
     fn allows_raw_element(self) -> bool {
-        matches!(
-            self,
-            Self::LegacyRawElementInput
-                | Self::LegacyArrayOrRawElementInput
-                | Self::LegacyArrayRawElementOrFunctionComponentInput
-        )
+        matches!(self, Self::LegacyRawElementInput)
     }
 
     fn allows_function_component(self) -> bool {
-        matches!(self, Self::LegacyArrayRawElementOrFunctionComponentInput)
+        matches!(self, Self::DefaultSurfaceOnly) && false
     }
 }
 
@@ -160,11 +154,7 @@ impl WasmRue {
         }
 
         let inner = self.inner.try_borrow().ok()?;
-        Some(transport::element_value_to_vapor_input(
-            &inner,
-            &obj,
-            vnode_id.clone(),
-        ))
+        Some(transport::element_value_to_vapor_input(&inner, &obj, vnode_id.clone()))
     }
 
     #[cfg(feature = "compat")]
@@ -176,7 +166,9 @@ impl WasmRue {
         shared_compat_object_to_input::<JsDomAdapter, _, _>(
             input_value,
             None,
-            |type_value| compat_entry_policy.allows_function_component() || !type_value.is_function(),
+            |type_value| {
+                compat_entry_policy.allows_function_component() || !type_value.is_function()
+            },
             |effective_children| {
                 self.compat_children_from_value(
                     effective_children,
@@ -233,9 +225,12 @@ impl WasmRue {
             }
         }
 
-        if let Some(input) = self.mount_input_from_compat_object(input_value, compat_entry_policy)
-        {
-            return Some(input);
+        if compat_entry_policy.allows_compat_object() {
+            if let Some(input) =
+                self.mount_input_from_compat_object(input_value, compat_entry_policy)
+            {
+                return Some(input);
+            }
         }
 
         None
@@ -247,8 +242,9 @@ impl WasmRue {
         input_value: &JsValue,
         compat_entry_policy: CompatEntryPolicy,
     ) -> Option<MountInput<JsDomAdapter>> {
-        self.default_surface_mount_input_from_input(input_value)
-            .or_else(|| self.compat_extension_mount_input_from_input(input_value, compat_entry_policy))
+        self.default_surface_mount_input_from_input(input_value).or_else(|| {
+            self.compat_extension_mount_input_from_input(input_value, compat_entry_policy)
+        })
     }
 
     #[cfg(not(feature = "compat"))]

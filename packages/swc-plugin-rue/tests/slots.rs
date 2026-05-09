@@ -177,10 +177,9 @@ const Demo: FC = () => {
 
     let out = compile(src, "slots_conditional_default_map");
 
-    assert!(
-        out.contains(&utils::normalize("children: showBody.value ? items.value.map((item)=>",))
-    );
-    assert!(out.contains(&utils::normalize("return vapor(()=>{")));
+    assert!(out.contains(&utils::normalize("children: showBody.value ? vapor(()=>{")));
+    assert!(out.contains(&utils::normalize("const _map1_newElements = _$vaporKeyedList({")));
+    assert!(out.contains(&utils::normalize("const label = item.label.toUpperCase();")));
     assert!(out.contains(&utils::normalize(": undefined")));
     assert!(!out.contains("_jsxDEV("));
 }

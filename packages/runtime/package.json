@@ -1,6 +1,6 @@
 {
   "name": "@rue-js/runtime",
-  "version": "0.0.33",
+  "version": "0.0.35",
   "description": "@rue-js/runtime",
   "keywords": [
     "rue"
@@ -57,7 +57,7 @@
     "@rue-js/rue": "workspace:*",
     "@rue-js/runtime-vapor": "workspace:*",
     "@rue-js/shared": "workspace:*",
-    "csstype": "^3.1.3"
+    "csstype": "^3.2.3"
   },
   "devDependencies": {
     "@types/trusted-types": "^2.0.7"

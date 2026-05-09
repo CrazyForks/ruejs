@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import FileInput from '../index'
-import { click, mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+import {
+  click,
+  mountContainer,
+  waitForContent,
+} from '../../../../../runtime/__tests__/page-test-utils'
 
 setReactiveScheduling('sync')
 
@@ -49,16 +53,7 @@ describe('FileInput', () => {
   it('forwards native attrs and appends className', async () => {
     const container = mountContainer()
     resetActiveRuntime()
-    render(
-      <FileInput
-        id="resume"
-        accept=".pdf"
-        multiple
-        disabled
-        className="w-full"
-      />,
-      container,
-    )
+    render(<FileInput id="resume" accept=".pdf" multiple disabled className="w-full" />, container)
 
     await waitForContent(() => {
       const element = container.querySelector('input.file-input') as HTMLInputElement
@@ -123,7 +118,7 @@ describe('FileInput', () => {
           }
           return true
         }}
-        onChange={info => handleChange(info)}
+        onChange={(info: any) => handleChange(info)}
       />,
       container,
     )

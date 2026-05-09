@@ -8,7 +8,8 @@ mod common;
 use common::{children_of, make_vapor_only_adapter as make_adapter, tick};
 
 fn attr_string(node: &JsValue, name: &str) -> String {
-    let attrs = Reflect::get(node, &JsValue::from_str("attrs")).unwrap_or_else(|_| Object::new().into());
+    let attrs =
+        Reflect::get(node, &JsValue::from_str("attrs")).unwrap_or_else(|_| Object::new().into());
     Reflect::get(&attrs, &JsValue::from_str(name))
         .unwrap_or(JsValue::UNDEFINED)
         .as_string()
@@ -37,7 +38,8 @@ async fn component_numeric_props_keep_dom_attribute_values() {
     let props_a = Object::new();
     let _ = Reflect::set(&props_a, &JsValue::from_str("minLength"), &JsValue::from_f64(3.0));
     let _ = Reflect::set(&props_a, &JsValue::from_str("maxLength"), &JsValue::from_f64(30.0));
-    let _ = Reflect::set(&props_a, &JsValue::from_str("placeholder"), &JsValue::from_str("Username"));
+    let _ =
+        Reflect::set(&props_a, &JsValue::from_str("placeholder"), &JsValue::from_str("Username"));
 
     let vnode_a = rue.create_component_wasm(component.clone().into(), props_a.into());
     rue.render_wasm(vnode_a, container.clone().into());
@@ -58,7 +60,8 @@ async fn component_numeric_props_keep_dom_attribute_values() {
     let props_b = Object::new();
     let _ = Reflect::set(&props_b, &JsValue::from_str("minLength"), &JsValue::from_f64(5.0));
     let _ = Reflect::set(&props_b, &JsValue::from_str("maxLength"), &JsValue::from_f64(50.0));
-    let _ = Reflect::set(&props_b, &JsValue::from_str("placeholder"), &JsValue::from_str("Reviewer"));
+    let _ =
+        Reflect::set(&props_b, &JsValue::from_str("placeholder"), &JsValue::from_str("Reviewer"));
 
     let vnode_b = rue.create_component_wasm(component.into(), props_b.into());
     rue.render_wasm(vnode_b, container.clone().into());

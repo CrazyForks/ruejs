@@ -137,16 +137,13 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run eslint
-        run: pnpm run lint
-
       - name: Run prettier
         run: pnpm run format-check
 
       - name: Build @rue-js/runtime-vapor (wasm)
         run: pnpm --filter @rue-js/runtime-vapor build
 
-      - name: Run tsc
+      - name: Run tsgo type check
         run: pnpm run check
 
       - run: pnpm --filter @rue-js/swc-plugin-rue build

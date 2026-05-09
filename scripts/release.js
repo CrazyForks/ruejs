@@ -19,6 +19,14 @@ import { parseArgs } from 'node:util'
  * }} Package
  */
 
+/**
+ * @typedef {{
+ *   filePath: string
+ *   existed: boolean
+ *   content: string | null
+ * }} FileSnapshot
+ */
+
 let versionUpdated = false
 
 const { prompt } = enquirer
@@ -31,6 +39,9 @@ const { values: args, positionals } = parseArgs({
   options: {
     preid: {
       type: 'string',
+    },
+    check: {
+      type: 'boolean',
     },
     dry: {
       type: 'boolean',
@@ -63,8 +74,10 @@ const { values: args, positionals } = parseArgs({
   },
 })
 
+const isCheckOnly = args.check
 const preId = args.preid || semver.prerelease(currentVersion)?.[0]
-const isDryRun = args.dry
+const isDryRun = args.dry || isCheckOnly
+const shouldRunValidationCommands = !args.dry || isCheckOnly
 /** @type {boolean | undefined} */
 let skipTests = args.skipTests
 const skipBuild = args.skipBuild
@@ -115,6 +128,60 @@ const dryRun = async (
 const runIfNotDry = isDryRun ? dryRun : run
 const getPkgRoot = (/** @type {string} */ pkg) => path.resolve(__dirname, '../packages/' + pkg)
 const step = (/** @type {string} */ msg) => console.log(pico.cyan(msg))
+const releaseVerificationPackages = [
+  {
+    name: '@rue-js/runtime-vapor',
+    cwd: path.resolve(__dirname, '../packages/runtime-vapor'),
+  },
+  {
+    name: '@rue-js/swc-plugin-rue',
+    cwd: path.resolve(__dirname, '../packages/swc-plugin-rue'),
+  },
+]
+
+function getReleaseCheckSnapshotPaths() {
+  return [
+    path.resolve(__dirname, '../package.json'),
+    path.resolve(__dirname, '../CHANGELOG.md'),
+    path.resolve(__dirname, '../pnpm-lock.yaml'),
+    ...packages.map(pkg => path.resolve(getPkgRoot(pkg), 'package.json')),
+  ]
+}
+
+/**
+ * @param {ReadonlyArray<string>} filePaths
+ * @returns {FileSnapshot[]}
+ */
+function captureFileSnapshots(filePaths) {
+  return filePaths.map(filePath => {
+    const existed = fs.existsSync(filePath)
+    return {
+      filePath,
+      existed,
+      content: existed ? fs.readFileSync(filePath, 'utf-8') : null,
+    }
+  })
+}
+
+/**
+ * @param {ReadonlyArray<FileSnapshot>} snapshots
+ */
+function restoreFileSnapshots(snapshots) {
+  for (const snapshot of snapshots) {
+    if (snapshot.existed) {
+      fs.writeFileSync(snapshot.filePath, snapshot.content ?? '')
+      continue
+    }
+
+    if (fs.existsSync(snapshot.filePath)) {
+      fs.rmSync(snapshot.filePath)
+    }
+  }
+}
+
+const releaseCheckSnapshots = isCheckOnly
+  ? captureFileSnapshots(getReleaseCheckSnapshotPaths())
+  : null
 
 async function ensureRuntimeVaporBuilt() {
   const runtimeVaporEntry = path.resolve(
@@ -138,7 +205,7 @@ async function ensureRuntimeVaporBuilt() {
   }
 
   step('\nBuilding @rue-js/runtime-vapor...')
-  if (!isDryRun) {
+  if (shouldRunValidationCommands) {
     await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node'])
     await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node-reactive'])
     await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node-vapor'])
@@ -153,6 +220,14 @@ async function main() {
   }
 
   let targetVersion = positionals[0]
+
+  if (isCheckOnly && skipPrompts && !targetVersion) {
+    targetVersion = currentVersion
+    step(
+      `Release check will use current version v${targetVersion}. ` +
+        'Pass a version argument to simulate another release version.',
+    )
+  }
 
   if (!targetVersion) {
     // no explicit version, offer suggestions
@@ -187,7 +262,7 @@ async function main() {
   }
 
   if (skipPrompts) {
-    step(`Releasing v${targetVersion}...`)
+    step(`${isCheckOnly ? 'Running release check for' : 'Releasing'} v${targetVersion}...`)
   } else {
     /** @type {{ yes: boolean }} */
     const { yes: confirmRelease } = await prompt({
@@ -254,7 +329,13 @@ async function main() {
     await runIfNotDry('git', ['push'])
   }
 
-  if (!args.publish) {
+  if (isCheckOnly) {
+    console.log(
+      pico.yellow(
+        '\nRelease check only: versioning, changelog, and lockfile generation were validated locally.',
+      ),
+    )
+  } else if (!args.publish) {
     console.log(
       pico.yellow(
         '\nRelease will be done via GitHub Actions.\n' +
@@ -263,7 +344,9 @@ async function main() {
     )
   }
 
-  if (isDryRun) {
+  if (isCheckOnly) {
+    console.log(`\nRelease check finished - local release files will be restored.`)
+  } else if (isDryRun) {
     console.log(`\nDry run finished - run git diff to see package changes.`)
   }
 
@@ -278,7 +361,7 @@ async function main() {
 }
 
 async function runTestsIfNeeded() {
-  if (!skipTests) {
+  if (!skipTests && !isCheckOnly) {
     step('Checking CI status for HEAD...')
     let isCIPassed = await getCIResult()
     skipTests ||= isCIPassed
@@ -301,18 +384,28 @@ async function runTestsIfNeeded() {
           'Only run the release workflow after the CI has passed.',
       )
     }
+  } else if (!skipTests) {
+    step('Release check mode: skipping CI gate and running local tests.')
   }
 
   if (!skipTests) {
     step('\nRunning tests...')
-    if (!isDryRun) {
+    if (shouldRunValidationCommands) {
       await ensureRuntimeVaporBuilt()
       await run('pnpm', ['run', 'test', '--run'])
+      await runReleaseVerificationPackageTests()
     } else {
       console.log(`Skipped (dry run)`)
     }
   } else {
     step('Tests skipped.')
+  }
+}
+
+async function runReleaseVerificationPackageTests() {
+  for (const pkg of releaseVerificationPackages) {
+    step(`\nRunning release verification for ${pkg.name}...`)
+    await run('npm', ['run', 'test'], { cwd: pkg.cwd })
   }
 }
 
@@ -335,6 +428,11 @@ async function getCIResult() {
 }
 
 async function isInSyncWithRemote() {
+  if (isCheckOnly) {
+    console.log(pico.yellow('Release check: skipping remote sync requirement.'))
+    return true
+  }
+
   try {
     const branch = await getBranch()
     const res = await fetch(`https://api.github.com/repos/ruejs/core/commits/${branch}?per_page=1`)
@@ -417,7 +515,11 @@ function updatePackage(pkgRoot, version, getNewPackageName) {
 async function buildPackages() {
   step('\nBuilding all packages...')
   if (!skipBuild) {
-    await run('pnpm', ['run', 'build', '--withTypes'])
+    if (shouldRunValidationCommands) {
+      await run('pnpm', ['run', 'build', '--withTypes'])
+    } else {
+      console.log(`Skipped (dry run)`)
+    }
   } else {
     console.log(`(skipped)`)
   }
@@ -509,11 +611,24 @@ async function publishOnly() {
 
 const fnToRun = args.publishOnly ? publishOnly : main
 
-fnToRun().catch(err => {
-  if (versionUpdated) {
-    // revert to current version on failed releases
-    updateVersions(currentVersion)
+async function runRelease() {
+  try {
+    await fnToRun()
+  } catch (err) {
+    if (versionUpdated && !isCheckOnly) {
+      // revert to current version on failed releases
+      updateVersions(currentVersion)
+    }
+    throw err
+  } finally {
+    if (releaseCheckSnapshots) {
+      restoreFileSnapshots(releaseCheckSnapshots)
+      console.log(pico.cyan('\nRelease check restored local release files.'))
+    }
   }
+}
+
+runRelease().catch(err => {
   console.error(err)
   process.exit(1)
 })

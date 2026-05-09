@@ -1,6 +1,7 @@
 import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 import { Chat, Tabs } from '@rue-js/design'
+import type { ChatDataItem } from '../../../packages/rue-design/src/components/chat/index'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 
@@ -106,7 +107,7 @@ const capabilityCards = [
   },
 ] as const
 
-const legacyChatData = [
+const legacyChatData: ReadonlyArray<ChatDataItem> = [
   {
     placement: 'start',
     message: "It's over Anakin, I have the high ground.",
@@ -141,9 +142,9 @@ const legacyChatData = [
     color: 'success' as const,
     message: 'You have been given a great honor.',
   },
-] as const
+]
 
-const legacyChatItems = [
+const legacyChatItems: ReadonlyArray<ChatDataItem> = [
   {
     placement: 'start',
     message: (
@@ -176,7 +177,7 @@ const legacyChatItems = [
     color: 'primary' as const,
     message: <em>What kind of nonsense is this</em>,
   },
-] as const
+]
 
 const semanticMessageCode = toCode([
   "import { Chat } from '@rue-js/design'",
@@ -296,7 +297,7 @@ const startEndCode = toCode([
   '<div className="w-full">',
   '  <Chat placement="start">',
   '    <Chat.Bubble>',
-  '      It\'s over Anakin,',
+  "      It's over Anakin,",
   '      <br />',
   '      I have the high ground.',
   '    </Chat.Bubble>',
@@ -347,7 +348,7 @@ const internalItemsCode = toCode([
   '    placement: "start",',
   '    message: (',
   '      <>',
-  '        <span>It\'s over Anakin,</span>',
+  "        <span>It's over Anakin,</span>",
   '        <br />I have the high ground.',
   '      </>',
   '    ),',
@@ -522,7 +523,7 @@ const chatApiRows: ApiRow[] = [
     type: 'boolean / any',
     defaultValue: 'false / -',
   },
-] 
+]
 
 const itemApiRows: ApiRow[] = [
   {
@@ -585,7 +586,7 @@ const itemApiRows: ApiRow[] = [
     type: 'string',
     defaultValue: '-',
   },
-] 
+]
 
 const partApiRows: ApiRow[] = [
   {
@@ -624,7 +625,7 @@ const partApiRows: ApiRow[] = [
     type: 'string',
     defaultValue: '-',
   },
-] 
+]
 
 const ChatDemo: FC = () => {
   const tabSemanticMessage = ref<TabMode>('preview')
@@ -638,7 +639,7 @@ const ChatDemo: FC = () => {
   const tabHeaderFooter = ref<TabMode>('preview')
   const tabColors = ref<TabMode>('preview')
 
-  const semanticFeedItems = [
+  const semanticFeedItems: ReadonlyArray<ChatDataItem> = [
     {
       key: 'rue',
       placement: 'start',
@@ -693,8 +694,8 @@ const ChatDemo: FC = () => {
           Chat 现在不再只是对 daisyUI 静态结构的薄封装。你可以继续使用
           <code> Chat.Bubble </code>
           这一套复合子组件，也可以直接通过
-          <code> message </code>、<code>author</code>、<code>timestamp</code>、<code>avatar</code>
-          与 <code>items</code> 组织整条消息流。
+          <code> message </code>、<code>author</code>、<code>timestamp</code>、<code>avatar</code>与{' '}
+          <code>items</code> 组织整条消息流。
         </p>
         <div className="text-sm flex flex-wrap gap-4">
           <a href="https://daisyui.com/components/chat/" target="_blank">
@@ -706,7 +707,9 @@ const ChatDemo: FC = () => {
           {capabilityCards.map(card => (
             <div key={card.title} className="card border border-base-300 bg-base-100 shadow-sm">
               <div className="card-body gap-2 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-base-content/50">Capability</div>
+                <div className="text-xs uppercase tracking-[0.2em] text-base-content/50">
+                  Capability
+                </div>
                 <div className="text-sm font-semibold">{card.title}</div>
                 <p className="m-0 text-sm opacity-70">{card.desc}</p>
               </div>
@@ -800,7 +803,8 @@ const ChatDemo: FC = () => {
               <div className="card-body gap-4">
                 <div className="alert alert-soft text-sm">
                   <span>
-                    推荐心智：<code>Chat</code> 负责布局与数据驱动，<code>Chat.Bubble</code> 负责局部精修。
+                    推荐心智：<code>Chat</code> 负责布局与数据驱动，<code>Chat.Bubble</code>{' '}
+                    负责局部精修。
                   </span>
                 </div>
                 <Chat items={semanticFeedItems} className="w-full" />
@@ -844,10 +848,16 @@ const ChatDemo: FC = () => {
                 <div className="w-full">
                   {legacyChatData.map((item, index) => (
                     <Chat key={index} placement={item.placement}>
-                      {item.avatarSrc ? <Chat.Image src={item.avatarSrc} alt={item.author} /> : null}
-                      {item.author ? <Chat.Header author={item.author} time={item.timestamp} /> : null}
+                      {item.avatarSrc ? (
+                        <Chat.Image src={item.avatarSrc} alt={item.author} />
+                      ) : null}
+                      {item.author ? (
+                        <Chat.Header author={item.author} time={item.timestamp} />
+                      ) : null}
                       <Chat.Bubble color={item.color}>{item.message}</Chat.Bubble>
-                      {item.footer ? <Chat.Footer className="opacity-50">{item.footer}</Chat.Footer> : null}
+                      {item.footer ? (
+                        <Chat.Footer className="opacity-50">{item.footer}</Chat.Footer>
+                      ) : null}
                     </Chat>
                   ))}
                 </div>
@@ -997,7 +1007,8 @@ const ChatDemo: FC = () => {
 
         <h2 id="chat-api">API</h2>
         <p>
-          Chat 现在分成三层心智：根节点的消息语义 props、items 的数据驱动消息流，以及复合子组件的局部结构控制。
+          Chat 现在分成三层心智：根节点的消息语义 props、items
+          的数据驱动消息流，以及复合子组件的局部结构控制。
         </p>
 
         <h3>Chat Props</h3>

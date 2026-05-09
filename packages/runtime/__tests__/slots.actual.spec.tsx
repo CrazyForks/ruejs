@@ -24,10 +24,14 @@ afterEach(() => {
 })
 
 const findButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === label) ?? null
+  Array.from(root.querySelectorAll('button')).find(
+    button => button.textContent?.trim() === label,
+  ) ?? null
 
 const findDemoSection = (root: ParentNode, heading: string) =>
-  Array.from(root.querySelectorAll('h3')).find(node => node.textContent?.trim() === heading)?.closest('div.space-y-3')
+  Array.from(root.querySelectorAll('h3'))
+    .find(node => node.textContent?.trim() === heading)
+    ?.closest('div.space-y-3')
 
 const countText = (root: ParentNode, needle: string) => {
   const text = root.textContent ?? ''

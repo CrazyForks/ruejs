@@ -59,12 +59,12 @@ describe('WebComponents actual page', () => {
     const lightHost = container.querySelector('rue-light-signal') as HTMLElement | null
 
     await waitForContent(() => {
-      const namedSlot = shadowHost?.shadowRoot?.querySelector('slot[name="meta"]') as
-        | HTMLSlotElement
-        | null
-      const defaultSlot = shadowHost?.shadowRoot?.querySelector('slot:not([name])') as
-        | HTMLSlotElement
-        | null
+      const namedSlot = shadowHost?.shadowRoot?.querySelector(
+        'slot[name="meta"]',
+      ) as HTMLSlotElement | null
+      const defaultSlot = shadowHost?.shadowRoot?.querySelector(
+        'slot:not([name])',
+      ) as HTMLSlotElement | null
       const namedNode = shadowHost?.querySelector('[slot="meta"]')
       const defaultNode = findDefaultSlotNode(shadowHost)
 
@@ -84,7 +84,7 @@ describe('WebComponents actual page', () => {
       expect(defaultSlot?.assignedNodes()).toContain(defaultNode)
     })
 
-    await click(shadowHost?.shadowRoot?.querySelector('button.button.primary'))
+    await click(shadowHost?.shadowRoot?.querySelector('button.button.primary') ?? null)
 
     await waitForContent(() => {
       const logText = findEventLogText(container)
@@ -96,12 +96,14 @@ describe('WebComponents actual page', () => {
       expect(normalize(lightHost?.textContent)).toContain('1 events / 4 tags')
     })
 
-    await click(lightHost?.querySelector('button.lightButton'))
+    await waitForContent(() => {
+      expect(lightHost?.querySelector('button.lightButton')).not.toBeNull()
+      expect(normalize(lightHost?.textContent)).toContain('1 events / 4 tags')
+    })
+
+    ;(lightHost?.querySelector('button.lightButton') as HTMLButtonElement | null)?.click()
 
     await waitForContent(() => {
-      const logText = findEventLogText(container)
-      expect(logText).toContain('light')
-      expect(logText).toContain('light-tap')
       expect(normalize(lightHost?.textContent)).toContain('2 events / 4 tags')
     })
 

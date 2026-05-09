@@ -51,9 +51,9 @@ describe('Fab', () => {
       const trigger = container.querySelector('[data-testid="trigger"]') as HTMLElement
       expect(trigger.getAttribute('role')).toBe('button')
       expect(trigger.getAttribute('tabindex')).toBe('0')
-      expect(container.querySelector('[data-testid="close"]')?.classList.contains('fab-close')).toBe(
-        true,
-      )
+      expect(
+        container.querySelector('[data-testid="close"]')?.classList.contains('fab-close'),
+      ).toBe(true)
       expect(
         container.querySelector('[data-testid="main"]')?.classList.contains('fab-main-action'),
       ).toBe(true)

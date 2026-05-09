@@ -17,7 +17,6 @@ Thumbs.db
 .tmp/
 .temp/
 .cache/
-.eslintcache
 .vite/
 .vite-cache/
 .parcel-cache/
@@ -45,10 +44,11 @@ target/
 /vibewindow/
 packages/runtime-vapor/pkg/
 packages/runtime-vapor/pkg-node/
-packages/runtime-vapor/p/pkg-reactive/
-packages/runtime-vapor/p/pkg-node-vapor/
-packages/runtime-vapor/p/pkg-node-reactive/
+packages/runtime-vapor/pkg-reactive/
+packages/runtime-vapor/pkg-node-vapor/
+packages/runtime-vapor/pkg-node-reactive/
 packages/runtime-vapor/pkg-vapor/
 /.vibewindow/
 /memory/
 /state/
+/.playwright-cli

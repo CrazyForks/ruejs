@@ -10,14 +10,7 @@ type DemoCalendarMode = 'month' | 'year'
 type CallyElement = HTMLElement & { value?: string }
 type PikadayInstance = { destroy?: () => void }
 type PikadayConstructor = new (options: Record<string, unknown>) => PikadayInstance
-type EventTone =
-  | 'primary'
-  | 'secondary'
-  | 'accent'
-  | 'info'
-  | 'success'
-  | 'warning'
-  | 'error'
+type EventTone = 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'
 
 interface ApiRow {
   prop: string
@@ -201,7 +194,8 @@ const eventToneClassName: Record<EventTone, string> = {
 }
 
 const getCalendarExternalLoaders = () => {
-  return (globalThis as { __RUE_CALENDAR_EXTERNALS__?: CalendarExternalLoaders }).__RUE_CALENDAR_EXTERNALS__
+  return (globalThis as { __RUE_CALENDAR_EXTERNALS__?: CalendarExternalLoaders })
+    .__RUE_CALENDAR_EXTERNALS__
 }
 
 const ensureCally = async () => {
@@ -344,7 +338,14 @@ const PreviewStatus: FC<PreviewStatusProps> = ({ ready, readyLabel, loadingLabel
   )
 }
 
-const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code, lang = 'tsx' }) => {
+const ExampleBlock: FC<ExampleBlockProps> = ({
+  title,
+  summary,
+  tab,
+  preview,
+  code,
+  lang = 'tsx',
+}) => {
   return (
     <div className="component-preview not-prose my-6 text-base-content lg:my-12">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -368,7 +369,11 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
   )
 }
 
-const HeroCard: FC<{ title: string; detail: string; badge: string }> = ({ title, detail, badge }) => {
+const HeroCard: FC<{ title: string; detail: string; badge: string }> = ({
+  title,
+  detail,
+  badge,
+}) => {
   return (
     <div className="rounded-[1.35rem] border border-base-300/80 bg-base-100/85 p-4 shadow-sm">
       <div className="badge badge-outline badge-sm">{badge}</div>
@@ -395,9 +400,7 @@ const BasicCalendarPreview: FC = () => {
           showWeek
           validRange={[parseDate('2026-04-01'), parseDate('2026-05-31')]}
           disabledDate={date =>
-            date.getDay() === 0 ||
-            date.getDay() === 6 ||
-            maintenanceDates.has(formatIsoDate(date))
+            date.getDay() === 0 || date.getDay() === 6 || maintenanceDates.has(formatIsoDate(date))
           }
           onChange={date => {
             value.value = formatIsoDate(date)
@@ -445,7 +448,7 @@ const NoticeCalendarPreview: FC = () => {
         value={value.value}
         mode={mode.value}
         onChange={date => {
-            value.value = formatIsoDate(date)
+          value.value = formatIsoDate(date)
         }}
         onPanelChange={(_date, nextMode) => {
           mode.value = nextMode as DemoCalendarMode
@@ -469,7 +472,10 @@ const NoticeCalendarPreview: FC = () => {
           return (
             <div className="space-y-1">
               {items.slice(0, 2).map(item => (
-                <div key={item.label} className={`badge badge-soft badge-xs ${eventToneClassName[item.tone]}`}>
+                <div
+                  key={item.label}
+                  className={`badge badge-soft badge-xs ${eventToneClassName[item.tone]}`}
+                >
                   {item.label}
                 </div>
               ))}
@@ -525,7 +531,9 @@ const CardCalendarPreview: FC = () => {
                 <div className="flex h-full flex-col justify-between gap-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-semibold">{date.getDate()}</span>
-                    <span className={`badge badge-xs ${load >= 80 ? 'badge-error' : load >= 60 ? 'badge-warning' : 'badge-success'} badge-soft`}>
+                    <span
+                      className={`badge badge-xs ${load >= 80 ? 'badge-error' : load >= 60 ? 'badge-warning' : 'badge-success'} badge-soft`}
+                    >
                       {load}%
                     </span>
                   </div>
@@ -536,7 +544,9 @@ const CardCalendarPreview: FC = () => {
                         style={{ width: `${load}%` }}
                       ></div>
                     </div>
-                    <div className="text-[0.62rem] uppercase tracking-[0.22em] opacity-60">Studio load</div>
+                    <div className="text-[0.62rem] uppercase tracking-[0.22em] opacity-60">
+                      Studio load
+                    </div>
                   </div>
                 </div>
               )
@@ -573,14 +583,24 @@ const CustomHeaderCalendarPreview: FC = () => {
         locale="zh-CN"
         value={value.value}
         mode={mode.value}
-        headerRender={({ value: current, type, yearOptions, monthOptions, onMonthChange, onTypeChange, onYearChange }) => (
+        headerRender={({
+          value: current,
+          type,
+          yearOptions,
+          monthOptions,
+          onMonthChange,
+          onTypeChange,
+          onYearChange,
+        }) => (
           <div className="border-b border-base-300/70 px-3 py-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
                   Studio Header
                 </div>
-                <div className="mt-1 text-base font-semibold">{formatPanelLabel(current, type as DemoCalendarMode)}</div>
+                <div className="mt-1 text-base font-semibold">
+                  {formatPanelLabel(current, type as DemoCalendarMode)}
+                </div>
               </div>
               <div className="join">
                 <button
@@ -604,7 +624,9 @@ const CustomHeaderCalendarPreview: FC = () => {
               <select
                 className="select select-sm min-w-24"
                 value={current.getFullYear()}
-                onChange={event => onYearChange(Number((event.currentTarget as HTMLSelectElement).value))}
+                onChange={(event: Event) =>
+                  onYearChange(Number((event.currentTarget as HTMLSelectElement).value))
+                }
               >
                 {yearOptions.map(option => (
                   <option key={option} value={option}>
@@ -616,7 +638,9 @@ const CustomHeaderCalendarPreview: FC = () => {
                 className="select select-sm min-w-24"
                 value={current.getMonth()}
                 disabled={type === 'year'}
-                onChange={event => onMonthChange(Number((event.currentTarget as HTMLSelectElement).value))}
+                onChange={(event: Event) =>
+                  onMonthChange(Number((event.currentTarget as HTMLSelectElement).value))
+                }
               >
                 {monthOptions.map(option => (
                   <option key={option.value} value={option.value} disabled={option.disabled}>
@@ -689,7 +713,7 @@ const CallyCalendarPreview: FC = () => {
   })
 
   onUnmounted(() => {
-    cleanupRef.current()
+    cleanupRef.current?.()
     cleanupRef.current = () => {}
   })
 
@@ -711,7 +735,8 @@ const CallyCalendarPreview: FC = () => {
         error={error.value}
       />
       <p className="m-0 text-xs text-base-content/70">
-        当前选择：{formatSelectedDate(selectedValue.value)}。这条 demo 原样保留，用于展示原生 web component 接口。
+        当前选择：{formatSelectedDate(selectedValue.value)}。这条 demo 原样保留，用于展示原生 web
+        component 接口。
       </p>
     </div>
   )
@@ -761,7 +786,7 @@ const CallyDatePickerPreview: FC = () => {
   })
 
   onUnmounted(() => {
-    cleanupRef.current()
+    cleanupRef.current?.()
     cleanupRef.current = () => {}
   })
 
@@ -869,7 +894,9 @@ const PikadayPreview: FC<PikadayPreviewProps> = ({ note, testId }) => {
         loadingLabel="Loading Pikaday..."
         error={error.value}
       />
-      <p className="m-0 text-xs text-base-content/70">当前选择：{formatSelectedDate(selectedValue.value)}</p>
+      <p className="m-0 text-xs text-base-content/70">
+        当前选择：{formatSelectedDate(selectedValue.value)}
+      </p>
       <p className="m-0 text-xs text-base-content/70">{note}</p>
     </div>
   )
@@ -1447,7 +1474,8 @@ const CalendarDemo: FC = () => {
       <div className="prose prose-sm max-w-none md:prose-base">
         <h1>Calendar 日历</h1>
         <p className="mt-3 mb-3 text-sm">
-          Calendar 现在同时覆盖 Rue 原生月历面板、事项渲染、卡片式日历，以及 Cally、Pikaday 两条旧接入链路。
+          Calendar 现在同时覆盖 Rue 原生月历面板、事项渲染、卡片式日历，以及 Cally、Pikaday
+          两条旧接入链路。
         </p>
         <div className="not-prose grid gap-3 rounded-[1.75rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200/75 p-4 shadow-sm md:grid-cols-3">
           <HeroCard
@@ -1543,7 +1571,8 @@ const CalendarDemo: FC = () => {
           <div>
             <h2 className="mb-2">API</h2>
             <p className="m-0 text-sm text-base-content/70">
-              默认 Calendar 面板聚焦于 ant-design Calendar 的核心交互能力，同时保留 Rue 自己的视觉和旧导出方式。
+              默认 Calendar 面板聚焦于日历组件常见的核心交互能力，同时保留 Rue
+              自己的视觉和旧导出方式。
             </p>
           </div>
           <ApiTable rows={apiRows} />

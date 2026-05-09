@@ -121,7 +121,8 @@ const Events: FC = () => {
             <div className="card-body gap-3">
               <div role="alert" className="alert alert-info alert-soft">
                 <span>
-                  这是原生 TSX 事件属性写法。若要看 Rue 的 v-on: / r-on: 指令糖、修饰符写法和两者对照，请看 /jsx/v-on-r-on。
+                  这是原生 TSX 事件属性写法。若要看 Rue 的 v-on: / r-on:
+                  指令糖、修饰符写法和两者对照，请看 /jsx/v-on-r-on。
                 </span>
               </div>
               <Code lang="tsx" code={nativeEventsCode} />
@@ -134,7 +135,8 @@ const Events: FC = () => {
             <div className="card-body grid gap-6">
               <div role="alert" className="alert alert-info">
                 <span>
-                  本页只展示原生 TSX 的 onClick / onKeyUp 写法。Rue 指令版与原生 TSX 的逐项对照，已经同步整理到 /jsx/v-on-r-on。
+                  本页只展示原生 TSX 的 onClick / onKeyUp 写法。Rue 指令版与原生 TSX
+                  的逐项对照，已经同步整理到 /jsx/v-on-r-on。
                 </span>
               </div>
 
@@ -151,7 +153,9 @@ const Events: FC = () => {
 
               <section className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-xl font-semibold">onClick + stopPropagation + preventDefault</h2>
+                  <h2 className="text-xl font-semibold">
+                    onClick + stopPropagation + preventDefault
+                  </h2>
                   <span className="badge badge-success badge-lg">{stopPreventCount.value}</span>
                 </div>
 
@@ -166,7 +170,11 @@ const Events: FC = () => {
                   <span className="badge badge-accent badge-lg">{enterCount.value}</span>
                 </div>
 
-                <input className="input input-bordered w-full" placeholder="按 Enter" onKeyUp={handleEnter} />
+                <input
+                  className="input input-bordered w-full"
+                  placeholder="按 Enter"
+                  onKeyUp={handleEnter}
+                />
               </section>
 
               <section className="space-y-3">

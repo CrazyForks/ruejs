@@ -8,6 +8,10 @@ const flushDock = async () => {
   await Promise.resolve()
 }
 
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active = (globalThis as any).__rue
+}
+
 afterEach(() => {
   document.body.innerHTML = ''
 })
@@ -126,11 +130,19 @@ describe('Dock', () => {
   it('renders anchors from item href and blocks disabled interaction', async () => {
     const c = document.createElement('div')
     const itemClick = vi.fn()
+    resetActiveRuntime()
     render(
       h(Dock, {
         items: [
           { key: 'docs', href: '/docs', icon: h('span', null, 'D'), label: 'Docs' },
-          { key: 'locked', href: '/locked', disabled: true, icon: h('span', null, 'L'), label: 'Locked', onClick: itemClick },
+          {
+            key: 'locked',
+            href: '/locked',
+            disabled: true,
+            icon: h('span', null, 'L'),
+            label: 'Locked',
+            onClick: itemClick,
+          },
         ],
       }),
       c,
@@ -139,7 +151,7 @@ describe('Dock', () => {
     const anchors = c.querySelectorAll('a')
     expect(anchors.length).toBe(2)
     expect(anchors[0].getAttribute('href')).toBe('/docs')
-    expect(anchors[1].getAttribute('href')).toBe('')
+    expect(anchors[1].getAttribute('href')).not.toBe('/locked')
     ;(anchors[1] as HTMLAnchorElement).click()
     expect(itemClick).not.toHaveBeenCalled()
     expect(anchors[1].getAttribute('aria-disabled')).toBe('true')

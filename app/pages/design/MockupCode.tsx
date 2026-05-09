@@ -45,7 +45,11 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
         onChange={key => (tab.value = key as TabMode)}
         className="mb-3 mt-4"
       />
-      {tab.value === 'preview' ? <PreviewRenderer preview={preview} /> : <Code className="mt-2" lang="tsx" code={code} />}
+      {tab.value === 'preview' ? (
+        <PreviewRenderer preview={preview} />
+      ) : (
+        <Code className="mt-2" lang="tsx" code={code} />
+      )}
     </div>
   )
 }
@@ -183,14 +187,27 @@ const createNumberedItems = () => [
   { prefix: '37', children: <code>{`import { MockupCode } from '@rue-js/design'`}</code> },
   { prefix: '38', children: <code /> },
   { prefix: '39', children: <code>{'export default function Demo() {'}</code> },
-  { prefix: '40', children: <code>{'  return <MockupCode lineNumbers items={lines} />'}</code>, tone: 'primary' as const },
+  {
+    prefix: '40',
+    children: <code>{'  return <MockupCode lineNumbers items={lines} />'}</code>,
+    tone: 'primary' as const,
+  },
   { prefix: '41', children: <code>{'}'}</code> },
 ]
 
 const createDiffItems = () => [
   { prefix: '-', children: <code>{'const theme = "light"'}</code>, tone: 'error' as const },
-  { prefix: '+', children: <code>{'const theme = "rue-night"'}</code>, tone: 'success' as const, highlight: true },
-  { prefix: '~', children: <code>{'const panel = createWorkspace(theme)'}</code>, tone: 'info' as const },
+  {
+    prefix: '+',
+    children: <code>{'const theme = "rue-night"'}</code>,
+    tone: 'success' as const,
+    highlight: true,
+  },
+  {
+    prefix: '~',
+    children: <code>{'const panel = createWorkspace(theme)'}</code>,
+    tone: 'info' as const,
+  },
 ]
 
 const MockupCodePage: FC = () => {
@@ -209,8 +226,10 @@ const MockupCodePage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Mockup Code 代码外框</h1>
         <p className="text-sm mt-3 mb-3">
-          MockupCode 现在同时支持两种写法：保留原始 <code>pre + data-prefix</code> 结构，也提供更顺手的
-          <code>items</code> 与 <code>MockupCode.Line</code> 语义 API，适合终端日志、代码片段和差异对比。
+          MockupCode 现在同时支持两种写法：保留原始 <code>pre + data-prefix</code>{' '}
+          结构，也提供更顺手的
+          <code>items</code> 与 <code>MockupCode.Line</code> 语义
+          API，适合终端日志、代码片段和差异对比。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -222,7 +241,9 @@ const MockupCodePage: FC = () => {
         <h2>何时使用</h2>
         <ul>
           <li>需要用 Rue 的终端外框包裹一小段安装命令、日志输出或代码片段。</li>
-          <li>希望把行号、前缀、状态色和高亮行用语义属性表达，而不是手写每个 <code>pre</code>。</li>
+          <li>
+            希望把行号、前缀、状态色和高亮行用语义属性表达，而不是手写每个 <code>pre</code>。
+          </li>
         </ul>
 
         <ExampleBlock
@@ -297,7 +318,11 @@ const MockupCodePage: FC = () => {
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body">
-                <MockupCode className="w-full" data-testid="mockup-code-line-numbers" items={createNumberedItems()} />
+                <MockupCode
+                  className="w-full"
+                  data-testid="mockup-code-line-numbers"
+                  items={createNumberedItems()}
+                />
               </div>
             </div>
           )}
@@ -423,7 +448,8 @@ const MockupCodePage: FC = () => {
                 <MockupCode className="w-full" data-testid="mockup-code-long-line">
                   <pre data-prefix="~">
                     <code>
-                      Magnam dolore beatae necessitatibus nemopsum itaque sit. Et porro quae qui et et dolore ratione.
+                      Magnam dolore beatae necessitatibus nemopsum itaque sit. Et porro quae qui et
+                      et dolore ratione.
                     </code>
                   </pre>
                 </MockupCode>

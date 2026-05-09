@@ -1,7 +1,7 @@
 use super::WasmRue;
 use crate::reactive::core::create_effect_scope;
-use crate::runtime::transport::DefaultMountHandleStorePolicy;
 use crate::runtime::js_adapter::JsDomAdapter;
+use crate::runtime::transport::DefaultMountHandleStorePolicy;
 use crate::runtime::types::{ComponentProps, MountInput, MountInputType};
 use js_sys::Function;
 use wasm_bindgen::JsValue;
@@ -33,6 +33,7 @@ impl WasmRue {
                 props: ComponentProps::new(),
                 children: vec![],
                 key: None,
+                strict_component_returns: false,
                 mount_cleanup_bucket: None,
                 mount_effect_scope_id: Some(scope_id),
                 el_hint: None,
@@ -44,6 +45,7 @@ impl WasmRue {
                 props: ComponentProps::new(),
                 children: vec![],
                 key: None,
+                strict_component_returns: false,
                 mount_cleanup_bucket: None,
                 mount_effect_scope_id: None,
                 el_hint: None,

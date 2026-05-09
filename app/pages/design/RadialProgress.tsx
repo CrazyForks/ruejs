@@ -16,7 +16,8 @@ const values = [0, 20, 60, 80, 100]
 const apiRows: ApiRow[] = [
   {
     prop: 'value / percent',
-    description: '既兼容 DaisyUI 原本的 value 写法，也支持更接近 Progress 的 percent 写法；percent 优先级更高',
+    description:
+      '既兼容 DaisyUI 原本的 value 写法，也支持更接近 Progress 的 percent 写法；percent 优先级更高',
     type: 'number | string',
     defaultValue: '0',
   },
@@ -220,7 +221,10 @@ const RadialProgressPage: FC = () => {
         <h2>何时使用</h2>
         <ul>
           <li>需要比线性 Progress 更聚焦的单值表达，比如健康分、完成度、评分和容量水位。</li>
-          <li>需要保留 DaisyUI 的轻量环形观感，但又希望补齐 dashboard、success segment 和 steps 这种行为层 API。</li>
+          <li>
+            需要保留 DaisyUI 的轻量环形观感，但又希望补齐 dashboard、success segment 和 steps
+            这种行为层 API。
+          </li>
           <li>需要在中心区域放置百分比、状态图标或业务文案，而不是单纯显示一个静态圆环。</li>
         </ul>
 
@@ -266,15 +270,26 @@ const RadialProgressPage: FC = () => {
           preview={() => (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">format</div>
-                <RadialProgress data-testid="radial-format" percent={72} className="text-primary" format={value => `部署中 ${value}%`} />
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  format
+                </div>
+                <RadialProgress
+                  data-testid="radial-format"
+                  percent={72}
+                  className="text-primary"
+                  format={value => `部署中 ${value}%`}
+                />
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">success icon</div>
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  success icon
+                </div>
                 <RadialProgress percent={100} status="success" className="text-success" />
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">exception</div>
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  exception
+                </div>
                 <RadialProgress percent={41} status="exception" />
               </div>
             </div>
@@ -289,11 +304,21 @@ const RadialProgressPage: FC = () => {
           preview={() => (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">dashboard</div>
-                <RadialProgress data-testid="radial-dashboard" type="dashboard" percent={66} gapDegree={84} className="text-secondary" />
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  dashboard
+                </div>
+                <RadialProgress
+                  data-testid="radial-dashboard"
+                  type="dashboard"
+                  percent={66}
+                  gapDegree={84}
+                  className="text-secondary"
+                />
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">success split</div>
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  success split
+                </div>
                 <RadialProgress
                   type="dashboard"
                   percent={78}
@@ -304,11 +329,15 @@ const RadialProgressPage: FC = () => {
                 />
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">custom content</div>
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  custom content
+                </div>
                 <RadialProgress percent={92} size="8rem" className="text-accent">
                   <div className="space-y-1">
                     <div className="text-xl font-semibold leading-none">92%</div>
-                    <div className="text-[11px] uppercase tracking-wide text-base-content/55">healthy</div>
+                    <div className="text-[11px] uppercase tracking-wide text-base-content/55">
+                      healthy
+                    </div>
                   </div>
                 </RadialProgress>
               </div>
@@ -324,11 +353,21 @@ const RadialProgressPage: FC = () => {
           preview={() => (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">circle steps</div>
-                <RadialProgress data-testid="radial-steps" percent={60} steps={{ count: 8, gap: 4 }} size="9rem" className="text-primary" />
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  circle steps
+                </div>
+                <RadialProgress
+                  data-testid="radial-steps"
+                  percent={60}
+                  steps={{ count: 8, gap: 4 }}
+                  size="9rem"
+                  className="text-primary"
+                />
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">colorful steps</div>
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  colorful steps
+                </div>
                 <RadialProgress
                   percent={75}
                   steps={{ count: 6, gap: 5 }}
@@ -338,7 +377,9 @@ const RadialProgressPage: FC = () => {
                 />
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-4 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">success segment</div>
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  success segment
+                </div>
                 <RadialProgress
                   percent={83}
                   success={{ percent: 46 }}
@@ -360,7 +401,10 @@ const RadialProgressPage: FC = () => {
               <RadialProgress className="text-primary" value={70}>
                 70%
               </RadialProgress>
-              <RadialProgress className="bg-primary text-primary-content border-4 border-primary" value={70}>
+              <RadialProgress
+                className="bg-primary text-primary-content border-4 border-primary"
+                value={70}
+              >
                 70%
               </RadialProgress>
               <RadialProgress value={84} strokeColor="#f97316" railColor="#fed7aa">
@@ -390,8 +434,8 @@ const RadialProgressPage: FC = () => {
 
         <h2 id="radial-progress-api">API</h2>
         <p className="text-sm mt-3 mb-4">
-          RadialProgress 沿用了 DaisyUI 的尺寸和 className 心智，但把最常用的环形进度行为 API 收敛到了一个组件里。
-          如果你已经在用 Rue 的 Progress，这里大部分字段会有熟悉的手感。
+          RadialProgress 沿用了 DaisyUI 的尺寸和 className 心智，但把最常用的环形进度行为 API
+          收敛到了一个组件里。 如果你已经在用 Rue 的 Progress，这里大部分字段会有熟悉的手感。
         </p>
         <ApiTable rows={apiRows} />
       </div>

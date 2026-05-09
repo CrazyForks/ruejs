@@ -36,7 +36,6 @@ const photos = {
   yellingwoman: 'https://img.daisyui.com/images/profile/demo/yellingwoman@192.webp',
 } as const
 
-
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">
@@ -95,23 +94,53 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
 }
 
 const UserIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-[1.2em]">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    className="size-[1.2em]"
+  >
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 20a7.5 7.5 0 0 1 15 0" />
   </svg>
 )
 
 const SparkIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-[1.2em]">
-    <path strokeLinecap="round" strokeLinejoin="round" d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z" />
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    className="size-[1.2em]"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z"
+    />
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 18h.01M19 18h.01M12 21h.01" />
   </svg>
 )
 
 const TeamIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-[1.2em]">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    className="size-[1.2em]"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M7.5 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M16.5 12.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+    />
     <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 20a4.5 4.5 0 0 1 8 0" />
     <path strokeLinecap="round" strokeLinejoin="round" d="M12.5 20a5.5 5.5 0 0 1 8 0" />
   </svg>
@@ -119,52 +148,144 @@ const TeamIcon = () => (
 
 const avatarApiRows: ApiRow[] = [
   { prop: 'alt', description: '图片头像的替代文本', type: 'string', defaultValue: '`Avatar`' },
-  { prop: 'bodyClassName', description: '头像主体容器类名，适合加 ring 或 mask', type: 'string', defaultValue: '-' },
-  { prop: 'children', description: '文字、图标、fallback，或旧版自定义内容插槽', type: 'VNode', defaultValue: '-' },
+  {
+    prop: 'bodyClassName',
+    description: '头像主体容器类名，适合加 ring 或 mask',
+    type: 'string',
+    defaultValue: '-',
+  },
+  {
+    prop: 'children',
+    description: '文字、图标、fallback，或旧版自定义内容插槽',
+    type: 'RenderOutput',
+    defaultValue: '-',
+  },
   { prop: 'className', description: '头像根节点类名', type: 'string', defaultValue: '-' },
-  { prop: 'color', description: '语义化背景色，主要作用于文字或图标头像', type: '`base` | `neutral` | `primary` | `secondary` | `accent` | `info` | `success` | `warning` | `error`', defaultValue: '根据场景自动决定' },
-  { prop: 'crossOrigin', description: '图片跨域属性', type: '`anonymous` | `use-credentials` | ``', defaultValue: '-' },
-  { prop: 'fit', description: '图片填充模式', type: '`cover` | `contain`', defaultValue: '`cover`' },
-  { prop: 'gap', description: '文字头像左右预留间距，用于自动缩放', type: 'number', defaultValue: '4' },
-  { prop: 'icon', description: '图标头像内容；图片失败后也会优先回退到这里', type: 'VNode', defaultValue: '-' },
+  {
+    prop: 'color',
+    description: '语义化背景色，主要作用于文字或图标头像',
+    type: '`base` | `neutral` | `primary` | `secondary` | `accent` | `info` | `success` | `warning` | `error`',
+    defaultValue: '根据场景自动决定',
+  },
+  {
+    prop: 'crossOrigin',
+    description: '图片跨域属性',
+    type: '`anonymous` | `use-credentials` | ``',
+    defaultValue: '-',
+  },
+  {
+    prop: 'fit',
+    description: '图片填充模式',
+    type: '`cover` | `contain`',
+    defaultValue: '`cover`',
+  },
+  {
+    prop: 'gap',
+    description: '文字头像左右预留间距，用于自动缩放',
+    type: 'number',
+    defaultValue: '4',
+  },
+  {
+    prop: 'icon',
+    description: '图标头像内容；图片失败后也会优先回退到这里',
+    type: 'RenderOutput',
+    defaultValue: '-',
+  },
   { prop: 'imgClassName', description: 'img 节点类名', type: 'string', defaultValue: '-' },
-  { prop: 'onError', description: '图片加载失败回调；返回 false 可阻止默认回退', type: '(event: Event) => boolean | void', defaultValue: '-' },
+  {
+    prop: 'onError',
+    description: '图片加载失败回调；返回 false 可阻止默认回退',
+    type: '(event: Event) => boolean | void',
+    defaultValue: '-',
+  },
   { prop: 'shape', description: '头像形状', type: '`circle` | `square`', defaultValue: '`circle`' },
-  { prop: 'size', description: '头像尺寸，支持数字像素和语义尺寸别名', type: 'number | `xs` | `sm` | `md` | `lg` | `xl` | `small` | `default` | `medium` | `middle` | `large`', defaultValue: '`md`' },
-  { prop: 'src', description: '图片地址或自定义媒体节点', type: 'string | VNode', defaultValue: '-' },
+  {
+    prop: 'size',
+    description: '头像尺寸，支持数字像素和语义尺寸别名',
+    type: 'number | `xs` | `sm` | `md` | `lg` | `xl` | `small` | `default` | `medium` | `middle` | `large`',
+    defaultValue: '`md`',
+  },
+  {
+    prop: 'src',
+    description: '图片地址或自定义媒体节点',
+    type: 'string | RenderOutput',
+    defaultValue: '-',
+  },
   { prop: 'srcSet', description: '图片多分辨率资源集合', type: 'string', defaultValue: '-' },
-  { prop: 'status', description: '在线、离线、占位三种状态标记', type: '`online` | `offline` | `placeholder`', defaultValue: '-' },
+  {
+    prop: 'status',
+    description: '在线、离线、占位三种状态标记',
+    type: '`online` | `offline` | `placeholder`',
+    defaultValue: '-',
+  },
   { prop: 'text', description: '显式指定文字头像内容', type: 'string', defaultValue: '-' },
 ]
 
 const avatarGroupApiRows: ApiRow[] = [
-  { prop: 'children', description: '手写 Avatar 子节点，保留原始组合方式', type: 'VNode', defaultValue: '-' },
+  {
+    prop: 'children',
+    description: '手写 Avatar 子节点，保留原始组合方式',
+    type: 'RenderOutput',
+    defaultValue: '-',
+  },
   { prop: 'className', description: '群组容器类名', type: 'string', defaultValue: '-' },
-  { prop: 'items', description: '数据驱动渲染头像列表，单项可复用 AvatarProps', type: 'AvatarGroupItem[]', defaultValue: '-' },
-  { prop: 'max', description: '最多显示多少个头像，超出后自动合并成 +N', type: 'number | { count?: number; placeholder?: VNode; className?: string; bodyClassName?: string }', defaultValue: '-' },
-  { prop: 'shape', description: '为 items 模式和聚合头像提供默认形状', type: '`circle` | `square`', defaultValue: '-' },
-  { prop: 'size', description: '为 items 模式和聚合头像提供默认尺寸', type: 'AvatarProps[`size`]', defaultValue: '-' },
+  {
+    prop: 'items',
+    description: '数据驱动渲染头像列表，单项可复用 AvatarProps',
+    type: 'AvatarGroupItem[]',
+    defaultValue: '-',
+  },
+  {
+    prop: 'max',
+    description: '最多显示多少个头像，超出后自动合并成 +N',
+    type: 'number | { count?: number; placeholder?: RenderOutput; className?: string; bodyClassName?: string }',
+    defaultValue: '-',
+  },
+  {
+    prop: 'shape',
+    description: '为 items 模式和聚合头像提供默认形状',
+    type: '`circle` | `square`',
+    defaultValue: '-',
+  },
+  {
+    prop: 'size',
+    description: '为 items 模式和聚合头像提供默认尺寸',
+    type: 'AvatarProps[`size`]',
+    defaultValue: '-',
+  },
 ]
 
 const legacyGroupItems = [
   {
     children: (
       <div className="w-12 bg-base-300">
-        <img className="h-full w-full object-cover" src={photos.batperson} alt="Tailwind-CSS-Avatar-component" />
+        <img
+          className="h-full w-full object-cover"
+          src={photos.batperson}
+          alt="Tailwind-CSS-Avatar-component"
+        />
       </div>
     ),
   },
   {
     children: (
       <div className="w-12 bg-base-300">
-        <img className="h-full w-full object-cover" src={photos.spiderperson} alt="Tailwind-CSS-Avatar-component" />
+        <img
+          className="h-full w-full object-cover"
+          src={photos.spiderperson}
+          alt="Tailwind-CSS-Avatar-component"
+        />
       </div>
     ),
   },
   {
     children: (
       <div className="w-12 bg-base-300">
-        <img className="h-full w-full object-cover" src={photos.averagebulk} alt="Tailwind-CSS-Avatar-component" />
+        <img
+          className="h-full w-full object-cover"
+          src={photos.averagebulk}
+          alt="Tailwind-CSS-Avatar-component"
+        />
       </div>
     ),
   },
@@ -316,11 +437,22 @@ const AvatarDemo: FC = () => {
           tab={tabSemanticFallback}
           preview={() => (
             <div className="flex flex-wrap items-center gap-4 rounded-box border border-base-300 bg-base-100 p-6">
-              <Avatar src="https://example.com/not-found-avatar.png" size="xl" color="primary" icon={<UserIcon />} />
+              <Avatar
+                src="https://example.com/not-found-avatar.png"
+                size="xl"
+                color="primary"
+                icon={<UserIcon />}
+              />
               <Avatar src="https://example.com/not-found-avatar-2.png" size="xl" color="neutral">
                 AI
               </Avatar>
-              <Avatar src="https://example.com/not-found-avatar-3.png" size="lg" color="accent" shape="square" text="Rue" />
+              <Avatar
+                src="https://example.com/not-found-avatar-3.png"
+                size="lg"
+                color="accent"
+                shape="square"
+                text="Rue"
+              />
             </div>
           )}
           code={`<div className="flex flex-wrap items-center gap-4">
@@ -364,7 +496,8 @@ const AvatarDemo: FC = () => {
 
         <h2 className="mt-10">兼容旧版组合方式</h2>
         <p>
-          下面这些 demo 来自 Rue 之前的 Avatar 页面，保留了原始的 children 插槽写法，用来说明升级后仍然可以继续拼 daisyUI 原子类。
+          下面这些 demo 来自 Rue 之前的 Avatar 页面，保留了原始的 children
+          插槽写法，用来说明升级后仍然可以继续拼 daisyUI 原子类。
         </p>
 
         <ExampleBlock
@@ -373,7 +506,11 @@ const AvatarDemo: FC = () => {
           preview={() => (
             <Avatar>
               <div className="w-24 rounded bg-base-300">
-                <img className="h-full w-full object-cover" src={photos.batperson} alt="Tailwind-CSS-Avatar-component" />
+                <img
+                  className="h-full w-full object-cover"
+                  src={photos.batperson}
+                  alt="Tailwind-CSS-Avatar-component"
+                />
               </div>
             </Avatar>
           )}
@@ -391,22 +528,38 @@ const AvatarDemo: FC = () => {
             <div className="grid gap-3">
               <Avatar>
                 <div className="w-24 rounded bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.superperson} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.superperson}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="w-16 rounded bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.superperson} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.superperson}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="w-12 rounded bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.superperson} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.superperson}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="w-8 rounded bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.superperson} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.superperson}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
             </div>
@@ -424,12 +577,20 @@ const AvatarDemo: FC = () => {
             <div className="grid gap-3">
               <Avatar>
                 <div className="w-24 rounded-xl bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.yellingwoman} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.yellingwoman}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="w-24 rounded-full bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.yellingcat} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.yellingcat}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
             </div>
@@ -445,17 +606,29 @@ const AvatarDemo: FC = () => {
             <div className="grid gap-3">
               <Avatar>
                 <div className="mask mask-heart w-24 bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.distracted3} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.distracted3}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="mask mask-squircle w-24 bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.distracted1} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.distracted1}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="mask mask-hexagon-2 w-24 bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.distracted2} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.distracted2}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
             </div>
@@ -472,22 +645,38 @@ const AvatarDemo: FC = () => {
             <Avatar.Group className="-space-x-6">
               <Avatar>
                 <div className="w-12 bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.batperson} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.batperson}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="w-12 bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.spiderperson} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.spiderperson}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="w-12 bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.averagebulk} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.averagebulk}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="w-12 bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.wonderperson} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.wonderperson}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
             </Avatar.Group>
@@ -546,17 +735,29 @@ const AvatarDemo: FC = () => {
             <Avatar.Group className="-space-x-6">
               <Avatar>
                 <div className="w-12 bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.batperson} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.batperson}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="w-12 bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.spiderperson} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.spiderperson}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar>
                 <div className="w-12 bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.averagebulk} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.averagebulk}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar status="placeholder">
@@ -580,7 +781,11 @@ const AvatarDemo: FC = () => {
           preview={() => (
             <Avatar>
               <div className="w-24 rounded-full ring-2 ring-primary ring-offset-2 ring-offset-base-100">
-                <img className="h-full w-full object-cover" src={photos.spiderperson} alt="Tailwind-CSS-Avatar-component" />
+                <img
+                  className="h-full w-full object-cover"
+                  src={photos.spiderperson}
+                  alt="Tailwind-CSS-Avatar-component"
+                />
               </div>
             </Avatar>
           )}
@@ -598,12 +803,20 @@ const AvatarDemo: FC = () => {
             <div className="flex min-h-[6rem] max-w-4xl min-w-[18rem] flex-wrap items-center justify-center gap-3 rounded-box bg-base-100 p-4 xl:py-10">
               <Avatar status="online">
                 <div className="w-24 rounded-full bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.gordon} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.gordon}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
               <Avatar status="offline">
                 <div className="w-24 rounded-full bg-base-300">
-                  <img className="h-full w-full object-cover" src={photos.idiotsandwich} alt="Tailwind-CSS-Avatar-component" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={photos.idiotsandwich}
+                    alt="Tailwind-CSS-Avatar-component"
+                  />
                 </div>
               </Avatar>
             </div>

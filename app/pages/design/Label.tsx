@@ -258,7 +258,8 @@ const compoundRows: ApiRow[] = [
   },
   {
     prop: 'Label.Floating',
-    description: 'floating-label 模式。保留 children 写法，也支持 caption、description、text、help、error 的字段级快捷写法。',
+    description:
+      'floating-label 模式。保留 children 写法，也支持 caption、description、text、help、error 的字段级快捷写法。',
     type: 'FC<FloatingLabelProps>',
     defaultValue: '-',
   },

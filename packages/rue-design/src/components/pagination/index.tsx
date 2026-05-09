@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Pagination 组件概述
 - 保留 Rue 当前基于 join + btn 的视觉风格，同时补齐更接近成熟组件库的分页能力。
@@ -30,7 +31,11 @@ export interface PaginationLocale {
   jumpNextTitle?: any
 }
 
-export type PaginationItemRender = (page: number, type: PaginationItemType, originalElement: any) => any
+export type PaginationItemRender = (
+  page: number,
+  type: PaginationItemType,
+  originalElement: any,
+) => any
 export type PaginationShowTotal = (total: number, range: [number, number]) => any
 
 export interface PaginationProps {
@@ -124,7 +129,12 @@ const buildJoinClassName = (direction?: PaginationDirection) => {
   return cls
 }
 
-const buildButtonClassName = (size?: PaginationSize, active?: boolean, disabled?: boolean, className?: string) => {
+const buildButtonClassName = (
+  size?: PaginationSize,
+  active?: boolean,
+  disabled?: boolean,
+  className?: string,
+) => {
   const resolvedSize = resolveSizeToken(size)
   let cls = 'join-item btn'
   if (resolvedSize) cls += ` btn-${resolvedSize}`
@@ -173,7 +183,7 @@ const resolveNumberInputWidthClass = (pageCount: number, mode: 'simple' | 'quick
 }
 
 const resolvePageSizeSelectWidthClass = (options: Array<number | string>) => {
-  const maxDigits = options.reduce((result, option) => {
+  const maxDigits = options.reduce<number>((result, option) => {
     return Math.max(result, String(option).length)
   }, 2)
 
@@ -213,7 +223,11 @@ const getRange = (current: number, pageSize: number, total: number): [number, nu
   return [start, end]
 }
 
-const getDisplayItems = (current: number, pageCount: number, showLessItems?: boolean): PaginationDisplayItem[] => {
+const getDisplayItems = (
+  current: number,
+  pageCount: number,
+  showLessItems?: boolean,
+): PaginationDisplayItem[] => {
   if (pageCount <= 0) return []
 
   const items: PaginationDisplayItem[] = []
@@ -322,7 +336,32 @@ const Root: FC<PaginationProps> = ({
   locale,
   ...rest
 }) => {
-  if (!isDataMode({ direction, align, size, className, children, current, defaultCurrent, total, pageSize, defaultPageSize, disabled, simple, showSizeChanger, pageSizeOptions, showQuickJumper, showLessItems, hideOnSinglePage, showTotal, itemRender, onChange, onShowSizeChange, locale })) {
+  if (
+    !isDataMode({
+      direction,
+      align,
+      size,
+      className,
+      children,
+      current,
+      defaultCurrent,
+      total,
+      pageSize,
+      defaultPageSize,
+      disabled,
+      simple,
+      showSizeChanger,
+      pageSizeOptions,
+      showQuickJumper,
+      showLessItems,
+      hideOnSinglePage,
+      showTotal,
+      itemRender,
+      onChange,
+      onShowSizeChange,
+      locale,
+    })
+  ) {
     return (
       <div {...rest} className={mergeClassName(buildJoinClassName(direction), className)}>
         {children}
@@ -335,7 +374,11 @@ const Root: FC<PaginationProps> = ({
   const mergedPageSize = normalizePositiveInt(pageSize ?? uncontrolledPageSize.value, 10)
   const normalizedTotal = Math.max(0, Number(total) || 0)
   const pageCount = Math.max(1, Math.ceil(normalizedTotal / mergedPageSize))
-  const mergedCurrent = clamp(normalizePositiveInt(current ?? uncontrolledCurrent.value, 1), 1, pageCount)
+  const mergedCurrent = clamp(
+    normalizePositiveInt(current ?? uncontrolledCurrent.value, 1),
+    1,
+    pageCount,
+  )
   const totalRange = getRange(mergedCurrent, mergedPageSize, normalizedTotal)
   const sizeOptions =
     pageSizeOptions && pageSizeOptions.length > 0
@@ -343,7 +386,11 @@ const Root: FC<PaginationProps> = ({
       : [10, 20, 50, 100]
   const simpleConfig = typeof simple === 'object' ? simple : simple ? {} : undefined
   const quickJumperConfig =
-    typeof showQuickJumper === 'object' && showQuickJumper ? showQuickJumper : showQuickJumper ? {} : undefined
+    typeof showQuickJumper === 'object' && showQuickJumper
+      ? showQuickJumper
+      : showQuickJumper
+        ? {}
+        : undefined
   const pagerItems = getDisplayItems(mergedCurrent, pageCount, showLessItems)
   const inputDraftRef = useRef<{
     page: number
@@ -437,7 +484,11 @@ const Root: FC<PaginationProps> = ({
         active={options?.active}
         disabled={renderedDisabled}
         aria-label={type === 'page' ? labels.pageTitle(page) : undefined}
-        title={showTitle ? options?.title ?? (type === 'page' ? labels.pageTitle(page) : undefined) : undefined}
+        title={
+          showTitle
+            ? (options?.title ?? (type === 'page' ? labels.pageTitle(page) : undefined))
+            : undefined
+        }
         onClick={() => {
           if (renderedDisabled || options?.active) return
           updatePage(page)
@@ -450,16 +501,16 @@ const Root: FC<PaginationProps> = ({
 
   const pagerNode = simpleConfig ? (
     <div className={buildJoinClassName()}>
-      {renderItem(
-        Math.max(1, mergedCurrent - 1),
-        'prev',
-        labels.prev,
-        {
-          disabled: mergedCurrent <= 1,
-          title: labels.previousPage,
-        },
-      )}
-      <div className={buildInputClassName(size, 'join-item inline-flex shrink-0 items-center gap-1 px-2 text-sm')}>
+      {renderItem(Math.max(1, mergedCurrent - 1), 'prev', labels.prev, {
+        disabled: mergedCurrent <= 1,
+        title: labels.previousPage,
+      })}
+      <div
+        className={buildInputClassName(
+          size,
+          'join-item inline-flex shrink-0 items-center gap-1 px-2 text-sm',
+        )}
+      >
         {simpleConfig.readOnly ? (
           <span className="tabular-nums">{mergedCurrent}</span>
         ) : (
@@ -476,15 +527,15 @@ const Root: FC<PaginationProps> = ({
               'border-0 bg-transparent p-0 text-right outline-none appearance-none [appearance:textfield] tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
               resolveNumberInputWidthClass(pageCount, 'simple'),
             )}
-            onInput={event => {
+            onInput={(event: Event) => {
               inputDraft.simple = (event.currentTarget as HTMLInputElement).value
             }}
-            onKeyDown={event => {
-              if ((event as KeyboardEvent).key !== 'Enter') return
+            onKeyDown={(event: KeyboardEvent) => {
+              if (event.key !== 'Enter') return
               const target = event.currentTarget as HTMLInputElement
               updatePage(Number(target.value))
             }}
-            onBlur={event => {
+            onBlur={(event: FocusEvent) => {
               if (disabled) return
               const target = event.currentTarget as HTMLInputElement
               if (target.value === '') {
@@ -500,27 +551,17 @@ const Root: FC<PaginationProps> = ({
           {labels.pageSuffix === '/ page' ? `/ ${pageCount}` : `${labels.pageSuffix} ${pageCount}`}
         </span>
       </div>
-      {renderItem(
-        Math.min(pageCount, mergedCurrent + 1),
-        'next',
-        labels.next,
-        {
-          disabled: mergedCurrent >= pageCount,
-          title: labels.nextPage,
-        },
-      )}
+      {renderItem(Math.min(pageCount, mergedCurrent + 1), 'next', labels.next, {
+        disabled: mergedCurrent >= pageCount,
+        title: labels.nextPage,
+      })}
     </div>
   ) : (
     <div className={buildJoinClassName(direction)}>
-      {renderItem(
-        Math.max(1, mergedCurrent - 1),
-        'prev',
-        labels.prev,
-        {
-          disabled: mergedCurrent <= 1,
-          title: labels.previousPage,
-        },
-      )}
+      {renderItem(Math.max(1, mergedCurrent - 1), 'prev', labels.prev, {
+        disabled: mergedCurrent <= 1,
+        title: labels.previousPage,
+      })}
       {pagerItems.map(item => {
         const label =
           item.type === 'jump-prev'
@@ -540,15 +581,10 @@ const Root: FC<PaginationProps> = ({
                 : labels.jumpNextTitle,
         })
       })}
-      {renderItem(
-        Math.min(pageCount, mergedCurrent + 1),
-        'next',
-        labels.next,
-        {
-          disabled: mergedCurrent >= pageCount,
-          title: labels.nextPage,
-        },
-      )}
+      {renderItem(Math.min(pageCount, mergedCurrent + 1), 'next', labels.next, {
+        disabled: mergedCurrent >= pageCount,
+        title: labels.nextPage,
+      })}
     </div>
   )
 
@@ -576,7 +612,9 @@ const Root: FC<PaginationProps> = ({
               size,
               `${resolvePageSizeSelectWidthClass(sizeOptions)} text-center tabular-nums`,
             )}
-            onChange={event => updatePageSize(Number((event.target as HTMLSelectElement).value))}
+            onChange={(event: Event) =>
+              updatePageSize(Number((event.currentTarget as HTMLSelectElement).value))
+            }
           >
             {sizeOptions.map(option => (
               <option key={option} value={String(option)}>
@@ -603,11 +641,11 @@ const Root: FC<PaginationProps> = ({
               size,
               `${resolveNumberInputWidthClass(pageCount, 'quick')} text-center tabular-nums`,
             )}
-            onInput={event => {
+            onInput={(event: Event) => {
               inputDraft.quick = (event.currentTarget as HTMLInputElement).value
             }}
-            onKeyDown={event => {
-              if ((event as KeyboardEvent).key !== 'Enter') return
+            onKeyDown={(event: KeyboardEvent) => {
+              if (event.key !== 'Enter') return
               const target = event.currentTarget as HTMLInputElement
               updatePage(Number(target.value))
             }}
@@ -616,8 +654,11 @@ const Root: FC<PaginationProps> = ({
             <button
               type="button"
               disabled={disabled}
-              className={appendClassName('btn', resolveSizeToken(size) ? `btn-${resolveSizeToken(size)}` : undefined)}
-              onClick={event => {
+              className={appendClassName(
+                'btn',
+                resolveSizeToken(size) ? `btn-${resolveSizeToken(size)}` : undefined,
+              )}
+              onClick={(event: MouseEvent) => {
                 const wrapper = (event.currentTarget as HTMLButtonElement).parentElement
                 const input = wrapper?.querySelector('input') as HTMLInputElement | null
                 if (!input) return

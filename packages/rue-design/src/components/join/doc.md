@@ -5,15 +5,15 @@ source: https://raw.githubusercontent.com/saadeghi/daisyui/refs/heads/master/pac
 layout: components
 classnames:
   component:
-  - class: join
-    desc: For grouping multiple items
-  - class: join-item
-    desc: Item inside join. Can be a button, input, etc.
+    - class: join
+      desc: For grouping multiple items
+    - class: join-item
+      desc: Item inside join. Can be a button, input, etc.
   direction:
-  - class: join-vertical
-    desc: Show items vertically
-  - class: join-horizontal
-    desc: Show items horizontally
+    - class: join-vertical
+      desc: Show items vertically
+    - class: join-horizontal
+      desc: Show items horizontally
 ---
 
 <script>
@@ -22,6 +22,7 @@ classnames:
 </script>
 
 ### ~Join
+
 <div class="join">
   <button class="btn join-item">Button</button>
   <button class="btn join-item">Button</button>
@@ -36,8 +37,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Group items vertically
+
 <div class="join join-vertical">
   <button class="btn join-item">Button</button>
   <button class="btn join-item">Button</button>
@@ -52,8 +53,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Responsive: it's vertical on small screen and horizontal on large screen
+
 <div class="join join-vertical lg:join-horizontal">
   <button class="btn join-item">Button</button>
   <button class="btn join-item">Button</button>
@@ -68,8 +69,8 @@ classnames:
 </div>
 ```
 
-
 ### ~With extra elements in the group
+
 #### Even if join-item is not a direct child of the group, it still gets the style
 
 <div class="join">
@@ -110,8 +111,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Custom border radius
+
 <div class="join">
   <input class="input join-item w-36 lg:w-52" placeholder="Email"/>
   <button class="btn join-item rounded-r-full">Subscribe</button>
@@ -124,8 +125,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Join radio inputs with btn style
+
 <div class="join">
   <input class="join-item btn" type="radio" name="options" autocomplete="off" aria-label="Radio 1" />
   <input class="join-item btn" type="radio" name="options" autocomplete="off" aria-label="Radio 2" />

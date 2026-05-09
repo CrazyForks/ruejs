@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 MockupWindow 组件概述
 - 保留 daisyUI 的 mockup-window 外框和既有 children 用法。
@@ -65,7 +66,15 @@ const hasVisibleChildren = (children: any) => {
   return children != null
 }
 
-const Header: FC<MockupWindowHeaderProps> = ({ title, description, extra, className, style, children, ...rest }) => {
+const Header: FC<MockupWindowHeaderProps> = ({
+  title,
+  description,
+  extra,
+  className,
+  style,
+  children,
+  ...rest
+}) => {
   const hasCustomChildren = hasVisibleChildren(children)
 
   return (
@@ -83,22 +92,35 @@ const Header: FC<MockupWindowHeaderProps> = ({ title, description, extra, classN
         <>
           <div className="min-w-0 flex-1">
             {title != null ? <div className="truncate text-sm font-semibold">{title}</div> : null}
-            {description != null ? <div className="mt-1 text-xs opacity-70">{description}</div> : null}
+            {description != null ? (
+              <div className="mt-1 text-xs opacity-70">{description}</div>
+            ) : null}
           </div>
-          {extra != null ? <div className="flex shrink-0 flex-wrap items-center gap-2">{extra}</div> : null}
+          {extra != null ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-2">{extra}</div>
+          ) : null}
         </>
       )}
     </div>
   )
 }
 
-const Body: FC<MockupWindowBodyProps> = ({ padding = 'none', className, style, children, ...rest }) => {
+const Body: FC<MockupWindowBodyProps> = ({
+  padding = 'none',
+  className,
+  style,
+  children,
+  ...rest
+}) => {
   const paddingClassName = resolvePaddingClass(padding)
 
   return (
     <div
       {...rest}
-      className={appendClassName(appendClassName('rue-mockup-window-body', paddingClassName), className)}
+      className={appendClassName(
+        appendClassName('rue-mockup-window-body', paddingClassName),
+        className,
+      )}
       style={style}
     >
       {children}
@@ -110,7 +132,10 @@ const Toolbar: FC<MockupWindowPartProps> = ({ className, style, children, ...res
   return (
     <div
       {...rest}
-      className={appendClassName('rue-mockup-window-toolbar flex flex-wrap items-center gap-2', className)}
+      className={appendClassName(
+        'rue-mockup-window-toolbar flex flex-wrap items-center gap-2',
+        className,
+      )}
       style={style}
     >
       {children}
@@ -152,7 +177,12 @@ const Root: FC<MockupWindowProps> = ({
   const hasHeader = title != null || description != null || toolbar != null
   const hasActions = actions != null
   const hasStructuredSlots =
-    hasHeader || hasActions || padding != null || bodyClassName != null || headerClassName != null || actionsClassName != null
+    hasHeader ||
+    hasActions ||
+    padding != null ||
+    bodyClassName != null ||
+    headerClassName != null ||
+    actionsClassName != null
 
   let rootClassName = 'mockup-window'
   if (bordered) rootClassName += ' border border-base-300'
@@ -169,7 +199,14 @@ const Root: FC<MockupWindowProps> = ({
 
   return (
     <div {...rest} className={rootClassName} style={style}>
-      {hasHeader ? <Header title={title} description={description} extra={toolbar} className={headerClassName} /> : null}
+      {hasHeader ? (
+        <Header
+          title={title}
+          description={description}
+          extra={toolbar}
+          className={headerClassName}
+        />
+      ) : null}
       <Body padding={padding ?? 'md'} className={bodyClassName}>
         {children}
       </Body>

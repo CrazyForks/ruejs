@@ -45,6 +45,26 @@ declare module 'pikaday' {
   export default Pikaday
 }
 
+declare module 'markdown-it-container' {
+  const markdownItContainer: any
+  export default markdownItContainer
+}
+
+declare module 'markdown-it-attrs' {
+  const markdownItAttrs: any
+  export default markdownItAttrs
+}
+
+declare module 'markdown-it-task-lists' {
+  const markdownItTaskLists: any
+  export default markdownItTaskLists
+}
+
+declare module 'markdown-it-footnote' {
+  const markdownItFootnote: any
+  export default markdownItFootnote
+}
+
 interface ImportMeta {
   env: any
 }

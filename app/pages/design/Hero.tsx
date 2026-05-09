@@ -215,11 +215,12 @@ const HeroPage: FC = () => {
       <div className={'max-w-none prose prose-sm md:prose-base'}>
         <h1>Hero 主视觉区</h1>
         <p className={'mt-3 mb-3 text-sm'}>
-          Hero 现在不只是一个样式壳。Root 负责背景、尺寸和遮罩，Content 负责布局，Title / Description / Actions
-          负责最常见的文案骨架，剩下的局部视觉继续交给 className 微调。
+          Hero 现在不只是一个样式壳。Root 负责背景、尺寸和遮罩，Content 负责布局，Title /
+          Description / Actions 负责最常见的文案骨架，剩下的局部视觉继续交给 className 微调。
         </p>
         <p className={'mt-0 mb-4 text-sm'}>
-          没有直接对照 ant-design 的同名组件，所以这次的增强重点放在组合能力和语义 API 上：保留 Rue 自己的视觉语言，但把高频搭建动作从页面里收回到组件里。
+          没有可以直接对照的同名标准组件，所以这次的增强重点放在组合能力和语义 API 上：保留 Rue
+          自己的视觉语言，但把高频搭建动作从页面里收回到组件里。
         </p>
         <div className={'text-sm'}>
           <a href={'https://daisyui.com/components/hero/'} target={'_blank'}>
@@ -262,13 +263,20 @@ const HeroPage: FC = () => {
                 'overflow-hidden rounded-[2rem] border border-base-300 bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10'
               }
             >
-              <Hero.Content layout={'split'} align={'center'} gap={'xl'} className={'px-6 py-10 lg:px-16'}>
+              <Hero.Content
+                layout={'split'}
+                align={'center'}
+                gap={'xl'}
+                className={'px-6 py-10 lg:px-16'}
+              >
                 <div className={'space-y-5'}>
                   <span className={'badge badge-outline badge-primary'}>Rue Design Hero</span>
-                  <Hero.Title>Ship landing sections without rebuilding layout scaffolding.</Hero.Title>
+                  <Hero.Title>
+                    Ship landing sections without rebuilding layout scaffolding.
+                  </Hero.Title>
                   <Hero.Description>
-                    Hero 现在把 surface、height、background image、overlay 和 action 布局都提升成了语义
-                    API。页面可以更聚焦在内容，而不是重复拼装容器类名。
+                    Hero 现在把 surface、height、background image、overlay 和 action
+                    布局都提升成了语义 API。页面可以更聚焦在内容，而不是重复拼装容器类名。
                   </Hero.Description>
                   <Hero.Actions stackOnMobile>
                     <Button color={'primary'}>Get Started</Button>
@@ -277,7 +285,11 @@ const HeroPage: FC = () => {
                 </div>
 
                 <div className={'grid w-full max-w-md gap-4'}>
-                  <div className={'rounded-[1.5rem] border border-base-300 bg-base-100/90 p-5 shadow-xl'}>
+                  <div
+                    className={
+                      'rounded-[1.5rem] border border-base-300 bg-base-100/90 p-5 shadow-xl'
+                    }
+                  >
                     <p className={'text-xs uppercase tracking-[0.3em] opacity-60'}>Composition</p>
                     <div className={'mt-4 space-y-3'}>
                       <div className={'rounded-2xl bg-base-200 p-4'}>
@@ -340,7 +352,12 @@ const HeroPage: FC = () => {
           tab={tabCentered}
           preview={() => (
             <Hero tone={'base-200'} size={'lg'} className={'rounded-box'}>
-              <Hero.Content layout={'center'} textAlign={'center'} gap={'md'} className={'px-6 py-10'}>
+              <Hero.Content
+                layout={'center'}
+                textAlign={'center'}
+                gap={'md'}
+                className={'px-6 py-10'}
+              >
                 <div className={'max-w-md space-y-4'}>
                   <Hero.Title>Hello there</Hero.Title>
                   <Hero.Description>
@@ -377,7 +394,11 @@ const HeroPage: FC = () => {
           preview={() => (
             <Hero tone={'base-200'} size={'lg'} className={'rounded-box'}>
               <Hero.Content layout={'split'} align={'center'} className={'px-6 py-10'}>
-                <img src={stockFigure} className={'max-w-sm rounded-lg shadow-2xl'} alt={'Hero figure'} />
+                <img
+                  src={stockFigure}
+                  className={'max-w-sm rounded-lg shadow-2xl'}
+                  alt={'Hero figure'}
+                />
                 <div>
                   <Hero.Title>Box Office News!</Hero.Title>
                   <Hero.Description>
@@ -415,7 +436,9 @@ const HeroPage: FC = () => {
             <Hero
               tone={'base-100'}
               size={'lg'}
-              className={'rounded-box border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-accent/10'}
+              className={
+                'rounded-box border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-accent/10'
+              }
             >
               <Hero.Content layout={'split-reverse'} align={'center'} className={'px-6 py-10'}>
                 <img
@@ -527,7 +550,11 @@ const HeroPage: FC = () => {
           preview={() => (
             <Hero backgroundImage={stockOverlay} size={'lg'} className={'rounded-box'}>
               <Hero.Overlay opacity={'medium'} className={'rounded-box'} />
-              <Hero.Content layout={'center'} textAlign={'center'} className={'px-6 py-10 text-neutral-content'}>
+              <Hero.Content
+                layout={'center'}
+                textAlign={'center'}
+                className={'px-6 py-10 text-neutral-content'}
+              >
                 <div className={'max-w-md space-y-5'}>
                   <Hero.Title>Hello there</Hero.Title>
                   <Hero.Description muted={false} className={'text-neutral-content/80'}>
@@ -566,19 +593,34 @@ const HeroPage: FC = () => {
               as={'section'}
               backgroundImage={stockOverlay}
               size={'xl'}
-              overlay={{ tone: 'base-content', opacity: 'medium', blur: true, className: 'rounded-[2rem]' }}
+              overlay={{
+                tone: 'base-content',
+                opacity: 'medium',
+                blur: true,
+                className: 'rounded-[2rem]',
+              }}
               className={'overflow-hidden rounded-[2rem]'}
             >
-              <Hero.Content layout={'split'} align={'center'} gap={'xl'} className={'px-6 py-12 text-neutral-content lg:px-16'}>
+              <Hero.Content
+                layout={'split'}
+                align={'center'}
+                gap={'xl'}
+                className={'px-6 py-12 text-neutral-content lg:px-16'}
+              >
                 <div className={'space-y-5'}>
                   <span className={'badge badge-soft badge-primary'}>Auto Overlay</span>
                   <Hero.Title>把背景图和可读性补丁一起交给 Hero 处理。</Hero.Title>
                   <Hero.Description muted={false} className={'text-neutral-content/80'}>
-                    当页面只是想快速搭一个带图主视觉区时，直接传 backgroundImage 和 overlay 就够了，不用再手写遮罩层节点。
+                    当页面只是想快速搭一个带图主视觉区时，直接传 backgroundImage 和 overlay
+                    就够了，不用再手写遮罩层节点。
                   </Hero.Description>
                 </div>
 
-                <div className={'w-full max-w-xs rounded-[1.5rem] border border-white/15 bg-black/30 p-5 backdrop-blur-sm'}>
+                <div
+                  className={
+                    'w-full max-w-xs rounded-[1.5rem] border border-white/15 bg-black/30 p-5 backdrop-blur-sm'
+                  }
+                >
                   <Hero.Actions direction={'column'} align={'start'}>
                     <Button color={'primary'} block>
                       Start from template
@@ -702,7 +744,8 @@ const HeroPage: FC = () => {
           <section className={'space-y-2'}>
             <h2 className={'text-2xl font-semibold'}>API</h2>
             <p className={'text-sm opacity-70'}>
-              推荐把外层背景和高度交给 Hero Root，把布局交给 Hero.Content，把标题、描述和 CTA 交给语义子组件。这样页面里仍然可以继续用 className 微调，但不会反复重写同一套结构。
+              推荐把外层背景和高度交给 Hero Root，把布局交给 Hero.Content，把标题、描述和 CTA
+              交给语义子组件。这样页面里仍然可以继续用 className 微调，但不会反复重写同一套结构。
             </p>
           </section>
 

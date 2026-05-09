@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Toggle 组件概述
 - 保留 Rue 当前的 toggle 视觉类，同时补齐 Switch 常见的受控/非受控、loading、状态文案能力。
@@ -122,7 +123,10 @@ const buildContentClassName = (contentClassName?: string) => {
 }
 
 const buildStateClassName = (stateClassName?: string) => {
-  return appendClassName('inline-flex items-center gap-2 text-xs text-base-content/60', stateClassName)
+  return appendClassName(
+    'inline-flex items-center gap-2 text-xs text-base-content/60',
+    stateClassName,
+  )
 }
 
 const Toggle: FC<ToggleProps> = ({
@@ -174,7 +178,9 @@ const Toggle: FC<ToggleProps> = ({
 
   const syncStateSlot = (nextChecked: boolean) => {
     const root = inputRef.current?.closest('[data-rue-toggle-root="true"]') as HTMLElement | null
-    const stateInput = root?.querySelector('[data-rue-toggle-state-input="true"]') as HTMLInputElement | null
+    const stateInput = root?.querySelector(
+      '[data-rue-toggle-state-input="true"]',
+    ) as HTMLInputElement | null
     if (stateInput) {
       stateInput.checked = nextChecked
     }
@@ -256,14 +262,27 @@ const Toggle: FC<ToggleProps> = ({
   )
 
   if (children == null && !hasStateSlot) {
-    return <span className={appendClassName('inline-flex align-middle', rootClassName)} style={rootStyle}>{switchNode}</span>
+    return (
+      <span
+        className={appendClassName('inline-flex align-middle', rootClassName)}
+        style={rootStyle}
+      >
+        {switchNode}
+      </span>
+    )
   }
 
   return (
-    <label className={buildRootClassName(mergedDisabled, rootClassName)} style={rootStyle} data-rue-toggle-root="true">
+    <label
+      className={buildRootClassName(mergedDisabled, rootClassName)}
+      style={rootStyle}
+      data-rue-toggle-root="true"
+    >
       {switchNode}
       <span className={buildContentClassName(contentClassName)}>
-        {children != null ? <span className="text-sm font-medium text-base-content">{children}</span> : null}
+        {children != null ? (
+          <span className="text-sm font-medium text-base-content">{children}</span>
+        ) : null}
         {hasStateSlot ? (
           <span className={buildStateClassName(stateClassName)}>
             <span className="swap pointer-events-none min-h-0 min-w-0">

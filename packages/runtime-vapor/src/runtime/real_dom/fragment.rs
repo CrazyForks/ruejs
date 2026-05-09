@@ -1,10 +1,9 @@
 use crate::runtime::Rue;
+use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::types::compat_state::MountedCompatPatchKind;
 use crate::runtime::types::{
-    MountInput, MountInputChild, MountedPatchSubtree, MountedSubtreeChild,
-    MountedSubtreeState,
+    MountInput, MountInputChild, MountedPatchSubtree, MountedSubtreeChild, MountedSubtreeState,
 };
-use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
 
 pub(super) fn mount_fragment<A: DomAdapter>(

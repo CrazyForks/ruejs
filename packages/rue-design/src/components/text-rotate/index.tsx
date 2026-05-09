@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 TextRotate 组件概述
 - 保留 Rue 当前 text-rotate 结构与视觉，并把排版语义职责交给独立 Typography 组件。

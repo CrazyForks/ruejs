@@ -1,9 +1,9 @@
 use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
 
-use super::MountInputType;
 #[cfg(feature = "compat")]
 use super::ComponentProps;
+use super::MountInputType;
 #[cfg(feature = "compat")]
 use super::compat_state::{
     MountedCompatLifecycleKind, MountedCompatPatchKind, MountedCompatPatchState,
@@ -38,7 +38,9 @@ impl MountLifecycleKind {
             Self::Component => true,
             Self::Other | Self::Vapor => false,
             #[cfg(feature = "compat")]
-            Self::Compat(kind) => compat_lifecycle::lifecycle_recurses_before_unmount_children(kind),
+            Self::Compat(kind) => {
+                compat_lifecycle::lifecycle_recurses_before_unmount_children(kind)
+            }
         }
     }
 
@@ -399,8 +401,8 @@ where
 
     fn into_component_root_state(self, lifecycle: MountLifecycleRecord) -> MountedState<A> {
         match self.r#type {
-            MountedPatchSubtreeType::Component(render_fn) => MountedState::Component(
-                MountedComponent {
+            MountedPatchSubtreeType::Component(render_fn) => {
+                MountedState::Component(MountedComponent {
                     render_fn,
                     key: self.key,
                     host: self.el,
@@ -408,8 +410,8 @@ where
                     subtree: self.comp_subtree,
                     inst_index: self.comp_inst_index,
                     lifecycle,
-                },
-            ),
+                })
+            }
             #[cfg(feature = "compat")]
             MountedPatchSubtreeType::Compat => {
                 unreachable!("compat patch roots must be handled by compat_root_state")

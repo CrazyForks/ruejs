@@ -1,7 +1,8 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Theme 组件概述
 - 默认导出仍是可直接渲染的 theme-controller 输入控件，兼容现有 daisyUI 用法。
-- 额外挂载 Provider、主题算法、token 计算工具，形成与 ant-design Theme 接近的能力层。
+- 额外挂载 Provider、主题算法、token 计算工具。
 - Provider 通过 data-theme 与 CSS 变量做“作用域主题岛”，不依赖运行时 context，也能支持嵌套继承。
 */
 import type { FC } from '@rue-js/rue'
@@ -353,7 +354,10 @@ const cloneThemeToken = (token: ThemeDesignToken): ThemeDesignToken => {
   }
 }
 
-const mergeThemeToken = (baseToken: ThemeDesignToken, override?: ThemeTokenOverride): ThemeDesignToken => {
+const mergeThemeToken = (
+  baseToken: ThemeDesignToken,
+  override?: ThemeTokenOverride,
+): ThemeDesignToken => {
   const nextToken = cloneThemeToken(baseToken)
   if (!override) return nextToken
 
@@ -364,7 +368,8 @@ const mergeThemeToken = (baseToken: ThemeDesignToken, override?: ThemeTokenOverr
   if (override.radius) nextToken.radius = { ...nextToken.radius, ...override.radius }
   if (override.size) nextToken.size = { ...nextToken.size, ...override.size }
   if (override.spacing) nextToken.spacing = { ...nextToken.spacing, ...override.spacing }
-  if (override.typography) nextToken.typography = { ...nextToken.typography, ...override.typography }
+  if (override.typography)
+    nextToken.typography = { ...nextToken.typography, ...override.typography }
   if (override.shadow) nextToken.shadow = { ...nextToken.shadow, ...override.shadow }
   if (override.borderWidth) nextToken.borderWidth = override.borderWidth
   if (override.depth !== undefined) nextToken.depth = override.depth
@@ -452,11 +457,16 @@ const compactAlgorithm: ThemeAlgorithm = inputToken => {
 
 const getDesignToken = (config?: ThemeConfig) => {
   const themeName = resolveThemeName(config)
-  const baseToken = config?.baseToken ? cloneThemeToken(config.baseToken) : buildPresetToken(themeName)
+  const baseToken = config?.baseToken
+    ? cloneThemeToken(config.baseToken)
+    : buildPresetToken(themeName)
   baseToken.themeName = themeName
 
   const algorithmList = normalizeAlgorithmList(config?.algorithm)
-  const derivedToken = algorithmList.reduce((currentToken, algorithm) => algorithm(currentToken), baseToken)
+  const derivedToken = algorithmList.reduce(
+    (currentToken, algorithm) => algorithm(currentToken),
+    baseToken,
+  )
   const mergedToken = mergeThemeToken(derivedToken, config?.token)
 
   return defaultAlgorithm(mergedToken)
@@ -593,10 +603,13 @@ const ThemeProvider: FC<ThemeProviderProps> = ({
     baseToken,
   })
   const content = render ? render(runtime) : children
-  const mergedStyle = mergeStyleInput({
-    colorScheme: runtime.token.colorScheme,
-    ...runtime.cssVariables,
-  }, style)
+  const mergedStyle = mergeStyleInput(
+    {
+      colorScheme: runtime.token.colorScheme,
+      ...runtime.cssVariables,
+    },
+    style,
+  )
   const syncScopedStyle = (styleText: string) => {
     const element = rootRef.current
     if (!element) return
@@ -618,7 +631,7 @@ const ThemeProvider: FC<ThemeProviderProps> = ({
 
   watch(
     () => mergedStyle,
-    nextStyle => {
+    (nextStyle: string) => {
       syncScopedStyle(nextStyle)
     },
     { immediate: true },

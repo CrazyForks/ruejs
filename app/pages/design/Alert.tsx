@@ -101,7 +101,11 @@ const SparkIcon = () => (
     strokeWidth="2"
     className="size-5"
   >
-    <path strokeLinecap="round" strokeLinejoin="round" d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z"
+    />
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 18h.01M19 18h.01M12 21h.01" />
   </svg>
 )
@@ -115,7 +119,11 @@ const ShieldIcon = () => (
     strokeWidth="2"
     className="size-5"
   >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3 5 6v5c0 4.4 2.8 8.44 7 10 4.2-1.56 7-5.6 7-10V6l-7-3Z" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 3 5 6v5c0 4.4 2.8 8.44 7 10 4.2-1.56 7-5.6 7-10V6l-7-3Z"
+    />
     <path strokeLinecap="round" strokeLinejoin="round" d="m9.5 12 1.75 1.75L14.5 10.5" />
   </svg>
 )
@@ -131,26 +139,71 @@ const tabBanner = ref<TabMode>('preview')
 const apiRows: ApiRow[] = [
   { prop: 'action', description: '右侧操作区，可放按钮或链接', type: 'any', defaultValue: '-' },
   { prop: 'afterClose', description: '关闭完成后触发', type: '() => void', defaultValue: '-' },
-  { prop: 'banner', description: '横幅模式，默认回退为 warning 语义', type: 'boolean', defaultValue: 'false' },
-  { prop: 'children', description: '自定义内容插槽，保留原始组合式写法', type: 'any', defaultValue: '-' },
+  {
+    prop: 'banner',
+    description: '横幅模式，默认回退为 warning 语义',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
+  {
+    prop: 'children',
+    description: '自定义内容插槽，保留原始组合式写法',
+    type: 'any',
+    defaultValue: '-',
+  },
   { prop: 'className', description: '追加自定义类名', type: 'string', defaultValue: '-' },
   { prop: 'closable', description: '显示关闭按钮', type: 'boolean', defaultValue: 'false' },
   { prop: 'closeIcon', description: '自定义关闭按钮内容', type: 'any', defaultValue: '-' },
   { prop: 'closeText', description: '以文本替代默认关闭图标', type: 'any', defaultValue: '-' },
-  { prop: 'color', description: 'Rue 风格语义色别名，兼容现有 demo', type: "'default' | 'info' | 'success' | 'warning' | 'error'", defaultValue: '-' },
+  {
+    prop: 'color',
+    description: 'Rue 风格语义色别名，兼容现有 demo',
+    type: "'default' | 'info' | 'success' | 'warning' | 'error'",
+    defaultValue: '-',
+  },
   { prop: 'dash', description: '虚线边框样式', type: 'boolean', defaultValue: 'false' },
   { prop: 'description', description: '辅助说明文案', type: 'any', defaultValue: '-' },
-  { prop: 'direction', description: '内容排布方向', type: "'vertical' | 'horizontal'", defaultValue: '-' },
+  {
+    prop: 'direction',
+    description: '内容排布方向',
+    type: "'vertical' | 'horizontal'",
+    defaultValue: '-',
+  },
   { prop: 'icon', description: '自定义图标', type: 'any', defaultValue: '-' },
-  { prop: 'message', description: '标题别名，兼容 ant-design 的写法', type: 'any', defaultValue: '-' },
-  { prop: 'onClose', description: '点击关闭按钮时触发', type: '(event: MouseEvent) => void', defaultValue: '-' },
+  {
+    prop: 'message',
+    description: '标题别名，兼容常见业务组件里的 message 写法',
+    type: 'any',
+    defaultValue: '-',
+  },
+  {
+    prop: 'onClose',
+    description: '点击关闭按钮时触发',
+    type: '(event: MouseEvent) => void',
+    defaultValue: '-',
+  },
   { prop: 'outline', description: '描边样式', type: 'boolean', defaultValue: 'false' },
   { prop: 'role', description: '可访问性角色属性', type: 'string', defaultValue: 'alert' },
-  { prop: 'showIcon', description: '显式控制图标显示', type: 'boolean', defaultValue: '标题/描述或 banner 场景自动显示' },
+  {
+    prop: 'showIcon',
+    description: '显式控制图标显示',
+    type: 'boolean',
+    defaultValue: '标题/描述或 banner 场景自动显示',
+  },
   { prop: 'soft', description: '柔和填充样式', type: 'boolean', defaultValue: 'false' },
   { prop: 'title', description: '主标题文案', type: 'any', defaultValue: '-' },
-  { prop: 'type', description: 'ant-design 风格语义类型', type: "'info' | 'success' | 'warning' | 'error'", defaultValue: '-' },
-  { prop: 'variant', description: '保留 Rue 原有语义类型写法', type: "'info' | 'success' | 'warning' | 'error'", defaultValue: '-' },
+  {
+    prop: 'type',
+    description: '常见业务组件风格的语义类型',
+    type: "'info' | 'success' | 'warning' | 'error'",
+    defaultValue: '-',
+  },
+  {
+    prop: 'variant',
+    description: '保留 Rue 原有语义类型写法',
+    type: "'info' | 'success' | 'warning' | 'error'",
+    defaultValue: '-',
+  },
 ]
 
 const AlertDemo: FC = () => {
@@ -235,7 +288,9 @@ const AlertDemo: FC = () => {
             <div className="card bg-base-100 shadow">
               <div className="card-body grid gap-6 lg:grid-cols-3">
                 <div className="grid gap-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] opacity-60">Soft</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] opacity-60">
+                    Soft
+                  </div>
                   <Alert variant="info" soft className="w-full">
                     12 unread messages. Tap to see.
                   </Alert>
@@ -250,7 +305,9 @@ const AlertDemo: FC = () => {
                   </Alert>
                 </div>
                 <div className="grid gap-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] opacity-60">Outline</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] opacity-60">
+                    Outline
+                  </div>
                   <Alert variant="info" outline className="w-full">
                     12 unread messages. Tap to see.
                   </Alert>
@@ -265,7 +322,9 @@ const AlertDemo: FC = () => {
                   </Alert>
                 </div>
                 <div className="grid gap-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] opacity-60">Dash</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] opacity-60">
+                    Dash
+                  </div>
                   <Alert variant="info" dash className="w-full">
                     12 unread messages. Tap to see.
                   </Alert>
@@ -379,8 +438,19 @@ const AlertDemo: FC = () => {
           preview={() => (
             <div className="card bg-base-100 shadow">
               <div className="card-body grid gap-3">
-                <Alert type="info" title="Invite sent" description="The invitation email has been delivered." closable={true} className="w-full" />
-                <Alert type="success" description="Your billing settings have been saved." closeText="知道了" className="w-full" />
+                <Alert
+                  type="info"
+                  title="Invite sent"
+                  description="The invitation email has been delivered."
+                  closable={true}
+                  className="w-full"
+                />
+                <Alert
+                  type="success"
+                  description="Your billing settings have been saved."
+                  closeText="知道了"
+                  className="w-full"
+                />
               </div>
             </div>
           )}
@@ -419,7 +489,11 @@ const AlertDemo: FC = () => {
                   icon={<ShieldIcon />}
                   title="Workspace protected"
                   description="Two-factor authentication is now enforced for all maintainers."
-                  action={<Button size="sm" type="text">View policy</Button>}
+                  action={
+                    <Button size="sm" type="text">
+                      View policy
+                    </Button>
+                  }
                   className="w-full"
                 />
               </div>
@@ -446,7 +520,7 @@ const AlertDemo: FC = () => {
         <div className="my-10">
           <h2>API</h2>
           <p className="text-sm opacity-75">
-            新版 Alert 同时兼容 Rue 旧用法与 ant-design 常见心智，下面列出当前建议使用的核心属性。
+            新版 Alert 同时兼容 Rue 旧用法与常见业务组件心智，下面列出当前建议使用的核心属性。
           </p>
           <ApiTable rows={apiRows} />
         </div>

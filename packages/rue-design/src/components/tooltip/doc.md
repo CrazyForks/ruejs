@@ -5,41 +5,41 @@ source: https://raw.githubusercontent.com/saadeghi/daisyui/refs/heads/master/pac
 layout: components
 classnames:
   component:
-  - class: tooltip
-    desc: Container element
+    - class: tooltip
+      desc: Container element
   part:
-  - class: tooltip-content
-    desc: Optional. Setting a div as the content of the tooltip instead of the `data-tip` text
+    - class: tooltip-content
+      desc: Optional. Setting a div as the content of the tooltip instead of the `data-tip` text
   placement:
-  - class: tooltip-top
-    desc: Put tooltip on top
-    default: true
-  - class: tooltip-bottom
-    desc: Put tooltip on bottom
-  - class: tooltip-left
-    desc: Put tooltip on left
-  - class: tooltip-right
-    desc: Put tooltip on right
+    - class: tooltip-top
+      desc: Put tooltip on top
+      default: true
+    - class: tooltip-bottom
+      desc: Put tooltip on bottom
+    - class: tooltip-left
+      desc: Put tooltip on left
+    - class: tooltip-right
+      desc: Put tooltip on right
   modifier:
-  - class: tooltip-open
-    desc: Force open tooltip
+    - class: tooltip-open
+      desc: Force open tooltip
   color:
-  - class: tooltip-neutral
-    desc: neutral color
-  - class: tooltip-primary
-    desc: primary color
-  - class: tooltip-secondary
-    desc: secondary color
-  - class: tooltip-accent
-    desc: accent color
-  - class: tooltip-info
-    desc: info color
-  - class: tooltip-success
-    desc: success color
-  - class: tooltip-warning
-    desc: warning color
-  - class: tooltip-error
-    desc: error color
+    - class: tooltip-neutral
+      desc: neutral color
+    - class: tooltip-primary
+      desc: primary color
+    - class: tooltip-secondary
+      desc: secondary color
+    - class: tooltip-accent
+      desc: accent color
+    - class: tooltip-info
+      desc: info color
+    - class: tooltip-success
+      desc: success color
+    - class: tooltip-warning
+      desc: warning color
+    - class: tooltip-error
+      desc: error color
 ---
 
 <script>
@@ -48,6 +48,7 @@ classnames:
 </script>
 
 ### ~Tooltip
+
 <div class="my-6">
   <div class="tooltip" data-tip="hello">
     <button class="btn">Hover me</button>
@@ -61,6 +62,7 @@ classnames:
 ```
 
 ### ~Tooltip with tooltip-content
+
 <div class="my-6 mt-12">
   <div class="tooltip">
     <div class="tooltip-content">
@@ -79,8 +81,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Force open
+
 <div class="my-6">
   <div class="tooltip tooltip-open" data-tip="hello">
     <button class="btn">Force open</button>
@@ -93,8 +95,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Top
+
 <div class="my-6">
   <div class="tooltip tooltip-open tooltip-top" data-tip="hello">
     <button class="btn">Top</button>
@@ -107,8 +109,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Bottom
+
 <div class="my-6">
   <div class="tooltip tooltip-open tooltip-bottom" data-tip="hello">
     <button class="btn">Bottom</button>
@@ -121,8 +123,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Left
+
 <div class="my-6">
   <div class="tooltip tooltip-open tooltip-left" data-tip="hello">
     <button class="btn">Left</button>
@@ -135,8 +137,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Right
+
 <div class="my-6">
   <div class="tooltip tooltip-open tooltip-right" data-tip="hello">
     <button class="btn">Right</button>
@@ -149,8 +151,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Neutral color
+
 <div class="my-6">
   <div data-tip="neutral" class="tooltip tooltip-open tooltip-neutral">
     <button class="btn btn-neutral">neutral</button>
@@ -163,8 +165,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Primary color
+
 <div class="my-6">
   <div data-tip="primary" class="tooltip tooltip-open tooltip-primary">
     <button class="btn btn-primary">primary</button>
@@ -177,8 +179,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Secondary color
+
 <div class="my-6">
   <div data-tip="secondary" class="tooltip tooltip-open tooltip-secondary">
     <button class="btn btn-secondary">secondary</button>
@@ -191,8 +193,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Accent color
+
 <div class="my-6">
   <div data-tip="accent" class="tooltip tooltip-open tooltip-accent">
     <button class="btn btn-accent">accent</button>
@@ -205,8 +207,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Info color
+
 <div class="my-6">
   <div data-tip="info" class="tooltip tooltip-open tooltip-info">
     <button class="btn btn-info">info</button>
@@ -219,8 +221,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Success color
+
 <div class="my-6">
   <div data-tip="success" class="tooltip tooltip-open tooltip-success">
     <button class="btn btn-success">success</button>
@@ -233,8 +235,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Warning color
+
 <div class="my-6">
   <div data-tip="warning" class="tooltip tooltip-open tooltip-warning">
     <button class="btn btn-warning">warning</button>
@@ -247,8 +249,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Error color
+
 <div class="my-6">
   <div data-tip="error" class="tooltip tooltip-open tooltip-error">
     <button class="btn btn-error">error</button>
@@ -261,8 +263,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Responsive tooltip. only show for large screen
+
 <div class="my-6">
   <div class="lg:tooltip" data-tip="hello">
     <button class="btn">Hover me</button>

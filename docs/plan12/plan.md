@@ -6,15 +6,15 @@ Plan 12 不再把目标定义成“继续压 compat boundary”，而是把“�
 
 - [Plan 11](../plan11/plan.md) 已经把 runtime-vapor 的 compat 边界拉直，所以剩余工作不再主要是 Rust 局部收口，而是跨包删除旧公开契约。
 - 当前仓内仍可量化看到两组残留面，以及一组已经收口的底层成果：
-   1. [packages/runtime-vapor/src](../../packages/runtime-vapor/src)、[packages/runtime-vapor/tests](../../packages/runtime-vapor/tests) 与 [packages/runtime-vapor/Cargo.toml](../../packages/runtime-vapor/Cargo.toml) 已经完成 Phase 1 收口：`compat` feature 已删除，`createElement` 公开入口与 compat parser 已删除，默认 wasm 回归通过，pkg-node 产物也已去掉旧导出。
-   2. [packages/runtime-vapor/src/runtime/transport.rs](../../packages/runtime-vapor/src/runtime/transport.rs)、[packages/runtime-vapor/src/runtime/types/mounted.rs](../../packages/runtime-vapor/src/runtime/types/mounted.rs)、[packages/runtime-vapor/src/hook/reactive.rs](../../packages/runtime-vapor/src/hook/reactive.rs) 这一层仍把默认 transport、mounted snapshot 和 renderable identity 绑定在 mount-handle / host-node 语义上。
-   3. [packages/runtime/src](../../packages/runtime/src)、[packages/rue/src](../../packages/rue/src)、[packages/jsx-runtime/src](../../packages/jsx-runtime/src)、[packages/jsx-dev-runtime/src](../../packages/jsx-dev-runtime/src)、[packages/router/src](../../packages/router/src) 以及 swc/vite、custom-elements、hooks 一组公开入口和仓内消费者里，仍有大约 20 个文件直接持有 VDOM / mount-handle / compat-anchor 语义。
+  1.  [packages/runtime-vapor/src](../../packages/runtime-vapor/src)、[packages/runtime-vapor/tests](../../packages/runtime-vapor/tests) 与 [packages/runtime-vapor/Cargo.toml](../../packages/runtime-vapor/Cargo.toml) 已经完成 Phase 1 收口：`compat` feature 已删除，`createElement` 公开入口与 compat parser 已删除，默认 wasm 回归通过，pkg-node 产物也已去掉旧导出。
+  2.  [packages/runtime-vapor/src/runtime/transport.rs](../../packages/runtime-vapor/src/runtime/transport.rs)、[packages/runtime-vapor/src/runtime/types/mounted.rs](../../packages/runtime-vapor/src/runtime/types/mounted.rs)、[packages/runtime-vapor/src/hook/reactive.rs](../../packages/runtime-vapor/src/hook/reactive.rs) 这一层仍把默认 transport、mounted snapshot 和 renderable identity 绑定在 mount-handle / host-node 语义上。
+  3.  [packages/runtime/src](../../packages/runtime/src)、[packages/rue/src](../../packages/rue/src)、[packages/jsx-runtime/src](../../packages/jsx-runtime/src)、[packages/jsx-dev-runtime/src](../../packages/jsx-dev-runtime/src)、[packages/router/src](../../packages/router/src) 以及 swc/vite、custom-elements、hooks 一组公开入口和仓内消费者里，仍有大约 20 个文件直接持有 VDOM / mount-handle / compat-anchor 语义。
 - 因此，Plan 12 的大头不是继续删单点 helper，而是同时处理五层东西：
-   1. runtime-vapor 的 compat feature 外壳与 compat-only mounted snapshot。
-   2. JS <-> Wasm 默认 transport 与 renderable identity/comparator。
-   3. JS runtime / rue / jsx-runtime / jsx-dev-runtime 的旧公开输入输出契约。
-   4. compiler / router / custom-elements / hooks / app / docs 对旧契约的仓内消费面。
-   5. build / docs / tests / release 口径的最终清场。
+  1.  runtime-vapor 的 compat feature 外壳与 compat-only mounted snapshot。
+  2.  JS <-> Wasm 默认 transport 与 renderable identity/comparator。
+  3.  JS runtime / rue / jsx-runtime / jsx-dev-runtime 的旧公开输入输出契约。
+  4.  compiler / router / custom-elements / hooks / app / docs 对旧契约的仓内消费面。
+  5.  build / docs / tests / release 口径的最终清场。
 
 ## 工作量判断
 

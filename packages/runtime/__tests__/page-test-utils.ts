@@ -37,35 +37,36 @@ export const createStaticHistory = (path: string): HistoryLike => ({
   back: () => {},
 })
 
-export const createMemoryHistory =
-  (initialPath: string): HistoryLike & { setPath: (path: string) => void } => {
-    let currentPath = initialPath
-    const listeners = new Set<() => void>()
+export const createMemoryHistory = (
+  initialPath: string,
+): HistoryLike & { setPath: (path: string) => void } => {
+  let currentPath = initialPath
+  const listeners = new Set<() => void>()
 
-    const notify = () => {
-      listeners.forEach(listener => listener())
-    }
-
-    return {
-      location: () => currentPath,
-      push: path => {
-        currentPath = path
-        notify()
-      },
-      replace: path => {
-        currentPath = path
-        notify()
-      },
-      listen: cb => {
-        listeners.add(cb)
-      },
-      back: () => {},
-      setPath: path => {
-        currentPath = path
-        notify()
-      },
-    }
+  const notify = () => {
+    listeners.forEach(listener => listener())
   }
+
+  return {
+    location: () => currentPath,
+    push: path => {
+      currentPath = path
+      notify()
+    },
+    replace: path => {
+      currentPath = path
+      notify()
+    },
+    listen: cb => {
+      listeners.add(cb)
+    },
+    back: () => {},
+    setPath: path => {
+      currentPath = path
+      notify()
+    },
+  }
+}
 
 export const mountContainer = () => {
   const container = document.createElement('div')

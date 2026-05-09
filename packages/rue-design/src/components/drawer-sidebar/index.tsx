@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 import { Teleport, onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 
@@ -135,7 +136,9 @@ const hasCompoundChildren = (children: any) => {
 
 const normalizeStyleKey = (key: string) => {
   if (key.startsWith('--')) return key
-  return key.includes('-') ? key.replace(/-([a-z])/g, (_, segment: string) => segment.toUpperCase()) : key
+  return key.includes('-')
+    ? key.replace(/-([a-z])/g, (_, segment: string) => segment.toUpperCase())
+    : key
 }
 
 const toStyleObject = (style?: DrawerSidebarInlineStyle) => {
@@ -225,10 +228,7 @@ const resolveMaskConfig = (
   }
 }
 
-const resolveClosableConfig = (
-  closable: DrawerSidebarProps['closable'],
-  closeIcon: any,
-) => {
+const resolveClosableConfig = (closable: DrawerSidebarProps['closable'], closeIcon: any) => {
   if (closable === false) {
     return {
       enabled: false,
@@ -394,7 +394,9 @@ const DefaultCloseIcon: FC = () => {
 }
 
 const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest }) => {
-  const shouldUseManagedMode = !hasCompoundChildren(children) && getManagedModeSignature({ end, open, className, children, ...rest })
+  const shouldUseManagedMode =
+    !hasCompoundChildren(children) &&
+    getManagedModeSignature({ end, open, className, children, ...rest })
 
   if (!shouldUseManagedMode) {
     let rootClassName = 'drawer'
@@ -402,7 +404,11 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
     if (open) rootClassName += ' drawer-open'
 
     return (
-      <div {...rest} className={mergeClassName(rootClassName, className)} data-rue-drawer-sidebar-mode="compound">
+      <div
+        {...rest}
+        className={mergeClassName(rootClassName, className)}
+        data-rue-drawer-sidebar-mode="compound"
+      >
         {children}
       </div>
     )
@@ -528,7 +534,7 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
 
   watch(
     () => currentOpen.value,
-    nextOpen => {
+    (nextOpen: boolean) => {
       syncManagedDom(nextOpen)
       if (nextOpen) {
         hasOpened.value = true
@@ -557,7 +563,7 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
 
   watch(
     () => keyboard,
-    nextKeyboard => {
+    (nextKeyboard: boolean) => {
       currentKeyboard.value = nextKeyboard
     },
     { immediate: true },
@@ -597,7 +603,7 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
         classNames?.close,
       )}
       style={mergeStyleValue(styles?.close)}
-      onClick={event => {
+      onClick={(event: MouseEvent) => {
         event.stopPropagation()
         if (resolvedClosable.disabled) return
         emitClose(event)
@@ -610,7 +616,11 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
 
   const bodyNode = (
     <div
-      className={mergeClassName('flex-1 overflow-y-auto px-5 py-5', bodyClassName, classNames?.body)}
+      className={mergeClassName(
+        'flex-1 overflow-y-auto px-5 py-5',
+        bodyClassName,
+        classNames?.body,
+      )}
       style={mergeStyleValue(styles?.body, bodyStyle)}
       aria-busy={loading ? 'true' : undefined}
       data-rue-drawer-sidebar-body="true"
@@ -633,8 +643,13 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
         panelClassName,
         classNames?.panel,
       )}
-      style={mergeStyleValue(styles?.panel, style, panelStyle, getPanelSizeStyle(placement, resolvedSize))}
-      onClick={event => event.stopPropagation()}
+      style={mergeStyleValue(
+        styles?.panel,
+        style,
+        panelStyle,
+        getPanelSizeStyle(placement, resolvedSize),
+      )}
+      onClick={(event: MouseEvent) => event.stopPropagation()}
       ref={(element: HTMLDivElement | null) => {
         panelElement = element
         syncManagedDom(currentOpen.value)
@@ -653,7 +668,10 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
           data-rue-drawer-sidebar-header="true"
         >
           {resolvedClosable.placement === 'start' ? closeButtonNode : null}
-          <div className={mergeClassName('min-w-0 flex-1', classNames?.title)} style={mergeStyleValue(styles?.title)}>
+          <div
+            className={mergeClassName('min-w-0 flex-1', classNames?.title)}
+            style={mergeStyleValue(styles?.title)}
+          >
             {title ? <div className="text-lg font-semibold leading-6">{title}</div> : null}
           </div>
           {extra ? <div className="shrink-0">{extra}</div> : null}
@@ -723,7 +741,7 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
           classNames?.wrapper,
         )}
         style={mergeStyleValue(styles?.wrapper)}
-        onClick={event => {
+        onClick={(event: MouseEvent) => {
           if (!resolvedMaskConfig.enabled || !resolvedMaskConfig.closable) return
           if (event.target !== event.currentTarget) return
           emitClose(event)
@@ -756,7 +774,11 @@ const Toggle: DrawerSidebarPartComponent<DrawerSidebarToggleProps> = ({ classNam
 }
 Toggle[COMPOUND_PART_FLAG] = 'Toggle'
 
-const Content: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({ className, children, ...rest }) => {
+const Content: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({
+  className,
+  children,
+  ...rest
+}) => {
   return (
     <div {...rest} className={mergeClassName('drawer-content', className)}>
       {children}
@@ -765,7 +787,11 @@ const Content: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({ className
 }
 Content[COMPOUND_PART_FLAG] = 'Content'
 
-const Side: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({ className, children, ...rest }) => {
+const Side: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({
+  className,
+  children,
+  ...rest
+}) => {
   return (
     <div {...rest} className={mergeClassName('drawer-side', className)}>
       {children}
@@ -774,7 +800,11 @@ const Side: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({ className, c
 }
 Side[COMPOUND_PART_FLAG] = 'Side'
 
-const Overlay: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({ className, children, ...rest }) => {
+const Overlay: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({
+  className,
+  children,
+  ...rest
+}) => {
   return (
     <label {...rest} className={mergeClassName('drawer-overlay', className)}>
       {children}

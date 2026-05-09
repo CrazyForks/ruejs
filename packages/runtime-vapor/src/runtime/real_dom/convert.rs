@@ -24,8 +24,12 @@ where
                 MountInputType::<JsDomAdapter>::VaporWithSetup(f.clone())
             }
             #[cfg(feature = "compat")]
-            MountInputType::<A>::Element(tag) => MountInputType::<JsDomAdapter>::Element(tag.clone()),
-            MountInputType::<A>::Component(f) => MountInputType::<JsDomAdapter>::Component(f.clone()),
+            MountInputType::<A>::Element(tag) => {
+                MountInputType::<JsDomAdapter>::Element(tag.clone())
+            }
+            MountInputType::<A>::Component(f) => {
+                MountInputType::<JsDomAdapter>::Component(f.clone())
+            }
             MountInputType::<A>::_Phantom(_) => {
                 MountInputType::<JsDomAdapter>::_Phantom(std::marker::PhantomData)
             }
@@ -42,6 +46,7 @@ where
             })
             .collect(),
         key: input.key.clone(),
+        strict_component_returns: input.strict_component_returns,
         mount_cleanup_bucket: input.mount_cleanup_bucket.clone(),
         mount_effect_scope_id: input.mount_effect_scope_id,
         el_hint: input
@@ -63,6 +68,31 @@ impl<A: DomAdapter> Rue<A>
 where
     A::Element: Clone,
 {
+    pub(crate) fn component_return_value_to_input(
+        &mut self,
+        value: &JsValue,
+        strict_component_returns: bool,
+    ) -> Option<MountInput<A>>
+    where
+        A::Element: From<JsValue> + Into<JsValue> + Clone,
+    {
+        if strict_component_returns {
+            if let Some(input) = self.object_value_to_input(value) {
+                return Some(input);
+            }
+
+            #[cfg(feature = "compat")]
+            if value.is_object() {
+                return self.compat_vnode_object_to_input(&Object::from(value.clone()));
+            }
+
+            None
+        } else {
+            self.value_to_input(value)
+        }
+    }
+
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn value_to_input(&mut self, value: &JsValue) -> Option<MountInput<A>>
     where
         A::Element: From<JsValue> + Into<JsValue> + Clone,
@@ -124,6 +154,7 @@ where
     }
 
     #[cfg(feature = "compat")]
+    #[cfg_attr(not(test), allow(dead_code))]
     fn compat_vnode_object_to_input(&mut self, obj: &Object) -> Option<MountInput<A>>
     where
         A::Element: From<JsValue> + Into<JsValue>,
@@ -137,6 +168,7 @@ where
     }
 
     #[cfg(feature = "compat")]
+    #[cfg_attr(not(test), allow(dead_code))]
     fn child_value_to_input(&mut self, value: &JsValue) -> MountInput<A>
     where
         A::Element: From<JsValue> + Into<JsValue> + Clone,
@@ -153,6 +185,7 @@ where
     }
 
     #[cfg(feature = "compat")]
+    #[cfg_attr(not(test), allow(dead_code))]
     fn children_from_js_input(&mut self, cc: &JsValue) -> Vec<MountInputChild<A>>
     where
         A::Element: From<JsValue> + Into<JsValue> + Clone,
@@ -273,6 +306,7 @@ mod tests {
             props: Default::default(),
             children: vec![],
             key: None,
+            strict_component_returns: false,
             mount_cleanup_bucket: None,
             mount_effect_scope_id: None,
             el_hint: Some(el.clone()),
@@ -352,11 +386,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn tagged_mount_handle_object_lifts_wrapper_metadata() {
         let mut rue: Rue<JsDomAdapter> = Rue::new();
-        let input = MountInput::new_normalized(
-            MountInputType::Vapor,
-            Default::default(),
-            vec![],
-        );
+        let input = MountInput::new_normalized(MountInputType::Vapor, Default::default(), vec![]);
 
         let handle = Object::from(rue.input_to_mount_handle_value(&input));
         let cleanup_bucket = Array::new();
@@ -367,12 +397,8 @@ mod tests {
             &cleanup_bucket.clone().into(),
         )
         .unwrap();
-        Reflect::set(
-            &handle,
-            &JsValue::from_str("__rue_effect_scope_id"),
-            &JsValue::from_f64(7.0),
-        )
-        .unwrap();
+        Reflect::set(&handle, &JsValue::from_str("__rue_effect_scope_id"), &JsValue::from_f64(7.0))
+            .unwrap();
 
         let roundtrip = rue
             .object_value_to_input(&handle.clone().into())
@@ -425,21 +451,20 @@ mod tests {
         children.push(&nested.clone().into());
 
         let props = JsObject::new();
-        Reflect::set(&props, &JsValue::from_str("className"), &JsValue::from_str("raw"))
-            .unwrap();
+        Reflect::set(&props, &JsValue::from_str("className"), &JsValue::from_str("raw")).unwrap();
 
         let vnode = JsObject::new();
         Reflect::set(&vnode, &JsValue::from_str("type"), &JsValue::from_str("div")).unwrap();
         Reflect::set(&vnode, &JsValue::from_str("props"), &props).unwrap();
         Reflect::set(&vnode, &JsValue::from_str("children"), &children.into()).unwrap();
 
-        let input = rue
-            .value_to_input(&vnode.into())
-            .expect("compat vnode object should convert");
+        let input = rue.value_to_input(&vnode.into()).expect("compat vnode object should convert");
 
         assert!(matches!(input.r#type, MountInputType::Element(ref tag) if tag == "div"));
         assert_eq!(input.children.len(), 2);
         assert!(matches!(&input.children[0], MountInputChild::Text(text) if text == "A"));
-        assert!(matches!(&input.children[1], MountInputChild::Input(child) if matches!(child.r#type, MountInputType::Element(ref tag) if tag == "strong")));
+        assert!(
+            matches!(&input.children[1], MountInputChild::Input(child) if matches!(child.r#type, MountInputType::Element(ref tag) if tag == "strong"))
+        );
     }
 }

@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 export type JoinDirection = 'horizontal' | 'vertical'
@@ -36,7 +37,10 @@ const mergeClassNames = (...classNames: Array<string | undefined | false>) => {
 }
 
 const isDisabledAttrTag = (tag: any) => {
-  return typeof tag === 'string' && ['button', 'input', 'select', 'textarea', 'option', 'optgroup', 'fieldset'].includes(tag)
+  return (
+    typeof tag === 'string' &&
+    ['button', 'input', 'select', 'textarea', 'option', 'optgroup', 'fieldset'].includes(tag)
+  )
 }
 
 const isButtonLikeClass = (className?: string) => {
@@ -128,11 +132,7 @@ const renderItems = (items: JoinItemConfig[], itemClassName?: string) => {
     const { key, label, children, className, ...rest } = item
     const content = Object.prototype.hasOwnProperty.call(item, 'children') ? children : label
     return (
-      <Item
-        key={key ?? index}
-        {...rest}
-        className={mergeClassNames(itemClassName, className)}
-      >
+      <Item key={key ?? index} {...rest} className={mergeClassNames(itemClassName, className)}>
         {content}
       </Item>
     )
@@ -161,7 +161,11 @@ const JoinRoot: FC<JoinProps> = ({
 
   return (
     <Tag {...rest} className={mergedClassName}>
-      {hasRenderableChildren(children) ? children : items ? renderItems(items, itemClassName) : null}
+      {hasRenderableChildren(children)
+        ? children
+        : items
+          ? renderItems(items, itemClassName)
+          : null}
     </Tag>
   )
 }

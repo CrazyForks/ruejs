@@ -5,35 +5,35 @@ source: https://raw.githubusercontent.com/saadeghi/daisyui/refs/heads/master/pac
 layout: components
 classnames:
   component:
-  - class: steps
-    desc: Container of multiple step nodes
+    - class: steps
+      desc: Container of multiple step nodes
   part:
-  - class: step
-    desc: A single step node
-  - class: step-icon
-    desc: For custom icon inside step
+    - class: step
+      desc: A single step node
+    - class: step-icon
+      desc: For custom icon inside step
   color:
-  - class: step-neutral
-    desc: neutral color
-  - class: step-primary
-    desc: primary color
-  - class: step-secondary
-    desc: secondary color
-  - class: step-accent
-    desc: accent color
-  - class: step-info
-    desc: info color
-  - class: step-success
-    desc: success color
-  - class: step-warning
-    desc: warning color
-  - class: step-error
-    desc: error color
+    - class: step-neutral
+      desc: neutral color
+    - class: step-primary
+      desc: primary color
+    - class: step-secondary
+      desc: secondary color
+    - class: step-accent
+      desc: accent color
+    - class: step-info
+      desc: info color
+    - class: step-success
+      desc: success color
+    - class: step-warning
+      desc: warning color
+    - class: step-error
+      desc: error color
   direction:
-  - class: steps-vertical
-    desc: Makes steps vertical (default)
-  - class: steps-horizontal
-    desc: Makes steps horizontal
+    - class: steps-vertical
+      desc: Makes steps vertical (default)
+    - class: steps-horizontal
+      desc: Makes steps horizontal
 ---
 
 <script>
@@ -42,6 +42,7 @@ classnames:
 </script>
 
 ### ~Horizontal
+
 <ul class="steps">
   <li class="step step-primary">Register</li>
   <li class="step step-primary">Choose plan</li>
@@ -58,8 +59,8 @@ classnames:
 </ul>
 ```
 
-
 ### ~Vertical
+
 <ul class="steps steps-vertical">
   <li class="step step-primary">Register</li>
   <li class="step step-primary">Choose plan</li>
@@ -76,8 +77,8 @@ classnames:
 </ul>
 ```
 
-
 ### ~responsive (vertical on small screen, horizontal on large screen)
+
 <ul class="steps steps-vertical lg:steps-horizontal">
   <li class="step step-primary">Register</li>
   <li class="step step-primary">Choose plan</li>
@@ -95,6 +96,7 @@ classnames:
 ```
 
 ### ~With custom content in step-icon
+
 <ul class="steps">
   <li class="step step-neutral">
     <span class="step-icon">😕</span>Step 1
@@ -109,19 +111,14 @@ classnames:
 
 ```html
 <ul class="$$steps">
-  <li class="$$step $$step-neutral">
-    <span class="$$step-icon">😕</span>Step 1
-  </li>
-  <li class="$$step $$step-neutral">
-    <span class="$$step-icon">😃</span>Step 2
-  </li>
-  <li class="$$step">
-    <span class="$$step-icon">😍</span>Step 3
-  </li>
+  <li class="$$step $$step-neutral"><span class="$$step-icon">😕</span>Step 1</li>
+  <li class="$$step $$step-neutral"><span class="$$step-icon">😃</span>Step 2</li>
+  <li class="$$step"><span class="$$step-icon">😍</span>Step 3</li>
 </ul>
 ```
 
 ### ~With data-content
+
 <ul class="steps">
   <li data-content="?" class="step step-neutral">Step 1</li>
   <li data-content="!" class="step step-neutral">Step 2</li>
@@ -144,8 +141,8 @@ classnames:
 </ul>
 ```
 
-
 ### ~Custom colors
+
 <ul class="steps">
   <li class="step step-info">Fly to moon</li>
   <li class="step step-info">Shrink the moon</li>
@@ -162,8 +159,8 @@ classnames:
 </ul>
 ```
 
-
 ### ~With scrollable wrapper
+
 <div class="overflow-x-auto">
   <ul class="steps">
     <li class="step">start</li>

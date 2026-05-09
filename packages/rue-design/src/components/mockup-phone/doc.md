@@ -5,13 +5,13 @@ source: https://raw.githubusercontent.com/saadeghi/daisyui/refs/heads/master/pac
 layout: components
 classnames:
   component:
-  - class: mockup-phone
-    desc: Phone mockup
+    - class: mockup-phone
+      desc: Phone mockup
   part:
-  - class: mockup-phone-camera
-    desc: Camera part
-  - class: mockup-phone-display
-    desc: Display part
+    - class: mockup-phone-camera
+      desc: Camera part
+    - class: mockup-phone-display
+      desc: Display part
 ---
 
 <script>

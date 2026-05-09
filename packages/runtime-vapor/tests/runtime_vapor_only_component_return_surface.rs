@@ -19,8 +19,7 @@ async fn vapor_only_component_accepts_host_node_bridge_return() {
 
     let bridge = Object::new();
     Reflect::set(&bridge, &JsValue::from_str("__rue_host_node"), &host.clone().into()).unwrap();
-    Reflect::set(&js_sys::global(), &JsValue::from_str("__rue_component_bridge"), &bridge)
-        .unwrap();
+    Reflect::set(&js_sys::global(), &JsValue::from_str("__rue_component_bridge"), &bridge).unwrap();
 
     let render_fn = Function::new_no_args("return globalThis.__rue_component_bridge");
     let handle = rue.create_component_wasm(render_fn.into(), JsValue::UNDEFINED);
@@ -81,8 +80,7 @@ async fn vapor_only_component_rejects_bare_raw_host_node_return() {
     Reflect::set(&raw, &JsValue::from_str("tag"), &JsValue::from_str("span")).unwrap();
     Reflect::set(&raw, &JsValue::from_str("children"), &Array::new().into()).unwrap();
     Reflect::set(&raw, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
-    Reflect::set(&js_sys::global(), &JsValue::from_str("__rue_component_raw_node"), &raw)
-        .unwrap();
+    Reflect::set(&js_sys::global(), &JsValue::from_str("__rue_component_raw_node"), &raw).unwrap();
 
     let render_fn = Function::new_no_args("return globalThis.__rue_component_raw_node");
     let handle = rue.create_component_wasm(render_fn.into(), JsValue::UNDEFINED);

@@ -26,7 +26,9 @@ const findTab = (root: ParentNode, label: string) =>
   ) ?? null
 
 const listNumbers = (root: ParentNode) =>
-  Array.from(root.querySelectorAll('.list-shell ul > li > span')).map(node => node.textContent?.trim())
+  Array.from(root.querySelectorAll('.list-shell ul > li > span')).map(node =>
+    node.textContent?.trim(),
+  )
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -50,7 +52,7 @@ describe('ListTransitionExample actual page', () => {
     const insertButton = Array.from(container.querySelectorAll('button')).find(
       button => button.textContent?.trim() === 'Insert at random index',
     )
-    await click(insertButton)
+    await click(insertButton ?? null)
 
     await waitForContent(() => {
       expect(listNumbers(container)).toEqual(['6', '1', '2', '3', '4', '5'])

@@ -68,7 +68,8 @@ const keyModifierAliases: Record<string, string[]> = {
 
 const normalizeEventKey = (value: unknown) => String(value ?? '').toLowerCase()
 
-const isKeyboardEvent = (event: any) => typeof event?.type === 'string' && event.type.startsWith('key')
+const isKeyboardEvent = (event: any) =>
+  typeof event?.type === 'string' && event.type.startsWith('key')
 
 const matchesMouseButtonModifier = (event: any, modifier: string) => {
   switch (modifier) {
@@ -245,7 +246,10 @@ const mountNativeEventRange = (target: RenderTarget) => {
   }
 }
 
-export const vaporWithNativeEvents = <T>(value: T, nativeEvents: VaporNativeEventMap): BlockFactory => {
+export const vaporWithNativeEvents = <T>(
+  value: T,
+  nativeEvents: VaporNativeEventMap,
+): BlockFactory => {
   const factory = (() => {
     let parent: DomElementLike | null = null
     let start: DomNodeLike | null = null

@@ -2,8 +2,8 @@ use crate::runtime::dom_adapter::DomAdapter;
 
 use super::compat_state::{MountedCompatPatchKind, MountedCompatRootState, MountedElement};
 use super::mounted::{
-    MountLifecycleRecord, MountedBlock, MountedPatchSubtree, MountedPatchSubtreeType,
-    MountedState, MountedSubtreeState,
+    MountLifecycleRecord, MountedBlock, MountedPatchSubtree, MountedPatchSubtreeType, MountedState,
+    MountedSubtreeState,
 };
 
 pub(super) fn mounted_element_into_patch_state<A: DomAdapter>(

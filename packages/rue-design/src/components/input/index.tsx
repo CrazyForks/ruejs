@@ -1,7 +1,8 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Input 组件概述
 - 在 Rue 现有 input 视觉基座上补齐更高层的语义 API：prefix/suffix、allowClear、showCount、状态与变体。
-- 通过命名空间挂载 Search、Password、TextArea，覆盖 ant-design Input 最常用的核心能力。
+- 通过命名空间挂载 Search、Password、TextArea。
 - 保留当前 Shell 入口，兼容文档里直接把 input 当作壳层容器使用的写法。
 */
 import type { FC } from '@rue-js/rue'
@@ -260,7 +261,11 @@ const EyeOpenIcon: FC = () => {
       className="size-4"
       aria-hidden="true"
     >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+      />
       <circle cx="12" cy="12" r="3" />
     </svg>
   )
@@ -278,8 +283,16 @@ const EyeClosedIcon: FC = () => {
       aria-hidden="true"
     >
       <path strokeLinecap="round" strokeLinejoin="round" d="m3 3 18 18" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10.6 5.3A10.2 10.2 0 0 1 12 5.2c6 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.1 3.9" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.7 6.8C4.1 8.4 2.5 11.2 2.5 11.2s3.5 6 9.5 6c1.8 0 3.4-.5 4.8-1.2" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M10.6 5.3A10.2 10.2 0 0 1 12 5.2c6 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.1 3.9"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.7 6.8C4.1 8.4 2.5 11.2 2.5 11.2s3.5 6 9.5 6c1.8 0 3.4-.5 4.8-1.2"
+      />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9.9 9.8A3 3 0 0 0 14.2 14" />
     </svg>
   )
@@ -332,7 +345,9 @@ const InputRoot: FC<InputProps> = ({
   }
 
   const syncValueState = () => {
-    currentValue.value = resolveInputValue(isControlled ? value : inputRef.current?.value ?? defaultValue)
+    currentValue.value = resolveInputValue(
+      isControlled ? value : (inputRef.current?.value ?? defaultValue),
+    )
   }
 
   const syncUncontrolledDefaultValue = () => {
@@ -458,7 +473,10 @@ const InputRoot: FC<InputProps> = ({
         size,
         variant,
         ghost,
-        className: mergeClassName(className, usesAddonGroup ? 'join-item min-w-0 flex-1' : undefined),
+        className: mergeClassName(
+          className,
+          usesAddonGroup ? 'join-item min-w-0 flex-1' : undefined,
+        ),
       })}
       onInput={handleInput}
       onChange={handleChange}
@@ -475,12 +493,17 @@ const InputRoot: FC<InputProps> = ({
         variant,
         ghost,
         shell: true,
-        className: mergeClassName(className, usesAddonGroup ? 'join-item min-w-0 flex-1' : undefined),
+        className: mergeClassName(
+          className,
+          usesAddonGroup ? 'join-item min-w-0 flex-1' : undefined,
+        ),
       })}
       aria-disabled={disabled ? 'true' : undefined}
       data-rue-input-shell="true"
     >
-      {prefix !== undefined ? <span className="shrink-0 text-sm text-base-content/60">{prefix}</span> : null}
+      {prefix !== undefined ? (
+        <span className="shrink-0 text-sm text-base-content/60">{prefix}</span>
+      ) : null}
       <input
         {...rest}
         {...nativeValueProps}
@@ -515,7 +538,9 @@ const InputRoot: FC<InputProps> = ({
           {clearConfig?.clearIcon ?? <DefaultClearIcon />}
         </button>
       ) : null}
-      {suffix !== undefined ? <span className="shrink-0 text-sm text-base-content/60">{suffix}</span> : null}
+      {suffix !== undefined ? (
+        <span className="shrink-0 text-sm text-base-content/60">{suffix}</span>
+      ) : null}
     </label>
   ) : null
 
@@ -523,9 +548,15 @@ const InputRoot: FC<InputProps> = ({
 
   const groupedControlNode = usesAddonGroup ? (
     <div className="join w-full items-stretch">
-      {addonBefore !== undefined ? (addonBeforeBare ? addonBefore : <Addon>{addonBefore}</Addon>) : null}
+      {addonBefore !== undefined ? (
+        addonBeforeBare ? (
+          addonBefore
+        ) : (
+          <Addon>{addonBefore}</Addon>
+        )
+      ) : null}
       {controlNode}
-      {addonAfter !== undefined ? (addonAfterBare ? addonAfter : <Addon>{addonAfter}</Addon>) : null}
+      {addonAfter !== undefined ? addonAfterBare ? addonAfter : <Addon>{addonAfter}</Addon> : null}
     </div>
   ) : (
     controlNode
@@ -536,7 +567,10 @@ const InputRoot: FC<InputProps> = ({
   }
 
   return (
-    <div className={mergeClassName(hasCount ? 'flex flex-col gap-2' : undefined, rootClassName)} data-rue-input-root="true">
+    <div
+      className={mergeClassName(hasCount ? 'flex flex-col gap-2' : undefined, rootClassName)}
+      data-rue-input-root="true"
+    >
       {groupedControlNode}
       {hasCount ? (
         <div
@@ -544,7 +578,10 @@ const InputRoot: FC<InputProps> = ({
             countElement = element
             syncCountDisplay()
           }}
-          className={mergeClassName('flex justify-end text-xs leading-5 text-base-content/60', countClassName)}
+          className={mergeClassName(
+            'flex justify-end text-xs leading-5 text-base-content/60',
+            countClassName,
+          )}
           data-rue-input-count="true"
         >
           {stringifyContent(
@@ -603,7 +640,7 @@ const Search: FC<SearchProps> = ({
   ...rest
 }) => {
   const inputRef = useRef<HTMLInputElement>()
-  const actionContent = enterButton === true ? '搜索' : enterButton ?? addonAfter
+  const actionContent = enterButton === true ? '搜索' : (enterButton ?? addonAfter)
 
   const triggerSearch = (event: MouseEvent | KeyboardEvent, source: SearchInfo['source']) => {
     if (disabled || loading) return
@@ -617,24 +654,33 @@ const Search: FC<SearchProps> = ({
       type="button"
       aria-label="Search"
       className={mergeClassName('btn btn-ghost join-item', buttonClassName)}
-      onClick={event => triggerSearch(event, 'input')}
+      onClick={(event: MouseEvent) => triggerSearch(event, 'input')}
       disabled={disabled || loading}
     >
-      {loading ? <span className="loading loading-spinner loading-xs" aria-hidden="true" /> : <DefaultSearchIcon />}
+      {loading ? (
+        <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+      ) : (
+        <DefaultSearchIcon />
+      )}
     </button>
   )
 
-  const addonButton = actionContent !== undefined ? (
-    <button
-      type="button"
-      className={mergeClassName('btn btn-primary join-item', buttonClassName)}
-      onClick={event => triggerSearch(event, 'input')}
-      disabled={disabled || loading}
-      aria-busy={loading ? 'true' : undefined}
-    >
-      {loading ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : actionContent}
-    </button>
-  ) : null
+  const addonButton =
+    actionContent !== undefined ? (
+      <button
+        type="button"
+        className={mergeClassName('btn btn-primary join-item', buttonClassName)}
+        onClick={(event: MouseEvent) => triggerSearch(event, 'input')}
+        disabled={disabled || loading}
+        aria-busy={loading ? 'true' : undefined}
+      >
+        {loading ? (
+          <span className="loading loading-spinner loading-sm" aria-hidden="true" />
+        ) : (
+          actionContent
+        )}
+      </button>
+    ) : null
 
   return (
     <InputRoot
@@ -645,7 +691,7 @@ const Search: FC<SearchProps> = ({
       suffix={suffix}
       addonAfter={actionContent === undefined ? suffixButton : addonButton}
       addonAfterBare={true}
-      onClear={event => {
+      onClear={(event: MouseEvent) => {
         if (onClear) onClear(event)
         if (onSearch) {
           onSearch('', event, { source: 'clear' })
@@ -659,12 +705,7 @@ const Search: FC<SearchProps> = ({
   )
 }
 
-const Password: FC<PasswordProps> = ({
-  iconRender,
-  visibilityToggle = true,
-  suffix,
-  ...rest
-}) => {
+const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suffix, ...rest }) => {
   const inputRef = useRef<HTMLInputElement>()
   const uncontrolledVisible = ref(false)
   const visibilityConfig =
@@ -690,7 +731,7 @@ const Password: FC<PasswordProps> = ({
       type="button"
       aria-label={visible ? 'Hide password' : 'Show password'}
       className="btn btn-ghost btn-xs btn-circle h-7 min-h-0 w-7 shrink-0 p-0"
-      onClick={event => {
+      onClick={(event: MouseEvent) => {
         if (typeof (event as any).preventDefault === 'function') {
           ;(event as any).preventDefault()
         }
@@ -702,12 +743,22 @@ const Password: FC<PasswordProps> = ({
   ) : null
 
   const mergedSuffix = visibilityButton ? (
-    <span className="inline-flex items-center gap-1">{suffix}{visibilityButton}</span>
+    <span className="inline-flex items-center gap-1">
+      {suffix}
+      {visibilityButton}
+    </span>
   ) : (
     suffix
   )
 
-  return <InputRoot {...rest} ref={inputRef} type={visible ? 'text' : 'password'} suffix={mergedSuffix} />
+  return (
+    <InputRoot
+      {...rest}
+      ref={inputRef}
+      type={visible ? 'text' : 'password'}
+      suffix={mergedSuffix}
+    />
+  )
 }
 
 type InputCompound = FC<InputProps> & {

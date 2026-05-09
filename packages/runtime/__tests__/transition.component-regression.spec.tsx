@@ -159,11 +159,10 @@ describe('built-in transition component regressions', () => {
           })
 
           stepElements = _$vaporKeyedList({
-            items: Array.from({ length: setupState.count.value }, (_, index) => [
-              index + 1,
-              index,
-              index,
-            ] as const),
+            items: Array.from(
+              { length: setupState.count.value },
+              (_, index) => [index + 1, index, index] as const,
+            ),
             getKey: item => item[0],
             elements: stepElements,
             parent: secondContainer,
@@ -241,11 +240,10 @@ describe('built-in transition component regressions', () => {
 
         watchEffect(() => {
           stepElements = _$vaporKeyedList({
-            items: Array.from({ length: setupState.count.value }, (_, index) => [
-              index + 1,
-              index,
-              index,
-            ] as const),
+            items: Array.from(
+              { length: setupState.count.value },
+              (_, index) => [index + 1, index, index] as const,
+            ),
             getKey: item => item[0],
             elements: stepElements,
             parent: listContainer,
@@ -276,14 +274,20 @@ describe('built-in transition component regressions', () => {
     await flush()
 
     expect(
-      Array.from(container.querySelectorAll('span[data-testid^="single-step-"]'), el => el.textContent),
+      Array.from(
+        container.querySelectorAll('span[data-testid^="single-step-"]'),
+        el => el.textContent,
+      ),
     ).toEqual(['Step 1', 'Step 2', 'Step 3'])
 
     ;(container.querySelector('#increment-single-count') as HTMLButtonElement).click()
     await flush()
 
     expect(
-      Array.from(container.querySelectorAll('span[data-testid^="single-step-"]'), el => el.textContent),
+      Array.from(
+        container.querySelectorAll('span[data-testid^="single-step-"]'),
+        el => el.textContent,
+      ),
     ).toEqual(['Step 1', 'Step 2', 'Step 3', 'Step 4'])
   })
 

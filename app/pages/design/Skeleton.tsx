@@ -302,13 +302,25 @@ const DemoCard: FC<{ children?: any }> = ({ children }) => {
   )
 }
 
-const SpreadChildren: FC<{ as?: any; children?: any; [key: string]: any }> = ({ as = 'div', children, ...rest }) => {
+const SpreadChildren: FC<{ as?: any; children?: any; [key: string]: any }> = ({
+  as = 'div',
+  children,
+  ...rest
+}) => {
   return h(as as any, rest, ...(toChildArray(children) as any[]))
 }
 
-const DemoToggleButton: FC<{ active?: boolean; onClick?: () => void; children?: any }> = ({ active, onClick, children }) => {
+const DemoToggleButton: FC<{ active?: boolean; onClick?: () => void; children?: any }> = ({
+  active,
+  onClick,
+  children,
+}) => {
   return (
-    <button className={`btn btn-xs ${active ? 'btn-primary' : 'btn-outline'}`.trim()} type="button" onClick={onClick}>
+    <button
+      className={`btn btn-xs ${active ? 'btn-primary' : 'btn-outline'}`.trim()}
+      type="button"
+      onClick={onClick}
+    >
       {children}
     </button>
   )
@@ -329,7 +341,8 @@ const ArticleContent: FC = () => {
         </div>
       </div>
       <p className="text-sm leading-6 opacity-80">
-        Skeleton 适合先稳定布局，再逐步替换真实内容。主组件支持组合式占位，子组件用于拼装头像、按钮、输入框、图片与自定义节点。
+        Skeleton
+        适合先稳定布局，再逐步替换真实内容。主组件支持组合式占位，子组件用于拼装头像、按钮、输入框、图片与自定义节点。
       </p>
       <div className="flex flex-wrap gap-2">
         <span className="badge badge-primary badge-soft">loading</span>
@@ -346,7 +359,9 @@ const FeedCard: FC<{ item: FeedItem }> = ({ item }) => {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="font-medium">{item.title}</div>
-          <div className="text-xs uppercase tracking-[0.18em] text-base-content/45">{item.meta}</div>
+          <div className="text-xs uppercase tracking-[0.18em] text-base-content/45">
+            {item.meta}
+          </div>
         </div>
         <span className="badge badge-primary badge-soft">{item.badge}</span>
       </div>
@@ -369,7 +384,9 @@ const LoadingSwitchPreview: FC = () => {
           >
             {contentLoading.value ? '显示内容' : '重新加载'}
           </button>
-          <span className="text-sm opacity-70">当前状态：{contentLoading.value ? '加载中' : '内容已展示'}</span>
+          <span className="text-sm opacity-70">
+            当前状态：{contentLoading.value ? '加载中' : '内容已展示'}
+          </span>
         </div>
         <Skeleton
           loading={contentLoading.value}
@@ -452,15 +469,23 @@ const ElementVariantsPreview: FC = () => {
     <DemoCard>
       <div className="space-y-5" data-testid="skeleton-elements-demo">
         <div className="flex flex-wrap items-center gap-2">
-          <DemoToggleButton active={elementActive.value} onClick={() => (elementActive.value = !elementActive.value)}>
+          <DemoToggleButton
+            active={elementActive.value}
+            onClick={() => (elementActive.value = !elementActive.value)}
+          >
             {elementActive.value ? '关闭 active' : '开启 active'}
           </DemoToggleButton>
-          <DemoToggleButton active={elementBlock.value} onClick={() => (elementBlock.value = !elementBlock.value)}>
+          <DemoToggleButton
+            active={elementBlock.value}
+            onClick={() => (elementBlock.value = !elementBlock.value)}
+          >
             {elementBlock.value ? '关闭 block' : '开启 block'}
           </DemoToggleButton>
           <DemoToggleButton
             active={avatarShape.value === 'circle'}
-            onClick={() => (avatarShape.value = avatarShape.value === 'circle' ? 'square' : 'circle')}
+            onClick={() =>
+              (avatarShape.value = avatarShape.value === 'circle' ? 'square' : 'circle')
+            }
           >
             Avatar: {avatarShape.value}
           </DemoToggleButton>
@@ -475,14 +500,22 @@ const ElementVariantsPreview: FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           <SpreadChildren className="flex flex-wrap items-center gap-2">
             {elementSizes.map(size => (
-              <DemoToggleButton key={size} active={elementSize.value === size} onClick={() => (elementSize.value = size)}>
+              <DemoToggleButton
+                key={size}
+                active={elementSize.value === size}
+                onClick={() => (elementSize.value = size)}
+              >
                 size: {size}
               </DemoToggleButton>
             ))}
           </SpreadChildren>
           <SpreadChildren className="flex flex-wrap items-center gap-2">
             {buttonShapes.map(shape => (
-              <DemoToggleButton key={shape} active={buttonShape.value === shape} onClick={() => (buttonShape.value = shape)}>
+              <DemoToggleButton
+                key={shape}
+                active={buttonShape.value === shape}
+                onClick={() => (buttonShape.value = shape)}
+              >
                 button: {shape}
               </DemoToggleButton>
             ))}
@@ -492,13 +525,23 @@ const ElementVariantsPreview: FC = () => {
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px] xl:items-start">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-4">
-              <Skeleton.Avatar active={elementActive.value} size={elementSize.value} shape={avatarShape.value} />
+              <Skeleton.Avatar
+                active={elementActive.value}
+                size={elementSize.value}
+                shape={avatarShape.value}
+              />
               <Skeleton.Avatar active={elementActive.value} size="xl" shape={avatarShape.value} />
-              <Skeleton.Button active={elementActive.value} size={elementSize.value} shape={buttonShape.value} />
+              <Skeleton.Button
+                active={elementActive.value}
+                size={elementSize.value}
+                shape={buttonShape.value}
+              />
             </div>
 
             <div className="rounded-2xl border border-base-300 bg-base-200/40 p-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-base-content/55">Button / Input block</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-base-content/55">
+                Button / Input block
+              </div>
               <div className="mt-3 space-y-3">
                 <Skeleton.Button
                   active={elementActive.value}
@@ -506,7 +549,11 @@ const ElementVariantsPreview: FC = () => {
                   shape={buttonShape.value}
                   block={elementBlock.value}
                 />
-                <Skeleton.Input active={elementActive.value} size={elementSize.value} block={elementBlock.value} />
+                <Skeleton.Input
+                  active={elementActive.value}
+                  size={elementSize.value}
+                  block={elementBlock.value}
+                />
               </div>
             </div>
           </div>
@@ -555,7 +602,8 @@ const SkeletonPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Skeleton 骨架屏</h1>
         <p className="mt-3 mb-3 text-sm">
-          Skeleton 用于展示加载中的占位内容。这次增强保留 Rue 现有的原子骨架视觉，同时补齐更接近 ant-design 的组合 API、元素级用法和更细的语义定制入口。
+          Skeleton 用于展示加载中的占位内容。这次增强保留 Rue 现有的原子骨架视觉，同时补齐更接近
+          成熟业务骨架屏的组合 API、元素级用法和更细的语义定制入口。
         </p>
 
         <div className="flex flex-wrap gap-4 text-sm">
@@ -573,25 +621,39 @@ const SkeletonPage: FC = () => {
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-primary">保留旧 demo</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-primary">
+              保留旧 demo
+            </div>
             <div className="mt-2 text-sm font-medium">基础方块、圆形内容、文本行都还在</div>
-            <p className="mt-2 text-sm opacity-70">原有 Rue 示例不删除，只是按“原子骨架 / 组合骨架 / 元素 API”重组。</p>
+            <p className="mt-2 text-sm opacity-70">
+              原有 Rue 示例不删除，只是按“原子骨架 / 组合骨架 / 元素 API”重组。
+            </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">增强 API</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              增强 API
+            </div>
             <div className="mt-2 text-sm font-medium">组合骨架、独立元素、列表加载一套打通</div>
-            <p className="mt-2 text-sm opacity-70">沿用 avatar/title/paragraph/loading/round，并补上语义槽位 classNames/styles。</p>
+            <p className="mt-2 text-sm opacity-70">
+              沿用 avatar/title/paragraph/loading/round，并补上语义槽位 classNames/styles。
+            </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-accent">保持 Rue 风格</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-accent">
+              保持 Rue 风格
+            </div>
             <div className="mt-2 text-sm font-medium">不照搬 Ant 视觉，只借鉴交互组织方式</div>
-            <p className="mt-2 text-sm opacity-70">依旧用 Rue 当前 daisyUI 底色，只做布局能力和 demo 丰富度增强。</p>
+            <p className="mt-2 text-sm opacity-70">
+              依旧用 Rue 当前 daisyUI 底色，只做布局能力和 demo 丰富度增强。
+            </p>
           </div>
         </div>
 
         <div className="not-prose mt-8 space-y-2">
           <h2 className="text-2xl font-semibold">原子骨架</h2>
-          <p className="text-sm text-base-content/70">这些用法保留现有 demo，适合直接拼局部占位或自定义布局骨架。</p>
+          <p className="text-sm text-base-content/70">
+            这些用法保留现有 demo，适合直接拼局部占位或自定义布局骨架。
+          </p>
         </div>
 
         <ExampleBlock
@@ -672,7 +734,9 @@ const SkeletonPage: FC = () => {
 
         <div className="not-prose mt-10 space-y-2">
           <h2 className="text-2xl font-semibold">组合骨架</h2>
-          <p className="text-sm text-base-content/70">这一组对齐 Ant 的主要场景：复杂内容组合、children 切换、列表加载，以及圆角行样式。</p>
+          <p className="text-sm text-base-content/70">
+            这一组对齐 Ant 的主要场景：复杂内容组合、children 切换、列表加载，以及圆角行样式。
+          </p>
         </div>
 
         <ExampleBlock
@@ -681,7 +745,12 @@ const SkeletonPage: FC = () => {
           preview={() => (
             <DemoCard>
               <div className="space-y-6">
-                <Skeleton avatar active paragraph={{ rows: 4 }} data-testid="skeleton-composition-default" />
+                <Skeleton
+                  avatar
+                  active
+                  paragraph={{ rows: 4 }}
+                  data-testid="skeleton-composition-default"
+                />
                 <Skeleton
                   avatar={{ shape: 'square', size: 'xl' }}
                   title={{ width: '42%' }}
@@ -817,11 +886,15 @@ const listLoading = ref(true)
                 <ul className="list rounded-2xl border border-base-300 bg-base-200/40 p-4 text-sm">
                   <li className="list-row">
                     <span className="font-medium">语义槽位</span>
-                    <span className="list-col-grow text-base-content/70">只改 root/header/section/avatar/title/paragraph，不必重写组件结构。</span>
+                    <span className="list-col-grow text-base-content/70">
+                      只改 root/header/section/avatar/title/paragraph，不必重写组件结构。
+                    </span>
                   </li>
                   <li className="list-row">
                     <span className="font-medium">适合</span>
-                    <span className="list-col-grow text-base-content/70">营销页首屏、品牌卡片、仪表盘重点模块。</span>
+                    <span className="list-col-grow text-base-content/70">
+                      营销页首屏、品牌卡片、仪表盘重点模块。
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -850,7 +923,10 @@ const listLoading = ref(true)
 
         <div className="not-prose mt-10 space-y-2">
           <h2 className="text-2xl font-semibold">元素 API</h2>
-          <p className="text-sm text-base-content/70">这一组对应 Ant 的 Button / Avatar / Input / Image / Node 示范，但保留 Rue 自己的视觉基底。</p>
+          <p className="text-sm text-base-content/70">
+            这一组对应 Ant 的 Button / Avatar / Input / Image / Node 示范，但保留 Rue
+            自己的视觉基底。
+          </p>
         </div>
 
         <ExampleBlock
@@ -886,7 +962,9 @@ const NodeIcon = () => (
         <div className="not-prose mt-12 space-y-4">
           <h2 className="text-2xl font-semibold">API</h2>
           <p className="text-sm text-base-content/70">
-            根组件保留 Ant 常见的组合式参数，同时继续兼容 Rue 原本的原子骨架写法。新增的 <code>rootClassName</code>、<code>classNames</code> 和 <code>styles</code> 用来只改局部槽位，不影响整棵骨架的默认结构。
+            根组件保留 Ant 常见的组合式参数，同时继续兼容 Rue 原本的原子骨架写法。新增的{' '}
+            <code>rootClassName</code>、<code>classNames</code> 和 <code>styles</code>{' '}
+            用来只改局部槽位，不影响整棵骨架的默认结构。
           </p>
         </div>
 

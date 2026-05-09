@@ -68,7 +68,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'placement',
-    description: '支持四个基础方向和 ant-design 风格的角落别名。',
+    description: '支持四个基础方向和常见浮层组件里的角落别名。',
     type: `'top' | 'bottom' | 'left' | 'right' | 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' | 'leftTop' | 'leftBottom' | 'rightTop' | 'rightBottom'`,
     defaultValue: `'top'`,
   },
@@ -101,8 +101,8 @@ const TooltipPage: FC = () => {
         <h1>Tooltip 提示框</h1>
         <p className="text-sm mt-3 mb-3">
           Tooltip 现在既保留 Rue 原本轻量、包裹式的视觉习惯，也补上更完整的语义 API。你可以继续使用
-          <code>tip</code> 和 <code>Tooltip.Content</code>，也可以切到 <code>title</code>、<code>overlay</code>、受控显示、
-          自定义颜色和语义化样式扩展。
+          <code>tip</code> 和 <code>Tooltip.Content</code>，也可以切到 <code>title</code>、
+          <code>overlay</code>、受控显示、 自定义颜色和语义化样式扩展。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/tooltip/" target="_blank">
@@ -231,7 +231,9 @@ const TooltipPage: FC = () => {
                 <Tooltip.Content>
                   <div className="space-y-2">
                     <div className="badge badge-primary badge-soft">Rue</div>
-                    <p className="m-0 text-xs leading-5">Tooltip.Content 适合承载更自由的结构化信息。</p>
+                    <p className="m-0 text-xs leading-5">
+                      Tooltip.Content 适合承载更自由的结构化信息。
+                    </p>
                   </div>
                 </Tooltip.Content>
                 <button className="btn btn-soft">Tooltip.Content</button>
@@ -278,7 +280,9 @@ const TooltipPage: FC = () => {
                 title="可通过 classNames.root 和 styles.body 精细调节"
                 open={true}
                 classNames={{ root: 'inline-flex', body: 'max-w-52 rounded-2xl' }}
-                styles={{ body: { padding: '0.875rem', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.16)' } }}
+                styles={{
+                  body: { padding: '0.875rem', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.16)' },
+                }}
               >
                 <button className="btn btn-accent btn-soft">Semantic slots</button>
               </Tooltip>
@@ -317,7 +321,9 @@ const TooltipPage: FC = () => {
                 </label>
               </Tooltip>
               <Tooltip trigger="contextMenu" title="右键也可以作为触发手势">
-                <div className="rounded-box border border-dashed border-base-300 px-4 py-3 text-sm">Right click me</div>
+                <div className="rounded-box border border-dashed border-base-300 px-4 py-3 text-sm">
+                  Right click me
+                </div>
               </Tooltip>
             </div>
           )}
@@ -342,18 +348,29 @@ const TooltipPage: FC = () => {
           tab={tabOpen}
           preview={() => (
             <div className="flex flex-wrap items-center gap-4">
-              <Tooltip data-testid="tooltip-open" title="Always visible" open={true} color="primary">
+              <Tooltip
+                data-testid="tooltip-open"
+                title="Always visible"
+                open={true}
+                color="primary"
+              >
                 <button className="btn btn-primary">Force open</button>
               </Tooltip>
               <Tooltip
                 title={controlledOpen.value ? '点击任一按钮都可以关闭' : '点击任一按钮都可以打开'}
                 open={controlledOpen.value}
               >
-                <button className="btn btn-soft" onClick={() => (controlledOpen.value = !controlledOpen.value)}>
+                <button
+                  className="btn btn-soft"
+                  onClick={() => (controlledOpen.value = !controlledOpen.value)}
+                >
                   Controlled tooltip
                 </button>
               </Tooltip>
-              <button className="btn btn-outline" onClick={() => (controlledOpen.value = !controlledOpen.value)}>
+              <button
+                className="btn btn-outline"
+                onClick={() => (controlledOpen.value = !controlledOpen.value)}
+              >
                 {controlledOpen.value ? 'Hide controlled tooltip' : 'Show controlled tooltip'}
               </button>
               <Tooltip title="包一层 span 可兼容禁用按钮" placement="bottom">

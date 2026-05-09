@@ -29,7 +29,8 @@ const previewButton = (root: ParentNode) => root.querySelector('button.btn.btn-p
 
 const stopPreventLink = (root: ParentNode) => root.querySelector('a.link.link-primary')
 
-const selfOnlyPanel = (root: ParentNode) => root.querySelector('div.rounded-box.border.border-base-300.p-4')
+const selfOnlyPanel = (root: ParentNode) =>
+  root.querySelector('div.rounded-box.border.border-base-300.p-4')
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -61,7 +62,9 @@ describe('Events actual page', () => {
     await click(previewButton(container))
     await click(stopPreventLink(container))
 
-    const keyInput = container.querySelector('input[placeholder="按 Enter"]') as HTMLInputElement | null
+    const keyInput = container.querySelector(
+      'input[placeholder="按 Enter"]',
+    ) as HTMLInputElement | null
     expect(keyInput).not.toBeNull()
     keyInput!.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }))
     keyInput!.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }))

@@ -5,7 +5,16 @@ import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import Radio from '../../../packages/rue-design/src/components/radio/index'
 
-const colors = ['neutral', 'primary', 'secondary', 'accent', 'success', 'warning', 'info', 'error'] as const
+const colors = [
+  'neutral',
+  'primary',
+  'secondary',
+  'accent',
+  'success',
+  'warning',
+  'info',
+  'error',
+] as const
 const sizes = ['xs', 'sm', 'md', 'lg', 'xl'] as const
 
 type TabMode = 'preview' | 'code'
@@ -379,7 +388,9 @@ const createLabeledRadioOptions = (selectedValue: string) => {
       label: (
         <span className="flex flex-col gap-1">
           <span className="font-medium">Team</span>
-          <span className="text-xs text-base-content/60">适合共享组件库和多成员维护的前台项目。</span>
+          <span className="text-xs text-base-content/60">
+            适合共享组件库和多成员维护的前台项目。
+          </span>
         </span>
       ),
     },
@@ -447,7 +458,9 @@ const OptionsPreview: FC = () => {
             label: (
               <span className="flex flex-col gap-1">
                 <span className="font-medium">Quarterly</span>
-                <span className="text-xs text-base-content/60">适合稳定迭代节奏和季度采购流程。</span>
+                <span className="text-xs text-base-content/60">
+                  适合稳定迭代节奏和季度采购流程。
+                </span>
               </span>
             ),
             value: 'quarterly',
@@ -462,7 +475,8 @@ const OptionsPreview: FC = () => {
             ),
             value: 'yearly',
             disabled: true,
-            className: 'items-start rounded-box border border-dashed border-base-300 bg-base-100 px-4 py-3',
+            className:
+              'items-start rounded-box border border-dashed border-base-300 bg-base-100 px-4 py-3',
           },
         ]}
         className="rounded-box border border-base-300 bg-base-200/50 p-4"
@@ -556,7 +570,10 @@ const ColorPreview: FC = () => {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {colors.map(color => (
-        <div key={color} className="flex items-center gap-3 rounded-box border border-base-300 bg-base-100 px-3 py-2">
+        <div
+          key={color}
+          className="flex items-center gap-3 rounded-box border border-base-300 bg-base-100 px-3 py-2"
+        >
           <Radio name={`radio-${color}`} color={color} checked={true} />
           <Radio name={`radio-${color}`} color={color} />
           <span className="text-xs uppercase tracking-wide text-base-content/60">{color}</span>
@@ -619,7 +636,8 @@ const RadioPage: FC = () => {
         </ul>
 
         <p className="text-sm text-base-content/70">
-          推荐优先使用 <code>Radio.Group + options</code> 组织业务表单；手写 children 更适合定制结构和说明文案。
+          推荐优先使用 <code>Radio.Group + options</code> 组织业务表单；手写 children
+          更适合定制结构和说明文案。
         </p>
 
         <ExampleBlock
@@ -809,7 +827,8 @@ const theme = ref('classic')
 
         <h2 id="radio-api">API</h2>
         <p className="text-sm text-base-content/70">
-          <code>Radio.Button</code> 等价于 <code>Radio optionType="button"</code>。推荐在配置驱动场景下优先使用
+          <code>Radio.Button</code> 等价于 <code>Radio optionType="button"</code>
+          。推荐在配置驱动场景下优先使用
           <code>Radio.Group</code> 的 <code>options</code> 入口。
         </p>
 

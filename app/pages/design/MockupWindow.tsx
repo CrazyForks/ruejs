@@ -170,7 +170,8 @@ const MockupWindowPage: FC = () => {
         <h1>Mockup Window 窗口外框</h1>
         <p className="text-sm mt-3 mb-3">
           MockupWindow 继续保留 Rue 原本的静态窗口外壳视觉，同时补了一层更顺手的结构化 API。
-          既可以继续直接写 children，也可以用 title、toolbar、actions 快速搭一个带头部和底部操作区的展示窗口。
+          既可以继续直接写 children，也可以用 title、toolbar、actions
+          快速搭一个带头部和底部操作区的展示窗口。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -219,7 +220,9 @@ const MockupWindowPage: FC = () => {
                   data-testid="mockup-window-structured"
                 >
                   <div className="rounded-box border border-base-300 bg-base-200/60 p-4">
-                    <div className="text-xs font-medium uppercase tracking-[0.2em] opacity-60">Preview</div>
+                    <div className="text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                      Preview
+                    </div>
                     <div className="mt-4 grid gap-3">
                       <div className="h-24 rounded-box bg-base-100" />
                       <div className="grid gap-3 sm:grid-cols-3">
@@ -331,7 +334,9 @@ const MockupWindowPage: FC = () => {
                       <div className="mt-2 text-2xl font-semibold">3.2k</div>
                     </div>
                     <div className="rounded-box border border-base-300 p-4">
-                      <div className="text-xs uppercase tracking-[0.2em] opacity-60">Conversion</div>
+                      <div className="text-xs uppercase tracking-[0.2em] opacity-60">
+                        Conversion
+                      </div>
                       <div className="mt-2 text-2xl font-semibold">5.8%</div>
                     </div>
                   </MockupWindow.Body>
@@ -401,9 +406,13 @@ const MockupWindowPage: FC = () => {
                   bodyClassName="grid divide-x divide-base-300 md:grid-cols-[220px_1fr]"
                 >
                   <div className="bg-base-100 p-4">
-                    <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Sections</div>
+                    <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                      Sections
+                    </div>
                     <div className="space-y-2 text-sm">
-                      <div className="rounded-box bg-base-200/70 px-3 py-2 font-medium">Overview</div>
+                      <div className="rounded-box bg-base-200/70 px-3 py-2 font-medium">
+                        Overview
+                      </div>
                       <div className="rounded-box px-3 py-2 opacity-70">Reports</div>
                       <div className="rounded-box px-3 py-2 opacity-70">Releases</div>
                     </div>
@@ -424,7 +433,8 @@ const MockupWindowPage: FC = () => {
                       </div>
                     </div>
                     <div className="rounded-box border border-dashed border-base-300 p-4 text-sm opacity-70">
-                      这里保持的是 Rue 自己的展示型窗口风格，不把 MockupWindow 做成真正的模态框或桌面应用壳。
+                      这里保持的是 Rue 自己的展示型窗口风格，不把 MockupWindow
+                      做成真正的模态框或桌面应用壳。
                     </div>
                   </div>
                 </MockupWindow>
@@ -482,8 +492,13 @@ const MockupWindowPage: FC = () => {
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body">
-                <MockupWindow className="border border-base-300 w-full" data-testid="mockup-window-border">
-                  <div className="grid place-content-center border-t border-base-300 h-80">Hello!</div>
+                <MockupWindow
+                  className="border border-base-300 w-full"
+                  data-testid="mockup-window-border"
+                >
+                  <div className="grid place-content-center border-t border-base-300 h-80">
+                    Hello!
+                  </div>
                 </MockupWindow>
               </div>
             </div>
@@ -523,8 +538,8 @@ const MockupWindowPage: FC = () => {
           <h3 className="mt-0 mb-3 text-base font-semibold">复合子组件</h3>
           <div className="grid gap-2 text-sm md:grid-cols-2">
             <div>
-              <code>MockupWindow.Header</code>：标准头部，支持 <code>title</code>、<code>description</code> 和{' '}
-              <code>extra</code>
+              <code>MockupWindow.Header</code>：标准头部，支持 <code>title</code>、
+              <code>description</code> 和 <code>extra</code>
             </div>
             <div>
               <code>MockupWindow.Toolbar</code>：头部工具区包装器，默认横向排列
@@ -542,8 +557,9 @@ const MockupWindowPage: FC = () => {
 
         <h3>什么时候用根组件属性，什么时候用复合子组件？</h3>
         <p>
-          如果只是常见的标题栏 + 内容区 + 按钮栏，优先直接使用根组件的 <code>title</code>、<code>toolbar</code>
-          和 <code>actions</code>。当你需要完全自定义头部排版，再切换到 <code>MockupWindow.Header</code> 这类低层拼装方式。
+          如果只是常见的标题栏 + 内容区 + 按钮栏，优先直接使用根组件的 <code>title</code>、
+          <code>toolbar</code>和 <code>actions</code>。当你需要完全自定义头部排版，再切换到{' '}
+          <code>MockupWindow.Header</code> 这类低层拼装方式。
         </p>
 
         <h3>padding 应该怎么理解？</h3>

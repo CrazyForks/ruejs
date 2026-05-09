@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Collapse 组件概述
 - 兼容旧版 daisyUI 风格的 children 组合写法。
@@ -87,17 +88,19 @@ interface NormalizedCollapseItem extends CollapseItem {
   content: any
 }
 
-const appendClassName = (base: string, className?: string) => {
+const appendClassName = (base?: string, className?: string) => {
+  if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
 const getCollapseGroupRoots = (groupName: string, source?: Element | null) => {
   const queryRoot = source?.getRootNode?.()
-  const scope = queryRoot && 'querySelectorAll' in queryRoot
-    ? queryRoot
-    : typeof document !== 'undefined'
-      ? document
-      : null
+  const scope =
+    queryRoot && typeof (queryRoot as ParentNode).querySelectorAll === 'function'
+      ? (queryRoot as ParentNode)
+      : typeof document !== 'undefined'
+        ? document
+        : null
 
   if (!scope) return []
 
@@ -120,7 +123,8 @@ const isTitleTriggerTarget = (root: Element, target: EventTarget | null) => {
 
 const getDirectCollapseInput = (root: Element) => {
   return Array.from(root.children).find(
-    child => child instanceof HTMLInputElement && (child.type === 'checkbox' || child.type === 'radio'),
+    child =>
+      child instanceof HTMLInputElement && (child.type === 'checkbox' || child.type === 'radio'),
   ) as HTMLInputElement | undefined
 }
 
@@ -274,7 +278,11 @@ const buildNextOpenKeys = (
   return currentKeys.filter(current => current !== key)
 }
 
-const resolveGroupClassName = (bordered: boolean, ghost: boolean | undefined, className?: string) => {
+const resolveGroupClassName = (
+  bordered: boolean,
+  ghost: boolean | undefined,
+  className?: string,
+) => {
   let cls = bordered
     ? 'overflow-hidden rounded-box border border-base-300 bg-base-100 divide-y divide-base-300'
     : 'space-y-3'
@@ -297,7 +305,13 @@ const ArrowIcon: FC<{ open: boolean }> = ({ open }) => {
       aria-hidden="true"
       className={`inline-flex size-5 items-center justify-center transition-transform duration-200 ${open ? 'rotate-90' : ''}`.trim()}
     >
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-4">
+      <svg
+        viewBox="0 0 20 20"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        className="size-4"
+      >
         <path strokeLinecap="round" strokeLinejoin="round" d="m7 4 6 6-6 6" />
       </svg>
     </span>
@@ -344,8 +358,8 @@ const renderTitleBody = (
       {extra != null ? (
         <div
           className={appendClassName('shrink-0 text-xs opacity-70', extraClassName)}
-          onClick={event => event.stopPropagation()}
-          onKeyDown={event => event.stopPropagation()}
+          onClick={(event: MouseEvent) => event.stopPropagation()}
+          onKeyDown={(event: KeyboardEvent) => event.stopPropagation()}
         >
           {extra}
         </div>
@@ -420,7 +434,11 @@ const Collapse: FC<CollapseProps> = ({
       })
     }
 
-    const commitChange = (item: NormalizedCollapseItem, nextOpen: boolean, source?: Element | null) => {
+    const commitChange = (
+      item: NormalizedCollapseItem,
+      nextOpen: boolean,
+      source?: Element | null,
+    ) => {
       const nextOpenKeys = buildNextOpenKeys(getCurrentOpenKeys(), item.key, nextOpen, accordion)
       const itemOpen = nextOpenKeys.some(key => key === item.key)
 
@@ -430,7 +448,7 @@ const Collapse: FC<CollapseProps> = ({
       }
 
       if (onChange) {
-        onChange(accordion ? nextOpenKeys[0] ?? null : nextOpenKeys, {
+        onChange(accordion ? (nextOpenKeys[0] ?? null) : nextOpenKeys, {
           key: item.key,
           index: item.index,
           open: itemOpen,
@@ -444,9 +462,8 @@ const Collapse: FC<CollapseProps> = ({
         {normalizedItems.map(item => {
           const itemIcon = item.icon ?? resolvedIcon
           const itemShowArrow = item.showArrow ?? hasManagedIcon
-          const itemCollapsible = disabled || item.disabled
-            ? 'disabled'
-            : item.collapsible ?? collapsible ?? 'header'
+          const itemCollapsible =
+            disabled || item.disabled ? 'disabled' : (item.collapsible ?? collapsible ?? 'header')
           const itemOpen = currentOpenKeys.some(key => key === item.key)
           const hasHeaderMeta = item.description != null || item.extra != null
           const iconOffsetClassName = hasHeaderMeta ? 'pt-1' : 'mt-0.5'
@@ -519,7 +536,7 @@ const Collapse: FC<CollapseProps> = ({
                           iconOffsetClassName,
                         )}
                         aria-label={itemOpen ? '收起' : '展开'}
-                        onClick={event => {
+                        onClick={(event: MouseEvent) => {
                           event.stopPropagation()
                           toggle(event.currentTarget as Element)
                         }}
@@ -548,7 +565,7 @@ const Collapse: FC<CollapseProps> = ({
                           iconOffsetClassName,
                         )}
                         aria-label={itemOpen ? '收起' : '展开'}
-                        onClick={event => {
+                        onClick={(event: MouseEvent) => {
                           event.stopPropagation()
                           toggle(event.currentTarget as Element)
                         }}
@@ -602,11 +619,11 @@ const Collapse: FC<CollapseProps> = ({
     <div
       className={cls}
       tabindex={resolvedTabIndex === undefined ? undefined : String(resolvedTabIndex)}
-      onMouseDown={event => {
+      onMouseDown={(event: MouseEvent) => {
         const root = event.currentTarget as HTMLDivElement
         root.dataset.rueCollapsePointerDown = 'true'
       }}
-      onClick={event => {
+      onClick={(event: MouseEvent) => {
         const root = event.currentTarget as HTMLDivElement
         const target = event.target
         const input = getDirectCollapseInput(root)
@@ -639,18 +656,18 @@ const Collapse: FC<CollapseProps> = ({
         }
         delete root.dataset.rueCollapsePointerDown
       }}
-      onFocus={event => {
+      onFocus={(event: FocusEvent) => {
         if (resolvedTabIndex === undefined || hasForcedLegacyState) return
         const root = event.currentTarget as HTMLDivElement
         if (root.dataset.rueCollapsePointerDown === 'true') return
         syncLegacyInteractiveState(root, true)
       }}
-      onBlur={event => {
+      onBlur={(event: FocusEvent) => {
         delete (event.currentTarget as HTMLDivElement).dataset.rueCollapsePointerDown
         if (resolvedTabIndex === undefined || hasForcedLegacyState) return
         syncLegacyInteractiveState(event.currentTarget as HTMLDivElement, false)
       }}
-      onKeyDown={event => {
+      onKeyDown={(event: KeyboardEvent) => {
         if (resolvedTabIndex === undefined || hasForcedLegacyState) return
         if (event.key !== 'Enter' && event.key !== ' ') return
         if (!isTitleTriggerTarget(event.currentTarget as HTMLDivElement, event.target)) return
@@ -659,7 +676,7 @@ const Collapse: FC<CollapseProps> = ({
         const root = event.currentTarget as HTMLDivElement
         syncLegacyInteractiveState(root, !root.classList.contains('collapse-open'))
       }}
-      onChange={event => {
+      onChange={(event: Event) => {
         if (hasForcedLegacyState) return
         const target = event.target as HTMLInputElement | null
         if (!target || (target.type !== 'checkbox' && target.type !== 'radio')) return

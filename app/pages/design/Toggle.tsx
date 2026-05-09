@@ -103,7 +103,11 @@ const CloudIcon: FC = () => {
       className="size-4"
       aria-hidden="true"
     >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M7 18a4 4 0 1 1 .8-7.92A5 5 0 0 1 17 11a3.5 3.5 0 1 1 0 7H7Z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M7 18a4 4 0 1 1 .8-7.92A5 5 0 0 1 17 11a3.5 3.5 0 1 1 0 7H7Z"
+      />
     </svg>
   )
 }
@@ -122,7 +126,9 @@ const BasicTogglePreview: FC = () => {
           enabled.value = nextChecked
         }}
       />
-      <span className="text-sm text-base-content/70">当前状态：{enabled.value ? '已启用' : '已关闭'}</span>
+      <span className="text-sm text-base-content/70">
+        当前状态：{enabled.value ? '已启用' : '已关闭'}
+      </span>
     </div>
   )
 }
@@ -144,7 +150,9 @@ const TextTogglePreview: FC = () => {
           }}
         />
       </div>
-      <div className="text-sm text-base-content/70">图标态：{wifiEnabled.value ? '网络已接通' : '网络已断开'}</div>
+      <div className="text-sm text-base-content/70">
+        图标态：{wifiEnabled.value ? '网络已接通' : '网络已断开'}
+      </div>
     </div>
   )
 }
@@ -152,7 +160,12 @@ const TextTogglePreview: FC = () => {
 const LoadingTogglePreview: FC = () => {
   return (
     <div className="flex flex-wrap items-center gap-4">
-      <Toggle loading={true} defaultValue={true} checkedChildren="同步中" unCheckedChildren="待命" />
+      <Toggle
+        loading={true}
+        defaultValue={true}
+        checkedChildren="同步中"
+        unCheckedChildren="待命"
+      />
       <Toggle size="small" loading={true} defaultChecked={false} />
     </div>
   )
@@ -163,7 +176,8 @@ const SettingTogglePreview: FC = () => {
   const releaseAlert = ref(false)
   const cloudSync = ref(true)
 
-  const cardClassName = 'w-full rounded-box border border-base-300 bg-base-100 px-4 py-3 shadow-sm md:max-w-xl'
+  const cardClassName =
+    'w-full rounded-box border border-base-300 bg-base-100 px-4 py-3 shadow-sm md:max-w-xl'
 
   return (
     <div className="flex flex-col gap-3">
@@ -341,10 +355,12 @@ const TogglePage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Toggle 开关</h1>
         <p className="mt-3 mb-3 text-sm">
-          Toggle 适合立即生效的双态切换。和 Checkbox 更偏向“标记后统一提交”不同，Toggle 更适合通知、同步、权限和偏好设置。
+          Toggle 适合立即生效的双态切换。和 Checkbox 更偏向“标记后统一提交”不同，Toggle
+          更适合通知、同步、权限和偏好设置。
         </p>
         <p className="text-sm text-base-content/70">
-          Rue 继续沿用现有 toggle 视觉类，并补齐了 Switch 常见的受控/非受控、状态文案、loading 和设置项布局能力。
+          Rue 继续沿用现有 toggle 视觉类，并补齐了 Switch 常见的受控/非受控、状态文案、loading
+          和设置项布局能力。
         </p>
 
         <PreviewBlock

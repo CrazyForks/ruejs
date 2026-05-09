@@ -487,7 +487,7 @@ const TableDemo: FC = () => {
       children: [
         { title: '岗位', dataIndex: 'role', ellipsis: true },
         { title: '团队', dataIndex: 'team', ellipsis: true },
-        { title: '月薪', dataIndex: 'salary', align: 'right', hidden: hideSalary.value },
+        { title: '月薪', dataIndex: 'salary', align: 'right' as const, hidden: hideSalary.value },
       ],
     },
     {
@@ -617,7 +617,7 @@ const TableDemo: FC = () => {
 
         <ExampleBlock
           title="可控筛选与排序"
-          summary="参考 ant-design 的 reset-filter demo，恢复外部控制台式的筛选与排序示例，避免交互状态混在一起。"
+          summary="恢复外部控制台式的筛选与排序示例，避免交互状态混在一起。"
           tab={tabControlledSort}
           preview={() => (
             <div className="space-y-4 rounded-box border border-base-300 bg-base-100 p-4">
@@ -749,8 +749,8 @@ const controlledSorter = ref({ columnKey: 'age', order: 'descend' as const })
         />
 
         <ExampleBlock
-          title="多列排序（Ant Design 对齐）"
-          summary="补回 antd multiple-sorter 风格 demo，支持 { compare, multiple } 并按优先级组合排序。"
+          title="多列排序（优先级组合）"
+          summary="补回多列优先级排序 demo，支持 { compare, multiple } 并按优先级组合排序。"
           tab={tabMultipleSorter}
           preview={() => (
             <div className="space-y-4 rounded-box border border-base-300 bg-base-100 p-4">
@@ -839,7 +839,7 @@ const controlledSorter = ref({ columnKey: 'age', order: 'descend' as const })
 
         <ExampleBlock
           title="动态列显隐（历史 Demo 恢复）"
-          summary="把旧的隐藏列 demo 补回来，并参考 antd hidden-columns 用外部开关控制列可见性。"
+          summary="把旧的隐藏列 demo 补回来，并用外部开关控制列可见性。"
           tab={tabColumnToggle}
           preview={() => (
             <div className="space-y-4 rounded-box border border-base-300 bg-base-100 p-4">

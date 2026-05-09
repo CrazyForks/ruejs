@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Menu 组件概述
 - 保留 Rue 当前 menu 视觉结构，并补齐更接近成熟组件库的导航能力。
@@ -8,16 +9,7 @@ import { ref } from '@rue-js/rue'
 import { RouterLink } from '@rue-js/router'
 
 export type MenuKey = string | number
-export type MenuSize =
-  | 'xs'
-  | 'sm'
-  | 'md'
-  | 'lg'
-  | 'xl'
-  | 'small'
-  | 'middle'
-  | 'medium'
-  | 'large'
+export type MenuSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'
 export type MenuDirection = 'vertical' | 'horizontal'
 export type MenuMode = 'vertical' | 'horizontal' | 'inline'
 export type MenuTriggerSubMenuAction = 'hover' | 'click'
@@ -208,6 +200,7 @@ export interface MenuSubMenuProps {
   onTitleClick?: (info: { key?: MenuKey; domEvent: MouseEvent }) => void
   onOpenChange?: (open: boolean) => void
   children?: any
+  __menuContext?: MenuContextValue | null
 }
 
 export interface MenuItemGroupProps {
@@ -353,13 +346,19 @@ const renderItemContent = ({
   const hasExtra = extra != null || suffix != null
   return (
     <>
-      {hasIcon ? <span className="inline-flex shrink-0 items-center justify-center">{icon}</span> : null}
+      {hasIcon ? (
+        <span className="inline-flex shrink-0 items-center justify-center">{icon}</span>
+      ) : null}
       {content != null ? (
-        <span className={appendClassName(hasExtra ? 'min-w-0 flex-1' : '', hasIcon ? '' : undefined)}>
+        <span
+          className={appendClassName(hasExtra ? 'min-w-0 flex-1' : '', hasIcon ? '' : undefined)}
+        >
           {content}
         </span>
       ) : null}
-      {extra != null ? <span className="ml-auto shrink-0 pl-3 text-xs opacity-70">{extra}</span> : null}
+      {extra != null ? (
+        <span className="ml-auto shrink-0 pl-3 text-xs opacity-70">{extra}</span>
+      ) : null}
       {suffix != null ? <span className="ml-2 shrink-0 opacity-60">{suffix}</span> : null}
     </>
   )
@@ -392,7 +391,8 @@ const renderMenuAction = (
     ...rest
   } = props
 
-  const mergedSelected = menuContext?.isSelected(eventKey, selected ?? active) ?? !!(selected ?? active)
+  const mergedSelected =
+    menuContext?.isSelected(eventKey, selected ?? active) ?? !!(selected ?? active)
   const innerClassName = getItemClassName({
     disabled,
     selected: mergedSelected,
@@ -474,10 +474,27 @@ const renderMenuAction = (
   }
 
   if (to) {
+    if (disabled) {
+      return (
+        <span
+          {...rest}
+          className={innerClassName}
+          title={title}
+          role={rest.role ?? 'menuitem'}
+          tabIndex={-1}
+          aria-current={mergedSelected ? 'page' : undefined}
+          aria-disabled="true"
+          onClick={handleClick}
+        >
+          {contentNode}
+        </span>
+      )
+    }
+
     return (
       <RouterLink
         className={innerClassName}
-        to={disabled ? undefined : to}
+        to={to}
         title={title}
         aria-current={mergedSelected ? 'page' : undefined}
         aria-disabled={disabled ? 'true' : undefined}
@@ -534,7 +551,13 @@ const Dropdown: FC<MenuDropdownProps> = ({ show, visible, className, children })
   return <ul className={cls}>{children}</ul>
 }
 
-const DropdownToggle: FC<MenuDropdownToggleProps> = ({ show, visible, className, onClick, children }) => {
+const DropdownToggle: FC<MenuDropdownToggleProps> = ({
+  show,
+  visible,
+  className,
+  onClick,
+  children,
+}) => {
   const mergedVisible = visible ?? show
   let cls = 'menu-dropdown-toggle'
   if (mergedVisible) cls += ' menu-dropdown-show'
@@ -546,7 +569,7 @@ const DropdownToggle: FC<MenuDropdownToggleProps> = ({ show, visible, className,
       tabIndex={onClick ? 0 : undefined}
       aria-expanded={onClick ? (mergedVisible ? 'true' : 'false') : undefined}
       onClick={onClick}
-      onKeyDown={event => {
+      onKeyDown={(event: KeyboardEvent) => {
         if (!onClick) return
         if (event.key !== 'Enter' && event.key !== ' ') return
         if (typeof (event as any).preventDefault === 'function') {
@@ -578,7 +601,10 @@ const Divider: FC<MenuDividerProps> = ({ className, dashed }) => {
     <li
       role="separator"
       className={appendClassName(
-        appendClassName('mx-2 my-1 h-px list-none bg-base-300/80', dashed ? 'border-t border-dashed border-base-300 bg-transparent' : undefined),
+        appendClassName(
+          'mx-2 my-1 h-px list-none bg-base-300/80',
+          dashed ? 'border-t border-dashed border-base-300 bg-transparent' : undefined,
+        ),
         className,
       )}
     />
@@ -622,12 +648,15 @@ const SubMenu: FC<MenuSubMenuProps> = ({
     if (disabled) return
     if (onTitleClick) onTitleClick({ key: eventKey, domEvent: event })
     if (eventKey !== undefined && menuContext) {
-      menuContext.onSubMenuToggle(
-        eventKey,
-        nextOpen,
-        event,
-        { key: eventKey, label: title, icon, extra, disabled, className, popupClassName },
-      )
+      menuContext.onSubMenuToggle(eventKey, nextOpen, event, {
+        key: eventKey,
+        label: title,
+        icon,
+        extra,
+        disabled,
+        className,
+        popupClassName,
+      })
     } else if (open === undefined) {
       uncontrolledOpen.value = nextOpen
     }
@@ -637,10 +666,10 @@ const SubMenu: FC<MenuSubMenuProps> = ({
   return (
     <li
       className={className}
-      onMouseEnter={event => {
+      onMouseEnter={(event: MouseEvent) => {
         if (triggerAction === 'hover') commitOpen(true, event as any)
       }}
-      onMouseLeave={event => {
+      onMouseLeave={(event: MouseEvent) => {
         if (triggerAction === 'hover') commitOpen(false, event as any)
       }}
     >
@@ -652,7 +681,7 @@ const SubMenu: FC<MenuSubMenuProps> = ({
         })}
         aria-expanded={mergedOpen ? 'true' : 'false'}
         aria-disabled={disabled ? 'true' : undefined}
-        onClick={event => {
+        onClick={(event: MouseEvent) => {
           if (triggerAction !== 'click') return
           commitOpen(!mergedOpen, event as any)
         }}
@@ -666,7 +695,11 @@ const SubMenu: FC<MenuSubMenuProps> = ({
       </button>
       <ul
         className={appendClassName(mergedOpen ? '' : 'hidden', popupClassName)}
-        style={menuContext?.mode === 'inline' ? { paddingInlineStart: `${menuContext.inlineIndent}px` } : undefined}
+        style={
+          menuContext?.mode === 'inline'
+            ? { paddingInlineStart: `${menuContext.inlineIndent}px` }
+            : undefined
+        }
       >
         {children}
       </ul>
@@ -693,7 +726,9 @@ const renderDataEntry = (
 
   if ((entry as MenuDividerData).type === 'divider') {
     const dividerEntry = entry as MenuDividerData
-    return <Divider key={entryKey} className={dividerEntry.className} dashed={dividerEntry.dashed} />
+    return (
+      <Divider key={entryKey} className={dividerEntry.className} dashed={dividerEntry.dashed} />
+    )
   }
 
   if ((entry as MenuGroupData).type === 'group') {
@@ -701,7 +736,12 @@ const renderDataEntry = (
     return (
       <ItemGroup key={entryKey} title={groupEntry.label} className={groupEntry.className}>
         {groupEntry.children?.map((child, childIndex) =>
-          renderDataEntry(child, childIndex, menuContext, groupEntry.key !== undefined ? [...parentKeyPath, groupEntry.key] : parentKeyPath),
+          renderDataEntry(
+            child,
+            childIndex,
+            menuContext,
+            groupEntry.key !== undefined ? [...parentKeyPath, groupEntry.key] : parentKeyPath,
+          ),
         )}
       </ItemGroup>
     )
@@ -845,7 +885,8 @@ const Menu: FC<MenuProps> = ({
   const uncontrolledOpenKeys = ref(normalizeKeys(defaultOpenKeys ?? openKeys))
   const mergedSelectedKeys =
     selectedKeys !== undefined ? normalizeKeys(selectedKeys) : uncontrolledSelectedKeys.value
-  const mergedOpenKeys = openKeys !== undefined ? normalizeKeys(openKeys) : uncontrolledOpenKeys.value
+  const mergedOpenKeys =
+    openKeys !== undefined ? normalizeKeys(openKeys) : uncontrolledOpenKeys.value
 
   const commitSelectedKeys = (nextSelectedKeys: MenuKey[]) => {
     if (selectedKeys === undefined) uncontrolledSelectedKeys.value = nextSelectedKeys
@@ -876,9 +917,7 @@ const Menu: FC<MenuProps> = ({
       if (onClick) onClick(info)
       if (!selectable || item.key === undefined) return
 
-      const nextSelectedKeys = multiple
-        ? toggleKey(mergedSelectedKeys, item.key)
-        : [item.key]
+      const nextSelectedKeys = multiple ? toggleKey(mergedSelectedKeys, item.key) : [item.key]
       const isSelected = hasKey(mergedSelectedKeys, item.key)
       commitSelectedKeys(nextSelectedKeys)
 

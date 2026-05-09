@@ -109,19 +109,25 @@ describe('Textarea', () => {
       expect(count?.textContent?.trim()).toBe('0 / 10')
     })
 
-    const textarea = container.querySelector('[data-testid="textarea-count"]') as HTMLTextAreaElement
+    const textarea = container.querySelector(
+      '[data-testid="textarea-count"]',
+    ) as HTMLTextAreaElement
     textarea.value = 'Rue'
     textarea.dispatchEvent(new Event('input', { bubbles: true }))
 
     await waitForContent(() => {
       const count = container.querySelector('[data-rue-textarea-count="true"]')
-      const clearButton = container.querySelector('button[aria-label="Clear text"]') as HTMLButtonElement
+      const clearButton = container.querySelector(
+        'button[aria-label="Clear text"]',
+      ) as HTMLButtonElement
       expect(count?.textContent?.trim()).toBe('3 / 10')
       expect(clearButton).toBeTruthy()
       expect(clearButton.classList.contains('hidden')).toBe(false)
     })
 
-    const clearButton = container.querySelector('button[aria-label="Clear text"]') as HTMLButtonElement
+    const clearButton = container.querySelector(
+      'button[aria-label="Clear text"]',
+    ) as HTMLButtonElement
     clearButton.click()
 
     await waitForContent(() => {
@@ -138,7 +144,10 @@ describe('Textarea', () => {
   it('supports autoSize with minRows and maxRows', async () => {
     const container = mountContainer()
     resetActiveRuntime()
-    const originalScrollHeight = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'scrollHeight')
+    const originalScrollHeight = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      'scrollHeight',
+    )
     const computedStyleSpy = vi.spyOn(window, 'getComputedStyle').mockImplementation(
       () =>
         ({
@@ -158,7 +167,10 @@ describe('Textarea', () => {
       },
     })
 
-    render(<Textarea autoSize={{ minRows: 2, maxRows: 4 }} defaultValue={'a\nb\nc\nd\ne'} />, container)
+    render(
+      <Textarea autoSize={{ minRows: 2, maxRows: 4 }} defaultValue={'a\nb\nc\nd\ne'} />,
+      container,
+    )
 
     await waitForContent(() => {
       const textarea = container.querySelector('textarea.textarea') as HTMLTextAreaElement

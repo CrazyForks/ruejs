@@ -1,9 +1,4 @@
-import {
-  Component,
-  type FC,
-  ref,
-  useApp,
-} from '@rue-js/rue'
+import { Component, type FC, ref, useApp } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -16,7 +11,12 @@ const cardToneClassNames: Record<SurfaceTone, string> = {
   accent: 'border-accent/25 bg-accent/10',
 }
 
-const SalesCard: FC<{ title: string; value: string; detail: string; tone?: SurfaceTone }> = props => (
+const SalesCard: FC<{
+  title: string
+  value: string
+  detail: string
+  tone?: SurfaceTone
+}> = props => (
   <article
     className={`rounded-box border p-4 shadow-sm ${cardToneClassNames[props.tone ?? 'primary']}`}
   >
@@ -211,7 +211,9 @@ const DynamicComponent: FC = () => {
         </button>
       </div>
 
-      <div className={`mt-4 grid md:grid-cols-1 gap-6 items-start ${activeTab.value === 'preview' ? '' : 'hidden'}`}>
+      <div
+        className={`mt-4 grid md:grid-cols-1 gap-6 items-start ${activeTab.value === 'preview' ? '' : 'hidden'}`}
+      >
         <div className="card bg-base-100 shadow">
           <div className="card-body gap-6">
             <section className="space-y-3">
@@ -219,7 +221,8 @@ const DynamicComponent: FC = () => {
                 <div>
                   <h2 className="text-xl font-semibold">1. 直接切换原生标签和组件定义</h2>
                   <p className="text-sm opacity-75">
-                    这里显式导入并使用 {'<Component>'}，is 可以在字符串标签名和函数组件之间来回切换。
+                    这里显式导入并使用 {'<Component>'}，is
+                    可以在字符串标签名和函数组件之间来回切换。
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -302,7 +305,8 @@ const DynamicComponent: FC = () => {
                 <div>
                   <h2 className="text-xl font-semibold">2. 运行时注册字符串组件名</h2>
                   <p className="text-sm opacity-75">
-                    下面这个小区域直接在当前页面里使用导出的 {'<Component>'}，并通过 useApp().component(...) 把字符串名注册到当前 runtime。
+                    下面这个小区域直接在当前页面里使用导出的 {'<Component>'}，并通过
+                    useApp().component(...) 把字符串名注册到当前 runtime。
                   </p>
                 </div>
 
@@ -344,28 +348,31 @@ const DynamicComponent: FC = () => {
 
                 <div className="rounded-box border border-base-300 bg-base-200 p-4 text-sm space-y-2">
                   <div>
-                    这里不再额外挂一个子应用，只把字符串组件名注册到当前 runtime，再直接渲染 {'<Component>'}。
+                    这里不再额外挂一个子应用，只把字符串组件名注册到当前 runtime，再直接渲染{' '}
+                    {'<Component>'}。
                   </div>
                   <div>
                     因为已经注册了字符串名，所以 Component 会先查注册表，再决定最终渲染哪个组件。
                   </div>
-                  <div>
-                    这也顺带验证了字符串名路径下的 children 透传。
-                  </div>
+                  <div>这也顺带验证了字符串名路径下的 children 透传。</div>
                 </div>
               </div>
             </section>
 
             <div role="alert" className="alert alert-warning alert-soft">
               <span>
-                注意：如果 is 最终解析成原生 input、select、textarea 之类的节点，写在 {'<Component>'} 上的 v-model / r-model 不能像静态原生标签那样在编译期展开，应该在最终原生节点处处理。
+                注意：如果 is 最终解析成原生 input、select、textarea 之类的节点，写在{' '}
+                {'<Component>'} 上的 v-model / r-model
+                不能像静态原生标签那样在编译期展开，应该在最终原生节点处处理。
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className={`mt-4 grid md:grid-cols-1 gap-6 items-start ${activeTab.value === 'code' ? '' : 'hidden'}`}>
+      <div
+        className={`mt-4 grid md:grid-cols-1 gap-6 items-start ${activeTab.value === 'code' ? '' : 'hidden'}`}
+      >
         <div className="card bg-base-100 shadow overflow-auto">
           <div className="card-body p-0">
             <Code className="h-full" lang="tsx" code={demoCode} />

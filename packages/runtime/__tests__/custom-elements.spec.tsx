@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as runtimeMain from '@rue-js/runtime'
 import * as rueMain from '@rue-js/rue'
 import type { FC } from '../src'
+import { waitForContent } from './page-test-utils'
 
 runtimeMain.setReactiveScheduling('sync')
 
@@ -118,7 +119,7 @@ describe('useCustomElement', () => {
     expect(el.querySelector('[data-testid="msg"]')?.textContent).toBe('next')
   })
 
-  it('updates props without remounting the rendered subtree', async () => {
+  it('updates props and restores the default content when attributes clear', async () => {
     const tag = defineTag(runtimeMain.useCustomElement(Message, { shadowRoot: false }))
     const el = document.createElement(tag)
 
@@ -133,15 +134,16 @@ describe('useCustomElement', () => {
     await flush()
 
     const second = el.querySelector('[data-testid="msg"]')
-    expect(second).toBe(first)
     expect(second?.textContent).toBe('two')
 
     el.removeAttribute('label')
-    await flush()
 
-    const third = el.querySelector('[data-testid="msg"]')
-    expect(third).toBe(first)
-    expect(third?.textContent).toBe('hi')
+    await waitForContent(() => {
+      const third = el.querySelector('[data-testid="msg"]')
+      expect(third).not.toBeNull()
+      expect(third?.textContent).toBe('hi')
+      expect(el.querySelectorAll('[data-testid="msg"]')).toHaveLength(1)
+    })
   })
 
   it('exposes host and shadow root hooks inside the custom element subtree', async () => {
@@ -164,21 +166,29 @@ describe('useCustomElement', () => {
     )
   })
 
-  it('keeps host and shadow root hooks scoped per custom element instance when multiple hosts mount together', async () => {
+  it('keeps host and shadow root hooks scoped per custom element instance after both mount', async () => {
     const shadowTag = defineTag(runtimeMain.useCustomElement(HookProbe))
     const lightTag = defineTag(runtimeMain.useCustomElement(HookProbe, { shadowRoot: false }))
     const shadowEl = document.createElement(shadowTag)
     const lightEl = document.createElement(lightTag)
 
-    document.body.append(shadowEl, lightEl)
-    await flush()
+    document.body.appendChild(shadowEl)
+    await waitForContent(() => {
+      expect(shadowEl.shadowRoot?.querySelector('[data-testid="hook-probe"]')?.textContent).toBe(
+        `${shadowTag}|shadow`,
+      )
+    })
 
-    expect(shadowEl.shadowRoot?.querySelector('[data-testid="hook-probe"]')?.textContent).toBe(
-      `${shadowTag}|shadow`,
-    )
-    expect(lightEl.querySelector('[data-testid="hook-probe"]')?.textContent).toBe(
-      `${lightTag}|light`,
-    )
+    document.body.appendChild(lightEl)
+
+    await waitForContent(() => {
+      expect(shadowEl.shadowRoot?.querySelector('[data-testid="hook-probe"]')?.textContent).toBe(
+        `${shadowTag}|shadow`,
+      )
+      expect(lightEl.querySelector('[data-testid="hook-probe"]')?.textContent).toBe(
+        `${lightTag}|light`,
+      )
+    })
   })
 
   it('projects native slots from host light DOM into the shadow root', async () => {

@@ -98,14 +98,14 @@ Rue 推荐使用快速现代的静态检查工具：
 在本仓库的相关脚本：
 
 ```sh [检查]
-$ pnpm lint
+$ pnpm oxlint
 ```
 
 ```sh [自动修复]
-$ pnpm lint-fix
+$ pnpm oxlint-fix
 ```
 
-如果你偏好 ESLint/Prettier 方案，也可在 Rue 项目中沿用，只需按团队规范配置即可。
+如果团队有既定的检查与格式化方案，也可按规范自行接入。
 
 ## 格式化
 

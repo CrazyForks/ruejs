@@ -101,7 +101,11 @@ const StatusPill: FC<{ label: string; tone?: string }> = ({ label, tone }) => {
 const AppIcon: FC<{ label: string; className: string }> = ({ label, className }) => {
   return (
     <div className="flex flex-col items-center gap-2 text-center text-[0.65rem] text-white/80">
-      <div className={`grid h-11 w-11 place-items-center rounded-2xl text-sm font-semibold shadow-sm ${className}`}>{label}</div>
+      <div
+        className={`grid h-11 w-11 place-items-center rounded-2xl text-sm font-semibold shadow-sm ${className}`}
+      >
+        {label}
+      </div>
       <span>{label}</span>
     </div>
   )
@@ -183,8 +187,8 @@ const MockupPhonePage: FC = () => {
         <h1>Mockup Phone 手机外框</h1>
         <p className="text-sm mt-3 mb-3">
           MockupPhone 继续保留 Rue 原本的 compound 结构，同时补上一层更顺手的根级 API：可以直接声明
-          <code>display</code>、<code>size</code>、<code>color</code> 和 <code>camera</code>，在快速搭 demo
-          时不用每次都手写完整骨架。
+          <code>display</code>、<code>size</code>、<code>color</code> 和 <code>camera</code>
+          ，在快速搭 demo 时不用每次都手写完整骨架。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -212,10 +216,13 @@ const MockupPhonePage: FC = () => {
                   color="primary"
                   data-testid="mockup-phone-recommended"
                   display={{
-                    className: 'bg-neutral-950 text-white grid place-content-center px-6 text-center',
+                    className:
+                      'bg-neutral-950 text-white grid place-content-center px-6 text-center',
                     children: (
                       <div>
-                        <div className="text-xs uppercase tracking-[0.3em] text-white/50">Rue OS</div>
+                        <div className="text-xs uppercase tracking-[0.3em] text-white/50">
+                          Rue OS
+                        </div>
                         <div className="mt-3 text-2xl font-semibold">It&apos;s Glowtime.</div>
                         <div className="mt-2 text-sm text-white/65">根级 display API</div>
                       </div>
@@ -235,11 +242,14 @@ const MockupPhonePage: FC = () => {
                         <div className="rounded-2xl bg-black/30 p-4 shadow-lg ring-1 ring-white/10">
                           <div className="text-sm font-medium">Today</div>
                           <div className="mt-1 text-2xl font-semibold">3 meetings</div>
-                          <div className="mt-2 text-xs text-white/70">Design sync, API review, launch checklist</div>
+                          <div className="mt-2 text-xs text-white/70">
+                            Design sync, API review, launch checklist
+                          </div>
                         </div>
                       </div>
                     ),
-                    contentClassName: 'absolute inset-0 flex flex-col justify-between p-4 text-white',
+                    contentClassName:
+                      'absolute inset-0 flex flex-col justify-between p-4 text-white',
                   }}
                 />
               </div>
@@ -342,13 +352,16 @@ const MockupPhonePage: FC = () => {
               <div className="card-body grid gap-6 lg:grid-cols-4">
                 {sizeExamples.map(item => (
                   <div key={item.label} className="space-y-3 text-center">
-                    <div className="text-xs font-medium uppercase tracking-[0.25em] opacity-60">{item.label}</div>
+                    <div className="text-xs font-medium uppercase tracking-[0.25em] opacity-60">
+                      {item.label}
+                    </div>
                     <div className="flex justify-center">
                       <MockupPhone
                         size={item.size}
                         color={item.color}
                         display={{
-                          className: 'grid place-content-center bg-base-200 text-base-content text-center px-4',
+                          className:
+                            'grid place-content-center bg-base-200 text-base-content text-center px-4',
                           children: (
                             <div>
                               <div className="text-xs opacity-60">{item.size}</div>
@@ -399,7 +412,8 @@ const MockupPhonePage: FC = () => {
                   size="sm"
                   color="accent"
                   display={{
-                    className: 'relative overflow-hidden bg-gradient-to-br from-violet-500 via-fuchsia-500 to-orange-400',
+                    className:
+                      'relative overflow-hidden bg-gradient-to-br from-violet-500 via-fuchsia-500 to-orange-400',
                     children: (
                       <>
                         <div className="flex items-center justify-between">
@@ -432,7 +446,9 @@ const MockupPhonePage: FC = () => {
                         </div>
                         <div className="rounded-2xl bg-base-200 p-3">
                           <div className="text-sm font-medium">Notes</div>
-                          <div className="mt-1 text-xs opacity-70">保留 compound，同时用 display 简写快速搭状态屏。</div>
+                          <div className="mt-1 text-xs opacity-70">
+                            保留 compound，同时用 display 简写快速搭状态屏。
+                          </div>
                         </div>
                         <div className="rounded-2xl bg-base-200 p-3">
                           <div className="text-sm font-medium">Next</div>
@@ -511,7 +527,8 @@ const MockupPhonePage: FC = () => {
                   size="sm"
                   camera={false}
                   display={{
-                    className: 'grid place-content-center bg-base-200 text-base-content text-center px-6',
+                    className:
+                      'grid place-content-center bg-base-200 text-base-content text-center px-6',
                     children: (
                       <div>
                         <div className="text-sm font-semibold">camera={false}</div>
@@ -589,7 +606,9 @@ const MockupPhonePage: FC = () => {
                       children: (
                         <div className="grid gap-3">
                           <div className="rounded-2xl bg-black/35 p-3 ring-1 ring-white/10 backdrop-blur">
-                            <div className="text-xs uppercase tracking-[0.2em] text-white/60">Now Playing</div>
+                            <div className="text-xs uppercase tracking-[0.2em] text-white/60">
+                              Now Playing
+                            </div>
                             <div className="mt-2 text-lg font-semibold">Midnight Route</div>
                             <div className="text-sm text-white/70">Rue FM</div>
                           </div>
@@ -624,7 +643,9 @@ const MockupPhonePage: FC = () => {
                             <AppIcon label="Docs" className="bg-white text-slate-950" />
                             <AppIcon label="Pay" className="bg-rose-500 text-white" />
                           </div>
-                          <div className="rounded-full bg-white/10 p-2 text-center text-xs text-white/70">Swipe up for more</div>
+                          <div className="rounded-full bg-white/10 p-2 text-center text-xs text-white/70">
+                            Swipe up for more
+                          </div>
                         </div>
                       ),
                     }}
@@ -745,19 +766,23 @@ const MockupPhonePage: FC = () => {
 
         <h3>什么时候用 display，什么时候继续写 MockupPhone.Display？</h3>
         <p>
-          如果只是想快速搭一个手机画面，优先用 <code>display</code>。如果你需要自己决定显示区里的完整节点树，或者已经在复用旧 demo，继续用
+          如果只是想快速搭一个手机画面，优先用 <code>display</code>
+          。如果你需要自己决定显示区里的完整节点树，或者已经在复用旧 demo，继续用
           <code>MockupPhone.Camera</code> 和 <code>MockupPhone.Display</code> 会更直观。
         </p>
 
         <h3>color 和 className 应该怎么选？</h3>
         <p>
-          <code>color</code> 负责常用边框主题色，适合快速选主色；<code>className</code> 负责更细的样式控制，比如任意十六进制边框色、自定义阴影或缩放。
+          <code>color</code> 负责常用边框主题色，适合快速选主色；<code>className</code>{' '}
+          负责更细的样式控制，比如任意十六进制边框色、自定义阴影或缩放。
         </p>
 
         <h3>如何在壁纸上叠加浮层内容？</h3>
         <p>
-          让 <code>display.className</code> 具备 <code>relative</code> 和 <code>overflow-hidden</code>，再把浮层内容放进
-          <code>children</code>，通过 <code>contentClassName</code> 设置 <code>absolute inset-0</code> 即可。
+          让 <code>display.className</code> 具备 <code>relative</code> 和{' '}
+          <code>overflow-hidden</code>，再把浮层内容放进
+          <code>children</code>，通过 <code>contentClassName</code> 设置{' '}
+          <code>absolute inset-0</code> 即可。
         </p>
       </div>
     </SidebarPlayground>

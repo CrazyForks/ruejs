@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Avatar 组件概述
 - 在保留 daisyUI 原子组合能力的前提下，补齐图片、图标、文字、尺寸、形状与失败回退等语义化 API。
@@ -196,7 +197,13 @@ const normalizeMax = (max?: number | AvatarGroupMaxConfig) => {
 
 const DefaultAvatarIcon: FC = () => {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[55%] w-[55%]">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className="h-[55%] w-[55%]"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 20a7.5 7.5 0 0 1 15 0" />
     </svg>
@@ -284,13 +291,16 @@ const Avatar: FC<AvatarProps> = ({
       return
     }
 
-    const target = ((event as any).currentTarget ?? (event as any).target) as HTMLImageElement | null
+    const target = ((event as any).currentTarget ??
+      (event as any).target) as HTMLImageElement | null
     if (!target) {
       return
     }
 
     target.classList.add('hidden')
-    const fallback = target.parentElement?.querySelector('[data-rue-avatar-fallback="true"]') as HTMLElement | null
+    const fallback = target.parentElement?.querySelector(
+      '[data-rue-avatar-fallback="true"]',
+    ) as HTMLElement | null
     if (fallback) {
       fallback.classList.remove('hidden')
       fallback.classList.add('flex')
@@ -314,11 +324,18 @@ const Avatar: FC<AvatarProps> = ({
         ) : null}
         {hasCustomMediaNode ? src : null}
         <span
-          className={fallbackVisible ? 'flex h-full w-full items-center justify-center' : 'hidden h-full w-full items-center justify-center'}
+          className={
+            fallbackVisible
+              ? 'flex h-full w-full items-center justify-center'
+              : 'hidden h-full w-full items-center justify-center'
+          }
           data-rue-avatar-fallback="true"
         >
           {textContent ? (
-            <span className="inline-flex max-w-full items-center justify-center px-[0.08em] font-semibold uppercase tracking-[0.02em]" style={fallbackTextStyle}>
+            <span
+              className="inline-flex max-w-full items-center justify-center px-[0.08em] font-semibold uppercase tracking-[0.02em]"
+              style={fallbackTextStyle}
+            >
               {textContent}
             </span>
           ) : (
@@ -333,18 +350,29 @@ const Avatar: FC<AvatarProps> = ({
 const Group: FC<AvatarGroupProps> = ({ className, children, items, size, shape, max }) => {
   const maxConfig = normalizeMax(max)
   const maxCount =
-    maxConfig && typeof maxConfig.count === 'number' && maxConfig.count >= 0 ? Math.floor(maxConfig.count) : undefined
+    maxConfig && typeof maxConfig.count === 'number' && maxConfig.count >= 0
+      ? Math.floor(maxConfig.count)
+      : undefined
   const rootClassName = mergeClassName('avatar-group', className)
 
   if (items && items.length) {
-    const hiddenCount = maxCount !== undefined && items.length > maxCount ? items.length - maxCount : 0
-    const visibleItems = hiddenCount > 0 && maxCount !== undefined ? items.slice(0, maxCount) : items
+    const hiddenCount =
+      maxCount !== undefined && items.length > maxCount ? items.length - maxCount : 0
+    const visibleItems =
+      hiddenCount > 0 && maxCount !== undefined ? items.slice(0, maxCount) : items
 
     return (
       <div className={rootClassName} data-rue-avatar-group="true">
         {visibleItems.map((item, index) => {
           const { key, ...itemProps } = item
-          return <Avatar key={key ?? index} size={item.size ?? size} shape={item.shape ?? shape} {...itemProps} />
+          return (
+            <Avatar
+              key={key ?? index}
+              size={item.size ?? size}
+              shape={item.shape ?? shape}
+              {...itemProps}
+            />
+          )
         })}
         {hiddenCount > 0 ? (
           <Avatar
@@ -362,8 +390,10 @@ const Group: FC<AvatarGroupProps> = ({ className, children, items, size, shape, 
   }
 
   const childNodes = flattenChildren(children)
-  const hiddenCount = maxCount !== undefined && childNodes.length > maxCount ? childNodes.length - maxCount : 0
-  const visibleChildren = hiddenCount > 0 && maxCount !== undefined ? childNodes.slice(0, maxCount) : childNodes
+  const hiddenCount =
+    maxCount !== undefined && childNodes.length > maxCount ? childNodes.length - maxCount : 0
+  const visibleChildren =
+    hiddenCount > 0 && maxCount !== undefined ? childNodes.slice(0, maxCount) : childNodes
 
   return (
     <div className={rootClassName} data-rue-avatar-group="true">

@@ -1,7 +1,8 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 FileInput 组件概述
 - 保留 Rue 当前 `input[type=file] + file-input-*` 的原始样式入口。
-- 增强模式参考 ant-design Upload 的高频能力：文件列表、拖拽选择、图片卡片、受控/非受控与 beforeUpload。
+- 文件列表、拖拽选择、图片卡片、受控/非受控与 beforeUpload。
 - 组件仍聚焦“文件选择与列表编排”，真正的上传请求继续由业务侧处理。
 */
 import type { FC } from '@rue-js/rue'
@@ -17,7 +18,16 @@ export type FileInputVariant =
   | 'warning'
   | 'error'
 
-export type FileInputSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'
+export type FileInputSize =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | 'small'
+  | 'middle'
+  | 'medium'
+  | 'large'
 export type FileInputListType = 'text' | 'picture' | 'picture-card'
 export type FileInputStatus = 'ready' | 'uploading' | 'done' | 'error' | 'removed'
 
@@ -66,7 +76,9 @@ export type FileInputBeforeUploadResult =
 
 export type FileInputBeforeUpload = (file: File, fileList: File[]) => FileInputBeforeUploadResult
 export type FileInputPreviewHandler = (file: FileInputFile) => void | Promise<void>
-export type FileInputRemoveHandler = (file: FileInputFile) => boolean | void | Promise<boolean | void>
+export type FileInputRemoveHandler = (
+  file: FileInputFile,
+) => boolean | void | Promise<boolean | void>
 export type FileInputPreviewFile = (file: File | Blob) => Promise<string>
 
 export interface FileInputProps {
@@ -177,7 +189,9 @@ const buildDropzoneClassName = ({
     'rounded-box border-2 border-dashed bg-base-100 p-5 transition',
     dragging ? 'border-primary bg-primary/5' : 'border-base-300',
     variant ? `text-${variant}` : undefined,
-    disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-primary/40 hover:bg-base-200/40',
+    disabled
+      ? 'cursor-not-allowed opacity-60'
+      : 'cursor-pointer hover:border-primary/40 hover:bg-base-200/40',
     className,
   )
 }
@@ -231,9 +245,12 @@ const cloneFileItem = (file: FileInputFile): FileInputFile => {
 
 const toFileItem = (file: File | Blob, fallbackName?: string): FileInputFile => {
   const source = file as File
-  const name = 'name' in source && typeof source.name === 'string' ? source.name : fallbackName ?? 'file'
+  const name =
+    'name' in source && typeof source.name === 'string' ? source.name : (fallbackName ?? 'file')
   const lastModified =
-    'lastModified' in source && typeof source.lastModified === 'number' ? source.lastModified : undefined
+    'lastModified' in source && typeof source.lastModified === 'number'
+      ? source.lastModified
+      : undefined
 
   return {
     uid: createUid(),
@@ -315,7 +332,11 @@ const DefaultUploadIcon: FC<{ className?: string }> = ({ className }) => {
       aria-hidden="true"
     >
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V5m0 0-4 4m4-4 4 4" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 16.5V18a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1.5" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5 16.5V18a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1.5"
+      />
     </svg>
   )
 }
@@ -347,7 +368,11 @@ const DefaultFileIcon: FC = () => {
       className="size-5"
       aria-hidden="true"
     >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 3h6l5 5v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 3h6l5 5v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
+      />
       <path strokeLinecap="round" strokeLinejoin="round" d="M14 3v5h5" />
     </svg>
   )
@@ -382,7 +407,11 @@ const DefaultPreviewIcon: FC = () => {
       className="size-4"
       aria-hidden="true"
     >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+      />
       <circle cx="12" cy="12" r="3" />
     </svg>
   )
@@ -492,7 +521,9 @@ const FileInputRoot: FC<FileInputProps> = ({
   const currentFileList = ref(normalizeFileList(controlled ? fileList : defaultFileList))
   const listVersion = ref(0)
   const uploadListConfig =
-    resolvedShowUploadList && typeof resolvedShowUploadList === 'object' ? resolvedShowUploadList : undefined
+    resolvedShowUploadList && typeof resolvedShowUploadList === 'object'
+      ? resolvedShowUploadList
+      : undefined
   const listVisible = resolvedShowUploadList !== false
   const showPreviewIcon = uploadListConfig?.showPreviewIcon ?? true
   const showRemoveIcon = uploadListConfig?.showRemoveIcon ?? true
@@ -598,7 +629,10 @@ const FileInputRoot: FC<FileInputProps> = ({
     applyRemove(file)
   }
 
-  const normalizeSelectedResult = (selectedFile: File, beforeResult: boolean | File | Blob | typeof FILE_INPUT_LIST_IGNORE) => {
+  const normalizeSelectedResult = (
+    selectedFile: File,
+    beforeResult: boolean | File | Blob | typeof FILE_INPUT_LIST_IGNORE,
+  ) => {
     if (beforeResult === FILE_INPUT_LIST_IGNORE) return null
     if (beforeResult instanceof Blob) {
       const transformedFile =
@@ -623,7 +657,10 @@ const FileInputRoot: FC<FileInputProps> = ({
       return
     }
 
-    const nextFileList = applyMaxCount([...currentFileList.value.map(cloneFileItem), ...resolvedFiles], maxCount)
+    const nextFileList = applyMaxCount(
+      [...currentFileList.value.map(cloneFileItem), ...resolvedFiles],
+      maxCount,
+    )
     updateFileListState(nextFileList)
     emitEnhancedChange({
       file: nextFileList[nextFileList.length - 1],
@@ -634,7 +671,11 @@ const FileInputRoot: FC<FileInputProps> = ({
     clearNativeInputValue()
   }
 
-  const buildSelectedList = (selectedFiles: File[], source: 'select' | 'drop', nativeEvent?: Event | DragEvent) => {
+  const buildSelectedList = (
+    selectedFiles: File[],
+    source: 'select' | 'drop',
+    nativeEvent?: Event | DragEvent,
+  ) => {
     const resolvedFiles: FileInputFile[] = []
 
     const processAt = (index: number): void => {
@@ -718,7 +759,9 @@ const FileInputRoot: FC<FileInputProps> = ({
 
   const renderListItem = (file: FileInputFile) => {
     const extraContent =
-      typeof uploadListConfig?.extra === 'function' ? uploadListConfig.extra(file) : uploadListConfig?.extra
+      typeof uploadListConfig?.extra === 'function'
+        ? uploadListConfig.extra(file)
+        : uploadListConfig?.extra
 
     const defaultNode =
       resolvedListType === 'picture-card' ? (
@@ -738,7 +781,9 @@ const FileInputRoot: FC<FileInputProps> = ({
           </button>
           <div className="border-t border-base-300 px-3 py-2">
             <div className="truncate text-sm font-medium">{file.name}</div>
-            {extraContent !== undefined ? <div className="mt-1 text-xs text-base-content/60">{extraContent}</div> : null}
+            {extraContent !== undefined ? (
+              <div className="mt-1 text-xs text-base-content/60">{extraContent}</div>
+            ) : null}
           </div>
           {(showPreviewIcon || showRemoveIcon) && !disabled ? (
             <div className="absolute top-2 right-2 flex gap-1 opacity-100 md:opacity-0 md:transition md:group-hover:opacity-100">
@@ -747,7 +792,7 @@ const FileInputRoot: FC<FileInputProps> = ({
                   type="button"
                   className="btn btn-circle btn-xs border-none bg-base-100/90 shadow-sm"
                   aria-label={`Preview ${file.name}`}
-                  onClick={event => {
+                  onClick={(event: MouseEvent) => {
                     if (typeof (event as any).stopPropagation === 'function') {
                       ;(event as any).stopPropagation()
                     }
@@ -762,7 +807,7 @@ const FileInputRoot: FC<FileInputProps> = ({
                   type="button"
                   className="btn btn-circle btn-xs border-none bg-base-100/90 shadow-sm"
                   aria-label={`Remove ${file.name}`}
-                  onClick={event => {
+                  onClick={(event: MouseEvent) => {
                     if (typeof (event as any).stopPropagation === 'function') {
                       ;(event as any).stopPropagation()
                     }
@@ -799,7 +844,12 @@ const FileInputRoot: FC<FileInputProps> = ({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="truncate font-medium">{file.name}</span>
-              <span className={mergeClassNames('badge badge-sm', buildStatusBadgeClassName(file.status))}>
+              <span
+                className={mergeClassNames(
+                  'badge badge-sm',
+                  buildStatusBadgeClassName(file.status),
+                )}
+              >
                 {file.status ?? 'ready'}
               </span>
             </div>
@@ -856,7 +906,10 @@ const FileInputRoot: FC<FileInputProps> = ({
       {...rest}
       ref={assignInputRef}
       type="file"
-      className={mergeClassNames('sr-only pointer-events-none absolute h-0 w-0 opacity-0', className)}
+      className={mergeClassNames(
+        'sr-only pointer-events-none absolute h-0 w-0 opacity-0',
+        className,
+      )}
       disabled={disabled}
       multiple={acceptsMany}
       onChange={handleNativeChange}
@@ -880,7 +933,9 @@ const FileInputRoot: FC<FileInputProps> = ({
             <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <DefaultUploadIcon className="size-6" />
             </span>
-            <div className="text-sm font-semibold text-base-content">{title ?? '拖拽文件到这里，或点击选择文件'}</div>
+            <div className="text-sm font-semibold text-base-content">
+              {title ?? '拖拽文件到这里，或点击选择文件'}
+            </div>
             <div className="mt-2 max-w-md text-sm text-base-content/65">
               {description ?? '适合资料、图片和批量附件收集；列表仍交给业务侧决定上传时机。'}
             </div>
@@ -897,14 +952,18 @@ const FileInputRoot: FC<FileInputProps> = ({
         <div
           className={mergeClassNames(
             'flex aspect-square flex-col items-center justify-center rounded-box border border-dashed border-base-300 bg-base-100 p-4 text-center shadow-sm transition',
-            disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-primary/40 hover:bg-base-200/40',
+            disabled
+              ? 'cursor-not-allowed opacity-60'
+              : 'cursor-pointer hover:border-primary/40 hover:bg-base-200/40',
             triggerClassName,
           )}
         >
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-base-200 text-base-content/70">
             <DefaultPlusIcon />
           </span>
-          <div className="mt-3 text-sm font-medium text-base-content">{buttonText ?? '添加文件'}</div>
+          <div className="mt-3 text-sm font-medium text-base-content">
+            {buttonText ?? '添加文件'}
+          </div>
           <div className="mt-1 text-xs text-base-content/60">
             {hint ?? (maxCount ? `最多 ${maxCount} 个` : '支持图片或附件卡片展示')}
           </div>
@@ -936,7 +995,8 @@ const FileInputRoot: FC<FileInputProps> = ({
         <div className="text-sm text-base-content/65">
           <div>{title ?? '保持 Rue 的轻量输入风格，同时拥有 Upload 式文件编排能力。'}</div>
           <div className="text-xs text-base-content/50">
-            {hint ?? (acceptsMany ? '可多选、可移除、可受控管理列表' : '可受控管理列表并自定义预览与删除')}
+            {hint ??
+              (acceptsMany ? '可多选、可移除、可受控管理列表' : '可受控管理列表并自定义预览与删除')}
           </div>
         </div>
       </div>
@@ -954,7 +1014,13 @@ const FileInputRoot: FC<FileInputProps> = ({
         <div
           role={drag ? 'button' : undefined}
           tabIndex={drag && !disabled ? 0 : undefined}
-          onClick={children ? openPicker : drag || resolvedListType === 'picture-card' ? openPicker : undefined}
+          onClick={
+            children
+              ? openPicker
+              : drag || resolvedListType === 'picture-card'
+                ? openPicker
+                : undefined
+          }
           onKeyDown={(event: KeyboardEvent) => {
             const key = (event as any).key
             if ((key === 'Enter' || key === ' ') && !disabled) {
@@ -974,7 +1040,12 @@ const FileInputRoot: FC<FileInputProps> = ({
         {listVisible ? (
           currentFileList.value.length > 0 ? (
             resolvedListType === 'picture-card' ? (
-              <div className={mergeClassNames('grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4', listClassName)}>
+              <div
+                className={mergeClassNames(
+                  'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4',
+                  listClassName,
+                )}
+              >
                 {currentFileList.value.map(file => (
                   <div key={file.uid}>{renderListItem(file)}</div>
                 ))}
@@ -993,7 +1064,9 @@ const FileInputRoot: FC<FileInputProps> = ({
                     role="button"
                     tabIndex={0}
                   >
-                    {children === undefined ? renderDefaultTriggerNode() : (
+                    {children === undefined ? (
+                      renderDefaultTriggerNode()
+                    ) : (
                       <div
                         className={mergeClassNames(
                           'flex aspect-square flex-col items-center justify-center rounded-box border border-dashed border-base-300 bg-base-100 p-4 text-center shadow-sm transition hover:border-primary/40 hover:bg-base-200/40',
@@ -1003,7 +1076,9 @@ const FileInputRoot: FC<FileInputProps> = ({
                         <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-base-200 text-base-content/70">
                           <DefaultPlusIcon />
                         </span>
-                        <div className="mt-3 text-sm font-medium text-base-content">{buttonText ?? '继续添加'}</div>
+                        <div className="mt-3 text-sm font-medium text-base-content">
+                          {buttonText ?? '继续添加'}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1017,7 +1092,12 @@ const FileInputRoot: FC<FileInputProps> = ({
               </div>
             )
           ) : (
-            <div className={mergeClassNames('rounded-box border border-dashed border-base-300 p-4 text-sm text-base-content/55', listClassName)}>
+            <div
+              className={mergeClassNames(
+                'rounded-box border border-dashed border-base-300 p-4 text-sm text-base-content/55',
+                listClassName,
+              )}
+            >
               {empty ?? '还没有文件，先选择一个文件开始。'}
             </div>
           )
@@ -1054,7 +1134,7 @@ const Dragger: FC<FileInputProps> = props => {
 
 const FileInput: FileInputCompound = Object.assign(FileInputRoot, {
   Dragger,
-  LIST_IGNORE: FILE_INPUT_LIST_IGNORE,
+  LIST_IGNORE: FILE_INPUT_LIST_IGNORE as typeof FILE_INPUT_LIST_IGNORE,
 })
 
 export default FileInput

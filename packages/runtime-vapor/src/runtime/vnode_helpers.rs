@@ -1,11 +1,11 @@
+#[cfg(feature = "compat")]
+use super::DomAdapter;
 use super::types::ComponentProps;
 #[cfg(feature = "compat")]
 use super::types::{FRAGMENT, MountInput, MountInputChild, MountInputType};
 #[cfg(feature = "compat")]
-use super::DomAdapter;
-use js_sys::{Array, Object, Reflect};
-#[cfg(feature = "compat")]
 use js_sys::Function;
+use js_sys::{Array, Object, Reflect};
 #[cfg(feature = "compat")]
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
@@ -47,18 +47,12 @@ pub(crate) fn effective_children(children: &JsValue, props_map: &ComponentProps)
     if Array::is_array(children) {
         let arr = Array::from(children);
         if arr.length() == 0 {
-            props_map
-                .get("children")
-                .cloned()
-                .unwrap_or_else(|| children.clone())
+            props_map.get("children").cloned().unwrap_or_else(|| children.clone())
         } else {
             children.clone()
         }
     } else if children.is_undefined() || children.is_null() {
-        props_map
-            .get("children")
-            .cloned()
-            .unwrap_or_else(|| children.clone())
+        props_map.get("children").cloned().unwrap_or_else(|| children.clone())
     } else {
         children.clone()
     }
@@ -109,11 +103,7 @@ where
     let effective = effective_children(children_value, &props);
     let r#type = compat_type_to_input_type::<A>(type_tag, &props, fallback_unknown_element)?;
 
-    Some(MountInput::new_normalized(
-        r#type,
-        props,
-        children_from_value(&effective),
-    ))
+    Some(MountInput::new_normalized(r#type, props, children_from_value(&effective)))
 }
 
 #[cfg(feature = "compat")]

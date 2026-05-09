@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Checkbox 组件概述
 - 保留 Rue 当前 checkbox 视觉类，同时补齐受控/非受控、children 标签包装、indeterminate 能力。
@@ -349,7 +350,9 @@ const Group: FC<CheckboxGroupProps> = ({
     if (!container) return
     const selectedSet = new Set(selectedValues.value.map(serializeValue))
     const inputs = Array.from(
-      container.querySelectorAll<HTMLInputElement>('input[type="checkbox"][data-rue-checkbox-input="true"]'),
+      container.querySelectorAll<HTMLInputElement>(
+        'input[type="checkbox"][data-rue-checkbox-input="true"]',
+      ),
     )
 
     inputs.forEach(input => {
@@ -372,7 +375,9 @@ const Group: FC<CheckboxGroupProps> = ({
     const container = groupRef.current
     if (!container) return normalizeValueList(values)
     const order = Array.from(
-      container.querySelectorAll<HTMLInputElement>('input[type="checkbox"][data-rue-checkbox-input="true"]'),
+      container.querySelectorAll<HTMLInputElement>(
+        'input[type="checkbox"][data-rue-checkbox-input="true"]',
+      ),
     )
       .map(input => input.dataset.rueCheckboxValue)
       .filter((item): item is string => !!item)
@@ -381,7 +386,10 @@ const Group: FC<CheckboxGroupProps> = ({
 
     const orderMap = new Map(order.map((item, index) => [item, index]))
     return normalizeValueList(values).sort((left, right) => {
-      return (orderMap.get(serializeValue(left)) ?? Number.MAX_SAFE_INTEGER) - (orderMap.get(serializeValue(right)) ?? Number.MAX_SAFE_INTEGER)
+      return (
+        (orderMap.get(serializeValue(left)) ?? Number.MAX_SAFE_INTEGER) -
+        (orderMap.get(serializeValue(right)) ?? Number.MAX_SAFE_INTEGER)
+      )
     })
   }
 
@@ -439,7 +447,7 @@ const Group: FC<CheckboxGroupProps> = ({
 
   watch(
     () => value,
-    nextValue => {
+    (nextValue: ReadonlyArray<CheckboxValue> | undefined) => {
       if (nextValue !== undefined) {
         selectedValues.value = normalizeValueList(nextValue)
       }

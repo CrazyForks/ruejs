@@ -104,7 +104,12 @@ describe('Toggle', () => {
     resetActiveRuntime()
 
     render(
-      <Toggle loading={true} defaultValue={true} checkedChildren="同步中" unCheckedChildren="待同步">
+      <Toggle
+        loading={true}
+        defaultValue={true}
+        checkedChildren="同步中"
+        unCheckedChildren="待同步"
+      >
         自动同步
       </Toggle>,
       container,

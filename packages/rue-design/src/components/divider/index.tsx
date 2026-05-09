@@ -1,7 +1,8 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Divider 组件概述
 - 保留 Rue 现有的 daisyUI 视觉基础。
-- 在兼容旧版 direction / placement / variant(颜色) 的同时，补充 ant-design 常用能力。
+- 在兼容旧版 direction / placement / variant(颜色) 的同时，补充常用能力。
 */
 import type { FC } from '@rue-js/rue'
 
@@ -112,23 +113,31 @@ const Divider: FC<DividerProps> = ({
   const resolvedLineVariant =
     lineVariant ?? (isLineVariant(variant) ? variant : undefined) ?? (dashed ? 'dashed' : 'solid')
   const resolvedPlacement = titlePlacement ?? placement
-  const orientationClass = orientation || type || vertical
-    ? resolveOrientationClass(orientation, vertical, type)
-    : resolveLegacyDirectionClass(direction)
-  const isVerticalSeparator = (orientation ?? type ?? (vertical ? 'vertical' : 'horizontal')) === 'vertical'
+  const orientationClass =
+    orientation || type || vertical
+      ? resolveOrientationClass(orientation, vertical, type)
+      : resolveLegacyDirectionClass(direction)
+  const isVerticalSeparator =
+    (orientation ?? type ?? (vertical ? 'vertical' : 'horizontal')) === 'vertical'
   const contentMargin = normalizeSpacingValue(orientationMargin)
 
   const cls = mergeClassName(
     'divider',
     orientationClass,
     resolvedTone ? `divider-${resolvedTone}` : undefined,
-    resolvedPlacement && resolvedPlacement !== 'center' ? `divider-${resolvedPlacement}` : undefined,
+    resolvedPlacement && resolvedPlacement !== 'center'
+      ? `divider-${resolvedPlacement}`
+      : undefined,
     resolvedLineVariant === 'dashed' ? 'before:border-dashed after:border-dashed' : undefined,
     resolvedLineVariant === 'dotted' ? 'before:border-dotted after:border-dotted' : undefined,
     className,
   )
 
-  const textCls = mergeClassName('whitespace-nowrap', plain ? 'font-normal opacity-80' : undefined, contentClassName)
+  const textCls = mergeClassName(
+    'whitespace-nowrap',
+    plain ? 'font-normal opacity-80' : undefined,
+    contentClassName,
+  )
   const textStyle =
     resolvedPlacement === 'start'
       ? { marginInlineStart: contentMargin, ...contentStyle }

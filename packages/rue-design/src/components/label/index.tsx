@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Label 组件概述
 - 保留 Rue 当前 input / select 包装与 floating-label 复合写法。
@@ -221,7 +222,9 @@ const resolveTextToneClassName = (tone?: LabelTextTone, muted?: boolean) => {
 
 const buildFieldClassName = (layout?: LabelLayout, block?: boolean, className?: string) => {
   return mergeClassName(
-    layout === 'inline' ? 'grid gap-2 sm:grid-cols-[var(--label-inline-width, minmax(8rem,12rem))_1fr]' : 'grid gap-1',
+    layout === 'inline'
+      ? 'grid gap-2 sm:grid-cols-[var(--label-inline-width, minmax(8rem,12rem))_1fr]'
+      : 'grid gap-1',
     block && 'w-full',
     className,
   )
@@ -239,7 +242,8 @@ const resolveInlineAlignClassName = (align?: LabelAlign) => {
 }
 
 const resolveInlineWidthStyle = (layout?: LabelLayout, labelWidth?: string | number) => {
-  if (layout !== 'inline' || labelWidth === undefined || labelWidth === null || labelWidth === '') return undefined
+  if (layout !== 'inline' || labelWidth === undefined || labelWidth === null || labelWidth === '')
+    return undefined
   return {
     '--label-inline-width': typeof labelWidth === 'number' ? `${labelWidth}px` : labelWidth,
   } as any
@@ -455,7 +459,10 @@ const LabelRoot: FC<LabelRootProps> = ({
 
   if (layout === 'inline') {
     return (
-      <div className={mergeClassName(fieldClassName, resolveInlineAlignClassName(align))} style={fieldStyle}>
+      <div
+        className={mergeClassName(fieldClassName, resolveInlineAlignClassName(align))}
+        style={fieldStyle}
+      >
         <div>
           {captionNode}
           {descriptionNode}
@@ -575,7 +582,10 @@ const Floating: FC<FloatingLabelProps> = ({
 
   if (layout === 'inline') {
     return (
-      <div className={mergeClassName(fieldClassName, resolveInlineAlignClassName(align))} style={fieldStyle}>
+      <div
+        className={mergeClassName(fieldClassName, resolveInlineAlignClassName(align))}
+        style={fieldStyle}
+      >
         <div>
           {captionNode}
           {descriptionNode}

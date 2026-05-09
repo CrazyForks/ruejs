@@ -28,7 +28,6 @@ interface NewsletterOption {
   disabled?: boolean
 }
 
-
 const ExampleBlock = PreviewBlock as FC<ExampleBlockProps>
 
 const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
@@ -450,7 +449,9 @@ const BasicPreview: FC = () => {
       >
         接收产品更新
       </Checkbox>
-      <span className="text-sm text-base-content/70">当前状态：{checked.value ? '已选中' : '未选中'}</span>
+      <span className="text-sm text-base-content/70">
+        当前状态：{checked.value ? '已选中' : '未选中'}
+      </span>
     </div>
   )
 }
@@ -463,7 +464,7 @@ const ControlledPreview: FC = () => {
       <div
         data-testid="checkbox-controlled-card"
         className="cursor-pointer rounded-box border border-base-300 bg-base-200/50 px-4 py-3"
-        onClick={event => {
+        onClick={(event: MouseEvent) => {
           if ((event.target as HTMLElement | null)?.closest('input')) {
             return
           }
@@ -480,12 +481,16 @@ const ControlledPreview: FC = () => {
           />
           <span className="min-w-0 flex-1 block">
             <span className="font-medium">开启每周摘要</span>
-            <span className="mt-1 block text-xs opacity-70">适合演示受控模式和更直接的布尔回调。</span>
+            <span className="mt-1 block text-xs opacity-70">
+              适合演示受控模式和更直接的布尔回调。
+            </span>
           </span>
         </div>
       </div>
       <div className="flex flex-wrap gap-2 text-sm">
-        <span className="badge badge-soft badge-primary">checked={enabled.value ? 'true' : 'false'}</span>
+        <span className="badge badge-soft badge-primary">
+          checked={enabled.value ? 'true' : 'false'}
+        </span>
         <span className="badge badge-soft">onCheckedChange</span>
       </div>
     </div>
@@ -501,7 +506,9 @@ const IndeterminatePreview: FC = () => {
       >
         部分成员已完成
       </Checkbox>
-      <span className="text-sm text-base-content/70">组件会自动同步原生 input 的 indeterminate 状态。</span>
+      <span className="text-sm text-base-content/70">
+        组件会自动同步原生 input 的 indeterminate 状态。
+      </span>
     </div>
   )
 }
@@ -577,19 +584,28 @@ const GridPreview: FC = () => {
   return (
     <div className="space-y-4">
       <Checkbox.Group defaultValue={['email', 'slack']} className="grid gap-4 md:grid-cols-2">
-        <Checkbox value="email" rootClassName="rounded-box border border-base-300 bg-base-100 px-4 py-3">
+        <Checkbox
+          value="email"
+          rootClassName="rounded-box border border-base-300 bg-base-100 px-4 py-3"
+        >
           <span className="block">
             <span className="font-medium">邮件通知</span>
             <span className="mt-1 block text-xs opacity-70">适合外部用户和日报汇总场景。</span>
           </span>
         </Checkbox>
-        <Checkbox value="slack" rootClassName="rounded-box border border-base-300 bg-base-100 px-4 py-3">
+        <Checkbox
+          value="slack"
+          rootClassName="rounded-box border border-base-300 bg-base-100 px-4 py-3"
+        >
           <span className="block">
             <span className="font-medium">Slack 频道</span>
             <span className="mt-1 block text-xs opacity-70">适合团队内部即时同步与讨论。</span>
           </span>
         </Checkbox>
-        <Checkbox value="webhook" rootClassName="rounded-box border border-base-300 bg-base-100 px-4 py-3">
+        <Checkbox
+          value="webhook"
+          rootClassName="rounded-box border border-base-300 bg-base-100 px-4 py-3"
+        >
           <span className="block">
             <span className="font-medium">Webhook</span>
             <span className="mt-1 block text-xs opacity-70">方便接入自动化脚本和外部工作流。</span>
@@ -606,7 +622,9 @@ const GridPreview: FC = () => {
           </span>
         </Checkbox>
       </Checkbox.Group>
-      <div className="text-sm text-base-content/70">children 模式适合做卡片化布局或更复杂的说明区。</div>
+      <div className="text-sm text-base-content/70">
+        children 模式适合做卡片化布局或更复杂的说明区。
+      </div>
     </div>
   )
 }
@@ -628,7 +646,9 @@ const CheckboxPage: FC = () => {
     <SidebarPlayground>
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Checkbox 复选框</h1>
-        <p className="mt-3 mb-3 text-sm">Checkbox 用于从多个候选项中选择零个、一个或多个值，也适合表达“确认某项设置”的状态。</p>
+        <p className="mt-3 mb-3 text-sm">
+          Checkbox 用于从多个候选项中选择零个、一个或多个值，也适合表达“确认某项设置”的状态。
+        </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/checkbox/" target="_blank">
             查看 Checkbox 静态样式
@@ -636,7 +656,10 @@ const CheckboxPage: FC = () => {
         </div>
 
         <div className="alert alert-soft mt-6 text-sm">
-          <span>Rue 在保留 daisyUI 视觉类名的基础上，为 Checkbox 增加了更完整的受控状态、半选态和 Group 能力。</span>
+          <span>
+            Rue 在保留 daisyUI 视觉类名的基础上，为 Checkbox 增加了更完整的受控状态、半选态和 Group
+            能力。
+          </span>
         </div>
 
         <h2 className="mt-8">何时使用</h2>
@@ -669,7 +692,11 @@ const CheckboxPage: FC = () => {
               <div className="card-body">
                 <fieldset className="fieldset w-80 rounded-box border border-base-300 bg-base-100 p-4">
                   <legend className="fieldset-legend">账号设置</legend>
-                  <Checkbox defaultChecked={true} rootClassName="items-center gap-2.5 [&>span:first-child]:pt-0" contentClassName="leading-none pt-1">
+                  <Checkbox
+                    defaultChecked={true}
+                    rootClassName="items-center gap-2.5 [&>span:first-child]:pt-0"
+                    contentClassName="leading-none pt-1"
+                  >
                     记住这台设备
                   </Checkbox>
                 </fieldset>
@@ -771,7 +798,7 @@ const CheckboxPage: FC = () => {
 
         <ExampleBlock
           title="Checkbox Group"
-          summary="参考 ant-design 的核心能力，支持 options 数据驱动和受控值数组。"
+          summary="参考常见业务表单的核心能力，支持 options 数据驱动和受控值数组。"
           tab={tabGroup}
           preview={() => (
             <div className={previewCardClassName}>
@@ -829,7 +856,10 @@ const CheckboxPage: FC = () => {
         />
 
         <h2 className="mt-12">API</h2>
-        <p className="text-sm text-base-content/70">为了兼容旧用法，className 仍然作用在原生 input 上；如果需要控制包裹层，请使用 rootClassName 和 rootStyle。</p>
+        <p className="text-sm text-base-content/70">
+          为了兼容旧用法，className 仍然作用在原生 input 上；如果需要控制包裹层，请使用
+          rootClassName 和 rootStyle。
+        </p>
 
         <h3 className="mt-6">Checkbox</h3>
         <ApiTable rows={checkboxApiRows} />

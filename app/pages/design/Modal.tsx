@@ -78,7 +78,6 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
   )
 }
 
-
 const apiRows: ApiRow[] = [
   {
     prop: 'open',
@@ -502,7 +501,7 @@ const ModalPage: FC = () => {
 
         <ExampleBlock
           title="Default footer with async confirm"
-          summary="更接近 antd 的常用能力：给 `onOk/onCancel` 和 `confirmLoading` 即可得到默认确认 footer。"
+          summary="更贴近常见业务弹窗的用法：给 `onOk/onCancel` 和 `confirmLoading` 即可得到默认确认 footer。"
           tab={tabAsync}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">

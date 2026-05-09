@@ -401,27 +401,12 @@ fn shallow_equal_prop_prefers_host_node_identity() {
 #[wasm_bindgen_test]
 fn shallow_equal_prop_prefers_mount_handle_identity() {
     let left = Object::new();
-    Reflect::set(
-        &left,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(7.0),
-    )
-    .unwrap();
+    Reflect::set(&left, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(7.0)).unwrap();
     Reflect::set(&left, &JsValue::from_str("key"), &JsValue::from_str("left")).unwrap();
 
     let right = Object::new();
-    Reflect::set(
-        &right,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(7.0),
-    )
-    .unwrap();
-    Reflect::set(
-        &right,
-        &JsValue::from_str("key"),
-        &JsValue::from_str("right"),
-    )
-    .unwrap();
+    Reflect::set(&right, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(7.0)).unwrap();
+    Reflect::set(&right, &JsValue::from_str("key"), &JsValue::from_str("right")).unwrap();
 
     assert!(shallow_equal_prop(&left.clone().into(), &right.clone().into()));
 
@@ -432,12 +417,7 @@ fn shallow_equal_prop_prefers_mount_handle_identity() {
     assert!(shallow_equal_prop(&right.clone().into(), &singleton_value));
 
     let third = Object::new();
-    Reflect::set(
-        &third,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(8.0),
-    )
-    .unwrap();
+    Reflect::set(&third, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(8.0)).unwrap();
 
     assert!(!shallow_equal_prop(&left.into(), &third.into()));
 }
@@ -446,20 +426,10 @@ fn shallow_equal_prop_prefers_mount_handle_identity() {
 #[wasm_bindgen_test]
 fn shallow_equal_prop_normalizes_nested_singleton_mount_handle_identity() {
     let left = Object::new();
-    Reflect::set(
-        &left,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(17.0),
-    )
-    .unwrap();
+    Reflect::set(&left, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(17.0)).unwrap();
 
     let right = Object::new();
-    Reflect::set(
-        &right,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(17.0),
-    )
-    .unwrap();
+    Reflect::set(&right, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(17.0)).unwrap();
 
     let singleton = Array::new();
     singleton.push(&left.clone().into());
@@ -468,10 +438,7 @@ fn shallow_equal_prop_normalizes_nested_singleton_mount_handle_identity() {
     nested_singleton.push(&singleton.into());
     let nested_singleton_value: JsValue = nested_singleton.into();
 
-    assert!(shallow_equal_prop(
-        &nested_singleton_value,
-        &right.clone().into()
-    ));
+    assert!(shallow_equal_prop(&nested_singleton_value, &right.clone().into()));
 
     let flat_array = Array::new();
     flat_array.push(&right.clone().into());
@@ -479,12 +446,7 @@ fn shallow_equal_prop_normalizes_nested_singleton_mount_handle_identity() {
     assert!(shallow_equal_prop(&nested_singleton_value, &flat_array_value));
 
     let third = Object::new();
-    Reflect::set(
-        &third,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(18.0),
-    )
-    .unwrap();
+    Reflect::set(&third, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(18.0)).unwrap();
 
     assert!(!shallow_equal_prop(&nested_singleton_value, &third.into()));
 }
@@ -493,20 +455,12 @@ fn shallow_equal_prop_normalizes_nested_singleton_mount_handle_identity() {
 #[wasm_bindgen_test]
 fn shallow_equal_prop_normalizes_nested_singletons_inside_renderable_arrays() {
     let left_first = Object::new();
-    Reflect::set(
-        &left_first,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(21.0),
-    )
-    .unwrap();
+    Reflect::set(&left_first, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(21.0))
+        .unwrap();
 
     let left_second = Object::new();
-    Reflect::set(
-        &left_second,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(22.0),
-    )
-    .unwrap();
+    Reflect::set(&left_second, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(22.0))
+        .unwrap();
 
     let left_first_singleton = Array::new();
     left_first_singleton.push(&left_first.clone().into());
@@ -519,20 +473,12 @@ fn shallow_equal_prop_normalizes_nested_singletons_inside_renderable_arrays() {
     let left_items_value: JsValue = left_items.into();
 
     let right_first = Object::new();
-    Reflect::set(
-        &right_first,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(21.0),
-    )
-    .unwrap();
+    Reflect::set(&right_first, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(21.0))
+        .unwrap();
 
     let right_second = Object::new();
-    Reflect::set(
-        &right_second,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(22.0),
-    )
-    .unwrap();
+    Reflect::set(&right_second, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(22.0))
+        .unwrap();
 
     let right_items = Array::new();
     right_items.push(&right_first.into());
@@ -542,12 +488,8 @@ fn shallow_equal_prop_normalizes_nested_singletons_inside_renderable_arrays() {
     assert!(shallow_equal_prop(&left_items_value, &right_items_value));
 
     let different_second = Object::new();
-    Reflect::set(
-        &different_second,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(23.0),
-    )
-    .unwrap();
+    Reflect::set(&different_second, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(23.0))
+        .unwrap();
 
     let different_items = Array::new();
     different_items.push(&left_first.into());
@@ -562,50 +504,24 @@ fn shallow_equal_prop_normalizes_nested_singletons_inside_renderable_arrays() {
 #[wasm_bindgen_test]
 fn shallow_equal_prop_compares_renderable_arrays_inside_objects() {
     let left_first = Object::new();
-    Reflect::set(
-        &left_first,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(11.0),
-    )
-    .unwrap();
+    Reflect::set(&left_first, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(11.0))
+        .unwrap();
     Reflect::set(&left_first, &JsValue::from_str("key"), &JsValue::from_str("left-a")).unwrap();
 
     let left_second = Object::new();
-    Reflect::set(
-        &left_second,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(12.0),
-    )
-    .unwrap();
+    Reflect::set(&left_second, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(12.0))
+        .unwrap();
     Reflect::set(&left_second, &JsValue::from_str("key"), &JsValue::from_str("left-b")).unwrap();
 
     let right_first = Object::new();
-    Reflect::set(
-        &right_first,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(11.0),
-    )
-    .unwrap();
-    Reflect::set(
-        &right_first,
-        &JsValue::from_str("key"),
-        &JsValue::from_str("right-a"),
-    )
-    .unwrap();
+    Reflect::set(&right_first, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(11.0))
+        .unwrap();
+    Reflect::set(&right_first, &JsValue::from_str("key"), &JsValue::from_str("right-a")).unwrap();
 
     let right_second = Object::new();
-    Reflect::set(
-        &right_second,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(12.0),
-    )
-    .unwrap();
-    Reflect::set(
-        &right_second,
-        &JsValue::from_str("key"),
-        &JsValue::from_str("right-b"),
-    )
-    .unwrap();
+    Reflect::set(&right_second, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(12.0))
+        .unwrap();
+    Reflect::set(&right_second, &JsValue::from_str("key"), &JsValue::from_str("right-b")).unwrap();
 
     let left_items = Array::new();
     left_items.push(&left_first.into());
@@ -626,12 +542,8 @@ fn shallow_equal_prop_compares_renderable_arrays_inside_objects() {
     let different = Object::new();
     let different_items = Array::new();
     let different_first = Object::new();
-    Reflect::set(
-        &different_first,
-        &JsValue::from_str("__rue_mount_id"),
-        &JsValue::from_f64(13.0),
-    )
-    .unwrap();
+    Reflect::set(&different_first, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(13.0))
+        .unwrap();
     different_items.push(&different_first.into());
     Reflect::set(&different, &JsValue::from_str("items"), &different_items.into()).unwrap();
 
@@ -643,12 +555,8 @@ fn shallow_equal_prop_compares_renderable_arrays_inside_objects() {
 #[wasm_bindgen_test]
 fn shallow_equal_prop_normalizes_singleton_block_factory_identity() {
     let factory = Function::new_no_args("return null;");
-    Reflect::set(
-        &factory,
-        &JsValue::from_str("kind"),
-        &JsValue::from_str("block-factory"),
-    )
-    .unwrap();
+    Reflect::set(&factory, &JsValue::from_str("kind"), &JsValue::from_str("block-factory"))
+        .unwrap();
 
     let singleton = Array::new();
     singleton.push(&factory.clone().into());
@@ -656,12 +564,8 @@ fn shallow_equal_prop_normalizes_singleton_block_factory_identity() {
     assert!(shallow_equal_prop(&singleton_value, &factory.clone().into()));
 
     let other_factory = Function::new_no_args("return null;");
-    Reflect::set(
-        &other_factory,
-        &JsValue::from_str("kind"),
-        &JsValue::from_str("block-factory"),
-    )
-    .unwrap();
+    Reflect::set(&other_factory, &JsValue::from_str("kind"), &JsValue::from_str("block-factory"))
+        .unwrap();
 
     assert!(!shallow_equal_prop(&factory.into(), &other_factory.into()));
 }

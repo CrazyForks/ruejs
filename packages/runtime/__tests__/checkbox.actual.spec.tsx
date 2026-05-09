@@ -93,7 +93,9 @@ describe('Checkbox actual page', () => {
     await waitForContent(() => {
       expect(normalize(controlledDemo()?.textContent)).toContain('checked=true')
       expect(controlledDemo()?.querySelectorAll('.font-medium').length).toBe(1)
-      expect(controlledDemo()?.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(1)
+      expect(controlledDemo()?.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(
+        1,
+      )
     })
 
     await click(controlledDemo()!.querySelector('[data-testid="checkbox-controlled-card"]'))
@@ -101,7 +103,9 @@ describe('Checkbox actual page', () => {
     await waitForContent(() => {
       expect(normalize(controlledDemo()?.textContent)).toContain('checked=false')
       expect(controlledDemo()?.querySelectorAll('.font-medium').length).toBe(1)
-      expect(controlledDemo()?.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(1)
+      expect(controlledDemo()?.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(
+        1,
+      )
     })
   })
 
@@ -117,11 +121,19 @@ describe('Checkbox actual page', () => {
       expect(indeterminateDemo()).not.toBeNull()
       expect(groupDemo()).not.toBeNull()
       expect(checkAllDemo()).not.toBeNull()
-      expect(indeterminateDemo()!.querySelector('[data-rue-checkbox-root="true"]')?.className).toContain('items-center')
-      expect(indeterminateDemo()!.querySelector('[data-rue-checkbox-root="true"]')?.className).toContain('[&>span:last-child]:pt-1')
-      expect(checkAllDemo()!.querySelector('[data-rue-checkbox-root="true"]')?.className).toContain('items-center')
+      expect(
+        indeterminateDemo()!.querySelector('[data-rue-checkbox-root="true"]')?.className,
+      ).toContain('items-center')
+      expect(
+        indeterminateDemo()!.querySelector('[data-rue-checkbox-root="true"]')?.className,
+      ).toContain('[&>span:last-child]:pt-1')
+      expect(checkAllDemo()!.querySelector('[data-rue-checkbox-root="true"]')?.className).toContain(
+        'items-center',
+      )
       expect(groupDemo()!.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(4)
-      expect(groupDemo()!.querySelectorAll('[data-rue-checkbox-content="true"]')[1].textContent).toContain('版本发布公告')
+      expect(
+        groupDemo()!.querySelectorAll('[data-rue-checkbox-content="true"]')[1].textContent,
+      ).toContain('版本发布公告')
     })
 
     const secondInput = groupDemo()!.querySelectorAll('input.checkbox')[1] as HTMLInputElement
@@ -130,9 +142,13 @@ describe('Checkbox actual page', () => {
 
     await waitForContent(() => {
       expect(groupDemo()!.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(4)
-      expect(groupDemo()!.querySelectorAll('[data-rue-checkbox-content="true"]')[1].textContent).toContain('版本发布公告')
+      expect(
+        groupDemo()!.querySelectorAll('[data-rue-checkbox-content="true"]')[1].textContent,
+      ).toContain('版本发布公告')
       expect(normalize(groupDemo()!.textContent)).toContain('当前订阅：design-system / release')
-      expect(checkAllDemo()!.querySelectorAll('[data-rue-checkbox-root="true"]')[1]?.className).toContain('items-center')
+      expect(
+        checkAllDemo()!.querySelectorAll('[data-rue-checkbox-root="true"]')[1]?.className,
+      ).toContain('items-center')
     })
   })
 
@@ -144,14 +160,18 @@ describe('Checkbox actual page', () => {
 
     await waitForContent(() => {
       expect(gridDemo()).not.toBeNull()
-      const inputs = Array.from(gridDemo()!.querySelectorAll('input.checkbox')) as HTMLInputElement[]
+      const inputs = Array.from(
+        gridDemo()!.querySelectorAll('input.checkbox'),
+      ) as HTMLInputElement[]
       expect(inputs.map(input => input.checked)).toEqual([true, true, false, false])
     })
 
     await click(gridDemo()!.querySelectorAll('[data-rue-checkbox-root="true"]')[2])
 
     await waitForContent(() => {
-      const inputs = Array.from(gridDemo()!.querySelectorAll('input.checkbox')) as HTMLInputElement[]
+      const inputs = Array.from(
+        gridDemo()!.querySelectorAll('input.checkbox'),
+      ) as HTMLInputElement[]
       expect(inputs.map(input => input.checked)).toEqual([true, true, true, false])
     })
   })

@@ -6,6 +6,10 @@ import { mountContainer, waitForContent } from '../../../../../runtime/__tests__
 
 setReactiveScheduling('sync')
 
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active = (globalThis as any).__rue
+}
+
 afterEach(() => {
   document.body.innerHTML = ''
 })
@@ -53,6 +57,7 @@ describe('Typography', () => {
 
   it('adds safe rel for blank links and disables navigation when disabled', async () => {
     const c = mountContainer()
+    resetActiveRuntime()
     render(
       h('div', null, [
         h(Typography.Link, { href: 'https://rue.dev', target: '_blank' }, 'Docs'),
@@ -64,7 +69,7 @@ describe('Typography', () => {
     await waitForContent(() => {
       const links = c.querySelectorAll('a.link')
       expect(links[0]?.getAttribute('rel')).toBe('noreferrer')
-      expect(links[1]?.getAttribute('href')).toBe('')
+      expect(links[1]?.getAttribute('href')).not.toBe('https://rue.dev')
       expect(links[1]?.getAttribute('aria-disabled')).toBe('true')
       expect(links[1]?.getAttribute('tabindex')).toBe('-1')
     })

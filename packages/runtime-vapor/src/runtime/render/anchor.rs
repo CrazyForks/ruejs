@@ -116,11 +116,8 @@ where
                     }
                     Some(old_mount) => {
                         let mut parent_clone = parent.clone();
-                        let mounted = self.patch_root_mounted_state(
-                            old_mount,
-                            input,
-                            &mut parent_clone,
-                        );
+                        let mounted =
+                            self.patch_root_mounted_state(old_mount, input, &mut parent_clone);
                         if let Some(entry) = self.anchor_map.get_mut(idx) {
                             entry.store_mount(mounted);
                         }

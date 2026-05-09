@@ -1,6 +1,6 @@
 {
   "name": "@rue-js/runtime-vapor",
-  "version": "0.0.33",
+  "version": "0.0.35",
   "description": "Rue runtime implemented in Rust and compiled to WebAssembly",
   "keywords": [
     "rue",
@@ -88,6 +88,6 @@
     "test-coverage-js": "c8 --reporter=lcov --reporter=text wasm-pack test --node"
   },
   "devDependencies": {
-    "c8": "^10.1.3"
+    "c8": "^11.0.0"
   }
 }

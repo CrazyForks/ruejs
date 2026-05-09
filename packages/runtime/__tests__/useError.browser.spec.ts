@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { useError } from '../src'
 
@@ -13,10 +13,12 @@ const getOverlayText = () => document.getElementById('rue-error-overlay')?.textC
 
 afterEach(() => {
   document.body.innerHTML = ''
+  vi.restoreAllMocks()
 })
 
 describe('useError browser bridge', () => {
   it('shows the overlay for unhandled promise rejections', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const reason = new Error('dynamic import exploded')
     const event = new Event('unhandledrejection') as Event & {
       reason: unknown
@@ -37,9 +39,11 @@ describe('useError browser bridge', () => {
 
     expect(getOverlayText()).toContain('dynamic import exploded')
     expect(getOverlayText()).toContain('Error: dynamic import exploded')
+    expect(consoleError).not.toHaveBeenCalled()
   })
 
   it('shows the overlay for browser resource load errors', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const img = document.createElement('img')
     img.src = 'http://example.com/assets/todo-app.js'
 
@@ -53,5 +57,6 @@ describe('useError browser bridge', () => {
     await flush()
 
     expect(getOverlayText()).toContain('Failed to load img: http://example.com/assets/todo-app.js')
+    expect(consoleError).not.toHaveBeenCalled()
   })
 })

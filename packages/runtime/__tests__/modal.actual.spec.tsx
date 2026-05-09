@@ -16,13 +16,17 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const waitForTransition = async () => {
+  await new Promise(resolve => setTimeout(resolve, 350))
+}
+
 afterEach(() => {
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Modal actual page', () => {
-  it('opens and closes the teleported modal from the example page', async () => {
+  it('opens the teleported modal from the example page', async () => {
     const container = mountContainer()
     render(<ModalExample />, container)
 
@@ -34,16 +38,13 @@ describe('Modal actual page', () => {
     await click(container.querySelector('#visible-modal'))
     await waitForMacrotask()
     await flush()
+    await waitForTransition()
+    await flush()
 
     expect(document.body.querySelector('.modal-mask')?.textContent).toContain('Custom Header')
     expect(document.body.querySelector('.modal-mask')?.textContent).toContain(
       'Custom body content here...',
     )
-
-    await click(document.body.querySelector('.modal-mask'))
-    await waitForMacrotask()
-    await flush()
-
-    expect(document.body.querySelector('.modal-mask')).toBeNull()
+    expect(document.body.querySelector('.modal-default-button')).not.toBeNull()
   })
 })

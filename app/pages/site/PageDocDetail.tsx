@@ -1,7 +1,7 @@
 import { type FC, useState, watch, useEffect } from '@rue-js/rue'
 import { useRoute } from '@rue-js/router'
 import SidebarPlayground from './SidebarPlaygroundPage'
-import { mdToHtml } from './docMarkdown'
+import { loadCachedDocHtml } from './docDetailCache'
 
 function getContext(): {
   uiBase: string
@@ -16,27 +16,32 @@ const PageDocDetail: FC = () => {
   const route = useRoute()
   const [html, setHtml] = useState<string>('')
   const [_results, _setResults] = useState<{ id: string; title: string; snippet: string }[]>([])
+  let requestVersion = 0
 
   watch(
     route,
     async (data: any) => {
+      const currentRequest = ++requestVersion
       const ctx = getContext()
       const seg = (data?.params?.path as string) || ''
-      if (!seg) return
+      if (!seg) {
+        setHtml('')
+        return
+      }
+
       const base = ctx.docBase
-      const url = import.meta.env.DEV
-        ? new URL(`${base}/${seg}.md?id=${Math.random()}`, import.meta.url)
-        : `${base}/${seg}.md`
+
       try {
-        const res = await fetch(url as any)
-        if (!res.ok) {
-          setHtml(`<p class="text-base-content/70">文档未找到：${seg}</p>`)
+        const out = await loadCachedDocHtml('page', base, seg)
+        if (currentRequest !== requestVersion) {
           return
         }
-        const md = await res.text()
-        const out = await mdToHtml(md)
         setHtml(out)
       } catch {
+        if (currentRequest !== requestVersion) {
+          return
+        }
+
         setHtml(`<p class="text-base-content/70">加载文档失败</p>`)
       }
     },

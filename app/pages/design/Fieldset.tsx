@@ -234,8 +234,9 @@ const FieldsetPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Fieldset 字段集</h1>
         <p className="text-sm mt-3 mb-3">
-          Fieldset 现在同时支持两类用法：保留原有的 <code>Fieldset.Legend</code> / <code>Fieldset.Label</code>{' '}
-          组合写法，也补上更适合表单场景的结构化 props 与 <code>Fieldset.Item</code>。
+          Fieldset 现在同时支持两类用法：保留原有的 <code>Fieldset.Legend</code> /{' '}
+          <code>Fieldset.Label</code> 组合写法，也补上更适合表单场景的结构化 props 与{' '}
+          <code>Fieldset.Item</code>。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -596,14 +597,16 @@ const FieldsetPage: FC = () => {
 
         <h3>结构化 props 和 children 可以同时用吗？</h3>
         <p>
-          当前实现里，<code>children</code> 仍然是最高优先级。想走推荐写法时使用 <code>legend</code>、
-          <code>description</code>、<code>items</code>；想自由拼装时继续直接写 <code>children</code>。
+          当前实现里，<code>children</code> 仍然是最高优先级。想走推荐写法时使用 <code>legend</code>
+          、<code>description</code>、<code>items</code>；想自由拼装时继续直接写{' '}
+          <code>children</code>。
         </p>
 
         <h3>什么时候该用 items，什么时候该用 Fieldset.Item？</h3>
         <p>
-          简单表单优先用 <code>items</code>，这样信息更集中；字段布局开始变复杂、需要横向排版或局部复用时，
-          更适合切到 <code>Fieldset.Item</code>。
+          简单表单优先用 <code>items</code>
+          ，这样信息更集中；字段布局开始变复杂、需要横向排版或局部复用时， 更适合切到{' '}
+          <code>Fieldset.Item</code>。
         </p>
 
         <h3>variant 和手写 className 会冲突吗？</h3>

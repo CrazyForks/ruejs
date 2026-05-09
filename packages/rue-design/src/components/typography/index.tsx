@@ -1,6 +1,7 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Typography 组件概述
-- 参考 ant-design 的 Typography 复合 API，提供 Text、Link、Title、Paragraph 语义组件。
+- Typography 复合 API，提供 Text、Link、Title、Paragraph 语义组件。
 - 保留 Rue 当前偏轻量的实现方式，继续用 daisyUI 与原子类完成视觉表达，不强加额外样式系统。
 - Text Rotate 等组件可以直接复用这些语义化排版能力，避免把排版职责塞进业务组件本身。
 */
@@ -124,11 +125,7 @@ const renderDecoratedContent = (
     node = <code className="rounded bg-base-200 px-1.5 py-0.5 text-[0.9em]">{node}</code>
   }
   if (mark) {
-    node = (
-      <mark className="rounded bg-warning/20 px-1 py-0.5 text-inherit">
-        {node}
-      </mark>
-    )
+    node = <mark className="rounded bg-warning/20 px-1 py-0.5 text-inherit">{node}</mark>
   }
   return node
 }

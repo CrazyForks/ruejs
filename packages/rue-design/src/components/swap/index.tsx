@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Swap 组件概述
 - 保留 Rue 当前 swap 视觉类与 compound 结构。
@@ -146,7 +147,7 @@ const SwapRoot: FC<SwapProps> = ({
         checked: nextChecked,
         indeterminate: nextIndeterminate,
         active: !!active || nextChecked,
-          mode,
+        mode,
       })
     }
     if (onCheckedChange) {

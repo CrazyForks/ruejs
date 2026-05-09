@@ -119,7 +119,9 @@ const directiveCode = [
   '    <section className="grid gap-4">',
   '      <input className="input input-bordered" ' + vModelAttr + '={message.value} />',
   '      <input className="input input-bordered" ' + vModelTrimAttr + '={trimmed.value} />',
-  '      <input type="number" className="input input-bordered" ' + rModelNumberAttr + '={age.value} />',
+  '      <input type="number" className="input input-bordered" ' +
+    rModelNumberAttr +
+    '={age.value} />',
   '      <input className="input input-bordered" ' + rModelLazyAttr + '={lazyNote.value} />',
   '      <input type="checkbox" className="checkbox" ' + vModelAttr + '={accepted.value} />',
   '',
@@ -321,8 +323,8 @@ const VModelAndRModel: FC = () => {
         <div className="space-y-3">
           <h1 className="text-5xl font-semibold">v-model / r-model</h1>
           <p className="text-base-content/70 max-w-3xl">
-            这页直接对齐 v-on 页面：一边给真实 Rue TSX 写法，一边给手写 value / checked /
-            modelValue 的等价实现，预览里也直接跑真实 v-model / r-model。
+            这页直接对齐 v-on 页面：一边给真实 Rue TSX 写法，一边给手写 value / checked / modelValue
+            的等价实现，预览里也直接跑真实 v-model / r-model。
           </p>
         </div>
 
@@ -352,7 +354,8 @@ const VModelAndRModel: FC = () => {
             <div className="card-body gap-6">
               <div role="alert" className="alert alert-info">
                 <span>
-                  左列是当前真实可写进 TSX 的 v-model / r-model，右列是手写等价实现。组件部分则把真实指令预览和等价 props 写法并排展示。
+                  左列是当前真实可写进 TSX 的 v-model /
+                  r-model，右列是手写等价实现。组件部分则把真实指令预览和等价 props 写法并排展示。
                 </span>
               </div>
 
@@ -378,17 +381,27 @@ const VModelAndRModel: FC = () => {
                     </label>
 
                     <label className="floating-label">
-                      <input className="input input-bordered w-full" v-model:trim={trimmedMessage.value} />
+                      <input
+                        className="input input-bordered w-full"
+                        v-model:trim={trimmedMessage.value}
+                      />
                       <span>v-model:trim</span>
                     </label>
 
                     <label className="floating-label">
-                      <input type="number" className="input input-bordered w-full" r-model:number={age.value} />
+                      <input
+                        type="number"
+                        className="input input-bordered w-full"
+                        r-model:number={age.value}
+                      />
                       <span>r-model:number</span>
                     </label>
 
                     <label className="floating-label">
-                      <input className="input input-bordered w-full" r-model:lazy={lazyNote.value} />
+                      <input
+                        className="input input-bordered w-full"
+                        r-model:lazy={lazyNote.value}
+                      />
                       <span>r-model:lazy</span>
                     </label>
 
@@ -505,7 +518,9 @@ const VModelAndRModel: FC = () => {
                     <div className="rounded-box border border-base-300 bg-base-200 p-4 text-sm">
                       <p>title: {title.value || '空'}</p>
                       <p>articleTitle: {articleTitle.value || '空'}</p>
-                      <p>firstName / lastName: {firstName.value} {lastName.value}</p>
+                      <p>
+                        firstName / lastName: {firstName.value} {lastName.value}
+                      </p>
                     </div>
                   </div>
 
@@ -518,10 +533,21 @@ const VModelAndRModel: FC = () => {
                     <Code className="h-full" lang="tsx" code={componentMappingCode} />
 
                     <div className="rounded-box border border-base-300 bg-base-200 p-4 text-sm">
-                      <p><strong>v-model</strong> -&gt; modelValue + onUpdateModelValue</p>
-                      <p><strong>v-model:trim-title</strong> -&gt; title + titleModifiers + onUpdateTitle</p>
-                      <p><strong>v-model:trim-first-name</strong> -&gt; firstName + firstNameModifiers + onUpdateFirstName</p>
-                      <p><strong>v-model:lazy-last-name</strong> -&gt; lastName + lastNameModifiers + onUpdateLastName</p>
+                      <p>
+                        <strong>v-model</strong> -&gt; modelValue + onUpdateModelValue
+                      </p>
+                      <p>
+                        <strong>v-model:trim-title</strong> -&gt; title + titleModifiers +
+                        onUpdateTitle
+                      </p>
+                      <p>
+                        <strong>v-model:trim-first-name</strong> -&gt; firstName +
+                        firstNameModifiers + onUpdateFirstName
+                      </p>
+                      <p>
+                        <strong>v-model:lazy-last-name</strong> -&gt; lastName + lastNameModifiers +
+                        onUpdateLastName
+                      </p>
                     </div>
                   </div>
                 </div>

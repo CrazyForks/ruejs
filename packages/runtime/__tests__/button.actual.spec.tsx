@@ -48,37 +48,40 @@ describe('Button actual page', () => {
       expect(container.querySelector('.component-preview')).not.toBeNull()
     })
 
-    const eventsDemo = findDemo(container, '# Button events') as HTMLElement | null
-    expect(eventsDemo).not.toBeNull()
+    const formDemoTitle = '# 根节点与表单行为'
+    const formDemo = findDemo(container, formDemoTitle) as HTMLElement | null
+    expect(formDemo).not.toBeNull()
 
     await waitForContent(() => {
-      expect(normalize(eventsDemo?.textContent)).toContain('count: 0')
-      expect(normalize(eventsDemo?.textContent)).toContain('Click Me')
-      expect(normalize(eventsDemo?.textContent)).toContain('Loading (disabled)')
+      expect(normalize(formDemo?.textContent)).toContain('submit count: 0')
+      expect(normalize(formDemo?.textContent)).toContain('Submit form')
+      expect(normalize(formDemo?.textContent)).toContain('Reset form')
     })
 
-    const buttons = Array.from(eventsDemo!.querySelectorAll('.card button')) as HTMLButtonElement[]
-    const clickMe = buttons.find(button => normalize(button.textContent) === 'Click Me') ?? null
-    const loading = buttons.find(button => normalize(button.textContent).includes('Loading')) ?? null
+    const buttons = Array.from(formDemo!.querySelectorAll('.card button')) as HTMLButtonElement[]
+    const submitButton =
+      buttons.find(button => normalize(button.textContent) === 'Submit form') ?? null
+    const resetButton =
+      buttons.find(button => normalize(button.textContent) === 'Reset form') ?? null
 
-    expect(clickMe).not.toBeNull()
-    expect(loading).not.toBeNull()
-    expect(loading?.disabled).toBe(true)
+    expect(submitButton).not.toBeNull()
+    expect(resetButton).not.toBeNull()
 
-    await click(clickMe)
+    await click(submitButton)
 
     await waitForContent(() => {
-      expect(normalize(eventsDemo?.textContent)).toContain('count: 1')
+      expect(normalize(formDemo?.textContent)).toContain('submit count: 1')
     })
 
-    await click(findTabButton(eventsDemo!, 'JSX代码'))
-    expect(Array.from(eventsDemo!.querySelectorAll('.card button')).length).toBe(0)
+    await click(findTabButton(formDemo!, 'JSX代码'))
+    expect(Array.from(formDemo!.querySelectorAll('.card button')).length).toBe(0)
 
-    await click(findTabButton(eventsDemo!, '预览'))
+    await click(findTabButton(findDemo(container, formDemoTitle)!, '预览'))
 
     await waitForContent(() => {
-      expect(normalize(eventsDemo?.textContent)).toContain('count: 1')
-      expect(normalize(eventsDemo?.textContent)).toContain('Click Me')
+      const restoredDemo = findDemo(container, formDemoTitle) as HTMLElement | null
+      expect(normalize(restoredDemo?.textContent)).toContain('submit count: 1')
+      expect(normalize(restoredDemo?.textContent)).toContain('Submit form')
     })
   })
 })

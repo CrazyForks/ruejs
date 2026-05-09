@@ -290,6 +290,7 @@ where
             props,
             children: vec![],
             key: None,
+            strict_component_returns: false,
             mount_cleanup_bucket: None,
             mount_effect_scope_id: None,
             el_hint: Some(el),

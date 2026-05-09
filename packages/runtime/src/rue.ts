@@ -15,7 +15,7 @@ import {
 } from './custom-elements.shared'
 import { withParentContextProps } from './context'
 import { Component as DynamicComponent } from './components/Component'
-import { getDOMAdapter, getParentNode } from './dom'
+import { appendChild, createComment, getDOMAdapter, getParentNode, removeChild } from './dom'
 import { mountNormalizedRenderableToTarget } from './renderable-bridge'
 import { registerOwnerCleanup, runOwnerCleanupBucket } from './renderable-lifecycle'
 import { normalizeRenderable } from './renderable-normalize'
@@ -58,13 +58,67 @@ type SharedRuntimeBridge = {
 }
 
 const runtimeDOMBridgeByInstance = new WeakMap<object, unknown>()
+const runtimeErrorHandlers = new WeakMap<object, Set<(error: any, instance?: any) => void>>()
 const RUE_MOUNT_ID_KEY = '__rue_mount_id'
 const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
 const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
 const RUE_VAPOR_PREFERRED_RUNTIME_KEY = '__rue_vapor_preferred'
+const RUE_JS_ERROR_BRIDGE_KEY = '__rue_js_error_bridge_installed'
+const RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY = '__rue_force_container_anchor_render__'
 
 const canTrackRuntime = (runtime: unknown): runtime is object =>
   (typeof runtime === 'object' || typeof runtime === 'function') && runtime != null
+
+const installRuntimeErrorBridge = <T>(runtime: T): T => {
+  if (!canTrackRuntime(runtime)) {
+    return runtime
+  }
+
+  if ((runtime as Record<string, unknown>)[RUE_JS_ERROR_BRIDGE_KEY]) {
+    return runtime
+  }
+
+  const handlers = new Set<(error: any, instance?: any) => void>()
+  runtimeErrorHandlers.set(runtime, handlers)
+
+  const runtimeWithErrorHandler = runtime as { handleError?: (error: any, instance?: any) => void }
+  const originalHandleError =
+    typeof runtimeWithErrorHandler.handleError === 'function'
+      ? runtimeWithErrorHandler.handleError.bind(runtime)
+      : null
+
+  ;(runtime as { onError?: unknown }).onError = (fn: (error: any, instance?: any) => void) => {
+    if (typeof fn !== 'function') {
+      return undefined
+    }
+
+    handlers.add(fn)
+    return () => {
+      handlers.delete(fn)
+    }
+  }
+
+  ;(runtime as { handleError?: unknown }).handleError = (error: any, instance?: any) => {
+    if (originalHandleError) {
+      try {
+        originalHandleError(error, instance)
+      } catch {}
+    } else if (handlers.size === 0) {
+      try {
+        ;(console as any).error?.(error)
+      } catch {}
+    }
+
+    handlers.forEach(handler => {
+      try {
+        handler(error, instance)
+      } catch {}
+    })
+  }
+
+  ;(runtime as Record<string, unknown>)[RUE_JS_ERROR_BRIDGE_KEY] = true
+  return runtime
+}
 
 export const getMarkedRuntimeDOMBridge = (runtime: unknown) => {
   if (!canTrackRuntime(runtime)) {
@@ -104,20 +158,25 @@ export const runWithRuntime = <T>(runtime: unknown, runner: () => T): T => {
 }
 
 const getSharedRuntimeBridge = () =>
-  (globalThis as typeof globalThis & {
-    __rue_runtime_vapor_shared_bridge?: SharedRuntimeBridge
-  }).__rue_runtime_vapor_shared_bridge
+  (
+    globalThis as typeof globalThis & {
+      __rue_runtime_vapor_shared_bridge?: SharedRuntimeBridge
+    }
+  ).__rue_runtime_vapor_shared_bridge
 
 /** 当前 Rue 实例（若不存在则按需初始化） */
 const initialDOMBridge = (globalThis as any).__rue_dom
-const rue: any = ((globalThis as any).__rue ||
-  ((globalThis as any).__rue = createRueWasm(initialDOMBridge))) as any
+const rue: any = installRuntimeErrorBridge(
+  ((globalThis as any).__rue ||
+    ((globalThis as any).__rue = createRueWasm(initialDOMBridge))) as any,
+)
 markRuntimeDOMBridge(rue, initialDOMBridge)
 ;(globalThis as any)[RUE_VAPOR_PREFERRED_RUNTIME_KEY] = rue
 /** 获取激活的 Rue 实例：优先 __rue_active，其次默认 __rue */
 const getRue = () => (globalThis as any).__rue_active || (globalThis as any).__rue
 
 const renderOwnerByContainer = new WeakMap<object, unknown>()
+const compatContainerAnchorByContainer = new WeakMap<object, DomNodeLike>()
 const renderOwnerByRangeStart = new WeakMap<object, unknown>()
 const renderOwnerByAnchor = new WeakMap<object, unknown>()
 const renderOwnerByStaticAnchor = new WeakMap<object, unknown>()
@@ -128,6 +187,35 @@ const pendingCompatAnchorRenders = new WeakMap<
 >()
 const RUE_FORCE_REMOUNT_ANCHOR_KEY = '__rue_force_remount_anchor'
 const RUE_COMPONENT_CHILDREN_KEY = '__rue_component_children'
+
+const getCompatContainerAnchor = (container: DomElementLike) =>
+  compatContainerAnchorByContainer.get(container as object) ?? null
+
+const ensureCompatContainerAnchor = (container: DomElementLike) => {
+  const existing = getCompatContainerAnchor(container)
+  if (existing && getParentNode(existing) === container) {
+    return existing
+  }
+
+  const anchor = createComment('rue:container:anchor')
+  appendChild(container, anchor)
+  compatContainerAnchorByContainer.set(container as object, anchor)
+  return anchor
+}
+
+const clearCompatContainerAnchor = (container: DomElementLike) => {
+  const anchor = getCompatContainerAnchor(container)
+  if (!anchor) {
+    return
+  }
+  if (getParentNode(anchor) === container) {
+    getRue().renderAnchor(null, container, anchor)
+    if (getParentNode(anchor) === container) {
+      removeChild(container, anchor)
+    }
+  }
+  compatContainerAnchorByContainer.delete(container as object)
+}
 
 const syncRenderableOwner = (owners: WeakMap<object, unknown>, key: object, nextOwner: unknown) => {
   const prevOwner = owners.get(key)
@@ -188,6 +276,29 @@ const isMountHandle = (value: unknown): value is RueMountHandle =>
   (RUE_MOUNT_ID_KEY in (value as Record<string, unknown>) ||
     RUE_PORTABLE_COMPONENT_TYPE_KEY in (value as Record<string, unknown>) ||
     RUE_PORTABLE_VAPOR_SETUP_KEY in (value as Record<string, unknown>))
+
+const normalizeMountHandleSingletonInput = (value: unknown): unknown => {
+  if (!Array.isArray(value)) {
+    return value
+  }
+
+  const meaningfulValues = value.filter(item => item !== null && item !== undefined)
+  if (meaningfulValues.length === 1 && isMountHandle(meaningfulValues[0])) {
+    return meaningfulValues[0]
+  }
+
+  // Wrap multiple top-level mount handles in a fragment so compat render entrypoints
+  // can hand a single handle back to the wasm runtime instead of an unsupported array.
+  if (meaningfulValues.length > 1 && meaningfulValues.some(item => isMountHandle(item))) {
+    const wrapped = getRue().createElement('fragment', null, meaningfulValues as any)
+    if (wrapped && typeof wrapped === 'object') {
+      ;(wrapped as Record<string, unknown>)[RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY] = true
+    }
+    return wrapped
+  }
+
+  return value
+}
 
 const analyzeDefaultRenderableInput = (value: unknown): DefaultRenderableAnalysis => {
   if (isMountHandle(value)) {
@@ -265,13 +376,11 @@ const markAnchorRemountableMountHandle = <P = {}>(
   const builtinName = typeof type === 'function' ? (type as Function).name : ''
   const shouldForceRemount =
     typeof type === 'function' &&
-    (
-      builtinName === 'Transition' ||
+    (builtinName === 'Transition' ||
       builtinName === 'Template' ||
       builtinName === 'Suspense' ||
       hasDomNodeLikeChildren ||
-      hasDomNodeLikeProp
-    )
+      hasDomNodeLikeProp)
   if (
     typeof type === 'function' &&
     effectiveChildren.length > 0 &&
@@ -307,14 +416,6 @@ const assertDefaultChildren = (props: ComponentProps | null, children: ChildInpu
     analyzeDefaultRenderableInput(child)
   }
 }
-;(rue as any).handleError =
-  (rue as any).handleError ??
-  ((error: any, _instance?: any) => {
-    try {
-      ;(console as any).error?.(error)
-    } catch {}
-  })
-
 /** 创建元素（JSX 工厂同源）
  * @param type 标签字符串或组件实例
  * @param props 属性对象
@@ -356,6 +457,7 @@ export const createComponent = <P = {}>(
 export const render = (value: RenderableInput, container: DomElementLike) => {
   const analysis = analyzeDefaultRenderableInput(value)
   if (analysis.kind === 'renderable') {
+    clearCompatContainerAnchor(container)
     const prevOwner = renderOwnerByContainer.get(container as object)
     if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
       getRue().render(null, container)
@@ -368,12 +470,34 @@ export const render = (value: RenderableInput, container: DomElementLike) => {
     return
   }
 
+  const normalizedValue = normalizeMountHandleSingletonInput(value)
+  const shouldUseContainerAnchorCompat =
+    !!normalizedValue &&
+    typeof normalizedValue === 'object' &&
+    RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY in (normalizedValue as object)
+
+  if (shouldUseContainerAnchorCompat) {
+    const prevOwner = renderOwnerByContainer.get(container as object)
+    const anchor = ensureCompatContainerAnchor(container)
+
+    if (prevOwner !== compatMountHandleOwner) {
+      getRue().render(null, container)
+      if (getParentNode(anchor) !== container) {
+        appendChild(container, anchor)
+      }
+    }
+
+    syncRenderableOwner(renderOwnerByContainer, container as object, compatMountHandleOwner)
+    return getRue().renderAnchor(normalizedValue, container, anchor)
+  }
+
   const prevOwner = renderOwnerByContainer.get(container as object)
   if (prevOwner === compatMountHandleOwner) {
+    clearCompatContainerAnchor(container)
     getRue().render(null, container)
   }
   syncRenderableOwner(renderOwnerByContainer, container as object, compatMountHandleOwner)
-  return getRue().render(value, container)
+  return getRue().render(normalizedValue, container)
 }
 /** 在区间 [start,end] 之间渲染 */
 export const renderBetween = (
@@ -382,13 +506,14 @@ export const renderBetween = (
   start: DomNodeLike,
   end: DomNodeLike,
 ) => {
+  const normalizedValue = normalizeMountHandleSingletonInput(value)
   const targetParent = resolveBetweenTargetParent(parent, start, end)
   if (!targetParent) {
     syncRenderableOwner(renderOwnerByRangeStart, start as object, undefined)
     return
   }
 
-  const analysis = analyzeDefaultRenderableInput(value)
+  const analysis = analyzeDefaultRenderableInput(normalizedValue)
   if (analysis.kind === 'renderable') {
     const prevOwner = renderOwnerByRangeStart.get(start as object)
     if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
@@ -413,7 +538,7 @@ export const renderBetween = (
     getRue().renderBetween(null, targetParent, start, end)
   }
   syncRenderableOwner(renderOwnerByRangeStart, start as object, compatMountHandleOwner)
-  return getRue().renderBetween(value, targetParent, start, end)
+  return getRue().renderBetween(normalizedValue, targetParent, start, end)
 }
 /** 在单个尾锚点前渲染 */
 export const renderAnchor = (
@@ -421,6 +546,7 @@ export const renderAnchor = (
   parent: DomElementLike,
   anchor: DomNodeLike,
 ) => {
+  const normalizedValue = normalizeMountHandleSingletonInput(value)
   pendingCompatAnchorRenders.delete(anchor as object)
   const targetParent = resolveAnchorTargetParent(parent, anchor)
   if (!targetParent) {
@@ -428,7 +554,7 @@ export const renderAnchor = (
     return
   }
 
-  const analysis = analyzeDefaultRenderableInput(value)
+  const analysis = analyzeDefaultRenderableInput(normalizedValue)
   if (analysis.kind === 'renderable') {
     const prevOwner = renderOwnerByAnchor.get(anchor as object)
     if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
@@ -448,20 +574,27 @@ export const renderAnchor = (
   }
 
   const shouldForceRemount =
-    !!value && typeof value === 'object' && RUE_FORCE_REMOUNT_ANCHOR_KEY in (value as object)
+    !!normalizedValue &&
+    typeof normalizedValue === 'object' &&
+    RUE_FORCE_REMOUNT_ANCHOR_KEY in (normalizedValue as object)
   const hasComponentChildren =
-    !!value && typeof value === 'object' && RUE_COMPONENT_CHILDREN_KEY in (value as object)
+    !!normalizedValue &&
+    typeof normalizedValue === 'object' &&
+    RUE_COMPONENT_CHILDREN_KEY in (normalizedValue as object)
   const prevOwner = renderOwnerByAnchor.get(anchor as object)
   if (!shouldForceRemount || prevOwner !== compatMountHandleOwner) {
     if (!hasComponentChildren) {
-      syncRenderableOwner(renderOwnerByAnchor, anchor as object, value as unknown)
-      return getRue().renderAnchor(value, targetParent, anchor)
+      syncRenderableOwner(renderOwnerByAnchor, anchor as object, normalizedValue as unknown)
+      return getRue().renderAnchor(normalizedValue, targetParent, anchor)
     }
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
-    return getRue().renderAnchor(value, targetParent, anchor)
+    return getRue().renderAnchor(normalizedValue, targetParent, anchor)
   }
 
-  pendingCompatAnchorRenders.set(anchor as object, { parent: targetParent, value })
+  pendingCompatAnchorRenders.set(anchor as object, {
+    parent: targetParent,
+    value: normalizedValue,
+  })
   queueMicrotask(() => {
     const pending = pendingCompatAnchorRenders.get(anchor as object)
     if (!pending) {
@@ -486,13 +619,14 @@ export const renderStatic = (
   parent: DomElementLike,
   anchor: DomNodeLike,
 ) => {
+  const normalizedValue = normalizeMountHandleSingletonInput(value)
   const targetParent = resolveAnchorTargetParent(parent, anchor)
   if (!targetParent) {
     syncRenderableOwner(renderOwnerByStaticAnchor, anchor as object, undefined)
     return
   }
 
-  const analysis = analyzeDefaultRenderableInput(value)
+  const analysis = analyzeDefaultRenderableInput(normalizedValue)
   if (analysis.kind === 'renderable') {
     const owner = mountNormalizedRenderableToTarget(analysis.value, {
       kind: 'static',
@@ -508,7 +642,7 @@ export const renderStatic = (
     getRue().renderStatic(null, targetParent, anchor)
   }
   syncRenderableOwner(renderOwnerByStaticAnchor, anchor as object, compatMountHandleOwner)
-  return getRue().renderStatic(value, targetParent, anchor)
+  return getRue().renderStatic(normalizedValue, targetParent, anchor)
 }
 /** 挂载应用到容器 */
 export const mount = (App: ComponentInstance, container: string | DomElementLike) =>
@@ -580,7 +714,7 @@ export function createRue() {
     getDOMAdapter()
   }
   const bridge = (globalThis as any).__rue_dom
-  const runtime = createRueWasm(bridge) as any
+  const runtime = installRuntimeErrorBridge(createRueWasm(bridge) as any)
   markRuntimeDOMBridge(runtime, bridge)
   return runtime
 }

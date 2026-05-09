@@ -22,8 +22,8 @@ afterEach(() => {
 })
 
 const findTabButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button[role="tab"]')).find(
-    button => button.textContent?.includes(label),
+  Array.from(root.querySelectorAll('button[role="tab"]')).find(button =>
+    button.textContent?.includes(label),
   ) ?? null
 
 const findPreviewByTitle = (root: ParentNode, title: string) =>
@@ -47,7 +47,9 @@ describe('Tabs actual page', () => {
     await waitForContent(() => {
       expect(container.textContent).toContain('Tabs 选项卡')
       expect(container.querySelector('.component-preview')).not.toBeNull()
-      const previewTexts = Array.from(container.querySelectorAll('.component-preview')).map(node => node.textContent ?? '')
+      const previewTexts = Array.from(container.querySelectorAll('.component-preview')).map(
+        node => node.textContent ?? '',
+      )
       expect(previewTexts.some(text => text.includes('[object Object]'))).toBe(false)
     })
 
@@ -127,9 +129,12 @@ describe('Tabs actual page', () => {
     const container = mountContainer()
     render(<TabsPage />, container)
 
-    const extraPreview = () => findPreviewByTitle(container, 'tab-bar-extra-content') as HTMLElement | null
-    const placementPreview = () => findPreviewByTitle(container, 'tab-placement') as HTMLElement | null
-    const editablePreview = () => findPreviewByTitle(container, 'editable-card') as HTMLElement | null
+    const extraPreview = () =>
+      findPreviewByTitle(container, 'tab-bar-extra-content') as HTMLElement | null
+    const placementPreview = () =>
+      findPreviewByTitle(container, 'tab-placement') as HTMLElement | null
+    const editablePreview = () =>
+      findPreviewByTitle(container, 'editable-card') as HTMLElement | null
     const bottomPreview = () => findPreviewByTitle(container, 'tabs-bottom') as HTMLElement | null
 
     await waitForContent(() => {
@@ -137,8 +142,12 @@ describe('Tabs actual page', () => {
       expect(placementPreview()).not.toBeNull()
       expect(editablePreview()).not.toBeNull()
       expect(bottomPreview()).not.toBeNull()
-      expect(findVisiblePanelText(extraPreview()!)).toContain('版本计划、优先级排序与协作说明统一放在这里。')
-      expect(findVisiblePanelText(placementPreview()!)).toContain('左侧导航布局适合文档、设置页和大段信息浏览。')
+      expect(findVisiblePanelText(extraPreview()!)).toContain(
+        '版本计划、优先级排序与协作说明统一放在这里。',
+      )
+      expect(findVisiblePanelText(placementPreview()!)).toContain(
+        '左侧导航布局适合文档、设置页和大段信息浏览。',
+      )
       expect(findVisiblePanelText(editablePreview()!)).toContain('设计走查与交互标注已经完成。')
       expect(findVisiblePanelText(bottomPreview()!)).toContain('Tab content 2')
     })
@@ -149,11 +158,19 @@ describe('Tabs actual page', () => {
     await click(findTabButton(bottomPreview()!, 'Tab 3'))
 
     await waitForContent(() => {
-      expect(findVisiblePanelText(extraPreview()!)).toContain('时间轴、里程碑和负责人信息可以作为右侧扩展操作的搭配内容。')
-      expect(findVisiblePanelText(extraPreview()!)).not.toContain('版本计划、优先级排序与协作说明统一放在这里。')
+      expect(findVisiblePanelText(extraPreview()!)).toContain(
+        '时间轴、里程碑和负责人信息可以作为右侧扩展操作的搭配内容。',
+      )
+      expect(findVisiblePanelText(extraPreview()!)).not.toContain(
+        '版本计划、优先级排序与协作说明统一放在这里。',
+      )
 
-      expect(findVisiblePanelText(placementPreview()!)).toContain('右侧摆放则更适合注释面板或对照式配置区域。')
-      expect(findVisiblePanelText(placementPreview()!)).not.toContain('左侧导航布局适合文档、设置页和大段信息浏览。')
+      expect(findVisiblePanelText(placementPreview()!)).toContain(
+        '右侧摆放则更适合注释面板或对照式配置区域。',
+      )
+      expect(findVisiblePanelText(placementPreview()!)).not.toContain(
+        '左侧导航布局适合文档、设置页和大段信息浏览。',
+      )
 
       expect(findVisiblePanelText(editablePreview()!)).toContain('需求说明、依赖评估与风险梳理。')
       expect(findVisiblePanelText(editablePreview()!)).not.toContain('设计走查与交互标注已经完成。')
@@ -167,8 +184,10 @@ describe('Tabs actual page', () => {
     const container = mountContainer()
     render(<TabsPage />, container)
 
-    const contentPanels = () => findPreviewByTitle(container, 'content-panels') as HTMLElement | null
-    const tabBarExtra = () => findPreviewByTitle(container, 'tab-bar-extra-content') as HTMLElement | null
+    const contentPanels = () =>
+      findPreviewByTitle(container, 'content-panels') as HTMLElement | null
+    const tabBarExtra = () =>
+      findPreviewByTitle(container, 'tab-bar-extra-content') as HTMLElement | null
     const tabPlacement = () => findPreviewByTitle(container, 'tab-placement') as HTMLElement | null
     const editableCard = () => findPreviewByTitle(container, 'editable-card') as HTMLElement | null
 

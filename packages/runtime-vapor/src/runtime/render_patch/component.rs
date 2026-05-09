@@ -126,11 +126,15 @@ where
         ret
     }
 
-    fn comp_make_sub_from_ret(&mut self, ret: &JsValue) -> Option<MountInput<A>>
+    fn comp_make_sub_from_ret(
+        &mut self,
+        ret: &JsValue,
+        strict_component_returns: bool,
+    ) -> Option<MountInput<A>>
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        if let Some(input) = self.value_to_input(ret) {
+        if let Some(input) = self.component_return_value_to_input(ret, strict_component_returns) {
             Some(input)
         } else if ret.is_object() {
             #[cfg(feature = "compat")]
@@ -150,6 +154,7 @@ where
                 props: super::super::types::ComponentProps::new(),
                 children: vec![],
                 key: None,
+                strict_component_returns: false,
                 mount_cleanup_bucket: None,
                 mount_effect_scope_id: None,
                 el_hint: Some(el),
@@ -235,7 +240,7 @@ where
         };
         let (props_ro, _host, idx) = self.comp_prepare_instance(old.comp_inst_index, new);
         let ret = self.comp_execute_and_collect(render_fn, &props_ro, idx);
-        let new_sub_opt = self.comp_make_sub_from_ret(&ret);
+        let new_sub_opt = self.comp_make_sub_from_ret(&ret, new.strict_component_returns);
         let mut mounted_subtree = old.comp_subtree.as_deref().cloned();
         if let Some(new_sub) = new_sub_opt {
             mounted_subtree = self.comp_mount_or_patch_subtree(old, parent, new_sub);

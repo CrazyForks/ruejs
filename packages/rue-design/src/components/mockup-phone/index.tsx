@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 export type MockupPhoneTone =
@@ -11,7 +12,16 @@ export type MockupPhoneTone =
   | 'warning'
   | 'error'
 
-export type MockupPhoneSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'
+export type MockupPhoneSize =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | 'small'
+  | 'middle'
+  | 'medium'
+  | 'large'
 
 export interface MockupPhonePartProps {
   className?: string
@@ -89,16 +99,14 @@ const Display: FC<MockupPhonePartProps> = ({ className, children, ...rest }) => 
 }
 
 const renderDisplayContent = (display: MockupPhoneDisplayConfig) => {
-  const {
-    src,
-    alt = 'mockup phone wallpaper',
-    imgClassName,
-    children,
-    contentClassName,
-  } = display
+  const { src, alt = 'mockup phone wallpaper', imgClassName, children, contentClassName } = display
 
   const contentNode =
-    children == null ? null : contentClassName ? <div className={contentClassName}>{children}</div> : children
+    children == null ? null : contentClassName ? (
+      <div className={contentClassName}>{children}</div>
+    ) : (
+      children
+    )
 
   return (
     <>

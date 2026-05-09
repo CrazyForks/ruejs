@@ -68,7 +68,8 @@ const Demo: FC = () => (
 /// - map 参数不是简单 `item`，而是 `({ id, value })`
 /// - key 也不是直接写 `id`，而是先经过 `const rowKey = id`
 ///
-/// 只有当 getKey 正确保留了解构和必要声明，才能稳定生成 `return rowKey;`。
+/// 当前实现会先把解构参数规范化成 `item` 成员访问，
+/// 但仍必须把 key/renderItem 依赖的声明前缀完整保留下来。
 fn preserves_destructured_params_and_decl_prefix_for_key_and_render_item() {
     let src = r##"
 import { type FC } from '@rue-js/rue'
@@ -88,8 +89,8 @@ const Demo: FC = () => (
 
     let out = compile(src, "list_block_scope_destructure");
 
-    assert!(out.contains("const rowKey = id;"));
-    assert!(out.contains("const label = value * 2;"));
+    assert!(out.contains("const rowKey = item.id;"));
+    assert!(out.contains("const label = item.value * 2;"));
     assert!(out.contains("return rowKey;"));
     let removed_factory = ["_$vaporCreate", "V", "Node", "(__slot)"];
     assert!(!out.contains(&removed_factory.concat()));
@@ -166,4 +167,81 @@ const Demo: FC = () => (
     let removed_factory = ["_$vaporCreate", "V", "Node", "(__slot)"];
     assert!(!out.contains(&removed_factory.concat()));
     assert!(!out.contains("getKey: (row, idx)=>{ const label = row.value.toFixed(0);"));
+}
+
+#[test]
+/// 覆盖“简单 block 前缀读取外部 ref.value”的场景。
+///
+/// 这类用法不能把 `const isEditing = ...` 固化在 renderItem 顶层，
+/// 否则后续 slot/watchEffect 只会拿到初始快照。
+///
+/// 当前期望是：把表达式直接内联回 slot watcher，
+/// 让 keyed-list 继续走 direct vapor 路径，但条件分支本身仍然读取外部 reactive 值。
+fn inlines_outer_ref_value_into_slot_watchers() {
+    let src = r##"
+import { type FC, ref } from '@rue-js/rue'
+
+const rows = [{ id: 1, title: 'A' }]
+
+const Demo: FC = () => {
+  const editingId = ref<number | null>(null)
+  return (
+    <ul>
+      {rows.map(row => {
+        const isEditing = editingId.value === row.id
+        return (
+          <li key={row.id}>
+            {!isEditing && <button>改名</button>}
+            {isEditing && <input value={row.title} />}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+"##;
+
+    let out = compile(src, "list_block_scope_outer_ref_value");
+
+    assert!(out.contains("const __slot = vapor(()=>{"));
+    assert!(out.contains("const __slot = !(editingId.value === row.id) ? vapor(()=>{"));
+    assert!(out.contains("const __slot = (editingId.value === row.id) ? vapor(()=>{"));
+    assert!(out.contains("renderAnchor(__slot, _el1, _list3);"));
+    assert!(out.contains("renderAnchor(__slot, _el1, _list4);"));
+    assert!(!out.contains("const isEditing = editingId.value === row.id;"));
+}
+
+#[test]
+/// 覆盖“简单 block 前缀读取外部 `.get()`”的场景。
+///
+/// 和 `ref.value` 一样，这类外部响应式读取也不能在 renderItem 顶层提前求值，
+/// 而是要直接落进文本/slot watcher 的表达式里。
+fn inlines_outer_getter_signal_into_slot_watchers() {
+    let src = r##"
+import { type FC, computed } from '@rue-js/rue'
+
+const rows = [{ id: 1, title: 'A' }]
+
+const Demo: FC = () => {
+  const selectedId = computed(() => 1)
+  return (
+    <ul>
+      {rows.map(row => {
+        const isSelected = selectedId.get() === row.id
+        return <li key={row.id}>{isSelected ? '已选中' : row.title}</li>
+      })}
+    </ul>
+  )
+}
+"##;
+
+    let out = compile(src, "list_block_scope_outer_getter_signal");
+
+    assert!(out.contains("const __slot = vapor(()=>{"));
+    assert!(
+        out.contains(
+            "_$settextContent(_el2, (selectedId.get() === row.id) ? '已选中' : row.title);"
+        )
+    );
+    assert!(!out.contains("const isSelected = selectedId.get() === row.id;"));
 }

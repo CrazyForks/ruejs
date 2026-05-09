@@ -1,17 +1,17 @@
 use super::WasmRue;
+#[cfg(feature = "dev")]
+#[cfg(feature = "compat")]
+use crate::runtime::js_adapter::JsDomAdapter;
 #[cfg(feature = "compat")]
 use crate::runtime::transport::DefaultMountHandleStorePolicy;
 #[cfg(feature = "dev")]
 #[cfg(feature = "compat")]
-use crate::runtime::js_adapter::JsDomAdapter;
+use crate::runtime::types::MountInputType;
 use crate::runtime::vnode_helpers::props_with_children;
 #[cfg(feature = "dev")]
 #[cfg(feature = "compat")]
-use crate::runtime::types::MountInputType;
-use js_sys::Function;
-#[cfg(feature = "dev")]
-#[cfg(feature = "compat")]
 use js_sys::Array;
+use js_sys::Function;
 #[cfg(feature = "dev")]
 #[cfg(feature = "compat")]
 use js_sys::Object;
@@ -40,7 +40,7 @@ impl WasmRue {
 
         let props_map = props_with_children(&props, &JsValue::UNDEFINED);
         let func = type_tag.dyn_ref::<Function>().unwrap().clone();
-        create_element_handle_out::create_function_component_out(self, func, props_map)
+        create_element_handle_out::create_function_component_out(self, func, props_map, true)
     }
 
     #[cfg(feature = "compat")]
@@ -89,7 +89,9 @@ impl WasmRue {
             }
             let props_map = props_with_children(&props, &children);
             let func = type_tag.dyn_ref::<Function>().unwrap().clone();
-            return create_element_handle_out::create_function_component_out(self, func, props_map);
+            return create_element_handle_out::create_function_component_out(
+                self, func, props_map, false,
+            );
         }
         // 普通标签：走共享 compat normalize 边界，避免 createElement 自己重做旧协议解析。
         let input = self.compat_mount_input_from_create_element(&type_tag, &props, &children);

@@ -357,7 +357,10 @@ const renderFaqGroup = (
           className={options?.itemClassName ?? 'bg-base-100 border border-base-300'}
           defaultOpen={index === 0}
         >
-          <Accordion.Title as={options?.use === 'details' ? 'summary' : 'div'} className="font-semibold">
+          <Accordion.Title
+            as={options?.use === 'details' ? 'summary' : 'div'}
+            className="font-semibold"
+          >
             {item.title}
           </Accordion.Title>
           <Accordion.Content className="text-sm opacity-80">{item.content}</Accordion.Content>
@@ -433,9 +436,7 @@ const AccordionDemo: FC = () => {
         <h1>Accordion 手风琴</h1>
         <p className="text-sm mt-3 mb-3">
           Accordion 现在保留 Rue 原本的轻量视觉风格，但 API 不再只是静态包装。你可以继续用
-          <code> Accordion.Title </code>
-          和
-          <code> Accordion.Content </code>
+          <code> Accordion.Title </code>和<code> Accordion.Content </code>
           组合单个面板，也可以直接用
           <code> items </code>
           走数据驱动，接入受控 key、多开、禁用和富标题信息。
@@ -452,14 +453,18 @@ const AccordionDemo: FC = () => {
           <li>需要 FAQ、设置说明、任务面板这类“标题 + 可折叠内容”的信息组织方式。</li>
           <li>需要在单开和多开之间切换，或把当前展开项接到页面状态里。</li>
           <li>需要在标题里补充状态、说明、标签，而不想为每个面板手写结构。</li>
-          <li>需要让浏览器能搜索折叠内容时，使用 <code>use="details"</code>。</li>
+          <li>
+            需要让浏览器能搜索折叠内容时，使用 <code>use="details"</code>。
+          </li>
         </ul>
 
         <div className="not-prose my-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {capabilityCards.map(card => (
             <div key={card.title} className="card border border-base-300 bg-base-100 shadow-sm">
               <div className="card-body gap-2 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-base-content/50">Capability</div>
+                <div className="text-xs uppercase tracking-[0.2em] text-base-content/50">
+                  Capability
+                </div>
                 <div className="text-sm font-semibold">{card.title}</div>
                 <p className="m-0 text-sm opacity-70">{card.desc}</p>
               </div>
@@ -530,7 +535,8 @@ const AccordionDemo: FC = () => {
                       key={item.key}
                       className={`btn btn-sm ${controlledKey.value === item.key ? 'btn-primary' : 'btn-ghost'}`}
                       onClick={() => {
-                        const nextKey = controlledKey.value === item.key ? null : (item.key as StageKey)
+                        const nextKey =
+                          controlledKey.value === item.key ? null : (item.key as StageKey)
                         controlledKey.value = nextKey
                         lastChanged.value = nextKey
                       }}
@@ -617,7 +623,9 @@ const items = [
               <div className="card bg-base-100 shadow-sm">
                 <div className="card-body gap-4">
                   <div className="alert alert-soft">
-                    <span className="text-sm">multiple 会把 radio 形态切到 checkbox 行为，适合筛选条件或调试面板。</span>
+                    <span className="text-sm">
+                      multiple 会把 radio 形态切到 checkbox 行为，适合筛选条件或调试面板。
+                    </span>
                   </div>
                   <Accordion
                     multiple
@@ -661,10 +669,18 @@ const items = [
                       不想强制保留一个展开项时，可以给 children 模式加 <code>collapsible</code>。
                     </p>
                   </div>
-                  <Accordion collapsible defaultOpen className="bg-base-100 border border-base-300" icon="plus">
-                    <Accordion.Title className="font-semibold">Can I close the last open panel?</Accordion.Title>
+                  <Accordion
+                    collapsible
+                    defaultOpen
+                    className="bg-base-100 border border-base-300"
+                    icon="plus"
+                  >
+                    <Accordion.Title className="font-semibold">
+                      Can I close the last open panel?
+                    </Accordion.Title>
                     <Accordion.Content className="text-sm opacity-80">
-                      Yes. Set <code>collapsible</code> to allow toggling the current panel off instead of forcing one active item.
+                      Yes. Set <code>collapsible</code> to allow toggling the current panel off
+                      instead of forcing one active item.
                     </Accordion.Content>
                   </Accordion>
                 </div>
@@ -752,7 +768,7 @@ const items = [
               </div>
             </div>
           )}
-            code={`<Accordion
+          code={`<Accordion
           collapsible
   icon="arrow"
   className="bg-base-100 border border-base-300"
@@ -788,7 +804,9 @@ const items = [
           title="Accordion with arrow icon"
           summary="保留 arrow 指示样式，并开启 collapsible，方便直接验证箭头开合反馈。"
           tab={tabArrow}
-          preview={() => renderFaqGroup('accordion-arrow-demo', { icon: 'arrow', collapsible: true })}
+          preview={() =>
+            renderFaqGroup('accordion-arrow-demo', { icon: 'arrow', collapsible: true })
+          }
           code={`<Accordion icon="arrow" className="bg-base-100 border border-base-300" name="accordion-arrow-demo" defaultOpen collapsible>
   <Accordion.Title className="font-semibold">How do I create an account?</Accordion.Title>
   <Accordion.Content className="text-sm opacity-80">
@@ -850,7 +868,9 @@ const items = [
                   defaultOpen={index === 0}
                 >
                   <Accordion.Title className="font-semibold">{item.title}</Accordion.Title>
-                  <Accordion.Content className="text-sm opacity-80">{item.content}</Accordion.Content>
+                  <Accordion.Content className="text-sm opacity-80">
+                    {item.content}
+                  </Accordion.Content>
                 </Accordion>
               ))}
             </div>

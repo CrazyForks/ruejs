@@ -1,6 +1,6 @@
 {
   "name": "@rue-js/design",
-  "version": "0.0.33",
+  "version": "0.0.35",
   "description": "@rue-js/design",
   "keywords": [
     "rue"
@@ -22,20 +22,20 @@
   ],
   "sideEffects": false,
   "main": "index.js",
-  "module": "dist/design.esm-bundler.js",
-  "types": "dist/design.d.ts",
-  "unpkg": "dist/design.global.js",
+  "module": "dist/rue-design.esm-bundler.js",
+  "types": "dist/rue-design.d.ts",
+  "unpkg": "dist/rue-design.global.js",
   "exports": {
     ".": {
-      "types": "./dist/design.d.ts",
+      "types": "./dist/rue-design.d.ts",
       "development": "./src/index.ts",
       "node": {
-        "production": "./dist/design.cjs.prod.js",
-        "development": "./dist/design.cjs.js",
+        "production": "./dist/rue-design.cjs.prod.js",
+        "development": "./dist/rue-design.cjs.js",
         "default": "./index.js"
       },
-      "module": "./dist/design.esm-bundler.js",
-      "import": "./dist/design.esm-bundler.js",
+      "module": "./dist/rue-design.esm-bundler.js",
+      "import": "./dist/rue-design.esm-bundler.js",
       "require": "./index.js"
     },
     "./*": "./*"
@@ -44,7 +44,7 @@
     "@rue-js/router": "workspace:*",
     "@rue-js/rue": "workspace:*",
     "@rue-js/shared": "workspace:*",
-    "csstype": "^3.1.3"
+    "csstype": "^3.2.3"
   },
   "devDependencies": {
     "@types/trusted-types": "^2.0.7"

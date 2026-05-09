@@ -5,37 +5,37 @@ source: https://raw.githubusercontent.com/saadeghi/daisyui/refs/heads/master/pac
 layout: components
 classnames:
   component:
-  - class: range
-    desc: For <input type="range"> tag
+    - class: range
+      desc: For <input type="range"> tag
   color:
-  - class: range-neutral
-    desc: neutral color
-  - class: range-primary
-    desc: primary color
-  - class: range-secondary
-    desc: secondary color
-  - class: range-accent
-    desc: accent color
-  - class: range-success
-    desc: success color
-  - class: range-warning
-    desc: warning color
-  - class: range-info
-    desc: info color
-  - class: range-error
-    desc: error color
+    - class: range-neutral
+      desc: neutral color
+    - class: range-primary
+      desc: primary color
+    - class: range-secondary
+      desc: secondary color
+    - class: range-accent
+      desc: accent color
+    - class: range-success
+      desc: success color
+    - class: range-warning
+      desc: warning color
+    - class: range-info
+      desc: info color
+    - class: range-error
+      desc: error color
   size:
-  - class: range-xs
-    desc: Extra small size
-  - class: range-sm
-    desc: Small size
-  - class: range-md
-    desc: Medium size
-    default: true
-  - class: range-lg
-    desc: Large size
-  - class: range-xl
-    desc: Extra large size
+    - class: range-xs
+      desc: Extra small size
+    - class: range-sm
+      desc: Small size
+    - class: range-md
+      desc: Medium size
+      default: true
+    - class: range-lg
+      desc: Large size
+    - class: range-xl
+      desc: Extra large size
 ---
 
 <script>
@@ -44,14 +44,15 @@ classnames:
 </script>
 
 ### ~Range
+
 <input type="range" min="0" max="100" value="40" class="range" />
 
 ```html
 <input type="range" min="0" max="100" value="40" class="$$range" />
 ```
 
-
 ### ~With steps and measure
+
 <div class="w-full max-w-xs">
   <input type="range" min="0" max="100" value="25" class="range" step="25" />
   <div class="flex justify-between px-2.5 mt-2 text-xs">
@@ -90,72 +91,72 @@ classnames:
 </div>
 ```
 
-
 ### ~Neutral color
+
 <input type="range" min="0" max="100" value="40" class="range range-neutral" />
 
 ```html
 <input type="range" min="0" max="100" value="40" class="$$range $$range-neutral" />
 ```
 
-
 ### ~Primary color
+
 <input type="range" min="0" max="100" value="40" class="range range-primary" />
 
 ```html
 <input type="range" min="0" max="100" value="40" class="$$range $$range-primary" />
 ```
 
-
 ### ~Secondary color
+
 <input type="range" min="0" max="100" value="40" class="range range-secondary" />
 
 ```html
 <input type="range" min="0" max="100" value="40" class="$$range $$range-secondary" />
 ```
 
-
 ### ~Accent color
+
 <input type="range" min="0" max="100" value="40" class="range range-accent" />
 
 ```html
 <input type="range" min="0" max="100" value="40" class="$$range $$range-accent" />
 ```
 
-
 ### ~Success color
+
 <input type="range" min="0" max="100" value="40" class="range range-success" />
 
 ```html
 <input type="range" min="0" max="100" value="40" class="$$range $$range-success" />
 ```
 
-
 ### ~Warning color
+
 <input type="range" min="0" max="100" value="40" class="range range-warning" />
 
 ```html
 <input type="range" min="0" max="100" value="40" class="$$range $$range-warning" />
 ```
 
-
 ### ~Info color
+
 <input type="range" min="0" max="100" value="40" class="range range-info" />
 
 ```html
 <input type="range" min="0" max="100" value="40" class="$$range $$range-info" />
 ```
 
-
 ### ~Error color
+
 <input type="range" min="0" max="100" value="40" class="range range-error" />
 
 ```html
 <input type="range" min="0" max="100" value="40" class="$$range $$range-error" />
 ```
 
-
 ### ~Sizes
+
 <div class="flex flex-col gap-4 w-full max-w-xs">
   <input type="range" min="0" max="100" value="30" class="range range-xs" />
   <input type="range" min="0" max="100" value="40" class="range range-sm" />
@@ -172,11 +173,16 @@ classnames:
 <input type="range" min="0" max="100" value="70" class="$$range $$range-xl" />
 ```
 
-
 ### ~Range with custom color and no fill
+
 <input type="range" min="0" max="100" value="40" class="range text-blue-300 [--range-bg:orange] [--range-thumb:blue] [--range-fill:0]" />
 
 ```html
-<input type="range" min="0" max="100" value="40" 
-  class="$$range text-blue-300 [--range-bg:orange] [--range-thumb:blue] [--range-fill:0]" />
+<input
+  type="range"
+  min="0"
+  max="100"
+  value="40"
+  class="$$range text-blue-300 [--range-bg:orange] [--range-thumb:blue] [--range-fill:0]"
+/>
 ```

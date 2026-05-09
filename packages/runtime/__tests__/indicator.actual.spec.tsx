@@ -52,10 +52,16 @@ describe('Indicator actual page', () => {
       expect(container.textContent).toContain('API')
     })
 
-    const cardDemo = findDemo(container, '# A button as an indicator for a card') as HTMLElement | null
+    const cardDemo = findDemo(
+      container,
+      '# A button as an indicator for a card',
+    ) as HTMLElement | null
     const centerDemo = findDemo(container, '# In center of an image') as HTMLElement | null
     const shortcutDemo = findDemo(container, '# Props-driven shorthand') as HTMLElement | null
-    const placementDemo = findDemo(container, '# Placement shorthand and offset') as HTMLElement | null
+    const placementDemo = findDemo(
+      container,
+      '# Placement shorthand and offset',
+    ) as HTMLElement | null
     expect(cardDemo).not.toBeNull()
     expect(centerDemo).not.toBeNull()
     expect(shortcutDemo).not.toBeNull()
@@ -69,13 +75,19 @@ describe('Indicator actual page', () => {
     })
 
     await click(findTabButton(cardDemo!, 'JSX代码'))
-    const cardDemoInCode = findDemo(container, '# A button as an indicator for a card') as HTMLElement | null
+    const cardDemoInCode = findDemo(
+      container,
+      '# A button as an indicator for a card',
+    ) as HTMLElement | null
     expect(cardDemoInCode!.querySelector('.indicator')).toBeNull()
 
     await click(findTabButton(cardDemoInCode!, '预览'))
 
     await waitForContent(() => {
-      const restoredDemo = findDemo(container, '# A button as an indicator for a card') as HTMLElement | null
+      const restoredDemo = findDemo(
+        container,
+        '# A button as an indicator for a card',
+      ) as HTMLElement | null
       expect(restoredDemo!.querySelector('.indicator')).not.toBeNull()
     })
   })

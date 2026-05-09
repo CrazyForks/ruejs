@@ -67,7 +67,12 @@ describe('Radio', () => {
     const handleChange = vi.fn()
 
     render(
-      <Radio checked={true} value="enterprise" rootClassName="rounded-box px-2 py-1" onChange={handleChange}>
+      <Radio
+        checked={true}
+        value="enterprise"
+        rootClassName="rounded-box px-2 py-1"
+        onChange={handleChange}
+      >
         Enterprise
       </Radio>,
       container,

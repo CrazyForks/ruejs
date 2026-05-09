@@ -377,7 +377,7 @@ const tabsApiRows: ApiRow[] = [
   {
     prop: 'size',
     description: '标签尺寸，兼容 xs 到 xl 以及 small / middle / large 别名。',
-    type: "TabsSize",
+    type: 'TabsSize',
     defaultValue: "'md'",
   },
   {
@@ -614,7 +614,9 @@ const TabsDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Tabs 选项卡</h1>
         <p className="text-sm mt-3 mb-3">
-          Tabs 现在除了保留 Rue 当前的 box / border / lift 视觉，还补齐了内容面板、默认激活项、额外操作区、居中、垂直摆放和 editable-card 等更完整的 API。
+          Tabs 现在除了保留 Rue 当前的 box / border / lift
+          视觉，还补齐了内容面板、默认激活项、额外操作区、居中、垂直摆放和 editable-card 等更完整的
+          API。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/tab/" target="_blank">
@@ -625,21 +627,30 @@ const TabsDemo: FC = () => {
         <h2>何时使用</h2>
         <ul>
           <li>需要在同一信息区域里切换多个视图、状态面板或设置分组时。</li>
-          <li>既想保留 daisyUI 的 box / border / lift 视觉，又需要受控、垂直摆放、额外操作区或可编辑标签头时。</li>
+          <li>
+            既想保留 daisyUI 的 box / border / lift
+            视觉，又需要受控、垂直摆放、额外操作区或可编辑标签头时。
+          </li>
         </ul>
 
         <div className="not-prose my-6 grid gap-3 rounded-box border border-base-300/70 bg-base-100 p-4 text-sm lg:grid-cols-3">
           <div className="rounded-box bg-base-200/50 p-3">
             <div className="font-medium">受控与非受控</div>
-            <div className="mt-1 opacity-75">支持 `activeKey`、`defaultActiveKey` 与 `onChange`。</div>
+            <div className="mt-1 opacity-75">
+              支持 `activeKey`、`defaultActiveKey` 与 `onChange`。
+            </div>
           </div>
           <div className="rounded-box bg-base-200/50 p-3">
             <div className="font-medium">内容与布局</div>
-            <div className="mt-1 opacity-75">支持 `items.children`、`destroyOnHidden`、`centered`、`tabPlacement`。</div>
+            <div className="mt-1 opacity-75">
+              支持 `items.children`、`destroyOnHidden`、`centered`、`tabPlacement`。
+            </div>
           </div>
           <div className="rounded-box bg-base-200/50 p-3">
             <div className="font-medium">操作能力</div>
-            <div className="mt-1 opacity-75">支持 `tabBarExtraContent`、`indicator` 与 `editable-card`。</div>
+            <div className="mt-1 opacity-75">
+              支持 `tabBarExtraContent`、`indicator` 与 `editable-card`。
+            </div>
           </div>
         </div>
 
@@ -649,15 +660,15 @@ const TabsDemo: FC = () => {
         >
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              items={[
-                { key: 'tab1', label: 'Tab 1' },
-                { key: 'tab2', label: 'Tab 2' },
-                { key: 'tab3', label: 'Tab 3' },
-              ]}
-              activeKey={activeBasic.value}
-              onChange={key => (activeBasic.value = key)}
-            />
+              <Tabs
+                items={[
+                  { key: 'tab1', label: 'Tab 1' },
+                  { key: 'tab2', label: 'Tab 2' },
+                  { key: 'tab3', label: 'Tab 3' },
+                ]}
+                activeKey={activeBasic.value}
+                onChange={key => (activeBasic.value = key)}
+              />
             </div>
           </div>
         </ExampleBlock>
@@ -668,16 +679,16 @@ const TabsDemo: FC = () => {
         >
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              style="border"
-              items={[
-                { key: 'tab1', label: 'Tab 1' },
-                { key: 'tab2', label: 'Tab 2' },
-                { key: 'tab3', label: 'Tab 3' },
-              ]}
-              activeKey={activeBorder.value}
-              onChange={key => (activeBorder.value = key)}
-            />
+              <Tabs
+                style="border"
+                items={[
+                  { key: 'tab1', label: 'Tab 1' },
+                  { key: 'tab2', label: 'Tab 2' },
+                  { key: 'tab3', label: 'Tab 3' },
+                ]}
+                activeKey={activeBorder.value}
+                onChange={key => (activeBorder.value = key)}
+              />
             </div>
           </div>
         </ExampleBlock>
@@ -688,16 +699,16 @@ const TabsDemo: FC = () => {
         >
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              style="lift"
-              items={[
-                { key: 'tab1', label: 'Tab 1' },
-                { key: 'tab2', label: 'Tab 2' },
-                { key: 'tab3', label: 'Tab 3' },
-              ]}
-              activeKey={activeLift.value}
-              onChange={key => (activeLift.value = key)}
-            />
+              <Tabs
+                style="lift"
+                items={[
+                  { key: 'tab1', label: 'Tab 1' },
+                  { key: 'tab2', label: 'Tab 2' },
+                  { key: 'tab3', label: 'Tab 3' },
+                ]}
+                activeKey={activeLift.value}
+                onChange={key => (activeLift.value = key)}
+              />
             </div>
           </div>
         </ExampleBlock>
@@ -708,162 +719,171 @@ const TabsDemo: FC = () => {
         >
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              style="box"
-              items={[
-                { key: 'tab1', label: 'Tab 1' },
-                { key: 'tab2', label: 'Tab 2' },
-                { key: 'tab3', label: 'Tab 3' },
-              ]}
-              activeKey={activeBox.value}
-              onChange={key => (activeBox.value = key)}
-            />
+              <Tabs
+                style="box"
+                items={[
+                  { key: 'tab1', label: 'Tab 1' },
+                  { key: 'tab2', label: 'Tab 2' },
+                  { key: 'tab3', label: 'Tab 3' },
+                ]}
+                activeKey={activeBox.value}
+                onChange={key => (activeBox.value = key)}
+              />
             </div>
           </div>
         </ExampleBlock>
 
-        <ExampleBlock
-          title="content-panels"
-          code={contentPanelsCode}
-        >
+        <ExampleBlock title="content-panels" code={contentPanelsCode}>
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              type="line"
-              defaultActiveKey="overview"
-              destroyOnHidden
-              items={[
-                {
-                  key: 'overview',
-                  label: 'Overview',
-                  children: (
-                    <div className="space-y-4">
-                      <div className="grid gap-3 md:grid-cols-3">
-                        <MetricPanel title="Velocity" value="+18%" description="本周交付速度" />
-                        <MetricPanel title="QA" value="7" description="待验证缺陷" />
-                        <MetricPanel title="Review" value="3" description="待合并 PR" />
-                      </div>
-
-                      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-                        <div className="rounded-box border border-base-300/70 bg-base-100 p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="text-sm font-semibold">本周推进节奏</div>
-                            <span className="badge badge-success badge-sm">On Track</span>
-                          </div>
-                          <progress className="progress progress-primary mt-4" value="72" max="100" />
-                          <div className="mt-3 flex justify-between text-xs opacity-70">
-                            <span>设计</span>
-                            <span>联调</span>
-                            <span>回归</span>
-                            <span>发布</span>
-                          </div>
+              <Tabs
+                type="line"
+                defaultActiveKey="overview"
+                destroyOnHidden
+                items={[
+                  {
+                    key: 'overview',
+                    label: 'Overview',
+                    children: (
+                      <div className="space-y-4">
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <MetricPanel title="Velocity" value="+18%" description="本周交付速度" />
+                          <MetricPanel title="QA" value="7" description="待验证缺陷" />
+                          <MetricPanel title="Review" value="3" description="待合并 PR" />
                         </div>
 
-                        <div className="rounded-box border border-base-300/70 bg-base-100 p-4">
-                          <div className="text-sm font-semibold">Next Step</div>
-                          <ul className="mt-3 space-y-2 text-sm opacity-75">
-                            <li>锁定接口字段命名</li>
-                            <li>同步埋点事件与告警阈值</li>
-                            <li>准备灰度发布公告</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'activity',
-                  label: 'Activity',
-                  children: (
-                    <div className="space-y-3">
-                      <ul className="list gap-2">
-                        <li className="list-row">
-                          <div className="font-medium">10:15</div>
-                          <div className="list-col-grow text-sm opacity-75">完成视觉验收，设计 token 已同步。</div>
-                        </li>
-                        <li className="list-row">
-                          <div className="font-medium">14:35</div>
-                          <div className="list-col-grow text-sm opacity-75">设计评审通过，进入开发联调。</div>
-                        </li>
-                        <li className="list-row">
-                          <div className="font-medium">16:20</div>
-                          <div className="list-col-grow text-sm opacity-75">补齐埋点与告警配置。</div>
-                        </li>
-                        <li className="list-row">
-                          <div className="font-medium">18:40</div>
-                          <div className="list-col-grow text-sm opacity-75">QA 已预约今晚的回归窗口。</div>
-                        </li>
-                      </ul>
-
-                      <div role="alert" className="alert alert-soft alert-info text-sm">
-                        <span>今晚 20:00 进入联调窗口，QA 会同步回归结果。</span>
-                      </div>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'members',
-                  label: 'Members',
-                  children: (
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      {[
-                        { label: 'UI', owner: 'Lin', note: '组件规格与 token 已冻结' },
-                        { label: 'FE', owner: 'Kai', note: '交互联调与埋点已完成' },
-                        { label: 'QA', owner: 'Mio', note: '回归清单与冒烟脚本已准备' },
-                      ].map(item => (
-                        <div key={item.label} className="rounded-box border border-base-300/70 bg-base-200/50 p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="text-lg font-semibold">{item.label}</div>
-                            <span className="badge badge-ghost badge-sm">{item.owner}</span>
+                        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+                          <div className="rounded-box border border-base-300/70 bg-base-100 p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm font-semibold">本周推进节奏</div>
+                              <span className="badge badge-success badge-sm">On Track</span>
+                            </div>
+                            <progress
+                              className="progress progress-primary mt-4"
+                              value="72"
+                              max="100"
+                            />
+                            <div className="mt-3 flex justify-between text-xs opacity-70">
+                              <span>设计</span>
+                              <span>联调</span>
+                              <span>回归</span>
+                              <span>发布</span>
+                            </div>
                           </div>
-                          <div className="mt-2 text-sm opacity-75">{item.note}</div>
+
+                          <div className="rounded-box border border-base-300/70 bg-base-100 p-4">
+                            <div className="text-sm font-semibold">Next Step</div>
+                            <ul className="mt-3 space-y-2 text-sm opacity-75">
+                              <li>锁定接口字段命名</li>
+                              <li>同步埋点事件与告警阈值</li>
+                              <li>准备灰度发布公告</li>
+                            </ul>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  ),
-                },
-              ]}
-            />
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'activity',
+                    label: 'Activity',
+                    children: (
+                      <div className="space-y-3">
+                        <ul className="list gap-2">
+                          <li className="list-row">
+                            <div className="font-medium">10:15</div>
+                            <div className="list-col-grow text-sm opacity-75">
+                              完成视觉验收，设计 token 已同步。
+                            </div>
+                          </li>
+                          <li className="list-row">
+                            <div className="font-medium">14:35</div>
+                            <div className="list-col-grow text-sm opacity-75">
+                              设计评审通过，进入开发联调。
+                            </div>
+                          </li>
+                          <li className="list-row">
+                            <div className="font-medium">16:20</div>
+                            <div className="list-col-grow text-sm opacity-75">
+                              补齐埋点与告警配置。
+                            </div>
+                          </li>
+                          <li className="list-row">
+                            <div className="font-medium">18:40</div>
+                            <div className="list-col-grow text-sm opacity-75">
+                              QA 已预约今晚的回归窗口。
+                            </div>
+                          </li>
+                        </ul>
+
+                        <div role="alert" className="alert alert-soft alert-info text-sm">
+                          <span>今晚 20:00 进入联调窗口，QA 会同步回归结果。</span>
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'members',
+                    label: 'Members',
+                    children: (
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {[
+                          { label: 'UI', owner: 'Lin', note: '组件规格与 token 已冻结' },
+                          { label: 'FE', owner: 'Kai', note: '交互联调与埋点已完成' },
+                          { label: 'QA', owner: 'Mio', note: '回归清单与冒烟脚本已准备' },
+                        ].map(item => (
+                          <div
+                            key={item.label}
+                            className="rounded-box border border-base-300/70 bg-base-200/50 p-4"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="text-lg font-semibold">{item.label}</div>
+                              <span className="badge badge-ghost badge-sm">{item.owner}</span>
+                            </div>
+                            <div className="mt-2 text-sm opacity-75">{item.note}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ),
+                  },
+                ]}
+              />
             </div>
           </div>
         </ExampleBlock>
 
-        <ExampleBlock
-          title="tab-bar-extra-content"
-          code={tabBarExtraContentCode}
-        >
+        <ExampleBlock title="tab-bar-extra-content" code={tabBarExtraContentCode}>
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              type="card"
-              activeKey={activeExtra.value}
-              onChange={key => (activeExtra.value = key)}
-              tabBarExtraContent={{
-                left: <span className="badge badge-neutral badge-sm">Workspace</span>,
-                right: (
-                  <button className="btn btn-primary btn-sm" type="button">
-                    New Milestone
-                  </button>
-                ),
-              }}
-              items={[
-                {
-                  key: 'overview',
-                  label: 'Overview',
-                  children: '版本计划、优先级排序与协作说明统一放在这里。',
-                },
-                {
-                  key: 'timeline',
-                  label: 'Timeline',
-                  children: '时间轴、里程碑和负责人信息可以作为右侧扩展操作的搭配内容。',
-                },
-                {
-                  key: 'qa',
-                  label: 'QA',
-                  children: '测试结果、风险等级与回归建议。',
-                },
-              ]}
-            />
+              <Tabs
+                type="card"
+                activeKey={activeExtra.value}
+                onChange={key => (activeExtra.value = key)}
+                tabBarExtraContent={{
+                  left: <span className="badge badge-neutral badge-sm">Workspace</span>,
+                  right: (
+                    <button className="btn btn-primary btn-sm" type="button">
+                      New Milestone
+                    </button>
+                  ),
+                }}
+                items={[
+                  {
+                    key: 'overview',
+                    label: 'Overview',
+                    children: '版本计划、优先级排序与协作说明统一放在这里。',
+                  },
+                  {
+                    key: 'timeline',
+                    label: 'Timeline',
+                    children: '时间轴、里程碑和负责人信息可以作为右侧扩展操作的搭配内容。',
+                  },
+                  {
+                    key: 'qa',
+                    label: 'QA',
+                    children: '测试结果、风险等级与回归建议。',
+                  },
+                ]}
+              />
             </div>
           </div>
         </ExampleBlock>
@@ -874,83 +894,77 @@ const TabsDemo: FC = () => {
         >
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              centered
-              type="line"
-              activeKey={activeCentered.value}
-              onChange={key => (activeCentered.value = key)}
-              items={[
-                { key: 'alpha', label: 'Alpha' },
-                { key: 'beta', label: 'Beta' },
-                { key: 'stable', label: 'Stable' },
-              ]}
-            />
+              <Tabs
+                centered
+                type="line"
+                activeKey={activeCentered.value}
+                onChange={key => (activeCentered.value = key)}
+                items={[
+                  { key: 'alpha', label: 'Alpha' },
+                  { key: 'beta', label: 'Beta' },
+                  { key: 'stable', label: 'Stable' },
+                ]}
+              />
             </div>
           </div>
         </ExampleBlock>
 
-        <ExampleBlock
-          title="tab-placement"
-          code={tabPlacementCode}
-        >
+        <ExampleBlock title="tab-placement" code={tabPlacementCode}>
           <div className="card bg-base-100 shadow-sm overflow-hidden">
             <div className="card-body gap-4">
-            <Tabs
-              tabPlacement={placementMode.value}
-              type="line"
-              activeKey={activePlacementTab.value}
-              onChange={key => (activePlacementTab.value = key)}
-              className="min-h-72"
-              tabBarExtraContent={{
-                left: (
-                  <div className="flex gap-2">
-                    <button
-                      className={`btn btn-xs ${placementMode.value === 'start' ? 'btn-neutral' : 'btn-ghost'}`}
-                      type="button"
-                      onClick={() => (placementMode.value = 'start')}
-                    >
-                      start
-                    </button>
-                    <button
-                      className={`btn btn-xs ${placementMode.value === 'end' ? 'btn-neutral' : 'btn-ghost'}`}
-                      type="button"
-                      onClick={() => (placementMode.value = 'end')}
-                    >
-                      end
-                    </button>
-                  </div>
-                ),
-              }}
-              items={[
-                {
-                  key: 'design',
-                  label: 'Design',
-                  children: '左侧导航布局适合文档、设置页和大段信息浏览。',
-                },
-                {
-                  key: 'review',
-                  label: 'Review',
-                  children: '右侧摆放则更适合注释面板或对照式配置区域。',
-                },
-              ]}
-            />
+              <Tabs
+                tabPlacement={placementMode.value}
+                type="line"
+                activeKey={activePlacementTab.value}
+                onChange={key => (activePlacementTab.value = key)}
+                className="min-h-72"
+                tabBarExtraContent={{
+                  left: (
+                    <div className="flex gap-2">
+                      <button
+                        className={`btn btn-xs ${placementMode.value === 'start' ? 'btn-neutral' : 'btn-ghost'}`}
+                        type="button"
+                        onClick={() => (placementMode.value = 'start')}
+                      >
+                        start
+                      </button>
+                      <button
+                        className={`btn btn-xs ${placementMode.value === 'end' ? 'btn-neutral' : 'btn-ghost'}`}
+                        type="button"
+                        onClick={() => (placementMode.value = 'end')}
+                      >
+                        end
+                      </button>
+                    </div>
+                  ),
+                }}
+                items={[
+                  {
+                    key: 'design',
+                    label: 'Design',
+                    children: '左侧导航布局适合文档、设置页和大段信息浏览。',
+                  },
+                  {
+                    key: 'review',
+                    label: 'Review',
+                    children: '右侧摆放则更适合注释面板或对照式配置区域。',
+                  },
+                ]}
+              />
             </div>
           </div>
         </ExampleBlock>
 
-        <ExampleBlock
-          title="editable-card"
-          code={editableCardCode}
-        >
+        <ExampleBlock title="editable-card" code={editableCardCode}>
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              type="editable-card"
-              activeKey={editableActiveKey.value}
-              onChange={key => (editableActiveKey.value = key)}
-              onEdit={handleEditableEdit}
-              items={editableItems.value}
-            />
+              <Tabs
+                type="editable-card"
+                activeKey={editableActiveKey.value}
+                onChange={key => (editableActiveKey.value = key)}
+                onEdit={handleEditableEdit}
+                items={editableItems.value}
+              />
             </div>
           </div>
         </ExampleBlock>
@@ -961,33 +975,48 @@ const TabsDemo: FC = () => {
         >
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              type="line"
-              activeKey={activeIndicator.value}
-              onChange={key => (activeIndicator.value = key)}
-              indicator={{
-                align: 'center',
-                size: 24,
-                className: 'bg-primary opacity-100',
-              }}
-              items={[
-                {
-                  key: 'roadmap',
-                  icon: <span className="mr-1 inline-flex badge badge-outline badge-xs" aria-hidden="true" />,
-                  label: 'Roadmap',
-                },
-                {
-                  key: 'metrics',
-                  icon: <span className="mr-1 inline-flex badge badge-primary badge-xs" aria-hidden="true" />,
-                  label: 'Metrics',
-                },
-                {
-                  key: 'notes',
-                  icon: <span className="mr-1 inline-flex badge badge-secondary badge-xs" aria-hidden="true" />,
-                  label: 'Notes',
-                },
-              ]}
-            />
+              <Tabs
+                type="line"
+                activeKey={activeIndicator.value}
+                onChange={key => (activeIndicator.value = key)}
+                indicator={{
+                  align: 'center',
+                  size: 24,
+                  className: 'bg-primary opacity-100',
+                }}
+                items={[
+                  {
+                    key: 'roadmap',
+                    icon: (
+                      <span
+                        className="mr-1 inline-flex badge badge-outline badge-xs"
+                        aria-hidden="true"
+                      />
+                    ),
+                    label: 'Roadmap',
+                  },
+                  {
+                    key: 'metrics',
+                    icon: (
+                      <span
+                        className="mr-1 inline-flex badge badge-primary badge-xs"
+                        aria-hidden="true"
+                      />
+                    ),
+                    label: 'Metrics',
+                  },
+                  {
+                    key: 'notes',
+                    icon: (
+                      <span
+                        className="mr-1 inline-flex badge badge-secondary badge-xs"
+                        aria-hidden="true"
+                      />
+                    ),
+                    label: 'Notes',
+                  },
+                ]}
+              />
             </div>
           </div>
         </ExampleBlock>
@@ -998,62 +1027,62 @@ const TabsDemo: FC = () => {
         >
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <div className="flex flex-col items-center gap-6">
-              <Tabs
-                style="lift"
-                size="xs"
-                items={[
-                  { key: 'xs1', label: 'Xsmall' },
-                  { key: 'xs2', label: 'Xsmall' },
-                  { key: 'xs3', label: 'Xsmall' },
-                ]}
-                activeKey={activeXs.value}
-                onChange={key => (activeXs.value = key)}
-              />
-              <Tabs
-                style="lift"
-                size="sm"
-                items={[
-                  { key: 'sm1', label: 'Small' },
-                  { key: 'sm2', label: 'Small' },
-                  { key: 'sm3', label: 'Small' },
-                ]}
-                activeKey={activeSm.value}
-                onChange={key => (activeSm.value = key)}
-              />
-              <Tabs
-                style="lift"
-                items={[
-                  { key: 'md1', label: 'Medium' },
-                  { key: 'md2', label: 'Medium' },
-                  { key: 'md3', label: 'Medium' },
-                ]}
-                activeKey={activeMd.value}
-                onChange={key => (activeMd.value = key)}
-              />
-              <Tabs
-                style="lift"
-                size="lg"
-                items={[
-                  { key: 'lg1', label: 'Large' },
-                  { key: 'lg2', label: 'Large' },
-                  { key: 'lg3', label: 'Large' },
-                ]}
-                activeKey={activeLg.value}
-                onChange={key => (activeLg.value = key)}
-              />
-              <Tabs
-                style="lift"
-                size="xl"
-                items={[
-                  { key: 'xl1', label: 'Xlarge' },
-                  { key: 'xl2', label: 'Xlarge' },
-                  { key: 'xl3', label: 'Xlarge' },
-                ]}
-                activeKey={activeXl.value}
-                onChange={key => (activeXl.value = key)}
-              />
-            </div>
+              <div className="flex flex-col items-center gap-6">
+                <Tabs
+                  style="lift"
+                  size="xs"
+                  items={[
+                    { key: 'xs1', label: 'Xsmall' },
+                    { key: 'xs2', label: 'Xsmall' },
+                    { key: 'xs3', label: 'Xsmall' },
+                  ]}
+                  activeKey={activeXs.value}
+                  onChange={key => (activeXs.value = key)}
+                />
+                <Tabs
+                  style="lift"
+                  size="sm"
+                  items={[
+                    { key: 'sm1', label: 'Small' },
+                    { key: 'sm2', label: 'Small' },
+                    { key: 'sm3', label: 'Small' },
+                  ]}
+                  activeKey={activeSm.value}
+                  onChange={key => (activeSm.value = key)}
+                />
+                <Tabs
+                  style="lift"
+                  items={[
+                    { key: 'md1', label: 'Medium' },
+                    { key: 'md2', label: 'Medium' },
+                    { key: 'md3', label: 'Medium' },
+                  ]}
+                  activeKey={activeMd.value}
+                  onChange={key => (activeMd.value = key)}
+                />
+                <Tabs
+                  style="lift"
+                  size="lg"
+                  items={[
+                    { key: 'lg1', label: 'Large' },
+                    { key: 'lg2', label: 'Large' },
+                    { key: 'lg3', label: 'Large' },
+                  ]}
+                  activeKey={activeLg.value}
+                  onChange={key => (activeLg.value = key)}
+                />
+                <Tabs
+                  style="lift"
+                  size="xl"
+                  items={[
+                    { key: 'xl1', label: 'Xlarge' },
+                    { key: 'xl2', label: 'Xlarge' },
+                    { key: 'xl3', label: 'Xlarge' },
+                  ]}
+                  activeKey={activeXl.value}
+                  onChange={key => (activeXl.value = key)}
+                />
+              </div>
             </div>
           </div>
         </ExampleBlock>
@@ -1064,17 +1093,17 @@ const TabsDemo: FC = () => {
         >
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              style="lift"
-              placement="bottom"
-              items={[
-                { key: 'b1', label: 'Tab 1', children: 'Tab content 1' },
-                { key: 'b2', label: 'Tab 2', children: 'Tab content 2' },
-                { key: 'b3', label: 'Tab 3', children: 'Tab content 3' },
-              ]}
-              activeKey={activeBottom.value}
-              onChange={key => (activeBottom.value = key)}
-            />
+              <Tabs
+                style="lift"
+                placement="bottom"
+                items={[
+                  { key: 'b1', label: 'Tab 1', children: 'Tab content 1' },
+                  { key: 'b2', label: 'Tab 2', children: 'Tab content 2' },
+                  { key: 'b3', label: 'Tab 3', children: 'Tab content 3' },
+                ]}
+                activeKey={activeBottom.value}
+                onChange={key => (activeBottom.value = key)}
+              />
             </div>
           </div>
         </ExampleBlock>
@@ -1085,15 +1114,15 @@ const TabsDemo: FC = () => {
         >
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              items={[
-                { key: 'd1', label: 'Disabled', disabled: true },
-                { key: 'd2', label: 'Active' },
-                { key: 'd3', label: 'Tab' },
-              ]}
-              activeKey={activeDisabled.value}
-              onChange={key => (activeDisabled.value = key)}
-            />
+              <Tabs
+                items={[
+                  { key: 'd1', label: 'Disabled', disabled: true },
+                  { key: 'd2', label: 'Active' },
+                  { key: 'd3', label: 'Tab' },
+                ]}
+                activeKey={activeDisabled.value}
+                onChange={key => (activeDisabled.value = key)}
+              />
             </div>
           </div>
         </ExampleBlock>
@@ -1104,26 +1133,29 @@ const TabsDemo: FC = () => {
         >
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body gap-4">
-            <Tabs
-              style="lift"
-              items={[
-                { key: 'c1', label: 'Tab 1' },
-                {
-                  key: 'c2',
-                  label: 'Tab 2',
-                  className: 'text-primary [--tab-bg:orange] [--tab-border-color:red]',
-                },
-                { key: 'c3', label: 'Tab 3' },
-              ]}
-              activeKey={activeCustom.value}
-              onChange={key => (activeCustom.value = key)}
-            />
+              <Tabs
+                style="lift"
+                items={[
+                  { key: 'c1', label: 'Tab 1' },
+                  {
+                    key: 'c2',
+                    label: 'Tab 2',
+                    className: 'text-primary [--tab-bg:orange] [--tab-border-color:red]',
+                  },
+                  { key: 'c3', label: 'Tab 3' },
+                ]}
+                activeKey={activeCustom.value}
+                onChange={key => (activeCustom.value = key)}
+              />
             </div>
           </div>
         </ExampleBlock>
 
         <h2 id="tabs-api">API</h2>
-        <p>Tabs 同时覆盖基础视觉标签、带面板的内容切换和 editable-card 交互，下面按根组件和单项配置拆开列出。</p>
+        <p>
+          Tabs 同时覆盖基础视觉标签、带面板的内容切换和 editable-card
+          交互，下面按根组件和单项配置拆开列出。
+        </p>
 
         <ApiTable rows={tabsApiRows} />
 
@@ -1141,10 +1173,12 @@ const TabsDemo: FC = () => {
               <code>defaultActiveKey</code> 适合静态文档、局部 demo 或无需外部接管的轻交互场景。
             </div>
             <div>
-              复杂标签头优先用 <code>icon</code> + 文本 <code>label</code> 组合，兼顾语义和稳定渲染。
+              复杂标签头优先用 <code>icon</code> + 文本 <code>label</code>{' '}
+              组合，兼顾语义和稳定渲染。
             </div>
             <div>
-              需要完整内容区域切换时给 <code>items.children</code> 传面板节点；只做导航标签时可以只传 <code>label</code>。
+              需要完整内容区域切换时给 <code>items.children</code>{' '}
+              传面板节点；只做导航标签时可以只传 <code>label</code>。
             </div>
           </div>
         </div>
@@ -1159,20 +1193,21 @@ const TabsDemo: FC = () => {
 
         <h3>style 和 type 会冲突吗？</h3>
         <p>
-          <code>type</code> 更偏语义能力，像 <code>card</code>、<code>editable-card</code> 会自动套用适合的视觉；
-          如果你明确传了 <code>style</code>，就以显式样式为准。
+          <code>type</code> 更偏语义能力，像 <code>card</code>、<code>editable-card</code>{' '}
+          会自动套用适合的视觉； 如果你明确传了 <code>style</code>，就以显式样式为准。
         </p>
 
         <h3>placement 和 tabPlacement 有什么区别？</h3>
         <p>
-          <code>placement</code> 只覆盖上下位置；<code>tabPlacement</code> 额外支持 <code>start</code> 和
-          <code>end</code> 两种垂直摆放，并且优先级更高。
+          <code>placement</code> 只覆盖上下位置；<code>tabPlacement</code> 额外支持{' '}
+          <code>start</code> 和<code>end</code> 两种垂直摆放，并且优先级更高。
         </p>
 
         <h3>为什么复杂 label 建议拆成 icon 和文本？</h3>
         <p>
           当前实现会给 <code>label</code> 包一层文本容器。为了避免复杂节点在运行时被串成
-          <code>[object Object]</code>，推荐把徽标、点状状态这类前缀放到 <code>icon</code>，把主要文案保留在
+          <code>[object Object]</code>，推荐把徽标、点状状态这类前缀放到 <code>icon</code>
+          ，把主要文案保留在
           <code>label</code>。
         </p>
       </div>

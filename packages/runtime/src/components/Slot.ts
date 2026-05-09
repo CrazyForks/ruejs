@@ -22,8 +22,7 @@ export interface SlotProps extends PropsWithChildren<Record<string, unknown>> {
 
 const DEFAULT_SLOT_NAME = 'default'
 
-const hasOwn = (target: object, key: string) =>
-  Object.prototype.hasOwnProperty.call(target, key)
+const hasOwn = (target: object, key: string) => Object.prototype.hasOwnProperty.call(target, key)
 
 const isScopedSlot = (value: unknown): value is (props: SlotRenderProps) => RenderableOutput =>
   typeof value === 'function' && (value as { kind?: unknown }).kind !== 'block-factory'
@@ -31,7 +30,8 @@ const isScopedSlot = (value: unknown): value is (props: SlotRenderProps) => Rend
 const isMissingSlotValue = (value: SlotValue | undefined) =>
   value == null || (Array.isArray(value) && value.length === 0)
 
-const resolveFallback = (fallback: unknown): RenderableOutput => (fallback ?? []) as RenderableOutput
+const resolveFallback = (fallback: unknown): RenderableOutput =>
+  (fallback ?? []) as RenderableOutput
 
 const resolveSlotSource = (source?: Record<string, unknown> | null) => {
   if (source && typeof source === 'object') {

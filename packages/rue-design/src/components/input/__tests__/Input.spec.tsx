@@ -19,13 +19,7 @@ describe('Input', () => {
     resetActiveRuntime()
 
     render(
-      <Input
-        type="email"
-        color="primary"
-        size="lg"
-        placeholder="Email"
-        data-testid="input-root"
-      />,
+      <Input type="email" color="primary" size="lg" placeholder="Email" data-testid="input-root" />,
       container,
     )
 
@@ -88,14 +82,18 @@ describe('Input', () => {
     await waitForContent(() => {
       const shell = container.querySelector('[data-rue-input-shell="true"]') as HTMLElement
       const count = container.querySelector('[data-rue-input-count="true"]')
-      const clearButton = container.querySelector('button[aria-label="Clear text"]') as HTMLButtonElement
+      const clearButton = container.querySelector(
+        'button[aria-label="Clear text"]',
+      ) as HTMLButtonElement
       expect(shell.classList.contains('input-warning')).toBe(true)
       expect(shell.classList.contains('border-transparent')).toBe(true)
       expect(count?.textContent?.trim()).toBe('3 / 6')
       expect(clearButton.classList.contains('hidden')).toBe(false)
     })
 
-    const clearButton = container.querySelector('button[aria-label="Clear text"]') as HTMLButtonElement
+    const clearButton = container.querySelector(
+      'button[aria-label="Clear text"]',
+    ) as HTMLButtonElement
     const input = container.querySelector('[data-testid="money-input"]') as HTMLInputElement
     clearButton.click()
 
@@ -136,7 +134,9 @@ describe('Input', () => {
     const searchButton = container.querySelector('button[aria-label="Search"]') as HTMLButtonElement
     searchButton.click()
 
-    const clearButton = container.querySelector('button[aria-label="Clear text"]') as HTMLButtonElement
+    const clearButton = container.querySelector(
+      'button[aria-label="Clear text"]',
+    ) as HTMLButtonElement
     clearButton.click()
 
     expect(handleSearch).toHaveBeenCalledTimes(3)
@@ -152,10 +152,15 @@ describe('Input', () => {
     const container = mountContainer()
     resetActiveRuntime()
 
-    render(<Input.Search data-testid="search-with-button" defaultValue="rue" enterButton="发布" />, container)
+    render(
+      <Input.Search data-testid="search-with-button" defaultValue="rue" enterButton="发布" />,
+      container,
+    )
 
     await waitForContent(() => {
-      const input = container.querySelector('[data-testid="search-with-button"]') as HTMLInputElement
+      const input = container.querySelector(
+        '[data-testid="search-with-button"]',
+      ) as HTMLInputElement
       const button = container.querySelector('button.btn-primary') as HTMLButtonElement
       expect(input).toBeTruthy()
       expect(input.type).toBe('text')
@@ -171,7 +176,9 @@ describe('Input', () => {
     render(<Input.Search data-testid="search-default-action" placeholder="搜索" />, container)
 
     await waitForContent(() => {
-      const input = container.querySelector('[data-testid="search-default-action"]') as HTMLInputElement
+      const input = container.querySelector(
+        '[data-testid="search-default-action"]',
+      ) as HTMLInputElement
       const button = container.querySelector('button[aria-label="Search"]') as HTMLButtonElement
       const join = input.parentElement as HTMLElement
       expect(button).toBeTruthy()
@@ -192,7 +199,9 @@ describe('Input', () => {
       expect(input.type).toBe('password')
     })
 
-    const toggleButton = container.querySelector('button[aria-label="Show password"]') as HTMLButtonElement
+    const toggleButton = container.querySelector(
+      'button[aria-label="Show password"]',
+    ) as HTMLButtonElement
     toggleButton.click()
 
     await waitForContent(() => {
@@ -206,7 +215,13 @@ describe('Input', () => {
     resetActiveRuntime()
 
     render(
-      <Input.TextArea data-testid="bio" value="Rue" allowClear={true} showCount={true} maxLength={8} />,
+      <Input.TextArea
+        data-testid="bio"
+        value="Rue"
+        allowClear={true}
+        showCount={true}
+        maxLength={8}
+      />,
       container,
     )
 

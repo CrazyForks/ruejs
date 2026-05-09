@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 export type FieldsetTone =
@@ -78,7 +79,8 @@ export interface FieldsetItemData extends Omit<FieldsetItemProps, 'children'> {
   key?: string | number
 }
 
-const joinClassName = (...values: Array<string | undefined | false>) => values.filter(Boolean).join(' ')
+const joinClassName = (...values: Array<string | undefined | false>) =>
+  values.filter(Boolean).join(' ')
 
 const hasRenderableContent = (value: any): boolean => {
   if (value === undefined || value === null || value === false) return false
@@ -289,7 +291,11 @@ const Item: FC<FieldsetItemProps> = ({
   const labelNode = hasRenderableContent(label) ? (
     <Label
       {...labelProps}
-      className={joinClassName('justify-start gap-2 font-medium', resolveLabelTextClass(size), labelClassName)}
+      className={joinClassName(
+        'justify-start gap-2 font-medium',
+        resolveLabelTextClass(size),
+        labelClassName,
+      )}
       tone={resolvedTone}
     >
       <span>{label}</span>
@@ -301,8 +307,12 @@ const Item: FC<FieldsetItemProps> = ({
     <Label
       {...descriptionProps}
       as="p"
-      className={joinClassName('mt-0 min-h-0 px-0 pb-0', resolveHintTextClass(size), descriptionClassName)}
-      tone={invalid ? 'error' : descriptionProps?.tone ?? 'muted'}
+      className={joinClassName(
+        'mt-0 min-h-0 px-0 pb-0',
+        resolveHintTextClass(size),
+        descriptionClassName,
+      )}
+      tone={invalid ? 'error' : (descriptionProps?.tone ?? 'muted')}
     >
       {description}
     </Label>
@@ -312,7 +322,7 @@ const Item: FC<FieldsetItemProps> = ({
       {...hintProps}
       as="p"
       className={joinClassName('mt-0 min-h-0 px-0 pt-1', resolveHintTextClass(size), hintClassName)}
-      tone={invalid ? 'error' : hintProps?.tone ?? 'muted'}
+      tone={invalid ? 'error' : (hintProps?.tone ?? 'muted')}
     >
       {hint}
     </Label>
@@ -329,8 +339,18 @@ const Item: FC<FieldsetItemProps> = ({
         className,
       )}
     >
-      {hasMeta ? <div className="min-w-0">{labelNode}{descriptionNode}</div> : null}
-      {hasControl ? <div className={joinClassName('min-w-0', contentClassName)}>{controlNode}{hintNode}</div> : null}
+      {hasMeta ? (
+        <div className="min-w-0">
+          {labelNode}
+          {descriptionNode}
+        </div>
+      ) : null}
+      {hasControl ? (
+        <div className={joinClassName('min-w-0', contentClassName)}>
+          {controlNode}
+          {hintNode}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -361,7 +381,14 @@ const Root: FC<FieldsetRootProps> = ({
     ? content
     : (items ?? []).map((item, index) => {
         const { key, ...itemProps } = item
-        return <Item key={key ?? index} {...itemProps} size={item.size ?? size} invalid={item.invalid ?? invalid} />
+        return (
+          <Item
+            key={key ?? index}
+            {...itemProps}
+            size={item.size ?? size}
+            invalid={item.invalid ?? invalid}
+          />
+        )
       })
 
   return (
@@ -380,13 +407,19 @@ const Root: FC<FieldsetRootProps> = ({
       ) : (
         <>
           {hasRenderableContent(legend) ? (
-            <Legend className={joinClassName(invalid && 'text-error', legendClassName)}>{legend}</Legend>
+            <Legend className={joinClassName(invalid && 'text-error', legendClassName)}>
+              {legend}
+            </Legend>
           ) : null}
           {hasRenderableContent(description) ? (
             <Label
               as="p"
               tone={invalid ? 'error' : 'muted'}
-              className={joinClassName('mt-0 min-h-0 px-0', resolveLabelTextClass(size), descriptionClassName)}
+              className={joinClassName(
+                'mt-0 min-h-0 px-0',
+                resolveLabelTextClass(size),
+                descriptionClassName,
+              )}
             >
               {description}
             </Label>
@@ -400,13 +433,21 @@ const Root: FC<FieldsetRootProps> = ({
             <Label
               as="p"
               tone={invalid ? 'error' : 'muted'}
-              className={joinClassName('mt-0 min-h-0 px-0', resolveHintTextClass(size), hintClassName)}
+              className={joinClassName(
+                'mt-0 min-h-0 px-0',
+                resolveHintTextClass(size),
+                hintClassName,
+              )}
             >
               {hint}
             </Label>
           ) : null}
           {hasRenderableContent(actions) ? (
-            <div className={joinClassName('mt-1 flex flex-wrap justify-end gap-2', actionsClassName)}>{actions}</div>
+            <div
+              className={joinClassName('mt-1 flex flex-wrap justify-end gap-2', actionsClassName)}
+            >
+              {actions}
+            </div>
           ) : null}
         </>
       )}

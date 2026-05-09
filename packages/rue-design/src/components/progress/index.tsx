@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 export type ProgressColor =
@@ -20,7 +21,10 @@ export type ProgressSize =
   | 'small'
   | 'default'
   | 'medium'
-export type ProgressStrokeColor = string | string[] | { from: string; to: string; direction?: string }
+export type ProgressStrokeColor =
+  | string
+  | string[]
+  | { from: string; to: string; direction?: string }
 export type ProgressSteps = number | { count: number; gap: number }
 export type ProgressGapPlacement = 'top' | 'bottom' | 'start' | 'end'
 
@@ -73,7 +77,8 @@ interface NormalizedSteps {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
-const mergeClassName = (base: string, className?: string) => (className ? `${base} ${className}` : base)
+const mergeClassName = (base: string, className?: string) =>
+  className ? `${base} ${className}` : base
 
 const polarToCartesian = (cx: number, cy: number, radius: number, angle: number) => {
   const radians = ((angle - 90) * Math.PI) / 180
@@ -83,7 +88,13 @@ const polarToCartesian = (cx: number, cy: number, radius: number, angle: number)
   }
 }
 
-const describeArcPath = (cx: number, cy: number, radius: number, startAngle: number, endAngle: number) => {
+const describeArcPath = (
+  cx: number,
+  cy: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+) => {
   const start = polarToCartesian(cx, cy, radius, startAngle)
   const end = polarToCartesian(cx, cy, radius, endAngle)
   const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0
@@ -115,7 +126,10 @@ const resolveColorClass = (color?: ProgressColor, status?: ProgressStatus) => {
   }
 }
 
-const resolveStatus = (status: ProgressStatus | undefined, percent: number | undefined): ProgressStatus => {
+const resolveStatus = (
+  status: ProgressStatus | undefined,
+  percent: number | undefined,
+): ProgressStatus => {
   if (status) return status
   if ((percent ?? 0) >= 100) return 'success'
   return 'normal'
@@ -234,7 +248,10 @@ const resolveStepColorStyle = (strokeColor: ProgressStrokeColor | undefined, ind
   }
 }
 
-const resolveGapPlacement = (gapPlacement?: ProgressGapPlacement, gapPosition?: 'top' | 'bottom' | 'left' | 'right') => {
+const resolveGapPlacement = (
+  gapPlacement?: ProgressGapPlacement,
+  gapPosition?: 'top' | 'bottom' | 'left' | 'right',
+) => {
   if (gapPlacement) return gapPlacement
   switch (gapPosition) {
     case 'left':
@@ -269,7 +286,13 @@ const DefaultStatusIcon: FC<{ status: ProgressStatus }> = ({ status }) => {
   if (status === 'success') {
     return (
       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-success/15 text-success">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+        <svg
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="h-3.5 w-3.5"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="m5 10 3 3 7-7" />
         </svg>
       </span>
@@ -278,7 +301,13 @@ const DefaultStatusIcon: FC<{ status: ProgressStatus }> = ({ status }) => {
   if (status === 'exception') {
     return (
       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-error/15 text-error">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+        <svg
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="h-3.5 w-3.5"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="m6 6 8 8M14 6l-8 8" />
         </svg>
       </span>
@@ -426,11 +455,24 @@ const Progress: FC<ProgressProps> = ({
         {stepsConfig ? (
           <div className="flex h-full w-full" style={{ gap: `${stepsConfig.gap}px` }}>
             {Array.from({ length: stepsConfig.count }, (_, index) => {
-              const completedCount = resolvedPercent == null ? 0 : clamp(rounding((resolvedPercent / 100) * stepsConfig.count), 0, stepsConfig.count)
-              const successCount = clamp(rounding((successPercent / 100) * stepsConfig.count), 0, stepsConfig.count)
+              const completedCount =
+                resolvedPercent == null
+                  ? 0
+                  : clamp(
+                      rounding((resolvedPercent / 100) * stepsConfig.count),
+                      0,
+                      stepsConfig.count,
+                    )
+              const successCount = clamp(
+                rounding((successPercent / 100) * stepsConfig.count),
+                0,
+                stepsConfig.count,
+              )
               const isSuccess = index < successCount
               const isActive = index >= successCount && index < completedCount
-              const stepColorStyle = isActive ? resolveStepColorStyle(strokeColor, index) : undefined
+              const stepColorStyle = isActive
+                ? resolveStepColorStyle(strokeColor, index)
+                : undefined
 
               return (
                 <span
@@ -460,7 +502,10 @@ const Progress: FC<ProgressProps> = ({
           </div>
         ) : resolvedPercent == null ? (
           <span
-            className={mergeClassName(`absolute inset-y-0 left-0 animate-pulse bg-current ${linecapClass}`, toneClass)}
+            className={mergeClassName(
+              `absolute inset-y-0 left-0 animate-pulse bg-current ${linecapClass}`,
+              toneClass,
+            )}
             style={{
               width: '38%',
               ...resolveLineFillStyle(strokeColor),
@@ -470,7 +515,10 @@ const Progress: FC<ProgressProps> = ({
           <>
             {successPercent > 0 ? (
               <span
-                className={mergeClassName(`absolute inset-y-0 left-0 ${linecapClass}`, success?.strokeColor ? undefined : 'bg-success')}
+                className={mergeClassName(
+                  `absolute inset-y-0 left-0 ${linecapClass}`,
+                  success?.strokeColor ? undefined : 'bg-success',
+                )}
                 style={{
                   width: `${successPercent}%`,
                   ...(success?.strokeColor ? { backgroundColor: success.strokeColor } : {}),
@@ -479,7 +527,10 @@ const Progress: FC<ProgressProps> = ({
             ) : null}
             {(resolvedPercent ?? 0) > successPercent ? (
               <span
-                className={mergeClassName(`absolute inset-y-0 ${linecapClass} bg-current`, toneClass)}
+                className={mergeClassName(
+                  `absolute inset-y-0 ${linecapClass} bg-current`,
+                  toneClass,
+                )}
                 style={{
                   left: `${successPercent}%`,
                   width: `${Math.max((resolvedPercent ?? 0) - successPercent, 0)}%`,
@@ -489,10 +540,14 @@ const Progress: FC<ProgressProps> = ({
             ) : null}
             {resolvedStatus === 'active' ? (
               <span
-                className={mergeClassName(`absolute inset-y-0 left-0 animate-pulse bg-white/20 ${linecapClass}`, undefined)}
+                className={mergeClassName(
+                  `absolute inset-y-0 left-0 animate-pulse bg-white/20 ${linecapClass}`,
+                  undefined,
+                )}
                 style={{
                   width: `${resolvedPercent ?? 0}%`,
-                  backgroundImage: 'repeating-linear-gradient(120deg, rgba(255,255,255,0.15) 0 10px, rgba(255,255,255,0.32) 10px 20px)',
+                  backgroundImage:
+                    'repeating-linear-gradient(120deg, rgba(255,255,255,0.15) 0 10px, rgba(255,255,255,0.32) 10px 20px)',
                 }}
               />
             ) : null}
@@ -539,7 +594,7 @@ const Progress: FC<ProgressProps> = ({
   const circleSize = resolveCircleSize(size)
   const normalizedStrokeWidth = clamp(strokeWidth ?? 8, 2, 20)
   const radius = 50 - normalizedStrokeWidth / 2
-  const safeGapDegree = clamp(type === 'dashboard' ? gapDegree ?? 75 : gapDegree ?? 0, 0, 295)
+  const safeGapDegree = clamp(type === 'dashboard' ? (gapDegree ?? 75) : (gapDegree ?? 0), 0, 295)
   const placement = resolveGapPlacement(gapPlacement, gapPosition)
   const gapCenter = resolveGapCenter(placement)
   const startAngle = gapCenter + safeGapDegree / 2
@@ -549,13 +604,17 @@ const Progress: FC<ProgressProps> = ({
   const successEndAngle = startAngle + (successPercent / 100) * sweepAngle
   const circleStroke = resolveCircleStroke(strokeColor)
   const stepsConfig = normalizeSteps(steps)
-  const circleLinecap = strokeLinecap === 'square' ? 'square' : strokeLinecap === 'butt' ? 'butt' : 'round'
+  const circleLinecap =
+    strokeLinecap === 'square' ? 'square' : strokeLinecap === 'butt' ? 'butt' : 'round'
   const trackPath = describeArcPath(50, 50, radius, startAngle, endAngle)
 
   return (
     <div
       {...rest}
-      className={mergeClassName(`rue-progress inline-flex flex-col items-center gap-3 ${toneClass}`, className)}
+      className={mergeClassName(
+        `rue-progress inline-flex flex-col items-center gap-3 ${toneClass}`,
+        className,
+      )}
       data-progress-type={type}
       role="progressbar"
       aria-valuemin="0"
@@ -574,21 +633,38 @@ const Progress: FC<ProgressProps> = ({
           />
           {stepsConfig
             ? Array.from({ length: stepsConfig.count }, (_, index) => {
-                const gap = clamp(stepsConfig.gap, 0, sweepAngle / Math.max(stepsConfig.count * 2, 1))
-                const segmentSweep = Math.max((sweepAngle - gap * (stepsConfig.count - 1)) / stepsConfig.count, 0.01)
+                const gap = clamp(
+                  stepsConfig.gap,
+                  0,
+                  sweepAngle / Math.max(stepsConfig.count * 2, 1),
+                )
+                const segmentSweep = Math.max(
+                  (sweepAngle - gap * (stepsConfig.count - 1)) / stepsConfig.count,
+                  0.01,
+                )
                 const segmentStart = startAngle + index * (segmentSweep + gap)
                 const segmentEnd = segmentStart + segmentSweep
-                const completedCount = resolvedPercent == null ? 0 : clamp(rounding((resolvedPercent / 100) * stepsConfig.count), 0, stepsConfig.count)
-                const successCount = clamp(rounding((successPercent / 100) * stepsConfig.count), 0, stepsConfig.count)
+                const completedCount =
+                  resolvedPercent == null
+                    ? 0
+                    : clamp(
+                        rounding((resolvedPercent / 100) * stepsConfig.count),
+                        0,
+                        stepsConfig.count,
+                      )
+                const successCount = clamp(
+                  rounding((successPercent / 100) * stepsConfig.count),
+                  0,
+                  stepsConfig.count,
+                )
                 const isSuccess = index < successCount
                 const isActive = index >= successCount && index < completedCount
                 const path = describeArcPath(50, 50, radius, segmentStart, segmentEnd)
-                const segmentStroke =
-                  isSuccess
-                    ? success?.strokeColor ?? '#22c55e'
-                    : isActive
-                      ? resolveCircleStroke(strokeColor) ?? 'currentColor'
-                      : resolvedRailColor ?? 'currentColor'
+                const segmentStroke = isSuccess
+                  ? (success?.strokeColor ?? '#22c55e')
+                  : isActive
+                    ? (resolveCircleStroke(strokeColor) ?? 'currentColor')
+                    : (resolvedRailColor ?? 'currentColor')
 
                 return (
                   <path
@@ -598,7 +674,9 @@ const Progress: FC<ProgressProps> = ({
                     stroke={segmentStroke}
                     strokeWidth={normalizedStrokeWidth}
                     strokeLinecap={circleLinecap}
-                    className={!isSuccess && !isActive && !resolvedRailColor ? 'text-base-300/70' : undefined}
+                    className={
+                      !isSuccess && !isActive && !resolvedRailColor ? 'text-base-300/70' : undefined
+                    }
                   />
                 )
               })

@@ -195,7 +195,7 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
 }
 
 const ControlledFilterPreview: FC = () => {
-  const activeStage = ref<string | undefined>()
+  const activeStage = ref<string | undefined>(undefined)
 
   return (
     <div className="card bg-base-100 shadow-sm">
@@ -204,8 +204,12 @@ const ControlledFilterPreview: FC = () => {
           as="div"
           items={viewModes}
           value={activeStage.value}
-          onChange={value => {
-            activeStage.value = Array.isArray(value) ? String(value[0] ?? '') || undefined : (value as string | undefined)
+          onChange={(
+            value: string | number | boolean | Array<string | number | boolean> | undefined,
+          ) => {
+            activeStage.value = Array.isArray(value)
+              ? String(value[0] ?? '') || undefined
+              : (value as string | undefined)
           }}
           reset={{ label: '全' }}
           color="primary"
@@ -230,12 +234,17 @@ const MultipleFilterPreview: FC = () => {
           items={signalModes}
           value={selectedSignals.value}
           onChange={value => {
-            selectedSignals.value = Array.isArray(value) ? value.map(item => String(item)) : value ? [String(value)] : []
+            selectedSignals.value = Array.isArray(value)
+              ? value.map(item => String(item))
+              : value
+                ? [String(value)]
+                : []
           }}
           reset={{ label: '×' }}
         />
         <div className="text-sm text-base-content/70">
-          已选择：<code>{selectedSignals.value.length ? selectedSignals.value.join(', ') : 'none'}</code>
+          已选择：
+          <code>{selectedSignals.value.length ? selectedSignals.value.join(', ') : 'none'}</code>
         </div>
       </div>
     </div>
@@ -255,8 +264,9 @@ const FilterPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Filter 筛选器</h1>
         <p className="text-sm mt-3 mb-3">
-          Filter 继续沿用 Rue 当前的 <code>filter + btn</code> 视觉风格，在此基础上补了一层更顺手的 API：
-          可以继续使用 <code>Filter.Item</code> / <code>Filter.Reset</code> 组合写法，也可以直接用
+          Filter 继续沿用 Rue 当前的 <code>filter + btn</code> 视觉风格，在此基础上补了一层更顺手的
+          API： 可以继续使用 <code>Filter.Item</code> / <code>Filter.Reset</code>{' '}
+          组合写法，也可以直接用
           <code>items</code>、<code>value</code>、<code>onChange</code> 组织整组筛选。
         </p>
 
@@ -333,11 +343,15 @@ const items = [
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body gap-5">
                 <div>
-                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Tone Overrides</div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Tone Overrides
+                  </div>
                   <Filter as="div" items={priorityModes} defaultValue="all" variant="outlined" />
                 </div>
                 <div>
-                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Sizes</div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Sizes
+                  </div>
                   <div className="grid gap-3">
                     <Filter as="div" items={viewModes} size="xs" reset={{ label: 'All' }} />
                     <Filter as="div" items={viewModes} size="sm" reset={{ label: 'All' }} />
@@ -414,7 +428,9 @@ const items = [
                 <Filter.Item name="framework-group" aria-label="Rue" />
                 <Filter.Item name="framework-group" aria-label="Solid" />
               </Filter>
-              <p className="text-sm text-base-content/70">每组筛选项都需要唯一的 name，并通过 aria-label 提供按钮文案。</p>
+              <p className="text-sm text-base-content/70">
+                每组筛选项都需要唯一的 name，并通过 aria-label 提供按钮文案。
+              </p>
             </div>
           )}
           code={`<Filter>
@@ -454,8 +470,9 @@ const items = [
 
         <h3>受控模式和多选模式怎么返回值？</h3>
         <p>
-          单选模式下，<code>onChange</code> 返回单个值或 <code>undefined</code>；多选模式下返回数组。
-          同时第三个参数里的 <code>values</code> 会始终给出当前整组已选值，便于统一处理。
+          单选模式下，<code>onChange</code> 返回单个值或 <code>undefined</code>
+          ；多选模式下返回数组。 同时第三个参数里的 <code>values</code>{' '}
+          会始终给出当前整组已选值，便于统一处理。
         </p>
       </div>
     </SidebarPlayground>

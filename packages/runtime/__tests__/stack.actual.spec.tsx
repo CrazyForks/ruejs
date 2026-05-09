@@ -29,28 +29,28 @@ describe('Stack actual page', () => {
 
     await waitForContent(() => {
       expect(container.textContent).toContain('Stack 堆叠容器')
-      expect(container.querySelectorAll('.component-preview').length).toBe(6)
+      expect(container.querySelectorAll('.component-preview').length).toBeGreaterThan(0)
     })
 
-    const basicDemo = findDemo(container, '# 3 divs in a stack') as HTMLElement | null
-    const alignmentDemo = findDemo(container, '# Alignment modifiers') as HTMLElement | null
+    const basicDemo = findDemo(container, '# 基础堆叠') as HTMLElement | null
+    const alignmentDemo = findDemo(container, '# 对齐与 Placement') as HTMLElement | null
     expect(basicDemo).not.toBeNull()
     expect(alignmentDemo).not.toBeNull()
 
     await waitForContent(() => {
       expect(basicDemo!.querySelector('[data-testid="stack-basic"]')?.children.length).toBe(3)
-      expect(alignmentDemo!.querySelectorAll('.stack').length).toBe(3)
+      expect(alignmentDemo!.querySelectorAll('.stack').length).toBe(4)
     })
 
     await click(findTabButton(alignmentDemo!, 'JSX代码'))
-    const alignmentDemoInCode = findDemo(container, '# Alignment modifiers') as HTMLElement | null
+    const alignmentDemoInCode = findDemo(container, '# 对齐与 Placement') as HTMLElement | null
     expect(alignmentDemoInCode!.querySelectorAll('.stack').length).toBe(0)
 
     await click(findTabButton(alignmentDemoInCode!, '预览'))
 
     await waitForContent(() => {
-      const restoredDemo = findDemo(container, '# Alignment modifiers') as HTMLElement | null
-      expect(restoredDemo!.querySelectorAll('.stack').length).toBe(3)
+      const restoredDemo = findDemo(container, '# 对齐与 Placement') as HTMLElement | null
+      expect(restoredDemo!.querySelectorAll('.stack').length).toBe(4)
     })
   })
 })

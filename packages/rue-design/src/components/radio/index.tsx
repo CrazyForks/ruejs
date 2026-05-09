@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Radio 组件概述
 - 保留 Rue 当前 radio 视觉类，同时补齐受控/非受控、标签包装、Radio.Group、Radio.Button 与 options 配置能力。
@@ -302,7 +303,10 @@ const normalizeOptions = (options?: ReadonlyArray<RadioOption | RadioValue>) => 
   })
 }
 
-const resolveOrientation = (orientation?: RadioOrientation, vertical?: boolean): RadioOrientation => {
+const resolveOrientation = (
+  orientation?: RadioOrientation,
+  vertical?: boolean,
+): RadioOrientation => {
   return orientation ?? (vertical ? 'vertical' : 'horizontal')
 }
 
@@ -354,11 +358,11 @@ const RadioRoot: FC<RadioProps> = ({
   const inputRef = useRef<HTMLInputElement>()
   const buttonRootRef = useRef<HTMLLabelElement>()
   const buttonSurfaceRef = useRef<HTMLSpanElement>()
-  const inheritedOptionType = ref<RadioOptionType>()
-  const inheritedButtonStyle = ref<RadioButtonStyle>()
-  const inheritedSize = ref<RadioSize>()
-  const inheritedColor = ref<RadioColor>()
-  const inheritedBlock = ref<boolean>()
+  const inheritedOptionType = ref<RadioOptionType | undefined>(undefined)
+  const inheritedButtonStyle = ref<RadioButtonStyle | undefined>(undefined)
+  const inheritedSize = ref<RadioSize | undefined>(undefined)
+  const inheritedColor = ref<RadioColor | undefined>(undefined)
+  const inheritedBlock = ref<boolean | undefined>(undefined)
 
   const syncControlledState = () => {
     if (typeof checked === 'boolean' && inputRef.current) {
@@ -376,7 +380,11 @@ const RadioRoot: FC<RadioProps> = ({
     inheritedBlock.value = config.block
 
     if (buttonRootRef.current) {
-      buttonRootRef.current.className = buildButtonRootClassName(disabled, rootClassName, block ?? config.block ?? false)
+      buttonRootRef.current.className = buildButtonRootClassName(
+        disabled,
+        rootClassName,
+        block ?? config.block ?? false,
+      )
     }
 
     if (buttonSurfaceRef.current) {
@@ -500,7 +508,9 @@ const RadioRoot: FC<RadioProps> = ({
       data-rue-radio-option-type="default"
     >
       <span className="shrink-0 pt-0.5">{inputNode}</span>
-      {children != null ? <span className={buildContentClassName(contentClassName)}>{children}</span> : null}
+      {children != null ? (
+        <span className={buildContentClassName(contentClassName)}>{children}</span>
+      ) : null}
     </label>
   )
 }
@@ -525,7 +535,7 @@ const Group: FC<RadioGroupProps> = ({
   ...rest
 }) => {
   const groupRef = useRef<HTMLDivElement>()
-  const generatedName = ref<string>()
+  const generatedName = ref<string | undefined>(undefined)
   const selectedValue = ref<RadioValue | undefined>(value ?? defaultValue)
   const normalizedOptions = normalizeOptions(options)
 
@@ -546,14 +556,17 @@ const Group: FC<RadioGroupProps> = ({
     const selectedSerializedValue =
       selectedValue.value !== undefined ? serializeValue(selectedValue.value) : undefined
     const inputs = Array.from(
-      container.querySelectorAll<HTMLInputElement>('input[type="radio"][data-rue-radio-input="true"]'),
+      container.querySelectorAll<HTMLInputElement>(
+        'input[type="radio"][data-rue-radio-input="true"]',
+      ),
     )
 
     inputs.forEach(input => {
       const serializedValue = input.dataset.rueRadioValue
 
       if (serializedValue) {
-        input.checked = selectedSerializedValue !== undefined && serializedValue === selectedSerializedValue
+        input.checked =
+          selectedSerializedValue !== undefined && serializedValue === selectedSerializedValue
       }
 
       input.name = mergedName
@@ -601,7 +614,9 @@ const Group: FC<RadioGroupProps> = ({
 
     const serializedValue = target.dataset.rueRadioValue
     const resolvedValue = deserializeValue(serializedValue)
-    const matchedOption = normalizedOptions.find(option => serializeValue(option.value) === serializedValue)
+    const matchedOption = normalizedOptions.find(
+      option => serializeValue(option.value) === serializedValue,
+    )
     const controlled = value !== undefined
 
     if (resolvedValue === undefined) {
@@ -621,7 +636,7 @@ const Group: FC<RadioGroupProps> = ({
 
   watch(
     () => value,
-    nextValue => {
+    (nextValue: RadioValue | undefined) => {
       if (nextValue !== undefined) {
         selectedValue.value = nextValue
       }

@@ -26,7 +26,9 @@ const findTab = (root: ParentNode, label: string) =>
   ) ?? null
 
 const findButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === label) ?? null
+  Array.from(root.querySelectorAll('button')).find(
+    button => button.textContent?.trim() === label,
+  ) ?? null
 
 const fruitTitles = (root: ParentNode) =>
   Array.from(root.querySelectorAll('ul.list.bg-base-200.rounded-box .font-medium')).map(node =>
@@ -34,7 +36,9 @@ const fruitTitles = (root: ParentNode) =>
   )
 
 const stepBadges = (root: ParentNode) =>
-  Array.from(root.querySelectorAll('.badge.badge-primary.badge-lg')).map(node => node.textContent?.trim())
+  Array.from(root.querySelectorAll('.badge.badge-primary.badge-lg')).map(node =>
+    node.textContent?.trim(),
+  )
 
 afterEach(() => {
   document.body.innerHTML = ''

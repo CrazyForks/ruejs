@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 export type NavbarPlacement = 'start' | 'center' | 'end'
@@ -48,7 +49,8 @@ export interface NavbarRootProps {
   [key: string]: any
 }
 
-const joinClassName = (...values: Array<string | undefined | false>) => values.filter(Boolean).join(' ')
+const joinClassName = (...values: Array<string | undefined | false>) =>
+  values.filter(Boolean).join(' ')
 
 const hasRenderableContent = (value: any): boolean => {
   if (value == null) return false
@@ -100,14 +102,7 @@ const Section: FC<NavbarSectionProps> = ({
   )
 }
 
-const Item: FC<NavbarItemProps> = ({
-  as = 'div',
-  className,
-  children,
-  content,
-  grow,
-  ...rest
-}) => {
+const Item: FC<NavbarItemProps> = ({ as = 'div', className, children, content, grow, ...rest }) => {
   const Component = as as any
   return (
     <Component
@@ -119,23 +114,30 @@ const Item: FC<NavbarItemProps> = ({
   )
 }
 
-const Start: FC<Omit<NavbarSectionProps, 'placement'>> = props => <Section {...props} placement="start" />
-const Center: FC<Omit<NavbarSectionProps, 'placement'>> = props => <Section {...props} placement="center" />
-const End: FC<Omit<NavbarSectionProps, 'placement'>> = props => <Section {...props} placement="end" />
+const Start: FC<Omit<NavbarSectionProps, 'placement'>> = props => (
+  <Section {...props} placement="start" />
+)
+const Center: FC<Omit<NavbarSectionProps, 'placement'>> = props => (
+  <Section {...props} placement="center" />
+)
+const End: FC<Omit<NavbarSectionProps, 'placement'>> = props => (
+  <Section {...props} placement="end" />
+)
 
 const renderSlotItem = (content: any, key: string) => {
   if (!hasRenderableContent(content)) return null
   return <Item key={key}>{content}</Item>
 }
 
-const renderPlacementItems = (items: ReadonlyArray<NavbarItem> | undefined, placement: NavbarPlacement) => {
+const renderPlacementItems = (
+  items: ReadonlyArray<NavbarItem> | undefined,
+  placement: NavbarPlacement,
+) => {
   return (items ?? [])
     .filter(item => (item.placement ?? 'start') === placement)
     .map((item, index) => {
       const { key, placement: _placement, content, children, ...rest } = item
-      return (
-        <Item key={key ?? `${placement}-${index}`} {...rest} content={content ?? children} />
-      )
+      return <Item key={key ?? `${placement}-${index}`} {...rest} content={content ?? children} />
     })
 }
 
@@ -170,7 +172,8 @@ const Root: FC<NavbarRootProps> = ({
     renderSlotItem(end, 'end'),
     renderSlotItem(actions, 'actions'),
   ]
-  const hasStructuredSlots = startNodes.some(Boolean) || centerNodes.some(Boolean) || endNodes.some(Boolean)
+  const hasStructuredSlots =
+    startNodes.some(Boolean) || centerNodes.some(Boolean) || endNodes.some(Boolean)
 
   return (
     <Component
@@ -187,9 +190,15 @@ const Root: FC<NavbarRootProps> = ({
         children
       ) : (
         <>
-          {hasStructuredSlots && startNodes.some(Boolean) ? <Start {...startProps}>{startNodes}</Start> : null}
-          {hasStructuredSlots && centerNodes.some(Boolean) ? <Center {...centerProps}>{centerNodes}</Center> : null}
-          {hasStructuredSlots && endNodes.some(Boolean) ? <End {...endProps}>{endNodes}</End> : null}
+          {hasStructuredSlots && startNodes.some(Boolean) ? (
+            <Start {...startProps}>{startNodes}</Start>
+          ) : null}
+          {hasStructuredSlots && centerNodes.some(Boolean) ? (
+            <Center {...centerProps}>{centerNodes}</Center>
+          ) : null}
+          {hasStructuredSlots && endNodes.some(Boolean) ? (
+            <End {...endProps}>{endNodes}</End>
+          ) : null}
         </>
       )}
     </Component>

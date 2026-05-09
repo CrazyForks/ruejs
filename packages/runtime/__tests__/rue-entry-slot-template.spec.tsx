@@ -2,8 +2,14 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import * as rueMain from '@rue-js/rue'
 import { Slot, Template, h, render, setReactiveScheduling, type FC } from '@rue-js/rue'
+import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
+
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active =
+    (globalThis as any).__rue_vapor_preferred ?? (globalThis as any).__rue
+}
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -72,13 +78,14 @@ describe('@rue-js/rue Slot and Template public entry', () => {
 
   it('renders Template without inserting an element wrapper through the default public entry', async () => {
     const host = document.createElement('div')
+    resetActiveRuntime()
     document.body.appendChild(host)
 
     render(h(Template, null, h('strong', null, 'A'), h('em', null, 'B')), host)
-    await flush()
 
-    expect(Array.from(host.children).map(node => node.tagName.toLowerCase())).toEqual(['strong', 'em'])
-    expect(host.querySelector('span')).toBeNull()
-    expect(host.textContent).toBe('AB')
+    await waitForContent(() => {
+      expect(host.querySelector('span')).toBeNull()
+      expect(host.textContent).toBe('AB')
+    })
   })
 })

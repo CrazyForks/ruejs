@@ -84,7 +84,9 @@ const TooltipRatingPreview: FC = () => {
         }}
       />
       <div className="rounded-box border border-base-300 bg-base-200/60 p-4 text-sm text-base-content/75">
-        <p className="m-0">悬停文案：{activeValue ? feedbackTips[Math.ceil(activeValue) - 1] : '未选择'}</p>
+        <p className="m-0">
+          悬停文案：{activeValue ? feedbackTips[Math.ceil(activeValue) - 1] : '未选择'}
+        </p>
         <p className="m-0 mt-1">最终得分：{currentValue.value || '未评分'}</p>
       </div>
     </div>
@@ -116,11 +118,19 @@ const ClearBehaviorPreview: FC = () => {
     <div className="space-y-4 text-sm">
       <div className="space-y-2">
         <Rating value={clearableValue.value} onChange={next => (clearableValue.value = next)} />
-        <p className="m-0 text-base-content/70">allowClear=true，再点当前项可清空，当前值：{clearableValue.value || '未评分'}</p>
+        <p className="m-0 text-base-content/70">
+          allowClear=true，再点当前项可清空，当前值：{clearableValue.value || '未评分'}
+        </p>
       </div>
       <div className="space-y-2">
-        <Rating value={lockedValue.value} allowClear={false} onChange={next => (lockedValue.value = next)} />
-        <p className="m-0 text-base-content/70">allowClear=false，只能改分不能清空，当前值：{lockedValue.value}</p>
+        <Rating
+          value={lockedValue.value}
+          allowClear={false}
+          onChange={next => (lockedValue.value = next)}
+        />
+        <p className="m-0 text-base-content/70">
+          allowClear=false，只能改分不能清空，当前值：{lockedValue.value}
+        </p>
       </div>
     </div>
   )
@@ -141,19 +151,25 @@ const CustomCharacterPreview: FC = () => {
           inactiveCharacterClassName="text-error opacity-25"
           size="lg"
         />
-        <p className="m-0 text-sm text-base-content/70">用 currentColor 驱动自定义字符，适合心形、徽章或品牌字形。</p>
+        <p className="m-0 text-sm text-base-content/70">
+          用 currentColor 驱动自定义字符，适合心形、徽章或品牌字形。
+        </p>
       </div>
       <div className="space-y-2">
         <Rating
           value={alphaValue.value}
           allowHalf={true}
           onChange={next => (alphaValue.value = next)}
-          character={({ index }: RatingCharacterRenderContext) => <span className="font-black tracking-[0.08em]">{String.fromCharCode(65 + index)}</span>}
+          character={({ index }: RatingCharacterRenderContext) => (
+            <span className="font-black tracking-[0.08em]">{String.fromCharCode(65 + index)}</span>
+          )}
           activeCharacterClassName="text-info"
           inactiveCharacterClassName="text-info opacity-25"
           characterClassName="min-w-[1.8em] justify-center text-lg"
         />
-        <p className="m-0 text-sm text-base-content/70">字符函数可以按 index 输出不同内容，当前值：{alphaValue.value.toFixed(1)}</p>
+        <p className="m-0 text-sm text-base-content/70">
+          字符函数可以按 index 输出不同内容，当前值：{alphaValue.value.toFixed(1)}
+        </p>
       </div>
     </div>
   )
@@ -179,7 +195,9 @@ const CountAndSizesPreview: FC = () => {
     <div className="space-y-5">
       <div className="space-y-2">
         <Rating count={10} defaultValue={7} size="sm" />
-        <p className="m-0 text-sm text-base-content/70">count 不再限定 5 项，适合 10 分制或更长评价维度。</p>
+        <p className="m-0 text-sm text-base-content/70">
+          count 不再限定 5 项，适合 10 分制或更长评价维度。
+        </p>
       </div>
       <div className="flex flex-col items-start gap-3">
         {sizes.map(size => (
@@ -217,11 +235,18 @@ const LegacyBasicRatingPreview: FC = () => {
         <Rating>
           <Rating.Item as="div" className="mask mask-star" aria-label="1 star" />
           <Rating.Item as="div" className="mask mask-star" aria-label="2 star" />
-          <Rating.Item as="div" className="mask mask-star" aria-label="3 star" aria-current="true" />
+          <Rating.Item
+            as="div"
+            className="mask mask-star"
+            aria-label="3 star"
+            aria-current="true"
+          />
           <Rating.Item as="div" className="mask mask-star" aria-label="4 star" />
           <Rating.Item as="div" className="mask mask-star" aria-label="5 star" />
         </Rating>
-        <p className="m-0 text-sm text-base-content/70">保留原来的 group + item 结构，适合完全自定义 mask 或静态只读展示。</p>
+        <p className="m-0 text-sm text-base-content/70">
+          保留原来的 group + item 结构，适合完全自定义 mask 或静态只读展示。
+        </p>
       </div>
     </div>
   )
@@ -244,11 +269,32 @@ const LegacyMaskGalleryPreview: FC = () => {
           ))}
         </Rating>
         <Rating className="gap-1">
-          <Rating.Item name="rating-heart" className="mask mask-heart bg-red-400" aria-label="1 star" />
-          <Rating.Item name="rating-heart" className="mask mask-heart bg-orange-400" aria-label="2 star" checked={true} />
-          <Rating.Item name="rating-heart" className="mask mask-heart bg-yellow-400" aria-label="3 star" />
-          <Rating.Item name="rating-heart" className="mask mask-heart bg-lime-400" aria-label="4 star" />
-          <Rating.Item name="rating-heart" className="mask mask-heart bg-green-400" aria-label="5 star" />
+          <Rating.Item
+            name="rating-heart"
+            className="mask mask-heart bg-red-400"
+            aria-label="1 star"
+          />
+          <Rating.Item
+            name="rating-heart"
+            className="mask mask-heart bg-orange-400"
+            aria-label="2 star"
+            checked={true}
+          />
+          <Rating.Item
+            name="rating-heart"
+            className="mask mask-heart bg-yellow-400"
+            aria-label="3 star"
+          />
+          <Rating.Item
+            name="rating-heart"
+            className="mask mask-heart bg-lime-400"
+            aria-label="4 star"
+          />
+          <Rating.Item
+            name="rating-heart"
+            className="mask mask-heart bg-green-400"
+            aria-label="5 star"
+          />
         </Rating>
         <Rating>
           {wholeValues.map(value => (
@@ -644,8 +690,9 @@ const RatingPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Rating 评分</h1>
         <p className="mt-3 mb-3 text-sm">
-          Rating 现在有两条使用路径：默认使用语义化 API，直接获得 count、value / defaultValue、allowClear、allowHalf、tooltips
-          和自定义字符；需要完全沿用 daisyUI mask 结构时，仍然可以继续使用 Rating.Item 复合写法。
+          Rating 现在有两条使用路径：默认使用语义化 API，直接获得 count、value /
+          defaultValue、allowClear、allowHalf、tooltips 和自定义字符；需要完全沿用 daisyUI mask
+          结构时，仍然可以继续使用 Rating.Item 复合写法。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/rating/" target="_blank">
@@ -668,7 +715,7 @@ const RatingPage: FC = () => {
           tab={tabTooltip}
           preview={() => <TooltipRatingPreview />}
           code={codeBlock([
-            'const tips = [\'很难用\', \'能用\', \'稳定\', \'顺手\', \'非常喜欢\']',
+            "const tips = ['很难用', '能用', '稳定', '顺手', '非常喜欢']",
             '<Rating',
             '  value={value}',
             '  tooltips={tips}',
@@ -744,7 +791,7 @@ const RatingPage: FC = () => {
           tab={tabLegacyBasic}
           preview={() => <LegacyBasicRatingPreview />}
           code={codeBlock([
-            'const wholeValues = [\'1\', \'2\', \'3\', \'4\', \'5\']',
+            "const wholeValues = ['1', '2', '3', '4', '5']",
             '',
             '<Rating>',
             '  {wholeValues.map(value => (',
@@ -778,8 +825,8 @@ const RatingPage: FC = () => {
           tab={tabLegacyAdvanced}
           preview={() => <LegacyClearAndHalfPreview />}
           code={codeBlock([
-            'const wholeValues = [\'1\', \'2\', \'3\', \'4\', \'5\']',
-            'const halfValues = [\'0.5\', \'1\', \'1.5\', \'2\', \'2.5\', \'3\', \'3.5\', \'4\', \'4.5\', \'5\']',
+            "const wholeValues = ['1', '2', '3', '4', '5']",
+            "const halfValues = ['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5']",
             '',
             '<Rating size="lg">',
             '  <Rating.Item hidden={true} name="rating-clearable" aria-label="clear" />',
@@ -802,7 +849,7 @@ const RatingPage: FC = () => {
             '      name="rating-half"',
             '      value={value}',
             '      aria-label={`${value} star`}',
-            '      className={`bg-green-500 mask mask-star-2 opacity-[0.35] checked:opacity-100 has-[~:checked]:opacity-100 ${index % 2 === 0 ? \'mask-half-1\' : \'mask-half-2\'}`}',
+            "      className={`bg-green-500 mask mask-star-2 opacity-[0.35] checked:opacity-100 has-[~:checked]:opacity-100 ${index % 2 === 0 ? 'mask-half-1' : 'mask-half-2'}`}",
             '    />',
             '  ))}',
             '</Rating>',

@@ -270,8 +270,8 @@ const Hover3DDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Hover 3D 悬浮 3D</h1>
         <p className="text-sm mt-3 mb-3">
-          Hover 3D 负责把第一层内容面板变成一个会随着鼠标位置倾斜的 3D surface。现在除了保留原有的
-          8 个命中区，也补齐了链接语义、surface wrapper 与根节点属性透传。
+          Hover 3D 负责把第一层内容面板变成一个会随着鼠标位置倾斜的 3D surface。现在除了保留原有的 8
+          个命中区，也补齐了链接语义、surface wrapper 与根节点属性透传。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/hover-3d/" target="_blank">
@@ -310,7 +310,8 @@ const Hover3DDemo: FC = () => {
             <span className="badge badge-outline">不要手写 8 个空 div</span>
           </div>
           <p className="m-0 mt-4 text-sm leading-6 opacity-80">
-            内部 children 尽量保持非交互。如果整块需要点击，直接让 Hover3D 自己渲染为链接根节点，避免在倾斜面板里再嵌按钮或链接。
+            内部 children 尽量保持非交互。如果整块需要点击，直接让 Hover3D
+            自己渲染为链接根节点，避免在倾斜面板里再嵌按钮或链接。
           </p>
         </div>
 
@@ -355,9 +356,7 @@ const Hover3DDemo: FC = () => {
                     </div>
                     <div className="space-y-2 text-sm opacity-75">
                       <p className="m-0">Hover the whole surface to read the motion.</p>
-                      <p className="m-0">
-                        Click stays on the wrapper instead of nested controls.
-                      </p>
+                      <p className="m-0">Click stays on the wrapper instead of nested controls.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>

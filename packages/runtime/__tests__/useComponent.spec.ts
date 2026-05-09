@@ -151,7 +151,9 @@ describe('useComponent', () => {
     deferred.resolve?.({ default: CompiledLikeRoute })
     await flushAsyncComponent()
 
-    expect(container.querySelector('[data-testid="async-shell"]')?.textContent).toBe('preview:hello')
+    expect(container.querySelector('[data-testid="async-shell"]')?.textContent).toBe(
+      'preview:hello',
+    )
     expect(container.querySelector('[data-testid="compiled-like-value"]')?.textContent).toBe(
       'preview:hello',
     )
@@ -240,8 +242,8 @@ describe('useComponent', () => {
     expect(container.querySelector('[data-testid="async-hookful-shell"]')?.textContent).toBe(
       'preview:hello',
     )
-    expect(container.querySelector('[data-testid="compiled-like-hookful-value"]')?.textContent).toBe(
-      'preview:hello',
-    )
+    expect(
+      container.querySelector('[data-testid="compiled-like-hookful-value"]')?.textContent,
+    ).toBe('preview:hello')
   })
 })

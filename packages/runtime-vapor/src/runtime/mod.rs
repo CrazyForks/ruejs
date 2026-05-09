@@ -23,6 +23,5 @@ pub use instance::*;
 pub use js_adapter::JsDomAdapter;
 pub use props::*;
 pub use types::{
-    ComponentProps, FC, FRAGMENT, MountInput, MountInputChild, MountInputType,
-    PropsWithChildren,
+    ComponentProps, FC, FRAGMENT, MountInput, MountInputChild, MountInputType, PropsWithChildren,
 };

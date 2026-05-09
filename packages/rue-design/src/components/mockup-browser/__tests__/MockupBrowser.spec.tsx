@@ -78,7 +78,8 @@ describe('MockupBrowser', () => {
       const root = container.querySelector('[data-testid="browser-root"]') as HTMLElement
       const toolbar = root.querySelector('.mockup-browser-toolbar') as HTMLElement
       const addressBar = toolbar.querySelector('.input') as HTMLElement
-      const content = root.querySelector('[data-testid="browser-content"]')?.parentElement as HTMLElement
+      const content = root.querySelector('[data-testid="browser-content"]')
+        ?.parentElement as HTMLElement
 
       expect(root.classList.contains('mockup-browser')).toBe(true)
       expect(root.classList.contains('border')).toBe(true)

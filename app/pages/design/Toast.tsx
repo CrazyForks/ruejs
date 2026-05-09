@@ -1,6 +1,5 @@
 import { h, ref, type FC } from '@rue-js/rue'
-import Tabs from '@rue-js/design/components/tabs'
-import Toast from '@rue-js/design/components/toast'
+import { Tabs, Toast } from '@rue-js/design'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 
@@ -23,7 +22,16 @@ interface ApiRow {
 
 interface PlacementExample {
   label: string
-  placement: 'top-start' | 'top' | 'top-end' | 'middle-start' | 'center' | 'middle-end' | 'bottom-start' | 'bottom' | 'bottom-end'
+  placement:
+    | 'top-start'
+    | 'top'
+    | 'top-end'
+    | 'middle-start'
+    | 'center'
+    | 'middle-end'
+    | 'bottom-start'
+    | 'bottom'
+    | 'bottom-end'
   tone: 'info' | 'success' | 'warning'
 }
 
@@ -106,14 +114,18 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
   )
 }
 
-const DemoSurface: FC<{ minHeight?: string; children?: any }> = ({ minHeight = '14rem', children }) => {
+const DemoSurface: FC<{ minHeight?: string; children?: any }> = ({
+  minHeight = '14rem',
+  children,
+}) => {
   return h(
     'div',
     { className: 'not-prose rounded-[1.5rem] border border-base-300 bg-base-200/50 p-4 shadow-sm' },
     h(
       'div',
       {
-        className: 'relative overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100/90',
+        className:
+          'relative overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100/90',
         style: { minHeight },
       },
       ...(toChildArray(children) as any[]),
@@ -201,8 +213,7 @@ const rootApiRows: ApiRow[] = [
   {
     prop: 'placement',
     description: '语义化九宫格定位别名，例如 top-end、center、bottom-start',
-    type:
-      "'top-start' | 'top' | 'top-center' | 'top-end' | 'middle-start' | 'middle' | 'middle-center' | 'middle-end' | 'bottom-start' | 'bottom' | 'bottom-center' | 'bottom-end' | 'start' | 'center' | 'end'",
+    type: "'top-start' | 'top' | 'top-center' | 'top-end' | 'middle-start' | 'middle' | 'middle-center' | 'middle-end' | 'bottom-start' | 'bottom' | 'bottom-center' | 'bottom-end' | 'start' | 'center' | 'end'",
     defaultValue: '-',
   },
   {
@@ -339,7 +350,8 @@ const messageHookRows: ApiRow[] = [
   },
   {
     prop: 'getContainer',
-    description: '控制消息挂载位置；默认挂到 document.body，传 false 时退回到 contextHolder 所在的局部 box。',
+    description:
+      '控制消息挂载位置；默认挂到 document.body，传 false 时退回到 contextHolder 所在的局部 box。',
     type: 'string | HTMLElement | (() => HTMLElement) | false',
     defaultValue: 'document.body',
   },
@@ -448,11 +460,14 @@ const ToastPage: FC = () => {
         <h1>Toast 轻提示</h1>
         <p className="text-sm mt-3 mb-3">
           这次 Toast 不再只有一个“放 alert 的定位壳”。根容器依旧负责 placement、stack 和 inset，
-          但单条提示现在可以直接用 <code>Toast.Item</code> 写出接近 message 的反馈体验：类型、标题、说明、
-          操作区、关闭按钮、自动关闭与悬停暂停都已经补齐；现在还可以像 ant-design message 一样通过
-          <code>Toast.useMessage()</code> 拿到 <code>messageApi</code> 和 <code>contextHolder</code>，
-          在业务按钮、异步流程和页面局部容器里直接按 key 推送、更新和销毁消息；默认会弹到全局页面层，
-          只有显式传 <code>getContainer=&#123;false&#125;</code> 时才会留在当前 box 里，同时仍然保留 Rue 自己更轻、更靠近页面内容的视觉语气。
+          但单条提示现在可以直接用 <code>Toast.Item</code> 写出接近 message
+          的反馈体验：类型、标题、说明、
+          操作区、关闭按钮、自动关闭与悬停暂停都已经补齐；现在还可以像常见 message API 一样通过
+          <code>Toast.useMessage()</code> 拿到 <code>messageApi</code> 和 <code>contextHolder</code>
+          ， 在业务按钮、异步流程和页面局部容器里直接按 key
+          推送、更新和销毁消息；默认会弹到全局页面层， 只有显式传{' '}
+          <code>getContainer=&#123;false&#125;</code> 时才会留在当前 box 里，同时仍然保留 Rue
+          自己更轻、更靠近页面内容的视觉语气。
         </p>
         <div className="text-sm flex flex-wrap gap-4">
           <a href="https://daisyui.com/components/toast/" target="_blank">
@@ -463,9 +478,14 @@ const ToastPage: FC = () => {
         <h2>何时使用</h2>
         <ul>
           <li>需要在页面局部提供轻量反馈，但不想上升成全局通知系统。</li>
-          <li>希望像 message 一样直接描述成功、失败、加载、警告这些状态，又想保留更贴近 Rue 的视觉风格。</li>
+          <li>
+            希望像 message 一样直接描述成功、失败、加载、警告这些状态，又想保留更贴近 Rue
+            的视觉风格。
+          </li>
           <li>希望在事件处理函数里直接触发反馈，而不是先把消息数组提升到页面状态。</li>
-          <li>既要兼容旧的 alert 容器写法，也想在业务里直接拿到可关闭、可自动关闭的单条提示能力。</li>
+          <li>
+            既要兼容旧的 alert 容器写法，也想在业务里直接拿到可关闭、可自动关闭的单条提示能力。
+          </li>
         </ul>
 
         <ExampleBlock
@@ -512,7 +532,9 @@ const ToastPage: FC = () => {
             <div className="grid gap-4">
               {toastVariantExamples.map(item => (
                 <DemoSurface key={item.label} minHeight="11rem">
-                  <div className="absolute left-3 top-3 badge badge-ghost badge-sm">{item.label}</div>
+                  <div className="absolute left-3 top-3 badge badge-ghost badge-sm">
+                    {item.label}
+                  </div>
                   <Toast className="absolute" placement="bottom-start" inset={{ x: 12, y: 12 }}>
                     <Toast.Item
                       type={item.type}
@@ -630,7 +652,7 @@ const autoToastKey = ref(0)
 
         <ExampleBlock
           title="Toast.useMessage"
-          summary="参考 ant-design message 的 hook 形态：把 contextHolder 放进页面即可，真正的消息默认弹到全局页面层；如果你要留在当前 box，再显式传 getContainer={false}。"
+          summary="参考常见 message hook 的形态：把 contextHolder 放进页面即可，真正的消息默认弹到全局页面层；如果你要留在当前 box，再显式传 getContainer={false}。"
           tab={tabs.useMessage}
           preview={() => (
             <DemoSurface minHeight="18rem">
@@ -641,7 +663,8 @@ const autoToastKey = ref(0)
                   onClick={() => {
                     messageApi.open({
                       type: 'success',
-                      content: 'This is a prompt message for success, and it will disappear in 10 seconds',
+                      content:
+                        'This is a prompt message for success, and it will disappear in 10 seconds',
                       duration: 10,
                     })
                   }}
@@ -801,7 +824,8 @@ const autoToastKey = ref(0)
 
         <h2>兼容旧写法</h2>
         <p className="text-sm mt-2 mb-4">
-          旧的“Toast 只做容器、里面继续放 alert 或自定义节点”的使用方式完全保留。下面这些原有 demo 都还在，只是按新的能力层次重新归组了。
+          旧的“Toast 只做容器、里面继续放 alert 或自定义节点”的使用方式完全保留。下面这些原有 demo
+          都还在，只是按新的能力层次重新归组了。
         </p>
 
         <ExampleBlock
@@ -838,7 +862,9 @@ const autoToastKey = ref(0)
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {placementExamples.map(item => (
                 <DemoSurface key={item.label} minHeight="9.5rem">
-                  <div className="absolute left-3 top-3 badge badge-ghost badge-sm">{item.label}</div>
+                  <div className="absolute left-3 top-3 badge badge-ghost badge-sm">
+                    {item.label}
+                  </div>
                   <Toast className="absolute" placement={item.placement} inset={{ x: 12, y: 12 }}>
                     <div role="alert" className={`${toastToneClassMap[item.tone]} shadow-sm`}>
                       <span>{item.label}</span>
@@ -951,7 +977,13 @@ const autoToastKey = ref(0)
               <div className="absolute right-8 top-10 z-10 rounded-box border border-base-300 bg-base-100 px-4 py-3 text-xs shadow-sm">
                 背景浮层
               </div>
-              <Toast className="absolute" placement="top-end" inset={{ x: 20, y: 20 }} gap={10} zIndex={30}>
+              <Toast
+                className="absolute"
+                placement="top-end"
+                inset={{ x: 20, y: 20 }}
+                gap={10}
+                zIndex={30}
+              >
                 <div role="alert" className="alert alert-success shadow-lg">
                   <span>Layered above the card.</span>
                 </div>
@@ -1024,9 +1056,11 @@ const autoToastKey = ref(0)
           <h3 className="mt-2 mb-3 text-base font-semibold">Toast.useMessage(options)</h3>
           <ApiTable rows={messageHookRows} />
           <p className="mt-4 text-sm opacity-70">
-            返回值固定为 <code>[messageApi, contextHolder]</code>。为了保持 ant-like 用法，<code>contextHolder</code>
+            返回值固定为 <code>[messageApi, contextHolder]</code>。为了保持这类 hook 的用法习惯，
+            <code>contextHolder</code>
             仍然建议真实渲染到页面里；默认情况下它主要跟随当前组件生命周期，真正的消息层会挂到
-            <code>document.body</code>，传 <code>getContainer=&#123;false&#125;</code> 时才会回到 holder 内。
+            <code>document.body</code>，传 <code>getContainer=&#123;false&#125;</code> 时才会回到
+            holder 内。
           </p>
           <h3 className="mt-8 mb-3 text-base font-semibold">messageApi</h3>
           <ApiTable rows={messageMethodRows} />
@@ -1037,8 +1071,9 @@ const autoToastKey = ref(0)
           <h3 className="mt-8 mb-3 text-base font-semibold">Toast.Item 单条提示</h3>
           <ApiTable rows={itemApiRows} />
           <p className="mt-4 text-sm opacity-70">
-            Compound 子组件包括 <code>Toast.Icon</code>、<code>Toast.Content</code>、<code>Toast.Title</code>、
-            <code>Toast.Description</code>、<code>Toast.Action</code> 和 <code>Toast.Close</code>。
+            Compound 子组件包括 <code>Toast.Icon</code>、<code>Toast.Content</code>、
+            <code>Toast.Title</code>、<code>Toast.Description</code>、<code>Toast.Action</code> 和{' '}
+            <code>Toast.Close</code>。
           </p>
         </div>
       </div>

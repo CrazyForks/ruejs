@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Textarea 组件概述
 - 保留 Rue 当前 textarea 视觉类，并补齐更顺手的语义 API：status、allowClear、showCount、autoSize、resize。
@@ -17,7 +18,16 @@ export type TextareaTone =
   | 'error'
 
 export type TextareaColor = 'default' | TextareaTone
-export type TextareaSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'
+export type TextareaSize =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | 'small'
+  | 'middle'
+  | 'medium'
+  | 'large'
 export type TextareaStatus = 'warning' | 'error'
 export type TextareaVariant = 'outlined' | 'filled' | 'ghost'
 export type TextareaResize = 'none' | 'vertical' | 'horizontal' | 'both'
@@ -120,7 +130,10 @@ const buildTextareaClassName = ({
   ghost,
   className,
   allowClear,
-}: Pick<TextareaProps, 'color' | 'status' | 'size' | 'variant' | 'ghost' | 'className' | 'allowClear'>) => {
+}: Pick<
+  TextareaProps,
+  'color' | 'status' | 'size' | 'variant' | 'ghost' | 'className' | 'allowClear'
+>) => {
   let cls = 'textarea'
   const resolvedColor = color && color !== 'default' ? color : resolveStatusTone(status)
   const resolvedSize = resolveSizeClass(size)
@@ -214,7 +227,9 @@ const Textarea: FC<TextareaProps> = ({
   }
 
   const syncValueState = () => {
-    currentValue.value = resolveTextValue(isControlled ? value : textareaRef.current?.value ?? defaultValue)
+    currentValue.value = resolveTextValue(
+      isControlled ? value : (textareaRef.current?.value ?? defaultValue),
+    )
   }
 
   const syncCountDisplay = () => {
@@ -254,11 +269,17 @@ const Textarea: FC<TextareaProps> = ({
     const computedStyle = window.getComputedStyle(element)
     const lineHeightValue = Number.parseFloat(computedStyle.lineHeight)
     const fontSizeValue = Number.parseFloat(computedStyle.fontSize)
-    const lineHeight = Number.isFinite(lineHeightValue) ? lineHeightValue : (Number.isFinite(fontSizeValue) ? fontSizeValue * 1.5 : 24)
+    const lineHeight = Number.isFinite(lineHeightValue)
+      ? lineHeightValue
+      : Number.isFinite(fontSizeValue)
+        ? fontSizeValue * 1.5
+        : 24
     const borderHeight =
-      Number.parseFloat(computedStyle.borderTopWidth || '0') + Number.parseFloat(computedStyle.borderBottomWidth || '0')
+      Number.parseFloat(computedStyle.borderTopWidth || '0') +
+      Number.parseFloat(computedStyle.borderBottomWidth || '0')
     const paddingHeight =
-      Number.parseFloat(computedStyle.paddingTop || '0') + Number.parseFloat(computedStyle.paddingBottom || '0')
+      Number.parseFloat(computedStyle.paddingTop || '0') +
+      Number.parseFloat(computedStyle.paddingBottom || '0')
     const minRows =
       typeof config?.minRows === 'number' && config.minRows > 0
         ? config.minRows
@@ -373,7 +394,10 @@ const Textarea: FC<TextareaProps> = ({
   }
 
   if (autoSize && (rest.rows === undefined || rest.rows === null)) {
-    const minRows = typeof autoSize === 'object' && typeof autoSize.minRows === 'number' ? autoSize.minRows : undefined
+    const minRows =
+      typeof autoSize === 'object' && typeof autoSize.minRows === 'number'
+        ? autoSize.minRows
+        : undefined
     if (minRows) {
       rest.rows = String(minRows)
     }
@@ -444,7 +468,10 @@ const Textarea: FC<TextareaProps> = ({
   )
 
   return (
-    <div className={appendClassName('flex flex-col gap-2', rootClassName)} data-rue-textarea-root="true">
+    <div
+      className={appendClassName('flex flex-col gap-2', rootClassName)}
+      data-rue-textarea-root="true"
+    >
       {textareaNode}
       {hasCount ? (
         <div

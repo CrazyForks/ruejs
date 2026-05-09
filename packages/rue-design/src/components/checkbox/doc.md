@@ -128,7 +128,7 @@ classnames:
 ```html
 <!-- You can make a checkbox indeterminate using JS -->
 <script>
-  document.getElementById("my-checkbox").indeterminate = true
+  document.getElementById('my-checkbox').indeterminate = true
 </script>
 <input type="checkbox" class="$$checkbox" id="my-checkbox" />
 ```

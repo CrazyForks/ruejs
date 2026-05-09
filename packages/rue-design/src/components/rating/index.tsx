@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Rating 组件概述
 - 默认提供语义化评分 API，支持受控/非受控、清除、半星、悬停反馈与自定义字符。
@@ -9,7 +10,17 @@ import { onMounted, ref, useRef, watch } from '@rue-js/rue'
 
 let ratingSeed = 0
 
-export type RatingSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'default' | 'medium' | 'middle' | 'large'
+export type RatingSize =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | 'small'
+  | 'default'
+  | 'medium'
+  | 'middle'
+  | 'large'
 
 export interface RatingTooltipItem {
   title?: any
@@ -142,36 +153,53 @@ const buildAutoRootClassName = (
 ) => {
   let cls = useLegacyMaskDefault
     ? buildManualRootClassName(size, false, 'rue-rating align-middle select-none')
-    : appendClassName('rue-rating inline-flex flex-wrap items-center gap-1 align-middle select-none', resolveCharacterSizeClass(size))
+    : appendClassName(
+        'rue-rating inline-flex flex-wrap items-center gap-1 align-middle select-none',
+        resolveCharacterSizeClass(size),
+      )
   if (disabled) cls = appendClassName(cls, 'cursor-not-allowed opacity-50')
   else if (readOnly) cls = appendClassName(cls, 'cursor-default opacity-85')
   else cls = appendClassName(cls, 'cursor-pointer')
   return appendClassName(cls, className)
 }
 
-const buildAutoButtonClassName = (interactive: boolean, useLegacyMaskDefault: boolean, itemClassName?: string) => {
+const buildAutoButtonClassName = (
+  interactive: boolean,
+  useLegacyMaskDefault: boolean,
+  itemClassName?: string,
+) => {
   let cls = useLegacyMaskDefault
     ? 'group relative inline-flex shrink-0 items-center justify-center border-0 bg-transparent p-0 leading-none opacity-100 transition duration-150'
     : 'group relative inline-flex shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0.5 leading-none transition duration-150'
-  if (interactive) cls = appendClassName(cls, 'hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25')
+  if (interactive)
+    cls = appendClassName(
+      cls,
+      'hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25',
+    )
   else cls = appendClassName(cls, 'focus:outline-none')
   return appendClassName(cls, itemClassName)
 }
 
 const buildCharacterWrapperClassName = (size?: RatingSize, characterClassName?: string) => {
-  return appendClassName('relative inline-flex items-center justify-center leading-none', appendClassName(resolveCharacterSizeClass(size), characterClassName))
+  return appendClassName(
+    'relative inline-flex items-center justify-center leading-none',
+    appendClassName(resolveCharacterSizeClass(size), characterClassName),
+  )
 }
 
 const syncLegacyMaskState = (legacyMask: HTMLElement, fill: number, disabled: boolean) => {
   legacyMask.classList.remove(LEGACY_ACTIVE_BACKGROUND_CLASS, LEGACY_INACTIVE_BACKGROUND_CLASS)
-  legacyMask.classList.add(disabled || fill <= 0 ? LEGACY_INACTIVE_BACKGROUND_CLASS : LEGACY_ACTIVE_BACKGROUND_CLASS)
-  legacyMask.style.opacity = disabled ? LEGACY_DISABLED_OPACITY : fill > 0 ? LEGACY_FILLED_OPACITY : LEGACY_EMPTY_OPACITY
+  legacyMask.classList.add(
+    disabled || fill <= 0 ? LEGACY_INACTIVE_BACKGROUND_CLASS : LEGACY_ACTIVE_BACKGROUND_CLASS,
+  )
+  legacyMask.style.opacity = disabled
+    ? LEGACY_DISABLED_OPACITY
+    : fill > 0
+      ? LEGACY_FILLED_OPACITY
+      : LEGACY_EMPTY_OPACITY
 }
 
-const resolveTooltipTitle = (
-  tooltips: RatingProps['tooltips'],
-  index: number,
-) => {
+const resolveTooltipTitle = (tooltips: RatingProps['tooltips'], index: number) => {
   const tooltip = tooltips?.[index]
   if (tooltip == null) return undefined
   if (typeof tooltip === 'string' || typeof tooltip === 'number') return String(tooltip)
@@ -191,9 +219,7 @@ const resolvePointerValue = (event: MouseEvent, index: number, allowHalf: boolea
 }
 
 const DefaultStarIcon: FC = () => {
-  return (
-    <span aria-hidden="true" className="mask mask-star inline-block size-[1em] bg-current" />
-  )
+  return <span aria-hidden="true" className="mask mask-star inline-block size-[1em] bg-current" />
 }
 
 const resolveCharacterNode = (
@@ -206,7 +232,14 @@ const resolveCharacterNode = (
   return character ?? <DefaultStarIcon />
 }
 
-const Item: FC<RatingItemProps> = ({ as = 'input', hidden, type, className, children, ...rest }) => {
+const Item: FC<RatingItemProps> = ({
+  as = 'input',
+  hidden,
+  type,
+  className,
+  children,
+  ...rest
+}) => {
   const Component = as as any
   const cls = appendClassName(hidden ? 'rating-hidden' : undefined, className).trim()
 
@@ -258,7 +291,9 @@ const RatingRoot: FC<RatingProps> = ({
   )
   const hoveredValue = ref<number | null>(null)
   const controlledValue =
-    typeof value === 'number' ? normalizeRatingValue(value, mergedAllowHalf, mergedCount) : undefined
+    typeof value === 'number'
+      ? normalizeRatingValue(value, mergedAllowHalf, mergedCount)
+      : undefined
 
   if (controlledValue !== undefined && uncontrolledValue.value !== controlledValue) {
     uncontrolledValue.value = controlledValue
@@ -271,10 +306,7 @@ const RatingRoot: FC<RatingProps> = ({
   const displayValue = hoveredValue.value ?? mergedValue
   const interactive = !disabled && !readOnly
   const useLegacyMaskDefault = character == null && !mergedAllowHalf
-  const {
-    onMouseLeave: externalMouseLeave,
-    ...restProps
-  } = rest as {
+  const { onMouseLeave: externalMouseLeave, ...restProps } = rest as {
     onMouseLeave?: (event: MouseEvent) => void
     [key: string]: any
   }
@@ -294,18 +326,26 @@ const RatingRoot: FC<RatingProps> = ({
     root.dataset.ratingValue = String(currentValue)
     root.dataset.ratingHover = hoveredValue.value == null ? '' : String(hoveredValue.value)
 
-    const hiddenInput = root.querySelector('input[type="hidden"][data-rating-hidden="true"]') as HTMLInputElement | null
+    const hiddenInput = root.querySelector(
+      'input[type="hidden"][data-rating-hidden="true"]',
+    ) as HTMLInputElement | null
     if (hiddenInput) {
       hiddenInput.value = String(currentValue)
     }
 
-    const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>('button[data-rating-index]'))
+    const buttons = Array.from(
+      root.querySelectorAll<HTMLButtonElement>('button[data-rating-index]'),
+    )
     buttons.forEach(button => {
       const index = Number(button.dataset.ratingIndex ?? 0)
       const itemValue = index + 1
       const fill = clamp(currentDisplayValue - index, 0, 1)
-      const activeLayer = button.querySelector('[data-rating-active-layer="true"]') as HTMLElement | null
-      const legacyMask = button.querySelector('[data-rating-legacy-mask="true"]') as HTMLElement | null
+      const activeLayer = button.querySelector(
+        '[data-rating-active-layer="true"]',
+      ) as HTMLElement | null
+      const legacyMask = button.querySelector(
+        '[data-rating-legacy-mask="true"]',
+      ) as HTMLElement | null
 
       button.dataset.ratingFill = String(fill)
       if (currentValue === itemValue) button.dataset.ratingCurrent = 'true'
@@ -399,7 +439,10 @@ const RatingRoot: FC<RatingProps> = ({
   })
 
   watch(
-    () => (typeof value === 'number' ? normalizeRatingValue(value, mergedAllowHalf, mergedCount) : undefined),
+    () =>
+      typeof value === 'number'
+        ? normalizeRatingValue(value, mergedAllowHalf, mergedCount)
+        : undefined,
     nextValue => {
       if (typeof nextValue === 'number') {
         uncontrolledValue.value = nextValue
@@ -411,7 +454,11 @@ const RatingRoot: FC<RatingProps> = ({
 
   if (hasRenderableChildren(children)) {
     return (
-      <div {...restProps} style={style} className={buildManualRootClassName(size, mergedAllowHalf, className)}>
+      <div
+        {...restProps}
+        style={style}
+        className={buildManualRootClassName(size, mergedAllowHalf, className)}
+      >
         {children}
       </div>
     )
@@ -425,17 +472,31 @@ const RatingRoot: FC<RatingProps> = ({
       {...restProps}
       ref={rootRef}
       style={style}
-      className={buildAutoRootClassName(size, !!disabled, !!readOnly, useLegacyMaskDefault, className)}
+      className={buildAutoRootClassName(
+        size,
+        !!disabled,
+        !!readOnly,
+        useLegacyMaskDefault,
+        className,
+      )}
       data-rating-mode="auto"
       data-rating-value={String(mergedValue)}
       data-rating-hover={hoveredValue.value == null ? '' : String(hoveredValue.value)}
       data-rating-name={renderedName}
-      onMouseLeave={event => {
+      onMouseLeave={(event: MouseEvent) => {
         clearHover()
         if (externalMouseLeave) externalMouseLeave(event as any)
       }}
     >
-      {name ? <input type="hidden" name={name} value={mergedValue} disabled={disabled} data-rating-hidden="true" /> : null}
+      {name ? (
+        <input
+          type="hidden"
+          name={name}
+          value={mergedValue}
+          disabled={disabled}
+          data-rating-hidden="true"
+        />
+      ) : null}
       {buttonCount.map(index => {
         const itemValue = index + 1
         const fill = clamp(displayValue - index, 0, 1)
@@ -451,9 +512,18 @@ const RatingRoot: FC<RatingProps> = ({
           half: mergedAllowHalf,
         }
         const wrapperClassName = buildCharacterWrapperClassName(size, characterClassName)
-        const resolvedInactiveCharacterClassName = inactiveCharacterClassName ?? 'text-base-content/35'
+        const resolvedInactiveCharacterClassName =
+          inactiveCharacterClassName ?? 'text-base-content/35'
         const resolvedActiveCharacterClassName = activeCharacterClassName ?? 'text-orange-400'
-        const tabIndex = disabled ? -1 : mergedValue > 0 ? (Math.ceil(mergedValue) - 1 === index ? 0 : -1) : index === 0 ? 0 : -1
+        const tabIndex = disabled
+          ? -1
+          : mergedValue > 0
+            ? Math.ceil(mergedValue) - 1 === index
+              ? 0
+              : -1
+            : index === 0
+              ? 0
+              : -1
 
         return (
           <button
@@ -470,13 +540,13 @@ const RatingRoot: FC<RatingProps> = ({
             data-rating-index={String(index)}
             data-rating-fill={String(fill)}
             data-rating-current={mergedValue === itemValue ? 'true' : undefined}
-            onFocus={event => {
+            onFocus={(event: FocusEvent) => {
               if (onFocus) onFocus(event as any)
             }}
-            onBlur={event => {
+            onBlur={(event: FocusEvent) => {
               if (onBlur) onBlur(event as any)
             }}
-            onMouseMove={event => {
+            onMouseMove={(event: MouseEvent) => {
               if (!interactive) return
               const nextValue = resolvePointerValue(event as any, index, mergedAllowHalf)
               if (hoveredValue.value !== nextValue) {
@@ -485,11 +555,11 @@ const RatingRoot: FC<RatingProps> = ({
                 syncDom()
               }
             }}
-            onClick={event => {
+            onClick={(event: MouseEvent) => {
               event.preventDefault?.()
               commitValue(resolvePointerValue(event as any, index, mergedAllowHalf))
             }}
-            onKeyDown={event => handleKeyCommit(event as any, index)}
+            onKeyDown={(event: KeyboardEvent) => handleKeyCommit(event as any, index)}
           >
             {useLegacyMaskDefault ? (
               <span
@@ -510,7 +580,10 @@ const RatingRoot: FC<RatingProps> = ({
             ) : (
               <span className="relative inline-flex">
                 <span
-                  className={appendClassName(wrapperClassName, disabled ? 'text-base-content/20' : resolvedInactiveCharacterClassName)}
+                  className={appendClassName(
+                    wrapperClassName,
+                    disabled ? 'text-base-content/20' : resolvedInactiveCharacterClassName,
+                  )}
                   aria-hidden="true"
                 >
                   {resolveCharacterNode(character, characterContext)}
@@ -522,7 +595,10 @@ const RatingRoot: FC<RatingProps> = ({
                   data-rating-active-layer="true"
                 >
                   <span
-                    className={appendClassName(wrapperClassName, disabled ? 'text-base-content/45' : resolvedActiveCharacterClassName)}
+                    className={appendClassName(
+                      wrapperClassName,
+                      disabled ? 'text-base-content/45' : resolvedActiveCharacterClassName,
+                    )}
                   >
                     {resolveCharacterNode(character, characterContext)}
                   </span>

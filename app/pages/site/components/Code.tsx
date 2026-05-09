@@ -1,13 +1,13 @@
 import { type FC, onBeforeUnmount, onCleanup, ref, watchEffect, useState } from '@rue-js/rue'
 import { createHighlighterCoreSync } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
-import jsLang from '@shikijs/langs/javascript'
-import tsLang from '@shikijs/langs/typescript'
-import tsxLang from '@shikijs/langs/tsx'
-import rustLang from '@shikijs/langs/rust'
-import htmlLang from '@shikijs/langs/html'
-import cssLang from '@shikijs/langs/css'
-import tokyoNight from '@shikijs/themes/tokyo-night'
+import jsLang from 'shiki/langs/javascript.mjs'
+import tsLang from 'shiki/langs/typescript.mjs'
+import tsxLang from 'shiki/langs/tsx.mjs'
+import rustLang from 'shiki/langs/rust.mjs'
+import htmlLang from 'shiki/langs/html.mjs'
+import cssLang from 'shiki/langs/css.mjs'
+import tokyoNight from 'shiki/themes/tokyo-night.mjs'
 
 let hl: any | null = null
 function getHl() {

@@ -66,22 +66,6 @@
 - [onDeactivated()](/api/composition-api-lifecycle#ondeactivated)
 - [onServerPrefetch()](/api/composition-api-lifecycle#onserverprefetch)
 
-## 组件实例 {#component-instance}
-
-- [$data](/api/component-instance#data)
-- [$props](/api/component-instance#props)
-- [$el](/api/component-instance#el)
-- [$options](/api/component-instance#options)
-- [$parent](/api/component-instance#parent)
-- [$root](/api/component-instance#root)
-- [$slots](/api/component-instance#slots)
-- [$refs](/api/component-instance#refs)
-- [$attrs](/api/component-instance#attrs)
-- [$watch()](/api/component-instance#watch)
-- [$emit()](/api/component-instance#emit)
-- [$forceUpdate()](/api/component-instance#forceupdate)
-- [$nextTick()](/api/component-instance#nexttick)
-
 ## 内置组件 {#built-in-components}
 
 - [Transition](/api/built-in-components#transition)

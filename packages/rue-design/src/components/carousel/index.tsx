@@ -1,8 +1,9 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Carousel 组件概述
 - 视图模型：以索引为单一真相源，统一承载受控、非受控、自动播放、箭头与 dots。
 - 布局策略：scrollx 模式保留 daisyUI carousel/item 的宽度与对齐语义，fade 模式切到叠层过渡。
-- 兼容目标：继续支持旧版 align/direction/auto/interval/loop/activeIndex/items 写法，同时补齐 ant-design 常用能力。
+- 兼容目标：继续支持旧版 align/direction/auto/interval/loop/activeIndex/items 写法，同时补齐常用能力。
 */
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
@@ -106,7 +107,8 @@ const serializeStyle = (style?: InlineStyle) => {
   return serialized || undefined
 }
 
-const mergeClassName = (base: string, className?: string) => (className ? `${base} ${className}` : base)
+const mergeClassName = (base: string, className?: string) =>
+  className ? `${base} ${className}` : base
 
 const flattenChildren = (value: any): any[] => {
   if (value == null || value === false) return []
@@ -198,7 +200,7 @@ const resetScrollSlideStyle = (slide: HTMLElement) => {
 /**
  * 走马灯组件：
  * - scrollx 模式保留多宽度、多对齐布局能力
- * - fade 模式补齐 ant-design 常见的叠层切换体验
+ * - fade 模式补齐常见的叠层切换体验
  * - 支持 ref 暴露 goTo/next/prev/autoPlay 方法
  */
 const Carousel: FC<CarouselProps> = ({
@@ -260,16 +262,18 @@ const Carousel: FC<CarouselProps> = ({
   const mergedAutoplaySpeed = autoplaySpeed ?? interval
   const mergedPauseOnHover = pauseOnHover ?? mergedAutoplay
   const mergedDotPlacement = resolveDotPlacement(dotPlacement ?? dotPosition)
-  const mergedShowDotDuration = mergedAutoplay && typeof autoplay === 'object' && !!autoplay.dotDuration
+  const mergedShowDotDuration =
+    mergedAutoplay && typeof autoplay === 'object' && !!autoplay.dotDuration
   const serializedStyle = serializeStyle(style)
   const normalizedChildList = flattenChildren(children)
   const normalizedItems = items ?? []
-  const slideCountHint = normalizedItems.length > 0 ? normalizedItems.length : normalizedChildList.length
+  const slideCountHint =
+    normalizedItems.length > 0 ? normalizedItems.length : normalizedChildList.length
   const mergedControlledIndex = slickGoTo ?? activeIndex
   const initialIndex = normalizeIndex(
     typeof mergedControlledIndex === 'number'
       ? mergedControlledIndex
-      : defaultActiveIndex ?? initialSlide ?? 0,
+      : (defaultActiveIndex ?? initialSlide ?? 0),
     slideCountHint || 1,
     mergedLoop,
   )
@@ -290,7 +294,9 @@ const Carousel: FC<CarouselProps> = ({
   const getRenderedSlides = () => {
     const track = trackRef.current
     if (!track) return [] as HTMLElement[]
-    return Array.from(track.children).filter((node): node is HTMLElement => node instanceof HTMLElement)
+    return Array.from(track.children).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    )
   }
 
   const getResolvedCount = () => {
@@ -388,7 +394,11 @@ const Carousel: FC<CarouselProps> = ({
     const root = rootRef.current
     if (!root) return
 
-    const resolvedIndex = normalizeIndex(currentIndexState.value, Math.max(visualCount, 1), mergedLoop)
+    const resolvedIndex = normalizeIndex(
+      currentIndexState.value,
+      Math.max(visualCount, 1),
+      mergedLoop,
+    )
     root.setAttribute('data-rue-carousel-current', String(resolvedIndex))
 
     const prevButton = root.querySelector<HTMLButtonElement>('[data-rue-carousel-prev="true"]')
@@ -400,7 +410,9 @@ const Carousel: FC<CarouselProps> = ({
       nextButton.disabled = !mergedLoop && resolvedIndex >= Math.max(0, visualCount - 1)
     }
 
-    const dotButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-rue-carousel-dot]'))
+    const dotButtons = Array.from(
+      root.querySelectorAll<HTMLButtonElement>('[data-rue-carousel-dot]'),
+    )
     dotButtons.forEach((button, index) => {
       const active = index === resolvedIndex
       if (active) button.setAttribute('aria-current', 'true')
@@ -592,7 +604,8 @@ const Carousel: FC<CarouselProps> = ({
     commitIndex(currentIndexState.value - 1, { source: 'user' })
   }
 
-  const visualCount = normalizedItems.length > 0 ? normalizedItems.length : normalizedChildList.length
+  const visualCount =
+    normalizedItems.length > 0 ? normalizedItems.length : normalizedChildList.length
   const canShowControls = visualCount > 1
 
   let rootClassName = 'carousel relative overflow-hidden'
@@ -707,7 +720,7 @@ const Carousel: FC<CarouselProps> = ({
 
   watch(
     () => slideCountHint,
-    nextCount => {
+    (nextCount: number | undefined) => {
       if (!nextCount) return
       currentIndexState.value = normalizeIndex(currentIndexState.value, nextCount, mergedLoop)
       syncLayout(true)
@@ -827,7 +840,8 @@ const Carousel: FC<CarouselProps> = ({
           )}
         >
           {Array.from({ length: visualCount }).map((_, index) => {
-            const active = index === normalizeIndex(currentIndexState.value, visualCount || 1, mergedLoop)
+            const active =
+              index === normalizeIndex(currentIndexState.value, visualCount || 1, mergedLoop)
             return (
               <button
                 key={index}
@@ -869,7 +883,11 @@ const Carousel: FC<CarouselProps> = ({
 
 /** 子项组件：在 scrollx 模式下延续 daisyUI carousel-item 语义。 */
 const Item: FC<CarouselItemProps> = ({ className, children, ...rest }) => {
-  return <div {...rest} className={mergeClassName('carousel-item', className)}>{children}</div>
+  return (
+    <div {...rest} className={mergeClassName('carousel-item', className)}>
+      {children}
+    </div>
+  )
 }
 
 type CarouselCompound = FC<CarouselProps> & {

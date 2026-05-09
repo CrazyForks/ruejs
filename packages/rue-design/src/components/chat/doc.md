@@ -106,7 +106,11 @@ classnames:
 ```html
 <div class="$$chat $$chat-start">
   <div class="$$chat-image $$avatar">
-    <div class="w-10 rounded-full bg-neutral text-neutral-content grid place-items-center text-xs font-semibold">AI</div>
+    <div
+      class="w-10 rounded-full bg-neutral text-neutral-content grid place-items-center text-xs font-semibold"
+    >
+      AI
+    </div>
   </div>
   <div class="$$chat-header">
     Rue Agent
@@ -117,7 +121,11 @@ classnames:
 </div>
 <div class="$$chat $$chat-start">
   <div class="$$chat-image $$avatar">
-    <div class="w-10 rounded-full bg-info text-info-content grid place-items-center text-[11px] font-semibold">OPS</div>
+    <div
+      class="w-10 rounded-full bg-info text-info-content grid place-items-center text-[11px] font-semibold"
+    >
+      OPS
+    </div>
   </div>
   <div class="$$chat-header">
     Deploy Agent

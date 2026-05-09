@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Button 组件概述
 - 提供语义化按钮 API，内部仍映射到 rue 当前的 btn 系列视觉类。
@@ -21,16 +22,7 @@ export type ButtonType = 'solid' | 'filled' | 'outlined' | 'dashed' | 'text' | '
 export type ButtonVariant = ButtonType
 export type ButtonVisualVariant = ButtonType
 export type ButtonShape = 'default' | 'square' | 'circle' | 'round'
-export type ButtonSize =
-  | 'xs'
-  | 'sm'
-  | 'md'
-  | 'lg'
-  | 'xl'
-  | 'small'
-  | 'medium'
-  | 'middle'
-  | 'large'
+export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium' | 'middle' | 'large'
 export type ButtonHTMLType = 'button' | 'submit' | 'reset'
 export type ButtonIconPlacement = 'start' | 'end'
 
@@ -183,7 +175,7 @@ const Button: FC<ButtonProps> = ({
   const renderAs = as ?? (href ? 'a' : 'button')
   const loadingVisible = normalizedLoading.active
   const iconNode = loadingVisible
-    ? normalizedLoading.icon ?? <DefaultLoadingIcon size={size} />
+    ? (normalizedLoading.icon ?? <DefaultLoadingIcon size={size} />)
     : icon
   const hasIcon = iconNode != null
   const hasChildren = hasRenderableContent(children)
@@ -230,7 +222,7 @@ const Button: FC<ButtonProps> = ({
         href={mergedDisabled ? undefined : href}
         target={target}
         rel={anchorRel}
-        role={href ? rest.role : rest.role ?? 'button'}
+        role={href ? rest.role : (rest.role ?? 'button')}
         className={mergedClassName}
         aria-disabled={mergedDisabled ? 'true' : undefined}
         aria-busy={loadingVisible ? 'true' : undefined}
@@ -240,7 +232,10 @@ const Button: FC<ButtonProps> = ({
           <>
             {hasChildren ? <span>{children}</span> : null}
             {hasIcon ? (
-              <span className="inline-flex items-center justify-center" aria-hidden={hasChildren ? 'true' : undefined}>
+              <span
+                className="inline-flex items-center justify-center"
+                aria-hidden={hasChildren ? 'true' : undefined}
+              >
                 {iconNode}
               </span>
             ) : null}
@@ -248,7 +243,10 @@ const Button: FC<ButtonProps> = ({
         ) : (
           <>
             {hasIcon ? (
-              <span className="inline-flex items-center justify-center" aria-hidden={hasChildren ? 'true' : undefined}>
+              <span
+                className="inline-flex items-center justify-center"
+                aria-hidden={hasChildren ? 'true' : undefined}
+              >
                 {iconNode}
               </span>
             ) : null}
@@ -274,7 +272,10 @@ const Button: FC<ButtonProps> = ({
           <>
             {hasChildren ? <span>{children}</span> : null}
             {hasIcon ? (
-              <span className="inline-flex items-center justify-center" aria-hidden={hasChildren ? 'true' : undefined}>
+              <span
+                className="inline-flex items-center justify-center"
+                aria-hidden={hasChildren ? 'true' : undefined}
+              >
                 {iconNode}
               </span>
             ) : null}
@@ -282,7 +283,10 @@ const Button: FC<ButtonProps> = ({
         ) : (
           <>
             {hasIcon ? (
-              <span className="inline-flex items-center justify-center" aria-hidden={hasChildren ? 'true' : undefined}>
+              <span
+                className="inline-flex items-center justify-center"
+                aria-hidden={hasChildren ? 'true' : undefined}
+              >
                 {iconNode}
               </span>
             ) : null}
@@ -306,7 +310,10 @@ const Button: FC<ButtonProps> = ({
         <>
           {hasChildren ? <span>{children}</span> : null}
           {hasIcon ? (
-            <span className="inline-flex items-center justify-center" aria-hidden={hasChildren ? 'true' : undefined}>
+            <span
+              className="inline-flex items-center justify-center"
+              aria-hidden={hasChildren ? 'true' : undefined}
+            >
               {iconNode}
             </span>
           ) : null}
@@ -314,7 +321,10 @@ const Button: FC<ButtonProps> = ({
       ) : (
         <>
           {hasIcon ? (
-            <span className="inline-flex items-center justify-center" aria-hidden={hasChildren ? 'true' : undefined}>
+            <span
+              className="inline-flex items-center justify-center"
+              aria-hidden={hasChildren ? 'true' : undefined}
+            >
               {iconNode}
             </span>
           ) : null}

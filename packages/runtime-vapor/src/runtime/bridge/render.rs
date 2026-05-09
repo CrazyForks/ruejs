@@ -16,7 +16,7 @@ impl WasmRue {
     #[wasm_bindgen(js_name = "render")]
     /// 渲染入口：
     /// - 默认接受 tagged mount handle、portable handle、host-node bridge
-    /// - compat 构建额外接受历史 raw node / array 输入
+    /// - 不接受 compat raw array/raw node/vnode/function-component 输入
     pub fn render_wasm(&self, input_value: JsValue, container: JsValue) {
         #[cfg(feature = "dev")]
         {
@@ -32,10 +32,10 @@ impl WasmRue {
                 );
             }
         }
-        let Some(input) = self.mount_input_from_input(
-            &input_value,
-            CompatEntryPolicy::LegacyArrayOrRawElementInput,
-        ) else {
+        let Some(input) =
+            self.mount_input_from_input(&input_value, CompatEntryPolicy::DefaultSurfaceOnly)
+        else {
+            let should_report_error = !input_value.is_null() && !input_value.is_undefined();
             #[cfg(feature = "dev")]
             {
                 crate::log::warning("Rue runtime: render input not supported on the default path");
@@ -47,6 +47,11 @@ impl WasmRue {
             }
 
             if let Ok(mut inner) = self.inner.try_borrow_mut() {
+                if should_report_error {
+                    inner.handle_error(JsValue::from_str(
+                        "Rue runtime: render input not supported on the default path",
+                    ));
+                }
                 let mut container_value = container.clone();
                 inner.clear_container((&mut container_value).into());
             }

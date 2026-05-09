@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 export type MockupBrowserAddressBarStatus = 'default' | 'success' | 'warning' | 'error'
@@ -169,17 +170,34 @@ const Root: FC<MockupBrowserProps> = ({
   children,
   ...rest
 }) => {
-  const toolbarContent = toolbar ?? (url != null ? <AddressBar href={typeof url === 'string' ? url : undefined}>{url}</AddressBar> : null)
+  const toolbarContent =
+    toolbar ??
+    (url != null ? (
+      <AddressBar href={typeof url === 'string' ? url : undefined}>{url}</AddressBar>
+    ) : null)
   const shouldRenderToolbar =
     showToolbar !== false &&
-    (toolbar != null || url != null || toolbarStart != null || toolbarEnd != null || toolbarClassName != null)
+    (toolbar != null ||
+      url != null ||
+      toolbarStart != null ||
+      toolbarEnd != null ||
+      toolbarClassName != null)
   const shouldWrapContent =
-    shouldRenderToolbar || contentClassName != null || contentBordered != null || contentBackground != null || contentPadding != null
+    shouldRenderToolbar ||
+    contentClassName != null ||
+    contentBordered != null ||
+    contentBackground != null ||
+    contentPadding != null
 
   return (
     <div
       {...rest}
-      className={joinClassName('mockup-browser', bordered && 'border border-base-300', background && 'bg-base-100', className)}
+      className={joinClassName(
+        'mockup-browser',
+        bordered && 'border border-base-300',
+        background && 'bg-base-100',
+        className,
+      )}
     >
       {shouldRenderToolbar ? (
         <Toolbar className={toolbarClassName} start={toolbarStart} end={toolbarEnd}>

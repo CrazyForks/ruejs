@@ -1,4 +1,4 @@
-import { type FC, Teleport, Transition, ref, useState } from '@rue-js/rue'
+import { type FC, Teleport, Transition, ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -67,7 +67,7 @@ const modalStyles = `
 }
 `
 
-const modalSource = `import { type FC, Teleport, Transition, useState } from '@rue-js/rue';
+const modalSource = `import { type FC, Teleport, Transition, ref } from '@rue-js/rue';
 
 const modalStyles = \`
 .modal-mask {
@@ -139,15 +139,15 @@ const Modal: FC<{ visible: boolean; onClose?: () => void }> = (props) => (
 );
 
 const ModalExample: FC = () => {
-  const [visibleModal, setVisibleModal] = useState(false);
+  const visibleModal = ref(false);
 
   return (
     <div className="card bg-base-100 shadow">
       <div className="card-body grid gap-4">
-        <button id="visible-modal" className="btn btn-primary w-fit" onClick={() => setVisibleModal(true)}>
+        <button id="visible-modal" className="btn btn-primary w-fit" onClick={() => (visibleModal.value = true)}>
           Visible Modal
         </button>
-        <Modal visible={visibleModal.value} onClose={() => setVisibleModal(false)} />
+        <Modal visible={visibleModal.value} onClose={() => (visibleModal.value = false)} />
       </div>
     </div>
   );
@@ -159,9 +159,9 @@ const Modal: FC<{
   visible: boolean
   onClose?: () => void
 }> = props => (
-  <Teleport to="body">
-    <>
-      <style>{modalStyles}</style>
+  <>
+    <style>{modalStyles}</style>
+    <Teleport to="body">
       <Transition name="modal" type="transition" duration={300} appear>
         {props.visible ? (
           <div
@@ -196,12 +196,12 @@ const Modal: FC<{
           </div>
         ) : null}
       </Transition>
-    </>
-  </Teleport>
+    </Teleport>
+  </>
 )
 
 const ModalExample: FC = () => {
-  const [visibleModal, setVisibleModal] = useState(false)
+  const visibleModal = ref(false)
   const activeTab = ref<'preview' | 'code'>('preview')
 
   return (
@@ -242,11 +242,18 @@ const ModalExample: FC = () => {
               <button
                 id="visible-modal"
                 className="btn btn-primary w-fit"
-                onClick={() => setVisibleModal(true)}
+                onClick={() => {
+                  visibleModal.value = true
+                }}
               >
                 Visible Modal
               </button>
-              <Modal visible={visibleModal.value} onClose={() => setVisibleModal(false)} />
+              <Modal
+                visible={visibleModal.value}
+                onClose={() => {
+                  visibleModal.value = false
+                }}
+              />
             </div>
           </div>
         )}

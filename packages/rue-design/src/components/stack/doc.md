@@ -5,18 +5,18 @@ source: https://raw.githubusercontent.com/saadeghi/daisyui/refs/heads/master/pac
 layout: components
 classnames:
   component:
-  - class: stack
-    desc: Puts the children elements on top of each other
+    - class: stack
+      desc: Puts the children elements on top of each other
   modifier:
-  - class: stack-top
-    desc: Aligns the children elements to the top
-  - class: stack-bottom
-    desc: Aligns the children elements to the bottom
-    default: true
-  - class: stack-start
-    desc: Aligns the children elements to the start (horizontally)
-  - class: stack-end
-    desc: Aligns the children elements to the end (horizontally)
+    - class: stack-top
+      desc: Aligns the children elements to the top
+    - class: stack-bottom
+      desc: Aligns the children elements to the bottom
+      default: true
+    - class: stack-start
+      desc: Aligns the children elements to the start (horizontally)
+    - class: stack-end
+      desc: Aligns the children elements to the end (horizontally)
 ---
 
 <script>
@@ -29,6 +29,7 @@ classnames:
 > You can use `w-*` and `h-*` classes to set the width and height of the stack, making all items the same size.
 
 ### ~3 divs in a stack
+
 <div class="stack h-20 w-32">
   <div class="grid rounded-box bg-primary text-primary-content place-content-center">1</div>
   <div class="grid rounded-box bg-accent text-accent-content place-content-center">2</div>
@@ -39,13 +40,12 @@ classnames:
 <div class="$$stack h-20 w-32">
   <div class="bg-primary text-primary-content grid place-content-center rounded-box">1</div>
   <div class="bg-accent text-accent-content grid place-content-center rounded-box">2</div>
-  <div class="bg-secondary text-secondary-content grid place-content-center rounded-box">
-    3
-  </div>
+  <div class="bg-secondary text-secondary-content grid place-content-center rounded-box">3</div>
 </div>
 ```
 
 ### ~stacked images
+
 <div class="stack mb-4 w-48">
   <img src="https://img.daisyui.com/images/stock/photo-1572635148818-ef6fd45eb394.webp" alt="Tailwind CSS example 1" class="rounded-box" />
   <img src="https://img.daisyui.com/images/stock/photo-1565098772267-60af42b81ef2.webp" alt="Tailwind CSS example 2" class="rounded-box" />
@@ -54,14 +54,23 @@ classnames:
 
 ```html
 <div class="$$stack w-48">
-  <img src="https://img.daisyui.com/images/stock/photo-1572635148818-ef6fd45eb394.webp" class="rounded-box" />
-  <img src="https://img.daisyui.com/images/stock/photo-1565098772267-60af42b81ef2.webp" class="rounded-box" />
-  <img src="https://img.daisyui.com/images/stock/photo-1559703248-dcaaec9fab78.webp" class="rounded-box" />
+  <img
+    src="https://img.daisyui.com/images/stock/photo-1572635148818-ef6fd45eb394.webp"
+    class="rounded-box"
+  />
+  <img
+    src="https://img.daisyui.com/images/stock/photo-1565098772267-60af42b81ef2.webp"
+    class="rounded-box"
+  />
+  <img
+    src="https://img.daisyui.com/images/stock/photo-1559703248-dcaaec9fab78.webp"
+    class="rounded-box"
+  />
 </div>
 ```
 
-
 ### ~stacked cards
+
 <div class="stack mb-4 size-28">
   <div class="text-center border border-base-content card bg-base-100">
     <div class="card-body">A</div>
@@ -89,6 +98,7 @@ classnames:
 ```
 
 ### ~stacked cards (top direction)
+
 <div class="stack stack-top mb-4 size-28">
   <div class="text-center border border-base-content card bg-base-100">
     <div class="card-body">A</div>
@@ -115,8 +125,8 @@ classnames:
 </div>
 ```
 
-
 ### ~stacked cards (start direction)
+
 <div class="stack stack-start mb-4 size-28">
   <div class="text-center border border-base-content card bg-base-100">
     <div class="card-body">A</div>
@@ -143,9 +153,8 @@ classnames:
 </div>
 ```
 
-
-
 ### ~stacked cards (end direction)
+
 <div class="stack stack-end mb-4 size-28">
   <div class="text-center border border-base-content card bg-base-100">
     <div class="card-body">A</div>
@@ -172,8 +181,8 @@ classnames:
 </div>
 ```
 
-
 ### ~stacked cards with shadow
+
 <div class="stack mb-4">
   <div class="text-center shadow-md card bg-base-200">
     <div class="card-body">A</div>
@@ -200,8 +209,8 @@ classnames:
 </div>
 ```
 
-
 ### ~stacked cards
+
 <div class="stack mb-4">
   <div class="shadow-md bg-base-100 card">
     <div class="card-body">

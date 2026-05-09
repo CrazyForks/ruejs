@@ -47,7 +47,9 @@ describe('Hero', () => {
     resetActiveRuntime()
 
     render(
-      <Hero overlay={{ tone: 'base-content', opacity: 'soft', blur: true, className: 'rounded-box' }}>
+      <Hero
+        overlay={{ tone: 'base-content', opacity: 'soft', blur: true, className: 'rounded-box' }}
+      >
         <Hero.Content data-testid="content" layout="split" align="end" textAlign="center" gap="xl">
           Body
         </Hero.Content>

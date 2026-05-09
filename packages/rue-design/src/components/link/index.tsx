@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Link 组件概述
 - 保留 Rue 当前 link/link-* 视觉基底，同时补齐 Typography.Link 风格的文本能力。
@@ -312,8 +313,7 @@ const syncTextareaAutoSize = (
   const paddingHeight =
     Number.parseFloat(computedStyle.paddingTop || '0') +
     Number.parseFloat(computedStyle.paddingBottom || '0')
-  const minRows =
-    typeof config?.minRows === 'number' && config.minRows > 0 ? config.minRows : 2
+  const minRows = typeof config?.minRows === 'number' && config.minRows > 0 ? config.minRows : 2
   const maxRows =
     typeof config?.maxRows === 'number' && config.maxRows > 0
       ? Math.max(config.maxRows, minRows)
@@ -751,7 +751,9 @@ const Link: FC<LinkProps> = ({
     return (
       <span
         className={mergeClassNames(
-          block ? 'flex w-full items-start gap-1 align-middle' : 'inline-flex max-w-full items-start gap-1 align-middle',
+          block
+            ? 'flex w-full items-start gap-1 align-middle'
+            : 'inline-flex max-w-full items-start gap-1 align-middle',
         )}
       >
         {editConfig.autoSize ? (
@@ -794,7 +796,7 @@ const Link: FC<LinkProps> = ({
           data-rue-link-edit-confirm="true"
           className="btn btn-ghost btn-xs"
           aria-label="确认编辑"
-          onClick={event => finishEdit(event as any)}
+          onClick={(event: MouseEvent) => finishEdit(event as any)}
         >
           {editConfig.enterIcon ?? <CheckIcon />}
         </button>
@@ -803,7 +805,7 @@ const Link: FC<LinkProps> = ({
           data-rue-link-edit-cancel="true"
           className="btn btn-ghost btn-xs"
           aria-label="取消编辑"
-          onClick={event => cancelEdit(event as any)}
+          onClick={(event: MouseEvent) => cancelEdit(event as any)}
         >
           <CloseIcon />
         </button>
@@ -936,7 +938,9 @@ const Link: FC<LinkProps> = ({
     return (
       <span
         className={mergeClassNames(
-          block ? 'flex w-full flex-wrap items-start gap-1 align-baseline' : 'inline-flex max-w-full flex-wrap items-start gap-1 align-baseline',
+          block
+            ? 'flex w-full flex-wrap items-start gap-1 align-baseline'
+            : 'inline-flex max-w-full flex-wrap items-start gap-1 align-baseline',
         )}
       >
         {anchor}
@@ -962,7 +966,7 @@ const Link: FC<LinkProps> = ({
             disabled={disabled}
             onClick={handleCopyClick}
           >
-          {copied.value ? '✓' : (copyConfig.icon ?? <CopyIcon />)}
+            {copied.value ? '✓' : (copyConfig.icon ?? <CopyIcon />)}
           </button>
         ) : null}
         {editConfig.enabled && editConfig.triggerType.includes('icon') ? (
@@ -974,7 +978,7 @@ const Link: FC<LinkProps> = ({
             title={editConfig.tooltip ?? '编辑'}
             tabIndex={editConfig.tabIndex}
             disabled={disabled}
-            onClick={event => startEdit(event as any)}
+            onClick={(event: MouseEvent) => startEdit(event as any)}
           >
             {editConfig.icon ?? <EditIcon />}
           </button>

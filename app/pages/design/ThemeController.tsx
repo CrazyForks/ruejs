@@ -5,7 +5,14 @@ import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 
 type TabMode = 'preview' | 'code'
-type ThemePresetName = 'default' | 'garden' | 'retro' | 'synthwave' | 'cyberpunk' | 'night' | 'coffee'
+type ThemePresetName =
+  | 'default'
+  | 'garden'
+  | 'retro'
+  | 'synthwave'
+  | 'cyberpunk'
+  | 'night'
+  | 'coffee'
 type AlgorithmMode = 'default' | 'dark' | 'compact' | 'darkCompact'
 type ControllerDemoKind = 'toggle' | 'checkbox' | 'swap' | 'radio' | 'buttons'
 
@@ -60,23 +67,23 @@ const resolveAlgorithms = (mode: AlgorithmMode) => {
 
 const buildScopedThemeCode = () => {
   return [
-    "const runtime = ThemeController.useToken({",
+    'const runtime = ThemeController.useToken({',
     "  theme: 'night',",
-    "  algorithm: [ThemeController.darkAlgorithm, ThemeController.compactAlgorithm],",
-    "  token: {",
+    '  algorithm: [ThemeController.darkAlgorithm, ThemeController.compactAlgorithm],',
+    '  token: {',
     "    colors: { primary: '#38bdf8' },",
     "    radius: { box: '1.1rem' },",
-    "  },",
-    "})",
+    '  },',
+    '})',
     '',
-    "<ThemeController.Provider",
-    "  theme=\"night\"",
-    "  algorithm={[ThemeController.darkAlgorithm, ThemeController.compactAlgorithm]}",
+    '<ThemeController.Provider',
+    '  theme="night"',
+    '  algorithm={[ThemeController.darkAlgorithm, ThemeController.compactAlgorithm]}',
     "  token={{ colors: { primary: '#38bdf8' }, radius: { box: '1.1rem' } }}",
-    "  className=\"rounded-[2rem] border border-base-300 p-6\"",
-    ">",
-    "  <Button color=\"primary\">Publish</Button>",
-    "</ThemeController.Provider>",
+    '  className="rounded-[2rem] border border-base-300 p-6"',
+    '>',
+    '  <Button color="primary">Publish</Button>',
+    '</ThemeController.Provider>',
     '',
     "runtime.token.colors.primary // '#38bdf8'",
   ].join('\n')
@@ -84,26 +91,26 @@ const buildScopedThemeCode = () => {
 
 const buildPresetCode = () => {
   return [
-    "const token = ThemeController.getDesignToken({",
+    'const token = ThemeController.getDesignToken({',
     "  theme: 'night',",
-    "})",
+    '})',
     '',
-    "token.colors.primary",
-    "token.radius.box",
-    "token.shadow.md",
+    'token.colors.primary',
+    'token.radius.box',
+    'token.shadow.md',
   ].join('\n')
 }
 
 const buildProviderRenderCode = () => {
   return [
-    "<ThemeController.Provider",
-    "  theme=\"retro\"",
-    "  render={(runtime) => (",
-    "    <div>",
-    "      {runtime.theme} | {runtime.token.colors.primary}",
-    "    </div>",
-    "  )}",
-    "/>",
+    '<ThemeController.Provider',
+    '  theme="retro"',
+    '  render={(runtime) => (',
+    '    <div>',
+    '      {runtime.theme} | {runtime.token.colors.primary}',
+    '    </div>',
+    '  )}',
+    '/>',
   ].join('\n')
 }
 
@@ -142,7 +149,8 @@ const buildButtonGroupCode = () => {
 const controllerApiRows: ApiRow[] = [
   {
     name: 'className',
-    description: '追加到 theme-controller 输入上的样式类，可与 toggle、checkbox、radio、btn 等 daisyUI 形态组合。',
+    description:
+      '追加到 theme-controller 输入上的样式类，可与 toggle、checkbox、radio、btn 等 daisyUI 形态组合。',
     type: 'string',
     defaultValue: '-',
   },
@@ -211,7 +219,8 @@ const providerApiRows: ApiRow[] = [
   },
   {
     name: 'theme',
-    description: '预设主题名，当前内置 default、garden、retro、synthwave、cyberpunk、night、coffee。',
+    description:
+      '预设主题名，当前内置 default、garden、retro、synthwave、cyberpunk、night、coffee。',
     type: 'string',
     defaultValue: "'default'",
   },
@@ -331,7 +340,11 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
   )
 }
 
-const ThemeSwatch: FC<{ label: string; value: string; text?: string }> = ({ label, value, text }) => {
+const ThemeSwatch: FC<{ label: string; value: string; text?: string }> = ({
+  label,
+  value,
+  text,
+}) => {
   return (
     <div className="rounded-[1.15rem] border border-base-300/70 bg-base-100/80 p-3 shadow-sm">
       <div
@@ -347,7 +360,9 @@ const ThemeSwatch: FC<{ label: string; value: string; text?: string }> = ({ labe
 const TokenFact: FC<{ label: string; value: string }> = ({ label, value }) => {
   return (
     <div className="rounded-[1.1rem] border border-base-300/70 bg-base-100/70 px-4 py-3 shadow-sm">
-      <div className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] opacity-60">{label}</div>
+      <div className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] opacity-60">
+        {label}
+      </div>
       <div className="mt-2 font-mono text-sm">{value}</div>
     </div>
   )
@@ -355,17 +370,38 @@ const TokenFact: FC<{ label: string; value: string }> = ({ label, value }) => {
 
 const SunIcon: FC = () => {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-5">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="size-5"
+    >
       <circle cx="12" cy="12" r="4" />
-      <path strokeLinecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+      <path
+        strokeLinecap="round"
+        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+      />
     </svg>
   )
 }
 
 const MoonIcon: FC = () => {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="size-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"
+      />
     </svg>
   )
 }
@@ -375,30 +411,39 @@ const ThemeWorkbenchPreview: FC = () => {
   const algorithmMode = ref<AlgorithmMode>('darkCompact')
   const primaryColor = ref('#38bdf8')
   const radiusBox = ref('1.1rem')
-  const runtime = computed(() => ThemeController.useToken({
-    theme: activeTheme.value,
-    algorithm: resolveAlgorithms(algorithmMode.value),
-    token: {
-      colors: {
-        primary: primaryColor.value,
+  const runtime = computed(() =>
+    ThemeController.useToken({
+      theme: activeTheme.value,
+      algorithm: resolveAlgorithms(algorithmMode.value),
+      token: {
+        colors: {
+          primary: primaryColor.value,
+        },
+        radius: {
+          box: radiusBox.value,
+        },
       },
-      radius: {
-        box: radiusBox.value,
-      },
-    },
-  }))
+    }),
+  )
   const palette = computed(() => runtime.get().token.colors)
 
   return (
     <div className="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
       <div className="rounded-[1.75rem] border border-base-300 bg-gradient-to-b from-base-100 to-base-200/70 p-5 shadow-sm">
         <h3 className="m-0 text-base font-semibold">Theme Workbench</h3>
-        <p className="mt-2 text-sm opacity-70">把预设、算法和 token 覆盖放到同一个工作台里，观察 Rue Theme 的组合结果。</p>
+        <p className="mt-2 text-sm opacity-70">
+          把预设、算法和 token 覆盖放到同一个工作台里，观察 Rue Theme 的组合结果。
+        </p>
 
         <Fieldset className="mt-4 gap-3">
-          <legend className="fieldset-legend text-xs uppercase tracking-[0.2em] opacity-60">Preset</legend>
+          <legend className="fieldset-legend text-xs uppercase tracking-[0.2em] opacity-60">
+            Preset
+          </legend>
           {themePresetOptions.map(option => (
-            <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-[1rem] border border-base-300/70 bg-base-100/70 px-3 py-3">
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-start gap-3 rounded-[1rem] border border-base-300/70 bg-base-100/70 px-3 py-3"
+            >
               <input
                 type="radio"
                 name="theme-workbench-preset"
@@ -418,14 +463,19 @@ const ThemeWorkbenchPreview: FC = () => {
         </Fieldset>
 
         <Fieldset className="mt-4 gap-2">
-          <legend className="fieldset-legend text-xs uppercase tracking-[0.2em] opacity-60">Algorithms</legend>
+          <legend className="fieldset-legend text-xs uppercase tracking-[0.2em] opacity-60">
+            Algorithms
+          </legend>
           {[
             { value: 'default', label: 'Default' },
             { value: 'dark', label: 'Dark' },
             { value: 'compact', label: 'Compact' },
             { value: 'darkCompact', label: 'Dark + Compact' },
           ].map(option => (
-            <label key={option.value} className="flex cursor-pointer items-center gap-3 rounded-[0.95rem] border border-base-300/70 bg-base-100/70 px-3 py-2.5">
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-center gap-3 rounded-[0.95rem] border border-base-300/70 bg-base-100/70 px-3 py-2.5"
+            >
               <input
                 type="radio"
                 name="theme-workbench-algorithm"
@@ -443,12 +493,15 @@ const ThemeWorkbenchPreview: FC = () => {
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
           <label className="rounded-[1rem] border border-base-300/70 bg-base-100/70 p-3">
-            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] opacity-60">Primary</span>
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] opacity-60">
+              Primary
+            </span>
             <input
               type="color"
               value={primaryColor.value}
               onInput={(event: Event) => {
-                primaryColor.value = (event.target as HTMLInputElement | null)?.value ?? primaryColor.value
+                primaryColor.value =
+                  (event.target as HTMLInputElement | null)?.value ?? primaryColor.value
               }}
               className="h-11 w-full cursor-pointer rounded-[0.9rem] border border-base-300 bg-transparent"
             />
@@ -456,7 +509,9 @@ const ThemeWorkbenchPreview: FC = () => {
           </label>
 
           <label className="rounded-[1rem] border border-base-300/70 bg-base-100/70 p-3">
-            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] opacity-60">Box Radius</span>
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] opacity-60">
+              Box Radius
+            </span>
             <input
               type="range"
               min="0.75"
@@ -492,47 +547,86 @@ const ThemeWorkbenchPreview: FC = () => {
               <div className="space-y-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.28em] opacity-60">Scoped Theme Island</div>
-                    <h3 className="mt-3 text-2xl font-semibold">{scopedRuntime.theme} · {scopedRuntime.token.density}</h3>
+                    <div className="text-xs font-semibold uppercase tracking-[0.28em] opacity-60">
+                      Scoped Theme Island
+                    </div>
+                    <h3 className="mt-3 text-2xl font-semibold">
+                      {scopedRuntime.theme} · {scopedRuntime.token.density}
+                    </h3>
                     <p className="mt-2 max-w-xl text-sm opacity-70">
-                      这个区域只吃当前 Provider 的 token。它不会改动全站视觉，但能单独承载营销卡片、工作台模块或嵌套的品牌子空间。
+                      这个区域只吃当前 Provider 的
+                      token。它不会改动全站视觉，但能单独承载营销卡片、工作台模块或嵌套的品牌子空间。
                     </p>
                   </div>
-                  <div className="badge badge-primary badge-lg">{scopedRuntime.token.appearance}</div>
+                  <div className="badge badge-primary badge-lg">
+                    {scopedRuntime.token.appearance}
+                  </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="rounded-[var(--radius-box)] border border-base-300 bg-base-100/80 p-4 shadow-[var(--rue-theme-shadow-sm)]">
-                    <div className="text-xs uppercase tracking-[0.22em] opacity-55">Release Health</div>
+                    <div className="text-xs uppercase tracking-[0.22em] opacity-55">
+                      Release Health
+                    </div>
                     <div className="mt-3 text-3xl font-semibold">98.4%</div>
                     <div className="mt-2 text-sm opacity-65">主流程可用，适合直接发版。</div>
                   </div>
                   <div className="rounded-[var(--radius-box)] border border-base-300 bg-base-100/80 p-4 shadow-[var(--rue-theme-shadow-sm)]">
                     <div className="text-xs uppercase tracking-[0.22em] opacity-55">Primary</div>
-                    <div className="mt-3 font-mono text-sm">{scopedRuntime.token.colors.primary}</div>
-                    <div className="mt-2 text-sm opacity-65">当前作用域主色已经注入到 Provider。</div>
+                    <div className="mt-3 font-mono text-sm">
+                      {scopedRuntime.token.colors.primary}
+                    </div>
+                    <div className="mt-2 text-sm opacity-65">
+                      当前作用域主色已经注入到 Provider。
+                    </div>
                   </div>
                   <div className="rounded-[var(--radius-box)] border border-base-300 bg-base-100/80 p-4 shadow-[var(--rue-theme-shadow-sm)]">
-                    <div className="text-xs uppercase tracking-[0.22em] opacity-55">Surface Radius</div>
+                    <div className="text-xs uppercase tracking-[0.22em] opacity-55">
+                      Surface Radius
+                    </div>
                     <div className="mt-3 font-mono text-sm">{scopedRuntime.token.radius.box}</div>
-                    <div className="mt-2 text-sm opacity-65">用于卡片、面板和岛屿容器的圆角尺度。</div>
+                    <div className="mt-2 text-sm opacity-65">
+                      用于卡片、面板和岛屿容器的圆角尺度。
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
                   <Button color="primary">Publish</Button>
-                  <Button color="secondary" type="outlined">Preview</Button>
-                  <Button type="filled" color="accent">Theme Diff</Button>
+                  <Button color="secondary" type="outlined">
+                    Preview
+                  </Button>
+                  <Button type="filled" color="accent">
+                    Theme Diff
+                  </Button>
                 </div>
               </div>
 
               <div className="rounded-[1.6rem] border border-base-300 bg-base-100/75 p-5 shadow-[var(--rue-theme-shadow-sm)]">
-                <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">Palette</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+                  Palette
+                </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <ThemeSwatch label="Primary" value={scopedRuntime.token.colors.primary} text={scopedRuntime.token.colors.primaryContent} />
-                  <ThemeSwatch label="Secondary" value={scopedRuntime.token.colors.secondary} text={scopedRuntime.token.colors.secondaryContent} />
-                  <ThemeSwatch label="Accent" value={scopedRuntime.token.colors.accent} text={scopedRuntime.token.colors.accentContent} />
-                  <ThemeSwatch label="Base 100" value={scopedRuntime.token.colors.base100} text={scopedRuntime.token.colors.baseContent} />
+                  <ThemeSwatch
+                    label="Primary"
+                    value={scopedRuntime.token.colors.primary}
+                    text={scopedRuntime.token.colors.primaryContent}
+                  />
+                  <ThemeSwatch
+                    label="Secondary"
+                    value={scopedRuntime.token.colors.secondary}
+                    text={scopedRuntime.token.colors.secondaryContent}
+                  />
+                  <ThemeSwatch
+                    label="Accent"
+                    value={scopedRuntime.token.colors.accent}
+                    text={scopedRuntime.token.colors.accentContent}
+                  />
+                  <ThemeSwatch
+                    label="Base 100"
+                    value={scopedRuntime.token.colors.base100}
+                    text={scopedRuntime.token.colors.baseContent}
+                  />
                 </div>
               </div>
             </div>
@@ -559,7 +653,10 @@ const ThemePresetGalleryPreview: FC = () => {
       <Fieldset className="gap-2 rounded-[1.5rem] border border-base-300 bg-base-100 p-4 shadow-sm">
         <legend className="fieldset-legend">预设主题</legend>
         {themePresetOptions.map(option => (
-          <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-[1rem] border border-base-300/70 bg-base-100/70 px-3 py-3">
+          <label
+            key={option.value}
+            className="flex cursor-pointer items-start gap-3 rounded-[1rem] border border-base-300/70 bg-base-100/70 px-3 py-3"
+          >
             <input
               type="radio"
               name="theme-static-presets"
@@ -580,16 +677,34 @@ const ThemePresetGalleryPreview: FC = () => {
 
       <div className="grid gap-4">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <ThemeSwatch label="Primary" value={token.get().colors.primary} text={token.get().colors.primaryContent} />
-          <ThemeSwatch label="Secondary" value={token.get().colors.secondary} text={token.get().colors.secondaryContent} />
-          <ThemeSwatch label="Accent" value={token.get().colors.accent} text={token.get().colors.accentContent} />
-          <ThemeSwatch label="Base" value={token.get().colors.base100} text={token.get().colors.baseContent} />
+          <ThemeSwatch
+            label="Primary"
+            value={token.get().colors.primary}
+            text={token.get().colors.primaryContent}
+          />
+          <ThemeSwatch
+            label="Secondary"
+            value={token.get().colors.secondary}
+            text={token.get().colors.secondaryContent}
+          />
+          <ThemeSwatch
+            label="Accent"
+            value={token.get().colors.accent}
+            text={token.get().colors.accentContent}
+          />
+          <ThemeSwatch
+            label="Base"
+            value={token.get().colors.base100}
+            text={token.get().colors.baseContent}
+          />
         </div>
 
         <div className="rounded-[1.6rem] border border-base-300 bg-base-100/80 p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">Token Snapshot</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+                Token Snapshot
+              </div>
               <div className="mt-2 text-lg font-semibold">{activeTheme.value}</div>
             </div>
             <div className="badge badge-outline">getDesignToken()</div>
@@ -616,7 +731,9 @@ const ThemeProviderRenderPreview: FC = () => {
       }}
       render={runtime => (
         <div className="rounded-[1.6rem] border border-base-300 bg-base-100/85 p-5 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">Render Prop Snapshot</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+            Render Prop Snapshot
+          </div>
           <div className="mt-3 grid gap-3 md:grid-cols-3">
             <TokenFact label="theme" value={runtime.theme} />
             <TokenFact label="primary" value={runtime.token.colors.primary} />
@@ -653,7 +770,9 @@ const ThemeTogglePreview: FC<ControllerPreviewProps> = ({ activeDemo, activeThem
         }}
       />
       <span className="label-text">Synthwave</span>
-      <span className="text-sm text-base-content/70">当前 controller 值：{isChecked ? 'synthwave' : '未激活'}</span>
+      <span className="text-sm text-base-content/70">
+        当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
+      </span>
     </div>
   )
 }
@@ -681,7 +800,9 @@ const ThemeCheckboxPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTh
           }
         }}
       />
-      <span className="text-sm text-base-content/70">当前 controller 值：{isChecked ? 'synthwave' : '未激活'}</span>
+      <span className="text-sm text-base-content/70">
+        当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
+      </span>
     </div>
   )
 }
@@ -709,10 +830,16 @@ const ThemeSwapPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme 
             }
           }}
         />
-        <span className="swap-off inline-flex items-center gap-2"><SunIcon /> Light</span>
-        <span className="swap-on inline-flex items-center gap-2"><MoonIcon /> Dark</span>
+        <span className="swap-off inline-flex items-center gap-2">
+          <SunIcon /> Light
+        </span>
+        <span className="swap-on inline-flex items-center gap-2">
+          <MoonIcon /> Dark
+        </span>
       </label>
-      <span className="text-sm text-base-content/70">当前 controller 值：{isChecked ? 'synthwave' : '未激活'}</span>
+      <span className="text-sm text-base-content/70">
+        当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
+      </span>
     </div>
   )
 }
@@ -739,7 +866,9 @@ const ThemeRadioPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme
           <span>{theme}</span>
         </label>
       ))}
-      <p className="m-0 text-sm text-base-content/70">当前 controller 值：{selectedTheme ?? '未激活'}</p>
+      <p className="m-0 text-sm text-base-content/70">
+        当前 controller 值：{selectedTheme ?? '未激活'}
+      </p>
     </Fieldset>
   )
 }
@@ -766,7 +895,9 @@ const ThemeButtonGroupPreview: FC<ControllerPreviewProps> = ({ activeDemo, activ
           />
         ))}
       </div>
-      <div className="text-sm text-base-content/70">当前 controller 值：{selectedTheme ?? '未激活'}</div>
+      <div className="text-sm text-base-content/70">
+        当前 controller 值：{selectedTheme ?? '未激活'}
+      </div>
     </div>
   )
 }
@@ -788,12 +919,15 @@ const ThemeControllerPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Theme 主题系统</h1>
         <p className="text-sm mt-3 mb-3">
-          目录仍然叫 theme，公共导出名继续保持 <code>ThemeController</code>，但它现在不再只是一个 CSS-only 的输入控件。
-          这一版把 Rue Theme 扩成了一个轻量主题系统：默认导出依旧兼容原有 controller，用来接住 daisyUI 主题切换模式；同时新增
-          <code>Provider</code>、<code>getDesignToken</code>、<code>useToken</code> 和暗色 / 紧凑算法，让主题可以局部作用、组合派生、按场景覆盖。
+          目录仍然叫 theme，公共导出名继续保持 <code>ThemeController</code>，但它现在不再只是一个
+          CSS-only 的输入控件。 这一版把 Rue Theme 扩成了一个轻量主题系统：默认导出依旧兼容原有
+          controller，用来接住 daisyUI 主题切换模式；同时新增
+          <code>Provider</code>、<code>getDesignToken</code>、<code>useToken</code> 和暗色 /
+          紧凑算法，让主题可以局部作用、组合派生、按场景覆盖。
         </p>
         <p className="text-sm mt-3 mb-3">
-          这套 API 参考了 ant-design Theme 的组织方式，但视觉仍然保留 Rue 当前偏轻盈、偏实验的气质：你可以把它当成一个局部主题岛生成器，而不是整站强耦合配置中心。
+          这套 API 参考了成熟主题系统的组织方式，但视觉仍然保留 Rue
+          当前偏轻盈、偏实验的气质：你可以把它当成一个局部主题岛生成器，而不是整站强耦合配置中心。
         </p>
 
         <ExampleBlock
@@ -822,23 +956,29 @@ const ThemeControllerPage: FC = () => {
 
         <div className="not-prose mt-12 grid gap-6 rounded-[2rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200/60 p-6 shadow-sm lg:grid-cols-2">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">Controller modes</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+              Controller modes
+            </div>
             <h2 className="mt-3 mb-2 text-xl font-semibold">完整的输入模式矩阵</h2>
             <p className="m-0 text-sm opacity-70">
-              下面这些示例保留了原来的 toggle、checkbox、swap、radio 四种 controller 写法，并额外补了按钮组模式，方便把 ThemeController 直接嵌进现有表单和筛选 UI。
-              由于 daisyUI 的 theme-controller 天生就是页面级切换器，这里额外做了单一激活控制，避免多个 demo 同时 checked 时互相抢占全局主题。
+              下面这些示例保留了原来的 toggle、checkbox、swap、radio 四种 controller
+              写法，并额外补了按钮组模式，方便把 ThemeController 直接嵌进现有表单和筛选 UI。 由于
+              daisyUI 的 theme-controller 天生就是页面级切换器，这里额外做了单一激活控制，避免多个
+              demo 同时 checked 时互相抢占全局主题。
             </p>
           </div>
           <div className="rounded-[1.5rem] border border-base-300 bg-base-100/80 p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">Static API quick use</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+              Static API quick use
+            </div>
             <Code
               className="mt-3"
               lang="tsx"
               code={[
-                "const token = ThemeController.getDesignToken({",
+                'const token = ThemeController.getDesignToken({',
                 "  theme: 'coffee',",
-                "  algorithm: ThemeController.compactAlgorithm,",
-                "})",
+                '  algorithm: ThemeController.compactAlgorithm,',
+                '})',
                 '',
                 "const runtime = ThemeController.useToken({ theme: 'coffee' })",
               ].join('\n')}
@@ -850,7 +990,12 @@ const ThemeControllerPage: FC = () => {
           title="Theme Controller using a toggle"
           summary="最轻量的 controller 入口。"
           tab={tabToggle}
-          preview={() => <ThemeTogglePreview activeDemo={activeControllerDemo} activeTheme={activeControllerTheme} />}
+          preview={() => (
+            <ThemeTogglePreview
+              activeDemo={activeControllerDemo}
+              activeTheme={activeControllerTheme}
+            />
+          )}
           code={buildToggleCode()}
         />
 
@@ -858,7 +1003,12 @@ const ThemeControllerPage: FC = () => {
           title="Theme Controller using a checkbox"
           summary="适合塞进表单区或者设置面板。"
           tab={tabCheckbox}
-          preview={() => <ThemeCheckboxPreview activeDemo={activeControllerDemo} activeTheme={activeControllerTheme} />}
+          preview={() => (
+            <ThemeCheckboxPreview
+              activeDemo={activeControllerDemo}
+              activeTheme={activeControllerTheme}
+            />
+          )}
           code={buildCheckboxCode()}
         />
 
@@ -866,7 +1016,12 @@ const ThemeControllerPage: FC = () => {
           title="Theme Controller using a swap"
           summary="保留了原来的 swap 形式，并补上更完整的视觉提示。"
           tab={tabSwap}
-          preview={() => <ThemeSwapPreview activeDemo={activeControllerDemo} activeTheme={activeControllerTheme} />}
+          preview={() => (
+            <ThemeSwapPreview
+              activeDemo={activeControllerDemo}
+              activeTheme={activeControllerTheme}
+            />
+          )}
           code={buildSwapCode()}
         />
 
@@ -874,7 +1029,12 @@ const ThemeControllerPage: FC = () => {
           title="Theme Controller using radio inputs"
           summary="适合明确展示当前主题选择。"
           tab={tabRadio}
-          preview={() => <ThemeRadioPreview activeDemo={activeControllerDemo} activeTheme={activeControllerTheme} />}
+          preview={() => (
+            <ThemeRadioPreview
+              activeDemo={activeControllerDemo}
+              activeTheme={activeControllerTheme}
+            />
+          )}
           code={buildRadioCode()}
         />
 
@@ -882,7 +1042,12 @@ const ThemeControllerPage: FC = () => {
           title="Theme Controller using button group"
           summary="把 ThemeController 当作 join 按钮组使用，适合主题预设切换器。"
           tab={tabButtons}
-          preview={() => <ThemeButtonGroupPreview activeDemo={activeControllerDemo} activeTheme={activeControllerTheme} />}
+          preview={() => (
+            <ThemeButtonGroupPreview
+              activeDemo={activeControllerDemo}
+              activeTheme={activeControllerTheme}
+            />
+          )}
           code={buildButtonGroupCode()}
         />
 

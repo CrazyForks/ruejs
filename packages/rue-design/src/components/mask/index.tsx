@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 export type MaskShape =
@@ -80,6 +81,13 @@ export interface MaskProps {
 
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
+}
+
+const hasRenderableContent = (value: any): boolean => {
+  if (Array.isArray(value)) {
+    return value.some(item => hasRenderableContent(item))
+  }
+  return value !== undefined && value !== null && value !== false
 }
 
 const resolveHalf = (half?: MaskHalf) => {
@@ -284,7 +292,7 @@ const Mask: FC<MaskProps> = ({
   const contentNode = content ?? children
   const mediaMode =
     !!src &&
-    (contentNode != null ||
+    (hasRenderableContent(contentNode) ||
       caption != null ||
       wrapperClassName != null ||
       imageClassName != null ||
@@ -299,7 +307,10 @@ const Mask: FC<MaskProps> = ({
     return (
       <Wrapper
         {...rest}
-        className={mergeClassName('relative inline-flex flex-col items-center gap-3', wrapperClassName)}
+        className={mergeClassName(
+          'relative inline-flex flex-col items-center gap-3',
+          wrapperClassName,
+        )}
       >
         <div className="relative inline-flex">
           <img
@@ -308,7 +319,7 @@ const Mask: FC<MaskProps> = ({
             alt={alt}
             className={mergeClassName(mergeClassName(cls, className), imageClassName)}
           />
-          {contentNode != null ? (
+          {hasRenderableContent(contentNode) ? (
             <div
               className={mergeClassName(
                 'absolute inset-0 grid place-items-center p-4 text-center',
@@ -320,7 +331,9 @@ const Mask: FC<MaskProps> = ({
           ) : null}
         </div>
         {caption != null ? (
-          <CaptionTag className={mergeClassName('text-center text-sm opacity-70', captionClassName)}>
+          <CaptionTag
+            className={mergeClassName('text-center text-sm opacity-70', captionClassName)}
+          >
             {caption}
           </CaptionTag>
         ) : null}

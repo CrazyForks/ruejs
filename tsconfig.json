@@ -18,20 +18,21 @@
     "types": ["vitest/globals"],
     "declaration": true,
     "outDir": "./dist",
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "paths": {
-      "@rue-js/rue": ["packages/rue/src"],
-      "@rue-js/router": ["packages/router/src"],
-      "@rue-js/jsx-runtime": ["packages/jsx-runtime/src"],
-      "@rue-js/jsx-dev-runtime": ["packages/jsx-dev-runtime/src"],
-      "@rue-js/runtime": ["packages/runtime/src"],
-      "@rue-js/vite-plugin-rue": ["packages/vite-plugin-rue/index.mjs"],
-      "@rue-js/shared": ["packages/shared/src"],
-      "@rue-js/design": ["packages/rue-design/src"],
-      "@rue-js/runtime-vapor": ["packages/runtime-vapor/pkg/rue_runtime_vapor.d.ts"],
-      "@rue-js/runtime-vapor/reactive": ["packages/runtime-vapor/reactive.d.ts"],
-      "@rue-js/runtime-vapor/vapor": ["packages/runtime-vapor/vapor.d.ts"]
+      "markdown-it": ["./app/types/markdown-it.d.ts"],
+      "@shikijs/langs/*": ["./app/types/shikijs-lang.d.ts"],
+      "@shikijs/themes/*": ["./app/types/shikijs-theme.d.ts"],
+      "@rue-js/rue": ["./packages/rue/src"],
+      "@rue-js/router": ["./packages/router/src"],
+      "@rue-js/jsx-runtime": ["./packages/jsx-runtime/src"],
+      "@rue-js/jsx-dev-runtime": ["./packages/jsx-dev-runtime/src"],
+      "@rue-js/runtime": ["./packages/runtime/src"],
+      "@rue-js/vite-plugin-rue": ["./packages/vite-plugin-rue/index.mjs"],
+      "@rue-js/shared": ["./packages/shared/src"],
+      "@rue-js/design": ["./packages/rue-design/src"],
+      "@rue-js/runtime-vapor": ["./packages/runtime-vapor/pkg/rue_runtime_vapor.d.ts"],
+      "@rue-js/runtime-vapor/reactive": ["./packages/runtime-vapor/reactive.d.ts"],
+      "@rue-js/runtime-vapor/vapor": ["./packages/runtime-vapor/vapor.d.ts"]
     },
     "noImplicitAny": true,
     "noImplicitReturns": true,
@@ -47,9 +48,7 @@
     "packages/*/__tests__",
     "packages/rue/jsx-runtime",
     "packages/rue/jsx.d.ts",
-    "scripts/*",
-    "rollup.*.js",
-    "packages/runtime-virtual/rue-bak.ts"
+    "scripts/*"
   ],
   "exclude": ["node_modules", "dist"]
 }

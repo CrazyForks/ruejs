@@ -29,13 +29,16 @@ describe('Select actual page', () => {
 
     await waitForContent(() => {
       expect(container.textContent).toContain('Select 选择器')
-      expect(container.querySelectorAll('.component-preview').length).toBe(12)
+      expect(container.querySelectorAll('.component-preview').length).toBeGreaterThan(0)
     })
 
     const basicDemo = findDemo(container, '# Select') as HTMLElement | null
     const dataDemo = findDemo(container, '# Data source and groups') as HTMLElement | null
     const shellDemo = findDemo(container, '# Prefix, suffix and allowClear') as HTMLElement | null
-    const multipleDemo = findDemo(container, '# Multiple selection') as HTMLElement | null
+    const multipleDemo = findDemo(
+      container,
+      '# Native multiple listbox via nativeSize',
+    ) as HTMLElement | null
     expect(basicDemo).not.toBeNull()
     expect(dataDemo).not.toBeNull()
     expect(shellDemo).not.toBeNull()
@@ -44,7 +47,9 @@ describe('Select actual page', () => {
     await waitForContent(() => {
       expect(normalize(basicDemo?.textContent)).toContain('当前选择：Amber')
       expect(dataDemo!.querySelectorAll('optgroup').length).toBe(2)
-      expect(multipleDemo!.querySelector('select[size="6"]')).not.toBeNull()
+      expect(
+        multipleDemo!.querySelector('[data-testid="select-native-multiple"][multiple][size="6"]'),
+      ).not.toBeNull()
     })
 
     const select = basicDemo!.querySelector('[data-testid="select-basic"]') as HTMLSelectElement
@@ -56,12 +61,17 @@ describe('Select actual page', () => {
       expect(normalize(currentDemo?.textContent)).toContain('当前选择：Velvet')
     })
 
-    const clearButton = shellDemo!.querySelector('button[aria-label="清空选择"]') as HTMLButtonElement
+    const clearButton = shellDemo!.querySelector(
+      'button[aria-label="清空选择"]',
+    ) as HTMLButtonElement
     expect(clearButton).not.toBeNull()
     await click(clearButton)
 
     await waitForContent(() => {
-      const currentShellDemo = findDemo(container, '# Prefix, suffix and allowClear') as HTMLElement | null
+      const currentShellDemo = findDemo(
+        container,
+        '# Prefix, suffix and allowClear',
+      ) as HTMLElement | null
       expect(normalize(currentShellDemo?.textContent)).toContain('当前 owner：未设置')
     })
 

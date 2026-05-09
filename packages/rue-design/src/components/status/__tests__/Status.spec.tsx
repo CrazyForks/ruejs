@@ -33,7 +33,9 @@ describe('Status', () => {
   })
 
   it('supports as=div, size and color variants', async () => {
-    const c = await renderAndWait(h(Status, { as: 'div', ariaLabel: 'status', size: 'lg', color: 'primary' }))
+    const c = await renderAndWait(
+      h(Status, { as: 'div', ariaLabel: 'status', size: 'lg', color: 'primary' }),
+    )
     const el = c.querySelector('.status') as HTMLElement
     expect(el).toBeTruthy()
     expect(el.tagName).toBe('DIV')
@@ -54,9 +56,9 @@ describe('Status', () => {
     const wrapper = c.querySelector('.indicator') as HTMLElement
     const indicator = c.querySelector('.indicator-item') as HTMLElement
     const content = wrapper.querySelector('.pe-6') as HTMLElement
-    const leadingDot = Array.from(content.querySelectorAll('.status')).find(node => !node.classList.contains('indicator-item')) as
-      | HTMLElement
-      | undefined
+    const leadingDot = Array.from(content.querySelectorAll('.status')).find(
+      node => !node.classList.contains('indicator-item'),
+    ) as HTMLElement | undefined
 
     expect(wrapper).toBeTruthy()
     expect(indicator).toBeTruthy()

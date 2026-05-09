@@ -52,6 +52,7 @@ classnames:
 ```
 
 ### ~Fieldset with multiple inputs
+
 #### Add proper id and for attributes for accessibility. The id must be unique and depends on your context.
 
 <fieldset class="fieldset w-xs bg-base-200 border border-base-300 p-4 rounded-box">
@@ -100,6 +101,7 @@ classnames:
 ```
 
 ### ~Login form with fieldset
+
 #### Add proper id and for attributes for accessibility. The id must be unique and depends on your context.
 
 <fieldset class="fieldset w-xs bg-base-200 border border-base-300 p-4 rounded-box">

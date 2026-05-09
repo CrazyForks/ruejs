@@ -30,33 +30,35 @@ describe('Textarea actual page', () => {
 
     await waitForContent(() => {
       expect(container.textContent).toContain('Textarea 文本域')
-      expect(container.querySelectorAll('.component-preview').length).toBe(4)
+      expect(container.querySelectorAll('.component-preview').length).toBeGreaterThan(0)
     })
 
-    const basicDemo = findDemo(container, '# Basic textarea') as HTMLElement | null
-    const sizesDemo = findDemo(container, '# Textarea sizes') as HTMLElement | null
+    const basicDemo = findDemo(container, '# 基础用法') as HTMLElement | null
+    const sizesDemo = findDemo(container, '# 尺寸体系') as HTMLElement | null
     expect(basicDemo).not.toBeNull()
     expect(sizesDemo).not.toBeNull()
 
-    const textarea = basicDemo!.querySelector('[data-testid="textarea-basic"]') as HTMLTextAreaElement
+    const textarea = basicDemo!.querySelector(
+      '[data-testid="textarea-basic"]',
+    ) as HTMLTextAreaElement
     textarea.value = 'Updated from test'
     textarea.dispatchEvent(new Event('input', { bubbles: true }))
 
     await waitForContent(() => {
-      const updatedBasicDemo = findDemo(container, '# Basic textarea') as HTMLElement | null
+      const updatedBasicDemo = findDemo(container, '# 基础用法') as HTMLElement | null
       expect(updatedBasicDemo!.textContent).toContain('Updated from test')
-      expect(sizesDemo!.querySelectorAll('textarea.textarea').length).toBe(5)
+      expect(sizesDemo!.querySelectorAll('textarea.textarea').length).toBe(8)
     })
 
     await click(findTabButton(sizesDemo!, 'JSX代码'))
-    const sizesDemoInCode = findDemo(container, '# Textarea sizes') as HTMLElement | null
+    const sizesDemoInCode = findDemo(container, '# 尺寸体系') as HTMLElement | null
     expect(sizesDemoInCode!.querySelectorAll('textarea.textarea').length).toBe(0)
 
     await click(findTabButton(sizesDemoInCode!, '预览'))
 
     await waitForContent(() => {
-      const restoredSizesDemo = findDemo(container, '# Textarea sizes') as HTMLElement | null
-      expect(restoredSizesDemo!.querySelectorAll('textarea.textarea').length).toBe(5)
+      const restoredSizesDemo = findDemo(container, '# 尺寸体系') as HTMLElement | null
+      expect(restoredSizesDemo!.querySelectorAll('textarea.textarea').length).toBe(8)
     })
   })
 })

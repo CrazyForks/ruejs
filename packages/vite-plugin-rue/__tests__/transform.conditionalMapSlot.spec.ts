@@ -21,6 +21,17 @@ const invokeTransform = async (source: string, id: string) => {
   return transformHook.handler.call({} as any, source, id)
 }
 
+const expectConditionalMapLowering = (code: string) => {
+  expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
+  expect(code).toMatch(/const __slot = showList\.value \? vapor\(\(\)=>\{/)
+  expect(code).toMatch(/const _map\d+_current = items\.get\(\) \|\| \[\];/)
+  expect(code).toContain('_$vaporKeyedList({')
+  expect(code).toContain('getKey: (item, idx)=>item.id')
+  expect(code).toContain('const label = item.label.toUpperCase();')
+  expect(code).toContain('renderBetween(__slot, parent, start, end);')
+  expect(code).not.toContain('_jsxDEV(')
+}
+
 describe('vite-plugin-rue conditional map slot transform', () => {
   it('rewrites map callbacks that return JSX inside conditional slot branches', async () => {
     const source = `
@@ -55,9 +66,8 @@ describe('vite-plugin-rue conditional map slot transform', () => {
 
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
-    expect(code).toMatch(/items\.get\(\)\.map\(\(item\)\s*=>\s*\{[\s\S]*return\s+vapor\(\(\)\s*=>\s*\{/) 
-    expect(code).not.toContain('_jsxDEV(')
+    expectConditionalMapLowering(code)
+    expect(code).toContain('_$createTextNode("empty")')
   })
 
   it('rewrites map callbacks that return JSX inside logical-and branches', async () => {
@@ -91,9 +101,7 @@ describe('vite-plugin-rue conditional map slot transform', () => {
 
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
-    expect(code).toContain('showList.value ? items.get().map((item)=>{')
-    expect(code).toMatch(/items\.get\(\)\.map\(\(item\)\s*=>\s*\{[\s\S]*return\s+vapor\(\(\)\s*=>\s*\{/) 
-    expect(code).not.toContain('_jsxDEV(')
+    expectConditionalMapLowering(code)
+    expect(code).toMatch(/\}\)\s*:\s*"";/)
   })
 })

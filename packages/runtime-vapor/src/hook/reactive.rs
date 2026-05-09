@@ -94,10 +94,7 @@ fn renderable_reference_identity(v: &JsValue) -> Option<JsValue> {
 }
 
 fn same_renderable_reference(a: &JsValue, b: &JsValue) -> bool {
-    match (
-        renderable_reference_identity(a),
-        renderable_reference_identity(b),
-    ) {
+    match (renderable_reference_identity(a), renderable_reference_identity(b)) {
         (Some(left), Some(right)) => js_sys::Object::is(&left, &right),
         _ => false,
     }

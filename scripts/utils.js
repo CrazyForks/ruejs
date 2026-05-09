@@ -8,6 +8,15 @@ import { spawn } from 'node:child_process'
 
 const require = createRequire(import.meta.url)
 
+/**
+ * @typedef {{
+ *   ok: boolean
+ *   code: number | null
+ *   stderr: string
+ *   stdout: string
+ * }} ExecResult
+ */
+
 export const targets = fs
   .readdirSync('packages')
   .filter(f => {
@@ -62,6 +71,7 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
  * @param {string} command
  * @param {ReadonlyArray<string>} args
  * @param {object} [options]
+ * @returns {Promise<ExecResult>}
  */
 export async function exec(command, args, options) {
   return new Promise((resolve, reject) => {

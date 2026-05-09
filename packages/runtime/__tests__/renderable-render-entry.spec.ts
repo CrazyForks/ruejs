@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
+  _$vaporKeyedList,
   h,
   render,
   renderAnchor,
   renderBetween,
   renderStatic,
   setReactiveScheduling,
+  vapor,
+  watchEffect,
+  type FC,
   type BlockInstance,
 } from '../src'
 
@@ -44,6 +48,91 @@ const createTextBlock = (
     }
   },
 })
+
+const createStrongVapor = (text: string) =>
+  vapor(() => {
+    const root = document.createDocumentFragment()
+    const strong = document.createElement('strong')
+
+    strong.textContent = text
+    root.appendChild(strong)
+
+    return root as any
+  }) as any
+
+const createAnchoredTextVapor = (text: string) =>
+  vapor(() => {
+    const root = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    root.appendChild(anchor)
+
+    watchEffect(() => {
+      renderAnchor(text, root as any, anchor as any)
+    })
+
+    return root as any
+  }) as any
+
+const createNestedVaporArray = (labels: string[]) =>
+  vapor(() => {
+    const root = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    root.appendChild(anchor)
+
+    watchEffect(() => {
+      renderAnchor(labels.map(label => createStrongVapor(label)) as any, root as any, anchor as any)
+    })
+
+    return root as any
+  }) as any
+
+const InlineStrong: FC<{ label: string }> = props => h('strong', null, props.label)
+
+const createAnchoredComponentVapor = (label: string) =>
+  vapor(() => {
+    const root = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    root.appendChild(anchor)
+
+    watchEffect(() => {
+      renderAnchor(h(InlineStrong, { label }) as any, root as any, anchor as any)
+    })
+
+    return root as any
+  }) as any
+
+const createKeyedButtonsVapor = (title: string, labels: string[]) =>
+  vapor(() => {
+    const root = document.createElement('div')
+    const heading = document.createElement('h3')
+    const buttons = document.createElement('div')
+    const start = document.createComment('list:start')
+    const end = document.createComment('list:end')
+    let elements = new Map()
+
+    heading.textContent = title
+    buttons.append(start, end)
+    root.append(heading, buttons)
+
+    watchEffect(() => {
+      elements = _$vaporKeyedList({
+        items: labels,
+        getKey: label => label,
+        elements,
+        parent: buttons as any,
+        before: end as any,
+        singleRoot: true,
+        renderItem: (label, parent, startAnchor) => {
+          renderAnchor(createStrongVapor(label) as any, parent as any, startAnchor as any)
+        },
+      })
+    })
+
+    return root as any
+  }) as any
 
 describe('render entry Renderable bridge', () => {
   it('bridges container renderables with mixed DOM nodes and blocks', async () => {
@@ -313,6 +402,115 @@ describe('render entry Renderable bridge', () => {
     await flushEffects()
 
     expect(parent.textContent).toBe('B')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+  })
+
+  it('updates a vapor child array inside renderAnchor', async () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    parent.append(anchor)
+
+    renderAnchor(
+      [createStrongVapor('A'), createStrongVapor('B'), createStrongVapor('C')] as any,
+      parent as any,
+      anchor as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('ABC')
+    expect(parent.querySelectorAll('strong')).toHaveLength(3)
+
+    renderAnchor([createStrongVapor('D')] as any, parent as any, anchor as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('D')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+  })
+
+  it('updates a vapor child array with nested renderAnchor text', async () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    parent.append(anchor)
+
+    renderAnchor(
+      [createAnchoredTextVapor('A'), createAnchoredTextVapor('B')] as any,
+      parent as any,
+      anchor as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('AB')
+
+    renderAnchor([createAnchoredTextVapor('C')] as any, parent as any, anchor as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('C')
+  })
+
+  it('updates a vapor child array with nested vapor child arrays', async () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    parent.append(anchor)
+
+    renderAnchor([createNestedVaporArray(['A', 'B'])] as any, parent as any, anchor as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('AB')
+    expect(parent.querySelectorAll('strong')).toHaveLength(2)
+
+    renderAnchor([createNestedVaporArray(['C'])] as any, parent as any, anchor as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('C')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+  })
+
+  it('updates a vapor child array with nested component anchors', async () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    parent.append(anchor)
+
+    renderAnchor(
+      [createAnchoredComponentVapor('A'), createAnchoredComponentVapor('B')] as any,
+      parent as any,
+      anchor as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('AB')
+    expect(parent.querySelectorAll('strong')).toHaveLength(2)
+
+    renderAnchor([createAnchoredComponentVapor('C')] as any, parent as any, anchor as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('C')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+  })
+
+  it('updates a vapor child array with nested keyed vapor lists', async () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    parent.append(anchor)
+
+    renderAnchor(
+      [createKeyedButtonsVapor('Title', ['A', 'B'])] as any,
+      parent as any,
+      anchor as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('TitleAB')
+    expect(parent.querySelectorAll('strong')).toHaveLength(2)
+
+    renderAnchor([createKeyedButtonsVapor('Next', ['C'])] as any, parent as any, anchor as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('NextC')
     expect(parent.querySelectorAll('strong')).toHaveLength(1)
   })
 

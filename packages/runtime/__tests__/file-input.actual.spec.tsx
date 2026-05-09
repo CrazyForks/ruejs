@@ -54,19 +54,27 @@ describe('FileInput actual page', () => {
     expect(disabledDemo).not.toBeNull()
 
     await waitForContent(() => {
-      expect(sizesDemo!.querySelectorAll('.file-input').length).toBe(5)
-      expect((disabledDemo!.querySelector('.file-input') as HTMLInputElement | null)?.disabled).toBe(
-        true,
-      )
+      const currentSizesDemo = findDemo(container, '# File input sizes') as HTMLElement | null
+      const currentDisabledDemo = findDemo(container, '# Disabled') as HTMLElement | null
+
+      expect(currentSizesDemo!.querySelectorAll('input[type="file"]').length).toBe(5)
+      expect(
+        (currentDisabledDemo!.querySelector('input[type="file"]') as HTMLInputElement | null)
+          ?.disabled,
+      ).toBe(true)
     })
 
     await click(findTabButton(sizesDemo!, 'JSX代码'))
-    expect(sizesDemo!.querySelectorAll('.file-input').length).toBe(0)
+    expect(
+      findDemo(container, '# File input sizes')?.querySelectorAll('input[type="file"]').length,
+    ).toBe(0)
 
     await click(findTabButton(sizesDemo!, '预览'))
 
     await waitForContent(() => {
-      expect(sizesDemo!.querySelectorAll('.file-input').length).toBe(5)
+      expect(
+        findDemo(container, '# File input sizes')?.querySelectorAll('input[type="file"]').length,
+      ).toBe(5)
     })
   })
 })

@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Modal 组件概述
 - 保留 Rue 当前的 daisyUI 风格视觉，同时补齐受控/非受控、默认 footer、遮罩与键盘关闭等常用能力。
@@ -101,10 +102,11 @@ export interface ModalProps {
 let activeModalCount = 0
 let previousDocumentOverflow = ''
 
-const mergeClassName = (base: string, className?: string) =>
-  className ? `${base} ${className}` : base
+const mergeClassName = (...classNames: Array<string | undefined | false | null>) =>
+  classNames.filter(Boolean).join(' ')
 
-const toCamelCase = (value: string) => value.replace(/-([a-z])/g, (_, match: string) => match.toUpperCase())
+const toCamelCase = (value: string) =>
+  value.replace(/-([a-z])/g, (_, match: string) => match.toUpperCase())
 
 const normalizeStyleKey = (key: string) => {
   if (key.startsWith('--')) return key
@@ -308,7 +310,7 @@ const Modal: FC<ModalProps> = ({
 
   watch(
     () => mergedOpen,
-    nextOpen => {
+    (nextOpen: boolean) => {
       currentOpen.value = nextOpen
       if (nextOpen) {
         hasOpened.value = true
@@ -327,7 +329,7 @@ const Modal: FC<ModalProps> = ({
 
   watch(
     () => keyboard,
-    nextKeyboard => {
+    (nextKeyboard: boolean) => {
       currentKeyboard.value = nextKeyboard
     },
     { immediate: true },
@@ -486,7 +488,7 @@ const Modal: FC<ModalProps> = ({
               style,
               width != null ? { width: resolveWidthStyle(width) } : undefined,
             )}
-            onClick={event => {
+            onClick={(event: MouseEvent) => {
               event.stopPropagation()
             }}
             data-rue-modal-box="true"
@@ -500,7 +502,7 @@ const Modal: FC<ModalProps> = ({
                   classNames?.close,
                 )}
                 style={mergeStyleValue(styles?.close)}
-                onClick={event => notifyCancel(event)}
+                onClick={(event: MouseEvent) => notifyCancel(event)}
               >
                 {closeIcon ?? <DefaultCloseIcon />}
               </button>
@@ -522,7 +524,10 @@ const Modal: FC<ModalProps> = ({
               </div>
             ) : null}
             <div
-              className={mergeClassName('space-y-4', mergeClassName(bodyClassName, classNames?.body))}
+              className={mergeClassName(
+                'space-y-4',
+                mergeClassName(bodyClassName, classNames?.body),
+              )}
               style={mergeStyleValue(styles?.body, bodyStyle)}
               aria-busy={loading ? 'true' : undefined}
             >

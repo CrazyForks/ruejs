@@ -44,8 +44,8 @@ describe('Components actual page', () => {
     await click(findTab(container, '效果'))
 
     await waitForContent(() => {
-      const lines = Array.from(container.querySelectorAll('.card-body.grid.gap-4 > div')).map(node =>
-        node.textContent?.trim(),
+      const lines = Array.from(container.querySelectorAll('.card-body.grid.gap-4 > div')).map(
+        node => node.textContent?.trim(),
       )
       expect(lines).toEqual(['你好，Rue', '你好，World'])
     })

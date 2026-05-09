@@ -64,9 +64,7 @@ const ensureVaporRuntime = () => {
 }
 
 const getRue = () =>
-  vaporGlobal.__rue_active ||
-  vaporGlobal[RUE_VAPOR_PREFERRED_RUNTIME_KEY] ||
-  ensureVaporRuntime()
+  vaporGlobal.__rue_active || vaporGlobal[RUE_VAPOR_PREFERRED_RUNTIME_KEY] || ensureVaporRuntime()
 
 const getRueRuntime = (): any => getRue()
 
@@ -112,6 +110,19 @@ const isMountHandle = (value: unknown): value is RueMountHandle =>
   (RUE_MOUNT_ID_KEY in (value as Record<string, unknown>) ||
     RUE_PORTABLE_COMPONENT_TYPE_KEY in (value as Record<string, unknown>) ||
     RUE_PORTABLE_VAPOR_SETUP_KEY in (value as Record<string, unknown>))
+
+const normalizeMountHandleSingletonInput = (value: unknown): unknown => {
+  if (!Array.isArray(value)) {
+    return value
+  }
+
+  const meaningfulValues = value.filter(item => item !== null && item !== undefined)
+  if (meaningfulValues.length === 1 && isMountHandle(meaningfulValues[0])) {
+    return meaningfulValues[0]
+  }
+
+  return value
+}
 
 const analyzeDefaultRenderableInput = (value: unknown): DefaultRenderableAnalysis => {
   if (isMountHandle(value)) {
@@ -257,13 +268,14 @@ export const renderBetween = (
   start: DomNodeLike,
   end: DomNodeLike,
 ) => {
+  const normalizedValue = normalizeMountHandleSingletonInput(value)
   const targetParent = resolveBetweenTargetParent(parent, start, end)
   if (!targetParent) {
     syncRenderableOwner(renderOwnerByRangeStart, start as object, undefined)
     return
   }
 
-  const analysis = analyzeDefaultRenderableInput(value)
+  const analysis = analyzeDefaultRenderableInput(normalizedValue)
   if (analysis.kind === 'renderable') {
     const prevOwner = renderOwnerByRangeStart.get(start as object)
     if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
@@ -288,7 +300,7 @@ export const renderBetween = (
     getRueRuntime().renderBetween(null, targetParent, start, end)
   }
   syncRenderableOwner(renderOwnerByRangeStart, start as object, compatMountHandleOwner)
-  return getRueRuntime().renderBetween(value, targetParent, start, end)
+  return getRueRuntime().renderBetween(normalizedValue, targetParent, start, end)
 }
 
 export const renderAnchor = (
@@ -296,6 +308,7 @@ export const renderAnchor = (
   parent: DomElementLike,
   anchor: DomNodeLike,
 ) => {
+  const normalizedValue = normalizeMountHandleSingletonInput(value)
   pendingCompatAnchorRenders.delete(anchor as object)
   const targetParent = resolveAnchorTargetParent(parent, anchor)
   if (!targetParent) {
@@ -303,7 +316,7 @@ export const renderAnchor = (
     return
   }
 
-  const analysis = analyzeDefaultRenderableInput(value)
+  const analysis = analyzeDefaultRenderableInput(normalizedValue)
   if (analysis.kind === 'renderable') {
     const prevOwner = renderOwnerByAnchor.get(anchor as object)
     if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
@@ -323,20 +336,27 @@ export const renderAnchor = (
   }
 
   const shouldForceRemount =
-    !!value && typeof value === 'object' && RUE_FORCE_REMOUNT_ANCHOR_KEY in (value as object)
+    !!normalizedValue &&
+    typeof normalizedValue === 'object' &&
+    RUE_FORCE_REMOUNT_ANCHOR_KEY in (normalizedValue as object)
   const hasComponentChildren =
-    !!value && typeof value === 'object' && RUE_COMPONENT_CHILDREN_KEY in (value as object)
+    !!normalizedValue &&
+    typeof normalizedValue === 'object' &&
+    RUE_COMPONENT_CHILDREN_KEY in (normalizedValue as object)
   const prevOwner = renderOwnerByAnchor.get(anchor as object)
   if (!shouldForceRemount || prevOwner !== compatMountHandleOwner) {
     if (!hasComponentChildren) {
-      syncRenderableOwner(renderOwnerByAnchor, anchor as object, value as unknown)
-      return getRueRuntime().renderAnchor(value, targetParent, anchor)
+      syncRenderableOwner(renderOwnerByAnchor, anchor as object, normalizedValue as unknown)
+      return getRueRuntime().renderAnchor(normalizedValue, targetParent, anchor)
     }
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
-    return getRueRuntime().renderAnchor(value, targetParent, anchor)
+    return getRueRuntime().renderAnchor(normalizedValue, targetParent, anchor)
   }
 
-  pendingCompatAnchorRenders.set(anchor as object, { parent: targetParent, value })
+  pendingCompatAnchorRenders.set(anchor as object, {
+    parent: targetParent,
+    value: normalizedValue,
+  })
   queueMicrotask(() => {
     const pending = pendingCompatAnchorRenders.get(anchor as object)
     if (!pending) {

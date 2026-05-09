@@ -73,7 +73,11 @@ describe('Stat', () => {
   it('renders Item semantic props without manual children composition', async () => {
     const c = document.createElement('div')
     await renderAndWait(
-      h(Stat, null, h(Stat.Item, { title: 'Active Users', value: 112893, prefix: '¥', suffix: '/月' })),
+      h(
+        Stat,
+        null,
+        h(Stat.Item, { title: 'Active Users', value: 112893, prefix: '¥', suffix: '/月' }),
+      ),
       c,
     )
     const value = c.querySelector('.stat-value') as HTMLElement
@@ -101,7 +105,7 @@ describe('Stat', () => {
           null,
           h(Stat.Title, null, 'Account balance'),
           h(Stat.Value, null, '$89,400'),
-            h(Stat.Actions, null, h(Button, { color: 'success', size: 'xs' }, 'Add funds')),
+          h(Stat.Actions, null, h(Button, { color: 'success', size: 'xs' }, 'Add funds')),
         ),
         h(
           Stat.Item,
@@ -200,8 +204,8 @@ describe('Stat', () => {
           null,
           h(Stat.Value, {
             value: 1280,
-            formatter: value => `${value} req/s`,
-            valueRender: node => h('strong', { className: 'value-strong' }, node),
+            formatter: (value: number) => `${value} req/s`,
+            valueRender: (node: any) => h('strong', { className: 'value-strong' }, node),
           }),
         ),
       ),

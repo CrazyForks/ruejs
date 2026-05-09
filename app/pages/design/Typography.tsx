@@ -36,11 +36,7 @@ const DemoBlock: FC<DemoBlockProps> = ({ title, description, activeKey, preview,
         onChange={k => (activeKey.value = k as DemoTabKey)}
         className="mb-3"
       />
-      {activeKey.value === 'preview' ? (
-        preview
-      ) : (
-        <Code className="mt-2" lang="tsx" code={code} />
-      )}
+      {activeKey.value === 'preview' ? preview : <Code className="mt-2" lang="tsx" code={code} />}
     </div>
   )
 }
@@ -260,8 +256,7 @@ const TypographyDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Typography 排版</h1>
         <p className="text-sm mt-3 mb-3">
-          Typography 参考
-          ant-design 的组织方式，提供 <code>Text</code>、<code>Link</code>、
+          Typography 采用常见业务排版组件的组织方式，提供 <code>Text</code>、<code>Link</code>、
           <code>Title</code>、<code>Paragraph</code> 这组复合 API。
         </p>
         <p className="text-sm mb-3 opacity-80">
@@ -355,8 +350,8 @@ const TypographyDemo: FC = () => {
               </Typography.Title>
 
               <Typography.Paragraph>
-                TextRotate items reuse the same semantic API, so headings, body copy and rotating words
-                stay in one typography system.
+                TextRotate items reuse the same semantic API, so headings, body copy and rotating
+                words stay in one typography system.
               </Typography.Paragraph>
 
               <TextRotate

@@ -104,10 +104,7 @@ const PasswordRulePreview: FC = () => {
   const invalid = ref(false)
 
   return (
-    <form
-      className="grid gap-2"
-      onSubmit={preventPreviewSubmit}
-    >
+    <form className="grid gap-2" onSubmit={preventPreviewSubmit}>
       <Validator
         appearance="input"
         type="password"
@@ -123,7 +120,10 @@ const PasswordRulePreview: FC = () => {
       />
       <Validator.Hint
         hideUntilInvalid={true}
-        lines={['Must be at least 8 characters', 'Must include number, lowercase and uppercase letters']}
+        lines={[
+          'Must be at least 8 characters',
+          'Must include number, lowercase and uppercase letters',
+        ]}
       />
       <Button htmlType="submit" size="sm" className="w-fit">
         Check password
@@ -136,10 +136,7 @@ const UsernameRulePreview: FC = () => {
   const invalid = ref(false)
 
   return (
-    <form
-      className="grid gap-2"
-      onSubmit={preventPreviewSubmit}
-    >
+    <form className="grid gap-2" onSubmit={preventPreviewSubmit}>
       <Validator
         appearance="input"
         type="text"
@@ -313,26 +310,31 @@ const ValidatorPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Validator 校验辅助</h1>
         <p className="text-sm mt-3 mb-3">
-          Validator 仍然只负责把浏览器原生校验结果映射成 Rue 当前的表单视觉，不引入额外校验引擎。原有的
+          Validator 仍然只负责把浏览器原生校验结果映射成 Rue
+          当前的表单视觉，不引入额外校验引擎。原有的
           <code>className=&quot;input validator&quot;</code>
           写法继续可用，但现在也可以直接通过
-          <code>appearance</code>
-          、<code>size</code>、<code>status</code> 和
-          <code>Field</code>
+          <code>appearance</code>、<code>size</code>、<code>status</code> 和<code>Field</code>
           组合件来组织更完整的表单场景。
         </p>
         <div className="not-prose grid gap-3 rounded-box border border-base-300 bg-base-200/70 p-4 text-sm sm:grid-cols-3">
           <div>
             <div className="font-medium text-base-content">原生校验优先</div>
-            <div className="mt-1 opacity-70">继续依赖 required、pattern、minLength 等原生约束。</div>
+            <div className="mt-1 opacity-70">
+              继续依赖 required、pattern、minLength 等原生约束。
+            </div>
           </div>
           <div>
             <div className="font-medium text-base-content">语义外观补齐</div>
-            <div className="mt-1 opacity-70">用 appearance 直接映射 input、select、toggle 等宿主风格。</div>
+            <div className="mt-1 opacity-70">
+              用 appearance 直接映射 input、select、toggle 等宿主风格。
+            </div>
           </div>
           <div>
             <div className="font-medium text-base-content">表单结构复用</div>
-            <div className="mt-1 opacity-70">Field 统一 label、hint、extra 和基础可访问性连线。</div>
+            <div className="mt-1 opacity-70">
+              Field 统一 label、hint、extra 和基础可访问性连线。
+            </div>
           </div>
         </div>
         <div className="text-sm mt-3">
@@ -347,7 +349,12 @@ const ValidatorPage: FC = () => {
           tab={tabBasic}
           preview={() => (
             <form className="grid w-full max-w-xs gap-2">
-              <Validator appearance="input" type="email" required={true} placeholder="mail@site.com" />
+              <Validator
+                appearance="input"
+                type="email"
+                required={true}
+                placeholder="mail@site.com"
+              />
               <Validator.Hint>Enter valid email address</Validator.Hint>
               <Button htmlType="submit" size="sm" className="w-fit">
                 Check email
@@ -379,7 +386,13 @@ const ValidatorPage: FC = () => {
               </div>
 
               <div className="grid gap-2">
-                <Validator as="textarea" appearance="textarea" rows={4} placeholder="Project notes" required={true} />
+                <Validator
+                  as="textarea"
+                  appearance="textarea"
+                  rows={4}
+                  placeholder="Project notes"
+                  required={true}
+                />
                 <Validator.Hint>Required</Validator.Hint>
               </div>
 
@@ -715,7 +728,8 @@ const usernameInvalid = ref(false)
         <div className="my-8 lg:my-12">
           <h2>API</h2>
           <p className="text-sm opacity-80">
-            Validator 本体负责控件本身的宿主类和状态类，Hint 管理提示文案，Field 则把常见表单项的结构和可访问性连线收敛到一处。
+            Validator 本体负责控件本身的宿主类和状态类，Hint 管理提示文案，Field
+            则把常见表单项的结构和可访问性连线收敛到一处。
           </p>
           <ApiTable title="Validator" rows={validatorApiRows} />
           <ApiTable title="Validator.Hint" rows={hintApiRows} />

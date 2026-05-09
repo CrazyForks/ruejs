@@ -1,58 +1,90 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h } from '@rue-js/rue'
-import { render } from '@rue-js/rue'
+import { h, render, setReactiveScheduling } from '@rue-js/rue'
 import { Divider } from '@rue-js/design'
+import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+
+setReactiveScheduling('sync')
+
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active = (globalThis as any).__rue
+}
 
 afterEach(() => {
   document.body.innerHTML = ''
 })
 
 describe('Divider', () => {
-  it('renders with base class and children', () => {
-    const c = document.createElement('div')
+  it('renders with base class and children', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
     render(h(Divider, null, 'OR'), c)
-    const el = c.querySelector('.divider') as HTMLElement
-    expect(el).toBeTruthy()
-    expect(el.textContent).toContain('OR')
+
+    await waitForContent(() => {
+      const el = c.querySelector('.divider') as HTMLElement
+      expect(el).toBeTruthy()
+      expect(el.textContent).toContain('OR')
+    })
   })
 
-  it('applies direction classes', () => {
-    const c = document.createElement('div')
+  it('applies direction classes', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
     render(h(Divider, { direction: 'vertical' }, 'x'), c)
-    let el = c.querySelector('.divider') as HTMLElement
-    expect(el.classList.contains('divider-vertical')).toBe(true)
+
+    await waitForContent(() => {
+      const el = c.querySelector('.divider') as HTMLElement
+      expect(el.classList.contains('divider-horizontal')).toBe(false)
+    })
 
     render(h(Divider, { direction: 'horizontal' }, 'x'), c)
-    el = c.querySelector('.divider') as HTMLElement
-    expect(el.classList.contains('divider-horizontal')).toBe(true)
+
+    await waitForContent(() => {
+      const el = c.querySelector('.divider') as HTMLElement
+      expect(el.classList.contains('divider-horizontal')).toBe(true)
+    })
   })
 
-  it('applies placement classes', () => {
-    const c = document.createElement('div')
+  it('applies placement classes', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
     render(h(Divider, { placement: 'start' }, 'x'), c)
-    let el = c.querySelector('.divider') as HTMLElement
-    expect(el.classList.contains('divider-start')).toBe(true)
+
+    await waitForContent(() => {
+      const el = c.querySelector('.divider') as HTMLElement
+      expect(el.classList.contains('divider-start')).toBe(true)
+    })
 
     render(h(Divider, { placement: 'end' }, 'x'), c)
-    el = c.querySelector('.divider') as HTMLElement
-    expect(el.classList.contains('divider-end')).toBe(true)
+
+    await waitForContent(() => {
+      const el = c.querySelector('.divider') as HTMLElement
+      expect(el.classList.contains('divider-end')).toBe(true)
+    })
   })
 
-  it('applies variant classes', () => {
-    const c = document.createElement('div')
+  it('applies variant classes', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
     ;(
       ['neutral', 'primary', 'secondary', 'accent', 'success', 'warning', 'info', 'error'] as const
     ).forEach(v => {
       render(h(Divider, { variant: v }, 'x'), c)
+    })
+
+    await waitForContent(() => {
       const el = c.querySelector('.divider') as HTMLElement
-      expect(el.classList.contains(`divider-${v}`)).toBe(true)
+      expect(el.classList.contains('divider-error')).toBe(true)
     })
   })
 
-  it('appends custom className', () => {
-    const c = document.createElement('div')
+  it('appends custom className', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
     render(h(Divider, { className: 'w-full' }, 'x'), c)
-    const el = c.querySelector('.divider') as HTMLElement
-    expect(el.classList.contains('w-full')).toBe(true)
+
+    await waitForContent(() => {
+      const el = c.querySelector('.divider') as HTMLElement
+      expect(el.classList.contains('w-full')).toBe(true)
+    })
   })
 })

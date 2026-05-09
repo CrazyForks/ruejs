@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import {
   h,
   onMounted,
@@ -10,7 +11,18 @@ import {
   type FC,
 } from '@rue-js/rue'
 
-export type SkeletonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'default' | 'medium' | 'middle' | 'large' | number
+export type SkeletonSize =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | 'small'
+  | 'default'
+  | 'medium'
+  | 'middle'
+  | 'large'
+  | number
 export type SkeletonAvatarShape = 'circle' | 'square'
 export type SkeletonButtonShape = 'default' | 'square' | 'round' | 'circle'
 export type SkeletonWidth = string | number
@@ -59,7 +71,7 @@ export interface SkeletonInputProps extends SkeletonBaseProps {
   block?: boolean
 }
 
-export interface SkeletonNodeProps extends SkeletonBaseProps {
+export interface SkeletonNodeProps extends Omit<SkeletonBaseProps, 'active'> {
   active?: SkeletonReactiveValue<boolean>
   as?: any
 }
@@ -130,7 +142,10 @@ const normalizeSize = (size?: SkeletonSize): Exclude<SkeletonSize, number> | num
   }
 }
 
-const normalizeToggleProps = <T extends Record<string, any>>(value: boolean | T | undefined, defaultEnabled: boolean) => {
+const normalizeToggleProps = <T extends Record<string, any>>(
+  value: boolean | T | undefined,
+  defaultEnabled: boolean,
+) => {
   if (value === false) {
     return { enabled: false, props: {} } as NormalizedToggleProps<T>
   }
@@ -150,24 +165,26 @@ const toChildArray = (children: any): any[] => {
 const cloneRenderableChildren = (children: unknown): unknown =>
   Array.isArray(children) ? children.map(child => cloneRenderableChildren(child)) : children
 
-const snapshotSkeletonNodeProps = <T extends SkeletonNodeProps>(props: T): T => ({
-  ...(props as Record<string, unknown>),
-  children: cloneRenderableChildren(props.children),
-}) as T
+const snapshotSkeletonNodeProps = <T extends SkeletonNodeProps>(props: T): T =>
+  ({
+    ...(props as Record<string, unknown>),
+    children: cloneRenderableChildren(props.children),
+  }) as unknown as T
 
 const resolveReactiveValue = <T,>(value: SkeletonReactiveValue<T> | undefined): T | undefined => {
   if (value == null) {
     return undefined
   }
   if (typeof value === 'function') {
-    return value()
+    return (value as () => T)()
   }
   if (typeof value === 'object') {
-    if (typeof value.get === 'function') {
-      return value.get()
+    const reactiveValue = value as { value?: T; get?: () => T }
+    if (typeof reactiveValue.get === 'function') {
+      return reactiveValue.get()
     }
-    if ('value' in value) {
-      return value.value as T
+    if ('value' in reactiveValue) {
+      return reactiveValue.value
     }
   }
   return value as T
@@ -249,7 +266,10 @@ const renderSkeletonNodeView = ({
     {
       ...rest,
       className: buildPrimitiveClassName(
-        mergeClassName('flex min-h-24 w-full items-center justify-center rounded-2xl text-base-content/40', className),
+        mergeClassName(
+          'flex min-h-24 w-full items-center justify-center rounded-2xl text-base-content/40',
+          className,
+        ),
         false,
         resolvedActive,
       ),
@@ -261,7 +281,10 @@ const renderSkeletonNodeView = ({
 
 const buildSkeletonNodeClassName = (className?: string, active?: boolean) =>
   buildPrimitiveClassName(
-    mergeClassName('flex min-h-24 w-full items-center justify-center rounded-2xl text-base-content/40', className),
+    mergeClassName(
+      'flex min-h-24 w-full items-center justify-center rounded-2xl text-base-content/40',
+      className,
+    ),
     false,
     active,
   )
@@ -276,14 +299,20 @@ const buildSkeletonImageClassName = (
     active,
   )
 
-const getAvatarBasicProps = (hasTitle: boolean, hasParagraph: boolean): Partial<SkeletonAvatarProps> => {
+const getAvatarBasicProps = (
+  hasTitle: boolean,
+  hasParagraph: boolean,
+): Partial<SkeletonAvatarProps> => {
   if (hasTitle && !hasParagraph) {
     return { size: 'lg', shape: 'square' }
   }
   return { size: 'lg', shape: 'circle' }
 }
 
-const getTitleBasicProps = (hasAvatar: boolean, hasParagraph: boolean): Partial<SkeletonTitleProps> => {
+const getTitleBasicProps = (
+  hasAvatar: boolean,
+  hasParagraph: boolean,
+): Partial<SkeletonTitleProps> => {
   if (!hasAvatar && hasParagraph) {
     return { width: '38%' }
   }
@@ -293,7 +322,10 @@ const getTitleBasicProps = (hasAvatar: boolean, hasParagraph: boolean): Partial<
   return {}
 }
 
-const getParagraphBasicProps = (hasAvatar: boolean, hasTitle: boolean): Partial<SkeletonParagraphProps> => {
+const getParagraphBasicProps = (
+  hasAvatar: boolean,
+  hasTitle: boolean,
+): Partial<SkeletonParagraphProps> => {
   return {
     rows: !hasAvatar && hasTitle ? 3 : 2,
     width: !hasAvatar || !hasTitle ? '61%' : undefined,
@@ -317,7 +349,11 @@ const PrimitiveSkeleton: FC<SkeletonProps> = ({
     Component,
     {
       ...rest,
-      className: buildPrimitiveClassName(mergeClassName(classNames?.root, className, rootClassName), text, active),
+      className: buildPrimitiveClassName(
+        mergeClassName(classNames?.root, className, rootClassName),
+        text,
+        active,
+      ),
       style: mergeStyle(styles?.root, style),
     },
     children,
@@ -337,7 +373,11 @@ const SkeletonAvatar: FC<SkeletonAvatarProps> = ({
     <div
       {...rest}
       className={buildPrimitiveClassName(
-        mergeClassName(sizeConfig.className, shape === 'square' ? 'rounded-2xl' : 'rounded-full', className),
+        mergeClassName(
+          sizeConfig.className,
+          shape === 'square' ? 'rounded-2xl' : 'rounded-full',
+          className,
+        ),
         false,
         active,
       )}
@@ -379,7 +419,14 @@ const SkeletonButton: FC<SkeletonButtonProps> = ({
   )
 }
 
-const SkeletonInput: FC<SkeletonInputProps> = ({ active, className, style, size, block, ...rest }) => {
+const SkeletonInput: FC<SkeletonInputProps> = ({
+  active,
+  className,
+  style,
+  size,
+  block,
+  ...rest
+}) => {
   const heightConfig = buildControlHeight(size)
   return (
     <div
@@ -394,9 +441,7 @@ const SkeletonInput: FC<SkeletonInputProps> = ({ active, className, style, size,
   )
 }
 
-const SkeletonNode: FC<SkeletonNodeProps> = ({
-  ...props
-}) => {
+const SkeletonNode: FC<SkeletonNodeProps> = ({ ...props }) => {
   const ctx = useSetup(() => ({
     container: null as HTMLElement | null,
     startEl: null as Comment | null,
@@ -516,7 +561,8 @@ const renderSkeletonImageView = ({
 }: SkeletonImageProps) => {
   const resolvedAspect = resolveReactiveValue(aspect) ?? 'video'
   const resolvedActive = resolveReactiveValue(active)
-  const resolvedChildren = toChildArray(children).length > 0 ? children : renderImagePlaceholderIcon()
+  const resolvedChildren =
+    toChildArray(children).length > 0 ? children : renderImagePlaceholderIcon()
 
   return renderElement(
     as as any,
@@ -601,7 +647,11 @@ const SkeletonImage: FC<SkeletonImageProps> = ({ ...props }) => {
         return
       }
 
-      host.className = buildSkeletonImageClassName(curProps.className, resolvedAspect, resolvedActive)
+      host.className = buildSkeletonImageClassName(
+        curProps.className,
+        resolvedAspect,
+        resolvedActive,
+      )
     })
   })
 
@@ -651,7 +701,11 @@ const renderTitle = (
   )
 }
 
-const resolveParagraphRowWidth = (width: SkeletonParagraphProps['width'], index: number, rows: number) => {
+const resolveParagraphRowWidth = (
+  width: SkeletonParagraphProps['width'],
+  index: number,
+  rows: number,
+) => {
   if (Array.isArray(width)) {
     const value = width[index]
     if (value != null) return value
@@ -708,7 +762,12 @@ const SkeletonRoot: FC<SkeletonProps> = props => {
     ...rest
   } = props
   const hasLoadingProp = Object.prototype.hasOwnProperty.call(props, 'loading')
-  const shouldRenderComposite = hasLoadingProp || avatar !== undefined || title !== undefined || paragraph !== undefined || !!round
+  const shouldRenderComposite =
+    hasLoadingProp ||
+    avatar !== undefined ||
+    title !== undefined ||
+    paragraph !== undefined ||
+    !!round
 
   if (!shouldRenderComposite) {
     return <PrimitiveSkeleton {...props} />
@@ -737,7 +796,13 @@ const SkeletonRoot: FC<SkeletonProps> = props => {
   return (
     <div
       {...rest}
-      className={mergeClassName('flex w-full gap-4', !hasAvatar && 'flex-col', classNames?.root, className, rootClassName)}
+      className={mergeClassName(
+        'flex w-full gap-4',
+        !hasAvatar && 'flex-col',
+        classNames?.root,
+        className,
+        rootClassName,
+      )}
       style={mergeStyle(styles?.root, style)}
     >
       {hasAvatar ? (
@@ -755,7 +820,9 @@ const SkeletonRoot: FC<SkeletonProps> = props => {
           className={mergeClassName('flex min-w-0 flex-1 flex-col gap-3', classNames?.section)}
           style={styles?.section}
         >
-          {hasTitle ? renderTitle(mergedTitleProps ?? {}, active, round, classNames?.title, styles?.title) : null}
+          {hasTitle
+            ? renderTitle(mergedTitleProps ?? {}, active, round, classNames?.title, styles?.title)
+            : null}
           {hasParagraph
             ? renderParagraph(
                 mergedParagraphProps ?? {},

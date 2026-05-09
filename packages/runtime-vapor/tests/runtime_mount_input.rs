@@ -16,6 +16,7 @@ fn text_input(text: &str) -> MountInput<TestAdapter> {
         props: ComponentProps::new(),
         children: Vec::new(),
         key: None,
+        strict_component_returns: false,
         mount_cleanup_bucket: None,
         mount_effect_scope_id: None,
         el_hint: None,
@@ -57,6 +58,7 @@ fn element_input(
         props: ComponentProps::new(),
         children: Vec::new(),
         key: None,
+        strict_component_returns: false,
         mount_cleanup_bucket: None,
         mount_effect_scope_id: None,
         el_hint: Some(host),
@@ -127,11 +129,7 @@ fn render_static_input_removes_anchor_without_vnode() {
     let anchor = rue.get_dom_adapter_mut().unwrap().create_element("comment_anchor");
     rue.get_dom_adapter_mut().unwrap().append_child(&mut parent, &anchor);
 
-    let input = element_input(
-        &mut rue,
-        "span",
-        vec![MountInputChild::Input(text_input("static"))],
-    );
+    let input = element_input(&mut rue, "span", vec![MountInputChild::Input(text_input("static"))]);
     rue.render_static_input(input, &mut parent, anchor.clone());
 
     let children = rue.get_dom_adapter().unwrap().collect_fragment_children(&parent);

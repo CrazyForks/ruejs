@@ -5,7 +5,9 @@ import { click, mountContainer, waitForContent } from './page-test-utils'
 import { findDemo, findTabButton, resetActiveRuntime } from './design-page-test-utils'
 
 const findButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === label) ?? null
+  Array.from(root.querySelectorAll('button')).find(
+    button => button.textContent?.trim() === label,
+  ) ?? null
 
 vi.mock('@rue-js/design', async () => {
   const [skeletonMod, tabsMod] = await Promise.all([
@@ -83,10 +85,18 @@ describe('Skeleton actual page', () => {
       expect(listDemo).not.toBeNull()
       expect(elementsDemo).not.toBeNull()
 
-      const image = elementsDemo!.querySelector('[data-testid="skeleton-elements-image"]') as HTMLElement
-      const node = elementsDemo!.querySelector('[data-testid="skeleton-elements-node"]') as HTMLElement
-      const imageWrap = elementsDemo!.querySelector('[data-testid="skeleton-elements-image-wrap"]') as HTMLElement
-      const nodeWrap = elementsDemo!.querySelector('[data-testid="skeleton-elements-node-wrap"]') as HTMLElement
+      const image = elementsDemo!.querySelector(
+        '[data-testid="skeleton-elements-image"]',
+      ) as HTMLElement
+      const node = elementsDemo!.querySelector(
+        '[data-testid="skeleton-elements-node"]',
+      ) as HTMLElement
+      const imageWrap = elementsDemo!.querySelector(
+        '[data-testid="skeleton-elements-image-wrap"]',
+      ) as HTMLElement
+      const nodeWrap = elementsDemo!.querySelector(
+        '[data-testid="skeleton-elements-node-wrap"]',
+      ) as HTMLElement
 
       expect(imageWrap).not.toBeNull()
       expect(nodeWrap).not.toBeNull()
@@ -121,20 +131,30 @@ describe('Skeleton actual page', () => {
       expect(elementsDemo!.textContent).toContain('Image: square')
       expect(elementsDemo!.textContent).toContain('开启 active')
 
-      const image = elementsDemo!.querySelector('[data-testid="skeleton-elements-image"]') as HTMLElement
-      const node = elementsDemo!.querySelector('[data-testid="skeleton-elements-node"]') as HTMLElement
+      const image = elementsDemo!.querySelector(
+        '[data-testid="skeleton-elements-image"]',
+      ) as HTMLElement
+      const node = elementsDemo!.querySelector(
+        '[data-testid="skeleton-elements-node"]',
+      ) as HTMLElement
 
       expect(image.classList.contains('animate-pulse')).toBe(false)
       expect(image.classList.contains('aspect-square')).toBe(true)
       expect(node.classList.contains('animate-pulse')).toBe(false)
       expect(node.querySelectorAll('[data-testid="skeleton-elements-node-icon"]').length).toBe(1)
-      expect(elementsDemo!.querySelectorAll('[data-testid="skeleton-elements-node-icon"]').length).toBe(1)
+      expect(
+        elementsDemo!.querySelectorAll('[data-testid="skeleton-elements-node-icon"]').length,
+      ).toBe(1)
     })
 
     await click(findButton(elementsDemo!, '开启 active'))
     await waitForContent(() => {
-      const image = elementsDemo!.querySelector('[data-testid="skeleton-elements-image"]') as HTMLElement
-      const node = elementsDemo!.querySelector('[data-testid="skeleton-elements-node"]') as HTMLElement
+      const image = elementsDemo!.querySelector(
+        '[data-testid="skeleton-elements-image"]',
+      ) as HTMLElement
+      const node = elementsDemo!.querySelector(
+        '[data-testid="skeleton-elements-node"]',
+      ) as HTMLElement
 
       expect(image.classList.contains('animate-pulse')).toBe(true)
       expect(node.classList.contains('animate-pulse')).toBe(true)

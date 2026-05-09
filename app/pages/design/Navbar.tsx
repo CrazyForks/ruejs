@@ -80,15 +80,30 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
 
 const MenuIcon: FC = () => {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block h-5 w-5 stroke-current">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      className="inline-block h-5 w-5 stroke-current"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M4 6h16M4 12h16M4 18h16"
+      ></path>
     </svg>
   )
 }
 
 const MoreIcon: FC = () => {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block h-5 w-5 stroke-current">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      className="inline-block h-5 w-5 stroke-current"
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -101,8 +116,18 @@ const MoreIcon: FC = () => {
 
 const SearchIcon: FC = () => {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block h-4 w-4 stroke-current">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-4.35-4.35"></path>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      className="inline-block h-4 w-4 stroke-current"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="m21 21-4.35-4.35"
+      ></path>
       <circle cx="11" cy="11" r="6" strokeWidth="2"></circle>
     </svg>
   )
@@ -110,14 +135,24 @@ const SearchIcon: FC = () => {
 
 const BellIcon: FC = () => {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block h-4 w-4 stroke-current">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      className="inline-block h-4 w-4 stroke-current"
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="2"
         d="M14.857 17.082a23.848 23.848 0 0 1-5.714 0M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
       ></path>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M13.73 21a2 2 0 0 1-3.46 0"
+      ></path>
     </svg>
   )
 }
@@ -306,8 +341,8 @@ const NavbarPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Navbar 导航栏</h1>
         <p className="text-sm mt-3 mb-3">
-          Navbar 仍然保持 Rue 当前的视觉基础和 daisyUI 的布局骨架，但补齐了更适合真实项目的语义插槽、
-          数据驱动项和布局控制能力。
+          Navbar 仍然保持 Rue 当前的视觉基础和 daisyUI
+          的布局骨架，但补齐了更适合真实项目的语义插槽、 数据驱动项和布局控制能力。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -460,7 +495,8 @@ const NavbarPage: FC = () => {
                   startProps={{ className: 'w-auto flex-none items-center gap-2' }}
                   centerProps={{
                     grow: true,
-                    className: 'order-3 basis-full justify-start pt-2 md:order-none md:basis-auto md:pt-0 md:px-6',
+                    className:
+                      'order-3 basis-full justify-start pt-2 md:order-none md:basis-auto md:pt-0 md:px-6',
                   }}
                   endProps={{ className: 'w-auto flex-none items-center gap-2' }}
                   data-testid="navbar-layout"
@@ -497,7 +533,10 @@ const NavbarPage: FC = () => {
         />
 
         <h2>经典 demo</h2>
-        <p>下面这几组示例保留了原有写法，只做了页面重组，方便继续对照 Start / Center / End 的经典组合方式。</p>
+        <p>
+          下面这几组示例保留了原有写法，只做了页面重组，方便继续对照 Start / Center / End
+          的经典组合方式。
+        </p>
 
         <ExampleBlock
           title="仅标题"
@@ -659,7 +698,11 @@ const NavbarPage: FC = () => {
                     <button className="btn btn-ghost text-xl">daisyUI</button>
                   </Navbar.Start>
                   <Navbar.End className="gap-2">
-                    <input type="text" placeholder="Search" className="input input-bordered w-24 md:w-auto" />
+                    <input
+                      type="text"
+                      placeholder="Search"
+                      className="input input-bordered w-24 md:w-auto"
+                    />
                     <div className="dropdown dropdown-end">
                       <div tabIndex="0" role="button" className="btn btn-ghost btn-circle avatar">
                         <div className="w-10 rounded-full">
@@ -669,7 +712,10 @@ const NavbarPage: FC = () => {
                           />
                         </div>
                       </div>
-                      <ul tabIndex="-1" className="mt-3 z-1 p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
+                      <ul
+                        tabIndex="-1"
+                        className="mt-3 z-1 p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52"
+                      >
                         <li>
                           <button className="justify-between">
                             Profile
@@ -732,8 +778,7 @@ const NavbarPage: FC = () => {
           <h3 className="mt-0 mb-3 text-base font-semibold">双模式说明</h3>
           <div className="grid gap-3 text-sm md:grid-cols-2">
             <div>
-              <code>children + Navbar.Start/Center/End</code>:
-              适合完全手写布局，兼容旧 demo。
+              <code>children + Navbar.Start/Center/End</code>: 适合完全手写布局，兼容旧 demo。
             </div>
             <div>
               <code>brand / start / center / end / actions / items</code>:
@@ -746,8 +791,9 @@ const NavbarPage: FC = () => {
 
         <h3>什么时候选推荐模式，什么时候继续手写 children？</h3>
         <p>
-          如果页面头部结构在多个页面之间重复，或者导航项来自配置，优先用语义插槽和 <code>items</code>。
-          如果当前头部结构非常自由，包含复杂的 dropdown、menu、搜索表单，继续手写
+          如果页面头部结构在多个页面之间重复，或者导航项来自配置，优先用语义插槽和{' '}
+          <code>items</code>。 如果当前头部结构非常自由，包含复杂的
+          dropdown、menu、搜索表单，继续手写
           <code>children + Navbar.Start/Center/End</code> 会更直接。
         </p>
 
@@ -759,8 +805,9 @@ const NavbarPage: FC = () => {
 
         <h3>sticky 和 bordered 是强样式能力吗？</h3>
         <p>
-          不是。它们只是补一层常用布局类，仍然遵循 Rue 当前的视觉基底；更细的背景、阴影、圆角和响应式布局，
-          依然建议通过 <code>className</code> 和区块 props 来组合。
+          不是。它们只是补一层常用布局类，仍然遵循 Rue
+          当前的视觉基底；更细的背景、阴影、圆角和响应式布局， 依然建议通过 <code>className</code>{' '}
+          和区块 props 来组合。
         </p>
       </div>
     </SidebarPlayground>

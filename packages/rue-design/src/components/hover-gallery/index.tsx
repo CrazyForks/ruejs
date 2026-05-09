@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 HoverGallery 组件概述
 - 数据驱动：支持字符串 src、对象项或自定义节点 node。
@@ -78,7 +79,16 @@ const normalizeItem = (
   if (typeof item === 'string') {
     return {
       key: index,
-      node: <img key={index} src={item} alt="" className={mergeClassName('', mergeClassName(fitClass ?? '', imageClassName)).trim() || undefined} />,
+      node: (
+        <img
+          key={index}
+          src={item}
+          alt=""
+          className={
+            mergeClassName('', mergeClassName(fitClass ?? '', imageClassName)).trim() || undefined
+          }
+        />
+      ),
     }
   }
 
@@ -102,10 +112,12 @@ const normalizeItem = (
             key={objectItem.key ?? index}
             src={objectItem.src}
             alt={objectItem.alt ?? ''}
-            className={mergeClassName(
-              mergeClassName(fitClass ?? '', imageClassName),
-              mergeClassName(objectItem.className ?? '', objectItem.imageClassName),
-            ).trim() || undefined}
+            className={
+              mergeClassName(
+                mergeClassName(fitClass ?? '', imageClassName),
+                mergeClassName(objectItem.className ?? '', objectItem.imageClassName),
+              ).trim() || undefined
+            }
           />
         ),
       }
@@ -123,7 +135,7 @@ const normalizeItems = (
   children: any,
   fitClass?: string,
   imageClassName?: string,
-) => {
+): NormalizedGalleryItem[] => {
   if (items && items.length > 0) {
     return items.map((item, index) => normalizeItem(item, index, fitClass, imageClassName))
   }
@@ -183,7 +195,10 @@ const HoverGallery: FC<HoverGalleryProps> = props => {
     <div className={mergeClassName('grid *:[grid-area:1/1]', wrapperClassName)}>
       {galleryNode}
       <div
-        className={mergeClassName('pointer-events-none grid font-mono text-white text-shadow-lg', guideClassName)}
+        className={mergeClassName(
+          'pointer-events-none grid font-mono text-white text-shadow-lg',
+          guideClassName,
+        )}
         style={{ gridTemplateColumns: `repeat(${guideCount}, minmax(0, 1fr))` }}
         aria-hidden="true"
       >

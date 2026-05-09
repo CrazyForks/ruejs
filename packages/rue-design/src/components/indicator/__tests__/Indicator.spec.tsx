@@ -59,7 +59,11 @@ describe('Indicator', () => {
 
     render(
       <Indicator>
-        <Indicator.Item placement="bottom-start" horizontal="center" data-testid="indicator-item-placement">
+        <Indicator.Item
+          placement="bottom-start"
+          horizontal="center"
+          data-testid="indicator-item-placement"
+        >
           Review
         </Indicator.Item>
       </Indicator>,
@@ -67,7 +71,9 @@ describe('Indicator', () => {
     )
 
     await waitForContent(() => {
-      const item = container.querySelector('[data-testid="indicator-item-placement"]') as HTMLElement
+      const item = container.querySelector(
+        '[data-testid="indicator-item-placement"]',
+      ) as HTMLElement
       expect(item.classList.contains('indicator-item')).toBe(true)
       expect(item.classList.contains('indicator-center')).toBe(true)
       expect(item.classList.contains('indicator-bottom')).toBe(true)
@@ -93,8 +99,12 @@ describe('Indicator', () => {
 
     await waitForContent(() => {
       const item = container.querySelector('.indicator-item.badge.badge-primary') as HTMLElement
-      const content = container.querySelector('[data-testid="indicator-shortcut-content"]') as HTMLElement
-      const target = container.querySelector('[data-testid="indicator-shortcut-target"]') as HTMLElement
+      const content = container.querySelector(
+        '[data-testid="indicator-shortcut-content"]',
+      ) as HTMLElement
+      const target = container.querySelector(
+        '[data-testid="indicator-shortcut-target"]',
+      ) as HTMLElement
 
       expect(item).toBeTruthy()
       expect(content.textContent).toBe('9')
@@ -111,16 +121,26 @@ describe('Indicator', () => {
     render(
       <Indicator
         items={[
-          { key: 'presence', children: <span data-testid="indicator-presence">live</span>, className: 'badge badge-success' },
+          {
+            key: 'presence',
+            children: <span data-testid="indicator-presence">live</span>,
+            className: 'badge badge-success',
+          },
           {
             key: 'cta',
             as: 'div',
             placement: 'bottom-center',
-            children: <button data-testid="indicator-cta" className="btn btn-sm">Apply</button>,
+            children: (
+              <button data-testid="indicator-cta" className="btn btn-sm">
+                Apply
+              </button>
+            ),
           },
         ]}
       >
-        <div className="card" data-testid="indicator-card">Card</div>
+        <div className="card" data-testid="indicator-card">
+          Card
+        </div>
       </Indicator>,
       container,
     )
@@ -129,7 +149,9 @@ describe('Indicator', () => {
       const items = container.querySelectorAll('.indicator-item')
       const cta = container.querySelector('[data-testid="indicator-cta"]') as HTMLElement
       expect(items).toHaveLength(2)
-      expect(container.querySelector('[data-testid="indicator-presence"]')?.textContent).toBe('live')
+      expect(container.querySelector('[data-testid="indicator-presence"]')?.textContent).toBe(
+        'live',
+      )
       expect(cta.closest('.indicator-bottom')).not.toBeNull()
       expect(cta.closest('.indicator-center')).not.toBeNull()
     })

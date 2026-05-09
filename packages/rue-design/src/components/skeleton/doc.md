@@ -5,11 +5,11 @@ source: https://raw.githubusercontent.com/saadeghi/daisyui/refs/heads/master/pac
 layout: components
 classnames:
   component:
-  - class: skeleton
-    desc: A placeholder div with loading animation
+    - class: skeleton
+      desc: A placeholder div with loading animation
   modifier:
-  - class: skeleton-text
-    desc: Animates the text color instead of background color
+    - class: skeleton-text
+      desc: Animates the text color instead of background color
 ---
 
 <script>
@@ -18,14 +18,15 @@ classnames:
 </script>
 
 ### ~Skeleton
+
 <div class="skeleton w-32 h-32"></div>
 
 ```html
 <div class="$$skeleton h-32 w-32"></div>
 ```
 
-
 ### ~Skeleton - circle with content
+
 <div class="flex flex-col gap-4 w-52">
   <div class="flex gap-4 items-center">
     <div class="skeleton w-16 h-16 rounded-full shrink-0"></div>
@@ -50,8 +51,8 @@ classnames:
 </div>
 ```
 
-
 ### ~Skeleton - rectangle with content
+
 <div class="flex flex-col gap-4 w-52">
   <div class="skeleton h-32 w-full"></div>
   <div class="skeleton h-4 w-28"></div>
@@ -68,8 +69,8 @@ classnames:
 </div>
 ```
 
-
 ### ~skeleton-text - animated gradient text
+
 <span class="skeleton skeleton-text">AI is thinking harder...</span>
 
 ```html

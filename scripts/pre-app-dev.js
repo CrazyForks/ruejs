@@ -7,12 +7,9 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const runtimeVaporRoot = path.resolve(__dirname, '../packages/runtime-vapor')
-const runtimeVaporBuildInputs = [
-  'src',
-  'Cargo.toml',
-  'Cargo.lock',
-]
+const runtimeVaporBuildInputs = ['src', 'Cargo.toml', 'Cargo.lock']
 
+/** @param {string} targetPath */
 const getLatestMtimeMs = targetPath => {
   const stat = fs.statSync(targetPath)
   if (!stat.isDirectory()) {
@@ -65,7 +62,8 @@ if (!missingOrStaleBuilds.length) {
   process.exit(0)
 }
 
-const packageManager = process.env.npm_execpath || (process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm')
+const packageManager =
+  process.env.npm_execpath || (process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm')
 
 for (const { script, file, outputs } of missingOrStaleBuilds) {
   const resolvedOutputs = outputs.map(output => path.resolve(runtimeVaporRoot, output))

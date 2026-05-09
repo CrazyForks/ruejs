@@ -9,7 +9,11 @@ if (!(globalThis as any).document) {
 const createPlugin = (options: Record<string, unknown> = {}) =>
   VitePluginRue({ include: ['/app/'], ...options })
 
-const invokeTransform = async (source: string, id: string, options: Record<string, unknown> = {}) => {
+const invokeTransform = async (
+  source: string,
+  id: string,
+  options: Record<string, unknown> = {},
+) => {
   const plugin = createPlugin(options)
   const transformHook = plugin.transform
 
@@ -39,11 +43,17 @@ describe('vite-plugin-rue transform failure handling', () => {
     `
 
     await expect(
-      invokeTransform(source, '/Users/Shared/work/dir/data/codes/rue/app/test-fixtures/InvalidSyntax.tsx'),
+      invokeTransform(
+        source,
+        '/Users/Shared/work/dir/data/codes/rue/app/test-fixtures/InvalidSyntax.tsx',
+      ),
     ).rejects.toThrow(/SWC transform failed/)
 
     await expect(
-      invokeTransform(source, '/Users/Shared/work/dir/data/codes/rue/app/test-fixtures/InvalidSyntax.tsx'),
+      invokeTransform(
+        source,
+        '/Users/Shared/work/dir/data/codes/rue/app/test-fixtures/InvalidSyntax.tsx',
+      ),
     ).rejects.toThrow(/InvalidSyntax\.tsx/)
   })
 
@@ -57,10 +67,14 @@ describe('vite-plugin-rue transform failure handling', () => {
     `
 
     await expect(
-      invokeTransform(source, '/Users/Shared/work/dir/data/codes/rue/app/test-fixtures/TransformTimeout.tsx', {
-        transformTimeoutMs: 10,
-        transformExecutor: () => new Promise(() => {}),
-      }),
+      invokeTransform(
+        source,
+        '/Users/Shared/work/dir/data/codes/rue/app/test-fixtures/TransformTimeout.tsx',
+        {
+          transformTimeoutMs: 10,
+          transformExecutor: () => new Promise(() => {}),
+        },
+      ),
     ).rejects.toThrow(/timed out after 10ms/)
   })
 })

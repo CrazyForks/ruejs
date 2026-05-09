@@ -1,10 +1,4 @@
-import {
-  Component,
-  KeepAlive,
-  ref,
-  useState,
-  type FC,
-} from '@rue-js/rue'
+import { Component, KeepAlive, ref, useState, type FC } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 

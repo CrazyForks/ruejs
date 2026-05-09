@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Tabs 组件概述
 - 保留 Rue 当前的 daisyUI 视觉基底，并补齐更接近成熟组件库的 tabs API。
@@ -10,15 +11,7 @@ export type TabsStyle = 'box' | 'border' | 'lift'
 export type TabsType = 'line' | 'card' | 'editable-card'
 export type TabsPlacement = 'top' | 'bottom'
 export type TabsExtendedPlacement = TabsPlacement | 'start' | 'end'
-export type TabsSize =
-  | 'xs'
-  | 'sm'
-  | 'md'
-  | 'lg'
-  | 'xl'
-  | 'small'
-  | 'middle'
-  | 'large'
+export type TabsSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'large'
 
 export interface TabsIndicator {
   align?: 'start' | 'center' | 'end'
@@ -69,7 +62,8 @@ export interface TabsProps {
 
 let tabsIdSeed = 0
 
-const appendClassName = (base: string, className?: string) => {
+const appendClassName = (base?: string, className?: string) => {
+  if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
@@ -186,8 +180,10 @@ const Tabs: FC<TabsProps> = ({
   if (!currentSeedRef.current) {
     currentSeedRef.current = `rue-tabs-${tabsIdSeed++}`
   }
-  const currentSeed = currentSeedRef.current
-  const uncontrolledActiveKey = ref(resolveInitialActiveKey(normalizedItems, defaultActiveKey ?? activeKey))
+  const currentSeed = currentSeedRef.current!
+  const uncontrolledActiveKey = ref(
+    resolveInitialActiveKey(normalizedItems, defaultActiveKey ?? activeKey),
+  )
   const tabListHostRef = useRef<HTMLDivElement>()
   const panelsHostRef = useRef<HTMLDivElement>()
   const destroyPanelHostsRef = useRef<Map<string, HTMLDivElement>>()
@@ -223,10 +219,7 @@ const Tabs: FC<TabsProps> = ({
   }
 
   const rootClassName = appendClassName(
-    appendClassName(
-      appendClassName('rue-tabs', isVertical ? 'block' : 'block'),
-      className,
-    ),
+    appendClassName(appendClassName('rue-tabs', isVertical ? 'block' : 'block'), className),
     hasPanels ? 'w-full' : undefined,
   )
   const tabsClassName = buildTabsClassName(
@@ -242,14 +235,18 @@ const Tabs: FC<TabsProps> = ({
       type="button"
       className="btn btn-ghost btn-sm shrink-0"
       aria-label="新增标签"
-      onClick={event => handleEditAdd(event as any)}
+      onClick={(event: MouseEvent) => handleEditAdd(event)}
     >
       {addIcon ?? '+'}
     </button>
   ) : null
 
   const renderTabsNode = () => (
-    <div role="tablist" aria-orientation={isVertical ? 'vertical' : 'horizontal'} className={tabsClassName}>
+    <div
+      role="tablist"
+      aria-orientation={isVertical ? 'vertical' : 'horizontal'}
+      className={tabsClassName}
+    >
       {normalizedItems.map(item => {
         const active = getEffectiveActiveKey() === item.key
         const closable = type === 'editable-card' && !!onEdit && (item.closable ?? !item.disabled)
@@ -273,7 +270,9 @@ const Tabs: FC<TabsProps> = ({
                       active
                         ? appendClassName(
                             'tab-active',
-                            replaceDefaultIndicator ? 'rue-tabs-indicator-active before:hidden' : undefined,
+                            replaceDefaultIndicator
+                              ? 'rue-tabs-indicator-active before:hidden'
+                              : undefined,
                           )
                         : undefined,
                     ),
@@ -305,11 +304,14 @@ const Tabs: FC<TabsProps> = ({
                 <span
                   className={appendClassName(
                     'mt-1 inline-flex h-0.5 rounded-full bg-current opacity-70',
-                    appendClassName(resolveIndicatorAlignment(indicator.align), indicator.className),
+                    appendClassName(
+                      resolveIndicatorAlignment(indicator.align),
+                      indicator.className,
+                    ),
                   )}
                   style={{
                     width: resolveIndicatorWidth(indicator.size),
-                    ...(indicator.style ?? {}),
+                    ...indicator.style,
                   }}
                 />
               ) : null}
@@ -320,14 +322,14 @@ const Tabs: FC<TabsProps> = ({
                 tabindex={item.disabled ? -1 : 0}
                 className="inline-flex size-5 shrink-0 items-center justify-center rounded-full opacity-60 transition-opacity hover:opacity-100"
                 aria-label={`移除 ${item.key}`}
-                onClick={event => {
+                onClick={(event: MouseEvent) => {
                   event.preventDefault()
                   event.stopPropagation()
                   if (item.disabled || !onEdit) return
                   onEdit(item.key, 'remove')
                 }}
-                onKeyDown={event => {
-                  if ((event as KeyboardEvent).key !== 'Enter' && (event as KeyboardEvent).key !== ' ') {
+                onKeyDown={(event: KeyboardEvent) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') {
                     return
                   }
                   event.preventDefault()
@@ -445,7 +447,11 @@ const Tabs: FC<TabsProps> = ({
       syncDestroyPanelHost(nextHost, activeItem)
     }
 
-    if (nextHost.parentNode !== parent || parent.childNodes.length !== 1 || parent.firstChild !== nextHost) {
+    if (
+      nextHost.parentNode !== parent ||
+      parent.childNodes.length !== 1 ||
+      parent.firstChild !== nextHost
+    ) {
       parent.replaceChildren(nextHost)
     }
 
@@ -504,17 +510,25 @@ const Tabs: FC<TabsProps> = ({
         >
           <div className="flex w-full max-w-xs shrink-0 flex-col gap-3">
             {extraContent.left != null ? <div className="shrink-0">{extraContent.left}</div> : null}
-            <div ref={element => (tabListHostRef.current = element ?? undefined)} />
+            <div
+              ref={(element: HTMLDivElement | null) =>
+                (tabListHostRef.current = element ?? undefined)
+              }
+            />
             {addButtonNode != null || extraContent.right != null ? (
               <div className="flex flex-wrap items-center gap-2">
                 {addButtonNode}
-                {extraContent.right != null ? <div className="shrink-0">{extraContent.right}</div> : null}
+                {extraContent.right != null ? (
+                  <div className="shrink-0">{extraContent.right}</div>
+                ) : null}
               </div>
             ) : null}
           </div>
           {hasPanels ? (
             <div
-              ref={element => (panelsHostRef.current = element ?? undefined)}
+              ref={(element: HTMLDivElement | null) =>
+                (panelsHostRef.current = element ?? undefined)
+              }
               className={appendClassName('min-w-0 flex-1', contentClassName)}
             />
           ) : null}
@@ -533,15 +547,24 @@ const Tabs: FC<TabsProps> = ({
       >
         <div className="flex flex-wrap items-center gap-3">
           {extraContent.left != null ? <div className="shrink-0">{extraContent.left}</div> : null}
-          <div className={appendClassName('min-w-0 flex-1', centered ? 'flex justify-center' : undefined)}>
-            <div ref={element => (tabListHostRef.current = element ?? undefined)} />
+          <div
+            className={appendClassName(
+              'min-w-0 flex-1',
+              centered ? 'flex justify-center' : undefined,
+            )}
+          >
+            <div
+              ref={(element: HTMLDivElement | null) =>
+                (tabListHostRef.current = element ?? undefined)
+              }
+            />
           </div>
           {addButtonNode}
           {extraContent.right != null ? <div className="shrink-0">{extraContent.right}</div> : null}
         </div>
         {hasPanels ? (
           <div
-            ref={element => (panelsHostRef.current = element ?? undefined)}
+            ref={(element: HTMLDivElement | null) => (panelsHostRef.current = element ?? undefined)}
             className={appendClassName('min-w-0 flex-1', contentClassName)}
           />
         ) : null}

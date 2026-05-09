@@ -43,16 +43,17 @@ export interface UseComponentOptions<P = any> {
 
 const isAsyncComponentOptions = <P = any>(
   value: AsyncComponentLoader<P> | AsyncComponentOptions<P>,
-): value is AsyncComponentOptions<P> => typeof value === 'object' && value !== null && 'loader' in value
+): value is AsyncComponentOptions<P> =>
+  typeof value === 'object' && value !== null && 'loader' in value
 
 const normalizeUseComponentSource = <P = any>(
   source: AsyncComponentLoader<P> | AsyncComponentOptions<P>,
   opts?: UseComponentOptions<P>,
 ) => {
   const resolvedLoader = isAsyncComponentOptions(source) ? source.loader : source
-  const resolvedOptions = (
-    isAsyncComponentOptions(source) ? source : opts
-  ) as (AsyncComponentOptions<P> & UseComponentOptions<P>) | undefined
+  const resolvedOptions = (isAsyncComponentOptions(source) ? source : opts) as
+    | (AsyncComponentOptions<P> & UseComponentOptions<P>)
+    | undefined
   const hasLegacyLoading = !!resolvedOptions?.loading
 
   return {
@@ -191,11 +192,14 @@ export function useComponent<P = any>(
 
         try {
           if ((slot as any).hasCustomLoading && (slot as any).delay > 0) {
-            ;(slot as any).delayTimer = setTimeout(() => {
-              if ((slot as any).requestId === loadId && !component.get() && !err.get()) {
-                setLoadingState(true)
-              }
-            }, (slot as any).delay)
+            ;(slot as any).delayTimer = setTimeout(
+              () => {
+                if ((slot as any).requestId === loadId && !component.get() && !err.get()) {
+                  setLoadingState(true)
+                }
+              },
+              (slot as any).delay,
+            )
           }
 
           // 执行动态导入：兼容两种返回格式（模块对象或组件函数）
@@ -219,11 +223,14 @@ export function useComponent<P = any>(
             })
 
           if (Number.isFinite((slot as any).timeout) && (slot as any).timeout >= 0) {
-            ;(slot as any).timeoutTimer = setTimeout(() => {
-              handleLoadError(
-                new Error(`Async component timed out after ${(slot as any).timeout}ms.`),
-              )
-            }, (slot as any).timeout)
+            ;(slot as any).timeoutTimer = setTimeout(
+              () => {
+                handleLoadError(
+                  new Error(`Async component timed out after ${(slot as any).timeout}ms.`),
+                )
+              },
+              (slot as any).timeout,
+            )
           }
         } catch (e: any) {
           // 同步错误（如 loader 内部抛错）
@@ -269,8 +276,16 @@ export function useComponent<P = any>(
       asyncComponentCache.set(loader as any, slot)
     }
 
-    const { component, err, start, Loading, ErrorComp, hasCustomLoading, suspensible, loadingVisible } =
-      slot as any
+    const {
+      component,
+      err,
+      start,
+      Loading,
+      ErrorComp,
+      hasCustomLoading,
+      suspensible,
+      loadingVisible,
+    } = slot as any
 
     if (!(slot as any).started) {
       ;(slot as any).started = true
@@ -396,4 +411,3 @@ export function useComponent<P = any>(
     })
   }
 }
-

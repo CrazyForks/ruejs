@@ -285,8 +285,12 @@ const VOnAndROn: FC = () => {
 
   const onDirectiveStopPrevent = (event: MouseEvent) => {
     stopPreventCount.value += 1
-    const href = (event.currentTarget as HTMLAnchorElement | null)?.getAttribute('href') ?? '#compiled-stop-prevent'
-    updateLastEvent('v-on:click-stop-prevent -> 已阻止 ' + href + '，第 ' + stopPreventCount.value + ' 次')
+    const href =
+      (event.currentTarget as HTMLAnchorElement | null)?.getAttribute('href') ??
+      '#compiled-stop-prevent'
+    updateLastEvent(
+      'v-on:click-stop-prevent -> 已阻止 ' + href + '，第 ' + stopPreventCount.value + ' 次',
+    )
   }
 
   const onEnterDirective = (event: KeyboardEvent) => {
@@ -308,7 +312,9 @@ const VOnAndROn: FC = () => {
 
   const onMetaExact = (event: MouseEvent) => {
     metaExactCount.value += 1
-    updateLastEvent('v-on:click-meta-exact -> button ' + event.button + '，第 ' + metaExactCount.value + ' 次')
+    updateLastEvent(
+      'v-on:click-meta-exact -> button ' + event.button + '，第 ' + metaExactCount.value + ' 次',
+    )
   }
 
   return (
@@ -367,21 +373,23 @@ const VOnAndROn: FC = () => {
             <div className="card-body grid gap-6">
               <div role="alert" className="alert alert-info">
                 <span>
-                  这页的预览区、代码区、日志文案统一展示当前真实可写进 TSX 的 Rue 语法：v-on: / r-on:。
-                  你在页面上看到什么写法，当前源码里就是什么写法。
+                  这页的预览区、代码区、日志文案统一展示当前真实可写进 TSX 的 Rue 语法：v-on: /
+                  r-on:。 你在页面上看到什么写法，当前源码里就是什么写法。
                 </span>
               </div>
 
               <div role="alert" className="alert alert-warning alert-soft">
                 <span>
-                  代码页已经同步给出两种对照：第一块是 Rue TSX 实际源码，第二块是原生 TSX 的 onClick / onKeyUp 手写版本，
-                  第三块尽量把当前支持的修饰符写法完整列出来。
+                  代码页已经同步给出两种对照：第一块是 Rue TSX 实际源码，第二块是原生 TSX 的 onClick
+                  / onKeyUp 手写版本， 第三块尽量把当前支持的修饰符写法完整列出来。
                 </span>
               </div>
 
               <section className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-xl font-semibold">v-on:click：method path 自动注入浏览器事件</h2>
+                  <h2 className="text-xl font-semibold">
+                    v-on:click：method path 自动注入浏览器事件
+                  </h2>
                   <span className="badge badge-primary badge-lg">{methodPathCount.value} 次</span>
                 </div>
 
@@ -389,7 +397,9 @@ const VOnAndROn: FC = () => {
                   <button className="btn btn-primary" v-on:click="onMethodPath">
                     v-on:click="onMethodPath"
                   </button>
-                  <p className="text-sm opacity-70">这里直接使用真实的 v-on:click 方法路径，点击后会把 event.type 自动传给处理函数。</p>
+                  <p className="text-sm opacity-70">
+                    这里直接使用真实的 v-on:click 方法路径，点击后会把 event.type 自动传给处理函数。
+                  </p>
                 </div>
               </section>
 
@@ -400,10 +410,16 @@ const VOnAndROn: FC = () => {
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <button className="btn btn-secondary" v-on:click="onManualCall('method() 不自动注入 event')">
+                  <button
+                    className="btn btn-secondary"
+                    v-on:click="onManualCall('method() 不自动注入 event')"
+                  >
                     method()
                   </button>
-                  <button className="btn btn-accent" v-on:click="onManualCall('method($event) 显式注入', $event)">
+                  <button
+                    className="btn btn-accent"
+                    v-on:click="onManualCall('method($event) 显式注入', $event)"
+                  >
                     method($event)
                   </button>
                 </div>
@@ -416,7 +432,11 @@ const VOnAndROn: FC = () => {
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-[minmax(0,24rem),1fr] items-start">
-                  <input className="input input-bordered w-full" value={keyword.value} r-on:input="onInput($event)" />
+                  <input
+                    className="input input-bordered w-full"
+                    value={keyword.value}
+                    r-on:input="onInput($event)"
+                  />
                   <div className="stats stats-vertical md:stats-horizontal shadow-sm border border-base-300">
                     <div className="stat">
                       <div className="stat-title">当前值</div>
@@ -424,7 +444,9 @@ const VOnAndROn: FC = () => {
                     </div>
                     <div className="stat">
                       <div className="stat-title">大写预览</div>
-                      <div className="stat-value text-2xl">{keyword.value.toUpperCase() || 'EMPTY'}</div>
+                      <div className="stat-value text-2xl">
+                        {keyword.value.toUpperCase() || 'EMPTY'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -435,15 +457,26 @@ const VOnAndROn: FC = () => {
                   <h2 className="text-xl font-semibold">v-on:click-stop-prevent</h2>
                   <div className="flex flex-wrap gap-2">
                     <span className="badge badge-warning badge-lg">bubble {bubbleCount.value}</span>
-                    <span className="badge badge-success badge-lg">stop/prevent {stopPreventCount.value}</span>
+                    <span className="badge badge-success badge-lg">
+                      stop/prevent {stopPreventCount.value}
+                    </span>
                   </div>
                 </div>
 
-                <div className="rounded-box border border-dashed border-base-300 bg-base-200 p-4 space-y-3" v-on:click="onBubbleParent">
-                  <a className="link link-primary" href="#compiled-stop-prevent" v-on:click-stop-prevent="onDirectiveStopPrevent">
+                <div
+                  className="rounded-box border border-dashed border-base-300 bg-base-200 p-4 space-y-3"
+                  v-on:click="onBubbleParent"
+                >
+                  <a
+                    className="link link-primary"
+                    href="#compiled-stop-prevent"
+                    v-on:click-stop-prevent="onDirectiveStopPrevent"
+                  >
                     v-on:click-stop-prevent="onDirectiveStopPrevent"
                   </a>
-                  <p className="text-sm opacity-70">这条写法会同时阻止默认行为与冒泡，因此不会改 hash，也不会冒泡到外层容器。</p>
+                  <p className="text-sm opacity-70">
+                    这条写法会同时阻止默认行为与冒泡，因此不会改 hash，也不会冒泡到外层容器。
+                  </p>
                 </div>
               </section>
 
@@ -458,11 +491,19 @@ const VOnAndROn: FC = () => {
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <label className="floating-label">
-                    <input className="input input-bordered" placeholder="按 Enter" v-on:keyup-enter="onEnterDirective" />
+                    <input
+                      className="input input-bordered"
+                      placeholder="按 Enter"
+                      v-on:keyup-enter="onEnterDirective"
+                    />
                     <span>v-on:keyup-enter="onEnterDirective"</span>
                   </label>
                   <label className="floating-label">
-                    <input className="input input-bordered" placeholder="按 Enter" v-on:keyup-13="onKeyCode13Directive" />
+                    <input
+                      className="input input-bordered"
+                      placeholder="按 Enter"
+                      v-on:keyup-13="onKeyCode13Directive"
+                    />
                     <span>v-on:keyup-13="onKeyCode13Directive"</span>
                   </label>
                 </div>
@@ -473,14 +514,21 @@ const VOnAndROn: FC = () => {
                   <h2 className="text-xl font-semibold">v-on:click-self / v-on:click-meta-exact</h2>
                   <div className="flex flex-wrap gap-2">
                     <span className="badge badge-info badge-lg">self {selfCount.value}</span>
-                    <span className="badge badge-info badge-lg">meta.exact {metaExactCount.value}</span>
+                    <span className="badge badge-info badge-lg">
+                      meta.exact {metaExactCount.value}
+                    </span>
                   </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-box border border-base-300 bg-base-200 p-4 space-y-3" v-on:click-self="onSelfOnly">
+                  <div
+                    className="rounded-box border border-base-300 bg-base-200 p-4 space-y-3"
+                    v-on:click-self="onSelfOnly"
+                  >
                     <p className="font-medium">v-on:click-self="onSelfOnly"</p>
-                    <p className="text-sm opacity-70">点击这块容器的空白处会触发；点击里面的按钮不会触发 self。</p>
+                    <p className="text-sm opacity-70">
+                      点击这块容器的空白处会触发；点击里面的按钮不会触发 self。
+                    </p>
                     <button className="btn btn-ghost btn-sm">子元素按钮</button>
                   </div>
 
@@ -498,14 +546,26 @@ const VOnAndROn: FC = () => {
 
                 <div className="grid gap-4 md:grid-cols-[minmax(0,1fr),minmax(0,20rem)] items-start">
                   <div className="mockup-code text-sm">
-                    <pre data-prefix="1"><code>{'<NativeCard v-on:click-native-once="onNativeRootClick" />'}</code></pre>
-                    <pre data-prefix="2"><code>{'// 编译后包装为 _\$vaporWithNativeEvents(...)'}</code></pre>
-                    <pre data-prefix="3"><code>{'// native + once 仍然属于同一条修饰符编译链'}</code></pre>
+                    <pre data-prefix="1">
+                      <code>{'<NativeCard v-on:click-native-once="onNativeRootClick" />'}</code>
+                    </pre>
+                    <pre data-prefix="2">
+                      <code>{'// 编译后包装为 _$vaporWithNativeEvents(...)'}</code>
+                    </pre>
+                    <pre data-prefix="3">
+                      <code>{'// native + once 仍然属于同一条修饰符编译链'}</code>
+                    </pre>
                   </div>
 
                   <div className="grid gap-3">
-                    <NativeCard title="组件根元素外观" note="这里保留组件根按钮的视觉形态，代码区会给出与原生 TSX 的对照写法。" />
-                    <p className="text-sm opacity-70">组件根元素修饰符同样使用当前真实 TSX-safe 写法；改成原生 TSX 时，通常需要组件自己透传 onClick 或暴露 root 事件 prop。</p>
+                    <NativeCard
+                      title="组件根元素外观"
+                      note="这里保留组件根按钮的视觉形态，代码区会给出与原生 TSX 的对照写法。"
+                    />
+                    <p className="text-sm opacity-70">
+                      组件根元素修饰符同样使用当前真实 TSX-safe 写法；改成原生 TSX
+                      时，通常需要组件自己透传 onClick 或暴露 root 事件 prop。
+                    </p>
                   </div>
                 </div>
               </section>
@@ -541,7 +601,9 @@ const VOnAndROn: FC = () => {
 
               <section className="space-y-3">
                 <h2 className="text-xl font-semibold">最近一次事件</h2>
-                <div className="rounded-box border border-base-300 bg-base-200 p-4 font-mono text-sm">{lastEvent.value}</div>
+                <div className="rounded-box border border-base-300 bg-base-200 p-4 font-mono text-sm">
+                  {lastEvent.value}
+                </div>
               </section>
 
               <section className="space-y-3">

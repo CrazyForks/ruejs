@@ -23,7 +23,10 @@ describe('Hover3D', () => {
 
   it('renders anchor root from href and fills safe rel defaults', async () => {
     const c = document.createElement('div')
-    render(h(Hover3D, { href: '/docs', target: '_blank', className: 'cursor-pointer' }, 'content'), c)
+    render(
+      h(Hover3D, { href: '/docs', target: '_blank', className: 'cursor-pointer' }, 'content'),
+      c,
+    )
     await waitHover3DRender()
     const el = c.querySelector('a.hover-3d') as HTMLAnchorElement
     expect(el).toBeTruthy()
@@ -70,7 +73,9 @@ describe('Hover3D', () => {
     render(h(Hover3D, { overlayClassName: 'overlay-zone' }, 'content'), c)
     await waitHover3DRender()
     const el = c.querySelector('.hover-3d') as HTMLElement
-    const overlayDivs = Array.from(el.querySelectorAll(':scope > [data-hover3d-overlay]')) as HTMLElement[]
+    const overlayDivs = Array.from(
+      el.querySelectorAll(':scope > [data-hover3d-overlay]'),
+    ) as HTMLElement[]
     expect(overlayDivs.length).toBe(8)
     overlayDivs.forEach(overlay => {
       expect(overlay.classList.contains('overlay-zone')).toBe(true)

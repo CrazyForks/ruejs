@@ -47,7 +47,8 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
 const menuItemLinkApiRows: ApiRow[] = [
   {
     prop: 'as',
-    description: '指定交互节点类型；传入 to / href 时通常保持默认 a，纯动作项可改成 button 或 span。',
+    description:
+      '指定交互节点类型；传入 to / href 时通常保持默认 a，纯动作项可改成 button 或 span。',
     type: "'a' | 'button' | 'span'",
     defaultValue: "'a'",
   },
@@ -427,7 +428,7 @@ const items = [
             # 推荐：多选、分组与分割线
           </h2>
           <p className="mb-3 text-sm text-base-content/70">
-            对照 ant-design 的 `multiple + group + divider` 思路，适合消息筛选、标签面板一类场景。
+            沿着常见菜单组件的 `multiple + group + divider` 思路，适合消息筛选、标签面板一类场景。
           </p>
           <Tabs
             style="box"
@@ -511,7 +512,10 @@ const items = [
               onOpenChange={keys => (compoundOpenKeys.value = keys as string[])}
             >
               <Menu.ItemGroup title="Account">
-                <Menu.Item eventKey="profile" icon={<span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />}>
+                <Menu.Item
+                  eventKey="profile"
+                  icon={<span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />}
+                >
                   Profile
                 </Menu.Item>
                 <Menu.Item eventKey="notifications" extra={<Badge size="xs">2</Badge>}>
@@ -2289,7 +2293,8 @@ const toggleDropdownByClass = (event: MouseEvent) => {
 
         <h2>API</h2>
         <p className="text-sm text-base-content/70">
-          `Menu.Item` 内置了常用链接能力，导航跳转示例里出现的 `to`、`href`、`target` 等属性可直接用于菜单项。
+          `Menu.Item` 内置了常用链接能力，导航跳转示例里出现的 `to`、`href`、`target`
+          等属性可直接用于菜单项。
         </p>
         <h3>Menu.Item 链接相关</h3>
         <ApiTable rows={menuItemLinkApiRows} />

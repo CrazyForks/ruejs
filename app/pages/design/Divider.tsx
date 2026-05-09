@@ -21,7 +21,6 @@ interface ApiRow {
   defaultValue: string
 }
 
-
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">
@@ -183,7 +182,8 @@ const DividerDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Divider 分隔线</h1>
         <p className="text-sm mt-3 mb-3">
-          分隔线（Divider）用于在内容之间建立轻量层级。Rue 保留原有视觉风格，并补充了更完整的文本位置、线型和垂直分隔能力。
+          分隔线（Divider）用于在内容之间建立轻量层级。Rue
+          保留原有视觉风格，并补充了更完整的文本位置、线型和垂直分隔能力。
         </p>
 
         <div className="text-sm">
@@ -386,7 +386,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Vertical Orientation API"
-          summary="新增 ant-design 风格的 orientation / vertical API，适合行内分隔，不展示 children。"
+          summary="新增更通用的 orientation / vertical API，适合行内分隔，不展示 children。"
           tab={tabVerticalApi}
           preview={() => (
             <div className="flex flex-wrap items-center gap-3 rounded-box border border-base-300 bg-base-100 px-4 py-5">

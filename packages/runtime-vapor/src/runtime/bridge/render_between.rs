@@ -25,7 +25,7 @@ impl WasmRue {
     #[wasm_bindgen(js_name = "renderBetween")]
     /// 区间渲染入口：
     /// - 默认接受 tagged mount handle、portable handle、host-node bridge
-    /// - compat 构建额外接受函数组件、raw node、array 等旧输入
+    /// - 不接受 compat raw array/raw node/vnode/function-component 输入
     pub fn render_between_wasm(
         &self,
         input_value: JsValue,
@@ -33,10 +33,10 @@ impl WasmRue {
         start: JsValue,
         end: JsValue,
     ) {
-        let Some(input) = self.mount_input_from_input(
-            &input_value,
-            CompatEntryPolicy::LegacyArrayRawElementOrFunctionComponentInput,
-        ) else {
+        let Some(input) =
+            self.mount_input_from_input(&input_value, CompatEntryPolicy::DefaultSurfaceOnly)
+        else {
+            let should_report_error = !input_value.is_null() && !input_value.is_undefined();
             #[cfg(feature = "dev")]
             {
                 crate::log::warning(
@@ -45,6 +45,11 @@ impl WasmRue {
             }
 
             if let Ok(mut inner) = self.inner.try_borrow_mut() {
+                if should_report_error {
+                    inner.handle_error(JsValue::from_str(
+                        "Rue runtime: renderBetween input not supported on the default path",
+                    ));
+                }
                 let mut parent_value = parent.clone();
                 inner.clear_range((&mut parent_value).into(), start.into(), end.into());
             }

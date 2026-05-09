@@ -21,17 +21,24 @@ impl WasmRue {
     #[wasm_bindgen(js_name = "renderStatic")]
     /// 单锚点静态渲染入口：
     /// - 默认接受 tagged mount handle、portable handle、host-node bridge
-    /// - compat 构建额外接受函数组件、raw node、array 等旧输入
+    /// - 不接受 compat raw array/raw node/vnode/function-component 输入
     pub fn render_static_wasm(&self, input_value: JsValue, parent: JsValue, anchor: JsValue) {
-        let Some(input) = self.mount_input_from_input(
-            &input_value,
-            CompatEntryPolicy::LegacyArrayRawElementOrFunctionComponentInput,
-        ) else {
+        let Some(input) =
+            self.mount_input_from_input(&input_value, CompatEntryPolicy::DefaultSurfaceOnly)
+        else {
+            let should_report_error = !input_value.is_null() && !input_value.is_undefined();
             #[cfg(feature = "dev")]
             {
                 crate::log::warning(
                     "Rue runtime: renderStatic input not supported on the default path",
                 );
+            }
+            if should_report_error {
+                if let Ok(mut inner) = self.inner.try_borrow_mut() {
+                    inner.handle_error(JsValue::from_str(
+                        "Rue runtime: renderStatic input not supported on the default path",
+                    ));
+                }
             }
             return;
         };

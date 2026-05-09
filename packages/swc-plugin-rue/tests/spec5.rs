@@ -107,12 +107,12 @@ const UseCart: FC = ()=>{
                     price: 4
                 }
             ];
-                onBeforeCreate(()=>{
-                  console.log('UseCart beforeCreate');
-                });
-                onCreated(()=>{
-                  console.log('UseCart created');
-                });
+            onBeforeCreate(()=>{
+                console.log('UseCart beforeCreate');
+            });
+            onCreated(()=>{
+                console.log('UseCart created');
+            });
             onMounted(()=>{
                 console.log('UseCart mounted');
             });
@@ -162,22 +162,24 @@ const UseCart: FC = ()=>{
                         const _el4 = _$createElement("span");
                         _$appendChild(_el3, _el4);
                         _$setClassName(_el4, "text-gray-800");
-                        const _el5 = _$createTextWrapper(_el4);
-                        _$appendChild(_el4, _el5);
+                        const _list3 = _$createComment("rue:slot:anchor");
+                        _$appendChild(_el4, _list3);
                         watchEffect(()=>{
-                            _$settextContent(_el5, pr.name);
+                          const __slot = (pr.name);
+                          renderAnchor(__slot, _el4, _list3);
                         });
                         _$appendChild(_el4, _$createTextNode(" ￥"));
-                        const _el6 = _$createTextWrapper(_el4);
-                        _$appendChild(_el4, _el6);
+                        const _list4 = _$createComment("rue:slot:anchor");
+                        _$appendChild(_el4, _list4);
                         watchEffect(()=>{
-                            _$settextContent(_el6, pr.price);
+                          const __slot = (pr.price);
+                          renderAnchor(__slot, _el4, _list4);
                         });
-                        const _el7 = _$createElement("button");
-                        _$appendChild(_el3, _el7);
-                        _$setClassName(_el7, "px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700");
-                        _$addEventListener(_el7, "click", (()=>cart.add(pr)));
-                        _$appendChild(_el7, _$createTextNode("加入"));
+                        const _el5 = _$createElement("button");
+                        _$appendChild(_el3, _el5);
+                        _$setClassName(_el5, "px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700");
+                        _$addEventListener(_el5, "click", (()=>cart.add(pr)));
+                        _$appendChild(_el5, _$createTextNode("加入"));
                         return _root;
                     });
                     renderAnchor(__slot, parent, start);
@@ -185,29 +187,29 @@ const UseCart: FC = ()=>{
             });
             _map1_elements = _map1_newElements;
         });
-        const _el8 = _$createElement("h3");
-        _$appendChild(_root, _el8);
-        _$setClassName(_el8, "mt-6 text-xl font-semibold");
-        _$appendChild(_el8, _$createTextNode("购物车"));
-        const _list3 = _$createComment("rue:slot:anchor");
-        _$appendChild(_root, _list3);
+        const _el6 = _$createElement("h3");
+        _$appendChild(_root, _el6);
+        _$setClassName(_el6, "mt-6 text-xl font-semibold");
+        _$appendChild(_el6, _$createTextNode("购物车"));
+        const _list5 = _$createComment("rue:slot:anchor");
+        _$appendChild(_root, _list5);
         watchEffect(()=>{
             const __slot = cart.items.value.length === 0 ? vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el9 = _$createElement("p");
-                _$appendChild(_root, _el9);
-                _$setClassName(_el9, "text-gray-500 mt-2");
-                _$appendChild(_el9, _$createTextNode("购物车为空"));
+            const _el7 = _$createElement("p");
+            _$appendChild(_root, _el7);
+            _$setClassName(_el7, "text-gray-500 mt-2");
+            _$appendChild(_el7, _$createTextNode("购物车为空"));
                 return _root;
             }) : vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el10 = _$createElement("ul");
-                _$appendChild(_root, _el10);
-                _$setClassName(_el10, "divide-y divide-gray-200 mt-2");
-                const _list4 = _$createComment("rue:list:start");
-                const _list5 = _$createComment("rue:list:end");
-                _$appendChild(_el10, _list4);
-                _$appendChild(_el10, _list5);
+            const _el8 = _$createElement("ul");
+            _$appendChild(_root, _el8);
+            _$setClassName(_el8, "divide-y divide-gray-200 mt-2");
+            const _list6 = _$createComment("rue:list:start");
+            const _list7 = _$createComment("rue:list:end");
+            _$appendChild(_el8, _list6);
+            _$appendChild(_el8, _list7);
                 let _map2_elements = new Map;
                 watchEffect(()=>{
                     const _map2_current = cart.items.value || [];
@@ -215,38 +217,40 @@ const UseCart: FC = ()=>{
                         items: _map2_current,
                         getKey: (i, idx)=>i.id,
                         elements: _map2_elements,
-                        parent: _el10,
-                        before: _list5,
+                parent: _el8,
+                before: _list7,
                         singleRoot: true,
-                        start: _list4,
+                start: _list6,
                         renderItem: (i, parent, start, end, idx)=>{
                             const __slot = vapor(()=>{
                                 const _root = _$createDocumentFragment();
-                                const _el11 = _$createElement("li");
-                                _$appendChild(_root, _el11);
+                    const _el9 = _$createElement("li");
+                    _$appendChild(_root, _el9);
                                 watchEffect(()=>{
-                                    _$setAttribute(_el11, "key", String((i.id)));
+                      _$setAttribute(_el9, "key", String((i.id)));
                                 });
-                                _$setClassName(_el11, "flex items-center justify之间 py-3");
-                                const _el12 = _$createElement("span");
-                                _$appendChild(_el11, _el12);
-                                _$setClassName(_el12, "text-gray-800");
-                                const _el13 = _$createTextWrapper(_el12);
-                                _$appendChild(_el12, _el13);
+                    _$setClassName(_el9, "flex items-center justify之间 py-3");
+                    const _el10 = _$createElement("span");
+                    _$appendChild(_el9, _el10);
+                    _$setClassName(_el10, "text-gray-800");
+                    const _list8 = _$createComment("rue:slot:anchor");
+                    _$appendChild(_el10, _list8);
                                 watchEffect(()=>{
-                                    _$settextContent(_el13, i.name);
+                      const __slot = (i.name);
+                      renderAnchor(__slot, _el10, _list8);
                                 });
-                                _$appendChild(_el12, _$createTextNode(" x "));
-                                const _el14 = _$createTextWrapper(_el12);
-                                _$appendChild(_el12, _el14);
+                    _$appendChild(_el10, _$createTextNode(" x "));
+                    const _list9 = _$createComment("rue:slot:anchor");
+                    _$appendChild(_el10, _list9);
                                 watchEffect(()=>{
-                                    _$settextContent(_el14, i.qty);
+                      const __slot = (i.qty);
+                      renderAnchor(__slot, _el10, _list9);
                                 });
-                                const _el15 = _$createElement("button");
-                                _$appendChild(_el11, _el15);
-                                _$setClassName(_el15, "text-red-600 hover:text-red-700");
-                                _$addEventListener(_el15, "click", (()=>cart.remove(i.id)));
-                                _$appendChild(_el15, _$createTextNode("移除"));
+                    const _el11 = _$createElement("button");
+                    _$appendChild(_el9, _el11);
+                    _$setClassName(_el11, "text-red-600 hover:text-red-700");
+                    _$addEventListener(_el11, "click", (()=>cart.remove(i.id)));
+                    _$appendChild(_el11, _$createTextNode("移除"));
                                 return _root;
                             });
                             renderAnchor(__slot, parent, start);
@@ -256,22 +260,22 @@ const UseCart: FC = ()=>{
                 });
                 return _root;
             });
-            renderAnchor(__slot, _root, _list3);
+            renderAnchor(__slot, _root, _list5);
         });
-        const _el16 = _$createElement("p");
-        _$appendChild(_root, _el16);
-        _$setClassName(_el16, "mt-4 text-right text-lg font-medium");
-        _$appendChild(_el16, _$createTextNode("总价：￥"));
-        const _el17 = _$createTextWrapper(_el16);
-        _$appendChild(_el16, _el17);
+          const _el12 = _$createElement("p");
+          _$appendChild(_root, _el12);
+          _$setClassName(_el12, "mt-4 text-right text-lg font-medium");
+          _$appendChild(_el12, _$createTextNode("总价：￥"));
+          const _el13 = _$createTextWrapper(_el12);
+          _$appendChild(_el12, _el13);
         watchEffect(()=>{
-            _$settextContent(_el17, cart.total.value);
+            _$settextContent(_el13, cart.total.value);
         });
-        const _el18 = _$createElement("button");
-        _$appendChild(_root, _el18);
-        _$setClassName(_el18, "mt-2 px-4 py-2 rounded-md border border-gray-300 bg-gray-100 hover:bg-gray-200");
-        _$addEventListener(_el18, "click", (cart.clear));
-        _$appendChild(_el18, _$createTextNode("清空"));
+          const _el14 = _$createElement("button");
+          _$appendChild(_root, _el14);
+          _$setClassName(_el14, "mt-2 px-4 py-2 rounded-md border border-gray-300 bg-gray-100 hover:bg-gray-200");
+          _$addEventListener(_el14, "click", (cart.clear));
+          _$appendChild(_el14, _$createTextNode("清空"));
         return _root;
     });
 };

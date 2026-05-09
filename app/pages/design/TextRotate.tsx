@@ -36,11 +36,7 @@ const DemoBlock: FC<DemoBlockProps> = ({ title, description, activeKey, preview,
         onChange={k => (activeKey.value = k as DemoTabKey)}
         className="mb-3"
       />
-      {activeKey.value === 'preview' ? (
-        preview
-      ) : (
-        <Code className="mt-2" lang="tsx" code={code} />
-      )}
+      {activeKey.value === 'preview' ? preview : <Code className="mt-2" lang="tsx" code={code} />}
     </div>
   )
 }
@@ -247,7 +243,8 @@ const TextRotateDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Text Rotate 文本轮播</h1>
         <p className="text-sm mt-3 mb-3">
-          Text Rotate 继续专注于轮播结构本身：保留 Rue 当前的视觉和 daisyUI 的 text-rotate class 用法。
+          Text Rotate 继续专注于轮播结构本身：保留 Rue 当前的视觉和 daisyUI 的 text-rotate class
+          用法。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -403,14 +400,16 @@ const TextRotateDemo: FC = () => {
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-sm font-medium">TextRotateItem</div>
             <p className="mt-2 text-sm opacity-70">
-              数据项负责单词条的内容和语义修饰；普通项走 Typography.Text，带 href 的项走 Typography.Link。
+              数据项负责单词条的内容和语义修饰；普通项走 Typography.Text，带 href 的项走
+              Typography.Link。
             </p>
           </div>
         </div>
 
         <h3 className="mt-8">TextRotate</h3>
         <p className="text-sm opacity-70">
-          根组件负责维持 daisyUI 的 text-rotate 结构，同时决定走原始 children 还是数据驱动的 items 模式。
+          根组件负责维持 daisyUI 的 text-rotate 结构，同时决定走原始 children 还是数据驱动的 items
+          模式。
         </p>
         <ApiTable rows={rootApiRows} />
 

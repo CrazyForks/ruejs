@@ -170,7 +170,7 @@ describe('Breadcrumbs', () => {
       h(Breadcrumbs, {
         items,
         params: { projectId: 42 },
-        itemRender: (item, params, routes, paths, href) => {
+        itemRender: (item: any, params: any, routes: any[], paths: string[], href?: string) => {
           const title = item.title ?? item.label
           const content = `${title}|${params.projectId}|${routes.length}|${paths.join('/')}`
           if (href) {

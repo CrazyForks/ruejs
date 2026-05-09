@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Validator 组件概述
 - 保留 daisyUI validator / validator-hint 的原生浏览器校验体验。
@@ -47,9 +48,16 @@ export interface ValidatorFieldProps extends Omit<ValidatorProps, 'className'> {
   requiredMark?: boolean
 }
 
-const VALIDATOR_APPEARANCES: ValidatorAppearance[] = ['input', 'select', 'textarea', 'checkbox', 'toggle']
+const VALIDATOR_APPEARANCES: ValidatorAppearance[] = [
+  'input',
+  'select',
+  'textarea',
+  'checkbox',
+  'toggle',
+]
 
-const joinClassNames = (...classNames: Array<string | undefined | false>) => classNames.filter(Boolean).join(' ')
+const joinClassNames = (...classNames: Array<string | undefined | false>) =>
+  classNames.filter(Boolean).join(' ')
 
 const toClassTokenSet = (className?: string) => {
   return new Set(
@@ -98,8 +106,12 @@ const buildValidatorClassName = (
   return joinClassNames(
     'validator',
     appearance && !tokens.has(appearance) ? appearance : undefined,
-    appearance && size && !tokens.has(`${appearance}-${size}`) ? `${appearance}-${size}` : undefined,
-    appearance && status && !tokens.has(`${appearance}-${status}`) ? `${appearance}-${status}` : undefined,
+    appearance && size && !tokens.has(`${appearance}-${size}`)
+      ? `${appearance}-${size}`
+      : undefined,
+    appearance && status && !tokens.has(`${appearance}-${status}`)
+      ? `${appearance}-${status}`
+      : undefined,
     className,
   )
 }
@@ -114,7 +126,15 @@ const renderStackedContent = (content: any) => {
   ))
 }
 
-const Root: FC<ValidatorProps> = ({ as, appearance, size, status, className, children, ...rest }) => {
+const Root: FC<ValidatorProps> = ({
+  as,
+  appearance,
+  size,
+  status,
+  className,
+  children,
+  ...rest
+}) => {
   const resolvedAppearance = resolveAppearance(as, appearance, className)
   const resolvedHost = resolveHost(as, resolvedAppearance)
   const cls = buildValidatorClassName(resolvedAppearance, size, status, className)
@@ -151,7 +171,11 @@ const Hint: FC<ValidatorHintProps> = ({
   return (
     <Component
       {...rest}
-      className={joinClassNames('validator-hint', hideUntilInvalid ? 'hidden' : undefined, className)}
+      className={joinClassNames(
+        'validator-hint',
+        hideUntilInvalid ? 'hidden' : undefined,
+        className,
+      )}
     >
       {lines?.length ? renderStackedContent(lines) : children}
     </Component>
@@ -181,7 +205,8 @@ const Field: FC<ValidatorFieldProps> = ({
 }) => {
   const Wrapper = fieldAs as any
   const controlId = typeof id === 'string' && id.trim() ? id : undefined
-  const generatedHintId = controlId && hint != null && rest['aria-describedby'] == null ? `${controlId}-hint` : undefined
+  const generatedHintId =
+    controlId && hint != null && rest['aria-describedby'] == null ? `${controlId}-hint` : undefined
   const describedBy = rest['aria-describedby'] ?? generatedHintId
   const showRequiredMark = requiredMark ?? rest.required === true
 
@@ -214,7 +239,9 @@ const Field: FC<ValidatorFieldProps> = ({
       ) : null}
 
       {extra != null ? (
-        <p className={joinClassNames('label text-xs opacity-70', extraClassName)}>{renderStackedContent(extra)}</p>
+        <p className={joinClassNames('label text-xs opacity-70', extraClassName)}>
+          {renderStackedContent(extra)}
+        </p>
       ) : null}
     </Wrapper>
   )

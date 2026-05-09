@@ -1,7 +1,7 @@
 import { type FC, useState, watch, computed, useEffect } from '@rue-js/rue'
 import { RouterLink, useRoute } from '@rue-js/router'
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlaygroundGuide'
-import { mdToHtml } from './docMarkdown'
+import { loadCachedDocHtml } from './docDetailCache'
 
 // 从 SidebarPlayground 的 SECTIONS_BY_TYPE 派生 DOCS_META，用于上一页/下一页
 type MenuItem = { id: string; title: string; href?: string; children?: MenuItem[] }
@@ -32,32 +32,37 @@ const GuideDocDetail: FC = () => {
   const [_results, _setResults] = useState<{ id: string; title: string; snippet: string }[]>([])
   const [docPath, setDocPath] = useState<string>('')
   const [uiBase, setUiBase] = useState<string>('')
+  let requestVersion = 0
 
   watch(
     route,
     async (data: any) => {
+      const currentRequest = ++requestVersion
       const ctx = getContext()
       setUiBase(ctx.uiBase)
       const seg = (data?.params?.path as string) || ''
-      if (!seg) return
+      if (!seg) {
+        setDocPath('')
+        setHtml('')
+        return
+      }
       setDocPath(seg)
       const docsMeta = SECTIONS_BY_TYPE['guide'].flatMap(sec => flatten(sec.items))
       const meta = docsMeta.find(d => d.id === seg)
       setTitle(meta?.title || seg.split('/').pop() || seg)
       const base = ctx.docBase
-      const url = import.meta.env.DEV
-        ? new URL(`${base}/${seg}.md?id=${Math.random()}`, import.meta.url)
-        : `${base}/${seg}.md`
+
       try {
-        const res = await fetch(url as any)
-        if (!res.ok) {
-          setHtml(`<p class="text-base-content/70">文档未找到：${seg}</p>`)
+        const out = await loadCachedDocHtml('guide', base, seg)
+        if (currentRequest !== requestVersion) {
           return
         }
-        const md = await res.text()
-        const out = await mdToHtml(md)
         setHtml(out)
       } catch {
+        if (currentRequest !== requestVersion) {
+          return
+        }
+
         setHtml(`<p class="text-base-content/70">加载文档失败</p>`)
       }
     },

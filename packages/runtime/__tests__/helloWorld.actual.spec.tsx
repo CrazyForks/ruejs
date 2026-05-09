@@ -43,7 +43,9 @@ const createStaticHistory = (path: string): HistoryLike => ({
   back: () => {},
 })
 
-const createMemoryHistory = (initialPath: string): HistoryLike & { setPath: (path: string) => void } => {
+const createMemoryHistory = (
+  initialPath: string,
+): HistoryLike & { setPath: (path: string) => void } => {
   let currentPath = initialPath
   const listeners = new Set<() => void>()
 

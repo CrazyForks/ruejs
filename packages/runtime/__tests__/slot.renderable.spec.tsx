@@ -43,7 +43,10 @@ describe('Slot renderable boundary', () => {
 
     const container = mount(
       <div>
-        <Panel title={<strong data-testid="title">Named title</strong>} item={({ label }) => <em data-testid="scoped">{label}</em>}>
+        <Panel
+          title={<strong data-testid="title">Named title</strong>}
+          item={({ label }) => <em data-testid="scoped">{label}</em>}
+        >
           <span data-testid="default">Body</span>
         </Panel>
         {h(Panel, null)}
@@ -67,10 +70,14 @@ describe('Slot renderable boundary', () => {
     const BagPanel: FC<Record<string, unknown>> = props => (
       <section>
         <header>
-          <Slot source={props} name="title">Untitled</Slot>
+          <Slot source={props} name="title">
+            Untitled
+          </Slot>
         </header>
         <small>
-          <Slot source={props} name="subtitle">No subtitle</Slot>
+          <Slot source={props} name="subtitle">
+            No subtitle
+          </Slot>
         </small>
       </section>
     )
@@ -95,6 +102,8 @@ describe('Slot renderable boundary', () => {
 
     expect(sections[0]?.querySelector('[data-testid="bag-title"]')?.textContent).toBe('Bag title')
     expect(sections[0]?.querySelector('[data-testid="plain-title"]')).toBeNull()
-    expect(sections[0]?.querySelector('[data-testid="plain-subtitle"]')?.textContent).toBe('Plain subtitle')
+    expect(sections[0]?.querySelector('[data-testid="plain-subtitle"]')?.textContent).toBe(
+      'Plain subtitle',
+    )
   })
 })

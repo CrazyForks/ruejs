@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Countdown 组件概述
 - 兼容静态 children / items / Countdown.Value 组合写法。
@@ -92,9 +93,8 @@ const parseFormat = (format: string): CountdownFormatToken[] => {
 
     if (current === '[') {
       const closeIndex = format.indexOf(']', index + 1)
-      const content = closeIndex === -1
-        ? format.slice(index + 1)
-        : format.slice(index + 1, closeIndex)
+      const content =
+        closeIndex === -1 ? format.slice(index + 1) : format.slice(index + 1, closeIndex)
       if (content) {
         const prev = tokens[tokens.length - 1]
         if (prev?.type === 'literal') prev.content += content

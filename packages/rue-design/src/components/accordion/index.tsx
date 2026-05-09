@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Accordion 组件概述
 - 数据驱动：支持 items 配置与 children 组合两种写法。
@@ -77,7 +78,8 @@ interface AccordionPartProps {
   as?: 'div' | 'summary' | 'button'
 }
 
-const appendClassName = (base: string, className?: string) => {
+const appendClassName = (base?: string, className?: string) => {
+  if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
@@ -114,7 +116,8 @@ const resolveInitialGroupOpenKeys = (
   if (openKeys !== undefined) return normalizeOpenKeys(openKeys, multiple)
   if (activeKey !== undefined) return normalizeOpenKeys(keyToArray(activeKey), multiple)
   if (defaultOpenKeys !== undefined) return normalizeOpenKeys(defaultOpenKeys, multiple)
-  if (defaultActiveKey !== undefined) return normalizeOpenKeys(keyToArray(defaultActiveKey), multiple)
+  if (defaultActiveKey !== undefined)
+    return normalizeOpenKeys(keyToArray(defaultActiveKey), multiple)
   return normalizeOpenKeys(
     normalizedItems.filter(item => item.open).map(item => item.key),
     multiple,
@@ -141,11 +144,12 @@ const getStateClass = (open: boolean, force: AccordionForce | undefined) => {
 
 const getAccordionGroupRoots = (groupName: string, source?: Element | null) => {
   const queryRoot = source?.getRootNode?.()
-  const scope = queryRoot && 'querySelectorAll' in queryRoot
-    ? queryRoot
-    : typeof document !== 'undefined'
-      ? document
-      : null
+  const scope =
+    queryRoot && typeof (queryRoot as ParentNode).querySelectorAll === 'function'
+      ? (queryRoot as ParentNode)
+      : typeof document !== 'undefined'
+        ? document
+        : null
 
   if (!scope) return []
 
@@ -156,7 +160,8 @@ const getAccordionGroupRoots = (groupName: string, source?: Element | null) => {
 
 const getDirectAccordionInput = (root: Element) => {
   return Array.from(root.children).find(
-    child => child instanceof HTMLInputElement && (child.type === 'checkbox' || child.type === 'radio'),
+    child =>
+      child instanceof HTMLInputElement && (child.type === 'checkbox' || child.type === 'radio'),
   ) as HTMLInputElement | undefined
 }
 
@@ -265,11 +270,12 @@ const Accordion: FC<AccordionProps> = ({
   onChange,
   onToggle,
 }) => {
-  const normalizedItems: NormalizedAccordionItem[] = items?.map((item, index) => ({
-    ...item,
-    key: item.key ?? index,
-    index,
-  })) ?? []
+  const normalizedItems: NormalizedAccordionItem[] =
+    items?.map((item, index) => ({
+      ...item,
+      key: item.key ?? index,
+      index,
+    })) ?? []
   const generatedName = ref(`rue-accordion-${accordionNameSeed++}`)
   const uncontrolledSingleOpen = ref(resolveInitialSingleOpen(open, defaultOpen, force))
   const uncontrolledGroupOpenKeys = ref(
@@ -285,13 +291,14 @@ const Accordion: FC<AccordionProps> = ({
   const groupName = name ?? generatedName.value
   const hasItems = normalizedItems.length > 0
   const isGroupControlled = openKeys !== undefined || activeKey !== undefined
-  const currentSingleOpen = force === 'open'
-    ? true
-    : force === 'close'
-      ? false
-      : open !== undefined
-        ? !!open
-        : uncontrolledSingleOpen.value
+  const currentSingleOpen =
+    force === 'open'
+      ? true
+      : force === 'close'
+        ? false
+        : open !== undefined
+          ? !!open
+          : uncontrolledSingleOpen.value
 
   const getCurrentGroupOpenKeys = () => {
     if (openKeys !== undefined) return normalizeOpenKeys(openKeys, multiple)
@@ -307,11 +314,12 @@ const Accordion: FC<AccordionProps> = ({
       if (!item) return
 
       const itemForce = item.force ?? force
-      const itemOpen = itemForce === 'open'
-        ? true
-        : itemForce === 'close'
-          ? false
-          : nextOpenKeys.some(key => key === item.key)
+      const itemOpen =
+        itemForce === 'open'
+          ? true
+          : itemForce === 'close'
+            ? false
+            : nextOpenKeys.some(key => key === item.key)
 
       syncAccordionPanelState(root, itemOpen, itemForce)
     })
@@ -321,13 +329,14 @@ const Accordion: FC<AccordionProps> = ({
     getAccordionGroupRoots(groupName, source).forEach(root => {
       const panelForce = (root.dataset.rueAccordionForce as AccordionForce | undefined) ?? force
       const input = getDirectAccordionInput(root)
-      const domOpen = panelForce === 'open'
-        ? true
-        : panelForce === 'close'
-          ? false
-          : root instanceof HTMLDetailsElement
-            ? root.open
-            : input?.checked === true
+      const domOpen =
+        panelForce === 'open'
+          ? true
+          : panelForce === 'close'
+            ? false
+            : root instanceof HTMLDetailsElement
+              ? root.open
+              : input?.checked === true
 
       syncAccordionPanelState(root, domOpen, panelForce)
     })
@@ -356,7 +365,7 @@ const Accordion: FC<AccordionProps> = ({
     }
 
     if (onChange) {
-      onChange(multiple ? nextOpenKeys : nextOpenKeys[0] ?? null, {
+      onChange(multiple ? nextOpenKeys : (nextOpenKeys[0] ?? null), {
         key: item.key,
         index: item.index,
         open: itemOpen,
@@ -387,11 +396,12 @@ const Accordion: FC<AccordionProps> = ({
           const itemUse = item.use ?? use
           const itemIcon = item.icon ?? icon
           const itemForce = item.force ?? force
-          const itemOpen = itemForce === 'open'
-            ? true
-            : itemForce === 'close'
-              ? false
-              : getCurrentGroupOpenKeys().some(key => key === item.key)
+          const itemOpen =
+            itemForce === 'open'
+              ? true
+              : itemForce === 'close'
+                ? false
+                : getCurrentGroupOpenKeys().some(key => key === item.key)
           let itemClassName = appendClassName('collapse', getStateClass(itemOpen, itemForce))
           if (itemIcon === 'arrow') itemClassName += ' collapse-arrow'
           if (itemIcon === 'plus') itemClassName += ' collapse-plus'
@@ -399,7 +409,9 @@ const Accordion: FC<AccordionProps> = ({
           if (item.className) itemClassName += ` ${item.className}`
           if (disabled || item.disabled) itemClassName += ' opacity-70'
           const arrowAlignClassName =
-            itemIcon === 'arrow' && (item.description != null || item.extra != null) ? 'after:top-6' : undefined
+            itemIcon === 'arrow' && (item.description != null || item.extra != null)
+              ? 'after:top-6'
+              : undefined
           const mergedTitleClassName = appendClassName(
             appendClassName('collapse-title', titleClassName),
             appendClassName(item.titleClassName, arrowAlignClassName),
@@ -423,7 +435,7 @@ const Accordion: FC<AccordionProps> = ({
                 <summary
                   className={mergedTitleClassName}
                   aria-expanded={itemOpen ? 'true' : 'false'}
-                  onClick={event => {
+                  onClick={(event: MouseEvent) => {
                     event.preventDefault()
                     commitGroupChange(item, !itemOpen, event.currentTarget as Element)
                   }}
@@ -450,7 +462,7 @@ const Accordion: FC<AccordionProps> = ({
                 name={inputType === 'radio' ? groupName : undefined}
                 checked={itemOpen}
                 disabled={disabled || item.disabled || !!itemForce}
-                onClick={event => {
+                onClick={(event: MouseEvent) => {
                   const input = event.currentTarget as HTMLInputElement
                   if (!collapsible || !itemOpen || !isRadioInput(input)) return
 
@@ -458,7 +470,7 @@ const Accordion: FC<AccordionProps> = ({
                   input.checked = false
                   commitGroupChange(item, false, input)
                 }}
-                onChange={event => {
+                onChange={(event: Event) => {
                   const nextOpen = (event.target as HTMLInputElement).checked
                   commitGroupChange(item, nextOpen, event.currentTarget as Element)
                 }}
@@ -488,7 +500,7 @@ const Accordion: FC<AccordionProps> = ({
         open={currentSingleOpen}
         data-rue-accordion-group={groupName}
         data-rue-accordion-force={force}
-        onToggle={event => {
+        onToggle={(event: Event) => {
           const nextOpen = (event.currentTarget as HTMLDetailsElement).open
           if (disabled || force) {
             if ((event.currentTarget as HTMLDetailsElement).open !== currentSingleOpen) {
@@ -507,13 +519,17 @@ const Accordion: FC<AccordionProps> = ({
   const singleInputType = 'radio'
 
   return (
-    <div className={wrapperClassName} data-rue-accordion-group={groupName} data-rue-accordion-force={force}>
+    <div
+      className={wrapperClassName}
+      data-rue-accordion-group={groupName}
+      data-rue-accordion-force={force}
+    >
       <input
         type={singleInputType}
         name={singleInputType === 'radio' ? groupName : undefined}
         checked={currentSingleOpen}
         disabled={disabled || !!force}
-        onClick={event => {
+        onClick={(event: MouseEvent) => {
           const input = event.currentTarget as HTMLInputElement
           if (!collapsible || !currentSingleOpen || !isRadioInput(input)) return
 
@@ -521,7 +537,7 @@ const Accordion: FC<AccordionProps> = ({
           input.checked = false
           commitSingleChange(false, input)
         }}
-        onChange={event => {
+        onChange={(event: Event) => {
           const nextOpen = (event.target as HTMLInputElement).checked
           commitSingleChange(nextOpen, event.currentTarget as Element)
         }}

@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Indicator 组件概述
 - 保留 Rue 当前 indicator / indicator-item 的轻量结构与视觉类名。
@@ -164,15 +165,20 @@ const Indicator: FC<IndicatorProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const shortcutItems = Array.isArray(items) && items.length > 0
-    ? items.map((config, index) => (
-        <Item key={config.key ?? index} {...config}>
-          {config.children}
-        </Item>
-      ))
-    : item != null
-      ? [<Item key="__indicator_item__" {...itemProps}>{item}</Item>]
-      : []
+  const shortcutItems =
+    Array.isArray(items) && items.length > 0
+      ? items.map((config, index) => (
+          <Item key={config.key ?? index} {...config}>
+            {config.children}
+          </Item>
+        ))
+      : item != null
+        ? [
+            <Item key="__indicator_item__" {...itemProps}>
+              {item}
+            </Item>,
+          ]
+        : []
 
   return (
     <Component {...rest} className={mergeClassName('indicator', className)} style={style}>

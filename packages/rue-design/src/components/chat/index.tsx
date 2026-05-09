@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Chat 组件概述
 - 保留 daisyUI chat 视觉语义：start/end 布局、chat-bubble 颜色与复合子组件结构。
@@ -153,11 +154,11 @@ const Bubble: FC<BubbleProps> = ({ color, className, children, typing, typingInd
 
   return (
     <div className={bubbleClassName}>
-      {typing ? (
-        typingIndicator ?? <span className="loading loading-dots loading-xs" aria-label="Typing" />
-      ) : (
-        children
-      )}
+      {typing
+        ? (typingIndicator ?? (
+            <span className="loading loading-dots loading-xs" aria-label="Typing" />
+          ))
+        : children}
     </div>
   )
 }
@@ -341,33 +342,36 @@ const Chat: FC<ChatProps> = ({
     )
   }
 
-  if (!hasRenderableNode(children) && hasSemanticMessage({
-    placement,
-    className,
-    message,
-    text,
-    color,
-    bubbleClassName,
-    avatar,
-    avatarSrc,
-    avatarAlt,
-    avatarClassName,
-    avatarBodyClassName,
-    avatarImgClassName,
-    imageSrc,
-    imageAlt,
-    imageClassName,
-    header,
-    author,
-    headerName,
-    timestamp,
-    headerTime,
-    headerClassName,
-    footer,
-    footerClassName,
-    typing,
-    typingIndicator,
-  })) {
+  if (
+    !hasRenderableNode(children) &&
+    hasSemanticMessage({
+      placement,
+      className,
+      message,
+      text,
+      color,
+      bubbleClassName,
+      avatar,
+      avatarSrc,
+      avatarAlt,
+      avatarClassName,
+      avatarBodyClassName,
+      avatarImgClassName,
+      imageSrc,
+      imageAlt,
+      imageClassName,
+      header,
+      author,
+      headerName,
+      timestamp,
+      headerTime,
+      headerClassName,
+      footer,
+      footerClassName,
+      typing,
+      typingIndicator,
+    })
+  ) {
     return renderSemanticMessage({
       placement,
       className,
@@ -397,7 +401,11 @@ const Chat: FC<ChatProps> = ({
     })
   }
 
-  return <div className={appendClassName(`chat chat-${resolvePlacement(placement)}`, className)}>{children}</div>
+  return (
+    <div className={appendClassName(`chat chat-${resolvePlacement(placement)}`, className)}>
+      {children}
+    </div>
+  )
 }
 
 type ChatCompound = FC<ChatProps> & {

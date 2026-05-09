@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ref, render, setReactiveScheduling } from '@rue-js/rue'
 import Toast from '..'
-import { click, flush, mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+import {
+  click,
+  flush,
+  mountContainer,
+  waitForContent,
+} from '../../../../../runtime/__tests__/page-test-utils'
 
 setReactiveScheduling('sync')
 

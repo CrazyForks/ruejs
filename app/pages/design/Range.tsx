@@ -22,7 +22,16 @@ interface ApiRow {
   defaultValue: string
 }
 
-const colors = ['neutral', 'primary', 'secondary', 'accent', 'success', 'warning', 'info', 'error'] as const
+const colors = [
+  'neutral',
+  'primary',
+  'secondary',
+  'accent',
+  'success',
+  'warning',
+  'info',
+  'error',
+] as const
 const sizes = ['xs', 'sm', 'md', 'lg', 'xl'] as const
 const aliasSizes = ['small', 'medium', 'large'] as const
 
@@ -131,16 +140,26 @@ const RangeStoryPreview: FC = () => {
       <div className="grid gap-3 rounded-box bg-base-200/70 p-4 text-sm sm:grid-cols-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-base-content/50">每秒请求</div>
-          <div className="mt-1 text-lg font-semibold text-base-content">{Math.round((bandwidth.value / 10) * 18)}k</div>
+          <div className="mt-1 text-lg font-semibold text-base-content">
+            {Math.round((bandwidth.value / 10) * 18)}k
+          </div>
         </div>
         <div>
           <div className="text-xs uppercase tracking-wide text-base-content/50">区域副本</div>
-          <div className="mt-1 text-lg font-semibold text-base-content">{bandwidth.value >= 500 ? '6 个' : '3 个'}</div>
+          <div className="mt-1 text-lg font-semibold text-base-content">
+            {bandwidth.value >= 500 ? '6 个' : '3 个'}
+          </div>
         </div>
         <div>
           <div className="text-xs uppercase tracking-wide text-base-content/50">推荐套餐</div>
           <div className="mt-1 text-lg font-semibold text-base-content">
-            {bandwidth.value >= 750 ? 'Enterprise' : bandwidth.value >= 500 ? 'Scale' : bandwidth.value >= 250 ? 'Growth' : 'Starter'}
+            {bandwidth.value >= 750
+              ? 'Enterprise'
+              : bandwidth.value >= 500
+                ? 'Scale'
+                : bandwidth.value >= 250
+                  ? 'Growth'
+                  : 'Starter'}
           </div>
         </div>
       </div>
@@ -174,11 +193,15 @@ const RangeCommitPreview: FC = () => {
       <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
         <div className="rounded-box bg-base-200/70 p-4">
           <div className="text-xs uppercase tracking-wide text-base-content/50">实时预算</div>
-          <div className="mt-2 text-lg font-semibold text-base-content">¥ {seats.value * 129} / 月</div>
+          <div className="mt-2 text-lg font-semibold text-base-content">
+            ¥ {seats.value * 129} / 月
+          </div>
         </div>
         <div className="rounded-box bg-base-200/70 p-4">
           <div className="text-xs uppercase tracking-wide text-base-content/50">已确认席位</div>
-          <div className="mt-2 text-lg font-semibold text-base-content">{committedSeats.value} seats</div>
+          <div className="mt-2 text-lg font-semibold text-base-content">
+            {committedSeats.value} seats
+          </div>
         </div>
       </div>
     </div>
@@ -385,7 +408,8 @@ const RangePage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Range Slider 范围选择</h1>
         <p className="mt-3 mb-3 text-sm">
-          Range 仍然坚持原生 <code>input type="range"</code> 的语义，但不再只是一条裸滑杆。现在可以直接在组件层补齐标题、提示、刻度、值展示和语义回调，设计页也按能力分层重新组织。
+          Range 仍然坚持原生 <code>input type="range"</code>{' '}
+          的语义，但不再只是一条裸滑杆。现在可以直接在组件层补齐标题、提示、刻度、值展示和语义回调，设计页也按能力分层重新组织。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/range/" target="_blank">
@@ -510,7 +534,9 @@ const values = ref({
               <div className="grid gap-3 rounded-box border border-dashed border-base-300 bg-base-100 p-4 text-sm sm:grid-cols-3">
                 {aliasSizes.map((size, index) => (
                   <div key={size} className="space-y-2">
-                    <div className="text-xs uppercase tracking-wide text-base-content/60">{size}</div>
+                    <div className="text-xs uppercase tracking-wide text-base-content/60">
+                      {size}
+                    </div>
                     <Range size={size} min={0} max={100} value={35 + index * 20} />
                   </div>
                 ))}
@@ -577,7 +603,8 @@ const committedSeats = ref(12)
         <div className="component-preview not-prose text-base-content my-6 lg:my-12">
           <h2 className="component-preview-title mt-2 mb-3 text-lg font-semibold"># API</h2>
           <p className="mb-4 text-sm text-base-content/70">
-            不做增强展示时，Range 仍然是一个直接透传原生属性的滑杆；一旦传入 <code>label</code>、<code>showValue</code>、<code>marks</code> 等属性，就会自动切换到更完整的展示结构。
+            不做增强展示时，Range 仍然是一个直接透传原生属性的滑杆；一旦传入 <code>label</code>、
+            <code>showValue</code>、<code>marks</code> 等属性，就会自动切换到更完整的展示结构。
           </p>
           <ApiTable rows={apiRows} />
         </div>

@@ -31,7 +31,9 @@ const findTab = (root: ParentNode, label: string) =>
   ) ?? null
 
 const findButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === label) ?? null
+  Array.from(root.querySelectorAll('button')).find(
+    button => button.textContent?.trim() === label,
+  ) ?? null
 
 describe('Refs actual page', () => {
   it('binds the DOM ref in preview mode and focuses the input through useRef', async () => {

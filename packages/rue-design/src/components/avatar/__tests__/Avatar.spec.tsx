@@ -139,12 +139,7 @@ describe('Avatar', () => {
       h(Avatar.Group, {
         size: 'sm',
         max: { count: 2 },
-        items: [
-          { text: 'A' },
-          { text: 'B' },
-          { text: 'C' },
-          { text: 'D' },
-        ],
+        items: [{ text: 'A' }, { text: 'B' }, { text: 'C' }, { text: 'D' }],
       }),
       c,
     )

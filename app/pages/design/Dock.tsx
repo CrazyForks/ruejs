@@ -304,9 +304,9 @@ const DockDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Dock 底部栏</h1>
         <p className="text-sm mt-3 mb-3">
-          Dock 用来承载移动端底部导航和轻量操作入口。当前版本保持 Rue 自己的视觉基底，同时补上更顺手的导航
-          API：可以继续用 <code>activeIndex</code>，也可以切到更语义化的 <code>activeKey</code> /
-          <code>onSelect</code> 模式。
+          Dock 用来承载移动端底部导航和轻量操作入口。当前版本保持 Rue
+          自己的视觉基底，同时补上更顺手的导航 API：可以继续用 <code>activeIndex</code>
+          ，也可以切到更语义化的 <code>activeKey</code> /<code>onSelect</code> 模式。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -411,7 +411,11 @@ const DockDemo: FC = () => {
                 当前区块：<code>{activeComposition.value}</code>
               </div>
               <DockStage className="max-w-md">
-                <Dock as="nav" aria-label="Project sections" className="relative border border-base-300">
+                <Dock
+                  as="nav"
+                  aria-label="Project sections"
+                  className="relative border border-base-300"
+                >
                   <Dock.Item
                     as="a"
                     href="#dock-api"
@@ -473,7 +477,9 @@ const DockDemo: FC = () => {
           preview={() => (
             <div className="grid gap-4 xl:grid-cols-2">
               <div className="space-y-2">
-                <div className="not-prose text-xs font-medium uppercase tracking-[0.2em] opacity-60">Extra Small</div>
+                <div className="not-prose text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                  Extra Small
+                </div>
                 <DockStage>
                   <Dock
                     size="xs"
@@ -484,7 +490,9 @@ const DockDemo: FC = () => {
                 </DockStage>
               </div>
               <div className="space-y-2">
-                <div className="not-prose text-xs font-medium uppercase tracking-[0.2em] opacity-60">Small</div>
+                <div className="not-prose text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                  Small
+                </div>
                 <DockStage>
                   <Dock
                     size="sm"
@@ -495,7 +503,9 @@ const DockDemo: FC = () => {
                 </DockStage>
               </div>
               <div className="space-y-2">
-                <div className="not-prose text-xs font-medium uppercase tracking-[0.2em] opacity-60">Medium</div>
+                <div className="not-prose text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                  Medium
+                </div>
                 <DockStage>
                   <Dock
                     size="md"
@@ -506,7 +516,9 @@ const DockDemo: FC = () => {
                 </DockStage>
               </div>
               <div className="space-y-2">
-                <div className="not-prose text-xs font-medium uppercase tracking-[0.2em] opacity-60">Large</div>
+                <div className="not-prose text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                  Large
+                </div>
                 <DockStage>
                   <Dock
                     size="lg"
@@ -517,7 +529,9 @@ const DockDemo: FC = () => {
                 </DockStage>
               </div>
               <div className="space-y-2 xl:col-span-2">
-                <div className="not-prose text-xs font-medium uppercase tracking-[0.2em] opacity-60">Extra Large</div>
+                <div className="not-prose text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                  Extra Large
+                </div>
                 <DockStage>
                   <Dock
                     size="xl"
@@ -543,15 +557,24 @@ const DockDemo: FC = () => {
           preview={() => (
             <DockStage>
               <Dock className="relative bg-neutral text-neutral-content">
-                <Dock.Item active={activeCustom.value === 0} onClick={() => (activeCustom.value = 0)}>
+                <Dock.Item
+                  active={activeCustom.value === 0}
+                  onClick={() => (activeCustom.value = 0)}
+                >
                   <HomeIcon />
                   <Dock.Label>Home</Dock.Label>
                 </Dock.Item>
-                <Dock.Item active={activeCustom.value === 1} onClick={() => (activeCustom.value = 1)}>
+                <Dock.Item
+                  active={activeCustom.value === 1}
+                  onClick={() => (activeCustom.value = 1)}
+                >
                   <InboxIcon />
                   <Dock.Label>Inbox</Dock.Label>
                 </Dock.Item>
-                <Dock.Item active={activeCustom.value === 2} onClick={() => (activeCustom.value = 2)}>
+                <Dock.Item
+                  active={activeCustom.value === 2}
+                  onClick={() => (activeCustom.value = 2)}
+                >
                   <SettingsIcon />
                   <Dock.Label>Settings</Dock.Label>
                 </Dock.Item>
@@ -594,7 +617,12 @@ const DockDemo: FC = () => {
                   onSelect={key => (activeAuto.value = key as DockKey)}
                   items={[
                     { key: 'home', icon: <HomeIcon />, label: 'Home' },
-                    { key: 'inbox', icon: <InboxIcon />, label: 'Inbox', labelClassName: 'font-medium' },
+                    {
+                      key: 'inbox',
+                      icon: <InboxIcon />,
+                      label: 'Inbox',
+                      labelClassName: 'font-medium',
+                    },
                     { key: 'settings', icon: <SettingsIcon />, label: 'Settings' },
                   ]}
                 />
@@ -651,13 +679,15 @@ const DockDemo: FC = () => {
 
         <h3>activeKey 和 activeIndex 应该优先选哪个？</h3>
         <p>
-          新页面建议优先用 <code>activeKey</code>，因为它更贴近导航语义，也更方便和路由、菜单数据对齐。
+          新页面建议优先用 <code>activeKey</code>
+          ，因为它更贴近导航语义，也更方便和路由、菜单数据对齐。
           如果你当前已经是索引式状态，继续使用 <code>activeIndex</code> 也没有问题。
         </p>
 
         <h3>什么时候用 items，什么时候用 Dock.Item？</h3>
         <p>
-          结构规整、希望统一从数据渲染时，优先用 <code>items</code>。如果单项内部结构更复杂，或者需要同时混用
+          结构规整、希望统一从数据渲染时，优先用 <code>items</code>
+          。如果单项内部结构更复杂，或者需要同时混用
           <code>a</code>、<code>button</code>、<code>div</code>，就直接用 <code>Dock.Item</code>。
         </p>
 

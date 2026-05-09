@@ -113,12 +113,10 @@
 - **详情**
 
   `useComponent()` 返回一个包装组件。它只会在实际渲染时触发 `loader`，并接受两种成功返回值：
-
   1. 组件本身
   2. 形如 `{ default: Component }` 的 ES 模块对象
 
   当前实现的行为如下：
-
   - `loadingComponent` 只有在异步加载仍未完成时才会渲染。
   - 旧写法中的 `loading` / `error` 仍然可用，分别对应 `loadingComponent` / `errorComponent`。
   - 如果提供了 `loadingComponent` 但没有显式传入 `delay`，默认会等待 `200ms` 后再显示，避免极快请求导致的闪烁。

@@ -54,7 +54,12 @@ describe('Alert', () => {
     const container = mountContainer()
     resetActiveRuntime()
 
-    render(<Alert outline={true} dash={true} soft={true}>x</Alert>, container)
+    render(
+      <Alert outline={true} dash={true} soft={true}>
+        x
+      </Alert>,
+      container,
+    )
 
     await waitForContent(() => {
       const el = container.querySelector('[role="alert"]') as HTMLElement
@@ -191,7 +196,9 @@ describe('Alert', () => {
       const alerts = Array.from(container.querySelectorAll('[role="alert"]')) as HTMLElement[]
       expect(alerts[0].classList.contains('alert-warning')).toBe(true)
       expect(alerts[0].querySelector('[aria-hidden="true"]')).toBeTruthy()
-      const closeButton = alerts[1].querySelector('button[aria-label="Close alert"]') as HTMLButtonElement
+      const closeButton = alerts[1].querySelector(
+        'button[aria-label="Close alert"]',
+      ) as HTMLButtonElement
       expect(closeButton).toBeTruthy()
       expect(closeButton.textContent).toContain('知道了')
     })

@@ -44,8 +44,8 @@ describe('Fragments actual page', () => {
     await click(findTab(container, '效果'))
 
     await waitForContent(() => {
-      const spans = Array.from(container.querySelectorAll('.card-body.grid.gap-2 > span')).map(node =>
-        node.textContent?.trim(),
+      const spans = Array.from(container.querySelectorAll('.card-body.grid.gap-2 > span')).map(
+        node => node.textContent?.trim(),
       )
       expect(spans).toEqual(['片段 1', '片段 2'])
       expect(container.querySelectorAll('.card-body.grid.gap-2 > span')).toHaveLength(2)

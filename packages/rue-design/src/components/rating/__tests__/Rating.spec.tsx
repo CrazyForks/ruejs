@@ -62,8 +62,12 @@ describe('Rating', () => {
     await waitForContent(() => {
       const root = container.querySelector('[data-rating-mode="auto"]') as HTMLElement
       const items = container.querySelectorAll('button[data-rating-index]')
-      const firstButton = container.querySelector('button[data-rating-index="0"]') as HTMLButtonElement
-      const hidden = container.querySelector('input[type="hidden"][name="score"]') as HTMLInputElement
+      const firstButton = container.querySelector(
+        'button[data-rating-index="0"]',
+      ) as HTMLButtonElement
+      const hidden = container.querySelector(
+        'input[type="hidden"][name="score"]',
+      ) as HTMLInputElement
       const defaultStar = container.querySelector('.mask.mask-star') as HTMLElement
       expect(items).toHaveLength(4)
       expect(root.getAttribute('data-rating-value')).toBe('3')
@@ -79,7 +83,9 @@ describe('Rating', () => {
 
     await waitForContent(() => {
       const root = container.querySelector('[data-rating-mode="auto"]') as HTMLElement
-      const hidden = container.querySelector('input[type="hidden"][name="score"]') as HTMLInputElement
+      const hidden = container.querySelector(
+        'input[type="hidden"][name="score"]',
+      ) as HTMLInputElement
       expect(root.getAttribute('data-rating-value')).toBe('0')
       expect(hidden.value).toBe('0')
     })
@@ -100,7 +106,9 @@ describe('Rating', () => {
 
     await waitForContent(() => {
       const root = container.querySelector('[data-rating-mode="auto"]') as HTMLElement
-      const masks = Array.from(container.querySelectorAll('[data-rating-legacy-mask="true"]')) as HTMLElement[]
+      const masks = Array.from(
+        container.querySelectorAll('[data-rating-legacy-mask="true"]'),
+      ) as HTMLElement[]
       expect(root.getAttribute('data-rating-value')).toBe('5')
       expect(masks).toHaveLength(5)
       expect(masks[4].style.opacity).toBe('1')
@@ -130,8 +138,12 @@ describe('Rating', () => {
     await waitForContent(() => {
       const root = container.querySelector('[data-rating-mode="auto"]') as HTMLElement
       const third = container.querySelector('button[data-rating-index="2"]') as HTMLButtonElement
-      const firstShell = container.querySelector('button[data-rating-index="0"] > span') as HTMLElement
-      const activeLayer = container.querySelector('[data-rating-active-layer="true"] span') as HTMLElement
+      const firstShell = container.querySelector(
+        'button[data-rating-index="0"] > span',
+      ) as HTMLElement
+      const activeLayer = container.querySelector(
+        '[data-rating-active-layer="true"] span',
+      ) as HTMLElement
       expect(root.getAttribute('data-rating-value')).toBe('2.5')
       expect(third.title).toBe('okay')
       expect(firstShell.children).toHaveLength(2)
@@ -187,8 +199,12 @@ describe('Rating', () => {
 
     await waitForContent(() => {
       const root = container.querySelector('[data-rating-mode="auto"]') as HTMLElement
-      const activeLayers = Array.from(container.querySelectorAll('[data-rating-active-layer="true"]')) as HTMLElement[]
-      const activeLayerSpans = Array.from(container.querySelectorAll('[data-rating-active-layer="true"] > span')) as HTMLElement[]
+      const activeLayers = Array.from(
+        container.querySelectorAll('[data-rating-active-layer="true"]'),
+      ) as HTMLElement[]
+      const activeLayerSpans = Array.from(
+        container.querySelectorAll('[data-rating-active-layer="true"] > span'),
+      ) as HTMLElement[]
       expect(root.getAttribute('data-rating-value')).toBe('4.5')
       expect(activeLayers[4].style.width).toBe('50%')
       expect(activeLayers[3].style.width).toBe('100%')
@@ -203,7 +219,12 @@ describe('Rating', () => {
     render(
       <Rating>
         <Rating.Item data-testid="clear-item" hidden={true} name="score" aria-label="clear" />
-        <Rating.Item as="div" data-testid="display-item" className="mask mask-heart bg-red-400" aria-label="1 star" />
+        <Rating.Item
+          as="div"
+          data-testid="display-item"
+          className="mask mask-heart bg-red-400"
+          aria-label="1 star"
+        />
       </Rating>,
       container,
     )

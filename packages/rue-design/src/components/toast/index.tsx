@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Toast 组件概述
 - 保留 Toast 根容器的定位与堆叠语义，兼容 placement / horizontal / vertical / inset / gap / zIndex。
@@ -121,7 +122,10 @@ export interface ToastCloseProps extends ToastPartProps {
   label?: string
 }
 
-const placementMap: Record<ToastPlacement, { horizontal?: ToastHorizontal; vertical?: ToastVertical }> = {
+const placementMap: Record<
+  ToastPlacement,
+  { horizontal?: ToastHorizontal; vertical?: ToastVertical }
+> = {
   'top-start': { horizontal: 'start', vertical: 'top' },
   top: { horizontal: 'center', vertical: 'top' },
   'top-center': { horizontal: 'center', vertical: 'top' },
@@ -193,12 +197,17 @@ const TOAST_ITEM_BASE_CLASS =
 
 const TOAST_ITEM_ROOT_CLASS_MAP: Record<ToastItemVariant, Record<ToastItemType, string>> = {
   soft: {
-    neutral: 'border-base-300 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
+    neutral:
+      'border-base-300 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
     info: 'border-info/25 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
-    success: 'border-success/25 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
-    warning: 'border-warning/30 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
-    error: 'border-error/30 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
-    loading: 'border-primary/25 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
+    success:
+      'border-success/25 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
+    warning:
+      'border-warning/30 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
+    error:
+      'border-error/30 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
+    loading:
+      'border-primary/25 bg-base-100/95 text-base-content shadow-lg supports-[backdrop-filter]:bg-base-100/80',
   },
   solid: {
     neutral: 'border-neutral bg-neutral text-neutral-content shadow-lg',
@@ -361,7 +370,7 @@ const ToastMessageViewport: FC<ToastMessageViewportProps> = ({
         const resolvedChildren = hasRenderableContent(children) ? children : content
 
         return (
-          <Toast.Item
+          <ToastItem
             key={record.key}
             {...itemProps}
             type={type}
@@ -370,16 +379,16 @@ const ToastMessageViewport: FC<ToastMessageViewportProps> = ({
             closable={closable}
             pauseOnHover={pauseOnHover}
             showIcon={showIcon}
-            onClose={meta => {
+            onClose={(meta: ToastItemCloseMeta) => {
               if (onClose) onClose(meta)
             }}
-            onOpenChange={(nextOpen, meta) => {
+            onOpenChange={(nextOpen: boolean, meta: ToastItemCloseMeta) => {
               if (!nextOpen) onDestroy(record.key)
               if (onOpenChange) onOpenChange(nextOpen, meta)
             }}
           >
             {resolvedChildren}
-          </Toast.Item>
+          </ToastItem>
         )
       })}
     </Toast>
@@ -396,7 +405,12 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
   optionsRef.current = options
 
   const ensureViewportElement = () => {
-    const target = resolveToastMountElement(optionsRef.current.getContainer, holderElementRef.current ?? null, true)
+    const currentOptions = optionsRef.current ?? {}
+    const target = resolveToastMountElement(
+      currentOptions.getContainer,
+      holderElementRef.current ?? null,
+      true,
+    )
     if (!target) return null
 
     if (viewportElementRef.current == null) {
@@ -416,24 +430,28 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
   const syncViewport = () => {
     const viewportElement = ensureViewportElement()
     if (!viewportElement) return
+    const currentOptions = optionsRef.current ?? {}
+    const currentRecords = recordsRef.current ?? []
 
     render(
-      <ToastMessageViewport records={recordsRef.current} onDestroy={destroy} {...optionsRef.current} />,
+      <ToastMessageViewport records={currentRecords} onDestroy={destroy} {...currentOptions} />,
       viewportElement,
     )
   }
 
   const destroy = (key?: ToastMessageKey) => {
+    const currentRecords = recordsRef.current ?? []
+
     if (key == null) {
-      if (recordsRef.current.length > 0) {
+      if (currentRecords.length > 0) {
         recordsRef.current = []
         syncViewport()
       }
       return
     }
 
-    const nextRecords = recordsRef.current.filter(record => record.key !== key)
-    if (nextRecords.length !== recordsRef.current.length) {
+    const nextRecords = currentRecords.filter(record => record.key !== key)
+    if (nextRecords.length !== currentRecords.length) {
       recordsRef.current = nextRecords
       syncViewport()
     }
@@ -446,7 +464,7 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
       config: { ...config, key: nextKey },
     }
 
-    const currentRecords = recordsRef.current
+    const currentRecords = recordsRef.current ?? []
     const currentIndex = currentRecords.findIndex(record => record.key === nextKey)
     let nextRecords =
       currentIndex === -1
@@ -457,9 +475,9 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
             ...currentRecords.slice(currentIndex + 1),
           ]
 
-    nextRecords = trimToastMessageRecords(nextRecords, optionsRef.current.maxCount)
-            recordsRef.current = nextRecords
-            syncViewport()
+    nextRecords = trimToastMessageRecords(nextRecords, (optionsRef.current ?? {}).maxCount)
+    recordsRef.current = nextRecords
+    syncViewport()
 
     return () => {
       destroy(nextKey)
@@ -503,14 +521,14 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
       style={{ display: 'contents' }}
       ref={(element: HTMLDivElement | null) => {
         holderElementRef.current = element ?? undefined
-        if (optionsRef.current.getContainer === false && element) {
+        if (optionsRef.current?.getContainer === false && element) {
           syncViewport()
         }
       }}
     />
   )
 
-  return [apiRef.current, contextHolder] as const
+  return [apiRef.current!, contextHolder] as const
 }
 
 const resolveItemRole = (type?: ToastItemType) => {
@@ -532,10 +550,20 @@ interface ToastGlyphProps {
   className?: string
 }
 
-const toastItemCloseHandlerRegistry = new WeakMap<HTMLElement, (source: ToastCloseSource, event?: Event) => void>()
+const toastItemCloseHandlerRegistry = new WeakMap<
+  HTMLElement,
+  (source: ToastCloseSource, event?: Event) => void
+>()
 
 const InfoIcon: FC<ToastGlyphProps> = ({ className }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
     <circle cx="12" cy="12" r="9" />
     <path d="M12 10v6" />
     <path d="M12 7.5h.01" strokeLinecap="round" strokeLinejoin="round" />
@@ -543,14 +571,28 @@ const InfoIcon: FC<ToastGlyphProps> = ({ className }) => (
 )
 
 const SuccessIcon: FC<ToastGlyphProps> = ({ className }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
     <circle cx="12" cy="12" r="9" />
     <path d="m8.5 12 2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
 
 const WarningIcon: FC<ToastGlyphProps> = ({ className }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
     <path d="M12 4 3.8 18.2a1 1 0 0 0 .87 1.5h14.66a1 1 0 0 0 .87-1.5z" strokeLinejoin="round" />
     <path d="M12 9v4" strokeLinecap="round" />
     <path d="M12 16.5h.01" strokeLinecap="round" strokeLinejoin="round" />
@@ -558,7 +600,14 @@ const WarningIcon: FC<ToastGlyphProps> = ({ className }) => (
 )
 
 const ErrorIcon: FC<ToastGlyphProps> = ({ className }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
     <circle cx="12" cy="12" r="9" />
     <path d="m9 9 6 6" strokeLinecap="round" />
     <path d="m15 9-6 6" strokeLinecap="round" />
@@ -566,7 +615,14 @@ const ErrorIcon: FC<ToastGlyphProps> = ({ className }) => (
 )
 
 const CloseIcon: FC<ToastGlyphProps> = ({ className }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
     <path d="m7 7 10 10" strokeLinecap="round" />
     <path d="M17 7 7 17" strokeLinecap="round" />
   </svg>
@@ -595,7 +651,10 @@ const ToastIcon: FC<ToastPartProps> = ({ as = 'div', className, children, ...res
   return (
     <Component
       {...rest}
-      className={mergeClassNames('flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl', className)}
+      className={mergeClassNames(
+        'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl',
+        className,
+      )}
     >
       {children}
     </Component>
@@ -623,7 +682,10 @@ const ToastTitle: FC<ToastPartProps> = ({ as = 'div', className, children, ...re
 const ToastDescription: FC<ToastPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return (
-    <Component {...rest} className={mergeClassNames('mt-1 text-xs leading-5 opacity-80', className)}>
+    <Component
+      {...rest}
+      className={mergeClassNames('mt-1 text-xs leading-5 opacity-80', className)}
+    >
       {children}
     </Component>
   )
@@ -673,7 +735,7 @@ const ToastClose: FC<ToastCloseProps> = ({
         if (closeHandler) closeHandler('close', event)
       }}
     >
-      {hasRenderableContent(children) ? children : icon ?? <CloseIcon className="h-4 w-4" />}
+      {hasRenderableContent(children) ? children : (icon ?? <CloseIcon className="h-4 w-4" />)}
     </Component>
   )
 }
@@ -710,7 +772,9 @@ const ToastItem: FC<ToastItemProps> = ({
   const uncontrolledOpen = ref(defaultOpen)
   const lastDefaultOpen = ref(!!defaultOpen)
   const isControlled = typeof open === 'boolean'
-  const [currentOpen, setCurrentOpen] = useState(isControlled ? !!open : uncontrolledOpen.value, { kind: 'ref' })
+  const [currentOpen, setCurrentOpen] = useState(isControlled ? !!open : uncontrolledOpen.value, {
+    kind: 'ref',
+  })
   const hovered = ref(false)
   const closeTimerRef = useRef<number>()
   const timerStartedAtRef = useRef<number>()
@@ -760,7 +824,11 @@ const ToastItem: FC<ToastItemProps> = ({
   const clearAutoCloseTimer = (captureRemaining = false) => {
     if (closeTimerRef.current == null) return
 
-    if (captureRemaining && remainingDurationRef.current != null && timerStartedAtRef.current != null) {
+    if (
+      captureRemaining &&
+      remainingDurationRef.current != null &&
+      timerStartedAtRef.current != null
+    ) {
       const elapsed = Date.now() - timerStartedAtRef.current
       remainingDurationRef.current = Math.max(0, remainingDurationRef.current - elapsed)
     }
@@ -882,7 +950,8 @@ const ToastItem: FC<ToastItemProps> = ({
   const resolvedRootClassName = TOAST_ITEM_ROOT_CLASS_MAP[variant][type]
   const resolvedIconClassName = TOAST_ITEM_ICON_CLASS_MAP[variant][type]
   const resolvedCloseClassName = TOAST_ITEM_CLOSE_CLASS_MAP[variant][type]
-  const resolvedIcon = showIcon === false ? null : icon !== undefined ? icon : renderDefaultItemIcon(type)
+  const resolvedIcon =
+    showIcon === false ? null : icon !== undefined ? icon : renderDefaultItemIcon(type)
   const hasTitle = hasRenderableContent(title)
   const hasDescription = hasRenderableContent(description)
   const hasChildren = hasRenderableContent(children)
@@ -926,11 +995,17 @@ const ToastItem: FC<ToastItemProps> = ({
               {hasDescription ? (
                 <ToastDescription className={descriptionClassName}>{description}</ToastDescription>
               ) : null}
-              {hasChildren ? <div className={mergeClassNames(hasTitle || hasDescription ? 'mt-2' : '')}>{children}</div> : null}
+              {hasChildren ? (
+                <div className={mergeClassNames(hasTitle || hasDescription ? 'mt-2' : '')}>
+                  {children}
+                </div>
+              ) : null}
             </ToastContent>
 
             {hasAction || closable ? (
-              <ToastAction className={mergeClassNames('ml-3 items-start self-start', actionClassName)}>
+              <ToastAction
+                className={mergeClassNames('ml-3 items-start self-start', actionClassName)}
+              >
                 {action}
                 {closable ? (
                   <button
@@ -991,7 +1066,11 @@ const Toast: FC<ToastProps> = ({
   if (className) cls += ` ${className}`
 
   return (
-    <Component {...rest} className={cls} style={Object.keys(mergedStyle).length ? mergedStyle : style}>
+    <Component
+      {...rest}
+      className={cls}
+      style={Object.keys(mergedStyle).length ? mergedStyle : style}
+    >
       {toChildArray(children)}
     </Component>
   )

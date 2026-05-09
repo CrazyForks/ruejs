@@ -99,11 +99,7 @@ const posts = ref([
 然后使用 `v-for` 为每篇文章渲染一个组件：
 
 ```tsx
-<BlogPost
-  v-for="post in posts"
-  key={post.id}
-  title={post.title}
- />
+<BlogPost v-for="post in posts" key={post.id} title={post.title} />
 ```
 
 以上就是你目前需要了解的 props 知识。阅读完本页并对其内容感到熟悉后，我们建议稍后回来阅读完整的 [Props](/guide/components/props) 指南。
@@ -126,11 +122,7 @@ const postFontSize = ref(1)
 
 ```tsx
 <div style={{ fontSize: postFontSize + 'em' }}>
-  <BlogPost
-    v-for="post in posts"
-    key={post.id}
-    title={post.title}
-   />
+  <BlogPost v-for="post in posts" key={post.id} title={post.title} />
 </div>
 ```
 
@@ -207,9 +199,7 @@ export default BlogPost
 就像 HTML 元素一样，能够向组件传递内容通常很有用，例如：
 
 ```tsx
-<AlertBox>
-  发生了一些错误。
-</AlertBox>
+<AlertBox>发生了一些错误。</AlertBox>
 ```
 
 渲染结果可能如下所示：

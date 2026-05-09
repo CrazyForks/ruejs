@@ -106,7 +106,7 @@ const apiRows: ApiRow[] = [
   {
     prop: 'simple',
     description: '切换为简洁模式；可传 { readOnly: true } 关闭中间输入。',
-    type: "boolean | { readOnly?: boolean }",
+    type: 'boolean | { readOnly?: boolean }',
     defaultValue: 'false',
   },
   {
@@ -118,7 +118,7 @@ const apiRows: ApiRow[] = [
   {
     prop: 'showQuickJumper',
     description: '展示快速跳页输入框；可传 { goButton } 自定义确认按钮。',
-    type: "boolean | { goButton?: any }",
+    type: 'boolean | { goButton?: any }',
     defaultValue: 'false',
   },
   {
@@ -200,8 +200,9 @@ const PaginationPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Pagination 分页</h1>
         <p className="text-sm mt-3 mb-3">
-          Pagination 现在同时支持两类用法：保留原有的静态组合模式，以及更接近 ant-design 的数据驱动模式。
-          视觉仍基于 Rue 当前的 join 与 btn 体系，但补齐了页码计算、受控/非受控、简单模式、页容量切换、快捷跳转和自定义渲染。
+          Pagination 现在同时支持两类用法：保留原有的静态组合模式，以及更贴近业务组件习惯的
+          的数据驱动模式。 视觉仍基于 Rue 当前的 join 与 btn
+          体系，但补齐了页码计算、受控/非受控、简单模式、页容量切换、快捷跳转和自定义渲染。
         </p>
         <div className="text-sm flex flex-wrap gap-4">
           <a href="https://daisyui.com/components/pagination/" target="_blank">
@@ -252,7 +253,11 @@ const PaginationPage: FC = () => {
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body">
-                <Pagination direction="vertical" className="w-fit" data-testid="pagination-vertical">
+                <Pagination
+                  direction="vertical"
+                  className="w-fit"
+                  data-testid="pagination-vertical"
+                >
                   <Pagination.Item>Overview</Pagination.Item>
                   <Pagination.Item>Updates</Pagination.Item>
                   <Pagination.Item>Logs</Pagination.Item>
@@ -278,7 +283,9 @@ const PaginationPage: FC = () => {
                   <Pagination.Item>1</Pagination.Item>
                   <Pagination.Item active>2</Pagination.Item>
                   <Pagination.Item>3</Pagination.Item>
-                  <Pagination.Item tag="a" href="#next">Next</Pagination.Item>
+                  <Pagination.Item tag="a" href="#next">
+                    Next
+                  </Pagination.Item>
                 </Pagination>
               </div>
             </div>
@@ -316,7 +323,8 @@ const PaginationPage: FC = () => {
                   }}
                 />
                 <div className="text-sm opacity-70">
-                  当前示例页码：默认尺寸第 {drivenPrimaryPage.value} 页，小尺寸第 {drivenSecondaryPage.value} 页
+                  当前示例页码：默认尺寸第 {drivenPrimaryPage.value} 页，小尺寸第{' '}
+                  {drivenSecondaryPage.value} 页
                 </div>
               </div>
             </div>
@@ -487,7 +495,8 @@ const simpleReadonlyPage = ref(2)
                   }}
                 />
                 <div className="text-sm opacity-70">
-                  紧凑版当前第 {advancedCompactPage.value} 页，每页 {advancedCompactPageSize.value} 条
+                  紧凑版当前第 {advancedCompactPage.value} 页，每页 {advancedCompactPageSize.value}{' '}
+                  条
                 </div>
               </div>
             </div>
@@ -560,7 +569,9 @@ const compactPageSize = ref(10)
                   }}
                 />
                 <Pagination total={8} defaultCurrent={1} hideOnSinglePage />
-                <div className="text-sm opacity-70">自定义文案示例当前位于第 {customPage.value} 页</div>
+                <div className="text-sm opacity-70">
+                  自定义文案示例当前位于第 {customPage.value} 页
+                </div>
               </div>
             </div>
           )}
@@ -593,31 +604,35 @@ const compactPageSize = ref(10)
         <h2>FAQ</h2>
         <div className="space-y-4 text-sm leading-6">
           <div>
-            <h3 className="mb-1 text-base font-semibold">什么时候用静态组合，什么时候用数据驱动？</h3>
+            <h3 className="mb-1 text-base font-semibold">
+              什么时候用静态组合，什么时候用数据驱动？
+            </h3>
             <p className="m-0 opacity-80">
-              当按钮结构、文案和链接完全由业务自定义时，用 `Pagination.Item` 静态组合更直接；只要你已经有
-              `total`、`current`、`pageSize` 这些分页信息，优先使用数据驱动模式，省去页码计算与边界处理。
+              当按钮结构、文案和链接完全由业务自定义时，用 `Pagination.Item`
+              静态组合更直接；只要你已经有 `total`、`current`、`pageSize`
+              这些分页信息，优先使用数据驱动模式，省去页码计算与边界处理。
             </p>
           </div>
           <div>
             <h3 className="mb-1 text-base font-semibold">`simple` 适合什么场景？</h3>
             <p className="m-0 opacity-80">
-              `simple` 适合工具栏、卡片头部、移动端等横向空间有限的区域；如果只想展示当前页而不允许直接输入，
+              `simple`
+              适合工具栏、卡片头部、移动端等横向空间有限的区域；如果只想展示当前页而不允许直接输入，
               可以传 `simple={{ readOnly: true }}`。
             </p>
           </div>
           <div>
             <h3 className="mb-1 text-base font-semibold">切换每页条数时会触发哪些回调？</h3>
             <p className="m-0 opacity-80">
-              `onShowSizeChange` 专门用于处理页容量变更；为了保持外部状态同步，`onChange` 也会收到新的页码和
-              `pageSize`，所以受控场景通常同时兼容这两个回调。
+              `onShowSizeChange` 专门用于处理页容量变更；为了保持外部状态同步，`onChange`
+              也会收到新的页码和 `pageSize`，所以受控场景通常同时兼容这两个回调。
             </p>
           </div>
           <div>
             <h3 className="mb-1 text-base font-semibold">如何把上一页、下一页改成业务文案？</h3>
             <p className="m-0 opacity-80">
-              轻量替换可以用 `itemRender` 改写 `prev`、`next`、`jump-prev`、`jump-next` 的内容；如果还要替换
-              aria/title 文案，可以继续传 `locale`。
+              轻量替换可以用 `itemRender` 改写 `prev`、`next`、`jump-prev`、`jump-next`
+              的内容；如果还要替换 aria/title 文案，可以继续传 `locale`。
             </p>
           </div>
         </div>

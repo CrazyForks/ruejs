@@ -141,7 +141,11 @@ describe('Card', () => {
           Card.Body,
           { className: 'border-base-300/80 border-b' },
           h(Card.Meta, {
-            avatar: h('div', { className: 'avatar placeholder' }, h('div', { className: 'bg-primary text-primary-content rounded-full w-10' }, 'AI')),
+            avatar: h(
+              'div',
+              { className: 'avatar placeholder' },
+              h('div', { className: 'bg-primary text-primary-content rounded-full w-10' }, 'AI'),
+            ),
             title: 'Workspace AI',
             description: 'Connect docs, demos and design decisions in one place.',
           }),
@@ -150,7 +154,11 @@ describe('Card', () => {
           'div',
           { className: 'grid gap-px bg-base-300/60 sm:grid-cols-2' },
           h(Card.Grid, null, h('div', { className: 'font-semibold' }, 'Design Tokens')),
-          h(Card.Grid, { hoverable: false }, h('div', { className: 'font-semibold' }, 'Usage Reports')),
+          h(
+            Card.Grid,
+            { hoverable: false },
+            h('div', { className: 'font-semibold' }, 'Usage Reports'),
+          ),
         ),
       ),
       c,

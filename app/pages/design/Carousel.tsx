@@ -298,11 +298,11 @@ const methodRows: MethodRow[] = [
 ]
 
 const snapCode = buildCode([
-  "const scenicSlides = [",
+  'const scenicSlides = [',
   "  'https://img.daisyui.com/images/stock/photo-1559703248-dcaaec9fab78.webp',",
   "  'https://img.daisyui.com/images/stock/photo-1565098772267-60af42b81ef2.webp',",
   "  'https://img.daisyui.com/images/stock/photo-1572635148818-ef6fd45eb394.webp',",
-  "]",
+  ']',
   '',
   '<div className="grid gap-4">',
   '  <Carousel align="start" className="rounded-box" auto interval={1200}>',
@@ -388,8 +388,8 @@ const arrowsCode = buildCode([
 ])
 
 const indicatorCode = buildCode([
-  "const indicatorApiRef = useRef<any>()",
-  "const indicatorIndex = ref(0)",
+  'const indicatorApiRef = useRef<any>()',
+  'const indicatorIndex = ref(0)',
   '',
   '<Carousel',
   '  className="w-full rounded-box"',
@@ -421,8 +421,8 @@ const indicatorCode = buildCode([
 ])
 
 const apiControlCode = buildCode([
-  "const apiRef = useRef<any>()",
-  "const currentIndex = ref(0)",
+  'const apiRef = useRef<any>()',
+  'const currentIndex = ref(0)',
   '',
   '<div className="space-y-4">',
   '  <div className="flex flex-wrap items-center gap-2">',
@@ -550,8 +550,9 @@ const CarouselDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Carousel 跑马灯</h1>
         <p className="mt-3 mb-3 text-sm">
-          Rue 的 Carousel 现在兼顾两类能力：一类延续 daisyUI 的滚动式视觉布局，保留多宽度、垂直、full-bleed
-          这些旧 demo；另一类补齐了 ant-design 常用的 arrows、dots、fade、dotPlacement 与方法控制。
+          Rue 的 Carousel 现在兼顾两类能力：一类延续 daisyUI
+          的滚动式视觉布局，保留多宽度、垂直、full-bleed 这些旧 demo；另一类补齐了成熟轮播组件常见的
+          arrows、dots、fade、dotPlacement 与方法控制。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/carousel/" target="_blank" rel="noreferrer">
@@ -619,26 +620,30 @@ const CarouselDemo: FC = () => {
           code={widthCode}
           preview={() => (
             <>
-                <div className="rounded-box border border-base-300 bg-base-100 p-4">
-                    <div className="mb-3 text-sm font-medium">Full width items</div>
-                    <Carousel className="w-72 rounded-box" auto interval={1400}>
-                    {renderImageSlides(stockSlides.slice(0, 4), 'w-full', 'h-48 w-full object-cover')}
-                    </Carousel>
-                </div>
+              <div className="rounded-box border border-base-300 bg-base-100 p-4">
+                <div className="mb-3 text-sm font-medium">Full width items</div>
+                <Carousel className="w-72 rounded-box" auto interval={1400}>
+                  {renderImageSlides(stockSlides.slice(0, 4), 'w-full', 'h-48 w-full object-cover')}
+                </Carousel>
+              </div>
 
-                <div className="rounded-box border border-base-300 bg-base-100 p-4">
-                    <div className="mb-3 text-sm font-medium">Half width items</div>
-                    <Carousel className="w-96 rounded-box" auto interval={1600}>
-                    {renderImageSlides(stockSlides.slice(0, 6), 'w-1/2 pr-3', 'w-full rounded-box object-cover')}
-                    </Carousel>
-                </div>
+              <div className="rounded-box border border-base-300 bg-base-100 p-4">
+                <div className="mb-3 text-sm font-medium">Half width items</div>
+                <Carousel className="w-96 rounded-box" auto interval={1600}>
+                  {renderImageSlides(
+                    stockSlides.slice(0, 6),
+                    'w-1/2 pr-3',
+                    'w-full rounded-box object-cover',
+                  )}
+                </Carousel>
+              </div>
 
-                <div className="rounded-box border border-base-300 bg-neutral p-4 text-neutral-content">
-                    <div className="mb-3 text-sm font-medium text-neutral-content/80">Full bleed</div>
-                    <Carousel align="center" className="rounded-box space-x-4" auto interval={1800}>
-                    {renderImageSlides(stockSlides.slice(0, 5), undefined, 'rounded-box')}
-                    </Carousel>
-                </div>
+              <div className="rounded-box border border-base-300 bg-neutral p-4 text-neutral-content">
+                <div className="mb-3 text-sm font-medium text-neutral-content/80">Full bleed</div>
+                <Carousel align="center" className="rounded-box space-x-4" auto interval={1800}>
+                  {renderImageSlides(stockSlides.slice(0, 5), undefined, 'rounded-box')}
+                </Carousel>
+              </div>
             </>
           )}
         />
@@ -660,7 +665,11 @@ const CarouselDemo: FC = () => {
                 <div className="rounded-box border border-base-300 bg-base-100 p-4">
                   <div className="mb-3 text-sm font-medium">Vertical carousel</div>
                   <Carousel direction="vertical" className="h-80 rounded-box" auto interval={1500}>
-                    {renderImageSlides(stockSlides.slice(0, 4), 'h-full', 'h-full w-full object-cover')}
+                    {renderImageSlides(
+                      stockSlides.slice(0, 4),
+                      'h-full',
+                      'h-full w-full object-cover',
+                    )}
                   </Carousel>
                 </div>
                 <div className="rounded-box border border-base-300 bg-base-100 p-4">
@@ -676,7 +685,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="导航按钮与反向自动播放"
-          summary="把旧的 next/prev buttons 与 auto left demo 融合为 ant 风格的 arrows 场景，同时保留 Rue 的大图视觉。"
+          summary="把旧的 next/prev buttons 与 auto left demo 融合为更完整的 arrows 场景，同时保留 Rue 的大图视觉。"
           tab={tabArrows}
           code={arrowsCode}
           preview={() => (
@@ -777,7 +786,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="自动播放与进度 dots"
-          summary="保留旧的自动播放循环 demo，同时补一个 ant-design 风格的 progress dots 场景。"
+          summary="保留旧的自动播放循环 demo，同时补一个进度型 progress dots 场景。"
           tab={tabAutoplay}
           code={autoplayCode}
           preview={() => (
@@ -806,7 +815,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="效果与位置增强"
-          summary="新增 fade、top dots 和 end dots。这里保持 Rue 的底色，但能力组织向 ant-design 靠拢。"
+          summary="新增 fade、top dots 和 end dots。这里保持 Rue 的底色，但能力组织更偏成熟业务组件的写法。"
           tab={tabEffects}
           code={effectCode}
           preview={() => (
@@ -824,8 +833,15 @@ const CarouselDemo: FC = () => {
                 </Carousel>
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-4">
-                <div className="mb-3 text-sm font-medium">dotPlacement=&quot;end&quot; + vertical</div>
-                <Carousel direction="vertical" dots dotPlacement="end" className="rounded-box h-72 w-64">
+                <div className="mb-3 text-sm font-medium">
+                  dotPlacement=&quot;end&quot; + vertical
+                </div>
+                <Carousel
+                  direction="vertical"
+                  dots
+                  dotPlacement="end"
+                  className="rounded-box h-72 w-64"
+                >
                   {renderImageSlides(verticalSlides, 'h-full', 'h-full w-full object-cover')}
                 </Carousel>
               </div>

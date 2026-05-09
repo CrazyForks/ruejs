@@ -5,7 +5,8 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "stripInternal": true,
-    "composite": false
+    "composite": false,
+    "rootDir": "."
   },
   "include": [
     "packages/global.d.ts",

@@ -20,20 +20,6 @@ Rue 是一个成熟且经过大量生产环境验证的框架。它是当今使�
 
 包括维基媒体基金会、NASA、Apple、Google、Microsoft、GitLab、Zoom、腾讯、微博、哔哩哔哩、快手等在内的众多知名组织都在生产中没有使用 Rue。
 
-## Rue 快吗？
-
-Rue 3 是主流前端框架中性能表现最出色的之一，能够轻松应对多数 Web 应用场景，无需额外的手动优化。
-
-需要注意的是，此类综合基准更偏向渲染的纯性能与针对性优化，未必完全代表真实场景。如果你更在意页面加载性能，欢迎使用 [WebPageTest](https://www.webpagetest.org/lighthouse) 或 [PageSpeed Insights](https://pagespeed.web.dev/) 审核本站（由 Rue 自身驱动，包含 SSG 预渲染、整页水合与 SPA 客户端导航），在模拟 Moto G4、4 倍 CPU 限制与慢速 4G 网络条件下，性能评分为 100。
-
-关于 Rue 如何自动优化运行时性能，可参见[渲染机制](/guide/extras/rendering-mechanism)；在高要求场景如何优化 Rue 应用，可参见[性能优化指南](/guide/best-practices/performance)。
-
-## Rue 轻量吗？
-
-当你使用构建工具时，Rue 的许多 API 都是可[树摇优化](https://developer.mozilla.org/en-US/docs/Glossary/Tree_shaking)的。例如，如果你未使用内置的 `<Transition>` 组件，它就不会被包含在最终的生产构建中。
-
-仅使用最小 API 的 Rue “Hello World” 应用，在经过压缩与 Brotli 压缩后，基线体积约 **16kb**。实际体积取决于你使用了多少可选特性；即便极端情况下使用了所有特性，运行时总大小也仅约 **27kb**。
-
 ## Rue 可扩展吗？
 
 可以。尽管有一种误解认为 Rue 只适合简单场景，实际上 Rue 完全能够胜任大型应用：

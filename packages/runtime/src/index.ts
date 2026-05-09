@@ -8,12 +8,7 @@ export * from './rue'
 export * from './renderable'
 export * from './renderable-normalize'
 export * from './custom-elements'
-export {
-  createContext,
-  useContext,
-  type RueContext,
-  type ContextProviderProps,
-} from './context'
+export { createContext, useContext, type RueContext, type ContextProviderProps } from './context'
 
 // 内置组件
 export { Slot, type SlotBag, type SlotProps, type SlotValue } from './components/Slot'

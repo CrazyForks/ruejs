@@ -105,9 +105,13 @@ describe('DrawerSidebar', () => {
     await waitForContent(() => {
       const root = container.querySelector('[data-rue-drawer-sidebar-root="true"]') as HTMLElement
       const panel = container.querySelector('[data-rue-drawer-sidebar-panel="true"]') as HTMLElement
-      const header = container.querySelector('[data-rue-drawer-sidebar-header="true"]') as HTMLElement
+      const header = container.querySelector(
+        '[data-rue-drawer-sidebar-header="true"]',
+      ) as HTMLElement
       const body = container.querySelector('[data-rue-drawer-sidebar-body="true"]') as HTMLElement
-      const footer = container.querySelector('[data-rue-drawer-sidebar-footer="true"]') as HTMLElement
+      const footer = container.querySelector(
+        '[data-rue-drawer-sidebar-footer="true"]',
+      ) as HTMLElement
       const mask = container.querySelector('[data-rue-drawer-sidebar-mask="true"]') as HTMLElement
       const close = container.querySelector('.close-slot') as HTMLElement
 
@@ -161,15 +165,21 @@ describe('DrawerSidebar', () => {
     )
 
     await waitForContent(() => {
-      const wrapper = container.querySelector('[data-rue-drawer-sidebar-wrapper="true"]') as HTMLElement
+      const wrapper = container.querySelector(
+        '[data-rue-drawer-sidebar-wrapper="true"]',
+      ) as HTMLElement
       expect(wrapper).toBeTruthy()
     })
 
-    const wrapper = container.querySelector('[data-rue-drawer-sidebar-wrapper="true"]') as HTMLElement
+    const wrapper = container.querySelector(
+      '[data-rue-drawer-sidebar-wrapper="true"]',
+    ) as HTMLElement
     wrapper.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     await waitForContent(() => {
-      const root = container.querySelector('[data-rue-drawer-sidebar-root="true"]') as HTMLElement | null
+      const root = container.querySelector(
+        '[data-rue-drawer-sidebar-root="true"]',
+      ) as HTMLElement | null
       expect(onClose).toHaveBeenCalledTimes(1)
       expect(onOpenChange).toHaveBeenCalledWith(false)
       if (root) {
@@ -204,7 +214,9 @@ describe('DrawerSidebar', () => {
     await waitForContent(() => {
       const root = container.querySelector('[data-rue-drawer-sidebar-root="true"]') as HTMLElement
       const panel = container.querySelector('[data-rue-drawer-sidebar-panel="true"]') as HTMLElement
-      const loadingBody = container.querySelector('[data-rue-drawer-sidebar-loading="true"]') as HTMLElement
+      const loadingBody = container.querySelector(
+        '[data-rue-drawer-sidebar-loading="true"]',
+      ) as HTMLElement
       const body = container.querySelector('[data-rue-drawer-sidebar-body="true"]') as HTMLElement
 
       expect(root.getAttribute('data-rue-drawer-sidebar-open')).toBe('false')
@@ -231,7 +243,9 @@ describe('DrawerSidebar', () => {
 
     await waitForContent(() => {
       expect(container.querySelector('[data-rue-drawer-sidebar-root="true"]')).toBeNull()
-      const teleportedRoot = target.querySelector('[data-rue-drawer-sidebar-root="true"]') as HTMLElement
+      const teleportedRoot = target.querySelector(
+        '[data-rue-drawer-sidebar-root="true"]',
+      ) as HTMLElement
       expect(teleportedRoot).toBeTruthy()
       expect(teleportedRoot.getAttribute('data-rue-drawer-sidebar-open')).toBe('true')
       expect(target.textContent).toContain('Portal Drawer')

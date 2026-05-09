@@ -26,8 +26,9 @@ import pico from 'picocolors'
 import { cpus } from 'node:os'
 import { targets as allTargets, exec, fuzzyMatchTarget } from './utils.js'
 import { scanEnums } from './inline-enums.js'
-import prettyBytes from 'pretty-bytes'
 import { spawnSync } from 'node:child_process'
+import { buildDistributionPackage } from './vite-package-builder.js'
+import { formatBytes } from './format-bytes.js'
 
 const commit = spawnSync('git', ['rev-parse', '--short=7', 'HEAD']).stdout.toString().trim()
 
@@ -89,6 +90,7 @@ async function run() {
     const resolvedTargets = targets.length
       ? fuzzyMatchTarget(targets, buildAllMatching)
       : allTargets
+    await ensureSwcPluginRueBuilt(resolvedTargets)
     await buildAll(resolvedTargets)
     await checkAllSizes(resolvedTargets)
     if (buildTypes) {
@@ -107,6 +109,26 @@ async function run() {
   } finally {
     removeCache()
   }
+}
+
+/**
+ * @param {Array<string>} targets
+ * @returns {Promise<void>}
+ */
+async function ensureSwcPluginRueBuilt(targets) {
+  if (!targets.includes('rue-design')) {
+    return
+  }
+
+  const wasmPath = path.resolve('packages/swc-plugin-rue/swc-plugin-rue.wasm')
+  if (fs.existsSync(wasmPath)) {
+    return
+  }
+
+  console.log(pico.cyan('\nBuilding @rue-js/swc-plugin-rue wasm...'))
+  await exec('pnpm', ['--filter', '@rue-js/swc-plugin-rue', 'run', 'build'], {
+    stdio: 'inherit',
+  })
 }
 
 /**
@@ -164,24 +186,13 @@ async function build(target) {
 
   const env = (pkg.buildOptions && pkg.buildOptions.env) || (devOnly ? 'development' : 'production')
 
-  await exec(
-    'rollup',
-    [
-      '-c',
-      '--environment',
-      [
-        `COMMIT:${commit}`,
-        `NODE_ENV:${env}`,
-        `TARGET:${target}`,
-        formats ? `FORMATS:${formats}` : ``,
-        prodOnly ? `PROD_ONLY:true` : ``,
-        sourceMap ? `SOURCE_MAP:true` : ``,
-      ]
-        .filter(Boolean)
-        .join(','),
-    ],
-    { stdio: 'inherit' },
-  )
+  process.env.COMMIT = commit
+  await buildDistributionPackage(target, {
+    formats,
+    env,
+    prodOnly,
+    sourceMap,
+  })
 }
 
 /**
@@ -229,9 +240,9 @@ async function checkFileSize(filePath) {
   const brotli = brotliCompressSync(file)
 
   console.log(
-    `${pico.gray(pico.bold(fileName))} min:${prettyBytes(
+    `${pico.gray(pico.bold(fileName))} min:${formatBytes(
       file.length,
-    )} / gzip:${prettyBytes(gzipped.length)} / brotli:${prettyBytes(brotli.length)}`,
+    )} / gzip:${formatBytes(gzipped.length)} / brotli:${formatBytes(brotli.length)}`,
   )
 
   if (writeSize)

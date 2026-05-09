@@ -479,15 +479,17 @@ const KbdDemo: FC = () => {
           <h3 className="mt-0 mb-3 text-base font-semibold">复合子组件</h3>
           <div className="grid gap-2 text-sm md:grid-cols-3">
             <div>
-              <code>Kbd.Combo</code>：显式渲染组合键序列，适合控制 <code>separator</code>、<code>wrap</code> 和
-              <code>itemClassName</code>。
+              <code>Kbd.Combo</code>：显式渲染组合键序列，适合控制 <code>separator</code>、
+              <code>wrap</code> 和<code>itemClassName</code>。
             </div>
             <div>
-              <code>Kbd.Group</code>：显式渲染布局容器，适合用 <code>direction</code> 和 <code>gap</code>
+              <code>Kbd.Group</code>：显式渲染布局容器，适合用 <code>direction</code> 和{' '}
+              <code>gap</code>
               组织多条快捷键。
             </div>
             <div>
-              <code>Kbd.Separator</code>：默认输出带弱化样式的分隔符，内容默认是 <code>+</code>，也可以换成
+              <code>Kbd.Separator</code>：默认输出带弱化样式的分隔符，内容默认是 <code>+</code>
+              ，也可以换成
               <code>/</code>、<code>then</code> 等文案。
             </div>
           </div>
@@ -497,19 +499,22 @@ const KbdDemo: FC = () => {
 
         <h3>什么时候用 children，什么时候用 items？</h3>
         <p>
-          单个键帽或完全自定义布局时，继续用 <code>children</code> 最直接；需要表达标准组合键时，优先用
+          单个键帽或完全自定义布局时，继续用 <code>children</code>{' '}
+          最直接；需要表达标准组合键时，优先用
           <code>items</code> 或 <code>Kbd.Combo</code>，维护成本更低。
         </p>
 
         <h3>分隔符只能是加号吗？</h3>
         <p>
-          不是。你可以通过 <code>separator</code> 传任意节点，也可以直接使用 <code>Kbd.Separator</code>
+          不是。你可以通过 <code>separator</code> 传任意节点，也可以直接使用{' '}
+          <code>Kbd.Separator</code>
           包一层，统一保持当前页面的弱化分隔视觉。
         </p>
 
         <h3>完整键盘这种自由布局还支持吗？</h3>
         <p>
-          支持。Kbd 本质上仍然是轻量键帽组件，增强 API 只是补充组合键表达，不会限制你自由排布完整键盘。
+          支持。Kbd 本质上仍然是轻量键帽组件，增强 API
+          只是补充组合键表达，不会限制你自由排布完整键盘。
         </p>
       </div>
     </SidebarPlayground>

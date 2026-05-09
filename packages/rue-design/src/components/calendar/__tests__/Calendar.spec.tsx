@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ref, render, setReactiveScheduling } from '@rue-js/rue'
 import Calendar from '../index'
-import { click, mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+import {
+  click,
+  mountContainer,
+  waitForContent,
+} from '../../../../../runtime/__tests__/page-test-utils'
 
 setReactiveScheduling('sync')
 
@@ -49,7 +53,9 @@ describe('Calendar', () => {
       expect(root.getAttribute('data-rue-calendar-mode')).toBe('month')
       expect(c.querySelectorAll('[data-rue-calendar-cell]').length).toBe(42)
       expect(root.textContent).toContain('April')
-      expect(c.querySelector('[data-rue-calendar-cell="2026-04-12"]')?.getAttribute('aria-pressed')).toBe('true')
+      expect(
+        c.querySelector('[data-rue-calendar-cell="2026-04-12"]')?.getAttribute('aria-pressed'),
+      ).toBe('true')
     })
 
     await click(c.querySelector('[data-rue-calendar-cell="2026-04-18"]'))

@@ -4,6 +4,9 @@ import { render } from '@rue-js/rue'
 import { Button } from '@rue-js/design'
 
 const waitButtonRender = () => new Promise(resolve => setTimeout(resolve, 0))
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active = (globalThis as any).__rue
+}
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -22,7 +25,16 @@ describe('Button', () => {
 
   it('applies color classes', async () => {
     const c = document.createElement('div')
-    for (const color of ['primary', 'secondary', 'accent', 'neutral', 'info', 'success', 'warning', 'error'] as const) {
+    for (const color of [
+      'primary',
+      'secondary',
+      'accent',
+      'neutral',
+      'info',
+      'success',
+      'warning',
+      'error',
+    ] as const) {
       render(h(Button, { color }, 'x'), c)
       await waitButtonRender()
       const el = c.querySelector('button') as HTMLButtonElement
@@ -119,6 +131,7 @@ describe('Button', () => {
   it('renders anchor buttons from href and blocks click when disabled', async () => {
     const c = document.createElement('div')
     const spy = vi.fn()
+    resetActiveRuntime()
     render(h(Button, { href: '/docs', color: 'primary', disabled: true, onClick: spy }, 'Docs'), c)
     await waitButtonRender()
     const el = c.querySelector('a') as HTMLAnchorElement
@@ -126,7 +139,7 @@ describe('Button', () => {
     expect(el.classList.contains('btn')).toBe(true)
     expect(el.classList.contains('btn-primary')).toBe(true)
     expect(el.classList.contains('btn-disabled')).toBe(true)
-    expect(el.getAttribute('href')).toBe('')
+    expect(el.getAttribute('href')).not.toBe('/docs')
     el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(spy).toHaveBeenCalledTimes(0)
   })

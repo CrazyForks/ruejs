@@ -76,7 +76,7 @@ export default VTextAndRText;`}
                   <input
                     className="input input-bordered"
                     value={title.value}
-                    onInput={event => {
+                    onInput={(event: Event) => {
                       title.value = (event.target as HTMLInputElement).value
                     }}
                   />

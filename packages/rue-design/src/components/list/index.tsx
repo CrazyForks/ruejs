@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 List 组件概述
 - 保留 Rue/daisyUI 的 list 视觉与 Row/ColGrow/ColWrap 组合 API。
@@ -311,7 +312,12 @@ const renderLegacyItem = (item: ListDataItem, index: number) => {
   const key = item.key ?? index
   const type =
     item.type ??
-    (item.cols || item.title !== undefined || item.description !== undefined || item.avatar !== undefined || item.actions !== undefined || item.extra !== undefined
+    (item.cols ||
+    item.title !== undefined ||
+    item.description !== undefined ||
+    item.avatar !== undefined ||
+    item.actions !== undefined ||
+    item.extra !== undefined
       ? 'row'
       : 'item')
   if (type === 'item') {

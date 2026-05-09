@@ -24,8 +24,8 @@ async fn tick() {
 
 fn ensure_fake_document() {
     let global = js_sys::global();
-    let document = Reflect::get(&global, &JsValue::from_str("document"))
-        .unwrap_or(JsValue::UNDEFINED);
+    let document =
+        Reflect::get(&global, &JsValue::from_str("document")).unwrap_or(JsValue::UNDEFINED);
     if document.is_undefined() || document.is_null() {
         let _ = Reflect::set(&global, &JsValue::from_str("document"), &Object::new().into());
     }
@@ -416,21 +416,12 @@ async fn render_anchor_same_component_props_update_restores_active_input_focus()
     let focus = Reflect::get(&old_input, &JsValue::from_str("focus")).unwrap();
     let focus = focus.unchecked_ref::<Function>();
     let _ = focus.call0(&old_input);
-    let _ = Reflect::set(
-        &old_input,
-        &JsValue::from_str("selectionStart"),
-        &JsValue::from_f64(1.0),
-    );
-    let _ = Reflect::set(
-        &old_input,
-        &JsValue::from_str("selectionEnd"),
-        &JsValue::from_f64(1.0),
-    );
+    let _ = Reflect::set(&old_input, &JsValue::from_str("selectionStart"), &JsValue::from_f64(1.0));
+    let _ = Reflect::set(&old_input, &JsValue::from_str("selectionEnd"), &JsValue::from_f64(1.0));
 
     let props_ab = Object::new();
     let _ = Reflect::set(&props_ab, &JsValue::from_str("value"), &JsValue::from_str("AB"));
-    let vnode_ab =
-        rue.create_element_wasm(component.into(), props_ab.into(), JsValue::UNDEFINED);
+    let vnode_ab = rue.create_element_wasm(component.into(), props_ab.into(), JsValue::UNDEFINED);
     rue.render_anchor_wasm(vnode_ab, parent.clone(), anchor.clone());
     tick().await;
     update_siblings(&parent);

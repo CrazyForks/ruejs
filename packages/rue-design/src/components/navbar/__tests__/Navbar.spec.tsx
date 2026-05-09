@@ -135,7 +135,9 @@ describe('Navbar', () => {
       const start = root.querySelector('.navbar-start') as HTMLElement
       const center = root.querySelector('.navbar-center') as HTMLElement
       const end = root.querySelector('.navbar-end') as HTMLElement
-      const statusItem = Array.from(end.children).find(node => node.textContent?.includes('Status')) as HTMLElement
+      const statusItem = Array.from(end.children).find(node =>
+        node.textContent?.includes('Status'),
+      ) as HTMLElement
 
       expect(start.textContent).toContain('Workspace')
       expect(center.classList.contains('hidden')).toBe(true)

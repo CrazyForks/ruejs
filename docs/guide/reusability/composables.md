@@ -7,7 +7,11 @@ import { useMouse } from './mouse'
 const MouseTracker: FC = () => {
   const { x, y } = useMouse()
 
-  return <div>鼠标位置在：{x.value}, {y.value}</div>
+  return (
+    <div>
+      鼠标位置在：{x.value}, {y.value}
+    </div>
+  )
 }
 ```
 

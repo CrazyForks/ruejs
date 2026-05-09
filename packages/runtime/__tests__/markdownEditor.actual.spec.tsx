@@ -54,7 +54,9 @@ describe('MarkdownEditor actual page', () => {
     await flush()
 
     expect(container.querySelector('ul li')?.textContent).toContain('alpha')
-    expect(Array.from(container.querySelectorAll('h1')).some(node => node.textContent === 'Rue')).toBe(true)
+    expect(
+      Array.from(container.querySelectorAll('h1')).some(node => node.textContent === 'Rue'),
+    ).toBe(true)
 
     await click(findTab(container, '代码'))
 

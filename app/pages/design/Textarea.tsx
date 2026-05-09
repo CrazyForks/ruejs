@@ -5,7 +5,15 @@ import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 
 type TabMode = 'preview' | 'code'
-type DemoTone = 'neutral' | 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'
+type DemoTone =
+  | 'neutral'
+  | 'primary'
+  | 'secondary'
+  | 'accent'
+  | 'info'
+  | 'success'
+  | 'warning'
+  | 'error'
 
 interface ExampleBlockProps {
   title: string
@@ -205,7 +213,9 @@ const CountTextareaPreview: FC = () => {
       </div>
 
       <div className="rounded-box border border-base-300 bg-base-100 p-4">
-        <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Clear + formatter</div>
+        <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+          Clear + formatter
+        </div>
         <Textarea
           value={note.value}
           maxLength={60}
@@ -231,7 +241,9 @@ const AutoSizePreview: FC = () => {
   return (
     <div className="grid w-full max-w-2xl gap-4 lg:grid-cols-2">
       <div className="rounded-box border border-base-300 bg-base-100 p-4">
-        <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Auto size</div>
+        <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+          Auto size
+        </div>
         <Textarea
           value={composer.value}
           autoSize={{ minRows: 3, maxRows: 8 }}
@@ -245,7 +257,9 @@ const AutoSizePreview: FC = () => {
       </div>
 
       <div className="rounded-box border border-base-300 bg-base-100 p-4">
-        <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Resize directions</div>
+        <div className="mb-2 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+          Resize directions
+        </div>
         <div className="grid gap-3">
           <Textarea resize="none" rows={4} placeholder="禁止拖拽缩放" />
           <Textarea resize="horizontal" rows={4} placeholder="只允许横向拖拽" />
@@ -257,7 +271,9 @@ const AutoSizePreview: FC = () => {
 }
 
 const RecipeTextareaPreview: FC = () => {
-  const review = ref('先说结论：这版交互更顺了。\n\n1. 清空和字数提示都更直观。\n2. 自动高度适合写中短文。')
+  const review = ref(
+    '先说结论：这版交互更顺了。\n\n1. 清空和字数提示都更直观。\n2. 自动高度适合写中短文。',
+  )
 
   return (
     <div className="rounded-box border border-base-300 bg-base-100 p-4">
@@ -265,7 +281,9 @@ const RecipeTextareaPreview: FC = () => {
         <div className="space-y-3">
           <div>
             <div className="text-sm font-medium">发布备注</div>
-            <div className="text-xs opacity-60">组合 `filled + allowClear + autoSize + showCount`。</div>
+            <div className="text-xs opacity-60">
+              组合 `filled + allowClear + autoSize + showCount`。
+            </div>
           </div>
           <Textarea
             value={review.value}
@@ -311,8 +329,8 @@ const TextareaPage: FC = () => {
         <h1>Textarea 文本域</h1>
         <p className="text-sm mt-3 mb-3">
           Textarea 不再只是原生 <code>textarea</code> 的样式壳。当前版本保留 Rue 的视觉基底，
-          同时补齐了更适合真实输入场景的语义 API，比如 <code>status</code>、<code>allowClear</code>、
-          <code>showCount</code>、<code>autoSize</code> 和 <code>resize</code>。
+          同时补齐了更适合真实输入场景的语义 API，比如 <code>status</code>、<code>allowClear</code>
+          、<code>showCount</code>、<code>autoSize</code> 和 <code>resize</code>。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -553,19 +571,21 @@ const TextareaPage: FC = () => {
 
         <h3>什么时候用 color，什么时候用 status？</h3>
         <p>
-          <code>color</code> 更偏主题色表达，适合整体视觉语气；<code>status</code> 更偏输入反馈语义，
-          适合警告和错误提示。常见表单场景里，优先用 <code>status</code> 表达风险更直观。
+          <code>color</code> 更偏主题色表达，适合整体视觉语气；<code>status</code>{' '}
+          更偏输入反馈语义， 适合警告和错误提示。常见表单场景里，优先用 <code>status</code>{' '}
+          表达风险更直观。
         </p>
 
         <h3>autoSize 和原生 rows 是什么关系？</h3>
         <p>
-          如果同时传了 <code>rows</code>，它会作为自动高度的初始下限；如果只传 <code>autoSize</code> 对象，
-          则优先使用其中的 <code>minRows</code>。
+          如果同时传了 <code>rows</code>，它会作为自动高度的初始下限；如果只传 <code>autoSize</code>{' '}
+          对象， 则优先使用其中的 <code>minRows</code>。
         </p>
 
         <h3>showCount 会不会限制输入？</h3>
         <p>
-          不会。真正的限制仍由原生 <code>maxLength</code> 控制；<code>showCount</code> 负责把当前输入进度展示出来。
+          不会。真正的限制仍由原生 <code>maxLength</code> 控制；<code>showCount</code>{' '}
+          负责把当前输入进度展示出来。
         </p>
       </div>
     </SidebarPlayground>

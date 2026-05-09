@@ -44,7 +44,11 @@ const PreviewBlock: FC<PreviewBlockProps> = ({ title, summary, tab, preview, cod
         onChange={key => (tab.value = key as PreviewTabMode)}
         className={summary ? 'mb-3 mt-4' : 'mb-3'}
       />
-      {tab.value === 'preview' ? <PreviewRenderer preview={preview} /> : <Code className="mt-2" lang="tsx" code={code} />}
+      {tab.value === 'preview' ? (
+        <PreviewRenderer preview={preview} />
+      ) : (
+        <Code className="mt-2" lang="tsx" code={code} />
+      )}
     </div>
   )
 }

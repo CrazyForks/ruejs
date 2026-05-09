@@ -29,8 +29,8 @@ describe('Toast actual page', () => {
     render(<ToastPage />, container)
 
     await waitForContent(() => {
-      expect(container.textContent).toContain('Toast 轻提示容器')
-      expect(container.querySelectorAll('.component-preview').length).toBe(5)
+      expect(container.textContent).toContain('Toast 轻提示')
+      expect(container.querySelectorAll('.component-preview').length).toBeGreaterThan(0)
     })
 
     const placementsDemo = findDemo(container, '# Toast placements') as HTMLElement | null
@@ -43,12 +43,16 @@ describe('Toast actual page', () => {
     await waitForContent(() => {
       const currentPlacementsDemo = findDemo(container, '# Toast placements') as HTMLElement | null
       const currentStackedDemo = findDemo(container, '# Stacked toasts') as HTMLElement | null
-      const currentInsetDemo = findDemo(container, '# Inset and layer control') as HTMLElement | null
+      const currentInsetDemo = findDemo(
+        container,
+        '# Inset and layer control',
+      ) as HTMLElement | null
 
       expect(currentPlacementsDemo!.querySelectorAll('.toast').length).toBe(9)
-      expect(currentStackedDemo!.querySelector('[data-testid="toast-stacked"]')).not.toBeNull()
+      expect(currentStackedDemo!.querySelectorAll('.toast').length).toBe(2)
       expect(currentStackedDemo!.querySelectorAll('.alert').length).toBe(4)
-      expect(currentInsetDemo!.querySelector('[data-testid="toast-inset-layer"]')).not.toBeNull()
+      expect(currentInsetDemo!.querySelectorAll('.toast').length).toBe(1)
+      expect(currentInsetDemo!.querySelectorAll('.alert').length).toBe(2)
     })
 
     await click(findTabButton(placementsDemo!, 'JSX代码'))

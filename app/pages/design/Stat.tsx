@@ -21,7 +21,6 @@ interface ApiRow {
   defaultValue: string
 }
 
-
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">
@@ -80,32 +79,82 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
 }
 
 const InfoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-8 h-8 stroke-current">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    className="inline-block w-8 h-8 stroke-current"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+    ></path>
   </svg>
 )
 
 const HeartIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-8 h-8 stroke-current">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    className="inline-block w-8 h-8 stroke-current"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+    ></path>
   </svg>
 )
 
 const BoltIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-8 h-8 stroke-current">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    className="inline-block w-8 h-8 stroke-current"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      d="M13 10V3L4 14h7v7l9-11h-7z"
+    ></path>
   </svg>
 )
 
 const SlidersIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-8 h-8 stroke-current">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    className="inline-block w-8 h-8 stroke-current"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+    ></path>
   </svg>
 )
 
 const PackageIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-8 h-8 stroke-current">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    className="inline-block w-8 h-8 stroke-current"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+    ></path>
   </svg>
 )
 
@@ -357,33 +406,103 @@ const actionsCode = `<Stat className="bg-base-100 border border-base-300">
 </Stat>`
 
 const containerApiRows: ApiRow[] = [
-  { prop: 'direction', description: '统计容器排列方向', type: `'horizontal' | 'vertical'`, defaultValue: `'horizontal'` },
-  { prop: 'items', description: '通过数据项快速渲染多个统计块', type: 'StatDataItem[]', defaultValue: '-' },
-  { prop: 'className', description: '补充容器类名，常配合 shadow / border / 响应式类使用', type: 'string', defaultValue: '-' },
+  {
+    prop: 'direction',
+    description: '统计容器排列方向',
+    type: `'horizontal' | 'vertical'`,
+    defaultValue: `'horizontal'`,
+  },
+  {
+    prop: 'items',
+    description: '通过数据项快速渲染多个统计块',
+    type: 'StatDataItem[]',
+    defaultValue: '-',
+  },
+  {
+    prop: 'className',
+    description: '补充容器类名，常配合 shadow / border / 响应式类使用',
+    type: 'string',
+    defaultValue: '-',
+  },
 ]
 
 const itemApiRows: ApiRow[] = [
-  { prop: 'title / value / desc', description: '直接声明常用统计内容，无需手写子节点结构', type: 'any', defaultValue: '-' },
-  { prop: 'prefix / suffix', description: '为数值区域追加前缀和后缀', type: 'any', defaultValue: '-' },
-  { prop: 'formatter', description: '自定义数值展示文案', type: '(value) => any', defaultValue: '-' },
-  { prop: 'precision', description: '数字精度，不传则保留原始小数', type: 'number', defaultValue: '-' },
-  { prop: 'loading', description: '在 value 区域展示 skeleton 占位', type: 'boolean', defaultValue: 'false' },
+  {
+    prop: 'title / value / desc',
+    description: '直接声明常用统计内容，无需手写子节点结构',
+    type: 'any',
+    defaultValue: '-',
+  },
+  {
+    prop: 'prefix / suffix',
+    description: '为数值区域追加前缀和后缀',
+    type: 'any',
+    defaultValue: '-',
+  },
+  {
+    prop: 'formatter',
+    description: '自定义数值展示文案',
+    type: '(value) => any',
+    defaultValue: '-',
+  },
+  {
+    prop: 'precision',
+    description: '数字精度，不传则保留原始小数',
+    type: 'number',
+    defaultValue: '-',
+  },
+  {
+    prop: 'loading',
+    description: '在 value 区域展示 skeleton 占位',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
   { prop: 'center', description: '启用居中布局', type: 'boolean', defaultValue: 'false' },
 ]
 
 const valueApiRows: ApiRow[] = [
-  { prop: 'value', description: '支持 number、string 或任意展示节点', type: 'any', defaultValue: '-' },
+  {
+    prop: 'value',
+    description: '支持 number、string 或任意展示节点',
+    type: 'any',
+    defaultValue: '-',
+  },
   { prop: 'groupSeparator', description: '千分位分隔符', type: 'string', defaultValue: `','` },
   { prop: 'decimalSeparator', description: '小数点分隔符', type: 'string', defaultValue: `'.'` },
-  { prop: 'valueRender', description: '包装格式化后的值节点，适合高亮或插入 tag', type: '(node) => any', defaultValue: '-' },
+  {
+    prop: 'valueRender',
+    description: '包装格式化后的值节点，适合高亮或插入 tag',
+    type: '(node) => any',
+    defaultValue: '-',
+  },
 ]
 
 const timerApiRows: ApiRow[] = [
-  { prop: 'type', description: '计时类型，支持倒计时和累计计时', type: `'countdown' | 'countup'`, defaultValue: `'countdown'` },
-  { prop: 'value', description: '目标时间，支持时间戳、Date、可解析字符串', type: 'number | string | Date', defaultValue: '-' },
-  { prop: 'format', description: '时间格式，支持 D/H/m/s/S 和 [literal] 文本', type: 'string', defaultValue: `'HH:mm:ss'` },
+  {
+    prop: 'type',
+    description: '计时类型，支持倒计时和累计计时',
+    type: `'countdown' | 'countup'`,
+    defaultValue: `'countdown'`,
+  },
+  {
+    prop: 'value',
+    description: '目标时间，支持时间戳、Date、可解析字符串',
+    type: 'number | string | Date',
+    defaultValue: '-',
+  },
+  {
+    prop: 'format',
+    description: '时间格式，支持 D/H/m/s/S 和 [literal] 文本',
+    type: 'string',
+    defaultValue: `'HH:mm:ss'`,
+  },
   { prop: 'interval', description: '主动指定刷新间隔', type: 'number', defaultValue: '自动推断' },
-  { prop: 'onChange / onFinish', description: '监听剩余或累计时长变化，以及倒计时结束', type: 'function', defaultValue: '-' },
+  {
+    prop: 'onChange / onFinish',
+    description: '监听剩余或累计时长变化，以及倒计时结束',
+    type: 'function',
+    defaultValue: '-',
+  },
 ]
 
 const StatDemo: FC = () => {
@@ -408,8 +527,8 @@ const StatDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Stat 统计</h1>
         <p className="text-sm mt-3 mb-3">
-          Stat 用于在一个块中展示数字与数据。这一轮增强保持 Rue 现有的 daisyUI 视觉语气，同时补上更接近
-          ant-design Statistic 的数值格式化、前后缀、loading 与 timer 能力。
+          Stat 用于在一个块中展示数字与数据。这一轮增强保持 Rue 现有的 daisyUI
+          视觉语气，同时补上更接近常见统计组件的数值格式化、前后缀、loading 与 timer 能力。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/stat/" target="_blank">
@@ -420,8 +539,13 @@ const StatDemo: FC = () => {
         <h2>功能概览</h2>
         <ul>
           <li>支持 children 组合写法、items 数据驱动、图标头像、居中/纵向/响应式 demo。</li>
-          <li>支持 `Stat.Item` 语义化属性写法，常见场景不必再手写 `Stat.Title / Stat.Value / Stat.Desc`。</li>
-          <li>支持数字格式化能力：`precision`、`groupSeparator`、`decimalSeparator`、`formatter`、`valueRender`。</li>
+          <li>
+            支持 `Stat.Item` 语义化属性写法，常见场景不必再手写 `Stat.Title / Stat.Value /
+            Stat.Desc`。
+          </li>
+          <li>
+            支持数字格式化能力：`precision`、`groupSeparator`、`decimalSeparator`、`formatter`、`valueRender`。
+          </li>
           <li>支持 `prefix`、`suffix`、`loading` 与 `Stat.Timer / Stat.Countdown`。</li>
         </ul>
 
@@ -511,14 +635,19 @@ const StatDemo: FC = () => {
           preview={() => (
             <Stat className="shadow">
               <Stat.Item title="Sync Revenue" loading desc="数据回填前展示 skeleton 占位" />
-              <Stat.Item title="Open Orders" value={0} suffix="items" desc="0 会正常渲染，不会被误判为空" />
+              <Stat.Item
+                title="Open Orders"
+                value={0}
+                suffix="items"
+                desc="0 会正常渲染，不会被误判为空"
+              />
             </Stat>
           )}
         />
 
         <ExampleBlock
           title="Timer / Countdown"
-          summary="`Stat.Timer` 对齐 ant-design 的核心计时能力，`Stat.Countdown` 作为倒计时别名保留。"
+          summary="`Stat.Timer` 提供常见统计组件里的核心计时能力，`Stat.Countdown` 作为倒计时别名保留。"
           tab={tabTimer}
           code={timerCode}
           preview={() => (

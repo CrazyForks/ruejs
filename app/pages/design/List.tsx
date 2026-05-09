@@ -220,7 +220,11 @@ const legacyItems = [
 const internalItems = [
   {
     type: 'item',
-    content: <div className="px-4 pt-4 pb-2 text-xs opacity-60 tracking-wide">Most played songs this week</div>,
+    content: (
+      <div className="px-4 pt-4 pb-2 text-xs opacity-60 tracking-wide">
+        Most played songs this week
+      </div>
+    ),
   },
   ...songs.slice(0, 3).map(song => ({
     key: song.id,
@@ -246,7 +250,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'dataSource',
-    description: 'Ant Design 风格的数据源数组，通常搭配 renderItem',
+    description: '数据源驱动的数组入口，通常搭配 renderItem',
     type: 'any[]',
     defaultValue: '-',
   },
@@ -674,7 +678,7 @@ const ListDemo: FC = () => {
 
         <ExampleBlock
           title="dataSource 与 renderItem"
-          summary="新增 Ant Design 风格的数据 API，适合业务列表统一从数据源渲染。"
+          summary="新增数据源驱动的列表 API，适合业务列表统一从数据源渲染。"
           tab={tabDataSource}
           code={dataSourceCode}
           preview={() => (

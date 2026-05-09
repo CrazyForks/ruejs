@@ -1,25 +1,29 @@
 use crate::runtime::dom_adapter::DomAdapter;
 
+use super::MountInputType;
 use super::compat_state::MountedCompatPatchKind;
 use super::mounted::{MountedPatchSubtree, MountedPatchSubtreeType};
-use super::MountInputType;
 
 pub(super) fn patch_subtree_matches_input_type<A: DomAdapter>(
     node: &MountedPatchSubtree<A>,
     input_type: &MountInputType<A>,
 ) -> bool {
     match (&node.r#type, node.compat.kind.as_ref(), input_type) {
-        (MountedPatchSubtreeType::Compat, Some(MountedCompatPatchKind::Fragment), MountInputType::Fragment) => {
-            true
-        }
+        (
+            MountedPatchSubtreeType::Compat,
+            Some(MountedCompatPatchKind::Fragment),
+            MountInputType::Fragment,
+        ) => true,
         (
             MountedPatchSubtreeType::Compat,
             Some(MountedCompatPatchKind::Element(old_tag)),
             MountInputType::Element(new_tag),
         ) => old_tag == new_tag,
-        (MountedPatchSubtreeType::Component(old_render), _, MountInputType::Component(new_render)) => {
-            old_render.eq(new_render)
-        }
+        (
+            MountedPatchSubtreeType::Component(old_render),
+            _,
+            MountInputType::Component(new_render),
+        ) => old_render.eq(new_render),
         _ => false,
     }
 }

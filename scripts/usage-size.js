@@ -1,14 +1,13 @@
 // @ts-check
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { rollup } from 'rollup'
-import nodeResolve from '@rollup/plugin-node-resolve'
 import { minify } from '@swc/core'
-import replace from '@rollup/plugin-replace'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { parseArgs } from 'node:util'
 import pico from 'picocolors'
-import prettyBytes from 'pretty-bytes'
+import { build } from 'vite'
+import wasm from 'vite-plugin-wasm'
+import { formatBytes } from './format-bytes.js'
 
 const {
   values: { write },
@@ -34,14 +33,14 @@ const entry = path.resolve('./packages/rue/dist/rue.runtime.esm-bundler.js')
 /** @type {Preset[]} */
 const presets = [
   {
-    name: 'createApp (CAPI only)',
-    imports: ['createApp'],
+    name: 'createRue (runtime only)',
+    imports: ['createRue'],
   },
-  { name: 'createApp', imports: ['createApp'] },
+  { name: 'createRue', imports: ['createRue'] },
   { name: 'useCustomElement', imports: ['useCustomElement'] },
   {
     name: 'overall',
-    imports: ['createApp', 'ref', 'watch', 'Transition'],
+    imports: ['createRue', 'ref', 'watch', 'Transition'],
   },
 ]
 
@@ -62,9 +61,9 @@ async function main() {
   for (const r of results) {
     console.log(
       `${pico.green(pico.bold(r.name))} - ` +
-        `min:${prettyBytes(r.size, { minimumFractionDigits: 3 })} / ` +
-        `gzip:${prettyBytes(r.gzip, { minimumFractionDigits: 3 })} / ` +
-        `brotli:${prettyBytes(r.brotli, { minimumFractionDigits: 3 })}`,
+        `min:${formatBytes(r.size, { minimumFractionDigits: 3 })} / ` +
+        `gzip:${formatBytes(r.gzip, { minimumFractionDigits: 3 })} / ` +
+        `brotli:${formatBytes(r.brotli, { minimumFractionDigits: 3 })}`,
     )
   }
 
@@ -83,53 +82,78 @@ async function main() {
  * @returns {Promise<{name: string, size: number, gzip: number, brotli: number}>} - The result of the bundling process
  */
 async function generateBundle(preset) {
-  const id = 'virtual:entry'
+  const entryFile = path.resolve(sizeDir, `${sanitizePresetName(preset.name)}.entry.mjs`)
   const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
 
-  const result = await rollup({
-    input: id,
-    plugins: [
-      {
-        name: 'usage-size-plugin',
-        resolveId(_id) {
-          if (_id === id) return id
-          return null
-        },
-        load(_id) {
-          if (_id === id) return content
-          return null
+  await mkdir(sizeDir, { recursive: true })
+  await writeFile(entryFile, content, 'utf-8')
+
+  try {
+    const result = await build({
+      configFile: false,
+      publicDir: false,
+      appType: 'custom',
+      logLevel: 'silent',
+      plugins: [wasm()],
+      define: {
+        'process.env.NODE_ENV': '"production"',
+        ...preset.replace,
+      },
+      build: {
+        target: 'es2020',
+        minify: false,
+        write: false,
+        lib: {
+          entry: entryFile,
+          formats: ['es'],
+          fileName: 'usage-size',
         },
       },
-      nodeResolve(),
-      replace({
-        'process.env.NODE_ENV': '"production"',
-        preventAssignment: true,
-        ...preset.replace,
-      }),
-    ],
-  })
-
-  const generated = await result.generate({})
-  const bundled = generated.output[0].code
-  const minified = (
-    await minify(bundled, {
-      module: true,
-      toplevel: true,
     })
-  ).code
 
-  const size = minified.length
-  const gzip = gzipSync(minified).length
-  const brotli = brotliCompressSync(minified).length
+    const outputs = Array.isArray(result) ? result : [result]
+    const bundled = outputs
+      .flatMap(output => ('output' in output ? output.output : []))
+      .find(output => output.type === 'chunk')?.code
 
-  if (write) {
-    await writeFile(path.resolve(sizeDir, preset.name + '.js'), bundled)
+    if (!bundled) {
+      throw new Error(`failed to generate usage-size bundle for ${preset.name}`)
+    }
+
+    const minified = (
+      await minify(bundled, {
+        module: true,
+        toplevel: true,
+      })
+    ).code
+
+    const size = minified.length
+    const gzip = gzipSync(minified).length
+    const brotli = brotliCompressSync(minified).length
+
+    if (write) {
+      await writeFile(path.resolve(sizeDir, preset.name + '.js'), bundled)
+    }
+
+    return {
+      name: preset.name,
+      size,
+      gzip,
+      brotli,
+    }
+  } finally {
+    await rm(entryFile, { force: true })
   }
+}
 
-  return {
-    name: preset.name,
-    size,
-    gzip,
-    brotli,
-  }
+/**
+ * @param {string} name
+ */
+function sanitizePresetName(name) {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'entry'
+  )
 }

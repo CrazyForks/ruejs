@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 // global JSX namespace registration
 // somehow we have to copy=pase the jsx-runtime types here to make TypeScript happy
 import type { RenderableOutput } from '@rue-js/runtime'

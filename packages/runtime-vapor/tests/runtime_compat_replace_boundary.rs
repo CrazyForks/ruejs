@@ -32,8 +32,11 @@ async fn render_between_fragment_replace_with_element_keeps_single_new_root() {
     update_siblings(&parent);
 
     let element_children = Array::of1(&JsValue::from_str("B"));
-    let element_vnode =
-        rue.create_element_wasm(JsValue::from_str("div"), JsValue::UNDEFINED, element_children.into());
+    let element_vnode = rue.create_element_wasm(
+        JsValue::from_str("div"),
+        JsValue::UNDEFINED,
+        element_children.into(),
+    );
     rue.render_between_wasm(element_vnode, parent.clone(), start.clone(), end.clone());
     tick().await;
     update_siblings(&parent);
@@ -54,8 +57,11 @@ async fn render_between_element_replace_with_fragment_clears_old_root() {
     let (parent, start, end) = setup_range(&adapter);
 
     let element_children = Array::of1(&JsValue::from_str("A"));
-    let element_vnode =
-        rue.create_element_wasm(JsValue::from_str("div"), JsValue::UNDEFINED, element_children.into());
+    let element_vnode = rue.create_element_wasm(
+        JsValue::from_str("div"),
+        JsValue::UNDEFINED,
+        element_children.into(),
+    );
     rue.render_between_wasm(element_vnode, parent.clone(), start.clone(), end.clone());
     tick().await;
     update_siblings(&parent);
@@ -89,8 +95,11 @@ async fn render_anchor_fragment_replace_with_element_keeps_single_new_root() {
     update_siblings(&parent);
 
     let element_children = Array::of1(&JsValue::from_str("B"));
-    let element_vnode =
-        rue.create_element_wasm(JsValue::from_str("div"), JsValue::UNDEFINED, element_children.into());
+    let element_vnode = rue.create_element_wasm(
+        JsValue::from_str("div"),
+        JsValue::UNDEFINED,
+        element_children.into(),
+    );
     rue.render_anchor_wasm(element_vnode, parent.clone(), anchor.clone());
     tick().await;
     update_siblings(&parent);
@@ -111,8 +120,11 @@ async fn render_anchor_element_replace_with_fragment_clears_old_root() {
     let (parent, anchor) = setup_anchor(&adapter);
 
     let element_children = Array::of1(&JsValue::from_str("A"));
-    let element_vnode =
-        rue.create_element_wasm(JsValue::from_str("div"), JsValue::UNDEFINED, element_children.into());
+    let element_vnode = rue.create_element_wasm(
+        JsValue::from_str("div"),
+        JsValue::UNDEFINED,
+        element_children.into(),
+    );
     rue.render_anchor_wasm(element_vnode, parent.clone(), anchor.clone());
     tick().await;
     update_siblings(&parent);
@@ -146,8 +158,11 @@ async fn render_container_fragment_replace_with_element_keeps_single_new_root() 
     update_siblings(&container);
 
     let element_children = Array::of1(&JsValue::from_str("B"));
-    let element_vnode =
-        rue.create_element_wasm(JsValue::from_str("div"), JsValue::UNDEFINED, element_children.into());
+    let element_vnode = rue.create_element_wasm(
+        JsValue::from_str("div"),
+        JsValue::UNDEFINED,
+        element_children.into(),
+    );
     rue.render_wasm(element_vnode, container.clone());
     tick().await;
     update_siblings(&container);
@@ -168,8 +183,11 @@ async fn render_container_element_replace_with_fragment_clears_old_root() {
     let container = setup_container(&adapter);
 
     let element_children = Array::of1(&JsValue::from_str("A"));
-    let element_vnode =
-        rue.create_element_wasm(JsValue::from_str("div"), JsValue::UNDEFINED, element_children.into());
+    let element_vnode = rue.create_element_wasm(
+        JsValue::from_str("div"),
+        JsValue::UNDEFINED,
+        element_children.into(),
+    );
     rue.render_wasm(element_vnode, container.clone());
     tick().await;
     update_siblings(&container);
@@ -194,15 +212,21 @@ async fn render_container_element_patch_updates_in_place() {
     let container = setup_container(&adapter);
 
     let element_a_children = Array::of1(&JsValue::from_str("A"));
-    let element_a =
-        rue.create_element_wasm(JsValue::from_str("div"), JsValue::UNDEFINED, element_a_children.into());
+    let element_a = rue.create_element_wasm(
+        JsValue::from_str("div"),
+        JsValue::UNDEFINED,
+        element_a_children.into(),
+    );
     rue.render_wasm(element_a, container.clone());
     tick().await;
     update_siblings(&container);
 
     let element_b_children = Array::of1(&JsValue::from_str("B"));
-    let element_b =
-        rue.create_element_wasm(JsValue::from_str("div"), JsValue::UNDEFINED, element_b_children.into());
+    let element_b = rue.create_element_wasm(
+        JsValue::from_str("div"),
+        JsValue::UNDEFINED,
+        element_b_children.into(),
+    );
     rue.render_wasm(element_b, container.clone());
     tick().await;
     update_siblings(&container);

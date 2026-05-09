@@ -46,7 +46,9 @@ describe('Dropdown actual page', () => {
       expect(currentPositionsDemo).not.toBeNull()
       expect(currentDetailsDemo!.querySelector('details.dropdown')).not.toBeNull()
       expect(currentFocusDemo!.querySelector('.dropdown-content')).not.toBeNull()
-      expect(currentPositionsDemo!.querySelector('[data-testid="dropdown-position-start"]')).not.toBeNull()
+      expect(
+        currentPositionsDemo!.querySelector('[data-testid="dropdown-position-start"]'),
+      ).not.toBeNull()
     })
 
     const detailsDemo = findDemo(container, detailsDemoTitle) as HTMLElement | null
@@ -56,30 +58,50 @@ describe('Dropdown actual page', () => {
     expect(focusDemo).not.toBeNull()
     expect(positionsDemo).not.toBeNull()
 
-    const controlledState = container.querySelector('[data-testid="dropdown-controlled-state"]') as HTMLElement
-    const controlledSource = container.querySelector('[data-testid="dropdown-controlled-source"]') as HTMLElement
-    const controlledTrigger = container.querySelector('[data-testid="dropdown-controlled-trigger"]') as HTMLElement
+    const controlledState = container.querySelector(
+      '[data-testid="dropdown-controlled-state"]',
+    ) as HTMLElement
+    const controlledSource = container.querySelector(
+      '[data-testid="dropdown-controlled-source"]',
+    ) as HTMLElement
+    const controlledTrigger = container.querySelector(
+      '[data-testid="dropdown-controlled-trigger"]',
+    ) as HTMLElement
     expect(controlledState.textContent).toContain('closed')
     expect(controlledTrigger.tagName).toBe('BUTTON')
     expect(container.querySelectorAll('[data-testid="dropdown-controlled-trigger"]').length).toBe(1)
 
     await click(controlledTrigger)
     await waitForContent(() => {
-      const nextState = container.querySelector('[data-testid="dropdown-controlled-state"]') as HTMLElement
-      const nextSource = container.querySelector('[data-testid="dropdown-controlled-source"]') as HTMLElement
-      expect(container.querySelectorAll('[data-testid="dropdown-controlled-trigger"]').length).toBe(1)
+      const nextState = container.querySelector(
+        '[data-testid="dropdown-controlled-state"]',
+      ) as HTMLElement
+      const nextSource = container.querySelector(
+        '[data-testid="dropdown-controlled-source"]',
+      ) as HTMLElement
+      expect(container.querySelectorAll('[data-testid="dropdown-controlled-trigger"]').length).toBe(
+        1,
+      )
       expect(nextState.textContent).toContain('open')
       expect(nextSource.textContent).toContain('trigger')
     })
 
-    const focusTrigger = focusDemo!.querySelector('[data-testid="dropdown-focus-trigger"]') as HTMLButtonElement
+    const focusTrigger = focusDemo!.querySelector(
+      '[data-testid="dropdown-focus-trigger"]',
+    ) as HTMLButtonElement
     expect(focusTrigger.tagName).toBe('BUTTON')
     focusTrigger.focus()
     expect(document.activeElement).toBe(focusTrigger)
 
-    const positionStartTrigger = positionsDemo!.querySelector('[data-testid="dropdown-position-start"]') as HTMLButtonElement
-    const positionTopCenterTrigger = positionsDemo!.querySelector('[data-testid="dropdown-position-top-center"]') as HTMLButtonElement
-    const positionLeftEndTrigger = positionsDemo!.querySelector('[data-testid="dropdown-position-left-end"]') as HTMLButtonElement
+    const positionStartTrigger = positionsDemo!.querySelector(
+      '[data-testid="dropdown-position-start"]',
+    ) as HTMLButtonElement
+    const positionTopCenterTrigger = positionsDemo!.querySelector(
+      '[data-testid="dropdown-position-top-center"]',
+    ) as HTMLButtonElement
+    const positionLeftEndTrigger = positionsDemo!.querySelector(
+      '[data-testid="dropdown-position-left-end"]',
+    ) as HTMLButtonElement
     expect(positionStartTrigger.tagName).toBe('BUTTON')
     expect(positionTopCenterTrigger.tagName).toBe('BUTTON')
     expect(positionLeftEndTrigger.tagName).toBe('BUTTON')

@@ -26,7 +26,9 @@ const findTab = (root: ParentNode, label: string) =>
   ) ?? null
 
 const previewLines = (root: ParentNode) =>
-  Array.from(root.querySelectorAll('.card-body.grid.gap-2 > div')).map(node => node.textContent?.trim())
+  Array.from(root.querySelectorAll('.card-body.grid.gap-2 > div')).map(node =>
+    node.textContent?.trim(),
+  )
 
 afterEach(() => {
   document.body.innerHTML = ''

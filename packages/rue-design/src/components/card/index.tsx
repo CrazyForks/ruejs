@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Card 组件概述
 - 保留 rue 现有的低层 card class 组合能力，同时补一层更顺手的语义化 API。
@@ -7,16 +8,7 @@ Card 组件概述
 import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 
-export type CardSize =
-  | 'xs'
-  | 'sm'
-  | 'md'
-  | 'lg'
-  | 'xl'
-  | 'small'
-  | 'medium'
-  | 'middle'
-  | 'large'
+export type CardSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium' | 'middle' | 'large'
 
 export type CardVariant = 'outlined' | 'borderless' | 'dashed'
 export type CardType = 'default' | 'inner'
@@ -247,7 +239,8 @@ const Figure: FC<CardPartProps> = ({ className, style, children, ...rest }) => {
 const Grid: FC<CardGridProps> = ({ className, style, hoverable = true, children, ...rest }) => {
   let cls = 'rue-card-grid block bg-base-100/70 p-5'
   if (hoverable) {
-    cls += ' transition duration-200 ease-out hover:bg-base-100 hover:shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)]'
+    cls +=
+      ' transition duration-200 ease-out hover:bg-base-100 hover:shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)]'
   }
   if (className) cls += ` ${className}`
 
@@ -372,7 +365,8 @@ const Card: FC<CardProps> = ({
     })) ?? []
   const normalizedActions = actions ?? []
   const uncontrolledActiveKey = ref(defaultActiveTabKey ?? normalizedTabItems[0]?.key ?? '')
-  const mergedActiveKey = activeTabKey ?? uncontrolledActiveKey.value ?? normalizedTabItems[0]?.key ?? ''
+  const mergedActiveKey =
+    activeTabKey ?? uncontrolledActiveKey.value ?? normalizedTabItems[0]?.key ?? ''
   const hasStructuredSlots =
     title != null ||
     extra != null ||
@@ -385,7 +379,9 @@ const Card: FC<CardProps> = ({
   const handleTabChange = (key: string, event?: MouseEvent) => {
     if (activeTabKey === undefined) {
       uncontrolledActiveKey.value = key
-      syncUncontrolledTabClasses((event?.currentTarget ?? event?.target) as HTMLButtonElement | null)
+      syncUncontrolledTabClasses(
+        (event?.currentTarget ?? event?.target) as HTMLButtonElement | null,
+      )
     }
     if (onTabChange) onTabChange(key)
   }
@@ -399,7 +395,8 @@ const Card: FC<CardProps> = ({
   if (variant && resolveVariantClass(variant)) cls += ` ${resolveVariantClass(variant)}`
   if (type === 'inner') cls += ' border border-base-300 bg-base-200/60 shadow-none'
   if (hoverable) {
-    cls += ' transition duration-200 ease-out hover:-translate-y-1 hover:shadow-[0_22px_60px_-36px_rgba(15,23,42,0.55)]'
+    cls +=
+      ' transition duration-200 ease-out hover:-translate-y-1 hover:shadow-[0_22px_60px_-36px_rgba(15,23,42,0.55)]'
   }
   if (className) cls += ` ${className}`
 
@@ -421,7 +418,7 @@ const Card: FC<CardProps> = ({
           key={item.key}
           className={`tab ${mergedActiveKey === item.key ? 'tab-active' : ''} ${item.disabled ? 'tab-disabled' : ''} ${item.className ?? ''}`.trim()}
           disabled={item.disabled}
-          onClick={event => {
+          onClick={(event: MouseEvent) => {
             if (item.disabled) return
             handleTabChange(item.key, event as any)
           }}
@@ -468,9 +465,17 @@ const Card: FC<CardProps> = ({
                 </div>
               ) : null}
               {tabsNode != null || tabBarExtraContent != null ? (
-                <div className={`flex flex-wrap items-center gap-3 ${title != null || extra != null ? 'mt-4' : ''}`.trim()}>
-                  {tabsNode != null ? <div className="min-w-0 flex-1">{tabsNode}</div> : <div className="flex-1" />}
-                  {tabBarExtraContent != null ? <div className="shrink-0">{tabBarExtraContent}</div> : null}
+                <div
+                  className={`flex flex-wrap items-center gap-3 ${title != null || extra != null ? 'mt-4' : ''}`.trim()}
+                >
+                  {tabsNode != null ? (
+                    <div className="min-w-0 flex-1">{tabsNode}</div>
+                  ) : (
+                    <div className="flex-1" />
+                  )}
+                  {tabBarExtraContent != null ? (
+                    <div className="shrink-0">{tabBarExtraContent}</div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -501,7 +506,9 @@ const Card: FC<CardProps> = ({
             >
               {normalizedActions.map((action, index) => (
                 <li key={`action-${index}`} className="flex-1">
-                  <div className="flex h-full items-center justify-center px-4 py-3 text-sm">{action}</div>
+                  <div className="flex h-full items-center justify-center px-4 py-3 text-sm">
+                    {action}
+                  </div>
                 </li>
               ))}
             </ul>

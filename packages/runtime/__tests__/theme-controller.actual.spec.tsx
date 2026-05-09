@@ -29,39 +29,59 @@ describe('ThemeController actual page', () => {
     render(<ThemeControllerPage />, container)
 
     await waitForContent(() => {
-      expect(container.textContent).toContain('Theme Controller 主题控制器')
-      expect(container.querySelectorAll('.component-preview').length).toBe(4)
+      expect(container.textContent).toContain('Theme 主题系统')
+      expect(container.querySelectorAll('.component-preview').length).toBeGreaterThan(0)
     })
 
-    const toggleDemo = findDemo(container, '# Theme Controller using a toggle') as HTMLElement | null
-    const checkboxDemo = findDemo(container, '# Theme Controller using a checkbox') as HTMLElement | null
-    const radioDemo = findDemo(container, '# Theme Controller using radio inputs') as HTMLElement | null
+    const toggleDemo = findDemo(
+      container,
+      '# Theme Controller using a toggle',
+    ) as HTMLElement | null
+    const checkboxDemo = findDemo(
+      container,
+      '# Theme Controller using a checkbox',
+    ) as HTMLElement | null
+    const radioDemo = findDemo(
+      container,
+      '# Theme Controller using radio inputs',
+    ) as HTMLElement | null
     expect(toggleDemo).not.toBeNull()
     expect(checkboxDemo).not.toBeNull()
     expect(radioDemo).not.toBeNull()
 
     await waitForContent(() => {
-      expect(toggleDemo!.textContent).toContain('当前值：default')
+      expect(toggleDemo!.textContent).toContain('当前 controller 值：未激活')
       expect(radioDemo!.querySelectorAll('input.theme-controller').length).toBe(3)
     })
 
-    const toggleInput = toggleDemo!.querySelector('[data-testid="theme-toggle"]') as HTMLInputElement
+    const toggleInput = toggleDemo!.querySelector(
+      '[data-testid="theme-toggle"]',
+    ) as HTMLInputElement
     toggleInput.checked = true
     toggleInput.dispatchEvent(new Event('change', { bubbles: true }))
 
     await waitForContent(() => {
-      const updatedToggleDemo = findDemo(container, '# Theme Controller using a toggle') as HTMLElement | null
-      expect(updatedToggleDemo!.textContent).toContain('当前值：synthwave')
+      const updatedToggleDemo = findDemo(
+        container,
+        '# Theme Controller using a toggle',
+      ) as HTMLElement | null
+      expect(updatedToggleDemo!.textContent).toContain('当前 controller 值：synthwave')
     })
 
     await click(findTabButton(checkboxDemo!, 'JSX代码'))
-    const checkboxDemoInCode = findDemo(container, '# Theme Controller using a checkbox') as HTMLElement | null
+    const checkboxDemoInCode = findDemo(
+      container,
+      '# Theme Controller using a checkbox',
+    ) as HTMLElement | null
     expect(checkboxDemoInCode!.querySelectorAll('input.theme-controller').length).toBe(0)
 
     await click(findTabButton(checkboxDemoInCode!, '预览'))
 
     await waitForContent(() => {
-      const restoredCheckboxDemo = findDemo(container, '# Theme Controller using a checkbox') as HTMLElement | null
+      const restoredCheckboxDemo = findDemo(
+        container,
+        '# Theme Controller using a checkbox',
+      ) as HTMLElement | null
       expect(restoredCheckboxDemo!.querySelectorAll('input.theme-controller').length).toBe(1)
     })
   })

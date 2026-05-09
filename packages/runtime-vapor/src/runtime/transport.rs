@@ -1,6 +1,8 @@
-use super::vnode_helpers::props_from_value as shared_props_from_value;
 use super::globals::MOUNT_INPUT_REGISTRY;
-use super::{ComponentProps, DomAdapter, JsDomAdapter, MountInput, MountInputChild, MountInputType, Rue};
+use super::vnode_helpers::props_from_value as shared_props_from_value;
+use super::{
+    ComponentProps, DomAdapter, JsDomAdapter, MountInput, MountInputChild, MountInputType, Rue,
+};
 use js_sys::{Function, Object, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
@@ -63,10 +65,7 @@ pub(crate) fn store_default_mount_input(
     let mut pending_input = Some(input);
     let id = allocate_default_mount_handle_id(store_policy, &mut pending_input);
 
-    DefaultMountHandle {
-        id,
-        value: default_mount_handle_object_value(id, key.as_deref()),
-    }
+    DefaultMountHandle { id, value: default_mount_handle_object_value(id, key.as_deref()) }
 }
 
 fn default_mount_handle_value_from_input(input_value: &JsValue) -> Option<JsValue> {
@@ -78,11 +77,7 @@ fn default_mount_handle_value_from_input(input_value: &JsValue) -> Option<JsValu
         let obj = Object::from(input_value.clone());
         let handle_value = Reflect::get(&obj, &JsValue::from_str(DEFAULT_MOUNT_HANDLE_KEY))
             .unwrap_or(JsValue::UNDEFINED);
-        if handle_value.is_undefined() {
-            None
-        } else {
-            Some(handle_value)
-        }
+        if handle_value.is_undefined() { None } else { Some(handle_value) }
     } else {
         None
     }
@@ -115,6 +110,7 @@ fn empty_mount_input<A: DomAdapter>(r#type: MountInputType<A>) -> MountInput<A> 
         props: ComponentProps::new(),
         children: vec![],
         key: None,
+        strict_component_returns: false,
         mount_cleanup_bucket: None,
         mount_effect_scope_id: None,
         el_hint: None,
@@ -161,15 +157,19 @@ where
     A::Element: From<JsValue> + Into<JsValue> + Clone,
 {
     let el: A::Element = element_value.into();
-    with_source_metadata(source, MountInput {
-        r#type: MountInputType::<A>::Vapor,
-        props: raw_object_to_vnode_props(rue, &el),
-        children: vec![],
-        key: None,
-        mount_cleanup_bucket: None,
-        mount_effect_scope_id: None,
-        el_hint: Some(el),
-    })
+    with_source_metadata(
+        source,
+        MountInput {
+            r#type: MountInputType::<A>::Vapor,
+            props: raw_object_to_vnode_props(rue, &el),
+            children: vec![],
+            key: None,
+            strict_component_returns: false,
+            mount_cleanup_bucket: None,
+            mount_effect_scope_id: None,
+            el_hint: Some(el),
+        },
+    )
 }
 
 pub(crate) fn portable_component_input<A: DomAdapter>(obj: &Object) -> Option<MountInput<A>> {
@@ -181,11 +181,14 @@ pub(crate) fn portable_component_input<A: DomAdapter>(obj: &Object) -> Option<Mo
 
     let props_value =
         Reflect::get(obj, &JsValue::from_str(PORTABLE_PROPS_KEY)).unwrap_or(JsValue::UNDEFINED);
-    Some(with_source_metadata(obj, MountInput::new_normalized(
-        MountInputType::<A>::Component(render_fn),
-        shared_props_from_value(&props_value),
-        vec![],
-    )))
+    Some(with_source_metadata(
+        obj,
+        MountInput::new_normalized(
+            MountInputType::<A>::Component(render_fn),
+            shared_props_from_value(&props_value),
+            vec![],
+        ),
+    ))
 }
 
 pub(crate) fn portable_vapor_input<A: DomAdapter>(obj: &Object) -> Option<MountInput<A>> {
@@ -241,6 +244,7 @@ where
             })
             .collect(),
         key: input.key,
+        strict_component_returns: input.strict_component_returns,
         mount_cleanup_bucket: input.mount_cleanup_bucket,
         mount_effect_scope_id: input.mount_effect_scope_id,
         el_hint: input.el_hint.map(|e| {

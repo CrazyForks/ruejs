@@ -26,7 +26,9 @@ const findTab = (root: ParentNode, label: string) =>
   ) ?? null
 
 const findButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === label) ?? null
+  Array.from(root.querySelectorAll('button')).find(
+    button => button.textContent?.trim() === label,
+  ) ?? null
 
 const readList = (root: ParentNode) =>
   Array.from(root.querySelectorAll('li')).map(item => item.textContent?.trim())

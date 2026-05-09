@@ -352,7 +352,6 @@ h(Transition, {
   在 JSX / TSX 中，`<Suspense>` 通过 `children` 和 `fallback` prop 工作。它会先在隐藏容器中渲染 `children`，并在等待异步依赖解析时显示 `fallback`。
 
   当前实现会跟踪两类异步依赖：
-
   - `useComponent()` 在 pending 状态下登记到最近 Suspense 边界的 Promise
   - 渲染过程中直接抛出的 thenable
 

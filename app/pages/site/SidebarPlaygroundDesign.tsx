@@ -1,5 +1,8 @@
 import { extend } from '@rue-js/shared'
-import { type SidebarSection, createPersistentSidebarPlayground } from './persistentSidebarPlayground'
+import {
+  type SidebarSection,
+  createPersistentSidebarPlayground,
+} from './persistentSidebarPlayground'
 
 const withDesignHrefs = (sections: SidebarSection[]): SidebarSection[] => {
   return sections.map(section =>

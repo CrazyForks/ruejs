@@ -1,6 +1,4 @@
-use super::super::types::{
-    MountInput, MountedPatchSubtree, MountedSubtreeState,
-};
+use super::super::types::{MountInput, MountedPatchSubtree, MountedSubtreeState};
 use super::super::{ComponentInternalInstance, Rue};
 use crate::hook::reactive::props_reactive_js;
 use crate::reactive::context::{get_current_instance, set_current_instance_ci};
@@ -52,7 +50,9 @@ where
     rue.call_hooks("created");
     rue.call_hooks("before_mount");
 
-    let mounted_subtree = if let Some(sub_input) = rue.value_to_input(&ret) {
+    let mounted_subtree = if let Some(sub_input) =
+        rue.component_return_value_to_input(&ret, input.strict_component_returns)
+    {
         rue.mount_from_input(&sub_input)
     } else if ret.is_object() {
         #[cfg(feature = "compat")]

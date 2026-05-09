@@ -34,7 +34,7 @@ export default Refs;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { useRef, _$vaporWithHookId, useSetup, vapor, onBeforeUnmount, _$createElement, _$createTextNode, _$appendChild, watchEffect, _$vaporBindUseRef, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { _$vaporWithHookId, useSetup, useRef, vapor, onBeforeUnmount, _$createElement, _$createTextNode, _$appendChild, watchEffect, _$vaporBindUseRef, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const Refs: FC = ()=>{

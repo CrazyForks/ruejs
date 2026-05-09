@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Stat 组件概述
 - 列表容器：水平/垂直布局；支持 children 或 items 数据驱动。
@@ -150,7 +151,10 @@ const formatNumericValue = ({
   precision,
   decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
   groupSeparator = DEFAULT_GROUP_SEPARATOR,
-}: Pick<StatValueProps, 'value' | 'formatter' | 'precision' | 'decimalSeparator' | 'groupSeparator'>) => {
+}: Pick<
+  StatValueProps,
+  'value' | 'formatter' | 'precision' | 'decimalSeparator' | 'groupSeparator'
+>) => {
   if (typeof formatter === 'function') return formatter(value)
   if (!hasContent(value)) return null
   if (typeof value !== 'number' && typeof value !== 'string') return value
@@ -183,7 +187,13 @@ const renderValueNode = ({
   groupSeparator,
 }: Pick<
   StatValueProps,
-  'value' | 'children' | 'valueRender' | 'formatter' | 'precision' | 'decimalSeparator' | 'groupSeparator'
+  | 'value'
+  | 'children'
+  | 'valueRender'
+  | 'formatter'
+  | 'precision'
+  | 'decimalSeparator'
+  | 'groupSeparator'
 >) => {
   const baseNode = hasContent(value)
     ? formatNumericValue({ value, formatter, precision, decimalSeparator, groupSeparator })
@@ -200,9 +210,8 @@ const parseTimerFormat = (format: string): StatTimerFormatToken[] => {
 
     if (current === '[') {
       const closeIndex = format.indexOf(']', index + 1)
-      const content = closeIndex === -1
-        ? format.slice(index + 1)
-        : format.slice(index + 1, closeIndex)
+      const content =
+        closeIndex === -1 ? format.slice(index + 1) : format.slice(index + 1, closeIndex)
       if (content) {
         const prev = tokens[tokens.length - 1]
         if (prev?.type === 'literal') prev.content += content
@@ -311,7 +320,12 @@ const renderItemContent = ({
           {title}
         </Title>
       ) : null}
-      {loading || hasContent(value) || hasContent(prefix) || hasContent(suffix) || typeof formatter === 'function' || typeof valueRender === 'function' ? (
+      {loading ||
+      hasContent(value) ||
+      hasContent(prefix) ||
+      hasContent(suffix) ||
+      typeof formatter === 'function' ||
+      typeof valueRender === 'function' ? (
         <Value
           className={valueClassName}
           style={valueStyle}
@@ -457,7 +471,10 @@ const Value: FC<StatValueProps> = ({
   return (
     <div className={mergeClassName('stat-value', className)} style={style}>
       {hasContent(prefix) ? (
-        <span className="stat-value-prefix mr-2 text-base-content/70 text-[0.55em]" aria-hidden="true">
+        <span
+          className="stat-value-prefix mr-2 text-base-content/70 text-[0.55em]"
+          aria-hidden="true"
+        >
           {prefix}
         </span>
       ) : null}
@@ -473,7 +490,10 @@ const Value: FC<StatValueProps> = ({
         </span>
       ) : null}
       {hasContent(suffix) ? (
-        <span className="stat-value-suffix ml-2 text-base-content/70 text-[0.55em]" aria-hidden="true">
+        <span
+          className="stat-value-suffix ml-2 text-base-content/70 text-[0.55em]"
+          aria-hidden="true"
+        >
           {suffix}
         </span>
       ) : null}

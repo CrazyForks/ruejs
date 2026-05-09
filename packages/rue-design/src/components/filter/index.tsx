@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Filter 组件概述
 - 保留 Rue 当前基于 daisyUI `filter + btn` 的视觉组合。
@@ -20,16 +21,7 @@ export type FilterTone =
   | 'error'
 export type FilterColor = 'default' | 'danger' | FilterTone
 export type FilterVariant = 'solid' | 'filled' | 'outlined' | 'dashed' | 'text'
-export type FilterSize =
-  | 'xs'
-  | 'sm'
-  | 'md'
-  | 'lg'
-  | 'xl'
-  | 'small'
-  | 'medium'
-  | 'middle'
-  | 'large'
+export type FilterSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium' | 'middle' | 'large'
 export type FilterValue = string | number | boolean
 
 export interface FilterItemChangeMeta {
@@ -72,7 +64,11 @@ export interface FilterProps {
   multiple?: boolean
   value?: FilterValue | ReadonlyArray<FilterValue>
   defaultValue?: FilterValue | ReadonlyArray<FilterValue>
-  onChange?: (value: FilterValue | FilterValue[] | undefined, event: Event, meta: FilterChangeMeta) => void
+  onChange?: (
+    value: FilterValue | FilterValue[] | undefined,
+    event: Event,
+    meta: FilterChangeMeta,
+  ) => void
   size?: FilterSize
   color?: FilterColor
   variant?: FilterVariant
@@ -105,7 +101,9 @@ const mergeClassNames = (...values: Array<string | undefined>) => {
 }
 
 const omitNullishProps = <T extends Record<string, any>>(values: T) => {
-  return Object.fromEntries(Object.entries(values).filter(([, value]) => value != null)) as Partial<T>
+  return Object.fromEntries(
+    Object.entries(values).filter(([, value]) => value != null),
+  ) as Partial<T>
 }
 
 const resolveSizeToken = (size?: FilterSize) => {
@@ -184,7 +182,9 @@ const normalizeItems = (items?: ReadonlyArray<FilterItemData | FilterValue>): Fi
       item.key ??
       (item.value !== undefined
         ? serializeValue(item.value)
-        : (typeof label === 'string' || typeof label === 'number' || typeof label === 'boolean' ? String(label) : `item-${index}`))
+        : typeof label === 'string' || typeof label === 'number' || typeof label === 'boolean'
+          ? String(label)
+          : `item-${index}`)
 
     return {
       ...item,
@@ -240,7 +240,12 @@ const resolveItemLabel = (label: any, fallbackChildren?: any) => {
   return fallbackChildren
 }
 
-const resolveItemValue = (props: { value?: FilterValue; label?: any; ['aria-label']?: any; children?: any }) => {
+const resolveItemValue = (props: {
+  value?: FilterValue
+  label?: any
+  ['aria-label']?: any
+  children?: any
+}) => {
   if (props.value !== undefined) return props.value
   const label = resolveItemLabel(props.label ?? props['aria-label'], props.children)
   return isPrimitiveValue(label) ? label : undefined
@@ -302,7 +307,8 @@ const Filter: FC<FilterProps> = ({
   const controlledValues = ref<FilterValue[]>(normalizeValueList(value, resolvedType))
   const uncontrolledValues = ref<FilterValue[]>(defaultValues)
   const controlled = value !== undefined
-  const managed = controlled || defaultValue !== undefined || !!onChange || normalizedItems.length > 0
+  const managed =
+    controlled || defaultValue !== undefined || !!onChange || normalizedItems.length > 0
 
   const getCurrentValues = () => {
     return controlled ? controlledValues.value : uncontrolledValues.value
@@ -338,14 +344,17 @@ const Filter: FC<FilterProps> = ({
     observerRef.current?.disconnect()
 
     const currentValues = getCurrentValues()
-    const inputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-rue-filter-role]'))
+    const inputs = Array.from(
+      container.querySelectorAll<HTMLInputElement>('input[data-rue-filter-role]'),
+    )
 
     inputs.forEach(input => {
       const config = readInputConfig(input)
 
       if (config.role === 'reset') {
         const resetMode = config.mode ?? as
-        const resetChecked = resetMode === 'div' && managed ? currentValues.length === 0 : input.checked === true
+        const resetChecked =
+          resetMode === 'div' && managed ? currentValues.length === 0 : input.checked === true
         const mergedClassName = resolveButtonClassName({
           color: config.color ?? color,
           size: config.size ?? size,
@@ -355,7 +364,10 @@ const Filter: FC<FilterProps> = ({
         })
         input.type = resetMode === 'form' ? 'reset' : 'radio'
         input.disabled = disabled ? true : config.disabled
-        input.className = mergeClassNames(mergedClassName, resetMode === 'form' ? 'btn-square' : 'filter-reset')
+        input.className = mergeClassNames(
+          mergedClassName,
+          resetMode === 'form' ? 'btn-square' : 'filter-reset',
+        )
 
         if (resetMode === 'div') {
           if (resolvedType === 'radio' && (config.name ?? resolvedName)) {
@@ -370,9 +382,12 @@ const Filter: FC<FilterProps> = ({
         return
       }
 
-      const itemChecked = managed && config.value !== undefined
-        ? currentValues.some(current => serializeValue(current) === serializeValue(config.value as FilterValue))
-        : input.checked === true
+      const itemChecked =
+        managed && config.value !== undefined
+          ? currentValues.some(
+              current => serializeValue(current) === serializeValue(config.value as FilterValue),
+            )
+          : input.checked === true
       const mergedClassName = resolveButtonClassName({
         color: config.color ?? color,
         size: config.size ?? size,
@@ -395,7 +410,12 @@ const Filter: FC<FilterProps> = ({
     observeGroup()
   }
 
-  const emitChange = (nextValues: FilterValue[], event: Event, item?: FilterItemData, checked = false) => {
+  const emitChange = (
+    nextValues: FilterValue[],
+    event: Event,
+    item?: FilterItemData,
+    checked = false,
+  ) => {
     const normalizedNext = normalizeValueList(nextValues, resolvedType)
     if (managed) {
       if (controlled) {
@@ -425,7 +445,9 @@ const Filter: FC<FilterProps> = ({
     }
 
     if (resolvedType === 'checkbox') {
-      const hasValue = currentValues.some(current => serializeValue(current) === serializeValue(itemValue))
+      const hasValue = currentValues.some(
+        current => serializeValue(current) === serializeValue(itemValue),
+      )
       const nextValues = checked
         ? hasValue
           ? currentValues
@@ -502,7 +524,7 @@ const Filter: FC<FilterProps> = ({
 
   watch(
     () => value,
-    nextValue => {
+    (nextValue: FilterProps['value']) => {
       controlledValues.value = normalizeValueList(nextValue, resolvedType)
       syncChildInputs()
     },
@@ -534,7 +556,8 @@ const Filter: FC<FilterProps> = ({
   )
 
   watch(
-    () => `${as}|${resolvedType}|${color ?? ''}|${variant ?? ''}|${size ?? ''}|${itemClassName ?? ''}|${normalizedItems.length}`,
+    () =>
+      `${as}|${resolvedType}|${color ?? ''}|${variant ?? ''}|${size ?? ''}|${itemClassName ?? ''}|${normalizedItems.length}`,
     () => {
       syncChildInputs()
     },
@@ -553,7 +576,10 @@ const Filter: FC<FilterProps> = ({
         scheduleSyncChildInputs()
         if (onReset) onReset(event)
       }}
-      className={mergeClassNames(resolvedType === 'radio' ? 'filter' : 'flex flex-wrap gap-1', className)}
+      className={mergeClassNames(
+        resolvedType === 'radio' ? 'filter' : 'flex flex-wrap gap-1',
+        className,
+      )}
       data-rue-filter-group="true"
       data-rue-filter-mode={as}
       data-rue-filter-type={resolvedType}
@@ -598,7 +624,11 @@ const Item: FC<FilterItemProps> = ({
   })
   const domProps = { ...rest }
 
-  if (mergedAriaLabel !== undefined && domProps['aria-label'] === undefined && isPrimitiveValue(mergedAriaLabel)) {
+  if (
+    mergedAriaLabel !== undefined &&
+    domProps['aria-label'] === undefined &&
+    isPrimitiveValue(mergedAriaLabel)
+  ) {
     domProps['aria-label'] = String(mergedAriaLabel)
   }
   if (mergedValue !== undefined && domProps.value === undefined) {

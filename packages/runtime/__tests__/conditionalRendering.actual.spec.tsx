@@ -46,8 +46,8 @@ describe('ConditionalRendering actual page', () => {
     await click(findTab(container, '效果'))
 
     await waitForContent(() => {
-      const lines = Array.from(container.querySelectorAll('.card-body.grid.gap-2 > div')).map(node =>
-        normalize(node.textContent),
+      const lines = Array.from(container.querySelectorAll('.card-body.grid.gap-2 > div')).map(
+        node => normalize(node.textContent),
       )
       expect(lines).toEqual([
         'A 显示（?:）',

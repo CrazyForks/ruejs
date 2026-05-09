@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Hover3D 组件概述
 - 保持 daisyUI 所需的 9 个直系子节点结构，同时补齐链接语义、根节点透传和 surface 包装层能力。
@@ -53,16 +54,16 @@ const renderSurface = (
     return children
   }
 
-  const { className: surfacePropClassName, children: _surfaceChildren, ...surfaceRest } = surfaceProps ?? {}
+  const {
+    className: surfacePropClassName,
+    children: _surfaceChildren,
+    ...surfaceRest
+  } = surfaceProps ?? {}
   const Surface = (surfaceAs ?? 'div') as any
   const mergedClassName = mergeClassName(surfacePropClassName, surfaceClassName)
 
   return (
-    <Surface
-      {...surfaceRest}
-      data-hover3d-surface=""
-      className={mergedClassName || undefined}
-    >
+    <Surface {...surfaceRest} data-hover3d-surface="" className={mergedClassName || undefined}>
       {children}
     </Surface>
   )

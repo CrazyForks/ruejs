@@ -36,7 +36,10 @@ describe('RadialProgress actual page', () => {
     const basicDemo = findDemo(container, '# Radial progress') as HTMLElement | null
     const valuesDemo = findDemo(container, '# Different values') as HTMLElement | null
     const statusDemo = findDemo(container, '# Status and formatting') as HTMLElement | null
-    const dashboardDemo = findDemo(container, '# Dashboard and custom content') as HTMLElement | null
+    const dashboardDemo = findDemo(
+      container,
+      '# Dashboard and custom content',
+    ) as HTMLElement | null
     const stepsDemo = findDemo(container, '# Steps and split success') as HTMLElement | null
     const sizeDemo = findDemo(container, '# Custom size and thickness') as HTMLElement | null
 
@@ -50,7 +53,9 @@ describe('RadialProgress actual page', () => {
     await waitForContent(() => {
       const basic = basicDemo!.querySelector('[data-testid="radial-basic"]') as HTMLElement
       const format = statusDemo!.querySelector('[data-testid="radial-format"]') as HTMLElement
-      const dashboard = dashboardDemo!.querySelector('[data-testid="radial-dashboard"]') as HTMLElement
+      const dashboard = dashboardDemo!.querySelector(
+        '[data-testid="radial-dashboard"]',
+      ) as HTMLElement
       const steps = stepsDemo!.querySelector('[data-testid="radial-steps"]') as HTMLElement
       const thin = sizeDemo!.querySelector('[data-testid="radial-thin"]') as HTMLElement
 

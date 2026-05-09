@@ -195,12 +195,12 @@ describe('Table', () => {
     await click(c.querySelector('button[aria-label="sort-name"]'))
 
     await waitForContent(() => {
-      expect(changes.at(-1)?.sorter).toMatchObject({
+      expect(changes[changes.length - 1]?.sorter).toMatchObject({
         columnKey: 'name',
         field: 'name',
         order: 'ascend',
       })
-      expect(changes.at(-1)?.extra?.action).toBe('sort')
+      expect(changes[changes.length - 1]?.extra?.action).toBe('sort')
     })
   })
 
@@ -320,7 +320,7 @@ describe('Table', () => {
     await click(c.querySelector('.btn-primary.btn-xs'))
 
     await waitForContent(() => {
-      expect(changes.at(-1)?.name).toEqual(['Jim'])
+      expect(changes[changes.length - 1]?.name).toEqual(['Jim'])
     })
   })
 
@@ -376,7 +376,7 @@ describe('Table', () => {
     await click(c.querySelector('.confirm-filter'))
 
     await waitForContent(() => {
-      expect(changes.at(-1)?.name).toEqual(['Jim'])
+      expect(changes[changes.length - 1]?.name).toEqual(['Jim'])
     })
   })
 

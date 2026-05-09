@@ -326,7 +326,9 @@ const createColoredTimelineItems = () =>
   productMoments.slice(0, 4).map(moment => ({
     key: `${moment.year}-color`,
     title: (
-      <span className={joinClassName('badge badge-sm', toneBadgeClassMap[moment.tone])}>{moment.badge}</span>
+      <span className={joinClassName('badge badge-sm', toneBadgeClassMap[moment.tone])}>
+        {moment.badge}
+      </span>
     ),
     content: (
       <MilestoneCard
@@ -499,7 +501,7 @@ const timelineApiRows: ApiRow[] = [
   },
   {
     prop: 'orientation',
-    description: 'direction 的别名，方便按 ant-design 的心智迁移写法',
+    description: 'direction 的别名，方便按常见业务组件的迁移写法',
     type: 'horizontal | vertical',
     defaultValue: '-',
   },
@@ -895,7 +897,8 @@ const TimelineDemo: FC = () => {
         <h1>Timeline 时间线</h1>
         <p className="text-sm mt-3 mb-3">
           Timeline 用于按时间顺序串起一组事件、阶段或发布动作。Rue 现在同时支持手写 children
-          布局和更接近 ant-design 心智的 items 数据 API；旧页里的 demo 标题与排列也继续保留，避免增强时把历史示例吞掉。
+          布局和更贴近业务组件心智的 items 数据 API；旧页里的 demo
+          标题与排列也继续保留，避免增强时把历史示例吞掉。
         </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/timeline/" target="_blank" rel="noreferrer">
@@ -978,7 +981,12 @@ const TimelineDemo: FC = () => {
           summary="这是新增的数据 API 组合场景：mode 控制主内容侧，reverse 反转顺序，pending 追加等待节点。"
           tab={tabDataApi}
           preview={() => (
-            <Timeline mode="alternate" reverse pending="质量复核中" items={createPendingTimelineItems()} />
+            <Timeline
+              mode="alternate"
+              reverse
+              pending="质量复核中"
+              items={createPendingTimelineItems()}
+            />
           )}
           code={dataApiCode}
         />
@@ -1043,7 +1051,13 @@ const TimelineDemo: FC = () => {
           title="纵向：不同侧交替"
           summary="在纵向模式下配合 mode=alternate，可以做更有节奏感的发布轨迹或品牌时间线。"
           tab={tabVDifferentSides}
-          preview={() => <Timeline orientation="vertical" mode="alternate" items={createEnhancedTimelineItems()} />}
+          preview={() => (
+            <Timeline
+              orientation="vertical"
+              mode="alternate"
+              items={createEnhancedTimelineItems()}
+            />
+          )}
           code={verticalAlternateCode}
         />
 
@@ -1060,14 +1074,21 @@ const TimelineDemo: FC = () => {
           summary="snapIcon 和 compact 组合后，更适合侧栏式或审计日志式的紧凑纵向布局。"
           tab={tabSnapStart}
           preview={() => (
-            <Timeline orientation="vertical" compact snapIcon items={snapTimelineItems} className="max-w-2xl" />
+            <Timeline
+              orientation="vertical"
+              compact
+              snapIcon
+              items={snapTimelineItems}
+              className="max-w-2xl"
+            />
           )}
           code={snapStartCode}
         />
 
         <h2>增强能力</h2>
         <p className="text-sm opacity-80">
-          这一组集中放数据 API 的新增组合场景，例如 `reverse`、`pending`、`mode` 等，更适合业务数据直接驱动。
+          这一组集中放数据 API 的新增组合场景，例如 `reverse`、`pending`、`mode`
+          等，更适合业务数据直接驱动。
         </p>
 
         <ExampleBlock
@@ -1075,7 +1096,12 @@ const TimelineDemo: FC = () => {
           summary="这是新增的数据 API 组合场景：mode 控制主内容侧，reverse 反转顺序，pending 追加等待节点。"
           tab={tabDataApi}
           preview={() => (
-            <Timeline mode="alternate" reverse pending="质量复核中" items={createPendingTimelineItems()} />
+            <Timeline
+              mode="alternate"
+              reverse
+              pending="质量复核中"
+              items={createPendingTimelineItems()}
+            />
           )}
           code={dataApiCode}
         />
@@ -1083,8 +1109,8 @@ const TimelineDemo: FC = () => {
         <div className="my-10 lg:my-14">
           <h2>API</h2>
           <p className="text-sm leading-6 opacity-70">
-            推荐优先使用 items 进行数据驱动渲染；当你需要极细粒度地控制每个节点结构时，再回到
-            Start / Middle / End 组合方式。
+            推荐优先使用 items 进行数据驱动渲染；当你需要极细粒度地控制每个节点结构时，再回到 Start
+            / Middle / End 组合方式。
           </p>
           <h3 className="mt-6">Timeline</h3>
           <ApiTable rows={timelineApiRows} />

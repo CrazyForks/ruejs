@@ -26,7 +26,9 @@ const findTab = (root: ParentNode, label: string) =>
   ) ?? null
 
 const findButton = (root: ParentNode, label: string, index = 0) =>
-  Array.from(root.querySelectorAll('button')).filter(button => button.textContent?.trim() === label)[index] ?? null
+  Array.from(root.querySelectorAll('button')).filter(
+    button => button.textContent?.trim() === label,
+  )[index] ?? null
 
 afterEach(() => {
   document.body.innerHTML = ''

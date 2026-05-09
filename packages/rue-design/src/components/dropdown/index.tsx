@@ -1,10 +1,20 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Dropdown 组件概述
 - 保留 Rue 当前的 daisyUI 原生结构能力：details / popover / focus 三类写法继续可用。
 - 同时补齐更接近成熟组件库的增强 API：menu/items、trigger、open/defaultOpen、popupRender。
 - 视觉仍沿用 Rue 当前的 dropdown 基底，只做交互与组织能力增强。
 */
-import { Slot, getCurrentInstance, h, onMounted, onUnmounted, ref, watch, type FC } from '@rue-js/rue'
+import {
+  Slot,
+  getCurrentInstance,
+  h,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+  type FC,
+} from '@rue-js/rue'
 import Menu from '../menu/index'
 import type { MenuClickInfo, MenuDataEntry, MenuProps } from '../menu/index'
 
@@ -326,7 +336,10 @@ const Trigger: FC<DropdownTriggerProps> = ({ as = 'div', className, style, child
     triggerProps.onKeyDown = (event: KeyboardEvent) => {
       if (userOnKeyDown) userOnKeyDown(event)
       if (event.defaultPrevented) return
-      if ((event.key === 'Enter' || event.key === ' ') && event.currentTarget instanceof HTMLElement) {
+      if (
+        (event.key === 'Enter' || event.key === ' ') &&
+        event.currentTarget instanceof HTMLElement
+      ) {
         if (typeof event.preventDefault === 'function') event.preventDefault()
         event.currentTarget.click()
       }
@@ -367,7 +380,8 @@ const Dropdown: FC<DropdownProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const slotSource = ((getCurrentInstance() as { propsRO?: Record<string, unknown> } | null)?.propsRO ?? {
+  const slotSource = ((getCurrentInstance() as { propsRO?: Record<string, unknown> } | null)
+    ?.propsRO ?? {
     children,
   }) as Record<string, unknown>
   const mergedArrow = arrow ?? false
@@ -431,12 +445,13 @@ const Dropdown: FC<DropdownProps> = ({
   const currentOpen = ref(open ?? defaultOpen ?? false)
   const currentTriggers = ref(normalizeTrigger(trigger))
   const contextPosition = ref<{ x: number; y: number } | null>(null)
-  const menuConfig: DropdownMenuProps | undefined = menu || items
-    ? {
-        ...(menu ?? {}),
-        items: items ?? menu?.items,
-      }
-    : undefined
+  const menuConfig: DropdownMenuProps | undefined =
+    menu || items
+      ? {
+          ...menu,
+          items: items ?? menu?.items,
+        }
+      : undefined
 
   let rootElement: HTMLElement | null = null
   let triggerElement: HTMLElement | null = null
@@ -513,7 +528,7 @@ const Dropdown: FC<DropdownProps> = ({
 
   watch(
     () => trigger,
-    nextTrigger => {
+    (nextTrigger: DropdownProps['trigger']) => {
       currentTriggers.value = normalizeTrigger(nextTrigger)
     },
     { immediate: true },
@@ -524,7 +539,8 @@ const Dropdown: FC<DropdownProps> = ({
 
     const handleWindowClick = (event: MouseEvent) => {
       if (!currentOpen.value) return
-      const allowOutsideClose = currentTriggers.value.includes('click') || currentTriggers.value.includes('contextMenu')
+      const allowOutsideClose =
+        currentTriggers.value.includes('click') || currentTriggers.value.includes('contextMenu')
       if (!allowOutsideClose) return
       if (rootElement?.contains(event.target as Node)) return
       requestOpenChange(false, 'outside')
@@ -547,26 +563,35 @@ const Dropdown: FC<DropdownProps> = ({
   const allowHover = currentTriggers.value.includes('hover')
   const allowClick = currentTriggers.value.includes('click')
   const allowContextMenu = currentTriggers.value.includes('contextMenu')
-  const overlaySourceNode = menuConfig?.items && menuConfig.items.length > 0
-    ? (
-        <Menu
-          {...menuConfig}
-          items={menuConfig.items}
-          selectable={menuConfig.selectable ?? false}
-          className={mergeClassNames('w-full min-w-56 rounded-box bg-transparent p-0', classNames?.menu, menuConfig.className)}
-          style={mergeStyleValue(menuConfig.style, styles?.menu) || undefined}
-          onClick={(info: MenuClickInfo) => {
-            if (menuConfig.onClick) menuConfig.onClick(info)
-            if (mergedCloseOnClick) requestOpenChange(false, 'menu')
-          }}
-        />
-      )
-    : overlay !== undefined
-      ? overlay
-      : content
+  const overlaySourceNode =
+    menuConfig?.items && menuConfig.items.length > 0 ? (
+      <Menu
+        {...menuConfig}
+        items={menuConfig.items}
+        selectable={menuConfig.selectable ?? false}
+        className={mergeClassNames(
+          'w-full min-w-56 rounded-box bg-transparent p-0',
+          classNames?.menu,
+          menuConfig.className,
+        )}
+        style={mergeStyleValue(menuConfig.style, styles?.menu) || undefined}
+        onClick={(info: MenuClickInfo) => {
+          if (menuConfig.onClick) menuConfig.onClick(info)
+          if (mergedCloseOnClick) requestOpenChange(false, 'menu')
+        }}
+      />
+    ) : overlay !== undefined ? (
+      overlay
+    ) : (
+      content
+    )
 
   const renderedOverlayChildren = popupRender ? popupRender(overlaySourceNode) : overlaySourceNode
-  const hasOverlay = childSlots.contentNode || renderedOverlayChildren !== undefined && renderedOverlayChildren !== null && renderedOverlayChildren !== false
+  const hasOverlay =
+    childSlots.contentNode ||
+    (renderedOverlayChildren !== undefined &&
+      renderedOverlayChildren !== null &&
+      renderedOverlayChildren !== false)
 
   let cls = 'dropdown'
   if (resolvedAlign) cls += ` dropdown-${resolvedAlign}`
@@ -578,21 +603,24 @@ const Dropdown: FC<DropdownProps> = ({
   if (className) cls += ` ${className}`
 
   const rootStyle = mergeStyleValue(style, styles?.root) || undefined
-  const overlayStyleValue = mergeStyleValue(
-    childSlots.contentNode ? undefined : mergeStyles(
-      styles?.overlay,
-      overlayStyle,
-      contextPosition.value
-        ? {
-            position: 'fixed',
-            inset: 'auto auto auto auto',
-            left: `${contextPosition.value.x}px`,
-            top: `${contextPosition.value.y}px`,
-          }
-        : undefined,
-    ),
-    undefined,
-  ) || undefined
+  const overlayStyleValue =
+    mergeStyleValue(
+      childSlots.contentNode
+        ? undefined
+        : mergeStyles(
+            styles?.overlay,
+            overlayStyle,
+            contextPosition.value
+              ? {
+                  position: 'fixed',
+                  inset: 'auto auto auto auto',
+                  left: `${contextPosition.value.x}px`,
+                  top: `${contextPosition.value.y}px`,
+                }
+              : undefined,
+          ),
+      undefined,
+    ) || undefined
 
   const overlayClass = mergeClassNames(
     childSlots.contentNode
@@ -606,66 +634,64 @@ const Dropdown: FC<DropdownProps> = ({
     overlayClassName,
   )
 
-  const overlayNode = childSlots.contentNode
-    ? patchVNodeProps(childSlots.contentNode, {
-        key: 'overlay',
-        className: overlayClass,
-        ref: (element: HTMLElement | null) => {
-          overlayElement = element
-          syncOverlayDom()
-        },
-        style: mergeStyles(
-          overlayStyle,
-          styles?.overlay,
-          contextPosition.value
-            ? {
-                position: 'fixed',
-                inset: 'auto auto auto auto',
-                left: `${contextPosition.value.x}px`,
-                top: `${contextPosition.value.y}px`,
-              }
-            : undefined,
-        ),
-      })
-    : (
-        <Content
-          key="overlay"
-          className={overlayClass}
-          style={overlayStyleValue}
-          ref={(element: HTMLElement | null) => {
-            overlayElement = element
-            syncOverlayDom()
-          }}
-          onClick={(event: MouseEvent) => {
-            if (!menuConfig?.items?.length || !mergedCloseOnClick) return
-            const clickable = (event.target as HTMLElement | null)?.closest?.('a,button,[role="menuitem"]')
-            if (!clickable) return
-            const parentLi = clickable.closest('li')
-            const hasNestedSubmenu = !!parentLi && Array.from(parentLi.children).some(child => child.tagName === 'UL')
-            if (!hasNestedSubmenu) {
-              requestOpenChange(false, 'menu')
+  const overlayNode = childSlots.contentNode ? (
+    patchVNodeProps(childSlots.contentNode, {
+      key: 'overlay',
+      className: overlayClass,
+      ref: (element: HTMLElement | null) => {
+        overlayElement = element
+        syncOverlayDom()
+      },
+      style: mergeStyles(
+        overlayStyle,
+        styles?.overlay,
+        contextPosition.value
+          ? {
+              position: 'fixed',
+              inset: 'auto auto auto auto',
+              left: `${contextPosition.value.x}px`,
+              top: `${contextPosition.value.y}px`,
             }
-          }}
-        >
-          {mergedArrow ? (
-            <span
-              aria-hidden="true"
-              className={mergeClassNames(
-                'pointer-events-none absolute z-[-1] h-2.5 w-2.5 rotate-45 border border-base-300/60 bg-base-100',
-                getArrowClassName(resolvedDirection, resolvedAlign),
-              )}
-            />
-          ) : null}
-          {renderedOverlayChildren}
-        </Content>
-      )
+          : undefined,
+      ),
+    })
+  ) : (
+    <Content
+      key="overlay"
+      className={overlayClass}
+      style={overlayStyleValue}
+      ref={(element: HTMLElement | null) => {
+        overlayElement = element
+        syncOverlayDom()
+      }}
+      onClick={(event: MouseEvent) => {
+        if (!menuConfig?.items?.length || !mergedCloseOnClick) return
+        const clickable = (event.target as HTMLElement | null)?.closest?.(
+          'a,button,[role="menuitem"]',
+        )
+        if (!clickable) return
+        const parentLi = clickable.closest('li')
+        const hasNestedSubmenu =
+          !!parentLi && Array.from(parentLi.children).some(child => child.tagName === 'UL')
+        if (!hasNestedSubmenu) {
+          requestOpenChange(false, 'menu')
+        }
+      }}
+    >
+      {mergedArrow ? (
+        <span
+          aria-hidden="true"
+          className={mergeClassNames(
+            'pointer-events-none absolute z-[-1] h-2.5 w-2.5 rotate-45 border border-base-300/60 bg-base-100',
+            getArrowClassName(resolvedDirection, resolvedAlign),
+          )}
+        />
+      ) : null}
+      {renderedOverlayChildren}
+    </Content>
+  )
 
-  const {
-    onMouseEnter,
-    onMouseLeave,
-    onKeyDown,
-    ...domProps
-  } = rest
+  const { onMouseEnter, onMouseLeave, onKeyDown, ...domProps } = rest
 
   return renderAsComponent(
     Component,

@@ -338,8 +338,9 @@ const StatusDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Status 状态列表</h1>
         <p className="text-sm mt-3 mb-3">
-          Status 现在既能保留 Rue 原来的状态点写法，也能像轻量 Badge 一样包裹内容，统一承载 dot、count、text、
-          overflowCount 和 offset。不传 children 时，它会自动切到独立的 label/badge 模式；传入 children 后，则变成右上角角标。
+          Status 现在既能保留 Rue 原来的状态点写法，也能像轻量 Badge 一样包裹内容，统一承载
+          dot、count、text、 overflowCount 和 offset。不传 children 时，它会自动切到独立的
+          label/badge 模式；传入 children 后，则变成右上角角标。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -500,7 +501,10 @@ const StatusDemo: FC = () => {
         />
 
         <h2 id="status-api">API</h2>
-        <p>Status 只有一个根组件，但会根据是否传入 children 自动切换成独立状态模式或包裹内容的角标模式。</p>
+        <p>
+          Status 只有一个根组件，但会根据是否传入 children
+          自动切换成独立状态模式或包裹内容的角标模式。
+        </p>
 
         <ApiTable rows={statusApiRows} />
 
@@ -508,7 +512,9 @@ const StatusDemo: FC = () => {
           <div className="font-semibold">模式选择建议</div>
           <div className="mt-2 grid gap-2 md:grid-cols-2">
             <div>不传 children 适合单独状态点、带文案的 label，以及独立数字/点状提示。</div>
-            <div>传 children 适合给按钮、卡片、入口块挂角标，并继续使用 count、dot、offset 等能力。</div>
+            <div>
+              传 children 适合给按钮、卡片、入口块挂角标，并继续使用 count、dot、offset 等能力。
+            </div>
           </div>
         </div>
 
@@ -519,12 +525,15 @@ const StatusDemo: FC = () => {
 
         <h3>为什么有时候会显示成一条 label，而不是右上角角标？</h3>
         <p>
-          当你传入 text，但没有传 children 时，Status 会自动用独立模式渲染成“状态点/数字 + 文案”的一条说明。只有传入 children
-          后，才会切到右上角挂载角标的模式。
+          当你传入 text，但没有传 children 时，Status 会自动用独立模式渲染成“状态点/数字 +
+          文案”的一条说明。只有传入 children 后，才会切到右上角挂载角标的模式。
         </p>
 
         <h3>count 为 0 时为什么默认不显示？</h3>
-        <p>这是为了保持和常见 badge 组件一致的默认行为。如果业务上需要明确展示 0，加上 showZero 即可。</p>
+        <p>
+          这是为了保持和常见 badge 组件一致的默认行为。如果业务上需要明确展示 0，加上 showZero
+          即可。
+        </p>
       </div>
     </SidebarPlayground>
   )

@@ -1,9 +1,10 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Timeline 组件概述
 - 保留 Rue 当前基于 daisyUI timeline 的视觉结构，不额外引入样式文件。
 - 同时提供两套使用方式：
   1. 现有的 Start / Middle / End 复合槽位写法。
-  2. 更接近 ant-design Timeline 的数据驱动 items API。
+  2. 更接近数据驱动 items API。
 - 数据驱动模式补齐了常用能力：mode、reverse、pending、icon、loading、color、title/content。
 */
 import { h, type FC } from '@rue-js/rue'
@@ -161,7 +162,10 @@ const LoadingDot: FC<{ className?: string }> = ({ className }) => {
 }
 
 const resolveLineClassName = (item: TimelineItemProps) => {
-  return joinClassName(item.lineClassName, item.color ? SEMANTIC_LINE_CLASS_MAP[item.color] : undefined)
+  return joinClassName(
+    item.lineClassName,
+    item.color ? SEMANTIC_LINE_CLASS_MAP[item.color] : undefined,
+  )
 }
 
 const resolveLineStyle = (item: TimelineItemProps) => {
@@ -172,7 +176,10 @@ const resolveLineStyle = (item: TimelineItemProps) => {
   }
 }
 
-const resolveMiddlePresentation = (item: TimelineItemProps, autoMode: boolean): TimelineMiddlePart | undefined => {
+const resolveMiddlePresentation = (
+  item: TimelineItemProps,
+  autoMode: boolean,
+): TimelineMiddlePart | undefined => {
   const semanticColorClass = item.color ? SEMANTIC_TEXT_CLASS_MAP[item.color] : undefined
   const middleClassName = joinClassName(item.iconClassName, semanticColorClass)
 
@@ -195,7 +202,11 @@ const resolveMiddlePresentation = (item: TimelineItemProps, autoMode: boolean): 
   if (item.color && !SEMANTIC_TEXT_CLASS_MAP[item.color]) {
     return {
       className: item.iconClassName,
-      content: <span style={{ color: item.color }}><DefaultDot /></span>,
+      content: (
+        <span style={{ color: item.color }}>
+          <DefaultDot />
+        </span>
+      ),
     }
   }
   if (autoMode) {
@@ -322,7 +333,9 @@ const renderTimelineItem = (item: TimelineRenderedItem, index: number) => {
           {item.start.content}
         </Start>
       ) : null}
-      {item.middle ? <Middle className={item.middle.className}>{item.middle.content}</Middle> : null}
+      {item.middle ? (
+        <Middle className={item.middle.className}>{item.middle.content}</Middle>
+      ) : null}
       {item.end ? (
         <End box={item.end.box} className={item.end.className}>
           {item.end.content}

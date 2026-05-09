@@ -26,7 +26,9 @@ const findTab = (root: ParentNode, label: string) =>
   ) ?? null
 
 const findButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === label) ?? null
+  Array.from(root.querySelectorAll('button')).find(
+    button => button.textContent?.trim() === label,
+  ) ?? null
 
 const findSection = (root: ParentNode, heading: string) =>
   Array.from(root.querySelectorAll('section.space-y-3')).find(section =>
@@ -73,6 +75,8 @@ describe('VPreAndRPre actual page', () => {
 
     await click(findTab(container, '代码'))
 
-    expect(container.querySelectorAll('div.rounded-box.border.border-dashed.border-base-300.p-4')).toHaveLength(0)
+    expect(
+      container.querySelectorAll('div.rounded-box.border.border-dashed.border-base-300.p-4'),
+    ).toHaveLength(0)
   })
 })

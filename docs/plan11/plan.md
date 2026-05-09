@@ -23,13 +23,13 @@ Plan 11 不再围绕 no-compat 协议收口扫尾，而是把剩余 compat 子�
 ## 阶段拆分
 
 1. [Phase 1: 类型拆层与主干定型](./phase-1-types-boundary.md)
-	先处理 [packages/runtime-vapor/src/runtime/types.rs](../../packages/runtime-vapor/src/runtime/types.rs) 及其相邻导出，把双模类型拆成 core shape 和显式 compat overlay。
+   先处理 [packages/runtime-vapor/src/runtime/types.rs](../../packages/runtime-vapor/src/runtime/types.rs) 及其相邻导出，把双模类型拆成 core shape 和显式 compat overlay。
 2. [Phase 2: Patch 边界收口](./phase-2-patch-boundary.md)
-	处理 [packages/runtime-vapor/src/runtime/render_patch/mod.rs](../../packages/runtime-vapor/src/runtime/render_patch/mod.rs)、[packages/runtime-vapor/src/runtime/render_patch/replace.rs](../../packages/runtime-vapor/src/runtime/render_patch/replace.rs)、[packages/runtime-vapor/src/runtime/render_patch/children.rs](../../packages/runtime-vapor/src/runtime/render_patch/children.rs) 一组 compat patch 逻辑。
+   处理 [packages/runtime-vapor/src/runtime/render_patch/mod.rs](../../packages/runtime-vapor/src/runtime/render_patch/mod.rs)、[packages/runtime-vapor/src/runtime/render_patch/replace.rs](../../packages/runtime-vapor/src/runtime/render_patch/replace.rs)、[packages/runtime-vapor/src/runtime/render_patch/children.rs](../../packages/runtime-vapor/src/runtime/render_patch/children.rs) 一组 compat patch 逻辑。
 3. [Phase 3: 输入桥接收束](./phase-3-input-bridge.md)
-	处理 [packages/runtime-vapor/src/runtime/bridge/input.rs](../../packages/runtime-vapor/src/runtime/bridge/input.rs)、[packages/runtime-vapor/src/runtime/bridge/create_element.rs](../../packages/runtime-vapor/src/runtime/bridge/create_element.rs)、[packages/runtime-vapor/src/runtime/bridge/create_element/create_element_helpers.rs](../../packages/runtime-vapor/src/runtime/bridge/create_element/create_element_helpers.rs) 等旧输入协议入口。
+   处理 [packages/runtime-vapor/src/runtime/bridge/input.rs](../../packages/runtime-vapor/src/runtime/bridge/input.rs)、[packages/runtime-vapor/src/runtime/bridge/create_element.rs](../../packages/runtime-vapor/src/runtime/bridge/create_element.rs)、[packages/runtime-vapor/src/runtime/bridge/create_element/create_element_helpers.rs](../../packages/runtime-vapor/src/runtime/bridge/create_element/create_element_helpers.rs) 等旧输入协议入口。
 4. [Phase 4: 纯 compat 模块外提准备](./phase-4-compat-extraction.md)
-	把 [packages/runtime-vapor/src/runtime/real_dom/element.rs](../../packages/runtime-vapor/src/runtime/real_dom/element.rs) 和 [packages/runtime-vapor/src/runtime/real_dom/fragment.rs](../../packages/runtime-vapor/src/runtime/real_dom/fragment.rs) 这类纯 compat 模块收成可外提边界。
+   把 [packages/runtime-vapor/src/runtime/real_dom/element.rs](../../packages/runtime-vapor/src/runtime/real_dom/element.rs) 和 [packages/runtime-vapor/src/runtime/real_dom/fragment.rs](../../packages/runtime-vapor/src/runtime/real_dom/fragment.rs) 这类纯 compat 模块收成可外提边界。
 
 ## 建议执行顺序
 

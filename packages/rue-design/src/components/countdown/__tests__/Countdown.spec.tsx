@@ -8,8 +8,10 @@ const waitCountdownRender = async () => {
   await Promise.resolve()
 }
 
-const getCountdownValue = (element: Element) => (element as HTMLElement).getAttribute('data-countdown-value') ?? ''
-const getCountdownDigits = (element: Element) => (element as HTMLElement).getAttribute('data-countdown-digits') ?? ''
+const getCountdownValue = (element: Element) =>
+  (element as HTMLElement).getAttribute('data-countdown-value') ?? ''
+const getCountdownDigits = (element: Element) =>
+  (element as HTMLElement).getAttribute('data-countdown-digits') ?? ''
 
 afterEach(() => {
   vi.useRealTimers()

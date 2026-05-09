@@ -12,7 +12,16 @@ interface ApiRow {
 }
 
 const values = [0, 10, 40, 70, 100]
-const colors = ['neutral', 'primary', 'secondary', 'accent', 'info', 'success', 'warning', 'error'] as const
+const colors = [
+  'neutral',
+  'primary',
+  'secondary',
+  'accent',
+  'info',
+  'success',
+  'warning',
+  'error',
+] as const
 
 const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
   return (
@@ -116,7 +125,8 @@ const DynamicProgressPreview: FC = () => {
         <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wide text-primary">交互建议</div>
           <p className="mt-2 mb-0 text-sm text-base-content/70">
-            用 <code>percent</code> 驱动增强模式；旧场景仍可继续传 <code>value/max</code> 保持原生语义。
+            用 <code>percent</code> 驱动增强模式；旧场景仍可继续传 <code>value/max</code>{' '}
+            保持原生语义。
           </p>
         </div>
       </div>
@@ -127,7 +137,8 @@ const DynamicProgressPreview: FC = () => {
 const progressApiRows: ApiRow[] = [
   {
     prop: 'percent / value + max',
-    description: '增强模式推荐使用 percent；旧场景仍兼容 value + max，并在简单场景下继续渲染原生 progress。',
+    description:
+      '增强模式推荐使用 percent；旧场景仍兼容 value + max，并在简单场景下继续渲染原生 progress。',
     type: 'number',
     defaultValue: '-',
   },
@@ -222,9 +233,10 @@ const ProgressPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Progress 进度条</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue Progress 继续保留原生 <code>progress</code> 的轻量入口，同时补齐更接近 ant-design 的核心能力：
-          支持 <code>line</code>、<code>circle</code>、<code>dashboard</code>、<code>status</code>、
-          <code>showInfo</code>、<code>format</code>、<code>success</code> 和 <code>steps</code>。
+          Rue Progress 继续保留原生 <code>progress</code> 的轻量入口，同时补齐更贴近成熟业务组件
+          的核心能力： 支持 <code>line</code>、<code>circle</code>、<code>dashboard</code>、
+          <code>status</code>、<code>showInfo</code>、<code>format</code>、<code>success</code> 和{' '}
+          <code>steps</code>。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -235,21 +247,27 @@ const ProgressPage: FC = () => {
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-primary">兼容优先</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-primary">
+              兼容优先
+            </div>
             <div className="mt-2 text-sm font-medium">旧的 value / max 继续可用</div>
             <p className="mt-2 text-sm opacity-70">
               最简单的用法仍直接输出原生 <code>progress</code>，已有页面不用重写。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">形态补齐</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              形态补齐
+            </div>
             <div className="mt-2 text-sm font-medium">line、circle、dashboard 一次补齐</div>
             <p className="mt-2 text-sm opacity-70">
               同一套 API 在不同形态间切换，便于把列表、卡片和概览页统一起来。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-accent">信息增强</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-accent">
+              信息增强
+            </div>
             <div className="mt-2 text-sm font-medium">支持状态、步骤、成功段与自定义文案</div>
             <p className="mt-2 text-sm opacity-70">
               不只是展示百分比，也能表达异常、已完成比例和阶段式进度。
@@ -279,7 +297,9 @@ const ProgressPage: FC = () => {
             <div className="grid gap-4 md:grid-cols-2">
               {colors.map(color => (
                 <div key={color} className="space-y-2">
-                  <div className="text-xs uppercase tracking-wide text-base-content/60">{color}</div>
+                  <div className="text-xs uppercase tracking-wide text-base-content/60">
+                    {color}
+                  </div>
                   <Progress color={color} value={70} max={100} className="w-full" />
                 </div>
               ))}
@@ -311,17 +331,28 @@ const ProgressPage: FC = () => {
                 <Progress percent={72} status="active" className="w-full" />
               </div>
               <div className="space-y-2">
-                <div className="text-xs uppercase tracking-wide text-base-content/60">success split</div>
+                <div className="text-xs uppercase tracking-wide text-base-content/60">
+                  success split
+                </div>
                 <Progress
                   percent={78}
                   success={{ percent: 46 }}
                   className="w-full"
-                  format={(percentValue, successValue) => `${successValue}% 已完成 / ${percentValue}% 总进度`}
+                  format={(percentValue, successValue) =>
+                    `${successValue}% 已完成 / ${percentValue}% 总进度`
+                  }
                 />
               </div>
               <div className="space-y-2">
-                <div className="text-xs uppercase tracking-wide text-base-content/60">exception</div>
-                <Progress percent={54} status="exception" className="w-full" strokeColor="#f97316" />
+                <div className="text-xs uppercase tracking-wide text-base-content/60">
+                  exception
+                </div>
+                <Progress
+                  percent={54}
+                  status="exception"
+                  className="w-full"
+                  strokeColor="#f97316"
+                />
               </div>
             </div>
           )}
@@ -390,23 +421,33 @@ const ProgressPage: FC = () => {
           preview={() => (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-box border border-base-300 bg-base-100 p-5 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">circle</div>
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  circle
+                </div>
                 <Progress type="circle" percent={75} />
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-5 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">small</div>
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  small
+                </div>
                 <Progress type="circle" percent={48} size="small" strokeWidth={10} />
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-5 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">dashboard</div>
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  dashboard
+                </div>
                 <Progress type="dashboard" percent={66} gapDegree={86} strokeColor="#8b5cf6" />
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-5 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">custom content</div>
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  custom content
+                </div>
                 <Progress type="circle" percent={92} size={136}>
                   <div className="space-y-1">
                     <div className="text-xl font-semibold leading-none">92%</div>
-                    <div className="text-[11px] uppercase tracking-wide text-base-content/55">healthy</div>
+                    <div className="text-[11px] uppercase tracking-wide text-base-content/55">
+                      healthy
+                    </div>
                   </div>
                 </Progress>
               </div>
@@ -447,8 +488,16 @@ const ProgressPage: FC = () => {
                 />
               </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-5 text-center shadow-sm">
-                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">circle steps</div>
-                <Progress type="circle" percent={60} steps={{ count: 8, gap: 4 }} size={152} strokeWidth={8} />
+                <div className="mb-4 text-xs uppercase tracking-wide text-base-content/60">
+                  circle steps
+                </div>
+                <Progress
+                  type="circle"
+                  percent={60}
+                  steps={{ count: 8, gap: 4 }}
+                  size={152}
+                  strokeWidth={8}
+                />
               </div>
             </div>
           )}
@@ -494,8 +543,9 @@ const shape = ref<'line' | 'circle' | 'dashboard'>('line')
 
         <h2>API</h2>
         <p>
-          <code>Progress</code> 在简单场景下兼容原生条形写法；进入增强模式后，统一由 <code>type</code>、<code>status</code>、
-          <code>showInfo</code>、<code>success</code> 和 <code>steps</code> 这些属性驱动。
+          <code>Progress</code> 在简单场景下兼容原生条形写法；进入增强模式后，统一由{' '}
+          <code>type</code>、<code>status</code>、<code>showInfo</code>、<code>success</code> 和{' '}
+          <code>steps</code> 这些属性驱动。
         </p>
 
         <h3>通用属性</h3>

@@ -200,7 +200,7 @@ export function scanEnums() {
 }
 
 /**
- * @returns {[import('rollup').Plugin, Record<string, string>]}
+ * @returns {[import('vite').Plugin, Record<string, string>]}
  */
 export function inlineEnums() {
   if (!existsSync(ENUM_CACHE_PATH)) {
@@ -215,10 +215,14 @@ export function inlineEnums() {
   //    3.1 files w/ enum declaration: rewrite declaration as object literal
   //    3.2 files using enum: inject into esbuild define
   /**
-   * @type {import('rollup').Plugin}
+   * @type {import('vite').Plugin}
    */
   const plugin = {
     name: 'inline-enum',
+    /**
+     * @param {string} code
+     * @param {string} id
+     */
     transform(code, id) {
       /**
        * @type {MagicString | undefined}

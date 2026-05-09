@@ -5,7 +5,9 @@ import SimpleComponent from '../../../app/pages/examples/SimpleComponent'
 import { click, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
-  default: (props: { children?: unknown }) => <div data-testid="mock-sidebar-example">{props.children}</div>,
+  default: (props: { children?: unknown }) => (
+    <div data-testid="mock-sidebar-example">{props.children}</div>
+  ),
 }))
 
 vi.mock('../../../app/pages/site/components/Code', () => ({
@@ -36,7 +38,9 @@ describe('SimpleComponent actual page', () => {
 
     await waitForContent(() => {
       expect(container.textContent).toContain('简单组件（移植自 Vue）')
-      const items = Array.from(container.querySelectorAll('li')).map(item => item.textContent?.trim())
+      const items = Array.from(container.querySelectorAll('li')).map(item =>
+        item.textContent?.trim(),
+      )
       expect(items).toEqual(['Vegetables', 'Cheese', 'Whatever else humans are supposed to eat'])
       expect(findTab(container, '效果')?.className).toContain('tab-active')
     })

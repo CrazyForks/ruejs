@@ -56,9 +56,15 @@ describe('Select', () => {
     )
 
     await waitForContent(() => {
-      const element = container.querySelector('[data-testid="select-variants"]') as HTMLSelectElement
-      const aliasElement = container.querySelector('[data-testid="select-size-alias"]') as HTMLSelectElement
-      const nativeSizeElement = container.querySelector('[data-testid="select-native-size"]') as HTMLSelectElement
+      const element = container.querySelector(
+        '[data-testid="select-variants"]',
+      ) as HTMLSelectElement
+      const aliasElement = container.querySelector(
+        '[data-testid="select-size-alias"]',
+      ) as HTMLSelectElement
+      const nativeSizeElement = container.querySelector(
+        '[data-testid="select-native-size"]',
+      ) as HTMLSelectElement
       expect(element.classList.contains('select-primary')).toBe(true)
       expect(element.classList.contains('select-ghost')).toBe(true)
       expect(element.classList.contains('select-lg')).toBe(true)
@@ -88,7 +94,13 @@ describe('Select', () => {
             titleText: 'System language',
           },
         ]}
-        fieldNames={{ label: 'text', value: 'id', options: 'items', groupLabel: 'name', title: 'titleText' }}
+        fieldNames={{
+          label: 'text',
+          value: 'id',
+          options: 'items',
+          groupLabel: 'name',
+          title: 'titleText',
+        }}
         data-testid="select-options"
       />,
       container,
@@ -135,7 +147,9 @@ describe('Select', () => {
       const shell = container.querySelector('[data-rue-select-root="true"]') as HTMLDivElement
       const element = container.querySelector('[data-testid="select-shell"]') as HTMLSelectElement
       const button = container.querySelector('button[aria-label="清空选择"]') as HTMLButtonElement
-      const suffix = container.querySelector('[data-testid="select-shell-suffix"]') as HTMLSpanElement
+      const suffix = container.querySelector(
+        '[data-testid="select-shell-suffix"]',
+      ) as HTMLSpanElement
       expect(shell).toBeTruthy()
       expect(shell.classList.contains('input')).toBe(true)
       expect(shell.classList.contains('items-center')).toBe(true)
@@ -184,7 +198,9 @@ describe('Select', () => {
     )
 
     await waitForContent(() => {
-      const element = container.querySelector('[data-testid="select-semantic"]') as HTMLSelectElement
+      const element = container.querySelector(
+        '[data-testid="select-semantic"]',
+      ) as HTMLSelectElement
       expect(element.value).toBe('amber')
     })
 
@@ -235,7 +251,9 @@ describe('Select', () => {
 
     await waitForContent(() => {
       const trigger = container.querySelector('[data-rue-select-trigger="true"]') as HTMLDivElement
-      const element = container.querySelector('[data-testid="select-compact-multiple"]') as HTMLSelectElement
+      const element = container.querySelector(
+        '[data-testid="select-compact-multiple"]',
+      ) as HTMLSelectElement
       const popup = container.querySelector('[data-rue-select-popup="true"]') as HTMLDivElement
       expect(trigger).toBeTruthy()
       expect(trigger.textContent).toContain('Jack')
@@ -244,7 +262,10 @@ describe('Select', () => {
       expect(popup.getAttribute('aria-hidden')).toBe('true')
       expect(element.multiple).toBe(true)
       expect(element.getAttribute('size')).toBeNull()
-      expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual(['jack', 'lucy'])
+      expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual([
+        'jack',
+        'lucy',
+      ])
     })
 
     const trigger = container.querySelector('[data-rue-select-trigger="true"]') as HTMLDivElement
@@ -281,29 +302,46 @@ describe('Select', () => {
       expect(popup.hidden).toBe(false)
     })
 
-    const optionButton = container.querySelector('button[data-rue-select-option="yiminghe"]') as HTMLButtonElement
+    const optionButton = container.querySelector(
+      'button[data-rue-select-option="yiminghe"]',
+    ) as HTMLButtonElement
     optionButton.click()
 
     await waitForContent(() => {
       const popup = container.querySelector('[data-rue-select-popup="true"]') as HTMLDivElement
-      const element = container.querySelector('[data-testid="select-compact-multiple"]') as HTMLSelectElement
-      const currentTrigger = container.querySelector('[data-rue-select-trigger="true"]') as HTMLDivElement
+      const element = container.querySelector(
+        '[data-testid="select-compact-multiple"]',
+      ) as HTMLSelectElement
+      const currentTrigger = container.querySelector(
+        '[data-rue-select-trigger="true"]',
+      ) as HTMLDivElement
       expect(popup).toBeTruthy()
       expect(popup.hidden).toBe(false)
       expect(popup.getAttribute('aria-hidden')).toBe('false')
-      expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual(['jack', 'lucy', 'yiminghe'])
+      expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual([
+        'jack',
+        'lucy',
+        'yiminghe',
+      ])
       expect(currentTrigger.textContent).toContain('yiminghe')
     })
 
-    const lucyButton = container.querySelector('button[data-rue-select-option="lucy"]') as HTMLButtonElement
+    const lucyButton = container.querySelector(
+      'button[data-rue-select-option="lucy"]',
+    ) as HTMLButtonElement
     lucyButton.click()
 
     await waitForContent(() => {
       const popup = container.querySelector('[data-rue-select-popup="true"]') as HTMLDivElement
-      const element = container.querySelector('[data-testid="select-compact-multiple"]') as HTMLSelectElement
+      const element = container.querySelector(
+        '[data-testid="select-compact-multiple"]',
+      ) as HTMLSelectElement
       expect(popup.hidden).toBe(false)
       expect(popup.getAttribute('aria-hidden')).toBe('false')
-      expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual(['jack', 'yiminghe'])
+      expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual([
+        'jack',
+        'yiminghe',
+      ])
     })
   })
 
@@ -346,17 +384,27 @@ describe('Select', () => {
       expect(popup.getAttribute('aria-hidden')).toBe('false')
     })
 
-    const optionButton = container.querySelector('button[data-rue-select-option="yiminghe"]') as HTMLButtonElement
+    const optionButton = container.querySelector(
+      'button[data-rue-select-option="yiminghe"]',
+    ) as HTMLButtonElement
     optionButton.click()
     renderControlled(['jack', 'lucy', 'yiminghe'])
 
     await waitForContent(() => {
       const popup = container.querySelector('[data-rue-select-popup="true"]') as HTMLDivElement
-      const element = container.querySelector('[data-testid="select-controlled-compact-multiple"]') as HTMLSelectElement
-      const currentTrigger = container.querySelector('[data-rue-select-trigger="true"]') as HTMLDivElement
+      const element = container.querySelector(
+        '[data-testid="select-controlled-compact-multiple"]',
+      ) as HTMLSelectElement
+      const currentTrigger = container.querySelector(
+        '[data-rue-select-trigger="true"]',
+      ) as HTMLDivElement
       expect(popup.hidden).toBe(false)
       expect(popup.getAttribute('aria-hidden')).toBe('false')
-      expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual(['jack', 'lucy', 'yiminghe'])
+      expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual([
+        'jack',
+        'lucy',
+        'yiminghe',
+      ])
       expect(currentTrigger.textContent).toContain('yiminghe')
     })
 
@@ -388,8 +436,12 @@ describe('Select', () => {
     )
 
     await waitForContent(() => {
-      const element = container.querySelector('[data-testid="select-native-listbox"]') as HTMLSelectElement
-      const trigger = container.querySelector('[data-rue-select-trigger="true"]') as HTMLDivElement | null
+      const element = container.querySelector(
+        '[data-testid="select-native-listbox"]',
+      ) as HTMLSelectElement
+      const trigger = container.querySelector(
+        '[data-rue-select-trigger="true"]',
+      ) as HTMLDivElement | null
       expect(element.multiple).toBe(true)
       expect(element.getAttribute('size')).toBe('6')
       expect(trigger).toBeNull()
@@ -425,15 +477,26 @@ describe('Select', () => {
     const trigger = container.querySelector('[data-rue-select-trigger="true"]') as HTMLDivElement
     trigger.click()
 
-    const designButton = container.querySelector('button[data-rue-select-option="design"]') as HTMLButtonElement
-    const labsButton = container.querySelector('button[data-rue-select-option="labs"]') as HTMLButtonElement
+    const designButton = container.querySelector(
+      'button[data-rue-select-option="design"]',
+    ) as HTMLButtonElement
+    const labsButton = container.querySelector(
+      'button[data-rue-select-option="labs"]',
+    ) as HTMLButtonElement
     designButton.click()
     labsButton.click()
 
     await waitForContent(() => {
-      const element = container.querySelector('[data-testid="select-max-count"]') as HTMLSelectElement
-      const currentTrigger = container.querySelector('[data-rue-select-trigger="true"]') as HTMLDivElement
-      expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual(['release', 'design'])
+      const element = container.querySelector(
+        '[data-testid="select-max-count"]',
+      ) as HTMLSelectElement
+      const currentTrigger = container.querySelector(
+        '[data-rue-select-trigger="true"]',
+      ) as HTMLDivElement
+      expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual([
+        'release',
+        'design',
+      ])
       expect(handleValueChange).toHaveBeenCalledTimes(2)
       expect(handleValueChange.mock.calls[1]?.[0]).toEqual(['release', 'design'])
       expect(currentTrigger.textContent).not.toContain('Labs rollout')

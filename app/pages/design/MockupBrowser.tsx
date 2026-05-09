@@ -21,7 +21,6 @@ interface ApiRow {
   defaultValue: string
 }
 
-
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">
@@ -255,8 +254,9 @@ const MockupBrowserPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Mockup Browser 浏览器外框</h1>
         <p className="text-sm mt-3 mb-3">
-          MockupBrowser 保留 Rue 当前的浏览器外框视觉，同时补上推荐写法所需的地址栏、内容区和快捷工具栏 API。
-          原始 children 组合方式依然可用，适合需要完全自定义结构的场景。
+          MockupBrowser 保留 Rue
+          当前的浏览器外框视觉，同时补上推荐写法所需的地址栏、内容区和快捷工具栏 API。 原始 children
+          组合方式依然可用，适合需要完全自定义结构的场景。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -293,9 +293,13 @@ const MockupBrowserPage: FC = () => {
                 >
                   <div className="grid h-full md:grid-cols-[15rem_minmax(0,1fr)]">
                     <aside className="border-r border-base-300 bg-base-200/35 p-4">
-                      <div className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] opacity-60">Workspace</div>
+                      <div className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+                        Workspace
+                      </div>
                       <div className="space-y-2 text-sm">
-                        <div className="rounded-box bg-primary/10 px-3 py-2 font-medium text-primary">Overview</div>
+                        <div className="rounded-box bg-primary/10 px-3 py-2 font-medium text-primary">
+                          Overview
+                        </div>
                         <div className="rounded-box px-3 py-2">Releases</div>
                         <div className="rounded-box px-3 py-2">Assets</div>
                         <div className="rounded-box px-3 py-2">Team</div>
@@ -305,7 +309,9 @@ const MockupBrowserPage: FC = () => {
                       <div className="rounded-box border border-base-300 bg-base-100 p-4">
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <div className="text-xs uppercase tracking-[0.24em] opacity-60">Current sprint</div>
+                            <div className="text-xs uppercase tracking-[0.24em] opacity-60">
+                              Current sprint
+                            </div>
                             <div className="mt-1 text-lg font-semibold">Mockup Browser refresh</div>
                           </div>
                           <div className="badge badge-primary badge-outline">In review</div>
@@ -316,15 +322,21 @@ const MockupBrowserPage: FC = () => {
                       </div>
                       <div className="grid gap-4 md:grid-cols-3">
                         <div className="rounded-box border border-base-300 bg-base-100 p-4">
-                          <div className="text-xs uppercase tracking-[0.24em] opacity-60">Deploys</div>
+                          <div className="text-xs uppercase tracking-[0.24em] opacity-60">
+                            Deploys
+                          </div>
                           <div className="mt-2 text-2xl font-semibold">18</div>
                         </div>
                         <div className="rounded-box border border-base-300 bg-base-100 p-4">
-                          <div className="text-xs uppercase tracking-[0.24em] opacity-60">Latency</div>
+                          <div className="text-xs uppercase tracking-[0.24em] opacity-60">
+                            Latency
+                          </div>
                           <div className="mt-2 text-2xl font-semibold">124ms</div>
                         </div>
                         <div className="rounded-box border border-base-300 bg-base-100 p-4">
-                          <div className="text-xs uppercase tracking-[0.24em] opacity-60">Errors</div>
+                          <div className="text-xs uppercase tracking-[0.24em] opacity-60">
+                            Errors
+                          </div>
                           <div className="mt-2 text-2xl font-semibold">0.02%</div>
                         </div>
                       </div>
@@ -395,11 +407,16 @@ const MockupBrowserPage: FC = () => {
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body">
-                <MockupBrowser className="w-full border border-base-300" data-testid="mockup-browser-border">
+                <MockupBrowser
+                  className="w-full border border-base-300"
+                  data-testid="mockup-browser-border"
+                >
                   <MockupBrowser.Toolbar>
                     <div className="input">https://daisyui.com</div>
                   </MockupBrowser.Toolbar>
-                  <div className="grid h-80 place-content-center border-t border-base-300">Hello!</div>
+                  <div className="grid h-80 place-content-center border-t border-base-300">
+                    Hello!
+                  </div>
                 </MockupBrowser>
               </div>
             </div>
@@ -461,9 +478,15 @@ const MockupBrowserPage: FC = () => {
                       https://ruejs.org/docs/components/mockup-browser
                     </MockupBrowser.AddressBar>
                   </MockupBrowser.Toolbar>
-                  <MockupBrowser.Content background padding="md" className="grid gap-4 md:grid-cols-[18rem_minmax(0,1fr)]">
+                  <MockupBrowser.Content
+                    background
+                    padding="md"
+                    className="grid gap-4 md:grid-cols-[18rem_minmax(0,1fr)]"
+                  >
                     <div className="rounded-box border border-base-300 bg-base-100 p-4">
-                      <div className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] opacity-60">Outline</div>
+                      <div className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+                        Outline
+                      </div>
                       <div className="space-y-2 text-sm">
                         <div className="font-medium text-primary">Introduction</div>
                         <div>Recommended usage</div>
@@ -599,16 +622,24 @@ const MockupBrowserPage: FC = () => {
                   <MockupBrowser.Toolbar>
                     <MockupBrowser.AddressBar>https://ruejs.org/changelog</MockupBrowser.AddressBar>
                   </MockupBrowser.Toolbar>
-                  <MockupBrowser.Content background padding="lg" className="grid gap-4 md:grid-cols-2">
+                  <MockupBrowser.Content
+                    background
+                    padding="lg"
+                    className="grid gap-4 md:grid-cols-2"
+                  >
                     <div className="rounded-box border border-base-300 bg-base-100 p-4">
                       <div className="text-xs uppercase tracking-[0.24em] opacity-60">May</div>
                       <div className="mt-2 text-base font-semibold">Component refresh</div>
-                      <p className="mt-2 mb-0 text-sm opacity-75">Mockup Browser 新增地址栏和内容区语义 API。</p>
+                      <p className="mt-2 mb-0 text-sm opacity-75">
+                        Mockup Browser 新增地址栏和内容区语义 API。
+                      </p>
                     </div>
                     <div className="rounded-box border border-dashed border-base-300 p-4">
                       <div className="text-xs uppercase tracking-[0.24em] opacity-60">Next</div>
                       <div className="mt-2 text-base font-semibold">Design recipes</div>
-                      <p className="mt-2 mb-0 text-sm opacity-75">用组合页展示不同布局密度和数据卡片编排方式。</p>
+                      <p className="mt-2 mb-0 text-sm opacity-75">
+                        用组合页展示不同布局密度和数据卡片编排方式。
+                      </p>
                     </div>
                   </MockupBrowser.Content>
                 </MockupBrowser>
@@ -650,19 +681,29 @@ const MockupBrowserPage: FC = () => {
                   >
                     <div className="grid h-full gap-4 p-4">
                       <div className="rounded-box border border-base-300 bg-primary/8 p-4">
-                        <div className="text-xs uppercase tracking-[0.24em] opacity-60">Campaign</div>
+                        <div className="text-xs uppercase tracking-[0.24em] opacity-60">
+                          Campaign
+                        </div>
                         <div className="mt-2 text-lg font-semibold">Spring Launch</div>
-                        <p className="mt-2 mb-0 text-sm opacity-75">在一个浏览器壳层里展示编辑后台会更接近真实产品观感。</p>
+                        <p className="mt-2 mb-0 text-sm opacity-75">
+                          在一个浏览器壳层里展示编辑后台会更接近真实产品观感。
+                        </p>
                       </div>
                       <div className="grid gap-4 md:grid-cols-2">
-                        <div className="rounded-box border border-base-300 p-4 text-sm">Email sequences</div>
-                        <div className="rounded-box border border-base-300 p-4 text-sm">Asset approvals</div>
+                        <div className="rounded-box border border-base-300 p-4 text-sm">
+                          Email sequences
+                        </div>
+                        <div className="rounded-box border border-base-300 p-4 text-sm">
+                          Asset approvals
+                        </div>
                       </div>
                     </div>
                   </MockupBrowser>
 
                   <MockupBrowser bordered background className="w-full">
-                    <MockupBrowser.Toolbar end={<span className="badge badge-info badge-sm">Docs</span>}>
+                    <MockupBrowser.Toolbar
+                      end={<span className="badge badge-info badge-sm">Docs</span>}
+                    >
                       <MockupBrowser.AddressBar prefix={<span className="text-xs">Search</span>}>
                         https://ruejs.org/components/mockup-browser
                       </MockupBrowser.AddressBar>
@@ -784,12 +825,14 @@ const MockupBrowserPage: FC = () => {
         <h3>原来的 demo 写法会失效吗？</h3>
         <p>
           不会。原来的 <code>children + MockupBrowser.Toolbar</code> 结构仍然保留；当前页面里的
-          “browser mockup with border” 和 “browser mockup with background color” 就是旧写法的直接保留版。
+          “browser mockup with border” 和 “browser mockup with background color”
+          就是旧写法的直接保留版。
         </p>
 
         <h3>Content 和根节点上的 contentClassName 有什么区别？</h3>
         <p>
-          <code>contentClassName</code> 适合推荐写法，直接让根组件帮你包一层内容区；如果你还需要分别控制
+          <code>contentClassName</code>{' '}
+          适合推荐写法，直接让根组件帮你包一层内容区；如果你还需要分别控制
           <code>padding</code>、<code>background</code> 或自己拆更多节点，就更适合直接使用{' '}
           <code>MockupBrowser.Content</code>。
         </p>

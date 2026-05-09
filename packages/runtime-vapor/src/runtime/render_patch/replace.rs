@@ -375,8 +375,7 @@ where
                     );
                 }
                 MountedSubtreeState::Patch(node) => {
-                    if !self.replace_compat_patch(node, &el_new, &mut dest_parent, &insert_anchor)
-                    {
+                    if !self.replace_compat_patch(node, &el_new, &mut dest_parent, &insert_anchor) {
                         if matches!(
                             node.r#type,
                             super::super::types::MountedPatchSubtreeType::Component(_)

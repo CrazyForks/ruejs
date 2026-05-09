@@ -14,20 +14,13 @@ Rue 本身是用 TypeScript 编写的，并提供一流的 TypeScript 支持。�
 
 - 在开发期间，我们建议依赖良好的 [IDE 设置](#ide-support)来获取类型错误的即时反馈。
 
-- 如果使用 SFC，请使用 [`rue-tsc`](https://github.com/@rue-js/ruejs/language-tools/tree/master/packages/tsc) 工具进行命令行类型检查和类型声明生成。`rue-tsc` 是围绕 `tsc`（TypeScript 自己的命令行接口）的包装器。它的工作方式与 `tsc` 大致相同，但除了 TypeScript 文件外还支持 Rue SFC。你可以在并行于 Vite 开发服务器的情况下在监视模式下运行 `rue-tsc`，或使用像 [vite-plugin-checker](https://vite-plugin-checker.netlify.app/) 这样的 Vite 插件，它在单独的 worker 线程中运行检查。
-
-- Rue CLI 也提供 TypeScript 支持，但不再推荐使用。参见[下面的说明](#note-on-rue-cli-and-ts-loader)。
+- 对于 TS/TSX 项目，以及本仓库当前的命令行类型检查脚本，我们统一使用 `tsgo`。你可以在并行于 Vite 开发服务器的情况下在监视模式下运行 `rue-tsc`，或使用像 [vite-plugin-checker](https://vite-plugin-checker.netlify.app/) 这样的 Vite 插件，它在单独的 worker 线程中运行检查。
 
 ### IDE 支持 {#ide-support}
 
 - [Visual Studio Code](https://code.visualstudio.com/)（VS Code）因其出色的 TypeScript 开箱即用支持而强烈推荐。
-  - [Rue - 官方](https://marketplace.visualstudio.com/items?itemName=Rue.rueolar)（以前称为 Volar）是官方 VS Code 扩展，为 Rue SFC 中的 TypeScript 提供支持，以及许多其他强大功能。
 
-    :::tip
-    Rue - 官方扩展取代了 [Vetur](https://marketplace.visualstudio.com/items?itemName=octref.vetur)，我们之前的 Rue 2 官方 VS Code 扩展。如果你当前安装了 Vetur，请确保在 Rue 3 项目中禁用它。
-    :::
-
-- [WebStorm](https://www.jetbrains.com/webstorm/) 也为 TypeScript 和 Rue 提供开箱即用支持。其他 JetBrains IDE 也支持它们，开箱即用或通过[免费插件](https://plugins.jetbrains.com/plugin/9442-@rue-js/rue)。从 2023.2 版本开始，WebStorm 和 Rue 插件内置支持 Rue 语言服务器。你可以在设置 > 语言和框架 > TypeScript > Rue 下将 Rue 服务设置为在所有 TypeScript 版本上使用 Volar 集成。默认情况下，Volar 将用于 TypeScript 5.0 及更高版本。
+- [WebStorm](https://www.jetbrains.com/webstorm/) 也为 TypeScript 提供开箱即用支持。
 
 ### 配置 `tsconfig.json` {#configuring-tsconfig-json}
 
@@ -52,13 +45,13 @@ Rue 本身是用 TypeScript 编写的，并提供一流的 TypeScript 支持。�
 
 在基于 webpack 的设置（如 Rue CLI）中，通常将类型检查作为模块转换管道的一部分执行，例如使用 `ts-loader`。然而，这不是一个干净的解决方案，因为类型系统需要整个模块图的知识来执行类型检查。单个模块的转换步骤根本不是完成此任务的正确位置。它导致以下问题：
 
-- `ts-loader` 只能对转换后的代码进行类型检查。这与我们在 IDE 或从 `rue-tsc` 看到的错误不一致，后者直接映射回源代码。
+- `ts-loader` 只能对转换后的代码进行类型检查。这与我们在 IDE、`tsgo` 或 `rue-tsc` 看到的错误不一致，后者直接映射回源代码。
 
 - 类型检查可能很慢。当它与代码转换在同一线程/进程中执行时，会显著影响整个应用程序的构建速度。
 
 - 我们已经在 IDE 中的单独进程中运行类型检查，因此开发者体验变慢的成本根本不是一个好的权衡。
 
-如果你当前通过 Rue CLI 使用 Rue 3 + TypeScript，我们强烈建议迁移到 Vite。我们也在研究启用仅转译 TS 支持的 CLI 选项，以便你可以切换到 `rue-tsc` 进行类型检查。
+如果你当前通过 Rue CLI 使用 Rue 3 + TypeScript，我们强烈建议迁移到 Vite。我们也在研究启用仅转译 TS 支持的 CLI 选项，以便你可以根据场景切换到 `rue-tsc`（SFC）或 `tsgo`（纯 TS/TSX）进行类型检查。
 
 ## 一般使用说明 {#general-usage-notes}
 

@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Select 组件概述
 - 默认保持原生 select 语义与浏览器下拉行为；只有在传入前后缀、附加说明或清空能力时，才增加轻量 shell 包裹。
@@ -121,8 +122,16 @@ export interface SelectProps {
     value: SelectValue | SelectValue[] | SelectLabeledValue | SelectLabeledValue[] | null,
     context: SelectChangeContext,
   ) => void
-  onSelect?: (value: SelectValue | SelectLabeledValue, option: SelectResolvedOption, event: Event) => void
-  onDeselect?: (value: SelectValue | SelectLabeledValue, option: SelectResolvedOption, event: Event) => void
+  onSelect?: (
+    value: SelectValue | SelectLabeledValue,
+    option: SelectResolvedOption,
+    event: Event,
+  ) => void
+  onDeselect?: (
+    value: SelectValue | SelectLabeledValue,
+    option: SelectResolvedOption,
+    event: Event,
+  ) => void
   rootClassName?: string
   selectClassName?: string
   className?: string
@@ -302,7 +311,9 @@ const flattenDataOptions = (
     const groupLabel = parentGroupLabel ?? readOptionField(option, 'groupLabel', fieldNames)
 
     if (Array.isArray(nestedOptions)) {
-      const nextGroupLabel = readOptionField(option, 'groupLabel', fieldNames) ?? readOptionField(option, 'label', fieldNames)
+      const nextGroupLabel =
+        readOptionField(option, 'groupLabel', fieldNames) ??
+        readOptionField(option, 'label', fieldNames)
       return flattenDataOptions(nestedOptions, fieldNames, optionPath, nextGroupLabel)
     }
 
@@ -349,9 +360,16 @@ const renderDataOptions = (
     const disabled = readOptionField(option, 'disabled', fieldNames)
 
     if (Array.isArray(nestedOptions)) {
-      const groupLabel = readOptionField(option, 'groupLabel', fieldNames) ?? readOptionField(option, 'label', fieldNames)
+      const groupLabel =
+        readOptionField(option, 'groupLabel', fieldNames) ??
+        readOptionField(option, 'label', fieldNames)
       return (
-        <optgroup key={optionPath} label={String(groupLabel ?? '')} className={className} title={title}>
+        <optgroup
+          key={optionPath}
+          label={String(groupLabel ?? '')}
+          className={className}
+          title={title}
+        >
           {renderDataOptions(nestedOptions, fieldNames, optionPath)}
         </optgroup>
       )
@@ -402,13 +420,13 @@ const resolveCompactOpenRestoreKey = (root?: Element | null): string | null => {
   let current: Element | null = root
 
   while (current && current !== document.body) {
-    const parent = current.parentElement
-    if (!parent) {
+    const parentElement: HTMLElement | null = current.parentElement
+    if (!parentElement) {
       return null
     }
 
-    segments.push(Array.from(parent.children).indexOf(current))
-    current = parent
+    segments.push(Array.from(parentElement.children).indexOf(current))
+    current = parentElement
   }
 
   if (current !== document.body) {
@@ -427,7 +445,11 @@ const resolveCompactOpenPersistenceKey = (
   selectClassName?: string,
 ) => {
   const explicitKey =
-    nativeProps.id ?? nativeProps.name ?? nativeProps['data-testid'] ?? nativeProps['aria-label'] ?? nativeProps.title
+    nativeProps.id ??
+    nativeProps.name ??
+    nativeProps['data-testid'] ??
+    nativeProps['aria-label'] ??
+    nativeProps.title
 
   if (explicitKey !== undefined && explicitKey !== null && explicitKey !== '') {
     return `prop:${String(explicitKey)}`
@@ -438,9 +460,12 @@ const resolveCompactOpenPersistenceKey = (
   }
 
   const optionFingerprint = flattenDataOptions(options, fieldNames)
-    .map(option => `${String(option.groupLabel ?? '')}>${String(option.value ?? option.label ?? '')}`)
+    .map(
+      option => `${String(option.groupLabel ?? '')}>${String(option.value ?? option.label ?? '')}`,
+    )
     .join('|')
-  const placeholderKey = placeholder !== undefined && placeholder !== null ? String(placeholder) : ''
+  const placeholderKey =
+    placeholder !== undefined && placeholder !== null ? String(placeholder) : ''
   const classKey = [className, selectClassName].filter(Boolean).join('|')
   return `options:${placeholderKey}:${classKey}:${optionFingerprint}`
 }
@@ -550,14 +575,16 @@ const buildChangeState = (
   const values = resolvedOptions.map(option => option.value)
   const labels = resolvedOptions.map(option => option.label)
   const semanticValues = labelInValue
-    ? selectedOptions.map(option => toLabeledValue(option, optionMetaMap[option.value], optionLabelProp))
+    ? selectedOptions.map(option =>
+        toLabeledValue(option, optionMetaMap[option.value], optionLabelProp),
+      )
     : values
 
   return {
     values,
     labels,
     options: resolvedOptions,
-    payload: select.multiple ? semanticValues : semanticValues[0] ?? null,
+    payload: select.multiple ? semanticValues : (semanticValues[0] ?? null),
   }
 }
 
@@ -577,7 +604,11 @@ const clampSelectionToMaxCount = (
 
   const keptValues: string[] = []
   currentValues.forEach(value => {
-    if (previousValues.includes(value) && !keptValues.includes(value) && keptValues.length < maxCount) {
+    if (
+      previousValues.includes(value) &&
+      !keptValues.includes(value) &&
+      keptValues.length < maxCount
+    ) {
       keptValues.push(value)
     }
   })
@@ -597,7 +628,9 @@ const clampSelectionToMaxCount = (
 }
 
 const findOptionElementByValue = (select: HTMLSelectElement, value: string) => {
-  return Array.from(select.options).find(option => option.value === value) as HTMLOptionElement | undefined
+  return Array.from(select.options).find(option => option.value === value) as
+    | HTMLOptionElement
+    | undefined
 }
 
 const normalizeSelectValues = (value?: SelectRawValue) => {
@@ -754,7 +787,9 @@ const SelectRoot: FC<SelectProps> = ({
     ? flattenDataOptions(options!, fieldNames).map(option => toResolvedOptionFromFlat(option))
     : []
   const compactRenderVersion = ref(0)
-  const compactSelectedValues = ref<string[]>(normalizeSelectValues(value !== undefined ? value : defaultValue))
+  const compactSelectedValues = ref<string[]>(
+    normalizeSelectValues(value !== undefined ? value : defaultValue),
+  )
   const compactResolvedOptions = ref<SelectResolvedOption[]>(initialCompactResolvedOptions)
   const mergedDisabled = !!disabled || !!loading
   const isNativeMultiple = !!multiple
@@ -764,9 +799,18 @@ const SelectRoot: FC<SelectProps> = ({
   const shouldRenderListbox = isNativeMultiple || isListboxSize(nativeSizeValue)
   const useCompactMultiple = isEnhancedMultiple && !shouldRenderListbox
   const compactPersistenceKey = useCompactMultiple
-    ? resolveCompactOpenPersistenceKey(nativeProps, options, fieldNames, placeholder, className, selectClassName)
+    ? resolveCompactOpenPersistenceKey(
+        nativeProps,
+        options,
+        fieldNames,
+        placeholder,
+        className,
+        selectClassName,
+      )
     : null
-  const compactOpenRef = useRef(compactPersistenceKey !== null && pendingCompactOpenRestoreKey === compactPersistenceKey)
+  const compactOpenRef = useRef(
+    compactPersistenceKey !== null && pendingCompactOpenRestoreKey === compactPersistenceKey,
+  )
   const hasShellDecorators =
     prefix !== undefined ||
     suffix !== undefined ||
@@ -801,13 +845,17 @@ const SelectRoot: FC<SelectProps> = ({
       return
     }
 
-    markPendingCompactOpenRestore(compactPersistenceKey ?? resolveCompactOpenRestoreKey(rootRef.current))
+    markPendingCompactOpenRestore(
+      compactPersistenceKey ?? resolveCompactOpenRestoreKey(rootRef.current),
+    )
   }
 
   const restorePendingCompactOpen = () => {
     if (
       !useCompactMultiple ||
-      !consumePendingCompactOpenRestore(compactPersistenceKey ?? resolveCompactOpenRestoreKey(rootRef.current))
+      !consumePendingCompactOpenRestore(
+        compactPersistenceKey ?? resolveCompactOpenRestoreKey(rootRef.current),
+      )
     ) {
       return
     }
@@ -842,7 +890,8 @@ const SelectRoot: FC<SelectProps> = ({
     selectedOptions.forEach(option => {
       const optionValue = String(option.value)
       const chip = document.createElement('span')
-      chip.className = 'inline-flex max-w-full items-center gap-1 rounded-md bg-base-200 px-2 py-1 text-xs text-base-content'
+      chip.className =
+        'inline-flex max-w-full items-center gap-1 rounded-md bg-base-200 px-2 py-1 text-xs text-base-content'
 
       const labelNode = document.createElement('span')
       labelNode.className = 'truncate'
@@ -944,7 +993,9 @@ const SelectRoot: FC<SelectProps> = ({
 
   const syncSelectedSnapshot = () => {
     if (!selectRef.current) return
-    previousSelectedValuesRef.current = Array.from(selectRef.current.selectedOptions).map(option => option.value)
+    previousSelectedValuesRef.current = Array.from(selectRef.current.selectedOptions).map(
+      option => option.value,
+    )
   }
 
   const emitSemanticCallbacks = (event: Event) => {
@@ -1168,9 +1219,17 @@ const SelectRoot: FC<SelectProps> = ({
     },
   )
 
-  const baseSelectClassName = buildSelectClassName(color, status, variant, size, uiSize, ghost, className)
+  const baseSelectClassName = buildSelectClassName(
+    color,
+    status,
+    variant,
+    size,
+    uiSize,
+    ghost,
+    className,
+  )
   const shellClassName = buildShellClassName(color, status, variant, size, uiSize, ghost, className)
-  const resolvedArrow = showArrow ? suffixIcon ?? <DefaultChevron /> : suffixIcon
+  const resolvedArrow = showArrow ? (suffixIcon ?? <DefaultChevron />) : suffixIcon
   const compactSelectedOptions = getCompactSelectedOptions()
   const compactGroups = groupResolvedOptions(compactResolvedOptions.value)
 
@@ -1188,13 +1247,16 @@ const SelectRoot: FC<SelectProps> = ({
       aria-busy={loading ? 'true' : undefined}
       className={
         useCompactMultiple
-          ? mergeClassName('pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0', selectClassName)
-          : useShell
           ? mergeClassName(
-              'min-w-0 grow appearance-none border-none bg-transparent pr-1 text-base-content outline-none',
+              'pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0',
               selectClassName,
             )
-          : mergeClassName(baseSelectClassName, selectClassName)
+          : useShell
+            ? mergeClassName(
+                'min-w-0 grow appearance-none border-none bg-transparent pr-1 text-base-content outline-none',
+                selectClassName,
+              )
+            : mergeClassName(baseSelectClassName, selectClassName)
       }
       onChange={handleChange}
     >
@@ -1204,8 +1266,12 @@ const SelectRoot: FC<SelectProps> = ({
         </option>
       ) : null}
       {renderedOptions}
-      {loading && !hasOptions && !hasChildren ? <option disabled={true}>{loadingOptionContent}</option> : null}
-      {!loading && !hasOptions && !hasChildren ? <option disabled={true}>{emptyOptionContent}</option> : null}
+      {loading && !hasOptions && !hasChildren ? (
+        <option disabled={true}>{loadingOptionContent}</option>
+      ) : null}
+      {!loading && !hasOptions && !hasChildren ? (
+        <option disabled={true}>{emptyOptionContent}</option>
+      ) : null}
     </select>
   )
 
@@ -1237,9 +1303,16 @@ const SelectRoot: FC<SelectProps> = ({
           onClick={handleCompactTriggerClick}
           onKeyDown={handleCompactTriggerKeyDown}
         >
-          {addonBefore !== undefined ? <span className="shrink-0 text-sm text-base-content/60">{addonBefore}</span> : null}
-          {prefix !== undefined ? <span className="shrink-0 text-sm text-base-content/60">{prefix}</span> : null}
-          <div ref={compactValueAreaRef} className="flex min-w-0 flex-1 flex-wrap items-center gap-1" />
+          {addonBefore !== undefined ? (
+            <span className="shrink-0 text-sm text-base-content/60">{addonBefore}</span>
+          ) : null}
+          {prefix !== undefined ? (
+            <span className="shrink-0 text-sm text-base-content/60">{prefix}</span>
+          ) : null}
+          <div
+            ref={compactValueAreaRef}
+            className="flex min-w-0 flex-1 flex-wrap items-center gap-1"
+          />
           {!loading && allowClear && compactSelectedOptions.length ? (
             <button
               type="button"
@@ -1255,12 +1328,20 @@ const SelectRoot: FC<SelectProps> = ({
               ×
             </button>
           ) : null}
-          {loading ? <span className="loading loading-spinner loading-xs shrink-0" aria-hidden="true" /> : null}
-          {suffix !== undefined ? <span className="shrink-0 text-sm text-base-content/60">{suffix}</span> : null}
-          {resolvedArrow !== undefined && resolvedArrow !== null ? (
-            <span className="pointer-events-none flex shrink-0 items-center text-base-content/70">{resolvedArrow}</span>
+          {loading ? (
+            <span className="loading loading-spinner loading-xs shrink-0" aria-hidden="true" />
           ) : null}
-          {addonAfter !== undefined ? <span className="shrink-0 text-sm text-base-content/60">{addonAfter}</span> : null}
+          {suffix !== undefined ? (
+            <span className="shrink-0 text-sm text-base-content/60">{suffix}</span>
+          ) : null}
+          {resolvedArrow !== undefined && resolvedArrow !== null ? (
+            <span className="pointer-events-none flex shrink-0 items-center text-base-content/70">
+              {resolvedArrow}
+            </span>
+          ) : null}
+          {addonAfter !== undefined ? (
+            <span className="shrink-0 text-sm text-base-content/60">{addonAfter}</span>
+          ) : null}
         </div>
         <div
           ref={compactPopupRef}
@@ -1269,7 +1350,11 @@ const SelectRoot: FC<SelectProps> = ({
           aria-hidden={isCompactOpen() ? 'false' : 'true'}
           hidden={!isCompactOpen()}
         >
-          <div role="listbox" aria-multiselectable="true" className="max-h-72 space-y-2 overflow-auto">
+          <div
+            role="listbox"
+            aria-multiselectable="true"
+            className="max-h-72 space-y-2 overflow-auto"
+          >
             {compactGroups.map(group => (
               <div key={group.key} className="space-y-1">
                 {group.label !== undefined ? (
@@ -1300,7 +1385,12 @@ const SelectRoot: FC<SelectProps> = ({
                       }}
                     >
                       <span className="truncate">{option.label ?? option.value}</span>
-                      <span data-rue-select-check="true" className={selected ? 'opacity-100' : 'opacity-0'}>✓</span>
+                      <span
+                        data-rue-select-check="true"
+                        className={selected ? 'opacity-100' : 'opacity-0'}
+                      >
+                        ✓
+                      </span>
                     </button>
                   )
                 })}
@@ -1319,8 +1409,12 @@ const SelectRoot: FC<SelectProps> = ({
       data-rue-select-root="true"
       aria-disabled={mergedDisabled ? 'true' : undefined}
     >
-      {addonBefore !== undefined ? <span className="shrink-0 text-sm text-base-content/60">{addonBefore}</span> : null}
-      {prefix !== undefined ? <span className="shrink-0 text-sm text-base-content/60">{prefix}</span> : null}
+      {addonBefore !== undefined ? (
+        <span className="shrink-0 text-sm text-base-content/60">{addonBefore}</span>
+      ) : null}
+      {prefix !== undefined ? (
+        <span className="shrink-0 text-sm text-base-content/60">{prefix}</span>
+      ) : null}
       {selectNode}
       {!loading && allowClear ? (
         <button
@@ -1334,17 +1428,24 @@ const SelectRoot: FC<SelectProps> = ({
         </button>
       ) : null}
       {loading ? (
-        <span className="loading loading-spinner loading-xs shrink-0 self-center" aria-hidden="true" />
+        <span
+          className="loading loading-spinner loading-xs shrink-0 self-center"
+          aria-hidden="true"
+        />
       ) : null}
       {suffix !== undefined ? (
-        <span className="inline-flex shrink-0 items-center self-center text-sm text-base-content/60">{suffix}</span>
+        <span className="inline-flex shrink-0 items-center self-center text-sm text-base-content/60">
+          {suffix}
+        </span>
       ) : null}
       {resolvedArrow !== undefined && resolvedArrow !== null ? (
         <span className="pointer-events-none inline-flex shrink-0 items-center self-center text-base-content/70">
           {resolvedArrow}
         </span>
       ) : null}
-      {addonAfter !== undefined ? <span className="shrink-0 text-sm text-base-content/60">{addonAfter}</span> : null}
+      {addonAfter !== undefined ? (
+        <span className="shrink-0 text-sm text-base-content/60">{addonAfter}</span>
+      ) : null}
     </div>
   )
 }

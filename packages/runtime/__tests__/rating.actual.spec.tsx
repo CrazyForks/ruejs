@@ -34,19 +34,24 @@ describe('Rating actual page', () => {
     })
 
     const semanticDemo = () => findDemo(container, '# Semantic rating') as HTMLElement | null
-    const legacyAdvancedDemo = () => findDemo(container, '# Legacy clear and half') as HTMLElement | null
+    const legacyAdvancedDemo = () =>
+      findDemo(container, '# Legacy clear and half') as HTMLElement | null
 
     expect(semanticDemo()).not.toBeNull()
     expect(legacyAdvancedDemo()).not.toBeNull()
 
-    const fourStar = semanticDemo()!.querySelector('button[data-rating-index="3"]') as HTMLButtonElement
+    const fourStar = semanticDemo()!.querySelector(
+      'button[data-rating-index="3"]',
+    ) as HTMLButtonElement
     await click(fourStar)
 
     await waitForContent(() => {
       expect(semanticDemo()!.textContent).toContain('当前评分：4')
     })
 
-    const clear = legacyAdvancedDemo()!.querySelector('input[aria-label="clear"]') as HTMLInputElement
+    const clear = legacyAdvancedDemo()!.querySelector(
+      'input[aria-label="clear"]',
+    ) as HTMLInputElement
     clear.checked = true
     clear.dispatchEvent(new Event('change', { bubbles: true }))
 
@@ -54,10 +59,18 @@ describe('Rating actual page', () => {
       const updatedLegacyDemo = legacyAdvancedDemo() as HTMLElement | null
       expect(updatedLegacyDemo!.textContent).toContain('当前评分：clear')
       expect(updatedLegacyDemo!.querySelectorAll('.rating').length).toBe(2)
-      expect(updatedLegacyDemo!.querySelectorAll('.rating')[0]?.querySelectorAll('input[type="radio"]').length).toBe(6)
-      expect(updatedLegacyDemo!.querySelectorAll('.rating')[1]?.querySelectorAll('input[type="radio"]').length).toBe(11)
+      expect(
+        updatedLegacyDemo!.querySelectorAll('.rating')[0]?.querySelectorAll('input[type="radio"]')
+          .length,
+      ).toBe(6)
+      expect(
+        updatedLegacyDemo!.querySelectorAll('.rating')[1]?.querySelectorAll('input[type="radio"]')
+          .length,
+      ).toBe(11)
       expect(updatedLegacyDemo!.querySelectorAll('.rating')[1]?.className).toContain('rating-half')
-      expect(updatedLegacyDemo!.querySelector('input.mask.mask-star-2')?.className).toContain('opacity-[0.35]')
+      expect(updatedLegacyDemo!.querySelector('input.mask.mask-star-2')?.className).toContain(
+        'opacity-[0.35]',
+      )
     })
 
     await click(findTabButton(legacyAdvancedDemo()!, 'JSX代码'))
@@ -69,10 +82,16 @@ describe('Rating actual page', () => {
     await waitForContent(() => {
       const restored = legacyAdvancedDemo() as HTMLElement | null
       expect(restored!.querySelectorAll('.rating').length).toBe(2)
-      expect(restored!.querySelectorAll('.rating')[0]?.querySelectorAll('input[type="radio"]').length).toBe(6)
-      expect(restored!.querySelectorAll('.rating')[1]?.querySelectorAll('input[type="radio"]').length).toBe(11)
+      expect(
+        restored!.querySelectorAll('.rating')[0]?.querySelectorAll('input[type="radio"]').length,
+      ).toBe(6)
+      expect(
+        restored!.querySelectorAll('.rating')[1]?.querySelectorAll('input[type="radio"]').length,
+      ).toBe(11)
       expect(restored!.querySelectorAll('.rating')[1]?.className).toContain('rating-half')
-      expect(restored!.querySelector('input.mask.mask-star-2')?.className).toContain('opacity-[0.35]')
+      expect(restored!.querySelector('input.mask.mask-star-2')?.className).toContain(
+        'opacity-[0.35]',
+      )
     })
   })
 })

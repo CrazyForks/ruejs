@@ -78,7 +78,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'loading',
-    description: '在 body 区域显示 Skeleton，占位加载态与 Ant Design 一致使用骨架屏',
+    description: '在 body 区域显示 Skeleton，占位加载态使用骨架屏',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -244,7 +244,9 @@ const SizeBody: FC<{ size: DrawerSizeValue }> = ({ size }) => {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="badge badge-soft badge-secondary">尺寸 {size}</span>
-        <span className="opacity-70">预设尺寸适合通用抽屉，自定义尺寸适合信息密度更高的详情面板。</span>
+        <span className="opacity-70">
+          预设尺寸适合通用抽屉，自定义尺寸适合信息密度更高的详情面板。
+        </span>
       </div>
       <div className="grid gap-3">
         <div className="rounded-box border border-base-300 bg-base-100 p-4">
@@ -310,7 +312,10 @@ const DrawerPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Drawer 抽屉侧栏</h1>
         <p className="text-sm mt-3 mb-3">
-          DrawerSidebar 现在保留了 Rue 原本的 daisyUI compound 结构，同时补上更接近 Ant Design Drawer 的受控抽屉能力：四向打开、预设尺寸、标题栏扩展、底部操作区、Skeleton loading、mask 配置与当前容器内联渲染。
+          DrawerSidebar 现在保留了 Rue 原本的 daisyUI compound
+          结构，同时补上更贴近成熟业务抽屉组件的
+          受控能力：四向打开、预设尺寸、标题栏扩展、底部操作区、Skeleton loading、mask
+          配置与当前容器内联渲染。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -321,7 +326,8 @@ const DrawerPage: FC = () => {
 
         <div className="alert alert-soft alert-info not-prose mt-6">
           <span>
-            两种模式继续并存：<strong>compound 模式</strong> 适合原始 daisyUI drawer 结构；<strong>增强模式</strong> 适合详情、表单、预览和二级任务面板。
+            两种模式继续并存：<strong>compound 模式</strong> 适合原始 daisyUI drawer 结构；
+            <strong>增强模式</strong> 适合详情、表单、预览和二级任务面板。
           </span>
         </div>
 
@@ -341,16 +347,26 @@ const DrawerPage: FC = () => {
           preview={
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body">
-                <DrawerSidebar className="h-56 overflow-hidden rounded-box" data-testid="drawer-basic-root">
+                <DrawerSidebar
+                  className="h-56 overflow-hidden rounded-box"
+                  data-testid="drawer-basic-root"
+                >
                   <DrawerSidebar.Toggle id="drawer-basic" data-testid="drawer-basic-toggle" />
                   <DrawerSidebar.Content className="flex flex-col items-center justify-center">
-                    <label for="drawer-basic" className="btn drawer-button" data-testid="drawer-basic-open">
+                    <label
+                      for="drawer-basic"
+                      className="btn drawer-button"
+                      data-testid="drawer-basic-open"
+                    >
                       Open drawer
                     </label>
                   </DrawerSidebar.Content>
                   <DrawerSidebar.Side className="z-1002">
                     <DrawerSidebar.Overlay for="drawer-basic" aria-label="close sidebar" />
-                    <MenuList items={['Sidebar Item 1', 'Sidebar Item 2']} className="w-60 md:w-80" />
+                    <MenuList
+                      items={['Sidebar Item 1', 'Sidebar Item 2']}
+                      className="w-60 md:w-80"
+                    />
                   </DrawerSidebar.Side>
                 </DrawerSidebar>
               </div>
@@ -380,15 +396,23 @@ const DrawerPage: FC = () => {
                   <DrawerSidebar.Content className="flex flex-col">
                     <div className="navbar w-full bg-base-300">
                       <div className="flex-none lg:hidden">
-                        <label for="drawer-navbar" aria-label="open sidebar" className="btn btn-square btn-ghost">
+                        <label
+                          for="drawer-navbar"
+                          aria-label="open sidebar"
+                          className="btn btn-square btn-ghost"
+                        >
                           =
                         </label>
                       </div>
                       <div className="mx-2 flex-1 px-2">Navbar Title</div>
                       <div className="hidden flex-none lg:block">
                         <ul className="menu menu-horizontal">
-                          <li><button>Navbar Item 1</button></li>
-                          <li><button>Navbar Item 2</button></li>
+                          <li>
+                            <button>Navbar Item 1</button>
+                          </li>
+                          <li>
+                            <button>Navbar Item 2</button>
+                          </li>
                         </ul>
                       </div>
                     </div>
@@ -396,7 +420,10 @@ const DrawerPage: FC = () => {
                   </DrawerSidebar.Content>
                   <DrawerSidebar.Side className="z-1002">
                     <DrawerSidebar.Overlay for="drawer-navbar" aria-label="close sidebar" />
-                    <MenuList items={['Sidebar Item 1', 'Sidebar Item 2']} className="w-60 md:w-80" />
+                    <MenuList
+                      items={['Sidebar Item 1', 'Sidebar Item 2']}
+                      className="w-60 md:w-80"
+                    />
                   </DrawerSidebar.Side>
                 </DrawerSidebar>
               </div>
@@ -444,7 +471,10 @@ const DrawerPage: FC = () => {
                   </DrawerSidebar.Content>
                   <DrawerSidebar.Side className="max-lg:z-1002">
                     <DrawerSidebar.Overlay for="drawer-responsive" aria-label="close sidebar" />
-                    <MenuList items={['Sidebar Item 1', 'Sidebar Item 2']} className="w-60 md:w-80" />
+                    <MenuList
+                      items={['Sidebar Item 1', 'Sidebar Item 2']}
+                      className="w-60 md:w-80"
+                    />
                   </DrawerSidebar.Side>
                 </DrawerSidebar>
               </div>
@@ -471,11 +501,21 @@ const DrawerPage: FC = () => {
           preview={
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body">
-                <DrawerSidebar className="h-80 lg:drawer-open" data-testid="drawer-collapsible-root">
-                  <DrawerSidebar.Toggle id="drawer-collapsible" data-testid="drawer-collapsible-toggle" />
+                <DrawerSidebar
+                  className="h-80 lg:drawer-open"
+                  data-testid="drawer-collapsible-root"
+                >
+                  <DrawerSidebar.Toggle
+                    id="drawer-collapsible"
+                    data-testid="drawer-collapsible-toggle"
+                  />
                   <DrawerSidebar.Content>
                     <nav className="navbar w-full bg-base-300">
-                      <label for="drawer-collapsible" aria-label="open sidebar" className="btn btn-square btn-ghost">
+                      <label
+                        for="drawer-collapsible"
+                        aria-label="open sidebar"
+                        className="btn btn-square btn-ghost"
+                      >
                         ||
                       </label>
                       <div className="px-4">Navbar Title</div>
@@ -487,15 +527,19 @@ const DrawerPage: FC = () => {
                     <div className="flex min-h-full flex-col items-start bg-base-200 is-drawer-close:w-14 is-drawer-open:w-64">
                       <ul className="menu w-full grow">
                         <li>
-                          <button className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Homepage">
-                            H
-                            <span className="is-drawer-close:hidden">Homepage</span>
+                          <button
+                            className="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+                            data-tip="Homepage"
+                          >
+                            H<span className="is-drawer-close:hidden">Homepage</span>
                           </button>
                         </li>
                         <li>
-                          <button className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Settings">
-                            S
-                            <span className="is-drawer-close:hidden">Settings</span>
+                          <button
+                            className="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+                            data-tip="Settings"
+                          >
+                            S<span className="is-drawer-close:hidden">Settings</span>
                           </button>
                         </li>
                       </ul>
@@ -554,7 +598,10 @@ const DrawerPage: FC = () => {
                   </DrawerSidebar.Content>
                   <DrawerSidebar.Side className="z-1002">
                     <DrawerSidebar.Overlay for="drawer-right" aria-label="close sidebar" />
-                    <MenuList items={['Sidebar Item 1', 'Sidebar Item 2']} className="w-60 md:w-80" />
+                    <MenuList
+                      items={['Sidebar Item 1', 'Sidebar Item 2']}
+                      className="w-60 md:w-80"
+                    />
                   </DrawerSidebar.Side>
                 </DrawerSidebar>
               </div>
@@ -578,22 +625,35 @@ const DrawerPage: FC = () => {
 
         <PreviewBlock
           title="Controlled drawer with title, extra and footer"
-          summary="直接传 open/title/footer 进入增强模式，默认会以页面级抽屉打开，更接近 Ant Design Drawer 的使用方式。"
+          summary="直接传 open/title/footer 进入增强模式，默认会以页面级抽屉打开，更贴近常见业务抽屉的使用方式。"
           tab={tabs.controlled}
           preview={
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body gap-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button type="button" className="btn btn-primary btn-sm" onClick={() => { controlledOpen.value = true }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      controlledOpen.value = true
+                    }}
+                  >
                     打开编辑抽屉
                   </button>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => { controlledOpen.value = false }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      controlledOpen.value = false
+                    }}
+                  >
                     主动关闭
                   </button>
                 </div>
                 <div className="relative h-80 overflow-hidden rounded-box border border-base-300 bg-base-200/40">
                   <div className="flex h-full items-center justify-center px-6 text-center text-sm opacity-70">
-                    这里仍然只是预览舞台。点击按钮后会按默认行为从整个页面右侧打开；如果要限制在当前容器，再额外传入 inline。
+                    这里仍然只是预览舞台。点击按钮后会按默认行为从整个页面右侧打开；如果要限制在当前容器，再额外传入
+                    inline。
                   </div>
                   <DrawerSidebar
                     open={controlledOpen.value}
@@ -601,13 +661,23 @@ const DrawerPage: FC = () => {
                     extra={<span className="badge badge-outline">版本 v3</span>}
                     footer={
                       <div className="flex justify-end gap-2">
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { controlledOpen.value = false }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => {
+                            controlledOpen.value = false
+                          }}
+                        >
                           取消
                         </button>
-                        <button type="button" className="btn btn-primary btn-sm">保存更改</button>
+                        <button type="button" className="btn btn-primary btn-sm">
+                          保存更改
+                        </button>
                       </div>
                     }
-                    onOpenChange={nextOpen => { controlledOpen.value = nextOpen }}
+                    onOpenChange={nextOpen => {
+                      controlledOpen.value = nextOpen
+                    }}
                   >
                     <OrderEditorBody />
                   </DrawerSidebar>
@@ -661,14 +731,19 @@ const DrawerPage: FC = () => {
                 </div>
                 <div className="relative h-80 overflow-hidden rounded-box border border-base-300 bg-base-200/40">
                   <div className="flex h-full items-center justify-center px-6 text-center text-sm opacity-70">
-                    当前方向：{placementLabels[placement.value]}。点击上方按钮后，抽屉会从整个页面对应边缘打开。
+                    当前方向：{placementLabels[placement.value]}
+                    。点击上方按钮后，抽屉会从整个页面对应边缘打开。
                   </div>
                   <DrawerSidebar
                     open={placementOpen.value}
                     placement={placement.value}
-                    size={placement.value === 'top' || placement.value === 'bottom' ? '16rem' : '24rem'}
+                    size={
+                      placement.value === 'top' || placement.value === 'bottom' ? '16rem' : '24rem'
+                    }
                     title={`从${placementLabels[placement.value]}打开`}
-                    onOpenChange={nextOpen => { placementOpen.value = nextOpen }}
+                    onOpenChange={nextOpen => {
+                      placementOpen.value = nextOpen
+                    }}
                   >
                     <PlacementBody placement={placement.value} />
                   </DrawerSidebar>
@@ -704,43 +779,70 @@ const open = ref(false)
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body gap-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button type="button" className="btn btn-sm btn-outline" onClick={() => {
-                    sizeValue.value = 'default'
-                    sizeOpen.value = true
-                  }}>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline"
+                    onClick={() => {
+                      sizeValue.value = 'default'
+                      sizeOpen.value = true
+                    }}
+                  >
                     default
                   </button>
-                  <button type="button" className="btn btn-sm btn-outline" onClick={() => {
-                    sizeValue.value = 'large'
-                    sizeOpen.value = true
-                  }}>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline"
+                    onClick={() => {
+                      sizeValue.value = 'large'
+                      sizeOpen.value = true
+                    }}
+                  >
                     large
                   </button>
-                  <button type="button" className="btn btn-sm btn-outline" onClick={() => {
-                    sizeValue.value = '32rem'
-                    sizeOpen.value = true
-                  }}>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline"
+                    onClick={() => {
+                      sizeValue.value = '32rem'
+                      sizeOpen.value = true
+                    }}
+                  >
                     32rem
                   </button>
                 </div>
                 <div className="relative h-80 overflow-hidden rounded-box border border-base-300 bg-base-200/40">
                   <div className="flex h-full items-center justify-center px-6 text-center text-sm opacity-70">
-                    当前尺寸：{sizeValue.value}。点击按钮后会以全局抽屉展示，适合根据信息密度在“任务面板”和“详情抽屉”之间切换。
+                    当前尺寸：{sizeValue.value}
+                    。点击按钮后会以全局抽屉展示，适合根据信息密度在“任务面板”和“详情抽屉”之间切换。
                   </div>
                   <DrawerSidebar
                     open={sizeOpen.value}
                     size={sizeValue.value}
                     title="发布任务"
-                    extra={<button type="button" className="btn btn-ghost btn-xs">历史版本</button>}
+                    extra={
+                      <button type="button" className="btn btn-ghost btn-xs">
+                        历史版本
+                      </button>
+                    }
                     footer={
                       <div className="flex justify-end gap-2">
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { sizeOpen.value = false }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => {
+                            sizeOpen.value = false
+                          }}
+                        >
                           稍后处理
                         </button>
-                        <button type="button" className="btn btn-secondary btn-sm">开始发布</button>
+                        <button type="button" className="btn btn-secondary btn-sm">
+                          开始发布
+                        </button>
                       </div>
                     }
-                    onOpenChange={nextOpen => { sizeOpen.value = nextOpen }}
+                    onOpenChange={nextOpen => {
+                      sizeOpen.value = nextOpen
+                    }}
                   >
                     <SizeBody size={sizeValue.value} />
                   </DrawerSidebar>
@@ -779,7 +881,13 @@ const size = ref<DrawerSizeValue>('default')
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body gap-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button type="button" className="btn btn-primary btn-sm" onClick={() => { loadingOpen.value = true }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      loadingOpen.value = true
+                    }}
+                  >
                     打开加载抽屉
                   </button>
                 </div>
@@ -793,7 +901,9 @@ const size = ref<DrawerSizeValue>('default')
                     loading={true}
                     mask={{ blur: true }}
                     closable={{ placement: 'start' }}
-                    onOpenChange={nextOpen => { loadingOpen.value = nextOpen }}
+                    onOpenChange={nextOpen => {
+                      loadingOpen.value = nextOpen
+                    }}
                   >
                     <div>loading body</div>
                   </DrawerSidebar>
@@ -825,7 +935,13 @@ const size = ref<DrawerSizeValue>('default')
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body gap-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button type="button" className="btn btn-outline btn-sm" onClick={() => { masklessOpen.value = true }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => {
+                      masklessOpen.value = true
+                    }}
+                  >
                     打开辅助面板
                   </button>
                 </div>
@@ -840,7 +956,9 @@ const size = ref<DrawerSizeValue>('default')
                     mask={false}
                     keyboard={false}
                     size="22rem"
-                    onOpenChange={nextOpen => { masklessOpen.value = nextOpen }}
+                    onOpenChange={nextOpen => {
+                      masklessOpen.value = nextOpen
+                    }}
                   >
                     <NoMaskBody />
                   </DrawerSidebar>
@@ -867,8 +985,8 @@ const size = ref<DrawerSizeValue>('default')
 
         <h2>API</h2>
         <p className="text-sm mt-3 mb-3">
-          旧的 <code>Toggle</code>、<code>Content</code>、<code>Side</code>、<code>Overlay</code> 子组件全部保留。
-          下面的表格重点列出增强模式新增或更值得直接使用的顶层 API。
+          旧的 <code>Toggle</code>、<code>Content</code>、<code>Side</code>、<code>Overlay</code>{' '}
+          子组件全部保留。 下面的表格重点列出增强模式新增或更值得直接使用的顶层 API。
         </p>
 
         <ApiTable rows={apiRows} />

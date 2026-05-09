@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Status 组件概述
 - 保留 Rue 原有的 status dot 视觉，同时融合 badge 的 dot / count / text / offset / wrapper 能力。
@@ -111,7 +112,11 @@ const resolveCountSizeClass = (size?: StatusSize) => {
 const resolveToneClasses = (tone?: StatusTone) => {
   switch (tone) {
     case 'primary':
-      return { dotClass: 'status-primary', badgeClass: 'bg-primary text-primary-content', textClass: 'text-primary' }
+      return {
+        dotClass: 'status-primary',
+        badgeClass: 'bg-primary text-primary-content',
+        textClass: 'text-primary',
+      }
     case 'secondary':
       return {
         dotClass: 'status-secondary',
@@ -119,9 +124,17 @@ const resolveToneClasses = (tone?: StatusTone) => {
         textClass: 'text-secondary',
       }
     case 'accent':
-      return { dotClass: 'status-accent', badgeClass: 'bg-accent text-accent-content', textClass: 'text-accent' }
+      return {
+        dotClass: 'status-accent',
+        badgeClass: 'bg-accent text-accent-content',
+        textClass: 'text-accent',
+      }
     case 'info':
-      return { dotClass: 'status-info', badgeClass: 'bg-info text-info-content', textClass: 'text-info' }
+      return {
+        dotClass: 'status-info',
+        badgeClass: 'bg-info text-info-content',
+        textClass: 'text-info',
+      }
     case 'success':
       return {
         dotClass: 'status-success',
@@ -135,7 +148,11 @@ const resolveToneClasses = (tone?: StatusTone) => {
         textClass: 'text-warning',
       }
     case 'error':
-      return { dotClass: 'status-error', badgeClass: 'bg-error text-error-content', textClass: 'text-error' }
+      return {
+        dotClass: 'status-error',
+        badgeClass: 'bg-error text-error-content',
+        textClass: 'text-error',
+      }
     case 'neutral':
       return {
         dotClass: 'status-neutral',
@@ -143,7 +160,11 @@ const resolveToneClasses = (tone?: StatusTone) => {
         textClass: 'text-neutral',
       }
     default:
-      return { dotClass: '', badgeClass: 'bg-neutral text-neutral-content', textClass: 'text-base-content' }
+      return {
+        dotClass: '',
+        badgeClass: 'bg-neutral text-neutral-content',
+        textClass: 'text-base-content',
+      }
   }
 }
 
@@ -249,13 +270,16 @@ const Status: FC<StatusProps> = ({
   const showStandaloneIndicator = !hasChildren && hasText && (showAsDot || !ignoreCount)
   const processingClassName = status === 'processing' ? 'animate-pulse' : undefined
   const indicatorTitle =
-    title ?? (typeof displayCount === 'number' || typeof displayCount === 'string' ? `${displayCount}` : undefined)
+    title ??
+    (typeof displayCount === 'number' || typeof displayCount === 'string'
+      ? `${displayCount}`
+      : undefined)
 
   const renderRoot = (content: any, rootClassName?: string, rootStyle?: any) => {
     const common: Record<string, any> = {
       ...rest,
       className: mergeClassNames(rootClassName, className),
-      style: style || rootStyle ? { ...(style ?? {}), ...(rootStyle ?? {}) } : undefined,
+      style: style || rootStyle ? { ...style, ...rootStyle } : undefined,
     }
     if (ariaLabel !== undefined) {
       common['aria-label'] = ariaLabel
@@ -276,7 +300,9 @@ const Status: FC<StatusProps> = ({
           processingClassName,
           dotClassName,
         )}
-        style={customColor ? { backgroundColor: customColor, color: customColor, ...dotStyle } : dotStyle}
+        style={
+          customColor ? { backgroundColor: customColor, color: customColor, ...dotStyle } : dotStyle
+        }
         title={dotTitle}
       />
     )
@@ -291,7 +317,9 @@ const Status: FC<StatusProps> = ({
           toneClasses.badgeClass,
           countClassName,
         )}
-        style={customColor ? { backgroundColor: customColor, color: '#fff', ...countStyle } : countStyle}
+        style={
+          customColor ? { backgroundColor: customColor, color: '#fff', ...countStyle } : countStyle
+        }
         title={indicatorTitle}
       >
         {displayCount}
@@ -315,7 +343,10 @@ const Status: FC<StatusProps> = ({
 
   const textNode = showText ? (
     <span
-      className={mergeClassNames('text-sm leading-none', usesStatusLabelMode && !customColor ? toneClasses.textClass : undefined)}
+      className={mergeClassNames(
+        'text-sm leading-none',
+        usesStatusLabelMode && !customColor ? toneClasses.textClass : undefined,
+      )}
       style={usesStatusLabelMode && customColor ? { color: customColor } : undefined}
     >
       {text}
@@ -350,7 +381,13 @@ const Status: FC<StatusProps> = ({
 
   if (!hasChildren && (showAsDot || !hasExplicitCount)) {
     if (showStandaloneIndicator) {
-      return renderStandaloneIndicator(renderDot('indicator-item ring-2 ring-base-100 shadow-sm', indicatorOffsetStyle, indicatorTitle))
+      return renderStandaloneIndicator(
+        renderDot(
+          'indicator-item ring-2 ring-base-100 shadow-sm',
+          indicatorOffsetStyle,
+          indicatorTitle,
+        ),
+      )
     }
 
     return renderRoot(
@@ -383,11 +420,15 @@ const Status: FC<StatusProps> = ({
   return renderRoot(
     <>
       <span className="indicator inline-flex w-fit shrink-0 align-middle">
-        {showAsDot ? (
-          renderDot('indicator-item ring-2 ring-base-100 shadow-sm', indicatorOffsetStyle, indicatorTitle)
-        ) : !ignoreCount ? (
-          renderCount('indicator-item ring-2 ring-base-100', indicatorOffsetStyle)
-        ) : null}
+        {showAsDot
+          ? renderDot(
+              'indicator-item ring-2 ring-base-100 shadow-sm',
+              indicatorOffsetStyle,
+              indicatorTitle,
+            )
+          : !ignoreCount
+            ? renderCount('indicator-item ring-2 ring-base-100', indicatorOffsetStyle)
+            : null}
         <span className="inline-flex w-fit shrink-0 align-middle">{children}</span>
       </span>
       {textNode}

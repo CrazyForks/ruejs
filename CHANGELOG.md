@@ -1,3 +1,19 @@
+## [0.0.35](https://github.com/hunzhiwange/ruejs/compare/v0.0.34...v0.0.35) (2026-05-09)
+
+
+### Bug Fixes
+
+* 修复构建 ([a20f2ff](https://github.com/hunzhiwange/ruejs/commit/a20f2ff7b8dda08aae39cbb3f5a13ce8e15a277e))
+
+## [0.0.34](https://github.com/hunzhiwange/ruejs/compare/v0.0.33...v0.0.34) (2026-05-09)
+
+
+### Bug Fixes
+
+* fix changelog ([9db521c](https://github.com/hunzhiwange/ruejs/commit/9db521cc48fb26510e430e3b3d87a12f19b64c14))
+* fix rue design ([9af4904](https://github.com/hunzhiwange/ruejs/commit/9af4904241bbc448ecaeaee72962cc3ce11d522d))
+* remove esbuild ([5c36719](https://github.com/hunzhiwange/ruejs/commit/5c36719dc453391dc3e87807db4c1fd89171ee78))
+
 ## [0.0.33](https://github.com/hunzhiwange/ruejs/compare/v0.0.32...v0.0.33) (2026-04-27)
 
 

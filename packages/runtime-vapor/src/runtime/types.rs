@@ -20,23 +20,23 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use wasm_bindgen::JsValue;
 
-mod mounted;
-#[cfg(feature = "compat")]
-pub(super) mod compat_state;
 #[cfg(feature = "compat")]
 mod compat_lifecycle;
 #[cfg(feature = "compat")]
 mod compat_patch_root;
 #[cfg(feature = "compat")]
+pub(super) mod compat_state;
+#[cfg(feature = "compat")]
 mod compat_subtree;
+mod mounted;
 
+#[cfg(feature = "compat")]
+pub(crate) use mounted::MountedSubtreeChild;
 pub(crate) use mounted::{
     AnchorMountState, ContainerMountState, MountLifecycleRecord, MountedPatchSubtree,
     MountedPatchSubtreeType, MountedState, MountedSubtreeState, MountedTextSubtree,
     MountedVaporSubtree, MountedVaporSubtreeType, RangeMountState,
 };
-#[cfg(feature = "compat")]
-pub(crate) use mounted::MountedSubtreeChild;
 
 pub type ComponentProps = HashMap<String, JsValue>;
 pub type PropsWithChildren = ComponentProps;
@@ -66,6 +66,7 @@ pub struct MountInput<A: DomAdapter> {
     pub props: ComponentProps,
     pub children: Vec<MountInputChild<A>>,
     pub key: Option<String>,
+    pub strict_component_returns: bool,
     pub mount_cleanup_bucket: Option<JsValue>,
     pub mount_effect_scope_id: Option<usize>,
     pub el_hint: Option<A::Element>,
@@ -130,6 +131,7 @@ impl<A: DomAdapter> MountInput<A> {
             props,
             children,
             key,
+            strict_component_returns: false,
             mount_cleanup_bucket,
             mount_effect_scope_id,
             el_hint: None,

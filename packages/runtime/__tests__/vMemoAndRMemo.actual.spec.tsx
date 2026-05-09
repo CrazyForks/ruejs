@@ -28,12 +28,14 @@ const findTab = (root: ParentNode, label: string) =>
   ) ?? null
 
 const findButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === label) ?? null
+  Array.from(root.querySelectorAll('button')).find(
+    button => button.textContent?.trim() === label,
+  ) ?? null
 
 const findRow = (root: ParentNode, name: string) =>
-  Array.from(root.querySelectorAll('div.rounded-box.border.border-base-300.p-4.grid.gap-3 > div')).find(
-    node => normalizeText(node.textContent).includes(name),
-  ) ?? null
+  Array.from(
+    root.querySelectorAll('div.rounded-box.border.border-base-300.p-4.grid.gap-3 > div'),
+  ).find(node => normalizeText(node.textContent).includes(name)) ?? null
 
 const memoBadgeText = (root: ParentNode) =>
   normalizeText(root.querySelector('.badge.badge-outline.badge-lg')?.textContent)

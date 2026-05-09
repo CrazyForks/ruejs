@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import { h, type FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 
@@ -135,7 +136,11 @@ const toChildArray = (children: any): any[] => {
   return children == null || typeof children === 'boolean' ? [] : [children]
 }
 
-const toggleClassTokens = (element: HTMLElement, className: string | undefined, active: boolean) => {
+const toggleClassTokens = (
+  element: HTMLElement,
+  className: string | undefined,
+  active: boolean,
+) => {
   if (!className) return
   className
     .split(/\s+/)
@@ -172,7 +177,14 @@ const isPrimitiveTooltipContent = (value: any) => {
 }
 
 const resolveTooltipContent = (overlay: any, title: any, content: any, tip: any) => {
-  const candidate = overlay !== undefined ? overlay : title !== undefined ? title : content !== undefined ? content : tip
+  const candidate =
+    overlay !== undefined
+      ? overlay
+      : title !== undefined
+        ? title
+        : content !== undefined
+          ? content
+          : tip
   return typeof candidate === 'function' ? candidate() : candidate
 }
 
@@ -214,7 +226,9 @@ const resolveReadableTextColor = (color: string) => {
   }
 
   const luminance =
-    0.2126 * normalizeRgbChannel(red) + 0.7152 * normalizeRgbChannel(green) + 0.0722 * normalizeRgbChannel(blue)
+    0.2126 * normalizeRgbChannel(red) +
+    0.7152 * normalizeRgbChannel(green) +
+    0.0722 * normalizeRgbChannel(blue)
 
   return luminance > 0.45 ? '#111827' : '#f8fafc'
 }
@@ -232,7 +246,9 @@ const Content: FC<TooltipContentProps> = ({ as = 'div', className, style, childr
   if (as === 'p') return h('p', contentProps, ...contentChildren)
   if (as === 'section') return h('section', contentProps, ...contentChildren)
 
-  return as === 'div' ? h('div', contentProps, ...contentChildren) : h(Component, contentProps, ...contentChildren)
+  return as === 'div'
+    ? h('div', contentProps, ...contentChildren)
+    : h(Component, contentProps, ...contentChildren)
 }
 
 const Root: FC<TooltipProps> = ({
@@ -263,7 +279,8 @@ const Root: FC<TooltipProps> = ({
   const bodyId = ref(`rue-tooltip-${tooltipIdSeed++}`)
   const uncontrolledOpen = ref(defaultOpen ?? false)
   const resolvedContent = resolveTooltipContent(overlay, title, content, tip)
-  const hasContent = resolvedContent !== undefined && resolvedContent !== null && resolvedContent !== false
+  const hasContent =
+    resolvedContent !== undefined && resolvedContent !== null && resolvedContent !== false
   const triggerList = normalizeTrigger(trigger)
   const allowHover = triggerList.includes('hover')
   const allowFocus = triggerList.includes('focus')
@@ -274,7 +291,11 @@ const Root: FC<TooltipProps> = ({
   const bodyClassName = mergeClassNames(classNames?.body, overlayClassName)
   const bodyStyle = mergeStyles(styles?.body, overlayStyle)
   const useBodyNode =
-    hasContent && (hasCustomColor || !isPrimitiveTooltipContent(resolvedContent) || !!bodyClassName || Object.keys(bodyStyle).length > 0)
+    hasContent &&
+    (hasCustomColor ||
+      !isPrimitiveTooltipContent(resolvedContent) ||
+      !!bodyClassName ||
+      Object.keys(bodyStyle).length > 0)
   const useDataTip = hasContent && !useBodyNode && isPrimitiveTooltipContent(resolvedContent)
   const manualOnly = !allowHover && !allowFocus
   const shouldForceHidden = !disabled && (open === false || (!currentOpen && manualOnly))
@@ -318,15 +339,7 @@ const Root: FC<TooltipProps> = ({
 
   rootClassName = mergeClassNames(rootClassName, classNames?.root, className)
 
-  const {
-    onMouseEnter,
-    onMouseLeave,
-    onFocus,
-    onBlur,
-    onClick,
-    onContextMenu,
-    ...domProps
-  } = rest
+  const { onMouseEnter, onMouseLeave, onFocus, onBlur, onClick, onContextMenu, ...domProps } = rest
 
   const rootProps = {
     ...domProps,
@@ -381,17 +394,18 @@ const Root: FC<TooltipProps> = ({
     rootProps['aria-describedby'] = bodyId.value
   }
 
-  const bodyNode = useBodyNode && !disabled
-    ? h(
-        Content,
-        {
-          id: bodyId.value,
-          className: bodyClassName,
-          style: Object.keys(bodyFinalStyle).length > 0 ? bodyFinalStyle : undefined,
-        },
-        resolvedContent,
-      )
-    : null
+  const bodyNode =
+    useBodyNode && !disabled
+      ? h(
+          Content,
+          {
+            id: bodyId.value,
+            className: bodyClassName,
+            style: Object.keys(bodyFinalStyle).length > 0 ? bodyFinalStyle : undefined,
+          },
+          resolvedContent,
+        )
+      : null
 
   const rootChildren = [...(bodyNode ? [bodyNode] : []), ...(toChildArray(children) as any[])]
 
@@ -401,7 +415,9 @@ const Root: FC<TooltipProps> = ({
   if (as === 'section') return h('section', rootProps, ...rootChildren)
   if (as === 'article') return h('article', rootProps, ...rootChildren)
 
-  return as === 'div' ? h('div', rootProps, ...rootChildren) : h(Component, rootProps, ...rootChildren)
+  return as === 'div'
+    ? h('div', rootProps, ...rootChildren)
+    : h(Component, rootProps, ...rootChildren)
 }
 
 type TooltipCompound = FC<TooltipProps> & {

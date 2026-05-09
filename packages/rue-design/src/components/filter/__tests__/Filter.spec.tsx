@@ -73,7 +73,11 @@ describe('Filter', () => {
         ]}
         reset={{ label: 'Clear' }}
         onChange={value => {
-          changes.push(Array.isArray(value) ? String(value[0] ?? '') || undefined : (value as string | undefined))
+          changes.push(
+            Array.isArray(value)
+              ? String(value[0] ?? '') || undefined
+              : (value as string | undefined),
+          )
         }}
       />,
       container,
@@ -100,7 +104,7 @@ describe('Filter', () => {
       expect(open.checked).toBe(true)
       expect(open.classList.contains('btn-primary')).toBe(true)
       expect(open.classList.contains('btn-outline')).toBe(true)
-      expect(changes.at(-1)).toBe('open')
+      expect(changes[changes.length - 1]).toBe('open')
     })
 
     clear.checked = true
@@ -110,7 +114,7 @@ describe('Filter', () => {
       expect(clear.classList.contains('filter-reset')).toBe(true)
       expect(open.checked).toBe(false)
       expect(clear.checked).toBe(true)
-      expect(changes.at(-1)).toBe(undefined)
+      expect(changes[changes.length - 1]).toBe(undefined)
     })
   })
 
@@ -128,7 +132,11 @@ describe('Filter', () => {
         ]}
         defaultValue="vue"
         onChange={value => {
-          changes.push(Array.isArray(value) ? String(value[0] ?? '') || undefined : (value as string | undefined))
+          changes.push(
+            Array.isArray(value)
+              ? String(value[0] ?? '') || undefined
+              : (value as string | undefined),
+          )
         }}
       />,
       container,
@@ -151,7 +159,7 @@ describe('Filter', () => {
 
     await waitForContent(() => {
       expect(react.checked).toBe(true)
-      expect(changes.at(-1)).toBe('react')
+      expect(changes[changes.length - 1]).toBe('react')
     })
 
     form.dispatchEvent(new Event('reset', { bubbles: true }))
@@ -159,7 +167,7 @@ describe('Filter', () => {
     await waitForContent(() => {
       expect(vue.checked).toBe(true)
       expect(react.checked).toBe(false)
-      expect(changes.at(-1)).toBe('vue')
+      expect(changes[changes.length - 1]).toBe('vue')
     })
   })
 
@@ -177,7 +185,9 @@ describe('Filter', () => {
         ]}
         defaultValue={['search']}
         onChange={value => {
-          changes.push(Array.isArray(value) ? value.map(item => String(item)) : value ? [String(value)] : [])
+          changes.push(
+            Array.isArray(value) ? value.map(item => String(item)) : value ? [String(value)] : [],
+          )
         }}
       />,
       container,
@@ -205,7 +215,7 @@ describe('Filter', () => {
       expect(alerts.checked).toBe(true)
       expect(search.classList.contains('btn-active')).toBe(true)
       expect(alerts.classList.contains('btn-active')).toBe(true)
-      expect(changes.at(-1)).toEqual(['search', 'alerts'])
+      expect(changes[changes.length - 1]).toEqual(['search', 'alerts'])
     })
   })
 
@@ -230,12 +240,10 @@ describe('Filter', () => {
       const inputs = Array.from(form.querySelectorAll('input'))
       expect(form.classList.contains('filter')).toBe(false)
       expect(form.classList.contains('flex')).toBe(true)
-      expect(inputs.map(input => input.getAttribute('aria-label') ?? input.getAttribute('value'))).toEqual([
-        'Search',
-        'Alerts',
-        'Clear',
-      ])
-      expect((inputs.at(-1) as HTMLInputElement).type).toBe('reset')
+      expect(
+        inputs.map(input => input.getAttribute('aria-label') ?? input.getAttribute('value')),
+      ).toEqual(['Search', 'Alerts', 'Clear'])
+      expect((inputs[inputs.length - 1] as HTMLInputElement).type).toBe('reset')
     })
   })
 })

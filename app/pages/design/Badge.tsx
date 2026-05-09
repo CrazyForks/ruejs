@@ -194,11 +194,7 @@ const sizeExamples: SizeExample[] = [
   { label: 'Xlarge', value: 'xl' },
 ]
 
-const basicCode = toCode([
-  "import { Badge } from '@rue-js/design'",
-  '',
-  '<Badge>Badge</Badge>',
-])
+const basicCode = toCode(["import { Badge } from '@rue-js/design'", '', '<Badge>Badge</Badge>'])
 
 const indicatorCode = toCode([
   '<Badge count={12}>',
@@ -267,11 +263,21 @@ const ribbonCode = toCode([
   '</Badge.Ribbon>',
 ])
 
-const sizeCode = sizeExamples.map(item => `<Badge size="${item.value}">${item.label}</Badge>`).join('\n')
-const colorsCode = toneExamples.map(item => `<Badge variant="${item.variant}">${item.label}</Badge>`).join('\n')
-const softCode = emphasisToneExamples.map(item => `<Badge soft variant="${item.variant}">${item.label}</Badge>`).join('\n')
-const outlineCode = emphasisToneExamples.map(item => `<Badge outline variant="${item.variant}">${item.label}</Badge>`).join('\n')
-const dashCode = emphasisToneExamples.map(item => `<Badge dash variant="${item.variant}">${item.label}</Badge>`).join('\n')
+const sizeCode = sizeExamples
+  .map(item => `<Badge size="${item.value}">${item.label}</Badge>`)
+  .join('\n')
+const colorsCode = toneExamples
+  .map(item => `<Badge variant="${item.variant}">${item.label}</Badge>`)
+  .join('\n')
+const softCode = emphasisToneExamples
+  .map(item => `<Badge soft variant="${item.variant}">${item.label}</Badge>`)
+  .join('\n')
+const outlineCode = emphasisToneExamples
+  .map(item => `<Badge outline variant="${item.variant}">${item.label}</Badge>`)
+  .join('\n')
+const dashCode = emphasisToneExamples
+  .map(item => `<Badge dash variant="${item.variant}">${item.label}</Badge>`)
+  .join('\n')
 
 const neutralCode = toCode([
   '<div className="flex gap-2 justify-center rounded-box bg-white p-6">',
@@ -515,7 +521,9 @@ const BadgeDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Badge 徽标</h1>
         <p className="text-sm mt-3 mb-3">
-          Badge 现在同时覆盖 Rue 轻标签、角标计数、状态点和 Ribbon 包裹四类场景。保留原有 daisyUI 风格标签写法，同时补齐常见业务中的 count、dot、showZero、offset、status 与 Badge.Ribbon 能力。
+          Badge 现在同时覆盖 Rue 轻标签、角标计数、状态点和 Ribbon 包裹四类场景。保留原有 daisyUI
+          风格标签写法，同时补齐常见业务中的 count、dot、showZero、offset、status 与 Badge.Ribbon
+          能力。
         </p>
 
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
@@ -527,7 +535,9 @@ const BadgeDemo: FC = () => {
         <div className="not-prose mt-6 rounded-box border border-base-300 bg-base-200/40 p-4 text-sm leading-6">
           <div className="font-semibold">使用建议</div>
           <div className="opacity-80">
-            只有 children 时，Badge 会保持 Rue 的标签模式；一旦传入 count、dot、status、color、offset 等语义属性，就会自动切换为 indicator 模式，把徽标放到目标元素角上。
+            只有 children 时，Badge 会保持 Rue 的标签模式；一旦传入
+            count、dot、status、color、offset 等语义属性，就会自动切换为 indicator
+            模式，把徽标放到目标元素角上。
           </div>
         </div>
 
@@ -556,10 +566,14 @@ const BadgeDemo: FC = () => {
                   <button className="btn btn-outline">Inbox</button>
                 </Badge>
                 <Badge count={3} variant="secondary">
-                  <div className="grid size-14 place-items-center rounded-full bg-base-200 font-semibold">AI</div>
+                  <div className="grid size-14 place-items-center rounded-full bg-base-200 font-semibold">
+                    AI
+                  </div>
                 </Badge>
                 <Badge dot status="success" text="持续可用">
-                  <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-3">API 网关</div>
+                  <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-3">
+                    API 网关
+                  </div>
                 </Badge>
               </div>
             </PreviewSurface>
@@ -617,10 +631,14 @@ const BadgeDemo: FC = () => {
             <PreviewSurface>
               <div className="flex flex-wrap items-center gap-8">
                 <Badge count={18}>
-                  <div className="rounded-2xl border border-base-300 bg-base-100 px-5 py-4">Default offset</div>
+                  <div className="rounded-2xl border border-base-300 bg-base-100 px-5 py-4">
+                    Default offset
+                  </div>
                 </Badge>
                 <Badge count={18} offset={[18, 14]} variant="secondary">
-                  <div className="rounded-2xl border border-base-300 bg-base-100 px-5 py-4">Custom offset</div>
+                  <div className="rounded-2xl border border-base-300 bg-base-100 px-5 py-4">
+                    Custom offset
+                  </div>
                 </Badge>
               </div>
             </PreviewSurface>
@@ -884,7 +902,9 @@ const BadgeDemo: FC = () => {
         <div className="mt-12">
           <h2>API</h2>
           <p className="text-sm opacity-70">
-            标签模式与 indicator 模式共用同一个 Badge 组件：只传 children 时渲染为标签；传入 count、dot、status、color、offset 等语义属性后切换为角标模式。Ribbon 通过 Badge.Ribbon 提供。
+            标签模式与 indicator 模式共用同一个 Badge 组件：只传 children 时渲染为标签；传入
+            count、dot、status、color、offset 等语义属性后切换为角标模式。Ribbon 通过 Badge.Ribbon
+            提供。
           </p>
         </div>
 

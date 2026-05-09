@@ -84,7 +84,7 @@
 - **期望类型：** `string | Component`
 
 - **在原生元素上的使用**
- 
+
   当在原生 HTML 元素上使用 `is` 属性时，它将被解释为[自定义内置元素](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-customized-builtin-example)，这是一个原生 Web 平台功能。
 
   但是，在某些用例中，您可能需要 Rue 用 Rue 组件替换原生元素，如在[DOM 内模板解析注意事项](/guide/essentials/component-basics#in-dom-template-parsing-caveats)中所述。您可以在 `is` 属性的值前加上 `rue:` 前缀，以便 Rue 将该元素作为 Rue 组件而不是自定义内置元素渲染：

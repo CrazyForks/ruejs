@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 export type StepsDirection = 'vertical' | 'horizontal'
@@ -71,11 +72,14 @@ export interface StepIconProps {
   [key: string]: any
 }
 
-const joinClassName = (...values: Array<string | undefined | false>) => values.filter(Boolean).join(' ')
+const joinClassName = (...values: Array<string | undefined | false>) =>
+  values.filter(Boolean).join(' ')
 
-const mergeClassName = (base: string, className?: string) => (className ? `${base} ${className}` : base)
+const mergeClassName = (base: string, className?: string) =>
+  className ? `${base} ${className}` : base
 
-const resolveDirection = (direction?: StepsDirection, orientation?: StepsDirection) => orientation ?? direction
+const resolveDirection = (direction?: StepsDirection, orientation?: StepsDirection) =>
+  orientation ?? direction
 
 const getStatusColor = (status?: StepStatus, color?: StepColor) => {
   if (color) return color
@@ -104,10 +108,7 @@ const DotIcon: FC<{ status?: StepStatus }> = ({ status }) => {
   return <span className={cls} />
 }
 
-const renderProgressDot = (
-  progressDot: StepsProps['progressDot'],
-  info: StepsProgressDotInfo,
-) => {
+const renderProgressDot = (progressDot: StepsProps['progressDot'], info: StepsProgressDotInfo) => {
   if (!progressDot) return undefined
   const dotNode = <DotIcon status={info.status} />
   if (typeof progressDot === 'function') {
@@ -116,7 +117,12 @@ const renderProgressDot = (
   return dotNode
 }
 
-const resolveItemStatus = (item: StepItem, index: number, current?: number, currentStatus?: StepStatus): StepStatus => {
+const resolveItemStatus = (
+  item: StepItem,
+  index: number,
+  current?: number,
+  currentStatus?: StepStatus,
+): StepStatus => {
   if (item.status) return item.status
   if (typeof current !== 'number') return 'wait'
   if (index < current) return 'finish'
@@ -195,15 +201,14 @@ const Step: FC<StepProps> = ({
   }
 
   return (
-    <Component
-      {...rootProps}
-      aria-current={ariaCurrent}
-      aria-disabled={ariaDisabled}
-    >
+    <Component {...rootProps} aria-current={ariaCurrent} aria-disabled={ariaDisabled}>
       {hasStructuredBody ? (
         <>
           {icon != null ? (
-            <span className={mergeClassName('step-icon', detail != null ? 'mt-0.5' : undefined)} aria-hidden="true">
+            <span
+              className={mergeClassName('step-icon', detail != null ? 'mt-0.5' : undefined)}
+              aria-hidden="true"
+            >
               {icon}
             </span>
           ) : null}
@@ -214,7 +219,9 @@ const Step: FC<StepProps> = ({
                 {subTitle != null ? <span className="text-xs opacity-60">{subTitle}</span> : null}
               </span>
             ) : null}
-            {detail != null ? <span className="text-xs leading-snug opacity-70">{detail}</span> : null}
+            {detail != null ? (
+              <span className="text-xs leading-snug opacity-70">{detail}</span>
+            ) : null}
           </span>
         </>
       ) : (
@@ -274,7 +281,8 @@ const StepsRoot: FC<StepsProps> = ({
               clickable={mergedClickable}
               onClick={(event, clickedIndex) => {
                 if (item.disabled) return
-                if (item.onClick && typeof clickedIndex === 'number') item.onClick(event, clickedIndex)
+                if (item.onClick && typeof clickedIndex === 'number')
+                  item.onClick(event, clickedIndex)
                 if (onChange && typeof clickedIndex === 'number' && clickedIndex !== current) {
                   onChange(clickedIndex)
                 }

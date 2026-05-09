@@ -23,7 +23,9 @@ const resetActiveRuntime = () => {
 const normalize = (value: string | null | undefined) => value?.replace(/\s+/g, ' ').trim() ?? ''
 
 const getDemoTitles = (root: ParentNode) =>
-  Array.from(root.querySelectorAll('.component-preview h2')).map(node => normalize(node.textContent))
+  Array.from(root.querySelectorAll('.component-preview h2')).map(node =>
+    normalize(node.textContent),
+  )
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -40,17 +42,16 @@ describe('Stat actual page', () => {
       const titles = getDemoTitles(container)
 
       expect(container.textContent).toContain('Stat 统计')
-      expect(container.textContent).toContain('经典效果')
-      expect(container.textContent).toContain('增强能力')
-      expect(container.textContent).toContain('API 模块')
+      expect(container.textContent).toContain('功能概览')
+      expect(container.textContent).toContain('API')
 
-      expect(titles.filter(title => title === '# Stat').length).toBe(2)
-      expect(titles).toContain('# Stat 通过数据渲染（数组，组件内部）')
-      expect(titles).toContain('# Stat with icons or image')
-      expect(titles).toContain('# Centered items')
-      expect(titles).toContain('# Vertical')
-      expect(titles).toContain('# Responsive')
-      expect(titles).toContain('# With custom colors and button')
+      expect(titles).toContain('# 基础用法')
+      expect(titles).toContain('# 数据驱动')
+      expect(titles).toContain('# 带图标或头像')
+      expect(titles).toContain('# 居中布局')
+      expect(titles).toContain('# 纵向布局')
+      expect(titles).toContain('# 响应式布局')
+      expect(titles).toContain('# 带操作按钮')
       expect(titles).toContain('# 数值格式化')
       expect(titles).toContain('# Timer / Countdown')
 

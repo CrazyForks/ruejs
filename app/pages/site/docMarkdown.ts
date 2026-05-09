@@ -93,13 +93,13 @@ const createHighlightContext = async (): Promise<HighlightContext> => {
   ] = await Promise.all([
     import('shiki/core'),
     import('shiki/engine/javascript'),
-    import('@shikijs/langs/javascript'),
-    import('@shikijs/langs/typescript'),
-    import('@shikijs/langs/tsx'),
-    import('@shikijs/langs/rust'),
-    import('@shikijs/langs/html'),
-    import('@shikijs/langs/css'),
-    import('@shikijs/themes/tokyo-night'),
+    import('shiki/langs/javascript.mjs'),
+    import('shiki/langs/typescript.mjs'),
+    import('shiki/langs/tsx.mjs'),
+    import('shiki/langs/rust.mjs'),
+    import('shiki/langs/html.mjs'),
+    import('shiki/langs/css.mjs'),
+    import('shiki/themes/tokyo-night.mjs'),
   ])
 
   const theme = themeModule.default

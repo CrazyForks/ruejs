@@ -49,12 +49,7 @@ export { KeepAlive, type KeepAliveMatchPattern, type KeepAliveProps } from './co
 export { Suspense, type SuspenseProps } from './components/Suspense'
 export { Template, type TemplateProps } from './components/Template'
 export { Transition, type TransitionProps } from './components/Transition'
-export {
-  createContext,
-  useContext,
-  type RueContext,
-  type ContextProviderProps,
-} from './context'
+export { createContext, useContext, type RueContext, type ContextProviderProps } from './context'
 
 export {
   type SignalHandle,

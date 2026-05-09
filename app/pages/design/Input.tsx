@@ -206,7 +206,8 @@ const passwordApiRows: ApiRow[] = [
 const textAreaApiRows: ApiRow[] = [
   {
     prop: 'Input.TextArea',
-    description: '直接复用 Rue Textarea 的完整能力：autoSize、allowClear、showCount、resize、status 等',
+    description:
+      '直接复用 Rue Textarea 的完整能力：autoSize、allowClear、showCount、resize、status 等',
     type: 'FC<TextareaProps>',
     defaultValue: '-',
   },
@@ -232,7 +233,13 @@ const SearchShell: FC = () => {
     <div className="grid w-xs gap-4">
       <Input.Shell>
         <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none" stroke="currentColor">
+          <g
+            stroke-linejoin="round"
+            stroke-linecap="round"
+            stroke-width="2.5"
+            fill="none"
+            stroke="currentColor"
+          >
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.3-4.3"></path>
           </g>
@@ -319,7 +326,11 @@ const PasswordShowcase: FC = () => {
             visible.value = next
           },
         }}
-        suffix={<Badge variant="neutral" size="xs">{visible.value ? '显示中' : '已隐藏'}</Badge>}
+        suffix={
+          <Badge variant="neutral" size="xs">
+            {visible.value ? '显示中' : '已隐藏'}
+          </Badge>
+        }
       />
     </div>
   )
@@ -328,7 +339,13 @@ const PasswordShowcase: FC = () => {
 const TextAreaShowcase: FC = () => {
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Input.TextArea placeholder="记录本次改动" rows={4} allowClear={true} showCount={true} maxLength={120} />
+      <Input.TextArea
+        placeholder="记录本次改动"
+        rows={4}
+        allowClear={true}
+        showCount={true}
+        maxLength={120}
+      />
       <Input.TextArea
         placeholder="自动撑高的说明文本"
         autoSize={{ minRows: 2, maxRows: 5 }}

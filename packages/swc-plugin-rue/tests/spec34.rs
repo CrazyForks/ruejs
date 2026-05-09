@@ -163,7 +163,7 @@ export default DocDetail
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { useState, useEffect, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setInnerHTML } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { useState, useEffect, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName, _$setInnerHTML } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink, useRoute } from '@rue-js/router';
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlayground';
@@ -320,8 +320,8 @@ const DocDetail: FC = ()=>{
     const { route: route, docPath: docPath, _title: _title, setTitle: setTitle, html: html, setHtml: setHtml, _results: _results, _setResults: _setResults, sidebarType: sidebarType, uiBase: uiBase, docBase: docBase, DOCS_META: DOCS_META, currentIndex: currentIndex, prev: prev, next: next } = _$useSetup;
     return vapor(()=>{
         const _root = _$createDocumentFragment();
-        const _list4 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list4);
+        const _list6 = _$createComment("rue:component:anchor");
+        _$appendChild(_root, _list6);
         const __child1 = vapor(()=>{
             const _root = _$createDocumentFragment();
             const _el1 = _$createElement("div");
@@ -333,16 +333,16 @@ const DocDetail: FC = ()=>{
                 });
                 _$setInnerHTML(_el1, __obj && "__html" in __obj ? __obj.__html : "");
             });
-            const _list3 = _$createComment("rue:slot:anchor");
-            _$appendChild(_root, _list3);
+            const _list5 = _$createComment("rue:slot:anchor");
+            _$appendChild(_root, _list5);
             watchEffect(()=>{
                 const __slot = currentIndex >= 0 ? vapor(()=>{
                     const _root = _$createDocumentFragment();
                     const _el2 = _$createElement("div");
                     _$appendChild(_root, _el2);
                     _$setClassName(_el2, "mt-8 flex justify-between");
-                const _list1 = _$createComment("rue:slot:anchor");
-                _$appendChild(_el2, _list1);
+                const _list2 = _$createComment("rue:slot:anchor");
+                _$appendChild(_el2, _list2);
                     watchEffect(()=>{
                         const __slot = prev ? vapor(()=>{
                             const _root = _$createDocumentFragment();
@@ -354,61 +354,63 @@ const DocDetail: FC = ()=>{
                             _$addEventListener(_el3, "click", ((e)=>RouterLink.__rueOnClick(e, `${uiBase}/${prev.id}`, false)));
                             _$setClassName(_el3, "btn btn-outline btn-sm");
                             _$appendChild(_el3, _$createTextNode("← 上一页："));
-                            const _el4 = _$createTextWrapper(_el3);
-                            _$appendChild(_el3, _el4);
+                            const _list1 = _$createComment("rue:slot:anchor");
+                            _$appendChild(_el3, _list1);
                             watchEffect(()=>{
-                                _$settextContent(_el4, prev.title);
+                              const __slot = (prev.title);
+                              renderAnchor(__slot, _el3, _list1);
                             });
                             return _root;
                         }) : vapor(()=>{
                             const _root = _$createDocumentFragment();
-                            const _el5 = _$createElement("span");
-                            _$appendChild(_root, _el5);
+                            const _el4 = _$createElement("span");
+                            _$appendChild(_root, _el4);
                             return _root;
                         });
-                        renderAnchor(__slot, _el2, _list1);
+                          renderAnchor(__slot, _el2, _list2);
                     });
                     _$appendChild(_el2, _$createTextNode(" "));
-                      const _list2 = _$createComment("rue:slot:anchor");
-                      _$appendChild(_el2, _list2);
+                        const _list4 = _$createComment("rue:slot:anchor");
+                        _$appendChild(_el2, _list4);
                     watchEffect(()=>{
                         const __slot = next ? vapor(()=>{
                             const _root = _$createDocumentFragment();
-                            const _el6 = _$createElement("a");
-                            _$appendChild(_root, _el6);
+                            const _el5 = _$createElement("a");
+                            _$appendChild(_root, _el5);
                             watchEffect(()=>{
-                                _$setAttribute(_el6, "href", String(RouterLink.__rueHref(`${uiBase}/${next.id}`)));
+                              _$setAttribute(_el5, "href", String(RouterLink.__rueHref(`${uiBase}/${next.id}`)));
                             });
-                            _$addEventListener(_el6, "click", ((e)=>RouterLink.__rueOnClick(e, `${uiBase}/${next.id}`, false)));
-                            _$setClassName(_el6, "btn btn-outline btn-sm");
-                            _$appendChild(_el6, _$createTextNode("下一页："));
-                            const _el7 = _$createTextWrapper(_el6);
-                            _$appendChild(_el6, _el7);
+                            _$addEventListener(_el5, "click", ((e)=>RouterLink.__rueOnClick(e, `${uiBase}/${next.id}`, false)));
+                            _$setClassName(_el5, "btn btn-outline btn-sm");
+                            _$appendChild(_el5, _$createTextNode("下一页："));
+                            const _list3 = _$createComment("rue:slot:anchor");
+                            _$appendChild(_el5, _list3);
                             watchEffect(()=>{
-                                _$settextContent(_el7, next.title);
+                              const __slot = (next.title);
+                              renderAnchor(__slot, _el5, _list3);
                             });
-                            _$appendChild(_el6, _$createTextNode(" →"));
+                            _$appendChild(_el5, _$createTextNode(" →"));
                             return _root;
                         }) : vapor(()=>{
                             const _root = _$createDocumentFragment();
-                            const _el8 = _$createElement("span");
-                            _$appendChild(_root, _el8);
+                            const _el6 = _$createElement("span");
+                            _$appendChild(_root, _el6);
                             return _root;
                         });
-                        renderAnchor(__slot, _el2, _list2);
+                          renderAnchor(__slot, _el2, _list4);
                     });
                     return _root;
                 }) : "";
-                    renderAnchor(__slot, _root, _list3);
+                      renderAnchor(__slot, _root, _list5);
             });
             return _root;
         });
         watchEffect(()=>{
-            const __slot5 = _$createComponent(SidebarPlayground, {
+                    const __slot7 = _$createComponent(SidebarPlayground, {
                 type: sidebarType,
                 children: __child1
             });
-            renderAnchor(__slot5, _root, _list4);
+                    renderAnchor(__slot7, _root, _list6);
         });
         return _root;
     });

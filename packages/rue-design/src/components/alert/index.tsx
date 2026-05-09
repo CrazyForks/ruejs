@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Alert 组件概述
 - 在 daisyUI 的 alert 视觉基础上，补齐更完整的 Rue 语义 API。
@@ -40,7 +41,12 @@ interface GlyphIconProps {
   className?: string
 }
 
-const resolveTone = ({ type, variant, color, banner }: Pick<AlertProps, 'type' | 'variant' | 'color' | 'banner'>) => {
+const resolveTone = ({
+  type,
+  variant,
+  color,
+  banner,
+}: Pick<AlertProps, 'type' | 'variant' | 'color' | 'banner'>) => {
   if (type) return type
   if (variant) return variant
   if (color && color !== 'default') return color
@@ -80,7 +86,9 @@ const Alert: FC<AlertProps> = ({
   const isClosable = closable ?? (closeText != null || closeIcon != null)
   const shouldShowIcon = showIcon ?? !!(banner || hasStructuredText)
   const contentAlignment = hasStructuredText ? 'items-start' : 'items-center'
-  const plainContentClass = hasStructuredText ? 'min-w-0 flex-1' : 'min-w-0 flex flex-1 items-center gap-2'
+  const plainContentClass = hasStructuredText
+    ? 'min-w-0 flex-1'
+    : 'min-w-0 flex flex-1 items-center gap-2'
   const actionAlignment = hasStructuredText ? 'items-start' : 'items-center'
   const alertRole = role ?? 'alert'
   const defaultIconGlyph =
@@ -126,16 +134,24 @@ const Alert: FC<AlertProps> = ({
 
       {hasStructuredText ? (
         <div className="min-w-0 flex-1">
-          {resolvedTitle != null ? <div className="font-semibold leading-6">{resolvedTitle}</div> : null}
-          {hasDescription ? <div className="mt-1 text-sm leading-6 opacity-80">{description}</div> : null}
-          {children != null ? <div className={hasDescription || resolvedTitle != null ? 'mt-3' : ''}>{children}</div> : null}
+          {resolvedTitle != null ? (
+            <div className="font-semibold leading-6">{resolvedTitle}</div>
+          ) : null}
+          {hasDescription ? (
+            <div className="mt-1 text-sm leading-6 opacity-80">{description}</div>
+          ) : null}
+          {children != null ? (
+            <div className={hasDescription || resolvedTitle != null ? 'mt-3' : ''}>{children}</div>
+          ) : null}
         </div>
       ) : (
         <div className={plainContentClass}>{children}</div>
       )}
 
       {actionGroup ? (
-        <div className={`flex shrink-0 ${actionAlignment} gap-2${direction === 'vertical' ? ' w-full justify-end sm:w-auto' : ''}`}>
+        <div
+          className={`flex shrink-0 ${actionAlignment} gap-2${direction === 'vertical' ? ' w-full justify-end sm:w-auto' : ''}`}
+        >
           {action}
           {isClosable ? (
             <button

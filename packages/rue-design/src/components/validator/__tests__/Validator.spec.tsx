@@ -64,8 +64,12 @@ describe('Validator', () => {
     )
 
     await waitForContent(() => {
-      const select = container.querySelector('[data-testid="validator-select"]') as HTMLSelectElement
-      const textarea = container.querySelector('[data-testid="validator-textarea"]') as HTMLTextAreaElement
+      const select = container.querySelector(
+        '[data-testid="validator-select"]',
+      ) as HTMLSelectElement
+      const textarea = container.querySelector(
+        '[data-testid="validator-textarea"]',
+      ) as HTMLTextAreaElement
       expect(select.tagName.toLowerCase()).toBe('select')
       expect(select.classList.contains('validator')).toBe(true)
       expect(select.classList.contains('select')).toBe(true)
@@ -96,7 +100,9 @@ describe('Validator', () => {
 
     await waitForContent(() => {
       const input = container.querySelector('[data-testid="validator-input"]') as HTMLInputElement
-      const checkbox = container.querySelector('[data-testid="validator-checkbox"]') as HTMLInputElement
+      const checkbox = container.querySelector(
+        '[data-testid="validator-checkbox"]',
+      ) as HTMLInputElement
       expect(input.classList.contains('validator')).toBe(true)
       expect(input.classList.contains('input')).toBe(true)
       expect(input.classList.contains('input-lg')).toBe(true)
@@ -112,7 +118,11 @@ describe('Validator', () => {
     resetActiveRuntime()
 
     render(
-      <Validator.Hint hideUntilInvalid={true} lines={['Required', 'Use company email']} data-testid="validator-hint" />,
+      <Validator.Hint
+        hideUntilInvalid={true}
+        lines={['Required', 'Use company email']}
+        data-testid="validator-hint"
+      />,
       container,
     )
 
@@ -148,7 +158,9 @@ describe('Validator', () => {
     await waitForContent(() => {
       const wrapper = container.firstElementChild as HTMLElement
       const label = container.querySelector('label') as HTMLLabelElement
-      const control = container.querySelector('[data-testid="validator-field-control"]') as HTMLInputElement
+      const control = container.querySelector(
+        '[data-testid="validator-field-control"]',
+      ) as HTMLInputElement
       const hint = container.querySelector('#validator-email-field-hint') as HTMLElement
       expect(wrapper.classList.contains('fieldset')).toBe(true)
       expect(label.getAttribute('for')).toBe('validator-email-field')

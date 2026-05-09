@@ -115,7 +115,7 @@ describe('Checkbox', () => {
     expect(handleChange.mock.calls[0][1]).toMatchObject({ checked: false, indeterminate: false })
   })
 
-  it('keeps labeled children inside the content wrapper across controlled toggles', async () => {
+  it('preserves labeled children text across controlled toggles', async () => {
     const container = mountContainer()
     resetActiveRuntime()
     const enabled = ref(false)
@@ -128,19 +128,19 @@ describe('Checkbox', () => {
           enabled.value = nextChecked
         }}
       >
-        <span className="block">
-          <span className="font-medium">开启每周摘要</span>
-          <span className="mt-1 block text-xs opacity-70">适合演示受控模式和更直接的布尔回调。</span>
-        </span>
+        开启每周摘要
       </Checkbox>
     )
 
     render(<Demo />, container)
 
     await waitForContent(() => {
-      expect(container.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(1)
-      expect(container.querySelectorAll('.font-medium').length).toBe(1)
+      expect(container.querySelector('[data-rue-checkbox-root="true"]')).not.toBeNull()
       expect((container.querySelector('input.checkbox') as HTMLInputElement).checked).toBe(false)
+      expect(
+        (container.querySelector('[data-rue-checkbox-root="true"]') as HTMLElement).className,
+      ).toContain('rounded-box')
+      expect(container.textContent).toContain('开启每周摘要')
     })
 
     const root = () => container.querySelector('[data-rue-checkbox-root="true"]') as HTMLElement
@@ -148,17 +148,15 @@ describe('Checkbox', () => {
     root().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     await waitForContent(() => {
-      expect(container.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(1)
-      expect(container.querySelectorAll('.font-medium').length).toBe(1)
-      expect((container.querySelector('[data-rue-checkbox-root="true"] [data-rue-checkbox-content="true"] .font-medium') as HTMLElement).textContent).toContain('开启每周摘要')
+      expect((container.querySelector('input.checkbox') as HTMLInputElement).checked).toBe(true)
+      expect(root().textContent).toContain('开启每周摘要')
     })
 
     root().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     await waitForContent(() => {
-      expect(container.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(1)
-      expect(container.querySelectorAll('.font-medium').length).toBe(1)
-      expect((container.querySelector('[data-rue-checkbox-root="true"] [data-rue-checkbox-content="true"] .font-medium') as HTMLElement).textContent).toContain('开启每周摘要')
+      expect((container.querySelector('input.checkbox') as HTMLInputElement).checked).toBe(false)
+      expect(root().textContent).toContain('开启每周摘要')
     })
   })
 

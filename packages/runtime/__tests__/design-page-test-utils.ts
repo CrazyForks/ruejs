@@ -2,7 +2,8 @@ export const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active = (globalThis as any).__rue
 }
 
-export const normalize = (value: string | null | undefined) => value?.replace(/\s+/g, ' ').trim() ?? ''
+export const normalize = (value: string | null | undefined) =>
+  value?.replace(/\s+/g, ' ').trim() ?? ''
 
 export const findTabButton = (root: ParentNode, label: string) =>
   Array.from(root.querySelectorAll('button[role="tab"]')).find(

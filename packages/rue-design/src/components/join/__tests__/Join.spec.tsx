@@ -121,7 +121,13 @@ describe('Join', () => {
         <Join.Item active className="btn" data-testid="join-active">
           Active
         </Join.Item>
-        <Join.Item as="a" href="#disabled" disabled className="btn" data-testid="join-disabled-link">
+        <Join.Item
+          as="a"
+          href="#disabled"
+          disabled
+          className="btn"
+          data-testid="join-disabled-link"
+        >
           Disabled link
         </Join.Item>
         <Join.Item disabled data-testid="join-disabled-button">
@@ -133,8 +139,12 @@ describe('Join', () => {
 
     await waitForContent(() => {
       const active = container.querySelector('[data-testid="join-active"]') as HTMLButtonElement
-      const disabledLink = container.querySelector('[data-testid="join-disabled-link"]') as HTMLAnchorElement
-      const disabledButton = container.querySelector('[data-testid="join-disabled-button"]') as HTMLButtonElement
+      const disabledLink = container.querySelector(
+        '[data-testid="join-disabled-link"]',
+      ) as HTMLAnchorElement
+      const disabledButton = container.querySelector(
+        '[data-testid="join-disabled-button"]',
+      ) as HTMLButtonElement
       expect(active.classList.contains('btn-active')).toBe(true)
       expect(disabledLink.classList.contains('btn-disabled')).toBe(true)
       expect(disabledLink.getAttribute('aria-disabled')).toBe('true')

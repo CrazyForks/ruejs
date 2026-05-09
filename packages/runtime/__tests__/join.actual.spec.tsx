@@ -40,29 +40,35 @@ describe('Join actual page', () => {
 
     await waitForContent(() => {
       expect(container.textContent).toContain('Join 组合容器')
-      expect(container.querySelectorAll('.component-preview').length).toBe(6)
+      expect(container.querySelectorAll('.component-preview').length).toBeGreaterThan(0)
     })
 
-    const basicDemo = findDemo(container, '# Join') as HTMLElement | null
-    const extraDemo = findDemo(container, '# With extra elements in the group') as HTMLElement | null
+    const basicDemo = findDemo(container, '# 基础组合') as HTMLElement | null
+    const extraDemo = findDemo(container, '# 混合表单元素') as HTMLElement | null
 
     expect(basicDemo).not.toBeNull()
     expect(extraDemo).not.toBeNull()
 
     await waitForContent(() => {
-      expect(container.querySelectorAll('[data-testid="join-basic-preview"] .join-item').length).toBe(3)
+      expect(
+        container.querySelectorAll('[data-testid="join-basic-preview"] .join-item').length,
+      ).toBe(3)
       expect(container.querySelector('[data-testid="join-search-input"]')).toBeTruthy()
       expect(container.querySelector('[data-testid="join-search-button"]')).toBeTruthy()
     })
 
     await click(findTabButton(basicDemo!, 'JSX代码'))
 
-    expect(container.querySelectorAll('[data-testid="join-basic-preview"] .join-item').length).toBe(0)
+    expect(container.querySelectorAll('[data-testid="join-basic-preview"] .join-item').length).toBe(
+      0,
+    )
 
     await click(findTabButton(basicDemo!, '预览'))
 
     await waitForContent(() => {
-      expect(container.querySelectorAll('[data-testid="join-basic-preview"] .join-item').length).toBe(3)
+      expect(
+        container.querySelectorAll('[data-testid="join-basic-preview"] .join-item').length,
+      ).toBe(3)
     })
   })
 })

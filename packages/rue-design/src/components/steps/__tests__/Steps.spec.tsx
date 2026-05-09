@@ -129,7 +129,11 @@ describe('Steps', () => {
         onChange={index => changed.push(index)}
         items={[
           { title: 'Start', 'data-testid': 'step-start' },
-          { title: 'Review', 'data-testid': 'step-review', onClick: (_, index) => clicked.push(index) },
+          {
+            title: 'Review',
+            'data-testid': 'step-review',
+            onClick: (_, index) => clicked.push(index),
+          },
           { title: 'Done', 'data-testid': 'step-done', disabled: true },
         ]}
       />,

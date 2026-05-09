@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import { h, type FC } from '@rue-js/rue'
 
 export type StackVerticalAlign = 'center' | 'top' | 'bottom'

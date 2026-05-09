@@ -184,7 +184,8 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'ellipsis',
-    description: '单行或多行省略；支持 tooltip、suffix、expandable、expanded/defaultExpanded、onExpand 与 onEllipsis。',
+    description:
+      '单行或多行省略；支持 tooltip、suffix、expandable、expanded/defaultExpanded、onExpand 与 onEllipsis。',
     type: "boolean | { rows?: number; tooltip?: boolean | string; suffix?: string; expandable?: boolean | 'collapsible'; symbol?: any | ((expanded: boolean) => any); defaultExpanded?: boolean; expanded?: boolean; onExpand?: (event, info) => void; onEllipsis?: (ellipsis: boolean) => void }",
     defaultValue: 'false',
   },
@@ -238,7 +239,9 @@ const LinkDemo: FC = () => {
   const clickCount = ref(0)
   const editableLabel = ref('Roadmap draft')
   const editableInline = ref('Click text to edit')
-  const editableNotes = ref('第一阶段：补齐 Link API\n第二阶段：整理设计页示例\n第三阶段：补充 FAQ 与测试')
+  const editableNotes = ref(
+    '第一阶段：补齐 Link API\n第二阶段：整理设计页示例\n第三阶段：补充 FAQ 与测试',
+  )
   const expandToggleCount = ref(0)
   const ellipsisDetected = ref(false)
 
@@ -430,7 +433,7 @@ const LinkDemo: FC = () => {
                     ellipsis={{
                       suffix: '.md',
                       expandable: 'collapsible',
-                      symbol: expanded => (expanded ? '收起摘要' : '展开摘要'),
+                      symbol: (expanded: boolean) => (expanded ? '收起摘要' : '展开摘要'),
                       onExpand: () => {
                         expandToggleCount.value += 1
                       },
@@ -439,8 +442,8 @@ const LinkDemo: FC = () => {
                       },
                     }}
                   >
-                    Architecture decision record for billing-service rollback procedure and
-                    approval flow
+                    Architecture decision record for billing-service rollback procedure and approval
+                    flow
                   </Link>
                 </div>
                 <div className="text-xs opacity-70">
@@ -657,21 +660,26 @@ const LinkDemo: FC = () => {
         <h2>FAQ</h2>
         <div className="space-y-4 text-sm leading-6">
           <div>
-            <h3 className="mb-1 text-base font-semibold">什么时候用 `variant`，什么时候用 `type`？</h3>
+            <h3 className="mb-1 text-base font-semibold">
+              什么时候用 `variant`，什么时候用 `type`？
+            </h3>
             <p className="m-0 opacity-80">
-              `variant` 更接近 Rue 原本的 `link-*` 视觉色板；`type` 更偏正文语义色，适合在文案里表达弱化、成功、警告、危险等状态。
+              `variant` 更接近 Rue 原本的 `link-*` 视觉色板；`type`
+              更偏正文语义色，适合在文案里表达弱化、成功、警告、危险等状态。
             </p>
           </div>
           <div>
             <h3 className="mb-1 text-base font-semibold">`ellipsis` 和原生 `title` 会不会冲突？</h3>
             <p className="m-0 opacity-80">
-              传入 `title` 时优先使用显式值；否则 `ellipsis.tooltip` 默认为开启，并回退到原生 `title`，方便桌面端快速查看全文。
+              传入 `title` 时优先使用显式值；否则 `ellipsis.tooltip` 默认为开启，并回退到原生
+              `title`，方便桌面端快速查看全文。
             </p>
           </div>
           <div>
             <h3 className="mb-1 text-base font-semibold">多行编辑为什么要用 `autoSize`？</h3>
             <p className="m-0 opacity-80">
-              `autoSize` 会把编辑控件切换为 textarea，并按内容自适应高度，适合处理链接标题、注释、摘要一类的文本。
+              `autoSize` 会把编辑控件切换为
+              textarea，并按内容自适应高度，适合处理链接标题、注释、摘要一类的文本。
             </p>
           </div>
           <div>

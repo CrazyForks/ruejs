@@ -41,20 +41,33 @@ describe('Validator actual page', () => {
     expect(rulesDemo).not.toBeNull()
 
     await waitForContent(() => {
-      expect((emailDemo!.querySelector('input.validator') as HTMLElement).tagName.toLowerCase()).toBe('input')
-      expect((emailDemo!.querySelector('form button[type="submit"]') as HTMLButtonElement).textContent).toContain(
-        'Check email',
-      )
-      expect((hostsDemo!.querySelector('select.validator') as HTMLElement).tagName.toLowerCase()).toBe('select')
-      expect((hostsDemo!.querySelector('textarea.validator') as HTMLElement).tagName.toLowerCase()).toBe('textarea')
-      const passwordInput = rulesDemo!.querySelector('input[placeholder="Password"]') as HTMLInputElement
+      expect(
+        (emailDemo!.querySelector('input.validator') as HTMLElement).tagName.toLowerCase(),
+      ).toBe('input')
+      expect(
+        (emailDemo!.querySelector('form button[type="submit"]') as HTMLButtonElement).textContent,
+      ).toContain('Check email')
+      expect(
+        (hostsDemo!.querySelector('select.validator') as HTMLElement).tagName.toLowerCase(),
+      ).toBe('select')
+      expect(
+        (hostsDemo!.querySelector('textarea.validator') as HTMLElement).tagName.toLowerCase(),
+      ).toBe('textarea')
+      const passwordInput = rulesDemo!.querySelector(
+        'input[placeholder="Password"]',
+      ) as HTMLInputElement
       expect(passwordInput.getAttribute('pattern')).toBe('(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}')
-      expect(passwordInput.getAttribute('title')).toBe('Must include number, lowercase and uppercase letters')
-      const usernameInput = rulesDemo!.querySelector('input[placeholder="Username"]') as HTMLInputElement
+      expect(passwordInput.getAttribute('title')).toBe(
+        'Must include number, lowercase and uppercase letters',
+      )
+      const usernameInput = rulesDemo!.querySelector(
+        'input[placeholder="Username"]',
+      ) as HTMLInputElement
       expect(usernameInput.getAttribute('pattern')).toBe('[A-Za-z0-9-]+')
       expect(usernameInput.getAttribute('title')).toBe('Only letters, numbers or dash')
       expect(
-        (usernameInput.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement).textContent,
+        (usernameInput.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement)
+          .textContent,
       ).toContain('Check username')
     })
 
@@ -64,7 +77,9 @@ describe('Validator actual page', () => {
       expect(ruleHints.every(hint => hint.classList.contains('hidden'))).toBe(true)
     })
 
-    const passwordInput = rulesDemo!.querySelector('input[placeholder="Password"]') as HTMLInputElement
+    const passwordInput = rulesDemo!.querySelector(
+      'input[placeholder="Password"]',
+    ) as HTMLInputElement
     passwordInput.value = 'Microlgo234324234'
     passwordInput.dispatchEvent(new Event('input', { bubbles: true }))
 
@@ -86,7 +101,9 @@ describe('Validator actual page', () => {
       expect(passwordInput.getAttribute('aria-invalid')).toBe('false')
     })
 
-    const usernameInput = rulesDemo!.querySelector('input[placeholder="Username"]') as HTMLInputElement
+    const usernameInput = rulesDemo!.querySelector(
+      'input[placeholder="Username"]',
+    ) as HTMLInputElement
     usernameInput.value = '222222'
     usernameInput.dispatchEvent(new Event('input', { bubbles: true }))
 
@@ -109,13 +126,19 @@ describe('Validator actual page', () => {
     })
 
     await click(findTabButton(emailDemo!, 'JSX代码'))
-    const emailDemoInCode = findDemo(container, '# Validator and validator-hint') as HTMLElement | null
+    const emailDemoInCode = findDemo(
+      container,
+      '# Validator and validator-hint',
+    ) as HTMLElement | null
     expect(emailDemoInCode!.querySelectorAll('.validator').length).toBe(0)
 
     await click(findTabButton(emailDemoInCode!, '预览'))
 
     await waitForContent(() => {
-      const restoredEmailDemo = findDemo(container, '# Validator and validator-hint') as HTMLElement | null
+      const restoredEmailDemo = findDemo(
+        container,
+        '# Validator and validator-hint',
+      ) as HTMLElement | null
       expect(restoredEmailDemo!.querySelectorAll('.validator').length).toBe(1)
     })
   })

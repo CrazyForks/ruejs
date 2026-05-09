@@ -21,7 +21,6 @@ interface ApiRow {
   defaultValue: string
 }
 
-
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">

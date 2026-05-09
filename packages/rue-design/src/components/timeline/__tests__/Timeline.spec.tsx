@@ -194,7 +194,9 @@ describe('Timeline', () => {
       expect(listItems).toHaveLength(3)
       expect(listItems[0].querySelector('.timeline-start')?.textContent).toContain('Waiting review')
       expect(listItems[1].querySelector('.timeline-end')?.textContent).toContain('Build')
-      expect(listItems[1].querySelector('.timeline-middle')?.classList.contains('text-success')).toBe(true)
+      expect(
+        listItems[1].querySelector('.timeline-middle')?.classList.contains('text-success'),
+      ).toBe(true)
       expect(listItems[1].querySelector('hr')?.classList.contains('bg-success')).toBe(true)
       expect(listItems[2].querySelector('.timeline-start')?.textContent).toContain('Launch prep')
       expect(listItems[2].querySelector('.timeline-end')?.textContent).toContain('Q1')

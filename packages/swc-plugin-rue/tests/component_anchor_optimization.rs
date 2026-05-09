@@ -87,7 +87,7 @@ const Page: FC = () => (
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
     assert!(out.contains(&utils::normalize(
-        "_$createComponent(Collapse.Title, { className: \"font-semibold\", children: __child1 })"
+        "_$createComponent(Collapse.Title, { className: \"font-semibold\", children: \"Hello\" })"
     )));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(out.contains(&utils::normalize("rue:component:anchor")));
@@ -177,7 +177,9 @@ const Page: FC = () => (
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
-    assert!(out.contains(&utils::normalize("const __child1 = icons[0].node;")));
-    assert!(out.contains(&utils::normalize("_$createComponent(IconHost, { children: __child1 })")));
+    assert!(
+        out.contains(&utils::normalize("_$createComponent(IconHost, { children: icons[0].node })"))
+    );
+    assert!(!out.contains(&utils::normalize("const __child1 = icons[0].node;")));
     assert!(!out.contains(&utils::normalize("_$settextContent(_el2, icons[0].node);")));
 }

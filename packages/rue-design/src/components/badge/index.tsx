@@ -1,7 +1,8 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Badge 组件概述
 - 保留 Rue 现有 badge 视觉语义：variant / size / outline / dash / soft / ghost。
-- 补齐 ant-design 常用能力：count、dot、showZero、overflowCount、status、color、offset。
+- 补齐常用能力：count、dot、showZero、overflowCount、status、color、offset。
 - 当需要角标包裹时输出 indicator 结构；普通标签场景仍保持轻量 badge 输出。
 */
 import type { FC } from '@rue-js/rue'
@@ -341,7 +342,11 @@ const BadgeBase: FC<BadgeProps> = ({
   const indicatorVariant = resolveIndicatorVariant({ variant, status, color })
   const hasText = shouldShowText(text)
   const hasChildren = hasRenderableContent(children)
-  const badgeTitle = title ?? (typeof displayCount === 'string' || typeof displayCount === 'number' ? `${displayCount}` : undefined)
+  const badgeTitle =
+    title ??
+    (typeof displayCount === 'string' || typeof displayCount === 'number'
+      ? `${displayCount}`
+      : undefined)
 
   const statusNode = (
     <span
@@ -359,7 +364,10 @@ const BadgeBase: FC<BadgeProps> = ({
 
   if (!hasChildren && usesIndicatorMode && hasStatus) {
     return (
-      <span className={mergeClassName('inline-flex items-center gap-2 align-middle', className)} style={style}>
+      <span
+        className={mergeClassName('inline-flex items-center gap-2 align-middle', className)}
+        style={style}
+      >
         {statusNode}
         {hasText ? <span>{text}</span> : null}
       </span>
@@ -388,43 +396,44 @@ const BadgeBase: FC<BadgeProps> = ({
     )
 
     if (hasText) {
-      const standaloneIndicatorNode = showDot
-        ? (
-            <span
-              className={mergeClassName(
-                'indicator-item indicator-top indicator-end status ring-2 ring-base-100 shadow-sm',
-                `status-${indicatorVariant}`,
-                resolveStatusSizeClass(size),
-                status === 'processing' && 'animate-pulse',
-                indicatorClassName,
-              )}
-              style={resolveDotIndicatorStyle({ color, offset, indicatorStyle })}
-              title={title}
-            />
-          )
-        : (
-            <span
-              className={mergeClassName(
-                'indicator-item indicator-top indicator-end border-none shadow-sm ring-2 ring-base-100',
-                createBadgeClassName({
-                  variant: indicatorVariant,
-                  size,
-                  outline,
-                  dash,
-                  soft,
-                  ghost,
-                  className: indicatorClassName,
-                }),
-              )}
-              style={resolveCountIndicatorStyle({ color, offset, indicatorStyle })}
-              title={badgeTitle}
-            >
-              {displayCount}
-            </span>
-          )
+      const standaloneIndicatorNode = showDot ? (
+        <span
+          className={mergeClassName(
+            'indicator-item indicator-top indicator-end status ring-2 ring-base-100 shadow-sm',
+            `status-${indicatorVariant}`,
+            resolveStatusSizeClass(size),
+            status === 'processing' && 'animate-pulse',
+            indicatorClassName,
+          )}
+          style={resolveDotIndicatorStyle({ color, offset, indicatorStyle })}
+          title={title}
+        />
+      ) : (
+        <span
+          className={mergeClassName(
+            'indicator-item indicator-top indicator-end border-none shadow-sm ring-2 ring-base-100',
+            createBadgeClassName({
+              variant: indicatorVariant,
+              size,
+              outline,
+              dash,
+              soft,
+              ghost,
+              className: indicatorClassName,
+            }),
+          )}
+          style={resolveCountIndicatorStyle({ color, offset, indicatorStyle })}
+          title={badgeTitle}
+        >
+          {displayCount}
+        </span>
+      )
 
       return (
-        <span className={mergeClassName('indicator inline-flex align-middle', className)} style={style}>
+        <span
+          className={mergeClassName('indicator inline-flex align-middle', className)}
+          style={style}
+        >
           {standaloneIndicatorNode}
           <span
             className={mergeClassName(
@@ -450,49 +459,48 @@ const BadgeBase: FC<BadgeProps> = ({
       return null
     }
     return (
-      <span className={mergeClassName('inline-flex items-center gap-2 align-middle', className)} style={style}>
+      <span
+        className={mergeClassName('inline-flex items-center gap-2 align-middle', className)}
+        style={style}
+      >
         <span>{text}</span>
       </span>
     )
   }
 
   if (hasChildren && usesIndicatorMode) {
-    const indicatorNode = !hasIndicator
-      ? null
-      : showDot || hasStatus
-        ? (
-            <span
-              className={mergeClassName(
-                'indicator-item indicator-top indicator-end status ring-2 ring-base-100 shadow-sm',
-                `status-${indicatorVariant}`,
-                resolveStatusSizeClass(size),
-                status === 'processing' && 'animate-pulse',
-                indicatorClassName,
-              )}
-              style={resolveDotIndicatorStyle({ color, offset, indicatorStyle })}
-              title={title}
-            />
-          )
-        : (
-            <span
-              className={mergeClassName(
-                'indicator-item indicator-top indicator-end border-none shadow-sm ring-2 ring-base-100',
-                createBadgeClassName({
-                  variant: indicatorVariant,
-                  size,
-                  outline,
-                  dash,
-                  soft,
-                  ghost,
-                  className: indicatorClassName,
-                }),
-              )}
-              style={resolveCountIndicatorStyle({ color, offset, indicatorStyle })}
-              title={badgeTitle}
-            >
-              {displayCount}
-            </span>
-          )
+    const indicatorNode = !hasIndicator ? null : showDot || hasStatus ? (
+      <span
+        className={mergeClassName(
+          'indicator-item indicator-top indicator-end status ring-2 ring-base-100 shadow-sm',
+          `status-${indicatorVariant}`,
+          resolveStatusSizeClass(size),
+          status === 'processing' && 'animate-pulse',
+          indicatorClassName,
+        )}
+        style={resolveDotIndicatorStyle({ color, offset, indicatorStyle })}
+        title={title}
+      />
+    ) : (
+      <span
+        className={mergeClassName(
+          'indicator-item indicator-top indicator-end border-none shadow-sm ring-2 ring-base-100',
+          createBadgeClassName({
+            variant: indicatorVariant,
+            size,
+            outline,
+            dash,
+            soft,
+            ghost,
+            className: indicatorClassName,
+          }),
+        )}
+        style={resolveCountIndicatorStyle({ color, offset, indicatorStyle })}
+        title={badgeTitle}
+      >
+        {displayCount}
+      </span>
+    )
 
     const wrappedNode = renderIndicatorContainer({
       className,
@@ -549,14 +557,15 @@ const BadgeRibbon: FC<BadgeRibbonProps> = ({
     className,
   )
 
-  const ribbonStyle = color && !isPresetVariant(color)
-    ? {
-        backgroundColor: color,
-        borderColor: color,
-        color: '#fff',
-        ...style,
-      }
-    : style
+  const ribbonStyle =
+    color && !isPresetVariant(color)
+      ? {
+          backgroundColor: color,
+          borderColor: color,
+          color: '#fff',
+          ...style,
+        }
+      : style
 
   return (
     <div className="relative inline-block overflow-hidden align-middle">

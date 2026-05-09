@@ -11,7 +11,6 @@ interface ApiRow {
   defaultValue: string
 }
 
-
 const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
   return (
     <div className="not-prose overflow-x-auto rounded-box border border-base-300 bg-base-100">
@@ -68,7 +67,11 @@ const SparkIcon = () => (
     strokeWidth="2"
     className="size-[1.05em]"
   >
-    <path strokeLinecap="round" strokeLinejoin="round" d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z"
+    />
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 18h.01M19 18h.01M12 21h.01" />
   </svg>
 )
@@ -184,7 +187,8 @@ const ClickableStepsDemo: FC = () => {
 const stepsApiRows: ApiRow[] = [
   {
     prop: 'direction / orientation',
-    description: '设置整体朝向；支持沿用 Rue 旧的 direction 写法，也支持 ant-design 风格的 orientation 别名。',
+    description:
+      '设置整体朝向；支持沿用 Rue 旧的 direction 写法，也支持更通用的 orientation 别名。',
     type: "'horizontal' | 'vertical'",
     defaultValue: '-',
   },
@@ -229,7 +233,8 @@ const stepApiRows: ApiRow[] = [
   },
   {
     prop: 'title',
-    description: '步骤主标题；在 children 写法中可与 description、subTitle、icon 组合为语义化内容区。',
+    description:
+      '步骤主标题；在 children 写法中可与 description、subTitle、icon 组合为语义化内容区。',
     type: 'any',
     defaultValue: '-',
   },
@@ -291,8 +296,8 @@ const StepsPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Steps 步骤条</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue Steps 继续保留 daisyUI 的轻量视觉风格，同时补齐更接近 ant-design 的数据驱动 API：
-          支持 <code>items</code>、<code>current</code>、<code>status</code>、<code>progressDot</code>、
+          Rue Steps 继续保留 daisyUI 的轻量视觉风格，同时补齐更贴近成熟业务组件的数据驱动 API： 支持{' '}
+          <code>items</code>、<code>current</code>、<code>status</code>、<code>progressDot</code>、
           <code>onChange</code>，以及单步级别的 <code>title</code>、<code>description</code>、
           <code>subTitle</code> 和 <code>icon</code>。
         </p>
@@ -307,18 +312,23 @@ const StepsPage: FC = () => {
             <div className="text-xs font-semibold uppercase tracking-wide text-primary">双模式</div>
             <div className="mt-2 text-sm font-medium">children / items 都可用</div>
             <p className="mt-2 text-sm opacity-70">
-              老的 <code>Steps.Step</code> 和 <code>Steps.Icon</code> 不变，新场景可直接传入数据数组。
+              老的 <code>Steps.Step</code> 和 <code>Steps.Icon</code>{' '}
+              不变，新场景可直接传入数据数组。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">状态推导</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              状态推导
+            </div>
             <div className="mt-2 text-sm font-medium">current 自动推导完成/进行中/等待</div>
             <p className="mt-2 text-sm opacity-70">
               不必手动给每一步都写颜色，只有例外项再单独覆盖即可。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-accent">内容增强</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-accent">
+              内容增强
+            </div>
             <div className="mt-2 text-sm font-medium">支持标题、副标题、描述和进度点</div>
             <p className="mt-2 text-sm opacity-70">
               适合把原本只能写一行文本的步骤条，扩展成更完整的流程说明区。
@@ -554,7 +564,10 @@ const StepsPage: FC = () => {
         />
 
         <h2>增强 API</h2>
-        <p>下面这些示例展示的是本次补齐的语义层能力，目标是让 Rue Steps 在不丢失现有风格的前提下更接近 ant-design 的使用体验。</p>
+        <p>
+          下面这些示例展示的是本次补齐的语义层能力，目标是让 Rue Steps
+          在不丢失现有风格的前提下更接近常见业务组件的使用体验。
+        </p>
 
         <PreviewBlock
           title="Rich step content"
@@ -641,7 +654,8 @@ const StepsPage: FC = () => {
                   ]}
                 />
                 <div className="text-sm opacity-70">
-                  当前索引为 <code>1</code>，所以第 0 步自动完成，第 1 步继承根节点的 <code>error</code> 状态。
+                  当前索引为 <code>1</code>，所以第 0 步自动完成，第 1 步继承根节点的{' '}
+                  <code>error</code> 状态。
                 </div>
               </div>
             </div>

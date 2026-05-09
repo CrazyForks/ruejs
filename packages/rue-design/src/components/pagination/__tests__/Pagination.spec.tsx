@@ -60,7 +60,9 @@ describe('Pagination', () => {
       const root = container.querySelector('[data-testid="pagination-vertical"]') as HTMLElement
       const link = container.querySelector('[data-testid="pagination-link"]') as HTMLAnchorElement
       const current = container.querySelector('[data-testid="pagination-current"]') as HTMLElement
-      const disabled = container.querySelector('[data-testid="pagination-disabled"]') as HTMLButtonElement
+      const disabled = container.querySelector(
+        '[data-testid="pagination-disabled"]',
+      ) as HTMLButtonElement
       expect(root.classList.contains('join-vertical')).toBe(true)
       expect(link.tagName.toLowerCase()).toBe('a')
       expect(link.classList.contains('join-item')).toBe(true)

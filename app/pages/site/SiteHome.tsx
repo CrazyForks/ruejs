@@ -187,6 +187,21 @@ const SiteHome: FC = () => (
           <Link to="/api/api/index" className="btn btn-outline btn-lg">
             API
           </Link>
+          <a
+            href="https://github.com/hunzhiwange/ruejs"
+            target="_blank"
+            className="btn btn-outline btn-lg"
+          >
+            Github
+          </a>
+          <a
+            href="https://www.dhb168.com/?from=ruejs"
+            target="_blank"
+            data-tip="订货宝-经销商订货系统,批发贸易订货,用订货宝下单软件app,小程序-订货管理系统"
+            className="tooltip tooltip-top btn btn-outline btn-lg"
+          >
+            订货宝
+          </a>
         </div>
       </div>
     </section>

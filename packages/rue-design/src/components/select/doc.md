@@ -566,8 +566,6 @@ const owner = ref('platform')
 
 ### ~Semantic callbacks with labelInValue
 
-如果你不想每次都从原生事件里自己取 label，可以改用 `labelInValue`、`onValueChange`、`onSelect`、`onDeselect` 这一组更接近 ant-design 的语义回调。
-
 ```jsx
 const selected = ref<SelectLabeledValue | null>({
   value: 'release',

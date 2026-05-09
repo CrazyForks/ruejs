@@ -4,13 +4,13 @@
 - 根组件：RootApp 组合站点布局与路由视图。
 - 启动流程：useApp 创建应用，挂载到 #app，并安装路由插件。
 */
-import { type FC, useError, useApp } from '@rue-js/rue'
+import { type FC, useApp, useError } from '@rue-js/rue'
 import { RouterView, useRoute } from '@rue-js/router'
 import router from './router'
 import SiteLayout from './pages/site/components/Layout'
 
-// 开发阶段错误可视化与控制台输出
-useError({ overlay: true, console: true })
+// 开发阶段显示 overlay，生产环境仅保留控制台输出
+useError({ overlay: import.meta.env.DEV, console: true })
 
 /** 根应用组件：提供布局与路由视图 */
 const RootApp: FC = () => {

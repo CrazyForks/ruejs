@@ -51,7 +51,16 @@ describe('Badge', () => {
 
   it('applies variant classes', async () => {
     const c = document.createElement('div')
-    for (const v of ['neutral', 'primary', 'secondary', 'accent', 'info', 'success', 'warning', 'error'] as const) {
+    for (const v of [
+      'neutral',
+      'primary',
+      'secondary',
+      'accent',
+      'info',
+      'success',
+      'warning',
+      'error',
+    ] as const) {
       render(h(Badge, { variant: v }, 'x'), c)
       await waitBadgeRender()
       const el = c.querySelector('.badge') as HTMLElement
@@ -77,10 +86,7 @@ describe('Badge', () => {
 
   it('renders wrapped indicator badge and offset styles', async () => {
     const c = document.createElement('div')
-    render(
-      h(Badge, { count: 8, offset: [10, 12] }, h('span', { className: 'anchor' }, 'Inbox')),
-      c,
-    )
+    render(h(Badge, { count: 8, offset: [10, 12] }, h('span', { className: 'anchor' }, 'Inbox')), c)
     await waitBadgeRender()
 
     const wrapper = c.querySelector('.indicator') as HTMLElement
@@ -157,14 +163,7 @@ describe('Badge', () => {
 
   it('uses primary ribbon styling by default when color is omitted', async () => {
     const c = document.createElement('div')
-    render(
-      h(
-        Badge.Ribbon,
-        { text: 'Beta' },
-        h('div', { className: 'panel' }, 'Content'),
-      ),
-      c,
-    )
+    render(h(Badge.Ribbon, { text: 'Beta' }, h('div', { className: 'panel' }, 'Content')), c)
     await waitBadgeRender()
 
     const ribbon = c.querySelector('.badge-primary') as HTMLElement

@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Calendar 组件概述
 - 默认导出为 Rue 自己的可控日历面板，支持 month/year 两种视图与受控/非受控状态。
@@ -126,7 +127,8 @@ const endOfYear = (value: Date) => createDate(value.getFullYear(), 11, 31)
 const addDays = (value: Date, amount: number) =>
   createDate(value.getFullYear(), value.getMonth(), value.getDate() + amount)
 
-const isValidDate = (value: unknown): value is Date => value instanceof Date && !Number.isNaN(value.getTime())
+const isValidDate = (value: unknown): value is Date =>
+  value instanceof Date && !Number.isNaN(value.getTime())
 
 const normalizeDate = (value: CalendarValue | undefined, fallback = new Date()) => {
   if (isValidDate(value)) {
@@ -337,11 +339,14 @@ const CalendarPanel: FC<CalendarProps> = ({
 }) => {
   const uncontrolledValue = ref(normalizeDate(value ?? defaultValue ?? new Date()))
   const uncontrolledMode = ref<CalendarMode>(mode ?? 'month')
-  const currentValue = value !== undefined ? normalizeDate(value, uncontrolledValue.value) : uncontrolledValue.value
+  const currentValue =
+    value !== undefined ? normalizeDate(value, uncontrolledValue.value) : uncontrolledValue.value
   const currentMode = mode ?? uncontrolledMode.value
   const today = startOfDay(new Date())
   const range = normalizeRange(validRange)
-  const resolvedLocale = locale ?? (typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'zh-CN')
+  const resolvedLocale =
+    locale ??
+    (typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'zh-CN')
   const resolvedWeekStart = clampWeekStart(weekStartsOn)
   const isZhLocale = resolvedLocale.toLowerCase().startsWith('zh')
   const weekdayLabels = getWeekdayLabels(resolvedLocale, resolvedWeekStart)
@@ -355,9 +360,12 @@ const CalendarPanel: FC<CalendarProps> = ({
   const rowClassName = showWeek
     ? 'grid grid-cols-[3.25rem_repeat(7,minmax(0,1fr))] gap-2'
     : 'grid grid-cols-7 gap-2'
-  const headerTitle = currentMode === 'month'
-    ? new Intl.DateTimeFormat(resolvedLocale, { year: 'numeric', month: 'long' }).format(currentValue)
-    : new Intl.DateTimeFormat(resolvedLocale, { year: 'numeric' }).format(currentValue)
+  const headerTitle =
+    currentMode === 'month'
+      ? new Intl.DateTimeFormat(resolvedLocale, { year: 'numeric', month: 'long' }).format(
+          currentValue,
+        )
+      : new Intl.DateTimeFormat(resolvedLocale, { year: 'numeric' }).format(currentValue)
   const todayLabel = new Intl.DateTimeFormat(resolvedLocale, {
     weekday: 'long',
     month: 'long',
@@ -368,27 +376,31 @@ const CalendarPanel: FC<CalendarProps> = ({
   const yearButtonLabel = isZhLocale ? '年' : 'Year'
   const weekButtonLabel = isZhLocale ? '周' : 'Week'
   const todayMarkerLabel = isZhLocale ? '今' : 'Today'
-  const viewLabel = currentMode === 'month'
-    ? isZhLocale
-      ? '月视图'
-      : 'Month view'
-    : isZhLocale
-      ? '年视图'
-      : 'Year view'
-  const previousDisabled = currentMode === 'month'
-    ? !monthHasSelectableDate(addMonths(currentValue, -1), range, disabledDate)
-    : !yearHasSelectableDate(addYears(currentValue, -1), range, disabledDate)
-  const nextDisabled = currentMode === 'month'
-    ? !monthHasSelectableDate(addMonths(currentValue, 1), range, disabledDate)
-    : !yearHasSelectableDate(addYears(currentValue, 1), range, disabledDate)
+  const viewLabel =
+    currentMode === 'month'
+      ? isZhLocale
+        ? '月视图'
+        : 'Month view'
+      : isZhLocale
+        ? '年视图'
+        : 'Year view'
+  const previousDisabled =
+    currentMode === 'month'
+      ? !monthHasSelectableDate(addMonths(currentValue, -1), range, disabledDate)
+      : !yearHasSelectableDate(addYears(currentValue, -1), range, disabledDate)
+  const nextDisabled =
+    currentMode === 'month'
+      ? !monthHasSelectableDate(addMonths(currentValue, 1), range, disabledDate)
+      : !yearHasSelectableDate(addYears(currentValue, 1), range, disabledDate)
   const todayDisabled = !isDateSelectable(today, range, disabledDate)
 
   const triggerChange = (nextInput: CalendarValue, source: CalendarSelectSource) => {
     const nextDate = startOfDay(normalizeDate(nextInput, currentValue))
     const changed = !isSameDate(nextDate, currentValue)
-    const panelChanged = currentMode === 'month'
-      ? !isSameMonth(nextDate, currentValue)
-      : !isSameYear(nextDate, currentValue)
+    const panelChanged =
+      currentMode === 'month'
+        ? !isSameMonth(nextDate, currentValue)
+        : !isSameYear(nextDate, currentValue)
 
     if (value === undefined) {
       uncontrolledValue.value = nextDate
@@ -425,7 +437,12 @@ const CalendarPanel: FC<CalendarProps> = ({
     onMonthChange: month => triggerChange(setCalendarMonth(currentValue, month), 'customize'),
   }
 
-  const renderDateCell = (row: CalendarDateRow, rowIndex: number, cell: CalendarDateCell, columnIndex: number) => {
+  const renderDateCell = (
+    row: CalendarDateRow,
+    rowIndex: number,
+    cell: CalendarDateCell,
+    columnIndex: number,
+  ) => {
     const selected = isSameDate(cell.date, currentValue)
     const isToday = isSameDate(cell.date, today)
     const disabled = !isDateSelectable(cell.date, range, disabledDate)
@@ -445,18 +462,19 @@ const CalendarPanel: FC<CalendarProps> = ({
         </div>
       </div>
     )
-    const content = cellRender?.(cloneDate(cell.date), {
-      type: 'date',
-      originNode: bareNode,
-      today: cloneDate(today),
-      selected,
-      isToday,
-      inView: cell.inView,
-      disabled,
-      row: rowIndex,
-      column: columnIndex,
-      week: row.week,
-    }) ?? dateCellRender?.(cloneDate(cell.date))
+    const content =
+      cellRender?.(cloneDate(cell.date), {
+        type: 'date',
+        originNode: bareNode,
+        today: cloneDate(today),
+        selected,
+        isToday,
+        inView: cell.inView,
+        disabled,
+        row: rowIndex,
+        column: columnIndex,
+        week: row.week,
+      }) ?? dateCellRender?.(cloneDate(cell.date))
     const originNode = (
       <div className="flex h-full flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
@@ -471,33 +489,41 @@ const CalendarPanel: FC<CalendarProps> = ({
             </span>
           ) : null}
         </div>
-        <div className={`min-h-[1.85rem] text-[0.68rem] leading-4 ${selected ? 'opacity-90' : 'opacity-75'}`}>
+        <div
+          className={`min-h-[1.85rem] text-[0.68rem] leading-4 ${selected ? 'opacity-90' : 'opacity-75'}`}
+        >
           {content}
         </div>
       </div>
     )
-    const rendered = fullCellRender?.(cloneDate(cell.date), {
-      type: 'date',
-      originNode,
-      today: cloneDate(today),
-      selected,
-      isToday,
-      inView: cell.inView,
-      disabled,
-      row: rowIndex,
-      column: columnIndex,
-      week: row.week,
-    }) ?? dateFullCellRender?.(cloneDate(cell.date)) ?? originNode
+    const rendered =
+      fullCellRender?.(cloneDate(cell.date), {
+        type: 'date',
+        originNode,
+        today: cloneDate(today),
+        selected,
+        isToday,
+        inView: cell.inView,
+        disabled,
+        row: rowIndex,
+        column: columnIndex,
+        week: row.week,
+      }) ??
+      dateFullCellRender?.(cloneDate(cell.date)) ??
+      originNode
 
     let buttonClassName = `group relative flex min-h-[5.35rem] w-full flex-col rounded-[1.2rem] border px-2.5 py-2.5 text-left transition duration-150 ${fullscreen ? '' : 'min-h-[4.7rem] rounded-[1rem] px-2 py-2'}`
     if (selected) {
-      buttonClassName += ' border-primary bg-primary text-primary-content shadow-md shadow-primary/15'
+      buttonClassName +=
+        ' border-primary bg-primary text-primary-content shadow-md shadow-primary/15'
     } else if (disabled) {
       buttonClassName += ' border-base-300/70 bg-base-200/50 text-base-content/35'
     } else if (cell.inView) {
-      buttonClassName += ' border-base-300/80 bg-base-100 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-sm'
+      buttonClassName +=
+        ' border-base-300/80 bg-base-100 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-sm'
     } else {
-      buttonClassName += ' border-base-300/60 bg-base-200/60 text-base-content/55 hover:border-primary/20'
+      buttonClassName +=
+        ' border-base-300/60 bg-base-200/60 text-base-content/55 hover:border-primary/20'
     }
     if (isToday && !selected) {
       buttonClassName += ' ring-1 ring-primary/20'
@@ -531,58 +557,70 @@ const CalendarPanel: FC<CalendarProps> = ({
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-semibold">{monthOption.label}</span>
           {isToday ? (
-            <span className={`badge badge-xs ${selected ? 'badge-neutral text-neutral-content' : 'badge-primary badge-outline'}`}>
+            <span
+              className={`badge badge-xs ${selected ? 'badge-neutral text-neutral-content' : 'badge-primary badge-outline'}`}
+            >
               {todayMarkerLabel}
             </span>
           ) : null}
         </div>
       </div>
     )
-    const content = cellRender?.(cloneDate(monthDate), {
-      type: 'month',
-      originNode: bareNode,
-      today: cloneDate(today),
-      selected,
-      isToday,
-      inView: true,
-      disabled,
-      row: Math.floor(columnIndex / 4),
-      column: columnIndex % 4,
-    }) ?? monthCellRender?.(cloneDate(monthDate))
+    const content =
+      cellRender?.(cloneDate(monthDate), {
+        type: 'month',
+        originNode: bareNode,
+        today: cloneDate(today),
+        selected,
+        isToday,
+        inView: true,
+        disabled,
+        row: Math.floor(columnIndex / 4),
+        column: columnIndex % 4,
+      }) ?? monthCellRender?.(cloneDate(monthDate))
     const originNode = (
       <div className="flex h-full flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-semibold">{monthOption.label}</span>
           {isToday ? (
-            <span className={`badge badge-xs ${selected ? 'badge-neutral text-neutral-content' : 'badge-primary badge-outline'}`}>
+            <span
+              className={`badge badge-xs ${selected ? 'badge-neutral text-neutral-content' : 'badge-primary badge-outline'}`}
+            >
               {todayMarkerLabel}
             </span>
           ) : null}
         </div>
-        <div className={`min-h-[2.1rem] text-xs leading-5 ${selected ? 'opacity-90' : 'opacity-75'}`}>
+        <div
+          className={`min-h-[2.1rem] text-xs leading-5 ${selected ? 'opacity-90' : 'opacity-75'}`}
+        >
           {content}
         </div>
       </div>
     )
-    const rendered = fullCellRender?.(cloneDate(monthDate), {
-      type: 'month',
-      originNode,
-      today: cloneDate(today),
-      selected,
-      isToday,
-      inView: true,
-      disabled,
-      row: Math.floor(columnIndex / 4),
-      column: columnIndex % 4,
-    }) ?? monthFullCellRender?.(cloneDate(monthDate)) ?? originNode
+    const rendered =
+      fullCellRender?.(cloneDate(monthDate), {
+        type: 'month',
+        originNode,
+        today: cloneDate(today),
+        selected,
+        isToday,
+        inView: true,
+        disabled,
+        row: Math.floor(columnIndex / 4),
+        column: columnIndex % 4,
+      }) ??
+      monthFullCellRender?.(cloneDate(monthDate)) ??
+      originNode
 
     let buttonClassName = `group relative flex min-h-[6.1rem] w-full flex-col rounded-[1.2rem] border px-3 py-3 text-left transition duration-150 ${fullscreen ? '' : 'min-h-[5.5rem] rounded-[1rem] px-2.5 py-2.5'}`
     if (selected) {
-      buttonClassName += ' border-primary bg-primary text-primary-content shadow-md shadow-primary/15'
+      buttonClassName +=
+        ' border-primary bg-primary text-primary-content shadow-md shadow-primary/15'
     } else if (disabled) {
       buttonClassName += ' border-base-300/70 bg-base-200/50 text-base-content/35'
     } else {
-      buttonClassName += ' border-base-300/80 bg-base-100 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-sm'
+      buttonClassName +=
+        ' border-base-300/80 bg-base-100 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-sm'
     }
     if (isToday && !selected) {
       buttonClassName += ' ring-1 ring-primary/20'
@@ -632,7 +670,9 @@ const CalendarPanel: FC<CalendarProps> = ({
                 disabled={previousDisabled}
                 onClick={() =>
                   triggerChange(
-                    currentMode === 'month' ? addMonths(currentValue, -1) : addYears(currentValue, -1),
+                    currentMode === 'month'
+                      ? addMonths(currentValue, -1)
+                      : addYears(currentValue, -1),
                     'customize',
                   )
                 }
@@ -654,7 +694,9 @@ const CalendarPanel: FC<CalendarProps> = ({
                 disabled={nextDisabled}
                 onClick={() =>
                   triggerChange(
-                    currentMode === 'month' ? addMonths(currentValue, 1) : addYears(currentValue, 1),
+                    currentMode === 'month'
+                      ? addMonths(currentValue, 1)
+                      : addYears(currentValue, 1),
                     'customize',
                   )
                 }
@@ -665,7 +707,7 @@ const CalendarPanel: FC<CalendarProps> = ({
             <select
               className="select select-sm min-w-24"
               value={currentValue.getFullYear()}
-              onChange={event =>
+              onChange={(event: Event) =>
                 headerConfig.onYearChange(Number((event.currentTarget as HTMLSelectElement).value))
               }
             >
@@ -673,7 +715,13 @@ const CalendarPanel: FC<CalendarProps> = ({
                 <option
                   key={year}
                   value={year}
-                  disabled={!yearHasSelectableDate(createDate(year, currentValue.getMonth(), 1), range, disabledDate)}
+                  disabled={
+                    !yearHasSelectableDate(
+                      createDate(year, currentValue.getMonth(), 1),
+                      range,
+                      disabledDate,
+                    )
+                  }
                 >
                   {year}
                 </option>
@@ -683,7 +731,7 @@ const CalendarPanel: FC<CalendarProps> = ({
               className="select select-sm min-w-24"
               value={currentValue.getMonth()}
               disabled={currentMode === 'year'}
-              onChange={event =>
+              onChange={(event: Event) =>
                 headerConfig.onMonthChange(Number((event.currentTarget as HTMLSelectElement).value))
               }
             >
@@ -750,7 +798,9 @@ const CalendarPanel: FC<CalendarProps> = ({
                       {row.week}
                     </div>
                   ) : null}
-                  {row.cells.map((cell, columnIndex) => renderDateCell(row, rowIndex, cell, columnIndex))}
+                  {row.cells.map((cell, columnIndex) =>
+                    renderDateCell(row, rowIndex, cell, columnIndex),
+                  )}
                 </div>
               ))}
             </div>

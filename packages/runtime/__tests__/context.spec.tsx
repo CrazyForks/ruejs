@@ -22,8 +22,8 @@ describe('context api', () => {
   it('keeps provider children rendered through the public rue entry', async () => {
     const ValueContext = createContext('fallback')
 
-    const Reader = () => h('span', { 'data-testid': 'reader' }, 'reader')
-    const App = () => h(ValueContext.Provider, { value: 'outer' }, h(Reader, null))
+    const Reader = (): any => h('span', { 'data-testid': 'reader' }, 'reader')
+    const App = (): any => h(ValueContext.Provider as any, { value: 'outer' }, h(Reader, null))
 
     const container = document.createElement('div')
     render(h(App, null), container)

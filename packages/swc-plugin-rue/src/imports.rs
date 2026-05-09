@@ -93,9 +93,20 @@ const VAPOR_SAFE_VALUE_IMPORTS: &[&str] = &[
 
 const FORCED_ROOT_TYPE_IMPORTS: &[&str] = &["FC"];
 
+const AUTO_INJECTED_VALUE_IMPORTS: &[&str] = &[
+    "vapor",
+    "renderAnchor",
+    "renderBetween",
+    "watchEffect",
+    "useMemo",
+    "useSetup",
+    "onBeforeUnmount",
+    "Template",
+];
+
 impl RuntimeUseCollector {
     fn new() -> Self {
-        let known_values: HashSet<&'static str> = VAPOR_SAFE_VALUE_IMPORTS
+        let known_values: HashSet<&'static str> = AUTO_INJECTED_VALUE_IMPORTS
             .iter()
             .copied()
             .chain([

@@ -5,7 +5,9 @@ import MockupCodePage from '../../../app/pages/design/MockupCode'
 import { click, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundDesign', () => ({
-  default: (props: { children?: unknown }) => <div data-testid="mock-sidebar-design">{props.children}</div>,
+  default: (props: { children?: unknown }) => (
+    <div data-testid="mock-sidebar-design">{props.children}</div>
+  ),
 }))
 
 vi.mock('../../../app/pages/site/components/Code', () => ({
@@ -17,10 +19,14 @@ setReactiveScheduling('sync')
 const normalize = (value: string | null | undefined) => value?.replace(/\s+/g, ' ').trim() ?? ''
 
 const findTabButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button[role="tab"]')).find(button => button.textContent?.trim() === label) ?? null
+  Array.from(root.querySelectorAll('button[role="tab"]')).find(
+    button => button.textContent?.trim() === label,
+  ) ?? null
 
 const findDemo = (root: ParentNode, title: string) =>
-  Array.from(root.querySelectorAll('.component-preview')).find(node => normalize(node.querySelector('h2')?.textContent) === title) ?? null
+  Array.from(root.querySelectorAll('.component-preview')).find(
+    node => normalize(node.querySelector('h2')?.textContent) === title,
+  ) ?? null
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -47,8 +53,10 @@ describe('MockupCode actual page', () => {
 
     await waitForContent(() => {
       const itemLines = itemsDemo?.querySelectorAll('[data-testid="mockup-code-items"] pre') ?? []
-      const lineRows = lineDemo?.querySelectorAll('[data-testid="mockup-code-line-component"] pre') ?? []
-      const numberedRows = numbersDemo?.querySelectorAll('[data-testid="mockup-code-line-numbers"] pre') ?? []
+      const lineRows =
+        lineDemo?.querySelectorAll('[data-testid="mockup-code-line-component"] pre') ?? []
+      const numberedRows =
+        numbersDemo?.querySelectorAll('[data-testid="mockup-code-line-numbers"] pre') ?? []
 
       expect(itemLines).toHaveLength(3)
       expect(itemLines[0]?.getAttribute('data-prefix')).toBe('$')
@@ -72,7 +80,9 @@ describe('MockupCode actual page', () => {
     await click(findTabButton(findDemo(container, '# 推荐：items 数据驱动')!, '预览'))
 
     await waitForContent(() => {
-      expect(findDemo(container, '# 推荐：items 数据驱动')?.querySelector('.mockup-code')).not.toBeNull()
+      expect(
+        findDemo(container, '# 推荐：items 数据驱动')?.querySelector('.mockup-code'),
+      ).not.toBeNull()
     })
   })
 })

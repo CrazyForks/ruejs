@@ -51,9 +51,9 @@ describe('Dropdown', () => {
 
     await waitForContent(() => {
       expect(container.querySelector('details.dropdown[open]')).not.toBeNull()
-      expect(container.querySelector('[data-testid="menu"]')?.classList.contains('dropdown-content')).toBe(
-        true,
-      )
+      expect(
+        container.querySelector('[data-testid="menu"]')?.classList.contains('dropdown-content'),
+      ).toBe(true)
     })
   })
 
@@ -111,9 +111,9 @@ describe('Dropdown', () => {
       expect(container.textContent).toContain('Archive')
     })
 
-    const firstItem = Array.from(container.querySelectorAll('.menu a, .menu button, .menu span')).find(node =>
-      node.textContent?.includes('Edit'),
-    )
+    const firstItem = Array.from(
+      container.querySelectorAll('.menu a, .menu button, .menu span'),
+    ).find(node => node.textContent?.includes('Edit'))
     expect(firstItem).toBeTruthy()
     firstItem?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
@@ -158,7 +158,9 @@ describe('Dropdown', () => {
     render(<ControlledDropdownCase />, container)
 
     await waitForContent(() => {
-      expect(container.querySelectorAll('[data-testid="controlled-trigger-button"]')).toHaveLength(1)
+      expect(container.querySelectorAll('[data-testid="controlled-trigger-button"]')).toHaveLength(
+        1,
+      )
       expect(container.querySelectorAll('.dropdown-content')).toHaveLength(1)
     })
 
@@ -168,9 +170,13 @@ describe('Dropdown', () => {
     await waitForContent(() => {
       const root = container.querySelector('.dropdown') as HTMLElement
       expect(root.classList.contains('dropdown-open')).toBe(true)
-      expect(container.querySelectorAll('[data-testid="controlled-trigger-button"]')).toHaveLength(1)
+      expect(container.querySelectorAll('[data-testid="controlled-trigger-button"]')).toHaveLength(
+        1,
+      )
       expect(container.querySelectorAll('.dropdown-content')).toHaveLength(1)
-      expect(container.querySelector('[data-testid="controlled-source"]')?.textContent).toBe('trigger')
+      expect(container.querySelector('[data-testid="controlled-source"]')?.textContent).toBe(
+        'trigger',
+      )
     })
 
     document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -178,7 +184,9 @@ describe('Dropdown', () => {
     await waitForContent(() => {
       const root = container.querySelector('.dropdown') as HTMLElement
       expect(root.classList.contains('dropdown-open')).toBe(false)
-      expect(container.querySelectorAll('[data-testid="controlled-trigger-button"]')).toHaveLength(1)
+      expect(container.querySelectorAll('[data-testid="controlled-trigger-button"]')).toHaveLength(
+        1,
+      )
       expect(container.querySelectorAll('.dropdown-content')).toHaveLength(1)
     })
   })
@@ -188,10 +196,7 @@ describe('Dropdown', () => {
     resetActiveRuntime()
 
     render(
-      <Dropdown
-        trigger="contextMenu"
-        overlay={<div className="px-3 py-2">Context actions</div>}
-      >
+      <Dropdown trigger="contextMenu" overlay={<div className="px-3 py-2">Context actions</div>}>
         <div data-testid="context-area">Right click here</div>
       </Dropdown>,
       container,
@@ -202,7 +207,9 @@ describe('Dropdown', () => {
     })
 
     const trigger = container.querySelector('[aria-haspopup="dialog"]') as HTMLDivElement
-    trigger.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 48, clientY: 96 }))
+    trigger.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, clientX: 48, clientY: 96 }),
+    )
 
     await waitForContent(() => {
       const root = container.querySelector('.dropdown') as HTMLElement

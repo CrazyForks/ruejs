@@ -7,13 +7,12 @@ const ThemePicker: FC = () => {
     return saved || 'light'
   })
 
-  watch(
-    () => theme.value,
-    () => {
-      localStorage.setItem('rue.theme', theme.value)
-      document.documentElement.setAttribute('data-theme', theme.value)
-    },
-  )
+  const syncTheme = () => {
+    localStorage.setItem('rue.theme', theme.value)
+    document.documentElement.setAttribute('data-theme', theme.value)
+  }
+
+  watch(() => theme.value, syncTheme, { immediate: true })
 
   const themes = [
     'light',
@@ -89,10 +88,11 @@ const ThemePicker: FC = () => {
       <select
         aria-label="切换主题"
         className="select select-bordered select-sm bg-transparent"
+        value={theme.value}
         onChange={(e: Event) => setTheme((e.currentTarget as HTMLSelectElement).value)}
       >
         {themes.map(name => (
-          <option key={name} value={name} selected={theme.value === name}>
+          <option key={name} value={name}>
             {labels[name] ? `${labels[name]} (${name})` : name}
           </option>
         ))}

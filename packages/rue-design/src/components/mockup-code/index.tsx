@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 export type MockupCodeTone =
@@ -39,13 +40,19 @@ export interface MockupCodeLineProps extends Omit<MockupCodeLineData, 'key'> {
   [key: string]: any
 }
 
-const joinClassName = (...values: Array<string | undefined | false>) => values.filter(Boolean).join(' ')
+const joinClassName = (...values: Array<string | undefined | false>) =>
+  values.filter(Boolean).join(' ')
 
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
-const hasContent = (value: any): boolean => value !== undefined && value !== null && value !== false
+const hasContent = (value: any): boolean => {
+  if (Array.isArray(value)) {
+    return value.some(item => hasContent(item))
+  }
+  return value !== undefined && value !== null && value !== false
+}
 
 const resolveToneClassName = (tone?: MockupCodeTone, highlight?: boolean) => {
   if (!tone && !highlight) return undefined
@@ -113,10 +120,14 @@ const Line: FC<MockupCodeLineProps> = ({
   return (
     <Component
       {...rest}
-      data-prefix={resolvedPrefix}
+      data-prefix={resolvedPrefix == null ? undefined : String(resolvedPrefix)}
       className={joinClassName(resolveToneClassName(tone, highlight), className)}
     >
-      {hasContent(children) ? children : hasContent(lineCode) ? <code className={codeClassName}>{lineCode}</code> : null}
+      {hasContent(children) ? (
+        children
+      ) : hasContent(lineCode) ? (
+        <code className={codeClassName}>{lineCode}</code>
+      ) : null}
     </Component>
   )
 }

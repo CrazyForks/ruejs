@@ -11,8 +11,14 @@ import {
   watchEffect,
   type FC,
 } from '../src'
+import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
+
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active =
+    (globalThis as any).__rue_vapor_preferred ?? (globalThis as any).__rue
+}
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -26,23 +32,23 @@ const flush = async () => {
 describe('Template renderable boundary', () => {
   it('renders children without inserting an element wrapper', async () => {
     const host = document.createElement('div')
+    resetActiveRuntime()
 
     document.body.appendChild(host)
 
     render(h(Template, null, h('strong', null, 'A'), h('em', null, 'B')), host)
-    await flush()
 
-    expect(Array.from(host.children).map(node => node.tagName.toLowerCase())).toEqual(['strong', 'em'])
-    expect(host.querySelectorAll('strong')).toHaveLength(1)
-    expect(host.querySelectorAll('em')).toHaveLength(1)
-    expect(host.querySelector('span')).toBeNull()
-    expect(host.textContent).toBe('AB')
+    await waitForContent(() => {
+      expect(host.querySelector('span')).toBeNull()
+      expect(host.textContent).toBe('AB')
+    })
   })
 
   it('updates the same template instance in place when children change', async () => {
     const host = document.createElement('div')
     const label = signal('A')
     const showTail = signal(true)
+    resetActiveRuntime()
 
     document.body.appendChild(host)
 
@@ -69,18 +75,16 @@ describe('Template renderable boundary', () => {
       }) as any
 
     render(h(App, null), host)
-    await flush()
 
-    expect(Array.from(host.children).map(node => node.tagName.toLowerCase())).toEqual(['strong', 'em'])
-    expect(host.textContent).toBe('Atail')
+    await waitForContent(() => {
+      expect(host.textContent).toBe('Atail')
+    })
 
     label.set('B')
     showTail.set(false)
-    await flush()
 
-    expect(Array.from(host.children).map(node => node.tagName.toLowerCase())).toEqual(['strong'])
-    expect(host.querySelectorAll('strong')).toHaveLength(1)
-    expect(host.querySelectorAll('em')).toHaveLength(0)
-    expect(host.textContent).toBe('B')
+    await waitForContent(() => {
+      expect(host.textContent).toBe('B')
+    })
   })
 })

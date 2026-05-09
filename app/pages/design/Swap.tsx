@@ -53,7 +53,6 @@ const CloseIcon: FC<IconProps> = ({ className }) => (
   </svg>
 )
 
-
 const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
   return (
     <div className="not-prose overflow-x-auto rounded-box border border-base-300 bg-base-100">
@@ -379,11 +378,19 @@ const SwapPage: FC = () => {
           preview={
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body flex flex-wrap items-center gap-6">
-                <Swap disabled defaultChecked className="rounded-box bg-base-200 px-4 py-3 text-success">
+                <Swap
+                  disabled
+                  defaultChecked
+                  className="rounded-box bg-base-200 px-4 py-3 text-success"
+                >
                   <Swap.On>ONLINE</Swap.On>
                   <Swap.Off>OFFLINE</Swap.Off>
                 </Swap>
-                <Swap disabled defaultIndeterminate className="rounded-box bg-base-200 px-4 py-3 text-warning">
+                <Swap
+                  disabled
+                  defaultIndeterminate
+                  className="rounded-box bg-base-200 px-4 py-3 text-warning"
+                >
                   <Swap.On>READY</Swap.On>
                   <Swap.Indeterminate>PENDING</Swap.Indeterminate>
                   <Swap.Off>IDLE</Swap.Off>
@@ -590,7 +597,9 @@ const SwapPage: FC = () => {
         />
 
         <h2 id="swap-api">API</h2>
-        <p>推荐优先使用 props 驱动模式；如果你已经有自己的隐藏 checkbox，也可以继续沿用原始结构。</p>
+        <p>
+          推荐优先使用 props 驱动模式；如果你已经有自己的隐藏 checkbox，也可以继续沿用原始结构。
+        </p>
         <ApiTable rows={apiRows} />
 
         <div className="not-prose mt-6 rounded-box border border-base-300 bg-base-100 p-4">
@@ -620,7 +629,8 @@ const SwapPage: FC = () => {
         <h3>active 和 checked 有什么区别？</h3>
         <p>
           <code>active</code> 只是追加 <code>swap-active</code>，属于 class mode；
-          <code>checked</code> / <code>indeterminate</code> 则是 input mode，会驱动真实的 checkbox 状态。
+          <code>checked</code> / <code>indeterminate</code> 则是 input mode，会驱动真实的 checkbox
+          状态。
         </p>
 
         <h3>effect 和 rotate / flip 应该怎么选？</h3>

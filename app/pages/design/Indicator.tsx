@@ -24,7 +24,6 @@ interface ApiRow {
 const stockImage = 'https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp'
 const avatarImage = 'https://img.daisyui.com/images/profile/demo/batperson@192.webp'
 
-
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">
@@ -178,22 +177,29 @@ const IndicatorPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Indicator 指示器</h1>
         <p className="text-sm mt-3 mb-3">
-          Indicator 负责把状态点、徽标、按钮或任意轻量信息悬挂到内容边缘。Rue 这一版在保留原有复合写法的同时，补齐了
+          Indicator 负责把状态点、徽标、按钮或任意轻量信息悬挂到内容边缘。Rue
+          这一版在保留原有复合写法的同时，补齐了
           <code> placement </code>、<code> offset </code>，以及 <code> item / items </code>
           这组三件套，方便快速搭角标而不必每次都手写一个 <code>Indicator.Item</code>。
         </p>
         <div className="not-prose grid gap-3 rounded-box border border-base-300 bg-base-100 p-4 md:grid-cols-3">
           <div className="rounded-box bg-base-200/70 p-4">
             <div className="text-sm font-medium">兼容旧用法</div>
-            <p className="m-0 mt-2 text-sm text-base-content/70">horizontal 和 vertical 仍然可直接使用，旧 demo 不需要回退。</p>
+            <p className="m-0 mt-2 text-sm text-base-content/70">
+              horizontal 和 vertical 仍然可直接使用，旧 demo 不需要回退。
+            </p>
           </div>
           <div className="rounded-box bg-base-200/70 p-4">
             <div className="text-sm font-medium">新增快捷模式</div>
-            <p className="m-0 mt-2 text-sm text-base-content/70">一个角标用 item，多角标用 items，页面模板代码可以明显收缩。</p>
+            <p className="m-0 mt-2 text-sm text-base-content/70">
+              一个角标用 item，多角标用 items，页面模板代码可以明显收缩。
+            </p>
           </div>
           <div className="rounded-box bg-base-200/70 p-4">
             <div className="text-sm font-medium">定位更顺手</div>
-            <p className="m-0 mt-2 text-sm text-base-content/70">placement 负责主定位，offset 负责微调，适合图片、卡片、操作按钮等场景。</p>
+            <p className="m-0 mt-2 text-sm text-base-content/70">
+              placement 负责主定位，offset 负责微调，适合图片、卡片、操作按钮等场景。
+            </p>
           </div>
         </div>
         <div className="mt-3 text-sm">
@@ -335,14 +341,29 @@ const IndicatorPage: FC = () => {
           tab={tabPlacement}
           preview={() => (
             <div className="grid gap-4 md:grid-cols-3">
-              <Indicator item={<Badge variant="secondary">Start</Badge>} itemProps={{ placement: 'top-start', offset: [8, -4] }}>
-                <div className="grid h-24 rounded-xl bg-base-200 place-items-center text-sm">top-start</div>
+              <Indicator
+                item={<Badge variant="secondary">Start</Badge>}
+                itemProps={{ placement: 'top-start', offset: [8, -4] }}
+              >
+                <div className="grid h-24 rounded-xl bg-base-200 place-items-center text-sm">
+                  top-start
+                </div>
               </Indicator>
-              <Indicator item={<Badge variant="accent">Center</Badge>} itemProps={{ placement: 'middle-center', offset: [0, 4] }}>
-                <div className="grid h-24 rounded-xl bg-base-200 place-items-center text-sm">middle-center</div>
+              <Indicator
+                item={<Badge variant="accent">Center</Badge>}
+                itemProps={{ placement: 'middle-center', offset: [0, 4] }}
+              >
+                <div className="grid h-24 rounded-xl bg-base-200 place-items-center text-sm">
+                  middle-center
+                </div>
               </Indicator>
-              <Indicator item={<Badge variant="warning">End</Badge>} itemProps={{ placement: 'bottom-end', offset: [10, 6] }}>
-                <div className="grid h-24 rounded-xl bg-base-200 place-items-center text-sm">bottom-end</div>
+              <Indicator
+                item={<Badge variant="warning">End</Badge>}
+                itemProps={{ placement: 'bottom-end', offset: [10, 6] }}
+              >
+                <div className="grid h-24 rounded-xl bg-base-200 place-items-center text-sm">
+                  bottom-end
+                </div>
               </Indicator>
             </div>
           )}
@@ -362,10 +383,14 @@ const IndicatorPage: FC = () => {
               <div className="card border border-base-300 bg-base-100 shadow-sm">
                 <div className="card-body gap-3">
                   <div>
-                    <div className="text-xs uppercase tracking-[0.18em] text-base-content/55">Queue</div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-base-content/55">
+                      Queue
+                    </div>
                     <div className="mt-2 text-lg font-semibold">Build pipeline</div>
                   </div>
-                  <p className="m-0 text-sm text-base-content/70">Web hooks, release notes and QA approvals are waiting for merge.</p>
+                  <p className="m-0 text-sm text-base-content/70">
+                    Web hooks, release notes and QA approvals are waiting for merge.
+                  </p>
                 </div>
               </div>
             </Indicator>
@@ -398,7 +423,10 @@ const IndicatorPage: FC = () => {
               <div className="card border border-base-300 bg-base-100 shadow-sm">
                 <div className="card-body gap-2">
                   <h3 className="m-0 text-lg font-semibold">Design review board</h3>
-                  <p className="m-0 text-sm text-base-content/70">This board keeps the latest reviewer presence and the primary action in one place.</p>
+                  <p className="m-0 text-sm text-base-content/70">
+                    This board keeps the latest reviewer presence and the primary action in one
+                    place.
+                  </p>
                 </div>
               </div>
             </Indicator>
@@ -407,7 +435,9 @@ const IndicatorPage: FC = () => {
         />
 
         <h2 className="mt-10">API</h2>
-        <p className="text-sm text-base-content/70">Indicator 仍然是一个纯布局组件，不接管 Badge、Status 或 Button 的视觉，只负责悬挂与定位。</p>
+        <p className="text-sm text-base-content/70">
+          Indicator 仍然是一个纯布局组件，不接管 Badge、Status 或 Button 的视觉，只负责悬挂与定位。
+        </p>
         <h3>Indicator</h3>
         <ApiTable rows={indicatorApiRows} />
         <h3 className="mt-8">Indicator.Item</h3>

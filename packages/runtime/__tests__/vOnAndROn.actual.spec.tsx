@@ -86,7 +86,9 @@ describe('VOnAndROn actual page', () => {
     keyInputs[1].dispatchEvent(keyCodeEvent)
     await flush()
 
-    const selfPanel = selfSection!.querySelector('div.rounded-box.border.border-base-300.bg-base-200.p-4.space-y-3')
+    const selfPanel = selfSection!.querySelector(
+      'div.rounded-box.border.border-base-300.bg-base-200.p-4.space-y-3',
+    )
     expect(selfPanel).not.toBeNull()
     await click(selfPanel!.querySelector('button'))
     await click(selfPanel)
@@ -99,13 +101,17 @@ describe('VOnAndROn actual page', () => {
     await flush()
 
     await waitForContent(() => {
-      expect(normalizeText(methodSection!.querySelector('.badge.badge-primary.badge-lg')?.textContent)).toBe('1 次')
+      expect(
+        normalizeText(methodSection!.querySelector('.badge.badge-primary.badge-lg')?.textContent),
+      ).toBe('1 次')
       expect(normalizeText(inputSection!.textContent)).toContain('当前值Rue Vapor')
       expect(normalizeText(inputSection!.textContent)).toContain('大写预览RUE VAPOR')
       expect(badgeTexts(stopSection!)).toEqual(['bubble 0', 'stop/prevent 1'])
       expect(badgeTexts(keySection!)).toEqual(['enter 1', '13 1'])
       expect(badgeTexts(selfSection!)).toEqual(['self 1', 'meta.exact 1'])
-      expect(normalizeText(lastEventSection!.textContent)).toContain('v-on:click-meta-exact -> button 0，第 1 次')
+      expect(normalizeText(lastEventSection!.textContent)).toContain(
+        'v-on:click-meta-exact -> button 0，第 1 次',
+      )
     })
 
     await click(findTab(container, '代码'))

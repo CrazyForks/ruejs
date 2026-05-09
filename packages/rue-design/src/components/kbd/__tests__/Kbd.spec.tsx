@@ -56,7 +56,7 @@ describe('Kbd', () => {
         separator: '/',
         size: 'small',
       }),
-      c
+      c,
     )
 
     await waitKbdRender()
@@ -78,9 +78,9 @@ describe('Kbd', () => {
         {
           items: ['⌘', 'K'],
         },
-        []
+        [],
       ),
-      c
+      c,
     )
 
     await waitKbdRender()
@@ -99,7 +99,7 @@ describe('Kbd', () => {
         h(Kbd.Separator, null, '|'),
         h(Kbd, null, '/'),
       ]),
-      c
+      c,
     )
 
     await waitKbdRender()

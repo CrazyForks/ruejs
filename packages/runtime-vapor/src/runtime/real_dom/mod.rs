@@ -43,7 +43,10 @@ impl<A: DomAdapter> Rue<A>
 where
     A::Element: Clone,
 {
-    pub(crate) fn mount_from_input(&mut self, input: &MountInput<A>) -> Option<MountedSubtreeState<A>>
+    pub(crate) fn mount_from_input(
+        &mut self,
+        input: &MountInput<A>,
+    ) -> Option<MountedSubtreeState<A>>
     where
         A::Element: From<JsValue> + Into<JsValue>,
     {

@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Breadcrumbs 组件概述
 - 推荐使用 items：补齐 path/params、itemRender、menu 与自定义 separator 等能力。
@@ -97,10 +98,8 @@ const isSeparatorItem = (item: BreadcrumbsDataItem): item is BreadcrumbsSeparato
   return !!item && typeof item === 'object' && 'type' in item && item.type === 'separator'
 }
 
-const resolveItemTitle = (
-  item: Pick<BreadcrumbsRouteItem, 'title' | 'label'>,
-  fallback?: any,
-) => item.title ?? item.label ?? fallback
+const resolveItemTitle = (item: Pick<BreadcrumbsRouteItem, 'title' | 'label'>, fallback?: any) =>
+  item.title ?? item.label ?? fallback
 
 const resolvePath = (params: BreadcrumbsParams, path?: string) => {
   if (path === undefined) {
@@ -172,21 +171,19 @@ const DefaultDropdownIcon: FC = () => {
   )
 }
 
-const renderMenuTrigger = (
-  menu: BreadcrumbsMenu | undefined,
-  dropdownIcon: any,
-  title: any,
-) => {
+const renderMenuTrigger = (menu: BreadcrumbsMenu | undefined, dropdownIcon: any, title: any) => {
   if (!menu?.items || menu.items.length === 0) {
     return null
   }
 
-  const triggerLabel = typeof title === 'string' && title
-    ? `打开 ${title} 菜单`
-    : '打开路径菜单'
+  const triggerLabel = typeof title === 'string' && title ? `打开 ${title} 菜单` : '打开路径菜单'
 
   return (
-    <Dropdown align={menu.align} direction={menu.direction} className={mergeClassName('ms-1', menu.className)}>
+    <Dropdown
+      align={menu.align}
+      direction={menu.direction}
+      className={mergeClassName('ms-1', menu.className)}
+    >
       <Dropdown.Trigger
         className="inline-flex items-center justify-center rounded-full text-base-content/60 outline-none transition-colors hover:text-base-content"
         aria-label={triggerLabel}
@@ -234,7 +231,12 @@ const renderMenuTrigger = (
 
           return (
             <li key={menuItem.key ?? index}>
-              <span className={mergeClassName(menuItem.disabled ? 'cursor-not-allowed opacity-50' : undefined, className)}>
+              <span
+                className={mergeClassName(
+                  menuItem.disabled ? 'cursor-not-allowed opacity-50' : undefined,
+                  className,
+                )}
+              >
                 {menuTitle}
               </span>
             </li>
@@ -286,7 +288,10 @@ const renderItemContent = ({
   const content = (
     <>
       {item.icon ? (
-        <span className="inline-flex shrink-0 items-center justify-center" aria-hidden={title != null ? 'true' : undefined}>
+        <span
+          className="inline-flex shrink-0 items-center justify-center"
+          aria-hidden={title != null ? 'true' : undefined}
+        >
           {item.icon}
         </span>
       ) : null}
@@ -294,14 +299,15 @@ const renderItemContent = ({
     </>
   )
 
-  const contentClassName = mergeClassName(
-    isCurrent
-      ? 'cursor-default font-medium text-base-content no-underline'
-      : item.disabled
-        ? 'cursor-not-allowed opacity-50 no-underline'
-        : undefined,
-    item.linkClassName,
-  ) || undefined
+  const contentClassName =
+    mergeClassName(
+      isCurrent
+        ? 'cursor-default font-medium text-base-content no-underline'
+        : item.disabled
+          ? 'cursor-not-allowed opacity-50 no-underline'
+          : undefined,
+      item.linkClassName,
+    ) || undefined
 
   if (href && !item.disabled && !isCurrent) {
     return (
@@ -360,7 +366,9 @@ const Breadcrumbs: FC<BreadcrumbsProps> = ({
   if (className) cls += ` ${className}`
 
   if (mergedItems && mergedItems.length) {
-    const renderableItems = mergedItems.filter(item => !isSeparatorItem(item)) as BreadcrumbsRouteItem[]
+    const renderableItems = mergedItems.filter(
+      item => !isSeparatorItem(item),
+    ) as BreadcrumbsRouteItem[]
     const resolvedSeparator = separator ?? <DefaultSeparator />
     const paths: string[] = []
     let routeIndex = -1
@@ -380,9 +388,7 @@ const Breadcrumbs: FC<BreadcrumbsProps> = ({
 
             const pathSegment = resolvePath(params, item.path)
             const pathsForItem =
-              pathSegment !== undefined && pathSegment !== ''
-                ? [...paths, pathSegment]
-                : [...paths]
+              pathSegment !== undefined && pathSegment !== '' ? [...paths, pathSegment] : [...paths]
             const href = resolveHref(item.href, pathsForItem, pathSegment !== undefined)
 
             if (pathSegment !== undefined && pathSegment !== '') {
@@ -392,7 +398,10 @@ const Breadcrumbs: FC<BreadcrumbsProps> = ({
             const rendered = (
               <li className={item.className ?? undefined} key={item.key ?? index}>
                 {hasRenderedItem ? (
-                  <span className="pointer-events-none inline-flex shrink-0 items-center justify-center ms-2 me-3 text-base-content/40" aria-hidden="true">
+                  <span
+                    className="pointer-events-none inline-flex shrink-0 items-center justify-center ms-2 me-3 text-base-content/40"
+                    aria-hidden="true"
+                  >
                     {separatorBefore}
                   </span>
                 ) : null}

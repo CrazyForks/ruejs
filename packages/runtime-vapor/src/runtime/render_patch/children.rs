@@ -13,11 +13,7 @@ where
         &self,
         mounted: &MountedSubtreeState<A>,
     ) -> Option<A::Element> {
-        mounted
-            .fragment_nodes()
-            .first()
-            .cloned()
-            .or_else(|| mounted.host_cloned())
+        mounted.fragment_nodes().first().cloned().or_else(|| mounted.host_cloned())
     }
 
     fn keyed_insert_text(
@@ -122,10 +118,7 @@ where
                         }
                     }
                 }
-                node_for_move = fragment_nodes
-                    .first()
-                    .cloned()
-                    .or_else(|| mounted.host_cloned());
+                node_for_move = fragment_nodes.first().cloned().or_else(|| mounted.host_cloned());
             }
 
             if node_for_move.is_none() {

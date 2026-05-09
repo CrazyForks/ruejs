@@ -5,10 +5,10 @@ source: https://raw.githubusercontent.com/saadeghi/daisyui/refs/heads/master/pac
 layout: components
 classnames:
   component:
-  - class: 'cally'
-    desc: for Cally web component
-  - class: 'pika-single'
-    desc: for the input field that opens Pikaday calendar
+    - class: 'cally'
+      desc: for Cally web component
+    - class: 'pika-single'
+      desc: for the input field that opens Pikaday calendar
 ---
 
 <script>
@@ -19,7 +19,9 @@ classnames:
 </script>
 
 <svelte:head>
+
   <script type="module" src="https://unpkg.com/cally"></script>
+
 </svelte:head>
 
 > :INFO:
@@ -40,6 +42,7 @@ You don't need to import the CSS files for these libraries. daisyUI will style t
 Cally is a web component calendar and it works everywhere. [Read the docs](https://github.com/WickyNilliams/cally)
 
 ### ~Cally calendar example
+
 #### Example using daisyUI styles
 
 <calendar-date class="cally bg-base-100 border border-base-300 shadow-lg rounded-box">
@@ -60,13 +63,30 @@ import "cally";
 -->
 
 <calendar-date class="$$cally bg-base-100 border border-base-300 shadow-lg rounded-box">
-  <svg aria-label="Previous" class="fill-current size-4" slot="previous" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg>
-  <svg aria-label="Next" class="fill-current size-4" slot="next" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg>
+  <svg
+    aria-label="Previous"
+    class="fill-current size-4"
+    slot="previous"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+  >
+    <path fill="currentColor" d="M15.75 19.5 8.25 12l7.5-7.5"></path>
+  </svg>
+  <svg
+    aria-label="Next"
+    class="fill-current size-4"
+    slot="next"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+  >
+    <path fill="currentColor" d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
+  </svg>
   <calendar-month></calendar-month>
 </calendar-date>
 ```
 
 ### ~Cally date picker example
+
 #### Example using daisyUI styles and daisyUI dropdown
 
 <button popovertarget="cally-popover1" class="input input-border" id="cally1" style="anchor-name:--cally1">
@@ -79,7 +99,6 @@ import "cally";
     <calendar-month></calendar-month>
   </calendar-date>
 </div>
-
 
 ```html
 <!--
@@ -103,6 +122,7 @@ import "cally";
   </calendar-date>
 </div>
 ```
+
 <div use:prefixClassNames>
 
 ## 2. Pikaday Calendar

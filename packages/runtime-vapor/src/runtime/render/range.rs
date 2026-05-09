@@ -176,7 +176,8 @@ where
                 }
                 old_mount => {
                     let mut parent_clone = parent.clone();
-                    let mounted = self.patch_root_mounted_state(old_mount, input, &mut parent_clone);
+                    let mounted =
+                        self.patch_root_mounted_state(old_mount, input, &mut parent_clone);
                     let entry_opt = self.range_map.get_mut(idx);
                     if let Some(entry) = entry_opt {
                         entry.end = end.clone();

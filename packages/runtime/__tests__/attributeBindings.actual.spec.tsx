@@ -5,7 +5,9 @@ import AttributeBindings from '../../../app/pages/examples/AttributeBindings'
 import { click, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
-  default: (props: { children?: unknown }) => <div data-testid="mock-sidebar-example">{props.children}</div>,
+  default: (props: { children?: unknown }) => (
+    <div data-testid="mock-sidebar-example">{props.children}</div>
+  ),
 }))
 
 vi.mock('../../../app/pages/site/components/Code', () => ({
@@ -49,9 +51,9 @@ describe('AttributeBindings actual page', () => {
     await click(redLine)
 
     await waitForContent(() => {
-      expect(findParagraph(container, 'This should be red... but click me to toggle it.')?.className).not.toContain(
-        'text-red-600',
-      )
+      expect(
+        findParagraph(container, 'This should be red... but click me to toggle it.')?.className,
+      ).not.toContain('text-red-600')
     })
 
     const colorLine = findParagraph(

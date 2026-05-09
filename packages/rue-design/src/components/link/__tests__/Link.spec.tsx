@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, render, setReactiveScheduling } from '@rue-js/rue'
 import Link from '../index'
-import { click, mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+import {
+  click,
+  mountContainer,
+  waitForContent,
+} from '../../../../../runtime/__tests__/page-test-utils'
 
 setReactiveScheduling('sync')
 

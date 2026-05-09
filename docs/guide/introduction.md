@@ -325,13 +325,13 @@ const TodoApp: FC = () => {
 
 #### signal 与 ref 的对比
 
-| 特性 | `signal` | `ref` |
-| ---- | -------- | ----- |
-| 读取值 | `count.get()` | `count.value` |
-| 写入值 | `count.set(newVal)` | `count.value = newVal` |
-| 类型风格 | getter / setter 函数 | 属性访问 |
-| 灵感来源 | Solid.js / Angular | Vue 3 |
-| 适合场景 | 函数式编程偏好 | 属性访问偏好 |
+| 特性     | `signal`             | `ref`                  |
+| -------- | -------------------- | ---------------------- |
+| 读取值   | `count.get()`        | `count.value`          |
+| 写入值   | `count.set(newVal)`  | `count.value = newVal` |
+| 类型风格 | getter / setter 函数 | 属性访问               |
+| 灵感来源 | Solid.js / Angular   | Vue 3                  |
+| 适合场景 | 函数式编程偏好       | 属性访问偏好           |
 
 两者在响应式追踪能力上完全等价，可以在同一个项目中混合使用，按团队偏好选择即可。
 

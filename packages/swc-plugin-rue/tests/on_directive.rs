@@ -52,7 +52,7 @@ export default Demo;
     assert!(out.contains("handleEnter($event)"));
     assert!(out.contains("__rueNativeOnClick"));
     assert!(out.contains("backClick($event)"));
-    assert!(out.contains("v-once"));
+    assert!(!out.contains("v-once"));
 }
 
 #[test]

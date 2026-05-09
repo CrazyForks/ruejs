@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 export type HeroTone =
@@ -167,8 +168,8 @@ const mergeStyle = (base?: HeroInlineStyle, extra?: HeroInlineStyle) => {
     return undefined
   }
   return {
-    ...(base ?? {}),
-    ...(extra ?? {}),
+    ...base,
+    ...extra,
   }
 }
 
@@ -204,7 +205,10 @@ const resolveHeroBackgroundStyle = ({
   backgroundPosition,
   backgroundSize,
   backgroundRepeat,
-}: Pick<HeroProps, 'backgroundImage' | 'backgroundPosition' | 'backgroundSize' | 'backgroundRepeat'>) => {
+}: Pick<
+  HeroProps,
+  'backgroundImage' | 'backgroundPosition' | 'backgroundSize' | 'backgroundRepeat'
+>) => {
   if (!backgroundImage) {
     return undefined
   }
@@ -369,7 +373,12 @@ const Title: FC<HeroTitleProps> = ({
   return (
     <Component
       {...rest}
-      className={joinClassName('font-bold tracking-tight', heroTitleSizeClassMap[size], balanced ? 'text-balance' : undefined, className)}
+      className={joinClassName(
+        'font-bold tracking-tight',
+        heroTitleSizeClassMap[size],
+        balanced ? 'text-balance' : undefined,
+        className,
+      )}
     >
       {children}
     </Component>
@@ -417,7 +426,11 @@ const Actions: FC<HeroActionsProps> = ({
       {...rest}
       className={joinClassName(
         'flex gap-3',
-        stackOnMobile ? 'flex-col sm:flex-row sm:flex-wrap' : direction === 'column' ? 'flex-col' : 'flex-row flex-wrap',
+        stackOnMobile
+          ? 'flex-col sm:flex-row sm:flex-wrap'
+          : direction === 'column'
+            ? 'flex-col'
+            : 'flex-row flex-wrap',
         resolveActionsAlignmentClass(align, direction, stackOnMobile),
         className,
       )}

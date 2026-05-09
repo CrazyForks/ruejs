@@ -5,7 +5,9 @@ import MockupBrowserPage from '../../../app/pages/design/MockupBrowser'
 import { click, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundDesign', () => ({
-  default: (props: { children?: unknown }) => <div data-testid="mock-sidebar-design">{props.children}</div>,
+  default: (props: { children?: unknown }) => (
+    <div data-testid="mock-sidebar-design">{props.children}</div>
+  ),
 }))
 
 vi.mock('../../../app/pages/site/components/Code', () => ({
@@ -17,10 +19,14 @@ setReactiveScheduling('sync')
 const normalize = (value: string | null | undefined) => value?.replace(/\s+/g, ' ').trim() ?? ''
 
 const findTabButton = (root: ParentNode, label: string) =>
-  Array.from(root.querySelectorAll('button[role="tab"]')).find(button => button.textContent?.trim() === label) ?? null
+  Array.from(root.querySelectorAll('button[role="tab"]')).find(
+    button => button.textContent?.trim() === label,
+  ) ?? null
 
 const findDemo = (root: ParentNode, title: string) =>
-  Array.from(root.querySelectorAll('.component-preview')).find(node => normalize(node.querySelector('h2')?.textContent) === title) ?? null
+  Array.from(root.querySelectorAll('.component-preview')).find(
+    node => normalize(node.querySelector('h2')?.textContent) === title,
+  ) ?? null
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -48,11 +54,17 @@ describe('MockupBrowser actual page', () => {
     })
 
     await click(findTabButton(borderDemo!, 'JSX代码'))
-    expect(findDemo(container, '# browser mockup with border')?.querySelectorAll('.mockup-browser').length).toBe(0)
+    expect(
+      findDemo(container, '# browser mockup with border')?.querySelectorAll('.mockup-browser')
+        .length,
+    ).toBe(0)
     await click(findTabButton(findDemo(container, '# browser mockup with border')!, '预览'))
 
     await waitForContent(() => {
-      expect(findDemo(container, '# browser mockup with border')?.querySelectorAll('.mockup-browser').length).toBe(1)
+      expect(
+        findDemo(container, '# browser mockup with border')?.querySelectorAll('.mockup-browser')
+          .length,
+      ).toBe(1)
     })
   })
 })

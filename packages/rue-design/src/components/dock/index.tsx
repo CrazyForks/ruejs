@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Dock 组件概述
 - 形态：保留原有 children / items 双写法，并补充 key、disabled、链接语义等增强能力。
@@ -9,16 +10,7 @@ import type { FC } from '@rue-js/rue'
 export type DockRootAs = 'div' | 'nav'
 export type DockItemAs = 'button' | 'a' | 'div'
 export type DockItemKey = string | number
-export type DockSize =
-  | 'xs'
-  | 'sm'
-  | 'md'
-  | 'lg'
-  | 'xl'
-  | 'small'
-  | 'middle'
-  | 'medium'
-  | 'large'
+export type DockSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'
 
 export interface DockChangeContext {
   key: DockItemKey
@@ -240,11 +232,12 @@ const Dock: FC<DockProps> = ({
         index: item.index,
         item,
       }
-      const isActive = selectedKey != null
-        ? selectedKey === item.key
-        : activeIndex != null
-          ? activeIndex === item.index
-          : !!item.active
+      const isActive =
+        selectedKey != null
+          ? selectedKey === item.key
+          : activeIndex != null
+            ? activeIndex === item.index
+            : !!item.active
 
       return (
         <Item
@@ -265,7 +258,12 @@ const Dock: FC<DockProps> = ({
           }}
         >
           {item.icon != null ? (
-            <span className={appendClassName('inline-flex items-center justify-center', item.iconClassName)}>
+            <span
+              className={appendClassName(
+                'inline-flex items-center justify-center',
+                item.iconClassName,
+              )}
+            >
               {item.icon}
             </span>
           ) : null}
@@ -275,15 +273,31 @@ const Dock: FC<DockProps> = ({
     })
 
     if (as === 'nav') {
-      return <nav className={cls} aria-label={ariaLabel}>{content}</nav>
+      return (
+        <nav className={cls} aria-label={ariaLabel}>
+          {content}
+        </nav>
+      )
     }
-    return <div className={cls} aria-label={ariaLabel}>{content}</div>
+    return (
+      <div className={cls} aria-label={ariaLabel}>
+        {content}
+      </div>
+    )
   }
 
   if (as === 'nav') {
-    return <nav className={cls} aria-label={ariaLabel}>{children}</nav>
+    return (
+      <nav className={cls} aria-label={ariaLabel}>
+        {children}
+      </nav>
+    )
   }
-  return <div className={cls} aria-label={ariaLabel}>{children}</div>
+  return (
+    <div className={cls} aria-label={ariaLabel}>
+      {children}
+    </div>
+  )
 }
 
 /** 项标签组件：显示文字或图标旁说明。 */

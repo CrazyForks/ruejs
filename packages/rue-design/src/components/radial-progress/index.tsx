@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 import type { FC } from '@rue-js/rue'
 
 type StyleValue = string | number | null | undefined
@@ -54,7 +55,8 @@ const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${matc
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
-const mergeClassName = (base: string, className?: string) => (className ? `${base} ${className}` : base)
+const mergeClassName = (base: string, className?: string) =>
+  className ? `${base} ${className}` : base
 
 const assignForwardedRef = (forwardedRef: any, element: HTMLDivElement | null) => {
   if (typeof forwardedRef === 'function') {
@@ -97,7 +99,11 @@ const resolveSize = (size?: RadialProgressSize) => {
   return normalizeCssLength(size) ?? '5rem'
 }
 
-const resolveThickness = (thickness?: string | number, strokeWidth?: string | number, size?: string) => {
+const resolveThickness = (
+  thickness?: string | number,
+  strokeWidth?: string | number,
+  size?: string,
+) => {
   return normalizeCssLength(thickness ?? strokeWidth) ?? `calc(${size ?? '5rem'} / 10)`
 }
 
@@ -205,7 +211,13 @@ const polarToCartesian = (cx: number, cy: number, radius: number, angle: number)
   }
 }
 
-const describeArcPath = (cx: number, cy: number, radius: number, startAngle: number, endAngle: number) => {
+const describeArcPath = (
+  cx: number,
+  cy: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+) => {
   const start = polarToCartesian(cx, cy, radius, startAngle)
   const end = polarToCartesian(cx, cy, radius, endAngle)
   const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0
@@ -226,7 +238,13 @@ const DefaultStatusIcon: FC<{ status: RadialProgressStatus }> = ({ status }) => 
   if (status === 'success') {
     return (
       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-success/15 text-success">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+        <svg
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="h-3.5 w-3.5"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="m5 10 3 3 7-7" />
         </svg>
       </span>
@@ -235,7 +253,13 @@ const DefaultStatusIcon: FC<{ status: RadialProgressStatus }> = ({ status }) => 
   if (status === 'exception') {
     return (
       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-error/15 text-error">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+        <svg
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="h-3.5 w-3.5"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="m6 6 8 8M14 6l-8 8" />
         </svg>
       </span>
@@ -338,12 +362,17 @@ const RadialProgress: FC<RadialProgressProps> = ({
   const resolvedThickness = resolveThickness(thickness, strokeWidth, resolvedSize)
   const resolvedRailColor = railColor ?? trailColor
   const stepsConfig = normalizeSteps(steps)
-  const resolvedGapDegree = clamp(type === 'dashboard' ? gapDegree ?? 75 : gapDegree ?? 0, 0, 295)
+  const resolvedGapDegree = clamp(
+    type === 'dashboard' ? (gapDegree ?? 75) : (gapDegree ?? 0),
+    0,
+    295,
+  )
   const resolvedGapPlacement = resolveGapPlacement(gapPlacement, gapPosition)
   const gapCenter = resolveGapCenter(resolvedGapPlacement)
   const startAngle = gapCenter + resolvedGapDegree / 2
   const sweepAngle = 360 - resolvedGapDegree
-  const endAngle = startAngle + (type === 'circle' && resolvedGapDegree === 0 ? 359.999 : sweepAngle)
+  const endAngle =
+    startAngle + (type === 'circle' && resolvedGapDegree === 0 ? 359.999 : sweepAngle)
   const progressEndAngle = startAngle + (resolvedPercent / 100) * sweepAngle
   const successEndAngle = startAngle + (resolvedSuccessPercent / 100) * sweepAngle
   const progressToneClass = resolveStatusToneClass(resolvedStatus)
@@ -385,11 +414,21 @@ const RadialProgress: FC<RadialProgressProps> = ({
       aria-valuemin={ariaValueMin ?? '0'}
       aria-valuemax={ariaValueMax ?? '100'}
       aria-valuenow={String(ariaValueNow ?? Math.round(resolvedPercent))}
-      className={mergeClassName('rue-radial-progress relative inline-grid shrink-0 place-items-center align-middle', className)}
+      className={mergeClassName(
+        'rue-radial-progress relative inline-grid shrink-0 place-items-center align-middle',
+        className,
+      )}
       data-progress-type={type}
     >
-      <div className="radial-progress invisible pointer-events-none absolute inset-0" aria-hidden="true" />
-      <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 h-full w-full -rotate-90 overflow-visible" aria-hidden="true">
+      <div
+        className="radial-progress invisible pointer-events-none absolute inset-0"
+        aria-hidden="true"
+      />
+      <svg
+        viewBox="0 0 100 100"
+        className="pointer-events-none absolute inset-0 h-full w-full -rotate-90 overflow-visible"
+        aria-hidden="true"
+      >
         <path
           d={trackPath}
           fill="none"
@@ -402,19 +441,29 @@ const RadialProgress: FC<RadialProgressProps> = ({
         {stepsConfig
           ? Array.from({ length: stepsConfig.count }, (_, index) => {
               const gap = clamp(stepsConfig.gap, 0, sweepAngle / Math.max(stepsConfig.count * 2, 1))
-              const segmentSweep = Math.max((sweepAngle - gap * (stepsConfig.count - 1)) / stepsConfig.count, 0.01)
+              const segmentSweep = Math.max(
+                (sweepAngle - gap * (stepsConfig.count - 1)) / stepsConfig.count,
+                0.01,
+              )
               const segmentStart = startAngle + index * (segmentSweep + gap)
               const segmentEnd = segmentStart + segmentSweep
-              const completedCount = clamp(Math.round((resolvedPercent / 100) * stepsConfig.count), 0, stepsConfig.count)
-              const successCount = clamp(Math.round((resolvedSuccessPercent / 100) * stepsConfig.count), 0, stepsConfig.count)
+              const completedCount = clamp(
+                Math.round((resolvedPercent / 100) * stepsConfig.count),
+                0,
+                stepsConfig.count,
+              )
+              const successCount = clamp(
+                Math.round((resolvedSuccessPercent / 100) * stepsConfig.count),
+                0,
+                stepsConfig.count,
+              )
               const isSuccess = index < successCount
               const isActive = index >= successCount && index < completedCount
-              const segmentStrokeColor =
-                isSuccess
-                  ? success?.strokeColor
-                  : Array.isArray(strokeColor)
-                    ? strokeColor[Math.min(index, strokeColor.length - 1)]
-                    : progressStrokeColor
+              const segmentStrokeColor = isSuccess
+                ? success?.strokeColor
+                : Array.isArray(strokeColor)
+                  ? strokeColor[Math.min(index, strokeColor.length - 1)]
+                  : progressStrokeColor
 
               return (
                 <path

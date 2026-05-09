@@ -21,7 +21,6 @@ interface ApiRow {
   defaultValue: string
 }
 
-
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">
@@ -78,7 +77,12 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
 }
 
 const collapseApiRows: ApiRow[] = [
-  { prop: 'items', description: '数据驱动的折叠面板列表', type: 'CollapseItem[]', defaultValue: '-' },
+  {
+    prop: 'items',
+    description: '数据驱动的折叠面板列表',
+    type: 'CollapseItem[]',
+    defaultValue: '-',
+  },
   {
     prop: 'activeKey',
     description: '受控展开项；accordion 模式下可传单值',
@@ -91,8 +95,18 @@ const collapseApiRows: ApiRow[] = [
     type: 'string | number | Array<string | number>',
     defaultValue: '-',
   },
-  { prop: 'accordion', description: '是否只允许同时展开一项', type: 'boolean', defaultValue: 'false' },
-  { prop: 'bordered', description: '是否使用分组边框容器', type: 'boolean', defaultValue: 'items 模式默认 true' },
+  {
+    prop: 'accordion',
+    description: '是否只允许同时展开一项',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
+  {
+    prop: 'bordered',
+    description: '是否使用分组边框容器',
+    type: 'boolean',
+    defaultValue: 'items 模式默认 true',
+  },
   { prop: 'ghost', description: '是否使用透明背景', type: 'boolean', defaultValue: 'false' },
   { prop: 'size', description: '标题与内容尺寸', type: "'sm' | 'md' | 'lg'", defaultValue: "'md'" },
   {
@@ -107,7 +121,12 @@ const collapseApiRows: ApiRow[] = [
     type: '(nextValue, context) => void',
     defaultValue: '-',
   },
-  { prop: 'tag', description: '兼容旧写法的根标签切换', type: "'div' | 'details'", defaultValue: "'div'" },
+  {
+    prop: 'tag',
+    description: '兼容旧写法的根标签切换',
+    type: "'div' | 'details'",
+    defaultValue: "'div'",
+  },
 ]
 
 const collapseItemApiRows: ApiRow[] = [
@@ -117,7 +136,12 @@ const collapseItemApiRows: ApiRow[] = [
   { prop: 'description', description: '标题下方的说明文案', type: 'any', defaultValue: '-' },
   { prop: 'extra', description: '标题右侧附加区域，不触发展开', type: 'any', defaultValue: '-' },
   { prop: 'showArrow', description: '是否显示展开图标', type: 'boolean', defaultValue: '继承父级' },
-  { prop: 'collapsible', description: '触发区域控制', type: "'header' | 'icon' | 'disabled'", defaultValue: "'header'" },
+  {
+    prop: 'collapsible',
+    description: '触发区域控制',
+    type: "'header' | 'icon' | 'disabled'",
+    defaultValue: "'header'",
+  },
   { prop: 'disabled', description: '禁用当前项交互', type: 'boolean', defaultValue: 'false' },
   { prop: 'open', description: '非受控初始展开', type: 'boolean', defaultValue: 'false' },
 ]
@@ -160,7 +184,9 @@ const CollapseDemo: FC = () => {
         </div>
 
         <h2>增强 API</h2>
-        <p className="text-sm opacity-80">优先面向 `items` 数据驱动用法，组织方式接近 ant-design，但保留 Rue 视觉风格。</p>
+        <p className="text-sm opacity-80">
+          优先面向 `items` 数据驱动用法，组织方式贴近常见业务组件，但保留 Rue 视觉风格。
+        </p>
 
         <ExampleBlock
           title="Items 基础用法"
@@ -174,8 +200,7 @@ const CollapseDemo: FC = () => {
                 {
                   key: 'overview',
                   label: 'Overview',
-                  children:
-                    '汇总版本亮点、上线范围与回滚策略，适合用作页面最上方的信息概览。',
+                  children: '汇总版本亮点、上线范围与回滚策略，适合用作页面最上方的信息概览。',
                 },
                 {
                   key: 'release',
@@ -226,7 +251,10 @@ const CollapseDemo: FC = () => {
                 <button className="btn btn-sm" onClick={() => (accordionKey.value = 'api')}>
                   打开 API
                 </button>
-                <button className="btn btn-sm btn-ghost" onClick={() => (accordionKey.value = null)}>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => (accordionKey.value = null)}
+                >
                   全部收起
                 </button>
               </div>
@@ -440,7 +468,10 @@ const CollapseDemo: FC = () => {
                 >
                   展开两项
                 </button>
-                <button className="btn btn-sm btn-ghost" onClick={() => (controlledKeys.value = [])}>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => (controlledKeys.value = [])}
+                >
                   全部收起
                 </button>
               </div>

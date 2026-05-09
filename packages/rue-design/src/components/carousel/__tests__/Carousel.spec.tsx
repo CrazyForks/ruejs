@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, render, setReactiveScheduling } from '@rue-js/rue'
 import { Carousel } from '@rue-js/design'
-import { click, mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+import {
+  click,
+  mountContainer,
+  waitForContent,
+} from '../../../../../runtime/__tests__/page-test-utils'
 
 setReactiveScheduling('sync')
 
@@ -120,7 +124,14 @@ describe('Carousel', () => {
     ]
 
     render(
-      h(Carousel, { items, align: 'center', direction: 'horizontal', dots: true, speed: 0, apiRef: carouselRef }),
+      h(Carousel, {
+        items,
+        align: 'center',
+        direction: 'horizontal',
+        dots: true,
+        speed: 0,
+        apiRef: carouselRef,
+      }),
       c,
     )
 

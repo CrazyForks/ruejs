@@ -38,7 +38,9 @@ describe('Filter actual page', () => {
     expect(groupedDemo).not.toBeNull()
     expect(formDemo).not.toBeNull()
 
-    const reactOption = groupedDemo!.querySelector('[data-testid="filter-react"]') as HTMLInputElement
+    const reactOption = groupedDemo!.querySelector(
+      '[data-testid="filter-react"]',
+    ) as HTMLInputElement
     reactOption.click()
     expect(reactOption.checked).toBe(true)
 
@@ -48,13 +50,19 @@ describe('Filter actual page', () => {
     })
 
     await click(findTabButton(groupedDemo!, 'JSX代码'))
-    const groupedDemoInCode = findDemo(container, '# Filter with grouped options') as HTMLElement | null
+    const groupedDemoInCode = findDemo(
+      container,
+      '# Filter with grouped options',
+    ) as HTMLElement | null
     expect(groupedDemoInCode!.querySelectorAll('input.btn').length).toBe(0)
 
     await click(findTabButton(groupedDemoInCode!, '预览'))
 
     await waitForContent(() => {
-      const restoredDemo = findDemo(container, '# Filter with grouped options') as HTMLElement | null
+      const restoredDemo = findDemo(
+        container,
+        '# Filter with grouped options',
+      ) as HTMLElement | null
       expect(restoredDemo!.querySelectorAll('input.btn').length).toBe(5)
     })
   })
@@ -93,8 +101,12 @@ describe('Filter actual page', () => {
     const alerts = multipleDemo!.querySelector('[aria-label="提醒"]') as HTMLInputElement
 
     expect(search.type).toBe('checkbox')
-    expect((multipleDemo!.querySelector('form') as HTMLFormElement).classList.contains('filter')).toBe(false)
-    expect((multipleDemo!.querySelector('form') as HTMLFormElement).classList.contains('flex')).toBe(true)
+    expect(
+      (multipleDemo!.querySelector('form') as HTMLFormElement).classList.contains('filter'),
+    ).toBe(false)
+    expect(
+      (multipleDemo!.querySelector('form') as HTMLFormElement).classList.contains('flex'),
+    ).toBe(true)
 
     favorite.checked = true
     favorite.dispatchEvent(new Event('change', { bubbles: true }))

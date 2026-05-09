@@ -5,10 +5,10 @@ source: https://raw.githubusercontent.com/saadeghi/daisyui/refs/heads/master/pac
 layout: components
 classnames:
   component:
-  - class: label
-    desc: For styling the text next to an input field (or select)
-  - class: floating-label
-    desc: For the parent of an input field (or select) and a span that floats above the input field when the field is focused
+    - class: label
+      desc: For styling the text next to an input field (or select)
+    - class: floating-label
+      desc: For the parent of an input field (or select) and a span that floats above the input field when the field is focused
 ---
 
 <script>
@@ -17,6 +17,7 @@ classnames:
 </script>
 
 ### ~Label for input
+
 <label class="input">
   <span class="label">https://</span>
   <input type="text" placeholder="URL" />
@@ -28,7 +29,9 @@ classnames:
   <input type="text" placeholder="URL" />
 </label>
 ```
+
 ### ~Label for input at the end
+
 <label class="input">
   <input type="text" placeholder="domain name" />
   <span class="label">.com</span>
@@ -42,6 +45,7 @@ classnames:
 ```
 
 ### ~Label for select
+
 <label class="select">
   <span class="label">Type</span>
   <select>
@@ -61,6 +65,7 @@ classnames:
 ```
 
 ### ~Label for date input
+
 <label class="input">
   <span class="label">Publish date</span>
   <input type="date" />
@@ -73,9 +78,8 @@ classnames:
 </label>
 ```
 
-
-
 ### ~Floating Label
+
 <label class="floating-label w-full max-w-xs">
   <span>Your Email</span>
   <input type="email" placeholder="mail@site.com" class="input input-md" />
@@ -89,6 +93,7 @@ classnames:
 ```
 
 ### ~Floating Label with Different Sizes
+
 <div class="grid gap-4 w-xs">
   <label class="floating-label">
     <input type="text" placeholder="Extra Small" class="input input-xs" />

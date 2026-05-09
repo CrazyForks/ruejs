@@ -1,30 +1,72 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig, defineProject } from 'vitest/config'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import tailwindcss from '@tailwindcss/vite'
 import VitePluginRue from '@rue-js/vite-plugin-rue'
 import { resolve } from 'node:path'
-import topLevelAwait from 'vite-plugin-top-level-await'
 import wasm from 'vite-plugin-wasm'
-import dts from 'vite-plugin-dts'
 
 const rootDir = resolve(__dirname)
 
-export default defineConfig({
+const vitestProjects = [
+  defineProject({
+    extends: true,
+    test: {
+      name: 'unit',
+      include: ['packages/**/__tests__/*.{test,spec}.{js,ts,jsx,tsx,mjs,cjs}'],
+      exclude: [
+        ...configDefaults.exclude,
+        '**/e2e/**',
+        'temp/**',
+        '**/{rue,rue-design,runtime,jsx-runtime}/**',
+        'packages/runtime/__tests__/transition-utils.spec.ts',
+      ],
+    },
+  }),
+  defineProject({
+    extends: true,
+    test: {
+      name: 'unit-jsdom',
+      include: [
+        'packages/{rue,runtime,jsx-runtime}/**/*.{test,spec}.{js,ts,jsx,tsx,mjs,cjs}',
+        'packages/runtime/__tests__/transition-utils.spec.ts',
+      ],
+      exclude: [...configDefaults.exclude, '**/e2e/**', 'temp/**'],
+      environment: 'jsdom',
+    },
+  }),
+  defineProject({
+    extends: true,
+    test: {
+      name: 'rue-design-jsdom',
+      include: ['packages/rue-design/**/*.{test,spec}.{js,ts,jsx,tsx,mjs,cjs}'],
+      exclude: [...configDefaults.exclude, '**/e2e/**', 'temp/**'],
+      environment: 'jsdom',
+    },
+  }),
+  defineProject({
+    extends: true,
+    test: {
+      name: 'e2e',
+      environment: 'jsdom',
+      poolOptions: {
+        threads: {
+          singleThread: !!process.env.CI,
+        },
+      },
+      exclude: [...configDefaults.exclude, 'temp/**'],
+      include: ['packages/rue/__tests__/e2e/*.spec.ts'],
+    },
+  }),
+]
+
+export default defineConfig(({ command }) => ({
   plugins: [
-    topLevelAwait({
-      // The export name of top-level await promise for each chunk module
-      promiseExportName: '__tla',
-      // The function to generate import names of top-level await promise in each chunk module
-      promiseImportName: i => `__tla_${i}`,
-    }),
     wasm(),
     tailwindcss() as any,
     VitePluginRue({
-      include: ['/app/'],
-      debug: true,
+      debug: command === 'serve',
     }),
-    !process.env.VITEST && dts(),
     {
       name: 'copy-docs',
       apply: 'build',
@@ -50,6 +92,9 @@ export default defineConfig({
   },
   assetsInclude: ['**/*.md'],
   build: {
+    // Keep this explicit so the build path doesn't depend on Vite's implicit
+    // minifier default when toolchain internals change.
+    minify: true,
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
@@ -63,6 +108,7 @@ export default defineConfig({
     sequence: {
       hooks: 'list',
     },
+    projects: vitestProjects,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
@@ -115,4 +161,4 @@ export default defineConfig({
         : path.resolve(rootDir, 'packages/runtime-vapor/pkg/rue_runtime_vapor.js'),
     },
   },
-})
+}))

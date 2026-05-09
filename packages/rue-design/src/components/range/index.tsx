@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Range 组件概述
 - 保留 Rue 当前的 range 视觉类，同时补齐常用的受控/非受控、值展示、marks 和辅助文案能力。
@@ -169,7 +170,9 @@ const normalizeMarks = (
       const rawValue = isRangeMarkObject(mark) ? mark.value : mark
       const numericValue = resolveValue(rawValue, min, max, min)
       const label = isRangeMarkObject(mark)
-        ? ('label' in mark ? mark.label : String(rawValue))
+        ? 'label' in mark
+          ? mark.label
+          : String(rawValue)
         : String(rawValue)
 
       return {
@@ -240,7 +243,9 @@ const Range: FC<RangeProps> = ({
   const bounds = resolveBounds(min, max)
   const rangeStep = resolveStep(step)
   const controlled = value !== undefined
-  const uncontrolledValue = ref(resolveValue(defaultValue ?? value ?? bounds.min, bounds.min, bounds.max, bounds.min))
+  const uncontrolledValue = ref(
+    resolveValue(defaultValue ?? value ?? bounds.min, bounds.min, bounds.max, bounds.min),
+  )
   const currentValue = controlled
     ? resolveValue(value, bounds.min, bounds.max, uncontrolledValue.value)
     : resolveValue(uncontrolledValue.value, bounds.min, bounds.max, bounds.min)
@@ -254,7 +259,10 @@ const Range: FC<RangeProps> = ({
   }
   const displayFormatter = valueDisplay.formatter ?? formatter
   const displayValue = formatRangeValue(currentValue, displayFormatter, info)
-  const ariaValueText = typeof displayValue === 'string' || typeof displayValue === 'number' ? String(displayValue) : undefined
+  const ariaValueText =
+    typeof displayValue === 'string' || typeof displayValue === 'number'
+      ? String(displayValue)
+      : undefined
   const needsWrapper =
     label != null ||
     hint != null ||
@@ -314,6 +322,13 @@ const Range: FC<RangeProps> = ({
     }
 
     if (!rootRef.current) return
+
+    if (nextAriaValueText !== undefined) {
+      const outputs = rootRef.current.querySelectorAll('[data-rue-range-output="true"]')
+      outputs.forEach(outputNode => {
+        outputNode.textContent = nextAriaValueText
+      })
+    }
 
     const marks = rootRef.current.querySelectorAll('[data-rue-range-mark]')
     marks.forEach(markNode => {
@@ -400,23 +415,36 @@ const Range: FC<RangeProps> = ({
       style={rootStyle}
       data-rue-range-root="true"
     >
-      {label != null || hint != null || (valueDisplay.visible && valueDisplay.placement === 'inline') ? (
+      {label != null ||
+      hint != null ||
+      (valueDisplay.visible && valueDisplay.placement === 'inline') ? (
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 space-y-1">
             {label != null ? (
-              <label htmlFor={inputId} className={appendClassName('block text-sm font-medium text-base-content', labelClassName)}>
+              <label
+                htmlFor={inputId}
+                className={appendClassName(
+                  'block text-sm font-medium text-base-content',
+                  labelClassName,
+                )}
+              >
                 {label}
               </label>
             ) : null}
             {hint != null ? (
-              <p className={appendClassName('m-0 text-xs text-base-content/65', hintClassName)}>{hint}</p>
+              <p className={appendClassName('m-0 text-xs text-base-content/65', hintClassName)}>
+                {hint}
+              </p>
             ) : null}
           </div>
           {valueDisplay.visible && valueDisplay.placement === 'inline' ? (
             <output
               htmlFor={inputId}
               className={appendClassName(
-                appendClassName('shrink-0 rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content', valueDisplay.className),
+                appendClassName(
+                  'shrink-0 rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content',
+                  valueDisplay.className,
+                ),
                 valueClassName,
               )}
               data-rue-range-output="true"
@@ -434,7 +462,10 @@ const Range: FC<RangeProps> = ({
           <output
             htmlFor={inputId}
             className={appendClassName(
-              appendClassName('rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content', valueDisplay.className),
+              appendClassName(
+                'rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content',
+                valueDisplay.className,
+              ),
               valueClassName,
             )}
             data-rue-range-output="true"
@@ -445,7 +476,10 @@ const Range: FC<RangeProps> = ({
       ) : null}
 
       {normalizedMarks.length > 0 ? (
-        <div className={appendClassName('relative h-10', marksClassName)} data-rue-range-marks="true">
+        <div
+          className={appendClassName('relative h-10', marksClassName)}
+          data-rue-range-marks="true"
+        >
           {normalizedMarks.map(mark => {
             const active = currentValue >= mark.value
             return (
@@ -457,8 +491,12 @@ const Range: FC<RangeProps> = ({
                 style={{ left: `${mark.percent}%` }}
                 data-rue-range-mark={String(mark.value)}
               >
-                <span className={`h-2 w-px ${active ? 'bg-base-content/80' : 'bg-base-content/25'}`} />
-                {mark.label != null ? <span className="whitespace-nowrap">{mark.label}</span> : null}
+                <span
+                  className={`h-2 w-px ${active ? 'bg-base-content/80' : 'bg-base-content/25'}`}
+                />
+                {mark.label != null ? (
+                  <span className="whitespace-nowrap">{mark.label}</span>
+                ) : null}
               </span>
             )
           })}
@@ -466,7 +504,9 @@ const Range: FC<RangeProps> = ({
       ) : null}
 
       {helper != null ? (
-        <p className={appendClassName('m-0 text-xs text-base-content/60', helperClassName)}>{helper}</p>
+        <p className={appendClassName('m-0 text-xs text-base-content/60', helperClassName)}>
+          {helper}
+        </p>
       ) : null}
     </div>
   )

@@ -23,7 +23,9 @@ const resetActiveRuntime = () => {
 const normalize = (value: string | null | undefined) => value?.replace(/\s+/g, ' ').trim() ?? ''
 
 const getDemoTitles = (root: ParentNode) =>
-  Array.from(root.querySelectorAll('.component-preview-title')).map(node => normalize(node.textContent))
+  Array.from(root.querySelectorAll('.component-preview-title')).map(node =>
+    normalize(node.textContent),
+  )
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -38,13 +40,12 @@ describe('Timeline actual page', () => {
 
     await waitForContent(() => {
       const titles = getDemoTitles(container)
-      const reverseIndex = titles.indexOf('# reverse 与 pending')
+      const reverseIndex = titles.lastIndexOf('# reverse 与 pending')
       const snapIndex = titles.indexOf('# 图标吸附到起始侧（snap to start）')
 
       expect(container.textContent).toContain('Timeline 时间线')
-      expect(container.textContent).toContain('经典效果')
       expect(container.textContent).toContain('增强能力')
-      expect(container.textContent).toContain('API 模块')
+      expect(container.textContent).toContain('API')
 
       expect(titles).toContain('# Timeline 通过数据渲染（数组）')
       expect(titles).toContain('# Timeline 通过数据渲染（数组，组件内部）')

@@ -58,7 +58,9 @@ describe('SuspenseDemo actual page', () => {
     await new Promise(resolve => setTimeout(resolve, 500))
 
     await waitForContent(() => {
-      expect(container.textContent).not.toContain('本地 loading：这个异步组件设置了 suspensible: false')
+      expect(container.textContent).not.toContain(
+        '本地 loading：这个异步组件设置了 suspensible: false',
+      )
       expect(container.textContent).not.toContain('这个 fallback 不会接管下面的组件')
     }, 120)
 

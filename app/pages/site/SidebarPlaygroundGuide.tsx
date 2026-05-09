@@ -1,4 +1,7 @@
-import { createPersistentSidebarPlayground, type SidebarSection } from './persistentSidebarPlayground'
+import {
+  createPersistentSidebarPlayground,
+  type SidebarSection,
+} from './persistentSidebarPlayground'
 
 export const SECTIONS_BY_TYPE: Record<'guide', SidebarSection[]> = {
   guide: [

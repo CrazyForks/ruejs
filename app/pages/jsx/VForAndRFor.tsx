@@ -138,7 +138,11 @@ export default VForAndRFor;`}
               <section className="space-y-3">
                 <h2 className="text-xl font-semibold">r-for：对象遍历</h2>
                 <div className="flex flex-wrap gap-2">
-                  <span r-for="(value, key) in profileMeta" key={key} className="badge badge-outline badge-lg">
+                  <span
+                    r-for="(value, key) in profileMeta"
+                    key={key}
+                    className="badge badge-outline badge-lg"
+                  >
                     {key}: {value}
                   </span>
                 </div>
@@ -168,7 +172,11 @@ export default VForAndRFor;`}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <span v-for="step in count.value" key={step} className="badge badge-primary badge-lg">
+                  <span
+                    v-for="step in count.value"
+                    key={step}
+                    className="badge badge-primary badge-lg"
+                  >
                     Step {step}
                   </span>
                 </div>

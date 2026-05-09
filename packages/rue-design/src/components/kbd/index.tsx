@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Kbd 组件概述
 - 保留 Rue 当前 `kbd` 视觉风格，同时把单键和组合键都整理成更顺手的语义 API。
@@ -121,10 +122,14 @@ const buildKbdClassName = (size?: KbdSize, className?: string) => {
 
 const isKbdItemData = (value: any): value is KbdItemData => {
   return (
-    typeof value === 'object'
-    && value !== null
-    && !Array.isArray(value)
-    && ('label' in value || 'children' in value || 'size' in value || 'className' in value || 'key' in value)
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    ('label' in value ||
+      'children' in value ||
+      'size' in value ||
+      'className' in value ||
+      'key' in value)
   )
 }
 
@@ -144,7 +149,8 @@ const renderItemContent = (item: KbdItemData) => {
   return item.label
 }
 
-const joinClassName = (...values: Array<string | undefined | false>) => values.filter(Boolean).join(' ')
+const joinClassName = (...values: Array<string | undefined | false>) =>
+  values.filter(Boolean).join(' ')
 
 const KeyRoot: FC<KbdProps> = ({ as = 'kbd', size, className, children, ...rest }) => {
   const Component = as as any
@@ -160,7 +166,10 @@ const Separator: FC<KbdSeparatorProps> = ({ as = 'span', className, children = '
   return (
     <Component
       {...rest}
-      className={mergeClassName('inline-flex items-center justify-center px-1 text-sm opacity-60', className)}
+      className={mergeClassName(
+        'inline-flex items-center justify-center px-1 text-sm opacity-60',
+        className,
+      )}
     >
       {children}
     </Component>
@@ -173,7 +182,10 @@ const renderComboItems = ({
   itemClassName,
   separator,
   separatorClassName,
-}: Pick<KbdComboProps, 'items' | 'size' | 'itemClassName' | 'separator' | 'separatorClassName'>) => {
+}: Pick<
+  KbdComboProps,
+  'items' | 'size' | 'itemClassName' | 'separator' | 'separatorClassName'
+>) => {
   const normalizedItems = items?.map((item, index) => normalizeItem(item, index)) ?? []
 
   return normalizedItems.flatMap((item, index) => {
@@ -184,7 +196,7 @@ const renderComboItems = ({
       itemNodes.push(
         <Separator key={`separator-${itemKey}`} className={separatorClassName}>
           {hasRenderableContent(separator) ? separator : '+'}
-        </Separator>
+        </Separator>,
       )
     }
 
@@ -197,7 +209,7 @@ const renderComboItems = ({
         {...itemRest}
       >
         {renderItemContent(item)}
-      </KeyRoot>
+      </KeyRoot>,
     )
 
     return itemNodes
@@ -219,10 +231,11 @@ const Group: FC<KbdGroupProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const baseClassName = direction === 'vertical' ? 'inline-flex flex-col' : 'inline-flex items-center'
+  const baseClassName =
+    direction === 'vertical' ? 'inline-flex flex-col' : 'inline-flex items-center'
   const groupClassName = mergeClassName(
     `${baseClassName}${direction !== 'vertical' && wrap ? ' flex-wrap' : ''} ${resolveGapClass(gap)}`,
-    className
+    className,
   )
 
   return (

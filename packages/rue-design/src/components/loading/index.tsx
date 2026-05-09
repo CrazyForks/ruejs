@@ -1,3 +1,4 @@
+/* RUE_VAPOR_TRANSFORMED */
 /*
 Loading 组件概述
 - 保留 daisyUI loading 的 spinner / dots / ring 等 Rue 视觉语言。
@@ -7,7 +8,17 @@ Loading 组件概述
 import { h, onMounted, onUnmounted, ref, useRef, watch, type FC } from '@rue-js/rue'
 
 export type LoadingStyle = 'spinner' | 'dots' | 'ring' | 'ball' | 'bars' | 'infinity'
-export type LoadingSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'default' | 'medium' | 'middle' | 'large'
+export type LoadingSize =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | 'small'
+  | 'default'
+  | 'medium'
+  | 'middle'
+  | 'large'
 export type LoadingPercent = number | 'auto'
 
 export interface LoadingIndicatorRenderProps {
@@ -101,7 +112,9 @@ const resolveRootStyle = (style?: LoadingStyle | InlineStyle) => {
   return style as InlineStyle | undefined
 }
 
-const normalizeSize = (size?: LoadingSize): Exclude<LoadingSize, 'small' | 'default' | 'medium' | 'middle' | 'large'> => {
+const normalizeSize = (
+  size?: LoadingSize,
+): Exclude<LoadingSize, 'small' | 'default' | 'medium' | 'middle' | 'large'> => {
   switch (size) {
     case 'small':
       return 'sm'
@@ -150,7 +163,11 @@ const renderElement = (as: string, props: Record<string, any>, children?: any) =
   }
 }
 
-const buildIndicatorClassName = (style: LoadingStyle, size: ReturnType<typeof normalizeSize>, className?: string) => {
+const buildIndicatorClassName = (
+  style: LoadingStyle,
+  size: ReturnType<typeof normalizeSize>,
+  className?: string,
+) => {
   return mergeClassNames('loading', `loading-${style}`, `loading-${size}`, className)
 }
 
@@ -159,7 +176,13 @@ const renderDefaultIndicator = (
   indicatorStyle?: Record<string, any>,
   label?: any,
 ) => {
-  return <span className={indicatorClassName} style={indicatorStyle} aria-hidden={label != null ? 'true' : undefined} />
+  return (
+    <span
+      className={indicatorClassName}
+      style={indicatorStyle}
+      aria-hidden={label != null ? 'true' : undefined}
+    />
+  )
 }
 
 const LoadingRoot: FC<LoadingProps> = ({
@@ -241,13 +264,12 @@ const LoadingRoot: FC<LoadingProps> = ({
   watch(() => spinning, syncVisible, { immediate: true })
   watch(() => delay, syncVisible)
 
-  const mergedPercent = percent === undefined
-    ? undefined
-    : percent === 'auto'
-      ? undefined
-      : clampPercent(percent)
+  const mergedPercent =
+    percent === undefined ? undefined : percent === 'auto' ? undefined : clampPercent(percent)
   const progressValue = typeof mergedPercent === 'number' ? Math.round(mergedPercent) : undefined
-  const delayHiddenClass = shouldDelay(spinning, delay) ? 'opacity-0 transition-opacity duration-200' : undefined
+  const delayHiddenClass = shouldDelay(spinning, delay)
+    ? 'opacity-0 transition-opacity duration-200'
+    : undefined
 
   const indicatorClassName = buildIndicatorClassName(
     resolvedStyle,
@@ -262,11 +284,14 @@ const LoadingRoot: FC<LoadingProps> = ({
           style: resolvedStyle,
           spinning: visible.value,
         })
-      : indicator ?? defaultIndicator
+      : (indicator ?? defaultIndicator)
     : renderDefaultIndicator(indicatorClassName, styles?.indicator, hasDescription || hasPercent)
 
   const progressNode = hasPercent ? (
-    <div className="flex w-full min-w-24 flex-col items-center gap-1.5" data-rue-loading-percent="true">
+    <div
+      className="flex w-full min-w-24 flex-col items-center gap-1.5"
+      data-rue-loading-percent="true"
+    >
       <progress className="progress progress-primary h-1 w-24" max="100" value={progressValue} />
       <span className="text-[0.68rem] leading-none tabular-nums opacity-70">
         {percent === 'auto' ? DEFAULT_PERCENT_LABEL : `${progressValue ?? 0}%`}
@@ -283,7 +308,10 @@ const LoadingRoot: FC<LoadingProps> = ({
     delayHiddenClass,
     classNames?.section,
   )
-  const descriptionClassName = mergeClassNames('text-sm leading-5 opacity-80', classNames?.description)
+  const descriptionClassName = mergeClassNames(
+    'text-sm leading-5 opacity-80',
+    classNames?.description,
+  )
   const containerClassName = mergeClassNames(
     'transition duration-200',
     visible.value && 'opacity-40 saturate-75',
@@ -305,30 +333,40 @@ const LoadingRoot: FC<LoadingProps> = ({
     typeof rootStyle === 'string' ? undefined : rootStyle,
     styles?.root,
   )
-  const rootStyleValue = typeof rootStyle === 'string'
-    ? rootStyle
-    : mergedRootStyle
+  const rootStyleValue = typeof rootStyle === 'string' ? rootStyle : mergedRootStyle
 
-  const sectionNode = visible.value ? renderElement(
-    !fullscreen && !isNested ? 'span' : 'div',
-    {
-      ref: delayTargetRef,
-      className: sectionClassName,
-      style: styles?.section,
-      'data-rue-loading-section': 'true',
-    },
-    <>
-      {hasCustomIndicator ? (
-        <span className={mergeClassNames('inline-flex items-center justify-center', classNames?.indicator)} style={styles?.indicator}>
-          {indicatorNode}
-        </span>
-      ) : (
-        indicatorNode
-      )}
-      {hasDescription ? <div className={descriptionClassName} style={styles?.description}>{descriptionNode}</div> : null}
-      {progressNode}
-    </>,
-  ) : null
+  const sectionNode = visible.value
+    ? renderElement(
+        !fullscreen && !isNested ? 'span' : 'div',
+        {
+          ref: delayTargetRef,
+          className: sectionClassName,
+          style: styles?.section,
+          'data-rue-loading-section': 'true',
+        },
+        <>
+          {hasCustomIndicator ? (
+            <span
+              className={mergeClassNames(
+                'inline-flex items-center justify-center',
+                classNames?.indicator,
+              )}
+              style={styles?.indicator}
+            >
+              {indicatorNode}
+            </span>
+          ) : (
+            indicatorNode
+          )}
+          {hasDescription ? (
+            <div className={descriptionClassName} style={styles?.description}>
+              {descriptionNode}
+            </div>
+          ) : null}
+          {progressNode}
+        </>,
+      )
+    : null
 
   if (fullscreen) {
     if (!visible.value) return null
@@ -360,7 +398,11 @@ const LoadingRoot: FC<LoadingProps> = ({
       },
       <>
         {sectionNode}
-        <div className={containerClassName} style={styles?.container} data-rue-loading-container="true">
+        <div
+          className={containerClassName}
+          style={styles?.container}
+          data-rue-loading-container="true"
+        >
           {childNodes}
         </div>
       </>,
@@ -371,13 +413,20 @@ const LoadingRoot: FC<LoadingProps> = ({
 
   if (!isEnhancedStandalone) {
     const rootTag = as ?? 'span'
-    const standaloneStyle = typeof rootStyleValue === 'string'
-      ? rootStyleValue
-      : mergeStyles(rootStyleValue, styles?.indicator)
+    const standaloneStyle =
+      typeof rootStyleValue === 'string'
+        ? rootStyleValue
+        : mergeStyles(rootStyleValue, styles?.indicator)
     return renderElement(rootTag, {
       ...rest,
       ref: delayTargetRef,
-      className: mergeClassNames(indicatorClassName, delayHiddenClass, rootClassName, classNames?.root, className),
+      className: mergeClassNames(
+        indicatorClassName,
+        delayHiddenClass,
+        rootClassName,
+        classNames?.root,
+        className,
+      ),
       style: standaloneStyle,
       role: rest.role ?? 'status',
       'aria-live': rest['aria-live'] ?? 'polite',

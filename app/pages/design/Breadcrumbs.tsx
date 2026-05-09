@@ -46,7 +46,14 @@ const ApiTable: FC<{ title: string; rows: ApiRow[] }> = ({ title, rows }) => {
 }
 
 const HomeIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="h-4 w-4"
+  >
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 10.5 12 3l9 7.5" />
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 9.5V20h14V9.5" />
     <path strokeLinecap="round" strokeLinejoin="round" d="M10 20v-6h4v6" />
@@ -54,13 +61,31 @@ const HomeIcon = () => (
 )
 
 const FolderIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="h-4 w-4"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
+    />
   </svg>
 )
 
 const GridIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="h-4 w-4"
+  >
     <rect x="3" y="3" width="7" height="7" rx="1.5" />
     <rect x="14" y="3" width="7" height="7" rx="1.5" />
     <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -69,51 +94,163 @@ const GridIcon = () => (
 )
 
 const FileIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="h-4 w-4"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
+    />
     <path strokeLinecap="round" strokeLinejoin="round" d="M14 3v5h5" />
   </svg>
 )
 
 const SparkIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-    <path strokeLinecap="round" strokeLinejoin="round" d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className="h-4 w-4"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z"
+    />
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 18h.01M19 18h.01M12 21h.01" />
   </svg>
 )
 
 const breadcrumbApiRows: ApiRow[] = [
-  { prop: 'children', description: '保留旧的组合式写法，适合手工控制节点结构', type: 'any', defaultValue: '-' },
+  {
+    prop: 'children',
+    description: '保留旧的组合式写法，适合手工控制节点结构',
+    type: 'any',
+    defaultValue: '-',
+  },
   { prop: 'className', description: '附加到根节点的类名', type: 'string', defaultValue: '-' },
-  { prop: 'dropdownIcon', description: 'items 模式下菜单触发器的自定义图标', type: 'any', defaultValue: 'Rue arrow' },
-  { prop: 'itemRender', description: '自定义 items 模式下每一项的渲染结果', type: '(route, params, routes, paths, href) => any', defaultValue: '-' },
-  { prop: 'items', description: '推荐入口，支持 title/label、path、menu、separator item', type: 'ReadonlyArray<BreadcrumbsDataItem>', defaultValue: '-' },
-  { prop: 'params', description: '用于替换 path 中的 :param 占位符', type: 'Record<string, string | number | boolean | null | undefined>', defaultValue: '{}' },
-  { prop: 'routes', description: 'items 的兼容别名，能力一致', type: 'ReadonlyArray<BreadcrumbsDataItem>', defaultValue: '-' },
-  { prop: 'separator', description: 'items 模式的全局分隔符，默认保持 Rue 的箭头风格', type: 'any', defaultValue: 'Rue arrow' },
+  {
+    prop: 'dropdownIcon',
+    description: 'items 模式下菜单触发器的自定义图标',
+    type: 'any',
+    defaultValue: 'Rue arrow',
+  },
+  {
+    prop: 'itemRender',
+    description: '自定义 items 模式下每一项的渲染结果',
+    type: '(route, params, routes, paths, href) => any',
+    defaultValue: '-',
+  },
+  {
+    prop: 'items',
+    description: '推荐入口，支持 title/label、path、menu、separator item',
+    type: 'ReadonlyArray<BreadcrumbsDataItem>',
+    defaultValue: '-',
+  },
+  {
+    prop: 'params',
+    description: '用于替换 path 中的 :param 占位符',
+    type: 'Record<string, string | number | boolean | null | undefined>',
+    defaultValue: '{}',
+  },
+  {
+    prop: 'routes',
+    description: 'items 的兼容别名，能力一致',
+    type: 'ReadonlyArray<BreadcrumbsDataItem>',
+    defaultValue: '-',
+  },
+  {
+    prop: 'separator',
+    description: 'items 模式的全局分隔符，默认保持 Rue 的箭头风格',
+    type: 'any',
+    defaultValue: 'Rue arrow',
+  },
 ]
 
 const itemApiRows: ApiRow[] = [
   { prop: 'className', description: '应用到当前 li 的类名', type: 'string', defaultValue: '-' },
-  { prop: 'current', description: '标记当前项，默认渲染为文本并附带 aria-current', type: 'boolean', defaultValue: 'false' },
+  {
+    prop: 'current',
+    description: '标记当前项，默认渲染为文本并附带 aria-current',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
   { prop: 'disabled', description: '禁用当前项的交互', type: 'boolean', defaultValue: 'false' },
   { prop: 'href', description: '直接指定链接地址', type: 'string', defaultValue: '-' },
   { prop: 'icon', description: '前置图标', type: 'any', defaultValue: '-' },
-  { prop: 'label / title', description: '显示内容，title 为推荐字段，label 兼容旧写法', type: 'any', defaultValue: '-' },
-  { prop: 'linkClassName', description: '应用到当前链接或文本节点的类名', type: 'string', defaultValue: '-' },
-  { prop: 'menu', description: '快捷切换菜单，内部复用 Rue Dropdown', type: '{ items?: ReadonlyArray<BreadcrumbsMenuItem> }', defaultValue: '-' },
-  { prop: 'onClick', description: '点击事件；无 href 时会渲染为 button', type: '(event: MouseEvent) => void', defaultValue: '-' },
-  { prop: 'path', description: '按层级拼接路径，适合和 params、itemRender 一起用', type: 'string', defaultValue: '-' },
-  { prop: 'type', description: '当值为 separator 时，这一项会作为独立分隔符配置', type: 'separator', defaultValue: '-' },
+  {
+    prop: 'label / title',
+    description: '显示内容，title 为推荐字段，label 兼容旧写法',
+    type: 'any',
+    defaultValue: '-',
+  },
+  {
+    prop: 'linkClassName',
+    description: '应用到当前链接或文本节点的类名',
+    type: 'string',
+    defaultValue: '-',
+  },
+  {
+    prop: 'menu',
+    description: '快捷切换菜单，内部复用 Rue Dropdown',
+    type: '{ items?: ReadonlyArray<BreadcrumbsMenuItem> }',
+    defaultValue: '-',
+  },
+  {
+    prop: 'onClick',
+    description: '点击事件；无 href 时会渲染为 button',
+    type: '(event: MouseEvent) => void',
+    defaultValue: '-',
+  },
+  {
+    prop: 'path',
+    description: '按层级拼接路径，适合和 params、itemRender 一起用',
+    type: 'string',
+    defaultValue: '-',
+  },
+  {
+    prop: 'type',
+    description: '当值为 separator 时，这一项会作为独立分隔符配置',
+    type: 'separator',
+    defaultValue: '-',
+  },
 ]
 
 const itemComponentRows: ApiRow[] = [
-  { prop: 'children', description: '手工传入内容，保留旧 demo 的组织方式', type: 'any', defaultValue: '-' },
-  { prop: 'current', description: '将该项渲染为当前项文本', type: 'boolean', defaultValue: 'false' },
+  {
+    prop: 'children',
+    description: '手工传入内容，保留旧 demo 的组织方式',
+    type: 'any',
+    defaultValue: '-',
+  },
+  {
+    prop: 'current',
+    description: '将该项渲染为当前项文本',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
   { prop: 'href', description: '组合模式下直接输出链接', type: 'string', defaultValue: '-' },
   { prop: 'icon', description: '组合模式下的前置图标', type: 'any', defaultValue: '-' },
-  { prop: 'linkClassName', description: '应用到链接、文本或按钮节点', type: 'string', defaultValue: '-' },
-  { prop: 'menu', description: '为当前项附加一个快捷菜单', type: '{ items?: ReadonlyArray<BreadcrumbsMenuItem> }', defaultValue: '-' },
+  {
+    prop: 'linkClassName',
+    description: '应用到链接、文本或按钮节点',
+    type: 'string',
+    defaultValue: '-',
+  },
+  {
+    prop: 'menu',
+    description: '为当前项附加一个快捷菜单',
+    type: '{ items?: ReadonlyArray<BreadcrumbsMenuItem> }',
+    defaultValue: '-',
+  },
 ]
 
 const basicCode = [
@@ -238,7 +375,9 @@ const BreadcrumbsDemo: FC = () => {
     <SidebarPlayground>
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Breadcrumbs 面包屑</h1>
-        <p className="text-sm mt-3 mb-3">Breadcrumbs 用来表达当前位置、可回退层级和相邻页面的快速切换。</p>
+        <p className="text-sm mt-3 mb-3">
+          Breadcrumbs 用来表达当前位置、可回退层级和相邻页面的快速切换。
+        </p>
         <div className="text-sm">
           <a href="https://daisyui.com/components/breadcrumbs/" target="_blank">
             查看 Breadcrumbs 静态样式
@@ -253,8 +392,11 @@ const BreadcrumbsDemo: FC = () => {
             <span className="badge badge-neutral badge-soft">保留 children</span>
           </div>
           <ul className="mt-4 space-y-2 text-sm text-base-content/75">
-            <li>默认分隔符继续保持 Rue 当前的箭头视觉，不照搬 ant-design 的斜杠样式。</li>
-            <li>推荐使用 items：可组合 title、label、path、params、current、menu 和独立 separator item。</li>
+            <li>默认分隔符继续保持 Rue 当前的箭头视觉，不改成斜杠样式。</li>
+            <li>
+              推荐使用 items：可组合 title、label、path、params、current、menu 和独立 separator
+              item。
+            </li>
             <li>children 与 Breadcrumbs.Item 仍然保留，适合在设计稿里手工控制单个节点。</li>
           </ul>
         </div>
@@ -351,7 +493,9 @@ const BreadcrumbsDemo: FC = () => {
                   )
                 }}
               />
-              <p className="m-0 text-sm text-base-content/60">itemRender 会拿到当前 route、params、完整 routes、当前 paths 和解析后的 href。</p>
+              <p className="m-0 text-sm text-base-content/60">
+                itemRender 会拿到当前 route、params、完整 routes、当前 paths 和解析后的 href。
+              </p>
             </div>
           )}
           code={itemRenderCode}
@@ -403,7 +547,9 @@ const BreadcrumbsDemo: FC = () => {
         <div className="not-prose my-10 space-y-4">
           <div>
             <h2 className="m-0 text-lg font-semibold"># API</h2>
-            <p className="mt-2 text-sm text-base-content/65">items 是推荐入口；Breadcrumbs.Item 更适合保留原有手工结构时逐步迁移。</p>
+            <p className="mt-2 text-sm text-base-content/65">
+              items 是推荐入口；Breadcrumbs.Item 更适合保留原有手工结构时逐步迁移。
+            </p>
           </div>
           <ApiTable title="Breadcrumbs" rows={breadcrumbApiRows} />
           <ApiTable title="BreadcrumbsDataItem / separator item" rows={itemApiRows} />

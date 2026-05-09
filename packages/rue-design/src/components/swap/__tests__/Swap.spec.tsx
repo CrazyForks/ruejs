@@ -99,12 +99,12 @@ describe('Swap', () => {
       const root = container.querySelector('[data-testid="swap-checkbox"]') as HTMLElement
       const input = root.querySelector('input[type="checkbox"]') as HTMLInputElement
       expect(input.checked).toBe(true)
-      expect(container.querySelector('[data-testid="swap-on"]')?.classList.contains('swap-on')).toBe(
-        true,
-      )
-      expect(container.querySelector('[data-testid="swap-off"]')?.classList.contains('swap-off')).toBe(
-        true,
-      )
+      expect(
+        container.querySelector('[data-testid="swap-on"]')?.classList.contains('swap-on'),
+      ).toBe(true)
+      expect(
+        container.querySelector('[data-testid="swap-off"]')?.classList.contains('swap-off'),
+      ).toBe(true)
     })
   })
 
@@ -123,7 +123,9 @@ describe('Swap', () => {
 
     await waitForContent(() => {
       const root = container.querySelector('[data-testid="swap-class-mode"]') as HTMLElement
-      const indeterminate = container.querySelector('[data-testid="swap-indeterminate"]') as HTMLElement
+      const indeterminate = container.querySelector(
+        '[data-testid="swap-indeterminate"]',
+      ) as HTMLElement
       expect(root.tagName.toLowerCase()).toBe('div')
       expect(indeterminate.tagName.toLowerCase()).toBe('span')
       expect(indeterminate.classList.contains('swap-indeterminate')).toBe(true)
@@ -145,7 +147,9 @@ describe('Swap', () => {
     )
 
     await waitForContent(() => {
-      const input = container.querySelector('[data-testid="swap-mixed"] input[type="checkbox"]') as HTMLInputElement
+      const input = container.querySelector(
+        '[data-testid="swap-mixed"] input[type="checkbox"]',
+      ) as HTMLInputElement
       expect(input.indeterminate).toBe(true)
       expect(input.getAttribute('aria-checked')).toBe('mixed')
     })
