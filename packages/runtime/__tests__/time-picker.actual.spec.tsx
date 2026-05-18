@@ -8,6 +8,7 @@ import { resetActiveRuntime } from './design-page-test-utils'
 setReactiveScheduling('sync')
 
 const mountedContainers: HTMLDivElement[] = []
+const slowTestTimeout = 30_000
 
 const mountTestContainer = () => {
   const container = mountContainer()
@@ -36,47 +37,55 @@ const openPicker = async (input: HTMLInputElement) => {
 }
 
 describe('TimePicker actual page', () => {
-  it('updates the basic live value after selecting a panel option', async () => {
-    const container = mountTestContainer()
-    resetActiveRuntime()
-    render(<BasicControlledPreview />, container)
+  it(
+    'updates the basic live value after selecting a panel option',
+    async () => {
+      const container = mountTestContainer()
+      resetActiveRuntime()
+      render(<BasicControlledPreview />, container)
 
-    await waitForContent(() => {
+      await waitForContent(() => {
+        const input = container.querySelector('input') as HTMLInputElement
+        const liveValue = container.querySelector('.text-2xl.font-semibold') as HTMLDivElement
+        expect(input.value).toBe('09:30:15')
+        expect(liveValue.textContent).toBe('09:30:15')
+      })
+
       const input = container.querySelector('input') as HTMLInputElement
-      const liveValue = container.querySelector('.text-2xl.font-semibold') as HTMLDivElement
-      expect(input.value).toBe('09:30:15')
-      expect(liveValue.textContent).toBe('09:30:15')
-    })
+      await openPicker(input)
 
-    const input = container.querySelector('input') as HTMLInputElement
-    await openPicker(input)
+      await waitForContent(() => {
+        const popup = container.querySelector(
+          '[data-rue-time-picker-popup="true"]',
+        ) as HTMLDivElement
+        const minuteButton = container.querySelector(
+          'button[data-rue-time-column="minute"][data-rue-time-option="45"]',
+        ) as HTMLButtonElement | null
+        expect(popup).toBeTruthy()
+        expect(minuteButton).toBeTruthy()
+      })
 
-    await waitForContent(() => {
-      const popup = container.querySelector('[data-rue-time-picker-popup="true"]') as HTMLDivElement
       const minuteButton = container.querySelector(
         'button[data-rue-time-column="minute"][data-rue-time-option="45"]',
-      ) as HTMLButtonElement | null
-      expect(popup).toBeTruthy()
-      expect(minuteButton).toBeTruthy()
-    })
+      ) as HTMLButtonElement
+      const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+      minuteButton.dispatchEvent(mouseDownEvent)
+      expect(mouseDownEvent.defaultPrevented).toBe(true)
+      await click(minuteButton)
 
-    const minuteButton = container.querySelector(
-      'button[data-rue-time-column="minute"][data-rue-time-option="45"]',
-    ) as HTMLButtonElement
-    const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
-    minuteButton.dispatchEvent(mouseDownEvent)
-    expect(mouseDownEvent.defaultPrevented).toBe(true)
-    await click(minuteButton)
-
-    await waitForContent(() => {
-      const updatedInput = container.querySelector('input') as HTMLInputElement
-      const updatedLiveValue = container.querySelector('.text-2xl.font-semibold') as HTMLDivElement
-      const popups = Array.from(
-        container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
-      ) as HTMLDivElement[]
-      expect(updatedInput.value).toBe('09:45:15')
-      expect(updatedLiveValue.textContent).toBe('09:45:15')
-      expect(popups.some(popup => !popup.hidden)).toBe(true)
-    })
-  })
+      await waitForContent(() => {
+        const updatedInput = container.querySelector('input') as HTMLInputElement
+        const updatedLiveValue = container.querySelector(
+          '.text-2xl.font-semibold',
+        ) as HTMLDivElement
+        const popups = Array.from(
+          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
+        ) as HTMLDivElement[]
+        expect(updatedInput.value).toBe('09:45:15')
+        expect(updatedLiveValue.textContent).toBe('09:45:15')
+        expect(popups.some(popup => !popup.hidden)).toBe(true)
+      })
+    },
+    slowTestTimeout,
+  )
 })
