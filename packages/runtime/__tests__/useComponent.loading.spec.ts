@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 type EffectRunner = () => void
 type LoadedModule = { default: (props: any) => any }
 
-const renderBetweenMock = vi.fn()
+const renderAnchorMock = vi.fn()
 const handleErrorMock = vi.fn()
 const onBeforeUnmountCallbacks: Array<() => void> = []
 
@@ -12,6 +12,13 @@ const createElementMock = vi.fn(() => ({
   children: [] as any[],
   style: {},
 }))
+
+const createDocumentFragmentMock = vi.fn(() => ({
+  tag: 'fragment',
+  children: [] as any[],
+}))
+
+const getDOMAdapterMock = vi.fn(() => ({}))
 
 const createCommentMock = vi.fn((data: string) => ({
   tag: 'comment',
@@ -55,7 +62,7 @@ vi.mock('../src/rue.ts', () => {
       onBeforeUnmountCallbacks.push(fn)
     },
     vapor: (setup: () => unknown) => setup(),
-    renderBetween: renderBetweenMock,
+    renderAnchor: renderAnchorMock,
   }
 })
 
@@ -63,7 +70,9 @@ vi.mock('../src/dom.ts', () => {
   return {
     appendChild: appendChildMock,
     createComment: createCommentMock,
+    createDocumentFragment: createDocumentFragmentMock,
     createElement: createElementMock,
+    getDOMAdapter: getDOMAdapterMock,
     getParentNode: (node: any) => node?.parentNode ?? null,
   }
 })
@@ -71,6 +80,7 @@ vi.mock('../src/dom.ts', () => {
 vi.mock('../src/reactivity/index.ts', () => {
   return {
     signal: <T>(initial: T) => createSignal(initial),
+    untrack: <T>(runner: () => T) => runner(),
     watchEffect: (runner: EffectRunner) => {
       const wrapped = () => {
         activeEffect = wrapped
@@ -88,18 +98,28 @@ vi.mock('../src/reactivity/index.ts', () => {
   }
 })
 
-vi.mock('@rue-js/runtime-vapor', () => {
+vi.mock('@rue-js/runtime-vapor/reactive', () => {
   return {
+    __rueDisposeHookScopeForInstance: vi.fn(),
+    __rueCreateDetachedEffectScope: vi.fn(() => 1),
+    __ruePushEffectScope: vi.fn(),
+    __ruePopEffectScope: vi.fn(),
+    __rueDisposeEffectScope: vi.fn(),
+    getCurrentInstance: vi.fn(() => undefined),
+    propsReactive: <T>(initial: T) => initial,
+    setCurrentInstance: vi.fn(),
     useSetup: <T>(factory: () => T) => factory(),
   }
 })
 
 afterEach(() => {
-  renderBetweenMock.mockClear()
+  renderAnchorMock.mockClear()
   handleErrorMock.mockClear()
   createElementMock.mockClear()
+  createDocumentFragmentMock.mockClear()
   createCommentMock.mockClear()
   appendChildMock.mockClear()
+  getDOMAdapterMock.mockClear()
   onBeforeUnmountCallbacks.length = 0
   activeEffect = null
   vi.useRealTimers()
@@ -120,7 +140,7 @@ describe('useComponent loading behavior', () => {
 
     const vnode: any = Async({ id: 1 })
     expect(vnode).toBeDefined()
-    expect(renderBetweenMock).not.toHaveBeenCalled()
+    expect(renderAnchorMock).not.toHaveBeenCalled()
   })
 
   it('keeps rendering a custom loading component before resolve', async () => {
@@ -135,18 +155,18 @@ describe('useComponent loading behavior', () => {
     const Async = useComponent(loader, { loading: Loading })
 
     Async({ id: 1 })
-    expect(renderBetweenMock).toHaveBeenCalledTimes(1)
-    expect(renderBetweenMock.mock.calls[0][0].type).toBe(Loading)
+    expect(renderAnchorMock).toHaveBeenCalledTimes(1)
+    expect(renderAnchorMock.mock.calls[0][0].type).toBe(Loading)
 
     deferred.resolve?.({
       default: (props: any) => ({ type: 'resolved', props, children: [] }),
     })
     await flushMicrotasks()
 
-    expect(renderBetweenMock).toHaveBeenCalledTimes(2)
+    expect(renderAnchorMock).toHaveBeenCalledTimes(2)
   })
 
-  it('renders the resolved component against the mounted anchor parent', async () => {
+  it('renders the resolved component against the mounted wrapper anchor', async () => {
     const deferred: { resolve?: (value: LoadedModule) => void } = {}
     const loader = () =>
       new Promise<LoadedModule>(resolve => {
@@ -158,8 +178,7 @@ describe('useComponent loading behavior', () => {
 
     const vnode: any = Async({ id: 1 })
     const container = vnode
-    const startEl = container.children[0]
-    const endEl = container.children[1]
+    const anchorEl = container.children[0]
     const host = { tag: 'host', children: [] as any[] }
 
     appendChildMock(host, container)
@@ -169,10 +188,28 @@ describe('useComponent loading behavior', () => {
     })
     await flushMicrotasks()
 
-    expect(renderBetweenMock).toHaveBeenCalledTimes(1)
-    expect(renderBetweenMock.mock.calls[0][1]).toBe(vnode)
-    expect(renderBetweenMock.mock.calls[0][2]).toBe(startEl)
-    expect(renderBetweenMock.mock.calls[0][3]).toBe(endEl)
+    expect(renderAnchorMock).toHaveBeenCalledTimes(1)
+    expect(renderAnchorMock.mock.calls[0][1]).toBe(vnode)
+    expect(renderAnchorMock.mock.calls[0][2]).toBe(anchorEl)
+  })
+
+  it('clears the mounted wrapper anchor on unmount', async () => {
+    const loader = () => new Promise<LoadedModule>(() => {})
+
+    const { useComponent } = await import('../src/hooks/useComponent')
+    const Async = useComponent(loader)
+
+    const vnode: any = Async({ id: 1 })
+    const anchorEl = vnode.children[0]
+
+    expect(onBeforeUnmountCallbacks).toHaveLength(1)
+
+    onBeforeUnmountCallbacks[0]()
+
+    expect(renderAnchorMock).toHaveBeenCalledTimes(1)
+    expect(renderAnchorMock.mock.calls[0][0]).toMatchObject({ tag: 'fragment' })
+    expect(renderAnchorMock.mock.calls[0][1]).toBe(vnode)
+    expect(renderAnchorMock.mock.calls[0][2]).toBe(anchorEl)
   })
 
   it('renders the error component and reports loader failures', async () => {
@@ -188,9 +225,9 @@ describe('useComponent loading behavior', () => {
 
     expect(handleErrorMock).toHaveBeenCalledTimes(1)
     expect(handleErrorMock).toHaveBeenCalledWith(error, null)
-    expect(renderBetweenMock).toHaveBeenCalledTimes(1)
-    expect(renderBetweenMock.mock.calls[0][0].type).toBe(ErrorView)
-    expect(renderBetweenMock.mock.calls[0][0].props).toEqual({ error })
+    expect(renderAnchorMock).toHaveBeenCalledTimes(1)
+    expect(renderAnchorMock.mock.calls[0][0].type).toBe(ErrorView)
+    expect(renderAnchorMock.mock.calls[0][0].props).toEqual({ error })
   })
 
   it('supports object-style loadingComponent with delayed fallback', async () => {
@@ -210,21 +247,21 @@ describe('useComponent loading behavior', () => {
     })
 
     Async({ id: 1 })
-    expect(renderBetweenMock).not.toHaveBeenCalled()
+    expect(renderAnchorMock).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(199)
-    expect(renderBetweenMock).not.toHaveBeenCalled()
+    expect(renderAnchorMock).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(1)
-    expect(renderBetweenMock).toHaveBeenCalledTimes(1)
-    expect(renderBetweenMock.mock.calls[0][0].type).toBe(Loading)
+    expect(renderAnchorMock).toHaveBeenCalledTimes(1)
+    expect(renderAnchorMock.mock.calls[0][0].type).toBe(Loading)
 
     deferred.resolve?.({
       default: (props: any) => ({ type: 'resolved', props, children: [] }),
     })
     await flushMicrotasks()
 
-    expect(renderBetweenMock).toHaveBeenCalledTimes(2)
+    expect(renderAnchorMock).toHaveBeenCalledTimes(2)
   })
 
   it('supports object-style errorComponent and timeout options', async () => {
@@ -248,7 +285,7 @@ describe('useComponent loading behavior', () => {
     expect((handleErrorMock.mock.calls[0][0] as Error).message).toBe(
       'Async component timed out after 50ms.',
     )
-    expect(renderBetweenMock).toHaveBeenCalledTimes(1)
-    expect(renderBetweenMock.mock.calls[0][0].type).toBe(ErrorView)
+    expect(renderAnchorMock).toHaveBeenCalledTimes(1)
+    expect(renderAnchorMock.mock.calls[0][0].type).toBe(ErrorView)
   })
 })

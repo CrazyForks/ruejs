@@ -35,6 +35,31 @@ use crate::log::{log, want_log};
 use crate::reactive::effect::{EffectHandle, create_effect};
 use crate::reactive::signal::SignalHandle;
 
+fn call_handler_untracked(handler: &Function, newv: &JsValue, oldv: &JsValue, _phase: &str) {
+    let prev_effect =
+        crate::reactive::core::CURRENT_EFFECT.with(|current| current.borrow_mut().take());
+    let prev_handler_effect =
+        crate::reactive::core::CURRENT_UNTRACKED_HANDLER_EFFECT.with(|current| {
+            let previous = *current.borrow();
+            *current.borrow_mut() = prev_effect;
+            previous
+        });
+    let result = handler.call2(&JsValue::NULL, newv, oldv);
+    crate::reactive::core::CURRENT_UNTRACKED_HANDLER_EFFECT
+        .with(|current| *current.borrow_mut() = prev_handler_effect);
+    crate::reactive::core::CURRENT_EFFECT.with(|current| *current.borrow_mut() = prev_effect);
+
+    if let Err(e) = result {
+        #[cfg(feature = "dev")]
+        {
+            if want_log("error", _phase) {
+                log("error", _phase);
+            }
+        }
+        wasm_bindgen::throw_val(e.clone());
+    }
+}
+
 struct ParsedOptions {
     immediate: bool,
     scheduler: Option<Function>,
@@ -147,19 +172,13 @@ fn make_effect_runner(
                         log("debug", "reactive:watch invoke immediate");
                     }
                 }
-                // 首次立即触发：old 为 undefined
-                match handler.call2(&JsValue::NULL, &newv, &JsValue::UNDEFINED) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        #[cfg(feature = "dev")]
-                        {
-                            if want_log("error", "reactive:watch handler threw (immediate)") {
-                                log("error", "reactive:watch handler threw (immediate)");
-                            }
-                        }
-                        wasm_bindgen::throw_val(e.clone());
-                    }
-                }
+                // handler 本身不应收集依赖；watch 只订阅 getter 读取到的源。
+                call_handler_untracked(
+                    &handler,
+                    &newv,
+                    &JsValue::UNDEFINED,
+                    "reactive:watch handler threw (immediate)",
+                );
             }
             *first.borrow_mut() = false;
         } else if changed {
@@ -169,19 +188,13 @@ fn make_effect_runner(
                     log("debug", "reactive:watch invoke changed");
                 }
             }
-            // 值变化：以 (new, old) 调用处理器
-            match handler.call2(&JsValue::NULL, &newv, &prevv) {
-                Ok(_) => {}
-                Err(e) => {
-                    #[cfg(feature = "dev")]
-                    {
-                        if want_log("error", "reactive:watch handler threw (changed)") {
-                            log("error", "reactive:watch handler threw (changed)");
-                        }
-                    }
-                    wasm_bindgen::throw_val(e.clone());
-                }
-            }
+            // 值变化：以 (new, old) 调用处理器；处理器内读取的其他 signal 不应反向订阅该 watch。
+            call_handler_untracked(
+                &handler,
+                &newv,
+                &prevv,
+                "reactive:watch handler threw (changed)",
+            );
         }
         *prev.borrow_mut() = newv;
     }) as Box<dyn FnMut()>);

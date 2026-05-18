@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import { BrowserDOMAdapter } from '../src/dom'
 
+const SVG_NS = 'http://www.w3.org/2000/svg'
+const HTML_NS = 'http://www.w3.org/1999/xhtml'
+
 describe('BrowserDOMAdapter.createTextWrapper', () => {
   const adapter = new BrowserDOMAdapter()
 
@@ -10,6 +13,7 @@ describe('BrowserDOMAdapter.createTextWrapper', () => {
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g')
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
     const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan')
+    const foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject')
 
     // 普通 SVG 容器下，动态文本需要先起一个 <text> 容器。
     expect(adapter.createTextWrapper(group).tagName.toLowerCase()).toBe('text')
@@ -17,5 +21,112 @@ describe('BrowserDOMAdapter.createTextWrapper', () => {
     expect(adapter.createTextWrapper(text).tagName.toLowerCase()).toBe('tspan')
     // <tspan> 内继续细分动态文本时，也应该递归保持 <tspan>。
     expect(adapter.createTextWrapper(tspan).tagName.toLowerCase()).toBe('tspan')
+    // foreignObject 会重新切回 HTML 上下文，动态文本不能误建成 SVG <text>。
+    expect(adapter.createTextWrapper(foreignObject).tagName.toLowerCase()).toBe('span')
+  })
+})
+
+describe('BrowserDOMAdapter.createElement', () => {
+  const adapter = new BrowserDOMAdapter()
+  const svgElementNames = [
+    'animate',
+    'animateMotion',
+    'animateTransform',
+    'circle',
+    'clipPath',
+    'defs',
+    'desc',
+    'ellipse',
+    'feBlend',
+    'feColorMatrix',
+    'feComponentTransfer',
+    'feComposite',
+    'feConvolveMatrix',
+    'feDiffuseLighting',
+    'feDisplacementMap',
+    'feDistantLight',
+    'feDropShadow',
+    'feFlood',
+    'feFuncA',
+    'feFuncB',
+    'feFuncG',
+    'feFuncR',
+    'feGaussianBlur',
+    'feImage',
+    'feMerge',
+    'feMergeNode',
+    'feMorphology',
+    'feOffset',
+    'fePointLight',
+    'feSpecularLighting',
+    'feSpotLight',
+    'feTile',
+    'feTurbulence',
+    'filter',
+    'foreignObject',
+    'g',
+    'image',
+    'line',
+    'linearGradient',
+    'marker',
+    'mask',
+    'metadata',
+    'mpath',
+    'path',
+    'pattern',
+    'polygon',
+    'polyline',
+    'radialGradient',
+    'rect',
+    'set',
+    'stop',
+    'svg',
+    'switch',
+    'symbol',
+    'text',
+    'textPath',
+    'tspan',
+    'use',
+    'view',
+  ] as const
+  const sharedHtmlTagNames = ['a', 'script', 'style', 'title'] as const
+
+  // 这份清单对齐 MDN 当前 SVG element reference 中“不与 HTML 同名”的元素，
+  // 避免遗漏整类元素后回退到 HTML createElement。
+  it('creates the full supported SVG element set in the SVG namespace', () => {
+    for (const tag of svgElementNames) {
+      const element = adapter.createElement(tag) as Element
+      expect(element.namespaceURI, tag).toBe(SVG_NS)
+      expect(element.tagName.toLowerCase()).toBe(tag.toLowerCase())
+    }
+  })
+
+  it('keeps plain HTML tags on the HTML namespace', () => {
+    const element = adapter.createElement('div') as Element
+
+    expect(element.namespaceURI).toBe(HTML_NS)
+    expect(element.tagName.toLowerCase()).toBe('div')
+  })
+
+  it('defaults shared HTML/SVG tag names to the HTML namespace without parent context', () => {
+    for (const tag of sharedHtmlTagNames) {
+      const element = adapter.createElement(tag) as Element
+
+      expect(element.namespaceURI, tag).toBe(HTML_NS)
+      expect(element.tagName.toLowerCase()).toBe(tag)
+    }
+  })
+
+  it('uses the SVG namespace for shared tag names under SVG parents and resets in foreignObject', () => {
+    const svg = document.createElementNS(SVG_NS, 'svg')
+    const foreignObject = document.createElementNS(SVG_NS, 'foreignObject')
+
+    for (const tag of sharedHtmlTagNames) {
+      const svgElement = adapter.createElement(tag, svg) as Element
+      const foreignObjectElement = adapter.createElement(tag, foreignObject) as Element
+
+      expect(svgElement.namespaceURI, `${tag}:svg`).toBe(SVG_NS)
+      expect(foreignObjectElement.namespaceURI, `${tag}:foreignObject`).toBe(HTML_NS)
+    }
   })
 })

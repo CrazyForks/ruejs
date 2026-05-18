@@ -370,6 +370,44 @@ async fn test_watch_microtask_schedule() {
     assert_eq!(r.length(), 2);
 }
 
+#[wasm_bindgen_test(async)]
+async fn test_watch_handler_reads_do_not_subscribe_to_local_signals() {
+    set_reactive_scheduling("microtask");
+
+    let source = create_signal(JsValue::from_f64(0.0), None);
+    let local = create_signal(JsValue::from_f64(0.0), None);
+    let getter_hits = std::rc::Rc::new(std::cell::RefCell::new(0usize));
+    let getter_hits_for_getter = getter_hits.clone();
+    let source_for_getter = source.clone();
+    let getter = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *getter_hits_for_getter.borrow_mut() += 1;
+        source_for_getter.get_js()
+    }) as Box<dyn FnMut() -> JsValue>);
+    let getter_fn: Function = getter.as_ref().clone().unchecked_into();
+
+    let local_for_handler = local.clone();
+    let handler =
+        wasm_bindgen::closure::Closure::wrap(Box::new(move |newv: JsValue, _oldv: JsValue| {
+            let _ = local_for_handler.get_js();
+            local_for_handler.set_js(newv);
+        }) as Box<dyn FnMut(JsValue, JsValue)>);
+    let handler_fn: Function = handler.as_ref().clone().unchecked_into();
+
+    let _eh = watch(getter_fn.into(), handler_fn, Some(opts_immediate_true()));
+    assert_eq!(*getter_hits.borrow(), 1);
+
+    source.set_js(JsValue::from_f64(1.0));
+    let _ = JsFuture::from(Promise::resolve(&JsValue::UNDEFINED)).await;
+    assert_eq!(*getter_hits.borrow(), 2);
+
+    local.set_js(JsValue::from_f64(2.0));
+    let _ = JsFuture::from(Promise::resolve(&JsValue::UNDEFINED)).await;
+    assert_eq!(*getter_hits.borrow(), 2);
+
+    getter.forget();
+    handler.forget();
+}
+
 #[wasm_bindgen_test]
 fn test_watch_empty_array_source() {
     set_reactive_scheduling("sync");

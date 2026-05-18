@@ -13,7 +13,13 @@ import {
 
 setReactiveScheduling('sync')
 
+let activeContainer: HTMLDivElement | null = null
+
 afterEach(() => {
+  if (activeContainer) {
+    render(null as any, activeContainer)
+    activeContainer = null
+  }
   document.body.innerHTML = ''
 })
 
@@ -51,6 +57,7 @@ describe('TransitionGroup renderable boundary', () => {
       }) as any
 
     const container = document.createElement('div')
+    activeContainer = container
     document.body.appendChild(container)
 
     render(<ListHarness />, container)
@@ -106,6 +113,7 @@ describe('TransitionGroup renderable boundary', () => {
       }) as any
 
     const container = document.createElement('div')
+    activeContainer = container
     document.body.appendChild(container)
 
     render(<ListHarness />, container)
@@ -152,6 +160,7 @@ describe('TransitionGroup renderable boundary', () => {
       }) as any
 
     const container = document.createElement('div')
+    activeContainer = container
     document.body.appendChild(container)
 
     render(<ListHarness />, container)

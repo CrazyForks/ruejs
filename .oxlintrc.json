@@ -4,6 +4,7 @@
     "**/dist/**",
     "**/temp/**",
     "**/coverage/**",
+    "output.js",
     "packages/**/pkg/**",
     "packages/**/pkg-node/**",
     "packages/swc-plugin-rue/target/**"

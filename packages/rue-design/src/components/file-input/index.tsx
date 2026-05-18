@@ -598,7 +598,12 @@ const FileInputRoot: FC<FileInputProps> = ({
   }
 
   const applyRemove = (file: FileInputFile) => {
-    const nextFileList = currentFileList.value.filter(item => item.uid !== file.uid)
+    const nextFileList = currentFileList.value.filter(
+      item => item.uid !== file.uid && item.uid !== undefined,
+    )
+    if (nextFileList.length !== currentFileList.value.length - 1) {
+      console.warn('File removal mismatch detected. Ensure file.uid is valid.')
+    }
     updateFileListState(nextFileList)
     emitEnhancedChange({
       file: {
@@ -1046,8 +1051,8 @@ const FileInputRoot: FC<FileInputProps> = ({
                   listClassName,
                 )}
               >
-                {currentFileList.value.map(file => (
-                  <div key={file.uid}>{renderListItem(file)}</div>
+                {currentFileList.value.map((file, index) => (
+                  <div key={file.uid || `fallback-${index}`}>{renderListItem(file)}</div>
                 ))}
                 {canAppendCard && !disabled ? (
                   <div
@@ -1086,8 +1091,8 @@ const FileInputRoot: FC<FileInputProps> = ({
               </div>
             ) : (
               <div className={mergeClassNames('space-y-3', listClassName)}>
-                {currentFileList.value.map(file => (
-                  <div key={file.uid}>{renderListItem(file)}</div>
+                {currentFileList.value.map((file, index) => (
+                  <div key={file.uid || `fallback-${index}`}>{renderListItem(file)}</div>
                 ))}
               </div>
             )

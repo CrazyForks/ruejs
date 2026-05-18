@@ -1,7 +1,7 @@
 # 组合式 API：生命周期钩子 {#composition-api-lifecycle-hooks}
 
 :::info 使用说明
-本页列出的所有 API 都必须在组件初始化阶段同步调用。在函数组件里，这通常就是组件函数同步执行期间；在对象形式组件里，则对应 `setup()` 的同步执行期间。有关更多详细信息，请参阅[指南 - 生命周期钩子](/guide/essentials/lifecycle)。
+本页列出的所有 API 都必须在组件初始化阶段同步调用。在函数组件里，这通常就是组件函数同步执行期间；在对象形式组件里，则对应 `setup()` 的同步执行期间。有关更多详细信息，请参阅[指南 - 生命周期钩子](/guide/guide/essentials/lifecycle)。
 :::
 
 ## onMounted() {#onmounted}
@@ -21,7 +21,7 @@
 
   - 其自身的 DOM 树已创建并插入到父容器中。注意，只有当应用的根容器也在文档中时，它才保证组件的 DOM 树在文档中。
 
-  这个钩子通常用于执行需要访问组件渲染 DOM 的副作用，或用于在[服务器渲染应用](/guide/scaling-up/ssr)中将 DOM 相关代码限制在客户端。
+  这个钩子通常用于执行需要访问组件渲染 DOM 的副作用，或用于在[服务器渲染应用](@todo)中将 DOM 相关代码限制在客户端。
 
   **此钩子在服务器端渲染期间不会被调用。**
 
@@ -53,7 +53,7 @@
 
   父组件的更新钩子在其子组件之后调用。
 
-  此钩子在组件的任何 DOM 更新后调用，这可能由不同的状态更改引起，因为出于性能原因，多个状态更改可能批量处理到单个渲染周期中。如果你需要在特定状态更改后访问更新后的 DOM，请改用 [nextTick()](/api/general#nexttick)。
+  此钩子在组件的任何 DOM 更新后调用，这可能由不同的状态更改引起，因为出于性能原因，多个状态更改可能批量处理到单个渲染周期中。如果你需要在特定状态更改后访问更新后的 DOM，请改用 [nextTick()](/api/api/general#nexttick)。
 
   **此钩子在服务器端渲染期间不会被调用。**
 
@@ -198,7 +198,7 @@
   钩子可以返回 `false` 来阻止错误进一步传播。请参阅下面的错误传播详情。
 
   **错误传播规则**
-  - 默认情况下，所有错误仍将发送到应用程序级 [`app.config.errorHandler`](/api/application#app-config-errorhandler)（如果已定义），以便这些错误仍可以在一个地方报告给分析服务。
+  - 默认情况下，所有错误仍将发送到应用程序级 [`app.config.errorHandler`](/api/api/application#app-config-errorhandler)（如果已定义），以便这些错误仍可以在一个地方报告给分析服务。
 
   - 如果组件的继承链或父链上存在多个 `errorCaptured` 钩子，它们都将按从下到上的顺序在同一个错误上调用。这类似于原生 DOM 事件的冒泡机制。
 
@@ -227,7 +227,7 @@
   }
   ```
 
-- **另请参阅** [深入响应式系统](/guide/extras/reactivity-in-depth)
+- **另请参阅** [深入响应式系统](/guide/guide/extras/reactivity-in-depth)
 
 ## onRenderTriggered() {#onrendertriggered} @todo
 
@@ -253,11 +253,11 @@
   }
   ```
 
-- **另请参阅** [深入响应式系统](/guide/extras/reactivity-in-depth)
+- **另请参阅** [深入响应式系统](/guide/guide/extras/reactivity-in-depth)
 
 ## onActivated() {#onactivated} @todo
 
-注册一个回调，在组件实例作为被 [`<KeepAlive>`](/api/built-in-components#keepalive) 缓存的树的一部分插入到 DOM 后调用。
+注册一个回调，在组件实例作为被 [`<KeepAlive>`](/api/api/built-in-components#keepalive) 缓存的树的一部分插入到 DOM 后调用。
 
 **此钩子在服务器端渲染期间不会被调用。**
 
@@ -267,11 +267,11 @@
   function onActivated(callback: () => void, target?: ComponentInternalInstance | null): void
   ```
 
-- **另请参阅** [指南 - 缓存实例的生命周期](/guide/built-ins/keep-alive#lifecycle-of-cached-instance)
+- **另请参阅** [指南 - 缓存实例的生命周期](/guide/guide/built-ins/keep-alive#lifecycle-of-cached-instance)
 
 ## onDeactivated() {#ondeactivated} @todo
 
-注册一个回调，在组件实例作为被 [`<KeepAlive>`](/api/built-in-components#keepalive) 缓存的树的一部分从 DOM 中移除后调用。
+注册一个回调，在组件实例作为被 [`<KeepAlive>`](/api/api/built-in-components#keepalive) 缓存的树的一部分从 DOM 中移除后调用。
 
 **此钩子在服务器端渲染期间不会被调用。**
 
@@ -281,7 +281,7 @@
   function onDeactivated(callback: () => void, target?: ComponentInternalInstance | null): void
   ```
 
-- **另请参阅** [指南 - 缓存实例的生命周期](/guide/built-ins/keep-alive#lifecycle-of-cached-instance)
+- **另请参阅** [指南 - 缓存实例的生命周期](/guide/guide/built-ins/keep-alive#lifecycle-of-cached-instance)
 
 ## onServerPrefetch() {#onserverprefetch} @todo
 
@@ -322,4 +322,4 @@
   })
   ```
 
-- **另请参阅** [服务器端渲染](/guide/scaling-up/ssr)
+- **另请参阅** [服务器端渲染](@todo)

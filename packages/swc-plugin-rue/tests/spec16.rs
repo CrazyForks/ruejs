@@ -122,7 +122,7 @@ export default ListTransitionExample
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$vaporWithKey, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$vaporWithKey, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC, TransitionGroup } from '@rue-js/rue';
 const ListTransitionExample: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
@@ -273,7 +273,7 @@ const ListTransitionExample: FC = ()=>{
                 return _root;
             }), item))
             });
-            renderAnchor(__slot2, _el8, _list1);
+            untrack(()=>renderAnchor(__slot2, _el8, _list1));
         });
         return _root;
     });

@@ -192,4 +192,30 @@ describe('Button', () => {
     expect(el.disabled).toBe(true)
     expect(el.querySelector('#loading-icon')).toBeTruthy()
   })
+
+  it('renders Button.Group and syncs group size and shape to child buttons', async () => {
+    const c = document.createElement('div')
+    render(
+      h(
+        Button.Group,
+        { size: 'large', shape: 'circle', 'data-testid': 'button-group' },
+        h(Button, { color: 'primary' }, 'Left'),
+        h(Button, null, 'Right'),
+      ),
+      c,
+    )
+    await waitButtonRender()
+    await waitButtonRender()
+
+    const root = c.querySelector('[data-testid="button-group"]') as HTMLElement
+    const items = root.querySelectorAll('.btn')
+    expect(root.classList.contains('join')).toBe(true)
+    expect(items).toHaveLength(2)
+
+    items.forEach(item => {
+      expect(item.classList.contains('join-item')).toBe(true)
+      expect(item.classList.contains('btn-lg')).toBe(true)
+      expect(item.classList.contains('rounded-full')).toBe(true)
+    })
+  })
 })

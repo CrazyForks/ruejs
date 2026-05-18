@@ -33,26 +33,26 @@ export default Components;
     // - 父组件：组件元素以注释锚点占位，renderAnchor 插入 <Hello/>
     // - 文本与属性：静态文本使用 _$createTextNode；className 使用 setAttribute
     let expected_fragment = r##"
-import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const Hello: FC<{
     name: string;
-}> = (props)=>vapor(()=>{
-        const _root = _$createElement("div");
+}> = (props)=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$appendChild(_root, _$createTextNode("你好，"));
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list1);
         watchEffect(()=>{
             const __slot = (props.name);
-            renderAnchor(__slot, _root, _list1);
+            untrack(()=>renderAnchor(__slot, _root, _list1));
         });
         return _root;
     });
-const Components: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
+const Components: FC = ()=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3");
+        const _el1 = _$createElement("h3", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "text-xl font-semibold");
         _$appendChild(_el1, _$createTextNode("组件与 Props 传递"));
@@ -68,7 +68,7 @@ const Components: FC = ()=>vapor(()=>{
             name: "World"
         });
         renderAnchor(__slot5, _root, _list4);
-        const _el2 = _$createElement("a");
+        const _el2 = _$createElement("a", _root);
         _$appendChild(_root, _el2);
         watchEffect(()=>{
             _$setAttribute(_el2, "href", String(RouterLink.__rueHref("/jsx")));

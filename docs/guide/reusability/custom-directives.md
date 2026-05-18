@@ -23,7 +23,7 @@ const vHighlight = {
 
 除了核心中默认提供的指令集（如 `v-model` 或 `v-show`）之外，Rue 还允许你注册自己的自定义指令。
 
-我们已经在 Rue 中介绍了两种代码复用形式：[组件](/guide/essentials/component-basics)和 [composables](./composables)。组件是主要的构建块，而 composables 专注于复用有状态逻辑。另一方面，自定义指令主要用于复用涉及对普通元素进行底层 DOM 访问的逻辑。
+我们已经在 Rue 中介绍了两种代码复用形式：[组件](/guide/guide/essentials/component-basics)和 [composables](/guide/guide/reusability/composables)。组件是主要的构建块，而 composables 专注于复用有状态逻辑。另一方面，自定义指令主要用于复用涉及对普通元素进行底层 DOM 访问的逻辑。
 
 自定义指令被定义为一个包含类似于组件生命周期钩子的对象。这些钩子接收指令绑定的元素。以下是一个示例，展示了一个在元素被 Rue 插入 DOM 时为其添加类的指令：
 
@@ -65,7 +65,7 @@ app.directive('highlight', {
 
 可以通过扩展 `@rue-js/rue` 中的 `ComponentCustomProperties` 接口来为全局自定义指令添加类型支持。
 
-更多详情：[类型化全局自定义指令](/guide/typescript/composition-api#typing-global-custom-directives) <sup class="vt-badge ts" />
+更多详情：[类型化全局自定义指令](/guide/guide/typescript/composition-api#typing-global-custom-directives) <sup class="vt-badge ts" />
 
 ## 何时使用自定义指令 {#when-to-use}
 
@@ -194,7 +194,7 @@ app.directive('demo', (el, binding) => {
 在组件上使用自定义指令不推荐。当组件具有多个根节点时，可能会发生意外行为。
 :::
 
-在组件上使用时，自定义指令将始终应用于组件的根节点，类似于[透传 Attributes](/guide/components/attrs)。
+在组件上使用时，自定义指令将始终应用于组件的根节点，类似于[透传 Attributes](/guide/guide/components/attrs)。
 
 ```tsx
 <MyComponent v-demo="test" />

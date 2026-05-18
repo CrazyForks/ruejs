@@ -34,14 +34,14 @@ export default AttributesAndProps;
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$setStyle, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$setStyle, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const Badge: FC<{
     label: string;
     color?: string;
-}> = (props)=>vapor(()=>{
-        const _root = _$createElement("span");
+}> = (props)=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("span", __rue_parent_context);
         _$setClassName(_root, "px-2 py-1 rounded-md");
         watchEffect(()=>{
             const _root_style = ({
@@ -53,23 +53,23 @@ const Badge: FC<{
         _$appendChild(_root, _list1);
         watchEffect(()=>{
             const __slot = (props.label);
-            renderAnchor(__slot, _root, _list1);
+            untrack(()=>renderAnchor(__slot, _root, _list1));
         });
         return _root;
     });
-const AttributesAndProps: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
+const AttributesAndProps: FC = ()=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3");
+        const _el1 = _$createElement("h3", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "text-xl font-semibold");
         _$appendChild(_el1, _$createTextNode("属性、className、style 与 Props"));
-        const _el2 = _$createElement("div");
+        const _el2 = _$createElement("div", _root);
         _$appendChild(_root, _el2);
         _$setAttribute(_el2, "id", "box");
         _$setClassName(_el2, "border p-2");
         _$appendChild(_el2, _$createTextNode("className 与 id"));
-        const _el3 = _$createElement("div");
+        const _el3 = _$createElement("div", _root);
         _$appendChild(_root, _el3);
         _$setStyle(_el3, {
             color: 'tomato',
@@ -89,7 +89,7 @@ const AttributesAndProps: FC = ()=>vapor(()=>{
             color: "#cde"
         });
         renderAnchor(__slot5, _root, _list4);
-        const _el4 = _$createElement("a");
+        const _el4 = _$createElement("a", _root);
         _$appendChild(_root, _el4);
         watchEffect(()=>{
             _$setAttribute(_el4, "href", String(RouterLink.__rueHref("/jsx")));

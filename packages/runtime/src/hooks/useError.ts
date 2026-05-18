@@ -15,6 +15,21 @@ type NormalizedErrorDetails = {
   stack: string
 }
 
+type ErrorShape = {
+  message?: unknown
+  stack?: unknown
+  name?: unknown
+  cause?: unknown
+}
+
+type BrowserResourceTarget = EventTarget & {
+  tagName?: string
+  src?: string
+  href?: string
+  currentSrc?: string
+  rel?: string
+}
+
 let bridgedWindow: Window | null = null
 const bridgedBrowserErrors = new WeakSet<object>()
 
@@ -31,40 +46,157 @@ const escapeHtml = (value: string) =>
     .split("'")
     .join('&#39;')
 
-const normalizeErrorDetails = (error: unknown): NormalizedErrorDetails => {
-  if (error instanceof Error) {
-    return {
-      message: error.message || error.name || 'Unknown error',
-      stack: error.stack || '',
-    }
+const getErrorShape = (error: unknown): ErrorShape | null =>
+  error && typeof error === 'object' ? (error as ErrorShape) : null
+
+const getErrorName = (error: unknown) => {
+  if (error instanceof Error && error.name) {
+    return error.name
+  }
+
+  const shape = getErrorShape(error)
+  return typeof shape?.name === 'string' ? shape.name : ''
+}
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error && typeof error.message === 'string') {
+    return error.message
   }
 
   if (typeof error === 'string') {
+    return error
+  }
+
+  const shape = getErrorShape(error)
+  if (typeof shape?.message === 'string') {
+    return shape.message
+  }
+
+  return String(error)
+}
+
+const getErrorStack = (error: unknown) => {
+  if (error instanceof Error && typeof error.stack === 'string') {
+    return error.stack
+  }
+
+  const shape = getErrorShape(error)
+  return typeof shape?.stack === 'string' ? shape.stack : ''
+}
+
+const isRueWasmTrapDiagnostic = (error: unknown) => getErrorName(error) === 'RueWasmTrapError'
+
+const isProbablyWasmUnreachableTrap = (error: unknown) => {
+  if (isRueWasmTrapDiagnostic(error)) {
+    return false
+  }
+
+  const name = getErrorName(error)
+  const message = getErrorMessage(error)
+  if (!/unreachable/i.test(message)) {
+    return false
+  }
+
+  return (
+    name === 'RuntimeError' ||
+    name === 'WebAssembly.RuntimeError' ||
+    /RuntimeError:\s*unreachable/i.test(message) ||
+    /^unreachable$/i.test(message.trim())
+  )
+}
+
+const createRueWasmTrapDiagnostic = (error: unknown) => {
+  const originalName = getErrorName(error)
+  const originalMessage = getErrorMessage(error)
+  const originalStack = getErrorStack(error)
+  const originalTrap = [originalName, originalMessage].filter(Boolean).join(': ')
+  const diagnostic = new Error(
+    'Rue Vapor/Wasm trapped with "unreachable". This usually means compiled render code mutated a props-derived or computed object during render. Fix the component by assembling a fresh object instead of deleting or rewriting fields on an object built from props + ...rest. If this came from pretransformed rue-design source, add /* RUE_VAPOR_TRANSFORMED */ at the top of the component file so Vite does not Vapor-transform it again.' +
+      (originalTrap ? ` Original trap: ${originalTrap}.` : ''),
+  )
+
+  diagnostic.name = 'RueWasmTrapError'
+
+  if (originalStack) {
+    diagnostic.stack = `${diagnostic.name}: ${diagnostic.message}\nCaused by: ${originalStack}`
+  }
+
+  ;(diagnostic as Error & { cause?: unknown }).cause = error
+  return diagnostic
+}
+
+const normalizeRueReportableError = (error: unknown) =>
+  isProbablyWasmUnreachableTrap(error) ? createRueWasmTrapDiagnostic(error) : error
+
+const normalizeErrorDetails = (error: unknown): NormalizedErrorDetails => {
+  const normalizedError = normalizeRueReportableError(error)
+
+  if (normalizedError instanceof Error) {
     return {
-      message: error,
+      message: normalizedError.message || normalizedError.name || 'Unknown error',
+      stack: normalizedError.stack || '',
+    }
+  }
+
+  if (typeof normalizedError === 'string') {
+    return {
+      message: normalizedError,
       stack: '',
     }
   }
 
-  if (error && typeof error === 'object') {
-    const candidate = error as { message?: unknown; stack?: unknown; name?: unknown }
+  if (normalizedError && typeof normalizedError === 'object') {
+    const candidate = normalizedError as { message?: unknown; stack?: unknown; name?: unknown }
     const message =
       typeof candidate.message === 'string'
         ? candidate.message
         : typeof candidate.name === 'string'
           ? candidate.name
-          : String(error)
+          : String(normalizedError)
     const stack = typeof candidate.stack === 'string' ? candidate.stack : ''
     return { message, stack }
   }
 
   return {
-    message: String(error),
+    message: String(normalizedError),
     stack: '',
   }
 }
+const getBrowserResourceTarget = (event: Event) => {
+  const target = event.target as BrowserResourceTarget | null
+  if (!target || typeof target !== 'object') {
+    return null
+  }
 
-const normalizeBrowserError = (event: Event | PromiseRejectionEvent): unknown => {
+  const tag = typeof target.tagName === 'string' ? target.tagName.toLowerCase() : 'resource'
+  const source =
+    (typeof target.currentSrc === 'string' && target.currentSrc) ||
+    (typeof target.src === 'string' && target.src) ||
+    (typeof target.href === 'string' && target.href) ||
+    ''
+
+  return {
+    tag,
+    source,
+    rel: typeof target.rel === 'string' ? target.rel.toLowerCase() : '',
+  }
+}
+
+/**
+ * 仅将足以破坏页面执行链的资源错误桥接给 Rue：
+ * - script: 动态 chunk / 外部脚本加载失败，页面通常不可继续运行。
+ * - link(rel=stylesheet/modulepreload/preload): 样式或预加载主资源失败，开发期需要尽快暴露。
+ * 图片、音视频、favicon 等非致命资源失败不再弹出框架错误遮罩，避免刷新时被浏览器噪音打断。
+ */
+const isReportableBrowserResource = (target: ReturnType<typeof getBrowserResourceTarget>) => {
+  if (!target) return false
+  if (target.tag === 'script') return true
+  if (target.tag !== 'link') return false
+
+  return target.rel === 'stylesheet' || target.rel === 'modulepreload' || target.rel === 'preload'
+}
+
+const normalizeBrowserError = (event: Event | PromiseRejectionEvent): unknown | null => {
   if ('reason' in event && event.reason !== undefined) {
     return event.reason
   }
@@ -73,26 +205,35 @@ const normalizeBrowserError = (event: Event | PromiseRejectionEvent): unknown =>
     return event.error
   }
 
-  const target = (event as Event).target as
-    | (EventTarget & { tagName?: string; src?: string; href?: string })
-    | null
-  if (target && typeof target === 'object') {
-    const tag = typeof target.tagName === 'string' ? target.tagName.toLowerCase() : 'resource'
-    const source =
-      (typeof target.src === 'string' && target.src) ||
-      (typeof target.href === 'string' && target.href) ||
-      ''
-    return new Error(source ? `Failed to load ${tag}: ${source}` : `Failed to load ${tag}`)
+  const resourceTarget = getBrowserResourceTarget(event as Event)
+  if (resourceTarget) {
+    if (!isReportableBrowserResource(resourceTarget)) {
+      return null
+    }
+
+    return new Error(
+      resourceTarget.source
+        ? `Failed to load ${resourceTarget.tag}: ${resourceTarget.source}`
+        : `Failed to load ${resourceTarget.tag}`,
+    )
   }
 
   if ('message' in event && typeof event.message === 'string' && event.message) {
-    return new Error(event.message)
+    const filename = 'filename' in event && typeof event.filename === 'string' ? event.filename : ''
+
+    if (event.message === 'Failed to load resource' && !filename) {
+      return null
+    }
+
+    return new Error(filename ? `${event.message}: ${filename}` : event.message)
   }
 
   return new Error('Unhandled browser error')
 }
 
 const reportBrowserError = (error: unknown) => {
+  const normalizedError = normalizeRueReportableError(error)
+
   if (error && typeof error === 'object') {
     if (bridgedBrowserErrors.has(error)) {
       return
@@ -100,7 +241,14 @@ const reportBrowserError = (error: unknown) => {
     bridgedBrowserErrors.add(error)
   }
 
-  ;(rue as any).handleError(error, null)
+  if (normalizedError && typeof normalizedError === 'object' && normalizedError !== error) {
+    if (bridgedBrowserErrors.has(normalizedError)) {
+      return
+    }
+    bridgedBrowserErrors.add(normalizedError)
+  }
+
+  ;(rue as any).handleError(normalizedError, null)
 }
 
 const installBrowserBridge = () => {
@@ -113,11 +261,17 @@ const installBrowserBridge = () => {
   }
 
   const handleWindowError = (event: Event) => {
-    reportBrowserError(normalizeBrowserError(event))
+    const normalized = normalizeBrowserError(event)
+    if (normalized != null) {
+      reportBrowserError(normalized)
+    }
   }
 
   const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-    reportBrowserError(normalizeBrowserError(event))
+    const normalized = normalizeBrowserError(event)
+    if (normalized != null) {
+      reportBrowserError(normalized)
+    }
   }
 
   window.addEventListener('error', handleWindowError, true)
@@ -176,15 +330,14 @@ export function useError(opts?: { overlay?: boolean; console?: boolean }) {
         '<button id="rue-error-close" aria-label="close" class="text-xs font-medium cursor-pointer hover:opacity-80">close</button>',
         '</div>',
         '<div class="p-4 text-sm leading-relaxed overflow-auto">',
-        '<div class="font-semibold text-error-content mb-3 break-words">' +
-          escapedMessage +
-          '</div>',
-        escapedStack
-          ? '<pre class="text-xs leading-5 whitespace-pre-wrap break-words opacity-90">' +
-            escapedStack +
-            '</pre>'
-          : '',
-        '</div>',
+        '<div class="font-semibold text-error break-words">' + escapedMessage + '</div>',
+        ...(escapedStack
+          ? [
+              '<pre class="mt-3 overflow-auto whitespace-pre-wrap break-words rounded bg-black/30 p-3 text-xs text-gray-300">' +
+                escapedStack +
+                '</pre>',
+            ]
+          : []),
         '</div>',
         '</div>',
       ].join('')

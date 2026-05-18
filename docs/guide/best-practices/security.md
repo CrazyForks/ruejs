@@ -126,7 +126,7 @@ Rue 模板被编译成 JavaScript，模板内的表达式将作为渲染过程�
 <style>{userProvidedStyles}</style>
 ```
 
-为了让您的用户完全免受点击劫持的保护，我们建议只允许在沙盒化的 iframe 内完全控制 CSS。或者，当通过样式绑定提供用户控制时，我们建议使用其 [对象语法](/guide/essentials/class-and-style#binding-to-objects-1) 并只允许用户提供他们可以安全控制的特定属性的值，如下所示：
+为了让您的用户完全免受点击劫持的保护，我们建议只允许在沙盒化的 iframe 内完全控制 CSS。或者，当通过样式绑定提供用户控制时，我们建议使用其 [对象语法](/guide/guide/essentials/class-and-style#binding-to-objects-1) 并只允许用户提供他们可以安全控制的特定属性的值，如下所示：
 
 ```tsx
 <a

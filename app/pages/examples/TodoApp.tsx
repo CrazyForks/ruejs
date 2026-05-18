@@ -1,4 +1,4 @@
-import { type FC, computed, ref, watchEffect } from '@rue-js/rue'
+import { type FC, computed, ref, useState, watchEffect } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -319,6 +319,139 @@ const STATUS_META: Record<
     dotClass: 'bg-success',
     cardClass: 'border-success/30',
   },
+}
+
+type TodoCardProps = {
+  item: TodoItem
+  currentEditingId: number | null
+  currentEditingTitle: string
+  onEditingTitleChange: (value: string) => void
+  onSaveEditing: (id: number, titleOverride?: string) => void
+  onCancelEditing: () => void
+  onUpdateStatus: (id: number, status: TodoStatus) => void
+  onStartEditing: (item: TodoItem) => void
+  onToggleArchived: (id: number) => void
+  onRemoveTodo: (id: number) => void
+}
+
+const _TodoCard: FC<TodoCardProps> = ({
+  item,
+  currentEditingId,
+  currentEditingTitle,
+  onEditingTitleChange,
+  onSaveEditing,
+  onCancelEditing,
+  onUpdateStatus,
+  onStartEditing,
+  onToggleArchived,
+  onRemoveTodo,
+}) => {
+  const isEditing = currentEditingId === item.id
+  const editingValue = isEditing ? currentEditingTitle : item.title
+  const meta = STATUS_META[item.status]
+  let pendingEditingValue = editingValue
+
+  const commitEditing = () => {
+    const latestValue = pendingEditingValue
+    onEditingTitleChange(latestValue)
+    onSaveEditing(item.id, latestValue)
+  }
+
+  return (
+    <div
+      className={`card border bg-base-100 shadow-sm transition-all ${meta.cardClass} ${
+        item.archived ? 'opacity-75' : 'hover:-translate-y-0.5 hover:shadow-md'
+      }`}
+    >
+      <div className="card-body gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex-1 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`inline-block h-2.5 w-2.5 rounded-full ${meta.dotClass}`}></span>
+              <span className={meta.badgeClass}>{meta.label}</span>
+              {item.archived && <span className="badge badge-secondary badge-outline">已归档</span>}
+              <span className="text-xs text-base-content/50">
+                创建于 {formatTodoCreatedAt(item.createdAt)}
+              </span>
+            </div>
+
+            <h3
+              className={`text-xl font-semibold ${
+                isEditing
+                  ? 'hidden'
+                  : item.status === 'done'
+                    ? 'text-base-content/50 line-through'
+                    : 'text-base-content'
+              }`}
+            >
+              {item.title}
+            </h3>
+
+            <div className={`flex flex-col gap-3 sm:flex-row ${isEditing ? '' : 'hidden'}`}>
+              <input
+                className="input input-bordered w-full"
+                value={editingValue}
+                onInput={(e: any) => {
+                  pendingEditingValue = (e.target as HTMLInputElement).value
+                  onEditingTitleChange(pendingEditingValue)
+                }}
+                onKeydown={(e: KeyboardEvent) => {
+                  if (e.key === 'Enter') {
+                    commitEditing()
+                  }
+                  if (e.key === 'Escape') {
+                    onCancelEditing()
+                  }
+                }}
+              />
+              <div className="flex gap-2">
+                <button className="btn btn-primary btn-sm" onClick={commitEditing}>
+                  保存
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={onCancelEditing}>
+                  取消
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {STATUS_OPTIONS.map(option => (
+                <button
+                  key={option.key}
+                  className={`btn btn-xs ${
+                    item.status === option.key ? 'btn-neutral' : 'btn-ghost border border-base-300'
+                  }`}
+                  onClick={() => onUpdateStatus(item.id, option.key)}
+                >
+                  {option.actionLabel}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            {!isEditing && (
+              <button className="btn btn-sm btn-outline" onClick={() => onStartEditing(item)}>
+                改名
+              </button>
+            )}
+            <button
+              className="btn btn-sm btn-outline btn-secondary"
+              onClick={() => onToggleArchived(item.id)}
+            >
+              {item.archived ? '恢复' : '归档'}
+            </button>
+            <button
+              className="btn btn-sm btn-outline btn-error"
+              onClick={() => onRemoveTodo(item.id)}
+            >
+              删除
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const SOURCE_CODE = [
@@ -686,31 +819,33 @@ const SOURCE_CODE = [
   '                    <span className="text-xs text-base-content/50">创建于 {formatTodoCreatedAt(card.item.createdAt)}</span>',
   '                  </div>',
   '',
-  '                  {!card.isEditing && (',
-  "                    <h3 className={`text-xl font-semibold ${card.item.status === 'done' ? 'text-base-content/50 line-through' : 'text-base-content'}`}>",
-  '                      {card.item.title}',
-  '                    </h3>',
-  '                  )}',
+  '                  <h3',
+  '                    className={`text-xl font-semibold ${',
+  "                      card.isEditing ? 'hidden' : card.item.status === 'done' ? 'text-base-content/50 line-through' : 'text-base-content'",
+  '                    }}`',
+  '                  >',
+  '                    {card.item.title}',
+  '                  </h3>',
   '',
-  '                  {card.isEditing && (',
-  '                    <div className="flex flex-col gap-3 sm:flex-row">',
-  '                      <input',
-  '                        className="input input-bordered w-full"',
-  '                        value={card.editingValue}',
-  '                        onInput={(e: any) => {',
-  '                          editingTitle.value = (e.target as HTMLInputElement).value;',
-  '                        }}',
-  '                        onKeydown={(e: KeyboardEvent) => {',
-  "                          if (e.key === 'Enter') saveEditing(card.item.id);",
-  "                          if (e.key === 'Escape') cancelEditing();",
-  '                        }}',
-  '                      />',
-  '                      <div className="flex gap-2">',
-  '                        <button className="btn btn-primary btn-sm" onClick={() => saveEditing(card.item.id)}>保存</button>',
-  '                        <button className="btn btn-ghost btn-sm" onClick={cancelEditing}>取消</button>',
-  '                      </div>',
+  '                  <div',
+  '                    className={`flex flex-col gap-3 sm:flex-row ${card.isEditing ? "" : "hidden"}`}',
+  '                  >',
+  '                    <input',
+  '                      className="input input-bordered w-full"',
+  '                      value={card.editingValue}',
+  '                      onInput={(e: any) => {',
+  '                        editingTitle.value = (e.target as HTMLInputElement).value;',
+  '                      }}',
+  '                      onKeydown={(e: KeyboardEvent) => {',
+  "                        if (e.key === 'Enter') saveEditing(card.item.id);",
+  "                        if (e.key === 'Escape') cancelEditing();",
+  '                      }}',
+  '                    />',
+  '                    <div className="flex gap-2">',
+  '                      <button className="btn btn-primary btn-sm" onClick={() => saveEditing(card.item.id)}>保存</button>',
+  '                      <button className="btn btn-ghost btn-sm" onClick={cancelEditing}>取消</button>',
   '                    </div>',
-  '                  )}',
+  '                  </div>',
   '',
   '                  <div className="flex flex-wrap gap-2">',
   '                    {STATUS_OPTIONS.map(option => (',
@@ -751,12 +886,16 @@ const SOURCE_CODE = [
 const PreviewPanel: FC = () => {
   const persistedState = loadPersistedTodoState()
   const initialTodos = persistedState?.todos ?? INITIAL_TODOS
-  const todos = ref<TodoItem[]>(initialTodos)
-  const draft = ref('')
-  const search = ref(persistedState?.search ?? '')
-  const activeFilter = ref<TodoFilter>(persistedState?.activeFilter ?? 'all')
-  const editingId = ref<number | null>(null)
-  const editingTitle = ref('')
+  const initialActiveFilter: TodoFilter = persistedState?.activeFilter ?? 'all'
+  const [todos, setTodos] = useState<TodoItem[]>(initialTodos)
+  const [draft, setDraft] = useState('')
+  const [search, setSearch] = useState(persistedState?.search ?? '')
+  const activeFilter = ref<TodoFilter>(initialActiveFilter)
+  const setActiveFilter = (nextFilter: TodoFilter) => {
+    activeFilter.value = nextFilter
+  }
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
   const nextId = ref(initialTodos.reduce((max, item) => Math.max(max, item.id), 0) + 1)
   const nextCreatedOrder = ref(
     initialTodos.reduce((max, item) => Math.max(max, item.createdOrder), 0) + 1,
@@ -764,18 +903,18 @@ const PreviewPanel: FC = () => {
 
   watchEffect(() => {
     persistTodoState({
-      todos: todos.value,
+      todos,
       search: search.value,
       activeFilter: activeFilter.value,
     })
   })
 
   const counts = computed(() => ({
-    total: todos.value.filter(item => !item.archived).length,
-    todo: todos.value.filter(item => !item.archived && item.status === 'todo').length,
-    doing: todos.value.filter(item => !item.archived && item.status === 'doing').length,
-    done: todos.value.filter(item => !item.archived && item.status === 'done').length,
-    archived: todos.value.filter(item => item.archived).length,
+    total: todos.filter(item => !item.archived).length,
+    todo: todos.filter(item => !item.archived && item.status === 'todo').length,
+    doing: todos.filter(item => !item.archived && item.status === 'doing').length,
+    done: todos.filter(item => !item.archived && item.status === 'done').length,
+    archived: todos.filter(item => item.archived).length,
   }))
 
   const overviewCards = computed(() => {
@@ -822,7 +961,7 @@ const PreviewPanel: FC = () => {
   const visibleTodos = computed(() => {
     const keyword = search.value.trim().toLowerCase()
 
-    return todos.value
+    return todos
       .filter(item => {
         const matchesKeyword = !keyword || item.title.toLowerCase().includes(keyword)
         if (!matchesKeyword) {
@@ -846,75 +985,63 @@ const PreviewPanel: FC = () => {
       .sort((left, right) => right.createdOrder - left.createdOrder)
   })
 
-  const visibleTodoCards = computed(() => {
-    const currentEditingId = editingId.value
-    const currentEditingTitle = editingTitle.value
-
-    return visibleTodos.get().map(item => ({
-      item,
-      meta: STATUS_META[item.status],
-      isEditing: currentEditingId === item.id,
-      editingValue: currentEditingId === item.id ? currentEditingTitle : item.title,
-    }))
-  })
-
   const addTodo = () => {
     const title = draft.value.trim()
     if (!title) {
       return
     }
 
-    todos.value = [
-      {
-        id: nextId.value++,
-        title,
-        status: 'todo',
-        archived: false,
-        createdAt: new Date().toISOString(),
-        createdOrder: nextCreatedOrder.value++,
-      },
-      ...todos.value,
-    ]
-    draft.value = ''
+    const nextTodo: TodoItem = {
+      id: nextId.value++,
+      title,
+      status: 'todo',
+      archived: false,
+      createdAt: new Date().toISOString(),
+      createdOrder: nextCreatedOrder.value++,
+    }
+
+    setTodos(current => [nextTodo, ...current])
+    setDraft('')
   }
 
   const removeTodo = (id: number) => {
-    todos.value = todos.value.filter(item => item.id !== id)
+    setTodos(current => current.filter(item => item.id !== id))
     if (editingId.value === id) {
-      editingId.value = null
+      setEditingId(null)
+      setEditingTitle('')
     }
   }
 
   const updateStatus = (id: number, status: TodoStatus) => {
-    todos.value = todos.value.map(item =>
-      item.id === id ? { ...item, status, archived: false } : item,
+    setTodos(current =>
+      current.map(item => (item.id === id ? { ...item, status, archived: false } : item)),
     )
   }
 
   const toggleArchived = (id: number) => {
-    todos.value = todos.value.map(item =>
-      item.id === id ? { ...item, archived: !item.archived } : item,
+    setTodos(current =>
+      current.map(item => (item.id === id ? { ...item, archived: !item.archived } : item)),
     )
   }
 
   const startEditing = (item: TodoItem) => {
-    editingId.value = item.id
-    editingTitle.value = item.title
+    setEditingId(item.id)
+    setEditingTitle(item.title)
   }
 
   const cancelEditing = () => {
-    editingId.value = null
-    editingTitle.value = ''
+    setEditingId(null)
+    setEditingTitle('')
   }
 
-  const saveEditing = (id: number) => {
-    const title = editingTitle.value.trim()
+  const saveEditing = (id: number, titleOverride?: string) => {
+    const title = (titleOverride ?? editingTitle.value).trim()
 
     if (!title) {
       return
     }
 
-    todos.value = todos.value.map(item => (item.id === id ? { ...item, title } : item))
+    setTodos(current => current.map(item => (item.id === id ? { ...item, title } : item)))
     cancelEditing()
   }
 
@@ -958,7 +1085,7 @@ const PreviewPanel: FC = () => {
                   value={draft.value}
                   placeholder="例如：实现 Todo 应用的归档功能"
                   onInput={(e: any) => {
-                    draft.value = (e.target as HTMLInputElement).value
+                    setDraft((e.target as HTMLInputElement).value)
                   }}
                   onKeydown={(e: KeyboardEvent) => {
                     if (e.key === 'Enter' && !e.isComposing) {
@@ -982,7 +1109,7 @@ const PreviewPanel: FC = () => {
                 value={search.value}
                 placeholder="按标题筛选任务"
                 onInput={(e: any) => {
-                  search.value = (e.target as HTMLInputElement).value
+                  setSearch((e.target as HTMLInputElement).value)
                 }}
               />
             </label>
@@ -998,7 +1125,7 @@ const PreviewPanel: FC = () => {
                     : 'btn-ghost border border-base-300'
                 }`}
                 onClick={() => {
-                  activeFilter.value = filter.key
+                  setActiveFilter(filter.key)
                 }}
               >
                 {filter.label}
@@ -1020,52 +1147,64 @@ const PreviewPanel: FC = () => {
       </div>
 
       <div className="grid gap-4">
-        {visibleTodoCards.get().map(card => (
-          <div
-            key={card.item.id}
-            className={`card border bg-base-100 shadow-sm transition-all ${card.meta.cardClass} ${
-              card.item.archived ? 'opacity-75' : 'hover:-translate-y-0.5 hover:shadow-md'
-            }`}
-          >
-            <div className="card-body gap-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex-1 space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`inline-block h-2.5 w-2.5 rounded-full ${card.meta.dotClass}`}
-                    ></span>
-                    <span className={card.meta.badgeClass}>{card.meta.label}</span>
-                    {card.item.archived && (
-                      <span className="badge badge-secondary badge-outline">已归档</span>
-                    )}
-                    <span className="text-xs text-base-content/50">
-                      创建于 {formatTodoCreatedAt(card.item.createdAt)}
-                    </span>
-                  </div>
+        {visibleTodos.get().map(item => {
+          const isEditing = editingId.value === item.id
+          const editingValue = isEditing ? editingTitle.value : item.title
+          const meta = STATUS_META[item.status]
 
-                  {!card.isEditing && (
+          const commitEditing = (latestValue: string) => {
+            setEditingTitle(latestValue)
+            saveEditing(item.id, latestValue)
+          }
+
+          return (
+            <div
+              key={`${item.id}-${item.title}-${item.status}-${item.archived ? 'archived' : 'active'}-${isEditing ? 'editing' : 'view'}`}
+              className={`card border bg-base-100 shadow-sm transition-all ${meta.cardClass} ${
+                item.archived ? 'opacity-75' : 'hover:-translate-y-0.5 hover:shadow-md'
+              }`}
+            >
+              <div className="card-body gap-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-block h-2.5 w-2.5 rounded-full ${meta.dotClass}`}
+                      ></span>
+                      <span className={meta.badgeClass}>{meta.label}</span>
+                      {item.archived && (
+                        <span className="badge badge-secondary badge-outline">已归档</span>
+                      )}
+                      <span className="text-xs text-base-content/50">
+                        创建于 {formatTodoCreatedAt(item.createdAt)}
+                      </span>
+                    </div>
+
                     <h3
                       className={`text-xl font-semibold ${
-                        card.item.status === 'done'
-                          ? 'text-base-content/50 line-through'
-                          : 'text-base-content'
+                        isEditing
+                          ? 'hidden'
+                          : item.status === 'done'
+                            ? 'text-base-content/50 line-through'
+                            : 'text-base-content'
                       }`}
                     >
-                      {card.item.title}
+                      {item.title}
                     </h3>
-                  )}
 
-                  {card.isEditing && (
-                    <div className="flex flex-col gap-3 sm:flex-row">
+                    <div
+                      data-todo-edit-row="true"
+                      className={`flex flex-col gap-3 sm:flex-row ${isEditing ? '' : 'hidden'}`}
+                    >
                       <input
                         className="input input-bordered w-full"
-                        value={card.editingValue}
+                        value={editingValue}
                         onInput={(e: any) => {
-                          editingTitle.value = (e.target as HTMLInputElement).value
+                          setEditingTitle((e.target as HTMLInputElement).value)
                         }}
                         onKeydown={(e: KeyboardEvent) => {
                           if (e.key === 'Enter') {
-                            saveEditing(card.item.id)
+                            commitEditing((e.target as HTMLInputElement).value)
                           }
                           if (e.key === 'Escape') {
                             cancelEditing()
@@ -1075,7 +1214,13 @@ const PreviewPanel: FC = () => {
                       <div className="flex gap-2">
                         <button
                           className="btn btn-primary btn-sm"
-                          onClick={() => saveEditing(card.item.id)}
+                          onClick={(e: any) => {
+                            const editRow = (e.currentTarget as HTMLElement).closest(
+                              '[data-todo-edit-row="true"]',
+                            ) as HTMLElement | null
+                            const input = editRow?.querySelector('input') as HTMLInputElement | null
+                            commitEditing(input?.value ?? editingValue)
+                          }}
                         >
                           保存
                         </button>
@@ -1084,51 +1229,48 @@ const PreviewPanel: FC = () => {
                         </button>
                       </div>
                     </div>
-                  )}
 
-                  <div className="flex flex-wrap gap-2">
-                    {STATUS_OPTIONS.map(option => (
-                      <button
-                        key={option.key}
-                        className={`btn btn-xs ${
-                          card.item.status === option.key
-                            ? 'btn-neutral'
-                            : 'btn-ghost border border-base-300'
-                        }`}
-                        onClick={() => updateStatus(card.item.id, option.key)}
-                      >
-                        {option.actionLabel}
-                      </button>
-                    ))}
+                    <div className="flex flex-wrap gap-2">
+                      {STATUS_OPTIONS.map(option => (
+                        <button
+                          key={option.key}
+                          className={`btn btn-xs ${
+                            item.status === option.key
+                              ? 'btn-neutral'
+                              : 'btn-ghost border border-base-300'
+                          }`}
+                          onClick={() => updateStatus(item.id, option.key)}
+                        >
+                          {option.actionLabel}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex flex-wrap gap-2 lg:justify-end">
-                  {!card.isEditing && (
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    {!isEditing && (
+                      <button className="btn btn-sm btn-outline" onClick={() => startEditing(item)}>
+                        改名
+                      </button>
+                    )}
                     <button
-                      className="btn btn-sm btn-outline"
-                      onClick={() => startEditing(card.item)}
+                      className="btn btn-sm btn-outline btn-secondary"
+                      onClick={() => toggleArchived(item.id)}
                     >
-                      改名
+                      {item.archived ? '恢复' : '归档'}
                     </button>
-                  )}
-                  <button
-                    className="btn btn-sm btn-outline btn-secondary"
-                    onClick={() => toggleArchived(card.item.id)}
-                  >
-                    {card.item.archived ? '恢复' : '归档'}
-                  </button>
-                  <button
-                    className="btn btn-sm btn-outline btn-error"
-                    onClick={() => removeTodo(card.item.id)}
-                  >
-                    删除
-                  </button>
+                    <button
+                      className="btn btn-sm btn-outline btn-error"
+                      onClick={() => removeTodo(item.id)}
+                    >
+                      删除
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
         {!visibleTodos.get().length && (
           <div className="card border border-dashed border-base-300 bg-base-100 shadow-sm">
             <div className="card-body items-center py-14 text-center">

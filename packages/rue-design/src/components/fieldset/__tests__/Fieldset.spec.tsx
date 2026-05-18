@@ -67,8 +67,10 @@ describe('Fieldset', () => {
       const root = container.querySelector('[data-testid="root"]') as HTMLElement
       const hint = container.querySelector('[data-testid="hint"]') as HTMLElement
       expect(root.classList.contains('fieldset')).toBe(true)
+      expect(root.hasAttribute('aria-invalid')).toBe(false)
       expect(hint.tagName.toLowerCase()).toBe('p')
       expect(hint.classList.contains('label')).toBe(true)
+      expect(hint.classList.contains('whitespace-normal')).toBe(true)
       expect(hint.classList.contains('text-xs')).toBe(true)
     })
   })

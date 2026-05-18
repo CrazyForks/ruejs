@@ -26,8 +26,8 @@ const Demo: FC<{ label: string }> = props => (
     let out = compile(src, "expr_fragment_slot_bare");
 
     assert!(out.contains(&utils::normalize("const __slot = vapor(()=>{")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1);")));
-    assert!(out.contains(&utils::normalize("const _el1 = _$createElement(\"span\");")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
+    assert!(out.contains(&utils::normalize("_$createElement(\"span\", _root)")));
 }
 
 #[test]
@@ -43,9 +43,9 @@ const Demo: FC<{ ok: boolean; label: string }> = props => (
     let out = compile(src, "expr_fragment_slot_conditional");
 
     assert!(out.contains(&utils::normalize("const __slot = props.ok ? vapor(()=>{")));
-    assert!(out.contains(&utils::normalize("const _el1 = _$createElement(\"span\");")));
-    assert!(out.contains(&utils::normalize("_$createElement(\"em\")")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1);")));
+    assert!(out.contains(&utils::normalize("_$createElement(\"span\", _root)")));
+    assert!(out.contains(&utils::normalize("_$createElement(\"em\", _root)")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
 }
 
 #[test]
@@ -62,7 +62,25 @@ const Demo: FC<{ ok: boolean; label: string }> = props => (
 
     assert!(out.contains(&utils::normalize("const __slot = props.ok ? vapor(()=>{")));
     assert!(out.contains(&utils::normalize(": \"\";")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1);")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
+}
+
+#[test]
+fn lowers_bare_identifier_inside_fragment_to_slot_render() {
+    let src = r##"
+import { type FC } from '@rue-js/rue'
+
+const Demo: FC<{ holder: any }> = ({ holder }) => (
+  <div><>{holder}</></div>
+)
+"##;
+
+    let out = compile(src, "expr_fragment_slot_bare_identifier");
+
+    assert!(out.contains(&utils::normalize("const _list1 = _$createComment(\"rue:slot:anchor\")")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
+    assert!(!out.contains(&utils::normalize("_$settextContent(_el1, holder)")));
+    assert!(!out.contains(&utils::normalize("_$settextContent(_el2, holder)")));
 }
 
 #[test]
@@ -121,9 +139,9 @@ const Demo: FC = () => {
     assert!(out.contains(&utils::normalize("getKey: (item, idx)=>item.id")));
     assert!(out.contains(&utils::normalize("const label = item.label.toUpperCase();")));
     assert!(out.contains(&utils::normalize("renderItem: (item, parent, start, end, idx)=>{")));
-    assert!(out.contains(&utils::normalize("_$createElement(\"button\")")));
-    assert!(out.contains(&utils::normalize("_$createElement(\"span\")")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1);")));
+    assert!(out.contains(&utils::normalize("_$createElement(\"button\", _root)")));
+    assert!(out.contains(&utils::normalize("_$createElement(\"span\", _root)")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
     assert!(!out.contains("_jsxDEV("));
 }
 
@@ -158,7 +176,7 @@ const Demo: FC = () => {
     assert!(out.contains(&utils::normalize(": \"\";")));
     assert!(out.contains(&utils::normalize("const label = item.label.toUpperCase();")));
     assert!(out.contains(&utils::normalize("renderItem: (item, parent, start, end, idx)=>{")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1);")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
     assert!(!out.contains("_jsxDEV("));
 }
 

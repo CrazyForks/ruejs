@@ -317,6 +317,18 @@ const VOnAndROn: FC = () => {
     )
   }
 
+  void [
+    onMethodPath,
+    onInput,
+    onManualCall,
+    onBubbleParent,
+    onDirectiveStopPrevent,
+    onEnterDirective,
+    onKeyCode13Directive,
+    onSelfOnly,
+    onMetaExact,
+  ]
+
   return (
     <SidebarPlayground>
       <h1 className="text-5xl font-semibold mb-4 md:mb-4">v-on / r-on</h1>

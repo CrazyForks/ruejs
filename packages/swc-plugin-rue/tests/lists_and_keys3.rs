@@ -101,7 +101,7 @@ export default TodoApp
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { computed, reactive, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { computed, reactive, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 interface Todo {
     id: number;
@@ -158,17 +158,17 @@ const TodoApp: FC = ()=>{
             };
         }));
     const { state: state, addTodo: addTodo, toggleTodo: toggleTodo, deleteTodo: deleteTodo, completedCount: completedCount } = _$useSetup;
-    return vapor(()=>{
-        const _root = _$createElement("div");
+    return vapor((__rue_parent_context)=>{
+      const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-2xl mx-auto p-6 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h2");
+      const _el1 = _$createElement("h2", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "text-xl font-semibold mb-3");
         _$appendChild(_el1, _$createTextNode("待办事项"));
-        const _el2 = _$createElement("div");
+      const _el2 = _$createElement("div", _root);
         _$appendChild(_root, _el2);
         _$setClassName(_el2, "flex items-center gap-2 mb-3");
-        const _el3 = _$createElement("input");
+      const _el3 = _$createElement("input", _el2);
         _$appendChild(_el2, _el3);
         _$setAttribute(_el3, "type", "text");
         watchEffect(()=>{
@@ -181,12 +181,12 @@ const TodoApp: FC = ()=>{
             if (e.key === 'Enter') addTodo();
         }));
         _$setClassName(_el3, "flex-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-400 focus:ring focus:ring-blue-200 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 px-3 py-2");
-        const _el4 = _$createElement("button");
+        const _el4 = _$createElement("button", _el2);
         _$appendChild(_el2, _el4);
         _$setClassName(_el4, "rounded-lg border border-green-500 bg-green-500 px-5 py-2.5 text-center text-sm font-medium text-white shadow-sm transition-all hover:border-green-700 hover:bg-green-700 focus:ring focus:ring-green-200 disabled:cursor-not-allowed disabled:border-green-300 disabled:bg-green-300");
         _$addEventListener(_el4, "click", (addTodo));
         _$appendChild(_el4, _$createTextNode("添加"));
-        const _el5 = _$createElement("div");
+        const _el5 = _$createElement("div", _root);
         _$appendChild(_root, _el5);
         const _list1 = _$createComment("rue:list:start");
         const _list2 = _$createComment("rue:list:end");
@@ -206,41 +206,41 @@ const TodoApp: FC = ()=>{
                 renderItem: (todo, parent, start, end, _idx)=>{
                     const __slot = vapor(()=>{
                         const _root = _$createDocumentFragment();
-                        const _el6 = _$createElement("div");
+                        const _el6 = _$createElement("div", _root);
                         _$appendChild(_root, _el6);
                         watchEffect(()=>{
                             _$setAttribute(_el6, "key", String((todo.id)));
                         });
-                        const _el7 = _$createElement("p");
+                        const _el7 = _$createElement("p", _el6);
                         _$appendChild(_el6, _el7);
-                      const _list3 = _$createComment("rue:slot:anchor");
-                      _$appendChild(_el7, _list3);
-                      watchEffect(()=>{
-                        const __slot = (todo.id);
-                        renderAnchor(__slot, _el7, _list3);
-                      });
-                      const _el8 = _$createElement("div");
-                      _$appendChild(_el6, _el8);
+                        const _list3 = _$createComment("rue:slot:anchor");
+                        _$appendChild(_el7, _list3);
                         watchEffect(()=>{
-                        _$setClassName(_el8, String(`flex items-center justify-between rounded-lg border p-3 mb-2 ${todo.completed ? 'bg-gray-50' : 'bg-white'}`));
+                            const __slot = (todo.id);
+                            untrack(()=>renderAnchor(__slot, _el7, _list3));
                         });
-                      const _el9 = _$createElement("span");
-                      _$appendChild(_el8, _el9);
-                      _$addEventListener(_el9, "click", (()=>toggleTodo(todo.id)));
+                        const _el8 = _$createElement("div", _el6);
+                        _$appendChild(_el6, _el8);
                         watchEffect(()=>{
-                        _$setClassName(_el9, String(`cursor-pointer ${todo.completed ? 'line-through text-gray-500' : 'text-gray-800'}`));
+                            _$setClassName(_el8, String(`flex items-center justify-between rounded-lg border p-3 mb-2 ${todo.completed ? 'bg-gray-50' : 'bg-white'}`));
                         });
-                      const _list4 = _$createComment("rue:slot:anchor");
-                      _$appendChild(_el9, _list4);
-                      watchEffect(()=>{
-                        const __slot = (todo.text);
-                        renderAnchor(__slot, _el9, _list4);
-                      });
-                      const _el10 = _$createElement("button");
-                      _$appendChild(_el8, _el10);
-                      _$setClassName(_el10, "rounded-lg border border-red-500 bg-red-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-all hover:border-red-700 hover:bg-red-700 focus:ring focus:ring-red-200");
-                      _$addEventListener(_el10, "click", (()=>deleteTodo(todo.id)));
-                      _$appendChild(_el10, _$createTextNode("删除"));
+                        const _el9 = _$createElement("span", _el8);
+                        _$appendChild(_el8, _el9);
+                        _$addEventListener(_el9, "click", (()=>toggleTodo(todo.id)));
+                        watchEffect(()=>{
+                            _$setClassName(_el9, String(`cursor-pointer ${todo.completed ? 'line-through text-gray-500' : 'text-gray-800'}`));
+                        });
+                        const _list4 = _$createComment("rue:slot:anchor");
+                        _$appendChild(_el9, _list4);
+                        watchEffect(()=>{
+                            const __slot = (todo.text);
+                            untrack(()=>renderAnchor(__slot, _el9, _list4));
+                        });
+                        const _el10 = _$createElement("button", _el8);
+                        _$appendChild(_el8, _el10);
+                        _$setClassName(_el10, "rounded-lg border border-red-500 bg-red-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-all hover:border-red-700 hover:bg-red-700 focus:ring focus:ring-red-200");
+                        _$addEventListener(_el10, "click", (()=>deleteTodo(todo.id)));
+                        _$appendChild(_el10, _$createTextNode("删除"));
                         return _root;
                     });
                     renderAnchor(__slot, parent, start);
@@ -248,12 +248,12 @@ const TodoApp: FC = ()=>{
             });
             _map1_elements = _map1_newElements;
         });
-              const _el11 = _$createElement("p");
-              _$appendChild(_root, _el11);
-              const _el12 = _$createTextWrapper(_el11);
-              _$appendChild(_el11, _el12);
+        const _el11 = _$createElement("p", _root);
+        _$appendChild(_root, _el11);
+        const _el12 = _$createTextWrapper(_el11);
+        _$appendChild(_el11, _el12);
         watchEffect(()=>{
-                _$settextContent(_el12, `总计: ${state.todos.length} | 已完成: ${completedCount.value}`);
+            _$settextContent(_el12, `总计: ${state.todos.length} | 已完成: ${completedCount.value}`);
         });
         return _root;
     });

@@ -68,7 +68,7 @@ Rue 当前公开的应用创建入口是 `useApp()`。如果你熟悉 Vue 的 `c
   })
   ```
 
-- **参阅** [指南 - 创建一个 Rue 应用](/guide/essentials/application)
+- **参阅** [指南 - 创建一个 Rue 应用](/guide/guide/essentials/application)
 
 ## app.mount() {#app-mount}
 

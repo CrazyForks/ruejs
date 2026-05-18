@@ -9,7 +9,11 @@ import {
   setInnerHTML,
 } from './dom'
 import type { DomElementLike, DomNodeLike } from './dom'
-import { attachBlockCleanup, RUE_CLEANUP_BUCKET_KEY } from './renderable-lifecycle'
+import {
+  attachBlockCleanup,
+  RUE_CLEANUP_BUCKET_KEY,
+  runOwnerCleanupBucket,
+} from './renderable-lifecycle'
 import type { BlockFactory, BlockInstance, NormalizedRenderable, RenderTarget } from './renderable'
 
 export type BridgeTargetKind = RenderTarget['kind']
@@ -77,9 +81,15 @@ const removeTrackedNodes = (nodes: readonly DomNodeLike[]) => {
 export const mountNormalizedRenderableToTarget = (
   value: NormalizedRenderable,
   target: RenderTarget,
-  prevOwner?: unknown,
+  prevOwner?: DirectRenderableOwner,
 ): DirectRenderableOwner => {
   const { fragment, nodes } = materializeRenderable(value, target.kind)
+
+  if (prevOwner) {
+    // 先执行旧 owner 的 cleanup，让 block.unmount 仍能访问旧的锚点/父节点。
+    // 若先删 DOM，再跑 cleanup，像 RouterView 这样的 block 会因为 start/end 已脱离父节点而空跑。
+    runOwnerCleanupBucket(prevOwner)
+  }
 
   switch (target.kind) {
     case 'container':

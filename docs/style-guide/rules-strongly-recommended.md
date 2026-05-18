@@ -1,7 +1,7 @@
 # 优先级 B 规则：强烈推荐 {#priority-b-rules-strongly-recommended}
 
 ::: warning 注意
-此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/ruejs/docs/issues/new)。
+此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/hunzhiwange/ruejs/docs/issues/new)。
 :::
 
 这些规则已被发现在大多数项目中提高可读性和/或开发者体验。如果你违反它们，你的代码仍然可以运行，但违规应该很少且有充分的理由。

@@ -52,7 +52,7 @@
   <component is={href ? 'a' : 'span'} />
   ```
 
-  [内置组件](./built-in-components)都可以传递给 `is`，但如果您想通过名称传递，则必须注册它们。例如：
+  [内置组件](/api/api/built-in-components)都可以传递给 `is`，但如果您想通过名称传递，则必须注册它们。例如：
 
   ```tsx
   import { Transition, TransitionGroup } from '@rue-js/rue'
@@ -80,7 +80,7 @@
 
   在 JSX / TSX 中直接使用时，对应的运行时组件名为 `Component`。
 
-- **另请参阅** [动态组件](/guide/essentials/component-basics#dynamic-components)
+- **另请参阅** [动态组件](/guide/guide/essentials/component-basics#dynamic-components)
 
 ## `<slot>` {#slot}
 
@@ -135,7 +135,7 @@
   <slot name="item" item={post} index={index} />
   ```
 
-- **另请参阅** [组件 - 插槽](/guide/components/slots)
+- **另请参阅** [组件 - 插槽](/guide/guide/components/slots)
 
 ## `<template>` / `<Template>` {#template}
 
@@ -159,11 +159,11 @@
 
   如果这些指令都不存在，编译器应保留它并将其视为[原生 `<template>` 元素](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template)。
 
-  带有列表渲染的 `<template>` 也可以具有 [key 属性](/api/built-in-special-attributes#key)。除这一类控制边界的语义外，其余属性和指令在没有实际元素节点时都会被忽略。
+  带有列表渲染的 `<template>` 也可以具有 [key 属性](/api/api/built-in-special-attributes#key)。除这一类控制边界的语义外，其余属性和指令在没有实际元素节点时都会被忽略。
 
   在 JSX / TSX 中直接使用 `Template` 时，它会只渲染子节点本身，不引入额外包装元素；除 `children` 之外的其他 props 在运行时会被忽略。
 
-  单文件组件使用[顶级 `<template>` 标签](/api/sfc-spec#language-blocks)来包装整个模板。该用法与上述 `<template>` 的用法分开。该顶级标签不是模板本身的一部分，也不支持模板语法，例如指令。
+  单文件组件使用[顶级 `<template>` 标签](@todo)来包装整个模板。该用法与上述 `<template>` 的用法分开。该顶级标签不是模板本身的一部分，也不支持模板语法，例如指令。
 
 - **示例**
 
@@ -190,6 +190,6 @@
   ```
 
 - **另请参阅**
-  - [指南 - 条件渲染中的 `<template>`](/guide/essentials/conditional#v-if-on-template)
-  - [指南 - 列表渲染中的 `<template>`](/guide/essentials/list#v-for-on-template)
-  - [指南 - 具名插槽](/guide/components/slots#named-slots)
+  - [指南 - 条件渲染中的 `<template>`](/guide/guide/essentials/conditional#v-if-on-template)
+  - [指南 - 列表渲染中的 `<template>`](/guide/guide/essentials/list#v-for-on-template)
+  - [指南 - 具名插槽](/guide/guide/components/slots#named-slots)

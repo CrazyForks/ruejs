@@ -350,6 +350,12 @@ const apiRows: ApiRow[] = [
     defaultValue: 'false',
   },
   {
+    prop: 'onClick',
+    description: '点击按钮时的回调；disabled 或 loading 时不会触发',
+    type: '(event: MouseEvent) => void',
+    defaultValue: '-',
+  },
+  {
     prop: 'shape',
     description: '按钮形状',
     type: `'default' | 'square' | 'circle' | 'round'`,
@@ -381,6 +387,45 @@ const apiRows: ApiRow[] = [
   },
 ]
 
+const groupApiRows: ApiRow[] = [
+  {
+    prop: 'as',
+    description: '指定按钮组根节点标签',
+    type: 'any',
+    defaultValue: `'div'`,
+  },
+  {
+    prop: 'size',
+    description: '统一同步组内按钮尺寸',
+    type: `'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'`,
+    defaultValue: '-',
+  },
+  {
+    prop: 'shape',
+    description: '统一同步组内按钮轮廓；circle 在分组场景下会映射为圆角组合样式',
+    type: `'default' | 'square' | 'circle' | 'round'`,
+    defaultValue: '-',
+  },
+  {
+    prop: 'direction',
+    description: '按钮组排列方向',
+    type: `'horizontal' | 'vertical'`,
+    defaultValue: `'horizontal'`,
+  },
+  {
+    prop: 'block',
+    description: '让按钮组宽度撑满容器',
+    type: 'boolean',
+    defaultValue: 'false',
+  },
+  {
+    prop: 'className',
+    description: '自定义根节点类名',
+    type: 'string',
+    defaultValue: '-',
+  },
+]
+
 const ButtonDemo: FC = () => {
   const tabTypes = ref<TabMode>('preview')
   const tabResponsive = ref<TabMode>('preview')
@@ -389,12 +434,16 @@ const ButtonDemo: FC = () => {
   const tabDanger = ref<TabMode>('preview')
   const tabIcons = ref<TabMode>('preview')
   const tabLoading = ref<TabMode>('preview')
+  const tabClick = ref<TabMode>('preview')
   const tabSizes = ref<TabMode>('preview')
+  const tabGroup = ref<TabMode>('preview')
   const tabStates = ref<TabMode>('preview')
   const tabFormLink = ref<TabMode>('preview')
   const tabRecipes = ref<TabMode>('preview')
   const tabLogin = ref<TabMode>('preview')
   const submitCount = ref(0)
+  const clickCount = ref(0)
+  const lastAction = ref('未触发')
 
   return (
     <SidebarPlayground>
@@ -670,6 +719,94 @@ const styles = [
         />
 
         <ExampleBlock
+          title="点击事件"
+          summary="onClick 会透传原生点击事件，适合命令触发、埋点和分组按钮内交互。"
+          tab={tabClick}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    color="primary"
+                    onClick={(event: MouseEvent) => {
+                      clickCount.value = clickCount.value + 1
+                      lastAction.value = `save:${(event.currentTarget as HTMLElement).tagName.toLowerCase()}`
+                    }}
+                  >
+                    Trigger save
+                  </Button>
+                  <Button
+                    type="outlined"
+                    onClick={(event: MouseEvent) => {
+                      clickCount.value = clickCount.value + 1
+                      lastAction.value = `preview:${(event.currentTarget as HTMLElement).tagName.toLowerCase()}`
+                    }}
+                  >
+                    Preview draft
+                  </Button>
+                  <Button
+                    href="#button-api"
+                    type="link"
+                    onClick={(event: MouseEvent) => {
+                      event.preventDefault()
+                      clickCount.value = clickCount.value + 1
+                      lastAction.value = `link:${(event.currentTarget as HTMLElement).tagName.toLowerCase()}`
+                    }}
+                  >
+                    Track jump
+                  </Button>
+                </div>
+                <div className="rounded-box bg-base-200/70 px-4 py-3 text-sm">
+                  <div>click count: {clickCount.value}</div>
+                  <div>last action: {lastAction.value}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          code={`const clickCount = ref(0)
+const lastAction = ref('未触发')
+
+<div className="flex flex-wrap items-center gap-2">
+  <Button
+    color="primary"
+    onClick={event => {
+      clickCount.value = clickCount.value + 1
+      lastAction.value = 'save:' + (event.currentTarget as HTMLElement).tagName.toLowerCase()
+    }}
+  >
+    Trigger save
+  </Button>
+
+  <Button
+    type="outlined"
+    onClick={event => {
+      clickCount.value = clickCount.value + 1
+      lastAction.value = 'preview:' + (event.currentTarget as HTMLElement).tagName.toLowerCase()
+    }}
+  >
+    Preview draft
+  </Button>
+
+  <Button
+    href="#button-api"
+    type="link"
+    onClick={event => {
+      event.preventDefault()
+      clickCount.value = clickCount.value + 1
+      lastAction.value = 'link:' + (event.currentTarget as HTMLElement).tagName.toLowerCase()
+    }}
+  >
+    Track jump
+  </Button>
+</div>
+
+<div className="rounded-box bg-base-200/70 px-4 py-3 text-sm">
+  <div>click count: {clickCount.value}</div>
+  <div>last action: {lastAction.value}</div>
+</div>`}
+        />
+
+        <ExampleBlock
           title="尺寸与形状"
           summary="size 管尺寸，shape 管轮廓形态。"
           tab={tabSizes}
@@ -729,6 +866,242 @@ const styles = [
 <Button color="primary" shape="round">Round action</Button>
 <Button color="secondary" shape="square" icon={<span>⋯</span>} />
 <Button color="accent" shape="circle" icon={<span>♥</span>} />`}
+        />
+
+        <ExampleBlock
+          title="按钮组合"
+          summary="提供与常见 ButtonGroup 类似的分组能力，这里统一用 Button.Group。"
+          tab={tabGroup}
+          preview={() => (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body gap-6">
+                <div>
+                  <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Basic
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button.Group>
+                      <Button>Cancel</Button>
+                      <Button color="primary">Confirm</Button>
+                    </Button.Group>
+                    <Button.Group>
+                      <Button disabled>Yesterday</Button>
+                      <Button disabled>Today</Button>
+                      <Button disabled>Tomorrow</Button>
+                    </Button.Group>
+                    <Button.Group>
+                      <Button color="primary">L</Button>
+                      <Button>M</Button>
+                      <Button>M</Button>
+                      <Button type="dashed">R</Button>
+                    </Button.Group>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Icons
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button.Group>
+                      <Button color="primary" icon={<span aria-hidden="true">←</span>}>
+                        Backward
+                      </Button>
+                      <Button
+                        color="primary"
+                        icon={<span aria-hidden="true">→</span>}
+                        iconPlacement="end"
+                      >
+                        Forward
+                      </Button>
+                    </Button.Group>
+                    <Button.Group>
+                      <Button
+                        color="primary"
+                        icon={<span aria-hidden="true">«</span>}
+                        aria-label="skip backward"
+                      />
+                      <Button
+                        color="primary"
+                        icon={<span aria-hidden="true">»</span>}
+                        aria-label="skip forward"
+                      />
+                    </Button.Group>
+                    <Button.Group>
+                      <Button icon={<span aria-hidden="true">✦</span>} aria-label="magic" />
+                      <Button icon={<span aria-hidden="true">☀</span>} aria-label="sunny" />
+                      <Button icon={<span aria-hidden="true">✂</span>} aria-label="crop" />
+                      <Button icon={<span aria-hidden="true">⛶</span>} aria-label="filter" />
+                    </Button.Group>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Circle
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button.Group shape="circle">
+                      <Button color="primary">Backward</Button>
+                      <Button color="primary">Forward</Button>
+                    </Button.Group>
+                    <Button.Group shape="circle">
+                      <Button
+                        color="primary"
+                        icon={<span aria-hidden="true">«</span>}
+                        aria-label="circle backward"
+                      />
+                      <Button
+                        color="primary"
+                        icon={<span aria-hidden="true">»</span>}
+                        aria-label="circle forward"
+                      />
+                    </Button.Group>
+                    <Button.Group shape="circle">
+                      <Button icon={<span aria-hidden="true">✦</span>} aria-label="circle magic" />
+                      <Button icon={<span aria-hidden="true">☀</span>} aria-label="circle sunny" />
+                      <Button icon={<span aria-hidden="true">✂</span>} aria-label="circle crop" />
+                      <Button icon={<span aria-hidden="true">⛶</span>} aria-label="circle filter" />
+                    </Button.Group>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Size
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button.Group size="large">
+                        <Button>Large</Button>
+                        <Button>Large</Button>
+                      </Button.Group>
+                      <Button.Group>
+                        <Button>Default</Button>
+                        <Button>Default</Button>
+                      </Button.Group>
+                      <Button.Group size="small">
+                        <Button>Small</Button>
+                        <Button>Small</Button>
+                      </Button.Group>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button.Group size="large" shape="circle">
+                        <Button>Large</Button>
+                        <Button>Large</Button>
+                      </Button.Group>
+                      <Button.Group shape="circle">
+                        <Button>Default</Button>
+                        <Button>Default</Button>
+                      </Button.Group>
+                      <Button.Group size="small" shape="circle">
+                        <Button>Small</Button>
+                        <Button>Small</Button>
+                      </Button.Group>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          code={`<div className="space-y-6">
+  <div>
+    <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Basic</div>
+    <div className="flex flex-wrap items-center gap-3">
+      <Button.Group>
+        <Button>Cancel</Button>
+        <Button color="primary">Confirm</Button>
+      </Button.Group>
+      <Button.Group>
+        <Button disabled>Yesterday</Button>
+        <Button disabled>Today</Button>
+        <Button disabled>Tomorrow</Button>
+      </Button.Group>
+      <Button.Group>
+        <Button color="primary">L</Button>
+        <Button>M</Button>
+        <Button>M</Button>
+        <Button type="dashed">R</Button>
+      </Button.Group>
+    </div>
+  </div>
+
+  <div>
+    <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Icons</div>
+    <div className="flex flex-wrap items-center gap-3">
+      <Button.Group>
+        <Button color="primary" icon={<span aria-hidden="true">←</span>}>Backward</Button>
+        <Button color="primary" icon={<span aria-hidden="true">→</span>} iconPlacement="end">
+          Forward
+        </Button>
+      </Button.Group>
+      <Button.Group>
+        <Button color="primary" icon={<span aria-hidden="true">«</span>} aria-label="skip backward" />
+        <Button color="primary" icon={<span aria-hidden="true">»</span>} aria-label="skip forward" />
+      </Button.Group>
+      <Button.Group>
+        <Button icon={<span aria-hidden="true">✦</span>} aria-label="magic" />
+        <Button icon={<span aria-hidden="true">☀</span>} aria-label="sunny" />
+        <Button icon={<span aria-hidden="true">✂</span>} aria-label="crop" />
+        <Button icon={<span aria-hidden="true">⛶</span>} aria-label="filter" />
+      </Button.Group>
+    </div>
+  </div>
+
+  <div>
+    <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Circle</div>
+    <div className="flex flex-wrap items-center gap-3">
+      <Button.Group shape="circle">
+        <Button color="primary">Backward</Button>
+        <Button color="primary">Forward</Button>
+      </Button.Group>
+      <Button.Group shape="circle">
+        <Button color="primary" icon={<span aria-hidden="true">«</span>} aria-label="circle backward" />
+        <Button color="primary" icon={<span aria-hidden="true">»</span>} aria-label="circle forward" />
+      </Button.Group>
+      <Button.Group shape="circle">
+        <Button icon={<span aria-hidden="true">✦</span>} aria-label="circle magic" />
+        <Button icon={<span aria-hidden="true">☀</span>} aria-label="circle sunny" />
+        <Button icon={<span aria-hidden="true">✂</span>} aria-label="circle crop" />
+        <Button icon={<span aria-hidden="true">⛶</span>} aria-label="circle filter" />
+      </Button.Group>
+    </div>
+  </div>
+
+  <div>
+    <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">Size</div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button.Group size="large">
+          <Button>Large</Button>
+          <Button>Large</Button>
+        </Button.Group>
+        <Button.Group>
+          <Button>Default</Button>
+          <Button>Default</Button>
+        </Button.Group>
+        <Button.Group size="small">
+          <Button>Small</Button>
+          <Button>Small</Button>
+        </Button.Group>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button.Group size="large" shape="circle">
+          <Button>Large</Button>
+          <Button>Large</Button>
+        </Button.Group>
+        <Button.Group shape="circle">
+          <Button>Default</Button>
+          <Button>Default</Button>
+        </Button.Group>
+        <Button.Group size="small" shape="circle">
+          <Button>Small</Button>
+          <Button>Small</Button>
+        </Button.Group>
+      </div>
+    </div>
+  </div>
+</div>`}
         />
 
         <ExampleBlock
@@ -930,13 +1303,17 @@ const styles = [
         />
 
         <h2 id="button-api">API</h2>
-        <p>当前页面展示的是 Button 的完整可用 API。</p>
+        <p>当前页面展示的是 Button 与 Button.Group 的完整可用 API。</p>
         <p>
           推荐使用顺序：<code>type</code> -&gt; <code>color</code> -&gt; <code>shape</code> -&gt;{' '}
           <code>size</code> -&gt; <code>loading</code> -&gt; <code>disabled</code>。
         </p>
 
+        <h3>Button</h3>
         <ApiTable rows={apiRows} />
+
+        <h3>Button.Group</h3>
+        <ApiTable rows={groupApiRows} />
 
         <h2>FAQ</h2>
 
@@ -962,6 +1339,14 @@ const styles = [
           当前版本已经支持 <code>loading</code> 的对象写法和自定义 <code>icon</code>。
           <code>delay</code>
           字段已保留在配置结构里，后续如果补充延迟显示策略，可以直接在现有接口上继续扩展。
+        </p>
+
+        <h3>Button.Group 会覆盖子按钮哪些属性？</h3>
+        <p>
+          组级只会统一同步 <code>size</code> 和 <code>shape</code>
+          ，方便在一组按钮上集中控制尺寸和轮廓。 每个子按钮自己的 <code>color</code>、
+          <code>type</code>、<code>disabled</code>、<code>onClick</code> 仍然在各自的{' '}
+          <code>Button</code> 上配置。
         </p>
       </div>
     </SidebarPlayground>

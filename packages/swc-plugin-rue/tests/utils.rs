@@ -11,8 +11,52 @@ pub fn strip_marker(s: &str) -> String {
     s.lines().filter(|l| !l.contains("RUE_VAPOR_TRANSFORMED")).collect::<Vec<_>>().join("\n")
 }
 
+fn strip_create_element_parent_arg(s: &str) -> String {
+    let token = "_$createElement(\"";
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0;
+
+    while i < s.len() {
+        if s[i..].starts_with(token) {
+            out.push_str(token);
+            i += token.len();
+
+            while i < s.len() {
+                let ch = s[i..].chars().next().expect("char");
+                out.push(ch);
+                i += ch.len_utf8();
+                if ch == '"' {
+                    break;
+                }
+            }
+
+            if i < s.len() && s[i..].starts_with(", ") {
+                i += 2;
+                while i < s.len() {
+                    let ch = s[i..].chars().next().expect("char");
+                    if ch == ')' {
+                        out.push(')');
+                        i += 1;
+                        break;
+                    }
+                    i += ch.len_utf8();
+                }
+                continue;
+            }
+            continue;
+        }
+
+        let ch = s[i..].chars().next().expect("char");
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+
+    out
+}
+
 pub fn normalize(s: &str) -> String {
-    let replaced = s
+    let replaced = strip_create_element_parent_arg(s)
+        .replace("vapor((__rue_parent_context)=>{", "vapor(()=>{")
         .replace("\r\n", "\n")
         .replace(" />", "/>")
         .replace("[ ", "[")

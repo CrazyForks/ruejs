@@ -64,12 +64,12 @@ describe('Badge actual page', () => {
 
     await click(findTabButton(basicDemo!, 'JSX代码'))
 
-    expect(Array.from(basicDemo!.querySelectorAll('.card .badge')).length).toBe(0)
+    expect(findDemo(container, '# Badge')?.querySelectorAll('.card .badge').length).toBe(0)
 
-    await click(findTabButton(basicDemo!, '预览'))
+    await click(findTabButton(findDemo(container, '# Badge')!, '预览'))
 
     await waitForContent(() => {
-      expect(normalize(basicDemo?.textContent)).toContain('Badge')
+      expect(normalize(findDemo(container, '# Badge')?.textContent)).toContain('Badge')
     })
   })
 })

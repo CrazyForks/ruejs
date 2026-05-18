@@ -34,10 +34,14 @@ impl VaporTransform {
             _ => String::from("div"),
         };
 
-        // 创建根元素：const _root = _$createElement(tag)
+        // 创建根元素：const _root = _$createElement(tag, __rue_parent_context)
         // - 来源：emit::call_ident("_$createElement", ...)
-        // - 原因：统一封装原生元素创建，以便在运行时适配不同环境（如 SSR/自定义渲染器）
-        let create_root = call_ident("_$createElement", vec![string_expr(&tag)]);
+        // - 原因：共享的 HTML/SVG 标签（a/title/style/script）需要父级上下文决定 namespace；
+        //   Vapor setup 在挂载时会显式收到 parent_context，这里直接把它透传给根节点
+        let create_root = call_ident(
+            "_$createElement",
+            vec![string_expr(&tag), Expr::Ident(ident("__rue_parent_context"))],
+        );
         stmts.push(const_decl(root.clone(), create_root));
         // 编译并设置属性（包括事件、style、class、指令改写后的属性等）
         // - emit_attrs_for 内部会：

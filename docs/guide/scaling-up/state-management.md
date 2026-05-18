@@ -38,7 +38,7 @@ export const Counter: FC = () => {
 1. 多个视图可能依赖于同一部分状态。
 2. 来自不同视图的动作可能需要改变同一部分状态。
 
-对于情况一，一个可能的变通方法是将共享状态"提升"到共同的祖先组件，然后作为 props 向下传递。然而，这在具有深层层次的组件树中很快就会变得繁琐，导致另一个被称为 [Prop Drilling](/guide/components/provide-inject#prop-drilling) 的问题。
+对于情况一，一个可能的变通方法是将共享状态"提升"到共同的祖先组件，然后作为 props 向下传递。然而，这在具有深层层次的组件树中很快就会变得繁琐，导致另一个被称为 [Prop Drilling](/guide/guide/components/provide-inject#prop-drilling) 的问题。
 
 对于情况二，我们经常发现自己求助于诸如通过模板 refs 直接访问父/子实例，或尝试通过触发的事件来改变和同步多个状态副本等解决方案。这两种模式都很脆弱，很快会导致无法维护的代码。
 
@@ -46,7 +46,7 @@ export const Counter: FC = () => {
 
 ## 使用响应式 API 进行简单的状态管理 {#simple-state-management-with-reactivity-api}
 
-如果你有一块应该由多个实例共享的状态，你可以使用 [`reactive()`](/api/reactivity-core#reactive) 创建一个响应式对象，然后将其导入多个组件：
+如果你有一块应该由多个实例共享的状态，你可以使用 [`reactive()`](/api/api/reactivity-core#reactive) 创建一个响应式对象，然后将其导入多个组件：
 
 ```ts [store.ts]
 import { reactive } from '@rue-js/rue'
@@ -105,7 +105,7 @@ export const store = reactive({
 注意点击处理器使用 `store.increment()` 并带括号——这是必要的，以使用正确的 `this` 上下文调用该方法，因为它不是组件方法。
 :::
 
-虽然这里我们使用单个响应式对象作为 store，但你也可以使用其他 [响应式 API](/api/reactivity-core)（如 `ref()` 或 `computed()`）创建共享的响应式状态，甚至从 [Composable](/guide/reusability/composables) 返回全局状态：
+虽然这里我们使用单个响应式对象作为 store，但你也可以使用其他 [响应式 API](/api/api/reactivity-core)（如 `ref()` 或 `computed()`）创建共享的响应式状态，甚至从 [Composable](/guide/guide/reusability/composables) 返回全局状态：
 
 ```ts
 import { ref } from '@rue-js/rue'

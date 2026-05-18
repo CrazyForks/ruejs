@@ -45,6 +45,25 @@ pub fn render_between_for_slot(
         type_args: None,
         ctxt: SyntaxContext::empty(),
     });
+    let untrack_render = Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee: Callee::Expr(Box::new(Expr::Ident(ident("untrack")))),
+        args: vec![ExprOrSpread {
+            spread: None,
+            expr: Box::new(Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                params: vec![],
+                body: Box::new(BlockStmtOrExpr::Expr(Box::new(render_call))),
+                is_async: false,
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+                ctxt: SyntaxContext::empty(),
+            })),
+        }],
+        type_args: None,
+        ctxt: SyntaxContext::empty(),
+    });
     let arrow = Expr::Arrow(ArrowExpr {
         span: DUMMY_SP,
         params: vec![],
@@ -53,7 +72,7 @@ pub fn render_between_for_slot(
             ctxt: SyntaxContext::empty(),
             stmts: vec![
                 decl_slot,
-                Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(render_call) }),
+                Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(untrack_render) }),
             ],
         })),
         is_async: false,

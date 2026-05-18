@@ -27,7 +27,7 @@ export default OrCases
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const OrCases: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
@@ -53,7 +53,7 @@ const OrCases: FC = ()=>{
                 _$appendChild(_el1, _$createTextNode("Alt"));
                 return _root;
             });
-            renderAnchor(__slot, _root, _list1);
+            untrack(()=>renderAnchor(__slot, _root, _list1));
         });
         _$appendChild(_root, _$createTextNode(" "));
         const _list2 = _$createComment("rue:slot:anchor");
@@ -72,7 +72,7 @@ const OrCases: FC = ()=>{
                 _$appendChild(_el3, _$createTextNode("B"));
                 return _root;
             });
-            renderAnchor(__slot, _root, _list2);
+            untrack(()=>renderAnchor(__slot, _root, _list2));
         });
         return _root;
     });

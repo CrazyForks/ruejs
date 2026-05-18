@@ -282,7 +282,7 @@ const Modal: FC<ModalProps> = ({
     if (onOk) onOk(event)
   }
 
-  const handleMaskClick = (event: MouseEvent) => {
+  const _handleMaskClick = (event: MouseEvent) => {
     if (!mask || !maskClosable) return
     if (event.target === event.currentTarget) {
       notifyCancel(event)

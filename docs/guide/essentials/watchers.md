@@ -4,7 +4,7 @@
 
 计算属性允许我们声明性地计算派生值。然而，有些情况下我们需要在状态变化时执行"副作用"——例如，改变 DOM，或基于异步操作的结果改变另一段状态。
 
-使用组合式 API，我们可以使用 [`watch` 函数](/api/reactivity-core#watch) 在响应式状态发生变化时触发回调：
+使用组合式 API，我们可以使用 [`watch` 函数](/api/api/reactivity-core#watch) 在响应式状态发生变化时触发回调：
 
 ```tsx
 import { ref, watch } from '@rue-js/rue'
@@ -191,7 +191,7 @@ watch(
 
 特别是，注意侦听器使用了两次 `todoId`，一次作为源，然后在回调内部再次使用。
 
-这可以用 [`watchEffect()`](/api/reactivity-core#watcheffect) 来简化。`watchEffect()` 允许我们自动追踪回调的响应式依赖。上面的侦听器可以重写为：
+这可以用 [`watchEffect()`](/api/api/reactivity-core#watcheffect) 来简化。`watchEffect()` 允许我们自动追踪回调的响应式依赖。上面的侦听器可以重写为：
 
 ```js
 watchEffect(async () => {
@@ -232,7 +232,7 @@ watch(id, newId => {
 
 但是如果 `id` 在请求完成之前发生变化呢？当前一个请求完成时，它仍然会用已经过时的 ID 值触发回调。理想情况下，我们希望在 `id` 变化为新值时能够取消过时的请求。
 
-我们可以使用 [`onWatcherCleanup()`](/api/reactivity-core#onwatchercleanup) API 注册一个清理函数，该函数将在侦听器失效并即将重新运行时调用：
+我们可以使用 [`onWatcherCleanup()`](/api/api/reactivity-core#onwatchercleanup) API 注册一个清理函数，该函数将在侦听器失效并即将重新运行时调用：
 
 ```js
 import { watch, onWatcherCleanup } from '@rue-js/rue'

@@ -9,7 +9,10 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_test::*;
 
-use rue_runtime_vapor::{set_current_instance, set_reactive_scheduling, use_state, watch_fn};
+use rue_runtime_vapor::reactive::signal::create_reactive;
+use rue_runtime_vapor::{
+    create_effect, set_current_instance, set_reactive_scheduling, use_state, watch_fn,
+};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
@@ -163,4 +166,55 @@ fn use_state_equals_prevents_rerun_in_watch() {
     let e1 = Array::from(&records.get(1));
     assert_eq!(e1.get(0).as_f64().unwrap(), 2.0);
     assert_eq!(e1.get(1).as_f64().unwrap(), 0.0);
+}
+
+#[wasm_bindgen_test]
+/// 传入已是 reactive 的对象时，useState 不应再次包裹成新的代理；
+/// 否则浏览器里的嵌套数组 push 会丢失更新。
+fn use_state_reuses_existing_reactive_object() {
+    set_reactive_scheduling("sync");
+    let inst = Object::new();
+    set_current_instance(inst.into());
+
+    let todos = Array::new();
+    let first = Object::new();
+    Reflect::set(&first, &JsValue::from_str("id"), &JsValue::from_f64(1.0)).unwrap();
+    Reflect::set(&first, &JsValue::from_str("text"), &JsValue::from_str("A")).unwrap();
+    todos.push(&first.into());
+
+    let root = Object::new();
+    Reflect::set(&root, &JsValue::from_str("todos"), &todos.into()).unwrap();
+
+    let reactive_initial = create_reactive(root.into(), None);
+
+    force_slot_zero();
+    let arr = Array::from(&use_state(reactive_initial.clone(), None));
+    let state_obj = arr.get(0);
+
+    assert!(Object::is(&state_obj, &reactive_initial));
+
+    let hits = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let hits2 = hits.clone();
+    let state_for_effect = state_obj.clone();
+    let effect = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        let todos = Reflect::get(&state_for_effect, &JsValue::from_str("todos")).unwrap();
+        let _ = Reflect::get(&todos, &JsValue::from_str("length")).unwrap();
+    }) as Box<dyn FnMut()>);
+    let effect_fn: Function = effect.as_ref().clone().into();
+    let _handle = create_effect(effect_fn, None);
+
+    assert_eq!(*hits.borrow(), 1);
+
+    let todos_proxy = Reflect::get(&state_obj, &JsValue::from_str("todos")).unwrap();
+    let push: Function =
+        Reflect::get(&todos_proxy, &JsValue::from_str("push")).unwrap().unchecked_into();
+    let next = Object::new();
+    Reflect::set(&next, &JsValue::from_str("id"), &JsValue::from_f64(2.0)).unwrap();
+    Reflect::set(&next, &JsValue::from_str("text"), &JsValue::from_str("B")).unwrap();
+    let _ = push.call1(&JsValue::NULL, &next.into());
+
+    assert_eq!(*hits.borrow(), 2);
+
+    effect.forget();
 }

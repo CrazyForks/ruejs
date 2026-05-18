@@ -1,7 +1,7 @@
 use super::super::Rue;
 use super::super::types::{MountInput, MountedPatchSubtree, MountedSubtreeState};
 use crate::runtime::dom_adapter::DomAdapter;
-use js_sys::{Function, Object, Reflect};
+use js_sys::{Array, Function, Object, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
@@ -25,6 +25,37 @@ fn js_string_prop(value: &JsValue, name: &str) -> Option<String> {
 
 fn js_u32_prop(value: &JsValue, name: &str) -> Option<u32> {
     js_prop(value, name).as_f64().map(|number| number as u32)
+}
+
+fn debug_record_sidebar_replace(
+    kind: &str,
+    parent: &JsValue,
+    old_host: &JsValue,
+    new_host: &JsValue,
+) {
+    let old_class = js_string_prop(old_host, "className").unwrap_or_default();
+    if !old_class.contains("sidebar-playground") {
+        return;
+    }
+
+    let global = js_sys::global();
+    let enabled =
+        Reflect::get(&global, &JsValue::from_str("__rue_debug_component_patch_enabled__"))
+            .unwrap_or(JsValue::FALSE);
+    if !enabled.as_bool().unwrap_or(false) {
+        return;
+    }
+
+    let key = JsValue::from_str("__rue_debug_component_patch__");
+    let existing = Reflect::get(&global, &key).unwrap_or(JsValue::UNDEFINED);
+    let array = if Array::is_array(&existing) { Array::from(&existing) } else { Array::new() };
+    let record = Object::new();
+    let _ = Reflect::set(&record, &JsValue::from_str("kind"), &JsValue::from_str(kind));
+    let _ = Reflect::set(&record, &JsValue::from_str("oldClass"), &JsValue::from_str(&old_class));
+    let _ = Reflect::set(&record, &JsValue::from_str("parentClass"), &js_prop(parent, "className"));
+    let _ = Reflect::set(&record, &JsValue::from_str("newClass"), &js_prop(new_host, "className"));
+    array.push(&record);
+    let _ = Reflect::set(&global, &key, &array.into());
 }
 
 fn normalized_tag_name(value: &JsValue) -> Option<String> {
@@ -189,6 +220,15 @@ where
             if let Some(adapter) = self.get_dom_adapter_mut() {
                 if let Some(el_old) = old_host {
                     if adapter.contains(parent, el_old) {
+                        let parent_js: JsValue = parent.clone().into();
+                        let old_host_js: JsValue = el_old.clone().into();
+                        let new_host_js: JsValue = new_el.clone().into();
+                        debug_record_sidebar_replace(
+                            "replace_vapor_like",
+                            &parent_js,
+                            &old_host_js,
+                            &new_host_js,
+                        );
                         adapter.insert_before(parent, new_el, el_old);
                         let mut p2 = parent.clone();
                         adapter.remove_child(&mut p2, el_old);
@@ -264,6 +304,15 @@ where
                     if let Some(adapter2) = self.get_dom_adapter_mut() {
                         if let Some(ref el_old) = old.el {
                             if adapter2.contains(&real_parent, el_old) {
+                                let parent_js: JsValue = real_parent.clone().into();
+                                let old_host_js: JsValue = el_old.clone().into();
+                                let new_host_js: JsValue = new_el.clone().into();
+                                debug_record_sidebar_replace(
+                                    "replace_component",
+                                    &parent_js,
+                                    &old_host_js,
+                                    &new_host_js,
+                                );
                                 adapter2.insert_before(&mut real_parent, new_el, el_old);
                                 let mut p2 = real_parent.clone();
                                 adapter2.remove_child(&mut p2, el_old);
@@ -333,7 +382,7 @@ where
             self.clear_fragment_nodes(&mut preclear_parent, old.fragment_nodes());
             self.invoke_unmounted_record(&lifecycle);
         }
-        if let Some(mounted) = self.mount_from_input(new) {
+        if let Some(mounted) = self.mount_from_input(new, Some(parent)) {
             let Some(el_new) = mounted.host_cloned() else {
                 *old = mounted;
                 if !eager_unmounted {

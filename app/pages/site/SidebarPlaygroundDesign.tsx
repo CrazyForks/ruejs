@@ -1,8 +1,17 @@
+import { type FC, useState } from '@rue-js/rue'
 import { extend } from '@rue-js/shared'
 import {
   type SidebarSection,
   createPersistentSidebarPlayground,
 } from './persistentSidebarPlayground'
+
+const readCurrentHashPath = (): string => {
+  const hash = globalThis.location?.hash || ''
+  if (hash.startsWith('#')) {
+    return hash.slice(1) || '/'
+  }
+  return hash || globalThis.location?.pathname || ''
+}
 
 const withDesignHrefs = (sections: SidebarSection[]): SidebarSection[] => {
   return sections.map(section =>
@@ -32,6 +41,11 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
           id: 'typography',
           title: '排版 Typography',
           href: '/design/typography',
+        },
+        {
+          id: 'time-picker',
+          title: '时间选择器 TimePicker',
+          href: '/design/time-picker',
         },
         {
           id: 'dropdown',
@@ -100,9 +114,18 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
           href: '/design/countdown',
         },
         {
+          id: 'descriptions',
+          title: '描述列表 Descriptions',
+          href: '/design/descriptions',
+        },
+        {
           id: 'diff',
           title: '对比 Diff',
           href: '/design/diff',
+        },
+        {
+          id: 'qr-code',
+          title: '二维码 QRCode',
         },
         {
           id: 'hover-3d',
@@ -156,6 +179,16 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
       title: '导航 Navigation',
       items: [
         {
+          id: 'anchor',
+          title: '锚点 Anchor',
+          href: '/design/anchor',
+        },
+        {
+          id: 'affix',
+          title: '固钉 Affix',
+          href: '/design/affix',
+        },
+        {
           id: 'breadcrumbs',
           title: '面包屑 Breadcrumbs',
           href: '/design/breadcrumbs',
@@ -204,8 +237,22 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
           href: '/design/alert',
         },
         {
+          id: 'result',
+          title: '结果页 Result',
+          href: '/design/result',
+        },
+        {
+          id: 'empty',
+          title: '空状态 Empty',
+        },
+        {
           id: 'loading',
           title: '加载 Loading',
+        },
+        {
+          id: 'message',
+          title: '全局提示 Message',
+          href: '/design/message',
         },
         {
           id: 'progress',
@@ -220,8 +267,20 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
           title: '骨架屏 Skeleton',
         },
         {
+          id: 'notification',
+          title: '通知提醒框 Notification',
+        },
+        {
           id: 'toast',
           title: '轻提示 Toast',
+        },
+        {
+          id: 'popconfirm',
+          title: '气泡确认框 Popconfirm',
+        },
+        {
+          id: 'popover',
+          title: '气泡卡片 Popover',
         },
         {
           id: 'tooltip',
@@ -239,12 +298,22 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
           href: '/design/calendar',
         },
         {
+          id: 'color-picker',
+          title: '颜色选择器 ColorPicker',
+          href: '/design/color-picker',
+        },
+        {
           id: 'checkbox',
           title: '复选框 Checkbox',
         },
         {
           id: 'fieldset',
           title: '字段集 Fieldset',
+        },
+        {
+          id: 'form',
+          title: '表单 Form',
+          href: '/design/form',
         },
         {
           id: 'file-input',
@@ -271,12 +340,49 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
           title: '评分 Rating',
         },
         {
+          id: 'segmented',
+          title: '分段选择 Segmented',
+          href: '/design/segmented',
+        },
+        {
+          id: 'auto-complete',
+          title: '自动完成 AutoComplete',
+          href: '/design/auto-complete',
+        },
+        {
           id: 'select',
           title: '选择器 Select',
         },
         {
+          id: 'tree-select',
+          title: '树选择 TreeSelect',
+        },
+        {
+          id: 'tree',
+          title: '树控件 Tree',
+          href: '/design/tree',
+        },
+        {
+          id: 'mentions',
+          title: '提及输入 Mentions',
+        },
+        {
+          id: 'transfer',
+          title: '穿梭框 Transfer',
+          href: '/design/transfer',
+        },
+        {
+          id: 'tour',
+          title: '漫游引导 Tour',
+          href: '/design/tour',
+        },
+        {
           id: 'input',
           title: '输入框 Input',
+        },
+        {
+          id: 'input-number',
+          title: '数字输入 InputNumber',
         },
         {
           id: 'textarea',
@@ -302,6 +408,16 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
           href: '/design/divider',
         },
         {
+          id: 'flex',
+          title: '弹性布局 Flex',
+          href: '/design/flex',
+        },
+        {
+          id: 'splitter',
+          title: '分割面板 Splitter',
+          href: '/design/splitter',
+        },
+        {
           id: 'drawer',
           title: '抽屉侧边栏 Drawer',
         },
@@ -309,6 +425,21 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
           id: 'footer',
           title: '页脚 Footer',
           href: '/design/footer',
+        },
+        {
+          id: 'grid',
+          title: '栅格 Grid',
+          href: '/design/grid',
+        },
+        {
+          id: 'masonry',
+          title: '瀑布流 Masonry',
+          href: '/design/masonry',
+        },
+        {
+          id: 'layout',
+          title: '布局 Layout',
+          href: '/design/layout',
         },
         {
           id: 'hero',
@@ -325,6 +456,14 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
         {
           id: 'mask',
           title: '蒙版 Mask',
+        },
+        {
+          id: 'watermark',
+          title: '水印 Watermark',
+        },
+        {
+          id: 'space',
+          title: '间距 Space',
         },
         {
           id: 'stack',
@@ -357,6 +496,20 @@ export const SECTIONS_BY_TYPE: Record<'design', SidebarSection[]> = {
   ]),
 }
 
-export default createPersistentSidebarPlayground({
+const BaseSidebarPlayground = createPersistentSidebarPlayground({
   sections: SECTIONS_BY_TYPE.design,
+  showCounts: true,
+  fallbackToRoute: false,
 })
+
+const SidebarPlayground: FC = props => {
+  const [initialCurrentPath] = useState(readCurrentHashPath)
+
+  return (
+    <BaseSidebarPlayground currentPath={initialCurrentPath.value}>
+      {props.children}
+    </BaseSidebarPlayground>
+  )
+}
+
+export default SidebarPlayground

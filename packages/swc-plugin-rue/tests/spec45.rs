@@ -42,20 +42,13 @@ useError({
 const RootApp: FC = ()=>{
     return vapor(()=>{
         const _root = _$createDocumentFragment();
-        const _list3 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list3);
-        const __child1 = vapor(()=>{
-            const _root = _$createDocumentFragment();
-            const _list1 = _$createComment("rue:component:anchor");
-            _$appendChild(_root, _list1);
-            const __slot2 = _$createComponent(RouterView, {});
-            renderAnchor(__slot2, _root, _list1);
-            return _root;
-        });
-        const __slot4 = _$createComponent(SiteLayout, {
+        const _list1 = _$createComment("rue:component:anchor");
+        _$appendChild(_root, _list1);
+        const __child1 = _$createComponent(RouterView, {});
+        const __slot2 = _$createComponent(SiteLayout, {
             children: __child1
         });
-        renderAnchor(__slot4, _root, _list3);
+        renderAnchor(__slot2, _root, _list1);
         return _root;
     });
 };

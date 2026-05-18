@@ -8,7 +8,7 @@
 - 安装 [Node.js](https://nodejs.org/) 版本 >=22.12.0`
   :::
 
-在本节中，我们将介绍如何在本地机器上搭建一个 Rue [单页应用](#/guide/extras/ways-of-using-rue#single-page-application-spa)。创建的项目将使用基于 [Vite](https://vitejs.dev) 的构建设置，并允许我们使用 JSX/TSX 编写组件。
+在本节中，我们将介绍如何在本地机器上搭建一个 Rue [单页应用](/guide/guide/extras/ways-of-using-rue#single-page-application-spa)。创建的项目将使用基于 [Vite](https://vitejs.dev) 的构建设置，并允许我们使用 JSX/TSX 编写组件。
 
 确保你已安装最新版本的 [Node.js](https://nodejs.org/)，并且当前工作目录是你打算创建项目的目录。在命令行中运行以下命令（不带 `$` 符号）：
 
@@ -69,10 +69,10 @@ $ bun run dev
 
 现在你应该已经运行了你的第一个 Rue 项目！请注意，生成项目中的示例组件是使用 JSX/TSX 编写的。以下是一些额外的提示：
 
-- 推荐的 IDE 配置是 [Visual Studio Code](https://code.visualstudio.com/)。如果你使用其他编辑器，请查看 [IDE 支持部分](#/page/guide/scaling-up/tooling)。
-- 更多工具细节，包括与后端框架的集成，在 [工具指南](#/page/guide/scaling-up/tooling) 中讨论。
+- 推荐的 IDE 配置是 [Visual Studio Code](https://code.visualstudio.com/)。如果你使用其他编辑器，请查看 [IDE 支持部分](/guide/guide/scaling-up/tooling)。
+- 更多工具细节，包括与后端框架的集成，在 [工具指南](/guide/guide/scaling-up/tooling) 中讨论。
 - 要了解有关底层构建工具 Vite 的更多信息，请查看 [Vite 文档](https://vitejs.dev)。
-- 如果你选择使用 TypeScript，请查看 [TypeScript 使用指南](#/guide/guide/typescript/overview)。
+- 如果你选择使用 TypeScript，请查看 [TypeScript 使用指南](/guide/guide/typescript/overview)。
 
 当你准备将应用部署到生产环境时，运行以下命令：
 

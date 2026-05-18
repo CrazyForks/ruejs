@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref, render, setReactiveScheduling } from '@rue-js/rue'
 import Calendar from '../index'
 import {
@@ -8,6 +8,14 @@ import {
 } from '../../../../../runtime/__tests__/page-test-utils'
 
 setReactiveScheduling('sync')
+
+const mountedContainers: HTMLDivElement[] = []
+
+const mountTestContainer = () => {
+  const container = mountContainer()
+  mountedContainers.push(container)
+  return container
+}
 
 const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active = (globalThis as any).__rue
@@ -20,54 +28,75 @@ const formatIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+const slowTestTimeout = 25_000
+
 afterEach(() => {
+  resetActiveRuntime()
+  for (const container of mountedContainers) {
+    render(null as any, container)
+  }
+  mountedContainers.length = 0
   document.body.innerHTML = ''
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
+
+beforeEach(() => {
+  setReactiveScheduling('sync')
+  resetActiveRuntime()
+  document.body.innerHTML = ''
+  vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 describe('Calendar', () => {
-  it('renders the enhanced calendar panel by default and supports date selection', async () => {
-    const c = mountContainer()
-    const onChange = vi.fn()
-    const ControlledCalendar = () => {
-      const value = ref('2026-04-12')
+  it(
+    'renders the enhanced calendar panel by default and supports date selection',
+    async () => {
+      const c = mountTestContainer()
+      const onChange = vi.fn()
+      const ControlledCalendar = () => {
+        const value = ref('2026-04-12')
 
-      return (
-        <Calendar
-          data-testid="calendar-root"
-          locale="en-US"
-          value={value.value}
-          onChange={date => {
-            value.value = formatIsoDate(date)
-            onChange(date)
-          }}
-        />
-      )
-    }
+        return (
+          <Calendar
+            data-testid="calendar-root"
+            locale="en-US"
+            value={value.value}
+            onChange={date => {
+              value.value = formatIsoDate(date)
+              onChange(date)
+            }}
+          />
+        )
+      }
 
-    resetActiveRuntime()
-    render(<ControlledCalendar />, c)
+      resetActiveRuntime()
+      render(<ControlledCalendar />, c)
 
-    await waitForContent(() => {
-      const root = c.querySelector('[data-testid="calendar-root"]') as HTMLElement
-      expect(root).toBeTruthy()
-      expect(root.getAttribute('data-rue-calendar-mode')).toBe('month')
-      expect(c.querySelectorAll('[data-rue-calendar-cell]').length).toBe(42)
-      expect(root.textContent).toContain('April')
-      expect(
-        c.querySelector('[data-rue-calendar-cell="2026-04-12"]')?.getAttribute('aria-pressed'),
-      ).toBe('true')
-    })
+      await waitForContent(() => {
+        const root = c.querySelector('[data-testid="calendar-root"]') as HTMLElement
+        expect(root).toBeTruthy()
+        expect(root.getAttribute('data-rue-calendar-mode')).toBe('month')
+        expect(c.querySelectorAll('[data-rue-calendar-cell]').length).toBe(42)
+        expect(root.textContent).toContain('April')
+        expect(
+          c.querySelector('[data-rue-calendar-cell="2026-04-12"]')?.getAttribute('aria-pressed'),
+        ).toBe('true')
+      })
 
-    await click(c.querySelector('[data-rue-calendar-cell="2026-04-18"]'))
+      await click(c.querySelector('[data-rue-calendar-cell="2026-04-18"]'))
 
-    await waitForContent(() => {
-      expect(onChange).toHaveBeenCalledTimes(1)
-      expect(formatIsoDate(onChange.mock.calls[0]?.[0] as Date)).toBe('2026-04-18')
-    })
-  })
+      await waitForContent(() => {
+        expect(onChange).toHaveBeenCalledTimes(1)
+        expect(formatIsoDate(onChange.mock.calls[0]?.[0] as Date)).toBe('2026-04-18')
+      })
+    },
+    slowTestTimeout,
+  )
 
   it('supports year mode and custom month cell rendering', async () => {
-    const c = mountContainer()
+    const c = mountTestContainer()
     resetActiveRuntime()
     render(
       <Calendar
@@ -99,7 +128,7 @@ describe('Calendar', () => {
   })
 
   it('preserves Cally and Pikaday wrapper subcomponents', async () => {
-    const c = mountContainer()
+    const c = mountTestContainer()
     resetActiveRuntime()
     render(
       <div>

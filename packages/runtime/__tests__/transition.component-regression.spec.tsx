@@ -14,20 +14,30 @@ import {
   vapor,
   watchEffect,
 } from '../src'
+import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
 
+const mountedContainers: HTMLDivElement[] = []
+
+const mountTestContainer = () => {
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  mountedContainers.push(container)
+  return container
+}
+
 afterEach(() => {
+  for (const container of mountedContainers) {
+    render(null as any, container)
+  }
+  mountedContainers.length = 0
   document.body.innerHTML = ''
 })
 
 const flush = async () => {
   await Promise.resolve()
   await Promise.resolve()
-}
-
-const waitForMacrotask = async () => {
-  await new Promise(resolve => setTimeout(resolve, 0))
 }
 
 describe('built-in transition component regressions', () => {
@@ -74,8 +84,7 @@ describe('built-in transition component regressions', () => {
       })
     }
 
-    const container = document.createElement('div')
-    document.body.appendChild(container)
+    const container = mountTestContainer()
 
     render(<Example />, container)
     await flush()
@@ -186,8 +195,7 @@ describe('built-in transition component regressions', () => {
       })
     }
 
-    const container = document.createElement('div')
-    document.body.appendChild(container)
+    const container = mountTestContainer()
 
     render(<Example />, container)
     await flush()
@@ -267,8 +275,7 @@ describe('built-in transition component regressions', () => {
       })
     }
 
-    const container = document.createElement('div')
-    document.body.appendChild(container)
+    const container = mountTestContainer()
 
     render(<Example />, container)
     await flush()
@@ -335,8 +342,7 @@ describe('built-in transition component regressions', () => {
       })
     }
 
-    const container = document.createElement('div')
-    document.body.appendChild(container)
+    const container = mountTestContainer()
 
     render(<Example />, container)
     await flush()
@@ -419,8 +425,7 @@ describe('built-in transition component regressions', () => {
       })
     }
 
-    const container = document.createElement('div')
-    document.body.appendChild(container)
+    const container = mountTestContainer()
 
     render(<Example />, container)
     await flush()
@@ -428,15 +433,13 @@ describe('built-in transition component regressions', () => {
     expect(document.body.querySelector('#modal-panel')).toBeNull()
 
     ;(container.querySelector('#open') as HTMLButtonElement).click()
-    await flush()
-    await waitForMacrotask()
-    await flush()
-
-    expect(document.body.querySelector('#modal-panel')?.textContent).toBe('hello modal')
+    await waitForContent(() => {
+      expect(document.body.querySelector('#modal-panel')?.textContent).toBe('hello modal')
+    })
 
     ;(document.body.querySelector('#modal-mask') as HTMLDivElement).click()
-    await flush()
-
-    expect(document.body.querySelector('#modal-panel')).toBeNull()
+    await waitForContent(() => {
+      expect(document.body.querySelector('#modal-panel')).toBeNull()
+    })
   })
 })

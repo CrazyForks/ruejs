@@ -9,9 +9,13 @@ use crate::runtime::types::{
 use wasm_bindgen::JsValue;
 
 /// 通过 DomAdapter 根据标签创建元素
-fn build_element<A: DomAdapter>(rue: &mut Rue<A>, tag: &String) -> Option<A::Element> {
+fn build_element<A: DomAdapter>(
+    rue: &mut Rue<A>,
+    tag: &String,
+    parent_context: Option<&A::Element>,
+) -> Option<A::Element> {
     match rue.get_dom_adapter_mut() {
-        Some(a) => Some(a.create_element(tag.as_str())),
+        Some(a) => Some(a.create_element_in_parent(tag.as_str(), parent_context)),
         None => {
             rue.handle_error(JsValue::from_str("runtime:create_real_dom Element no adapter"));
             None
@@ -71,7 +75,7 @@ where
                 }
             }
             MountInputChild::Input(node) => {
-                if let Some(mounted_child) = rue.mount_from_input(node) {
+                if let Some(mounted_child) = rue.mount_from_input(node, Some(el)) {
                     if let Some(child_el) = mounted_child.host_cloned() {
                         if let Some(adapter) = rue.get_dom_adapter_mut() {
                             adapter.append_child(el, &child_el);
@@ -90,11 +94,12 @@ pub(super) fn mount_element<A: DomAdapter>(
     rue: &mut Rue<A>,
     input: &MountInput<A>,
     tag: &String,
+    parent_context: Option<&A::Element>,
 ) -> Option<MountedSubtreeState<A>>
 where
     A::Element: Clone + From<JsValue> + Into<JsValue>,
 {
-    let mut el = match build_element(rue, tag) {
+    let mut el = match build_element(rue, tag, parent_context) {
         Some(e) => e,
         None => return None,
     };

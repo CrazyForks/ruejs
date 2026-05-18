@@ -282,6 +282,8 @@ async function main() {
     }
   }
 
+  await runReleaseCheckTypecheckIfNeeded()
+
   await runTestsIfNeeded()
 
   // update all package versions and inter-dependencies
@@ -364,6 +366,19 @@ async function main() {
     )
   }
   console.log()
+}
+
+async function runReleaseCheckTypecheckIfNeeded() {
+  if (!isCheckOnly) {
+    return
+  }
+
+  step('\nRunning tsgo check...')
+  if (shouldRunValidationCommands) {
+    await run('pnpm', ['exec', 'tsgo', '--incremental', '--noEmit'])
+  } else {
+    console.log(`Skipped (dry run)`)
+  }
 }
 
 async function runTestsIfNeeded() {

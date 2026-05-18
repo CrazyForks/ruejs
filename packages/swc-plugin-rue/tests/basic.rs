@@ -40,32 +40,32 @@ export default BasicElements;
 import { vapor, _$createElement, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
-const BasicElements: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
+const BasicElements: FC = ()=>vapor((__rue_parent_context)=>{
+    const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3");
+    const _el1 = _$createElement("h3", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "text-xl font-semibold");
         _$appendChild(_el1, _$createTextNode("基础元素与自闭合标签"));
-        const _el2 = _$createElement("div");
+    const _el2 = _$createElement("div", _root);
         _$appendChild(_root, _el2);
         _$appendChild(_el2, _$createTextNode("div 元素"));
-        const _el3 = _$createElement("span");
+    const _el3 = _$createElement("span", _root);
         _$appendChild(_root, _el3);
         _$appendChild(_el3, _$createTextNode("span 元素"));
-        const _el4 = _$createElement("br");
+    const _el4 = _$createElement("br", _root);
         _$appendChild(_root, _el4);
-        const _el5 = _$createElement("img");
+    const _el5 = _$createElement("img", _root);
         _$appendChild(_root, _el5);
         _$setAttribute(_el5, "src", "https://via.placeholder.com/80");
         _$setAttribute(_el5, "alt", "占位图");
-        const _el6 = _$createElement("input");
+    const _el6 = _$createElement("input", _root);
         _$appendChild(_root, _el6);
         _$setAttribute(_el6, "placeholder", "自闭合 input");
-        const _el7 = _$createElement("p");
+    const _el7 = _$createElement("p", _root);
         _$appendChild(_root, _el7);
         _$appendChild(_el7, _$createTextNode("支持文本、嵌套与自闭合形式"));
-        const _el8 = _$createElement("a");
+    const _el8 = _$createElement("a", _root);
         _$appendChild(_root, _el8);
         watchEffect(()=>{
             _$setAttribute(_el8, "href", String(RouterLink.__rueHref("/jsx")));
@@ -124,35 +124,35 @@ const user = {
     name: 'Alice',
     age: 20
 };
-const Expressions: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
+const Expressions: FC = ()=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3");
+        const _el1 = _$createElement("h3", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "text-xl font-semibold");
         _$appendChild(_el1, _$createTextNode("表达式与插值"));
-        const _el2 = _$createElement("div");
+        const _el2 = _$createElement("div", _root);
         _$appendChild(_root, _el2);
         const _el3 = _$createTextWrapper(_el2);
         _$appendChild(_el2, _el3);
         watchEffect(()=>{
             _$settextContent(_el3, 1 + 2);
         });
-        const _el4 = _$createElement("div");
+        const _el4 = _$createElement("div", _root);
         _$appendChild(_root, _el4);
         const _el5 = _$createTextWrapper(_el4);
         _$appendChild(_el4, _el5);
         watchEffect(()=>{
             _$settextContent(_el5, `hello ${user.name}`);
         });
-        const _el6 = _$createElement("div");
+        const _el6 = _$createElement("div", _root);
         _$appendChild(_root, _el6);
         const _el7 = _$createTextWrapper(_el6);
         _$appendChild(_el6, _el7);
         watchEffect(()=>{
             _$settextContent(_el7, n > 5 ? '大于5' : '不大于5');
         });
-        const _el8 = _$createElement("div");
+        const _el8 = _$createElement("div", _root);
         _$appendChild(_root, _el8);
         const _el9 = _$createTextWrapper(_el8);
         _$appendChild(_el8, _el9);
@@ -162,7 +162,7 @@ const Expressions: FC = ()=>vapor(()=>{
                 'B'
             ].join(','));
         });
-        const _el10 = _$createElement("a");
+        const _el10 = _$createElement("a", _root);
         _$appendChild(_root, _el10);
         watchEffect(()=>{
             _$setAttribute(_el10, "href", String(RouterLink.__rueHref("/jsx")));
@@ -221,6 +221,104 @@ export default Page;
 }
 
 #[test]
+fn lowers_helper_call_renderable_child_to_slot_anchor() {
+    let src = r##"
+import { type FC } from '@rue-js/rue';
+
+const show = true;
+
+const renderIcon = () => (
+    <svg viewBox="0 0 20 20">
+        <path d="M10 18a8 8 0 100-16 8 8 0 000 16z" />
+    </svg>
+);
+
+const Page: FC = () => (
+    <section>{show ? <div>{show ? renderIcon() : 'fallback'}</div> : null}</section>
+);
+
+export default Page;
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply(program);
+    let emitted = utils::emit(program, cm);
+    let stripped = utils::strip_marker(&emitted);
+    let out = utils::normalize(&stripped);
+
+    std::fs::create_dir_all("target/vapor_outputs").ok();
+    std::fs::write("target/vapor_outputs/basic_helper_call_slot.out.js", stripped).ok();
+
+    assert!(out.contains(&utils::normalize("const __slot = show ? renderIcon() : 'fallback';")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _el2, _list2)")));
+    assert!(
+        !out.contains(&utils::normalize(
+            "_$settextContent(_el3, show ? renderIcon() : 'fallback');"
+        ))
+    );
+}
+
+#[test]
+fn lowers_bare_local_renderable_child_to_slot_anchor() {
+    let src = r##"
+import { type FC } from '@rue-js/rue';
+
+const show = true;
+
+const Page: FC = () => {
+    const iconNode = show
+        ? <svg viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16z" /></svg>
+        : null;
+
+    return <section><div>{iconNode}</div></section>;
+};
+
+export default Page;
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply(program);
+    let emitted = utils::emit(program, cm);
+    let stripped = utils::strip_marker(&emitted);
+    let out = utils::normalize(&stripped);
+
+    std::fs::create_dir_all("target/vapor_outputs").ok();
+    std::fs::write("target/vapor_outputs/basic_bare_local_slot.out.js", stripped).ok();
+
+    assert!(out.contains(&utils::normalize("const __slot = (iconNode);")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _el1, _list1)")));
+    assert!(!out.contains(&utils::normalize("_$settextContent(_el2, iconNode);")));
+}
+
+#[test]
+fn lowers_nullish_jsx_fallback_child_to_slot_anchor() {
+    let src = r##"
+import { type FC } from '@rue-js/rue';
+
+const iconConfig: { icon?: any } = {};
+
+const Page: FC = () => (
+    <button>{iconConfig.icon ?? <svg viewBox="0 0 16 16"><path d="M2 8h12" /></svg>}</button>
+);
+
+export default Page;
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply(program);
+    let emitted = utils::emit(program, cm);
+    let stripped = utils::strip_marker(&emitted);
+    let out = utils::normalize(&stripped);
+
+    std::fs::create_dir_all("target/vapor_outputs").ok();
+    std::fs::write("target/vapor_outputs/basic_nullish_jsx_slot.out.js", stripped).ok();
+
+    assert!(out.contains(&utils::normalize("const __slot = iconConfig.icon ?? vapor(()=>{")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
+    assert!(!out.contains("_$settextContent("));
+}
+
+#[test]
 fn transforms_root_router_link_as_static_component() {
     let src = r##"
 import { type FC } from '@rue-js/rue';
@@ -240,8 +338,8 @@ export default RootRouterLink;
 import { vapor, _$createElement, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
-const RootRouterLink: FC = ()=>vapor(()=>{
-        const _root = _$createElement("a");
+const RootRouterLink: FC = ()=>vapor((__rue_parent_context)=>{
+    const _root = _$createElement("a", __rue_parent_context);
         watchEffect(()=>{
             _$setAttribute(_root, "href", String(RouterLink.__rueHref("/jsx")));
         });
@@ -284,14 +382,14 @@ export default InlineRouterLinkExpr;
 import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
-const InlineRouterLinkExpr: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
+const InlineRouterLinkExpr: FC = ()=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "wrap");
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list1);
         const __slot2 = vapor(()=>{
             const _root = _$createDocumentFragment();
-            const _el1 = _$createElement("a");
+            const _el1 = _$createElement("a", _root);
             _$appendChild(_root, _el1);
             watchEffect(()=>{
                 _$setAttribute(_el1, "href", String(RouterLink.__rueHref("/jsx")));

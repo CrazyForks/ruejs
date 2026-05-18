@@ -1033,7 +1033,9 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
                     "return function(){ \
                        var args = Array.prototype.slice.call(arguments); \
                        var base = getBase(); \
-                                             var isArrayLike = Array.isArray(base) || (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(base)); \
+                                             var hasLength = base != null && typeof base.length === 'number'; \
+                                             var isTypedArray = typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(base); \
+                                             var isArrayLike = Array.isArray(base) || isTypedArray || hasLength; \
                                              if (isArrayLike) { \
                                                  args = args.map(function(arg){ \
                                                      if (arg && typeof arg === 'object') { \
@@ -1045,19 +1047,36 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
                                                      return arg; \
                                                  }); \
                                              } \
-                       if (readonly) { \
-                         if (Array.isArray(base)) { \
-                           base = base.slice(); \
-                         } else if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(base) && typeof base.slice === 'function') { \
-                           base = base.slice(); \
+                                             if (readonly) { \
+                                                 if (Array.isArray(base)) { \
+                                                     base = base.slice(); \
+                                                 } else if (isTypedArray && typeof base.slice === 'function') { \
+                                                     base = base.slice(); \
+                                                 } else if (hasLength) { \
+                                                     base = Array.prototype.slice.call(base); \
                          } else if (base && typeof base === 'object') { \
                            base = Object.assign({}, base); \
                          } \
                                                  return fn.apply(base, args); \
                                              } \
                                              if (mutating && isArrayLike) { \
-                                                 var draft = Array.isArray(base) ? base.slice() : (typeof base.slice === 'function' ? base.slice() : base); \
+                                                                                                 var draft = Array.isArray(base) \
+                                                                                                     ? base.slice() \
+                                                                                                     : (isTypedArray && typeof base.slice === 'function') \
+                                                                                                         ? base.slice() \
+                                                                                                         : Array.prototype.slice.call(base); \
                                                  var result = fn.apply(draft, args); \
+                                                 if (Array.isArray(draft)) { \
+                                                     draft = draft.map(function(item){ \
+                                                         if (item && typeof item === 'object') { \
+                                                             try { \
+                                                                 var raw = item.__rue_raw__; \
+                                                                 if (raw !== undefined) return raw; \
+                                                             } catch (e) {} \
+                                                         } \
+                                                         return item; \
+                                                     }); \
+                                                 } \
                                                  setBase(draft); \
                                                  return result; \
                        } \

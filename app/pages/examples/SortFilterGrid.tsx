@@ -1,4 +1,4 @@
-import { type FC, computed, ref } from '@rue-js/rue'
+import { type FC, useState } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -8,68 +8,55 @@ const DemoGrid: FC<{
   data: Row[]
   columns: string[]
   filterKey: string
+  sortKey: string
+  sortDirection: number
+  onSort: (key: string) => void
 }> = props => {
-  const sortKey = ref<string>('')
-  const sortOrders = ref<Record<string, number>>(
-    props.columns.reduce(
-      (o, k) => {
-        ;(o as any)[k] = 1
-        return o
-      },
-      {} as Record<string, number>,
-    ),
-  )
-
-  const filteredData = computed(() => {
-    let data: Row[] = props.data
-    let filterKey = props.filterKey
-    if (filterKey) {
-      const q = String(filterKey).toLowerCase()
-      data = data.filter(row =>
-        Object.keys(row).some(key => String(row[key]).toLowerCase().includes(q)),
-      )
-    }
-    const key = sortKey.value
-    if (key) {
-      const order = sortOrders.value[key]
-      data = data.slice().sort((a, b) => {
-        const av = a[key] as any
-        const bv = b[key] as any
-        return (av === bv ? 0 : av > bv ? 1 : -1) * order
-      })
-    }
-    return data
-  })
-
-  const sortBy = (key: string) => {
-    sortKey.value = key
-    sortOrders.value[key] = (sortOrders.value[key] || 1) * -1
+  const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
+  let currentRows: Row[] = props.data
+  if (props.filterKey) {
+    const query = String(props.filterKey).toLowerCase()
+    currentRows = currentRows.filter(row =>
+      Object.keys(row).some(key => String(row[key]).toLowerCase().includes(query)),
+    )
   }
 
-  const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
+  if (props.sortKey) {
+    const key = props.sortKey
+    const order = props.sortDirection
+    currentRows = currentRows.slice().sort((left, right) => {
+      const leftValue = left[key] as any
+      const rightValue = right[key] as any
+      return (leftValue === rightValue ? 0 : leftValue > rightValue ? 1 : -1) * order
+    })
+  }
 
   return (
     <div>
-      {filteredData.get().length ? (
+      {currentRows.length ? (
         <table className="min-w-full border-2 border-emerald-500 rounded-md bg-white">
           <thead>
             <tr>
               {props.columns.map(key => (
                 <th
                   key={key}
-                  className={`bg-emerald-500 text-white/90 cursor-pointer select-none px-5 py-2 ${sortKey.value === key ? 'text-white' : ''}`}
-                  onClick={() => sortBy(key)}
+                  className={`bg-emerald-500 text-white/90 cursor-pointer select-none px-5 py-2 ${props.sortKey === key ? 'text-white' : ''}`}
+                  onClick={() => props.onSort(key)}
                 >
                   {capitalize(key)}
                   <span
-                    className={`ml-2 inline-block align-middle opacity-80 ${sortOrders.value[key] > 0 ? 'border-l-4 border-r-4 border-b-4 border-transparent border-b-white h-0 w-0' : 'border-l-4 border-r-4 border-t-4 border-transparent border-t-white h-0 w-0'}`}
+                    className={`ml-2 inline-block align-middle opacity-80 ${
+                      props.sortKey === key && props.sortDirection > 0
+                        ? 'border-l-4 border-r-4 border-b-4 border-transparent border-b-white h-0 w-0'
+                        : 'border-l-4 border-r-4 border-t-4 border-transparent border-t-white h-0 w-0'
+                    }`}
                   ></span>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filteredData.get().map((entry: Row, idx: number) => (
+            {currentRows.map((entry: Row, idx: number) => (
               <tr key={idx}>
                 {props.columns.map(key => (
                   <td key={key} className="bg-gray-50 min-w-[120px] px-5 py-2">
@@ -88,7 +75,9 @@ const DemoGrid: FC<{
 }
 
 const SortFilterGrid: FC = () => {
-  const searchQuery = ref('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortKey, setSortKey] = useState('')
+  const [sortDirection, setSortDirection] = useState(1)
   const gridColumns = ['name', 'power']
   const gridData: Row[] = [
     { name: 'Chuck Norris', power: Infinity },
@@ -98,9 +87,20 @@ const SortFilterGrid: FC = () => {
   ]
 
   const updateQuery = (e: any) => {
-    searchQuery.value = (e.target as HTMLInputElement).value
+    setSearchQuery((e.target as HTMLInputElement).value)
   }
-  const activeTab = ref<'preview' | 'code'>('preview')
+  const sortBy = (key: string) => {
+    if (sortKey.value === key) {
+      setSortDirection(value => {
+        value.value *= -1
+      })
+      return
+    }
+
+    setSortKey(key)
+    setSortDirection(-1)
+  }
+  const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview')
 
   return (
     <SidebarPlayground>
@@ -111,7 +111,7 @@ const SortFilterGrid: FC = () => {
           role="tab"
           className={`tab ${activeTab.value === 'preview' ? 'tab-active' : ''}`}
           onClick={() => {
-            activeTab.value = 'preview'
+            setActiveTab('preview')
           }}
         >
           效果
@@ -120,7 +120,7 @@ const SortFilterGrid: FC = () => {
           role="tab"
           className={`tab ${activeTab.value === 'code' ? 'tab-active' : ''}`}
           onClick={() => {
-            activeTab.value = 'code'
+            setActiveTab('code')
           }}
         >
           代码
@@ -249,7 +249,15 @@ export default SortFilterGrid;`}
                   onInput={updateQuery}
                 />
               </form>
-              <DemoGrid data={gridData} columns={gridColumns} filterKey={searchQuery.value} />
+              <DemoGrid
+                key={`${searchQuery.value || 'all'}-${sortKey.value || 'none'}-${sortDirection.value}`}
+                data={gridData}
+                columns={gridColumns}
+                filterKey={searchQuery.value}
+                sortKey={sortKey.value}
+                sortDirection={sortDirection.value}
+                onSort={sortBy}
+              />
             </div>
           </div>
         )}

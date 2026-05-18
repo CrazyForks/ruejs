@@ -84,7 +84,7 @@ export default UseCart
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeCreate, onCreated, onMounted, onBeforeUnmount, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { onBeforeCreate, onCreated, onMounted, onBeforeUnmount, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { useCart } from '../hooks/useCart';
 const UseCart: FC = ()=>{
@@ -149,6 +149,7 @@ const UseCart: FC = ()=>{
                 parent: _el2,
                 before: _list2,
                 singleRoot: true,
+                trackIndex: false,
                 start: _list1,
                 renderItem: (pr, parent, start, end, idx)=>{
                     const __slot = vapor(()=>{
@@ -165,15 +166,15 @@ const UseCart: FC = ()=>{
                         const _list3 = _$createComment("rue:slot:anchor");
                         _$appendChild(_el4, _list3);
                         watchEffect(()=>{
-                          const __slot = (pr.name);
-                          renderAnchor(__slot, _el4, _list3);
+                            const __slot = (pr.name);
+                            untrack(()=>renderAnchor(__slot, _el4, _list3));
                         });
                         _$appendChild(_el4, _$createTextNode(" ￥"));
                         const _list4 = _$createComment("rue:slot:anchor");
                         _$appendChild(_el4, _list4);
                         watchEffect(()=>{
-                          const __slot = (pr.price);
-                          renderAnchor(__slot, _el4, _list4);
+                            const __slot = (pr.price);
+                            untrack(()=>renderAnchor(__slot, _el4, _list4));
                         });
                         const _el5 = _$createElement("button");
                         _$appendChild(_el3, _el5);
@@ -220,6 +221,7 @@ const UseCart: FC = ()=>{
                 parent: _el8,
                 before: _list7,
                         singleRoot: true,
+                      trackIndex: false,
                 start: _list6,
                         renderItem: (i, parent, start, end, idx)=>{
                             const __slot = vapor(()=>{
@@ -236,15 +238,15 @@ const UseCart: FC = ()=>{
                     const _list8 = _$createComment("rue:slot:anchor");
                     _$appendChild(_el10, _list8);
                                 watchEffect(()=>{
-                      const __slot = (i.name);
-                      renderAnchor(__slot, _el10, _list8);
+                                    const __slot = (i.name);
+                                    untrack(()=>renderAnchor(__slot, _el10, _list8));
                                 });
                     _$appendChild(_el10, _$createTextNode(" x "));
                     const _list9 = _$createComment("rue:slot:anchor");
                     _$appendChild(_el10, _list9);
                                 watchEffect(()=>{
-                      const __slot = (i.qty);
-                      renderAnchor(__slot, _el10, _list9);
+                                    const __slot = (i.qty);
+                                    untrack(()=>renderAnchor(__slot, _el10, _list9));
                                 });
                     const _el11 = _$createElement("button");
                     _$appendChild(_el9, _el11);
@@ -260,7 +262,7 @@ const UseCart: FC = ()=>{
                 });
                 return _root;
             });
-            renderAnchor(__slot, _root, _list5);
+              untrack(()=>renderAnchor(__slot, _root, _list5));
         });
           const _el12 = _$createElement("p");
           _$appendChild(_root, _el12);

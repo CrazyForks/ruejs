@@ -271,6 +271,7 @@ const FormBindings: FC = ()=>{
                 parent: _el14,
                 before: _list2,
                 singleRoot: true,
+                trackIndex: false,
                 start: _list1,
                 renderItem: (name, parent, start, end, idx)=>{
                     const __slot = vapor(()=>{

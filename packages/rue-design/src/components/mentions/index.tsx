@@ -1,0 +1,1381 @@
+/*
+Mentions 组件概述
+- 以 textarea 为输入基座，补齐 mentions 场景常用的触发词识别、候选面板、键盘导航与插入替换。
+- 保持 Rue 当前表单视觉体系：尺寸、状态、变体、allowClear、autoSize 与原生 textarea 语义继续兼容。
+- API 参考 ant-design Mentions 的核心能力，但不引入额外依赖与 portal，便于在 Rue 设计页直接演示与复用。
+*/
+import type { FC } from '@rue-js/rue'
+import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
+
+export type MentionPlacement = 'top' | 'bottom'
+export type MentionsSize =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | 'small'
+  | 'middle'
+  | 'medium'
+  | 'large'
+export type MentionsStatus = 'success' | 'warning' | 'error' | 'validating'
+export type MentionsVariant = 'outlined' | 'filled' | 'ghost' | 'borderless' | 'underlined'
+
+export interface MentionsAutoSizeConfig {
+  minRows?: number
+  maxRows?: number
+}
+
+export interface MentionsAllowClearConfig {
+  clearIcon?: any
+}
+
+export interface MentionsOption {
+  key?: string
+  value: string
+  label?: any
+  disabled?: boolean
+  className?: string
+  style?: any
+  [key: string]: any
+}
+
+export interface MentionsClassNames {
+  root?: string
+  textarea?: string
+  popup?: string
+  option?: string
+  empty?: string
+  clear?: string
+}
+
+export interface MentionsStyles {
+  root?: any
+  textarea?: any
+  popup?: any
+}
+
+export interface MentionsRef {
+  nativeElement?: HTMLTextAreaElement
+  focus: () => void
+  blur: () => void
+}
+
+export interface MentionsConfig {
+  prefix?: string | string[]
+  split?: string
+}
+
+export interface MentionsEntity {
+  prefix: string
+  value: string
+}
+
+export interface MentionsProps {
+  value?: string
+  defaultValue?: string
+  options?: MentionsOption[]
+  prefix?: string | string[]
+  split?: string
+  searchDebounce?: number
+  placement?: MentionPlacement
+  size?: MentionsSize
+  status?: MentionsStatus
+  variant?: MentionsVariant
+  allowClear?: boolean | MentionsAllowClearConfig
+  autoSize?: boolean | MentionsAutoSizeConfig
+  loading?: boolean
+  disabled?: boolean
+  readOnly?: boolean
+  notFoundContent?: any
+  filterOption?: false | ((input: string, option: MentionsOption) => boolean)
+  validateSearch?: (text: string, props: MentionsProps) => boolean
+  onChange?: (text: string) => void
+  onInput?: (event: Event) => void
+  onNativeChange?: (event: Event) => void
+  onSearch?: (text: string, prefix: string) => void
+  onSelect?: (option: MentionsOption, prefix: string) => void
+  onFocus?: (event: FocusEvent) => void
+  onBlur?: (event: FocusEvent) => void
+  onKeyDown?: (event: KeyboardEvent) => void
+  onCompositionStart?: (event: CompositionEvent) => void
+  onCompositionEnd?: (event: CompositionEvent) => void
+  onResize?: (size: { width: number; height: number }) => void
+  onPopupScroll?: (event: Event) => void
+  rootClassName?: string
+  textareaClassName?: string
+  popupClassName?: string
+  popupStyle?: any
+  classNames?: MentionsClassNames
+  styles?: MentionsStyles
+  className?: string
+  style?: any
+  children?: any
+  [key: string]: any
+}
+
+interface MentionTriggerState {
+  start: number
+  end: number
+  prefix: string
+  search: string
+  key: string
+}
+
+let mentionsIdSeed = 0
+
+const appendClassName = (base: string, className?: string) => {
+  return className ? `${base} ${className}` : base
+}
+
+const resolveTextValue = (value?: string) => {
+  if (value == null) return ''
+  return String(value)
+}
+
+const normalizePrefixList = (prefix?: string | string[]) => {
+  const list = Array.isArray(prefix) ? prefix : [prefix ?? '@']
+  return list
+    .filter(item => typeof item === 'string' && item.length > 0)
+    .sort((left, right) => right.length - left.length)
+}
+
+const resolveSizeClass = (size?: MentionsSize) => {
+  switch (size) {
+    case 'small':
+      return 'sm'
+    case 'middle':
+    case 'medium':
+      return 'md'
+    case 'large':
+      return 'lg'
+    default:
+      return size
+  }
+}
+
+const resolveStatusTone = (status?: MentionsStatus) => {
+  switch (status) {
+    case 'success':
+      return 'success'
+    case 'warning':
+      return 'warning'
+    case 'error':
+      return 'error'
+    case 'validating':
+      return 'info'
+    default:
+      return undefined
+  }
+}
+
+const resolveVariantClassName = (variant?: MentionsVariant) => {
+  switch (variant) {
+    case 'filled':
+      return 'border-transparent bg-base-200/70 shadow-none focus:bg-base-100'
+    case 'ghost':
+      return 'textarea-ghost'
+    case 'borderless':
+      return 'bg-transparent border-transparent shadow-none'
+    case 'underlined':
+      return 'rounded-none border-x-0 border-t-0 border-b-base-300 bg-transparent px-0 shadow-none focus:border-b-primary'
+    default:
+      return undefined
+  }
+}
+
+const buildTextareaClassName = ({
+  size,
+  status,
+  variant,
+  allowClear,
+  className,
+}: Pick<MentionsProps, 'size' | 'status' | 'variant' | 'className' | 'allowClear'>) => {
+  let cls = 'textarea w-full'
+  const resolvedSize = resolveSizeClass(size)
+  const resolvedTone = resolveStatusTone(status)
+  const resolvedVariant = resolveVariantClassName(variant)
+
+  if (resolvedSize) cls += ` textarea-${resolvedSize}`
+  if (resolvedTone) cls += ` textarea-${resolvedTone}`
+  if (resolvedVariant) cls += ` ${resolvedVariant}`
+  if (allowClear) cls += ' pr-10'
+  if (className) cls += ` ${className}`
+
+  return cls
+}
+
+export const validateSearchText = (text: string, split = ' ') => {
+  if (/\r|\n/.test(text)) return false
+  return !split || text.indexOf(split) === -1
+}
+
+const hasBoundaryBeforePrefix = (value: string, start: number, split: string) => {
+  if (start <= 0) return true
+  if (split && start >= split.length && value.slice(start - split.length, start) === split) {
+    return true
+  }
+  return /\s/.test(value[start - 1] ?? '')
+}
+
+const findMentionBoundaryEnd = (value: string, start: number, split: string) => {
+  let cursor = start
+
+  while (cursor < value.length) {
+    if (split && value.slice(cursor, cursor + split.length) === split) {
+      break
+    }
+
+    if (/\s/.test(value[cursor] ?? '')) {
+      break
+    }
+
+    cursor += 1
+  }
+
+  return cursor
+}
+
+const findPreviousPrefixIndex = (value: string, token: string, searchIndex: number) => {
+  if (searchIndex <= 0) {
+    return -1
+  }
+
+  return value.lastIndexOf(token, searchIndex - 1)
+}
+
+const findActiveTrigger = (
+  value: string,
+  caretPosition: number,
+  prefixList: string[],
+  split: string,
+  validator: (text: string) => boolean,
+): MentionTriggerState | null => {
+  if (caretPosition < 0) return null
+
+  let matchedTrigger: MentionTriggerState | null = null
+
+  prefixList.forEach(token => {
+    let searchIndex = value.lastIndexOf(token, Math.max(caretPosition - token.length, 0))
+
+    while (searchIndex >= 0) {
+      if (searchIndex + token.length > caretPosition) {
+        searchIndex = findPreviousPrefixIndex(value, token, searchIndex)
+        continue
+      }
+
+      if (!hasBoundaryBeforePrefix(value, searchIndex, split)) {
+        searchIndex = findPreviousPrefixIndex(value, token, searchIndex)
+        continue
+      }
+
+      const searchText = value.slice(searchIndex + token.length, caretPosition)
+      if (!validator(searchText)) {
+        searchIndex = findPreviousPrefixIndex(value, token, searchIndex)
+        continue
+      }
+
+      const candidate: MentionTriggerState = {
+        start: searchIndex,
+        end: caretPosition,
+        prefix: token,
+        search: searchText,
+        key: `${searchIndex}:${caretPosition}:${token}:${searchText}`,
+      }
+
+      if (!matchedTrigger || candidate.start > matchedTrigger.start) {
+        matchedTrigger = candidate
+      }
+
+      break
+    }
+  })
+
+  return matchedTrigger
+}
+
+const stringifyOptionLabel = (option: MentionsOption) => {
+  if (typeof option.label === 'string' || typeof option.label === 'number') {
+    return String(option.label)
+  }
+  return String(option.value ?? '')
+}
+
+const filterMentionOptions = (
+  options: MentionsOption[],
+  searchText: string,
+  filterOption?: MentionsProps['filterOption'],
+) => {
+  if (filterOption === false) {
+    return options
+  }
+
+  const normalizedSearch = searchText.trim().toLowerCase()
+
+  return options.filter(option => {
+    if (typeof filterOption === 'function') {
+      return filterOption(searchText, option)
+    }
+
+    if (!normalizedSearch) {
+      return true
+    }
+
+    const valueText = String(option.value ?? '').toLowerCase()
+    const labelText = stringifyOptionLabel(option).toLowerCase()
+    return valueText.includes(normalizedSearch) || labelText.includes(normalizedSearch)
+  })
+}
+
+const createOptionView = (source?: MentionsOption[]) => {
+  if (!source || typeof (source as any).length !== 'number') {
+    return [] as MentionsOption[]
+  }
+
+  const list: MentionsOption[] = []
+  const length = Number((source as any).length) || 0
+
+  for (let index = 0; index < length; index += 1) {
+    const option = (source as any)[index] as MentionsOption | undefined
+    if (option !== undefined) {
+      list.push(option)
+    }
+  }
+
+  return list
+}
+
+const resolveSearchDebounce = (value?: number) => {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return 0
+  }
+
+  return Math.round(value)
+}
+
+const findFirstEnabledIndex = (options: MentionsOption[]) => {
+  return options.findIndex(option => !option.disabled)
+}
+
+const findNextEnabledIndex = (
+  options: MentionsOption[],
+  currentIndex: number,
+  direction: 1 | -1,
+) => {
+  if (!options.length) return -1
+  const maxLoop = options.length
+  let nextIndex = currentIndex
+
+  for (let step = 0; step < maxLoop; step += 1) {
+    nextIndex = (nextIndex + direction + options.length) % options.length
+    if (!options[nextIndex]?.disabled) {
+      return nextIndex
+    }
+  }
+
+  return -1
+}
+
+const assignForwardedRef = (forwardedRef: any, value: MentionsRef | null) => {
+  if (typeof forwardedRef === 'function') {
+    forwardedRef(value)
+    return
+  }
+
+  if (forwardedRef && typeof forwardedRef === 'object') {
+    ;(forwardedRef as any).current = value ?? undefined
+  }
+}
+
+const triggerSyntheticInput = (element: HTMLTextAreaElement) => {
+  element.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+const DefaultClearIcon: FC = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className="size-4"
+      aria-hidden="true"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m7 7 10 10M17 7 7 17" />
+    </svg>
+  )
+}
+
+const LoadingOption: FC = () => {
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 text-sm text-base-content/65">
+      <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+      正在检索候选项
+    </div>
+  )
+}
+
+const EmptyOption: FC<{ content: any; className?: string }> = ({ content, className }) => {
+  return (
+    <div className={appendClassName('px-3 py-2 text-sm text-base-content/55', className)}>
+      {content}
+    </div>
+  )
+}
+
+const MentionsRoot: FC<MentionsProps> = ({
+  value,
+  defaultValue,
+  options,
+  prefix = '@',
+  split = ' ',
+  searchDebounce,
+  placement = 'bottom',
+  size,
+  status,
+  variant,
+  allowClear,
+  autoSize,
+  loading,
+  disabled,
+  readOnly,
+  notFoundContent = '未找到匹配项',
+  filterOption,
+  validateSearch,
+  onChange,
+  onInput,
+  onNativeChange,
+  onSearch,
+  onSelect,
+  onFocus,
+  onBlur,
+  onKeyDown,
+  onCompositionStart,
+  onCompositionEnd,
+  onResize,
+  onPopupScroll,
+  rootClassName,
+  textareaClassName,
+  popupClassName,
+  popupStyle,
+  classNames,
+  styles,
+  className,
+  style,
+  ...rest
+}) => {
+  const textareaRef = useRef<HTMLTextAreaElement>()
+  const rootRef = useRef<HTMLDivElement>()
+  const resizeObserverRef = useRef<ResizeObserver>()
+  const triggerSyncTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const lastResizeRef = useRef<{ width: number; height: number }>()
+  const forwardedRef = rest.ref
+  const isControlled = value !== undefined
+  const currentValue = ref(resolveTextValue(isControlled ? value : defaultValue))
+  const focused = ref(false)
+  const composing = ref(false)
+  const selectionStart = ref(0)
+  const selectionEnd = ref(0)
+  const highlightedIndex = ref(-1)
+  const dismissedTriggerKey = ref('')
+  const activeTrigger = ref<MentionTriggerState | null>(null)
+  const lastSearchKey = ref('')
+  const optionSource = ref(createOptionView(options))
+  const visibleOptions = ref<MentionsOption[]>([])
+  const lastCompositionCommittedValue = useRef<string | null>(null)
+  const instanceId = ref('')
+  const didInitOptionsWatch = useRef(false)
+  const lastOptionsSourceRef = useRef<MentionsOption[] | undefined>(undefined)
+  const didInitConfigWatch = useRef(false)
+  const lastConfigSignatureRef = useRef<string>('')
+  const clearConfig = allowClear && typeof allowClear === 'object' ? allowClear : undefined
+  const clearable = !!allowClear
+  const prefixList = normalizePrefixList(prefix)
+  const searchDebounceMs = resolveSearchDebounce(searchDebounce)
+  const triggerConfigSignature = `${loading ? 1 : 0}:${Array.isArray(prefix) ? prefix.join('|') : (prefix ?? '@')}:${split}:${searchDebounceMs}`
+  const validator = (text: string) => {
+    if (typeof validateSearch === 'function') {
+      return validateSearch(text, {
+        value,
+        defaultValue,
+        options,
+        prefix,
+        split,
+        searchDebounce,
+        placement,
+        size,
+        status,
+        variant,
+        allowClear,
+        autoSize,
+        loading,
+        disabled,
+        readOnly,
+        notFoundContent,
+        filterOption,
+        validateSearch,
+        onChange,
+        onInput,
+        onNativeChange,
+        onSearch,
+        onSelect,
+        onFocus,
+        onBlur,
+        onKeyDown,
+        onResize,
+        onPopupScroll,
+        rootClassName,
+        textareaClassName,
+        popupClassName,
+        popupStyle,
+        classNames,
+        styles,
+        className,
+        style,
+        ...rest,
+      })
+    }
+
+    return validateSearchText(text, split)
+  }
+
+  if ('ref' in rest) {
+    delete rest.ref
+  }
+
+  const createApi = (): MentionsRef => ({
+    nativeElement: textareaRef.current,
+    focus: () => {
+      textareaRef.current?.focus()
+    },
+    blur: () => {
+      textareaRef.current?.blur()
+    },
+  })
+
+  const syncForwardedRef = () => {
+    assignForwardedRef(forwardedRef, textareaRef.current ? createApi() : null)
+  }
+
+  const syncNativeDataTestId = () => {
+    const element = textareaRef.current
+    if (!element) return
+
+    if (dataTestId === undefined || dataTestId === null) {
+      element.removeAttribute('data-testid')
+      return
+    }
+
+    element.setAttribute('data-testid', String(dataTestId))
+  }
+
+  const syncValueState = () => {
+    const elementValue = textareaRef.current?.value
+
+    currentValue.value = resolveTextValue(
+      isControlled
+        ? composing.value
+          ? (elementValue ?? currentValue.value)
+          : value
+        : (elementValue ?? defaultValue),
+    )
+  }
+
+  const syncSelectionState = () => {
+    const element = textareaRef.current
+    const nextStart = element?.selectionStart ?? currentValue.value.length
+    const nextEnd = element?.selectionEnd ?? nextStart
+    selectionStart.value = nextStart
+    selectionEnd.value = nextEnd
+  }
+
+  const isCompositionActive = (event?: { isComposing?: boolean } | null) => {
+    return composing.value || !!event?.isComposing
+  }
+
+  const getResolvedOptions = (
+    trigger: MentionTriggerState | null = activeTrigger.value,
+  ): MentionsOption[] => {
+    if (!trigger) {
+      return []
+    }
+
+    return filterMentionOptions(optionSource.value, trigger.search, filterOption)
+  }
+
+  const syncHighlightState = (resolvedOptions: MentionsOption[]) => {
+    if (!resolvedOptions.length) {
+      highlightedIndex.value = -1
+      return
+    }
+
+    if (highlightedIndex.value < 0 || highlightedIndex.value >= resolvedOptions.length) {
+      highlightedIndex.value = findFirstEnabledIndex(resolvedOptions)
+      return
+    }
+
+    if (resolvedOptions[highlightedIndex.value]?.disabled) {
+      highlightedIndex.value = findNextEnabledIndex(resolvedOptions, highlightedIndex.value, 1)
+    }
+  }
+
+  const clearPendingTriggerSync = () => {
+    if (triggerSyncTimerRef.current === undefined) {
+      return
+    }
+
+    clearTimeout(triggerSyncTimerRef.current)
+    triggerSyncTimerRef.current = undefined
+  }
+
+  const syncTriggerStateNow = () => {
+    if (composing.value) {
+      activeTrigger.value = null
+      visibleOptions.value = []
+      highlightedIndex.value = -1
+      lastSearchKey.value = ''
+      return
+    }
+
+    const nextTrigger =
+      disabled || readOnly
+        ? null
+        : findActiveTrigger(currentValue.value, selectionStart.value, prefixList, split, validator)
+
+    if (!nextTrigger) {
+      activeTrigger.value = null
+      visibleOptions.value = []
+      highlightedIndex.value = -1
+      lastSearchKey.value = ''
+      dismissedTriggerKey.value = ''
+      return
+    }
+
+    if (dismissedTriggerKey.value && dismissedTriggerKey.value !== nextTrigger.key) {
+      dismissedTriggerKey.value = ''
+    }
+
+    const previousTriggerKey = activeTrigger.value?.key
+    activeTrigger.value = nextTrigger
+
+    if (lastSearchKey.value !== `${nextTrigger.prefix}:${nextTrigger.search}`) {
+      lastSearchKey.value = `${nextTrigger.prefix}:${nextTrigger.search}`
+      if (onSearch) {
+        onSearch(nextTrigger.search, nextTrigger.prefix)
+      }
+    }
+
+    const resolvedOptions = getResolvedOptions(nextTrigger)
+    visibleOptions.value = resolvedOptions
+    if (previousTriggerKey !== nextTrigger.key) {
+      highlightedIndex.value = findFirstEnabledIndex(resolvedOptions)
+      return
+    }
+
+    syncHighlightState(resolvedOptions)
+  }
+
+  const syncTriggerState = (immediate = false) => {
+    clearPendingTriggerSync()
+
+    if (immediate || searchDebounceMs <= 0) {
+      syncTriggerStateNow()
+      return
+    }
+
+    triggerSyncTimerRef.current = setTimeout(() => {
+      triggerSyncTimerRef.current = undefined
+      syncTriggerStateNow()
+    }, searchDebounceMs)
+  }
+
+  const syncAutoSize = () => {
+    const element = textareaRef.current
+    if (!element) return
+
+    if (!autoSize) {
+      element.style.height = ''
+      element.style.overflowY = ''
+      return
+    }
+
+    const config = typeof autoSize === 'object' ? autoSize : undefined
+    const computedStyle = window.getComputedStyle(element)
+    const lineHeightValue = Number.parseFloat(computedStyle.lineHeight)
+    const fontSizeValue = Number.parseFloat(computedStyle.fontSize)
+    const lineHeight = Number.isFinite(lineHeightValue)
+      ? lineHeightValue
+      : Number.isFinite(fontSizeValue)
+        ? fontSizeValue * 1.5
+        : 24
+    const borderHeight =
+      Number.parseFloat(computedStyle.borderTopWidth || '0') +
+      Number.parseFloat(computedStyle.borderBottomWidth || '0')
+    const paddingHeight =
+      Number.parseFloat(computedStyle.paddingTop || '0') +
+      Number.parseFloat(computedStyle.paddingBottom || '0')
+    const minRows =
+      typeof config?.minRows === 'number' && config.minRows > 0
+        ? config.minRows
+        : typeof rest.rows === 'number'
+          ? rest.rows
+          : undefined
+    const maxRows =
+      typeof config?.maxRows === 'number' && config.maxRows > 0
+        ? Math.max(config.maxRows, minRows ?? 1)
+        : undefined
+
+    element.style.height = 'auto'
+    let nextHeight = element.scrollHeight
+
+    if (typeof minRows === 'number') {
+      nextHeight = Math.max(nextHeight, minRows * lineHeight + borderHeight + paddingHeight)
+    }
+
+    if (typeof maxRows === 'number') {
+      const maxHeight = maxRows * lineHeight + borderHeight + paddingHeight
+      element.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden'
+      nextHeight = Math.min(nextHeight, maxHeight)
+    } else {
+      element.style.overflowY = 'hidden'
+    }
+
+    element.style.height = `${nextHeight}px`
+  }
+
+  const observeResize = () => {
+    const element = textareaRef.current
+    if (!element || typeof ResizeObserver === 'undefined' || !onResize) {
+      lastResizeRef.current = undefined
+      return
+    }
+
+    if (!resizeObserverRef.current) {
+      resizeObserverRef.current = new ResizeObserver(entries => {
+        const entry = entries[0]
+        if (!entry) return
+        const nextSize = {
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        }
+        const previousSize = lastResizeRef.current
+
+        if (
+          previousSize &&
+          previousSize.width === nextSize.width &&
+          previousSize.height === nextSize.height
+        ) {
+          return
+        }
+
+        lastResizeRef.current = nextSize
+        onResize(nextSize)
+      })
+    }
+
+    resizeObserverRef.current.disconnect()
+    resizeObserverRef.current.observe(element)
+  }
+
+  const assignTextareaRef = (element: HTMLTextAreaElement | null) => {
+    textareaRef.current = element ?? undefined
+
+    if (element && element.value !== currentValue.value) {
+      element.value = currentValue.value
+    }
+
+    syncNativeDataTestId()
+    syncForwardedRef()
+  }
+
+  const setCaretPosition = (position: number) => {
+    const element = textareaRef.current
+    if (!element) return
+    element.focus()
+    if (typeof element.setSelectionRange === 'function') {
+      element.setSelectionRange(position, position)
+    }
+    syncSelectionState()
+  }
+
+  const selectMentionOption = (option: MentionsOption) => {
+    const trigger = activeTrigger.value
+    const element = textareaRef.current
+
+    if (!trigger || !element || option.disabled) {
+      return
+    }
+
+    const before = currentValue.value.slice(0, trigger.start)
+    const after = currentValue.value.slice(trigger.end)
+    const triggerPrefix = trigger.prefix
+    const splitIsWhitespace = split.trim() === ''
+    const needsSplit =
+      !!split && (!after || (!after.startsWith(split) && !(splitIsWhitespace && /^\s/.test(after))))
+    const insertedText = `${triggerPrefix}${option.value}${needsSplit ? split : ''}`
+    const nextValue = `${before}${insertedText}${after}`
+    const nextCaretPosition = before.length + insertedText.length
+
+    element.value = nextValue
+    lastCompositionCommittedValue.current = null
+    dismissedTriggerKey.value = ''
+    if (typeof element.setSelectionRange === 'function') {
+      element.setSelectionRange(nextCaretPosition, nextCaretPosition)
+    }
+
+    triggerSyntheticInput(element)
+
+    if (onSelect) {
+      onSelect(option, triggerPrefix)
+    }
+  }
+
+  const handleInput = (event: Event) => {
+    const element = event.target as HTMLTextAreaElement | null
+    currentValue.value = element?.value ?? ''
+    focused.value = true
+    syncAutoSize()
+    const composingNow = isCompositionActive(event as InputEvent)
+
+    if (!composingNow) {
+      syncSelectionState()
+      syncTriggerState()
+    }
+
+    if (onInput) {
+      onInput(event)
+    }
+
+    if (composingNow) {
+      return
+    }
+
+    if (lastCompositionCommittedValue.current === currentValue.value) {
+      lastCompositionCommittedValue.current = null
+      return
+    }
+
+    lastCompositionCommittedValue.current = null
+
+    if (onChange) {
+      onChange(currentValue.value)
+    }
+  }
+
+  const handleNativeChange = (event: Event) => {
+    lastCompositionCommittedValue.current = null
+    syncValueState()
+    syncSelectionState()
+    syncAutoSize()
+    syncTriggerState()
+    if (onNativeChange) {
+      onNativeChange(event)
+    }
+  }
+
+  const handleFocus = (event: FocusEvent) => {
+    const wasFocused = focused.value
+    focused.value = true
+    syncSelectionState()
+    syncTriggerState(!wasFocused)
+    if (onFocus) {
+      onFocus(event)
+    }
+  }
+
+  const handleBlur = (event: FocusEvent) => {
+    focused.value = false
+    clearPendingTriggerSync()
+    if (onBlur) {
+      onBlur(event)
+    }
+  }
+
+  const handleSelectionRefresh = () => {
+    if (composing.value) {
+      return
+    }
+
+    syncSelectionState()
+    syncTriggerState(searchDebounceMs <= 0)
+  }
+
+  const moveHighlight = (direction: 1 | -1) => {
+    const resolvedOptions = getResolvedOptions()
+    if (!resolvedOptions.length) return
+
+    if (highlightedIndex.value < 0) {
+      highlightedIndex.value =
+        direction === 1
+          ? findFirstEnabledIndex(resolvedOptions)
+          : findNextEnabledIndex(resolvedOptions, 0, -1)
+      return
+    }
+
+    highlightedIndex.value = findNextEnabledIndex(
+      resolvedOptions,
+      highlightedIndex.value,
+      direction,
+    )
+  }
+
+  const handleKeyDownInternal = (event: KeyboardEvent) => {
+    if (isCompositionActive(event)) {
+      if (onKeyDown) {
+        onKeyDown(event)
+      }
+      return
+    }
+
+    const resolvedOptions = getResolvedOptions()
+    const popupVisible =
+      focused.value &&
+      !!activeTrigger.value &&
+      dismissedTriggerKey.value !== activeTrigger.value.key &&
+      (loading || resolvedOptions.length > 0 || notFoundContent !== null)
+
+    if (popupVisible) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        moveHighlight(1)
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        moveHighlight(-1)
+      } else if (event.key === 'Enter') {
+        const option =
+          highlightedIndex.value >= 0 ? resolvedOptions[highlightedIndex.value] : undefined
+        if (option && !option.disabled) {
+          event.preventDefault()
+          selectMentionOption(option)
+        }
+      } else if (event.key === 'Escape') {
+        dismissedTriggerKey.value = activeTrigger.value?.key ?? ''
+        highlightedIndex.value = -1
+      }
+    }
+
+    if (onKeyDown) {
+      onKeyDown(event)
+    }
+  }
+
+  const handleKeyUp = (event: KeyboardEvent) => {
+    if (
+      !isCompositionActive(event) &&
+      !['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab'].includes(event.key)
+    ) {
+      syncSelectionState()
+      syncTriggerState()
+    }
+  }
+
+  const handleCompositionStartInternal = (event: CompositionEvent) => {
+    composing.value = true
+    lastCompositionCommittedValue.current = null
+    activeTrigger.value = null
+    highlightedIndex.value = -1
+    lastSearchKey.value = ''
+
+    if (onCompositionStart) {
+      onCompositionStart(event)
+    }
+  }
+
+  const handleCompositionEndInternal = (event: CompositionEvent) => {
+    composing.value = false
+    const nextValue = textareaRef.current?.value ?? currentValue.value
+
+    currentValue.value = nextValue
+    syncSelectionState()
+    syncAutoSize()
+    syncTriggerState()
+    lastCompositionCommittedValue.current = nextValue
+
+    if (onChange) {
+      onChange(nextValue)
+    }
+
+    if (onCompositionEnd) {
+      onCompositionEnd(event)
+    }
+  }
+
+  const handleClear = (event: MouseEvent) => {
+    const element = textareaRef.current
+    if (!element || disabled || readOnly) {
+      return
+    }
+
+    if (typeof (event as any).preventDefault === 'function') {
+      ;(event as any).preventDefault()
+    }
+    if (typeof (event as any).stopPropagation === 'function') {
+      ;(event as any).stopPropagation()
+    }
+
+    element.value = ''
+    currentValue.value = ''
+    lastCompositionCommittedValue.current = null
+    dismissedTriggerKey.value = ''
+    highlightedIndex.value = -1
+    syncAutoSize()
+    setCaretPosition(0)
+    syncTriggerState(true)
+
+    triggerSyntheticInput(element)
+
+    if (typeof rest.onClear === 'function') {
+      rest.onClear(event)
+    }
+  }
+
+  onMounted(() => {
+    if (!instanceId.value) {
+      mentionsIdSeed += 1
+      instanceId.value = `rue-mentions-${mentionsIdSeed}`
+    }
+
+    if (textareaRef.current && textareaRef.current.value !== currentValue.value) {
+      textareaRef.current.value = currentValue.value
+    }
+
+    syncValueState()
+    syncSelectionState()
+    syncAutoSize()
+    syncTriggerState()
+    observeResize()
+    syncForwardedRef()
+  })
+
+  onUnmounted(() => {
+    clearPendingTriggerSync()
+    resizeObserverRef.current?.disconnect()
+    lastResizeRef.current = undefined
+    assignForwardedRef(forwardedRef, null)
+  })
+
+  watch(
+    () => value,
+    () => {
+      if (isControlled && textareaRef.current && !composing.value) {
+        textareaRef.current.value = resolveTextValue(value)
+      }
+      syncValueState()
+      syncSelectionState()
+      syncAutoSize()
+      syncTriggerState()
+      observeResize()
+    },
+    { immediate: true },
+  )
+
+  watch(
+    () => autoSize,
+    () => {
+      syncAutoSize()
+      observeResize()
+    },
+    { immediate: true },
+  )
+
+  watch(
+    () => options,
+    (nextOptions: MentionsOption[] | undefined) => {
+      const isSameOptionsRef =
+        didInitOptionsWatch.current && lastOptionsSourceRef.current === nextOptions
+      didInitOptionsWatch.current = true
+      lastOptionsSourceRef.current = nextOptions
+      if (isSameOptionsRef) {
+        return
+      }
+
+      optionSource.value = createOptionView(nextOptions)
+      syncTriggerState(true)
+    },
+    { immediate: true },
+  )
+
+  watch(
+    () => triggerConfigSignature,
+    (nextSignature: string) => {
+      const isSameSignature =
+        didInitConfigWatch.current && lastConfigSignatureRef.current === nextSignature
+      didInitConfigWatch.current = true
+      lastConfigSignatureRef.current = nextSignature
+      if (isSameSignature) {
+        return
+      }
+
+      syncTriggerState(true)
+    },
+    { immediate: true },
+  )
+
+  if (rest.rows !== undefined && rest.rows !== null) {
+    rest.rows = String(rest.rows)
+  }
+
+  if (autoSize && (rest.rows === undefined || rest.rows === null)) {
+    const minRows =
+      typeof autoSize === 'object' && typeof autoSize.minRows === 'number'
+        ? autoSize.minRows
+        : undefined
+    if (minRows) {
+      rest.rows = String(minRows)
+    }
+  }
+
+  const dataTestId = rest['data-testid']
+
+  const nativeValueProps: Record<string, any> = {}
+  if (value !== undefined) {
+    nativeValueProps.value = composing.value ? currentValue.value : value
+  }
+  if (defaultValue !== undefined) {
+    nativeValueProps.defaultValue = defaultValue
+  }
+
+  const nativeTextareaOptionalProps: Record<string, any> = {}
+  if (readOnly) {
+    nativeTextareaOptionalProps.readOnly = true
+  }
+
+  const resolvePopupId = () => {
+    return instanceId.value ? `${instanceId.value}-popup` : undefined
+  }
+
+  const isPopupVisible = () => {
+    return (
+      !composing.value &&
+      focused.value &&
+      !!activeTrigger.value &&
+      dismissedTriggerKey.value !== activeTrigger.value.key &&
+      (loading || visibleOptions.value.length > 0 || notFoundContent !== null)
+    )
+  }
+
+  const resolveActiveOptionId = () => {
+    const popupId = resolvePopupId()
+
+    if (!popupId || !isPopupVisible() || highlightedIndex.value < 0) {
+      return undefined
+    }
+
+    return `${popupId}-option-${highlightedIndex.value}`
+  }
+
+  const popupId = isPopupVisible() ? resolvePopupId() : undefined
+  if (popupId !== undefined) {
+    nativeTextareaOptionalProps['aria-controls'] = popupId
+  }
+
+  const activeOptionId = resolveActiveOptionId()
+  if (activeOptionId !== undefined) {
+    nativeTextareaOptionalProps['aria-activedescendant'] = activeOptionId
+  }
+
+  const ariaInvalid = status === 'error' ? 'true' : rest['aria-invalid']
+  if (ariaInvalid !== undefined && ariaInvalid !== null) {
+    nativeTextareaOptionalProps['aria-invalid'] = ariaInvalid
+  }
+
+  return (
+    <div
+      ref={(element: HTMLDivElement | null) => {
+        rootRef.current = element ?? undefined
+      }}
+      className={appendClassName(
+        appendClassName('rue-mentions relative block w-full', classNames?.root),
+        appendClassName(className ?? '', rootClassName),
+      )}
+      style={{ ...styles?.root, ...style }}
+    >
+      <div className="relative">
+        <textarea
+          {...rest}
+          {...nativeValueProps}
+          {...nativeTextareaOptionalProps}
+          ref={assignTextareaRef}
+          disabled={disabled}
+          aria-expanded={isPopupVisible() ? 'true' : 'false'}
+          aria-autocomplete="list"
+          data-rue-mentions-input="true"
+          className={appendClassName(
+            appendClassName(
+              buildTextareaClassName({
+                size,
+                status,
+                variant,
+                allowClear: clearable,
+                className: textareaClassName,
+              }),
+              classNames?.textarea,
+            ),
+            styles?.textarea ? undefined : undefined,
+          )}
+          style={styles?.textarea}
+          onInput={handleInput}
+          onChange={handleNativeChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onClick={handleSelectionRefresh}
+          onSelect={handleSelectionRefresh}
+          onKeyDown={handleKeyDownInternal}
+          onKeyUp={handleKeyUp}
+          onCompositionStart={handleCompositionStartInternal}
+          onCompositionEnd={handleCompositionEndInternal}
+        />
+        {clearable && !disabled && !readOnly ? (
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label="Clear mentions"
+            className={appendClassName(
+              appendClassName(
+                appendClassName(
+                  'btn btn-ghost btn-xs absolute right-2 top-2 h-7 min-h-0 w-7 rounded-full p-0 text-base-content/55 hover:text-base-content',
+                  currentValue.value ? undefined : 'hidden',
+                ),
+                classNames?.clear,
+              ),
+              rootRef.current ? undefined : undefined,
+            )}
+            onMouseDown={(event: MouseEvent) => {
+              if (typeof (event as any).preventDefault === 'function') {
+                ;(event as any).preventDefault()
+              }
+            }}
+            onClick={handleClear}
+          >
+            <>{clearConfig?.clearIcon ?? <DefaultClearIcon />}</>
+          </button>
+        ) : null}
+      </div>
+      {isPopupVisible() ? (
+        <div
+          id={resolvePopupId()}
+          role="listbox"
+          className={appendClassName(
+            appendClassName(
+              appendClassName(
+                appendClassName(
+                  `absolute left-0 z-20 w-full overflow-hidden rounded-2xl border border-base-300 bg-base-100/95 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.55)] backdrop-blur ${placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}`,
+                  popupClassName,
+                ),
+                classNames?.popup,
+              ),
+              rootClassName ? undefined : undefined,
+            ),
+            focused.value ? undefined : undefined,
+          )}
+          style={{ ...styles?.popup, ...popupStyle }}
+          onScroll={(event: Event) => {
+            if (onPopupScroll) {
+              onPopupScroll(event)
+            }
+          }}
+        >
+          <div className="max-h-72 overflow-y-auto py-2">
+            {loading ? (
+              <LoadingOption />
+            ) : visibleOptions.value.length ? (
+              visibleOptions.value.map((option, index) => {
+                const popupId = resolvePopupId()
+                const selected = index === highlightedIndex.value
+
+                return (
+                  <button
+                    key={option.key ?? `${option.value}-${index}`}
+                    id={popupId ? `${popupId}-option-${index}` : undefined}
+                    type="button"
+                    role="option"
+                    aria-selected={selected ? 'true' : 'false'}
+                    disabled={option.disabled}
+                    className={appendClassName(
+                      appendClassName(
+                        appendClassName(
+                          'mx-2 flex w-[calc(100%-1rem)] items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition',
+                          selected
+                            ? 'bg-primary/10 text-primary ring-1 ring-primary/10'
+                            : 'text-base-content hover:bg-base-200/75',
+                        ),
+                        option.disabled
+                          ? 'cursor-not-allowed opacity-45 hover:bg-transparent'
+                          : undefined,
+                      ),
+                      appendClassName(classNames?.option ?? '', option.className),
+                    )}
+                    style={option.style}
+                    onMouseDown={(event: MouseEvent) => {
+                      if (typeof (event as any).preventDefault === 'function') {
+                        ;(event as any).preventDefault()
+                      }
+                    }}
+                    onMouseEnter={() => {
+                      highlightedIndex.value = option.disabled ? highlightedIndex.value : index
+                    }}
+                    onClick={() => {
+                      selectMentionOption(option)
+                    }}
+                  >
+                    <span className="min-w-0 flex-1 truncate">{option.label ?? option.value}</span>
+                    <span className={selected ? 'text-primary/55' : 'text-base-content/35'}>
+                      {activeTrigger.value?.prefix}
+                    </span>
+                  </button>
+                )
+              })
+            ) : (
+              <EmptyOption className={classNames?.empty} content={notFoundContent} />
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+type CompoundedComponent = typeof MentionsRoot & {
+  getMentions: (value: string, config?: MentionsConfig) => MentionsEntity[]
+}
+
+const Mentions = MentionsRoot as CompoundedComponent
+
+Mentions.getMentions = (value = '', config: MentionsConfig = {}): MentionsEntity[] => {
+  const { prefix = '@', split = ' ' } = config
+  const prefixList = normalizePrefixList(prefix)
+  const entities: MentionsEntity[] = []
+  let index = 0
+
+  while (index < value.length) {
+    const matchedPrefix = prefixList.find(token => value.startsWith(token, index))
+
+    if (!matchedPrefix || !hasBoundaryBeforePrefix(value, index, split)) {
+      index += 1
+      continue
+    }
+
+    const mentionStart = index + matchedPrefix.length
+    const mentionEnd = findMentionBoundaryEnd(value, mentionStart, split)
+    const mentionValue = value.slice(mentionStart, mentionEnd)
+
+    if (mentionValue) {
+      entities.push({
+        prefix: matchedPrefix,
+        value: mentionValue,
+      })
+    }
+
+    if (split && value.slice(mentionEnd, mentionEnd + split.length) === split) {
+      index = mentionEnd + split.length
+      continue
+    }
+
+    index = mentionEnd > index ? mentionEnd : index + matchedPrefix.length
+  }
+
+  return entities
+}
+
+export default Mentions

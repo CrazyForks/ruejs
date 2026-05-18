@@ -1,4 +1,6 @@
 // SWC 常量与上下文：DUMMY_SP（稳定 span）、SyntaxContext（统一 empty）
+use std::collections::HashSet;
+
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 // SWC ECMAScript AST 节点类型集合（JSXExprContainer/CondExpr/BinExpr/ArrowExpr 等）
 use swc_core::ecma::ast::*;
@@ -135,6 +137,15 @@ fn expr_returns_jsx_renderable(expr: &Expr) -> bool {
         Expr::JSXElement(_) | Expr::JSXFragment(_) => true,
         Expr::Cond(CondExpr { cons, alt, .. }) => {
             expr_returns_jsx_renderable(cons.as_ref()) || expr_returns_jsx_renderable(alt.as_ref())
+        }
+        Expr::Bin(BinExpr {
+            op: BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+            left,
+            right,
+            ..
+        }) => {
+            expr_returns_jsx_renderable(left.as_ref())
+                || expr_returns_jsx_renderable(right.as_ref())
         }
         Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, right, .. }) => {
             expr_returns_jsx_renderable(right.as_ref())
@@ -354,6 +365,151 @@ fn is_non_ref_member_expr(inner: &Expr) -> bool {
     }
 }
 
+fn is_text_coercion_call_name(name: &str) -> bool {
+    matches!(name, "String" | "Number" | "Boolean" | "BigInt" | "Date" | "parseInt" | "parseFloat")
+}
+
+fn is_opaque_renderable_call_expr(call: &CallExpr) -> bool {
+    let Some(callee_name) = call_callee_ident_name(call) else {
+        return false;
+    };
+
+    !is_text_coercion_call_name(callee_name)
+}
+
+fn expr_is_renderable_local_alias_source(
+    inner: &Expr,
+    known_renderable_locals: &HashSet<String>,
+) -> bool {
+    let unwrapped = crate::utils::unwrap_expr(inner);
+    if crate::utils::is_static_empty_like(unwrapped) {
+        return false;
+    }
+
+    match unwrapped {
+        Expr::JSXElement(_) | Expr::JSXFragment(_) => true,
+        Expr::Ident(id) => known_renderable_locals.contains(id.sym.as_ref()),
+        Expr::Call(call) => {
+            call_returns_jsx_renderable(call) || is_opaque_renderable_call_expr(call)
+        }
+        Expr::Cond(CondExpr { cons, alt, .. }) => {
+            expr_is_renderable_local_alias_source(cons.as_ref(), known_renderable_locals)
+                || expr_is_renderable_local_alias_source(alt.as_ref(), known_renderable_locals)
+        }
+        Expr::Bin(BinExpr {
+            op: BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+            left,
+            right,
+            ..
+        }) => {
+            expr_is_renderable_local_alias_source(left.as_ref(), known_renderable_locals)
+                || expr_is_renderable_local_alias_source(right.as_ref(), known_renderable_locals)
+        }
+        Expr::Paren(ParenExpr { expr, .. }) => {
+            expr_is_renderable_local_alias_source(expr.as_ref(), known_renderable_locals)
+        }
+        Expr::TsAs(ts_as) => {
+            expr_is_renderable_local_alias_source(ts_as.expr.as_ref(), known_renderable_locals)
+        }
+        Expr::TsTypeAssertion(ts_assert) => {
+            expr_is_renderable_local_alias_source(ts_assert.expr.as_ref(), known_renderable_locals)
+        }
+        _ => false,
+    }
+}
+
+pub(crate) fn collect_renderable_local_alias_names<'a>(
+    stmts: impl IntoIterator<Item = &'a Stmt>,
+    outer_renderable_locals: &HashSet<String>,
+) -> HashSet<String> {
+    let mut known_renderable_locals = outer_renderable_locals.clone();
+    let mut aliases = HashSet::new();
+
+    for stmt in stmts {
+        let Stmt::Decl(Decl::Var(var)) = stmt else {
+            continue;
+        };
+        if var.kind != VarDeclKind::Const {
+            continue;
+        }
+
+        for decl in &var.decls {
+            let Pat::Ident(binding) = &decl.name else {
+                continue;
+            };
+            let Some(init) = &decl.init else {
+                continue;
+            };
+
+            if expr_is_renderable_local_alias_source(init.as_ref(), &known_renderable_locals) {
+                let name = binding.id.sym.to_string();
+                known_renderable_locals.insert(name.clone());
+                aliases.insert(name);
+            }
+        }
+    }
+
+    aliases
+}
+
+fn contains_nested_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> bool {
+    let unwrapped = crate::utils::unwrap_expr(inner);
+    if crate::utils::is_static_empty_like(unwrapped) {
+        return false;
+    }
+
+    match unwrapped {
+        Expr::Ident(id) => vt.is_renderable_local_ident(id.sym.as_ref()),
+        Expr::Member(_) => is_non_ref_member_expr(unwrapped),
+        Expr::Call(call) => is_opaque_renderable_call_expr(call),
+        Expr::Cond(CondExpr { cons, alt, .. }) => {
+            contains_nested_opaque_renderable_expr(vt, cons.as_ref())
+                || contains_nested_opaque_renderable_expr(vt, alt.as_ref())
+        }
+        Expr::Bin(BinExpr {
+            op: BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+            left,
+            right,
+            ..
+        }) => {
+            contains_nested_opaque_renderable_expr(vt, left.as_ref())
+                || contains_nested_opaque_renderable_expr(vt, right.as_ref())
+        }
+        Expr::Paren(ParenExpr { expr, .. }) => {
+            contains_nested_opaque_renderable_expr(vt, expr.as_ref())
+        }
+        _ => false,
+    }
+}
+
+fn contains_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> bool {
+    let unwrapped = crate::utils::unwrap_expr(inner);
+    if crate::utils::is_static_empty_like(unwrapped) {
+        return false;
+    }
+
+    match unwrapped {
+        Expr::Ident(id) => vt.is_renderable_local_ident(id.sym.as_ref()),
+        Expr::Member(_) => is_non_ref_member_expr(unwrapped),
+        Expr::Call(call) => is_opaque_renderable_call_expr(call),
+        Expr::Cond(CondExpr { cons, alt, .. }) => {
+            contains_nested_opaque_renderable_expr(vt, cons.as_ref())
+                || contains_nested_opaque_renderable_expr(vt, alt.as_ref())
+        }
+        Expr::Bin(BinExpr {
+            op: BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+            left,
+            right,
+            ..
+        }) => {
+            contains_nested_opaque_renderable_expr(vt, left.as_ref())
+                || contains_nested_opaque_renderable_expr(vt, right.as_ref())
+        }
+        Expr::Paren(ParenExpr { expr, .. }) => contains_opaque_renderable_expr(vt, expr.as_ref()),
+        _ => false,
+    }
+}
+
 /// 将任意表达式（可能包含 JSX、条件、逻辑运算）改写为用于插槽渲染的表达式：
 /// - 若是 JSXElement / JSXFragment，则编译为 `vapor(()=>{ ... })` 返回 DocumentFragment
 /// - 若是三元表达式，则对 cons/alt 分支中的 JSX 进行同样改写
@@ -427,6 +583,33 @@ pub fn make_expr_for_slot(vt: &mut VaporTransform, inner: &Expr) -> Expr {
                 alt: Box::new(new_alt),
             })
         }
+        Expr::Bin(BinExpr { op, left, right, .. })
+            if matches!(op, BinaryOp::LogicalOr | BinaryOp::NullishCoalescing) =>
+        {
+            log::debug("element_expr: slot LogicalOr/NullishCoalescing");
+            let left_inner = crate::utils::unwrap_expr(left.as_ref());
+            let right_inner = crate::utils::unwrap_expr(right.as_ref());
+            let new_left: Expr = if let Some(slot_expr) = jsx_expr_to_slot_expr(vt, left_inner) {
+                slot_expr
+            } else if expr_returns_jsx_renderable(left_inner) {
+                make_expr_for_slot(vt, left_inner)
+            } else {
+                *left.clone()
+            };
+            let new_right: Expr = if let Some(slot_expr) = jsx_expr_to_slot_expr(vt, right_inner) {
+                slot_expr
+            } else if expr_returns_jsx_renderable(right_inner) {
+                make_expr_for_slot(vt, right_inner)
+            } else {
+                *right.clone()
+            };
+            Expr::Bin(BinExpr {
+                span: DUMMY_SP,
+                op: *op,
+                left: Box::new(new_left),
+                right: Box::new(new_right),
+            })
+        }
         Expr::Call(call) if call_returns_jsx_renderable(call) => {
             log::debug("element_expr: slot CallExpr");
             rewrite_call_for_slot(vt, call).unwrap_or_else(|| inner.clone())
@@ -448,6 +631,16 @@ pub fn contains_jsx_in_expr(inner_top: &Expr) -> bool {
             let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
             expr_returns_jsx_renderable(cons_inner) || expr_returns_jsx_renderable(alt_inner)
         }
+        Expr::Bin(BinExpr {
+            op: BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+            left,
+            right,
+            ..
+        }) => {
+            let left_inner = crate::utils::unwrap_expr(left.as_ref());
+            let right_inner = crate::utils::unwrap_expr(right.as_ref());
+            expr_returns_jsx_renderable(left_inner) || expr_returns_jsx_renderable(right_inner)
+        }
         Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, right, .. }) => {
             let right_inner = crate::utils::unwrap_expr(right.as_ref());
             expr_returns_jsx_renderable(right_inner)
@@ -462,6 +655,17 @@ pub fn contains_jsx_in_expr(inner_top: &Expr) -> bool {
                     let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
                     expr_returns_jsx_renderable(cons_inner)
                         || expr_returns_jsx_renderable(alt_inner)
+                }
+                Expr::Bin(BinExpr {
+                    op: BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+                    left,
+                    right,
+                    ..
+                }) => {
+                    let left_inner = crate::utils::unwrap_expr(left.as_ref());
+                    let right_inner = crate::utils::unwrap_expr(right.as_ref());
+                    expr_returns_jsx_renderable(left_inner)
+                        || expr_returns_jsx_renderable(right_inner)
                 }
                 Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, right, .. }) => {
                     let right_inner = crate::utils::unwrap_expr(right.as_ref());
@@ -519,11 +723,11 @@ pub fn emit_element_expr_container_child(
                 let parent_tag = vt.el_tag_by_ident.get(&el_ident.sym.to_string()).cloned();
                 let parent_is_style = matches!(parent_tag.as_deref(), Some("style"));
                 let parent_is_svg = parent_tag.as_deref().map(is_svg_tag).unwrap_or(false);
-                let is_opaque_renderable_expr = is_non_ref_member_expr(&inner_top)
-                    && !crate::utils::is_static_empty_like(&inner_top);
+                let is_opaque_renderable_expr =
+                    crate::element_expr::contains_opaque_renderable_expr(vt, &inner_top);
                 if contains_jsx || (!parent_is_style && !parent_is_svg && is_opaque_renderable_expr)
                 {
-                    log::debug("element_expr: contains JSX -> slot");
+                    log::debug("element_expr: renderable-like expr -> slot");
                     let expr_for_slot = crate::element_expr::make_expr_for_slot(vt, &inner_top);
                     let render_once = is_empty_deps_memoized_jsx_expr(&inner_top)
                         || is_empty_deps_memoized_jsx_expr(&expr_for_slot);

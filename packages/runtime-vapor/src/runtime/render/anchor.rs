@@ -4,6 +4,7 @@ use super::super::types::{AnchorMountState, MountInput, MountedState};
 use crate::log::{log, want_log};
 use crate::reactive::core::batch_scope;
 use crate::runtime::dom_adapter::DomAdapter;
+use js_sys::Reflect;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
 
@@ -41,7 +42,11 @@ where
 
                 if let Some(old_mount) = taken {
                     let mut dest_parent = self.resolve_dest_parent_for_end(parent, &anchor);
+                    let global = js_sys::global();
+                    let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                    let _ = Reflect::set(&global, &source_key, &JsValue::from_str("clear_anchor"));
                     self.clear_mounted_state(&mut dest_parent, old_mount);
+                    let _ = Reflect::delete_property(&global, &source_key);
                 }
             }
 
@@ -106,7 +111,15 @@ where
                     Some(MountedState::Block(old_block)) => {
                         let mut dest_parent = self.resolve_dest_parent_for_end(parent, &anchor);
                         self.call_hooks("before_update");
+                        let global = js_sys::global();
+                        let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                        let _ = Reflect::set(
+                            &global,
+                            &source_key,
+                            &JsValue::from_str("render_anchor_impl:block"),
+                        );
                         self.clear_mounted_state(&mut dest_parent, MountedState::Block(old_block));
+                        let _ = Reflect::delete_property(&global, &source_key);
                         if let Some(mounted) = self.render_anchor_mount(input, parent, &anchor) {
                             self.call_hooks("updated");
                             if let Some(entry) = self.anchor_map.get_mut(idx) {
@@ -159,7 +172,7 @@ where
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        if let Some(mounted) = self.mount_from_input(input) {
+        if let Some(mounted) = self.mount_from_input(input, Some(parent)) {
             let Some(el) = mounted.host_cloned() else {
                 return None;
             };

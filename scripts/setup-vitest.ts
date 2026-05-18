@@ -105,6 +105,6 @@ afterEach(() => {
 })
 
 beforeAll(() => {
-  ;(globalThis as any).__rue_active = createRue((globalThis as any).__rue_dom)
+  ;(globalThis as any).__rue_active = createRue()
   ;(globalThis as any).__rue_active.setDOMAdapter((globalThis as any).__rue_dom)
 })

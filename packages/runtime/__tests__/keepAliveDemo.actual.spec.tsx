@@ -16,11 +16,13 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const mountedContainers = new Set<HTMLElement>()
+
 const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active = (globalThis as any).__rue
 }
 
-const findTab = (root: ParentNode, label: string) =>
+const _findTab = (root: ParentNode, label: string) =>
   Array.from(root.querySelectorAll('button[role="tab"]')).find(
     button => button.textContent?.trim() === label,
   ) ?? null
@@ -32,7 +34,32 @@ const findButton = (root: ParentNode, label: string) =>
 
 const normalizedText = (root: ParentNode) => root.textContent?.replace(/\s+/g, ' ').trim() ?? ''
 
+const waitForButton = async (root: ParentNode, label: string) => {
+  let button: Element | null = null
+  await waitForContent(() => {
+    button = findButton(root, label)
+    expect(button).not.toBeNull()
+  })
+  return button
+}
+
+const waitForDraftInput = async (root: ParentNode): Promise<HTMLInputElement> => {
+  let input: HTMLInputElement | null = null
+  await waitForContent(() => {
+    input = root.querySelector('input.input') as HTMLInputElement | null
+    expect(input).not.toBeNull()
+  })
+  if (!input) {
+    throw new Error('Expected draft input to exist')
+  }
+  return input
+}
+
 afterEach(() => {
+  mountedContainers.forEach(container => {
+    render(null as any, container)
+  })
+  mountedContainers.clear()
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
@@ -40,6 +67,7 @@ afterEach(() => {
 describe('KeepAliveDemo actual page', () => {
   it('keeps the counter panel cached when switching views in the default cache mode', async () => {
     const container = mountContainer()
+    mountedContainers.add(container)
     resetActiveRuntime()
     render(<KeepAliveDemo />, container)
 
@@ -68,6 +96,7 @@ describe('KeepAliveDemo actual page', () => {
 
   it('does not cache the draft panel when excludeDraft mode is selected', async () => {
     const container = mountContainer()
+    mountedContainers.add(container)
     resetActiveRuntime()
     render(<KeepAliveDemo />, container)
 
@@ -76,11 +105,10 @@ describe('KeepAliveDemo actual page', () => {
       expect(findButton(container, '排除草稿')).not.toBeNull()
     })
 
-    await click(findButton(container, '排除草稿'))
-    await click(findButton(container, '草稿'))
+    await click(await waitForButton(container, '排除草稿'))
+    await click(await waitForButton(container, '草稿'))
 
-    const input = container.querySelector('input.input') as HTMLInputElement | null
-    expect(input).not.toBeNull()
+    const input = await waitForDraftInput(container)
     input!.value = '缓存不会保留'
     input!.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }))
 
@@ -89,8 +117,8 @@ describe('KeepAliveDemo actual page', () => {
       expect(normalizedText(container)).toContain('缓存模式： DraftPanel 不缓存')
     })
 
-    await click(findButton(container, '动态'))
-    await click(findButton(container, '草稿'))
+    await click(await waitForButton(container, '动态'))
+    await click(await waitForButton(container, '草稿'))
 
     await waitForContent(() => {
       const draftInput = container.querySelector('input.input') as HTMLInputElement | null
@@ -101,6 +129,7 @@ describe('KeepAliveDemo actual page', () => {
 
   it('prunes the least recently used cached view when max=2 is selected', async () => {
     const container = mountContainer()
+    mountedContainers.add(container)
     resetActiveRuntime()
     render(<KeepAliveDemo />, container)
 
@@ -109,20 +138,19 @@ describe('KeepAliveDemo actual page', () => {
       expect(findButton(container, 'max=2')).not.toBeNull()
     })
 
-    await click(findButton(container, 'max=2'))
-    await click(findButton(container, '增加'))
+    await click(await waitForButton(container, 'max=2'))
+    await click(await waitForButton(container, '增加'))
     await waitForContent(() => {
       expect(container.textContent).toContain('1')
     })
 
-    await click(findButton(container, '草稿'))
-    const draftInput = container.querySelector('input.input') as HTMLInputElement | null
-    expect(draftInput).not.toBeNull()
+    await click(await waitForButton(container, '草稿'))
+    const draftInput = await waitForDraftInput(container)
     draftInput!.value = '保留到上限'
     draftInput!.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }))
 
-    await click(findButton(container, '动态'))
-    await click(findButton(container, '添加记录'))
+    await click(await waitForButton(container, '动态'))
+    await click(await waitForButton(container, '添加记录'))
     await waitForContent(() => {
       expect(container.textContent).toContain('记录 2')
     })

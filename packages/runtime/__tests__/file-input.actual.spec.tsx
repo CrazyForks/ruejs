@@ -69,7 +69,7 @@ describe('FileInput actual page', () => {
       findDemo(container, '# File input sizes')?.querySelectorAll('input[type="file"]').length,
     ).toBe(0)
 
-    await click(findTabButton(sizesDemo!, '预览'))
+    await click(findTabButton(findDemo(container, '# File input sizes')!, '预览'))
 
     await waitForContent(() => {
       expect(

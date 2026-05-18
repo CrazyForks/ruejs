@@ -19,7 +19,7 @@ const MyComponent: FC = () => {
 }
 ```
 
-还有其他钩子将在实例生命周期的不同阶段被调用，最常用的是 [`onMounted`](/api/composition-api-lifecycle#onmounted)、[`onUpdated`](/api/composition-api-lifecycle#onupdated) 和 [`onUnmounted`](/api/composition-api-lifecycle#onunmounted)。
+还有其他钩子将在实例生命周期的不同阶段被调用，最常用的是 [`onMounted`](/api/api/composition-api-lifecycle#onmounted)、[`onUpdated`](/api/api/composition-api-lifecycle#onupdated) 和 [`onUnmounted`](/api/api/composition-api-lifecycle#onunmounted)。
 
 当调用 `onMounted` 时，Rue 会自动将注册的回调函数与当前活动的组件实例关联。这要求这些钩子在组件设置期间**同步**注册。例如，不要这样做：
 
@@ -37,11 +37,11 @@ setTimeout(() => {
 
 下面是实例生命周期的图示。你现在不需要完全理解所有内容，但随着学习和构建更多项目，它将是一个有用的参考。
 
-![组件生命周期图示](./images/lifecycle.png)
+![组件生命周期图示](@todo)
 
 <!-- https://www.figma.com/file/Xw3UeNMOralY6NV7gSjWdS/Vue-Lifecycle -->
 
-查阅 [生命周期钩子 API 参考](/api/composition-api-lifecycle) 以了解所有生命周期钩子及其各自用例的详细信息。
+查阅 [生命周期钩子 API 参考](/api/api/composition-api-lifecycle) 以了解所有生命周期钩子及其各自用例的详细信息。
 
 ## 常用生命周期钩子 {#common-lifecycle-hooks}
 

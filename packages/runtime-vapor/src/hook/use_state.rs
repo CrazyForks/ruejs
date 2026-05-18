@@ -15,6 +15,7 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 
+use crate::hook::is_reactive::is_reactive;
 use crate::reactive::context::with_hook_slot;
 use crate::reactive::signal::{create_reactive, create_signal};
 
@@ -116,12 +117,16 @@ pub fn use_state(initial: JsValue, options: Option<JsValue>) -> JsValue {
             create_signal(init, opts_out).into()
         } else if kind == "reactive" {
             // 创建响应式对象/数组代理
-            let opts_out = equals.clone().map(|eqf| {
-                let o = Object::new();
-                let _ = Reflect::set(&o, &JsValue::from_str("equals"), &eqf);
-                o.into()
-            });
-            create_reactive(init, opts_out)
+            if init_is_object && is_reactive(init.clone()) {
+                init.clone()
+            } else {
+                let opts_out = equals.clone().map(|eqf| {
+                    let o = Object::new();
+                    let _ = Reflect::set(&o, &JsValue::from_str("equals"), &eqf);
+                    o.into()
+                });
+                create_reactive(init, opts_out)
+            }
         } else {
             // 默认使用 ref：包裹为 { value } 并创建响应式代理，等值比较针对 value 字段
             let eq_wrapped = equals.clone().map(|eqf| {

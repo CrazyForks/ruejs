@@ -122,7 +122,7 @@
   useSomeFeature(toRef(() => props.foo))
   ```
 
-  当 `toRef` 与组件 props 一起使用时，修改 props 的常规限制仍然适用。尝试为 ref 分配新值等同于尝试直接修改 prop，这是不允许的。在这种情况下，你可能需要考虑改用带有 `get` 和 `set` 的 [`computed`](./reactivity-core#computed)。有关更多信息，请参阅[在组件上使用 `v-model`](/guide/components/v-model) 指南。
+  当 `toRef` 与组件 props 一起使用时，修改 props 的常规限制仍然适用。尝试为 ref 分配新值等同于尝试直接修改 prop，这是不允许的。在这种情况下，你可能需要考虑改用带有 `get` 和 `set` 的 [`computed`](/api/api/reactivity-core#computed)。有关更多信息，请参阅[在组件上使用 `v-model`](/guide/guide/components/v-model) 指南。
 
   当使用对象属性签名时，即使源属性当前不存在，`toRef()` 也会返回一个可用的 ref。这使得处理可选属性成为可能，而 [`toRefs`](#torefs) 无法处理这种情况。
 
@@ -130,7 +130,7 @@
 
 将值/refs/getters 规范化为值。这与 [unref()](#unref) 类似，但它还会规范化 getters。如果参数是 getter，它将被调用并返回其返回值。
 
-这可以在[组合式函数](/guide/reusability/composables.html)中用于规范化一个可以是值、ref 或 getter 的参数。
+这可以在[组合式函数](/guide/guide/reusability/composables)中用于规范化一个可以是值、ref 或 getter 的参数。
 
 - **类型**
 
@@ -229,7 +229,7 @@
 
 ## isProxy() {#isproxy} @todo
 
-检查对象是否是由 [`reactive()`](./reactivity-core#reactive)、[`readonly()`](./reactivity-core#readonly)、[`shallowReactive()`](./reactivity-advanced#shallowreactive) 或 [`shallowReadonly()`](./reactivity-advanced#shallowreadonly) 创建的代理。
+检查对象是否是由 [`reactive()`](/api/api/reactivity-core#reactive)、[`readonly()`](/api/api/reactivity-core#readonly)、[`shallowReactive()`](/api/api/reactivity-advanced#shallowreactive) 或 [`shallowReadonly()`](/api/api/reactivity-advanced#shallowreadonly) 创建的代理。
 
 - **类型**
 
@@ -239,7 +239,7 @@
 
 ## isReactive() {#isreactive}
 
-检查对象是否是由 [`reactive()`](./reactivity-core#reactive) 或 [`shallowReactive()`](./reactivity-advanced#shallowreactive) 创建的代理。
+检查对象是否是由 [`reactive()`](/api/api/reactivity-core#reactive) 或 [`shallowReactive()`](/api/api/reactivity-advanced#shallowreactive) 创建的代理。
 
 - **类型**
 
@@ -251,7 +251,7 @@
 
 检查传递的值是否为只读对象。只读对象的属性可以更改，但不能直接通过传递的对象分配。
 
-由 [`readonly()`](./reactivity-core#readonly) 和 [`shallowReadonly()`](./reactivity-advanced#shallowreadonly) 创建的代理都被认为是只读的，同样，没有 `set` 函数的 [`computed()`](./reactivity-core#computed) ref 也是如此。
+由 [`readonly()`](/api/api/reactivity-core#readonly) 和 [`shallowReadonly()`](/api/api/reactivity-advanced#shallowreadonly) 创建的代理都被认为是只读的，同样，没有 `set` 函数的 [`computed()`](/api/api/reactivity-core#computed) ref 也是如此。
 
 - **类型**
 

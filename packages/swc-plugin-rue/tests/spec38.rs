@@ -494,7 +494,7 @@ const Header: FC<{
     theme: string;
     setTheme: (t: string) => void;
 }> = (p)=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$vaporWithHookId("useSetup:0:0:dup1", ()=>useSetup(()=>{
             const [open, setOpen] = _$vaporWithHookId("useState:1:0", ()=>useState<string | null>(null));
             const route = useRoute();
             _$vaporWithHookId("useEffect:1:1", ()=>useEffect(()=>{
@@ -760,7 +760,7 @@ const Footer: FC = ()=>(<footer className="w-full bg-base-200">
 const SiteLayout: FC<{
     title?: string;
 }> = (props)=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$vaporWithHookId("useSetup:0:0:dup2", ()=>useSetup(()=>{
             const [theme, setTheme] = _$vaporWithHookId("useState:1:3", ()=>useState<string>(()=>{
                     const saved = localStorage.getItem('rue.theme');
                     return saved || 'light';

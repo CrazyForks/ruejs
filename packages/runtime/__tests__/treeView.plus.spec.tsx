@@ -32,16 +32,16 @@ const click = async (el: Element | null) => {
   await flush()
 }
 
-const getRootList = (container: HTMLElement) =>
+const _getRootList = (container: HTMLElement) =>
   container.querySelector('ul > li > ul') as HTMLUListElement | null
 
-const getRootAdd = (container: HTMLElement) => getRootList(container)?.lastElementChild ?? null
+const getRootAdd = (container: HTMLElement) => container.querySelector('[data-testid="add-root"]')
 
-const getBranchItem = (container: HTMLElement) =>
+const _getBranchItem = (container: HTMLElement) =>
   container.querySelector('[data-testid="label-branch"]')?.parentElement ?? null
 
 const getBranchAdd = (container: HTMLElement) =>
-  getBranchItem(container)?.querySelector('ul')?.lastElementChild ?? null
+  container.querySelector('[data-testid="add-branch"]')
 
 describe('TreeView plus interactions', () => {
   it('keeps the root add button clickable across repeated inserts', async () => {

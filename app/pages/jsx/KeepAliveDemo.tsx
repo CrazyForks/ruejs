@@ -1,4 +1,13 @@
-import { Component, KeepAlive, ref, useState, type FC } from '@rue-js/rue'
+import {
+  Component,
+  KeepAlive,
+  ref,
+  renderAnchor,
+  useState,
+  vapor,
+  watchEffect,
+  type FC,
+} from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -132,6 +141,29 @@ const resolveKeepAliveProps = (mode: CacheMode) => {
   return {}
 }
 
+const KeepAliveViewport: FC<{
+  activeView: { value: ViewName }
+  cacheMode: { value: CacheMode }
+}> = props => {
+  return vapor(() => {
+    const root = document.createDocumentFragment()
+    const anchor = document.createComment('keep-alive-demo-anchor')
+    root.appendChild(anchor)
+
+    watchEffect(() => {
+      renderAnchor(
+        <KeepAlive {...resolveKeepAliveProps(props.cacheMode.value)}>
+          <Component is={views[props.activeView.value]} key={props.activeView.value} />
+        </KeepAlive>,
+        root as any,
+        anchor as any,
+      )
+    })
+
+    return root as any
+  }) as any
+}
+
 const KeepAliveDemo: FC = () => {
   const activeTab = ref<'preview' | 'code'>('preview')
   const activeView = ref<ViewName>('CounterPanel')
@@ -219,9 +251,7 @@ const KeepAliveDemo: FC = () => {
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
               <div className="rounded-box border border-dashed border-base-300 p-4 min-h-64">
-                <KeepAlive {...resolveKeepAliveProps(cacheMode.value)}>
-                  <Component is={views[activeView.value]} key={activeView.value} />
-                </KeepAlive>
+                <KeepAliveViewport activeView={activeView} cacheMode={cacheMode} />
               </div>
 
               <aside className="rounded-box border border-base-300 bg-base-200 p-4 text-sm space-y-2">

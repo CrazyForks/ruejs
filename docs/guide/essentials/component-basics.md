@@ -2,7 +2,7 @@
 
 组件允许我们将 UI 拆分为独立且可复用的部分，并可以对每个部分进行独立思考。
 
-应用通常由嵌套的组件树来组织，这与我们嵌套原生 HTML 元素的方式非常相似，但 Rue 实现了自己的组件模型，使我们能够在每个组件中封装自定义内容和逻辑。Rue 也能与原生 Web Components 良好协作。如果你对 Rue 组件与原生 Web Components 之间的关系感到好奇，请[点此阅读更多](/guide/extras/web-components)。
+应用通常由嵌套的组件树来组织，这与我们嵌套原生 HTML 元素的方式非常相似，但 Rue 实现了自己的组件模型，使我们能够在每个组件中封装自定义内容和逻辑。Rue 也能与原生 Web Components 良好协作。如果你对 Rue 组件与原生 Web Components 之间的关系感到好奇，请[点此阅读更多](/guide/guide/extras/web-components)。
 
 ## 定义一个组件 {#defining-a-component}
 
@@ -102,7 +102,7 @@ const posts = ref([
 <BlogPost v-for="post in posts" key={post.id} title={post.title} />
 ```
 
-以上就是你目前需要了解的 props 知识。阅读完本页并对其内容感到熟悉后，我们建议稍后回来阅读完整的 [Props](/guide/components/props) 指南。
+以上就是你目前需要了解的 props 知识。阅读完本页并对其内容感到熟悉后，我们建议稍后回来阅读完整的 [Props](/guide/guide/components/props) 指南。
 
 ## 监听事件 {#listening-to-events}
 
@@ -144,7 +144,7 @@ const postFontSize = ref(1)
  />
 ```
 
-子组件可以通过调用内置的 [**`emitted`** 方法](/api/component-instance#emit)，传入事件名来触发事件：
+子组件可以通过调用内置的 [**`emitted`** 方法](@todo)，传入事件名来触发事件：
 
 ```tsx
 <div class="blog-post">
@@ -175,7 +175,7 @@ const BlogPost: FC<BlogPostProps> = props => (
 export default BlogPost
 ```
 
-这使得子组件向父组件的通信更加明确，并让 TypeScript 能够直接感知回调契约。如果你使用对象形式的组件，`emits` 选项仍然可以记录并可选地[验证事件](/guide/components/events#events-validation)。
+这使得子组件向父组件的通信更加明确，并让 TypeScript 能够直接感知回调契约。如果你使用对象形式的组件，`emits` 选项仍然可以记录并可选地[验证事件](/guide/guide/components/events#events-validation)。
 
 <div class="composition-api">
 
@@ -192,7 +192,7 @@ export default BlogPost
 
 </div>
 
-以上就是你目前需要了解的自定义组件事件。阅读完本页并对其内容感到熟悉后，我们建议稍后回来阅读完整的[自定义事件](/guide/components/events)指南。
+以上就是你目前需要了解的自定义组件事件。阅读完本页并对其内容感到熟悉后，我们建议稍后回来阅读完整的[自定义事件](/guide/guide/components/events)指南。
 
 ## 通过插槽分发内容 {#content-distribution-with-slots}
 
@@ -219,7 +219,7 @@ export default BlogPost
 
 如上所示，我们使用 `<slot>` 作为内容放置的占位符——就这样，大功告成！
 
-以上就是你目前需要了解的插槽知识。阅读完本页并对其内容感到熟悉后，我们建议稍后回来阅读完整的[插槽](/guide/components/slots)指南。
+以上就是你目前需要了解的插槽知识。阅读完本页并对其内容感到熟悉后，我们建议稍后回来阅读完整的[插槽](/guide/guide/components/slots)指南。
 
 ## 动态组件 {#dynamic-components}
 
@@ -251,7 +251,7 @@ export default BlogPost
 
 你也可以使用 `is` 属性来创建普通 HTML 元素。
 
-当使用 `<component :is="...">` 在多个组件间切换时，被切换掉的组件将会被卸载。我们可以通过内置的 [`<KeepAlive>` 组件](/guide/built-ins/keep-alive)强制不活跃的组件保持"存活"状态。
+当使用 `<component :is="...">` 在多个组件间切换时，被切换掉的组件将会被卸载。我们可以通过内置的 [`<KeepAlive>` 组件](/guide/guide/built-ins/keep-alive)强制不活跃的组件保持"存活"状态。
 
 ## DOM 模板解析注意事项 {#in-dom-template-parsing-caveats}
 
@@ -328,7 +328,7 @@ const BlogPost = {
 </table>
 ```
 
-自定义组件 `<blog-post-row>` 会被作为无效内容提升出来，导致最终渲染输出中出现错误。我们可以使用特殊的 [`is` 属性](/api/built-in-special-attributes#is)作为变通方案：
+自定义组件 `<blog-post-row>` 会被作为无效内容提升出来，导致最终渲染输出中出现错误。我们可以使用特殊的 [`is` 属性](/api/api/built-in-special-attributes#is)作为变通方案：
 
 ```Rue-html
 <table>

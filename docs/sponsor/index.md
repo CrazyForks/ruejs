@@ -38,12 +38,12 @@ https://github.com/hunzhiwange/ruejs/issues
 | 赞助等级                   | 月赞助金额 (USD) | 权益描述                                                                                                                         |
 | :------------------------- | :--------------- | :------------------------------------------------------------------------------------------------------------------------------- |
 | **全球特别赞助商**         | 专属洽谈         | 全球仅限 **5 席**。<br>• Rue 官网首页首屏核心区域 Logo 展示。<br>• 所有展示位置享有最高优先级与最醒目呈现。                      |
-| **白金**                   | $2,000           | • Rue 官网首页显著位置 Logo 展示。<br>• 文档内容页侧边栏显著位置 Logo 展示。<br>• `hunzhiwange/ruejs` 仓库 README 显著位置展示。 |
-| **黄金**                   | $500             | • Rue 官网首页大型 Logo 展示。<br>• `hunzhiwange/ruejs` 仓库 README 大型 Logo 展示。                                             |
-| **白银**                   | $250             | • 在 `hunzhiwange/ruejs` 仓库的 `BACKERS.md` 文件中型 Logo/名称展示。                                                            |
-| **青铜**                   | $100             | • 在 `hunzhiwange/ruejs` 仓库的 `BACKERS.md` 文件小型 Logo/名称展示。                                                            |
-| **慷慨支持者 (个人/企业)** | $50              | • 名字列于 `hunzhiwange/ruejs` 仓库的 `BACKERS.md` 文件，位置优先于其他个人支持者。                                              |
-| **个人支持者**             | $5               | • 名字列于 `hunzhiwange/ruejs` 仓库的 `BACKERS.md` 文件。                                                                        |
+| **白金**                   | $0               | • Rue 官网首页显著位置 Logo 展示。<br>• 文档内容页侧边栏显著位置 Logo 展示。<br>• `hunzhiwange/ruejs` 仓库 README 显著位置展示。 |
+| **黄金**                   | $0               | • Rue 官网首页大型 Logo 展示。<br>• `hunzhiwange/ruejs` 仓库 README 大型 Logo 展示。                                             |
+| **白银**                   | $0               | • 在 `hunzhiwange/ruejs` 仓库的 `BACKERS.md` 文件中型 Logo/名称展示。                                                            |
+| **青铜**                   | $0               | • 在 `hunzhiwange/ruejs` 仓库的 `BACKERS.md` 文件小型 Logo/名称展示。                                                            |
+| **慷慨支持者 (个人/企业)** | $0               | • 名字列于 `hunzhiwange/ruejs` 仓库的 `BACKERS.md` 文件，位置优先于其他个人支持者。                                              |
+| **个人支持者**             | $0               | • 名字列于 `hunzhiwange/ruejs` 仓库的 `BACKERS.md` 文件。                                                                        |
 
 _(注：一次性赞助将根据金额折算为等效的月度支持周期进行荣誉展示)_
 

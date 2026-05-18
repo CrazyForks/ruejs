@@ -16,11 +16,26 @@ use crate::utils::unwrap_expr;
 use super::VaporTransform;
 use crate::log;
 
+fn vapor_parent_param() -> Pat {
+    Pat::Ident(BindingIdent { id: ident("__rue_parent_context"), type_ann: None })
+}
+
 /// 访问器核心：
 /// - 将表达式体或 `return` 返回的 JSX/Fragment 包裹进 `vapor(() => { ... })`
 /// - 通过 `jsx_to_block/fragment_to_block` 生成块体，避免运行时解析 JSX
 /// - 在发生转换后设置 `did_transform=true`，Module 访问阶段按需注入运行时 import
 impl VisitMut for VaporTransform {
+    fn visit_mut_block_stmt(&mut self, block: &mut BlockStmt) {
+        let visible_renderable_locals = self.current_renderable_local_names();
+        let scope = crate::element_expr::collect_renderable_local_alias_names(
+            block.stmts.iter(),
+            &visible_renderable_locals,
+        );
+        self.push_renderable_local_scope(scope);
+        block.visit_mut_children_with(self);
+        self.pop_renderable_local_scope();
+    }
+
     /// 将 `() => <JSX />` 的箭头函数体替换为 `() => vapor(() => { ... })`
     /// 生成块体示例（参考 `tests/spec1.rs`）：
     /// - `const _root = _$createElement("div");`
@@ -38,7 +53,7 @@ impl VisitMut for VaporTransform {
                         let block = self.jsx_to_block(el.as_ref());
                         let func = Expr::Arrow(ArrowExpr {
                             span: DUMMY_SP,
-                            params: vec![],
+                            params: vec![vapor_parent_param()],
                             body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
                             is_async: false,
                             is_generator: false,
@@ -57,7 +72,7 @@ impl VisitMut for VaporTransform {
                         let block = self.jsx_fragment_to_block(frag);
                         let func = Expr::Arrow(ArrowExpr {
                             span: DUMMY_SP,
-                            params: vec![],
+                            params: vec![vapor_parent_param()],
                             body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
                             is_async: false,
                             is_generator: false,
@@ -77,8 +92,9 @@ impl VisitMut for VaporTransform {
             }
             BlockStmtOrExpr::BlockStmt(block) => {
                 log::debug("rue-swc: arrow block");
-                // 递归访问块体，让嵌套分支中的 return 也能转换为 vapor(() => { ... })
-                block.visit_mut_children_with(self);
+                // 必须走 block visitor 本身，才能为块内 `const iconNode = <JSX />` 这类 bare local
+                // renderable alias 建立作用域；只访问 children 会绕过 visit_mut_block_stmt。
+                block.visit_mut_with(self);
             }
         }
     }
@@ -94,7 +110,7 @@ impl VisitMut for VaporTransform {
                     let body_block = self.jsx_to_block(el.as_ref());
                     let func = Expr::Arrow(ArrowExpr {
                         span: DUMMY_SP,
-                        params: vec![],
+                        params: vec![vapor_parent_param()],
                         body: Box::new(BlockStmtOrExpr::BlockStmt(body_block)),
                         is_async: false,
                         is_generator: false,
@@ -112,7 +128,7 @@ impl VisitMut for VaporTransform {
                     let body_block = self.jsx_fragment_to_block(frag);
                     let func = Expr::Arrow(ArrowExpr {
                         span: DUMMY_SP,
-                        params: vec![],
+                        params: vec![vapor_parent_param()],
                         body: Box::new(BlockStmtOrExpr::BlockStmt(body_block)),
                         is_async: false,
                         is_generator: false,
@@ -132,8 +148,18 @@ impl VisitMut for VaporTransform {
     /// 模块级处理：在发生 Vapor 转换后，按需注入 `@rue-js/rue` 运行时 import
     fn visit_mut_module(&mut self, m: &mut Module) {
         log::debug("rue-swc: visit module");
+        let visible_renderable_locals = self.current_renderable_local_names();
+        let scope = crate::element_expr::collect_renderable_local_alias_names(
+            m.body.iter().filter_map(|item| match item {
+                ModuleItem::Stmt(stmt) => Some(stmt),
+                _ => None,
+            }),
+            &visible_renderable_locals,
+        );
+        self.push_renderable_local_scope(scope);
         // propagate into children first
         m.visit_mut_children_with(self);
+        self.pop_renderable_local_scope();
         if !self.did_transform {
             return;
         }

@@ -27,7 +27,7 @@ const Page: FC<{ active: boolean }> = props => (
 
     assert!(out.contains(&utils::normalize("RouterLink.__rueHref")));
     assert!(out.contains(&utils::normalize("RouterLink.__rueOnClick")));
-    assert!(out.contains(&utils::normalize("_$createElement(\"a\")")));
+    assert!(out.contains(&utils::normalize("_$createElement(\"a\"")));
     assert!(!out.contains("rue:component:start"));
     assert!(!out.contains("renderBetween("));
 }

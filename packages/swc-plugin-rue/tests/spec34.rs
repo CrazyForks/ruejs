@@ -163,7 +163,7 @@ export default DocDetail
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { useState, useEffect, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName, _$setInnerHTML } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { useState, useEffect, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName, _$setInnerHTML } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink, useRoute } from '@rue-js/router';
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlayground';
@@ -358,7 +358,7 @@ const DocDetail: FC = ()=>{
                             _$appendChild(_el3, _list1);
                             watchEffect(()=>{
                               const __slot = (prev.title);
-                              renderAnchor(__slot, _el3, _list1);
+                              untrack(()=>renderAnchor(__slot, _el3, _list1));
                             });
                             return _root;
                         }) : vapor(()=>{
@@ -367,7 +367,7 @@ const DocDetail: FC = ()=>{
                             _$appendChild(_root, _el4);
                             return _root;
                         });
-                          renderAnchor(__slot, _el2, _list2);
+                          untrack(()=>renderAnchor(__slot, _el2, _list2));
                     });
                     _$appendChild(_el2, _$createTextNode(" "));
                         const _list4 = _$createComment("rue:slot:anchor");
@@ -387,7 +387,7 @@ const DocDetail: FC = ()=>{
                             _$appendChild(_el5, _list3);
                             watchEffect(()=>{
                               const __slot = (next.title);
-                              renderAnchor(__slot, _el5, _list3);
+                              untrack(()=>renderAnchor(__slot, _el5, _list3));
                             });
                             _$appendChild(_el5, _$createTextNode(" →"));
                             return _root;
@@ -397,11 +397,11 @@ const DocDetail: FC = ()=>{
                             _$appendChild(_root, _el6);
                             return _root;
                         });
-                          renderAnchor(__slot, _el2, _list4);
+                          untrack(()=>renderAnchor(__slot, _el2, _list4));
                     });
                     return _root;
                 }) : "";
-                      renderAnchor(__slot, _root, _list5);
+                      untrack(()=>renderAnchor(__slot, _root, _list5));
             });
             return _root;
         });
@@ -410,7 +410,7 @@ const DocDetail: FC = ()=>{
                 type: sidebarType,
                 children: __child1
             });
-                    renderAnchor(__slot7, _root, _list6);
+              untrack(()=>renderAnchor(__slot7, _root, _list6));
         });
         return _root;
     });

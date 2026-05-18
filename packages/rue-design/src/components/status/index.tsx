@@ -168,7 +168,7 @@ const resolveToneClasses = (tone?: StatusTone) => {
   }
 }
 
-const toCssLength = (value: number | string) => {
+const _toCssLength = (value: number | string) => {
   return typeof value === 'number' ? `${value}px` : value
 }
 

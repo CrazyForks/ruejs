@@ -1015,7 +1015,7 @@ const columns = [
                 title={rows => (
                   <div className="text-sm font-medium">成员列表（当前页 {rows.length} 行）</div>
                 )}
-                footer={rows => (
+                footer={_rows => (
                   <div className="text-sm opacity-70">展示了固定列、纵向滚动和 ellipsis。</div>
                 )}
               />

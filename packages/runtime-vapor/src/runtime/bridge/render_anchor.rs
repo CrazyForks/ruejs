@@ -27,9 +27,7 @@ impl WasmRue {
         #[cfg(not(feature = "compat"))]
         let compat_entry_policy = CompatEntryPolicy::DefaultSurfaceOnly;
 
-        let Some(input) =
-            self.mount_input_from_input(&input_value, compat_entry_policy)
-        else {
+        let Some(input) = self.mount_input_from_input(&input_value, compat_entry_policy) else {
             let should_report_error = !input_value.is_null() && !input_value.is_undefined();
             #[cfg(feature = "dev")]
             {

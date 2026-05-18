@@ -50,14 +50,14 @@ const Refs: FC = ()=>{
             };
         }));
     const { inputRef: inputRef, focus: focus } = _$useSetup;
-    return vapor(()=>{
-        const _root = _$createElement("div");
+    return vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3");
+        const _el1 = _$createElement("h3", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "text-xl font-semibold");
         _$appendChild(_el1, _$createTextNode("Refs 基础"));
-        const _el2 = _$createElement("input");
+        const _el2 = _$createElement("input", _root);
         _$appendChild(_root, _el2);
         const _el2_ref_stop = _$vaporBindUseRef(_el2, ()=>(inputRef));
         onBeforeUnmount(()=>{
@@ -65,12 +65,12 @@ const Refs: FC = ()=>{
         });
         _$setClassName(_el2, "border rounded-md px-2 py-1");
         _$setAttribute(_el2, "placeholder", "点击按钮自动聚焦");
-        const _el3 = _$createElement("button");
+        const _el3 = _$createElement("button", _root);
         _$appendChild(_root, _el3);
         _$setClassName(_el3, "px-3 py-2 rounded-md bg-blue-600 text白");
         _$addEventListener(_el3, "click", (focus));
         _$appendChild(_el3, _$createTextNode("聚焦"));
-        const _el4 = _$createElement("a");
+        const _el4 = _$createElement("a", _root);
         _$appendChild(_root, _el4);
         watchEffect(()=>{
             _$setAttribute(_el4, "href", String(RouterLink.__rueHref("/jsx")));

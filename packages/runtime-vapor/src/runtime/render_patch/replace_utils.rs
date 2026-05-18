@@ -2,6 +2,7 @@ use super::super::Rue;
 use super::super::types::{MountLifecycleRecord, MountedState};
 use crate::runtime::dom_adapter::DomAdapter;
 use js_sys::JsString;
+use js_sys::{Array, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 
 // 替换与插入辅助工具：
@@ -15,6 +16,129 @@ impl<A: DomAdapter> Rue<A>
 where
     A::Element: Clone,
 {
+    fn debug_record_cleared_sidebar(&self, parent: &A::Element, host: &A::Element)
+    where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        let host_js: JsValue = host.clone().into();
+        let host_class = Reflect::get(&host_js, &JsValue::from_str("className"))
+            .unwrap_or(JsValue::UNDEFINED)
+            .as_string()
+            .unwrap_or_default();
+        if !host_class.contains("sidebar-playground") {
+            return;
+        }
+
+        let global = js_sys::global();
+        let enabled = Reflect::get(&global, &JsValue::from_str("__rue_debug_clear_enabled__"))
+            .unwrap_or(JsValue::FALSE);
+        if !enabled.as_bool().unwrap_or(false) {
+            return;
+        }
+
+        let key = JsValue::from_str("__rue_debug_clear__");
+        let existing = Reflect::get(&global, &key).unwrap_or(JsValue::UNDEFINED);
+        let array = if Array::is_array(&existing) { Array::from(&existing) } else { Array::new() };
+        let record = Object::new();
+        let parent_js: JsValue = parent.clone().into();
+        let _ =
+            Reflect::set(&record, &JsValue::from_str("hostClass"), &JsValue::from_str(&host_class));
+        let _ = Reflect::set(
+            &record,
+            &JsValue::from_str("parentClass"),
+            &Reflect::get(&parent_js, &JsValue::from_str("className"))
+                .unwrap_or(JsValue::UNDEFINED),
+        );
+        let source = Reflect::get(&global, &JsValue::from_str("__rue_debug_clear_source__"))
+            .unwrap_or(JsValue::UNDEFINED);
+        if !source.is_undefined() && !source.is_null() {
+            let _ = Reflect::set(&record, &JsValue::from_str("source"), &source);
+        }
+        let meta = Reflect::get(&global, &JsValue::from_str("__rue_debug_clear_meta__"))
+            .unwrap_or(JsValue::UNDEFINED);
+        if !meta.is_undefined() && !meta.is_null() {
+            let _ = Reflect::set(&record, &JsValue::from_str("meta"), &meta);
+        }
+        array.push(&record);
+        let _ = Reflect::set(&global, &key, &array.into());
+    }
+
+    fn debug_record_component_anchor_owner(
+        &self,
+        parent: &A::Element,
+        host: Option<&A::Element>,
+        fragment_nodes: &[A::Element],
+    ) where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        let global = js_sys::global();
+        let enabled = Reflect::get(&global, &JsValue::from_str("__rue_debug_clear_enabled__"))
+            .unwrap_or(JsValue::FALSE);
+        if !enabled.as_bool().unwrap_or(false) {
+            return;
+        }
+
+        let has_component_anchor = fragment_nodes.iter().any(|node| {
+            let node_js: JsValue = node.clone().into();
+            Reflect::get(&node_js, &JsValue::from_str("nodeValue"))
+                .unwrap_or(JsValue::UNDEFINED)
+                .as_string()
+                .is_some_and(|value| value == "rue:component:anchor")
+        });
+        if !has_component_anchor {
+            return;
+        }
+
+        let key = JsValue::from_str("__rue_debug_clear__");
+        let existing = Reflect::get(&global, &key).unwrap_or(JsValue::UNDEFINED);
+        let array = if Array::is_array(&existing) { Array::from(&existing) } else { Array::new() };
+        let record = Object::new();
+        let parent_js: JsValue = parent.clone().into();
+        let _ = Reflect::set(
+            &record,
+            &JsValue::from_str("kind"),
+            &JsValue::from_str("component-anchor-owner"),
+        );
+        let _ = Reflect::set(
+            &record,
+            &JsValue::from_str("parentClass"),
+            &Reflect::get(&parent_js, &JsValue::from_str("className"))
+                .unwrap_or(JsValue::UNDEFINED),
+        );
+        let _ = Reflect::set(
+            &record,
+            &JsValue::from_str("fragmentCount"),
+            &JsValue::from_f64(fragment_nodes.len() as f64),
+        );
+        if let Some(host) = host {
+            let host_js: JsValue = host.clone().into();
+            let _ = Reflect::set(
+                &record,
+                &JsValue::from_str("hostClass"),
+                &Reflect::get(&host_js, &JsValue::from_str("className"))
+                    .unwrap_or(JsValue::UNDEFINED),
+            );
+            let _ = Reflect::set(
+                &record,
+                &JsValue::from_str("hostNodeName"),
+                &Reflect::get(&host_js, &JsValue::from_str("nodeName"))
+                    .unwrap_or(JsValue::UNDEFINED),
+            );
+        }
+        let source = Reflect::get(&global, &JsValue::from_str("__rue_debug_clear_source__"))
+            .unwrap_or(JsValue::UNDEFINED);
+        if !source.is_undefined() && !source.is_null() {
+            let _ = Reflect::set(&record, &JsValue::from_str("source"), &source);
+        }
+        let meta = Reflect::get(&global, &JsValue::from_str("__rue_debug_clear_meta__"))
+            .unwrap_or(JsValue::UNDEFINED);
+        if !meta.is_undefined() && !meta.is_null() {
+            let _ = Reflect::set(&record, &JsValue::from_str("meta"), &meta);
+        }
+        array.push(&record);
+        let _ = Reflect::set(&global, &key, &array.into());
+    }
+
     fn clear_mounted_block_dom(
         &mut self,
         parent: &mut A::Element,
@@ -59,6 +183,11 @@ where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         let (lifecycle, host, fragment_nodes) = mounted.into_dom_identity();
+
+        if let Some(host_ref) = host.as_ref() {
+            self.debug_record_cleared_sidebar(parent, host_ref);
+        }
+        self.debug_record_component_anchor_owner(parent, host.as_ref(), &fragment_nodes);
 
         self.invoke_before_unmount_record(&lifecycle);
         self.clear_mounted_block_dom(parent, host.as_ref(), &fragment_nodes);
@@ -105,7 +234,21 @@ where
             return;
         };
 
+        let global = js_sys::global();
+        let source_key = JsValue::from_str("__rue_debug_clear_source__");
+        let meta_key = JsValue::from_str("__rue_debug_clear_meta__");
+        let anchor_js: JsValue = anchor.clone().into();
+        let _ =
+            Reflect::set(&global, &source_key, &JsValue::from_str("clear_anchor_entry_if_present"));
+        let _ = Reflect::set(
+            &global,
+            &meta_key,
+            &Reflect::get(&anchor_js, &JsValue::from_str("nodeValue"))
+                .unwrap_or(JsValue::UNDEFINED),
+        );
         self.clear_mounted_state(parent, old_mount);
+        let _ = Reflect::delete_property(&global, &source_key);
+        let _ = Reflect::delete_property(&global, &meta_key);
     }
 
     /// 若某个待删除的片段节点本身是 renderBetween 管理的 start 锚点，
@@ -148,7 +291,20 @@ where
             return;
         };
 
+        let global = js_sys::global();
+        let source_key = JsValue::from_str("__rue_debug_clear_source__");
+        let meta_key = JsValue::from_str("__rue_debug_clear_meta__");
+        let start_js: JsValue = start.clone().into();
+        let _ =
+            Reflect::set(&global, &source_key, &JsValue::from_str("clear_range_entry_if_present"));
+        let _ = Reflect::set(
+            &global,
+            &meta_key,
+            &Reflect::get(&start_js, &JsValue::from_str("nodeValue")).unwrap_or(JsValue::UNDEFINED),
+        );
         self.clear_mounted_state(parent, old_mount);
+        let _ = Reflect::delete_property(&global, &source_key);
+        let _ = Reflect::delete_property(&global, &meta_key);
     }
 
     // 片段子节点插入（优先 end 锚点）：

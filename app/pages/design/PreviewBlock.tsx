@@ -18,7 +18,7 @@ const PreviewRenderer: FC<{ preview: PreviewBlockProps['preview'] }> = ({ previe
     return <PreviewComponent />
   }
 
-  return preview
+  return <>{preview}</>
 }
 
 const PreviewBlock: FC<PreviewBlockProps> = ({ title, summary, tab, preview, code }) => {

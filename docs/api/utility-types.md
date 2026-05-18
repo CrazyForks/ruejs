@@ -32,19 +32,19 @@
   }
   ```
 
-- **另请参阅** [指南 - 为组件 Props 添加类型](/guide/typescript/options-api#typing-component-props)
+- **另请参阅** [指南 - 为组件 Props 添加类型](@todo)
 
 ## MaybeRef\<T> {#mayberef}
 
 - 仅在 3.3+ 中支持
 
-`T | Ref<T>` 的别名。用于注释[组合式函数](/guide/reusability/composables.html)的参数。
+`T | Ref<T>` 的别名。用于注释[组合式函数](/guide/guide/reusability/composables)的参数。
 
 ## MaybeRefOrGetter\<T> {#maybereforgetter}
 
 - 仅在 3.3+ 中支持
 
-`T | Ref<T> | (() => T)` 的别名。用于注释[组合式函数](/guide/reusability/composables.html)的参数。
+`T | Ref<T> | (() => T)` 的别名。用于注释[组合式函数](/guide/guide/reusability/composables)的参数。
 
 ## ExtractPropTypes\<T> {#extractproptypes}
 
@@ -126,10 +126,10 @@
   ```
 
   :::tip
-  扩充必须放置在模块 `.ts` 或 `.d.ts` 文件中。有关更多详细信息，请参见[类型扩充放置](/guide/typescript/options-api#augmenting-global-properties)。
+  扩充必须放置在模块 `.ts` 或 `.d.ts` 文件中。有关更多详细信息，请参见[类型扩充放置](@todo)。
   :::
 
-- **另请参阅** [指南 - 扩充全局属性](/guide/typescript/options-api#augmenting-global-properties)
+- **另请参阅** [指南 - 扩充全局属性](@todo)
 
 ## ComponentCustomOptions {#componentcustomoptions}
 
@@ -148,10 +148,10 @@
   ```
 
   :::tip
-  扩充必须放置在模块 `.ts` 或 `.d.ts` 文件中。有关更多详细信息，请参见[类型扩充放置](/guide/typescript/options-api#augmenting-global-properties)。
+  扩充必须放置在模块 `.ts` 或 `.d.ts` 文件中。有关更多详细信息，请参见[类型扩充放置](@todo)。
   :::
 
-- **另请参阅** [指南 - 扩充自定义选项](/guide/typescript/options-api#augmenting-custom-options)
+- **另请参阅** [指南 - 扩充自定义选项](@todo)
 
 ## ComponentCustomProps {#componentcustomprops}
 
@@ -175,7 +175,7 @@
   ```
 
   :::tip
-  扩充必须放置在模块 `.ts` 或 `.d.ts` 文件中。有关更多详细信息，请参见[类型扩充放置](/guide/typescript/options-api#augmenting-global-properties)。
+  扩充必须放置在模块 `.ts` 或 `.d.ts` 文件中。有关更多详细信息，请参见[类型扩充放置](@todo)。
   :::
 
 ## CSSProperties {#cssproperties}
@@ -203,11 +203,11 @@
   ```
 
 :::tip
-扩充必须放置在模块 `.ts` 或 `.d.ts` 文件中。有关更多详细信息，请参见[类型扩充放置](/guide/typescript/options-api#augmenting-global-properties)。
+扩充必须放置在模块 `.ts` 或 `.d.ts` 文件中。有关更多详细信息，请参见[类型扩充放置](@todo)。
 :::
 
 :::info 另请参阅
 SFC `<style>` 标签支持使用 `v-bind` CSS 函数将 CSS 值链接到动态组件状态。这允许自定义属性无需类型扩充。
 
-- [CSS 中的 v-bind()](/api/sfc-css-features#v-bind-in-css)
+- [CSS 中的 v-bind()](@todo)
   :::

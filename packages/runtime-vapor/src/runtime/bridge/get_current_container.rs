@@ -1,15 +1,15 @@
 use super::WasmRue;
+use crate::runtime::shared_runtime_bridge;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 impl WasmRue {
     #[wasm_bindgen(js_name = "getCurrentContainer")]
-    /// 获取当前容器：优先返回最近一次渲染或挂载设置的容器
+    /// 获取当前容器：优先返回可重入的当前父容器 shadow，其次尝试读取 Rue 当前容器，最后回退到最近一次挂载容器
     pub fn get_current_container_wasm(&self) -> JsValue {
-        // 若 last_container 有值，直接返回
-        if let Some(c) = self.last_container.borrow().as_ref() {
-            return c.clone();
+        if let Some(current) = shared_runtime_bridge::get_current_container() {
+            return current;
         }
         // 尝试只读借用 inner，从 Rue 查询当前容器
         if let Ok(inner) = self.inner.try_borrow() {
@@ -30,14 +30,20 @@ impl WasmRue {
                     );
                 }
             }
-            // 转换返回元素为 JsValue；若无则返回 UNDEFINED
-            res.map(|el| JsValue::from(el)).unwrap_or(JsValue::UNDEFINED)
+            if let Some(current) = res.map(JsValue::from) {
+                return current;
+            }
         } else {
             #[cfg(feature = "dev")]
             {
                 crate::log::warning("runtime:getCurrentContainer reentrant borrow");
             }
-            JsValue::UNDEFINED
         }
+
+        if let Some(c) = self.last_container.borrow().as_ref() {
+            return c.clone();
+        }
+
+        JsValue::UNDEFINED
     }
 }

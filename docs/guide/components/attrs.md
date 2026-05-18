@@ -1,10 +1,10 @@
 # 透传属性 {#fallthrough-attributes}
 
-> 本页面假设你已经阅读过[组件基础](/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
+> 本页面假设你已经阅读过[组件基础](/guide/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
 
 ## 属性继承 {#attribute-inheritance}
 
-"透传属性"是指传递给组件但未被接收组件显式声明在 [props](./props) 或 [事件](./events) 中的属性或事件监听器。常见的例子包括 `class`、`style` 和 `id` 属性。
+"透传属性"是指传递给组件但未被接收组件显式声明在 [props](/guide/guide/components/props) 或 [事件](/guide/guide/components/events) 中的属性或事件监听器。常见的例子包括 `class`、`style` 和 `id` 属性。
 
 在 Rue 中，透传属性需要通过 `rest` 参数显式处理。例如，给定一个 `<MyButton>` 组件：
 

@@ -68,7 +68,7 @@ const videos: Video[] = [
 
 const SearchInput: FC<{ value: string; onChange: (t: string) => void }> = p => (
   <input
-    className="w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring focus:ring-violet-200 px-3 py-2"
+    className="w-full rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content shadow-sm focus:border-violet-500 focus:ring focus:ring-violet-200"
     value={p.value}
     onInput={(e: any) => p.onChange((e.target as HTMLInputElement).value)}
     placeholder="搜索视频"
@@ -78,9 +78,9 @@ const SearchInput: FC<{ value: string; onChange: (t: string) => void }> = p => (
 // VideoList 组件
 const VideoList: FC<{ videos: Video[]; emptyHeading?: string }> = p => (
   <div className="mt-3 space-y-2">
-    <div className="text-sm text-gray-700">{p.videos.length} 个视频</div>
+    <div className="text-sm text-base-content/70">{p.videos.length} 个视频</div>
     {p.videos.length === 0 ? (
-      <div className="rounded-md border border-gray-200/70 bg-white/60 backdrop-blur-sm p-3 text-sm">
+      <div className="rounded-md border border-base-300/70 bg-base-100/70 backdrop-blur-sm p-3 text-sm text-base-content/70">
         {p.emptyHeading || '暂无匹配'}
       </div>
     ) : (
@@ -88,10 +88,10 @@ const VideoList: FC<{ videos: Video[]; emptyHeading?: string }> = p => (
         {p.videos.map((v, i) => (
           <li
             key={i}
-            className="rounded-md border border-gray-200/70 bg-white/60 backdrop-blur-sm p-3"
+            className="rounded-md border border-base-300/70 bg-base-100/70 backdrop-blur-sm p-3"
           >
-            <div className="font-medium">{v.title}</div>
-            <div className="text-sm text-gray-500">{v.desc}</div>
+            <div className="font-medium text-base-content">{v.title}</div>
+            <div className="text-sm text-base-content/70">{v.desc}</div>
           </li>
         ))}
       </ul>
@@ -118,7 +118,7 @@ const ReactiveDemo: FC = () => {
   const count = ref(0)
   const state = reactive({ enabled: false })
   return (
-    <div className="rounded-xl border border-gray-200/70 bg-white/60 backdrop-blur-sm p-4">
+    <div className="rounded-xl border border-base-300/70 bg-base-100/70 backdrop-blur-sm p-4">
       <div className="flex items-center gap-3">
         <button className="btn btn-primary" onClick={() => count.value++}>
           +1
@@ -133,10 +133,10 @@ const ReactiveDemo: FC = () => {
             checked={state.enabled}
             onChange={(e: any) => (state.enabled = (e.target as HTMLInputElement).checked)}
           />
-          <span className="text-sm">启用</span>
+          <span className="text-sm text-base-content">启用</span>
         </label>
       </div>
-      <div className="mt-2 text-sm text-gray-700">
+      <div className="mt-2 text-sm text-base-content/70">
         计数：{count.value}，启用：{state.enabled ? '是' : '否'}
       </div>
     </div>
@@ -164,7 +164,7 @@ const SiteHome: FC = () => (
             <div className="mt-2 text-4xl md:text-5xl font-extrabold tracking-tight bg-linear-to-r from-violet-500 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
               Framework For Vapor Native DOM
             </div>
-            <p className="mt-6 text-lg md:text-xl text-gray-700">
+            <p className="mt-6 text-lg md:text-xl text-base-content/70">
               Rust 运行时，Rust 响应式系统，Rust 原生 DOM 编译器
             </p>
           </figure>
@@ -193,6 +193,9 @@ const SiteHome: FC = () => (
             className="btn btn-outline btn-lg"
           >
             Github
+          </a>
+          <a href="https://vercel.com" target="_blank" className="btn btn-outline btn-lg">
+            Vercel
           </a>
           <a
             href="https://www.dhb168.com/?from=ruejs"
@@ -535,7 +538,7 @@ const videos: Video[] = [
 
 const SearchInput: FC<{ value: string; onChange: (t: string) => void }> = p => (
   <input
-    className="w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring focus:ring-violet-200 px-3 py-2"
+    className="w-full rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content shadow-sm focus:border-violet-500 focus:ring focus:ring-violet-200"
     value={p.value}
     onInput={(e: any) => p.onChange((e.target as HTMLInputElement).value)}
     placeholder="搜索视频"
@@ -545,9 +548,9 @@ const SearchInput: FC<{ value: string; onChange: (t: string) => void }> = p => (
 // VideoList 组件
 const VideoList: FC<{ videos: Video[]; emptyHeading?: string }> = p => (
   <div className="mt-3 space-y-2">
-    <div className="text-sm text-gray-700">{p.videos.length} 个视频</div>
+    <div className="text-sm text-base-content/70">{p.videos.length} 个视频</div>
     {p.videos.length === 0 ? (
-      <div className="rounded-md border border-gray-200/70 bg-white/60 backdrop-blur-sm p-3 text-sm">
+      <div className="rounded-md border border-base-300/70 bg-base-100/70 backdrop-blur-sm p-3 text-sm text-base-content/70">
         {p.emptyHeading || '暂无匹配'}
       </div>
     ) : (
@@ -555,10 +558,10 @@ const VideoList: FC<{ videos: Video[]; emptyHeading?: string }> = p => (
         {p.videos.map((v, i) => (
           <li
             key={i}
-            className="rounded-md border border-gray-200/70 bg-white/60 backdrop-blur-sm p-3"
+            className="rounded-md border border-base-300/70 bg-base-100/70 backdrop-blur-sm p-3"
           >
-            <div className="font-medium">{v.title}</div>
-            <div className="text-sm text-gray-500">{v.desc}</div>
+            <div className="font-medium text-base-content">{v.title}</div>
+            <div className="text-sm text-base-content/70">{v.desc}</div>
           </li>
         ))}
       </ul>
@@ -610,11 +613,11 @@ const ReactiveDemo: FC = () => {
 const Reactive: FC = () => (
   <div className="grid gap-6">
     <div>
-      <h3 className="text-lg font-semibold mb-2">前端的发展，从原始DOM，到 JQUERY等</h3>
+      <h3 className="text-lg font-semibold mb-2 text-base-content">前端的发展，从原始DOM，到 JQUERY等</h3>
       <SearchableVideoList videos={videos} />
     </div>
     <div>
-      <h3 className="text-lg font-semibold mb-2">ref / reactive 示例</h3>
+      <h3 className="text-lg font-semibold mb-2 text-base-content">ref / reactive 示例</h3>
       <ReactiveDemo />
     </div>
   </div>
@@ -626,11 +629,13 @@ export default Reactive;`}
         {/* 右栏：实际效果 */}
         <div className="grid gap-6">
           <div>
-            <h3 className="text-lg font-semibold mb-2">前端的发展，从原始DOM，到 JQUERY等</h3>
+            <h3 className="text-lg font-semibold mb-2 text-base-content">
+              前端的发展，从原始DOM，到 JQUERY等
+            </h3>
             <SearchableVideoList videos={videos} />
           </div>
           <div>
-            <h3 className="text-lg font-semibold mb-2">ref / reactive 示例</h3>
+            <h3 className="text-lg font-semibold mb-2 text-base-content">ref / reactive 示例</h3>
             <ReactiveDemo />
           </div>
         </div>

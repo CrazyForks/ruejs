@@ -93,7 +93,7 @@
   ```
 
 - **另请参阅**
-  - [指南 - 使用 Rue 构建自定义元素](/guide/extras/web-components#building-custom-elements-with-rue)
+  - [指南 - 使用 Rue 构建自定义元素](/guide/guide/extras/web-components#building-custom-elements-with-rue)
 
 ## useHost() <sup class="vt-badge" data-text="3.5+"/> {#usehost}
 

@@ -47,7 +47,7 @@ export default HelloWorld
     let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const HelloWorld: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$vaporWithHookId("useSetup:0:0:dup2", ()=>useSetup(()=>{
         const World: FC = ()=>{
             const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
                 const x = _$vaporWithHookId("ref:1:0", ()=>ref(0));
@@ -61,7 +61,7 @@ const HelloWorld: FC = ()=>{
       </div>);
         };
         const Goods: FC = ()=>{
-            const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const _$useSetup = _$vaporWithHookId("useSetup:0:0:dup1", ()=>useSetup(()=>{
                 const y = _$vaporWithHookId("ref:1:1", ()=>ref(10));
                 return {
                     y: y

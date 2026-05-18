@@ -24,7 +24,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-const flush = async () => {
+const _flush = async () => {
   await Promise.resolve()
   await Promise.resolve()
 }

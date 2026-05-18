@@ -1,6 +1,6 @@
 # Props {#props}
 
-> 本页面假设你已经阅读过[组件基础](/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
+> 本页面假设你已经阅读过[组件基础](/guide/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
 
 ## Props 声明 {#props-declaration}
 
@@ -67,7 +67,7 @@ const BlogPost: FC<BlogPostProps> = ({ title, likes = 0 }) => {
 
 这不仅记录了组件的接口，还会在使用组件时提供类型检查。我们将在本节后面讨论更多关于 [prop 验证](#prop-validation) 的细节。
 
-更多详情：[为组件 Props 添加类型](/guide/typescript/props) <sup class="vt-badge ts" />
+更多详情：[为组件 Props 添加类型](@todo) <sup class="vt-badge ts" />
 
 ## Props 传递细节 {#prop-passing-details}
 
@@ -93,7 +93,7 @@ function Parent() {
 }
 ```
 
-我们尽可能使用 [PascalCase 命名组件标签](/guide/components/registration#component-name-casing)，因为它通过区分 Rue 组件和原生元素提高了模板的可读性。
+我们尽可能使用 [PascalCase 命名组件标签](/guide/guide/components/registration#component-name-casing)，因为它通过区分 Rue 组件和原生元素提高了模板的可读性。
 
 ### 静态与动态 Props {#static-vs-dynamic-props}
 
@@ -246,7 +246,7 @@ function MyComponent(props: MyComponentProps) {
 
 当对象和数组作为 props 传递时，虽然子组件不能改变 prop 绑定，但它**可以**改变对象或数组的嵌套属性。这是因为 JavaScript 中的对象和数组是通过引用传递的，Vue 阻止这种改变是不合理的。
 
-这种改变的主要缺点是它允许子组件以一种对父组件不明显的方式影响父组件状态，可能使未来的数据流更难推理。作为最佳实践，你应该避免这种改变，除非父组件和子组件在设计上是紧密耦合的。在大多数情况下，子组件应该 [触发事件](/guide/components/events) 让父组件执行改变。
+这种改变的主要缺点是它允许子组件以一种对父组件不明显的方式影响父组件状态，可能使未来的数据流更难推理。作为最佳实践，你应该避免这种改变，除非父组件和子组件在设计上是紧密耦合的。在大多数情况下，子组件应该 [触发事件](/guide/guide/components/events) 让父组件执行改变。
 
 ## Prop 验证 {#prop-validation}
 

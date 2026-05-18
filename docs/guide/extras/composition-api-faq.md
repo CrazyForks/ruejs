@@ -8,11 +8,11 @@
 
 Composition API 是一组 API，允许我们使用导入的函数而不是声明选项来编写 Rue 组件。它是一个涵盖以下 API 的统称：
 
-- [Reactivity API](/api/reactivity-core)，例如 `ref()` 和 `reactive()`，允许我们直接创建响应式状态、计算状态和 watchers。
+- [Reactivity API](/api/api/reactivity-core)，例如 `ref()` 和 `reactive()`，允许我们直接创建响应式状态、计算状态和 watchers。
 
-- [生命周期钩子](/api/composition-api-lifecycle)，例如 `onMounted()` 和 `onUnmounted()`，允许我们以编程方式钩入组件生命周期。
+- [生命周期钩子](/api/api/composition-api-lifecycle)，例如 `onMounted()` 和 `onUnmounted()`，允许我们以编程方式钩入组件生命周期。
 
-- [依赖注入](/api/composition-api-dependency-injection)，即 `provide()` 和 `inject()`，允许我们在使用 Reactivity API 时利用 Rue 的依赖注入系统。
+- [依赖注入](/api/api/composition-api-dependency-injection)，即 `provide()` 和 `inject()`，允许我们在使用 Reactivity API 时利用 Rue 的依赖注入系统。
 
 Composition API 是 Rue 3 和 [Rue 2.7](https://blog.@rue-js/ruejs.org/posts/rue-2-7-naruto.html) 的内置功能。对于较旧的 Rue 2 版本，请使用官方维护的 [`rue-composition-api`](https://github.com/@rue-js/ruejs/composition-api) 插件。在 Rue 3 中，它更常见的用法是直接在组件函数里导入并调用这些 API。以下是使用 Composition API 的组件的基本示例：
 
@@ -46,9 +46,9 @@ const App: FC = () => {
 
 ### 更好的逻辑复用 {#better-logic-reuse}
 
-Composition API 的主要优势在于它能够实现干净、高效的逻辑复用，形式为 [Composable 函数](/guide/reusability/composables)。它解决了 [mixins 的所有缺点](/guide/reusability/composables#vs-mixins)，这是 Options API 的主要逻辑复用机制。
+Composition API 的主要优势在于它能够实现干净、高效的逻辑复用，形式为 [Composable 函数](/guide/guide/reusability/composables)。它解决了 [mixins 的所有缺点](/guide/guide/reusability/composables#vs-mixins)，这是 Options API 的主要逻辑复用机制。
 
-Composition API 的逻辑复用能力催生了令人印象深刻的社区项目，例如 [RueUse](https://rueuse.org/)，一个不断增长的 composable 工具集合。它还作为将有状态的第三方服务或库轻松集成到 Rue 响应式系统中的干净机制，例如 [不可变数据](/guide/extras/reactivity-in-depth#immutable-data)、[状态机](/guide/extras/reactivity-in-depth#state-machines) 和 [RxJS](/guide/extras/reactivity-in-depth#rxjs)。
+Composition API 的逻辑复用能力催生了令人印象深刻的社区项目，例如 [RueUse](https://rueuse.org/)，一个不断增长的 composable 工具集合。它还作为将有状态的第三方服务或库轻松集成到 Rue 响应式系统中的干净机制，例如 [不可变数据](/guide/guide/extras/reactivity-in-depth#immutable-data)、[状态机](/guide/guide/extras/reactivity-in-depth#state-machines) 和 [RxJS](/guide/guide/extras/reactivity-in-depth#rxjs)。
 
 ### 更灵活的代码组织 {#more-flexible-code-organization}
 
@@ -71,7 +71,7 @@ Composition API 的逻辑复用能力催生了令人印象深刻的社区项目�
 
 以下是同一组件在[重构为 Composition API](https://gist.github.com/yyx990803/8854f8f6a97631576c14b63c8acd8f2e) 之前和之后的样子：
 
-![folder component after](./images/composition-api-after.png)
+![folder component after](@todo)
 
 注意与相同逻辑关注点相关的代码现在如何可以组合在一起：我们在处理特定逻辑关注点时不再需要在不同的选项块之间跳转。此外，我们现在可以用最小的努力将一组代码移到外部文件中，因为我们不再需要为了提取它们而四处移动代码。这种减少的重构摩擦是大型代码库长期可维护性的关键。
 
@@ -107,11 +107,11 @@ Options API 确实允许你在编写组件代码时"少想一些"，这就是为
 
 :::
 
-如果你打算专门使用 Composition API（以及上面列出的选项），你可以通过[编译时标志](/api/compile-time-flags)从 Rue 中删除 Options API 相关代码，从而节省几 KB 的生产包。请注意，这也会影响依赖项中的 Rue 组件。
+如果你打算专门使用 Composition API（以及上面列出的选项），你可以通过[编译时标志](@todo)从 Rue 中删除 Options API 相关代码，从而节省几 KB 的生产包。请注意，这也会影响依赖项中的 Rue 组件。
 
 ### 可以在同一组件中使用两种 API 吗？ {#can-i-use-both-apis-in-the-same-component}
 
-可以。你可以在 Options API 组件里引入 Composition API 逻辑，常见方式是通过组件定义中的 [`setup()`](/api/composition-api-setup) 入口。
+可以。你可以在 Options API 组件里引入 Composition API 逻辑，常见方式是通过组件定义中的 [`setup()`](@todo) 入口。
 
 但是，我们只建议在你有现有的 Options API 代码库需要与用 Composition API 编写的新功能/外部库集成时才这样做。
 

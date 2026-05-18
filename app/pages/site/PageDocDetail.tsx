@@ -1,4 +1,4 @@
-import { type FC, useState, watch, useEffect } from '@rue-js/rue'
+import { type FC, computed, useState, watch, useEffect, useRef } from '@rue-js/rue'
 import { useRoute } from '@rue-js/router'
 import SidebarPlayground from './SidebarPlaygroundPage'
 import { loadCachedDocHtml } from './docDetailCache'
@@ -12,43 +12,62 @@ function getContext(): {
   return { uiBase, docBase }
 }
 
-const PageDocDetail: FC = () => {
+type PageDocDetailProps = {
+  params?: {
+    path?: string
+  }
+}
+
+const PageDocDetail: FC<PageDocDetailProps> = props => {
   const route = useRoute()
   const [html, setHtml] = useState<string>('')
   const [_results, _setResults] = useState<{ id: string; title: string; snippet: string }[]>([])
-  let requestVersion = 0
-
-  watch(
-    route,
-    async (data: any) => {
-      const currentRequest = ++requestVersion
-      const ctx = getContext()
-      const seg = (data?.params?.path as string) || ''
-      if (!seg) {
-        setHtml('')
-        return
-      }
-
-      const base = ctx.docBase
-
-      try {
-        const out = await loadCachedDocHtml('page', base, seg)
-        if (currentRequest !== requestVersion) {
-          return
-        }
-        setHtml(out)
-      } catch {
-        if (currentRequest !== requestVersion) {
-          return
-        }
-
-        setHtml(`<p class="text-base-content/70">加载文档失败</p>`)
-      }
-    },
-    { immediate: true },
-  )
+  const routeSegment = computed<string>(() => {
+    const routePath = ((route.get() as any)?.params?.path as string | undefined)?.trim()
+    if (routePath) {
+      return routePath
+    }
+    const propPath = props.params?.path as string | undefined
+    if (propPath) {
+      return propPath
+    }
+    return ''
+  })
+  const context = getContext()
+  const requestVersionRef = useRef(0)
+  const currentPath = computed<string>(() => {
+    const seg = routeSegment.get()
+    return seg ? `${context.uiBase}/${seg}` : ''
+  })
 
   useEffect(() => {
+    const routeWatch = watch(
+      routeSegment,
+      async (seg: string) => {
+        const currentRequest = (requestVersionRef.current ?? 0) + 1
+        requestVersionRef.current = currentRequest
+        if (!seg) {
+          setHtml('')
+          return
+        }
+
+        try {
+          const out = await loadCachedDocHtml('page', context.docBase, seg)
+          if (currentRequest !== requestVersionRef.current) {
+            return
+          }
+          setHtml(out)
+        } catch {
+          if (currentRequest !== requestVersionRef.current) {
+            return
+          }
+
+          setHtml(`<p class="text-base-content/70">加载文档失败</p>`)
+        }
+      },
+      { immediate: true },
+    )
+
     const onClick = (e: Event) => {
       const target = e.target as HTMLElement
       const btn = target.closest('.copy-code-btn') as HTMLElement | null
@@ -65,16 +84,21 @@ const PageDocDetail: FC = () => {
       }, 1500)
     }
     document.addEventListener('click', onClick)
-    return () => document.removeEventListener('click', onClick)
+    return () => {
+      document.removeEventListener('click', onClick)
+      routeWatch.dispose()
+    }
   }, [])
 
   return (
-    <SidebarPlayground>
-      <div
-        className="prose prose-sm md:prose-base"
-        id="doc-body"
-        dangerouslySetInnerHTML={{ __html: html.value }}
-      ></div>
+    <SidebarPlayground currentPath={currentPath.get()}>
+      <div>
+        <div
+          className="prose prose-sm md:prose-base"
+          id="doc-body"
+          dangerouslySetInnerHTML={{ __html: html.value }}
+        ></div>
+      </div>
     </SidebarPlayground>
   )
 }

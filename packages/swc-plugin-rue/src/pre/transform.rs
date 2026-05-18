@@ -12,8 +12,10 @@ use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use super::for_directive;
 use super::helpers::{
-    has_jsx_return_in_block, is_fc_pat, is_untyped_arrow_component_decl, process_fn_decl,
-    process_function, process_var_decl, should_transform_fn_decl,
+    has_component_render_return_in_block, is_fc_pat, is_untyped_arrow_component_decl,
+    lower_props_derived_consts_in_arrow, lower_props_derived_consts_in_function, process_fn_decl,
+    process_function, process_var_decl, rewrite_component_props_destructure_in_arrow,
+    rewrite_component_props_destructure_in_function, should_transform_fn_decl,
 };
 use super::if_directive;
 use super::model_directive;
@@ -64,6 +66,42 @@ pub struct PreTransform {
     hook_index_stack: Vec<usize>,
 }
 
+#[derive(Default)]
+struct HookIdDeduper {
+    seen: HashMap<String, usize>,
+}
+
+impl VisitMut for HookIdDeduper {
+    fn visit_mut_call_expr(&mut self, c: &mut CallExpr) {
+        c.visit_mut_children_with(self);
+
+        let Callee::Expr(callee) = &c.callee else {
+            return;
+        };
+        let Expr::Ident(id) = callee.as_ref() else {
+            return;
+        };
+        if id.sym.as_ref() != "_$vaporWithHookId" {
+            return;
+        }
+
+        let Some(first_arg) = c.args.get_mut(0) else {
+            return;
+        };
+        let Expr::Lit(Lit::Str(str_lit)) = first_arg.expr.as_mut() else {
+            return;
+        };
+
+        let raw_id = str_lit.value.to_string_lossy().into_owned();
+        let count = self.seen.entry(raw_id.clone()).or_insert(0);
+        if *count > 0 {
+            str_lit.value = Atom::from(format!("{}:dup{}", raw_id, *count)).into();
+            str_lit.raw = None;
+        }
+        *count += 1;
+    }
+}
+
 impl Default for PreTransform {
     fn default() -> Self {
         Self {
@@ -91,13 +129,15 @@ impl VisitMut for PreTransform {
         for item in &mut m.body {
             if let ModuleItem::Stmt(Stmt::Decl(Decl::Fn(fd))) = item {
                 if let Some(block) = &mut fd.function.body {
-                    let has_jsx_return = has_jsx_return_in_block(block);
+                    let has_jsx_return = has_component_render_return_in_block(block);
                     if has_jsx_return {
                         process_function(&mut fd.function);
                     }
                 }
             }
         }
+        // 统一为同模块内重复的 hook id 追加稳定后缀，避免跨组件槽位碰撞。
+        m.visit_mut_with(&mut HookIdDeduper::default());
         // 合并确保运行时导入（例如 _$vaporWithHookId/_$vaporShowStyle/useSetup 等）
         crate::imports::ensure_runtime_imports(m);
     }
@@ -153,6 +193,10 @@ impl VisitMut for PreTransform {
     fn visit_mut_fn_decl(&mut self, f: &mut FnDecl) {
         // 判定该函数声明是否作为组件处理（返回 JSX 或返回类型为 JSX.Element）
         let is_comp = should_transform_fn_decl(f);
+        if is_comp {
+            rewrite_component_props_destructure_in_function(&mut f.function);
+            lower_props_derived_consts_in_function(&mut f.function);
+        }
         let prev = self.in_component;
         if is_comp {
             self.in_component = true;
@@ -171,6 +215,18 @@ impl VisitMut for PreTransform {
         // 判定变量声明是否是组件（显式 FC 或未标注但返回 JSX 的箭头函数）
         let is_comp =
             v.decls.iter().any(|d| is_fc_pat(&d.name) || is_untyped_arrow_component_decl(d));
+        if is_comp {
+            for decl in &mut v.decls {
+                let is_decl_comp = is_fc_pat(&decl.name) || is_untyped_arrow_component_decl(decl);
+                if !is_decl_comp {
+                    continue;
+                }
+                if let Some(Expr::Arrow(arrow)) = decl.init.as_mut().map(|expr| expr.as_mut()) {
+                    rewrite_component_props_destructure_in_arrow(arrow);
+                    lower_props_derived_consts_in_arrow(arrow);
+                }
+            }
+        }
         let prev = self.in_component;
         if is_comp {
             self.in_component = true;

@@ -14,7 +14,7 @@ app.use(myPlugin, {
 })
 ```
 
-插件被定义为一个暴露 `install()` 方法的对象，或者简单地作为一个充当安装函数本身的函数。安装函数接收[应用实例](/api/application)以及传递给 `app.use()` 的任何附加选项：
+插件被定义为一个暴露 `install()` 方法的对象，或者简单地作为一个充当安装函数本身的函数。安装函数接收[应用实例](/api/api/application)以及传递给 `app.use()` 的任何附加选项：
 
 ```ts
 const myPlugin = {
@@ -26,13 +26,13 @@ const myPlugin = {
 
 插件没有严格定义的范围，但插件有用的常见场景包括：
 
-1. 使用 [`app.component()`](/api/application#app-component) 和 [`app.directive()`](/api/application#app-directive) 注册一个或多个全局组件或自定义指令。
+1. 使用 [`app.component()`](/api/api/application#app-component) 和 [`app.directive()`](/api/api/application#app-directive) 注册一个或多个全局组件或自定义指令。
 
-2. 通过调用 [`app.provide()`](/api/application#app-provide) 使资源在整个应用中可[注入](/guide/components/provide-inject)。
+2. 通过调用 [`app.provide()`](/api/api/application#app-provide) 使资源在整个应用中可[注入](/guide/guide/components/provide-inject)。
 
-3. 通过将它们附加到 [`app.config.globalProperties`](/api/application#app-config-globalproperties) 来添加一些全局实例属性或方法。
+3. 通过将它们附加到 [`app.config.globalProperties`](/api/api/application#app-config-globalproperties) 来添加一些全局实例属性或方法。
 
-4. 需要执行上述某些组合的库（例如 [@rue-js/router](https://github.com/ruejs/router)）。
+4. 需要执行上述某些组合的库（例如 [@rue-js/router](https://github.com/hunzhiwange/ruejs/router)）。
 
 ## 编写插件 {#writing-a-plugin}
 
@@ -88,7 +88,7 @@ app.use(i18nPlugin, {
 
 现在，我们最初的表达式 `$translate('greetings.hello')` 将在运行时被替换为 `Bonjour!`。
 
-另请参见：[扩展全局属性](/guide/typescript/options-api#augmenting-global-properties) <sup class="vt-badge ts" />
+另请参见：[扩展全局属性](@todo) <sup class="vt-badge ts" />
 
 :::tip
 谨慎使用全局属性，因为如果太多不同的插件在整个应用中注入的全局属性，会很快变得混乱。

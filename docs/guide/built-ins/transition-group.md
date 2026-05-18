@@ -8,14 +8,14 @@
 
 - 默认情况下，它不渲染包装元素。但您可以使用 `tag` prop 指定要渲染的元素。
 
-- [过渡模式](./transition#transition-modes) 不可用，因为我们不再在互斥元素之间交替。
+- [过渡模式](/guide/guide/built-ins/transition#transition-modes) 不可用，因为我们不再在互斥元素之间交替。
 
 - 内部的元素 **始终需要** 有一个唯一的 `key` 属性。
 
 - CSS 过渡类将应用于列表中的单个元素，**而不是** 应用于组/容器本身。
 
 :::tip
-当在 [DOM 内模板](/guide/essentials/component-basics#in-dom-template-parsing-caveats) 中使用时，它应该引用为 `<transition-group>`。
+当在 [DOM 内模板](/guide/guide/essentials/component-basics#in-dom-template-parsing-caveats) 中使用时，它应该引用为 `<transition-group>`。
 :::
 
 ## 进入/离开过渡 (Enter / Leave Transitions) {#enter-leave-transitions}
@@ -95,7 +95,7 @@ const App: FC = () => {
 
 ### 自定义 TransitionGroup 类 (Custom TransitionGroup classes) {#custom-transitiongroup-classes}
 
-您还可以通过向 `<TransitionGroup>` 传递 `moveClass` prop 来为移动元素指定自定义过渡类，就像 [`<Transition>` 上的自定义过渡类](/guide/built-ins/transition.html#custom-transition-classes) 一样。
+您还可以通过向 `<TransitionGroup>` 传递 `moveClass` prop 来为移动元素指定自定义过渡类，就像 [`<Transition>` 上的自定义过渡类](/guide/guide/built-ins/transition#custom-transition-classes) 一样。
 
 ## 交错列表过渡 (Staggering List Transitions) {#staggering-list-transitions}
 
@@ -134,4 +134,4 @@ const onEnter = (el: HTMLElement, done: () => void) => {
 
 **相关**
 
-- [`<TransitionGroup>` API 参考](/api/built-in-components#transitiongroup)
+- [`<TransitionGroup>` API 参考](/api/api/built-in-components#transitiongroup)

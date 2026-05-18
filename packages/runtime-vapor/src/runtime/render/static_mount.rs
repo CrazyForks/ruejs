@@ -76,7 +76,7 @@ where
 
             let mut dest_parent = self.resolve_dest_parent_for_end(parent, &anchor);
             let mut mounted_nodes: Vec<A::Element> = Vec::new();
-            let mounted = if let Some(mounted) = self.mount_from_input(input) {
+            let mounted = if let Some(mounted) = self.mount_from_input(input, Some(parent)) {
                 let Some(el) = mounted.host_cloned() else {
                     return;
                 };

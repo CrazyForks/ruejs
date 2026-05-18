@@ -273,4 +273,6 @@ export const SECTIONS_BY_TYPE: Record<'guide', SidebarSection[]> = {
 
 export default createPersistentSidebarPlayground({
   sections: SECTIONS_BY_TYPE.guide,
+  showCounts: true,
+  fallbackToRoute: false,
 })

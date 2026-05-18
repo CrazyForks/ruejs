@@ -4,7 +4,7 @@
 
 ## 基本用法 (Basic Usage) {#basic-usage}
 
-在组件基础章节中，我们介绍了 [动态组件](/guide/essentials/component-basics#dynamic-components) 的语法，使用特殊的 `<Dynamic>` 组件：
+在组件基础章节中，我们介绍了 [动态组件](/guide/guide/essentials/component-basics#dynamic-components) 的语法，使用特殊的 `<Dynamic>` 组件：
 
 ```tsx
 import { useState } from '@rue-js/rue'
@@ -45,7 +45,7 @@ const App: FC = () => {
 现在，状态将在组件切换之间持久化：
 
 :::tip
-当在 [DOM 内模板](/guide/essentials/component-basics#in-dom-template-parsing-caveats) 中使用时，它应该引用为 `<keep-alive>`。
+当在 [DOM 内模板](/guide/guide/essentials/component-basics#in-dom-template-parsing-caveats) 中使用时，它应该引用为 `<keep-alive>`。
 :::
 
 ## 包含 / 排除 (Include / Exclude) {#include-exclude}
@@ -97,4 +97,4 @@ const App: FC = () => {
 
 **相关**
 
-- [`<KeepAlive>` API 参考](/api/built-in-components#keepalive)
+- [`<KeepAlive>` API 参考](/api/api/built-in-components#keepalive)

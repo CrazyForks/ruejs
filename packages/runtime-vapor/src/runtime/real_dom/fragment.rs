@@ -9,6 +9,7 @@ use wasm_bindgen::JsValue;
 pub(super) fn mount_fragment<A: DomAdapter>(
     rue: &mut Rue<A>,
     input: &MountInput<A>,
+    parent_context: Option<&A::Element>,
 ) -> Option<MountedSubtreeState<A>>
 where
     A::Element: Clone + From<JsValue> + Into<JsValue>,
@@ -25,7 +26,7 @@ where
     for child in input.children.iter() {
         match child {
             MountInputChild::Input(node) => {
-                if let Some(mounted_child) = rue.mount_from_input(node) {
+                if let Some(mounted_child) = rue.mount_from_input(node, parent_context) {
                     if let Some(child_el) = mounted_child.host_cloned() {
                         if let Some(adapter) = rue.get_dom_adapter_mut() {
                             adapter.append_child(&mut frag, &child_el);

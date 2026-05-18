@@ -22,6 +22,13 @@ fn call_bridge_method0(name: &str) {
     let _ = func.call0(&bridge);
 }
 
+fn call_bridge_method0_result(name: &str) -> Option<JsValue> {
+    let bridge = bridge_object()?;
+    let value = Reflect::get(&bridge, &JsValue::from_str(name)).unwrap_or(JsValue::UNDEFINED);
+    let func = value.dyn_ref::<Function>()?;
+    func.call0(&bridge).ok()
+}
+
 fn call_bridge_method1(name: &str, arg: &JsValue) {
     let Some(bridge) = bridge_object() else {
         return;
@@ -46,6 +53,19 @@ pub(crate) fn begin_component_render(instance: &JsValue) {
 
 pub(crate) fn end_component_render() {
     call_bridge_method0("endComponentRender");
+}
+
+pub(crate) fn push_current_container(container: &JsValue) {
+    call_bridge_method1("pushCurrentContainer", container);
+}
+
+pub(crate) fn pop_current_container() {
+    call_bridge_method0("popCurrentContainer");
+}
+
+pub(crate) fn get_current_container() -> Option<JsValue> {
+    call_bridge_method0_result("getCurrentContainer")
+        .filter(|value| !value.is_undefined() && !value.is_null())
 }
 
 pub(crate) fn dispose_component(instance: &JsValue) {

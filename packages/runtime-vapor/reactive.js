@@ -4,5 +4,10 @@ import { installSharedBridge } from './vapor-bridge.js'
 
 installSharedBridge(reactiveRuntime)
 
+export const __rueCurrentEffectId =
+  typeof reactiveRuntime.__rueCurrentEffectId === 'function'
+    ? reactiveRuntime.__rueCurrentEffectId
+    : () => undefined
+
 export * from './pkg/rue_runtime_vapor.js'
 export default reactiveRuntime

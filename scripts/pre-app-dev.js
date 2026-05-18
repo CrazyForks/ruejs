@@ -33,10 +33,27 @@ const runtimeVaporInputMtimeMs = runtimeVaporBuildInputs.reduce((latestMtimeMs, 
   return Math.max(latestMtimeMs, getLatestMtimeMs(entryPath))
 }, 0)
 
+/** @param {string} wasmFilePath */
+const wasmHasDebugInfo = wasmFilePath => {
+  if (!fs.existsSync(wasmFilePath)) {
+    return false
+  }
+
+  const wasmBuffer = fs.readFileSync(wasmFilePath)
+  const wasmText = wasmBuffer.toString('latin1')
+  return (
+    wasmText.includes('.debug_info') ||
+    wasmText.includes('.debug_line') ||
+    wasmText.includes('.debug_str') ||
+    wasmText.includes('external_debug_info')
+  )
+}
+
 const requiredBuilds = [
   {
     file: 'pkg/rue_runtime_vapor_bg.wasm',
-    script: 'build',
+    script: 'build-profiling',
+    requiresDebugInfo: true,
     outputs: [
       'pkg/rue_runtime_vapor.js',
       'pkg/rue_runtime_vapor_bg.js',
@@ -45,9 +62,16 @@ const requiredBuilds = [
   },
 ]
 
-const missingOrStaleBuilds = requiredBuilds.filter(({ outputs }) => {
+const missingOrStaleBuilds = requiredBuilds.filter(({ outputs, requiresDebugInfo }) => {
   const resolvedOutputs = outputs.map(file => path.resolve(runtimeVaporRoot, file))
   if (resolvedOutputs.some(file => !fs.existsSync(file))) {
+    return true
+  }
+
+  if (
+    requiresDebugInfo &&
+    !wasmHasDebugInfo(path.resolve(runtimeVaporRoot, outputs[outputs.length - 1] ?? ''))
+  ) {
     return true
   }
 
@@ -62,9 +86,6 @@ if (!missingOrStaleBuilds.length) {
   process.exit(0)
 }
 
-const packageManager =
-  process.env.npm_execpath || (process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm')
-
 for (const { script, file, outputs } of missingOrStaleBuilds) {
   const resolvedOutputs = outputs.map(output => path.resolve(runtimeVaporRoot, output))
   const isMissing = resolvedOutputs.some(output => !fs.existsSync(output))
@@ -72,7 +93,7 @@ for (const { script, file, outputs } of missingOrStaleBuilds) {
 
   console.log(`[preapp] ${reason} ${file}, running @rue-js/runtime-vapor:${script}`)
 
-  const result = spawnSync(packageManager, ['run', script], {
+  const result = spawnSync('pnpm', ['run', script], {
     cwd: runtimeVaporRoot,
     stdio: 'inherit',
     shell: process.platform === 'win32',

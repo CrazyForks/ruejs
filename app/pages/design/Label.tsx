@@ -108,7 +108,7 @@ const statusExamples: StatusExample[] = [
   { label: 'Blocked field', status: 'error', help: 'Use a company email address.' },
 ]
 
-const variantExamples: VariantExample[] = [
+const _variantExamples: VariantExample[] = [
   { label: 'Filled', variant: 'filled' },
   { label: 'Ghost', variant: 'ghost' },
   { label: 'Borderless', variant: 'borderless' },

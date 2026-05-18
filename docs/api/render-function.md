@@ -67,7 +67,7 @@
   )
   ```
 
-- **另请参阅** [指南 - 渲染函数 - 创建渲染输出](/guide/extras/render-function#creating-vnodes)
+- **另请参阅** [指南 - 渲染函数 - 创建渲染输出](/guide/guide/extras/render-function#creating-vnodes)
 
 ## mergeProps() {#mergeprops} @todo
 

@@ -29,7 +29,7 @@ Rue 当前默认的渲染机制是 Block / Vapor。模板与 JSX 在编译阶段
 3. **更新**：依赖变更后，只重新执行受影响的 block / effect。运行时直接更新对应 DOM 节点、区间或组件边界，而不是重新比较整棵对象树。
 4. **清理**：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 DOM 区间一并释放。
 
-![render pipeline](./images/render-pipeline.png)
+![render pipeline](@todo)
 
 <!-- https://www.figma.com/file/elViLsnxGJ9lsQVsuhwqxM/Rendering-Mechanism -->
 
@@ -47,7 +47,7 @@ Rue 依然支持手写渲染函数，但默认推荐模板或普通 JSX，原因
 - 需要精确控制 children / render prop 的库代码
 - 迁移中的旧 helper 或预编译产物桥接
 
-如果你需要手写 `h()` 或维护旧的渲染桥接，请把它们视为显式边界，而不是默认开发路径。相关写法见 [渲染函数与 JSX](./render-function)，迁移事项见 [默认 Block / Vapor 路径迁移](/guide/migration/renderable-default)。
+如果你需要手写 `h()` 或维护旧的渲染桥接，请把它们视为显式边界，而不是默认开发路径。相关写法见 [渲染函数与 JSX](/guide/guide/extras/render-function)，迁移事项见 [默认 Block / Vapor 路径迁移](/guide/guide/migration/renderable-default)。
 
 ## 编译器知情的 Block / Vapor {#compiler-informed-virtual-dom}
 

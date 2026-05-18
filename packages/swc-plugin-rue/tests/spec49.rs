@@ -67,7 +67,7 @@ export default About
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { useState, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { useState, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const About: FC<{
@@ -89,7 +89,7 @@ const About: FC<{
         _$appendChild(_root, _list1);
         watchEffect(()=>{
             const __slot = !!open.value ? '是' : '否';
-            renderAnchor(__slot, _root, _list1);
+          untrack(()=>renderAnchor(__slot, _root, _list1));
         });
         const _el1 = _$createElement("ul");
         _$appendChild(_root, _el1);

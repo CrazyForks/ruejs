@@ -155,7 +155,7 @@ where
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        if let Some(mounted) = self.mount_from_input(nc) {
+        if let Some(mounted) = self.mount_from_input(nc, Some(parent)) {
             let first_dom_node = self.keyed_first_dom_node_for_mounted(&mounted);
             let fragment_nodes = mounted.fragment_nodes();
             if !fragment_nodes.is_empty() {

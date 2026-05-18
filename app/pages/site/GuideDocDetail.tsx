@@ -1,4 +1,4 @@
-import { type FC, useState, watch, computed, useEffect } from '@rue-js/rue'
+import { type FC, useState, watch, computed, useEffect, useRef } from '@rue-js/rue'
 import { RouterLink, useRoute } from '@rue-js/router'
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlaygroundGuide'
 import { loadCachedDocHtml } from './docDetailCache'
@@ -25,56 +25,40 @@ function getContext(): {
   return { uiBase, docBase }
 }
 
-const GuideDocDetail: FC = () => {
+type GuideDocDetailProps = {
+  params?: {
+    path?: string
+  }
+}
+
+const GuideDocDetail: FC<GuideDocDetailProps> = props => {
   const route = useRoute()
-  const [_title, setTitle] = useState<string>('')
   const [html, setHtml] = useState<string>('')
   const [_results, _setResults] = useState<{ id: string; title: string; snippet: string }[]>([])
-  const [docPath, setDocPath] = useState<string>('')
-  const [uiBase, setUiBase] = useState<string>('')
-  let requestVersion = 0
-
-  watch(
-    route,
-    async (data: any) => {
-      const currentRequest = ++requestVersion
-      const ctx = getContext()
-      setUiBase(ctx.uiBase)
-      const seg = (data?.params?.path as string) || ''
-      if (!seg) {
-        setDocPath('')
-        setHtml('')
-        return
-      }
-      setDocPath(seg)
-      const docsMeta = SECTIONS_BY_TYPE['guide'].flatMap(sec => flatten(sec.items))
-      const meta = docsMeta.find(d => d.id === seg)
-      setTitle(meta?.title || seg.split('/').pop() || seg)
-      const base = ctx.docBase
-
-      try {
-        const out = await loadCachedDocHtml('guide', base, seg)
-        if (currentRequest !== requestVersion) {
-          return
-        }
-        setHtml(out)
-      } catch {
-        if (currentRequest !== requestVersion) {
-          return
-        }
-
-        setHtml(`<p class="text-base-content/70">加载文档失败</p>`)
-      }
-    },
-    { immediate: true },
-  )
+  const routeSegment = computed<string>(() => {
+    const routePath = ((route.get() as any)?.params?.path as string | undefined)?.trim()
+    if (routePath) {
+      return routePath
+    }
+    const propPath = props.params?.path as string | undefined
+    if (propPath) {
+      return propPath
+    }
+    return ''
+  })
+  const context = getContext()
+  const requestVersionRef = useRef(0)
+  const currentPath = computed<string>(() => {
+    const seg = routeSegment.get()
+    return seg ? `${context.uiBase}/${seg}` : ''
+  })
 
   const DOCS_META = computed(() => {
     return SECTIONS_BY_TYPE['guide'].flatMap(sec => flatten(sec.items))
   })
   const currentIndex = computed(() => {
     const list = DOCS_META.get()
-    const seg = docPath.value || ''
+    const seg = routeSegment.get()
     return list.findIndex(d => d.id === seg)
   })
   const prev = computed(() => {
@@ -88,6 +72,32 @@ const GuideDocDetail: FC = () => {
     return idx >= 0 && idx < list.length - 1 ? list[idx + 1] : undefined
   })
   useEffect(() => {
+    const routeWatch = watch(
+      routeSegment,
+      async (seg: string) => {
+        const currentRequest = (requestVersionRef.current ?? 0) + 1
+        requestVersionRef.current = currentRequest
+        if (!seg) {
+          setHtml('')
+          return
+        }
+        try {
+          const out = await loadCachedDocHtml('guide', context.docBase, seg)
+          if (currentRequest !== requestVersionRef.current) {
+            return
+          }
+          setHtml(out)
+        } catch {
+          if (currentRequest !== requestVersionRef.current) {
+            return
+          }
+
+          setHtml(`<p class="text-base-content/70">加载文档失败</p>`)
+        }
+      },
+      { immediate: true },
+    )
+
     const onClick = (e: Event) => {
       const target = e.target as HTMLElement
       const btn = target.closest('.copy-code-btn') as HTMLElement | null
@@ -104,40 +114,45 @@ const GuideDocDetail: FC = () => {
       }, 1500)
     }
     document.addEventListener('click', onClick)
-    return () => document.removeEventListener('click', onClick)
+    return () => {
+      document.removeEventListener('click', onClick)
+      routeWatch.dispose()
+    }
   }, [])
 
   return (
-    <SidebarPlayground>
-      <div
-        className="prose prose-sm md:prose-base"
-        id="doc-body"
-        dangerouslySetInnerHTML={{ __html: html.value }}
-      ></div>
-      {currentIndex.get() >= 0 && (
-        <div className="mt-8 flex justify-between">
-          {prev.get() ? (
-            <RouterLink
-              to={`${uiBase.value}/${prev?.get()?.id}`}
-              className="btn btn-outline btn-sm"
-            >
-              ← 上一页：{prev?.get()?.title}
-            </RouterLink>
-          ) : (
-            <span />
-          )}
-          {next.get() ? (
-            <RouterLink
-              to={`${uiBase.value}/${next?.get()?.id}`}
-              className="btn btn-outline btn-sm"
-            >
-              下一页：{next?.get()?.title} →
-            </RouterLink>
-          ) : (
-            <span />
-          )}
-        </div>
-      )}
+    <SidebarPlayground currentPath={currentPath.get()}>
+      <div>
+        <div
+          className="prose prose-sm md:prose-base"
+          id="doc-body"
+          dangerouslySetInnerHTML={{ __html: html.value }}
+        ></div>
+        {currentIndex.get() >= 0 && (
+          <div className="mt-8 flex justify-between">
+            {prev.get() ? (
+              <RouterLink
+                to={`${context.uiBase}/${prev?.get()?.id}`}
+                className="btn btn-outline btn-sm"
+              >
+                ← 上一页：{prev?.get()?.title}
+              </RouterLink>
+            ) : (
+              <span />
+            )}
+            {next.get() ? (
+              <RouterLink
+                to={`${context.uiBase}/${next?.get()?.id}`}
+                className="btn btn-outline btn-sm"
+              >
+                下一页：{next?.get()?.title} →
+              </RouterLink>
+            ) : (
+              <span />
+            )}
+          </div>
+        )}
+      </div>
     </SidebarPlayground>
   )
 }

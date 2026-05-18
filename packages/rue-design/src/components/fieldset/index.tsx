@@ -236,7 +236,7 @@ const Label: FC<FieldsetLabelProps> = ({ as = 'label', className, children, tone
 
   if (as === 'p') {
     return (
-      <p {...rest} className={cls}>
+      <p {...rest} className={joinClassName(cls, 'min-w-0 whitespace-normal break-words')}>
         {children}
       </p>
     )
@@ -390,11 +390,19 @@ const Root: FC<FieldsetRootProps> = ({
           />
         )
       })
+  const ariaInvalid = invalid ? 'true' : rest['aria-invalid']
+  if ('aria-invalid' in rest) {
+    delete rest['aria-invalid']
+  }
+  const fieldsetAriaInvalidProps: Record<string, any> = {}
+  if (ariaInvalid !== undefined && ariaInvalid !== null) {
+    fieldsetAriaInvalidProps['aria-invalid'] = ariaInvalid
+  }
 
   return (
     <fieldset
       {...rest}
-      aria-invalid={invalid ? 'true' : rest['aria-invalid']}
+      {...fieldsetAriaInvalidProps}
       className={joinClassName(
         'fieldset',
         resolveGapClass(size),

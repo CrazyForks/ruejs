@@ -1,0 +1,365 @@
+//! SWC 插件转换行为测试（spec_setup_props_derived_const_computed）
+//!
+//! 覆盖：顶层只读 props 派生 const 会在组件 phase 2 中降成 computed，
+//! 后续读取自动改写为 `.get()`。
+use swc_plugin_rue::{apply, apply_pre};
+
+mod utils;
+
+#[test]
+fn lowers_props_derived_consts_into_computed_and_rewrites_reads() {
+    let src = r##"
+import { type FC, ref } from '@rue-js/rue'
+
+type Props = {
+  showSearch?: boolean | { placeholder?: string }
+  label?: string
+}
+
+const normalizeSearchConfig = (showSearch?: boolean | { placeholder?: string }) => {
+  if (!showSearch) return { placeholder: 'hidden' }
+  if (typeof showSearch === 'object') {
+    return { placeholder: showSearch.placeholder ?? 'search...' }
+  }
+  return { placeholder: 'search...' }
+}
+
+const Comp: FC<Props> = ({ showSearch, label = 'fallback' }) => {
+  const count = ref(0)
+  const searchConfig = normalizeSearchConfig(showSearch)
+  const summary = `${label}:${searchConfig.placeholder}`
+
+  return <div data-count={count.value}>{summary}-{searchConfig.placeholder}</div>
+}
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply_pre(program);
+    let out = utils::emit(program, cm);
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    println!("{}", normalized);
+
+    std::fs::create_dir_all("target/vapor_outputs").ok();
+    std::fs::write(
+        "target/vapor_outputs/spec_setup_props_derived_const_computed.out.js",
+        utils::strip_marker(&out),
+    )
+    .ok();
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";"#,
+    )));
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{"#,
+    )));
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));"#,
+    )));
+
+    assert!(normalized.contains(&utils::normalize(
+      r#"const searchConfig = _$vaporWithHookId("computed:1:1", ()=>computed(()=>normalizeSearchConfig(__rue_props.showSearch)));"#,
+    )));
+
+    assert!(
+        normalized
+            .contains(&utils::normalize(r#"const __rue_phase2_searchConfig = searchConfig;"#,))
+    );
+
+    assert!(normalized.contains(&utils::normalize(
+      r#"const summary = _$vaporWithHookId("computed:1:2", ()=>computed(()=>`${(__rue_props.label === void 0 ? 'fallback' : __rue_props.label)}:${__rue_phase2_searchConfig.get().placeholder}`));"#,
+    )));
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"return { count: count, searchConfig: searchConfig, summary: summary };"#,
+    )));
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"const { count: count, searchConfig: searchConfig, summary: summary } = _$useSetup;"#,
+    )));
+
+    assert!(normalized.contains(&utils::normalize(
+      r#"return <div data-count={count.value}>{summary.get()}-{searchConfig.get().placeholder}</div>;"#,
+    )));
+}
+
+#[test]
+fn preserves_hygiene_for_nested_props_derived_computed_reads() {
+    let src = r##"
+  import { type FC, ref } from '@rue-js/rue'
+
+  type Props = {
+    count?: number
+  }
+
+  const Comp: FC<Props> = props => {
+    const count = Number(props.count ?? 0)
+    const meterWidth = `${Math.max(8, Math.min(count * 9, 100))}%`
+
+    return <div data-count={count}>{meterWidth}</div>
+  }
+
+  const Page: FC = () => {
+    const count = ref(7)
+    return <Comp count={count.value} />
+  }
+  "##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply(program);
+    let out = utils::emit(program, cm);
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    println!("{}", normalized);
+
+    assert!(normalized.contains(&utils::normalize(
+      r#"const __rue_phase2_count = count;
+      const meterWidth = _$vaporWithHookId("computed:1:1", ()=>computed(()=>`${Math.max(8, Math.min(__rue_phase2_count.get() * 9, 100))}%`));"#,
+    )));
+
+    assert!(!normalized.contains(&utils::normalize(
+      r#"const meterWidth = _$vaporWithHookId("computed:1:1", ()=>computed(()=>`${Math.max(8, Math.min(count.get() * 9, 100))}%`));"#,
+    )));
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"_$setAttribute(_root, "data-count", String(count.get()));"#,
+    )));
+
+    assert!(normalized.contains(&utils::normalize(r#"const __slot = meterWidth.get();"#,)));
+}
+
+#[test]
+fn keeps_snapshot_only_props_derived_consts_plain_inside_setup() {
+    let src = r##"
+import { type FC, ref } from '@rue-js/rue'
+
+type Props = {
+  showSearch?: boolean | { defaultValue?: string }
+}
+
+const normalizeSearchConfig = (showSearch?: boolean | { defaultValue?: string }) => {
+  if (!showSearch) return { defaultValue: '' }
+  if (typeof showSearch === 'object') {
+    return { defaultValue: showSearch.defaultValue ?? '' }
+  }
+  return { defaultValue: '' }
+}
+
+const Comp: FC<Props> = ({ showSearch }) => {
+  const searchConfig = normalizeSearchConfig(showSearch)
+  const searchValueRef = ref(searchConfig.defaultValue)
+
+  return <div>{searchValueRef.value}</div>
+}
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply_pre(program);
+    let out = utils::emit(program, cm);
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    println!("{}", normalized);
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+        const searchConfig = normalizeSearchConfig(__rue_props.showSearch);
+        const searchValueRef = _$vaporWithHookId("ref:1:0", ()=>ref(searchConfig.defaultValue));
+        return {
+            searchConfig: searchConfig,
+            searchValueRef: searchValueRef
+        };
+    }));"#,
+    )));
+
+    assert!(!normalized.contains("computed(()=>normalizeSearchConfig(__rue_props.showSearch))"));
+    assert!(
+        normalized.contains(&utils::normalize(r#"return <div>{searchValueRef.value}</div>;"#,))
+    );
+}
+
+#[test]
+fn keeps_snapshot_only_lazy_state_initializers_plain_inside_setup() {
+    let src = r##"
+import { type FC, useState } from '@rue-js/rue'
+
+type Props = {
+  showSearch?: boolean | { defaultValue?: string }
+}
+
+const normalizeSearchConfig = (showSearch?: boolean | { defaultValue?: string }) => {
+  if (!showSearch) return { defaultValue: '' }
+  if (typeof showSearch === 'object') {
+    return { defaultValue: showSearch.defaultValue ?? '' }
+  }
+  return { defaultValue: '' }
+}
+
+const Comp: FC<Props> = ({ showSearch }) => {
+  const searchConfig = normalizeSearchConfig(showSearch)
+  const state = useState(() => searchConfig.defaultValue)
+
+  return <div>{state[0].value}</div>
+}
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply_pre(program);
+    let out = utils::emit(program, cm);
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    println!("{}", normalized);
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"const searchConfig = normalizeSearchConfig(__rue_props.showSearch);"#,
+    )));
+    assert!(normalized.contains(&utils::normalize(
+        r#"const state = _$vaporWithHookId("useState:1:0", ()=>useState(()=>searchConfig.defaultValue));"#,
+    )));
+    assert!(!normalized.contains("computed(()=>normalizeSearchConfig(__rue_props.showSearch))"));
+    assert!(normalized.contains(&utils::normalize(r#"return <div>{state[0].value}</div>;"#,)));
+}
+
+#[test]
+fn keeps_snapshot_only_imperative_helper_consumption_plain_inside_setup() {
+    let src = r##"
+import { type FC, ref } from '@rue-js/rue'
+
+type Props = {
+  showSearch?: boolean | { defaultValue?: string }
+}
+
+const normalizeSearchConfig = (showSearch?: boolean | { defaultValue?: string }) => {
+  if (!showSearch) return { defaultValue: '' }
+  if (typeof showSearch === 'object') {
+    return { defaultValue: showSearch.defaultValue ?? '' }
+  }
+  return { defaultValue: '' }
+}
+
+const Comp: FC<Props> = ({ showSearch }) => {
+  const searchConfig = normalizeSearchConfig(showSearch)
+  const getInitialSearchValue = () => searchConfig.defaultValue.trim()
+  const initialSearchValue = getInitialSearchValue()
+  const searchValueRef = ref(initialSearchValue)
+
+  return <div>{searchValueRef.value}</div>
+}
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply_pre(program);
+    let out = utils::emit(program, cm);
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    println!("{}", normalized);
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"const searchConfig = normalizeSearchConfig(__rue_props.showSearch);"#,
+    )));
+    assert!(normalized.contains(&utils::normalize(
+        r#"const getInitialSearchValue = ()=>searchConfig.defaultValue.trim();"#,
+    )));
+    assert!(
+        normalized
+            .contains(&utils::normalize(r#"const initialSearchValue = getInitialSearchValue();"#,))
+    );
+    assert!(normalized.contains(&utils::normalize(
+        r#"const searchValueRef = _$vaporWithHookId("ref:1:0", ()=>ref(initialSearchValue));"#,
+    )));
+    assert!(!normalized.contains("computed(()=>normalizeSearchConfig(__rue_props.showSearch))"));
+    assert!(
+        normalized.contains(&utils::normalize(r#"return <div>{searchValueRef.value}</div>;"#,))
+    );
+}
+
+#[test]
+fn keeps_snapshot_only_helper_alias_passthrough_plain_inside_setup() {
+    let src = r##"
+import { type FC, useState } from '@rue-js/rue'
+
+type Props = {
+  showSearch?: boolean | { defaultValue?: string }
+}
+
+const normalizeSearchConfig = (showSearch?: boolean | { defaultValue?: string }) => {
+  if (!showSearch) return { defaultValue: '' }
+  if (typeof showSearch === 'object') {
+    return { defaultValue: showSearch.defaultValue ?? '' }
+  }
+  return { defaultValue: '' }
+}
+
+const Comp: FC<Props> = ({ showSearch }) => {
+  const searchConfig = normalizeSearchConfig(showSearch)
+  const getInitialSearchValue = () => searchConfig.defaultValue.trim()
+  const lazyInit = getInitialSearchValue
+  const state = useState(lazyInit)
+
+  return <div>{state[0].value}</div>
+}
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply_pre(program);
+    let out = utils::emit(program, cm);
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    println!("{}", normalized);
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"const searchConfig = normalizeSearchConfig(__rue_props.showSearch);"#,
+    )));
+    assert!(normalized.contains(&utils::normalize(
+        r#"const getInitialSearchValue = ()=>searchConfig.defaultValue.trim();"#,
+    )));
+    assert!(normalized.contains(&utils::normalize(r#"const lazyInit = getInitialSearchValue;"#,)));
+    assert!(normalized.contains(&utils::normalize(
+        r#"const state = _$vaporWithHookId("useState:1:0", ()=>useState(lazyInit));"#,
+    )));
+    assert!(!normalized.contains("computed(()=>normalizeSearchConfig(__rue_props.showSearch))"));
+    assert!(normalized.contains(&utils::normalize(r#"return <div>{state[0].value}</div>;"#,)));
+}
+
+#[test]
+fn lowers_props_derived_consts_when_helper_alias_reaches_render() {
+    let src = r##"
+import { type FC } from '@rue-js/rue'
+
+type Props = {
+  showSearch?: boolean | { placeholder?: string }
+}
+
+const normalizeSearchConfig = (showSearch?: boolean | { placeholder?: string }) => {
+  if (!showSearch) return { placeholder: 'hidden' }
+  if (typeof showSearch === 'object') {
+    return { placeholder: showSearch.placeholder ?? 'search...' }
+  }
+  return { placeholder: 'search...' }
+}
+
+const Comp: FC<Props> = ({ showSearch }) => {
+  const searchConfig = normalizeSearchConfig(showSearch)
+  const renderSearchValue = () => searchConfig.placeholder.trim()
+  const renderSearchValueAlias = renderSearchValue
+
+  return <div>{renderSearchValueAlias()}</div>
+}
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply_pre(program);
+    let out = utils::emit(program, cm);
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    println!("{}", normalized);
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"const searchConfig = _$vaporWithHookId("computed:1:0", ()=>computed(()=>normalizeSearchConfig(__rue_props.showSearch)));"#,
+    )));
+    assert!(normalized.contains(&utils::normalize(
+        r#"const __rue_phase2_searchConfig = searchConfig;
+      const renderSearchValue = ()=>__rue_phase2_searchConfig.get().placeholder.trim();"#,
+    )));
+    assert!(
+        normalized
+            .contains(&utils::normalize(r#"const renderSearchValueAlias = renderSearchValue;"#,))
+    );
+    assert!(
+        normalized.contains(&utils::normalize(r#"return <div>{renderSearchValueAlias()}</div>;"#,))
+    );
+}

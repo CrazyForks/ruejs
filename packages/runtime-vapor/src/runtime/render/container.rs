@@ -4,6 +4,7 @@ use super::super::types::{ContainerMountState, MountInput, MountedState};
 use crate::log::{log, want_log};
 use crate::reactive::core::batch_scope;
 use crate::runtime::dom_adapter::DomAdapter;
+use js_sys::Reflect;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
 
@@ -46,7 +47,12 @@ where
                 };
 
                 if let Some(old_mount) = taken {
+                    let global = js_sys::global();
+                    let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                    let _ =
+                        Reflect::set(&global, &source_key, &JsValue::from_str("clear_container"));
                     self.clear_mounted_state(container, old_mount);
+                    let _ = Reflect::delete_property(&global, &source_key);
                 }
             }
 
@@ -117,7 +123,15 @@ where
                 match taken {
                     Some(MountedState::Block(old_block)) => {
                         self.call_hooks("before_update");
+                        let global = js_sys::global();
+                        let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                        let _ = Reflect::set(
+                            &global,
+                            &source_key,
+                            &JsValue::from_str("render_impl:block"),
+                        );
                         self.clear_mounted_state(container, MountedState::Block(old_block));
+                        let _ = Reflect::delete_property(&global, &source_key);
                         if let Some(mounted) = self.render_container_mount(input, container) {
                             self.call_hooks("updated");
                             let entry = self.container_map.get_mut(idx).unwrap();
@@ -178,7 +192,8 @@ where
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        if let Some(mounted) = self.mount_from_input(input) {
+        let previous_error = self.last_error.clone();
+        if let Some(mounted) = self.mount_from_input(input, Some(container)) {
             let Some(el) = mounted.host_cloned() else {
                 return None;
             };
@@ -201,12 +216,19 @@ where
 
             Some(MountedState::from_subtree_root(mounted))
         } else {
-            let err_to_handle = if let Some(e) = self.last_error.clone() {
-                e
-            } else {
-                js_sys::Error::new("Rue vapor: render failed (create_real_dom=None)").into()
+            let mount_reported_error = match (&previous_error, &self.last_error) {
+                (None, Some(_)) => true,
+                (Some(previous), Some(current)) => !js_sys::Object::is(previous, current),
+                _ => false,
             };
-            self.handle_error(err_to_handle);
+            if !mount_reported_error {
+                let err_to_handle = if let Some(e) = self.last_error.clone() {
+                    e
+                } else {
+                    js_sys::Error::new("Rue vapor: render failed (create_real_dom=None)").into()
+                };
+                self.handle_error(err_to_handle);
+            };
             None
         }
     }

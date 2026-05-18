@@ -65,7 +65,11 @@ describe('SortFilterGrid actual page', () => {
     ).map(cell => cell.textContent?.trim())
     expect(cellsAfterFirstSort[0]).toBe('Chuck Norris')
 
-    await click(powerHeader)
+    const refreshedHeaders = Array.from(container.querySelectorAll('th'))
+    const refreshedPowerHeader =
+      refreshedHeaders.find(header => header.textContent?.includes('Power')) ?? null
+
+    await click(refreshedPowerHeader)
 
     await waitForContent(() => {
       const names = Array.from(container.querySelectorAll('tbody tr td:nth-child(1)')).map(cell =>

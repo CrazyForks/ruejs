@@ -82,7 +82,7 @@ export interface BreadcrumbsItemProps extends BreadcrumbsRouteItem {
   children?: any
 }
 
-const normalizeChildren = (children?: any) => {
+const _normalizeChildren = (children?: any) => {
   if (Array.isArray(children)) {
     return children
   }

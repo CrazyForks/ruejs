@@ -45,7 +45,7 @@ export default Chain
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect } from "@rue-js/rue/vapor";
+import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Chain: FC = ()=>{
     return vapor(()=>{
@@ -61,7 +61,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el1, _$createTextNode("A"));
                 return _root;
             }) : 0;
-            renderAnchor(__slot, _root, _list1);
+            untrack(()=>renderAnchor(__slot, _root, _list1));
         });
         _$appendChild(_root, _$createTextNode("】 【"));
         const _list2 = _$createComment("rue:slot:anchor");
@@ -74,7 +74,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el2, _$createTextNode("B"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list2);
+            untrack(()=>renderAnchor(__slot, _root, _list2));
         });
         _$appendChild(_root, _$createTextNode("】 【"));
         const _list3 = _$createComment("rue:slot:anchor");
@@ -87,7 +87,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el3, _$createTextNode("C"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list3);
+            untrack(()=>renderAnchor(__slot, _root, _list3));
         });
         _$appendChild(_root, _$createTextNode("】 【 "));
         const _list4 = _$createComment("rue:slot:anchor");
@@ -100,7 +100,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el4, _$createTextNode("D"));
                 return _root;
             }) : NaN;
-            renderAnchor(__slot, _root, _list4);
+            untrack(()=>renderAnchor(__slot, _root, _list4));
         });
         _$appendChild(_root, _$createTextNode("】 【 "));
         const _list5 = _$createComment("rue:slot:anchor");
@@ -113,7 +113,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el5, _$createTextNode("E"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list5);
+            untrack(()=>renderAnchor(__slot, _root, _list5));
         });
         _$appendChild(_root, _$createTextNode("】 【"));
         const _list6 = _$createComment("rue:slot:anchor");
@@ -126,7 +126,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el6, _$createTextNode("F"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list6);
+            untrack(()=>renderAnchor(__slot, _root, _list6));
         });
         _$appendChild(_root, _$createTextNode("】 【"));
         const _list7 = _$createComment("rue:slot:anchor");
@@ -139,7 +139,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el7, _$createTextNode("G"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list7);
+            untrack(()=>renderAnchor(__slot, _root, _list7));
         });
         _$appendChild(_root, _$createTextNode("】 【"));
         const _list8 = _$createComment("rue:slot:anchor");
@@ -152,7 +152,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el8, _$createTextNode("H"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list8);
+            untrack(()=>renderAnchor(__slot, _root, _list8));
         });
         _$appendChild(_root, _$createTextNode("】 === 【"));
         const _list9 = _$createComment("rue:slot:anchor");
@@ -165,7 +165,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el9, _$createTextNode("A"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list9);
+            untrack(()=>renderAnchor(__slot, _root, _list9));
         });
         _$appendChild(_root, _$createTextNode("】 【"));
         const _list10 = _$createComment("rue:slot:anchor");
@@ -178,7 +178,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el10, _$createTextNode("B"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list10);
+            untrack(()=>renderAnchor(__slot, _root, _list10));
         });
         _$appendChild(_root, _$createTextNode("】 【"));
         const _list11 = _$createComment("rue:slot:anchor");
@@ -191,7 +191,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el11, _$createTextNode("C"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list11);
+            untrack(()=>renderAnchor(__slot, _root, _list11));
         });
         _$appendChild(_root, _$createTextNode("】 【 "));
         const _list12 = _$createComment("rue:slot:anchor");
@@ -204,7 +204,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el12, _$createTextNode("D"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list12);
+            untrack(()=>renderAnchor(__slot, _root, _list12));
         });
         _$appendChild(_root, _$createTextNode("】 【 "));
         const _list13 = _$createComment("rue:slot:anchor");
@@ -217,7 +217,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el13, _$createTextNode("E"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list13);
+            untrack(()=>renderAnchor(__slot, _root, _list13));
         });
         _$appendChild(_root, _$createTextNode("】 【"));
         const _list14 = _$createComment("rue:slot:anchor");
@@ -230,7 +230,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el14, _$createTextNode("F"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list14);
+            untrack(()=>renderAnchor(__slot, _root, _list14));
         });
         _$appendChild(_root, _$createTextNode("】 【"));
         const _list15 = _$createComment("rue:slot:anchor");
@@ -243,7 +243,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el15, _$createTextNode("G"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list15);
+            untrack(()=>renderAnchor(__slot, _root, _list15));
         });
         _$appendChild(_root, _$createTextNode("】 【"));
         const _list16 = _$createComment("rue:slot:anchor");
@@ -256,7 +256,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el16, _$createTextNode("H"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list16);
+            untrack(()=>renderAnchor(__slot, _root, _list16));
         });
         _$appendChild(_root, _$createTextNode("】"));
         return _root;

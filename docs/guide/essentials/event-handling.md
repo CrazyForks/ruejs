@@ -57,7 +57,7 @@ const Greeter: FC = () => {
 
 方法处理器会自动接收触发它的原生 DOM 事件对象——在上面的示例中，我们能够通过 `event.target` 访问调度事件的元素。
 
-另请参见：[为事件处理器添加类型](/guide/typescript/composition-api#typing-event-handlers) <sup class="vt-badge ts" />
+另请参见：[为事件处理器添加类型](/guide/guide/typescript/composition-api#typing-event-handlers) <sup class="vt-badge ts" />
 
 ### 方法 vs 内联检测 {#method-vs-inline-detection}
 

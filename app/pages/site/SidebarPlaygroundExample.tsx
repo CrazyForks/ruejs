@@ -1,7 +1,16 @@
+import { type FC, useState } from '@rue-js/rue'
 import {
   createPersistentSidebarPlayground,
   type SidebarSection,
 } from './persistentSidebarPlayground'
+
+const readCurrentHashPath = (): string => {
+  const hash = globalThis.location?.hash || ''
+  if (hash.startsWith('#')) {
+    return hash.slice(1) || '/'
+  }
+  return hash || globalThis.location?.pathname || ''
+}
 
 export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
   examples: [
@@ -38,6 +47,21 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           id: 'simple-component',
           title: '简单组件',
           href: '/examples/simple-component',
+        },
+        {
+          id: 'reactive-props-destructure',
+          title: 'Reactive Props Destructure',
+          href: '/examples/reactive-props-destructure',
+        },
+        {
+          id: 'freeze-compiler-trap',
+          title: '卡死复现（编译器坏路径）',
+          href: '/examples/freeze-compiler-trap',
+        },
+        {
+          id: 'props-setup-boundary',
+          title: 'Props 与 useSetup',
+          href: '/examples/props-setup-boundary',
         },
         {
           id: 'slots',
@@ -181,9 +205,64 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/fetching-data',
         },
         {
+          id: 'reactive-counter',
+          title: '基础计数器',
+          href: '/examples/reactive-counter',
+        },
+        {
+          id: 'render-counter',
+          title: '渲染函数计数器',
+          href: '/examples/render-counter',
+        },
+        {
+          id: 'use-state-counter',
+          title: 'useState 计数器',
+          href: '/examples/use-state-counter',
+        },
+        {
+          id: 'react-style-conditional',
+          title: '条件渲染',
+          href: '/examples/react-style-conditional',
+        },
+        {
+          id: 'map-list-rendering',
+          title: 'map 列表渲染',
+          href: '/examples/map-list-rendering',
+        },
+        {
           id: 'todo-app',
           title: 'Todo 应用',
           href: '/examples/todo-app',
+        },
+        {
+          id: 'basic-todo-list',
+          title: '基础待办事项',
+          href: '/examples/basic-todo-list',
+        },
+        {
+          id: 'local-todo-list',
+          title: '本地待办事项',
+          href: '/examples/local-todo-list',
+        },
+        {
+          id: 'editable-user-profile',
+          title: '用户资料编辑',
+          href: '/examples/editable-user-profile',
+        },
+        {
+          id: 'use-state-array',
+          title: 'useState 数组',
+          href: '/examples/use-state-array',
+        },
+        {
+          id: 'use-state-object',
+          title: 'useState 对象',
+          href: '/examples/use-state-object',
+        },
+        {
+          id: 'local-counter',
+          title: '本地 ref 计数器',
+          href: '/examples/local-counter',
         },
         {
           id: 'sort-filter-grid',
@@ -192,7 +271,57 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
         },
         { id: 'tree-view', title: '树状视图', href: '/examples/tree-view' },
         { id: 'svg-graph', title: 'SVG 图表', href: '/examples/svg-graph' },
+        {
+          id: 'svg-shared-namespace',
+          title: 'SVG 共享标签命名空间',
+          href: '/examples/svg-shared-namespace',
+        },
         { id: 'modal', title: '带过渡动效的模态框', href: '/examples/modal' },
+        {
+          id: 'child-to-parent-notify',
+          title: '子调父方法',
+          href: '/examples/child-to-parent-notify',
+        },
+        {
+          id: 'parent-child-counter-control',
+          title: '父控子计数',
+          href: '/examples/parent-child-counter-control',
+        },
+        {
+          id: 'component-v-model',
+          title: '组件级 vModel',
+          href: '/examples/component-v-model',
+        },
+        {
+          id: 'named-v-model',
+          title: '命名 vModel',
+          href: '/examples/named-v-model',
+        },
+        {
+          id: 'component-emit',
+          title: '组件 emit',
+          href: '/examples/component-emit',
+        },
+        {
+          id: 'hello-children',
+          title: 'Hello children',
+          href: '/examples/hello-children',
+        },
+        {
+          id: 'basic-children-box',
+          title: '基础 children Box',
+          href: '/examples/basic-children-box',
+        },
+        {
+          id: 'nested-children-box',
+          title: '嵌套 children Box',
+          href: '/examples/nested-children-box',
+        },
+        {
+          id: 'layout-children',
+          title: 'Layout children',
+          href: '/examples/layout-children',
+        },
         {
           id: 'list-transition',
           title: '过渡动效',
@@ -203,7 +332,21 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
   ],
 }
 
-export default createPersistentSidebarPlayground({
+const BaseSidebarPlayground = createPersistentSidebarPlayground({
   sections: SECTIONS_BY_TYPE.examples,
+  showCounts: true,
   wrapperClassName: 'sidebar-playground-examples',
+  fallbackToRoute: false,
 })
+
+const SidebarPlayground: FC = props => {
+  const [initialCurrentPath] = useState(readCurrentHashPath)
+
+  return (
+    <BaseSidebarPlayground currentPath={initialCurrentPath.value}>
+      {props.children}
+    </BaseSidebarPlayground>
+  )
+}
+
+export default SidebarPlayground

@@ -6,8 +6,13 @@ type Node = {
   children?: Node[]
 }
 
-const TreeItem: FC<{ model: Node }> = props => {
+const TreeItem: FC<{
+  model: Node
+  notifyChange: () => void
+  syncChildren: (id: string, children: Node[]) => void
+}> = props => {
   const isOpen = ref(false)
+  const version = ref(0)
   const isFolder = computed(() => !!props.model.children && props.model.children.length > 0)
 
   const toggle = (e?: any) => {
@@ -17,13 +22,17 @@ const TreeItem: FC<{ model: Node }> = props => {
 
   const addChild = (e?: any) => {
     e?.stopPropagation()
-    if (!props.model.children) {
-      props.model.children = []
-    }
-    props.model.children.push({
-      id: `${props.model.id}-new-${props.model.children.length}`,
+    const nextChildren = props.model.children ? props.model.children.slice() : []
+
+    nextChildren.push({
+      id: `${props.model.id}-new-${nextChildren.length}`,
       name: 'new stuff',
     })
+
+    props.model.children = nextChildren
+    props.syncChildren(props.model.id, nextChildren)
+    version.value += 1
+    props.notifyChange()
   }
 
   return (
@@ -33,9 +42,14 @@ const TreeItem: FC<{ model: Node }> = props => {
         {isFolder.get() ? <span>[{isOpen.value ? '-' : '+'}]</span> : null}
       </div>
       {isFolder.get() && isOpen.value ? (
-        <ul>
+        <ul key={`${props.model.id}-${props.model.children!.length}-${version.value}`}>
           {props.model.children!.map(model => (
-            <TreeItem key={model.id} model={model} />
+            <TreeItem
+              key={model.id}
+              model={model}
+              notifyChange={props.notifyChange}
+              syncChildren={props.syncChildren}
+            />
           ))}
           <li data-testid={`add-${props.model.id}`} onClick={addChild}>
             +
@@ -63,11 +77,27 @@ export const TreeViewFixture: FC = () => {
       },
     ],
   })
+  const revision = ref(0)
+
+  const syncChildren = (id: string, children: Node[]) => {
+    if (id !== treeData.value.id) {
+      return
+    }
+
+    treeData.value = {
+      ...treeData.value,
+      children,
+    }
+  }
+
+  const notifyChange = () => {
+    revision.value += 1
+  }
 
   return (
-    <div>
+    <div data-testid={`tree-${revision.value}`}>
       <ul>
-        <TreeItem model={treeData.value} />
+        <TreeItem model={treeData.value} notifyChange={notifyChange} syncChildren={syncChildren} />
       </ul>
     </div>
   )

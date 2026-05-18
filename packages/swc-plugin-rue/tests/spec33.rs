@@ -124,7 +124,7 @@ export default HelloWorld
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const ThemePicker: FC<{
     value: string;
@@ -227,6 +227,7 @@ const ThemePicker: FC<{
                 parent: _list1.parentNode,
                 before: _list2,
                 singleRoot: true,
+                trackIndex: false,
                 start: _list1,
                 renderItem: (name, parent, start, end, idx)=>{
                     const __slot = vapor(()=>{
@@ -255,7 +256,7 @@ const ThemePicker: FC<{
     });
 };
 const HelloWorld: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$vaporWithHookId("useSetup:0:0:dup1", ()=>useSetup(()=>{
             const theme = _$vaporWithHookId("ref:1:0", ()=>ref('light'));
             return {
                 theme: theme
@@ -289,7 +290,7 @@ const HelloWorld: FC = ()=>{
                     document.documentElement.setAttribute('data-theme', t);
                 }
             });
-            renderAnchor(__slot4, _el6, _list3);
+            untrack(()=>renderAnchor(__slot4, _el6, _list3));
         });
         const _el7 = _$createElement("span");
         _$appendChild(_el6, _el7);

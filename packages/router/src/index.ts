@@ -1,6 +1,6 @@
 /*
 路由架构概述
-- 历史驱动：通过 HistoryLike 抽象适配不同历史实现（默认 Web Hash）。
+- 历史驱动：通过 HistoryLike 抽象适配不同历史实现（支持 Web Hash / Web History）。
 - 信号状态：currentPath/route 使用响应式 signal 保存当前路径与匹配结果。
 - 路由匹配：编译 path 模式为正则与参数键列表，实现 params 提取。
 - 容器绑定：每个应用容器绑定一个 Router，支持通过 attachRouter/useRouter 访问。
@@ -14,8 +14,9 @@ import {
   signal,
   getCurrentContainer,
   type SignalHandle,
+  render,
   renderAnchor,
-  renderBetween,
+  untrack,
   vapor,
   watchEffect,
   useSetup,
@@ -67,6 +68,7 @@ export type HistoryLike = {
   replace: (p: string) => void
   listen: (cb: () => void) => void
   back?: () => void
+  createHref?: (p: string) => string
 }
 
 const __routerByContainer = new WeakMap<HTMLElement, Router>()
@@ -81,6 +83,14 @@ export const attachRouter = (router: Router) => {
 /** 创建基于 hash 的 Web 历史实现 */
 export const createWebHashHistory = () => {
   const g = globalThis as any
+  const normalize = (path: string) => {
+    const next = String(path || '')
+    if (!next) return '/'
+    if (next.startsWith('/')) return next
+    if (next.startsWith('#/')) return next.slice(1)
+    if (next.startsWith('#')) return '/' + next.slice(1)
+    return '/' + next
+  }
   if (g && g.location) {
     // 没有 hash 时，默认跳到根路径 '/'
     if (!g.location.hash) g.location.hash = '#/'
@@ -97,7 +107,7 @@ export const createWebHashHistory = () => {
   return {
     location: loc,
     push: (p: string) => {
-      const next = p.startsWith('#') ? p.slice(1) : p
+      const next = normalize(p)
       if (next === loc()) return
       if (g && g.location) {
         // 兼容传入 '#/path' 或 '/path' 两种形式
@@ -109,7 +119,7 @@ export const createWebHashHistory = () => {
       }
     },
     replace: (p: string) => {
-      const next = p.startsWith('#') ? p.slice(1) : p
+      const next = normalize(p)
       if (next === loc()) return
       const href = '#' + next
       if (g && g.location && typeof g.location.replace === 'function') {
@@ -125,6 +135,58 @@ export const createWebHashHistory = () => {
       // 优先使用原生历史回退
       if (g && g.history && typeof g.history.back === 'function') g.history.back()
     },
+    createHref: (p: string) => '#' + normalize(p),
+  } as HistoryLike
+}
+
+/** 创建基于 history API 的 Web 历史实现 */
+export const createWebHistory = () => {
+  const g = globalThis as any
+  const normalize = (path: string) => {
+    const next = String(path || '')
+    if (!next) return '/'
+    if (next.startsWith('/')) return next
+    return '/' + next
+  }
+  const loc = () => {
+    const pathname = g && g.location ? String(g.location.pathname || '') : ''
+    return pathname || '/'
+  }
+  const listen = (cb: () => void) => {
+    if (g && g.addEventListener) g.addEventListener('popstate', cb)
+  }
+  const notify = () => {
+    if (g && g.dispatchEvent && g.PopStateEvent) {
+      g.dispatchEvent(new g.PopStateEvent('popstate'))
+    }
+  }
+  return {
+    location: loc,
+    push: (p: string) => {
+      const next = normalize(p)
+      if (next === loc()) return
+      if (g && g.history && typeof g.history.pushState === 'function') {
+        g.history.pushState(null, '', next)
+      } else if (g && g.location) {
+        g.location.pathname = next
+      }
+      notify()
+    },
+    replace: (p: string) => {
+      const next = normalize(p)
+      if (next === loc()) return
+      if (g && g.history && typeof g.history.replaceState === 'function') {
+        g.history.replaceState(null, '', next)
+      } else if (g && g.location && typeof g.location.replace === 'function') {
+        g.location.replace(next)
+      }
+      notify()
+    },
+    listen,
+    back: () => {
+      if (g && g.history && typeof g.history.back === 'function') g.history.back()
+    },
+    createHref: (p: string) => normalize(p),
   } as HistoryLike
 }
 
@@ -197,9 +259,6 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       return
     }
     const matchRoute = match(p)
-    if (null === matchRoute) {
-      throw new Error('No route matched path ' + p)
-    }
     currentPath.set(p)
     route.set(matchRoute)
   })
@@ -254,52 +313,30 @@ const createRouteComponentBlock = (
   component: RouteRecord['component'],
   params: RouteParams,
 ): BlockInstance => {
-  let start: Comment | null = null
-  let end: Comment | null = null
+  let host: HTMLSpanElement | null = null
 
   return {
     kind: 'block',
     mount(target) {
-      const routeStart = document.createComment('rue-router-view-route-start')
-      const routeEnd = document.createComment('rue-router-view-route-end')
-      start = routeStart
-      end = routeEnd
-      insertNodeAtTarget(target, routeStart)
-      insertNodeAtTarget(target, routeEnd)
-
-      const parent =
-        target.kind === 'container'
-          ? (target.container as unknown as Node)
-          : (target.parent as Node)
-      renderBetween(
-        h(component, { params }) as any,
-        parent as any,
-        routeStart as any,
-        routeEnd as any,
-      )
+      const routeHost = document.createElement('span')
+      routeHost.style.display = 'contents'
+      host = routeHost
+      insertNodeAtTarget(target, routeHost)
+      render(h(component, { params }) as any, routeHost as any)
     },
     unmount() {
-      if (!start || !end) {
+      if (!host) {
         return
       }
 
-      const parent = start.parentNode
-      if (parent && end.parentNode === parent) {
-        renderBetween(null as any, parent as any, start as any, end as any)
+      render(null as any, host as any)
 
-        let current = start.nextSibling
-        while (current && current !== end) {
-          const next = current.nextSibling
-          parent.removeChild(current)
-          current = next
-        }
-
-        parent.removeChild(start)
-        parent.removeChild(end)
+      const parent = host.parentNode
+      if (parent) {
+        parent.removeChild(host)
       }
 
-      start = null
-      end = null
+      host = null
     },
   }
 }
@@ -308,7 +345,8 @@ const createRouteComponentBlock = (
 export const RouterView: FC = () => {
   const { container } = useSetup(() => {
     const r = useRouter()
-    const container = document.createDocumentFragment()
+    const container = document.createElement('span')
+    container.style.display = 'contents'
     const anchorEl = document.createComment('rue-router-view-anchor')
     container.appendChild(anchorEl)
 
@@ -316,15 +354,17 @@ export const RouterView: FC = () => {
       const data = r.route.get()
       const parent = (anchorEl as any).parentNode || container
 
-      if (!data) {
-        renderAnchor(null as any, parent, anchorEl)
-      } else {
-        renderAnchor(
-          createRouteComponentBlock(data.record.component, data.params) as any,
-          parent,
-          anchorEl,
-        )
-      }
+      untrack(() => {
+        if (!data) {
+          renderAnchor(null as any, parent, anchorEl)
+        } else {
+          renderAnchor(
+            createRouteComponentBlock(data.record.component, data.params) as any,
+            parent,
+            anchorEl,
+          )
+        }
+      })
     })
 
     return { container }
@@ -340,7 +380,11 @@ type RouterLinkFastPath = FC<RouterLinkProps> & {
   __rueOnClick: (e: MouseEvent, to: unknown, replace?: unknown) => void
 }
 
-const routerLinkHref = (to: unknown) => '#' + String(to || '')
+const routerLinkHref = (to: unknown) => {
+  const path = String(to || '')
+  const createHref = __activeRouter?.history?.createHref
+  return createHref ? createHref(path) : path || '/'
+}
 
 const routerLinkNavigate = (to: unknown, replace?: unknown) => {
   const router = __activeRouter

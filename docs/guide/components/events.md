@@ -1,6 +1,6 @@
 # 组件事件 {#component-events}
 
-> 本页面假设你已经阅读过[组件基础](/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
+> 本页面假设你已经阅读过[组件基础](/guide/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
 
 ## 触发和监听事件 {#emitting-and-listening-to-events}
 
@@ -30,7 +30,7 @@ function Parent() {
 ```
 
 :::tip
-与原生 DOM 事件不同，组件触发的事件**不会冒泡**。你只能监听直接子组件触发的事件。如果需要在兄弟组件或深层嵌套组件之间通信，可以使用 [全局状态管理解决方案](/guide/scaling-up/state-management)。
+与原生 DOM 事件不同，组件触发的事件**不会冒泡**。你只能监听直接子组件触发的事件。如果需要在兄弟组件或深层嵌套组件之间通信，可以使用 [全局状态管理解决方案](/guide/guide/scaling-up/state-management)。
 :::
 
 ## 事件参数 {#event-arguments}
@@ -118,9 +118,9 @@ function MyComponent({ onSubmit }: MyComponentProps) {
 }
 ```
 
-更多详情：[为组件事件添加类型](/guide/typescript/events) <sup class="vt-badge ts" />
+更多详情：[为组件事件添加类型](@todo) <sup class="vt-badge ts" />
 
-虽然可选，但建议定义所有回调 props 以便更好地记录组件应该如何工作。这也允许 Rue 从 [透传属性](/guide/components/attrs) 中排除已知的监听器，避免由第三方代码手动分派的 DOM 事件引起的边界情况。
+虽然可选，但建议定义所有回调 props 以便更好地记录组件应该如何工作。这也允许 Rue 从 [透传属性](/guide/guide/components/attrs) 中排除已知的监听器，避免由第三方代码手动分派的 DOM 事件引起的边界情况。
 
 :::tip
 如果回调 prop 的名称与原生事件相同（例如 `onClick`），监听器会监听组件触发的 `click` 事件，但也会响应原生的 `click` 事件。

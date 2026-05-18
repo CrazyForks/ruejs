@@ -43,11 +43,11 @@ onUpdated(() => {
 })
 ```
 
-另请参见：[为模板引用添加类型](/guide/typescript/composition-api#typing-template-refs) <sup class="vt-badge ts" />
+另请参见：[为模板引用添加类型](/guide/guide/typescript/composition-api#typing-template-refs) <sup class="vt-badge ts" />
 
 ## 组件上的引用 {#ref-on-component}
 
-> 本部分假设你了解 [组件](/guide/essentials/component-basics)。如果你还不熟悉，可以跳过并在之后回来查看。
+> 本部分假设你了解 [组件](/guide/guide/essentials/component-basics)。如果你还不熟悉，可以跳过并在之后回来查看。
 
 `ref` 也可以在子组件上使用。在这种情况下，引用将是组件实例：
 
@@ -106,7 +106,7 @@ export default Child
 
 注意，必须在任何异步操作之前完成暴露。否则，在 await 操作之后暴露的属性和方法将不可访问。
 
-另请参见：[为组件模板引用添加类型](/guide/typescript/composition-api#typing-component-template-refs) <sup class="vt-badge ts" />
+另请参见：[为组件模板引用添加类型](/guide/guide/typescript/composition-api#typing-component-template-refs) <sup class="vt-badge ts" />
 
 ## 列表中的引用 {#refs-inside-v-for}
 

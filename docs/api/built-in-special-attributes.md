@@ -36,11 +36,11 @@
 
   当 `text` 更改时，`<span>` 将始终被替换而不是修补，因此将触发过渡。
 
-- **另请参阅** [指南 - 列表渲染 - 使用 `key` 维护状态](/guide/essentials/list#maintaining-state-with-key)
+- **另请参阅** [指南 - 列表渲染 - 使用 `key` 维护状态](/guide/guide/essentials/list#maintaining-state-with-key)
 
 ## ref {#ref}
 
-表示[模板 ref](/guide/essentials/template-refs)。
+表示[模板 ref](/guide/guide/essentials/template-refs)。
 
 - **期望类型：** `Function | { current: unknown }`
 
@@ -73,13 +73,13 @@
   关于 ref 注册时间的重要说明：由于 refs 本身是渲染函数的结果，因此必须等到组件挂载后才能访问它们。
 
 - **另请参阅**
-  - [指南 - 模板 Refs](/guide/essentials/template-refs)
-  - [指南 - 为模板 Refs 添加类型](/guide/typescript/composition-api#typing-template-refs) <sup class="vt-badge ts" />
-  - [指南 - 为组件模板 Refs 添加类型](/guide/typescript/composition-api#typing-component-template-refs) <sup class="vt-badge ts" />
+  - [指南 - 模板 Refs](/guide/guide/essentials/template-refs)
+  - [指南 - 为模板 Refs 添加类型](/guide/guide/typescript/composition-api#typing-template-refs) <sup class="vt-badge ts" />
+  - [指南 - 为组件模板 Refs 添加类型](/guide/guide/typescript/composition-api#typing-component-template-refs) <sup class="vt-badge ts" />
 
 ## is {#is} @todo
 
-用于绑定[动态组件](/guide/essentials/component-basics#dynamic-components)。
+用于绑定[动态组件](/guide/guide/essentials/component-basics#dynamic-components)。
 
 - **期望类型：** `string | Component`
 
@@ -87,7 +87,7 @@
 
   当在原生 HTML 元素上使用 `is` 属性时，它将被解释为[自定义内置元素](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-customized-builtin-example)，这是一个原生 Web 平台功能。
 
-  但是，在某些用例中，您可能需要 Rue 用 Rue 组件替换原生元素，如在[DOM 内模板解析注意事项](/guide/essentials/component-basics#in-dom-template-parsing-caveats)中所述。您可以在 `is` 属性的值前加上 `rue:` 前缀，以便 Rue 将该元素作为 Rue 组件而不是自定义内置元素渲染：
+  但是，在某些用例中，您可能需要 Rue 用 Rue 组件替换原生元素，如在[DOM 内模板解析注意事项](/guide/guide/essentials/component-basics#in-dom-template-parsing-caveats)中所述。您可以在 `is` 属性的值前加上 `rue:` 前缀，以便 Rue 将该元素作为 Rue 组件而不是自定义内置元素渲染：
 
   ```tsx
   <table>
@@ -96,5 +96,5 @@
   ```
 
 - **另请参阅**
-  - [内置特殊元素 - `<component>`](/api/built-in-special-elements#component)
-  - [动态组件](/guide/essentials/component-basics#dynamic-components)
+  - [内置特殊元素 - `<component>`](/api/api/built-in-special-elements#component)
+  - [动态组件](/guide/guide/essentials/component-basics#dynamic-components)

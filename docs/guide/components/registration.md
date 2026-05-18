@@ -1,12 +1,12 @@
 # 组件注册 {#component-registration}
 
-> 本页面假设你已经阅读过[组件基础](/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
+> 本页面假设你已经阅读过[组件基础](/guide/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
 
 Rue 组件需要被"注册"以便 Rue 知道在模板中遇到它们时去哪里找到其实现。组件注册有两种方式：全局注册和局部注册。
 
 ## 全局注册 {#global-registration}
 
-我们可以使用 `app.component()` 方法使组件在当前 [Rue 应用](/guide/essentials/application) 中全局可用：
+我们可以使用 `app.component()` 方法使组件在当前 [Rue 应用](/guide/guide/essentials/application) 中全局可用：
 
 ```tsx
 import { createApp } from '@rue-js/rue'

@@ -1,7 +1,7 @@
 # 优先级 A 规则：必要 {#priority-a-rules-essential}
 
 ::: warning 注意
-此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/ruejs/docs/issues/new)。
+此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/hunzhiwange/ruejs/docs/issues/new)。
 :::
 
 这些规则有助于防止错误，因此无论如何都要学习和遵守。例外可能存在，但应该非常罕见，并且只能由精通 JavaScript 和 Vue 的专家做出。
@@ -41,7 +41,7 @@
 在提交的代码中，prop 定义应始终尽可能详细，至少指定类型。
 
 ::: details 详细解释
-详细的 [prop 定义](/guide/components/props#prop-validation)有两个优点：
+详细的 [prop 定义](/guide/guide/components/props#prop-validation)有两个优点：
 
 - 它们记录了组件的 API，因此很容易看到组件应该如何使用。
 - 在开发中，如果组件提供了格式不正确的 props，Vue 会警告你，帮助你捕获潜在的错误来源。
@@ -294,7 +294,7 @@ const activeUsers = computed(() => {
 
 对于应用程序，顶层 `App` 组件和布局组件中的样式可能是全局的，但所有其他组件应始终使用作用域样式。
 
-这与[单文件组件](/guide/scaling-up/sfc)相关。它 _不_ 要求使用 `scoped` 属性。作用域可以通过 [CSS modules](https://github.com/css-modules/css-modules)、基于类的策略（如 [BEM](http://getbem.com/)）或其他库/约定来实现。
+这与[单文件组件](@todo)相关。它 _不_ 要求使用 `scoped` 属性。作用域可以通过 [CSS modules](https://github.com/css-modules/css-modules)、基于类的策略（如 [BEM](http://getbem.com/)）或其他库/约定来实现。
 
 **但是，组件库应该优先使用基于类的策略而不是 `scoped` 属性。**
 

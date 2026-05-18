@@ -7,7 +7,7 @@ pageClass: api
 :::info 注册和使用
 内置组件可以直接在 JSX/TSX 中使用，无需注册。它们也是可 tree-shake 的：只有在被使用时才会包含在构建中。
 
-在[渲染函数](/guide/extras/render-function)中使用它们时，需要显式导入。例如：
+在[渲染函数](/guide/guide/extras/render-function)中使用它们时，需要显式导入。例如：
 
 ```js
 import { h, Transition } from '@rue-js/rue'
@@ -135,7 +135,7 @@ h(Transition, {
   <Transition onAfterEnter={onTransitionComplete}>{ok && <div>toggled content</div>}</Transition>
   ```
 
-- **另请参阅** [指南 - Transition](/guide/built-ins/transition)
+- **另请参阅** [指南 - Transition](/guide/guide/built-ins/transition)
 
 ## `<TransitionGroup>` {#transitiongroup}
 
@@ -167,7 +167,7 @@ h(Transition, {
 
   默认情况下，`<TransitionGroup>` 会使用一个 `display: contents` 的稳定容器来承载子节点，因此通常不会引入额外布局盒；如果提供 `tag`，则渲染该标签对应的包装元素。
 
-  注意，`<transition-group>` 中的每个子元素必须[**具有唯一的 key**](/guide/essentials/list#maintaining-state-with-key)，动画才能正常工作。
+  注意，`<transition-group>` 中的每个子元素必须[**具有唯一的 key**](/guide/guide/essentials/list#maintaining-state-with-key)，动画才能正常工作。
 
   `<TransitionGroup>` 通过 CSS transform 支持移动过渡。当子元素在屏幕上的位置在更新后发生变化时，它将被应用一个移动的 CSS 类（从 `name` 属性自动生成或使用 `move-class` prop 配置）。如果在应用移动类时 CSS `transform` 属性是"可过渡的"，则元素将使用[FLIP 技术](https://aerotwist.com/blog/flip-your-animations/)平滑地动画到其目标位置。
 
@@ -181,7 +181,7 @@ h(Transition, {
   </TransitionGroup>
   ```
 
-- **另请参阅** [指南 - TransitionGroup](/guide/built-ins/transition-group)
+- **另请参阅** [指南 - TransitionGroup](/guide/guide/built-ins/transition-group)
 
 ## `<KeepAlive>` {#keepalive}
 
@@ -271,7 +271,7 @@ h(Transition, {
   <KeepAlive max={10}>{view}</KeepAlive>
   ```
 
-- **另请参阅** [指南 - KeepAlive](/guide/built-ins/keep-alive)
+- **另请参阅** [指南 - KeepAlive](/guide/guide/built-ins/keep-alive)
 
 ## `<Teleport>` {#teleport}
 
@@ -324,7 +324,7 @@ h(Transition, {
   </Teleport>
   ```
 
-- **另请参阅** [指南 - Teleport](/guide/built-ins/teleport)
+- **另请参阅** [指南 - Teleport](/guide/guide/built-ins/teleport)
 
 ## `<Suspense>` <sup class="vt-badge experimental" /> {#suspense}
 
@@ -367,4 +367,4 @@ h(Transition, {
   </Suspense>
   ```
 
-- **另请参阅** [指南 - Suspense](/guide/built-ins/suspense)
+- **另请参阅** [指南 - Suspense](/guide/guide/built-ins/suspense)

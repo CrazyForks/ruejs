@@ -148,7 +148,29 @@ const App: FC = () => {
 
 ### 使用 signal {#using-signal}
 
-`signal` 是 Rue 提供的另一种创建响应式状态的方式，灵感来自 Solid.js 和 Angular Signals。与 `ref` 使用 `.value` 属性不同，`signal` 使用 `.get()` 和 `.set()` 方法来读写值，语义更加明确，特别适合习惯函数式编程风格的开发者。
+`signal` 是 Rue 提供的底层响应式状态句柄。与 `ref` 主要通过 `.value` 读写不同，`signal` 提供了一组更细粒度的 API，包括：
+
+- `get()` / `set()`
+- `peek()` / `update()`
+- `getPath()` / `setPath()` / `updatePath()` / `peekPath()`
+- `value` / `toJSON()` / `valueOf()` / `toString()`
+
+它特别适合以下场景：
+
+- 你更喜欢 getter / setter 风格
+- 你需要对嵌套对象按路径读写
+- 你希望区分“读取并建立依赖”和“只读取但不建立依赖”
+- 你希望用函数式更新复杂状态
+
+`signal` 的签名如下：
+
+```ts
+signal<T>(initial: T, options?: { equals?: (prev: T, next: T) => boolean }, forceGlobal?: boolean)
+```
+
+- `initial`：初始值
+- `options.equals`：自定义等值比较；返回 `true` 表示新旧值等价，不触发更新
+- `forceGlobal`：在需要脱离组件 Hook 上下文时强制创建全局 signal，一般场景下可忽略
 
 #### 基本用法
 
@@ -167,6 +189,58 @@ const App: FC = () => {
       <button onClick={() => count.set(count.get() + 1)}>加一</button>
       <button onClick={() => count.set(count.get() - 1)}>减一</button>
       <button onClick={() => count.set(0)}>重置</button>
+    </div>
+  )
+}
+```
+
+#### get / set / update / peek / value
+
+下面几个 API 是最常用的一组：
+
+- `get()`：读取值，并在响应式上下文中建立依赖
+- `set(next)`：直接设置新值
+- `update(updater)`：基于旧值计算新值
+- `peek()`：读取值，但不建立依赖
+- `value`：便捷属性；读取时等同于无依赖读取，写入时等价于 `set()`
+
+```tsx
+import { type FC, signal, watchEffect } from '@rue-js/rue'
+
+const App: FC = () => {
+  const count = signal(1)
+
+  // get(): 建立依赖，count 变化时会重新执行
+  watchEffect(() => {
+    console.log('count =', count.get())
+  })
+
+  const increment = () => {
+    count.set(count.get() + 1)
+  }
+
+  const double = () => {
+    count.update(prev => prev * 2)
+  }
+
+  const logSnapshot = () => {
+    // peek(): 只读取，不建立依赖
+    console.log('snapshot =', count.peek())
+    // value: 读取当前值；写入等价于 set()
+    console.log('value =', count.value)
+  }
+
+  const reset = () => {
+    count.value = 0
+  }
+
+  return (
+    <div>
+      <p>计数：{count.get()}</p>
+      <button onClick={increment}>加一</button>
+      <button onClick={double}>翻倍</button>
+      <button onClick={logSnapshot}>打印快照</button>
+      <button onClick={reset}>重置</button>
     </div>
   )
 }
@@ -207,6 +281,101 @@ const App: FC = () => {
     </div>
   )
 }
+```
+
+#### getPath / setPath / updatePath / peekPath
+
+当 `signal` 内部存的是对象或数组时，可以按路径操作任意嵌套字段：
+
+- `getPath(path)`：读取路径值，并建立该路径的依赖
+- `setPath(path, value)`：设置路径值
+- `updatePath(path, updater)`：基于路径旧值更新
+- `peekPath(path)`：读取路径值，但不建立依赖
+
+`path` 同时支持两种写法：
+
+- 数组路径：`['user', 'profile', 'name']`
+- 字符串路径：`'user.profile.name'`
+
+数组下标同样支持：
+
+- `['items', 0]`
+- `'items.0'`
+
+```tsx
+import { type FC, signal, watchEffect } from '@rue-js/rue'
+
+const App: FC = () => {
+  const state = signal({
+    user: {
+      profile: {
+        name: 'Rue',
+      },
+      age: 20,
+    },
+    items: ['苹果', '香蕉'],
+  })
+
+  watchEffect(() => {
+    // 订阅 user.profile.name 这条路径
+    console.log('当前用户名：', state.getPath('user.profile.name'))
+  })
+
+  const rename = () => {
+    state.setPath(['user', 'profile', 'name'], 'Rue Next')
+  }
+
+  const growUp = () => {
+    state.updatePath('user.age', prev => (prev ?? 0) + 1)
+  }
+
+  const replaceFirstItem = () => {
+    state.setPath('items.0', '西瓜')
+  }
+
+  const logRawName = () => {
+    // 不建立依赖，适合调试或一次性读取
+    console.log(state.peekPath('user.profile.name'))
+  }
+
+  return (
+    <div>
+      <p>姓名：{state.getPath('user.profile.name')}</p>
+      <p>年龄：{state.getPath('user.age')}</p>
+      <p>第一个水果：{state.getPath(['items', 0])}</p>
+      <button onClick={rename}>改名</button>
+      <button onClick={growUp}>年龄 +1</button>
+      <button onClick={replaceFirstItem}>替换第一个水果</button>
+      <button onClick={logRawName}>打印姓名快照</button>
+    </div>
+  )
+}
+```
+
+路径写入还有几个很实用的特性：
+
+- 空路径 `[]` 或 `''` 表示整个根值
+- 缺失的中间路径会自动按对象补齐
+- 写入数组越界索引时会自动扩展数组长度
+- 函数会被当作普通值存储，不会自动执行
+
+```tsx
+import { signal } from '@rue-js/rue'
+
+const state = signal({
+  items: ['A'],
+})
+
+state.setPath(['config', 'theme', 'mode'], 'dark')
+state.setPath('items.2', 'C')
+state.setPath('', { ok: true })
+state.setPath('callback', () => 42)
+
+console.log(state.get())
+// {
+//   ok: true,
+//   callback: [Function]
+// }
 ```
 
 #### 与 watch / watchEffect 配合
@@ -250,6 +419,50 @@ const App: FC = () => {
     </div>
   )
 }
+```
+
+#### 自定义 equals
+
+默认情况下，`signal` 会根据内部的等值比较决定是否触发订阅者。你也可以通过 `options.equals` 自定义比较策略：
+
+```tsx
+import { signal, watchEffect } from '@rue-js/rue'
+
+const user = signal(
+  { id: 1, name: 'Rue' },
+  {
+    equals: (prev, next) => prev.id === next.id && prev.name === next.name,
+  },
+)
+
+watchEffect(() => {
+  console.log('user changed:', user.get())
+})
+
+user.set({ id: 1, name: 'Rue' }) // equals 返回 true，不触发
+user.set({ id: 1, name: 'Rue 2' }) // 触发
+```
+
+#### 调试与序列化
+
+`signal` 还提供了一些调试辅助 API：
+
+- `toJSON()`：`JSON.stringify(signal)` 时返回内部值
+- `valueOf()`：返回内部原始值
+- `toString()`：返回 JSON 字符串；无法序列化时会退回占位文本
+
+```tsx
+import { signal } from '@rue-js/rue'
+
+const state = signal({
+  count: 1,
+  nested: { ok: true },
+})
+
+console.log(state.toJSON())
+console.log(state.valueOf())
+console.log(state.toString())
+console.log(JSON.stringify(state))
 ```
 
 #### 对象与数组类型
@@ -333,7 +546,7 @@ const TodoApp: FC = () => {
 | 灵感来源 | Solid.js / Angular   | Vue 3                  |
 | 适合场景 | 函数式编程偏好       | 属性访问偏好           |
 
-两者在响应式追踪能力上完全等价，可以在同一个项目中混合使用，按团队偏好选择即可。
+两者在响应式追踪能力上完全等价，可以在同一个项目中混合使用，按团队偏好选择即可。如果你需要路径级别的读取和更新、无依赖快照读取、函数式更新等能力，`signal` 会更灵活。
 
 ### 使用 watch 和 watchEffect
 

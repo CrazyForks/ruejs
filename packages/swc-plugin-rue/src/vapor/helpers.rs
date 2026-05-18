@@ -5,7 +5,7 @@ use crate::emit::*;
 use super::VaporTransform;
 
 /*
-命名与计数器说明（中文）：
+命名与计数器说明：
 - 通过在转换器中维护递增计数，生成稳定且可读的局部标识符：
   - `_elX`：原生元素节点
   - `_listX`：注释锚点（列表/插槽/children）

@@ -1,12 +1,12 @@
 # Provide / Inject {#provide-inject}
 
-> 本页面假设你已经阅读过[组件基础](/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
+> 本页面假设你已经阅读过[组件基础](/guide/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
 
 ## Prop Drilling {#prop-drilling}
 
-通常，当我们需要将数据从父组件传递给子组件时，我们使用 [props](/guide/components/props)。然而，想象一下我们有一个大型组件树，一个深层嵌套的组件需要来自遥远祖先组件的数据。如果只用 props，我们将不得不在整个父链中传递相同的 prop：
+通常，当我们需要将数据从父组件传递给子组件时，我们使用 [props](/guide/guide/components/props)。然而，想象一下我们有一个大型组件树，一个深层嵌套的组件需要来自遥远祖先组件的数据。如果只用 props，我们将不得不在整个父链中传递相同的 prop：
 
-![prop drilling diagram](./images/prop-drilling.png)
+![prop drilling diagram](@todo)
 
 <!-- https://www.figma.com/file/yNDTtReM2xVgjcGVRzChss/prop-drilling -->
 
@@ -14,13 +14,13 @@
 
 我们可以用 `provide` 和 `inject` 来解决 prop drilling。父组件可以作为其所有后代的**依赖提供者**。后代树中的任何组件，无论多深，都可以**注入**由其父链中上游组件提供的依赖。
 
-![Provide/inject scheme](./images/provide-inject.png)
+![Provide/inject scheme](@todo)
 
 <!-- https://www.figma.com/file/PbTJ9oXis5KUawEOWdy2cE/provide-inject -->
 
 ## Provide {#provide}
 
-要向组件的后代提供数据，使用 [`provide()`](/api/composition-api-dependency-injection#provide) 函数：
+要向组件的后代提供数据，使用 [`provide()`](/api/api/composition-api-dependency-injection#provide) 函数：
 
 ```tsx
 import { provide } from '@rue-js/rue'
@@ -53,11 +53,11 @@ const app = createApp({})
 app.provide(/* key */ 'message', /* value */ 'hello!')
 ```
 
-应用级提供对所有在应用中渲染的组件都可用。这在编写 [插件](/guide/reusability/plugins) 时特别有用，因为插件通常无法使用组件来提供值。
+应用级提供对所有在应用中渲染的组件都可用。这在编写 [插件](/guide/guide/reusability/plugins) 时特别有用，因为插件通常无法使用组件来提供值。
 
 ## Inject {#inject}
 
-要注入由祖先组件提供的数据，使用 [`inject()`](/api/composition-api-dependency-injection#inject) 函数：
+要注入由祖先组件提供的数据，使用 [`inject()`](/api/api/composition-api-dependency-injection#inject) 函数：
 
 ```tsx
 import { inject } from '@rue-js/rue'
@@ -120,7 +120,7 @@ import { inject } from '@rue-js/rue'
 const { location, updateLocation } = inject('location')
 ```
 
-最后，如果你想确保通过 `provide` 传递的数据不能被注入器组件更改，可以使用 [`readonly()`](/api/reactivity-core#readonly) 包装提供的值：
+最后，如果你想确保通过 `provide` 传递的数据不能被注入器组件更改，可以使用 [`readonly()`](/api/api/reactivity-core#readonly) 包装提供的值：
 
 ```tsx
 import { ref, provide, readonly } from '@rue-js/rue'
@@ -157,7 +157,7 @@ import { myInjectionKey } from './keys.ts'
 const injected = inject(myInjectionKey)
 ```
 
-参见：[为 Provide / Inject 添加类型](/guide/typescript/provide-inject) <sup class="vt-badge ts" />
+参见：[为 Provide / Inject 添加类型](@todo) <sup class="vt-badge ts" />
 
 ## 使用 Context API（React 风格）{#using-context-api}
 

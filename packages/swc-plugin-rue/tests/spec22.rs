@@ -24,7 +24,7 @@ export default Chain
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Chain: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
@@ -68,7 +68,7 @@ const Chain: FC = ()=>{
                 _$appendChild(_el4, _$createTextNode("Else"));
                 return _root;
             });
-            renderAnchor(__slot, _root, _list1);
+            untrack(()=>renderAnchor(__slot, _root, _list1));
         });
         return _root;
     });

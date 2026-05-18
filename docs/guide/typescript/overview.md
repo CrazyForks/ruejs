@@ -57,7 +57,7 @@ Rue 本身是用 TypeScript 编写的，并提供一流的 TypeScript 支持。�
 
 ### `defineComponent()` {#definecomponent}
 
-为了让 TypeScript 正确推断组件选项内部的类型，我们需要使用 [`defineComponent()`](/api/general#definecomponent) 定义组件：
+为了让 TypeScript 正确推断组件选项内部的类型，我们需要使用 [`defineComponent()`](/api/api/general#definecomponent) 定义组件：
 
 ```ts
 import { defineComponent } from '@rue-js/rue'
@@ -101,7 +101,7 @@ const App: FC = defineComponent({
 
 另请参阅：
 
-- [关于 webpack Treeshaking 的说明](/api/general#note-on-webpack-treeshaking)
+- [关于 webpack Treeshaking 的说明](/api/api/general#note-on-webpack-treeshaking)
 - [`defineComponent` 的类型测试](https://github.com/@rue-js/ruejs/core/blob/main/packages-private/dts-test/defineComponent.test-d.tsx)
 
 :::tip
@@ -179,13 +179,13 @@ let x: string | number = 1
 
 ### 与 TSX 一起使用 {#usage-with-tsx}
 
-Rue 还支持使用 JSX / TSX 编写组件。详细信息在[渲染函数与 JSX](/guide/extras/render-function.html#jsx-tsx)指南中介绍。
+Rue 还支持使用 JSX / TSX 编写组件。详细信息在[渲染函数与 JSX](/guide/guide/extras/render-function#jsx-tsx)指南中介绍。
 
 ## 泛型组件 {#generic-components}
 
-泛型组件在渲染函数 / JSX 组件中受支持，详见 [`defineComponent()` 的函数签名](/api/general.html#function-signature)。
+泛型组件在渲染函数 / JSX 组件中受支持，详见 [`defineComponent()` 的函数签名](/api/api/general#function-signature)。
 
 ## API 特定配方 {#api-specific-recipes}
 
-- [TS 与 Composition API](./composition-api)
-- [TS 与 Options API](./options-api)
+- [TS 与 Composition API](/guide/guide/typescript/composition-api)
+- [TS 与 Options API](@todo)

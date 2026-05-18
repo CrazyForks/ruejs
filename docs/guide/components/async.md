@@ -28,7 +28,7 @@ const AsyncComp = useComponent(() => import('./components/MyComponent.tsx'))
 
 生成的 `AsyncComp` 是一个包装器组件，仅在页面上实际渲染时才调用加载器函数。此外，它会将任何 props 和插槽传递给内部组件，因此你可以使用异步包装器无缝替换原始组件，同时实现懒加载。
 
-与常规组件一样，异步组件可以使用 `app.component()` [全局注册](/guide/components/registration#global-registration)：
+与常规组件一样，异步组件可以使用 `app.component()` [全局注册](/guide/guide/components/registration#global-registration)：
 
 ```tsx
 app.component(
@@ -116,4 +116,4 @@ Rue 当前实现尚未提供 `hydrateOnIdle`、`hydrateOnVisible`、`hydrateOnMe
 
 异步组件可以与 `<Suspense>` 内置组件一起使用。默认情况下，`useComponent()` 会把仍在 pending 的加载任务登记到最近的 `<Suspense>` 边界；如果你希望组件始终自行控制 loading 和 error 状态，可以设置 `suspensible: false`。
 
-`<Suspense>` 与异步组件之间的交互记录在 [`<Suspense>` 的专门章节](/guide/built-ins/suspense)中。
+`<Suspense>` 与异步组件之间的交互记录在 [`<Suspense>` 的专门章节](/guide/guide/built-ins/suspense)中。

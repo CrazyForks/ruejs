@@ -15,7 +15,7 @@ Rue 的响应式系统可以与不同输入类型的输入框、`<textarea>` 和
 - `<select>` 使用 `value` 作为属性和 `change` 作为事件。
 
 ::: tip 注意
-表单元素上的初始 `value`、`checked` 或 `selected` 属性会被忽略。Rue 将始终将当前绑定的 JavaScript 状态视为唯一数据源。你应该在 JavaScript 侧声明初始值，使用 [响应式 API](/api/reactivity-core.html#reactivity-api-core)。
+表单元素上的初始 `value`、`checked` 或 `selected` 属性会被忽略。Rue 将始终将当前绑定的 JavaScript 状态视为唯一数据源。你应该在 JavaScript 侧声明初始值，使用 [响应式 API](/api/api/reactivity-core#reactivity-api-core)。
 :::
 
 ## 基本用法 {#basic-usage}
@@ -432,4 +432,4 @@ const DynamicSelect: FC = () => {
 
 > 如果你还不熟悉 Rue 的组件，可以暂时跳过这个部分。
 
-HTML 的内置输入类型并不总能满足你的需求。幸运的是，Rue 组件允许你构建具有完全自定义行为的可复用输入。这些输入甚至可以与 `value` 绑定一起工作！要了解更多，请阅读组件指南中的 [使用 `value` 绑定](/guide/components/v-model)。
+HTML 的内置输入类型并不总能满足你的需求。幸运的是，Rue 组件允许你构建具有完全自定义行为的可复用输入。这些输入甚至可以与 `value` 绑定一起工作！要了解更多，请阅读组件指南中的 [使用 `value` 绑定](/guide/guide/components/v-model)。

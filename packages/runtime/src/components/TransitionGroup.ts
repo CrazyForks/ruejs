@@ -15,6 +15,8 @@ import * as TransitionUtils from './transitionUtils'
 
 type TransitionGroupChildInput = unknown
 
+const renderedTransitionGroupContainers = new WeakSet<HTMLElement>()
+
 export type TransitionGroupProps = PropsWithChildren<
   BaseTransitionProps & {
     tag?: string
@@ -102,7 +104,7 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
   const nextChildren = normalizeTransitionGroupChildren(curProps.children)
   const nextKeys = nextChildren.map(readTransitionGroupKey)
   const renderVersion = Symbol('transition-group-render')
-  const isFirstRender = ctx.firstRender
+  const instanceFirstRender = ctx.firstRender
   ctx.renderVersion = renderVersion
 
   queueMicrotask(() => {
@@ -113,6 +115,20 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
 
     const nextElements = collectDirectElements(container)
     const elementsByKey: Map<string, HTMLElement> = new Map()
+    const existingKeys = new Set<string>()
+
+    nextElements.forEach(el => {
+      const key = el.getAttribute('data-rue-key')
+      if (key) {
+        existingKeys.add(key)
+      }
+    })
+
+    const isFirstRender =
+      instanceFirstRender &&
+      prevElementsByKey.size === 0 &&
+      existingKeys.size === 0 &&
+      !renderedTransitionGroupContainers.has(container)
 
     for (let index = 0; index < nextChildren.length; index++) {
       const el = nextElements[index]
@@ -177,6 +193,8 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
         oldEl.remove()
       })
     })
+
+    renderedTransitionGroupContainers.add(container)
   })
 
   ctx.firstRender = false

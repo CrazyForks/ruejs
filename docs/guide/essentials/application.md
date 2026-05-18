@@ -2,7 +2,7 @@
 
 ## 应用实例 {#the-application-instance}
 
-每个 Rue 应用都通过 [`useApp`](/api/application#useapp) 函数创建一个新的**应用实例**：
+每个 Rue 应用都通过 [`useApp`](/api/api/application#useapp) 函数创建一个新的**应用实例**：
 
 ```tsx
 import { type FC, useApp } from '@rue-js/rue'
@@ -82,7 +82,7 @@ const rustPlugin = createPlugin()
 useApp(App).use(router).mount('#app')
 ```
 
-这使得 `router` 和 `rustPlugin` 可以在我们的整个应用中使用。我们将在本指南的后续部分讨论组件和其他类型资源的注册。你还可以在其 [API 参考](/api/application) 中浏览应用实例 API 的完整列表。
+这使得 `router` 和 `rustPlugin` 可以在我们的整个应用中使用。我们将在本指南的后续部分讨论组件和其他类型资源的注册。你还可以在其 [API 参考](/api/api/application) 中浏览应用实例 API 的完整列表。
 
 确保在挂载应用之前应用所有应用配置！
 

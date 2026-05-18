@@ -35,7 +35,7 @@ export default Goods;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect } from "@rue-js/rue/vapor";
 import { type FC, h } from '@rue-js/rue';
 const Hello: FC = (props)=>{
     return vapor(()=>{
@@ -47,7 +47,7 @@ const Hello: FC = (props)=>{
         _$appendChild(_el1, _list1);
         watchEffect(()=>{
             const __slot = (props.children);
-            renderAnchor(__slot, _el1, _list1);
+          untrack(()=>renderAnchor(__slot, _el1, _list1));
         });
         return _root;
     });

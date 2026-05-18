@@ -199,7 +199,12 @@ const ListTransitionExample: FC = () => {
               </div>
 
               <div className="list-shell rounded-xl border border-base-200 bg-base-100 p-3">
-                <TransitionGroup tag="ul" name="list" duration={TRANSITION_MS}>
+                <TransitionGroup
+                  key={items.value.join('-')}
+                  tag="ul"
+                  name="list"
+                  duration={TRANSITION_MS}
+                >
                   {items.value.map(item => (
                     <li
                       key={item}

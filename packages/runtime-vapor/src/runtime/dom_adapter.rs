@@ -18,6 +18,13 @@ pub trait DomAdapter: Clone {
 
     // 创建节点相关：统一由运行时调用，用于构造最基本的宿主节点
     fn create_element(&mut self, tag: &str) -> Self::Element;
+    fn create_element_in_parent(
+        &mut self,
+        tag: &str,
+        _parent: Option<&Self::Element>,
+    ) -> Self::Element {
+        self.create_element(tag)
+    }
     fn create_text_node(&mut self, text: &str) -> Self::Element;
     fn create_document_fragment(&mut self) -> Self::Element;
 

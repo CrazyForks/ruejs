@@ -16,7 +16,7 @@ import {
 import { withParentContextProps } from './context'
 import { Component as DynamicComponent } from './components/Component'
 import { appendChild, createComment, getDOMAdapter, getParentNode, removeChild } from './dom'
-import { mountNormalizedRenderableToTarget } from './renderable-bridge'
+import { mountNormalizedRenderableToTarget, type DirectRenderableOwner } from './renderable-bridge'
 import { registerOwnerCleanup, runOwnerCleanupBucket } from './renderable-lifecycle'
 import { normalizeRenderable } from './renderable-normalize'
 import type { NormalizedRenderable, Renderable } from './renderable'
@@ -65,6 +65,7 @@ const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
 const RUE_VAPOR_PREFERRED_RUNTIME_KEY = '__rue_vapor_preferred'
 const RUE_JS_ERROR_BRIDGE_KEY = '__rue_js_error_bridge_installed'
 const RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY = '__rue_force_container_anchor_render__'
+const RUE_REPEATABLE_MOUNT_FACTORY_KEY = '__rue_repeatable_mount_factory__'
 
 const canTrackRuntime = (runtime: unknown): runtime is object =>
   (typeof runtime === 'object' || typeof runtime === 'function') && runtime != null
@@ -180,11 +181,17 @@ const compatContainerAnchorByContainer = new WeakMap<object, DomNodeLike>()
 const renderOwnerByRangeStart = new WeakMap<object, unknown>()
 const renderOwnerByAnchor = new WeakMap<object, unknown>()
 const renderOwnerByStaticAnchor = new WeakMap<object, unknown>()
+const activeRenderEntryByTarget = new WeakMap<
+  object,
+  { entryName: string; targetKind: 'container' | 'range' | 'anchor' | 'static-anchor' }
+>()
 const compatMountHandleOwner = Object.freeze({ __rue_compat_mount_handle_owner: true })
+const compatRangeEndAnchorOwner = Object.freeze({ __rue_compat_range_end_anchor_owner: true })
 const pendingCompatAnchorRenders = new WeakMap<
   object,
   { parent: DomElementLike; value: RenderableInput }
 >()
+const activeRuntimeErrorCaptures: Array<(error: Error) => void> = []
 const RUE_FORCE_REMOUNT_ANCHOR_KEY = '__rue_force_remount_anchor'
 const RUE_COMPONENT_CHILDREN_KEY = '__rue_component_children'
 
@@ -233,8 +240,90 @@ const syncRenderableOwner = (owners: WeakMap<object, unknown>, key: object, next
 
 const DEFAULT_UNSUPPORTED_OBJECT_INPUT_ERROR =
   'Unsupported object inputs are no longer accepted on the default @rue-js/runtime entry.'
+const DEFAULT_REENTRANT_RENDER_ERROR =
+  'Reentrant render detected on the same target. This usually means render logic triggered a nested render or state update while that target was already rendering.'
 
-const isDirectRenderableOwner = (value: unknown): value is { nodes: readonly DomNodeLike[] } =>
+const isObjectLike = (value: unknown): value is object =>
+  (typeof value === 'object' || typeof value === 'function') && value != null
+
+const createReentrantRenderError = (
+  entryName: string,
+  targetKind: 'container' | 'range' | 'anchor' | 'static-anchor',
+  activeEntryName: string,
+  activeTargetKind: 'container' | 'range' | 'anchor' | 'static-anchor',
+) =>
+  new Error(
+    `${DEFAULT_REENTRANT_RENDER_ERROR} Active ${activeEntryName}(${activeTargetKind}) blocked nested ${entryName}(${targetKind}).`,
+  )
+
+const reportRuntimeError = (error: Error) => {
+  const capture = activeRuntimeErrorCaptures[activeRuntimeErrorCaptures.length - 1]
+  if (capture) {
+    capture(error)
+  }
+  const runtime = getRue()
+  if (!runtime || typeof runtime.handleError !== 'function') {
+    return
+  }
+  try {
+    runtime.handleError(error)
+  } catch {}
+}
+
+const withCapturedReportedRuntimeError = <T>(runner: () => T): T => {
+  let capturedError: Error | undefined
+
+  activeRuntimeErrorCaptures.push(error => {
+    if (!capturedError) {
+      capturedError = error
+    }
+  })
+
+  try {
+    const result = runner()
+    if (capturedError) {
+      throw capturedError
+    }
+    return result
+  } finally {
+    activeRuntimeErrorCaptures.pop()
+  }
+}
+
+const withRenderEntryGuard = <T>(
+  entryName: string,
+  targetKind: 'container' | 'range' | 'anchor' | 'static-anchor',
+  target: unknown,
+  runner: () => T,
+): T => {
+  if (!isObjectLike(target)) {
+    return runner()
+  }
+
+  const activeEntry = activeRenderEntryByTarget.get(target)
+  if (activeEntry) {
+    const error = createReentrantRenderError(
+      entryName,
+      targetKind,
+      activeEntry.entryName,
+      activeEntry.targetKind,
+    )
+    reportRuntimeError(error)
+    throw error
+  }
+
+  activeRenderEntryByTarget.set(target, { entryName, targetKind })
+  try {
+    return runner()
+  } finally {
+    const currentEntry = activeRenderEntryByTarget.get(target)
+    if (currentEntry?.entryName === entryName && currentEntry.targetKind === targetKind) {
+      activeRenderEntryByTarget.delete(target)
+    }
+  }
+}
+
+const isDirectRenderableOwner = (value: unknown): value is DirectRenderableOwner =>
   !!value && typeof value === 'object' && Array.isArray((value as { nodes?: unknown }).nodes)
 
 const resolveAnchorTargetParent = (parent: DomElementLike, anchor: DomNodeLike) => {
@@ -277,6 +366,132 @@ const isMountHandle = (value: unknown): value is RueMountHandle =>
     RUE_PORTABLE_COMPONENT_TYPE_KEY in (value as Record<string, unknown>) ||
     RUE_PORTABLE_VAPOR_SETUP_KEY in (value as Record<string, unknown>))
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (!value || typeof value !== 'object') return false
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
+
+const attachRepeatableMountFactory = <T>(value: T, factory: () => unknown): T => {
+  if (isMountHandle(value)) {
+    Object.defineProperty(value, RUE_REPEATABLE_MOUNT_FACTORY_KEY, {
+      value: factory,
+      enumerable: false,
+      configurable: true,
+    })
+  }
+  return value
+}
+
+const createFreshMountHandle = (value: unknown): unknown => {
+  if (!isMountHandle(value)) return value
+  const replayFactory = (value as Record<string, unknown>)[RUE_REPEATABLE_MOUNT_FACTORY_KEY]
+  return typeof replayFactory === 'function' ? replayFactory() : value
+}
+
+const replayMountAwareValue = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    let changed = false
+    const nextValue = value.map(item => {
+      const replayed = replayMountAwareValue(item)
+      if (replayed !== item) changed = true
+      return replayed
+    })
+    return changed ? nextValue : value
+  }
+
+  if (isMountHandle(value)) {
+    return createFreshMountHandle(value)
+  }
+
+  if (!isPlainObject(value)) {
+    return value
+  }
+
+  let changed = false
+  const nextEntries = Object.entries(value).map(([key, entryValue]) => {
+    const replayed = replayMountAwareValue(entryValue)
+    if (replayed !== entryValue) changed = true
+    return [key, replayed] as const
+  })
+
+  if (!changed) {
+    return value
+  }
+
+  const clone = Object.create(Object.getPrototypeOf(value)) as Record<string, unknown>
+  nextEntries.forEach(([key, entryValue]) => {
+    clone[key] = entryValue
+  })
+  return clone
+}
+
+const resolveComponentPropsWithChildren = (
+  props: ComponentProps | null,
+  children: ChildInput[],
+): ComponentProps | null => {
+  const effectiveChildren = getEffectiveChildren(props, children)
+  if (!effectiveChildren.length) {
+    return props
+  }
+
+  const nextProps = props ? { ...props } : ({} as ComponentProps)
+  nextProps.children = effectiveChildren.length === 1 ? effectiveChildren[0] : effectiveChildren
+  return nextProps
+}
+
+const createRepeatableElementHandle = <P = {}>(
+  type: string | ComponentInstance<P>,
+  props: ComponentProps | null,
+  children: ChildInput[],
+  finalize?: (
+    vnode: RenderableOutput,
+    nextProps: ComponentProps | null,
+    nextChildren: ChildInput[],
+  ) => RenderableOutput,
+): RenderableOutput => {
+  const nextProps = replayMountAwareValue(props) as ComponentProps | null
+  const nextChildren = replayMountAwareValue(children) as ChildInput[]
+  const vnode = getRue().createElement(type, nextProps, nextChildren as any) as RenderableOutput
+  const nextVnode = finalize ? finalize(vnode, nextProps, nextChildren) : vnode
+  return attachRepeatableMountFactory(nextVnode, () =>
+    createRepeatableElementHandle(type, props, children, finalize),
+  )
+}
+
+const createRepeatableComponentHandle = <P = {}>(
+  type: ComponentInstance<P>,
+  props: ComponentProps | null,
+): RenderableOutput => {
+  const nextProps = replayMountAwareValue(props) as ComponentProps | null
+  const vnode = {
+    [RUE_PORTABLE_COMPONENT_TYPE_KEY]: type,
+    props: nextProps,
+  } as RenderableOutput
+  const nextVnode = markAnchorRemountableMountHandle(type, nextProps, [], vnode)
+  return attachRepeatableMountFactory(nextVnode, () => createRepeatableComponentHandle(type, props))
+}
+
+const createRepeatableVaporHandle = (
+  setup: (parentContext?: DomElementLike | null) => VaporSetupResult,
+): RenderableOutput => {
+  const bridge = getSharedRuntimeBridge()
+  const owner = {}
+  const wrappedSetup = (parentContext?: DomElementLike | null) => {
+    const didPush = bridge?.beginVaporScope(owner) ?? false
+    try {
+      return setup(parentContext)
+    } finally {
+      bridge?.endVaporScope(didPush)
+    }
+  }
+  const handle = getRue().vapor(wrappedSetup) as RenderableOutput
+  registerOwnerCleanup(handle, () => {
+    bridge?.disposeVaporScope(owner)
+  })
+  return attachRepeatableMountFactory(handle, () => createRepeatableVaporHandle(setup))
+}
+
 const normalizeMountHandleSingletonInput = (value: unknown): unknown => {
   if (!Array.isArray(value)) {
     return value
@@ -290,7 +505,7 @@ const normalizeMountHandleSingletonInput = (value: unknown): unknown => {
   // Wrap multiple top-level mount handles in a fragment so compat render entrypoints
   // can hand a single handle back to the wasm runtime instead of an unsupported array.
   if (meaningfulValues.length > 1 && meaningfulValues.some(item => isMountHandle(item))) {
-    const wrapped = getRue().createElement('fragment', null, meaningfulValues as any)
+    const wrapped = createRepeatableElementHandle('fragment', null, meaningfulValues as any)
     if (wrapped && typeof wrapped === 'object') {
       ;(wrapped as Record<string, unknown>)[RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY] = true
     }
@@ -350,6 +565,9 @@ const getEffectiveChildren = (
   if (props?.children === undefined) {
     return []
   }
+  if (Array.isArray(props.children)) {
+    return props.children as ChildInput[]
+  }
   return [props.children]
 }
 
@@ -374,6 +592,9 @@ const markAnchorRemountableMountHandle = <P = {}>(
   const hasDomNodeLikeProp =
     !!props && Object.values(props).some(value => containsDomNodeLikeInput(value))
   const builtinName = typeof type === 'function' ? (type as Function).name : ''
+  const shouldUseComponentChildrenAnchor =
+    (effectiveChildren.length > 0 && builtinName !== 'TransitionGroup') ||
+    builtinName === 'Transition'
   const shouldForceRemount =
     typeof type === 'function' &&
     (builtinName === 'Transition' ||
@@ -383,7 +604,7 @@ const markAnchorRemountableMountHandle = <P = {}>(
       hasDomNodeLikeProp)
   if (
     typeof type === 'function' &&
-    effectiveChildren.length > 0 &&
+    shouldUseComponentChildrenAnchor &&
     vnode &&
     typeof vnode === 'object'
   ) {
@@ -433,12 +654,19 @@ export const createElement = <P = {}>(
   ) as ComponentProps | null
   const normalizedChildren = normalizeCreateElementChildren(children)
   assertDefaultChildren(contextualProps, normalizedChildren)
-  const vnode = getRue().createElement(
+  if (typeof resolvedType === 'function') {
+    return createRepeatableComponentHandle(
+      resolvedType,
+      resolveComponentPropsWithChildren(contextualProps, normalizedChildren),
+    )
+  }
+  return createRepeatableElementHandle(
     resolvedType,
     contextualProps,
-    normalizedChildren as any,
-  ) as RenderableOutput
-  return markAnchorRemountableMountHandle(resolvedType, contextualProps, normalizedChildren, vnode)
+    normalizedChildren,
+    (vnode, nextProps, nextChildren) =>
+      markAnchorRemountableMountHandle(resolvedType, nextProps, nextChildren, vnode),
+  )
 }
 
 export const createComponent = <P = {}>(
@@ -450,54 +678,62 @@ export const createComponent = <P = {}>(
     props as Record<string, unknown> | null,
   ) as ComponentProps | null
   assertDefaultChildren(contextualProps, [])
-  const vnode = getRue().createComponent(type, contextualProps) as RenderableOutput
-  return markAnchorRemountableMountHandle(type, contextualProps, [], vnode)
+  return createRepeatableComponentHandle(type, contextualProps)
 }
 /** 渲染到容器 */
 export const render = (value: RenderableInput, container: DomElementLike) => {
-  const analysis = analyzeDefaultRenderableInput(value)
-  if (analysis.kind === 'renderable') {
-    clearCompatContainerAnchor(container)
-    const prevOwner = renderOwnerByContainer.get(container as object)
-    if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
-      getRue().render(null, container)
-    }
-    const owner = mountNormalizedRenderableToTarget(analysis.value, {
-      kind: 'container',
-      container,
-    })
-    syncRenderableOwner(renderOwnerByContainer, container as object, owner)
-    return
-  }
-
-  const normalizedValue = normalizeMountHandleSingletonInput(value)
-  const shouldUseContainerAnchorCompat =
-    !!normalizedValue &&
-    typeof normalizedValue === 'object' &&
-    RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY in (normalizedValue as object)
-
-  if (shouldUseContainerAnchorCompat) {
-    const prevOwner = renderOwnerByContainer.get(container as object)
-    const anchor = ensureCompatContainerAnchor(container)
-
-    if (prevOwner !== compatMountHandleOwner) {
-      getRue().render(null, container)
-      if (getParentNode(anchor) !== container) {
-        appendChild(container, anchor)
+  return withRenderEntryGuard('render', 'container', container as object, () => {
+    const analysis = analyzeDefaultRenderableInput(value)
+    if (analysis.kind === 'renderable') {
+      clearCompatContainerAnchor(container)
+      const prevOwner = renderOwnerByContainer.get(container as object)
+      if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
+        getRue().render(null, container)
       }
+      const owner = mountNormalizedRenderableToTarget(
+        analysis.value,
+        {
+          kind: 'container',
+          container,
+        },
+        isDirectRenderableOwner(prevOwner) ? prevOwner : undefined,
+      )
+      syncRenderableOwner(renderOwnerByContainer, container as object, owner)
+      return
     }
 
-    syncRenderableOwner(renderOwnerByContainer, container as object, compatMountHandleOwner)
-    return getRue().renderAnchor(normalizedValue, container, anchor)
-  }
+    const normalizedValue = normalizeMountHandleSingletonInput(value)
+    const compatValue = createFreshMountHandle(normalizedValue)
+    const shouldUseContainerAnchorCompat =
+      !!normalizedValue &&
+      typeof normalizedValue === 'object' &&
+      RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY in (normalizedValue as object)
 
-  const prevOwner = renderOwnerByContainer.get(container as object)
-  if (prevOwner === compatMountHandleOwner) {
-    clearCompatContainerAnchor(container)
-    getRue().render(null, container)
-  }
-  syncRenderableOwner(renderOwnerByContainer, container as object, compatMountHandleOwner)
-  return getRue().render(normalizedValue, container)
+    if (shouldUseContainerAnchorCompat) {
+      const prevOwner = renderOwnerByContainer.get(container as object)
+      const anchor = ensureCompatContainerAnchor(container)
+
+      if (prevOwner !== compatMountHandleOwner) {
+        getRue().render(null, container)
+        if (getParentNode(anchor) !== container) {
+          appendChild(container, anchor)
+        }
+      }
+
+      syncRenderableOwner(renderOwnerByContainer, container as object, compatMountHandleOwner)
+      return withCapturedReportedRuntimeError(() =>
+        getRue().renderAnchor(compatValue, container, anchor),
+      )
+    }
+
+    const prevOwner = renderOwnerByContainer.get(container as object)
+    if (prevOwner === compatMountHandleOwner) {
+      clearCompatContainerAnchor(container)
+      getRue().render(null, container)
+    }
+    syncRenderableOwner(renderOwnerByContainer, container as object, compatMountHandleOwner)
+    return withCapturedReportedRuntimeError(() => getRue().render(compatValue, container))
+  })
 }
 /** 在区间 [start,end] 之间渲染 */
 export const renderBetween = (
@@ -506,39 +742,64 @@ export const renderBetween = (
   start: DomNodeLike,
   end: DomNodeLike,
 ) => {
-  const normalizedValue = normalizeMountHandleSingletonInput(value)
-  const targetParent = resolveBetweenTargetParent(parent, start, end)
-  if (!targetParent) {
-    syncRenderableOwner(renderOwnerByRangeStart, start as object, undefined)
-    return
-  }
-
-  const analysis = analyzeDefaultRenderableInput(normalizedValue)
-  if (analysis.kind === 'renderable') {
-    const prevOwner = renderOwnerByRangeStart.get(start as object)
-    if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
-      getRue().renderBetween(null, parent, start, end)
+  return withRenderEntryGuard('renderBetween', 'range', start as object, () => {
+    const normalizedValue = normalizeMountHandleSingletonInput(value)
+    const compatValue = createFreshMountHandle(normalizedValue)
+    const targetParent = resolveBetweenTargetParent(parent, start, end)
+    if (!targetParent) {
+      syncRenderableOwner(renderOwnerByRangeStart, start as object, undefined)
+      return
     }
-    const owner = mountNormalizedRenderableToTarget(
-      analysis.value,
-      {
-        kind: 'between',
-        parent: targetParent,
-        start,
-        end,
-      },
-      prevOwner,
-    )
-    syncRenderableOwner(renderOwnerByRangeStart, start as object, owner)
-    return
-  }
 
-  const prevOwner = renderOwnerByRangeStart.get(start as object)
-  if (prevOwner === compatMountHandleOwner) {
-    getRue().renderBetween(null, targetParent, start, end)
-  }
-  syncRenderableOwner(renderOwnerByRangeStart, start as object, compatMountHandleOwner)
-  return getRue().renderBetween(normalizedValue, targetParent, start, end)
+    const analysis = analyzeDefaultRenderableInput(normalizedValue)
+    if (analysis.kind === 'renderable') {
+      const prevOwner = renderOwnerByRangeStart.get(start as object)
+      if (prevOwner === compatRangeEndAnchorOwner) {
+        getRue().renderAnchor(null, targetParent, end)
+      } else if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
+        getRue().renderBetween(null, targetParent, start, end)
+      }
+      const owner = mountNormalizedRenderableToTarget(
+        analysis.value,
+        {
+          kind: 'between',
+          parent: targetParent,
+          start,
+          end,
+        },
+        isDirectRenderableOwner(prevOwner) ? prevOwner : undefined,
+      )
+      syncRenderableOwner(renderOwnerByRangeStart, start as object, owner)
+      return
+    }
+
+    const shouldUseRangeEndAnchorCompat =
+      !!normalizedValue &&
+      typeof normalizedValue === 'object' &&
+      RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY in (normalizedValue as object)
+
+    if (shouldUseRangeEndAnchorCompat) {
+      const prevOwner = renderOwnerByRangeStart.get(start as object)
+      if (prevOwner === compatMountHandleOwner) {
+        getRue().renderBetween(null, targetParent, start, end)
+      }
+      syncRenderableOwner(renderOwnerByRangeStart, start as object, compatRangeEndAnchorOwner)
+      return withCapturedReportedRuntimeError(() =>
+        getRue().renderAnchor(compatValue, targetParent, end),
+      )
+    }
+
+    const prevOwner = renderOwnerByRangeStart.get(start as object)
+    if (prevOwner === compatRangeEndAnchorOwner) {
+      getRue().renderAnchor(null, targetParent, end)
+    } else if (prevOwner === compatMountHandleOwner) {
+      getRue().renderBetween(null, targetParent, start, end)
+    }
+    syncRenderableOwner(renderOwnerByRangeStart, start as object, compatMountHandleOwner)
+    return withCapturedReportedRuntimeError(() =>
+      getRue().renderBetween(compatValue, targetParent, start, end),
+    )
+  })
 }
 /** 在单个尾锚点前渲染 */
 export const renderAnchor = (
@@ -546,71 +807,83 @@ export const renderAnchor = (
   parent: DomElementLike,
   anchor: DomNodeLike,
 ) => {
-  const normalizedValue = normalizeMountHandleSingletonInput(value)
-  pendingCompatAnchorRenders.delete(anchor as object)
-  const targetParent = resolveAnchorTargetParent(parent, anchor)
-  if (!targetParent) {
-    syncRenderableOwner(renderOwnerByAnchor, anchor as object, undefined)
-    return
-  }
-
-  const analysis = analyzeDefaultRenderableInput(normalizedValue)
-  if (analysis.kind === 'renderable') {
-    const prevOwner = renderOwnerByAnchor.get(anchor as object)
-    if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
-      getRue().renderAnchor(null, parent, anchor)
-    }
-    const owner = mountNormalizedRenderableToTarget(
-      analysis.value,
-      {
-        kind: 'anchor',
-        parent: targetParent,
-        anchor,
-      },
-      isDirectRenderableOwner(prevOwner) ? prevOwner : undefined,
-    )
-    syncRenderableOwner(renderOwnerByAnchor, anchor as object, owner)
-    return
-  }
-
-  const shouldForceRemount =
-    !!normalizedValue &&
-    typeof normalizedValue === 'object' &&
-    RUE_FORCE_REMOUNT_ANCHOR_KEY in (normalizedValue as object)
-  const hasComponentChildren =
-    !!normalizedValue &&
-    typeof normalizedValue === 'object' &&
-    RUE_COMPONENT_CHILDREN_KEY in (normalizedValue as object)
-  const prevOwner = renderOwnerByAnchor.get(anchor as object)
-  if (!shouldForceRemount || prevOwner !== compatMountHandleOwner) {
-    if (!hasComponentChildren) {
-      syncRenderableOwner(renderOwnerByAnchor, anchor as object, normalizedValue as unknown)
-      return getRue().renderAnchor(normalizedValue, targetParent, anchor)
-    }
-    syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
-    return getRue().renderAnchor(normalizedValue, targetParent, anchor)
-  }
-
-  pendingCompatAnchorRenders.set(anchor as object, {
-    parent: targetParent,
-    value: normalizedValue,
-  })
-  queueMicrotask(() => {
-    const pending = pendingCompatAnchorRenders.get(anchor as object)
-    if (!pending) {
-      return
-    }
+  return withRenderEntryGuard('renderAnchor', 'anchor', anchor as object, () => {
+    const normalizedValue = normalizeMountHandleSingletonInput(value)
+    const compatValue = createFreshMountHandle(normalizedValue)
     pendingCompatAnchorRenders.delete(anchor as object)
-
-    const mountedParent = resolveAnchorTargetParent(pending.parent, anchor)
-    if (!mountedParent) {
+    const targetParent = resolveAnchorTargetParent(parent, anchor)
+    if (!targetParent) {
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, undefined)
       return
     }
 
-    getRue().renderAnchor(null, mountedParent, anchor)
-    syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
-    getRue().renderAnchor(pending.value, mountedParent, anchor)
+    const analysis = analyzeDefaultRenderableInput(normalizedValue)
+    if (analysis.kind === 'renderable') {
+      const prevOwner = renderOwnerByAnchor.get(anchor as object)
+      if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
+        getRue().renderAnchor(null, targetParent, anchor)
+      }
+      const owner = mountNormalizedRenderableToTarget(
+        analysis.value,
+        {
+          kind: 'anchor',
+          parent: targetParent,
+          anchor,
+        },
+        isDirectRenderableOwner(prevOwner) ? prevOwner : undefined,
+      )
+      syncRenderableOwner(renderOwnerByAnchor, anchor as object, owner)
+      return
+    }
+
+    const shouldForceRemount =
+      !!normalizedValue &&
+      typeof normalizedValue === 'object' &&
+      RUE_FORCE_REMOUNT_ANCHOR_KEY in (normalizedValue as object)
+    const hasComponentChildren =
+      !!normalizedValue &&
+      typeof normalizedValue === 'object' &&
+      RUE_COMPONENT_CHILDREN_KEY in (normalizedValue as object)
+    const prevOwner = renderOwnerByAnchor.get(anchor as object)
+    const componentType =
+      !!normalizedValue && typeof normalizedValue === 'object'
+        ? (normalizedValue as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
+        : undefined
+    const componentName = typeof componentType === 'function' ? componentType.name : ''
+    const shouldPreserveCompatChildrenInstance = componentName === 'KeepAlive'
+    const shouldRemountCompatChildren =
+      prevOwner === compatMountHandleOwner &&
+      (shouldForceRemount || (hasComponentChildren && !shouldPreserveCompatChildrenInstance))
+    if (!shouldRemountCompatChildren) {
+      if (!hasComponentChildren) {
+        syncRenderableOwner(renderOwnerByAnchor, anchor as object, normalizedValue as unknown)
+        return getRue().renderAnchor(compatValue, targetParent, anchor)
+      }
+      syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
+      return getRue().renderAnchor(compatValue, targetParent, anchor)
+    }
+
+    pendingCompatAnchorRenders.set(anchor as object, {
+      parent: targetParent,
+      value: normalizedValue,
+    })
+    queueMicrotask(() => {
+      const pending = pendingCompatAnchorRenders.get(anchor as object)
+      if (!pending) {
+        return
+      }
+      pendingCompatAnchorRenders.delete(anchor as object)
+
+      const mountedParent = resolveAnchorTargetParent(pending.parent, anchor)
+      if (!mountedParent) {
+        syncRenderableOwner(renderOwnerByAnchor, anchor as object, undefined)
+        return
+      }
+
+      getRue().renderAnchor(null, mountedParent, anchor)
+      syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
+      getRue().renderAnchor(createFreshMountHandle(pending.value), mountedParent, anchor)
+    })
   })
 }
 /** 在单个临时锚点前执行一次性静态渲染 */
@@ -619,30 +892,38 @@ export const renderStatic = (
   parent: DomElementLike,
   anchor: DomNodeLike,
 ) => {
-  const normalizedValue = normalizeMountHandleSingletonInput(value)
-  const targetParent = resolveAnchorTargetParent(parent, anchor)
-  if (!targetParent) {
-    syncRenderableOwner(renderOwnerByStaticAnchor, anchor as object, undefined)
-    return
-  }
+  return withRenderEntryGuard('renderStatic', 'static-anchor', anchor as object, () => {
+    const normalizedValue = normalizeMountHandleSingletonInput(value)
+    const compatValue = createFreshMountHandle(normalizedValue)
+    const targetParent = resolveAnchorTargetParent(parent, anchor)
+    if (!targetParent) {
+      syncRenderableOwner(renderOwnerByStaticAnchor, anchor as object, undefined)
+      return
+    }
 
-  const analysis = analyzeDefaultRenderableInput(normalizedValue)
-  if (analysis.kind === 'renderable') {
-    const owner = mountNormalizedRenderableToTarget(analysis.value, {
-      kind: 'static',
-      parent: targetParent,
-      anchor,
-    })
-    syncRenderableOwner(renderOwnerByStaticAnchor, anchor as object, owner)
-    return
-  }
+    const analysis = analyzeDefaultRenderableInput(normalizedValue)
+    if (analysis.kind === 'renderable') {
+      const prevOwner = renderOwnerByStaticAnchor.get(anchor as object)
+      const owner = mountNormalizedRenderableToTarget(
+        analysis.value,
+        {
+          kind: 'static',
+          parent: targetParent,
+          anchor,
+        },
+        isDirectRenderableOwner(prevOwner) ? prevOwner : undefined,
+      )
+      syncRenderableOwner(renderOwnerByStaticAnchor, anchor as object, owner)
+      return
+    }
 
-  const prevOwner = renderOwnerByStaticAnchor.get(anchor as object)
-  if (prevOwner === compatMountHandleOwner) {
-    getRue().renderStatic(null, targetParent, anchor)
-  }
-  syncRenderableOwner(renderOwnerByStaticAnchor, anchor as object, compatMountHandleOwner)
-  return getRue().renderStatic(normalizedValue, targetParent, anchor)
+    const prevOwner = renderOwnerByStaticAnchor.get(anchor as object)
+    if (prevOwner === compatMountHandleOwner) {
+      getRue().renderStatic(null, targetParent, anchor)
+    }
+    syncRenderableOwner(renderOwnerByStaticAnchor, anchor as object, compatMountHandleOwner)
+    return getRue().renderStatic(compatValue, targetParent, anchor)
+  })
 }
 /** 挂载应用到容器 */
 export const mount = (App: ComponentInstance, container: string | DomElementLike) =>
@@ -669,22 +950,8 @@ export const emitted = (props: ComponentProps) => {
   }
 }
 /** Vapor 块模式：返回 runtime-vapor 的最小挂载句柄，而不是旧的 type/props dev object */
-export const vapor = (setup: () => VaporSetupResult) => {
-  const bridge = getSharedRuntimeBridge()
-  const owner = {}
-  const wrappedSetup = () => {
-    const didPush = bridge?.beginVaporScope(owner) ?? false
-    try {
-      return setup()
-    } finally {
-      bridge?.endVaporScope(didPush)
-    }
-  }
-  const handle = getRue().vapor(wrappedSetup) as RenderableOutput
-  registerOwnerCleanup(handle, () => {
-    bridge?.disposeVaporScope(owner)
-  })
-  return handle
+export const vapor = (setup: (parentContext?: DomElementLike | null) => VaporSetupResult) => {
+  return createRepeatableVaporHandle(setup)
 }
 /** 生命周期：创建前 */
 export const onBeforeCreate = (fn: () => void) => getRue().onBeforeCreate(fn)
@@ -728,15 +995,7 @@ export function h<P = {}>(
   props: ComponentProps | null,
   ...children: ChildInput[]
 ): RenderableOutput {
-  const resolvedType = resolveCreateElementType(type)
-  const normalizedChildren = normalizeCreateElementChildren(children)
-  assertDefaultChildren(props, normalizedChildren)
-  const vnode = getRue().createElement(
-    resolvedType,
-    props,
-    normalizedChildren as any,
-  ) as RenderableOutput
-  return markAnchorRemountableMountHandle(resolvedType, props, normalizedChildren, vnode)
+  return createElement(type, props, ...children)
 }
 /** 片段标记：用于 JSX 片段渲染 */
 export const Fragment = 'fragment'

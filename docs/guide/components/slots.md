@@ -1,6 +1,6 @@
 # 插槽 {#slots}
 
-> 本页面假设你已经阅读过[组件基础](/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
+> 本页面假设你已经阅读过[组件基础](/guide/guide/essentials/component-basics)。如果你是组件的新手，请先阅读那部分内容。
 
 ## 插槽内容和出口 {#slot-content-and-outlet}
 
@@ -28,7 +28,7 @@ function FancyButton({ children }: { children?: React.ReactNode }) {
 
 `children` 属性是一个**插槽出口**，表示父组件提供的**插槽内容**应该在哪里渲染。
 
-![slot diagram](./images/slots.png)
+![slot diagram](@todo)
 
 <!-- https://www.figma.com/file/LjKTYVL97Ck6TEmBbstavX/slot -->
 
@@ -189,7 +189,7 @@ function BaseLayout({
 </BaseLayout>
 ```
 
-![named slots diagram](./images/named-slots.png)
+![named slots diagram](@todo)
 
 <!-- https://www.figma.com/file/2BhP8gVZevttBu9oUmUUyz/named-slot -->
 
@@ -333,7 +333,7 @@ function MyComponent({ children }: MyComponentProps) {
 </MyComponent>
 ```
 
-![scoped slots diagram](./images/scoped-slots.svg)
+![scoped slots diagram](@todo)
 
 <!-- https://www.figma.com/file/QRneoj8eIdL1kw3WQaaEyc/scoped-slot -->
 
@@ -364,7 +364,7 @@ function MyComponent(slots) {
 }
 ```
 
-事实上，这与作用域插槽的编译方式非常接近，也是你在手动 [渲染函数](/guide/extras/render-function) 中使用作用域插槽的方式。
+事实上，这与作用域插槽的编译方式非常接近，也是你在手动 [渲染函数](/guide/guide/extras/render-function) 中使用作用域插槽的方式。
 
 注意 render prop 函数签名如何匹配。就像函数参数一样，我们可以在 render prop 中使用解构：
 
@@ -512,6 +512,6 @@ function MouseTracker({ children }: MouseTrackerProps) {
 
 </div>
 
-虽然这是一个有趣的实现方式，但大多数可以用无渲染组件实现的功能都可以用 Composition API 更高效地实现，而不会产生额外的组件嵌套开销。稍后，我们将看到如何将此鼠标跟踪功能实现为 [组合式函数](/guide/reusability/composables)。
+虽然这是一个有趣的实现方式，但大多数可以用无渲染组件实现的功能都可以用 Composition API 更高效地实现，而不会产生额外的组件嵌套开销。稍后，我们将看到如何将此鼠标跟踪功能实现为 [组合式函数](/guide/guide/reusability/composables)。
 
 也就是说，在需要同时封装逻辑**和**组合视觉输出的情况下，作用域插槽仍然很有用，就像 `<FancyList>` 示例一样。

@@ -102,7 +102,7 @@ const EyeIcon = () => (
   </svg>
 )
 
-const SparkIcon = () => (
+const _SparkIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
@@ -160,7 +160,7 @@ const PlusIcon = () => (
   </svg>
 )
 
-const ArrowRightIcon = () => (
+const _ArrowRightIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
@@ -380,8 +380,8 @@ const semanticCode = `import { Badge, Button, Card } from '@rue-js/design'
   extra={<Badge variant="secondary">Live</Badge>}
   cover={<img src="https://picsum.photos/seed/rue-card-workspace/960/640" alt="Workspace dashboard" className="h-56 w-full object-cover" />}
   actions={[
-    <Button type="text" size="sm">查看报表</Button>,
-    <Button color="primary" size="sm">升级看板</Button>,
+    <Button type="text" size="sm" className="inline-flex items-center justify-center">查看报表</Button>,
+    <Button color="primary" size="sm" className="inline-flex items-center justify-center">升级看板</Button>,
   ]}
   hoverable
   className="overflow-hidden bg-base-100 shadow-sm"
@@ -655,13 +655,17 @@ const CardDemo: FC = () => {
                   />
                 }
                 actions={[
-                  <Button type="text" size="sm">
+                  <Button type="text" size="sm" className="inline-flex items-center justify-center">
                     <span className="inline-flex items-center gap-2">
                       <EyeIcon />
                       查看报表
                     </span>
                   </Button>,
-                  <Button color="primary" size="sm">
+                  <Button
+                    color="primary"
+                    size="sm"
+                    className="inline-flex items-center justify-center"
+                  >
                     <span className="inline-flex items-center gap-2">
                       <TrendIcon />
                       升级看板

@@ -2,7 +2,7 @@
 
 组件允许我们将 UI 划分为独立的、可复用的部分，并且可以对每个部分进行单独思考。在实际应用中，组件常常被组织成层层嵌套的树状结构：
 
-![Component Tree](./images/components.png)
+![Component Tree](@todo)
 
 <!-- https://www.figma.com/file/qa7WHDQRWu7ZJ7Fm8r9ZR1/Component-Tree -->
 

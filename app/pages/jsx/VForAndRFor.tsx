@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { type FC, ref } from '@rue-js/rue'
+import { computed, type FC, ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -19,6 +19,12 @@ const VForAndRFor: FC = () => {
   const activeTab = ref<'preview' | 'code'>('code')
   const fruits = ref([...initialFruits])
   const count = ref(3)
+  const fruitCards = computed(() =>
+    fruits.value.map((item, index) => ({
+      ...item,
+      rank: index + 1,
+    })),
+  )
 
   return (
     <SidebarPlayground>
@@ -124,10 +130,14 @@ export default VForAndRFor;`}
                 </div>
 
                 <ul className="list bg-base-200 rounded-box">
-                  <li v-for="(item, index) in fruits.value" key={item.id} className="list-row">
+                  <li
+                    v-for="item in fruitCards.get()"
+                    key={`${item.id}-${item.rank}`}
+                    className="list-row"
+                  >
                     <div>
                       <div className="font-medium">
-                        {index + 1}. {item.name}
+                        {item.rank}. {item.name}
                       </div>
                       <div className="text-sm opacity-70">颜色：{item.color}</div>
                     </div>

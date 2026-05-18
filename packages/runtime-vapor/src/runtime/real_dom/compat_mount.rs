@@ -11,13 +11,14 @@ mod fragment;
 pub(super) fn mount_compat_input<A: DomAdapter>(
     rue: &mut Rue<A>,
     input: &MountInput<A>,
+    parent_context: Option<&A::Element>,
 ) -> Option<MountedSubtreeState<A>>
 where
     A::Element: Clone + From<JsValue> + Into<JsValue>,
 {
     match &input.r#type {
-        MountInputType::Fragment => fragment::mount_fragment(rue, input),
-        MountInputType::Element(tag) => element::mount_element(rue, input, tag),
-        _ => super::mount_core_input(rue, input),
+        MountInputType::Fragment => fragment::mount_fragment(rue, input, parent_context),
+        MountInputType::Element(tag) => element::mount_element(rue, input, tag, parent_context),
+        _ => super::mount_core_input(rue, input, parent_context),
     }
 }

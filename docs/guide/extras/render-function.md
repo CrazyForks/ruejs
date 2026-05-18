@@ -2,7 +2,7 @@
 
 Rue 依然支持手写渲染函数，但它们现在更适合作为显式边界来使用：例如可复用库组件、极动态 UI，或迁移旧的手写渲染 helper。对绝大多数应用代码来说，模板和普通 JSX 仍然是首选，因为它们会在编译阶段直接生成 Block / Vapor 导向的渲染产物。
 
-> 如果你还没建立 Rue 当前默认渲染路径的整体图景，请先阅读[渲染机制](/guide/extras/rendering-mechanism)。
+> 如果你还没建立 Rue 当前默认渲染路径的整体图景，请先阅读[渲染机制](/guide/guide/extras/rendering-mechanism)。
 
 ## 基本用法 {#basic-usage}
 
@@ -291,7 +291,7 @@ h('input', {
 <input onClickCapture={() => {}} onKeyupOnce={() => {}} onMouseoverOnceCapture={() => {}} />
 ```
 
-其他修饰符可以配合 [`withModifiers`](/api/render-function#withmodifiers) 使用：
+其他修饰符可以配合 [`withModifiers`](/api/api/render-function#withmodifiers) 使用：
 
 ```tsx
 import { withModifiers } from '@rue-js/rue'

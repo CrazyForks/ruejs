@@ -18,7 +18,7 @@
 - 如果使用全局构建（通过 `Rue` 全局访问）：使用 `rue.global.prod.js`。
 - 如果使用 ESM 构建（通过原生 ESM 导入访问）：使用 `rue.esm-browser.prod.js`。
 
-查阅 [dist 文件指南](https://github.com/ruejs/core/tree/main/packages/rue#which-dist-file-to-use) 了解更多详情。
+查阅 [dist 文件指南](https://github.com/hunzhiwange/ruejs/core/tree/main/packages/rue#which-dist-file-to-use) 了解更多详情。
 
 ## 使用构建工具 (With Build Tools) {#with-build-tools}
 
@@ -27,7 +27,7 @@
 如果使用自定义设置，请确保：
 
 1. `rue` 解析为 `rue.runtime.esm-bundler.js`。
-2. [编译时功能标志](/api/compile-time-flags) 已正确配置。
+2. [编译时功能标志](@todo) 已正确配置。
 3. <code>process.env<wbr>.NODE_ENV</code> 在构建期间替换为 `"production"`。
 
 其他参考：
@@ -37,7 +37,7 @@
 
 ## 跟踪运行时错误 (Tracking Runtime Errors) {#tracking-runtime-errors}
 
-可以使用 [应用级错误处理程序](/api/application#app-config-errorhandler) 向跟踪服务报告错误：
+可以使用 [应用级错误处理程序](/api/api/application#app-config-errorhandler) 向跟踪服务报告错误：
 
 ```tsx
 import { createApp } from '@rue-js/rue'

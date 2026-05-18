@@ -214,11 +214,7 @@ async fn wasm_render_anchor_reports_unsupported_default_surface_input() {
 
     let unsupported_function_component = Function::new_no_args("return null");
 
-    rue.render_anchor_wasm(
-        unsupported_function_component.into(),
-        parent.clone(),
-        anchor.clone(),
-    );
+    rue.render_anchor_wasm(unsupported_function_component.into(), parent.clone(), anchor.clone());
     tick().await;
 
     assert_eq!(errors.length(), 1);

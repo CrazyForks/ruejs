@@ -12,9 +12,11 @@
   "type": "module",
   "scripts": {
     "preapp-dev": "node scripts/pre-app-dev.js",
-    "app-dev": "vite",
+    "runtime-vapor-addr2line": "node scripts/runtime-vapor-addr2line.js",
     "preapp-build": "node scripts/pre-app-dev.js",
+    "app-dev": "vite",
     "app-build": "vite build",
+    "app-preview": "vite preview",
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
     "build-dts": "tsgo -p tsconfig.build.json --noCheck && node scripts/build-dts.js",

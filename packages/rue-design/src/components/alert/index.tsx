@@ -37,7 +37,7 @@ export interface AlertProps {
   [key: string]: any
 }
 
-interface GlyphIconProps {
+interface _GlyphIconProps {
   className?: string
 }
 

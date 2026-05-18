@@ -10,7 +10,7 @@ Rue [在 Custom Elements Everywhere 测试中获得了完美的 100% 分数](htt
 
 ### 跳过组件解析 {#skipping-component-resolution}
 
-默认情况下，Rue 会尝试将非原生 HTML 标签解析为已注册的 Rue 组件，然后再回退将其渲染为自定义元素。这会导致 Rue 在开发期间发出"无法解析组件"的警告。要让 Rue 知道某些元素应被视为自定义元素并跳过组件解析，我们可以指定 [`compilerOptions.isCustomElement` 选项](/api/application#app-config-compileroptions)。
+默认情况下，Rue 会尝试将非原生 HTML 标签解析为已注册的 Rue 组件，然后再回退将其渲染为自定义元素。这会导致 Rue 在开发期间发出"无法解析组件"的警告。要让 Rue 知道某些元素应被视为自定义元素并跳过组件解析，我们可以指定 [`compilerOptions.isCustomElement` 选项](/api/api/application#app-config-compileroptions)。
 
 如果你使用构建设置使用 Rue，该选项应通过构建配置传递，因为它是一个编译时选项。
 
@@ -219,7 +219,7 @@ export function MyComponent() {
 
 ### 基于 Rue 的 Web 组件与 TypeScript {#web-components-and-typescript}
 
-编写 Rue SFC 模板时，你可能希望[类型检查](/guide/scaling-up/tooling.html#typescript)你的 Rue 组件，包括那些定义为自定义元素的组件。
+编写 Rue SFC 模板时，你可能希望[类型检查](/guide/guide/scaling-up/tooling#typescript)你的 Rue 组件，包括那些定义为自定义元素的组件。
 
 自定义元素使用浏览器内置 API 全局注册，默认情况下在 Rue 模板中使用它们时没有类型推断。要为注册为自定义元素的 Rue 组件提供类型支持，我们可以通过扩充 [`GlobalComponents` 接口](https://github.com/@rue-js/ruejs/language-tools/wiki/Global-Component-Types)来注册全局组件类型以在 Rue 模板中进行类型检查（JSX 用户可以改为扩充 [JSX.IntrinsicElements](https://www.typescriptlang.org/docs/handbook/jsx.html#intrinsic-elements) 类型，此处未展示）。
 
@@ -441,6 +441,6 @@ Rue 的组件模型将这些需求设计为一个连贯的系统。
 
 我们还发现自定义元素在某些方面有限制：
 
-- 急切的插槽评估阻碍了组件组合。Rue 的[作用域插槽](/guide/components/slots#scoped-slots)是一种强大的组件组合机制，由于原生插槽的急切特性，无法被自定义元素支持。急切的插槽也意味着接收组件无法控制何时或是否渲染一段插槽内容。
+- 急切的插槽评估阻碍了组件组合。Rue 的[作用域插槽](/guide/guide/components/slots#scoped-slots)是一种强大的组件组合机制，由于原生插槽的急切特性，无法被自定义元素支持。急切的插槽也意味着接收组件无法控制何时或是否渲染一段插槽内容。
 
 Rue 将始终与 Web 平台的最新标准保持同步，如果平台提供的任何东西能让我们的工作更轻松，我们将很乐意利用它。然而，我们的目标是提供今天运行良好且有效的解决方案。这意味着我们必须以批判的态度纳入新平台功能——这涉及在标准仍有不足时填补空白。

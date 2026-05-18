@@ -27,8 +27,9 @@
 // 提供 Effect/Signal 的注册、运行、调度以及批量更新机制。
 // 该模块以线程局部存储维护运行时全局状态，确保在 WebAssembly 场景下安全共享。
 use js_sys::{Function, JSON, Promise, Reflect};
-use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
+use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
@@ -42,10 +43,13 @@ thread_local! {
     pub(crate) static NEXT_EFFECT_ID: RefCell<usize> = RefCell::new(1);
     // 当前正在执行的副作用 id，用于依赖收集（Signal 读取时订阅到该 id）
     pub(crate) static CURRENT_EFFECT: RefCell<Option<usize>> = RefCell::new(None);
+    // watch handler 在“无依赖收集”模式下执行时，仍允许 on_cleanup 把清理函数挂到外层 effect。
+    pub(crate) static CURRENT_UNTRACKED_HANDLER_EFFECT: RefCell<Option<usize>> = RefCell::new(None);
     // 批量更新深度计数；>0 时 Signal 改变不会立即运行副作用，而是入队
     pub(crate) static BATCH_DEPTH: RefCell<usize> = RefCell::new(0);
-    // 等待在微任务中统一刷新执行的副作用 id 集合
-    pub(crate) static PENDING_EFFECTS: RefCell<HashSet<usize>> = RefCell::new(HashSet::new());
+    // 等待在微任务中统一刷新执行的副作用 id 队列。
+    // 这里显式保留入队顺序，避免父/子 effect 在异步 drain 中被无序集合打乱。
+    pub(crate) static PENDING_EFFECTS: RefCell<Vec<usize>> = RefCell::new(Vec::new());
     // 是否已安排下一次 drain，避免重复安排（微任务/动画帧共用）
     pub(crate) static MICROTASK_SCHEDULED: RefCell<bool> = RefCell::new(false);
     // 调度模式：1=同步立即运行，0=统一走默认微任务，2=统一走动画帧。
@@ -80,6 +84,7 @@ thread_local! {
     pub(crate) static EFFECT_SCOPE_STACK: RefCell<Vec<usize>> = RefCell::new(Vec::new());
     pub(crate) static EFFECT_SCOPES_EFFECTS: RefCell<HashMap<usize, Vec<usize>>> = RefCell::new(HashMap::new());
     pub(crate) static EFFECT_SCOPES_CHILDREN: RefCell<HashMap<usize, Vec<usize>>> = RefCell::new(HashMap::new());
+
 }
 
 /// 副作用实体
@@ -229,9 +234,7 @@ pub(crate) fn register_effect_in_scope(effect_id: usize, scope_id: usize) {
 /// - 同时从 PENDING_EFFECTS 移除，避免批量/微任务 drain 时再次触发
 /// - 最后执行 cleanups，保证资源（订阅/定时器等）被释放
 pub(crate) fn dispose_effect(id: usize) {
-    PENDING_EFFECTS.with(|p| {
-        p.borrow_mut().remove(&id);
-    });
+    remove_pending_effect(id);
     let (cleanups, existed) = EFFECTS.with(|m| {
         let mut map = m.borrow_mut();
         if let Some(mut e) = map.remove(&id) {
@@ -383,6 +386,8 @@ pub(crate) fn run_effect(id: usize) {
     if scope_id.is_some() {
         let _ = pop_effect_scope();
     }
+    // 执行结束后恢复上一层副作用（支持嵌套 effect 场景），即便当前回调抛错也不能把上下文留脏。
+    CURRENT_EFFECT.with(|c| *c.borrow_mut() = prev_effect);
     if let Err(err) = ret {
         let msg_js: js_sys::JsString =
             JSON::stringify(&err).unwrap_or(JsValue::from_str("<unstringifiable>").into());
@@ -398,8 +403,6 @@ pub(crate) fn run_effect(id: usize) {
 
         throw_val(err.clone());
     }
-    // 执行结束后恢复上一层副作用（支持嵌套 effect 场景）
-    CURRENT_EFFECT.with(|c| *c.borrow_mut() = prev_effect);
     #[cfg(feature = "dev")]
     {
         if crate::log::want_log("debug", "reactive:effect run end") {
@@ -418,20 +421,19 @@ fn drain_pending_effects() {
             crate::log::log("debug", &format!("reactive:schedule drain start"));
         }
     }
-    let ids: Vec<usize> = PENDING_EFFECTS.with(|p| p.borrow().iter().copied().collect());
-    PENDING_EFFECTS.with(|p| p.borrow_mut().clear());
+    let ids = take_pending_effects();
     for id in ids {
         run_effect(id);
     }
     MICROTASK_SCHEDULED.with(|s| *s.borrow_mut() = false);
     // drain 期间可能又产生了新的 pending effect；若有，必须主动续一轮调度，
     // 不能等下一次外部事件“顺手”把它们带出来。
-    let needs_follow_up = PENDING_EFFECTS.with(|p| !p.borrow().is_empty());
+    let needs_follow_up = has_pending_effects();
     if needs_follow_up {
         #[cfg(feature = "dev")]
         {
             if crate::log::want_log("debug", "reactive:schedule drain continue") {
-                let queued = PENDING_EFFECTS.with(|p| p.borrow().len());
+                let queued = pending_effects_len();
                 crate::log::log(
                     "debug",
                     &format!("reactive:schedule drain continue queued={}", queued),
@@ -448,6 +450,44 @@ fn drain_pending_effects() {
     }
 }
 
+fn enqueue_pending_effect(id: usize) -> bool {
+    PENDING_EFFECTS.with(|p| {
+        let mut pending = p.borrow_mut();
+        if pending.iter().any(|queued| *queued == id) {
+            return false;
+        }
+        pending.push(id);
+        true
+    })
+}
+
+fn remove_pending_effect(id: usize) {
+    PENDING_EFFECTS.with(|p| {
+        let mut pending = p.borrow_mut();
+        if let Some(index) = pending.iter().position(|queued| *queued == id) {
+            pending.remove(index);
+        }
+    });
+}
+
+fn take_pending_effects() -> Vec<usize> {
+    PENDING_EFFECTS.with(|p| {
+        let mut pending = p.borrow_mut();
+        let ids = pending.clone();
+        pending.clear();
+        ids
+    })
+}
+
+fn has_pending_effects() -> bool {
+    PENDING_EFFECTS.with(|p| !p.borrow().is_empty())
+}
+
+#[cfg(feature = "dev")]
+fn pending_effects_len() -> usize {
+    PENDING_EFFECTS.with(|p| p.borrow().len())
+}
+
 fn schedule_pending_effects_drain_microtask() {
     let drain = Closure::wrap(Box::new(move |_v: JsValue| {
         drain_pending_effects();
@@ -459,17 +499,43 @@ fn schedule_pending_effects_drain_microtask() {
 fn schedule_pending_effects_drain_frame() {
     // 帧级合并只在浏览器窗口环境中启用；
     // 在 node/测试环境里回退到微任务，避免因为没有 rAF 而卡住队列。
+    // 当浏览器的 rAF 被后台标签页或嵌入式预览环境节流时，再追加一个短超时兜底，
+    // 保持“优先按帧合并”的语义，同时避免交互更新被拖到秒级。
     let global: JsValue = js_sys::global().into();
     let target = Reflect::get(&global, &JsValue::from_str("window")).unwrap_or(global.clone());
     let raf = Reflect::get(&target, &JsValue::from_str("requestAnimationFrame"))
         .unwrap_or(JsValue::UNDEFINED);
     if let Some(func) = raf.dyn_ref::<Function>() {
+        let did_drain = Rc::new(Cell::new(false));
         let raf_fn = func.clone();
+        let raf_drain_flag = did_drain.clone();
         let drain = Closure::wrap(Box::new(move |_ts: JsValue| {
+            if raf_drain_flag.replace(true) {
+                return;
+            }
             drain_pending_effects();
         }) as Box<dyn FnMut(JsValue)>);
         let _ = raf_fn.call1(&target, drain.as_ref().unchecked_ref());
         drain.forget();
+
+        let timeout =
+            Reflect::get(&target, &JsValue::from_str("setTimeout")).unwrap_or(JsValue::UNDEFINED);
+        if let Some(func) = timeout.dyn_ref::<Function>() {
+            let timeout_fn = func.clone();
+            let timeout_drain_flag = did_drain.clone();
+            let timeout_drain = Closure::wrap(Box::new(move || {
+                if timeout_drain_flag.replace(true) {
+                    return;
+                }
+                drain_pending_effects();
+            }) as Box<dyn FnMut()>);
+            let _ = timeout_fn.call2(
+                &target,
+                timeout_drain.as_ref().unchecked_ref(),
+                &JsValue::from_f64(34.0),
+            );
+            timeout_drain.forget();
+        }
     } else {
         schedule_pending_effects_drain_microtask();
     }
@@ -500,10 +566,7 @@ fn schedule_pending_effects_drain() {
 /// 默认的异步调度：将副作用 id 入队，并根据当前模式在微任务或动画帧中统一运行。
 /// 返回值表示这个 id 是否是本轮第一次进入 pending 集合。
 fn schedule_effect_run_default(id: usize) -> bool {
-    let inserted = PENDING_EFFECTS.with(|p| {
-        // 将副作用 id 入队，等待微任务统一执行
-        p.borrow_mut().insert(id)
-    });
+    let inserted = enqueue_pending_effect(id);
     schedule_pending_effects_drain();
     inserted
 }
@@ -531,13 +594,7 @@ pub(crate) fn schedule_effect_run(id: usize) {
     }
     let in_batch = BATCH_DEPTH.with(|bd| *bd.borrow() > 0);
     if in_batch {
-        let _inserted = PENDING_EFFECTS.with(|p| {
-            // 批量模式：仅入队，不立即运行
-            //
-            // 这里用 HashSet 的语义保证去重：
-            // - 同一个 effect 在一个 batch 中被多次触发，只需要在 batch 结束时运行一次
-            p.borrow_mut().insert(id)
-        });
+        let _inserted = enqueue_pending_effect(id);
         #[cfg(feature = "dev")]
         {
             if _inserted && crate::log::want_log("debug", "reactive:schedule queued") {
@@ -546,13 +603,10 @@ pub(crate) fn schedule_effect_run(id: usize) {
         }
         return;
     }
-    PENDING_EFFECTS.with(|p| {
-        let mut set = p.borrow_mut();
-        // 走到这里说明“不在 batch 中”，因此可以把旧的 pending 去掉：
-        // - 避免后续 drain 再次运行同一个 id（造成重复执行）
-        // - 也使得 schedule_effect_run_default 的队列状态更干净
-        set.remove(&id);
-    });
+    // 走到这里说明“不在 batch 中”，因此可以把旧的 pending 去掉：
+    // - 避免后续 drain 再次运行同一个 id（造成重复执行）
+    // - 也使得 schedule_effect_run_default 的队列状态更干净
+    remove_pending_effect(id);
     // 是否已由自定义调度器处理
     let scheduler = EFFECTS.with(|m| {
         m.borrow()
@@ -656,16 +710,13 @@ pub fn batch_scope<F: FnOnce()>(cb: F) {
     });
     BATCH_DEPTH.with(|bd| {
         if *bd.borrow() == 0 {
-            PENDING_EFFECTS.with(|p| {
-                let ids: Vec<usize> = p.borrow().iter().copied().collect();
-                p.borrow_mut().clear();
-                for id in ids {
-                    // 注意这里调用的是 schedule_effect_run 而不是 run_effect：
-                    // - 这样能复用“自定义调度器 / 同步 vs 微任务 / avoid_self 重入保护”等策略
-                    // - 同时也确保 effect 在 flush 阶段仍会尊重 disposed 状态
-                    schedule_effect_run(id);
-                }
-            });
+            let ids = take_pending_effects();
+            for id in ids {
+                // 注意这里调用的是 schedule_effect_run 而不是 run_effect：
+                // - 这样能复用“自定义调度器 / 同步 vs 微任务 / avoid_self 重入保护”等策略
+                // - 同时也确保 effect 在 flush 阶段仍会尊重 disposed 状态
+                schedule_effect_run(id);
+            }
         }
     });
 }

@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   Component,
-  ref,
   render,
   renderAnchor,
   setReactiveScheduling,
@@ -175,5 +174,66 @@ describe('Component renderable boundary', () => {
       'on',
     )
     expect(host.querySelectorAll('[data-testid="shell-icon"]')).toHaveLength(1)
+  })
+
+  it('replays renderable props nested inside component handles on the same anchor', async () => {
+    const host = document.createElement('div')
+    const iconTone = signal<'mail' | 'bell'>('mail')
+
+    document.body.appendChild(host)
+
+    const MailGlyph: FC = () => (
+      <svg data-testid="mail-icon" viewBox="0 0 10 10" aria-hidden="true">
+        <rect x="1" y="2" width="8" height="6" rx="1" />
+      </svg>
+    )
+
+    const BellGlyph: FC = () => (
+      <svg data-testid="bell-icon" viewBox="0 0 10 10" aria-hidden="true">
+        <path d="M5 1.5a2.5 2.5 0 0 1 2.5 2.5c0 2 .8 2.8.8 2.8H1.7S2.5 6 2.5 4A2.5 2.5 0 0 1 5 1.5Z" />
+      </svg>
+    )
+
+    const IconShell: FC<{ icon: any; label: string }> = props => (
+      <button data-testid="icon-shell">
+        {props.icon}
+        <span>{props.label}</span>
+      </button>
+    )
+
+    const App: FC = () =>
+      vapor(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('rue:component:renderable-prop-anchor')
+
+        root.appendChild(anchor)
+
+        watchEffect(() => {
+          renderAnchor(
+            <IconShell
+              icon={iconTone.get() === 'mail' ? <MailGlyph /> : <BellGlyph />}
+              label="channel"
+            />,
+            root as any,
+            anchor as any,
+          )
+        })
+
+        return root as any
+      }) as any
+
+    render(<App />, host)
+    await flush()
+
+    expect(host.querySelector('[data-testid="mail-icon"]')).toBeTruthy()
+    expect(host.querySelector('[data-testid="bell-icon"]')).toBeNull()
+    expect(host.textContent).toContain('channel')
+
+    iconTone.set('bell')
+    await flush()
+
+    expect(host.querySelector('[data-testid="mail-icon"]')).toBeNull()
+    expect(host.querySelector('[data-testid="bell-icon"]')).toBeTruthy()
+    expect(host.textContent).toContain('channel')
   })
 })

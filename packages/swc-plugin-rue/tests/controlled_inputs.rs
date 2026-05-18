@@ -50,14 +50,14 @@ const ControlledInputs: FC = ()=>{
             };
         }));
     const { text: text, setText: setText } = _$useSetup;
-    return vapor(()=>{
-        const _root = _$createElement("div");
+    return vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3");
+        const _el1 = _$createElement("h3", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "text-xl font-semibold");
         _$appendChild(_el1, _$createTextNode("受控输入"));
-        const _el2 = _$createElement("input");
+        const _el2 = _$createElement("input", _root);
         _$appendChild(_root, _el2);
         _$setClassName(_el2, "border rounded-md px-2 py-1");
         watchEffect(()=>{
@@ -65,7 +65,7 @@ const ControlledInputs: FC = ()=>{
         });
         _$addEventListener(_el2, "input", ((e)=>setText((e.target as HTMLInputElement).value)));
         _$setAttribute(_el2, "placeholder", "输入试试");
-        const _el3 = _$createElement("div");
+        const _el3 = _$createElement("div", _root);
         _$appendChild(_root, _el3);
         _$appendChild(_el3, _$createTextNode("当前："));
         const _el4 = _$createTextWrapper(_el3);
@@ -73,7 +73,7 @@ const ControlledInputs: FC = ()=>{
         watchEffect(()=>{
             _$settextContent(_el4, text.value);
         });
-        const _el5 = _$createElement("a");
+        const _el5 = _$createElement("a", _root);
         _$appendChild(_root, _el5);
         watchEffect(()=>{
             _$setAttribute(_el5, "href", String(RouterLink.__rueHref("/jsx")));

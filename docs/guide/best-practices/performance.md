@@ -12,7 +12,7 @@ Rue 旨在在大多数常见用例中具有良好的性能，无需太多手动�
 
 虽然理想情况下两者都应最大化，但不同的前端架构往往会影响在这些方面获得所需性能的难易程度。此外，您正在构建的应用类型极大地影响您应该在性能方面优先考虑什么。因此，确保最佳性能的第一步是为您正在构建的应用类型选择正确的架构：
 
-- 查阅 [使用 Rue 的方式](/guide/extras/ways-of-using-rue) 了解如何以不同方式利用 Rue。
+- 查阅 [使用 Rue 的方式](/guide/guide/extras/ways-of-using-rue) 了解如何以不同方式利用 Rue。
 
 - Jason Miller 在 [应用原型](https://jasonformat.com/application-holotypes/) 中讨论了 Web 应用的类型及其各自的理想实现/交付方式。
 
@@ -64,7 +64,7 @@ function loadLazy() {
 }
 ```
 
-懒加载最好用于初始页面加载后不需要立即使用的功能。在 Rue 应用中，这可以与 Rue 的 [异步组件](/guide/components/async) 功能结合使用，为组件树创建分割块：
+懒加载最好用于初始页面加载后不需要立即使用的功能。在 Rue 应用中，这可以与 Rue 的 [异步组件](/guide/guide/components/async) 功能结合使用，为组件树创建分割块：
 
 ```tsx
 import { lazy } from '@rue-js/rue'
@@ -231,7 +231,7 @@ const MyComponent: FC = () => {
 
 ### 避免不必要的组件抽象 (Avoid Unnecessary Component Abstractions) {#avoid-unnecessary-component-abstractions}
 
-有时我们可能会创建 [无渲染组件](/guide/components/slots#renderless-components) 或高阶组件（即使用额外 props 渲染其他组件的组件）以获得更好的抽象或代码组织。虽然这没有错，但请记住，组件实例比纯 DOM 节点昂贵得多，由于抽象模式创建太多组件实例会产生性能成本。
+有时我们可能会创建 [无渲染组件](/guide/guide/components/slots#renderless-components) 或高阶组件（即使用额外 props 渲染其他组件的组件）以获得更好的抽象或代码组织。虽然这没有错，但请记住，组件实例比纯 DOM 节点昂贵得多，由于抽象模式创建太多组件实例会产生性能成本。
 
 请注意，只减少几个实例不会有明显的效果，所以如果组件在应用中只渲染几次，请不要担心。考虑这种优化的最佳场景再次是大型列表。想象一下 100 个项目的列表，其中每个项目组件包含许多子组件。在这里删除一个不必要的组件抽象可能会导致数百个组件实例的减少。
 

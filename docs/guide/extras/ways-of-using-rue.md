@@ -10,13 +10,13 @@ Rue 可以用作独立脚本文件——无需构建步骤！如果你已经有�
 
 ## 嵌入式 Web 组件 {#embedded-web-components}
 
-你可以使用 Rue 来[构建标准 Web 组件](/guide/extras/web-components)，这些组件可以嵌入到任何 HTML 页面中，无论它们是如何渲染的。这个选项允许你以完全与使用者无关的方式利用 Rue：生成的 web 组件可以嵌入到遗留应用程序、静态 HTML 中，甚至使用其他框架构建的应用程序中。
+你可以使用 Rue 来[构建标准 Web 组件](/guide/guide/extras/web-components)，这些组件可以嵌入到任何 HTML 页面中，无论它们是如何渲染的。这个选项允许你以完全与使用者无关的方式利用 Rue：生成的 web 组件可以嵌入到遗留应用程序、静态 HTML 中，甚至使用其他框架构建的应用程序中。
 
 ## 单页应用（SPA）{#single-page-application-spa}
 
 一些应用程序需要丰富的前端交互性、深度会话和非平凡的状态逻辑。构建此类应用程序的最佳方式是使用 Rue 不仅控制整个页面，而且处理数据更新和导航而无需重新加载页面的架构。这种类型的应用程序通常被称为单页应用（SPA）。
 
-Rue 提供了核心库和[全面的工具支持](/guide/scaling-up/tooling)，为构建现代 SPA 提供令人惊叹的开发者体验，包括：
+Rue 提供了核心库和[全面的工具支持](/guide/guide/scaling-up/tooling)，为构建现代 SPA 提供令人惊叹的开发者体验，包括：
 
 - 客户端路由器
 - 极速的构建工具链
@@ -35,4 +35,4 @@ SPA 通常需要后端暴露 API 端点——但你也可以将 Rue 与 [Inertia
 - 使用 [Ionic Rue](https://ionicframework.com/docs/rue/overview) 构建移动应用程序
 - 使用 [Quasar](https://quasar.dev/) 或 [Tauri](https://tauri.app) 从同一代码库构建桌面和移动应用程序
 - 使用 [TresJS](https://tresjs.org/) 构建 3D WebGL 体验
-- 使用 Rue 的[自定义渲染器 API](/api/custom-renderer) 构建自定义渲染器，如[终端](https://github.com/rue-terminal/rue-termui)！
+- 使用 Rue 的[自定义渲染器 API](/api/api/custom-renderer) 构建自定义渲染器，如[终端](https://github.com/rue-terminal/rue-termui)！

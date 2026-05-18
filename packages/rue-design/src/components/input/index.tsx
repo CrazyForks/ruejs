@@ -59,6 +59,7 @@ export interface InputProps {
   clearButtonClassName?: string
   className?: string
   disabled?: boolean
+  readOnly?: boolean
   value?: string | number
   defaultValue?: string | number
   onClear?: (event: MouseEvent) => void
@@ -319,6 +320,7 @@ const InputRoot: FC<InputProps> = ({
   clearButtonClassName,
   className,
   disabled,
+  readOnly,
   value,
   defaultValue,
   onClear,
@@ -369,7 +371,10 @@ const InputRoot: FC<InputProps> = ({
 
   const syncClearButtonVisibility = () => {
     if (!clearButtonElement) return
-    clearButtonElement.classList.toggle('hidden', currentValue.value.length <= 0 || !!disabled)
+    clearButtonElement.classList.toggle(
+      'hidden',
+      currentValue.value.length <= 0 || !!disabled || !!readOnly,
+    )
   }
 
   const syncAffixes = () => {
@@ -416,7 +421,7 @@ const InputRoot: FC<InputProps> = ({
 
   const handleClear = (event: MouseEvent) => {
     const element = inputRef.current
-    if (!element || disabled) return
+    if (!element || disabled || readOnly) return
 
     if (typeof (event as any).preventDefault === 'function') {
       ;(event as any).preventDefault()
@@ -458,15 +463,28 @@ const InputRoot: FC<InputProps> = ({
   if (defaultValue !== undefined) {
     nativeValueProps.defaultValue = defaultValue
   }
+  const nativeReadOnlyProps: Record<string, any> = {}
+  if (readOnly !== undefined) {
+    nativeReadOnlyProps.readOnly = readOnly
+  }
+  const ariaInvalid = status === 'error' ? 'true' : rest['aria-invalid']
+  if ('aria-invalid' in rest) {
+    delete rest['aria-invalid']
+  }
+  const nativeAriaInvalidProps: Record<string, any> = {}
+  if (ariaInvalid !== undefined && ariaInvalid !== null) {
+    nativeAriaInvalidProps['aria-invalid'] = ariaInvalid
+  }
 
   const rawInputNode = (
     <input
       {...rest}
       {...nativeValueProps}
+      {...nativeReadOnlyProps}
+      {...nativeAriaInvalidProps}
       ref={assignRefs}
       type={type}
       disabled={disabled}
-      aria-invalid={status === 'error' ? 'true' : rest['aria-invalid']}
       className={buildClassName({
         color,
         status,
@@ -507,10 +525,11 @@ const InputRoot: FC<InputProps> = ({
       <input
         {...rest}
         {...nativeValueProps}
+        {...nativeReadOnlyProps}
+        {...nativeAriaInvalidProps}
         ref={assignRefs}
         type={type}
         disabled={disabled}
-        aria-invalid={status === 'error' ? 'true' : rest['aria-invalid']}
         className={mergeClassName(
           'min-w-0 grow border-0 bg-transparent p-0 text-inherit outline-none placeholder:text-base-content/40',
           inputClassName,
@@ -519,7 +538,7 @@ const InputRoot: FC<InputProps> = ({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
       />
-      {clearable && !disabled ? (
+      {clearable && !disabled && !readOnly ? (
         <button
           ref={(element: HTMLButtonElement | null) => {
             clearButtonElement = element

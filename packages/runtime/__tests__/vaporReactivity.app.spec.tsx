@@ -3,12 +3,14 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   _$vaporWithHookId,
   computed,
+  effect,
   ref,
   render,
   renderAnchor,
   setReactiveScheduling,
   useSetup,
   vapor,
+  watch,
   watchEffect,
 } from '../src'
 import { SortFilterPreview, TogglePanel } from '../../../app/test-fixtures/VaporReactivityFixture'
@@ -107,6 +109,157 @@ const ManualComputedChild = (props: { query: string }) => {
 
     watchEffect(() => {
       text.textContent = setupState.derived.get()
+    })
+
+    return root
+  })
+}
+
+const ManualSetupWatchPropChild = (props: { query: string }) => {
+  const setupState = _$vaporWithHookId('useSetup:manual-watch-prop:0', () =>
+    useSetup(() => {
+      const latest = ref('')
+      const runs = ref('0')
+      let count = 0
+
+      watchEffect(() => {
+        count += 1
+        runs.value = String(count)
+        latest.value = props.query
+      })
+
+      return { latest, runs }
+    }),
+  ) as { latest: { value: string }; runs: { value: string } }
+
+  return vapor(() => {
+    const root = document.createElement('div')
+    const latestText = document.createElement('span')
+    const runsText = document.createElement('span')
+    latestText.dataset.testid = 'manual-watch-prop-value'
+    runsText.dataset.testid = 'manual-watch-prop-runs'
+    root.append(latestText, runsText)
+
+    watchEffect(() => {
+      latestText.textContent = setupState.latest.value
+      runsText.textContent = setupState.runs.value
+    })
+
+    return root
+  })
+}
+
+const ManualSetupWatchPropParent = () => {
+  const query = ref('a')
+
+  return vapor(() => {
+    const root = document.createElement('section')
+    const input = document.createElement('input')
+    input.dataset.testid = 'manual-watch-prop-input'
+    input.addEventListener('input', event => {
+      query.value = (event.target as HTMLInputElement).value
+    })
+
+    const anchor = document.createComment('manual-watch-prop-anchor')
+    root.append(input, anchor)
+
+    watchEffect(() => {
+      input.value = query.value
+      renderAnchor(<ManualSetupWatchPropChild query={query.value} />, root, anchor)
+    })
+
+    return root
+  })
+}
+
+const ManualSetupWatchAndEffectChild = (props: { query: string; label: string }) => {
+  const setupState = _$vaporWithHookId('useSetup:manual-watch-and-effect:0', () =>
+    useSetup(() => {
+      const watched = ref('')
+      const watchRuns = ref('0')
+      const effected = ref('')
+      const effectRuns = ref('0')
+      let watchCount = 0
+      let effectCount = 0
+
+      watch(
+        () => props.query,
+        next => {
+          watchCount += 1
+          watchRuns.value = String(watchCount)
+          watched.value = String(next)
+        },
+        { immediate: true },
+      )
+
+      effect(() => {
+        effectCount += 1
+        effectRuns.value = String(effectCount)
+        effected.value = props.label
+      })
+
+      return { watched, watchRuns, effected, effectRuns }
+    }),
+  ) as {
+    watched: { value: string }
+    watchRuns: { value: string }
+    effected: { value: string }
+    effectRuns: { value: string }
+  }
+
+  return vapor(() => {
+    const root = document.createElement('div')
+    const watchedText = document.createElement('span')
+    const watchRunsText = document.createElement('span')
+    const effectedText = document.createElement('span')
+    const effectRunsText = document.createElement('span')
+
+    watchedText.dataset.testid = 'manual-watch-effect-watch-value'
+    watchRunsText.dataset.testid = 'manual-watch-effect-watch-runs'
+    effectedText.dataset.testid = 'manual-watch-effect-effect-value'
+    effectRunsText.dataset.testid = 'manual-watch-effect-effect-runs'
+    root.append(watchedText, watchRunsText, effectedText, effectRunsText)
+
+    watchEffect(() => {
+      watchedText.textContent = setupState.watched.value
+      watchRunsText.textContent = setupState.watchRuns.value
+      effectedText.textContent = setupState.effected.value
+      effectRunsText.textContent = setupState.effectRuns.value
+    })
+
+    return root
+  })
+}
+
+const ManualSetupWatchAndEffectParent = () => {
+  const query = ref('a')
+  const label = ref('left')
+
+  return vapor(() => {
+    const root = document.createElement('section')
+    const queryInput = document.createElement('input')
+    const labelInput = document.createElement('input')
+    const anchor = document.createComment('manual-watch-effect-anchor')
+
+    queryInput.dataset.testid = 'manual-watch-effect-query'
+    labelInput.dataset.testid = 'manual-watch-effect-label'
+    queryInput.addEventListener('input', event => {
+      query.value = (event.target as HTMLInputElement).value
+    })
+    labelInput.addEventListener('input', event => {
+      label.value = (event.target as HTMLInputElement).value
+    })
+
+    root.append(queryInput, labelInput, anchor)
+
+    watchEffect(() => {
+      queryInput.value = query.value
+      labelInput.value = label.value
+      renderAnchor(
+        <ManualSetupWatchAndEffectChild query={query.value} label={label.value} />,
+        root,
+        anchor,
+      )
     })
 
     return root
@@ -314,6 +467,108 @@ const StableMixedParent = () => {
   })
 }
 
+const CompiledReactiveDestructureWatchChild = (__rue_props: {
+  query?: string
+  count: number
+  label?: string
+}) => {
+  const setupState = _$vaporWithHookId('useSetup:compiled-reactive-watch:0', () =>
+    useSetup(() => {
+      const summary = computed(
+        () =>
+          `${__rue_props.label === void 0 ? 'fallback-label' : __rue_props.label}:${(__rue_props.query === void 0 ? 'fallback-query' : __rue_props.query).trim().toUpperCase()} x ${__rue_props.count}`,
+      )
+      const latest = ref('')
+      const runs = ref('0')
+      const shadow = (query: string) => query.toLowerCase()
+      let watchRuns = 0
+
+      watchEffect(() => {
+        const query = __rue_props.query === void 0 ? 'fallback-query' : __rue_props.query
+        const label = __rue_props.label === void 0 ? 'fallback-label' : __rue_props.label
+
+        watchRuns += 1
+        runs.value = String(watchRuns)
+        latest.value = `${query}|${__rue_props.count}|${label}|${shadow(query)}`
+      })
+
+      return { summary, latest, runs }
+    }),
+  ) as {
+    summary: { get: () => string }
+    latest: { value: string }
+    runs: { value: string }
+  }
+
+  return vapor(() => {
+    const root = document.createElement('section')
+    const summaryText = document.createElement('span')
+    const latestText = document.createElement('span')
+    const runsText = document.createElement('span')
+
+    summaryText.dataset.testid = 'compiled-reactive-watch-summary'
+    latestText.dataset.testid = 'compiled-reactive-watch-latest'
+    runsText.dataset.testid = 'compiled-reactive-watch-runs'
+    root.append(summaryText, latestText, runsText)
+
+    watchEffect(() => {
+      summaryText.textContent = setupState.summary.get()
+      latestText.textContent = setupState.latest.value
+      runsText.textContent = setupState.runs.value
+    })
+
+    return root
+  })
+}
+
+const CompiledReactiveDestructureWatchParent = () => {
+  const query = ref(' transfer ')
+  const count = ref(2)
+  const label = ref('runtime-label')
+
+  return vapor(() => {
+    const root = document.createElement('section')
+    const queryInput = document.createElement('input')
+    const labelInput = document.createElement('input')
+    const countButton = document.createElement('button')
+    const anchor = document.createComment('compiled-reactive-watch-anchor')
+
+    queryInput.dataset.testid = 'compiled-reactive-watch-query'
+    labelInput.dataset.testid = 'compiled-reactive-watch-label'
+    countButton.dataset.testid = 'compiled-reactive-watch-count'
+
+    queryInput.addEventListener('input', event => {
+      query.value = (event.target as HTMLInputElement).value
+    })
+    labelInput.addEventListener('input', event => {
+      label.value = (event.target as HTMLInputElement).value
+    })
+    countButton.addEventListener('click', () => {
+      count.value += 1
+    })
+
+    root.append(queryInput, labelInput, countButton, anchor)
+
+    watchEffect(() => {
+      queryInput.value = query.value
+      labelInput.value = label.value
+      countButton.textContent = String(count.value)
+
+      renderAnchor(
+        <CompiledReactiveDestructureWatchChild
+          query={query.value}
+          count={count.value}
+          label={label.value}
+        />,
+        root,
+        anchor,
+      )
+    })
+
+    return root
+  })
+}
+
 const mount = (view: any) => {
   const container = document.createElement('div')
   document.body.appendChild(container)
@@ -367,6 +622,120 @@ describe('app fixture vapor reactivity', () => {
     expect(container.querySelector('[data-testid="manual-computed-value"]')?.textContent).toBe(
       'bru',
     )
+  })
+
+  it('keeps useSetup watchEffect on direct props across multiple parent prop updates', async () => {
+    const container = mount(
+      <div>
+        <ManualSetupWatchPropParent />
+      </div>,
+    )
+    await flush()
+
+    expect(container.querySelector('[data-testid="manual-watch-prop-value"]')?.textContent).toBe(
+      'a',
+    )
+    expect(container.querySelector('[data-testid="manual-watch-prop-runs"]')?.textContent).toBe('1')
+
+    const input = container.querySelector(
+      '[data-testid="manual-watch-prop-input"]',
+    ) as HTMLInputElement
+    input.value = 'b'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await flush()
+
+    expect(container.querySelector('[data-testid="manual-watch-prop-value"]')?.textContent).toBe(
+      'b',
+    )
+    expect(container.querySelector('[data-testid="manual-watch-prop-runs"]')?.textContent).toBe('2')
+
+    input.value = 'c'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await flush()
+
+    expect(container.querySelector('[data-testid="manual-watch-prop-value"]')?.textContent).toBe(
+      'c',
+    )
+    expect(container.querySelector('[data-testid="manual-watch-prop-runs"]')?.textContent).toBe('3')
+  })
+
+  it('keeps useSetup watch and createEffect alive across repeated parent prop updates', async () => {
+    const container = mount(
+      <div>
+        <ManualSetupWatchAndEffectParent />
+      </div>,
+    )
+    await flush()
+
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-watch-value"]')?.textContent,
+    ).toBe('a')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-watch-runs"]')?.textContent,
+    ).toBe('1')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-effect-value"]')?.textContent,
+    ).toBe('left')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-effect-runs"]')?.textContent,
+    ).toBe('1')
+
+    const queryInput = container.querySelector(
+      '[data-testid="manual-watch-effect-query"]',
+    ) as HTMLInputElement
+    queryInput.value = 'b'
+    queryInput.dispatchEvent(new Event('input', { bubbles: true }))
+    await flush()
+
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-watch-value"]')?.textContent,
+    ).toBe('b')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-watch-runs"]')?.textContent,
+    ).toBe('2')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-effect-value"]')?.textContent,
+    ).toBe('left')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-effect-runs"]')?.textContent,
+    ).toBe('1')
+
+    const labelInput = container.querySelector(
+      '[data-testid="manual-watch-effect-label"]',
+    ) as HTMLInputElement
+    labelInput.value = 'next'
+    labelInput.dispatchEvent(new Event('input', { bubbles: true }))
+    await flush()
+
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-watch-value"]')?.textContent,
+    ).toBe('b')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-watch-runs"]')?.textContent,
+    ).toBe('2')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-effect-value"]')?.textContent,
+    ).toBe('next')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-effect-runs"]')?.textContent,
+    ).toBe('2')
+
+    queryInput.value = 'c'
+    queryInput.dispatchEvent(new Event('input', { bubbles: true }))
+    await flush()
+
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-watch-value"]')?.textContent,
+    ).toBe('c')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-watch-runs"]')?.textContent,
+    ).toBe('3')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-effect-value"]')?.textContent,
+    ).toBe('next')
+    expect(
+      container.querySelector('[data-testid="manual-watch-effect-effect-runs"]')?.textContent,
+    ).toBe('2')
   })
 
   it('updates direct computed child props through renderAnchor immediately', async () => {
@@ -445,6 +814,75 @@ describe('app fixture vapor reactivity', () => {
     expect(container.querySelector('[data-testid="stable-mixed-children-runs"]')?.textContent).toBe(
       '1',
     )
+  })
+
+  it('reruns useSetup watchEffect for compiled reactive destructured props when parent props change', async () => {
+    const container = mount(
+      <div>
+        <CompiledReactiveDestructureWatchParent />
+      </div>,
+    )
+    await flush()
+
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-summary"]')?.textContent,
+    ).toBe('runtime-label:TRANSFER x 2')
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-latest"]')?.textContent,
+    ).toBe(' transfer |2|runtime-label| transfer ')
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-runs"]')?.textContent,
+    ).toBe('1')
+
+    const queryInput = container.querySelector(
+      '[data-testid="compiled-reactive-watch-query"]',
+    ) as HTMLInputElement
+    queryInput.value = ' rue '
+    queryInput.dispatchEvent(new Event('input', { bubbles: true }))
+    await flush()
+
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-summary"]')?.textContent,
+    ).toBe('runtime-label:RUE x 2')
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-latest"]')?.textContent,
+    ).toBe(' rue |2|runtime-label| rue ')
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-runs"]')?.textContent,
+    ).toBe('2')
+
+    const labelInput = container.querySelector(
+      '[data-testid="compiled-reactive-watch-label"]',
+    ) as HTMLInputElement
+    labelInput.value = 'next-label'
+    labelInput.dispatchEvent(new Event('input', { bubbles: true }))
+    await flush()
+
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-summary"]')?.textContent,
+    ).toBe('next-label:RUE x 2')
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-latest"]')?.textContent,
+    ).toBe(' rue |2|next-label| rue ')
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-runs"]')?.textContent,
+    ).toBe('3')
+
+    const countButton = container.querySelector(
+      '[data-testid="compiled-reactive-watch-count"]',
+    ) as HTMLButtonElement
+    countButton.click()
+    await flush()
+
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-summary"]')?.textContent,
+    ).toBe('next-label:RUE x 3')
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-latest"]')?.textContent,
+    ).toBe(' rue |3|next-label| rue ')
+    expect(
+      container.querySelector('[data-testid="compiled-reactive-watch-runs"]')?.textContent,
+    ).toBe('4')
   })
 
   it('updates local ref-driven content immediately', async () => {

@@ -66,6 +66,7 @@ export default defineConfig(({ command }) => ({
     tailwindcss() as any,
     VitePluginRue({
       debug: command === 'serve',
+      transformTimeoutMs: command === 'build' ? 60000 : undefined,
     }),
     {
       name: 'copy-docs',
@@ -90,6 +91,10 @@ export default defineConfig(({ command }) => ({
   css: {
     devSourcemap: true,
   },
+  server: {
+    port: 5173,
+    strictPort: false,
+  },
   assetsInclude: ['**/*.md'],
   build: {
     // Keep this explicit so the build path doesn't depend on Vite's implicit
@@ -105,6 +110,9 @@ export default defineConfig(({ command }) => ({
     globals: true,
     pool: 'threads',
     setupFiles: 'scripts/setup-vitest.ts',
+    testTimeout: 10_000,
+    hookTimeout: 10_000,
+    teardownTimeout: 10_000,
     sequence: {
       hooks: 'list',
     },
@@ -157,8 +165,8 @@ export default defineConfig(({ command }) => ({
       '@rue-js/shared': path.resolve(rootDir, 'packages/shared/src'),
       '@rue-js/design': path.resolve(rootDir, 'packages/rue-design/src'),
       '@rue-js/runtime-vapor': process.env.VITEST
-        ? path.resolve(rootDir, 'packages/runtime-vapor/pkg-node/rue_runtime_vapor.js')
-        : path.resolve(rootDir, 'packages/runtime-vapor/pkg/rue_runtime_vapor.js'),
+        ? path.resolve(rootDir, 'packages/runtime-vapor/index.node.js')
+        : path.resolve(rootDir, 'packages/runtime-vapor/index.js'),
     },
   },
 }))

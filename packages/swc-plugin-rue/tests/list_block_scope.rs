@@ -206,8 +206,8 @@ const Demo: FC = () => {
     assert!(out.contains("const __slot = vapor(()=>{"));
     assert!(out.contains("const __slot = !(editingId.value === row.id) ? vapor(()=>{"));
     assert!(out.contains("const __slot = (editingId.value === row.id) ? vapor(()=>{"));
-    assert!(out.contains("renderAnchor(__slot, _el1, _list3);"));
-    assert!(out.contains("renderAnchor(__slot, _el1, _list4);"));
+    assert!(out.contains("renderAnchor(__slot, _el1, _list3)"));
+    assert!(out.contains("renderAnchor(__slot, _el1, _list4)"));
     assert!(!out.contains("const isEditing = editingId.value === row.id;"));
 }
 
@@ -238,10 +238,7 @@ const Demo: FC = () => {
     let out = compile(src, "list_block_scope_outer_getter_signal");
 
     assert!(out.contains("const __slot = vapor(()=>{"));
-    assert!(
-        out.contains(
-            "_$settextContent(_el2, (selectedId.get() === row.id) ? '已选中' : row.title);"
-        )
-    );
+    assert!(out.contains("const __slot = (selectedId.get() === row.id) ? '已选中' : row.title;"));
+    assert!(out.contains("untrack(()=>renderAnchor(__slot, _el1, _list3));"));
     assert!(!out.contains("const isSelected = selectedId.get() === row.id;"));
 }

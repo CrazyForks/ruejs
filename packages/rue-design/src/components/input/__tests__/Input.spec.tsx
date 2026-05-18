@@ -108,6 +108,36 @@ describe('Input', () => {
     expect(handleChange).toHaveBeenCalledTimes(1)
   })
 
+  it('does not serialize undefined readOnly and respects readOnly when enabled', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <div>
+        <Input data-testid="plain-input" readOnly={undefined} />
+        <Input data-testid="invalid-input" status="error" />
+        <Input data-testid="readonly-input" defaultValue="42" allowClear={true} readOnly={true} />
+      </div>,
+      container,
+    )
+
+    await waitForContent(() => {
+      const plainInput = container.querySelector('[data-testid="plain-input"]') as HTMLInputElement
+      const invalidInput = container.querySelector(
+        '[data-testid="invalid-input"]',
+      ) as HTMLInputElement
+      const readonlyInput = container.querySelector(
+        '[data-testid="readonly-input"]',
+      ) as HTMLInputElement
+      expect(plainInput.hasAttribute('readonly')).toBe(false)
+      expect(plainInput.hasAttribute('aria-invalid')).toBe(false)
+      expect(invalidInput.getAttribute('aria-invalid')).toBe('true')
+      expect(readonlyInput.readOnly).toBe(true)
+      expect(readonlyInput.getAttribute('readonly')).not.toBe('undefined')
+      expect(container.querySelector('button[aria-label="Clear text"]')).toBeNull()
+    })
+  })
+
   it('triggers search from enter, button click and clear', async () => {
     const container = mountContainer()
     resetActiveRuntime()

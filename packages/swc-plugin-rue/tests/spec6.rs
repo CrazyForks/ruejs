@@ -29,7 +29,7 @@ export default Comp;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$setAttribute } from "@rue-js/rue/vapor";
 import { type FC, h } from '@rue-js/rue';
 const count = _$vaporWithHookId("ref:1:0", ()=>ref(22));
 const Comp: FC = ()=>vapor(()=>{
@@ -53,7 +53,7 @@ const Comp: FC = ()=>vapor(()=>{
                 _$appendChild(_el3, _$createTextNode("ok"));
                 return _root;
             });
-            renderAnchor(__slot, _root, _list1);
+            untrack(()=>renderAnchor(__slot, _root, _list1));
         });
         const _el4 = _$createElement("span");
         _$appendChild(_root, _el4);

@@ -77,7 +77,7 @@ describe('increment', () => {
 
 ### Composables {#composables}
 
-Rue 应用中特定的一类函数是 [Composables](/guide/reusability/composables)，在测试期间可能需要特殊处理。
+Rue 应用中特定的一类函数是 [Composables](/guide/guide/reusability/composables)，在测试期间可能需要特殊处理。
 有关更多详细信息，请参见下面的[测试 Composables](#testing-composables)。
 
 ### 单元测试组件 {#unit-testing-components}
@@ -160,7 +160,7 @@ describe('Stepper', () => {
 
 ### 推荐 {#recommendation-1}
 
-- [Vitest](https://vitest.dev/) 用于无头渲染的组件或 composables（例如 VueUse 中的 [`useFavicon`](https://vueuse.org/core/useFavicon/#usefavicon) 函数）。组件和 DOM 可以使用 [`rue-test-utils`](https://github.com/ruejs/test-utils) 进行测试。
+- [Vitest](https://vitest.dev/) 用于无头渲染的组件或 composables（例如 VueUse 中的 [`useFavicon`](https://vueuse.org/core/useFavicon/#usefavicon) 函数）。组件和 DOM 可以使用 [`rue-test-utils`](https://github.com/hunzhiwange/ruejs/test-utils) 进行测试。
 
 - [Cypress Component Testing](https://on.cypress.io/component) 用于预期行为依赖于正确渲染样式或触发原生 DOM 事件的组件。它可以通过 [@testing-library/cypress](https://testing-library.com/docs/cypress-testing-library/intro) 与 Testing Library 一起使用。
 
@@ -170,7 +170,7 @@ Vitest 和基于浏览器的运行器之间的主要区别是速度和执行上�
 
 组件测试通常涉及在隔离中挂载被测试的组件、触发模拟的用户输入事件，并对渲染的 DOM 输出进行断言。有一些专门的实用库可以简化这些任务。
 
-- [`rue-test-utils`](https://github.com/ruejs/test-utils) 是官方的低级组件测试库，旨在为用户提供访问 Rue 特定 API 的能力。它也是 `@testing-library/rue` 构建的基础库。
+- [`rue-test-utils`](https://github.com/hunzhiwange/ruejs/test-utils) 是官方的低级组件测试库，旨在为用户提供访问 Rue 特定 API 的能力。它也是 `@testing-library/rue` 构建的基础库。
 
 - [`@testing-library/rue`](https://github.com/testing-library/rue-testing-library) 是一个专注于不依赖实现细节测试组件的 Rue 测试库。其指导原则是，测试越像软件的使用方式，它们就越能提供信心。
 
@@ -301,7 +301,7 @@ npm test
 
 ### 测试 Composables {#testing-composables}
 
-> 本部分假设你已经阅读了 [Composables](/guide/reusability/composables) 部分。
+> 本部分假设你已经阅读了 [Composables](/guide/guide/reusability/composables) 部分。
 
 在测试 composables 时，我们可以将它们分为两类：不依赖宿主组件实例的 composables 和依赖的 composables。
 

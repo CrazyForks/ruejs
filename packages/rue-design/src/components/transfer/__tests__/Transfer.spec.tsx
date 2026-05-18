@@ -1,0 +1,525 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { onError, render, setReactiveScheduling } from '@rue-js/rue'
+import Transfer from '../index'
+import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+
+setReactiveScheduling('sync')
+
+const supportsBrowserFocusIdentityAssertions =
+  typeof navigator !== 'undefined' && !/jsdom/i.test(navigator.userAgent)
+
+const resetActiveRuntime = () => {
+  ;(globalThis as any).__rue_active =
+    (globalThis as any).__rue_vapor_preferred ?? (globalThis as any).__rue
+}
+
+const dataSource = [
+  { key: 'alpha', title: 'Alpha', description: 'First item' },
+  { key: 'beta', title: 'Beta', description: 'Second item' },
+  { key: 'gamma', title: 'Gamma', description: 'Third item' },
+]
+
+const getPanel = (container: HTMLElement, direction: 'left' | 'right') => {
+  return container.querySelector(`[data-rue-transfer-panel="${direction}"]`) as HTMLElement
+}
+
+const findButtonByText = (container: HTMLElement, text: string) => {
+  return Array.from(container.querySelectorAll('button')).find(button =>
+    button.textContent?.includes(text),
+  ) as HTMLButtonElement | undefined
+}
+
+const press = (element: HTMLButtonElement | HTMLInputElement | null | undefined) => {
+  expect(element).toBeTruthy()
+  element!.click()
+}
+
+const getItemCheckbox = (container: HTMLElement, direction: 'left' | 'right', text: string) => {
+  const panel = getPanel(container, direction)
+  const label = Array.from(panel.querySelectorAll('label')).find(node =>
+    node.textContent?.includes(text),
+  )
+  return (label?.querySelector('input[type="checkbox"]') as HTMLInputElement | null) ?? null
+}
+
+const getSelectAllCheckbox = (container: HTMLElement, direction: 'left' | 'right') => {
+  const panel = getPanel(container, direction)
+  return panel.querySelector(
+    `input[type="checkbox"][aria-label="${direction === 'left' ? '待选择全选' : '已加入全选'}"]`,
+  ) as HTMLInputElement | null
+}
+
+const getSearchInput = (container: HTMLElement, direction: 'left' | 'right') => {
+  const panel = getPanel(container, direction)
+  return panel.querySelector('input[type="text"]') as HTMLInputElement | null
+}
+
+afterEach(() => {
+  document.body.innerHTML = ''
+})
+
+describe('Transfer', () => {
+  it('moves selected source items in uncontrolled mode and emits antd-like callbacks', async () => {
+    const container = mountContainer()
+    const handleChange = vi.fn()
+    const handleSelectChange = vi.fn()
+    resetActiveRuntime()
+
+    render(
+      <Transfer
+        dataSource={dataSource}
+        defaultSelectedKeys={['alpha']}
+        defaultTargetKeys={['beta']}
+        onChange={handleChange}
+        onSelectChange={handleSelectChange}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const leftPanel = getPanel(container, 'left')
+      const rightPanel = getPanel(container, 'right')
+      expect(leftPanel.textContent).toContain('Alpha')
+      expect(leftPanel.textContent).toContain('Gamma')
+      expect(rightPanel.textContent).toContain('Beta')
+      expect(findButtonByText(container, '加入')).toBeTruthy()
+    })
+
+    press(findButtonByText(container, '加入'))
+
+    await waitForContent(() => {
+      const leftPanel = getPanel(container, 'left')
+      const rightPanel = getPanel(container, 'right')
+      expect(handleChange).toHaveBeenCalledWith(['beta', 'alpha'], 'right', ['alpha'])
+      expect(handleSelectChange).toHaveBeenLastCalledWith([], [])
+      expect(leftPanel.textContent).not.toContain('Alpha')
+      expect(rightPanel.textContent).toContain('Alpha')
+      expect(rightPanel.textContent).toContain('Beta')
+    })
+  })
+
+  it('selects all visible source items from the header checkbox without throwing', async () => {
+    const container = mountContainer()
+    const handleSelectChange = vi.fn()
+    resetActiveRuntime()
+
+    render(<Transfer dataSource={dataSource} onSelectChange={handleSelectChange} />, container)
+
+    await waitForContent(() => {
+      expect(getSelectAllCheckbox(container, 'left')).toBeTruthy()
+    })
+
+    press(getSelectAllCheckbox(container, 'left'))
+
+    await waitForContent(() => {
+      expect(handleSelectChange).toHaveBeenLastCalledWith(['alpha', 'beta', 'gamma'], [])
+      expect(getSelectAllCheckbox(container, 'left')?.checked).toBe(true)
+    })
+  })
+
+  it('filters items with search input and paginates visible content', async () => {
+    const container = mountContainer()
+    const handleSearch = vi.fn()
+    resetActiveRuntime()
+
+    render(
+      <Transfer
+        dataSource={dataSource}
+        showSearch={{ placeholder: 'Search items' }}
+        pagination={{ pageSize: 1 }}
+        onSearch={handleSearch}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const leftPanel = getPanel(container, 'left')
+      expect(leftPanel.textContent).toContain('Alpha')
+      expect(leftPanel.textContent).not.toContain('Beta')
+      expect(leftPanel.textContent).toContain('第 1 / 3 页')
+    })
+
+    press(findButtonByText(getPanel(container, 'left'), '下一页'))
+
+    await waitForContent(() => {
+      const leftPanel = getPanel(container, 'left')
+      expect(leftPanel.textContent).toContain('Beta')
+      expect(leftPanel.textContent).not.toContain('Alpha')
+      expect(leftPanel.textContent).toContain('第 2 / 3 页')
+    })
+
+    const searchInput = Array.from(container.querySelectorAll('input')).find(
+      input => input.getAttribute('placeholder') === 'Search items',
+    ) as HTMLInputElement
+    searchInput.value = 'ga'
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }))
+
+    await waitForContent(() => {
+      const leftPanel = getPanel(container, 'left')
+      expect(handleSearch).toHaveBeenLastCalledWith('left', 'ga')
+      expect(leftPanel.textContent).toContain('Gamma')
+      expect(leftPanel.textContent).not.toContain('Alpha')
+      expect(leftPanel.textContent).not.toContain('Beta')
+      expect(leftPanel.textContent).toContain('第 1 / 1 页')
+    })
+  })
+
+  it('waits for IME composition to finish before committing the search text', async () => {
+    const container = mountContainer()
+    const handleSearch = vi.fn()
+    resetActiveRuntime()
+
+    render(
+      <Transfer
+        dataSource={dataSource}
+        showSearch={{ placeholder: 'Search items' }}
+        onSearch={handleSearch}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(getSearchInput(container, 'left')).toBeTruthy()
+    })
+
+    const searchInput = getSearchInput(container, 'left') as HTMLInputElement
+    searchInput.focus()
+    searchInput.dispatchEvent(new Event('compositionstart', { bubbles: true }))
+    searchInput.value = '中'
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }))
+
+    expect(handleSearch).not.toHaveBeenCalled()
+
+    await waitForContent(() => {
+      if (supportsBrowserFocusIdentityAssertions) {
+        expect(document.activeElement).toBe(getSearchInput(container, 'left'))
+      }
+
+      expect(getSearchInput(container, 'left')).toBeTruthy()
+    })
+
+    searchInput.dispatchEvent(new Event('compositionend', { bubbles: true }))
+
+    await waitForContent(() => {
+      expect(handleSearch).toHaveBeenLastCalledWith('left', '中')
+      if (supportsBrowserFocusIdentityAssertions) {
+        expect(document.activeElement).toBe(getSearchInput(container, 'left'))
+      }
+
+      expect(getSearchInput(container, 'left')).toBeTruthy()
+      expect(getSearchInput(container, 'left')?.value).toBe('中')
+    })
+  })
+
+  it('keeps the search input focused while moving between pages', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Transfer
+        dataSource={dataSource}
+        showSearch={{ placeholder: 'Search items' }}
+        pagination={{ pageSize: 1 }}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(getSearchInput(container, 'left')).toBeTruthy()
+      expect(getPanel(container, 'left').textContent).toContain('第 1 / 3 页')
+    })
+
+    const searchInput = getSearchInput(container, 'left') as HTMLInputElement
+    searchInput.focus()
+
+    press(findButtonByText(getPanel(container, 'left'), '下一页'))
+
+    await waitForContent(() => {
+      expect(getPanel(container, 'left').textContent).toContain('第 2 / 3 页')
+      expect(document.activeElement).toBe(getSearchInput(container, 'left'))
+    })
+  })
+
+  it('keeps the search input focused while typing in the controlled footer and pagination demo', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Transfer
+        dataSource={dataSource}
+        targetKeys={['beta']}
+        selectedKeys={[]}
+        titles={['素材池', '上线包']}
+        showSearch={{ placeholder: '搜索标签、频道、负责人' }}
+        pagination={{ pageSize: 1 }}
+        footer={(listProps, { direction }) => <div>{`${direction}:${listProps.items.length}`}</div>}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(getSearchInput(container, 'left')).toBeTruthy()
+      expect(getSearchInput(container, 'right')).toBeTruthy()
+    })
+
+    const searchInput = getSearchInput(container, 'left') as HTMLInputElement
+    searchInput.focus()
+    searchInput.value = 'a'
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }))
+
+    await waitForContent(() => {
+      if (supportsBrowserFocusIdentityAssertions) {
+        expect(document.activeElement).toBe(getSearchInput(container, 'left'))
+        expect(getSearchInput(container, 'left')).toBe(searchInput)
+      }
+
+      expect(getSearchInput(container, 'left')).toBeTruthy()
+      expect(getSearchInput(container, 'left')?.value).toBe('a')
+    })
+  })
+
+  it('keeps the oneWay search input focused while typing with disabled target items', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Transfer
+        dataSource={[
+          { key: 'alpha', title: 'Alpha' },
+          { key: 'locked', title: 'Accessibility Review', disabled: true },
+          { key: 'beta', title: 'Stakeholder Sign-off' },
+        ]}
+        targetKeys={['locked', 'beta']}
+        selectedKeys={[]}
+        titles={['待加入能力', '当前方案']}
+        oneWay
+        showSearch
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(getSearchInput(container, 'right')).toBeTruthy()
+    })
+
+    const searchInput = getSearchInput(container, 'right') as HTMLInputElement
+    searchInput.focus()
+    searchInput.value = 'a'
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }))
+
+    await waitForContent(() => {
+      if (supportsBrowserFocusIdentityAssertions) {
+        expect(document.activeElement).toBe(getSearchInput(container, 'right'))
+        expect(getSearchInput(container, 'right')).toBe(searchInput)
+      }
+
+      expect(getSearchInput(container, 'right')).toBeTruthy()
+      expect(getSearchInput(container, 'right')?.value).toBe('a')
+    })
+  })
+
+  it('re-renders paginated panels only once per page change', async () => {
+    const container = mountContainer()
+    const renderList = vi.fn(listProps => (
+      <div data-testid={`render-list-${listProps.direction}`}>{listProps.items.length}</div>
+    ))
+    resetActiveRuntime()
+
+    render(
+      <Transfer dataSource={dataSource} pagination={{ pageSize: 1 }} renderList={renderList} />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(renderList).toHaveBeenCalledTimes(2)
+      expect(getPanel(container, 'left').textContent).toContain('第 1 / 3 页')
+    })
+
+    press(findButtonByText(getPanel(container, 'left'), '下一页'))
+
+    await waitForContent(() => {
+      expect(renderList).toHaveBeenCalledTimes(4)
+      expect(getPanel(container, 'left').textContent).toContain('第 2 / 3 页')
+    })
+  })
+
+  it('renders JSX footer content together with search and pagination', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Transfer
+        dataSource={dataSource}
+        showSearch={{ placeholder: 'Search items' }}
+        pagination={{ pageSize: 1 }}
+        footer={(listProps, info) => (
+          <div data-testid={`footer-${info.direction}`}>
+            {`${info.direction}:${listProps.filteredItems.length}:${listProps.items.length}`}
+          </div>
+        )}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const leftFooter = container.querySelector(
+        '[data-testid="footer-left"]',
+      ) as HTMLElement | null
+      const rightFooter = container.querySelector(
+        '[data-testid="footer-right"]',
+      ) as HTMLElement | null
+      expect(leftFooter?.textContent).toContain('left:3:1')
+      expect(rightFooter?.textContent).toContain('right:0:0')
+      expect(container.textContent).not.toContain('[object Object]')
+    })
+
+    const searchInput = Array.from(container.querySelectorAll('input')).find(
+      input => input.getAttribute('placeholder') === 'Search items',
+    ) as HTMLInputElement
+    searchInput.value = 'ga'
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }))
+
+    await waitForContent(() => {
+      const leftFooter = container.querySelector(
+        '[data-testid="footer-left"]',
+      ) as HTMLElement | null
+      expect(leftFooter?.textContent).toContain('left:1:1')
+      expect(container.textContent).not.toContain('[object Object]')
+    })
+  })
+
+  it('renders custom renderList bodies and allows custom selection flow', async () => {
+    const container = mountContainer()
+    const handleSelectChange = vi.fn()
+    const handleChange = vi.fn()
+    resetActiveRuntime()
+
+    render(
+      <Transfer
+        dataSource={dataSource}
+        onChange={handleChange}
+        onSelectChange={handleSelectChange}
+        renderList={listProps => (
+          <div data-testid={`custom-${listProps.direction}`}>
+            {listProps.items.map(item => {
+              const active = listProps.selectedKeys.includes(item.key)
+              return (
+                <button
+                  key={String(item.key)}
+                  type="button"
+                  data-testid={`custom-item-${listProps.direction}-${String(item.key)}`}
+                  data-active={active ? 'true' : 'false'}
+                  onClick={() => listProps.onItemSelect(item.key, !active)}
+                >
+                  {String(item.label)}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-testid="custom-left"]')).toBeTruthy()
+      expect(container.querySelector('[data-testid="custom-right"]')).toBeTruthy()
+      expect(
+        container.querySelector('[data-testid="custom-item-left-alpha"]')?.textContent,
+      ).toContain('Alpha')
+    })
+
+    press(
+      container.querySelector('[data-testid="custom-item-left-alpha"]') as HTMLButtonElement | null,
+    )
+
+    await waitForContent(() => {
+      expect(handleSelectChange).toHaveBeenLastCalledWith(['alpha'], [])
+      expect(
+        container
+          .querySelector('[data-testid="custom-item-left-alpha"]')
+          ?.getAttribute('data-active'),
+      ).toBe('true')
+    })
+
+    press(findButtonByText(container, '加入'))
+
+    await waitForContent(() => {
+      expect(handleChange).toHaveBeenLastCalledWith(['alpha'], 'right', ['alpha'])
+      expect(
+        container.querySelector('[data-testid="custom-item-right-alpha"]')?.textContent,
+      ).toContain('Alpha')
+    })
+  })
+
+  it('supports oneWay mode and removes selected target items back to source', async () => {
+    const container = mountContainer()
+    const handleChange = vi.fn()
+    resetActiveRuntime()
+
+    render(
+      <Transfer
+        dataSource={dataSource}
+        defaultTargetKeys={['beta']}
+        oneWay
+        onChange={handleChange}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const rightPanel = getPanel(container, 'right')
+      expect(rightPanel.textContent).toContain('Beta')
+      expect(findButtonByText(container, '移出已选')).toBeTruthy()
+    })
+
+    const betaCheckbox = getItemCheckbox(container, 'right', 'Beta')
+    expect(betaCheckbox).toBeTruthy()
+    press(betaCheckbox)
+
+    await waitForContent(() => {
+      expect(findButtonByText(container, '移出已选')?.disabled).toBe(false)
+    })
+
+    press(findButtonByText(container, '移出已选'))
+
+    await waitForContent(() => {
+      const leftPanel = getPanel(container, 'left')
+      const rightPanel = getPanel(container, 'right')
+      expect(handleChange).toHaveBeenLastCalledWith([], 'left', ['beta'])
+      expect(leftPanel.textContent).toContain('Beta')
+      expect(rightPanel.textContent).not.toContain('Beta')
+    })
+  })
+
+  it('reports a clear runtime error when renderList mutates selection during render', async () => {
+    const container = mountContainer()
+    const reportedErrors: Error[] = []
+    resetActiveRuntime()
+    const stopListening = onError((error: Error) => {
+      reportedErrors.push(error)
+    })
+
+    render(
+      <Transfer
+        dataSource={dataSource}
+        renderList={listProps => {
+          const firstItem = listProps.items[0]
+          if (listProps.direction === 'left' && firstItem) {
+            const active = listProps.selectedKeys.includes(firstItem.key)
+            listProps.onItemSelect(firstItem.key, !active)
+          }
+
+          return <div data-testid={`unsafe-${listProps.direction}`}>{listProps.direction}</div>
+        }}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(reportedErrors[0]?.message).toMatch(/Reentrant render detected on the same target/)
+    })
+
+    stopListening?.()
+  })
+})

@@ -6,11 +6,11 @@
 
 *异步组件*是另一个组件的包装器，允许被包装的组件延迟加载。这通常用作减小构建后的 `.js` 文件大小的一种方式，允许将它们分割成仅在需要时加载的较小块。
 
-Rue Router [路由组件的延迟加载](#/page/routing) 也使用 Rue 的异步组件功能。
+Rue Router [路由组件的延迟加载](/page/routing) 也使用 Rue 的异步组件功能。
 
 更多详情请参见：
 
-- [指南 - 异步组件](#/guide/guide/components/async)
+- [指南 - 异步组件](/guide/guide/components/async)
 
 ## 组件 {#component}
 
@@ -32,13 +32,13 @@ const HelloWorldComponent = {
 
 更多详情请参见：
 
-- [指南 - 组件基础](/guide/essentials/component-basics.html)
+- [指南 - 组件基础](/guide/guide/essentials/component-basics)
 
 "组件"这个词还出现在其他几个术语中：
 
-- [异步组件](#/guide/guide/components/async)
+- [异步组件](/guide/guide/components/async)
 - [动态组件](#dynamic-component)
-- [Web 组件](#/guide/guide/extras/web-components)
+- [Web 组件](/guide/guide/extras/web-components)
 
 ## 组合式函数 {#composable}
 
@@ -52,13 +52,13 @@ const HelloWorldComponent = {
 
 与许多模式一样，对于特定代码是否符合该标签可能存在一些分歧。并非所有 JavaScript 实用函数都是组合式函数。如果函数不使用组合式 API，那么它可能不是组合式函数。如果它不期望在组件初始化阶段的同步执行期间被调用，那么它可能不是组合式函数。组合式函数专门用于封装有状态的逻辑，它们不仅仅是函数的命名约定。
 
-有关编写组合式函数的更多详情，请参见[指南 - 组合式函数](/guide/reusability/composables.html)。
+有关编写组合式函数的更多详情，请参见[指南 - 组合式函数](/guide/guide/reusability/composables)。
 
 ## 组合式 API {#composition-api}
 
 *组合式 API*是一组用于在 Rue 中编写组件和组合式函数的函数。
 
-更多详情请参见[组合式 API FAQ](/guide/extras/composition-api-faq)。
+更多详情请参见[组合式 API FAQ](/guide/guide/extras/composition-api-faq)。
 
 ## 自定义元素 {#custom-element}
 
@@ -70,7 +70,7 @@ Rue 内置支持渲染自定义元素，并允许它们直接在 Rue 组件模�
 
 更多详情请参见：
 
-- [指南 - Rue 和 Web 组件](/guide/extras/web-components.html)
+- [指南 - Rue 和 Web 组件](/guide/guide/extras/web-components)
 
 ## 指令 {#directive}
 
@@ -80,8 +80,8 @@ Rue 内置支持渲染自定义元素，并允许它们直接在 Rue 组件模�
 
 更多详情请参见：
 
-- [指南 - 模板语法 - 指令](/guide/essentials/template-syntax.html#directives)
-- [指南 - 自定义指令](/guide/reusability/custom-directives.html)
+- [指南 - 模板语法 - 指令](/guide/guide/essentials/template-syntax#directives)
+- [指南 - 自定义指令](/guide/guide/reusability/custom-directives)
 
 ## 动态组件 {#dynamic-component}
 
@@ -91,7 +91,7 @@ Rue 内置支持渲染自定义元素，并允许它们直接在 Rue 组件模�
 
 更多详情请参见：
 
-- [指南 - 组件基础 - 动态组件](/guide/essentials/component-basics.html#dynamic-components)
+- [指南 - 组件基础 - 动态组件](/guide/guide/essentials/component-basics#dynamic-components)
 
 ## 副作用 {#effect}
 
@@ -103,8 +103,8 @@ Rue 内置支持渲染自定义元素，并允许它们直接在 Rue 组件模�
 
 更多详情请参见：
 
-- [指南 - 事件处理](/guide/essentials/event-handling.html)
-- [指南 - 组件事件](/guide/components/events.html)
+- [指南 - 事件处理](/guide/guide/essentials/event-handling)
+- [指南 - 组件事件](/guide/guide/components/events)
 
 ## 片段 {#fragment}
 
@@ -128,7 +128,7 @@ Rue 内置支持渲染自定义元素，并允许它们直接在 Rue 组件模�
 
 更多详情请参见：
 
-- [指南 - 渲染函数 & JSX - 函数式组件](/guide/extras/render-function.html#functional-components)
+- [指南 - 渲染函数 & JSX - 函数式组件](/guide/guide/extras/render-function#functional-components)
 
 ## 提升 {#hoisting}
 
@@ -146,7 +146,7 @@ Rue 模板编译器识别那些静态渲染片段，在初始渲染期间缓存�
 
 更多详情请参见：
 
-- [指南 - 渲染机制 - 静态缓存](/guide/extras/rendering-mechanism.html#cache-static)
+- [指南 - 渲染机制 - 静态缓存](/guide/guide/extras/rendering-mechanism#cache-static)
 
 ## DOM 内模板 {#in-dom-template}
 
@@ -158,9 +158,9 @@ Rue 模板编译器识别那些静态渲染片段，在初始渲染期间缓存�
 
 更多详情请参见：
 
-- [指南 - 创建应用 - DOM 内根组件模板](/guide/essentials/application.html#in-dom-root-component-template)
-- [指南 - 组件基础 - DOM 内模板解析注意事项](/guide/essentials/component-basics.html#in-dom-template-parsing-caveats)
-- [选项：渲染 - template](/api/options-rendering.html#template)
+- [指南 - 创建应用 - DOM 内根组件模板](/guide/guide/essentials/application#in-dom-root-component-template)
+- [指南 - 组件基础 - DOM 内模板解析注意事项](/guide/guide/essentials/component-basics#in-dom-template-parsing-caveats)
+- [选项：渲染 - template](@todo)
 
 ## 注入 {#inject}
 
@@ -176,7 +176,7 @@ Rue 组件实例经历一个生命周期。例如，它被创建、挂载、更�
 
 更多详情请参见：
 
-- [指南 - 生命周期钩子](/guide/essentials/lifecycle.html)
+- [指南 - 生命周期钩子](/guide/guide/essentials/lifecycle)
 
 ## 具名插槽 {#named-slot}
 
@@ -184,7 +184,7 @@ Rue 组件实例经历一个生命周期。例如，它被创建、挂载、更�
 
 更多详情请参见：
 
-- [指南 - 插槽 - 具名插槽](/guide/components/slots.html#named-slots)
+- [指南 - 插槽 - 具名插槽](/guide/guide/components/slots#named-slots)
 
 ## 插件 {#plugin}
 
@@ -194,7 +194,7 @@ Rue 组件实例经历一个生命周期。例如，它被创建、挂载、更�
 
 更多详情请参见：
 
-- [指南 - 插件](/guide/reusability/plugins.html)
+- [指南 - 插件](/guide/guide/reusability/plugins)
 
 ## 属性 {#prop}
 
@@ -216,9 +216,9 @@ Rue 组件实例经历一个生命周期。例如，它被创建、挂载、更�
 
 更多详情请参见：
 
-- [指南 - Props](/guide/components/props.html)
-- [指南 - 渲染函数 & JSX](/guide/extras/render-function.html)
-- [指南 - 插槽 - 作用域插槽](/guide/components/slots.html#scoped-slots)
+- [指南 - Props](/guide/guide/components/props)
+- [指南 - 渲染函数 & JSX](/guide/guide/extras/render-function)
+- [指南 - 插槽 - 作用域插槽](/guide/guide/components/slots#scoped-slots)
 
 ## provide / inject {#provide-inject}
 
@@ -232,7 +232,7 @@ Rue 组件实例经历一个生命周期。例如，它被创建、挂载、更�
 
 更多详情请参见：
 
-- [指南 - provide / inject](/guide/components/provide-inject.html)
+- [指南 - provide / inject](/guide/guide/components/provide-inject)
 
 ## 响应式副作用 {#reactive-effect}
 
@@ -246,7 +246,7 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 更多详情请参见：
 
-- [指南 - 深入响应式系统](/guide/extras/reactivity-in-depth.html)
+- [指南 - 深入响应式系统](/guide/guide/extras/reactivity-in-depth)
 
 ## 响应性 {#reactivity}
 
@@ -260,8 +260,8 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 更多详情请参见：
 
-- [指南 - 响应式基础](/guide/essentials/reactivity-fundamentals.html)
-- [指南 - 深入响应式系统](/guide/extras/reactivity-in-depth.html)
+- [指南 - 响应式基础](/guide/guide/essentials/reactivity-fundamentals)
+- [指南 - 深入响应式系统](/guide/guide/extras/reactivity-in-depth)
 
 ## 响应式 API {#reactivity-api}
 
@@ -271,9 +271,9 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 更多详情请参见：
 
-- [响应式 API：核心](/api/reactivity-core.html)
-- [响应式 API：工具](/api/reactivity-utilities.html)
-- [响应式 API：进阶](/api/reactivity-advanced.html)
+- [响应式 API：核心](/api/api/reactivity-core)
+- [响应式 API：工具](/api/api/reactivity-utilities)
+- [响应式 API：进阶](/api/api/reactivity-advanced)
 
 ## ref {#ref}
 
@@ -285,10 +285,10 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 更多详情请参见：
 
-- [指南 - 响应式基础](/guide/essentials/reactivity-fundamentals.html)
-- [响应式 API：核心](/api/reactivity-core.html)
-- [响应式 API：工具](/api/reactivity-utilities.html)
-- [响应式 API：进阶](/api/reactivity-advanced.html)
+- [指南 - 响应式基础](/guide/guide/essentials/reactivity-fundamentals)
+- [响应式 API：核心](/api/api/reactivity-core)
+- [响应式 API：工具](/api/api/reactivity-utilities)
+- [响应式 API：进阶](/api/api/reactivity-advanced)
 
 ## 渲染函数 {#render-function}
 
@@ -296,7 +296,7 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 更多详情请参见：
 
-- [指南 - 渲染函数 & JSX](/guide/extras/render-function.html)
+- [指南 - 渲染函数 & JSX](/guide/guide/extras/render-function)
 
 ## 调度器 {#scheduler}
 
@@ -304,7 +304,7 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 当响应式状态更改时，Rue 不会立即触发渲染更新。相反，它使用队列将它们批量处理在一起。这确保了一个组件只重新渲染一次，即使对底层数据进行了多次更改。
 
-[侦听器](/guide/essentials/watchers.html)也使用调度器队列进行批处理。具有 `flush: 'pre'`（默认）的侦听器将在组件渲染之前运行，而那些具有 `flush: 'post'` 的将在组件渲染之后运行。
+[侦听器](/guide/guide/essentials/watchers)也使用调度器队列进行批处理。具有 `flush: 'pre'`（默认）的侦听器将在组件渲染之前运行，而那些具有 `flush: 'post'` 的将在组件渲染之后运行。
 
 调度器中的作业还用于执行各种其他内部任务，例如触发某些[生命周期钩子](#lifecycle-hooks)和更新[模板 ref](#template-ref)。
 
@@ -320,7 +320,7 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 更多详情请参见：
 
-- [指南 - 插槽 - 作用域插槽](/guide/components/slots.html#scoped-slots)
+- [指南 - 插槽 - 作用域插槽](/guide/guide/components/slots#scoped-slots)
 
 ## 副作用 {#side-effect}
 
@@ -338,7 +338,7 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 更多详情请参见：
 
-- [指南 - 插槽](/guide/components/slots.html)
+- [指南 - 插槽](/guide/guide/components/slots)
 
 ## 模板 ref {#template-ref}
 
@@ -352,7 +352,7 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 更多详情请参见：
 
-- [指南 - 模板 Refs](/guide/essentials/template-refs.html)
+- [指南 - 模板 Refs](/guide/guide/essentials/template-refs)
 
 ## 公开渲染输出 {#vnode}
 
@@ -368,4 +368,4 @@ Rue 组件不是 Web 组件，但 `useCustomElement()` 可用于从 Rue 组件�
 
 更多详情请参见：
 
-- [指南 - Rue 和 Web 组件](/guide/extras/web-components.html)
+- [指南 - Rue 和 Web 组件](/guide/guide/extras/web-components)

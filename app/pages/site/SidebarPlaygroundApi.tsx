@@ -73,4 +73,6 @@ export const SECTIONS_BY_TYPE: Record<'api', SidebarSection[]> = {
 
 export default createPersistentSidebarPlayground({
   sections: SECTIONS_BY_TYPE.api,
+  showCounts: true,
+  fallbackToRoute: false,
 })

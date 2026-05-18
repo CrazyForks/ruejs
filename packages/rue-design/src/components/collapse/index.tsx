@@ -238,7 +238,7 @@ const resolveContentSizeClass = (size?: CollapseSize) => {
   }
 }
 
-const resolveLegacyStateClass = (
+const _resolveLegacyStateClass = (
   open: boolean | undefined,
   close: boolean | undefined,
   defaultOpen: boolean | undefined,

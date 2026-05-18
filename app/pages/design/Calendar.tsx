@@ -671,7 +671,19 @@ const CustomHeaderCalendarPreview: FC = () => {
   )
 }
 
-const CallyCalendarPreview: FC = () => {
+const LegacyPreviewLoadCard: FC<{ note: string; onLoad: () => void }> = ({ note, onLoad }) => {
+  return (
+    <div className="rounded-[1.5rem] border border-dashed border-base-300 bg-base-100/80 p-5 shadow-sm">
+      <div className="badge badge-outline badge-sm">Legacy preview</div>
+      <p className="mb-0 mt-3 text-sm text-base-content/72">{note}</p>
+      <button type="button" className="btn btn-sm btn-primary mt-4" onClick={onLoad}>
+        加载预览
+      </button>
+    </div>
+  )
+}
+
+const CallyCalendarLoadedPreview: FC = () => {
   const calendarRef = useRef<CallyElement>()
   const cleanupRef = useRef<() => void>(() => {})
   const selectedValue = ref('2026-04-12')
@@ -742,7 +754,22 @@ const CallyCalendarPreview: FC = () => {
   )
 }
 
-const CallyDatePickerPreview: FC = () => {
+const CallyCalendarPreview: FC = () => {
+  const shouldLoad = ref(false)
+
+  return shouldLoad.value ? (
+    <CallyCalendarLoadedPreview />
+  ) : (
+    <LegacyPreviewLoadCard
+      note="Cally web component 旧链路会在挂载时注册自定义元素，这里改为手动加载。"
+      onLoad={() => {
+        shouldLoad.value = true
+      }}
+    />
+  )
+}
+
+const CallyDatePickerLoadedPreview: FC = () => {
   const calendarRef = useRef<CallyElement>()
   const cleanupRef = useRef<() => void>(() => {})
   const selectedValue = ref('')
@@ -830,7 +857,22 @@ const CallyDatePickerPreview: FC = () => {
   )
 }
 
-const PikadayPreview: FC<PikadayPreviewProps> = ({ note, testId }) => {
+const CallyDatePickerPreview: FC = () => {
+  const shouldLoad = ref(false)
+
+  return shouldLoad.value ? (
+    <CallyDatePickerLoadedPreview />
+  ) : (
+    <LegacyPreviewLoadCard
+      note="旧 date picker demo 会额外挂起 Cally 实例，默认不在页面首次打开时立即加载。"
+      onLoad={() => {
+        shouldLoad.value = true
+      }}
+    />
+  )
+}
+
+const PikadayLoadedPreview: FC<PikadayPreviewProps> = ({ note, testId }) => {
   const inputRef = useRef<HTMLInputElement>()
   const instanceRef = useRef<PikadayInstance | null>()
   const selectedValue = ref('')
@@ -899,6 +941,21 @@ const PikadayPreview: FC<PikadayPreviewProps> = ({ note, testId }) => {
       </p>
       <p className="m-0 text-xs text-base-content/70">{note}</p>
     </div>
+  )
+}
+
+const PikadayPreview: FC<PikadayPreviewProps> = props => {
+  const shouldLoad = ref(false)
+
+  return shouldLoad.value ? (
+    <PikadayLoadedPreview {...props} />
+  ) : (
+    <LegacyPreviewLoadCard
+      note="Pikaday 会在首次挂载时初始化第三方实例，改为按需加载以避免设计页打开卡顿。"
+      onLoad={() => {
+        shouldLoad.value = true
+      }}
+    />
   )
 }
 

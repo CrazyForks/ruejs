@@ -81,4 +81,4 @@ export {
   unref,
   setReactiveScheduling,
 } from '@rue-js/runtime-vapor/reactive'
-export { createRue } from '@rue-js/runtime-vapor'
+export { createRue } from './rue'

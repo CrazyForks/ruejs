@@ -165,7 +165,7 @@ function UserName({
 
 ## 处理 v-model 修饰符 {#handling-v-model-modifiers}
 
-当我们学习表单输入绑定时，我们看到 `v-model` 有[内置修饰符](/guide/essentials/forms#modifiers) - `.trim`、`.number` 和 `.lazy`。在某些情况下，你可能也希望自定义输入组件上的 `v-model` 支持自定义修饰符。
+当我们学习表单输入绑定时，我们看到 `v-model` 有[内置修饰符](/guide/guide/essentials/forms#modifiers) - `.trim`、`.number` 和 `.lazy`。在某些情况下，你可能也希望自定义输入组件上的 `v-model` 支持自定义修饰符。
 
 让我们创建一个示例自定义修饰符 `capitalize`，它将 `v-model` 绑定提供的字符串的首字母大写：
 

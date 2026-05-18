@@ -246,4 +246,56 @@ describe('useComponent', () => {
       container.querySelector('[data-testid="compiled-like-hookful-value"]')?.textContent,
     ).toBe('preview:hello')
   })
+
+  it('keeps resolved child component updates reactive after async resolve', async () => {
+    const deferred: { resolve?: (value: { default: FC }) => void } = {}
+
+    const Counter: FC = () => {
+      const ctx = _$vaporWithHookId('useSetup:async-counter:0', () =>
+        useSetup(() => ({
+          count: ref(0),
+        })),
+      ) as {
+        count: { value: number }
+      }
+
+      return vapor(() => {
+        const button = document.createElement('button')
+        button.dataset.testid = 'async-counter'
+        button.addEventListener('click', () => {
+          ctx.count.value += 1
+        })
+
+        watchEffect(() => {
+          button.textContent = String(ctx.count.value)
+        })
+
+        return button
+      })
+    }
+
+    const Async = useComponent(
+      () =>
+        new Promise<{ default: FC }>(resolve => {
+          deferred.resolve = resolve
+        }),
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    render(h(Async, null), container)
+    await flushAsyncComponent()
+
+    deferred.resolve?.({ default: Counter })
+    await flushAsyncComponent()
+
+    const button = container.querySelector('[data-testid="async-counter"]') as HTMLButtonElement
+    expect(button?.textContent).toBe('0')
+
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushAsyncComponent()
+
+    expect(button.textContent).toBe('1')
+  })
 })

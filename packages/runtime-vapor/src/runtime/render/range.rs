@@ -4,6 +4,7 @@ use super::super::types::{MountInput, MountedState, RangeMountState};
 use crate::log::{log, want_log};
 use crate::reactive::core::batch_scope;
 use crate::runtime::dom_adapter::DomAdapter;
+use js_sys::Reflect;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
 
@@ -44,7 +45,28 @@ where
                 };
 
                 if let Some(old_mount) = taken {
+                    let global = js_sys::global();
+                    let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                    let meta_key = JsValue::from_str("__rue_debug_clear_meta__");
+                    let start_js: JsValue = start.clone().into();
+                    let end_js: JsValue = end.clone().into();
+                    let _ = Reflect::set(&global, &source_key, &JsValue::from_str("clear_range"));
+                    let start_value = Reflect::get(&start_js, &JsValue::from_str("nodeValue"))
+                        .unwrap_or(JsValue::UNDEFINED)
+                        .as_string()
+                        .unwrap_or_default();
+                    let end_value = Reflect::get(&end_js, &JsValue::from_str("nodeValue"))
+                        .unwrap_or(JsValue::UNDEFINED)
+                        .as_string()
+                        .unwrap_or_default();
+                    let _ = Reflect::set(
+                        &global,
+                        &meta_key,
+                        &JsValue::from_str(&format!("{} -> {}", start_value, end_value)),
+                    );
                     self.clear_mounted_state(&mut dest_parent, old_mount);
+                    let _ = Reflect::delete_property(&global, &source_key);
+                    let _ = Reflect::delete_property(&global, &meta_key);
                 }
             }
 
@@ -140,8 +162,17 @@ where
             match old_mount {
                 MountedState::Block(old_block) => {
                     let mut dest_parent = self.resolve_dest_parent_for_end(parent, &end);
+                    let global = js_sys::global();
+                    let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                    let _ = Reflect::set(
+                        &global,
+                        &source_key,
+                        &JsValue::from_str("render_between_hit:block"),
+                    );
                     self.clear_mounted_state(&mut dest_parent, MountedState::Block(old_block));
-                    let mounted = if let Some(mounted) = self.mount_from_input(input) {
+                    let _ = Reflect::delete_property(&global, &source_key);
+                    let mounted = if let Some(mounted) = self.mount_from_input(input, Some(parent))
+                    {
                         mounted
                     } else {
                         let err_to_handle = if let Some(e) = self.last_error.clone() {
@@ -198,7 +229,7 @@ where
     ) where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        if let Some(mounted) = self.mount_from_input(input) {
+        if let Some(mounted) = self.mount_from_input(input, Some(parent)) {
             let Some(el) = mounted.host_cloned() else {
                 self.current_anchor = None;
                 return;

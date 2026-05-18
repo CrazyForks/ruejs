@@ -31,17 +31,17 @@ export default VaporJSXDemo;
     let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC, h } from '@rue-js/rue';
 const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-const VaporJSXDemo: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
+    const VaporJSXDemo: FC = ()=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "container");
-        const _el1 = _$createElement("h2");
+        const _el1 = _$createElement("h2", _root);
         _$appendChild(_root, _el1);
         _$appendChild(_el1, _$createTextNode("Vapor JSX Demo"));
-        const _el2 = _$createElement("button");
+        const _el2 = _$createElement("button", _root);
         _$appendChild(_root, _el2);
         _$addEventListener(_el2, "click", (()=>count.value++));
         _$appendChild(_el2, _$createTextNode("加一"));
-        const _el3 = _$createElement("span");
+        const _el3 = _$createElement("span", _root);
         _$appendChild(_root, _el3);
         _$setAttribute(_el3, "id", "n");
         const _el4 = _$createTextWrapper(_el3);

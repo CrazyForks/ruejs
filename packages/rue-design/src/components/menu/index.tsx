@@ -309,6 +309,17 @@ const getAnchorRel = (target?: string, rel?: string) => {
   return rel
 }
 
+const resolveRouterHref = (to: string) => {
+  const resolvedHref = RouterLink.__rueHref(to)
+  if (!resolvedHref) {
+    return '#/'
+  }
+  if (resolvedHref === to && to && !to.startsWith('#')) {
+    return `#${to}`
+  }
+  return resolvedHref
+}
+
 const getItemClassName = ({
   disabled,
   selected,
@@ -491,17 +502,26 @@ const renderMenuAction = (
       )
     }
 
+    const handleRouterClick = (event: MouseEvent) => {
+      handleClick(event)
+      if ((event as any).defaultPrevented) {
+        return
+      }
+      RouterLink.__rueOnClick(event, to, false)
+    }
+
     return (
-      <RouterLink
+      <a
+        {...rest}
         className={innerClassName}
-        to={to}
+        href={resolveRouterHref(to)}
         title={title}
         aria-current={mergedSelected ? 'page' : undefined}
         aria-disabled={disabled ? 'true' : undefined}
-        onClick={handleClick}
+        onClick={handleRouterClick}
       >
         {contentNode}
-      </RouterLink>
+      </a>
     )
   }
 

@@ -90,6 +90,8 @@ const createNestedVaporArray = (labels: string[]) =>
 
 const InlineStrong: FC<{ label: string }> = props => h('strong', null, props.label)
 
+const ForwardRenderable: FC<{ value: any }> = props => props.value as any
+
 const createAnchoredComponentVapor = (label: string) =>
   vapor(() => {
     const root = document.createElement('div')
@@ -135,6 +137,21 @@ const createKeyedButtonsVapor = (title: string, labels: string[]) =>
   }) as any
 
 describe('render entry Renderable bridge', () => {
+  it('throws a descriptive error for reentrant container renders on the same target', () => {
+    const container = document.createElement('div')
+
+    document.body.appendChild(container)
+
+    const Recursive: FC = () => {
+      render(h(Recursive, null), container)
+      return h('span', null, 'never')
+    }
+
+    expect(() => render(h(Recursive, null), container)).toThrow(
+      /Reentrant render detected on the same target/,
+    )
+  })
+
   it('bridges container renderables with mixed DOM nodes and blocks', async () => {
     const container = document.createElement('div')
     const strong = document.createElement('strong')
@@ -329,6 +346,28 @@ describe('render entry Renderable bridge', () => {
     expect(parent.querySelectorAll('strong')).toHaveLength(1)
   })
 
+  it('updates renderBetween from a component handle to a vapor handle', async () => {
+    const parent = document.createElement('div')
+    const start = document.createComment('start')
+    const end = document.createComment('end')
+
+    parent.append(start, end)
+
+    renderBetween(h(InlineStrong, { label: 'A' }) as any, parent as any, start as any, end as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('A')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+
+    renderBetween(createStrongVapor('B') as any, parent as any, start as any, end as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('B')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+    expect(parent.childNodes[0]).toBe(start)
+    expect(parent.childNodes[parent.childNodes.length - 1]).toBe(end)
+  })
+
   it('updates a raw mount-handle child array inside renderBetween', async () => {
     const parent = document.createElement('div')
     const start = document.createComment('start')
@@ -347,6 +386,63 @@ describe('render entry Renderable bridge', () => {
 
     expect(parent.textContent).toBe('B')
     expect(parent.querySelectorAll('strong')).toHaveLength(1)
+  })
+
+  it('updates a component-handle child array inside renderBetween', async () => {
+    const parent = document.createElement('div')
+    const start = document.createComment('start')
+    const end = document.createComment('end')
+
+    parent.append(start, end)
+
+    renderBetween(
+      [h(InlineStrong, { label: 'A' }), h(InlineStrong, { label: 'B' })] as any,
+      parent as any,
+      start as any,
+      end as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('AB')
+    expect(parent.querySelectorAll('strong')).toHaveLength(2)
+
+    renderBetween(
+      [h(InlineStrong, { label: 'C' }), h(InlineStrong, { label: 'D' })] as any,
+      parent as any,
+      start as any,
+      end as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('CD')
+    expect(parent.querySelectorAll('strong')).toHaveLength(2)
+  })
+
+  it('updates a vapor child array inside renderBetween', async () => {
+    const parent = document.createElement('div')
+    const start = document.createComment('start')
+    const end = document.createComment('end')
+
+    parent.append(start, end)
+
+    renderBetween(
+      [createStrongVapor('A'), createStrongVapor('B'), createStrongVapor('C')] as any,
+      parent as any,
+      start as any,
+      end as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('ABC')
+    expect(parent.querySelectorAll('strong')).toHaveLength(3)
+
+    renderBetween([createStrongVapor('D')] as any, parent as any, start as any, end as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('D')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+    expect(parent.childNodes[0]).toBe(start)
+    expect(parent.childNodes[parent.childNodes.length - 1]).toBe(end)
   })
 
   it('bridges renderAnchor blocks through a temporary anchor target', async () => {
@@ -403,6 +499,82 @@ describe('render entry Renderable bridge', () => {
 
     expect(parent.textContent).toBe('B')
     expect(parent.querySelectorAll('strong')).toHaveLength(1)
+  })
+
+  it('updates a component-handle child array inside renderAnchor', async () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    parent.append(anchor)
+
+    renderAnchor(
+      [h(InlineStrong, { label: 'A' }), h(InlineStrong, { label: 'B' })] as any,
+      parent as any,
+      anchor as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('AB')
+    expect(parent.querySelectorAll('strong')).toHaveLength(2)
+
+    renderAnchor(
+      [h(InlineStrong, { label: 'C' }), h(InlineStrong, { label: 'D' })] as any,
+      parent as any,
+      anchor as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('CD')
+    expect(parent.querySelectorAll('strong')).toHaveLength(2)
+    expect(parent.childNodes[parent.childNodes.length - 1]).toBe(anchor)
+  })
+
+  it('updates renderAnchor from a component handle to a vapor handle', async () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    parent.append(anchor)
+
+    renderAnchor(h(InlineStrong, { label: 'A' }) as any, parent as any, anchor as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('A')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+
+    renderAnchor(createStrongVapor('B') as any, parent as any, anchor as any)
+    await flushEffects()
+
+    expect(parent.textContent).toBe('B')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+    expect(parent.childNodes[parent.childNodes.length - 1]).toBe(anchor)
+  })
+
+  it('updates renderAnchor when a component directly returns a renderable prop value', async () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('anchor')
+
+    parent.append(anchor)
+
+    renderAnchor(
+      h(ForwardRenderable, { value: h(InlineStrong, { label: 'A' }) }) as any,
+      parent as any,
+      anchor as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('A')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+
+    renderAnchor(
+      h(ForwardRenderable, { value: createStrongVapor('B') }) as any,
+      parent as any,
+      anchor as any,
+    )
+    await flushEffects()
+
+    expect(parent.textContent).toBe('B')
+    expect(parent.querySelectorAll('strong')).toHaveLength(1)
+    expect(parent.childNodes[parent.childNodes.length - 1]).toBe(anchor)
   })
 
   it('updates a vapor child array inside renderAnchor', async () => {

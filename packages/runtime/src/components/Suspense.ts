@@ -65,6 +65,17 @@ export const Suspense: FC<SuspenseProps> = props => {
       container.style.display = 'contents'
     }
 
+    const stagingHost = createElement('div') as HTMLElement & {
+      attachShadow?: (init: ShadowRootInit) => ShadowRoot
+    }
+    if (stagingHost && stagingHost.style && typeof stagingHost.style === 'object') {
+      stagingHost.style.display = 'none'
+    }
+    const stagingRoot =
+      typeof stagingHost.attachShadow === 'function'
+        ? ((stagingHost.attachShadow({ mode: 'open' }) as unknown as HTMLElement) ?? stagingHost)
+        : stagingHost
+
     const boundary: SuspenseBoundary = {
       id: Symbol('rue-suspense-boundary'),
       register: () => {},
@@ -73,6 +84,7 @@ export const Suspense: FC<SuspenseProps> = props => {
 
     const startEl = createComment('rue-suspense-start')
     const endEl = createComment('rue-suspense-end')
+    appendChild(container, stagingHost)
     appendChild(container, startEl)
     appendChild(container, endEl)
 
@@ -85,6 +97,7 @@ export const Suspense: FC<SuspenseProps> = props => {
     const contentEndEl = createComment('rue-suspense-content-end')
     appendChild(contentContainer, contentStartEl)
     appendChild(contentContainer, contentEndEl)
+    appendChild(stagingRoot as any, contentContainer)
 
     const fallbackContainer = createElement('div') as HTMLElement
     if (
@@ -98,10 +111,12 @@ export const Suspense: FC<SuspenseProps> = props => {
     const fallbackEndEl = createComment('rue-suspense-fallback-end')
     appendChild(fallbackContainer, fallbackStartEl)
     appendChild(fallbackContainer, fallbackEndEl)
+    appendChild(stagingRoot as any, fallbackContainer)
 
     return {
       boundary,
       container,
+      stagingHost,
       startEl,
       endEl,
       contentContainer,

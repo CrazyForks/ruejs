@@ -663,10 +663,14 @@ describe('TodoApp actual page', () => {
     let saveButton: HTMLButtonElement | undefined
 
     await waitForContent(() => {
-      editInput = Array.from(container.querySelectorAll('input')).find(
-        input => !(input as HTMLInputElement).placeholder,
-      ) as HTMLInputElement | undefined
-      saveButton = findButtonByText(container, '保存')
+      editInput = Array.from(container.querySelectorAll('input')).find(input => {
+        const htmlInput = input as HTMLInputElement
+        const editingRowClass = (htmlInput.parentElement as HTMLElement | null)?.className ?? ''
+
+        return !htmlInput.placeholder && !editingRowClass.includes('hidden')
+      }) as HTMLInputElement | undefined
+      const editingRow = editInput?.parentElement as HTMLElement | undefined
+      saveButton = findButtonByText(editingRow ?? container, '保存')
 
       expect(editInput).toBeTruthy()
       expect(saveButton).toBeTruthy()
@@ -681,6 +685,9 @@ describe('TodoApp actual page', () => {
 
     editInput.value = renamedTitle
     editInput.dispatchEvent(new Event('input', { bubbles: true }))
+
+    await flush()
+
     saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     await waitForContent(() => {

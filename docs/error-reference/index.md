@@ -15,9 +15,9 @@ onMounted(() => {
 
 在生产构建中，传递给以下错误处理器 API 的第三个参数将是一个短代码而不是完整的信息字符串：
 
-- [`app.config.errorHandler`](/api/application#app-config-errorhandler)
-- [`onErrorCaptured`](/api/composition-api-lifecycle#onerrorcaptured) (组合式 API)
-- [`errorCaptured`](/api/options-lifecycle#errorcaptured) (选项式 API)
+- [`app.config.errorHandler`](/api/api/application#app-config-errorhandler)
+- [`onErrorCaptured`](/api/api/composition-api-lifecycle#onerrorcaptured) (组合式 API)
+- [`errorCaptured`](@todo) (选项式 API)
 
 下表将代码映射到其原始完整信息字符串。
 

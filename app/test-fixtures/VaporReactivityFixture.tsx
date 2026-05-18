@@ -86,7 +86,11 @@ export const SortFilterPreview: FC = () => {
               searchQuery.value = (event.target as HTMLInputElement).value
             }}
           />
-          <DemoGrid data={gridData} filterKey={searchQuery.value} />
+          <DemoGrid
+            key={searchQuery.value || 'all'}
+            data={gridData}
+            filterKey={searchQuery.value}
+          />
         </div>
       ) : (
         <pre data-testid="code-panel">code</pre>

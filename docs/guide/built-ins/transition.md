@@ -4,9 +4,9 @@ Rue 提供了两个内置组件来帮助处理响应状态变化的过渡和动�
 
 - `<Transition>` 用于在元素或组件进入和离开 DOM 时应用动画。本页将介绍此内容。
 
-- `<TransitionGroup>` 用于在 `v-for` 列表中插入、移除或移动元素或组件时应用动画。这将在 [下一章](/guide/built-ins/transition-group) 中介绍。
+- `<TransitionGroup>` 用于在 `v-for` 列表中插入、移除或移动元素或组件时应用动画。这将在 [下一章](/guide/guide/built-ins/transition-group) 中介绍。
 
-除了这两个组件之外，我们还可以使用其他技术（如切换 CSS 类或通过样式绑定进行状态驱动动画）在 Rue 中应用动画。这些额外的技术在 [动画技术](/guide/extras/animation) 章节中介绍。
+除了这两个组件之外，我们还可以使用其他技术（如切换 CSS 类或通过样式绑定进行状态驱动动画）在 Rue 中应用动画。这些额外的技术在 [动画技术](/guide/guide/extras/animation) 章节中介绍。
 
 ## `<Transition>` 组件 (The `<Transition>` Component) {#the-transition-component}
 
@@ -67,7 +67,7 @@ const App: FC = () => {
 
 有六个类应用于进入/离开过渡。
 
-![过渡图示](./images/transition-classes.png)
+![过渡图示](@todo)
 
 1. `rue-enter`：进入的起始状态。在元素插入之前添加，在元素插入后一帧移除。
 
@@ -420,7 +420,7 @@ Rue 当前的 `<Transition>` 实现还没有提供 `mode` 来自动编排这类�
 
 ## 组件之间的过渡 (Transition Between Components) {#transition-between-components}
 
-`<Transition>` 也可以用于 [动态组件](/guide/essentials/component-basics#dynamic-components) 周围：
+`<Transition>` 也可以用于 [动态组件](/guide/guide/essentials/component-basics#dynamic-components) 周围：
 
 ```tsx
 import { useState } from '@rue-js/rue'
@@ -485,4 +485,4 @@ const Counter: FC = () => {
 
 **相关**
 
-- [`<Transition>` API 参考](/api/built-in-components#transition)
+- [`<Transition>` API 参考](/api/api/built-in-components#transition)

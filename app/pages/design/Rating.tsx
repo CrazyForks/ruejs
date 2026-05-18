@@ -14,7 +14,7 @@ interface ApiRow {
 
 const sizes = ['xs', 'sm', 'md', 'lg', 'xl'] as const
 const wholeValues = ['1', '2', '3', '4', '5']
-const halfValues = ['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5']
+const _halfValues = ['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5']
 const feedbackTips = ['很难用', '能用', '稳定', '顺手', '非常喜欢']
 const legacyVisibleItemClassName = 'opacity-[0.35] checked:opacity-100 has-[~:checked]:opacity-100'
 

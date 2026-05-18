@@ -120,12 +120,22 @@ impl DomAdapter for JsDomAdapter {
     type Element = JsValue;
 
     fn create_element(&mut self, tag: &str) -> Self::Element {
+        self.create_element_in_parent(tag, None)
+    }
+
+    fn create_element_in_parent(
+        &mut self,
+        tag: &str,
+        parent: Option<&Self::Element>,
+    ) -> Self::Element {
         // 通过 JS 适配器对象的 createElement 构造元素；返回值需非空
         let f = Reflect::get(&self.inner, &JsValue::from_str("createElement"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let ret =
-                func.call1(&self.inner, &JsValue::from_str(tag)).unwrap_or(JsValue::UNDEFINED);
+            let parent_value = parent.cloned().unwrap_or(JsValue::UNDEFINED);
+            let ret = func
+                .call2(&self.inner, &JsValue::from_str(tag), &parent_value)
+                .unwrap_or(JsValue::UNDEFINED);
             if ret.is_undefined() || ret.is_null() {
                 throw_str("Rue runtime: createElement returned undefined/null");
             }

@@ -1,7 +1,7 @@
 use super::super::types::{MountInput, MountedPatchSubtree, MountedSubtreeState};
 use super::super::{ComponentInternalInstance, Rue};
 use crate::hook::reactive::props_reactive_js;
-use crate::reactive::context::{get_current_instance, set_current_instance_ci};
+use crate::reactive::context::set_current_instance_ci;
 use crate::reactive::core::{pop_effect_scope, push_effect_scope};
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::shared_runtime_bridge;
@@ -12,20 +12,32 @@ pub(crate) fn mount_component<A: DomAdapter>(
     rue: &mut Rue<A>,
     input: &MountInput<A>,
     render_fn: &JsValue,
+    parent_context: Option<&A::Element>,
 ) -> Option<MountedSubtreeState<A>>
 where
     A::Element: From<JsValue> + Into<JsValue> + Clone,
 {
     let props_js = rue.props_with_children_input_to_jsobject(input);
-    let (_host, props_ro, idx) = prepare_instance_from_input(rue, props_js);
-    let shared_instance = get_current_instance();
+    let (host, props_ro, idx) = prepare_instance_from_input(rue, props_js);
     let render_scope_id = rue.renew_component_render_scope(idx);
-    shared_runtime_bridge::begin_component_render(&shared_instance);
+    shared_runtime_bridge::begin_component_render(&host.clone().into());
     push_effect_scope(render_scope_id);
     let func = render_fn.dyn_ref::<Function>().unwrap();
+    let prev_container = rue.current_container.clone();
+    let mut did_push_current_container = false;
+    if let Some(parent) = parent_context {
+        rue.current_container = Some(parent.clone());
+        let parent_value: JsValue = parent.clone().into();
+        shared_runtime_bridge::push_current_container(&parent_value);
+        did_push_current_container = true;
+    }
     let ret = match func.call1(&JsValue::UNDEFINED, &props_ro) {
         Ok(value) => value,
         Err(error) => {
+            if did_push_current_container {
+                shared_runtime_bridge::pop_current_container();
+            }
+            rue.current_container = prev_container;
             let _ = pop_effect_scope();
             shared_runtime_bridge::end_component_render();
             rue.handle_error(error.clone());
@@ -42,6 +54,10 @@ where
             return None;
         }
     };
+    if did_push_current_container {
+        shared_runtime_bridge::pop_current_container();
+    }
+    rue.current_container = prev_container;
     let _ = pop_effect_scope();
     shared_runtime_bridge::end_component_render();
 
@@ -53,7 +69,7 @@ where
     let mounted_subtree = if let Some(sub_input) =
         rue.component_return_value_to_input(&ret, input.strict_component_returns)
     {
-        rue.mount_from_input(&sub_input)
+        rue.mount_from_input(&sub_input, parent_context)
     } else if ret.is_object() {
         #[cfg(feature = "compat")]
         let error = JsValue::from_str(
@@ -64,7 +80,7 @@ where
             "Unsupported object returns are no longer accepted on the default component path. Return a host-node bridge, portable handle, or mount handle instead.",
         );
         rue.handle_error(error.clone());
-        wasm_bindgen::throw_val(error);
+        None
     } else {
         let el: A::Element = ret.into();
         Some(MountedSubtreeState::Vapor(super::super::types::MountedVaporSubtree {

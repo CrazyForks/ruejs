@@ -125,7 +125,6 @@ function resolvePackageInfo(target) {
 }
 
 function resolveBuildEntries(packageInfo, formatFilter) {
-  const packageFormats = packageInfo.packageOptions.formats || defaultFormats
   const resolveEntryFormats = formats => {
     const configuredFormats = formats || packageInfo.packageOptions.formats || defaultFormats
     return formatFilter
@@ -336,10 +335,7 @@ function resolveAliasEntries(request) {
     },
     {
       find: '@rue-js/runtime-vapor',
-      replacement: path.resolve(
-        runtimeVaporRoot,
-        nodeRuntime ? 'pkg-node/rue_runtime_vapor.js' : 'pkg/rue_runtime_vapor.js',
-      ),
+      replacement: path.resolve(runtimeVaporRoot, nodeRuntime ? 'index.node.js' : 'index.js'),
     },
   ]
 }

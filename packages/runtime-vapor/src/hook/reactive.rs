@@ -12,6 +12,8 @@ use crate::reactive::signal::create_reactive as create_reactive_impl;
 
 const RUE_HOST_NODE_KEY: &str = "__rue_host_node";
 const RUE_MOUNT_HANDLE_KEY: &str = "__rue_mount_id";
+const PORTABLE_COMPONENT_TYPE_KEY: &str = "__rue_component_type";
+const PORTABLE_PROPS_KEY: &str = "props";
 
 fn get_object_field(obj: &Object, key: &str) -> JsValue {
     Reflect::get(obj, &JsValue::from_str(key)).unwrap_or(JsValue::UNDEFINED)
@@ -138,6 +140,35 @@ fn normalized_renderable_array(v: &JsValue) -> Option<Array> {
     Some(arr)
 }
 
+fn shallow_equal_portable_component(a: &JsValue, b: &JsValue) -> Option<bool> {
+    if !a.is_object() || !b.is_object() {
+        return None;
+    }
+
+    let ao: Object = a.clone().unchecked_into();
+    let bo: Object = b.clone().unchecked_into();
+    let a_type = get_object_field(&ao, PORTABLE_COMPONENT_TYPE_KEY);
+    let b_type = get_object_field(&bo, PORTABLE_COMPONENT_TYPE_KEY);
+    let a_is_portable = !a_type.is_undefined() && !a_type.is_null();
+    let b_is_portable = !b_type.is_undefined() && !b_type.is_null();
+
+    if !a_is_portable && !b_is_portable {
+        return None;
+    }
+
+    if !a_is_portable || !b_is_portable {
+        return Some(false);
+    }
+
+    if !js_sys::Object::is(&a_type, &b_type) {
+        return Some(false);
+    }
+
+    let a_props = get_object_field(&ao, PORTABLE_PROPS_KEY);
+    let b_props = get_object_field(&bo, PORTABLE_PROPS_KEY);
+    Some(shallow_equal_prop(&a_props, &b_props))
+}
+
 fn shallow_equal_renderable_like(a: &JsValue, b: &JsValue) -> Option<bool> {
     let a_scalar = normalized_renderable_scalar(a);
     let b_scalar = normalized_renderable_scalar(b);
@@ -184,6 +215,9 @@ pub fn shallow_equal_prop(a: &JsValue, b: &JsValue) -> bool {
     if js_sys::Object::is(a, b) {
         return true;
     }
+    if let Some(equal) = shallow_equal_portable_component(a, b) {
+        return equal;
+    }
     if let Some(equal) = shallow_equal_renderable_like(a, b) {
         return equal;
     }
@@ -216,7 +250,11 @@ pub fn shallow_equal_prop(a: &JsValue, b: &JsValue) -> bool {
             }
             let av = js_sys::Reflect::get(&ao, &key_js).unwrap_or(JsValue::UNDEFINED);
             let bv = js_sys::Reflect::get(&bo, &key_js).unwrap_or(JsValue::UNDEFINED);
-            if let Some(equal) = shallow_equal_renderable_like(&av, &bv) {
+            if let Some(equal) = shallow_equal_portable_component(&av, &bv) {
+                if !equal {
+                    return false;
+                }
+            } else if let Some(equal) = shallow_equal_renderable_like(&av, &bv) {
                 if !equal {
                     return false;
                 }

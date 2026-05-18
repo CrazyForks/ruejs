@@ -94,7 +94,7 @@ function ref(value) {
 这里的代码片段和下面的代码旨在以最简单的形式解释核心概念，因此许多细节被省略，边缘情况被忽略。
 :::
 
-这解释了我们已经在基础部分讨论过的一些[响应式对象的限制](/guide/essentials/reactivity-fundamentals#limitations-of-reactive)：
+这解释了我们已经在基础部分讨论过的一些[响应式对象的限制](/guide/guide/essentials/reactivity-fundamentals#limitations-of-reactive)：
 
 - 当你将响应式对象的属性赋值或解构为局部变量时，访问或赋值该变量是非响应式的，因为它不再触发源对象上的 get / set proxy 陷阱。请注意，这种"断开连接"只影响变量绑定——如果变量指向非原始值（如对象），修改该对象仍然是响应式的。
 
@@ -142,7 +142,7 @@ function whenDepsChange(update) {
 
 此时，我们已经创建了一个自动跟踪其依赖并在依赖更改时重新运行的 effect。我们称之为**响应式 Effect**。
 
-Rue 提供了一个允许你创建响应式 effect 的 API：[`watchEffect()`](/api/reactivity-core#watcheffect)。事实上，你可能已经注意到它的工作方式与示例中神奇的 `whenDepsChange()` 非常相似。我们现在可以使用实际的 Rue API 重写原始示例：
+Rue 提供了一个允许你创建响应式 effect 的 API：[`watchEffect()`](/api/api/reactivity-core#watcheffect)。事实上，你可能已经注意到它的工作方式与示例中神奇的 `whenDepsChange()` 非常相似。我们现在可以使用实际的 Rue API 重写原始示例：
 
 ```tsx
 import { ref, watchEffect } from '@rue-js/rue'
@@ -189,7 +189,7 @@ watchEffect(() => {
 count.value++
 ```
 
-事实上，这与 Rue 组件如何保持状态和 DOM 同步非常接近——每个组件实例创建一个响应式 effect 来渲染和更新 DOM。当然，Rue 组件使用比 `innerHTML` 更高效的方式来更新 DOM。这在[渲染机制](./rendering-mechanism)中讨论。
+事实上，这与 Rue 组件如何保持状态和 DOM 同步非常接近——每个组件实例创建一个响应式 effect 来渲染和更新 DOM。当然，Rue 组件使用比 `innerHTML` 更高效的方式来更新 DOM。这在[渲染机制](/guide/guide/extras/rendering-mechanism)中讨论。
 
 <div class="options-api">
 
@@ -203,7 +203,7 @@ Rue 的响应式系统主要基于运行时：跟踪和触发都在浏览器中�
 
 一些框架，例如 [Svelte](https://svelte.dev/)，选择在编译期间实现响应式来克服此类限制。它分析和转换代码以模拟响应式。编译步骤允许框架改变 JavaScript 本身的语义——例如，隐式注入在访问局部定义变量时执行依赖分析和 effect 触发的代码。缺点是这样的转换需要构建步骤，而改变 JavaScript 语义本质上是在创建一种看起来像 JavaScript 但编译成其他东西的语言。
 
-Rue 团队确实通过一个名为 [Reactivity Transform](/guide/extras/reactivity-transform) 的实验性功能探索了这个方向，但最终我们决定由于[这里的原因](https://github.com/@rue-js/ruejs/rfcs/discussions/369#discussioncomment-5059028)它不适合该项目。
+Rue 团队确实通过一个名为 [Reactivity Transform](/guide/guide/extras/reactivity-transform) 的实验性功能探索了这个方向，但最终我们决定由于[这里的原因](https://github.com/@rue-js/ruejs/rfcs/discussions/369#discussioncomment-5059028)它不适合该项目。
 
 ## 响应式调试 {#reactivity-debugging}
 
@@ -339,7 +339,7 @@ watchEffect(
 
 Rue 的响应式系统通过将普通 JavaScript 对象深度转换为响应式代理来工作。当与外部状态管理系统集成时（例如，如果外部解决方案也使用 Proxy），这种深度转换可能是不必要的或有时是不希望的。
 
-将 Rue 的响应式系统与外部状态管理解决方案集成的总体思路是将外部状态保存在 [`shallowRef`](/api/reactivity-advanced#shallowref) 中。浅层 ref 仅在其 `.value` 属性被访问时才是响应式的——内部值保持不变。当外部状态更改时，替换 ref 值以触发更新。
+将 Rue 的响应式系统与外部状态管理解决方案集成的总体思路是将外部状态保存在 [`shallowRef`](/api/api/reactivity-advanced#shallowref) 中。浅层 ref 仅在其 `.value` 属性被访问时才是响应式的——内部值保持不变。当外部状态更改时，替换 ref 值以触发更新。
 
 ### 不可变数据 {#immutable-data}
 
@@ -400,7 +400,7 @@ export function useMachine<T>(options: T) {
 
 从根本上讲，signals 与 Rue refs 是同一种响应式原语。它是一个值容器，在访问时提供依赖跟踪，在修改时触发副作用。这种基于响应式原语的范式在前端世界中并不是一个特别新的概念：它可以追溯到十多年前的实现，如 [Knockout observables](https://knockoutjs.com/documentation/observables.html) 和 [Meteor Tracker](https://docs.meteor.com/api/tracker.html)。Rue Options API 和 React 状态管理库 [MobX](https://mobx.js.org/) 也基于相同的原理，但将原语隐藏在对象属性后面。
 
-虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。Rue 当前默认已经把编译期知识下沉到 Block / Vapor 渲染路径中，并通过[编译器知情的 Block / Vapor](/guide/extras/rendering-mechanism#compiler-informed-virtual-dom)把更新收敛到更小的动态边界，而不是依赖整棵运行时树的全量 diff。
+虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。Rue 当前默认已经把编译期知识下沉到 Block / Vapor 渲染路径中，并通过[编译器知情的 Block / Vapor](/guide/guide/extras/rendering-mechanism#compiler-informed-virtual-dom)把更新收敛到更小的动态边界，而不是依赖整棵运行时树的全量 diff。
 
 这也是 Rue 响应式系统与运行时结合的关键点：响应式依赖不只是决定“重新执行哪段代码”，还决定“重新接管哪个 block、哪个区间、哪个 DOM 边界”。
 \*\*\* Add File: /Users/Shared/work/dir/data/codes/rue/docs/guide/migration/renderable-default.md
@@ -491,7 +491,7 @@ Rue 公开的历史渲染输出别名仍然存在，但它现在只是显式边�
 
 ### API 设计权衡 {#api-design-trade-offs}
 
-Preact 和 Qwik 的 signals 设计与 Rue 的 [shallowRef](/api/reactivity-advanced#shallowref) 非常相似：三者都通过 `.value` 属性提供可变接口。我们将重点讨论 Solid 和 Angular signals。
+Preact 和 Qwik 的 signals 设计与 Rue 的 [shallowRef](/api/api/reactivity-advanced#shallowref) 非常相似：三者都通过 `.value` 属性提供可变接口。我们将重点讨论 Solid 和 Angular signals。
 
 #### Solid Signals {#solid-signals}
 

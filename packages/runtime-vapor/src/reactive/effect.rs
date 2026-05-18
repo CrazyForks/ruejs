@@ -31,9 +31,17 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 
 use crate::reactive::core::{
-    CURRENT_EFFECT, EFFECTS, Effect, NEXT_EFFECT_ID, current_effect_scope, dispose_effect,
-    register_effect_in_scope, run_effect,
+    CURRENT_EFFECT, CURRENT_UNTRACKED_HANDLER_EFFECT, EFFECTS, Effect, NEXT_EFFECT_ID,
+    current_effect_scope, dispose_effect, register_effect_in_scope, run_effect,
 };
+
+fn push_cleanup_for_effect(id: usize, cb: Function) {
+    EFFECTS.with(|m| {
+        if let Some(e) = m.borrow_mut().get_mut(&id) {
+            e.cleanups.push(cb);
+        }
+    });
+}
 
 #[wasm_bindgen]
 pub struct EffectHandle {
@@ -210,15 +218,14 @@ pub fn create_effect(cb: Function, options: Option<JsValue>) -> EffectHandle {
 /// ```
 #[wasm_bindgen(js_name = onCleanup)]
 pub fn on_cleanup(cb: Function) {
-    CURRENT_EFFECT.with(|c| {
-        if let Some(id) = *c.borrow() {
-            EFFECTS.with(|m| {
-                if let Some(e) = m.borrow_mut().get_mut(&id) {
-                    e.cleanups.push(cb);
-                }
-            });
-        }
-    });
+    if let Some(id) = CURRENT_EFFECT.with(|c| *c.borrow()) {
+        push_cleanup_for_effect(id, cb);
+        return;
+    }
+
+    if let Some(id) = CURRENT_UNTRACKED_HANDLER_EFFECT.with(|c| *c.borrow()) {
+        push_cleanup_for_effect(id, cb);
+    }
 }
 
 /// 断开依赖收集地执行回调（不记录对 Signal 的订阅）

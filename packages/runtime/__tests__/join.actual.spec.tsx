@@ -63,7 +63,7 @@ describe('Join actual page', () => {
       0,
     )
 
-    await click(findTabButton(basicDemo!, '预览'))
+    await click(findTabButton(findDemo(container, '# 基础组合')!, '预览'))
 
     await waitForContent(() => {
       expect(

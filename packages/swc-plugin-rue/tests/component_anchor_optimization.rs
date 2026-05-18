@@ -19,6 +19,7 @@ const Page: FC<{ code: string }> = props => (
     let (program, cm) = utils::parse(src, "test.tsx");
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
+    println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(out.contains(&utils::normalize("rue:component:anchor")));
@@ -38,6 +39,7 @@ const Page: FC<{ code: string }> = props => <Code code={props.code} />
     let (program, cm) = utils::parse(src, "test.tsx");
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
+    println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(out.contains(&utils::normalize("rue:component:anchor")));
@@ -61,6 +63,7 @@ const Page: FC<{ show: boolean }> = props => (
     let (program, cm) = utils::parse(src, "test.tsx");
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
+    println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(out.contains(&utils::normalize("rue:component:anchor")));
@@ -85,6 +88,7 @@ const Page: FC = () => (
     let (program, cm) = utils::parse(src, "test.tsx");
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
+    println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize(
         "_$createComponent(Collapse.Title, { className: \"font-semibold\", children: \"Hello\" })"
@@ -110,13 +114,14 @@ const Page: FC<{ items: string[] }> = props => (
     let (program, cm) = utils::parse(src, "test.tsx");
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
+    println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize(
         "_$createComponent(TransitionGroup, { children: props.items.map"
     )));
     assert!(out.contains("props.items.map"));
     assert!(out.contains("_$vaporWithKey"));
-    assert!(out.contains("_$createElement(\"span\")"));
+    assert!(out.contains("_$createElement(\"span\""));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(!out.contains("const __child1"));
     assert!(!out.contains("children={__child1}"));
@@ -139,13 +144,14 @@ const Page: FC<{ items: string[] }> = props => (
     let (program, cm) = utils::parse(src, "test.tsx");
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
+    println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize(
         "_$createComponent(TransitionGroup, { children: props.items.map"
     )));
     assert!(out.contains("props.items.map"));
     assert!(out.contains("_$vaporWithKey"));
-    assert!(out.contains("_$createElement(\"span\")"));
+    assert!(out.contains("_$createElement(\"span\""));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(!out.contains("const __child1"));
     assert!(!out.contains("children={__child1}"));
@@ -176,10 +182,48 @@ const Page: FC = () => (
     let (program, cm) = utils::parse(src, "test.tsx");
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
+    println!("DEBUG_OUT: {}", out);
 
     assert!(
         out.contains(&utils::normalize("_$createComponent(IconHost, { children: icons[0].node })"))
     );
     assert!(!out.contains(&utils::normalize("const __child1 = icons[0].node;")));
     assert!(!out.contains(&utils::normalize("_$settextContent(_el2, icons[0].node);")));
+}
+
+#[test]
+fn lowers_nullish_member_expression_child_to_render_anchor() {
+    let src = r##"
+import { type FC } from '@rue-js/rue';
+
+const options = [
+  {
+    label: (
+      <strong>
+        Alpha
+      </strong>
+    ),
+    value: 'alpha',
+  },
+]
+
+const Page: FC = () => (
+  <div>
+    <span>{options[0].label ?? options[0].value}</span>
+  </div>
+)
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply(program);
+    let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
+    println!("DEBUG_OUT: {}", out);
+
+    assert!(
+        out.contains(&utils::normalize("const __slot = options[0].label ?? options[0].value;"))
+    );
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
+    assert!(!out.contains(&utils::normalize(
+        "_$settextContent(_el2, options[0].label ?? options[0].value);"
+    )));
 }

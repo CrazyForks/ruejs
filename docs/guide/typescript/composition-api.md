@@ -4,7 +4,7 @@
   在 Scrimba 上观看互动视频课程
 </ScrimbaLink>
 
-> 本页面假设你已经阅读了[使用 Rue 与 TypeScript](./overview)的概述。
+> 本页面假设你已经阅读了[使用 Rue 与 TypeScript](/guide/guide/typescript/overview)的概述。
 
 本页示例统一使用 Rue 当前仓库里更常见的 TSX / 函数组件写法，风格与 Template Demo 一致：直接导入组合式 API，在组件函数体中声明响应式状态，在 JSX 中消费它们。
 

@@ -187,6 +187,17 @@ const resolveTypeClass = (type?: LinkType) => {
   }
 }
 
+const resolveRouterHref = (to: string) => {
+  const resolvedHref = RouterLink.__rueHref(to)
+  if (!resolvedHref) {
+    return '#/'
+  }
+  if (resolvedHref === to && to && !to.startsWith('#')) {
+    return `#${to}`
+  }
+  return resolvedHref
+}
+
 const resolveEllipsis = (ellipsis?: boolean | LinkEllipsisConfig): NormalizedEllipsisConfig => {
   if (!ellipsis) {
     return { enabled: false, rows: 1, tooltip: false, expandable: false }
@@ -892,7 +903,7 @@ const Link: FC<LinkProps> = ({
       return (
         <a
           {...rest}
-          href={RouterLink.__rueHref(to)}
+          href={resolveRouterHref(to)}
           target={target}
           rel={anchorRel}
           className={linkClassName}

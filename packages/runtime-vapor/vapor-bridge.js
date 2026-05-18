@@ -28,6 +28,7 @@ export const installSharedBridge = sharedRuntime => {
 
   const instanceStack = []
   const renderScopeStack = []
+  const currentContainerStack = []
 
   const bridge = {
     beginComponentRender(instance) {
@@ -79,6 +80,20 @@ export const installSharedBridge = sharedRuntime => {
     },
     disposeVaporScope(owner) {
       disposeScopeKey(sharedRuntime, owner, RUE_SHARED_VAPOR_SCOPE_KEY)
+    },
+    pushCurrentContainer(container) {
+      if (container == null) {
+        return
+      }
+      currentContainerStack.push(container)
+    },
+    popCurrentContainer() {
+      currentContainerStack.pop()
+    },
+    getCurrentContainer() {
+      return currentContainerStack.length > 0
+        ? currentContainerStack[currentContainerStack.length - 1]
+        : undefined
     },
     propsReactive(initial) {
       return sharedRuntime.propsReactive(initial, true)

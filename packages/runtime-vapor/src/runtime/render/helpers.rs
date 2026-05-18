@@ -9,6 +9,32 @@ use js_sys::{Array, Function, Object, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
+fn debug_record_sidebar_compaction(kind: &str, host: &JsValue) {
+    let host_class = Reflect::get(host, &JsValue::from_str("className"))
+        .unwrap_or(JsValue::UNDEFINED)
+        .as_string()
+        .unwrap_or_default();
+    if !host_class.contains("sidebar-playground") {
+        return;
+    }
+
+    let global = js_sys::global();
+    let enabled = Reflect::get(&global, &JsValue::from_str("__rue_debug_compact_enabled__"))
+        .unwrap_or(JsValue::FALSE);
+    if !enabled.as_bool().unwrap_or(false) {
+        return;
+    }
+
+    let key = JsValue::from_str("__rue_debug_compact__");
+    let existing = Reflect::get(&global, &key).unwrap_or(JsValue::UNDEFINED);
+    let array = if Array::is_array(&existing) { Array::from(&existing) } else { Array::new() };
+    let record = Object::new();
+    let _ = Reflect::set(&record, &JsValue::from_str("kind"), &JsValue::from_str(kind));
+    let _ = Reflect::set(&record, &JsValue::from_str("hostClass"), &JsValue::from_str(&host_class));
+    array.push(&record);
+    let _ = Reflect::set(&global, &key, &array.into());
+}
+
 // 渲染辅助方法：
 // - reset_hook_index：重置组件宿主上的 hooks 索引，确保从头执行
 // - compact_container_map / compact_anchor_map / compact_range_map：清理容器/单锚点/区间映射中过期项
@@ -173,7 +199,11 @@ where
             if keep {
                 kept.push(entry);
             } else if let Some(mount) = entry.take_mount() {
-                let lifecycle = mount.into_lifecycle();
+                let (lifecycle, host, _fragment_nodes) = mount.into_dom_identity();
+                if let Some(host) = host {
+                    let host_js: JsValue = host.into();
+                    debug_record_sidebar_compaction("anchor", &host_js);
+                }
                 self.invoke_before_unmount_record(&lifecycle);
                 self.invoke_unmounted_record(&lifecycle);
             }
@@ -339,10 +369,14 @@ where
                 //   清理 watchEffect/createEffect 注册的副作用；
                 // - 也能让组件的 `unmounted` 正常执行，清理事件/定时器等资源。
                 if let Some(mount) = entry.take_mount() {
+                    let (lifecycle, host, _fragment_nodes) = mount.into_dom_identity();
+                    if let Some(host) = host {
+                        let host_js: JsValue = host.into();
+                        debug_record_sidebar_compaction("range", &host_js);
+                    }
                     // 为什么这个代码会影响切换路由后组件的生命周期无法恢复了。
                     // 说明：在丢弃过期区间前调用卸载钩子，确保 Vapor scope 与副作用得到释放，
                     // 否则切换场景中旧副作用残留会导致生命周期异常与资源泄漏。
-                    let lifecycle = mount.into_lifecycle();
                     self.invoke_before_unmount_record(&lifecycle);
                     self.invoke_unmounted_record(&lifecycle);
                 }

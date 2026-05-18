@@ -12,7 +12,7 @@ use crate::vapor::VaporTransform;
 */
 /// 解析 JSX 标签名并生成原生元素创建与插入语句。
 /// 典型输出：
-/// - `const _el1 = _$createElement("div");`
+/// - `const _el1 = _$createElement("div", _root);`
 /// - `_$appendChild(_root, _el1);`
 /// 标签名解析规则：
 /// - 标识符直接使用其字符串值作为标签（如 `div`/`span`）
@@ -36,8 +36,10 @@ pub fn emit_create_element(
 ) -> Ident {
     let el_ident = vt.next_el_ident();
     // 1) 创建元素：来源 emit::call_ident 封装
-    //    - 原因：统一封装元素创建，运行时可适配不同环境（浏览器/SVG/SSR）
-    let create_el = call_ident("_$createElement", vec![string_expr(tag)]);
+    //    - 原因：共享的 HTML/SVG 标签需要读取父元素上下文决定 namespace，
+    //      因此这里把当前 parent 作为第二参传给运行时
+    let create_el =
+        call_ident("_$createElement", vec![string_expr(tag), Expr::Ident(parent.clone())]);
     stmts.push(const_decl(el_ident.clone(), create_el));
     // 2) 插入到父节点：来源 emit::append_child 封装
     //    - 原因：抽象原生 DOM API，便于批量插入/移动优化与跨环境适配

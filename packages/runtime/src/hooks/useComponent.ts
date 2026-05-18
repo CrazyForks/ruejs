@@ -1,14 +1,22 @@
 /*
 异步组件 Hook 概述
-- 使用动机：以最小成本接入动态导入与按需加载，同时保证渲染区间的稳定与错误兜底。
+- 使用动机：以最小成本接入动态导入与按需加载，同时保证渲染锚点的稳定与错误兜底。
 - 缓存策略：以 loader 函数为 key 建立 WeakMap 缓存，避免重复请求与状态重建。
-- 状态管理：signal 存储目标组件与错误；watchEffect 驱动容器内尾锚点前的渲染更新。
+- 状态管理：signal 存储目标组件与错误；watchEffect 驱动容器内固定锚点前的渲染更新。
 - 占位渲染：提供可覆盖的 Loading 与 Error 组件，满足不同产品形态的占位需求。
- * - 固定渲染：使用 vapor + renderBetween，内部通过 display: contents 容器承载稳定区间，既能正确卸载，又不额外产生布局盒。
+ * - 固定渲染：使用 vapor + renderAnchor，内部通过 display: contents 容器承载稳定锚点，既能正确卸载，又不额外产生布局盒。
 */
-import rue, { FC, h, onBeforeUnmount, renderBetween, vapor } from '../rue'
-import { appendChild, createComment, createElement, getParentNode } from '../dom'
-import { signal, watchEffect } from '../reactivity'
+import rue, { FC, h, onBeforeUnmount, renderAnchor, vapor } from '../rue'
+import {
+  appendChild,
+  createComment,
+  createDocumentFragment,
+  createElement,
+  getParentNode,
+} from '../dom'
+import { signal, untrack, watchEffect } from '../reactivity'
+import { registerOwnerCleanup } from '../renderable-lifecycle'
+import { _$createComponent } from '../vapor'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
 import {
   getCurrentSuspenseBoundary,
@@ -30,7 +38,7 @@ export interface AsyncComponentOptions<P = any> {
   onError?: (error: Error, retry: () => void, fail: () => void, attempts: number) => any
 }
 
-export interface UseComponentOptions<P = any> {
+export interface UseComponentOptions<_P = any> {
   loading?: FC<any>
   error?: FC<{ error: any }>
   loadingComponent?: FC<any>
@@ -292,19 +300,27 @@ export function useComponent<P = any>(
       start()
     }
 
-    // 为每个 Hook 实例创建独立的容器、区间锚点与 props 信号，
+    // 为每个 Hook 实例创建独立的容器、单锚点与 props 信号，
     // 同一 loader 下仅共享“加载状态”，但不共享渲染区间与副作用。
-    const ctx = useSetup(() => {
+    const createRenderContext = (initialProps: any) => {
       const container = createElement('div') as any
       if (container && container.style && typeof container.style === 'object') {
         container.style.display = 'contents'
       }
-      const startEl = createComment('rue-async-component-start')
-      const endEl = createComment('rue-async-component-end')
-      appendChild(container, startEl)
-      appendChild(container, endEl)
-      const propsSig = signal<any>(props, {}, true)
-      let pendingSuspenseCheck = false
+      const anchorEl = createComment('rue-async-component-anchor')
+      appendChild(container, anchorEl)
+      const propsSig = signal<any>(initialProps, {}, true)
+      const mountKey = {}
+      const ctx = {
+        container,
+        anchorEl,
+        propsSig,
+        lastProps: initialProps,
+        pendingSuspenseCheck: false,
+        disposed: false,
+        effect: null as { dispose?: () => void } | null,
+        dispose: () => {},
+      }
 
       const isStillPending = (thenable: Promise<unknown>) =>
         (slot as any).promise === thenable && !component.get() && !err.get()
@@ -338,10 +354,10 @@ export function useComponent<P = any>(
           return true
         }
 
-        if (!pendingSuspenseCheck) {
-          pendingSuspenseCheck = true
+        if (!ctx.pendingSuspenseCheck) {
+          ctx.pendingSuspenseCheck = true
           queueMicrotask(() => {
-            pendingSuspenseCheck = false
+            ctx.pendingSuspenseCheck = false
             if (!isStillPending(thenable)) {
               return
             }
@@ -354,22 +370,27 @@ export function useComponent<P = any>(
         return false
       }
 
-      const effect = watchEffect(() => {
+      const renderCurrent = () => {
         const curProps = propsSig.get()
-        if (curProps == null) return
+        if (curProps == null) {
+          return
+        }
 
         // 根据当前状态选择渲染内容：
         // - 有错误：渲染 ErrorComp 并展示错误信息
         // - 有组件：渲染目标异步组件
         // - 尚未就绪：渲染 Loading 占位
-        let nextOutput: any
+        let nextOutput: any = null
         const e = err.get()
         if (e) {
           nextOutput = h(ErrorComp, { error: e })
         } else {
           const comp = component.get()
           if (comp) {
-            nextOutput = h(comp as FC<P>, curProps)
+            nextOutput = _$createComponent(comp as FC<P>, {
+              ...curProps,
+              key: mountKey,
+            })
           } else if (hasCustomLoading && loadingVisible.get()) {
             if (suspensible && (slot as any).promise) {
               registerSuspenseDependency((slot as any).promise)
@@ -382,26 +403,65 @@ export function useComponent<P = any>(
             return
           }
         }
-        renderBetween(nextOutput as any, container, startEl as any, endEl as any)
-      })
-
-      return {
-        container,
-        startEl,
-        endEl,
-        propsSig,
-        lastProps: props,
-        effect: effect as ReturnType<typeof watchEffect> | null,
+        untrack(() => {
+          renderAnchor(nextOutput as any, container, anchorEl as any)
+        })
       }
-    })
+
+      ctx.dispose = () => {
+        if (ctx.disposed) {
+          return
+        }
+
+        ctx.disposed = true
+
+        untrack(() => {
+          renderAnchor(
+            vapor(() => createDocumentFragment() as any),
+            container,
+            anchorEl as any,
+          )
+        })
+
+        ctx.effect?.dispose?.()
+        ctx.effect = null
+      }
+
+      const startRenderEffect = () =>
+        watchEffect(() => {
+          if (ctx.disposed) {
+            return
+          }
+          renderCurrent()
+        })
+
+      if (component.get()) {
+        queueMicrotask(() => {
+          if (ctx.disposed || ctx.effect) {
+            return
+          }
+          ctx.effect = startRenderEffect()
+        })
+      } else {
+        ctx.effect = startRenderEffect()
+      }
+
+      return ctx
+    }
+
+    const ctxHolder = useSetup(() => ({ current: createRenderContext(props) })) as {
+      current: ReturnType<typeof createRenderContext>
+    }
+    if (ctxHolder.current.disposed) {
+      ctxHolder.current = createRenderContext(props)
+    }
+    const ctx = ctxHolder.current
 
     onBeforeUnmount(() => {
-      ctx.effect?.dispose?.()
-      ctx.effect = null
-      renderBetween([] as any, ctx.container, ctx.startEl as any, ctx.endEl as any)
+      ctx.dispose()
     })
 
-    return vapor(() => {
+    const handle = vapor(() => {
       // 将 props 写入信号以驱动渲染，并把稳定容器直接暴露给 Vapor 渲染管线
       if (ctx.lastProps !== props) {
         ctx.lastProps = props
@@ -409,5 +469,11 @@ export function useComponent<P = any>(
       }
       return ctx.container as any
     })
+
+    registerOwnerCleanup(handle as any, () => {
+      ctx.dispose()
+    })
+
+    return handle
   }
 }

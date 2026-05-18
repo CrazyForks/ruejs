@@ -82,6 +82,7 @@ pub fn transform(program: Program, _metadata: TransformPluginProgramMetadata) ->
         once_depth: 0,
         did_transform: false,
         el_tag_by_ident: std::collections::HashMap::new(),
+        renderable_local_scopes: Vec::new(),
     });
     log::info("rue-swc: vapor transform done");
     p
@@ -100,6 +101,7 @@ pub fn apply(program: Program) -> Program {
         once_depth: 0,
         did_transform: false,
         el_tag_by_ident: std::collections::HashMap::new(),
+        renderable_local_scopes: Vec::new(),
     });
     log::info("rue-swc: apply(pre+vapor) done");
     p

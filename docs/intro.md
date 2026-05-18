@@ -8,7 +8,7 @@ Rue 是一个轻量的前端框架，追求简单直观的开发体验，同时�
 - **响应式系统**：类似 Vue 的响应式 API，支持 ref、reactive、computed
 - **JSX/TSX 支持**：使用 JSX 语法编写组件，无需学习模板语法
 
-对于绝大多数应用代码，你只需要写模板或普通 JSX。只有在迁移旧的手写渲染逻辑时，才需要查看历史渲染术语与迁移说明。相关说明见 [默认 Block / Vapor 路径迁移](/guide/migration/renderable-default)。
+对于绝大多数应用代码，你只需要写模板或普通 JSX。只有在迁移旧的手写渲染逻辑时，才需要查看历史渲染术语与迁移说明。相关说明见 [默认 Block / Vapor 路径迁移](/guide/guide/migration/renderable-default)。
 
 ```tsx
 // 一个最简单的组件示例

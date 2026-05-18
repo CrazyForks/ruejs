@@ -1098,6 +1098,7 @@ pub(crate) fn try_build_list_from_map(
                     };
 
                     let mut use_single_root_anchor = false;
+                    let track_index = params.len() >= 2;
 
                     // renderItem(item, start, end)
                     // `_$vaporKeyedList` 的 `renderItem` 约定参数：
@@ -1677,6 +1678,17 @@ pub(crate) fn try_build_list_from_map(
                                 }))),
                             },
                         ))));
+                        if !track_index {
+                            keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(
+                                KeyValueProp {
+                                    key: PropName::Ident(ident_name("trackIndex")),
+                                    value: Box::new(Expr::Lit(Lit::Bool(Bool {
+                                        span: DUMMY_SP,
+                                        value: false,
+                                    }))),
+                                },
+                            ))));
+                        }
                     }
 
                     keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(

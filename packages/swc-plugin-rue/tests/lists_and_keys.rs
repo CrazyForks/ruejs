@@ -43,14 +43,14 @@ const list = [
     'Banana',
     'Cherry'
 ];
-const ListsAndKeys: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
+const ListsAndKeys: FC = ()=>vapor((__rue_parent_context)=>{
+    const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3");
+    const _el1 = _$createElement("h3", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "text-xl font-semibold");
         _$appendChild(_el1, _$createTextNode("列表渲染与 key"));
-        const _el2 = _$createElement("ul");
+    const _el2 = _$createElement("ul", _root);
         _$appendChild(_root, _el2);
         _$setClassName(_el2, "list-disc pl-6");
         const _list1 = _$createComment("rue:list:start");
@@ -71,7 +71,7 @@ const ListsAndKeys: FC = ()=>vapor(()=>{
                 renderItem: (item, parent, start, end, idx)=>{
                     const __slot = vapor(()=>{
                         const _root = _$createDocumentFragment();
-                        const _el3 = _$createElement("li");
+                        const _el3 = _$createElement("li", _root);
                         _$appendChild(_root, _el3);
                         watchEffect(()=>{
                             _$setAttribute(_el3, "key", String((item)));
@@ -94,7 +94,7 @@ const ListsAndKeys: FC = ()=>vapor(()=>{
             });
             _map1_elements = _map1_newElements;
         });
-        const _el6 = _$createElement("a");
+        const _el6 = _$createElement("a", _root);
         _$appendChild(_root, _el6);
         watchEffect(()=>{
             _$setAttribute(_el6, "href", String(RouterLink.__rueHref("/jsx")));

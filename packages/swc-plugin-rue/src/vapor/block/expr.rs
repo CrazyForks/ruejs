@@ -140,6 +140,15 @@ fn expr_returns_jsx_renderable(expr: &Expr) -> bool {
         Expr::Cond(CondExpr { cons, alt, .. }) => {
             expr_returns_jsx_renderable(cons.as_ref()) || expr_returns_jsx_renderable(alt.as_ref())
         }
+        Expr::Bin(BinExpr {
+            op: BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+            left,
+            right,
+            ..
+        }) => {
+            expr_returns_jsx_renderable(left.as_ref())
+                || expr_returns_jsx_renderable(right.as_ref())
+        }
         Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, right, .. }) => {
             expr_returns_jsx_renderable(right.as_ref())
         }
@@ -337,7 +346,8 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
                     match cons_inner {
                         Expr::Cond(_)
                         | Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, .. })
-                        | Expr::Bin(BinExpr { op: BinaryOp::LogicalOr, .. }) => {
+                        | Expr::Bin(BinExpr { op: BinaryOp::LogicalOr, .. })
+                        | Expr::Bin(BinExpr { op: BinaryOp::NullishCoalescing, .. }) => {
                             build_slot_expr(this, cons_inner)
                         }
                         _ => {
@@ -359,7 +369,8 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
                 match alt_inner {
                     Expr::Cond(_)
                     | Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, .. })
-                    | Expr::Bin(BinExpr { op: BinaryOp::LogicalOr, .. }) => {
+                    | Expr::Bin(BinExpr { op: BinaryOp::LogicalOr, .. })
+                    | Expr::Bin(BinExpr { op: BinaryOp::NullishCoalescing, .. }) => {
                         build_slot_expr(this, alt_inner)
                     }
                     _ => {
@@ -400,9 +411,20 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
                 alt: Box::new(new_alt),
             })
         }
-        Expr::Bin(BinExpr { op: BinaryOp::LogicalOr, left, right, .. }) => {
-            // 逻辑或：保持二元形式，右侧 JSX/复杂表达式递归 Vapor 化
+        Expr::Bin(BinExpr { op, left, right, .. })
+            if matches!(op, BinaryOp::LogicalOr | BinaryOp::NullishCoalescing) =>
+        {
+            // 逻辑或/空值合并：保持二元形式，并将两侧的 JSX 子表达式递归 Vapor 化
+            let left_inner = unwrap_expr(left.as_ref());
             let right_inner = unwrap_expr(right.as_ref());
+            let new_left: Expr =
+                if let Some(slot_expr) = jsxish_to_slot_value_expr(this, left_inner) {
+                    slot_expr
+                } else if expr_returns_jsx_renderable(left_inner) {
+                    build_slot_expr(this, left_inner)
+                } else {
+                    *left.clone()
+                };
             let new_right: Expr =
                 if let Some(slot_expr) = jsxish_to_slot_value_expr(this, right_inner) {
                     slot_expr
@@ -412,7 +434,8 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
                     match right_inner {
                         Expr::Cond(_)
                         | Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, .. })
-                        | Expr::Bin(BinExpr { op: BinaryOp::LogicalOr, .. }) => {
+                        | Expr::Bin(BinExpr { op: BinaryOp::LogicalOr, .. })
+                        | Expr::Bin(BinExpr { op: BinaryOp::NullishCoalescing, .. }) => {
                             build_slot_expr(this, right_inner)
                         }
                         _ => *right.clone(),
@@ -420,8 +443,8 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
                 };
             Expr::Bin(BinExpr {
                 span: DUMMY_SP,
-                op: BinaryOp::LogicalOr,
-                left: (*left).clone(),
+                op: *op,
+                left: Box::new(new_left),
                 right: Box::new(new_right),
             })
         }

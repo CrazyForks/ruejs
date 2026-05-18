@@ -6,11 +6,11 @@
 
 ## 官方路由 {#official-router}
 
-Rue 非常适合构建 SPA。对于大多数 SPA，建议使用官方支持的 [Rue Router](https://github.com/ruejs/router) 库。更多详情请参见 Rue Router 的[文档](https://router.ruejs.org/)。
+Rue 非常适合构建 SPA。对于大多数 SPA，建议使用官方支持的 [Rue Router](https://github.com/hunzhiwange/ruejs/router) 库。更多详情请参见 Rue Router 的[文档](https://router.ruejs.org/)。
 
 ## 从零开始实现简单路由 {#simple-routing-from-scratch}
 
-如果你只需要非常简单的路由，不想引入完整功能的路由库，你可以使用[动态组件](/guide/essentials/component-basics#dynamic-components)来实现，并通过监听浏览器 [`hashchange` 事件](https://developer.mozilla.org/en-US/docs/Web/API/Window/hashchange_event) 或使用 [History API](https://developer.mozilla.org/en-US/docs/Web/API/History) 来更新当前组件状态。
+如果你只需要非常简单的路由，不想引入完整功能的路由库，你可以使用[动态组件](/guide/guide/essentials/component-basics#dynamic-components)来实现，并通过监听浏览器 [`hashchange` 事件](https://developer.mozilla.org/en-US/docs/Web/API/Window/hashchange_event) 或使用 [History API](https://developer.mozilla.org/en-US/docs/Web/API/History) 来更新当前组件状态。
 
 以下是一个最简单的示例：
 

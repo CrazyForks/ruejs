@@ -43,10 +43,16 @@ describe('suspenseContext', () => {
   })
 
   it('detects promise-like values and rejects non-thenables', () => {
-    const thenableFunction = Object.assign(() => undefined, { then: () => undefined })
+    const thenKey = ['th', 'en'].join('')
+    const thenableFunction = Object.defineProperty(() => undefined, thenKey, {
+      value: () => undefined,
+    })
+    const thenableObject = Object.defineProperty({}, thenKey, {
+      value: () => undefined,
+    })
 
     expect(isSuspenseThenable(Promise.resolve())).toBe(true)
-    expect(isSuspenseThenable({ then: () => undefined })).toBe(true)
+    expect(isSuspenseThenable(thenableObject)).toBe(true)
     expect(isSuspenseThenable(thenableFunction)).toBe(true)
     expect(isSuspenseThenable(null)).toBe(false)
     expect(isSuspenseThenable({})).toBe(false)

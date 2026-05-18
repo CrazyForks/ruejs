@@ -52,7 +52,7 @@ const AuthorInfo: FC = () => {
 
 计算属性自动追踪其响应式依赖。Rue 知道 `publishedBooksMessage` 的计算依赖于 `author.books`，所以当 `author.books` 更改时，任何依赖于 `publishedBooksMessage` 的绑定都会更新。
 
-另请参见：[为 Computed 添加类型](/guide/typescript/composition-api#typing-computed) <sup class="vt-badge ts" />
+另请参见：[为 Computed 添加类型](/guide/guide/typescript/composition-api#typing-computed) <sup class="vt-badge ts" />
 
 ## 计算属性缓存 vs 方法 {#computed-caching-vs-methods}
 
@@ -178,7 +178,7 @@ const alwaysSmall = computed({
 
 ### Getter 应该是无副作用的 {#getters-should-be-side-effect-free}
 
-重要的是要记住，计算属性的 getter 函数应该只执行纯计算，并且没有副作用。例如，**不要在计算属性的 getter 中修改其他状态、进行异步请求或修改 DOM！** 将计算属性视为声明性地描述如何基于其他值派生一个值——它的唯一职责应该是计算并返回该值。在本指南的后面，我们将讨论如何使用 [侦听器](./watchers) 在状态变化时执行副作用。
+重要的是要记住，计算属性的 getter 函数应该只执行纯计算，并且没有副作用。例如，**不要在计算属性的 getter 中修改其他状态、进行异步请求或修改 DOM！** 将计算属性视为声明性地描述如何基于其他值派生一个值——它的唯一职责应该是计算并返回该值。在本指南的后面，我们将讨论如何使用 [侦听器](/guide/guide/essentials/watchers) 在状态变化时执行副作用。
 
 ### 避免修改计算属性值 {#avoid-mutating-computed-value}
 

@@ -30,9 +30,10 @@ export interface DOMAdapter {
   createTextNode(data: string): DomTextLike
   /** 创建元素节点
    * @param tag 标签名（支持 SVG 标签）
+   * @param parent 父元素；共享的 HTML/SVG 标签依赖它决定命名空间
    * @returns 抽象的元素节点
    */
-  createElement(tag: string): DomElementLike
+  createElement(tag: string, parent?: DomElementLike | null): DomElementLike
   /** 创建文本包装元素
    * @param parent 父元素，用于判断是否在 SVG 环境
    * @returns 在 SVG 中返回 <text>，HTML 中返回 <span>
@@ -180,29 +181,105 @@ export interface DOMAdapter {
 // SVG 标签命名空间与白名单：用于 createElement 的分支创建
 const SVG_NS = 'http://www.w3.org/2000/svg'
 const SVG_TAGS = new Set([
-  'svg',
-  'g',
+  'animate',
+  'animateMotion',
+  'animateTransform',
   'circle',
+  'clipPath',
+  'defs',
+  'desc',
   'ellipse',
+  'feBlend',
+  'feColorMatrix',
+  'feComponentTransfer',
+  'feComposite',
+  'feConvolveMatrix',
+  'feDiffuseLighting',
+  'feDisplacementMap',
+  'feDistantLight',
+  'feDropShadow',
+  'feFlood',
+  'feFuncA',
+  'feFuncB',
+  'feFuncG',
+  'feFuncR',
+  'feGaussianBlur',
+  'feImage',
+  'feMerge',
+  'feMergeNode',
+  'feMorphology',
+  'feOffset',
+  'fePointLight',
+  'feSpecularLighting',
+  'feSpotLight',
+  'feTile',
+  'feTurbulence',
+  'filter',
+  'foreignObject',
+  'g',
+  'image',
   'line',
+  'linearGradient',
+  'marker',
+  'mask',
+  'metadata',
+  'mpath',
   'path',
+  'pattern',
   'polygon',
   'polyline',
-  'rect',
-  'text',
-  'tspan',
-  'defs',
-  'clipPath',
-  'mask',
-  'pattern',
-  'linearGradient',
   'radialGradient',
+  'rect',
+  'set',
   'stop',
-  'use',
+  'svg',
+  'switch',
   'symbol',
-  'marker',
-  'foreignObject',
+  'text',
+  'textPath',
+  'tspan',
+  'use',
+  'view',
 ])
+const SVG_CONTEXTUAL_TAGS = new Set(['a', 'script', 'style', 'title'])
+
+const getElementTagName = (parent: DomElementLike | null | undefined) => {
+  const p = parent as any
+  return typeof p?.tagName === 'string' ? p.tagName.toLowerCase() : ''
+}
+
+const isSVGNamespaceParent = (parent: DomElementLike | null | undefined) => {
+  const p = parent as any
+  // foreignObject 重新切回 HTML 解析上下文，子节点不能继续继承 SVG namespace。
+  if (getElementTagName(parent) === 'foreignobject') {
+    return false
+  }
+  return p?.namespaceURI === SVG_NS || p instanceof SVGElement
+}
+
+const getActiveRuntimeContainer = (): DomElementLike | null => {
+  const globalRecord = globalThis as typeof globalThis & {
+    __rue_active?: { getCurrentContainer?: () => DomElementLike | null | undefined }
+    __rue?: { getCurrentContainer?: () => DomElementLike | null | undefined }
+    __rue_vapor_preferred?: { getCurrentContainer?: () => DomElementLike | null | undefined }
+    __rue_vapor?: { getCurrentContainer?: () => DomElementLike | null | undefined }
+  }
+  const runtime =
+    globalRecord.__rue_active ??
+    globalRecord.__rue ??
+    globalRecord.__rue_vapor_preferred ??
+    globalRecord.__rue_vapor
+
+  if (!runtime || typeof runtime.getCurrentContainer !== 'function') {
+    return null
+  }
+
+  const container = runtime.getCurrentContainer()
+  return container ?? null
+}
+
+const resolveCreateElementParent = (parent?: DomElementLike | null) =>
+  parent === undefined ? getActiveRuntimeContainer() : (parent ?? null)
 
 export class BrowserDOMAdapter implements DOMAdapter {
   /** 注释节点：委托原生 document.createComment */
@@ -213,10 +290,12 @@ export class BrowserDOMAdapter implements DOMAdapter {
   createTextNode(data: string) {
     return document.createTextNode(data) as any
   }
-  /** 元素节点：SVG 使用 createElementNS，否则使用 createElement */
-  createElement(tag: string) {
+  /** 元素节点：非冲突 SVG 标签直接走 createElementNS，共享标签依赖父上下文决定 namespace */
+  createElement(tag: string, parent?: DomElementLike | null) {
     return (
-      SVG_TAGS.has(tag) ? document.createElementNS(SVG_NS, tag) : document.createElement(tag)
+      SVG_TAGS.has(tag) || (SVG_CONTEXTUAL_TAGS.has(tag) && isSVGNamespaceParent(parent))
+        ? document.createElementNS(SVG_NS, tag)
+        : document.createElement(tag)
     ) as any
   }
   /**
@@ -242,13 +321,13 @@ export class BrowserDOMAdapter implements DOMAdapter {
    * <text><tspan>0</tspan>ms</text>
    */
   createTextWrapper(parent: DomElementLike) {
-    const p = parent as any
     // 这里读取父节点 tagName，而不是只判断“是不是 SVGElement”，
-    // 因为 <g> 和 <text> 都是 SVGElement，但它们需要的文本子节点类型并不一样。
-    const tagName = typeof p?.tagName === 'string' ? p.tagName.toLowerCase() : ''
+    // 因为 <g> 和 <text> 都是 SVGElement，但它们需要的文本子节点类型并不一样；
+    // 同时 foreignObject 虽然位于 SVG 中，但它的子节点应该重新回到 HTML namespace。
+    const tagName = getElementTagName(parent)
     return (
-      p instanceof SVGElement
-        ? this.createElement(tagName === 'text' || tagName === 'tspan' ? 'tspan' : 'text')
+      isSVGNamespaceParent(parent)
+        ? this.createElement(tagName === 'text' || tagName === 'tspan' ? 'tspan' : 'text', parent)
         : this.createElement('span')
     ) as any
   }
@@ -272,7 +351,12 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 追加子节点：parent.appendChild(child) */
   appendChild(parent: DomNodeLike, child: DomNodeLike) {
+    if (!parent) {
+      return child as any
+    }
+
     ;(parent as any).appendChild(child)
+    return child as any
   }
   /** 移除子节点：parent.removeChild(child) */
   removeChild(parent: DomNodeLike, child: DomNodeLike) {
@@ -392,6 +476,10 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 包含关系判断：优先原生 contains，缺省 false */
   contains(parent: DomNodeLike, child: DomNodeLike) {
+    if (!parent) {
+      return false
+    }
+
     return (parent as any).contains?.(child as any) ?? false
   }
   /** 父节点获取：不存在返回 null */
@@ -431,7 +519,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
 let CURRENT_ADAPTER: DOMAdapter = new BrowserDOMAdapter()
 
 type GlobalDOMBridge = {
-  createElement: (tag: string) => DomElementLike
+  createElement: (tag: string, parent?: DomElementLike | null) => DomElementLike
   createTextNode: (data: string) => DomTextLike
   createDocumentFragment: () => DomFragmentLike
   isFragment: (node: DomNodeLike) => boolean
@@ -464,7 +552,8 @@ type GlobalDOMBridge = {
 }
 
 const createGlobalDOMBridge = (): GlobalDOMBridge => ({
-  createElement: (tag: string) => CURRENT_ADAPTER.createElement(tag),
+  createElement: (tag: string, parent?: DomElementLike | null) =>
+    CURRENT_ADAPTER.createElement(tag, parent),
   createTextNode: (data: string) => CURRENT_ADAPTER.createTextNode(data),
   createDocumentFragment: () => CURRENT_ADAPTER.createDocumentFragment(),
   isFragment: (node: DomNodeLike) => CURRENT_ADAPTER.isFragment(node),
@@ -536,7 +625,8 @@ export const createTextNode = (data: string) => CURRENT_ADAPTER.createTextNode(d
 /** 创建元素（便捷函数）
  * @param tag 标签名
  */
-export const createElement = (tag: string) => CURRENT_ADAPTER.createElement(tag)
+export const createElement = (tag: string, parent?: DomElementLike | null) =>
+  CURRENT_ADAPTER.createElement(tag, resolveCreateElementParent(parent))
 /** 创建文本包装元素（便捷函数）
  * @param parent 父元素
  */

@@ -6,6 +6,7 @@ Button 组件概述
 - 组件仅保留当前推荐 API，不再承载旧版兼容分支。
 */
 import type { FC } from '@rue-js/rue'
+import { onMounted, onUnmounted, useRef, watch } from '@rue-js/rue'
 
 export type ButtonTone =
   | 'neutral'
@@ -25,6 +26,7 @@ export type ButtonShape = 'default' | 'square' | 'circle' | 'round'
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium' | 'middle' | 'large'
 export type ButtonHTMLType = 'button' | 'submit' | 'reset'
 export type ButtonIconPlacement = 'start' | 'end'
+export type ButtonGroupDirection = 'horizontal' | 'vertical'
 
 export interface ButtonLoadingConfig {
   delay?: number
@@ -51,6 +53,18 @@ export interface ButtonProps {
   target?: string
   rel?: string
   onClick?: (e: MouseEvent) => void
+  children?: any
+  [key: string]: any
+}
+
+export interface ButtonGroupProps {
+  as?: any
+  size?: ButtonSize
+  shape?: ButtonShape
+  direction?: ButtonGroupDirection
+  block?: boolean
+  className?: string
+  style?: any
   children?: any
   [key: string]: any
 }
@@ -104,6 +118,48 @@ const resolveLoadingSizeClass = (size?: ButtonSize) => {
   }
 }
 
+const resolveButtonSizeUtilityClass = (size?: ButtonSize) => {
+  switch (resolveSizeClass(size)) {
+    case 'xs':
+      return 'btn-xs'
+    case 'sm':
+      return 'btn-sm'
+    case 'md':
+      return 'btn-md'
+    case 'lg':
+      return 'btn-lg'
+    case 'xl':
+      return 'btn-xl'
+    default:
+      return undefined
+  }
+}
+
+const _resolveButtonShapeUtilityClass = (shape?: ButtonShape) => {
+  switch (shape) {
+    case 'square':
+      return 'btn-square'
+    case 'circle':
+      return 'btn-circle'
+    case 'round':
+      return 'rounded-full'
+    default:
+      return undefined
+  }
+}
+
+const resolveButtonGroupShapeUtilityClass = (shape?: ButtonShape) => {
+  switch (shape) {
+    case 'square':
+      return 'btn-square'
+    case 'circle':
+    case 'round':
+      return 'rounded-full'
+    default:
+      return undefined
+  }
+}
+
 /**
  * type 直接承载视觉类型；颜色层由 color 单独控制。
  */
@@ -142,6 +198,111 @@ const normalizeLoading = (loading?: boolean | ButtonLoadingConfig): NormalizedLo
 /** 默认 loading 图标。 */
 const DefaultLoadingIcon: FC<{ size?: ButtonSize }> = ({ size }) => {
   return <span className={`loading loading-spinner ${resolveLoadingSizeClass(size)}`.trim()} />
+}
+
+const syncButtonGroupItems = (
+  root: HTMLElement | null | undefined,
+  size?: ButtonSize,
+  shape?: ButtonShape,
+) => {
+  if (!root) return
+
+  const groupSizeClass = resolveButtonSizeUtilityClass(size)
+  const groupShapeClass = resolveButtonGroupShapeUtilityClass(shape)
+
+  root.querySelectorAll<HTMLElement>('.btn').forEach(button => {
+    if (button.closest('[data-rue-button-group="true"]') !== root) return
+
+    button.classList.add('join-item')
+    const previousSizeClass = button.dataset.rueButtonGroupSizeClass
+    if (previousSizeClass) {
+      button.classList.remove(previousSizeClass)
+    }
+    if (groupSizeClass) {
+      button.classList.add(groupSizeClass)
+      button.dataset.rueButtonGroupSizeClass = groupSizeClass
+    } else {
+      delete button.dataset.rueButtonGroupSizeClass
+    }
+
+    const previousShapeClass = button.dataset.rueButtonGroupShapeClass
+    if (previousShapeClass) {
+      button.classList.remove(previousShapeClass)
+    }
+    if (shape && shape !== 'default' && groupShapeClass) {
+      button.classList.add(groupShapeClass)
+      button.dataset.rueButtonGroupShapeClass = groupShapeClass
+    } else {
+      delete button.dataset.rueButtonGroupShapeClass
+    }
+  })
+}
+
+const ButtonGroup: FC<ButtonGroupProps> = ({
+  as,
+  size,
+  shape,
+  direction,
+  block,
+  className,
+  style,
+  children,
+  ...rest
+}) => {
+  const Tag = (as ?? 'div') as any
+  const groupRef = useRef<HTMLElement | null>(null)
+  const observerRef = useRef<MutationObserver | undefined>(undefined)
+
+  const syncGroupItems = () => {
+    syncButtonGroupItems(groupRef.current, size, shape)
+  }
+
+  const observeGroup = () => {
+    observerRef.current?.disconnect()
+    if (!groupRef.current || typeof MutationObserver !== 'function') return
+    observerRef.current?.observe(groupRef.current, { childList: true, subtree: true })
+  }
+
+  onMounted(() => {
+    if (typeof MutationObserver === 'function') {
+      observerRef.current = new MutationObserver(() => {
+        syncGroupItems()
+      })
+      observeGroup()
+    }
+    syncGroupItems()
+  })
+
+  onUnmounted(() => {
+    observerRef.current?.disconnect()
+    observerRef.current = undefined
+  })
+
+  watch(
+    () => `${size ?? ''}|${shape ?? ''}|${direction ?? ''}|${block ? 'block' : ''}`,
+    () => {
+      syncGroupItems()
+    },
+    { immediate: true },
+  )
+
+  let cls = 'join'
+  if (direction === 'vertical') cls += ' join-vertical flex-col'
+  if (block) cls += ' w-full'
+  if (className) cls += ` ${className}`
+
+  return (
+    <Tag
+      {...rest}
+      ref={groupRef}
+      className={cls}
+      style={style}
+      data-rue-button-group="true"
+      data-rue-button-group-direction={direction ?? 'horizontal'}
+    >
+      {children}
+    </Tag>
+  )
 }
 
 const Button: FC<ButtonProps> = ({
@@ -335,4 +496,12 @@ const Button: FC<ButtonProps> = ({
   )
 }
 
-export default Button
+type ButtonCompound = FC<ButtonProps> & {
+  Group: FC<ButtonGroupProps>
+}
+
+const ButtonCompound: ButtonCompound = Object.assign(Button, {
+  Group: ButtonGroup,
+})
+
+export default ButtonCompound

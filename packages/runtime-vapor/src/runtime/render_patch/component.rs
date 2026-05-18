@@ -3,13 +3,28 @@ use super::super::types::{
     MountInput, MountInputType, MountedPatchSubtree, MountedPatchSubtreeType, MountedSubtreeState,
 };
 use crate::hook::reactive::props_reactive_js;
-use crate::reactive::context::get_current_instance;
 use crate::reactive::core::{pop_effect_scope, push_effect_scope};
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::shared_runtime_bridge;
-use js_sys::{Function, Object, Reflect};
+use js_sys::{Array, Function, Object, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
+
+fn debug_record_component_patch(record: &Object) {
+    let global = js_sys::global();
+    let enabled =
+        Reflect::get(&global, &JsValue::from_str("__rue_debug_component_patch_enabled__"))
+            .unwrap_or(JsValue::FALSE);
+    if !enabled.as_bool().unwrap_or(false) {
+        return;
+    }
+
+    let key = JsValue::from_str("__rue_debug_component_patch__");
+    let existing = Reflect::get(&global, &key).unwrap_or(JsValue::UNDEFINED);
+    let array = if Array::is_array(&existing) { Array::from(&existing) } else { Array::new() };
+    array.push(record);
+    let _ = Reflect::set(&global, &key, &array.into());
+}
 
 impl<A: DomAdapter> Rue<A>
 where
@@ -86,16 +101,32 @@ where
         &mut self,
         render_fn: &JsValue,
         props_ro: &JsValue,
+        host: &Object,
         idx: usize,
-    ) -> JsValue {
+        parent_context: Option<&A::Element>,
+    ) -> JsValue
+    where
+        <A as DomAdapter>::Element: Into<JsValue> + Clone,
+    {
         let func = render_fn.dyn_ref::<Function>().unwrap();
-        let shared_instance = get_current_instance();
-        shared_runtime_bridge::begin_component_render(&shared_instance);
+        shared_runtime_bridge::begin_component_render(&host.clone().into());
         let render_scope_id = self.renew_component_render_scope(idx);
         push_effect_scope(render_scope_id);
+        let prev_container = self.current_container.clone();
+        let mut did_push_current_container = false;
+        if let Some(parent) = parent_context {
+            self.current_container = Some(parent.clone());
+            let parent_value: JsValue = parent.clone().into();
+            shared_runtime_bridge::push_current_container(&parent_value);
+            did_push_current_container = true;
+        }
         let ret = match func.call1(&JsValue::UNDEFINED, props_ro) {
             Ok(v) => v,
             Err(e) => {
+                if did_push_current_container {
+                    shared_runtime_bridge::pop_current_container();
+                }
+                self.current_container = prev_container;
                 let _ = pop_effect_scope();
                 shared_runtime_bridge::end_component_render();
                 self.handle_error(e.clone());
@@ -112,6 +143,10 @@ where
                 wasm_bindgen::throw_val(e.clone());
             }
         };
+        if did_push_current_container {
+            shared_runtime_bridge::pop_current_container();
+        }
+        self.current_container = prev_container;
         let _ = pop_effect_scope();
         shared_runtime_bridge::end_component_render();
         let pending = crate::runtime::take_pending_hooks();
@@ -146,7 +181,7 @@ where
                 "Unsupported object returns are no longer accepted on the default component path. Return a host-node bridge, portable handle, or mount handle instead.",
             );
             self.handle_error(error.clone());
-            wasm_bindgen::throw_val(error);
+            None
         } else {
             let el: A::Element = ret.clone().into();
             Some(MountInput {
@@ -172,9 +207,26 @@ where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         if let Some(old_sub) = old.comp_subtree.as_deref_mut() {
+            if matches!(old_sub, MountedSubtreeState::Vapor(_))
+                && old_sub.matches_input_type(&new_sub.r#type)
+                && matches!(new_sub.r#type, MountInputType::<A>::Vapor)
+                && new_sub
+                    .el_hint
+                    .as_ref()
+                    .zip(old_sub.host())
+                    .map(|(new_host, old_host)| {
+                        let new_host_js: JsValue = new_host.clone().into();
+                        let old_host_js: JsValue = old_host.clone().into();
+                        Object::is(&old_host_js, &new_host_js)
+                    })
+                    .unwrap_or(false)
+            {
+                return Some(old_sub.clone());
+            }
+
             self.patch(old_sub, &new_sub, parent);
             Some(old_sub.clone())
-        } else if let Some(mounted_subtree) = self.mount_from_input(&new_sub) {
+        } else if let Some(mounted_subtree) = self.mount_from_input(&new_sub, Some(parent)) {
             if let Some(el_new) = mounted_subtree.host_cloned() {
                 let anchor_opt = self.current_anchor.clone();
                 let mut dest_parent =
@@ -183,6 +235,54 @@ where
 
                 if let Some(a) = self.get_dom_adapter_mut() {
                     if let Some(ref el_old) = old.el {
+                        let old_el_js: JsValue = el_old.clone().into();
+                        let old_class = Reflect::get(&old_el_js, &JsValue::from_str("className"))
+                            .unwrap_or(JsValue::UNDEFINED);
+                        let old_class_string = old_class.as_string().unwrap_or_default();
+                        if old_class_string.contains("sidebar-playground") {
+                            let record = Object::new();
+                            let dest_parent_js: JsValue = dest_parent.clone().into();
+                            let new_el_js: JsValue = el_new.clone().into();
+                            let anchor_value = anchor_opt
+                                .clone()
+                                .map(|anchor| {
+                                    let value: JsValue = anchor.into();
+                                    value
+                                })
+                                .unwrap_or(JsValue::NULL);
+                            let _ = Reflect::set(
+                                &record,
+                                &JsValue::from_str("instIndex"),
+                                &old.comp_inst_index
+                                    .map(|idx| JsValue::from_f64(idx as f64))
+                                    .unwrap_or(JsValue::NULL),
+                            );
+                            let _ = Reflect::set(
+                                &record,
+                                &JsValue::from_str("oldClass"),
+                                &JsValue::from_str(&old_class_string),
+                            );
+                            let _ = Reflect::set(
+                                &record,
+                                &JsValue::from_str("parentClass"),
+                                &Reflect::get(&dest_parent_js, &JsValue::from_str("className"))
+                                    .unwrap_or(JsValue::UNDEFINED),
+                            );
+                            let _ = Reflect::set(
+                                &record,
+                                &JsValue::from_str("newClass"),
+                                &Reflect::get(&new_el_js, &JsValue::from_str("className"))
+                                    .unwrap_or(JsValue::UNDEFINED),
+                            );
+                            let _ = Reflect::set(
+                                &record,
+                                &JsValue::from_str("anchorPresent"),
+                                &JsValue::from_bool(
+                                    !anchor_value.is_null() && !anchor_value.is_undefined(),
+                                ),
+                            );
+                            debug_record_component_patch(&record);
+                        }
                         if a.contains(&dest_parent, el_old) {
                             let mut p2 = dest_parent.clone();
                             a.remove_child(&mut p2, el_old);
@@ -238,8 +338,8 @@ where
             MountInputType::Component(render_fn) => render_fn,
             _ => unreachable!(),
         };
-        let (props_ro, _host, idx) = self.comp_prepare_instance(old.comp_inst_index, new);
-        let ret = self.comp_execute_and_collect(render_fn, &props_ro, idx);
+        let (props_ro, host, idx) = self.comp_prepare_instance(old.comp_inst_index, new);
+        let ret = self.comp_execute_and_collect(render_fn, &props_ro, &host, idx, Some(parent));
         let new_sub_opt = self.comp_make_sub_from_ret(&ret, new.strict_component_returns);
         let mut mounted_subtree = old.comp_subtree.as_deref().cloned();
         if let Some(new_sub) = new_sub_opt {

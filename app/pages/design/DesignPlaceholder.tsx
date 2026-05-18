@@ -1,5 +1,5 @@
-import { type FC, useState, watch } from '@rue-js/rue'
-import { RouterLink, useRoute } from '@rue-js/router'
+import { computed, type FC, useState } from '@rue-js/rue'
+import { RouterLink } from '@rue-js/router'
 import SidebarPlayground, { SECTIONS_BY_TYPE } from '../site/SidebarPlaygroundDesign'
 
 type DesignMenuItem = {
@@ -20,26 +20,32 @@ const flattenItems = (items: DesignMenuItem[]): DesignMenuItem[] => {
 
 const DESIGN_ITEMS = SECTIONS_BY_TYPE.design.flatMap(section => flattenItems(section.items))
 
-const DesignPlaceholder: FC = () => {
-  const route = useRoute()
-  const [slug, setSlug] = useState('')
-  const [title, setTitle] = useState('组件')
+const readCurrentDesignSlug = (): string => {
+  const hash = globalThis.location?.hash || ''
+  const path = hash.startsWith('#') ? hash.slice(1) : hash
+  const match = path.match(/^\/design\/([^/?#]+)/)
+  return match?.[1] || ''
+}
 
-  watch(
-    route,
-    (data: any) => {
-      const nextSlug = (data?.params?.slug as string) || ''
-      const meta = DESIGN_ITEMS.find(item => item.id === nextSlug)
-      setSlug(nextSlug)
-      setTitle(meta?.title || nextSlug || '组件')
-    },
-    { immediate: true },
-  )
+type DesignPlaceholderProps = {
+  params?: {
+    slug?: string
+  }
+}
+
+const DesignPlaceholder: FC<DesignPlaceholderProps> = props => {
+  const [initialSlug] = useState(readCurrentDesignSlug)
+  const slug = computed(() => props.params?.slug || initialSlug.value || '')
+  const title = computed(() => {
+    const currentSlug = slug.get()
+    const meta = DESIGN_ITEMS.find(item => item.id === currentSlug)
+    return meta?.title || currentSlug || '组件'
+  })
 
   return (
     <SidebarPlayground>
       <div className="max-w-none prose prose-sm md:prose-base">
-        <h1>{title.value}</h1>
+        <h1>{title.get()}</h1>
         <p className="text-sm mt-3 mb-3">
           这个组件的菜单入口和路由已经预留，正式示例页还没有补齐。
         </p>
@@ -53,7 +59,7 @@ const DesignPlaceholder: FC = () => {
             <div>
               <div className="text-sm text-base-content/60">组件标识</div>
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="badge badge-outline">{slug.value || 'unknown'}</span>
+                <span className="badge badge-outline">{slug.get() || 'unknown'}</span>
                 <span className="badge badge-ghost">待补示例</span>
               </div>
             </div>
@@ -65,7 +71,7 @@ const DesignPlaceholder: FC = () => {
             <div className="card-actions justify-start gap-3">
               <a
                 className="btn btn-primary btn-sm"
-                href={`https://daisyui.com/components/${slug.value || 'button'}/`}
+                href={`https://daisyui.com/components/${slug.get() || 'button'}/`}
                 target="_blank"
                 rel="noreferrer"
               >

@@ -7,7 +7,7 @@ import AnimateWatcher from './demos/AnimateWatcher.vue'
 
 # 动画技巧 {#animation-techniques}
 
-Rue 提供了 [`<Transition>`](/guide/built-ins/transition) 和 [`<TransitionGroup>`](/guide/built-ins/transition-group) 组件用于处理进入/离开和列表过渡。然而，还有许多其他在 Web 上使用动画的方式，即使在 Rue 应用中也是如此。这里我们将讨论一些额外的技术。
+Rue 提供了 [`<Transition>`](/guide/guide/built-ins/transition) 和 [`<TransitionGroup>`](/guide/guide/built-ins/transition-group) 组件用于处理进入/离开和列表过渡。然而，还有许多其他在 Web 上使用动画的方式，即使在 Rue 应用中也是如此。这里我们将讨论一些额外的技术。
 
 ## 基于类的动画 {#class-based-animations}
 

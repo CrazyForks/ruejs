@@ -93,7 +93,7 @@ const MyModal: FC = () => {
 
 `<Teleport>` 的 `to` 目标期望一个 CSS 选择器字符串或实际的 DOM 节点。在这里，我们实际上是在告诉 Rue "**传送** 此模板片段 **到** **`body`** 标签"。
 
-您可以将 `<Teleport>` 与 [`<Transition>`](./transition) 结合使用来创建动画模态框 - 参见 [示例](/examples/#modal)。
+您可以将 `<Teleport>` 与 [`<Transition>`](/guide/guide/built-ins/transition) 结合使用来创建动画模态框 - 参见 [示例](/examples/#modal)。
 
 :::tip
 传送门 `to` 目标必须在 `<Teleport>` 组件挂载时已经存在于 DOM 中。理想情况下，这应该是整个 Rue 应用之外的元素。如果目标是 Rue 渲染的另一个元素，您需要确保该元素在 `<Teleport>` 之前挂载。
@@ -149,4 +149,4 @@ const MyModal: FC = () => {
 
 **相关**
 
-- [`<Teleport>` API 参考](/api/built-in-components#teleport)
+- [`<Teleport>` API 参考](/api/api/built-in-components#teleport)

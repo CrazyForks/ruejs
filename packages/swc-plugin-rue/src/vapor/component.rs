@@ -6,7 +6,7 @@ use crate::emit::*;
 use super::VaporTransform;
 
 /*
-组件块编译说明（中文）：
+组件块编译说明：
 - 使用 DocumentFragment 作为组件片段根，并在其下插入 "rue:component:anchor" 注释锚点；
 - 若存在内联 children，则复用 element_component 的共享改写逻辑，保持 TransitionGroup 原始 JSX children、简单字面量快路径与 children vapor 包裹语义一致；
 - 静态组件直接一次性渲染（renderAnchor）；动态组件通过 watchEffect 包裹以支持响应式更新。
@@ -78,6 +78,25 @@ pub fn emit_component_root(transform: &mut VaporTransform, el: &JSXElement) -> B
         stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(render_call) }));
     } else {
         let decl_slot = const_decl(slot_ident.clone(), slot_init_expr.clone());
+        let untrack_render = Expr::Call(CallExpr {
+            span: DUMMY_SP,
+            callee: Callee::Expr(Box::new(Expr::Ident(ident("untrack")))),
+            args: vec![ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Arrow(ArrowExpr {
+                    span: DUMMY_SP,
+                    params: vec![],
+                    body: Box::new(BlockStmtOrExpr::Expr(Box::new(render_call))),
+                    is_async: false,
+                    is_generator: false,
+                    type_params: None,
+                    return_type: None,
+                    ctxt: SyntaxContext::empty(),
+                })),
+            }],
+            type_args: None,
+            ctxt: SyntaxContext::empty(),
+        });
         let render_arrow = Expr::Arrow(ArrowExpr {
             span: DUMMY_SP,
             params: vec![],
@@ -86,7 +105,7 @@ pub fn emit_component_root(transform: &mut VaporTransform, el: &JSXElement) -> B
                 ctxt: SyntaxContext::empty(),
                 stmts: vec![
                     decl_slot,
-                    Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(render_call) }),
+                    Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(untrack_render) }),
                 ],
             })),
             is_async: false,

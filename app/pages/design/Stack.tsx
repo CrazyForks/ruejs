@@ -471,20 +471,20 @@ const StackPage: FC = () => {
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body">
-                <Stack className="w-full max-w-md" reverse>
-                  <div className="card bg-base-100 shadow-md">
+                <Stack className="h-56 w-full max-w-md" reverse>
+                  <div className="card h-full bg-base-100 shadow-md">
                     <div className="card-body">
                       <h2 className="card-title">Notification 1</h2>
                       <p>You have 3 unread messages. Tap here to see.</p>
                     </div>
                   </div>
-                  <div className="card bg-base-100 shadow-md">
+                  <div className="card h-full bg-base-100 shadow-md">
                     <div className="card-body">
                       <h2 className="card-title">Notification 2</h2>
                       <p>Deploy finished successfully. Tap here to open the report.</p>
                     </div>
                   </div>
-                  <div className="card border border-success/30 bg-success/5 shadow-md">
+                  <div className="card h-full border border-success/30 bg-base-100 shadow-md ring-1 ring-success/15">
                     <div className="card-body">
                       <h2 className="card-title text-success">Notification 3</h2>
                       <p>Latest release is live. Tap here to share the changelog.</p>
@@ -494,20 +494,20 @@ const StackPage: FC = () => {
               </div>
             </div>
           )}
-          code={`<Stack className="w-full max-w-md" reverse>
-  <div className="card bg-base-100 shadow-md">
+          code={`<Stack className="h-56 w-full max-w-md" reverse>
+  <div className="card h-full bg-base-100 shadow-md">
     <div className="card-body">
       <h2 className="card-title">Notification 1</h2>
       <p>You have 3 unread messages. Tap here to see.</p>
     </div>
   </div>
-  <div className="card bg-base-100 shadow-md">
+  <div className="card h-full bg-base-100 shadow-md">
     <div className="card-body">
       <h2 className="card-title">Notification 2</h2>
       <p>Deploy finished successfully. Tap here to open the report.</p>
     </div>
   </div>
-  <div className="card border border-success/30 bg-success/5 shadow-md">
+  <div className="card h-full border border-success/30 bg-base-100 shadow-md ring-1 ring-success/15">
     <div className="card-body">
       <h2 className="card-title text-success">Notification 3</h2>
       <p>Latest release is live. Tap here to share the changelog.</p>

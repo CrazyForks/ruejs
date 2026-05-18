@@ -267,7 +267,7 @@ const ConditionalList: FC = () => {
 
 ## 与组件一起使用 {#v-for-with-a-component}
 
-> 本部分假设你了解 [组件](/guide/essentials/component-basics)。如果你还不熟悉，可以跳过并在之后回来查看。
+> 本部分假设你了解 [组件](/guide/guide/essentials/component-basics)。如果你还不熟悉，可以跳过并在之后回来查看。
 
 你可以像使用普通元素一样直接在组件上使用列表渲染（不要忘记提供 `key`）：
 

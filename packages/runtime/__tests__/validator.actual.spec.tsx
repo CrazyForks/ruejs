@@ -63,11 +63,12 @@ describe('Validator actual page', () => {
       const usernameInput = rulesDemo!.querySelector(
         'input[placeholder="Username"]',
       ) as HTMLInputElement
+      const usernameForm = usernameInput.closest('form')
+      expect(usernameForm).not.toBeNull()
       expect(usernameInput.getAttribute('pattern')).toBe('[A-Za-z0-9-]+')
       expect(usernameInput.getAttribute('title')).toBe('Only letters, numbers or dash')
       expect(
-        (usernameInput.closest('form')?.querySelector('button[type="submit"]') as HTMLButtonElement)
-          .textContent,
+        (usernameForm!.querySelector('button[type="submit"]') as HTMLButtonElement).textContent,
       ).toContain('Check username')
     })
 

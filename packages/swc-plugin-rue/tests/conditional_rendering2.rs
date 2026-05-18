@@ -61,7 +61,7 @@ export default ReactConditionalDemo;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const ReactConditionalDemo: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
@@ -75,17 +75,17 @@ const ReactConditionalDemo: FC = ()=>{
             };
         }));
     const { show: show, level: level, message: message } = _$useSetup;
-    return vapor(()=>{
-        const _root = _$createElement("div");
+        return vapor((__rue_parent_context)=>{
+          const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-2xl mx-auto p-6 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h2");
+          const _el1 = _$createElement("h2", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "text-xl font-semibold text-purple-600 mb-3");
         _$appendChild(_el1, _$createTextNode("React 风格条件渲染"));
-        const _el2 = _$createElement("div");
+          const _el2 = _$createElement("div", _root);
         _$appendChild(_root, _el2);
         _$setClassName(_el2, "flex flex-wrap justify-center gap-2");
-        const _el3 = _$createElement("button");
+          const _el3 = _$createElement("button", _el2);
         _$appendChild(_el2, _el3);
         _$setClassName(_el3, "rounded-lg border border-gray-700 bg-gray-700 px-5 py-2.5 text-center text-sm font-medium text-white shadow-sm transition-all hover:border-gray-900 hover:bg-gray-900 focus:ring focus:ring-gray-200");
         _$addEventListener(_el3, "click", (()=>(show.value = !show.value)));
@@ -94,12 +94,12 @@ const ReactConditionalDemo: FC = ()=>{
         watchEffect(()=>{
             _$settextContent(_el4, show.value ? '隐藏详情' : '显示详情');
         });
-        const _el5 = _$createElement("button");
+          const _el5 = _$createElement("button", _el2);
         _$appendChild(_el2, _el5);
         _$setClassName(_el5, "rounded-lg border border-blue-500 bg-blue-500 px-5 py-2.5 text-center text-sm font-medium text-white shadow-sm transition-all hover:border-blue-700 hover:bg-blue-700 focus:ring focus:ring-blue-200");
         _$addEventListener(_el5, "click", (()=>level.value++));
         _$appendChild(_el5, _$createTextNode("等级+1"));
-        const _el6 = _$createElement("button");
+          const _el6 = _$createElement("button", _el2);
         _$appendChild(_el2, _el6);
         _$setClassName(_el6, "rounded-lg border border-gray-500 bg-gray-500 px-5 py-2.5 text-center text-sm font-medium text-white shadow-sm transition-all hover:border-gray-700 hover:bg-gray-700 focus:ring focus:ring-gray-200");
         _$addEventListener(_el6, "click", (()=>(message.value = message.value ? '' : 'Hello')));
@@ -108,29 +108,29 @@ const ReactConditionalDemo: FC = ()=>{
         watchEffect(()=>{
             const __slot = message.value ? vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el7 = _$createElement("span");
+              const _el7 = _$createElement("span", _root);
                 _$appendChild(_root, _el7);
                 _$setClassName(_el7, "text-red-600");
                 _$appendChild(_el7, _$createTextNode("清空消息"));
                 return _root;
             }) : '恢复消息';
-            renderAnchor(__slot, _el6, _list1);
+            untrack(()=>renderAnchor(__slot, _el6, _list1));
         });
         const _list2 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list2);
         watchEffect(()=>{
             const __slot = show.value ? vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el8 = _$createElement("div");
+              const _el8 = _$createElement("div", _root);
                 _$appendChild(_root, _el8);
                 _$setClassName(_el8, "mt-2");
-                const _el9 = _$createElement("p");
+              const _el9 = _$createElement("p", _el8);
                 _$appendChild(_el8, _el9);
                 _$setClassName(_el9, "text-gray-700");
                 _$appendChild(_el9, _$createTextNode("详情区域：仅在 show 为 true 时显示"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list2);
+            untrack(()=>renderAnchor(__slot, _root, _list2));
         });
         _$appendChild(_root, _$createTextNode(" "));
         const _list3 = _$createComment("rue:slot:anchor");
@@ -138,18 +138,18 @@ const ReactConditionalDemo: FC = ()=>{
         watchEffect(()=>{
             const __slot = show.value ? vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el10 = _$createElement("div");
+              const _el10 = _$createElement("div", _root);
                 _$appendChild(_root, _el10);
                 _$setClassName(_el10, "mt-2");
-                const _el11 = _$createElement("p");
+              const _el11 = _$createElement("p", _el10);
                 _$appendChild(_el10, _el11);
                 _$setClassName(_el11, "text-gray-700");
                 _$appendChild(_el11, _$createTextNode("详情区域2：仅在 show 为 true 时显示"));
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list3);
+            untrack(()=>renderAnchor(__slot, _root, _list3));
         });
-        const _el12 = _$createElement("p");
+          const _el12 = _$createElement("p", _root);
         _$appendChild(_root, _el12);
         _$setClassName(_el12, "text-gray-700");
         _$appendChild(_el12, _$createTextNode("等级状态："));
@@ -158,27 +158,27 @@ const ReactConditionalDemo: FC = ()=>{
         watchEffect(()=>{
             const __slot = level.value >= 3 ? vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el13 = _$createElement("span");
+              const _el13 = _$createElement("span", _root);
                 _$appendChild(_root, _el13);
                 _$setClassName(_el13, "text-red-600");
                 _$appendChild(_el13, _$createTextNode("高级"));
                 return _root;
             }) : vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el14 = _$createElement("span");
+              const _el14 = _$createElement("span", _root);
                 _$appendChild(_root, _el14);
                 _$setClassName(_el14, "text-green-600");
                 _$appendChild(_el14, _$createTextNode("普通"));
                 return _root;
             });
-            renderAnchor(__slot, _el12, _list4);
+            untrack(()=>renderAnchor(__slot, _el12, _list4));
         });
         const _list5 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list5);
         watchEffect(()=>{
             const __slot = message.value ? vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el15 = _$createElement("p");
+              const _el15 = _$createElement("p", _root);
                 _$appendChild(_root, _el15);
                 _$setClassName(_el15, "text-gray-700 bg-gray-100 p-2 rounded-md");
                 _$appendChild(_el15, _$createTextNode("消息："));
@@ -189,7 +189,7 @@ const ReactConditionalDemo: FC = ()=>{
                 });
                 return _root;
             }) : "";
-            renderAnchor(__slot, _root, _list5);
+                untrack(()=>renderAnchor(__slot, _root, _list5));
         });
         return _root;
     });

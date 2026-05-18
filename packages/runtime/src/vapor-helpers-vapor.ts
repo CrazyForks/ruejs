@@ -6,7 +6,13 @@ Vapor 运行时辅助概述
 - Hooks ID：vaporWithHookId 通过 id -> index 映射稳定 hook 槽位，避免重渲染时索引漂移。
 */
 import { onBeforeUnmount, renderBetween } from './vapor-runtime'
-import { getCurrentInstance, signal, untrack, watchEffect } from '@rue-js/runtime-vapor/reactive'
+import {
+  getCurrentInstance,
+  signal,
+  toRaw,
+  untrack,
+  watchEffect,
+} from '@rue-js/runtime-vapor/reactive'
 import {
   addEventListener,
   createComment,
@@ -49,7 +55,9 @@ export type VaporListItemRange = {
   end: DomNodeLike
   stop?: () => void
   singleRoot?: boolean
-  current?: ReturnType<typeof signal<{ item: any; index: number }>>
+  current?: ReturnType<typeof signal<{ item: any; index: number; rawIdentity: unknown }>>
+  renderState?: ReturnType<typeof signal<{ item: any; index: number; rawIdentity: unknown }>>
+  stableItem?: unknown
 }
 
 const systemModifierNames = ['ctrl', 'shift', 'alt', 'meta'] as const
@@ -320,36 +328,193 @@ export const vaporKeyedList = <T>(args: {
   elements: Map<any, VaporListItemRange>
   parent: any
   before: any
+  start?: any
   singleRoot?: boolean
+  trackIndex?: boolean
   renderItem: (item: T, parent: any, start: any, end: any, idx?: number) => void
 }) => {
-  const { items, getKey, elements, parent, before, renderItem, singleRoot = false } = args
+  const {
+    items,
+    getKey,
+    elements,
+    parent,
+    before,
+    start: listStart,
+    renderItem,
+    singleRoot = false,
+    trackIndex = true,
+  } = args
   const nextElements = new Map<any, VaporListItemRange>()
   const syncEffectOptions = {
     scheduler: (run: () => void) => run(),
   }
 
-  const getRawIdentity = (value: T) => {
-    if (value && typeof value === 'object') {
-      try {
-        const raw = (value as any).__rue_raw__
-        if (raw !== undefined) return raw
-      } catch {}
+  const isListMarker = (node: DomNodeLike | null | undefined) => {
+    if (!node) {
+      return false
     }
-    return value
+    if (listStart && node === listStart) {
+      return true
+    }
+    if ((node as any).nodeType !== 8) {
+      return false
+    }
+    const marker = String((node as any).data ?? (node as any).nodeValue ?? '')
+    return marker.startsWith('rue:list:')
+  }
+
+  const isObjectLike = (value: unknown) =>
+    (typeof value === 'object' || typeof value === 'function') && value != null
+
+  const getRawIdentity = (value: T) => {
+    if (!isObjectLike(value)) {
+      return value
+    }
+
+    const seen = new Set<unknown>()
+    let current: unknown = value
+
+    while (isObjectLike(current) && !seen.has(current)) {
+      seen.add(current)
+
+      let next = current
+
+      try {
+        const raw = untrack(() => toRaw(current as any))
+        if (raw !== undefined && raw !== current) {
+          next = raw
+        }
+      } catch {}
+
+      if (next === current) {
+        try {
+          const raw = (current as any).__rue_raw__
+          if (raw !== undefined && raw !== current) {
+            next = raw
+          }
+        } catch {}
+      }
+
+      if (next === current) {
+        break
+      }
+
+      current = next
+    }
+
+    return current
+  }
+
+  const createStableItemProxy = (
+    current: ReturnType<typeof signal<{ item: T; index: number; rawIdentity: unknown }>>,
+  ) => {
+    const readCurrentItem = () => untrack(() => current.get().item as any)
+    const readCurrentItemRaw = () => {
+      const item = readCurrentItem()
+      if (isObjectLike(item)) {
+        try {
+          const raw = (item as { __rue_raw__?: unknown }).__rue_raw__
+          if (raw !== undefined) {
+            return raw
+          }
+        } catch {}
+      }
+      return item
+    }
+
+    return new Proxy(Object.create(null), {
+      get(_target, key) {
+        const item = readCurrentItem()
+        const value = item?.[key as keyof typeof item]
+        if (typeof value === 'function') {
+          try {
+            return value.bind(item)
+          } catch {}
+        }
+        return value
+      },
+      set(_target, key, value) {
+        const item = readCurrentItem()
+        if (!isObjectLike(item)) {
+          return false
+        }
+        ;(item as Record<PropertyKey, unknown>)[key] = value
+        return true
+      },
+      has(_target, key) {
+        const raw = readCurrentItemRaw()
+        return isObjectLike(raw) && key in raw
+      },
+      ownKeys() {
+        const raw = readCurrentItemRaw()
+        return isObjectLike(raw) ? Reflect.ownKeys(raw) : []
+      },
+      getOwnPropertyDescriptor(_target, key) {
+        const raw = readCurrentItemRaw()
+        if (!isObjectLike(raw)) {
+          return undefined
+        }
+        const descriptor = Reflect.getOwnPropertyDescriptor(raw, key)
+        if (descriptor) {
+          return {
+            ...descriptor,
+            configurable: true,
+          }
+        }
+        return {
+          configurable: true,
+          enumerable: true,
+          writable: true,
+          value: raw[key as keyof typeof raw],
+        }
+      },
+    })
   }
 
   const syncCurrentItem = (range: VaporListItemRange, nextItem: T, nextIndex: number) => {
+    const nextRawIdentity = getRawIdentity(nextItem)
+
     if (!range.current) {
-      range.current = signal({ item: nextItem, index: nextIndex }, {}, true)
-      return range.current
+      range.current = signal(
+        { item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity },
+        {},
+        true,
+      )
+      range.renderState = signal(
+        { item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity },
+        {},
+        true,
+      )
+      if (!trackIndex && isObjectLike(nextItem)) {
+        range.stableItem = createStableItemProxy(range.current)
+      }
+      return range.renderState
     }
 
     const prev = untrack(() => range.current!.get())
-    if (getRawIdentity(prev.item) !== getRawIdentity(nextItem) || prev.index !== nextIndex) {
-      range.current.set({ item: nextItem, index: nextIndex })
+    const rawChanged = prev.rawIdentity !== nextRawIdentity
+    const indexChanged = prev.index !== nextIndex
+    if (rawChanged || indexChanged) {
+      range.current.set({ item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity })
     }
-    return range.current
+
+    if (!range.renderState) {
+      range.renderState = signal(
+        { item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity },
+        {},
+        true,
+      )
+    }
+
+    const prevRender = untrack(() => range.renderState!.get())
+    const shouldRefreshStructure =
+      prevRender.rawIdentity !== nextRawIdentity && !(range.stableItem && isObjectLike(nextItem))
+
+    if (shouldRefreshStructure || (trackIndex && indexChanged)) {
+      range.renderState.set({ item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity })
+    }
+
+    return range.renderState
   }
 
   const resolveStartNode = (range: VaporListItemRange) => {
@@ -357,7 +522,7 @@ export const vaporKeyedList = <T>(args: {
       return range.start as DomNodeLike
     }
     const head = ((range.end as any).previousSibling as DomNodeLike | null) || null
-    return head && contains(parent as any, head as any) ? head : range.end
+    return head && contains(parent as any, head as any) && !isListMarker(head) ? head : range.end
   }
 
   let cursor: DomNodeLike | null = before as any
@@ -366,7 +531,6 @@ export const vaporKeyedList = <T>(args: {
     const item = items[index]
     const key = getKey(item, index)
     let range = elements.get(key)
-    const isNewRange = !range
     let start: DomNodeLike
     let end: DomNodeLike
 
@@ -375,10 +539,18 @@ export const vaporKeyedList = <T>(args: {
         end = createComment('rue:list:item:anchor')
         insertBefore(parent, end, cursor as any)
         const entry: VaporListItemRange = { end, singleRoot: true }
-        const current = syncCurrentItem(entry, item, index)
+        const renderState = syncCurrentItem(entry, item, index)
         const stop = watchEffect(() => {
-          const next = current.get()
-          renderItem(next.item, parent as any, end, end, next.index)
+          const next = renderState.get()
+          untrack(() => {
+            renderItem(
+              (entry.stableItem as T | undefined) ?? next.item,
+              parent as any,
+              end,
+              end,
+              next.index,
+            )
+          })
         }, syncEffectOptions)
         entry.stop = () => stop.dispose()
         range = entry
@@ -388,24 +560,28 @@ export const vaporKeyedList = <T>(args: {
         insertBefore(parent, end, cursor as any)
         insertBefore(parent, start, end)
         const entry: VaporListItemRange = { start, end }
-        const current = syncCurrentItem(entry, item, index)
+        const renderState = syncCurrentItem(entry, item, index)
         const stop = watchEffect(() => {
-          const next = current.get()
-          renderItem(next.item, parent as any, start, end, next.index)
+          const next = renderState.get()
+          untrack(() => {
+            renderItem(
+              (entry.stableItem as T | undefined) ?? next.item,
+              parent as any,
+              start,
+              end,
+              next.index,
+            )
+          })
         }, syncEffectOptions)
         entry.stop = () => stop.dispose()
         range = entry
       }
     } else {
       syncCurrentItem(range, item, index)
-      start = resolveStartNode(range)
       end = range.end
     }
 
-    // New single-root entries mount through renderAnchor after this loop turn, so their
-    // tail anchor is the only stable cursor until the DOM child lands.
-    const blockStart = isNewRange && range.singleRoot ? range.end : resolveStartNode(range)
-
+    const blockStart = resolveStartNode(range)
     if ((end as any).nextSibling !== cursor && cursor !== blockStart) {
       const block = createDocumentFragment()
       let node: DomNodeLike | null = blockStart
@@ -426,14 +602,21 @@ export const vaporKeyedList = <T>(args: {
 
   elements.forEach((range, key) => {
     if (!nextElements.has(key)) {
+      const nodesToRemove: DomNodeLike[] = []
+      const removeStart = resolveStartNode(range)
+      let node: DomNodeLike | null = removeStart
+      while (node) {
+        nodesToRemove.push(node)
+        if (node === range.end) break
+        node = ((node as any).nextSibling as DomNodeLike | null) || null
+      }
+
       if (range.stop) range.stop()
 
-      let node: DomNodeLike | null = resolveStartNode(range)
-      while (node) {
-        const next: DomNodeLike | null = (node as any).nextSibling || null
-        if (contains(parent as any, node as any)) removeChild(parent as any, node as any)
-        if (node === range.end) break
-        node = next
+      for (const staleNode of nodesToRemove) {
+        if (contains(parent as any, staleNode as any)) {
+          removeChild(parent as any, staleNode as any)
+        }
       }
     }
   })

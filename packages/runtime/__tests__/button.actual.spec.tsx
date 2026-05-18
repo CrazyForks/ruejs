@@ -73,8 +73,12 @@ describe('Button actual page', () => {
       expect(normalize(formDemo?.textContent)).toContain('submit count: 1')
     })
 
-    await click(findTabButton(formDemo!, 'JSX代码'))
-    expect(Array.from(formDemo!.querySelectorAll('.card button')).length).toBe(0)
+    await click(findTabButton(findDemo(container, formDemoTitle)!, 'JSX代码'))
+
+    await waitForContent(() => {
+      const codeDemo = findDemo(container, formDemoTitle) as HTMLElement | null
+      expect(Array.from(codeDemo?.querySelectorAll('.card button') ?? []).length).toBe(0)
+    })
 
     await click(findTabButton(findDemo(container, formDemoTitle)!, '预览'))
 

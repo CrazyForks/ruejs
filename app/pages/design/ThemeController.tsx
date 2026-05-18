@@ -425,7 +425,6 @@ const ThemeWorkbenchPreview: FC = () => {
       },
     }),
   )
-  const palette = computed(() => runtime.get().token.colors)
 
   return (
     <div className="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">

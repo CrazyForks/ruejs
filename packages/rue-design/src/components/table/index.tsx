@@ -531,12 +531,6 @@ const resolveSemanticValue = <T extends Record<string, any>>(
   return (value ?? {}) as T
 }
 
-const isEllipsisConfig = (
-  ellipsis: ColumnItem['ellipsis'],
-): ellipsis is { showTitle?: boolean } => {
-  return typeof ellipsis === 'object' && ellipsis !== null
-}
-
 const shouldShowEllipsisTitle = (ellipsis?: ColumnItem['ellipsis']) => {
   if (!ellipsis) return false
   if (ellipsis === true) return true
@@ -594,10 +588,6 @@ const getPaginationPlacementClass = (placement: PaginationPlacement) => {
 const getTreeChildren = (record: any, childrenColumnName: string) => {
   const children = record?.[childrenColumnName]
   return Array.isArray(children) ? children : []
-}
-
-const hasTreeChildren = (record: any, childrenColumnName: string) => {
-  return getTreeChildren(record, childrenColumnName).length > 0
 }
 
 const RenderTableSection: FC<{ render?: ((currentData: any[]) => any) | null; data: any[] }> = ({

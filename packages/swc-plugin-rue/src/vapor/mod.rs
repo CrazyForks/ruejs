@@ -3,6 +3,8 @@ mod component;
 mod helpers;
 mod visitor;
 
+use std::collections::HashSet;
+
 use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
 
@@ -41,6 +43,8 @@ pub struct VaporTransform {
     pub did_transform: bool,
     /// 记录已创建元素的标识符与标签名，用于特殊处理（例如 style 子文本）
     pub el_tag_by_ident: std::collections::HashMap<String, String>,
+    /// 当前可见的“renderable local” 变量名栈，用于把 bare ident child 判定为 slot 候选
+    pub renderable_local_scopes: Vec<HashSet<String>>,
 }
 
 impl VaporTransform {
@@ -53,6 +57,26 @@ impl VaporTransform {
         let out = f(self);
         self.once_depth -= 1;
         out
+    }
+
+    pub(crate) fn current_renderable_local_names(&self) -> HashSet<String> {
+        let mut names = HashSet::new();
+        for scope in &self.renderable_local_scopes {
+            names.extend(scope.iter().cloned());
+        }
+        names
+    }
+
+    pub(crate) fn push_renderable_local_scope(&mut self, scope: HashSet<String>) {
+        self.renderable_local_scopes.push(scope);
+    }
+
+    pub(crate) fn pop_renderable_local_scope(&mut self) {
+        self.renderable_local_scopes.pop();
+    }
+
+    pub(crate) fn is_renderable_local_ident(&self, name: &str) -> bool {
+        self.renderable_local_scopes.iter().rev().any(|scope| scope.contains(name))
     }
 }
 

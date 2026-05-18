@@ -54,7 +54,7 @@ const classObject = reactive({
 <div class="active"></div>
 ```
 
-我们也可以绑定到返回对象的 [计算属性](./computed)。这是一种常见且强大的模式：
+我们也可以绑定到返回对象的 [计算属性](/guide/guide/essentials/computed)。这是一种常见且强大的模式：
 
 ```js
 const isActive = ref(true)
@@ -105,7 +105,7 @@ const errorClass = ref('text-danger')
 
 ### 与组件一起使用 {#with-components}
 
-> 本部分假设你了解 [组件](/guide/essentials/component-basics)。如果你还不熟悉，可以跳过并在之后回来查看。
+> 本部分假设你了解 [组件](/guide/guide/essentials/component-basics)。如果你还不熟悉，可以跳过并在之后回来查看。
 
 当你在单根元素的组件上使用 `className` 属性时，这些类将被添加到组件的根元素上，并与该元素上已有的任何现有类合并。
 
@@ -169,7 +169,7 @@ const MyComponent: FC = props => {
 <span>这是子组件</span>
 ```
 
-你可以在 [透传属性](/guide/components/attrs) 部分了解更多关于组件属性继承的信息。
+你可以在 [透传属性](/guide/guide/components/attrs) 部分了解更多关于组件属性继承的信息。
 
 ## 绑定内联样式 {#binding-inline-styles}
 

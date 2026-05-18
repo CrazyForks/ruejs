@@ -4,7 +4,7 @@
 
 ### `ref()` {#ref}
 
-在 Rue 中，声明响应式状态推荐使用 [`ref()`](/api/reactivity-core#ref) 函数：
+在 Rue 中，声明响应式状态推荐使用 [`ref()`](/api/api/reactivity-core#ref) 函数：
 
 ```js
 import { ref } from '@rue-js/rue'
@@ -90,7 +90,7 @@ const myRef = {
 
 refs 的另一个优点与普通变量不同，你可以将 refs 传递给函数，同时保留对最新值和响应式连接的访问。这在将复杂逻辑重构为可复用代码时特别有用。
 
-响应式系统在 [深入响应式](/guide/extras/reactivity-in-depth) 部分有更详细的讨论。
+响应式系统在 [深入响应式](/guide/guide/extras/reactivity-in-depth) 部分有更详细的讨论。
 
 ## 深层响应式 {#deep-reactivity}
 
@@ -115,18 +115,18 @@ function mutateDeeply() {
 
 非原始值通过 [`reactive()`](#reactive) 转换为响应式代理，下面会讨论。
 
-也可以通过 [shallow refs](/api/reactivity-advanced#shallowref) 选择退出深层响应式。对于浅层 refs，只有 `.value` 访问被追踪响应式。浅层 refs 可用于通过避免大对象的观测开销来优化性能，或在内部状态由外部库管理的情况下使用。
+也可以通过 [shallow refs](/api/api/reactivity-advanced#shallowref) 选择退出深层响应式。对于浅层 refs，只有 `.value` 访问被追踪响应式。浅层 refs 可用于通过避免大对象的观测开销来优化性能，或在内部状态由外部库管理的情况下使用。
 
 进一步阅读：
 
-- [减少大型不可变结构的响应式开销](/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures)
-- [与外部状态系统集成](/guide/extras/reactivity-in-depth#integration-with-external-state-systems)
+- [减少大型不可变结构的响应式开销](/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures)
+- [与外部状态系统集成](/guide/guide/extras/reactivity-in-depth#integration-with-external-state-systems)
 
 ## DOM 更新时机 {#dom-update-timing}
 
 当你修改响应式状态时，DOM 会自动更新。但需要注意的是，DOM 更新不是同步应用的。相反，Rue 会将它们缓冲到更新周期的"下一个 tick"，以确保无论进行了多少次状态更改，每个组件都只更新一次。
 
-要等待 DOM 更新在状态更改后完成，可以使用 [nextTick()](/api/general#nexttick) 全局 API：
+要等待 DOM 更新在状态更改后完成，可以使用 [nextTick()](/api/api/general#nexttick) 全局 API：
 
 ```js
 import { nextTick, ref } from '@rue-js/rue'
@@ -148,7 +148,7 @@ import { reactive } from '@rue-js/rue'
 const state = reactive({ count: 0 })
 ```
 
-> 另请参见：[为 Reactive 添加类型](/guide/typescript/composition-api#typing-reactive) <sup class="vt-badge ts" />
+> 另请参见：[为 Reactive 添加类型](/guide/guide/typescript/composition-api#typing-reactive) <sup class="vt-badge ts" />
 
 在模板中使用：
 
@@ -158,7 +158,7 @@ const state = reactive({ count: 0 })
 
 响应式对象是 [JavaScript Proxies](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy)，行为与普通对象一样。不同之处在于 Vue 能够拦截对响应式对象所有属性的访问和修改以进行响应式追踪和触发。
 
-`reactive()` 深度转换对象：嵌套对象在被访问时也会被 `reactive()` 包装。当 ref 值是对象时，它也会在内部被 `ref()` 调用。与浅层 refs 类似，也有 [`shallowReactive()`](/api/reactivity-advanced#shallowreactive) API 用于选择退出深层响应式。
+`reactive()` 深度转换对象：嵌套对象在被访问时也会被 `reactive()` 包装。当 ref 值是对象时，它也会在内部被 `ref()` 调用。与浅层 refs 类似，也有 [`shallowReactive()`](/api/api/reactivity-advanced#shallowreactive) API 用于选择退出深层响应式。
 
 ### Reactive Proxy vs. Original {#reactive-proxy-vs-original}
 
@@ -258,7 +258,7 @@ console.log(state.count) // 2
 console.log(count.value) // 1
 ```
 
-Ref 解包只发生在嵌套在深层响应式对象内部时。当作为 [浅层响应式对象](/api/reactivity-advanced#shallowreactive) 的属性访问时，它不会应用。
+Ref 解包只发生在嵌套在深层响应式对象内部时。当作为 [浅层响应式对象](/api/api/reactivity-advanced#shallowreactive) 的属性访问时，它不会应用。
 
 ### 数组和集合中的注意事项 {#caveat-in-arrays-and-collections}
 

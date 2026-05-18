@@ -50,11 +50,11 @@ function increment() {
 
 每个返回 refs 的响应式 API 都会有一个 `$` 前缀的宏等效项。这些 API 包括：
 
-- [`ref`](/api/reactivity-core#ref) -> `$ref`
-- [`computed`](/api/reactivity-core#computed) -> `$computed`
-- [`shallowRef`](/api/reactivity-advanced#shallowref) -> `$shallowRef`
-- [`customRef`](/api/reactivity-advanced#customref) -> `$customRef`
-- [`toRef`](/api/reactivity-utilities#toref) -> `$toRef`
+- [`ref`](/api/api/reactivity-core#ref) -> `$ref`
+- [`computed`](/api/api/reactivity-core#computed) -> `$computed`
+- [`shallowRef`](/api/api/reactivity-advanced#shallowref) -> `$shallowRef`
+- [`customRef`](/api/api/reactivity-advanced#customref) -> `$customRef`
+- [`toRef`](/api/api/reactivity-utilities#toref) -> `$toRef`
 
 这些宏是全局可用的，在启用响应式转换时不需要导入，但如果你想更明确，可以从 `@rue-js/rue/macros` 选择性地导入它们：
 
@@ -111,7 +111,7 @@ let count = $(myCreateRef())
 
 1. 与 `.value` 类似，你需要始终将 props 作为 `props.x` 访问以保持响应式。这意味着你不能解构 `defineProps`，因为生成的解构变量不是响应式的，不会更新。
 
-2. 当使用[仅类型的 props 声明](/api/sfc-script-setup#type-only-props-emit-declarations)时，没有简单的方法来声明 props 的默认值。我们为此引入了 `withDefaults()` API，但使用它仍然很笨拙。
+2. 当使用[仅类型的 props 声明](@todo)时，没有简单的方法来声明 props 的默认值。我们为此引入了 `withDefaults()` API，但使用它仍然很笨拙。
 
 我们可以通过在使用解构时对 `defineProps` 应用编译时转换来解决这些问题，类似于我们之前看到的 `$()`：
 

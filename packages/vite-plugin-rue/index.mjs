@@ -11,12 +11,13 @@ import { Worker } from 'node:worker_threads'
 
 const requireFromHere = createRequire(import.meta.url)
 const RUE_TRANSFORM_HEADER = '/* RUE_VAPOR_TRANSFORMED */'
+const RUE_REACTIVE_PROPS_DESTRUCTURE_HEADER = '/* RUE_REACTIVE_PROPS_DESTRUCTURED */'
 const RUE_VITE_PLUGIN_NAME = '@rue-js/vite-plugin-rue'
 const DEFAULT_TRANSFORM_TIMEOUT_MS = 5000
 const TRANSFORM_WORKER_PATH = requireFromHere.resolve('./transform-worker.mjs')
 
 const isAlpha = ch => /[A-Za-z]/.test(ch)
-const isDirectiveEventChar = ch => /[A-Za-z0-9:_-]/.test(ch)
+const _isDirectiveEventChar = ch => /[A-Za-z0-9:_-]/.test(ch)
 const isEventDirectiveAttrChar = ch => /[A-Za-z0-9:_.-]/.test(ch)
 const isSlotDirectiveAttrChar = ch => /[A-Za-z0-9_.-]/.test(ch)
 const MODEL_DIRECTIVE_SAFE_PREFIX = '__rue_model__'
@@ -82,6 +83,8 @@ const startsJsxTag = (code, index) => {
 }
 
 const normalizeDirectiveToken = raw => raw.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+
+const hasReactivePropsDestructureRewrite = code => code.includes('__rue_props.')
 
 const isDirectiveModifierToken = raw =>
   /^\d+$/.test(raw) || directiveModifierNames.has(raw.toLowerCase())
@@ -1329,7 +1332,11 @@ export default function VitePluginRue(options = {}) {
         }),
         { id, timeoutMs: transformTimeoutMs },
       )
-      return `${RUE_TRANSFORM_HEADER}\n${out}`
+      const headers = [RUE_TRANSFORM_HEADER]
+      if (hasReactivePropsDestructureRewrite(out)) {
+        headers.push(RUE_REACTIVE_PROPS_DESTRUCTURE_HEADER)
+      }
+      return `${headers.join('\n')}\n${out}`
     } catch (error) {
       if (isRueTransformError(error)) {
         throw error

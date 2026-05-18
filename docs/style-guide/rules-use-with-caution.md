@@ -1,7 +1,7 @@
 # 优先级 D 规则：谨慎使用 {#priority-d-rules-use-with-caution}
 
 ::: warning 注意
-此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/ruejs/docs/issues/new)。
+此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/hunzhiwange/ruejs/docs/issues/new)。
 :::
 
 Vue 的某些功能存在是为了适应罕见的边缘情况或从遗留代码库更平滑地迁移。然而，如果过度使用，它们会使你的代码更难维护，甚至成为错误的来源。这些规则揭示了潜在的风险功能，描述了何时以及为什么应该避免使用它们。

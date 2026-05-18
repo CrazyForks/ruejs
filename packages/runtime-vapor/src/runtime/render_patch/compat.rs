@@ -84,7 +84,7 @@ where
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        if let Some(mounted) = self.mount_from_input(new) {
+        if let Some(mounted) = self.mount_from_input(new, Some(parent)) {
             let Some(el_new) = mounted.host_cloned() else {
                 return Some(mounted);
             };
@@ -177,7 +177,7 @@ where
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        if let Some(mounted) = self.mount_from_input(new) {
+        if let Some(mounted) = self.mount_from_input(new, Some(parent)) {
             let Some(el_new) = mounted.host_cloned() else {
                 return Some(mounted);
             };

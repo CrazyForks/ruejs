@@ -263,7 +263,7 @@ const shouldUseEnhancedMode = ({
   placement,
   trigger,
   disabled,
-  arrow,
+  arrow: _arrow,
   triggerClassName,
   overlay,
   content,

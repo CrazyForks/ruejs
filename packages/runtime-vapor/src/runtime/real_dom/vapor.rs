@@ -6,6 +6,7 @@ use super::super::types::{
 use super::compat_vapor_wrapper::setup_return_uses_legacy_vapor_wrapper;
 use crate::reactive::core::{create_effect_scope, pop_effect_scope, push_effect_scope};
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::shared_runtime_bridge;
 use crate::runtime::transport;
 use js_sys::{Function, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
@@ -78,6 +79,7 @@ pub(crate) fn mount_vapor_with_setup<A: DomAdapter>(
     rue: &mut Rue<A>,
     input: &MountInput<A>,
     f: &JsValue,
+    parent_context: Option<&A::Element>,
 ) -> Option<MountedSubtreeState<A>>
 where
     A::Element: From<JsValue> + Into<JsValue> + Clone,
@@ -97,7 +99,22 @@ where
     if let Some(func) = f.dyn_ref::<Function>() {
         let scope_id = input.mount_effect_scope_id.unwrap_or_else(create_effect_scope);
         push_effect_scope(scope_id);
-        let ret = func.call0(&JsValue::UNDEFINED);
+        let prev_container = rue.current_container.clone();
+        let mut did_push_current_container = false;
+        if let Some(parent) = parent_context {
+            rue.current_container = Some(parent.clone());
+        }
+        let parent_value =
+            parent_context.cloned().map(Into::<JsValue>::into).unwrap_or(JsValue::UNDEFINED);
+        if !parent_value.is_undefined() && !parent_value.is_null() {
+            shared_runtime_bridge::push_current_container(&parent_value);
+            did_push_current_container = true;
+        }
+        let ret = func.call1(&JsValue::UNDEFINED, &parent_value);
+        if did_push_current_container {
+            shared_runtime_bridge::pop_current_container();
+        }
+        rue.current_container = prev_container;
         pop_effect_scope();
 
         match ret {
@@ -121,7 +138,7 @@ where
                         "Unsupported object returns are no longer accepted for vapor setup on the default path. Return a raw node, fragment, or mount handle instead.",
                     );
                     rue.handle_error(error.clone());
-                    wasm_bindgen::throw_val(error);
+                    return None;
                 }
 
                 // 编译器生成的 Vapor setup 默认直接 `return _root`，这里继续接受该块根节点。
@@ -145,7 +162,7 @@ where
     }
 
     if let Some(adapter) = rue.get_dom_adapter_mut() {
-        let el = adapter.create_element("div");
+        let el = adapter.create_element_in_parent("div", parent_context);
         return Some(MountedSubtreeState::Vapor(MountedVaporSubtree {
             r#type: MountedVaporSubtreeType::VaporWithSetup(f.clone()),
             host: Some(el),

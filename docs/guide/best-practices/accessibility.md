@@ -192,7 +192,7 @@ const MyForm: FC = () => {
 
 如果您在 Chrome DevTools 中检查此元素并打开 Elements 选项卡内的 Accessibility 选项卡，您将看到输入如何从标签获取其名称：
 
-![Chrome Developer Tools 显示从标签获取的输入可访问名称](./images/AccessibleLabelChromeDevTools.png)
+![Chrome Developer Tools 显示从标签获取的输入可访问名称](@todo)
 
 :::warning 警告：
 尽管您可能见过像这样包裹输入字段的标签：
@@ -223,7 +223,7 @@ const MyForm: FC = () => {
 
 随时在 Chrome DevTools 中检查此元素以查看可访问名称如何变化：
 
-![Chrome Developer Tools 显示从 aria-label 获取的输入可访问名称](./images/AccessibleARIAlabelDevTools.png)
+![Chrome Developer Tools 显示从 aria-label 获取的输入可访问名称](@todo)
 
 #### `aria-labelledby` {#aria-labelledby}
 
@@ -240,7 +240,7 @@ const MyForm: FC = () => {
 </form>
 ```
 
-![Chrome Developer Tools 显示从 aria-labelledby 获取的输入可访问名称](./images/AccessibleARIAlabelledbyDevTools.png)
+![Chrome Developer Tools 显示从 aria-labelledby 获取的输入可访问名称](@todo)
 
 #### `aria-describedby` {#aria-describedby}
 
@@ -266,7 +266,7 @@ const MyForm: FC = () => {
 
 您可以通过检查 Chrome DevTools 来查看描述：
 
-![Chrome Developer Tools 显示从 aria-labelledby 获取的输入可访问名称和从 aria-describedby 获取的描述](./images/AccessibleARIAdescribedby.png)
+![Chrome Developer Tools 显示从 aria-labelledby 获取的输入可访问名称和从 aria-describedby 获取的描述](@todo)
 
 ### 占位符 (Placeholder) {#placeholder}
 
@@ -274,7 +274,7 @@ const MyForm: FC = () => {
 
 占位符的问题之一是它们默认不符合 [颜色对比度标准](https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html)；修复颜色对比度会使占位符看起来像输入字段中预填充的数据。查看以下示例，您可以看到符合颜色对比度标准的 Last Name 占位符看起来像预填充的数据：
 
-![无障碍占位符](./images/AccessiblePlaceholder.png)
+![无障碍占位符](@todo)
 
 ```tsx
 <form className="demo" action="/dataCollectionLocation" method="post" autoComplete="on">

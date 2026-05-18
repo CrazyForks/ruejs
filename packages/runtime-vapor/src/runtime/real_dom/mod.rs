@@ -22,6 +22,7 @@ mod vapor;
 fn mount_core_input<A: DomAdapter>(
     rue: &mut Rue<A>,
     input: &MountInput<A>,
+    parent_context: Option<&A::Element>,
 ) -> Option<MountedSubtreeState<A>>
 where
     A::Element: Clone + From<JsValue> + Into<JsValue>,
@@ -31,8 +32,12 @@ where
         #[cfg(feature = "compat")]
         MountInputType::Fragment => None,
         MountInputType::Vapor => vapor::mount_vapor(rue, input),
-        MountInputType::VaporWithSetup(setup) => vapor::mount_vapor_with_setup(rue, input, setup),
-        MountInputType::Component(render_fn) => component::mount_component(rue, input, render_fn),
+        MountInputType::VaporWithSetup(setup) => {
+            vapor::mount_vapor_with_setup(rue, input, setup, parent_context)
+        }
+        MountInputType::Component(render_fn) => {
+            component::mount_component(rue, input, render_fn, parent_context)
+        }
         #[cfg(feature = "compat")]
         MountInputType::Element(_) => None,
         MountInputType::_Phantom(_) => None,
@@ -46,6 +51,7 @@ where
     pub(crate) fn mount_from_input(
         &mut self,
         input: &MountInput<A>,
+        parent_context: Option<&A::Element>,
     ) -> Option<MountedSubtreeState<A>>
     where
         A::Element: From<JsValue> + Into<JsValue>,
@@ -56,12 +62,12 @@ where
 
         #[cfg(feature = "compat")]
         {
-            return compat_mount::mount_compat_input(self, input);
+            return compat_mount::mount_compat_input(self, input, parent_context);
         }
 
         #[cfg(not(feature = "compat"))]
         {
-            mount_core_input(self, input)
+            mount_core_input(self, input, parent_context)
         }
     }
 }

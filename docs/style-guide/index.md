@@ -1,7 +1,7 @@
 # 风格指南 {#style-guide}
 
 ::: warning 注意
-此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/ruejs/docs/issues/new)。
+此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/hunzhiwange/ruejs/docs/issues/new)。
 :::
 
 这是 Rue 特定代码的官方风格指南。如果你在项目中使用 Rue，这是一个很好的参考，可以避免错误、避免无意义的争论和反模式。然而，我们不认为任何风格指南对所有团队或项目都是理想的，因此鼓励根据过去的经验、周围的技术栈和个人价值观进行有意识的偏离。
@@ -16,13 +16,13 @@
 
 这些规则有助于防止错误，因此无论如何都要学习和遵守。例外可能存在，但应该非常罕见，并且只能由精通 JavaScript 和 Vue 的专家做出。
 
-- [查看所有优先级 A 规则](./rules-essential)
+- [查看所有优先级 A 规则](/page/style-guide/rules-essential)
 
 ### 优先级 B：强烈推荐 {#priority-b-strongly-recommended}
 
 这些规则已被发现在大多数项目中提高可读性和/或开发者体验。如果你违反它们，你的代码仍然可以运行，但违规应该很少且有充分的理由。
 
-- [查看所有优先级 B 规则](./rules-strongly-recommended)
+- [查看所有优先级 B 规则](/page/style-guide/rules-strongly-recommended)
 
 ### 优先级 C：推荐 {#priority-c-recommended}
 
@@ -32,10 +32,10 @@
 2. 能够复制和粘贴大多数社区代码示例而无需修改
 3. 经常发现新员工已经习惯了你喜欢的编码风格，至少在 Rue 方面
 
-- [查看所有优先级 C 规则](./rules-recommended)
+- [查看所有优先级 C 规则](/page/style-guide/rules-recommended)
 
 ### 优先级 D：谨慎使用 {#priority-d-use-with-caution}
 
 Vue 的某些功能存在是为了适应罕见的边缘情况或从遗留代码库更平滑地迁移。然而，如果过度使用，它们会使你的代码更难维护，甚至成为错误的来源。这些规则揭示了潜在的风险功能，描述了何时以及为什么应该避免使用它们。
 
-- [查看所有优先级 D 规则](./rules-use-with-caution)
+- [查看所有优先级 D 规则](/page/style-guide/rules-use-with-caution)

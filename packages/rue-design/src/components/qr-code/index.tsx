@@ -1,0 +1,613 @@
+import type { FC } from '@rue-js/rue'
+import { onMounted, useRef, watch } from '@rue-js/rue'
+import { encodeQrMatrix, type EncodedQrCode, type QRCodeErrorCorrectionLevel } from './encoder'
+
+export type { QRCodeErrorCorrectionLevel } from './encoder'
+
+export type QRCodeType = 'canvas' | 'svg'
+export type QRCodeStatus = 'active' | 'expired' | 'loading' | 'scanned'
+
+export interface QRCodeLocale {
+  expired?: any
+  refresh?: any
+  scanned?: any
+  loading?: any
+  overflow?: any
+}
+
+export interface QRCodeStatusRenderInfo {
+  status: Exclude<QRCodeStatus, 'active'>
+  locale: QRCodeLocale
+  onRefresh?: () => void
+}
+
+export interface QRCodeClassNames {
+  root?: string
+  frame?: string
+  code?: string
+  svg?: string
+  canvas?: string
+  cover?: string
+  status?: string
+  action?: string
+  icon?: string
+}
+
+export interface QRCodeStyles {
+  root?: Record<string, any>
+  frame?: Record<string, any>
+  code?: Record<string, any>
+  svg?: Record<string, any>
+  canvas?: Record<string, any>
+  cover?: Record<string, any>
+  status?: Record<string, any>
+  action?: Record<string, any>
+  icon?: Record<string, any>
+}
+
+export interface QRCodeProps {
+  value?: string
+  type?: QRCodeType
+  icon?: string
+  size?: number
+  iconSize?: number | { width?: number; height?: number }
+  color?: string
+  bgColor?: string
+  errorLevel?: QRCodeErrorCorrectionLevel
+  status?: QRCodeStatus
+  bordered?: boolean
+  onRefresh?: () => void
+  statusRender?: (info: QRCodeStatusRenderInfo) => any
+  className?: string
+  rootClassName?: string
+  style?: Record<string, any>
+  marginSize?: number
+  locale?: QRCodeLocale
+  classNames?: QRCodeClassNames
+  styles?: QRCodeStyles
+  boostLevel?: boolean
+  [key: string]: any
+}
+
+interface IconSizeShape {
+  width: number
+  height: number
+}
+
+interface SvgIconLayout {
+  x: number
+  y: number
+  width: number
+  height: number
+  padding: number
+}
+
+const DEFAULT_LOCALE: Required<QRCodeLocale> = {
+  expired: '二维码已过期',
+  refresh: '刷新二维码',
+  scanned: '已扫码，等待确认',
+  loading: '准备二维码中…',
+  overflow: '内容过长，请缩短后重试',
+}
+
+const appendClassName = (...parts: Array<string | undefined | null | false>) =>
+  parts.filter(Boolean).join(' ')
+
+const clampNumber = (value: number, min: number, max: number) => {
+  if (!Number.isFinite(value)) {
+    return min
+  }
+
+  return Math.min(Math.max(value, min), max)
+}
+
+const normalizeIconSize = (iconSize: QRCodeProps['iconSize'], innerSize: number): IconSizeShape => {
+  const fallbackSide = clampNumber(Math.round(innerSize * 0.24), 22, Math.round(innerSize * 0.42))
+
+  if (typeof iconSize === 'number') {
+    const side = clampNumber(iconSize, 16, Math.round(innerSize * 0.42))
+    return { width: side, height: side }
+  }
+
+  if (iconSize && typeof iconSize === 'object') {
+    return {
+      width: clampNumber(iconSize.width ?? fallbackSide, 16, Math.round(innerSize * 0.42)),
+      height: clampNumber(iconSize.height ?? fallbackSide, 16, Math.round(innerSize * 0.42)),
+    }
+  }
+
+  return {
+    width: fallbackSide,
+    height: fallbackSide,
+  }
+}
+
+const buildSvgPath = (matrix: boolean[][], margin: number) => {
+  let path = ''
+
+  for (let rowIndex = 0; rowIndex < matrix.length; rowIndex += 1) {
+    let start = -1
+
+    for (let columnIndex = 0; columnIndex <= matrix.length; columnIndex += 1) {
+      const filled = columnIndex < matrix.length ? matrix[rowIndex]![columnIndex]! : false
+
+      if (filled && start < 0) {
+        start = columnIndex
+      }
+
+      if (!filled && start >= 0) {
+        const x = start + margin
+        const y = rowIndex + margin
+        path += `M${x} ${y}h${columnIndex - start}v1H${x}z`
+        start = -1
+      }
+    }
+  }
+
+  return path
+}
+
+const resolveSvgIconLayout = (
+  totalUnits: number,
+  innerSize: number,
+  iconSize: IconSizeShape,
+): SvgIconLayout => {
+  const width = (iconSize.width / innerSize) * totalUnits
+  const height = (iconSize.height / innerSize) * totalUnits
+  const padding = Math.max(
+    (Math.min(iconSize.width, iconSize.height) * 0.18 * totalUnits) / innerSize,
+    0.9,
+  )
+
+  return {
+    x: (totalUnits - width) / 2,
+    y: (totalUnits - height) / 2,
+    width,
+    height,
+    padding,
+  }
+}
+
+const drawCanvasIcon = (
+  context: CanvasRenderingContext2D,
+  pixelSize: number,
+  iconSize: IconSizeShape,
+  bgColor: string,
+  image: CanvasImageSource,
+) => {
+  const width = Math.max(1, Math.round(iconSize.width))
+  const height = Math.max(1, Math.round(iconSize.height))
+  const padding = Math.max(4, Math.round(Math.min(width, height) * 0.18))
+  const x = Math.round((pixelSize - width) / 2)
+  const y = Math.round((pixelSize - height) / 2)
+
+  context.fillStyle = bgColor
+  context.fillRect(x - padding, y - padding, width + padding * 2, height + padding * 2)
+  context.drawImage(image, x, y, width, height)
+}
+
+const encodeSafe = (
+  value: string,
+  errorLevel: QRCodeErrorCorrectionLevel,
+  boostLevel: boolean,
+): { encoded: EncodedQrCode | null; error: Error | null } => {
+  try {
+    return {
+      encoded: encodeQrMatrix(value, { errorLevel, boostLevel }),
+      error: null,
+    }
+  } catch (error) {
+    return {
+      encoded: null,
+      error: error as Error,
+    }
+  }
+}
+
+const LoadingIndicator = () => <span className="loading loading-spinner loading-sm" />
+
+const ExpiredIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 3" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20 12a8 8 0 1 1-2.34-5.66L20 8V4h-4" />
+  </svg>
+)
+
+const ScannedIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="m7 12 3 3 7-7" />
+    <circle cx="12" cy="12" r="9" />
+  </svg>
+)
+
+const WarningIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="m12 4 8 14H4L12 4Z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 17h.01" />
+  </svg>
+)
+
+const RefreshIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20 12a8 8 0 1 1-2.34-5.66L20 8V4h-4" />
+  </svg>
+)
+
+const OverflowState: FC<{ locale: Required<QRCodeLocale>; message: string }> = ({
+  locale,
+  message,
+}) => {
+  return (
+    <div className="flex flex-col items-center gap-2 text-center">
+      <div className="flex items-center gap-2 text-warning">
+        <WarningIcon />
+        <span className="text-sm font-semibold text-base-content">{locale.overflow}</span>
+      </div>
+      <p className="m-0 text-xs opacity-70">{message}</p>
+    </div>
+  )
+}
+
+const DefaultStatusContent: FC<QRCodeStatusRenderInfo> = ({ status, locale, onRefresh }) => {
+  if (status === 'loading') {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <LoadingIndicator />
+        <div className="text-sm font-medium">{locale.loading}</div>
+      </div>
+    )
+  }
+
+  if (status === 'scanned') {
+    return (
+      <div className="flex flex-col items-center gap-2 text-success">
+        <ScannedIcon />
+        <div className="text-sm font-medium text-base-content">{locale.scanned}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="flex items-center gap-2 text-warning">
+        <ExpiredIcon />
+        <span className="text-sm font-medium text-base-content">{locale.expired}</span>
+      </div>
+      {onRefresh ? (
+        <button
+          type="button"
+          className="btn btn-primary btn-sm rounded-full px-4"
+          onClick={onRefresh}
+          data-rue-qrcode-refresh="true"
+        >
+          <RefreshIcon />
+          {locale.refresh}
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
+const CustomStatusContent: FC<{
+  render: NonNullable<QRCodeProps['statusRender']>
+  info: QRCodeStatusRenderInfo
+}> = ({ render, info }) => {
+  return render(info)
+}
+
+const QRCode: FC<QRCodeProps> = ({
+  value,
+  type = 'canvas',
+  icon,
+  size = 160,
+  iconSize,
+  color = '#111827',
+  errorLevel = 'M',
+  status = 'active',
+  bordered = true,
+  onRefresh,
+  style,
+  className,
+  rootClassName,
+  bgColor = '#ffffff',
+  marginSize = 4,
+  statusRender,
+  locale,
+  classNames,
+  styles,
+  boostLevel = true,
+  ...rest
+}) => {
+  if (value == null || value === '') {
+    return null
+  }
+
+  const mergedLocale = { ...DEFAULT_LOCALE, ...locale }
+  const resolvedSize = Math.max(48, Math.round(size))
+  const framePadding = bordered ? Math.max(6, Math.round(resolvedSize * 0.06)) : 0
+  const innerSize = Math.max(resolvedSize - framePadding * 2, 24)
+  const quietZone = Math.max(0, Math.round(marginSize))
+  const radius = Math.max(16, Math.round(resolvedSize * 0.16))
+  const normalizedIconSize = normalizeIconSize(iconSize, innerSize)
+  const drawTicketRef = useRef(0)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  const { encoded, error } = encodeSafe(String(value), errorLevel, boostLevel)
+  const totalUnits = (encoded?.size ?? 21) + quietZone * 2
+  const svgPath = encoded ? buildSvgPath(encoded.matrix, quietZone) : ''
+  const svgIconLayout = resolveSvgIconLayout(totalUnits, innerSize, normalizedIconSize)
+  const shouldShowCover = !!error || status !== 'active'
+  const statusInfo: QRCodeStatusRenderInfo | null =
+    status !== 'active'
+      ? {
+          status,
+          locale: mergedLocale,
+          onRefresh,
+        }
+      : null
+
+  const drawCanvas = () => {
+    const canvas = canvasRef.current
+
+    if (!canvas || type !== 'canvas') {
+      return
+    }
+
+    const result = encodeSafe(String(value), errorLevel, boostLevel)
+    if (!result.encoded) {
+      return
+    }
+
+    const matrix = result.encoded.matrix
+    const pixelRatio = globalThis.devicePixelRatio || 1
+    const pixelSize = Math.max(1, Math.round(innerSize * pixelRatio))
+    const viewSize = result.encoded.size + quietZone * 2
+
+    canvas.width = pixelSize
+    canvas.height = pixelSize
+    canvas.style.width = `${innerSize}px`
+    canvas.style.height = `${innerSize}px`
+
+    let context: CanvasRenderingContext2D | null = null
+
+    try {
+      context = canvas.getContext('2d')
+    } catch {
+      context = null
+    }
+
+    if (!context) {
+      return
+    }
+
+    const toPixel = (unit: number) => Math.round((unit / viewSize) * pixelSize)
+
+    context.clearRect(0, 0, pixelSize, pixelSize)
+    context.fillStyle = bgColor
+    context.fillRect(0, 0, pixelSize, pixelSize)
+    context.fillStyle = color
+
+    for (let rowIndex = 0; rowIndex < matrix.length; rowIndex += 1) {
+      for (let columnIndex = 0; columnIndex < matrix.length; columnIndex += 1) {
+        if (!matrix[rowIndex]![columnIndex]) {
+          continue
+        }
+
+        const left = toPixel(columnIndex + quietZone)
+        const top = toPixel(rowIndex + quietZone)
+        const right = toPixel(columnIndex + quietZone + 1)
+        const bottom = toPixel(rowIndex + quietZone + 1)
+
+        context.fillRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top))
+      }
+    }
+
+    if (!icon || typeof Image === 'undefined') {
+      return
+    }
+
+    const drawTicket = (drawTicketRef.current ?? 0) + 1
+    drawTicketRef.current = drawTicket
+
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+    image.onload = () => {
+      if (drawTicketRef.current !== drawTicket || canvasRef.current !== canvas) {
+        return
+      }
+
+      try {
+        drawCanvasIcon(
+          context!,
+          pixelSize,
+          {
+            width: Math.max(1, Math.round(normalizedIconSize.width * pixelRatio)),
+            height: Math.max(1, Math.round(normalizedIconSize.height * pixelRatio)),
+          },
+          bgColor,
+          image,
+        )
+      } catch {
+        // ignore cross-origin or draw failures and keep the QR surface available
+      }
+    }
+    image.onerror = () => undefined
+    image.src = icon
+  }
+
+  const applyCanvasRef = (element: HTMLCanvasElement | null) => {
+    canvasRef.current = element
+
+    if (element) {
+      drawCanvas()
+    }
+  }
+
+  onMounted(() => {
+    drawCanvas()
+
+    watch(
+      () =>
+        [
+          value,
+          type,
+          innerSize,
+          color,
+          bgColor,
+          icon ?? '',
+          normalizedIconSize.width,
+          normalizedIconSize.height,
+          quietZone,
+          errorLevel,
+          boostLevel ? '1' : '0',
+        ].join('|'),
+      () => {
+        drawCanvas()
+      },
+      { immediate: true },
+    )
+  })
+
+  return (
+    <div
+      {...rest}
+      className={appendClassName(
+        'rue-qrcode relative inline-flex items-center justify-center overflow-hidden border-base-300 text-base-content',
+        bordered
+          ? 'border bg-base-100 shadow-sm'
+          : 'border border-transparent bg-transparent shadow-none',
+        className,
+        rootClassName,
+        classNames?.root,
+      )}
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: `${resolvedSize}px`,
+        height: `${resolvedSize}px`,
+        borderRadius: `${radius}px`,
+        overflow: 'hidden',
+        ...styles?.root,
+        ...style,
+      }}
+      data-rue-qrcode="true"
+      data-rue-qrcode-type={type}
+      data-rue-qrcode-status={error ? 'overflow' : status}
+    >
+      <div
+        className={appendClassName(
+          'rue-qrcode-frame relative flex items-center justify-center overflow-hidden',
+          classNames?.frame,
+        )}
+        style={{
+          width: `${innerSize}px`,
+          height: `${innerSize}px`,
+          borderRadius: `${Math.max(12, radius - framePadding / 2)}px`,
+          backgroundColor: bgColor,
+          ...styles?.frame,
+        }}
+        data-rue-qrcode-frame="true"
+      >
+        {encoded ? (
+          type === 'svg' ? (
+            <svg
+              viewBox={`0 0 ${totalUnits} ${totalUnits}`}
+              width={innerSize}
+              height={innerSize}
+              className={appendClassName('rue-qrcode-svg block', classNames?.code, classNames?.svg)}
+              style={{
+                display: 'block',
+                width: `${innerSize}px`,
+                height: `${innerSize}px`,
+                ...styles?.code,
+                ...styles?.svg,
+              }}
+              data-rue-qrcode-svg="true"
+              aria-hidden="true"
+            >
+              <rect x="0" y="0" width={totalUnits} height={totalUnits} fill={bgColor} />
+              <path d={svgPath} fill={color} />
+              {icon ? (
+                <>
+                  <rect
+                    x={svgIconLayout.x - svgIconLayout.padding}
+                    y={svgIconLayout.y - svgIconLayout.padding}
+                    width={svgIconLayout.width + svgIconLayout.padding * 2}
+                    height={svgIconLayout.height + svgIconLayout.padding * 2}
+                    rx={Math.max(svgIconLayout.padding * 0.9, 1.2)}
+                    fill={bgColor}
+                  />
+                  <image
+                    href={icon}
+                    xlinkHref={icon}
+                    x={svgIconLayout.x}
+                    y={svgIconLayout.y}
+                    width={svgIconLayout.width}
+                    height={svgIconLayout.height}
+                    preserveAspectRatio="xMidYMid meet"
+                    className={appendClassName('rue-qrcode-icon', classNames?.icon)}
+                    style={{ ...styles?.icon }}
+                  />
+                </>
+              ) : null}
+            </svg>
+          ) : (
+            <canvas
+              ref={applyCanvasRef}
+              className={appendClassName(
+                'rue-qrcode-canvas block',
+                classNames?.code,
+                classNames?.canvas,
+              )}
+              style={{
+                display: 'block',
+                width: `${innerSize}px`,
+                height: `${innerSize}px`,
+                ...styles?.code,
+                ...styles?.canvas,
+              }}
+              data-rue-qrcode-canvas="true"
+              aria-hidden="true"
+            />
+          )
+        ) : null}
+      </div>
+
+      {shouldShowCover ? (
+        <div
+          className={appendClassName(
+            'rue-qrcode-cover absolute inset-0 flex items-center justify-center p-4 text-center',
+            classNames?.cover,
+          )}
+          style={{
+            backgroundColor: 'oklch(var(--b1) / 0.82)',
+            backdropFilter: 'blur(10px)',
+            ...styles?.cover,
+          }}
+          data-rue-qrcode-cover="true"
+        >
+          <div
+            className={appendClassName(
+              'rue-qrcode-status rounded-[20px] border border-base-300 bg-base-100/90 px-4 py-3 shadow-lg',
+              classNames?.status,
+            )}
+            style={{ ...styles?.status }}
+          >
+            {error ? <OverflowState locale={mergedLocale} message={error.message} /> : null}
+            {!error && statusInfo && statusRender ? (
+              <CustomStatusContent render={statusRender} info={statusInfo} />
+            ) : null}
+            {!error && statusInfo && !statusRender ? (
+              <DefaultStatusContent {...statusInfo} />
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+export default QRCode

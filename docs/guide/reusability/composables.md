@@ -16,7 +16,7 @@ const MouseTracker: FC = () => {
 ```
 
 :::tip
-本章节假设你已经具备 Composition API 的基础知识。如果你只学习过 Options API，可以将 API 偏好设置为 Composition API（使用左侧边栏顶部的切换按钮），然后重新阅读[响应式基础](/guide/essentials/reactivity-fundamentals)和[生命周期钩子](/guide/essentials/lifecycle)章节。
+本章节假设你已经具备 Composition API 的基础知识。如果你只学习过 Options API，可以将 API 偏好设置为 Composition API（使用左侧边栏顶部的切换按钮），然后重新阅读[响应式基础](/guide/guide/essentials/reactivity-fundamentals)和[生命周期钩子](/guide/guide/essentials/lifecycle)章节。
 :::
 
 ## 什么是 "Composable"？ {#what-is-a-composable}
@@ -102,7 +102,7 @@ export const MouseComponent: FC = () => {
   鼠标位置在：{{ x }}, {{ y }}
 </div>
 
-如我们所见，核心逻辑保持完全相同——我们所需要做的只是将其移到一个外部函数中，并返回应该暴露的状态。就像在组件内部一样，你可以在 composables 中使用完整的 [Composition API 函数](/api/#composition-api)。现在，相同的 `useMouse()` 功能可以在任何组件中使用。
+如我们所见，核心逻辑保持完全相同——我们所需要做的只是将其移到一个外部函数中，并返回应该暴露的状态。就像在组件内部一样，你可以在 composables 中使用完整的 [Composition API 函数](/api/api/index#composition-api)。现在，相同的 `useMouse()` 功能可以在任何组件中使用。
 
 composables 更酷的一点是，你还可以嵌套它们：一个 composable 函数可以调用一个或多个其他 composable 函数。这使我们能够使用小的、独立的单元来组合复杂的逻辑，类似于我们使用组件来组合整个应用。事实上，这就是为什么我们决定将使这种模式成为可能的 API 集合称为 Composition API。
 
@@ -138,7 +138,7 @@ export function useMouse() {
 ```
 
 :::tip
-每个调用 `useMouse()` 的组件实例都会创建自己的 `x` 和 `y` 状态副本，因此它们不会相互干扰。如果你想在组件之间管理共享状态，请阅读[状态管理](/guide/scaling-up/state-management)章节。
+每个调用 `useMouse()` 的组件实例都会创建自己的 `x` 和 `y` 状态副本，因此它们不会相互干扰。如果你想在组件之间管理共享状态，请阅读[状态管理](/guide/guide/scaling-up/state-management)章节。
 :::
 
 ## 异步状态示例 {#async-state-example}
@@ -226,7 +226,7 @@ url.value = '/new-url'
 const { data, error } = useFetch(() => `/posts/${props.id}`)
 ```
 
-我们可以使用 [`watchEffect()`](/api/reactivity-core.html#watcheffect) 和 [`toValue()`](/api/reactivity-utilities.html#tovalue) API 重构我们现有的实现：
+我们可以使用 [`watchEffect()`](/api/api/reactivity-core#watcheffect) 和 [`toValue()`](/api/api/reactivity-utilities#tovalue) API 重构我们现有的实现：
 
 ```ts{7,12} [fetch.ts]
 import { ref, watchEffect, toValue } from '@rue-js/rue'
@@ -254,7 +254,7 @@ export function useFetch(url: string | Ref<string> | (() => string)) {
 }
 ```
 
-`toValue()` 是在 3.3 中添加的 API。它的设计目的是将 refs 或 getters 规范化为值。如果参数是 ref，它返回 ref 的值；如果参数是函数，它会调用该函数并返回其返回值。否则，它会原样返回参数。它的工作方式类似于 [`unref()`](/api/reactivity-utilities.html#unref)，但对函数有特殊处理。
+`toValue()` 是在 3.3 中添加的 API。它的设计目的是将 refs 或 getters 规范化为值。如果参数是 ref，它返回 ref 的值；如果参数是函数，它会调用该函数并返回其返回值。否则，它会原样返回参数。它的工作方式类似于 [`unref()`](/api/api/reactivity-utilities#unref)，但对函数有特殊处理。
 
 请注意，`toValue(url)` 是在 `watchEffect` 回调**内部**调用的。这确保了在 `toValue()` 规范化期间访问的任何响应式依赖都会被监视器跟踪。
 
@@ -268,7 +268,7 @@ export function useFetch(url: string | Ref<string> | (() => string)) {
 
 ### 输入参数 {#input-arguments}
 
-即使 composable 不依赖它们来实现响应式，它也可以接受 ref 或 getter 参数。如果你正在编写一个可能被其他开发者使用的 composable，最好处理输入参数是 refs 或 getters 而不是原始值的情况。[`toValue()`](/api/reactivity-utilities#tovalue) 实用函数会对此很有帮助：
+即使 composable 不依赖它们来实现响应式，它也可以接受 ref 或 getter 参数。如果你正在编写一个可能被其他开发者使用的 composable，最好处理输入参数是 refs 或 getters 而不是原始值的情况。[`toValue()`](/api/api/reactivity-utilities#tovalue) 实用函数会对此很有帮助：
 
 ```ts
 import { toValue } from '@rue-js/rue'
@@ -354,7 +354,7 @@ export const MyComponent: FC = () => {
 
 ### vs. Mixins {#vs-mixins}
 
-来自 Vue 2 的用户可能熟悉 [mixins](/api/options-composition#mixins) 选项，它也允许我们将组件逻辑提取到可复用的单元中。Mixins 有三个主要缺点：
+来自 Vue 2 的用户可能熟悉 [mixins](@todo) 选项，它也允许我们将组件逻辑提取到可复用的单元中。Mixins 有三个主要缺点：
 
 1. **属性来源不清晰**：当使用许多 mixins 时，不清楚哪个实例属性是由哪个 mixin 注入的，这使得追踪实现和理解组件行为变得困难。这也是我们推荐对 composables 使用 refs + 解构模式的原因：它使消费组件中的属性来源清晰。
 
@@ -366,7 +366,7 @@ export const MyComponent: FC = () => {
 
 ### vs. 无渲染组件 {#vs-renderless-components}
 
-在组件插槽章节中，我们讨论了基于作用域插槽的[无渲染组件](/guide/components/slots#renderless-components)模式。我们甚至使用无渲染组件实现了相同的鼠标跟踪演示。
+在组件插槽章节中，我们讨论了基于作用域插槽的[无渲染组件](/guide/guide/components/slots#renderless-components)模式。我们甚至使用无渲染组件实现了相同的鼠标跟踪演示。
 
 Composables 相对于无渲染组件的主要优势在于 composables 不会产生额外的组件实例开销。当在整个应用中使用无渲染组件模式时，创建的额外组件实例数量可能会成为明显的性能开销。
 
@@ -378,6 +378,6 @@ Composables 相对于无渲染组件的主要优势在于 composables 不会产�
 
 ## 延伸阅读 {#further-reading}
 
-- [响应式深入](/guide/extras/reactivity-in-depth)：深入了解 Rue 响应式系统的工作原理。
-- [状态管理](/guide/scaling-up/state-management)：管理多个组件共享状态的模式。
-- [测试 Composables](/guide/scaling-up/testing#testing-composables)：关于单元测试 composables 的技巧。
+- [响应式深入](/guide/guide/extras/reactivity-in-depth)：深入了解 Rue 响应式系统的工作原理。
+- [状态管理](/guide/guide/scaling-up/state-management)：管理多个组件共享状态的模式。
+- [测试 Composables](/guide/guide/scaling-up/testing#testing-composables)：关于单元测试 composables 的技巧。

@@ -1,7 +1,7 @@
 # 优先级 C 规则：推荐 {#priority-c-rules-recommended}
 
 ::: warning 注意
-此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/ruejs/docs/issues/new)。
+此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/hunzhiwange/ruejs/docs/issues/new)。
 :::
 
 当存在多个同样好的选项时，可以任意选择以确保一致性。在这些规则中，我们描述了每个可接受的选项并建议一个默认选择。这意味着你可以在自己的代码库中自由选择不同的选项，只要你保持一致并有充分的理由。请一定要有充分的理由！通过适应社区标准，你将：

@@ -166,6 +166,11 @@ impl WasmRue {
 
     /// 安排一次异步刷新：Promise.then 调用处理闭包
     pub(super) fn schedule_flush(&self) {
+        self.process_queues();
+        if !self.has_pending() {
+            return;
+        }
+
         let this_ptr = self as *const WasmRue;
         let cb = WasmRue::make_process_closure(this_ptr);
         let _ = Promise::resolve(&JsValue::UNDEFINED).then(&cb);

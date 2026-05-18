@@ -200,7 +200,7 @@ const renderComboItems = ({
       )
     }
 
-    const { key, size: itemSize, className: itemOwnClassName, ...itemRest } = item
+    const { key: _key, size: itemSize, className: itemOwnClassName, ...itemRest } = item
     itemNodes.push(
       <KeyRoot
         key={`key-${itemKey}`}

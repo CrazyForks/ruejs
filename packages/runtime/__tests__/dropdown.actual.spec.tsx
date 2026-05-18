@@ -61,9 +61,6 @@ describe('Dropdown actual page', () => {
     const controlledState = container.querySelector(
       '[data-testid="dropdown-controlled-state"]',
     ) as HTMLElement
-    const controlledSource = container.querySelector(
-      '[data-testid="dropdown-controlled-source"]',
-    ) as HTMLElement
     const controlledTrigger = container.querySelector(
       '[data-testid="dropdown-controlled-trigger"]',
     ) as HTMLElement

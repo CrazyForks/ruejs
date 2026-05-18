@@ -80,7 +80,7 @@
 
   </div>
 
-- **另请参阅** [`this.$nextTick()`](/api/component-instance#nexttick)
+- **另请参阅** [`this.$nextTick()`](@todo)
 
 ## useComponent() {#usecomponent}
 
@@ -156,4 +156,4 @@
   })
   ```
 
-- **另请参阅** [指南 - 异步组件](/guide/components/async)
+- **另请参阅** [指南 - 异步组件](/guide/guide/components/async)

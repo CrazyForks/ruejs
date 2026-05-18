@@ -45,6 +45,7 @@ type CacheEntry = {
   end: DomNodeLike
   cacheable: boolean
   disposed: boolean
+  justActivated: boolean
 }
 
 type ChildDescriptor = {
@@ -108,8 +109,13 @@ const normalizeName = (value: unknown): string | undefined => {
 }
 
 const getExplicitKey = (child: unknown): unknown => {
-  const key = readObjectValue(child, 'key')
-  return key == null ? undefined : key
+  const directKey = readObjectValue(child, 'key')
+  if (directKey != null) {
+    return directKey
+  }
+
+  const propsKey = readObjectValue(readObjectValue(child, 'props'), 'key')
+  return propsKey == null ? undefined : propsKey
 }
 
 const resolveChildDescriptor = (child: KeepAliveChildInput): ChildDescriptor => {
@@ -283,6 +289,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
       end,
       cacheable,
       disposed: false,
+      justActivated: false,
     }
   }
 
@@ -325,6 +332,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     }
 
     moveRange(entry, getActiveParent(), ctx.end)
+    entry.justActivated = true
   }
 
   const touchEntry = (entry: CacheEntry) => {
@@ -362,7 +370,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
   }
 
   const pruneByPattern = (curProps: KeepAliveProps) => {
-    for (const [key, entry] of [...ctx.cache.entries()]) {
+    for (const [key, entry] of Array.from(ctx.cache.entries())) {
       const descriptor = {
         child: null as any,
         key: entry.key,
@@ -410,7 +418,11 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
       }
 
       activateEntry(entry)
-      renderEntry(entry, descriptor.child)
+      if (entry.justActivated) {
+        entry.justActivated = false
+      } else {
+        renderEntry(entry, descriptor.child)
+      }
       pruneOldestEntries(max)
       return
     }

@@ -28,7 +28,7 @@
 
 1. 具有异步数据获取的组件。这包括使用 `useEffect` 或 `useQuery` 等 hooks 进行数据获取的组件。
 
-2. [异步组件](/guide/components/async)。
+2. [异步组件](/guide/guide/components/async)。
 
 ### 异步数据获取 (Async Data Fetching) {#async-data-fetching}
 
@@ -116,7 +116,7 @@ const App: FC = () => {
 
 ## 与其他组件结合使用 (Combining with Other Components) {#combining-with-other-components}
 
-通常希望将 `<Suspense>` 与 [`<Transition>`](./transition) 和 [`<KeepAlive>`](./keep-alive) 组件结合使用。不过需要注意，这里的组合能力应以 Rue 当前实现为准，而不是直接套用 Vue 文档中的全部语义。
+通常希望将 `<Suspense>` 与 [`<Transition>`](/guide/guide/built-ins/transition) 和 [`<KeepAlive>`](/guide/guide/built-ins/keep-alive) 组件结合使用。不过需要注意，这里的组合能力应以 Rue 当前实现为准，而不是直接套用 Vue 文档中的全部语义。
 
 此外，这些组件通常与来自 [Rue Router](https://router.vuejs.org/) 的 `<RouterView>` 组件结合使用。
 
@@ -182,4 +182,4 @@ Rue 当前可以嵌套多个 `<Suspense>` 边界，但 `<Suspense>` 本身还没
 
 **相关**
 
-- [`<Suspense>` API 参考](/api/built-in-components#suspense)
+- [`<Suspense>` API 参考](/api/api/built-in-components#suspense)
