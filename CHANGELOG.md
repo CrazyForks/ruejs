@@ -1,3 +1,17 @@
+## [0.1.1](https://github.com/hunzhiwange/ruejs/compare/v0.0.39...v0.1.1) (2026-05-18)
+
+
+### Features
+
+* new version ([6fe4d85](https://github.com/hunzhiwange/ruejs/commit/6fe4d851b1bfd557ba8b670a3a6e77cc4fd73ed3))
+
+# v0.1.0 (2026-05-18)
+
+
+### Features
+
+* new design ([f883714](https://github.com/hunzhiwange/ruejs/commit/f88371420c339e4c80b2db7827067d32b107e502))
+
 # [0.1.0](https://github.com/hunzhiwange/ruejs/compare/v0.0.39...v0.1.0) (2026-05-18)
 
 

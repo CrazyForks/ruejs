@@ -1,6 +1,6 @@
 {
   "name": "@rue-js/runtime-vapor",
-  "version": "v0.0.40",
+  "version": "0.1.1",
   "description": "Rue runtime implemented in Rust and compiled to WebAssembly",
   "keywords": [
     "rue",
