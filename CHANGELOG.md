@@ -1,3 +1,10 @@
+## [0.0.40](https://github.com/hunzhiwange/ruejs/compare/v0.0.39...v0.0.40) (2026-05-18)
+
+
+### Features
+
+* new design ([f883714](https://github.com/hunzhiwange/ruejs/commit/f88371420c339e4c80b2db7827067d32b107e502))
+
 ## [0.0.40](https://github.com/doyouhaobaby/rue/compare/v0.0.39...v0.0.40) (2026-05-18)
 
 ## [0.0.39](https://github.com/hunzhiwange/ruejs/compare/v0.0.37...v0.0.39) (2026-05-09)
