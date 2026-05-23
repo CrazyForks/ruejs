@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/hunzhiwange/ruejs/compare/v0.2.0...v0.2.1) (2026-05-23)
+
+
+### Features
+
+* fix ci ([8328ed6](https://github.com/hunzhiwange/ruejs/commit/8328ed605fc9515b87995846d01a3897b6c22dce))
+
 # [0.2.0](https://github.com/hunzhiwange/ruejs/compare/v0.0.33...v0.2.0) (2026-05-23)
 
 
