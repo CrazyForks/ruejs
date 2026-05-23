@@ -155,8 +155,10 @@ fn parse_inline_handler_source(src: &str) -> Option<Expr> {
         return Some(build_noop_handler());
     }
 
-    if let Some(expr) = parse_expr(trimmed, "v-on-handler.tsx") {
-        return Some(expr);
+    if !trimmed.contains(';') {
+        if let Some(expr) = parse_expr(trimmed, "v-on-handler.tsx") {
+            return Some(expr);
+        }
     }
 
     parse_expr(&format!("($event) => {{ {} }}", trimmed), "v-on-handler-inline-statements.tsx")
@@ -341,5 +343,201 @@ pub fn transform_opening(opening: &mut JSXOpeningElement) {
 
         attr.value = Some(handler_to_attr_value(handler_expr));
         attr.name = JSXAttrName::Ident(emit::ident(next_name.as_str()).into());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use swc_core::ecma::ast::{ExprStmt, Module, ModuleItem, Program, Stmt};
+    use swc_core::ecma::codegen::{Emitter, text_writer::JsWriter};
+    use swc_ecma_parser::{Parser, StringInput, Syntax, TsSyntax};
+
+    fn parse_ts_expr(src: &str) -> Expr {
+        let cm = Arc::new(SourceMap::default());
+        let fm = cm.new_source_file(
+            FileName::Custom("on-directive-test.ts".into()).into(),
+            src.to_string(),
+        );
+        let mut parser = Parser::new(
+            Syntax::Typescript(TsSyntax { tsx: false, ..Default::default() }),
+            StringInput::from(&*fm),
+            None,
+        );
+        *parser.parse_expr().expect("parse typescript expr")
+    }
+
+    fn parse_jsx_opening(src: &str) -> JSXOpeningElement {
+        let cm = Arc::new(SourceMap::default());
+        let fm = cm.new_source_file(
+            FileName::Custom("on-directive-test.tsx".into()).into(),
+            src.to_string(),
+        );
+        let mut parser = Parser::new(
+            Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
+            StringInput::from(&*fm),
+            None,
+        );
+        match *parser.parse_expr().expect("parse jsx expr") {
+            Expr::JSXElement(el) => el.opening,
+            other => panic!("expected JSXElement, got {other:?}"),
+        }
+    }
+
+    fn emit_expr(expr: Expr) -> String {
+        let cm = Arc::new(SourceMap::default());
+        let module = Module {
+            span: DUMMY_SP,
+            body: vec![ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                span: DUMMY_SP,
+                expr: Box::new(expr),
+            }))],
+            shebang: None,
+        };
+        let mut buf = Vec::new();
+        let mut emitter = Emitter {
+            cfg: Default::default(),
+            comments: None,
+            cm: cm.clone(),
+            wr: JsWriter::new(cm, "\n", &mut buf, None),
+        };
+        emitter.emit_program(&Program::Module(module)).expect("emit expr");
+        String::from_utf8(buf).expect("utf8")
+    }
+
+    fn normalize(src: &str) -> String {
+        let mut out = String::new();
+        let mut prev_space = false;
+        for ch in src.chars() {
+            if ch.is_whitespace() {
+                if !prev_space {
+                    out.push(' ');
+                    prev_space = true;
+                }
+            } else {
+                out.push(ch);
+                prev_space = false;
+            }
+        }
+        out.trim().to_string()
+    }
+
+    fn ident_attr<'a>(opening: &'a JSXOpeningElement, name: &str) -> &'a JSXAttr {
+        opening
+            .attrs
+            .iter()
+            .find_map(|attr| match attr {
+                JSXAttrOrSpread::JSXAttr(attr) => match &attr.name {
+                    JSXAttrName::Ident(ident) if ident.sym.as_ref() == name => Some(attr),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .expect("expected attr")
+    }
+
+    fn attr_expr(attr: &JSXAttr) -> &Expr {
+        match attr.value.as_ref().expect("attr value") {
+            JSXAttrValue::JSXExprContainer(container) => match &container.expr {
+                JSXExpr::Expr(expr) => expr.as_ref(),
+                _ => panic!("expected expr attr"),
+            },
+            other => panic!("expected expr container, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn normalizes_event_names_and_safe_directive_markers() {
+        assert_eq!(normalize_event_suffix("__mouse_down"), Some("MouseDown".to_string()));
+        assert_eq!(normalize_event_suffix("..."), None);
+
+        assert_eq!(normalize_modifier("__Prevent"), Some("prevent".to_string()));
+        assert!(is_modifier_token("once"));
+        assert!(is_modifier_token("12"));
+        assert!(!is_modifier_token("custom"));
+
+        assert_eq!(
+            parse_namespaced_directive_name("click.prevent.stop"),
+            Some(("onClick".to_string(), vec!["prevent".to_string(), "stop".to_string()])),
+        );
+        assert_eq!(
+            parse_namespaced_directive_name("click-meta-exact"),
+            Some(("onClick".to_string(), vec!["meta".to_string(), "exact".to_string()])),
+        );
+        assert_eq!(
+            parse_namespaced_directive_name("mouse_down"),
+            Some(("onMouseDown".to_string(), Vec::new())),
+        );
+        assert_eq!(
+            parse_safe_directive_name("__rue_on__mouse_down__mods__native__once"),
+            Some(("onMouseDown".to_string(), vec!["native".to_string(), "once".to_string()],)),
+        );
+    }
+
+    #[test]
+    fn parses_inline_handlers_and_wraps_handler_shapes() {
+        let empty = parse_inline_handler_source("").expect("empty handler");
+        assert_eq!(normalize(&emit_expr(empty)), normalize("($event)=>{};"));
+
+        let inline_statements =
+            parse_inline_handler_source("count++; log($event)").expect("inline statements");
+        let emitted_inline = normalize(&emit_expr(inline_statements));
+        assert!(emitted_inline.contains(&normalize("($event)=>{")));
+        assert!(emitted_inline.contains(&normalize("count++;")));
+        assert!(emitted_inline.contains(&normalize("log($event)")));
+
+        let method_handler = build_handler_expr(parse_ts_expr("actions.submit"));
+        assert_eq!(
+            normalize(&emit_expr(method_handler)),
+            normalize("($event)=>actions.submit($event);"),
+        );
+
+        let call_handler = build_handler_expr(parse_ts_expr("submit()"));
+        assert_eq!(normalize(&emit_expr(call_handler)), normalize("($event)=>submit();"));
+
+        let literal_handler = build_handler_expr(parse_ts_expr("($event) => submit($event)"));
+        assert_eq!(normalize(&emit_expr(literal_handler)), normalize("($event)=>submit($event);"),);
+    }
+
+    #[test]
+    fn rewrites_standard_native_and_safe_event_directives() {
+        let mut dom_opening = parse_jsx_opening("<div v-on:click-stop-prevent=\"submit\" />");
+        transform_opening(&mut dom_opening);
+
+        let dom_attr = ident_attr(&dom_opening, "onClick");
+        let dom_expr = normalize(&emit_expr(attr_expr(dom_attr).clone()));
+        assert!(dom_expr.contains("_$vaporWithEventModifiers"));
+        assert!(dom_expr.contains(&normalize("submit($event)")));
+        assert!(dom_expr.contains(&normalize("\"stop\"")));
+        assert!(dom_expr.contains(&normalize("\"prevent\"")));
+
+        let mut component_opening =
+            parse_jsx_opening("<Card r-on:click-native-once={handleClick} />");
+        transform_opening(&mut component_opening);
+
+        let component_attr = ident_attr(&component_opening, "__rueNativeOnClick");
+        let component_expr = normalize(&emit_expr(attr_expr(component_attr).clone()));
+        assert!(component_expr.contains("_$vaporWithEventModifiers"));
+        assert!(component_expr.contains(&normalize("handleClick($event)")));
+        assert!(component_expr.contains(&normalize("\"once\"")));
+        assert!(!component_expr.contains(&normalize("\"native\"")));
+
+        let mut safe_opening = parse_jsx_opening("<div __rue_on__keyup__mods__enter />");
+        transform_opening(&mut safe_opening);
+
+        let safe_attr = ident_attr(&safe_opening, "onKeyup");
+        let safe_expr = normalize(&emit_expr(attr_expr(safe_attr).clone()));
+        assert!(safe_expr.contains("_$vaporWithEventModifiers"));
+        assert!(safe_expr.contains(&normalize("($event)=>{}")));
+        assert!(safe_expr.contains(&normalize("\"enter\"")));
+    }
+
+    #[test]
+    fn leaves_non_directive_attrs_unchanged() {
+        let mut opening = parse_jsx_opening("<div onClick={handleClick} />");
+        transform_opening(&mut opening);
+
+        let attr = ident_attr(&opening, "onClick");
+        assert_eq!(normalize(&emit_expr(attr_expr(attr).clone())), normalize("handleClick;"));
     }
 }

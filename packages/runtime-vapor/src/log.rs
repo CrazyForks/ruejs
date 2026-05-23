@@ -19,7 +19,7 @@ Rust 结构与 wasm 选择：
 // 通过 localStorage 键控制：
 // - `rue.logs.enabled`：是否启用日志（true/false/1/0 等）
 // - `rue.logs.level`：最低输出级别（debug/info/notice/warning/error/critical/alert/emergency）
-// - `rue.logs.verboseDebug`：是否重新启用默认静音的高频内部 debug 日志
+// - `rue.logs.verboseDebug`：是否放开普通 debug 日志；对高频内部生命周期日志仍需配合 include 精确点名
 // 支持包含/排除关键字过滤，并可选择是否输出到控制台。
 use js_sys::Reflect;
 use wasm_bindgen::JsValue;
@@ -32,7 +32,7 @@ thread_local! {
     static LOG_CONSOLE: std::cell::RefCell<bool> = std::cell::RefCell::new(true);
     // 最低输出级别（数字越大级别越高）；默认 0=debug
     static LOG_LEVEL: std::cell::RefCell<u8> = std::cell::RefCell::new(0);
-    // 是否输出高频内部 debug 日志；默认关闭，避免 effect/scope 生命周期刷屏
+    // 是否输出普通 debug 日志；高频内部生命周期日志仍需 include 精确点名
     static LOG_VERBOSE_DEBUG: std::cell::RefCell<bool> = std::cell::RefCell::new(false);
     // 包含过滤：若非空，则仅当消息包含任一关键字时才输出
     static LOG_INCLUDE: std::cell::RefCell<Vec<String>> = std::cell::RefCell::new(Vec::new());
@@ -176,12 +176,7 @@ fn should_log(level: u8, msg: &str) -> bool {
             return false;
         }
     }
-    let verbose_debug = LOG_VERBOSE_DEBUG.with(|v| *v.borrow());
-    if level == level_to_num("debug")
-        && !verbose_debug
-        && !include_match
-        && is_noisy_debug_message(msg)
-    {
+    if level == level_to_num("debug") && !include_match && is_noisy_debug_message(msg) {
         return false;
     }
     let excludes = LOG_EXCLUDE.with(|f| f.borrow().clone());

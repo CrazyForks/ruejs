@@ -1,7 +1,9 @@
 use super::super::types::{MountInput, MountedPatchSubtree, MountedSubtreeState};
 use super::super::{ComponentInternalInstance, Rue};
 use crate::hook::reactive::props_reactive_js;
-use crate::reactive::context::set_current_instance_ci;
+use crate::reactive::context::{
+    CONTEXT_OWNER_PARENT_PROP, CONTEXT_PARENT_INSTANCE_PROP, set_current_instance_ci,
+};
 use crate::reactive::core::{pop_effect_scope, push_effect_scope};
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::shared_runtime_bridge;
@@ -69,6 +71,7 @@ where
     let mounted_subtree = if let Some(sub_input) =
         rue.component_return_value_to_input(&ret, input.strict_component_returns)
     {
+        crate::set_current_instance(host.clone().into());
         rue.mount_from_input(&sub_input, parent_context)
     } else if ret.is_object() {
         #[cfg(feature = "compat")]
@@ -141,10 +144,13 @@ fn prepare_instance_from_input<A: DomAdapter>(
 where
     A::Element: From<JsValue> + Into<JsValue> + Clone,
 {
+    let parent_instance = crate::get_current_instance();
     let props_ro = shared_runtime_bridge::props_reactive(&props_js)
         .unwrap_or_else(|| props_reactive_js(props_js.clone(), Some(true)));
     let host = Object::new();
     let _ = Reflect::set(&host, &JsValue::from_str("propsRO"), &props_ro);
+    let _ = Reflect::set(&host, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP), &parent_instance);
+    let _ = Reflect::set(&host, &JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP), &parent_instance);
     super::helpers::reset_hook_index(&host);
 
     let idx = rue.instance_store.len();

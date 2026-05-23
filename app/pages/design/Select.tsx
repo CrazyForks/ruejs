@@ -563,11 +563,6 @@ const SelectPage: FC = () => {
           数据源、fieldNames、allowClear、status、variant、语义回调与前后缀 shell 等更接近业务开发的
           API。
         </p>
-        <div className="flex flex-wrap gap-4 text-sm">
-          <a href="https://daisyui.com/components/select/" target="_blank">
-            查看 Select 静态样式
-          </a>
-        </div>
 
         <div className="not-prose mt-8 space-y-2">
           <h2 className="text-2xl font-semibold">基础能力</h2>

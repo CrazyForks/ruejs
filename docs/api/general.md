@@ -1,10 +1,16 @@
 # 全局 API：通用 {#global-api-general}
 
-## version {#version} @todo
+## version {#version}
 
 暴露当前版本的 Rue。
 
 - **类型：** `string`
+
+- **详情**
+
+  `version` 是一个在构建时注入的只读字符串。在已发布产物中，它通常与当前安装的 `@rue-js/rue` 版本一致。
+
+  这个值适合用于日志、调试面板、错误上报或问题排查时输出运行时框架版本。它表示的是 Rue 自身版本，不代表你的应用版本，也不会随着响应式更新发生变化。
 
 - **示例**
 
@@ -14,73 +20,64 @@
   console.log(version)
   ```
 
-## nextTick() {#nexttick} @todo
+## nextTick() {#nexttick}
 
-等待下一次 DOM 更新刷新的工具。
+等待当前已排队的默认响应式 flush 完成。
 
 - **类型**
 
   ```ts
-  function nextTick(callback?: () => void): Promise<void>
+  function nextTick(): Promise<void>
+  function nextTick<T>(callback: () => T | Promise<T>): Promise<T>
   ```
 
 - **详情**
 
-  当你在 Vue 中更改响应式状态时，产生的 DOM 更新不会同步应用。相反，Vue 会将它们缓冲到"下一 tick"，以确保每个组件只更新一次，无论你做了多少状态更改。
+  当你修改响应式状态时，Rue 不会在同一同步调用栈里立刻更新 DOM。相反，默认调度的更新会被合并到当前这一轮 flush 中，以避免重复渲染。
 
-  `nextTick()` 可以在状态更改后立即使用，以等待 DOM 更新完成。你可以传递一个回调作为参数，或等待返回的 Promise。
+  `nextTick()` 适合放在状态变更之后，用来等待这轮 flush 完成，再去读取更新后的 DOM，或继续执行依赖最新视图状态的逻辑。
+
+  同一轮里多次调用 `nextTick()` 会共享同一个等待中的 Promise。如果当前没有待处理的默认响应式 flush，`nextTick()` 会退化为一个已 resolve 的 Promise，因此也可以安全地用来串联后续步骤。
+
+  `nextTick()` 等待的是 Rue 默认调度的响应式 flush，而不是网络请求、图片加载或自定义 scheduler 安排的异步任务。
 
 - **示例**
 
-  <div class="composition-api">
+  ```tsx
+  import { type FC, nextTick, ref, useRef } from '@rue-js/rue'
 
-  ```js
-  import { ref, nextTick } from '@rue-js/rue'
+  const NextTickDemo: FC = () => {
+    const count = ref(0)
+    const beforeDomText = ref('尚未读取')
+    const afterDomText = ref('尚未读取')
+    const counterRef = useRef<HTMLSpanElement>()
 
-  const count = ref(0)
+    const inspectUpdate = async () => {
+      count.value += 1
 
-  async function increment() {
-    count.value++
+      beforeDomText.value = counterRef.current?.textContent ?? '(missing)'
+      await nextTick()
+      afterDomText.value = counterRef.current?.textContent ?? '(missing)'
+    }
 
-    // DOM 尚未更新
-    console.log(document.getElementById('counter').textContent) // 0
-
-    await nextTick()
-    // DOM 现在已更新
-    console.log(document.getElementById('counter').textContent) // 1
+    return (
+      <div className="card bg-base-100 shadow">
+        <div className="card-body gap-4">
+          <p>
+            当前 DOM：<span ref={counterRef}>{count.value}</span>
+          </p>
+          <button className="btn btn-primary" onClick={() => void inspectUpdate()}>
+            自增并读取 DOM
+          </button>
+          <p>同步读取：{beforeDomText.value}</p>
+          <p>nextTick 后：{afterDomText.value}</p>
+        </div>
+      </div>
+    )
   }
   ```
 
-  </div>
-  <div class="options-api">
-
-  ```js
-  import { nextTick } from '@rue-js/rue'
-
-  export default {
-    data() {
-      return {
-        count: 0,
-      }
-    },
-    methods: {
-      async increment() {
-        this.count++
-
-        // DOM 尚未更新
-        console.log(document.getElementById('counter').textContent) // 0
-
-        await nextTick()
-        // DOM 现在已更新
-        console.log(document.getElementById('counter').textContent) // 1
-      },
-    },
-  }
-  ```
-
-  </div>
-
-- **另请参阅** [`this.$nextTick()`](@todo)
+  交互式示例：[/examples/next-tick](/examples/next-tick)
 
 ## useComponent() {#usecomponent}
 

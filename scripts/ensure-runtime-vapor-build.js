@@ -5,6 +5,41 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
+const runtimeVaporDir = path.resolve(rootDir, 'packages/runtime-vapor')
+
+const buildInputs = [
+  path.resolve(runtimeVaporDir, 'Cargo.toml'),
+  path.resolve(runtimeVaporDir, 'Cargo.lock'),
+  path.resolve(runtimeVaporDir, 'package.json'),
+  path.resolve(runtimeVaporDir, 'src'),
+  path.resolve(runtimeVaporDir, 'scripts/run-wasm-pack.mjs'),
+]
+
+const getLatestModifiedTime = targetPath => {
+  if (!fs.existsSync(targetPath)) {
+    return 0
+  }
+
+  const stat = fs.statSync(targetPath)
+  if (!stat.isDirectory()) {
+    return stat.mtimeMs
+  }
+
+  let latestModifiedTime = stat.mtimeMs
+  for (const entry of fs.readdirSync(targetPath, { withFileTypes: true })) {
+    latestModifiedTime = Math.max(
+      latestModifiedTime,
+      getLatestModifiedTime(path.join(targetPath, entry.name)),
+    )
+  }
+
+  return latestModifiedTime
+}
+
+const latestInputModifiedTime = buildInputs.reduce(
+  (latest, targetPath) => Math.max(latest, getLatestModifiedTime(targetPath)),
+  0,
+)
 
 const requiredArtifacts = [
   {
@@ -33,11 +68,18 @@ const requiredArtifacts = [
 ]
 
 for (const artifact of requiredArtifacts) {
-  if (fs.existsSync(artifact.filePath)) {
+  const artifactExists = fs.existsSync(artifact.filePath)
+  const artifactModifiedTime = artifactExists ? fs.statSync(artifact.filePath).mtimeMs : 0
+  const artifactIsStale = artifactExists && artifactModifiedTime < latestInputModifiedTime
+
+  if (artifactExists && !artifactIsStale) {
     continue
   }
 
-  console.log(`Building @rue-js/runtime-vapor ${artifact.label}...`)
+  const actionLabel = artifactExists ? 'Rebuilding' : 'Building'
+  const reasonLabel = artifactExists ? 'sources are newer than the artifact' : 'artifact missing'
+
+  console.log(`${actionLabel} @rue-js/runtime-vapor ${artifact.label} because ${reasonLabel}...`)
 
   const result = spawnSync('pnpm', artifact.command, {
     cwd: rootDir,

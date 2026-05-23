@@ -5,7 +5,11 @@ import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,
   type CustomElementEmitBridge,
 } from './custom-elements.shared'
-import { withParentContextProps } from './context'
+import {
+  copyContextProviderPropsMarker,
+  isContextProviderProps,
+  withParentContextProps,
+} from './context'
 import { getDOMAdapter, getParentNode } from './dom'
 import type { DomElementLike, DomNodeLike } from './dom'
 import { mountNormalizedRenderableToTarget, type DirectRenderableOwner } from './renderable-bridge'
@@ -155,8 +159,17 @@ const replayMountAwareValue = (value: unknown): unknown => {
   }
 
   let changed = false
+  // vapor runtime 和默认 runtime 共享同一套 context 约束：
+  // Provider 的 value 必须保持引用稳定，parent-instance 也不能被递归 replay。
+  // 两边只要有一边漏掉这个特判，context 在某些入口下就会重新出现“交互失活 / 切换卡顿”的分叉行为。
+  const shouldKeepValueProp = isContextProviderProps(value)
   const nextEntries = Object.entries(value).map(([key, entryValue]) => {
-    const replayed = replayMountAwareValue(entryValue)
+    const replayed =
+      shouldKeepValueProp && key === 'value'
+        ? entryValue
+        : key === '__rue_context_parent_instance__'
+          ? entryValue
+          : replayMountAwareValue(entryValue)
     if (replayed !== entryValue) changed = true
     return [key, replayed] as const
   })
@@ -169,6 +182,7 @@ const replayMountAwareValue = (value: unknown): unknown => {
   nextEntries.forEach(([key, entryValue]) => {
     clone[key] = entryValue
   })
+  copyContextProviderPropsMarker(value, clone)
   return clone
 }
 

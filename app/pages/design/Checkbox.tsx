@@ -649,11 +649,6 @@ const CheckboxPage: FC = () => {
         <p className="mt-3 mb-3 text-sm">
           Checkbox 用于从多个候选项中选择零个、一个或多个值，也适合表达“确认某项设置”的状态。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/checkbox/" target="_blank">
-            查看 Checkbox 静态样式
-          </a>
-        </div>
 
         <div className="alert alert-soft mt-6 text-sm">
           <span>

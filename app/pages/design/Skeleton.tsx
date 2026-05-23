@@ -606,12 +606,6 @@ const SkeletonPage: FC = () => {
           成熟业务骨架屏的组合 API、元素级用法和更细的语义定制入口。
         </p>
 
-        <div className="flex flex-wrap gap-4 text-sm">
-          <a href="https://daisyui.com/components/skeleton/" target="_blank">
-            查看 Skeleton 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>接口返回前需要先锁定卡片、列表、详情页等最终布局。</li>

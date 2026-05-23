@@ -469,11 +469,6 @@ const ToastPage: FC = () => {
           <code>getContainer=&#123;false&#125;</code> 时才会留在当前 box 里，同时仍然保留 Rue
           自己更轻、更靠近页面内容的视觉语气。
         </p>
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/toast/" target="_blank">
-            查看 Toast 静态样式
-          </a>
-        </div>
 
         <h2>何时使用</h2>
         <ul>

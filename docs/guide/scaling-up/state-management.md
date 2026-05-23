@@ -29,16 +29,14 @@ export const Counter: FC = () => {
 
 这是"单向数据流"概念的简单表示：
 
-<p style="text-align: center">
-  <img alt="状态流图" src="./images/state-flow.png" width="252px" style="margin: 40px auto">
-</p>
+状态驱动视图，视图响应用户输入触发动作，而动作再反过来修改状态。
 
 然而，当我们有**多个组件共享一个公共状态**时，这种简单性开始瓦解：
 
 1. 多个视图可能依赖于同一部分状态。
 2. 来自不同视图的动作可能需要改变同一部分状态。
 
-对于情况一，一个可能的变通方法是将共享状态"提升"到共同的祖先组件，然后作为 props 向下传递。然而，这在具有深层层次的组件树中很快就会变得繁琐，导致另一个被称为 [Prop Drilling](/guide/guide/components/provide-inject#prop-drilling) 的问题。
+对于情况一，一个可能的变通方法是将共享状态"提升"到共同的祖先组件，然后作为 props 向下传递。然而，这在具有深层层次的组件树中很快就会变得繁琐，导致另一个被称为 [Prop Drilling](/guide/guide/components/create-context#why-context) 的问题。
 
 对于情况二，我们经常发现自己求助于诸如通过模板 refs 直接访问父/子实例，或尝试通过触发的事件来改变和同步多个状态副本等解决方案。这两种模式都很脆弱，很快会导致无法维护的代码。
 

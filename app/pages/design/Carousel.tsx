@@ -554,11 +554,6 @@ const CarouselDemo: FC = () => {
           的滚动式视觉布局，保留多宽度、垂直、full-bleed 这些旧 demo；另一类补齐了成熟轮播组件常见的
           arrows、dots、fade、dotPlacement 与方法控制。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/carousel/" target="_blank" rel="noreferrer">
-            查看 daisyUI Carousel 静态样式
-          </a>
-        </div>
 
         <div className="not-prose my-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4">

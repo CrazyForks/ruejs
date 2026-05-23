@@ -214,7 +214,7 @@ const book: Book = reactive({ title: 'Rue 3 Guide' })
 ```
 
 :::tip
-不建议给 `reactive()` 直接传泛型参数，因为返回值在处理嵌套 ref 解包时，与传入的原始类型并不完全相同。
+不建议给 `reactive()` 直接传泛型参数。Rue 的 `reactive()` 会保留对象结构本身，并叠加代理行为；直接写泛型往往会让类型看起来比真实运行时更“理想化”，尤其是在对象里混合 `ref()`、普通值和嵌套对象时。
 :::
 
 ## 为 `computed()` 添加类型 {#typing-computed}
@@ -259,43 +259,30 @@ const SearchBox = () => <input type="text" onChange={handleChange} />
 
 如果没有类型注解，在开启 `"strict": true` 或 `"noImplicitAny": true` 时，你通常会得到隐式 `any` 的报错。访问 `target`、`currentTarget` 这类 DOM 属性时，也经常需要显式断言到具体元素类型。
 
-## 为 Provide / Inject 添加类型 {#typing-provide-inject}
+## 为 Context 添加类型 {#typing-provide-inject}
 
-Provide 和 inject 往往发生在不同组件里。为了让提供者和消费者共享同一个类型约束，Rue 提供了 `InjectionKey`：
-
-```ts
-import { provide, inject } from '@rue-js/rue'
-import type { InjectionKey } from '@rue-js/rue'
-
-const key = Symbol() as InjectionKey<string>
-
-provide(key, 'foo')
-
-const foo = inject(key)
-// foo 的类型: string | undefined
-```
-
-建议把注入 key 单独放到一个文件里复用。
-
-如果你使用字符串 key，需要手动补上泛型参数：
+Rue 的 Context 类型通常直接来自 `createContext()` 的默认值。建议先声明上下文值类型，再把 Context 放到独立模块里导出，这样 Provider 和 `useContext()` 会共享同一套类型约束。
 
 ```ts
-const foo = inject<string>('foo')
-// 类型: string | undefined
+import { createContext, useContext } from '@rue-js/rue'
+
+type AuthContextValue = {
+  userId: string | null
+  login: (userId: string) => void
+}
+
+export const AuthContext = createContext<AuthContextValue>({
+  userId: null,
+  login: () => {},
+})
+
+const auth = useContext(AuthContext)
+// auth 的类型: AuthContextValue
 ```
 
-如果你提供了默认值，返回类型中的 `undefined` 会被移除：
+如果默认值里的字面量会把类型收得太窄，可以显式为 `createContext<T>()` 传入泛型参数。
 
-```ts
-const foo = inject<string>('foo', 'bar')
-// 类型: string
-```
-
-如果你非常确定这个值一定会被提供，也可以显式断言：
-
-```ts
-const foo = inject('foo') as string
-```
+与基于键的注入不同，Rue 的 `useContext()` 不会额外返回 `undefined`；当没有匹配的 Provider 时，它会回退到 `createContext()` 声明时的默认值。因此默认值应尽量保持完整，并为占位函数提供符合签名的空实现。
 
 ## 为模板 Refs 添加类型 {#typing-template-refs}
 
@@ -340,35 +327,3 @@ const Parent: FC = () => {
 ```
 
 当你手里已经有更精确的公开实例类型时，可以把 `ComponentPublicInstance` 换成那个具体类型；如果组件只需要作为一个可拿到实例的边界使用，公共实例类型通常已经足够。
-
-## 为全局自定义指令添加类型 {#typing-global-custom-directives}
-
-在 JSX / TSX 项目里，很多原本会写成“自定义指令”的 DOM 行为，更适合直接封装成 hook、ref 或回调逻辑。不过如果你仍然通过 `app.directive()` 注册全局指令，仍然可以扩展 `ComponentCustomProperties` 来获得类型提示：
-
-```ts
-import type { Directive } from '@rue-js/rue'
-
-export type HighlightDirective = Directive<HTMLElement, string>
-
-declare module '@rue-js/rue' {
-  export interface ComponentCustomProperties {
-    vHighlight: HighlightDirective
-  }
-}
-
-export default {
-  mounted: (el, binding) => {
-    el.style.backgroundColor = binding.value
-  },
-} satisfies HighlightDirective
-```
-
-注册方式保持不变：
-
-```ts
-import { createApp } from '@rue-js/rue'
-import highlight from './directives/highlight'
-
-const app = createApp(App)
-app.directive('highlight', highlight)
-```

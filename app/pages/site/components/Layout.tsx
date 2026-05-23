@@ -1,10 +1,54 @@
 import { type FC, useState, watch } from '@rue-js/rue'
 import { RouterLink } from '@rue-js/router'
 
+const DEFAULT_THEME = 'luxury'
+
+const themes = [
+  'light',
+  'dark',
+  'cupcake',
+  'bumblebee',
+  'emerald',
+  'corporate',
+  'synthwave',
+  'retro',
+  'cyberpunk',
+  'valentine',
+  'halloween',
+  'garden',
+  'forest',
+  'aqua',
+  'lofi',
+  'pastel',
+  'fantasy',
+  'wireframe',
+  'black',
+  'luxury',
+  'dracula',
+  'cmyk',
+  'autumn',
+  'business',
+  'acid',
+  'lemonade',
+  'night',
+  'coffee',
+  'winter',
+  'dim',
+  'nord',
+  'sunset',
+] as const
+
+const resolveTheme = (value: string | null) => {
+  if (value && themes.includes(value as (typeof themes)[number])) {
+    return value
+  }
+
+  return DEFAULT_THEME
+}
+
 const ThemePicker: FC = () => {
   const [theme, setTheme] = useState<string>(() => {
-    const saved = localStorage.getItem('rue.theme')
-    return saved || 'light'
+    return resolveTheme(localStorage.getItem('rue.theme'))
   })
 
   const syncTheme = () => {
@@ -13,41 +57,6 @@ const ThemePicker: FC = () => {
   }
 
   watch(() => theme.value, syncTheme, { immediate: true })
-
-  const themes = [
-    'light',
-    'dark',
-    'cupcake',
-    'bumblebee',
-    'emerald',
-    'corporate',
-    'synthwave',
-    'retro',
-    'cyberpunk',
-    'valentine',
-    'halloween',
-    'garden',
-    'forest',
-    'aqua',
-    'lofi',
-    'pastel',
-    'fantasy',
-    'wireframe',
-    'black',
-    'luxury',
-    'dracula',
-    'cmyk',
-    'autumn',
-    'business',
-    'acid',
-    'lemonade',
-    'night',
-    'coffee',
-    'winter',
-    'dim',
-    'nord',
-    'sunset',
-  ]
 
   const labels: Record<string, string> = {
     light: '亮色',
@@ -89,7 +98,12 @@ const ThemePicker: FC = () => {
         aria-label="切换主题"
         className="select select-bordered select-sm bg-transparent"
         value={theme.value}
-        onChange={(e: Event) => setTheme((e.currentTarget as HTMLSelectElement).value)}
+        onChange={(e: Event) => {
+          const nextTheme = resolveTheme((e.currentTarget as HTMLSelectElement).value)
+          setTheme(nextTheme)
+          localStorage.setItem('rue.theme', nextTheme)
+          document.documentElement.setAttribute('data-theme', nextTheme)
+        }}
       >
         {themes.map(name => (
           <option key={name} value={name}>

@@ -1,6 +1,6 @@
 # Compat 策略与发布清单
 
-本页用于说明 Rue 当前对历史 compat / VNode-first 协议的最终策略，以及涉及这类 breaking removal 时的发布检查项。
+本页用于说明 Rue 当前对历史 compat / 旧桥接协议的最终策略，以及涉及这类 breaking removal 时的发布检查项。
 
 ## 当前策略
 
@@ -24,13 +24,13 @@ Rue 默认渲染路径已经完全围绕 Block / Vapor / Renderable-first 组织
 旧代码需要直接改写为默认路径能力，而不是继续寻找新的 compat 导入点：
 
 1. 默认内容优先使用 `children`、render prop、callback props。
-2. 直接返回 raw node / fragment / mount handle，而不是继续手写 VNode-like 对象。
+2. 直接返回 raw node / fragment / mount handle，而不是继续手写旧桥接对象。
 3. 使用默认 `render`、`renderBetween`、`renderAnchor`、`renderStatic`，不要再包一层 compat render helper。
 4. 组件库内部若仍有历史桥接层，应在本轮升级中一并删除，而不是继续向应用层暴露兼容协议。
 
 ## 发布清单
 
-当一次改动涉及历史 compat / VNode-first helper 的删除时，发布前至少检查下面这些项：
+当一次改动涉及历史 compat / 旧桥接 helper 的删除时，发布前至少检查下面这些项：
 
 1. package exports、dist 与 d.ts 产物里已不存在 compat 子路径。
 2. 默认主入口不再暴露 compat-only helper，也不再暗示存在替代 compat 导入。
@@ -42,7 +42,7 @@ Rue 默认渲染路径已经完全围绕 Block / Vapor / Renderable-first 组织
 
 如果你维护的是组件库、指令库或预编译产物，请优先遵循以下策略：
 
-1. 不要再依赖 compat 子路径或 VNode-first helper。
+1. 不要再依赖 compat 子路径或历史桥接 helper。
 2. 在 peer 依赖中声明最低运行时版本，避免旧运行时消费新产物时出现隐式不兼容。
 3. 尽量把新代码迁到 `props.children`、render prop、显式命名 props 等默认路径。
 
@@ -50,4 +50,4 @@ Rue 默认渲染路径已经完全围绕 Block / Vapor / Renderable-first 组织
 
 - compat 子路径已移除。
 - 默认主入口继续保持 Renderable-first。
-- 新代码不应继续依赖 VNode-first helper 或显式 compat bridge。
+- 新代码不应继续依赖历史桥接 helper 或显式 compat 层。

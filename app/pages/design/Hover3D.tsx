@@ -273,11 +273,6 @@ const Hover3DDemo: FC = () => {
           Hover 3D 负责把第一层内容面板变成一个会随着鼠标位置倾斜的 3D surface。现在除了保留原有的 8
           个命中区，也补齐了链接语义、surface wrapper 与根节点属性透传。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/hover-3d/" target="_blank">
-            查看 Hover 3D 静态样式
-          </a>
-        </div>
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-sm">

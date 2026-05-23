@@ -165,3 +165,7 @@ pub fn emit_element_children(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "element_children_tests.rs"]
+mod tests;

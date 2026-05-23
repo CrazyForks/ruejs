@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import VitePluginRue from '../index.mjs'
 
-const createPlugin = () => VitePluginRue({ include: ['/packages/rue-design/src/components/'] })
+const createPlugin = () => VitePluginRue()
 
 const invokeTransform = async (source: string, id: string) => {
   const plugin = createPlugin()
@@ -55,33 +55,24 @@ const notificationLikeSource = `
 `
 
 describe('vite-plugin-rue rue-design transform header guard', () => {
-  it('recompiles headerless rue-design component sources into the freeze-prone vapor path', async () => {
+  it('skips the path-guarded rue-design component sources even without the legacy transform header', async () => {
     const result = await invokeTransform(
       notificationLikeSource,
-      '/Users/dyhb/code/rue/packages/rue-design/src/components/demo/index.tsx',
+      '/Users/dyhb/code/rue/packages/rue-design/src/components/time-picker/index.tsx',
+    )
+
+    expect(result).toBeNull()
+  })
+
+  it('still transforms headerless rue-design component sources outside the path-guarded migration set', async () => {
+    const result = await invokeTransform(
+      notificationLikeSource,
+      '/Users/dyhb/code/rue/packages/rue-design/src/components/anchor/index.tsx',
     )
 
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain(
-      'const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{',
-    )
-    expect(code).toContain('const componentProps = _$vaporWithHookId("computed:')
-    expect(code).toContain('...__rue_props.props ?? {},')
-    expect(code).toContain('delete __rue_phase2_componentProps.get().onClick;')
-    expect(code).toContain(
-      "__rue_phase2_componentProps.get().role = __rue_phase2_componentProps.get().role ?? 'status';",
-    )
-  })
-
-  it('skips rue-design component sources that already declare the transform header', async () => {
-    const result = await invokeTransform(
-      `${HEADER}\n${notificationLikeSource}`,
-      '/Users/dyhb/code/rue/packages/rue-design/src/components/demo/index.tsx',
-    )
-
-    expect(result).toBeNull()
   })
 })

@@ -301,11 +301,6 @@ const StepsPage: FC = () => {
           <code>onChange</code>，以及单步级别的 <code>title</code>、<code>description</code>、
           <code>subTitle</code> 和 <code>icon</code>。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/steps/" target="_blank">
-            查看 Steps 静态样式基底
-          </a>
-        </div>
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">

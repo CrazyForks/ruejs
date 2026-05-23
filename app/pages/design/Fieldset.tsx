@@ -239,12 +239,6 @@ const FieldsetPage: FC = () => {
           <code>Fieldset.Item</code>。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/fieldset/" target="_blank">
-            查看 Fieldset 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要把一组相关输入控件组织成一个明确的表单区块。</li>

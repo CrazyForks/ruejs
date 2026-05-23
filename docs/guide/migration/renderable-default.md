@@ -7,7 +7,7 @@ Rue 当前默认的编译与运行时路径已经是 Block / Vapor / Renderable-
 下面这些场景需要显式检查：
 
 - 你从默认主入口导入过 `_$vaporCreateVNode`
-- 你手写过依赖 VNode 内部字段的渲染 helper
+- 你手写过依赖旧渲染输出内部字段的渲染 helper
 - 你分发的是预编译后的组件、指令或运行时桥接代码
 - 你在库内部手动拼接 children / slot 对象以模拟旧渲染路径
 
@@ -28,7 +28,7 @@ import { _$vaporCreateVNode as createCompatVNode } from '@rue-js/rue/compat'
 
 ## 推荐迁移方式
 
-### 1. 新代码不要继续扩 VNode-first 边界
+### 1. 新代码不要继续扩历史桥接边界
 
 新组件优先使用：
 
@@ -39,11 +39,11 @@ import { _$vaporCreateVNode as createCompatVNode } from '@rue-js/rue/compat'
 
 如果还存在历史 helper，请在升级时直接改写，不要继续保留 compat 壳层。
 
-### 2. 不要继续依赖 VNode 内部结构
+### 2. 不要继续依赖旧渲染输出内部结构
 
-历史文档里仍可能看到 `VNode` 这个词，但默认主入口的公开输入口径已经围绕 RenderableOutput 组织。请不要继续假设所有输出都具备稳定的 `type / props / children / patchFlag` 内部布局。
+历史文档里仍可能看到旧的公开对象术语，但默认主入口的公开输入口径已经围绕 RenderableOutput 组织。请不要继续假设所有输出都具备稳定的 `type / props / children / patchFlag` 内部布局。
 
-如果你仍在维护 VNode-like 对象，请把这层桥接改写为默认 Renderable / children / raw node 模式，而不是继续向业务组件透出旧结构。
+如果你仍在维护旧桥接对象，请把这层桥接改写为默认 Renderable / children / raw node 模式，而不是继续向业务组件透出旧结构。
 
 ### 3. 子内容优先建模成 children / render prop
 
@@ -85,6 +85,6 @@ import { _$vaporCreateVNode as createCompatVNode } from '@rue-js/rue/compat'
 完成迁移后，你的代码应尽量符合下面这些特征：
 
 - 新组件不再从默认主入口期待 compat-only helper
-- 业务组件不用感知 VNode 内部字段
+- 业务组件不用感知旧渲染输出内部字段
 - children / render prop / callback props 取代旧的手写 slot 对象桥接
 - 历史桥接文件已经完成重写，而不是继续保留 compat 壳层

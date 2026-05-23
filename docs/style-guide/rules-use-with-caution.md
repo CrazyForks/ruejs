@@ -166,7 +166,7 @@ defineProps({
 })
 </script>
 
-<template>
+<Template>
   <input v-model="todo.text" />
 </template>
 ```
@@ -194,7 +194,7 @@ function removeTodo() {
 }
 </script>
 
-<template>
+<Template>
   <span>
     {{ todo.text }}
     <button onClick="removeTodo">×</button>
@@ -219,7 +219,7 @@ defineProps({
 const emit = defineEmits(['input'])
 </script>
 
-<template>
+<Template>
   <input value="todo.text" onInput="emit('input', $event.target.value)" />
 </template>
 ```
@@ -236,7 +236,7 @@ defineProps({
 const emit = defineEmits(['delete'])
 </script>
 
-<template>
+<Template>
   <span>
     {{ todo.text }}
     <button onClick="emit('delete')">×</button>

@@ -2109,3 +2109,7 @@ fn block_has_use_setup(block: &BlockStmt) -> bool {
     }
     false
 }
+
+#[cfg(test)]
+#[path = "helpers_tests.rs"]
+mod tests;

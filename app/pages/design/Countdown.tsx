@@ -325,11 +325,6 @@ const CountdownDemo: FC = () => {
           现在既能继续使用 `Countdown.Value` / `items` 进行静态拼装，也能直接传入目标时间并通过
           `format`、`onChange`、`onFinish` 驱动完整倒计时。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/countdown/" target="_blank">
-            查看 Countdown 静态样式
-          </a>
-        </div>
 
         <ExampleBlock
           title="Target Time Countdown"

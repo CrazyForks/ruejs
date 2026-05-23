@@ -4,12 +4,15 @@ import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import Calendar from '../../../packages/rue-design/src/components/calendar'
 import Tabs from '../../../packages/rue-design/src/components/tabs'
+import BasicCalendarPreview from './calendar/BasicCalendarPreview'
+import {
+  CallyCalendarPreview,
+  CallyDatePickerPreview,
+  PikadayCalendarPreview,
+} from './calendar/LegacyCalendarPreviews'
 
 type TabMode = 'preview' | 'code'
 type DemoCalendarMode = 'month' | 'year'
-type CallyElement = HTMLElement & { value?: string }
-type PikadayInstance = { destroy?: () => void }
-type PikadayConstructor = new (options: Record<string, unknown>) => PikadayInstance
 type EventTone = 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'
 
 interface ApiRow {
@@ -28,35 +31,24 @@ interface ExampleBlockProps {
   title: string
   summary?: string
   tab: { value: TabMode }
-  preview: () => any
+  preview: any
   code: string
   lang?: string
+  shouldLoadPreview?: { value: boolean }
+  previewLoadNote?: string
 }
 
 interface PreviewStatusProps {
   ready: boolean
   readyLabel: string
   loadingLabel: string
-  error: string
-}
-
-interface PikadayPreviewProps {
-  note: string
-  testId: string
+  error?: string
 }
 
 interface CalendarEventItem {
   tone: EventTone
   label: string
 }
-
-interface CalendarExternalLoaders {
-  cally?: () => Promise<unknown>
-  pikaday?: () => Promise<unknown>
-}
-
-let callyReadyPromise: Promise<void> | null = null
-let pikadayCtorPromise: Promise<PikadayConstructor> | null = null
 
 const apiRows: ApiRow[] = [
   {
@@ -193,42 +185,6 @@ const eventToneClassName: Record<EventTone, string> = {
   error: 'badge-error',
 }
 
-const getCalendarExternalLoaders = () => {
-  return (globalThis as { __RUE_CALENDAR_EXTERNALS__?: CalendarExternalLoaders })
-    .__RUE_CALENDAR_EXTERNALS__
-}
-
-const ensureCally = async () => {
-  if (typeof window === 'undefined' || typeof customElements === 'undefined') {
-    return
-  }
-
-  if (!callyReadyPromise) {
-    callyReadyPromise = (async () => {
-      const loaders = getCalendarExternalLoaders()
-      if (!customElements.get('calendar-date')) {
-        await (loaders?.cally ? loaders.cally() : import('cally'))
-      }
-      if (customElements.get('calendar-date') && typeof customElements.whenDefined === 'function') {
-        await customElements.whenDefined('calendar-date')
-      }
-    })()
-  }
-
-  await callyReadyPromise
-}
-
-const ensurePikaday = async () => {
-  if (!pikadayCtorPromise) {
-    const loaders = getCalendarExternalLoaders()
-    pikadayCtorPromise = (loaders?.pikaday ? loaders.pikaday() : import('pikaday')).then(module => {
-      return ((module as any).default ?? module) as PikadayConstructor
-    })
-  }
-
-  return pikadayCtorPromise
-}
-
 const formatIsoDate = (date: Date) => {
   const year = date.getFullYear()
   const month = `${date.getMonth() + 1}`.padStart(2, '0')
@@ -242,8 +198,6 @@ const parseDate = (value: string) => {
   return date
 }
 
-const formatSelectedDate = (value: string, fallback = '未选择') => value || fallback
-const formatPickerLabel = (value: string) => value || 'Pick a date'
 const formatDateLabel = (value?: string | Date) => {
   if (!value) {
     return '未选择'
@@ -256,6 +210,16 @@ const formatPanelLabel = (date: Date, mode: DemoCalendarMode) => {
     return `${new Intl.DateTimeFormat('zh-CN', { year: 'numeric' }).format(date)} / 年视图`
   }
   return `${new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long' }).format(date)} / 月视图`
+}
+
+const basicCalendarValidRange: [Date, Date] = [parseDate('2026-04-01'), parseDate('2026-05-31')]
+
+const CalendarCally = Calendar.Cally
+const CalendarMonth = Calendar.Month
+const CalendarPikaSingle = Calendar.PikaSingle
+
+const isBasicCalendarDateDisabled = (date: Date) => {
+  return date.getDay() === 0 || date.getDay() === 6 || maintenanceDates.has(formatIsoDate(date))
 }
 
 const MetaItem: FC<{ label: string; value: string }> = ({ label, value }) => {
@@ -345,6 +309,8 @@ const ExampleBlock: FC<ExampleBlockProps> = ({
   preview,
   code,
   lang = 'tsx',
+  shouldLoadPreview,
+  previewLoadNote,
 }) => {
   return (
     <div className="component-preview not-prose my-6 text-base-content lg:my-12">
@@ -364,7 +330,18 @@ const ExampleBlock: FC<ExampleBlockProps> = ({
         onChange={key => (tab.value = key as TabMode)}
         className="mb-3 mt-4"
       />
-      {tab.value === 'preview' ? preview() : <Code className="mt-2" lang={lang} code={code} />}
+      {tab.value !== 'preview' ? (
+        <Code className="mt-2" lang={lang} code={code} />
+      ) : shouldLoadPreview && !shouldLoadPreview.value ? (
+        <div className="rounded-[1.5rem] border border-base-300 bg-base-100/80 p-5 shadow-sm">
+          <div className="badge badge-outline badge-sm">Preview</div>
+          <p className="mb-0 mt-3 text-sm text-base-content/72">
+            {previewLoadNote || '预览正在后台初始化，页面主体会先显示出来。'}
+          </p>
+        </div>
+      ) : (
+        preview
+      )}
     </div>
   )
 }
@@ -383,75 +360,17 @@ const HeroCard: FC<{ title: string; detail: string; badge: string }> = ({
   )
 }
 
-const BasicCalendarPreview: FC = () => {
-  const value = ref('2026-04-12')
-  const mode = ref<DemoCalendarMode>('month')
-  const selectedSource = ref('date')
-  const panelState = ref(formatPanelLabel(parseDate(value.value), 'month'))
-
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4">
-        <Calendar
-          data-testid="basic-calendar"
-          locale="zh-CN"
-          value={value.value}
-          mode={mode.value}
-          showWeek
-          validRange={[parseDate('2026-04-01'), parseDate('2026-05-31')]}
-          disabledDate={date =>
-            date.getDay() === 0 || date.getDay() === 6 || maintenanceDates.has(formatIsoDate(date))
-          }
-          onChange={date => {
-            value.value = formatIsoDate(date)
-          }}
-          onPanelChange={(date, nextMode) => {
-            mode.value = nextMode as DemoCalendarMode
-            panelState.value = formatPanelLabel(date, nextMode as DemoCalendarMode)
-          }}
-          onSelect={(date, info) => {
-            value.value = formatIsoDate(date)
-            selectedSource.value = info.source
-          }}
-        />
-
-        <div className="rounded-[1.5rem] border border-base-300 bg-base-100/85 p-4 shadow-sm">
-          <div className="badge badge-primary badge-soft">Core Panel</div>
-          <h3 className="mt-3 mb-1 text-base font-semibold">排班窗口</h3>
-          <p className="m-0 text-sm text-base-content/70">
-            同时演示受控 value、validRange、disabledDate、showWeek、onSelect 与 onPanelChange。
-          </p>
-          <div className="mt-4 space-y-3">
-            <MetaItem label="当前值" value={formatDateLabel(value.value)} />
-            <MetaItem label="选择来源" value={selectedSource.value} />
-            <MetaItem label="面板状态" value={panelState.value} />
-            <MetaItem label="禁用规则" value="周末 + 4/4、4/5、5/1" />
-          </div>
-        </div>
-      </div>
-      <p className="m-0 text-xs text-base-content/70">
-        日期范围被限制在 2026 年 4 至 5 月之间，适合产品排期、门店值班或发布窗口场景。
-      </p>
-    </div>
-  )
-}
-
 const NoticeCalendarPreview: FC = () => {
-  const value = ref('2026-04-15')
-  const mode = ref<DemoCalendarMode>('month')
+  const selectedValue = ref('2026-04-15')
 
   return (
     <div className="space-y-4">
       <Calendar
         data-testid="notice-calendar"
         locale="zh-CN"
-        value={value.value}
-        mode={mode.value}
+        defaultValue={selectedValue.value}
         onChange={date => {
-          value.value = formatIsoDate(date)
-        }}
-        onPanelChange={(_date, nextMode) => {
-          mode.value = nextMode as DemoCalendarMode
+          selectedValue.value = formatIsoDate(date)
         }}
         cellRender={(date, info) => {
           if (info.type === 'month') {
@@ -488,7 +407,7 @@ const NoticeCalendarPreview: FC = () => {
       />
 
       <div className="grid gap-3 md:grid-cols-3">
-        <MetaItem label="当前日期" value={formatDateLabel(value.value)} />
+        <MetaItem label="当前日期" value={formatDateLabel(selectedValue.value)} />
         <MetaItem label="4 月 15 日事件" value={`${agendaByDate['2026-04-15']?.length ?? 0} 条`} />
         <MetaItem label="9 月 backlog" value={`${monthBacklog[8]} 项`} />
       </div>
@@ -497,8 +416,7 @@ const NoticeCalendarPreview: FC = () => {
 }
 
 const CardCalendarPreview: FC = () => {
-  const value = ref('2026-09-18')
-  const mode = ref<DemoCalendarMode>('month')
+  const selectedValue = ref('2026-09-18')
 
   return (
     <div className="space-y-4">
@@ -509,13 +427,9 @@ const CardCalendarPreview: FC = () => {
             className="w-fit max-w-none min-w-[34rem]"
             locale="zh-CN"
             fullscreen={false}
-            value={value.value}
-            mode={mode.value}
+            defaultValue={selectedValue.value}
             onChange={date => {
-              value.value = formatIsoDate(date)
-            }}
-            onPanelChange={(_date, nextMode) => {
-              mode.value = nextMode as DemoCalendarMode
+              selectedValue.value = formatIsoDate(date)
             }}
             fullCellRender={(date, info) => {
               if (info.type !== 'date') {
@@ -561,7 +475,7 @@ const CardCalendarPreview: FC = () => {
             使用 fullscreen=false 收成卡片，再用 fullCellRender 把单元格改造成带进度条的容量卡。
           </p>
           <div className="mt-4 space-y-3">
-            <MetaItem label="当前日期" value={formatDateLabel(value.value)} />
+            <MetaItem label="当前日期" value={formatDateLabel(selectedValue.value)} />
             <MetaItem label="高负载日" value="9/18 · 92%" />
             <MetaItem label="布局定位" value="侧栏、仪表盘、详情卡片" />
           </div>
@@ -572,8 +486,8 @@ const CardCalendarPreview: FC = () => {
 }
 
 const CustomHeaderCalendarPreview: FC = () => {
-  const value = ref('2026-07-04')
-  const mode = ref<DemoCalendarMode>('month')
+  const selectedValue = ref('2026-07-04')
+  const panelMode = ref<DemoCalendarMode>('month')
   const actionSource = ref('date')
 
   return (
@@ -581,8 +495,7 @@ const CustomHeaderCalendarPreview: FC = () => {
       <Calendar
         data-testid="custom-header-calendar"
         locale="zh-CN"
-        value={value.value}
-        mode={mode.value}
+        defaultValue={selectedValue.value}
         headerRender={({
           value: current,
           type,
@@ -652,10 +565,10 @@ const CustomHeaderCalendarPreview: FC = () => {
           </div>
         )}
         onChange={date => {
-          value.value = formatIsoDate(date)
+          selectedValue.value = formatIsoDate(date)
         }}
         onPanelChange={(_date, nextMode) => {
-          mode.value = nextMode as DemoCalendarMode
+          panelMode.value = nextMode as DemoCalendarMode
         }}
         onSelect={(_date, info) => {
           actionSource.value = info.source
@@ -663,331 +576,15 @@ const CustomHeaderCalendarPreview: FC = () => {
       />
 
       <div className="grid gap-3 md:grid-cols-3">
-        <MetaItem label="当前日期" value={formatDateLabel(value.value)} />
-        <MetaItem label="当前模式" value={mode.value} />
+        <MetaItem label="当前日期" value={formatDateLabel(selectedValue.value)} />
+        <MetaItem label="当前模式" value={panelMode.value} />
         <MetaItem label="最近来源" value={actionSource.value} />
       </div>
     </div>
   )
 }
 
-const LegacyPreviewLoadCard: FC<{ note: string; onLoad: () => void }> = ({ note, onLoad }) => {
-  return (
-    <div className="rounded-[1.5rem] border border-dashed border-base-300 bg-base-100/80 p-5 shadow-sm">
-      <div className="badge badge-outline badge-sm">Legacy preview</div>
-      <p className="mb-0 mt-3 text-sm text-base-content/72">{note}</p>
-      <button type="button" className="btn btn-sm btn-primary mt-4" onClick={onLoad}>
-        加载预览
-      </button>
-    </div>
-  )
-}
-
-const CallyCalendarLoadedPreview: FC = () => {
-  const calendarRef = useRef<CallyElement>()
-  const cleanupRef = useRef<() => void>(() => {})
-  const selectedValue = ref('2026-04-12')
-  const ready = ref(false)
-  const error = ref('')
-
-  onMounted(() => {
-    let active = true
-
-    void ensureCally()
-      .then(() => {
-        if (!active) {
-          return
-        }
-
-        ready.value = true
-        const calendar = calendarRef.current
-        if (!calendar) {
-          return
-        }
-
-        calendar.value = selectedValue.value
-        const handleChange = () => {
-          selectedValue.value = calendar.value || ''
-        }
-
-        calendar.addEventListener('change', handleChange)
-        cleanupRef.current = () => calendar.removeEventListener('change', handleChange)
-      })
-      .catch(() => {
-        if (active) {
-          error.value = 'Cally 加载失败'
-        }
-      })
-
-    onUnmounted(() => {
-      active = false
-    })
-  })
-
-  onUnmounted(() => {
-    cleanupRef.current?.()
-    cleanupRef.current = () => {}
-  })
-
-  return (
-    <div className="space-y-3">
-      <Calendar.Cally
-        ref={calendarRef}
-        data-testid="cally-calendar"
-        className="border border-base-300 bg-base-100 shadow-lg rounded-box"
-      >
-        <PreviousIcon />
-        <NextIcon />
-        <Calendar.Month />
-      </Calendar.Cally>
-      <PreviewStatus
-        ready={ready.value}
-        readyLabel="Cally ready"
-        loadingLabel="Loading Cally..."
-        error={error.value}
-      />
-      <p className="m-0 text-xs text-base-content/70">
-        当前选择：{formatSelectedDate(selectedValue.value)}。这条 demo 原样保留，用于展示原生 web
-        component 接口。
-      </p>
-    </div>
-  )
-}
-
-const CallyCalendarPreview: FC = () => {
-  const shouldLoad = ref(false)
-
-  return shouldLoad.value ? (
-    <CallyCalendarLoadedPreview />
-  ) : (
-    <LegacyPreviewLoadCard
-      note="Cally web component 旧链路会在挂载时注册自定义元素，这里改为手动加载。"
-      onLoad={() => {
-        shouldLoad.value = true
-      }}
-    />
-  )
-}
-
-const CallyDatePickerLoadedPreview: FC = () => {
-  const calendarRef = useRef<CallyElement>()
-  const cleanupRef = useRef<() => void>(() => {})
-  const selectedValue = ref('')
-  const open = ref(false)
-  const ready = ref(false)
-  const error = ref('')
-
-  onMounted(() => {
-    let active = true
-
-    void ensureCally()
-      .then(() => {
-        if (!active) {
-          return
-        }
-
-        ready.value = true
-        const calendar = calendarRef.current
-        if (!calendar) {
-          return
-        }
-
-        calendar.value = selectedValue.value
-        const handleChange = () => {
-          selectedValue.value = calendar.value || ''
-          open.value = false
-        }
-
-        calendar.addEventListener('change', handleChange)
-        cleanupRef.current = () => calendar.removeEventListener('change', handleChange)
-      })
-      .catch(() => {
-        if (active) {
-          error.value = 'Cally 加载失败'
-        }
-      })
-
-    onUnmounted(() => {
-      active = false
-    })
-  })
-
-  onUnmounted(() => {
-    cleanupRef.current?.()
-    cleanupRef.current = () => {}
-  })
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          data-testid="cally-picker-button"
-          className="input input-bordered w-fit cursor-pointer"
-          onClick={() => {
-            open.value = !open.value
-          }}
-        >
-          {formatPickerLabel(selectedValue.value)}
-        </button>
-        <span className="text-xs text-base-content/70">
-          当前选择：{formatSelectedDate(selectedValue.value)}
-        </span>
-      </div>
-      <div
-        data-testid="cally-picker-panel"
-        className={`inline-block rounded-box bg-base-100 p-3 shadow-lg ${open.value ? '' : 'hidden'}`}
-      >
-        <Calendar.Cally ref={calendarRef} data-testid="cally-picker-calendar">
-          <PreviousIcon />
-          <NextIcon />
-          <Calendar.Month />
-        </Calendar.Cally>
-      </div>
-      <PreviewStatus
-        ready={ready.value}
-        readyLabel="Cally ready"
-        loadingLabel="Loading Cally..."
-        error={error.value}
-      />
-      <p className="m-0 text-xs text-base-content/70">
-        点击按钮展开面板，选中日期后会自动回填并收起。这条旧 demo 同样完整保留。
-      </p>
-    </div>
-  )
-}
-
-const CallyDatePickerPreview: FC = () => {
-  const shouldLoad = ref(false)
-
-  return shouldLoad.value ? (
-    <CallyDatePickerLoadedPreview />
-  ) : (
-    <LegacyPreviewLoadCard
-      note="旧 date picker demo 会额外挂起 Cally 实例，默认不在页面首次打开时立即加载。"
-      onLoad={() => {
-        shouldLoad.value = true
-      }}
-    />
-  )
-}
-
-const PikadayLoadedPreview: FC<PikadayPreviewProps> = ({ note, testId }) => {
-  const inputRef = useRef<HTMLInputElement>()
-  const instanceRef = useRef<PikadayInstance | null>()
-  const selectedValue = ref('')
-  const ready = ref(false)
-  const error = ref('')
-
-  onMounted(() => {
-    let active = true
-
-    void ensurePikaday()
-      .then(Pikaday => {
-        if (!active) {
-          return
-        }
-
-        const field = inputRef.current
-        if (!field) {
-          return
-        }
-
-        instanceRef.current = new Pikaday({
-          field,
-          defaultDate: new Date('2026-04-12T00:00:00'),
-          setDefaultDate: true,
-          toString: (date: Date) => formatIsoDate(date),
-          onSelect: (date: Date) => {
-            selectedValue.value = field.value || formatIsoDate(date)
-          },
-        })
-        field.setAttribute('data-pikaday-ready', 'true')
-        selectedValue.value = field.value || '2026-04-12'
-        ready.value = true
-      })
-      .catch(() => {
-        if (active) {
-          error.value = 'Pikaday 加载失败'
-        }
-      })
-
-    onUnmounted(() => {
-      active = false
-    })
-  })
-
-  onUnmounted(() => {
-    instanceRef.current?.destroy?.()
-    instanceRef.current = null
-  })
-
-  return (
-    <div className="space-y-3">
-      <Calendar.PikaSingle
-        ref={inputRef}
-        data-testid={testId}
-        className="input input-bordered w-full max-w-xs"
-        placeholder="Pick a day"
-      />
-      <PreviewStatus
-        ready={ready.value}
-        readyLabel="Pikaday ready"
-        loadingLabel="Loading Pikaday..."
-        error={error.value}
-      />
-      <p className="m-0 text-xs text-base-content/70">
-        当前选择：{formatSelectedDate(selectedValue.value)}
-      </p>
-      <p className="m-0 text-xs text-base-content/70">{note}</p>
-    </div>
-  )
-}
-
-const PikadayPreview: FC<PikadayPreviewProps> = props => {
-  const shouldLoad = ref(false)
-
-  return shouldLoad.value ? (
-    <PikadayLoadedPreview {...props} />
-  ) : (
-    <LegacyPreviewLoadCard
-      note="Pikaday 会在首次挂载时初始化第三方实例，改为按需加载以避免设计页打开卡顿。"
-      onLoad={() => {
-        shouldLoad.value = true
-      }}
-    />
-  )
-}
-
-const PreviousIcon: FC = () => {
-  return (
-    <svg
-      aria-label="Previous"
-      className="fill-current size-4"
-      slot="previous"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-    >
-      <path fill="currentColor" d="M15.75 19.5 8.25 12l7.5-7.5"></path>
-    </svg>
-  )
-}
-
-const NextIcon: FC = () => {
-  return (
-    <svg
-      aria-label="Next"
-      className="fill-current size-4"
-      slot="next"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-    >
-      <path fill="currentColor" d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
-    </svg>
-  )
-}
-
-const basicCalendarCode = `import { ref } from '@rue-js/rue'
+const basicCalendarCode = `import { ref, useCallback } from '@rue-js/rue'
 import { Calendar } from '@rue-js/design'
 
 const maintenanceDates = new Set(['2026-04-04', '2026-04-05', '2026-05-01'])
@@ -1012,6 +609,12 @@ const formatPanelLabel = (date: Date, mode: 'month' | 'year') => {
   return \`\${new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long' }).format(date)} / 月视图\`
 }
 
+const basicCalendarValidRange: [Date, Date] = [parseDate('2026-04-01'), parseDate('2026-05-31')]
+
+const isBasicCalendarDateDisabled = (date: Date) => {
+  return date.getDay() === 0 || date.getDay() === 6 || maintenanceDates.has(formatIsoDate(date))
+}
+
 const formatDateLabel = (value?: string | Date) => {
   if (!value) {
     return '未选择'
@@ -1020,70 +623,52 @@ const formatDateLabel = (value?: string | Date) => {
 }
 
 export default function BasicCalendarDemo() {
-  const value = ref('2026-04-12')
-  const mode = ref<'month' | 'year'>('month')
+  const selectedValue = ref('2026-04-12')
   const selectedSource = ref('date')
-  const panelState = ref(formatPanelLabel(parseDate(value.value), 'month'))
+  const panelState = ref(formatPanelLabel(parseDate(selectedValue.value), 'month'))
+  const handleChange = useCallback((date: Date) => {
+    selectedValue.value = formatIsoDate(date)
+  }, [])
+  const handlePanelChange = useCallback((date: Date, nextMode: 'month' | 'year') => {
+    panelState.value = formatPanelLabel(date, nextMode)
+  }, [])
+  const handleSelect = useCallback((_date: Date, info: { source: string }) => {
+    selectedSource.value = info.source
+  }, [])
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4">
-        <Calendar
-          locale="zh-CN"
-          value={value.value}
-          mode={mode.value}
-          showWeek
-          validRange={[parseDate('2026-04-01'), parseDate('2026-05-31')]}
-          disabledDate={date =>
-            date.getDay() === 0 ||
-            date.getDay() === 6 ||
-            maintenanceDates.has(formatIsoDate(date))
-          }
-          onChange={date => {
-            value.value = formatIsoDate(date)
-          }}
-          onPanelChange={(date, nextMode) => {
-            mode.value = nextMode as 'month' | 'year'
-            panelState.value = formatPanelLabel(date, nextMode as 'month' | 'year')
-          }}
-          onSelect={(date, info) => {
-            value.value = formatIsoDate(date)
-            selectedSource.value = info.source
-          }}
-        />
+      <Calendar
+        locale="zh-CN"
+        value={selectedValue.value}
+        showWeek
+        validRange={basicCalendarValidRange}
+        disabledDate={isBasicCalendarDateDisabled}
+        onChange={handleChange}
+        onPanelChange={handlePanelChange}
+        onSelect={handleSelect}
+      />
 
-        <div className="rounded-[1.5rem] border border-base-300 bg-base-100/85 p-4 shadow-sm">
-          <div className="badge badge-primary badge-soft">Core Panel</div>
-          <h3 className="mt-3 mb-1 text-base font-semibold">排班窗口</h3>
-          <p className="m-0 text-sm text-base-content/70">
-            同时演示受控 value、validRange、disabledDate、showWeek、onSelect 与 onPanelChange。
-          </p>
-          <div className="mt-4 space-y-3">
-            <div className="flex items-center justify-between gap-4 rounded-[1rem] bg-base-200/70 px-3 py-2">
-              <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
-                当前值
-              </span>
-              <span className="text-sm font-medium">{formatDateLabel(value.value)}</span>
-            </div>
-            <div className="flex items-center justify-between gap-4 rounded-[1rem] bg-base-200/70 px-3 py-2">
-              <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
-                选择来源
-              </span>
-              <span className="text-sm font-medium">{selectedSource.value}</span>
-            </div>
-            <div className="flex items-center justify-between gap-4 rounded-[1rem] bg-base-200/70 px-3 py-2">
-              <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
-                面板状态
-              </span>
-              <span className="text-sm font-medium">{panelState.value}</span>
-            </div>
-            <div className="flex items-center justify-between gap-4 rounded-[1rem] bg-base-200/70 px-3 py-2">
-              <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
-                禁用规则
-              </span>
-              <span className="text-sm font-medium">周末 + 4/4、4/5、5/1</span>
-            </div>
+      <div className="grid gap-3 rounded-[1.5rem] border border-base-300 bg-base-100/85 p-4 shadow-sm md:grid-cols-2">
+        <div className="rounded-[1rem] bg-base-200/70 px-3 py-2">
+          <div className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
+            当前值
           </div>
+          <div className="mt-1 text-sm font-medium">{formatDateLabel(selectedValue.value)}</div>
+        </div>
+
+        <div className="rounded-[1rem] bg-base-200/70 px-3 py-2">
+          <div className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
+            选择来源
+          </div>
+          <div className="mt-1 text-sm font-medium">{selectedSource.value}</div>
+        </div>
+
+        <div className="rounded-[1rem] bg-base-200/70 px-3 py-2 md:col-span-2">
+          <div className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
+            面板状态
+          </div>
+          <div className="mt-1 text-sm font-medium">{panelState.value}</div>
         </div>
       </div>
 
@@ -1145,20 +730,15 @@ const formatIsoDate = (date: Date) => {
 }
 
 export default function NoticeCalendarDemo() {
-  const value = ref('2026-04-15')
-  const mode = ref<'month' | 'year'>('month')
+  const selectedValue = ref('2026-04-15')
 
   return (
     <div className="space-y-4">
       <Calendar
         locale="zh-CN"
-        value={value.value}
-        mode={mode.value}
+        defaultValue={selectedValue.value}
         onChange={date => {
-          value.value = formatIsoDate(date)
-        }}
-        onPanelChange={(_date, nextMode) => {
-          mode.value = nextMode as 'month' | 'year'
+          selectedValue.value = formatIsoDate(date)
         }}
         cellRender={(date, info) => {
           if (info.type === 'month') {
@@ -1196,7 +776,7 @@ export default function NoticeCalendarDemo() {
           <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
             当前日期
           </span>
-          <span className="text-sm font-medium">{value.value}</span>
+          <span className="text-sm font-medium">{selectedValue.value}</span>
         </div>
         <div className="flex items-center justify-between gap-4 rounded-[1rem] bg-base-200/70 px-3 py-2">
           <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
@@ -1235,8 +815,7 @@ const formatIsoDate = (date: Date) => {
 }
 
 export default function CardCalendarDemo() {
-  const value = ref('2026-09-18')
-  const mode = ref<'month' | 'year'>('month')
+  const selectedValue = ref('2026-09-18')
 
   return (
     <div className="space-y-4">
@@ -1246,13 +825,9 @@ export default function CardCalendarDemo() {
             className="w-fit max-w-none min-w-[34rem]"
             locale="zh-CN"
             fullscreen={false}
-            value={value.value}
-            mode={mode.value}
+            defaultValue={selectedValue.value}
             onChange={date => {
-              value.value = formatIsoDate(date)
-            }}
-            onPanelChange={(_date, nextMode) => {
-              mode.value = nextMode as 'month' | 'year'
+              selectedValue.value = formatIsoDate(date)
             }}
             fullCellRender={(date, info) => {
               if (info.type !== 'date') {
@@ -1298,7 +873,7 @@ export default function CardCalendarDemo() {
               <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
                 当前日期
               </span>
-              <span className="text-sm font-medium">{value.value}</span>
+              <span className="text-sm font-medium">{selectedValue.value}</span>
             </div>
             <div className="flex items-center justify-between gap-4 rounded-[1rem] bg-base-200/70 px-3 py-2">
               <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
@@ -1337,16 +912,15 @@ const formatPanelLabel = (date: Date, mode: 'month' | 'year') => {
 }
 
 export default function CustomHeaderCalendarDemo() {
-  const value = ref('2026-07-04')
-  const mode = ref<'month' | 'year'>('month')
+  const selectedValue = ref('2026-07-04')
+  const panelMode = ref<'month' | 'year'>('month')
   const actionSource = ref('date')
 
   return (
     <div className="space-y-4">
       <Calendar
         locale="zh-CN"
-        value={value.value}
-        mode={mode.value}
+        defaultValue={selectedValue.value}
         headerRender={({ value: current, type, yearOptions, monthOptions, onMonthChange, onTypeChange, onYearChange }) => (
           <div className="border-b border-base-300/70 px-3 py-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1402,10 +976,10 @@ export default function CustomHeaderCalendarDemo() {
           </div>
         )}
         onChange={date => {
-          value.value = formatIsoDate(date)
+          selectedValue.value = formatIsoDate(date)
         }}
         onPanelChange={(_date, nextMode) => {
-          mode.value = nextMode as 'month' | 'year'
+          panelMode.value = nextMode as 'month' | 'year'
         }}
         onSelect={(_date, info) => {
           actionSource.value = info.source
@@ -1417,13 +991,13 @@ export default function CustomHeaderCalendarDemo() {
           <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
             当前日期
           </span>
-          <span className="text-sm font-medium">{value.value}</span>
+          <span className="text-sm font-medium">{selectedValue.value}</span>
         </div>
         <div className="flex items-center justify-between gap-4 rounded-[1rem] bg-base-200/70 px-3 py-2">
           <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
             当前模式
           </span>
-          <span className="text-sm font-medium">{mode.value}</span>
+          <span className="text-sm font-medium">{panelMode.value}</span>
         </div>
         <div className="flex items-center justify-between gap-4 rounded-[1rem] bg-base-200/70 px-3 py-2">
           <span className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-base-content/55">
@@ -1525,6 +1099,31 @@ const CalendarDemo: FC = () => {
   const tabCallyCalendar = ref<TabMode>('preview')
   const tabCallyDatePicker = ref<TabMode>('preview')
   const tabPikaday = ref<TabMode>('preview')
+  const shouldLoadNotice = ref(false)
+  const shouldLoadCard = ref(false)
+  const shouldLoadHeader = ref(false)
+  const preloadTimers = useRef<number[]>([])
+
+  onMounted(() => {
+    preloadTimers.current = [
+      window.setTimeout(() => {
+        shouldLoadNotice.value = true
+      }, 0),
+      window.setTimeout(() => {
+        shouldLoadCard.value = true
+      }, 32),
+      window.setTimeout(() => {
+        shouldLoadHeader.value = true
+      }, 64),
+    ]
+  })
+
+  onUnmounted(() => {
+    for (const timer of preloadTimers.current ?? []) {
+      window.clearTimeout(timer)
+    }
+    preloadTimers.current = []
+  })
 
   return (
     <SidebarPlayground>
@@ -1552,17 +1151,11 @@ const CalendarDemo: FC = () => {
           />
         </div>
 
-        <div className="mt-4 text-sm">
-          <a href="https://daisyui.com/components/calendar/" target="_blank">
-            查看 Calendar 静态样式
-          </a>
-        </div>
-
         <ExampleBlock
           title="Basic calendar"
           summary="默认面板，覆盖受控日期、范围限制、禁用规则与周序号。"
           tab={tabBasic}
-          preview={() => <BasicCalendarPreview />}
+          preview={<BasicCalendarPreview />}
           code={basicCalendarCode}
         />
 
@@ -1570,31 +1163,37 @@ const CalendarDemo: FC = () => {
           title="Notice calendar"
           summary="使用 cellRender 在日期格展示事项，在年视图展示月份 backlog。"
           tab={tabNotice}
-          preview={() => <NoticeCalendarPreview />}
+          preview={<NoticeCalendarPreview />}
           code={noticeCalendarCode}
+          shouldLoadPreview={shouldLoadNotice}
+          previewLoadNote="事项日历会在页面显示后自动初始化，不再需要手动点击加载。"
         />
 
         <ExampleBlock
           title="Card mode"
           summary="缩成仪表盘卡片，再用 fullCellRender 为少量日期挂上负载进度。"
           tab={tabCard}
-          preview={() => <CardCalendarPreview />}
+          preview={<CardCalendarPreview />}
           code={cardCalendarCode}
+          shouldLoadPreview={shouldLoadCard}
+          previewLoadNote="卡片模式会在后台分帧挂载，避免首屏一次性把多个重预览一起算完。"
         />
 
         <ExampleBlock
           title="Custom header"
           summary="接管顶部工具条，自定义模式切换、年份与月份选择器。"
           tab={tabHeader}
-          preview={() => <CustomHeaderCalendarPreview />}
+          preview={<CustomHeaderCalendarPreview />}
           code={customHeaderCalendarCode}
+          shouldLoadPreview={shouldLoadHeader}
+          previewLoadNote="自定义头部示例会在页面稳定后自动挂载，减少首屏阻塞。"
         />
 
         <ExampleBlock
           title="Cally calendar example"
           summary="旧的 Cally web component 日历壳层仍然原样可用。"
           tab={tabCallyCalendar}
-          preview={() => <CallyCalendarPreview />}
+          preview={<CallyCalendarPreview />}
           code={callyCalendarCode}
         />
 
@@ -1602,7 +1201,7 @@ const CalendarDemo: FC = () => {
           title="Cally date picker example"
           summary="旧的日期输入弹层 demo 继续保留，只把交互说明和布局重新编排。"
           tab={tabCallyDatePicker}
-          preview={() => <CallyDatePickerPreview />}
+          preview={<CallyDatePickerPreview />}
           code={callyDatePickerCode}
         />
 
@@ -1610,12 +1209,7 @@ const CalendarDemo: FC = () => {
           title="Pikaday input example"
           summary="保留原有 pika-single 输入壳层，让第三方实例继续挂载在 Rue 组件树里。"
           tab={tabPikaday}
-          preview={() => (
-            <PikadayPreview
-              testId="pikaday-cdn-input"
-              note="输入框已挂上真实 Pikaday 实例，点击即可弹出日期面板。"
-            />
-          )}
+          preview={<PikadayCalendarPreview />}
           lang="html"
           code={`<script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
 <input type="text" class="input pika-single" id="myDatepicker">

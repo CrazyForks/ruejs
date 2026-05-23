@@ -622,12 +622,6 @@ const RadioPage: FC = () => {
           Radio.Group、按钮化选项，以及更清晰的受控 / 非受控 API。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/radio/" target="_blank">
-            查看 Radio 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要在少量、彼此可直接比较的选项中选出唯一结果。</li>

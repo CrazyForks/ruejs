@@ -526,12 +526,6 @@ const BadgeDemo: FC = () => {
           能力。
         </p>
 
-        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-          <a href="https://daisyui.com/components/badge/" target="_blank">
-            查看 Badge 静态样式
-          </a>
-        </div>
-
         <div className="not-prose mt-6 rounded-box border border-base-300 bg-base-200/40 p-4 text-sm leading-6">
           <div className="font-semibold">使用建议</div>
           <div className="opacity-80">

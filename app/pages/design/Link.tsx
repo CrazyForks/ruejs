@@ -254,12 +254,6 @@ const LinkDemo: FC = () => {
           安全外链、路由跳转、省略、复制、编辑、禁用与内联文本修饰。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/link/" target="_blank">
-            查看 Link 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要普通文本链接、外链或 Rue Router 内部跳转。</li>

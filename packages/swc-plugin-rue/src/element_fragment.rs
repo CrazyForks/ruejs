@@ -77,3 +77,7 @@ pub fn emit_fragment_children(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "element_fragment_tests.rs"]
+mod tests;

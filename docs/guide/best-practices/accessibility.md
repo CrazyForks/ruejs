@@ -192,7 +192,7 @@ const MyForm: FC = () => {
 
 如果您在 Chrome DevTools 中检查此元素并打开 Elements 选项卡内的 Accessibility 选项卡，您将看到输入如何从标签获取其名称：
 
-![Chrome Developer Tools 显示从标签获取的输入可访问名称](@todo)
+在 Accessibility 面板中，这个输入的 Accessible Name 会显示为对应 `label` 的文本内容。
 
 :::warning 警告：
 尽管您可能见过像这样包裹输入字段的标签：
@@ -223,7 +223,7 @@ const MyForm: FC = () => {
 
 随时在 Chrome DevTools 中检查此元素以查看可访问名称如何变化：
 
-![Chrome Developer Tools 显示从 aria-label 获取的输入可访问名称](@todo)
+此时 Accessibility 面板中的 Accessible Name 会直接来自 `aria-label` 的值。
 
 #### `aria-labelledby` {#aria-labelledby}
 
@@ -240,7 +240,7 @@ const MyForm: FC = () => {
 </form>
 ```
 
-![Chrome Developer Tools 显示从 aria-labelledby 获取的输入可访问名称](@todo)
+在这个例子里，Accessibility 面板中的 Accessible Name 会由 `billing` 与 `name` 对应元素的文本共同组成。
 
 #### `aria-describedby` {#aria-describedby}
 
@@ -266,15 +266,13 @@ const MyForm: FC = () => {
 
 您可以通过检查 Chrome DevTools 来查看描述：
 
-![Chrome Developer Tools 显示从 aria-labelledby 获取的输入可访问名称和从 aria-describedby 获取的描述](@todo)
+你会看到 Accessible Name 仍来自 `aria-labelledby`，而 Description 则来自 `aria-describedby` 指向的说明文本。
 
 ### 占位符 (Placeholder) {#placeholder}
 
 避免使用占位符，因为它们可能会让许多用户感到困惑。
 
-占位符的问题之一是它们默认不符合 [颜色对比度标准](https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html)；修复颜色对比度会使占位符看起来像输入字段中预填充的数据。查看以下示例，您可以看到符合颜色对比度标准的 Last Name 占位符看起来像预填充的数据：
-
-![无障碍占位符](@todo)
+占位符的问题之一是它们默认不符合 [颜色对比度标准](https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html)；即使把颜色对比度调到合规，它们也仍然很容易被误认为是输入框里已经填写好的默认值。
 
 ```tsx
 <form className="demo" action="/dataCollectionLocation" method="post" autoComplete="on">
@@ -399,24 +397,9 @@ const MyForm: FC = () => {
 </form>
 ```
 
-### 功能图像 (Functional Images) {#functional-images}
+### 功能型图标控件 (Functional Images) {#functional-images}
 
-您可以使用此技术来创建功能图像。
-
-- 输入字段
-  - 这些图像将在表单上充当提交类型按钮
-
-  ```tsx
-  <form role="search">
-    <label htmlFor="search" className="hidden-visually">
-      搜索:{' '}
-    </label>
-    <input type="text" name="search" id="search" />
-    <input type="image" className="btnImg" src="https://img.icons8.com/search" alt="搜索" />
-  </form>
-  ```
-
-- 图标
+如果一个控件只用图标表达动作，仍然需要为它提供可访问名称。与其依赖单独的图片资源，更推荐直接使用按钮配合图标字体、SVG 或隐藏文本来表达含义。
 
 ```tsx
 <form role="search">

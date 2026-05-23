@@ -631,11 +631,6 @@ const CardDemo: FC = () => {
           这一轮增强保留了 Rue 当前的视觉语气和 daisyUI class
           直连能力，同时补上更接近业务组件的头部、封面、操作栏、Meta、Grid、loading 和 tabs API。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/card/" target="_blank">
-            查看 Card 静态样式
-          </a>
-        </div>
 
         <ExampleBlock
           title="语义化 API"

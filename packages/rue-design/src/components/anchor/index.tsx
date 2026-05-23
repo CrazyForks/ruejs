@@ -363,6 +363,7 @@ const AnchorBase: FC<AnchorProps> = ({
   styles,
   ...rest
 }) => {
+  const rootRef = useRef<HTMLElement>()
   const slotSource = ((getCurrentInstance() as { propsRO?: Record<string, unknown> } | null)
     ?.propsRO ?? {
     children,
@@ -373,6 +374,7 @@ const AnchorBase: FC<AnchorProps> = ({
   const shouldRenderChildrenFallback = !items && normalizedItems.length === 0 && children != null
   const activeHrefRef = ref('')
   const rawActiveHrefRef = useRef('')
+  const hasInitializedActiveRef = useRef(false)
   const scrollContainerRef = useRef<AnchorContainer>()
   const cleanupScrollRef = useRef<(() => void) | undefined>(undefined)
   const frameRef = useRef<number | undefined>(undefined)
@@ -390,16 +392,63 @@ const AnchorBase: FC<AnchorProps> = ({
   }
 
   const setActiveHref = (href: string, emitChange = true) => {
+    const syncActiveLinkDom = () => {
+      if (!rootRef.current) return
+
+      const linkNodes =
+        rootRef.current.querySelectorAll<HTMLAnchorElement>('[data-rue-anchor-href]')
+      linkNodes.forEach(linkNode => {
+        const isActive =
+          (linkNode.getAttribute('data-rue-anchor-href') ?? '') === activeHrefRef.value
+
+        linkNode.setAttribute('data-active', isActive ? 'true' : 'false')
+        if (isActive) {
+          linkNode.setAttribute('aria-current', 'location')
+        } else {
+          linkNode.removeAttribute('aria-current')
+        }
+
+        linkNode.classList.toggle('border-primary/35', isActive)
+        linkNode.classList.toggle('bg-primary/8', isActive)
+        linkNode.classList.toggle('text-primary', isActive)
+        linkNode.classList.toggle('shadow-[0_12px_30px_-24px_rgba(59,130,246,0.85)]', isActive)
+        linkNode.classList.toggle('border-transparent', !isActive)
+        linkNode.classList.toggle('bg-base-100/65', !isActive)
+        linkNode.classList.toggle('text-base-content/78', !isActive)
+        linkNode.classList.toggle('hover:border-base-300', !isActive)
+        linkNode.classList.toggle('hover:bg-base-100', !isActive)
+
+        const indicatorNode = linkNode.querySelector<HTMLElement>(
+          '[data-rue-anchor-indicator="true"]',
+        )
+        indicatorNode?.classList.toggle('border-primary', isActive)
+        indicatorNode?.classList.toggle('bg-primary', isActive)
+        indicatorNode?.classList.toggle('border-base-300', !isActive)
+        indicatorNode?.classList.toggle('bg-base-100', !isActive)
+
+        const titleNode = linkNode.querySelector<HTMLElement>('[data-rue-anchor-title="true"]')
+        titleNode?.classList.toggle('text-primary', isActive)
+        titleNode?.classList.toggle('text-base-content', !isActive)
+      })
+    }
+
     if (rawActiveHrefRef.current === href) {
       const resolved = typeof getCurrentAnchor === 'function' ? getCurrentAnchor(href) : href
       if (activeHrefRef.value !== resolved) {
         activeHrefRef.value = resolved
       }
+      syncActiveLinkDom()
       return
     }
 
     rawActiveHrefRef.current = href
     activeHrefRef.value = typeof getCurrentAnchor === 'function' ? getCurrentAnchor(href) : href
+    syncActiveLinkDom()
+    if (!hasInitializedActiveRef.current) {
+      hasInitializedActiveRef.current = true
+      return
+    }
+
     if (emitChange && onChange) onChange(href)
   }
 
@@ -439,8 +488,9 @@ const AnchorBase: FC<AnchorProps> = ({
   }
 
   const scheduleActiveSync = () => {
+    syncActiveHref()
+
     if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
-      syncActiveHref()
       return
     }
 
@@ -506,8 +556,10 @@ const AnchorBase: FC<AnchorProps> = ({
     { immediate: true },
   )
 
+  const activeHref = activeHrefRef.value
+
   const renderItem = (item: NormalizedAnchorItem) => {
-    const active = activeHrefRef.value === item.href
+    const active = activeHref === item.href
     const nestedVisible = direction !== 'horizontal' && !!item.children?.length
     const effectiveReplace = item.replace ?? replace
     const effectiveHref = item.disabled ? undefined : item.href
@@ -575,6 +627,7 @@ const AnchorBase: FC<AnchorProps> = ({
           {showIndicator ? (
             <span
               aria-hidden="true"
+              data-rue-anchor-indicator="true"
               className={appendClassName(
                 appendClassName(
                   direction === 'horizontal'
@@ -589,6 +642,7 @@ const AnchorBase: FC<AnchorProps> = ({
           ) : null}
           <span className="min-w-0 flex-1">
             <span
+              data-rue-anchor-title="true"
               className={appendClassName(
                 appendClassName(
                   'block truncate text-sm font-medium leading-6',
@@ -640,6 +694,7 @@ const AnchorBase: FC<AnchorProps> = ({
 
   return (
     <nav
+      ref={rootRef}
       {...rest}
       aria-label="页内导航"
       className={mergedRootClassName}

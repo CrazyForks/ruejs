@@ -121,7 +121,7 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'top / bottom',
-    description: '控制顶部或底部偏移量，和 antd notification 的使用心智保持一致。',
+    description: '控制顶部或底部偏移量，符合常见通知容器的定位方式。',
     type: 'number | string',
     defaultValue: '24',
   },
@@ -148,7 +148,7 @@ const rootApiRows: ApiRow[] = [
 const itemApiRows: ApiRow[] = [
   {
     prop: 'title / message',
-    description: '主标题字段；保留 antd 风格的 message 别名，同时支持更语义化的 title。',
+    description: '主标题字段；保留 message 别名，同时支持更语义化的 title。',
     type: 'any',
     defaultValue: '-',
   },
@@ -529,7 +529,7 @@ const NotificationPage: FC = () => {
         <h1>Notification 通知提醒框</h1>
         <p>
           Rue 现在补上了独立的 Notification 组件，不再只能借 Toast 或 Stack 手工拼通知卡片。
-          这次增强保持 Rue 自己更轻、更贴近页面内容的视觉语气，同时把 antd notification
+          这次增强保持 Rue 自己更轻、更贴近页面内容的视觉语气，同时把通知组件
           常用的执行逻辑一次补齐：静态 open、语义快捷方法、按 key 更新、全局配置、局部 holder、六向
           placement、关闭按钮、自动关闭和进度条都已经可以直接使用。
         </p>
@@ -675,7 +675,7 @@ const NotificationPage: FC = () => {
 
         <PreviewBlock
           title="useNotification 局部容器与按 key 更新"
-          summary="参考 antd notification 的实例模式，但把通知约束在当前 demo 盒子里，方便工作台和局部面板使用。"
+          summary="通过实例模式把通知约束在当前 demo 盒子里，方便工作台和局部面板使用。"
           tab={tabs.hook}
           code={hookCode}
           preview={() => <NotificationHookDemo />}

@@ -530,11 +530,6 @@ const StatDemo: FC = () => {
           Stat 用于在一个块中展示数字与数据。这一轮增强保持 Rue 现有的 daisyUI
           视觉语气，同时补上更接近常见统计组件的数值格式化、前后缀、loading 与 timer 能力。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/stat/" target="_blank">
-            查看 Stat 静态样式
-          </a>
-        </div>
 
         <h2>功能概览</h2>
         <ul>

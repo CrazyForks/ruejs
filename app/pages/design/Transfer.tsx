@@ -565,9 +565,7 @@ const TransferDesign: FC = () => {
             <div className="mt-2 text-base font-semibold">
               dataSource + targetKeys + selectedKeys
             </div>
-            <p className="mt-2 mb-0 text-sm text-base-content/68">
-              和 antd Transfer 一样，用 key 驱动归属和顺序。
-            </p>
+            <p className="mt-2 mb-0 text-sm text-base-content/68">用 key 驱动归属和顺序。</p>
           </div>
           <div className="rounded-[1.4rem] border border-base-300 bg-gradient-to-br from-base-100 to-base-200/40 p-4 shadow-sm">
             <div className="text-xs uppercase tracking-[0.2em] text-base-content/45">
@@ -591,7 +589,7 @@ const TransferDesign: FC = () => {
 
         <PreviewBlock
           title="基础受控模式"
-          summary="最接近 ant-design Transfer 的使用方式：外部维护 targetKeys 与 selectedKeys。"
+          summary="最常见的受控用法：外部维护 targetKeys 与 selectedKeys。"
           tab={basicTab}
           code={basicCode}
           preview={() => (

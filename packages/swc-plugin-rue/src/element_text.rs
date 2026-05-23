@@ -155,3 +155,7 @@ pub fn append_normalized_jsx_text(parent_ident: &Ident, raw: &Atom, stmts: &mut 
     let text_node = call_ident("_$createTextNode", vec![string_expr(&txt)]);
     stmts.push(append_child(parent_ident.clone(), text_node));
 }
+
+#[cfg(test)]
+#[path = "element_text_tests.rs"]
+mod tests;

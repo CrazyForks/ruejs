@@ -796,7 +796,7 @@ const CustomActionsPreview: FC = () => {
         <div>
           <div className="text-sm font-semibold">自定义 indicator 与 actions</div>
           <div className="mt-1 text-sm text-base-content/60">
-            这套写法更接近 antd Tour 的心智，但视觉和布局还是 Rue 自己的。
+            这套写法更接近常见分步引导的心智，但视觉和布局还是 Rue 自己的。
           </div>
         </div>
         <button

@@ -239,12 +239,6 @@ const ProgressPage: FC = () => {
           <code>steps</code>。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/progress/" target="_blank">
-            查看 Progress 静态样式
-          </a>
-        </div>
-
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-primary">

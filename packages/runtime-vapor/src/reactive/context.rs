@@ -44,6 +44,12 @@ thread_local! {
 }
 
 const HOOK_EFFECT_SCOPE_KEY: &str = "__hook_effect_scope_id";
+#[cfg(feature = "runtime")]
+pub(crate) const CONTEXT_OWNER_PARENT_PROP: &str = "__rue_context_owner_parent__";
+#[cfg(feature = "runtime")]
+pub(crate) const CONTEXT_LINKED_INSTANCE_PROP: &str = "__rue_context_linked_instance__";
+#[cfg(feature = "runtime")]
+pub(crate) const CONTEXT_PARENT_INSTANCE_PROP: &str = "__rue_context_parent_instance__";
 
 /// 设置当前实例
 /// 传入 `null/undefined` 表示清空；否则记录为 Some(instance)
@@ -114,14 +120,40 @@ pub(crate) fn set_current_instance_ci<A: DomAdapter>(inst: &mut ComponentInterna
     CURRENT_INSTANCE.with(|c| *c.borrow_mut() = Some(wrapper_js.clone()));
     if wrapper_js.is_object() {
         let o = Object::from(wrapper_js.clone());
+        let _ = Reflect::set(&o, &JsValue::from_str(CONTEXT_LINKED_INSTANCE_PROP), &inst.host);
+        if inst.host.is_object() {
+            let host = Object::from(inst.host.clone());
+            let _ = Reflect::set(
+                &host,
+                &JsValue::from_str(CONTEXT_LINKED_INSTANCE_PROP),
+                &JsValue::from(o.clone()),
+            );
+        }
         // 重置索引
         let hooks = Reflect::get(&o, &JsValue::from_str("__hooks")).unwrap_or(JsValue::UNDEFINED);
         if hooks.is_object() {
             let hooks_obj = Object::from(hooks);
             let _ = Reflect::set(&hooks_obj, &JsValue::from_str("index"), &JsValue::from_f64(0.0));
+            let _ = Reflect::set(&hooks_obj, &JsValue::from_str("__idCursor"), &Map::new());
         }
         // 写入只读 props
         let _ = Reflect::set(&o, &JsValue::from_str("propsRO"), &inst.props_ro);
+        let parent_instance = if inst.host.is_object() {
+            let host = Object::from(inst.host.clone());
+            let owner_parent = Reflect::get(&host, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP))
+                .unwrap_or(JsValue::UNDEFINED);
+            if owner_parent.is_undefined() || owner_parent.is_null() {
+                Reflect::get(&host, &JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP))
+                    .unwrap_or(JsValue::UNDEFINED)
+            } else {
+                owner_parent
+            }
+        } else {
+            JsValue::UNDEFINED
+        };
+        let _ = Reflect::set(&o, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP), &parent_instance);
+        let _ =
+            Reflect::set(&o, &JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP), &parent_instance);
     }
 }
 
@@ -348,7 +380,8 @@ pub fn vapor_with_hook_id(id: JsValue, runner: Function) -> JsValue {
     } else {
         hooks.unchecked_into::<Object>()
     };
-    // 获取/创建 id->index 的映射表
+    // 获取/创建 id->slot 的映射表。
+    // 同一个稳定 id 应始终命中同一个 hook slot；重复 id 由编译阶段去重。
     let idmap_v =
         Reflect::get(&hooks_obj, &JsValue::from_str("__idMap")).unwrap_or(JsValue::UNDEFINED);
     let idmap = if idmap_v.is_undefined() || idmap_v.is_null() {
@@ -358,6 +391,7 @@ pub fn vapor_with_hook_id(id: JsValue, runner: Function) -> JsValue {
     } else {
         idmap_v.unchecked_into::<Map>()
     };
+
     // 查找现有索引；若不存在则使用 states.length 创建新索引
     let states_js =
         Reflect::get(&hooks_obj, &JsValue::from_str("states")).unwrap_or(Array::new().into());
@@ -367,21 +401,33 @@ pub fn vapor_with_hook_id(id: JsValue, runner: Function) -> JsValue {
         let next = JsValue::from_f64(states.length() as f64);
         idmap.set(&id, &next);
         next
+    } else if Array::is_array(&existing) {
+        let slots = Array::from(&existing);
+        let current = slots.get(0);
+        if current.is_undefined() {
+            let next = JsValue::from_f64(states.length() as f64);
+            idmap.set(&id, &next);
+            next
+        } else {
+            idmap.set(&id, &current);
+            current
+        }
     } else {
         existing
     };
     // 强制索引
     Reflect::set(&hooks_obj, &JsValue::from_str("__forcedIndex"), &idx).ok();
-    let ret = match runner.call0(&JsValue::NULL) {
-        Ok(v) => v,
+    match runner.call0(&JsValue::NULL) {
+        Ok(v) => {
+            Reflect::set(&hooks_obj, &JsValue::from_str("__forcedIndex"), &JsValue::UNDEFINED).ok();
+            v
+        }
         Err(e) => {
+            Reflect::set(&hooks_obj, &JsValue::from_str("__forcedIndex"), &JsValue::UNDEFINED).ok();
             mark_crashed_from_hook(&e);
             throw_val(e.clone());
         }
-    };
-    // 清理强制索引
-    Reflect::set(&hooks_obj, &JsValue::from_str("__forcedIndex"), &JsValue::UNDEFINED).ok();
-    ret
+    }
 }
 
 #[wasm_bindgen(typescript_custom_section)]
@@ -464,3 +510,7 @@ export function withHookSlot<T = any>(factory: () => T): T;
  */
 export function vaporWithHookId<T = any>(id: string, runner: () => T): T;
 "#;
+
+#[cfg(test)]
+#[path = "context_tests.rs"]
+mod tests;

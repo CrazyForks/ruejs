@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$PWD\" != */compiler* ]]; then cat .claude/instructions.md 2>/dev/null || true; fi"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Skill(compat-cleanup)",
+      "Skill(rue)",
+      "Skill(vapor-debug)",
+      "Skill(extract-errors)",
+      "Skill(feature-flags)",
+      "Skill(fix)",
+      "Skill(flags)",
+      "Skill(flow)",
+      "Skill(test)",
+      "Skill(verify)",
+      "Bash(pnpm:*)"
+    ],
+    "deny": ["Bash(npm:*)", "Bash(bun:*)", "Bash(npx:*)"]
+  }
+}

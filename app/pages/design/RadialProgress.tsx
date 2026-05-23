@@ -212,11 +212,6 @@ const RadialProgressPage: FC = () => {
           value / size / thickness 写法和 className 习惯，同时补上 percent、max、dashboard、
           success、steps、format 和 showInfo 等更接近 Progress 的能力。
         </p>
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/radial-progress/" target="_blank">
-            查看 Radial Progress 静态样式
-          </a>
-        </div>
 
         <h2>何时使用</h2>
         <ul>

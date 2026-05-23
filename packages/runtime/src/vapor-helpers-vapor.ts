@@ -661,17 +661,33 @@ export function vaporWithHookId<T>(id: string, runner: () => T): T {
   const instance = getCurrentInstance() as any
   if (!instance) return runner()
   const hooks = instance.__hooks || (instance.__hooks = { states: [], index: 0 })
-  const map: Map<string, number> =
-    (hooks as any).__idMap || ((hooks as any).__idMap = new Map<string, number>())
-  let index = map.get(id)
+  const hookIndex = typeof hooks.index === 'number' ? hooks.index : 0
+  const lastHookIndex = (hooks as any).__lastVaporHookIndex as number | undefined
+  if (lastHookIndex === undefined || hookIndex < lastHookIndex) {
+    ;(hooks as any).__idCursor = new Map<string, number>()
+  }
+
+  const map: Map<string, number[]> =
+    (hooks as any).__idMap || ((hooks as any).__idMap = new Map<string, number[]>())
+  const cursor: Map<string, number> =
+    (hooks as any).__idCursor || ((hooks as any).__idCursor = new Map<string, number>())
+  const seen = cursor.get(id) ?? 0
+  const slots = map.get(id) ?? []
+
+  let index = slots[seen]
   if (index === undefined) {
     index = (hooks.states?.length as number) ?? 0
-    map.set(id, index)
+    slots.push(index)
+    map.set(id, slots)
   }
+
+  cursor.set(id, seen + 1)
+  ;(hooks as any).__lastVaporHookIndex = hookIndex
   ;(hooks as any).__forcedIndex = index
   try {
     return runner()
   } finally {
     ;(hooks as any).__forcedIndex = undefined
+    ;(hooks as any).__lastVaporHookIndex = typeof hooks.index === 'number' ? hooks.index : hookIndex
   }
 }

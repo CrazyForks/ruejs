@@ -29,7 +29,6 @@
 4. **组合**（将属性合并到选项中）
    - `extends`
    - `mixins`
-   - `provide`/`inject`
 
 5. **接口**（组件的接口）
    - `inheritAttrs`
@@ -242,7 +241,7 @@ const inputClasses = computed(() => {
 
 ## 单文件组件顶层元素顺序 {#single-file-component-top-level-element-order}
 
-**单文件组件应始终一致地排列 `<script>`、`<template>` 和 `<style>` 标签，`<style>` 放在最后，因为其他两个中至少一个是始终必需的。**
+**单文件组件应始终一致地排列 `<script>`、`<Template>` 和 `<style>` 标签，`<style>` 放在最后，因为其他两个中至少一个是始终必需的。**
 
 <div class="style-example style-example-bad">
 <h3>Bad</h3>
@@ -250,17 +249,17 @@ const inputClasses = computed(() => {
 ```jsx [ComponentX.jsx]
 <style>{/* ... */}</style>
 <script>{/* ... */}</script>
-<template>...</template>
+<Template>...</template>
 ```
 
 ```jsx [ComponentA.jsx]
 <script>{/* ... */}</script>
-<template>...</template>
+<Template>...</template>
 <style>{/* ... */}</style>
 ```
 
 ```jsx [ComponentB.jsx]
-<template>...</template>
+<Template>...</template>
 <script>{/* ... */}</script>
 <style>{/* ... */}</style>
 ```
@@ -272,26 +271,26 @@ const inputClasses = computed(() => {
 
 ```jsx [ComponentA.jsx]
 <script>{/* ... */}</script>
-<template>...</template>
+<Template>...</template>
 <style>{/* ... */}</style>
 ```
 
 ```jsx [ComponentB.jsx]
 <script>{/* ... */}</script>
-<template>...</template>
+<Template>...</template>
 <style>{/* ... */}</style>
 ```
 
 或
 
 ```jsx [ComponentA.jsx]
-<template>...</template>
+<Template>...</template>
 <script>{/* ... */}</script>
 <style>{/* ... */}</style>
 ```
 
 ```jsx [ComponentB.jsx]
-<template>...</template>
+<Template>...</template>
 <script>{/* ... */}</script>
 <style>{/* ... */}</style>
 ```

@@ -55,6 +55,7 @@ export {
   type SignalHandle,
   createEffect as effect,
   batch,
+  nextTick,
   onCleanup,
   untrack,
   setCurrentInstance,
@@ -66,13 +67,13 @@ export {
   watchSignal,
   watchDeepSignal,
   watchPath,
-  createResource,
   watch,
   useState,
   useSignal,
   useEffect,
   signal,
   ref,
+  shallowRef,
   computed,
   isReactive,
   reactive,
@@ -88,3 +89,5 @@ export {
   unref,
   setReactiveScheduling,
 } from '@rue-js/runtime-vapor/reactive'
+
+export { createResource } from './reactivity'

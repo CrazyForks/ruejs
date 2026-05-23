@@ -195,7 +195,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'className / rootClassName / style',
-    description: '根节点扩展类名和样式，rootClassName 用来贴近 antd 的迁移心智。',
+    description: '根节点扩展类名和样式，rootClassName 便于兼容旧代码中的根节点类名分工。',
     type: 'string / string / any',
     defaultValue: '-',
   },
@@ -407,7 +407,7 @@ const EmptyDemo: FC = () => {
         <h1>Empty 空状态</h1>
         <p className="text-sm mt-3 mb-3">
           Empty 用来承接列表、筛选、面板和工作流中的无数据状态。它保留了 Rue
-          一贯的轻量卡片语言，同时补齐了 antd Empty 最核心的 image、description、children
+          一贯的轻量卡片语言，同时补齐了空状态组件最核心的 image、description、children
           和预设插画能力。
         </p>
         <p className="text-sm opacity-75">
@@ -551,7 +551,7 @@ const EmptyDemo: FC = () => {
 
         <h2>API</h2>
         <p className="text-sm opacity-75">
-          保留 antd Empty 的核心迁移心智，同时补一层更贴近 Rue 页面编排的尺寸、变体和语义插槽。
+          保留易迁移的属性组织方式，同时补一层更贴近 Rue 页面编排的尺寸、变体和语义插槽。
         </p>
         <ApiTable rows={apiRows} />
 

@@ -209,12 +209,6 @@ const JoinPage: FC = () => {
           数据驱动入口、根节点自定义和基础状态语义，让工具条、筛选器和紧凑表单更容易组织。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/join/" target="_blank">
-            查看 Join 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要把按钮、输入框、选择器等控件拼成一个连续分组。</li>

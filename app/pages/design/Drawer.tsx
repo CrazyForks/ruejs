@@ -318,12 +318,6 @@ const DrawerPage: FC = () => {
           配置与当前容器内联渲染。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/drawer/" target="_blank">
-            查看 Drawer 静态样式
-          </a>
-        </div>
-
         <div className="alert alert-soft alert-info not-prose mt-6">
           <span>
             两种模式继续并存：<strong>compound 模式</strong> 适合原始 daisyUI drawer 结构；

@@ -15,10 +15,6 @@ const MouseTracker: FC = () => {
 }
 ```
 
-:::tip
-本章节假设你已经具备 Composition API 的基础知识。如果你只学习过 Options API，可以将 API 偏好设置为 Composition API（使用左侧边栏顶部的切换按钮），然后重新阅读[响应式基础](/guide/guide/essentials/reactivity-fundamentals)和[生命周期钩子](/guide/guide/essentials/lifecycle)章节。
-:::
-
 ## 什么是 "Composable"？ {#what-is-a-composable}
 
 在 Rue 应用的上下文中，"composable" 是一个利用 Rue 的 Composition API 来封装和复用**有状态逻辑**的函数。
@@ -296,17 +292,16 @@ const { x, y } = useMouse()
 
 从 composable 返回响应式对象会导致此类解构失去与 composable 内部状态的响应式连接，而 refs 会保留该连接。
 
-如果你更喜欢将 composables 返回的状态作为对象属性使用，你可以用 `reactive()` 包装返回的对象，这样 refs 会被解包。例如：
+如果你更喜欢将 composables 返回的状态作为对象属性使用，你也可以用 `reactive()` 包装返回的对象。不过需要注意，Rue 当前不会在属性层自动解包 refs，因此访问时仍应显式读取 `.value`：
 
 ```ts
 const mouse = reactive(useMouse())
-// mouse.x 链接到原始 ref
-console.log(mouse.x)
+console.log(mouse.x.value)
 ```
 
 ```tsx
 <div>
-  鼠标位置在：{mouse.x}, {mouse.y}
+  鼠标位置在：{mouse.x.value}, {mouse.y.value}
 </div>
 ```
 
@@ -327,7 +322,7 @@ Composables 应该只在组件函数或组件初始化入口中调用。它们�
 2. 计算属性和监视器可以链接到它，以便在实例卸载时被销毁，防止内存泄漏。
 
 :::tip
-一旦跨过 `await`，当前活动组件实例上下文就可能已经丢失。因此，依赖生命周期钩子、provide / inject 或自动清理能力的 composable，最稳妥的做法是在第一次 `await` 之前完成调用。
+一旦跨过 `await`，当前活动组件实例上下文就可能已经丢失。因此，依赖生命周期钩子、`useContext()` 或自动清理能力的 composable，最稳妥的做法是在第一次 `await` 之前完成调用。
 :::
 
 ## 提取 Composables 以组织代码 {#extracting-composables-for-code-organization}
@@ -351,18 +346,6 @@ export const MyComponent: FC = () => {
 在某种程度上，你可以将这些提取的 composables 视为可以相互通信的组件级服务。
 
 ## 与其他技术的比较 {#comparisons-with-other-techniques}
-
-### vs. Mixins {#vs-mixins}
-
-来自 Vue 2 的用户可能熟悉 [mixins](@todo) 选项，它也允许我们将组件逻辑提取到可复用的单元中。Mixins 有三个主要缺点：
-
-1. **属性来源不清晰**：当使用许多 mixins 时，不清楚哪个实例属性是由哪个 mixin 注入的，这使得追踪实现和理解组件行为变得困难。这也是我们推荐对 composables 使用 refs + 解构模式的原因：它使消费组件中的属性来源清晰。
-
-2. **命名空间冲突**：来自不同作者的多个 mixins 可能会注册相同的属性键，导致命名空间冲突。使用 composables，如果来自不同 composables 的键冲突，你可以重命名解构的变量。
-
-3. **隐式跨 mixin 通信**：需要相互交互的多个 mixin 必须依赖共享的属性键，使它们隐式耦合。使用 composables，从一个 composable 返回的值可以作为参数传递给另一个，就像普通函数一样。
-
-由于上述原因，我们不再推荐在 Vue 3 中使用 mixins。该功能仅出于迁移和熟悉的原因保留。
 
 ### vs. 无渲染组件 {#vs-renderless-components}
 

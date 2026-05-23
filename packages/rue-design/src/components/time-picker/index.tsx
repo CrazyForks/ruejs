@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 TimePicker 组件概述
 - 在 Rue 现有 input 视觉语义上补齐时间面板、12 小时制、步进、禁用时间、确认按钮与 RangePicker。
@@ -975,6 +974,9 @@ const TimePickerRoot: FC<TimePickerProps> = ({
 
   const setPopupOpen = (nextOpen: boolean) => {
     if (disabled) return
+    if (!isControlledOpen && popupOpen.current === nextOpen) {
+      return
+    }
     if (!isControlledOpen) {
       popupOpen.current = nextOpen
     }
@@ -1165,6 +1167,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
                                   ? 'border-primary bg-primary text-primary-content shadow-[0_14px_28px_-20px_rgba(59,130,246,0.95)]'
                                   : 'border-transparent text-base-content/75 hover:bg-base-200',
                             )}
+                            onPointerDown={preventPopupButtonBlur}
                             onMouseDown={preventPopupButtonBlur}
                             onClick={() => handlePanelSelection(column, option.value)}
                           >
@@ -1203,6 +1206,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
+                    onPointerDown={preventPopupButtonBlur}
                     onMouseDown={preventPopupButtonBlur}
                     onClick={handleNowClick}
                   >
@@ -1214,6 +1218,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
                     type="button"
                     className="btn btn-primary btn-sm"
                     data-rue-time-confirm="true"
+                    onPointerDown={preventPopupButtonBlur}
                     onMouseDown={preventPopupButtonBlur}
                     onClick={handleConfirm}
                   >
@@ -1328,7 +1333,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     setPopupOpen(false)
   }
 
-  const preventPopupButtonBlur = (event: MouseEvent) => {
+  const preventPopupButtonBlur = (event: MouseEvent | PointerEvent) => {
     preservePopupOnInternalBlur.current = true
     if (typeof (event as any).preventDefault === 'function') {
       ;(event as any).preventDefault()
@@ -1502,70 +1507,69 @@ const TimePickerRoot: FC<TimePickerProps> = ({
   )
 
   const hasAddons = addonBefore !== undefined || addonAfter !== undefined
-  const shellNode = (
-    <label
-      ref={shellRef}
-      className={buildShellClassName({
-        status,
-        size,
-        variant,
-        className: mergeClassName(className, hasAddons ? 'join-item min-w-0 flex-1' : undefined),
-      })}
-      aria-disabled={disabled ? 'true' : undefined}
-      data-rue-time-picker="true"
-    >
-      {prefix !== undefined ? (
-        <span className="shrink-0 text-sm text-base-content/60">{prefix}</span>
-      ) : null}
-      <input
-        {...rest}
-        ref={assignInputRef}
-        type="text"
-        value={inputText.current ?? ''}
-        disabled={disabled}
-        readOnly={inputReadOnly}
-        placeholder={placeholder}
-        aria-invalid={status === 'error' ? 'true' : rest['aria-invalid']}
-        className={mergeClassName(
-          'min-w-0 grow border-0 bg-transparent p-0 text-sm outline-none placeholder:text-base-content/40',
-          inputClassName,
-        )}
-        onClick={() => setPopupOpen(true)}
-        onInput={handleInput}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-      />
-      <button
-        ref={clearButtonRef}
-        type="button"
-        tabIndex={-1}
-        aria-label={clearLabel}
-        className="btn btn-ghost btn-xs btn-circle hidden h-7 min-h-0 w-7 shrink-0 p-0 text-base-content/55 hover:text-base-content"
-        data-rue-time-clear="true"
-        onClick={handleClear}
-      >
-        {allowClearConfig?.clearIcon ?? <DefaultClearIcon />}
-      </button>
-      <span className="shrink-0 text-base-content/55">
-        {suffixIcon ?? <ClockIcon iconRef={defaultSuffixIconRef} />}
-      </span>
-    </label>
-  )
-
-  const controlNode = hasAddons ? (
-    <div className="join w-full items-stretch">
-      {addonBefore !== undefined ? <Addon>{addonBefore}</Addon> : null}
-      {shellNode}
-      {addonAfter !== undefined ? <Addon>{addonAfter}</Addon> : null}
-    </div>
-  ) : (
-    shellNode
-  )
 
   return (
     <div ref={rootRef} className={mergeClassName('relative', rootClassName)}>
-      {controlNode}
+      <div className={hasAddons ? 'join w-full items-stretch' : undefined}>
+        {addonBefore !== undefined ? <Addon>{addonBefore}</Addon> : null}
+        <label
+          ref={shellRef}
+          className={buildShellClassName({
+            status,
+            size,
+            variant,
+            className: mergeClassName(
+              className,
+              hasAddons ? 'join-item min-w-0 flex-1' : undefined,
+            ),
+          })}
+          aria-disabled={disabled ? 'true' : undefined}
+          data-rue-time-picker="true"
+        >
+          {prefix !== undefined ? (
+            <span className="shrink-0 text-sm text-base-content/60">{prefix}</span>
+          ) : null}
+          <input
+            {...rest}
+            ref={assignInputRef}
+            type="text"
+            data-testid={rest['data-testid']}
+            value={inputText.current ?? ''}
+            disabled={disabled}
+            readOnly={inputReadOnly}
+            placeholder={placeholder}
+            aria-invalid={status === 'error' ? 'true' : rest['aria-invalid']}
+            className={mergeClassName(
+              'min-w-0 w-0 flex-1 border-0 bg-transparent p-0 text-inherit outline-none placeholder:text-base-content/40',
+              inputClassName,
+            )}
+            onClick={() => {
+              if (!popupOpen.current) {
+                setPopupOpen(true)
+              }
+            }}
+            onInput={handleInput}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+          />
+          <button
+            ref={clearButtonRef}
+            type="button"
+            tabIndex={-1}
+            aria-label={clearLabel}
+            className="btn btn-ghost btn-xs btn-circle hidden h-7 min-h-0 w-7 shrink-0 p-0 text-base-content/55 hover:text-base-content"
+            data-rue-time-clear="true"
+            onClick={handleClear}
+          >
+            {allowClearConfig?.clearIcon ?? <DefaultClearIcon />}
+          </button>
+          <span className="shrink-0 text-base-content/55">
+            {suffixIcon ?? <ClockIcon iconRef={defaultSuffixIconRef} />}
+          </span>
+        </label>
+        {addonAfter !== undefined ? <Addon>{addonAfter}</Addon> : null}
+      </div>
       <div
         ref={popupRef}
         role="dialog"
@@ -1764,8 +1768,14 @@ type TimePickerCompound = FC<TimePickerProps> & {
   RangePicker: FC<TimeRangePickerProps>
 }
 
-const TimePicker = Object.assign(TimePickerRoot, {
-  RangePicker,
+const TimePicker: TimePickerCompound = ((props: TimePickerProps) => {
+  return (
+    <div className="contents">
+      <TimePickerRoot {...props} />
+    </div>
+  )
 }) as TimePickerCompound
+
+TimePicker.RangePicker = RangePicker
 
 export default TimePicker

@@ -216,11 +216,6 @@ const AlertDemo: FC = () => {
           这次增强保留了 Rue 现有的 alert、语义色、soft、outline、dash 与响应式组合方式，同时补齐了
           type、color、title、description、icon、action、closable、banner 等常用能力。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/alert/" target="_blank">
-            查看 Alert 静态样式
-          </a>
-        </div>
 
         <ExampleBlock
           title="基础用法"

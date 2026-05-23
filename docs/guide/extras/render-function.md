@@ -6,9 +6,11 @@ Rue 依然支持手写渲染函数，但它们现在更适合作为显式边界�
 
 ## 基本用法 {#basic-usage}
 
-### 创建渲染输出 {#creating-vnodes}
+### 创建渲染输出 {#creating-render-output}
 
-本节保留了历史锚点，因为 `h()` 仍然是 Rue 的公开 API。需要注意的是：`h()` 创建的是公开渲染输出；在当前默认路径中，编译器通常会直接生成 Renderable / Block，而不是在每个节点上都显式调用 `h()`。
+<span id="creating-vnodes"></span>
+
+为兼容旧链接，这里保留了历史锚点。需要注意的是：`h()` 创建的是公开渲染输出；在当前默认路径中，编译器通常会直接生成 Renderable / Block，而不是在每个节点上都显式调用 `h()`。
 
 ```tsx
 import { h } from '@rue-js/rue'
@@ -149,7 +151,7 @@ Rue 的 JSX 与 React JSX 有两点最容易混淆的区别：
 - 你可以直接使用 `class` 和 `for`，无需改写成 `className` 或 `htmlFor`
 - 组件 children 最终会落到 `props.children` 或显式命名 props，而不是默认套入一层 Vue 风格的 `slots` 上下文
 
-Rue 当前的 JSX 编译也默认服务于 Block / Vapor 路径，因此即便你写的是 JSX，编译结果也不意味着“运行时一定会重建整棵对象树”。
+Rue 当前的 JSX 编译也默认服务于 Block / Vapor 路径，因此即便你写的是 JSX，编译结果也会优先落到当前的 Renderable / Block 执行模型。
 
 ### JSX 类型推断 {#jsx-type-inference}
 
@@ -461,10 +463,6 @@ const MyInput: FC<Props> = props => {
   )
 }
 ```
-
-### 自定义指令 {#custom-directives}
-
-Rue 当前默认主入口没有额外公开的 render-function 指令包装 helper。需要指令时，优先在模板或 JSX 路径中使用它们；如果你在维护手写渲染边界，请把这类行为封装在组件或 DOM / block 边界里，而不是继续依赖旧的 compat helper。
 
 ### 模板 Refs {#template-refs}
 

@@ -1756,3 +1756,7 @@ pub(crate) fn try_build_list_from_map(
     }
     false
 }
+
+#[cfg(test)]
+#[path = "element_list_tests.rs"]
+mod tests;

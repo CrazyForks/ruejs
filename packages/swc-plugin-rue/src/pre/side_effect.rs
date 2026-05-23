@@ -334,3 +334,132 @@ pub fn expr_has_impure_ops(expr: &Expr, locals: &HashSet<String>) -> bool {
         _ => false,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use swc_core::common::{FileName, SourceMap};
+    use swc_ecma_parser::{Parser, StringInput, Syntax, TsSyntax};
+
+    fn parse_expr(src: &str) -> Expr {
+        let cm = Arc::new(SourceMap::default());
+        let fm = cm.new_source_file(
+            FileName::Custom("side-effect-test.ts".into()).into(),
+            src.to_string(),
+        );
+        let mut parser = Parser::new(
+            Syntax::Typescript(TsSyntax { tsx: false, ..Default::default() }),
+            StringInput::from(&*fm),
+            None,
+        );
+        *parser.parse_expr().expect("parse expression")
+    }
+
+    fn locals(names: &[&str]) -> HashSet<String> {
+        names.iter().map(|name| (*name).to_string()).collect()
+    }
+
+    #[test]
+    fn collects_identifiers_from_nested_arrow_and_function_bodies() {
+        let arrow_expr = parse_expr(
+            "(() => { foo; const bar = baz; function inner() { qux; const deep = nested; } })",
+        );
+        let mut arrow_idents = HashSet::new();
+        collect_idents_in_expr(&arrow_expr, &mut arrow_idents);
+
+        for name in ["foo", "baz", "qux", "nested"] {
+            assert!(arrow_idents.contains(name), "missing identifier: {name}");
+        }
+        for name in ["bar", "deep", "inner"] {
+            assert!(!arrow_idents.contains(name), "unexpected binding: {name}");
+        }
+
+        let fn_expr = parse_expr("(function () { alpha; const beta = gamma; })");
+        let mut fn_idents = HashSet::new();
+        collect_idents_in_expr(&fn_expr, &mut fn_idents);
+
+        assert!(fn_idents.contains("alpha"));
+        assert!(fn_idents.contains("gamma"));
+        assert!(!fn_idents.contains("beta"));
+    }
+
+    #[test]
+    fn collects_identifiers_from_objects_templates_and_type_wrappers() {
+        let object_expr = parse_expr(
+            "({ ...spreadSource, value: props.children, method() { methodExpr; const local = methodInit; }, get read() { getterExpr; }, set write(v) { setterExpr; } })",
+        );
+        let mut object_idents = HashSet::new();
+        collect_idents_in_expr(&object_expr, &mut object_idents);
+
+        for name in
+            ["spreadSource", "props", "methodExpr", "methodInit", "getterExpr", "setterExpr"]
+        {
+            assert!(object_idents.contains(name), "missing identifier: {name}");
+        }
+        assert!(!object_idents.contains("local"));
+        assert!(!object_idents.contains("v"));
+
+        let mixed_expr = parse_expr(
+            "`prefix ${call(arg)} ${new Factory(service)} ${condition ? left + right : updateTarget++} ${(assign = value)} ${(receiver.method(other))} ${[first, second]} ${(count as number)} ${(<string>label)}`",
+        );
+        let mut mixed_idents = HashSet::new();
+        collect_idents_in_expr(&mixed_expr, &mut mixed_idents);
+
+        for name in [
+            "call",
+            "arg",
+            "Factory",
+            "service",
+            "condition",
+            "left",
+            "right",
+            "updateTarget",
+            "value",
+            "receiver",
+            "other",
+            "first",
+            "second",
+            "count",
+            "label",
+        ] {
+            assert!(mixed_idents.contains(name), "missing identifier: {name}");
+        }
+        assert!(!mixed_idents.contains("assign"));
+    }
+
+    #[test]
+    fn treats_local_mutations_and_wrapped_values_as_pure() {
+        let locals = locals(&["localValue", "localBox"]);
+
+        assert!(!expr_has_impure_ops(&parse_expr("localValue = next"), &locals));
+        assert!(!expr_has_impure_ops(&parse_expr("localBox.count++"), &locals));
+        assert!(!expr_has_impure_ops(&parse_expr("Object.freeze(localBox)"), &locals));
+        assert!(!expr_has_impure_ops(&parse_expr("(localValue as number)"), &locals));
+        assert!(!expr_has_impure_ops(&parse_expr("(<number>localValue)"), &locals));
+        assert!(!expr_has_impure_ops(&parse_expr("(() => remoteValue = next)"), &locals));
+        assert!(!expr_has_impure_ops(
+            &parse_expr("(function () { remoteValue = next; })"),
+            &locals
+        ));
+    }
+
+    #[test]
+    fn flags_nonlocal_mutations_and_impure_nested_expressions() {
+        let locals = locals(&["localValue", "localBox"]);
+
+        assert!(expr_has_impure_ops(&parse_expr("remoteValue = next"), &locals));
+        assert!(expr_has_impure_ops(&parse_expr("remoteBox.count++"), &locals));
+        assert!(expr_has_impure_ops(&parse_expr("(makeBox()).count++"), &locals));
+        assert!(expr_has_impure_ops(&parse_expr("this.count++"), &locals));
+        assert!(expr_has_impure_ops(&parse_expr("({ value } = source)"), &locals));
+        assert!(expr_has_impure_ops(
+            &parse_expr("localBox.count = Object.assign(target, source)"),
+            &locals
+        ));
+        assert!(expr_has_impure_ops(&parse_expr("({ key: remoteValue = next })"), &locals));
+        assert!(expr_has_impure_ops(&parse_expr("[localValue, remoteValue = next]"), &locals));
+        assert!(expr_has_impure_ops(&parse_expr("`value:${remoteValue = next}`"), &locals));
+        assert!(expr_has_impure_ops(&parse_expr("((remoteValue = runner))(arg)"), &locals));
+    }
+}

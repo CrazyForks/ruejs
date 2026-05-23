@@ -96,5 +96,5 @@
   ```
 
 - **另请参阅**
-  - [内置特殊元素 - `<component>`](/api/api/built-in-special-elements#component)
+  - [内置特殊元素 - `<Component>`](/api/api/built-in-special-elements#component)
   - [动态组件](/guide/guide/essentials/component-basics#dynamic-components)

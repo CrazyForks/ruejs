@@ -52,6 +52,10 @@ thread_local! {
     pub(crate) static PENDING_EFFECTS: RefCell<Vec<usize>> = RefCell::new(Vec::new());
     // 是否已安排下一次 drain，避免重复安排（微任务/动画帧共用）
     pub(crate) static MICROTASK_SCHEDULED: RefCell<bool> = RefCell::new(false);
+    // 当前默认调度的 flush 周期是否正在执行。
+    pub(crate) static FLUSH_IN_PROGRESS: RefCell<bool> = RefCell::new(false);
+    // nextTick 挂起的 Promise resolver 列表；在当前 flush 完成后统一 resolve。
+    pub(crate) static FLUSH_WAITERS: RefCell<Vec<Function>> = RefCell::new(Vec::new());
     // 调度模式：1=同步立即运行，0=统一走默认微任务，2=统一走动画帧。
     // 默认直接使用 frame：浏览器里按帧合并高频交互；非浏览器环境会自动回退到 microtask。
     pub(crate) static SCHEDULING_MODE: RefCell<u8> = RefCell::new(2);
@@ -415,6 +419,7 @@ fn drain_pending_effects() {
     // 在一次 drain 中把当前队列完整取出并逐个运行。
     // 这里先复制再清空，目的是允许 effect 运行过程中继续向 PENDING_EFFECTS 里追加新任务，
     // 而这些新任务会在本轮结束后决定是否补发下一次 drain。
+    FLUSH_IN_PROGRESS.with(|state| *state.borrow_mut() = true);
     #[cfg(feature = "dev")]
     {
         if crate::log::want_log("debug", "reactive:schedule drain start") {
@@ -441,6 +446,9 @@ fn drain_pending_effects() {
             }
         }
         schedule_pending_effects_drain();
+    } else {
+        FLUSH_IN_PROGRESS.with(|state| *state.borrow_mut() = false);
+        resolve_flush_waiters();
     }
     #[cfg(feature = "dev")]
     {
@@ -481,6 +489,51 @@ fn take_pending_effects() -> Vec<usize> {
 
 fn has_pending_effects() -> bool {
     PENDING_EFFECTS.with(|p| !p.borrow().is_empty())
+}
+
+fn has_pending_flush() -> bool {
+    let in_flush = FLUSH_IN_PROGRESS.with(|flushing| *flushing.borrow());
+    if in_flush {
+        return true;
+    }
+
+    let scheduled = MICROTASK_SCHEDULED.with(|scheduled| *scheduled.borrow());
+    if scheduled {
+        return true;
+    }
+
+    BATCH_DEPTH.with(|depth| *depth.borrow() > 0) && has_pending_effects()
+}
+
+fn enqueue_flush_waiter(resolve: Function) {
+    FLUSH_WAITERS.with(|waiters| {
+        waiters.borrow_mut().push(resolve);
+    });
+}
+
+fn take_flush_waiters() -> Vec<Function> {
+    FLUSH_WAITERS.with(|waiters| {
+        let mut queued = waiters.borrow_mut();
+        std::mem::take(&mut *queued)
+    })
+}
+
+fn resolve_flush_waiters() {
+    for resolve in take_flush_waiters() {
+        let _ = resolve.call0(&JsValue::UNDEFINED);
+    }
+}
+
+fn schedule_flush_waiter_resolution() {
+    let resolve = Closure::wrap(Box::new(move |_v: JsValue| {
+        if has_pending_flush() {
+            return;
+        }
+
+        resolve_flush_waiters();
+    }) as Box<dyn FnMut(JsValue)>);
+    let _ = Promise::resolve(&JsValue::UNDEFINED).then(&resolve);
+    resolve.forget();
 }
 
 #[cfg(feature = "dev")]
@@ -717,6 +770,10 @@ pub fn batch_scope<F: FnOnce()>(cb: F) {
                 // - 同时也确保 effect 在 flush 阶段仍会尊重 disposed 状态
                 schedule_effect_run(id);
             }
+
+            if !has_pending_flush() {
+                schedule_flush_waiter_resolution();
+            }
         }
     });
 }
@@ -742,6 +799,42 @@ pub fn set_reactive_scheduling(mode: &str) {
         0
     };
     SCHEDULING_MODE.with(|m| *m.borrow_mut() = v);
+}
+
+fn create_flush_waiter_promise() -> Promise {
+    let mut init = move |resolve: Function, _reject: Function| {
+        enqueue_flush_waiter(resolve);
+    };
+    Promise::new(&mut init)
+}
+
+fn chain_promise_callback(promise: Promise, callback: Function) -> Promise {
+    let then =
+        Reflect::get(promise.as_ref(), &JsValue::from_str("then")).unwrap_or(JsValue::UNDEFINED);
+    let Some(then_fn) = then.dyn_ref::<Function>() else {
+        return promise;
+    };
+
+    match then_fn.call1(promise.as_ref(), &callback) {
+        Ok(chained) => chained.unchecked_into::<Promise>(),
+        Err(_) => promise,
+    }
+}
+
+/// 等待当前一次默认响应式 flush 完成。
+///
+/// 语义：
+/// - 若当前存在默认调度的异步 flush（microtask / frame），Promise 会在该次 flush 及其级联续刷完成后 resolve
+/// - 若当前没有待处理的默认 flush，则退化为一个已 resolve 的 Promise，保持微任务语义
+#[wasm_bindgen(js_name = nextTick)]
+pub fn next_tick(cb: Option<Function>) -> Promise {
+    let promise = if has_pending_flush() {
+        create_flush_waiter_promise()
+    } else {
+        Promise::resolve(&JsValue::UNDEFINED)
+    };
+
+    if let Some(callback) = cb { chain_promise_callback(promise, callback) } else { promise }
 }
 
 // batch function is exposed in effect.rs
@@ -793,6 +886,14 @@ const TS_CORE_DECL: &'static str = r#"
  * ```
  */
 export function setReactiveScheduling(mode: 'sync' | 'microtask' | 'frame' | string): void;
+
+/**
+ * 等待当前一次响应式 flush 完成。
+ *
+ * - 若当前已有默认调度的异步 flush，则会等待这次 flush 及其级联续刷全部完成
+ * - 若当前没有待刷新的默认 effect，则退化为 Promise.resolve()，保持微任务时序
+ */
+export function nextTick<T = void>(callback?: () => T | Promise<T>): Promise<T | void>;
 
 /**
  * 通用取值转换

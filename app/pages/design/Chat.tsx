@@ -697,11 +697,6 @@ const ChatDemo: FC = () => {
           <code> message </code>、<code>author</code>、<code>timestamp</code>、<code>avatar</code>与{' '}
           <code>items</code> 组织整条消息流。
         </p>
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/chat/" target="_blank">
-            查看 Chat 静态样式
-          </a>
-        </div>
 
         <div className="not-prose my-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {capabilityCards.map(card => (

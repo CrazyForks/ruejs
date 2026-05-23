@@ -1,6 +1,7 @@
 import * as runtimeVapor from './pkg/rue_runtime_vapor.js'
 
 import { wrapCreateRue } from './runtime-entry-wrap.js'
+import { shallowRef } from './reactive.js'
 
 const createRue = wrapCreateRue(runtimeVapor.createRue)
 
@@ -54,6 +55,7 @@ export * from './pkg/rue_runtime_vapor.js'
 export default {
   ...runtimeVapor,
   createRue,
+  shallowRef,
 }
 
 export {
@@ -78,6 +80,7 @@ export {
   ref,
   setCurrentInstance,
   setReactiveScheduling,
+  shallowRef,
   shallowReactive,
   shallowReadonly,
   signal,

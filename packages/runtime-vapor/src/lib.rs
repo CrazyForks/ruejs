@@ -28,3 +28,9 @@ pub mod runtime;
 pub use hook::*;
 pub use reactive::*;
 pub use runtime::*;
+
+// Keep minicov linked for wasm coverage builds that use `-Zno-profiler-runtime`.
+#[allow(unexpected_cfgs)]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-coverage", wasm_bindgen_unstable_test_coverage))]
+#[used]
+static RUE_MINICOV_KEEP: fn() -> bool = minicov::coverage_enabled;

@@ -208,3 +208,7 @@ pub fn build_setup_with_binds(
     }
     out
 }
+
+#[cfg(test)]
+#[path = "on_setup_tests.rs"]
+mod tests;

@@ -295,12 +295,6 @@ const LabelPage: FC = () => {
           模式继续保留，并补上字段级说明能力。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/label/" target="_blank">
-            查看 Label 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要把输入控件、前后缀和字段说明组合成一个一致的表单单元。</li>

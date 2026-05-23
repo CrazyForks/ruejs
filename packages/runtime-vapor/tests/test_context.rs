@@ -59,3 +59,34 @@ fn get_current_instance_returns_undefined_when_cleared() {
     let cur = get_current_instance();
     assert!(cur.is_undefined() || cur.is_null());
 }
+
+#[wasm_bindgen_test]
+fn with_hook_slot_reuses_existing_slot_when_index_is_rewound() {
+    let inst = Object::new();
+    set_current_instance(inst.clone().into());
+
+    let first = wasm_bindgen::closure::Closure::wrap(
+        Box::new(move || JsValue::from_str("A")) as Box<dyn FnMut() -> JsValue>
+    );
+    let first_fn: Function = first.as_ref().clone().into();
+    let initial = with_hook_slot(first_fn);
+    first.forget();
+
+    let cur = get_current_instance();
+    let hooks = Reflect::get(&cur, &JsValue::from_str("__hooks")).unwrap();
+    Reflect::set(&hooks, &JsValue::from_str("index"), &JsValue::from_f64(0.0)).unwrap();
+
+    let second = wasm_bindgen::closure::Closure::wrap(
+        Box::new(move || JsValue::from_str("B")) as Box<dyn FnMut() -> JsValue>
+    );
+    let second_fn: Function = second.as_ref().clone().into();
+    let reused = with_hook_slot(second_fn);
+    second.forget();
+
+    let states: Array =
+        Reflect::get(&hooks, &JsValue::from_str("states")).unwrap().unchecked_into();
+    assert_eq!(initial.as_string().as_deref(), Some("A"));
+    assert_eq!(reused.as_string().as_deref(), Some("A"));
+    assert_eq!(states.length(), 1);
+    assert_eq!(states.get(0).as_string().as_deref(), Some("A"));
+}

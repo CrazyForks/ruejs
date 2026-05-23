@@ -1,5 +1,7 @@
 use js_sys::{Function, Promise};
-use rue_runtime_vapor::{create_computed, create_effect, create_signal, set_reactive_scheduling};
+use rue_runtime_vapor::{
+    create_computed, create_effect, create_signal, next_tick, set_reactive_scheduling,
+};
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;
@@ -108,6 +110,33 @@ async fn scheduling_microtask_continues_chained_effects_without_external_poke() 
     assert_eq!(*hits.borrow(), 2);
     assert_eq!(doubled.get_js().as_f64().unwrap(), 4.0);
     effect_cb.forget();
+}
+
+#[wasm_bindgen_test(async)]
+/// nextTick 应等待当前微任务 flush 完成，并看到合并后的最终值。
+async fn next_tick_waits_for_merged_microtask_flush() {
+    set_reactive_scheduling("microtask");
+    let sig = create_signal(JsValue::from_f64(0.0), None);
+    let hits = Rc::new(RefCell::new(Vec::<f64>::new()));
+    let hits2 = hits.clone();
+    let s_for = sig.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        hits2.borrow_mut().push(s_for.get_js().as_f64().unwrap());
+    }) as Box<dyn FnMut()>);
+    let f: Function = cb.as_ref().clone().into();
+    let _eh = create_effect(f, None);
+
+    assert_eq!(hits.borrow().as_slice(), &[0.0]);
+
+    sig.set_js(JsValue::from_f64(1.0));
+    sig.set_js(JsValue::from_f64(2.0));
+
+    assert_eq!(hits.borrow().as_slice(), &[0.0]);
+
+    wasm_bindgen_futures::JsFuture::from(next_tick(None)).await.unwrap();
+
+    assert_eq!(hits.borrow().as_slice(), &[0.0, 2.0]);
+    cb.forget();
 }
 
 #[wasm_bindgen_test]

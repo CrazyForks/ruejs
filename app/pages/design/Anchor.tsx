@@ -504,9 +504,8 @@ const AnchorPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Anchor 锚点导航</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue 版 Anchor 保留 antd
-          的核心心智：items、滚动激活、局部容器、受控高亮与横向模式；视觉上换成更适合 Rue
-          站点的卡片式导航，不直接复制 antd 的细线目录。
+          Rue 版 Anchor 保留锚点导航的核心能力：items、滚动激活、局部容器、受控高亮与横向模式；
+          视觉上换成更适合 Rue 站点的卡片式导航，不直接复制细线目录样式。
         </p>
 
         <div role="alert" className="alert alert-soft alert-info not-prose my-6">

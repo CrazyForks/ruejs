@@ -47,7 +47,7 @@ const HelloWorldComponent = {
 - 组合式函数是一个函数。
 - 组合式函数用于封装和重用有状态的逻辑。
 - 函数名通常以 `use` 开头，以便其他开发人员知道它是一个组合式函数。
-- 该函数通常预期在组件函数或组件初始化入口的同步执行期间被调用。这将组合式函数的调用与当前组件上下文联系起来，例如通过调用 `provide()`、`inject()` 或 `onMounted()`。
+- 该函数通常预期在组件函数或组件初始化入口的同步执行期间被调用。这将组合式函数的调用与当前组件上下文联系起来，例如通过调用 `useContext()` 或 `onMounted()`。
 - 组合式函数通常返回一个普通对象，而不是响应式对象。这个对象通常包含 refs 和函数，并且期望在调用代码中被解构。
 
 与许多模式一样，对于特定代码是否符合该标签可能存在一些分歧。并非所有 JavaScript 实用函数都是组合式函数。如果函数不使用组合式 API，那么它可能不是组合式函数。如果它不期望在组件初始化阶段的同步执行期间被调用，那么它可能不是组合式函数。组合式函数专门用于封装有状态的逻辑，它们不仅仅是函数的命名约定。
@@ -81,7 +81,6 @@ Rue 内置支持渲染自定义元素，并允许它们直接在 Rue 组件模�
 更多详情请参见：
 
 - [指南 - 模板语法 - 指令](/guide/guide/essentials/template-syntax#directives)
-- [指南 - 自定义指令](/guide/guide/reusability/custom-directives)
 
 ## 动态组件 {#dynamic-component}
 
@@ -162,9 +161,9 @@ Rue 模板编译器识别那些静态渲染片段，在初始渲染期间缓存�
 - [指南 - 组件基础 - DOM 内模板解析注意事项](/guide/guide/essentials/component-basics#in-dom-template-parsing-caveats)
 - [选项：渲染 - template](@todo)
 
-## 注入 {#inject}
+## Context 注入 {#inject}
 
-参见[provide / inject](#provide-inject)。
+参见 [context](#context)。
 
 ## 生命周期钩子 {#lifecycle-hooks}
 
@@ -220,19 +219,17 @@ Rue 组件实例经历一个生命周期。例如，它被创建、挂载、更�
 - [指南 - 渲染函数 & JSX](/guide/guide/extras/render-function)
 - [指南 - 插槽 - 作用域插槽](/guide/guide/components/slots#scoped-slots)
 
-## provide / inject {#provide-inject}
+## context {#context}
 
-`provide` 和 `inject` 是一种组件间通信的形式。
+Context 是 Rue 用于跨组件层级共享数据的一种机制。
 
-当组件*提供*一个值时，该组件的所有后代都可以选择使用 `inject` 获取该值。与 props 不同，提供组件不知道确切哪个组件正在接收该值。
+祖先组件可以通过 Context Provider 提供一份共享值，后代组件则通过 `useContext()` 直接读取最近的 Provider 值，而不需要在中间层逐级透传 props。
 
-`provide` 和 `inject` 有时用于避免*prop 钻取*。它们也可以用作组件与其插槽内容通信的隐式方式。
-
-`provide` 也可以在应用程序级别使用，使该值可供该应用程序内的所有组件使用。
+Context 常用于避免 _prop drilling_，尤其适合主题、当前用户、购物车状态这类需要在一整段组件树中复用的数据。
 
 更多详情请参见：
 
-- [指南 - provide / inject](/guide/guide/components/provide-inject)
+- [指南 - Create Context](/guide/guide/components/create-context)
 
 ## 响应式副作用 {#reactive-effect}
 
@@ -354,11 +351,13 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 - [指南 - 模板 Refs](/guide/guide/essentials/template-refs)
 
-## 公开渲染输出 {#vnode}
+## 公开渲染输出 {#public-render-output}
+
+<span id="vnode"></span>
 
 这个锚点同样保留给历史跳转使用。对 Rue 当前主路径来说，更准确的理解是：`h()` 产出的是公开渲染输出对象，它属于显式手写渲染边界，而不是默认内部渲染货币。
 
-更多信息请参见[旧的整树 diff 渲染模型](#virtual-dom)。
+更多信息请参见[指南 - 渲染机制](/guide/guide/extras/rendering-mechanism#public-render-output)。
 
 ## Web 组件 {#web-component}
 

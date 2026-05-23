@@ -1225,8 +1225,8 @@ const TreeDesign: FC = () => {
         <h1>Tree 树控件</h1>
         <p>
           Rue 的 Tree 补上了独立树组件这块空白：保留 TreeView 示例里递归数据直改的灵活性，同时把
-          antd Tree 常用的展开、选中、勾选、简单模式、异步加载和自定义标题一次补齐。 视觉上继续沿用
-          Rue 现有的卡片、badge 和 base 色阶体系，不照搬 antd 的外观。
+          树控件常用的展开、选中、勾选、简单模式、异步加载和自定义标题一次补齐。 视觉上继续沿用 Rue
+          现有的卡片、badge 和 base 色阶体系，不照搬其他组件库的外观。
         </p>
 
         <div className="not-prose mt-6 grid gap-3 md:grid-cols-3">

@@ -140,12 +140,6 @@ const StackPage: FC = () => {
           <code>reverse</code> 反向层级。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/stack/" target="_blank">
-            查看 Stack 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要把多张卡片、图片、文件封面或通知面板做成同一视觉堆叠。</li>

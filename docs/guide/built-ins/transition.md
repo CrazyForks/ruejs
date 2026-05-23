@@ -67,7 +67,7 @@ const App: FC = () => {
 
 有六个类应用于进入/离开过渡。
 
-![过渡图示](@todo)
+可以按时间顺序理解为：进入时依次经历 `rue-enter -> rue-enter-active + rue-enter-to`，离开时依次经历 `rue-exit -> rue-exit-active + rue-exit-to`。
 
 1. `rue-enter`：进入的起始状态。在元素插入之前添加，在元素插入后一帧移除。
 

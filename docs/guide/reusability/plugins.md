@@ -5,9 +5,10 @@
 插件是自包含的代码，通常为应用添加全局级功能。以下是我们安装插件的方式：
 
 ```ts
-import { createApp } from '@rue-js/rue'
+import { useApp } from '@rue-js/rue'
+import App from './App'
 
-const app = createApp({})
+const app = useApp(App)
 
 app.use(myPlugin, {
   /* 可选选项 */
@@ -26,11 +27,11 @@ const myPlugin = {
 
 插件没有严格定义的范围，但插件有用的常见场景包括：
 
-1. 使用 [`app.component()`](/api/api/application#app-component) 和 [`app.directive()`](/api/api/application#app-directive) 注册一个或多个全局组件或自定义指令。
+1. 使用 [`app.component()`](/api/api/application#app-component) 注册一个或多个全局组件。
 
-2. 通过调用 [`app.provide()`](/api/api/application#app-provide) 使资源在整个应用中可[注入](/guide/guide/components/provide-inject)。
+2. 通过导出 [Context](/guide/guide/components/create-context) Provider 和 `useContext()` 封装，让资源在组件树中共享访问。
 
-3. 通过将它们附加到 [`app.config.globalProperties`](/api/api/application#app-config-globalproperties) 来添加一些全局实例属性或方法。
+3. 通过导出组合式函数或普通工具函数，向应用代码暴露插件能力。
 
 4. 需要执行上述某些组合的库（例如 [@rue-js/router](https://github.com/hunzhiwange/ruejs/router)）。
 
@@ -41,38 +42,30 @@ const myPlugin = {
 让我们从设置插件对象开始。建议在一个单独的文件中创建并导出它，如下所示，以保持逻辑独立和分离。
 
 ```ts [plugins/i18n.ts]
-import type { App } from '@rue-js/rue'
-
 export default {
-  install: (app: App, options: Record<string, any>) => {
+  install(app: unknown, options: Record<string, any>) {
     // 插件代码放在这里
   },
 }
 ```
 
-我们想要创建一个翻译函数。该函数将接收一个点分隔的 `key` 字符串，我们将使用它在用户提供的选项中查找翻译后的字符串。这是在模板中的预期用法：
+我们想要创建一个翻译函数。该函数将接收一个点分隔的 `key` 字符串，我们将使用它在用户提供的选项中查找翻译后的字符串。这是在组件中的典型用法：
 
 ```tsx
-<h1>{$translate('greetings.hello')}</h1>
+<h1>{translate(messages, 'greetings.hello')}</h1>
 ```
 
-由于此函数应该在所有模板中全局可用，我们将在插件中将其附加到 `app.config.globalProperties`：
+Rue 当前没有 `app.config.globalProperties`。更稳妥的做法是把翻译函数作为普通工具函数显式导出：
 
-```ts{3-10} [plugins/i18n.ts]
-export default {
-  install: (app, options) => {
-    // 注入一个全局可用的 $translate() 方法
-    app.config.globalProperties.$translate = (key: string) => {
-      // 使用 `key` 作为路径检索 `options` 中的嵌套属性
-      return key.split('.').reduce((o, i) => {
-        if (o) return o[i]
-      }, options)
-    }
-  }
+```ts{1-6} [plugins/i18n.ts]
+export const translate = (messages: Record<string, any>, key: string) => {
+  return key.split('.').reduce((o, i) => {
+    if (o && typeof o === 'object') return (o as Record<string, any>)[i]
+  }, messages as Record<string, any>)
 }
 ```
 
-我们的 `$translate` 函数将接受如 `greetings.hello` 这样的字符串，在用户提供的配置中查找并返回翻译后的值。
+这个 `translate()` 函数会接受如 `greetings.hello` 这样的字符串，在用户提供的配置中查找并返回翻译后的值。
 
 包含翻译键的对象应该通过附加参数传递给 `app.use()` 在插件安装期间传递：
 
@@ -88,37 +81,44 @@ app.use(i18nPlugin, {
 
 现在，我们最初的表达式 `$translate('greetings.hello')` 将在运行时被替换为 `Bonjour!`。
 
-另请参见：[扩展全局属性](@todo) <sup class="vt-badge ts" />
+另请参见：[Create Context](/guide/guide/components/create-context)
 
 :::tip
 谨慎使用全局属性，因为如果太多不同的插件在整个应用中注入的全局属性，会很快变得混乱。
 :::
 
-### 插件中的 Provide / Inject {#provide-inject-with-plugins}
+### 插件中的 Context {#provide-inject-with-plugins}
 
-插件还允许我们使用 `provide` 让插件用户访问函数或属性。例如，我们可以让应用程序访问 `options` 参数以使用翻译对象。
+如果插件需要让整棵组件树共享一份数据，推荐由插件导出 Context，并在应用根部显式渲染对应的 Provider。
 
-```ts{3} [plugins/i18n.ts]
-export default {
-  install: (app, options) => {
-    app.provide('i18n', options)
-  }
+```tsx [plugins/i18n.tsx]
+import { createContext, type FC } from '@rue-js/rue'
+
+export const I18nContext = createContext<Record<string, any>>({})
+
+export const I18nProvider: FC<{ messages: Record<string, any>; children?: any }> = props => {
+  return <I18nContext.Provider value={props.messages}>{props.children}</I18nContext.Provider>
 }
 ```
 
-插件用户现在可以使用 `i18n` 键将插件选项注入到他们的组件中：
+在根组件或布局组件中用 `<I18nProvider messages={messages}>` 包裹应用子树即可。
+
+插件用户随后可以在组件中通过 `useContext()` 读取共享的翻译对象：
 
 ```tsx
-import { inject, type FC } from '@rue-js/rue'
+import { type FC, useContext } from '@rue-js/rue'
+import { I18nContext, translate } from './plugins/i18n'
 
 export const MyComponent: FC = () => {
-  const i18n = inject<Record<string, any>>('i18n')
+  const messages = useContext(I18nContext)
 
-  console.log(i18n?.greetings?.hello)
+  console.log(translate(messages, 'greetings.hello'))
 
-  return () => <div>...</div>
+  return <div>...</div>
 }
 ```
+
+这种模式把“插件安装”和“组件树内共享数据”分开处理：`app.use()` 负责安装插件，`Context.Provider` 负责把值传给后代组件。
 
 ### 打包发布到 NPM
 

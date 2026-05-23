@@ -1,225 +1,298 @@
 # 生命周期钩子 {#lifecycle-hooks}
 
-每个 Rue 组件实例在创建时都会经历一系列初始化步骤——例如，需要设置数据观测、编译模板、将实例挂载到 DOM，以及在数据变化时更新 DOM。在此过程中，它还会运行称为生命周期钩子的函数，让用户有机会在特定阶段添加自己的代码。
+每个 Rue 组件实例都会经历创建、挂载、更新和卸载等阶段。生命周期钩子让你可以在这些阶段插入自己的逻辑，例如：
 
-## 注册生命周期钩子 {#registering-lifecycle-hooks}
+- 组件首次渲染后聚焦输入框
+- 数据变化并完成 DOM 更新后执行同步逻辑
+- 组件离开页面时清理计时器、事件监听器或订阅
+- 在开发阶段追踪是谁触发了重新渲染
 
-例如，`onMounted` 钩子可用于在组件完成初始渲染并创建 DOM 节点后运行代码：
+如果你已经熟悉 Rue 的响应式基础，本页可以帮助你把“什么时候做什么事”放到正确的位置。
+
+## 如何注册生命周期钩子 {#registering-lifecycle-hooks}
+
+生命周期钩子必须在组件初始化阶段**同步注册**。对于函数组件来说，通常就是组件函数同步执行的这段时间。
+
+最常见的例子是 `onMounted()`：
 
 ```tsx
-import { onMounted, ref } from '@rue-js/rue'
+import { onMounted } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
-const MyComponent: FC = () => {
+const HelloCard: FC = () => {
   onMounted(() => {
-    console.log('组件现在已挂载。')
+    console.log('组件已经挂载到页面中。')
   })
 
-  return <div>我的组件</div>
+  return <div>你好，Rue。</div>
 }
+
+export default HelloCard
 ```
 
-还有其他钩子将在实例生命周期的不同阶段被调用，最常用的是 [`onMounted`](/api/api/composition-api-lifecycle#onmounted)、[`onUpdated`](/api/api/composition-api-lifecycle#onupdated) 和 [`onUnmounted`](/api/api/composition-api-lifecycle#onunmounted)。
+同理，[`onUpdated`](/api/api/composition-api-lifecycle#onupdated)、[`onUnmounted`](/api/api/composition-api-lifecycle#onunmounted) 等其他钩子也都需要在这个阶段注册。
 
-当调用 `onMounted` 时，Rue 会自动将注册的回调函数与当前活动的组件实例关联。这要求这些钩子在组件设置期间**同步**注册。例如，不要这样做：
+:::warning 注意
+不要在异步回调里注册生命周期钩子，因为那时当前组件实例的上下文已经结束了。
+:::
 
-```js
+下面的写法不会生效：
+
+```ts
 setTimeout(() => {
   onMounted(() => {
-    // 这不会生效。
+    console.log('这段代码不会与当前组件实例关联。')
   })
 }, 100)
 ```
 
-请注意，这并不意味着调用必须词法上放置在 `setup()` 内部。`onMounted()` 可以在外部函数中调用，只要调用栈是同步的并且源自 `setup()` 内部。
+## 生命周期阶段概览 {#lifecycle-overview}
 
-## 生命周期图示 {#lifecycle-diagram}
+一个典型组件会按这样的顺序经历生命周期：
 
-下面是实例生命周期的图示。你现在不需要完全理解所有内容，但随着学习和构建更多项目，它将是一个有用的参考。
+1. 创建组件实例并建立响应式状态
+2. 调用 `onBeforeMount()`
+3. 执行首次渲染并把 DOM 挂到页面上
+4. 调用 `onMounted()`
+5. 状态变化时，调用 `onBeforeUpdate()`
+6. DOM 更新完成后调用 `onUpdated()`
+7. 组件移除前调用 `onBeforeUnmount()`
+8. 清理完成后调用 `onUnmounted()`
 
-![组件生命周期图示](@todo)
+如果你只记住一条经验法则，可以记成这样：
 
-<!-- https://www.figma.com/file/Xw3UeNMOralY6NV7gSjWdS/Vue-Lifecycle -->
+- 需要访问 DOM：优先放在 `onMounted()` 或 `onUpdated()`
+- 需要做清理：放在 `onUnmounted()`
+- 需要观察渲染链路：使用调试钩子
 
-查阅 [生命周期钩子 API 参考](/api/api/composition-api-lifecycle) 以了解所有生命周期钩子及其各自用例的详细信息。
+查阅 [生命周期钩子 API 参考](/api/api/composition-api-lifecycle) 可以看到所有钩子的完整签名与边界行为。
 
-## 常用生命周期钩子 {#common-lifecycle-hooks}
+## 挂载阶段 {#mounting-hooks}
 
-### onMounted {#onmounted}
+### onBeforeMount() {#onbeforemount}
 
-在组件挂载后调用。此时 DOM 元素已经可用：
+`onBeforeMount()` 在组件即将首次渲染之前调用。此时响应式状态已经准备好，但 DOM 还没有创建出来。
+
+它更适合做“挂载前准备”，而不是访问页面元素：
 
 ```tsx
-import { onMounted, ref } from '@rue-js/rue'
+import { onBeforeMount, ref } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
-const MyComponent: FC = () => {
-  const elementRef = ref<HTMLDivElement>(null)
+const ProfileCard: FC = () => {
+  const status = ref('准备中')
 
-  onMounted(() => {
-    // DOM 元素现在可用
-    console.log(elementRef.value)
-    elementRef.value?.focus()
+  onBeforeMount(() => {
+    status.value = '即将渲染'
   })
 
-  return <div ref={elementRef}>我的元素</div>
+  return <div>{status.value}</div>
 }
+
+export default ProfileCard
 ```
 
-### onUpdated {#onupdated}
+### onMounted() {#onmounted}
 
-在响应式状态变更导致组件更新其 DOM 树之后调用：
+`onMounted()` 在组件首次渲染完成并挂到页面后调用。访问 DOM、启动浏览器 API、接入第三方库，通常都应该放在这里。
 
 ```tsx
-import { onUpdated, ref } from '@rue-js/rue'
+import { onMounted, useRef } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
-const MyComponent: FC = () => {
+const SearchBox: FC = () => {
+  const inputRef = useRef<HTMLInputElement>()
+
+  onMounted(() => {
+    inputRef.current?.focus()
+  })
+
+  return <input ref={inputRef} placeholder="页面加载后自动聚焦" />
+}
+
+export default SearchBox
+```
+
+如果你正在使用[模板引用](/guide/guide/essentials/template-refs)，通常也会在这里第一次读取它们。
+
+## 更新阶段 {#update-hooks}
+
+### onBeforeUpdate() {#onbeforeupdate}
+
+响应式状态变化后，组件准备更新 DOM 之前会调用 `onBeforeUpdate()`。这时 DOM 还是旧的，但你已经知道一次更新即将发生。
+
+```tsx
+import { onBeforeUpdate, ref } from '@rue-js/rue'
+import type { FC } from '@rue-js/rue'
+
+const CounterPanel: FC = () => {
   const count = ref(0)
 
+  onBeforeUpdate(() => {
+    console.log('DOM 还没更新，下一次渲染即将开始。')
+  })
+
+  return (
+    <button
+      onClick={() => {
+        count.value++
+      }}
+    >
+      当前计数：{count.value}
+    </button>
+  )
+}
+
+export default CounterPanel
+```
+
+### onUpdated() {#onupdated}
+
+`onUpdated()` 会在 DOM 完成更新之后触发。适合做依赖“更新后页面状态”的副作用。
+
+```tsx
+import { onUpdated, ref, useRef } from '@rue-js/rue'
+import type { FC } from '@rue-js/rue'
+
+const MeasureBox: FC = () => {
+  const count = ref(0)
+  const boxRef = useRef<HTMLDivElement>()
+
   onUpdated(() => {
-    // 在 DOM 更新后执行某些操作
-    console.log('组件已更新')
+    console.log('最新高度：', boxRef.current?.offsetHeight)
   })
 
   return (
     <div>
-      <p>计数：{count.value}</p>
-      <button onClick={() => count.value++}>增加</button>
+      <button
+        onClick={() => {
+          count.value++
+        }}
+      >
+        增加内容
+      </button>
+      <div ref={boxRef}>{'内容 '.repeat(count.value + 1)}</div>
     </div>
   )
 }
+
+export default MeasureBox
 ```
 
 :::warning 注意
-不要在 `onUpdated` 中更改组件的状态，这可能会导致无限更新循环。
+不要在 `onUpdated()` 中直接再次修改导致当前渲染的状态，否则很容易形成无限更新循环。
 :::
 
-### onUnmounted {#onunmounted}
+如果你的目标是“在某一个明确的状态变更之后读取更新后的 DOM”，也可以考虑 [`nextTick()`](/api/api/general#nexttick)。
 
-在组件实例被卸载之后调用：
+## 卸载阶段 {#unmount-hooks}
+
+### onBeforeUnmount() {#onbeforeunmount}
+
+`onBeforeUnmount()` 会在组件即将从页面移除时调用。此时实例仍然可用，适合做卸载前的最后一步记录或通知。
+
+### onUnmounted() {#onunmounted}
+
+`onUnmounted()` 会在组件及其关联副作用完成清理后调用。计时器、事件监听器、手动订阅都应该在这里回收。
 
 ```tsx
 import { onMounted, onUnmounted, ref } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
-const MyComponent: FC = () => {
-  const timer = ref<number | null>(null)
+const ClockPanel: FC = () => {
+  const now = ref(new Date().toLocaleTimeString())
+  let timerId = 0
 
   onMounted(() => {
-    timer.value = window.setInterval(() => {
-      console.log('滴答')
+    timerId = window.setInterval(() => {
+      now.value = new Date().toLocaleTimeString()
     }, 1000)
   })
 
   onUnmounted(() => {
-    // 清理副作用
-    if (timer.value) {
-      clearInterval(timer.value)
-    }
+    window.clearInterval(timerId)
   })
 
-  return <div>我的组件</div>
+  return <div>当前时间：{now.value}</div>
 }
+
+export default ClockPanel
 ```
 
-### onBeforeMount / onBeforeUpdate / onBeforeUnmount {#other-hooks}
-
-这些钩子分别在挂载、更新、卸载**之前**调用：
-
-```tsx
-import {
-  onBeforeMount,
-  onBeforeUpdate,
-  onBeforeUnmount,
-  onMounted,
-  onUpdated,
-  onUnmounted,
-} from '@rue-js/rue'
-
-const MyComponent: FC = () => {
-  onBeforeMount(() => {
-    console.log('挂载前')
-  })
-
-  onMounted(() => {
-    console.log('挂载后')
-  })
-
-  onBeforeUpdate(() => {
-    console.log('更新前')
-  })
-
-  onUpdated(() => {
-    console.log('更新后')
-  })
-
-  onBeforeUnmount(() => {
-    console.log('卸载前')
-  })
-
-  onUnmounted(() => {
-    console.log('卸载后')
-  })
-
-  return <div>我的组件</div>
-}
-```
+一个简单原则是：凡是在 `onMounted()` 里开启的外部副作用，通常都应该在 `onUnmounted()` 里关闭。
 
 ## 错误处理钩子 {#error-handling-hooks}
 
-### onErrorCaptured {#onerrorcaptured}
+### onErrorCaptured() {#onerrorcaptured}
 
-在捕获到来自后代组件的错误时被调用：
+当后代组件抛出错误并向上冒泡时，父组件可以用 `onErrorCaptured()` 接住它，并展示降级 UI。
 
 ```tsx
 import { onErrorCaptured, ref } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
-const MyComponent: FC = () => {
-  const error = ref<Error | null>(null)
+const ErrorBoundaryLike: FC = (_, { slots }) => {
+  const message = ref('')
 
-  onErrorCaptured((err, instance, info) => {
-    error.value = err as Error
-    console.error('捕获到错误：', err)
-    console.error('错误信息：', info)
-
-    // 返回 false 阻止错误继续向上传播
+  onErrorCaptured((error, _instance, info) => {
+    message.value = `${info}: ${String(error)}`
     return false
   })
 
-  return <div>{error.value ? <p>出错了：{error.value.message}</p> : <ChildComponent />}</div>
+  if (message.value) {
+    return <p>组件渲染失败：{message.value}</p>
+  }
+
+  return <>{slots.default?.()}</>
 }
+
+export default ErrorBoundaryLike
 ```
+
+返回 `false` 可以阻止错误继续向上传播。更完整的行为说明见 [API 文档](/api/api/composition-api-lifecycle#onerrorcaptured)。
 
 ## 调试钩子 {#debug-hooks}
 
-### onRenderTracked / onRenderTriggered {#debug-hooks}
+### onRenderTracked() 与 onRenderTriggered() {#render-debug-hooks}
 
-用于调试响应式依赖：
+这两个钩子主要用于排查“为什么组件会重新渲染”。它们通常只在开发阶段使用。
 
 ```tsx
 import { onRenderTracked, onRenderTriggered, ref } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
-const MyComponent: FC = () => {
+const DebugCounter: FC = () => {
   const count = ref(0)
 
   onRenderTracked(event => {
-    // 当响应式依赖被追踪时调用
     console.log('追踪到依赖：', event)
   })
 
   onRenderTriggered(event => {
-    // 当响应式依赖触发重新渲染时调用
     console.log('触发重新渲染：', event)
   })
 
   return (
-    <div>
-      <p>计数：{count.value}</p>
-      <button onClick={() => count.value++}>增加</button>
-    </div>
+    <button
+      onClick={() => {
+        count.value++
+      }}
+    >
+      {count.value}
+    </button>
   )
 }
+
+export default DebugCounter
 ```
+
+如果某个组件意外频繁更新，这两个钩子通常是最直接的入口。
+
+## 使用建议 {#best-practices}
+
+1. 把生命周期钩子当作“阶段性副作用入口”，不要把普通数据推导逻辑放进去。
+2. 访问 DOM 用 `onMounted()` 或 `onUpdated()`，不要在首次渲染前读取模板引用。
+3. 需要监听状态变化时，优先考虑 [`watch`](/guide/guide/essentials/watchers)；需要在固定生命周期阶段执行时，再使用生命周期钩子。
+4. 任何会长期存在的副作用都要配对清理，避免内存泄漏和重复订阅。
+
+如果你准备继续学习，与本页最相关的下一站通常是[模板引用](/guide/guide/essentials/template-refs)、[侦听器](/guide/guide/essentials/watchers)和[组合式 API 生命周期参考](/api/api/composition-api-lifecycle)。

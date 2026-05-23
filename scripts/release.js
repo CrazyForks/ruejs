@@ -426,6 +426,7 @@ async function runTestsIfNeeded() {
 async function runReleaseVerificationPackageTests() {
   for (const pkg of releaseVerificationPackages) {
     step(`\nRunning release verification for ${pkg.name}...`)
+    await run('npm', ['run', 'fmt'], { cwd: pkg.cwd })
     await run('npm', ['run', 'test'], { cwd: pkg.cwd })
   }
 }

@@ -290,7 +290,7 @@ const ResultDemo: FC = () => {
           更完整，也比空状态更适合承接下一步动作。
         </p>
         <p className="text-sm opacity-75">
-          这次补齐参考了 Ant Design Result 的能力面，但视觉保持 Rue
+          这次补齐参考了成熟结果页组件的能力面，但视觉保持 Rue
           自己的圆角面板、柔和光晕和较轻的插画结构；除了 success、info、warning、error
           之外，也内置了 403、404、500 三种异常状态。
         </p>
@@ -652,7 +652,7 @@ ${shieldWaveIconCode}
 
         <ExampleBlock
           title="预制异常插画"
-          summary="与 Ant Design 一样，Result 也暴露了可单独复用的异常插画，适合接到自定义页面或空状态外壳里。"
+          summary="Result 也暴露了可单独复用的异常插画，适合接到自定义页面或空状态外壳里。"
           tab={presentedImageTab}
           preview={() => (
             <div className="grid gap-4 md:grid-cols-3">

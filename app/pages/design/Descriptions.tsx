@@ -121,7 +121,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'items / children',
-    description: '支持 antd 风格的 items 数组，也支持 Descriptions.Item 子组件。',
+    description: '支持 items 数组，也支持 Descriptions.Item 子组件。',
     type: 'DescriptionsItemProps[] / any',
     defaultValue: '[] / -',
   },
@@ -292,7 +292,7 @@ const DescriptionsDesign: FC = () => {
             </div>
             <div className="mt-2 text-base font-semibold">items 与 Item 都可用</div>
             <p className="mt-2 mb-0 text-sm text-base-content/68">
-              兼容 antd 风格的数组声明，也能保留 JSX 结构化书写。
+              兼容数组声明，也能保留 JSX 结构化书写。
             </p>
           </div>
           <div className="rounded-[1.4rem] border border-base-300 bg-gradient-to-br from-base-100 to-base-200/40 p-4 shadow-sm">
@@ -317,7 +317,7 @@ const DescriptionsDesign: FC = () => {
 
         <PreviewBlock
           title="基础 items API"
-          summary="最接近 antd Descriptions 的用法：直接用 items 数组描述标签、内容与跨列。"
+          summary="最直接的 items 用法：直接用数组描述标签、内容与跨列。"
           tab={basicTab}
           code={basicCode}
           preview={() => (

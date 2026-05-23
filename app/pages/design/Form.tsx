@@ -171,7 +171,7 @@ const BasicSubmitShowcase: FC = () => {
           Submit result
         </div>
         <p className="mt-3 mb-0 text-sm text-base-content/65">
-          这个示例对应 ant-design 文档里的 Basic Usage：基础收集、规则校验、Checkbox 的 checked
+          这个示例覆盖基础提交路径：基础收集、规则校验、Checkbox 的 checked
           绑定，以及失败时滚到错误字段。
         </p>
         <div className="mt-4 grid gap-4">
@@ -310,7 +310,7 @@ const InstanceMethodsShowcase: FC = () => {
           Reactive summary
         </div>
         <p className="mt-3 mb-0 text-sm text-base-content/65">
-          这里对齐 ant-design 的 Form methods 和 Watch Hooks
+          这里把表单实例方法和 Watch Hooks
           两类示例：同一个实例被按钮、摘要卡片和提交流程共享，字段变化会同步反映到右侧。
         </p>
         <div className="mt-4 grid gap-3">
@@ -406,7 +406,7 @@ const ValidationDependenciesShowcase: FC = () => {
                 validateTrigger="onBlur"
                 rules={[{ required: true }, { min: 8 }]}
                 hasFeedback={true}
-                extra="这里用 onBlur 模拟 antd 文档里的 Validate Trigger 用法。"
+                extra="这里用 onBlur 展示 validateTrigger 的常见用法。"
                 render={control => <Input {...control} placeholder="至少 8 位" />}
               />
               <Form.Item
@@ -448,8 +448,8 @@ const ValidationDependenciesShowcase: FC = () => {
           Validation notes
         </div>
         <p className="mt-3 mb-0 text-sm text-base-content/65">
-          这组示例把 ant-design Form 里最常用的跨字段模式放到一起：`validateTrigger`
-          控制时机，`dependencies` 负责联动校验，`warningOnly` 用于规范提醒。
+          这组示例把最常用的跨字段模式放到一起：`validateTrigger` 控制时机，`dependencies`
+          负责联动校验，`warningOnly` 用于规范提醒。
         </p>
         <div className="mt-4 grid gap-3">
           <div className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm">
@@ -581,8 +581,8 @@ const NormalizeValueShowcase: FC = () => {
           Store snapshot
         </div>
         <p className="mt-3 mb-0 text-sm text-base-content/65">
-          这个示例对应 ant-design 里的 `getValueProps + normalize`
-          思路：显示层和存储层可以不同，但写入 Form store 前必须同步归一化。
+          这个示例演示 `getValueProps + normalize` 思路：显示层和存储层可以不同，但写入 Form store
+          前必须同步归一化。
         </p>
         <div className="mt-4 grid gap-3">
           <div className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm">
@@ -731,7 +731,7 @@ const ConditionalFieldsShowcase: FC = () => {
           Conditional summary
         </div>
         <p className="mt-3 mb-0 text-sm text-base-content/65">
-          这个示例对齐 ant-design 里的 `shouldUpdate`
+          这个示例演示 `shouldUpdate`
           使用方式：字段本身负责绑定，条件区域负责根据全表单值决定是否渲染额外内容。
         </p>
         <div className="mt-4 grid gap-3">
@@ -880,7 +880,7 @@ const CompositeNoStyleShowcase: FC = () => {
           Composite preview
         </div>
         <p className="mt-3 mb-0 text-sm text-base-content/65">
-          这个示例对齐 ant-design 的 complex form control
+          这个示例演示复合表单控件的常见组织方式
           思路：一个视觉行可以包含多个真实字段，但绑定必须落在内部 noStyle Item 上。
         </p>
         <div className="mt-4 rounded-[1.25rem] bg-base-200/70 p-4">
@@ -1296,7 +1296,7 @@ const DynamicListShowcase: FC = () => {
           List snapshot
         </div>
         <p className="mt-3 mb-0 text-sm text-base-content/65">
-          这里对齐 ant-design 里的 Dynamic Form
+          这里展示动态列表字段的常见组织方式
           Item：列表项支持新增、插入、重排和删除，右侧快照会跟着字段结构一起变化。
         </p>
         <div className="mt-4 grid gap-3">
@@ -1424,8 +1424,8 @@ const InlineFiltersShowcase: FC = () => {
             Query preview
           </div>
           <p className="mt-3 mb-0 text-sm text-base-content/65">
-            这个示例更接近 ant-design 的 Advanced search：字段采用网格布局，按钮区保持独立，search
-            和 reset 仍由同一实例驱动。
+            这个示例更接近常见的高级搜索表单：字段采用网格布局，按钮区保持独立，search 和 reset
+            仍由同一实例驱动。
           </p>
           <pre className="mt-4 whitespace-pre-wrap break-words rounded-[1.25rem] bg-base-200/70 p-4 text-xs leading-6 text-base-content/80">
             {buildQueryString({
@@ -1695,7 +1695,7 @@ const usageCards = [
     eyebrow: '先记住',
     title: '默认值放在 Form 上',
     description:
-      '和 ant-design 一样，字段被 Form.Item 接管后会进入受控模式。需要初始值时，优先放到 initialValues，而不是给 Input 传 defaultValue。',
+      '字段被 Form.Item 接管后会进入受控模式。需要初始值时，优先放到 initialValues，而不是给 Input 传 defaultValue。',
     items: [
       '单字段初始化优先级低于 Form initialValues',
       '动态列表默认值放到 Form 或 Form.List',
@@ -1738,7 +1738,7 @@ const faqCards = [
     eyebrow: 'FAQ',
     title: '为什么推荐显式传 form？',
     description:
-      '因为 Rue 当前 runtime 还不支持像 ant-design 一样稳定地自动解析最近 Form 实例。显式传递是当前最稳的写法。',
+      '因为 Rue 当前 runtime 还不支持稳定地自动解析最近 Form 实例。显式传递是当前最稳的写法。',
   },
   {
     eyebrow: 'FAQ',
@@ -1755,8 +1755,7 @@ const faqCards = [
   {
     eyebrow: 'FAQ',
     title: '为什么 Form.List 里的 Item initialValue 不推荐？',
-    description:
-      '和 ant-design 的建议一致，动态列表的初始结构应放在 Form 或 Form.List 上，而不是子 Item 上。',
+    description: '动态列表的初始结构应放在 Form 或 Form.List 上，而不是子 Item 上。',
   },
   {
     eyebrow: 'FAQ',
@@ -1790,7 +1789,7 @@ const FormPage: FC = () => {
           Form 表单
         </h1>
         <p className="mt-4 mb-0 max-w-3xl text-sm leading-7 text-base-content/72">
-          这个页面不再只给你一个“能跑”的表单，而是把 ant-design Form 文档里最关键的思路补进 Rue
+          这个页面不再只给你一个“能跑”的表单，而是把表单最关键的使用思路补进 Rue
           当前稳定实现：基础提交、命令式实例、跨字段依赖、条件区域、动态列表、搜索表单，以及它们背后的使用约束。
         </p>
 
@@ -1818,9 +1817,9 @@ const FormPage: FC = () => {
         <div className="not-prose rounded-[1.5rem] border border-base-300 bg-base-100 p-6 text-sm leading-7 text-base-content/75 shadow-sm">
           当前 Rue runtime 下，推荐通过 <code>Form.useForm()</code> 或{' '}
           <code>render=form =&gt; ...</code> 显式持有并传递 <code>form</code>。 下面所有 demo
-          都按这个稳定路径组织，不再依赖隐式祖先解析；你也会在示例里反复看到 ant-design
-          文档常强调的几条规则： `initialValues` 优先于子字段默认值，`Checkbox` 要切到 `checked`
-          语义，`dependencies` 和 `shouldUpdate` 分工不同。
+          都按这个稳定路径组织，不再依赖隐式祖先解析；你也会在示例里反复看到几条关键规则：
+          `initialValues` 优先于子字段默认值，`Checkbox` 要切到 `checked` 语义，`dependencies` 和
+          `shouldUpdate` 分工不同。
         </div>
 
         <PreviewBlock
@@ -2129,7 +2128,7 @@ form.scrollToField(['rollback', 'ticket'], { block: 'center', focus: true })
 
         <PreviewBlock
           title="Advanced search"
-          summary="把 ant-design 里的高级搜索表单思路翻成 Rue 版本：网格字段、独立按钮区、统一实例驱动。"
+          summary="把高级搜索表单整理成 Rue 版本：网格字段、独立按钮区、统一实例驱动。"
           tab={tabInline}
           preview={() => <InlineFiltersShowcase />}
           code={`const [form] = Form.useForm()
@@ -2165,10 +2164,10 @@ form.scrollToField(['rollback', 'ticket'], { block: 'center', focus: true })
 `}
         />
 
-        <h2>Ant Design 使用说明</h2>
+        <h2>使用说明</h2>
         <p>
-          下面这些说明不是泛泛而谈，而是从 ant-design Form 文档里最容易踩坑、同时又和 Rue
-          当前实现强相关的部分抽出来的。先看这些规则，再回头看上面的 demo，理解会快很多。
+          下面这些说明不是泛泛而谈，而是把表单里最容易踩坑、同时又和 Rue
+          当前实现强相关的部分抽出来。先看这些规则，再回头看上面的 demo，理解会快很多。
         </p>
 
         <section className="not-prose my-8 grid gap-4 lg:grid-cols-2">

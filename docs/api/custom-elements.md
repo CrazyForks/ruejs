@@ -51,7 +51,7 @@
 
   组件内部通过 `emitted(props)` 发出的事件，会在宿主元素上桥接为同名 `CustomEvent`。事件参数会按原顺序放到 `event.detail` 数组里，并以 `bubbles: true`、`composed: true` 调度。
 
-  在 `shadowRoot: true` 模式下，组件模板中的原生 `<slot>` 会直接依赖浏览器的 slot 分发机制，从宿主 light DOM 投影内容。
+  在 `shadowRoot: true` 模式下，组件模板中的原生 `<Slot>` 会直接依赖浏览器的 slot 分发机制，从宿主 light DOM 投影内容。
 
   请注意，这些选项可以作为第二个参数传递，而不是作为组件本身的一部分传递：
 

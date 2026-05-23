@@ -578,7 +578,7 @@ const QRCodeDesign: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>QRCode 二维码</h1>
         <p>
-          Rue QRCode 这次直接补齐成一个可用组件：保持 Rue 自己的表面语言，不照搬 ant-design
+          Rue QRCode 这次直接补齐成一个可用组件：保持 Rue 自己的表面语言，不照搬其他组件库
           的视觉，但把 canvas / svg、纠错等级、中心
           logo、状态遮罩、下载示例和语义化样式入口一次性补上。
         </p>
@@ -635,7 +635,7 @@ const QRCodeDesign: FC = () => {
 
         <PreviewBlock
           title="配色、边框与语义样式"
-          summary="不照搬 antd 的视觉，而是延续 Rue 的圆角卡面语言，同时保留 classNames / styles 扩展位。"
+          summary="延续 Rue 的圆角卡面语言，同时保留 classNames / styles 扩展位。"
           tab={appearanceTab}
           code={appearanceCode}
           preview={() => (
@@ -686,7 +686,7 @@ const QRCodeDesign: FC = () => {
 
         <PreviewBlock
           title="下载输出"
-          summary="和 ant-design 的示例一样，下载逻辑放在业务层；组件只负责稳定地产出 canvas 或 svg。"
+          summary="下载逻辑放在业务层；组件只负责稳定地产出 canvas 或 svg。"
           tab={downloadTab}
           code={downloadCode}
           preview={() => <DownloadPreview />}

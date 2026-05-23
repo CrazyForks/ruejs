@@ -133,3 +133,7 @@ pub fn compute_jsx_text_content(
     }
     if content.is_empty() { None } else { Some(content) }
 }
+
+#[cfg(test)]
+#[path = "text_tests.rs"]
+mod tests;

@@ -520,8 +520,7 @@ const GroupedAutoCompletePreview: FC = () => {
 
         <div className="grid gap-3">
           <div className="rounded-box border border-base-300 bg-base-100/80 p-4 text-sm text-base-content/70">
-            这里把 ant-design 的 Certain Category / Uncertain Category 体验折成 Rue
-            更轻的卡片面板：分组标题更克制，建议项仍保留描述与来源标记。
+            这里把分组查找体验折成 Rue 更轻的卡片面板：分组标题更克制，建议项仍保留描述与来源标记。
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             {['Runtime', 'Design', 'Docs'].map(section => (
@@ -725,7 +724,7 @@ const AutoCompletePage: FC = () => {
 
         <PreviewBlock
           title="分组查找与自定义面板"
-          summary="对应 antd 的 category lookup 模式，但用 Rue 自己更轻的卡片和标签节奏重组。"
+          summary="对应分组查找模式，但用 Rue 自己更轻的卡片和标签节奏重组。"
           tab={groupedTab}
           code={groupedCode}
           preview={GroupedAutoCompletePreview}

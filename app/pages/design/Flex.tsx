@@ -87,7 +87,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'component',
-    description: '与 antd Flex 对齐的根节点声明方式；优先级高于 as。',
+    description: '与 as 类似的根节点声明方式；优先级高于 as。',
     type: 'any',
     defaultValue: '-',
   },
@@ -565,7 +565,7 @@ const FlexPage = () => {
         <h1>Flex 弹性布局</h1>
         <p className="text-sm mt-3 mb-3">
           Flex 为 Rue Design 补上一层语义化的弹性布局容器。它不为子元素额外包裹节点，继续保留
-          <code>className</code> 与 <code>style</code> 的直接组合方式，同时补齐接近 antd Flex
+          <code>className</code> 与 <code>style</code> 的直接组合方式，同时补齐更完整的
           的方向、对齐、换行、间距与伸缩能力。
         </p>
         <p className="text-sm mt-0 mb-4 text-base-content/70">
@@ -661,7 +661,7 @@ const FlexPage = () => {
 
         <ExampleBlock
           title="对齐方式组合"
-          summary="justify 和 align 支持 antd 常用语义，也兼容更贴近 CSS 的原生值。"
+          summary="justify 和 align 支持常用语义，也兼容更贴近 CSS 的原生值。"
           tab={tabs.alignment}
           preview={() => (
             <div className="card border border-base-300 bg-base-100 shadow-sm">

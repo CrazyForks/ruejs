@@ -900,11 +900,6 @@ const TimelineDemo: FC = () => {
           布局和更贴近业务组件心智的 items 数据 API；旧页里的 demo
           标题与排列也继续保留，避免增强时把历史示例吞掉。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/timeline/" target="_blank" rel="noreferrer">
-            查看 Timeline 静态样式
-          </a>
-        </div>
 
         <div className="not-prose grid gap-4 md:grid-cols-3 my-6 lg:my-8">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">

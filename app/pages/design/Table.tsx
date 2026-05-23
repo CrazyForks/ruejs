@@ -530,11 +530,6 @@ const TableDemo: FC = () => {
           可以先从基础用法进入，再根据场景查看筛选排序、选择模式、滚动布局与分组表头。静态样式写法仍然保留，可继续
           使用 <code>Table.Head</code>、<code>Table.Body</code> 等复合组件。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/table/" target="_blank">
-            查看 Table 静态样式
-          </a>
-        </div>
 
         <h2>何时使用</h2>
         <ul>

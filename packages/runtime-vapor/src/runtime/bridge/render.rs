@@ -36,9 +36,13 @@ impl WasmRue {
             self.mount_input_from_input(&input_value, CompatEntryPolicy::DefaultSurfaceOnly)
         else {
             let should_report_error = !input_value.is_null() && !input_value.is_undefined();
-            #[cfg(feature = "dev")]
-            {
-                crate::log::warning("Rue runtime: render input not supported on the default path");
+            if should_report_error {
+                #[cfg(feature = "dev")]
+                {
+                    crate::log::warning(
+                        "Rue runtime: render input not supported on the default path",
+                    );
+                }
             }
 
             {

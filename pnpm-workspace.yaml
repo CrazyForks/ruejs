@@ -1,6 +1,8 @@
 packages:
   - 'packages/*'
 
+nodeLinker: hoisted
+
 allowBuilds:
   '@swc/core': false
   simple-git-hooks: false

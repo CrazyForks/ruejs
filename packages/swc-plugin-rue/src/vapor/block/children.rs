@@ -64,3 +64,7 @@ pub(crate) fn emit_children(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "children_tests.rs"]
+mod tests;

@@ -352,8 +352,8 @@ const GridDemo: FC = () => {
           Grid 提供接近成熟组件库的 24 栅格 API，用来组织页面骨架、卡片矩阵和左右混排布局。
         </p>
         <p className="my-3 text-sm opacity-75">
-          这一版不照搬 Ant Design 的视觉，而是把它的核心布局能力迁到 Rue 当前的轻量表面体系里：支持
-          Row / Col、响应式断点、gutter、偏移、顺序和 flex 混排。
+          这一版不照搬其他设计体系的视觉，而是把核心布局能力迁到 Rue 当前的轻量表面体系里：支持 Row
+          / Col、响应式断点、gutter、偏移、顺序和 flex 混排。
         </p>
 
         <div className="not-prose mt-4 flex flex-wrap gap-2">

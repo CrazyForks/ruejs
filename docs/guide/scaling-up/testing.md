@@ -308,7 +308,7 @@ npm test
 当 composable 使用以下 API 时，它就依赖于宿主组件实例：
 
 - 生命周期钩子
-- Provide / Inject
+- Context API（例如 `useContext()`）
 
 如果 composable 只使用响应式 API，那么可以通过直接调用它并断言其返回的状态/方法来测试它：
 
@@ -341,22 +341,25 @@ describe('useCounter', () => {
 })
 ```
 
-依赖于生命周期钩子或 Provide / Inject 的 composable 需要包装在宿主组件中才能进行测试。我们可以创建一个如下所示的辅助函数：
+依赖于生命周期钩子或 Context API 的 composable 需要包装在宿主组件中才能进行测试。我们可以创建一个如下所示的辅助函数：
 
 ```ts [test-utils.ts]
-import { createApp, h, type RenderOutput } from '@rue-js/rue'
+import { h, useApp, type RenderableOutput } from '@rue-js/rue'
 
-export function withSetup<T>(composable: () => T): [T, ReturnType<typeof createApp>] {
+export function withSetup<T>(composable: () => T): [T, ReturnType<typeof useApp>] {
   let result!: T
-  const app = createApp({
+  const app = useApp({
     setup() {
       result = composable()
-      return (): RenderOutput => h('div')
+      return {}
+    },
+    render(): RenderableOutput {
+      return h('div')
     },
   })
   app.mount(document.createElement('div'))
   // 返回结果和应用实例
-  // 用于测试 provide/unmount
+  // 用于测试 Context / unmount
   return [result, app]
 }
 ```
@@ -369,8 +372,7 @@ import { useFoo } from './foo'
 describe('useFoo', () => {
   test('应该正确工作', () => {
     const [result, app] = withSetup(() => useFoo(123))
-    // 为测试注入提供 mock
-    // app.provide(...)
+    // 如果 composable 依赖 useContext()，请在测试宿主组件外层包一层对应的 Context.Provider
     // 运行断言
     // expect(result.foo.value).toBe(1)
     // 如果需要触发 onUnmounted 钩子

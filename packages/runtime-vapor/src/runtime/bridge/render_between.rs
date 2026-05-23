@@ -37,11 +37,13 @@ impl WasmRue {
             self.mount_input_from_input(&input_value, CompatEntryPolicy::DefaultSurfaceOnly)
         else {
             let should_report_error = !input_value.is_null() && !input_value.is_undefined();
-            #[cfg(feature = "dev")]
-            {
-                crate::log::warning(
-                    "Rue runtime: renderBetween input not supported on the default path",
-                );
+            if should_report_error {
+                #[cfg(feature = "dev")]
+                {
+                    crate::log::warning(
+                        "Rue runtime: renderBetween input not supported on the default path",
+                    );
+                }
             }
 
             if let Ok(mut inner) = self.inner.try_borrow_mut() {

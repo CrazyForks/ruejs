@@ -343,12 +343,6 @@ const StatusDemo: FC = () => {
           label/badge 模式；传入 children 后，则变成右上角角标。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/status/" target="_blank" rel="noreferrer">
-            查看 Status 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要一个很轻的状态点，表达在线、同步中、告警、错误这类语义状态。</li>

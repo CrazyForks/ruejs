@@ -309,12 +309,6 @@ const DockDemo: FC = () => {
           ，也可以切到更语义化的 <code>activeKey</code> /<code>onSelect</code> 模式。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/dock/" target="_blank">
-            查看 Dock 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要一个固定在底部的轻量导航，让用户在 3 到 5 个主入口之间快速切换。</li>

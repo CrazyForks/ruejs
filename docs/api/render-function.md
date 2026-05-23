@@ -67,7 +67,7 @@
   )
   ```
 
-- **另请参阅** [指南 - 渲染函数 - 创建渲染输出](/guide/guide/extras/render-function#creating-vnodes)
+- **另请参阅** [指南 - 渲染函数 - 创建渲染输出](/guide/guide/extras/render-function#creating-render-output)
 
 ## mergeProps() {#mergeprops} @todo
 
@@ -80,10 +80,6 @@ Rue 当前默认主入口未公开导出 `cloneVNode()`，本页不再提供过�
 ## resolveComponent() {#resolvecomponent} @todo
 
 Rue 当前默认主入口未公开导出 `resolveComponent()`。渲染函数中的组件请直接导入使用。
-
-## resolveDirective() {#resolvedirective} @todo
-
-Rue 当前默认主入口未公开导出 `resolveDirective()`。需要指令时，优先在模板或 JSX 路径中直接使用它们。
 
 ## withModifiers() {#withmodifiers} @todo
 

@@ -205,9 +205,34 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/fetching-data',
         },
         {
+          id: 'resources',
+          title: '资源',
+          href: '/examples/resources',
+        },
+        {
+          id: 'resources-jsx',
+          title: '资源（纯 JSX）',
+          href: '/examples/resources-jsx',
+        },
+        {
+          id: 'context',
+          title: 'Context',
+          href: '/examples/context',
+        },
+        {
           id: 'reactive-counter',
           title: '基础计数器',
           href: '/examples/reactive-counter',
+        },
+        {
+          id: 'shallow-ref',
+          title: 'shallowRef 浅层 ref',
+          href: '/examples/shallow-ref',
+        },
+        {
+          id: 'next-tick',
+          title: 'nextTick 真实业务场景',
+          href: '/examples/next-tick',
         },
         {
           id: 'render-counter',

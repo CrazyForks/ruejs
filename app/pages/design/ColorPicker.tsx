@@ -341,7 +341,7 @@ const ColorPickerDesign: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>ColorPicker 颜色选择器</h1>
         <p>
-          Rue 的 ColorPicker 不照搬 ant-design 的弹层视觉，但把核心能力补齐到足够实用：
+          Rue 的 ColorPicker 不照搬其他组件库的弹层视觉，但把核心能力补齐到足够实用：
           受控与非受控、格式切换、透明度、预设色、自定义触发器和自定义面板都已经可以直接用。
         </p>
 

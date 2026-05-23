@@ -411,11 +411,6 @@ const RangePage: FC = () => {
           Range 仍然坚持原生 <code>input type="range"</code>{' '}
           的语义，但不再只是一条裸滑杆。现在可以直接在组件层补齐标题、提示、刻度、值展示和语义回调，设计页也按能力分层重新组织。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/range/" target="_blank">
-            查看 Range 静态样式
-          </a>
-        </div>
 
         <ExampleBlock
           title="Range"

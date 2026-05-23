@@ -1,116 +1,115 @@
-# 组合式 API：<br>依赖注入 {#composition-api-dependency-injection}
+# 组合式 API：<br>Context {#composition-api-dependency-injection}
 
-## provide() {#provide} @todo
+Rue 当前通过 Context API 在组件树中共享数据，而不是提供一组单独的依赖注入函数。
 
-提供一个值，可由后代组件注入。
+## createContext() {#create-context}
+
+创建一个上下文对象，供 Provider 和消费者共享同一份类型化的值。
 
 - **类型**
 
   ```ts
-  function provide<T>(key: InjectionKey<T> | string, value: T): void
+  function createContext<T>(defaultValue: T): RueContext<T>
   ```
 
 - **详情**
 
-  `provide()` 接受两个参数：键（可以是字符串或符号）和要注入的值。
+  `createContext()` 接收一个默认值，并返回包含 `Provider` 的 Context 对象。
 
-  使用 TypeScript 时，键可以是类型为 `InjectionKey` 的符号 - 这是 Rue 提供的实用类型，扩展了 `Symbol`，可用于在 `provide()` 和 `inject()` 之间同步值类型。
+  当组件树中没有匹配的 Provider 时，`useContext()` 会回退到这份默认值。
 
-  与生命周期钩子注册 API 类似，`provide()` 必须在组件初始化阶段同步调用。
+  通常建议在模块顶层创建并导出 Context，确保提供者和消费者复用同一个 Context 对象。
+
+  如果默认值的推导类型过窄，可以显式传入泛型参数。
 
 - **示例**
 
   ```tsx
-  import { ref, provide } from '@rue-js/rue'
-  import { countSymbol } from './injectionSymbols'
+  import { createContext, ref } from '@rue-js/rue'
 
-  // 提供静态值
-  provide('path', '/project/')
-
-  // 提供响应式值
-  const count = ref(0)
-  provide('count', count)
-
-  // 使用 Symbol 键提供
-  provide(countSymbol, count)
+  export const CountContext = createContext({
+    count: ref(0),
+    increment: () => {},
+  })
   ```
 
 - **另请参阅**
-  - [指南 - Provide / Inject](/guide/guide/components/provide-inject)
-  - [指南 - 为 Provide / Inject 添加类型](/guide/guide/typescript/composition-api#typing-provide-inject) <sup class="vt-badge ts" />
+  - [指南 - Create Context](/guide/guide/components/create-context)
+  - [指南 - 为 Context 添加类型](/guide/guide/typescript/composition-api#typing-provide-inject) <sup class="vt-badge ts" />
 
-## inject() {#inject} @todo
+## useContext() {#use-context}
 
-注入由祖先组件或应用程序（通过 `app.provide()`）提供的值。
+读取最近的 Context Provider 值；如果没有匹配的 Provider，则返回 `createContext()` 时传入的默认值。
 
 - **类型**
 
   ```ts
-  // 没有默认值
-  function inject<T>(key: InjectionKey<T> | string): T | undefined
-
-  // 有默认值
-  function inject<T>(key: InjectionKey<T> | string, defaultValue: T): T
-
-  // 有工厂函数
-  function inject<T>(
-    key: InjectionKey<T> | string,
-    defaultValue: () => T,
-    treatDefaultAsFactory: true,
-  ): T
+  function useContext<T>(context: RueContext<T>): T
   ```
 
 - **详情**
 
-  第一个参数是注入键。Rue 将遍历父级链以查找具有匹配键的提供的值。如果父级链中有多个组件提供相同的键，则最接近注入组件的那个将"遮蔽"其上方的组件，并使用其值。如果没有找到具有匹配键的值，`inject()` 将返回 `undefined`，除非提供了默认值。
+  `useContext()` 接收一个由 `createContext()` 返回的 Context 对象。
 
-  第二个参数是可选的，是在找不到匹配值时使用的默认值。
+  Rue 会沿当前组件的祖先链查找最近的 `Context.Provider`，并返回它的 `value`。
 
-  第二个参数也可以是返回昂贵创建值的工厂函数。在这种情况下，必须将 `true` 作为第三个参数传递，以指示该函数应被用作工厂而不是值本身。
+  如果父链中有多个相同 Context 的 Provider，离当前组件最近的那个优先。
 
-  与生命周期钩子注册 API 类似，`inject()` 必须在组件初始化阶段同步调用。
-
-  使用 TypeScript 时，键可以是 `InjectionKey` 类型 - 这是 Rue 提供的实用类型，扩展了 `Symbol`，可用于在 `provide()` 和 `inject()` 之间同步值类型。
+  `useContext()` 依赖当前组件实例，因此应在组件函数或组合式函数的同步执行阶段调用。
 
 - **示例**
 
-  假设父组件已按照前面 `provide()` 示例中显示的方式提供了值：
-
   ```tsx
-  import { inject } from '@rue-js/rue'
-  import { countSymbol } from './injectionSymbols'
+  import { useContext } from '@rue-js/rue'
+  import { CountContext } from './count-context'
 
-  // 注入没有默认值的静态值
-  const path = inject('path')
+  function CounterLabel() {
+    const { count, increment } = useContext(CountContext)
 
-  // 注入响应式值
-  const count = inject('count')
-
-  // 使用 Symbol 键注入
-  const count2 = inject(countSymbol)
-
-  // 注入带默认值
-  const bar = inject('path', '/default-path')
-
-  // 注入带函数默认值
-  const fn = inject('function', () => {})
-
-  // 注入带工厂函数默认值
-  const baz = inject('factory', () => new ExpensiveObject(), true)
+    return <button onClick={increment}>Count: {count.value}</button>
+  }
   ```
 
 - **另请参阅**
-  - [指南 - Provide / Inject](/guide/guide/components/provide-inject)
-  - [指南 - 为 Provide / Inject 添加类型](/guide/guide/typescript/composition-api#typing-provide-inject) <sup class="vt-badge ts" />
+  - [指南 - Create Context](/guide/guide/components/create-context)
+  - [指南 - 为 Context 添加类型](/guide/guide/typescript/composition-api#typing-provide-inject) <sup class="vt-badge ts" />
 
-## hasInjectionContext() {#has-injection-context} @todo
+## Context.Provider {#context-provider}
 
-- 仅在 3.3+ 中支持
-
-如果可以在不警告在错误位置调用的情况下使用 [inject()](#inject)，则返回 true。此方法旨在供希望在内部使用 `inject()` 而不会向最终用户触发警告的库使用。
+向后代组件提供一份 Context 值。
 
 - **类型**
 
   ```ts
-  function hasInjectionContext(): boolean
+  interface ContextProviderProps<T> {
+    value: T
+    children?: unknown
+  }
+  ```
+
+- **详情**
+
+  每个由 `createContext()` 返回的 Context 对象都带有一个 `Provider` 组件。
+
+  你可以通过 `<SomeContext.Provider value={...}>` 包裹一段子树，让其中的后代通过 `useContext(SomeContext)` 读取该值。
+
+  Provider 可以嵌套使用，内部 Provider 会覆盖外层同一个 Context 的值。
+
+- **示例**
+
+  ```tsx
+  import { ref } from '@rue-js/rue'
+  import { CountContext } from './count-context'
+
+  function CountProvider(props: { children?: any }) {
+    const count = ref(0)
+
+    const increment = () => {
+      count.value += 1
+    }
+
+    return (
+      <CountContext.Provider value={{ count, increment }}>{props.children}</CountContext.Provider>
+    )
+  }
   ```

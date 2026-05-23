@@ -36,7 +36,7 @@ Rue 当前默认渲染路径已经切到 Block / Vapor / Renderable-first。与�
 - 主入口默认描述的是当前渲染路径
 - `@rue-js/runtime/compat` 与 `@rue-js/rue/compat` 已不存在
 - `_\$vaporCreateVNode` 与 `renderCompat*` 系列 helper 已移除
-- 默认公开 helper 会继续围绕 MountInput / mounted snapshot 组织，而不是继续扩大 VNode-first 契约
+- 默认公开 helper 会继续围绕 MountInput / mounted snapshot 组织，而不是继续扩大历史桥接对象契约
 
 如果你维护的是旧的手写渲染 helper、历史 render-function 桥接或预编译产物，请直接改写到默认路径，而不是继续寻找 compat 替代导入。当前迁移指引见 [默认 Block / Vapor 路径迁移](/guide/guide/migration/renderable-default)。
 

@@ -333,12 +333,6 @@ const TextareaPage: FC = () => {
           、<code>showCount</code>、<code>autoSize</code> 和 <code>resize</code>。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/textarea/" target="_blank">
-            查看 Textarea 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要输入评论、备注、描述等多行文本，并希望保留 Rue 的基础视觉风格。</li>

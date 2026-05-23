@@ -124,19 +124,26 @@ function mutateDeeply() {
 
 ## DOM 更新时机 {#dom-update-timing}
 
-当你修改响应式状态时，DOM 会自动更新。但需要注意的是，DOM 更新不是同步应用的。相反，Rue 会将它们缓冲到更新周期的"下一个 tick"，以确保无论进行了多少次状态更改，每个组件都只更新一次。
+当你修改响应式状态时，DOM 会自动更新。但需要注意的是，DOM 更新不会在同一同步调用栈里立刻应用。相反，Rue 会把默认调度的更新合并到当前这一轮 flush 中，以确保无论进行了多少次状态更改，每个组件都只更新一次。
 
 要等待 DOM 更新在状态更改后完成，可以使用 [nextTick()](/api/api/general#nexttick) 全局 API：
 
-```js
-import { nextTick, ref } from '@rue-js/rue'
+```tsx
+import { nextTick, ref, useRef } from '@rue-js/rue'
+
+const count = ref(0)
+const counterRef = useRef<HTMLSpanElement>()
 
 async function increment() {
   count.value++
+
+  console.log(counterRef.current?.textContent) // 旧 DOM 文本
   await nextTick()
-  // 现在 DOM 已更新
+  console.log(counterRef.current?.textContent) // 新 DOM 文本
 }
 ```
+
+交互式示例：[/examples/next-tick](/examples/next-tick)
 
 ## `reactive()` {#reactive}
 
@@ -156,9 +163,9 @@ const state = reactive({ count: 0 })
 <button onClick={() => state.count++}>{state.count}</button>
 ```
 
-响应式对象是 [JavaScript Proxies](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy)，行为与普通对象一样。不同之处在于 Vue 能够拦截对响应式对象所有属性的访问和修改以进行响应式追踪和触发。
+响应式对象是 [JavaScript Proxies](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy)，行为与普通对象一样。不同之处在于 Rue 会拦截对响应式对象所有属性的访问和修改，以进行响应式追踪和触发。
 
-`reactive()` 深度转换对象：嵌套对象在被访问时也会被 `reactive()` 包装。当 ref 值是对象时，它也会在内部被 `ref()` 调用。与浅层 refs 类似，也有 [`shallowReactive()`](/api/api/reactivity-advanced#shallowreactive) API 用于选择退出深层响应式。
+`reactive()` 深度转换对象：嵌套对象在被访问时也会继续被 Rue 包装为响应式代理。与浅层 refs 类似，也有 [`shallowReactive()`](/api/api/reactivity-advanced#shallowreactive) API 用于选择退出深层响应式。
 
 ### Reactive Proxy vs. Original {#reactive-proxy-vs-original}
 
@@ -229,47 +236,22 @@ console.log(proxy.nested === raw) // false
 
 由于这些局限性，我们推荐使用 `ref()` 作为主要 API 来声明响应式状态。
 
-## 额外的 Ref 解包细节 {#additional-ref-unwrapping-details}
+## 在 `reactive()` 中访问 ref {#refs-inside-reactive}
 
-### 作为响应式对象属性 {#ref-unwrapping-as-reactive-object-property}
-
-当作为响应式对象的属性访问或修改时，ref 会自动解包。换句话说，它表现得像一个普通属性：
+Rue 当前不会在 `reactive()` 属性层自动解包 ref。无论 ref 出现在对象属性、数组元素还是集合值里，访问时拿到的都是 ref 本身，因此读取和写入都需要显式使用 `.value`：
 
 ```js
 const count = ref(0)
-const state = reactive({
-  count,
-})
+const state = reactive({ count })
 
-console.log(state.count) // 0
+console.log(state.count.value) // 0
+state.count.value = 1
 
-state.count = 1
-console.log(count.value) // 1
-```
-
-如果一个新的 ref 被分配给链接到现有 ref 的属性，它会替换旧的 ref：
-
-```js
-const otherCount = ref(2)
-
-state.count = otherCount
-console.log(state.count) // 2
-// 原始 ref 现在与 state.count 断开连接
-console.log(count.value) // 1
-```
-
-Ref 解包只发生在嵌套在深层响应式对象内部时。当作为 [浅层响应式对象](/api/api/reactivity-advanced#shallowreactive) 的属性访问时，它不会应用。
-
-### 数组和集合中的注意事项 {#caveat-in-arrays-and-collections}
-
-与响应式对象不同，当 ref 作为响应式数组或原生集合类型如 `Map` 的元素被访问时，**不会**执行解包：
-
-```js
 const books = reactive([ref('Vue 3 Guide')])
-// 这里需要 .value
 console.log(books[0].value)
 
 const map = reactive(new Map([['count', ref(0)]]))
-// 这里需要 .value
 console.log(map.get('count').value)
 ```
+
+如果你只是想把某个值规范化为普通值，优先使用 [`unref()`](/api/api/reactivity-utilities#unref) 或 [`toValue()`](/api/api/reactivity-utilities#tovalue)，而不是依赖对象属性访问时的隐式解包。

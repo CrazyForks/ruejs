@@ -182,12 +182,25 @@ impl WasmRue {
         &self,
         input_value: &JsValue,
     ) -> Option<MountInput<JsDomAdapter>> {
-        if let Some(input) = transport::default_handle_input(input_value) {
-            return Some(input);
-        }
-
         if input_value.is_object() {
             let obj = js_sys::Object::from(input_value.clone());
+            if let Some(mut input) = transport::default_handle_input(&JsValue::from(obj.clone())) {
+                // default_handle_input 会把 JS side 注册过的 mount handle 直接还原成 MountInput，
+                // 但这条快路径不会再触发 default_input 那套“从 source object 回填元数据”的流程。
+                // 对普通 handle 来说这通常无害；对 raw vapor handle 来说则会丢掉
+                // __rue_cleanup_bucket / __rue_effect_scope_id 这两类只存在于 source object 上的卸载元数据。
+                // 一旦这里漏掉，后面的 mounted lifecycle record 只能拿到 vapor subtree 自己的 scope，
+                // 却看不到 JS owner cleanup bucket 和 hook scope，对应的 useSetup/watchEffect 就会在
+                // renderAnchor 分支切走后继续存活，形成“隐藏分支还在响应”的泄漏。
+                //
+                // 不能简单把 object handle 统一改走 default_input：那条路需要额外 borrow inner runtime，
+                // 在某些嵌套 render / renderAnchor 时机下更容易放大借用冲突。这里保留原有快路径，
+                // 只把 source object 上的 mount metadata 显式补回 MountInput，既保住性能/借用行为，
+                // 也确保卸载链能看到完整的 cleanup 信息。
+                input.attach_mount_metadata_from_source(&obj);
+                return Some(input);
+            }
+
             if let Some(input) = transport::portable_object_input::<JsDomAdapter>(&obj) {
                 return Some(input);
             }
@@ -196,6 +209,12 @@ impl WasmRue {
             if let Some(input) = transport::default_input(&inner, input_value) {
                 return Some(input);
             }
+
+            return None;
+        }
+
+        if let Some(input) = transport::default_handle_input(input_value) {
+            return Some(input);
         }
 
         None
@@ -256,3 +275,7 @@ impl WasmRue {
         self.default_surface_mount_input_from_input(input_value)
     }
 }
+
+#[cfg(test)]
+#[path = "input_tests.rs"]
+mod tests;

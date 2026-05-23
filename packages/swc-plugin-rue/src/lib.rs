@@ -115,3 +115,7 @@ pub fn apply_pre(program: Program) -> Program {
     log::info("rue-swc: apply_pre done");
     p
 }
+
+#[cfg(test)]
+#[path = "lib_tests.rs"]
+mod tests;

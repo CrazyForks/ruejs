@@ -281,6 +281,71 @@ const getActiveRuntimeContainer = (): DomElementLike | null => {
 const resolveCreateElementParent = (parent?: DomElementLike | null) =>
   parent === undefined ? getActiveRuntimeContainer() : (parent ?? null)
 
+const RUE_PENDING_SELECT_VALUE = Symbol('rue.pendingSelectValue')
+
+const getSelectOwner = (node: any): HTMLSelectElement | null => {
+  const parent = node?.parentElement ?? null
+  if (!parent || typeof parent.tagName !== 'string') {
+    return null
+  }
+
+  const parentTag = parent.tagName.toUpperCase()
+  if (parentTag === 'SELECT') {
+    return parent as HTMLSelectElement
+  }
+  if (parentTag === 'OPTGROUP') {
+    const select = parent.parentElement
+    if (select && typeof select.tagName === 'string' && select.tagName.toUpperCase() === 'SELECT') {
+      return select as HTMLSelectElement
+    }
+  }
+
+  return null
+}
+
+const syncPendingSelectValue = (select: any) => {
+  if (!select || typeof select.tagName !== 'string' || select.tagName.toUpperCase() !== 'SELECT') {
+    return
+  }
+
+  const pendingValue = select[RUE_PENDING_SELECT_VALUE]
+  if (pendingValue === undefined) {
+    return
+  }
+
+  if (select.multiple && Array.isArray(pendingValue)) {
+    for (let i = 0; i < select.options.length; i++) {
+      const option = select.options[i]
+      option.selected = pendingValue.indexOf(option.value) !== -1
+    }
+    return
+  }
+
+  select.value = pendingValue
+}
+
+const syncSelectValueAfterMutation = (parent: any, child?: any) => {
+  if (parent && typeof parent.tagName === 'string') {
+    const parentTag = parent.tagName.toUpperCase()
+    if (parentTag === 'SELECT') {
+      syncPendingSelectValue(parent)
+      return
+    }
+    if (parentTag === 'OPTGROUP') {
+      const owner = getSelectOwner(parent)
+      if (owner) {
+        syncPendingSelectValue(owner)
+        return
+      }
+    }
+  }
+
+  const owner = getSelectOwner(child)
+  if (owner) {
+    syncPendingSelectValue(owner)
+  }
+}
+
 export class BrowserDOMAdapter implements DOMAdapter {
   /** 注释节点：委托原生 document.createComment */
   createComment(data: string) {
@@ -356,6 +421,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
     }
 
     ;(parent as any).appendChild(child)
+    syncSelectValueAfterMutation(parent as any, child as any)
     return child as any
   }
   /** 移除子节点：parent.removeChild(child) */
@@ -365,10 +431,12 @@ export class BrowserDOMAdapter implements DOMAdapter {
   /** 插入子节点：parent.insertBefore(child, ref) */
   insertBefore(parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null) {
     ;(parent as any).insertBefore(child, ref)
+    syncSelectValueAfterMutation(parent as any, child as any)
   }
   /** 替换子节点：parent.replaceChild(newChild, oldChild) */
   replaceChild(parent: DomNodeLike, newChild: DomNodeLike, oldChild: DomNodeLike) {
     ;(parent as any).replaceChild(newChild, oldChild)
+    syncSelectValueAfterMutation(parent as any, newChild as any)
   }
   /** 选择器查询：document.querySelector(selector) */
   querySelector(selector: string) {
@@ -430,6 +498,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
     const anyEl = el as any
     const tag = (anyEl.tagName || '').toUpperCase()
     if (tag === 'SELECT') {
+      anyEl[RUE_PENDING_SELECT_VALUE] = value
       if (anyEl.multiple && Array.isArray(value)) {
         for (let i = 0; i < anyEl.options.length; i++) {
           const opt = anyEl.options[i]
@@ -437,6 +506,14 @@ export class BrowserDOMAdapter implements DOMAdapter {
         }
       } else {
         anyEl.value = value
+      }
+      return
+    }
+    if (tag === 'OPTION') {
+      anyEl.value = value
+      const owner = getSelectOwner(anyEl)
+      if (owner) {
+        syncPendingSelectValue(owner)
       }
       return
     }

@@ -126,6 +126,19 @@ fn noisy_runtime_vapor_debug_is_silent_unless_included() {
     rue_runtime_vapor::log::clear_log_exclude();
 
     let global = js_sys::global();
+    let local_storage = Object::new();
+    let get_item = wasm_bindgen::closure::Closure::wrap(Box::new(move |key: JsValue| -> JsValue {
+        if key.as_string().as_deref() == Some("rue.logs.verboseDebug") {
+            return JsValue::from_str("true");
+        }
+        JsValue::NULL
+    })
+        as Box<dyn FnMut(JsValue) -> JsValue>);
+    let get_item_fn: Function = get_item.as_ref().clone().into();
+    Reflect::set(&local_storage, &JsValue::from_str("getItem"), &get_item_fn).ok();
+    Reflect::set(&global, &JsValue::from_str("localStorage"), &local_storage).ok();
+    get_item.forget();
+
     let bucket = Array::new();
     Reflect::set(&global, &JsValue::from_str("__capturedLogs3"), &bucket.clone().into()).ok();
     let logger = wasm_bindgen::closure::Closure::wrap(Box::new(move |s: JsValue| {

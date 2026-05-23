@@ -333,11 +333,6 @@ const AvatarDemo: FC = () => {
           <code>src / icon / text / size / shape / onError</code>
           这类语义 API，也保留原本基于 daisyUI 的自由组合方式。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/avatar/" target="_blank">
-            查看 Avatar 静态样式
-          </a>
-        </div>
 
         <div className="not-prose mt-4 rounded-box border border-base-300 bg-base-100 p-4 text-sm leading-6 text-base-content">
           <div className="font-semibold">这次增强补了什么</div>

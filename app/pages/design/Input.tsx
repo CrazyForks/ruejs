@@ -380,11 +380,6 @@ const InputPage: FC = () => {
           <code>Input.Password</code> 负责常见业务形态，<code>Input.TextArea</code> 则直接复用 Rue
           的多行输入能力。
         </p>
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/input/" target="_blank">
-            查看 Input 静态样式
-          </a>
-        </div>
 
         <h2>何时使用</h2>
         <ul>

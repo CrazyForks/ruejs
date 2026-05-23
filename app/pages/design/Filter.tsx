@@ -270,12 +270,6 @@ const FilterPage: FC = () => {
           <code>items</code>、<code>value</code>、<code>onChange</code> 组织整组筛选。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/filter/" target="_blank">
-            查看 Filter 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要一排轻量筛选按钮，并保持 Rue 当前视觉。</li>

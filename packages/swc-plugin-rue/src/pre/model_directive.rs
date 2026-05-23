@@ -640,3 +640,213 @@ pub fn transform_opening(opening: &mut JSXOpeningElement) {
         apply_native_model(opening, model_expr, &spec.modifiers);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use swc_ecma_parser::{Parser, StringInput, Syntax, TsSyntax};
+
+    fn parse_jsx_opening(src: &str) -> JSXOpeningElement {
+        let cm = Arc::new(SourceMap::default());
+        let fm = cm.new_source_file(
+            FileName::Custom("model-directive-test.tsx".into()).into(),
+            src.to_string(),
+        );
+        let mut parser = Parser::new(
+            Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
+            StringInput::from(&*fm),
+            None,
+        );
+        match *parser.parse_expr().expect("parse jsx expr") {
+            Expr::JSXElement(el) => el.opening,
+            other => panic!("expected JSXElement, got {other:?}"),
+        }
+    }
+
+    fn normalize(src: &str) -> String {
+        let mut out = String::new();
+        let mut prev_space = false;
+        for ch in src.chars() {
+            if ch.is_whitespace() {
+                if !prev_space {
+                    out.push(' ');
+                    prev_space = true;
+                }
+            } else {
+                out.push(ch);
+                prev_space = false;
+            }
+        }
+        out.trim().to_string()
+    }
+
+    fn ident_attr<'a>(opening: &'a JSXOpeningElement, name: &str) -> &'a JSXAttr {
+        opening
+            .attrs
+            .iter()
+            .find_map(|attr| match attr {
+                JSXAttrOrSpread::JSXAttr(attr) => match &attr.name {
+                    JSXAttrName::Ident(ident) if ident.sym.as_ref() == name => Some(attr),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .expect("expected attr")
+    }
+
+    fn attr_expr(attr: &JSXAttr) -> &Expr {
+        match attr.value.as_ref().expect("attr value") {
+            JSXAttrValue::JSXExprContainer(container) => match &container.expr {
+                JSXExpr::Expr(expr) => expr.as_ref(),
+                _ => panic!("expected expr attr"),
+            },
+            other => panic!("expected expr container, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_model_specs_from_namespaced_prefixed_and_safe_names() {
+        assert_eq!(normalize_model_arg("user-name"), Some("userName".to_string()));
+        assert_eq!(normalize_model_arg("ModelValue"), Some("modelValue".to_string()));
+
+        assert_eq!(
+            parse_raw_model_suffix(":lazy-trim-user-name"),
+            Some((Some("userName".to_string()), vec!["lazy".to_string(), "trim".to_string()])),
+        );
+        assert_eq!(parse_raw_model_suffix(":number"), Some((None, vec!["number".to_string()])),);
+        assert_eq!(
+            parse_safe_model_name("__rue_model__user_name__mods__lazy__trim"),
+            Some((Some("userName".to_string()), vec!["lazy".to_string(), "trim".to_string()])),
+        );
+
+        let namespaced_opening =
+            parse_jsx_opening("<Field v-model:trim-user-name={state.value} />");
+        let namespaced_attr = match &namespaced_opening.attrs[0] {
+            JSXAttrOrSpread::JSXAttr(attr) => attr,
+            _ => panic!("expected jsx attr"),
+        };
+        let namespaced_spec =
+            directive_spec_from_name(&namespaced_attr.name).expect("namespaced spec");
+        assert_eq!(namespaced_spec.prop_name, "userName");
+        assert_eq!(namespaced_spec.update_name, "onUpdateUserName");
+        assert_eq!(namespaced_spec.modifiers_prop_name, "userNameModifiers");
+        assert_eq!(namespaced_spec.modifiers, vec!["trim"]);
+
+        let safe_opening =
+            parse_jsx_opening("<Field __rue_model__user_name__mods__lazy__trim={state.value} />");
+        let safe_attr = match &safe_opening.attrs[0] {
+            JSXAttrOrSpread::JSXAttr(attr) => attr,
+            _ => panic!("expected safe jsx attr"),
+        };
+        let safe_spec = directive_spec_from_name(&safe_attr.name).expect("safe spec");
+        assert_eq!(safe_spec.prop_name, "userName");
+        assert_eq!(safe_spec.modifiers, vec!["lazy", "trim"]);
+    }
+
+    #[test]
+    fn classifies_native_model_kinds_from_tag_and_attrs() {
+        assert!(matches!(
+            native_model_kind(&parse_jsx_opening("<textarea />")),
+            NativeModelKind::TextArea
+        ));
+        assert!(matches!(
+            native_model_kind(&parse_jsx_opening("<select multiple />")),
+            NativeModelKind::Select { multiple: true }
+        ));
+        assert!(matches!(
+            native_model_kind(&parse_jsx_opening("<input type=\"checkbox\" />")),
+            NativeModelKind::Checkbox
+        ));
+        assert!(matches!(
+            native_model_kind(&parse_jsx_opening("<input type=\"radio\" />")),
+            NativeModelKind::Radio
+        ));
+        assert!(matches!(
+            native_model_kind(&parse_jsx_opening("<input type=\"number\" />")),
+            NativeModelKind::TextInput { event_name: "onInput", auto_number: true, .. }
+        ));
+    }
+
+    #[test]
+    fn rewrites_component_model_to_controlled_props_and_modifiers() {
+        let mut opening = parse_jsx_opening("<Field v-model:lazy-trim-user-name={state.value} />");
+        transform_opening(&mut opening);
+
+        assert_eq!(opening.attrs.len(), 3);
+        let model_expr = attr_expr(ident_attr(&opening, "userName"));
+        assert_eq!(
+            normalize(&emit_expr_source(model_expr).expect("model expr")),
+            normalize("state.value")
+        );
+
+        let update_expr = attr_expr(ident_attr(&opening, "onUpdateUserName"));
+        let update_src = normalize(&emit_expr_source(update_expr).expect("update expr"));
+        assert!(update_src.contains("(value)"));
+        assert!(
+            update_src.contains("state.value = value") || update_src.contains("state.value=value")
+        );
+
+        let modifiers_expr = attr_expr(ident_attr(&opening, "userNameModifiers"));
+        let modifiers_src = normalize(&emit_expr_source(modifiers_expr).expect("modifiers expr"));
+        assert!(modifiers_src.contains(&normalize("\"lazy\": true")));
+        assert!(modifiers_src.contains(&normalize("\"trim\": true")));
+        assert!(!modifiers_src.contains("v-model"));
+    }
+
+    #[test]
+    fn rewrites_native_text_checkbox_and_select_models() {
+        let mut text_input =
+            parse_jsx_opening("<input type=\"number\" v-model:trim-lazy={age.value} />");
+        transform_opening(&mut text_input);
+        assert_eq!(
+            normalize(
+                &emit_expr_source(attr_expr(ident_attr(&text_input, "value"))).expect("value src")
+            ),
+            normalize("age.value")
+        );
+        let text_handler_src = normalize(
+            &emit_expr_source(attr_expr(ident_attr(&text_input, "onChange")))
+                .expect("text handler"),
+        );
+        assert!(text_handler_src.contains("value.trim()"));
+        assert!(text_handler_src.contains("parseFloat(value)"));
+        assert!(text_handler_src.contains("age.value = value"));
+
+        let mut checkbox = parse_jsx_opening(
+            "<input type=\"checkbox\" true-value=\"yes\" false-value=\"no\" r-model={picked.value} />",
+        );
+        transform_opening(&mut checkbox);
+        let checked_src = normalize(
+            &emit_expr_source(attr_expr(ident_attr(&checkbox, "checked"))).expect("checked expr"),
+        );
+        assert!(checked_src.contains("Array.isArray(picked.value)"));
+        assert!(checked_src.contains("picked.value instanceof Set"));
+        assert!(checked_src.contains("(picked.value) === (\"yes\")"));
+        let checkbox_handler_src = normalize(
+            &emit_expr_source(attr_expr(ident_attr(&checkbox, "onChange")))
+                .expect("checkbox handler"),
+        );
+        assert!(checkbox_handler_src.contains("picked.value = checked ? \"yes\" : \"no\""));
+
+        let mut select = parse_jsx_opening(
+            "<select multiple v-model:number={selected.value}><option value=\"1\">1</option></select>",
+        );
+        transform_opening(&mut select);
+        let select_handler_src = normalize(
+            &emit_expr_source(attr_expr(ident_attr(&select, "onChange"))).expect("select handler"),
+        );
+        assert!(select_handler_src.contains("selectedOptions"));
+        assert!(select_handler_src.contains("parseFloat(value)"));
+        assert!(select_handler_src.contains("selected.value ="));
+    }
+
+    #[test]
+    fn ignores_elements_without_model_directives() {
+        let mut opening = parse_jsx_opening("<input value={state.value} />");
+        transform_opening(&mut opening);
+        assert_eq!(opening.attrs.len(), 1);
+        assert!(
+            matches!(&opening.attrs[0], JSXAttrOrSpread::JSXAttr(attr) if matches!(&attr.name, JSXAttrName::Ident(id) if id.sym.as_ref() == "value"))
+        );
+    }
+}

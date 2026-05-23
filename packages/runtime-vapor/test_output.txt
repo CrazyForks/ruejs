@@ -1,373 +1,0 @@
-
-> @rue-js/runtime-vapor@0.0.39 test
-> wasm-pack test --node
-
-[INFO]: 🎯  Checking for the Wasm target...
-warning: function `pending_effects_len` is never used
-   --> src/reactive/core.rs:486:4
-    |
-486 | fn pending_effects_len() -> usize {
-    |    ^^^^^^^^^^^^^^^^^^^
-    |
-    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
-
-warning: `rue-runtime-vapor` (lib) generated 1 warning
-warning: `rue-runtime-vapor` (lib test) generated 1 warning (1 duplicate)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.02s
-[INFO]: ⬇️  Installing wasm-bindgen...
-warning: function `pending_effects_len` is never used
-   --> src/reactive/core.rs:486:4
-    |
-486 | fn pending_effects_len() -> usize {
-    |    ^^^^^^^^^^^^^^^^^^^
-    |
-    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
-
-warning: `rue-runtime-vapor` (lib) generated 1 warning
-warning: `rue-runtime-vapor` (lib test) generated 1 warning (1 duplicate)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
-     Running unittests src/lib.rs (target/wasm32-unknown-unknown/debug/deps/rue_runtime_vapor-4432803573bcb5ee.wasm)
-Executing bindgen...                                                                                running 7 tests
-test runtime::real_dom::convert::tests::vapor_with_setup_mount_handle_roundtrip_preserves_setup_marker ... ok
-test runtime::real_dom::convert::tests::vapor_with_existing_element_mount_handle_roundtrip_preserves_element_hint ... ok
-test runtime::real_dom::convert::tests::tagged_mount_handle_object_lifts_wrapper_metadata ... ok
-test runtime::real_dom::convert::tests::props_with_children_input_to_jsobject_uses_tagged_mount_handles ... ok
-test runtime::real_dom::convert::tests::portable_component_object_input_roundtrips_on_default_object_surface ... ok
-test runtime::real_dom::convert::tests::host_node_bridge_input_lifts_mount_metadata_off_props ... ok
-test runtime::real_dom::convert::tests::compat_vnode_object_input_flattens_nested_array_children ... ok
-
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/reactive.rs (target/wasm32-unknown-unknown/debug/deps/reactive-dc2556e812ee99fb.wasm)
-Executing bindgen...                                                                                running 10 tests
-test untrack_prevents_subscription ... ok
-test signal_update_and_peek_work ... ok
-test signal_equals_prevents_rerun ... ok
-test signal_effect_runs_on_set ... ok
-test resource_resolves_promise ... ok
-test resource_catches_error ... ok
-test reactive_primitive_value_get_set ... ok
-test reactive_object_property_set_reflects_in_raw ... ok
-test computed_updates_when_dependency_changes ... ok
-test batch_runs_effect_once_for_multiple_sets ... ok
-
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/runtime_compat_replace_boundary.rs (target/wasm32-unknown-unknown/debug/deps/runtime_compat_replace_boundary-a1ec396f1b700c94.wasm)
-Executing bindgen...                                                                                running 7 tests
-test render_container_fragment_replace_with_element_keeps_single_new_root ... ok
-test render_container_element_replace_with_fragment_clears_old_root ... ok
-test render_container_element_patch_updates_in_place ... ok
-test render_between_fragment_replace_with_element_keeps_single_new_root ... ok
-test render_between_element_replace_with_fragment_clears_old_root ... ok
-test render_anchor_fragment_replace_with_element_keeps_single_new_root ... ok
-test render_anchor_element_replace_with_fragment_clears_old_root ... ok
-
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/runtime_component_fragment_switch.rs (target/wasm32-unknown-unknown/debug/deps/runtime_component_fragment_switch-1e5ca091a86f2d21.wasm)
-Executing bindgen...                                                                                running 1 test
-test render_between_component_switch_fragment_root_in_range ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/runtime_component_numeric_attr_props.rs (target/wasm32-unknown-unknown/debug/deps/runtime_component_numeric_attr_props-455fc2763f41a15f.wasm)
-Executing bindgen...                                                                                running 1 test
-test component_numeric_props_keep_dom_attribute_values ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/runtime_component_same_props_vapor_local.rs (target/wasm32-unknown-unknown/debug/deps/runtime_component_same_props_vapor_local-263336322d211cf9.wasm)
-Executing bindgen...                                                                                running 4 tests
-test render_between_same_component_props_update_rebuilds_vapor_local_capture ... ok
-test render_anchor_same_component_props_update_restores_active_input_focus ... ok
-test render_anchor_same_component_props_update_rebuilds_vapor_local_capture ... ok
-test render_anchor_component_element_component_toggle_keeps_single_root ... ok
-
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.02s
-
-                                                       Running tests/runtime_component_switch.rs (target/wasm32-unknown-unknown/debug/deps/runtime_component_switch-6cbea37a9baf4cbf.wasm)
-Executing bindgen...                                                                                running 1 test
-test render_between_component_switching_function_replaces_subtree ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/runtime_fragment_patch_anchor_order.rs (target/wasm32-unknown-unknown/debug/deps/runtime_fragment_patch_anchor_order-eda80124fb908a8d.wasm)
-Executing bindgen...                                                                                running 1 test
-test render_between_fragment_patch_keeps_children_before_end_anchor ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/runtime_js_adapter.rs (target/wasm32-unknown-unknown/debug/deps/runtime_js_adapter-e96b66748ee38908.wasm)
-Executing bindgen...                                                                                running 7 tests
-test js_adapter_replace_child_fallback_calls_insert_before_and_remove_child ... ok
-test js_adapter_query_selector_none_and_some ... ok
-test js_adapter_get_parent_node_uses_method_or_fallback_property ... ok
-test js_adapter_events_attributes_and_patch_style_logging ... ok
-test js_adapter_create_element_returning_undefined_panics ... ok
-test js_adapter_audit_ok_and_basic_calls ... ok
-test js_adapter_audit_missing_methods_panics ... ok
-
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/runtime_mount_input.rs (target/wasm32-unknown-unknown/debug/deps/runtime_mount_input-ea4f26def76d1666.wasm)
-Executing bindgen...                                                                                running 4 tests
-test render_static_input_removes_anchor_without_vnode ... ok
-test render_input_mounts_element_tree_without_vnode ... ok
-test render_between_input_records_range_mount_without_vnode ... ok
-test render_anchor_input_records_anchor_mount_without_vnode ... ok
-
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/runtime_vapor_only_component_return_surface.rs (target/wasm32-unknown-unknown/debug/deps/runtime_vapor_only_component_return_surface-d95370e4fac30c2c.wasm)
-Executing bindgen...                                                                                running 3 tests
-test vapor_only_component_rejects_bare_raw_host_node_return ... ok
-test vapor_only_component_rejects_array_fragment_return ... ok
-test vapor_only_component_accepts_host_node_bridge_return ... ok
-
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/runtime_vapor_only_input_surface.rs (target/wasm32-unknown-unknown/debug/deps/runtime_vapor_only_input_surface-540fd55e5278666a.wasm)
-Executing bindgen...                                                                                running 2 tests
-test vapor_only_render_rejects_raw_element_input ... ok
-test vapor_only_render_accepts_host_node_bridge ... ok
-
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/runtime_wasm_rue.rs (target/wasm32-unknown-unknown/debug/deps/runtime_wasm_rue-89cf83000733924e.wasm)
-Executing bindgen...                                                                                running 13 tests
-test wasm_vapor_wasm_renders_host_element ... ok
-test wasm_vapor_wasm_rejects_legacy_vapor_wrapper_return ... ok
-test wasm_render_static_reports_unsupported_default_surface_input ... ok
-test wasm_render_rejects_raw_vnode_object_input ... ok
-test wasm_render_rejects_raw_function_component_input_on_container_entry ... ok
-test wasm_render_rejects_raw_array_fragment_input ... ok
-test wasm_render_clears_container_on_null_without_error ... ok
-test wasm_render_between_rejects_raw_function_component_input ... ok
-test wasm_render_between_clears_range_on_null_without_error ... ok
-test wasm_render_anchor_reports_unsupported_default_surface_input ... ok
-test wasm_render_anchor_clears_on_null_without_error ... ok
-test wasm_get_current_container_returns_last_render_container ... ok
-test create_rue_sets_global_dom_adapter ... ok
-
-test result: ok. 13 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_benchmark.rs (target/wasm32-unknown-unknown/debug/deps/test_benchmark-01960c36f4984d68.wasm)
-Executing bindgen...                                                                                running 1 test
-test benchmark_massive_updates_debounce ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.57s
-
-                                                       Running tests/test_computed.rs (target/wasm32-unknown-unknown/debug/deps/test_computed-deeefef522462521.wasm)
-Executing bindgen...                                                                                running 4 tests
-test computed_writable_calls_setter_and_updates_value ... ok
-test computed_updates_on_dependency_change ... ok
-test computed_is_lazy_and_uses_dirty_cache ... ok
-test computed_accepts_options_object ... ok
-
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_context.rs (target/wasm32-unknown-unknown/debug/deps/test_context-1dacd23b680b85be.wasm)
-Executing bindgen...                                                                                running 2 tests
-test with_hook_slot_allocates_and_forced_index_resets ... ok
-test get_current_instance_returns_undefined_when_cleared ... ok
-
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_core.rs (target/wasm32-unknown-unknown/debug/deps/test_core-d4cf131d49fd4caa.wasm)
-Executing bindgen...                                                                                running 5 tests
-test to_value_variants ... ok
-test scheduling_sync_runs_immediately ... ok
-test scheduling_microtask_defers_until_microtask ... ok
-test scheduling_microtask_continues_chained_effects_without_external_poke ... ok
-test scheduling_frame_falls_back_to_microtask_outside_browser ... ok
-
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_create_reactive_ref.rs (target/wasm32-unknown-unknown/debug/deps/test_create_reactive_ref-1a9947fa26c7865f.wasm)
-Executing bindgen...                                                                                running 6 tests
-test create_ref_supports_array_and_object_values ... ok
-test create_ref_nested_set_triggers_effect ... ok
-test create_ref_getter_setter_work ... ok
-test create_ref_array_index_triggers_effect ... ok
-test create_reactive_updates_on_nested_set ... ok
-test create_reactive_array_index_triggers_effect ... ok
-
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_effect.rs (target/wasm32-unknown-unknown/debug/deps/test_effect-3c07a7b698bbc5e3.wasm)
-Executing bindgen...                                                                                running 7 tests
-test untrack_prevents_subscription ... ok
-test effect_with_custom_scheduler_defers_initial_run ... ok
-test effect_self_reentry_avoids_direct_loop ... ok
-test effect_immediate_run_and_rerun_on_set ... ok
-test effect_cleanup_runs_before_next_execution ... ok
-test dispose_stops_future_runs ... ok
-test batch_coalesces_multiple_sets ... ok
-
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_effect_scope.rs (target/wasm32-unknown-unknown/debug/deps/test_effect_scope-7039f4f93dd15e82.wasm)
-Executing bindgen...                                                                                running 5 tests
-test effect_scope_stack_roundtrip ... ok
-test dispose_scope_runs_cleanup_and_stops_future_runs ... ok
-test dispose_scope_is_recursive ... ok
-test dispose_scope_cancels_pending_microtask_run ... ok
-test dispose_empty_scope_is_idempotent ... ok
-
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_hook_wrappers.rs (target/wasm32-unknown-unknown/debug/deps/test_hook_wrappers-56a18622b1724ad2.wasm)
-Executing bindgen...                                                                                running 9 tests
-test hook_vapor_with_hook_id_assigns_stable_slot ... ok
-test hook_signal_and_computed_work ... ok
-test hook_shallow_readonly_top_level_block_child_raw_mutates ... ok
-test hook_shallow_reactive_child_not_reactive_and_mutates ... ok
-test hook_ref_basic_value_read_write ... ok
-test hook_readonly_blocks_top_level_set ... ok
-test hook_reactive_nested_write_triggers ... ok
-test hook_is_reactive_and_to_raw_smoke ... ok
-test hook_computed_reuses_handle_across_render_scopes_and_refreshes_getter ... ok
-
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_hooks_basic.rs (target/wasm32-unknown-unknown/debug/deps/test_hooks_basic-765a9820aba9d4b5.wasm)
-this test suite is only configured to run in a browser, but we're only testing node.js tests so skipping
-     Running tests/test_log.rs (target/wasm32-unknown-unknown/debug/deps/test_log-27b143958b4bc697.wasm)
-no tests to run!
-     Running tests/test_nested_effect.rs (target/wasm32-unknown-unknown/debug/deps/test_nested_effect-76ccefc5af6bc5b5.wasm)
-this test suite is only configured to run in a browser, but we're only testing node.js tests so skipping
-     Running tests/test_reactive_proxy.rs (target/wasm32-unknown-unknown/debug/deps/test_reactive_proxy-7550cd908ae1598e.wasm)
-Executing bindgen...                                                                                running 31 tests
-test shallow_equal_prop_prefers_mount_handle_identity ... ok
-test shallow_equal_prop_prefers_host_node_identity ... ok
-test shallow_equal_prop_normalizes_singleton_block_factory_identity ... ok
-test shallow_equal_prop_normalizes_nested_singletons_inside_renderable_arrays ... ok
-test shallow_equal_prop_normalizes_nested_singleton_mount_handle_identity ... ok
-test shallow_equal_prop_compares_renderable_arrays_inside_objects ... ok
-test reactive_shallow_child_write_no_effect_and_no_subscription ... ok
-test reactive_shallow_child_not_proxy ... ok
-test reactive_readonly_typedarray_subarray_set_no_change ... ok
-test reactive_readonly_typedarray_sort_no_change ... ok
-test reactive_readonly_typedarray_reverse_set_no_change ... ok
-test reactive_readonly_typedarray_fill_copywithin_no_change ... ok
-test reactive_readonly_set_blocked_and_raw_unchanged ... ok
-test reactive_readonly_array_methods_pop_shift_unshift_sort_reverse_no_change ... ok
-test reactive_readonly_array_methods_no_change ... ok
-test reactive_readonly_array_methods_fill_copywithin_no_change ... ok
-test reactive_primitive_own_keys_hidden_value ... ok
-test reactive_ownkeys_readonly_shallow_differences ... ok
-test reactive_object_mirror_keys_update_on_set ... ok
-test reactive_nested_branch_update_does_not_rerun_sibling_effect ... ok
-test reactive_method_this_binding_uses_holder ... ok
-test reactive_get_own_property_descriptor_configurable_true ... ok
-test reactive_array_push_triggers_effect ... ok
-test reactive_array_proxy_self_assignment_preserves_push ... ok
-test reactive_array_proxy_self_assignment_keeps_length_in_ownkeys ... ok
-test reactive_array_methods_push_splice_update_on_reget ... ok
-test reactive_array_json_stringify_tracks_mutations ... ok
-test reactive_array_indexof_proxy_child_and_splice_trigger_effect ... ok
-test reactive_array_child_proxy_mirror_updates_on_index_set ... ok
-test props_reactive_nested_array_length_accessible ... ok
-test props_reactive_keeps_host_node_prop_raw ... ok
-
-test result: ok. 31 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.02s
-
-                                                       Running tests/test_resource.rs (target/wasm32-unknown-unknown/debug/deps/test_resource-e43d3082c46d36d9.wasm)
-Executing bindgen...                                                                                running 3 tests
-test resource_resolves_promise ... ok
-test resource_fetcher_returns_non_promise ... ok
-test resource_catches_error ... ok
-
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_signal.rs (target/wasm32-unknown-unknown/debug/deps/test_signal-de9dd20cd8b1202c.wasm)
-Executing bindgen...                                                                                running 13 tests
-test signal_value_setter_triggers_and_updates ... ok
-test signal_value_getter_does_not_subscribe ... ok
-test signal_update_and_peek ... ok
-test signal_string_path_get_set_update ... ok
-test signal_runs_effect_on_set ... ok
-test signal_path_subscriptions_are_isolated_by_branch ... ok
-test signal_path_get_set_update ... ok
-test signal_parent_path_replace_notifies_child_subscribers ... ok
-test signal_equals_prevents_rerun ... ok
-test signal_equals_always_false_triggers ... ok
-test signal_debug_to_string_cyclic_fallback ... ok
-test signal_debug_methods_basic ... ok
-test peek_does_not_subscribe ... ok
-
-test result: ok. 13 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_use_effect.rs (target/wasm32-unknown-unknown/debug/deps/test_use_effect-a20d7b05ecb3a3f4.wasm)
-Executing bindgen...                                                                                running 5 tests
-test use_effect_signal_dep_triggers_on_change_and_cleanup_runs ... ok
-test use_effect_reuses_watch_across_render_scopes_and_updates_latest_callback ... ok
-test use_effect_ref_value_dep_triggers_on_value_change ... ok
-test use_effect_empty_deps_runs_once ... ok
-test use_effect_array_equals_prevents_trigger ... ok
-
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/test_use_state.rs (target/wasm32-unknown-unknown/debug/deps/test_use_state-a6ba4703d03e7a5d.wasm)
-this test suite is only configured to run in a browser, but we're only testing node.js tests so skipping
-     Running tests/test_watch.rs (target/wasm32-unknown-unknown/debug/deps/test_watch-367b192db085b164.wasm)
-Executing bindgen...                                                                                running 14 tests
-test watch_signal_equals_prevents_rerun ... ok
-test watch_path_triggers_on_value_change ... ok
-test watch_path_supports_string_path ... ok
-test watch_path_equals_prevents_rerun ... ok
-test watch_fn_immediate_and_changes ... ok
-test watch_fn_equals_prevents_rerun ... ok
-test watch_fn_custom_scheduler_runs_immediately ... ok
-test watch_effect_no_duplicate_on_batch_flush ... ok
-test watch_effect_no_duplicate_last_value ... ok
-test watch_effect_custom_scheduler_defers ... ok
-test watch_effect_collects_dependencies ... ok
-test watch_deep_signal_triggers_on_nested_changes ... ok
-test watch_deep_signal_custom_equals_always_triggers ... ok
-test watch_debounce_merges_rapid_changes ... ok
-
-test result: ok. 14 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.11s
-
-                                                       Running tests/use_signal.rs (target/wasm32-unknown-unknown/debug/deps/use_signal-661a2d49bd6cfe79.wasm)
-Executing bindgen...                                                                                running 2 tests
-test test_use_signal_equals_no_trigger ... ok
-test test_use_signal_basic_setter ... ok
-
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                       Running tests/watch.rs (target/wasm32-unknown-unknown/debug/deps/watch-4f309cf5fa0b9a63.wasm)
-Executing bindgen...                                                                                running 22 tests
-test test_watch_unified_signal_object_immediate_false_then_trigger ... ok
-test test_watch_unified_signal_object ... ok
-test test_watch_unified_immediate_false ... ok
-test test_watch_unified_function ... ok
-test test_watch_unified_dispose_stops_runs ... ok
-test test_watch_unified_constant_value ... ok
-test test_watch_unified_array_sources ... ok
-test test_watch_unified_array_microtask_schedule ... ok
-test test_watch_signal_custom_equals_no_trigger ... ok
-test test_watch_signal_basic ... ok
-test test_watch_path_string ... ok
-test test_watch_path_array_index_string ... ok
-test test_watch_microtask_schedule ... ok
-test test_watch_handler_reads_do_not_subscribe_to_local_signals ... ok
-test test_watch_fn_object_deep_equals ... ok
-test test_watch_fn_custom_equals_always_true ... ok
-test test_watch_empty_array_source ... ok
-test test_watch_deep_signal_default_eq ... ok
-test test_watch_deep_signal_custom_equals_no_trigger ... ok
-test test_watch_constant_immediate_false_no_trigger ... ok
-test test_watch_array_immediate_false_then_trigger ... ok
-test test_watch_array_custom_equals_suppress ... ok
-
-test result: ok. 22 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.01s
-
-                                                     Doc-tests rue_runtime_vapor
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-
-[WARN]: ⚠️   There's a newer version of wasm-pack available, the new version is: 0.15.0, you are using: 0.13.1. To update, navigate to: https://rustwasm.github.io/wasm-pack/installer/

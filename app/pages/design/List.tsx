@@ -530,11 +530,6 @@ const ListDemo: FC = () => {
           列表用于以行或网格的形式展示同类信息。Rue 的 List 保留 daisyUI 的轻量视觉，并补充
           dataSource、renderItem、Meta、actions、extra、分页、加载和空态等能力。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/list/" target="_blank">
-            查看 List 静态样式
-          </a>
-        </div>
 
         <ExampleBlock
           title="List（第二列默认填充剩余空间）"

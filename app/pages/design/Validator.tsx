@@ -337,11 +337,6 @@ const ValidatorPage: FC = () => {
             </div>
           </div>
         </div>
-        <div className="text-sm mt-3">
-          <a href="https://daisyui.com/components/validator/" target="_blank" rel="noreferrer">
-            查看 daisyUI 原始静态样式
-          </a>
-        </div>
 
         <ExampleBlock
           title="Validator and validator-hint"

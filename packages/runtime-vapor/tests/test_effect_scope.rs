@@ -1,7 +1,7 @@
 use js_sys::{Function, Promise};
 use rue_runtime_vapor::reactive::core::{
-    create_effect_scope, current_effect_scope, dispose_effect_scope, pop_effect_scope,
-    push_effect_scope,
+    create_detached_effect_scope, create_effect_scope, current_effect_scope, dispose_effect_scope,
+    pop_effect_scope, push_effect_scope,
 };
 use rue_runtime_vapor::{create_effect, create_signal, on_cleanup, set_reactive_scheduling};
 use std::cell::RefCell;
@@ -9,7 +9,7 @@ use std::rc::Rc;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_test::*;
 
-#[wasm_bindgen_test]
+#[wasm_bindgen_test(unsupported = test)]
 /// scope 栈：push/pop 影响 current_effect_scope 的返回值。
 fn effect_scope_stack_roundtrip() {
     // 先创建一个父 scope 并压栈。
@@ -29,7 +29,7 @@ fn effect_scope_stack_roundtrip() {
     assert_eq!(current_effect_scope(), None);
 }
 
-#[wasm_bindgen_test]
+#[wasm_bindgen_test(unsupported = test)]
 /// dispose 空 scope：允许重复 dispose，且不会影响后续 scope 使用。
 fn dispose_empty_scope_is_idempotent() {
     let sid = create_effect_scope();
@@ -45,6 +45,56 @@ fn dispose_empty_scope_is_idempotent() {
     push_effect_scope(sid2);
     assert_eq!(current_effect_scope(), Some(sid2));
     pop_effect_scope();
+}
+
+#[wasm_bindgen_test(unsupported = test)]
+/// dispose 父 scope：会递归移除空子 scope；随后重复 dispose 子 scope 应保持 no-op。
+fn dispose_parent_scope_recursively_clears_empty_children() {
+    while pop_effect_scope().is_some() {}
+
+    let parent = create_effect_scope();
+    push_effect_scope(parent);
+
+    let child = create_effect_scope();
+    push_effect_scope(child);
+
+    let grandchild = create_effect_scope();
+
+    assert_eq!(pop_effect_scope(), Some(child));
+    assert_eq!(pop_effect_scope(), Some(parent));
+    assert_eq!(current_effect_scope(), None);
+
+    dispose_effect_scope(parent);
+
+    // parent dispose 后，child/grandchild 应该已被递归清理，重复 dispose 为 no-op。
+    dispose_effect_scope(child);
+    dispose_effect_scope(grandchild);
+}
+
+#[wasm_bindgen_test(unsupported = test)]
+/// detached scope 不参与父 scope 递归销毁。
+fn detached_scope_survives_parent_dispose() {
+    while pop_effect_scope().is_some() {}
+
+    let parent = create_effect_scope();
+    push_effect_scope(parent);
+
+    let child = create_effect_scope();
+    let detached = create_detached_effect_scope();
+
+    assert_eq!(pop_effect_scope(), Some(parent));
+    assert_eq!(current_effect_scope(), None);
+
+    dispose_effect_scope(parent);
+
+    // parent dispose 递归清理 child，但 detached 仍应可用。
+    dispose_effect_scope(child);
+    push_effect_scope(detached);
+    assert_eq!(current_effect_scope(), Some(detached));
+    assert_eq!(pop_effect_scope(), Some(detached));
+
+    dispose_effect_scope(detached);
+    dispose_effect_scope(detached);
 }
 
 #[wasm_bindgen_test]

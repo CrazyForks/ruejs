@@ -545,7 +545,7 @@ const props = defineProps({
 <h3>Bad</h3>
 
 ```jsx
-<img src="https://vuejs.org/images/logo.png" alt="Vue Logo" />
+<button type="button" className="icon-button" aria-label="Close" disabled />
 ```
 
 ```jsx
@@ -558,7 +558,7 @@ const props = defineProps({
 <h3>Good</h3>
 
 ```jsx
-<img src="https://vuejs.org/images/logo.png" alt="Vue Logo" />
+<button type="button" className="icon-button" aria-label="Close" disabled />
 ```
 
 ```jsx

@@ -1,13 +1,17 @@
 # 响应式 API：进阶 {#reactivity-api-advanced}
 
-## shallowRef() {#shallowref} @todo
+## shallowRef() {#shallowref}
 
 [`ref()`](/api/api/reactivity-core#ref) 的浅层版本。
 
 - **类型**
 
   ```ts
-  function shallowRef<T>(value: T): ShallowRef<T>
+  function shallowRef<T = any>(
+    initial: T,
+    options?: { equals?: (prev: T, next: T) => boolean } | null,
+    forceGlobal?: boolean,
+  ): ShallowRef<T>
 
   interface ShallowRef<T> {
     value: T
@@ -17,6 +21,8 @@
 - **详情**
 
   与 `ref()` 不同，浅层 ref 的内部值按原样存储和暴露，不会被设为深层响应式。只有 `.value` 访问是响应式的。
+
+  `shallowRef()` 与 Rue 的 `ref()` 使用同一组选项：你可以通过 `options.equals` 控制整体替换 `.value` 时的比较方式；`forceGlobal` 仍然是面向底层封装和 Hook 边界控制的高级参数。
 
   `shallowRef()` 通常用于大型数据结构的性能优化，或与外部状态管理系统集成。
 

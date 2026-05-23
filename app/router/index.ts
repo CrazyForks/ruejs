@@ -139,6 +139,14 @@ const routes: RouteRecord[] = [
     component: useComponent(() => import('../pages/examples/ReactiveCounter')),
   },
   {
+    path: '/examples/shallow-ref',
+    component: useComponent(() => import('../pages/examples/ShallowRef')),
+  },
+  {
+    path: '/examples/next-tick',
+    component: useComponent(() => import('../pages/examples/NextTick')),
+  },
+  {
     path: '/examples/render-counter',
     component: useComponent(() => import('../pages/examples/RenderCounter')),
   },
@@ -257,6 +265,18 @@ const routes: RouteRecord[] = [
   {
     path: '/examples/fetching-data',
     component: useComponent(() => import('../pages/examples/FetchingData')),
+  },
+  {
+    path: '/examples/resources',
+    component: useComponent(() => import('../pages/examples/ResourceDemo')),
+  },
+  {
+    path: '/examples/resources-jsx',
+    component: useComponent(() => import('../pages/examples/ResourceJSX')),
+  },
+  {
+    path: '/examples/context',
+    component: useComponent(() => import('../pages/examples/Context')),
   },
   {
     path: '/examples/todo-app',

@@ -455,12 +455,6 @@ const ButtonDemo: FC = () => {
           <code>loading</code> 补足交互细节。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/button/" target="_blank">
-            查看 Button 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要一个通用操作按钮，并希望颜色、类型、形状和状态能拆开表达。</li>

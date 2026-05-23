@@ -1,39 +1,5 @@
 # 实用类型 {#utility-types} @todo
 
-> **@todo**: 以下实用类型大部分为 Options API 相关，尚未在 Rue 中实现。
-
-:::info
-此页面仅列出一些可能需要解释其用法的常用实用类型。有关导出类型的完整列表，请参阅[源代码](https://github.com/hunzhiwange/ruejs/blob/main/packages/runtime-core/src/index.ts#L131)。
-:::
-
-## PropType\<T> {#proptype-t}
-
-用于在使用运行时 props 声明时为 prop 添加更高级的类型注释。
-
-- **示例**
-
-  ```ts
-  import type { PropType } from '@rue-js/rue'
-
-  interface Book {
-    title: string
-    author: string
-    year: number
-  }
-
-  export default {
-    props: {
-      book: {
-        // 为 `Object` 提供更具体的类型
-        type: Object as PropType<Book>,
-        required: true,
-      },
-    },
-  }
-  ```
-
-- **另请参阅** [指南 - 为组件 Props 添加类型](@todo)
-
 ## MaybeRef\<T> {#mayberef}
 
 - 仅在 3.3+ 中支持

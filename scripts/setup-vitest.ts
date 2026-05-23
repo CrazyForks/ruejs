@@ -4,6 +4,12 @@ import type { MockInstance } from 'vitest'
 import { afterEach, beforeEach, beforeAll, expect, vi } from 'vitest'
 import { createRue } from '@rue-js/runtime'
 
+type GlobalStorageTarget = typeof globalThis & {
+  window?: Window & typeof globalThis
+  localStorage?: Storage
+  sessionStorage?: Storage
+}
+
 declare module 'vitest' {
   interface Assertion<T = any> extends CustomMatchers<T> {}
   interface AsymmetricMatchersContaining extends CustomMatchers {}
@@ -14,6 +20,76 @@ interface CustomMatchers<R = unknown> {
   toHaveBeenWarnedLast(): R
   toHaveBeenWarnedTimes(n: number): R
 }
+
+const createMemoryStorage = (): Storage => {
+  const data = new Map<string, string>()
+
+  return {
+    get length() {
+      return data.size
+    },
+    clear() {
+      data.clear()
+    },
+    getItem(key) {
+      return data.has(key) ? data.get(key)! : null
+    },
+    key(index) {
+      return Array.from(data.keys())[index] ?? null
+    },
+    removeItem(key) {
+      data.delete(String(key))
+    },
+    setItem(key, value) {
+      data.set(String(key), String(value))
+    },
+  }
+}
+
+const resolveUsableStorage = (name: 'localStorage' | 'sessionStorage') => {
+  const target = globalThis as GlobalStorageTarget
+  const probeKey = `__rue_${name}_probe__`
+
+  for (const candidate of [target[name], target.window?.[name]]) {
+    if (!candidate) {
+      continue
+    }
+
+    try {
+      candidate.setItem(probeKey, '1')
+      candidate.removeItem(probeKey)
+      return candidate
+    } catch {
+      continue
+    }
+  }
+
+  return null
+}
+
+const ensureStorage = (name: 'localStorage' | 'sessionStorage') => {
+  const target = globalThis as GlobalStorageTarget
+  const storage = resolveUsableStorage(name) ?? createMemoryStorage()
+
+  Object.defineProperty(target, name, {
+    configurable: true,
+    writable: true,
+    value: storage,
+  })
+
+  if (target.window) {
+    Object.defineProperty(target.window, name, {
+      configurable: true,
+      writable: true,
+      value: storage,
+    })
+  }
+
+  return storage
+}
+
+const localStorageRef = ensureStorage('localStorage')
+const sessionStorageRef = ensureStorage('sessionStorage')
 
 vi.stubGlobal('MathMLElement', class MathMLElement {})
 
@@ -101,6 +177,8 @@ afterEach(() => {
     throw new Error(`test case threw unexpected warnings:\n - ${nonAssertedWarnings.join('\n - ')}`)
   }
 
+  localStorageRef.clear()
+  sessionStorageRef.clear()
   document.body.innerHTML = ''
 })
 

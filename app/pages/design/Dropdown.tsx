@@ -250,11 +250,6 @@ const DropdownPage: FC = () => {
           <code>menu / items</code>、<code>trigger</code>、<code>placement</code>、<code>open</code>
           、<code>popupRender</code> 和右键菜单。
         </p>
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/dropdown/" target="_blank">
-            查看 Dropdown 静态样式
-          </a>
-        </div>
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">

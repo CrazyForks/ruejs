@@ -195,12 +195,6 @@ const SwapPage: FC = () => {
           <code>indeterminate</code> 和 <code>onCheckedChange</code> 让组件自己生成隐藏输入。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/swap/" target="_blank">
-            查看 Swap 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要在两个内容之间做轻量切换，同时复用 Rue 现有的 swap 视觉和动效。</li>

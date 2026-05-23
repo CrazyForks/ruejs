@@ -27,9 +27,9 @@ function increment() {
 }
 </script>
 
-<template>
+<Template>
   <button @click="increment">{{ count }}</button>
-</template>
+</Template>
 ```
 
 这里的 `$ref()` 方法是一个**编译时宏**：它不是一个会在运行时实际调用的方法。相反，Rue 编译器使用它作为提示，将生成的 `count` 变量视为**响应式变量**。
@@ -54,7 +54,10 @@ function increment() {
 - [`computed`](/api/api/reactivity-core#computed) -> `$computed`
 - [`shallowRef`](/api/api/reactivity-advanced#shallowref) -> `$shallowRef`
 - [`customRef`](/api/api/reactivity-advanced#customref) -> `$customRef`
-- [`toRef`](/api/api/reactivity-utilities#toref) -> `$toRef`
+
+:::warning 规划状态
+Rue 当前公开运行时尚未提供 [`toRef()`](/api/api/reactivity-utilities#toref)。因此 `$toRef` 以及下文中基于 `toRef()` 的展开示例应视为规划中的设计草案，而不是当前稳定 API。
+:::
 
 这些宏是全局可用的，在启用响应式转换时不需要导入，但如果你想更明确，可以从 `@rue-js/rue/macros` 选择性地导入它们：
 
@@ -76,7 +79,7 @@ const { x, y } = $(useMouse())
 console.log(x, y)
 ```
 
-编译输出：
+设计草案中的编译输出：
 
 ```js
 import { toRef } from '@rue-js/rue'

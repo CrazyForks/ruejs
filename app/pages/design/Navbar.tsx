@@ -345,12 +345,6 @@ const NavbarPage: FC = () => {
           的布局骨架，但补齐了更适合真实项目的语义插槽、 数据驱动项和布局控制能力。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/navbar/" target="_blank">
-            查看 Navbar 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要一个轻量的头部布局容器，用来放品牌、导航入口、搜索框和用户操作。</li>

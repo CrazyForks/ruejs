@@ -232,12 +232,6 @@ const MockupCodePage: FC = () => {
           API，适合终端日志、代码片段和差异对比。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/mockup-code/" target="_blank">
-            查看 Mockup Code 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要用 Rue 的终端外框包裹一小段安装命令、日志输出或代码片段。</li>

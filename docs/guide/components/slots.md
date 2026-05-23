@@ -28,9 +28,7 @@ function FancyButton({ children }: { children?: React.ReactNode }) {
 
 `children` 属性是一个**插槽出口**，表示父组件提供的**插槽内容**应该在哪里渲染。
 
-![slot diagram](@todo)
-
-<!-- https://www.figma.com/file/LjKTYVL97Ck6TEmBbstavX/slot -->
+也就是说，父组件决定插槽里放什么，`<FancyButton>` 只决定外层按钮结构以及这段内容被插入的位置。
 
 最终渲染的 DOM：
 
@@ -77,7 +75,7 @@ function FancyButton(slotContent) {
 
 通过使用插槽，我们的 `<FancyButton>` 更加灵活和可复用。我们现在可以在不同的地方使用不同的内部内容，但都使用相同的精美样式。
 
-Rue 组件的插槽机制受到[原生 Web Component `<slot>` 元素](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/slot)的启发，但具有我们将在后面看到的额外功能。
+Rue 组件的插槽机制受到[原生 Web Component `<Slot>` 元素](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/slot)的启发，但具有我们将在后面看到的额外功能。
 
 ## 渲染作用域 {#render-scope}
 
@@ -189,9 +187,7 @@ function BaseLayout({
 </BaseLayout>
 ```
 
-![named slots diagram](@todo)
-
-<!-- https://www.figma.com/file/2BhP8gVZevttBu9oUmUUyz/named-slot -->
+换句话说，`header` 会渲染到 `<header>`，默认插槽内容会渲染到 `<main>`，而 `footer` 会渲染到 `<footer>`。
 
 当组件同时接受默认插槽和具名插槽时，所有顶层非命名节点都被隐式视为默认插槽的内容。所以上面的代码也可以写成：
 
@@ -333,9 +329,7 @@ function MyComponent({ children }: MyComponentProps) {
 </MyComponent>
 ```
 
-![scoped slots diagram](@todo)
-
-<!-- https://www.figma.com/file/QRneoj8eIdL1kw3WQaaEyc/scoped-slot -->
+这里的数据流是：子组件调用 `children` 并传入 `slotProps`，父组件在 render prop 的参数中接收这些数据并决定最终渲染结果。
 
 <div class="composition-api">
 

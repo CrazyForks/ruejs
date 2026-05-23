@@ -146,7 +146,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'onChange',
-    description: '内容变化时返回当前文本，行为对齐 ant-design Mentions',
+    description: '内容变化时返回当前文本，便于同步输入状态',
     type: '(text: string) => void',
     defaultValue: '-',
   },
@@ -376,7 +376,7 @@ const BasicMentionsPreview: FC = () => {
         <div className="rounded-box border border-dashed border-base-300 bg-base-100/80 p-4 text-sm text-base-content/70">
           <div className="mb-3 font-medium text-base-content">候选项设计</div>
           <p className="m-0">
-            这里没有照搬 ant-design 的面板视觉，而是保留 Rue
+            这里没有照搬其它组件库的面板视觉，而是保留 Rue
             更轻、更卡片化的输入体验，候选项支持头像块、角色说明与团队信息。
           </p>
         </div>

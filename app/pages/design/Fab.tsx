@@ -258,11 +258,6 @@ const FabPage: FC = () => {
           <code>trigger</code>、<code>placement</code>、<code>open</code>、<code>tooltip</code> 和{' '}
           <code>badge</code>。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/fab/" target="_blank">
-            查看 Fab 静态样式基底
-          </a>
-        </div>
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">

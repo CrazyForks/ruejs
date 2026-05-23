@@ -52,7 +52,45 @@ const openPicker = async (input: HTMLInputElement) => {
   await click(input)
 }
 
+const clickPanelOption = async (
+  container: HTMLDivElement,
+  column: 'hour' | 'minute' | 'second' | 'meridiem',
+  option: string,
+) => {
+  const button = container.querySelector(
+    `button[data-rue-time-column="${column}"][data-rue-time-option="${option}"]`,
+  ) as HTMLButtonElement
+  const pointerDownEvent = new PointerEvent('pointerdown', { bubbles: true, cancelable: true })
+  button.dispatchEvent(pointerDownEvent)
+  expect(pointerDownEvent.defaultPrevented).toBe(true)
+  const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+  button.dispatchEvent(mouseDownEvent)
+  expect(mouseDownEvent.defaultPrevented).toBe(true)
+  await click(button)
+}
+
 describe('TimePicker', () => {
+  it('opens only once for a single click that also focuses the input', async () => {
+    const container = mountTestContainer()
+    resetActiveRuntime()
+    const handleOpenChange = vi.fn()
+
+    render(<TimePicker onOpenChange={handleOpenChange} data-testid="open-once-picker" />, container)
+
+    await waitForContent(() => {
+      const input = container.querySelector('[data-testid="open-once-picker"]') as HTMLInputElement
+      expect(input).toBeTruthy()
+    })
+
+    const input = container.querySelector('[data-testid="open-once-picker"]') as HTMLInputElement
+    await openPicker(input)
+
+    await waitForContent(() => {
+      expect(handleOpenChange).toHaveBeenCalledTimes(1)
+      expect(handleOpenChange).toHaveBeenLastCalledWith(true)
+    })
+  })
+
   it('renders the default value and updates after clicking a panel option', async () => {
     const container = mountTestContainer()
     resetActiveRuntime()
@@ -408,6 +446,113 @@ describe('TimePicker', () => {
         expect(input.value).toBe('09:45:15')
         expect(live.textContent).toBe('09:45:15')
         expect(popups.some(popup => !popup.hidden)).toBe(true)
+      })
+    },
+    slowTestTimeout,
+  )
+
+  it(
+    'keeps the popup open while a controlled value is updated across hour minute second clicks',
+    async () => {
+      const container = mountTestContainer()
+      resetActiveRuntime()
+
+      const ControlledCase = () => {
+        const currentValue = ref('09:30:15')
+        const liveValue = ref('09:30:15')
+
+        return (
+          <div>
+            <TimePicker
+              value={currentValue.value}
+              onChange={(nextValue, timeString) => {
+                currentValue.value = nextValue ?? ''
+                liveValue.value = timeString || '未选择'
+              }}
+              data-testid="controlled-sequence-picker"
+            />
+            <div data-testid="controlled-sequence-live-value">{liveValue.value}</div>
+          </div>
+        )
+      }
+
+      render(<ControlledCase />, container)
+
+      const assertPopupOpen = () => {
+        const popups = Array.from(
+          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
+        ) as HTMLDivElement[]
+        expect(popups.some(popup => !popup.hidden)).toBe(true)
+      }
+
+      await waitForContent(() => {
+        const input = container.querySelector(
+          '[data-testid="controlled-sequence-picker"]',
+        ) as HTMLInputElement
+        expect(input.value).toBe('09:30:15')
+      })
+
+      const input = container.querySelector(
+        '[data-testid="controlled-sequence-picker"]',
+      ) as HTMLInputElement
+      await openPicker(input)
+
+      await waitForContent(() => {
+        expect(
+          container.querySelector('button[data-rue-time-column="hour"][data-rue-time-option="10"]'),
+        ).toBeTruthy()
+        expect(
+          container.querySelector(
+            'button[data-rue-time-column="minute"][data-rue-time-option="45"]',
+          ),
+        ).toBeTruthy()
+        expect(
+          container.querySelector(
+            'button[data-rue-time-column="second"][data-rue-time-option="30"]',
+          ),
+        ).toBeTruthy()
+      })
+
+      await clickPanelOption(container, 'hour', '10')
+
+      await waitForContent(() => {
+        const updatedInput = container.querySelector(
+          '[data-testid="controlled-sequence-picker"]',
+        ) as HTMLInputElement
+        const live = container.querySelector(
+          '[data-testid="controlled-sequence-live-value"]',
+        ) as HTMLDivElement
+        expect(updatedInput.value).toBe('10:30:15')
+        expect(live.textContent).toBe('10:30:15')
+        assertPopupOpen()
+      })
+
+      await clickPanelOption(container, 'minute', '45')
+
+      await waitForContent(() => {
+        const updatedInput = container.querySelector(
+          '[data-testid="controlled-sequence-picker"]',
+        ) as HTMLInputElement
+        const live = container.querySelector(
+          '[data-testid="controlled-sequence-live-value"]',
+        ) as HTMLDivElement
+        expect(updatedInput.value).toBe('10:45:15')
+        expect(live.textContent).toBe('10:45:15')
+        assertPopupOpen()
+      })
+
+      await clickPanelOption(container, 'second', '30')
+
+      await waitForContent(() => {
+        const updatedInput = container.querySelector(
+          '[data-testid="controlled-sequence-picker"]',
+        ) as HTMLInputElement
+        const live = container.querySelector(
+          '[data-testid="controlled-sequence-live-value"]',
+        ) as HTMLDivElement
+        expect(updatedInput.value).toBe('10:45:30')
+        expect(live.textContent).toBe('10:45:30')
+        assertPopupOpen()
       })
     },
     slowTestTimeout,

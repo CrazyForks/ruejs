@@ -618,11 +618,6 @@ const TabsDemo: FC = () => {
           视觉，还补齐了内容面板、默认激活项、额外操作区、居中、垂直摆放和 editable-card 等更完整的
           API。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/tab/" target="_blank">
-            查看 Tabs 静态样式
-          </a>
-        </div>
 
         <h2>何时使用</h2>
         <ul>

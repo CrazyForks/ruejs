@@ -305,12 +305,6 @@ const FooterDemo: FC = () => {
           这组结构化 API，把品牌区、链接列和表单区拆开表达。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/footer/" target="_blank">
-            查看 Footer 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要组织品牌信息、导航链接、社交入口或版权声明。</li>

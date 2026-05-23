@@ -350,7 +350,7 @@ const responsiveCode = [
   '        <div className="rounded-[1.25rem] border border-base-300/70 bg-base-100/90 p-5 shadow-sm">',
   '          <div className="text-sm font-semibold">Callbacks included</div>',
   '          <div className="mt-2 text-sm opacity-75">',
-  '            onBreakpoint and onCollapse stay separate, matching the antd mental model.',
+  '            onBreakpoint and onCollapse stay separate, keeping breakpoint and collapse callbacks separate.',
   '          </div>',
   '        </div>',
   '      </div>',
@@ -495,8 +495,8 @@ const LayoutPage: FC = () => {
         <h1>Layout 布局</h1>
         <p className="text-sm mt-3 mb-3">
           Rue 原来没有成体系的 Layout。现在这一组组件把页面骨架、双栏工作台、可折叠侧栏和响应式 rail
-          一次补齐，API 对齐 ant-design 的 Layout / Sider 核心能力，但视觉仍然沿用 Rue 现在的
-          柔和面板、圆角和 utility class 组合方式。
+          一次补齐，API 覆盖 Layout / Sider 这组核心能力，但视觉仍然沿用 Rue 现在的 柔和面板、圆角和
+          utility class 组合方式。
         </p>
 
         <h2>何时使用</h2>
@@ -787,7 +787,8 @@ const LayoutPage: FC = () => {
                     <div className="rounded-[1.25rem] border border-base-300/70 bg-base-100/90 p-5 shadow-sm">
                       <div className="text-sm font-semibold">Callbacks included</div>
                       <div className="mt-2 text-sm opacity-75">
-                        onBreakpoint and onCollapse stay separate, matching the antd mental model.
+                        onBreakpoint and onCollapse stay separate, so breakpoint and collapse state
+                        can be handled independently.
                       </div>
                     </div>
                   </div>

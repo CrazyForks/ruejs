@@ -557,7 +557,7 @@ const TreeSelectPage: FC = () => {
         <p className="text-sm mt-3 mb-3">
           TreeSelect 适合“下拉选择 +
           树结构浏览”同时存在的输入场景，比如目录、组织架构、权限树、资源分类和发布范围。
-          这一版不照搬 antd 的视觉，而是延续 Rue 的 input / badge / base 色阶体系，把
+          这一版不照搬其他组件库的视觉，而是延续 Rue 的 input / badge / base 色阶体系，把
           treeData、simple mode、多选、勾选、语义值、异步加载和 filled / warning 等核心面一次补齐。
         </p>
 

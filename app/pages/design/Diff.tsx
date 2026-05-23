@@ -204,12 +204,6 @@ const DiffDemo: FC = () => {
           <code>Diff.Item1</code>、<code>Diff.Item2</code>、<code>Diff.Resizer</code> 自己拼装。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/diff/" target="_blank" rel="noreferrer">
-            查看 Diff 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要比较两个版本、两套视觉稿或两段内容，并让用户自己拖动查看差异。</li>

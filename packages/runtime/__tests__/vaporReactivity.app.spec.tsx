@@ -569,6 +569,90 @@ const CompiledReactiveDestructureWatchParent = () => {
   })
 }
 
+const createHookedVaporToggle = (onHookRun: () => void) => {
+  const createHookedVaporPanel = (source: { value: string }) => {
+    return vapor(() => {
+      // 这个 panel 刻意走“raw vapor + useSetup + watchEffect”的组合，
+      // 用来覆盖最容易泄漏的那条链：
+      // - renderAnchor 负责在 preview / code 两个分支之间反复替换整棵 raw vapor 子树；
+      // - useSetup 在 raw vapor setup 里注册 hook-based effect；
+      // - effect 同时读取 source，便于我们用 hookRuns 观察旧订阅有没有被真正 dispose。
+      // 只要 owner cleanup bucket、hook scope 或 vapor scope 任意一环没接上，
+      // 切到 code 分支后继续 bump source，hookRuns 就会错误增长。
+      _$vaporWithHookId('useSetup:hooked-vapor-toggle:0', () =>
+        useSetup(() => {
+          watchEffect(() => {
+            void source.value
+            onHookRun()
+          })
+
+          return {}
+        }),
+      )
+
+      const root = document.createElement('div')
+      root.dataset.testid = 'hooked-vapor-value'
+
+      watchEffect(() => {
+        root.textContent = source.value
+      })
+
+      return root
+    })
+  }
+
+  return () => {
+    const activeTab = ref<'preview' | 'code'>('preview')
+    const query = ref('a')
+
+    return vapor(() => {
+      const root = document.createElement('section')
+      const previewButton = document.createElement('button')
+      const codeButton = document.createElement('button')
+      const bumpButton = document.createElement('button')
+      const anchor = document.createComment('hooked-vapor-anchor')
+
+      previewButton.dataset.testid = 'hooked-vapor-preview'
+      codeButton.dataset.testid = 'hooked-vapor-code'
+      bumpButton.dataset.testid = 'hooked-vapor-bump'
+
+      previewButton.addEventListener('click', () => {
+        activeTab.value = 'preview'
+      })
+      codeButton.addEventListener('click', () => {
+        activeTab.value = 'code'
+      })
+      bumpButton.addEventListener('click', () => {
+        query.value += '!'
+      })
+
+      root.append(previewButton, codeButton, bumpButton, anchor)
+
+      watchEffect(() => {
+        previewButton.textContent = 'preview'
+        codeButton.textContent = 'code'
+        bumpButton.textContent = 'bump'
+
+        // 关键形状：父 raw vapor 实例本身不卸载，只在同一个 anchor 上切换子分支。
+        // 这样可以排除“整组件卸载时 cleanup 本来就会跑”的简单情况，专门验证
+        // renderAnchor 替换 raw vapor branch 时，旧 branch 自己的 hook-based effect
+        // 有没有跟着 mounted lifecycle 一起被清理。
+        renderAnchor(
+          activeTab.value === 'preview' ? (
+            createHookedVaporPanel(query)
+          ) : (
+            <pre data-testid="hooked-vapor-code-panel">code</pre>
+          ),
+          root,
+          anchor,
+        )
+      })
+
+      return root
+    })
+  }
+}
+
 const mount = (view: any) => {
   const container = document.createElement('div')
   document.body.appendChild(container)
@@ -951,5 +1035,68 @@ describe('app fixture vapor reactivity', () => {
         item => item.textContent,
       ),
     ).toEqual(['Bruce Lee'])
+  })
+
+  it('disposes hook-based vapor setup effects across branch remounts', async () => {
+    let hookRuns = 0
+    const HookedVaporToggle = createHookedVaporToggle(() => {
+      hookRuns += 1
+    })
+
+    const container = mount(
+      <div>
+        <HookedVaporToggle />
+      </div>,
+    )
+    await flush()
+
+    expect(hookRuns).toBe(1)
+    expect(container.querySelector('[data-testid="hooked-vapor-value"]')?.textContent).toBe('a')
+
+    ;(
+      container.querySelector('[data-testid="hooked-vapor-bump"]') as HTMLButtonElement | null
+    )?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flush()
+
+    expect(hookRuns).toBe(2)
+    expect(container.querySelector('[data-testid="hooked-vapor-value"]')?.textContent).toBe('a!')
+
+    ;(
+      container.querySelector('[data-testid="hooked-vapor-code"]') as HTMLButtonElement | null
+    )?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flush()
+
+    expect(container.querySelector('[data-testid="hooked-vapor-code-panel"]')?.textContent).toBe(
+      'code',
+    )
+
+    ;(
+      container.querySelector('[data-testid="hooked-vapor-bump"]') as HTMLButtonElement | null
+    )?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flush()
+
+    // 切到 code 后，query 仍然会继续变成 a!!，因为状态本身没有停；
+    // 真正要断开的只是 preview branch 里那条旧 watchEffect 订阅。
+    // 所以这里断言 hookRuns 维持 2，而不是去断言 query 停止更新。
+    expect(hookRuns).toBe(2)
+
+    ;(
+      container.querySelector('[data-testid="hooked-vapor-preview"]') as HTMLButtonElement | null
+    )?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flush()
+
+    // 重新切回 preview 时会挂载一棵全新的 raw vapor branch，
+    // 这一次 setup 会读取当前最新的 query 值 a!!，因此 hookRuns 只应新增 1 次，
+    // 同时 DOM 也应该直接反映 a!!，而不是回退到旧 branch 离开时的 a!。
+    expect(hookRuns).toBe(3)
+    expect(container.querySelector('[data-testid="hooked-vapor-value"]')?.textContent).toBe('a!!')
+
+    ;(
+      container.querySelector('[data-testid="hooked-vapor-bump"]') as HTMLButtonElement | null
+    )?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flush()
+
+    expect(hookRuns).toBe(4)
+    expect(container.querySelector('[data-testid="hooked-vapor-value"]')?.textContent).toBe('a!!!')
   })
 })

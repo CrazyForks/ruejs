@@ -4,6 +4,8 @@
 - 对 DOM/Vapor 运行时方法进行别名导出（带 _$ 前缀），便于编译产物按需引用。
 - 保持与 @rue-js/runtime-vapor 的接口兼容性，便于替换底层实现。
 */
+export { version } from './version'
+
 export * from './rue'
 export * from './renderable'
 export * from './renderable-normalize'

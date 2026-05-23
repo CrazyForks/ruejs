@@ -289,12 +289,6 @@ const HoverGalleryDemo: FC = () => {
           数据驱动，并把导览遮罩和图片层样式统一收口到组件里。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/hover-gallery/" target="_blank">
-            查看 Hover Gallery 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要在商品卡片、作品集卡片里，用最轻的结构承载多张预览图。</li>

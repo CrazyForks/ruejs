@@ -388,3 +388,157 @@ pub fn transform_element(el: &mut JSXElement) {
         i += 1;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use swc_core::ecma::ast::{ExprStmt, Module, ModuleItem, Program, Stmt};
+    use swc_core::ecma::codegen::{Emitter, text_writer::JsWriter};
+    use swc_ecma_parser::{Parser, StringInput, Syntax, TsSyntax};
+
+    fn parse_jsx_element(src: &str) -> JSXElement {
+        let cm = Arc::new(SourceMap::default());
+        let fm = cm.new_source_file(
+            FileName::Custom("for-directive-test.tsx".into()).into(),
+            src.to_string(),
+        );
+        let mut parser = Parser::new(
+            Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
+            StringInput::from(&*fm),
+            None,
+        );
+        match *parser.parse_expr().expect("parse jsx element") {
+            Expr::JSXElement(el) => *el,
+            other => panic!("expected JSXElement, got {other:?}"),
+        }
+    }
+
+    fn emit_expr(expr: Expr) -> String {
+        let cm = Arc::new(SourceMap::default());
+        let module = Module {
+            span: DUMMY_SP,
+            body: vec![ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                span: DUMMY_SP,
+                expr: Box::new(expr),
+            }))],
+            shebang: None,
+        };
+        let mut buf = Vec::new();
+        let mut emitter = Emitter {
+            cfg: Default::default(),
+            comments: None,
+            cm: cm.clone(),
+            wr: JsWriter::new(cm, "\n", &mut buf, None),
+        };
+        emitter.emit_program(&Program::Module(module)).expect("emit expr");
+        String::from_utf8(buf).expect("utf8")
+    }
+
+    fn normalize(src: &str) -> String {
+        let mut out = String::new();
+        let mut prev_space = false;
+        for ch in src.chars() {
+            if ch.is_whitespace() {
+                if !prev_space {
+                    out.push(' ');
+                    prev_space = true;
+                }
+            } else {
+                out.push(ch);
+                prev_space = false;
+            }
+        }
+        out.trim().to_string()
+    }
+
+    #[test]
+    fn parses_top_level_separators_without_entering_nested_structures() {
+        let raw = "(item, key) in records.filter(entry => entry.kind === 'inbox')";
+        let (sep_idx, sep_len) = find_top_level_separator(raw).expect("separator");
+        assert_eq!(raw[..sep_idx].trim(), "(item, key)");
+        assert_eq!(
+            raw[sep_idx + sep_len..].trim(),
+            "records.filter(entry => entry.kind === 'inbox')"
+        );
+
+        let raw_of = "([value, key], index) of sourceMap";
+        let (sep_idx, sep_len) = find_top_level_separator(raw_of).expect("of separator");
+        assert_eq!(raw_of[..sep_idx].trim(), "([value, key], index)");
+        assert_eq!(raw_of[sep_idx + sep_len..].trim(), "sourceMap");
+
+        assert!(find_top_level_separator("item => item + 1").is_none());
+    }
+
+    #[test]
+    fn parses_aliases_and_directive_specs_for_supported_forms() {
+        let single = parse_aliases("item").expect("single alias");
+        assert_eq!(single.len(), 1);
+        assert!(matches!(&single[0], Pat::Ident(binding) if binding.id.sym.as_ref() == "item"));
+
+        let triple = parse_aliases("(value, key, index)").expect("triple alias");
+        assert_eq!(triple.len(), 3);
+        assert!(parse_aliases("(a, b, c, d)").is_none());
+        assert!(parse_aliases("()").is_none());
+
+        let directive_el = parse_jsx_element("<li v-for=\"(item, index) in list\" />");
+        let attr = get_directive_attr(&directive_el, FOR_DIRECTIVE_NAMES).expect("v-for attr");
+        let spec = parse_directive_attr(attr).expect("directive spec");
+        assert_eq!(spec.aliases.len(), 2);
+        assert_eq!(normalize(&emit_expr(spec.source)), normalize("list;"));
+
+        let invalid_el = parse_jsx_element("<li v-for={items} />");
+        let invalid_attr =
+            get_directive_attr(&invalid_el, FOR_DIRECTIVE_NAMES).expect("invalid attr");
+        assert!(parse_directive_attr(invalid_attr).is_none());
+    }
+
+    #[test]
+    fn normalizes_array_number_and_object_sources_before_mapping() {
+        let normalized = normalize(&emit_expr(build_normalized_iterable_expr(
+            parse_expr("source").expect("source expr"),
+        )));
+
+        assert!(normalized.contains("Array.isArray(__rue_v_for_source)"));
+        assert!(
+            normalized.contains("__rue_v_for_source.map((value, index)=>[ value, index, index ])")
+        );
+        assert!(normalized.contains("Array.from({ length: __rue_v_for_source }, (__rue_v_for_unused, index)=>[ index + 1, index, index ])"));
+        assert!(normalized.contains("Object.entries(__rue_v_for_source == null ? {} : __rue_v_for_source).map(([key, value], index)=>[ value, key, index ])"));
+    }
+
+    #[test]
+    fn rewrites_v_for_children_to_map_expr_and_preserves_other_children() {
+        let mut parent = parse_jsx_element(
+            "<ul><li v-for=\"(item, key, index) in itemsMap\" key={item.id}>{index}:{key}:{item.name}</li><li>Static</li></ul>",
+        );
+        transform_element(&mut parent);
+
+        assert_eq!(parent.children.len(), 2);
+        let first = match &parent.children[0] {
+            JSXElementChild::JSXExprContainer(container) => match &container.expr {
+                JSXExpr::Expr(expr) => expr.as_ref(),
+                _ => panic!("expected expr child"),
+            },
+            other => panic!("expected expr container, got {other:?}"),
+        };
+        let rendered = normalize(&emit_expr(first.clone()));
+        assert!(rendered.contains("Array.isArray(__rue_v_for_source)"));
+        assert!(rendered.contains(".map(([item, key, index])=>"));
+        assert!(!rendered.contains("v-for"));
+        assert!(rendered.contains("key={item.id}"));
+        assert!(matches!(&parent.children[1], JSXElementChild::JSXElement(_)));
+
+        let mut r_for_parent = parse_jsx_element("<div><span r-for=\"n in 3\">{n}</span></div>");
+        transform_element(&mut r_for_parent);
+        let r_for_expr = match &r_for_parent.children[0] {
+            JSXElementChild::JSXExprContainer(container) => match &container.expr {
+                JSXExpr::Expr(expr) => expr.as_ref(),
+                _ => panic!("expected r-for expr"),
+            },
+            other => panic!("expected expr container, got {other:?}"),
+        };
+        let r_for_rendered = normalize(&emit_expr(r_for_expr.clone()));
+        assert!(r_for_rendered.contains("Array.from({ length: __rue_v_for_source }"));
+        assert!(r_for_rendered.contains(".map(([n])=>"));
+    }
+}

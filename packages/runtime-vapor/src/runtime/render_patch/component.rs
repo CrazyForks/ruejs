@@ -3,6 +3,7 @@ use super::super::types::{
     MountInput, MountInputType, MountedPatchSubtree, MountedPatchSubtreeType, MountedSubtreeState,
 };
 use crate::hook::reactive::props_reactive_js;
+use crate::reactive::context::{CONTEXT_OWNER_PARENT_PROP, CONTEXT_PARENT_INSTANCE_PROP};
 use crate::reactive::core::{pop_effect_scope, push_effect_scope};
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::shared_runtime_bridge;
@@ -56,7 +57,12 @@ where
         });
         let host: Object =
             stored_host.filter(|h| h.is_object()).map(Object::from).unwrap_or_else(Object::new);
+        let parent_instance = crate::get_current_instance();
         let _ = Reflect::set(&host, &JsValue::from_str("propsRO"), &props_ro);
+        let _ =
+            Reflect::set(&host, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP), &parent_instance);
+        let _ =
+            Reflect::set(&host, &JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP), &parent_instance);
         Self::reset_hook_index(&host);
 
         let hooks = stored_hooks.unwrap_or_default();
@@ -343,6 +349,7 @@ where
         let new_sub_opt = self.comp_make_sub_from_ret(&ret, new.strict_component_returns);
         let mut mounted_subtree = old.comp_subtree.as_deref().cloned();
         if let Some(new_sub) = new_sub_opt {
+            crate::set_current_instance(host.clone().into());
             mounted_subtree = self.comp_mount_or_patch_subtree(old, parent, new_sub);
         }
         let hooks = self.comp_finalize();

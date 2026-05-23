@@ -30,3 +30,7 @@ pub fn transform_element(el: &mut JSXElement) {
         rewrite_to_template_component(&mut closing.name);
     }
 }
+
+#[cfg(test)]
+#[path = "template_directive_tests.rs"]
+mod tests;

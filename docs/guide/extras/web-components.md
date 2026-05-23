@@ -143,7 +143,7 @@ document.body.appendChild(el)
 
 #### 插槽 {#slots}
 
-- 在 `shadowRoot: true` 模式下，组件中的原生 `<slot>` 会直接使用浏览器的原生 slot 分发。
+- 在 `shadowRoot: true` 模式下，组件中的原生 `<Slot>` 会直接使用浏览器的原生 slot 分发。
 - 命名插槽继续使用原生 `slot` 属性，例如 `<div slot="named">...</div>`。
 - `shadowRoot: false` 时没有原生 shadow DOM slot 投影。
 
@@ -157,7 +157,7 @@ document.body.appendChild(el)
 #### 当前限制 {#events}
 
 - 还没有 `this.$host`。
-- 还没有作用域插槽或自定义元素专用的 provide/inject 语义。
+- 还没有作用域插槽，也没有跨自定义元素边界的专用 Context 透传语义。
 - 还没有单文件组件的 custom-element 专用构建链路；如果你要注入样式，请显式通过 `styles` 选项传入。
 
 ### Rue 自定义元素库技巧 {#tips-for-a-rue-custom-elements-library}
@@ -193,11 +193,11 @@ import { register } from 'path/to/elements.js'
 register()
 </script>
 
-<template>
+<Template>
   <my-foo ...>
     <my-bar ...></my-bar>
   </my-foo>
-</template>
+</Template>
 ```
 
 或在任何其他框架中，如使用 JSX 的框架，并使用自定义名称：
@@ -375,7 +375,7 @@ onMounted(() => {
 })
 </script>
 
-<template>
+<Template>
   <!-- 现在我们可以使用元素并进行类型检查： -->
   <some-element
     :ref="el"
@@ -387,7 +387,7 @@ onMounted(() => {
       }
     "
   ></some-element>
-</template>
+</Template>
 ```
 
 如果元素没有类型定义，属性和事件的类型可以以更手动的方式定义：
@@ -417,9 +417,9 @@ declare module '@rue-js/rue' {
 // ... 与之前相同，使用对元素的引用 ...
 </script>
 
-<template>
+<Template>
   <!-- ... 与之前相同，在模板中使用元素 ... -->
-</template>
+</Template>
 ```
 
 自定义元素作者不应自动从其库中导出框架特定的自定义元素类型定义，例如不应从也导出库其余部分的 `index.ts` 文件中导出它们，否则用户将遇到意外的模块扩充错误。用户应导入他们需要的框架特定的类型定义文件。

@@ -458,3 +458,7 @@ pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {
         _ => inner.clone(),
     }
 }
+
+#[cfg(test)]
+#[path = "expr_tests.rs"]
+mod tests;

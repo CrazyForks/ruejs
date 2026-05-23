@@ -130,7 +130,7 @@ const planningSections: DemoSection[] = [
     metric: 'Scoped',
     points: [
       'target 可以绑定任意滚动容器。',
-      '定位公式与 antd 心智一致。',
+      '定位规则符合常见吸附组件的预期。',
       '宽度和占位尺寸会自动同步。',
     ],
   },
@@ -243,7 +243,7 @@ const threadItems: MessageItem[] = [
     id: 'msg-3',
     author: 'Nora',
     role: 'Design',
-    text: '视觉上还是维持 Rue 自己的圆角卡片和轻阴影，不去照搬 antd 的纯线框感。',
+    text: '视觉上还是维持 Rue 自己的圆角卡片和轻阴影，不去照搬其它库的纯线框感。',
     time: '09:41',
   },
   {
@@ -663,8 +663,8 @@ const AffixPage: FC = () => {
         <p>
           Rue 的 Affix 是一个纯行为组件：它不替 child
           决定外观，只负责在合适的滚动边界上把节点吸附到顶部或底部。 这次补齐了 top / bottom
-          偏移、自定义 target、状态回调，以及 root 与 fixed 两层样式钩子，API 心智尽量贴近 antd
-          Affix，但视觉仍然交给 Rue 自己的内容块来完成。
+          偏移、自定义 target、状态回调，以及 root 与 fixed 两层样式钩子，API
+          尽量保持直观，视觉仍然交给 Rue 自己的内容块来完成。
         </p>
 
         <div className="not-prose mt-6 grid gap-3 md:grid-cols-3">

@@ -186,12 +186,6 @@ const DividerDemo: FC = () => {
           保留原有视觉风格，并补充了更完整的文本位置、线型和垂直分隔能力。
         </p>
 
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/divider/" target="_blank" rel="noreferrer">
-            查看 Divider 静态样式
-          </a>
-        </div>
-
         <ExampleBlock
           title="Divider"
           summary="基础分隔线，保留现有默认用法。"

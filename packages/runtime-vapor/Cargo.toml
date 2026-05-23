@@ -2,6 +2,9 @@
 name = "rue-runtime-vapor"
 version = "0.0.1"
 edition = "2021"
+description = "Rue runtime implemented in Rust and compiled to WebAssembly"
+repository = "https://github.com/hunzhiwange/ruejs/tree/main/packages/runtime-vapor"
+license = "MIT"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -10,9 +13,15 @@ crate-type = ["cdylib", "rlib"]
 wasm-bindgen = "0.2"
 js-sys = "0.3"
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+minicov = { version = "0.3", optional = true }
+
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
 wasm-bindgen-futures = "0.4"
+
+[build-dependencies]
+cc = "1"
 
 [features]
 default = ["runtime", "compat"]
@@ -21,6 +30,10 @@ compat = ["runtime"]
 dom = []
 log = []
 dev = []
+wasm-coverage = ["dep:minicov"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(wasm_bindgen_unstable_test_coverage)'] }
 
 [profile.release]
 opt-level = "z"

@@ -247,12 +247,6 @@ const TextRotateDemo: FC = () => {
           用法。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/text-rotate/" target="_blank">
-            查看 Text Rotate 静态样式
-          </a>
-        </div>
-
         <DemoBlock
           title="# Text Rotate"
           description="Rotates through 3 words, in 10 seconds"

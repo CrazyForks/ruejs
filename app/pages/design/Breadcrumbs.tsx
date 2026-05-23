@@ -378,11 +378,6 @@ const BreadcrumbsDemo: FC = () => {
         <p className="text-sm mt-3 mb-3">
           Breadcrumbs 用来表达当前位置、可回退层级和相邻页面的快速切换。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/breadcrumbs/" target="_blank">
-            查看 Breadcrumbs 静态样式
-          </a>
-        </div>
 
         <div className="not-prose my-6 rounded-box border border-base-300 bg-base-100 p-5">
           <div className="flex flex-wrap gap-2">

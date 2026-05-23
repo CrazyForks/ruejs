@@ -15,6 +15,7 @@ const RUE_REACTIVE_PROPS_DESTRUCTURE_HEADER = '/* RUE_REACTIVE_PROPS_DESTRUCTURE
 const RUE_VITE_PLUGIN_NAME = '@rue-js/vite-plugin-rue'
 const DEFAULT_TRANSFORM_TIMEOUT_MS = 5000
 const TRANSFORM_WORKER_PATH = requireFromHere.resolve('./transform-worker.mjs')
+const RUE_DESIGN_PATH_SKIPPED_COMPONENTS = new Set(['calendar', 'time-picker'])
 
 const isAlpha = ch => /[A-Za-z]/.test(ch)
 const _isDirectiveEventChar = ch => /[A-Za-z0-9:_-]/.test(ch)
@@ -1301,6 +1302,18 @@ export default function VitePluginRue(options = {}) {
     return include.some(x => id.includes(x))
   }
 
+  const isRueDesignComponentSource = id => {
+    if (/[\\/]__tests__[\\/]/.test(id)) {
+      return false
+    }
+
+    const matched = id.match(
+      /[\\/]packages[\\/]rue-design[\\/]src[\\/]components[\\/]([^\\/]+)[\\/]/,
+    )
+
+    return matched ? RUE_DESIGN_PATH_SKIPPED_COMPONENTS.has(matched[1]) : false
+  }
+
   /**
    * 使用 SWC + wasm 插件进行代码转换
    * @param {string} code 输入源码
@@ -1378,6 +1391,8 @@ export default function VitePluginRue(options = {}) {
       if (!isTsx) return null
       // include/exclude 规则过滤
       if (!isIncluded(id)) return null
+      // 少数 rue-design 组件仍处于去除遗留头标记的迁移中，先按路径跳过二次转换
+      if (isRueDesignComponentSource(id)) return null
       // 已包含 RUE 头标记则直接跳过
       if (code.startsWith(RUE_TRANSFORM_HEADER)) return null
       const base = code

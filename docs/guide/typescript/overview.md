@@ -30,8 +30,6 @@ Rue 本身是用 TypeScript 编写的，并提供一流的 TypeScript 支持。�
 
 - [`compilerOptions.isolatedModules`](https://www.typescriptlang.org/tsconfig#isolatedModules) 设置为 `true`，因为 Vite 使用 [esbuild](https://esbuild.github.io/) 转译 TypeScript，并受限于单文件转译。[`compilerOptions.verbatimModuleSyntax`](https://www.typescriptlang.org/tsconfig#verbatimModuleSyntax) 是 `isolatedModules` 的[超集](https://github.com/microsoft/TypeScript/issues/53601)，也是一个不错的选择——这是 [`rue-tsconfig`](https://github.com/@rue-js/ruejs/tsconfig) 使用的。
 
-- 如果你使用 Options API，需要设置 [`compilerOptions.strict`](https://www.typescriptlang.org/tsconfig#strict) 为 `true`（或至少启用 [`compilerOptions.noImplicitThis`](https://www.typescriptlang.org/tsconfig#noImplicitThis)，它是 `strict` 标志的一部分）以利用组件选项中 `this` 的类型检查。否则 `this` 将被视为 `any`。
-
 - 如果你在构建工具中配置了解析器别名，例如 `create-rue` 项目中默认配置的 `@/*` 别名，你也需要通过 [`compilerOptions.paths`](https://www.typescriptlang.org/tsconfig#paths) 为 TypeScript 配置它。
 
 - 如果你打算将 TSX 与 Rue 一起使用，将 [`compilerOptions.jsx`](https://www.typescriptlang.org/tsconfig#jsx) 设置为 `"preserve"`，并将 [`compilerOptions.jsxImportSource`](https://www.typescriptlang.org/tsconfig#jsxImportSource) 设置为 `"@rue-js/rue"`。
@@ -126,10 +124,10 @@ const App: FC = defineComponent({
 })
 </script>
 
-<template>
+<Template>
   <!-- 启用类型检查和自动完成 -->
   {{ count.toFixed(2) }}
-</template>
+</Template>
 ```
 
 如果你的项目主要使用 TSX，那么更常见的写法是直接在组件函数中声明响应式状态：
@@ -146,7 +144,7 @@ const Counter: FC = () => {
 
 ### 模板中的 TypeScript {#typescript-in-templates}
 
-当使用 `<script lang="ts">` 时，`<template>` 也支持在绑定表达式中使用 TypeScript。这在需要在模板表达式中执行类型转换的情况下很有用。
+当使用 `<script lang="ts">` 时，`<Template>` 也支持在绑定表达式中使用 TypeScript。这在需要在模板表达式中执行类型转换的情况下很有用。
 
 这里有一个有点做作的例子：
 
@@ -155,10 +153,10 @@ const Counter: FC = () => {
 let x: string | number = 1
 </script>
 
-<template>
+<Template>
   <!-- 错误，因为 x 可能是字符串 -->
   {{ x.toFixed(2) }}
-</template>
+</Template>
 ```
 
 这可以通过内联类型转换来解决：
@@ -168,7 +166,7 @@ let x: string | number = 1
 let x: string | number = 1
 </script>
 
-<template>
+<Template>
   {{ (x as number).toFixed(2) }}
 </template>
 ```
@@ -188,4 +186,3 @@ Rue 还支持使用 JSX / TSX 编写组件。详细信息在[渲染函数与 JSX
 ## API 特定配方 {#api-specific-recipes}
 
 - [TS 与 Composition API](/guide/guide/typescript/composition-api)
-- [TS 与 Options API](@todo)

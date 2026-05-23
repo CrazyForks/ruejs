@@ -442,12 +442,6 @@ const AccordionDemo: FC = () => {
           走数据驱动，接入受控 key、多开、禁用和富标题信息。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/accordion/" target="_blank">
-            查看 Accordion 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要 FAQ、设置说明、任务面板这类“标题 + 可折叠内容”的信息组织方式。</li>

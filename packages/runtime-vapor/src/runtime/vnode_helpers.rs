@@ -3,6 +3,7 @@ use super::DomAdapter;
 use super::types::ComponentProps;
 #[cfg(feature = "compat")]
 use super::types::{FRAGMENT, MountInput, MountInputChild, MountInputType};
+use crate::reactive::context::CONTEXT_PARENT_INSTANCE_PROP;
 #[cfg(feature = "compat")]
 use js_sys::Function;
 use js_sys::{Array, Object, Reflect};
@@ -21,6 +22,12 @@ pub(crate) fn props_from_value(props: &JsValue) -> ComponentProps {
                 let value = Reflect::get(&obj, &key).unwrap_or(JsValue::UNDEFINED);
                 props_map.insert(name, value);
             }
+        }
+
+        let parent_key = JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP);
+        if Reflect::has(&obj, &parent_key).unwrap_or(false) {
+            let value = Reflect::get(&obj, &parent_key).unwrap_or(JsValue::UNDEFINED);
+            props_map.insert(CONTEXT_PARENT_INSTANCE_PROP.to_string(), value);
         }
     }
     props_map
@@ -182,3 +189,7 @@ where
     push_compat_child_value(value.clone(), &mut child_vec, &mut input_from_value);
     child_vec
 }
+
+#[cfg(test)]
+#[path = "vnode_helpers_tests.rs"]
+mod tests;

@@ -208,11 +208,6 @@ const LoadingPage: FC = () => {
           Loading 现在既可以作为轻量 daisyUI 动效使用，也可以像 Spin
           一样包裹内容、展示描述、进度和全屏遮罩。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/loading/" target="_blank">
-            查看 Loading 静态样式
-          </a>
-        </div>
 
         <ExampleBlock
           title="Basic spin"

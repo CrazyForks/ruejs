@@ -56,7 +56,7 @@ const IAmRue: FC = () => (
   </div>
 )
 
-// React/Vue 兼容交互演示（新增）
+// React 风格 JSX + Vue 式响应式演示
 type Video = { title: string; desc: string }
 const videos: Video[] = [
   { title: '原始 DOM 编程', desc: '直接操作节点与事件' },
@@ -143,122 +143,377 @@ const ReactiveDemo: FC = () => {
   )
 }
 
-const SiteHome: FC = () => (
-  <>
-    <section className="relative rounded-2xl bg-gr2adient-to-br from-violet-50 to-fuchsia-50 p-12 mb-10">
-      <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-violet-200/40 blur-3xl" />
-      <div className="absolute -bottom-24 -right-24 w-md h-112 rounded-full bg-fuchsia-200/40 blur-3xl" />
-      <div className="relative max-w-[1100px] mx-auto text-center">
-        <div className="hover-3d">
-          <figure>
-            <div className="inline-flex items-center justify-center gap-3">
-              <span className="inline-flex items-center justify-center w-22 h-22 rounded-full bg-linear-to-br from-violet-500 via-fuchsia-500 to-pink-500 shadow-lg ring-1 ring-white/30">
-                <span className="text-white font-extrabold text-[64px] md:text-[92px] leading-none">
-                  T
+const QuickStartDemo: FC = () => {
+  const count = ref(0)
+
+  return (
+    <div className="card h-[330px] border border-base-300/70 bg-base-100/80 shadow-sm backdrop-blur-sm">
+      <div className="card-body flex h-full p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-sm uppercase tracking-[0.22em] text-base-content/45">
+              Live Demo
+            </div>
+            <div className="mt-2 text-sm text-base-content/70">
+              一个 ref signal 同时驱动计数和 v-if 条件分支。
+            </div>
+          </div>
+          <div className="badge badge-outline badge-lg">{count.value}</div>
+        </div>
+
+        <div className="mt-6 grid gap-4">
+          <button
+            className="rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-base font-medium text-base-content shadow-sm transition hover:border-primary hover:text-primary"
+            onClick={() => count.value++}
+          >
+            计数：{count.value}
+          </button>
+
+          <div className="min-h-[96px] rounded-2xl border border-base-300/70 bg-base-200/40 p-4">
+            <div
+              v-if={count.value % 2 === 0}
+              className="flex h-full items-center justify-between gap-3"
+            >
+              <div>
+                <div className="font-semibold text-base-content">偶数态 UI</div>
+                <div className="mt-1 text-sm text-base-content/70">当前展示欢迎提示卡片。</div>
+              </div>
+              <span className="badge badge-info badge-lg">v-if</span>
+            </div>
+            <div v-else className="flex h-full items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold text-base-content">奇数态 UI</div>
+                <div className="mt-1 text-sm text-base-content/70">
+                  signal 更新后切到另一套界面。
+                </div>
+              </div>
+              <span className="badge badge-success badge-lg">v-else</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-auto text-xs tracking-[0.16em] text-base-content/45">
+          点击按钮时，下面的两个 UI 会跟着 signal 一起切换。
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const quickStartDemoCode = `import { type FC, ref } from '@rue-js/rue'
+
+const App: FC = () => {
+  const count = ref(0)
+
+  return (
+    <div className="card h-[310px] border border-base-300/70 bg-base-100/80 shadow-sm backdrop-blur-sm">
+      <div className="card-body flex h-full p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-sm uppercase tracking-[0.22em] text-base-content/45">Live Demo</div>
+            <div className="mt-2 text-sm text-base-content/70">
+              一个 ref signal 同时驱动计数和 v-if 条件分支。
+            </div>
+          </div>
+          <div className="badge badge-outline badge-lg">{count.value}</div>
+        </div>
+
+        <div className="mt-6 grid gap-4">
+          <button
+            className="rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-base font-medium text-base-content shadow-sm transition hover:border-primary hover:text-primary"
+            onClick={() => count.value++}
+          >
+            计数：{count.value}
+          </button>
+
+          <div className="min-h-[96px] rounded-2xl border border-base-300/70 bg-base-200/40 p-4">
+            <div v-if={count.value % 2 === 0} className="flex h-full items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold text-base-content">偶数态 UI</div>
+                <div className="mt-1 text-sm text-base-content/70">当前展示欢迎提示卡片。</div>
+              </div>
+              <span className="badge badge-info badge-lg">v-if</span>
+            </div>
+            <div v-else className="flex h-full items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold text-base-content">奇数态 UI</div>
+                <div className="mt-1 text-sm text-base-content/70">signal 更新后切到另一套界面。</div>
+              </div>
+              <span className="badge badge-success badge-lg">v-else</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-auto text-xs tracking-[0.16em] text-base-content/45">
+          点击按钮时，下面的两个 UI 会跟着 signal 一起切换。
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default App`
+
+const createCommandOptions = [
+  { id: 'npm', label: 'npm', command: 'npm create rue@latest' },
+  { id: 'pnpm', label: 'pnpm', command: 'pnpm create rue@latest' },
+  { id: 'bun', label: 'bun', command: 'bun create rue@latest' },
+  { id: 'yarn', label: 'yarn', command: 'yarn dlx create-rue@latest' },
+] as const
+
+type PartnerLink = {
+  name: string
+  href: string
+  description: string
+}
+
+const platinumSponsors = [
+  {
+    name: '虚位以待',
+    href: '/page/sponsor/index',
+    description: '期待与你一起支持 Rue 生态建设。',
+  },
+] as const satisfies readonly PartnerLink[]
+
+const goldSponsors = [
+  {
+    name: '虚位以待',
+    href: '/page/sponsor/index',
+    description: '欢迎加入 Rue 赞助计划。',
+  },
+] as const satisfies readonly PartnerLink[]
+
+const friendlyLinks = [
+  {
+    name: 'QueryPHP',
+    href: 'https://www.queryphp.com',
+    description: '现代化 PHP 开发框架',
+  },
+  {
+    name: 'VibeWindow',
+    href: 'https://vibewindow.huododo.com/#/',
+    description: '氛围视窗软件智能体',
+  },
+  {
+    name: '订货宝',
+    href: 'https://www.dhb168.com/?from=ruejs',
+    description: '经销商订货系统与批发贸易订货平台',
+  },
+  {
+    name: 'Vercel',
+    href: 'https://vercel.com',
+    description: '云部署与前端基础设施',
+  },
+] as const satisfies readonly PartnerLink[]
+
+const PartnerSection: FC<{
+  eyebrow: string
+  title: string
+  items: readonly PartnerLink[]
+  actionLabel?: string
+  actionTo?: string
+}> = props => (
+  <section className="max-w-[1100px] mx-auto mt-8">
+    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <div className="text-sm font-semibold uppercase tracking-[0.24em] text-base-content/45">
+          {props.eyebrow}
+        </div>
+        <h2 className="mt-2 text-3xl font-semibold text-base-content">{props.title}</h2>
+      </div>
+      {props.actionLabel && props.actionTo ? (
+        <Link to={props.actionTo} className="btn btn-outline self-start md:self-auto">
+          {props.actionLabel}
+        </Link>
+      ) : null}
+    </div>
+
+    <div className={`mt-5 grid gap-4 ${props.items.length > 1 ? 'md:grid-cols-2' : ''}`}>
+      {props.items.map(item => (
+        <a
+          key={item.name}
+          href={item.href}
+          target="_blank"
+          rel="noreferrer"
+          className="group rounded-[1.5rem] border border-base-200 bg-base-100/90 p-5 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
+        >
+          <div className="flex min-h-[116px] flex-col justify-center gap-4">
+            <div>
+              <div className="text-3xl font-semibold tracking-tight text-base-content">
+                {item.name}
+              </div>
+              <p className="mt-3 max-w-[30ch] text-base leading-7 text-base-content/65">
+                {item.description}
+              </p>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+)
+
+const SiteHome: FC = () => {
+  const activeCreateCommand = ref<(typeof createCommandOptions)[number]['id']>('npm')
+  const selectedCreateCommand = computed(
+    () =>
+      createCommandOptions.find(option => option.id === activeCreateCommand.value) ??
+      createCommandOptions[0],
+  )
+
+  return (
+    <>
+      <section className="relative rounded-2xl bg-gr2adient-to-br from-violet-50 to-fuchsia-50 p-12 mb-10">
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-violet-200/40 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-md h-112 rounded-full bg-fuchsia-200/40 blur-3xl" />
+        <div className="relative max-w-[1100px] mx-auto text-center">
+          <div className="hover-3d">
+            <figure>
+              <div className="inline-flex items-center justify-center gap-3">
+                <span className="inline-flex items-center justify-center w-22 h-22 rounded-full bg-linear-to-br from-violet-500 via-fuchsia-500 to-pink-500 shadow-lg ring-1 ring-white/30">
+                  <span className="text-white font-extrabold text-[64px] md:text-[92px] leading-none">
+                    T
+                  </span>
                 </span>
-              </span>
-              <span className="text-6xl md:text-8xl font-extrabold tracking-tight bg-linear-to-r from-violet-600 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
-                he Wasm
-              </span>
+                <span className="text-6xl md:text-8xl font-extrabold tracking-tight bg-linear-to-r from-violet-600 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
+                  he Wasm
+                </span>
+              </div>
+              <div className="mt-2 text-4xl md:text-5xl font-extrabold tracking-tight bg-linear-to-r from-violet-500 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
+                Framework For Vapor Native DOM
+              </div>
+              <p className="mt-6 text-lg md:text-xl text-base-content/70">
+                Rust 运行时，Rust 响应式系统，Rust 原生 DOM 编译器
+              </p>
+            </figure>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link to="/guide/guide/quick-start" className="btn btn-primary btn-lg">
+              快速上手
+            </Link>
+            <Link to="/guide/guide/introduction" className="btn btn-outline btn-lg">
+              文档
+            </Link>
+            <Link to="/api/api/index" className="btn btn-outline btn-lg">
+              API
+            </Link>
+            <a
+              href="https://github.com/hunzhiwange/ruejs"
+              target="_blank"
+              className="btn btn-outline btn-lg"
+            >
+              Github
+            </a>
+          </div>
+          <div className="mx-auto mt-6 max-w-[900px] rounded-2xl border border-white/60 bg-slate-950/90 p-4 text-left shadow-xl shadow-fuchsia-200/40">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-rose-400" />
+                <span className="h-3 w-3 rounded-full bg-amber-400" />
+                <span className="h-3 w-3 rounded-full bg-emerald-400" />
+                <span className="ml-2 text-xs uppercase tracking-[0.24em] text-white/45">
+                  Quick Start
+                </span>
+              </div>
+              <div
+                className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1"
+                role="tablist"
+                aria-label="选择创建命令"
+              >
+                {createCommandOptions.map(option => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeCreateCommand.value === option.id}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                      activeCreateCommand.value === option.id
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'text-white/65 hover:text-white'
+                    }`}
+                    onClick={() => (activeCreateCommand.value = option.id)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="mt-2 text-4xl md:text-5xl font-extrabold tracking-tight bg-linear-to-r from-violet-500 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
-              Framework For Vapor Native DOM
-            </div>
-            <p className="mt-6 text-lg md:text-xl text-base-content/70">
-              Rust 运行时，Rust 响应式系统，Rust 原生 DOM 编译器
+            <pre className="overflow-x-auto text-sm md:text-base text-white/92">
+              <code>$ {selectedCreateCommand.get().command}</code>
+            </pre>
+          </div>
+        </div>
+      </section>
+
+      {/* 三大卖点 */}
+      <section className="grid md:grid-cols-3 gap-6 max-w-[1100px] mx-auto">
+        <FeatureCard
+          title="简洁易用"
+          desc="轻量、直观的 API，适合渐进式接入；保留熟悉的 JSX / TSX 开发方式，无需额外模板语法。"
+          icon="✅"
+        />
+        <FeatureCard
+          title="编译驱动的原生 DOM 渲染"
+          desc="围绕真实 DOM 做最小更新，并可结合 Rust / Wasm 运行时扩展与原生 DOM 编译能力。"
+          icon="🦀"
+        />
+        <FeatureCard
+          title="React JSX + Vue 式响应式"
+          desc="适合希望保留 React 风格 JSX，同时获得 ref、reactive、computed 等 Vue 式响应式 API 的项目。"
+          icon="🤝"
+        />
+      </section>
+
+      <section className="max-w-[1100px] mx-auto mt-12">
+        <div className="mt-6 grid md:grid-cols-2 gap-6 items-stretch">
+          <div className="card bg-base-100 border p-0 overflow-auto h-[330px]">
+            <Code className="h-full" lang="tsx" code={quickStartDemoCode} />
+          </div>
+          <QuickStartDemo />
+        </div>
+      </section>
+
+      {/* 生态与插件 */}
+      <section className="mt-12 rounded-2xl p-8 bg-linear-to-br from-pink-500/80 to-fuchsia-500/80 text-white ring-1 ring-white/30 shadow-lg max-w-[1100px] mx-auto">
+        <div className="md:flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold mb-2 text-white">生态与插件</h2>
+            <p className="text-white/90">
+              官方路由、设计组件库与构建插件协同工作，也支持渐进式接入现有应用。
             </p>
-          </figure>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
+          </div>
+          <div className="mt-4 md:mt-0 flex gap-3">
+            <Link to="/plugins" className="btn btn-outline">
+              插件
+            </Link>
+            <Link to="/design/button" className="btn btn-outline">
+              组件库
+            </Link>
+          </div>
         </div>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link to="/guide/guide/quick-start" className="btn btn-primary btn-lg">
-            快速上手
-          </Link>
-          <Link to="/guide/guide/introduction" className="btn btn-outline btn-lg">
-            文档
-          </Link>
-          <Link to="/api/api/index" className="btn btn-outline btn-lg">
-            API
-          </Link>
-          <a
-            href="https://github.com/hunzhiwange/ruejs"
-            target="_blank"
-            className="btn btn-outline btn-lg"
-          >
-            Github
-          </a>
-          <a href="https://vercel.com" target="_blank" className="btn btn-outline btn-lg">
-            Vercel
-          </a>
-          <a
-            href="https://www.dhb168.com/?from=ruejs"
-            target="_blank"
-            data-tip="订货宝-经销商订货系统,批发贸易订货,用订货宝下单软件app,小程序-订货管理系统"
-            className="tooltip tooltip-top btn btn-outline btn-lg"
-          >
-            订货宝
-          </a>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    {/* 三大卖点 */}
-    <section className="grid md:grid-cols-3 gap-6 max-w-[1100px] mx-auto">
-      <FeatureCard
-        title="简洁易用"
-        desc="基于标准 HTML/CSS/TSX/WebAssembly，编译驱动的原生 DOM 渲染，组件语法直观，开发体验轻松高效。"
-        icon="✅"
-      />
-      <FeatureCard
-        title="Rust 编译器 · Vapor 模式"
-        desc="由 Rust 实现的 Vapor 原生 DOM 编译与细粒度更新，低内存、高性能，适用于复杂界面。"
-        icon="🦀"
-      />
-      <FeatureCard
-        title="兼容 React / Vue 语法"
-        desc="同时支持 useState / useEffect 与 ref / reactive / watchEffect 等相关 API，保留熟悉的心智模型，渐进式融入现有代码。"
-        icon="🤝"
-      />
-    </section>
-
-    {/* 生态与插件 */}
-    <section className="mt-12 rounded-2xl p-8 bg-linear-to-br from-pink-500/80 to-fuchsia-500/80 text-white ring-1 ring-white/30 shadow-lg max-w-[1100px] mx-auto">
-      <div className="md:flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold mb-2 text-white">生态与插件</h2>
-          <p className="text-white/90">可使用 AI 开发你自己的插件，可渐进式集成到你的应用。</p>
-        </div>
-        <div className="mt-4 md:mt-0 flex gap-3">
-          <Link to="/plugins" className="btn btn-outline">
-            插件
-          </Link>
-          <Link to="/design/button" className="btn btn-outline">
-            组件库
-          </Link>
-        </div>
-      </div>
-    </section>
-
-    <section className="max-w-[1100px] mx-auto mt-12">
-      <h2 className="text-2xl font-semibold mb-2">用组件组织界面</h2>
-      <p className="text-gray-600">
-        Rue
-        以组件表达界面中的可复用片段。组件同时包含结构与逻辑，按需组合即可形成页面或模块，语法简洁、心智负担低。
-      </p>
-      <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
-        {/* 左栏：代码 */}
-        <div className="card bg-base-100 border p-0 overflow-auto h-[360px] md:h-[560px]">
-          <Code
-            className="h-full"
-            lang="tsx"
-            code={`import { type FC } from '@rue-js/rue'
+      <section className="max-w-[1100px] mx-auto mt-12">
+        <h2 className="text-2xl font-semibold mb-2">用组件组织界面</h2>
+        <p className="text-gray-600">
+          Rue 以 JSX / TSX
+          组件表达界面中的可复用片段。组件同时包含结构与逻辑，按需组合即可形成页面或模块。
+        </p>
+        <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
+          {/* 左栏：代码 */}
+          <div className="card bg-base-100 border p-0 overflow-auto h-[360px] md:h-[560px]">
+            <Code
+              className="h-full"
+              lang="tsx"
+              code={`import { type FC } from '@rue-js/rue'
 
 const Hello: FC = () => (
   <div className="card bg-primary text-primary-content shadow-sm">
@@ -306,37 +561,38 @@ const HelloWorld: FC = () => (
 )
 
 export default HelloWorld`}
-          />
+            />
+          </div>
+          {/* 右栏：效果 */}
+          <div className="grid gap-6">
+            <Hello />
+            <World />
+            <HelloRue />
+            <IAmRue />
+          </div>
         </div>
-        {/* 右栏：效果 */}
-        <div className="grid gap-6">
-          <Hello />
-          <World />
-          <HelloRue />
-          <IAmRue />
-        </div>
-      </div>
-      <p className="mt-6 text-gray-600">
-        Rue
-        的组件强调可复用与可组合，关注清晰的数据与事件流。你可以按需拼装来自不同团队的模块，保持一致的开发体验，而不受沉重框架约束。
-      </p>
-    </section>
+        <p className="mt-6 text-gray-600">
+          Rue 的组件强调可复用与可组合，保持清晰的数据与事件流，也方便把交互片段渐进接入现有页面。
+        </p>
+      </section>
 
-    {/* Vapor 模式变异：源代码与编译输出对照 */}
-    <section className="max-w-[1100px] mx-auto mt-12">
-      <h2 className="text-2xl font-semibold mb-2">Vapor 模式：Rust 编译到原生 DOM</h2>
-      <p className="text-gray-600">Rue 以 JSX/TSX 描述结构与逻辑，使用 Vapor 原生 DOM 渲染路径。</p>
-      <p className="text-gray-600">
-        Vapor 编译器由 Rust 实现，对小块更新进行细粒度优化；高性能区域采用 Vapor，通用区域沿用虚拟
-        DOM，二者可渐进混用。
-      </p>
-      <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
-        {/* 左栏：原始代码（@vapor） */}
-        <div className="card bg-base-100 border overflow-auto h-[360px] md:h-[510px]">
-          <Code
-            className="h-full"
-            lang="tsx"
-            code={`const Hello: FC = () => (
+      {/* Vapor 模式变异：源代码与编译输出对照 */}
+      <section className="max-w-[1100px] mx-auto mt-12">
+        <h2 className="text-2xl font-semibold mb-2">Vapor 渲染路径：更贴近真实 DOM 更新模型</h2>
+        <p className="text-gray-600">
+          Rue 提供默认 Block / Vapor 渲染路径，Vapor 适合需要更高性能、细粒度更新的区域。
+        </p>
+        <p className="text-gray-600">
+          结合 Rust 实现的响应式系统、Rust / Wasm 运行时与原生 DOM 编译能力，Vapor 会把 JSX
+          转换为更贴近真实 DOM 的产物。
+        </p>
+        <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
+          {/* 左栏：原始代码（@vapor） */}
+          <div className="card bg-base-100 border overflow-auto h-[360px] md:h-[510px]">
+            <Code
+              className="h-full"
+              lang="tsx"
+              code={`const Hello: FC = () => (
   <div className="card bg-primary text-primary-content shadow-sm">
     <div className="card-body items-center text-center">
       <div className="text-3xl font-extrabold">Hello</div>
@@ -382,14 +638,14 @@ const HelloWorld: FC = () => (
 )
 
 export default HelloWorld`}
-          />
-        </div>
-        {/* 右栏：编译后的 Vapor 原生 DOM 输出 */}
-        <div className="card bg-base-100 border p-0 overflow-auto h-[360px] md:h-[510px]">
-          <Code
-            className="h-full"
-            lang="ts"
-            code={`/* RUE_VAPOR_TRANSFORMED */
+            />
+          </div>
+          {/* 右栏：编译后的 Vapor 原生 DOM 输出 */}
+          <div className="card bg-base-100 border p-0 overflow-auto h-[360px] md:h-[510px]">
+            <Code
+              className="h-full"
+              lang="ts"
+              code={`/* RUE_VAPOR_TRANSFORMED */
 import { jsxDEV as _jsxDEV } from "@rue-js/jsx-dev-runtime";
 import { vapor, renderBetween, _$createElement, _$createComment, _$createTextNode, _$appendChild, _$setClassName } from "@rue-js/rue";
 const Hello = ()=>vapor(()=>{
@@ -502,30 +758,30 @@ const HelloWorld = ()=>vapor(()=>{
         return _root;
     });
 export default HelloWorld;`}
-          />
+            />
+          </div>
         </div>
-      </div>
-      <div className="mt-6 space-y-3 text-gray-700">
-        <p>
-          Vapor 模式优势： 直接创建与更新原生 DOM，避免额外的整树协调
-          开销；按需、细粒度响应式更新，组件级挂载与卸载更高效；更小的运行时路径与更少的内存占用，在复杂界面中表现尤为稳定。
-        </p>
-      </div>
-    </section>
+        <div className="mt-6 space-y-3 text-gray-700">
+          <p>
+            Vapor 渲染路径直接面向原生
+            DOM，减少额外协调开销；配合细粒度响应式更新，在复杂界面中能保持更稳的性能与内存表现。
+          </p>
+        </div>
+      </section>
 
-    <section className="max-w-[1100px] mx-auto mt-12">
-      <h2 className="text-2xl font-semibold mb-2">在需要的地方添加交互（兼容 React / Vue）</h2>
-      <p className="text-gray-600">
-        Rue 组件可以接收数据并返回视图。你既可以用 React 风格的 useState， 也可以用 Vue 风格的 ref /
-        reactive 在任何位置增加交互。
-      </p>
-      <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
-        {/* 左栏：示例代码（useState + ref/reactive） */}
-        <div className="card bg-base-100 border p-0 overflow-auto h-[360px] md:h-[660px]">
-          <Code
-            className="h-full"
-            lang="tsx"
-            code={`import { type FC, useState, ref, reactive, computed } from '@rue-js/rue';
+      <section className="max-w-[1100px] mx-auto mt-12">
+        <h2 className="text-2xl font-semibold mb-2">React 风格 JSX，Vue 式响应式 API</h2>
+        <p className="text-gray-600">
+          Rue 适合希望保留 React 风格 JSX，同时获得 Vue 式响应式 API 的项目。你既可以用
+          useState，也可以用 ref / reactive / computed 来组织交互逻辑。
+        </p>
+        <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
+          {/* 左栏：示例代码（useState + ref/reactive） */}
+          <div className="card bg-base-100 border p-0 overflow-auto h-[360px] md:h-[660px]">
+            <Code
+              className="h-full"
+              lang="tsx"
+              code={`import { type FC, useState, ref, reactive, computed } from '@rue-js/rue';
 
 type Video = { title: string; desc: string };
 const videos: Video[] = [
@@ -624,27 +880,46 @@ const Reactive: FC = () => (
 )
 
 export default Reactive;`}
-          />
-        </div>
-        {/* 右栏：实际效果 */}
-        <div className="grid gap-6">
-          <div>
-            <h3 className="text-lg font-semibold mb-2 text-base-content">
-              前端的发展，从原始DOM，到 JQUERY等
-            </h3>
-            <SearchableVideoList videos={videos} />
+            />
           </div>
-          <div>
-            <h3 className="text-lg font-semibold mb-2 text-base-content">ref / reactive 示例</h3>
-            <ReactiveDemo />
+          {/* 右栏：实际效果 */}
+          <div className="grid gap-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-base-content">
+                前端的发展，从原始DOM，到 JQUERY等
+              </h3>
+              <SearchableVideoList videos={videos} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-base-content">ref / reactive 示例</h3>
+              <ReactiveDemo />
+            </div>
           </div>
         </div>
-      </div>
-      <p className="mt-6 text-gray-600">
-        Rue 支持渐进集成：在任意 DOM 节点挂载交互片段，与现有页面共存，无需重写整站。
-      </p>
-    </section>
-  </>
-)
+        <p className="mt-6 text-gray-600">
+          Rue 支持渐进集成：你可以在现有页面中按需挂载组件、路由或交互片段，而不必一次性重写整站。
+        </p>
+      </section>
+
+      <PartnerSection
+        eyebrow="Platinum Sponsor"
+        title="白金赞助商"
+        items={platinumSponsors}
+        actionLabel="成为赞助商"
+        actionTo="/page/sponsor/index"
+      />
+
+      <PartnerSection
+        eyebrow="Gold Sponsor"
+        title="黄金赞助商"
+        actionLabel="成为赞助商"
+        actionTo="/page/sponsor/index"
+        items={goldSponsors}
+      />
+
+      <PartnerSection eyebrow="Links" title="友情链接" items={friendlyLinks} />
+    </>
+  )
+}
 
 export default SiteHome

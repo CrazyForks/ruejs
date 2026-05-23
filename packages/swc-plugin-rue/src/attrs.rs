@@ -830,3 +830,208 @@ pub fn emit_attrs_for(stmts: &mut Vec<Stmt>, target: &Ident, opening: &JSXOpenin
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use swc_core::common::{FileName, SourceMap};
+    use swc_core::ecma::ast::{Module, ModuleItem, Program};
+    use swc_core::ecma::codegen::{Emitter, text_writer::JsWriter};
+    use swc_ecma_parser::{Parser, StringInput, Syntax, TsSyntax};
+
+    fn parse_expr(src: &str, tsx: bool) -> Expr {
+        let cm = Arc::new(SourceMap::default());
+        let fm =
+            cm.new_source_file(FileName::Custom("attrs-test.tsx".into()).into(), src.to_string());
+        let mut parser = Parser::new(
+            Syntax::Typescript(TsSyntax { tsx, ..Default::default() }),
+            StringInput::from(&*fm),
+            None,
+        );
+        *parser.parse_expr().expect("parse expr")
+    }
+
+    fn parse_jsx_opening(src: &str) -> JSXOpeningElement {
+        match parse_expr(src, true) {
+            Expr::JSXElement(el) => el.opening,
+            other => panic!("expected JSXElement, got {other:?}"),
+        }
+    }
+
+    fn emit_stmts(stmts: Vec<Stmt>) -> String {
+        let cm = Arc::new(SourceMap::default());
+        let module = Module {
+            span: DUMMY_SP,
+            body: stmts.into_iter().map(ModuleItem::Stmt).collect(),
+            shebang: None,
+        };
+        let mut buf = Vec::new();
+        let mut emitter = Emitter {
+            cfg: Default::default(),
+            comments: None,
+            cm: cm.clone(),
+            wr: JsWriter::new(cm, "\n", &mut buf, None),
+        };
+        emitter.emit_program(&Program::Module(module)).expect("emit stmts");
+        String::from_utf8(buf).expect("utf8")
+    }
+
+    fn emit_expr(expr: Expr) -> String {
+        emit_stmts(vec![Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(expr) })])
+    }
+
+    fn normalize(src: &str) -> String {
+        let mut out = String::new();
+        let mut prev_space = false;
+        for ch in src.chars() {
+            if ch.is_whitespace() {
+                if !prev_space {
+                    out.push(' ');
+                    prev_space = true;
+                }
+            } else {
+                out.push(ch);
+                prev_space = false;
+            }
+        }
+        out.trim().to_string()
+    }
+
+    #[test]
+    fn extracts_static_literals_strings_truthy_values_and_style_objects() {
+        assert!(matches!(
+            get_static_literal_value_expr(&parse_expr("'hello'", false)),
+            Some(Expr::Lit(Lit::Str(s))) if s.value.as_str().unwrap_or("") == "hello"
+        ));
+        assert!(matches!(
+            get_static_literal_value_expr(&parse_expr("42", false)),
+            Some(Expr::Lit(Lit::Num(n))) if n.value == 42.0
+        ));
+        assert!(matches!(
+            get_static_literal_value_expr(&parse_expr("true", false)),
+            Some(Expr::Lit(Lit::Bool(b))) if b.value
+        ));
+        assert!(matches!(
+            get_static_literal_value_expr(&parse_expr("null", false)),
+            Some(Expr::Lit(Lit::Null(_)))
+        ));
+        assert!(matches!(
+            get_static_literal_value_expr(&parse_expr("undefined", false)),
+            Some(Expr::Ident(id)) if id.sym.as_ref() == "undefined"
+        ));
+        assert!(matches!(
+            get_static_literal_value_expr(&parse_expr("void 0", false)),
+            Some(Expr::Unary(u)) if matches!(u.op, UnaryOp::Void)
+        ));
+        assert!(get_static_literal_value_expr(&parse_expr("count + 1", false)).is_none());
+
+        assert!(matches!(
+            get_static_stringified_expr(&parse_expr("1", false)),
+            Some(Expr::Lit(Lit::Str(s))) if s.value.as_str().unwrap_or("") == "1"
+        ));
+        assert!(matches!(
+            get_static_stringified_expr(&parse_expr("false", false)),
+            Some(Expr::Lit(Lit::Str(s))) if s.value.as_str().unwrap_or("") == "false"
+        ));
+        assert_eq!(get_static_truthy_bool(&parse_expr("''", false)), Some(false));
+        assert_eq!(get_static_truthy_bool(&parse_expr("'x'", false)), Some(true));
+        assert_eq!(get_static_truthy_bool(&parse_expr("0", false)), Some(false));
+        assert_eq!(get_static_truthy_bool(&parse_expr("7", false)), Some(true));
+        assert_eq!(get_static_truthy_bool(&parse_expr("void 0", false)), Some(false));
+        assert_eq!(get_static_truthy_bool(&parse_expr("count", false)), None);
+
+        let style_expr =
+            get_static_style_expr(&parse_expr("({ color: 'red', hidden: false, size: 2 })", false))
+                .expect("static style expr");
+        let style_out = normalize(&emit_expr(style_expr));
+        assert!(style_out.contains(&normalize("color: 'red'")));
+        assert!(style_out.contains(&normalize("hidden: false")));
+        assert!(style_out.contains(&normalize("size: 2")));
+
+        assert!(get_static_style_expr(&parse_expr("({ color: tone })", false)).is_none());
+        assert!(get_static_style_expr(&parse_expr("({ ...style })", false)).is_none());
+    }
+
+    #[test]
+    fn emits_static_expr_attrs_for_special_cases() {
+        let target = ident("el");
+        let mut stmts = Vec::new();
+
+        assert!(try_emit_static_expr_attr(
+            &mut stmts,
+            &target,
+            "style",
+            &parse_expr("({ color: 'red' })", false)
+        ));
+        assert!(try_emit_static_expr_attr(
+            &mut stmts,
+            &target,
+            "className",
+            &parse_expr("'active'", false)
+        ));
+        assert!(try_emit_static_expr_attr(&mut stmts, &target, "value", &parse_expr("7", false)));
+        assert!(try_emit_static_expr_attr(
+            &mut stmts,
+            &target,
+            "disabled",
+            &parse_expr("true", false)
+        ));
+        assert!(try_emit_static_expr_attr(
+            &mut stmts,
+            &target,
+            "multiple",
+            &parse_expr("false", false)
+        ));
+        assert!(try_emit_static_expr_attr(
+            &mut stmts,
+            &target,
+            "checked",
+            &parse_expr("true", false)
+        ));
+        assert!(try_emit_static_expr_attr(&mut stmts, &target, "title", &parse_expr("42", false)));
+        assert!(!try_emit_static_expr_attr(
+            &mut stmts,
+            &target,
+            "title",
+            &parse_expr("count + 1", false)
+        ));
+
+        let out = normalize(&emit_stmts(stmts));
+        assert!(out.contains(&normalize("_$setStyle(el, { color: 'red' })")));
+        assert!(out.contains(&normalize("_$setClassName(el, 'active')")));
+        assert!(out.contains(&normalize("_$setValue(el, 7)")));
+        assert!(out.contains(&normalize("_$setDisabled(el, true)")));
+        assert!(out.contains(&normalize("el.multiple = false")));
+        assert!(out.contains(&normalize("_$setChecked(el, true)")));
+        assert!(out.contains(&normalize("_$setAttribute(el, \"title\", \"42\")")));
+    }
+
+    #[test]
+    fn emits_static_string_expr_and_bare_boolean_attrs() {
+        let target = ident("el");
+        let opening = parse_jsx_opening(
+            "<input className=\"field\" disabled=\"\" dangerouslySetInnerHTML=\"<b>safe</b>\" title=\"hello\" style={{ color: 'red' }} value={1} checked={false} multiple={true} />",
+        );
+        let mut stmts = Vec::new();
+        emit_attrs_for(&mut stmts, &target, &opening);
+
+        let out = normalize(&emit_stmts(stmts));
+        assert!(out.contains(&normalize("_$setClassName(el, \"field\")")));
+        assert!(out.contains(&normalize("_$setDisabled(el, true)")));
+        assert!(out.contains(&normalize("_$setInnerHTML(el, \"<b>safe</b>\")")));
+        assert!(out.contains(&normalize("_$setAttribute(el, \"title\", \"hello\")")));
+        assert!(out.contains(&normalize("_$setStyle(el, { color: 'red' })")));
+        assert!(out.contains(&normalize("_$setValue(el, 1)")));
+        assert!(out.contains(&normalize("_$setChecked(el, false)")));
+        assert!(out.contains(&normalize("el.multiple = true")));
+
+        let bare_opening = parse_jsx_opening("<input disabled checked multiple />");
+        let mut bare_stmts = Vec::new();
+        emit_attrs_for(&mut bare_stmts, &target, &bare_opening);
+        let bare_out = normalize(&emit_stmts(bare_stmts));
+        assert!(bare_out.contains(&normalize("_$setDisabled(el, true)")));
+        assert!(bare_out.contains(&normalize("_$setChecked(el, true)")));
+        assert!(bare_out.contains(&normalize("_$setAttribute(el, \"multiple\", \"\")")));
+    }
+}

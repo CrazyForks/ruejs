@@ -1,4 +1,4 @@
-import { type FC, onBeforeUnmount, onCleanup, ref, watchEffect, useState } from '@rue-js/rue'
+import { type FC, onBeforeUnmount, onCleanup, ref, watchEffect } from '@rue-js/rue'
 import { createHighlighterCoreSync } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
 import jsLang from 'shiki/langs/javascript.mjs'
@@ -26,17 +26,17 @@ function escapeHtml(s: string): string {
 
 const Code: FC<{ code: string; lang?: string; className?: string; title?: string }> = p => {
   const html = ref<string>('')
-  const [copied, setCopied] = useState(false)
+  const copied = ref(false)
+  const copyResetTimer = ref<number | null>(null)
   const rootClassName = p.className ? `code-block ${p.className}` : 'code-block'
-  let copyResetTimer: ReturnType<typeof setTimeout> | null = null
 
   const clearCopyResetTimer = () => {
-    if (copyResetTimer == null) {
+    if (copyResetTimer.value == null) {
       return
     }
 
-    clearTimeout(copyResetTimer)
-    copyResetTimer = null
+    clearTimeout(copyResetTimer.value)
+    copyResetTimer.value = null
   }
 
   onBeforeUnmount(() => {
@@ -46,11 +46,11 @@ const Code: FC<{ code: string; lang?: string; className?: string; title?: string
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(p.code || '')
-      setCopied(true)
+      copied.value = true
       clearCopyResetTimer()
-      copyResetTimer = setTimeout(() => {
-        copyResetTimer = null
-        setCopied(false)
+      copyResetTimer.value = window.setTimeout(() => {
+        copyResetTimer.value = null
+        copied.value = false
       }, 1500)
     } catch {}
   }

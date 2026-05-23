@@ -119,3 +119,7 @@ pub fn render_once_for_slot(
     });
     stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(render_call) }));
 }
+
+#[cfg(test)]
+#[path = "element_slot_tests.rs"]
+mod tests;

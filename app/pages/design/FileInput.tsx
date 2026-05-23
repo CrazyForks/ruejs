@@ -217,11 +217,6 @@ const FileInputDemo: FC = () => {
           Rue File Input 继续保留原始 <code>file-input</code> 样式入口，同时补齐更常用的
           补齐更常用的文件列表、拖拽、图片卡片、受控/非受控和选择前校验能力。
         </p>
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/file-input/" target="_blank">
-            查看 File Input 静态样式
-          </a>
-        </div>
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">

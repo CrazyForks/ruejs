@@ -120,9 +120,9 @@ export const SECTIONS_BY_TYPE: Record<'guide', SidebarSection[]> = {
         { id: 'guide/components/events', title: '事件', href: '/guide/guide/components/events' },
         { id: 'guide/components/props', title: 'Props', href: '/guide/guide/components/props' },
         {
-          id: 'guide/components/provide-inject',
-          title: '依赖注入',
-          href: '/guide/guide/components/provide-inject',
+          id: 'guide/components/create-context',
+          title: 'Create Context',
+          href: '/guide/guide/components/create-context',
         },
         {
           id: 'guide/components/registration',
@@ -151,6 +151,11 @@ export const SECTIONS_BY_TYPE: Record<'guide', SidebarSection[]> = {
           id: 'guide/extras/reactivity-in-depth',
           title: '响应式深入',
           href: '/guide/guide/extras/reactivity-in-depth',
+        },
+        {
+          id: 'guide/extras/resources',
+          title: '资源',
+          href: '/guide/guide/extras/resources',
         },
         {
           id: 'guide/extras/reactivity-transform',
@@ -187,11 +192,6 @@ export const SECTIONS_BY_TYPE: Record<'guide', SidebarSection[]> = {
           id: 'guide/reusability/composables',
           title: '可组合函数',
           href: '/guide/guide/reusability/composables',
-        },
-        {
-          id: 'guide/reusability/custom-directives',
-          title: '自定义指令',
-          href: '/guide/guide/reusability/custom-directives',
         },
         {
           id: 'guide/reusability/plugins',

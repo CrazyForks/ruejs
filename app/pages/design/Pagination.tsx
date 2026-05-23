@@ -204,11 +204,6 @@ const PaginationPage: FC = () => {
           的数据驱动模式。 视觉仍基于 Rue 当前的 join 与 btn
           体系，但补齐了页码计算、受控/非受控、简单模式、页容量切换、快捷跳转和自定义渲染。
         </p>
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/pagination/" target="_blank">
-            查看 Pagination 静态样式
-          </a>
-        </div>
 
         <h2>何时使用</h2>
         <ul>

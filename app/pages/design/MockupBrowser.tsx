@@ -259,12 +259,6 @@ const MockupBrowserPage: FC = () => {
           组合方式依然可用，适合需要完全自定义结构的场景。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/mockup-browser/" target="_blank">
-            查看 Browser Mockup 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要展示网页、管理台、嵌入式预览或静态产品截图，并且希望外层有统一的浏览器语义。</li>

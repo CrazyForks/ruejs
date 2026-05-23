@@ -333,11 +333,7 @@ const MenuDemo: FC = () => {
           Menu 用于垂直或水平展示导航链接。Rue 现在同时支持经典静态结构，以及更接近成熟组件库的
           `items / selectedKeys / openKeys / group / divider / extra` 增强 API。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/menu/" target="_blank">
-            查看 Menu 静态样式
-          </a>
-        </div>
+
         <div className="component-preview not-prose text-base-content my-6 lg:my-12">
           <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
             # 推荐：items 数据驱动导航

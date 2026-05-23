@@ -196,11 +196,6 @@ const MaskPage: FC = () => {
           Mask 现在不只是原始 class 的薄封装。它保留 Rue
           的轻量视觉路线，同时补上尺寸、fit、tone、ring 与交互态这些更适合实际页面搭建的语义化能力。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/mask/" target="_blank" rel="noreferrer">
-            查看 Mask 静态样式来源
-          </a>
-        </div>
 
         <ExampleBlock
           title="Core shapes"

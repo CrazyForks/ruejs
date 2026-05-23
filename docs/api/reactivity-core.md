@@ -14,7 +14,11 @@
 - **类型**
 
   ```ts
-  function ref<T>(value: T): Ref<UnwrapRef<T>>
+  function ref<T = any>(
+    initial: T,
+    options?: { equals?: (prev: T, next: T) => boolean } | null,
+    forceGlobal?: boolean,
+  ): Ref<T>
 
   interface Ref<T> {
     value: T
@@ -25,7 +29,9 @@
 
   ref 对象是可更改的——也就是说，你可以为 `.value` 赋予新的值。它也是响应式的，即所有对 `.value` 的读取操作都会被追踪，写入操作会触发相关副作用。
 
-  如果一个对象被赋值给 ref，该对象将通过 [reactive()](#reactive) 被设置为深层响应式。这也意味着如果对象包含嵌套的 ref，它们将被深层解包。
+  Rue 中的 `ref()` 与运行时 Hook API 保持一致：除了初始值外，还支持传入 `options.equals` 自定义比较函数，以及可选的 `forceGlobal` 参数。`forceGlobal` 通常只用于底层封装、测试或需要跳过当前组件 Hook 槽位的场景。
+
+  如果一个对象被赋值给 ref，该对象将通过 [reactive()](#reactive) 按 Rue 的规则被设为深层响应式。
 
   要避免深层转换，请改用 [`shallowRef()`](/api/api/reactivity-advanced#shallowref)。
 
@@ -37,6 +43,10 @@
 
   count.value = 1
   console.log(count.value) // 1
+
+  const state = ref({ count: 1 }, { equals: (prev, next) => prev.count === next.count })
+
+  state.value = { count: 1 } // 相等，不触发更新
   ```
 
 - **另请参阅**
@@ -116,19 +126,37 @@
 
 ## reactive() {#reactive}
 
-返回对象的响应式代理。
+创建响应式代理。对象/数组会返回代理对象；原始值会被包装成带 `.value` 字段的响应式对象。
 
 - **类型**
 
   ```ts
-  function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
+  function reactive<T extends object | Function>(
+    initial: T,
+    options?: {
+      equals?: (prev: T, next: T) => boolean
+      readonly?: boolean
+      shallow?: boolean
+    },
+    forceGlobal?: boolean,
+  ): T
+
+  function reactive<T>(
+    initial: T,
+    options?: {
+      equals?: (prev: T, next: T) => boolean
+      readonly?: boolean
+      shallow?: boolean
+    },
+    forceGlobal?: boolean,
+  ): { value: T }
   ```
 
 - **详情**
 
-  响应式转换是"深层"的：它影响所有嵌套属性。响应式对象也会在深层解包任何为 [refs](#ref) 的属性，同时保持响应性。
+  响应式转换默认是深层的：访问嵌套对象时，它们也会继续被包装为 Rue 的响应式代理。
 
-  还应该注意的是，当 ref 作为响应式数组或原生集合类型（如 `Map`）的元素被访问时，不会执行 ref 解包。
+  Rue 当前**不会**在 `reactive()` 属性层自动解包 [ref](#ref)。如果某个属性本身就是 ref，读取时拿到的仍然是 ref 对象，访问内部值时需要显式使用 `.value`。
 
   要避免深层转换并仅在根级别保留响应性，请改用 [shallowReactive()](/api/api/reactivity-advanced#shallowreactive)。
 
@@ -143,48 +171,32 @@
   obj.count++
   ```
 
-  Ref 解包：
+  原始值包装：
 
-  ```ts
+  ```js
+  const count = reactive(0)
+  count.value++
+  ```
+
+  在响应式对象中保留 ref：
+
+  ```js
   const count = ref(1)
   const obj = reactive({ count })
 
-  // ref 将被解包
-  console.log(obj.count === count.value) // true
+  console.log(obj.count === count) // true
+  console.log(obj.count.value) // 1
 
-  // 它将更新 `obj.count`
   count.value++
-  console.log(count.value) // 2
-  console.log(obj.count) // 2
-
-  // 它也会更新 `count` ref
-  obj.count++
-  console.log(obj.count) // 3
-  console.log(count.value) // 3
+  console.log(obj.count.value) // 2
   ```
 
-  注意，refs 作为数组或集合元素访问时**不会**被解包：
+  自定义比较：
 
   ```js
-  const books = reactive([ref('Vue 3 Guide')])
-  // 这里需要 .value
-  console.log(books[0].value)
+  const state = reactive({ count: 1 }, { equals: (prev, next) => prev.count === next.count })
 
-  const map = reactive(new Map([['count', ref(0)]]))
-  // 这里需要 .value
-  console.log(map.get('count').value)
-  ```
-
-  当将 [ref](#ref) 赋值给 `reactive` 属性时，该 ref 也会被自动解包：
-
-  ```ts
-  const count = ref(1)
-  const obj = reactive({})
-
-  obj.count = count
-
-  console.log(obj.count) // 1
-  console.log(obj.count === count.value) // true
+  state.count = 1 // 相等，不触发更新
   ```
 
 - **另请参阅**
@@ -193,17 +205,19 @@
 
 ## readonly() {#readonly}
 
-接受一个对象（响应式或普通对象）或 [ref](#ref)，返回一个原只读的代理。
+接受一个对象，返回其只读代理。
 
 - **类型**
 
   ```ts
-  function readonly<T extends object>(target: T): DeepReadonly<UnwrapNestedRefs<T>>
+  function readonly<T extends object>(initial: T, forceGlobal?: boolean): T
   ```
 
 - **详情**
 
-  只读代理是深层的：访问的任何嵌套属性也将是只读的。它还具有与 `reactive()` 相同的 ref 解包行为，只是解包的值也将被设为只读。
+  只读代理是深层的：访问到的嵌套对象也会继续保持只读。
+
+  Rue 当前不会在 `readonly()` 属性层自动解包 ref。若属性本身是 ref，读取结果仍然是 ref 对象。
 
   要避免深层转换，请改用 [shallowReadonly()](/api/api/reactivity-advanced#shallowreadonly)。
 

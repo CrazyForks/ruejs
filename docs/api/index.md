@@ -29,27 +29,26 @@
 
 ### 响应式：工具 {#reactivity-utilities}
 
-- [isRef()](/api/api/reactivity-utilities#isref)
+- [isRef()（规划中）](/api/api/reactivity-utilities#isref)
 - [unref()](/api/api/reactivity-utilities#unref)
-- [toRef()](/api/api/reactivity-utilities#toref)
+- [toRef()（规划中）](/api/api/reactivity-utilities#toref)
 - [toValue()](/api/api/reactivity-utilities#tovalue)
-- [toRefs()](/api/api/reactivity-utilities#torefs)
-- [isProxy()](/api/api/reactivity-utilities#isproxy)
+- [toRefs()（规划中）](/api/api/reactivity-utilities#torefs)
+- [isProxy()（规划中）](/api/api/reactivity-utilities#isproxy)
 - [isReactive()](/api/api/reactivity-utilities#isreactive)
-- [isReadonly()](/api/api/reactivity-utilities#isreadonly)
+- [isReadonly()（规划中）](/api/api/reactivity-utilities#isreadonly)
 
 ### 响应式：进阶 {#reactivity-advanced}
 
 - [shallowRef()](/api/api/reactivity-advanced#shallowref)
-- [triggerRef()](/api/api/reactivity-advanced#triggerref)
-- [customRef()](/api/api/reactivity-advanced#customref)
+- [triggerRef()（规划中）](/api/api/reactivity-advanced#triggerref)
+- [customRef()（规划中）](/api/api/reactivity-advanced#customref)
 - [shallowReactive()](/api/api/reactivity-advanced#shallowreactive)
 - [shallowReadonly()](/api/api/reactivity-advanced#shallowreadonly)
 - [toRaw()](/api/api/reactivity-advanced#toraw)
-- [markRaw()](/api/api/reactivity-advanced#markraw)
-- [effectScope()](/api/api/reactivity-advanced#effectscope)
-- [getCurrentScope()](/api/api/reactivity-advanced#getcurrentscope)
-- [onScopeDispose()](/api/api/reactivity-advanced#onscopedispose)
+- [effectScope()（规划中）](/api/api/reactivity-advanced#effectscope)
+- [getCurrentScope()（规划中）](/api/api/reactivity-advanced#getcurrentscope)
+- [onScopeDispose()（规划中）](/api/api/reactivity-advanced#onscopedispose)
 
 ### 生命周期钩子 {#lifecycle-hooks}
 

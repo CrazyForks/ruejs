@@ -208,7 +208,7 @@ export default BlogPost
 发生了一些错误。
 :::
 
-这可以通过 Rue 的特殊 `<slot>` 元素来实现：
+这可以通过 Rue 的特殊 `<Slot>` 元素来实现：
 
 ```tsx
 <div class="alert-box">
@@ -217,7 +217,7 @@ export default BlogPost
 </div>
 ```
 
-如上所示，我们使用 `<slot>` 作为内容放置的占位符——就这样，大功告成！
+如上所示，我们使用 `<Slot>` 作为内容放置的占位符——就这样，大功告成！
 
 以上就是你目前需要了解的插槽知识。阅读完本页并对其内容感到熟悉后，我们建议稍后回来阅读完整的[插槽](/guide/guide/components/slots)指南。
 
@@ -225,13 +225,13 @@ export default BlogPost
 
 有时，根据条件在组件之间动态切换会很有用，例如在标签页界面中：
 
-上述功能是通过 Rue 的特殊 `<component>` 元素配合 `is` 属性实现的：
+上述功能是通过 Rue 的特殊 `<Component>` 元素配合 `is` 属性实现的：
 
 <div class="options-api">
 
 ```Rue-html
 <!-- 当 currentTab 改变时，组件也会随之改变 -->
-<component :is="currentTab"></component>
+<Component :is="currentTab"></Component>
 ```
 
 </div>

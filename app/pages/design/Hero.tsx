@@ -222,11 +222,6 @@ const HeroPage: FC = () => {
           没有可以直接对照的同名标准组件，所以这次的增强重点放在组合能力和语义 API 上：保留 Rue
           自己的视觉语言，但把高频搭建动作从页面里收回到组件里。
         </p>
-        <div className={'text-sm'}>
-          <a href={'https://daisyui.com/components/hero/'} target={'_blank'}>
-            查看 Hero 静态样式
-          </a>
-        </div>
 
         <div className={'not-prose mt-6 grid gap-4 lg:grid-cols-3'}>
           <div className={'rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-sm'}>

@@ -863,3 +863,7 @@ pub fn emit_element_expr_container_child(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "element_expr_tests.rs"]
+mod tests;

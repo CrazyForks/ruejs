@@ -986,3 +986,7 @@ pub fn build_component_element(
         stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
     }
 }
+
+#[cfg(test)]
+#[path = "element_component_tests.rs"]
+mod tests;

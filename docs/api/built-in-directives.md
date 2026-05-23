@@ -107,7 +107,7 @@ Rue 使用 JSX/TSX 作为主要模板语法，因此大多数 Vue 的模板指�
 
 ```tsx
 // 基础绑定
-<img src={imageSrc} />
+<a href={linkHref}>查看详情</a>
 
 // 动态属性名
 <button {...{ [dynamicKey]: value }}>点击</button>
@@ -162,28 +162,6 @@ const [selected, setSelected] = useState('')
   value={content}
   onChange={(e) => setContent(e.target.value)}
 />
-```
-
-## 自定义指令 {#custom-directives}
-
-使用 `use` 钩子或 ref 回调：
-
-```tsx
-import { useEffect, useRef } from '@rue-js/rue'
-
-// 使用 ref 和 useEffect 实现自定义指令逻辑
-const MyComponent = () => {
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (inputRef.current) {
-      // 自定义指令逻辑
-      inputRef.current.focus()
-    }
-  }, [])
-
-  return <input ref={inputRef} />
-}
 ```
 
 ## 渲染一次 {#render-once}

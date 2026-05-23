@@ -29,6 +29,7 @@
     ".": "./swc-plugin-rue.wasm"
   },
   "scripts": {
+    "prebuild": "node ./scripts/ensure-rust-target.mjs",
     "build": "cargo fmt --all && cargo build --release --target wasm32-wasip1",
     "postbuild": "node -e \"const fs=require('fs');fs.copyFileSync('target/wasm32-wasip1/release/swc_plugin_rue.wasm','swc-plugin-rue.wasm')\"",
     "test": "cargo test",

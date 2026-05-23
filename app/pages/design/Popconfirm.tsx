@@ -424,7 +424,7 @@ const PopconfirmPage: FC = () => {
 
         <PreviewBlock
           title="基础确认与危险操作"
-          summary="覆盖默认双按钮、危险确认和单按钮确认，基本心智尽量贴近 ant-design Popconfirm。"
+          summary="覆盖默认双按钮、危险确认和单按钮确认，涵盖最常见的确认交互。"
           tab={basicTab}
           code={basicCode}
           preview={() => (

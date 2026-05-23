@@ -219,11 +219,6 @@ const ModalPage: FC = () => {
           Modal 现在保持 Rue 自己的视觉风格，同时补齐了更完整的显隐控制、默认
           footer、异步确认、遮罩交互、挂载策略与 root/mask/wrapper 级别的语义化定制能力。
         </p>
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/modal/" target="_blank">
-            查看 Modal 静态样式
-          </a>
-        </div>
 
         <ExampleBlock
           title="Controlled modal"

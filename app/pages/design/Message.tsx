@@ -474,7 +474,7 @@ const MessagePage: FC = () => {
         <h1>Message 全局提示</h1>
         <p>
           Rue 现在把原先散在 Toast 里的 message-like 体验收敛成真正的 Message 组件：保留 Rue
-          更轻、更贴近页面内容的视觉语气，但把 antd message 常用的执行逻辑一次补齐，包含 静态
+          更轻、更贴近页面内容的视觉语气，但把消息组件常用的执行逻辑一次补齐，包含 静态
           open、语义快捷方法、useMessage、局部 holder、按 key 更新、maxCount、Promise-like close
           handle 和全局 config。
         </p>
@@ -484,7 +484,7 @@ const MessagePage: FC = () => {
             <div className="text-xs uppercase tracking-[0.2em] text-base-content/45">Core API</div>
             <div className="mt-2 text-base font-semibold">open / useMessage / config</div>
             <p className="mt-2 mb-0 text-sm text-base-content/68">
-              既能像 antd message 一样直接静态调用，也能在局部容器内管理消息流。
+              既能直接静态调用，也能在局部容器内管理消息流。
             </p>
           </div>
           <div className="rounded-[1.4rem] border border-base-300 bg-gradient-to-br from-base-100 to-base-200/45 p-4 shadow-sm">

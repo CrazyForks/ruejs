@@ -174,12 +174,6 @@ const MockupWindowPage: FC = () => {
           快速搭一个带头部和底部操作区的展示窗口。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/mockup-window/" target="_blank">
-            查看 Mockup Window 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要模拟一个系统窗口、面板或预览壳层，用来承载展示内容。</li>

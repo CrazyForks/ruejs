@@ -55,3 +55,7 @@ impl VaporTransform {
         format!("_map{}", self.next_map)
     }
 }
+
+#[cfg(test)]
+#[path = "helpers_tests.rs"]
+mod tests;

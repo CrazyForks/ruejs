@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module'
 
 import { wrapCreateRue } from './runtime-entry-wrap.js'
+import { shallowRef } from './reactive.node.js'
 
 const require = createRequire(import.meta.url)
 const runtimeVapor = require('./pkg-node/rue_runtime_vapor.js')
@@ -20,6 +21,7 @@ const {
   createSignal,
   getCurrentInstance,
   isReactive,
+  nextTick,
   onCleanup,
   propsReactive,
   reactive,
@@ -54,6 +56,7 @@ const {
 export default {
   ...runtimeVapor,
   createRue,
+  shallowRef,
 }
 
 export {
@@ -71,6 +74,7 @@ export {
   createSignal,
   getCurrentInstance,
   isReactive,
+  nextTick,
   onCleanup,
   propsReactive,
   reactive,
@@ -78,6 +82,7 @@ export {
   ref,
   setCurrentInstance,
   setReactiveScheduling,
+  shallowRef,
   shallowReactive,
   shallowReadonly,
   signal,

@@ -13,7 +13,11 @@ import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,
   type CustomElementEmitBridge,
 } from './custom-elements.shared'
-import { withParentContextProps } from './context'
+import {
+  copyContextProviderPropsMarker,
+  isContextProviderProps,
+  withParentContextProps,
+} from './context'
 import { Component as DynamicComponent } from './components/Component'
 import { appendChild, createComment, getDOMAdapter, getParentNode, removeChild } from './dom'
 import { mountNormalizedRenderableToTarget, type DirectRenderableOwner } from './renderable-bridge'
@@ -409,8 +413,19 @@ const replayMountAwareValue = (value: unknown): unknown => {
   }
 
   let changed = false
+  // replay 的目标是“重新生成 mount handle / 子树壳对象”，不是复制 context graph。
+  // Provider props 有两个必须按引用保留的字段：
+  // 1. value：里面常常装着 ref、action、闭包，深拷贝会把 live binding 拆散；
+  // 2. __rue_context_parent_instance__：它是祖先 owner 的指针，递归 replay 会把整条 owner 链拖进复制路径，
+  //    既可能制造非常大的对象图，也会让示例页 code/preview 切换走上慢路径。
+  const shouldKeepValueProp = isContextProviderProps(value)
   const nextEntries = Object.entries(value).map(([key, entryValue]) => {
-    const replayed = replayMountAwareValue(entryValue)
+    const replayed =
+      shouldKeepValueProp && key === 'value'
+        ? entryValue
+        : key === '__rue_context_parent_instance__'
+          ? entryValue
+          : replayMountAwareValue(entryValue)
     if (replayed !== entryValue) changed = true
     return [key, replayed] as const
   })
@@ -423,6 +438,7 @@ const replayMountAwareValue = (value: unknown): unknown => {
   nextEntries.forEach(([key, entryValue]) => {
     clone[key] = entryValue
   })
+  copyContextProviderPropsMarker(value, clone)
   return clone
 }
 
@@ -437,6 +453,9 @@ const resolveComponentPropsWithChildren = (
 
   const nextProps = props ? { ...props } : ({} as ComponentProps)
   nextProps.children = effectiveChildren.length === 1 ? effectiveChildren[0] : effectiveChildren
+  // children 合并会新建一层 props 壳；Provider marker 必须继续跟过去，
+  // 否则后续 replay 看不出这是 context provider props，又会重新递归进 value。
+  copyContextProviderPropsMarker(props, nextProps)
   return nextProps
 }
 

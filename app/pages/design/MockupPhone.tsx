@@ -191,12 +191,6 @@ const MockupPhonePage: FC = () => {
           ，在快速搭 demo 时不用每次都手写完整骨架。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/mockup-phone/" target="_blank">
-            查看 Mockup Phone 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要在设计页、营销页或功能介绍页展示移动端界面，而不想自己维护手机边框结构。</li>

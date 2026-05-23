@@ -177,11 +177,6 @@ const CollapseDemo: FC = () => {
           保留 Rue 原本基于 daisyUI 的视觉语言，并在此基础上补齐 `items`、accordion、
           `activeKey`、`extra`、`description`、尺寸与图标位置等增强能力。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/collapse/" target="_blank">
-            查看 Collapse 静态样式
-          </a>
-        </div>
 
         <h2>增强 API</h2>
         <p className="text-sm opacity-80">

@@ -694,11 +694,6 @@ const RatingPage: FC = () => {
           defaultValue、allowClear、allowHalf、tooltips 和自定义字符；需要完全沿用 daisyUI mask
           结构时，仍然可以继续使用 Rating.Item 复合写法。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/rating/" target="_blank">
-            查看 Rating 静态样式参考
-          </a>
-        </div>
 
         <PreviewBlock
           title="Semantic rating"

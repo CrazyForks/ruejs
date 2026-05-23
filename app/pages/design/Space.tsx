@@ -80,7 +80,7 @@ const spaceApiRows: ApiRow[] = [
   },
   {
     prop: 'direction',
-    description: '主轴方向，和 ant-design Space 一致保留 horizontal / vertical 两种布局。',
+    description: '主轴方向，保留 horizontal / vertical 两种布局。',
     type: `'horizontal' | 'vertical'`,
     defaultValue: `'horizontal'`,
   },
@@ -590,7 +590,7 @@ const SpacePage: FC = () => {
 
         <PreviewBlock
           title="Compact 垂直按钮组"
-          summary="再补一组更像 ant-design 的纵向按钮拼接，直接把默认、dashed、primary 和 outlined 四种按钮风格摆在一起。"
+          summary="再补一组纵向按钮拼接，直接把默认、dashed、primary 和 outlined 四种按钮风格摆在一起。"
           tab={tabs.compactVerticalButtons}
           code={compactVerticalButtonsCode}
           preview={
@@ -706,7 +706,7 @@ const SpacePage: FC = () => {
 
         <h2 className="mt-10">Space.Compact API</h2>
         <p className="text-sm opacity-70">
-          Space.Compact 对齐的是 ant-design 的 compact 语义：它负责把控件压成连续组，默认不提供
+          Space.Compact 对应的是 compact 语义：它负责把控件压成连续组，默认不提供
           gap；如果你要的是普通留白，请继续使用 Space。
         </p>
         <ApiTable rows={compactApiRows} />

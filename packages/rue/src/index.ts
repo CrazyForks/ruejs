@@ -36,6 +36,7 @@ export type {
 } from '@rue-js/runtime'
 
 export {
+  version,
   createContext,
   createElement,
   render,
@@ -92,6 +93,7 @@ export {
   useEffect,
   signal,
   ref,
+  shallowRef,
   computed,
   isReactive,
   reactive,
@@ -109,6 +111,7 @@ export {
   useContext,
   useRef,
   unref,
+  nextTick,
   setReactiveScheduling,
   Slot,
 } from '@rue-js/runtime'

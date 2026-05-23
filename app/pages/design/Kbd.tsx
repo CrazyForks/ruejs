@@ -192,12 +192,6 @@ const KbdDemo: FC = () => {
           组织快捷键序列。
         </p>
 
-        <div className="text-sm flex flex-wrap gap-4">
-          <a href="https://daisyui.com/components/kbd/" target="_blank">
-            查看 Kbd 静态样式
-          </a>
-        </div>
-
         <h2>何时使用</h2>
         <ul>
           <li>需要展示单个按键、组合键或快捷键列表。</li>

@@ -104,11 +104,6 @@ const TooltipPage: FC = () => {
           <code>tip</code> 和 <code>Tooltip.Content</code>，也可以切到 <code>title</code>、
           <code>overlay</code>、受控显示、 自定义颜色和语义化样式扩展。
         </p>
-        <div className="text-sm">
-          <a href="https://daisyui.com/components/tooltip/" target="_blank">
-            查看 Tooltip 静态样式
-          </a>
-        </div>
 
         <PreviewBlock
           title="Tooltip"

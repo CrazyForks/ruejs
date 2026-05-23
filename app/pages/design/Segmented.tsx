@@ -857,7 +857,7 @@ const SegmentedDesign: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Segmented 分段选择器</h1>
         <p>
-          Rue 的 Segmented 走的是更轻一点的轨道条和卡片式高亮，不照搬 antd
+          Rue 的 Segmented 走的是更轻一点的轨道条和卡片式高亮，不照搬其他组件库
           的视觉，但把日常最常用的那组能力一次补齐了： 受控与非受控、raw value 与对象
           options、icon、block、size、round、vertical，以及语义化的 class 和 style 定制。
         </p>

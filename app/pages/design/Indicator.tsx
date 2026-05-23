@@ -202,11 +202,6 @@ const IndicatorPage: FC = () => {
             </p>
           </div>
         </div>
-        <div className="mt-3 text-sm">
-          <a href="https://daisyui.com/components/indicator/" target="_blank">
-            查看 Indicator 静态样式
-          </a>
-        </div>
 
         <ExampleBlock
           title="Status indicator"

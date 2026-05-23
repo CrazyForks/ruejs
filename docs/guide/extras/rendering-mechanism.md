@@ -1,10 +1,12 @@
 # 渲染机制 {#rendering-mechanism}
 
-Rue 当前默认的渲染机制是 Block / Vapor。模板与 JSX 在编译阶段会尽量直接降到可执行的 Renderable / Block 指令，运行时围绕 DOM 锚点、区间和响应式副作用做最小更新，而不是把整棵界面都当成一棵需要反复 diff 的对象树。
+Rue 当前默认的渲染机制是 Block / Vapor。模板与 JSX 在编译阶段会尽量直接降到可执行的 Renderable / Block 指令，运行时围绕 DOM 锚点、区间和响应式副作用做最小更新。
 
 这并不意味着文档里完全不会再出现旧的公开对象术语。`h()` 和少量迁移说明仍会提到它们，用来解释历史上的手写渲染输出；但 Rue 的默认主入口已经不再提供 compat 子路径，也不再接受旧的 compat helper。
 
-## 公开渲染输出与默认 Block / Vapor {#virtual-dom}
+## 公开渲染输出与默认 Block / Vapor {#public-render-output}
+
+<span id="virtual-dom"></span>
 
 如果你从旧版本或其他框架迁移过来，最容易混淆的一点是：
 
@@ -12,7 +14,7 @@ Rue 当前默认的渲染机制是 Block / Vapor。模板与 JSX 在编译阶段
 - 历史文档里仍可能看到旧的公开对象术语
 - 但 Rue 默认编译产物已经优先走 Block / Vapor / Renderable 路径
 
-在默认路径中，编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的不是“先完整建一棵对象树，再整树比较”，而是“直接执行一段更接近真实 DOM 操作的渲染计划”。
+在默认路径中，编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 DOM 操作的渲染计划。
 
 只有在以下情况，你才会明显接触到历史对象桥接/compat 语义：
 
@@ -26,12 +28,10 @@ Rue 当前默认的渲染机制是 Block / Vapor。模板与 JSX 在编译阶段
 
 1. **编译**：模板或 JSX 被编译成 Block / Renderable 导向的输出。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。
 2. **挂载**：运行时执行编译产物，创建真实 DOM、插入锚点、建立区间边界，并在执行过程中收集相关响应式依赖。
-3. **更新**：依赖变更后，只重新执行受影响的 block / effect。运行时直接更新对应 DOM 节点、区间或组件边界，而不是重新比较整棵对象树。
+3. **更新**：依赖变更后，只重新执行受影响的 block / effect。运行时直接更新对应 DOM 节点、区间或组件边界。
 4. **清理**：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 DOM 区间一并释放。
 
-![render pipeline](@todo)
-
-<!-- https://www.figma.com/file/elViLsnxGJ9lsQVsuhwqxM/Rendering-Mechanism -->
+可以把它理解成一条线性的管道：源码先被编译成带有更新提示和边界信息的输出，运行时再据此完成初次挂载、按需更新以及最终清理。
 
 ## 模板与渲染函数 {#templates-vs-render-functions}
 
@@ -49,7 +49,9 @@ Rue 依然支持手写渲染函数，但默认推荐模板或普通 JSX，原因
 
 如果你需要手写 `h()` 或维护旧的渲染桥接，请把它们视为显式边界，而不是默认开发路径。相关写法见 [渲染函数与 JSX](/guide/guide/extras/render-function)，迁移事项见 [默认 Block / Vapor 路径迁移](/guide/guide/migration/renderable-default)。
 
-## 编译器知情的 Block / Vapor {#compiler-informed-virtual-dom}
+## 编译器知情的 Block / Vapor {#compiler-informed-block-vapor}
+
+<span id="compiler-informed-virtual-dom"></span>
 
 Rue 的核心优势在于同时掌控编译器与运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；运行时则只执行这些已经被压缩过的信息。
 
@@ -73,7 +75,7 @@ Rue 的核心优势在于同时掌控编译器与运行时。编译器可以提�
 
 ### Patch 标记与精准更新 {#patch-flags}
 
-对于有动态绑定的节点，编译器会把“究竟什么会变”编码进产物，例如文本、class、style、属性或稳定片段。运行时据此直接走对应的更新路径，而不是重新检查整组 props。
+对于有动态绑定的节点，编译器会把“究竟什么会变”编码进产物，例如文本、class、style、属性或稳定片段。运行时据此直接走对应的更新路径。
 
 ```vue-html
 <div :class="{ active }"></div>

@@ -686,7 +686,7 @@ const TimePickerPage: FC = () => {
         <h2 id="time-picker-api">API</h2>
         <p>
           Rue 的 TimePicker 把输入和弹层合在同一个语义面里，因此既保留了手输效率，也补上了接近
-          ant-design TimePicker 的核心能力层。
+          完整的核心能力层。
         </p>
 
         <h3>TimePicker</h3>
