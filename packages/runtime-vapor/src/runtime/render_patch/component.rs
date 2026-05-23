@@ -7,9 +7,10 @@ use crate::reactive::context::{CONTEXT_OWNER_PARENT_PROP, CONTEXT_PARENT_INSTANC
 use crate::reactive::core::{pop_effect_scope, push_effect_scope};
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::shared_runtime_bridge;
-use js_sys::{Array, Function, Object, Reflect};
+use js_sys::{Array, Function, Object, Promise, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
+use wasm_bindgen::closure::Closure;
 
 fn debug_record_component_patch(record: &Object) {
     let global = js_sys::global();
@@ -25,6 +26,194 @@ fn debug_record_component_patch(record: &Object) {
     let array = if Array::is_array(&existing) { Array::from(&existing) } else { Array::new() };
     array.push(record);
     let _ = Reflect::set(&global, &key, &array.into());
+}
+
+fn active_element() -> Option<JsValue> {
+    let global = js_sys::global();
+    let document = Reflect::get(&global, &JsValue::from_str("document")).ok()?;
+    if document.is_undefined() || document.is_null() {
+        return None;
+    }
+
+    let active = Reflect::get(&document, &JsValue::from_str("activeElement")).ok()?;
+    if active.is_undefined() || active.is_null() {
+        return None;
+    }
+
+    Some(active)
+}
+
+#[derive(Clone)]
+struct ReplaceFocusSnapshot {
+    path: Vec<u32>,
+    tag_name: Option<String>,
+    input_type: Option<String>,
+    selection_start: Option<u32>,
+    selection_end: Option<u32>,
+    selection_direction: Option<String>,
+}
+
+fn js_prop(value: &JsValue, name: &str) -> JsValue {
+    Reflect::get(value, &JsValue::from_str(name)).unwrap_or(JsValue::UNDEFINED)
+}
+
+fn js_string_prop(value: &JsValue, name: &str) -> Option<String> {
+    js_prop(value, name).as_string()
+}
+
+fn js_u32_prop(value: &JsValue, name: &str) -> Option<u32> {
+    js_prop(value, name).as_f64().map(|number| number as u32)
+}
+
+fn normalized_tag_name(value: &JsValue) -> Option<String> {
+    js_string_prop(value, "tagName")
+        .or_else(|| js_string_prop(value, "tag"))
+        .map(|tag| tag.to_ascii_uppercase())
+}
+
+fn normalized_input_type(value: &JsValue) -> Option<String> {
+    js_string_prop(value, "type").map(|kind| kind.to_ascii_lowercase())
+}
+
+fn child_values(value: &JsValue) -> Vec<JsValue> {
+    for key in ["children", "childNodes"] {
+        let collection = js_prop(value, key);
+        if collection.is_undefined() || collection.is_null() {
+            continue;
+        }
+
+        if let Some(length) = js_prop(&collection, "length").as_f64() {
+            let mut items = Vec::with_capacity(length as usize);
+            for index in 0..(length as u32) {
+                let child = Reflect::get(&collection, &JsValue::from_f64(index as f64))
+                    .unwrap_or(JsValue::UNDEFINED);
+                if !child.is_undefined() && !child.is_null() {
+                    items.push(child);
+                }
+            }
+            return items;
+        }
+    }
+
+    Vec::new()
+}
+
+fn find_descendant_path(root: &JsValue, target: &JsValue) -> Option<Vec<u32>> {
+    if Object::is(root, target) {
+        return Some(Vec::new());
+    }
+
+    for (index, child) in child_values(root).into_iter().enumerate() {
+        if let Some(mut path) = find_descendant_path(&child, target) {
+            let mut full_path = Vec::with_capacity(path.len() + 1);
+            full_path.push(index as u32);
+            full_path.append(&mut path);
+            return Some(full_path);
+        }
+    }
+
+    None
+}
+
+fn descendant_by_path(root: &JsValue, path: &[u32]) -> Option<JsValue> {
+    let mut current = root.clone();
+    for index in path {
+        let children = child_values(&current);
+        let next = children.get(*index as usize)?.clone();
+        current = next;
+    }
+    Some(current)
+}
+
+fn capture_focus_snapshot(root: &JsValue) -> Option<ReplaceFocusSnapshot> {
+    let active = active_element()?;
+    let path = find_descendant_path(root, &active)?;
+
+    Some(ReplaceFocusSnapshot {
+        path,
+        tag_name: normalized_tag_name(&active),
+        input_type: normalized_input_type(&active),
+        selection_start: js_u32_prop(&active, "selectionStart"),
+        selection_end: js_u32_prop(&active, "selectionEnd"),
+        selection_direction: js_string_prop(&active, "selectionDirection"),
+    })
+}
+
+fn focus_target_matches(snapshot: &ReplaceFocusSnapshot, target: &JsValue) -> bool {
+    if let Some(expected_tag) = snapshot.tag_name.as_ref() {
+        if normalized_tag_name(target).as_ref() != Some(expected_tag) {
+            return false;
+        }
+    }
+
+    if let Some(expected_type) = snapshot.input_type.as_ref() {
+        if normalized_input_type(target).as_ref() != Some(expected_type) {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn restore_focus_snapshot(snapshot: &ReplaceFocusSnapshot, target: &JsValue) {
+    let snapshot = snapshot.clone();
+    let target = target.clone();
+    let restore = Closure::wrap(Box::new(move |_v: JsValue| {
+        let owner_document = js_prop(&target, "ownerDocument");
+        let active_element = js_prop(&owner_document, "activeElement");
+        if !Object::is(&active_element, &target) {
+            let focus = js_prop(&target, "focus");
+            if let Some(function) = focus.dyn_ref::<Function>() {
+                let _ = function.call0(&target);
+            }
+        }
+
+        if let Some(start) = snapshot.selection_start {
+            let _ = Reflect::set(
+                &target,
+                &JsValue::from_str("selectionStart"),
+                &JsValue::from_f64(start as f64),
+            );
+        }
+        if let Some(end) = snapshot.selection_end {
+            let _ = Reflect::set(
+                &target,
+                &JsValue::from_str("selectionEnd"),
+                &JsValue::from_f64(end as f64),
+            );
+        }
+        if let Some(direction) = snapshot.selection_direction.as_ref() {
+            let _ = Reflect::set(
+                &target,
+                &JsValue::from_str("selectionDirection"),
+                &JsValue::from_str(direction),
+            );
+        }
+    }) as Box<dyn FnMut(JsValue)>);
+    let _ = Promise::resolve(&JsValue::UNDEFINED).then(&restore);
+    restore.forget();
+}
+
+fn has_active_composing_descendant(root: &JsValue) -> bool {
+    let Some(active) = active_element() else {
+        return false;
+    };
+
+    let contains = Reflect::get(root, &JsValue::from_str("contains")).unwrap_or(JsValue::UNDEFINED);
+    let Some(contains_fn) = contains.dyn_ref::<Function>() else {
+        return false;
+    };
+
+    let contains_active =
+        contains_fn.call1(root, &active).ok().and_then(|value| value.as_bool()).unwrap_or(false);
+    if !contains_active {
+        return false;
+    }
+
+    Reflect::get(&active, &JsValue::from_str("__rue_is_composing__"))
+        .unwrap_or(JsValue::FALSE)
+        .as_bool()
+        .unwrap_or(false)
 }
 
 impl<A: DomAdapter> Rue<A>
@@ -213,6 +402,19 @@ where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         if let Some(old_sub) = old.comp_subtree.as_deref_mut() {
+            let should_hold_composing_subtree = old_sub.host_cloned().is_some_and(|host| {
+                let host_js: JsValue = host.into();
+                has_active_composing_descendant(&host_js)
+            });
+            if should_hold_composing_subtree {
+                return Some(old_sub.clone());
+            }
+
+            let focus_snapshot = old_sub.host_cloned().and_then(|host| {
+                let host_js: JsValue = host.into();
+                capture_focus_snapshot(&host_js)
+            });
+
             if matches!(old_sub, MountedSubtreeState::Vapor(_))
                 && old_sub.matches_input_type(&new_sub.r#type)
                 && matches!(new_sub.r#type, MountInputType::<A>::Vapor)
@@ -231,6 +433,16 @@ where
             }
 
             self.patch(old_sub, &new_sub, parent);
+            if let (Some(snapshot), Some(next_host)) =
+                (focus_snapshot.as_ref(), old_sub.host_cloned())
+            {
+                let next_host_js: JsValue = next_host.into();
+                if let Some(target) = descendant_by_path(&next_host_js, &snapshot.path)
+                    .filter(|target| focus_target_matches(snapshot, target))
+                {
+                    restore_focus_snapshot(snapshot, &target);
+                }
+            }
             Some(old_sub.clone())
         } else if let Some(mounted_subtree) = self.mount_from_input(&new_sub, Some(parent)) {
             if let Some(el_new) = mounted_subtree.host_cloned() {

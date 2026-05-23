@@ -1,3 +1,5 @@
+#[cfg(feature = "compat")]
+use super::super::types::FRAGMENT;
 use super::super::types::{MountInput, MountInputChild, MountInputType};
 #[cfg(feature = "compat")]
 use super::super::vnode_helpers::{
@@ -64,10 +66,88 @@ fn default_mount_handle_value_from_jsdom_input(input: MountInput<JsDomAdapter>) 
     .value
 }
 
+fn set_mount_handle_wrapper_metadata<A: DomAdapter>(target: &Object, input: &MountInput<A>) {
+    if let Some(key) = input.key.as_ref() {
+        let _ = Reflect::set(target, &JsValue::from_str("key"), &JsValue::from_str(key));
+    }
+
+    if let Some(cleanup_bucket) = input.mount_cleanup_bucket.as_ref() {
+        let _ = Reflect::set(target, &JsValue::from_str("__rue_cleanup_bucket"), cleanup_bucket);
+    }
+
+    if let Some(scope_id) = input.mount_effect_scope_id {
+        let _ = Reflect::set(
+            target,
+            &JsValue::from_str("__rue_effect_scope_id"),
+            &JsValue::from_f64(scope_id as f64),
+        );
+    }
+}
+
 impl<A: DomAdapter> Rue<A>
 where
     A::Element: Clone,
 {
+    fn nested_child_mount_handle_value(&mut self, input: &MountInput<A>) -> JsValue
+    where
+        A::Element: From<JsValue> + Into<JsValue> + Clone,
+    {
+        match &input.r#type {
+            MountInputType::<A>::Component(render_fn) => {
+                let handle = Object::new();
+                let _ = Reflect::set(
+                    &handle,
+                    &JsValue::from_str(transport::PORTABLE_COMPONENT_TYPE_KEY),
+                    render_fn,
+                );
+                let props = self.props_with_children_input_to_jsobject(input);
+                let _ = Reflect::set(&handle, &JsValue::from_str("props"), &props);
+                set_mount_handle_wrapper_metadata(&handle, input);
+                handle.into()
+            }
+            MountInputType::<A>::VaporWithSetup(setup) => {
+                let handle = Object::new();
+                let _ = Reflect::set(
+                    &handle,
+                    &JsValue::from_str(transport::PORTABLE_VAPOR_SETUP_KEY),
+                    setup,
+                );
+                set_mount_handle_wrapper_metadata(&handle, input);
+                handle.into()
+            }
+            #[cfg(feature = "compat")]
+            MountInputType::<A>::Element(tag) => {
+                let handle = Object::new();
+                let props = Object::new();
+                for (key, value) in input.props.iter() {
+                    let _ = Reflect::set(&props, &JsValue::from_str(key.as_str()), value);
+                }
+                let children = self.normalized_children_input_array(&input.props, &input.children);
+                let _ = Reflect::set(&handle, &JsValue::from_str("type"), &JsValue::from_str(tag));
+                let _ = Reflect::set(&handle, &JsValue::from_str("props"), &props);
+                let _ = Reflect::set(&handle, &JsValue::from_str("children"), &children.into());
+                set_mount_handle_wrapper_metadata(&handle, input);
+                handle.into()
+            }
+            #[cfg(feature = "compat")]
+            MountInputType::<A>::Fragment => {
+                let handle = Object::new();
+                let props = Object::new();
+                for (key, value) in input.props.iter() {
+                    let _ = Reflect::set(&props, &JsValue::from_str(key.as_str()), value);
+                }
+                let children = self.normalized_children_input_array(&input.props, &input.children);
+                let _ =
+                    Reflect::set(&handle, &JsValue::from_str("type"), &JsValue::from_str(FRAGMENT));
+                let _ = Reflect::set(&handle, &JsValue::from_str("props"), &props);
+                let _ = Reflect::set(&handle, &JsValue::from_str("children"), &children.into());
+                set_mount_handle_wrapper_metadata(&handle, input);
+                handle.into()
+            }
+            _ => default_mount_handle_value_from_jsdom_input(convert_mount_input_to_js_dom(input)),
+        }
+    }
+
     pub(crate) fn component_return_value_to_input(
         &mut self,
         value: &JsValue,
@@ -212,7 +292,7 @@ where
     }
 
     pub(crate) fn normalized_children_input_array(
-        &self,
+        &mut self,
         props: &super::super::types::ComponentProps,
         children: &[MountInputChild<A>],
     ) -> Array
@@ -231,7 +311,7 @@ where
                             arr.push(&JsValue::from_str(text));
                         }
                         _ => {
-                            let handle = self.input_to_mount_handle_value(node);
+                            let handle = self.nested_child_mount_handle_value(node);
                             arr.push(&handle);
                         }
                     },
@@ -263,6 +343,7 @@ where
         obj.into()
     }
 
+    #[cfg(test)]
     pub(crate) fn input_to_mount_handle_value(&self, input: &MountInput<A>) -> JsValue
     where
         A::Element: From<JsValue> + Into<JsValue> + Clone,
@@ -322,7 +403,7 @@ mod tests {
 
     #[cfg(feature = "compat")]
     #[wasm_bindgen_test]
-    fn props_with_children_input_to_jsobject_uses_tagged_mount_handles() {
+    fn props_with_children_input_to_jsobject_preserves_stable_child_objects() {
         let mut rue: Rue<JsDomAdapter> = Rue::new();
         let child = MountInput::new_normalized(
             MountInputType::Element("strong".to_string()),
@@ -342,12 +423,11 @@ mod tests {
         let child_object = Object::from(children.get(0));
 
         assert!(
-            Reflect::has(&child_object, &JsValue::from_str(DEFAULT_MOUNT_HANDLE_KEY))
-                .unwrap_or(false)
+            !Reflect::has(&child_object, &JsValue::from_str(DEFAULT_MOUNT_HANDLE_KEY)).unwrap()
         );
         let type_value =
             Reflect::get(&child_object, &JsValue::from_str("type")).unwrap_or(JsValue::UNDEFINED);
-        assert!(type_value.is_undefined());
+        assert_eq!(type_value.as_string().as_deref(), Some("strong"));
     }
 
     #[wasm_bindgen_test]

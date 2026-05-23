@@ -17,13 +17,23 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Toast actual page', () => {
   it('renders toast demos and restores the placements preview after toggling code', async () => {
+    setEnabledPreviews('Toast placements', 'Stacked toasts', 'Inset and layer control')
+
     const container = mountContainer()
     resetActiveRuntime()
     render(<ToastPage />, container)

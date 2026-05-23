@@ -4,6 +4,7 @@ import { Tabs } from '@rue-js/design'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import Radio from '../../../packages/rue-design/src/components/radio/index'
+import { renderDesignPreview } from './preview-test-gate'
 
 const colors = [
   'neutral',
@@ -55,7 +56,11 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
         className="mb-3 mt-4"
       />
 
-      {tab.value === 'preview' ? preview() : <Code className="mt-2" lang="tsx" code={code} />}
+      {tab.value === 'preview' ? (
+        renderDesignPreview(title, preview)
+      ) : (
+        <Code className="mt-2" lang="tsx" code={code} />
+      )}
     </div>
   )
 }

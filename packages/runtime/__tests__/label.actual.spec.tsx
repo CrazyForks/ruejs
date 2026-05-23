@@ -28,6 +28,12 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 const normalize = (value: string | null | undefined) => value?.replace(/\s+/g, ' ').trim() ?? ''
 
 const findTabButton = (root: ParentNode, label: string) =>
@@ -41,12 +47,23 @@ const findDemo = (root: ParentNode, title: string) =>
   ) ?? null
 
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Label actual page', () => {
   it('renders label demos and restores the first preview after toggling code', async () => {
+    setEnabledPreviews(
+      'Label for input',
+      '字段说明',
+      'Textarea 字段',
+      'Floating Label',
+      'Floating Label with Different Sizes',
+      'Floating Label with feedback',
+    )
+
     const container = mountContainer()
     render(<LabelPage />, container)
 

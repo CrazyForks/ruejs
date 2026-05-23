@@ -17,13 +17,27 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Fab actual page', () => {
   it('renders fab demos and restores the vertical preview after toggling code', async () => {
+    setEnabledPreviews(
+      'FAB and Speed Dial (vertical)',
+      'FAB and Speed Dial with labels and fab-close button',
+      'FAB and Speed Dial with labels and fab-main-action Button',
+    )
+
     const container = mountContainer()
 
     resetActiveRuntime()

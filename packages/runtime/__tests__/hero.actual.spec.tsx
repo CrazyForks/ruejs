@@ -17,13 +17,23 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Hero actual page', () => {
   it('renders hero demos and restores the centered preview after toggling code', async () => {
+    setEnabledPreviews('Centered hero', 'Hero with overlay image')
+
     const container = mountContainer()
     resetActiveRuntime()
     render(<HeroPage />, container)

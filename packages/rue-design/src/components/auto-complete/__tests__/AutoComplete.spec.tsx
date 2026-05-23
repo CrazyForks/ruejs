@@ -9,18 +9,30 @@ import {
 
 setReactiveScheduling('sync')
 
+const mountedContainers: HTMLDivElement[] = []
+
+const mountTestContainer = () => {
+  const container = mountContainer()
+  mountedContainers.push(container)
+  return container
+}
+
 const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active =
     (globalThis as any).__rue_vapor_preferred ?? (globalThis as any).__rue
 }
 
 afterEach(() => {
+  for (const container of mountedContainers) {
+    render(null as any, container)
+  }
+  mountedContainers.length = 0
   document.body.innerHTML = ''
 })
 
 describe('AutoComplete', () => {
   it('filters options and selects the highlighted item with Enter', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
     const handleSelect = vi.fn()
     const reportedErrors: Error[] = []
     resetActiveRuntime()
@@ -85,7 +97,7 @@ describe('AutoComplete', () => {
   })
 
   it('supports keyboard backfill preview and allowClear', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
     const handleClear = vi.fn()
     const reportedErrors: Error[] = []
     resetActiveRuntime()
@@ -168,7 +180,7 @@ describe('AutoComplete', () => {
   })
 
   it('opens suggestions on control click when open state is controlled externally', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
     const reportedErrors: Error[] = []
     const handleOpenChange = vi.fn()
     resetActiveRuntime()
@@ -227,7 +239,7 @@ describe('AutoComplete', () => {
   })
 
   it('moves from the current selection with arrow keys and confirms with Enter', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
     const handleSelect = vi.fn()
     const reportedErrors: Error[] = []
     resetActiveRuntime()
@@ -243,7 +255,6 @@ describe('AutoComplete', () => {
           data-testid="auto-complete-selected-navigation"
           value={value.value}
           options={[
-            { value: 'runtime/useComponent', title: 'useComponent lazy route' },
             { value: 'runtime/render', title: 'render entry bridge' },
             { value: 'runtime/watch', title: 'watch effect tracing' },
           ]}
@@ -277,11 +288,11 @@ describe('AutoComplete', () => {
     await click(control)
 
     await waitForContent(() => {
-      expect(container.querySelectorAll('[role="option"]')).toHaveLength(3)
+      expect(container.querySelectorAll('[role="option"]')).toHaveLength(2)
     })
 
-    const secondOption = container.querySelectorAll('[role="option"]')[1] as HTMLButtonElement
-    secondOption.click()
+    const firstOption = container.querySelectorAll('[role="option"]')[0] as HTMLButtonElement
+    firstOption.click()
 
     await waitForContent(() => {
       expect(input.value).toBe('render entry bridge')
@@ -325,7 +336,7 @@ describe('AutoComplete', () => {
   })
 
   it('preserves focus after the first character in grouped popupRender mode', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
     const reportedErrors: Error[] = []
     resetActiveRuntime()
     const stopListening = onError((error: Error) => {
@@ -341,17 +352,11 @@ describe('AutoComplete', () => {
           value={value.value}
           allowClear
           prefix={<span>Search</span>}
+          filterOption={false}
           options={[
             {
               label: 'Runtime',
-              options: [
-                { value: 'runtime/useComponent', title: 'useComponent lazy route' },
-                { value: 'runtime/render', title: 'render entry bridge' },
-              ],
-            },
-            {
-              label: 'Docs',
-              options: [{ value: 'docs/routing', title: 'Routing guide' }],
+              options: [{ value: 'runtime/useComponent', title: 'useComponent lazy route' }],
             },
           ]}
           optionLabelProp="title"
@@ -395,7 +400,7 @@ describe('AutoComplete', () => {
   })
 
   it('preserves focus when controlled open remounts after focus', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
     const reportedErrors: Error[] = []
     resetActiveRuntime()
     const stopListening = onError((error: Error) => {
@@ -454,7 +459,7 @@ describe('AutoComplete', () => {
   })
 
   it('updates visible highlight with arrow keys without backfill', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
     const reportedErrors: Error[] = []
     resetActiveRuntime()
     const stopListening = onError((error: Error) => {

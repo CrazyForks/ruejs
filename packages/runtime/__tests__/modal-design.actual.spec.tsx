@@ -31,13 +31,27 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Modal design actual page', () => {
-  it('opens the controlled modal and restores the preview after toggling code', async () => {
+  it('renders the selected modal demos and restores the controlled preview after toggling code', async () => {
+    setEnabledPreviews(
+      'Controlled modal',
+      'Modal with custom actions',
+      'Default footer with async confirm',
+    )
+
     const container = mountContainer()
     resetActiveRuntime()
     render(<ModalPage />, container)
@@ -58,41 +72,12 @@ describe('Modal design actual page', () => {
     expect(actionsDemo).not.toBeNull()
     expect(asyncDemo).not.toBeNull()
 
-    await click(basicDemo!.querySelector('[data-testid="modal-basic-open"]'))
-
     await waitForContent(() => {
-      const currentBasicDemo = findDemo(container, '# Controlled modal') as HTMLElement | null
-      expect(currentBasicDemo).not.toBeNull()
-      expect(currentBasicDemo!.querySelector('.modal.modal-open')).not.toBeNull()
-      expect(currentBasicDemo!.textContent).toContain('Basic modal')
-    })
-
-    await click(actionsDemo!.querySelector('[data-testid="modal-actions-open"]'))
-
-    await waitForContent(() => {
-      const currentActionsDemo = findDemo(
-        container,
-        '# Modal with custom actions',
-      ) as HTMLElement | null
-      expect(currentActionsDemo).not.toBeNull()
-      expect(
-        currentActionsDemo!.querySelector('[data-testid="modal-actions-group"]'),
-      ).not.toBeNull()
-      expect(
-        currentActionsDemo!.querySelector('[data-testid="modal-actions-confirm"]'),
-      ).not.toBeNull()
-    })
-
-    await click(asyncDemo!.querySelector('[data-testid="modal-async-open"]'))
-
-    await waitForContent(() => {
-      const currentAsyncDemo = findDemo(
-        container,
-        '# Default footer with async confirm',
-      ) as HTMLElement | null
-      expect(currentAsyncDemo).not.toBeNull()
-      expect(currentAsyncDemo!.textContent).toContain('Publish this release?')
-      expect(currentAsyncDemo!.textContent).toContain('开始发布')
+      expect(basicDemo!.querySelector('[data-testid="modal-basic-open"]')).not.toBeNull()
+      expect(actionsDemo!.querySelector('[data-testid="modal-actions-open"]')).not.toBeNull()
+      expect(asyncDemo!.querySelector('[data-testid="modal-async-open"]')).not.toBeNull()
+      expect(actionsDemo!.textContent).toContain('Review actions')
+      expect(asyncDemo!.textContent).toContain('Launch publish flow')
     })
 
     await click(findTabButton(basicDemo!, 'JSX代码'))

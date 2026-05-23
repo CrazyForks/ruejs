@@ -7,3 +7,10 @@ table
 TimePicker
 /design/calendar 卡死
 color-picker/
+
+runtime-vapor单元测试
+swc-plugin-rue单元测试
+router 子路由
+router 路由守卫
+状态管理库
+i18n 插件支持

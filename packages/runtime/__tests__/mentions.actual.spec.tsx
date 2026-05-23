@@ -1,6 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { render, setReactiveScheduling, type FC } from '../src'
+
+vi.mock('../../../app/pages/site/SidebarPlaygroundDesign', () => ({
+  default: (props: { children?: unknown }) => (
+    <div data-testid="mock-sidebar-design">{props.children}</div>
+  ),
+}))
+
+vi.mock('../../../app/pages/site/components/Code', () => ({
+  default: () => null,
+}))
+
 import { AutoSizeMentionsPreview } from '../../../app/pages/design/Mentions'
 import Mentions from '../../../packages/rue-design/src/components/mentions/index'
 import { mountContainer, waitForContent } from './page-test-utils'

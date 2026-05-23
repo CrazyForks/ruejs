@@ -36,13 +36,13 @@ const ApiDocDetail: FC<ApiDocDetailProps> = props => {
   const [html, setHtml] = useState<string>('')
   const [_results, _setResults] = useState<{ id: string; title: string; snippet: string }[]>([])
   const routeSegment = computed<string>(() => {
-    const routePath = ((route.get() as any)?.params?.path as string | undefined)?.trim()
-    if (routePath) {
-      return routePath
-    }
     const propPath = props.params?.path as string | undefined
     if (propPath) {
       return propPath
+    }
+    const routePath = ((route.get() as any)?.params?.path as string | undefined)?.trim()
+    if (routePath) {
+      return routePath
     }
     return ''
   })

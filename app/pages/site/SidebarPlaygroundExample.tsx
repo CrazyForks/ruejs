@@ -12,6 +12,15 @@ const readCurrentHashPath = (): string => {
   return hash || globalThis.location?.pathname || ''
 }
 
+const isTestEnvironment = (): boolean => {
+  return (
+    import.meta.env?.MODE === 'test' ||
+    import.meta.env?.VITEST === true ||
+    import.meta.env?.VITEST === 'true' ||
+    !!(globalThis as any).vitest
+  )
+}
+
 export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
   examples: [
     {
@@ -220,6 +229,26 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/context',
         },
         {
+          id: 'i18n-switcher',
+          title: '语言切换（_ 模型）',
+          href: '/examples/i18n-switcher',
+        },
+        {
+          id: 'router-demo-overview',
+          title: '路由 Demo：总览（嵌套路由）',
+          href: '/examples/router-demo/guide/router/overview',
+        },
+        {
+          id: 'router-demo-guards',
+          title: '路由 Demo：守卫（beforeEnter）',
+          href: '/examples/router-demo/guide/router/guards',
+        },
+        {
+          id: 'router-demo-lab',
+          title: '路由 Demo：实验页（受守卫保护）',
+          href: '/examples/router-demo/lab',
+        },
+        {
           id: 'reactive-counter',
           title: '基础计数器',
           href: '/examples/reactive-counter',
@@ -294,6 +323,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           title: '排序、筛选与网格',
           href: '/examples/sort-filter-grid',
         },
+        {
+          id: 'store-query-sync',
+          title: 'Store Query Sync 与 URL 状态',
+          href: '/examples/store-query-sync',
+        },
         { id: 'tree-view', title: '树状视图', href: '/examples/tree-view' },
         { id: 'svg-graph', title: 'SVG 图表', href: '/examples/svg-graph' },
         {
@@ -357,8 +391,54 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
   ],
 }
 
+const TEST_SECTIONS: SidebarSection[] = [
+  {
+    id: 'examples-test',
+    title: '基础',
+    items: [
+      {
+        id: 'demo',
+        title: 'useState 计数器',
+        href: '/examples/demo',
+      },
+      {
+        id: 'hello-world',
+        title: '你好，世界',
+        href: '/examples/hello-world',
+      },
+      {
+        id: 'handling-input',
+        title: '处理输入',
+        href: '/examples/handling-input',
+      },
+      {
+        id: 'attribute-bindings',
+        title: 'Attribute 绑定',
+        href: '/examples/attribute-bindings',
+      },
+      {
+        id: 'i18n-switcher',
+        title: '语言切换（_ 模型）',
+        href: '/examples/i18n-switcher',
+      },
+      {
+        id: 'router-demo-overview',
+        title: '路由 Demo 总览',
+        href: '/examples/router-demo/guide/router/overview',
+      },
+      {
+        id: 'store-query-sync',
+        title: 'Store Query Sync 与 URL 状态',
+        href: '/examples/store-query-sync',
+      },
+    ],
+  },
+]
+
+const activeSections = isTestEnvironment() ? TEST_SECTIONS : SECTIONS_BY_TYPE.examples
+
 const BaseSidebarPlayground = createPersistentSidebarPlayground({
-  sections: SECTIONS_BY_TYPE.examples,
+  sections: activeSections,
   showCounts: true,
   wrapperClassName: 'sidebar-playground-examples',
   fallbackToRoute: false,

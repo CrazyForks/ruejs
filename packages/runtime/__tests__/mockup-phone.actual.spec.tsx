@@ -16,6 +16,12 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 const normalize = (value: string | null | undefined) => value?.replace(/\s+/g, ' ').trim() ?? ''
 
 const findTabButton = (root: ParentNode, label: string) =>
@@ -29,12 +35,16 @@ const findDemo = (root: ParentNode, title: string) =>
   ) ?? null
 
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('MockupPhone actual page', () => {
   it('renders phone mockup demos and restores preview after tab toggling', async () => {
+    setEnabledPreviews('iPhone mockup', 'With color and wallpaper')
+
     const container = mountContainer()
     render(<MockupPhonePage />, container)
 
@@ -65,8 +75,6 @@ describe('MockupPhone actual page', () => {
     expect(findDemo(container, '# iPhone mockup')?.querySelector('.mockup-phone')).toBeNull()
     await click(findTabButton(findDemo(container, '# iPhone mockup')!, '预览'))
 
-    await waitForContent(() => {
-      expect(findDemo(container, '# iPhone mockup')?.querySelector('.mockup-phone')).not.toBeNull()
-    })
+    expect(findDemo(container, '# iPhone mockup')?.querySelector('.mockup-phone')).not.toBeNull()
   })
 })

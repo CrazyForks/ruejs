@@ -1,0 +1,52 @@
+{
+  "name": "@rue-js/store",
+  "version": "0.2.1",
+  "description": "@rue-js/store",
+  "keywords": [
+    "rue"
+  ],
+  "homepage": "https://github.com/hunzhiwange/ruejs/tree/main/packages/store#readme",
+  "bugs": {
+    "url": "https://github.com/hunzhiwange/ruejs/issues"
+  },
+  "license": "MIT",
+  "author": "Xiangmin Liu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hunzhiwange/ruejs.git",
+    "directory": "packages/store"
+  },
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "sideEffects": false,
+  "main": "index.js",
+  "module": "dist/store.esm-bundler.js",
+  "types": "dist/store.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/store.d.ts",
+      "development": "./src/index.ts",
+      "node": {
+        "production": "./dist/store.cjs.prod.js",
+        "development": "./dist/store.cjs.js",
+        "default": "./index.js"
+      },
+      "module": "./dist/store.esm-bundler.js",
+      "import": "./dist/store.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
+  "dependencies": {
+    "@rue-js/rue": "workspace:*"
+  },
+  "buildOptions": {
+    "name": "RueStoreCore",
+    "formats": [
+      "esm-bundler",
+      "cjs"
+    ]
+  }
+}

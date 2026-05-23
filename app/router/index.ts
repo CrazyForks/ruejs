@@ -1,9 +1,22 @@
 import { useComponent } from '@rue-js/rue'
-import { createRouter, createWebHistory } from '@rue-js/router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from '@rue-js/router'
+import { routerDemoLabEnabled } from '../pages/examples/router-demo/state'
 
-type RouteRecord = { path: string; component: any }
+const loadRouterDemoScene = () => import('../pages/examples/router-demo/RouterDemoScene')
 
-const routes: RouteRecord[] = [
+const AsyncRouterDemoGuideShell = useComponent(async () => ({
+  default: (await loadRouterDemoScene()).RouterDemoGuideShell,
+}))
+
+const AsyncRouterDemoTopicPage = useComponent(async () => ({
+  default: (await loadRouterDemoScene()).RouterDemoTopicPage,
+}))
+
+const AsyncRouterDemoLabPage = useComponent(async () => ({
+  default: (await loadRouterDemoScene()).RouterDemoLabPage,
+}))
+
+const routes: RouteRecordRaw[] = [
   { path: '/about', component: useComponent(() => import('../pages/About')) },
   { path: '/posts', component: useComponent(() => import('../pages/PostsList')) },
   { path: '/posts/:id', component: useComponent(() => import('../pages/PostDetail')) },
@@ -279,6 +292,57 @@ const routes: RouteRecord[] = [
     component: useComponent(() => import('../pages/examples/Context')),
   },
   {
+    path: '/examples/i18n-switcher',
+    component: useComponent(() => import('../pages/examples/I18nSwitcher')),
+  },
+  {
+    path: '/examples/router-demo',
+    component: useComponent(() => import('../pages/examples/RouterDemo')),
+    meta: { demo: 'router', surface: 'examples' },
+    children: [
+      {
+        path: '',
+        redirect: { name: 'router-demo-topic', params: { section: 'router', topic: 'overview' } },
+      },
+      {
+        path: 'guide/:section(router|data)',
+        component: AsyncRouterDemoGuideShell,
+        meta: { layer: 'guide-shell' },
+        children: [
+          {
+            path: '',
+            redirect: to => ({
+              name: 'router-demo-topic',
+              params: {
+                section: to?.params.section || 'router',
+                topic: 'overview',
+              },
+            }),
+          },
+          {
+            path: ':topic',
+            name: 'router-demo-topic',
+            component: AsyncRouterDemoTopicPage,
+            meta: { layer: 'topic-leaf' },
+          },
+        ],
+      },
+      {
+        path: 'lab',
+        name: 'router-demo-lab',
+        component: AsyncRouterDemoLabPage,
+        meta: { layer: 'lab-leaf', gated: true },
+        beforeEnter: () => {
+          if (routerDemoLabEnabled.value) {
+            return
+          }
+
+          return { name: 'router-demo-topic', params: { section: 'router', topic: 'guards' } }
+        },
+      },
+    ],
+  },
+  {
     path: '/examples/todo-app',
     component: useComponent(() => import('../pages/examples/TodoApp')),
   },
@@ -289,6 +353,10 @@ const routes: RouteRecord[] = [
   {
     path: '/examples/sort-filter-grid',
     component: useComponent(() => import('../pages/examples/SortFilterGrid')),
+  },
+  {
+    path: '/examples/store-query-sync',
+    component: useComponent(() => import('../pages/examples/StoreQuerySync')),
   },
   {
     path: '/examples/tree-view',

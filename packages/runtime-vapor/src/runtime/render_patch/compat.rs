@@ -4,7 +4,10 @@ use super::super::types::{
     MountInput, MountInputType, MountedPatchSubtree, MountedPatchSubtreeType, MountedSubtreeState,
 };
 use crate::runtime::dom_adapter::DomAdapter;
+use js_sys::{Function, Object, Promise, Reflect};
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
+use wasm_bindgen::closure::Closure;
 
 pub(super) enum CompatPatchBoundaryOutcome<A: DomAdapter> {
     NotCompat,
@@ -16,6 +19,172 @@ enum CompatPatchSameOutcome<A: DomAdapter> {
     NotHandled,
     Handled,
     Replaced(MountedSubtreeState<A>),
+}
+
+#[derive(Clone)]
+struct ReplaceFocusSnapshot {
+    path: Vec<u32>,
+    tag_name: Option<String>,
+    input_type: Option<String>,
+    selection_start: Option<u32>,
+    selection_end: Option<u32>,
+    selection_direction: Option<String>,
+}
+
+fn js_prop(value: &JsValue, name: &str) -> JsValue {
+    Reflect::get(value, &JsValue::from_str(name)).unwrap_or(JsValue::UNDEFINED)
+}
+
+fn js_string_prop(value: &JsValue, name: &str) -> Option<String> {
+    js_prop(value, name).as_string()
+}
+
+fn js_u32_prop(value: &JsValue, name: &str) -> Option<u32> {
+    js_prop(value, name).as_f64().map(|number| number as u32)
+}
+
+fn normalized_tag_name(value: &JsValue) -> Option<String> {
+    js_string_prop(value, "tagName")
+        .or_else(|| js_string_prop(value, "tag"))
+        .map(|tag| tag.to_ascii_uppercase())
+}
+
+fn normalized_input_type(value: &JsValue) -> Option<String> {
+    js_string_prop(value, "type").map(|kind| kind.to_ascii_lowercase())
+}
+
+fn child_values(value: &JsValue) -> Vec<JsValue> {
+    for key in ["children", "childNodes"] {
+        let collection = js_prop(value, key);
+        if collection.is_undefined() || collection.is_null() {
+            continue;
+        }
+
+        if let Some(length) = js_prop(&collection, "length").as_f64() {
+            let mut items = Vec::with_capacity(length as usize);
+            for index in 0..(length as u32) {
+                let child = Reflect::get(&collection, &JsValue::from_f64(index as f64))
+                    .unwrap_or(JsValue::UNDEFINED);
+                if !child.is_undefined() && !child.is_null() {
+                    items.push(child);
+                }
+            }
+            return items;
+        }
+    }
+
+    Vec::new()
+}
+
+fn find_descendant_path(root: &JsValue, target: &JsValue) -> Option<Vec<u32>> {
+    if Object::is(root, target) {
+        return Some(Vec::new());
+    }
+
+    for (index, child) in child_values(root).into_iter().enumerate() {
+        if let Some(mut path) = find_descendant_path(&child, target) {
+            let mut full_path = Vec::with_capacity(path.len() + 1);
+            full_path.push(index as u32);
+            full_path.append(&mut path);
+            return Some(full_path);
+        }
+    }
+
+    None
+}
+
+fn descendant_by_path(root: &JsValue, path: &[u32]) -> Option<JsValue> {
+    let mut current = root.clone();
+    for index in path {
+        let children = child_values(&current);
+        let next = children.get(*index as usize)?.clone();
+        current = next;
+    }
+    Some(current)
+}
+
+fn active_element() -> Option<JsValue> {
+    let global = js_sys::global();
+    let document = js_prop(&global, "document");
+    if document.is_undefined() || document.is_null() {
+        return None;
+    }
+
+    let active = js_prop(&document, "activeElement");
+    if active.is_undefined() || active.is_null() {
+        return None;
+    }
+
+    Some(active)
+}
+
+fn capture_focus_snapshot(root: &JsValue) -> Option<ReplaceFocusSnapshot> {
+    let active = active_element()?;
+    let path = find_descendant_path(root, &active)?;
+
+    Some(ReplaceFocusSnapshot {
+        path,
+        tag_name: normalized_tag_name(&active),
+        input_type: normalized_input_type(&active),
+        selection_start: js_u32_prop(&active, "selectionStart"),
+        selection_end: js_u32_prop(&active, "selectionEnd"),
+        selection_direction: js_string_prop(&active, "selectionDirection"),
+    })
+}
+
+fn focus_target_matches(snapshot: &ReplaceFocusSnapshot, target: &JsValue) -> bool {
+    if let Some(expected_tag) = snapshot.tag_name.as_ref() {
+        if normalized_tag_name(target).as_ref() != Some(expected_tag) {
+            return false;
+        }
+    }
+
+    if let Some(expected_type) = snapshot.input_type.as_ref() {
+        if normalized_input_type(target).as_ref() != Some(expected_type) {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn restore_focus_snapshot(snapshot: &ReplaceFocusSnapshot, target: &JsValue) {
+    let snapshot = snapshot.clone();
+    let target = target.clone();
+    let restore = Closure::wrap(Box::new(move |_v: JsValue| {
+        let owner_document = js_prop(&target, "ownerDocument");
+        let active_element = js_prop(&owner_document, "activeElement");
+        if !Object::is(&active_element, &target) {
+            let focus = js_prop(&target, "focus");
+            if let Some(function) = focus.dyn_ref::<Function>() {
+                let _ = function.call0(&target);
+            }
+        }
+
+        if let Some(start) = snapshot.selection_start {
+            let _ = Reflect::set(
+                &target,
+                &JsValue::from_str("selectionStart"),
+                &JsValue::from_f64(start as f64),
+            );
+        }
+        if let Some(end) = snapshot.selection_end {
+            let _ = Reflect::set(
+                &target,
+                &JsValue::from_str("selectionEnd"),
+                &JsValue::from_f64(end as f64),
+            );
+        }
+        if let Some(direction) = snapshot.selection_direction.as_ref() {
+            let _ = Reflect::set(
+                &target,
+                &JsValue::from_str("selectionDirection"),
+                &JsValue::from_str(direction),
+            );
+        }
+    }) as Box<dyn FnMut(JsValue)>);
+    let _ = Promise::resolve(&JsValue::UNDEFINED).then(&restore);
+    restore.forget();
 }
 
 impl<A: DomAdapter> Rue<A>
@@ -88,6 +257,15 @@ where
             let Some(el_new) = mounted.host_cloned() else {
                 return Some(mounted);
             };
+            let focus_snapshot = old_host.as_ref().and_then(|host| {
+                let host_js: JsValue = host.clone().into();
+                capture_focus_snapshot(&host_js)
+            });
+            let focus_target = focus_snapshot.as_ref().and_then(|snapshot| {
+                let new_root: JsValue = el_new.clone().into();
+                descendant_by_path(&new_root, &snapshot.path)
+                    .filter(|target| focus_target_matches(snapshot, target))
+            });
             let anchor_opt = self.current_anchor.clone();
             if let Some(adapter) = self.get_dom_adapter_mut() {
                 if let Some(ref el_old) = old_host {
@@ -103,6 +281,10 @@ where
                 } else {
                     adapter.append_child(parent, &el_new);
                 }
+            }
+            if let (Some(snapshot), Some(target)) = (focus_snapshot.as_ref(), focus_target.as_ref())
+            {
+                restore_focus_snapshot(snapshot, target);
             }
             Some(mounted)
         } else {
@@ -181,6 +363,15 @@ where
             let Some(el_new) = mounted.host_cloned() else {
                 return Some(mounted);
             };
+            let focus_snapshot = old.el.as_ref().and_then(|host| {
+                let host_js: JsValue = host.clone().into();
+                capture_focus_snapshot(&host_js)
+            });
+            let focus_target = focus_snapshot.as_ref().and_then(|snapshot| {
+                let new_root: JsValue = el_new.clone().into();
+                descendant_by_path(&new_root, &snapshot.path)
+                    .filter(|target| focus_target_matches(snapshot, target))
+            });
             let anchor_opt = self.current_anchor.clone();
             let mut dest_parent =
                 self.resolve_dest_parent(parent, old.el.clone(), anchor_opt.clone());
@@ -205,6 +396,10 @@ where
                 self.clear_old_el_if_present(&mut dest_parent, el_old);
             }
             self.invoke_unmounted_record(&lifecycle);
+            if let (Some(snapshot), Some(target)) = (focus_snapshot.as_ref(), focus_target.as_ref())
+            {
+                restore_focus_snapshot(snapshot, target);
+            }
             Some(mounted)
         } else {
             None

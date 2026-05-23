@@ -26,6 +26,9 @@ importers:
       '@rue-js/design':
         specifier: workspace:*
         version: link:packages/rue-design
+      '@rue-js/i18n':
+        specifier: workspace:*
+        version: link:packages/i18n
       '@rue-js/jsx-runtime':
         specifier: workspace:*
         version: link:packages/jsx-runtime
@@ -44,6 +47,9 @@ importers:
       '@rue-js/shared':
         specifier: workspace:*
         version: link:packages/shared
+      '@rue-js/store':
+        specifier: workspace:*
+        version: link:packages/store
       '@rue-js/vite-plugin-rue':
         specifier: workspace:*
         version: link:packages/vite-plugin-rue
@@ -187,6 +193,12 @@ importers:
         specifier: 4.1.5
         version: 4.1.5(@types/node@25.6.2)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@8.0.11(@types/node@25.6.2)(jiti@2.7.0)(yaml@2.8.4))
 
+  packages/i18n:
+    dependencies:
+      '@rue-js/rue':
+        specifier: workspace:*
+        version: link:../rue
+
   packages/jsx-dev-runtime:
     dependencies:
       '@rue-js/rue':
@@ -262,6 +274,12 @@ importers:
         version: 11.0.0
 
   packages/shared: {}
+
+  packages/store:
+    dependencies:
+      '@rue-js/rue':
+        specifier: workspace:*
+        version: link:../rue
 
   packages/swc-plugin-rue: {}
 

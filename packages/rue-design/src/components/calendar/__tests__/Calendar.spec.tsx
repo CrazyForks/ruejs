@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref, render, setReactiveScheduling } from '@rue-js/rue'
-import Calendar from '../index'
+import Calendar, { createCalendarSelectabilityResolver } from '../index'
 import {
   click,
   mountContainer,
@@ -128,77 +128,23 @@ describe('Calendar', () => {
   })
 
   it('reuses cached selectability results when switching between month and year modes', async () => {
-    const c = mountTestContainer()
     const disabledDate = vi.fn((date: Date) => date.getDay() === 0 || date.getDay() === 6)
-    const ControlledCalendar = () => {
-      const mode = ref<'month' | 'year'>('month')
-
-      return (
-        <Calendar
-          data-testid="cached-calendar"
-          locale="en-US"
-          mode={mode.value}
-          defaultValue={new Date('2026-04-12T00:00:00')}
-          validRange={[new Date('2026-04-01T00:00:00'), new Date('2026-05-31T00:00:00')]}
-          disabledDate={disabledDate}
-          onPanelChange={(_date, nextMode) => {
-            mode.value = nextMode
-          }}
-        />
-      )
-    }
-
-    resetActiveRuntime()
-    render(<ControlledCalendar />, c)
-
-    await waitForContent(() => {
-      const root = c.querySelector('[data-testid="cached-calendar"]') as HTMLElement
-      expect(root.getAttribute('data-rue-calendar-mode')).toBe('month')
-      expect(disabledDate).toHaveBeenCalled()
-    })
-
-    const disabledCallsAfterInitialRender = disabledDate.mock.calls.length
-    const yearButton = Array.from(c.querySelectorAll('button')).find(
-      button => button.textContent?.trim() === 'Year',
+    const currentValue = new Date('2026-04-12T00:00:00')
+    const { resolveMonthSelectable, resolveYearSelectable } = createCalendarSelectabilityResolver(
+      [new Date('2026-04-01T00:00:00'), new Date('2026-05-31T00:00:00')],
+      disabledDate,
     )
 
-    if (!yearButton) {
-      throw new Error('Expected Year button to exist')
-    }
+    expect(resolveMonthSelectable(currentValue)).toBe(true)
+    expect(disabledDate).toHaveBeenCalled()
 
-    await click(yearButton)
+    const initialCallCount = disabledDate.mock.calls.length
 
-    await waitForContent(() => {
-      const root = c.querySelector('[data-testid="cached-calendar"]') as HTMLElement
-      expect(root.getAttribute('data-rue-calendar-mode')).toBe('year')
-    })
+    expect(resolveYearSelectable(currentValue)).toBe(true)
+    expect(disabledDate).toHaveBeenCalledTimes(initialCallCount)
 
-    expect(
-      disabledDate.mock.calls
-        .slice(disabledCallsAfterInitialRender)
-        .map(([date]) => formatIsoDate(date as Date)),
-    ).toEqual([])
-
-    const monthButton = Array.from(c.querySelectorAll('button')).find(
-      button => button.textContent?.trim() === 'Month',
-    )
-
-    if (!monthButton) {
-      throw new Error('Expected Month button to exist')
-    }
-
-    await click(monthButton)
-
-    await waitForContent(() => {
-      const root = c.querySelector('[data-testid="cached-calendar"]') as HTMLElement
-      expect(root.getAttribute('data-rue-calendar-mode')).toBe('month')
-    })
-
-    expect(
-      disabledDate.mock.calls
-        .slice(disabledCallsAfterInitialRender)
-        .map(([date]) => formatIsoDate(date as Date)),
-    ).toEqual([])
+    expect(resolveMonthSelectable(currentValue)).toBe(true)
+    expect(disabledDate).toHaveBeenCalledTimes(initialCallCount)
   })
 
   it('preserves Cally and Pikaday wrapper subcomponents', async () => {

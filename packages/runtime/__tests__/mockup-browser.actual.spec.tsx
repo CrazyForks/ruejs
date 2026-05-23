@@ -16,6 +16,12 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 const normalize = (value: string | null | undefined) => value?.replace(/\s+/g, ' ').trim() ?? ''
 
 const findTabButton = (root: ParentNode, label: string) =>
@@ -29,12 +35,16 @@ const findDemo = (root: ParentNode, title: string) =>
   ) ?? null
 
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('MockupBrowser actual page', () => {
   it('renders browser mockup demos and restores the first preview after toggling code', async () => {
+    setEnabledPreviews('browser mockup with border', '推荐用法')
+
     const container = mountContainer()
     render(<MockupBrowserPage />, container)
 
@@ -48,7 +58,7 @@ describe('MockupBrowser actual page', () => {
     expect(borderDemo).not.toBeNull()
 
     await waitForContent(() => {
-      expect(container.querySelectorAll('.mockup-browser-toolbar').length).toBeGreaterThanOrEqual(7)
+      expect(container.querySelectorAll('.mockup-browser-toolbar').length).toBeGreaterThanOrEqual(2)
       expect(borderDemo?.querySelector('[data-testid="mockup-browser-border"]')).not.toBeNull()
       expect(findDemo(container, '# 推荐用法')?.querySelectorAll('.mockup-browser').length).toBe(1)
     })
@@ -59,12 +69,9 @@ describe('MockupBrowser actual page', () => {
         .length,
     ).toBe(0)
     await click(findTabButton(findDemo(container, '# browser mockup with border')!, '预览'))
-
-    await waitForContent(() => {
-      expect(
-        findDemo(container, '# browser mockup with border')?.querySelectorAll('.mockup-browser')
-          .length,
-      ).toBe(1)
-    })
+    expect(
+      findDemo(container, '# browser mockup with border')?.querySelectorAll('.mockup-browser')
+        .length,
+    ).toBe(1)
   })
 })

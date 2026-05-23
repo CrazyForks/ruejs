@@ -1,6 +1,7 @@
 import type { FC } from '@rue-js/rue'
 import Code from '../site/components/Code'
 import Tabs from '../../../packages/rue-design/src/components/tabs/index'
+import { renderDesignPreview } from './preview-test-gate'
 
 export type PreviewTabMode = 'preview' | 'code'
 
@@ -10,15 +11,6 @@ interface PreviewBlockProps {
   tab: { value: PreviewTabMode }
   preview: (() => any) | any
   code: string
-}
-
-const PreviewRenderer: FC<{ preview: PreviewBlockProps['preview'] }> = ({ preview }) => {
-  if (typeof preview === 'function') {
-    const PreviewComponent = preview as FC
-    return <PreviewComponent />
-  }
-
-  return <>{preview}</>
 }
 
 const PreviewBlock: FC<PreviewBlockProps> = ({ title, summary, tab, preview, code }) => {
@@ -45,7 +37,7 @@ const PreviewBlock: FC<PreviewBlockProps> = ({ title, summary, tab, preview, cod
         className={summary ? 'mb-3 mt-4' : 'mb-3'}
       />
       {tab.value === 'preview' ? (
-        <PreviewRenderer preview={preview} />
+        renderDesignPreview(title, preview)
       ) : (
         <Code className="mt-2" lang="tsx" code={code} />
       )}

@@ -17,13 +17,28 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Layout actual page', () => {
   it('renders layout demos and preserves preview after toggling code', async () => {
+    setEnabledPreviews(
+      'Basic structure',
+      'Collapsible sider',
+      'Responsive zero-width sider',
+      'Nested workbench',
+    )
+
     const container = mountContainer()
     resetActiveRuntime()
     render(<LayoutPage />, container)

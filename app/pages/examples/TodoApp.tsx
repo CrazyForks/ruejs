@@ -135,7 +135,8 @@ const formatTodoCreatedAt = (value: string, now = new Date()) => {
     return `${Math.max(1, Math.floor(diffMs / MINUTE_IN_MS))} 分钟前`
   }
 
-  if (isSameCalendarDay(parsed, now)) {
+  const shouldFormatRelativeHours = isSameCalendarDay(parsed, now) || diffMs < 6 * HOUR_IN_MS
+  if (shouldFormatRelativeHours) {
     return `${Math.max(1, Math.floor(diffMs / HOUR_IN_MS))} 小时前`
   }
 
@@ -319,139 +320,6 @@ const STATUS_META: Record<
     dotClass: 'bg-success',
     cardClass: 'border-success/30',
   },
-}
-
-type TodoCardProps = {
-  item: TodoItem
-  currentEditingId: number | null
-  currentEditingTitle: string
-  onEditingTitleChange: (value: string) => void
-  onSaveEditing: (id: number, titleOverride?: string) => void
-  onCancelEditing: () => void
-  onUpdateStatus: (id: number, status: TodoStatus) => void
-  onStartEditing: (item: TodoItem) => void
-  onToggleArchived: (id: number) => void
-  onRemoveTodo: (id: number) => void
-}
-
-const _TodoCard: FC<TodoCardProps> = ({
-  item,
-  currentEditingId,
-  currentEditingTitle,
-  onEditingTitleChange,
-  onSaveEditing,
-  onCancelEditing,
-  onUpdateStatus,
-  onStartEditing,
-  onToggleArchived,
-  onRemoveTodo,
-}) => {
-  const isEditing = currentEditingId === item.id
-  const editingValue = isEditing ? currentEditingTitle : item.title
-  const meta = STATUS_META[item.status]
-  let pendingEditingValue = editingValue
-
-  const commitEditing = () => {
-    const latestValue = pendingEditingValue
-    onEditingTitleChange(latestValue)
-    onSaveEditing(item.id, latestValue)
-  }
-
-  return (
-    <div
-      className={`card border bg-base-100 shadow-sm transition-all ${meta.cardClass} ${
-        item.archived ? 'opacity-75' : 'hover:-translate-y-0.5 hover:shadow-md'
-      }`}
-    >
-      <div className="card-body gap-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex-1 space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-block h-2.5 w-2.5 rounded-full ${meta.dotClass}`}></span>
-              <span className={meta.badgeClass}>{meta.label}</span>
-              {item.archived && <span className="badge badge-secondary badge-outline">已归档</span>}
-              <span className="text-xs text-base-content/50">
-                创建于 {formatTodoCreatedAt(item.createdAt)}
-              </span>
-            </div>
-
-            <h3
-              className={`text-xl font-semibold ${
-                isEditing
-                  ? 'hidden'
-                  : item.status === 'done'
-                    ? 'text-base-content/50 line-through'
-                    : 'text-base-content'
-              }`}
-            >
-              {item.title}
-            </h3>
-
-            <div className={`flex flex-col gap-3 sm:flex-row ${isEditing ? '' : 'hidden'}`}>
-              <input
-                className="input input-bordered w-full"
-                value={editingValue}
-                onInput={(e: any) => {
-                  pendingEditingValue = (e.target as HTMLInputElement).value
-                  onEditingTitleChange(pendingEditingValue)
-                }}
-                onKeydown={(e: KeyboardEvent) => {
-                  if (e.key === 'Enter') {
-                    commitEditing()
-                  }
-                  if (e.key === 'Escape') {
-                    onCancelEditing()
-                  }
-                }}
-              />
-              <div className="flex gap-2">
-                <button className="btn btn-primary btn-sm" onClick={commitEditing}>
-                  保存
-                </button>
-                <button className="btn btn-ghost btn-sm" onClick={onCancelEditing}>
-                  取消
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {STATUS_OPTIONS.map(option => (
-                <button
-                  key={option.key}
-                  className={`btn btn-xs ${
-                    item.status === option.key ? 'btn-neutral' : 'btn-ghost border border-base-300'
-                  }`}
-                  onClick={() => onUpdateStatus(item.id, option.key)}
-                >
-                  {option.actionLabel}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2 lg:justify-end">
-            {!isEditing && (
-              <button className="btn btn-sm btn-outline" onClick={() => onStartEditing(item)}>
-                改名
-              </button>
-            )}
-            <button
-              className="btn btn-sm btn-outline btn-secondary"
-              onClick={() => onToggleArchived(item.id)}
-            >
-              {item.archived ? '恢复' : '归档'}
-            </button>
-            <button
-              className="btn btn-sm btn-outline btn-error"
-              onClick={() => onRemoveTodo(item.id)}
-            >
-              删除
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 const SOURCE_CODE = [
@@ -861,7 +729,7 @@ const SOURCE_CODE = [
   '                </div>',
   '',
   '                <div className="flex flex-wrap gap-2 lg:justify-end">',
-  '                  {!card.isEditing && <button className="btn btn-sm btn-outline" onClick={() => startEditing(card.item)}>改名</button>}',
+  '                  {!card.isEditing && <button className="btn btn-sm btn-outline" onClick={() => startEditing(card.item)}>重命名</button>}',
   "                  <button className=\"btn btn-sm btn-outline btn-secondary\" onClick={() => toggleArchived(card.item.id)}>{card.item.archived ? '恢复' : '归档'}</button>",
   '                  <button className="btn btn-sm btn-outline btn-error" onClick={() => removeTodo(card.item.id)}>删除</button>',
   '                </div>',
@@ -1250,7 +1118,7 @@ const PreviewPanel: FC = () => {
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     {!isEditing && (
                       <button className="btn btn-sm btn-outline" onClick={() => startEditing(item)}>
-                        改名
+                        重命名
                       </button>
                     )}
                     <button

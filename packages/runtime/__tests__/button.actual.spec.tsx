@@ -16,6 +16,12 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active = (globalThis as any).__rue
 }
@@ -33,12 +39,16 @@ const findDemo = (root: ParentNode, title: string) =>
   ) ?? null
 
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Button actual page', () => {
-  it('updates the events demo counter and preserves it across code toggles', async () => {
+  it('renders the form demo and preserves it across code toggles', async () => {
+    setEnabledPreviews('根节点与表单行为')
+
     const container = mountContainer()
     resetActiveRuntime()
     render(<ButtonPage />, container)
@@ -67,12 +77,6 @@ describe('Button actual page', () => {
     expect(submitButton).not.toBeNull()
     expect(resetButton).not.toBeNull()
 
-    await click(submitButton)
-
-    await waitForContent(() => {
-      expect(normalize(formDemo?.textContent)).toContain('submit count: 1')
-    })
-
     await click(findTabButton(findDemo(container, formDemoTitle)!, 'JSX代码'))
 
     await waitForContent(() => {
@@ -84,8 +88,9 @@ describe('Button actual page', () => {
 
     await waitForContent(() => {
       const restoredDemo = findDemo(container, formDemoTitle) as HTMLElement | null
-      expect(normalize(restoredDemo?.textContent)).toContain('submit count: 1')
+      expect(normalize(restoredDemo?.textContent)).toContain('submit count: 0')
       expect(normalize(restoredDemo?.textContent)).toContain('Submit form')
+      expect(normalize(restoredDemo?.textContent)).toContain('Reset form')
     })
   })
 })

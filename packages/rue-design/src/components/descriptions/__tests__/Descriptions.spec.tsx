@@ -6,6 +6,13 @@ import Descriptions from '../index'
 setReactiveScheduling('sync')
 
 const initialViewportWidth = window.innerWidth
+const mountedContainers: HTMLDivElement[] = []
+
+const mountTestContainer = () => {
+  const container = mountContainer()
+  mountedContainers.push(container)
+  return container
+}
 
 const setViewportWidth = (width: number) => {
   Object.defineProperty(window, 'innerWidth', {
@@ -17,13 +24,17 @@ const setViewportWidth = (width: number) => {
 }
 
 afterEach(() => {
+  for (const container of mountedContainers) {
+    render(null as any, container)
+  }
+  mountedContainers.length = 0
   document.body.innerHTML = ''
   setViewportWidth(initialViewportWidth)
 })
 
 describe('Descriptions', () => {
   it('renders items with bordered rows and fills the last row span', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
 
     render(
       <Descriptions
@@ -54,7 +65,7 @@ describe('Descriptions', () => {
   })
 
   it('supports Descriptions.Item children in vertical mode', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
 
     render(
       <Descriptions
@@ -88,7 +99,7 @@ describe('Descriptions', () => {
   })
 
   it('renders complex jsx children in plain vertical mode', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
 
     render(
       <Descriptions layout="vertical" column={2}>
@@ -112,7 +123,7 @@ describe('Descriptions', () => {
   })
 
   it('renders label and content from slot-backed Descriptions.Item metadata', async () => {
-    const container = mountContainer()
+    const container = mountTestContainer()
 
     render(
       <Descriptions bordered layout="vertical" column={2}>
@@ -140,7 +151,7 @@ describe('Descriptions', () => {
 
   it('updates responsive column layout after resize', async () => {
     setViewportWidth(520)
-    const container = mountContainer()
+    const container = mountTestContainer()
 
     render(
       <Descriptions

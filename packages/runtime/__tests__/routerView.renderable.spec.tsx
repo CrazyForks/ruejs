@@ -600,8 +600,8 @@ describe('RouterView renderable boundary', () => {
       switchedCodeTab?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
       await flush()
 
-      expect(container.textContent).toContain('复制')
-      expect(container.textContent).not.toContain('A link with e.preventDefault()')
+      expect(container.querySelector('button[aria-label="复制代码"]')).toBeTruthy()
+      expect(container.querySelector('a.link.link-primary[href="https://google.com"]')).toBeNull()
 
       const switchedPreviewTab = Array.from(container.querySelectorAll('button')).find(
         current => current.textContent?.trim() === '效果',
@@ -613,8 +613,8 @@ describe('RouterView renderable boundary', () => {
       )
       await flush()
 
-      expect(container.textContent).toContain('A link with e.preventDefault()')
-      expect(container.textContent).not.toContain('复制')
+      expect(container.querySelector('a.link.link-primary[href="https://google.com"]')).toBeTruthy()
+      expect(container.querySelector('button[aria-label="复制代码"]')).toBeNull()
     },
     slowTestTimeout,
   )
@@ -667,8 +667,12 @@ describe('RouterView renderable boundary', () => {
       codeTab?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
       await flush()
 
-      expect(container.textContent).toContain('复制')
-      expect(container.textContent).not.toContain('Hello World!')
+      expect(container.querySelector('button[aria-label="复制代码"]')).toBeTruthy()
+      expect(
+        Array.from(container.querySelectorAll('.card .card-body h1')).some(
+          current => current.textContent?.trim() === 'Hello World!',
+        ),
+      ).toBe(false)
 
       const previewTab = Array.from(container.querySelectorAll('button')).find(
         current => current.textContent?.trim() === '效果',
@@ -678,8 +682,12 @@ describe('RouterView renderable boundary', () => {
       previewTab?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
       await flush()
 
-      expect(container.textContent).toContain('Hello World!')
-      expect(container.textContent).not.toContain('复制')
+      expect(
+        Array.from(container.querySelectorAll('.card .card-body h1')).some(
+          current => current.textContent?.trim() === 'Hello World!',
+        ),
+      ).toBe(true)
+      expect(container.querySelector('button[aria-label="复制代码"]')).toBeNull()
     },
     slowTestTimeout,
   )

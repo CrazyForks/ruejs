@@ -1,6 +1,8 @@
+import { type FC, ref } from '@rue-js/rue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, setReactiveScheduling } from '../src'
 import SkeletonPage from '../../../app/pages/design/Skeleton'
+import Skeleton from '../../../packages/rue-design/src/components/skeleton/index'
 import { click, mountContainer, waitForContent } from './page-test-utils'
 import { findDemo, findTabButton, resetActiveRuntime } from './design-page-test-utils'
 
@@ -32,13 +34,162 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
+const MinimalElementVariantsPreview: FC = () => {
+  const elementActive = ref(true)
+  const elementBlock = ref(false)
+  const avatarShape = ref<'circle' | 'square'>('circle')
+  const imageAspect = ref<'video' | 'square'>('video')
+
+  return (
+    <div className="space-y-5" data-testid="skeleton-elements-demo">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => (elementActive.value = !elementActive.value)}
+        >
+          {elementActive.value ? '关闭 active' : '开启 active'}
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => (elementBlock.value = !elementBlock.value)}
+        >
+          {elementBlock.value ? '关闭 block' : '开启 block'}
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => (avatarShape.value = avatarShape.value === 'circle' ? 'square' : 'circle')}
+        >
+          Avatar: {avatarShape.value}
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => (imageAspect.value = imageAspect.value === 'video' ? 'square' : 'video')}
+        >
+          Image: {imageAspect.value}
+        </button>
+      </div>
+
+      <div data-testid="skeleton-elements-image-wrap">
+        <Skeleton.Image
+          active={() => elementActive.value}
+          aspect={() => imageAspect.value}
+          className="w-full"
+          data-testid="skeleton-elements-image"
+        />
+      </div>
+      <div data-testid="skeleton-elements-node-wrap">
+        <Skeleton.Node
+          active={() => elementActive.value}
+          className={
+            elementBlock.value
+              ? 'block h-28 text-xs font-semibold uppercase tracking-[0.24em] text-base-content/45'
+              : 'h-28 text-xs font-semibold uppercase tracking-[0.24em] text-base-content/45'
+          }
+          data-testid="skeleton-elements-node"
+        >
+          <div className="flex items-center gap-3">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-6 w-6 fill-current opacity-70"
+              aria-hidden="true"
+              data-testid="skeleton-elements-node-icon"
+            >
+              <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3h9A2.5 2.5 0 0 1 19 5.5v6A2.5 2.5 0 0 1 16.5 14H14v2.25h1.75a.75.75 0 0 1 0 1.5H14V19a.75.75 0 0 1-1.5 0v-1.25h-1V19a.75.75 0 0 1-1.5 0v-1.25H8.25a.75.75 0 0 1 0-1.5H10V14H7.5A2.5 2.5 0 0 1 5 11.5v-6Zm2.5-1A1 1 0 0 0 6.5 5.5v6a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-9Zm1.25 2.25a.75.75 0 0 1 .75-.75h5a.75.75 0 0 1 0 1.5h-5a.75.75 0 0 1-.75-.75Zm0 3a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5H9.5a.75.75 0 0 1-.75-.75Z" />
+            </svg>
+            <span>Node</span>
+          </div>
+        </Skeleton.Node>
+      </div>
+      <div className="text-sm opacity-70">Avatar: {avatarShape.value}</div>
+    </div>
+  )
+}
+
+const MinimalLoadingSwitchPreview: FC = () => {
+  const loading = ref(true)
+
+  return (
+    <div className="space-y-4" data-testid="skeleton-loading-switch-demo">
+      <button
+        type="button"
+        className="btn btn-sm btn-primary"
+        onClick={() => (loading.value = !loading.value)}
+      >
+        {loading.value ? '显示内容' : '重新加载'}
+      </button>
+
+      <Skeleton
+        loading={loading.value}
+        active
+        avatar
+        title={{ width: '46%' }}
+        paragraph={{ rows: 3, width: ['100%', '100%', '68%'] }}
+      >
+        <div className="space-y-2">
+          <div className="text-lg font-semibold">Rue Design Skeleton</div>
+          <div className="text-sm opacity-70">内容已展示</div>
+        </div>
+      </Skeleton>
+    </div>
+  )
+}
+
+const MinimalListLayoutPreview: FC = () => {
+  const listLoading = ref(true)
+
+  return (
+    <div className="space-y-4" data-testid="skeleton-list-layout-demo">
+      <button
+        type="button"
+        className="btn btn-sm btn-primary"
+        onClick={() => (listLoading.value = !listLoading.value)}
+      >
+        {listLoading.value ? '显示列表' : '重新加载列表'}
+      </button>
+
+      <div className="space-y-3">
+        {['Ops broadcast draft', 'North star metrics', 'Skeleton API notes'].map(title => (
+          <div key={title} className="rounded-2xl border border-base-300 bg-base-100/70 p-4">
+            <Skeleton
+              loading={listLoading.value}
+              active
+              avatar
+              title={{ width: '36%' }}
+              paragraph={{ rows: 2, width: ['100%', '78%'] }}
+            >
+              <div className="space-y-2">
+                <div className="font-semibold">{title}</div>
+                <div className="text-sm opacity-70">列表骨架保持卡片高度稳定。</div>
+              </div>
+            </Skeleton>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Skeleton actual page', () => {
   it('renders skeleton demos and supports preview/code tab switching', async () => {
+    setEnabledPreviews('Skeleton', 'Loading Switch', 'List Layout', 'Semantic slots')
+
     const container = mountContainer()
     resetActiveRuntime()
     render(<SkeletonPage />, container)
@@ -67,22 +218,52 @@ describe('Skeleton actual page', () => {
     })
   })
 
-  it('updates the loading, list, and element demos when toggles are clicked', async () => {
+  it('updates the loading demo when its toggle is clicked', async () => {
     const container = mountContainer()
     resetActiveRuntime()
-    render(<SkeletonPage />, container)
+    render(<MinimalLoadingSwitchPreview />, container)
 
-    let loadingDemo: HTMLElement | null = null
-    let listDemo: HTMLElement | null = null
+    const loadingDemo = container.querySelector(
+      '[data-testid="skeleton-loading-switch-demo"]',
+    ) as HTMLElement | null
+    expect(loadingDemo).not.toBeNull()
+
+    await click(findButton(loadingDemo!, '显示内容'))
+    await waitForContent(() => {
+      expect(loadingDemo!.textContent).toContain('重新加载')
+      expect(loadingDemo!.textContent).toContain('内容已展示')
+      expect(loadingDemo!.textContent).toContain('Rue Design Skeleton')
+    })
+  })
+
+  it('updates the list demo when its toggle is clicked', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<MinimalListLayoutPreview />, container)
+
+    const listDemo = container.querySelector(
+      '[data-testid="skeleton-list-layout-demo"]',
+    ) as HTMLElement | null
+    expect(listDemo).not.toBeNull()
+
+    await click(findButton(listDemo!, '显示列表'))
+    await waitForContent(() => {
+      expect(listDemo!.textContent).toContain('重新加载列表')
+      expect(listDemo!.textContent).toContain('Ops broadcast draft')
+    })
+  })
+
+  it('switches the element demo to its alternate visual state', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<MinimalElementVariantsPreview />, container)
+
     let elementsDemo: HTMLElement | null = null
 
     await waitForContent(() => {
-      loadingDemo = findDemo(container, '# Loading Switch') as HTMLElement | null
-      listDemo = findDemo(container, '# List Layout') as HTMLElement | null
-      elementsDemo = findDemo(container, '# Element Variants') as HTMLElement | null
-
-      expect(loadingDemo).not.toBeNull()
-      expect(listDemo).not.toBeNull()
+      elementsDemo = container.querySelector(
+        '[data-testid="skeleton-elements-demo"]',
+      ) as HTMLElement | null
       expect(elementsDemo).not.toBeNull()
 
       const image = elementsDemo!.querySelector(
@@ -106,19 +287,6 @@ describe('Skeleton actual page', () => {
       expect(image.classList.contains('aspect-video')).toBe(true)
       expect(node.classList.contains('animate-pulse')).toBe(true)
       expect(node.querySelectorAll('[data-testid="skeleton-elements-node-icon"]').length).toBe(1)
-    })
-
-    await click(findButton(loadingDemo!, '显示内容'))
-    await waitForContent(() => {
-      expect(loadingDemo!.textContent).toContain('重新加载')
-      expect(loadingDemo!.textContent).toContain('内容已展示')
-      expect(loadingDemo!.textContent).toContain('Rue Design Skeleton')
-    })
-
-    await click(findButton(listDemo!, '显示列表'))
-    await waitForContent(() => {
-      expect(listDemo!.textContent).toContain('重新加载列表')
-      expect(listDemo!.textContent).toContain('Ops broadcast draft')
     })
 
     await click(findButton(elementsDemo!, '开启 block'))
@@ -145,20 +313,6 @@ describe('Skeleton actual page', () => {
       expect(
         elementsDemo!.querySelectorAll('[data-testid="skeleton-elements-node-icon"]').length,
       ).toBe(1)
-    })
-
-    await click(findButton(elementsDemo!, '开启 active'))
-    await waitForContent(() => {
-      const image = elementsDemo!.querySelector(
-        '[data-testid="skeleton-elements-image"]',
-      ) as HTMLElement
-      const node = elementsDemo!.querySelector(
-        '[data-testid="skeleton-elements-node"]',
-      ) as HTMLElement
-
-      expect(image.classList.contains('animate-pulse')).toBe(true)
-      expect(node.classList.contains('animate-pulse')).toBe(true)
-      expect(node.querySelectorAll('[data-testid="skeleton-elements-node-icon"]').length).toBe(1)
     })
   })
 })

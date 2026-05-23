@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { render, setReactiveScheduling } from '../src'
 import SuspenseDemo from '../../../app/pages/jsx/SuspenseDemo'
-import { click, mountContainer, waitForContent } from './page-test-utils'
+import { click, flush, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
   default: (props: { children?: unknown }) => (
@@ -12,6 +12,14 @@ vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
 
 vi.mock('../../../app/pages/site/components/Code', () => ({
   default: () => null,
+}))
+
+vi.mock('../../../app/pages/jsx/suspense/AsyncRevenuePanel', () => ({
+  default: () => <div>¥ 342,800</div>,
+}))
+
+vi.mock('../../../app/pages/jsx/suspense/AsyncActivityPanel', () => ({
+  default: (props: { title?: string }) => <div>{props.title ?? '活动流'}</div>,
 }))
 
 setReactiveScheduling('sync')
@@ -33,36 +41,36 @@ afterEach(() => {
 
 describe('SuspenseDemo actual page', () => {
   it('shows the shared suspense fallback first and then resolves both shared and local async panels', async () => {
+    vi.useFakeTimers()
+
     const container = mountContainer()
     resetActiveRuntime()
     render(<SuspenseDemo />, container)
 
-    await waitForContent(() => {
-      expect(container.textContent).toContain('Suspense 异步边界')
-      expect(container.textContent).toContain('正在加载销售看板')
-      expect(container.textContent).toContain('本地 loading：这个异步组件设置了 suspensible: false')
-      expect(container.textContent).not.toContain('这个 fallback 不会接管下面的组件')
-      expect(container.textContent).not.toContain('¥ 342,800')
-    })
+    await flush(6)
 
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    expect(container.textContent).toContain('Suspense 异步边界')
+    expect(container.textContent).toContain('正在加载销售看板')
+    expect(container.textContent).toContain('本地 loading：这个异步组件设置了 suspensible: false')
+    expect(container.textContent).not.toContain('这个 fallback 不会接管下面的组件')
+    expect(container.textContent).not.toContain('¥ 342,800')
 
-    await waitForContent(() => {
-      expect(container.textContent).toContain('¥ 342,800')
-      expect(container.textContent).toContain('统一边界内的活动流')
-      expect(container.textContent).not.toContain('正在加载销售看板')
-      expect(container.textContent).toContain('本地 loading：这个异步组件设置了 suspensible: false')
-      expect(container.textContent).not.toContain('这个 fallback 不会接管下面的组件')
-    }, 120)
+    await vi.advanceTimersByTimeAsync(1750)
+    await flush(6)
 
-    await new Promise(resolve => setTimeout(resolve, 500))
+    expect(container.textContent).toContain('¥ 342,800')
+    expect(container.textContent).toContain('统一边界内的活动流')
+    expect(container.textContent).not.toContain('正在加载销售看板')
+    expect(container.textContent).toContain('本地 loading：这个异步组件设置了 suspensible: false')
+    expect(container.textContent).not.toContain('这个 fallback 不会接管下面的组件')
 
-    await waitForContent(() => {
-      expect(container.textContent).not.toContain(
-        '本地 loading：这个异步组件设置了 suspensible: false',
-      )
-      expect(container.textContent).not.toContain('这个 fallback 不会接管下面的组件')
-    }, 120)
+    await vi.advanceTimersByTimeAsync(100)
+    await flush(6)
+
+    expect(container.textContent).not.toContain(
+      '本地 loading：这个异步组件设置了 suspensible: false',
+    )
+    expect(container.textContent).not.toContain('这个 fallback 不会接管下面的组件')
 
     await click(findTab(container, '代码'))
 

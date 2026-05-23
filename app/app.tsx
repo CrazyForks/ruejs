@@ -5,7 +5,9 @@
 - 启动流程：useApp 创建应用，挂载到 #app，并安装路由插件。
 */
 import { type FC, useApp, useError } from '@rue-js/rue'
+import { I18nProvider } from '@rue-js/i18n'
 import { RouterView, useRoute } from '@rue-js/router'
+import i18n from './i18n'
 import router from './router'
 import SiteLayout from './pages/site/components/Layout'
 
@@ -18,16 +20,18 @@ const RootApp: FC = () => {
 
   const isRustLayers = route.get()?.path === '/rust-layers'
 
-  if (isRustLayers) {
-    return <RouterView />
-  }
-
   return (
-    <SiteLayout>
-      <RouterView />
-    </SiteLayout>
+    <I18nProvider i18n={i18n}>
+      {isRustLayers ? (
+        <RouterView />
+      ) : (
+        <SiteLayout>
+          <RouterView />
+        </SiteLayout>
+      )}
+    </I18nProvider>
   )
 }
 
 // 创建并挂载应用，安装路由
-useApp(RootApp).use(router).mount('#app')
+useApp(RootApp).use(router).use(i18n).mount('#app')

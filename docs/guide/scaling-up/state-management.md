@@ -124,43 +124,63 @@ export function useCount() {
 
 Rue 的响应式系统与组件模型解耦，这使其极具灵活性。
 
-## Pinia {#pinia}
+## Rue Store {#rue-store}
 
-虽然我们的手动状态管理解决方案在简单场景下足够使用，但在大型生产应用中还有很多事情需要考虑：
+虽然手动组织共享状态在简单场景下已经足够，但在大型生产应用中，我们通常还会需要：
 
-- 更强的团队协作约定
-- 与 Rue DevTools 的集成，包括时间线、组件内检查和时光旅行调试
-- 热模块替换
+- 更明确的 store 边界与团队协作约定
+- 可复用的 actions / getters 组织方式
+- 应用级的 store root 与插件扩展能力
+- 订阅、批量更新、重置等统一的状态操作入口
 
-[Pinia](https://pinia.vuejs.org) 是一个实现了上述所有功能的状态管理库。它由 Rue 核心团队维护，同时适用于 Vue 2 和 Vue 3。
+Rue 提供了官方状态管理库 `@rue-js/store`。它建立在 Rue 自身的响应式系统之上，延续 `ref()`、`reactive()` 和 `computed()` 的使用体验，同时提供更适合中大型应用的集中式状态管理模式。
 
-现有用户可能熟悉 [Vuex](https://vuex.vuejs.org/)，Vue 之前官方的状态管理库。随着 Pinia 在生态系统中扮演同样的角色，Vuex 现在处于维护模式。它仍然可以工作，但不会再收到新功能。建议新应用使用 Pinia。
+`@rue-js/store` 的核心特性包括：
 
-Pinia 最初是作为 Vuex 下一个迭代的探索，包含了核心团队对 Vuex 5 讨论中的许多想法。最终，我们意识到 Pinia 已经实现了我们在 Vuex 5 中想要的大部分功能，因此决定将其作为新的推荐。
+- 使用 `createStore()` 创建应用级 store root，并通过 `app.use()` 安装
+- 使用 `defineStore()` 定义 store，同时支持 options 风格与 setup 风格
+- 通过 `$patch()`、`$set()`、`$reset()`、`$subscribe()` 统一管理状态变更
+- 支持 `root.use()` 注册 store 插件，便于扩展调试、同步和持久化能力
 
-与 Vuex 相比，Pinia 提供了更简单的 API，仪式更少，提供 Composition-API 风格的 API，最重要的是，与 TypeScript 一起使用时具有可靠的类型推断支持。
+## 使用 Rue Store 与 Rue
 
-## 使用 Pinia 与 Rue
+首先，在应用入口创建并安装 store root：
+
+```tsx [main.tsx]
+import { type FC, useApp } from '@rue-js/rue'
+import { createStore } from '@rue-js/store'
+import { Counter } from './Counter'
+
+const Root: FC = () => <Counter />
+
+const store = createStore()
+
+useApp(Root).use(store).mount('#app')
+```
+
+然后定义一个 setup 风格的 store：
 
 ```ts [stores/counter.ts]
-import { defineStore } from 'pinia'
-import { ref, computed } from '@rue-js/rue'
+import { computed, ref } from '@rue-js/rue'
+import { defineStore } from '@rue-js/store'
 
 export const useCounterStore = defineStore('counter', () => {
   const count = ref(0)
   const doubleCount = computed(() => count.value * 2)
 
-  function increment() {
-    count.value++
+  function increment(step = 1) {
+    count.value += step
   }
 
   return { count, doubleCount, increment }
 })
 ```
 
+在组件中直接使用它：
+
 ```tsx [Counter.tsx]
 import { type FC } from '@rue-js/rue'
-import { useCounterStore } from '../stores/counter'
+import { useCounterStore } from './stores/counter'
 
 export const Counter: FC = () => {
   const counter = useCounterStore()
@@ -175,31 +195,61 @@ export const Counter: FC = () => {
 }
 ```
 
-### Store 操作与异步
+### Options Store、状态操作与异步
+
+除了 setup 风格，`defineStore()` 也支持 options 风格，这在需要显式组织 `state`、`getters` 和 `actions` 时尤其有用：
 
 ```ts [stores/user.ts]
-import { defineStore } from 'pinia'
-import { ref } from '@rue-js/rue'
+import { defineStore } from '@rue-js/store'
 
-export const useUserStore = defineStore('user', () => {
-  const user = ref(null)
-  const loading = ref(false)
-  const error = ref(null)
+type User = {
+  id: string
+  name: string
+}
 
-  async function fetchUser(id: string) {
-    loading.value = true
-    error.value = null
+export const useUserStore = defineStore('user', {
+  state: () => ({
+    user: null as User | null,
+    loading: false,
+    error: null as unknown,
+  }),
+  getters: {
+    isReady(state) {
+      return !state.loading && !!state.user
+    },
+  },
+  actions: {
+    async fetchUser(this: any, id: string) {
+      this.loading = true
+      this.error = null
 
-    try {
-      const response = await fetch(`/api/users/${id}`)
-      user.value = await response.json()
-    } catch (e) {
-      error.value = e
-    } finally {
-      loading.value = false
-    }
-  }
+      try {
+        const response = await fetch(`/api/users/${id}`)
+        this.user = await response.json()
+      } catch (error) {
+        this.error = error
+      } finally {
+        this.loading = false
+      }
+    },
+    clear(this: any) {
+      this.$reset()
+    },
+  },
+})
+```
 
-  return { user, loading, error, fetchUser }
+当你需要一次性更新多个字段时，可以使用 `$patch()`；需要按路径更新深层字段时，可以使用 `$set()`；如果想监听状态变化，则可以使用 `$subscribe()`：
+
+```ts
+const userStore = useUserStore()
+
+userStore.$patch({
+  loading: true,
+  error: null,
+})
+
+userStore.$subscribe((mutation, state) => {
+  console.log(mutation.storeId, state)
 })
 ```

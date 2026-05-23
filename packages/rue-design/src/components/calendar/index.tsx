@@ -160,6 +160,12 @@ const createSelectabilityCaches = (): CalendarSelectabilityCaches => ({
   year: new Map(),
 })
 
+const weekdayLabelCache = new Map<string, string[]>()
+const monthLabelCache = new Map<string, string[]>()
+const monthYearFormatterCache = new Map<string, Intl.DateTimeFormat>()
+const yearFormatterCache = new Map<string, Intl.DateTimeFormat>()
+const todayFormatterCache = new Map<string, Intl.DateTimeFormat>()
+
 const buildDateButtonClassName = (
   fullscreen: boolean,
   selected: boolean,
@@ -215,6 +221,26 @@ const renderOptimizedDateButtonInnerHTML = (
     ? `<span class="badge badge-xs ${state.selected ? 'badge-neutral text-neutral-content' : 'badge-primary badge-outline'}">${todayMarkerLabel}</span>`
     : ''
   return `<span class="flex items-start justify-between gap-2"><span class="${dayClassName}">${state.dayNumber}</span>${badgeHTML}</span>`
+}
+
+const buildMonthSelectionPatchSignature = (
+  yearOptions: OptimizedCalendarYearOption[],
+  monthOptions: CalendarMonthOption[],
+  dateCellStates: Map<string, DefaultDateCellState>,
+) => {
+  const yearSignature = yearOptions
+    .map(option => `${option.value}:${option.disabled ? '1' : '0'}`)
+    .join(',')
+  const monthSignature = monthOptions
+    .map(option => `${option.value}:${option.disabled ? '1' : '0'}`)
+    .join(',')
+  const cellSignature = Array.from(dateCellStates.values())
+    .map(
+      state =>
+        `${state.key}:${state.inView ? '1' : '0'}:${state.isToday ? '1' : '0'}:${state.disabled ? '1' : '0'}`,
+    )
+    .join(',')
+  return `${yearSignature}|${monthSignature}|${cellSignature}`
 }
 
 const canPatchMonthSelectionOnly = (
@@ -631,6 +657,69 @@ const yearHasSelectableDate = (
   )
 }
 
+export const createCalendarSelectabilityResolver = (
+  validRange?: [CalendarValue, CalendarValue],
+  disabledDate?: (date: Date) => boolean,
+) => {
+  const range = normalizeRange(validRange)
+  const hasSelectabilityConstraints = !!range || !!disabledDate
+  const caches = createSelectabilityCaches()
+
+  const resolveDateSelectable = (date: Date) => {
+    if (!hasSelectabilityConstraints) {
+      return true
+    }
+
+    const cacheKey = formatDateKey(startOfDay(date))
+    const cached = caches.date.get(cacheKey)
+    if (cached !== undefined) {
+      return cached
+    }
+
+    const selectable = isDateSelectable(date, range, disabledDate)
+    caches.date.set(cacheKey, selectable)
+    return selectable
+  }
+
+  const resolveMonthSelectable = (date: Date) => {
+    if (!hasSelectabilityConstraints) {
+      return true
+    }
+
+    const cacheKey = `${date.getFullYear()}-${date.getMonth()}`
+    const cached = caches.month.get(cacheKey)
+    if (cached !== undefined) {
+      return cached
+    }
+
+    const selectable = monthHasSelectableDate(date, range, disabledDate, resolveDateSelectable)
+    caches.month.set(cacheKey, selectable)
+    return selectable
+  }
+
+  const resolveYearSelectable = (date: Date) => {
+    if (!hasSelectabilityConstraints) {
+      return true
+    }
+
+    const cacheKey = `${date.getFullYear()}`
+    const cached = caches.year.get(cacheKey)
+    if (cached !== undefined) {
+      return cached
+    }
+
+    const selectable = yearHasSelectableDate(date, range, disabledDate, resolveMonthSelectable)
+    caches.year.set(cacheKey, selectable)
+    return selectable
+  }
+
+  return {
+    resolveDateSelectable,
+    resolveMonthSelectable,
+    resolveYearSelectable,
+  }
+}
+
 const getISOWeek = (value: Date) => {
   const date = startOfDay(value)
   const day = (date.getDay() + 6) % 7
@@ -642,11 +731,33 @@ const getISOWeek = (value: Date) => {
 }
 
 const getWeekdayLabels = (locale: string, weekStartsOn: CalendarWeekStart) => {
+  const cacheKey = `${locale}:${weekStartsOn}`
+  const cached = weekdayLabelCache.get(cacheKey)
+  if (cached) {
+    return cached
+  }
+
   const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short' })
   const anchor = createDate(2026, 2, 1)
-  return Array.from({ length: 7 }, (_, index) =>
+  const labels = Array.from({ length: 7 }, (_, index) =>
     formatter.format(addDays(anchor, (weekStartsOn + index) % 7)),
   )
+  weekdayLabelCache.set(cacheKey, labels)
+  return labels
+}
+
+const getMonthLabels = (locale: string) => {
+  const cached = monthLabelCache.get(locale)
+  if (cached) {
+    return cached
+  }
+
+  const formatter = new Intl.DateTimeFormat(locale, { month: 'short' })
+  const labels = Array.from({ length: 12 }, (_, month) =>
+    formatter.format(createDate(2026, month, 1)),
+  )
+  monthLabelCache.set(locale, labels)
+  return labels
 }
 
 const getYearOptions = (value: Date, range: CalendarRange | null) => {
@@ -673,12 +784,12 @@ const getMonthOptions = (
   disabledDate?: (date: Date) => boolean,
   resolveMonthSelectable?: (date: Date) => boolean,
 ): CalendarMonthOption[] => {
-  const formatter = new Intl.DateTimeFormat(locale, { month: 'short' })
+  const labels = getMonthLabels(locale)
   return Array.from({ length: 12 }, (_, month) => {
     const date = createDate(value.getFullYear(), month, 1)
     return {
       value: month,
-      label: formatter.format(date),
+      label: labels[month],
       disabled: !(resolveMonthSelectable
         ? resolveMonthSelectable(date)
         : monthHasSelectableDate(date, range, disabledDate)),
@@ -706,6 +817,58 @@ const getVisibleDateRows = (value: Date, weekStartsOn: CalendarWeekStart): Calen
       }),
     }
   })
+}
+
+const getMonthYearFormatter = (locale: string) => {
+  let formatter = monthYearFormatterCache.get(locale)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' })
+    monthYearFormatterCache.set(locale, formatter)
+  }
+  return formatter
+}
+
+const getYearFormatter = (locale: string) => {
+  let formatter = yearFormatterCache.get(locale)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, { year: 'numeric' })
+    yearFormatterCache.set(locale, formatter)
+  }
+  return formatter
+}
+
+const getTodayFormatter = (locale: string) => {
+  let formatter = todayFormatterCache.get(locale)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    })
+    todayFormatterCache.set(locale, formatter)
+  }
+  return formatter
+}
+
+const syncRenderedDateCellAccessibility = (
+  host: HTMLElement,
+  snapshot: OptimizedDefaultCalendarSnapshot,
+) => {
+  for (const [key, state] of snapshot.dateCellStates) {
+    const button = host.querySelector(
+      `[data-rue-calendar-cell="${key}"]`,
+    ) as HTMLButtonElement | null
+    if (!button) {
+      continue
+    }
+
+    button.setAttribute('aria-pressed', state.selected ? 'true' : 'false')
+    if (state.isToday) {
+      button.setAttribute('aria-current', 'date')
+    } else {
+      button.removeAttribute('aria-current')
+    }
+  }
 }
 
 const CalendarPanel: FC<CalendarProps> = ({
@@ -744,6 +907,7 @@ const CalendarPanel: FC<CalendarProps> = ({
   const currentMode = mode ?? uncontrolledMode.value
   const today = startOfDay(new Date())
   const range = normalizeRange(validRange)
+  const hasSelectabilityConstraints = !!range || !!disabledDate
   const resolvedLocale =
     locale ??
     (typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'zh-CN')
@@ -777,6 +941,10 @@ const CalendarPanel: FC<CalendarProps> = ({
   }
 
   const resolveDateSelectable = (date: Date) => {
+    if (!hasSelectabilityConstraints) {
+      return true
+    }
+
     const cacheKey = formatDateKey(startOfDay(date))
     const cached = selectableDateCacheRef.current?.get(cacheKey)
     if (cached !== undefined) {
@@ -789,6 +957,10 @@ const CalendarPanel: FC<CalendarProps> = ({
   }
 
   const resolveMonthSelectable = (date: Date) => {
+    if (!hasSelectabilityConstraints) {
+      return true
+    }
+
     const cacheKey = `${date.getFullYear()}-${date.getMonth()}`
     const cached = selectableMonthCacheRef.current?.get(cacheKey)
     if (cached !== undefined) {
@@ -801,6 +973,10 @@ const CalendarPanel: FC<CalendarProps> = ({
   }
 
   const resolveYearSelectable = (date: Date) => {
+    if (!hasSelectabilityConstraints) {
+      return true
+    }
+
     const cacheKey = `${date.getFullYear()}`
     const cached = selectableYearCacheRef.current?.get(cacheKey)
     if (cached !== undefined) {
@@ -812,15 +988,16 @@ const CalendarPanel: FC<CalendarProps> = ({
     return selectable
   }
 
-  const weekdayLabels = getWeekdayLabels(resolvedLocale, resolvedWeekStart)
-  const dateRows = getVisibleDateRows(currentValue, resolvedWeekStart)
+  const isMonthMode = currentMode === 'month'
+  const weekdayLabels = isMonthMode ? getWeekdayLabels(resolvedLocale, resolvedWeekStart) : []
+  const dateRows = isMonthMode ? getVisibleDateRows(currentValue, resolvedWeekStart) : []
   const yearOptions = getYearOptions(currentValue, range)
   const monthOptions = getMonthOptions(
     resolvedLocale,
     currentValue,
-    range,
-    disabledDate,
-    resolveMonthSelectable,
+    hasSelectabilityConstraints ? range : null,
+    hasSelectabilityConstraints ? disabledDate : undefined,
+    hasSelectabilityConstraints ? resolveMonthSelectable : undefined,
   )
   const rootClassName = mergeClassName(
     `overflow-hidden border border-base-300 bg-gradient-to-b from-base-100 via-base-100 to-base-200/70 text-base-content shadow-sm ${fullscreen ? 'rounded-[1.75rem]' : 'max-w-[24rem] rounded-[1.5rem]'}`,
@@ -831,15 +1008,9 @@ const CalendarPanel: FC<CalendarProps> = ({
     : 'grid grid-cols-7 gap-2'
   const headerTitle =
     currentMode === 'month'
-      ? new Intl.DateTimeFormat(resolvedLocale, { year: 'numeric', month: 'long' }).format(
-          currentValue,
-        )
-      : new Intl.DateTimeFormat(resolvedLocale, { year: 'numeric' }).format(currentValue)
-  const todayLabel = new Intl.DateTimeFormat(resolvedLocale, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  }).format(today)
+      ? getMonthYearFormatter(resolvedLocale).format(currentValue)
+      : getYearFormatter(resolvedLocale).format(currentValue)
+  const todayLabel = getTodayFormatter(resolvedLocale).format(today)
   const todayButtonLabel = isZhLocale ? '今天' : 'Today'
   const monthButtonLabel = isZhLocale ? '月' : 'Month'
   const yearButtonLabel = isZhLocale ? '年' : 'Year'
@@ -853,15 +1024,17 @@ const CalendarPanel: FC<CalendarProps> = ({
       : isZhLocale
         ? '年视图'
         : 'Year view'
-  const previousDisabled =
-    currentMode === 'month'
+  const previousDisabled = !hasSelectabilityConstraints
+    ? false
+    : currentMode === 'month'
       ? !resolveMonthSelectable(addMonths(currentValue, -1))
       : !resolveYearSelectable(addYears(currentValue, -1))
-  const nextDisabled =
-    currentMode === 'month'
+  const nextDisabled = !hasSelectabilityConstraints
+    ? false
+    : currentMode === 'month'
       ? !resolveMonthSelectable(addMonths(currentValue, 1))
       : !resolveYearSelectable(addYears(currentValue, 1))
-  const todayDisabled = !resolveDateSelectable(today)
+  const todayDisabled = hasSelectabilityConstraints ? !resolveDateSelectable(today) : false
   const hasDateCustomRender = !!(
     cellRender ||
     fullCellRender ||
@@ -875,7 +1048,7 @@ const CalendarPanel: FC<CalendarProps> = ({
     monthFullCellRender
   )
   const shouldUseOptimizedDefaultPath =
-    false && !headerRender && !hasDateCustomRender && !hasMonthCustomRender
+    !headerRender && !hasDateCustomRender && !hasMonthCustomRender
 
   const triggerChange = (nextInput: CalendarValue, source: CalendarSelectSource) => {
     const nextDate = startOfDay(normalizeDate(nextInput, currentValue))
@@ -945,16 +1118,18 @@ const CalendarPanel: FC<CalendarProps> = ({
     }
 
     const dateCellStates = new Map<string, DefaultDateCellState>()
-    for (const row of dateRows) {
-      for (const cell of row.cells) {
-        dateCellStates.set(cell.key, {
-          key: cell.key,
-          dayNumber: cell.date.getDate(),
-          inView: cell.inView,
-          selected: isSameDate(cell.date, currentValue),
-          isToday: isSameDate(cell.date, today),
-          disabled: !resolveDateSelectable(cell.date),
-        })
+    if (isMonthMode) {
+      for (const row of dateRows) {
+        for (const cell of row.cells) {
+          dateCellStates.set(cell.key, {
+            key: cell.key,
+            dayNumber: cell.date.getDate(),
+            inView: cell.inView,
+            selected: isSameDate(cell.date, currentValue),
+            isToday: isSameDate(cell.date, today),
+            disabled: !resolveDateSelectable(cell.date),
+          })
+        }
       }
     }
 
@@ -994,6 +1169,14 @@ const CalendarPanel: FC<CalendarProps> = ({
         rowClassName,
         todayMarkerLabel,
         weekButtonLabel,
+        buildMonthSelectionPatchSignature(
+          yearOptions.map(year => ({
+            value: year,
+            disabled: !resolveYearSelectable(createDate(year, currentValue.getMonth(), 1)),
+          })),
+          monthOptions,
+          dateCellStates,
+        ),
         previousDisabled ? 'prev-off' : 'prev-on',
         nextDisabled ? 'next-off' : 'next-on',
         todayDisabled ? 'today-off' : 'today-on',
@@ -1043,6 +1226,7 @@ const CalendarPanel: FC<CalendarProps> = ({
           optimizedCtx.start as any,
           optimizedCtx.end as any,
         )
+        syncRenderedDateCellAccessibility(optimizedCtx.host, optimizedSnapshot)
       } else if (canPatchMonthSelectionOnly(optimizedCtx.lastSnapshot, optimizedSnapshot)) {
         patchMonthSelectionOnly(optimizedCtx.host, optimizedCtx.lastSnapshot, optimizedSnapshot)
       } else {
@@ -1052,6 +1236,7 @@ const CalendarPanel: FC<CalendarProps> = ({
           optimizedCtx.start as any,
           optimizedCtx.end as any,
         )
+        syncRenderedDateCellAccessibility(optimizedCtx.host, optimizedSnapshot)
       }
 
       optimizedCtx.lastSnapshot = optimizedSnapshot

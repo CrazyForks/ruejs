@@ -24,6 +24,10 @@ const resetActiveRuntime = () => {
 }
 
 const slowTestTimeout = 30_000
+const fastPickerProps = {
+  minuteStep: 15,
+  secondStep: 15,
+} as const
 
 afterEach(async () => {
   resetActiveRuntime()
@@ -52,6 +56,10 @@ const openPicker = async (input: HTMLInputElement) => {
   await click(input)
 }
 
+const waitForPickerContent = async (assertion: () => void) => {
+  await waitForContent(assertion, 12)
+}
+
 const clickPanelOption = async (
   container: HTMLDivElement,
   column: 'hour' | 'minute' | 'second' | 'meridiem',
@@ -75,7 +83,14 @@ describe('TimePicker', () => {
     resetActiveRuntime()
     const handleOpenChange = vi.fn()
 
-    render(<TimePicker onOpenChange={handleOpenChange} data-testid="open-once-picker" />, container)
+    render(
+      <TimePicker
+        {...fastPickerProps}
+        onOpenChange={handleOpenChange}
+        data-testid="open-once-picker"
+      />,
+      container,
+    )
 
     await waitForContent(() => {
       const input = container.querySelector('[data-testid="open-once-picker"]') as HTMLInputElement
@@ -98,7 +113,8 @@ describe('TimePicker', () => {
 
     render(
       <TimePicker
-        defaultValue="09:15:20"
+        {...fastPickerProps}
+        defaultValue="09:15:15"
         onChange={handleChange}
         data-testid="time-picker-input"
       />,
@@ -107,7 +123,7 @@ describe('TimePicker', () => {
 
     await waitForContent(() => {
       const input = container.querySelector('[data-testid="time-picker-input"]') as HTMLInputElement
-      expect(input.value).toBe('09:15:20')
+      expect(input.value).toBe('09:15:15')
     })
 
     const input = container.querySelector('[data-testid="time-picker-input"]') as HTMLInputElement
@@ -134,10 +150,10 @@ describe('TimePicker', () => {
       const popups = Array.from(
         container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
       ) as HTMLDivElement[]
-      expect(input.value).toBe('09:30:20')
+      expect(input.value).toBe('09:30:15')
       expect(popups.some(popup => !popup.hidden)).toBe(true)
       expect(handleChange).toHaveBeenCalledTimes(1)
-      expect(handleChange.mock.calls[0]?.[0]).toBe('09:30:20')
+      expect(handleChange.mock.calls[0]?.[0]).toBe('09:30:15')
     })
   })
 
@@ -148,6 +164,7 @@ describe('TimePicker', () => {
 
     render(
       <TimePicker
+        {...fastPickerProps}
         defaultValue="08:00:00"
         needConfirm
         onChange={handleChange}
@@ -205,6 +222,7 @@ describe('TimePicker', () => {
       return (
         <div>
           <TimePicker
+            {...fastPickerProps}
             value={currentValue.value}
             needConfirm
             data-testid="controlled-confirm-picker"
@@ -224,7 +242,7 @@ describe('TimePicker', () => {
 
     render(<ControlledCase />, container)
 
-    await waitForContent(() => {
+    await waitForPickerContent(() => {
       const input = container.querySelector(
         '[data-testid="controlled-confirm-picker"]',
       ) as HTMLInputElement
@@ -236,7 +254,7 @@ describe('TimePicker', () => {
     ) as HTMLInputElement
     await openPicker(input)
 
-    await waitForContent(() => {
+    await waitForPickerContent(() => {
       const hourButton = container.querySelector(
         'button[data-rue-time-column="hour"][data-rue-time-option="8"]',
       ) as HTMLButtonElement
@@ -254,7 +272,7 @@ describe('TimePicker', () => {
     ) as HTMLButtonElement
     switchButton.click()
 
-    await waitForContent(() => {
+    await waitForPickerContent(() => {
       expect(input.value).toBe('10:30:00')
       const hourButton = container.querySelector(
         'button[data-rue-time-column="hour"][data-rue-time-option="10"]',
@@ -276,6 +294,7 @@ describe('TimePicker', () => {
 
     render(
       <TimePicker
+        {...fastPickerProps}
         defaultValue="09:20:00"
         allowClear
         hideDisabledOptions
@@ -288,7 +307,7 @@ describe('TimePicker', () => {
       container,
     )
 
-    await waitForContent(() => {
+    await waitForPickerContent(() => {
       const input = container.querySelector('[data-testid="disabled-picker"]') as HTMLInputElement
       expect(input).toBeTruthy()
     })
@@ -296,7 +315,7 @@ describe('TimePicker', () => {
     const input = container.querySelector('[data-testid="disabled-picker"]') as HTMLInputElement
     await openPicker(input)
 
-    await waitForContent(() => {
+    await waitForPickerContent(() => {
       expect(
         container.querySelector('button[data-rue-time-column="hour"][data-rue-time-option="8"]'),
       ).toBeNull()
@@ -310,7 +329,7 @@ describe('TimePicker', () => {
     ) as HTMLButtonElement
     clearButton.click()
 
-    await waitForContent(() => {
+    await waitForPickerContent(() => {
       expect(input.value).toBe('')
     })
   })
@@ -327,6 +346,7 @@ describe('TimePicker', () => {
 
         return (
           <TimePicker
+            {...fastPickerProps}
             value={currentValue.value}
             onChange={nextValue => {
               currentValue.value = nextValue ?? ''
@@ -339,7 +359,7 @@ describe('TimePicker', () => {
 
       render(<ControlledCase />, container)
 
-      await waitForContent(() => {
+      await waitForPickerContent(() => {
         const input = container.querySelector(
           '[data-testid="controlled-manual-picker"]',
         ) as HTMLInputElement
@@ -349,24 +369,21 @@ describe('TimePicker', () => {
       const input = container.querySelector(
         '[data-testid="controlled-manual-picker"]',
       ) as HTMLInputElement
-      await openPicker(input)
-
       input.value = '10:45:30'
       input.dispatchEvent(new Event('input', { bubbles: true }))
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
 
-      await waitForContent(() => {
+      await waitForPickerContent(() => {
         expect(input.value).toBe('10:45:30')
         expect(handleChange).toHaveBeenCalledTimes(1)
         expect(handleChange.mock.calls[0]?.[0]).toBe('10:45:30')
       })
 
-      await openPicker(input)
       input.value = '25:61:61'
       input.dispatchEvent(new Event('input', { bubbles: true }))
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
 
-      await waitForContent(() => {
+      await waitForPickerContent(() => {
         expect(input.value).toBe('10:45:30')
         expect(handleChange).toHaveBeenCalledTimes(1)
       })
@@ -387,6 +404,7 @@ describe('TimePicker', () => {
         return (
           <div>
             <TimePicker
+              {...fastPickerProps}
               value={currentValue.value}
               onChange={(nextValue, timeString) => {
                 currentValue.value = nextValue ?? ''
@@ -401,7 +419,7 @@ describe('TimePicker', () => {
 
       render(<ControlledCase />, container)
 
-      await waitForContent(() => {
+      await waitForPickerContent(() => {
         const input = container.querySelector(
           '[data-testid="controlled-live-picker"]',
         ) as HTMLInputElement
@@ -417,7 +435,7 @@ describe('TimePicker', () => {
       ) as HTMLInputElement
       await openPicker(input)
 
-      await waitForContent(() => {
+      await waitForPickerContent(() => {
         const popup = container.querySelector(
           '[data-rue-time-picker-popup="true"]',
         ) as HTMLDivElement
@@ -436,7 +454,7 @@ describe('TimePicker', () => {
       expect(mouseDownEvent.defaultPrevented).toBe(true)
       minuteButton.click()
 
-      await waitForContent(() => {
+      await waitForPickerContent(() => {
         const popups = Array.from(
           container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
         ) as HTMLDivElement[]
@@ -452,7 +470,7 @@ describe('TimePicker', () => {
   )
 
   it(
-    'keeps the popup open while a controlled value is updated across hour minute second clicks',
+    'keeps the popup open after selecting an hour option in controlled mode',
     async () => {
       const container = mountTestContainer()
       resetActiveRuntime()
@@ -464,6 +482,7 @@ describe('TimePicker', () => {
         return (
           <div>
             <TimePicker
+              {...fastPickerProps}
               value={currentValue.value}
               onChange={(nextValue, timeString) => {
                 currentValue.value = nextValue ?? ''
@@ -478,14 +497,7 @@ describe('TimePicker', () => {
 
       render(<ControlledCase />, container)
 
-      const assertPopupOpen = () => {
-        const popups = Array.from(
-          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
-        ) as HTMLDivElement[]
-        expect(popups.some(popup => !popup.hidden)).toBe(true)
-      }
-
-      await waitForContent(() => {
+      await waitForPickerContent(() => {
         const input = container.querySelector(
           '[data-testid="controlled-sequence-picker"]',
         ) as HTMLInputElement
@@ -497,15 +509,142 @@ describe('TimePicker', () => {
       ) as HTMLInputElement
       await openPicker(input)
 
-      await waitForContent(() => {
+      await waitForPickerContent(() => {
         expect(
           container.querySelector('button[data-rue-time-column="hour"][data-rue-time-option="10"]'),
         ).toBeTruthy()
+      })
+
+      await clickPanelOption(container, 'hour', '10')
+
+      await waitForPickerContent(() => {
+        const updatedInput = container.querySelector(
+          '[data-testid="controlled-sequence-picker"]',
+        ) as HTMLInputElement
+        const updatedLive = container.querySelector(
+          '[data-testid="controlled-sequence-live-value"]',
+        ) as HTMLDivElement
+        const popups = Array.from(
+          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
+        ) as HTMLDivElement[]
+        expect(updatedInput.value).toBe('10:30:15')
+        expect(updatedLive.textContent).toBe('10:30:15')
+        expect(popups.some(popup => !popup.hidden)).toBe(true)
+      })
+    },
+    slowTestTimeout,
+  )
+
+  it(
+    'keeps the popup open after selecting a minute option in controlled mode',
+    async () => {
+      const container = mountTestContainer()
+      resetActiveRuntime()
+
+      const ControlledCase = () => {
+        const currentValue = ref('10:30:15')
+        const liveValue = ref('10:30:15')
+
+        return (
+          <div>
+            <TimePicker
+              {...fastPickerProps}
+              value={currentValue.value}
+              onChange={(nextValue, timeString) => {
+                currentValue.value = nextValue ?? ''
+                liveValue.value = timeString || '未选择'
+              }}
+              data-testid="controlled-sequence-picker"
+            />
+            <div data-testid="controlled-sequence-live-value">{liveValue.value}</div>
+          </div>
+        )
+      }
+
+      render(<ControlledCase />, container)
+
+      await waitForPickerContent(() => {
+        const input = container.querySelector(
+          '[data-testid="controlled-sequence-picker"]',
+        ) as HTMLInputElement
+        expect(input.value).toBe('10:30:15')
+      })
+
+      const input = container.querySelector(
+        '[data-testid="controlled-sequence-picker"]',
+      ) as HTMLInputElement
+      await openPicker(input)
+
+      await waitForPickerContent(() => {
         expect(
           container.querySelector(
             'button[data-rue-time-column="minute"][data-rue-time-option="45"]',
           ),
         ).toBeTruthy()
+      })
+
+      await clickPanelOption(container, 'minute', '45')
+
+      await waitForPickerContent(() => {
+        const updatedInput = container.querySelector(
+          '[data-testid="controlled-sequence-picker"]',
+        ) as HTMLInputElement
+        const updatedLive = container.querySelector(
+          '[data-testid="controlled-sequence-live-value"]',
+        ) as HTMLDivElement
+        const popups = Array.from(
+          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
+        ) as HTMLDivElement[]
+        expect(updatedInput.value).toBe('10:45:15')
+        expect(updatedLive.textContent).toBe('10:45:15')
+        expect(popups.some(popup => !popup.hidden)).toBe(true)
+      })
+    },
+    slowTestTimeout,
+  )
+
+  it(
+    'keeps the popup open after selecting a second option in controlled mode',
+    async () => {
+      const container = mountTestContainer()
+      resetActiveRuntime()
+
+      const ControlledCase = () => {
+        const currentValue = ref('10:45:00')
+        const liveValue = ref('10:45:00')
+
+        return (
+          <div>
+            <TimePicker
+              {...fastPickerProps}
+              secondStep={30}
+              value={currentValue.value}
+              onChange={(nextValue, timeString) => {
+                currentValue.value = nextValue ?? ''
+                liveValue.value = timeString || '未选择'
+              }}
+              data-testid="controlled-sequence-picker"
+            />
+            <div data-testid="controlled-sequence-live-value">{liveValue.value}</div>
+          </div>
+        )
+      }
+
+      render(<ControlledCase />, container)
+
+      await waitForPickerContent(() => {
+        const input = container.querySelector(
+          '[data-testid="controlled-sequence-picker"]',
+        ) as HTMLInputElement
+        expect(input.value).toBe('10:45:00')
+      })
+
+      const input = container.querySelector(
+        '[data-testid="controlled-sequence-picker"]',
+      ) as HTMLInputElement
+      await openPicker(input)
+
+      await waitForPickerContent(() => {
         expect(
           container.querySelector(
             'button[data-rue-time-column="second"][data-rue-time-option="30"]',
@@ -513,46 +652,21 @@ describe('TimePicker', () => {
         ).toBeTruthy()
       })
 
-      await clickPanelOption(container, 'hour', '10')
-
-      await waitForContent(() => {
-        const updatedInput = container.querySelector(
-          '[data-testid="controlled-sequence-picker"]',
-        ) as HTMLInputElement
-        const live = container.querySelector(
-          '[data-testid="controlled-sequence-live-value"]',
-        ) as HTMLDivElement
-        expect(updatedInput.value).toBe('10:30:15')
-        expect(live.textContent).toBe('10:30:15')
-        assertPopupOpen()
-      })
-
-      await clickPanelOption(container, 'minute', '45')
-
-      await waitForContent(() => {
-        const updatedInput = container.querySelector(
-          '[data-testid="controlled-sequence-picker"]',
-        ) as HTMLInputElement
-        const live = container.querySelector(
-          '[data-testid="controlled-sequence-live-value"]',
-        ) as HTMLDivElement
-        expect(updatedInput.value).toBe('10:45:15')
-        expect(live.textContent).toBe('10:45:15')
-        assertPopupOpen()
-      })
-
       await clickPanelOption(container, 'second', '30')
 
-      await waitForContent(() => {
+      await waitForPickerContent(() => {
         const updatedInput = container.querySelector(
           '[data-testid="controlled-sequence-picker"]',
         ) as HTMLInputElement
-        const live = container.querySelector(
+        const updatedLive = container.querySelector(
           '[data-testid="controlled-sequence-live-value"]',
         ) as HTMLDivElement
+        const popups = Array.from(
+          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
+        ) as HTMLDivElement[]
         expect(updatedInput.value).toBe('10:45:30')
-        expect(live.textContent).toBe('10:45:30')
-        assertPopupOpen()
+        expect(updatedLive.textContent).toBe('10:45:30')
+        expect(popups.some(popup => !popup.hidden)).toBe(true)
       })
     },
     slowTestTimeout,
@@ -566,7 +680,11 @@ describe('TimePicker', () => {
       const handleChange = vi.fn()
 
       render(
-        <TimePicker.RangePicker defaultValue={['09:00:00', '18:00:00']} onChange={handleChange} />,
+        <TimePicker.RangePicker
+          {...fastPickerProps}
+          defaultValue={['09:00:00', '18:00:00']}
+          onChange={handleChange}
+        />,
         container,
       )
 

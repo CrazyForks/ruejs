@@ -1,9 +1,10 @@
 use super::super::Rue;
 use super::super::types::{MountInput, MountedPatchSubtree, MountedSubtreeState};
 use crate::runtime::dom_adapter::DomAdapter;
-use js_sys::{Array, Function, Object, Reflect};
+use js_sys::{Array, Function, Object, Promise, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
+use wasm_bindgen::closure::Closure;
 
 #[derive(Clone)]
 struct ReplaceFocusSnapshot {
@@ -164,32 +165,42 @@ fn focus_target_matches(snapshot: &ReplaceFocusSnapshot, target: &JsValue) -> bo
 }
 
 fn restore_focus_snapshot(snapshot: &ReplaceFocusSnapshot, target: &JsValue) {
-    let focus = js_prop(target, "focus");
-    if let Some(function) = focus.dyn_ref::<Function>() {
-        let _ = function.call0(target);
-    }
+    let snapshot = snapshot.clone();
+    let target = target.clone();
+    let restore = Closure::wrap(Box::new(move |_v: JsValue| {
+        let owner_document = js_prop(&target, "ownerDocument");
+        let active_element = js_prop(&owner_document, "activeElement");
+        if !Object::is(&active_element, &target) {
+            let focus = js_prop(&target, "focus");
+            if let Some(function) = focus.dyn_ref::<Function>() {
+                let _ = function.call0(&target);
+            }
+        }
 
-    if let Some(start) = snapshot.selection_start {
-        let _ = Reflect::set(
-            target,
-            &JsValue::from_str("selectionStart"),
-            &JsValue::from_f64(start as f64),
-        );
-    }
-    if let Some(end) = snapshot.selection_end {
-        let _ = Reflect::set(
-            target,
-            &JsValue::from_str("selectionEnd"),
-            &JsValue::from_f64(end as f64),
-        );
-    }
-    if let Some(direction) = snapshot.selection_direction.as_ref() {
-        let _ = Reflect::set(
-            target,
-            &JsValue::from_str("selectionDirection"),
-            &JsValue::from_str(direction),
-        );
-    }
+        if let Some(start) = snapshot.selection_start {
+            let _ = Reflect::set(
+                &target,
+                &JsValue::from_str("selectionStart"),
+                &JsValue::from_f64(start as f64),
+            );
+        }
+        if let Some(end) = snapshot.selection_end {
+            let _ = Reflect::set(
+                &target,
+                &JsValue::from_str("selectionEnd"),
+                &JsValue::from_f64(end as f64),
+            );
+        }
+        if let Some(direction) = snapshot.selection_direction.as_ref() {
+            let _ = Reflect::set(
+                &target,
+                &JsValue::from_str("selectionDirection"),
+                &JsValue::from_str(direction),
+            );
+        }
+    }) as Box<dyn FnMut(JsValue)>);
+    let _ = Promise::resolve(&JsValue::UNDEFINED).then(&restore);
+    restore.forget();
 }
 
 impl<A: DomAdapter> Rue<A>
@@ -264,6 +275,15 @@ where
     ) where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
+        let focus_snapshot = old.el.as_ref().and_then(|host| {
+            let host_js: JsValue = host.clone().into();
+            capture_focus_snapshot(&host_js)
+        });
+        let focus_target = focus_snapshot.as_ref().and_then(|snapshot| {
+            let new_root: JsValue = new_el.clone().into();
+            descendant_by_path(&new_root, &snapshot.path)
+                .filter(|target| focus_target_matches(snapshot, target))
+        });
         let cleared = self.clear_fragment_nodes(dest_parent, &old.fragment_nodes);
         #[cfg(feature = "dev")]
         {
@@ -287,6 +307,11 @@ where
                         new_el,
                         &effective_anchor,
                     );
+                    if let (Some(snapshot), Some(target)) =
+                        (focus_snapshot.as_ref(), focus_target.as_ref())
+                    {
+                        restore_focus_snapshot(snapshot, target);
+                    }
                 } else {
                     self.clear_current_named_range_if_present(dest_parent);
                     self.insert_fragment_children_preferring_end(
@@ -294,6 +319,11 @@ where
                         new_el,
                         insert_anchor,
                     );
+                    if let (Some(snapshot), Some(target)) =
+                        (focus_snapshot.as_ref(), focus_target.as_ref())
+                    {
+                        restore_focus_snapshot(snapshot, target);
+                    }
                 }
             } else {
                 let effective_anchor = self.current_anchor.clone().or(insert_anchor.clone());
@@ -316,6 +346,11 @@ where
                                 adapter2.insert_before(&mut real_parent, new_el, el_old);
                                 let mut p2 = real_parent.clone();
                                 adapter2.remove_child(&mut p2, el_old);
+                                if let (Some(snapshot), Some(target)) =
+                                    (focus_snapshot.as_ref(), focus_target.as_ref())
+                                {
+                                    restore_focus_snapshot(snapshot, target);
+                                }
                                 return;
                             }
                         }
@@ -324,6 +359,11 @@ where
                 self.insert_with_end_anchor_opt(&mut real_parent, new_el, &effective_anchor);
                 if let Some(ref el_old) = old.el {
                     self.clear_old_el_if_present(&mut real_parent, el_old);
+                }
+                if let (Some(snapshot), Some(target)) =
+                    (focus_snapshot.as_ref(), focus_target.as_ref())
+                {
+                    restore_focus_snapshot(snapshot, target);
                 }
             }
         }

@@ -9,38 +9,109 @@
 import {
   type FC,
   type BlockInstance,
-  type RenderTarget,
+  createContext,
   h,
   signal,
   getCurrentContainer,
+  type RenderTarget,
   type SignalHandle,
   render,
   renderAnchor,
   untrack,
+  useContext,
   vapor,
   watchEffect,
   useSetup,
 } from '@rue-js/rue'
-import { extend } from '@rue-js/shared'
 
 /** 路由静态记录：
  * - path：形如 '/users/:id(\\d+)' 的匹配模式（支持命名参数与可选正则）
  * - component：匹配成功时渲染的组件（接收 { params }）
+ * - name：命名路由，可通过 router.push({ name, params }) 导航
+ * - redirect：重定向目标，可用于默认子路由重定向
+ * - children：子路由配置，路径会相对父级拼接
+ * - meta：路由元信息，匹配后会按父 -> 子合并到当前 route.meta
+ * - beforeEnter：路由独享守卫，返回 false 取消，返回 string 重定向
  */
-export type RouteRecord = { path: string; component: FC<any> }
+type Awaitable<T> = T | Promise<T>
+export type RouteMeta = Record<string, unknown>
+export type RouteName = string
+export type RouteParamValue = string | number | boolean | null | undefined
+export type RouteParamsInput = Record<string, RouteParamValue>
+export type PathRouteLocation = { path: string }
+export type NamedRouteLocation = { name: RouteName; params?: RouteParamsInput }
+export type RouteLocationRaw = string | PathRouteLocation | NamedRouteLocation
+export type NavigationGuardResult = void | boolean | RouteLocationRaw
+export type RouteRecordRedirect = RouteLocationRaw | ((to: Route) => RouteLocationRaw)
+export const NavigationFailureType = {
+  aborted: 'aborted',
+  cancelled: 'cancelled',
+  duplicated: 'duplicated',
+} as const
+export type NavigationFailureType =
+  (typeof NavigationFailureType)[keyof typeof NavigationFailureType]
+export type RouteRecord = {
+  path: string
+  name?: RouteName
+  component?: FC<any>
+  redirect?: RouteRecordRedirect
+  children?: RouteRecord[]
+  meta?: RouteMeta
+  beforeEnter?: NavigationGuard
+}
+export type RouteRecordRaw = RouteRecord
 /** 路由参数对象：命名参数的解码后字串映射 */
 export type RouteParams = Record<string, string>
 /** 当前路由匹配结果：
- * - record：命中的路由记录
+ * - record：命中的最深层路由记录
+ * - matched：从父到子的命中链，供嵌套 RouterView 按层级渲染
  * - params：从路径中提取的参数
+ * - meta：由 matched 链按顺序合并后的元信息
  * - path：当前匹配的原始路径
  * - 为 null 表示无匹配（RouterView 将清空渲染区域）
  */
-export type Route = { record: RouteRecord; params: RouteParams; path: string } | null
+export type Route = {
+  record: RouteRecord
+  name?: RouteName
+  matched: RouteRecord[]
+  params: RouteParams
+  meta: RouteMeta
+  path: string
+} | null
+export type NavigationFailure = {
+  type: NavigationFailureType
+  to: Route
+  from: Route
+}
+export type NavigationGuard = (to: Route, from: Route) => Awaitable<NavigationGuardResult>
+export type AfterEachFailure = NavigationFailure | Error
+export type AfterEachGuard = (to: Route, from: Route, failure?: AfterEachFailure) => void
+export const isNavigationFailure = (
+  value: unknown,
+  type?: NavigationFailureType,
+): value is NavigationFailure => {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const failure = value as Partial<NavigationFailure>
+  const knownType = failure.type
+  if (
+    knownType !== NavigationFailureType.aborted &&
+    knownType !== NavigationFailureType.cancelled &&
+    knownType !== NavigationFailureType.duplicated
+  ) {
+    return false
+  }
+
+  return type ? knownType === type : true
+}
 /** Router 核心接口：
  * - currentPath：当前历史位置（字符串）信号
  * - route：当前匹配结果信号（Route 或 null）
  * - push/replace/back：导航 API，委托给历史实现
+ * - beforeEach：注册全局前置守卫
+ * - afterEach：注册全局后置守卫
  * - routes：注册的路由表（顺序即匹配优先级）
  * - history：历史实现（HistoryLike）
  * - install：把 Router 绑定到当前容器上下文
@@ -48,9 +119,11 @@ export type Route = { record: RouteRecord; params: RouteParams; path: string } |
 export type Router = {
   currentPath: SignalHandle<string>
   route: SignalHandle<Route>
-  push: (p: string) => void
-  replace: (p: string) => void
+  push: (p: RouteLocationRaw) => Promise<NavigationFailure | undefined>
+  replace: (p: RouteLocationRaw) => Promise<NavigationFailure | undefined>
   back: () => void
+  beforeEach: (guard: NavigationGuard) => () => void
+  afterEach: (guard: AfterEachGuard) => () => void
   routes: RouteRecord[]
   history: HistoryLike
   install: (app: unknown, options: unknown[]) => void
@@ -72,7 +145,131 @@ export type HistoryLike = {
 }
 
 const __routerByContainer = new WeakMap<HTMLElement, Router>()
+const __routerResolvePathByInstance = new WeakMap<Router, (to: RouteLocationRaw) => string>()
 let __activeRouter: Router | null = null
+const RouterViewDepthContext = createContext(0)
+
+type CompiledRouteRecord = Omit<RouteRecord, 'children'> & {
+  children?: CompiledRouteRecord[]
+  _fullPath: string
+  _c: { re: RegExp; keys: string[] }
+}
+
+type RouteBranch = {
+  record: CompiledRouteRecord
+  matched: CompiledRouteRecord[]
+}
+
+type GuardDecision =
+  | { kind: 'allow' }
+  | { kind: 'abort' }
+  | { kind: 'cancelled' }
+  | { kind: 'error'; error: Error }
+  | { kind: 'redirect'; path: string }
+
+type NavigationResolution =
+  | { kind: 'allow'; path: string; route: Route }
+  | { kind: 'abort'; path: string; route: Route }
+  | { kind: 'cancelled'; path: string; route: Route }
+  | { kind: 'error'; path: string; route: Route; error: Error }
+
+type PendingNavigation = {
+  id: number
+  path: string
+  route: Route
+  from: Route
+  notify: boolean
+  resolve?: (result: NavigationFailure | undefined) => void
+}
+
+const resolveRecordParams = (
+  record: RouteRecord,
+  params: RouteParams,
+  previousRecord: RouteRecord | null,
+  previousParams: RouteParams | null,
+) => {
+  const recordKeys = ((record as Partial<CompiledRouteRecord>)._c?.keys ?? []) as string[]
+
+  if (!recordKeys.length) {
+    if (previousRecord === record && previousParams && !Object.keys(previousParams).length) {
+      return previousParams
+    }
+    return {} as RouteParams
+  }
+
+  let changed = previousRecord !== record || !previousParams
+  const nextParams: RouteParams = {}
+
+  recordKeys.forEach(key => {
+    const value = params[key]
+    if (value == null) {
+      changed = changed || previousParams?.[key] != null
+      return
+    }
+
+    nextParams[key] = value
+    if (!changed && previousParams?.[key] !== value) {
+      changed = true
+    }
+  })
+
+  if (!changed && previousParams) {
+    const previousKeys = Object.keys(previousParams)
+    if (previousKeys.length !== recordKeys.length) {
+      changed = true
+    }
+  }
+
+  return !changed && previousParams ? previousParams : nextParams
+}
+
+const normalizeRoutePath = (path: string) => {
+  const raw = String(path || '')
+  if (!raw) return '/'
+
+  const withoutHash = raw.startsWith('#') ? raw.replace(/^#/, '') : raw
+  const withLeadingSlash = withoutHash.startsWith('/') ? withoutHash : `/${withoutHash}`
+  const compact = withLeadingSlash.replace(/\/+/g, '/')
+
+  if (compact === '/') {
+    return compact
+  }
+
+  return compact.endsWith('/') ? compact.slice(0, -1) : compact
+}
+
+const joinRoutePath = (parentPath: string, path: string) => {
+  if (!path) {
+    return parentPath || '/'
+  }
+
+  if (path.startsWith('/')) {
+    return normalizeRoutePath(path)
+  }
+
+  if (!parentPath || parentPath === '/') {
+    return normalizeRoutePath(`/${path}`)
+  }
+
+  return normalizeRoutePath(`${parentPath}/${path}`)
+}
+
+const isPathRouteLocation = (value: unknown): value is PathRouteLocation => {
+  return !!value && typeof value === 'object' && 'path' in (value as Record<string, unknown>)
+}
+
+const isNamedRouteLocation = (value: unknown): value is NamedRouteLocation => {
+  return !!value && typeof value === 'object' && 'name' in (value as Record<string, unknown>)
+}
+
+const toNavigationError = (error: unknown): Error => {
+  if (error instanceof Error) {
+    return error
+  }
+
+  return new Error(String(error))
+}
+
 /** 将 Router 绑定到当前容器并设置为活动路由 */
 export const attachRouter = (router: Router) => {
   const c = getCurrentContainer() as HTMLElement | null
@@ -197,9 +394,6 @@ export const createWebHistory = () => {
  * @returns Router 实例
  */
 export const createRouter = (options: { history: HistoryLike; routes: RouteRecord[] }): Router => {
-  // currentPath：受历史驱动的源信号；第三参 true 表示同步更新立即通知观察者
-  const currentPath = signal(options.history.location(), {}, true)
-
   /** 编译路径模式为正则与参数键 */
   const compilePath = (path: string) => {
     const keys: string[] = []
@@ -217,62 +411,551 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     return { re: new RegExp(reStr), keys }
   }
 
-  // 预编译路由：在记录上挂载 _c 字段以便快速匹配
-  const compiled = options.routes.map(
-    r =>
-      extend(r, {
-        _c: compilePath(r.path),
-      }) as RouteRecord & { _c: { re: RegExp; keys: string[] } },
-  )
+  const routeByName = new Map<RouteName, CompiledRouteRecord>()
+
+  const normalizeParamsInput = (params?: RouteParamsInput): RouteParams => {
+    const nextParams: RouteParams = {}
+
+    if (!params) {
+      return nextParams
+    }
+
+    Object.keys(params).forEach(key => {
+      const value = params[key]
+      if (value == null) {
+        return
+      }
+
+      nextParams[key] = String(value)
+    })
+
+    return nextParams
+  }
+
+  const stringifyRoutePath = (path: string, params?: RouteParamsInput) => {
+    const normalizedParams = normalizeParamsInput(params)
+
+    return normalizeRoutePath(
+      path.replace(/\/:([^/()]+)(?:\(([^)]+)\))?/g, (_m, name) => {
+        const value = normalizedParams[name]
+        if (value == null) {
+          throw new Error(`Missing required param "${name}" for route path ${path}`)
+        }
+
+        return `/${encodeURIComponent(value)}`
+      }),
+    )
+  }
+
+  const resolveLocationPath = (to: RouteLocationRaw, inheritedParams?: RouteParamsInput) => {
+    if (typeof to === 'string') {
+      return normalizeRoutePath(to)
+    }
+
+    if (isPathRouteLocation(to)) {
+      return normalizeRoutePath(to.path)
+    }
+
+    if (isNamedRouteLocation(to)) {
+      const target = routeByName.get(to.name)
+      if (!target) {
+        throw new Error('No route matched name ' + to.name)
+      }
+
+      return stringifyRoutePath(target._fullPath, {
+        ...normalizeParamsInput(inheritedParams),
+        ...normalizeParamsInput(to.params),
+      })
+    }
+
+    return normalizeRoutePath(String(to || ''))
+  }
+
+  const resolveRouteRedirect = (to: Route) => {
+    if (!to) {
+      return { kind: 'none' } as const
+    }
+
+    for (let i = to.matched.length - 1; i >= 0; i -= 1) {
+      const redirect = to.matched[i].redirect
+      if (!redirect) {
+        continue
+      }
+
+      try {
+        const target = typeof redirect === 'function' ? redirect(to) : redirect
+        return { kind: 'redirect', path: resolveLocationPath(target, to.params) } as const
+      } catch (error) {
+        return { kind: 'error', error: toNavigationError(error) } as const
+      }
+    }
+
+    return { kind: 'none' } as const
+  }
+
+  const compileRecords = (records: RouteRecord[], parentPath = ''): CompiledRouteRecord[] =>
+    records.map(record => {
+      const fullPath = joinRoutePath(parentPath, record.path)
+      const children = record.children ? compileRecords(record.children, fullPath) : undefined
+
+      const compiledRecord: CompiledRouteRecord = {
+        ...record,
+        children,
+        _fullPath: fullPath,
+        _c: compilePath(fullPath),
+      }
+
+      if (compiledRecord.name) {
+        if (routeByName.has(compiledRecord.name)) {
+          throw new Error('Duplicate route name ' + compiledRecord.name)
+        }
+
+        routeByName.set(compiledRecord.name, compiledRecord)
+      }
+
+      return compiledRecord
+    })
+
+  const collectBranches = (records: CompiledRouteRecord[]) => {
+    const branches: RouteBranch[] = []
+
+    const visit = (record: CompiledRouteRecord, matched: CompiledRouteRecord[]) => {
+      const nextMatched = [...matched, record]
+
+      if (record.children?.length) {
+        record.children.forEach(child => visit(child, nextMatched))
+      }
+
+      branches.push({ record, matched: nextMatched })
+    }
+
+    records.forEach(record => visit(record, []))
+    return branches
+  }
+
+  const compiled = compileRecords(options.routes)
+  const branches = collectBranches(compiled)
 
   /** 匹配路径并提取参数 */
   const match = (path: string): Route => {
-    for (let i = 0; i < compiled.length; i++) {
-      const r = compiled[i]
+    const normalizedPath = normalizeRoutePath(path)
+
+    for (let i = 0; i < branches.length; i++) {
+      const branch = branches[i]
+      const r = branch.record
       // 顺序匹配，命中即返回（后续规则不再检查）
-      const m = r._c.re.exec(path)
+      const m = r._c.re.exec(normalizedPath)
       if (m) {
         const params: RouteParams = {}
         // 将捕获组与命名键对应并解码
         r._c.keys.forEach((k: string, idx: number) => {
           params[k] = decodeURIComponent(m[idx + 1] || '')
         })
-        return { record: r, params, path: path }
+
+        const matched = branch.matched as RouteRecord[]
+        const meta = matched.reduce<RouteMeta>((acc, record) => {
+          if (record.meta) {
+            Object.assign(acc, record.meta)
+          }
+          return acc
+        }, {})
+
+        return { record: r, name: r.name, matched, params, meta, path: normalizedPath }
       }
     }
     // 未命中返回 null（交由视图层决定如何处理）
     return null
   }
 
+  const resolveInitialRoute = (
+    rawPath: string,
+    redirectDepth = 0,
+  ): { path: string; route: Route } => {
+    if (redirectDepth > 20) {
+      throw new Error('Too many redirects while navigating to ' + rawPath)
+    }
+
+    const path = normalizeRoutePath(rawPath)
+    const targetRoute = match(path)
+    const redirect = resolveRouteRedirect(targetRoute)
+    if (redirect.kind === 'redirect') {
+      return resolveInitialRoute(redirect.path, redirectDepth + 1)
+    }
+
+    if (redirect.kind === 'error') {
+      throw redirect.error
+    }
+
+    return { path, route: targetRoute }
+  }
+
+  const initialRouteState = resolveInitialRoute(options.history.location())
+
+  // currentPath：受历史驱动的源信号；第三参 true 表示同步更新立即通知观察者
+  const currentPath = signal(initialRouteState.path, {}, true)
+
+  const beforeGuards: NavigationGuard[] = []
+  const afterGuards: AfterEachGuard[] = []
+  let pendingNavigation: PendingNavigation | null = null
+  let navigationRequestId = 0
+
+  const createNavigationFailure = (
+    type: NavigationFailureType,
+    to: Route,
+    from: Route,
+  ): NavigationFailure => ({ type, to, from })
+
+  const runAfterGuards = (to: Route, from: Route, failure?: AfterEachFailure) => {
+    for (let i = 0; i < afterGuards.length; i++) {
+      afterGuards[i](to, from, failure)
+    }
+  }
+
+  const isStaleNavigation = (requestId: number) => requestId !== navigationRequestId
+
+  const resolveGuardDecision = (result: NavigationGuardResult, to: Route): GuardDecision => {
+    if (result === false) {
+      return { kind: 'abort' }
+    }
+
+    if (result === undefined || result === true) {
+      return { kind: 'allow' }
+    }
+
+    try {
+      return { kind: 'redirect', path: resolveLocationPath(result, to?.params) }
+    } catch (error) {
+      return { kind: 'error', error: toNavigationError(error) }
+    }
+  }
+
+  const runBeforeGuards = async (
+    to: Route,
+    from: Route,
+    requestId: number,
+  ): Promise<GuardDecision> => {
+    for (let i = 0; i < beforeGuards.length; i++) {
+      let result: NavigationGuardResult
+      try {
+        result = await beforeGuards[i](to, from)
+      } catch (error) {
+        if (isStaleNavigation(requestId)) {
+          return { kind: 'cancelled' }
+        }
+
+        return { kind: 'error', error: toNavigationError(error) }
+      }
+
+      if (isStaleNavigation(requestId)) {
+        return { kind: 'cancelled' }
+      }
+
+      const decision = resolveGuardDecision(result, to)
+      if (decision.kind !== 'allow') {
+        return decision
+      }
+    }
+
+    if (!to) {
+      return { kind: 'allow' }
+    }
+
+    for (let i = 0; i < to.matched.length; i++) {
+      const record = to.matched[i]
+      if (!record.beforeEnter) {
+        continue
+      }
+
+      let result: NavigationGuardResult
+      try {
+        result = await record.beforeEnter(to, from)
+      } catch (error) {
+        if (isStaleNavigation(requestId)) {
+          return { kind: 'cancelled' }
+        }
+
+        return { kind: 'error', error: toNavigationError(error) }
+      }
+
+      if (isStaleNavigation(requestId)) {
+        return { kind: 'cancelled' }
+      }
+
+      const decision = resolveGuardDecision(result, to)
+      if (decision.kind !== 'allow') {
+        return decision
+      }
+    }
+
+    return { kind: 'allow' }
+  }
+
+  const resolveNavigation = (
+    rawPath: RouteLocationRaw,
+    from: Route,
+    requestId: number,
+    redirectDepth = 0,
+  ): Promise<NavigationResolution> => {
+    const execute = async (): Promise<NavigationResolution> => {
+      if (redirectDepth > 20) {
+        return {
+          kind: 'error',
+          path: typeof rawPath === 'string' ? normalizeRoutePath(rawPath) : currentPath.get(),
+          route: from,
+          error: new Error('Too many redirects while navigating to ' + String(rawPath)),
+        }
+      }
+
+      let path: string
+      try {
+        path = resolveLocationPath(rawPath)
+      } catch (error) {
+        return {
+          kind: 'error',
+          path: currentPath.get(),
+          route: null,
+          error: toNavigationError(error),
+        }
+      }
+
+      const targetRoute = match(path)
+      const redirect = resolveRouteRedirect(targetRoute)
+      if (redirect.kind === 'redirect') {
+        return resolveNavigation(redirect.path, from, requestId, redirectDepth + 1)
+      }
+
+      if (redirect.kind === 'error') {
+        return { kind: 'error', path, route: targetRoute, error: redirect.error }
+      }
+
+      const decision = await runBeforeGuards(targetRoute, from, requestId)
+
+      if (decision.kind === 'redirect') {
+        return resolveNavigation(decision.path, from, requestId, redirectDepth + 1)
+      }
+
+      if (decision.kind === 'abort') {
+        return { kind: 'abort', path, route: targetRoute }
+      }
+
+      if (decision.kind === 'cancelled') {
+        return { kind: 'cancelled', path, route: targetRoute }
+      }
+
+      if (decision.kind === 'error') {
+        return { kind: 'error', path, route: targetRoute, error: decision.error }
+      }
+
+      return { kind: 'allow', path, route: targetRoute }
+    }
+
+    return execute()
+  }
+
+  const commitNavigation = (path: string, nextRoute: Route, from: Route) => {
+    currentPath.set(path)
+    route.set(nextRoute)
+    runAfterGuards(nextRoute, from)
+  }
+
+  const settlePendingNavigation = () => {
+    const nextPending = pendingNavigation
+    if (!nextPending) {
+      return false
+    }
+
+    const currentLocation = normalizeRoutePath(options.history.location())
+    if (currentLocation !== nextPending.path) {
+      return false
+    }
+
+    pendingNavigation = null
+
+    if (nextPending.notify) {
+      commitNavigation(nextPending.path, nextPending.route, nextPending.from)
+    }
+
+    nextPending.resolve?.(undefined)
+    return true
+  }
+
+  const navigate = async (
+    rawPath: RouteLocationRaw,
+    method: 'push' | 'replace',
+  ): Promise<NavigationFailure | undefined> => {
+    const from = route.get()
+    const requestId = ++navigationRequestId
+    const resolution = await resolveNavigation(rawPath, from, requestId)
+
+    if (resolution.kind === 'error') {
+      runAfterGuards(resolution.route, from, resolution.error)
+      throw resolution.error
+    }
+
+    if (resolution.kind === 'cancelled') {
+      const failure = createNavigationFailure(
+        NavigationFailureType.cancelled,
+        resolution.route,
+        from,
+      )
+      runAfterGuards(resolution.route, from, failure)
+      return failure
+    }
+
+    if (resolution.kind === 'abort') {
+      const failure = createNavigationFailure(NavigationFailureType.aborted, resolution.route, from)
+      runAfterGuards(resolution.route, from, failure)
+      return failure
+    }
+
+    if (resolution.path === currentPath.get()) {
+      const failure = createNavigationFailure(
+        NavigationFailureType.duplicated,
+        resolution.route,
+        from,
+      )
+      runAfterGuards(resolution.route, from, failure)
+      return failure
+    }
+
+    return await new Promise<NavigationFailure | undefined>(resolve => {
+      pendingNavigation = {
+        id: requestId,
+        path: resolution.path,
+        route: resolution.route,
+        from,
+        notify: true,
+        resolve,
+      }
+
+      options.history[method](resolution.path)
+      settlePendingNavigation()
+    })
+  }
+
   // route：派生信号，保存当前路径对应的匹配结果
-  const matchRoute = match(currentPath.get())
+  const matchRoute = initialRouteState.route
   if (null === matchRoute) {
     throw new Error('No route matched path ' + currentPath.get())
   }
   const route = signal<Route>(matchRoute, {}, true)
 
+  if (initialRouteState.path !== normalizeRoutePath(options.history.location())) {
+    options.history.replace(initialRouteState.path)
+  }
+
   // 监听历史变化同步信号
   options.history.listen(() => {
-    const p = options.history.location()
-    // 去重：避免重复设置导致无意义的通知
-    if (p === currentPath.get()) {
-      return
-    }
-    const matchRoute = match(p)
-    currentPath.set(p)
-    route.set(matchRoute)
+    void (async () => {
+      const p = normalizeRoutePath(options.history.location())
+
+      if (settlePendingNavigation()) {
+        return
+      }
+
+      // 去重：避免重复设置导致无意义的通知
+      if (p === currentPath.get()) {
+        return
+      }
+
+      const from = route.get()
+      const requestId = ++navigationRequestId
+      const resolution = await resolveNavigation(p, from, requestId)
+
+      if (resolution.kind === 'error') {
+        runAfterGuards(resolution.route, from, resolution.error)
+
+        if (!from) {
+          return
+        }
+
+        pendingNavigation = {
+          id: requestId,
+          path: from.path,
+          route: from,
+          from,
+          notify: false,
+        }
+        options.history.replace(from.path)
+        settlePendingNavigation()
+        return
+      }
+
+      if (resolution.kind === 'cancelled') {
+        const failure = createNavigationFailure(
+          NavigationFailureType.cancelled,
+          resolution.route,
+          from,
+        )
+        runAfterGuards(resolution.route, from, failure)
+        return
+      }
+
+      if (resolution.kind === 'abort') {
+        if (!from) {
+          return
+        }
+
+        const failure = createNavigationFailure(
+          NavigationFailureType.aborted,
+          resolution.route,
+          from,
+        )
+        runAfterGuards(resolution.route, from, failure)
+
+        pendingNavigation = {
+          id: requestId,
+          path: from.path,
+          route: from,
+          from,
+          notify: false,
+        }
+        options.history.replace(from.path)
+        settlePendingNavigation()
+        return
+      }
+
+      if (resolution.path !== p) {
+        pendingNavigation = {
+          id: requestId,
+          path: resolution.path,
+          route: resolution.route,
+          from,
+          notify: true,
+        }
+        options.history.replace(resolution.path)
+        settlePendingNavigation()
+        return
+      }
+
+      commitNavigation(resolution.path, resolution.route, from)
+    })()
   })
 
   const router: Router = {
     currentPath,
     route,
-    push: (p: string) => options.history.push(p),
-    replace: (p: string) => options.history.replace(p),
+    push: (p: RouteLocationRaw) => navigate(p, 'push'),
+    replace: (p: RouteLocationRaw) => navigate(p, 'replace'),
     back: () => {
       // 优先使用 HistoryLike.back；否则退回到全局 history
       if (options.history.back) return options.history.back()
       const gg = globalThis as any
       if (gg.history && typeof gg.history.back === 'function') gg.history.back()
+    },
+    beforeEach: (guard: NavigationGuard) => {
+      beforeGuards.push(guard)
+      return () => {
+        const idx = beforeGuards.indexOf(guard)
+        if (idx >= 0) beforeGuards.splice(idx, 1)
+      }
+    },
+    afterEach: (guard: AfterEachGuard) => {
+      afterGuards.push(guard)
+      return () => {
+        const idx = afterGuards.indexOf(guard)
+        if (idx >= 0) afterGuards.splice(idx, 1)
+      }
     },
     routes: options.routes,
     history: options.history,
@@ -282,6 +965,8 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       attachRouter(router)
     },
   }
+
+  __routerResolvePathByInstance.set(router, (to: RouteLocationRaw) => resolveLocationPath(to))
 
   return router
 }
@@ -312,6 +997,7 @@ const insertNodeAtTarget = (target: RenderTarget, node: Node) => {
 const createRouteComponentBlock = (
   component: RouteRecord['component'],
   params: RouteParams,
+  nextDepth: number,
 ): BlockInstance => {
   let host: HTMLSpanElement | null = null
 
@@ -322,7 +1008,20 @@ const createRouteComponentBlock = (
       routeHost.style.display = 'contents'
       host = routeHost
       insertNodeAtTarget(target, routeHost)
-      render(h(component, { params }) as any, routeHost as any)
+
+      if (!component) {
+        render(null as any, routeHost as any)
+        return
+      }
+
+      render(
+        h(
+          RouterViewDepthContext.Provider as any,
+          { value: nextDepth },
+          h(component, { params }) as any,
+        ) as any,
+        routeHost as any,
+      )
     },
     unmount() {
       if (!host) {
@@ -341,29 +1040,49 @@ const createRouteComponentBlock = (
   }
 }
 
-/** RouterView：在单个尾锚点前渲染当前匹配组件 */
+/** RouterView：根据当前上下文深度，在单个尾锚点前渲染匹配链上的对应组件 */
 export const RouterView: FC = () => {
+  const depth = useContext(RouterViewDepthContext)
+
   const { container } = useSetup(() => {
     const r = useRouter()
     const container = document.createElement('span')
     container.style.display = 'contents'
     const anchorEl = document.createComment('rue-router-view-anchor')
     container.appendChild(anchorEl)
+    let previousRecord: RouteRecord | null = null
+    let previousParams: RouteParams | null = null
 
     watchEffect(() => {
       const data = r.route.get()
+      const record = data?.matched?.[depth] || null
       const parent = (anchorEl as any).parentNode || container
 
       untrack(() => {
-        if (!data) {
+        if (!record || !data || !record.component) {
+          previousRecord = null
+          previousParams = null
           renderAnchor(null as any, parent, anchorEl)
-        } else {
-          renderAnchor(
-            createRouteComponentBlock(data.record.component, data.params) as any,
-            parent,
-            anchorEl,
-          )
+          return
         }
+
+        const recordParams = resolveRecordParams(
+          record,
+          data.params,
+          previousRecord,
+          previousParams,
+        )
+        if (previousRecord === record && previousParams === recordParams) {
+          return
+        }
+        previousRecord = record
+        previousParams = recordParams
+
+        renderAnchor(
+          createRouteComponentBlock(record.component, recordParams, depth + 1) as any,
+          parent,
+          anchorEl,
+        )
       })
     })
 
@@ -373,15 +1092,36 @@ export const RouterView: FC = () => {
   return vapor(() => container)
 }
 
-type RouterLinkProps = { to: string; replace?: boolean } & Record<string, unknown>
+type RouterLinkProps = { to: RouteLocationRaw; replace?: boolean } & Record<string, unknown>
 
 type RouterLinkFastPath = FC<RouterLinkProps> & {
   __rueHref: (to: unknown) => string
   __rueOnClick: (e: MouseEvent, to: unknown, replace?: unknown) => void
 }
 
+const resolveRouterLocationPath = (router: Router | null, to: unknown) => {
+  if (!router) {
+    if (typeof to === 'string') {
+      return normalizeRoutePath(to)
+    }
+
+    if (isPathRouteLocation(to)) {
+      return normalizeRoutePath(to.path)
+    }
+
+    throw new Error('Router not installed for current application/container')
+  }
+
+  const resolvePath = __routerResolvePathByInstance.get(router)
+  if (!resolvePath) {
+    throw new Error('Router path resolver not available for current application/container')
+  }
+
+  return resolvePath(to as RouteLocationRaw)
+}
+
 const routerLinkHref = (to: unknown) => {
-  const path = String(to || '')
+  const path = resolveRouterLocationPath(__activeRouter, to)
   const createHref = __activeRouter?.history?.createHref
   return createHref ? createHref(path) : path || '/'
 }
@@ -390,9 +1130,9 @@ const routerLinkNavigate = (to: unknown, replace?: unknown) => {
   const router = __activeRouter
   if (!router) throw new Error('Router not installed for current application/container')
 
-  const path = String(to || '')
+  const target = to as RouteLocationRaw
   const nav = replace ? router.replace : router.push
-  nav(path)
+  void nav(target)
 }
 
 const routerLinkOnClick = (e: MouseEvent, to: unknown, replace?: unknown) => {
@@ -413,7 +1153,7 @@ const routerLinkOnClick = (e: MouseEvent, to: unknown, replace?: unknown) => {
 /** RouterLink：渲染链接并处理导航 */
 const RouterLinkImpl: FC<RouterLinkProps> = props => {
   const r = useRouter()
-  const to = String((props as any).to || '')
+  const to = (props as any).to as RouteLocationRaw
   const replace = !!(props as any).replace
   const { children, to: _to, replace: _replace, ...rest } = props as any
 
@@ -430,7 +1170,7 @@ const RouterLinkImpl: FC<RouterLinkProps> = props => {
     }
     e.preventDefault()
     const nav = replace ? r.replace : r.push
-    nav(to)
+    void nav(to)
   }
 
   const childList = Array.isArray(children)

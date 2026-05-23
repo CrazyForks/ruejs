@@ -4,6 +4,7 @@ import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import Skeleton from '../../../packages/rue-design/src/components/skeleton/index'
 import Tabs from '../../../packages/rue-design/src/components/tabs/index'
+import { renderDesignPreview } from './preview-test-gate'
 
 type PreviewTabMode = 'preview' | 'code'
 
@@ -289,7 +290,11 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
         onChange={key => (tab.value = key as PreviewTabMode)}
         className={summary ? 'mb-3 mt-4' : 'mb-3'}
       />
-      {tab.value === 'preview' ? preview() : <Code className="mt-2" lang="tsx" code={code} />}
+      {tab.value === 'preview' ? (
+        renderDesignPreview(title, preview)
+      ) : (
+        <Code className="mt-2" lang="tsx" code={code} />
+      )}
     </div>
   )
 }

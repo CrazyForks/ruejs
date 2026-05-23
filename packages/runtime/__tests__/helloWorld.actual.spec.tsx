@@ -1,8 +1,19 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { attachRouter, createRouter, RouterView, type HistoryLike } from '@rue-js/router'
 
 import { h, render, setReactiveScheduling, useComponent } from '../src'
+
+vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
+  default: (props: { children?: unknown }) => (
+    <div data-testid="mock-sidebar-playground">{props.children}</div>
+  ),
+}))
+
+vi.mock('../../../app/pages/site/components/Code', () => ({
+  default: () => null,
+}))
+
 import HelloWorld from '../../../app/pages/examples/HelloWorld'
 
 setReactiveScheduling('sync')

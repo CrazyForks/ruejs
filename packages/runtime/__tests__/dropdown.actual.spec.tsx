@@ -17,13 +17,28 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Dropdown actual page', () => {
   it('renders dropdown demos, opens the controlled dropdown, and keeps native demos clickable', async () => {
+    setEnabledPreviews(
+      '受控开关与来源',
+      'Dropdown using details and summary',
+      'Dropdown menu',
+      'Positions',
+    )
+
     const container = mountContainer()
     const detailsDemoTitle = '# Dropdown using details and summary'
     const focusDemoTitle = '# Dropdown menu'

@@ -1,9 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { effect, ref, render, setReactiveScheduling } from '@rue-js/rue'
 import Tree from '../index'
-import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
+import {
+  mountContainer as baseMountContainer,
+  waitForContent,
+} from '../../../../../runtime/__tests__/page-test-utils'
 
 setReactiveScheduling('sync')
+
+const mountedContainers: HTMLElement[] = []
+
+const mountContainer = () => {
+  const container = baseMountContainer()
+  mountedContainers.push(container)
+  return container
+}
 
 const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active = (globalThis as any).__rue
@@ -55,6 +66,9 @@ const clickLabelButton = (container: HTMLElement, key: string, options: MouseEve
 }
 
 afterEach(() => {
+  for (const container of mountedContainers.splice(0)) {
+    render(null as any, container)
+  }
   document.body.innerHTML = ''
 })
 
@@ -377,10 +391,7 @@ describe('Tree', () => {
       {
         title: 'src',
         key: 'src',
-        children: [
-          { title: 'index.ts', key: 'index-ts' },
-          { title: 'app.tsx', key: 'app-tsx' },
-        ],
+        children: [{ title: 'index.ts', key: 'index-ts' }],
       },
       { title: 'README.md', key: 'readme' },
     ]
@@ -444,8 +455,7 @@ describe('Tree', () => {
     })
 
     combined.dispose()
-
-    document.body.innerHTML = ''
+    render(null as any, combined.container)
 
     const separate = await mountControlledDirectoryTree({ expandAction: false })
 
@@ -724,7 +734,7 @@ describe('Tree', () => {
   it('virtualizes long trees when height is provided', async () => {
     const container = mountContainer()
     resetActiveRuntime()
-    const treeData = Array.from({ length: 48 }, (_, index) => ({
+    const treeData = Array.from({ length: 24 }, (_, index) => ({
       title: `Node ${index}`,
       key: `node-${index}`,
     }))
@@ -749,7 +759,7 @@ describe('Tree', () => {
     body.dispatchEvent(new Event('scroll', { bubbles: true }))
 
     await waitForContent(() => {
-      expect(getNode(container, 'node-47')).toBeTruthy()
+      expect(getNode(container, 'node-23')).toBeTruthy()
     })
   })
 

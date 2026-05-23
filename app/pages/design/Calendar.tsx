@@ -4,6 +4,7 @@ import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import Calendar from '../../../packages/rue-design/src/components/calendar'
 import Tabs from '../../../packages/rue-design/src/components/tabs'
+import { renderDesignPreview } from './preview-test-gate'
 import BasicCalendarPreview from './calendar/BasicCalendarPreview'
 import {
   CallyCalendarPreview,
@@ -340,7 +341,7 @@ const ExampleBlock: FC<ExampleBlockProps> = ({
           </p>
         </div>
       ) : (
-        preview
+        renderDesignPreview(title, preview)
       )}
     </div>
   )

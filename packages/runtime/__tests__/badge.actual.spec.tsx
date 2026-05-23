@@ -16,6 +16,12 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active = (globalThis as any).__rue
 }
@@ -33,12 +39,16 @@ const findDemo = (root: ParentNode, title: string) =>
   ) ?? null
 
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Badge actual page', () => {
   it('renders badge demos in preview mode and restores the basic demo after toggling code', async () => {
+    setEnabledPreviews('Badge', 'Badge sizes')
+
     const container = mountContainer()
     resetActiveRuntime()
     render(<BadgePage />, container)

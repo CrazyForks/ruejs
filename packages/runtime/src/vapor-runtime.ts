@@ -10,7 +10,12 @@ import {
   isContextProviderProps,
   withParentContextProps,
 } from './context'
-import { getDOMAdapter, getParentNode } from './dom'
+import {
+  getDOMAdapter,
+  getParentNode,
+  hasActiveTextControlWithin,
+  scheduleTrackedTextControlRestoreWithin,
+} from './dom'
 import type { DomElementLike, DomNodeLike } from './dom'
 import { mountNormalizedRenderableToTarget, type DirectRenderableOwner } from './renderable-bridge'
 import { registerOwnerCleanup, runOwnerCleanupBucket } from './renderable-lifecycle'
@@ -38,10 +43,12 @@ const RUE_FORCE_REMOUNT_ANCHOR_KEY = '__rue_force_remount_anchor'
 const RUE_COMPONENT_CHILDREN_KEY = '__rue_component_children'
 const RUE_MOUNT_ID_KEY = '__rue_mount_id'
 const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
+const RUE_PORTABLE_COMPONENT_ID_KEY = '__rue_component_type_id'
 const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
 const RUE_VAPOR_RUNTIME_KEY = '__rue_vapor'
 const RUE_VAPOR_PREFERRED_RUNTIME_KEY = '__rue_vapor_preferred'
 const RUE_REPEATABLE_MOUNT_FACTORY_KEY = '__rue_repeatable_mount_factory__'
+let componentTypeIdentitySeed = 0
 const DEFAULT_UNSUPPORTED_OBJECT_INPUT_ERROR =
   'Unsupported object inputs are no longer accepted on the default @rue-js/runtime entry.'
 
@@ -190,12 +197,23 @@ const createRepeatableComponentHandle = <P = {}>(
   type: ComponentInstance<P>,
   props: ComponentProps | null,
 ): RenderableOutput => {
+  const componentType = type as ComponentInstance<P> & Record<string, unknown>
+  if (!(RUE_PORTABLE_COMPONENT_ID_KEY in componentType)) {
+    try {
+      Object.defineProperty(componentType, RUE_PORTABLE_COMPONENT_ID_KEY, {
+        value: ++componentTypeIdentitySeed,
+        enumerable: false,
+        configurable: false,
+        writable: false,
+      })
+    } catch {}
+  }
   const nextProps = replayMountAwareValue(props) as ComponentProps | null
   const vnode = {
-    [RUE_PORTABLE_COMPONENT_TYPE_KEY]: type,
+    [RUE_PORTABLE_COMPONENT_TYPE_KEY]: componentType,
     props: nextProps,
   } as RenderableOutput
-  const nextVnode = markAnchorRemountableMountHandle(type, nextProps, [], vnode)
+  const nextVnode = markAnchorRemountableMountHandle(componentType, nextProps, [], vnode)
   return attachRepeatableMountFactory(nextVnode, () => createRepeatableComponentHandle(type, props))
 }
 
@@ -463,17 +481,23 @@ export const renderAnchor = (
       ? (normalizedValue as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
       : undefined
   const componentName = typeof componentType === 'function' ? componentType.name : ''
-  const shouldPreserveCompatChildrenInstance = componentName === 'KeepAlive'
+  const shouldPreserveCompatChildrenInstance =
+    componentName === 'KeepAlive' ||
+    (!shouldForceRemount && hasActiveTextControlWithin(targetParent))
   const shouldRemountCompatChildren =
     prevOwner === compatMountHandleOwner &&
     (shouldForceRemount || (hasComponentChildren && !shouldPreserveCompatChildrenInstance))
   if (!shouldRemountCompatChildren) {
     if (!hasComponentChildren) {
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, normalizedValue as unknown)
-      return getRueRuntime().renderAnchor(compatValue, targetParent, anchor)
+      const result = getRueRuntime().renderAnchor(compatValue, targetParent, anchor)
+      scheduleTrackedTextControlRestoreWithin(targetParent)
+      return result
     }
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
-    return getRueRuntime().renderAnchor(compatValue, targetParent, anchor)
+    const result = getRueRuntime().renderAnchor(compatValue, targetParent, anchor)
+    scheduleTrackedTextControlRestoreWithin(targetParent)
+    return result
   }
 
   pendingCompatAnchorRenders.set(anchor as object, {
@@ -496,6 +520,7 @@ export const renderAnchor = (
     getRueRuntime().renderAnchor(null, mountedParent, anchor)
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
     getRueRuntime().renderAnchor(createFreshMountHandle(pending.value), mountedParent, anchor)
+    scheduleTrackedTextControlRestoreWithin(mountedParent)
   })
 }
 

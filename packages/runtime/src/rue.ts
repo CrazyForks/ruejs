@@ -19,7 +19,15 @@ import {
   withParentContextProps,
 } from './context'
 import { Component as DynamicComponent } from './components/Component'
-import { appendChild, createComment, getDOMAdapter, getParentNode, removeChild } from './dom'
+import {
+  appendChild,
+  createComment,
+  getDOMAdapter,
+  getParentNode,
+  hasActiveTextControlWithin,
+  removeChild,
+  scheduleTrackedTextControlRestoreWithin,
+} from './dom'
 import { mountNormalizedRenderableToTarget, type DirectRenderableOwner } from './renderable-bridge'
 import { registerOwnerCleanup, runOwnerCleanupBucket } from './renderable-lifecycle'
 import { normalizeRenderable } from './renderable-normalize'
@@ -65,11 +73,13 @@ const runtimeDOMBridgeByInstance = new WeakMap<object, unknown>()
 const runtimeErrorHandlers = new WeakMap<object, Set<(error: any, instance?: any) => void>>()
 const RUE_MOUNT_ID_KEY = '__rue_mount_id'
 const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
+const RUE_PORTABLE_COMPONENT_ID_KEY = '__rue_component_type_id'
 const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
 const RUE_VAPOR_PREFERRED_RUNTIME_KEY = '__rue_vapor_preferred'
 const RUE_JS_ERROR_BRIDGE_KEY = '__rue_js_error_bridge_installed'
 const RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY = '__rue_force_container_anchor_render__'
 const RUE_REPEATABLE_MOUNT_FACTORY_KEY = '__rue_repeatable_mount_factory__'
+let componentTypeIdentitySeed = 0
 
 const canTrackRuntime = (runtime: unknown): runtime is object =>
   (typeof runtime === 'object' || typeof runtime === 'function') && runtime != null
@@ -482,12 +492,24 @@ const createRepeatableComponentHandle = <P = {}>(
   type: ComponentInstance<P>,
   props: ComponentProps | null,
 ): RenderableOutput => {
+  const componentType = type as ComponentInstance<P> & Record<string, unknown>
+  if (!(RUE_PORTABLE_COMPONENT_ID_KEY in componentType)) {
+    try {
+      Object.defineProperty(componentType, RUE_PORTABLE_COMPONENT_ID_KEY, {
+        value: ++componentTypeIdentitySeed,
+        enumerable: false,
+        configurable: false,
+        writable: false,
+      })
+    } catch {}
+  }
   const nextProps = replayMountAwareValue(props) as ComponentProps | null
   const vnode = {
-    [RUE_PORTABLE_COMPONENT_TYPE_KEY]: type,
+    [RUE_PORTABLE_COMPONENT_TYPE_KEY]: componentType,
     props: nextProps,
+    ...(nextProps?.key == null ? null : { key: nextProps.key }),
   } as RenderableOutput
-  const nextVnode = markAnchorRemountableMountHandle(type, nextProps, [], vnode)
+  const nextVnode = markAnchorRemountableMountHandle(componentType, nextProps, [], vnode)
   return attachRepeatableMountFactory(nextVnode, () => createRepeatableComponentHandle(type, props))
 }
 
@@ -869,17 +891,23 @@ export const renderAnchor = (
         ? (normalizedValue as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
         : undefined
     const componentName = typeof componentType === 'function' ? componentType.name : ''
-    const shouldPreserveCompatChildrenInstance = componentName === 'KeepAlive'
+    const shouldPreserveCompatChildrenInstance =
+      componentName === 'KeepAlive' ||
+      (!shouldForceRemount && hasActiveTextControlWithin(targetParent))
     const shouldRemountCompatChildren =
       prevOwner === compatMountHandleOwner &&
       (shouldForceRemount || (hasComponentChildren && !shouldPreserveCompatChildrenInstance))
     if (!shouldRemountCompatChildren) {
       if (!hasComponentChildren) {
         syncRenderableOwner(renderOwnerByAnchor, anchor as object, normalizedValue as unknown)
-        return getRue().renderAnchor(compatValue, targetParent, anchor)
+        const result = getRue().renderAnchor(compatValue, targetParent, anchor)
+        scheduleTrackedTextControlRestoreWithin(targetParent)
+        return result
       }
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
-      return getRue().renderAnchor(compatValue, targetParent, anchor)
+      const result = getRue().renderAnchor(compatValue, targetParent, anchor)
+      scheduleTrackedTextControlRestoreWithin(targetParent)
+      return result
     }
 
     pendingCompatAnchorRenders.set(anchor as object, {
@@ -902,6 +930,7 @@ export const renderAnchor = (
       getRue().renderAnchor(null, mountedParent, anchor)
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
       getRue().renderAnchor(createFreshMountHandle(pending.value), mountedParent, anchor)
+      scheduleTrackedTextControlRestoreWithin(mountedParent)
     })
   })
 }

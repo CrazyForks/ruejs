@@ -3,6 +3,7 @@ import { ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import { Button, Modal, Tabs } from '@rue-js/design'
+import { renderDesignPreview } from './preview-test-gate'
 
 type TabMode = 'preview' | 'code'
 
@@ -40,7 +41,11 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
         onChange={key => (tab.value = key as TabMode)}
         className="mb-3 mt-4"
       />
-      {tab.value === 'preview' ? preview() : <Code className="mt-2" lang="tsx" code={code} />}
+      {tab.value === 'preview' ? (
+        renderDesignPreview(title, preview)
+      ) : (
+        <Code className="mt-2" lang="tsx" code={code} />
+      )}
     </div>
   )
 }

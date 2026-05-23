@@ -35,13 +35,28 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Indicator actual page', () => {
   it('renders indicator demos and restores the card preview after toggling code', async () => {
+    setEnabledPreviews(
+      'A button as an indicator for a card',
+      'In center of an image',
+      'Props-driven shorthand',
+      'Placement shorthand and offset',
+    )
+
     const container = mountContainer()
     resetActiveRuntime()
     render(<IndicatorPage />, container)

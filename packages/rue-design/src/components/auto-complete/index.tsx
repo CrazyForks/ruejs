@@ -537,6 +537,10 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
     inputFocusRestoreRequestId.current = (inputFocusRestoreRequestId.current ?? 0) + 1
     return inputFocusRestoreRequestId.current
   }
+  const suppressNextFocusOpen = useRef(false)
+  const clearConfig = allowClear && typeof allowClear === 'object' ? allowClear : undefined
+  const clearable = !!allowClear
+  const dataTestId = rest['data-testid']
   const valueState = ref(resolveInputValue(isControlled ? value : defaultValue))
   const previewValue = ref<string | null>(null)
   const popupOpenState = ref(!!defaultOpen)
@@ -544,10 +548,6 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
   const composing = ref(false)
   const highlightedIndex = ref(-1)
   const instanceId = ref('')
-  const suppressNextFocusOpen = useRef(false)
-  const clearConfig = allowClear && typeof allowClear === 'object' ? allowClear : undefined
-  const clearable = !!allowClear
-  const dataTestId = rest['data-testid']
   const normalizedGroupsState = ref<NormalizedGroup[]>(normalizeGroups(options))
   const filteredGroupsState = ref<NormalizedGroup[]>([])
   const filteredOptionsState = ref<NormalizedOption[]>([])

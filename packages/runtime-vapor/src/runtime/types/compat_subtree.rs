@@ -1,8 +1,29 @@
 use crate::runtime::dom_adapter::DomAdapter;
+use js_sys::{Object, Reflect};
+use wasm_bindgen::JsValue;
 
 use super::MountInputType;
 use super::compat_state::MountedCompatPatchKind;
 use super::mounted::{MountedPatchSubtree, MountedPatchSubtreeType};
+
+const PORTABLE_COMPONENT_ID_KEY: &str = "__rue_component_type_id";
+
+fn same_component_type(old_render: &JsValue, new_render: &JsValue) -> bool {
+    if old_render.eq(new_render) {
+        return true;
+    }
+
+    let old_id = Reflect::get(old_render, &JsValue::from_str(PORTABLE_COMPONENT_ID_KEY))
+        .unwrap_or(JsValue::UNDEFINED);
+    let new_id = Reflect::get(new_render, &JsValue::from_str(PORTABLE_COMPONENT_ID_KEY))
+        .unwrap_or(JsValue::UNDEFINED);
+
+    if old_id.is_undefined() || old_id.is_null() || new_id.is_undefined() || new_id.is_null() {
+        return false;
+    }
+
+    Object::is(&old_id, &new_id)
+}
 
 pub(super) fn patch_subtree_matches_input_type<A: DomAdapter>(
     node: &MountedPatchSubtree<A>,
@@ -23,7 +44,7 @@ pub(super) fn patch_subtree_matches_input_type<A: DomAdapter>(
             MountedPatchSubtreeType::Component(old_render),
             _,
             MountInputType::Component(new_render),
-        ) => old_render.eq(new_render),
+        ) => same_component_type(old_render, new_render),
         _ => false,
     }
 }

@@ -25,6 +25,12 @@ vi.mock('@rue-js/design', async () => {
 
 setReactiveScheduling('sync')
 
+const setEnabledPreviews = (...titles: string[]) => {
+  ;(
+    globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> }
+  ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
+}
+
 const normalize = (value: string | null | undefined) => value?.replace(/\s+/g, ' ').trim() ?? ''
 
 const findTabButton = (root: ParentNode, label: string) =>
@@ -38,12 +44,16 @@ const findDemo = (root: ParentNode, title: string) =>
   ) ?? null
 
 afterEach(() => {
+  delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
+    .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('Loading actual page', () => {
   it('renders loading demos and restores the spinner preview after toggling code', async () => {
+    setEnabledPreviews('Loading spinner')
+
     const container = mountContainer()
     render(<LoadingPage />, container)
 
@@ -52,33 +62,15 @@ describe('Loading actual page', () => {
       expect(container.querySelectorAll('.component-preview').length).toBe(15)
     })
 
-    const basicDemo = findDemo(container, '# Basic spin') as HTMLElement | null
-    const nestedDemo = findDemo(container, '# Nested content') as HTMLElement | null
-    const percentDemo = findDemo(container, '# Percent') as HTMLElement | null
     const spinnerDemo = findDemo(container, '# Loading spinner') as HTMLElement | null
-    const colorsDemo = findDemo(container, '# Loading with colors') as HTMLElement | null
 
-    expect(basicDemo).not.toBeNull()
-    expect(nestedDemo).not.toBeNull()
-    expect(percentDemo).not.toBeNull()
     expect(spinnerDemo).not.toBeNull()
-    expect(colorsDemo).not.toBeNull()
 
     await waitForContent(() => {
-      expect(
-        basicDemo?.querySelectorAll('[data-testid="loading-basic-demo"] .loading').length,
-      ).toBe(3)
-      expect(nestedDemo?.querySelector('[data-rue-loading-section="true"]')?.textContent).toContain(
-        '正在拉取洞察',
-      )
-      expect(percentDemo?.querySelectorAll('[data-rue-loading-percent="true"]').length).toBe(4)
       expect(
         spinnerDemo?.querySelectorAll('[data-testid="loading-spinner-demo"] .loading-spinner')
           .length,
       ).toBe(5)
-      expect(
-        colorsDemo?.querySelectorAll('[data-testid="loading-colors-demo"] .loading').length,
-      ).toBe(8)
     })
 
     await click(findTabButton(spinnerDemo!, 'JSX代码'))

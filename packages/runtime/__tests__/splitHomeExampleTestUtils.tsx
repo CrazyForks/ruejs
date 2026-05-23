@@ -126,11 +126,12 @@ export const defineSplitHomeExampleActualSpec = (options: SplitHomeExampleSpecOp
       })
     })
 
-    if (options.interaction) {
+    const interaction = options.interaction
+
+    if (interaction) {
       it('handles the primary demo interaction', async () => {
         resetActiveRuntime()
         const { default: Page } = await options.importPage()
-        const interaction = options.interaction
         const container = mountContainer()
 
         render(h(Page as any, null), container)
@@ -138,7 +139,7 @@ export const defineSplitHomeExampleActualSpec = (options: SplitHomeExampleSpecOp
           expectVisibleTexts(container, options.expectedTexts)
         })
 
-        await interaction?.(container)
+        await interaction(container)
 
         await waitForContent(() => {
           expectVisibleTexts(container, options.interactionExpectedTexts ?? options.expectedTexts)

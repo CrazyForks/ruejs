@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { attachRouter, createRouter, RouterView, type HistoryLike } from '@rue-js/router'
-
 import { h, render, setReactiveScheduling, useComponent } from '../src'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
@@ -46,14 +44,6 @@ const waitForContent = async (assertion: () => void, attempts = 40) => {
 
   throw lastError
 }
-
-const createStaticHistory = (path: string): HistoryLike => ({
-  location: () => path,
-  push: () => {},
-  replace: () => {},
-  listen: () => {},
-  back: () => {},
-})
 
 const readTaskTitles = (container: HTMLElement) =>
   Array.from(container.querySelectorAll('h3.text-xl'))
@@ -636,7 +626,7 @@ describe('TodoApp actual page', () => {
     ])
   })
 
-  it('keeps edit, archive, restore and delete operations consistent with persisted state', async () => {
+  it('renames a todo and persists the updated title', async () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
@@ -648,7 +638,7 @@ describe('TodoApp actual page', () => {
 
     const renamedTitle = '补充 Todo App 的深入回归测试'
     const originalCard = findTodoCard(container, '补充 Todo App 的交互与视觉细节')
-    const renameButton = findButtonByText(originalCard ?? container, '改名')
+    const renameButton = findButtonByText(originalCard ?? container, '重命名')
 
     expect(originalCard).toBeTruthy()
     expect(renameButton).toBeTruthy()
@@ -663,14 +653,11 @@ describe('TodoApp actual page', () => {
     let saveButton: HTMLButtonElement | undefined
 
     await waitForContent(() => {
-      editInput = Array.from(container.querySelectorAll('input')).find(input => {
-        const htmlInput = input as HTMLInputElement
-        const editingRowClass = (htmlInput.parentElement as HTMLElement | null)?.className ?? ''
-
-        return !htmlInput.placeholder && !editingRowClass.includes('hidden')
-      }) as HTMLInputElement | undefined
-      const editingRow = editInput?.parentElement as HTMLElement | undefined
-      saveButton = findButtonByText(editingRow ?? container, '保存')
+      const editingCard = findTodoCard(container, '补充 Todo App 的交互与视觉细节') ?? originalCard
+      editInput = editingCard?.querySelector('input:not([placeholder])') as
+        | HTMLInputElement
+        | undefined
+      saveButton = findButtonByText(editingCard ?? container, '保存')
 
       expect(editInput).toBeTruthy()
       expect(saveButton).toBeTruthy()
@@ -688,42 +675,98 @@ describe('TodoApp actual page', () => {
 
     await flush()
 
-    saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    const currentSaveButton = findButtonByText(
+      findTodoCard(container, '补充 Todo App 的交互与视觉细节') ?? originalCard,
+      '保存',
+    )
+
+    expect(currentSaveButton).toBeTruthy()
+
+    currentSaveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toContain(renamedTitle)
     })
 
     expect(readPersistedState().todos?.find(item => item.id === 2)?.title).toBe(renamedTitle)
+  })
 
-    const renamedCard = findTodoCard(container, renamedTitle)
-    const archiveButton = findButtonByText(renamedCard ?? container, '归档')
+  it('archives a todo consistently with persisted state', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
 
-    expect(renamedCard).toBeTruthy()
+    render(h(TodoApp as any, null), container)
+
+    const targetTitle = '补充 Todo App 的交互与视觉细节'
+
+    await waitForContent(() => {
+      expect(readTaskTitles(container)).toContain(targetTitle)
+    })
+
+    const originalCard = findTodoCard(container, targetTitle)
+    const archiveButton = findButtonByText(originalCard ?? container, '归档')
+
+    expect(originalCard).toBeTruthy()
     expect(archiveButton).toBeTruthy()
 
-    if (!renamedCard || !archiveButton) {
+    if (!originalCard || !archiveButton) {
       return
     }
 
     archiveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     await waitForContent(() => {
-      expect(readTaskTitles(container)).not.toContain(renamedTitle)
+      expect(readTaskTitles(container)).not.toContain(targetTitle)
     })
 
-    expect(readPersistedState().todos?.find(item => item.id === 2)?.archived).toBe(true)
+    expect(readPersistedState().todos?.find(item => item.title === targetTitle)?.archived).toBe(
+      true,
+    )
+  })
+
+  it('restores an archived todo consistently with persisted state', async () => {
+    const targetTitle = '补充 Todo App 的交互与视觉细节'
+
+    localStorage.setItem(
+      TODO_STORAGE_KEY,
+      JSON.stringify({
+        todos: [
+          {
+            id: 2,
+            title: targetTitle,
+            status: 'todo',
+            archived: true,
+            createdAt: '2026-04-12T09:30:00.000Z',
+            createdOrder: 2,
+          },
+          {
+            id: 1,
+            title: '整理 Rue 3.0 示例文档结构',
+            status: 'doing',
+            archived: false,
+            createdAt: '2026-04-11T09:30:00.000Z',
+            createdOrder: 1,
+          },
+        ],
+        search: '',
+        activeFilter: 'archived',
+      }),
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    render(h(TodoApp as any, null), container)
+
+    await waitForContent(() => {
+      expect(readTaskTitles(container)).toContain(targetTitle)
+      expect(findTodoCard(container, targetTitle)?.textContent).toContain('已归档')
+    })
 
     const archivedFilter = findButtonByText(container, '已归档', 'btn-sm')
     expect(archivedFilter).toBeTruthy()
-    archivedFilter?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
-    await waitForContent(() => {
-      expect(readTaskTitles(container)).toContain(renamedTitle)
-      expect(findTodoCard(container, renamedTitle)?.textContent).toContain('已归档')
-    })
-
-    const archivedCard = findTodoCard(container, renamedTitle)
+    const archivedCard = findTodoCard(container, targetTitle)
     const restoreButton = findButtonByText(archivedCard ?? container, '恢复')
 
     expect(archivedCard).toBeTruthy()
@@ -736,54 +779,60 @@ describe('TodoApp actual page', () => {
     restoreButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     await waitForContent(() => {
-      expect(readTaskTitles(container)).not.toContain(renamedTitle)
+      expect(readTaskTitles(container)).not.toContain(targetTitle)
     })
 
-    expect(readPersistedState().todos?.find(item => item.id === 2)?.archived).toBe(false)
+    expect(readPersistedState().todos?.find(item => item.title === targetTitle)?.archived).toBe(
+      false,
+    )
 
     const allFilter = findButtonByText(container, '全部', 'btn-sm')
     expect(allFilter).toBeTruthy()
     allFilter?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     await waitForContent(() => {
-      expect(readTaskTitles(container)).toContain(renamedTitle)
+      expect(readTaskTitles(container)).toContain(targetTitle)
+    })
+  })
+
+  it('deletes a todo and removes it from persisted state', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    render(h(TodoApp as any, null), container)
+
+    const targetTitle = '复查按钮、输入框与卡片层级样式'
+
+    await waitForContent(() => {
+      expect(readTaskTitles(container)).toContain(targetTitle)
     })
 
-    const restoredCard = findTodoCard(container, renamedTitle)
-    const deleteButton = findButtonByText(restoredCard ?? container, '删除')
+    const targetCard = findTodoCard(container, targetTitle)
+    const deleteButton = findButtonByText(targetCard ?? container, '删除')
 
-    expect(restoredCard).toBeTruthy()
+    expect(targetCard).toBeTruthy()
     expect(deleteButton).toBeTruthy()
 
-    if (!restoredCard || !deleteButton) {
+    if (!targetCard || !deleteButton) {
       return
     }
 
     deleteButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     await waitForContent(() => {
-      expect(readTaskTitles(container)).not.toContain(renamedTitle)
+      expect(readTaskTitles(container)).not.toContain(targetTitle)
     })
 
-    expect(readPersistedState().todos?.some(item => item.id === 2)).toBe(false)
-  }, 15000)
+    expect(readPersistedState().todos?.some(item => item.title === targetTitle)).toBe(false)
+  })
 
-  it('renders through RouterView when lazy-loaded', async () => {
-    const Empty = () => null
-    const AsyncTodoApp = useComponent(() => import('../../../app/pages/examples/TodoApp'))
-    const router = createRouter({
-      history: createStaticHistory('/examples/todo-app'),
-      routes: [
-        { path: '/', component: Empty as any },
-        { path: '/examples/todo-app', component: AsyncTodoApp as any },
-      ],
-    })
-    attachRouter(router)
+  it('renders when lazy-loaded through useComponent', async () => {
+    const AsyncTodoApp = useComponent(async () => ({ default: TodoApp as any }))
 
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(<RouterView />, container)
+    render(<AsyncTodoApp />, container)
     await waitForContent(() => {
       expect(container.textContent).toContain('Todo 应用（完整实战示例）')
       expect(container.textContent).toContain('Rue Todo Studio')

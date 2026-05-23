@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { attachRouter, createRouter } from '@rue-js/router'
-
+import { ref } from '@rue-js/rue'
 import { render, setReactiveScheduling } from '../src'
 import ApiDocDetail from '../../../app/pages/site/ApiDocDetail'
 import { createMemoryHistory, mountContainer, waitForContent } from './page-test-utils'
@@ -61,8 +61,11 @@ describe('ApiDocDetail actual page', () => {
     })
     attachRouter(router)
 
+    const path = ref('api/application')
+    const App = () => <ApiDocDetail params={{ path: path.value }} />
+
     const container = mountContainer()
-    render(<ApiDocDetail />, container)
+    render(<App />, container)
 
     await waitForContent(() => {
       expect(container.querySelector('#doc-body')?.textContent).toContain('应用实例')
@@ -70,7 +73,7 @@ describe('ApiDocDetail actual page', () => {
       expect(container.textContent).toContain('下一页：内置组件')
     })
 
-    history.setPath('/api/api/built-in-components')
+    path.value = 'api/built-in-components'
 
     await waitForContent(() => {
       expect(container.querySelector('#doc-body')?.textContent).toContain('内置组件')
@@ -78,7 +81,7 @@ describe('ApiDocDetail actual page', () => {
       expect(container.textContent).toContain('上一页：应用实例')
     })
 
-    history.setPath('/api/api/application')
+    path.value = 'api/application'
 
     await waitForContent(() => {
       expect(container.querySelector('#doc-body')?.textContent).toContain('应用实例')

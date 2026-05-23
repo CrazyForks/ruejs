@@ -6,6 +6,7 @@ type HomeSplitExamplePageOptions = {
   source: string
   Demo: FC
   codeCardClassName?: string
+  withoutSidebar?: boolean
 }
 
 const createHomeSplitExamplePage = (options: HomeSplitExamplePageOptions): FC => {
@@ -17,6 +18,7 @@ const createHomeSplitExamplePage = (options: HomeSplitExamplePageOptions): FC =>
         title={options.title}
         source={options.source}
         codeCardClassName={options.codeCardClassName}
+        withoutSidebar={options.withoutSidebar}
       >
         <Demo />
       </ExamplePlayground>

@@ -399,7 +399,7 @@ where
 
     /// 将新的 MountInput props 与 children 同步写入只读 reactive 视图（props_ro）。
     pub(crate) fn sync_props_children_input(
-        &self,
+        &mut self,
         props_ro: &JsValue,
         new_props: &ComponentProps,
         new_children: &[super::super::types::MountInputChild<A>],

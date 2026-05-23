@@ -282,6 +282,201 @@ const resolveCreateElementParent = (parent?: DomElementLike | null) =>
   parent === undefined ? getActiveRuntimeContainer() : (parent ?? null)
 
 const RUE_PENDING_SELECT_VALUE = Symbol('rue.pendingSelectValue')
+const RUE_TEXT_CONTROL_COMPOSING_KEY = '__rue_is_composing__'
+const NON_TEXT_INPUT_TYPES = new Set([
+  'button',
+  'checkbox',
+  'color',
+  'file',
+  'hidden',
+  'image',
+  'radio',
+  'range',
+  'reset',
+  'submit',
+])
+let trackedTextControl: {
+  tagName?: unknown
+  type?: unknown
+  ownerDocument?: Document | null
+} | null = null
+let textControlTrackingInstalled = false
+let trackedTextControlRestoreRequestId = 0
+let trackedTextControlIdentity: {
+  dataTestId?: string
+  id?: string
+  name?: string
+  placeholder?: string
+  tagName: string
+  type?: string
+} | null = null
+
+const isTextControlElement = (
+  value: unknown,
+): value is { tagName?: unknown; type?: unknown; ownerDocument?: Document | null } => {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const tagName =
+    typeof (value as { tagName?: unknown }).tagName === 'string'
+      ? ((value as { tagName?: string }).tagName as string).toUpperCase()
+      : ''
+
+  if (tagName === 'TEXTAREA') {
+    return true
+  }
+
+  if (tagName !== 'INPUT') {
+    return false
+  }
+
+  const inputType =
+    typeof (value as { type?: unknown }).type === 'string'
+      ? ((value as { type?: string }).type as string).toLowerCase()
+      : 'text'
+
+  return !NON_TEXT_INPUT_TYPES.has(inputType)
+}
+
+const rememberTrackedTextControl = (event: Event) => {
+  if (isTextControlElement(event.target)) {
+    trackedTextControl = event.target
+    const target = event.target as {
+      getAttribute?: (name: string) => string | null
+      id?: string
+      name?: string
+      placeholder?: string
+      tagName?: string
+      type?: string
+    }
+    trackedTextControlIdentity = {
+      dataTestId: target.getAttribute?.('data-testid') ?? undefined,
+      id: typeof target.id === 'string' && target.id ? target.id : undefined,
+      name: typeof target.name === 'string' && target.name ? target.name : undefined,
+      placeholder:
+        typeof target.placeholder === 'string' && target.placeholder
+          ? target.placeholder
+          : undefined,
+      tagName: typeof target.tagName === 'string' ? target.tagName.toUpperCase() : 'INPUT',
+      type: typeof target.type === 'string' && target.type ? target.type.toLowerCase() : undefined,
+    }
+  }
+}
+
+const setTrackedTextControlComposing = (event: Event, composing: boolean) => {
+  if (!isTextControlElement(event.target)) {
+    return
+  }
+
+  trackedTextControl = event.target
+  ;(event.target as unknown as Record<string, unknown>)[RUE_TEXT_CONTROL_COMPOSING_KEY] = composing
+}
+
+const clearTrackedTextControl = (event: Event) => {
+  if (!trackedTextControl || event.target !== trackedTextControl) {
+    return
+  }
+
+  const ownerDocument = trackedTextControl.ownerDocument
+  if (ownerDocument?.activeElement !== trackedTextControl) {
+    trackedTextControl = null
+  }
+}
+
+const escapeSelectorValue = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+
+const resolveTrackedTextControlWithin = (parent: DomNodeLike | null | undefined) => {
+  if (!parent) {
+    return null
+  }
+
+  const contains = (parent as { contains?: (node: unknown) => boolean }).contains
+  if (
+    isTextControlElement(trackedTextControl) &&
+    typeof contains === 'function' &&
+    contains.call(parent, trackedTextControl)
+  ) {
+    return trackedTextControl
+  }
+
+  const querySelector = (parent as { querySelector?: (selector: string) => Element | null })
+    .querySelector
+  if (typeof querySelector !== 'function' || !trackedTextControlIdentity) {
+    return null
+  }
+
+  const { dataTestId, id, name, placeholder, tagName, type } = trackedTextControlIdentity
+  const selectors = [
+    dataTestId ? `[data-testid="${escapeSelectorValue(dataTestId)}"]` : null,
+    id ? `#${escapeSelectorValue(id)}` : null,
+    name ? `${tagName.toLowerCase()}[name="${escapeSelectorValue(name)}"]` : null,
+    placeholder
+      ? `${tagName.toLowerCase()}[placeholder="${escapeSelectorValue(placeholder)}"]`
+      : null,
+    type ? `${tagName.toLowerCase()}[type="${escapeSelectorValue(type)}"]` : tagName.toLowerCase(),
+  ]
+
+  for (const selector of selectors) {
+    if (!selector) {
+      continue
+    }
+
+    const matched = querySelector.call(parent, selector)
+    if (isTextControlElement(matched)) {
+      trackedTextControl = matched
+      return matched
+    }
+  }
+
+  return null
+}
+
+const isConnectedNodeLike = (value: unknown) => {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const isConnected = (value as { isConnected?: unknown }).isConnected
+  if (typeof isConnected === 'boolean') {
+    return isConnected
+  }
+
+  const ownerDocument = (value as { ownerDocument?: Document | null }).ownerDocument
+  const contains = ownerDocument?.contains
+  if (typeof contains === 'function') {
+    return contains.call(ownerDocument, value as Node)
+  }
+
+  return true
+}
+
+const ensureTextControlTracking = () => {
+  if (textControlTrackingInstalled) {
+    return
+  }
+
+  const ownerDocument = globalThis.document
+  if (!ownerDocument) {
+    return
+  }
+
+  textControlTrackingInstalled = true
+  ownerDocument.addEventListener('focusin', rememberTrackedTextControl, true)
+  ownerDocument.addEventListener('input', rememberTrackedTextControl, true)
+  ownerDocument.addEventListener(
+    'compositionstart',
+    event => setTrackedTextControlComposing(event, true),
+    true,
+  )
+  ownerDocument.addEventListener('compositionupdate', rememberTrackedTextControl, true)
+  ownerDocument.addEventListener(
+    'compositionend',
+    event => setTrackedTextControlComposing(event, false),
+    true,
+  )
+  ownerDocument.addEventListener('focusout', clearTrackedTextControl, true)
+}
 
 const getSelectOwner = (node: any): HTMLSelectElement | null => {
   const parent = node?.parentElement ?? null
@@ -322,6 +517,121 @@ const syncPendingSelectValue = (select: any) => {
   }
 
   select.value = pendingValue
+}
+
+export const hasActiveTextControlWithin = (parent: DomNodeLike | null | undefined) => {
+  ensureTextControlTracking()
+
+  if (!parent) {
+    return false
+  }
+
+  const contains = (parent as { contains?: (node: unknown) => boolean }).contains
+  if (typeof contains !== 'function') {
+    return false
+  }
+
+  const active = globalThis.document?.activeElement
+  if (isTextControlElement(active) && contains.call(parent, active)) {
+    return true
+  }
+
+  const tracked = resolveTrackedTextControlWithin(parent)
+  if (!isTextControlElement(tracked)) {
+    return false
+  }
+
+  const ownerDocument = tracked.ownerDocument
+  const currentActive = ownerDocument?.activeElement
+  if (currentActive && currentActive !== tracked && currentActive !== ownerDocument?.body) {
+    return false
+  }
+
+  return contains.call(parent, tracked)
+}
+
+export const restoreTrackedTextControlWithin = (parent: DomNodeLike | null | undefined) => {
+  ensureTextControlTracking()
+
+  const tracked = resolveTrackedTextControlWithin(parent)
+  if (!parent || !isTextControlElement(tracked)) {
+    return false
+  }
+
+  if (!isConnectedNodeLike(parent) || !isConnectedNodeLike(tracked)) {
+    trackedTextControl = null
+    return false
+  }
+
+  const contains = (parent as { contains?: (node: unknown) => boolean }).contains
+  if (typeof contains !== 'function' || !contains.call(parent, tracked)) {
+    return false
+  }
+
+  const ownerDocument = tracked.ownerDocument
+  const activeElement = ownerDocument?.activeElement
+  if (activeElement && activeElement !== tracked && activeElement !== ownerDocument?.body) {
+    return false
+  }
+
+  if (activeElement === tracked) {
+    return true
+  }
+
+  const focus = (tracked as { focus?: () => void }).focus
+  if (typeof focus === 'function') {
+    focus.call(tracked)
+  }
+
+  return ownerDocument?.activeElement === tracked
+}
+
+export const scheduleTrackedTextControlRestoreWithin = (
+  parent: DomNodeLike | null | undefined,
+  attempts = 6,
+) => {
+  if (!parent || attempts <= 0 || !isConnectedNodeLike(parent)) {
+    return
+  }
+
+  const requestId = ++trackedTextControlRestoreRequestId
+  const enqueueMicrotask =
+    typeof queueMicrotask === 'function'
+      ? queueMicrotask
+      : (task: () => void) => Promise.resolve().then(task)
+
+  const attemptRestore = (remainingAttempts: number) => {
+    if (requestId !== trackedTextControlRestoreRequestId || remainingAttempts <= 0) {
+      return
+    }
+
+    if (!isConnectedNodeLike(parent)) {
+      trackedTextControl = null
+      return
+    }
+
+    restoreTrackedTextControlWithin(parent)
+
+    if (!isTextControlElement(trackedTextControl)) {
+      return
+    }
+
+    const ownerDocument = trackedTextControl.ownerDocument
+    const activeElement = ownerDocument?.activeElement
+    if (
+      activeElement &&
+      activeElement !== trackedTextControl &&
+      activeElement !== ownerDocument?.body
+    ) {
+      return
+    }
+
+    if (remainingAttempts > 1) {
+      globalThis.setTimeout(() => attemptRestore(remainingAttempts - 1), 16)
+    }
+  }
+
+  enqueueMicrotask(() => attemptRestore(attempts))
 }
 
 const syncSelectValueAfterMutation = (parent: any, child?: any) => {
@@ -522,7 +832,10 @@ export class BrowserDOMAdapter implements DOMAdapter {
       return
     }
     if (anyEl.value !== undefined) {
-      anyEl.value = value
+      const nextValue = value == null ? '' : value
+      if (String(anyEl.value ?? '') !== String(nextValue)) {
+        anyEl.value = nextValue
+      }
     } else {
       anyEl.setAttribute('value', String(value))
     }

@@ -26,6 +26,8 @@ const nodeBuiltinNames = new Set([
 const workspaceAliasEntries = [
   ...entries,
   { find: '@rue-js/router', replacement: path.resolve(rootDir, 'packages/router/src') },
+  { find: '@rue-js/store', replacement: path.resolve(rootDir, 'packages/store/src') },
+  { find: '@rue-js/i18n', replacement: path.resolve(rootDir, 'packages/i18n/src') },
   { find: '@rue-js/jsx-runtime', replacement: path.resolve(rootDir, 'packages/jsx-runtime/src') },
   {
     find: '@rue-js/jsx-dev-runtime',

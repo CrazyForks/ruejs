@@ -24,6 +24,8 @@
       "@shikijs/themes/*": ["./app/types/shikijs-theme.d.ts"],
       "@rue-js/rue": ["./packages/rue/src"],
       "@rue-js/router": ["./packages/router/src"],
+      "@rue-js/store": ["./packages/store/src"],
+      "@rue-js/i18n": ["./packages/i18n/src"],
       "@rue-js/jsx-runtime": ["./packages/jsx-runtime/src"],
       "@rue-js/jsx-dev-runtime": ["./packages/jsx-dev-runtime/src"],
       "@rue-js/runtime": ["./packages/runtime/src"],

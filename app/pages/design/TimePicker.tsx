@@ -351,7 +351,17 @@ const manualCode = `const manual = ref('21:15:00')
   }}
 />`
 
-export const BasicControlledPreview: FC = () => {
+interface BasicControlledPreviewProps {
+  hourStep?: number
+  minuteStep?: number
+  secondStep?: number
+}
+
+export const BasicControlledPreview: FC<BasicControlledPreviewProps> = ({
+  hourStep,
+  minuteStep,
+  secondStep,
+}) => {
   const basicValue = ref('09:30:15')
   const basicLiveValue = ref('09:30:15')
   const basicInputStatus = ref<'error' | undefined>(undefined)
@@ -363,6 +373,9 @@ export const BasicControlledPreview: FC = () => {
         <TimePicker
           value={basicValue.value}
           allowClear
+          hourStep={hourStep}
+          minuteStep={minuteStep}
+          secondStep={secondStep}
           status={basicInputStatus.value}
           onInput={event => {
             const nextText = ((event.target as HTMLInputElement | null)?.value ?? '').trim()

@@ -267,6 +267,14 @@ type PartnerLink = {
   description: string
 }
 
+type DemoSpotlight = {
+  title: string
+  desc: string
+  to: string
+  eyebrow: string
+  accentClassName: string
+}
+
 const platinumSponsors = [
   {
     name: '虚位以待',
@@ -305,6 +313,33 @@ const friendlyLinks = [
     description: '云部署与前端基础设施',
   },
 ] as const satisfies readonly PartnerLink[]
+
+const demoSpotlights: readonly DemoSpotlight[] = [
+  {
+    title: 'i18n 国际化插件',
+    desc: '直接展示源文本即 key、局部插值和按需懒加载语言包的完整链路。',
+    to: '/examples/i18n-switcher',
+    eyebrow: 'I18n Demo',
+    accentClassName:
+      'border-emerald-200 bg-linear-to-br from-emerald-500/12 via-base-100 to-teal-500/10 hover:border-emerald-400/60',
+  },
+  {
+    title: '路由插件',
+    desc: '集中看嵌套路由、守卫、redirect 和实验页在真实页面里的组合方式。',
+    to: '/examples/router-demo/guide/router/overview',
+    eyebrow: 'Router Demo',
+    accentClassName:
+      'border-sky-200 bg-linear-to-br from-sky-500/12 via-base-100 to-cyan-500/10 hover:border-sky-400/60',
+  },
+  {
+    title: '数据状态与 URL 同步插件',
+    desc: '把 Store、筛选条件和查询串连起来，观察状态如何驱动可分享链接。',
+    to: '/examples/store-query-sync',
+    eyebrow: 'State Demo',
+    accentClassName:
+      'border-amber-200 bg-linear-to-br from-amber-500/12 via-base-100 to-orange-500/10 hover:border-amber-400/60',
+  },
+] as const
 
 const PartnerSection: FC<{
   eyebrow: string
@@ -369,18 +404,24 @@ const SiteHome: FC = () => {
         <div className="relative max-w-[1100px] mx-auto text-center">
           <div className="hover-3d">
             <figure>
+              <div class="mx-auto w-full px-6 pb-4 text-center">
+                <div class="flex select-none items-end justify-center gap-6 whitespace-nowrap text-[clamp(6rem,21vw,16rem)] font-black leading-none bg-gradient-to-r from-violet-600 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent md:gap-10">
+                  <span>Rue</span>
+                  <span class="pl-1">.JS</span>
+                </div>
+              </div>
               <div className="inline-flex items-center justify-center gap-3">
-                <span className="inline-flex items-center justify-center w-22 h-22 rounded-full bg-linear-to-br from-violet-500 via-fuchsia-500 to-pink-500 shadow-lg ring-1 ring-white/30">
-                  <span className="text-white font-extrabold text-[64px] md:text-[92px] leading-none">
+                <span className="inline-flex items-center justify-center w-28 h-28 md:w-30 md:h-30 rounded-full bg-linear-to-br from-sky-500 via-cyan-400 to-emerald-300 shadow-md ring-1 ring-white/15">
+                  <span className="text-black font-extrabold text-[28px] md:text-[112px] leading-none drop-shadow-none">
                     T
                   </span>
                 </span>
-                <span className="text-6xl md:text-8xl font-extrabold tracking-tight bg-linear-to-r from-violet-600 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
+                <span className="text-[44px] md:text-[95px] font-extrabold tracking-tight bg-linear-to-r from-sky-500 via-cyan-400 to-emerald-300 bg-clip-text text-transparent">
                   he Wasm
                 </span>
               </div>
-              <div className="mt-2 text-4xl md:text-5xl font-extrabold tracking-tight bg-linear-to-r from-violet-500 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
-                Framework For Vapor Native DOM
+              <div className="mt-2 text-[44px] md:text-[62px] font-extrabold tracking-tight bg-linear-to-r from-sky-400 via-cyan-300 to-teal-200 bg-clip-text text-transparent">
+                Framework For Native DOM
               </div>
               <p className="mt-6 text-lg md:text-xl text-base-content/70">
                 Rust 运行时，Rust 响应式系统，Rust 原生 DOM 编译器
@@ -413,7 +454,7 @@ const SiteHome: FC = () => {
               Github
             </a>
           </div>
-          <div className="mx-auto mt-6 max-w-[900px] rounded-2xl border border-white/60 bg-slate-950/90 p-4 text-left shadow-xl shadow-fuchsia-200/40">
+          <div className="mx-auto mt-18 max-w-[900px] rounded-2xl border border-white/60 bg-slate-950/90 p-4 text-left shadow-xl shadow-fuchsia-200/40">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-full bg-rose-400" />
@@ -498,6 +539,25 @@ const SiteHome: FC = () => {
               组件库
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section className="max-w-[1100px] mx-auto mt-8">
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          {demoSpotlights.map(item => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`group rounded-[1.5rem] border p-5 text-left text-base-content transition hover:-translate-y-0.5 hover:shadow-xl ${item.accentClassName}`}
+            >
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-base-content/55">
+                {item.eyebrow}
+              </div>
+              <div className="mt-3 text-xl font-semibold text-base-content">{item.title}</div>
+              <p className="mt-2 text-sm leading-6 text-base-content/72">{item.desc}</p>
+              <div className="mt-4 text-sm font-medium text-base-content/88">打开 Demo</div>
+            </Link>
+          ))}
         </div>
       </section>
 

@@ -43,6 +43,9 @@ Default preference when generating code:
    - Do not force every example into `useState` + `useEffect`
    - Prefer Rue reactivity APIs for derived state and subscriptions
 
+- Do not cross-wrap state containers: avoid putting `createStore()` / `defineStore()` stores, `ref`, `reactive`, or `computed` handles inside `useState`, and avoid re-wrapping `useState` state inside store state, `ref`, `reactive`, or `computed` just to pass it around
+- Pick one owner for each piece of state: use `useState` for plain local values or a single local object shape, and use store / `ref` / `reactive` / `computed` directly when the surrounding code already depends on Rue reactivity primitives
+
 - Rue also supports React-style hooks such as `#sym:useEffect`, `useMemo`, `useCallback`, and `useRef`; use them when the user asks for React-like Rue code or when matching existing local style
 
 3. **Generate Rue imports**
@@ -297,6 +300,13 @@ const ProfileCard: FC = () => {
 export default ProfileCard
 ```
 
+Avoid cross-wrapping reactive containers:
+
+- Do not write `const [state] = useState(() => ({ store, count, summary }))` when `store` comes from `defineStore()`, `count` is a `ref`, or `summary` is a `computed`
+- Do not place `useState` return values into store state, `reactive(...)`, or `computed(...)` only to expose them through another container
+- If a component already has a Rue store or reactive primitives, keep them at setup scope and read them directly in JSX
+- If a component truly wants `useState`, keep that state plain and local instead of mixing ownership with store / `ref` / `reactive` / `computed`
+
 ### Effects and Lifecycle
 
 Prefer this for subscriptions or reactive reactions:
@@ -385,6 +395,7 @@ useApp(App).mount('#app')
 - Generating React-only imports from `react` inside Rue examples
 - Using `createRoot` or `ReactDOM.render` in Rue app entry files
 - Replacing simple `computed` values with manual effect bookkeeping
+- Wrapping Rue store instances, `computed` handles, `ref`s, or `reactive` objects inside `useState`, or wrapping `useState` state back into those containers
 - Assuming Rue lacks `#sym:useEffect` / `useMemo` / `useCallback` / `useRef` and rewriting existing React-like Rue code unnecessarily
 - Avoiding valid Rue JSX directives like `v-if`, `v-for`, `v-pre`, or `r-pre` when the user explicitly asks for directive examples
 - Writing examples without `key` when rendering lists
