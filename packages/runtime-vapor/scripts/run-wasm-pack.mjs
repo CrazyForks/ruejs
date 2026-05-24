@@ -8,6 +8,55 @@ if (args.length === 0) {
   process.exit(1)
 }
 
+// 某些 wasm-pack 版本不接受重复的 --features，这里预先合并为单个 cargo 特性列表。
+function normalizeWasmPackArgs(rawArgs) {
+  let firstFeatureIndex = -1
+  const features = []
+  const normalized = []
+
+  for (let index = 0; index < rawArgs.length; index += 1) {
+    const current = rawArgs[index]
+
+    if (current === '--features') {
+      const next = rawArgs[index + 1]
+      if (!next) {
+        normalized.push(current)
+        continue
+      }
+
+      if (firstFeatureIndex === -1) {
+        firstFeatureIndex = normalized.length
+      }
+      features.push(next)
+      index += 1
+      continue
+    }
+
+    if (current.startsWith('--features=')) {
+      if (firstFeatureIndex === -1) {
+        firstFeatureIndex = normalized.length
+      }
+      features.push(current.slice('--features='.length))
+      continue
+    }
+
+    normalized.push(current)
+  }
+
+  if (features.length <= 1) {
+    return rawArgs
+  }
+
+  const mergedFeatures = features
+    .flatMap(value => value.split(','))
+    .map(value => value.trim())
+    .filter(Boolean)
+    .join(',')
+
+  normalized.splice(firstFeatureIndex, 0, '--features', mergedFeatures)
+  return normalized
+}
+
 function run(command, commandArgs, options = {}) {
   return spawnSync(command, commandArgs, {
     shell: isWin,
@@ -39,7 +88,7 @@ function ensureWasmPack() {
 
 ensureWasmPack()
 
-const execResult = run('wasm-pack', args, { stdio: 'inherit' })
+const execResult = run('wasm-pack', normalizeWasmPackArgs(args), { stdio: 'inherit' })
 if (execResult.error) {
   console.error('[runtime-vapor] Failed to execute wasm-pack.')
   process.exit(1)
