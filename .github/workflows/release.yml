@@ -45,9 +45,6 @@ jobs:
       - name: Install deps
         run: pnpm install
 
-      - name: Update npm
-        run: npm i -g npm@latest
-
       - name: Build and publish
         id: publish
         env:
