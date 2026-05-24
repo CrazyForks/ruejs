@@ -586,6 +586,10 @@ async function publishPackage(pkgName, version, additionalFlags) {
     return
   }
 
+  const pkgRoot = getPkgRoot(pkgName)
+  /** @type {Package} */
+  const pkg = JSON.parse(fs.readFileSync(path.resolve(pkgRoot, 'package.json'), 'utf-8'))
+
   let releaseTag = null
   if (args.tag) {
     releaseTag = args.tag
@@ -597,32 +601,46 @@ async function publishPackage(pkgName, version, additionalFlags) {
     releaseTag = 'rc'
   }
 
-  step(`Publishing ${pkgName}...`)
+  step(`Publishing ${pkg.name}...`)
+  const packDir = fs.mkdtempSync(path.resolve(pkgRoot, '.release-pack-'))
   try {
-    // Don't change the package manager here as we rely on pnpm to handle
-    // workspace:* deps
+    // Use pnpm pack to rewrite workspace:* deps, then publish the tarball with npm.
+    await run('pnpm', ['pack', '--pack-destination', packDir], {
+      cwd: pkgRoot,
+      stdio: 'pipe',
+    })
+
+    const tarballName = fs.readdirSync(packDir).find(fileName => fileName.endsWith('.tgz'))
+    if (!tarballName) {
+      throw new Error(`Failed to locate packed tarball for ${pkg.name}`)
+    }
+
+    const tarballPath = path.resolve(packDir, tarballName)
     await run(
-      'pnpm',
+      'npm',
       [
         'publish',
+        tarballPath,
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
         ...(args.registry ? ['--registry', args.registry] : []),
-        ...additionalFlags,
+        ...additionalFlags.filter(flag => flag !== '--no-git-checks'),
       ],
       {
-        cwd: getPkgRoot(pkgName),
+        cwd: pkgRoot,
         stdio: 'pipe',
       },
     )
-    console.log(pico.green(`Successfully published ${pkgName}@${version}`))
+    console.log(pico.green(`Successfully published ${pkg.name}@${version}`))
   } catch (/** @type {any} */ e) {
     if (e.message?.match(/previously published/)) {
-      console.log(pico.red(`Skipping already published: ${pkgName}`))
+      console.log(pico.red(`Skipping already published: ${pkg.name}`))
     } else {
       throw e
     }
+  } finally {
+    fs.rmSync(packDir, { recursive: true, force: true })
   }
 }
 
