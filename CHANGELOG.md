@@ -1,3 +1,10 @@
+## [0.3.1](https://github.com/hunzhiwange/ruejs/compare/v0.3.0...v0.3.1) (2026-05-24)
+
+
+### Bug Fixes
+
+* fix wasm 兼容性 ([0eb635e](https://github.com/hunzhiwange/ruejs/commit/0eb635e2421c1d8155fec8bf30cc3e76374b2a2c))
+
 # [0.3.0](https://github.com/hunzhiwange/ruejs/compare/v0.2.1...v0.3.0) (2026-05-23)
 
 
