@@ -68,6 +68,10 @@ const { values: args, positionals } = parseArgs({
     publishOnly: {
       type: 'boolean',
     },
+    provenance: {
+      type: 'boolean',
+      default: false,
+    },
     registry: {
       type: 'string',
     },
@@ -561,9 +565,9 @@ async function publishPackages(version) {
   if (isDryRun || skipGit || process.env.CI) {
     additionalPublishFlags.push('--no-git-checks')
   }
-  // add provenance metadata when releasing from CI
-  // skip provenance if not publishing to actual npm
-  if (process.env.CI && !args.registry) {
+  // Native pnpm publish provenance is opt-in because CI/OIDC support varies
+  // across environments and should not block a normal npm release.
+  if (args.provenance && process.env.CI && !args.registry) {
     additionalPublishFlags.push('--provenance')
   }
 

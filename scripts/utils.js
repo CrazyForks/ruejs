@@ -110,12 +110,17 @@ export async function exec(command, args, options) {
       const ok = code === 0
       const stderr = Buffer.concat(stderrChunks).toString().trim()
       const stdout = Buffer.concat(stdoutChunks).toString().trim()
+      const output = [stderr, stdout].filter(Boolean).join('\n')
 
       if (ok) {
         const result = { ok, code, stderr, stdout }
         resolve(result)
       } else {
-        reject(new Error(`Failed to execute command: ${command} ${args.join(' ')}: ${stderr}`))
+        reject(
+          new Error(
+            `Failed to execute command: ${command} ${args.join(' ')}${output ? `\n${output}` : ''}`,
+          ),
+        )
       }
     })
   })
