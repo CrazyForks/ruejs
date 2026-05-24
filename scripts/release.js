@@ -68,10 +68,6 @@ const { values: args, positionals } = parseArgs({
     publishOnly: {
       type: 'boolean',
     },
-    provenance: {
-      type: 'boolean',
-      default: false,
-    },
     registry: {
       type: 'string',
     },
@@ -430,7 +426,6 @@ async function runTestsIfNeeded() {
 async function runReleaseVerificationPackageTests() {
   for (const pkg of releaseVerificationPackages) {
     step(`\nRunning release verification for ${pkg.name}...`)
-    await run('npm', ['run', 'fmt'], { cwd: pkg.cwd })
     await run('npm', ['run', 'test'], { cwd: pkg.cwd })
   }
 }
@@ -565,9 +560,9 @@ async function publishPackages(version) {
   if (isDryRun || skipGit || process.env.CI) {
     additionalPublishFlags.push('--no-git-checks')
   }
-  // Native pnpm publish provenance is opt-in because CI/OIDC support varies
-  // across environments and should not block a normal npm release.
-  if (args.provenance && process.env.CI && !args.registry) {
+  // add provenance metadata when releasing from CI
+  // skip provenance if not publishing to actual npm
+  if (process.env.CI && !args.registry) {
     additionalPublishFlags.push('--provenance')
   }
 
@@ -586,10 +581,6 @@ async function publishPackage(pkgName, version, additionalFlags) {
     return
   }
 
-  const pkgRoot = getPkgRoot(pkgName)
-  /** @type {Package} */
-  const pkg = JSON.parse(fs.readFileSync(path.resolve(pkgRoot, 'package.json'), 'utf-8'))
-
   let releaseTag = null
   if (args.tag) {
     releaseTag = args.tag
@@ -601,27 +592,14 @@ async function publishPackage(pkgName, version, additionalFlags) {
     releaseTag = 'rc'
   }
 
-  step(`Publishing ${pkg.name}...`)
-  const packDir = fs.mkdtempSync(path.resolve(pkgRoot, '.release-pack-'))
+  step(`Publishing ${pkgName}...`)
   try {
-    // Use pnpm pack to rewrite workspace:* deps, then publish the tarball via pnpm
-    // so CI keeps using the same auth path as the normal pnpm-based release flow.
-    await run('pnpm', ['pack', '--pack-destination', packDir], {
-      cwd: pkgRoot,
-      stdio: 'pipe',
-    })
-
-    const tarballName = fs.readdirSync(packDir).find(fileName => fileName.endsWith('.tgz'))
-    if (!tarballName) {
-      throw new Error(`Failed to locate packed tarball for ${pkg.name}`)
-    }
-
-    const tarballPath = path.resolve(packDir, tarballName)
+    // Don't change the package manager here as we rely on pnpm to handle
+    // workspace:* deps
     await run(
       'pnpm',
       [
         'publish',
-        tarballPath,
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
@@ -629,19 +607,17 @@ async function publishPackage(pkgName, version, additionalFlags) {
         ...additionalFlags,
       ],
       {
-        cwd: pkgRoot,
+        cwd: getPkgRoot(pkgName),
         stdio: 'pipe',
       },
     )
-    console.log(pico.green(`Successfully published ${pkg.name}@${version}`))
+    console.log(pico.green(`Successfully published ${pkgName}@${version}`))
   } catch (/** @type {any} */ e) {
     if (e.message?.match(/previously published/)) {
-      console.log(pico.red(`Skipping already published: ${pkg.name}`))
+      console.log(pico.red(`Skipping already published: ${pkgName}`))
     } else {
       throw e
     }
-  } finally {
-    fs.rmSync(packDir, { recursive: true, force: true })
   }
 }
 
