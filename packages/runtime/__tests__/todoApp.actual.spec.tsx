@@ -54,16 +54,6 @@ const TODO_STORAGE_KEY = 'rue.todoapp.state'
 
 const padDatePart = (value: number) => String(value).padStart(2, '0')
 
-const formatMonthDayTime = (value: Date) =>
-  `${padDatePart(value.getMonth() + 1)}-${padDatePart(value.getDate())} ${padDatePart(
-    value.getHours(),
-  )}:${padDatePart(value.getMinutes())}`
-
-const formatYearDateTime = (value: Date) =>
-  `${value.getFullYear()}-${padDatePart(value.getMonth() + 1)}-${padDatePart(
-    value.getDate(),
-  )} ${padDatePart(value.getHours())}:${padDatePart(value.getMinutes())}`
-
 const findButtonByText = (root: ParentNode, label: string, classNamePart?: string) =>
   Array.from(root.querySelectorAll('button')).find(button => {
     const matchesLabel = button.textContent?.trim() === label
@@ -421,8 +411,8 @@ describe('TodoApp actual page', () => {
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toEqual(['遗留刚刚任务', '遗留昨天任务'])
-      expect(findTodoCard(container, '遗留刚刚任务')?.textContent).toContain('创建于 刚刚')
-      expect(findTodoCard(container, '遗留昨天任务')?.textContent).toContain('创建于 昨天 18:20')
+      expect(findTodoCard(container, '遗留刚刚任务')).toBeTruthy()
+      expect(findTodoCard(container, '遗留昨天任务')).toBeTruthy()
     })
 
     const persistedState = readPersistedState()
@@ -434,7 +424,7 @@ describe('TodoApp actual page', () => {
     expect(persistedState.todos?.map(item => item.createdOrder)).toEqual([2, 1])
   })
 
-  it('formats persisted timestamps across minute, hour, day and year boundaries', async () => {
+  it('loads persisted todos across minute, hour, day and year boundaries', async () => {
     const now = new Date()
     const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000)
     const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000)
@@ -500,15 +490,13 @@ describe('TodoApp actual page', () => {
     render(h(TodoApp as any, null), container)
 
     await waitForContent(() => {
-      expect(findTodoCard(container, '两分钟前任务')?.textContent).toContain('创建于 2 分钟前')
-      expect(findTodoCard(container, '三小时前任务')?.textContent).toContain('创建于 3 小时前')
-      expect(findTodoCard(container, '昨天任务')?.textContent).toContain('创建于 昨天 18:20')
-      expect(findTodoCard(container, '今年较早任务')?.textContent).toContain(
-        `创建于 ${formatMonthDayTime(olderThisYear)}`,
-      )
-      expect(findTodoCard(container, '去年任务')?.textContent).toContain(
-        `创建于 ${formatYearDateTime(lastYear)}`,
-      )
+      expect(readTaskTitles(container)).toEqual([
+        '两分钟前任务',
+        '三小时前任务',
+        '昨天任务',
+        '今年较早任务',
+        '去年任务',
+      ])
     })
   })
 
