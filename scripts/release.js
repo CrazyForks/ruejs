@@ -604,7 +604,8 @@ async function publishPackage(pkgName, version, additionalFlags) {
   step(`Publishing ${pkg.name}...`)
   const packDir = fs.mkdtempSync(path.resolve(pkgRoot, '.release-pack-'))
   try {
-    // Use pnpm pack to rewrite workspace:* deps, then publish the tarball with npm.
+    // Use pnpm pack to rewrite workspace:* deps, then publish the tarball via pnpm
+    // so CI keeps using the same auth path as the normal pnpm-based release flow.
     await run('pnpm', ['pack', '--pack-destination', packDir], {
       cwd: pkgRoot,
       stdio: 'pipe',
@@ -617,7 +618,7 @@ async function publishPackage(pkgName, version, additionalFlags) {
 
     const tarballPath = path.resolve(packDir, tarballName)
     await run(
-      'npm',
+      'pnpm',
       [
         'publish',
         tarballPath,
@@ -625,7 +626,7 @@ async function publishPackage(pkgName, version, additionalFlags) {
         '--access',
         'public',
         ...(args.registry ? ['--registry', args.registry] : []),
-        ...additionalFlags.filter(flag => flag !== '--no-git-checks'),
+        ...additionalFlags,
       ],
       {
         cwd: pkgRoot,
