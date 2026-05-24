@@ -1,11 +1,11 @@
 {
   "name": "@rue-js/router",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "@rue-js/router",
   "keywords": [
     "rue"
   ],
-  "homepage": "https://github.com/hunzhiwange/ruejs/tree/main/packages/runtime#readme",
+  "homepage": "https://github.com/hunzhiwange/ruejs/tree/main/packages/router#readme",
   "bugs": {
     "url": "https://github.com/hunzhiwange/ruejs/issues"
   },
