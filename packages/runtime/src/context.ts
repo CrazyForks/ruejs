@@ -92,17 +92,6 @@ const getParentContextPropDescriptor = (value: unknown) => {
   return Object.getOwnPropertyDescriptor(carrier, RUE_CONTEXT_PARENT_INSTANCE_PROP) ?? null
 }
 
-const defineParentContextProp = (target: Record<string, unknown>, parentInstance: unknown) => {
-  Object.defineProperty(target, RUE_CONTEXT_PARENT_INSTANCE_PROP, {
-    configurable: true,
-    enumerable: false,
-    value: parentInstance,
-    writable: true,
-  })
-
-  return target
-}
-
 const markContextProviderProps = <T extends Record<string, unknown>>(target: T): T => {
   Object.defineProperty(target, RUE_CONTEXT_PROVIDER_PROPS_MARKER, {
     configurable: true,

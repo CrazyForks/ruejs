@@ -117,7 +117,7 @@ async function run() {
  * @returns {Promise<void>}
  */
 async function ensureRuntimeVaporBuilt(targets) {
-  if (!targets.some(target => target === 'runtime' || target === 'rue')) {
+  if (!targets.some(target => target === 'runtime' || target === 'rue' || target === 'text')) {
     return
   }
 

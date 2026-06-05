@@ -1,0 +1,140 @@
+import { TEXTJS_ACTION_NOT_FOUND_HEADER as SERVER_ACTION_NOT_FOUND_HEADER } from './headers.js'
+import { UnrecognizedActionError } from '../shims/unrecognized-action-error.js'
+
+const SERVER_ACTION_NOT_FOUND_DOCS = 'https://textjs.org/docs/messages/failed-to-find-server-action'
+const SERVER_ACTION_NOT_FOUND_BODY = 'Server action not found.'
+
+function getServerActionNotFoundPrefix(actionId: string | null): string {
+  return `Failed to find Server Action${actionId ? ` "${actionId}"` : ''}.`
+}
+
+export function getServerActionNotFoundMessage(actionId: string | null): string {
+  return `${getServerActionNotFoundPrefix(
+    actionId,
+  )} This request might be from an older or newer deployment.\nRead more: ${SERVER_ACTION_NOT_FOUND_DOCS}`
+}
+
+function getServerActionNotFoundClientMessage(actionId: string): string {
+  return `Server Action "${actionId}" was not found on the server. \nRead more: ${SERVER_ACTION_NOT_FOUND_DOCS}`
+}
+
+function getUnknownMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return typeof error === 'string' ? error : ''
+}
+
+function getUnknownCode(error: unknown): string {
+  if (!error || typeof error !== 'object') return ''
+  const code = (error as { code?: unknown }).code
+  return typeof code === 'string' ? code : ''
+}
+
+function isModuleNotFoundForActionId(error: unknown, actionId: string | null): boolean {
+  if (!actionId) return false
+  const message = getUnknownMessage(error)
+  if (!message) return false
+  if (
+    getUnknownCode(error) !== 'ERR_MODULE_NOT_FOUND' &&
+    getUnknownCode(error) !== 'MODULE_NOT_FOUND'
+  ) {
+    return false
+  }
+  return (
+    message.includes(`Cannot find module '${actionId}'`) ||
+    message.includes(`Cannot find module "${actionId}"`)
+  )
+}
+
+export function isServerActionNotFoundError(error: unknown, actionId: string | null): boolean {
+  const message = getUnknownMessage(error)
+  if (!message) {
+    return false
+  }
+
+  if (isModuleNotFoundForActionId(error, actionId)) {
+    return true
+  }
+
+  if (actionId && message.startsWith(getServerActionNotFoundPrefix(actionId))) {
+    return true
+  }
+
+  if (!actionId && message.startsWith('Failed to find Server Action')) {
+    return true
+  }
+
+  // RSC runtimes raise "no such server reference" errors depending on the
+  // build mode. They all mean the referenced server action id isn't in the
+  // runtime manifest and must surface as Text.js' 404 + action-not-found header
+  // rather than a generic 500. The progressive (no-JS) path also hits this
+  // while decoding the body before it has any actionId in hand, so match these
+  // patterns whether or not the caller has resolved an action id from request
+  // headers.
+  //
+  //  - dev:  `[vite-rsc] invalid server reference '<id>'` (from the reference
+  //          validation virtual module loaded ahead of dynamic import)
+  //  - prod: `server reference not found '<id>'`         (from the built
+  //          `virtual:vite-rsc/server-references` lookup, including the case
+  //          where the build has no server actions at all)
+  //
+  // See: @vitejs/plugin-rsc dist/rsc.js (`server reference not found`) and
+  // dist/plugin-*.js (`[vite-rsc] invalid <type> reference`).
+  if (actionId) {
+    if (
+      message.includes(`[vite-rsc] invalid server reference '${actionId}'`) ||
+      message.includes(`[rue-rsc] invalid server reference '${actionId}'`)
+    ) {
+      return true
+    }
+    if (message.includes(`server reference not found '${actionId}'`)) {
+      return true
+    }
+    return false
+  }
+
+  return (
+    /\[vite-rsc] invalid server reference '/.test(message) ||
+    /\[rue-rsc] invalid server reference '/.test(message) ||
+    /server reference not found '/.test(message)
+  )
+}
+
+export function createServerActionNotFoundResponse(): Response {
+  return new Response(SERVER_ACTION_NOT_FOUND_BODY, {
+    status: 404,
+    headers: {
+      [SERVER_ACTION_NOT_FOUND_HEADER]: '1',
+      'content-type': 'text/plain',
+    },
+  })
+}
+
+function isServerActionNotFoundResponse(response: Pick<Response, 'headers'>): boolean {
+  return response.headers.get(SERVER_ACTION_NOT_FOUND_HEADER) === '1'
+}
+
+/**
+ * Throw an `UnrecognizedActionError` when the server reported the requested
+ * server action id as unknown (the `x-textjs-action-not-found` response
+ * header); otherwise return so the caller can keep processing the response.
+ *
+ * The client-side counterpart of `createServerActionNotFoundResponse`. The
+ * typed error lets client `catch` blocks call the public
+ * `unstable_isUnrecognizedActionError` predicate to detect client/server
+ * deployment skew and recover (typically by reloading the page).
+ *
+ * Mirrors Text.js, whose server-action reducer throws `UnrecognizedActionError`
+ * on this same response header:
+ * https://github.com/vercel/next.js/blob/canary/packages/text/src/client/components/router-reducer/reducers/server-action-reducer.ts
+ */
+export function throwOnServerActionNotFound(
+  response: Pick<Response, 'headers'>,
+  actionId: string,
+): void {
+  if (isServerActionNotFoundResponse(response)) {
+    throw new UnrecognizedActionError(getServerActionNotFoundClientMessage(actionId))
+  }
+}

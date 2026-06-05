@@ -119,7 +119,19 @@ const run = async (
   /** @type {string} */ bin,
   /** @type {ReadonlyArray<string>} */ args,
   /** @type {import('node:child_process').SpawnOptions} */ opts = {},
-) => exec(bin, args, { stdio: 'inherit', ...opts })
+) => {
+  const env =
+    bin === 'pnpm'
+      ? {
+          ...process.env,
+          ...opts.env,
+          PNPM_CONFIG_AUTO_INSTALL_PEERS: 'false',
+          npm_config_auto_install_peers: 'false',
+        }
+      : opts.env
+
+  return exec(bin, args, { stdio: 'inherit', ...opts, env })
+}
 const dryRun = async (
   /** @type {string} */ bin,
   /** @type {ReadonlyArray<string>} */ args,

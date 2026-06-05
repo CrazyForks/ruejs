@@ -14,7 +14,7 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 }))
 
 import TimePicker from '../../../packages/rue-design/src/components/time-picker/index'
-import { click, flush, mountContainer, waitForContent } from './page-test-utils'
+import { click, flush, mountContainer } from './page-test-utils'
 import { resetActiveRuntime } from './design-page-test-utils'
 
 setReactiveScheduling('sync')

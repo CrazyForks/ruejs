@@ -53,3 +53,4 @@ packages/runtime-vapor/pkg-vapor/
 /state/
 /.playwright-cli
 /.vite/
+.test-tmp

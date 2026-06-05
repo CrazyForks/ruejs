@@ -39,13 +39,6 @@ interface ExampleBlockProps {
   previewLoadNote?: string
 }
 
-interface PreviewStatusProps {
-  ready: boolean
-  readyLabel: string
-  loadingLabel: string
-  error?: string
-}
-
 interface CalendarEventItem {
   tone: EventTone
   label: string
@@ -135,8 +128,6 @@ const exportRows: ExportRow[] = [
   },
 ]
 
-const maintenanceDates = new Set(['2026-04-04', '2026-04-05', '2026-05-01'])
-
 const agendaByDate: Record<string, CalendarEventItem[]> = {
   '2026-04-08': [
     { tone: 'warning', label: 'Risk review' },
@@ -193,12 +184,6 @@ const formatIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
-const parseDate = (value: string) => {
-  const date = new Date(`${value}T00:00:00`)
-  date.setHours(12, 0, 0, 0)
-  return date
-}
-
 const formatDateLabel = (value?: string | Date) => {
   if (!value) {
     return '未选择'
@@ -211,16 +196,6 @@ const formatPanelLabel = (date: Date, mode: DemoCalendarMode) => {
     return `${new Intl.DateTimeFormat('zh-CN', { year: 'numeric' }).format(date)} / 年视图`
   }
   return `${new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long' }).format(date)} / 月视图`
-}
-
-const basicCalendarValidRange: [Date, Date] = [parseDate('2026-04-01'), parseDate('2026-05-31')]
-
-const CalendarCally = Calendar.Cally
-const CalendarMonth = Calendar.Month
-const CalendarPikaSingle = Calendar.PikaSingle
-
-const isBasicCalendarDateDisabled = (date: Date) => {
-  return date.getDay() === 0 || date.getDay() === 6 || maintenanceDates.has(formatIsoDate(date))
 }
 
 const MetaItem: FC<{ label: string; value: string }> = ({ label, value }) => {
@@ -288,17 +263,6 @@ const ExportTable: FC<{ rows: ExportRow[] }> = ({ rows }) => {
           ))}
         </tbody>
       </table>
-    </div>
-  )
-}
-
-const PreviewStatus: FC<PreviewStatusProps> = ({ ready, readyLabel, loadingLabel, error }) => {
-  return (
-    <div className="flex flex-wrap gap-2 text-xs">
-      <span className={`badge ${ready ? 'badge-success badge-soft' : 'badge-outline'}`}>
-        {ready ? readyLabel : loadingLabel}
-      </span>
-      {error ? <span className="badge badge-error badge-soft">{error}</span> : null}
     </div>
   )
 }

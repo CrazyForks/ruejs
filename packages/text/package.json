@@ -1,0 +1,203 @@
+{
+  "name": "@rue-js/text",
+  "version": "0.3.10",
+  "description": "Text.js app framework for Rue.",
+  "keywords": [
+    "rsc",
+    "rue",
+    "text",
+    "vite"
+  ],
+  "homepage": "https://github.com/hunzhiwange/ruejs/tree/main/packages/text#readme",
+  "bugs": {
+    "url": "https://github.com/hunzhiwange/ruejs/issues"
+  },
+  "license": "MIT",
+  "author": "Xiangmin Liu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hunzhiwange/ruejs.git",
+    "directory": "packages/text"
+  },
+  "bin": {
+    "ruetext": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./cache": {
+      "types": "./dist/cache.d.ts",
+      "development": "./src/cache.ts",
+      "import": "./dist/cache.js",
+      "default": "./dist/cache.js"
+    },
+    "./cloudflare": {
+      "types": "./dist/cloudflare/index.d.ts",
+      "development": "./src/cloudflare/index.ts",
+      "import": "./dist/cloudflare/index.js",
+      "default": "./dist/cloudflare/index.js"
+    },
+    "./link": {
+      "types": "./dist/link.d.ts",
+      "development": "./src/link.ts",
+      "import": "./dist/link.js",
+      "default": "./dist/link.js"
+    },
+    "./navigation": {
+      "types": "./dist/navigation.d.ts",
+      "development": "./src/navigation.ts",
+      "import": "./dist/navigation.js",
+      "default": "./dist/navigation.js"
+    },
+    "./font/google": {
+      "types": "./dist/shims/font-google.d.ts",
+      "development": "./src/shims/font-google.ts",
+      "import": "./dist/shims/font-google.js",
+      "default": "./dist/shims/font-google.js"
+    },
+    "./font/local": {
+      "types": "./dist/shims/font-local.d.ts",
+      "development": "./src/shims/font-local.ts",
+      "import": "./dist/shims/font-local.js",
+      "default": "./dist/shims/font-local.js"
+    },
+    "./package.json": "./package.json",
+    "./build/*": {
+      "types": "./dist/build/*.d.ts",
+      "development": "./src/build/*.ts",
+      "import": "./dist/build/*.js",
+      "default": "./dist/build/*.js"
+    },
+    "./client/*": {
+      "types": "./dist/client/*.d.ts",
+      "development": "./src/client/*.ts",
+      "import": "./dist/client/*.js",
+      "default": "./dist/client/*.js"
+    },
+    "./config/*": {
+      "types": "./dist/config/*.d.ts",
+      "development": "./src/config/*.ts",
+      "import": "./dist/config/*.js",
+      "default": "./dist/config/*.js"
+    },
+    "./routing/*": {
+      "types": "./dist/routing/*.d.ts",
+      "development": "./src/routing/*.ts",
+      "import": "./dist/routing/*.js",
+      "default": "./dist/routing/*.js"
+    },
+    "./server/*": {
+      "types": "./dist/server/*.d.ts",
+      "development": "./src/server/*.ts",
+      "import": "./dist/server/*.js",
+      "default": "./dist/server/*.js"
+    },
+    "./shims/*": {
+      "types": "./dist/shims/*.d.ts",
+      "development": "./src/shims/*.ts",
+      "import": "./dist/shims/*.js",
+      "default": "./dist/shims/*.js"
+    },
+    "./utils/*": {
+      "types": "./dist/utils/*.d.ts",
+      "development": "./src/utils/*.ts",
+      "import": "./dist/utils/*.js",
+      "default": "./dist/utils/*.js"
+    },
+    "./*": {
+      "types": "./dist/shims/*.d.ts",
+      "development": "./src/shims/*.ts",
+      "import": "./dist/shims/*.js",
+      "default": "./dist/shims/*.js"
+    }
+  },
+  "dependencies": {
+    "@rue-js/jsx-dev-runtime": "workspace:*",
+    "@rue-js/jsx-runtime": "workspace:*",
+    "@rue-js/rue": "workspace:*",
+    "@rue-js/runtime": "workspace:*",
+    "@rue-js/runtime-vapor": "workspace:*",
+    "@rue-js/shared": "workspace:*",
+    "@rue-js/vite-plugin-rue": "workspace:*",
+    "jiti": "^2.7.0",
+    "magic-string": "catalog:"
+  },
+  "peerDependencies": {
+    "@cloudflare/vite-plugin": "*",
+    "@mdx-js/rollup": "*",
+    "@rue-js/rsc": "*",
+    "@rue-js/server-renderer": "*",
+    "@vercel/og": "*",
+    "image-size": "*",
+    "ipaddr.js": "*",
+    "vite": "*",
+    "vite-plugin-commonjs": "*",
+    "vite-tsconfig-paths": "*",
+    "web-vitals": "*"
+  },
+  "peerDependenciesMeta": {
+    "@cloudflare/vite-plugin": {
+      "optional": true
+    },
+    "@mdx-js/rollup": {
+      "optional": true
+    },
+    "@rue-js/rsc": {
+      "optional": true
+    },
+    "@rue-js/server-renderer": {
+      "optional": true
+    },
+    "@vercel/og": {
+      "optional": true
+    },
+    "image-size": {
+      "optional": true
+    },
+    "ipaddr.js": {
+      "optional": true
+    },
+    "vite-plugin-commonjs": {
+      "optional": true
+    },
+    "vite-tsconfig-paths": {
+      "optional": true
+    },
+    "web-vitals": {
+      "optional": true
+    }
+  },
+  "buildOptions": {
+    "name": "RueText",
+    "formats": [
+      "esm-bundler"
+    ],
+    "preserveModules": true,
+    "copyRuntimeArtifacts": [
+      "runtime-vapor"
+    ],
+    "external": [
+      "@rue-js/rsc",
+      "@rue-js/server-renderer",
+      "@rue-js/text",
+      "private-text-instrumentation-client",
+      "text",
+      "virtual:text-rsc",
+      "virtual:text-rsc-entry",
+      "virtual:text-server-entry"
+    ]
+  }
+}

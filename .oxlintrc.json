@@ -4,6 +4,7 @@
     "**/dist/**",
     "**/temp/**",
     "**/coverage/**",
+    "**/.test-tmp/**",
     "output.js",
     "packages/**/pkg/**",
     "packages/**/pkg-node/**",

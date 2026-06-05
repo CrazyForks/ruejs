@@ -1,7 +1,7 @@
 lockfileVersion: '9.0'
 
 settings:
-  autoInstallPeers: true
+  autoInstallPeers: false
   excludeLinksFromLockfile: false
 
 catalogs:
@@ -67,7 +67,7 @@ importers:
         version: 14.1.1
       markdown-it-anchor:
         specifier: ^9.2.0
-        version: 9.2.0(@types/markdown-it@14.1.2)(markdown-it@14.1.1)
+        version: 9.2.0(markdown-it@14.1.1)
       markdown-it-attrs:
         specifier: ^4.3.1
         version: 4.3.1(markdown-it@14.1.1)
@@ -225,9 +225,6 @@ importers:
       '@rue-js/shared':
         specifier: workspace:*
         version: link:../shared
-      typescript:
-        specifier: '*'
-        version: 5.9.3
 
   packages/rue-design:
     dependencies:
@@ -282,6 +279,36 @@ importers:
         version: link:../rue
 
   packages/swc-plugin-rue: {}
+
+  packages/text:
+    dependencies:
+      '@rue-js/jsx-dev-runtime':
+        specifier: workspace:*
+        version: link:../jsx-dev-runtime
+      '@rue-js/jsx-runtime':
+        specifier: workspace:*
+        version: link:../jsx-runtime
+      '@rue-js/rue':
+        specifier: workspace:*
+        version: link:../rue
+      '@rue-js/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@rue-js/runtime-vapor':
+        specifier: workspace:*
+        version: link:../runtime-vapor
+      '@rue-js/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@rue-js/vite-plugin-rue':
+        specifier: workspace:*
+        version: link:../vite-plugin-rue
+      jiti:
+        specifier: ^2.7.0
+        version: 2.7.0
+      magic-string:
+        specifier: 'catalog:'
+        version: 0.30.21
 
   packages/vite-plugin-rue:
     dependencies:
@@ -1188,17 +1215,8 @@ packages:
   '@types/istanbul-lib-coverage@2.0.6':
     resolution: {integrity: sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==}
 
-  '@types/linkify-it@5.0.0':
-    resolution: {integrity: sha512-sVDA58zAw4eWAffKOaQH5/5j3XeayukzDk+ewSsnv3p4yJEZHCCzMDiZM8e0OUrRvmpGZ85jf4yDHkHsgBNr9Q==}
-
-  '@types/markdown-it@14.1.2':
-    resolution: {integrity: sha512-promo4eFwuiW+TfGxhi+0x3czqTYJkG8qB17ZUJiVF10Xm7NLVRSLUsfRTU/6h1e24VvRnXCx+hG7li58lkzog==}
-
   '@types/mdast@4.0.4':
     resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
-
-  '@types/mdurl@2.0.0':
-    resolution: {integrity: sha512-RGdgjQUZba5p6QEFAVx2OGb8rQDL/cPRG7GiedRzMcJ1tYnUANBncjbSB1NRGwbvjcPeikRABz2nshyPk1bhWg==}
 
   '@types/node@25.6.2':
     resolution: {integrity: sha512-sokuT28dxf9JT5Kady1fsXOvI4HVpjZa95NKT5y9PNTIrs2AsobR4GFAA90ZG8M+nxVRLysCXsVj6eGC7Vbrlw==}
@@ -2746,11 +2764,6 @@ packages:
     resolution: {integrity: sha512-TeTSQ6H5YHvpqVwBRcnLDCBnDOHWYu7IvGbHT6N8AOymcr9PJGjc1GTtiWZTYg0NCgYwvnYWEkVChQAr9bjfwA==}
     engines: {node: '>=16'}
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
@@ -3611,18 +3624,9 @@ snapshots:
 
   '@types/istanbul-lib-coverage@2.0.6': {}
 
-  '@types/linkify-it@5.0.0': {}
-
-  '@types/markdown-it@14.1.2':
-    dependencies:
-      '@types/linkify-it': 5.0.0
-      '@types/mdurl': 2.0.0
-
   '@types/mdast@4.0.4':
     dependencies:
       '@types/unist': 3.0.3
-
-  '@types/mdurl@2.0.0': {}
 
   '@types/node@25.6.2':
     dependencies:
@@ -4578,9 +4582,8 @@ snapshots:
     dependencies:
       semver: 7.7.4
 
-  markdown-it-anchor@9.2.0(@types/markdown-it@14.1.2)(markdown-it@14.1.1):
+  markdown-it-anchor@9.2.0(markdown-it@14.1.1):
     dependencies:
-      '@types/markdown-it': 14.1.2
       markdown-it: 14.1.1
 
   markdown-it-attrs@4.3.1(markdown-it@14.1.1):
@@ -5208,8 +5211,6 @@ snapshots:
   type-fest@2.19.0: {}
 
   type-fest@4.41.0: {}
-
-  typescript@5.9.3: {}
 
   typescript@6.0.3: {}
 

@@ -1,5 +1,5 @@
 import { builtinModules, createRequire } from 'node:module'
-import { existsSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { minify as minifySwc } from '@swc/core'
@@ -67,6 +67,15 @@ export async function buildDistributionPackage(
 ) {
   const packageInfo = resolvePackageInfo(target)
   const formatFilter = splitFormats(rawFormats)
+
+  if (packageInfo.packageOptions.preserveModules) {
+    await buildPreserveModulesPackage(packageInfo, {
+      formatFilter,
+      sourceMap,
+    })
+    return
+  }
+
   const buildEntries = resolveBuildEntries(packageInfo, formatFilter)
   const requests = []
 
@@ -90,6 +99,116 @@ export async function buildDistributionPackage(
 
   for (const request of requests) {
     await build(createViteConfig(request))
+  }
+}
+
+async function buildPreserveModulesPackage(packageInfo, { formatFilter, sourceMap }) {
+  const configuredFormats = packageInfo.packageOptions.formats || ['esm-bundler']
+  const selectedFormats = formatFilter
+    ? configuredFormats.filter(format => formatFilter.includes(format))
+    : configuredFormats
+
+  if (!selectedFormats.length) {
+    return
+  }
+
+  for (const format of selectedFormats) {
+    if (format !== 'esm-bundler') {
+      throw new Error(`Preserve-modules package ${packageInfo.target} only supports esm-bundler`)
+    }
+
+    const request = createPreserveModulesRequest(packageInfo, format, sourceMap)
+    await build(createViteConfig(request))
+  }
+
+  copyPackageRuntimeArtifacts(packageInfo)
+}
+
+function createPreserveModulesRequest(packageInfo, format, sourceMap) {
+  return {
+    kind: 'preserve-modules',
+    packageInfo,
+    buildEntry: {
+      fileName: packageInfo.fileName,
+      globalName: packageInfo.packageOptions.name,
+      isMain: true,
+    },
+    format,
+    viteFormat: 'es',
+    prod: false,
+    sourceMap,
+    externalize: true,
+    outputPlatform: 'node',
+    browserBuild: false,
+    isBundlerESMBuild: true,
+    isBrowserESMBuild: false,
+    isCJSBuild: false,
+    isGlobalBuild: false,
+    entryFile: '',
+    outputFileBase: '',
+    enableRueVaporTransform: false,
+    watch: false,
+    preserveModules: true,
+    preserveModulesRoot: path.resolve(packageInfo.packageDir, 'src'),
+    input: resolvePreserveModuleInput(packageInfo),
+  }
+}
+
+function resolvePreserveModuleInput(packageInfo) {
+  const sourceDir = path.resolve(packageInfo.packageDir, 'src')
+  const entries = {}
+
+  walkSourceFiles(sourceDir, filePath => {
+    if (!/\.(ts|tsx|js|jsx)$/.test(filePath) || filePath.endsWith('.d.ts')) {
+      return
+    }
+
+    const relativePath = path.relative(sourceDir, filePath).split(path.sep).join('/')
+    const entryName = relativePath.replace(/\.(ts|tsx|js|jsx)$/, '')
+    entries[entryName] = filePath
+  })
+
+  return entries
+}
+
+function walkSourceFiles(dir, visit) {
+  for (const name of readdirSync(dir)) {
+    const filePath = path.join(dir, name)
+    const stat = statSync(filePath)
+    if (stat.isDirectory()) {
+      walkSourceFiles(filePath, visit)
+    } else {
+      visit(filePath)
+    }
+  }
+}
+
+function copyPackageRuntimeArtifacts(packageInfo) {
+  const copyTargets = packageInfo.packageOptions.copyRuntimeArtifacts || []
+  for (const copyTarget of copyTargets) {
+    if (copyTarget === 'runtime-vapor') {
+      copyRuntimeVaporArtifacts(packageInfo)
+    }
+  }
+}
+
+function copyRuntimeVaporArtifacts(packageInfo) {
+  const runtimeVaporDir = path.resolve(rootDir, 'packages/runtime-vapor')
+  const outputDir = path.resolve(packageInfo.packageDir, 'dist/runtime-vapor')
+  mkdirSync(outputDir, { recursive: true })
+
+  for (const name of [
+    'pkg',
+    'pkg-node',
+    'pkg-reactive',
+    'pkg-node-reactive',
+    'pkg-vapor',
+    'pkg-node-vapor',
+  ]) {
+    const source = path.resolve(runtimeVaporDir, name)
+    if (existsSync(source)) {
+      cpSync(source, path.resolve(outputDir, name), { recursive: true })
+    }
   }
 }
 
@@ -262,7 +381,9 @@ function needsProdVariant(format) {
 }
 
 function createViteConfig(request) {
-  const enumPluginResult = existsSync(enumCachePath) ? inlineEnums() : [null, {}]
+  const preserveModules = request.preserveModules === true
+  const enumPluginResult =
+    !preserveModules && existsSync(enumCachePath) ? inlineEnums() : [null, {}]
   const [enumPlugin, enumDefines] = enumPluginResult
 
   return {
@@ -293,25 +414,36 @@ function createViteConfig(request) {
       outDir: path.resolve(request.packageInfo.packageDir, 'dist'),
       emptyOutDir: false,
       watch: request.watch ? {} : null,
-      lib: {
-        entry: path.resolve(request.packageInfo.packageDir, request.entryFile),
-        name: request.buildEntry.globalName || request.packageInfo.packageOptions.name,
-        formats: [request.viteFormat],
-      },
+      lib: preserveModules
+        ? undefined
+        : {
+            entry: path.resolve(request.packageInfo.packageDir, request.entryFile),
+            name: request.buildEntry.globalName || request.packageInfo.packageOptions.name,
+            formats: [request.viteFormat],
+          },
       rollupOptions: {
+        input: preserveModules ? request.input : undefined,
         external: createExternalPredicate(request),
         output: {
           banner: request.packageInfo.banner,
           exports: 'named',
+          format: preserveModules ? request.viteFormat : undefined,
+          preserveModules,
+          preserveModulesRoot: preserveModules ? request.preserveModulesRoot : undefined,
           name:
             request.viteFormat === 'iife'
               ? request.buildEntry.globalName || request.packageInfo.packageOptions.name
               : undefined,
-          esModule: request.viteFormat === 'cjs',
-          entryFileNames: `${request.outputFileBase}.js`,
-          chunkFileNames: `${request.outputFileBase}-[name]-[hash].js`,
+          esModule: preserveModules ? undefined : request.viteFormat === 'cjs',
+          entryFileNames: preserveModules ? '[name].js' : `${request.outputFileBase}.js`,
+          chunkFileNames: preserveModules
+            ? '_virtual/[name]-[hash].js'
+            : `${request.outputFileBase}-[name]-[hash].js`,
           assetFileNames: assetInfo => {
             const extension = path.extname(assetInfo.name || '') || '.asset'
+            if (preserveModules) {
+              return `assets/[name]-[hash]${extension}`
+            }
             return `${request.outputFileBase}-[name]-[hash]${extension}`
           },
           externalLiveBindings: false,
@@ -397,6 +529,7 @@ function createExternalPredicate(request) {
   const dependencies = new Set([
     ...Object.keys(request.packageInfo.pkg.dependencies || {}),
     ...Object.keys(request.packageInfo.pkg.peerDependencies || {}),
+    ...(request.packageInfo.packageOptions.external || []),
     'path',
     'url',
     'stream',

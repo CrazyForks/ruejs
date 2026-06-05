@@ -2,6 +2,7 @@ packages:
   - 'packages/*'
 
 nodeLinker: hoisted
+autoInstallPeers: false
 
 allowBuilds:
   '@swc/core': false
