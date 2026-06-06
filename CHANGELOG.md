@@ -1,3 +1,17 @@
+## [0.4.1](https://github.com/hunzhiwange/ruejs/compare/v0.3.5...v0.4.1) (2026-06-06)
+
+
+### Bug Fixes
+
+* remove __FEATURE_OPTIONS_API__ ([fa87d9e](https://github.com/hunzhiwange/ruejs/commit/fa87d9e1340730488a2eac0e12d36aa82fbb4634))
+* 修复CI报错 ([2dbec22](https://github.com/hunzhiwange/ruejs/commit/2dbec2220afa40dfc9745af206dbbf2f23e17339))
+* 修复误删build ([914155d](https://github.com/hunzhiwange/ruejs/commit/914155da21547aa121b55270e6d6bc44486e9f0c))
+
+
+### Features
+
+* new version ([c0a71e5](https://github.com/hunzhiwange/ruejs/commit/c0a71e5ef74b2a616e715fbddca2e71cfba5e572))
+
 # [0.4.0](https://github.com/hunzhiwange/ruejs/compare/v0.3.10...v0.4.0) (2026-06-06)
 
 
