@@ -1,3 +1,5 @@
+## [0.4.2](https://github.com/hunzhiwange/ruejs/compare/v0.4.1...v0.4.2) (2026-06-06)
+
 ## [0.4.1](https://github.com/hunzhiwange/ruejs/compare/v0.3.5...v0.4.1) (2026-06-06)
 
 
