@@ -18,7 +18,6 @@ Rue does not use React-style release channels, `@gate` pragmas, or `__VARIANT__`
 ## Known Feature Defines
 
 - `__COMPAT__`
-- `__FEATURE_OPTIONS_API__`
 - `__FEATURE_PROD_DEVTOOLS__`
 - `__FEATURE_SUSPENSE__`
 - `__FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__`

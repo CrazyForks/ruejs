@@ -487,7 +487,6 @@ function resolveDefineValues(request) {
     __SSR__: String(!request.isGlobalBuild),
     __COMPAT__: 'false',
     __FEATURE_SUSPENSE__: 'true',
-    __FEATURE_OPTIONS_API__: request.isBundlerESMBuild ? '__RUE_OPTIONS_API__' : 'true',
     __FEATURE_PROD_DEVTOOLS__: request.isBundlerESMBuild ? '__RUE_PROD_DEVTOOLS__' : 'false',
     __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: request.isBundlerESMBuild
       ? '__RUE_PROD_HYDRATION_MISMATCH_DETAILS__'
