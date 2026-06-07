@@ -10,6 +10,8 @@ export {
   nextTick,
   /** 注册组件 render 依赖收集调试钩子。 */
   onRenderTracked,
+  /** 在当前 effect scope 停止时注册清理函数。 */
+  onScopeDispose,
   /** 在当前 watcher 失效或停止前注册清理函数。 */
   onWatcherCleanup,
   /** 创建浅层 ref，只追踪 value 替换。 */
@@ -41,6 +43,7 @@ declare const _default: typeof runtimeVapor & {
   isReadonly: typeof import('./reactive').isReadonly
   nextTick: typeof import('./reactive').nextTick
   onRenderTracked: typeof import('./reactive').onRenderTracked
+  onScopeDispose: typeof import('./reactive').onScopeDispose
   onWatcherCleanup: typeof import('./reactive').onWatcherCleanup
   shallowRef: typeof import('./reactive').shallowRef
   toRef: typeof import('./reactive').toRef

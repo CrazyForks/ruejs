@@ -51,6 +51,11 @@ try {
  * @param {string} pkg
  */
 function bundlePackageTypes(pkg) {
+  const staticTypesEntry = resolveStaticTypesEntry(pkg)
+  if (staticTypesEntry) {
+    return
+  }
+
   const entryFile = path.resolve(tempDtsRoot, pkg, 'src/index.d.ts')
   const tempOutputFile = path.resolve(tempOutputRoot, `${pkg}.d.ts`)
 
@@ -102,6 +107,34 @@ function resolvePackageTypesOutput(pkg) {
     }
   }
   return `packages/${pkg}/dist/${pkg}.d.ts`
+}
+
+/**
+ * @param {string} pkg
+ * @returns {string | null}
+ */
+function resolveStaticTypesEntry(pkg) {
+  const pkgJsonPath = `packages/${pkg}/package.json`
+  if (!existsSync(pkgJsonPath)) {
+    return null
+  }
+
+  /** @type {{ types?: string }} */
+  const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
+  if (typeof pkgJson.types !== 'string' || !pkgJson.types.endsWith('.d.ts')) {
+    return null
+  }
+
+  const typesEntry = path.resolve(`packages/${pkg}`, pkgJson.types)
+  if (!existsSync(typesEntry)) {
+    return null
+  }
+
+  if (typesEntry.includes(`${path.sep}dist${path.sep}`)) {
+    return null
+  }
+
+  return typesEntry
 }
 
 /**

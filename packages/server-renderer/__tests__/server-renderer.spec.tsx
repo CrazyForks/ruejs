@@ -53,9 +53,9 @@ describe('rue server-renderer', () => {
     )
   })
 
-  it('renders no-value data and aria attributes as stable string booleans', async () => {
+  it('renders explicit boolean data and aria attributes as stable string booleans', async () => {
     const App: FC = () => (
-      <section data-editor-content data-ready={true} data-off={false} aria-hidden />
+      <section data-editor-content={true} data-ready={true} data-off={false} aria-hidden={true} />
     )
 
     await expect(renderToString(App)).resolves.toBe(

@@ -129,6 +129,9 @@ export const onWatcherCleanup = (cleanupFn, failSilently) => {
   }
 }
 
+/** 在当前 effect scope 停止时注册清理函数。 */
+export const onScopeDispose = cleanupFn => reactiveRuntime.onScopeDispose(cleanupFn)
+
 /** 等待响应式 flush 与 post flush 队列完成，可选执行回调。 */
 export const nextTick = callback => {
   const promise =
@@ -573,6 +576,7 @@ const runtimeWithShallowRef = {
   nextTick,
   onWatcherCleanup,
   onRenderTracked,
+  onScopeDispose,
   propsReactive,
   reactive,
   readonly,

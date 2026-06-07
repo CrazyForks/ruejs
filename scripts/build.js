@@ -95,17 +95,15 @@ async function run() {
     await buildAll(resolvedTargets)
     await checkAllSizes(resolvedTargets)
     if (buildTypes) {
-      await exec(
-        'pnpm',
-        [
-          'run',
-          'build-dts',
-          ...(targets.length ? ['--environment', `TARGETS:${resolvedTargets.join(',')}`] : []),
-        ],
-        {
-          stdio: 'inherit',
-        },
-      )
+      await exec('pnpm', ['run', 'build-dts'], {
+        stdio: 'inherit',
+        env: targets.length
+          ? {
+              ...process.env,
+              TARGETS: resolvedTargets.join(','),
+            }
+          : process.env,
+      })
     }
   } finally {
     removeCache()

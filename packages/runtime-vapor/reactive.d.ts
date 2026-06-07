@@ -70,6 +70,9 @@ export declare function onRenderTracked(callback: DebuggerHook): (() => void) | 
 /** 在当前 watcher 失效或停止前注册清理函数。 */
 export declare function onWatcherCleanup(cleanupFn: () => void, failSilently?: boolean): void
 
+/** 在当前 effect scope 停止时注册清理函数。 */
+export declare function onScopeDispose(cleanupFn: () => void): void
+
 /** 等待响应式 flush 完成，可选追加回调。 */
 export declare function nextTick<T = void>(callback?: () => T | Promise<T>): Promise<T | void>
 
@@ -99,6 +102,7 @@ declare const _default: typeof reactiveRuntime & {
   isReadonly: typeof isReadonly
   nextTick: typeof nextTick
   onRenderTracked: typeof onRenderTracked
+  onScopeDispose: typeof onScopeDispose
   onWatcherCleanup: typeof onWatcherCleanup
   shallowRef: typeof shallowRef
   toRef: typeof toRef

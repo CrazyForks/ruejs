@@ -26,10 +26,10 @@
   "sideEffects": false,
   "main": "index.js",
   "module": "dist/server-renderer.esm-bundler.js",
-  "types": "dist/server-renderer.d.ts",
+  "types": "src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./src/index.d.ts",
       "node": {
         "production": "./dist/server-renderer.cjs.prod.js",
         "development": "./dist/server-renderer.cjs.js",
@@ -41,6 +41,12 @@
       "require": "./index.js"
     },
     "./*": "./*"
+  },
+  "scripts": {
+    "build": "pnpm -w exec node scripts/build.js '^server-renderer$'",
+    "dev": "pnpm -w exec node scripts/dev.js server-renderer -f esm-bundler",
+    "test": "pnpm -w exec vitest packages/server-renderer/__tests__",
+    "test-unit": "pnpm -w exec vitest run packages/server-renderer"
   },
   "dependencies": {
     "@rue-js/runtime": "workspace:*"

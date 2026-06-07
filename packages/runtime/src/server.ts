@@ -538,7 +538,11 @@ function setServerElementProp(element: ServerElementNode, key: string, value: un
 
   const attributeName = key === 'className' ? 'class' : key === 'htmlFor' ? 'for' : key
   if (typeof value === 'boolean') {
-    setBooleanAttribute(element, attributeName, value)
+    if (BOOLEAN_ATTRIBUTES.has(attributeName)) {
+      setBooleanAttribute(element, attributeName, value)
+    } else {
+      element.attributes.set(attributeName, String(value))
+    }
     return
   }
   element.attributes.set(attributeName, String(value))
