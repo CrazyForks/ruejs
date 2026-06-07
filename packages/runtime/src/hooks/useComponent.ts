@@ -25,27 +25,47 @@ import {
 } from '../components/suspenseContext'
 
 const asyncComponentCache = new WeakMap<Function, any>()
+const SERVER_RENDERING_FLAG = '__rue_is_server_rendering__'
+const RUE_SSR_PENDING_ASYNC_COMPONENT_KEY = '__rue_ssr_pending_async_component__'
 
+/** 异步组件加载函数，支持直接返回组件或动态 import 的 default 导出。 */
 export type AsyncComponentLoader<P = any> = () => Promise<{ default: FC<P> } | FC<P>>
 
+/** 定义异步组件时的完整选项。 */
 export interface AsyncComponentOptions<P = any> {
+  /** 实际的动态加载函数。 */
   loader: AsyncComponentLoader<P>
+  /** 加载中占位组件。 */
   loadingComponent?: FC<any>
+  /** 加载失败占位组件。 */
   errorComponent?: FC<{ error: any }>
+  /** 显示 loadingComponent 前的延迟毫秒数。 */
   delay?: number
+  /** 加载超时时间，超时后进入错误状态。 */
   timeout?: number
+  /** 是否把 pending promise 登记到 Suspense 边界。 */
   suspensible?: boolean
+  /** 加载失败处理器，可调用 retry 或 fail 控制后续流程。 */
   onError?: (error: Error, retry: () => void, fail: () => void, attempts: number) => any
 }
 
+/** useComponent 的兼容选项，支持新旧 loading/error 命名。 */
 export interface UseComponentOptions<_P = any> {
+  /** @deprecated Prefer loadingComponent. */
   loading?: FC<any>
+  /** @deprecated Prefer errorComponent. */
   error?: FC<{ error: any }>
+  /** 加载中占位组件。 */
   loadingComponent?: FC<any>
+  /** 加载失败占位组件。 */
   errorComponent?: FC<{ error: any }>
+  /** 显示 loadingComponent 前的延迟毫秒数。 */
   delay?: number
+  /** 加载超时时间，超时后进入错误状态。 */
   timeout?: number
+  /** 是否把 pending promise 登记到 Suspense 边界。 */
   suspensible?: boolean
+  /** 加载失败处理器，可调用 retry 或 fail 控制后续流程。 */
   onError?: (error: Error, retry: () => void, fail: () => void, attempts: number) => any
 }
 
@@ -75,6 +95,26 @@ const normalizeUseComponentSource = <P = any>(
     suspensible: resolvedOptions?.suspensible !== false,
     onError: resolvedOptions?.onError,
   }
+}
+
+const registerServerPendingDependency = (thenable: Promise<unknown> | null | undefined) => {
+  if (!thenable) {
+    return
+  }
+
+  const globalRecord = globalThis as Record<string, unknown>
+  const serverRenderingCount = globalRecord[SERVER_RENDERING_FLAG]
+  if (typeof serverRenderingCount !== 'number' || serverRenderingCount <= 0) {
+    return
+  }
+
+  const pending = (globalRecord[RUE_SSR_PENDING_ASYNC_COMPONENT_KEY] ??= []) as Promise<unknown>[]
+  pending.push(Promise.resolve(thenable).catch(() => undefined))
+}
+
+const isServerRendering = () => {
+  const serverRenderingCount = (globalThis as Record<string, unknown>)[SERVER_RENDERING_FLAG]
+  return typeof serverRenderingCount === 'number' && serverRenderingCount > 0
 }
 
 /** 异步组件加载 Hook
@@ -240,6 +280,7 @@ export function useComponent<P = any>(
               (slot as any).timeout,
             )
           }
+          registerServerPendingDependency(pending)
         } catch (e: any) {
           // 同步错误（如 loader 内部抛错）
           handleLoadError(e)
@@ -342,6 +383,8 @@ export function useComponent<P = any>(
           return false
         }
 
+        registerServerPendingDependency(thenable)
+
         const currentBoundary = getCurrentSuspenseBoundary()
         if (currentBoundary) {
           currentBoundary.register(thenable)
@@ -435,7 +478,7 @@ export function useComponent<P = any>(
           renderCurrent()
         })
 
-      if (component.get()) {
+      if (component.get() && !isServerRendering()) {
         queueMicrotask(() => {
           if (ctx.disposed || ctx.effect) {
             return
@@ -460,6 +503,10 @@ export function useComponent<P = any>(
     onBeforeUnmount(() => {
       ctx.dispose()
     })
+
+    if (isServerRendering()) {
+      return ctx.container as any
+    }
 
     const handle = vapor(() => {
       // 将 props 写入信号以驱动渲染，并把稳定容器直接暴露给 Vapor 渲染管线

@@ -6,8 +6,23 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const rootDir = path.resolve(__dirname, '..')
 const runtimeVaporRoot = path.resolve(__dirname, '../packages/runtime-vapor')
 const runtimeVaporBuildInputs = ['src', 'Cargo.toml', 'Cargo.lock']
+
+const generateDocsSearchIndex = () => {
+  const result = spawnSync('node', ['scripts/generate-doc-search-index.js'], {
+    cwd: rootDir,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  })
+
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1)
+  }
+}
+
+generateDocsSearchIndex()
 
 /** @param {string} targetPath */
 const getLatestMtimeMs = targetPath => {

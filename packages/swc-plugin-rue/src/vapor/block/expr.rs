@@ -287,7 +287,7 @@ fn rewrite_use_memo_call_for_slot(this: &mut VaporTransform, call: &CallExpr) ->
     let first = next.args.first_mut()?;
     let rewritten =
         this.with_once_context(|this| rewrite_arrow_expr_body_for_slot(this, first.expr.as_ref()))?;
-    first.expr = Box::new(rewritten);
+    *first.expr = rewritten;
     Some(Expr::Call(next))
 }
 
@@ -299,7 +299,7 @@ fn rewrite_hook_wrapped_call_for_slot(this: &mut VaporTransform, call: &CallExpr
     let mut next = call.clone();
     let runner = next.args.get_mut(1)?;
     let rewritten = rewrite_arrow_expr_body_for_slot(this, runner.expr.as_ref())?;
-    runner.expr = Box::new(rewritten);
+    *runner.expr = rewritten;
     Some(Expr::Call(next))
 }
 

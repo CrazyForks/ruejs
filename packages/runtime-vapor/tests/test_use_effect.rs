@@ -199,3 +199,73 @@ fn use_effect_reuses_watch_across_render_scopes_and_updates_latest_callback() {
     assert_eq!(*second_hits.borrow(), 1);
     set_current_instance(JsValue::UNDEFINED);
 }
+
+#[wasm_bindgen_test]
+fn use_effect_scheduler_and_recreated_deps_dispose_previous_watch() {
+    set_reactive_scheduling("sync");
+    let inst = Object::new();
+    set_current_instance(inst.into());
+
+    let source = create_signal(JsValue::from_f64(0.0), None);
+    let runs = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let scheduled = Array::new();
+    Reflect::set(&js_sys::global(), &JsValue::from_str("__use_effect_scheduled"), &scheduled)
+        .unwrap();
+
+    let runs_for_effect = runs.clone();
+    let effect = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *runs_for_effect.borrow_mut() += 1;
+        JsValue::UNDEFINED
+    }) as Box<dyn FnMut() -> JsValue>);
+    let effect_fn: Function = effect.as_ref().clone().unchecked_into();
+    let scheduler =
+        Function::new_with_args("run", "globalThis.__use_effect_scheduled.push(run); run();");
+    let options = Object::new();
+    Reflect::set(&options, &JsValue::from_str("scheduler"), &scheduler).unwrap();
+
+    let source_for_first = source.clone();
+    let effect_fn_first = effect_fn.clone();
+    let options_first = options.clone();
+    let render_first = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        let deps = Array::new();
+        deps.push(&JsValue::from(source_for_first.clone()));
+        use_effect(effect_fn_first.clone(), Some(deps.into()), Some(options_first.clone().into()));
+        JsValue::UNDEFINED
+    }) as Box<dyn FnMut() -> JsValue>);
+    let _ = vapor_with_hook_id(
+        JsValue::from_str("useEffect:scheduler"),
+        render_first.as_ref().clone().unchecked_into(),
+    );
+    assert_eq!(*runs.borrow(), 1);
+    let scheduled_after_first = Array::from(
+        &Reflect::get(&js_sys::global(), &JsValue::from_str("__use_effect_scheduled")).unwrap(),
+    )
+    .length();
+
+    let static_dep = JsValue::from_str("static-dep");
+    let effect_fn_second = effect_fn.clone();
+    let render_second = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        let deps = Array::new();
+        deps.push(&static_dep);
+        use_effect(effect_fn_second.clone(), Some(deps.into()), Some(JsValue::from_str("ignored")));
+        JsValue::UNDEFINED
+    }) as Box<dyn FnMut() -> JsValue>);
+    let _ = vapor_with_hook_id(
+        JsValue::from_str("useEffect:scheduler"),
+        render_second.as_ref().clone().unchecked_into(),
+    );
+    assert_eq!(*runs.borrow(), 2);
+
+    source.set_js(JsValue::from_f64(1.0));
+    assert_eq!(*runs.borrow(), 2);
+    let recorded: Array =
+        Reflect::get(&js_sys::global(), &JsValue::from_str("__use_effect_scheduled"))
+            .unwrap()
+            .unchecked_into();
+    assert_eq!(recorded.length(), scheduled_after_first);
+
+    effect.forget();
+    render_first.forget();
+    render_second.forget();
+    set_current_instance(JsValue::UNDEFINED);
+}

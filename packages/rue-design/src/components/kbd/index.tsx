@@ -6,73 +6,127 @@ Kbd 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** KbdSize 尺寸类型。 */
 export type KbdSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'
+/** KbdGap 类型。 */
 export type KbdGap = 'xs' | 'sm' | 'md' | 'lg'
+/** KbdDirection 位置或方向类型。 */
 export type KbdDirection = 'horizontal' | 'vertical'
 
+/** KbdItemData 数据项结构。 */
 export interface KbdItemData {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 展示标签。 */
   label?: any
+  /** 组件子内容。 */
   children?: any
+  /** 组件尺寸。 */
   size?: KbdSize
+  /** 根节点附加类名。 */
   className?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** KbdProps 组件属性。 */
 export interface KbdProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 组件尺寸。 */
   size?: KbdSize
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<KbdItemData | any>
+  /** separator 配置项。 */
   separator?: any
+  /** itemClassName 附加类名。 */
   itemClassName?: string
+  /** separatorClassName 附加类名。 */
   separatorClassName?: string
+  /** wrap 配置项。 */
   wrap?: boolean
+  /** 元素间距。 */
   gap?: KbdGap
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** KbdGroupProps 组件属性。 */
 export interface KbdGroupProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 组件尺寸。 */
   size?: KbdSize
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<KbdItemData | any>
+  /** separator 配置项。 */
   separator?: any
+  /** itemClassName 附加类名。 */
   itemClassName?: string
+  /** separatorClassName 附加类名。 */
   separatorClassName?: string
+  /** 布局方向。 */
   direction?: KbdDirection
+  /** wrap 配置项。 */
   wrap?: boolean
+  /** 元素间距。 */
   gap?: KbdGap
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** KbdComboProps 组件属性。 */
 export interface KbdComboProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 组件尺寸。 */
   size?: KbdSize
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<KbdItemData | any>
+  /** separator 配置项。 */
   separator?: any
+  /** itemClassName 附加类名。 */
   itemClassName?: string
+  /** separatorClassName 附加类名。 */
   separatorClassName?: string
+  /** wrap 配置项。 */
   wrap?: boolean
+  /** 元素间距。 */
   gap?: KbdGap
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** KbdSeparatorProps 组件属性。 */
 export interface KbdSeparatorProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value === undefined || value === null || value === false) {
     return false
@@ -85,6 +139,7 @@ const hasRenderableContent = (value: any): boolean => {
   return true
 }
 
+/** 解析 Size Token 的内部工具函数。 */
 const resolveSizeToken = (size?: KbdSize) => {
   switch (size) {
     case 'small':
@@ -99,6 +154,7 @@ const resolveSizeToken = (size?: KbdSize) => {
   }
 }
 
+/** 解析 Gap Class 的内部工具函数。 */
 const resolveGapClass = (gap: KbdGap = 'sm') => {
   switch (gap) {
     case 'xs':
@@ -112,6 +168,7 @@ const resolveGapClass = (gap: KbdGap = 'sm') => {
   }
 }
 
+/** 构建 Kbd Class Name 的内部工具函数。 */
 const buildKbdClassName = (size?: KbdSize, className?: string) => {
   let cls = 'kbd'
   const resolvedSize = resolveSizeToken(size)
@@ -120,6 +177,7 @@ const buildKbdClassName = (size?: KbdSize, className?: string) => {
   return cls
 }
 
+/** 判断 Kbd Item Data 的内部工具函数。 */
 const isKbdItemData = (value: any): value is KbdItemData => {
   return (
     typeof value === 'object' &&
@@ -133,6 +191,7 @@ const isKbdItemData = (value: any): value is KbdItemData => {
   )
 }
 
+/** 归一化 Item 的内部工具函数。 */
 const normalizeItem = (item: KbdItemData | any, index: number): KbdItemData => {
   if (isKbdItemData(item)) {
     return item
@@ -144,14 +203,17 @@ const normalizeItem = (item: KbdItemData | any, index: number): KbdItemData => {
   }
 }
 
+/** 渲染 Item Content 的内部工具函数。 */
 const renderItemContent = (item: KbdItemData) => {
   if (hasRenderableContent(item.children)) return item.children
   return item.label
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...values: Array<string | undefined | false>) =>
   values.filter(Boolean).join(' ')
 
+/** Key Root 的内部工具函数。 */
 const KeyRoot: FC<KbdProps> = ({ as = 'kbd', size, className, children, ...rest }) => {
   const Component = as as any
   return (
@@ -161,6 +223,7 @@ const KeyRoot: FC<KbdProps> = ({ as = 'kbd', size, className, children, ...rest 
   )
 }
 
+/** Separator 的内部工具函数。 */
 const Separator: FC<KbdSeparatorProps> = ({ as = 'span', className, children = '+', ...rest }) => {
   const Component = as as any
   return (
@@ -176,6 +239,7 @@ const Separator: FC<KbdSeparatorProps> = ({ as = 'span', className, children = '
   )
 }
 
+/** 渲染 Combo Items 的内部工具函数。 */
 const renderComboItems = ({
   items,
   size,
@@ -216,6 +280,7 @@ const renderComboItems = ({
   })
 }
 
+/** Group 的内部工具函数。 */
 const Group: FC<KbdGroupProps> = ({
   as = 'span',
   size,
@@ -253,6 +318,7 @@ const Group: FC<KbdGroupProps> = ({
   )
 }
 
+/** Combo 的内部工具函数。 */
 const Combo: FC<KbdComboProps> = ({
   as = 'span',
   size,
@@ -290,6 +356,7 @@ type KbdCompound = FC<KbdProps> & {
   Separator: FC<KbdSeparatorProps>
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<KbdProps> = ({
   items,
   separator,
@@ -322,4 +389,5 @@ const Kbd: KbdCompound = Object.assign(Root, {
   Separator,
 })
 
+/** 默认导出键盘键位组件。 */
 export default Kbd

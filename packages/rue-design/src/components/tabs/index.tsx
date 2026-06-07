@@ -7,66 +7,112 @@ Tabs 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
 
+/** TabsStyle 样式值类型。 */
 export type TabsStyle = 'box' | 'border' | 'lift'
+/** TabsType 视觉或语义变体类型。 */
 export type TabsType = 'line' | 'card' | 'editable-card'
+/** TabsPlacement 位置或方向类型。 */
 export type TabsPlacement = 'top' | 'bottom'
+/** TabsExtendedPlacement 位置或方向类型。 */
 export type TabsExtendedPlacement = TabsPlacement | 'start' | 'end'
+/** TabsSize 尺寸类型。 */
 export type TabsSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'large'
 
+/** TabsIndicator 接口。 */
 export interface TabsIndicator {
+  /** 交叉轴或内容对齐方式。 */
   align?: 'start' | 'center' | 'end'
+  /** 组件尺寸。 */
   size?: number | string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
 }
 
+/** TabBarExtraContentMap 接口。 */
 export interface TabBarExtraContentMap {
+  /** left 配置项。 */
   left?: any
+  /** right 配置项。 */
   right?: any
 }
 
+/** TabItem 数据项结构。 */
 export interface TabItem {
+  /** 数据项唯一标识。 */
   key: string
+  /** 展示标签。 */
   label: any
+  /** 组件子内容。 */
   children?: any
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** closable 配置项。 */
   closable?: boolean
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** 图标内容。 */
   icon?: any
 }
 
+/** TabsProps 组件属性。 */
 export interface TabsProps {
+  /** 数据驱动渲染项。 */
   items: TabItem[]
+  /** activeKey 标识键。 */
   activeKey?: string
+  /** defaultActiveKey 标识键。 */
   defaultActiveKey?: string
+  /** 值或状态变化时触发的回调。 */
   onChange?: (key: string) => void
+  /** onEdit 事件回调。 */
   onEdit?: (eventOrKey: MouseEvent | string, action: 'add' | 'remove') => void
+  /** 根节点内联样式。 */
   style?: TabsStyle
+  /** 组件类型或语义类型。 */
   type?: TabsType
+  /** 弹出层或内容展示位置。 */
   placement?: TabsPlacement
+  /** tabPlacement 配置项。 */
   tabPlacement?: TabsExtendedPlacement
+  /** 组件尺寸。 */
   size?: TabsSize
+  /** centered 配置项。 */
   centered?: boolean
+  /** destroyOnHidden 配置项。 */
   destroyOnHidden?: boolean
+  /** hideAdd 配置项。 */
   hideAdd?: boolean
+  /** addIcon 图标内容。 */
   addIcon?: any
+  /** removeIcon 图标内容。 */
   removeIcon?: any
+  /** indicator 配置项。 */
   indicator?: TabsIndicator
+  /** tabBarExtraContent 配置项。 */
   tabBarExtraContent?: any | TabBarExtraContentMap
+  /** 根节点附加类名。 */
   className?: string
+  /** tabBarClassName 附加类名。 */
   tabBarClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
 }
 
 let tabsIdSeed = 0
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
+/** 解析 Visual Style 的内部工具函数。 */
 const resolveVisualStyle = (style?: TabsStyle, type?: TabsType): TabsStyle | undefined => {
   if (style) return style
   if (type === 'card' || type === 'editable-card') return 'box'
@@ -74,6 +120,7 @@ const resolveVisualStyle = (style?: TabsStyle, type?: TabsType): TabsStyle | und
   return undefined
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: TabsSize) => {
   switch (size) {
     case 'small':
@@ -87,6 +134,7 @@ const resolveSizeClass = (size?: TabsSize) => {
   }
 }
 
+/** 解析 Initial Active Key 的内部工具函数。 */
 const resolveInitialActiveKey = (items: TabItem[], preferredKey?: string) => {
   if (preferredKey !== undefined && items.some(item => item.key === preferredKey)) {
     return preferredKey
@@ -94,6 +142,7 @@ const resolveInitialActiveKey = (items: TabItem[], preferredKey?: string) => {
   return items.find(item => !item.disabled)?.key ?? items[0]?.key ?? ''
 }
 
+/** 归一化 Extra Content 的内部工具函数。 */
 const normalizeExtraContent = (extra?: any | TabBarExtraContentMap): TabBarExtraContentMap => {
   if (
     extra &&
@@ -106,6 +155,7 @@ const normalizeExtraContent = (extra?: any | TabBarExtraContentMap): TabBarExtra
   return { right: extra }
 }
 
+/** 构建 Tabs Class Name 的内部工具函数。 */
 const buildTabsClassName = (
   style?: TabsStyle,
   placement?: TabsExtendedPlacement,
@@ -125,11 +175,13 @@ const buildTabsClassName = (
   return cls
 }
 
+/** 解析 Indicator Width 的内部工具函数。 */
 const resolveIndicatorWidth = (size?: number | string) => {
   if (typeof size === 'number') return `${size}px`
   return size ?? '100%'
 }
 
+/** 解析 Indicator Alignment 的内部工具函数。 */
 const resolveIndicatorAlignment = (align?: TabsIndicator['align']) => {
   switch (align) {
     case 'start':
@@ -141,6 +193,7 @@ const resolveIndicatorAlignment = (align?: TabsIndicator['align']) => {
   }
 }
 
+/** 构建 Panel Class Name 的内部工具函数。 */
 const buildPanelClassName = (contentClassName?: string, active = true) =>
   appendClassName(
     appendClassName(
@@ -573,4 +626,5 @@ const Tabs: FC<TabsProps> = ({
   )
 }
 
+/** 默认导出标签页组件。 */
 export default Tabs

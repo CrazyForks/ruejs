@@ -14,6 +14,7 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 }))
 
 import TimePicker from '../../../packages/rue-design/src/components/time-picker/index'
+import { BasicControlledPreview } from '../../../app/pages/design/TimePicker'
 import { click, flush, mountContainer, waitForContent } from './page-test-utils'
 import { resetActiveRuntime } from './design-page-test-utils'
 
@@ -90,6 +91,14 @@ const clickPanelOption = async (
   await click(button)
 }
 
+const popupIsOpen = (popup: HTMLDivElement) => {
+  return (
+    !popup.hidden &&
+    popup.getAttribute('aria-hidden') === 'false' &&
+    !popup.classList.contains('hidden')
+  )
+}
+
 describe('TimePicker actual page', () => {
   it(
     'updates the basic live value after selecting a panel option',
@@ -122,16 +131,18 @@ describe('TimePicker actual page', () => {
 
       await flush(4)
 
-      const updatedInput = container.querySelector('input') as HTMLInputElement
-      const updatedLiveValue = container.querySelector(
-        '[data-testid="time-picker-live-value"]',
-      ) as HTMLDivElement
-      const popups = Array.from(
-        container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
-      ) as HTMLDivElement[]
-      expect(updatedInput.value).toBe('09:45:15')
-      expect(updatedLiveValue.textContent).toBe('09:45:15')
-      expect(popups.some(popup => !popup.hidden)).toBe(true)
+      await waitForContent(() => {
+        const updatedInput = container.querySelector('input') as HTMLInputElement
+        const updatedLiveValue = container.querySelector(
+          '[data-testid="time-picker-live-value"]',
+        ) as HTMLDivElement
+        const popups = Array.from(
+          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
+        ) as HTMLDivElement[]
+        expect(updatedInput.value).toBe('09:45:15')
+        expect(updatedLiveValue.textContent).toBe('09:45:15')
+        expect(popups.some(popupIsOpen)).toBe(true)
+      })
     },
     slowTestTimeout,
   )
@@ -147,7 +158,7 @@ describe('TimePicker actual page', () => {
         const popups = Array.from(
           container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
         ) as HTMLDivElement[]
-        expect(popups.some(popup => !popup.hidden)).toBe(true)
+        expect(popups.some(popupIsOpen)).toBe(true)
       }
 
       await flush(4)
@@ -171,13 +182,15 @@ describe('TimePicker actual page', () => {
 
       await flush(4)
 
-      const updatedInput = container.querySelector('input') as HTMLInputElement
-      const updatedLiveValue = container.querySelector(
-        '[data-testid="time-picker-live-value"]',
-      ) as HTMLDivElement
-      expect(updatedInput.value).toBe('10:30:15')
-      expect(updatedLiveValue.textContent).toBe('10:30:15')
-      assertPopupOpen()
+      await waitForContent(() => {
+        const updatedInput = container.querySelector('input') as HTMLInputElement
+        const updatedLiveValue = container.querySelector(
+          '[data-testid="time-picker-live-value"]',
+        ) as HTMLDivElement
+        expect(updatedInput.value).toBe('10:30:15')
+        expect(updatedLiveValue.textContent).toBe('10:30:15')
+        assertPopupOpen()
+      })
     },
     slowTestTimeout,
   )
@@ -193,7 +206,7 @@ describe('TimePicker actual page', () => {
         const popups = Array.from(
           container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
         ) as HTMLDivElement[]
-        expect(popups.some(popup => !popup.hidden)).toBe(true)
+        expect(popups.some(popupIsOpen)).toBe(true)
       }
 
       await flush(4)
@@ -217,13 +230,96 @@ describe('TimePicker actual page', () => {
 
       await flush(4)
 
-      const updatedInput = container.querySelector('input') as HTMLInputElement
-      const updatedLiveValue = container.querySelector(
-        '[data-testid="time-picker-live-value"]',
-      ) as HTMLDivElement
-      expect(updatedInput.value).toBe('10:45:30')
-      expect(updatedLiveValue.textContent).toBe('10:45:30')
-      assertPopupOpen()
+      await waitForContent(() => {
+        const updatedInput = container.querySelector('input') as HTMLInputElement
+        const updatedLiveValue = container.querySelector(
+          '[data-testid="time-picker-live-value"]',
+        ) as HTMLDivElement
+        expect(updatedInput.value).toBe('10:45:30')
+        expect(updatedLiveValue.textContent).toBe('10:45:30')
+        assertPopupOpen()
+      })
+    },
+    slowTestTimeout,
+  )
+
+  it(
+    'keeps the documented basic controlled preview open while selecting hour minute and second',
+    async () => {
+      const container = mountTestContainer()
+      resetActiveRuntime()
+      render(<BasicControlledPreview />, container)
+
+      await flush(4)
+
+      const input = container.querySelector('input') as HTMLInputElement
+      expect(input.value).toBe('09:30:15')
+      expect(input.readOnly).toBe(false)
+      expect(input.hasAttribute('readonly')).toBe(false)
+
+      input.focus()
+      input.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
+      input.value = '21:30:15'
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+
+      await waitForContent(() => {
+        const liveValue = container.querySelector(
+          '.mt-2.text-2xl.font-semibold.text-base-content',
+        ) as HTMLDivElement
+        expect(input.value).toBe('21:30:15')
+        expect(liveValue.textContent).toBe('21:30:15')
+      })
+
+      await openPicker(input)
+      await flush(4)
+
+      await clickPanelOption(container, 'hour', '10')
+      await flush(4)
+
+      await waitForContent(() => {
+        const popups = Array.from(
+          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
+        ) as HTMLDivElement[]
+        expect(input.value).toBe('10:30:15')
+        expect(popups.some(popupIsOpen)).toBe(true)
+        expect(
+          container.querySelector(
+            'button[data-rue-time-column="minute"][data-rue-time-option="45"]',
+          ),
+        ).toBeTruthy()
+      })
+
+      await clickPanelOption(container, 'minute', '45')
+      await flush(4)
+
+      await waitForContent(() => {
+        const popups = Array.from(
+          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
+        ) as HTMLDivElement[]
+        expect(input.value).toBe('10:45:15')
+        expect(popups.some(popupIsOpen)).toBe(true)
+        expect(
+          container.querySelector(
+            'button[data-rue-time-column="second"][data-rue-time-option="30"]',
+          ),
+        ).toBeTruthy()
+      })
+
+      await clickPanelOption(container, 'second', '30')
+      await flush(4)
+
+      await waitForContent(() => {
+        const liveValue = container.querySelector(
+          '.mt-2.text-2xl.font-semibold.text-base-content',
+        ) as HTMLDivElement
+        const popups = Array.from(
+          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
+        ) as HTMLDivElement[]
+        expect(input.value).toBe('10:45:30')
+        expect(liveValue.textContent).toBe('10:45:30')
+        expect(popups.some(popupIsOpen)).toBe(true)
+      })
     },
     slowTestTimeout,
   )

@@ -44,7 +44,9 @@ export function useApp(
   AppOrOptions:
     | ComponentInstance
     | {
+        /** 应用级 setup，返回值会传给 render。 */
         setup?: () => any
+        /** 应用级 render，接收 setup 返回的上下文。 */
         render?: (ctx: any) => RenderableOutput
       },
   runtime?: Rue,
@@ -82,7 +84,7 @@ export function useApp(
     return container as DomElementLike
   }
   return {
-    /** 安装插件到应用 */
+    /** 安装插件到应用，并返回 app 以支持链式调用。 */
     use(plugin: any, ...options: any[]) {
       // 透传到 Rue.use，支持多插件链式安装
       runWithRuntime(appRue, () => {
@@ -90,12 +92,12 @@ export function useApp(
       })
       return this
     },
-    /** 注册运行时组件名，供 <component is="Foo" /> 解析使用 */
+    /** 注册运行时组件名，供 <component is="Foo" /> 解析使用。 */
     component(name: string, component: ComponentInstance) {
       registerRuntimeComponent(appRue, name, component)
       return this
     },
-    /** 挂载应用到容器 */
+    /** 挂载应用到容器，容器可以是选择器字符串或元素对象。 */
     mount(container: string | DomElementLike) {
       const el = normalizeContainer(container)
       if (!el) return
@@ -111,7 +113,7 @@ export function useApp(
       if ((el as any).nodeType === 1) setAttribute(el, 'data-rue-app', '')
       containerRef = el
     },
-    /** 从容器卸载应用 */
+    /** 从上一次 mount 的容器卸载应用并释放容器引用。 */
     unmount() {
       if (containerRef) {
         // 执行卸载，释放容器引用

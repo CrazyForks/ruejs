@@ -562,7 +562,7 @@
   - [指南 - 侦听器](/guide/guide/essentials/watchers)
   - [指南 - 侦听器调试](/guide/guide/extras/reactivity-in-depth#watcher-debugging)
 
-## onWatcherCleanup() {#onwatchercleanup} @todo
+## onWatcherCleanup() {#onwatchercleanup}
 
 注册一个清理函数，在当前侦听器即将重新运行时执行。只能在 `watchEffect` effect 函数或 `watch` 回调函数的同步执行期间调用（即不能在异步函数中的 `await` 语句之后调用。）
 

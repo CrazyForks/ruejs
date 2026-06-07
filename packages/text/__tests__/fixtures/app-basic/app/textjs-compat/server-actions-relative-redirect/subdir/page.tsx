@@ -1,0 +1,45 @@
+'use client'
+
+import { absoluteRedirect, multiRelativeRedirect, relativeRedirect } from '../actions'
+
+function startTransition(callback: () => void | Promise<void>): void {
+  void Promise.resolve().then(callback)
+}
+
+export default function Page() {
+  return (
+    <>
+      <p>hello subdir page</p>
+      <button
+        onClick={() => {
+          startTransition(async () => {
+            await relativeRedirect()
+          })
+        }}
+        id="relative-subdir-redirect"
+      >
+        relative redirect
+      </button>
+      <button
+        onClick={() => {
+          startTransition(async () => {
+            await multiRelativeRedirect()
+          })
+        }}
+        id="multi-relative-subdir-redirect"
+      >
+        multi-level relative redirect
+      </button>
+      <button
+        onClick={() => {
+          startTransition(async () => {
+            await absoluteRedirect()
+          })
+        }}
+        id="absolute-subdir-redirect"
+      >
+        absolute redirect
+      </button>
+    </>
+  )
+}

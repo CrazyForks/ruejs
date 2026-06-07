@@ -9,44 +9,77 @@ import { Teleport, h, onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 import Button from '../button'
 import type { ButtonProps, ButtonType } from '../button'
 
+/** ModalWidth 类型。 */
 export type ModalWidth = string | number
+/** ModalInlineStyle 样式值类型。 */
 export type ModalInlineStyle = string | Record<string, string | number | null | undefined>
+/** ModalGetContainer 类型。 */
 export type ModalGetContainer = string | HTMLElement | (() => HTMLElement) | false
 
+/** ModalButtonProps 组件属性。 */
 export interface ModalButtonProps extends ButtonProps {}
 
+/** ModalClassNames 局部类名配置。 */
 export interface ModalClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** 遮罩层区域配置。 */
   mask?: string
+  /** 外层包裹区域配置。 */
   wrapper?: string
+  /** 内容容器区域配置。 */
   container?: string
+  /** box 配置项。 */
   box?: string
+  /** 头部区域内容。 */
   header?: string
+  /** 标题内容。 */
   title?: string
+  /** 主体区域配置。 */
   body?: string
+  /** 底部区域内容。 */
   footer?: string
+  /** 关闭按钮区域配置。 */
   close?: string
 }
 
+/** ModalStyles 局部样式配置。 */
 export interface ModalStyles {
+  /** 根节点区域配置。 */
   root?: ModalInlineStyle
+  /** 遮罩层区域配置。 */
   mask?: ModalInlineStyle
+  /** 外层包裹区域配置。 */
   wrapper?: ModalInlineStyle
+  /** 内容容器区域配置。 */
   container?: ModalInlineStyle
+  /** box 配置项。 */
   box?: ModalInlineStyle
+  /** 头部区域内容。 */
   header?: ModalInlineStyle
+  /** 标题内容。 */
   title?: ModalInlineStyle
+  /** 主体区域配置。 */
   body?: ModalInlineStyle
+  /** 底部区域内容。 */
   footer?: ModalInlineStyle
+  /** 关闭按钮区域配置。 */
   close?: ModalInlineStyle
 }
 
+/** ModalProps 组件属性。 */
 export interface ModalProps {
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 标题内容。 */
   title?: any
+  /** 组件子内容。 */
   children?: any
+  /** 操作区内容。 */
   actions?: any
+  /** 底部区域内容。 */
   footer?:
     | any
     | ((
@@ -56,63 +89,108 @@ export interface ModalProps {
           CancelBtn: FC<Record<string, any>>
         },
       ) => any)
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** 根节点内联样式。 */
   rootStyle?: ModalInlineStyle
+  /** wrapClassName 附加类名。 */
   wrapClassName?: string
+  /** wrapProps 透传属性。 */
   wrapProps?: Record<string, any>
+  /** bodyClassName 附加类名。 */
   bodyClassName?: string
+  /** headerClassName 附加类名。 */
   headerClassName?: string
+  /** footerClassName 附加类名。 */
   footerClassName?: string
+  /** maskClassName 附加类名。 */
   maskClassName?: string
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: ModalClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: ModalStyles
+  /** width 配置项。 */
   width?: ModalWidth
+  /** 根节点内联样式。 */
   style?: ModalInlineStyle
+  /** bodyStyle 内联样式。 */
   bodyStyle?: ModalInlineStyle
+  /** maskStyle 内联样式。 */
   maskStyle?: ModalInlineStyle
+  /** centered 配置项。 */
   centered?: boolean
+  /** closable 配置项。 */
   closable?: boolean
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** keyboard 配置项。 */
   keyboard?: boolean
+  /** 遮罩层区域配置。 */
   mask?: boolean
+  /** maskClosable 配置项。 */
   maskClosable?: boolean
+  /** forceRender 自定义渲染函数。 */
   forceRender?: boolean
+  /** destroyOnClose 配置项。 */
   destroyOnClose?: boolean
+  /** destroyOnHidden 配置项。 */
   destroyOnHidden?: boolean
+  /** confirmLoading 配置项。 */
   confirmLoading?: boolean
+  /** okText 文本内容。 */
   okText?: any
+  /** cancelText 文本内容。 */
   cancelText?: any
+  /** okType 配置项。 */
   okType?: ButtonType
+  /** okButtonProps 透传属性。 */
   okButtonProps?: ModalButtonProps
+  /** cancelButtonProps 透传属性。 */
   cancelButtonProps?: ModalButtonProps
+  /** zIndex 配置项。 */
   zIndex?: number
+  /** getContainer 配置项。 */
   getContainer?: ModalGetContainer
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** onOk 事件回调。 */
   onOk?: (event: MouseEvent) => void
+  /** onCancel 事件回调。 */
   onCancel?: (event: MouseEvent | KeyboardEvent) => void
+  /** 关闭时触发的回调。 */
   onClose?: (event?: MouseEvent | KeyboardEvent) => void
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** afterClose 配置项。 */
   afterClose?: () => void
+  /** afterOpenChange 配置项。 */
   afterOpenChange?: (open: boolean) => void
+  /** modalRender 自定义渲染函数。 */
   modalRender?: (node: any) => any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
 let activeModalCount = 0
 let previousDocumentOverflow = ''
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...classNames: Array<string | undefined | false | null>) =>
   classNames.filter(Boolean).join(' ')
 
+/** 转换为 Camel Case 的内部工具函数。 */
 const toCamelCase = (value: string) =>
   value.replace(/-([a-z])/g, (_, match: string) => match.toUpperCase())
 
+/** 归一化 Style Key 的内部工具函数。 */
 const normalizeStyleKey = (key: string) => {
   if (key.startsWith('--')) return key
   return key.includes('-') ? toCamelCase(key) : key
 }
 
+/** 转换为 Style Object 的内部工具函数。 */
 const toStyleObject = (style?: ModalInlineStyle) => {
   if (!style) return undefined
   const normalized: Record<string, string | number> = {}
@@ -142,6 +220,7 @@ const toStyleObject = (style?: ModalInlineStyle) => {
   return Object.keys(normalized).length > 0 ? normalized : undefined
 }
 
+/** merge Style Value 的内部工具函数。 */
 const mergeStyleValue = (...styles: Array<ModalInlineStyle | undefined>) => {
   const merged: Record<string, string | number> = {}
 
@@ -153,11 +232,13 @@ const mergeStyleValue = (...styles: Array<ModalInlineStyle | undefined>) => {
   return Object.keys(merged).length > 0 ? merged : undefined
 }
 
+/** 解析 Width Style 的内部工具函数。 */
 const resolveWidthStyle = (width?: ModalWidth) => {
   if (width == null) return undefined
   return typeof width === 'number' ? `${width}px` : width
 }
 
+/** 渲染 Loading Body 的内部工具函数。 */
 const renderLoadingBody = () => {
   return (
     <div className="space-y-3" data-rue-modal-loading="true">
@@ -169,6 +250,7 @@ const renderLoadingBody = () => {
   )
 }
 
+/** Default Close Icon 的内部工具函数。 */
 const DefaultCloseIcon: FC = () => {
   return (
     <svg
@@ -185,6 +267,7 @@ const DefaultCloseIcon: FC = () => {
   )
 }
 
+/** lock Document Scroll 的内部工具函数。 */
 const lockDocumentScroll = () => {
   if (typeof document === 'undefined') return
   if (activeModalCount === 0) {
@@ -194,6 +277,7 @@ const lockDocumentScroll = () => {
   activeModalCount += 1
 }
 
+/** unlock Document Scroll 的内部工具函数。 */
 const unlockDocumentScroll = () => {
   if (typeof document === 'undefined' || activeModalCount === 0) return
   activeModalCount -= 1
@@ -560,4 +644,5 @@ const Modal: FC<ModalProps> = ({
   return <Teleport to={resolvedContainer}>{renderedNode}</Teleport>
 }
 
+/** 默认导出模态框组件。 */
 export default Modal

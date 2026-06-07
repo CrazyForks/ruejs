@@ -9,7 +9,7 @@ const initialFruits = [
   { id: 3, name: 'Cherry', color: '酒红色' },
 ]
 
-const profileMeta = {
+const _profileMeta = {
   framework: 'Rue',
   renderer: 'Vapor',
   syntax: 'TSX directives',
@@ -19,7 +19,7 @@ const VForAndRFor: FC = () => {
   const activeTab = ref<'preview' | 'code'>('code')
   const fruits = ref([...initialFruits])
   const count = ref(3)
-  const fruitCards = computed(() =>
+  const _fruitCards = computed(() =>
     fruits.value.map((item, index) => ({
       ...item,
       rank: index + 1,
@@ -131,7 +131,7 @@ export default VForAndRFor;`}
 
                 <ul className="list bg-base-200 rounded-box">
                   <li
-                    v-for="item in fruitCards.get()"
+                    v-for="item in _fruitCards.get()"
                     key={`${item.id}-${item.rank}`}
                     className="list-row"
                   >
@@ -149,7 +149,7 @@ export default VForAndRFor;`}
                 <h2 className="text-xl font-semibold">r-for：对象遍历</h2>
                 <div className="flex flex-wrap gap-2">
                   <span
-                    r-for="(value, key) in profileMeta"
+                    r-for="(value, key) in _profileMeta"
                     key={key}
                     className="badge badge-outline badge-lg"
                   >

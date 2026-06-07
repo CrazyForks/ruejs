@@ -1,24 +1,49 @@
 packages:
   - 'packages/*'
+  - 'examples/text-*'
 
 nodeLinker: hoisted
+autoInstallPeers: false
 
 allowBuilds:
+  '@parcel/watcher': true
   '@swc/core': false
+  better-sqlite3: true
+  esbuild: true
+  msw: false
+  sharp: true
   simple-git-hooks: false
+  workerd: true
 
 catalog:
+  '@mdx-js/rollup': ^3.1.1
   '@babel/parser': ^7.29.3
   '@babel/types': ^7.29.0
+  '@types/node': ^25.6.2
+  '@vercel/og': ^0.8.6
+  'better-auth': ^1.6.14
   'estree-walker': ^2.0.2
+  'image-size': ^2.0.2
+  'ipaddr.js': ^2.1.0
+  'jiti': ^2.7.0
+  'kysely': ^0.28.17
   'magic-string': ^0.30.21
+  'next': ^16.2.7
   'source-map-js': ^1.2.1
   'vite': ^8.0.11
+  'vite-plus': ^0.1.22
+  'vite-plugin-commonjs': ^0.10.4
+  'vite-tsconfig-paths': ^6.1.1
+  'web-vitals': ^4.2.4
 
 onlyBuiltDependencies:
+  - '@parcel/watcher'
   - '@swc/core'
+  - 'better-sqlite3'
   - 'esbuild'
   - 'puppeteer'
+  - 'sharp'
   - 'simple-git-hooks'
   - 'unrs-resolver'
+  - 'workerd'
   - '@rue-js/jsx-dev-runtime'

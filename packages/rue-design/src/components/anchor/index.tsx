@@ -1,65 +1,121 @@
+/*
+Anchor 模块概述
+- 汇总锚点组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 import { Slot, getCurrentInstance, onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** AnchorKey 标识键类型。 */
 export type AnchorKey = string | number
+/** AnchorDirection 位置或方向类型。 */
 export type AnchorDirection = 'vertical' | 'horizontal'
+/** AnchorContainer 类型。 */
 export type AnchorContainer = HTMLElement | Window
 
+/** AnchorItem 数据项结构。 */
 export interface AnchorItem {
+  /** 数据项唯一标识。 */
   key?: AnchorKey
+  /** 链接地址。 */
   href: string
+  /** 标题内容。 */
   title: any
+  /** 链接或定位目标。 */
   target?: string
+  /** replace 配置项。 */
   replace?: boolean
+  /** 描述内容。 */
   description?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 组件子内容。 */
   children?: AnchorItem[]
 }
 
+/** AnchorLinkProps 组件属性。 */
 export interface AnchorLinkProps extends Omit<AnchorItem, 'children'> {
+  /** 组件子内容。 */
   children?: any
 }
 
+/** AnchorClassNames 局部类名配置。 */
 export interface AnchorClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** list 区域配置。 */
   list?: string
+  /** item 区域配置。 */
   item?: string
+  /** link 配置项。 */
   link?: string
+  /** 标题内容。 */
   title?: string
+  /** 描述内容。 */
   description?: string
+  /** indicator 配置项。 */
   indicator?: string
 }
 
+/** AnchorStyles 局部样式配置。 */
 export interface AnchorStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** list 区域配置。 */
   list?: Record<string, any>
+  /** item 区域配置。 */
   item?: Record<string, any>
+  /** link 配置项。 */
   link?: Record<string, any>
+  /** 标题内容。 */
   title?: Record<string, any>
+  /** 描述内容。 */
   description?: Record<string, any>
+  /** indicator 配置项。 */
   indicator?: Record<string, any>
 }
 
+/** AnchorProps 组件属性。 */
 export interface AnchorProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** offsetTop 配置项。 */
   offsetTop?: number
+  /** bounds 配置项。 */
   bounds?: number
+  /** affix 配置项。 */
   affix?: boolean
+  /** showInkInFixed 配置项。 */
   showInkInFixed?: boolean
+  /** getContainer 配置项。 */
   getContainer?: () => AnchorContainer | undefined
+  /** getCurrentAnchor 配置项。 */
   getCurrentAnchor?: (activeLink: string) => string
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent, link: { title: any; href: string }) => void
+  /** targetOffset 配置项。 */
   targetOffset?: number
+  /** 值或状态变化时触发的回调。 */
   onChange?: (currentActiveLink: string) => void
+  /** 数据驱动渲染项。 */
   items?: AnchorItem[]
+  /** 布局方向。 */
   direction?: AnchorDirection
+  /** replace 配置项。 */
   replace?: boolean
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: AnchorClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: AnchorStyles
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -69,30 +125,36 @@ interface NormalizedAnchorItem extends Omit<AnchorItem, 'children'> {
   children?: NormalizedAnchorItem[]
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (base && className) return `${base} ${className}`
   return base ?? className ?? ''
 }
 
+/** 归一化 Children 的内部工具函数。 */
 const normalizeChildren = (children?: any) => {
   if (Array.isArray(children)) return children
   return children != null ? [children] : []
 }
 
+/** 创建 Key Text 的内部工具函数。 */
 const createKeyText = (key: AnchorKey | undefined, href: string, level: number, index: number) => {
   const fallback = `${href || 'anchor'}:${level}:${index}`
   return key == null ? fallback : `${typeof key}:${String(key)}`
 }
 
+/** 判断 Renderable Node 的内部工具函数。 */
 const isRenderableNode = (value: unknown): value is Record<string, any> => {
   return !!value && typeof value === 'object'
 }
 
+/** 判断 Anchor Link Node 的内部工具函数。 */
 const isAnchorLinkNode = (value: unknown) => {
   if (!isRenderableNode(value)) return false
   return (value as any).type === AnchorLink
 }
 
+/** extract Href Target Id 的内部工具函数。 */
 const extractHrefTargetId = (href?: string) => {
   if (!href) return ''
   const hashIndex = href.lastIndexOf('#')
@@ -106,10 +168,12 @@ const extractHrefTargetId = (href?: string) => {
   }
 }
 
+/** 解析 Item Title 的内部工具函数。 */
 const resolveItemTitle = (item: Pick<AnchorItem, 'title' | 'href'>) => {
   return item.title ?? item.href
 }
 
+/** parse Link Children 的内部工具函数。 */
 const parseLinkChildren = (children?: any, level = 0): AnchorItem[] => {
   return normalizeChildren(children).flatMap((child, _index) => {
     if (!isAnchorLinkNode(child)) return []
@@ -136,6 +200,7 @@ const parseLinkChildren = (children?: any, level = 0): AnchorItem[] => {
   })
 }
 
+/** 归一化 Items 的内部工具函数。 */
 const normalizeItems = (
   items: AnchorItem[] | undefined,
   children: any,
@@ -160,6 +225,7 @@ const normalizeItems = (
   })
 }
 
+/** flatten Items 的内部工具函数。 */
 const flattenItems = (
   items: NormalizedAnchorItem[],
   includeChildren = true,
@@ -170,14 +236,17 @@ const flattenItems = (
   })
 }
 
+/** 读取 Default Container 的内部工具函数。 */
 const getDefaultContainer = (): AnchorContainer | undefined => {
   return typeof window === 'undefined' ? undefined : window
 }
 
+/** 判断 Window Container 的内部工具函数。 */
 const isWindowContainer = (container?: AnchorContainer): container is Window => {
   return typeof window !== 'undefined' && container === window
 }
 
+/** 读取 Container Scroll Top 的内部工具函数。 */
 const getContainerScrollTop = (container?: AnchorContainer) => {
   if (!container) return 0
   if (isWindowContainer(container)) {
@@ -186,6 +255,7 @@ const getContainerScrollTop = (container?: AnchorContainer) => {
   return container.scrollTop
 }
 
+/** 读取 Container Viewport Height 的内部工具函数。 */
 const getContainerViewportHeight = (container?: AnchorContainer) => {
   if (!container) return 0
   if (isWindowContainer(container)) {
@@ -196,6 +266,7 @@ const getContainerViewportHeight = (container?: AnchorContainer) => {
   return container.clientHeight
 }
 
+/** 读取 Container Scroll Height 的内部工具函数。 */
 const getContainerScrollHeight = (container?: AnchorContainer) => {
   if (!container) return 0
   if (isWindowContainer(container)) {
@@ -209,6 +280,7 @@ const getContainerScrollHeight = (container?: AnchorContainer) => {
   return container.scrollHeight
 }
 
+/** 设置 Container Scroll Top 的内部工具函数。 */
 const setContainerScrollTop = (container: AnchorContainer | undefined, top: number) => {
   const nextTop = Math.max(0, top)
   if (!container) return
@@ -233,6 +305,7 @@ const setContainerScrollTop = (container: AnchorContainer | undefined, top: numb
   }
 }
 
+/** 读取 Offset Top 的内部工具函数。 */
 const getOffsetTop = (element: HTMLElement, container?: AnchorContainer) => {
   const rect = element.getBoundingClientRect()
   if (!container || isWindowContainer(container)) {
@@ -243,6 +316,7 @@ const getOffsetTop = (element: HTMLElement, container?: AnchorContainer) => {
   return rect.top - containerRect.top + container.scrollTop
 }
 
+/** 读取 Scoped Target Element 的内部工具函数。 */
 const getScopedTargetElement = (targetId: string, container: HTMLElement) => {
   if (container.id === targetId) return container
 
@@ -257,6 +331,7 @@ const getScopedTargetElement = (targetId: string, container: HTMLElement) => {
   return null
 }
 
+/** 读取 Target Element 的内部工具函数。 */
 const getTargetElement = (href?: string, container?: AnchorContainer) => {
   if (typeof document === 'undefined') return null
   const targetId = extractHrefTargetId(href)
@@ -269,6 +344,7 @@ const getTargetElement = (href?: string, container?: AnchorContainer) => {
   return document.getElementById(targetId)
 }
 
+/** 判断 Near Container Bottom 的内部工具函数。 */
 const isNearContainerBottom = (container: AnchorContainer | undefined, tolerance = 1) => {
   if (!container) return false
   const viewportHeight = getContainerViewportHeight(container)
@@ -279,8 +355,10 @@ const isNearContainerBottom = (container: AnchorContainer | undefined, tolerance
   return getContainerScrollTop(container) + viewportHeight >= scrollHeight - tolerance
 }
 
+/** 判断 External Href 的内部工具函数。 */
 const isExternalHref = (href: string) => /^(https?:)?\/\//.test(href)
 
+/** update Hash Safely 的内部工具函数。 */
 const updateHashSafely = (href: string, replace?: boolean) => {
   if (typeof window === 'undefined') return
   if (!href.startsWith('#')) return
@@ -294,6 +372,7 @@ const updateHashSafely = (href: string, replace?: boolean) => {
   }
 }
 
+/** 解析 Sticky Style 的内部工具函数。 */
 const resolveStickyStyle = (affix?: boolean, offsetTop?: number) => {
   if (!affix) return undefined
   return {
@@ -302,6 +381,7 @@ const resolveStickyStyle = (affix?: boolean, offsetTop?: number) => {
   }
 }
 
+/** Anchor Link 的内部工具函数。 */
 const AnchorLink: FC<AnchorLinkProps> = ({
   href,
   title,
@@ -342,6 +422,7 @@ const AnchorLink: FC<AnchorLinkProps> = ({
   )
 }
 
+/** Anchor Base 的内部工具函数。 */
 const AnchorBase: FC<AnchorProps> = ({
   className,
   rootClassName,
@@ -738,5 +819,8 @@ const Anchor = AnchorBase as AnchorComponent
 
 Anchor.Link = AnchorLink
 
+/** 导出 Anchor 复合组件类型，包含 Link 子组件。 */
 export type { AnchorComponent }
+
+/** 默认导出锚点组件。 */
 export default Anchor

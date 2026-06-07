@@ -7,6 +7,14 @@ import type {
   NormalizeRenderableResult,
 } from './renderable'
 
+/*
+Renderable 规范化概述
+- 空值和 boolean 会变成空数组，表示“不产生 DOM”。
+- string / number 会立即创建文本节点，避免后续渲染桥反复判断基础类型。
+- 数组会递归展开并保留顺序，遇到不支持对象时短路返回 unsupported-object。
+- DOM 节点、BlockInstance 和 BlockFactory 会原样保留，交给 renderable bridge 挂载。
+*/
+
 const isDomNodeLike = (value: unknown): value is DomNodeLike & { nodeType: number } =>
   !!value && typeof value === 'object' && 'nodeType' in value
 
@@ -37,6 +45,7 @@ const normalizeRenderableArray = (values: readonly unknown[]): NormalizeRenderab
   return { kind: 'renderable', value: normalized }
 }
 
+/** 将任意默认运行时输入转换为安全可挂载的 NormalizedRenderable。 */
 export const normalizeRenderable = (value: unknown): NormalizeRenderableResult => {
   if (value == null || typeof value === 'boolean') {
     return { kind: 'renderable', value: [] }

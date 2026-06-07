@@ -1,3 +1,9 @@
+/*
+render：容器级渲染桥接
+
+把 JS 输入规范化为 MountInput 后入队，真正的 DOM 挂载/patch 由 WasmRue 的异步队列统一执行。
+这样可以避免 JS 回调重入时直接可变借用内部 Rue。
+*/
 use super::WasmRue;
 use super::input::CompatEntryPolicy;
 use crate::runtime::js_adapter::JsDomAdapter;

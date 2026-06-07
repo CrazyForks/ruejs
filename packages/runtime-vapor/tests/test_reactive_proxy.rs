@@ -8,6 +8,22 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_test::*;
 
+fn mount_handle(id: f64) -> Object {
+    let handle = Object::new();
+    Reflect::set(&handle, &JsValue::from_str("__rue_mount_id"), &JsValue::from_f64(id)).unwrap();
+    handle
+}
+
+fn portable_component(component_type: &Function, prop_id: f64) -> Object {
+    let props = Object::new();
+    Reflect::set(&props, &JsValue::from_str("id"), &JsValue::from_f64(prop_id)).unwrap();
+
+    let component = Object::new();
+    Reflect::set(&component, &JsValue::from_str("__rue_component_type"), component_type).unwrap();
+    Reflect::set(&component, &JsValue::from_str("props"), &props).unwrap();
+    component
+}
+
 /// 代理属性访问应订阅具体分支，而不是把所有中间层都订到根上。
 #[wasm_bindgen_test]
 fn reactive_nested_branch_update_does_not_rerun_sibling_effect() {
@@ -246,6 +262,159 @@ fn reactive_primitive_own_keys_hidden_value() {
     // 依旧不暴露任何键
     let keys2 = js_sys::Reflect::own_keys(&proxy).unwrap_or(Array::new());
     assert_eq!(keys2.length(), 0);
+}
+
+#[wasm_bindgen_test]
+fn reactive_value_object_and_debug_traps_cover_proxy_metadata_paths() {
+    let inner = Object::new();
+    Reflect::set(&inner, &JsValue::from_str("nested"), &JsValue::from_str("A")).unwrap();
+    let root = Object::new();
+    Reflect::set(&root, &JsValue::from_str("value"), &inner.clone().into()).unwrap();
+    let proxy = create_reactive(root.into(), None);
+
+    let value_proxy = Reflect::get(&proxy, &JsValue::from_str("value")).unwrap();
+    assert_eq!(
+        Reflect::get(&value_proxy, &JsValue::from_str("nested")).unwrap().as_string().as_deref(),
+        Some("A")
+    );
+    assert_eq!(
+        Reflect::get(&value_proxy, &JsValue::from_str("__isReactive__")).unwrap().as_bool(),
+        Some(true)
+    );
+    assert_eq!(
+        Reflect::get(&value_proxy, &JsValue::from_str("__isReadonly__")).unwrap().as_bool(),
+        Some(false)
+    );
+
+    let path =
+        Array::from(&Reflect::get(&value_proxy, &JsValue::from_str("__rue_path__")).unwrap());
+    assert_eq!(path.length(), 1);
+    assert_eq!(path.get(0).as_string().as_deref(), Some("value"));
+
+    assert!(Reflect::has(&value_proxy, &JsValue::from_str("nested")).unwrap());
+    let keys = Reflect::own_keys(&value_proxy).unwrap();
+    assert_eq!(keys.length(), 1);
+
+    let desc = Object::get_own_property_descriptor(
+        &value_proxy.clone().unchecked_into::<Object>(),
+        &JsValue::from_str("nested"),
+    );
+    assert_eq!(
+        Reflect::get(&desc, &JsValue::from_str("configurable")).unwrap().as_bool(),
+        Some(true)
+    );
+
+    let to_json: Function =
+        Reflect::get(&value_proxy, &JsValue::from_str("toJSON")).unwrap().unchecked_into();
+    let json_value = to_json.call0(&JsValue::NULL).unwrap();
+    assert_eq!(
+        Reflect::get(&json_value, &JsValue::from_str("nested")).unwrap().as_string().as_deref(),
+        Some("A")
+    );
+
+    let value_of: Function =
+        Reflect::get(&value_proxy, &JsValue::from_str("valueOf")).unwrap().unchecked_into();
+    let value_of_value = value_of.call0(&JsValue::NULL).unwrap();
+    assert_eq!(
+        Reflect::get(&value_of_value, &JsValue::from_str("nested")).unwrap().as_string().as_deref(),
+        Some("A")
+    );
+
+    let to_string: Function =
+        Reflect::get(&value_proxy, &JsValue::from_str("toString")).unwrap().unchecked_into();
+    let text = to_string.call0(&JsValue::NULL).unwrap().as_string().unwrap();
+    assert!(text.contains("nested"));
+}
+
+#[wasm_bindgen_test]
+fn reactive_proxy_covers_readonly_set_and_stale_child_metadata_edges() {
+    let readonly_opts = Object::new();
+    Reflect::set(&readonly_opts, &JsValue::from_str("readonly"), &JsValue::TRUE).unwrap();
+    let readonly_root = Object::new();
+    Reflect::set(&readonly_root, &JsValue::from_str("count"), &JsValue::from_f64(1.0)).unwrap();
+    let readonly_proxy = create_reactive(readonly_root.into(), Some(readonly_opts.into()));
+
+    let write_ok =
+        Reflect::set(&readonly_proxy, &JsValue::from_str("count"), &JsValue::from_f64(2.0))
+            .unwrap();
+    assert!(!write_ok);
+    assert_eq!(
+        Reflect::get(&readonly_proxy, &JsValue::from_str("__isReadonly__")).unwrap().as_bool(),
+        Some(true)
+    );
+    assert_eq!(
+        Reflect::get(&readonly_proxy, &JsValue::from_str("count")).unwrap().as_f64(),
+        Some(1.0)
+    );
+
+    let child = Object::new();
+    Reflect::set(&child, &JsValue::from_str("name"), &JsValue::from_str("A")).unwrap();
+    let root = Object::new();
+    Reflect::set(&root, &JsValue::from_str("child"), &child.clone().into()).unwrap();
+    let proxy = create_reactive(root.into(), None);
+    let child_proxy = Reflect::get(&proxy, &JsValue::from_str("child")).unwrap();
+
+    Reflect::set(&proxy, &JsValue::from_str("child"), &JsValue::NULL).unwrap();
+    let stale_keys = Reflect::own_keys(&child_proxy).unwrap();
+    assert_eq!(stale_keys.length(), 0);
+    let stale_desc = Object::get_own_property_descriptor(
+        &child_proxy.clone().unchecked_into::<Object>(),
+        &JsValue::from_str("name"),
+    );
+    assert!(stale_desc.is_undefined());
+}
+
+#[wasm_bindgen_test]
+fn reactive_proxy_preserves_non_configurable_target_keys_when_holder_shape_changes() {
+    let arr = Array::new();
+    arr.push(&JsValue::from_str("A"));
+    let proxy = create_reactive(arr.into(), None);
+
+    let signal = Reflect::get(&proxy, &JsValue::from_str("__signal__")).unwrap();
+    let set: Function = Reflect::get(&signal, &JsValue::from_str("set")).unwrap().unchecked_into();
+    set.call1(&signal, &Object::new().into()).unwrap();
+
+    let keys = Reflect::own_keys(&proxy).unwrap();
+    let mut saw_length = false;
+    for index in 0..keys.length() {
+        if keys.get(index).as_string().as_deref() == Some("length") {
+            saw_length = true;
+        }
+    }
+    assert!(saw_length);
+
+    let length_desc = Object::get_own_property_descriptor(
+        &proxy.clone().unchecked_into::<Object>(),
+        &JsValue::from_str("length"),
+    );
+    assert_eq!(
+        Reflect::get(&length_desc, &JsValue::from_str("configurable")).unwrap().as_bool(),
+        Some(false)
+    );
+}
+
+#[wasm_bindgen_test]
+fn reactive_primitive_value_accessor_reads_latest_holder_shape() {
+    let proxy = create_reactive(JsValue::from_str("first"), None);
+    assert_eq!(
+        Reflect::get(&proxy, &JsValue::from_str("value")).unwrap().as_string().as_deref(),
+        Some("first")
+    );
+
+    let signal = Reflect::get(&proxy, &JsValue::from_str("__signal__")).unwrap();
+    let set: Function = Reflect::get(&signal, &JsValue::from_str("set")).unwrap().unchecked_into();
+    set.call1(&signal, &JsValue::from_str("plain")).unwrap();
+
+    assert!(Reflect::get(&proxy, &JsValue::from_str("value")).unwrap().is_undefined());
+
+    let wrapped = Object::new();
+    Reflect::set(&wrapped, &JsValue::from_str("value"), &JsValue::from_str("wrapped")).unwrap();
+    set.call1(&signal, &wrapped.into()).unwrap();
+
+    assert_eq!(
+        Reflect::get(&proxy, &JsValue::from_str("value")).unwrap().as_string().as_deref(),
+        Some("wrapped")
+    );
 }
 
 /// 方法调用的 `this` 绑定到原始 holder；代理写入后方法读取到最新值
@@ -568,6 +737,141 @@ fn shallow_equal_prop_normalizes_singleton_block_factory_identity() {
         .unwrap();
 
     assert!(!shallow_equal_prop(&factory.into(), &other_factory.into()));
+}
+
+#[wasm_bindgen_test]
+fn shallow_equal_prop_normalizes_singleton_block_instance_identity() {
+    let block = Object::new();
+    Reflect::set(&block, &JsValue::from_str("kind"), &JsValue::from_str("block")).unwrap();
+    Reflect::set(&block, &JsValue::from_str("mount"), &Function::new_no_args("return null;"))
+        .unwrap();
+
+    let singleton = Array::new();
+    singleton.push(&block.clone().into());
+    assert!(shallow_equal_prop(&singleton.into(), &block.clone().into()));
+
+    let other_block = Object::new();
+    Reflect::set(&other_block, &JsValue::from_str("kind"), &JsValue::from_str("block")).unwrap();
+    Reflect::set(&other_block, &JsValue::from_str("mount"), &Function::new_no_args("return null;"))
+        .unwrap();
+    assert!(!shallow_equal_prop(&block.into(), &other_block.into()));
+}
+
+#[wasm_bindgen_test]
+fn shallow_equal_prop_covers_remaining_renderable_and_plain_edges() {
+    let host = Object::new();
+    Reflect::set(&host, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
+    let nodes = Array::new();
+    nodes.push(&host.clone().into());
+    let wrapper = Object::new();
+    Reflect::set(&wrapper, &JsValue::from_str("nodes"), &nodes).unwrap();
+    assert!(shallow_equal_prop(&wrapper.into(), &host.into()));
+
+    let empty_nodes_wrapper = Object::new();
+    Reflect::set(&empty_nodes_wrapper, &JsValue::from_str("nodes"), &Array::new()).unwrap();
+    assert!(!shallow_equal_prop(&empty_nodes_wrapper.into(), &Object::new().into()));
+
+    let handle = mount_handle(31.0);
+    assert!(!shallow_equal_prop(&handle.clone().into(), &Object::new().into()));
+
+    let invalid_items = Array::new();
+    invalid_items.push(&Object::new().into());
+    assert!(!shallow_equal_prop(&invalid_items.into(), &Array::new().into()));
+
+    let left_pair = Array::new();
+    left_pair.push(&handle.clone().into());
+    left_pair.push(&mount_handle(32.0).into());
+    let longer = Array::new();
+    longer.push(&mount_handle(31.0).into());
+    longer.push(&mount_handle(32.0).into());
+    longer.push(&mount_handle(33.0).into());
+    assert!(!shallow_equal_prop(&left_pair.into(), &longer.into()));
+
+    let mismatch_left = Array::new();
+    mismatch_left.push(&mount_handle(41.0).into());
+    mismatch_left.push(&mount_handle(42.0).into());
+    let mismatch_right = Array::new();
+    mismatch_right.push(&mount_handle(41.0).into());
+    mismatch_right.push(&mount_handle(43.0).into());
+    assert!(!shallow_equal_prop(&mismatch_left.into(), &mismatch_right.into()));
+
+    let same = Object::new();
+    assert!(shallow_equal_prop(&same.clone().into(), &same.into()));
+
+    let left = Object::new();
+    Reflect::set(&left, &JsValue::from_str("a"), &JsValue::from_f64(1.0)).unwrap();
+    assert!(!shallow_equal_prop(&left.clone().into(), &Object::new().into()));
+    let right = Object::new();
+    Reflect::set(&right, &JsValue::from_str("b"), &JsValue::from_f64(1.0)).unwrap();
+    assert!(!shallow_equal_prop(&left.into(), &right.into()));
+
+    let value_left = Object::new();
+    Reflect::set(&value_left, &JsValue::from_str("value"), &JsValue::from_f64(1.0)).unwrap();
+    let value_right = Object::new();
+    Reflect::set(&value_right, &JsValue::from_str("value"), &JsValue::from_f64(2.0)).unwrap();
+    assert!(!shallow_equal_prop(&value_left.into(), &value_right.into()));
+
+    assert!(!shallow_equal_prop(&JsValue::from_f64(1.0), &JsValue::from_f64(2.0)));
+}
+
+#[wasm_bindgen_test]
+fn shallow_equal_prop_covers_portable_component_false_edges() {
+    let component_type = Function::new_no_args("return null;");
+    let component = portable_component(&component_type, 1.0);
+    assert!(!shallow_equal_prop(&component.clone().into(), &Object::new().into()));
+
+    let other_type = Function::new_no_args("return null;");
+    let other_component = portable_component(&other_type, 1.0);
+    assert!(!shallow_equal_prop(&component.clone().into(), &other_component.into()));
+
+    let changed_props = portable_component(&component_type, 2.0);
+    assert!(!shallow_equal_prop(&component.into(), &changed_props.into()));
+}
+
+#[wasm_bindgen_test]
+fn shallow_equal_prop_covers_nested_portable_component_false_edge() {
+    let component_type = Function::new_no_args("return null;");
+
+    let equal_left = Object::new();
+    Reflect::set(
+        &equal_left,
+        &JsValue::from_str("child"),
+        &portable_component(&component_type, 1.0),
+    )
+    .unwrap();
+    let equal_right = Object::new();
+    Reflect::set(
+        &equal_right,
+        &JsValue::from_str("child"),
+        &portable_component(&component_type, 1.0),
+    )
+    .unwrap();
+    assert!(shallow_equal_prop(&equal_left.into(), &equal_right.into()));
+
+    let left = Object::new();
+    Reflect::set(&left, &JsValue::from_str("child"), &portable_component(&component_type, 1.0))
+        .unwrap();
+
+    let right = Object::new();
+    Reflect::set(&right, &JsValue::from_str("child"), &portable_component(&component_type, 2.0))
+        .unwrap();
+
+    assert!(!shallow_equal_prop(&left.into(), &right.into()));
+}
+
+#[wasm_bindgen_test]
+fn props_reactive_signal_set_invokes_shallow_equal_props() {
+    let initial = Object::new();
+    Reflect::set(&initial, &JsValue::from_str("id"), &JsValue::from_f64(1.0)).unwrap();
+    let props = props_reactive_js(initial.into(), Some(true));
+    let signal = Reflect::get(&props, &JsValue::from_str("__signal__")).unwrap();
+    let set: Function = Reflect::get(&signal, &JsValue::from_str("set")).unwrap().unchecked_into();
+
+    let equivalent = Object::new();
+    Reflect::set(&equivalent, &JsValue::from_str("id"), &JsValue::from_f64(1.0)).unwrap();
+    set.call1(&signal, &equivalent.into()).unwrap();
+
+    assert_eq!(Reflect::get(&props, &JsValue::from_str("id")).unwrap().as_f64(), Some(1.0),);
 }
 
 /// 只读代理：写入被拒绝（返回 false/不生效），原始快照保持不变

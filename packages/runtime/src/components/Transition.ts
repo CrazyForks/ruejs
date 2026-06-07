@@ -22,6 +22,7 @@ import { useSetup } from '@rue-js/runtime-vapor/reactive'
 type FC<P = {}> = VaporFC<P>
 type PropsWithChildren<P = {}> = VaporPropsWithChildren<P>
 
+/** Transition 组件属性，继承基础过渡配置并接收一个直接子节点。 */
 export type TransitionProps = PropsWithChildren<BaseTransitionProps>
 
 type TransitionChildInput = Parameters<typeof renderBetween>[0]

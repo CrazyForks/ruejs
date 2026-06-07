@@ -1,0 +1,787 @@
+/**
+ * Behavioral tests for the App Router entry-template code generators.
+ *
+ * Tests focus on observable behavior (structured API outputs and error paths),
+ * not on the textual shape of the generated code.
+ */
+import path from 'node:path'
+import fs from 'node:fs'
+import os from 'node:os'
+import { describe, it, expect } from 'vite-plus/test'
+import { generateBrowserEntry } from '../src/entries/app-browser-entry.js'
+import { buildAppRscManifestCode } from '../src/entries/app-rsc-manifest.js'
+import { generateRscEntry } from '../src/entries/app-rsc-entry.js'
+import { generateServerEntry } from '../src/entries/pages-server-entry.js'
+import { resolveTextConfig } from '../src/config/text-config.js'
+import { buildAppRouteGraph } from '../src/routing/app-route-graph.js'
+import { createValidFileMatcher } from '../src/routing/file-matcher.js'
+import type { AppRoute } from '../src/routing/app-router.js'
+import type { MetadataFileRoute } from '../src/server/metadata-routes.js'
+
+// ── Minimal App Router route fixtures ─────────────────────────────────
+// Use stable absolute paths so tests don't depend on the machine.
+const minimalAppRoutes: AppRoute[] = [
+  {
+    pattern: '/',
+    patternParts: [],
+    pagePath: '/tmp/test/app/page.tsx',
+    routePath: null,
+    layouts: ['/tmp/test/app/layout.tsx'],
+    templates: [],
+    parallelSlots: [],
+    loadingPath: null,
+    errorPath: null,
+    layoutErrorPaths: [null],
+    notFoundPath: null,
+    notFoundPaths: [null],
+    forbiddenPaths: [null],
+    forbiddenPath: null,
+    unauthorizedPaths: [null],
+    unauthorizedPath: null,
+    routeSegments: [],
+    templateTreePositions: [],
+    layoutTreePositions: [0],
+    isDynamic: false,
+    params: [],
+  },
+  {
+    pattern: '/about',
+    patternParts: ['about'],
+    pagePath: '/tmp/test/app/about/page.tsx',
+    routePath: null,
+    layouts: ['/tmp/test/app/layout.tsx'],
+    templates: [],
+    parallelSlots: [],
+    loadingPath: null,
+    errorPath: null,
+    layoutErrorPaths: [null],
+    notFoundPath: null,
+    notFoundPaths: [null],
+    forbiddenPaths: [null],
+    forbiddenPath: null,
+    unauthorizedPaths: [null],
+    unauthorizedPath: null,
+    routeSegments: ['about'],
+    templateTreePositions: [],
+    layoutTreePositions: [0],
+    isDynamic: false,
+    params: [],
+  },
+  {
+    pattern: '/blog/:slug',
+    patternParts: ['blog', ':slug'],
+    pagePath: '/tmp/test/app/blog/[slug]/page.tsx',
+    routePath: null,
+    layouts: ['/tmp/test/app/layout.tsx', '/tmp/test/app/blog/[slug]/layout.tsx'],
+    templates: [],
+    parallelSlots: [],
+    loadingPath: null,
+    errorPath: null,
+    layoutErrorPaths: [null, null],
+    notFoundPath: null,
+    notFoundPaths: [null, null],
+    forbiddenPaths: [null, null],
+    forbiddenPath: null,
+    unauthorizedPaths: [null, null],
+    unauthorizedPath: null,
+    routeSegments: ['blog', ':slug'],
+    templateTreePositions: [],
+    layoutTreePositions: [0, 1],
+    isDynamic: true,
+    params: ['slug'],
+  },
+  {
+    pattern: '/dashboard',
+    patternParts: ['dashboard'],
+    pagePath: '/tmp/test/app/dashboard/page.tsx',
+    routePath: null,
+    layouts: ['/tmp/test/app/layout.tsx', '/tmp/test/app/dashboard/layout.tsx'],
+    templates: ['/tmp/test/app/dashboard/template.tsx'],
+    parallelSlots: [],
+    loadingPath: '/tmp/test/app/dashboard/loading.tsx',
+    errorPath: '/tmp/test/app/dashboard/error.tsx',
+    layoutErrorPaths: [null, '/tmp/test/app/dashboard/error.tsx'],
+    notFoundPath: '/tmp/test/app/dashboard/not-found.tsx',
+    notFoundPaths: [null, '/tmp/test/app/dashboard/not-found.tsx'],
+    forbiddenPaths: [null, '/tmp/test/app/dashboard/forbidden.tsx'],
+    forbiddenPath: '/tmp/test/app/dashboard/forbidden.tsx',
+    unauthorizedPaths: [null, '/tmp/test/app/dashboard/unauthorized.tsx'],
+    unauthorizedPath: '/tmp/test/app/dashboard/unauthorized.tsx',
+    routeSegments: ['dashboard'],
+    templateTreePositions: [1],
+    layoutTreePositions: [0, 1],
+    isDynamic: false,
+    params: [],
+  },
+]
+
+// ── App Router manifest construction ─────────────────────────────────
+
+describe('App Router generated manifest construction', () => {
+  it('embeds the Link auto-prefetch route manifest in the browser entry', () => {
+    const code = generateBrowserEntry([
+      ...minimalAppRoutes,
+      {
+        pattern: '/modal-host',
+        patternParts: ['modal-host'],
+        pagePath: null,
+        routePath: null,
+        layouts: ['/tmp/test/app/layout.tsx', '/tmp/test/app/modal-host/layout.tsx'],
+        templates: [],
+        parallelSlots: [],
+        loadingPath: null,
+        errorPath: null,
+        layoutErrorPaths: [null, null],
+        notFoundPath: null,
+        notFoundPaths: [null, null],
+        forbiddenPaths: [null, null],
+        forbiddenPath: null,
+        unauthorizedPaths: [null, null],
+        unauthorizedPath: null,
+        routeSegments: ['modal-host'],
+        templateTreePositions: [],
+        layoutTreePositions: [0, 1],
+        isDynamic: false,
+        params: [],
+      },
+      {
+        pattern: '/docs/:slug',
+        patternParts: ['docs', ':slug'],
+        pagePath: '/tmp/test/app/docs/[slug]/page.tsx',
+        routePath: null,
+        layouts: ['/tmp/test/app/layout.tsx'],
+        templates: [],
+        parallelSlots: [],
+        loadingPath: '/tmp/test/app/docs/[slug]/loading.tsx',
+        errorPath: null,
+        layoutErrorPaths: [null],
+        notFoundPath: null,
+        notFoundPaths: [null],
+        forbiddenPaths: [null],
+        forbiddenPath: null,
+        unauthorizedPaths: [null],
+        unauthorizedPath: null,
+        routeSegments: ['docs', ':slug'],
+        templateTreePositions: [],
+        layoutTreePositions: [0],
+        isDynamic: true,
+        params: ['slug'],
+      },
+      {
+        pattern: '/api',
+        patternParts: ['api'],
+        pagePath: null,
+        routePath: '/tmp/test/app/api/route.ts',
+        layouts: [],
+        templates: [],
+        parallelSlots: [],
+        loadingPath: null,
+        errorPath: null,
+        layoutErrorPaths: [],
+        notFoundPath: null,
+        notFoundPaths: [],
+        forbiddenPaths: [],
+        forbiddenPath: null,
+        unauthorizedPaths: [],
+        unauthorizedPath: null,
+        routeSegments: ['api'],
+        templateTreePositions: [],
+        layoutTreePositions: [],
+        isDynamic: false,
+        params: [],
+      },
+    ])
+
+    expect(code).toContain('import { registerNavigationRuntimeBootstrap } from ')
+    expect(code).toContain('window.__TEXT_LINK_PREFETCH_ROUTES__ = ')
+    expect(code).toContain('registerNavigationRuntimeBootstrap({')
+    expect(code).toContain('routeManifest: null')
+    expect(code).toContain(
+      '{"canPrefetchLoadingShell":false,"patternParts":["about"],"isDynamic":false}',
+    )
+    expect(code).toContain(
+      '{"canPrefetchLoadingShell":false,"patternParts":["blog",":slug"],"isDynamic":true}',
+    )
+    expect(code).toContain(
+      '{"canPrefetchLoadingShell":true,"patternParts":["docs",":slug"],"isDynamic":true}',
+    )
+    expect(code).toContain(
+      '{"canPrefetchLoadingShell":false,"patternParts":["modal-host"],"isDynamic":false}',
+    )
+    expect(code).not.toContain(
+      '{"canPrefetchLoadingShell":false,"patternParts":["api"],"isDynamic":false}',
+    )
+  })
+
+  it('embeds the RouteManifest read model in the browser entry', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'text-browser-route-manifest-'))
+    const appDir = path.join(tmpDir, 'app')
+    try {
+      fs.mkdirSync(path.join(appDir, 'dashboard'), { recursive: true })
+      fs.writeFileSync(path.join(appDir, 'layout.tsx'), 'export default function Layout() {}\n')
+      fs.writeFileSync(path.join(appDir, 'page.tsx'), 'export default function Page() {}\n')
+      fs.writeFileSync(
+        path.join(appDir, 'dashboard', 'page.tsx'),
+        'export default function Page() {}\n',
+      )
+
+      const graph = await buildAppRouteGraph(appDir, createValidFileMatcher())
+      const code = generateBrowserEntry(graph.routes, graph.routeManifest)
+
+      expect(code).toContain('registerNavigationRuntimeBootstrap({')
+      expect(code).toContain('graphVersion:')
+      expect(code).toContain('routes: new Map(')
+      expect(code).toContain('rootBoundaries: new Map(')
+      expect(code).toContain('"route:/dashboard"')
+      expect(code).toContain('"root-boundary:/"')
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('constructs route module imports and route entries from the scanned app shape', () => {
+    const routes = [
+      {
+        pattern: '/',
+        patternParts: [],
+        pagePath: '/tmp/test/app/page.tsx',
+        routePath: null,
+        layouts: ['/tmp/test/app/layout.tsx'],
+        templates: [],
+        parallelSlots: [],
+        loadingPath: null,
+        errorPath: null,
+        layoutErrorPaths: [null],
+        notFoundPath: '/tmp/test/app/not-found.tsx',
+        notFoundPaths: ['/tmp/test/app/not-found.tsx'],
+        forbiddenPath: '/tmp/test/app/forbidden.tsx',
+        forbiddenPaths: ['/tmp/test/app/forbidden.tsx'],
+        unauthorizedPath: '/tmp/test/app/unauthorized.tsx',
+        unauthorizedPaths: ['/tmp/test/app/unauthorized.tsx'],
+        routeSegments: [],
+        templateTreePositions: [],
+        layoutTreePositions: [0],
+        isDynamic: false,
+        params: [],
+      },
+      {
+        ids: {
+          route: 'route:/dashboard/:id',
+          page: 'page:/dashboard/:id',
+          routeHandler: 'route-handler:/dashboard/:id',
+          rootBoundary: 'root-boundary:/',
+          layouts: ['layout:/', 'layout:/dashboard'],
+          templates: ['template:/dashboard'],
+          slots: {
+            'modal:/tmp/test/app/dashboard/@modal': 'slot:modal:/dashboard',
+          },
+        },
+        pattern: '/dashboard/:id',
+        patternParts: ['dashboard', ':id'],
+        pagePath: '/tmp/test/app/dashboard/[id]/page.tsx',
+        routePath: '/tmp/test/app/dashboard/[id]/route.ts',
+        layouts: ['/tmp/test/app/layout.tsx', '/tmp/test/app/dashboard/layout.tsx'],
+        templates: ['/tmp/test/app/dashboard/template.tsx'],
+        parallelSlots: [
+          {
+            id: 'slot:modal:/dashboard',
+            key: 'modal:/tmp/test/app/dashboard/@modal',
+            name: 'modal',
+            ownerDir: '/tmp/test/app/dashboard/@modal',
+            ownerTreePath: '/dashboard',
+            hasPage: true,
+            pagePath: '/tmp/test/app/dashboard/@modal/page.tsx',
+            defaultPath: '/tmp/test/app/dashboard/@modal/default.tsx',
+            layoutPath: '/tmp/test/app/dashboard/@modal/layout.tsx',
+            loadingPath: '/tmp/test/app/dashboard/@modal/loading.tsx',
+            errorPath: '/tmp/test/app/dashboard/@modal/error.tsx',
+            interceptingRoutes: [
+              {
+                convention: '.',
+                targetPattern: '/photos/:photoId',
+                sourceMatchPattern: '/dashboard',
+                pagePath: '/tmp/test/app/dashboard/@modal/(.)photos/[photoId]/page.tsx',
+                layoutPaths: ['/tmp/test/app/dashboard/@modal/(.)photos/layout.tsx'],
+                params: ['photoId'],
+              },
+            ],
+            layoutIndex: 1,
+            routeSegments: ['@modal'],
+          },
+        ],
+        loadingPath: '/tmp/test/app/dashboard/loading.tsx',
+        errorPath: '/tmp/test/app/dashboard/error.tsx',
+        layoutErrorPaths: [null, '/tmp/test/app/dashboard/error.tsx'],
+        notFoundPath: '/tmp/test/app/dashboard/not-found.tsx',
+        notFoundPaths: ['/tmp/test/app/not-found.tsx', '/tmp/test/app/dashboard/not-found.tsx'],
+        forbiddenPath: null,
+        forbiddenPaths: ['/tmp/test/app/forbidden.tsx', null],
+        unauthorizedPath: null,
+        unauthorizedPaths: ['/tmp/test/app/unauthorized.tsx', null],
+        routeSegments: ['dashboard', '[id]'],
+        templateTreePositions: [1],
+        layoutTreePositions: [0, 1],
+        isDynamic: true,
+        params: ['id'],
+        rootParamNames: ['id'],
+      },
+    ] satisfies AppRoute[]
+
+    const manifest = buildAppRscManifestCode({
+      routes,
+      metadataRoutes: [],
+      globalErrorPath: '/tmp/test/app/global-error.tsx',
+    })
+
+    const imports = manifest.imports.join('\n')
+    expect(imports.match(/\/tmp\/test\/app\/layout\.tsx/g)).toHaveLength(1)
+    expect(imports).toContain('import * as mod_0 from "/tmp/test/app/page.tsx";')
+    expect(imports).toContain(
+      'import * as mod_17 from "/tmp/test/app/dashboard/@modal/(.)photos/[photoId]/page.tsx";',
+    )
+    expect(imports).toContain('import * as mod_19 from "/tmp/test/app/global-error.tsx";')
+
+    expect(manifest.rootNotFoundVar).toBe('mod_2')
+    expect(manifest.rootForbiddenVar).toBe('mod_3')
+    expect(manifest.rootUnauthorizedVar).toBe('mod_4')
+    expect(manifest.rootLayoutVars).toEqual(['mod_1'])
+    expect(manifest.globalErrorVar).toBe('mod_19')
+
+    const dynamicRouteEntry = manifest.routeEntries[1]
+    expect(dynamicRouteEntry).toContain('"route":"route:/dashboard/:id"')
+    expect(dynamicRouteEntry).toContain(
+      '"modal:/tmp/test/app/dashboard/@modal":"slot:modal:/dashboard"',
+    )
+    expect(dynamicRouteEntry).toContain('id: "slot:modal:/dashboard"')
+    expect(dynamicRouteEntry).toContain('pattern: "/dashboard/:id"')
+    expect(dynamicRouteEntry).toContain('routeHandler: mod_6')
+    expect(dynamicRouteEntry).toContain('layouts: [mod_1, mod_7]')
+    expect(dynamicRouteEntry).toContain('"modal:/tmp/test/app/dashboard/@modal": {')
+    expect(dynamicRouteEntry).toContain('interceptLayouts: [mod_18]')
+    expect(dynamicRouteEntry).toContain('page: mod_17')
+    expect(dynamicRouteEntry).toContain('params: ["photoId"]')
+    expect(manifest.generateStaticParamsEntries).toEqual([
+      '  "/dashboard/:id": __createAppPrerenderStaticParamsResolver([mod_5?.generateStaticParams], ["id"]),',
+    ])
+  })
+
+  it('exposes layout-level generateStaticParams to App Router prerender', () => {
+    // Ported from Text.js: test/e2e/app-dir/app-root-params-getters/generate-static-params.test.ts
+    // https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/app-root-params-getters/generate-static-params.test.ts
+    const routes = [
+      {
+        pattern: '/:lang/:locale/other/:slug',
+        patternParts: [':lang', ':locale', 'other', ':slug'],
+        pagePath: '/tmp/test/app/[lang]/[locale]/other/[slug]/page.tsx',
+        routePath: null,
+        layouts: ['/tmp/test/app/[lang]/[locale]/layout.tsx'],
+        templates: [],
+        parallelSlots: [],
+        loadingPath: null,
+        errorPath: null,
+        layoutErrorPaths: [null],
+        notFoundPath: null,
+        notFoundPaths: [null],
+        forbiddenPath: null,
+        forbiddenPaths: [null],
+        unauthorizedPath: null,
+        unauthorizedPaths: [null],
+        routeSegments: ['[lang]', '[locale]', 'other', '[slug]'],
+        templateTreePositions: [],
+        layoutTreePositions: [2],
+        isDynamic: true,
+        params: ['lang', 'locale', 'slug'],
+        rootParamNames: ['lang', 'locale'],
+      },
+    ] satisfies AppRoute[]
+
+    const manifest = buildAppRscManifestCode({
+      routes,
+      metadataRoutes: [],
+      globalErrorPath: null,
+    })
+
+    expect(manifest.generateStaticParamsEntries).toEqual([
+      '  "/:lang/:locale": __createAppPrerenderStaticParamsResolver([mod_1?.generateStaticParams], ["lang","locale"]),',
+      '  "/:lang/:locale/other/:slug": __createAppPrerenderStaticParamsResolver([mod_0?.generateStaticParams], ["lang","locale"]),',
+    ])
+    expect(manifest.rootParamNameEntries).toEqual([
+      '  "/:lang/:locale/other/:slug": ["lang","locale"],',
+      '  "/:lang/:locale": ["lang","locale"],',
+    ])
+  })
+
+  it('keys layout generateStaticParams with canonical decoded route patterns', () => {
+    const routes = [
+      {
+        pattern: '/:lang/docs v2/:section/:slug',
+        patternParts: [':lang', 'docs v2', ':section', ':slug'],
+        pagePath: '/tmp/test/app/[lang]/docs%20v2/[section]/[slug]/page.tsx',
+        routePath: null,
+        layouts: ['/tmp/test/app/[lang]/docs%20v2/[section]/layout.tsx'],
+        templates: [],
+        parallelSlots: [],
+        loadingPath: null,
+        errorPath: null,
+        layoutErrorPaths: [null],
+        notFoundPath: null,
+        notFoundPaths: [null],
+        forbiddenPath: null,
+        forbiddenPaths: [null],
+        unauthorizedPath: null,
+        unauthorizedPaths: [null],
+        routeSegments: ['[lang]', 'docs%20v2', '[section]', '[slug]'],
+        templateTreePositions: [],
+        layoutTreePositions: [3],
+        isDynamic: true,
+        params: ['lang', 'section', 'slug'],
+        rootParamNames: ['lang', 'section'],
+      },
+    ] satisfies AppRoute[]
+
+    const manifest = buildAppRscManifestCode({
+      routes,
+      metadataRoutes: [],
+      globalErrorPath: null,
+    })
+
+    expect(manifest.generateStaticParamsEntries).toEqual([
+      '  "/:lang/docs v2/:section": __createAppPrerenderStaticParamsResolver([mod_1?.generateStaticParams], ["lang","section"]),',
+      '  "/:lang/docs v2/:section/:slug": __createAppPrerenderStaticParamsResolver([mod_0?.generateStaticParams], ["lang","section"]),',
+    ])
+    expect(manifest.rootParamNameEntries).toEqual([
+      '  "/:lang/docs v2/:section/:slug": ["lang","section"],',
+      '  "/:lang/docs v2/:section": ["lang","section"],',
+    ])
+  })
+
+  it('imports the global-not-found module and exposes its var when provided', () => {
+    // Mirrors how text scans `app/global-not-found.tsx` in
+    // packages/text/src/index.ts and threads it into the manifest so the
+    // generated RSC entry can hand it to createAppFallbackRenderer.
+    // See https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/global-not-found
+    const manifest = buildAppRscManifestCode({
+      routes: minimalAppRoutes,
+      metadataRoutes: [],
+      globalErrorPath: null,
+      globalNotFoundPath: '/tmp/test/app/global-not-found.tsx',
+    })
+
+    const imports = manifest.imports.join('\n')
+    expect(imports).toContain('from "/tmp/test/app/global-not-found.tsx"')
+    expect(manifest.globalNotFoundVar).toBeTruthy()
+  })
+
+  it('does not import a global-not-found module when the path is absent', () => {
+    const manifest = buildAppRscManifestCode({
+      routes: minimalAppRoutes,
+      metadataRoutes: [],
+      globalErrorPath: null,
+      globalNotFoundPath: null,
+    })
+
+    expect(manifest.imports.join('\n')).not.toContain('global-not-found')
+    expect(manifest.globalNotFoundVar).toBeNull()
+  })
+
+  it('serializes graph-minted ids without leaking the filesystem root', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'text-app-rsc-manifest-'))
+    const appDir = path.join(tmpDir, 'app')
+    try {
+      fs.mkdirSync(path.join(appDir, '(marketing)', 'blog', '[slug]', '@modal'), {
+        recursive: true,
+      })
+      fs.writeFileSync(path.join(appDir, 'layout.tsx'), 'export default function Layout() {}\n')
+      fs.writeFileSync(
+        path.join(appDir, '(marketing)', 'layout.tsx'),
+        'export default function Layout() {}\n',
+      )
+      fs.writeFileSync(
+        path.join(appDir, '(marketing)', 'blog', '[slug]', 'layout.tsx'),
+        'export default function Layout() {}\n',
+      )
+      fs.writeFileSync(
+        path.join(appDir, '(marketing)', 'blog', '[slug]', 'template.tsx'),
+        'export default function Template() {}\n',
+      )
+      fs.writeFileSync(
+        path.join(appDir, '(marketing)', 'blog', '[slug]', 'page.tsx'),
+        'export default function Page() {}\n',
+      )
+      fs.writeFileSync(
+        path.join(appDir, '(marketing)', 'blog', '[slug]', '@modal', 'default.tsx'),
+        'export default function Default() {}\n',
+      )
+
+      const graph = await buildAppRouteGraph(appDir, createValidFileMatcher())
+      const manifest = buildAppRscManifestCode({
+        routes: graph.routes,
+        metadataRoutes: [],
+        globalErrorPath: null,
+      })
+
+      const routeEntry = manifest.routeEntries.find(entry =>
+        entry.includes('pattern: "/blog/:slug"'),
+      )
+
+      expect(routeEntry).toBeDefined()
+      expect(routeEntry).not.toContain(appDir)
+      expect(routeEntry).toContain('"route":"route:/blog/:slug"')
+      expect(routeEntry).toContain('"page":"page:/blog/:slug"')
+      expect(routeEntry).toContain('"layout:/(marketing)/blog/[slug]"')
+      expect(routeEntry).toContain('"template:/(marketing)/blog/[slug]"')
+      expect(routeEntry).toContain(
+        '"modal@(marketing)/blog/[slug]/@modal":"slot:modal:/(marketing)/blog/[slug]"',
+      )
+      expect(routeEntry).toContain('id: "slot:modal:/(marketing)/blog/[slug]"')
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('embeds static metadata files and imports dynamic metadata modules', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'text-app-rsc-manifest-'))
+    try {
+      const staticManifestPath = path.join(tmpDir, 'manifest.webmanifest')
+      const dynamicOgPath = path.join(tmpDir, 'blog', '[slug]', 'opengraph-image.tsx')
+      fs.mkdirSync(path.dirname(dynamicOgPath), { recursive: true })
+      fs.writeFileSync(staticManifestPath, '{"name":"Text"}')
+      fs.writeFileSync(dynamicOgPath, 'export default function Image() {}')
+
+      const manifest = buildAppRscManifestCode({
+        routes: minimalAppRoutes,
+        metadataRoutes: [
+          {
+            type: 'manifest',
+            isDynamic: false,
+            filePath: staticManifestPath,
+            routePrefix: '',
+            routeSegments: [],
+            servedUrl: '/manifest.webmanifest',
+            contentType: 'application/manifest+json',
+          },
+          {
+            type: 'opengraph-image',
+            isDynamic: true,
+            filePath: dynamicOgPath,
+            routePrefix: '/blog/[slug]',
+            routeSegments: ['blog', '[slug]'],
+            servedUrl: '/blog/[slug]/opengraph-image',
+            contentType: 'image/png',
+          },
+        ],
+        globalErrorPath: null,
+      })
+
+      const entries = manifest.metaRouteEntries.join('\n')
+      expect(entries).toContain(
+        `fileDataBase64: ${JSON.stringify(Buffer.from('{"name":"Text"}').toString('base64'))}`,
+      )
+      // Dynamic metadata modules get imported and referenced with a generated name
+      expect(entries).toMatch(/module: mod_\d+/)
+      expect(manifest.imports.some(imp => imp.includes('opengraph-image.tsx'))).toBe(true)
+      expect(entries).toContain('patternParts: ["blog",":slug","opengraph-image"]')
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('throws a build-time error when a discovered static metadata file cannot be read', () => {
+    expect(() =>
+      buildAppRscManifestCode({
+        routes: minimalAppRoutes,
+        metadataRoutes: [
+          {
+            type: 'manifest',
+            isDynamic: false,
+            filePath: '/tmp/test/app/missing-manifest.webmanifest',
+            routePrefix: '',
+            routeSegments: [],
+            servedUrl: '/manifest.webmanifest',
+            contentType: 'application/manifest+json',
+          },
+        ],
+        globalErrorPath: null,
+      }),
+    ).toThrow('[text] Failed to read metadata route file')
+  })
+})
+
+// ── App Router entry template error paths ────────────────────────────
+
+describe('App Router entry templates', () => {
+  it('installs server globals before App Router user modules are imported', () => {
+    const code = generateRscEntry('/tmp/test/app', minimalAppRoutes, null, [], null, '', false)
+
+    const globalsImportIndex = code.indexOf('/server-globals.js')
+    const firstUserImportIndex = code.search(
+      /import \* as mod_\d+ from "\/tmp\/test\/app\/page\.tsx";/,
+    )
+
+    expect(globalsImportIndex).toBeGreaterThanOrEqual(0)
+    expect(firstUserImportIndex).toBeGreaterThanOrEqual(0)
+    expect(globalsImportIndex).toBeLessThan(firstUserImportIndex)
+  })
+
+  it('generateRscEntry fails with a path-specific error when a static metadata file cannot be read', () => {
+    const metadataRoutes: MetadataFileRoute[] = [
+      {
+        type: 'icon',
+        isDynamic: false,
+        filePath: '/tmp/test/app/missing-icon.png',
+        routePrefix: '',
+        servedUrl: '/icon.png',
+        contentType: 'image/png',
+      },
+    ]
+
+    expect(() =>
+      generateRscEntry('/tmp/test/app', minimalAppRoutes, null, metadataRoutes, null, '', false),
+    ).toThrow('[text] Failed to read metadata route file /tmp/test/app/missing-icon.png')
+  })
+
+  it('generateRscEntry fails with a path-specific error when a dynamic metadata file hash cannot be read', () => {
+    const metadataRoutes: MetadataFileRoute[] = [
+      {
+        type: 'icon',
+        isDynamic: true,
+        filePath: '/tmp/test/app/missing-icon.tsx',
+        routePrefix: '',
+        servedUrl: '/icon',
+        contentType: 'image/png',
+      },
+    ]
+
+    expect(() =>
+      generateRscEntry('/tmp/test/app', minimalAppRoutes, null, metadataRoutes, null, '', false),
+    ).toThrow('[text] Failed to read metadata route file /tmp/test/app/missing-icon.tsx')
+  })
+
+  it('generateRscEntry fails with a path-specific error when static image dimensions cannot be read', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'text-entry-metadata-'))
+    const filePath = path.join(tmpDir, 'icon.png')
+    fs.writeFileSync(filePath, 'not a png')
+    const metadataRoutes: MetadataFileRoute[] = [
+      {
+        type: 'icon',
+        isDynamic: false,
+        filePath,
+        routePrefix: '',
+        servedUrl: '/icon.png',
+        contentType: 'image/png',
+      },
+    ]
+
+    try {
+      expect(() =>
+        generateRscEntry('/tmp/test/app', minimalAppRoutes, null, metadataRoutes, null, '', false),
+      ).toThrow(`[text] Failed to read metadata image dimensions for ${filePath} (/icon.png)`)
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('generateRscEntry does not read image dimensions for static text metadata files', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'text-entry-metadata-'))
+    const filePath = path.join(tmpDir, 'manifest.json')
+    fs.writeFileSync(filePath, JSON.stringify({ name: 'test' }))
+    const metadataRoutes: MetadataFileRoute[] = [
+      {
+        type: 'manifest',
+        isDynamic: false,
+        filePath,
+        routePrefix: '',
+        servedUrl: '/manifest.webmanifest',
+        contentType: 'application/manifest+json',
+      },
+    ]
+
+    try {
+      expect(() =>
+        generateRscEntry('/tmp/test/app', minimalAppRoutes, null, metadataRoutes, null, '', false),
+      ).not.toThrow()
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('generateRscEntry delegates App Router request handling to the typed helper', () => {
+    const code = generateRscEntry('/tmp/test/app', minimalAppRoutes, null, [], null, '', false)
+
+    expect(code).toContain('app-rsc-handler.js')
+    expect(code).toContain('export default __createAppRscHandler({')
+    expect(code).not.toContain('computeRscCacheBustingSearchParam(')
+  })
+
+  it('generateRscEntry threads globalNotFoundPath from config into the fallback renderer', () => {
+    // The generated entry's createAppFallbackRenderer call must receive a
+    // globalNotFoundModule binding so route-miss 404s can render
+    // app/global-not-found.tsx standalone.
+    // See packages/text/src/entries/app-rsc-entry.ts and
+    // https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/global-not-found
+    const code = generateRscEntry('/tmp/test/app', minimalAppRoutes, null, [], null, '', false, {
+      globalNotFoundPath: '/tmp/test/app/global-not-found.tsx',
+    })
+
+    expect(code).toContain('from "/tmp/test/app/global-not-found.tsx"')
+    // The renderer is wired with the module binding (not just `null`).
+    expect(code).toContain('globalNotFoundModule,')
+    expect(code).not.toContain('const globalNotFoundModule = null;')
+  })
+
+  it('generateRscEntry emits a null globalNotFoundModule when no path is provided', () => {
+    const code = generateRscEntry('/tmp/test/app', minimalAppRoutes, null, [], null, '', false)
+
+    expect(code).toContain('const globalNotFoundModule = null;')
+    expect(code).not.toContain('global-not-found.tsx')
+  })
+
+  it('generateRscEntry delegates RSC preload hint normalization', () => {
+    const code = generateRscEntry('/tmp/test/app', minimalAppRoutes, null, [], null, '', false)
+
+    expect(code).toContain('createRscRenderer')
+    expect(code).toContain(
+      'const appRscRendererAdapter = createTextRscRendererAdapter(\n  createRscRenderer(_renderAppRscPayloadToReadableStream),\n);',
+    )
+    expect(code).toContain(
+      'const renderToReadableStream = appRscRendererAdapter.renderToReadableStream;',
+    )
+    expect(code).not.toContain('const _hlFixRe =')
+  })
+})
+
+// ── Pages Router entry template runtime bootstrap ─────────────────────
+
+describe('Pages Router entry template', () => {
+  it('installs server globals before Pages Router user modules are imported', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'text-pages-entry-'))
+    const pagesDir = path.join(tmpDir, 'pages')
+
+    try {
+      fs.mkdirSync(pagesDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(pagesDir, 'index.tsx'),
+        'export default function Page() { return null; }',
+      )
+
+      const code = await generateServerEntry(
+        pagesDir,
+        await resolveTextConfig({}),
+        createValidFileMatcher(),
+        null,
+        null,
+      )
+
+      const globalsImportIndex = code.indexOf('/server-globals.js')
+      const firstUserImportIndex = code.indexOf(
+        `import * as page_0 from ${JSON.stringify(path.join(pagesDir, 'index.tsx'))}`,
+      )
+
+      expect(globalsImportIndex).toBeGreaterThanOrEqual(0)
+      expect(firstUserImportIndex).toBeGreaterThanOrEqual(0)
+      expect(globalsImportIndex).toBeLessThan(firstUserImportIndex)
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+})

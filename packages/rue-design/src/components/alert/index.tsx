@@ -7,33 +7,60 @@ Alert 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** AlertTone 语义色类型。 */
 export type AlertTone = 'default' | 'info' | 'success' | 'warning' | 'error'
+/** AlertType 视觉或语义变体类型。 */
 export type AlertType = Exclude<AlertTone, 'default'>
+/** AlertDirection 位置或方向类型。 */
 export type AlertDirection = 'vertical' | 'horizontal'
 
+/** AlertProps 组件属性。 */
 export interface AlertProps {
+  /** 组件类型或语义类型。 */
   type?: AlertType
+  /** 组件视觉变体。 */
   variant?: AlertType
+  /** 组件语义色。 */
   color?: AlertTone
+  /** outline 配置项。 */
   outline?: boolean
+  /** dash 配置项。 */
   dash?: boolean
+  /** soft 配置项。 */
   soft?: boolean
+  /** 布局方向。 */
   direction?: AlertDirection
+  /** 标题内容。 */
   title?: any
+  /** message 配置项。 */
   message?: any
+  /** 描述内容。 */
   description?: any
+  /** showIcon 图标内容。 */
   showIcon?: boolean
+  /** 图标内容。 */
   icon?: any
+  /** banner 配置项。 */
   banner?: boolean
+  /** closable 配置项。 */
   closable?: boolean
+  /** closeText 文本内容。 */
   closeText?: any
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** action 配置项。 */
   action?: any
+  /** 关闭时触发的回调。 */
   onClose?: (event: MouseEvent) => void
+  /** afterClose 配置项。 */
   afterClose?: () => void
+  /** role 配置项。 */
   role?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -41,6 +68,7 @@ interface _GlyphIconProps {
   className?: string
 }
 
+/** 解析 Tone 的内部工具函数。 */
 const resolveTone = ({
   type,
   variant,
@@ -54,6 +82,7 @@ const resolveTone = ({
   return undefined
 }
 
+/** Alert 的内部工具函数。 */
 const Alert: FC<AlertProps> = ({
   type,
   variant,
@@ -169,4 +198,5 @@ const Alert: FC<AlertProps> = ({
   )
 }
 
+/** 默认导出警告提示组件。 */
 export default Alert

@@ -80,4 +80,47 @@ describe('ColorPicker actual page', () => {
       expect(popupInput?.value).toContain('#1677ff')
     })
   })
+
+  it('reflects the format picker callback in the design page preview', async () => {
+    setEnabledPreviews('格式切换与透明度')
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<ColorPickerPage />, container)
+
+    await waitForContent(() => {
+      expect(container.textContent).toContain('ColorPicker 颜色选择器')
+      expect(findDemo(container, '# 格式切换与透明度')).not.toBeNull()
+    })
+
+    const formatDemo = findDemo(container, '# 格式切换与透明度') as HTMLElement
+    expect(formatDemo).not.toBeNull()
+
+    const trigger = Array.from(
+      formatDemo.querySelectorAll('[data-rue-color-picker-trigger="true"]'),
+    ).find(node => node.textContent?.includes('alpha 72%')) as HTMLElement | undefined
+
+    expect(trigger).toBeTruthy()
+    trigger!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    await waitForContent(() => {
+      const popupHostId = trigger!.getAttribute('aria-controls') || ''
+      const popupHost = document.body.querySelector(`#${popupHostId}`) as HTMLElement | null
+      expect(popupHost).not.toBeNull()
+      expect(popupHost?.hidden).toBe(false)
+      expect(popupHost?.querySelector('select')).toBeTruthy()
+      expect(formatDemo.textContent).toContain('当前格式 RGB')
+    })
+
+    const popupHostId = trigger!.getAttribute('aria-controls') || ''
+    const popupHost = document.body.querySelector(`#${popupHostId}`) as HTMLElement
+    const select = popupHost.querySelector('select') as HTMLSelectElement
+    select.value = 'hsb'
+    select.dispatchEvent(new Event('input', { bubbles: true }))
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+
+    await waitForContent(() => {
+      expect(formatDemo.textContent).toContain('当前格式 HSB')
+    })
+  })
 })

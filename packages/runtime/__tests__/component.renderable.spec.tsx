@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   Component,
+  h,
   render,
   renderAnchor,
   setReactiveScheduling,
@@ -25,6 +26,75 @@ const flush = async () => {
 }
 
 describe('Component renderable boundary', () => {
+  it('mounts class components through portable component handles', async () => {
+    const host = document.createElement('div')
+
+    document.body.appendChild(host)
+
+    class ClassShell {
+      props: { label: string }
+
+      constructor(props: { label: string }) {
+        this.props = props
+      }
+
+      render() {
+        return <span data-testid="class-shell">{this.props.label}</span>
+      }
+    }
+
+    render(h(ClassShell as any, { label: 'class' }) as any, host)
+    await flush()
+
+    expect(host.querySelector('[data-testid="class-shell"]')?.textContent).toBe('class')
+  })
+
+  it('routes descendant render errors to class component error boundaries', async () => {
+    const host = document.createElement('div')
+    const thrown = new Error('boundary boom')
+    let caught: unknown
+    let catchCount = 0
+
+    document.body.appendChild(host)
+
+    class Boundary {
+      props: { children?: unknown; onCatch?: () => void }
+      state: { error: unknown | null }
+
+      constructor(props: { children?: unknown; onCatch?: () => void }) {
+        this.props = props
+        this.state = { error: null }
+      }
+
+      static getDerivedStateFromError(error: unknown) {
+        return { error }
+      }
+
+      componentDidCatch(error: unknown) {
+        caught = error
+        this.props.onCatch?.()
+      }
+
+      render() {
+        return this.state.error ? null : this.props.children
+      }
+    }
+
+    const Thrower = () => {
+      throw thrown
+    }
+
+    render(
+      h(Boundary as any, { onCatch: () => catchCount++ }, h(Thrower as any, null)) as any,
+      host,
+    )
+    await flush()
+
+    expect(caught).toBe(thrown)
+    expect(catchCount).toBe(1)
+    expect(host.textContent).toBe('')
+  })
+
   it('renders a native element when is is a tag string', async () => {
     const host = document.createElement('div')
 

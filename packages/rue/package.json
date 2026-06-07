@@ -19,7 +19,7 @@
     "index.js",
     "index.mjs",
     "dist",
-    "src/vapor.ts",
+    "src",
     "jsx-runtime",
     "jsx-dev-runtime",
     "jsx.d.ts"
@@ -31,8 +31,17 @@
   "jsdelivr": "dist/rue.global.js",
   "exports": {
     ".": {
+      "types": "./src/index.ts",
+      "node": {
+        "import": "./index.mjs",
+        "require": {
+          "production": "./dist/rue.cjs.prod.js",
+          "development": "./dist/rue.cjs.js",
+          "default": "./index.js"
+        },
+        "default": "./index.js"
+      },
       "development": "./src/index.ts",
-      "types": "./dist/rue.d.ts",
       "import": {
         "node": "./index.mjs",
         "default": "./dist/rue.runtime.esm-bundler.js"
@@ -48,15 +57,27 @@
     },
     "./vapor": {
       "types": "./src/vapor.ts",
-      "development": "./src/vapor.ts",
       "node": {
         "production": "./dist/rue.vapor.cjs.prod.js",
         "development": "./dist/rue.vapor.cjs.js",
         "default": "./dist/rue.vapor.cjs.js"
       },
+      "development": "./src/vapor.ts",
       "module": "./dist/rue.vapor.esm-bundler.js",
       "import": "./dist/rue.vapor.esm-bundler.js",
       "require": "./dist/rue.vapor.cjs.js"
+    },
+    "./server-renderer": {
+      "types": "./src/server-renderer.ts",
+      "node": {
+        "production": "./dist/rue.server-renderer.cjs.prod.js",
+        "development": "./dist/rue.server-renderer.cjs.js",
+        "default": "./dist/rue.server-renderer.cjs.js"
+      },
+      "development": "./src/server-renderer.ts",
+      "module": "./dist/rue.server-renderer.esm-bundler.js",
+      "import": "./dist/rue.server-renderer.esm-bundler.js",
+      "require": "./dist/rue.server-renderer.cjs.js"
     },
     "./jsx-runtime": {
       "types": "./jsx-runtime/index.d.ts",
@@ -74,6 +95,7 @@
   },
   "dependencies": {
     "@rue-js/runtime": "workspace:*",
+    "@rue-js/server-renderer": "workspace:*",
     "@rue-js/shared": "workspace:*"
   },
   "peerDependencies": {
@@ -96,6 +118,14 @@
       "esm-browser-runtime"
     ],
     "subEntries": [
+      {
+        "entry": "src/server-renderer.ts",
+        "filename": "rue.server-renderer",
+        "formats": [
+          "esm-bundler",
+          "cjs"
+        ]
+      },
       {
         "entry": "src/vapor.ts",
         "filename": "rue.vapor",

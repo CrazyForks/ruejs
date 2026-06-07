@@ -1,0 +1,16 @@
+{
+  "name": "ecosystem-better-auth",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@rue-js/text": "workspace:*",
+    "better-auth": "catalog:",
+    "better-sqlite3": "catalog:",
+    "kysely": "catalog:"
+  },
+  "devDependencies": {
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

@@ -38,11 +38,9 @@ describe('Filter actual page', () => {
     expect(groupedDemo).not.toBeNull()
     expect(formDemo).not.toBeNull()
 
-    const reactOption = groupedDemo!.querySelector(
-      '[data-testid="filter-react"]',
-    ) as HTMLInputElement
-    reactOption.click()
-    expect(reactOption.checked).toBe(true)
+    const rueOption = groupedDemo!.querySelector('[aria-label="Rue"]') as HTMLInputElement
+    rueOption.click()
+    expect(rueOption.checked).toBe(true)
 
     await waitForContent(() => {
       expect(formDemo!.querySelector('form.filter')).not.toBeNull()

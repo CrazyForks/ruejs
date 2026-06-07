@@ -8,79 +8,140 @@ Layout 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 
+/** LayoutBreakpoint 类型。 */
 export type LayoutBreakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
+/** LayoutStyle 样式值类型。 */
 export type LayoutStyle = string | Record<string, any>
+/** LayoutCollapseType 视觉或语义变体类型。 */
 export type LayoutCollapseType = 'clickTrigger' | 'responsive'
+/** LayoutSiderTheme 类型。 */
 export type LayoutSiderTheme = 'light' | 'dark'
+/** LayoutSiderTriggerPosition 位置或方向类型。 */
 export type LayoutSiderTriggerPosition = 'start' | 'end'
 
+/** LayoutProps 组件属性。 */
 export interface LayoutProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** hasSider 配置项。 */
   hasSider?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: LayoutStyle
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** LayoutSectionProps 组件属性。 */
 export interface LayoutSectionProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: LayoutStyle
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** LayoutSiderTriggerRenderMeta 接口。 */
 export interface LayoutSiderTriggerRenderMeta {
+  /** collapsed 配置项。 */
   collapsed: boolean
+  /** below 配置项。 */
   below: boolean
+  /** zeroWidth 配置项。 */
   zeroWidth: boolean
+  /** toggle 配置项。 */
   toggle: () => void
 }
 
+/** LayoutSiderTriggerProps 组件属性。 */
 export interface LayoutSiderTriggerProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: LayoutStyle
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** LayoutSiderProps 组件属性。 */
 export interface LayoutSiderProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: LayoutStyle
+  /** bodyClassName 附加类名。 */
   bodyClassName?: string
+  /** bodyStyle 内联样式。 */
   bodyStyle?: LayoutStyle
+  /** 底部区域内容。 */
   footer?: any
+  /** footerClassName 附加类名。 */
   footerClassName?: string
+  /** footerStyle 内联样式。 */
   footerStyle?: LayoutStyle
+  /** triggerClassName 附加类名。 */
   triggerClassName?: string
+  /** triggerStyle 内联样式。 */
   triggerStyle?: LayoutStyle
+  /** theme 配置项。 */
   theme?: LayoutSiderTheme
+  /** width 配置项。 */
   width?: number | string
+  /** collapsedWidth 配置项。 */
   collapsedWidth?: number | string
+  /** collapsed 配置项。 */
   collapsed?: boolean
+  /** defaultCollapsed 配置项。 */
   defaultCollapsed?: boolean
+  /** collapsible 配置项。 */
   collapsible?: boolean
+  /** breakpoint 配置项。 */
   breakpoint?: LayoutBreakpoint
+  /** reverseArrow 配置项。 */
   reverseArrow?: boolean
+  /** trigger 区域配置。 */
   trigger?: any | ((meta: LayoutSiderTriggerRenderMeta) => any)
+  /** zeroWidthTriggerStyle 内联样式。 */
   zeroWidthTriggerStyle?: LayoutStyle
+  /** triggerPosition 配置项。 */
   triggerPosition?: LayoutSiderTriggerPosition
+  /** onCollapse 事件回调。 */
   onCollapse?: (collapsed: boolean, type: LayoutCollapseType) => void
+  /** onBreakpoint 事件回调。 */
   onBreakpoint?: (broken: boolean) => void
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** LayoutCompound 接口。 */
 export interface LayoutCompound extends FC<LayoutProps> {
+  /** Header 配置项。 */
   Header: FC<LayoutSectionProps>
+  /** Content 配置项。 */
   Content: FC<LayoutSectionProps>
+  /** Footer 配置项。 */
   Footer: FC<LayoutSectionProps>
+  /** Sider 配置项。 */
   Sider: FC<LayoutSiderProps>
+  /** Trigger 配置项。 */
   Trigger: FC<LayoutSiderTriggerProps>
 }
 
+/** BREAKPOINT_MAX_WIDTH 内部常量。 */
 const BREAKPOINT_MAX_WIDTH: Record<LayoutBreakpoint, number> = {
   xs: 479.98,
   sm: 575.98,
@@ -90,12 +151,15 @@ const BREAKPOINT_MAX_WIDTH: Record<LayoutBreakpoint, number> = {
   xxl: 1599.98,
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...values: Array<string | undefined | false | null>) => {
   return values.filter(Boolean).join(' ')
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 
+/** serialize Style 的内部工具函数。 */
 const serializeStyle = (style?: LayoutStyle) => {
   if (!style) return ''
   if (typeof style === 'string') return style.trim()
@@ -106,6 +170,7 @@ const serializeStyle = (style?: LayoutStyle) => {
     .join('; ')
 }
 
+/** merge Style 的内部工具函数。 */
 const mergeStyle = (...styles: Array<LayoutStyle | undefined>) => {
   return styles
     .map(style => serializeStyle(style))
@@ -113,6 +178,7 @@ const mergeStyle = (...styles: Array<LayoutStyle | undefined>) => {
     .join('; ')
 }
 
+/** flatten Children 的内部工具函数。 */
 const flattenChildren = (children: any, out: any[] = []) => {
   if (children == null || children === false) return out
   if (Array.isArray(children)) {
@@ -123,17 +189,20 @@ const flattenChildren = (children: any, out: any[] = []) => {
   return out
 }
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value == null || value === false) return false
   if (Array.isArray(value)) return value.some((item: any) => hasRenderableContent(item))
   return true
 }
 
+/** 判断 Numeric 的内部工具函数。 */
 const isNumeric = (value: any) => {
   if (value == null || value === '') return false
   return !Number.isNaN(Number.parseFloat(String(value))) && Number.isFinite(Number(value))
 }
 
+/** 解析 Size 的内部工具函数。 */
 const resolveSize = (value: number | string | undefined, fallback: number) => {
   const resolved = value ?? fallback
   if (typeof resolved === 'number') return `${resolved}px`
@@ -141,11 +210,13 @@ const resolveSize = (value: number | string | undefined, fallback: number) => {
   return resolved
 }
 
+/** 读取 Viewport Width 的内部工具函数。 */
 const getViewportWidth = () => {
   if (typeof window === 'undefined') return BREAKPOINT_MAX_WIDTH.xl + 1
   return window.innerWidth || document.documentElement?.clientWidth || BREAKPOINT_MAX_WIDTH.xl + 1
 }
 
+/** 解析 Theme Class Name 的内部工具函数。 */
 const resolveThemeClassName = (theme?: LayoutSiderTheme) => {
   if (theme === 'dark') {
     return 'border-base-content/10 bg-neutral text-neutral-content'
@@ -153,6 +224,7 @@ const resolveThemeClassName = (theme?: LayoutSiderTheme) => {
   return 'border-base-300 bg-base-100 text-base-content'
 }
 
+/** 解析 Sider Body Class Name 的内部工具函数。 */
 const resolveSiderBodyClassName = (theme?: LayoutSiderTheme) => {
   if (theme === 'dark') {
     return 'bg-neutral/90 text-neutral-content'
@@ -160,6 +232,7 @@ const resolveSiderBodyClassName = (theme?: LayoutSiderTheme) => {
   return 'bg-transparent text-base-content'
 }
 
+/** 解析 Chevron 的内部工具函数。 */
 const resolveChevron = (collapsed: boolean, reverseArrow?: boolean) => {
   if (collapsed) {
     return reverseArrow ? '▶' : '◀'
@@ -167,15 +240,18 @@ const resolveChevron = (collapsed: boolean, reverseArrow?: boolean) => {
   return reverseArrow ? '◀' : '▶'
 }
 
+/** 判断 Sider Element 的内部工具函数。 */
 const isSiderElement = (child: any) => {
   return !!child && typeof child === 'object' && child.type === Sider
 }
 
+/** 解析 Has Sider 的内部工具函数。 */
 const resolveHasSider = (children: any, hasSider?: boolean) => {
   if (typeof hasSider === 'boolean') return hasSider
   return flattenChildren(children).some(child => isSiderElement(child))
 }
 
+/** Basic Section 的内部工具函数。 */
 const BasicSection = (
   suffix: string,
   defaultAs: any,
@@ -222,6 +298,7 @@ const Footer = BasicSection(
   'flex min-h-14 items-center justify-between gap-3 rounded-[1.5rem] border border-base-300/80 bg-base-200/75 px-5 py-4 text-sm text-base-content/75',
 )
 
+/** Trigger 的内部工具函数。 */
 const Trigger: FC<LayoutSiderTriggerProps> = ({ className, style, children, ...rest }) => {
   return (
     <span
@@ -237,6 +314,7 @@ const Trigger: FC<LayoutSiderTriggerProps> = ({ className, style, children, ...r
   )
 }
 
+/** Layout Root 的内部工具函数。 */
 const LayoutRoot: FC<LayoutProps> = ({
   as = 'section',
   hasSider,
@@ -272,6 +350,7 @@ const LayoutRoot: FC<LayoutProps> = ({
   )
 }
 
+/** Sider 的内部工具函数。 */
 const Sider: FC<LayoutSiderProps> = ({
   as = 'aside',
   className,
@@ -639,4 +718,5 @@ const Layout = Object.assign(LayoutRoot, {
   Trigger,
 }) as LayoutCompound
 
+/** 默认导出布局组件。 */
 export default Layout

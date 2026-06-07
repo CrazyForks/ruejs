@@ -1,0 +1,1510 @@
+import { describe, it, expect, afterEach, vi, beforeEach } from 'vite-plus/test'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import {
+  detectTextIntlConfig,
+  loadTextConfig,
+  parseBodySizeLimit,
+  reassignsModuleExports,
+  referencesCjsGlobals,
+  resolveTextConfig,
+  type ResolvedTextConfig,
+} from '../src/config/text-config.js'
+import { PHASE_PRODUCTION_BUILD, PHASE_DEVELOPMENT_SERVER } from '../src/shims/constants.js'
+
+function makeTempDir(): string {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'text-config-test-'))
+}
+
+describe('invalid config files', () => {
+  let tmpDir: string
+
+  beforeEach(() => {
+    tmpDir = makeTempDir()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('should throw an error when loading a config fails', async () => {
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), `{ "type": "module" }`)
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.js'),
+      // Syntactically invalid in any module system.
+      `module.exports = { invalid: } ;\n`,
+    )
+
+    await expect(loadTextConfig(tmpDir, PHASE_PRODUCTION_BUILD)).rejects.toThrow()
+  })
+})
+
+describe('loadTextConfig with CJS text.config.js under type:module', () => {
+  // Real-world shape from the Text.js deploy suite: `ruetext init` flips
+  // package.json to `"type": "module"`, but the test fixture's
+  // `text.config.js` is still written in CJS (module.exports + require).
+  // text must load it as CJS instead of forcing the project to rewrite the
+  // file to ESM.
+
+  let tmpDir: string
+
+  beforeEach(() => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), `{ "type": "module" }`)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('loads module.exports + require() from a .js file', async () => {
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.js'),
+      `const path = require('node:path');\n` +
+        `module.exports = { basePath: path.join('/', 'docs') };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.basePath).toBe('/docs')
+  })
+
+  it('supports __dirname and __filename in a CJS .js config', async () => {
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.js'),
+      `module.exports = { env: { DIRNAME_SET: String(typeof __dirname === 'string'), FILENAME_SET: String(typeof __filename === 'string') } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.DIRNAME_SET).toBe('true')
+    expect(config?.env?.FILENAME_SET).toBe('true')
+  })
+
+  it('supports require(mod)(args) plugin-wrapper pattern', async () => {
+    // Mirrors @text/bundle-analyzer / textra plugin shape — the value
+    // returned from require() is called with options and re-exported.
+    fs.writeFileSync(
+      path.join(tmpDir, 'wrap.cjs'),
+      `module.exports = (opts) => (config) => ({ ...config, env: { ...(config.env || {}), WRAPPED: opts.tag } });\n`,
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.js'),
+      `const withWrap = require('./wrap.cjs')({ tag: 'yes' });\n` +
+        `module.exports = withWrap({ basePath: '/app' });\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.basePath).toBe('/app')
+    expect(config?.env?.WRAPPED).toBe('yes')
+  })
+
+  it('does not leave temp .cjs files in the project root', async () => {
+    fs.writeFileSync(path.join(tmpDir, 'text.config.js'), `module.exports = { basePath: '/x' };\n`)
+
+    await loadTextConfig(tmpDir)
+
+    const stray = fs
+      .readdirSync(tmpDir)
+      .filter(name => name.startsWith('.text-text-config.') && name.endsWith('.cjs'))
+    expect(stray).toEqual([])
+  })
+})
+
+describe('loadTextConfig phase argument', () => {
+  let tmpDir: string
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('passes phase-production-build to function-form config when phase is specified', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.mjs'),
+      `export default (phase) => ({ env: { RECEIVED_PHASE: phase } });\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir, PHASE_PRODUCTION_BUILD)
+    expect(config?.env?.RECEIVED_PHASE).toBe(PHASE_PRODUCTION_BUILD)
+  })
+
+  it('defaults to phase-development-server when no phase is provided', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.mjs'),
+      `export default (phase) => ({ env: { RECEIVED_PHASE: phase } });\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.RECEIVED_PHASE).toBe(PHASE_DEVELOPMENT_SERVER)
+  })
+
+  it('ignores phase for object-form config', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.mjs'),
+      `export default { env: { STATIC: "yes" } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir, PHASE_PRODUCTION_BUILD)
+    expect(config?.env?.STATIC).toBe('yes')
+  })
+})
+
+describe('loadTextConfig with CJS globals in text.config.ts', () => {
+  // Ported from Text.js: test/e2e/app-dir/text-config-ts/node-api-cjs/
+  //   https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/text-config-ts/node-api-cjs/text.config.ts
+  // and test/e2e/app-dir/text-config-ts/import-js-extensions-cjs/.
+  // Text.js's transpile-config.ts transforms text.config.ts to CommonJS via SWC
+  // and evaluates it through Node's `Module._compile`, which exposes the CJS
+  // globals (`__filename`, `__dirname`, `module`, `require`, `exports`) even
+  // when the source uses ESM syntax. text mirrors that behaviour so that
+  // upstream fixtures referencing these globals continue to load.
+  let tmpDir: string
+
+  afterEach(() => {
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('exposes __dirname inside text.config.ts', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(path.join(tmpDir, 'foo.txt'), 'foo')
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `import fs from "node:fs";\nimport path from "node:path";\nconst foo = fs.readFileSync(path.join(__dirname, "foo.txt"), "utf8");\nexport default { env: { FOO: foo } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.FOO).toBe('foo')
+  })
+
+  it('exposes __filename inside text.config.ts', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `export default { env: { NAME: __filename } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    const name = config?.env?.NAME
+    expect(typeof name).toBe('string')
+    expect((name as string).endsWith('text.config.ts')).toBe(true)
+  })
+
+  it('exposes a working require() inside text.config.ts', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(path.join(tmpDir, 'data.json'), `{"value":"json-data"}`)
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `const data = require("./data.json");\nexport default { env: { VAL: data.value } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.VAL).toBe('json-data')
+  })
+
+  it('exposes a CommonJS module/exports object inside text.config.ts', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `module.exports = { env: { VIA: "module.exports" } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.VIA).toBe('module.exports')
+  })
+
+  it('loads a pure-ESM text.config.ts without injecting CJS shims', async () => {
+    // No __filename / __dirname / require / module / exports references —
+    // the injector transform should short-circuit. We only assert
+    // functional behaviour: the export const that the transform would add
+    // (__text_cjs_exports) is invisible to user code anyway, so the
+    // observable contract is just "ESM config loads correctly".
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `export default { env: { PURE: "esm" } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.PURE).toBe('esm')
+  })
+})
+
+describe('referencesCjsGlobals', () => {
+  it('returns false for pure-ESM source', () => {
+    expect(referencesCjsGlobals(`export default { env: { FOO: "bar" } };\n`)).toBe(false)
+    expect(
+      referencesCjsGlobals(
+        `import type { TextConfig } from "text";\nconst textConfig: TextConfig = {};\nexport default textConfig;\n`,
+      ),
+    ).toBe(false)
+    expect(referencesCjsGlobals(`export { textConfig as default };\n`)).toBe(false)
+  })
+
+  it('returns true when any CJS global is referenced', () => {
+    expect(referencesCjsGlobals(`const x = __filename;`)).toBe(true)
+    expect(referencesCjsGlobals(`const x = __dirname;`)).toBe(true)
+    expect(referencesCjsGlobals(`const x = require("./foo");`)).toBe(true)
+    expect(referencesCjsGlobals(`module.exports = { a: 1 };`)).toBe(true)
+    expect(referencesCjsGlobals(`exports.foo = 1;`)).toBe(true)
+  })
+
+  it('does not match identifiers that merely contain a global as a substring', () => {
+    expect(referencesCjsGlobals(`const requireSomething = 1;`)).toBe(false)
+    expect(referencesCjsGlobals(`const myModule = 1;`)).toBe(false)
+    expect(referencesCjsGlobals(`const exporter = 1;`)).toBe(false)
+    // `export default` is a different word boundary from `exports`.
+    expect(referencesCjsGlobals(`export default {};`)).toBe(false)
+  })
+
+  it('matches inside strings and comments (acceptable false positive)', () => {
+    // Substring match is intentionally loose: a wasted transform is the
+    // worst case, never a correctness bug.
+    expect(referencesCjsGlobals(`// __dirname is shimmed`)).toBe(true)
+    expect(referencesCjsGlobals(`const s = "module.exports = 1";`)).toBe(true)
+  })
+})
+
+describe('reassignsModuleExports', () => {
+  it('returns true for direct module.exports reassignment', () => {
+    expect(reassignsModuleExports(`module.exports = { foo: 1 };`)).toBe(true)
+    expect(reassignsModuleExports(`module . exports = X;`)).toBe(true)
+  })
+
+  it('returns true for property mutation', () => {
+    expect(reassignsModuleExports(`module.exports.foo = 1;`)).toBe(true)
+    expect(reassignsModuleExports(`module.exports["foo"] = 1;`)).toBe(true)
+    expect(reassignsModuleExports(`module.exports[name] = 1;`)).toBe(true)
+  })
+
+  it('returns false for pure-ESM source', () => {
+    expect(reassignsModuleExports(`export default { foo: 1 };`)).toBe(false)
+    expect(reassignsModuleExports(`const x = module;`)).toBe(false)
+    expect(reassignsModuleExports(`import x from "node:module";`)).toBe(false)
+  })
+
+  it('does not match comparisons or reads', () => {
+    expect(reassignsModuleExports(`if (module.exports === foo) {}`)).toBe(false)
+    expect(reassignsModuleExports(`const x = module.exports;`)).toBe(false)
+    expect(reassignsModuleExports(`const x = module.exports.foo;`)).toBe(false)
+  })
+})
+
+describe('loadTextConfig CJS vs ESM unwrap', () => {
+  // Exercises the static reassignsModuleExports detection end-to-end:
+  // pure-ESM configs go through the ESM `default` path, configs that
+  // reassign module.exports get unwrapped from the injected wrapper.
+  let tmpDir: string
+
+  afterEach(() => {
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('returns ESM default for a pure-ESM config', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `export default { env: { SHAPE: "esm-default" } };\n`,
+    )
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.SHAPE).toBe('esm-default')
+  })
+
+  it('returns module.exports = X for a config that reassigns module.exports', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `module.exports = { env: { SHAPE: "reassigned" } };\n`,
+    )
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.SHAPE).toBe('reassigned')
+  })
+
+  it('accumulates module.exports.foo = ... assignments', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `module.exports.env = { SHAPE: "mutated" };\nmodule.exports.basePath = "/m";\n`,
+    )
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.SHAPE).toBe('mutated')
+    expect(config?.basePath).toBe('/m')
+  })
+
+  it('falls back to ESM default when module.exports reference is only a false positive', async () => {
+    // Ports the heuristic-false-positive case: the substring matcher
+    // could see `module.exports = ` inside a string and decide to emit
+    // the wrapper. The unwrap path checks identity against the initial
+    // empty exports object and falls back to the ESM default.
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `const doc = "module.exports = legacy";\nexport default { env: { SHAPE: "fallback", DOC: doc } };\n`,
+    )
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.SHAPE).toBe('fallback')
+    expect(config?.env?.DOC).toBe('module.exports = legacy')
+  })
+})
+
+describe('loadTextConfig with tsconfig path aliases', () => {
+  // Ported from Text.js: test/e2e/app-dir/text-config-ts/import-alias-paths-only/
+  //   https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/text-config-ts/import-alias-paths-only/
+  // and import-alias-paths-with-baseurl/.
+  // Text.js's transpile-config.ts reads compilerOptions.paths from tsconfig.json
+  // and passes them to SWC so that text.config.ts can import via tsconfig
+  // aliases. text mirrors this by passing tsconfig paths to Vite as
+  // resolve.alias when calling runnerImport.
+
+  let tmpDir: string
+
+  afterEach(() => {
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it("resolves '@/*' imports in text.config.ts from tsconfig paths (no baseUrl)", async () => {
+    tmpDir = makeTempDir()
+
+    fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true })
+    fs.writeFileSync(path.join(tmpDir, 'src', 'foo.ts'), `export const foo = "foo";\n`)
+    fs.writeFileSync(
+      path.join(tmpDir, 'tsconfig.json'),
+      JSON.stringify({
+        compilerOptions: {
+          paths: {
+            '@/*': ['./src/*'],
+          },
+        },
+      }),
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `import { foo } from "@/foo";\nexport default { env: { FOO: foo } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.FOO).toBe('foo')
+  })
+
+  it("resolves '@/*' imports when baseUrl is set", async () => {
+    tmpDir = makeTempDir()
+
+    fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true })
+    fs.writeFileSync(path.join(tmpDir, 'src', 'bar.ts'), `export const bar = "bar";\n`)
+    fs.writeFileSync(
+      path.join(tmpDir, 'tsconfig.json'),
+      JSON.stringify({
+        compilerOptions: {
+          baseUrl: '.',
+          paths: {
+            '@/*': ['src/*'],
+          },
+        },
+      }),
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `import { bar } from "@/bar";\nexport default { env: { BAR: bar } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.BAR).toBe('bar')
+  })
+
+  it("follows tsconfig 'extends' when resolving paths", async () => {
+    tmpDir = makeTempDir()
+
+    fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true })
+    fs.writeFileSync(path.join(tmpDir, 'src', 'baz.ts'), `export const baz = "baz";\n`)
+    fs.writeFileSync(
+      path.join(tmpDir, 'tsconfig.base.json'),
+      JSON.stringify({
+        compilerOptions: {
+          paths: {
+            '@/*': ['./src/*'],
+          },
+        },
+      }),
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'tsconfig.json'),
+      JSON.stringify({
+        extends: './tsconfig.base.json',
+      }),
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `import { baz } from "@/baz";\nexport default { env: { BAZ: baz } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.BAZ).toBe('baz')
+  })
+
+  it('loads config without tsconfig.json (no aliases needed)', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.ts'),
+      `export default { env: { PLAIN: "yes" } };\n`,
+    )
+
+    const config = await loadTextConfig(tmpDir)
+    expect(config?.env?.PLAIN).toBe('yes')
+  })
+})
+
+describe('resolveTextConfig alias extraction', () => {
+  let tmpDir: string
+
+  afterEach(() => {
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('captures webpack resolve.alias from wrapped config plugins', async () => {
+    tmpDir = makeTempDir()
+
+    fs.mkdirSync(path.join(tmpDir, 'node_modules', 'fake-plugin'), {
+      recursive: true,
+    })
+    fs.writeFileSync(
+      path.join(tmpDir, 'node_modules', 'fake-plugin', 'index.js'),
+      `module.exports = function fakePlugin() {
+        return function withPlugin(textConfig = {}) {
+          return Object.assign({}, textConfig, {
+            webpack(config) {
+              config.resolve = config.resolve || {};
+              config.resolve.alias = config.resolve.alias || {};
+              config.resolve.alias["wrapped/config"] = "./config/request.ts";
+              return typeof textConfig.webpack === "function"
+                ? textConfig.webpack(config)
+                : config;
+            }
+          });
+        };
+      };`,
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'node_modules', 'fake-plugin', 'package.json'),
+      JSON.stringify({ name: 'fake-plugin', version: '1.0.0', main: 'index.js' }),
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.js'),
+      `const withPlugin = require("fake-plugin")();
+module.exports = withPlugin({ basePath: "/wrapped" });`,
+    )
+
+    const rawConfig = await loadTextConfig(tmpDir)
+    const config = await resolveTextConfig(rawConfig, tmpDir)
+
+    expect(config.basePath).toBe('/wrapped')
+    expect(config.aliases['wrapped/config']).toBe(path.join(tmpDir, 'config', 'request.ts'))
+  })
+
+  it('captures turbopack aliases from wrapped config plugins', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.mjs'),
+      `export default {
+        experimental: {
+          turbo: {
+            resolveAlias: {
+              "wrapped/config": "./turbo/request.ts"
+            }
+          }
+        }
+      };`,
+    )
+
+    const rawConfig = await loadTextConfig(tmpDir)
+    const config = await resolveTextConfig(rawConfig, tmpDir)
+
+    expect(config.aliases['wrapped/config']).toBe(path.join(tmpDir, 'turbo', 'request.ts'))
+  })
+
+  it('captures top-level turbopack aliases', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.mjs'),
+      `export default {
+        turbopack: {
+          resolveAlias: {
+            "wrapped/config": "./turbopack/request.ts"
+          }
+        }
+      };`,
+    )
+
+    const rawConfig = await loadTextConfig(tmpDir)
+    const config = await resolveTextConfig(rawConfig, tmpDir)
+
+    expect(config.aliases['wrapped/config']).toBe(path.join(tmpDir, 'turbopack', 'request.ts'))
+  })
+
+  it('does not attribute turbopack aliases to webpack support warnings', async () => {
+    tmpDir = makeTempDir()
+
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const rawConfig = {
+      turbopack: {
+        resolveAlias: {
+          'wrapped/config': './turbopack/request.ts',
+        },
+      },
+      webpack: (webpackConfig: any) => webpackConfig,
+    }
+
+    const config = await resolveTextConfig(rawConfig, tmpDir)
+
+    expect(config.aliases['wrapped/config']).toBe(path.join(tmpDir, 'turbopack', 'request.ts'))
+    expect(consoleWarn).toHaveBeenCalledWith(
+      '[text] text.config option "webpack" is not yet supported and will be ignored',
+    )
+  })
+
+  it('keeps unrelated config resolution unchanged when no aliases exist', async () => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.mjs'),
+      `export default {
+        basePath: "/docs",
+        env: { FEATURE_FLAG: "on" }
+      };`,
+    )
+
+    const rawConfig = await loadTextConfig(tmpDir)
+    const config = await resolveTextConfig(rawConfig, tmpDir)
+
+    expect(config.basePath).toBe('/docs')
+    expect(config.env.FEATURE_FLAG).toBe('on')
+    expect(config.aliases).toEqual({})
+  })
+
+  it('extracts aliases and mdx from a single async webpack probe', async () => {
+    tmpDir = makeTempDir()
+
+    let invocations = 0
+    const fakeRemarkPlugin = () => {}
+    const rawConfig = {
+      webpack: async (webpackConfig: any) => {
+        invocations++
+        webpackConfig.resolve = webpackConfig.resolve || {}
+        webpackConfig.resolve.alias = webpackConfig.resolve.alias || {}
+        webpackConfig.resolve.alias['wrapped/config'] = './config/request.ts'
+        webpackConfig.module = webpackConfig.module || { rules: [] }
+        webpackConfig.module.rules.push({
+          test: /\.mdx$/,
+          use: [
+            {
+              loader: '@text/mdx/mdx-js-loader',
+              options: {
+                remarkPlugins: [fakeRemarkPlugin],
+              },
+            },
+          ],
+        })
+        return webpackConfig
+      },
+    }
+
+    const config = await resolveTextConfig(rawConfig, tmpDir)
+
+    expect(invocations).toBe(1)
+    expect(config.aliases['wrapped/config']).toBe(path.join(tmpDir, 'config', 'request.ts'))
+    expect(config.mdx?.remarkPlugins).toEqual([fakeRemarkPlugin])
+  })
+})
+
+describe('parseBodySizeLimit', () => {
+  it('parses megabyte strings', () => {
+    expect(parseBodySizeLimit('10mb')).toBe(10 * 1024 * 1024)
+    expect(parseBodySizeLimit('1mb')).toBe(1 * 1024 * 1024)
+  })
+
+  it('parses kilobyte strings', () => {
+    expect(parseBodySizeLimit('500kb')).toBe(500 * 1024)
+  })
+
+  it('parses gigabyte strings', () => {
+    expect(parseBodySizeLimit('1gb')).toBe(1 * 1024 * 1024 * 1024)
+  })
+
+  it('parses byte strings', () => {
+    expect(parseBodySizeLimit('2048b')).toBe(2048)
+  })
+
+  it('passes through numeric values directly', () => {
+    expect(parseBodySizeLimit(2097152)).toBe(2097152)
+  })
+
+  it('is case-insensitive', () => {
+    expect(parseBodySizeLimit('10MB')).toBe(10 * 1024 * 1024)
+    expect(parseBodySizeLimit('500KB')).toBe(500 * 1024)
+  })
+
+  it('handles fractional values', () => {
+    expect(parseBodySizeLimit('1.5mb')).toBe(Math.floor(1.5 * 1024 * 1024))
+  })
+
+  it('returns default 1MB for undefined', () => {
+    expect(parseBodySizeLimit(undefined)).toBe(1 * 1024 * 1024)
+  })
+
+  it('returns default 1MB for null', () => {
+    expect(parseBodySizeLimit(null)).toBe(1 * 1024 * 1024)
+  })
+
+  it('returns default 1MB and warns for invalid strings', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    // In Vitest 4, spyOn on an already-intercepted console returns the same mock,
+    // which may have accumulated calls from earlier tests. Clear before asserting.
+    warn.mockClear()
+    expect(parseBodySizeLimit('invalid')).toBe(1 * 1024 * 1024)
+    expect(parseBodySizeLimit('10mbb')).toBe(1 * 1024 * 1024)
+    expect(warn).toHaveBeenCalledTimes(2)
+    expect(warn.mock.calls[0][0]).toContain('Invalid bodySizeLimit')
+    warn.mockRestore()
+    // empty string also falls through to the regex (no match), so it warns too
+    const warn2 = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    warn2.mockClear()
+    expect(parseBodySizeLimit('')).toBe(1 * 1024 * 1024)
+    expect(warn2).toHaveBeenCalledTimes(1)
+    warn2.mockRestore()
+  })
+
+  it('parses terabyte strings', () => {
+    expect(parseBodySizeLimit('10tb')).toBe(10 * 1024 * 1024 * 1024 * 1024)
+  })
+
+  it('parses petabyte strings', () => {
+    expect(parseBodySizeLimit('1pb')).toBe(1 * 1024 * 1024 * 1024 * 1024 * 1024)
+  })
+
+  it('accepts bare number strings as bytes', () => {
+    expect(parseBodySizeLimit('1048576')).toBe(1048576)
+    expect(parseBodySizeLimit('2097152')).toBe(2097152)
+  })
+
+  it('throws for zero or negative numeric values', () => {
+    expect(() => parseBodySizeLimit(0)).toThrow()
+    expect(() => parseBodySizeLimit(-1)).toThrow()
+  })
+})
+
+describe('resolveTextConfig serverExternalPackages', () => {
+  it('defaults to empty array when no config is provided', async () => {
+    const resolved = await resolveTextConfig(null)
+    expect(resolved.serverExternalPackages).toEqual([])
+  })
+
+  it('defaults to empty array when not configured', async () => {
+    const resolved = await resolveTextConfig({ env: {} })
+    expect(resolved.serverExternalPackages).toEqual([])
+  })
+
+  it('reads top-level serverExternalPackages', async () => {
+    const resolved = await resolveTextConfig({
+      serverExternalPackages: ['payload', 'graphql'],
+    })
+    expect(resolved.serverExternalPackages).toEqual(['payload', 'graphql'])
+  })
+
+  it('falls back to experimental.serverComponentsExternalPackages (legacy name)', async () => {
+    const resolved = await resolveTextConfig({
+      experimental: {
+        serverComponentsExternalPackages: ['jose', 'pg-cloudflare'],
+      },
+    })
+    expect(resolved.serverExternalPackages).toEqual(['jose', 'pg-cloudflare'])
+  })
+
+  it('prefers top-level serverExternalPackages over legacy experimental key', async () => {
+    const resolved = await resolveTextConfig({
+      serverExternalPackages: ['payload'],
+      experimental: {
+        serverComponentsExternalPackages: ['jose'],
+      },
+    })
+    expect(resolved.serverExternalPackages).toEqual(['payload'])
+  })
+})
+
+describe('resolveTextConfig serverActionsBodySizeLimit', () => {
+  it('defaults to 1MB when no config is provided', async () => {
+    const resolved = await resolveTextConfig(null)
+    expect(resolved.serverActionsBodySizeLimit).toBe(1 * 1024 * 1024)
+  })
+
+  it('defaults to 1MB when serverActions is not configured', async () => {
+    const resolved = await resolveTextConfig({ env: {} })
+    expect(resolved.serverActionsBodySizeLimit).toBe(1 * 1024 * 1024)
+  })
+
+  it('parses bodySizeLimit from experimental.serverActions', async () => {
+    const resolved = await resolveTextConfig({
+      experimental: {
+        serverActions: {
+          bodySizeLimit: '10mb',
+        },
+      },
+    })
+    expect(resolved.serverActionsBodySizeLimit).toBe(10 * 1024 * 1024)
+  })
+
+  it('accepts numeric bodySizeLimit', async () => {
+    const resolved = await resolveTextConfig({
+      experimental: {
+        serverActions: {
+          bodySizeLimit: 5242880,
+        },
+      },
+    })
+    expect(resolved.serverActionsBodySizeLimit).toBe(5242880)
+  })
+})
+
+describe('resolveTextConfig hashSalt', () => {
+  const OLD_ENV = process.env.TEXT_HASH_SALT
+
+  afterEach(() => {
+    if (OLD_ENV !== undefined) {
+      process.env.TEXT_HASH_SALT = OLD_ENV
+    } else {
+      delete process.env.TEXT_HASH_SALT
+    }
+  })
+
+  it('defaults to empty string when no config or env is set', async () => {
+    const resolved = await resolveTextConfig(null)
+    expect(resolved.hashSalt).toBe('')
+  })
+
+  it('defaults to empty string when config has no experimental', async () => {
+    const resolved = await resolveTextConfig({ env: {} })
+    expect(resolved.hashSalt).toBe('')
+  })
+
+  it('reads outputHashSalt from experimental config', async () => {
+    const resolved = await resolveTextConfig({
+      experimental: { outputHashSalt: 'v1' },
+    })
+    expect(resolved.hashSalt).toBe('v1')
+  })
+
+  it('reads TEXT_HASH_SALT from env var', async () => {
+    process.env.TEXT_HASH_SALT = 'envsalt'
+    const resolved = await resolveTextConfig(null)
+    expect(resolved.hashSalt).toBe('envsalt')
+  })
+
+  it('concatenates config salt and env salt (config first)', async () => {
+    process.env.TEXT_HASH_SALT = 'envsalt'
+    const resolved = await resolveTextConfig({
+      experimental: { outputHashSalt: 'configsalt' },
+    })
+    expect(resolved.hashSalt).toBe('configsaltenvsalt')
+  })
+
+  it('handles only env var without config salt', async () => {
+    process.env.TEXT_HASH_SALT = 'onlyenv'
+    const resolved = await resolveTextConfig({ env: {} })
+    expect(resolved.hashSalt).toBe('onlyenv')
+  })
+})
+
+describe('resolveTextConfig instrumentationClientInject', () => {
+  let tmpDir: string
+
+  beforeEach(() => {
+    tmpDir = makeTempDir()
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), `{ "type": "module" }\n`)
+  })
+
+  afterEach(() => {
+    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('loads instrumentationClientInject from text.config.mjs', async () => {
+    fs.writeFileSync(
+      path.join(tmpDir, 'text.config.mjs'),
+      `export default { instrumentationClientInject: ["./inject-a.js", "./inject-b.js"] };\n`,
+    )
+    const raw = await loadTextConfig(tmpDir)
+    const resolved = await resolveTextConfig(raw, tmpDir)
+    expect(resolved.instrumentationClientInject).toEqual(['./inject-a.js', './inject-b.js'])
+  })
+})
+
+describe('resolveTextConfig htmlLimitedBots', () => {
+  it('serializes RegExp config values to their source', async () => {
+    const resolved = await resolveTextConfig({ htmlLimitedBots: /Minibot/i })
+
+    expect(resolved.htmlLimitedBots).toBe('Minibot')
+  })
+
+  it('accepts valid serialized regex source strings', async () => {
+    const resolved = await resolveTextConfig({ htmlLimitedBots: 'Minibot|Weebot' })
+
+    expect(resolved.htmlLimitedBots).toBe('Minibot|Weebot')
+  })
+
+  it('treats empty string config as unset', async () => {
+    const resolved = await resolveTextConfig({ htmlLimitedBots: '' })
+
+    expect(resolved.htmlLimitedBots).toBeUndefined()
+  })
+
+  it('throws a config error for invalid serialized regex sources', async () => {
+    await expect(resolveTextConfig({ htmlLimitedBots: '[' })).rejects.toThrow(
+      'Invalid text.config option "htmlLimitedBots"',
+    )
+  })
+})
+
+describe('resolveTextConfig expireTime', () => {
+  it('defaults to the Text.js route expire fallback', async () => {
+    const resolved = await resolveTextConfig(null)
+    expect(resolved.expireTime).toBe(31_536_000)
+  })
+
+  it('uses configured expireTime', async () => {
+    const resolved = await resolveTextConfig({ expireTime: 2 })
+    expect(resolved.expireTime).toBe(2)
+  })
+})
+
+// Ported from Text.js: packages/text/src/server/config.ts:528-531
+// https://github.com/vercel/next.js/blob/canary/packages/text/src/server/config.ts
+describe('resolveTextConfig basePath → assetPrefix parity fallback', () => {
+  it('falls back to basePath when assetPrefix is empty', async () => {
+    const resolved = await resolveTextConfig({ basePath: '/app' })
+    expect(resolved.basePath).toBe('/app')
+    expect(resolved.assetPrefix).toBe('/app')
+  })
+
+  it('does not override an explicitly set assetPrefix', async () => {
+    const resolved = await resolveTextConfig({
+      basePath: '/app',
+      assetPrefix: '/cdn',
+    })
+    expect(resolved.basePath).toBe('/app')
+    expect(resolved.assetPrefix).toBe('/cdn')
+  })
+
+  it('preserves absolute-URL assetPrefix even when basePath is also set', async () => {
+    const resolved = await resolveTextConfig({
+      basePath: '/app',
+      assetPrefix: 'https://cdn.example.com',
+    })
+    expect(resolved.assetPrefix).toBe('https://cdn.example.com')
+  })
+
+  it('leaves assetPrefix empty when basePath is also empty', async () => {
+    const resolved = await resolveTextConfig({})
+    expect(resolved.basePath).toBe('')
+    expect(resolved.assetPrefix).toBe('')
+  })
+
+  it('does not fall back when basePath is literal `/` (parity with Text.js)', async () => {
+    // Text.js rejects basePath === "/" earlier in its config pipeline;
+    // text passes the value through but the fallback explicitly skips
+    // it to avoid producing assetPrefix === "/" (which would collide
+    // with the root URL).
+    const resolved = await resolveTextConfig({ basePath: '/' })
+    expect(resolved.basePath).toBe('/')
+    expect(resolved.assetPrefix).toBe('')
+  })
+})
+
+describe('detectTextIntlConfig', () => {
+  let tmpDir: string
+
+  afterEach(() => {
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  function makeResolved(overrides: Partial<ResolvedTextConfig> = {}): ResolvedTextConfig {
+    return {
+      env: {},
+      assetPrefix: '',
+      basePath: '',
+      trailingSlash: false,
+      output: '',
+      pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+      cacheComponents: false,
+      redirects: [],
+      rewrites: { beforeFiles: [], afterFiles: [], fallback: [] },
+      headers: [],
+      images: undefined,
+      i18n: null,
+      mdx: null,
+      aliases: {},
+      allowedDevOrigins: [],
+      serverActionsAllowedOrigins: [],
+      optimizePackageImports: [],
+      serverActionsBodySizeLimit: 1 * 1024 * 1024,
+      htmlLimitedBots: undefined,
+      serverExternalPackages: [],
+      cacheHandler: undefined,
+      cacheMaxMemorySize: undefined,
+      hashSalt: '',
+      enablePrerenderSourceMaps: true,
+      expireTime: 31_536_000,
+      buildId: 'test-build-id',
+      deploymentId: undefined,
+      sassOptions: null,
+      instrumentationClientInject: [],
+      ...overrides,
+    }
+  }
+
+  /** Create a tmpdir with a fake text-intl package so require.resolve("text-intl") works */
+  function setupWithTextIntl(i18nFile?: string) {
+    tmpDir = makeTempDir()
+    // Create a resolvable text-intl package with an entry file.
+    const textIntlDir = path.join(tmpDir, 'node_modules', 'text-intl')
+    fs.mkdirSync(textIntlDir, { recursive: true })
+    fs.writeFileSync(
+      path.join(textIntlDir, 'package.json'),
+      JSON.stringify({ name: 'text-intl', version: '4.0.0', main: 'index.js' }),
+    )
+    fs.writeFileSync(path.join(textIntlDir, 'index.js'), 'module.exports = {};\n')
+    // Create root package.json so createRequire works
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ name: 'test-project' }))
+
+    if (i18nFile) {
+      const absPath = path.join(tmpDir, i18nFile)
+      fs.mkdirSync(path.dirname(absPath), { recursive: true })
+      fs.writeFileSync(absPath, 'export default {};\n')
+    }
+  }
+
+  it('auto-detects i18n/request.ts when text-intl is installed', () => {
+    setupWithTextIntl('i18n/request.ts')
+    const resolved = makeResolved()
+    detectTextIntlConfig(tmpDir, resolved)
+
+    expect(resolved.aliases['text-intl/config']).toBe(path.join(tmpDir, 'i18n', 'request.ts'))
+  })
+
+  it('auto-detects src/i18n/request.ts', () => {
+    setupWithTextIntl('src/i18n/request.ts')
+    const resolved = makeResolved()
+    detectTextIntlConfig(tmpDir, resolved)
+
+    expect(resolved.aliases['text-intl/config']).toBe(
+      path.join(tmpDir, 'src', 'i18n', 'request.ts'),
+    )
+  })
+
+  it('prefers i18n/request.ts over src/i18n/request.ts', () => {
+    setupWithTextIntl('i18n/request.ts')
+    // Also create src variant
+    const srcPath = path.join(tmpDir, 'src', 'i18n', 'request.ts')
+    fs.mkdirSync(path.dirname(srcPath), { recursive: true })
+    fs.writeFileSync(srcPath, 'export default {};\n')
+
+    const resolved = makeResolved()
+    detectTextIntlConfig(tmpDir, resolved)
+
+    expect(resolved.aliases['text-intl/config']).toBe(path.join(tmpDir, 'i18n', 'request.ts'))
+  })
+
+  it('detects .js extension variant', () => {
+    setupWithTextIntl('i18n/request.js')
+    const resolved = makeResolved()
+    detectTextIntlConfig(tmpDir, resolved)
+
+    expect(resolved.aliases['text-intl/config']).toBe(path.join(tmpDir, 'i18n', 'request.js'))
+  })
+
+  it('detects .tsx extension variant', () => {
+    setupWithTextIntl('i18n/request.tsx')
+    const resolved = makeResolved()
+    detectTextIntlConfig(tmpDir, resolved)
+
+    expect(resolved.aliases['text-intl/config']).toBe(path.join(tmpDir, 'i18n', 'request.tsx'))
+  })
+
+  // Note: "does nothing when text-intl is not installed" cannot be tested
+  // in this monorepo because vitest's module resolution always finds
+  // text-intl from the workspace root. The code path is a single try/catch
+  // that returns early — covered by the "no config file" and "explicit alias" tests.
+
+  it('does nothing when no i18n config file exists', () => {
+    setupWithTextIntl() // no i18n file
+    const resolved = makeResolved()
+    detectTextIntlConfig(tmpDir, resolved)
+
+    expect(resolved.aliases['text-intl/config']).toBeUndefined()
+  })
+
+  it('does not overwrite explicit alias', () => {
+    setupWithTextIntl('i18n/request.ts')
+    const explicit = '/custom/path/to/config.ts'
+    const resolved = makeResolved({
+      aliases: { 'text-intl/config': explicit },
+    })
+    detectTextIntlConfig(tmpDir, resolved)
+
+    expect(resolved.aliases['text-intl/config']).toBe(explicit)
+  })
+
+  it('sets trailing slash env var when trailingSlash is true', () => {
+    setupWithTextIntl('i18n/request.ts')
+    const resolved = makeResolved({ trailingSlash: true })
+    detectTextIntlConfig(tmpDir, resolved)
+
+    expect(resolved.env._text_intl_trailing_slash).toBe('true')
+  })
+
+  it('does not set trailing slash env var when trailingSlash is false', () => {
+    setupWithTextIntl('i18n/request.ts')
+    const resolved = makeResolved({ trailingSlash: false })
+    detectTextIntlConfig(tmpDir, resolved)
+
+    expect(resolved.env._text_intl_trailing_slash).toBeUndefined()
+  })
+})
+
+describe('resolveTextConfig text-intl auto-detection', () => {
+  let tmpDir: string
+
+  afterEach(() => {
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('auto-detects text-intl even when config is null', async () => {
+    tmpDir = makeTempDir()
+    // Setup text-intl + i18n config file
+    const textIntlDir = path.join(tmpDir, 'node_modules', 'text-intl')
+    fs.mkdirSync(textIntlDir, { recursive: true })
+    fs.writeFileSync(
+      path.join(textIntlDir, 'package.json'),
+      JSON.stringify({ name: 'text-intl', version: '4.0.0', main: 'index.js' }),
+    )
+    fs.writeFileSync(path.join(textIntlDir, 'index.js'), 'module.exports = {};\n')
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ name: 'test-project' }))
+    fs.mkdirSync(path.join(tmpDir, 'i18n'), { recursive: true })
+    fs.writeFileSync(path.join(tmpDir, 'i18n', 'request.ts'), 'export default {};\n')
+
+    const config = await resolveTextConfig(null, tmpDir)
+    expect(config.aliases['text-intl/config']).toBe(path.join(tmpDir, 'i18n', 'request.ts'))
+  })
+
+  it('explicit webpack alias takes precedence over auto-detection', async () => {
+    tmpDir = makeTempDir()
+    // Setup text-intl + i18n config file
+    const textIntlDir = path.join(tmpDir, 'node_modules', 'text-intl')
+    fs.mkdirSync(textIntlDir, { recursive: true })
+    fs.writeFileSync(
+      path.join(textIntlDir, 'package.json'),
+      JSON.stringify({ name: 'text-intl', version: '4.0.0', main: 'index.js' }),
+    )
+    fs.writeFileSync(path.join(textIntlDir, 'index.js'), 'module.exports = {};\n')
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ name: 'test-project' }))
+    fs.mkdirSync(path.join(tmpDir, 'i18n'), { recursive: true })
+    fs.writeFileSync(path.join(tmpDir, 'i18n', 'request.ts'), 'export default {};\n')
+
+    // Create a custom config path
+    fs.mkdirSync(path.join(tmpDir, 'custom'), { recursive: true })
+    fs.writeFileSync(path.join(tmpDir, 'custom', 'intl.ts'), 'export default {};\n')
+
+    const rawConfig = {
+      webpack: (webpackConfig: any) => {
+        webpackConfig.resolve = webpackConfig.resolve || {}
+        webpackConfig.resolve.alias = webpackConfig.resolve.alias || {}
+        webpackConfig.resolve.alias['text-intl/config'] = './custom/intl.ts'
+        return webpackConfig
+      },
+    }
+
+    const config = await resolveTextConfig(rawConfig, tmpDir)
+    // Should use the explicit webpack alias, not auto-detected
+    expect(config.aliases['text-intl/config']).toBe(path.join(tmpDir, 'custom', 'intl.ts'))
+  })
+})
+
+// Ported from Text.js: test/integration/production-config/test/index.test.ts
+// https://github.com/vercel/next.js/blob/canary/test/integration/production-config/test/index.test.ts
+describe('generateBuildId', () => {
+  it('defaults to a non-empty string when generateBuildId is not set', async () => {
+    const config = await resolveTextConfig(null)
+    expect(typeof config.buildId).toBe('string')
+    expect(config.buildId.length).toBeGreaterThan(0)
+  })
+
+  it('uses the string returned by generateBuildId', async () => {
+    const config = await resolveTextConfig({ generateBuildId: () => 'my-custom-build-id' })
+    expect(config.buildId).toBe('my-custom-build-id')
+  })
+
+  it('trims whitespace from the returned build ID', async () => {
+    const config = await resolveTextConfig({ generateBuildId: () => '  trimmed  ' })
+    expect(config.buildId).toBe('trimmed')
+  })
+
+  it('falls back to a random UUID when generateBuildId returns null', async () => {
+    const config = await resolveTextConfig({ generateBuildId: () => null })
+    expect(typeof config.buildId).toBe('string')
+    expect(config.buildId.length).toBeGreaterThan(0)
+  })
+
+  it('supports async generateBuildId returning a string', async () => {
+    const config = await resolveTextConfig({
+      generateBuildId: async () => 'async-build-id',
+    })
+    expect(config.buildId).toBe('async-build-id')
+  })
+
+  it('supports async generateBuildId returning null (falls back)', async () => {
+    const config = await resolveTextConfig({
+      generateBuildId: async () => null,
+    })
+    expect(typeof config.buildId).toBe('string')
+    expect(config.buildId.length).toBeGreaterThan(0)
+  })
+
+  it('throws when generateBuildId returns a non-string, non-null value', async () => {
+    await expect(
+      resolveTextConfig({ generateBuildId: () => 42 as unknown as string }),
+    ).rejects.toThrow('generateBuildId did not return a string')
+  })
+
+  it('throws when generateBuildId returns an empty string', async () => {
+    await expect(resolveTextConfig({ generateBuildId: () => '   ' })).rejects.toThrow(
+      'generateBuildId returned an empty string',
+    )
+  })
+
+  it('two calls with no generateBuildId produce different build IDs (random)', async () => {
+    const a = await resolveTextConfig(null)
+    const b = await resolveTextConfig(null)
+    // UUIDs are random — astronomically unlikely to collide
+    expect(a.buildId).not.toBe(b.buildId)
+  })
+
+  it('two calls with the same generateBuildId produce the same ID', async () => {
+    const fn = () => 'stable-id'
+    const a = await resolveTextConfig({ generateBuildId: fn })
+    const b = await resolveTextConfig({ generateBuildId: fn })
+    expect(a.buildId).toBe('stable-id')
+    expect(b.buildId).toBe('stable-id')
+  })
+})
+
+describe('deploymentId', () => {
+  const OLD_ENV = process.env.TEXT_DEPLOYMENT_ID
+
+  afterEach(() => {
+    if (OLD_ENV === undefined) {
+      delete process.env.TEXT_DEPLOYMENT_ID
+    } else {
+      process.env.TEXT_DEPLOYMENT_ID = OLD_ENV
+    }
+  })
+
+  it('defaults to undefined when no deployment ID is configured', async () => {
+    delete process.env.TEXT_DEPLOYMENT_ID
+
+    const config = await resolveTextConfig(null)
+
+    expect(config.deploymentId).toBeUndefined()
+  })
+
+  it('uses TEXT_DEPLOYMENT_ID when text.config.js does not set deploymentId', async () => {
+    process.env.TEXT_DEPLOYMENT_ID = 'env-deployment'
+
+    const config = await resolveTextConfig({})
+
+    expect(config.deploymentId).toBe('env-deployment')
+  })
+
+  it('lets text.config.js deploymentId take precedence over TEXT_DEPLOYMENT_ID', async () => {
+    process.env.TEXT_DEPLOYMENT_ID = 'env-deployment'
+
+    const config = await resolveTextConfig({ deploymentId: 'config-deployment' })
+
+    expect(config.deploymentId).toBe('config-deployment')
+  })
+
+  it('treats an empty text.config.js deploymentId as unset even when TEXT_DEPLOYMENT_ID is set', async () => {
+    process.env.TEXT_DEPLOYMENT_ID = 'env-deployment'
+
+    const config = await resolveTextConfig({ deploymentId: '' })
+
+    expect(config.deploymentId).toBeUndefined()
+  })
+
+  it('throws when deploymentId contains invalid characters', async () => {
+    await expect(resolveTextConfig({ deploymentId: 'bad value' })).rejects.toThrow(
+      'Invalid `deploymentId` configuration: contains invalid characters',
+    )
+  })
+
+  it('throws when deploymentId is not a string', async () => {
+    await expect(resolveTextConfig({ deploymentId: 42 as unknown as string })).rejects.toThrow(
+      'Invalid `deploymentId` configuration: must be a string',
+    )
+  })
+})
+
+describe('resolveTextConfig external rewrite warning', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('emits a warning when rewrites contain external destinations', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await resolveTextConfig({
+      rewrites: async () => [
+        { source: '/api/:path*', destination: 'https://api.example.com/:path*' },
+        { source: '/internal', destination: '/other' },
+      ],
+    })
+
+    const externalWarning = warn.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('external rewrite'),
+    )
+
+    expect(externalWarning).toBeDefined()
+    expect(externalWarning![0]).toContain('1 external rewrite that')
+    expect(externalWarning![0]).toContain('https://api.example.com/:path*')
+    expect(externalWarning![0]).toContain('/api/:path*')
+    expect(externalWarning![0]).toContain('→')
+    expect(externalWarning![0]).toContain('credential headers')
+    expect(externalWarning![0]).toContain('forwarded')
+    expect(externalWarning![0]).toContain('match Text.js behavior')
+    expect(externalWarning![0]).not.toContain('/other')
+  })
+
+  it('does not warn when all rewrites are internal', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await resolveTextConfig({
+      rewrites: async () => [
+        { source: '/old', destination: '/new' },
+        { source: '/a', destination: '/b' },
+      ],
+    })
+
+    const externalWarning = warn.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('external rewrite'),
+    )
+    expect(externalWarning).toBeUndefined()
+  })
+
+  it('warns about multiple external rewrites across beforeFiles, afterFiles, and fallback', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await resolveTextConfig({
+      rewrites: async () => ({
+        beforeFiles: [{ source: '/proxy1', destination: 'https://one.example.com/api' }],
+        afterFiles: [{ source: '/proxy2', destination: 'https://two.example.com/api' }],
+        fallback: [{ source: '/proxy3', destination: 'https://three.example.com/api' }],
+      }),
+    })
+
+    const externalWarning = warn.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('external rewrite'),
+    )
+    expect(externalWarning).toBeDefined()
+    expect(externalWarning![0]).toContain('3 external rewrites')
+    expect(externalWarning![0]).toContain('https://one.example.com/api')
+    expect(externalWarning![0]).toContain('https://two.example.com/api')
+    expect(externalWarning![0]).toContain('https://three.example.com/api')
+    expect(externalWarning![0]).toContain('/proxy1')
+    expect(externalWarning![0]).toContain('/proxy2')
+    expect(externalWarning![0]).toContain('/proxy3')
+  })
+
+  it('does not warn when no rewrites are configured', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await resolveTextConfig({ env: {} })
+
+    const externalWarning = warn.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('external rewrite'),
+    )
+    expect(externalWarning).toBeUndefined()
+  })
+})
+
+describe('resolveTextConfig swcEnvOptions warning', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('emits a warning when experimental.swcEnvOptions is set', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await resolveTextConfig({
+      experimental: { swcEnvOptions: { mode: 'usage' } },
+    })
+
+    const swcWarning = warn.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('swcEnvOptions'),
+    )
+
+    expect(swcWarning).toBeDefined()
+    expect(swcWarning![0]).toContain('swcEnvOptions')
+    expect(swcWarning![0]).toContain('not applicable')
+    expect(swcWarning![0]).toContain('text uses Vite')
+  })
+
+  it('does not warn when experimental.swcEnvOptions is not set', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await resolveTextConfig({
+      experimental: {},
+    })
+
+    const swcWarning = warn.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('swcEnvOptions'),
+    )
+    expect(swcWarning).toBeUndefined()
+  })
+})
+
+describe('resolveTextConfig rootParams deprecation warning', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('emits a warning when experimental.rootParams is true', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await resolveTextConfig({
+      experimental: { rootParams: true },
+    })
+
+    const rootParamsWarning = warn.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('rootParams'),
+    )
+
+    expect(rootParamsWarning).toBeDefined()
+    expect(rootParamsWarning![0]).toContain('experimental.rootParams')
+    expect(rootParamsWarning![0]).toContain('no longer needed')
+    expect(rootParamsWarning![0]).toContain('text/root-params')
+    expect(rootParamsWarning![0]).toContain('available by default')
+  })
+
+  it('emits a warning when experimental.rootParams is false', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await resolveTextConfig({
+      experimental: { rootParams: false },
+    })
+
+    const rootParamsWarning = warn.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('rootParams'),
+    )
+
+    expect(rootParamsWarning).toBeDefined()
+  })
+
+  it('does not warn when experimental.rootParams is not set', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await resolveTextConfig({
+      experimental: {},
+    })
+
+    const rootParamsWarning = warn.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('rootParams'),
+    )
+    expect(rootParamsWarning).toBeUndefined()
+  })
+
+  it('does not warn when experimental is not set', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await resolveTextConfig({})
+
+    const rootParamsWarning = warn.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('rootParams'),
+    )
+    expect(rootParamsWarning).toBeUndefined()
+  })
+})
+
+describe('resolveTextConfig cacheHandler', () => {
+  it('resolves file:// URLs to filesystem paths', async () => {
+    const resolved = await resolveTextConfig({
+      cacheHandler: 'file:///absolute/path/to/handler.js',
+    })
+    expect(resolved.cacheHandler).toBe('/absolute/path/to/handler.js')
+  })
+
+  it('passes through absolute paths unchanged', async () => {
+    const resolved = await resolveTextConfig({
+      cacheHandler: '/absolute/path/to/handler.js',
+    })
+    expect(resolved.cacheHandler).toBe('/absolute/path/to/handler.js')
+  })
+
+  it('passes through relative paths unchanged', async () => {
+    const resolved = await resolveTextConfig({
+      cacheHandler: './my-cache-handler.js',
+    })
+    expect(resolved.cacheHandler).toBe('./my-cache-handler.js')
+  })
+
+  it('defaults to undefined when not configured', async () => {
+    const resolved = await resolveTextConfig({})
+    expect(resolved.cacheHandler).toBeUndefined()
+  })
+
+  it('defaults to undefined when config is null', async () => {
+    const resolved = await resolveTextConfig(null)
+    expect(resolved.cacheHandler).toBeUndefined()
+  })
+
+  it('resolves cacheMaxMemorySize when configured', async () => {
+    const resolved = await resolveTextConfig({
+      cacheMaxMemorySize: 52428800,
+    })
+    expect(resolved.cacheMaxMemorySize).toBe(52428800)
+  })
+
+  it('defaults cacheMaxMemorySize to undefined when not configured', async () => {
+    const resolved = await resolveTextConfig({})
+    expect(resolved.cacheMaxMemorySize).toBeUndefined()
+  })
+})
+
+describe('resolveTextConfig enablePrerenderSourceMaps', () => {
+  it('defaults enablePrerenderSourceMaps to true when not configured', async () => {
+    const resolved = await resolveTextConfig({})
+    expect(resolved.enablePrerenderSourceMaps).toBe(true)
+  })
+
+  it('respects explicit enablePrerenderSourceMaps: false', async () => {
+    const resolved = await resolveTextConfig({
+      enablePrerenderSourceMaps: false,
+    })
+    expect(resolved.enablePrerenderSourceMaps).toBe(false)
+  })
+})

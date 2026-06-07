@@ -1,52 +1,91 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Space 模块概述
+- 汇总间距组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import { h, type FC } from '@rue-js/rue'
 
+/** SpaceDirection 位置或方向类型。 */
 export type SpaceDirection = 'horizontal' | 'vertical'
+/** SpaceAlign 对齐方式类型。 */
 export type SpaceAlign = 'start' | 'end' | 'center' | 'baseline' | 'stretch'
+/** SpaceSize 尺寸类型。 */
 export type SpaceSize = 'small' | 'middle' | 'large' | number | string
 
+/** SpaceProps 组件属性。 */
 export interface SpaceProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 组件尺寸。 */
   size?: SpaceSize | [SpaceSize, SpaceSize]
+  /** 布局方向。 */
   direction?: SpaceDirection
+  /** orientation 配置项。 */
   orientation?: SpaceDirection
+  /** vertical 配置项。 */
   vertical?: boolean
+  /** 交叉轴或内容对齐方式。 */
   align?: SpaceAlign
+  /** split 配置项。 */
   split?: any
+  /** separator 配置项。 */
   separator?: any
+  /** wrap 配置项。 */
   wrap?: boolean
+  /** block 配置项。 */
   block?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** itemClassName 附加类名。 */
   itemClassName?: string
+  /** itemStyle 内联样式。 */
   itemStyle?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** SpaceCompactProps 组件属性。 */
 export interface SpaceCompactProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 组件尺寸。 */
   size?: SpaceSize
+  /** 布局方向。 */
   direction?: SpaceDirection
+  /** orientation 配置项。 */
   orientation?: SpaceDirection
+  /** vertical 配置项。 */
   vertical?: boolean
+  /** block 配置项。 */
   block?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** SPACE_SIZE_TOKENS 内部常量。 */
 const SPACE_SIZE_TOKENS: Record<'small' | 'middle' | 'large', string> = {
   small: 'var(--rue-theme-space-sm, 8px)',
   middle: 'var(--rue-theme-space-md, 16px)',
   large: 'var(--rue-theme-space-lg, 24px)',
 }
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...classNames: Array<string | undefined | false>) => {
   return classNames.filter(Boolean).join(' ')
 }
 
+/** merge Style 的内部工具函数。 */
 const mergeStyle = (...styles: Array<Record<string, any> | undefined>) => {
   const nextStyle: Record<string, any> = {}
 
@@ -60,6 +99,7 @@ const mergeStyle = (...styles: Array<Record<string, any> | undefined>) => {
   return Object.keys(nextStyle).length > 0 ? nextStyle : undefined
 }
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -67,10 +107,12 @@ const toChildArray = (children: any): any[] => {
   return children == null || typeof children === 'boolean' ? [] : [children]
 }
 
+/** is Renderable Node 的内部工具函数。 */
 const _isRenderableNode = (node: any) => {
   return !!node && typeof node === 'object'
 }
 
+/** 归一化 Space Value 的内部工具函数。 */
 const normalizeSpaceValue = (value?: SpaceSize) => {
   if (value == null) {
     return undefined
@@ -84,6 +126,7 @@ const normalizeSpaceValue = (value?: SpaceSize) => {
   return value
 }
 
+/** 解析 Gap 的内部工具函数。 */
 const resolveGap = (size?: SpaceSize | [SpaceSize, SpaceSize]) => {
   if (Array.isArray(size)) {
     return {
@@ -99,6 +142,7 @@ const resolveGap = (size?: SpaceSize | [SpaceSize, SpaceSize]) => {
   }
 }
 
+/** 解析 Direction 的内部工具函数。 */
 const resolveDirection = (
   orientation?: SpaceDirection,
   direction?: SpaceDirection,
@@ -110,6 +154,7 @@ const resolveDirection = (
   return orientation ?? direction ?? 'horizontal'
 }
 
+/** resolve Compact Size Class Name 的内部工具函数。 */
 const _resolveCompactSizeClassName = (className: string | undefined, size?: SpaceSize) => {
   if (!className || size == null || typeof size === 'number') {
     return undefined
@@ -130,6 +175,7 @@ const _resolveCompactSizeClassName = (className: string | undefined, size?: Spac
   return nextClassNames.length > 0 ? nextClassNames.join(' ') : undefined
 }
 
+/** 解析 Compact Item Class Name 的内部工具函数。 */
 const resolveCompactItemClassName = (direction: SpaceDirection, index: number, total: number) => {
   const isFirst = index === 0
   const isLast = index === total - 1
@@ -149,10 +195,12 @@ const resolveCompactItemClassName = (direction: SpaceDirection, index: number, t
   )
 }
 
+/** 解析 Separator Content 的内部工具函数。 */
 const resolveSeparatorContent = (separator: any) => {
   return typeof separator === 'function' ? separator() : separator
 }
 
+/** 解析 Compact Shell Style 的内部工具函数。 */
 const resolveCompactShellStyle = (size?: SpaceSize) => {
   if (size == null) {
     return undefined
@@ -177,6 +225,7 @@ const resolveCompactShellStyle = (size?: SpaceSize) => {
   return undefined
 }
 
+/** 渲染 Space Separator 的内部工具函数。 */
 const renderSpaceSeparator = (separator: any, direction: SpaceDirection) => {
   return (
     <span
@@ -191,6 +240,7 @@ const renderSpaceSeparator = (separator: any, direction: SpaceDirection) => {
   )
 }
 
+/** Space Root 的内部工具函数。 */
 const SpaceRoot: FC<SpaceProps> = ({
   as = 'div',
   size,
@@ -274,6 +324,7 @@ const SpaceRoot: FC<SpaceProps> = ({
   )
 }
 
+/** Space Compact 的内部工具函数。 */
 const SpaceCompact: FC<SpaceCompactProps> = ({
   as = 'div',
   size,
@@ -353,4 +404,5 @@ const Space: SpaceCompound = Object.assign(SpaceRoot, {
   Compact: SpaceCompact,
 })
 
+/** 默认导出间距组件。 */
 export default Space

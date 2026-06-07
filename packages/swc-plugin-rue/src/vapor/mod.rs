@@ -15,7 +15,7 @@ Vapor 深编译转换器说明：
 - 命名策略：使用递增计数生成稳定的局部标识符，避免与用户代码冲突，并提升可读性与调试体验。
 - Import 注入：当 `did_transform` 为 true 时，模块级访问会按需注入 `@rue-js/rue` 的运行时 import。
 - 选择注释锚点的原因：原生 DOM 没有“片段占位”概念，注释节点可作为轻量且不影响布局的边界标记，配合 `parentNode` 枚举进行精准插入与复用。
-+
+
 结构体字段说明：
 - next_el/next_list/next_map/next_child：各类计数器用于生成稳定名称；
 - did_transform：标记是否发生 Vapor 转换，模块访问阶段据此注入运行时 import；
@@ -81,6 +81,8 @@ impl VaporTransform {
 }
 
 pub(crate) fn flatten_once_watch_effects(stmts: &mut Vec<Stmt>) {
+    // v-once/r-once 子树只需要初次赋值。这里把生成阶段保守包上的 watchEffect 展平，
+    // 保留内部 DOM 写入语句，避免 once 子树仍然参与响应式订阅。
     let mut next = Vec::with_capacity(stmts.len());
     for stmt in std::mem::take(stmts) {
         if let Some(mut body) = watch_effect_body(&stmt) {
@@ -125,3 +127,7 @@ fn watch_effect_body(stmt: &Stmt) -> Option<Vec<Stmt>> {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod tests;

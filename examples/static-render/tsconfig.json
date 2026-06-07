@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@rue-js",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@rue-js/rue": ["../../packages/rue/src"],
+      "@rue-js/rue/*": ["../../packages/rue/src/*"],
+      "@rue-js/router": ["../../packages/router/src"],
+      "@rue-js/jsx-runtime": ["../../packages/jsx-runtime/src"],
+      "@rue-js/jsx-dev-runtime": ["../../packages/jsx-dev-runtime/src"],
+      "@rue-js/runtime": ["../../packages/runtime/src"],
+      "@rue-js/runtime/*": ["../../packages/runtime/src/*"],
+      "@rue-js/server-renderer": ["../../packages/server-renderer/src"],
+      "@rue-js/shared": ["../../packages/shared/src"]
+    }
+  },
+  "include": ["src", "../../packages/global.d.ts", "../../packages/rue/jsx.d.ts"]
+}

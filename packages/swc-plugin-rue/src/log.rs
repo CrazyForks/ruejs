@@ -39,13 +39,13 @@ use std::fs::OpenOptions;
 use std::io::Write;
 
 thread_local! {
-    static LOG_ENABLED: std::cell::RefCell<bool> = std::cell::RefCell::new(false);
-    static LOG_CONSOLE: std::cell::RefCell<bool> = std::cell::RefCell::new(false);
-    static LOG_LEVEL: std::cell::RefCell<u8> = std::cell::RefCell::new(0);
-    static LOG_INCLUDE: std::cell::RefCell<Vec<String>> = std::cell::RefCell::new(Vec::new());
-    static LOG_EXCLUDE: std::cell::RefCell<Vec<String>> = std::cell::RefCell::new(Vec::new());
-    static LOG_INCLUDE_TOUCHED: std::cell::RefCell<bool> = std::cell::RefCell::new(false);
-    static LOG_EXCLUDE_TOUCHED: std::cell::RefCell<bool> = std::cell::RefCell::new(false);
+    static LOG_ENABLED: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
+    static LOG_CONSOLE: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
+    static LOG_LEVEL: std::cell::RefCell<u8> = const { std::cell::RefCell::new(0) };
+    static LOG_INCLUDE: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    static LOG_EXCLUDE: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    static LOG_INCLUDE_TOUCHED: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
+    static LOG_EXCLUDE_TOUCHED: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
     static LOG_FILE_PATH: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(std::env::var("RUE_LOG_FILE").ok());
 }
 
@@ -206,6 +206,13 @@ pub fn set_log_file(path: &str) {
     LOG_FILE_PATH.with(|p| *p.borrow_mut() = Some(path.to_string()));
 }
 
+fn unix_timestamp_secs(now: std::time::SystemTime) -> String {
+    match now.duration_since(std::time::UNIX_EPOCH) {
+        Ok(d) => format!("{}", d.as_secs()),
+        Err(_) => String::from("0"),
+    }
+}
+
 /// 实际写入日志：按规则检查后输出到 console
 fn write(level: &str, msg: &str) {
     sync_log_config_from_env();
@@ -221,10 +228,7 @@ fn write(level: &str, msg: &str) {
             .collect()
     }
     // 简单时间戳：UNIX 秒
-    let ts = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-        Ok(d) => format!("{}", d.as_secs()),
-        Err(_) => String::from("0"),
-    };
+    let ts = unix_timestamp_secs(std::time::SystemTime::now());
     let entry = sanitize(&format!("{} [{}] {}", ts, level, msg));
     let to_console = LOG_CONSOLE.with(|c| *c.borrow());
     if to_console {
@@ -237,60 +241,11 @@ fn write(level: &str, msg: &str) {
         if let Some(parent) = p.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&p) {
+        if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(p) {
             let _ = writeln!(f, "{}", entry);
         } else {
-            let _ = std::fs::write(&p, format!("{}\n", entry));
+            let _ = std::fs::write(p, format!("{}\n", entry));
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn env_config_drives_logging() {
-        std::env::set_var("RUE_LOG_ENABLED", "true");
-        std::env::set_var("RUE_LOG_LEVEL", "info");
-        std::env::remove_var("RUE_LOG_INCLUDE");
-        std::env::remove_var("RUE_LOG_EXCLUDE");
-        clear_log_include();
-        clear_log_exclude();
-        let path = "target/test_log_env.txt";
-        std::fs::create_dir_all("target").ok();
-        std::fs::remove_file(path).ok();
-        set_log_console(false);
-        set_log_file(path);
-        info("hello env");
-        let s = std::fs::read_to_string(path).expect("file");
-        assert!(s.contains("[info]"));
-        assert!(s.contains("hello env"));
-    }
-
-    #[test]
-    fn include_exclude_filters() {
-        std::env::set_var("RUE_LOG_ENABLED", "true");
-        std::env::set_var("RUE_LOG_LEVEL", "debug");
-        let path = "target/test_log_filters.txt";
-        std::fs::remove_file(path).ok();
-        set_log_console(false);
-        set_log_file(path);
-
-        std::env::set_var("RUE_LOG_INCLUDE", "only");
-        info("hello");
-        info("only match");
-        let s = std::fs::read_to_string(path).expect("file");
-        assert!(s.contains("only match"));
-        assert!(!s.contains("hello\n"));
-
-        std::env::set_var("RUE_LOG_INCLUDE", "");
-        std::env::set_var("RUE_LOG_EXCLUDE", "ban");
-        info("ban content");
-        info("ok content");
-        let s2 = std::fs::read_to_string(path).expect("file");
-        assert!(s2.contains("ok content"));
-        assert!(!s2.contains("ban content"));
     }
 }
 
@@ -344,3 +299,19 @@ pub fn alert(msg: &str) {
 pub fn emergency(msg: &str) {
     write("emergency", msg);
 }
+
+#[cfg(test)]
+fn reset_for_test() {
+    LOG_ENABLED.with(|e| *e.borrow_mut() = false);
+    LOG_CONSOLE.with(|c| *c.borrow_mut() = false);
+    LOG_LEVEL.with(|l| *l.borrow_mut() = 0);
+    LOG_INCLUDE.with(|f| f.borrow_mut().clear());
+    LOG_EXCLUDE.with(|f| f.borrow_mut().clear());
+    LOG_INCLUDE_TOUCHED.with(|t| *t.borrow_mut() = false);
+    LOG_EXCLUDE_TOUCHED.with(|t| *t.borrow_mut() = false);
+    LOG_FILE_PATH.with(|p| *p.borrow_mut() = None);
+}
+
+#[cfg(test)]
+#[path = "log_tests.rs"]
+mod tests;

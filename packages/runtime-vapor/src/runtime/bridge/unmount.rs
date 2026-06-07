@@ -1,3 +1,8 @@
+/*
+unmount：应用卸载桥接
+
+清理 root effect scope，并委托 Rue::unmount 触发生命周期、移除 DOM 与释放 mounted 记录。
+*/
 use super::WasmRue;
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::js_adapter::JsDomAdapter;

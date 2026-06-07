@@ -12,63 +12,110 @@ type BreadcrumbsParamValue = string | number | boolean | null | undefined
 type BreadcrumbsMenuAlign = 'start' | 'center' | 'end'
 type BreadcrumbsMenuDirection = 'top' | 'bottom' | 'left' | 'right'
 
+/** BreadcrumbsParams 接口。 */
 export interface BreadcrumbsParams {
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: BreadcrumbsParamValue
 }
 
+/** BreadcrumbsMenuItem 数据项结构。 */
 export interface BreadcrumbsMenuItem {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 展示标签。 */
   label?: any
+  /** 标题内容。 */
   title?: any
+  /** 链接地址。 */
   href?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
 }
 
+/** BreadcrumbsMenu 接口。 */
 export interface BreadcrumbsMenu {
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<BreadcrumbsMenuItem>
+  /** 交叉轴或内容对齐方式。 */
   align?: BreadcrumbsMenuAlign
+  /** 布局方向。 */
   direction?: BreadcrumbsMenuDirection
+  /** 根节点附加类名。 */
   className?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
 }
 
+/** BreadcrumbsRouteItem 数据项结构。 */
 export interface BreadcrumbsRouteItem {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 标题内容。 */
   title?: any
+  /** 展示标签。 */
   label?: any
+  /** 链接地址。 */
   href?: string
+  /** path 配置项。 */
   path?: string
+  /** 图标内容。 */
   icon?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** linkClassName 附加类名。 */
   linkClassName?: string
+  /** current 配置项。 */
   current?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** menu 配置项。 */
   menu?: BreadcrumbsMenu
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
 }
 
+/** BreadcrumbsSeparatorItem 数据项结构。 */
 export interface BreadcrumbsSeparatorItem {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 组件类型或语义类型。 */
   type: 'separator'
+  /** separator 配置项。 */
   separator?: any
 }
 
+/** BreadcrumbsDataItem 类型。 */
 export type BreadcrumbsDataItem = BreadcrumbsRouteItem | BreadcrumbsSeparatorItem
 
+/** BreadcrumbsProps 组件属性。 */
 export interface BreadcrumbsProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<BreadcrumbsDataItem>
+  /** routes 配置项。 */
   routes?: ReadonlyArray<BreadcrumbsDataItem>
+  /** separator 配置项。 */
   separator?: any
+  /** params 配置项。 */
   params?: BreadcrumbsParams
+  /** dropdownIcon 图标内容。 */
   dropdownIcon?: any
+  /** itemRender 自定义渲染函数。 */
   itemRender?: (
     route: BreadcrumbsRouteItem,
     params: BreadcrumbsParams,
@@ -78,10 +125,13 @@ export interface BreadcrumbsProps {
   ) => any
 }
 
+/** BreadcrumbsItemProps 组件属性。 */
 export interface BreadcrumbsItemProps extends BreadcrumbsRouteItem {
+  /** 组件子内容。 */
   children?: any
 }
 
+/** normalize Children 的内部工具函数。 */
 const _normalizeChildren = (children?: any) => {
   if (Array.isArray(children)) {
     return children
@@ -89,18 +139,22 @@ const _normalizeChildren = (children?: any) => {
   return children != null ? [children] : []
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base?: string, className?: string) => {
   if (base && className) return `${base} ${className}`
   return base ?? className ?? ''
 }
 
+/** 判断 Separator Item 的内部工具函数。 */
 const isSeparatorItem = (item: BreadcrumbsDataItem): item is BreadcrumbsSeparatorItem => {
   return !!item && typeof item === 'object' && 'type' in item && item.type === 'separator'
 }
 
+/** 解析 Item Title 的内部工具函数。 */
 const resolveItemTitle = (item: Pick<BreadcrumbsRouteItem, 'title' | 'label'>, fallback?: any) =>
   item.title ?? item.label ?? fallback
 
+/** 解析 Path 的内部工具函数。 */
 const resolvePath = (params: BreadcrumbsParams, path?: string) => {
   if (path === undefined) {
     return undefined
@@ -116,6 +170,7 @@ const resolvePath = (params: BreadcrumbsParams, path?: string) => {
   return mergedPath
 }
 
+/** 解析 Href 的内部工具函数。 */
 const resolveHref = (href: string | undefined, paths: string[], hasPath: boolean) => {
   if (href) {
     return href
@@ -127,6 +182,7 @@ const resolveHref = (href: string | undefined, paths: string[], hasPath: boolean
   return mergedPath ? `/${mergedPath}` : '/'
 }
 
+/** 解析 Link Rel 的内部工具函数。 */
 const resolveLinkRel = (target?: string, rel?: string) => {
   if (target === '_blank' && !rel) {
     return 'noreferrer'
@@ -134,6 +190,7 @@ const resolveLinkRel = (target?: string, rel?: string) => {
   return rel
 }
 
+/** prevent When Disabled 的内部工具函数。 */
 const preventWhenDisabled = (disabled?: boolean, onClick?: (event: MouseEvent) => void) => {
   return (event: MouseEvent) => {
     if (disabled) {
@@ -151,10 +208,12 @@ const preventWhenDisabled = (disabled?: boolean, onClick?: (event: MouseEvent) =
   }
 }
 
+/** Default Separator 的内部工具函数。 */
 const DefaultSeparator: FC = () => {
   return <span className="inline-block h-1.5 w-1.5 rotate-45 border-t border-r border-current" />
 }
 
+/** Default Dropdown Icon 的内部工具函数。 */
 const DefaultDropdownIcon: FC = () => {
   return (
     <svg
@@ -171,6 +230,7 @@ const DefaultDropdownIcon: FC = () => {
   )
 }
 
+/** 渲染 Menu Trigger 的内部工具函数。 */
 const renderMenuTrigger = (menu: BreadcrumbsMenu | undefined, dropdownIcon: any, title: any) => {
   if (!menu?.items || menu.items.length === 0) {
     return null
@@ -260,6 +320,7 @@ interface RenderItemContentOptions {
   fallbackChildren?: any
 }
 
+/** 渲染 Item Content 的内部工具函数。 */
 const renderItemContent = ({
   item,
   href,
@@ -461,4 +522,5 @@ const BreadcrumbsCompound: BreadcrumbsCompound = Object.assign(Breadcrumbs, {
   Item,
 })
 
+/** 默认导出面包屑组件。 */
 export default BreadcrumbsCompound

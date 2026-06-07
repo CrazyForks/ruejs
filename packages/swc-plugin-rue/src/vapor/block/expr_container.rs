@@ -27,12 +27,7 @@ pub(crate) fn handle_expr_container(
                     return;
                 }
             }
-            let is_children = if let Expr::Member(m) = inner {
-                matches!((&*m.obj, &m.prop), (Expr::Ident(id), MemberProp::Ident(pi))
-                    if id.sym.as_ref() == "props" && pi.sym.as_ref() == "children")
-            } else {
-                false
-            };
+            let is_children = crate::utils::is_children_member_expr(inner);
 
             let maybe_static = match inner {
                 Expr::JSXElement(el) => {
@@ -80,3 +75,7 @@ pub(crate) fn handle_expr_container(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "expr_container_tests.rs"]
+mod tests;

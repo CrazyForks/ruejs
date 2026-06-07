@@ -9,61 +9,110 @@ Timeline 组件概述
 */
 import { h, type FC } from '@rue-js/rue'
 
+/** TimelineDirection 位置或方向类型。 */
 export type TimelineDirection = 'horizontal' | 'vertical'
+/** TimelinePlacement 位置或方向类型。 */
 export type TimelinePlacement = 'start' | 'end'
+/** TimelineLegacyPosition 位置或方向类型。 */
 export type TimelineLegacyPosition = 'left' | 'right' | TimelinePlacement
+/** TimelineMode 类型。 */
 export type TimelineMode = TimelinePlacement | 'alternate'
 
+/** TimelineProps 组件属性。 */
 export interface TimelineProps {
+  /** 布局方向。 */
   direction?: TimelineDirection
+  /** orientation 配置项。 */
   orientation?: TimelineDirection
+  /** mode 配置项。 */
   mode?: TimelineMode
+  /** snapIcon 图标内容。 */
   snapIcon?: boolean
+  /** compact 配置项。 */
   compact?: boolean
+  /** reverse 配置项。 */
   reverse?: boolean
+  /** pending 配置项。 */
   pending?: any
+  /** pendingDot 配置项。 */
   pendingDot?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<TimelineItemProps>
 }
 
+/** TimelineItemPart 接口。 */
 export interface TimelineItemPart {
+  /** box 配置项。 */
   box?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 主体内容。 */
   content?: any
 }
 
+/** TimelineMiddlePart 接口。 */
 export interface TimelineMiddlePart {
+  /** 根节点附加类名。 */
   className?: string
+  /** 主体内容。 */
   content?: any
 }
 
+/** TimelineItemProps 组件属性。 */
 export interface TimelineItemProps {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** beforeLine 配置项。 */
   beforeLine?: boolean
+  /** afterLine 配置项。 */
   afterLine?: boolean
+  /** start 配置项。 */
   start?: TimelineItemPart
+  /** middle 配置项。 */
   middle?: TimelineMiddlePart
+  /** end 配置项。 */
   end?: TimelineItemPart
+  /** liClassName 附加类名。 */
   liClassName?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 标题内容。 */
   title?: any
+  /** 主体内容。 */
   content?: any
+  /** 展示标签。 */
   label?: any
+  /** 组件子内容。 */
   children?: any
+  /** 弹出层或内容展示位置。 */
   placement?: TimelinePlacement
+  /** position 配置项。 */
   position?: TimelineLegacyPosition
+  /** 组件语义色。 */
   color?: string
+  /** 图标内容。 */
   icon?: any
+  /** dot 配置项。 */
   dot?: any
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** box 配置项。 */
   box?: boolean
+  /** titleBox 配置项。 */
   titleBox?: boolean
+  /** contentBox 配置项。 */
   contentBox?: boolean
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** iconClassName 附加类名。 */
   iconClassName?: string
+  /** lineClassName 附加类名。 */
   lineClassName?: string
 }
 
@@ -85,6 +134,7 @@ interface TimelineRenderedItem {
   lineStyle?: Record<string, string>
 }
 
+/** SEMANTIC_TEXT_CLASS_MAP 内部常量。 */
 const SEMANTIC_TEXT_CLASS_MAP: Record<string, string> = {
   neutral: 'text-neutral',
   primary: 'text-primary',
@@ -96,6 +146,7 @@ const SEMANTIC_TEXT_CLASS_MAP: Record<string, string> = {
   error: 'text-error',
 }
 
+/** SEMANTIC_LINE_CLASS_MAP 内部常量。 */
 const SEMANTIC_LINE_CLASS_MAP: Record<string, string> = {
   neutral: 'bg-neutral border-neutral',
   primary: 'bg-primary border-primary',
@@ -107,10 +158,12 @@ const SEMANTIC_LINE_CLASS_MAP: Record<string, string> = {
   error: 'bg-error border-error',
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...values: Array<string | undefined | false>) => {
   return values.filter(Boolean).join(' ')
 }
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -121,8 +174,10 @@ const toChildArray = (children: any): any[] => {
   return [children]
 }
 
+/** 判断 Defined 的内部工具函数。 */
 const isDefined = (value: any) => value !== undefined && value !== null
 
+/** 归一化 Direction 的内部工具函数。 */
 const normalizeDirection = (
   direction?: TimelineDirection,
   orientation?: TimelineDirection,
@@ -130,6 +185,7 @@ const normalizeDirection = (
   return direction ?? orientation
 }
 
+/** 归一化 Position 的内部工具函数。 */
 const normalizePosition = (position?: TimelineLegacyPosition): TimelinePlacement | undefined => {
   if (!position) return undefined
   if (position === 'left') return 'start'
@@ -137,6 +193,7 @@ const normalizePosition = (position?: TimelineLegacyPosition): TimelinePlacement
   return position
 }
 
+/** 解析 Placement 的内部工具函数。 */
 const resolvePlacement = (item: TimelineItemProps, index: number, mode?: TimelineMode) => {
   const explicitPlacement = item.placement ?? normalizePosition(item.position)
   if (explicitPlacement) return explicitPlacement
@@ -146,6 +203,7 @@ const resolvePlacement = (item: TimelineItemProps, index: number, mode?: Timelin
   return mode === 'start' ? 'start' : 'end'
 }
 
+/** Default Dot 的内部工具函数。 */
 const DefaultDot: FC<{ className?: string }> = ({ className }) => {
   return (
     <span
@@ -157,10 +215,12 @@ const DefaultDot: FC<{ className?: string }> = ({ className }) => {
   )
 }
 
+/** Loading Dot 的内部工具函数。 */
 const LoadingDot: FC<{ className?: string }> = ({ className }) => {
   return <span className={joinClassName('loading loading-spinner loading-xs', className)} />
 }
 
+/** 解析 Line Class Name 的内部工具函数。 */
 const resolveLineClassName = (item: TimelineItemProps) => {
   return joinClassName(
     item.lineClassName,
@@ -168,6 +228,7 @@ const resolveLineClassName = (item: TimelineItemProps) => {
   )
 }
 
+/** 解析 Line Style 的内部工具函数。 */
 const resolveLineStyle = (item: TimelineItemProps) => {
   if (!item.color || SEMANTIC_LINE_CLASS_MAP[item.color]) return undefined
   return {
@@ -176,6 +237,7 @@ const resolveLineStyle = (item: TimelineItemProps) => {
   }
 }
 
+/** 解析 Middle Presentation 的内部工具函数。 */
 const resolveMiddlePresentation = (
   item: TimelineItemProps,
   autoMode: boolean,
@@ -215,6 +277,7 @@ const resolveMiddlePresentation = (
   return undefined
 }
 
+/** 解析 Auto Parts 的内部工具函数。 */
 const resolveAutoParts = (item: TimelineItemProps, placement: TimelinePlacement) => {
   const metaContent = item.title ?? item.label
   const bodyContent = item.content ?? item.children ?? item.title ?? item.label
@@ -257,6 +320,7 @@ const resolveAutoParts = (item: TimelineItemProps, placement: TimelinePlacement)
   }
 }
 
+/** 归一化 Pending Item 的内部工具函数。 */
 const normalizePendingItem = (pending: any, pendingDot?: any): TimelineItemProps | null => {
   if (!pending) return null
   return {
@@ -269,6 +333,7 @@ const normalizePendingItem = (pending: any, pendingDot?: any): TimelineItemProps
   }
 }
 
+/** 归一化 Items 的内部工具函数。 */
 const normalizeItems = (
   items: ReadonlyArray<TimelineItemProps>,
   mode?: TimelineMode,
@@ -324,6 +389,7 @@ const End: FC<TimelinePartProps> = ({ box, className, children }) => {
   return <div className={cls}>{children}</div>
 }
 
+/** 渲染 Timeline Item 的内部工具函数。 */
 const renderTimelineItem = (item: TimelineRenderedItem, index: number) => {
   return (
     <li className={item.liClassName} key={item.key ?? index}>
@@ -398,4 +464,5 @@ const TimelineCompound: TimelineCompound = Object.assign(Timeline, {
   End,
 })
 
+/** 默认导出时间线组件。 */
 export default TimelineCompound

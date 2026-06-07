@@ -5,6 +5,16 @@ use js_sys::Reflect;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
+// ref/computed 虽然也是对象，但 isProxy 语义只覆盖 reactive/readonly 代理。
+fn has_ref_flag(obj: &JsValue) -> bool {
+    let raw = Reflect::get(obj, &JsValue::from_str("__rue_raw__")).unwrap_or(JsValue::UNDEFINED);
+    let target = if raw.is_object() { raw } else { obj.clone() };
+    Reflect::get(&target, &JsValue::from_str("__rue_ref__"))
+        .unwrap_or(JsValue::FALSE)
+        .as_bool()
+        .unwrap_or(false)
+}
+
 #[wasm_bindgen(js_name = isReactive)]
 pub fn is_reactive(obj: JsValue) -> bool {
     // 非对象一定不是 reactive
@@ -22,10 +32,27 @@ pub fn is_reactive(obj: JsValue) -> bool {
     flag_true || has_sig
 }
 
+/// 判断对象是否为 Rue reactive 或 readonly 代理，排除 ref/computed 句柄。
+#[wasm_bindgen(js_name = isProxy)]
+pub fn is_proxy(obj: JsValue) -> bool {
+    if !obj.is_object() || has_ref_flag(&obj) {
+        return false;
+    }
+
+    let readonly_flag =
+        Reflect::get(&obj, &JsValue::from_str("__isReadonly__")).unwrap_or(JsValue::UNDEFINED);
+    is_reactive(obj) || readonly_flag.as_bool() == Some(true)
+}
+
 #[wasm_bindgen(typescript_custom_section)]
 const TS_IS_REACTIVE_DECL: &'static str = r#"
 /**
  * 调试工具：判断对象是否为 reactive 代理
  */
 export function isReactive(obj: any): boolean;
+
+/**
+ * 调试工具：判断对象是否为 Rue 响应式代理
+ */
+export function isProxy(obj: any): boolean;
 "#;

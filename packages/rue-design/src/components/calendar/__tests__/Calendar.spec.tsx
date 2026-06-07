@@ -95,6 +95,62 @@ describe('Calendar', () => {
     slowTestTimeout,
   )
 
+  it(
+    'switches between month and year modes from the controlled default panel',
+    async () => {
+      const c = mountTestContainer()
+      const onPanelChange = vi.fn()
+      const ControlledCalendar = () => {
+        const mode = ref<'month' | 'year'>('month')
+
+        return (
+          <Calendar
+            data-testid="calendar-root"
+            locale="zh-CN"
+            value="2026-04-12"
+            mode={mode.value}
+            showWeek
+            validRange={[new Date('2026-04-01T00:00:00'), new Date('2026-05-31T00:00:00')]}
+            disabledDate={date => date.getDay() === 0 || date.getDay() === 6}
+            onPanelChange={(date, nextMode) => {
+              mode.value = nextMode
+              onPanelChange(date, nextMode)
+            }}
+          />
+        )
+      }
+
+      resetActiveRuntime()
+      render(<ControlledCalendar />, c)
+
+      await waitForContent(() => {
+        const root = c.querySelector('[data-testid="calendar-root"]') as HTMLElement
+        expect(root.getAttribute('data-rue-calendar-mode')).toBe('month')
+        expect(c.querySelectorAll('[data-rue-calendar-cell]').length).toBe(42)
+      })
+
+      await click(c.querySelector('[data-rue-calendar-mode-switch="year"]'))
+
+      await waitForContent(() => {
+        const root = c.querySelector('[data-testid="calendar-root"]') as HTMLElement
+        expect(root.getAttribute('data-rue-calendar-mode')).toBe('year')
+        expect(c.querySelectorAll('[data-rue-calendar-month]').length).toBe(12)
+      })
+
+      await click(c.querySelector('[data-rue-calendar-mode-switch="month"]'))
+
+      await waitForContent(() => {
+        const root = c.querySelector('[data-testid="calendar-root"]') as HTMLElement
+        expect(root.getAttribute('data-rue-calendar-mode')).toBe('month')
+        expect(c.querySelectorAll('[data-rue-calendar-cell]').length).toBe(42)
+      })
+
+      expect(onPanelChange).toHaveBeenCalledWith(expect.any(Date), 'year')
+      expect(onPanelChange).toHaveBeenCalledWith(expect.any(Date), 'month')
+    },
+    slowTestTimeout,
+  )
+
   it('supports year mode and custom month cell rendering', async () => {
     const c = mountTestContainer()
     resetActiveRuntime()

@@ -18,8 +18,11 @@ import {
 import Menu from '../menu/index'
 import type { MenuClickInfo, MenuDataEntry, MenuProps } from '../menu/index'
 
+/** DropdownAlign 对齐方式类型。 */
 export type DropdownAlign = 'start' | 'center' | 'end'
+/** DropdownDirection 位置或方向类型。 */
 export type DropdownDirection = 'top' | 'bottom' | 'left' | 'right'
+/** DropdownPlacement 位置或方向类型。 */
 export type DropdownPlacement =
   | 'top'
   | 'topLeft'
@@ -33,25 +36,39 @@ export type DropdownPlacement =
   | 'right'
   | 'rightTop'
   | 'rightBottom'
+/** DropdownTriggerMode 类型。 */
 export type DropdownTriggerMode = 'hover' | 'click' | 'contextMenu'
+/** DropdownOpenSource 类型。 */
 export type DropdownOpenSource = 'trigger' | 'menu' | 'outside' | 'escape' | 'contextMenu'
 
+/** DropdownMenuProps 组件属性。 */
 export interface DropdownMenuProps extends Omit<MenuProps, 'children'> {}
 
+/** DropdownOpenChangeInfo 接口。 */
 export interface DropdownOpenChangeInfo {
+  /** source 配置项。 */
   source: DropdownOpenSource
 }
 
+/** DropdownClassNames 局部类名配置。 */
 export interface DropdownClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** trigger 区域配置。 */
   trigger?: string
+  /** overlay 配置项。 */
   overlay?: string
+  /** menu 配置项。 */
   menu?: string
 }
 
+/** DropdownStyles 局部样式配置。 */
 export interface DropdownStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** overlay 配置项。 */
   overlay?: Record<string, any>
+  /** menu 配置项。 */
   menu?: Record<string, any>
 }
 
@@ -107,12 +124,15 @@ interface PlacementLayout {
   direction?: DropdownDirection
 }
 
+/** RUE_COMPONENT_TYPE_KEY 内部常量。 */
 const RUE_COMPONENT_TYPE_KEY = '__rue_component_type'
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | undefined | false>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** merge Styles 的内部工具函数。 */
 const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   const merged: Record<string, any> = {}
   parts.forEach(part => {
@@ -121,8 +141,10 @@ const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   return merged
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 
+/** serialize Style 的内部工具函数。 */
 const serializeStyle = (style?: string | Record<string, any>) => {
   if (!style) return ''
   if (typeof style === 'string') return style.trim()
@@ -132,6 +154,7 @@ const serializeStyle = (style?: string | Record<string, any>) => {
     .join('; ')
 }
 
+/** merge Style Value 的内部工具函数。 */
 const mergeStyleValue = (
   base?: string | Record<string, any>,
   extra?: string | Record<string, any>,
@@ -141,6 +164,7 @@ const mergeStyleValue = (
   return [baseStyle, extraStyle].filter(Boolean).join('; ')
 }
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -148,15 +172,18 @@ const toChildArray = (children: any): any[] => {
   return children == null || typeof children === 'boolean' ? [] : [children]
 }
 
+/** 判断 Renderable Node 的内部工具函数。 */
 const isRenderableNode = (value: unknown): value is Record<string, any> => {
   return !!value && typeof value === 'object'
 }
 
+/** 归一化 Trigger 的内部工具函数。 */
 const normalizeTrigger = (trigger?: DropdownTriggerMode | DropdownTriggerMode[]) => {
   const source = Array.isArray(trigger) ? trigger : trigger ? [trigger] : ['hover']
   return Array.from(new Set(source)) as DropdownTriggerMode[]
 }
 
+/** 解析 Placement Layout 的内部工具函数。 */
 const resolvePlacementLayout = (placement?: DropdownPlacement): PlacementLayout => {
   switch (placement) {
     case 'top':
@@ -187,6 +214,7 @@ const resolvePlacementLayout = (placement?: DropdownPlacement): PlacementLayout 
   }
 }
 
+/** 读取 Overlay Offset Class 的内部工具函数。 */
 const getOverlayOffsetClass = (direction?: DropdownDirection) => {
   switch (direction) {
     case 'top':
@@ -200,6 +228,7 @@ const getOverlayOffsetClass = (direction?: DropdownDirection) => {
   }
 }
 
+/** 读取 Arrow Class Name 的内部工具函数。 */
 const getArrowClassName = (direction?: DropdownDirection, align?: DropdownAlign) => {
   switch (direction) {
     case 'top':
@@ -225,7 +254,8 @@ const getArrowClassName = (direction?: DropdownDirection, align?: DropdownAlign)
   }
 }
 
-const patchVNodeProps = (node: any, patch: Record<string, any>) => {
+/** patch Renderable Props 的内部工具函数。 */
+const patchRenderableProps = (node: any, patch: Record<string, any>) => {
   if (!isRenderableNode(node) || !node.props || typeof node.props !== 'object') return node
   const originalProps = node.props as Record<string, any>
   const nextProps = {
@@ -241,6 +271,7 @@ const patchVNodeProps = (node: any, patch: Record<string, any>) => {
   return node
 }
 
+/** split Dropdown Children 的内部工具函数。 */
 const splitDropdownChildren = (children: any) => {
   let contentNode: any = null
   const triggerNodes: any[] = []
@@ -259,6 +290,7 @@ const splitDropdownChildren = (children: any) => {
   }
 }
 
+/** should Use Enhanced Mode 的内部工具函数。 */
 const shouldUseEnhancedMode = ({
   placement,
   trigger,
@@ -294,6 +326,7 @@ const shouldUseEnhancedMode = ({
   )
 }
 
+/** 渲染 As Component 的内部工具函数。 */
 const renderAsComponent = (Component: any, props: Record<string, any>, children: any[]) => {
   if (Component === 'div') return <div {...props}>{children}</div>
   if (Component === 'span') return <span {...props}>{children}</span>
@@ -304,6 +337,7 @@ const renderAsComponent = (Component: any, props: Record<string, any>, children:
   return h(Component, props, ...children)
 }
 
+/** Content 的内部工具函数。 */
 const Content: FC<DropdownContentProps> = ({ as = 'div', className, style, children, ...rest }) => {
   const Component = as as any
   return renderAsComponent(
@@ -317,6 +351,7 @@ const Content: FC<DropdownContentProps> = ({ as = 'div', className, style, child
   )
 }
 
+/** Trigger 的内部工具函数。 */
 const Trigger: FC<DropdownTriggerProps> = ({ as = 'div', className, style, children, ...rest }) => {
   const Component = as as any
   const triggerProps: Record<string, any> = {
@@ -349,6 +384,7 @@ const Trigger: FC<DropdownTriggerProps> = ({ as = 'div', className, style, child
   return renderAsComponent(Component, triggerProps, toChildArray(children))
 }
 
+/** Dropdown 的内部工具函数。 */
 const Dropdown: FC<DropdownProps> = ({
   as = 'div',
   align,
@@ -635,7 +671,7 @@ const Dropdown: FC<DropdownProps> = ({
   )
 
   const overlayNode = childSlots.contentNode ? (
-    patchVNodeProps(childSlots.contentNode, {
+    patchRenderableProps(childSlots.contentNode, {
       key: 'overlay',
       className: overlayClass,
       ref: (element: HTMLElement | null) => {
@@ -762,4 +798,5 @@ const DropdownCompound: DropdownCompound = Object.assign(Dropdown, {
   Content,
 })
 
+/** 默认导出下拉菜单组件。 */
 export default DropdownCompound

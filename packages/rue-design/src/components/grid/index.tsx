@@ -8,9 +8,13 @@ Grid 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, useRef } from '@rue-js/rue'
 
+/** GridBreakpoint 类型。 */
 export type GridBreakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
+/** GridGutterSize 尺寸类型。 */
 export type GridGutterSize = number | string
+/** GridAlign 对齐方式类型。 */
 export type GridAlign = 'top' | 'middle' | 'bottom' | 'stretch'
+/** GridJustify 对齐方式类型。 */
 export type GridJustify =
   | 'start'
   | 'end'
@@ -19,52 +23,89 @@ export type GridJustify =
   | 'space-between'
   | 'space-evenly'
 
+/** GridResponsiveValue 值类型。 */
 export type GridResponsiveValue<T> = Partial<Record<GridBreakpoint, T>>
+/** GridResponsiveGutter 类型。 */
 export type GridResponsiveGutter = GridGutterSize | GridResponsiveValue<GridGutterSize>
+/** GridGutter 类型。 */
 export type GridGutter = GridResponsiveGutter | [GridResponsiveGutter, GridResponsiveGutter]
+/** GridStyle 样式值类型。 */
 export type GridStyle = string | Record<string, any>
 
+/** GridColConfig 配置对象。 */
 export interface GridColConfig {
+  /** span 配置项。 */
   span?: number
+  /** order 配置项。 */
   order?: number
+  /** offset 配置项。 */
   offset?: number
+  /** push 配置项。 */
   push?: number
+  /** pull 配置项。 */
   pull?: number
+  /** flex 配置项。 */
   flex?: number | string
 }
 
+/** GridColResponsive 类型。 */
 export type GridColResponsive = number | GridColConfig
 
+/** GridRowProps 组件属性。 */
 export interface GridRowProps {
+  /** 栅格间距。 */
   gutter?: GridGutter
+  /** 交叉轴或内容对齐方式。 */
   align?: GridAlign
+  /** 主轴分布方式。 */
   justify?: GridJustify
+  /** wrap 配置项。 */
   wrap?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: GridStyle
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** GridColProps 组件属性。 */
 export interface GridColProps extends GridColConfig {
+  /** xs 配置项。 */
   xs?: GridColResponsive
+  /** sm 配置项。 */
   sm?: GridColResponsive
+  /** md 配置项。 */
   md?: GridColResponsive
+  /** lg 配置项。 */
   lg?: GridColResponsive
+  /** xl 配置项。 */
   xl?: GridColResponsive
+  /** xxl 配置项。 */
   xxl?: GridColResponsive
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: GridStyle
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** GridCompound 接口。 */
 export interface GridCompound extends FC<GridRowProps> {
+  /** Row 配置项。 */
   Row: FC<GridRowProps>
+  /** Col 配置项。 */
   Col: FC<GridColProps>
 }
 
+/** BREAKPOINT_SEQUENCE 内部常量。 */
 const BREAKPOINT_SEQUENCE: GridBreakpoint[] = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl']
+/** BREAKPOINT_MIN_WIDTH 内部常量。 */
 const BREAKPOINT_MIN_WIDTH: Record<GridBreakpoint, number> = {
   xs: 0,
   sm: 576,
@@ -75,18 +116,22 @@ const BREAKPOINT_MIN_WIDTH: Record<GridBreakpoint, number> = {
 }
 const viewportSubscribers = new Set<() => void>()
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
+/** as Css Size 的内部工具函数。 */
 const asCssSize = (value?: GridGutterSize) => {
   if (typeof value === 'number') return `${value}px`
   return value
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 
+/** serialize Style 的内部工具函数。 */
 const serializeStyle = (style?: GridStyle) => {
   if (!style) {
     return ''
@@ -101,6 +146,7 @@ const serializeStyle = (style?: GridStyle) => {
     .join('; ')
 }
 
+/** merge Style 的内部工具函数。 */
 const mergeStyle = (...styles: Array<GridStyle | undefined>) => {
   return styles
     .map(style => serializeStyle(style))
@@ -108,6 +154,7 @@ const mergeStyle = (...styles: Array<GridStyle | undefined>) => {
     .join('; ')
 }
 
+/** assign Forwarded Ref 的内部工具函数。 */
 const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   if (typeof forwardedRef === 'function') {
     forwardedRef(element)
@@ -116,11 +163,13 @@ const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   }
 }
 
+/** 读取 Viewport Width 的内部工具函数。 */
 const getViewportWidth = () => {
   if (typeof window === 'undefined') return BREAKPOINT_MIN_WIDTH.xl
   return window.innerWidth || document.documentElement?.clientWidth || BREAKPOINT_MIN_WIDTH.xl
 }
 
+/** notify Viewport Subscribers 的内部工具函数。 */
 const notifyViewportSubscribers = () => {
   viewportSubscribers.forEach(notify => notify())
 }
@@ -148,6 +197,7 @@ const subscribeViewport = (notify: () => void) => {
   }
 }
 
+/** 判断 Responsive Map 的内部工具函数。 */
 const isResponsiveMap = <T,>(value: unknown): value is GridResponsiveValue<T> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   return Object.keys(value).some(key => BREAKPOINT_SEQUENCE.includes(key as GridBreakpoint))
@@ -174,6 +224,7 @@ const resolveResponsiveValue = <T,>(
   return resolved
 }
 
+/** 判断是否存在 Responsive Gutter 的内部工具函数。 */
 const hasResponsiveGutter = (gutter?: GridGutter) => {
   if (!gutter) return false
   if (Array.isArray(gutter)) {
@@ -182,10 +233,12 @@ const hasResponsiveGutter = (gutter?: GridGutter) => {
   return isResponsiveMap<GridGutterSize>(gutter)
 }
 
+/** 判断是否存在 Responsive Col Props 的内部工具函数。 */
 const hasResponsiveColProps = (props: GridColProps) => {
   return BREAKPOINT_SEQUENCE.some(breakpoint => props[breakpoint] !== undefined)
 }
 
+/** 解析 Half Size 的内部工具函数。 */
 const resolveHalfSize = (value?: GridGutterSize, negative = false) => {
   if (value === undefined || value === null || value === 0 || value === '0') return undefined
   if (typeof value === 'number') {
@@ -195,6 +248,7 @@ const resolveHalfSize = (value?: GridGutterSize, negative = false) => {
   return `calc(${value} / ${negative ? '-2' : '2'})`
 }
 
+/** 解析 Row Justify 的内部工具函数。 */
 const resolveRowJustify = (justify?: GridJustify) => {
   switch (justify) {
     case 'end':
@@ -212,6 +266,7 @@ const resolveRowJustify = (justify?: GridJustify) => {
   }
 }
 
+/** 解析 Row Align 的内部工具函数。 */
 const resolveRowAlign = (align?: GridAlign) => {
   switch (align) {
     case 'middle':
@@ -225,6 +280,7 @@ const resolveRowAlign = (align?: GridAlign) => {
   }
 }
 
+/** 解析 Gutter Pair 的内部工具函数。 */
 const resolveGutterPair = (
   gutter: GridGutter | undefined,
   width: number,
@@ -236,6 +292,7 @@ const resolveGutterPair = (
   return [resolveResponsiveValue(gutter, width), undefined]
 }
 
+/** 归一化 Col Config 的内部工具函数。 */
 const normalizeColConfig = (value?: GridColResponsive) => {
   if (value === undefined) return undefined
   if (typeof value === 'number') {
@@ -273,6 +330,7 @@ const resolveColConfig = (props: GridColProps, width: number): GridColConfig => 
   return resolved
 }
 
+/** span To Percent 的内部工具函数。 */
 const spanToPercent = (span?: number) => {
   if (span === undefined) return undefined
   const normalized = Math.min(24, Math.max(0, span))
@@ -299,6 +357,7 @@ const resolveFlexValue = (flex?: number | string) => {
   return normalized
 }
 
+/** 构建 Row Style 的内部工具函数。 */
 const buildRowStyle = (
   gutterX: GridGutterSize | undefined,
   gutterY: GridGutterSize | undefined,
@@ -330,6 +389,7 @@ const buildRowStyle = (
   return merged
 }
 
+/** 构建 Col Style 的内部工具函数。 */
 const buildColStyle = (config: GridColConfig) => {
   const merged: Record<string, any> = {
     boxSizing: 'border-box',
@@ -525,4 +585,5 @@ const GridCompound: GridCompound = Object.assign(Row, {
   Col,
 })
 
+/** 默认导出栅格组件。 */
 export default GridCompound

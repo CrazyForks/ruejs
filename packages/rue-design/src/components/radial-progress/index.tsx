@@ -1,4 +1,9 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+RadialProgress 模块概述
+- 汇总环形进度组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 
 type StyleValue = string | number | null | undefined
@@ -7,42 +12,76 @@ interface StyleObject {
   [key: string]: StyleValue
 }
 
+/** RadialProgressType 视觉或语义变体类型。 */
 export type RadialProgressType = 'circle' | 'dashboard'
+/** RadialProgressStatus 状态类型。 */
 export type RadialProgressStatus = 'normal' | 'exception' | 'success'
+/** RadialProgressLinecap 类型。 */
 export type RadialProgressLinecap = 'round' | 'square' | 'butt'
+/** RadialProgressSize 尺寸类型。 */
 export type RadialProgressSize = number | string | 'small' | 'default' | 'medium'
+/** RadialProgressSteps 类型。 */
 export type RadialProgressSteps = number | { count: number; gap: number }
+/** RadialProgressGapPlacement 位置或方向类型。 */
 export type RadialProgressGapPlacement = 'top' | 'bottom' | 'start' | 'end'
 
+/** RadialProgressSuccessProps 组件属性。 */
 export interface RadialProgressSuccessProps {
+  /** percent 配置项。 */
   percent?: number
+  /** 受控值。 */
   value?: string | number
+  /** strokeColor 颜色。 */
   strokeColor?: string
 }
 
+/** RadialProgressProps 组件属性。 */
 export interface RadialProgressProps {
+  /** 受控值。 */
   value?: string | number
+  /** percent 配置项。 */
   percent?: number
+  /** max 配置项。 */
   max?: string | number
+  /** 组件类型或语义类型。 */
   type?: RadialProgressType
+  /** 组件状态。 */
   status?: RadialProgressStatus
+  /** showInfo 配置项。 */
   showInfo?: boolean
+  /** format 配置项。 */
   format?: (percent?: number, successPercent?: number) => any
+  /** 组件尺寸。 */
   size?: RadialProgressSize
+  /** thickness 配置项。 */
   thickness?: string | number
+  /** strokeWidth 配置项。 */
   strokeWidth?: string | number
+  /** strokeLinecap 配置项。 */
   strokeLinecap?: RadialProgressLinecap
+  /** strokeColor 颜色。 */
   strokeColor?: string | string[]
+  /** railColor 颜色。 */
   railColor?: string
+  /** trailColor 颜色。 */
   trailColor?: string
+  /** success 配置项。 */
   success?: RadialProgressSuccessProps
+  /** steps 配置项。 */
   steps?: RadialProgressSteps
+  /** gapDegree 配置项。 */
   gapDegree?: number
+  /** gapPlacement 配置项。 */
   gapPlacement?: RadialProgressGapPlacement
+  /** gapPosition 配置项。 */
   gapPosition?: 'top' | 'bottom' | 'left' | 'right'
+  /** 根节点内联样式。 */
   style?: string | StyleObject
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -51,13 +90,17 @@ interface NormalizedSteps {
   gap: number
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 
+/** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
 
+/** assign Forwarded Ref 的内部工具函数。 */
 const assignForwardedRef = (forwardedRef: any, element: HTMLDivElement | null) => {
   if (typeof forwardedRef === 'function') {
     forwardedRef(element)
@@ -66,6 +109,7 @@ const assignForwardedRef = (forwardedRef: any, element: HTMLDivElement | null) =
   }
 }
 
+/** parse Numberish 的内部工具函数。 */
 const parseNumberish = (value?: string | number) => {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : undefined
@@ -77,6 +121,7 @@ const parseNumberish = (value?: string | number) => {
   return undefined
 }
 
+/** 归一化 Css Length 的内部工具函数。 */
 const normalizeCssLength = (value?: string | number) => {
   if (value == null) {
     return undefined
@@ -85,6 +130,7 @@ const normalizeCssLength = (value?: string | number) => {
   return typeof value === 'number' ? `${value}px` : String(value)
 }
 
+/** 解析 Size 的内部工具函数。 */
 const resolveSize = (size?: RadialProgressSize) => {
   if (size === 'small') {
     return '4rem'
@@ -99,6 +145,7 @@ const resolveSize = (size?: RadialProgressSize) => {
   return normalizeCssLength(size) ?? '5rem'
 }
 
+/** 解析 Thickness 的内部工具函数。 */
 const resolveThickness = (
   thickness?: string | number,
   strokeWidth?: string | number,
@@ -107,6 +154,7 @@ const resolveThickness = (
   return normalizeCssLength(thickness ?? strokeWidth) ?? `calc(${size ?? '5rem'} / 10)`
 }
 
+/** 解析 Percent 的内部工具函数。 */
 const resolvePercent = (percent?: number, value?: string | number, max?: string | number) => {
   if (typeof percent === 'number') {
     return clamp(percent, 0, 100)
@@ -125,6 +173,7 @@ const resolvePercent = (percent?: number, value?: string | number, max?: string 
   return clamp(resolvedValue, 0, 100)
 }
 
+/** 解析 Success Percent 的内部工具函数。 */
 const resolveSuccessPercent = (success?: RadialProgressSuccessProps, max?: string | number) => {
   if (!success) {
     return 0
@@ -137,6 +186,7 @@ const resolveSuccessPercent = (success?: RadialProgressSuccessProps, max?: strin
   return resolved ?? 0
 }
 
+/** 解析 Status 的内部工具函数。 */
 const resolveStatus = (status: RadialProgressStatus | undefined, percent: number) => {
   if (status) {
     return status
@@ -145,6 +195,7 @@ const resolveStatus = (status: RadialProgressStatus | undefined, percent: number
   return percent >= 100 ? 'success' : 'normal'
 }
 
+/** 解析 Status Tone Class 的内部工具函数。 */
 const resolveStatusToneClass = (status: RadialProgressStatus) => {
   if (status === 'success') {
     return 'text-success'
@@ -155,6 +206,7 @@ const resolveStatusToneClass = (status: RadialProgressStatus) => {
   return undefined
 }
 
+/** 解析 Gap Placement 的内部工具函数。 */
 const resolveGapPlacement = (
   gapPlacement?: RadialProgressGapPlacement,
   gapPosition?: 'top' | 'bottom' | 'left' | 'right',
@@ -173,6 +225,7 @@ const resolveGapPlacement = (
   }
 }
 
+/** 解析 Gap Center 的内部工具函数。 */
 const resolveGapCenter = (placement: RadialProgressGapPlacement) => {
   switch (placement) {
     case 'top':
@@ -186,6 +239,7 @@ const resolveGapCenter = (placement: RadialProgressGapPlacement) => {
   }
 }
 
+/** 归一化 Steps 的内部工具函数。 */
 const normalizeSteps = (steps?: RadialProgressSteps): NormalizedSteps | null => {
   if (typeof steps === 'number' && steps > 0) {
     return {
@@ -203,6 +257,7 @@ const normalizeSteps = (steps?: RadialProgressSteps): NormalizedSteps | null => 
   return null
 }
 
+/** polar To Cartesian 的内部工具函数。 */
 const polarToCartesian = (cx: number, cy: number, radius: number, angle: number) => {
   const radians = ((angle - 90) * Math.PI) / 180
   return {
@@ -211,6 +266,7 @@ const polarToCartesian = (cx: number, cy: number, radius: number, angle: number)
   }
 }
 
+/** describe Arc Path 的内部工具函数。 */
 const describeArcPath = (
   cx: number,
   cy: number,
@@ -224,6 +280,7 @@ const describeArcPath = (
   return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`
 }
 
+/** 判断是否存在 Renderable Children 的内部工具函数。 */
 const hasRenderableChildren = (children: any) => {
   if (children == null) {
     return false
@@ -234,6 +291,7 @@ const hasRenderableChildren = (children: any) => {
   return true
 }
 
+/** Default Status Icon 的内部工具函数。 */
 const DefaultStatusIcon: FC<{ status: RadialProgressStatus }> = ({ status }) => {
   if (status === 'success') {
     return (
@@ -268,6 +326,7 @@ const DefaultStatusIcon: FC<{ status: RadialProgressStatus }> = ({ status }) => 
   return null
 }
 
+/** 渲染 Indicator 的内部工具函数。 */
 const renderIndicator = ({
   children,
   showInfo,
@@ -298,6 +357,7 @@ const renderIndicator = ({
   return `${Math.round(percent)}%`
 }
 
+/** serialize Style 的内部工具函数。 */
 const serializeStyle = (style?: string | StyleObject) => {
   if (!style) {
     return ''
@@ -312,6 +372,7 @@ const serializeStyle = (style?: string | StyleObject) => {
     .join('; ')
 }
 
+/** Radial Progress 的内部工具函数。 */
 const RadialProgress: FC<RadialProgressProps> = ({
   value,
   percent,
@@ -526,4 +587,5 @@ const RadialProgress: FC<RadialProgressProps> = ({
   )
 }
 
+/** 默认导出环形进度组件。 */
 export default RadialProgress

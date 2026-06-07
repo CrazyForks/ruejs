@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { render, setReactiveScheduling } from '../src'
 import ModalExample from '../../../app/pages/examples/Modal'
-import { click, flush, mountContainer, waitForContent, waitForMacrotask } from './page-test-utils'
+import { click, flush, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
   default: (props: { children?: unknown }) => (

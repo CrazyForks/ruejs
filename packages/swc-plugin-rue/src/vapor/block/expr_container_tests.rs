@@ -1,0 +1,230 @@
+use super::*;
+use std::collections::HashMap;
+use std::sync::Arc;
+use swc_core::common::{DUMMY_SP, FileName, SourceMap};
+use swc_core::ecma::ast::{Module, ModuleItem, Program};
+use swc_core::ecma::codegen::{Emitter, text_writer::JsWriter};
+use swc_ecma_parser::{Parser, StringInput, Syntax, TsSyntax};
+
+fn new_vt() -> VaporTransform {
+    VaporTransform {
+        next_el: 0,
+        next_list: 0,
+        next_map: 0,
+        next_child: 0,
+        once_depth: 0,
+        did_transform: false,
+        el_tag_by_ident: HashMap::new(),
+        renderable_local_scopes: Vec::new(),
+    }
+}
+
+fn parse_expr_container(src: &str) -> JSXExprContainer {
+    let cm = Arc::new(SourceMap::default());
+    let fm = cm.new_source_file(
+        FileName::Custom("expr-container-test.tsx".into()).into(),
+        format!("<div>{{{src}}}</div>"),
+    );
+    let mut parser = Parser::new(
+        Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
+        StringInput::from(&*fm),
+        None,
+    );
+    let Expr::JSXElement(el) = *parser.parse_expr().expect("parse expr") else {
+        panic!("expected JSXElement");
+    };
+    let JSXElementChild::JSXExprContainer(container) =
+        el.children.into_iter().next().expect("child")
+    else {
+        panic!("expected JSXExprContainer");
+    };
+    container
+}
+
+fn parse_empty_container() -> JSXExprContainer {
+    let cm = Arc::new(SourceMap::default());
+    let fm = cm.new_source_file(
+        FileName::Custom("expr-container-test.tsx".into()).into(),
+        "<div>{}</div>".to_string(),
+    );
+    let mut parser = Parser::new(
+        Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
+        StringInput::from(&*fm),
+        None,
+    );
+    let Expr::JSXElement(el) = *parser.parse_expr().expect("parse expr") else {
+        panic!("expected JSXElement");
+    };
+    let JSXElementChild::JSXExprContainer(container) =
+        el.children.into_iter().next().expect("child")
+    else {
+        panic!("expected JSXExprContainer");
+    };
+    container
+}
+
+fn emit_stmts(stmts: Vec<Stmt>) -> String {
+    let cm = Arc::new(SourceMap::default());
+    let module = Module {
+        span: DUMMY_SP,
+        body: stmts.into_iter().map(ModuleItem::Stmt).collect(),
+        shebang: None,
+    };
+    let mut buf = Vec::new();
+    let mut emitter = Emitter {
+        cfg: Default::default(),
+        comments: None,
+        cm: cm.clone(),
+        wr: JsWriter::new(cm, "\n", &mut buf, None),
+    };
+    emitter.emit_program(&Program::Module(module)).expect("emit stmts");
+    String::from_utf8(buf).expect("utf8")
+}
+
+fn compact(src: &str) -> String {
+    src.chars().filter(|ch| !ch.is_whitespace()).collect()
+}
+
+#[test]
+fn skips_empty_expr_containers_without_emitting_markers() {
+    let mut vt = new_vt();
+    let root = crate::emit::ident("_root");
+    let mut stmts = Vec::new();
+
+    handle_expr_container(&mut vt, &root, &parse_empty_container(), &mut stmts);
+
+    assert!(stmts.is_empty());
+}
+
+#[test]
+fn emits_watch_anchor_for_dynamic_text_exprs() {
+    let mut vt = new_vt();
+    let root = crate::emit::ident("_root");
+    let mut stmts = Vec::new();
+
+    handle_expr_container(&mut vt, &root, &parse_expr_container("message"), &mut stmts);
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(out.contains("_$createComment(\"rue:slot:anchor\")"));
+    assert!(out.contains("watchEffect(()=>{const__slot=(message);"));
+    assert!(out.contains("untrack(()=>renderAnchor(__slot,_root,_list1));"));
+}
+
+#[test]
+fn renders_static_jsx_slots_once_and_map_expressions_as_lists() {
+    let root = crate::emit::ident("_root");
+
+    let mut jsx_vt = new_vt();
+    let mut jsx_stmts = Vec::new();
+    handle_expr_container(&mut jsx_vt, &root, &parse_expr_container("<Box />"), &mut jsx_stmts);
+    let jsx_out = compact(&emit_stmts(jsx_stmts));
+    assert!(jsx_out.contains("const__slot4=vapor(()=>{"));
+    assert!(jsx_out.contains("renderAnchor(__slot4,_root,_list1);"));
+    assert!(!jsx_out.contains("watchEffect("));
+
+    let mut map_vt = new_vt();
+    let mut map_stmts = Vec::new();
+    handle_expr_container(
+        &mut map_vt,
+        &root,
+        &parse_expr_container("items.map(item => <li key={item.id}>{item.name}</li>)"),
+        &mut map_stmts,
+    );
+    let map_out = compact(&emit_stmts(map_stmts));
+    assert!(map_out.contains("_$vaporKeyedList("));
+    assert!(map_out.contains("renderItem:(item,parent,start,end,idx)=>{"));
+    assert!(map_out.contains("renderAnchor(__slot,parent,start);"));
+}
+
+#[test]
+fn handles_children_slots_non_map_calls_and_static_component_variants() {
+    let root = crate::emit::ident("_root");
+
+    let mut children_vt = new_vt();
+    let mut children_stmts = Vec::new();
+    handle_expr_container(
+        &mut children_vt,
+        &root,
+        &parse_expr_container("props.children"),
+        &mut children_stmts,
+    );
+    let children_out = compact(&emit_stmts(children_stmts));
+    assert!(children_out.contains("_$createComment(\"rue:children:anchor\")"));
+    assert!(children_out.contains("const__slot=props.children;"));
+
+    let mut member_children_vt = new_vt();
+    let mut member_children_stmts = Vec::new();
+    handle_expr_container(
+        &mut member_children_vt,
+        &root,
+        &parse_expr_container("ctx.children"),
+        &mut member_children_stmts,
+    );
+    let member_children_out = compact(&emit_stmts(member_children_stmts));
+    assert!(member_children_out.contains("_$createComment(\"rue:children:anchor\")"));
+    assert!(member_children_out.contains("const__slot=ctx.children;"));
+    assert!(!member_children_out.contains("rue:slot:anchor"));
+
+    let mut call_vt = new_vt();
+    let mut call_stmts = Vec::new();
+    handle_expr_container(&mut call_vt, &root, &parse_expr_container("render()"), &mut call_stmts);
+    let call_out = compact(&emit_stmts(call_stmts));
+    assert!(call_out.contains("watchEffect(()=>{const__slot=render();"));
+    assert!(!call_out.contains("_$vaporKeyedList("));
+
+    let mut children_ident_vt = new_vt();
+    let mut children_ident_stmts = Vec::new();
+    handle_expr_container(
+        &mut children_ident_vt,
+        &root,
+        &parse_expr_container("<Card children={slot} />"),
+        &mut children_ident_stmts,
+    );
+    let children_ident_out = compact(&emit_stmts(children_ident_stmts));
+    assert!(children_ident_out.contains("renderAnchor(__slot4,_root,_list1);"));
+    assert!(!children_ident_out.contains("watchEffect("));
+
+    let mut static_props_vt = new_vt();
+    let mut static_props_stmts = Vec::new();
+    handle_expr_container(
+        &mut static_props_vt,
+        &root,
+        &parse_expr_container("<Card title=\"ok\" count={1} />"),
+        &mut static_props_stmts,
+    );
+    let static_props_out = compact(&emit_stmts(static_props_stmts));
+    assert!(static_props_out.contains("renderAnchor(__slot4,_root,_list1);"));
+    assert!(!static_props_out.contains("watchEffect("));
+}
+
+#[test]
+fn hardens_memoized_jsx_and_transition_group_container_paths() {
+    let root = crate::emit::ident("_root");
+
+    let mut memo_vt = new_vt();
+    let mut memo_stmts = Vec::new();
+    handle_expr_container(
+        &mut memo_vt,
+        &root,
+        &parse_expr_container("useMemo(() => <span>{label}</span>, [])"),
+        &mut memo_stmts,
+    );
+    let memo_out = compact(&emit_stmts(memo_stmts));
+    assert!(memo_out.contains("_$createComment(\"rue:slot:anchor\")"), "{memo_out}");
+    assert!(memo_out.contains("const__slot"), "{memo_out}");
+    assert!(memo_out.contains("renderAnchor(__slot"), "{memo_out}");
+    assert!(!memo_out.contains("watchEffect("), "{memo_out}");
+
+    let mut transition_vt = new_vt();
+    let mut transition_stmts = Vec::new();
+    handle_expr_container(
+        &mut transition_vt,
+        &root,
+        &parse_expr_container("<TransitionGroup><li key=\"x\">X</li></TransitionGroup>"),
+        &mut transition_stmts,
+    );
+    let transition_out = compact(&emit_stmts(transition_stmts));
+    assert!(transition_out.contains("_$createComment(\"rue:slot:anchor\")"), "{transition_out}");
+    assert!(transition_out.contains("watchEffect("), "{transition_out}");
+    assert!(transition_out.contains("_$createComponent(TransitionGroup"), "{transition_out}");
+}

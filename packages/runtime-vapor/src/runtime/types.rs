@@ -164,3 +164,79 @@ where
         self.mount_effect_scope_id = scope_id.as_f64().map(|scope_id| scope_id as usize);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::js_adapter::JsDomAdapter;
+    use js_sys::{Array, Object, Reflect};
+    use wasm_bindgen_test::*;
+
+    #[wasm_bindgen_test]
+    fn mount_input_normalizes_defaults_key_and_mount_metadata() {
+        let cleanup = Array::new();
+        let mut props = ComponentProps::new();
+        props.insert("key".to_string(), JsValue::from_f64(42.0));
+        props.insert("__rue_cleanup_bucket".to_string(), cleanup.clone().into());
+        props.insert("__rue_effect_scope_id".to_string(), JsValue::from_f64(7.0));
+        props.insert("title".to_string(), JsValue::from_str("kept"));
+
+        let input = MountInput::<JsDomAdapter>::new_normalized(
+            MountInputType::Text("hello".to_string()),
+            props,
+            vec![MountInputChild::Text("child".to_string())],
+        );
+
+        assert!(matches!(&input.r#type, MountInputType::Text(text) if text == "hello"));
+        assert_eq!(input.key.as_deref(), Some("42"));
+        assert_eq!(input.children.len(), 1);
+        assert!(!input.strict_component_returns);
+        assert!(input.el_hint.is_none());
+        assert!(Array::is_array(input.mount_cleanup_bucket.as_ref().unwrap()));
+        assert_eq!(input.mount_effect_scope_id, Some(7));
+        assert!(!input.props.contains_key("__rue_cleanup_bucket"));
+        assert!(!input.props.contains_key("__rue_effect_scope_id"));
+        assert_eq!(
+            input.props.get("title").and_then(|value| value.as_string()).as_deref(),
+            Some("kept")
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn attach_mount_metadata_from_source_overrides_key_and_ignores_invalid_cleanup() {
+        let mut input = MountInput::<JsDomAdapter>::new_normalized(
+            MountInputType::Vapor,
+            ComponentProps::new(),
+            Vec::new(),
+        );
+        let source = Object::new();
+        Reflect::set(&source, &JsValue::from_str("key"), &JsValue::from_str("from-source"))
+            .unwrap();
+        Reflect::set(&source, &JsValue::from_str("__rue_cleanup_bucket"), &JsValue::from_str("no"))
+            .unwrap();
+        Reflect::set(
+            &source,
+            &JsValue::from_str("__rue_effect_scope_id"),
+            &JsValue::from_f64(11.0),
+        )
+        .unwrap();
+
+        input.attach_mount_metadata_from_source(&source);
+
+        assert_eq!(input.key.as_deref(), Some("from-source"));
+        assert!(input.mount_cleanup_bucket.is_none());
+        assert_eq!(input.mount_effect_scope_id, Some(11));
+
+        let source_with_array = Object::new();
+        let cleanup = Array::new();
+        Reflect::set(
+            &source_with_array,
+            &JsValue::from_str("__rue_cleanup_bucket"),
+            &cleanup.into(),
+        )
+        .unwrap();
+        input.attach_mount_metadata_from_source(&source_with_array);
+        assert!(Array::is_array(input.mount_cleanup_bucket.as_ref().unwrap()));
+        assert!(input.mount_effect_scope_id.is_none());
+    }
+}

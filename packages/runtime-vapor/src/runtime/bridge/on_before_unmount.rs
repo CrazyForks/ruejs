@@ -1,3 +1,8 @@
+/*
+生命周期桥接：onBeforeUnmount
+
+用于在 mounted snapshot 被清理前运行用户回调，通常放置订阅、计时器、外部资源的释放逻辑。
+*/
 use super::WasmRue;
 use crate::runtime::globals::push_pending_hook;
 use wasm_bindgen::JsValue;

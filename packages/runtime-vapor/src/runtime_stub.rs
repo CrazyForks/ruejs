@@ -1,3 +1,9 @@
+/*
+未启用 runtime feature 时的最小桩实现
+
+响应式/Hook 层仍可能需要记录运行时崩溃状态与最近错误。
+本文件提供同名 API，避免非 runtime 构建下出现大量条件编译分支。
+*/
 use std::cell::{Cell, RefCell};
 use wasm_bindgen::JsValue;
 

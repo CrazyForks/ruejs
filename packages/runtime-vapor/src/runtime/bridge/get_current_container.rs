@@ -1,3 +1,9 @@
+/*
+getCurrentContainer：读取当前渲染容器
+
+优先使用 JS shared bridge 维护的容器栈，其次读取 Rust runtime 当前容器，
+最后回退到最近一次 mount/render 记录的容器，服务于嵌套渲染与 Hook 辅助逻辑。
+*/
 use super::WasmRue;
 use crate::runtime::shared_runtime_bridge;
 use wasm_bindgen::JsValue;

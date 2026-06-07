@@ -55,8 +55,8 @@ function increment() {
 - [`shallowRef`](/api/api/reactivity-advanced#shallowref) -> `$shallowRef`
 - [`customRef`](/api/api/reactivity-advanced#customref) -> `$customRef`
 
-:::warning 规划状态
-Rue 当前公开运行时尚未提供 [`toRef()`](/api/api/reactivity-utilities#toref)。因此 `$toRef` 以及下文中基于 `toRef()` 的展开示例应视为规划中的设计草案，而不是当前稳定 API。
+:::warning 编译宏状态
+Rue 运行时已提供 [`toRef()`](/api/api/reactivity-utilities#toref)。本页描述的 `$toRef` / `$()` 响应式转换宏仍应视为编译器侧设计草案，而不是当前稳定语法。
 :::
 
 这些宏是全局可用的，在启用响应式转换时不需要导入，但如果你想更明确，可以从 `@rue-js/rue/macros` 选择性地导入它们：
@@ -110,53 +110,69 @@ let count = $(myCreateRef())
 
 ## 响应式 Props 解构 {#reactive-props-destructure}
 
-当前在 `<script setup>` 中使用 `defineProps()` 有两个痛点：
+在 Rue 的 JSX / TSX 组件中，props 通常作为函数组件的第一个参数传入。直接解构这个参数时，普通 JavaScript 的解构变量本来只会拿到当前值，后续 props 更新可能无法被响应式依赖继续追踪。
 
-1. 与 `.value` 类似，你需要始终将 props 作为 `props.x` 访问以保持响应式。这意味着你不能解构 `defineProps`，因为生成的解构变量不是响应式的，不会更新。
+Rue 的 SWC 插件会在底层自动处理这个场景：当它识别到组件 props 参数解构时，会保留一个隐藏的响应式 props 对象，并把解构出来的变量读取重写为对应的 props 访问。因此你可以按符合直觉的方式使用默认值、别名和常见嵌套解构，而不需要手动包一层宏。
 
-2. 当使用[仅类型的 props 声明](@todo)时，没有简单的方法来声明 props 的默认值。我们为此引入了 `withDefaults()` API，但使用它仍然很笨拙。
+```tsx
+import { type FC, watchEffect } from '@rue-js/rue'
 
-我们可以通过在使用解构时对 `defineProps` 应用编译时转换来解决这些问题，类似于我们之前看到的 `$()`：
+interface Props {
+  msg: string
+  count?: number
+  foo?: string
+}
 
-```html
-<script setup lang="ts">
-  interface Props {
-    msg: string
-    count?: number
-    foo?: string
-  }
-
-  const {
-    msg,
-    // 默认值可以直接工作
-    count = 1,
-    // 本地别名也可以直接工作
-    // 这里我们将 `props.foo` 别名为 `bar`
-    foo: bar,
-  } = defineProps<Props>()
-
+const Child: FC<Props> = ({
+  msg,
+  // 默认值可以直接工作
+  count = 1,
+  // 本地别名也可以直接工作
+  // 这里我们将 `props.foo` 别名为 `bar`
+  foo: bar,
+}) => {
   watchEffect(() => {
-    // 当 props 更改时将记录日志
+    // 当 props 更新时会重新执行
     console.log(msg, count, bar)
   })
-</script>
+
+  return (
+    <button>
+      {msg}: {count}
+    </button>
+  )
+}
 ```
 
-上述代码将被编译成以下运行时声明等效代码：
+可以将它理解为类似下面的编译结果：
 
-```js
-export default {
-  props: {
-    msg: { type: String, required: true },
-    count: { type: Number, default: 1 },
-    foo: String,
-  },
-  setup(props) {
-    watchEffect(() => {
-      console.log(props.msg, props.count, props.foo)
-    })
-  },
+```tsx
+const Child: FC<Props> = __rue_props => {
+  watchEffect(() => {
+    console.log(
+      __rue_props.msg,
+      __rue_props.count === void 0 ? 1 : __rue_props.count,
+      __rue_props.foo,
+    )
+  })
+
+  return (
+    <button>
+      {__rue_props.msg}: {__rue_props.count === void 0 ? 1 : __rue_props.count}
+    </button>
+  )
 }
+```
+
+这个转换发生在编译阶段，不需要你手动引入 `defineProps()` 或额外宏。需要注意的是，如果要把解构后的 prop 作为响应式源传给 `watch()`，请使用 getter 形式：
+
+```ts
+watch(
+  () => msg,
+  value => {
+    console.log(value)
+  },
+)
 ```
 
 ## 在函数边界之间保持响应式 {#retaining-reactivity-across-function-boundaries}

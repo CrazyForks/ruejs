@@ -1,3 +1,9 @@
+/*
+useSignal：以 useState 语义创建底层 Signal
+
+这是面向用户的便捷 Hook：内部复用 useState，并强制 kind=signal。
+相比 reactive/ref，它直接暴露 SignalHandle，适合需要 get/set/peek/setPath 等精细操作的场景。
+*/
 use js_sys::{Object, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;

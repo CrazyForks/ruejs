@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { render, setReactiveScheduling } from '../src'
 import SuspenseDemo from '../../../app/pages/jsx/SuspenseDemo'
-import { click, flush, mountContainer, waitForContent } from './page-test-utils'
+import { click, flush, mountContainer } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
   default: (props: { children?: unknown }) => (

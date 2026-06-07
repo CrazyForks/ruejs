@@ -23,17 +23,25 @@ import {
 } from './custom-elements.shared'
 import { useApp } from './hooks/useApp'
 
+/** useCustomElement 的包装配置。 */
 export interface CustomElementsOptions {
+  /** 需要注入到 shadow root 或 host 的样式文本。 */
   styles?: string[]
+  /** 自定义元素创建内部 app 后的配置回调，可安装插件或注册组件。 */
   configureApp?: (app: ReturnType<typeof useApp>) => void
+  /** 是否使用 shadow root 承载组件，默认 true。 */
   shadowRoot?: boolean
+  /** 注入 style 标签时使用的 CSP nonce。 */
   nonce?: string
 }
 
+/** Rue 自定义元素实例，额外暴露 props bag。 */
 export interface RueCustomElement<P = Record<string, unknown>> extends HTMLElement {
+  /** 外部可批量设置的 props 对象，会与 attribute / own property 合并。 */
   props: Partial<P>
 }
 
+/** useCustomElement 返回的 Custom Element 构造器。 */
 export type RueCustomElementConstructor<P = Record<string, unknown>> = {
   new (): RueCustomElement<P>
 }
@@ -120,6 +128,7 @@ const resolveContainerShadowRoot = (container: unknown): ShadowRoot | null => {
   return shadowRootByContainer.get(container as object) ?? null
 }
 
+/** 获取当前自定义元素宿主；不在自定义元素上下文中时尝试从当前容器反查。 */
 export const useHost = (): HTMLElement | null => {
   const activeContext = getActiveCustomElementContext()
   if (activeContext) {
@@ -128,6 +137,7 @@ export const useHost = (): HTMLElement | null => {
   return resolveContainerHost(getCurrentContainer())
 }
 
+/** 获取当前自定义元素的 shadow root；light DOM 模式下返回 null。 */
 export const useShadowRoot = (): ShadowRoot | null => {
   const activeContext = getActiveCustomElementContext()
   if (activeContext) {
@@ -335,6 +345,7 @@ const shouldIgnoreAttributeMutation = (record: MutationRecord) =>
   record.attributeName != null &&
   INTERNAL_ATTRIBUTES.has(record.attributeName)
 
+/** 将 Rue 组件包装成原生 Custom Element 构造器。 */
 export function useCustomElement<P = Record<string, unknown>>(
   component: CustomElementComponent<P>,
   options: CustomElementsOptions = {},

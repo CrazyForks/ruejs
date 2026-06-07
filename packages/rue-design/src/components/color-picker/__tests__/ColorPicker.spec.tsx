@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, setReactiveScheduling } from '@rue-js/rue'
+import { ref, render, setReactiveScheduling } from '@rue-js/rue'
 import ColorPicker, { COLOR_PICKER_MODE_GRADIENT, COLOR_PICKER_MODE_SINGLE } from '../index'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 
@@ -36,6 +36,30 @@ describe('ColorPicker', () => {
       expect(trigger.className).toContain('w-8')
       expect(popup.className).toContain('bg-base-100')
       expect(popup.className).toContain('border-base-300')
+    })
+  })
+
+  it('supports Button-style size values', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <div>
+        <ColorPicker size="xs" defaultValue="#1677ff" />
+        <ColorPicker size="xl" defaultValue="#22c55e" showText />
+      </div>,
+      container,
+    )
+
+    await waitForContent(() => {
+      const triggers = container.querySelectorAll('[data-rue-color-picker-trigger="true"]')
+      expect(triggers.length).toBe(2)
+      expect(triggers[0].className).toContain('h-6')
+      expect(triggers[0].className).toContain('w-6')
+      expect(triggers[0].querySelector('span')?.className).toContain('size-[0.85rem]')
+      expect(triggers[1].className).toContain('min-h-12')
+      expect(triggers[1].className).toContain('text-base')
+      expect(triggers[1].querySelector('span')?.className).toContain('size-6')
     })
   })
 
@@ -239,6 +263,135 @@ describe('ColorPicker', () => {
     })
   })
 
+  it('reflects uncontrolled popup edits in the trigger', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const handleChange = vi.fn()
+
+    render(
+      <ColorPicker
+        defaultOpen={true}
+        defaultFormat="hex"
+        defaultValue="#1677ff"
+        showText
+        onChange={handleChange}
+      />,
+      container,
+    )
+
+    const trigger = container.querySelector(
+      '[data-rue-color-picker-trigger="true"]',
+    ) as HTMLDivElement
+    const popup = document.body.querySelector(
+      '[data-rue-color-picker-popup="true"]',
+    ) as HTMLDivElement
+
+    await waitForContent(() => {
+      expect(trigger.textContent).toContain('#1677ff')
+      expect(trigger.querySelector('span')?.getAttribute('style')).toContain('rgb(22, 119, 255)')
+      expect(popup.querySelector('input[type="text"]')).toBeTruthy()
+    })
+
+    const input = popup.querySelector('input[type="text"]') as HTMLInputElement
+    input.value = '#22c55e'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    )
+
+    await waitForContent(() => {
+      expect(handleChange).toHaveBeenCalled()
+      const currentTrigger = container.querySelector(
+        '[data-rue-color-picker-trigger="true"]',
+      ) as HTMLDivElement
+      expect(currentTrigger.textContent).toContain('#22c55e')
+      expect(currentTrigger.querySelector('span')?.getAttribute('style')).toContain(
+        'rgb(34, 197, 94)',
+      )
+    })
+  })
+
+  it('reflects controlled callback updates in the trigger', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    const ControlledPreview = () => {
+      const colorValue = ref('#1677ff')
+
+      return (
+        <div>
+          <ColorPicker
+            defaultOpen={true}
+            defaultFormat="hex"
+            value={colorValue.value}
+            showText
+            onChange={(nextColor, css) => {
+              colorValue.value =
+                nextColor && 'toHexString' in nextColor ? nextColor.toHexString() : css
+            }}
+          />
+          <div data-testid="controlled-color-value">{colorValue.value}</div>
+        </div>
+      )
+    }
+
+    render(<ControlledPreview />, container)
+
+    await waitForContent(() => {
+      const trigger = container.querySelector(
+        '[data-rue-color-picker-trigger="true"]',
+      ) as HTMLDivElement
+      expect(trigger.textContent).toContain('#1677ff')
+      expect(trigger.querySelector('span')?.getAttribute('style')).toContain('rgb(22, 119, 255)')
+    })
+
+    const popup = document.body.querySelector(
+      '[data-rue-color-picker-popup="true"]',
+    ) as HTMLDivElement
+    const input = popup.querySelector('input[type="text"]') as HTMLInputElement
+    input.value = '#22c55e'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    )
+
+    await waitForContent(() => {
+      const trigger = container.querySelector(
+        '[data-rue-color-picker-trigger="true"]',
+      ) as HTMLDivElement
+      expect(trigger.textContent).toContain('#22c55e')
+      expect(trigger.querySelector('span')?.getAttribute('style')).toContain('rgb(34, 197, 94)')
+      expect(container.querySelector('[data-testid="controlled-color-value"]')?.textContent).toBe(
+        '#22c55e',
+      )
+    })
+  })
+
+  it('keeps popup text input mounted while the user is editing', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(<ColorPicker defaultOpen={true} defaultFormat="hex" defaultValue="#1677ff" />, container)
+
+    const popup = document.body.querySelector(
+      '[data-rue-color-picker-popup="true"]',
+    ) as HTMLDivElement
+
+    await waitForContent(() => {
+      expect(popup.querySelector('input[type="text"]')).toBeTruthy()
+    })
+
+    const input = popup.querySelector('input[type="text"]') as HTMLInputElement
+    input.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
+    input.value = '#22c55e'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+
+    await waitForContent(() => {
+      expect(popup.querySelector('input[type="text"]')).toBe(input)
+      expect(input.value).toBe('#22c55e')
+    })
+  })
+
   it('updates popup format fields after changing the format select', async () => {
     const container = mountContainer()
     resetActiveRuntime()
@@ -283,7 +436,180 @@ describe('ColorPicker', () => {
       expect(labels).toContain('H')
       expect(labels).toContain('S')
       expect(labels).toContain('B')
-      expect(handleFormatChange).toHaveBeenCalled()
+      expect(handleFormatChange).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('updates parent reactive text from format and color callbacks', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    const CallbackPreview = () => {
+      const colorValue = ref('rgba(56, 189, 248, 0.72)')
+      const formatMode = ref('rgb')
+      const cssText = ref('rgba(56, 189, 248, 0.72)')
+
+      return (
+        <div>
+          <ColorPicker
+            defaultOpen={true}
+            defaultFormat="rgb"
+            value={colorValue.value}
+            onFormatChange={nextFormat => {
+              formatMode.value = nextFormat
+            }}
+            onChange={(_nextColor, css) => {
+              colorValue.value = css || ''
+              cssText.value = css || '已清空'
+            }}
+          />
+          <div data-testid="format-mode">{formatMode.value}</div>
+          <div data-testid="css-text">{cssText.value}</div>
+        </div>
+      )
+    }
+
+    render(<CallbackPreview />, container)
+
+    const popup = document.body.querySelector(
+      '[data-rue-color-picker-popup="true"]',
+    ) as HTMLDivElement
+
+    await waitForContent(() => {
+      expect(popup.querySelector('select')).toBeTruthy()
+      expect(container.querySelector('[data-testid="format-mode"]')?.textContent).toBe('rgb')
+    })
+
+    const select = popup.querySelector('select') as HTMLSelectElement
+    select.value = 'hsb'
+    select.dispatchEvent(new Event('input', { bubbles: true }))
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-testid="format-mode"]')?.textContent).toBe('hsb')
+    })
+
+    const hue = popup.querySelector('input[type="range"]') as HTMLInputElement
+    hue.value = '120'
+    hue.dispatchEvent(new Event('input', { bubbles: true }))
+
+    await waitForContent(() => {
+      const cssText = container.querySelector('[data-testid="css-text"]')?.textContent ?? ''
+      expect(cssText).toContain('rgba')
+      expect(cssText).not.toBe('rgba(56, 189, 248, 0.72)')
+    })
+  })
+
+  it('keeps an uncontrolled format selection through parent updates', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    const ControlledColorPreview = () => {
+      const colorValue = ref('#1677ff')
+
+      return (
+        <div>
+          <button
+            type="button"
+            data-rue-color-picker-test-update="true"
+            onClick={() => {
+              colorValue.value = '#22c55e'
+            }}
+          >
+            update
+          </button>
+          <ColorPicker defaultOpen={true} value={colorValue.value} />
+        </div>
+      )
+    }
+
+    render(<ControlledColorPreview />, container)
+
+    const popup = document.body.querySelector(
+      '[data-rue-color-picker-popup="true"]',
+    ) as HTMLDivElement
+
+    await waitForContent(() => {
+      expect(popup.querySelector('select')).toBeTruthy()
+    })
+
+    const select = popup.querySelector('select') as HTMLSelectElement
+    select.value = 'rgb'
+    select.dispatchEvent(new Event('input', { bubbles: true }))
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+
+    await waitForContent(() => {
+      const labels = Array.from(popup.querySelectorAll('label > span')).map(
+        node => node.textContent,
+      )
+      expect(labels).toContain('R')
+      expect(labels).toContain('G')
+      expect(labels).toContain('B')
+    })
+
+    const updateButton = container.querySelector(
+      '[data-rue-color-picker-test-update="true"]',
+    ) as HTMLButtonElement
+    updateButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    await waitForContent(() => {
+      const labels = Array.from(popup.querySelectorAll('label > span')).map(
+        node => node.textContent,
+      )
+      expect(labels).toContain('R')
+      expect(labels).toContain('G')
+      expect(labels).toContain('B')
+    })
+  })
+
+  it('does not emit or rerender twice for the same range value', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const handleChange = vi.fn()
+    const handleChangeComplete = vi.fn()
+
+    render(
+      <ColorPicker
+        defaultOpen={true}
+        defaultValue="#1677ff"
+        onChange={handleChange}
+        onChangeComplete={handleChangeComplete}
+      />,
+      container,
+    )
+
+    const popup = document.body.querySelector(
+      '[data-rue-color-picker-popup="true"]',
+    ) as HTMLDivElement
+
+    await waitForContent(() => {
+      expect(popup.querySelector('input[type="range"]')).toBeTruthy()
+    })
+
+    const hue = popup.querySelector('input[type="range"]') as HTMLInputElement
+    hue.value = '120'
+    hue.dispatchEvent(new Event('input', { bubbles: true }))
+
+    let versionAfterInput = ''
+    await waitForContent(() => {
+      const activePopup = document.body.querySelector(
+        '[data-rue-color-picker-popup="true"]',
+      ) as HTMLDivElement
+      versionAfterInput = activePopup.getAttribute('data-rue-color-picker-panel-version') ?? ''
+      expect(handleChange).toHaveBeenCalledTimes(1)
+    })
+
+    hue.dispatchEvent(new Event('change', { bubbles: true }))
+
+    await waitForContent(() => {
+      const activePopup = document.body.querySelector(
+        '[data-rue-color-picker-popup="true"]',
+      ) as HTMLDivElement
+      expect(handleChange).toHaveBeenCalledTimes(1)
+      expect(handleChangeComplete).toHaveBeenCalledTimes(1)
+      expect(activePopup.getAttribute('data-rue-color-picker-panel-version')).toBe(
+        versionAfterInput,
+      )
     })
   })
 

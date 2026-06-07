@@ -90,6 +90,24 @@ fn preserves_children_slots_and_map_lists_inside_fragments() {
 }
 
 #[test]
+fn treats_any_member_children_as_children_slots_inside_fragments() {
+    let out = compile_fragment_children("<>{ctx.children}{panel.children}</>");
+
+    assert_eq!(out.matches("rue:children:anchor").count(), 2, "{out}");
+    assert!(out.contains(&normalize(r#"const __slot = (ctx.children);"#)));
+    assert!(out.contains("panel.children"));
+    assert!(!out.contains("rue:slot:anchor"));
+}
+
+#[test]
+fn map_list_children_short_circuit_slot_rendering_inside_fragments() {
+    let out = compile_fragment_children("<>{items.map(item => <span>{item.label}</span>)}</>");
+
+    assert!(out.contains(&normalize(r#"_$vaporKeyedList({"#)));
+    assert!(out.contains(&normalize(r#"rue:list:start"#)));
+}
+
+#[test]
 fn ignores_empty_and_spread_children_while_flattening_nested_fragments() {
     let out = compile_fragment_children("<>{}{...items}<><span>A</span></>ok</>");
 
@@ -97,4 +115,13 @@ fn ignores_empty_and_spread_children_while_flattening_nested_fragments() {
     assert!(out.contains(&normalize(r#"_$createElement("span", parent)"#)));
     assert!(out.contains(&normalize(r#"_$createTextNode("A")"#)));
     assert!(out.contains(&normalize(r#"_$createTextNode("ok")"#)));
+}
+
+#[test]
+fn falls_back_to_slot_rendering_for_non_map_call_expr_children() {
+    let out = compile_fragment_children("<>{renderChild(value)}</>");
+
+    assert!(!out.contains("_$vaporKeyedList"));
+    assert!(out.contains(&normalize(r#"renderChild(value)"#)));
+    assert!(out.contains(&normalize(r#"renderAnchor(__slot, parent"#)));
 }

@@ -1,6 +1,13 @@
+/*
+Steps 模块概述
+- 汇总步骤条组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import { h, type FC } from '@rue-js/rue'
 
+/** StepsDirection 位置或方向类型。 */
 export type StepsDirection = 'vertical' | 'horizontal'
+/** StepColor 语义色类型。 */
 export type StepColor =
   | 'neutral'
   | 'primary'
@@ -10,70 +17,119 @@ export type StepColor =
   | 'success'
   | 'warning'
   | 'error'
+/** StepStatus 状态类型。 */
 export type StepStatus = 'wait' | 'process' | 'finish' | 'error'
 
+/** StepsProgressDotInfo 接口。 */
 export interface StepsProgressDotInfo {
+  /** index 配置项。 */
   index: number
+  /** 组件状态。 */
   status: StepStatus
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** 主体内容。 */
   content?: any
 }
 
+/** StepsProgressDotRender 自定义渲染函数类型。 */
 export type StepsProgressDotRender = (iconDot: any, info: StepsProgressDotInfo) => any
 
+/** StepSharedProps 组件属性。 */
 export interface StepSharedProps {
+  /** 组件语义色。 */
   color?: StepColor
+  /** 根节点附加类名。 */
   className?: string
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** 主体内容。 */
   content?: any
+  /** subTitle 配置项。 */
   subTitle?: any
+  /** 图标内容。 */
   icon?: any
+  /** 组件状态。 */
   status?: StepStatus
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** clickable 配置项。 */
   clickable?: boolean
+  /** dataContent 配置项。 */
   dataContent?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** StepItem 数据项结构。 */
 export interface StepItem extends StepSharedProps {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent, index: number) => void
 }
 
+/** StepsProps 组件属性。 */
 export interface StepsProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 布局方向。 */
   direction?: StepsDirection
+  /** orientation 配置项。 */
   orientation?: StepsDirection
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<StepItem>
+  /** current 配置项。 */
   current?: number
+  /** 组件状态。 */
   status?: StepStatus
+  /** progressDot 配置项。 */
   progressDot?: boolean | StepsProgressDotRender
+  /** 值或状态变化时触发的回调。 */
   onChange?: (current: number) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** StepProps 组件属性。 */
 export interface StepProps extends StepSharedProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** index 配置项。 */
   index?: number
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent, index?: number) => void
+  /** onKeyDown 事件回调。 */
   onKeyDown?: (event: KeyboardEvent) => void
 }
 
+/** StepIconProps 组件属性。 */
 export interface StepIconProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...values: Array<string | undefined | false>) =>
   values.filter(Boolean).join(' ')
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -81,12 +137,15 @@ const toChildArray = (children: any): any[] => {
   return children == null || typeof children === 'boolean' ? [] : [children]
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
 
+/** 解析 Direction 的内部工具函数。 */
 const resolveDirection = (direction?: StepsDirection, orientation?: StepsDirection) =>
   orientation ?? direction
 
+/** 读取 Status Color 的内部工具函数。 */
 const getStatusColor = (status?: StepStatus, color?: StepColor) => {
   if (color) return color
   if (status === 'error') return 'error'
@@ -94,6 +153,7 @@ const getStatusColor = (status?: StepStatus, color?: StepColor) => {
   return undefined
 }
 
+/** 读取 Default Data Content 的内部工具函数。 */
 const getDefaultDataContent = (status?: StepStatus, hasIcon?: boolean) => {
   if (hasIcon) return undefined
   if (status === 'finish') return '✓'
@@ -101,11 +161,13 @@ const getDefaultDataContent = (status?: StepStatus, hasIcon?: boolean) => {
   return undefined
 }
 
+/** prevent Event 的内部工具函数。 */
 const preventEvent = (event: MouseEvent | KeyboardEvent) => {
   if (typeof event.preventDefault === 'function') event.preventDefault()
   if (typeof event.stopPropagation === 'function') event.stopPropagation()
 }
 
+/** Dot Icon 的内部工具函数。 */
 const DotIcon: FC<{ status?: StepStatus }> = ({ status }) => {
   const cls =
     status === 'wait'
@@ -114,6 +176,7 @@ const DotIcon: FC<{ status?: StepStatus }> = ({ status }) => {
   return <span className={cls} />
 }
 
+/** 渲染 Progress Dot 的内部工具函数。 */
 const renderProgressDot = (progressDot: StepsProps['progressDot'], info: StepsProgressDotInfo) => {
   if (!progressDot) return undefined
   const dotNode = <DotIcon status={info.status} />
@@ -123,6 +186,7 @@ const renderProgressDot = (progressDot: StepsProps['progressDot'], info: StepsPr
   return dotNode
 }
 
+/** 解析 Item Status 的内部工具函数。 */
 const resolveItemStatus = (
   item: StepItem,
   index: number,
@@ -136,11 +200,13 @@ const resolveItemStatus = (
   return 'wait'
 }
 
+/** 渲染 Tag 的内部工具函数。 */
 const renderTag = (as: any, props: Record<string, any>, children?: any) => {
   const nextChildren = toChildArray(children)
   return h(as, props, ...nextChildren)
 }
 
+/** Step 的内部工具函数。 */
 const Step: FC<StepProps> = ({
   as = 'li',
   color,
@@ -242,6 +308,7 @@ const Step: FC<StepProps> = ({
   )
 }
 
+/** Icon 的内部工具函数。 */
 const Icon: FC<StepIconProps> = ({ as = 'span', className, children, ...rest }) => {
   const Component = as as any
   return renderTag(
@@ -254,6 +321,7 @@ const Icon: FC<StepIconProps> = ({ as = 'span', className, children, ...rest }) 
   )
 }
 
+/** Steps Root 的内部工具函数。 */
 const StepsRoot: FC<StepsProps> = ({
   as = 'ul',
   direction,
@@ -293,6 +361,9 @@ const StepsRoot: FC<StepsProps> = ({
               color={getStatusColor(itemStatus, item.color)}
               icon={itemIcon}
               clickable={mergedClickable}
+              aria-current={
+                index === current ? (item['aria-current'] ?? 'step') : item['aria-current']
+              }
               onClick={(event, clickedIndex) => {
                 if (item.disabled) return
                 if (item.onClick && typeof clickedIndex === 'number')
@@ -329,4 +400,5 @@ const StepsCompound: StepsCompound = Object.assign(StepsRoot, {
   Icon,
 })
 
+/** 默认导出步骤条组件。 */
 export default StepsCompound

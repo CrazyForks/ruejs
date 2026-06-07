@@ -18,6 +18,8 @@ pub trait DomAdapter: Clone {
 
     // 创建节点相关：统一由运行时调用，用于构造最基本的宿主节点
     fn create_element(&mut self, tag: &str) -> Self::Element;
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+    #[inline(never)]
     fn create_element_in_parent(
         &mut self,
         tag: &str,
@@ -90,4 +92,139 @@ pub trait DomAdapter: Clone {
     fn is_select_multiple(&self, el: &Self::Element) -> bool;
 
     fn query_selector(&self, selector: &str) -> Option<Self::Element>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DomAdapter;
+    use std::collections::HashMap;
+    use wasm_bindgen::JsValue;
+    use wasm_bindgen_test::*;
+
+    #[derive(Clone, Default)]
+    struct MinimalAdapter {
+        created: Vec<String>,
+    }
+
+    impl DomAdapter for MinimalAdapter {
+        type Element = String;
+
+        fn create_element(&mut self, tag: &str) -> Self::Element {
+            self.created.push(tag.to_string());
+            format!("element:{tag}")
+        }
+
+        fn create_text_node(&mut self, text: &str) -> Self::Element {
+            format!("text:{text}")
+        }
+
+        fn create_document_fragment(&mut self) -> Self::Element {
+            "fragment".to_string()
+        }
+
+        fn is_fragment(&self, el: &Self::Element) -> bool {
+            el == "fragment"
+        }
+
+        fn collect_fragment_children(&self, _el: &Self::Element) -> Vec<Self::Element> {
+            Vec::new()
+        }
+
+        fn set_text_content(&mut self, el: &mut Self::Element, text: &str) {
+            *el = format!("text:{text}");
+        }
+
+        fn append_child(&mut self, _parent: &mut Self::Element, _child: &Self::Element) {}
+
+        fn insert_before(
+            &mut self,
+            _parent: &mut Self::Element,
+            _child: &Self::Element,
+            _before: &Self::Element,
+        ) {
+        }
+
+        fn remove_child(&mut self, _parent: &mut Self::Element, _child: &Self::Element) {}
+
+        fn contains(&self, parent: &Self::Element, child: &Self::Element) -> bool {
+            parent == child
+        }
+
+        fn get_parent_node(&self, _node: &Self::Element) -> Option<Self::Element> {
+            None
+        }
+
+        fn replace_child(
+            &mut self,
+            _parent: &mut Self::Element,
+            _new_child: &Self::Element,
+            _old_child: &Self::Element,
+        ) {
+        }
+
+        fn set_class_name(&mut self, _el: &mut Self::Element, _value: &str) {}
+
+        fn patch_style(
+            &mut self,
+            _el: &mut Self::Element,
+            _old_style: &HashMap<String, String>,
+            _new_style: &HashMap<String, String>,
+        ) {
+        }
+
+        fn set_inner_html(&mut self, el: &mut Self::Element, html: &str) {
+            *el = html.to_string();
+        }
+
+        fn set_value(&mut self, _el: &mut Self::Element, _value: JsValue) {}
+
+        fn set_checked(&mut self, _el: &mut Self::Element, _checked: bool) {}
+
+        fn set_disabled(&mut self, _el: &mut Self::Element, _disabled: bool) {}
+
+        fn clear_ref(&mut self, _ref_handle: JsValue) {}
+
+        fn apply_ref(&mut self, _el: &mut Self::Element, _ref_handle: JsValue) {}
+
+        fn set_attribute(&mut self, _el: &mut Self::Element, _key: &str, _value: &str) {}
+
+        fn remove_attribute(&mut self, _el: &mut Self::Element, _key: &str) {}
+
+        fn get_tag_name(&self, el: &Self::Element) -> String {
+            el.clone()
+        }
+
+        fn add_event_listener(&mut self, _el: &mut Self::Element, _event: &str, _handler: JsValue) {
+        }
+
+        fn remove_event_listener(
+            &mut self,
+            _el: &mut Self::Element,
+            _event: &str,
+            _handler: JsValue,
+        ) {
+        }
+
+        fn has_value_property(&self, _el: &Self::Element) -> bool {
+            false
+        }
+
+        fn is_select_multiple(&self, _el: &Self::Element) -> bool {
+            false
+        }
+
+        fn query_selector(&self, _selector: &str) -> Option<Self::Element> {
+            None
+        }
+    }
+
+    #[wasm_bindgen_test]
+    fn default_create_element_in_parent_delegates_to_create_element() {
+        let mut adapter = MinimalAdapter::default();
+        let parent = "parent".to_string();
+        let child = adapter.create_element_in_parent("child", Some(&parent));
+
+        assert_eq!(child, "element:child");
+        assert_eq!(adapter.created, vec!["child"]);
+    }
 }

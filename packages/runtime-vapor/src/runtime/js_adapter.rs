@@ -51,6 +51,7 @@ use std::collections::HashMap;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
+use wasm_bindgen::throw_val;
 
 #[derive(Clone)]
 pub struct JsDomAdapter {
@@ -116,6 +117,12 @@ impl JsDomAdapter {
     }
 }
 
+impl From<JsDomAdapter> for JsValue {
+    fn from(adapter: JsDomAdapter) -> Self {
+        adapter.inner
+    }
+}
+
 impl DomAdapter for JsDomAdapter {
     type Element = JsValue;
 
@@ -133,9 +140,7 @@ impl DomAdapter for JsDomAdapter {
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
             let parent_value = parent.cloned().unwrap_or(JsValue::UNDEFINED);
-            let ret = func
-                .call2(&self.inner, &JsValue::from_str(tag), &parent_value)
-                .unwrap_or(JsValue::UNDEFINED);
+            let ret = call2_or_throw(func, &self.inner, &JsValue::from_str(tag), &parent_value);
             if ret.is_undefined() || ret.is_null() {
                 throw_str("Rue runtime: createElement returned undefined/null");
             }
@@ -150,8 +155,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("createTextNode"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let ret =
-                func.call1(&self.inner, &JsValue::from_str(text)).unwrap_or(JsValue::UNDEFINED);
+            let ret = call1_or_throw(func, &self.inner, &JsValue::from_str(text));
             if ret.is_undefined() || ret.is_null() {
                 throw_str("Rue runtime: createTextNode returned undefined/null");
             }
@@ -166,7 +170,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("createDocumentFragment"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let ret = func.call0(&self.inner).unwrap_or(JsValue::UNDEFINED);
+            let ret = call0_or_throw(func, &self.inner);
             if ret.is_undefined() || ret.is_null() {
                 throw_str("Rue runtime: createDocumentFragment returned undefined/null");
             }
@@ -182,7 +186,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("isFragment"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            func.call1(&self.inner, el).unwrap_or(JsValue::FALSE).as_bool().unwrap_or(false)
+            call1_or_throw(func, &self.inner, el).as_bool().unwrap_or(false)
         } else {
             throw_str("Rue runtime: dom-adapter.isFragment not found");
             // diverges
@@ -193,7 +197,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("collectFragmentChildren"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let arr = func.call1(&self.inner, el).unwrap_or(Array::new().into());
+            let arr = call1_or_throw(func, &self.inner, el);
             let arr: Array = arr.unchecked_into();
             let mut out = Vec::new();
             for i in 0..arr.length() {
@@ -211,18 +215,21 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("setTextContent"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call2(&self.inner, el, &JsValue::from_str(text));
+            let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_str(text));
         } else {
             throw_str("Rue runtime: dom-adapter.setTextContent not found");
             // diverges
         }
     }
     fn append_child(&mut self, parent: &mut Self::Element, child: &Self::Element) {
+        if parent.is_undefined() || parent.is_null() || child.is_undefined() || child.is_null() {
+            return;
+        }
         // 追加子节点
         let f = Reflect::get(&self.inner, &JsValue::from_str("appendChild"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call2(&self.inner, parent, child);
+            let _ = call2_or_throw(func, &self.inner, parent, child);
         } else {
             throw_str("Rue runtime: dom-adapter.appendChild not found");
             // diverges
@@ -234,20 +241,26 @@ impl DomAdapter for JsDomAdapter {
         child: &Self::Element,
         before: &Self::Element,
     ) {
+        if parent.is_undefined() || parent.is_null() || child.is_undefined() || child.is_null() {
+            return;
+        }
         let f = Reflect::get(&self.inner, &JsValue::from_str("insertBefore"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call3(&self.inner, parent, child, before);
+            let _ = call3_or_throw(func, &self.inner, parent, child, before);
         } else {
             throw_str("Rue runtime: dom-adapter.insertBefore not found");
             // diverges
         }
     }
     fn remove_child(&mut self, parent: &mut Self::Element, child: &Self::Element) {
+        if parent.is_undefined() || parent.is_null() || child.is_undefined() || child.is_null() {
+            return;
+        }
         let f = Reflect::get(&self.inner, &JsValue::from_str("removeChild"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call2(&self.inner, parent, child);
+            let _ = call2_or_throw(func, &self.inner, parent, child);
         } else {
             throw_str("Rue runtime: dom-adapter.removeChild not found");
             // diverges
@@ -257,10 +270,7 @@ impl DomAdapter for JsDomAdapter {
         let f =
             Reflect::get(&self.inner, &JsValue::from_str("contains")).unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            func.call2(&self.inner, parent, child)
-                .unwrap_or(JsValue::FALSE)
-                .as_bool()
-                .unwrap_or(false)
+            call2_or_throw(func, &self.inner, parent, child).as_bool().unwrap_or(false)
         } else {
             throw_str("Rue runtime: dom-adapter.contains not found");
             // diverges
@@ -274,7 +284,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("getParentNode"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let ret = func.call1(&self.inner, node).unwrap_or(JsValue::UNDEFINED);
+            let ret = call1_or_throw(func, &self.inner, node);
             if ret.is_undefined() || ret.is_null() { None } else { Some(ret) }
         } else {
             let ret =
@@ -287,7 +297,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("setClassName"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call2(&self.inner, el, &JsValue::from_str(value));
+            let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_str(value));
         } else {
             throw_str("Rue runtime: dom-adapter.setClassName not found");
             // diverges
@@ -304,17 +314,20 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("patchStyle"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call3(&self.inner, el, &js_old, &js_new);
+            let _ = call3_or_throw(func, &self.inner, el, &js_old, &js_new);
         } else {
             throw_str("Rue runtime: dom-adapter.patchStyle not found");
             // diverges
         }
     }
     fn set_inner_html(&mut self, el: &mut Self::Element, html: &str) {
+        if el.is_undefined() || el.is_null() {
+            return;
+        }
         let f = Reflect::get(&self.inner, &JsValue::from_str("setInnerHTML"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call2(&self.inner, el, &JsValue::from_str(html));
+            let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_str(html));
         } else {
             throw_str("Rue runtime: dom-adapter.setInnerHTML not found");
             // diverges
@@ -325,7 +338,7 @@ impl DomAdapter for JsDomAdapter {
         let f =
             Reflect::get(&self.inner, &JsValue::from_str("setValue")).unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call2(&self.inner, el, &value);
+            let _ = call2_or_throw(func, &self.inner, el, &value);
         } else {
             throw_str("Rue runtime: dom-adapter.setValue not found");
             // diverges
@@ -335,7 +348,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("setChecked"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call2(&self.inner, el, &JsValue::from_bool(checked));
+            let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_bool(checked));
         } else {
             throw_str("Rue runtime: dom-adapter.setChecked not found");
             // diverges
@@ -345,7 +358,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("setDisabled"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call2(&self.inner, el, &JsValue::from_bool(disabled));
+            let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_bool(disabled));
         } else {
             throw_str("Rue runtime: dom-adapter.setDisabled not found");
             // diverges
@@ -356,7 +369,7 @@ impl DomAdapter for JsDomAdapter {
         let f =
             Reflect::get(&self.inner, &JsValue::from_str("clearRef")).unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call1(&self.inner, &ref_handle);
+            let _ = call1_or_throw(func, &self.inner, &ref_handle);
         } else {
             throw_str("Rue runtime: dom-adapter.clearRef not found");
             // diverges
@@ -366,7 +379,7 @@ impl DomAdapter for JsDomAdapter {
         let f =
             Reflect::get(&self.inner, &JsValue::from_str("applyRef")).unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call2(&self.inner, el, &ref_handle);
+            let _ = call2_or_throw(func, &self.inner, el, &ref_handle);
         } else {
             throw_str("Rue runtime: dom-adapter.applyRef not found");
             // diverges
@@ -377,7 +390,13 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("setAttribute"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call3(&self.inner, el, &JsValue::from_str(key), &JsValue::from_str(value));
+            let _ = call3_or_throw(
+                func,
+                &self.inner,
+                el,
+                &JsValue::from_str(key),
+                &JsValue::from_str(value),
+            );
         } else {
             throw_str("Rue runtime: dom-adapter.setAttribute not found");
             // diverges
@@ -388,7 +407,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("removeAttribute"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call2(&self.inner, el, &JsValue::from_str(key));
+            let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_str(key));
         } else {
             throw_str("Rue runtime: dom-adapter.removeAttribute not found");
         }
@@ -398,10 +417,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("getTagName"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            func.call1(&self.inner, el)
-                .unwrap_or(JsValue::from_str(""))
-                .as_string()
-                .unwrap_or_default()
+            call1_or_throw(func, &self.inner, el).as_string().unwrap_or_default()
         } else {
             throw_str("Rue runtime: dom-adapter.getTagName not found");
         }
@@ -418,7 +434,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("replaceChild"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call3(&self.inner, parent, new_child, old_child);
+            let _ = call3_or_throw(func, &self.inner, parent, new_child, old_child);
         } else {
             self.insert_before(parent, new_child, old_child);
             self.remove_child(parent, old_child);
@@ -430,7 +446,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("addEventListener"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call3(&self.inner, el, &JsValue::from_str(event), &handler);
+            let _ = call3_or_throw(func, &self.inner, el, &JsValue::from_str(event), &handler);
         } else {
             throw_str("Rue runtime: dom-adapter.addEventListener not found");
         }
@@ -440,7 +456,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("removeEventListener"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let _ = func.call3(&self.inner, el, &JsValue::from_str(event), &handler);
+            let _ = call3_or_throw(func, &self.inner, el, &JsValue::from_str(event), &handler);
         } else {
             throw_str("Rue runtime: dom-adapter.removeEventListener not found");
         }
@@ -465,8 +481,7 @@ impl DomAdapter for JsDomAdapter {
         let f = Reflect::get(&self.inner, &JsValue::from_str("querySelector"))
             .unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
-            let ret =
-                func.call1(&self.inner, &JsValue::from_str(selector)).unwrap_or(JsValue::UNDEFINED);
+            let ret = call1_or_throw(func, &self.inner, &JsValue::from_str(selector));
             if ret.is_undefined() || ret.is_null() { None } else { Some(ret) }
         } else {
             throw_str("Rue runtime: dom-adapter.querySelector not found");
@@ -481,4 +496,38 @@ fn map_to_js_obj(map: &HashMap<String, String>) -> JsValue {
         let _ = Reflect::set(&obj, &JsValue::from_str(k), &JsValue::from_str(v));
     }
     obj.into()
+}
+
+fn call0_or_throw(func: &Function, this: &JsValue) -> JsValue {
+    match func.call0(this) {
+        Ok(value) => value,
+        Err(error) => throw_val(error),
+    }
+}
+
+fn call1_or_throw(func: &Function, this: &JsValue, arg1: &JsValue) -> JsValue {
+    match func.call1(this, arg1) {
+        Ok(value) => value,
+        Err(error) => throw_val(error),
+    }
+}
+
+fn call2_or_throw(func: &Function, this: &JsValue, arg1: &JsValue, arg2: &JsValue) -> JsValue {
+    match func.call2(this, arg1, arg2) {
+        Ok(value) => value,
+        Err(error) => throw_val(error),
+    }
+}
+
+fn call3_or_throw(
+    func: &Function,
+    this: &JsValue,
+    arg1: &JsValue,
+    arg2: &JsValue,
+    arg3: &JsValue,
+) -> JsValue {
+    match func.call3(this, arg1, arg2, arg3) {
+        Ok(value) => value,
+        Err(error) => throw_val(error),
+    }
 }

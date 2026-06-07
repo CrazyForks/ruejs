@@ -111,3 +111,46 @@ fn omits_extra_bindings_when_no_names_are_requested() {
     assert!(!rendered.contains(&normalize("const {")));
     assert!(!rendered.contains(&normalize("let {")));
 }
+
+#[test]
+fn builds_setup_for_assignment_patterns_and_synthetic_exports() {
+    let collected = parse_module_stmts(
+        "
+        const [first = fallback] = list;
+        const plain = source;
+        ",
+    );
+
+    let rendered = normalize(&emit_stmts(build_setup_with_binds(
+        vec!["first".into(), "missing".into()],
+        Vec::new(),
+        collected,
+    )));
+
+    assert!(rendered.contains(&normalize("first: first")));
+    assert!(rendered.contains(&normalize("missing: missing")));
+    assert!(
+        rendered.contains(&normalize("const { first: first, missing: missing } = _$useSetup;",))
+    );
+    assert!(rendered.contains(&normalize("const [first = fallback] = list;")));
+}
+
+#[test]
+fn build_setup_tolerates_uncollectable_patterns() {
+    let collected = vec![Stmt::Decl(Decl::Var(Box::new(VarDecl {
+        span: DUMMY_SP,
+        ctxt: Default::default(),
+        kind: VarDeclKind::Const,
+        declare: false,
+        decls: vec![VarDeclarator {
+            span: DUMMY_SP,
+            name: Pat::Invalid(Invalid { span: DUMMY_SP }),
+            init: None,
+            definite: false,
+        }],
+    })))];
+
+    let stmts = build_setup_with_binds(vec!["missing".into()], Vec::new(), collected);
+
+    assert_eq!(stmts.len(), 2);
+}

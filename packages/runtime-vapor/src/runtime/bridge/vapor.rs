@@ -1,3 +1,9 @@
+/*
+vapor：创建 Vapor 子树输入句柄
+
+当传入 setup 函数时，仅创建 MountInput 与 effect scope id，不立即运行 setup。
+真正执行发生在真实挂载阶段，这样副作用归属与 DOM 生命周期能保持一致。
+*/
 use super::WasmRue;
 use crate::reactive::core::create_effect_scope;
 use crate::runtime::js_adapter::JsDomAdapter;

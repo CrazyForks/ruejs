@@ -34,9 +34,6 @@ const findPreviewByTitle = (root: ParentNode, title: string) =>
     block.querySelector('h2')?.textContent?.includes(title),
   ) ?? null
 
-const findCodeText = (root: ParentNode) =>
-  (root.querySelector('[data-testid="mock-code"]') as HTMLElement | null)?.textContent ?? ''
-
 const findVisiblePanelText = (root: ParentNode) =>
   Array.from(root.querySelectorAll<HTMLElement>('[role="tabpanel"]')).find(
     panel => panel.getAttribute('aria-hidden') !== 'true' && !panel.classList.contains('hidden'),

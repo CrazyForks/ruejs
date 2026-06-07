@@ -7,66 +7,118 @@ Dock 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** DockRootAs 类型。 */
 export type DockRootAs = 'div' | 'nav'
+/** DockItemAs 类型。 */
 export type DockItemAs = 'button' | 'a' | 'div'
+/** DockItemKey 标识键类型。 */
 export type DockItemKey = string | number
+/** DockSize 尺寸类型。 */
 export type DockSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'
 
+/** DockChangeContext 事件或渲染上下文。 */
 export interface DockChangeContext {
+  /** 数据项唯一标识。 */
   key: DockItemKey
+  /** index 配置项。 */
   index: number
+  /** item 区域配置。 */
   item?: DockItemData
 }
 
+/** DockItemData 数据项结构。 */
 export interface DockItemData {
+  /** 数据项唯一标识。 */
   key?: DockItemKey
+  /** 自定义渲染的宿主元素。 */
   as?: DockItemAs
+  /** 根节点附加类名。 */
   className?: string
+  /** 图标内容。 */
   icon?: any
+  /** iconClassName 附加类名。 */
   iconClassName?: string
+  /** 展示标签。 */
   label?: any
+  /** labelClassName 附加类名。 */
   labelClassName?: string
+  /** 链接地址。 */
   href?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** 原生 button type 属性。 */
   htmlType?: 'button' | 'submit' | 'reset'
+  /** 是否处于激活态。 */
   active?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** ariaLabel 标签内容。 */
   ariaLabel?: string
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent, context: DockChangeContext) => void
 }
 
+/** DockProps 组件属性。 */
 export interface DockProps {
+  /** 自定义渲染的宿主元素。 */
   as?: DockRootAs
+  /** 组件尺寸。 */
   size?: DockSize
+  /** 根节点附加类名。 */
   className?: string
+  /** ariaLabel 标签内容。 */
   ariaLabel?: string
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<DockItemData>
+  /** activeIndex 配置项。 */
   activeIndex?: number
+  /** defaultActiveIndex 配置项。 */
   defaultActiveIndex?: number
+  /** activeKey 标识键。 */
   activeKey?: DockItemKey | null
+  /** defaultActiveKey 标识键。 */
   defaultActiveKey?: DockItemKey | null
+  /** 值或状态变化时触发的回调。 */
   onChange?: (index: number, context: DockChangeContext) => void
+  /** 选中项时触发的回调。 */
   onSelect?: (key: DockItemKey | null, context: DockChangeContext) => void
+  /** 组件子内容。 */
   children?: any
 }
 
+/** DockItemProps 组件属性。 */
 export interface DockItemProps {
+  /** 自定义渲染的宿主元素。 */
   as?: DockItemAs
+  /** 是否处于激活态。 */
   active?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 链接地址。 */
   href?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** 原生 button type 属性。 */
   htmlType?: 'button' | 'submit' | 'reset'
+  /** ariaLabel 标签内容。 */
   ariaLabel?: string
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
+  /** 组件子内容。 */
   children?: any
 }
 
+/** DockLabelProps 组件属性。 */
 export interface DockLabelProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
 }
 
@@ -75,10 +127,12 @@ interface NormalizedDockItem extends DockItemData {
   index: number
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: DockSize) => {
   switch (size) {
     case 'small':
@@ -93,11 +147,13 @@ const resolveSizeClass = (size?: DockSize) => {
   }
 }
 
+/** 解析 Anchor Rel 的内部工具函数。 */
 const resolveAnchorRel = (target?: string, rel?: string) => {
   if (target === '_blank' && !rel) return 'noreferrer'
   return rel
 }
 
+/** 解析 Selected Key 的内部工具函数。 */
 const resolveSelectedKey = (
   items: ReadonlyArray<NormalizedDockItem>,
   activeKey: DockItemKey | null | undefined,
@@ -112,6 +168,7 @@ const resolveSelectedKey = (
   return null
 }
 
+/** Item 的内部工具函数。 */
 const Item: FC<DockItemProps> = ({
   as,
   active,
@@ -315,4 +372,5 @@ const DockCompound: DockCompound = Object.assign(Dock, {
   Label,
 })
 
+/** 默认导出停靠栏组件。 */
 export default DockCompound

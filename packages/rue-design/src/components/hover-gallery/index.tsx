@@ -6,30 +6,52 @@ HoverGallery 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** HoverGalleryItem 数据项结构。 */
 export interface HoverGalleryItem {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** src 配置项。 */
   src?: string
+  /** alt 配置项。 */
   alt?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** imageClassName 附加类名。 */
   imageClassName?: string
+  /** 展示标签。 */
   label?: any
+  /** node 配置项。 */
   node?: any
 }
 
+/** HoverGalleryFit 类型。 */
 export type HoverGalleryFit = 'cover' | 'contain' | 'fill' | 'none' | 'scale-down'
 
+/** HoverGalleryProps 组件属性。 */
 export interface HoverGalleryProps {
+  /** 自定义渲染的宿主元素。 */
   as?: 'figure' | 'div'
+  /** 根节点附加类名。 */
   className?: string
+  /** wrapperClassName 附加类名。 */
   wrapperClassName?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<HoverGalleryItem | string | any>
+  /** imageClassName 附加类名。 */
   imageClassName?: string
+  /** fit 配置项。 */
   fit?: HoverGalleryFit
+  /** showGuide 配置项。 */
   showGuide?: boolean
+  /** guideLabels 配置项。 */
   guideLabels?: ReadonlyArray<any>
+  /** guideClassName 附加类名。 */
   guideClassName?: string
+  /** guideItemClassName 附加类名。 */
   guideItemClassName?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -39,10 +61,12 @@ interface NormalizedGalleryItem {
   label?: any
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 解析 Fit Class 的内部工具函数。 */
 const resolveFitClass = (fit?: HoverGalleryFit) => {
   switch (fit) {
     case 'contain':
@@ -59,6 +83,7 @@ const resolveFitClass = (fit?: HoverGalleryFit) => {
   }
 }
 
+/** 转换为 Array 的内部工具函数。 */
 const toArray = (value: any): any[] => {
   if (value == null || value === false) return []
   if (!Array.isArray(value)) return [value]
@@ -70,6 +95,7 @@ const toArray = (value: any): any[] => {
   return result
 }
 
+/** 归一化 Item 的内部工具函数。 */
 const normalizeItem = (
   item: HoverGalleryItem | string | any,
   index: number,
@@ -130,6 +156,7 @@ const normalizeItem = (
   }
 }
 
+/** 归一化 Items 的内部工具函数。 */
 const normalizeItems = (
   items: HoverGalleryProps['items'],
   children: any,
@@ -218,4 +245,5 @@ const HoverGallery: FC<HoverGalleryProps> = props => {
   )
 }
 
+/** 默认导出悬停画廊组件。 */
 export default HoverGallery

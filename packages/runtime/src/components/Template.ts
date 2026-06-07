@@ -8,6 +8,7 @@ Template 组件概述
 import { type FC, type PropsWithChildren, renderAnchor, renderBetween, vapor } from '../rue'
 import { appendChild, createComment, createDocumentFragment } from '../dom'
 
+/** Template 组件属性；运行时只关心 children。 */
 export type TemplateProps = PropsWithChildren<Record<string, unknown>>
 
 type TemplateChildInput = Parameters<typeof renderBetween>[0]
@@ -19,6 +20,7 @@ const toRenderable = (children: unknown): TemplateChildInput => {
   return (children ?? []) as TemplateChildInput
 }
 
+/** 无包装渲染 children 的模板占位组件。 */
 export const Template: FC<TemplateProps> = props => {
   return vapor(() => {
     const root = createDocumentFragment()

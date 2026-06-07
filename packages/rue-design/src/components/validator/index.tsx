@@ -7,47 +7,82 @@ Validator 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** ValidatorHost 类型。 */
 export type ValidatorHost = 'input' | 'select' | 'textarea'
+/** ValidatorAppearance 类型。 */
 export type ValidatorAppearance = 'input' | 'select' | 'textarea' | 'checkbox' | 'toggle'
+/** ValidatorHintHost 类型。 */
 export type ValidatorHintHost = 'div' | 'p' | 'span'
+/** ValidatorFieldHost 类型。 */
 export type ValidatorFieldHost = 'div' | 'fieldset'
+/** ValidatorSize 尺寸类型。 */
 export type ValidatorSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+/** ValidatorStatus 状态类型。 */
 export type ValidatorStatus = 'error' | 'success' | 'warning'
 
+/** ValidatorProps 组件属性。 */
 export interface ValidatorProps {
+  /** 自定义渲染的宿主元素。 */
   as?: ValidatorHost
+  /** appearance 配置项。 */
   appearance?: ValidatorAppearance
+  /** 组件尺寸。 */
   size?: ValidatorSize
+  /** 组件状态。 */
   status?: ValidatorStatus
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ValidatorHintProps 组件属性。 */
 export interface ValidatorHintProps {
+  /** 自定义渲染的宿主元素。 */
   as?: ValidatorHintHost
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** hideUntilInvalid 配置项。 */
   hideUntilInvalid?: boolean
+  /** lines 配置项。 */
   lines?: any[]
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ValidatorFieldProps 组件属性。 */
 export interface ValidatorFieldProps extends Omit<ValidatorProps, 'className'> {
+  /** fieldAs 配置项。 */
   fieldAs?: ValidatorFieldHost
+  /** 根节点附加类名。 */
   className?: string
+  /** controlClassName 附加类名。 */
   controlClassName?: string
+  /** 展示标签。 */
   label?: any
+  /** labelClassName 附加类名。 */
   labelClassName?: string
+  /** hint 配置项。 */
   hint?: any
+  /** hintAs 配置项。 */
   hintAs?: ValidatorHintHost
+  /** hintClassName 附加类名。 */
   hintClassName?: string
+  /** hideHintWhenValid 配置项。 */
   hideHintWhenValid?: boolean
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** extraClassName 附加类名。 */
   extraClassName?: string
+  /** requiredMark 配置项。 */
   requiredMark?: boolean
 }
 
+/** VALIDATOR_APPEARANCES 内部常量。 */
 const VALIDATOR_APPEARANCES: ValidatorAppearance[] = [
   'input',
   'select',
@@ -56,9 +91,11 @@ const VALIDATOR_APPEARANCES: ValidatorAppearance[] = [
   'toggle',
 ]
 
+/** join Class Names 的内部工具函数。 */
 const joinClassNames = (...classNames: Array<string | undefined | false>) =>
   classNames.filter(Boolean).join(' ')
 
+/** 转换为 Class Token Set 的内部工具函数。 */
 const toClassTokenSet = (className?: string) => {
   return new Set(
     (className ?? '')
@@ -68,11 +105,13 @@ const toClassTokenSet = (className?: string) => {
   )
 }
 
+/** detect Appearance From Class Name 的内部工具函数。 */
 const detectAppearanceFromClassName = (className?: string) => {
   const tokens = toClassTokenSet(className)
   return VALIDATOR_APPEARANCES.find(candidate => tokens.has(candidate))
 }
 
+/** 解析 Appearance 的内部工具函数。 */
 const resolveAppearance = (
   as?: ValidatorHost,
   appearance?: ValidatorAppearance,
@@ -88,6 +127,7 @@ const resolveAppearance = (
   return undefined
 }
 
+/** 解析 Host 的内部工具函数。 */
 const resolveHost = (as?: ValidatorHost, appearance?: ValidatorAppearance): ValidatorHost => {
   if (as) return as
   if (appearance === 'select') return 'select'
@@ -95,6 +135,7 @@ const resolveHost = (as?: ValidatorHost, appearance?: ValidatorAppearance): Vali
   return 'input'
 }
 
+/** 构建 Validator Class Name 的内部工具函数。 */
 const buildValidatorClassName = (
   appearance?: ValidatorAppearance,
   size?: ValidatorSize,
@@ -116,6 +157,7 @@ const buildValidatorClassName = (
   )
 }
 
+/** 渲染 Stacked Content 的内部工具函数。 */
 const renderStackedContent = (content: any) => {
   if (!Array.isArray(content)) return content
 
@@ -126,6 +168,7 @@ const renderStackedContent = (content: any) => {
   ))
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<ValidatorProps> = ({
   as,
   appearance,
@@ -158,6 +201,7 @@ const Root: FC<ValidatorProps> = ({
   return <input {...rest} className={cls} />
 }
 
+/** Hint 的内部工具函数。 */
 const Hint: FC<ValidatorHintProps> = ({
   as = 'p',
   className,
@@ -182,10 +226,12 @@ const Hint: FC<ValidatorHintProps> = ({
   )
 }
 
+/** 构建 Field Class Name 的内部工具函数。 */
 const buildFieldClassName = (fieldAs: ValidatorFieldHost, className?: string) => {
   return joinClassNames(fieldAs === 'fieldset' ? 'fieldset gap-2' : 'grid gap-2', className)
 }
 
+/** Field 的内部工具函数。 */
 const Field: FC<ValidatorFieldProps> = ({
   fieldAs = 'fieldset',
   className,
@@ -257,4 +303,5 @@ const ValidatorCompound: ValidatorCompound = Object.assign(Root, {
   Field,
 })
 
+/** 默认导出校验器组件。 */
 export default ValidatorCompound

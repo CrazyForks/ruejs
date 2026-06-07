@@ -1,3 +1,9 @@
+/*
+renderStatic：一次性静态锚点挂载桥接
+
+用于编译期确认不会再由父级驱动更新的子树。
+它只借助 anchor 定位插入，不维护 range_map，从而降低静态内容的运行时成本。
+*/
 use super::WasmRue;
 use super::input::CompatEntryPolicy;
 use crate::runtime::js_adapter::JsDomAdapter;

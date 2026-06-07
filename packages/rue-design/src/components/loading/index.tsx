@@ -7,7 +7,9 @@ Loading 组件概述
 */
 import { h, onMounted, onUnmounted, ref, useRef, watch, type FC } from '@rue-js/rue'
 
+/** LoadingStyle 样式值类型。 */
 export type LoadingStyle = 'spinner' | 'dots' | 'ring' | 'ball' | 'bars' | 'infinity'
+/** LoadingSize 尺寸类型。 */
 export type LoadingSize =
   | 'xs'
   | 'sm'
@@ -19,53 +21,92 @@ export type LoadingSize =
   | 'medium'
   | 'middle'
   | 'large'
+/** LoadingPercent 类型。 */
 export type LoadingPercent = number | 'auto'
 
+/** LoadingIndicatorRenderProps 组件属性。 */
 export interface LoadingIndicatorRenderProps {
+  /** percent 配置项。 */
   percent?: number
+  /** 组件尺寸。 */
   size: Exclude<LoadingSize, 'small' | 'default' | 'medium' | 'middle' | 'large'>
+  /** 根节点内联样式。 */
   style: LoadingStyle
+  /** spinning 配置项。 */
   spinning: boolean
 }
 
+/** LoadingClassNames 局部类名配置。 */
 export interface LoadingClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** section 配置项。 */
   section?: string
+  /** indicator 配置项。 */
   indicator?: string
+  /** 描述内容。 */
   description?: string
+  /** 内容容器区域配置。 */
   container?: string
 }
 
+/** LoadingStyles 局部样式配置。 */
 export interface LoadingStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** section 配置项。 */
   section?: Record<string, any>
+  /** indicator 配置项。 */
   indicator?: Record<string, any>
+  /** 描述内容。 */
   description?: Record<string, any>
+  /** 内容容器区域配置。 */
   container?: Record<string, any>
 }
 
 type InlineStyle = string | Record<string, any>
 
+/** LoadingProps 组件属性。 */
 export interface LoadingProps {
+  /** 自定义渲染的宿主元素。 */
   as?: string
+  /** 根节点内联样式。 */
   style?: LoadingStyle | InlineStyle
+  /** indicatorStyle 内联样式。 */
   indicatorStyle?: LoadingStyle
+  /** 组件视觉变体。 */
   variant?: LoadingStyle
+  /** 组件类型或语义类型。 */
   type?: LoadingStyle
+  /** 组件尺寸。 */
   size?: LoadingSize
+  /** spinning 配置项。 */
   spinning?: boolean
+  /** delay 配置项。 */
   delay?: number
+  /** indicator 配置项。 */
   indicator?: any | ((props: LoadingIndicatorRenderProps) => any)
+  /** 描述内容。 */
   description?: any
+  /** tip 配置项。 */
   tip?: any
+  /** fullscreen 配置项。 */
   fullscreen?: boolean
+  /** percent 配置项。 */
   percent?: LoadingPercent
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** wrapperClassName 附加类名。 */
   wrapperClassName?: string
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: LoadingClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: LoadingStyles
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -73,15 +114,19 @@ type LoadingComponent = FC<LoadingProps> & {
   setDefaultIndicator: (indicator: any) => void
 }
 
+/** LOADING_STYLES 内部常量。 */
 const LOADING_STYLES: LoadingStyle[] = ['spinner', 'dots', 'ring', 'ball', 'bars', 'infinity']
+/** DEFAULT_PERCENT_LABEL 内部常量。 */
 const DEFAULT_PERCENT_LABEL = 'Loading'
 
 let defaultIndicator: any
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | false | null | undefined>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** merge Styles 的内部工具函数。 */
 const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   const merged: Record<string, any> = {}
   parts.forEach(part => {
@@ -90,10 +135,12 @@ const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   return Object.keys(merged).length > 0 ? merged : undefined
 }
 
+/** 判断 Loading Style 的内部工具函数。 */
 const isLoadingStyle = (value: any): value is LoadingStyle => {
   return typeof value === 'string' && LOADING_STYLES.includes(value as LoadingStyle)
 }
 
+/** 解析 Indicator Style 的内部工具函数。 */
 const resolveIndicatorStyle = (
   style?: LoadingStyle | InlineStyle,
   indicatorStyle?: LoadingStyle,
@@ -107,11 +154,13 @@ const resolveIndicatorStyle = (
   return 'spinner'
 }
 
+/** 解析 Root Style 的内部工具函数。 */
 const resolveRootStyle = (style?: LoadingStyle | InlineStyle) => {
   if (isLoadingStyle(style)) return undefined
   return style as InlineStyle | undefined
 }
 
+/** 归一化 Size 的内部工具函数。 */
 const normalizeSize = (
   size?: LoadingSize,
 ): Exclude<LoadingSize, 'small' | 'default' | 'medium' | 'middle' | 'large'> => {
@@ -129,15 +178,18 @@ const normalizeSize = (
   }
 }
 
+/** clamp Percent 的内部工具函数。 */
 const clampPercent = (value: number) => {
   if (!Number.isFinite(value)) return 0
   return Math.min(100, Math.max(0, value))
 }
 
+/** should Delay 的内部工具函数。 */
 const shouldDelay = (spinning: boolean, delay?: number) => {
   return spinning && typeof delay === 'number' && delay > 0 && Number.isFinite(delay)
 }
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -145,6 +197,7 @@ const toChildArray = (children: any): any[] => {
   return children == null || typeof children === 'boolean' ? [] : [children]
 }
 
+/** 渲染 Element 的内部工具函数。 */
 const renderElement = (as: string, props: Record<string, any>, children?: any) => {
   const nextChildren = toChildArray(children)
   switch (as) {
@@ -163,6 +216,7 @@ const renderElement = (as: string, props: Record<string, any>, children?: any) =
   }
 }
 
+/** 构建 Indicator Class Name 的内部工具函数。 */
 const buildIndicatorClassName = (
   style: LoadingStyle,
   size: ReturnType<typeof normalizeSize>,
@@ -171,6 +225,7 @@ const buildIndicatorClassName = (
   return mergeClassNames('loading', `loading-${style}`, `loading-${size}`, className)
 }
 
+/** 渲染 Default Indicator 的内部工具函数。 */
 const renderDefaultIndicator = (
   indicatorClassName: string,
   indicatorStyle?: Record<string, any>,
@@ -185,6 +240,7 @@ const renderDefaultIndicator = (
   )
 }
 
+/** Loading Root 的内部工具函数。 */
 const LoadingRoot: FC<LoadingProps> = ({
   as,
   style,
@@ -455,4 +511,5 @@ Loading.setDefaultIndicator = (indicator: any) => {
   defaultIndicator = indicator
 }
 
+/** 默认导出加载组件。 */
 export default Loading

@@ -32,18 +32,11 @@ interface ExampleBlockProps {
   title: string
   summary?: string
   tab: { value: TabMode }
-  preview: any
+  preview: FC
   code: string
   lang?: string
-  shouldLoadPreview?: { value: boolean }
+  previewLoadDelay?: number
   previewLoadNote?: string
-}
-
-interface PreviewStatusProps {
-  ready: boolean
-  readyLabel: string
-  loadingLabel: string
-  error?: string
 }
 
 interface CalendarEventItem {
@@ -135,8 +128,6 @@ const exportRows: ExportRow[] = [
   },
 ]
 
-const maintenanceDates = new Set(['2026-04-04', '2026-04-05', '2026-05-01'])
-
 const agendaByDate: Record<string, CalendarEventItem[]> = {
   '2026-04-08': [
     { tone: 'warning', label: 'Risk review' },
@@ -193,12 +184,6 @@ const formatIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
-const parseDate = (value: string) => {
-  const date = new Date(`${value}T00:00:00`)
-  date.setHours(12, 0, 0, 0)
-  return date
-}
-
 const formatDateLabel = (value?: string | Date) => {
   if (!value) {
     return '未选择'
@@ -211,16 +196,6 @@ const formatPanelLabel = (date: Date, mode: DemoCalendarMode) => {
     return `${new Intl.DateTimeFormat('zh-CN', { year: 'numeric' }).format(date)} / 年视图`
   }
   return `${new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long' }).format(date)} / 月视图`
-}
-
-const basicCalendarValidRange: [Date, Date] = [parseDate('2026-04-01'), parseDate('2026-05-31')]
-
-const CalendarCally = Calendar.Cally
-const CalendarMonth = Calendar.Month
-const CalendarPikaSingle = Calendar.PikaSingle
-
-const isBasicCalendarDateDisabled = (date: Date) => {
-  return date.getDay() === 0 || date.getDay() === 6 || maintenanceDates.has(formatIsoDate(date))
 }
 
 const MetaItem: FC<{ label: string; value: string }> = ({ label, value }) => {
@@ -292,17 +267,6 @@ const ExportTable: FC<{ rows: ExportRow[] }> = ({ rows }) => {
   )
 }
 
-const PreviewStatus: FC<PreviewStatusProps> = ({ ready, readyLabel, loadingLabel, error }) => {
-  return (
-    <div className="flex flex-wrap gap-2 text-xs">
-      <span className={`badge ${ready ? 'badge-success badge-soft' : 'badge-outline'}`}>
-        {ready ? readyLabel : loadingLabel}
-      </span>
-      {error ? <span className="badge badge-error badge-soft">{error}</span> : null}
-    </div>
-  )
-}
-
 const ExampleBlock: FC<ExampleBlockProps> = ({
   title,
   summary,
@@ -310,9 +274,30 @@ const ExampleBlock: FC<ExampleBlockProps> = ({
   preview,
   code,
   lang = 'tsx',
-  shouldLoadPreview,
+  previewLoadDelay,
   previewLoadNote,
 }) => {
+  const shouldLoadPreview = ref(previewLoadDelay == null)
+  const preloadTimer = useRef<number | null>(null)
+
+  onMounted(() => {
+    if (previewLoadDelay == null || shouldLoadPreview.value) {
+      return
+    }
+
+    preloadTimer.current = window.setTimeout(() => {
+      shouldLoadPreview.value = true
+      preloadTimer.current = null
+    }, previewLoadDelay)
+  })
+
+  onUnmounted(() => {
+    if (preloadTimer.current != null) {
+      window.clearTimeout(preloadTimer.current)
+      preloadTimer.current = null
+    }
+  })
+
   return (
     <div className="component-preview not-prose my-6 text-base-content lg:my-12">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -333,7 +318,7 @@ const ExampleBlock: FC<ExampleBlockProps> = ({
       />
       {tab.value !== 'preview' ? (
         <Code className="mt-2" lang={lang} code={code} />
-      ) : shouldLoadPreview && !shouldLoadPreview.value ? (
+      ) : !shouldLoadPreview.value ? (
         <div className="rounded-[1.5rem] border border-base-300 bg-base-100/80 p-5 shadow-sm">
           <div className="badge badge-outline badge-sm">Preview</div>
           <p className="mb-0 mt-3 text-sm text-base-content/72">
@@ -626,6 +611,7 @@ const formatDateLabel = (value?: string | Date) => {
 export default function BasicCalendarDemo() {
   const selectedValue = ref('2026-04-12')
   const selectedSource = ref('date')
+  const panelMode = ref<'month' | 'year'>('month')
   const panelState = ref(formatPanelLabel(parseDate(selectedValue.value), 'month'))
   const handleChange = useCallback((date: Date) => {
     selectedValue.value = formatIsoDate(date)
@@ -642,11 +628,15 @@ export default function BasicCalendarDemo() {
       <Calendar
         locale="zh-CN"
         value={selectedValue.value}
+        mode={panelMode.value}
         showWeek
         validRange={basicCalendarValidRange}
         disabledDate={isBasicCalendarDateDisabled}
         onChange={handleChange}
-        onPanelChange={handlePanelChange}
+        onPanelChange={(date, nextMode) => {
+          panelMode.value = nextMode
+          handlePanelChange(date, nextMode)
+        }}
         onSelect={handleSelect}
       />
 
@@ -1100,31 +1090,6 @@ const CalendarDemo: FC = () => {
   const tabCallyCalendar = ref<TabMode>('preview')
   const tabCallyDatePicker = ref<TabMode>('preview')
   const tabPikaday = ref<TabMode>('preview')
-  const shouldLoadNotice = ref(false)
-  const shouldLoadCard = ref(false)
-  const shouldLoadHeader = ref(false)
-  const preloadTimers = useRef<number[]>([])
-
-  onMounted(() => {
-    preloadTimers.current = [
-      window.setTimeout(() => {
-        shouldLoadNotice.value = true
-      }, 0),
-      window.setTimeout(() => {
-        shouldLoadCard.value = true
-      }, 32),
-      window.setTimeout(() => {
-        shouldLoadHeader.value = true
-      }, 64),
-    ]
-  })
-
-  onUnmounted(() => {
-    for (const timer of preloadTimers.current ?? []) {
-      window.clearTimeout(timer)
-    }
-    preloadTimers.current = []
-  })
 
   return (
     <SidebarPlayground>
@@ -1156,7 +1121,7 @@ const CalendarDemo: FC = () => {
           title="Basic calendar"
           summary="默认面板，覆盖受控日期、范围限制、禁用规则与周序号。"
           tab={tabBasic}
-          preview={<BasicCalendarPreview />}
+          preview={BasicCalendarPreview}
           code={basicCalendarCode}
         />
 
@@ -1164,9 +1129,9 @@ const CalendarDemo: FC = () => {
           title="Notice calendar"
           summary="使用 cellRender 在日期格展示事项，在年视图展示月份 backlog。"
           tab={tabNotice}
-          preview={<NoticeCalendarPreview />}
+          preview={NoticeCalendarPreview}
           code={noticeCalendarCode}
-          shouldLoadPreview={shouldLoadNotice}
+          previewLoadDelay={1200}
           previewLoadNote="事项日历会在页面显示后自动初始化，不再需要手动点击加载。"
         />
 
@@ -1174,9 +1139,9 @@ const CalendarDemo: FC = () => {
           title="Card mode"
           summary="缩成仪表盘卡片，再用 fullCellRender 为少量日期挂上负载进度。"
           tab={tabCard}
-          preview={<CardCalendarPreview />}
+          preview={CardCalendarPreview}
           code={cardCalendarCode}
-          shouldLoadPreview={shouldLoadCard}
+          previewLoadDelay={1800}
           previewLoadNote="卡片模式会在后台分帧挂载，避免首屏一次性把多个重预览一起算完。"
         />
 
@@ -1184,9 +1149,9 @@ const CalendarDemo: FC = () => {
           title="Custom header"
           summary="接管顶部工具条，自定义模式切换、年份与月份选择器。"
           tab={tabHeader}
-          preview={<CustomHeaderCalendarPreview />}
+          preview={CustomHeaderCalendarPreview}
           code={customHeaderCalendarCode}
-          shouldLoadPreview={shouldLoadHeader}
+          previewLoadDelay={2400}
           previewLoadNote="自定义头部示例会在页面稳定后自动挂载，减少首屏阻塞。"
         />
 
@@ -1194,24 +1159,30 @@ const CalendarDemo: FC = () => {
           title="Cally calendar example"
           summary="旧的 Cally web component 日历壳层仍然原样可用。"
           tab={tabCallyCalendar}
-          preview={<CallyCalendarPreview />}
+          preview={CallyCalendarPreview}
           code={callyCalendarCode}
+          previewLoadDelay={3200}
+          previewLoadNote="Cally 预览会延后挂载，避免阻塞第一个日历示例。"
         />
 
         <ExampleBlock
           title="Cally date picker example"
           summary="旧的日期输入弹层 demo 继续保留，只把交互说明和布局重新编排。"
           tab={tabCallyDatePicker}
-          preview={<CallyDatePickerPreview />}
+          preview={CallyDatePickerPreview}
           code={callyDatePickerCode}
+          previewLoadDelay={4000}
+          previewLoadNote="日期输入弹层会延后挂载，页面主体优先完成交互。"
         />
 
         <ExampleBlock
           title="Pikaday input example"
           summary="保留原有 pika-single 输入壳层，让第三方实例继续挂载在 Rue 组件树里。"
           tab={tabPikaday}
-          preview={<PikadayCalendarPreview />}
+          preview={PikadayCalendarPreview}
           lang="html"
+          previewLoadDelay={4800}
+          previewLoadNote="Pikaday 第三方实例会延后初始化，避免拖慢首屏。"
           code={`<script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
 <input type="text" class="input pika-single" id="myDatepicker">
 <script>

@@ -91,7 +91,23 @@ const App: FC = () => {
 
 当前实现会在组件切走时保留实例和 DOM 区间，并在重新命中缓存时把这段 DOM 挪回活动容器。
 
-需要注意的是，Rue 当前并没有额外暴露 Vue 风格的 `activated` / `deactivated` 专用生命周期钩子。也就是说，`<KeepAlive>` 目前提供的是“缓存与复用”语义，而不是一组新的生命周期 API。
+你可以在被缓存的组件中使用 `onActivated()` 和 `onDeactivated()` 观察这两个状态变化：
+
+```tsx
+import { onActivated, onDeactivated } from '@rue-js/rue'
+
+const CachedPanel = () => {
+  onActivated(() => {
+    // 组件进入活动 DOM 区间
+  })
+
+  onDeactivated(() => {
+    // 组件被移动到 KeepAlive 的离线缓存区间
+  })
+
+  return <section>Cached</section>
+}
+```
 
 ---
 

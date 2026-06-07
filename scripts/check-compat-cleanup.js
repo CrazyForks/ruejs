@@ -7,6 +7,8 @@ const sharedArgs = [
   '-g',
   '!docs/plan*/**',
   '-g',
+  '!docs/search-index.json',
+  '-g',
   '!packages/**/dist/**',
   '-g',
   '!packages/**/pkg/**',

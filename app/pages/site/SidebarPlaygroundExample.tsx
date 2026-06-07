@@ -33,6 +33,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/hello-world',
         },
         {
+          id: 'on-deactivated',
+          title: 'onDeactivated',
+          href: '/examples/on-deactivated',
+        },
+        {
           id: 'handling-input',
           title: '处理输入',
           href: '/examples/handling-input',
@@ -58,9 +63,19 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/simple-component',
         },
         {
+          id: 'on-error-captured',
+          title: 'onErrorCaptured 错误捕获',
+          href: '/examples/on-error-captured',
+        },
+        {
           id: 'reactive-props-destructure',
           title: 'Reactive Props Destructure',
           href: '/examples/reactive-props-destructure',
+        },
+        {
+          id: 'to-refs',
+          title: 'toRefs 响应式解构',
+          href: '/examples/to-refs',
         },
         {
           id: 'freeze-compiler-trap',
@@ -214,6 +229,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/fetching-data',
         },
         {
+          id: 'on-server-prefetch',
+          title: '服务端预取',
+          href: '/examples/on-server-prefetch',
+        },
+        {
           id: 'resources',
           title: '资源',
           href: '/examples/resources',
@@ -258,15 +278,77 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           title: 'shallowRef 浅层 ref',
           href: '/examples/shallow-ref',
         },
+        // 响应式高级 API 示例集中放在浅层 ref 与 nextTick 之间，便于按能力递进浏览。
+        {
+          id: 'trigger-ref',
+          title: 'triggerRef 手动触发',
+          href: '/examples/trigger-ref',
+        },
+        {
+          id: 'on-activated',
+          title: 'onActivated 缓存生命周期',
+          href: '/examples/on-activated',
+        },
+        {
+          id: 'to-ref',
+          title: 'toRef 响应式句柄',
+          href: '/examples/to-ref',
+        },
+        {
+          id: 'is-ref',
+          title: 'isRef 判定示例',
+          href: '/examples/is-ref',
+        },
+        {
+          id: 'is-proxy',
+          title: 'isProxy 代理判断',
+          href: '/examples/is-proxy',
+        },
+        {
+          id: 'is-readonly',
+          title: 'isReadonly 判断',
+          href: '/examples/is-readonly',
+        },
         {
           id: 'next-tick',
           title: 'nextTick 真实业务场景',
           href: '/examples/next-tick',
         },
+        // 调度、scope 与渲染调试示例紧邻 nextTick，突出它们都依赖 effect 执行时机。
+        {
+          id: 'watch-post-effect',
+          title: 'watchPostEffect DOM 读取',
+          href: '/examples/watch-post-effect',
+        },
+        {
+          id: 'on-watcher-cleanup',
+          title: 'onWatcherCleanup 请求清理',
+          href: '/examples/on-watcher-cleanup',
+        },
+        {
+          id: 'on-scope-dispose',
+          title: 'onScopeDispose 作用域清理',
+          href: '/examples/on-scope-dispose',
+        },
+        {
+          id: 'get-current-scope',
+          title: 'getCurrentScope 作用域探针',
+          href: '/examples/get-current-scope',
+        },
         {
           id: 'render-counter',
           title: '渲染函数计数器',
           href: '/examples/render-counter',
+        },
+        {
+          id: 'on-render-tracked',
+          title: 'onRenderTracked 调试',
+          href: '/examples/on-render-tracked',
+        },
+        {
+          id: 'on-render-triggered',
+          title: 'onRenderTriggered 调试',
+          href: '/examples/on-render-triggered',
         },
         {
           id: 'use-state-counter',
@@ -410,6 +492,11 @@ const TEST_SECTIONS: SidebarSection[] = [
         id: 'handling-input',
         title: '处理输入',
         href: '/examples/handling-input',
+      },
+      {
+        id: 'to-refs',
+        title: 'toRefs 响应式解构',
+        href: '/examples/to-refs',
       },
       {
         id: 'attribute-bindings',

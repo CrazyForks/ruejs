@@ -1,4 +1,9 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Fab 模块概述
+- 汇总悬浮按钮组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import { h, onMounted, onUnmounted, ref, type FC, watch } from '@rue-js/rue'
 import Badge from '../badge'
 import type { BadgeProps } from '../badge'
@@ -7,44 +12,79 @@ import type { ButtonColor, ButtonHTMLType } from '../button'
 import Tooltip from '../tooltip'
 import type { TooltipPlacement, TooltipProps } from '../tooltip'
 
+/** FabType 视觉或语义变体类型。 */
 export type FabType = 'default' | 'primary'
+/** FabShape 类型。 */
 export type FabShape = 'circle' | 'square'
+/** FabTriggerMode 类型。 */
 export type FabTriggerMode = 'click' | 'hover'
+/** FabPlacement 位置或方向类型。 */
 export type FabPlacement = 'top' | 'bottom' | 'left' | 'right'
 
+/** FabBadgeProps 组件属性。 */
 export interface FabBadgeProps extends Omit<BadgeProps, 'children'> {}
 
+/** FabActionProps 组件属性。 */
 export interface FabActionProps {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 图标内容。 */
   icon?: any
+  /** 主体内容。 */
   content?: any
+  /** 描述内容。 */
   description?: any
+  /** tooltip 配置项。 */
   tooltip?: any
+  /** badge 配置项。 */
   badge?: FabBadgeProps
+  /** 组件类型或语义类型。 */
   type?: FabType
+  /** 组件语义色。 */
   color?: ButtonColor
+  /** 组件形状。 */
   shape?: FabShape
+  /** 链接地址。 */
   href?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 原生 button type 属性。 */
   htmlType?: ButtonHTMLType
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** closeOnClick 配置项。 */
   closeOnClick?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FabProps 组件属性。 */
 export interface FabProps extends FabActionProps {
+  /** flower 配置项。 */
   flower?: boolean
+  /** 数据驱动渲染项。 */
   items?: FabActionProps[]
+  /** trigger 区域配置。 */
   trigger?: FabTriggerMode
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 弹出层或内容展示位置。 */
   placement?: FabPlacement
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** menuIcon 图标内容。 */
   menuIcon?: any
+  /** panelClassName 附加类名。 */
   panelClassName?: string
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
 }
 
@@ -57,9 +97,11 @@ interface FabPartProps {
   [key: string]: any
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...parts: Array<string | undefined | false | null>) =>
   parts.filter(Boolean).join(' ')
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -70,12 +112,14 @@ const toChildArray = (children: any): any[] => {
   return [children]
 }
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value === undefined || value === null || value === false || value === '') return false
   if (Array.isArray(value)) return value.some(item => hasRenderableContent(item))
   return true
 }
 
+/** 判断是否存在 Structured Fab Props 的内部工具函数。 */
 const hasStructuredFabProps = (props: FabProps) => {
   return (
     props.items !== undefined ||
@@ -100,16 +144,19 @@ const hasStructuredFabProps = (props: FabProps) => {
   )
 }
 
+/** 解析 Action Color 的内部工具函数。 */
 const resolveActionColor = (type?: FabType, color?: ButtonColor): ButtonColor | undefined => {
   if (color) return color
   return type === 'primary' ? 'primary' : 'default'
 }
 
+/** 解析 Shape 的内部工具函数。 */
 const resolveShape = (shape: FabShape | undefined, content: any) => {
   if (shape) return shape
   return hasRenderableContent(content) ? 'square' : 'circle'
 }
 
+/** 判断 Tooltip Config 的内部工具函数。 */
 const isTooltipConfig = (tooltip: any): tooltip is TooltipProps => {
   if (!tooltip || typeof tooltip !== 'object' || Array.isArray(tooltip)) return false
   return [
@@ -126,6 +173,7 @@ const isTooltipConfig = (tooltip: any): tooltip is TooltipProps => {
   ].some(key => key in tooltip)
 }
 
+/** with Tooltip 的内部工具函数。 */
 const withTooltip = (node: any, tooltip: any, placement: TooltipPlacement) => {
   if (tooltip == null || tooltip === false) return node
   if (isTooltipConfig(tooltip)) {
@@ -142,23 +190,27 @@ const withTooltip = (node: any, tooltip: any, placement: TooltipPlacement) => {
   )
 }
 
+/** with Badge 的内部工具函数。 */
 const withBadge = (node: any, badge?: FabBadgeProps) => {
   if (!badge) return node
   return <Badge {...badge}>{node}</Badge>
 }
 
+/** Default Menu Icon 的内部工具函数。 */
 const DefaultMenuIcon: FC = () => (
   <span aria-hidden="true" className="text-xl leading-none">
     +
   </span>
 )
 
+/** Default Close Icon 的内部工具函数。 */
 const DefaultCloseIcon: FC = () => (
   <span aria-hidden="true" className="text-lg leading-none">
     x
   </span>
 )
 
+/** Action Button 的内部工具函数。 */
 const ActionButton: FC<
   FabActionProps & {
     tooltipPlacement?: TooltipPlacement
@@ -264,6 +316,7 @@ const ActionButton: FC<
   return node
 }
 
+/** 读取 Linear Panel Position 的内部工具函数。 */
 const getLinearPanelPosition = (placement: FabPlacement) => {
   switch (placement) {
     case 'bottom':
@@ -293,6 +346,7 @@ const getLinearPanelPosition = (placement: FabPlacement) => {
   }
 }
 
+/** 读取 Flower Offset 的内部工具函数。 */
 const getFlowerOffset = (index: number, count: number) => {
   const steps = Math.max(Math.min(count, 4), 1) - 1
   const start = 180
@@ -306,10 +360,12 @@ const getFlowerOffset = (index: number, count: number) => {
   }
 }
 
+/** Item 的内部工具函数。 */
 const Item: FC<FabActionProps> = props => {
   return <ActionButton {...props} />
 }
 
+/** Fab 的内部工具函数。 */
 const Fab: FC<FabProps> = props => {
   if (!hasStructuredFabProps(props)) {
     const { flower, className, children, ...rest } = props
@@ -586,6 +642,7 @@ const Fab: FC<FabProps> = props => {
   )
 }
 
+/** Trigger 的内部工具函数。 */
 const Trigger: FC<FabPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   const triggerProps: Record<string, any> = { ...rest }
@@ -604,6 +661,7 @@ const Trigger: FC<FabPartProps> = ({ as = 'div', className, children, ...rest })
   return h(Component, { ...triggerProps, className }, ...(toChildArray(children) as any[]))
 }
 
+/** Close 的内部工具函数。 */
 const Close: FC<FabPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return h(
@@ -613,6 +671,7 @@ const Close: FC<FabPartProps> = ({ as = 'div', className, children, ...rest }) =
   )
 }
 
+/** Main Action 的内部工具函数。 */
 const MainAction: FC<FabPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return h(
@@ -636,4 +695,5 @@ const FabCompound: FabCompound = Object.assign(Fab, {
   Item,
 })
 
+/** 默认导出悬浮按钮组件。 */
 export default FabCompound

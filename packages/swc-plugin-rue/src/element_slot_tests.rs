@@ -100,3 +100,16 @@ fn renders_static_slot_once_without_watch_effect() {
     assert!(out.contains(&normalize(r#"renderAnchor(_list2, root, _list1);"#)));
     assert!(!out.contains("watchEffect("));
 }
+
+#[test]
+fn renders_identifier_slot_once_with_parenthesized_slot_value() {
+    let mut vt = new_vt();
+    let mut stmts = Vec::new();
+
+    render_once_for_slot(&mut vt, &ident("root"), &Expr::Ident(ident("slotValue")), &mut stmts);
+
+    let out = normalize(&emit_stmts(stmts));
+    assert!(out.contains(&normalize(r#"const _list2 = (slotValue);"#)));
+    assert!(out.contains(&normalize(r#"renderAnchor(_list2, root, _list1);"#)));
+    assert!(!out.contains("watchEffect("));
+}

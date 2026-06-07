@@ -273,32 +273,6 @@ const DocDetail: FC = ()=>{
                 }[]>([]));
             const { sidebarType, uiBase, docBase } = getContext(route.value.path || '');
             const DOCS_META = SECTIONS_BY_TYPE[sidebarType].flatMap((sec)=>flatten(sec.items));
-            _$vaporWithHookId("useEffect:1:3", ()=>useEffect(()=>{
-                    let cancelled = false;
-                    (async ()=>{
-                        const seg = docPath || '';
-                        const meta = DOCS_META.find((d)=>d.id === seg);
-                        setTitle(meta?.title || seg.split('/').pop() || seg);
-                        const base = docBase;
-                        const url = import.meta.env.DEV ? new URL(`${base}/${docPath}.md?raw`, import.meta.url) : `${base}/${docPath}.md`;
-                        console.log(url);
-                        try {
-                            const md = await fetch(url as any).then((r)=>r.text());
-                            const html = await mdToHtml(md);
-                            if (!cancelled) setHtml(html);
-                        } catch  {
-                            if (!cancelled) setHtml(`<p class="text-gray-600">加载文档失败</p>`);
-                        }
-                    })();
-                    return ()=>{
-                        cancelled = true;
-                    };
-                }, [
-                    docPath
-                ]));
-            const currentIndex = DOCS_META.findIndex((d)=>d.id === (docPath || ''));
-            const prev = currentIndex > 0 ? DOCS_META[currentIndex - 1] : undefined;
-            const next = currentIndex >= 0 && currentIndex < DOCS_META.length - 1 ? DOCS_META[currentIndex + 1] : undefined;
             return {
                 route: route,
                 docPath: docPath,
@@ -311,20 +285,43 @@ const DocDetail: FC = ()=>{
                 sidebarType: sidebarType,
                 uiBase: uiBase,
                 docBase: docBase,
-                DOCS_META: DOCS_META,
-                currentIndex: currentIndex,
-                prev: prev,
-                next: next
+                DOCS_META: DOCS_META
             };
         }));
-    const { route: route, docPath: docPath, _title: _title, setTitle: setTitle, html: html, setHtml: setHtml, _results: _results, _setResults: _setResults, sidebarType: sidebarType, uiBase: uiBase, docBase: docBase, DOCS_META: DOCS_META, currentIndex: currentIndex, prev: prev, next: next } = _$useSetup;
-    return vapor(()=>{
+    const { route: route, docPath: docPath, _title: _title, setTitle: setTitle, html: html, setHtml: setHtml, _results: _results, _setResults: _setResults, sidebarType: sidebarType, uiBase: uiBase, docBase: docBase, DOCS_META: DOCS_META } = _$useSetup;
+    _$vaporWithHookId("useEffect:1:3", ()=>useEffect(()=>{
+            let cancelled = false;
+            (async ()=>{
+                const seg = docPath || '';
+                const meta = DOCS_META.find((d)=>d.id === seg);
+                setTitle(meta?.title || seg.split('/').pop() || seg);
+                const base = docBase;
+                const url = import.meta.env.DEV ? new URL(`${base}/${docPath}.md?raw`, import.meta.url) : `${base}/${docPath}.md`;
+                console.log(url);
+                try {
+                    const md = await fetch(url as any).then((r)=>r.text());
+                    const html = await mdToHtml(md);
+                    if (!cancelled) setHtml(html);
+                } catch  {
+                    if (!cancelled) setHtml(`<p class="text-gray-600">加载文档失败</p>`);
+                }
+            })();
+            return ()=>{
+                cancelled = true;
+            };
+        }, [
+            docPath
+        ]));
+    const currentIndex = DOCS_META.findIndex((d)=>d.id === (docPath || ''));
+    const prev = currentIndex > 0 ? DOCS_META[currentIndex - 1] : undefined;
+    const next = currentIndex >= 0 && currentIndex < DOCS_META.length - 1 ? DOCS_META[currentIndex + 1] : undefined;
+    return vapor((__rue_parent_context)=>{
         const _root = _$createDocumentFragment();
         const _list6 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list6);
         const __child1 = vapor(()=>{
             const _root = _$createDocumentFragment();
-            const _el1 = _$createElement("div");
+            const _el1 = _$createElement("div", _root);
             _$appendChild(_root, _el1);
             _$setClassName(_el1, "prose prose-sm md:prose-base");
             watchEffect(()=>{
@@ -338,15 +335,15 @@ const DocDetail: FC = ()=>{
             watchEffect(()=>{
                 const __slot = currentIndex >= 0 ? vapor(()=>{
                     const _root = _$createDocumentFragment();
-                    const _el2 = _$createElement("div");
+                    const _el2 = _$createElement("div", _root);
                     _$appendChild(_root, _el2);
                     _$setClassName(_el2, "mt-8 flex justify-between");
-                const _list2 = _$createComment("rue:slot:anchor");
-                _$appendChild(_el2, _list2);
+                    const _list2 = _$createComment("rue:slot:anchor");
+                    _$appendChild(_el2, _list2);
                     watchEffect(()=>{
                         const __slot = prev ? vapor(()=>{
                             const _root = _$createDocumentFragment();
-                            const _el3 = _$createElement("a");
+                            const _el3 = _$createElement("a", _root);
                             _$appendChild(_root, _el3);
                             watchEffect(()=>{
                                 _$setAttribute(_el3, "href", String(RouterLink.__rueHref(`${uiBase}/${prev.id}`)));
@@ -357,28 +354,28 @@ const DocDetail: FC = ()=>{
                             const _list1 = _$createComment("rue:slot:anchor");
                             _$appendChild(_el3, _list1);
                             watchEffect(()=>{
-                              const __slot = (prev.title);
-                              untrack(()=>renderAnchor(__slot, _el3, _list1));
+                                const __slot = (prev.title);
+                                untrack(()=>renderAnchor(__slot, _el3, _list1));
                             });
                             return _root;
                         }) : vapor(()=>{
                             const _root = _$createDocumentFragment();
-                            const _el4 = _$createElement("span");
+                            const _el4 = _$createElement("span", _root);
                             _$appendChild(_root, _el4);
                             return _root;
                         });
-                          untrack(()=>renderAnchor(__slot, _el2, _list2));
+                        untrack(()=>renderAnchor(__slot, _el2, _list2));
                     });
                     _$appendChild(_el2, _$createTextNode(" "));
-                        const _list4 = _$createComment("rue:slot:anchor");
-                        _$appendChild(_el2, _list4);
+                    const _list4 = _$createComment("rue:slot:anchor");
+                    _$appendChild(_el2, _list4);
                     watchEffect(()=>{
                         const __slot = next ? vapor(()=>{
                             const _root = _$createDocumentFragment();
-                            const _el5 = _$createElement("a");
+                            const _el5 = _$createElement("a", _root);
                             _$appendChild(_root, _el5);
                             watchEffect(()=>{
-                              _$setAttribute(_el5, "href", String(RouterLink.__rueHref(`${uiBase}/${next.id}`)));
+                                _$setAttribute(_el5, "href", String(RouterLink.__rueHref(`${uiBase}/${next.id}`)));
                             });
                             _$addEventListener(_el5, "click", ((e)=>RouterLink.__rueOnClick(e, `${uiBase}/${next.id}`, false)));
                             _$setClassName(_el5, "btn btn-outline btn-sm");
@@ -386,37 +383,36 @@ const DocDetail: FC = ()=>{
                             const _list3 = _$createComment("rue:slot:anchor");
                             _$appendChild(_el5, _list3);
                             watchEffect(()=>{
-                              const __slot = (next.title);
-                              untrack(()=>renderAnchor(__slot, _el5, _list3));
+                                const __slot = (next.title);
+                                untrack(()=>renderAnchor(__slot, _el5, _list3));
                             });
                             _$appendChild(_el5, _$createTextNode(" →"));
                             return _root;
                         }) : vapor(()=>{
                             const _root = _$createDocumentFragment();
-                            const _el6 = _$createElement("span");
+                            const _el6 = _$createElement("span", _root);
                             _$appendChild(_root, _el6);
                             return _root;
                         });
-                          untrack(()=>renderAnchor(__slot, _el2, _list4));
+                        untrack(()=>renderAnchor(__slot, _el2, _list4));
                     });
                     return _root;
                 }) : "";
-                      untrack(()=>renderAnchor(__slot, _root, _list5));
+                untrack(()=>renderAnchor(__slot, _root, _list5));
             });
             return _root;
         });
         watchEffect(()=>{
-                    const __slot7 = _$createComponent(SidebarPlayground, {
+            const __slot7 = _$createComponent(SidebarPlayground, {
                 type: sidebarType,
                 children: __child1
             });
-              untrack(()=>renderAnchor(__slot7, _root, _list6));
+            untrack(()=>renderAnchor(__slot7, _root, _list6));
         });
         return _root;
     });
 };
-export default DocDetail;
-"##;
+export default DocDetail;"##;
 
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();

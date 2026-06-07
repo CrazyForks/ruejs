@@ -7,144 +7,254 @@ Transfer 组件概述
 import type { FC } from '@rue-js/rue'
 import { h, onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
 
+/** TransferKey 标识键类型。 */
 export type TransferKey = string | number
+/** TransferDirection 位置或方向类型。 */
 export type TransferDirection = 'left' | 'right'
+/** TransferStatus 状态类型。 */
 export type TransferStatus = 'warning' | 'error'
+/** TransferSize 尺寸类型。 */
 export type TransferSize = 'small' | 'default' | 'middle' | 'large' | 'sm' | 'md' | 'lg'
 
+/** TransferItem 数据项结构。 */
 export interface TransferItem {
+  /** 数据项唯一标识。 */
   key?: TransferKey
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** TransferRenderResultObject 接口。 */
 export interface TransferRenderResultObject {
+  /** 展示标签。 */
   label: any
+  /** 受控值。 */
   value?: string
+  /** 描述内容。 */
   description?: any
 }
 
+/** TransferRenderResult 类型。 */
 export type TransferRenderResult = TransferRenderResultObject | string | number | any | null
+/** TransferRender 自定义渲染函数类型。 */
 export type TransferRender<RecordType> = (item: RecordType) => TransferRenderResult
 
+/** TransferLocale 接口。 */
 export interface TransferLocale {
+  /** titles 配置项。 */
   titles?: any[]
+  /** notFoundContent 配置项。 */
   notFoundContent?: any | any[]
+  /** searchPlaceholder 配置项。 */
   searchPlaceholder?: any
+  /** itemUnit 配置项。 */
   itemUnit?: string
+  /** itemsUnit 配置项。 */
   itemsUnit?: string
+  /** remove 配置项。 */
   remove?: any
+  /** selectAll 配置项。 */
   selectAll?: any
+  /** deselectAll 配置项。 */
   deselectAll?: any
+  /** selectInvert 配置项。 */
   selectInvert?: any
+  /** clearSelection 配置项。 */
   clearSelection?: any
+  /** removeSelected 配置项。 */
   removeSelected?: any
 }
 
+/** TransferSearchConfig 配置对象。 */
 export interface TransferSearchConfig {
+  /** 占位内容。 */
   placeholder?: string
+  /** 非受控初始值。 */
   defaultValue?: string
 }
 
+/** TransferPaginationConfig 配置对象。 */
 export interface TransferPaginationConfig {
+  /** pageSize 尺寸。 */
   pageSize?: number
 }
 
+/** TransferListStyleInfo 接口。 */
 export interface TransferListStyleInfo {
+  /** 布局方向。 */
   direction: TransferDirection
 }
 
+/** TransferClassNames 局部类名配置。 */
 export interface TransferClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** panel 区域配置。 */
   panel?: string
+  /** 头部区域内容。 */
   header?: string
+  /** search 配置项。 */
   search?: string
+  /** 主体区域配置。 */
   body?: string
+  /** list 区域配置。 */
   list?: string
+  /** item 区域配置。 */
   item?: string
+  /** operations 配置项。 */
   operations?: string
+  /** 底部区域内容。 */
   footer?: string
+  /** empty 配置项。 */
   empty?: string
+  /** pager 配置项。 */
   pager?: string
 }
 
+/** TransferStyles 局部样式配置。 */
 export interface TransferStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** panel 区域配置。 */
   panel?: Record<string, any>
+  /** 头部区域内容。 */
   header?: Record<string, any>
+  /** search 配置项。 */
   search?: Record<string, any>
+  /** 主体区域配置。 */
   body?: Record<string, any>
+  /** list 区域配置。 */
   list?: Record<string, any>
+  /** item 区域配置。 */
   item?: Record<string, any>
+  /** operations 配置项。 */
   operations?: Record<string, any>
+  /** 底部区域内容。 */
   footer?: Record<string, any>
+  /** empty 配置项。 */
   empty?: Record<string, any>
+  /** pager 配置项。 */
   pager?: Record<string, any>
 }
 
+/** TransferRenderListItem 数据项结构。 */
 export interface TransferRenderListItem<RecordType = TransferItem> {
+  /** 数据项唯一标识。 */
   key: TransferKey
+  /** record 配置项。 */
   record: RecordType
+  /** 是否禁用交互。 */
   disabled: boolean
+  /** 展示标签。 */
   label: any
+  /** 描述内容。 */
   description?: any
+  /** searchText 文本内容。 */
   searchText: string
 }
 
+/** TransferRenderListProps 组件属性。 */
 export interface TransferRenderListProps<RecordType = TransferItem> {
+  /** 布局方向。 */
   direction: TransferDirection
+  /** 是否禁用交互。 */
   disabled: boolean
+  /** 数据驱动渲染项。 */
   items: TransferRenderListItem<RecordType>[]
+  /** filteredItems 配置项。 */
   filteredItems: TransferRenderListItem<RecordType>[]
+  /** selectedKeys 标识键集合。 */
   selectedKeys: TransferKey[]
+  /** searchValue 值。 */
   searchValue: string
+  /** onItemSelect 事件回调。 */
   onItemSelect: (key: TransferKey, selected: boolean) => void
+  /** onItemSelectAll 事件回调。 */
   onItemSelectAll: (keys: TransferKey[], selected: boolean) => void
 }
 
+/** TransferProps 组件属性。 */
 export interface TransferProps<RecordType = TransferItem> {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 组件尺寸。 */
   size?: TransferSize
+  /** 组件状态。 */
   status?: TransferStatus
+  /** 数据源。 */
   dataSource?: RecordType[]
+  /** targetKeys 标识键集合。 */
   targetKeys?: TransferKey[]
+  /** defaultTargetKeys 标识键集合。 */
   defaultTargetKeys?: TransferKey[]
+  /** selectedKeys 标识键集合。 */
   selectedKeys?: TransferKey[]
+  /** defaultSelectedKeys 标识键集合。 */
   defaultSelectedKeys?: TransferKey[]
+  /** render 配置项。 */
   render?: TransferRender<RecordType>
+  /** 值或状态变化时触发的回调。 */
   onChange?: (
     targetKeys: TransferKey[],
     direction: TransferDirection,
     moveKeys: TransferKey[],
   ) => void
+  /** onSelectChange 事件回调。 */
   onSelectChange?: (sourceSelectedKeys: TransferKey[], targetSelectedKeys: TransferKey[]) => void
+  /** titles 配置项。 */
   titles?: any[]
+  /** operations 配置项。 */
   operations?: any[]
+  /** 操作区内容。 */
   actions?: any[]
+  /** showSearch 配置项。 */
   showSearch?: boolean | TransferSearchConfig
+  /** filterOption 配置项。 */
   filterOption?: (inputValue: string, item: RecordType, direction: TransferDirection) => boolean
+  /** locale 配置项。 */
   locale?: TransferLocale
+  /** 底部区域内容。 */
   footer?: (
     props: TransferRenderListProps<RecordType>,
     info: { direction: TransferDirection },
   ) => any
+  /** renderList 配置项。 */
   renderList?: (props: TransferRenderListProps<RecordType>) => any
+  /** rowKey 标识键。 */
   rowKey?: (record: RecordType) => TransferKey
+  /** 搜索文本变化时触发的回调。 */
   onSearch?: (direction: TransferDirection, value: string) => void
+  /** onScroll 事件回调。 */
   onScroll?: (direction: TransferDirection, event: Event) => void
+  /** 组件子内容。 */
   children?: (props: TransferRenderListProps<RecordType>) => any
+  /** showSelectAll 配置项。 */
   showSelectAll?: boolean
+  /** selectAllLabels 配置项。 */
   selectAllLabels?: Array<any | ((info: { selectedCount: number; totalCount: number }) => any)>
+  /** oneWay 配置项。 */
   oneWay?: boolean
+  /** pagination 配置项。 */
   pagination?: boolean | TransferPaginationConfig
+  /** listStyle 内联样式。 */
   listStyle?: Record<string, any> | ((info: TransferListStyleInfo) => Record<string, any>)
+  /** operationStyle 内联样式。 */
   operationStyle?: Record<string, any>
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: TransferClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: TransferStyles
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -169,6 +279,7 @@ interface TransferStateSnapshot<RecordType> {
 
 type TransferSelectAllLabel = NonNullable<TransferProps<any>['selectAllLabels']>[number]
 
+/** 解析 Display Label 的内部工具函数。 */
 const resolveDisplayLabel = <RecordType,>(item: NormalizedTransferItem<RecordType>) => {
   if (typeof item.label === 'string' || typeof item.label === 'number') return item.label
   return resolveFallbackLabel(item.record, item.key)
@@ -188,16 +299,20 @@ const defaultLocale: Required<TransferLocale> = {
   removeSelected: '移出已选',
 }
 
+/** TRANSFER_REENTRANT_RENDER_ERROR 内部常量。 */
 const TRANSFER_REENTRANT_RENDER_ERROR =
   'Reentrant render detected on the same target. This usually means render logic triggered a nested render or state update while that target was already rendering.'
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
+/** 转换为 Key Text 的内部工具函数。 */
 const toKeyText = (key: TransferKey) => `${typeof key}:${String(key)}`
 
+/** uniq Keys 的内部工具函数。 */
 const uniqKeys = (keys?: ReadonlyArray<TransferKey>) => {
   const next: TransferKey[] = []
   const seen = new Set<string>()
@@ -212,16 +327,19 @@ const uniqKeys = (keys?: ReadonlyArray<TransferKey>) => {
   return next
 }
 
+/** 判断是否存在 Key 的内部工具函数。 */
 const hasKey = (keys: ReadonlyArray<TransferKey>, key: TransferKey) => {
   const keyText = toKeyText(key)
   return keys.some(current => toKeyText(current) === keyText)
 }
 
+/** remove Keys 的内部工具函数。 */
 const removeKeys = (keys: ReadonlyArray<TransferKey>, keysToRemove: ReadonlyArray<TransferKey>) => {
   const removeSet = new Set(keysToRemove.map(toKeyText))
   return keys.filter(key => !removeSet.has(toKeyText(key)))
 }
 
+/** stringify Search Part 的内部工具函数。 */
 const stringifySearchPart = (value: any): string => {
   if (value == null || typeof value === 'boolean') return ''
   if (typeof value === 'string' || typeof value === 'number') return String(value)
@@ -241,12 +359,14 @@ const stringifySearchPart = (value: any): string => {
   return ''
 }
 
+/** 解析 Fallback Label 的内部工具函数。 */
 const resolveFallbackLabel = (record: any, key: TransferKey) => {
   const candidates = [record?.title, record?.label, record?.name, record?.text, record?.description]
   const matched = candidates.find(candidate => candidate !== undefined && candidate !== null)
   return matched ?? String(key)
 }
 
+/** 归一化 Render Result 的内部工具函数。 */
 const normalizeRenderResult = <RecordType,>(
   record: RecordType,
   key: TransferKey,
@@ -293,6 +413,7 @@ const normalizeRenderResult = <RecordType,>(
   }
 }
 
+/** 解析 Record Key 的内部工具函数。 */
 const resolveRecordKey = <RecordType,>(
   record: RecordType,
   index: number,
@@ -304,6 +425,7 @@ const resolveRecordKey = <RecordType,>(
   return index
 }
 
+/** 归一化 Data Source 的内部工具函数。 */
 const normalizeDataSource = <RecordType,>(
   dataSource: RecordType[] | undefined,
   rowKey?: (record: RecordType) => TransferKey,
@@ -332,11 +454,13 @@ const normalizeDataSource = <RecordType,>(
   })
 }
 
+/** 解析 Titles 的内部工具函数。 */
 const resolveTitles = (titles?: any[], localeTitles?: any[]) => {
   const resolved = titles ?? localeTitles ?? defaultLocale.titles
   return [resolved[0] ?? defaultLocale.titles[0], resolved[1] ?? defaultLocale.titles[1]]
 }
 
+/** 解析 Not Found Content 的内部工具函数。 */
 const resolveNotFoundContent = (
   notFoundContent: any | any[] | undefined,
   direction: TransferDirection,
@@ -347,6 +471,7 @@ const resolveNotFoundContent = (
   return notFoundContent ?? defaultLocale.notFoundContent
 }
 
+/** 归一化 Search Config 的内部工具函数。 */
 const normalizeSearchConfig = (showSearch?: boolean | TransferSearchConfig) => {
   if (!showSearch)
     return { enabled: false, placeholder: defaultLocale.searchPlaceholder, defaultValue: '' }
@@ -360,12 +485,14 @@ const normalizeSearchConfig = (showSearch?: boolean | TransferSearchConfig) => {
   return { enabled: true, placeholder: defaultLocale.searchPlaceholder, defaultValue: '' }
 }
 
+/** 归一化 Pagination 的内部工具函数。 */
 const normalizePagination = (pagination?: boolean | TransferPaginationConfig) => {
   if (!pagination) return null
   if (pagination === true) return { pageSize: 10 }
   return { pageSize: Math.max(1, Math.floor(pagination.pageSize ?? 10)) }
 }
 
+/** 解析 List Style 的内部工具函数。 */
 const resolveListStyle = (
   listStyle: TransferProps['listStyle'],
   direction: TransferDirection,
@@ -375,6 +502,7 @@ const resolveListStyle = (
   return listStyle
 }
 
+/** partition Selected Keys 的内部工具函数。 */
 const partitionSelectedKeys = <RecordType,>(
   keys: ReadonlyArray<TransferKey>,
   targetKeySet: Set<string>,
@@ -393,6 +521,7 @@ const partitionSelectedKeys = <RecordType,>(
   return { left, right }
 }
 
+/** filter Items 的内部工具函数。 */
 const filterItems = <RecordType,>(
   items: NormalizedTransferItem<RecordType>[],
   inputValue: string,
@@ -408,6 +537,7 @@ const filterItems = <RecordType,>(
   })
 }
 
+/** paginate Items 的内部工具函数。 */
 const paginateItems = <RecordType,>(
   items: NormalizedTransferItem<RecordType>[],
   page: number,
@@ -432,10 +562,12 @@ const paginateItems = <RecordType,>(
   }
 }
 
+/** 解析 Unit Label 的内部工具函数。 */
 const resolveUnitLabel = (total: number, locale: Required<TransferLocale>) => {
   return total === 1 ? locale.itemUnit : locale.itemsUnit
 }
 
+/** 解析 Select All Label 的内部工具函数。 */
 const resolveSelectAllLabel = (
   label: TransferSelectAllLabel | undefined,
   info: { selectedCount: number; totalCount: number },
@@ -444,6 +576,7 @@ const resolveSelectAllLabel = (
   return label
 }
 
+/** 解析 Size Config 的内部工具函数。 */
 const resolveSizeConfig = (size?: TransferSize) => {
   switch (size) {
     case 'small':
@@ -475,6 +608,7 @@ const resolveSizeConfig = (size?: TransferSize) => {
   }
 }
 
+/** 解析 Status Class Name 的内部工具函数。 */
 const resolveStatusClassName = (status?: TransferStatus) => {
   switch (status) {
     case 'error':
@@ -486,11 +620,13 @@ const resolveStatusClassName = (status?: TransferStatus) => {
   }
 }
 
+/** 解析 Checkbox Class Name 的内部工具函数。 */
 const resolveCheckboxClassName = (size?: 'sm' | 'md') => {
   if (size === 'md') return 'checkbox checkbox-md'
   return 'checkbox checkbox-sm'
 }
 
+/** Arrow Right Icon 的内部工具函数。 */
 const ArrowRightIcon: FC = () => {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-4">
@@ -500,6 +636,7 @@ const ArrowRightIcon: FC = () => {
   )
 }
 
+/** Arrow Left Icon 的内部工具函数。 */
 const ArrowLeftIcon: FC = () => {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-4">
@@ -509,6 +646,7 @@ const ArrowLeftIcon: FC = () => {
   )
 }
 
+/** Close Icon 的内部工具函数。 */
 const CloseIcon: FC = () => {
   return (
     <svg
@@ -559,6 +697,7 @@ interface TransferManagedPanelProps {
   setCurrentPage: (nextPage: number) => void
 }
 
+/** Transfer Managed Panel 的内部工具函数。 */
 const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
   direction,
   rawItems,
@@ -978,6 +1117,7 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
   )
 }
 
+/** Transfer 的内部工具函数。 */
 const Transfer: FC<TransferProps<any>> = ({
   className,
   style,
@@ -1514,4 +1654,5 @@ const Transfer: FC<TransferProps<any>> = ({
   )
 }
 
+/** 默认导出穿梭框组件。 */
 export default Transfer

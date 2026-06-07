@@ -1,0 +1,438 @@
+import { describe, expect, it, vi } from 'vite-plus/test'
+import { renderPagesPageResponse } from '../src/server/pages-page-response.js'
+import { createElement, isRueRenderableHandle } from './rue-test-utils.js'
+
+function createStream(chunks: string[]): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder()
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk))
+      }
+      controller.close()
+    },
+  })
+}
+
+function createByteStream(chunks: Uint8Array[]): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(chunk)
+      }
+      controller.close()
+    },
+  })
+}
+
+function createFailingStream(error: Error): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('<div>partial'))
+      controller.error(error)
+    },
+  })
+}
+
+async function settleMicrotasks(): Promise<void> {
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
+function createCommonOptions() {
+  const clearSsrContext = vi.fn()
+  const createPageElement = vi.fn((pageProps: Record<string, unknown>) =>
+    createElement('div', {
+      'data-page': typeof pageProps.title === 'string' ? pageProps.title : '',
+    }),
+  )
+  const isrSet = vi.fn(async () => {})
+  const renderDocumentToString = vi.fn(
+    async () =>
+      '<!DOCTYPE html><html><head></head><body><div id="__text">__TEXT_MAIN__</div><!-- __TEXT_SCRIPTS__ --></body></html>',
+  )
+  const renderIsrPassToStringAsync = vi.fn(async () => '<div>cached-body</div>')
+  const renderToReadableStream = vi.fn(async () => createStream(['<div>live-body</div>']))
+
+  return {
+    clearSsrContext,
+    createPageElement,
+    isrSet,
+    renderDocumentToString,
+    renderIsrPassToStringAsync,
+    renderToReadableStream,
+    options: {
+      assetTags: '<script type="module" src="/entry.js" crossorigin></script>',
+      buildId: 'build-123',
+      clearSsrContext,
+      createPageElement,
+      DocumentComponent: function TestDocument() {
+        return null
+      },
+      flushPreloads: vi.fn(async () => {}),
+      fontLinkHeader: '</font.woff2>; rel=preload; as=font; type=font/woff2; crossorigin',
+      fontPreloads: [{ href: '/font.woff2', type: 'font/woff2' }],
+      getFontLinks: vi.fn(() => ['/font.css']),
+      getFontStyles: vi.fn(() => ['.font { font-family: Test; }']),
+      getSSRHeadHTML: vi.fn(() => '<meta name="test-head" content="1" />'),
+      gsspRes: null,
+      isrCacheKey(_router: string, pathname: string) {
+        return `pages:${pathname}`
+      },
+      isrRevalidateSeconds: null,
+      isrSet,
+      i18n: {
+        locale: 'en',
+        locales: ['en', 'fr'],
+        defaultLocale: 'en',
+        domainLocales: [{ domain: 'example.com', defaultLocale: 'en', locales: ['en'] }],
+      },
+      pageProps: { title: 'hello' },
+      params: { slug: 'post' },
+      renderDocumentToString,
+      renderToReadableStream,
+      resetSSRHead: vi.fn(),
+      routePattern: '/posts/[slug]',
+      routeUrl: '/posts/post',
+      safeJsonStringify(value: unknown) {
+        return JSON.stringify(value)
+      },
+    },
+  }
+}
+
+describe('pages page response', () => {
+  it('passes Rue renderables to the page renderer without Rue wrapping', async () => {
+    const common = createCommonOptions()
+
+    await renderPagesPageResponse(common.options)
+
+    expect(isRueRenderableHandle(common.renderToReadableStream.mock.calls[0]?.[0])).toBe(true)
+  })
+
+  it('renders the document shell, merges gSSP headers, and marks streamed HTML responses', async () => {
+    const common = createCommonOptions()
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      gsspRes: {
+        statusCode: 201,
+        getHeaders() {
+          return {
+            'content-type': 'application/json',
+            'x-test': '1',
+          }
+        },
+      },
+    })
+
+    expect(response.status).toBe(201)
+    expect(response.headers.get('content-type')).toBe('text/html')
+    expect(response.headers.get('x-test')).toBe('1')
+    expect(response.headers.get('link')).toBe(
+      '</font.woff2>; rel=preload; as=font; type=font/woff2; crossorigin',
+    )
+    expect(
+      (response as Response & { __textStreamedHtmlResponse?: boolean }).__textStreamedHtmlResponse,
+    ).toBe(true)
+
+    const html = await response.text()
+    expect(html).toContain('<div>live-body</div>')
+    expect(html).toContain('<meta name="test-head" content="1" />')
+    expect(html).toContain('<link rel="stylesheet" href="/font.css" />')
+    expect(html).toContain('window.__TEXT_DATA__')
+    expect(html).toContain('__TEXT_LOCALE__')
+
+    expect(common.clearSsrContext).toHaveBeenCalledTimes(1)
+    expect(common.renderDocumentToString).toHaveBeenCalledTimes(1)
+  })
+
+  it('adds a doctype when a custom document renders from the html element', async () => {
+    const common = createCommonOptions()
+    common.renderDocumentToString.mockResolvedValue(
+      '<html lang="en"><head></head><body><div id="__text">__TEXT_MAIN__</div><!-- __TEXT_SCRIPTS__ --></body></html>',
+    )
+
+    const response = await renderPagesPageResponse(common.options)
+
+    await expect(response.text()).resolves.toMatch(/^<!DOCTYPE html>\n<html lang="en">/)
+  })
+
+  it('preserves array-valued non-set-cookie headers from gSSP responses', async () => {
+    const common = createCommonOptions()
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      gsspRes: {
+        statusCode: 200,
+        getHeaders() {
+          return {
+            vary: ['Accept', 'Accept-Encoding'],
+            'set-cookie': ['a=1; Path=/', 'b=2; Path=/'],
+            'x-custom': 42,
+          }
+        },
+      },
+    })
+
+    expect(response.headers.get('vary')).toBe('Accept, Accept-Encoding')
+    expect(response.headers.get('x-custom')).toBe('42')
+    expect(response.headers.getSetCookie()).toEqual(['a=1; Path=/', 'b=2; Path=/'])
+  })
+
+  it('records the streamed body into the ISR HTML cache without a second page render', async () => {
+    const common = createCommonOptions()
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      DocumentComponent: null,
+      expireSeconds: 300,
+      getSSRHeadHTML: undefined,
+      isrRevalidateSeconds: 60,
+      routeUrl: '/posts/post?draft=0',
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('s-maxage=60, stale-while-revalidate=240')
+    expect(response.headers.get('x-text-cache')).toBe('MISS')
+    expect(response.headers.get('x-textjs-cache')).toBe('MISS')
+    await expect(response.text()).resolves.toContain('<div>live-body</div>')
+    await settleMicrotasks()
+
+    expect(common.createPageElement).toHaveBeenCalledTimes(1)
+    expect(common.renderIsrPassToStringAsync).not.toHaveBeenCalled()
+    expect(common.isrSet).toHaveBeenCalledTimes(1)
+    expect(common.isrSet).toHaveBeenCalledWith(
+      'pages:/posts/post',
+      expect.objectContaining({
+        kind: 'PAGES',
+        html: expect.stringContaining('<div>live-body</div>'),
+        pageData: { title: 'hello' },
+      }),
+      60,
+      undefined,
+      300,
+    )
+  })
+
+  it('records split UTF-8 chunks without corrupting cached ISR HTML', async () => {
+    const common = createCommonOptions()
+    common.renderToReadableStream.mockResolvedValue(
+      createByteStream([
+        new Uint8Array([0xe2]),
+        new Uint8Array([0x82, 0xac]),
+        new TextEncoder().encode('<div>live-body</div>'),
+      ]),
+    )
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      isrRevalidateSeconds: 60,
+    })
+
+    await expect(response.text()).resolves.toContain('\u20ac<div>live-body</div>')
+    await settleMicrotasks()
+
+    expect(common.isrSet).toHaveBeenCalledWith(
+      'pages:/posts/post',
+      expect.objectContaining({
+        html: expect.stringContaining('\u20ac<div>live-body</div>'),
+      }),
+      60,
+      undefined,
+      undefined,
+    )
+  })
+
+  it('does not write a Pages ISR cache entry when the streamed render fails', async () => {
+    const common = createCommonOptions()
+    common.renderToReadableStream.mockResolvedValue(createFailingStream(new Error('stream failed')))
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      const response = await renderPagesPageResponse({
+        ...common.options,
+        isrRevalidateSeconds: 60,
+      })
+
+      await expect(response.text()).rejects.toThrow('stream failed')
+      await settleMicrotasks()
+
+      expect(common.renderIsrPassToStringAsync).not.toHaveBeenCalled()
+      expect(common.isrSet).not.toHaveBeenCalled()
+      expect(consoleError).toHaveBeenCalledWith(
+        '[text] Pages ISR cache write failed for pages:/posts/post:',
+        expect.any(Error),
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('adds nonce attributes to inline scripts and font tags when provided', async () => {
+    const common = createCommonOptions()
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      assetTags:
+        '<link rel="modulepreload" nonce="pages-test-nonce" href="/entry.js" />\n' +
+        '<script type="module" nonce="pages-test-nonce" src="/entry.js" crossorigin></script>',
+      scriptNonce: 'pages-test-nonce',
+    })
+
+    const html = await response.text()
+    expect(html).toContain('<script nonce="pages-test-nonce">window.__TEXT_DATA__ = ')
+    expect(html).toContain('<link rel="stylesheet" nonce="pages-test-nonce" href="/font.css" />')
+    expect(html).toContain(
+      '<link rel="preload" nonce="pages-test-nonce" href="/font.woff2" as="font" type="font/woff2" crossorigin />',
+    )
+    expect(html).toContain('<style data-text-fonts nonce="pages-test-nonce">')
+    expect(html).toContain(
+      '<script type="module" nonce="pages-test-nonce" src="/entry.js" crossorigin></script>',
+    )
+  })
+
+  it('renders page before collecting SSR head HTML to prevent style race conditions', async () => {
+    // Ported from Text.js: vercel/text.js@9853944
+    // styled-jsx (and <Head>) styles must be collected AFTER rendering completes,
+    // not concurrently. Otherwise dynamic styles that are registered during
+    // rendering are silently dropped from the HTML output.
+    const common = createCommonOptions()
+    const callOrder: string[] = []
+
+    common.renderToReadableStream.mockImplementation(async () => {
+      // Verify getSSRHeadHTML has NOT been called yet
+      expect(common.options.getSSRHeadHTML).not.toHaveBeenCalled()
+      callOrder.push('render')
+      // Return the original stream by calling the original factory
+      return createStream(['<div>live-body</div>'])
+    })
+
+    ;(common.options.getSSRHeadHTML as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callOrder.push('head')
+      return '<meta name="test-head" content="1" />'
+    })
+
+    await renderPagesPageResponse(common.options)
+
+    expect(callOrder).toEqual(['render', 'head'])
+  })
+
+  it('clears SSR context only after rendering, not before', async () => {
+    const common = createCommonOptions()
+    const callOrder: string[] = []
+
+    common.renderToReadableStream.mockImplementation(async () => {
+      // Verify clearSsrContext has NOT been called yet
+      expect(common.clearSsrContext).not.toHaveBeenCalled()
+      callOrder.push('render')
+      return createStream(['<div>live-body</div>'])
+    })
+
+    common.clearSsrContext.mockImplementation(() => {
+      callOrder.push('clear')
+    })
+
+    await renderPagesPageResponse(common.options)
+
+    expect(callOrder).toEqual(['render', 'clear'])
+  })
+
+  // Matches Text.js's `pages-handler.ts` (revalidate: 0 →
+  // getCacheControlHeader). gSSP responses with no user-set Cache-Control
+  // must default to no-store so middlebox caches do not pin per-request
+  // server-rendered HTML. See packages/text/src/server/dev-server.ts for
+  // the dev-server twin. Fixes #1461.
+  it('applies default no-store Cache-Control for gSSP responses without one', async () => {
+    const common = createCommonOptions()
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      gsspRes: {
+        statusCode: 200,
+        getHeaders() {
+          return { 'x-test': '1' }
+        },
+      },
+    })
+
+    expect(response.headers.get('cache-control')).toBe(
+      'private, no-cache, no-store, max-age=0, must-revalidate',
+    )
+  })
+
+  it('preserves user-set Cache-Control from gSSP res.setHeader', async () => {
+    const common = createCommonOptions()
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      gsspRes: {
+        statusCode: 200,
+        getHeaders() {
+          return { 'Cache-Control': 'public, max-age=60' }
+        },
+      },
+    })
+
+    expect(response.headers.get('cache-control')).toBe('public, max-age=60')
+  })
+
+  it('preserves user-set Cache-Control regardless of header name case', async () => {
+    const common = createCommonOptions()
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      gsspRes: {
+        statusCode: 200,
+        getHeaders() {
+          return { 'cache-control': 's-maxage=120' }
+        },
+      },
+    })
+
+    expect(response.headers.get('cache-control')).toBe('s-maxage=120')
+  })
+
+  it('lets ISR Cache-Control win over the gSSP default when both apply', async () => {
+    const common = createCommonOptions()
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      gsspRes: {
+        statusCode: 200,
+        getHeaders() {
+          return { 'x-test': '1' }
+        },
+      },
+      isrRevalidateSeconds: 60,
+    })
+
+    expect(response.headers.get('cache-control')).toBe('s-maxage=60, stale-while-revalidate')
+  })
+
+  it('does not set a gSSP default Cache-Control when there is no gSSP response', async () => {
+    const common = createCommonOptions()
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      gsspRes: null,
+    })
+
+    expect(response.headers.get('cache-control')).toBeNull()
+  })
+
+  it('disables pages ISR caching when a script nonce is present', async () => {
+    const common = createCommonOptions()
+
+    const response = await renderPagesPageResponse({
+      ...common.options,
+      isrRevalidateSeconds: 60,
+      scriptNonce: 'pages-test-nonce',
+    })
+
+    expect(response.headers.get('cache-control')).toBe('no-store, must-revalidate')
+    expect(response.headers.get('x-text-cache')).toBeNull()
+    expect(common.renderIsrPassToStringAsync).not.toHaveBeenCalled()
+    expect(common.isrSet).not.toHaveBeenCalled()
+  })
+})

@@ -1,8 +1,16 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Stack 模块概述
+- 汇总堆叠布局组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import { h, type FC } from '@rue-js/rue'
 
+/** StackVerticalAlign 对齐方式类型。 */
 export type StackVerticalAlign = 'center' | 'top' | 'bottom'
+/** StackHorizontalAlign 对齐方式类型。 */
 export type StackHorizontalAlign = 'center' | 'start' | 'end'
+/** StackPlacement 位置或方向类型。 */
 export type StackPlacement =
   | 'center'
   | 'top'
@@ -14,20 +22,31 @@ export type StackPlacement =
   | 'bottom-start'
   | 'bottom-end'
 
+/** StackProps 组件属性。 */
 export interface StackProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** vertical 配置项。 */
   vertical?: StackVerticalAlign
+  /** horizontal 配置项。 */
   horizontal?: StackHorizontalAlign
+  /** 弹出层或内容展示位置。 */
   placement?: StackPlacement
+  /** reverse 配置项。 */
   reverse?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -35,6 +54,7 @@ const toChildArray = (children: any): any[] => {
   return children == null ? [] : [children]
 }
 
+/** 解析 Placement 的内部工具函数。 */
 const resolvePlacement = (placement?: StackPlacement) => {
   switch (placement) {
     case 'top':
@@ -61,6 +81,7 @@ const resolvePlacement = (placement?: StackPlacement) => {
   }
 }
 
+/** Stack 的内部工具函数。 */
 const Stack: FC<StackProps> = ({
   as = 'div',
   vertical,
@@ -89,4 +110,5 @@ const Stack: FC<StackProps> = ({
   )
 }
 
+/** 默认导出堆叠布局组件。 */
 export default Stack

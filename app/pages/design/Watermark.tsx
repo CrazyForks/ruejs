@@ -38,7 +38,7 @@ const apiRows: ApiRow[] = [
     prop: 'font',
     description: '文字水印的颜色、字号、字重、字体和对齐方式。',
     type: '{ color?: string; fontSize?: number | string; fontWeight?: number | string; fontStyle?: string; fontFamily?: string; textAlign?: string }',
-    defaultValue: '{ color: rgba(15,23,42,0.14), fontSize: 16 }',
+    defaultValue: '{ color: 自动按宿主背景明暗推导, fontSize: 16 }',
   },
   {
     prop: 'rotate',

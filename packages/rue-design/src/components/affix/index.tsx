@@ -1,32 +1,57 @@
+/*
+Affix 模块概述
+- 汇总固钉组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** AffixTarget 类型。 */
 export type AffixTarget = HTMLElement | Window | null | undefined
 
+/** AffixClassNames 局部类名配置。 */
 export interface AffixClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** fixed 配置项。 */
   fixed?: string
 }
 
+/** AffixStyles 局部样式配置。 */
 export interface AffixStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** fixed 配置项。 */
   fixed?: Record<string, any>
 }
 
+/** AffixProps 组件属性。 */
 export interface AffixProps {
+  /** offsetTop 配置项。 */
   offsetTop?: number
+  /** offsetBottom 配置项。 */
   offsetBottom?: number
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 值或状态变化时触发的回调。 */
   onChange?: (affixed?: boolean) => void
+  /** 链接或定位目标。 */
   target?: () => AffixTarget
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** 组件子内容。 */
   children?: any
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: AffixClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: AffixStyles
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** TRIGGER_EVENTS 内部常量。 */
 const TRIGGER_EVENTS: Array<keyof WindowEventMap> = [
   'resize',
   'scroll',
@@ -37,11 +62,13 @@ const TRIGGER_EVENTS: Array<keyof WindowEventMap> = [
   'load',
 ]
 
+/** RESET_ROOT_STYLE 内部常量。 */
 const RESET_ROOT_STYLE = {
   width: '',
   height: '',
 }
 
+/** RESET_FIXED_STYLE 内部常量。 */
 const RESET_FIXED_STYLE = {
   position: '',
   top: '',
@@ -51,11 +78,13 @@ const RESET_FIXED_STYLE = {
   height: '',
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (base && className) return `${base} ${className}`
   return base ?? className ?? ''
 }
 
+/** 解析 Window 的内部工具函数。 */
 const resolveWindow = (target?: AffixTarget) => {
   if (typeof window === 'undefined') return undefined
   if (target && 'ownerDocument' in target) {
@@ -64,14 +93,17 @@ const resolveWindow = (target?: AffixTarget) => {
   return window
 }
 
+/** 判断 Window Target 的内部工具函数。 */
 const isWindowTarget = (target: AffixTarget, currentWindow: Window) => {
   return target === currentWindow
 }
 
+/** 判断 Element Target 的内部工具函数。 */
 const isElementTarget = (target: AffixTarget, currentWindow: Window): target is HTMLElement => {
   return !!target && !isWindowTarget(target, currentWindow) && 'getBoundingClientRect' in target
 }
 
+/** 构建 Viewport Rect 的内部工具函数。 */
 const buildViewportRect = (currentWindow: Window) => {
   const width =
     currentWindow.innerWidth ||
@@ -97,6 +129,7 @@ const buildViewportRect = (currentWindow: Window) => {
   } as DOMRect
 }
 
+/** 读取 Target Rect 的内部工具函数。 */
 const getTargetRect = (target: AffixTarget, currentWindow: Window) => {
   if (isElementTarget(target, currentWindow)) {
     return target.getBoundingClientRect()
@@ -104,6 +137,7 @@ const getTargetRect = (target: AffixTarget, currentWindow: Window) => {
   return buildViewportRect(currentWindow)
 }
 
+/** 读取 Fixed Top 的内部工具函数。 */
 const getFixedTop = (placeholderRect: DOMRect, targetRect: DOMRect, offsetTop?: number) => {
   if (
     offsetTop !== undefined &&
@@ -114,6 +148,7 @@ const getFixedTop = (placeholderRect: DOMRect, targetRect: DOMRect, offsetTop?: 
   return undefined
 }
 
+/** 读取 Fixed Bottom 的内部工具函数。 */
 const getFixedBottom = (
   placeholderRect: DOMRect,
   targetRect: DOMRect,
@@ -129,6 +164,7 @@ const getFixedBottom = (
   return undefined
 }
 
+/** Affix 的内部工具函数。 */
 const Affix: FC<AffixProps> = ({
   offsetTop,
   offsetBottom,
@@ -410,4 +446,5 @@ const Affix: FC<AffixProps> = ({
   )
 }
 
+/** 默认导出固钉组件。 */
 export default Affix

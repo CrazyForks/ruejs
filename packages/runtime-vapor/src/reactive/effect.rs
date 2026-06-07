@@ -32,9 +32,11 @@ use wasm_bindgen::prelude::*;
 
 use crate::reactive::core::{
     CURRENT_EFFECT, CURRENT_UNTRACKED_HANDLER_EFFECT, EFFECTS, Effect, NEXT_EFFECT_ID,
-    current_effect_scope, dispose_effect, register_effect_in_scope, run_effect,
+    current_effect_scope, current_render_debug_owner, dispose_effect, is_watcher_effect,
+    register_effect_in_scope, run_effect,
 };
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn push_cleanup_for_effect(id: usize, cb: Function) {
     EFFECTS.with(|m| {
         if let Some(e) = m.borrow_mut().get_mut(&id) {
@@ -140,6 +142,7 @@ pub fn create_effect(cb: Function, options: Option<JsValue>) -> EffectHandle {
     //   都会自动归属到该 Vapor 子树。
     // - 当该 Vapor 子树卸载（before_unmount）时，会 dispose 掉 scope，从而统一清理这些 effect。
     let scope_id = current_effect_scope();
+    let render_debug_owner = current_render_debug_owner();
     let mut scheduler: Option<Function> = None;
     let mut lazy = false;
     if let Some(opts) = options {
@@ -176,7 +179,9 @@ pub fn create_effect(cb: Function, options: Option<JsValue>) -> EffectHandle {
                 cleanups: Vec::new(),
                 disposed: false,
                 scheduler: scheduler.clone(),
+                watcher: false,
                 scope_id,
+                render_debug_owner,
             },
         );
     });
@@ -225,6 +230,34 @@ pub fn on_cleanup(cb: Function) {
 
     if let Some(id) = CURRENT_UNTRACKED_HANDLER_EFFECT.with(|c| *c.borrow()) {
         push_cleanup_for_effect(id, cb);
+    }
+}
+
+/// 解析当前允许登记 cleanup 的 effect；watch 回调会通过 untracked handler 记录当前 id。
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+fn current_cleanup_effect_id() -> Option<usize> {
+    if let Some(id) = CURRENT_EFFECT.with(|c| *c.borrow()) {
+        return Some(id);
+    }
+
+    CURRENT_UNTRACKED_HANDLER_EFFECT.with(|c| *c.borrow())
+}
+
+/// 在当前 watcher 上注册清理函数。
+///
+/// 只能在 `watchEffect` 的 effect 函数或 `watch` 回调函数同步执行期间调用。
+/// 如果当前没有活动 watcher，默认输出 warning；传入 `failSilently: true` 时静默忽略。
+#[wasm_bindgen(js_name = onWatcherCleanup)]
+pub fn on_watcher_cleanup(cb: Function, fail_silently: Option<bool>) {
+    if let Some(id) = current_cleanup_effect_id() {
+        if is_watcher_effect(id) {
+            push_cleanup_for_effect(id, cb);
+            return;
+        }
+    }
+
+    if !fail_silently.unwrap_or(false) {
+        crate::log::log("warning", "onWatcherCleanup() is called when there is no active watcher.");
     }
 }
 
@@ -381,6 +414,13 @@ export function createEffect(
  * ```
  */
 export function onCleanup(cb: () => void): void;
+
+/**
+ * 注册一个清理函数，在当前 watcher 下次重新运行前或停止时执行。
+ *
+ * 只能在 `watchEffect` 的 effect 函数或 `watch` 回调函数同步执行期间调用。
+ */
+export function onWatcherCleanup(cb: () => void, failSilently?: boolean): void;
 
 /**
  * 断开依赖收集地执行回调（不记录对 Signal 的订阅）

@@ -1,6 +1,12 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Fieldset 模块概述
+- 汇总字段集组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 
+/** FieldsetTone 语义色类型。 */
 export type FieldsetTone =
   | 'default'
   | 'neutral'
@@ -12,82 +18,141 @@ export type FieldsetTone =
   | 'warning'
   | 'error'
 
+/** FieldsetVariant 视觉或语义变体类型。 */
 export type FieldsetVariant = 'default' | 'soft' | 'outlined'
+/** FieldsetSize 尺寸类型。 */
 export type FieldsetSize = 'sm' | 'md' | 'lg' | 'small' | 'middle' | 'medium' | 'large'
 
+/** FieldsetRootProps 组件属性。 */
 export interface FieldsetRootProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** legend 配置项。 */
   legend?: any
+  /** 描述内容。 */
   description?: any
+  /** hint 配置项。 */
   hint?: any
+  /** 操作区内容。 */
   actions?: any
+  /** 主体内容。 */
   content?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<FieldsetItemData>
+  /** 组件尺寸。 */
   size?: FieldsetSize
+  /** 组件语义色调。 */
   tone?: FieldsetTone
+  /** 组件视觉变体。 */
   variant?: FieldsetVariant
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** invalid 配置项。 */
   invalid?: boolean
+  /** legendClassName 附加类名。 */
   legendClassName?: string
+  /** descriptionClassName 附加类名。 */
   descriptionClassName?: string
+  /** hintClassName 附加类名。 */
   hintClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** actionsClassName 附加类名。 */
   actionsClassName?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FieldsetLegendProps 组件属性。 */
 export interface FieldsetLegendProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** aside 配置项。 */
   aside?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FieldsetLabelProps 组件属性。 */
 export interface FieldsetLabelProps {
+  /** 自定义渲染的宿主元素。 */
   as?: 'label' | 'p' | 'span' | 'div'
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 组件语义色调。 */
   tone?: FieldsetTone | 'muted'
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FieldsetItemProps 组件属性。 */
 export interface FieldsetItemProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 展示标签。 */
   label?: any
+  /** 描述内容。 */
   description?: any
+  /** hint 配置项。 */
   hint?: any
+  /** control 配置项。 */
   control?: any
+  /** required 配置项。 */
   required?: boolean
+  /** optional 配置项。 */
   optional?: boolean
+  /** horizontal 配置项。 */
   horizontal?: boolean
+  /** 组件尺寸。 */
   size?: FieldsetSize
+  /** 组件语义色调。 */
   tone?: FieldsetTone
+  /** invalid 配置项。 */
   invalid?: boolean
+  /** labelClassName 附加类名。 */
   labelClassName?: string
+  /** descriptionClassName 附加类名。 */
   descriptionClassName?: string
+  /** hintClassName 附加类名。 */
   hintClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** labelProps 透传属性。 */
   labelProps?: Omit<FieldsetLabelProps, 'children' | 'className'>
+  /** descriptionProps 透传属性。 */
   descriptionProps?: Omit<FieldsetLabelProps, 'children' | 'className' | 'as'>
+  /** hintProps 透传属性。 */
   hintProps?: Omit<FieldsetLabelProps, 'children' | 'className' | 'as'>
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FieldsetItemData 数据项结构。 */
 export interface FieldsetItemData extends Omit<FieldsetItemProps, 'children'> {
+  /** 数据项唯一标识。 */
   key?: string | number
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...values: Array<string | undefined | false>) =>
   values.filter(Boolean).join(' ')
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value === undefined || value === null || value === false) return false
   if (Array.isArray(value)) return value.some(item => hasRenderableContent(item))
   return true
 }
 
+/** 解析 Size 的内部工具函数。 */
 const resolveSize = (size?: FieldsetSize): 'sm' | 'md' | 'lg' => {
   switch (size) {
     case 'small':
@@ -102,6 +167,7 @@ const resolveSize = (size?: FieldsetSize): 'sm' | 'md' | 'lg' => {
   }
 }
 
+/** 解析 Gap Class 的内部工具函数。 */
 const resolveGapClass = (size?: FieldsetSize) => {
   switch (resolveSize(size)) {
     case 'sm':
@@ -113,6 +179,7 @@ const resolveGapClass = (size?: FieldsetSize) => {
   }
 }
 
+/** 解析 Surface Class 的内部工具函数。 */
 const resolveSurfaceClass = ({
   variant,
   tone,
@@ -170,6 +237,7 @@ const resolveSurfaceClass = ({
   return undefined
 }
 
+/** 解析 Text Tone Class 的内部工具函数。 */
 const resolveTextToneClass = (tone?: FieldsetTone | 'muted') => {
   switch (tone) {
     case 'muted':
@@ -195,6 +263,7 @@ const resolveTextToneClass = (tone?: FieldsetTone | 'muted') => {
   }
 }
 
+/** 解析 Label Text Class 的内部工具函数。 */
 const resolveLabelTextClass = (size?: FieldsetSize) => {
   switch (resolveSize(size)) {
     case 'sm':
@@ -206,6 +275,7 @@ const resolveLabelTextClass = (size?: FieldsetSize) => {
   }
 }
 
+/** 解析 Hint Text Class 的内部工具函数。 */
 const resolveHintTextClass = (size?: FieldsetSize) => {
   switch (resolveSize(size)) {
     case 'lg':
@@ -215,6 +285,7 @@ const resolveHintTextClass = (size?: FieldsetSize) => {
   }
 }
 
+/** Legend 的内部工具函数。 */
 const Legend: FC<FieldsetLegendProps> = ({ className, children, aside, ...rest }) => {
   const hasAside = hasRenderableContent(aside)
   return (
@@ -231,6 +302,7 @@ const Legend: FC<FieldsetLegendProps> = ({ className, children, aside, ...rest }
   )
 }
 
+/** Label 的内部工具函数。 */
 const Label: FC<FieldsetLabelProps> = ({ as = 'label', className, children, tone, ...rest }) => {
   const cls = joinClassName('label', resolveTextToneClass(tone), className)
 
@@ -265,6 +337,7 @@ const Label: FC<FieldsetLabelProps> = ({ as = 'label', className, children, tone
   )
 }
 
+/** Item 的内部工具函数。 */
 const Item: FC<FieldsetItemProps> = ({
   className,
   children,
@@ -355,6 +428,7 @@ const Item: FC<FieldsetItemProps> = ({
   )
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<FieldsetRootProps> = ({
   className,
   children,
@@ -475,4 +549,5 @@ const Fieldset: FieldsetCompound = Object.assign(Root, {
   Item,
 })
 
+/** 默认导出字段集组件。 */
 export default Fieldset

@@ -66,15 +66,10 @@ pub fn use_memo(factory: Function, deps: JsValue) -> JsValue {
         if nd_arr.length() != prev_arr.length() {
             changed = true;
         } else {
-            let obj_is = Function::new_no_args("return Object.is");
             for i in 0..nd_arr.length() {
                 let a = nd_arr.get(i);
                 let b = prev_arr.get(i);
-                let eq = obj_is
-                    .call2(&JsValue::UNDEFINED, &a, &b)
-                    .unwrap_or(JsValue::FALSE)
-                    .as_bool()
-                    .unwrap_or(false);
+                let eq = Object::is(&a, &b);
                 if !eq {
                     changed = true;
                     break;

@@ -1,7 +1,11 @@
 use js_sys::{Array, Function, Object, Reflect};
-use rue_runtime_vapor::{create_effect, create_signal, set_reactive_scheduling};
+use rue_runtime_vapor::reactive::signal::{create_reactive, create_ref};
+use rue_runtime_vapor::{
+    SignalHandle, create_computed, create_effect, create_signal, set_reactive_scheduling,
+};
 use std::cell::RefCell;
 use std::rc::Rc;
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_test::*;
 
@@ -34,6 +38,16 @@ fn signal_debug_to_string_cyclic_fallback() {
     let sig = create_signal(obj.into(), None);
     let s = sig.to_string_js();
     assert_eq!(s, "[object SignalHandle]");
+}
+
+#[wasm_bindgen_test]
+fn signal_debug_to_string_handles_json_undefined_values() {
+    set_reactive_scheduling("sync");
+
+    let value = Function::new_no_args("return 1").into();
+    let sig = create_signal(value, None);
+
+    assert_eq!(sig.to_string_js(), "[object SignalHandle]");
 }
 
 #[wasm_bindgen_test]
@@ -94,6 +108,28 @@ fn signal_runs_effect_on_set() {
     let _eh = create_effect(f, None);
     assert_eq!(*hits.borrow(), 1);
     sig.set_js(JsValue::from_f64(1.0));
+    assert_eq!(*hits.borrow(), 2);
+    cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn signal_duplicate_reads_in_one_effect_subscribe_once() {
+    set_reactive_scheduling("sync");
+    let sig = create_signal(JsValue::from_f64(0.0), None);
+    let hits = Rc::new(RefCell::new(0));
+    let hits2 = hits.clone();
+    let s_for = sig.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        let _ = s_for.get_js();
+        let _ = s_for.get_js();
+    }) as Box<dyn FnMut()>);
+    let f: Function = cb.as_ref().clone().into();
+    let _eh = create_effect(f, None);
+    assert_eq!(*hits.borrow(), 1);
+
+    sig.set_js(JsValue::from_f64(1.0));
+
     assert_eq!(*hits.borrow(), 2);
     cb.forget();
 }
@@ -166,6 +202,24 @@ fn signal_equals_always_false_triggers() {
     sig.set_js(JsValue::from_f64(1.0));
     assert_eq!(*hits.borrow(), 2);
     cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn signal_and_ref_options_cover_non_function_equals_fallbacks() {
+    set_reactive_scheduling("sync");
+    let sig = create_signal(JsValue::from_f64(1.0), Some(JsValue::from_str("not-options")));
+    sig.set_js(JsValue::from_f64(2.0));
+    assert_eq!(sig.peek_js().as_f64(), Some(2.0));
+
+    let opts = Object::new();
+    Reflect::set(&opts, &JsValue::from_str("equals"), &JsValue::from_str("not-a-function"))
+        .unwrap();
+    let r = create_ref(JsValue::from_str("A"), Some(opts.into()));
+    Reflect::set(&r, &JsValue::from_str("value"), &JsValue::from_str("B")).unwrap();
+    assert_eq!(
+        Reflect::get(&r, &JsValue::from_str("value")).unwrap().as_string().as_deref(),
+        Some("B")
+    );
 }
 
 #[wasm_bindgen_test]
@@ -398,4 +452,441 @@ fn signal_parent_path_replace_notifies_child_subscribers() {
     let next_name = sig.get_path_js(name_path.into()).as_string().unwrap();
     assert_eq!(next_name, "B");
     cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn signal_manual_trigger_and_markers_cover_public_getters() {
+    set_reactive_scheduling("sync");
+
+    let sig = create_signal(JsValue::from_f64(1.0), None);
+    assert!(!sig.ref_marker());
+    assert!(!sig.readonly_marker());
+
+    let hits = Rc::new(RefCell::new(0));
+    let hits2 = hits.clone();
+    let sig_for_effect = sig.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        let _ = sig_for_effect.get_js();
+    }) as Box<dyn FnMut()>);
+    let effect_fn: Function = cb.as_ref().clone().into();
+    let _effect = create_effect(effect_fn, None);
+
+    assert_eq!(*hits.borrow(), 1);
+    sig.trigger_js();
+    assert_eq!(*hits.borrow(), 2);
+    sig.trigger_path_js(JsValue::UNDEFINED);
+    assert_eq!(*hits.borrow(), 3);
+
+    cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn signal_manual_trigger_path_notifies_symbol_path_subscribers() {
+    set_reactive_scheduling("sync");
+
+    let symbol = Function::new_no_args("return Symbol('rue-path')").call0(&JsValue::NULL).unwrap();
+    let boxed_symbol = Function::new_with_args("symbol", "return Object(symbol)")
+        .call1(&JsValue::NULL, &symbol)
+        .unwrap();
+    let root = Object::new();
+    Reflect::set(&root, &symbol, &JsValue::from_str("token")).unwrap();
+    let sig = create_signal(root.into(), None);
+
+    let path = Array::new();
+    path.push(&boxed_symbol);
+
+    let hits = Rc::new(RefCell::new(0));
+    let hits2 = hits.clone();
+    let sig_for_effect = sig.clone();
+    let path_for_effect = path.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        let _ = sig_for_effect.get_path_js(path_for_effect.clone().into());
+    }) as Box<dyn FnMut()>);
+    let effect_fn: Function = cb.as_ref().clone().into();
+    let _effect = create_effect(effect_fn, None);
+
+    assert_eq!(*hits.borrow(), 1);
+    sig.trigger_path_js(path.into());
+    assert_eq!(*hits.borrow(), 2);
+
+    cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn signal_manual_trigger_path_accepts_object_path_segments() {
+    set_reactive_scheduling("sync");
+
+    let sig = create_signal(Object::new().into(), None);
+    let object_segment = Object::new();
+    Reflect::set(&object_segment, &JsValue::from_str("id"), &JsValue::from_f64(1.0)).unwrap();
+
+    let path = Array::new();
+    path.push(&object_segment);
+
+    let hits = Rc::new(RefCell::new(0));
+    let hits2 = hits.clone();
+    let sig_for_effect = sig.clone();
+    let path_for_effect = path.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        let _ = sig_for_effect.get_path_js(path_for_effect.clone().into());
+    }) as Box<dyn FnMut()>);
+    let effect_fn: Function = cb.as_ref().clone().into();
+    let _effect = create_effect(effect_fn, None);
+
+    assert_eq!(*hits.borrow(), 1);
+    sig.trigger_path_js(path.into());
+    assert_eq!(*hits.borrow(), 2);
+
+    cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn signal_manual_trigger_path_accepts_unstringifiable_function_segments() {
+    set_reactive_scheduling("sync");
+
+    let sig = create_signal(Object::new().into(), None);
+    let function_segment = Function::new_no_args("return 1");
+
+    let path = Array::new();
+    path.push(&function_segment);
+
+    let hits = Rc::new(RefCell::new(0));
+    let hits2 = hits.clone();
+    let sig_for_effect = sig.clone();
+    let path_for_effect = path.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        let _ = sig_for_effect.get_path_js(path_for_effect.clone().into());
+    }) as Box<dyn FnMut()>);
+    let effect_fn: Function = cb.as_ref().clone().into();
+    let _effect = create_effect(effect_fn, None);
+
+    assert_eq!(*hits.borrow(), 1);
+    sig.trigger_path_js(path.into());
+    assert_eq!(*hits.borrow(), 2);
+
+    cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn signal_trigger_path_empty_array_uses_path_key_fallback() {
+    set_reactive_scheduling("sync");
+
+    let root = Object::new();
+    Reflect::set(&root, &JsValue::from_str("count"), &JsValue::from_f64(1.0)).unwrap();
+    let sig = create_signal(root.into(), None);
+    let empty_path = Array::new();
+
+    let hits = Rc::new(RefCell::new(0));
+    let hits2 = hits.clone();
+    let sig_for_effect = sig.clone();
+    let empty_for_effect = empty_path.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        let _ = sig_for_effect.get_path_js(empty_for_effect.clone().into());
+    }) as Box<dyn FnMut()>);
+    let effect_fn: Function = cb.as_ref().clone().into();
+    let _effect = create_effect(effect_fn, None);
+
+    assert_eq!(*hits.borrow(), 1);
+    sig.trigger_path_js(empty_path.into());
+    assert_eq!(*hits.borrow(), 2);
+
+    cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn signal_path_edges_cover_disposed_subscribers_and_sparse_path_writes() {
+    set_reactive_scheduling("sync");
+
+    let sig = create_signal(Object::new().into(), None);
+    let hits = Rc::new(RefCell::new(0));
+    let hits2 = hits.clone();
+    let sig_for_effect = sig.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        let _ = sig_for_effect.get_path_js(JsValue::from_str("user.name"));
+    }) as Box<dyn FnMut()>);
+    let effect_fn: Function = cb.as_ref().clone().into();
+    let effect = create_effect(effect_fn, None);
+
+    assert_eq!(*hits.borrow(), 1);
+    effect.dispose_js();
+    sig.set_path_js(JsValue::from_str("user.name"), JsValue::from_str("A"));
+    assert_eq!(*hits.borrow(), 1);
+
+    let user = sig.peek_path_js(JsValue::from_str("user"));
+    assert_eq!(
+        Reflect::get(&user, &JsValue::from_str("name")).unwrap().as_string().as_deref(),
+        Some("A")
+    );
+
+    let primitive = create_signal(JsValue::from_f64(1.0), None);
+    primitive
+        .update_path_js(JsValue::UNDEFINED, Function::new_with_args("value", "return value + 1"));
+    assert_eq!(primitive.peek_js().as_f64(), Some(2.0));
+
+    primitive.set_path_js(JsValue::from_str("deep..0.value"), JsValue::from_str("leaf"));
+    assert_eq!(
+        primitive.peek_path_js(JsValue::from_str("deep.0.value")).as_string().as_deref(),
+        Some("leaf")
+    );
+
+    cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn reactive_proxy_numeric_string_paths_are_publicly_reachable() {
+    let arr = Array::new();
+    arr.push(&JsValue::from_str("zero"));
+    let proxy = create_reactive(arr.into(), None);
+    assert_eq!(
+        Reflect::get(&proxy, &JsValue::from_str("0")).unwrap().as_string().as_deref(),
+        Some("zero")
+    );
+}
+
+#[wasm_bindgen_test]
+fn signal_array_string_index_and_empty_path_subscription_edges_are_publicly_reachable() {
+    set_reactive_scheduling("sync");
+
+    let items = Array::new();
+    items.push(&JsValue::from_str("zero"));
+    let root = Object::new();
+    Reflect::set(&root, &JsValue::from_str("items"), &items).unwrap();
+    let sig = create_signal(root.into(), None);
+
+    let string_index_path = Array::new();
+    string_index_path.push(&JsValue::from_str("items"));
+    string_index_path.push(&JsValue::from_str("0"));
+    sig.set_path_js(string_index_path.clone().into(), JsValue::from_str("updated"));
+    assert_eq!(sig.peek_path_js(string_index_path.into()).as_string().as_deref(), Some("updated"));
+
+    let root_hits = Rc::new(RefCell::new(0));
+    let root_hits_for_effect = root_hits.clone();
+    let sig_for_effect = sig.clone();
+    let empty_path = Array::new();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *root_hits_for_effect.borrow_mut() += 1;
+        let _ = sig_for_effect.get_path_js(empty_path.clone().into());
+    }) as Box<dyn FnMut()>);
+    let effect_fn: Function = cb.as_ref().clone().into();
+    let effect = create_effect(effect_fn, None);
+    assert_eq!(*root_hits.borrow(), 1);
+
+    effect.dispose_js();
+    sig.trigger_js();
+    assert_eq!(*root_hits.borrow(), 1);
+    cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn reactive_primitive_proxy_value_descriptor_reads_object_and_primitive_holders() {
+    let proxy = create_reactive(JsValue::from_str("first"), None);
+    assert_eq!(
+        Reflect::get(&proxy, &JsValue::from_str("value")).unwrap().as_string().as_deref(),
+        Some("first")
+    );
+    assert_eq!(Object::keys(&proxy.clone().unchecked_into::<Object>()).length(), 0);
+
+    let signal = Reflect::get(&proxy, &JsValue::from_str("__signal__")).unwrap();
+    let set: Function = Reflect::get(&signal, &JsValue::from_str("set")).unwrap().unchecked_into();
+    set.call1(&signal, &JsValue::from_str("plain-holder")).unwrap();
+
+    assert_eq!(
+        Reflect::get(&proxy, &JsValue::from_str("value")).unwrap().as_string().as_deref(),
+        None
+    );
+}
+
+#[wasm_bindgen_test]
+fn computed_getter_self_read_does_not_subscribe_to_its_own_effect() {
+    set_reactive_scheduling("sync");
+
+    let holder: Rc<RefCell<Option<SignalHandle>>> = Rc::new(RefCell::new(None));
+    let getter_holder = holder.clone();
+    let getter = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        getter_holder
+            .borrow()
+            .as_ref()
+            .map(|handle| handle.get_js())
+            .unwrap_or_else(|| JsValue::from_f64(1.0))
+    }) as Box<dyn FnMut() -> JsValue>);
+    let computed = create_computed(getter.as_ref().clone().unchecked_into::<Function>().into());
+    *holder.borrow_mut() = Some(computed.clone());
+
+    assert!(computed.get_js().is_undefined());
+    assert!(computed.get_js().is_undefined());
+
+    getter.forget();
+}
+
+#[wasm_bindgen_test]
+fn signal_root_disposed_subscriber_is_pruned_on_manual_trigger() {
+    set_reactive_scheduling("sync");
+
+    let sig = create_signal(JsValue::from_f64(0.0), None);
+    let hits = Rc::new(RefCell::new(0));
+    let hits_for_effect = hits.clone();
+    let sig_for_effect = sig.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits_for_effect.borrow_mut() += 1;
+        let _ = sig_for_effect.get_js();
+    }) as Box<dyn FnMut()>);
+    let effect = create_effect(cb.as_ref().clone().unchecked_into::<Function>(), None);
+    assert_eq!(*hits.borrow(), 1);
+
+    effect.dispose_js();
+    sig.trigger_js();
+    sig.set_js(JsValue::from_f64(1.0));
+    assert_eq!(*hits.borrow(), 1);
+
+    cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn computed_path_self_read_does_not_subscribe_to_its_own_effect() {
+    set_reactive_scheduling("sync");
+
+    let holder: Rc<RefCell<Option<SignalHandle>>> = Rc::new(RefCell::new(None));
+    let getter_holder = holder.clone();
+    let getter = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        getter_holder
+            .borrow()
+            .as_ref()
+            .map(|handle| handle.get_path_js(JsValue::from_str("value")))
+            .unwrap_or_else(|| JsValue::from_f64(1.0))
+    }) as Box<dyn FnMut() -> JsValue>);
+    let computed = create_computed(getter.as_ref().clone().unchecked_into::<Function>().into());
+    *holder.borrow_mut() = Some(computed.clone());
+
+    assert!(computed.get_js().is_undefined());
+    assert!(computed.get_path_js(JsValue::from_str("value")).is_undefined());
+
+    getter.forget();
+}
+
+#[wasm_bindgen_test]
+fn reactive_proxy_public_edges_cover_numeric_paths_and_snapshot_helpers() {
+    set_reactive_scheduling("sync");
+
+    let opts = JsValue::from_str("not-options");
+    let primitive_proxy = create_reactive(JsValue::from_str("wrapped"), Some(opts));
+    assert_eq!(
+        Reflect::get(&primitive_proxy, &JsValue::from_str("value")).unwrap().as_string().as_deref(),
+        Some("wrapped")
+    );
+
+    let root = Object::new();
+    let list = Array::new();
+    list.push(&JsValue::from_str("zero"));
+    list.push(&JsValue::from_str("one"));
+    Reflect::set(&root, &JsValue::from_str("list"), &list).unwrap();
+    let proxy = create_reactive(root.into(), None);
+
+    let list_proxy = Reflect::get(&proxy, &JsValue::from_str("list")).unwrap();
+    assert_eq!(
+        Reflect::get(&list_proxy, &JsValue::from_str("1")).unwrap().as_string().as_deref(),
+        Some("one")
+    );
+
+    let length_desc = js_sys::Object::get_own_property_descriptor(
+        &list_proxy.clone().unchecked_into::<Object>(),
+        &JsValue::from_str("length"),
+    );
+    assert!(length_desc.is_object());
+
+    let replacement = Object::new();
+    Reflect::set(&replacement, &JsValue::from_str("next"), &JsValue::from_f64(2.0)).unwrap();
+    Reflect::set(&proxy, &JsValue::from_str("list"), &replacement).unwrap();
+    let target = Reflect::get(&proxy, &JsValue::from_str("__rue_target__")).unwrap();
+    assert_eq!(
+        Reflect::get(&target, &JsValue::from_str("list")).unwrap().dyn_ref::<Object>().is_some(),
+        true
+    );
+}
+
+#[wasm_bindgen_test]
+fn reactive_proxy_large_numeric_string_key_stays_string() {
+    set_reactive_scheduling("sync");
+
+    let huge_index = "4294967296";
+    let root = Object::new();
+    Reflect::set(&root, &JsValue::from_str(huge_index), &JsValue::from_str("huge")).unwrap();
+    let proxy = create_reactive(root.into(), None);
+
+    assert_eq!(
+        Reflect::get(&proxy, &JsValue::from_str(huge_index)).unwrap().as_string().as_deref(),
+        Some("huge")
+    );
+}
+
+#[wasm_bindgen_test]
+fn reactive_proxy_own_keys_preserve_non_configurable_target_keys() {
+    set_reactive_scheduling("sync");
+
+    let proxy = create_reactive(Object::new().into(), None);
+    let proxy_object: Object = proxy.clone().unchecked_into();
+
+    let stable_desc = Object::new();
+    Reflect::set(&stable_desc, &JsValue::from_str("value"), &JsValue::from_str("stable")).unwrap();
+    Reflect::set(&stable_desc, &JsValue::from_str("enumerable"), &JsValue::TRUE).unwrap();
+    Reflect::set(&stable_desc, &JsValue::from_str("configurable"), &JsValue::FALSE).unwrap();
+    Object::define_property(&proxy_object, &JsValue::from_str("stable"), &stable_desc);
+
+    let soft_desc = Object::new();
+    Reflect::set(&soft_desc, &JsValue::from_str("value"), &JsValue::from_str("soft")).unwrap();
+    Reflect::set(&soft_desc, &JsValue::from_str("enumerable"), &JsValue::TRUE).unwrap();
+    Reflect::set(&soft_desc, &JsValue::from_str("configurable"), &JsValue::TRUE).unwrap();
+    Object::define_property(&proxy_object, &JsValue::from_str("soft"), &soft_desc);
+
+    let keys = Reflect::own_keys(&proxy).unwrap();
+    let includes_stable: Function =
+        Function::new_with_args("keys", "return keys.indexOf('stable') !== -1");
+    assert_eq!(includes_stable.call1(&JsValue::NULL, &keys).unwrap().as_bool(), Some(true));
+
+    let stable_read =
+        Object::get_own_property_descriptor(&proxy_object, &JsValue::from_str("stable"));
+    assert_eq!(
+        Reflect::get(&stable_read, &JsValue::from_str("configurable")).unwrap().as_bool(),
+        Some(false)
+    );
+
+    let soft_read = Object::get_own_property_descriptor(&proxy_object, &JsValue::from_str("soft"));
+    assert!(soft_read.is_undefined());
+}
+
+#[wasm_bindgen_test]
+fn stale_child_proxy_set_handles_primitive_latest_snapshot() {
+    set_reactive_scheduling("sync");
+
+    let child = Object::new();
+    Reflect::set(&child, &JsValue::from_str("name"), &JsValue::from_str("A")).unwrap();
+    let root = Object::new();
+    Reflect::set(&root, &JsValue::from_str("child"), &child).unwrap();
+    let proxy = create_reactive(root.into(), None);
+    let child_proxy = Reflect::get(&proxy, &JsValue::from_str("child")).unwrap();
+
+    let signal = Reflect::get(&proxy, &JsValue::from_str("__signal__")).unwrap();
+    let set_path: Function =
+        Reflect::get(&signal, &JsValue::from_str("setPath")).unwrap().unchecked_into();
+    set_path
+        .call2(&signal, &JsValue::from_str("child"), &JsValue::from_str("plain-child"))
+        .unwrap();
+
+    assert_eq!(
+        Reflect::get(&proxy, &JsValue::from_str("child")).unwrap().as_string().as_deref(),
+        Some("plain-child")
+    );
+    assert_eq!(
+        Reflect::set(&child_proxy, &JsValue::from_str("name"), &JsValue::from_str("B")).unwrap(),
+        true
+    );
+    assert_eq!(
+        Reflect::get(&proxy, &JsValue::from_str("child")).unwrap().as_string().as_deref(),
+        Some("plain-child")
+    );
 }

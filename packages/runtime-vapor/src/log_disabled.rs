@@ -1,3 +1,9 @@
+/*
+禁用日志时的空实现
+
+当没有启用 `log` feature 时，顶层会把 log 模块映射到本文件。
+所有 API 保持同名但不做任何输出，这样调用侧无需写条件编译分支。
+*/
 use wasm_bindgen::JsValue;
 
 #[allow(dead_code)]

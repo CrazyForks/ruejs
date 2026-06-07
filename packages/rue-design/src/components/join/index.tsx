@@ -1,41 +1,72 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Join 模块概述
+- 汇总组合容器组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 
+/** JoinDirection 位置或方向类型。 */
 export type JoinDirection = 'horizontal' | 'vertical'
 
+/** JoinItemProps 组件属性。 */
 export interface JoinItemProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** tag 配置项。 */
   tag?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 是否处于激活态。 */
   active?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 链接地址。 */
   href?: string
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** JoinItemConfig 配置对象。 */
 export interface JoinItemConfig extends JoinItemProps {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 展示标签。 */
   label?: any
 }
 
+/** JoinProps 组件属性。 */
 export interface JoinProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 布局方向。 */
   direction?: JoinDirection
+  /** 数据驱动渲染项。 */
   items?: JoinItemConfig[]
+  /** itemClassName 附加类名。 */
   itemClassName?: string
+  /** wrap 配置项。 */
   wrap?: boolean
+  /** block 配置项。 */
   block?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...classNames: Array<string | undefined | false>) => {
   return classNames.filter(Boolean).join(' ')
 }
 
+/** 判断 Disabled Attr Tag 的内部工具函数。 */
 const isDisabledAttrTag = (tag: any) => {
   return (
     typeof tag === 'string' &&
@@ -43,14 +74,17 @@ const isDisabledAttrTag = (tag: any) => {
   )
 }
 
+/** 判断 Button Like Class 的内部工具函数。 */
 const isButtonLikeClass = (className?: string) => {
   return !!className && /\bbtn\b/.test(className)
 }
 
+/** 判断是否存在 Renderable Children 的内部工具函数。 */
 const hasRenderableChildren = (children: any) => {
   return !(children == null || (Array.isArray(children) && children.length === 0))
 }
 
+/** Item 的内部工具函数。 */
 const Item: FC<JoinItemProps> = ({
   as,
   tag = 'button',
@@ -127,6 +161,7 @@ const Item: FC<JoinItemProps> = ({
   )
 }
 
+/** 渲染 Items 的内部工具函数。 */
 const renderItems = (items: JoinItemConfig[], itemClassName?: string) => {
   return items.map((item, index) => {
     const { key, label, children, className, ...rest } = item
@@ -139,6 +174,7 @@ const renderItems = (items: JoinItemConfig[], itemClassName?: string) => {
   })
 }
 
+/** Join Root 的内部工具函数。 */
 const JoinRoot: FC<JoinProps> = ({
   as,
   direction,
@@ -178,4 +214,5 @@ const JoinCompound: JoinCompound = Object.assign(JoinRoot, {
   Item,
 })
 
+/** 默认导出组合容器组件。 */
 export default JoinCompound

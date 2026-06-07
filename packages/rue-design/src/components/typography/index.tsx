@@ -7,55 +7,90 @@ Typography 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** TypographyTone 语义色类型。 */
 export type TypographyTone = 'default' | 'secondary' | 'success' | 'warning' | 'danger'
+/** TypographyHeadingLevel 类型。 */
 export type TypographyHeadingLevel = 1 | 2 | 3 | 4 | 5
+/** TypographyTextTag 类型。 */
 export type TypographyTextTag = 'span' | 'div' | 'p'
+/** TypographyRootTag 类型。 */
 export type TypographyRootTag = 'div' | 'section' | 'article'
 
+/** TypographyInlineProps 组件属性。 */
 export interface TypographyInlineProps {
+  /** 组件类型或语义类型。 */
   type?: TypographyTone
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** mark 配置项。 */
   mark?: boolean
+  /** code 配置项。 */
   code?: boolean
+  /** keyboard 配置项。 */
   keyboard?: boolean
+  /** underline 配置项。 */
   underline?: boolean
+  /** delete 配置项。 */
   delete?: boolean
+  /** strong 配置项。 */
   strong?: boolean
+  /** italic 配置项。 */
   italic?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** TypographyProps 组件属性。 */
 export interface TypographyProps {
+  /** 自定义渲染的宿主元素。 */
   as?: TypographyRootTag
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** TypographyTextProps 组件属性。 */
 export interface TypographyTextProps extends TypographyInlineProps {
+  /** 自定义渲染的宿主元素。 */
   as?: TypographyTextTag
 }
 
+/** TypographyLinkProps 组件属性。 */
 export interface TypographyLinkProps extends TypographyInlineProps {
+  /** 链接地址。 */
   href?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
 }
 
+/** TypographyTitleProps 组件属性。 */
 export interface TypographyTitleProps extends TypographyInlineProps {
+  /** level 配置项。 */
   level?: TypographyHeadingLevel
 }
 
+/** TypographyParagraphProps 组件属性。 */
 export interface TypographyParagraphProps extends TypographyInlineProps {}
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | undefined | false>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** 解析 Tone Class 的内部工具函数。 */
 const resolveToneClass = (type?: TypographyTone) => {
   switch (type) {
     case 'secondary':
@@ -71,6 +106,7 @@ const resolveToneClass = (type?: TypographyTone) => {
   }
 }
 
+/** 构建 Inline Class Name 的内部工具函数。 */
 const buildInlineClassName = ({
   type,
   disabled,
@@ -105,6 +141,7 @@ const buildInlineClassName = ({
   )
 }
 
+/** 渲染 Decorated Content 的内部工具函数。 */
 const renderDecoratedContent = (
   content: any,
   {
@@ -130,6 +167,7 @@ const renderDecoratedContent = (
   return node
 }
 
+/** Typography Root 的内部工具函数。 */
 const TypographyRoot: FC<TypographyProps> = ({
   as = 'div',
   className,
@@ -152,6 +190,7 @@ const TypographyRoot: FC<TypographyProps> = ({
   return <div {...props}>{children}</div>
 }
 
+/** Text 的内部工具函数。 */
 const Text: FC<TypographyTextProps> = ({
   as = 'span',
   type,
@@ -194,6 +233,7 @@ const Text: FC<TypographyTextProps> = ({
   return <span {...props}>{content}</span>
 }
 
+/** Link 的内部工具函数。 */
 const Link: FC<TypographyLinkProps> = ({
   href,
   target,
@@ -241,6 +281,7 @@ const Link: FC<TypographyLinkProps> = ({
   )
 }
 
+/** 解析 Title Class Name 的内部工具函数。 */
 const resolveTitleClassName = (level: TypographyHeadingLevel) => {
   switch (level) {
     case 1:
@@ -256,6 +297,7 @@ const resolveTitleClassName = (level: TypographyHeadingLevel) => {
   }
 }
 
+/** Title 的内部工具函数。 */
 const Title: FC<TypographyTitleProps> = ({
   level = 1,
   type,
@@ -298,6 +340,7 @@ const Title: FC<TypographyTitleProps> = ({
   return <h5 {...props}>{content}</h5>
 }
 
+/** Paragraph 的内部工具函数。 */
 const Paragraph: FC<TypographyParagraphProps> = ({
   type,
   disabled,
@@ -350,4 +393,5 @@ const Typography: TypographyCompound = Object.assign(TypographyRoot, {
   Paragraph,
 })
 
+/** 默认导出排版组件。 */
 export default Typography

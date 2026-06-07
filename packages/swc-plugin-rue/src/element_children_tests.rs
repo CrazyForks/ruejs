@@ -40,6 +40,10 @@ fn parse_jsx_element(src: &str) -> JSXElement {
     }
 }
 
+fn jsx_text(value: &str) -> JSXElementChild {
+    JSXElementChild::JSXText(JSXText { span: DUMMY_SP, value: value.into(), raw: value.into() })
+}
+
 fn emit_stmts(stmts: Vec<Stmt>) -> String {
     let cm = Arc::new(SourceMap::default());
     let module = Module {
@@ -112,4 +116,81 @@ fn dispatches_fragment_expr_nested_element_and_ignores_spread_children() {
     assert!(out.contains("_$createElement(\"span\",root)"));
     assert!(out.contains("_$appendChild(_el1,_$createTextNode(\"child\"));"));
     assert!(!out.contains("extra"));
+}
+
+#[test]
+fn skips_block_whitespace_and_empty_expression_children() {
+    let mut vt = new_vt();
+    let mut el = parse_jsx_element("<div>   <span />   </div>");
+    el.children.push(JSXElementChild::JSXExprContainer(JSXExprContainer {
+        span: DUMMY_SP,
+        expr: JSXExpr::JSXEmptyExpr(JSXEmptyExpr { span: DUMMY_SP }),
+    }));
+    el.children.push(JSXElementChild::JSXSpreadChild(JSXSpreadChild {
+        span: DUMMY_SP,
+        expr: Box::new(parse_expr("extra", false)),
+    }));
+
+    let mut stmts = Vec::new();
+    emit_element_children(&mut vt, &crate::emit::ident("root"), &el.children, &mut stmts);
+
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(out.contains("_$createElement(\"span\",root)"));
+    assert!(!out.contains("_$createTextNode(\" \")"));
+    assert!(!out.contains("extra"));
+}
+
+#[test]
+fn trims_text_against_explicit_space_expression_neighbors() {
+    let mut vt = new_vt();
+    let el = parse_jsx_element("<div>{' '} hello {' '}</div>");
+    let mut stmts = Vec::new();
+
+    emit_element_children(&mut vt, &crate::emit::ident("root"), &el.children, &mut stmts);
+
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(out.contains("_$appendChild(root,_$createTextNode(\"hello\"));"));
+    assert_eq!(out.matches("_$createTextNode(\"hello\")").count(), 1);
+}
+
+#[test]
+fn handles_jsx_text_neighbors_for_spaces_and_visible_text() {
+    let mut vt = new_vt();
+    let children = vec![
+        jsx_text("left"),
+        jsx_text("   "),
+        jsx_text("mid"),
+        jsx_text(" right "),
+        jsx_text("tail"),
+    ];
+    let mut stmts = Vec::new();
+
+    emit_element_children(&mut vt, &crate::emit::ident("root"), &children, &mut stmts);
+
+    let raw = emit_stmts(stmts);
+    let out = compact(&raw);
+
+    assert_eq!(raw.matches("_$createTextNode(\" \")").count(), 1);
+    assert!(out.contains("_$appendChild(root,_$createTextNode(\"left\"));"));
+    assert!(out.contains("_$appendChild(root,_$createTextNode(\"mid\"));"));
+    assert!(out.contains("_$appendChild(root,_$createTextNode(\"right\"));"));
+    assert!(out.contains("_$appendChild(root,_$createTextNode(\"tail\"));"));
+}
+
+#[test]
+fn treats_non_string_expression_neighbors_as_non_space_neighbors() {
+    let mut vt = new_vt();
+    let empty_expr = JSXElementChild::JSXExprContainer(JSXExprContainer {
+        span: DUMMY_SP,
+        expr: JSXExpr::JSXEmptyExpr(JSXEmptyExpr { span: DUMMY_SP }),
+    });
+    let children = vec![empty_expr.clone(), jsx_text(" padded "), empty_expr];
+    let mut stmts = Vec::new();
+
+    emit_element_children(&mut vt, &crate::emit::ident("root"), &children, &mut stmts);
+
+    let out = compact(&emit_stmts(stmts));
+    assert!(out.contains("_$appendChild(root,_$createTextNode(\"padded\"));"));
 }

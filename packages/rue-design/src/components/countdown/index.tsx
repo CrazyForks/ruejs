@@ -7,9 +7,13 @@ Countdown 组件概述
 */
 import { onUnmounted, ref, useRef, watch, type FC } from '@rue-js/rue'
 
+/** DEFAULT_FORMAT 内部常量。 */
 const DEFAULT_FORMAT = 'HH:mm:ss'
+/** MILLISECOND_INTERVAL 内部常量。 */
 const MILLISECOND_INTERVAL = 1000 / 30
+/** SECOND_INTERVAL 内部常量。 */
 const SECOND_INTERVAL = 1000
+/** TIME_UNITS 内部常量。 */
 const TIME_UNITS: Array<[unit: CountdownFormatUnit, milliseconds: number]> = [
   ['Y', 1000 * 60 * 60 * 24 * 365],
   ['M', 1000 * 60 * 60 * 24 * 30],
@@ -23,21 +27,33 @@ const TIME_UNITS: Array<[unit: CountdownFormatUnit, milliseconds: number]> = [
 type CountdownAriaLive = 'polite' | 'off' | 'assertive'
 type CountdownFormatUnit = 'Y' | 'M' | 'D' | 'H' | 'm' | 's' | 'S'
 
+/** CountdownTextItem 数据项结构。 */
 export interface CountdownTextItem {
+  /** 主体内容。 */
   content: any
+  /** 根节点附加类名。 */
   className?: string
 }
 
+/** CountdownValueItem 数据项结构。 */
 export interface CountdownValueItem {
+  /** 受控值。 */
   value: number
+  /** digits 配置项。 */
   digits?: number
+  /** 根节点附加类名。 */
   className?: string
+  /** ariaLive 配置项。 */
   ariaLive?: CountdownAriaLive
+  /** ariaLabel 标签内容。 */
   ariaLabel?: string
+  /** 组件子内容。 */
   children?: any
 }
 
+/** CountdownItem 类型。 */
 export type CountdownItem = CountdownTextItem | CountdownValueItem
+/** CountdownTargetValue 值类型。 */
 export type CountdownTargetValue = number | string | Date
 
 interface CountdownLiteralToken {
@@ -53,37 +69,57 @@ interface CountdownUnitToken {
 
 type CountdownFormatToken = CountdownLiteralToken | CountdownUnitToken
 
+/** CountdownProps 组件属性。 */
 export interface CountdownProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<CountdownItem>
+  /** 受控值。 */
   value?: CountdownTargetValue
+  /** format 配置项。 */
   format?: string
+  /** interval 配置项。 */
   interval?: number
+  /** ariaLive 配置项。 */
   ariaLive?: CountdownAriaLive
+  /** 值或状态变化时触发的回调。 */
   onChange?: (remaining?: number) => void
+  /** onFinish 事件回调。 */
   onFinish?: () => void
 }
 
+/** ValueProps 组件属性。 */
 export interface ValueProps {
+  /** 受控值。 */
   value: number
+  /** digits 配置项。 */
   digits?: number
+  /** 根节点附加类名。 */
   className?: string
+  /** ariaLive 配置项。 */
   ariaLive?: CountdownAriaLive
+  /** ariaLabel 标签内容。 */
   ariaLabel?: string
+  /** 组件子内容。 */
   children?: any
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** parse Target Time 的内部工具函数。 */
 const parseTargetTime = (value?: CountdownTargetValue) => {
   if (value == null) return null
   const timestamp = value instanceof Date ? value.getTime() : new Date(value).getTime()
   return Number.isFinite(timestamp) ? timestamp : null
 }
 
+/** parse Format 的内部工具函数。 */
 const parseFormat = (format: string): CountdownFormatToken[] => {
   const tokens: CountdownFormatToken[] = []
   let index = 0
@@ -130,6 +166,7 @@ const parseFormat = (format: string): CountdownFormatToken[] => {
   return tokens
 }
 
+/** 读取 Unit Values 的内部工具函数。 */
 const getUnitValues = (duration: number, tokens: CountdownFormatToken[]) => {
   const remainingUnits = new Set<CountdownFormatUnit>()
   tokens.forEach(token => {
@@ -149,6 +186,7 @@ const getUnitValues = (duration: number, tokens: CountdownFormatToken[]) => {
   return values
 }
 
+/** 构建 Items From Duration 的内部工具函数。 */
 const buildItemsFromDuration = (
   duration: number,
   format: string,
@@ -174,11 +212,13 @@ const buildItemsFromDuration = (
   })
 }
 
+/** 解析 Timer Interval 的内部工具函数。 */
 const resolveTimerInterval = (format: string, interval?: number) => {
   if (typeof interval === 'number' && interval > 0) return interval
   return format.includes('S') ? MILLISECOND_INTERVAL : SECOND_INTERVAL
 }
 
+/** 渲染 Items 的内部工具函数。 */
 const renderItems = (items: ReadonlyArray<CountdownItem>) => {
   return items.map((it, index) => {
     if ('value' in it) {
@@ -330,4 +370,5 @@ const CountdownCompound: CountdownCompound = Object.assign(Countdown, {
   Value,
 })
 
+/** 默认导出倒计时组件。 */
 export default CountdownCompound

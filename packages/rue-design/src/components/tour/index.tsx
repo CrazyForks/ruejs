@@ -7,6 +7,7 @@ Tour 组件概述
 import type { FC } from '@rue-js/rue'
 import { Teleport, onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** TourPlacement 位置或方向类型。 */
 export type TourPlacement =
   | 'center'
   | 'top'
@@ -22,133 +23,246 @@ export type TourPlacement =
   | 'rightTop'
   | 'rightBottom'
 
+/** TourType 视觉或语义变体类型。 */
 export type TourType = 'default' | 'primary'
+/** TourArrow 类型。 */
 export type TourArrow = boolean | { pointAtCenter?: boolean }
+/** TourTarget 类型。 */
 export type TourTarget = HTMLElement | null | undefined | (() => HTMLElement | null | undefined)
+/** TourGetPopupContainer 类型。 */
 export type TourGetPopupContainer = string | HTMLElement | (() => HTMLElement) | false
 
+/** TourGap 接口。 */
 export interface TourGap {
+  /** offset 配置项。 */
   offset?: number | [number, number]
+  /** radius 配置项。 */
   radius?: number
 }
 
+/** TourMask 接口。 */
 export interface TourMask {
+  /** 组件语义色。 */
   color?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
 }
 
+/** TourLocale 接口。 */
 export interface TourLocale {
+  /** next 配置项。 */
   next?: any
+  /** previous 配置项。 */
   previous?: any
+  /** finish 配置项。 */
   finish?: any
+  /** 关闭按钮区域配置。 */
   close?: any
 }
 
+/** TourButtonProps 组件属性。 */
 export interface TourButtonProps {
+  /** 组件子内容。 */
   children?: any
+  /** 点击时触发的回调。 */
   onClick?: () => void
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 是否禁用交互。 */
   disabled?: boolean
 }
 
+/** TourClassNames 局部类名配置。 */
 export interface TourClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** 遮罩层区域配置。 */
   mask?: string
+  /** spotlight 配置项。 */
   spotlight?: string
+  /** panel 区域配置。 */
   panel?: string
+  /** section 配置项。 */
   section?: string
+  /** cover 配置项。 */
   cover?: string
+  /** 主体区域配置。 */
   body?: string
+  /** meta 区域配置。 */
   meta?: string
+  /** 头部区域内容。 */
   header?: string
+  /** 标题内容。 */
   title?: string
+  /** 描述内容。 */
   description?: string
+  /** 底部区域内容。 */
   footer?: string
+  /** 操作区内容。 */
   actions?: string
+  /** buttons 配置项。 */
   buttons?: string
+  /** prevButton 配置项。 */
   prevButton?: string
+  /** nextButton 配置项。 */
   nextButton?: string
+  /** indicators 配置项。 */
   indicators?: string
+  /** indicator 配置项。 */
   indicator?: string
+  /** 关闭按钮区域配置。 */
   close?: string
+  /** arrow 配置项。 */
   arrow?: string
 }
 
+/** TourStyles 局部样式配置。 */
 export interface TourStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** 遮罩层区域配置。 */
   mask?: Record<string, any>
+  /** spotlight 配置项。 */
   spotlight?: Record<string, any>
+  /** panel 区域配置。 */
   panel?: Record<string, any>
+  /** section 配置项。 */
   section?: Record<string, any>
+  /** cover 配置项。 */
   cover?: Record<string, any>
+  /** 主体区域配置。 */
   body?: Record<string, any>
+  /** meta 区域配置。 */
   meta?: Record<string, any>
+  /** 头部区域内容。 */
   header?: Record<string, any>
+  /** 标题内容。 */
   title?: Record<string, any>
+  /** 描述内容。 */
   description?: Record<string, any>
+  /** 底部区域内容。 */
   footer?: Record<string, any>
+  /** 操作区内容。 */
   actions?: Record<string, any>
+  /** buttons 配置项。 */
   buttons?: Record<string, any>
+  /** prevButton 配置项。 */
   prevButton?: Record<string, any>
+  /** nextButton 配置项。 */
   nextButton?: Record<string, any>
+  /** indicators 配置项。 */
   indicators?: Record<string, any>
+  /** indicator 配置项。 */
   indicator?: Record<string, any>
+  /** 关闭按钮区域配置。 */
   close?: Record<string, any>
+  /** arrow 配置项。 */
   arrow?: Record<string, any>
 }
 
+/** TourStepProps 组件属性。 */
 export interface TourStepProps {
+  /** 链接或定位目标。 */
   target?: TourTarget
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** cover 配置项。 */
   cover?: any
+  /** locale 配置项。 */
   locale?: TourLocale
+  /** 弹出层或内容展示位置。 */
   placement?: TourPlacement
+  /** 遮罩层区域配置。 */
   mask?: boolean | TourMask
+  /** arrow 配置项。 */
   arrow?: TourArrow
+  /** 组件类型或语义类型。 */
   type?: TourType
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** 关闭时触发的回调。 */
   onClose?: () => void
+  /** scrollIntoViewOptions 选项配置。 */
   scrollIntoViewOptions?: boolean | ScrollIntoViewOptions
+  /** nextButtonProps 透传属性。 */
   nextButtonProps?: TourButtonProps
+  /** prevButtonProps 透传属性。 */
   prevButtonProps?: TourButtonProps
+  /** indicatorsRender 自定义渲染函数。 */
   indicatorsRender?: (current: number, total: number) => any
+  /** actionsRender 自定义渲染函数。 */
   actionsRender?: (originNode: any, info: { current: number; total: number }) => any
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: TourClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: TourStyles
 }
 
+/** TourProps 组件属性。 */
 export interface TourProps {
+  /** steps 配置项。 */
   steps?: TourStepProps[]
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** current 配置项。 */
   current?: number
+  /** defaultCurrent 配置项。 */
   defaultCurrent?: number
+  /** 弹出层或内容展示位置。 */
   placement?: TourPlacement
+  /** 遮罩层区域配置。 */
   mask?: boolean | TourMask
+  /** 元素间距。 */
   gap?: TourGap
+  /** arrow 配置项。 */
   arrow?: TourArrow
+  /** 组件类型或语义类型。 */
   type?: TourType
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** disabledInteraction 配置项。 */
   disabledInteraction?: boolean
+  /** keyboard 配置项。 */
   keyboard?: boolean
+  /** zIndex 配置项。 */
   zIndex?: number
+  /** scrollIntoViewOptions 选项配置。 */
   scrollIntoViewOptions?: boolean | ScrollIntoViewOptions
+  /** getPopupContainer 配置项。 */
   getPopupContainer?: TourGetPopupContainer
+  /** locale 配置项。 */
   locale?: TourLocale
+  /** indicatorsRender 自定义渲染函数。 */
   indicatorsRender?: (current: number, total: number) => any
+  /** actionsRender 自定义渲染函数。 */
   actionsRender?: (originNode: any, info: { current: number; total: number }) => any
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: TourClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: TourStyles
+  /** 值或状态变化时触发的回调。 */
   onChange?: (current: number) => void
+  /** 关闭时触发的回调。 */
   onClose?: () => void
+  /** onFinish 事件回调。 */
   onFinish?: () => void
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -174,10 +288,12 @@ const defaultLocale: Required<TourLocale> = {
 const viewportPadding = 16
 const panelGap = 18
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...values: Array<string | undefined | false | null>) => {
   return values.filter(Boolean).join(' ')
 }
 
+/** merge Style 的内部工具函数。 */
 const mergeStyle = (...values: Array<Record<string, any> | undefined>) => {
   const merged: Record<string, any> = {}
   values.forEach(value => {
@@ -186,8 +302,10 @@ const mergeStyle = (...values: Array<Record<string, any> | undefined>) => {
   return merged
 }
 
+/** 转换为 Px 的内部工具函数。 */
 const toPx = (value: number) => `${value}px`
 
+/** merge Semantic Class Names 的内部工具函数。 */
 const mergeSemanticClassNames = (
   base?: TourClassNames,
   override?: TourClassNames,
@@ -205,6 +323,7 @@ const mergeSemanticClassNames = (
   return merged
 }
 
+/** merge Semantic Styles 的内部工具函数。 */
 const mergeSemanticStyles = (base?: TourStyles, override?: TourStyles): TourStyles => {
   const merged: TourStyles = {}
   const keys = new Set([...Object.keys(base ?? {}), ...Object.keys(override ?? {})])
@@ -219,21 +338,25 @@ const mergeSemanticStyles = (base?: TourStyles, override?: TourStyles): TourStyl
   return merged
 }
 
+/** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => {
   if (max < min) return min
   return Math.min(Math.max(value, min), max)
 }
 
+/** 解析 Container 的内部工具函数。 */
 const resolveContainer = (container?: TourGetPopupContainer) => {
   if (typeof container === 'function') return container()
   return container
 }
 
+/** 解析 Target Element 的内部工具函数。 */
 const resolveTargetElement = (target?: TourTarget) => {
   if (typeof target === 'function') return target() ?? null
   return target ?? null
 }
 
+/** 解析 Offset 的内部工具函数。 */
 const resolveOffset = (gap?: TourGap) => {
   const source = gap?.offset ?? 8
   if (Array.isArray(source)) {
@@ -247,10 +370,12 @@ const resolveOffset = (gap?: TourGap) => {
   return { horizontal: value, vertical: value }
 }
 
+/** 解析 Radius 的内部工具函数。 */
 const resolveRadius = (gap?: TourGap) => {
   return Math.max(0, gap?.radius ?? 18)
 }
 
+/** 解析 Mask Config 的内部工具函数。 */
 const resolveMaskConfig = (mask?: boolean | TourMask) => {
   if (mask === false) return null
   if (mask && typeof mask === 'object') {
@@ -266,18 +391,22 @@ const resolveMaskConfig = (mask?: boolean | TourMask) => {
   }
 }
 
+/** 解析 Arrow Enabled 的内部工具函数。 */
 const resolveArrowEnabled = (arrow?: TourArrow) => {
   return arrow !== false
 }
 
+/** 解析 Arrow Point At Center 的内部工具函数。 */
 const resolveArrowPointAtCenter = (arrow?: TourArrow) => {
   return typeof arrow === 'object' ? arrow.pointAtCenter !== false : true
 }
 
+/** 归一化 Placement 的内部工具函数。 */
 const normalizePlacement = (placement?: TourPlacement): TourPlacement => {
   return placement ?? 'bottom'
 }
 
+/** 读取 Placement Side 的内部工具函数。 */
 const getPlacementSide = (placement: TourPlacement) => {
   if (placement === 'center') return 'center'
   if (placement.startsWith('top')) return 'top'
@@ -286,6 +415,7 @@ const getPlacementSide = (placement: TourPlacement) => {
   return 'right'
 }
 
+/** 读取 Inverse Placement 的内部工具函数。 */
 const getInversePlacement = (placement: TourPlacement): TourPlacement => {
   switch (placement) {
     case 'top':
@@ -317,6 +447,7 @@ const getInversePlacement = (placement: TourPlacement): TourPlacement => {
   }
 }
 
+/** 解析 Viewport 的内部工具函数。 */
 const resolveViewport = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return { width: 1440, height: 900 }
@@ -328,6 +459,7 @@ const resolveViewport = () => {
   }
 }
 
+/** buildSpotlightRect 导出函数。 */
 export const buildSpotlightRect = (
   element: HTMLElement | null,
   gap?: TourGap,
@@ -360,6 +492,7 @@ export const buildSpotlightRect = (
   }
 }
 
+/** 构建 Panel Coordinates 的内部工具函数。 */
 const buildPanelCoordinates = (
   placement: TourPlacement,
   spotlight: SpotlightRect,
@@ -402,6 +535,7 @@ const buildPanelCoordinates = (
   }
 }
 
+/** should Flip Placement 的内部工具函数。 */
 const shouldFlipPlacement = (
   placement: TourPlacement,
   coordinates: { left: number; top: number },
@@ -423,6 +557,7 @@ const shouldFlipPlacement = (
   }
 }
 
+/** 解析 Panel Placement 的内部工具函数。 */
 const resolvePanelPlacement = (
   preferredPlacement: TourPlacement,
   spotlight: SpotlightRect | null,
@@ -462,6 +597,7 @@ const resolvePanelPlacement = (
   }
 }
 
+/** 解析 Arrow Style 的内部工具函数。 */
 const resolveArrowStyle = (
   placement: TourPlacement,
   spotlight: SpotlightRect | null,
@@ -491,6 +627,7 @@ const resolveArrowStyle = (
   }
 }
 
+/** Default Close Icon 的内部工具函数。 */
 const DefaultCloseIcon: FC = () => {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="size-4">
@@ -499,6 +636,7 @@ const DefaultCloseIcon: FC = () => {
   )
 }
 
+/** Spark Icon 的内部工具函数。 */
 const SparkIcon: FC = () => {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-4">
@@ -512,6 +650,7 @@ const SparkIcon: FC = () => {
   )
 }
 
+/** Tour 的内部工具函数。 */
 const Tour: FC<TourProps> = props => {
   const {
     steps = [],
@@ -1247,4 +1386,5 @@ const Tour: FC<TourProps> = props => {
   return <Teleport to={resolvedContainer}>{rootNode}</Teleport>
 }
 
+/** 默认导出漫游引导组件。 */
 export default Tour

@@ -28,6 +28,8 @@ export const installSharedBridge = sharedRuntime => {
   }
 
   const instanceStack = []
+  // 当前 render owner 供 JS 侧 onRenderTracked 绑定组件实例。
+  const renderOwnerStack = []
   const renderScopeStack = []
   const vaporInstanceStack = []
   const currentContainerStack = []
@@ -38,6 +40,7 @@ export const installSharedBridge = sharedRuntime => {
       const prevInstance = sharedRuntime.getCurrentInstance()
       instanceStack.push(prevInstance)
       if (!target) {
+        renderOwnerStack.push(undefined)
         renderScopeStack.push(false)
         sharedRuntime.setCurrentInstance(undefined)
         return
@@ -55,6 +58,7 @@ export const installSharedBridge = sharedRuntime => {
       target[RUE_SHARED_RENDER_SCOPE_KEY] = scopeId
       sharedRuntime.setCurrentInstance(target)
       sharedRuntime.__ruePushEffectScope(scopeId)
+      renderOwnerStack.push(target)
       renderScopeStack.push(true)
     },
     endComponentRender() {
@@ -62,6 +66,7 @@ export const installSharedBridge = sharedRuntime => {
       if (hadScope) {
         sharedRuntime.__ruePopEffectScope()
       }
+      renderOwnerStack.pop()
       const prev = instanceStack.pop()
       sharedRuntime.setCurrentInstance(prev == null ? undefined : prev)
     },
@@ -103,11 +108,13 @@ export const installSharedBridge = sharedRuntime => {
       target[RUE_SHARED_VAPOR_SCOPE_KEY] = scopeId
       sharedRuntime.setCurrentInstance(target)
       sharedRuntime.__ruePushEffectScope(scopeId)
+      renderOwnerStack.push(target)
       return true
     },
     endVaporScope(didPush) {
       if (didPush) {
         sharedRuntime.__ruePopEffectScope()
+        renderOwnerStack.pop()
       }
       const prev = vaporInstanceStack.pop()
       sharedRuntime.setCurrentInstance(prev == null ? undefined : prev)
@@ -137,6 +144,9 @@ export const installSharedBridge = sharedRuntime => {
       return currentContainerStack.length > 0
         ? currentContainerStack[currentContainerStack.length - 1]
         : undefined
+    },
+    getCurrentRenderOwner() {
+      return renderOwnerStack.length > 0 ? renderOwnerStack[renderOwnerStack.length - 1] : undefined
     },
     propsReactive(initial) {
       return sharedRuntime.propsReactive(initial, true)

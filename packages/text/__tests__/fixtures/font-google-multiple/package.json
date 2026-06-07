@@ -1,0 +1,12 @@
+{
+  "name": "font-google-multiple-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "text": "workspace:*",
+    "vite": "catalog:"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  }
+}

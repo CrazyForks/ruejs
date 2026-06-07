@@ -7,7 +7,9 @@ Mentions 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** MentionPlacement 位置或方向类型。 */
 export type MentionPlacement = 'top' | 'bottom'
+/** MentionsSize 尺寸类型。 */
 export type MentionsSize =
   | 'xs'
   | 'sm'
@@ -18,99 +20,176 @@ export type MentionsSize =
   | 'middle'
   | 'medium'
   | 'large'
+/** MentionsStatus 状态类型。 */
 export type MentionsStatus = 'success' | 'warning' | 'error' | 'validating'
+/** MentionsVariant 视觉或语义变体类型。 */
 export type MentionsVariant = 'outlined' | 'filled' | 'ghost' | 'borderless' | 'underlined'
 
+/** MentionsAutoSizeConfig 配置对象。 */
 export interface MentionsAutoSizeConfig {
+  /** minRows 配置项。 */
   minRows?: number
+  /** maxRows 配置项。 */
   maxRows?: number
 }
 
+/** MentionsAllowClearConfig 配置对象。 */
 export interface MentionsAllowClearConfig {
+  /** 清空图标。 */
   clearIcon?: any
 }
 
+/** MentionsOption 选项配置。 */
 export interface MentionsOption {
+  /** 数据项唯一标识。 */
   key?: string
+  /** 受控值。 */
   value: string
+  /** 展示标签。 */
   label?: any
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** MentionsClassNames 局部类名配置。 */
 export interface MentionsClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** textarea 配置项。 */
   textarea?: string
+  /** popup 区域配置。 */
   popup?: string
+  /** option 配置项。 */
   option?: string
+  /** empty 配置项。 */
   empty?: string
+  /** clear 配置项。 */
   clear?: string
 }
 
+/** MentionsStyles 局部样式配置。 */
 export interface MentionsStyles {
+  /** 根节点区域配置。 */
   root?: any
+  /** textarea 配置项。 */
   textarea?: any
+  /** popup 区域配置。 */
   popup?: any
 }
 
+/** MentionsRef 对外暴露的实例引用。 */
 export interface MentionsRef {
+  /** nativeElement 配置项。 */
   nativeElement?: HTMLTextAreaElement
+  /** focus 配置项。 */
   focus: () => void
+  /** blur 配置项。 */
   blur: () => void
 }
 
+/** MentionsConfig 配置对象。 */
 export interface MentionsConfig {
+  /** 前缀内容。 */
   prefix?: string | string[]
+  /** split 配置项。 */
   split?: string
 }
 
+/** MentionsEntity 接口。 */
 export interface MentionsEntity {
+  /** 前缀内容。 */
   prefix: string
+  /** 受控值。 */
   value: string
 }
 
+/** MentionsProps 组件属性。 */
 export interface MentionsProps {
+  /** 受控值。 */
   value?: string
+  /** 非受控初始值。 */
   defaultValue?: string
+  /** 可选项数据。 */
   options?: MentionsOption[]
+  /** 前缀内容。 */
   prefix?: string | string[]
+  /** split 配置项。 */
   split?: string
+  /** searchDebounce 配置项。 */
   searchDebounce?: number
+  /** 弹出层或内容展示位置。 */
   placement?: MentionPlacement
+  /** 组件尺寸。 */
   size?: MentionsSize
+  /** 组件状态。 */
   status?: MentionsStatus
+  /** 组件视觉变体。 */
   variant?: MentionsVariant
+  /** 是否允许一键清空。 */
   allowClear?: boolean | MentionsAllowClearConfig
+  /** autoSize 尺寸。 */
   autoSize?: boolean | MentionsAutoSizeConfig
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** readOnly 配置项。 */
   readOnly?: boolean
+  /** notFoundContent 配置项。 */
   notFoundContent?: any
+  /** filterOption 配置项。 */
   filterOption?: false | ((input: string, option: MentionsOption) => boolean)
+  /** validateSearch 配置项。 */
   validateSearch?: (text: string, props: MentionsProps) => boolean
+  /** 值或状态变化时触发的回调。 */
   onChange?: (text: string) => void
+  /** onInput 事件回调。 */
   onInput?: (event: Event) => void
+  /** onNativeChange 事件回调。 */
   onNativeChange?: (event: Event) => void
+  /** 搜索文本变化时触发的回调。 */
   onSearch?: (text: string, prefix: string) => void
+  /** 选中项时触发的回调。 */
   onSelect?: (option: MentionsOption, prefix: string) => void
+  /** 获得焦点时触发的回调。 */
   onFocus?: (event: FocusEvent) => void
+  /** 失去焦点时触发的回调。 */
   onBlur?: (event: FocusEvent) => void
+  /** onKeyDown 事件回调。 */
   onKeyDown?: (event: KeyboardEvent) => void
+  /** onCompositionStart 事件回调。 */
   onCompositionStart?: (event: CompositionEvent) => void
+  /** onCompositionEnd 事件回调。 */
   onCompositionEnd?: (event: CompositionEvent) => void
+  /** onResize 事件回调。 */
   onResize?: (size: { width: number; height: number }) => void
+  /** onPopupScroll 事件回调。 */
   onPopupScroll?: (event: Event) => void
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** textareaClassName 附加类名。 */
   textareaClassName?: string
+  /** popupClassName 附加类名。 */
   popupClassName?: string
+  /** popupStyle 内联样式。 */
   popupStyle?: any
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: MentionsClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: MentionsStyles
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -124,15 +203,18 @@ interface MentionTriggerState {
 
 let mentionsIdSeed = 0
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 解析 Text Value 的内部工具函数。 */
 const resolveTextValue = (value?: string) => {
   if (value == null) return ''
   return String(value)
 }
 
+/** 归一化 Prefix List 的内部工具函数。 */
 const normalizePrefixList = (prefix?: string | string[]) => {
   const list = Array.isArray(prefix) ? prefix : [prefix ?? '@']
   return list
@@ -140,6 +222,7 @@ const normalizePrefixList = (prefix?: string | string[]) => {
     .sort((left, right) => right.length - left.length)
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: MentionsSize) => {
   switch (size) {
     case 'small':
@@ -154,6 +237,7 @@ const resolveSizeClass = (size?: MentionsSize) => {
   }
 }
 
+/** 解析 Status Tone 的内部工具函数。 */
 const resolveStatusTone = (status?: MentionsStatus) => {
   switch (status) {
     case 'success':
@@ -169,6 +253,7 @@ const resolveStatusTone = (status?: MentionsStatus) => {
   }
 }
 
+/** 解析 Variant Class Name 的内部工具函数。 */
 const resolveVariantClassName = (variant?: MentionsVariant) => {
   switch (variant) {
     case 'filled':
@@ -184,6 +269,7 @@ const resolveVariantClassName = (variant?: MentionsVariant) => {
   }
 }
 
+/** 构建 Textarea Class Name 的内部工具函数。 */
 const buildTextareaClassName = ({
   size,
   status,
@@ -205,11 +291,13 @@ const buildTextareaClassName = ({
   return cls
 }
 
+/** validateSearchText 导出函数。 */
 export const validateSearchText = (text: string, split = ' ') => {
   if (/\r|\n/.test(text)) return false
   return !split || text.indexOf(split) === -1
 }
 
+/** 判断是否存在 Boundary Before Prefix 的内部工具函数。 */
 const hasBoundaryBeforePrefix = (value: string, start: number, split: string) => {
   if (start <= 0) return true
   if (split && start >= split.length && value.slice(start - split.length, start) === split) {
@@ -218,6 +306,7 @@ const hasBoundaryBeforePrefix = (value: string, start: number, split: string) =>
   return /\s/.test(value[start - 1] ?? '')
 }
 
+/** find Mention Boundary End 的内部工具函数。 */
 const findMentionBoundaryEnd = (value: string, start: number, split: string) => {
   let cursor = start
 
@@ -236,6 +325,7 @@ const findMentionBoundaryEnd = (value: string, start: number, split: string) => 
   return cursor
 }
 
+/** find Previous Prefix Index 的内部工具函数。 */
 const findPreviousPrefixIndex = (value: string, token: string, searchIndex: number) => {
   if (searchIndex <= 0) {
     return -1
@@ -244,6 +334,7 @@ const findPreviousPrefixIndex = (value: string, token: string, searchIndex: numb
   return value.lastIndexOf(token, searchIndex - 1)
 }
 
+/** find Active Trigger 的内部工具函数。 */
 const findActiveTrigger = (
   value: string,
   caretPosition: number,
@@ -294,6 +385,7 @@ const findActiveTrigger = (
   return matchedTrigger
 }
 
+/** stringify Option Label 的内部工具函数。 */
 const stringifyOptionLabel = (option: MentionsOption) => {
   if (typeof option.label === 'string' || typeof option.label === 'number') {
     return String(option.label)
@@ -301,6 +393,7 @@ const stringifyOptionLabel = (option: MentionsOption) => {
   return String(option.value ?? '')
 }
 
+/** filter Mention Options 的内部工具函数。 */
 const filterMentionOptions = (
   options: MentionsOption[],
   searchText: string,
@@ -327,6 +420,7 @@ const filterMentionOptions = (
   })
 }
 
+/** 创建 Option View 的内部工具函数。 */
 const createOptionView = (source?: MentionsOption[]) => {
   if (!source || typeof (source as any).length !== 'number') {
     return [] as MentionsOption[]
@@ -345,6 +439,7 @@ const createOptionView = (source?: MentionsOption[]) => {
   return list
 }
 
+/** 解析 Search Debounce 的内部工具函数。 */
 const resolveSearchDebounce = (value?: number) => {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
     return 0
@@ -353,10 +448,12 @@ const resolveSearchDebounce = (value?: number) => {
   return Math.round(value)
 }
 
+/** find First Enabled Index 的内部工具函数。 */
 const findFirstEnabledIndex = (options: MentionsOption[]) => {
   return options.findIndex(option => !option.disabled)
 }
 
+/** find Next Enabled Index 的内部工具函数。 */
 const findNextEnabledIndex = (
   options: MentionsOption[],
   currentIndex: number,
@@ -376,6 +473,7 @@ const findNextEnabledIndex = (
   return -1
 }
 
+/** assign Forwarded Ref 的内部工具函数。 */
 const assignForwardedRef = (forwardedRef: any, value: MentionsRef | null) => {
   if (typeof forwardedRef === 'function') {
     forwardedRef(value)
@@ -387,10 +485,12 @@ const assignForwardedRef = (forwardedRef: any, value: MentionsRef | null) => {
   }
 }
 
+/** trigger Synthetic Input 的内部工具函数。 */
 const triggerSyntheticInput = (element: HTMLTextAreaElement) => {
   element.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
+/** Default Clear Icon 的内部工具函数。 */
 const DefaultClearIcon: FC = () => {
   return (
     <svg
@@ -407,6 +507,7 @@ const DefaultClearIcon: FC = () => {
   )
 }
 
+/** Loading Option 的内部工具函数。 */
 const LoadingOption: FC = () => {
   return (
     <div className="flex items-center gap-2 px-3 py-2 text-sm text-base-content/65">
@@ -416,6 +517,7 @@ const LoadingOption: FC = () => {
   )
 }
 
+/** Empty Option 的内部工具函数。 */
 const EmptyOption: FC<{ content: any; className?: string }> = ({ content, className }) => {
   return (
     <div className={appendClassName('px-3 py-2 text-sm text-base-content/55', className)}>
@@ -424,6 +526,7 @@ const EmptyOption: FC<{ content: any; className?: string }> = ({ content, classN
   )
 }
 
+/** Mentions Root 的内部工具函数。 */
 const MentionsRoot: FC<MentionsProps> = ({
   value,
   defaultValue,
@@ -1378,4 +1481,5 @@ Mentions.getMentions = (value = '', config: MentionsConfig = {}): MentionsEntity
   return entities
 }
 
+/** 默认导出提及输入组件。 */
 export default Mentions

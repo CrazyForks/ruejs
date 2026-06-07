@@ -62,7 +62,7 @@ impl VisitMut for VaporTransform {
                             ctxt: SyntaxContext::empty(),
                         });
                         let call = call_ident("vapor", vec![func]);
-                        *expr = Box::new(call);
+                        **expr = call;
                         // 标记已进行 Vapor 转换，用于模块级导入注入
                         self.did_transform = true;
                     }
@@ -81,7 +81,7 @@ impl VisitMut for VaporTransform {
                             ctxt: SyntaxContext::empty(),
                         });
                         let call = call_ident("vapor", vec![func]);
-                        *expr = Box::new(call);
+                        **expr = call;
                         self.did_transform = true;
                     }
                     _ => {
@@ -119,7 +119,7 @@ impl VisitMut for VaporTransform {
                         ctxt: SyntaxContext::empty(),
                     });
                     let call = call_ident("vapor", vec![func]);
-                    *expr = Box::new(call);
+                    **expr = call;
                     self.did_transform = true;
                 }
                 Expr::JSXFragment(frag) => {
@@ -137,7 +137,7 @@ impl VisitMut for VaporTransform {
                         ctxt: SyntaxContext::empty(),
                     });
                     let call = call_ident("vapor", vec![func]);
-                    *expr = Box::new(call);
+                    **expr = call;
                     self.did_transform = true;
                 }
                 _ => {}
@@ -173,3 +173,7 @@ impl VisitMut for VaporTransform {
         ensure_runtime_imports(m);
     }
 }
+
+#[cfg(test)]
+#[path = "visitor_tests.rs"]
+mod tests;

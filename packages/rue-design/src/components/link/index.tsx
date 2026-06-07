@@ -9,6 +9,7 @@ import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
 import { RouterLink } from '@rue-js/router'
 
+/** LinkVariant 视觉或语义变体类型。 */
 export type LinkVariant =
   | 'neutral'
   | 'primary'
@@ -19,85 +20,154 @@ export type LinkVariant =
   | 'warning'
   | 'error'
 
+/** LinkColor 语义色类型。 */
 export type LinkColor = LinkVariant | 'danger'
+/** LinkType 视觉或语义变体类型。 */
 export type LinkType = 'secondary' | 'success' | 'warning' | 'danger'
+/** LinkIconPlacement 位置或方向类型。 */
 export type LinkIconPlacement = 'start' | 'end'
 
+/** LinkCopyConfig 配置对象。 */
 export interface LinkCopyConfig {
+  /** text 区域配置。 */
   text?: string | (() => string | Promise<string>)
+  /** onCopy 事件回调。 */
   onCopy?: (event?: MouseEvent) => void
+  /** 图标内容。 */
   icon?: any
+  /** tooltips 配置项。 */
   tooltips?: any
+  /** format 配置项。 */
   format?: 'text/plain' | 'text/html'
+  /** tabIndex 配置项。 */
   tabIndex?: number
 }
 
+/** LinkEditAutoSizeConfig 配置对象。 */
 export interface LinkEditAutoSizeConfig {
+  /** minRows 配置项。 */
   minRows?: number
+  /** maxRows 配置项。 */
   maxRows?: number
 }
 
+/** LinkEditConfig 配置对象。 */
 export interface LinkEditConfig {
+  /** text 区域配置。 */
   text?: string
+  /** editing 配置项。 */
   editing?: boolean
+  /** 图标内容。 */
   icon?: any
+  /** tooltip 配置项。 */
   tooltip?: any
+  /** onStart 事件回调。 */
   onStart?: () => void
+  /** 值或状态变化时触发的回调。 */
   onChange?: (value: string) => void
+  /** onCancel 事件回调。 */
   onCancel?: () => void
+  /** onEnd 事件回调。 */
   onEnd?: () => void
+  /** maxLength 配置项。 */
   maxLength?: number
+  /** autoSize 尺寸。 */
   autoSize?: boolean | LinkEditAutoSizeConfig
+  /** triggerType 配置项。 */
   triggerType?: ('icon' | 'text')[]
+  /** enterIcon 图标内容。 */
   enterIcon?: any
+  /** tabIndex 配置项。 */
   tabIndex?: number
 }
 
+/** LinkEllipsisExpandInfo 接口。 */
 export interface LinkEllipsisExpandInfo {
+  /** expanded 配置项。 */
   expanded: boolean
 }
 
+/** LinkEllipsisConfig 配置对象。 */
 export interface LinkEllipsisConfig {
+  /** rows 配置项。 */
   rows?: number
+  /** tooltip 配置项。 */
   tooltip?: boolean | string
+  /** expandable 配置项。 */
   expandable?: boolean | 'collapsible'
+  /** 后缀内容。 */
   suffix?: string
+  /** symbol 配置项。 */
   symbol?: any | ((expanded: boolean) => any)
+  /** defaultExpanded 配置项。 */
   defaultExpanded?: boolean
+  /** expanded 配置项。 */
   expanded?: boolean
+  /** onExpand 事件回调。 */
   onExpand?: (event: MouseEvent, info: LinkEllipsisExpandInfo) => void
+  /** onEllipsis 事件回调。 */
   onEllipsis?: (ellipsis: boolean) => void
 }
 
+/** LinkProps 组件属性。 */
 export interface LinkProps {
+  /** 链接地址。 */
   href?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** to 配置项。 */
   to?: string
+  /** replace 配置项。 */
   replace?: boolean
+  /** 点击时触发的回调。 */
   onClick?: (e: MouseEvent) => void
+  /** 组件视觉变体。 */
   variant?: LinkVariant
+  /** 组件语义色。 */
   color?: LinkColor
+  /** 组件类型或语义类型。 */
   type?: LinkType
+  /** hover 配置项。 */
   hover?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** ellipsis 配置项。 */
   ellipsis?: boolean | LinkEllipsisConfig
+  /** copyable 配置项。 */
   copyable?: boolean | LinkCopyConfig
+  /** editable 配置项。 */
   editable?: boolean | LinkEditConfig
+  /** mark 配置项。 */
   mark?: boolean
+  /** code 配置项。 */
   code?: boolean
+  /** keyboard 配置项。 */
   keyboard?: boolean
+  /** underline 配置项。 */
   underline?: boolean
+  /** delete 配置项。 */
   delete?: boolean
+  /** strong 配置项。 */
   strong?: boolean
+  /** italic 配置项。 */
   italic?: boolean
+  /** 图标内容。 */
   icon?: any
+  /** iconPlacement 配置项。 */
   iconPlacement?: LinkIconPlacement
+  /** block 配置项。 */
   block?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 标题内容。 */
   title?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -117,10 +187,12 @@ interface NormalizedEllipsisConfig extends LinkEllipsisConfig {
   expandable: boolean | 'collapsible'
 }
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | undefined | false>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** merge Styles 的内部工具函数。 */
 const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   const merged: Record<string, any> = {}
   parts.forEach(part => {
@@ -129,6 +201,7 @@ const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   return Object.keys(merged).length > 0 ? merged : undefined
 }
 
+/** 转换为 Text 的内部工具函数。 */
 const toText = (value: any): string => {
   if (value == null || value === false || value === true) return ''
   if (typeof value === 'string' || typeof value === 'number') return String(value)
@@ -142,6 +215,7 @@ const toText = (value: any): string => {
   return ''
 }
 
+/** stop Event 的内部工具函数。 */
 const stopEvent = (event?: MouseEvent | KeyboardEvent) => {
   if (!event) return
   if (typeof (event as any).preventDefault === 'function') {
@@ -152,11 +226,13 @@ const stopEvent = (event?: MouseEvent | KeyboardEvent) => {
   }
 }
 
+/** 归一化 Copy Config 的内部工具函数。 */
 const normalizeCopyConfig = (copyable?: boolean | LinkCopyConfig): NormalizedCopyConfig => {
   if (!copyable) return { enabled: false }
   return typeof copyable === 'object' ? { ...copyable, enabled: true } : { enabled: true }
 }
 
+/** 归一化 Edit Config 的内部工具函数。 */
 const normalizeEditConfig = (editable?: boolean | LinkEditConfig): NormalizedEditConfig => {
   if (!editable) return { enabled: false, triggerType: ['icon'] }
   const config = typeof editable === 'object' ? editable : {}
@@ -167,11 +243,13 @@ const normalizeEditConfig = (editable?: boolean | LinkEditConfig): NormalizedEdi
   }
 }
 
+/** 解析 Color Class 的内部工具函数。 */
 const resolveColorClass = (color?: LinkColor) => {
   if (!color) return undefined
   return `link-${color === 'danger' ? 'error' : color}`
 }
 
+/** 解析 Type Class 的内部工具函数。 */
 const resolveTypeClass = (type?: LinkType) => {
   switch (type) {
     case 'secondary':
@@ -187,6 +265,7 @@ const resolveTypeClass = (type?: LinkType) => {
   }
 }
 
+/** 解析 Router Href 的内部工具函数。 */
 const resolveRouterHref = (to: string) => {
   const resolvedHref = RouterLink.__rueHref(to)
   if (!resolvedHref) {
@@ -198,6 +277,7 @@ const resolveRouterHref = (to: string) => {
   return resolvedHref
 }
 
+/** 解析 Ellipsis 的内部工具函数。 */
 const resolveEllipsis = (ellipsis?: boolean | LinkEllipsisConfig): NormalizedEllipsisConfig => {
   if (!ellipsis) {
     return { enabled: false, rows: 1, tooltip: false, expandable: false }
@@ -214,6 +294,7 @@ const resolveEllipsis = (ellipsis?: boolean | LinkEllipsisConfig): NormalizedEll
   return { enabled: true, rows: 1, tooltip: true, expandable: false }
 }
 
+/** 构建 Link Class Name 的内部工具函数。 */
 const buildLinkClassName = ({
   variant,
   color,
@@ -265,6 +346,7 @@ const buildLinkClassName = ({
   )
 }
 
+/** 构建 Ellipsis Style 的内部工具函数。 */
 const buildEllipsisStyle = (rows: number) => {
   if (rows <= 1) return undefined
   return {
@@ -274,6 +356,7 @@ const buildEllipsisStyle = (rows: number) => {
   }
 }
 
+/** 解析 Title Value 的内部工具函数。 */
 const resolveTitleValue = (
   title: string | undefined,
   ellipsis: NormalizedEllipsisConfig,
@@ -285,12 +368,14 @@ const resolveTitleValue = (
   return text
 }
 
+/** 解析 Expand Symbol 的内部工具函数。 */
 const resolveExpandSymbol = (ellipsis: NormalizedEllipsisConfig, expanded: boolean) => {
   if (typeof ellipsis.symbol === 'function') return ellipsis.symbol(expanded)
   if (ellipsis.symbol != null) return ellipsis.symbol
   return expanded ? '收起' : '展开'
 }
 
+/** 归一化 Rows Value 的内部工具函数。 */
 const normalizeRowsValue = (autoSize?: boolean | LinkEditAutoSizeConfig) => {
   if (!autoSize) return undefined
   const config = typeof autoSize === 'object' ? autoSize : undefined
@@ -298,6 +383,7 @@ const normalizeRowsValue = (autoSize?: boolean | LinkEditAutoSizeConfig) => {
   return String(minRows)
 }
 
+/** sync Textarea Auto Size 的内部工具函数。 */
 const syncTextareaAutoSize = (
   element: HTMLTextAreaElement | undefined,
   autoSize?: boolean | LinkEditAutoSizeConfig,
@@ -348,12 +434,14 @@ const syncTextareaAutoSize = (
   element.style.height = `${nextHeight}px`
 }
 
+/** read Copy Text 的内部工具函数。 */
 const readCopyText = async (config: NormalizedCopyConfig, children: any) => {
   const source = config.text
   const value = typeof source === 'function' ? await source() : source
   return value ?? toText(children)
 }
 
+/** fallback Copy Text 的内部工具函数。 */
 const fallbackCopyText = (text: string) => {
   if (typeof document === 'undefined') return
   const textarea = document.createElement('textarea')
@@ -367,6 +455,7 @@ const fallbackCopyText = (text: string) => {
   document.body.removeChild(textarea)
 }
 
+/** write Clipboard 的内部工具函数。 */
 const writeClipboard = async (text: string, format?: LinkCopyConfig['format']) => {
   const clipboard = (globalThis as any).navigator?.clipboard
   if (format === 'text/html' && clipboard?.write && (globalThis as any).ClipboardItem) {
@@ -384,6 +473,7 @@ const writeClipboard = async (text: string, format?: LinkCopyConfig['format']) =
   fallbackCopyText(text)
 }
 
+/** 渲染 Decorated Content 的内部工具函数。 */
 const renderDecoratedContent = (
   content: any,
   {
@@ -409,6 +499,7 @@ const renderDecoratedContent = (
   return node
 }
 
+/** Copy Icon 的内部工具函数。 */
 const CopyIcon: FC = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -428,6 +519,7 @@ const CopyIcon: FC = () => (
   </svg>
 )
 
+/** Check Icon 的内部工具函数。 */
 const CheckIcon: FC = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -442,6 +534,7 @@ const CheckIcon: FC = () => (
   </svg>
 )
 
+/** Edit Icon 的内部工具函数。 */
 const EditIcon: FC = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -461,6 +554,7 @@ const EditIcon: FC = () => (
   </svg>
 )
 
+/** Close Icon 的内部工具函数。 */
 const CloseIcon: FC = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -475,6 +569,7 @@ const CloseIcon: FC = () => (
   </svg>
 )
 
+/** Link 的内部工具函数。 */
 const Link: FC<LinkProps> = ({
   href = '#',
   target,
@@ -1011,4 +1106,5 @@ const Link: FC<LinkProps> = ({
   )
 }
 
+/** 默认导出链接组件。 */
 export default Link

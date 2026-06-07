@@ -1,3 +1,9 @@
+/*
+useSetup：只执行一次的 setup 工厂
+
+通过空依赖的 useMemo 缓存 setup 返回值，并在执行期间绑定当前组件的 Hook/effect scope。
+这让 setup 内创建的响应式副作用可以在组件卸载或重建时被统一清理。
+*/
 use js_sys::{Array, Function};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;

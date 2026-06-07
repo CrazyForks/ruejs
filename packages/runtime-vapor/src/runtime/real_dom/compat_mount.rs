@@ -1,3 +1,9 @@
+/*
+Compat 真实 DOM 挂载入口
+
+在启用 compat feature 时，把旧式 Element/Fragment MountInput 转到真实 DOM 创建逻辑。
+默认 Vapor 主路径不依赖这里。
+*/
 use super::super::types::{MountInput, MountInputType, MountedSubtreeState};
 use super::Rue;
 use crate::runtime::dom_adapter::DomAdapter;

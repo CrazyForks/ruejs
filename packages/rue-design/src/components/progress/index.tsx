@@ -1,6 +1,12 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Progress 模块概述
+- 汇总进度条组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 
+/** ProgressColor 语义色类型。 */
 export type ProgressColor =
   | 'neutral'
   | 'primary'
@@ -11,9 +17,13 @@ export type ProgressColor =
   | 'warning'
   | 'error'
 
+/** ProgressType 视觉或语义变体类型。 */
 export type ProgressType = 'line' | 'circle' | 'dashboard'
+/** ProgressStatus 状态类型。 */
 export type ProgressStatus = 'normal' | 'exception' | 'active' | 'success'
+/** ProgressLinecap 类型。 */
 export type ProgressLinecap = 'round' | 'square' | 'butt'
+/** ProgressSize 尺寸类型。 */
 export type ProgressSize =
   | number
   | [number | string, number]
@@ -21,47 +31,81 @@ export type ProgressSize =
   | 'small'
   | 'default'
   | 'medium'
+/** ProgressStrokeColor 语义色类型。 */
 export type ProgressStrokeColor =
   | string
   | string[]
   | { from: string; to: string; direction?: string }
+/** ProgressSteps 类型。 */
 export type ProgressSteps = number | { count: number; gap: number }
+/** ProgressGapPlacement 位置或方向类型。 */
 export type ProgressGapPlacement = 'top' | 'bottom' | 'start' | 'end'
 
+/** ProgressSuccessProps 组件属性。 */
 export interface ProgressSuccessProps {
+  /** percent 配置项。 */
   percent?: number
+  /** strokeColor 颜色。 */
   strokeColor?: string
 }
 
+/** ProgressPercentPosition 接口。 */
 export interface ProgressPercentPosition {
+  /** 交叉轴或内容对齐方式。 */
   align?: 'start' | 'center' | 'end'
+  /** 组件类型或语义类型。 */
   type?: 'inner' | 'outer'
 }
 
+/** ProgressProps 组件属性。 */
 export interface ProgressProps {
+  /** 组件语义色。 */
   color?: ProgressColor
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件类型或语义类型。 */
   type?: ProgressType
+  /** percent 配置项。 */
   percent?: number
+  /** max 配置项。 */
   max?: number
+  /** 受控值。 */
   value?: number
+  /** 组件状态。 */
   status?: ProgressStatus
+  /** showInfo 配置项。 */
   showInfo?: boolean
+  /** format 配置项。 */
   format?: (percent?: number, successPercent?: number) => any
+  /** 组件尺寸。 */
   size?: ProgressSize
+  /** strokeWidth 配置项。 */
   strokeWidth?: number
+  /** strokeLinecap 配置项。 */
   strokeLinecap?: ProgressLinecap
+  /** strokeColor 颜色。 */
   strokeColor?: ProgressStrokeColor
+  /** trailColor 颜色。 */
   trailColor?: string
+  /** railColor 颜色。 */
   railColor?: string
+  /** success 配置项。 */
   success?: ProgressSuccessProps
+  /** steps 配置项。 */
   steps?: ProgressSteps
+  /** gapDegree 配置项。 */
   gapDegree?: number
+  /** gapPlacement 配置项。 */
   gapPlacement?: ProgressGapPlacement
+  /** gapPosition 配置项。 */
   gapPosition?: 'top' | 'bottom' | 'left' | 'right'
+  /** percentPosition 配置项。 */
   percentPosition?: ProgressPercentPosition
+  /** rounding 配置项。 */
   rounding?: (step: number) => number
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -75,11 +119,14 @@ interface NormalizedSteps {
   gap: number
 }
 
+/** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
 
+/** polar To Cartesian 的内部工具函数。 */
 const polarToCartesian = (cx: number, cy: number, radius: number, angle: number) => {
   const radians = ((angle - 90) * Math.PI) / 180
   return {
@@ -88,6 +135,7 @@ const polarToCartesian = (cx: number, cy: number, radius: number, angle: number)
   }
 }
 
+/** describe Arc Path 的内部工具函数。 */
 const describeArcPath = (
   cx: number,
   cy: number,
@@ -101,6 +149,7 @@ const describeArcPath = (
   return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`
 }
 
+/** 解析 Color Class 的内部工具函数。 */
 const resolveColorClass = (color?: ProgressColor, status?: ProgressStatus) => {
   const resolved =
     color ??
@@ -126,6 +175,7 @@ const resolveColorClass = (color?: ProgressColor, status?: ProgressStatus) => {
   }
 }
 
+/** 解析 Status 的内部工具函数。 */
 const resolveStatus = (
   status: ProgressStatus | undefined,
   percent: number | undefined,
@@ -135,6 +185,7 @@ const resolveStatus = (
   return 'normal'
 }
 
+/** 解析 Percent 的内部工具函数。 */
 const resolvePercent = (percent?: number, value?: number, max?: number) => {
   if (typeof percent === 'number') return clamp(percent, 0, 100)
   if (typeof value === 'number') {
@@ -146,11 +197,13 @@ const resolvePercent = (percent?: number, value?: number, max?: number) => {
   return undefined
 }
 
+/** 解析 Success Percent 的内部工具函数。 */
 const resolveSuccessPercent = (success?: ProgressSuccessProps) => {
   if (typeof success?.percent !== 'number') return 0
   return clamp(success.percent, 0, 100)
 }
 
+/** 解析 Line Size 的内部工具函数。 */
 const resolveLineSize = (size?: ProgressSize, strokeWidth?: number): NormalizedLineSize => {
   if (Array.isArray(size)) {
     return {
@@ -188,6 +241,7 @@ const resolveLineSize = (size?: ProgressSize, strokeWidth?: number): NormalizedL
   }
 }
 
+/** 解析 Circle Size 的内部工具函数。 */
 const resolveCircleSize = (size?: ProgressSize) => {
   if (typeof size === 'number') return size
   if (typeof size === 'string') {
@@ -196,6 +250,7 @@ const resolveCircleSize = (size?: ProgressSize) => {
   return 120
 }
 
+/** 归一化 Steps 的内部工具函数。 */
 const normalizeSteps = (steps?: ProgressSteps): NormalizedSteps | null => {
   if (typeof steps === 'number' && steps > 0) {
     return {
@@ -212,6 +267,7 @@ const normalizeSteps = (steps?: ProgressSteps): NormalizedSteps | null => {
   return null
 }
 
+/** 解析 Linecap Class 的内部工具函数。 */
 const resolveLinecapClass = (strokeLinecap?: ProgressLinecap) => {
   switch (strokeLinecap) {
     case 'butt':
@@ -223,6 +279,7 @@ const resolveLinecapClass = (strokeLinecap?: ProgressLinecap) => {
   }
 }
 
+/** 解析 Line Fill Style 的内部工具函数。 */
 const resolveLineFillStyle = (strokeColor?: ProgressStrokeColor) => {
   if (!strokeColor || Array.isArray(strokeColor)) return undefined
   if (typeof strokeColor === 'string') {
@@ -234,6 +291,7 @@ const resolveLineFillStyle = (strokeColor?: ProgressStrokeColor) => {
   }
 }
 
+/** 解析 Circle Stroke 的内部工具函数。 */
 const resolveCircleStroke = (strokeColor?: ProgressStrokeColor) => {
   if (!strokeColor) return undefined
   if (typeof strokeColor === 'string') return strokeColor
@@ -241,6 +299,7 @@ const resolveCircleStroke = (strokeColor?: ProgressStrokeColor) => {
   return strokeColor.from
 }
 
+/** 解析 Step Color Style 的内部工具函数。 */
 const resolveStepColorStyle = (strokeColor: ProgressStrokeColor | undefined, index: number) => {
   if (!Array.isArray(strokeColor) || !strokeColor.length) return undefined
   return {
@@ -248,6 +307,7 @@ const resolveStepColorStyle = (strokeColor: ProgressStrokeColor | undefined, ind
   }
 }
 
+/** 解析 Gap Placement 的内部工具函数。 */
 const resolveGapPlacement = (
   gapPlacement?: ProgressGapPlacement,
   gapPosition?: 'top' | 'bottom' | 'left' | 'right',
@@ -263,6 +323,7 @@ const resolveGapPlacement = (
   }
 }
 
+/** 解析 Gap Center 的内部工具函数。 */
 const resolveGapCenter = (placement: ProgressGapPlacement) => {
   switch (placement) {
     case 'top':
@@ -276,12 +337,14 @@ const resolveGapCenter = (placement: ProgressGapPlacement) => {
   }
 }
 
+/** 判断是否存在 Renderable Children 的内部工具函数。 */
 const hasRenderableChildren = (children: any) => {
   if (children == null) return false
   if (Array.isArray(children)) return children.length > 0
   return true
 }
 
+/** Default Status Icon 的内部工具函数。 */
 const DefaultStatusIcon: FC<{ status: ProgressStatus }> = ({ status }) => {
   if (status === 'success') {
     return (
@@ -316,6 +379,7 @@ const DefaultStatusIcon: FC<{ status: ProgressStatus }> = ({ status }) => {
   return null
 }
 
+/** 渲染 Indicator 的内部工具函数。 */
 const renderIndicator = ({
   children,
   showInfo,
@@ -345,6 +409,7 @@ const renderIndicator = ({
   return `${Math.round(percent)}%`
 }
 
+/** Progress 的内部工具函数。 */
 const Progress: FC<ProgressProps> = ({
   color,
   className,
@@ -710,4 +775,5 @@ const Progress: FC<ProgressProps> = ({
   )
 }
 
+/** 默认导出进度条组件。 */
 export default Progress

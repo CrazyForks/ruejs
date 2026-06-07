@@ -19,34 +19,59 @@ import {
   whenTransitionEnds,
 } from './transitionUtils'
 
+/** Transition 与 TransitionGroup 共享的过渡配置。 */
 export interface BaseTransitionProps {
+  /** CSS 类名前缀，默认 `rue`。 */
   name?: string
+  /** 显式指定监听 transition 还是 animation；未传入时从样式推断。 */
   type?: TransitionType
+  /** 是否启用 CSS class 驱动；为 false 时只执行 JS 钩子。 */
   css?: boolean
+  /** 首次渲染时是否执行 appear 过渡。 */
   appear?: boolean
+  /** 显式过渡时长，优先于样式推断。 */
   duration?: number | { enter: number; leave: number }
-  // Class overrides
+  /** enter 阶段初始类名。 */
   enterFromClass?: string
+  /** enter 阶段激活类名。 */
   enterActiveClass?: string
+  /** enter 阶段结束类名。 */
   enterToClass?: string
+  /** leave 阶段初始类名。 */
   leaveFromClass?: string
+  /** leave 阶段激活类名。 */
   leaveActiveClass?: string
+  /** leave 阶段结束类名。 */
   leaveToClass?: string
+  /** appear 阶段初始类名，默认复用 enterFromClass。 */
   appearFromClass?: string
+  /** appear 阶段激活类名，默认复用 enterActiveClass。 */
   appearActiveClass?: string
+  /** appear 阶段结束类名，默认复用 enterToClass。 */
   appearToClass?: string
-  // JS hooks
+  /** enter 前钩子。 */
   onBeforeEnter?: (el: HTMLElement) => void
+  /** enter 钩子；接管动画时需要调用 done。 */
   onEnter?: (el: HTMLElement, done: () => void) => void
+  /** enter 完成钩子。 */
   onAfterEnter?: (el: HTMLElement) => void
+  /** enter 取消钩子，预留给上层兼容。 */
   onEnterCancelled?: (el: HTMLElement) => void
+  /** leave 前钩子。 */
   onBeforeLeave?: (el: HTMLElement) => void
+  /** leave 钩子；接管动画时需要调用 done。 */
   onLeave?: (el: HTMLElement, done: () => void) => void
+  /** leave 完成钩子。 */
   onAfterLeave?: (el: HTMLElement) => void
+  /** leave 取消钩子，预留给上层兼容。 */
   onLeaveCancelled?: (el: HTMLElement) => void
+  /** appear 前钩子。 */
   onBeforeAppear?: (el: HTMLElement) => void
+  /** appear 钩子；接管动画时需要调用 done。 */
   onAppear?: (el: HTMLElement, done: () => void) => void
+  /** appear 完成钩子。 */
   onAfterAppear?: (el: HTMLElement) => void
+  /** appear 取消钩子，预留给上层兼容。 */
   onAppearCancelled?: (el: HTMLElement) => void
 }
 

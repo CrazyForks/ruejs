@@ -145,10 +145,8 @@ fn collect_pat_declared_names(pat: &Pat, out: &mut HashSet<String>) {
             out.insert(id.sym.to_string());
         }
         Pat::Array(arr) => {
-            for elem in &arr.elems {
-                if let Some(pat) = elem {
-                    collect_pat_declared_names(pat, out);
-                }
+            for pat in arr.elems.iter().flatten() {
+                collect_pat_declared_names(pat, out);
             }
         }
         Pat::Object(obj) => {
@@ -385,6 +383,43 @@ impl<'a> ReactivePropsDestructureRewriter<'a> {
             ));
         }
     }
+
+    fn scoped_visit_with_names<T>(&mut self, names: HashSet<String>, node: &mut T)
+    where
+        T: VisitMutWith<Self>,
+    {
+        self.push_scope(names);
+        node.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+}
+
+fn collect_var_decl_names(var: &VarDecl, out: &mut HashSet<String>) {
+    for decl in &var.decls {
+        collect_pat_declared_names(&decl.name, out);
+    }
+}
+
+fn collect_for_init_names(init: &Option<VarDeclOrExpr>) -> HashSet<String> {
+    let mut names = HashSet::new();
+    if let Some(VarDeclOrExpr::VarDecl(var)) = init {
+        collect_var_decl_names(var, &mut names);
+    }
+    names
+}
+
+fn collect_for_head_names(left: &ForHead) -> HashSet<String> {
+    let mut names = HashSet::new();
+    match left {
+        ForHead::VarDecl(var) => collect_var_decl_names(var, &mut names),
+        ForHead::UsingDecl(using_decl) => {
+            for decl in &using_decl.decls {
+                collect_pat_declared_names(&decl.name, &mut names);
+            }
+        }
+        ForHead::Pat(pat) => collect_pat_declared_names(pat, &mut names),
+    }
+    names
 }
 
 impl VisitMut for ReactivePropsDestructureRewriter<'_> {
@@ -441,6 +476,31 @@ impl VisitMut for ReactivePropsDestructureRewriter<'_> {
         self.push_scope(scope);
         arrow.visit_mut_children_with(self);
         self.pop_scope();
+    }
+
+    fn visit_mut_catch_clause(&mut self, catch: &mut CatchClause) {
+        let mut scope = HashSet::new();
+        if let Some(param) = &catch.param {
+            collect_pat_declared_names(param, &mut scope);
+        }
+        self.push_scope(scope);
+        catch.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_for_stmt(&mut self, for_stmt: &mut ForStmt) {
+        let names = collect_for_init_names(&for_stmt.init);
+        self.scoped_visit_with_names(names, for_stmt);
+    }
+
+    fn visit_mut_for_in_stmt(&mut self, for_in: &mut ForInStmt) {
+        let names = collect_for_head_names(&for_in.left);
+        self.scoped_visit_with_names(names, for_in);
+    }
+
+    fn visit_mut_for_of_stmt(&mut self, for_of: &mut ForOfStmt) {
+        let names = collect_for_head_names(&for_of.left);
+        self.scoped_visit_with_names(names, for_of);
     }
 
     fn visit_mut_call_expr(&mut self, call: &mut CallExpr) {
@@ -1091,6 +1151,37 @@ impl VisitMut for DerivedConstUsageRewriter<'_> {
         arrow.visit_mut_children_with(self);
         self.pop_scope();
     }
+
+    fn visit_mut_catch_clause(&mut self, catch: &mut CatchClause) {
+        let mut scope = HashSet::new();
+        if let Some(param) = &catch.param {
+            collect_pat_declared_names(param, &mut scope);
+        }
+        self.push_scope(scope);
+        catch.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_for_stmt(&mut self, for_stmt: &mut ForStmt) {
+        let names = collect_for_init_names(&for_stmt.init);
+        self.push_scope(names);
+        for_stmt.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_for_in_stmt(&mut self, for_in: &mut ForInStmt) {
+        let names = collect_for_head_names(&for_in.left);
+        self.push_scope(names);
+        for_in.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_for_of_stmt(&mut self, for_of: &mut ForOfStmt) {
+        let names = collect_for_head_names(&for_of.left);
+        self.push_scope(names);
+        for_of.visit_mut_children_with(self);
+        self.pop_scope();
+    }
 }
 
 fn apply_phase2_props_derived_const_lowering(
@@ -1361,7 +1452,7 @@ pub fn rewrite_component_props_destructure_in_arrow(arrow: &mut ArrowExpr) -> bo
                     .stmts
                     .push(Stmt::Return(ReturnStmt { span: DUMMY_SP, arg: Some(original_expr) }));
                 block.visit_mut_with(&mut rewriter);
-                arrow.body = Box::new(BlockStmtOrExpr::BlockStmt(block));
+                *arrow.body = BlockStmtOrExpr::BlockStmt(block);
             }
         }
     }
@@ -1399,6 +1490,7 @@ pub fn rewrite_component_props_destructure_in_function(func: &mut Function) -> b
 /// - ret_idx：第一个包含 return 的语句索引（注入边界）
 /// - first_control_idx：第一个控制流语句的索引（用于更细粒度的跳过策略）
 /// - skip_var_after_control：是否在控制流语句之后跳过变量声明（更保守的策略）
+///
 /// 输出：
 /// - collected：待搬迁进 useSetup 的语句列表（按原顺序）
 /// - names_const：以 const 方式导出的名称（包括函数声明名，作为只读）
@@ -1424,10 +1516,8 @@ pub fn collect_setup(
                 out.push(id.sym.to_string());
             }
             Pat::Array(arr) => {
-                for elem in &arr.elems {
-                    if let Some(p) = elem {
-                        collect_pat_idents(p, out);
-                    }
+                for p in arr.elems.iter().flatten() {
+                    collect_pat_idents(p, out);
                 }
             }
             Pat::Object(obj) => {
@@ -1541,7 +1631,7 @@ pub fn collect_setup(
         }
     }
 
-    fn arrow_body_expr<'a>(arrow: &'a ArrowExpr) -> Option<&'a Expr> {
+    fn arrow_body_expr(arrow: &ArrowExpr) -> Option<&Expr> {
         match arrow.body.as_ref() {
             BlockStmtOrExpr::Expr(expr) => Some(crate::utils::unwrap_expr(expr.as_ref())),
             BlockStmtOrExpr::BlockStmt(block) => block.stmts.iter().find_map(|stmt| match stmt {
@@ -1629,6 +1719,22 @@ pub fn collect_setup(
                 .all(|decl| decl.init.as_ref().is_some_and(|init| expr_is_hoistable_computed(init)))
     }
 
+    struct AwaitExprDetector {
+        found: bool,
+    }
+
+    impl Visit for AwaitExprDetector {
+        fn visit_await_expr(&mut self, _await_expr: &AwaitExpr) {
+            self.found = true;
+        }
+    }
+
+    fn stmt_contains_await_expr(stmt: &Stmt) -> bool {
+        let mut detector = AwaitExprDetector { found: false };
+        stmt.visit_with(&mut detector);
+        detector.found
+    }
+
     fn expr_is_setup_helper(expr: &Expr) -> bool {
         matches!(crate::utils::unwrap_expr(expr), Expr::Arrow(_) | Expr::Fn(_))
     }
@@ -1647,6 +1753,7 @@ pub fn collect_setup(
         };
 
         let is_setup_effect_name = |name: &str| {
+            // setup 副作用类调用需要保留在 setup 语义内，生命周期注册不能被错误提升。
             matches!(
                 name,
                 "watch"
@@ -1657,6 +1764,7 @@ pub fn collect_setup(
                     | "onUnmounted"
                     | "onBeforeMount"
                     | "onBeforeUnmount"
+                    | "onServerPrefetch"
                     | "onUpdated"
                     | "onBeforeUpdate"
                     | "onActivated"
@@ -1701,15 +1809,21 @@ pub fn collect_setup(
         let declared_names = stmt_declared_names(s);
         let uses_unavailable_locals = stmt_uses_unavailable_locals(s, &known_locals, &available);
 
+        if stmt_contains_await_expr(s) {
+            for name in declared_names {
+                known_locals.insert(name);
+            }
+            break;
+        }
+
         match s {
             Stmt::Decl(Decl::Var(var)) => {
                 if var_decl_contains_jsx(var) {
                     break;
                 }
-                if !uses_unavailable_locals
-                    || var_decl_is_hoistable_computed(var)
-                    || var_decl_is_setup_helper(var)
-                {
+                let is_hoistable_computed = var_decl_is_hoistable_computed(var);
+                let is_setup_helper = var_decl_is_setup_helper(var);
+                if !uses_unavailable_locals || is_hoistable_computed || is_setup_helper {
                     // 收集变量声明，并从解构模式中递归提取所有绑定的标识符名称
                     collected.push(s.clone());
                     for vd in &var.decls {
@@ -1768,10 +1882,8 @@ fn collect_param_idents(params: &[Pat]) -> HashSet<String> {
                 out.insert(id.sym.to_string());
             }
             Pat::Array(arr) => {
-                for elem in &arr.elems {
-                    if let Some(p) = elem {
-                        collect_pat_names(p, out);
-                    }
+                for p in arr.elems.iter().flatten() {
+                    collect_pat_names(p, out);
                 }
             }
             Pat::Object(obj) => {
@@ -2037,10 +2149,10 @@ pub fn is_untyped_arrow_component_decl(d: &VarDeclarator) -> bool {
             if let Some(ann) = &a.return_type {
                 if let TsType::TsTypeRef(tr) = &*ann.type_ann {
                     if let TsEntityName::Ident(id) = &tr.type_name {
-                        if id.sym.as_ref() == "JSX.Element" {
-                            if matches!(&*a.body, BlockStmtOrExpr::BlockStmt(_)) {
-                                return true;
-                            }
+                        if id.sym.as_ref() == "JSX.Element"
+                            && matches!(&*a.body, BlockStmtOrExpr::BlockStmt(_))
+                        {
+                            return true;
                         }
                     }
                 }

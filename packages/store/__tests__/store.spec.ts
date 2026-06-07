@@ -1,7 +1,24 @@
 // @vitest-environment jsdom
 
-import { computed, nextTick, ref, watchEffect } from '@rue-js/rue'
+import { afterEach, describe, expect, it } from 'vitest'
+
+import { computed, nextTick, ref, setReactiveScheduling, watchEffect } from '@rue-js/rue'
 import { createStore, defineStore, storeToRefs } from '../src'
+
+const mountedRoots: ReturnType<typeof createStore>[] = []
+
+const createTestRoot = () => {
+  const root = createStore()
+  mountedRoots.push(root)
+  return root
+}
+
+afterEach(() => {
+  while (mountedRoots.length > 0) {
+    mountedRoots.pop()?.dispose()
+  }
+  setReactiveScheduling('microtask')
+})
 
 describe('@rue-js/store', () => {
   it('supports options stores with getters, actions, patching and subscriptions', async () => {
@@ -75,6 +92,57 @@ describe('@rue-js/store', () => {
     stopEffect.dispose()
   })
 
+  it('applies plugins to existing and future stores with descriptor extensions', () => {
+    const root = createTestRoot()
+    const applied: string[] = []
+
+    const useFirstStore = defineStore('first', {
+      state: () => ({
+        count: 1,
+      }),
+    })
+
+    const first = useFirstStore(root)
+
+    expect(root.use(undefined as any)).toBe(root)
+    expect(
+      root.use(({ store, root: pluginRoot, id }) => {
+        applied.push(`${id}:${pluginRoot === root}:${store.$id}`)
+
+        const extension = Object.create(null)
+        Object.defineProperty(extension, 'pluginId', {
+          enumerable: true,
+          get: () => `${id}:${store.$id}`,
+        })
+        Object.defineProperty(extension, 'pluginValue', {
+          enumerable: true,
+          get: () => store.$state.pluginValue,
+          set: value => {
+            store.$set('pluginValue', value)
+          },
+        })
+        return extension
+      }),
+    ).toBe(root)
+
+    expect(first.pluginId).toBe('first:first')
+    first.pluginValue = 'from-plugin'
+    expect(first.$state.pluginValue).toBe('from-plugin')
+
+    const useSecondStore = defineStore('second', {
+      state: () => ({
+        count: 2,
+      }),
+    })
+
+    const second = useSecondStore(root)
+
+    expect(second.pluginId).toBe('second:second')
+    second.pluginValue = 'future-store'
+    expect(second.$state.pluginValue).toBe('future-store')
+    expect(applied).toEqual(['first:true:first', 'second:true:second'])
+  })
+
   it('isolates the same store definition across store roots', async () => {
     const rootA = createStore()
     const rootB = createStore()
@@ -100,6 +168,116 @@ describe('@rue-js/store', () => {
     expect(storeB.theme).toBe('light')
     expect(usePreferencesStore(rootA)).toBe(storeA)
     expect(usePreferencesStore(rootB)).toBe(storeB)
+  })
+
+  it('supports state replacement, functional patching, path updaters and reset cleanup', async () => {
+    const root = createTestRoot()
+    const externalExtra = { label: 'external' }
+    const externalDate = new Date('2026-01-01T00:00:00.000Z')
+
+    const useInventoryStore = defineStore('inventory', {
+      state: () => ({
+        count: 1,
+        nested: {
+          label: 'seed',
+        },
+        items: [{ name: 'one' }],
+        stamp: 'seed-stamp',
+      }),
+    })
+
+    const store = useInventoryStore(root)
+
+    store.$patch(state => {
+      state.count += 1
+      state.nested.label = 'patched-by-function'
+    })
+    store.$state = {
+      nested: {
+        meta: {
+          enabled: true,
+        },
+      },
+      extra: externalExtra,
+      stamp: externalDate,
+    }
+    store.$set(['items', 1, 'name'], 'two')
+    store.$set('count', (prev: unknown) => Number(prev) + 3)
+
+    externalExtra.label = 'mutated'
+    externalDate.setUTCFullYear(2030)
+    await nextTick()
+
+    expect(store.count).toBe(5)
+    expect(store.nested).toEqual({
+      label: 'patched-by-function',
+      meta: {
+        enabled: true,
+      },
+    })
+    expect(store.items).toEqual([{ name: 'one' }, { name: 'two' }])
+    expect(store.extra).toEqual({ label: 'external' })
+    expect(store.stamp.toISOString()).toBe('2026-01-01T00:00:00.000Z')
+
+    store.$reset()
+    await nextTick()
+
+    expect(store.count).toBe(1)
+    expect(store.nested).toEqual({ label: 'seed' })
+    expect(store.items).toEqual([{ name: 'one' }])
+    expect(store.stamp).toBe('seed-stamp')
+    expect('extra' in store).toBe(false)
+    expect(Object.keys(store.$state)).toEqual(['count', 'nested', 'items', 'stamp'])
+  })
+
+  it('emits cloned immediate subscription snapshots and disposes subscribed stores', () => {
+    setReactiveScheduling('sync')
+
+    const root = createTestRoot()
+    const useTodosStore = defineStore('todos', {
+      state: () => ({
+        items: ['seed'],
+      }),
+    })
+
+    const store = useTodosStore(root)
+    const snapshots: Array<{ storeId: string; items: string[] }> = []
+
+    const unsubscribe = store.$subscribe(
+      (mutation, state) => {
+        snapshots.push({
+          storeId: mutation.storeId,
+          items: state.items.slice(),
+        })
+        state.items.push('snapshot-only')
+      },
+      { immediate: true },
+    )
+
+    expect(snapshots).toEqual([{ storeId: 'todos', items: ['seed'] }])
+    expect(store.items).toEqual(['seed'])
+
+    store.$patch({
+      items: ['actual'],
+    })
+
+    expect(snapshots).toEqual([
+      { storeId: 'todos', items: ['seed'] },
+      { storeId: 'todos', items: ['actual'] },
+    ])
+    expect(store.items).toEqual(['actual'])
+
+    unsubscribe()
+    store.$patch({
+      items: ['ignored'],
+    })
+    expect(snapshots).toHaveLength(2)
+
+    const disposedStore = useTodosStore(root)
+    store.$dispose()
+
+    expect(root._s.has('todos')).toBe(false)
+    expect(useTodosStore(root)).not.toBe(disposedStore)
   })
 
   it('supports setup stores and storeToRefs for writable state', async () => {
@@ -134,5 +312,40 @@ describe('@rue-js/store', () => {
     await nextTick()
     expect(refs.token.value).toBe('gamma')
     expect(refs.upper.value).toBe('GAMMA')
+  })
+
+  it('keeps setup plain state writable while exposing computed refs', async () => {
+    const root = createTestRoot()
+
+    const useProfileStore = defineStore('profile', () => {
+      const score = ref(2)
+      const doubled = computed(() => score.value * 2)
+
+      return {
+        score,
+        doubled,
+        name: 'Rue',
+        rename(this: any, nextName: string) {
+          this.name = nextName
+        },
+      }
+    })
+
+    const store = useProfileStore(root)
+    const refs = storeToRefs(store)
+
+    expect(Object.keys(refs).sort()).toEqual(['doubled', 'name', 'score'])
+    expect(Object.prototype.hasOwnProperty.call(refs, 'rename')).toBe(false)
+
+    refs.name.value = 'Vapor'
+    store.score = 4
+    await nextTick()
+
+    expect(store.name).toBe('Vapor')
+    expect(refs.score.value).toBe(4)
+    expect(refs.doubled.value).toBe(8)
+
+    store.rename('Rue Store')
+    expect(refs.name.value).toBe('Rue Store')
   })
 })

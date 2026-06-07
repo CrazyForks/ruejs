@@ -10,7 +10,10 @@ import {
   createStore,
   debounce,
   defineStore,
+  parseAsBoolean,
+  parseAsFloat,
   parseAsInteger,
+  parseAsJson,
   parseAsString,
   throttle,
 } from '../src'
@@ -273,5 +276,257 @@ describe('store query sync plugin', () => {
 
     expect(readSearch().get('tab')).toBe('code')
     expect(pushState).toHaveBeenCalledTimes(2)
+  })
+
+  it('hydrates built-in boolean, float and json parsers and writes configured defaults', async () => {
+    resetUrl('/?price=4.5&featured=yes&filters=%7B%22brand%22%3A%22Rue%22%7D&rating=oops')
+
+    const root = createTestRoot()
+    root.use(
+      createQuerySync({
+        writeDefaults: true,
+        stores: {
+          product: {
+            price: parseAsFloat.withDefault(0),
+            featured: { parser: parseAsBoolean.withDefault(false), writeDefault: true },
+            filters: parseAsJson<{ brand: string }>().withDefault({ brand: 'all' }),
+            rating: parseAsInteger.withDefault(5),
+          },
+        },
+      }),
+    )
+
+    const useProductStore = defineStore('product', {
+      state: () => ({
+        price: 0,
+        featured: false,
+        filters: { brand: 'all' },
+        rating: 1,
+      }),
+    })
+
+    const store = useProductStore(root)
+
+    expect(store.price).toBe(4.5)
+    expect(store.featured).toBe(true)
+    expect(store.filters).toEqual({ brand: 'Rue' })
+    expect(store.rating).toBe(5)
+
+    store.price = Number.POSITIVE_INFINITY
+    store.featured = false
+    store.filters = { brand: 'all' }
+    store.rating = 5
+    await flush()
+
+    expect(readSearch().has('price')).toBe(false)
+    expect(readSearch().get('featured')).toBe('0')
+    expect(readSearch().get('filters')).toBe('{"brand":"all"}')
+
+    store.rating = 6
+    await flush()
+
+    expect(readSearch().get('rating')).toBe('6')
+
+    store.rating = 5
+    await flush()
+
+    expect(readSearch().get('rating')).toBe('5')
+  })
+
+  it('clones parser defaults when query params are missing or restored', async () => {
+    const defaultTags: string[] = []
+    const tagsParser = parseAsJson<string[]>().withDefault(defaultTags)
+
+    resetUrl('/')
+
+    const root = createTestRoot()
+    root.use(
+      createQuerySync({
+        stores: {
+          filters: {
+            tags: tagsParser,
+          },
+        },
+      }),
+    )
+
+    const useFiltersStore = defineStore('filters', {
+      state: () => ({
+        tags: ['seed'],
+      }),
+    })
+
+    const store = useFiltersStore(root)
+
+    expect(store.tags).toEqual([])
+
+    store.tags.push('local-only')
+    await flush()
+
+    expect(defaultTags).toEqual([])
+    expect(readSearch().get('tags')).toBe('["local-only"]')
+
+    window.history.replaceState(null, '', '/')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    await flush()
+
+    expect(store.tags).toEqual([])
+    expect(defaultTags).toEqual([])
+  })
+
+  it('falls back safely when custom parsers throw while parsing, comparing or serializing', async () => {
+    const parseFallback = createParser<string>({
+      parse: value => {
+        if (value === 'throw') {
+          throw new Error('parse failed')
+        }
+        return value
+      },
+      serialize: value => value,
+    }).withDefault('safe')
+
+    const equalsFallback = createParser<string>({
+      parse: value => value,
+      serialize: value => value,
+      equals: () => {
+        throw new Error('equals failed')
+      },
+    }).withDefault('matched')
+
+    const serializeFallback = createParser<string>({
+      parse: value => value,
+      serialize: value => {
+        if (value === 'boom') {
+          throw new Error('serialize failed')
+        }
+        return value
+      },
+    })
+
+    resetUrl('/?parse=throw&eq=matched&write=alpha')
+
+    const root = createTestRoot()
+    root.use(
+      createQuerySync({
+        stores: {
+          unstable: {
+            parse: { parser: parseFallback, path: 'parseValue' },
+            eq: { parser: equalsFallback, path: 'equalValue' },
+            write: { parser: serializeFallback, path: 'writeValue' },
+          },
+        },
+      }),
+    )
+
+    const useUnstableStore = defineStore('unstable', {
+      state: () => ({
+        parseValue: 'initial',
+        equalValue: 'initial',
+        writeValue: '',
+      }),
+    })
+
+    const store = useUnstableStore(root)
+
+    expect(store.parseValue).toBe('safe')
+    expect(store.equalValue).toBe('matched')
+    expect(store.writeValue).toBe('alpha')
+
+    store.writeValue = 'boom'
+    await flush()
+
+    expect(readSearch().has('write')).toBe(false)
+  })
+
+  it('hydrates nested paths and creates missing array/object containers', async () => {
+    resetUrl('/?tag=red')
+
+    const root = createTestRoot()
+    root.use(
+      createQuerySync({
+        stores: {
+          filters: {
+            tag: {
+              path: ['groups', 0, 'value'],
+              parser: parseAsString.withDefault(''),
+            },
+          },
+        },
+      }),
+    )
+
+    const useFiltersStore = defineStore('filters', {
+      state: () => ({
+        groups: [] as Array<{ value: string }>,
+      }),
+    })
+
+    const store = useFiltersStore(root)
+
+    expect(store.groups).toHaveLength(1)
+    expect(store.groups[0].value).toBe('red')
+
+    store.$set(['groups', 0, 'value'], 'blue')
+    await flush()
+
+    expect(readSearch().get('tag')).toBe('blue')
+  })
+
+  it('coalesces multiple store bindings and stops syncing disposed stores', async () => {
+    resetUrl('/')
+
+    const addEventListener = vi.spyOn(window, 'addEventListener')
+    const removeEventListener = vi.spyOn(window, 'removeEventListener')
+    const replaceState = vi.spyOn(window.history, 'replaceState')
+
+    const root = createTestRoot()
+    root.use(
+      createQuerySync({
+        stores: {
+          filters: {
+            q: { path: 'query', parser: parseAsString.withDefault('') },
+          },
+          view: {
+            tab: parseAsString.withDefault('overview'),
+          },
+        },
+      }),
+    )
+
+    const useFiltersStore = defineStore('filters', {
+      state: () => ({
+        query: '',
+      }),
+    })
+    const useViewStore = defineStore('view', {
+      state: () => ({
+        tab: 'overview',
+      }),
+    })
+
+    const filters = useFiltersStore(root)
+    const view = useViewStore(root)
+
+    expect(addEventListener).toHaveBeenCalledWith('popstate', expect.any(Function))
+
+    filters.query = 'rue'
+    view.tab = 'details'
+    await flush()
+
+    expect(replaceState).toHaveBeenCalledTimes(1)
+    expect(readSearch().get('q')).toBe('rue')
+    expect(readSearch().get('tab')).toBe('details')
+
+    filters.$dispose()
+    filters.query = 'ignored'
+    view.tab = 'preview'
+    await flush()
+
+    expect(readSearch().get('q')).toBe('rue')
+    expect(readSearch().get('tab')).toBe('preview')
+
+    view.$dispose()
+
+    expect(removeEventListener).toHaveBeenCalledWith('popstate', expect.any(Function))
   })
 })

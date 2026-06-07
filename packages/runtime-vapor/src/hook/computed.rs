@@ -26,6 +26,7 @@ fn arg_has_setter(arg: &JsValue) -> bool {
     setter.is_function()
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn make_dynamic_computed_arg(holder: &Object, writable: bool) -> JsValue {
     let getter_holder = holder.clone();
     let getter = Closure::wrap(Box::new(move || {
@@ -70,6 +71,7 @@ fn make_dynamic_computed_arg(holder: &Object, writable: bool) -> JsValue {
     options.into()
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn mark_computed_dirty(handle: &SignalHandle) {
     let to_run = {
         let mut inner = handle.inner.borrow_mut();
@@ -83,6 +85,22 @@ fn mark_computed_dirty(handle: &SignalHandle) {
     for id in to_run {
         schedule_effect_run(id);
     }
+}
+
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+fn refresh_computed_slot_arg(slot: JsValue, arg: &JsValue) -> usize {
+    let slot_obj = Object::from(slot);
+    let holder =
+        Reflect::get(&slot_obj, &JsValue::from_str("holder")).unwrap_or(JsValue::UNDEFINED);
+    if holder.is_object() {
+        let holder_obj = Object::from(holder);
+        let _ = Reflect::set(&holder_obj, &JsValue::from_str("arg"), arg);
+    }
+
+    Reflect::get(&slot_obj, &JsValue::from_str("handleIndex"))
+        .unwrap_or(JsValue::from_f64(0.0))
+        .as_f64()
+        .unwrap_or(0.0) as usize
 }
 
 #[wasm_bindgen(js_name = computed)]
@@ -121,22 +139,126 @@ pub fn computed_js(arg: JsValue, force_global: Option<bool>) -> SignalHandle {
     let slot = with_hook_slot(f);
     make.forget();
 
-    let slot_obj = Object::from(slot);
-    let holder =
-        Reflect::get(&slot_obj, &JsValue::from_str("holder")).unwrap_or(JsValue::UNDEFINED);
-    if holder.is_object() {
-        let holder_obj = Object::from(holder);
-        let _ = Reflect::set(&holder_obj, &JsValue::from_str("arg"), &arg);
-    }
-
-    let handle_index = Reflect::get(&slot_obj, &JsValue::from_str("handleIndex"))
-        .unwrap_or(JsValue::from_f64(0.0))
-        .as_f64()
-        .unwrap_or(0.0) as usize;
+    let handle_index = refresh_computed_slot_arg(slot, &arg);
     let handle = COMPUTED_HANDLE_REGISTRY.with(|registry| registry.borrow()[handle_index].clone());
     // getter 在重渲染时可能捕获了新的闭包，显式标脏让下次读取走新 getter。
     mark_computed_dirty(&handle);
     handle
+}
+
+#[cfg(test)]
+// computed hook 内部测试，覆盖动态参数复用、getter/setter fallback 与脏标记通知。
+mod tests {
+    use super::*;
+    use crate::reactive::signal::create_signal;
+    use wasm_bindgen_test::*;
+
+    fn get_fn(value: &JsValue, key: &str) -> Function {
+        Reflect::get(value, &JsValue::from_str(key)).unwrap().unchecked_into::<Function>()
+    }
+
+    #[wasm_bindgen_test]
+    fn dynamic_computed_arg_handles_refresh_fallback_and_setter_edges() {
+        let holder = Object::new();
+        let arg = make_dynamic_computed_arg(&holder, true);
+        let getter = get_fn(&arg, "get");
+        let setter = get_fn(&arg, "set");
+
+        let direct_getter = Function::new_no_args("return 'direct'");
+        Reflect::set(&holder, &JsValue::from_str("arg"), &direct_getter.into()).unwrap();
+        assert_eq!(getter.call0(&JsValue::NULL).unwrap().as_string().as_deref(), Some("direct"));
+
+        let options = Object::new();
+        Reflect::set(
+            &options,
+            &JsValue::from_str("get"),
+            &Function::new_no_args("return 'object-getter'").into(),
+        )
+        .unwrap();
+        Reflect::set(
+            &options,
+            &JsValue::from_str("set"),
+            &Function::new_with_args("value", "globalThis.__computed_set_value = value").into(),
+        )
+        .unwrap();
+        Reflect::set(&holder, &JsValue::from_str("arg"), &options.into()).unwrap();
+        assert_eq!(
+            getter.call0(&JsValue::NULL).unwrap().as_string().as_deref(),
+            Some("object-getter"),
+        );
+        setter.call1(&JsValue::NULL, &JsValue::from_str("written")).unwrap();
+        assert_eq!(
+            Reflect::get(&js_sys::global(), &JsValue::from_str("__computed_set_value"))
+                .unwrap()
+                .as_string()
+                .as_deref(),
+            Some("written"),
+        );
+
+        let missing_getter = Object::new();
+        Reflect::set(&holder, &JsValue::from_str("arg"), &missing_getter.into()).unwrap();
+        assert!(getter.call0(&JsValue::NULL).unwrap().is_undefined());
+
+        let non_function_getter = Object::new();
+        Reflect::set(
+            &non_function_getter,
+            &JsValue::from_str("get"),
+            &JsValue::from_str("not-callable"),
+        )
+        .unwrap();
+        Reflect::set(&holder, &JsValue::from_str("arg"), &non_function_getter.into()).unwrap();
+        assert!(getter.call0(&JsValue::NULL).unwrap().is_undefined());
+
+        let non_function_setter = Object::new();
+        Reflect::set(
+            &non_function_setter,
+            &JsValue::from_str("set"),
+            &JsValue::from_str("not-callable"),
+        )
+        .unwrap();
+        Reflect::set(&holder, &JsValue::from_str("arg"), &non_function_setter.into()).unwrap();
+        setter.call1(&JsValue::NULL, &JsValue::from_str("ignored")).unwrap();
+        assert_eq!(
+            Reflect::get(&js_sys::global(), &JsValue::from_str("__computed_set_value"))
+                .unwrap()
+                .as_string()
+                .as_deref(),
+            Some("written"),
+        );
+
+        Reflect::set(&holder, &JsValue::from_str("arg"), &JsValue::from_str("primitive")).unwrap();
+        setter.call1(&JsValue::NULL, &JsValue::from_str("ignored")).unwrap();
+        assert_eq!(
+            Reflect::get(&js_sys::global(), &JsValue::from_str("__computed_set_value"))
+                .unwrap()
+                .as_string()
+                .as_deref(),
+            Some("written"),
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn mark_computed_dirty_handles_plain_signals_and_notifies_subscribers() {
+        let plain = create_signal(JsValue::from_f64(1.0), None);
+        mark_computed_dirty(&plain);
+        assert!(plain.inner.borrow().computed.is_none());
+
+        let computed = create_computed(Function::new_no_args("return 2").into());
+        computed.get_js();
+        {
+            let mut inner = computed.inner.borrow_mut();
+            inner.subs.push(usize::MAX - 1);
+            let state = inner.computed.as_ref().expect("computed state");
+            assert!(!state.dirty);
+            assert!(state.initialized);
+        }
+
+        mark_computed_dirty(&computed);
+        let inner = computed.inner.borrow();
+        let state = inner.computed.as_ref().expect("computed state");
+        assert!(state.dirty);
+        assert!(!state.initialized);
+    }
 }
 
 #[wasm_bindgen(typescript_custom_section)]

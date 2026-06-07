@@ -18,7 +18,8 @@
   },
   "files": [
     "index.js",
-    "dist"
+    "dist",
+    "src"
   ],
   "sideEffects": false,
   "main": "index.js",
@@ -26,7 +27,7 @@
   "types": "dist/router.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/router.d.ts",
+      "types": "./src/index.ts",
       "development": "./src/index.ts",
       "node": {
         "production": "./dist/router.cjs.prod.js",
@@ -40,7 +41,8 @@
     "./*": "./*"
   },
   "dependencies": {
-    "@rue-js/rue": "workspace:*"
+    "@rue-js/rue": "workspace:*",
+    "@rue-js/runtime": "workspace:*"
   },
   "buildOptions": {
     "name": "RueRouterCore",

@@ -42,7 +42,7 @@
   - [指南 - 减少大型不可变结构的响应式开销](/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures)
   - [指南 - 与外部状态系统集成](/guide/guide/extras/reactivity-in-depth#integration-with-external-state-systems)
 
-## triggerRef() {#triggerref} @todo
+## triggerRef() {#triggerref}
 
 强制触发依赖于[浅层 ref](#shallowref)的副作用。这通常在对浅层 ref 的内部值进行深度变更后使用。
 
@@ -278,7 +278,7 @@
   function getCurrentScope(): EffectScope | undefined
   ```
 
-## onScopeDispose() {#onscopedispose} @todo
+## onScopeDispose() {#onscopedispose}
 
 在当前活动的 [effect 作用域](#effectscope)上注册一个处置回调。当关联的 effect 作用域停止时，将调用回调。
 

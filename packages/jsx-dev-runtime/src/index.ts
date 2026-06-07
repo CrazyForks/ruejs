@@ -6,6 +6,24 @@ JSX Dev Runtime 概述
 import { Fragment as RueFragment, h } from '@rue-js/rue'
 import type { RenderableOutput } from '@rue-js/rue'
 
+type RueContextRuntime = {
+  createElement: (
+    type: unknown,
+    props: Record<string, unknown> | null,
+    ...children: unknown[]
+  ) => unknown
+}
+
+const RUE_CONTEXT_RUNTIME_KEY = Symbol.for('text.rueContextRuntime')
+
+type RueContextRuntimeGlobal = typeof globalThis & {
+  [RUE_CONTEXT_RUNTIME_KEY]?: RueContextRuntime
+}
+
+function getRueContextRuntime(): RueContextRuntime | null {
+  return (globalThis as RueContextRuntimeGlobal)[RUE_CONTEXT_RUNTIME_KEY] ?? null
+}
+
 export function jsx(type: any, props: any, key?: any): RenderableOutput {
   const p =
     key !== undefined
@@ -21,6 +39,11 @@ export function jsx(type: any, props: any, key?: any): RenderableOutput {
         ? props
         : null
   const c = props ? (props as any).children : undefined
+  const runtime = getRueContextRuntime()
+  if (runtime) {
+    const children = Array.isArray(c) ? c : c !== undefined ? [c] : []
+    return runtime.createElement(type, p, ...children) as RenderableOutput
+  }
   return Array.isArray(c) ? h(type, p, ...c) : c !== undefined ? h(type, p, c) : h(type, p)
 }
 
@@ -39,4 +62,20 @@ export function jsxDEV(
   _self?: any,
 ): RenderableOutput {
   return jsx(type, props, key)
+}
+
+export namespace JSX {
+  export type Element = any
+  export interface ElementClass {
+    $props: {}
+  }
+  export interface ElementAttributesProperty {
+    $props: {}
+  }
+  export interface IntrinsicElements {
+    [name: string]: any
+  }
+  export interface IntrinsicAttributes {
+    key?: string | number
+  }
 }

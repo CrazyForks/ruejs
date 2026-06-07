@@ -1,3 +1,8 @@
+/*
+Form 模块概述
+- 汇总表单组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 import {
   Slot,
@@ -13,33 +18,49 @@ import {
   watch,
 } from '@rue-js/rue'
 
+/** FormLayout 类型。 */
 export type FormLayout = 'horizontal' | 'vertical' | 'inline'
+/** FormLabelAlign 对齐方式类型。 */
 export type FormLabelAlign = 'left' | 'right'
+/** FormSize 尺寸类型。 */
 export type FormSize = 'small' | 'middle' | 'large' | 'sm' | 'md' | 'lg'
+/** FormRequiredMark 类型。 */
 export type FormRequiredMark =
   | boolean
   | 'optional'
   | ((label: any, info: { required: boolean }) => any)
+/** FormComponent 类型。 */
 export type FormComponent = string | false
+/** NamePath 类型。 */
 export type NamePath = string | number | ReadonlyArray<string | number>
+/** NamePathSegment 类型。 */
 export type NamePathSegment = string | number
+/** ValidateStatus 状态类型。 */
 export type ValidateStatus = 'success' | 'warning' | 'error' | 'validating'
 
+/** FormValidateMessages 接口。 */
 export interface FormValidateMessages {
+  /** required 配置项。 */
   required?: string
+  /** whitespace 配置项。 */
   whitespace?: string
+  /** pattern 配置项。 */
   pattern?: string
+  /** types 配置项。 */
   types?: Partial<Record<FormRuleType, string>>
+  /** string 配置项。 */
   string?: {
     len?: string
     min?: string
     max?: string
   }
+  /** number 配置项。 */
   number?: {
     len?: string
     min?: string
     max?: string
   }
+  /** array 配置项。 */
   array?: {
     len?: string
     min?: string
@@ -47,88 +68,156 @@ export interface FormValidateMessages {
   }
 }
 
+/** FormRuleType 视觉或语义变体类型。 */
 export type FormRuleType = 'string' | 'number' | 'boolean' | 'array' | 'email' | 'url'
 
+/** FormRule 接口。 */
 export interface FormRule {
+  /** required 配置项。 */
   required?: boolean
+  /** message 配置项。 */
   message?: string
+  /** min 配置项。 */
   min?: number
+  /** max 配置项。 */
   max?: number
+  /** len 配置项。 */
   len?: number
+  /** 组件类型或语义类型。 */
   type?: FormRuleType
+  /** pattern 配置项。 */
   pattern?: RegExp
+  /** whitespace 配置项。 */
   whitespace?: boolean
+  /** warningOnly 配置项。 */
   warningOnly?: boolean
+  /** transform 配置项。 */
   transform?: (value: any) => any
+  /** validator 配置项。 */
   validator?: (rule: FormRule, value: any, values: any) => void | string | Promise<void | string>
 }
 
+/** FieldError 接口。 */
 export interface FieldError {
+  /** 表单 name 属性或分组名称。 */
   name: NamePathSegment[]
+  /** errors 配置项。 */
   errors: string[]
+  /** warnings 配置项。 */
   warnings: string[]
 }
 
+/** FieldData 数据项结构。 */
 export interface FieldData extends FieldError {
+  /** touched 配置项。 */
   touched: boolean
+  /** validating 配置项。 */
   validating: boolean
+  /** 受控值。 */
   value: any
 }
 
+/** FormListFieldData 数据项结构。 */
 export interface FormListFieldData {
+  /** 数据项唯一标识。 */
   key: number
+  /** 表单 name 属性或分组名称。 */
   name: number
+  /** fieldKey 标识键。 */
   fieldKey: number
 }
 
+/** FormListOperation 接口。 */
 export interface FormListOperation {
+  /** add 配置项。 */
   add: (defaultValue?: any, insertIndex?: number) => void
+  /** remove 配置项。 */
   remove: (index: number | number[]) => void
+  /** move 配置项。 */
   move: (from: number, to: number) => void
 }
 
+/** FormErrorListProps 组件属性。 */
 export interface FormErrorListProps {
+  /** errors 配置项。 */
   errors?: ReadonlyArray<any>
+  /** warnings 配置项。 */
   warnings?: ReadonlyArray<any>
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
 }
 
+/** FormProps 组件属性。 */
 export interface FormProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** render 配置项。 */
   render?: (form: FormInstance) => any
+  /** component 配置项。 */
   component?: FormComponent
+  /** layout 配置项。 */
   layout?: FormLayout
+  /** 组件尺寸。 */
   size?: FormSize
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** colon 配置项。 */
   colon?: boolean
+  /** labelAlign 配置项。 */
   labelAlign?: FormLabelAlign
+  /** labelWrap 配置项。 */
   labelWrap?: boolean
+  /** labelCol 配置项。 */
   labelCol?: FormColConfig
+  /** wrapperCol 配置项。 */
   wrapperCol?: FormColConfig
+  /** requiredMark 配置项。 */
   requiredMark?: FormRequiredMark
+  /** initialValues 值集合。 */
   initialValues?: Record<string, any>
+  /** form 配置项。 */
   form?: FormInstance
+  /** 表单 name 属性或分组名称。 */
   name?: string
+  /** preserve 配置项。 */
   preserve?: boolean
+  /** validateMessages 配置项。 */
   validateMessages?: FormValidateMessages
+  /** validateTrigger 配置项。 */
   validateTrigger?: string | string[]
+  /** scrollToFirstError 配置项。 */
   scrollToFirstError?: boolean | (ScrollIntoViewOptions & { focus?: boolean })
+  /** onValuesChange 事件回调。 */
   onValuesChange?: (changedValues: any, allValues: any) => void
+  /** onFieldsChange 事件回调。 */
   onFieldsChange?: (changedFields: FieldData[], allFields: FieldData[]) => void
+  /** onFinish 事件回调。 */
   onFinish?: (values: any) => void
+  /** onFinishFailed 事件回调。 */
   onFinishFailed?: (info: FormFinishFailedInfo) => void
+  /** onSubmit 事件回调。 */
   onSubmit?: (event: Event) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FormItemProps 组件属性。 */
 export interface FormItemProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** form 配置项。 */
   form?: FormInstance
+  /** 组件子内容。 */
   children?: any
+  /** render 配置项。 */
   render?: (
     controlProps: Record<string, any>,
     meta: {
@@ -141,75 +230,129 @@ export interface FormItemProps {
     },
     form: FormInstance,
   ) => any
+  /** 表单 name 属性或分组名称。 */
   name?: NamePath
+  /** 展示标签。 */
   label?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** help 配置项。 */
   help?: any
+  /** required 配置项。 */
   required?: boolean
+  /** rules 配置项。 */
   rules?: FormRule[]
+  /** dependencies 配置项。 */
   dependencies?: NamePath[]
+  /** noStyle 内联样式。 */
   noStyle?: boolean
+  /** hidden 配置项。 */
   hidden?: boolean
+  /** initialValue 值。 */
   initialValue?: any
+  /** preserve 配置项。 */
   preserve?: boolean
+  /** valuePropName 配置项。 */
   valuePropName?: string
+  /** trigger 区域配置。 */
   trigger?: string
+  /** validateTrigger 配置项。 */
   validateTrigger?: string | string[]
+  /** getValueFromEvent 配置项。 */
   getValueFromEvent?: (...args: any[]) => any
+  /** getValueProps 透传属性。 */
   getValueProps?: (value: any) => Record<string, any>
+  /** normalize 配置项。 */
   normalize?: (value: any, prevValue: any, values: any) => any
+  /** shouldUpdate 配置项。 */
   shouldUpdate?: boolean | ((prevValues: any, nextValues: any) => boolean)
+  /** validateStatus 状态。 */
   validateStatus?: ValidateStatus
+  /** hasFeedback 配置项。 */
   hasFeedback?: boolean
+  /** messageVariables 配置项。 */
   messageVariables?: Record<string, string>
+  /** colon 配置项。 */
   colon?: boolean
+  /** labelAlign 配置项。 */
   labelAlign?: FormLabelAlign
+  /** labelCol 配置项。 */
   labelCol?: FormColConfig
+  /** wrapperCol 配置项。 */
   wrapperCol?: FormColConfig
+  /** layout 配置项。 */
   layout?: Exclude<FormLayout, 'inline'>
+  /** htmlFor 配置项。 */
   htmlFor?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FormListProps 组件属性。 */
 export interface FormListProps {
+  /** form 配置项。 */
   form?: FormInstance
+  /** 表单 name 属性或分组名称。 */
   name: NamePath
+  /** 组件子内容。 */
   children?: (
     fields: FormListFieldData[],
     operation: FormListOperation,
     meta: { errors: string[]; warnings: string[] },
   ) => any
+  /** render 配置项。 */
   render?: (
     fields: FormListFieldData[],
     operation: FormListOperation,
     meta: { errors: string[]; warnings: string[] },
   ) => any
+  /** initialValue 值。 */
   initialValue?: any[]
+  /** rules 配置项。 */
   rules?: FormRule[]
 }
 
+/** FormFinishFailedInfo 接口。 */
 export interface FormFinishFailedInfo {
+  /** values 配置项。 */
   values: any
+  /** errorFields 配置项。 */
   errorFields: FieldError[]
+  /** outOfDate 配置项。 */
   outOfDate: boolean
 }
 
+/** FormInstance 对外暴露的实例能力。 */
 export interface FormInstance {
+  /** getFieldValue 值。 */
   getFieldValue: (name: NamePath) => any
+  /** getFieldsValue 值。 */
   getFieldsValue: (nameList?: true | NamePath[]) => any
+  /** setFieldValue 值。 */
   setFieldValue: (name: NamePath, value: any) => void
+  /** setFieldsValue 值。 */
   setFieldsValue: (values: Record<string, any>) => void
+  /** resetFields 配置项。 */
   resetFields: (nameList?: NamePath[]) => void
+  /** validateFields 配置项。 */
   validateFields: (nameList?: NamePath[]) => Promise<any>
+  /** submit 配置项。 */
   submit: () => void
+  /** scrollToField 配置项。 */
   scrollToField: (name: NamePath, options?: ScrollIntoViewOptions & { focus?: boolean }) => void
+  /** isFieldTouched 配置项。 */
   isFieldTouched: (name: NamePath) => boolean
+  /** getFieldError 配置项。 */
   getFieldError: (name: NamePath) => string[]
+  /** getFieldsError 配置项。 */
   getFieldsError: (nameList?: NamePath[]) => FieldError[]
 }
 
+/** FormColConfig 配置对象。 */
 export interface FormColConfig {
+  /** span 配置项。 */
   span?: number
+  /** offset 配置项。 */
   offset?: number
 }
 
@@ -286,10 +429,15 @@ interface FormContextValue {
   formName?: string
 }
 
+/** RUE_COMPONENT_TYPE_KEY 内部常量。 */
 const RUE_COMPONENT_TYPE_KEY = '__rue_component_type'
+/** FORM_CONTEXT_PROP 内部常量。 */
 const FORM_CONTEXT_PROP = '__rueFormContext'
+/** FORM_PATH_PROP 内部常量。 */
 const FORM_PATH_PROP = '__rueFormPath'
+/** FORM_ORIGINAL_SLOT_PROP 内部常量。 */
 const FORM_ORIGINAL_SLOT_PROP = '__rueFormOriginalDefaultSlot'
+/** RUE_SLOT_KEY 内部常量。 */
 const RUE_SLOT_KEY = '__rue_slots'
 
 let formEntitySeed = 0
@@ -323,14 +471,17 @@ const defaultValidateMessages: FormValidateMessages = {
   },
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...values: Array<string | undefined | false | null>) => {
   return values.filter(Boolean).join(' ')
 }
 
+/** 判断 Object Like 的内部工具函数。 */
 const isObjectLike = (value: unknown): value is Record<string, any> => {
   return !!value && typeof value === 'object'
 }
 
+/** clone Value 的内部工具函数。 */
 const cloneValue = <T,>(value: T): T => {
   if (Array.isArray(value)) {
     return value.map(item => cloneValue(item)) as T
@@ -345,26 +496,31 @@ const cloneValue = <T,>(value: T): T => {
   return value
 }
 
+/** 转换为 Name Path Array 的内部工具函数。 */
 const toNamePathArray = (name?: NamePath): NamePathSegment[] => {
   if (name == null) return []
   if (Array.isArray(name)) return [...name] as NamePathSegment[]
   return [name as NamePathSegment]
 }
 
+/** 读取 Path Key 的内部工具函数。 */
 const getPathKey = (namePath: NamePathSegment[]) => {
   return namePath.map(segment => `${typeof segment}:${String(segment)}`).join('__rue_form_path__')
 }
 
+/** path Matches 的内部工具函数。 */
 const pathMatches = (left: NamePathSegment[], right: NamePathSegment[]) => {
   if (left.length !== right.length) return false
   return left.every((segment, index) => segment === right[index])
 }
 
+/** path Starts With 的内部工具函数。 */
 const _pathStartsWith = (namePath: NamePathSegment[], target: NamePathSegment[]) => {
   if (target.length > namePath.length) return false
   return target.every((segment, index) => segment === namePath[index])
 }
 
+/** 读取 Value At Path 的内部工具函数。 */
 const getValueAtPath = (source: any, namePath: NamePathSegment[]) => {
   return namePath.reduce<any>((current, segment) => {
     if (current == null) return undefined
@@ -372,6 +528,7 @@ const getValueAtPath = (source: any, namePath: NamePathSegment[]) => {
   }, source)
 }
 
+/** 判断是否存在 Value At Path 的内部工具函数。 */
 const hasValueAtPath = (source: any, namePath: NamePathSegment[]) => {
   if (namePath.length === 0) return source !== undefined
   let current = source
@@ -382,6 +539,7 @@ const hasValueAtPath = (source: any, namePath: NamePathSegment[]) => {
   return true
 }
 
+/** 设置 Value At Path 的内部工具函数。 */
 const setValueAtPath = (source: any, namePath: NamePathSegment[], value: any): any => {
   if (namePath.length === 0) return cloneValue(value)
 
@@ -392,6 +550,7 @@ const setValueAtPath = (source: any, namePath: NamePathSegment[], value: any): a
   return next
 }
 
+/** delete Value At Path 的内部工具函数。 */
 const deleteValueAtPath = (source: any, namePath: NamePathSegment[]): any => {
   if (namePath.length === 0) return undefined
   if (!isObjectLike(source) && !Array.isArray(source)) return source
@@ -412,6 +571,7 @@ const deleteValueAtPath = (source: any, namePath: NamePathSegment[]): any => {
   return next
 }
 
+/** merge Values 的内部工具函数。 */
 const mergeValues = (base: any, patch: any): any => {
   if (!isObjectLike(patch) && !Array.isArray(patch)) return cloneValue(patch)
   if (Array.isArray(patch)) return patch.map(item => cloneValue(item))
@@ -423,20 +583,24 @@ const mergeValues = (base: any, patch: any): any => {
   return current
 }
 
+/** 构建 Changed Values 的内部工具函数。 */
 const buildChangedValues = (namePath: NamePathSegment[], value: any) => {
   return setValueAtPath({}, namePath, value)
 }
 
+/** 归一化 Trigger List 的内部工具函数。 */
 const normalizeTriggerList = (trigger?: string | string[]) => {
   if (!trigger) return ['onChange']
   return Array.isArray(trigger) ? trigger : [trigger]
 }
 
+/** 判断 Renderable Node 的内部工具函数。 */
 const isRenderableNode = (value: unknown): value is Record<string, any> => {
   return !!value && typeof value === 'object'
 }
 
-const patchVNodeProps = (node: any, patch: Record<string, any>) => {
+/** patch Renderable Props 的内部工具函数。 */
+const patchRenderableProps = (node: any, patch: Record<string, any>) => {
   if (!isRenderableNode(node) || !node.props || typeof node.props !== 'object') return node
   const originalProps = node.props as Record<string, any>
   const nextProps = {
@@ -455,6 +619,7 @@ const patchVNodeProps = (node: any, patch: Record<string, any>) => {
   return node
 }
 
+/** patch Control Node 的内部工具函数。 */
 const _patchControlNode = (node: any, patch: Record<string, any>): any => {
   if (Array.isArray(node)) {
     let patched = false
@@ -471,12 +636,13 @@ const _patchControlNode = (node: any, patch: Record<string, any>): any => {
   if (node.type === 'fragment' && node.props && typeof node.props === 'object') {
     const nextChildren = _patchControlNode((node.props as Record<string, any>).children, patch)
     if (nextChildren === (node.props as Record<string, any>).children) return node
-    return patchVNodeProps(node, { children: nextChildren })
+    return patchRenderableProps(node, { children: nextChildren })
   }
 
-  return patchVNodeProps(node, patch)
+  return patchRenderableProps(node, patch)
 }
 
+/** inject Form Context 的内部工具函数。 */
 const _injectFormContext = (
   value: unknown,
   formContext: FormContextValue,
@@ -519,6 +685,7 @@ const _injectFormContext = (
   return value
 }
 
+/** 解析 Default Slot Children 的内部工具函数。 */
 const resolveDefaultSlotChildren = (source: Record<string, unknown>, fallback: any) => {
   const slots = source[RUE_SLOT_KEY]
   if (slots && typeof slots === 'object' && 'default' in (slots as Record<string, unknown>)) {
@@ -534,6 +701,7 @@ const resolveDefaultSlotChildren = (source: Record<string, unknown>, fallback: a
   return fallback
 }
 
+/** materialize Slot Children 的内部工具函数。 */
 const materializeSlotChildren = (children: any): any => {
   if (typeof children === 'function' && (children as { kind?: unknown }).kind === 'block-factory') {
     return children()
@@ -541,11 +709,13 @@ const materializeSlotChildren = (children: any): any => {
   return children
 }
 
+/** 判断是否存在 Default Slot 的内部工具函数。 */
 const hasDefaultSlot = (source: Record<string, unknown>) => {
   const slots = source[RUE_SLOT_KEY]
   return !!(slots && typeof slots === 'object' && 'default' in (slots as Record<string, unknown>))
 }
 
+/** patch Default Slot Source 的内部工具函数。 */
 const patchDefaultSlotSource = (
   source: Record<string, unknown>,
   transform: (children: any) => any,
@@ -567,6 +737,7 @@ const patchDefaultSlotSource = (
   return source
 }
 
+/** render Transformed Children 的内部工具函数。 */
 const _renderTransformedChildren = (
   source: Record<string, unknown>,
   fallback: any,
@@ -585,6 +756,7 @@ const _renderTransformedChildren = (
   return transform(materializeSlotChildren(resolveDefaultSlotChildren(source, fallback)))
 }
 
+/** 读取 Rule Length Type 的内部工具函数。 */
 const getRuleLengthType = (value: any, type?: FormRuleType) => {
   if (type === 'number') return 'number'
   if (Array.isArray(value)) return 'array'
@@ -592,6 +764,7 @@ const getRuleLengthType = (value: any, type?: FormRuleType) => {
   return 'string'
 }
 
+/** 读取 Rule Length Value 的内部工具函数。 */
 const getRuleLengthValue = (value: any, type?: FormRuleType) => {
   const lengthType = getRuleLengthType(value, type)
   if (lengthType === 'array') return Array.isArray(value) ? value.length : 0
@@ -600,6 +773,7 @@ const getRuleLengthValue = (value: any, type?: FormRuleType) => {
   return String(value).length
 }
 
+/** 判断 Empty Value 的内部工具函数。 */
 const isEmptyValue = (value: any, type?: FormRuleType) => {
   if (value == null) return true
   if (type === 'array') return !Array.isArray(value) || value.length === 0
@@ -608,6 +782,7 @@ const isEmptyValue = (value: any, type?: FormRuleType) => {
   return false
 }
 
+/** 判断 Valid Url 的内部工具函数。 */
 const isValidUrl = (value: string) => {
   try {
     new URL(value)
@@ -617,6 +792,7 @@ const isValidUrl = (value: string) => {
   }
 }
 
+/** 读取 Type Valid 的内部工具函数。 */
 const getTypeValid = (value: any, type?: FormRuleType) => {
   if (!type) return true
   switch (type) {
@@ -637,6 +813,7 @@ const getTypeValid = (value: any, type?: FormRuleType) => {
   }
 }
 
+/** extract Rule Message 的内部工具函数。 */
 const extractRuleMessage = (
   rule: FormRule,
   value: any,
@@ -671,6 +848,7 @@ const extractRuleMessage = (
   return source[fallbackType ?? 'len'] ?? '${label} 校验失败'
 }
 
+/** format Message 的内部工具函数。 */
 const formatMessage = (
   template: string,
   variables: Record<string, string | number | undefined>,
@@ -681,17 +859,20 @@ const formatMessage = (
   })
 }
 
+/** 读取 Label Text 的内部工具函数。 */
 const getLabelText = (label: any, namePath: NamePathSegment[]) => {
   if (typeof label === 'string' || typeof label === 'number') return String(label)
   const last = namePath[namePath.length - 1]
   return last == null ? '字段' : String(last)
 }
 
+/** 解析 Item Required 的内部工具函数。 */
 const resolveItemRequired = (required: boolean | undefined, rules: FormRule[] | undefined) => {
   if (required !== undefined) return required
   return !!rules?.some(rule => rule.required && !rule.warningOnly)
 }
 
+/** run Rules 的内部工具函数。 */
 const runRules = async (
   namePath: NamePathSegment[],
   value: any,
@@ -771,6 +952,7 @@ const runRules = async (
   return { errors, warnings }
 }
 
+/** resolve Size Class 的内部工具函数。 */
 const _resolveSizeClass = (size?: FormSize) => {
   switch (size) {
     case 'small':
@@ -784,6 +966,7 @@ const _resolveSizeClass = (size?: FormSize) => {
   }
 }
 
+/** 读取 Default Value From Event 的内部工具函数。 */
 const getDefaultValueFromEvent = (valuePropName: string, ...args: any[]) => {
   const [first, second] = args
 
@@ -815,6 +998,7 @@ const getDefaultValueFromEvent = (valuePropName: string, ...args: any[]) => {
   return first
 }
 
+/** 读取 Feedback Icon 的内部工具函数。 */
 const getFeedbackIcon = (status: ValidateStatus | undefined) => {
   if (!status) return null
   if (status === 'error') return <span className="text-error">!</span>
@@ -823,16 +1007,19 @@ const getFeedbackIcon = (status: ValidateStatus | undefined) => {
   return <span className="loading loading-spinner loading-xs text-primary" />
 }
 
+/** 解析 Col Width 的内部工具函数。 */
 const resolveColWidth = (config?: FormColConfig) => {
   if (!config?.span) return undefined
   return `${(config.span / 24) * 100}%`
 }
 
+/** should Keep Field 的内部工具函数。 */
 const shouldKeepField = (entity: RegisteredFieldEntity, formPreserve?: boolean) => {
   if (entity.getPreserve() !== undefined) return entity.getPreserve() !== false
   return formPreserve !== false
 }
 
+/** 创建 Form Instance 的内部工具函数。 */
 const createFormInstance = (): InternalFormInstance => {
   const version = ref(0)
   const fields = new Map<string, RegisteredFieldEntity>()
@@ -1215,6 +1402,7 @@ const createFormInstance = (): InternalFormInstance => {
   return internal
 }
 
+/** 渲染 Required Mark 的内部工具函数。 */
 const renderRequiredMark = (label: any, required: boolean, requiredMark: FormRequiredMark) => {
   if (typeof requiredMark === 'function') {
     return requiredMark(label, { required })
@@ -1239,6 +1427,7 @@ const renderRequiredMark = (label: any, required: boolean, requiredMark: FormReq
   return null
 }
 
+/** Error List 的内部工具函数。 */
 const ErrorList: FC<FormErrorListProps> = ({ errors, warnings, className, style }) => {
   const list = [...(errors ?? []), ...(warnings ?? [])].filter(item => item != null)
   if (!list.length) return null
@@ -1262,6 +1451,7 @@ const ErrorList: FC<FormErrorListProps> = ({ errors, warnings, className, style 
   )
 }
 
+/** Form Item 的内部工具函数。 */
 const FormItem: FC<FormItemProps> = props => {
   const slotSource = ((getCurrentInstance() as { propsRO?: Record<string, unknown> } | null)
     ?.propsRO ?? {
@@ -1573,6 +1763,7 @@ const FormItem: FC<FormItemProps> = props => {
   )
 }
 
+/** Form List 的内部工具函数。 */
 const FormList: FC<FormListProps> = props => {
   const { form, name, children, render, initialValue, rules } = props
   const formInstance = form as InternalFormInstance | undefined
@@ -1722,10 +1913,12 @@ const FormList: FC<FormListProps> = props => {
   })()
 }
 
+/** use Form Instance 的内部工具函数。 */
 const useFormInstance = () => {
   throw new Error('当前运行时不支持自动解析祖先 Form，请显式持有并传递 form 实例')
 }
 
+/** use Watch 的内部工具函数。 */
 const useWatch = (name: NamePath, form?: FormInstance) => {
   const instanceProps = (getCurrentInstance() as { propsRO?: Record<string, unknown> } | null)
     ?.propsRO as Record<string, any> | undefined
@@ -1758,6 +1951,7 @@ const useWatch = (name: NamePath, form?: FormInstance) => {
   })()
 }
 
+/** use Form 的内部工具函数。 */
 const useForm = (form?: FormInstance): [FormInstance] => {
   const formRef = useRef<FormInstance>()
   if (!formRef.current) {
@@ -1766,6 +1960,7 @@ const useForm = (form?: FormInstance): [FormInstance] => {
   return [formRef.current]
 }
 
+/** Form Root 的内部工具函数。 */
 const FormRoot: FC<FormProps> = ({
   className,
   style,
@@ -1962,4 +2157,5 @@ const Form = Object.assign(FormRoot, {
   useWatch,
 }) as FormCompound
 
+/** 默认导出表单组件。 */
 export default Form

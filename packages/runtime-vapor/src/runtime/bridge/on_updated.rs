@@ -1,3 +1,8 @@
+/*
+生命周期桥接：onUpdated
+
+注册更新后回调。具体触发由 patch/render 生命周期层统一决定。
+*/
 use super::WasmRue;
 use crate::runtime::globals::push_pending_hook;
 use wasm_bindgen::JsValue;

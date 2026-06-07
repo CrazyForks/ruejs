@@ -76,6 +76,58 @@ describe('Watermark', () => {
     })
   })
 
+  it('uses a light fallback text color on dark backgrounds when font.color is omitted', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Watermark
+        content="Rue Design"
+        style={{ backgroundColor: '#0f172a' }}
+        data-testid="watermark-root"
+      >
+        <div>panel</div>
+      </Watermark>,
+      container,
+    )
+
+    await waitForContent(() => {
+      const root = container.querySelector('[data-testid="watermark-root"]') as HTMLElement
+      const overlay = root.querySelector('[data-rue-watermark-overlay="true"]') as HTMLElement
+
+      expect(root.style.backgroundColor).toBe('rgb(15, 23, 42)')
+      expect(overlay.style.backgroundImage).toContain(
+        encodeURIComponent('rgba(248, 250, 252, 0.28)'),
+      )
+    })
+  })
+
+  it('detects dark DaisyUI-style oklch backgrounds for the fallback text color', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Watermark
+        content="Rue Design"
+        style={{ backgroundColor: 'oklch(22% 0.04 265)' }}
+        data-testid="watermark-root"
+      >
+        <div>panel</div>
+      </Watermark>,
+      container,
+    )
+
+    await waitForContent(() => {
+      const root = container.querySelector('[data-testid="watermark-root"]') as HTMLElement
+      const overlay = root.querySelector('[data-rue-watermark-overlay="true"]') as HTMLElement
+
+      expect(root.style.backgroundColor).toBe('oklch(0.22 0.04 265)')
+      expect(overlay.style.backgroundImage).toContain(
+        encodeURIComponent('rgba(248, 250, 252, 0.28)'),
+      )
+    })
+  })
+
   it('supports image watermark source and inherited nested watermark', async () => {
     const container = mountContainer()
     resetActiveRuntime()

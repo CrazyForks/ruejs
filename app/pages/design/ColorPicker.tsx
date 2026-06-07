@@ -61,12 +61,18 @@ const brandPresets = [
 ]
 
 const basicTab = ref<PreviewTabMode>('preview')
+const sizeTab = ref<PreviewTabMode>('preview')
 const formatTab = ref<PreviewTabMode>('preview')
 const presetTab = ref<PreviewTabMode>('preview')
 const panelTab = ref<PreviewTabMode>('preview')
 
-const formatValue = ref('rgba(56, 189, 248, 0.72)')
-const formatMode = ref('rgb')
+const sizeExamples = [
+  { label: 'XS', size: 'xs', value: '#06b6d4' },
+  { label: 'SM', size: 'sm', value: '#22c55e' },
+  { label: 'MD', size: 'md', value: '#1677ff' },
+  { label: 'LG', size: 'lg', value: '#8b5cf6' },
+  { label: 'XL', size: 'xl', value: '#f97316' },
+] as const
 
 const presetValue = ref('#f97316')
 const presetSummary = ref('Launch Warm')
@@ -119,9 +125,10 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'size',
-    description: '触发器尺寸，兼容 ant 风格的 large / medium / small。',
-    type: `'large' | 'medium' | 'small'`,
-    defaultValue: `'medium'`,
+    description:
+      '触发器尺寸，支持 Button 同款 xs / sm / md / lg / xl，并兼容 large / medium / small。',
+    type: `'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'large' | 'medium' | 'middle' | 'small'`,
+    defaultValue: `'md'`,
   },
   {
     prop: 'allowClear',
@@ -195,11 +202,28 @@ const cssText = ref('rgb(22, 119, 255)')
   }}
 />`
 
+const sizeCode = `import { ColorPicker } from '@rue-js/design'
+
+<div className="flex flex-col gap-4">
+  <ColorPicker size="xs" defaultValue="#06b6d4" showText />
+  <ColorPicker size="sm" defaultValue="#22c55e" showText />
+  <ColorPicker size="md" defaultValue="#1677ff" showText />
+  <ColorPicker size="lg" defaultValue="#8b5cf6" showText />
+  <ColorPicker size="xl" defaultValue="#f97316" showText />
+</div>
+
+<div className="flex flex-wrap items-center gap-3">
+  <ColorPicker size="small" defaultValue="#14b8a6" />
+  <ColorPicker size="middle" defaultValue="#6366f1" />
+  <ColorPicker size="large" defaultValue="#ef4444" />
+</div>`
+
 const formatCode = `import { ref } from '@rue-js/rue'
 import { ColorPicker } from '@rue-js/design'
 
 const value = ref('rgba(56, 189, 248, 0.72)')
 const formatMode = ref('rgb')
+const brand = ref('#22c55e')
 
 <ColorPicker
   value={value.value}
@@ -214,10 +238,13 @@ const formatMode = ref('rgb')
 />
 
 <ColorPicker
-  defaultValue="#22c55e"
+  value={brand.value}
   disabledAlpha
   defaultFormat="hex"
   showText
+  onChange={(nextColor, css) => {
+    brand.value = nextColor && 'toHexString' in nextColor ? nextColor.toHexString() : css || ''
+  }}
 />`
 
 const presetCode = `import { ref } from '@rue-js/rue'
@@ -335,6 +362,84 @@ const BasicControlledPreview: FC = () => {
   )
 }
 
+const SizePreview: FC = () => {
+  return (
+    <div className="space-y-5 not-prose">
+      <div className="grid gap-3 rounded-[1.3rem] border border-base-300 bg-base-100 p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
+        {sizeExamples.map(item => (
+          <div key={item.size} className="flex flex-col gap-2">
+            <div className="text-xs font-medium uppercase tracking-[0.18em] text-base-content/45">
+              {item.label}
+            </div>
+            <ColorPicker size={item.size} defaultValue={item.value} showText />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 rounded-[1.3rem] border border-dashed border-base-300 bg-base-100 p-4 shadow-sm">
+        <span className="text-sm font-medium text-base-content/68">语义别名</span>
+        <ColorPicker size="small" defaultValue="#14b8a6" />
+        <ColorPicker size="middle" defaultValue="#6366f1" />
+        <ColorPicker size="large" defaultValue="#ef4444" />
+      </div>
+    </div>
+  )
+}
+
+/** 格式切换与禁用透明度的组合预览，避免两个示例共享同一组 ref 状态。 */
+const FormatAlphaPreview: FC = () => {
+  const formatValue = ref('rgba(56, 189, 248, 0.72)')
+  const formatMode = ref('rgb')
+  const brandValue = ref('#22c55e')
+
+  return (
+    <div className="grid gap-4 not-prose lg:grid-cols-2">
+      <div className="rounded-[1.3rem] border border-base-300 bg-base-100 p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">Translucent UI Layer</div>
+            <div className="text-xs text-base-content/58">
+              当前格式 {formatMode.value.toUpperCase()}
+            </div>
+          </div>
+          <span className="badge badge-outline badge-sm">alpha enabled</span>
+        </div>
+        <ColorPicker
+          value={formatValue.value}
+          defaultFormat="rgb"
+          showText={color => `alpha ${Math.round(('toHsb' in color ? color.toHsb().a : 1) * 100)}%`}
+          onFormatChange={nextFormat => {
+            formatMode.value = nextFormat
+          }}
+          onChange={(_color, css) => {
+            formatValue.value = css || ''
+          }}
+        />
+      </div>
+
+      <div className="rounded-[1.3rem] border border-base-300 bg-base-100 p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">Brand Lock</div>
+            <div className="text-xs text-base-content/58">适合按钮主色和规范色卡</div>
+          </div>
+          <span className="badge badge-outline badge-sm">alpha off</span>
+        </div>
+        <ColorPicker
+          value={brandValue.value}
+          disabledAlpha
+          defaultFormat="hex"
+          showText
+          onChange={(nextColor, css) => {
+            brandValue.value =
+              nextColor && 'toHexString' in nextColor ? nextColor.toHexString() : css || ''
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
 const ColorPickerDesign: FC = () => {
   return (
     <SidebarPlayground>
@@ -378,49 +483,19 @@ const ColorPickerDesign: FC = () => {
         />
 
         <PreviewBlock
+          title="尺寸"
+          summary="通过 size 调整触发器尺寸，支持 xs / sm / md / lg / xl，也兼容 small / middle / large 语义别名。"
+          tab={sizeTab}
+          code={sizeCode}
+          preview={SizePreview}
+        />
+
+        <PreviewBlock
           title="格式切换与透明度"
           summary="第一块保留 alpha 并监听格式切换；第二块关闭透明度，用更稳定的品牌色录入。"
           tab={formatTab}
           code={formatCode}
-          preview={() => (
-            <div className="grid gap-4 not-prose lg:grid-cols-2">
-              <div className="rounded-[1.3rem] border border-base-300 bg-base-100 p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold">Translucent UI Layer</div>
-                    <div className="text-xs text-base-content/58">
-                      当前格式 {formatMode.value.toUpperCase()}
-                    </div>
-                  </div>
-                  <span className="badge badge-outline badge-sm">alpha enabled</span>
-                </div>
-                <ColorPicker
-                  value={formatValue.value}
-                  defaultFormat="rgb"
-                  showText={color =>
-                    `alpha ${Math.round(('toHsb' in color ? color.toHsb().a : 1) * 100)}%`
-                  }
-                  onFormatChange={nextFormat => {
-                    formatMode.value = nextFormat
-                  }}
-                  onChange={(_color, css) => {
-                    formatValue.value = css || ''
-                  }}
-                />
-              </div>
-
-              <div className="rounded-[1.3rem] border border-base-300 bg-base-100 p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold">Brand Lock</div>
-                    <div className="text-xs text-base-content/58">适合按钮主色和规范色卡</div>
-                  </div>
-                  <span className="badge badge-outline badge-sm">alpha off</span>
-                </div>
-                <ColorPicker defaultValue="#22c55e" disabledAlpha defaultFormat="hex" showText />
-              </div>
-            </div>
-          )}
+          preview={FormatAlphaPreview}
         />
 
         <PreviewBlock

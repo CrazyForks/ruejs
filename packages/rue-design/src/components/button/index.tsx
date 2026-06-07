@@ -8,6 +8,7 @@ Button 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, useRef, watch } from '@rue-js/rue'
 
+/** ButtonTone 语义色类型。 */
 export type ButtonTone =
   | 'neutral'
   | 'primary'
@@ -18,54 +19,98 @@ export type ButtonTone =
   | 'warning'
   | 'error'
 
+/** ButtonColor 语义色类型。 */
 export type ButtonColor = 'default' | 'danger' | ButtonTone
+/** ButtonType 视觉或语义变体类型。 */
 export type ButtonType = 'solid' | 'filled' | 'outlined' | 'dashed' | 'text' | 'link'
+/** ButtonVariant 视觉或语义变体类型。 */
 export type ButtonVariant = ButtonType
+/** ButtonVisualVariant 视觉或语义变体类型。 */
 export type ButtonVisualVariant = ButtonType
+/** ButtonShape 类型。 */
 export type ButtonShape = 'default' | 'square' | 'circle' | 'round'
+/** ButtonSize 尺寸类型。 */
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium' | 'middle' | 'large'
+/** ButtonHTMLType 视觉或语义变体类型。 */
 export type ButtonHTMLType = 'button' | 'submit' | 'reset'
+/** ButtonIconPlacement 位置或方向类型。 */
 export type ButtonIconPlacement = 'start' | 'end'
+/** ButtonGroupDirection 位置或方向类型。 */
 export type ButtonGroupDirection = 'horizontal' | 'vertical'
 
+/** ButtonLoadingConfig 配置对象。 */
 export interface ButtonLoadingConfig {
+  /** delay 配置项。 */
   delay?: number
+  /** 图标内容。 */
   icon?: any
 }
 
+/** ButtonProps 组件属性。 */
 export interface ButtonProps {
+  /** 自定义渲染的宿主元素。 */
   as?: 'button' | 'a' | 'div'
+  /** 组件类型或语义类型。 */
   type?: ButtonType
+  /** 原生 button type 属性。 */
   htmlType?: ButtonHTMLType
+  /** 组件语义色。 */
   color?: ButtonColor
+  /** 组件形状。 */
   shape?: ButtonShape
+  /** 组件尺寸。 */
   size?: ButtonSize
+  /** 图标内容。 */
   icon?: any
+  /** iconPlacement 配置项。 */
   iconPlacement?: ButtonIconPlacement
+  /** 是否展示加载态。 */
   loading?: boolean | ButtonLoadingConfig
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** danger 配置项。 */
   danger?: boolean
+  /** 是否处于激活态。 */
   active?: boolean
+  /** block 配置项。 */
   block?: boolean
+  /** wide 配置项。 */
   wide?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 链接地址。 */
   href?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** 点击时触发的回调。 */
   onClick?: (e: MouseEvent) => void
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ButtonGroupProps 组件属性。 */
 export interface ButtonGroupProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 组件尺寸。 */
   size?: ButtonSize
+  /** 组件形状。 */
   shape?: ButtonShape
+  /** 布局方向。 */
   direction?: ButtonGroupDirection
+  /** block 配置项。 */
   block?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -75,10 +120,12 @@ interface NormalizedLoadingConfig {
   icon?: any
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value === undefined || value === null || value === false || value === '') return false
   if (Array.isArray(value)) return value.some(item => hasRenderableContent(item))
@@ -118,6 +165,7 @@ const resolveLoadingSizeClass = (size?: ButtonSize) => {
   }
 }
 
+/** 解析 Button Size Utility Class 的内部工具函数。 */
 const resolveButtonSizeUtilityClass = (size?: ButtonSize) => {
   switch (resolveSizeClass(size)) {
     case 'xs':
@@ -135,6 +183,7 @@ const resolveButtonSizeUtilityClass = (size?: ButtonSize) => {
   }
 }
 
+/** resolve Button Shape Utility Class 的内部工具函数。 */
 const _resolveButtonShapeUtilityClass = (shape?: ButtonShape) => {
   switch (shape) {
     case 'square':
@@ -148,6 +197,7 @@ const _resolveButtonShapeUtilityClass = (shape?: ButtonShape) => {
   }
 }
 
+/** 解析 Button Group Shape Utility Class 的内部工具函数。 */
 const resolveButtonGroupShapeUtilityClass = (shape?: ButtonShape) => {
   switch (shape) {
     case 'square':
@@ -200,6 +250,7 @@ const DefaultLoadingIcon: FC<{ size?: ButtonSize }> = ({ size }) => {
   return <span className={`loading loading-spinner ${resolveLoadingSizeClass(size)}`.trim()} />
 }
 
+/** sync Button Group Items 的内部工具函数。 */
 const syncButtonGroupItems = (
   root: HTMLElement | null | undefined,
   size?: ButtonSize,
@@ -238,6 +289,7 @@ const syncButtonGroupItems = (
   })
 }
 
+/** Button Group 的内部工具函数。 */
 const ButtonGroup: FC<ButtonGroupProps> = ({
   as,
   size,
@@ -305,6 +357,7 @@ const ButtonGroup: FC<ButtonGroupProps> = ({
   )
 }
 
+/** Button 的内部工具函数。 */
 const Button: FC<ButtonProps> = ({
   as,
   type,
@@ -504,4 +557,5 @@ const ButtonCompound: ButtonCompound = Object.assign(Button, {
   Group: ButtonGroup,
 })
 
+/** 默认导出按钮组件。 */
 export default ButtonCompound

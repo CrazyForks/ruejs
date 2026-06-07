@@ -1082,13 +1082,7 @@ const PreviewPanel: FC = () => {
                       <div className="flex gap-2">
                         <button
                           className="btn btn-primary btn-sm"
-                          onClick={(e: any) => {
-                            const editRow = (e.currentTarget as HTMLElement).closest(
-                              '[data-todo-edit-row="true"]',
-                            ) as HTMLElement | null
-                            const input = editRow?.querySelector('input') as HTMLInputElement | null
-                            commitEditing(input?.value ?? editingValue)
-                          }}
+                          onClick={() => commitEditing(editingValue)}
                         >
                           保存
                         </button>

@@ -19,6 +19,7 @@ use swc_core::ecma::ast::*;
 /// 设计说明：
 /// - 将常见的 AST 片段封装为助手，减少样板与错误率，提升阅读性（如 `const_decl`, `call_ident`）。
 /// - Vapor setup 主路径直接返回块根 `Node`，把编译结果收敛到更薄的挂载协议。
+///
 /// 构造标识符 `Ident`
 pub fn ident(name: &str) -> Ident {
     Ident::new(Atom::from(name), DUMMY_SP, SyntaxContext::empty())
@@ -105,3 +106,7 @@ pub fn append_child(parent: Ident, child: Expr) -> Stmt {
 pub fn return_root(root: Ident) -> Stmt {
     Stmt::Return(ReturnStmt { span: DUMMY_SP, arg: Some(Box::new(Expr::Ident(root))) })
 }
+
+#[cfg(test)]
+#[path = "emit_tests.rs"]
+mod tests;

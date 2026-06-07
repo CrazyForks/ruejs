@@ -32,10 +32,27 @@ fn string_expr(value: &str) -> JSXElementChild {
     })
 }
 
+fn jsx_text(value: &str) -> JSXElementChild {
+    JSXElementChild::JSXText(swc_core::ecma::ast::JSXText {
+        span: DUMMY_SP,
+        value: value.into(),
+        raw: value.into(),
+    })
+}
+
+fn empty_expr() -> JSXElementChild {
+    JSXElementChild::JSXExprContainer(JSXExprContainer {
+        span: DUMMY_SP,
+        expr: JSXExpr::JSXEmptyExpr(swc_core::ecma::ast::JSXEmptyExpr { span: DUMMY_SP }),
+    })
+}
+
 #[test]
 fn normalize_text_collapses_newlines_but_preserves_inline_spaces() {
     assert_eq!(normalize_text("foo   bar"), "foo   bar");
     assert_eq!(normalize_text("foo \n  bar\r\n baz"), "foo bar baz");
+    assert_eq!(normalize_text("foo\tbar"), "foo\tbar");
+    assert_eq!(normalize_text("foo\r\n"), "foo ");
 }
 
 #[test]
@@ -109,5 +126,35 @@ fn trims_visible_text_against_explicit_space_neighbors() {
             &normalize_text(&trailing_text.value),
         ),
         Some(" hello".to_string())
+    );
+}
+
+#[test]
+fn handles_jsx_text_neighbors_and_empty_expr_neighbors() {
+    let visible_text_neighbors = vec![jsx_text("left"), jsx_text("  middle  "), jsx_text("right")];
+    let JSXElementChild::JSXText(middle) = &visible_text_neighbors[1] else {
+        panic!("expected middle text child");
+    };
+    assert_eq!(
+        compute_jsx_text_content(&visible_text_neighbors, 1, &normalize_text(&middle.value),),
+        Some("  middle  ".to_string())
+    );
+
+    let whitespace_text_neighbors = vec![jsx_text(" "), jsx_text(" padded "), jsx_text("\n")];
+    let JSXElementChild::JSXText(padded) = &whitespace_text_neighbors[1] else {
+        panic!("expected padded text child");
+    };
+    assert_eq!(
+        compute_jsx_text_content(&whitespace_text_neighbors, 1, &normalize_text(&padded.value),),
+        Some("padded".to_string())
+    );
+
+    let empty_expr_neighbors = vec![empty_expr(), jsx_text(" padded "), empty_expr()];
+    let JSXElementChild::JSXText(empty_padded) = &empty_expr_neighbors[1] else {
+        panic!("expected padded text child");
+    };
+    assert_eq!(
+        compute_jsx_text_content(&empty_expr_neighbors, 1, &normalize_text(&empty_padded.value),),
+        Some(" padded ".to_string())
     );
 }

@@ -18,7 +18,8 @@
   },
   "files": [
     "index.js",
-    "dist"
+    "dist",
+    "src"
   ],
   "sideEffects": false,
   "main": "index.js",
@@ -26,7 +27,7 @@
   "types": "dist/jsx-runtime.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/jsx-runtime.d.ts",
+      "types": "./src/index.ts",
       "development": "./src/index.ts",
       "node": {
         "production": "./dist/jsx-runtime.cjs.prod.js",

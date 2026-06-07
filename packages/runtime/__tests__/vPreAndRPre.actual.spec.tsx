@@ -46,7 +46,7 @@ afterEach(() => {
 })
 
 describe('VPreAndRPre actual page', () => {
-  it('preserves literal directive markup inside pre blocks while the comparison panel still reacts', async () => {
+  it('preserves literal directive markup inside pre blocks while the comparison panel still rues', async () => {
     const container = mountContainer()
     resetActiveRuntime()
     render(<VPreAndRPre />, container)

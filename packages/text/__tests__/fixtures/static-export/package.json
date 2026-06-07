@@ -1,0 +1,9 @@
+{
+  "name": "fixture-static-export",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "text": "workspace:*",
+    "vite": "catalog:"
+  }
+}

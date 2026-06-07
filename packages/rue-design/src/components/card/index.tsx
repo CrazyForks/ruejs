@@ -8,98 +8,177 @@ Card 组件概述
 import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 
+/** CardSize 尺寸类型。 */
 export type CardSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium' | 'middle' | 'large'
 
+/** CardVariant 视觉或语义变体类型。 */
 export type CardVariant = 'outlined' | 'borderless' | 'dashed'
+/** CardType 视觉或语义变体类型。 */
 export type CardType = 'default' | 'inner'
+/** CardTabStyle 样式值类型。 */
 export type CardTabStyle = 'box' | 'border' | 'lift'
+/** CardTabPlacement 位置或方向类型。 */
 export type CardTabPlacement = 'top' | 'bottom'
 
+/** CardTabItem 数据项结构。 */
 export interface CardTabItem {
+  /** 数据项唯一标识。 */
   key: string
+  /** 展示标签。 */
   label?: any
+  /** tab 配置项。 */
   tab?: any
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
 }
 
+/** CardTabProps 组件属性。 */
 export interface CardTabProps {
+  /** 根节点内联样式。 */
   style?: CardTabStyle
+  /** 弹出层或内容展示位置。 */
   placement?: CardTabPlacement
+  /** 组件尺寸。 */
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  /** 根节点附加类名。 */
   className?: string
 }
 
+/** CardProps 组件属性。 */
 export interface CardProps {
+  /** 组件尺寸。 */
   size?: CardSize
+  /** border 配置项。 */
   border?: boolean
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** dash 配置项。 */
   dash?: boolean
+  /** side 配置项。 */
   side?: boolean
+  /** imageFull 配置项。 */
   imageFull?: boolean
+  /** 组件视觉变体。 */
   variant?: CardVariant
+  /** 组件类型或语义类型。 */
   type?: CardType
+  /** hoverable 配置项。 */
   hoverable?: boolean
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** 标题内容。 */
   title?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** cover 配置项。 */
   cover?: any
+  /** 操作区内容。 */
   actions?: any[]
+  /** tabList 配置项。 */
   tabList?: CardTabItem[]
+  /** activeTabKey 标识键。 */
   activeTabKey?: string
+  /** defaultActiveTabKey 标识键。 */
   defaultActiveTabKey?: string
+  /** tabBarExtraContent 配置项。 */
   tabBarExtraContent?: any
+  /** tabProps 透传属性。 */
   tabProps?: CardTabProps
+  /** onTabChange 事件回调。 */
   onTabChange?: (key: string) => void
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** headerClassName 附加类名。 */
   headerClassName?: string
+  /** headerStyle 内联样式。 */
   headerStyle?: any
+  /** bodyClassName 附加类名。 */
   bodyClassName?: string
+  /** bodyStyle 内联样式。 */
   bodyStyle?: any
+  /** coverClassName 附加类名。 */
   coverClassName?: string
+  /** coverStyle 内联样式。 */
   coverStyle?: any
+  /** actionsClassName 附加类名。 */
   actionsClassName?: string
+  /** actionsStyle 内联样式。 */
   actionsStyle?: any
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** titleStyle 内联样式。 */
   titleStyle?: any
+  /** extraClassName 附加类名。 */
   extraClassName?: string
+  /** extraStyle 内联样式。 */
   extraStyle?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** CardPartProps 组件属性。 */
 export interface CardPartProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** CardGridProps 组件属性。 */
 export interface CardGridProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** hoverable 配置项。 */
   hoverable?: boolean
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** CardMetaProps 组件属性。 */
 export interface CardMetaProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** avatar 配置项。 */
   avatar?: any
+  /** avatarClassName 附加类名。 */
   avatarClassName?: string
+  /** avatarStyle 内联样式。 */
   avatarStyle?: any
+  /** 标题内容。 */
   title?: any
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** titleStyle 内联样式。 */
   titleStyle?: any
+  /** 描述内容。 */
   description?: any
+  /** descriptionClassName 附加类名。 */
   descriptionClassName?: string
+  /** descriptionStyle 内联样式。 */
   descriptionStyle?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
@@ -539,4 +618,5 @@ const CardCompound: CardCompound = Object.assign(Card, {
   Meta,
 })
 
+/** 默认导出卡片组件。 */
 export default CardCompound

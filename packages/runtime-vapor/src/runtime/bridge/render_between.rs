@@ -1,3 +1,9 @@
+/*
+renderBetween：区间渲染桥接
+
+输入被渲染到 start/end 两个锚点之间，适合片段、列表片段或动态局部更新。
+区间边界稳定后，后续更新可以精确清理并复用这一段 DOM。
+*/
 use super::WasmRue;
 use super::input::CompatEntryPolicy;
 use crate::runtime::js_adapter::JsDomAdapter;

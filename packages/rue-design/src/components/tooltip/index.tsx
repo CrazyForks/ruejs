@@ -1,7 +1,13 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Tooltip 模块概述
+- 汇总文字提示组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import { h, type FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 
+/** TooltipPresetColor 语义色类型。 */
 export type TooltipPresetColor =
   | 'neutral'
   | 'primary'
@@ -12,8 +18,10 @@ export type TooltipPresetColor =
   | 'warning'
   | 'error'
 
+/** TooltipColor 语义色类型。 */
 export type TooltipColor = TooltipPresetColor | string
 
+/** TooltipPlacement 位置或方向类型。 */
 export type TooltipPlacement =
   | 'top'
   | 'bottom'
@@ -28,53 +36,91 @@ export type TooltipPlacement =
   | 'rightTop'
   | 'rightBottom'
 
+/** TooltipTrigger 类型。 */
 export type TooltipTrigger = 'hover' | 'focus' | 'click' | 'contextMenu'
 
+/** TooltipClassNames 局部类名配置。 */
 export interface TooltipClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** 主体区域配置。 */
   body?: string
 }
 
+/** TooltipStyles 局部样式配置。 */
 export interface TooltipStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** 主体区域配置。 */
   body?: Record<string, any>
 }
 
+/** TooltipProps 组件属性。 */
 export interface TooltipProps {
+  /** 自定义渲染的宿主元素。 */
   as?: string
+  /** tip 配置项。 */
   tip?: string | number
+  /** 标题内容。 */
   title?: any
+  /** 主体内容。 */
   content?: any
+  /** overlay 配置项。 */
   overlay?: any
+  /** 弹出层或内容展示位置。 */
   placement?: TooltipPlacement
+  /** 组件语义色。 */
   color?: TooltipColor
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** arrow 配置项。 */
   arrow?: boolean
+  /** trigger 区域配置。 */
   trigger?: TooltipTrigger | TooltipTrigger[]
+  /** openClassName 附加类名。 */
   openClassName?: string
+  /** overlayClassName 附加类名。 */
   overlayClassName?: string
+  /** overlayStyle 内联样式。 */
   overlayStyle?: Record<string, any>
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: TooltipClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: TooltipStyles
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** TooltipContentProps 组件属性。 */
 export interface TooltipContentProps {
+  /** 自定义渲染的宿主元素。 */
   as?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 
+/** PRESET_COLORS 内部常量。 */
 const PRESET_COLORS: readonly TooltipPresetColor[] = [
   'neutral',
   'primary',
@@ -86,6 +132,7 @@ const PRESET_COLORS: readonly TooltipPresetColor[] = [
   'error',
 ]
 
+/** PLACEMENT_CLASS_MAP 内部常量。 */
 const PLACEMENT_CLASS_MAP: Record<TooltipPlacement, 'top' | 'bottom' | 'left' | 'right'> = {
   top: 'top',
   bottom: 'bottom',
@@ -103,10 +150,12 @@ const PLACEMENT_CLASS_MAP: Record<TooltipPlacement, 'top' | 'bottom' | 'left' | 
 
 let tooltipIdSeed = 0
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | undefined | false>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** merge Styles 的内部工具函数。 */
 const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   const merged: Record<string, any> = {}
   parts.forEach(part => {
@@ -115,6 +164,7 @@ const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   return merged
 }
 
+/** serialize Style 的内部工具函数。 */
 const serializeStyle = (style?: string | Record<string, any>) => {
   if (!style) {
     return ''
@@ -129,6 +179,7 @@ const serializeStyle = (style?: string | Record<string, any>) => {
     .join('; ')
 }
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -136,6 +187,7 @@ const toChildArray = (children: any): any[] => {
   return children == null || typeof children === 'boolean' ? [] : [children]
 }
 
+/** toggle Class Tokens 的内部工具函数。 */
 const toggleClassTokens = (
   element: HTMLElement,
   className: string | undefined,
@@ -149,6 +201,7 @@ const toggleClassTokens = (
     .forEach(token => element.classList.toggle(token, active))
 }
 
+/** sync Tooltip Open State 的内部工具函数。 */
 const syncTooltipOpenState = (
   element: EventTarget | null,
   nextOpen: boolean,
@@ -163,19 +216,23 @@ const syncTooltipOpenState = (
   element.classList.toggle('[&>.tooltip-content]:!opacity-0', manualOnly && !nextOpen)
 }
 
+/** 归一化 Trigger 的内部工具函数。 */
 const normalizeTrigger = (trigger?: TooltipTrigger | TooltipTrigger[]) => {
   const source = Array.isArray(trigger) ? trigger : trigger ? [trigger] : ['hover', 'focus']
   return Array.from(new Set(source)) as TooltipTrigger[]
 }
 
+/** 判断 Preset Color 的内部工具函数。 */
 const isPresetColor = (color?: TooltipColor): color is TooltipPresetColor => {
   return typeof color === 'string' && PRESET_COLORS.includes(color as TooltipPresetColor)
 }
 
+/** 判断 Primitive Tooltip Content 的内部工具函数。 */
 const isPrimitiveTooltipContent = (value: any) => {
   return typeof value === 'string' || typeof value === 'number'
 }
 
+/** 解析 Tooltip Content 的内部工具函数。 */
 const resolveTooltipContent = (overlay: any, title: any, content: any, tip: any) => {
   const candidate =
     overlay !== undefined
@@ -188,13 +245,16 @@ const resolveTooltipContent = (overlay: any, title: any, content: any, tip: any)
   return typeof candidate === 'function' ? candidate() : candidate
 }
 
+/** parse Hex Channel 的内部工具函数。 */
 const parseHexChannel = (value: string) => Number.parseInt(value, 16)
 
+/** 归一化 Rgb Channel 的内部工具函数。 */
 const normalizeRgbChannel = (value: number) => {
   const ratio = value / 255
   return ratio <= 0.03928 ? ratio / 12.92 : ((ratio + 0.055) / 1.055) ** 2.4
 }
 
+/** 解析 Readable Text Color 的内部工具函数。 */
 const resolveReadableTextColor = (color: string) => {
   const normalized = color.trim()
   let red = Number.NaN
@@ -233,10 +293,12 @@ const resolveReadableTextColor = (color: string) => {
   return luminance > 0.45 ? '#111827' : '#f8fafc'
 }
 
+/** call Handler 的内部工具函数。 */
 const callHandler = (handler: ((event: any) => void) | undefined, event: any) => {
   if (typeof handler === 'function') handler(event)
 }
 
+/** Content 的内部工具函数。 */
 const Content: FC<TooltipContentProps> = ({ as = 'div', className, style, children, ...rest }) => {
   const Component = as as any
   const contentProps = { ...rest, className: mergeClassNames('tooltip-content', className), style }
@@ -251,6 +313,7 @@ const Content: FC<TooltipContentProps> = ({ as = 'div', className, style, childr
     : h(Component, contentProps, ...contentChildren)
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<TooltipProps> = ({
   as = 'div',
   tip,
@@ -428,4 +491,5 @@ const Tooltip: TooltipCompound = Object.assign(Root, {
   Content,
 })
 
+/** 默认导出文字提示组件。 */
 export default Tooltip

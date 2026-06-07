@@ -61,3 +61,16 @@ fn keeps_non_matching_template_names_unchanged() {
         "Template"
     );
 }
+
+#[test]
+fn handles_self_closing_templates_and_non_ident_attrs() {
+    let mut self_closing = parse_element("<template v-if={ok} />");
+    transform_element(&mut self_closing);
+    assert_eq!(element_name(&self_closing.opening.name), "Template");
+    assert!(self_closing.closing.is_none());
+
+    let mut unsupported_attrs = parse_element("<template ns:slot=\"header\" {...props} />");
+    transform_element(&mut unsupported_attrs);
+    assert_eq!(element_name(&unsupported_attrs.opening.name), "template");
+    assert!(unsupported_attrs.closing.is_none());
+}

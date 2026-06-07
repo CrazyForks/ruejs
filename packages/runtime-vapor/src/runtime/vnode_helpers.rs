@@ -1,3 +1,9 @@
+/*
+render input/props 辅助转换
+
+集中处理 JS props、children 与 compat render object 到 MountInput 的转换。
+默认主路径只需要 props/children 的基础工具；启用 compat 时才会解析旧式 type/props/children 结构。
+*/
 #[cfg(feature = "compat")]
 use super::DomAdapter;
 use super::types::ComponentProps;
@@ -18,10 +24,9 @@ pub(crate) fn props_from_value(props: &JsValue) -> ComponentProps {
         let keys = Object::keys(&obj);
         for index in 0..keys.length() {
             let key = keys.get(index);
-            if let Some(name) = key.as_string() {
-                let value = Reflect::get(&obj, &key).unwrap_or(JsValue::UNDEFINED);
-                props_map.insert(name, value);
-            }
+            let name = key.as_string().expect("Object.keys must return string keys");
+            let value = Reflect::get(&obj, &key).unwrap_or(JsValue::UNDEFINED);
+            props_map.insert(name, value);
         }
 
         let parent_key = JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP);
@@ -50,16 +55,23 @@ pub(crate) fn props_with_children(props: &JsValue, children: &JsValue) -> Compon
 }
 
 #[cfg(feature = "compat")]
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 pub(crate) fn effective_children(children: &JsValue, props_map: &ComponentProps) -> JsValue {
     if Array::is_array(children) {
         let arr = Array::from(children);
         if arr.length() == 0 {
-            props_map.get("children").cloned().unwrap_or_else(|| children.clone())
+            match props_map.get("children") {
+                Some(value) => value.clone(),
+                None => children.clone(),
+            }
         } else {
             children.clone()
         }
     } else if children.is_undefined() || children.is_null() {
-        props_map.get("children").cloned().unwrap_or_else(|| children.clone())
+        match props_map.get("children") {
+            Some(value) => value.clone(),
+            None => children.clone(),
+        }
     } else {
         children.clone()
     }
@@ -95,6 +107,7 @@ pub(crate) fn compat_type_to_input_type<A: DomAdapter>(
 }
 
 #[cfg(feature = "compat")]
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 pub(crate) fn compat_input_from_values<A, F>(
     type_tag: &JsValue,
     props_value: &JsValue,
@@ -114,6 +127,7 @@ where
 }
 
 #[cfg(feature = "compat")]
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 pub(crate) fn compat_object_to_input<A, TypeGuard, F>(
     input_value: &JsValue,
     fallback_unknown_element: Option<&str>,
@@ -138,18 +152,22 @@ where
     let props_value = Reflect::get(&obj, &JsValue::from_str("props")).unwrap_or(JsValue::UNDEFINED);
     let children_value =
         Reflect::get(&obj, &JsValue::from_str("children")).unwrap_or(JsValue::UNDEFINED);
-    let mut input = compat_input_from_values::<A, _>(
+    let mut input = match compat_input_from_values::<A, _>(
         &type_value,
         &props_value,
         &children_value,
         fallback_unknown_element,
         children_from_value,
-    )?;
+    ) {
+        Some(input) => input,
+        None => return None,
+    };
     input.attach_mount_metadata_from_source(&obj);
     Some(input)
 }
 
 #[cfg(feature = "compat")]
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 pub(crate) fn compat_children_from_value<A, F>(
     value: &JsValue,
     mut input_from_value: F,

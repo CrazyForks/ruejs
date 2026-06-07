@@ -1,0 +1,21 @@
+{
+  "name": "@rue-js/example-text-static-export",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ruetext dev --port 3030",
+    "build": "ruetext build",
+    "start": "node serve-static.mjs dist/client 3031",
+    "preview": "node serve-static.mjs dist/client 3031"
+  },
+  "dependencies": {
+    "@rue-js/jsx-runtime": "workspace:*",
+    "@rue-js/rue": "workspace:*",
+    "@rue-js/text": "workspace:*",
+    "text": "workspace:@rue-js/text@*",
+    "vite": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

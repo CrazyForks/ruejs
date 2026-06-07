@@ -3,6 +3,14 @@ use swc_core::ecma::ast::*;
 
 use crate::emit::{ident, ident_name, string_expr};
 
+/*
+RouterLink 快路径：
+- 目标：在编译期将简单 `<RouterLink>` 降级为原生 `<a>`，减少一次组件创建与 props 分发。
+- 支持范围：无 spread、无自定义 onClick、无 children prop 的常见链接形态。
+- 保守回退：一旦遇到可能改变语义的属性，返回 None，让普通组件路径处理。
+- 生成结果：注入 `href={RouterLink.__rueHref(to)}` 与
+  `onClick={(e) => RouterLink.__rueOnClick(e, to, replace)}`，其余属性和 children 保留。
+*/
 fn jsx_attr_name(attr: &JSXAttr) -> Option<&str> {
     match &attr.name {
         JSXAttrName::Ident(idn) => Some(idn.sym.as_ref()),
@@ -81,6 +89,7 @@ pub fn rewrite_router_link_fast_path(jsx_el: &JSXElement) -> Option<JSXElement> 
     for attr in &jsx_el.opening.attrs {
         match attr {
             JSXAttrOrSpread::SpreadElement(_) => {
+                // spread 可能覆盖 to/replace/onClick，编译期无法可靠排序合并，直接走组件路径。
                 return None;
             }
             JSXAttrOrSpread::JSXAttr(attr) => {
@@ -99,6 +108,7 @@ pub fn rewrite_router_link_fast_path(jsx_el: &JSXElement) -> Option<JSXElement> 
                         );
                     }
                     "onClick" | "children" => {
+                        // 用户显式接管点击或 children prop 时，快路径可能改变语义，保持保守。
                         return None;
                     }
                     _ => {
@@ -141,123 +151,5 @@ pub fn rewrite_router_link_fast_path(jsx_el: &JSXElement) -> Option<JSXElement> 
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Arc;
-    use swc_core::common::{FileName, SourceMap};
-    use swc_core::ecma::codegen::{Emitter, text_writer::JsWriter};
-    use swc_ecma_parser::{Parser, StringInput, Syntax, TsSyntax};
-
-    fn parse_jsx_element(src: &str) -> JSXElement {
-        let cm = Arc::new(SourceMap::default());
-        let fm = cm.new_source_file(
-            FileName::Custom("router-link-test.tsx".into()).into(),
-            src.to_string(),
-        );
-        let mut parser = Parser::new(
-            Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
-            StringInput::from(&*fm),
-            None,
-        );
-        match *parser.parse_expr().expect("parse jsx element") {
-            Expr::JSXElement(el) => *el,
-            other => panic!("expected JSXElement, got {other:?}"),
-        }
-    }
-
-    fn emit_expr(expr: Expr) -> String {
-        let cm = Arc::new(SourceMap::default());
-        let module = Module {
-            span: DUMMY_SP,
-            body: vec![ModuleItem::Stmt(Stmt::Expr(ExprStmt {
-                span: DUMMY_SP,
-                expr: Box::new(expr),
-            }))],
-            shebang: None,
-        };
-        let mut buf = Vec::new();
-        let mut emitter = Emitter {
-            cfg: Default::default(),
-            comments: None,
-            cm: cm.clone(),
-            wr: JsWriter::new(cm, "\n", &mut buf, None),
-        };
-        emitter.emit_program(&Program::Module(module)).expect("emit expr");
-        String::from_utf8(buf).expect("utf8")
-    }
-
-    fn normalize(src: &str) -> String {
-        let mut out = String::new();
-        let mut prev_space = false;
-        for ch in src.chars() {
-            if ch.is_whitespace() {
-                if !prev_space {
-                    out.push(' ');
-                    prev_space = true;
-                }
-            } else {
-                out.push(ch);
-                prev_space = false;
-            }
-        }
-        out.trim().to_string()
-    }
-
-    #[test]
-    fn rejects_non_router_link_spread_onclick_and_children_attrs() {
-        let div_el = parse_jsx_element("<div to=\"/docs\" />");
-        assert!(rewrite_router_link_fast_path(&div_el).is_none());
-
-        let spread_el = parse_jsx_element("<RouterLink {...props} to=\"/docs\" />");
-        assert!(rewrite_router_link_fast_path(&spread_el).is_none());
-
-        let onclick_el = parse_jsx_element("<RouterLink to=\"/docs\" onClick={handleClick} />");
-        assert!(rewrite_router_link_fast_path(&onclick_el).is_none());
-
-        let children_attr_el = parse_jsx_element("<RouterLink to=\"/docs\" children={slot} />");
-        assert!(rewrite_router_link_fast_path(&children_attr_el).is_none());
-    }
-
-    #[test]
-    fn rewrites_router_link_with_static_attrs_and_children_to_anchor() {
-        let router_link = parse_jsx_element(
-            "<RouterLink to=\"/docs\" replace className=\"active\">Docs</RouterLink>",
-        );
-        let rewritten = rewrite_router_link_fast_path(&router_link).expect("router link rewrite");
-
-        assert!(
-            matches!(&rewritten.opening.name, JSXElementName::Ident(id) if id.sym.as_ref() == "a")
-        );
-        assert_eq!(rewritten.children.len(), 1);
-        assert!(rewritten.closing.is_some());
-        assert!(!rewritten.opening.self_closing);
-
-        let rendered = normalize(&emit_expr(Expr::JSXElement(Box::new(rewritten))));
-        assert!(rendered.contains(&normalize("href={RouterLink.__rueHref(\"/docs\")}")));
-        assert!(
-            rendered
-                .contains(&normalize("onClick={(e)=>RouterLink.__rueOnClick(e, \"/docs\", true)}"))
-        );
-        assert!(rendered.contains(&normalize("className=\"active\"")));
-        assert!(rendered.contains(">Docs</a>"));
-    }
-
-    #[test]
-    fn rewrites_dynamic_to_and_defaults_replace_for_self_closing_links() {
-        let router_link = parse_jsx_element("<RouterLink to={target.href} aria-label=\"docs\" />");
-        let rewritten = rewrite_router_link_fast_path(&router_link).expect("dynamic rewrite");
-
-        assert!(rewritten.children.is_empty());
-        assert!(rewritten.closing.is_none());
-        assert!(rewritten.opening.self_closing);
-
-        let rendered = normalize(&emit_expr(Expr::JSXElement(Box::new(rewritten))));
-        assert!(rendered.contains(&normalize("href={RouterLink.__rueHref(target.href)}")));
-        assert!(
-            rendered.contains(&normalize(
-                "onClick={(e)=>RouterLink.__rueOnClick(e, target.href, false)}"
-            ))
-        );
-        assert!(rendered.contains(&normalize("aria-label=\"docs\"")));
-    }
-}
+#[path = "router_link_tests.rs"]
+mod tests;

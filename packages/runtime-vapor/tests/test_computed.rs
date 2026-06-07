@@ -161,3 +161,35 @@ fn computed_is_lazy_and_uses_dirty_cache() {
     assert_eq!(double.get_js().as_f64().unwrap(), 4.0);
     assert_eq!(*getter_hits.borrow(), 2);
 }
+
+#[wasm_bindgen_test]
+fn computed_invalid_inputs_and_peek_paths_return_stable_undefined() {
+    set_reactive_scheduling("sync");
+    let missing_get = js_sys::Object::new();
+    let from_missing_get = create_computed(missing_get.into());
+    assert!(from_missing_get.peek_js().is_undefined());
+    assert!(from_missing_get.get_js().is_undefined());
+
+    let primitive = create_computed(JsValue::from_f64(42.0));
+    assert!(primitive.get_js().is_undefined());
+    primitive.set_js(JsValue::from_str("ignored-without-setter"));
+    assert_eq!(primitive.get_js().as_string().as_deref(), Some("ignored-without-setter"));
+
+    let root = create_signal(JsValue::from_f64(1.0), None);
+    let root_for_getter = root.clone();
+    let options = js_sys::Object::new();
+    let getter = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        let obj = js_sys::Object::new();
+        js_sys::Reflect::set(&obj, &JsValue::from_str("nested"), &root_for_getter.get_js())
+            .unwrap();
+        obj.into()
+    }) as Box<dyn FnMut() -> JsValue>);
+    let getter_fn: Function = getter.as_ref().clone().into();
+    js_sys::Reflect::set(&options, &JsValue::from_str("get"), &getter_fn).unwrap();
+    let derived = create_computed(options.into());
+    getter.forget();
+
+    assert_eq!(derived.get_path_js(JsValue::from_str("nested")).as_f64(), Some(1.0),);
+    root.set_js(JsValue::from_f64(2.0));
+    assert_eq!(derived.peek_path_js(JsValue::from_str("nested")).as_f64(), Some(2.0),);
+}

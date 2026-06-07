@@ -10,6 +10,7 @@ import { onMounted, ref, useRef, watch } from '@rue-js/rue'
 
 let ratingSeed = 0
 
+/** RatingSize 尺寸类型。 */
 export type RatingSize =
   | 'xs'
   | 'sm'
@@ -22,71 +23,118 @@ export type RatingSize =
   | 'middle'
   | 'large'
 
+/** RatingTooltipItem 数据项结构。 */
 export interface RatingTooltipItem {
+  /** 标题内容。 */
   title?: any
 }
 
+/** RatingCharacterRenderContext 事件或渲染上下文。 */
 export interface RatingCharacterRenderContext {
+  /** index 配置项。 */
   index: number
+  /** 受控值。 */
   value: number
+  /** fill 配置项。 */
   fill: number
+  /** 受控选中状态。 */
   checked: boolean
+  /** hovered 配置项。 */
   hovered: boolean
+  /** half 配置项。 */
   half: boolean
 }
 
+/** RatingProps 组件属性。 */
 export interface RatingProps {
+  /** 组件尺寸。 */
   size?: RatingSize
+  /** half 配置项。 */
   half?: boolean
+  /** allowHalf 配置项。 */
   allowHalf?: boolean
+  /** count 配置项。 */
   count?: number
+  /** 受控值。 */
   value?: number
+  /** 非受控初始值。 */
   defaultValue?: number
+  /** 是否允许一键清空。 */
   allowClear?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** readOnly 配置项。 */
   readOnly?: boolean
+  /** 表单 name 属性或分组名称。 */
   name?: string
+  /** character 配置项。 */
   character?: any | ((context: RatingCharacterRenderContext) => any)
+  /** tooltips 配置项。 */
   tooltips?: Array<string | number | RatingTooltipItem>
+  /** 根节点附加类名。 */
   className?: string
+  /** itemClassName 附加类名。 */
   itemClassName?: string
+  /** characterClassName 附加类名。 */
   characterClassName?: string
+  /** activeCharacterClassName 附加类名。 */
   activeCharacterClassName?: string
+  /** inactiveCharacterClassName 附加类名。 */
   inactiveCharacterClassName?: string
+  /** clearLabel 标签内容。 */
   clearLabel?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 值或状态变化时触发的回调。 */
   onChange?: (value: number) => void
+  /** onHoverChange 事件回调。 */
   onHoverChange?: (value: number) => void
+  /** 失去焦点时触发的回调。 */
   onBlur?: (event: Event) => void
+  /** 获得焦点时触发的回调。 */
   onFocus?: (event: Event) => void
+  /** onKeyDown 事件回调。 */
   onKeyDown?: (event: Event) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** RatingItemProps 组件属性。 */
 export interface RatingItemProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** hidden 配置项。 */
   hidden?: boolean
+  /** 组件类型或语义类型。 */
   type?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
+/** 判断是否存在 Renderable Children 的内部工具函数。 */
 const hasRenderableChildren = (children: any) => {
   if (Array.isArray(children)) return children.length > 0
   return children != null
 }
 
+/** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => {
   return Math.min(max, Math.max(min, value))
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: RatingSize) => {
   switch (size) {
     case 'small':
@@ -102,6 +150,7 @@ const resolveSizeClass = (size?: RatingSize) => {
   }
 }
 
+/** 解析 Character Size Class 的内部工具函数。 */
 const resolveCharacterSizeClass = (size?: RatingSize) => {
   switch (resolveSizeClass(size)) {
     case 'xs':
@@ -117,11 +166,13 @@ const resolveCharacterSizeClass = (size?: RatingSize) => {
   }
 }
 
+/** 归一化 Count 的内部工具函数。 */
 const normalizeCount = (count?: number) => {
   if (typeof count !== 'number' || Number.isNaN(count)) return 5
   return Math.max(1, Math.round(count))
 }
 
+/** 归一化 Rating Value 的内部工具函数。 */
 const normalizeRatingValue = (value: unknown, allowHalf: boolean, count: number) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return 0
   const bounded = clamp(value, 0, count)
@@ -129,12 +180,18 @@ const normalizeRatingValue = (value: unknown, allowHalf: boolean, count: number)
   return Number(stepped.toFixed(1))
 }
 
+/** LEGACY_EMPTY_OPACITY 内部常量。 */
 const LEGACY_EMPTY_OPACITY = '0.35'
+/** LEGACY_FILLED_OPACITY 内部常量。 */
 const LEGACY_FILLED_OPACITY = '1'
+/** LEGACY_DISABLED_OPACITY 内部常量。 */
 const LEGACY_DISABLED_OPACITY = '0.45'
+/** LEGACY_ACTIVE_BACKGROUND_CLASS 内部常量。 */
 const LEGACY_ACTIVE_BACKGROUND_CLASS = 'bg-orange-400'
+/** LEGACY_INACTIVE_BACKGROUND_CLASS 内部常量。 */
 const LEGACY_INACTIVE_BACKGROUND_CLASS = 'bg-base-content'
 
+/** 构建 Manual Root Class Name 的内部工具函数。 */
 const buildManualRootClassName = (size?: RatingSize, half?: boolean, className?: string) => {
   let cls = 'rating'
   const resolvedSize = resolveSizeClass(size)
@@ -144,6 +201,7 @@ const buildManualRootClassName = (size?: RatingSize, half?: boolean, className?:
   return cls
 }
 
+/** 构建 Auto Root Class Name 的内部工具函数。 */
 const buildAutoRootClassName = (
   size: RatingSize | undefined,
   disabled: boolean,
@@ -163,6 +221,7 @@ const buildAutoRootClassName = (
   return appendClassName(cls, className)
 }
 
+/** 构建 Auto Button Class Name 的内部工具函数。 */
 const buildAutoButtonClassName = (
   interactive: boolean,
   useLegacyMaskDefault: boolean,
@@ -180,6 +239,7 @@ const buildAutoButtonClassName = (
   return appendClassName(cls, itemClassName)
 }
 
+/** 构建 Character Wrapper Class Name 的内部工具函数。 */
 const buildCharacterWrapperClassName = (size?: RatingSize, characterClassName?: string) => {
   return appendClassName(
     'relative inline-flex items-center justify-center leading-none',
@@ -187,6 +247,7 @@ const buildCharacterWrapperClassName = (size?: RatingSize, characterClassName?: 
   )
 }
 
+/** sync Legacy Mask State 的内部工具函数。 */
 const syncLegacyMaskState = (legacyMask: HTMLElement, fill: number, disabled: boolean) => {
   legacyMask.classList.remove(LEGACY_ACTIVE_BACKGROUND_CLASS, LEGACY_INACTIVE_BACKGROUND_CLASS)
   legacyMask.classList.add(
@@ -199,6 +260,7 @@ const syncLegacyMaskState = (legacyMask: HTMLElement, fill: number, disabled: bo
       : LEGACY_EMPTY_OPACITY
 }
 
+/** 解析 Tooltip Title 的内部工具函数。 */
 const resolveTooltipTitle = (tooltips: RatingProps['tooltips'], index: number) => {
   const tooltip = tooltips?.[index]
   if (tooltip == null) return undefined
@@ -209,6 +271,7 @@ const resolveTooltipTitle = (tooltips: RatingProps['tooltips'], index: number) =
   return undefined
 }
 
+/** 解析 Pointer Value 的内部工具函数。 */
 const resolvePointerValue = (event: MouseEvent, index: number, allowHalf: boolean) => {
   const fullValue = index + 1
   if (!allowHalf) return fullValue
@@ -218,10 +281,12 @@ const resolvePointerValue = (event: MouseEvent, index: number, allowHalf: boolea
   return event.clientX - rect.left <= rect.width / 2 ? index + 0.5 : fullValue
 }
 
+/** Default Star Icon 的内部工具函数。 */
 const DefaultStarIcon: FC = () => {
   return <span aria-hidden="true" className="mask mask-star inline-block size-[1em] bg-current" />
 }
 
+/** 解析 Character Node 的内部工具函数。 */
 const resolveCharacterNode = (
   character: RatingProps['character'],
   context: RatingCharacterRenderContext,
@@ -232,6 +297,7 @@ const resolveCharacterNode = (
   return character ?? <DefaultStarIcon />
 }
 
+/** Item 的内部工具函数。 */
 const Item: FC<RatingItemProps> = ({
   as = 'input',
   hidden,
@@ -254,6 +320,7 @@ const Item: FC<RatingItemProps> = ({
   )
 }
 
+/** Rating Root 的内部工具函数。 */
 const RatingRoot: FC<RatingProps> = ({
   size,
   half,
@@ -623,4 +690,5 @@ const RatingCompound: RatingCompound = Object.assign(RatingRoot, {
   Item,
 })
 
+/** 默认导出评分组件。 */
 export default RatingCompound

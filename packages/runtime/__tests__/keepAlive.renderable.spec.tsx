@@ -1,8 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   Component,
   KeepAlive,
+  onActivated,
+  onDeactivated,
   render,
   renderAnchor,
   setReactiveScheduling,
@@ -169,5 +171,48 @@ describe('KeepAlive renderable boundary', () => {
     active.set('A')
     await flush()
     expect(getInputValue(host, 'A')).toBe('')
+  })
+
+  it('fires activation lifecycle hooks when cached components switch', async () => {
+    const host = document.createElement('div')
+    const active = signal('A')
+    const aActivated = vi.fn()
+    const aDeactivated = vi.fn()
+    const bActivated = vi.fn()
+    const bDeactivated = vi.fn()
+    document.body.appendChild(host)
+
+    const A: FC = () => {
+      onActivated(aActivated)
+      onDeactivated(aDeactivated)
+      return <div data-testid="panel-A">A</div>
+    }
+    const B: FC = () => {
+      onActivated(bActivated)
+      onDeactivated(bDeactivated)
+      return <div data-testid="panel-B">B</div>
+    }
+
+    mountKeepAliveSwitch(host, {
+      active,
+      views: { A, B },
+    })
+    await flush()
+    expect(aActivated).toHaveBeenCalledTimes(1)
+    expect(bActivated).toHaveBeenCalledTimes(0)
+
+    active.set('B')
+    await flush()
+    expect(aActivated).toHaveBeenCalledTimes(1)
+    expect(aDeactivated).toHaveBeenCalledTimes(1)
+    expect(bActivated).toHaveBeenCalledTimes(1)
+    expect(bDeactivated).toHaveBeenCalledTimes(0)
+
+    active.set('A')
+    await flush()
+    expect(aActivated).toHaveBeenCalledTimes(2)
+    expect(aDeactivated).toHaveBeenCalledTimes(1)
+    expect(bActivated).toHaveBeenCalledTimes(1)
+    expect(bDeactivated).toHaveBeenCalledTimes(1)
   })
 })

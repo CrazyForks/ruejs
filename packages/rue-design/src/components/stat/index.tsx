@@ -7,11 +7,17 @@ Stat 组件概述
 */
 import { onUnmounted, ref, useRef, watch, type FC } from '@rue-js/rue'
 
+/** DEFAULT_DECIMAL_SEPARATOR 内部常量。 */
 const DEFAULT_DECIMAL_SEPARATOR = '.'
+/** DEFAULT_GROUP_SEPARATOR 内部常量。 */
 const DEFAULT_GROUP_SEPARATOR = ','
+/** DEFAULT_TIMER_FORMAT 内部常量。 */
 const DEFAULT_TIMER_FORMAT = 'HH:mm:ss'
+/** MILLISECOND_INTERVAL 内部常量。 */
 const MILLISECOND_INTERVAL = 1000 / 30
+/** SECOND_INTERVAL 内部常量。 */
 const SECOND_INTERVAL = 1000
+/** TIME_UNITS 内部常量。 */
 const TIME_UNITS: Array<[unit: StatTimerFormatUnit, milliseconds: number]> = [
   ['Y', 1000 * 60 * 60 * 24 * 365],
   ['M', 1000 * 60 * 60 * 24 * 30],
@@ -22,10 +28,15 @@ const TIME_UNITS: Array<[unit: StatTimerFormatUnit, milliseconds: number]> = [
   ['S', 1],
 ]
 
+/** StatsDirection 位置或方向类型。 */
 export type StatsDirection = 'horizontal' | 'vertical'
+/** StatTimerType 视觉或语义变体类型。 */
 export type StatTimerType = 'countdown' | 'countup'
+/** StatAriaLive 类型。 */
 export type StatAriaLive = 'polite' | 'off' | 'assertive'
+/** StatTimerFormatUnit 类型。 */
 export type StatTimerFormatUnit = 'Y' | 'M' | 'D' | 'H' | 'm' | 's' | 'S'
+/** StatTargetValue 值类型。 */
 export type StatTargetValue = number | string | Date
 
 interface StatFormatConfig {
@@ -48,40 +59,71 @@ interface StatPartProps {
   children?: any
 }
 
+/** StatValueProps 组件属性。 */
 export interface StatValueProps extends StatPartProps, StatFormatConfig {
+  /** 受控值。 */
   value?: any
+  /** 前缀内容。 */
   prefix?: any
+  /** 后缀内容。 */
   suffix?: any
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** valueRender 自定义渲染函数。 */
   valueRender?: (node: any) => any
 }
 
+/** StatItemProps 组件属性。 */
 export interface StatItemProps extends StatFormatConfig {
+  /** center 配置项。 */
   center?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** figure 配置项。 */
   figure?: any
+  /** figureClassName 附加类名。 */
   figureClassName?: string
+  /** figureStyle 内联样式。 */
   figureStyle?: any
+  /** 标题内容。 */
   title?: any
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** titleStyle 内联样式。 */
   titleStyle?: any
+  /** 受控值。 */
   value?: any
+  /** valueClassName 附加类名。 */
   valueClassName?: string
+  /** valueStyle 内联样式。 */
   valueStyle?: any
+  /** valueRender 自定义渲染函数。 */
   valueRender?: (node: any) => any
+  /** 前缀内容。 */
   prefix?: any
+  /** 后缀内容。 */
   suffix?: any
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** desc 配置项。 */
   desc?: any
+  /** descClassName 附加类名。 */
   descClassName?: string
+  /** descStyle 内联样式。 */
   descStyle?: any
+  /** 操作区内容。 */
   actions?: any
+  /** actionsClassName 附加类名。 */
   actionsClassName?: string
+  /** actionsStyle 内联样式。 */
   actionsStyle?: any
 }
 
+/** StatDataItem 数据项结构。 */
 export interface StatDataItem extends Omit<StatItemProps, 'children'> {
+  /** 数据项唯一标识。 */
   key?: string | number
 }
 
@@ -98,53 +140,85 @@ interface StatTimerUnitToken {
 
 type StatTimerFormatToken = StatTimerLiteralToken | StatTimerUnitToken
 
+/** StatTimerProps 组件属性。 */
 export interface StatTimerProps {
+  /** 组件类型或语义类型。 */
   type?: StatTimerType
+  /** 根节点附加类名。 */
   className?: string
+  /** center 配置项。 */
   center?: boolean
+  /** figure 配置项。 */
   figure?: any
+  /** figureClassName 附加类名。 */
   figureClassName?: string
+  /** figureStyle 内联样式。 */
   figureStyle?: any
+  /** 标题内容。 */
   title?: any
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** titleStyle 内联样式。 */
   titleStyle?: any
+  /** valueClassName 附加类名。 */
   valueClassName?: string
+  /** valueStyle 内联样式。 */
   valueStyle?: any
+  /** 前缀内容。 */
   prefix?: any
+  /** 后缀内容。 */
   suffix?: any
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** desc 配置项。 */
   desc?: any
+  /** descClassName 附加类名。 */
   descClassName?: string
+  /** descStyle 内联样式。 */
   descStyle?: any
+  /** 操作区内容。 */
   actions?: any
+  /** actionsClassName 附加类名。 */
   actionsClassName?: string
+  /** actionsStyle 内联样式。 */
   actionsStyle?: any
+  /** 受控值。 */
   value: StatTargetValue
+  /** format 配置项。 */
   format?: string
+  /** interval 配置项。 */
   interval?: number
+  /** ariaLive 配置项。 */
   ariaLive?: StatAriaLive
+  /** 值或状态变化时触发的回调。 */
   onChange?: (value?: number) => void
+  /** onFinish 事件回调。 */
   onFinish?: () => void
 }
 
+/** StatCountdownProps 组件属性。 */
 export interface StatCountdownProps extends Omit<StatTimerProps, 'type'> {}
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 判断是否存在 Content 的内部工具函数。 */
 const hasContent = (value: any): boolean => {
   if (value === undefined || value === null || value === false) return false
   if (Array.isArray(value)) return value.some(item => hasContent(item))
   return true
 }
 
+/** parse Target Time 的内部工具函数。 */
 const parseTargetTime = (value?: StatTargetValue) => {
   if (value == null) return null
   const timestamp = value instanceof Date ? value.getTime() : new Date(value).getTime()
   return Number.isFinite(timestamp) ? timestamp : null
 }
 
+/** format Numeric Value 的内部工具函数。 */
 const formatNumericValue = ({
   value,
   formatter,
@@ -177,6 +251,7 @@ const formatNumericValue = ({
   return `${negative}${int}${decimal ? `${decimalSeparator}${decimal}` : ''}`
 }
 
+/** 渲染 Value Node 的内部工具函数。 */
 const renderValueNode = ({
   value,
   children,
@@ -201,6 +276,7 @@ const renderValueNode = ({
   return typeof valueRender === 'function' ? valueRender(baseNode) : baseNode
 }
 
+/** parse Timer Format 的内部工具函数。 */
 const parseTimerFormat = (format: string): StatTimerFormatToken[] => {
   const tokens: StatTimerFormatToken[] = []
   let index = 0
@@ -247,6 +323,7 @@ const parseTimerFormat = (format: string): StatTimerFormatToken[] => {
   return tokens
 }
 
+/** 读取 Timer Unit Values 的内部工具函数。 */
 const getTimerUnitValues = (duration: number, tokens: StatTimerFormatToken[]) => {
   const requiredUnits = new Set<StatTimerFormatUnit>()
   tokens.forEach(token => {
@@ -266,6 +343,7 @@ const getTimerUnitValues = (duration: number, tokens: StatTimerFormatToken[]) =>
   return values
 }
 
+/** format Timer Duration 的内部工具函数。 */
 const formatTimerDuration = (duration: number, format: string) => {
   const tokens = parseTimerFormat(format)
   const unitValues = getTimerUnitValues(duration, tokens)
@@ -278,11 +356,13 @@ const formatTimerDuration = (duration: number, format: string) => {
     .join('')
 }
 
+/** 解析 Timer Interval 的内部工具函数。 */
 const resolveTimerInterval = (format: string, interval?: number) => {
   if (typeof interval === 'number' && interval > 0) return interval
   return format.includes('S') ? MILLISECOND_INTERVAL : SECOND_INTERVAL
 }
 
+/** 渲染 Item Content 的内部工具函数。 */
 const renderItemContent = ({
   figure,
   figureClassName,
@@ -646,6 +726,7 @@ const Timer: FC<StatTimerProps> = ({
   )
 }
 
+/** Countdown 的内部工具函数。 */
 const Countdown: FC<StatCountdownProps> = props => {
   return <Timer {...props} type="countdown" />
 }
@@ -672,4 +753,5 @@ const StatCompound: StatCompound = Object.assign(Stat, {
   Countdown,
 })
 
+/** 默认导出统计组件。 */
 export default StatCompound

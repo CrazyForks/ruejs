@@ -1,5 +1,5 @@
 import { builtinModules, createRequire } from 'node:module'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { minify as minifySwc } from '@swc/core'
@@ -34,6 +34,10 @@ const workspaceAliasEntries = [
     replacement: path.resolve(rootDir, 'packages/jsx-dev-runtime/src'),
   },
   { find: '@rue-js/runtime', replacement: path.resolve(rootDir, 'packages/runtime/src') },
+  {
+    find: '@rue-js/server-renderer',
+    replacement: path.resolve(rootDir, 'packages/server-renderer/src'),
+  },
   { find: '@rue-js/shared', replacement: path.resolve(rootDir, 'packages/shared/src') },
   { find: '@rue-js/design', replacement: path.resolve(rootDir, 'packages/rue-design/src') },
   {
@@ -153,6 +157,38 @@ function resolveBuildEntries(packageInfo, formatFilter) {
   ]
 }
 
+function walkSourceFiles(sourceDir, onFile) {
+  for (const entry of readdirSync(sourceDir)) {
+    const filePath = path.resolve(sourceDir, entry)
+    const stats = statSync(filePath)
+
+    if (stats.isDirectory()) {
+      walkSourceFiles(filePath, onFile)
+      continue
+    }
+
+    onFile(filePath)
+  }
+}
+
+function resolvePreserveModuleInput(packageInfo) {
+  const sourceDir = path.resolve(packageInfo.packageDir, 'src')
+  const entries = {}
+
+  walkSourceFiles(sourceDir, filePath => {
+    if (!/\.(ts|tsx|js|jsx)$/.test(filePath) || filePath.endsWith('.d.ts')) {
+      return
+    }
+
+    const relativePath = path.relative(sourceDir, filePath)
+    const parsed = path.parse(relativePath)
+    const entryName = path.join(parsed.dir, parsed.name).replaceAll(path.sep, '/')
+    entries[entryName] = filePath
+  })
+
+  return entries
+}
+
 function createDistributionRequest(packageInfo, buildEntry, format, prod, sourceMap) {
   const viteFormat = viteFormatMap[format]
   if (!viteFormat) {
@@ -187,6 +223,7 @@ function createDistributionRequest(packageInfo, buildEntry, format, prod, source
     entryFile: resolveEntryFile(buildEntry, format),
     outputFileBase: resolveOutputFileBase(buildEntry.fileName, format, prod),
     enableRueVaporTransform: packageInfo.target === 'rue-design',
+    preserveModules: packageInfo.packageOptions.preserveModules === true,
     watch: false,
   }
 }
@@ -224,6 +261,7 @@ function createWatchRequest(packageInfo, format, prod, inlineDeps) {
     entryFile: path.resolve(packageInfo.packageDir, 'src/index.ts'),
     outputFileBase: `${packageInfo.target === 'rue-compat' ? 'rue' : packageInfo.target}.${format}${prod ? '.prod' : ''}`,
     enableRueVaporTransform: packageInfo.target === 'rue-design',
+    preserveModules: false,
     watch: true,
   }
 }
@@ -262,7 +300,9 @@ function needsProdVariant(format) {
 }
 
 function createViteConfig(request) {
-  const enumPluginResult = existsSync(enumCachePath) ? inlineEnums() : [null, {}]
+  const preserveModules = request.preserveModules === true
+  const enumPluginResult =
+    !preserveModules && existsSync(enumCachePath) ? inlineEnums() : [null, {}]
   const [enumPlugin, enumDefines] = enumPluginResult
 
   return {
@@ -294,7 +334,9 @@ function createViteConfig(request) {
       emptyOutDir: false,
       watch: request.watch ? {} : null,
       lib: {
-        entry: path.resolve(request.packageInfo.packageDir, request.entryFile),
+        entry: preserveModules
+          ? resolvePreserveModuleInput(request.packageInfo)
+          : path.resolve(request.packageInfo.packageDir, request.entryFile),
         name: request.buildEntry.globalName || request.packageInfo.packageOptions.name,
         formats: [request.viteFormat],
       },
@@ -308,13 +350,21 @@ function createViteConfig(request) {
               ? request.buildEntry.globalName || request.packageInfo.packageOptions.name
               : undefined,
           esModule: request.viteFormat === 'cjs',
-          entryFileNames: `${request.outputFileBase}.js`,
-          chunkFileNames: `${request.outputFileBase}-[name]-[hash].js`,
+          entryFileNames: preserveModules ? '[name].js' : `${request.outputFileBase}.js`,
+          chunkFileNames: preserveModules
+            ? '_chunks/[name]-[hash].js'
+            : `${request.outputFileBase}-[name]-[hash].js`,
           assetFileNames: assetInfo => {
             const extension = path.extname(assetInfo.name || '') || '.asset'
-            return `${request.outputFileBase}-[name]-[hash]${extension}`
+            return preserveModules
+              ? 'assets/[name]-[hash][extname]'
+              : `${request.outputFileBase}-[name]-[hash]${extension}`
           },
           externalLiveBindings: false,
+          preserveModules,
+          preserveModulesRoot: preserveModules
+            ? path.resolve(request.packageInfo.packageDir, 'src')
+            : undefined,
         },
       },
     },
@@ -397,6 +447,7 @@ function createExternalPredicate(request) {
   const dependencies = new Set([
     ...Object.keys(request.packageInfo.pkg.dependencies || {}),
     ...Object.keys(request.packageInfo.pkg.peerDependencies || {}),
+    ...(request.packageInfo.packageOptions.external || []),
     'path',
     'url',
     'stream',

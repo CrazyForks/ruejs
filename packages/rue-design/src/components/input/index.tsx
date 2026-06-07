@@ -9,6 +9,7 @@ import type { FC } from '@rue-js/rue'
 import { onMounted, ref, useRef, watch } from '@rue-js/rue'
 import Textarea, { type TextareaProps } from '../textarea'
 
+/** InputTone 语义色类型。 */
 export type InputTone =
   | 'neutral'
   | 'primary'
@@ -19,99 +20,167 @@ export type InputTone =
   | 'warning'
   | 'error'
 
+/** InputColor 语义色类型。 */
 export type InputColor = 'default' | InputTone
+/** InputSize 尺寸类型。 */
 export type InputSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'
+/** InputStatus 状态类型。 */
 export type InputStatus = 'warning' | 'error'
+/** InputVariant 视觉或语义变体类型。 */
 export type InputVariant = 'outlined' | 'filled' | 'ghost' | 'borderless'
 
+/** InputShowCountInfo 接口。 */
 export interface InputShowCountInfo {
+  /** 受控值。 */
   value: string
+  /** count 配置项。 */
   count: number
+  /** maxLength 配置项。 */
   maxLength?: number
 }
 
+/** InputShowCountConfig 配置对象。 */
 export interface InputShowCountConfig {
+  /** formatter 配置项。 */
   formatter?: (info: InputShowCountInfo) => any
 }
 
+/** InputAllowClearConfig 配置对象。 */
 export interface InputAllowClearConfig {
+  /** 清空图标。 */
   clearIcon?: any
 }
 
+/** InputProps 组件属性。 */
 export interface InputProps {
+  /** 组件语义色。 */
   color?: InputColor
+  /** 组件尺寸。 */
   size?: InputSize
+  /** 组件状态。 */
   status?: InputStatus
+  /** 组件视觉变体。 */
   variant?: InputVariant
+  /** ghost 配置项。 */
   ghost?: boolean
+  /** 组件类型或语义类型。 */
   type?: string
+  /** 前缀内容。 */
   prefix?: any
+  /** 后缀内容。 */
   suffix?: any
+  /** 输入前置附加内容。 */
   addonBefore?: any
+  /** 输入后置附加内容。 */
   addonAfter?: any
+  /** addonBeforeBare 配置项。 */
   addonBeforeBare?: boolean
+  /** addonAfterBare 配置项。 */
   addonAfterBare?: boolean
+  /** showCount 配置项。 */
   showCount?: boolean | InputShowCountConfig
+  /** 是否允许一键清空。 */
   allowClear?: boolean | InputAllowClearConfig
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** inputClassName 附加类名。 */
   inputClassName?: string
+  /** countClassName 附加类名。 */
   countClassName?: string
+  /** clearButtonClassName 附加类名。 */
   clearButtonClassName?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** readOnly 配置项。 */
   readOnly?: boolean
+  /** 受控值。 */
   value?: string | number
+  /** 非受控初始值。 */
   defaultValue?: string | number
+  /** 清空时触发的回调。 */
   onClear?: (event: MouseEvent) => void
+  /** onInput 事件回调。 */
   onInput?: (event: Event) => void
+  /** 值或状态变化时触发的回调。 */
   onChange?: (event: Event) => void
+  /** onKeyDown 事件回调。 */
   onKeyDown?: (event: KeyboardEvent) => void
+  /** onPressEnter 事件回调。 */
   onPressEnter?: (event: KeyboardEvent) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** InputShellProps 组件属性。 */
 export interface InputShellProps {
+  /** 自定义渲染的宿主元素。 */
   as?: string
+  /** 组件语义色。 */
   color?: InputColor
+  /** 组件状态。 */
   status?: InputStatus
+  /** 组件尺寸。 */
   size?: InputSize
+  /** 组件视觉变体。 */
   variant?: InputVariant
+  /** ghost 配置项。 */
   ghost?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** SearchInfo 接口。 */
 export interface SearchInfo {
+  /** source 配置项。 */
   source: 'input' | 'clear'
 }
 
+/** SearchProps 组件属性。 */
 export interface SearchProps extends InputProps {
+  /** enterButton 配置项。 */
   enterButton?: boolean | any
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** buttonClassName 附加类名。 */
   buttonClassName?: string
+  /** 搜索文本变化时触发的回调。 */
   onSearch?: (value: string, event: MouseEvent | KeyboardEvent, info: SearchInfo) => void
 }
 
+/** PasswordVisibilityToggle 接口。 */
 export interface PasswordVisibilityToggle {
+  /** visible 配置项。 */
   visible?: boolean
+  /** onVisibleChange 事件回调。 */
   onVisibleChange?: (visible: boolean) => void
 }
 
+/** PasswordProps 组件属性。 */
 export interface PasswordProps extends Omit<InputProps, 'type'> {
+  /** iconRender 自定义渲染函数。 */
   iconRender?: (visible: boolean) => any
+  /** visibilityToggle 配置项。 */
   visibilityToggle?: boolean | PasswordVisibilityToggle
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...classNames: Array<string | undefined | false | null>) => {
   return classNames.filter(Boolean).join(' ')
 }
 
+/** 解析 Input Value 的内部工具函数。 */
 const resolveInputValue = (value?: string | number) => {
   if (value == null) return ''
   return String(value)
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: InputSize) => {
   switch (size) {
     case 'small':
@@ -126,6 +195,7 @@ const resolveSizeClass = (size?: InputSize) => {
   }
 }
 
+/** 解析 Status Tone 的内部工具函数。 */
 const resolveStatusTone = (status?: InputStatus) => {
   switch (status) {
     case 'warning':
@@ -137,6 +207,7 @@ const resolveStatusTone = (status?: InputStatus) => {
   }
 }
 
+/** 解析 Variant Class Name 的内部工具函数。 */
 const resolveVariantClassName = (variant?: InputVariant, ghost?: boolean) => {
   const resolvedVariant = ghost ? 'ghost' : variant
   switch (resolvedVariant) {
@@ -151,6 +222,7 @@ const resolveVariantClassName = (variant?: InputVariant, ghost?: boolean) => {
   }
 }
 
+/** 构建 Class Name 的内部工具函数。 */
 const buildClassName = ({
   color,
   status,
@@ -181,6 +253,7 @@ const buildClassName = ({
   return cls
 }
 
+/** 渲染 Count Content 的内部工具函数。 */
 const renderCountContent = (
   showCount: boolean | InputShowCountConfig | undefined,
   info: InputShowCountInfo,
@@ -194,17 +267,20 @@ const renderCountContent = (
   return String(info.count)
 }
 
+/** stringify Content 的内部工具函数。 */
 const stringifyContent = (content: any) => {
   if (content == null) return ''
   return typeof content === 'string' ? content : String(content)
 }
 
+/** read Max Length 的内部工具函数。 */
 const readMaxLength = (props: Record<string, any>) => {
   if (typeof props.maxLength === 'number') return props.maxLength
   if (typeof props.maxlength === 'number') return props.maxlength
   return undefined
 }
 
+/** Addon 的内部工具函数。 */
 const Addon: FC<{ children: any; className?: string }> = ({ children, className }) => {
   return (
     <span
@@ -218,6 +294,7 @@ const Addon: FC<{ children: any; className?: string }> = ({ children, className 
   )
 }
 
+/** Default Clear Icon 的内部工具函数。 */
 const DefaultClearIcon: FC = () => {
   return (
     <svg
@@ -234,6 +311,7 @@ const DefaultClearIcon: FC = () => {
   )
 }
 
+/** Default Search Icon 的内部工具函数。 */
 const DefaultSearchIcon: FC = () => {
   return (
     <svg
@@ -251,6 +329,7 @@ const DefaultSearchIcon: FC = () => {
   )
 }
 
+/** Eye Open Icon 的内部工具函数。 */
 const EyeOpenIcon: FC = () => {
   return (
     <svg
@@ -272,6 +351,7 @@ const EyeOpenIcon: FC = () => {
   )
 }
 
+/** Eye Closed Icon 的内部工具函数。 */
 const EyeClosedIcon: FC = () => {
   return (
     <svg
@@ -299,6 +379,7 @@ const EyeClosedIcon: FC = () => {
   )
 }
 
+/** Input Root 的内部工具函数。 */
 const InputRoot: FC<InputProps> = ({
   color,
   size,
@@ -616,6 +697,7 @@ const InputRoot: FC<InputProps> = ({
   )
 }
 
+/** Shell 的内部工具函数。 */
 const Shell: FC<InputShellProps> = ({
   as = 'label',
   color,
@@ -646,6 +728,7 @@ const Shell: FC<InputShellProps> = ({
   )
 }
 
+/** Search 的内部工具函数。 */
 const Search: FC<SearchProps> = ({
   enterButton,
   loading,
@@ -724,6 +807,7 @@ const Search: FC<SearchProps> = ({
   )
 }
 
+/** Password 的内部工具函数。 */
 const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suffix, ...rest }) => {
   const inputRef = useRef<HTMLInputElement>()
   const uncontrolledVisible = ref(false)
@@ -794,4 +878,5 @@ const InputCompound: InputCompound = Object.assign(InputRoot, {
   TextArea: Textarea,
 })
 
+/** 默认导出输入框组件。 */
 export default InputCompound

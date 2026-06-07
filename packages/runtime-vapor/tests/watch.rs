@@ -38,6 +38,16 @@ fn rec() -> Array {
     Array::from(&Reflect::get(&js_sys::global(), &JsValue::from_str("_rec")).unwrap())
 }
 
+async fn wait_timeout(ms: f64) {
+    let promise = Promise::new(&mut |resolve, _| {
+        let global = js_sys::global();
+        let set_timeout = Reflect::get(&global, &JsValue::from_str("setTimeout")).unwrap();
+        let set_timeout_fn = set_timeout.unchecked_into::<Function>();
+        let _ = set_timeout_fn.call2(&JsValue::NULL, &resolve, &JsValue::from_f64(ms));
+    });
+    JsFuture::from(promise).await.unwrap();
+}
+
 #[wasm_bindgen_test]
 fn test_watch_signal_basic() {
     set_reactive_scheduling("sync");
@@ -472,4 +482,144 @@ fn test_watch_constant_immediate_false_no_trigger() {
     let _eh = watch(v, handler_push(), Some(opts_immediate_false()));
     let r = rec();
     assert_eq!(r.length(), 0);
+}
+
+#[wasm_bindgen_test]
+fn test_watch_object_source_getter_disappears_on_rerun() {
+    set_reactive_scheduling("sync");
+    reset_rec();
+    let signal = create_signal(JsValue::from_f64(0.0), None);
+    let source = Object::new();
+    let source_for_delete = source.clone();
+    let signal_for_getter = signal.clone();
+    let getter = wasm_bindgen::closure::Closure::wrap(
+        Box::new(move || signal_for_getter.get_js()) as Box<dyn FnMut() -> JsValue>
+    );
+    let getter_fn: Function = getter.as_ref().clone().unchecked_into();
+    Reflect::set(&source, &JsValue::from_str("get"), &getter_fn).unwrap();
+
+    let _eh = watch(source.into(), handler_push(), Some(opts_immediate_false()));
+    Reflect::delete_property(&source_for_delete, &JsValue::from_str("get")).unwrap();
+    signal.set_js(JsValue::from_f64(1.0));
+
+    let r = rec();
+    assert_eq!(r.length(), 1);
+    let entry = Array::from(&r.get(0));
+    assert!(entry.get(0).is_undefined());
+    assert_eq!(entry.get(1).as_f64().unwrap(), 0.0);
+
+    getter.forget();
+}
+
+#[wasm_bindgen_test]
+fn test_watch_array_source_keeps_plain_object_constants() {
+    set_reactive_scheduling("sync");
+    reset_rec();
+    let signal = create_signal(JsValue::from_f64(0.0), None);
+    let plain = Object::new();
+    Reflect::set(&plain, &JsValue::from_str("label"), &JsValue::from_str("plain")).unwrap();
+    let arr = Array::new();
+    arr.push(&JsValue::from(signal.clone()));
+    arr.push(&plain);
+
+    let _eh = watch(arr.into(), handler_push(), Some(opts_immediate_true()));
+    signal.set_js(JsValue::from_f64(1.0));
+
+    let r = rec();
+    assert_eq!(r.length(), 2);
+    let entry = Array::from(&r.get(1));
+    let values = Array::from(&entry.get(0));
+    assert_eq!(values.get(0).as_f64().unwrap(), 1.0);
+    assert_eq!(
+        Reflect::get(&values.get(1), &JsValue::from_str("label")).unwrap().as_string().unwrap(),
+        "plain"
+    );
+}
+
+#[wasm_bindgen_test(async)]
+async fn test_watch_signal_object_debounce_option() {
+    set_reactive_scheduling("sync");
+    reset_rec();
+    let signal = create_signal(JsValue::from_f64(0.0), None);
+    let options = Object::new();
+    Reflect::set(&options, &JsValue::from_str("debounce"), &JsValue::from_f64(5.0)).unwrap();
+    let _eh = watch(JsValue::from(signal.clone()), handler_push(), Some(options.into()));
+
+    signal.set_js(JsValue::from_f64(1.0));
+    signal.set_js(JsValue::from_f64(2.0));
+    assert_eq!(rec().length(), 0);
+    wait_timeout(30.0).await;
+    assert_eq!(rec().length(), 1);
+}
+
+#[wasm_bindgen_test(async)]
+async fn test_watch_array_debounce_option() {
+    set_reactive_scheduling("sync");
+    reset_rec();
+    let signal = create_signal(JsValue::from_f64(0.0), None);
+    let arr = Array::new();
+    arr.push(&JsValue::from(signal.clone()));
+    arr.push(&JsValue::from_str("stable"));
+    let options = Object::new();
+    Reflect::set(&options, &JsValue::from_str("debounce"), &JsValue::from_f64(5.0)).unwrap();
+    let _eh = watch(arr.into(), handler_push(), Some(options.into()));
+
+    signal.set_js(JsValue::from_f64(1.0));
+    signal.set_js(JsValue::from_f64(2.0));
+    assert_eq!(rec().length(), 0);
+    wait_timeout(30.0).await;
+    assert_eq!(rec().length(), 1);
+}
+
+#[wasm_bindgen_test]
+fn test_watch_constant_source_accepts_debounce_option() {
+    set_reactive_scheduling("sync");
+    reset_rec();
+    let options = Object::new();
+    Reflect::set(&options, &JsValue::from_str("immediate"), &JsValue::from_bool(true)).unwrap();
+    Reflect::set(&options, &JsValue::from_str("debounce"), &JsValue::from_f64(5.0)).unwrap();
+    let _eh = watch(JsValue::from_str("CONST"), handler_push(), Some(options.into()));
+
+    let r = rec();
+    assert_eq!(r.length(), 1);
+    let entry = Array::from(&r.get(0));
+    assert_eq!(entry.get(0).as_string().unwrap(), "CONST");
+    assert!(entry.get(1).is_undefined());
+}
+
+#[wasm_bindgen_test]
+fn test_watch_scheduler_takes_precedence_over_debounce_for_unified_sources() {
+    set_reactive_scheduling("sync");
+    reset_rec();
+    let scheduler = Function::new_with_args("run", "run()");
+
+    let signal = create_signal(JsValue::from_f64(0.0), None);
+    let object_options = Object::new();
+    Reflect::set(&object_options, &JsValue::from_str("scheduler"), &scheduler).unwrap();
+    Reflect::set(&object_options, &JsValue::from_str("debounce"), &JsValue::from_f64(50.0))
+        .unwrap();
+    let _object_watch =
+        watch(JsValue::from(signal.clone()), handler_push(), Some(object_options.into()));
+    signal.set_js(JsValue::from_f64(1.0));
+    assert_eq!(rec().length(), 1);
+
+    let array_signal = create_signal(JsValue::from_f64(0.0), None);
+    let sources = Array::new();
+    sources.push(&JsValue::from(array_signal.clone()));
+    let array_options = Object::new();
+    Reflect::set(&array_options, &JsValue::from_str("scheduler"), &scheduler).unwrap();
+    Reflect::set(&array_options, &JsValue::from_str("debounce"), &JsValue::from_f64(50.0)).unwrap();
+    let _array_watch = watch(sources.into(), handler_push(), Some(array_options.into()));
+    array_signal.set_js(JsValue::from_f64(1.0));
+    assert_eq!(rec().length(), 2);
+
+    let constant_options = Object::new();
+    Reflect::set(&constant_options, &JsValue::from_str("immediate"), &JsValue::from_bool(true))
+        .unwrap();
+    Reflect::set(&constant_options, &JsValue::from_str("scheduler"), &scheduler).unwrap();
+    Reflect::set(&constant_options, &JsValue::from_str("debounce"), &JsValue::from_f64(50.0))
+        .unwrap();
+    let _constant_watch =
+        watch(JsValue::from_str("CONST"), handler_push(), Some(constant_options.into()));
+    assert_eq!(rec().length(), 3);
 }

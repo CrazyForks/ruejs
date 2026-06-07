@@ -132,19 +132,19 @@ const moreRef = useRef<HTMLButtonElement>()
 
 const steps = [
   {
-    target: () => document.querySelector('[data-basic-tour-target="upload"]') as HTMLButtonElement | null,
+    target: () => uploadRef.current ?? null,
     title: 'Upload',
     description: 'Bring files into the workspace first.',
     placement: 'top',
   },
   {
-    target: () => document.querySelector('[data-basic-tour-target="save"]') as HTMLButtonElement | null,
+    target: () => saveRef.current ?? null,
     title: 'Save',
     description: 'Save your changes.',
     placement: 'top',
   },
   {
-    target: () => document.querySelector('[data-basic-tour-target="more"]') as HTMLButtonElement | null,
+    target: () => moreRef.current ?? null,
     title: 'More',
     description: 'Open additional actions from here.',
     placement: 'left',
@@ -413,22 +413,19 @@ const BasicWorkspacePreview: FC = () => {
 
   const steps = [
     {
-      target: () =>
-        document.querySelector('[data-basic-tour-target="upload"]') as HTMLButtonElement | null,
+      target: () => uploadRef.current ?? null,
       title: 'Upload',
       description: 'Bring files into the workspace first.',
       placement: 'top' as const,
     },
     {
-      target: () =>
-        document.querySelector('[data-basic-tour-target="save"]') as HTMLButtonElement | null,
+      target: () => saveRef.current ?? null,
       title: 'Save',
       description: 'Save your changes.',
       placement: 'top' as const,
     },
     {
-      target: () =>
-        document.querySelector('[data-basic-tour-target="more"]') as HTMLButtonElement | null,
+      target: () => moreRef.current ?? null,
       title: 'More',
       description: 'Open additional actions from here.',
       placement: 'left' as const,

@@ -42,31 +42,31 @@
   "exports": {
     ".": {
       "types": "./index.d.ts",
-      "development": "./index.js",
       "node": {
         "development": "./index.node.js",
         "default": "./index.node.js"
       },
+      "development": "./index.js",
       "import": "./index.js",
       "default": "./index.js"
     },
     "./reactive": {
       "types": "./reactive.d.ts",
-      "development": "./reactive.js",
       "node": {
         "development": "./reactive.node.js",
         "default": "./reactive.node.js"
       },
+      "development": "./reactive.js",
       "import": "./reactive.js",
       "default": "./reactive.js"
     },
     "./vapor": {
       "types": "./vapor.d.ts",
-      "development": "./vapor.js",
       "node": {
         "development": "./vapor.node.js",
         "default": "./vapor.node.js"
       },
+      "development": "./vapor.js",
       "import": "./vapor.js",
       "default": "./vapor.js"
     }

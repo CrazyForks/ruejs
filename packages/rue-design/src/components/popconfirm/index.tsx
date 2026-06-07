@@ -7,6 +7,7 @@ Popconfirm 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 
+/** PopconfirmPlacement 位置或方向类型。 */
 export type PopconfirmPlacement =
   | 'top'
   | 'topLeft'
@@ -21,7 +22,9 @@ export type PopconfirmPlacement =
   | 'rightTop'
   | 'rightBottom'
 
+/** PopconfirmTrigger 类型。 */
 export type PopconfirmTrigger = 'hover' | 'focus' | 'click' | 'contextMenu'
+/** PopconfirmOkType 视觉或语义变体类型。 */
 export type PopconfirmOkType =
   | 'solid'
   | 'filled'
@@ -32,13 +35,20 @@ export type PopconfirmOkType =
   | 'default'
   | 'primary'
   | 'danger'
+/** PopconfirmArrow 类型。 */
 export type PopconfirmArrow = boolean | { pointAtCenter?: boolean }
 
+/** PopconfirmButtonProps 组件属性。 */
 export interface PopconfirmButtonProps {
+  /** 组件子内容。 */
   children?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 组件类型或语义类型。 */
   type?: 'solid' | 'filled' | 'outlined' | 'dashed' | 'text' | 'link'
+  /** 组件语义色。 */
   color?:
     | 'default'
     | 'danger'
@@ -50,76 +60,141 @@ export interface PopconfirmButtonProps {
     | 'success'
     | 'warning'
     | 'error'
+  /** 组件尺寸。 */
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium' | 'middle' | 'large'
+  /** 组件形状。 */
   shape?: 'default' | 'square' | 'circle' | 'round'
+  /** block 配置项。 */
   block?: boolean
+  /** wide 配置项。 */
   wide?: boolean
+  /** danger 配置项。 */
   danger?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 原生 button type 属性。 */
   htmlType?: 'button' | 'submit' | 'reset'
+  /** 图标内容。 */
   icon?: any
+  /** iconPlacement 配置项。 */
   iconPlacement?: 'start' | 'end'
+  /** 是否展示加载态。 */
   loading?: boolean | { delay?: number; icon?: any }
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
 }
 
+/** PopconfirmClassNames 局部类名配置。 */
 export interface PopconfirmClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** trigger 区域配置。 */
   trigger?: string
+  /** overlay 配置项。 */
   overlay?: string
+  /** panel 区域配置。 */
   panel?: string
+  /** arrow 配置项。 */
   arrow?: string
+  /** 图标内容。 */
   icon?: string
+  /** 主体区域配置。 */
   body?: string
+  /** 标题内容。 */
   title?: string
+  /** 描述内容。 */
   description?: string
+  /** 底部区域内容。 */
   footer?: string
+  /** cancelButton 配置项。 */
   cancelButton?: string
+  /** okButton 配置项。 */
   okButton?: string
 }
 
+/** PopconfirmStyles 局部样式配置。 */
 export interface PopconfirmStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** trigger 区域配置。 */
   trigger?: Record<string, any>
+  /** overlay 配置项。 */
   overlay?: Record<string, any>
+  /** panel 区域配置。 */
   panel?: Record<string, any>
+  /** arrow 配置项。 */
   arrow?: Record<string, any>
+  /** 图标内容。 */
   icon?: Record<string, any>
+  /** 主体区域配置。 */
   body?: Record<string, any>
+  /** 标题内容。 */
   title?: Record<string, any>
+  /** 描述内容。 */
   description?: Record<string, any>
+  /** 底部区域内容。 */
   footer?: Record<string, any>
+  /** cancelButton 配置项。 */
   cancelButton?: Record<string, any>
+  /** okButton 配置项。 */
   okButton?: Record<string, any>
 }
 
+/** PopconfirmProps 组件属性。 */
 export interface PopconfirmProps {
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 弹出层或内容展示位置。 */
   placement?: PopconfirmPlacement
+  /** trigger 区域配置。 */
   trigger?: PopconfirmTrigger | PopconfirmTrigger[]
+  /** arrow 配置项。 */
   arrow?: PopconfirmArrow
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 图标内容。 */
   icon?: any
+  /** okText 文本内容。 */
   okText?: any
+  /** cancelText 文本内容。 */
   cancelText?: any
+  /** okType 配置项。 */
   okType?: PopconfirmOkType
+  /** okButtonProps 透传属性。 */
   okButtonProps?: PopconfirmButtonProps
+  /** cancelButtonProps 透传属性。 */
   cancelButtonProps?: PopconfirmButtonProps
+  /** showCancel 配置项。 */
   showCancel?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: string | Record<string, any>
+  /** overlayClassName 附加类名。 */
   overlayClassName?: string
+  /** overlayStyle 内联样式。 */
   overlayStyle?: Record<string, any>
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: PopconfirmClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: PopconfirmStyles
+  /** onConfirm 事件回调。 */
   onConfirm?: (event?: MouseEvent) => void | boolean | Promise<unknown>
+  /** onCancel 事件回调。 */
   onCancel?: (event?: MouseEvent) => void
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** onPopupClick 事件回调。 */
   onPopupClick?: (event: MouseEvent) => void
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -129,12 +204,15 @@ interface PlacementLayout {
 }
 
 let popconfirmIdSeed = 0
+/** HOVER_CLOSE_DELAY_MS 内部常量。 */
 const HOVER_CLOSE_DELAY_MS = 120
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | undefined | false | null>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** merge Styles 的内部工具函数。 */
 const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   const merged: Record<string, any> = {}
   parts.forEach(part => {
@@ -143,8 +221,10 @@ const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   return merged
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 
+/** serialize Style 的内部工具函数。 */
 const serializeStyle = (style?: string | Record<string, any>) => {
   if (!style) return undefined
   if (typeof style === 'string') return style.trim() || undefined
@@ -155,27 +235,33 @@ const serializeStyle = (style?: string | Record<string, any>) => {
   return serialized || undefined
 }
 
+/** 判断 Renderable 的内部工具函数。 */
 const isRenderable = (value: any) => {
   return value !== undefined && value !== null && value !== false && value !== ''
 }
 
+/** 解析 Node 的内部工具函数。 */
 const resolveNode = (value: any) => {
   return typeof value === 'function' ? value() : value
 }
 
+/** 判断 Promise Like 的内部工具函数。 */
 const isPromiseLike = (value: unknown): value is PromiseLike<unknown> => {
   return !!value && typeof (value as PromiseLike<unknown>).then === 'function'
 }
 
+/** call Handler 的内部工具函数。 */
 const callHandler = (handler: ((event: any) => void) | undefined, event: any) => {
   if (typeof handler === 'function') handler(event)
 }
 
+/** 归一化 Trigger 的内部工具函数。 */
 const normalizeTrigger = (trigger?: PopconfirmTrigger | PopconfirmTrigger[]) => {
   const source = Array.isArray(trigger) ? trigger : trigger ? [trigger] : ['click']
   return Array.from(new Set(source)) as PopconfirmTrigger[]
 }
 
+/** 解析 Placement Layout 的内部工具函数。 */
 const resolvePlacementLayout = (placement: PopconfirmPlacement): PlacementLayout => {
   switch (placement) {
     case 'top':
@@ -206,6 +292,7 @@ const resolvePlacementLayout = (placement: PopconfirmPlacement): PlacementLayout
   }
 }
 
+/** 读取 Overlay Placement Class 的内部工具函数。 */
 const getOverlayPlacementClass = (placement: PopconfirmPlacement) => {
   switch (placement) {
     case 'top':
@@ -236,6 +323,7 @@ const getOverlayPlacementClass = (placement: PopconfirmPlacement) => {
   }
 }
 
+/** 读取 Transform Origin Class 的内部工具函数。 */
 const getTransformOriginClass = (placement: PopconfirmPlacement) => {
   switch (placement) {
     case 'top':
@@ -258,6 +346,7 @@ const getTransformOriginClass = (placement: PopconfirmPlacement) => {
   }
 }
 
+/** 解析 Arrow Class Name 的内部工具函数。 */
 const resolveArrowClassName = (placement: PopconfirmPlacement, pointAtCenter: boolean) => {
   const layout = resolvePlacementLayout(placement)
   if (layout.direction === 'top') {
@@ -303,6 +392,7 @@ const resolveArrowClassName = (placement: PopconfirmPlacement, pointAtCenter: bo
   )
 }
 
+/** 解析 Button Size Class Name 的内部工具函数。 */
 const resolveButtonSizeClassName = (size?: PopconfirmButtonProps['size']) => {
   switch (size) {
     case 'xs':
@@ -323,12 +413,14 @@ const resolveButtonSizeClassName = (size?: PopconfirmButtonProps['size']) => {
   }
 }
 
+/** 解析 Button Tone Class Name 的内部工具函数。 */
 const resolveButtonToneClassName = (color?: PopconfirmButtonProps['color'], danger?: boolean) => {
   const resolved = danger ? 'danger' : color
   if (!resolved || resolved === 'default') return ''
   return `btn-${resolved === 'danger' ? 'error' : resolved}`
 }
 
+/** 解析 Button Type Class Name 的内部工具函数。 */
 const resolveButtonTypeClassName = (type?: PopconfirmButtonProps['type']) => {
   switch (type) {
     case 'outlined':
@@ -346,6 +438,7 @@ const resolveButtonTypeClassName = (type?: PopconfirmButtonProps['type']) => {
   }
 }
 
+/** 解析 Ok Button Preset 的内部工具函数。 */
 const resolveOkButtonPreset = (okType?: PopconfirmOkType): Partial<PopconfirmButtonProps> => {
   switch (okType) {
     case 'default':
@@ -366,6 +459,7 @@ const resolveOkButtonPreset = (okType?: PopconfirmOkType): Partial<PopconfirmBut
   }
 }
 
+/** 解析 Action Button Class Name 的内部工具函数。 */
 const resolveActionButtonClassName = (
   props: PopconfirmButtonProps | undefined,
   fallbackClassName: string,
@@ -387,6 +481,7 @@ const resolveActionButtonClassName = (
   )
 }
 
+/** 解析 Button Loading 的内部工具函数。 */
 const resolveButtonLoading = (loading?: PopconfirmButtonProps['loading']) => {
   if (!loading) return { active: false, icon: undefined as any }
   if (typeof loading === 'object') {
@@ -395,6 +490,7 @@ const resolveButtonLoading = (loading?: PopconfirmButtonProps['loading']) => {
   return { active: true, icon: undefined as any }
 }
 
+/** 渲染 Button Content 的内部工具函数。 */
 const renderButtonContent = (
   props: PopconfirmButtonProps | undefined,
   fallbackLabel: any,
@@ -431,6 +527,7 @@ const renderButtonContent = (
   )
 }
 
+/** Popconfirm 的内部工具函数。 */
 const Popconfirm: FC<PopconfirmProps> = ({
   title,
   description,
@@ -837,4 +934,5 @@ const Popconfirm: FC<PopconfirmProps> = ({
   )
 }
 
+/** 默认导出气泡确认组件。 */
 export default Popconfirm

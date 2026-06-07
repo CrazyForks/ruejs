@@ -1,6 +1,12 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+MockupCode 模块概述
+- 汇总代码样机组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 
+/** MockupCodeTone 语义色类型。 */
 export type MockupCodeTone =
   | 'neutral'
   | 'primary'
@@ -11,42 +17,68 @@ export type MockupCodeTone =
   | 'warning'
   | 'error'
 
+/** MockupCodeLineData 数据项结构。 */
 export interface MockupCodeLineData {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 前缀内容。 */
   prefix?: any
+  /** code 配置项。 */
   code?: any
+  /** 组件子内容。 */
   children?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** codeClassName 附加类名。 */
   codeClassName?: string
+  /** highlight 配置项。 */
   highlight?: boolean
+  /** 组件语义色调。 */
   tone?: MockupCodeTone
 }
 
+/** MockupCodeProps 组件属性。 */
 export interface MockupCodeProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<MockupCodeLineData>
+  /** 前缀内容。 */
   prefix?: any
+  /** lineNumbers 配置项。 */
   lineNumbers?: boolean
+  /** start 配置项。 */
   start?: number
+  /** codeClassName 附加类名。 */
   codeClassName?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** MockupCodeLineProps 组件属性。 */
 export interface MockupCodeLineProps extends Omit<MockupCodeLineData, 'key'> {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** lineNumber 配置项。 */
   lineNumber?: number | string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...values: Array<string | undefined | false>) =>
   values.filter(Boolean).join(' ')
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 判断是否存在 Content 的内部工具函数。 */
 const hasContent = (value: any): boolean => {
   if (Array.isArray(value)) {
     return value.some(item => hasContent(item))
@@ -54,6 +86,7 @@ const hasContent = (value: any): boolean => {
   return value !== undefined && value !== null && value !== false
 }
 
+/** 解析 Tone Class Name 的内部工具函数。 */
 const resolveToneClassName = (tone?: MockupCodeTone, highlight?: boolean) => {
   if (!tone && !highlight) return undefined
 
@@ -102,6 +135,7 @@ const resolveToneClassName = (tone?: MockupCodeTone, highlight?: boolean) => {
   }
 }
 
+/** Line 的内部工具函数。 */
 const Line: FC<MockupCodeLineProps> = ({
   as = 'pre',
   prefix,
@@ -132,6 +166,7 @@ const Line: FC<MockupCodeLineProps> = ({
   )
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<MockupCodeProps> = ({
   as = 'div',
   className,
@@ -175,4 +210,5 @@ const MockupCode: MockupCodeCompound = Object.assign(Root, {
   Line,
 })
 
+/** 默认导出代码样机组件。 */
 export default MockupCode

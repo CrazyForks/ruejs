@@ -65,31 +65,15 @@ mod utils;
 #[plugin_transform]
 // 插件入口：供 SWC 在编译时调用
 pub fn transform(program: Program, _metadata: TransformPluginProgramMetadata) -> Program {
-    let mut p = program;
-
-    log::info("rue-swc: pre transform start");
-    p.visit_mut_with(&mut pre::PreTransform::default());
-    log::info("rue-swc: pre transform done");
-
-    // 预处理完成后固定进入 Vapor 深编译。
-    log::info("rue-swc: vapor transform start");
-    // VaporTransform 初始化：计数器清零，did_transform 标记为 false
-    p.visit_mut_with(&mut vapor::VaporTransform {
-        next_el: 0,
-        next_list: 0,
-        next_map: 0,
-        next_child: 0,
-        once_depth: 0,
-        did_transform: false,
-        el_tag_by_ident: std::collections::HashMap::new(),
-        renderable_local_scopes: Vec::new(),
-    });
-    log::info("rue-swc: vapor transform done");
-    p
+    run_full_transform(program)
 }
 
 // 测试入口：在单元测试中直接复用同样的转换逻辑
 pub fn apply(program: Program) -> Program {
+    run_full_transform(program)
+}
+
+fn run_full_transform(program: Program) -> Program {
     let mut p = program;
     log::info("rue-swc: apply(pre+vapor) start");
     p.visit_mut_with(&mut pre::PreTransform::default());

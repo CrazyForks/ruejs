@@ -13,6 +13,8 @@ import {
   type PropsWithChildren,
   renderBetween,
   vapor,
+  __rueActivateRange,
+  __rueDeactivateRange,
 } from '../rue'
 import {
   appendChild,
@@ -28,11 +30,16 @@ import type { DomElementLike, DomNodeLike } from '../dom'
 import { signal, watchEffect } from '../reactivity'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
 
+/** KeepAlive 的 include/exclude 匹配模式。 */
 export type KeepAliveMatchPattern = string | RegExp | Array<string | RegExp>
 
+/** KeepAlive 组件属性。 */
 export interface KeepAliveProps extends PropsWithChildren<Record<string, unknown>> {
+  /** 只缓存命中名称的子组件。字符串支持逗号分隔。 */
   include?: KeepAliveMatchPattern
+  /** 不缓存命中名称的子组件。字符串支持逗号分隔。 */
   exclude?: KeepAliveMatchPattern
+  /** 最大缓存数量，超出后按 LRU 淘汰。 */
   max?: number | string
 }
 
@@ -46,6 +53,12 @@ type CacheEntry = {
   cacheable: boolean
   disposed: boolean
   justActivated: boolean
+  /** 当前缓存 range 是否在活动 DOM 区间中。 */
+  isActive: boolean
+  /** JS 快路径收集到的 activated 回调；为空时回退给 Wasm mounted snapshot。 */
+  activatedHooks: Set<() => void>
+  /** JS 快路径收集到的 deactivated 回调；为空时回退给 Wasm mounted snapshot。 */
+  deactivatedHooks: Set<() => void>
 }
 
 type ChildDescriptor = {
@@ -55,6 +68,8 @@ type ChildDescriptor = {
 }
 
 const DEFAULT_CACHE_KEY = Symbol('rue-keep-alive-default')
+// onActivated/onDeactivated 注册时通过全局临时槽找到正在 render 的 KeepAlive entry。
+const RUE_KEEP_ALIVE_HOOK_TARGET_KEY = '__rue_keep_alive_hook_target__'
 const RUE_MOUNT_ID_KEY = '__rue_mount_id'
 
 const cloneRenderable = (value: unknown): unknown =>
@@ -203,6 +218,7 @@ const removeEntryAnchors = (entry: CacheEntry) => {
   }
 }
 
+/** 缓存直接子组件 DOM range，切换时移动到离线片段而不是销毁。 */
 export const KeepAlive: FC<KeepAliveProps> = props => {
   const ctx = useSetup(() => {
     const container = createKeepAliveContainer()
@@ -290,12 +306,56 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
       cacheable,
       disposed: false,
       justActivated: false,
+      isActive: false,
+      activatedHooks: new Set(),
+      deactivatedHooks: new Set(),
     }
   }
 
+  /** 渲染缓存 entry，并在同步 render 阶段暴露 hook target 供生命周期注册。 */
   const renderEntry = (entry: CacheEntry, child: KeepAliveChildInput) => {
     const parent = (getParentNode(entry.start) as DomElementLike | null) ?? getActiveParent()
+    const globalRecord = globalThis as typeof globalThis & Record<string, unknown>
+    const prevHookTarget = globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY]
+    globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = entry
     renderBetween(child, parent, entry.start, entry.end)
+    setTimeout(() => {
+      if (globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] === entry) {
+        globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = prevHookTarget
+      }
+    }, 0)
+  }
+
+  /** 异步触发 activated，等待 renderBetween 完成内部 mount/patch 队列。 */
+  const notifyActivated = (entry: CacheEntry) => {
+    queueMicrotask(() => {
+      queueMicrotask(() => {
+        if (!entry.disposed && entry.isActive) {
+          for (const hook of entry.activatedHooks) {
+            hook()
+          }
+          if (entry.activatedHooks.size === 0) {
+            __rueActivateRange(entry.start)
+          }
+        }
+      })
+    })
+  }
+
+  /** 异步触发 deactivated，确保 DOM range 已经移动到缓存容器后再派发生命周期。 */
+  const notifyDeactivated = (entry: CacheEntry) => {
+    queueMicrotask(() => {
+      queueMicrotask(() => {
+        if (!entry.disposed) {
+          for (const hook of entry.deactivatedHooks) {
+            hook()
+          }
+          if (entry.deactivatedHooks.size === 0) {
+            __rueDeactivateRange(entry.start)
+          }
+        }
+      })
+    })
   }
 
   const unmountEntry = (entry: CacheEntry) => {
@@ -304,6 +364,10 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     }
 
     moveEntryToStorage(entry)
+    if (entry.isActive) {
+      entry.isActive = false
+      notifyDeactivated(entry)
+    }
     entry.disposed = true
 
     const parent = getParentNode(entry.start) as DomElementLike | null
@@ -320,6 +384,10 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
   const deactivateEntry = (entry: CacheEntry) => {
     if (entry.cacheable && !entry.disposed) {
       moveEntryToStorage(entry)
+      if (entry.isActive) {
+        entry.isActive = false
+        notifyDeactivated(entry)
+      }
       return
     }
 
@@ -332,7 +400,11 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     }
 
     moveRange(entry, getActiveParent(), ctx.end)
-    entry.justActivated = true
+    if (!entry.isActive) {
+      entry.isActive = true
+      entry.justActivated = true
+      notifyActivated(entry)
+    }
   }
 
   const touchEntry = (entry: CacheEntry) => {
@@ -457,6 +529,9 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     ctx.activeEntry = nextEntry
     if (!reusedCachedEntry) {
       renderEntry(nextEntry, descriptor.child)
+      nextEntry.isActive = true
+      nextEntry.justActivated = true
+      notifyActivated(nextEntry)
     }
     pruneOldestEntries(max)
   }

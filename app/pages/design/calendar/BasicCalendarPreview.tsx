@@ -42,6 +42,7 @@ const isBasicCalendarDateDisabled = (date: Date) => {
 const BasicCalendarPreview: FC = () => {
   const selectedValue = ref('2026-04-12')
   const selectedSource = ref('date')
+  const panelMode = ref<DemoCalendarMode>('month')
   const panelState = ref(formatPanelLabel(parseDate(selectedValue.value), 'month'))
   const handleChange = useCallback((date: Date) => {
     selectedValue.value = formatIsoDate(date)
@@ -59,11 +60,15 @@ const BasicCalendarPreview: FC = () => {
         data-testid="basic-calendar"
         locale="zh-CN"
         value={selectedValue.value}
+        mode={panelMode.value}
         showWeek
         validRange={basicCalendarValidRange}
         disabledDate={isBasicCalendarDateDisabled}
         onChange={handleChange}
-        onPanelChange={handlePanelChange}
+        onPanelChange={(date, nextMode) => {
+          panelMode.value = nextMode as DemoCalendarMode
+          handlePanelChange(date, nextMode as DemoCalendarMode)
+        }}
         onSelect={handleSelect}
       />
 

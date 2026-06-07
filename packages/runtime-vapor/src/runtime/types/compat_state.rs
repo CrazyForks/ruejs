@@ -1,3 +1,9 @@
+/*
+Compat mounted 状态
+
+仅在 compat feature 下启用，用来描述旧式 Element/Fragment 的 patch 与生命周期信息。
+默认主路径保留这些类型的原因，是让旧 vnode 输入能逐步映射到新的 mounted snapshot。
+*/
 use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
 

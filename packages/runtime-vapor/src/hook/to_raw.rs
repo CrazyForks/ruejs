@@ -6,6 +6,19 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
+fn raw_ref_value(value: &JsValue) -> Option<JsValue> {
+    if !value.is_object() {
+        return None;
+    }
+    let marker =
+        Reflect::get(value, &JsValue::from_str("__rue_ref__")).unwrap_or(JsValue::UNDEFINED);
+    if marker.as_bool() != Some(true) {
+        return None;
+    }
+    let ref_value = Reflect::get(value, &JsValue::from_str("value")).unwrap_or(JsValue::UNDEFINED);
+    if ref_value.is_undefined() { None } else { Some(ref_value) }
+}
+
 #[wasm_bindgen(js_name = toRaw)]
 pub fn to_raw_js(obj: JsValue) -> JsValue {
     if obj.is_object() {
@@ -13,6 +26,9 @@ pub fn to_raw_js(obj: JsValue) -> JsValue {
         let raw =
             Reflect::get(&obj, &JsValue::from_str("__rue_raw__")).unwrap_or(JsValue::UNDEFINED);
         if !raw.is_undefined() {
+            if let Some(ref_value) = raw_ref_value(&raw) {
+                return ref_value;
+            }
             return raw;
         }
         // 其次：底层信号句柄（代理暴露的隐藏通道）

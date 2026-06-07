@@ -1,3 +1,9 @@
+/*
+createRue：创建 JS 可持有的 WasmRue 运行时实例
+
+初始化内部 Rue、DOM 适配器、渲染队列与 root effect 记录。
+这是 JS 世界进入 runtime-vapor 的第一道门。
+*/
 use super::WasmRue;
 use crate::runtime::core::Rue;
 use crate::runtime::js_adapter::JsDomAdapter;
@@ -46,6 +52,8 @@ pub fn createRue(adapter: JsValue) -> WasmRue {
         last_container: RefCell::new(None),
         pending_anchor: RefCell::new(Vec::new()),
         pending_between: RefCell::new(Vec::new()),
+        pending_activated_ranges: RefCell::new(Vec::new()),
+        pending_deactivated_ranges: RefCell::new(Vec::new()),
         pending_render: RefCell::new(Vec::new()),
         pending_static: RefCell::new(Vec::new()),
         root_effect: RefCell::new(None),

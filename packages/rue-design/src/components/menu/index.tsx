@@ -8,108 +8,190 @@ import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 import { RouterLink } from '@rue-js/router'
 
+/** MenuKey 标识键类型。 */
 export type MenuKey = string | number
+/** MenuSize 尺寸类型。 */
 export type MenuSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'medium' | 'large'
+/** MenuDirection 位置或方向类型。 */
 export type MenuDirection = 'vertical' | 'horizontal'
+/** MenuMode 类型。 */
 export type MenuMode = 'vertical' | 'horizontal' | 'inline'
+/** MenuTriggerSubMenuAction 类型。 */
 export type MenuTriggerSubMenuAction = 'hover' | 'click'
 
+/** MenuClickInfo 接口。 */
 export interface MenuClickInfo {
+  /** 数据项唯一标识。 */
   key?: MenuKey
+  /** keyPath 配置项。 */
   keyPath: MenuKey[]
+  /** item 区域配置。 */
   item?: MenuDataEntry
+  /** domEvent 配置项。 */
   domEvent: MouseEvent
 }
 
+/** MenuSelectInfo 接口。 */
 export interface MenuSelectInfo extends MenuClickInfo {
+  /** 数据项唯一标识。 */
   key: MenuKey
+  /** selectedKeys 标识键集合。 */
   selectedKeys: MenuKey[]
 }
 
+/** MenuTitleData 数据项结构。 */
 export interface MenuTitleData {
+  /** kind 配置项。 */
   kind: 'title'
+  /** 自定义渲染的宿主元素。 */
   as?: 'li' | 'h2'
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
 }
 
+/** MenuDropdownToggleData 数据项结构。 */
 export interface MenuDropdownToggleData {
+  /** show 配置项。 */
   show?: boolean
+  /** visible 配置项。 */
   visible?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
+  /** 组件子内容。 */
   children?: any
 }
 
+/** MenuDropdownData 数据项结构。 */
 export interface MenuDropdownData {
+  /** show 配置项。 */
   show?: boolean
+  /** visible 配置项。 */
   visible?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<MenuDataEntry>
 }
 
+/** MenuLegacySubmenuData 数据项结构。 */
 export interface MenuLegacySubmenuData {
+  /** 根节点附加类名。 */
   className?: string
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<MenuDataEntry>
 }
 
+/** MenuItemData 数据项结构。 */
 export interface MenuItemData {
+  /** kind 配置项。 */
   kind?: 'item'
+  /** 组件类型或语义类型。 */
   type?: undefined
+  /** 数据项唯一标识。 */
   key?: MenuKey
+  /** 自定义渲染的宿主元素。 */
   as?: 'a' | 'button' | 'span'
+  /** 链接地址。 */
   href?: string
+  /** to 配置项。 */
   to?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** 标题内容。 */
   title?: string
+  /** 展示标签。 */
   label?: any
+  /** 图标内容。 */
   icon?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** danger 配置项。 */
   danger?: boolean
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 是否处于激活态。 */
   active?: boolean
+  /** selected 配置项。 */
   selected?: boolean
+  /** focus 配置项。 */
   focus?: boolean
+  /** liClassName 附加类名。 */
   liClassName?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** dropdownToggle 配置项。 */
   dropdownToggle?: MenuDropdownToggleData
+  /** dropdown 配置项。 */
   dropdown?: MenuDropdownData
+  /** submenu 配置项。 */
   submenu?: MenuLegacySubmenuData
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** MenuSubMenuData 数据项结构。 */
 export interface MenuSubMenuData {
+  /** 组件类型或语义类型。 */
   type: 'submenu'
+  /** 数据项唯一标识。 */
   key?: MenuKey
+  /** 展示标签。 */
   label?: any
+  /** 图标内容。 */
   icon?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** 标题内容。 */
   title?: string
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** popupClassName 附加类名。 */
   popupClassName?: string
+  /** 组件子内容。 */
   children?: ReadonlyArray<MenuDataEntry>
+  /** onTitleClick 事件回调。 */
   onTitleClick?: (info: { key?: MenuKey; domEvent: MouseEvent }) => void
 }
 
+/** MenuGroupData 数据项结构。 */
 export interface MenuGroupData {
+  /** 组件类型或语义类型。 */
   type: 'group'
+  /** 数据项唯一标识。 */
   key?: MenuKey
+  /** 展示标签。 */
   label?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: ReadonlyArray<MenuDataEntry>
 }
 
+/** MenuDividerData 数据项结构。 */
 export interface MenuDividerData {
+  /** 组件类型或语义类型。 */
   type: 'divider'
+  /** 数据项唯一标识。 */
   key?: MenuKey
+  /** 根节点附加类名。 */
   className?: string
+  /** dashed 配置项。 */
   dashed?: boolean
 }
 
+/** MenuDataEntry 类型。 */
 export type MenuDataEntry =
   | MenuTitleData
   | MenuItemData
@@ -117,100 +199,179 @@ export type MenuDataEntry =
   | MenuGroupData
   | MenuDividerData
 
+/** MenuProps 组件属性。 */
 export interface MenuProps {
+  /** 组件尺寸。 */
   size?: MenuSize
+  /** 布局方向。 */
   direction?: MenuDirection
+  /** mode 配置项。 */
   mode?: MenuMode
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** selectable 配置项。 */
   selectable?: boolean
+  /** multiple 配置项。 */
   multiple?: boolean
+  /** inlineIndent 配置项。 */
   inlineIndent?: number
+  /** triggerSubMenuAction 配置项。 */
   triggerSubMenuAction?: MenuTriggerSubMenuAction
+  /** selectedKeys 标识键集合。 */
   selectedKeys?: ReadonlyArray<MenuKey>
+  /** defaultSelectedKeys 标识键集合。 */
   defaultSelectedKeys?: ReadonlyArray<MenuKey>
+  /** openKeys 标识键集合。 */
   openKeys?: ReadonlyArray<MenuKey>
+  /** defaultOpenKeys 标识键集合。 */
   defaultOpenKeys?: ReadonlyArray<MenuKey>
+  /** 点击时触发的回调。 */
   onClick?: (info: MenuClickInfo) => void
+  /** 选中项时触发的回调。 */
   onSelect?: (info: MenuSelectInfo) => void
+  /** 取消选中项时触发的回调。 */
   onDeselect?: (info: MenuSelectInfo) => void
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (openKeys: MenuKey[]) => void
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<MenuDataEntry>
 }
 
+/** MenuItemProps 组件属性。 */
 export interface MenuItemProps {
+  /** eventKey 标识键。 */
   eventKey?: MenuKey
+  /** 自定义渲染的宿主元素。 */
   as?: 'a' | 'button' | 'span'
+  /** 链接地址。 */
   href?: string
+  /** to 配置项。 */
   to?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** 标题内容。 */
   title?: string
+  /** 图标内容。 */
   icon?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** danger 配置项。 */
   danger?: boolean
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 是否处于激活态。 */
   active?: boolean
+  /** selected 配置项。 */
   selected?: boolean
+  /** focus 配置项。 */
   focus?: boolean
+  /** liClassName 附加类名。 */
   liClassName?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** MenuTitleProps 组件属性。 */
 export interface MenuTitleProps {
+  /** 自定义渲染的宿主元素。 */
   as?: 'li' | 'h2'
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
 }
 
+/** MenuDropdownProps 组件属性。 */
 export interface MenuDropdownProps {
+  /** show 配置项。 */
   show?: boolean
+  /** visible 配置项。 */
   visible?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
 }
 
+/** MenuDropdownToggleProps 组件属性。 */
 export interface MenuDropdownToggleProps {
+  /** show 配置项。 */
   show?: boolean
+  /** visible 配置项。 */
   visible?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
+  /** 组件子内容。 */
   children?: any
 }
 
+/** SubmenuProps 组件属性。 */
 export interface SubmenuProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
 }
 
+/** MenuSubMenuProps 组件属性。 */
 export interface MenuSubMenuProps {
+  /** eventKey 标识键。 */
   eventKey?: MenuKey
+  /** 标题内容。 */
   title?: any
+  /** 图标内容。 */
   icon?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** popupClassName 附加类名。 */
   popupClassName?: string
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** onTitleClick 事件回调。 */
   onTitleClick?: (info: { key?: MenuKey; domEvent: MouseEvent }) => void
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** 组件子内容。 */
   children?: any
+  /** __menuContext 配置项。 */
   __menuContext?: MenuContextValue | null
 }
 
+/** MenuItemGroupProps 组件属性。 */
 export interface MenuItemGroupProps {
+  /** 标题内容。 */
   title?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
 }
 
+/** MenuDividerProps 组件属性。 */
 export interface MenuDividerProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** dashed 配置项。 */
   dashed?: boolean
 }
 
@@ -233,12 +394,16 @@ interface MenuContextValue {
   ) => void
 }
 
+/** RUE_COMPONENT_TYPE_KEY 内部常量。 */
 const RUE_COMPONENT_TYPE_KEY = '__rue_component_type'
+/** MENU_CONTEXT_PROP 内部常量。 */
 const MENU_CONTEXT_PROP = '__menuContext'
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: MenuSize) => {
   switch (size) {
     case 'small':
@@ -253,18 +418,22 @@ const resolveSizeClass = (size?: MenuSize) => {
   }
 }
 
+/** 归一化 Keys 的内部工具函数。 */
 const normalizeKeys = (keys?: ReadonlyArray<MenuKey>) => {
   return Array.isArray(keys) ? [...keys] : []
 }
 
+/** 判断是否存在 Key 的内部工具函数。 */
 const hasKey = (keys: ReadonlyArray<MenuKey>, target?: MenuKey) => {
   if (target === undefined) return false
   return keys.some(key => key === target)
 }
 
+/** 判断 Renderable Node 的内部工具函数。 */
 const isRenderableNode = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object'
 
+/** inject Menu Context 的内部工具函数。 */
 const injectMenuContext = (value: unknown, menuContext: MenuContextValue): unknown => {
   if (Array.isArray(value)) {
     return value.map(child => injectMenuContext(child, menuContext))
@@ -294,21 +463,25 @@ const injectMenuContext = (value: unknown, menuContext: MenuContextValue): unkno
   return value
 }
 
+/** toggle Key 的内部工具函数。 */
 const toggleKey = (keys: ReadonlyArray<MenuKey>, target: MenuKey) => {
   return hasKey(keys, target) ? keys.filter(key => key !== target) : [...keys, target]
 }
 
+/** 读取 Menu Mode 的内部工具函数。 */
 const getMenuMode = (mode?: MenuMode, direction?: MenuDirection): MenuMode => {
   if (mode) return mode
   if (direction === 'horizontal') return 'horizontal'
   return 'vertical'
 }
 
+/** 读取 Anchor Rel 的内部工具函数。 */
 const getAnchorRel = (target?: string, rel?: string) => {
   if (target === '_blank' && !rel) return 'noreferrer'
   return rel
 }
 
+/** 解析 Router Href 的内部工具函数。 */
 const resolveRouterHref = (to: string) => {
   const resolvedHref = RouterLink.__rueHref(to)
   if (!resolvedHref) {
@@ -320,6 +493,7 @@ const resolveRouterHref = (to: string) => {
   return resolvedHref
 }
 
+/** 读取 Item Class Name 的内部工具函数。 */
 const getItemClassName = ({
   disabled,
   selected,
@@ -342,6 +516,7 @@ const getItemClassName = ({
   return cls.trim() || undefined
 }
 
+/** 渲染 Item Content 的内部工具函数。 */
 const renderItemContent = ({
   icon,
   content,
@@ -375,6 +550,7 @@ const renderItemContent = ({
   )
 }
 
+/** 渲染 Menu Action 的内部工具函数。 */
 const renderMenuAction = (
   props: MenuItemProps,
   menuContext: MenuContextValue | null,
@@ -557,12 +733,14 @@ const renderMenuAction = (
   )
 }
 
+/** Title 的内部工具函数。 */
 const Title: FC<MenuTitleProps> = ({ as = 'li', className, children }) => {
   const cls = appendClassName('menu-title', className)
   if (as === 'h2') return <h2 className={cls}>{children}</h2>
   return <li className={cls}>{children}</li>
 }
 
+/** Dropdown 的内部工具函数。 */
 const Dropdown: FC<MenuDropdownProps> = ({ show, visible, className, children }) => {
   const mergedVisible = visible ?? show
   let cls = 'menu-dropdown'
@@ -571,6 +749,7 @@ const Dropdown: FC<MenuDropdownProps> = ({ show, visible, className, children })
   return <ul className={cls}>{children}</ul>
 }
 
+/** Dropdown Toggle 的内部工具函数。 */
 const DropdownToggle: FC<MenuDropdownToggleProps> = ({
   show,
   visible,
@@ -603,10 +782,12 @@ const DropdownToggle: FC<MenuDropdownToggleProps> = ({
   )
 }
 
+/** Submenu 的内部工具函数。 */
 const Submenu: FC<SubmenuProps> = ({ className, children }) => {
   return <ul className={className}>{children}</ul>
 }
 
+/** Item 的内部工具函数。 */
 const Item: FC<MenuItemProps & { __menuContext?: MenuContextValue | null }> = ({
   liClassName,
   __menuContext = null,
@@ -616,6 +797,7 @@ const Item: FC<MenuItemProps & { __menuContext?: MenuContextValue | null }> = ({
   return <li className={liClassName}>{renderMenuAction(rest, menuContext)}</li>
 }
 
+/** Divider 的内部工具函数。 */
 const Divider: FC<MenuDividerProps> = ({ className, dashed }) => {
   return (
     <li
@@ -631,6 +813,7 @@ const Divider: FC<MenuDividerProps> = ({ className, dashed }) => {
   )
 }
 
+/** Item Group 的内部工具函数。 */
 const ItemGroup: FC<MenuItemGroupProps> = ({ title, className, children }) => {
   return (
     <li className={className}>
@@ -640,6 +823,7 @@ const ItemGroup: FC<MenuItemGroupProps> = ({ title, className, children }) => {
   )
 }
 
+/** Sub Menu 的内部工具函数。 */
 const SubMenu: FC<MenuSubMenuProps> = ({
   eventKey,
   title,
@@ -727,6 +911,7 @@ const SubMenu: FC<MenuSubMenuProps> = ({
   )
 }
 
+/** 渲染 Data Entry 的内部工具函数。 */
 const renderDataEntry = (
   entry: MenuDataEntry,
   index: number,
@@ -879,6 +1064,7 @@ const renderDataEntry = (
   )
 }
 
+/** Menu 的内部工具函数。 */
 const Menu: FC<MenuProps> = ({
   size,
   direction = 'vertical',
@@ -1010,4 +1196,5 @@ const MenuCompound: MenuCompound = Object.assign(Menu, {
   Divider,
 })
 
+/** 默认导出菜单组件。 */
 export default MenuCompound

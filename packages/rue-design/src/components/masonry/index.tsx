@@ -7,38 +7,68 @@ Masonry 组件概述
 */
 import { h, onMounted, onUnmounted, type FC, useRef } from '@rue-js/rue'
 
+/** MasonryBreakpoint 类型。 */
 export type MasonryBreakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
+/** MasonryResponsiveValue 值类型。 */
 export type MasonryResponsiveValue<T> = Partial<Record<MasonryBreakpoint, T>>
+/** MasonrySpacePreset 类型。 */
 export type MasonrySpacePreset = 'small' | 'middle' | 'large'
+/** MasonrySpace 类型。 */
 export type MasonrySpace = MasonrySpacePreset | number | string
+/** MasonryResponsiveSpace 类型。 */
 export type MasonryResponsiveSpace = MasonrySpace | MasonryResponsiveValue<MasonrySpace>
+/** MasonryGap 类型。 */
 export type MasonryGap = MasonryResponsiveSpace | [MasonryResponsiveSpace, MasonryResponsiveSpace]
+/** MasonryStyle 样式值类型。 */
 export type MasonryStyle = string | Record<string, any>
 
+/** MasonryProps 组件属性。 */
 export interface MasonryProps<T = any> {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** columns 配置项。 */
   columns?: number | MasonryResponsiveValue<number>
+  /** 元素间距。 */
   gap?: MasonryGap
+  /** 栅格间距。 */
   gutter?: MasonryGap
+  /** columnGap 配置项。 */
   columnGap?: MasonryResponsiveSpace
+  /** rowGap 配置项。 */
   rowGap?: MasonryResponsiveSpace
+  /** minColumnWidth 配置项。 */
   minColumnWidth?: MasonryResponsiveSpace
+  /** minColumns 配置项。 */
   minColumns?: number | MasonryResponsiveValue<number>
+  /** maxColumns 配置项。 */
   maxColumns?: number | MasonryResponsiveValue<number>
+  /** 数据驱动渲染项。 */
   items?: T[]
+  /** renderItem 配置项。 */
   renderItem?: (item: T, index: number) => any
+  /** itemKey 标识键。 */
   itemKey?: keyof T | ((item: T, index: number) => string | number)
+  /** itemAs 配置项。 */
   itemAs?: any
+  /** itemClassName 附加类名。 */
   itemClassName?: string | ((item: T, index: number) => string | undefined)
+  /** itemStyle 内联样式。 */
   itemStyle?: Record<string, any> | ((item: T, index: number) => Record<string, any> | undefined)
+  /** empty 配置项。 */
   empty?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: MasonryStyle
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** BREAKPOINT_SEQUENCE 内部常量。 */
 const BREAKPOINT_SEQUENCE: MasonryBreakpoint[] = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl']
+/** BREAKPOINT_MIN_WIDTH 内部常量。 */
 const BREAKPOINT_MIN_WIDTH: Record<MasonryBreakpoint, number> = {
   xs: 0,
   sm: 576,
@@ -47,11 +77,13 @@ const BREAKPOINT_MIN_WIDTH: Record<MasonryBreakpoint, number> = {
   xl: 1200,
   xxl: 1600,
 }
+/** SPACE_SIZE_TOKENS 内部常量。 */
 const SPACE_SIZE_TOKENS: Record<MasonrySpacePreset, string> = {
   small: 'var(--rue-theme-space-sm, 8px)',
   middle: 'var(--rue-theme-space-md, 16px)',
   large: 'var(--rue-theme-space-lg, 24px)',
 }
+/** SPACE_SIZE_FALLBACKS 内部常量。 */
 const SPACE_SIZE_FALLBACKS: Record<MasonrySpacePreset, number> = {
   small: 8,
   middle: 16,
@@ -59,10 +91,12 @@ const SPACE_SIZE_FALLBACKS: Record<MasonrySpacePreset, number> = {
 }
 const viewportSubscribers = new Set<() => void>()
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...classNames: Array<string | undefined | false>) => {
   return classNames.filter(Boolean).join(' ')
 }
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -70,11 +104,13 @@ const toChildArray = (children: any): any[] => {
   return children == null || typeof children === 'boolean' ? [] : [children]
 }
 
+/** 判断 Responsive Map 的内部工具函数。 */
 const isResponsiveMap = <T,>(value: unknown): value is MasonryResponsiveValue<T> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   return Object.keys(value).some(key => BREAKPOINT_SEQUENCE.includes(key as MasonryBreakpoint))
 }
 
+/** 解析 Responsive Value 的内部工具函数。 */
 const resolveResponsiveValue = <T,>(
   value: T | MasonryResponsiveValue<T> | undefined,
   width: number,
@@ -92,10 +128,12 @@ const resolveResponsiveValue = <T,>(
   return resolved
 }
 
+/** 判断是否存在 Responsive Space 的内部工具函数。 */
 const hasResponsiveSpace = (value?: MasonryResponsiveSpace) => {
   return isResponsiveMap<MasonrySpace>(value)
 }
 
+/** 判断是否存在 Responsive Gap 的内部工具函数。 */
 const hasResponsiveGap = (value?: MasonryGap) => {
   if (!value) return false
   if (Array.isArray(value)) {
@@ -104,6 +142,7 @@ const hasResponsiveGap = (value?: MasonryGap) => {
   return hasResponsiveSpace(value)
 }
 
+/** 归一化 Space Value 的内部工具函数。 */
 const normalizeSpaceValue = (value?: MasonrySpace) => {
   if (value == null) return undefined
   if (typeof value === 'number') return `${value}px`
@@ -113,6 +152,7 @@ const normalizeSpaceValue = (value?: MasonrySpace) => {
   return value
 }
 
+/** read Theme Space Token Px 的内部工具函数。 */
 const readThemeSpaceTokenPx = (token: MasonrySpacePreset) => {
   if (typeof window === 'undefined') return SPACE_SIZE_FALLBACKS[token]
   const variableName =
@@ -129,6 +169,7 @@ const readThemeSpaceTokenPx = (token: MasonrySpacePreset) => {
   return Number.isFinite(parsed) ? parsed : SPACE_SIZE_FALLBACKS[token]
 }
 
+/** 转换为 Pixels 的内部工具函数。 */
 const toPixels = (value: MasonrySpace | undefined, element?: HTMLElement | null) => {
   if (value == null) return undefined
   if (typeof value === 'number') return value
@@ -174,8 +215,10 @@ const toPixels = (value: MasonrySpace | undefined, element?: HTMLElement | null)
   }
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 
+/** serialize Style 的内部工具函数。 */
 const serializeStyle = (style?: MasonryStyle) => {
   if (!style) return ''
   if (typeof style === 'string') return style.trim()
@@ -186,6 +229,7 @@ const serializeStyle = (style?: MasonryStyle) => {
     .join('; ')
 }
 
+/** merge Style 的内部工具函数。 */
 const mergeStyle = (...styles: Array<MasonryStyle | undefined>) => {
   return styles
     .map(style => serializeStyle(style))
@@ -193,6 +237,7 @@ const mergeStyle = (...styles: Array<MasonryStyle | undefined>) => {
     .join('; ')
 }
 
+/** merge Item Style 的内部工具函数。 */
 const mergeItemStyle = (...styles: Array<Record<string, any> | undefined>) => {
   const merged: Record<string, any> = {}
 
@@ -204,6 +249,7 @@ const mergeItemStyle = (...styles: Array<Record<string, any> | undefined>) => {
   return Object.keys(merged).length > 0 ? merged : undefined
 }
 
+/** assign Forwarded Ref 的内部工具函数。 */
 const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   if (typeof forwardedRef === 'function') {
     forwardedRef(element)
@@ -212,11 +258,13 @@ const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   }
 }
 
+/** 读取 Viewport Width 的内部工具函数。 */
 const getViewportWidth = () => {
   if (typeof window === 'undefined') return BREAKPOINT_MIN_WIDTH.xl
   return window.innerWidth || document.documentElement?.clientWidth || BREAKPOINT_MIN_WIDTH.xl
 }
 
+/** notify Viewport Subscribers 的内部工具函数。 */
 const notifyViewportSubscribers = () => {
   viewportSubscribers.forEach(notify => notify())
 }
@@ -243,11 +291,13 @@ const subscribeViewport = (notify: () => void) => {
   }
 }
 
+/** 归一化 Column Count 的内部工具函数。 */
 const normalizeColumnCount = (value?: number) => {
   if (value == null || !Number.isFinite(value)) return undefined
   return Math.max(1, Math.floor(value))
 }
 
+/** 解析 Gap Pair 的内部工具函数。 */
 const resolveGapPair = (
   gap: MasonryGap | undefined,
   viewportWidth: number,
@@ -263,6 +313,7 @@ const resolveGapPair = (
   return [resolved, resolved]
 }
 
+/** 解析 Item Key 的内部工具函数。 */
 const resolveItemKey = <T,>(item: T, index: number, itemKey?: MasonryProps<T>['itemKey']) => {
   if (typeof itemKey === 'function') return itemKey(item, index)
   if (itemKey && item && typeof item === 'object' && itemKey in (item as Record<string, any>)) {
@@ -521,4 +572,5 @@ const Masonry: FC<MasonryProps<any>> = ({
   )
 }
 
+/** 默认导出瀑布流组件。 */
 export default Masonry

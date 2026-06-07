@@ -1,0 +1,23 @@
+{
+  "name": "@rue-js/example-text-blog-ssr",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node run-with-port.mjs dev 3020",
+    "build": "ruetext build",
+    "start": "node run-with-port.mjs start 3021",
+    "preview": "node run-with-port.mjs preview 3021"
+  },
+  "dependencies": {
+    "@rue-js/jsx-runtime": "workspace:*",
+    "@rue-js/rue": "workspace:*",
+    "@rue-js/text": "workspace:*",
+    "@rue-js/vite-plugin-rue": "workspace:*",
+    "text": "workspace:@rue-js/text@*",
+    "vite": "catalog:",
+    "vite-plugin-wasm": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

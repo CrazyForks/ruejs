@@ -1,3 +1,9 @@
+/*
+createElement/createComponent 桥接入口
+
+JS/TSX 编译产物会通过这里把“标签、组件函数、props、children”收敛为默认 MountInput 句柄。
+默认路径不直接运输旧式 vnode 树，而是写入注册表并返回轻量 handle，后续 render 再消费该 handle。
+*/
 use super::WasmRue;
 #[cfg(feature = "dev")]
 #[cfg(feature = "compat")]

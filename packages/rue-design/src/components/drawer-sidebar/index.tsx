@@ -1,104 +1,194 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+DrawerSidebar 模块概述
+- 汇总抽屉侧栏组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 import { Teleport, onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 
+/** DrawerSidebarPlacement 位置或方向类型。 */
 export type DrawerSidebarPlacement = 'left' | 'right' | 'top' | 'bottom'
+/** DrawerSidebarSize 尺寸类型。 */
 export type DrawerSidebarSize = 'default' | 'large' | number | string
+/** DrawerSidebarInlineStyle 样式值类型。 */
 export type DrawerSidebarInlineStyle = string | Record<string, string | number | null | undefined>
+/** DrawerSidebarGetContainer 类型。 */
 export type DrawerSidebarGetContainer = string | HTMLElement | (() => HTMLElement) | false
+/** DrawerSidebarClosePlacement 位置或方向类型。 */
 export type DrawerSidebarClosePlacement = 'start' | 'end'
 
+/** DrawerSidebarMaskConfig 配置对象。 */
 export interface DrawerSidebarMaskConfig {
+  /** enabled 配置项。 */
   enabled?: boolean
+  /** closable 配置项。 */
   closable?: boolean
+  /** blur 配置项。 */
   blur?: boolean
 }
 
+/** DrawerSidebarClosableConfig 配置对象。 */
 export interface DrawerSidebarClosableConfig {
+  /** 弹出层或内容展示位置。 */
   placement?: DrawerSidebarClosePlacement
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** 是否禁用交互。 */
   disabled?: boolean
 }
 
+/** DrawerSidebarClassNames 局部类名配置。 */
 export interface DrawerSidebarClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** 遮罩层区域配置。 */
   mask?: string
+  /** 外层包裹区域配置。 */
   wrapper?: string
+  /** panel 区域配置。 */
   panel?: string
+  /** 头部区域内容。 */
   header?: string
+  /** 标题内容。 */
   title?: string
+  /** 主体区域配置。 */
   body?: string
+  /** 底部区域内容。 */
   footer?: string
+  /** 关闭按钮区域配置。 */
   close?: string
 }
 
+/** DrawerSidebarStyles 局部样式配置。 */
 export interface DrawerSidebarStyles {
+  /** 根节点区域配置。 */
   root?: DrawerSidebarInlineStyle
+  /** 遮罩层区域配置。 */
   mask?: DrawerSidebarInlineStyle
+  /** 外层包裹区域配置。 */
   wrapper?: DrawerSidebarInlineStyle
+  /** panel 区域配置。 */
   panel?: DrawerSidebarInlineStyle
+  /** 头部区域内容。 */
   header?: DrawerSidebarInlineStyle
+  /** 标题内容。 */
   title?: DrawerSidebarInlineStyle
+  /** 主体区域配置。 */
   body?: DrawerSidebarInlineStyle
+  /** 底部区域内容。 */
   footer?: DrawerSidebarInlineStyle
+  /** 关闭按钮区域配置。 */
   close?: DrawerSidebarInlineStyle
 }
 
+/** DrawerSidebarProps 组件属性。 */
 export interface DrawerSidebarProps {
+  /** end 配置项。 */
   end?: boolean
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 弹出层或内容展示位置。 */
   placement?: DrawerSidebarPlacement
+  /** 组件尺寸。 */
   size?: DrawerSidebarSize
+  /** width 配置项。 */
   width?: number | string
+  /** height 配置项。 */
   height?: number | string
+  /** 标题内容。 */
   title?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** 底部区域内容。 */
   footer?: any
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** closable 配置项。 */
   closable?: boolean | DrawerSidebarClosableConfig
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** keyboard 配置项。 */
   keyboard?: boolean
+  /** 遮罩层区域配置。 */
   mask?: boolean | DrawerSidebarMaskConfig
+  /** maskClosable 配置项。 */
   maskClosable?: boolean
+  /** inline 配置项。 */
   inline?: boolean
+  /** forceRender 自定义渲染函数。 */
   forceRender?: boolean
+  /** destroyOnClose 配置项。 */
   destroyOnClose?: boolean
+  /** destroyOnHidden 配置项。 */
   destroyOnHidden?: boolean
+  /** zIndex 配置项。 */
   zIndex?: number
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** panelClassName 附加类名。 */
   panelClassName?: string
+  /** bodyClassName 附加类名。 */
   bodyClassName?: string
+  /** headerClassName 附加类名。 */
   headerClassName?: string
+  /** footerClassName 附加类名。 */
   footerClassName?: string
+  /** maskClassName 附加类名。 */
   maskClassName?: string
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: DrawerSidebarClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: DrawerSidebarStyles
+  /** 根节点内联样式。 */
   style?: DrawerSidebarInlineStyle
+  /** 根节点内联样式。 */
   rootStyle?: DrawerSidebarInlineStyle
+  /** panelStyle 内联样式。 */
   panelStyle?: DrawerSidebarInlineStyle
+  /** bodyStyle 内联样式。 */
   bodyStyle?: DrawerSidebarInlineStyle
+  /** headerStyle 内联样式。 */
   headerStyle?: DrawerSidebarInlineStyle
+  /** footerStyle 内联样式。 */
   footerStyle?: DrawerSidebarInlineStyle
+  /** maskStyle 内联样式。 */
   maskStyle?: DrawerSidebarInlineStyle
+  /** getContainer 配置项。 */
   getContainer?: DrawerSidebarGetContainer
+  /** drawerRender 自定义渲染函数。 */
   drawerRender?: (node: any) => any
+  /** 组件子内容。 */
   children?: any
+  /** 关闭时触发的回调。 */
   onClose?: (event?: MouseEvent | KeyboardEvent) => void
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** afterOpenChange 配置项。 */
   afterOpenChange?: (open: boolean) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** DrawerSidebarToggleProps 组件属性。 */
 export interface DrawerSidebarToggleProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** DrawerSidebarPartProps 组件属性。 */
 export interface DrawerSidebarPartProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -106,17 +196,23 @@ type DrawerSidebarPartComponent<T> = FC<T> & {
   __rueDrawerSidebarPart?: string
 }
 
+/** COMPOUND_PART_FLAG 内部常量。 */
 const COMPOUND_PART_FLAG = '__rueDrawerSidebarPart'
+/** DEFAULT_PANEL_SIZE 内部常量。 */
 const DEFAULT_PANEL_SIZE = 378
+/** LARGE_PANEL_SIZE 内部常量。 */
 const LARGE_PANEL_SIZE = 736
+/** DEFAULT_ROOT_Z_INDEX 内部常量。 */
 const DEFAULT_ROOT_Z_INDEX = 1000
 
 let activeDrawerCount = 0
 let previousDocumentOverflow = ''
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...parts: Array<string | undefined | false | null>) =>
   parts.filter(Boolean).join(' ')
 
+/** flatten Children 的内部工具函数。 */
 const flattenChildren = (children: any, result: any[] = []) => {
   if (children == null || children === false) return result
   if (Array.isArray(children)) {
@@ -127,6 +223,7 @@ const flattenChildren = (children: any, result: any[] = []) => {
   return result
 }
 
+/** 判断是否存在 Compound Children 的内部工具函数。 */
 const hasCompoundChildren = (children: any) => {
   return flattenChildren(children).some(child => {
     if (!child || typeof child !== 'object') return false
@@ -134,6 +231,7 @@ const hasCompoundChildren = (children: any) => {
   })
 }
 
+/** 归一化 Style Key 的内部工具函数。 */
 const normalizeStyleKey = (key: string) => {
   if (key.startsWith('--')) return key
   return key.includes('-')
@@ -141,6 +239,7 @@ const normalizeStyleKey = (key: string) => {
     : key
 }
 
+/** 转换为 Style Object 的内部工具函数。 */
 const toStyleObject = (style?: DrawerSidebarInlineStyle) => {
   if (!style) return undefined
   const normalized: Record<string, string | number> = {}
@@ -170,6 +269,7 @@ const toStyleObject = (style?: DrawerSidebarInlineStyle) => {
   return Object.keys(normalized).length > 0 ? normalized : undefined
 }
 
+/** merge Style Value 的内部工具函数。 */
 const mergeStyleValue = (...styles: Array<DrawerSidebarInlineStyle | undefined>) => {
   const merged: Record<string, string | number> = {}
 
@@ -181,6 +281,7 @@ const mergeStyleValue = (...styles: Array<DrawerSidebarInlineStyle | undefined>)
   return Object.keys(merged).length > 0 ? merged : undefined
 }
 
+/** 解析 Numeric Style 的内部工具函数。 */
 const resolveNumericStyle = (value?: number | string) => {
   if (value == null) return undefined
   if (typeof value === 'number') return `${value}px`
@@ -188,6 +289,7 @@ const resolveNumericStyle = (value?: number | string) => {
   return value
 }
 
+/** 解析 Drawer Size 的内部工具函数。 */
 const resolveDrawerSize = (
   size: DrawerSidebarSize | undefined,
   placement: DrawerSidebarPlacement,
@@ -205,6 +307,7 @@ const resolveDrawerSize = (
   return resolveNumericStyle(height) ?? `${DEFAULT_PANEL_SIZE}px`
 }
 
+/** 解析 Mask Config 的内部工具函数。 */
 const resolveMaskConfig = (
   mask: DrawerSidebarProps['mask'],
   maskClosable?: boolean,
@@ -228,6 +331,7 @@ const resolveMaskConfig = (
   }
 }
 
+/** 解析 Closable Config 的内部工具函数。 */
 const resolveClosableConfig = (closable: DrawerSidebarProps['closable'], closeIcon: any) => {
   if (closable === false) {
     return {
@@ -255,6 +359,7 @@ const resolveClosableConfig = (closable: DrawerSidebarProps['closable'], closeIc
   }
 }
 
+/** 读取 Wrapper Class Name 的内部工具函数。 */
 const getWrapperClassName = (placement: DrawerSidebarPlacement) => {
   switch (placement) {
     case 'left':
@@ -270,6 +375,7 @@ const getWrapperClassName = (placement: DrawerSidebarPlacement) => {
   }
 }
 
+/** 读取 Panel Base Class Name 的内部工具函数。 */
 const getPanelBaseClassName = (placement: DrawerSidebarPlacement) => {
   switch (placement) {
     case 'left':
@@ -285,6 +391,7 @@ const getPanelBaseClassName = (placement: DrawerSidebarPlacement) => {
   }
 }
 
+/** 读取 Panel Transform Class Name 的内部工具函数。 */
 const getPanelTransformClassName = (placement: DrawerSidebarPlacement, open: boolean) => {
   switch (placement) {
     case 'left':
@@ -300,11 +407,13 @@ const getPanelTransformClassName = (placement: DrawerSidebarPlacement, open: boo
   }
 }
 
+/** 读取 Panel Size Style 的内部工具函数。 */
 const getPanelSizeStyle = (placement: DrawerSidebarPlacement, size: string | undefined) => {
   if (!size) return undefined
   return placement === 'left' || placement === 'right' ? { width: size } : { height: size }
 }
 
+/** 读取 Managed Mode Signature 的内部工具函数。 */
 const getManagedModeSignature = (props: DrawerSidebarProps) => {
   return [
     props.defaultOpen,
@@ -349,6 +458,7 @@ const getManagedModeSignature = (props: DrawerSidebarProps) => {
   ].some(value => value !== undefined)
 }
 
+/** lock Document Scroll 的内部工具函数。 */
 const lockDocumentScroll = () => {
   if (typeof document === 'undefined') return
   if (activeDrawerCount === 0) {
@@ -358,6 +468,7 @@ const lockDocumentScroll = () => {
   activeDrawerCount += 1
 }
 
+/** unlock Document Scroll 的内部工具函数。 */
 const unlockDocumentScroll = () => {
   if (typeof document === 'undefined' || activeDrawerCount === 0) return
   activeDrawerCount -= 1
@@ -366,6 +477,7 @@ const unlockDocumentScroll = () => {
   }
 }
 
+/** 渲染 Loading Body 的内部工具函数。 */
 const renderLoadingBody = () => {
   return (
     <div className="space-y-3" data-rue-drawer-sidebar-loading="true">
@@ -377,6 +489,7 @@ const renderLoadingBody = () => {
   )
 }
 
+/** Default Close Icon 的内部工具函数。 */
 const DefaultCloseIcon: FC = () => {
   return (
     <svg
@@ -393,6 +506,7 @@ const DefaultCloseIcon: FC = () => {
   )
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest }) => {
   const shouldUseManagedMode =
     !hasCompoundChildren(children) &&
@@ -762,6 +876,7 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
   return <Teleport to={resolvedContainer}>{rootNode}</Teleport>
 }
 
+/** Toggle 的内部工具函数。 */
 const Toggle: DrawerSidebarPartComponent<DrawerSidebarToggleProps> = ({ className, ...rest }) => {
   return (
     <input
@@ -774,6 +889,7 @@ const Toggle: DrawerSidebarPartComponent<DrawerSidebarToggleProps> = ({ classNam
 }
 Toggle[COMPOUND_PART_FLAG] = 'Toggle'
 
+/** Content 的内部工具函数。 */
 const Content: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({
   className,
   children,
@@ -787,6 +903,7 @@ const Content: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({
 }
 Content[COMPOUND_PART_FLAG] = 'Content'
 
+/** Side 的内部工具函数。 */
 const Side: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({
   className,
   children,
@@ -800,6 +917,7 @@ const Side: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({
 }
 Side[COMPOUND_PART_FLAG] = 'Side'
 
+/** Overlay 的内部工具函数。 */
 const Overlay: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({
   className,
   children,
@@ -813,6 +931,7 @@ const Overlay: DrawerSidebarPartComponent<DrawerSidebarPartProps> = ({
 }
 Overlay[COMPOUND_PART_FLAG] = 'Overlay'
 
+/** DrawerSidebarCompound 类型。 */
 export type DrawerSidebarCompound = FC<DrawerSidebarProps> & {
   Toggle: FC<DrawerSidebarToggleProps>
   Content: FC<DrawerSidebarPartProps>
@@ -827,4 +946,5 @@ const DrawerSidebar: DrawerSidebarCompound = Object.assign(Root, {
   Overlay,
 })
 
+/** 默认导出抽屉侧栏组件。 */
 export default DrawerSidebar

@@ -1,3 +1,8 @@
+/*
+生命周期桥接：onUnmounted
+
+mounted lifecycle record 完成卸载清理后触发，用于用户侧“已卸载”通知。
+*/
 use super::WasmRue;
 use crate::runtime::globals::push_pending_hook;
 use wasm_bindgen::JsValue;

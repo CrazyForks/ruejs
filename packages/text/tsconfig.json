@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsxImportSource": "@rue-js",
+    "paths": {
+      "@rue-js/jsx-dev-runtime": ["./src/shims/jsx-dev-runtime-compat.ts"],
+      "@rue-js/jsx-runtime": ["./src/shims/jsx-runtime-compat.ts"],
+      "@rue-js/rue": ["../rue/dist/rue.d.ts"],
+      "@rue-js/server-renderer": ["../server-renderer/dist/server-renderer.d.ts"]
+    }
+  },
+  "include": ["src", "__tests__"],
+  "exclude": ["node_modules", "dist"]
+}

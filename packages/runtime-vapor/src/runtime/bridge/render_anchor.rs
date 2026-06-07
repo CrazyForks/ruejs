@@ -1,3 +1,9 @@
+/*
+renderAnchor：单锚点渲染桥接
+
+用于在指定 parent 的 anchor 前渲染一段子树，并通过 anchor_map 追踪后续更新。
+常见于组件或条件分支这类“位置由锚点稳定标识”的场景。
+*/
 use super::WasmRue;
 use super::input::CompatEntryPolicy;
 use crate::runtime::js_adapter::JsDomAdapter;

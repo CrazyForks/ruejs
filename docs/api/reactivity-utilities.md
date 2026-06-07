@@ -29,13 +29,38 @@
   }
   ```
 
-## toRef() {#toref} @todo
+## toRef() {#toref}
 
-当前 Rue 运行时尚未提供 `toRef()`。
+基于一个响应式对象属性创建 ref。返回的 ref 与源属性保持双向同步：读取 `.value` 会读取源对象属性，写入 `.value` 会写回源对象属性。
 
-- **状态**
+也可以传入 ref、getter 或普通值来做单值规范化：已有 ref 会原样返回，getter 会被包装成只读 ref，普通值会被包装为独立 ref。
 
-  本节保留为规划占位。现阶段如果你需要稳定的单值响应式句柄，应直接使用 [`ref()`](/api/api/reactivity-core#ref)、[`shallowRef()`](/api/api/reactivity-advanced#shallowref)、[`computed()`](/api/api/reactivity-core#computed) 或 [`toValue()`](#tovalue)。
+- **类型**
+
+  ```ts
+  function toRef<T>(value: Ref<T>): Ref<T>
+  function toRef<T>(getter: () => T): Readonly<Ref<T>>
+  function toRef<T>(value: T): Ref<T>
+  function toRef<T extends object, K extends keyof T>(object: T, key: K): { value: T[K] }
+  function toRef<T extends object, K extends keyof T, D>(
+    object: T,
+    key: K,
+    defaultValue: D,
+  ): { value: Exclude<T[K], undefined> | D }
+  ```
+
+- **示例**
+
+  ```ts
+  const state = reactive({ count: 1 })
+  const count = toRef(state, 'count')
+
+  count.value++
+  console.log(state.count) // 2
+
+  const doubled = toRef(() => count.value * 2)
+  console.log(doubled.value) // 4
+  ```
 
 ## toValue() {#tovalue}
 
@@ -77,21 +102,42 @@
   useFeature(() => 1)
   ```
 
-## toRefs() {#torefs} @todo
+## toRefs() {#torefs}
 
-当前 Rue 运行时尚未提供 `toRefs()`。
+将响应式对象的可枚举属性转换为一组 ref。这个 API 常用于从组合式函数返回响应式对象时保持解构后的响应性。
 
-- **状态**
+- **类型**
 
-  本节保留为规划占位。当前如果需要从组合式函数返回多个响应式值，推荐直接返回一个由多个 `ref()` 组成的普通对象，而不是依赖对象到 refs 的批量转换。
+  ```ts
+  function toRefs<T extends object>(
+    object: T,
+  ): {
+    [K in keyof T]: { value: T[K] }
+  }
+  ```
 
-## isProxy() {#isproxy} @todo
+- **示例**
 
-当前 Rue 运行时尚未提供 `isProxy()`。
+  ```ts
+  function useCounter() {
+    const state = reactive({ count: 0, label: 'Rue' })
+    return toRefs(state)
+  }
 
-- **状态**
+  const { count, label } = useCounter()
+  count.value++
+  console.log(label.value)
+  ```
 
-  本节保留为规划占位。现阶段如果你只需要判断对象是否来自 Rue 的响应式代理，优先使用已提供的 [`isReactive()`](#isreactive)。
+## isProxy() {#isproxy}
+
+检查对象是否是由 [`reactive()`](/api/api/reactivity-core#reactive)、[`readonly()`](/api/api/reactivity-core#readonly)、[`shallowReactive()`](/api/api/reactivity-advanced#shallowreactive) 或 [`shallowReadonly()`](/api/api/reactivity-advanced#shallowreadonly) 创建的 Rue 响应式代理。
+
+- **类型**
+
+  ```ts
+  function isProxy(value: unknown): boolean
+  ```
 
 ## isReactive() {#isreactive}
 
@@ -103,10 +149,14 @@
   function isReactive(value: unknown): boolean
   ```
 
-## isReadonly() {#isreadonly} @todo
+## isReadonly() {#isreadonly}
 
-当前 Rue 运行时尚未提供 `isReadonly()`。
+- **类型**
 
-- **状态**
+  ```ts
+  function isReadonly(value: unknown): boolean
+  ```
 
-  本节保留为规划占位。Rue 后续如果提供该 API，会基于自身只读代理与计算句柄模型重新定义其判断边界。
+检查对象是否是由 [`readonly()`](/api/api/reactivity-core#readonly)、
+[`shallowReadonly()`](/api/api/reactivity-advanced#shallowreadonly) 或内部只读 props 包装创建的代理。
+只读 `computed(() => value)` 句柄也会返回 `true`；带 `set` 的可写 computed 返回 `false`。

@@ -17,6 +17,7 @@ const formatIsoDate = (date: Date) => {
 const MinimalCalendarPreview: FC<{ initialValue?: string }> = props => {
   const selectedValue = ref(props.initialValue ?? '2026-04-12')
   const selectedSource = ref('date')
+  const panelMode = ref<'month' | 'year'>('month')
 
   return (
     <div className="space-y-4">
@@ -24,8 +25,12 @@ const MinimalCalendarPreview: FC<{ initialValue?: string }> = props => {
         data-testid="basic-calendar"
         fullscreen={false}
         value={selectedValue.value}
+        mode={panelMode.value}
         onChange={date => {
           selectedValue.value = formatIsoDate(date)
+        }}
+        onPanelChange={(_date, nextMode) => {
+          panelMode.value = nextMode
         }}
         onSelect={(_date, info) => {
           selectedSource.value = info.source
@@ -97,6 +102,32 @@ describe('Calendar actual page', () => {
       expect(container.querySelector('[data-testid="calendar-selected-source"]')?.textContent).toBe(
         'date',
       )
+    })
+
+    it('switches the basic calendar preview between month and year panels', async () => {
+      const container = sharedPreviewContainer as HTMLDivElement
+
+      await click(container.querySelector('[data-rue-calendar-mode-switch="year"]'))
+
+      await flush(6)
+
+      expect(
+        container
+          .querySelector('[data-testid="basic-calendar"]')
+          ?.getAttribute('data-rue-calendar-mode'),
+      ).toBe('year')
+      expect(container.querySelectorAll('[data-rue-calendar-month]').length).toBe(12)
+
+      await click(container.querySelector('[data-rue-calendar-mode-switch="month"]'))
+
+      await flush(6)
+
+      expect(
+        container
+          .querySelector('[data-testid="basic-calendar"]')
+          ?.getAttribute('data-rue-calendar-mode'),
+      ).toBe('month')
+      expect(container.querySelectorAll('[data-rue-calendar-cell]').length).toBe(42)
     })
   })
 

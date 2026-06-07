@@ -52,8 +52,6 @@ const readTaskTitles = (container: HTMLElement) =>
 
 const TODO_STORAGE_KEY = 'rue.todoapp.state'
 
-const padDatePart = (value: number) => String(value).padStart(2, '0')
-
 const findButtonByText = (root: ParentNode, label: string, classNamePart?: string) =>
   Array.from(root.querySelectorAll('button')).find(button => {
     const matchesLabel = button.textContent?.trim() === label

@@ -22,8 +22,8 @@ Rust 结构与 wasm 选择：
 // - `rue.logs.verboseDebug`：是否放开普通 debug 日志；对高频内部生命周期日志仍需配合 include 精确点名
 // 支持包含/排除关键字过滤，并可选择是否输出到控制台。
 use js_sys::Reflect;
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
-use wasm_bindgen::prelude::*;
 
 thread_local! {
     // 是否启用日志（默认关闭，受 localStorage 同步影响）
@@ -91,9 +91,38 @@ fn level_to_num(level: &str) -> u8 {
     }
 }
 
+fn is_node_localstorage_accessor(global: &JsValue) -> bool {
+    let process = Reflect::get(global, &JsValue::from_str("process")).ok();
+    let versions =
+        process.as_ref().and_then(|value| Reflect::get(value, &JsValue::from_str("versions")).ok());
+    let node_version =
+        versions.as_ref().and_then(|value| Reflect::get(value, &JsValue::from_str("node")).ok());
+
+    if node_version.and_then(|value| value.as_string()).is_none() {
+        return false;
+    }
+
+    let Some(global_obj) = global.dyn_ref::<js_sys::Object>() else {
+        return false;
+    };
+    let descriptor =
+        js_sys::Object::get_own_property_descriptor(global_obj, &JsValue::from_str("localStorage"));
+    if descriptor.is_undefined() {
+        return false;
+    }
+
+    Reflect::get(&descriptor, &JsValue::from_str("get"))
+        .map(|getter| getter.is_function())
+        .unwrap_or(false)
+}
+
 /// 读取 localStorage 某键的字符串值
 fn read_localstorage_value(key: &str) -> Option<String> {
     let global = js_sys::global();
+    if is_node_localstorage_accessor(&global) {
+        return None;
+    }
+
     let ls = js_sys::Reflect::get(&global, &JsValue::from_str("localStorage")).ok()?;
     if ls.is_undefined() {
         return None;

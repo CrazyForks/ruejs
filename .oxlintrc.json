@@ -4,7 +4,12 @@
     "**/dist/**",
     "**/temp/**",
     "**/coverage/**",
+    "**/.test-tmp/**",
     "output.js",
+    "packages/rue-rsc/src/transforms/fixtures/**",
+    "packages/text/__tests__/fixtures/**",
+    "packages/text/__tests__/*-part-*.test.ts",
+    "packages/text/__tests__/shims-script-*.test.ts",
     "packages/**/pkg/**",
     "packages/**/pkg-node/**",
     "packages/swc-plugin-rue/target/**"

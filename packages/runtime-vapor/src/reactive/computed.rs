@@ -20,6 +20,19 @@ use crate::reactive::core::{ComputedState, Signal, schedule_effect_run};
 use crate::reactive::effect::create_effect;
 use crate::reactive::signal::{SignalHandle, collect_affected_subscribers};
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+fn collect_computed_dirty_subscribers(handle: &SignalHandle) -> Vec<usize> {
+    let mut inner = handle.inner.borrow_mut();
+    let Some(computed) = inner.computed.as_mut() else {
+        return Vec::new();
+    };
+    if computed.dirty {
+        return Vec::new();
+    }
+    computed.dirty = true;
+    collect_affected_subscribers(&mut inner, None)
+}
+
 /// 创建计算属性
 /// - 参数：可为函数 `() => any`，或对象 `{ get: () => any }`
 /// 返回：一个只读信号句柄（通过 get/peek 读取，内部通过 effect 驱动更新）
@@ -127,26 +140,15 @@ pub fn create_computed(arg: JsValue) -> SignalHandle {
             let v = cb.call0(&JsValue::NULL).unwrap_or(JsValue::UNDEFINED);
             let mut inner = s.borrow_mut();
             inner.value = v;
-            if let Some(computed) = inner.computed.as_mut() {
-                computed.initialized = true;
-                computed.dirty = false;
-            }
+            let computed = inner.computed.as_mut().expect("computed signal state must exist");
+            computed.initialized = true;
+            computed.dirty = false;
         }) as Box<dyn FnMut()>)
     };
     let mark_dirty_scheduler = {
         let handle = sig.clone();
         Closure::wrap(Box::new(move |_run: JsValue| {
-            let to_run = {
-                let mut inner = handle.inner.borrow_mut();
-                let Some(computed) = inner.computed.as_mut() else {
-                    return JsValue::UNDEFINED;
-                };
-                if computed.dirty {
-                    return JsValue::UNDEFINED;
-                }
-                computed.dirty = true;
-                collect_affected_subscribers(&mut inner, None)
-            };
+            let to_run = collect_computed_dirty_subscribers(&handle);
             for id in to_run {
                 schedule_effect_run(id);
             }
@@ -163,13 +165,54 @@ pub fn create_computed(arg: JsValue) -> SignalHandle {
     let eh = create_effect(func, Some(opts.into()));
     {
         let mut inner = sig.inner.borrow_mut();
-        if let Some(computed) = inner.computed.as_mut() {
-            computed.effect_id = Some(eh.id);
-        }
+        let computed = inner.computed.as_mut().expect("computed signal state must exist");
+        computed.effect_id = Some(eh.id);
     }
     eval_fn.forget();
     mark_dirty_scheduler.forget();
     sig
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::reactive::core::schedule_effect_run;
+    use crate::reactive::signal::create_signal;
+    use wasm_bindgen_test::*;
+
+    #[wasm_bindgen_test]
+    fn computed_dirty_scheduler_ignores_handles_without_computed_state() {
+        let computed = create_computed(Function::new_no_args("return 1").into());
+        let effect_id = computed
+            .inner
+            .borrow()
+            .computed
+            .as_ref()
+            .and_then(|state| state.effect_id)
+            .expect("computed effect id");
+
+        computed.inner.borrow_mut().computed = None;
+
+        schedule_effect_run(effect_id);
+        assert!(computed.inner.borrow().computed.is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn computed_dirty_scheduler_ignores_removed_computed_state_from_dependency_trigger() {
+        let source = create_signal(JsValue::from_f64(1.0), None);
+        let source_for_getter = source.clone();
+        let getter = Closure::wrap(
+            Box::new(move || source_for_getter.get_js()) as Box<dyn FnMut() -> JsValue>
+        );
+        let computed = create_computed(getter.as_ref().clone().unchecked_into::<Function>().into());
+        getter.forget();
+
+        assert_eq!(computed.get_js().as_f64(), Some(1.0));
+        computed.inner.borrow_mut().computed = None;
+
+        source.set_js(JsValue::from_f64(2.0));
+        assert!(computed.inner.borrow().computed.is_none());
+    }
 }
 
 #[wasm_bindgen(typescript_custom_section)]

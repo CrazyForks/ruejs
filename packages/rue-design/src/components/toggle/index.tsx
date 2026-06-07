@@ -8,6 +8,7 @@ Toggle 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** ToggleColor 语义色类型。 */
 export type ToggleColor =
   | 'primary'
   | 'secondary'
@@ -18,39 +19,66 @@ export type ToggleColor =
   | 'info'
   | 'error'
 
+/** ToggleSize 尺寸类型。 */
 export type ToggleSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'default' | 'medium'
 
+/** ToggleValue 值类型。 */
 export type ToggleValue = boolean | string | number
 
+/** ToggleProps 组件属性。 */
 export interface ToggleProps {
+  /** 组件语义色。 */
   color?: ToggleColor
+  /** 组件尺寸。 */
   size?: ToggleSize
+  /** 受控选中状态。 */
   checked?: boolean
+  /** 非受控初始选中状态。 */
   defaultChecked?: boolean
+  /** 受控值。 */
   value?: ToggleValue
+  /** 非受控初始值。 */
   defaultValue?: ToggleValue
+  /** checkedChildren 配置项。 */
   checkedChildren?: any
+  /** unCheckedChildren 配置项。 */
   unCheckedChildren?: any
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** stateClassName 附加类名。 */
   stateClassName?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 根节点内联样式。 */
   rootStyle?: any
+  /** 组件子内容。 */
   children?: any
+  /** 值或状态变化时触发的回调。 */
   onChange?: (checked: boolean, event: Event) => void
+  /** onCheckedChange 事件回调。 */
   onCheckedChange?: (checked: boolean, event: Event) => void
+  /** 点击时触发的回调。 */
   onClick?: (checked: boolean, event: Event) => void
+  /** onNativeChange 事件回调。 */
   onNativeChange?: (event: Event) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: ToggleSize) => {
   switch (size) {
     case 'small':
@@ -63,6 +91,7 @@ const resolveSizeClass = (size?: ToggleSize) => {
   }
 }
 
+/** 解析 Loading Size Class 的内部工具函数。 */
 const resolveLoadingSizeClass = (size?: ToggleSize) => {
   switch (resolveSizeClass(size)) {
     case 'xs':
@@ -77,12 +106,14 @@ const resolveLoadingSizeClass = (size?: ToggleSize) => {
   }
 }
 
+/** 解析 Controlled Checked 的内部工具函数。 */
 const resolveControlledChecked = (checked?: boolean, value?: ToggleValue) => {
   if (typeof checked === 'boolean') return checked
   if (typeof value === 'boolean') return value
   return undefined
 }
 
+/** 解析 Default Checked 的内部工具函数。 */
 const resolveDefaultChecked = (
   defaultChecked?: boolean,
   defaultValue?: ToggleValue,
@@ -93,14 +124,17 @@ const resolveDefaultChecked = (
   return fallback
 }
 
+/** 解析 Native Value 的内部工具函数。 */
 const resolveNativeValue = (value?: ToggleValue) => {
   return typeof value === 'boolean' ? undefined : value
 }
 
+/** 解析 Native Default Value 的内部工具函数。 */
 const resolveNativeDefaultValue = (defaultValue?: ToggleValue) => {
   return typeof defaultValue === 'boolean' ? undefined : defaultValue
 }
 
+/** 构建 Input Class Name 的内部工具函数。 */
 const buildInputClassName = (color?: ToggleColor, size?: ToggleSize, className?: string) => {
   let cls = 'toggle'
   if (color) cls += ` toggle-${color}`
@@ -110,6 +144,7 @@ const buildInputClassName = (color?: ToggleColor, size?: ToggleSize, className?:
   return cls
 }
 
+/** 构建 Root Class Name 的内部工具函数。 */
 const buildRootClassName = (disabled?: boolean, rootClassName?: string) => {
   let cls = 'inline-flex max-w-full items-start gap-3 align-top text-base-content'
   if (disabled) cls += ' cursor-not-allowed opacity-65'
@@ -118,10 +153,12 @@ const buildRootClassName = (disabled?: boolean, rootClassName?: string) => {
   return cls
 }
 
+/** 构建 Content Class Name 的内部工具函数。 */
 const buildContentClassName = (contentClassName?: string) => {
   return appendClassName('flex min-w-0 flex-col gap-1 pt-0.5', contentClassName)
 }
 
+/** 构建 State Class Name 的内部工具函数。 */
 const buildStateClassName = (stateClassName?: string) => {
   return appendClassName(
     'inline-flex items-center gap-2 text-xs text-base-content/60',
@@ -129,6 +166,7 @@ const buildStateClassName = (stateClassName?: string) => {
   )
 }
 
+/** Toggle 的内部工具函数。 */
 const Toggle: FC<ToggleProps> = ({
   color,
   size,
@@ -304,4 +342,5 @@ const Toggle: FC<ToggleProps> = ({
   )
 }
 
+/** 默认导出开关组件。 */
 export default Toggle

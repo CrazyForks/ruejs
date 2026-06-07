@@ -7,6 +7,7 @@ TimePicker 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
 
+/** TimePickerSize 尺寸类型。 */
 export type TimePickerSize =
   | 'xs'
   | 'sm'
@@ -18,11 +19,17 @@ export type TimePickerSize =
   | 'medium'
   | 'large'
 
+/** TimePickerStatus 状态类型。 */
 export type TimePickerStatus = 'warning' | 'error'
+/** TimePickerVariant 视觉或语义变体类型。 */
 export type TimePickerVariant = 'outlined' | 'filled' | 'ghost' | 'borderless'
+/** TimePickerPlacement 位置或方向类型。 */
 export type TimePickerPlacement = 'bottomLeft' | 'bottomRight' | 'topLeft' | 'topRight'
+/** TimePickerPanelColumn 类型。 */
 export type TimePickerPanelColumn = 'hour' | 'minute' | 'second' | 'meridiem'
+/** TimePickerChangeSource 类型。 */
 export type TimePickerChangeSource = 'panel' | 'input' | 'clear' | 'now' | 'confirm'
+/** TimeMeridiem 类型。 */
 export type TimeMeridiem = 'am' | 'pm'
 
 interface InternalTimeSelection {
@@ -36,6 +43,19 @@ interface TimePanelOption<T = string | number> {
   value: T
   label: string
   disabled?: boolean
+}
+
+interface ScrollSnapshot {
+  elements: Array<{
+    left: number
+    target: Element
+    top: number
+  }>
+  view?: {
+    left: number
+    top: number
+    window: Window
+  }
 }
 
 type RuntimeGlobalRecord = typeof globalThis & {
@@ -53,127 +73,228 @@ interface TimePickerRuntimeConfig {
   disabledTime?: (selection: TimePickerValue | null) => TimePickerDisabledConfig | undefined
 }
 
+/** TimePickerValue 接口。 */
 export interface TimePickerValue {
+  /** hour 配置项。 */
   hour: number
+  /** minute 配置项。 */
   minute: number
+  /** second 配置项。 */
   second: number
+  /** meridiem 配置项。 */
   meridiem: TimeMeridiem
+  /** text 区域配置。 */
   text: string
 }
 
+/** TimePickerDisabledConfig 配置对象。 */
 export interface TimePickerDisabledConfig {
+  /** disabledHours 配置项。 */
   disabledHours?: () => number[]
+  /** disabledMinutes 配置项。 */
   disabledMinutes?: (selectedHour: number) => number[]
+  /** disabledSeconds 配置项。 */
   disabledSeconds?: (selectedHour: number, selectedMinute: number) => number[]
 }
 
+/** TimePickerCellRenderInfo 接口。 */
 export interface TimePickerCellRenderInfo {
+  /** subType 配置项。 */
   subType: TimePickerPanelColumn
+  /** selected 配置项。 */
   selected: boolean
+  /** 是否禁用交互。 */
   disabled: boolean
+  /** 展示标签。 */
   label: string
 }
 
+/** TimePickerChangeInfo 接口。 */
 export interface TimePickerChangeInfo {
+  /** selection 配置项。 */
   selection: TimePickerValue | null
+  /** source 配置项。 */
   source: TimePickerChangeSource
 }
 
+/** TimePickerAllowClearConfig 配置对象。 */
 export interface TimePickerAllowClearConfig {
+  /** 清空图标。 */
   clearIcon?: any
 }
 
+/** TimePickerProps 组件属性。 */
 export interface TimePickerProps {
+  /** 受控值。 */
   value?: string | null
+  /** 非受控初始值。 */
   defaultValue?: string | null
+  /** defaultOpenValue 值。 */
   defaultOpenValue?: string | null
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 是否允许一键清空。 */
   allowClear?: boolean | TimePickerAllowClearConfig
+  /** clearLabel 标签内容。 */
   clearLabel?: string
+  /** format 配置项。 */
   format?: string
+  /** use12Hours 配置项。 */
   use12Hours?: boolean
+  /** hourStep 配置项。 */
   hourStep?: number
+  /** minuteStep 配置项。 */
   minuteStep?: number
+  /** secondStep 配置项。 */
   secondStep?: number
+  /** hideDisabledOptions 选项配置。 */
   hideDisabledOptions?: boolean
+  /** inputReadOnly 配置项。 */
   inputReadOnly?: boolean
+  /** needConfirm 配置项。 */
   needConfirm?: boolean
+  /** showNow 配置项。 */
   showNow?: boolean
+  /** nowLabel 标签内容。 */
   nowLabel?: string
+  /** confirmLabel 标签内容。 */
   confirmLabel?: string
+  /** changeOnScroll 配置项。 */
   changeOnScroll?: boolean
+  /** 占位内容。 */
   placeholder?: string
+  /** 弹出层或内容展示位置。 */
   placement?: TimePickerPlacement
+  /** 组件状态。 */
   status?: TimePickerStatus
+  /** 组件视觉变体。 */
   variant?: TimePickerVariant
+  /** 组件尺寸。 */
   size?: TimePickerSize
+  /** 前缀内容。 */
   prefix?: any
+  /** suffixIcon 图标内容。 */
   suffixIcon?: any
+  /** 输入前置附加内容。 */
   addonBefore?: any
+  /** 输入后置附加内容。 */
   addonAfter?: any
+  /** renderExtraFooter 配置项。 */
   renderExtraFooter?: () => any
+  /** disabledTime 配置项。 */
   disabledTime?: (selection: TimePickerValue | null) => TimePickerDisabledConfig | undefined
+  /** cellRender 自定义渲染函数。 */
   cellRender?: (current: number | string, info: TimePickerCellRenderInfo) => any
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** popupClassName 附加类名。 */
   popupClassName?: string
+  /** panelClassName 附加类名。 */
   panelClassName?: string
+  /** inputClassName 附加类名。 */
   inputClassName?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 值或状态变化时触发的回调。 */
   onChange?: (value: string | null, timeString: string, info: TimePickerChangeInfo) => void
+  /** onCalendarChange 事件回调。 */
   onCalendarChange?: (value: string | null, timeString: string, info: TimePickerChangeInfo) => void
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** onInput 事件回调。 */
   onInput?: (event: Event) => void
+  /** 获得焦点时触发的回调。 */
   onFocus?: (event: FocusEvent) => void
+  /** 失去焦点时触发的回调。 */
   onBlur?: (event: FocusEvent) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** TimeRangePickerChangeInfo 接口。 */
 export interface TimeRangePickerChangeInfo {
+  /** range 配置项。 */
   range: 'start' | 'end' | 'clear'
+  /** values 配置项。 */
   values: [TimePickerValue | null, TimePickerValue | null]
 }
 
+/** TimeRangePickerProps 组件属性。 */
 export interface TimeRangePickerProps {
+  /** 受控值。 */
   value?: [string | null, string | null]
+  /** 非受控初始值。 */
   defaultValue?: [string | null, string | null]
+  /** defaultOpenValue 值。 */
   defaultOpenValue?: [string | null, string | null] | string | null
+  /** 是否禁用交互。 */
   disabled?: boolean | [boolean, boolean]
+  /** 占位内容。 */
   placeholder?: string | [string, string]
+  /** 是否允许一键清空。 */
   allowClear?: boolean | TimePickerAllowClearConfig
+  /** order 配置项。 */
   order?: boolean
+  /** separator 配置项。 */
   separator?: any
+  /** format 配置项。 */
   format?: string
+  /** use12Hours 配置项。 */
   use12Hours?: boolean
+  /** hourStep 配置项。 */
   hourStep?: number
+  /** minuteStep 配置项。 */
   minuteStep?: number
+  /** secondStep 配置项。 */
   secondStep?: number
+  /** hideDisabledOptions 选项配置。 */
   hideDisabledOptions?: boolean
+  /** inputReadOnly 配置项。 */
   inputReadOnly?: boolean
+  /** needConfirm 配置项。 */
   needConfirm?: boolean
+  /** showNow 配置项。 */
   showNow?: boolean
+  /** nowLabel 标签内容。 */
   nowLabel?: string
+  /** confirmLabel 标签内容。 */
   confirmLabel?: string
+  /** changeOnScroll 配置项。 */
   changeOnScroll?: boolean
+  /** 组件状态。 */
   status?: TimePickerStatus
+  /** 组件视觉变体。 */
   variant?: TimePickerVariant
+  /** 组件尺寸。 */
   size?: TimePickerSize
+  /** renderExtraFooter 配置项。 */
   renderExtraFooter?: () => any
+  /** disabledTime 配置项。 */
   disabledTime?: (
     selection: TimePickerValue | null,
     type: 'start' | 'end',
   ) => TimePickerDisabledConfig | undefined
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** pickerClassName 附加类名。 */
   pickerClassName?: string
+  /** startPickerClassName 附加类名。 */
   startPickerClassName?: string
+  /** endPickerClassName 附加类名。 */
   endPickerClassName?: string
+  /** 值或状态变化时触发的回调。 */
   onChange?: (
     values: [string | null, string | null],
     timeStrings: [string, string],
     info: TimeRangePickerChangeInfo,
   ) => void
+  /** onCalendarChange 事件回调。 */
   onCalendarChange?: (
     values: [string | null, string | null],
     timeStrings: [string, string],
@@ -186,33 +307,40 @@ export interface TimeRangePickerProps {
   ) => void
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...classNames: Array<string | undefined | null | false>) => {
   return classNames.filter(Boolean).join(' ')
 }
 
+/** clamp Number 的内部工具函数。 */
 const clampNumber = (value: number, min: number, max: number) => {
   if (Number.isNaN(value)) return min
   return Math.min(Math.max(value, min), max)
 }
 
+/** 归一化 Step 的内部工具函数。 */
 const normalizeStep = (value?: number) => {
   if (!value || !Number.isFinite(value) || value <= 0) return 1
   return Math.max(1, Math.floor(value))
 }
 
+/** pad Number 的内部工具函数。 */
 const padNumber = (value: number, length = 2) => {
   return String(value).padStart(length, '0')
 }
 
+/** escape Reg Exp 的内部工具函数。 */
 const escapeRegExp = (value: string) => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+/** 解析 Active Runtime 的内部工具函数。 */
 const resolveActiveRuntime = () => {
   const globalRecord = globalThis as RuntimeGlobalRecord
   return globalRecord.__rue_active ?? globalRecord.__rue
 }
 
+/** run With Active Runtime 的内部工具函数。 */
 const runWithActiveRuntime = <T,>(runtime: unknown, runner: () => T): T => {
   if ((typeof runtime !== 'object' && typeof runtime !== 'function') || runtime == null) {
     return runner()
@@ -234,6 +362,7 @@ const runWithActiveRuntime = <T,>(runtime: unknown, runner: () => T): T => {
   }
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: TimePickerSize) => {
   switch (size) {
     case 'small':
@@ -248,6 +377,7 @@ const resolveSizeClass = (size?: TimePickerSize) => {
   }
 }
 
+/** 解析 Variant Class Name 的内部工具函数。 */
 const resolveVariantClassName = (variant?: TimePickerVariant) => {
   switch (variant) {
     case 'filled':
@@ -261,6 +391,7 @@ const resolveVariantClassName = (variant?: TimePickerVariant) => {
   }
 }
 
+/** 解析 Status Class Name 的内部工具函数。 */
 const resolveStatusClassName = (status?: TimePickerStatus) => {
   switch (status) {
     case 'warning':
@@ -272,6 +403,7 @@ const resolveStatusClassName = (status?: TimePickerStatus) => {
   }
 }
 
+/** 构建 Shell Class Name 的内部工具函数。 */
 const buildShellClassName = ({
   status,
   size,
@@ -295,6 +427,7 @@ const buildShellClassName = ({
   return cls
 }
 
+/** 构建 Popup Class Name 的内部工具函数。 */
 const buildPopupClassName = (placement: TimePickerPlacement, className?: string) => {
   const vertical = placement.startsWith('top') ? 'bottom-full mb-2' : 'top-full mt-2'
   const horizontal = placement.endsWith('Right') ? 'right-0' : 'left-0'
@@ -306,15 +439,18 @@ const buildPopupClassName = (placement: TimePickerPlacement, className?: string)
   )
 }
 
+/** 解析 Format 的内部工具函数。 */
 const resolveFormat = (format?: string, use12Hours?: boolean) => {
   if (format && format.trim()) return format
   return use12Hours ? 'h:mm:ss a' : 'HH:mm:ss'
 }
 
+/** 判断是否存在 Token 的内部工具函数。 */
 const hasToken = (format: string, tokenPattern: RegExp) => {
   return tokenPattern.test(format)
 }
 
+/** 读取 Visible Columns 的内部工具函数。 */
 const getVisibleColumns = (format: string, use12Hours?: boolean): TimePickerPanelColumn[] => {
   const columns: TimePickerPanelColumn[] = ['hour']
   if (hasToken(format, /m/)) columns.push('minute')
@@ -323,15 +459,18 @@ const getVisibleColumns = (format: string, use12Hours?: boolean): TimePickerPane
   return columns
 }
 
+/** 读取 Meridiem 的内部工具函数。 */
 const getMeridiem = (hour: number): TimeMeridiem => {
   return hour >= 12 ? 'pm' : 'am'
 }
 
+/** display Hour 的内部工具函数。 */
 const displayHour = (hour: number) => {
   const value = hour % 12
   return value === 0 ? 12 : value
 }
 
+/** apply Meridiem To Hour 的内部工具函数。 */
 const applyMeridiemToHour = (hour: number, meridiem: TimeMeridiem) => {
   const baseHour = displayHour(hour)
   if (meridiem === 'am') {
@@ -340,6 +479,7 @@ const applyMeridiemToHour = (hour: number, meridiem: TimeMeridiem) => {
   return baseHour === 12 ? 12 : baseHour + 12
 }
 
+/** 归一化 Selection 的内部工具函数。 */
 const normalizeSelection = (selection: InternalTimeSelection): InternalTimeSelection => {
   return {
     hour: clampNumber(selection.hour, 0, 23),
@@ -348,6 +488,7 @@ const normalizeSelection = (selection: InternalTimeSelection): InternalTimeSelec
   }
 }
 
+/** selections Equal 的内部工具函数。 */
 const selectionsEqual = (
   left: InternalTimeSelection | null | undefined,
   right: InternalTimeSelection | null | undefined,
@@ -357,10 +498,12 @@ const selectionsEqual = (
   return left.hour === right.hour && left.minute === right.minute && left.second === right.second
 }
 
+/** selection To Comparable 的内部工具函数。 */
 const selectionToComparable = (selection: InternalTimeSelection) => {
   return selection.hour * 3600 + selection.minute * 60 + selection.second
 }
 
+/** 构建 Parser 的内部工具函数。 */
 const buildParser = (format: string) => {
   const tokenRegex = /(HH|H|hh|h|mm|m|ss|s|A|a)/g
   const parts: string[] = []
@@ -405,6 +548,7 @@ const buildParser = (format: string) => {
   }
 }
 
+/** parse Time String 的内部工具函数。 */
 const parseTimeString = (
   rawValue: string | null | undefined,
   format: string,
@@ -471,6 +615,17 @@ const parseTimeString = (
   }
 }
 
+/** 将外部 value/defaultValue 规范化成输入框展示文本，避免受 format/use12Hours 差异影响。 */
+const normalizeInputTextFromValue = (
+  rawValue: string | null | undefined,
+  format: string,
+  use12Hours?: boolean,
+) => {
+  const parsed = parseTimeString(rawValue, format, use12Hours)
+  return parsed ? formatTimeSelection(parsed, format) : ''
+}
+
+/** format Time Selection 的内部工具函数。 */
 const formatTimeSelection = (selection: InternalTimeSelection, format: string) => {
   return format.replace(/HH|H|hh|h|mm|m|ss|s|A|a/g, token => {
     switch (token) {
@@ -500,6 +655,7 @@ const formatTimeSelection = (selection: InternalTimeSelection, format: string) =
   })
 }
 
+/** 转换为 Time Picker Value 的内部工具函数。 */
 const toTimePickerValue = (
   selection: InternalTimeSelection | null,
   format: string,
@@ -514,6 +670,7 @@ const toTimePickerValue = (
   }
 }
 
+/** 构建 Step Values 的内部工具函数。 */
 const buildStepValues = (max: number, step: number) => {
   const resolvedStep = normalizeStep(step)
   const values: number[] = []
@@ -526,14 +683,17 @@ const buildStepValues = (max: number, step: number) => {
   return values
 }
 
+/** find First Enabled Option 的内部工具函数。 */
 const findFirstEnabledOption = <T,>(options: TimePanelOption<T>[]) => {
   return options.find(option => !option.disabled)
 }
 
+/** filter Disabled Options 的内部工具函数。 */
 const filterDisabledOptions = <T,>(options: TimePanelOption<T>[], hideDisabledOptions: boolean) => {
   return hideDisabledOptions ? options.filter(option => !option.disabled) : options
 }
 
+/** 解析 Disabled Config 的内部工具函数。 */
 const resolveDisabledConfig = (
   selection: InternalTimeSelection,
   config: TimePickerRuntimeConfig,
@@ -541,6 +701,7 @@ const resolveDisabledConfig = (
   return config.disabledTime?.(toTimePickerValue(selection, config.format))
 }
 
+/** 构建 Meridiem Options 的内部工具函数。 */
 const buildMeridiemOptions = (
   selection: InternalTimeSelection,
   config: TimePickerRuntimeConfig,
@@ -566,6 +727,7 @@ const buildMeridiemOptions = (
   return filterDisabledOptions(options, honorHideDisabled && config.hideDisabledOptions)
 }
 
+/** 构建 Hour Options 的内部工具函数。 */
 const buildHourOptions = (
   selection: InternalTimeSelection,
   config: TimePickerRuntimeConfig,
@@ -587,6 +749,7 @@ const buildHourOptions = (
   return filterDisabledOptions(options, honorHideDisabled && config.hideDisabledOptions)
 }
 
+/** 构建 Minute Options 的内部工具函数。 */
 const buildMinuteOptions = (
   selection: InternalTimeSelection,
   config: TimePickerRuntimeConfig,
@@ -603,6 +766,7 @@ const buildMinuteOptions = (
   return filterDisabledOptions(options, honorHideDisabled && config.hideDisabledOptions)
 }
 
+/** 构建 Second Options 的内部工具函数。 */
 const buildSecondOptions = (
   selection: InternalTimeSelection,
   config: TimePickerRuntimeConfig,
@@ -621,6 +785,7 @@ const buildSecondOptions = (
   return filterDisabledOptions(options, honorHideDisabled && config.hideDisabledOptions)
 }
 
+/** 读取 Column Options 的内部工具函数。 */
 const getColumnOptions = (
   column: TimePickerPanelColumn,
   selection: InternalTimeSelection,
@@ -641,6 +806,7 @@ const getColumnOptions = (
   }
 }
 
+/** sanitize Selection 的内部工具函数。 */
 const sanitizeSelection = (
   rawSelection: InternalTimeSelection,
   config: TimePickerRuntimeConfig,
@@ -689,6 +855,7 @@ const sanitizeSelection = (
   return nextSelection
 }
 
+/** now Selection 的内部工具函数。 */
 const nowSelection = (): InternalTimeSelection => {
   const currentDate = new Date()
   return {
@@ -698,6 +865,7 @@ const nowSelection = (): InternalTimeSelection => {
   }
 }
 
+/** apply Column Value 的内部工具函数。 */
 const applyColumnValue = (
   selection: InternalTimeSelection,
   column: TimePickerPanelColumn,
@@ -716,6 +884,7 @@ const applyColumnValue = (
   } as InternalTimeSelection
 }
 
+/** 解析 Column Heading 的内部工具函数。 */
 const resolveColumnHeading = (column: TimePickerPanelColumn) => {
   switch (column) {
     case 'hour':
@@ -731,6 +900,65 @@ const resolveColumnHeading = (column: TimePickerPanelColumn) => {
   }
 }
 
+const internalBlurCloseDelay = 32
+const internalBlurPreserveWindow = 160
+const internalSelectionScrollRestoreDelays = [0, internalBlurCloseDelay + 8, 120, 320, 720, 1200]
+const controlledSelectionOpenResumeWindow = 2000
+
+interface ControlledSelectionOpenResume {
+  expiresAt: number
+  format: string
+  text: string
+  use12Hours: boolean
+}
+
+let controlledSelectionOpenResume: ControlledSelectionOpenResume | undefined
+
+const focusWithoutScroll = (element: HTMLElement) => {
+  element.focus({ preventScroll: true })
+}
+
+const rememberControlledSelectionOpen = (text: string, format: string, use12Hours: boolean) => {
+  controlledSelectionOpenResume = {
+    text,
+    format,
+    use12Hours,
+    expiresAt: Date.now() + controlledSelectionOpenResumeWindow,
+  }
+}
+
+const consumeControlledSelectionOpen = (
+  value: string | null | undefined,
+  format: string,
+  use12Hours: boolean,
+) => {
+  const resume = controlledSelectionOpenResume
+  if (!resume) {
+    return false
+  }
+
+  if (Date.now() > resume.expiresAt) {
+    controlledSelectionOpenResume = undefined
+    return false
+  }
+
+  const rawValue = value == null ? '' : String(value).trim()
+  const parsedValue = parseTimeString(rawValue, format, use12Hours)
+  const normalizedText = parsedValue ? formatTimeSelection(parsedValue, format) : rawValue
+
+  if (
+    resume.text !== normalizedText ||
+    resume.format !== format ||
+    resume.use12Hours !== use12Hours
+  ) {
+    return false
+  }
+
+  controlledSelectionOpenResume = undefined
+  return true
+}
+
+/** 解析 Current Column Value 的内部工具函数。 */
 const resolveCurrentColumnValue = (
   column: TimePickerPanelColumn,
   selection: InternalTimeSelection,
@@ -741,6 +969,7 @@ const resolveCurrentColumnValue = (
   return selection[column]
 }
 
+/** 解析 Default Selection 的内部工具函数。 */
 const resolveDefaultSelection = (
   currentSelection: InternalTimeSelection | null,
   defaultOpenValue: string | null | undefined,
@@ -750,6 +979,7 @@ const resolveDefaultSelection = (
   return sanitizeSelection(parsedDefaultOpen ?? currentSelection ?? nowSelection(), config)
 }
 
+/** compare Range Values 的内部工具函数。 */
 const compareRangeValues = (
   left: string | null,
   right: string | null,
@@ -762,6 +992,7 @@ const compareRangeValues = (
   return selectionToComparable(leftSelection) - selectionToComparable(rightSelection)
 }
 
+/** 归一化 Range Value 的内部工具函数。 */
 const normalizeRangeValue = (
   value?: [string | null, string | null],
 ): [string | null, string | null] => {
@@ -769,6 +1000,7 @@ const normalizeRangeValue = (
   return [value[0] ?? null, value[1] ?? null]
 }
 
+/** range Values Equal 的内部工具函数。 */
 const rangeValuesEqual = (
   left: [string | null, string | null],
   right: [string | null, string | null],
@@ -776,6 +1008,7 @@ const rangeValuesEqual = (
   return left[0] === right[0] && left[1] === right[1]
 }
 
+/** 归一化 Range Disabled 的内部工具函数。 */
 const normalizeRangeDisabled = (disabled?: boolean | [boolean, boolean]): [boolean, boolean] => {
   if (Array.isArray(disabled)) {
     return [!!disabled[0], !!disabled[1]]
@@ -783,6 +1016,7 @@ const normalizeRangeDisabled = (disabled?: boolean | [boolean, boolean]): [boole
   return [!!disabled, !!disabled]
 }
 
+/** 归一化 Range Placeholders 的内部工具函数。 */
 const normalizeRangePlaceholders = (placeholder?: string | [string, string]): [string, string] => {
   if (Array.isArray(placeholder)) {
     return [placeholder[0] ?? '开始时间', placeholder[1] ?? '结束时间']
@@ -793,6 +1027,7 @@ const normalizeRangePlaceholders = (placeholder?: string | [string, string]): [s
   return ['开始时间', '结束时间']
 }
 
+/** 归一化 Default Open Values 的内部工具函数。 */
 const normalizeDefaultOpenValues = (
   defaultOpenValue?: [string | null, string | null] | string | null,
 ): [string | null, string | null] => {
@@ -802,6 +1037,7 @@ const normalizeDefaultOpenValues = (
   return [defaultOpenValue ?? null, defaultOpenValue ?? null]
 }
 
+/** Addon 的内部工具函数。 */
 const Addon: FC<{ children: any }> = ({ children }) => {
   return (
     <span className="join-item inline-flex items-center border border-base-300 bg-base-200 px-3 text-sm text-base-content/65">
@@ -810,6 +1046,7 @@ const Addon: FC<{ children: any }> = ({ children }) => {
   )
 }
 
+/** Default Clear Icon 的内部工具函数。 */
 const DefaultClearIcon: FC = () => {
   return (
     <svg
@@ -826,6 +1063,7 @@ const DefaultClearIcon: FC = () => {
   )
 }
 
+/** Clock Icon 的内部工具函数。 */
 const ClockIcon: FC<{ iconRef?: { current?: SVGSVGElement } }> = ({ iconRef }) => {
   return (
     <svg
@@ -844,6 +1082,7 @@ const ClockIcon: FC<{ iconRef?: { current?: SVGSVGElement } }> = ({ iconRef }) =
   )
 }
 
+/** Time Picker Root 的内部工具函数。 */
 const TimePickerRoot: FC<TimePickerProps> = ({
   value,
   defaultValue,
@@ -895,19 +1134,37 @@ const TimePickerRoot: FC<TimePickerProps> = ({
   const inputRef = useRef<HTMLInputElement>()
   const popupRef = useRef<HTMLDivElement>()
   const popupContentHostRef = useRef<HTMLDivElement>()
+  /** fast popup 模式下单独承载 renderExtraFooter 的 Rue 子树。 */
+  const fastExtraFooterHostRef = useRef<HTMLDivElement>()
   const clearButtonRef = useRef<HTMLButtonElement>()
   const defaultSuffixIconRef = useRef<SVGSVGElement>()
   const preservePopupOnInternalBlur = useRef(false)
+  const suppressNextFocusOpen = useRef(false)
   const forwardedRef = rest.ref
   const isControlledOpen = open !== undefined
   const allowClearConfig = allowClear && typeof allowClear === 'object' ? allowClear : undefined
   const resolvedFormatValue = resolveFormat(format, use12Hours)
   const visibleColumns = getVisibleColumns(resolvedFormatValue, use12Hours)
-  const popupOpen = useRef(isControlledOpen ? !!open : !!defaultOpen)
-  const inputText = useRef(value !== undefined ? (value ?? '') : (defaultValue ?? ''))
+  const initialInputText = normalizeInputTextFromValue(
+    value !== undefined ? value : defaultValue,
+    resolvedFormatValue,
+    use12Hours,
+  )
+  const shouldResumeControlledSelectionOpen =
+    !isControlledOpen &&
+    value !== undefined &&
+    consumeControlledSelectionOpen(value, resolvedFormatValue, use12Hours)
+  const popupOpen = useRef(
+    isControlledOpen ? !!open : shouldResumeControlledSelectionOpen || !!defaultOpen,
+  )
+  const inputText = useRef(initialInputText)
+  const lastSyncedPropInputText = useRef(initialInputText)
   const committedSelection = useRef<InternalTimeSelection | null>(null)
   const draftSelection = useRef<InternalTimeSelection | null>(null)
+  const popupContentRenderMode = useRef<'none' | 'fast' | 'rue'>('none')
   const blurTimer = useRef<ReturnType<typeof setTimeout>>()
+  const internalBlurPreserveTimer = useRef<ReturnType<typeof setTimeout>>()
+  const suppressFocusOpenTimer = useRef<ReturnType<typeof setTimeout>>()
   const runtimeConfig = (): TimePickerRuntimeConfig => ({
     format: resolvedFormatValue,
     use12Hours,
@@ -924,11 +1181,151 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     delete rest.ref
   }
 
+  const clearPopupInternalInteraction = () => {
+    preservePopupOnInternalBlur.current = false
+    if (internalBlurPreserveTimer.current) {
+      clearTimeout(internalBlurPreserveTimer.current)
+      internalBlurPreserveTimer.current = undefined
+    }
+  }
+
+  const markPopupInternalInteraction = () => {
+    preservePopupOnInternalBlur.current = true
+    if (internalBlurPreserveTimer.current) {
+      clearTimeout(internalBlurPreserveTimer.current)
+    }
+    internalBlurPreserveTimer.current = setTimeout(() => {
+      preservePopupOnInternalBlur.current = false
+      internalBlurPreserveTimer.current = undefined
+    }, internalBlurPreserveWindow)
+  }
+
+  const focusInputWithoutOpeningPopup = () => {
+    const input = inputRef.current
+    if (!input) return
+
+    if (input.ownerDocument.activeElement === input) {
+      return
+    }
+
+    suppressNextFocusOpen.current = true
+    if (suppressFocusOpenTimer.current) {
+      clearTimeout(suppressFocusOpenTimer.current)
+    }
+    suppressFocusOpenTimer.current = setTimeout(() => {
+      suppressNextFocusOpen.current = false
+      suppressFocusOpenTimer.current = undefined
+    }, 0)
+    focusWithoutScroll(input)
+  }
+
+  const captureDocumentScroll = (): ScrollSnapshot | null => {
+    const ownerDocument = rootRef.current?.ownerDocument ?? inputRef.current?.ownerDocument
+    if (!ownerDocument) {
+      return null
+    }
+
+    const elements: ScrollSnapshot['elements'] = []
+    const addTarget = (target?: Element | null) => {
+      if (!target || elements.some(item => item.target === target)) return
+      elements.push({
+        target,
+        top: target.scrollTop,
+        left: target.scrollLeft,
+      })
+    }
+
+    let current: Element | null = rootRef.current ?? inputRef.current ?? null
+    while (current) {
+      addTarget(current)
+      current = current.parentElement
+    }
+
+    addTarget(ownerDocument.scrollingElement)
+    addTarget(ownerDocument.documentElement)
+    addTarget(ownerDocument.body)
+
+    const ownerWindow = ownerDocument.defaultView
+    return {
+      elements,
+      view: ownerWindow
+        ? {
+            window: ownerWindow,
+            top: ownerWindow.scrollY,
+            left: ownerWindow.scrollX,
+          }
+        : undefined,
+    }
+  }
+
+  const restoreDocumentScroll = (snapshot: ScrollSnapshot | null) => {
+    if (!snapshot) return
+    snapshot.elements.forEach(item => {
+      item.target.scrollLeft = item.left
+      item.target.scrollTop = item.top
+    })
+    if (
+      snapshot.view &&
+      (snapshot.view.window.scrollX !== snapshot.view.left ||
+        snapshot.view.window.scrollY !== snapshot.view.top)
+    ) {
+      snapshot.view.window.scrollTo(snapshot.view.left, snapshot.view.top)
+    }
+  }
+
+  const keepPopupRootInView = () => {
+    const root = rootRef.current
+    if (!root || !root.isConnected || !popupOpen.current) return
+    if (typeof root.scrollIntoView !== 'function') return
+
+    const ownerWindow = root.ownerDocument.defaultView
+    const viewportHeight =
+      ownerWindow?.innerHeight ?? root.ownerDocument.documentElement.clientHeight
+    const rect = root.getBoundingClientRect()
+    if (rect.top < 0 || rect.bottom > viewportHeight) {
+      root.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    }
+  }
+
+  const restoreDocumentScrollAroundPopup = (snapshot: ScrollSnapshot | null) => {
+    restoreDocumentScroll(snapshot)
+    keepPopupRootInView()
+  }
+
+  const preserveDocumentScrollAfterInternalSelection = (snapshot: ScrollSnapshot | null) => {
+    if (!snapshot) return
+    const ownerWindow =
+      snapshot.view?.window ?? (typeof window === 'undefined' ? undefined : window)
+
+    restoreDocumentScrollAroundPopup(snapshot)
+    ownerWindow?.requestAnimationFrame?.(() => {
+      restoreDocumentScrollAroundPopup(snapshot)
+    })
+    internalSelectionScrollRestoreDelays.forEach(delay => {
+      ownerWindow?.setTimeout(() => {
+        restoreDocumentScrollAroundPopup(snapshot)
+      }, delay)
+    })
+  }
+
   const syncInputDom = () => {
-    if (!inputRef.current) return
+    const input = inputRef.current
+    if (!input) return
     const nextText = inputText.current ?? ''
-    if (inputRef.current.value !== nextText) {
-      inputRef.current.value = nextText
+    if (input.value !== nextText) {
+      input.value = nextText
+    }
+    input.disabled = !!disabled
+    if (disabled) {
+      input.setAttribute('disabled', '')
+    } else {
+      input.removeAttribute('disabled')
+    }
+    input.readOnly = !!inputReadOnly
+    if (inputReadOnly) {
+      input.setAttribute('readonly', '')
+    } else {
+      input.removeAttribute('readonly')
     }
   }
 
@@ -963,6 +1360,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
 
   const assignInputRef = (element: HTMLInputElement | null) => {
     inputRef.current = element ?? undefined
+    syncInputDom()
     if (typeof forwardedRef === 'function') {
       forwardedRef(element)
       return
@@ -975,6 +1373,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
   const setPopupOpen = (nextOpen: boolean) => {
     if (disabled) return
     if (!isControlledOpen && popupOpen.current === nextOpen) {
+      syncPopupDom()
       return
     }
     if (!isControlledOpen) {
@@ -1015,12 +1414,10 @@ const TimePickerRoot: FC<TimePickerProps> = ({
         return
       }
 
-      if (!popupOpen.current) {
-        setPopupOpen(true)
-      }
+      setPopupOpen(true)
 
       if (inputRef.current.ownerDocument.activeElement !== inputRef.current) {
-        inputRef.current.focus()
+        focusWithoutScroll(inputRef.current)
       }
     }, 0)
   }
@@ -1042,6 +1439,9 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     syncClearButtonDom()
     if (popupOpen.current && (source === 'panel' || source === 'now')) {
       syncPopupContent()
+    }
+    if ((source === 'panel' || source === 'now') && nextText) {
+      rememberControlledSelectionOpen(nextText, resolvedFormatValue, use12Hours)
     }
 
     if (previousText === nextText && source !== 'clear') {
@@ -1073,12 +1473,16 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     const inputChanged = (inputText.current ?? '') !== nextInputText
     const draftChanged =
       shouldSyncDraft && !selectionsEqual(draftSelection.current ?? null, nextDraftSelection)
+    const shouldPreserveFocusedControlledInput =
+      value !== undefined &&
+      inputRef.current?.ownerDocument.activeElement === inputRef.current &&
+      lastSyncedPropInputText.current === nextInputText
 
     if (committedChanged) {
       committedSelection.current = nextSelection ? { ...nextSelection } : null
     }
 
-    if (inputChanged) {
+    if (inputChanged && !shouldPreserveFocusedControlledInput) {
       inputText.current = nextInputText
     }
 
@@ -1086,9 +1490,18 @@ const TimePickerRoot: FC<TimePickerProps> = ({
       draftSelection.current = nextDraftSelection ? { ...nextDraftSelection } : null
     }
 
+    if (value !== undefined) {
+      lastSyncedPropInputText.current = nextInputText
+    }
+
     syncInputDom()
     syncClearButtonDom()
-    syncPopupDom()
+
+    if (committedChanged || inputChanged || draftChanged || popupOpen.current) {
+      syncPopupDom()
+    } else {
+      syncShellDom()
+    }
   }
 
   const getActiveSelection = () => {
@@ -1096,6 +1509,179 @@ const TimePickerRoot: FC<TimePickerProps> = ({
       draftSelection.current ??
       resolveDefaultSelection(committedSelection.current ?? null, defaultOpenValue, runtimeConfig())
     )
+  }
+
+  /** 清理 fast 模式下额外 footer 的 Rue 渲染内容。 */
+  const clearFastExtraFooterContent = () => {
+    const host = fastExtraFooterHostRef.current
+    if (!host) return
+    withCallbackRuntime(() => {
+      renderRue(null, host)
+    })
+    fastExtraFooterHostRef.current = undefined
+  }
+
+  const clearPopupContent = (host: HTMLDivElement) => {
+    if (popupContentRenderMode.current === 'rue') {
+      withCallbackRuntime(() => {
+        renderRue(null, host)
+      })
+    } else if (popupContentRenderMode.current === 'fast') {
+      clearFastExtraFooterContent()
+      host.replaceChildren()
+    }
+    popupContentRenderMode.current = 'none'
+  }
+
+  const renderFastPopupContent = (host: HTMLDivElement, activeSelection: InternalTimeSelection) => {
+    const ownerDocument = host.ownerDocument
+    clearFastExtraFooterContent()
+
+    const panel = ownerDocument.createElement('div')
+    panel.className = mergeClassName(
+      'rounded-[1.1rem] bg-gradient-to-br from-base-100 via-base-100 to-base-200/55 p-1',
+      panelClassName,
+    )
+    panel.setAttribute('data-rue-time-picker-popup-content', 'true')
+
+    const columnsGrid = ownerDocument.createElement('div')
+    columnsGrid.className = 'grid gap-2 px-2 pt-2'
+    columnsGrid.style.gridTemplateColumns = `repeat(${visibleColumns.length}, minmax(0, 1fr))`
+
+    for (const column of visibleColumns) {
+      const options = getColumnOptions(column, activeSelection, runtimeConfig(), true)
+      const selectedValue = resolveCurrentColumnValue(column, activeSelection)
+      const columnPanel = ownerDocument.createElement('div')
+      columnPanel.className = 'min-w-0 rounded-xl border border-base-300/70 bg-base-100/85 p-2'
+
+      const heading = ownerDocument.createElement('div')
+      heading.className = 'mb-2 px-2 text-[11px] uppercase tracking-[0.2em] text-base-content/45'
+      heading.textContent = resolveColumnHeading(column)
+      columnPanel.appendChild(heading)
+
+      const list = ownerDocument.createElement('div')
+      list.className = 'max-h-56 space-y-1 overflow-y-auto pr-1'
+      if (changeOnScroll) {
+        list.addEventListener(
+          'wheel',
+          event => {
+            event.preventDefault()
+            stepColumn(column, event.deltaY > 0 ? 1 : -1)
+          },
+          { passive: false },
+        )
+      }
+
+      if (options.length) {
+        for (const option of options) {
+          const selected = option.value === selectedValue
+          const button = ownerDocument.createElement('button')
+          button.type = 'button'
+          button.disabled = !!option.disabled
+          button.setAttribute('aria-selected', selected ? 'true' : 'false')
+          button.setAttribute('data-rue-time-selected', selected ? 'true' : 'false')
+          button.setAttribute('data-rue-time-column', column)
+          button.setAttribute('data-rue-time-option', String(option.value))
+          button.className = mergeClassName(
+            'flex w-full items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors duration-150',
+            option.disabled
+              ? 'cursor-not-allowed border-transparent opacity-35'
+              : selected
+                ? 'border-primary bg-primary text-primary-content shadow-[0_14px_28px_-20px_rgba(59,130,246,0.95)]'
+                : 'border-transparent text-base-content/75 hover:bg-base-200',
+          )
+          button.textContent = option.label
+          button.addEventListener('pointerdown', event =>
+            preventPopupButtonBlur(event as PointerEvent),
+          )
+          button.addEventListener('mousedown', event => preventPopupButtonBlur(event as MouseEvent))
+          button.addEventListener('click', () => {
+            handlePanelSelection(column, option.value)
+          })
+          list.appendChild(button)
+        }
+      } else {
+        const empty = ownerDocument.createElement('div')
+        empty.className = 'px-2 py-6 text-center text-sm text-base-content/40'
+        empty.textContent = '暂无可选项'
+        list.appendChild(empty)
+      }
+
+      columnPanel.appendChild(list)
+      columnsGrid.appendChild(columnPanel)
+    }
+
+    panel.appendChild(columnsGrid)
+
+    const footer = ownerDocument.createElement('div')
+    footer.className = 'mt-3 border-t border-base-300/70 px-2 pt-3'
+
+    const footerRow = ownerDocument.createElement('div')
+    footerRow.className = 'flex flex-wrap items-center justify-between gap-2'
+
+    const helperText = ownerDocument.createElement('div')
+    helperText.className = 'text-xs text-base-content/45'
+    helperText.textContent = changeOnScroll ? '支持滚轮快速切换' : '点击列表项完成选择'
+    footerRow.appendChild(helperText)
+
+    const actionGroup = ownerDocument.createElement('div')
+    actionGroup.className = 'flex flex-wrap items-center gap-2'
+
+    if (showNow) {
+      const nowButton = ownerDocument.createElement('button')
+      nowButton.type = 'button'
+      nowButton.className = 'btn btn-ghost btn-sm'
+      nowButton.textContent = nowLabel
+      nowButton.addEventListener('pointerdown', event =>
+        preventPopupButtonBlur(event as PointerEvent),
+      )
+      nowButton.addEventListener('mousedown', event => preventPopupButtonBlur(event as MouseEvent))
+      nowButton.addEventListener('click', handleNowClick)
+      actionGroup.appendChild(nowButton)
+    }
+
+    if (needConfirm) {
+      const confirmButton = ownerDocument.createElement('button')
+      confirmButton.type = 'button'
+      confirmButton.className = 'btn btn-primary btn-sm'
+      confirmButton.setAttribute('data-rue-time-confirm', 'true')
+      confirmButton.textContent = confirmLabel
+      confirmButton.addEventListener('pointerdown', event =>
+        preventPopupButtonBlur(event as PointerEvent),
+      )
+      confirmButton.addEventListener('mousedown', event =>
+        preventPopupButtonBlur(event as MouseEvent),
+      )
+      confirmButton.addEventListener('click', handleConfirm)
+      actionGroup.appendChild(confirmButton)
+    }
+
+    footerRow.appendChild(actionGroup)
+
+    // fast 渲染主面板仍允许 renderExtraFooter 使用 Rue 子树挂到专用 host。
+    let extraFooterHost: HTMLDivElement | undefined
+    if (renderExtraFooter) {
+      extraFooterHost = ownerDocument.createElement('div')
+      extraFooterHost.className = 'mb-3 text-sm text-base-content/65'
+      footer.appendChild(extraFooterHost)
+    }
+
+    footer.appendChild(footerRow)
+    panel.appendChild(footer)
+
+    if (popupContentRenderMode.current === 'rue') {
+      withCallbackRuntime(() => {
+        renderRue(null, host)
+      })
+    }
+    host.replaceChildren(panel)
+    if (extraFooterHost && renderExtraFooter) {
+      fastExtraFooterHostRef.current = extraFooterHost
+      withCallbackRuntime(() => {
+        renderRue(renderExtraFooter(), extraFooterHost)
+      })
+    }
+    popupContentRenderMode.current = 'fast'
   }
 
   const renderPopupContent = () => {
@@ -1106,13 +1692,19 @@ const TimePickerRoot: FC<TimePickerProps> = ({
 
     const popupVisible = !!popupOpen.current && !disabled
     if (!popupVisible) {
-      withCallbackRuntime(() => {
-        renderRue(null, host)
-      })
       return
     }
 
     const activeSelection = getActiveSelection()
+
+    if (!cellRender) {
+      renderFastPopupContent(host, activeSelection)
+      return
+    }
+
+    if (popupContentRenderMode.current === 'fast') {
+      clearPopupContent(host)
+    }
 
     withCallbackRuntime(() => {
       renderRue(
@@ -1232,6 +1824,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
         host,
       )
     })
+    popupContentRenderMode.current = 'rue'
   }
 
   const syncPopupContent = () => {
@@ -1250,6 +1843,8 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     optionValue: number | string,
     source: Extract<TimePickerChangeSource, 'panel' | 'now'> = 'panel',
   ) => {
+    const scrollSnapshot = captureDocumentScroll()
+    markPopupInternalInteraction()
     const currentSelection = getActiveSelection()
     const nextSelection = sanitizeSelection(
       applyColumnValue(currentSelection, column, optionValue),
@@ -1267,9 +1862,13 @@ const TimePickerRoot: FC<TimePickerProps> = ({
         schedulePopupRefocus()
       }
     }
+
+    preserveDocumentScrollAfterInternalSelection(scrollSnapshot)
   }
 
   const handleNowClick = () => {
+    const scrollSnapshot = captureDocumentScroll()
+    markPopupInternalInteraction()
     const nextSelection = sanitizeSelection(nowSelection(), runtimeConfig())
     draftSelection.current = { ...nextSelection }
     if (needConfirm) {
@@ -1280,6 +1879,8 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     if (!needConfirm) {
       commitSelection(nextSelection, 'now')
     }
+
+    preserveDocumentScrollAfterInternalSelection(scrollSnapshot)
   }
 
   const resetDraftSelection = () => {
@@ -1324,17 +1925,19 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     }
     commitSelection(null, 'clear')
     resetDraftSelection()
+    clearPopupInternalInteraction()
     setPopupOpen(false)
-    inputRef.current?.focus()
+    focusInputWithoutOpeningPopup()
   }
 
   const handleConfirm = () => {
+    clearPopupInternalInteraction()
     commitSelection(draftSelection.current ?? null, 'confirm')
     setPopupOpen(false)
   }
 
   const preventPopupButtonBlur = (event: MouseEvent | PointerEvent) => {
-    preservePopupOnInternalBlur.current = true
+    markPopupInternalInteraction()
     if (typeof (event as any).preventDefault === 'function') {
       ;(event as any).preventDefault()
     }
@@ -1360,6 +1963,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     if (event.key === 'Escape') {
       syncInputText(committedSelection.current ?? null)
       resetDraftSelection()
+      clearPopupInternalInteraction()
       setPopupOpen(false)
       return
     }
@@ -1371,17 +1975,25 @@ const TimePickerRoot: FC<TimePickerProps> = ({
         return
       }
       applyInputTextValue()
+      clearPopupInternalInteraction()
       setPopupOpen(false)
     }
   }
 
   const handleFocus = (event: FocusEvent) => {
-    preservePopupOnInternalBlur.current = false
     if (blurTimer.current) {
       clearTimeout(blurTimer.current)
       blurTimer.current = undefined
     }
-    setPopupOpen(true)
+    if (suppressNextFocusOpen.current) {
+      suppressNextFocusOpen.current = false
+      if (suppressFocusOpenTimer.current) {
+        clearTimeout(suppressFocusOpenTimer.current)
+        suppressFocusOpenTimer.current = undefined
+      }
+    } else {
+      setPopupOpen(true)
+    }
     if (onFocus) {
       withCallbackRuntime(() => {
         onFocus(event)
@@ -1397,8 +2009,12 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     }
     blurTimer.current = setTimeout(() => {
       if (preservePopupOnInternalBlur.current) {
-        preservePopupOnInternalBlur.current = false
-        inputRef.current?.focus()
+        if (!popupOpen.current) {
+          setPopupOpen(true)
+        }
+        if (inputRef.current) {
+          focusWithoutScroll(inputRef.current)
+        }
         return
       }
       if (rootRef.current?.contains(document.activeElement)) {
@@ -1406,7 +2022,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
       }
       applyInputTextValue()
       setPopupOpen(false)
-    }, 0)
+    }, internalBlurCloseDelay)
   }
 
   const stepColumn = (column: TimePickerPanelColumn, direction: 1 | -1) => {
@@ -1441,6 +2057,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
       const target = event.target as Node | null
       if (!target) return
       if (rootRef.current?.contains(target)) return
+      clearPopupInternalInteraction()
       applyInputTextValue()
       setPopupOpen(false)
     }
@@ -1454,6 +2071,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
       if (!popupOpen.current || event.key !== 'Escape') return
       syncInputText(committedSelection.current ?? null)
       resetDraftSelection()
+      clearPopupInternalInteraction()
       setPopupOpen(false)
     }
 
@@ -1464,6 +2082,12 @@ const TimePickerRoot: FC<TimePickerProps> = ({
       if (blurTimer.current) {
         clearTimeout(blurTimer.current)
       }
+      if (internalBlurPreserveTimer.current) {
+        clearTimeout(internalBlurPreserveTimer.current)
+      }
+      if (suppressFocusOpenTimer.current) {
+        clearTimeout(suppressFocusOpenTimer.current)
+      }
       window.removeEventListener('pointerdown', handleWindowPointerDown, true)
       window.removeEventListener('keydown', handleWindowKeyDown)
     })
@@ -1471,9 +2095,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
 
   onUnmounted(() => {
     if (popupContentHostRef.current) {
-      withCallbackRuntime(() => {
-        renderRue(null, popupContentHostRef.current!)
-      })
+      clearPopupContent(popupContentHostRef.current)
       popupContentHostRef.current = undefined
     }
   })
@@ -1507,6 +2129,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
   )
 
   const hasAddons = addonBefore !== undefined || addonAfter !== undefined
+  const popupVisible = !!popupOpen.current && !disabled
 
   return (
     <div ref={rootRef} className={mergeClassName('relative', rootClassName)}>
@@ -1535,8 +2158,6 @@ const TimePickerRoot: FC<TimePickerProps> = ({
             type="text"
             data-testid={rest['data-testid']}
             value={inputText.current ?? ''}
-            disabled={disabled}
-            readOnly={inputReadOnly}
             placeholder={placeholder}
             aria-invalid={status === 'error' ? 'true' : rest['aria-invalid']}
             className={mergeClassName(
@@ -1574,8 +2195,11 @@ const TimePickerRoot: FC<TimePickerProps> = ({
         ref={popupRef}
         role="dialog"
         aria-label="Time picker panel"
-        aria-hidden="true"
-        className={mergeClassName(buildPopupClassName(placement, popupClassName), 'hidden')}
+        aria-hidden={popupVisible ? 'false' : 'true'}
+        className={mergeClassName(
+          buildPopupClassName(placement, popupClassName),
+          popupVisible ? undefined : 'hidden',
+        )}
         data-rue-time-picker-popup="true"
       >
         <div ref={assignPopupContentHostRef} />
@@ -1584,6 +2208,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
   )
 }
 
+/** Range Picker 的内部工具函数。 */
 const RangePicker: FC<TimeRangePickerProps> = ({
   value,
   defaultValue,
@@ -1630,7 +2255,7 @@ const RangePicker: FC<TimeRangePickerProps> = ({
   }
 
   const getCurrentValues = () => {
-    return value !== undefined ? normalizeRangeValue(value) : internalValues.value
+    return internalValues.value
   }
 
   watch(
@@ -1662,7 +2287,7 @@ const RangePicker: FC<TimeRangePickerProps> = ({
       }
     }
 
-    if (!emitCalendarOnly && value === undefined) {
+    if (!emitCalendarOnly) {
       internalValues.value = nextValues
       requestRender()
     }
@@ -1694,7 +2319,11 @@ const RangePicker: FC<TimeRangePickerProps> = ({
 
   return (
     <div
-      className={mergeClassName('flex items-center gap-2', rootClassName, className)}
+      className={mergeClassName(
+        'flex w-full max-w-full items-center gap-2',
+        rootClassName,
+        className,
+      )}
       data-rue-time-range-picker-version={String(renderVersion.value)}
     >
       <TimePickerRoot
@@ -1720,7 +2349,8 @@ const RangePicker: FC<TimeRangePickerProps> = ({
         size={size}
         renderExtraFooter={renderExtraFooter}
         disabledTime={selection => disabledTime?.(selection, 'start')}
-        className={mergeClassName('min-w-0 flex-1', pickerClassName, startPickerClassName)}
+        rootClassName="min-w-0 flex-1"
+        className={mergeClassName(pickerClassName, startPickerClassName)}
         onChange={nextValue => {
           commitRangeChange(0, nextValue, nextValue ? 'start' : 'clear')
         }}
@@ -1752,7 +2382,8 @@ const RangePicker: FC<TimeRangePickerProps> = ({
         size={size}
         renderExtraFooter={renderExtraFooter}
         disabledTime={selection => disabledTime?.(selection, 'end')}
-        className={mergeClassName('min-w-0 flex-1', pickerClassName, endPickerClassName)}
+        rootClassName="min-w-0 flex-1"
+        className={mergeClassName(pickerClassName, endPickerClassName)}
         onChange={nextValue => {
           commitRangeChange(1, nextValue, nextValue ? 'end' : 'clear')
         }}
@@ -1778,4 +2409,5 @@ const TimePicker: TimePickerCompound = ((props: TimePickerProps) => {
 
 TimePicker.RangePicker = RangePicker
 
+/** 默认导出时间选择器组件。 */
 export default TimePicker

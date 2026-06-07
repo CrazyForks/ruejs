@@ -1,0 +1,12 @@
+{
+  "type": "Program",
+  "declarations": ["x"],
+  "references": [
+    {
+      "name": "x",
+      "declaredAt": "Program",
+      "referenceNode": "x.y.z"
+    }
+  ],
+  "children": []
+}

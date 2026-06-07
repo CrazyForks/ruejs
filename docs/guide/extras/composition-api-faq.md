@@ -82,7 +82,7 @@ React Hooks 在每次组件更新时都会重复调用。这产生了许多可�
 
 - 陈旧闭包问题与 Concurrent 特性相结合，使得很难推断一段 hooks 代码何时运行，并使处理应该在渲染之间持久化的可变状态（通过 `useRef`）变得繁琐。
 
-> 注意：一些与记忆化相关的上述问题可以通过即将推出的 [React Compiler](https://react.dev/learn/react-compiler) 解决。
+> 注意：一些与记忆化相关的上述问题可以通过编译器优化解决。
 
 相比之下，Rue Composition API：
 

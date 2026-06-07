@@ -1,0 +1,11 @@
+{
+  "type": "Program",
+  "declarations": ["Self"],
+  "references": [
+    {
+      "name": "Self",
+      "declaredAt": "Program"
+    }
+  ],
+  "children": []
+}

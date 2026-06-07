@@ -1,0 +1,303 @@
+import { afterEach, describe, it, expect, vi } from 'vite-plus/test'
+
+// Ported from Text.js: test/e2e/app-dir/javascript-urls/javascript-urls.test.ts
+// https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/javascript-urls/javascript-urls.test.ts
+//
+// Text.js blocks dangerous URI schemes in router.push/replace/prefetch with a
+// thrown Error: "Text.js has blocked a javascript: URL as a security precaution."
+// See: packages/text/src/client/components/app-router-instance.ts:343,400,440,458
+//
+// The Text.js E2E test asserts the blocked navigation surfaces as a
+// `console.error` whose message matches
+//   "has blocked a javascript: URL as a security precaution."
+// In Text.js, the thrown Error is caught by Rue's event-handler runtime and
+// reported via `console.error`. Text's Link/router shims do not always
+// propagate through Rue (e.g. Link click handlers are async, and async
+// throws are not reported to Rue). To match the observable Text.js
+// behaviour, text emits a `console.error` with the same message before the
+// throw, so the assertion fires in both unit-test and browser contexts.
+//
+// Text mirrors that behavior. The guard runs before any programmatic
+// navigation kicks off, at the top of push/replace/prefetch. Even server-side
+// calls throw, matching Text.js intent and giving SSR-safe regression coverage
+// in node-based unit tests.
+//
+// Coverage split:
+//   Ported from the Text.js E2E suite above: javascript: cases for
+//     push/replace/prefetch plus the obfuscation variants that Text.js's
+//     javascript-url.ts regex covers (uppercase, embedded tabs, leading
+//     whitespace).
+//   Text-only extensions: data: and vbscript: cases. Text intentionally
+//     extends the dangerous-scheme block to those schemes via the shared
+//     isDangerousScheme helper. Rationale and scope: shims/url-safety.ts:20-21.
+
+const BLOCK_MESSAGE = 'Text.js has blocked a javascript: URL as a security precaution.'
+
+describe('App Router appRouterInstance blocks dangerous URI schemes', () => {
+  it('router.push throws on javascript: URL', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.push('javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+  })
+
+  it('router.replace throws on javascript: URL', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.replace('javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+  })
+
+  it('router.prefetch throws on javascript: URL', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.prefetch('javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+  })
+
+  it('router.push throws on data: URL', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.push('data:text/html,<script>alert(1)</script>')).toThrow(
+      BLOCK_MESSAGE,
+    )
+  })
+
+  it('router.push throws on vbscript: URL', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.push('vbscript:MsgBox(1)')).toThrow(BLOCK_MESSAGE)
+  })
+
+  it('router.push throws on obfuscated javascript: URL with embedded tabs', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.push('java\tscript:alert(1)')).toThrow(BLOCK_MESSAGE)
+  })
+
+  it('router.push throws on uppercase JAVASCRIPT: URL', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.push('JAVASCRIPT:alert(1)')).toThrow(BLOCK_MESSAGE)
+  })
+
+  it('router.push throws on leading-whitespace javascript: URL', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.push('   javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+  })
+
+  // Safe URLs must not throw — guard must not over-block.
+  it('router.push does not throw on a normal pathname', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.push('/safe')).not.toThrow()
+  })
+
+  it('router.replace does not throw on absolute https URL', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.replace('https://example.com/path')).not.toThrow()
+  })
+
+  it('router.prefetch does not throw on a normal pathname', async () => {
+    const { appRouterInstance } = await import('../src/shims/navigation.js')
+    expect(() => appRouterInstance.prefetch('/safe')).not.toThrow()
+  })
+})
+
+describe('App Router appRouterInstance emits console.error on dangerous URI schemes', () => {
+  it('router.push logs to console.error before throwing', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const { appRouterInstance } = await import('../src/shims/navigation.js')
+      expect(() => appRouterInstance.push('javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+      expect(consoleError).toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('router.replace logs to console.error before throwing', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const { appRouterInstance } = await import('../src/shims/navigation.js')
+      expect(() => appRouterInstance.replace('javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+      expect(consoleError).toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('router.prefetch logs to console.error before throwing', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const { appRouterInstance } = await import('../src/shims/navigation.js')
+      expect(() => appRouterInstance.prefetch('javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+      expect(consoleError).toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('does not log when the URL is safe', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const { appRouterInstance } = await import('../src/shims/navigation.js')
+      appRouterInstance.push('/safe')
+      expect(consoleError).not.toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+})
+
+// Pages Router parity: text/router push/replace must also block dangerous
+// URI schemes with both a throw and a matching console.error. Mirrors
+// Text.js's `packages/text/src/shared/lib/router/router.ts:1020,1052`, where
+// push/replace throw the same error message *synchronously* (before any
+// async work) so Rue's event-handler error reporter can surface the
+// console.error to the user.
+describe('Pages Router text/router blocks dangerous URI schemes', () => {
+  // Minimal fake window/document so importing shims/router.ts (which touches
+  // window at module load to attach popstate) does not crash. Installed by
+  // the helper below; restored in `afterEach`.
+  function installFakeBrowserGlobals() {
+    const previousWindow = (globalThis as { window?: unknown }).window
+    const previousDocument = (globalThis as { document?: unknown }).document
+    ;(globalThis as { window?: unknown }).window = {
+      location: {
+        pathname: '/',
+        search: '',
+        hash: '',
+        href: 'http://localhost/',
+        origin: 'http://localhost',
+      },
+      history: { state: null, pushState() {}, replaceState() {} },
+      addEventListener() {},
+      dispatchEvent() {},
+    }
+    ;(globalThis as { document?: unknown }).document = {
+      addEventListener() {},
+    }
+    return () => {
+      ;(globalThis as { window?: unknown }).window = previousWindow as never
+      ;(globalThis as { document?: unknown }).document = previousDocument as never
+    }
+  }
+
+  afterEach(() => {
+    vi.resetModules()
+  })
+
+  it('Router.push throws synchronously on javascript: URL', async () => {
+    const restoreBrowserGlobals = installFakeBrowserGlobals()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      vi.resetModules()
+      const routerModule = await import('../src/shims/router.js')
+      const Router = routerModule.default
+      // Text.js's Pages Router `push` throws synchronously inside the push()
+      // call so Rue's event-handler error reporter can surface
+      // `console.error`. Mirror that here (do not await the call).
+      expect(() => Router.push('javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+      expect(consoleError).toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+      restoreBrowserGlobals()
+    }
+  })
+
+  it('Router.replace throws synchronously on javascript: URL', async () => {
+    const restoreBrowserGlobals = installFakeBrowserGlobals()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      vi.resetModules()
+      const routerModule = await import('../src/shims/router.js')
+      const Router = routerModule.default
+      expect(() => Router.replace('javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+      expect(consoleError).toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+      restoreBrowserGlobals()
+    }
+  })
+
+  it('Router.push throws synchronously when only `as` is a javascript: URL', async () => {
+    const restoreBrowserGlobals = installFakeBrowserGlobals()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      vi.resetModules()
+      const routerModule = await import('../src/shims/router.js')
+      const Router = routerModule.default
+      expect(() => Router.push('/safe', 'javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+      expect(consoleError).toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+      restoreBrowserGlobals()
+    }
+  })
+
+  it('Router.replace throws synchronously when only `as` is a javascript: URL', async () => {
+    const restoreBrowserGlobals = installFakeBrowserGlobals()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      vi.resetModules()
+      const routerModule = await import('../src/shims/router.js')
+      const Router = routerModule.default
+      expect(() => Router.replace('/safe', 'javascript:alert(1)')).toThrow(BLOCK_MESSAGE)
+      expect(consoleError).toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+      restoreBrowserGlobals()
+    }
+  })
+
+  it('Router.push throws synchronously on uppercase JAVASCRIPT: URL', async () => {
+    const restoreBrowserGlobals = installFakeBrowserGlobals()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      vi.resetModules()
+      const routerModule = await import('../src/shims/router.js')
+      const Router = routerModule.default
+      expect(() => Router.push('JAVASCRIPT:alert(1)')).toThrow(BLOCK_MESSAGE)
+      expect(consoleError).toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+      restoreBrowserGlobals()
+    }
+  })
+
+  it('Router.push throws synchronously on data: URL', async () => {
+    const restoreBrowserGlobals = installFakeBrowserGlobals()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      vi.resetModules()
+      const routerModule = await import('../src/shims/router.js')
+      const Router = routerModule.default
+      expect(() => Router.push('data:text/html,<script>alert(1)</script>')).toThrow(BLOCK_MESSAGE)
+      expect(consoleError).toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+      restoreBrowserGlobals()
+    }
+  })
+
+  // Regression coverage: `Router.push(...)` must throw *before* returning the
+  // Promise. If it ever regresses to throwing inside the async
+  // `performNavigation` body, the throw would be wrapped in a rejected
+  // Promise that Rue's event-handler runtime does not observe, and the
+  // matching `console.error` would not be reported through page logs (the
+  // failure mode covered by Text.js's
+  // `test/e2e/app-dir/javascript-urls/javascript-urls.test.ts:341,376`).
+  it('Router.push throws synchronously (does not return a rejected Promise)', async () => {
+    const restoreBrowserGlobals = installFakeBrowserGlobals()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      vi.resetModules()
+      const routerModule = await import('../src/shims/router.js')
+      const Router = routerModule.default
+      let threw = false
+      let returned: unknown = 'not-called'
+      try {
+        returned = Router.push('javascript:alert(1)')
+      } catch {
+        threw = true
+      }
+      expect(threw).toBe(true)
+      // The synchronous throw means no value was ever returned.
+      expect(returned).toBe('not-called')
+      expect(consoleError).toHaveBeenCalledWith(BLOCK_MESSAGE)
+    } finally {
+      consoleError.mockRestore()
+      restoreBrowserGlobals()
+    }
+  })
+})

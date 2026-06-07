@@ -119,7 +119,19 @@ const run = async (
   /** @type {string} */ bin,
   /** @type {ReadonlyArray<string>} */ args,
   /** @type {import('node:child_process').SpawnOptions} */ opts = {},
-) => exec(bin, args, { stdio: 'inherit', ...opts })
+) => {
+  const env =
+    bin === 'pnpm'
+      ? {
+          ...process.env,
+          ...opts.env,
+          PNPM_CONFIG_AUTO_INSTALL_PEERS: 'false',
+          npm_config_auto_install_peers: 'false',
+        }
+      : opts.env
+
+  return exec(bin, args, { stdio: 'inherit', ...opts, env })
+}
 const dryRun = async (
   /** @type {string} */ bin,
   /** @type {ReadonlyArray<string>} */ args,
@@ -136,6 +148,11 @@ const releaseVerificationPackages = [
   {
     name: '@rue-js/swc-plugin-rue',
     cwd: path.resolve(__dirname, '../packages/swc-plugin-rue'),
+  },
+  {
+    name: '@rue-js/text',
+    cwd: path.resolve(__dirname, '../packages/text'),
+    testScript: 'test-unit',
   },
 ]
 
@@ -376,9 +393,15 @@ async function runReleaseCheckTypecheckIfNeeded() {
   step('\nRunning tsgo check...')
   if (shouldRunValidationCommands) {
     await run('pnpm', ['exec', 'tsgo', '--incremental', '--noEmit'])
+    await runReleaseCheckTextTypecheck()
   } else {
     console.log(`Skipped (dry run)`)
   }
+}
+
+async function runReleaseCheckTextTypecheck() {
+  step('\nRunning @rue-js/text package check...')
+  await run('pnpm', ['--dir', 'packages/text', 'run', 'check'])
 }
 
 async function runTestsIfNeeded() {
@@ -426,7 +449,7 @@ async function runTestsIfNeeded() {
 async function runReleaseVerificationPackageTests() {
   for (const pkg of releaseVerificationPackages) {
     step(`\nRunning release verification for ${pkg.name}...`)
-    await run('npm', ['run', 'test'], { cwd: pkg.cwd })
+    await run('npm', ['run', pkg.testScript ?? 'test'], { cwd: pkg.cwd })
   }
 }
 

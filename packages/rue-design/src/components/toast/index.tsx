@@ -7,15 +7,25 @@ Toast 组件概述
 */
 import { onUnmounted, ref, render, useRef, useState, watch, type FC } from '@rue-js/rue'
 
+/** ToastHorizontal 类型。 */
 export type ToastHorizontal = 'start' | 'center' | 'end'
+/** ToastVertical 类型。 */
 export type ToastVertical = 'top' | 'middle' | 'bottom'
+/** ToastStack 类型。 */
 export type ToastStack = 'vertical' | 'horizontal'
+/** ToastInset 类型。 */
 export type ToastInset = number | string | { x?: number | string; y?: number | string }
+/** ToastItemType 视觉或语义变体类型。 */
 export type ToastItemType = 'neutral' | 'info' | 'success' | 'warning' | 'error' | 'loading'
+/** ToastItemVariant 视觉或语义变体类型。 */
 export type ToastItemVariant = 'soft' | 'solid' | 'outline'
+/** ToastCloseSource 类型。 */
 export type ToastCloseSource = 'close' | 'timeout'
+/** ToastMessageKey 标识键类型。 */
 export type ToastMessageKey = string | number
+/** ToastGetContainer 类型。 */
 export type ToastGetContainer = string | HTMLElement | (() => HTMLElement) | false
+/** ToastPlacement 位置或方向类型。 */
 export type ToastPlacement =
   | 'top-start'
   | 'top'
@@ -33,92 +43,165 @@ export type ToastPlacement =
   | 'center'
   | 'end'
 
+/** ToastProps 组件属性。 */
 export interface ToastProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 弹出层或内容展示位置。 */
   placement?: ToastPlacement
+  /** horizontal 配置项。 */
   horizontal?: ToastHorizontal
+  /** vertical 配置项。 */
   vertical?: ToastVertical
+  /** stack 配置项。 */
   stack?: ToastStack
+  /** reverse 配置项。 */
   reverse?: boolean
+  /** inset 配置项。 */
   inset?: ToastInset
+  /** 元素间距。 */
   gap?: number | string
+  /** zIndex 配置项。 */
   zIndex?: number | string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ToastItemCloseMeta 接口。 */
 export interface ToastItemCloseMeta {
+  /** source 配置项。 */
   source: ToastCloseSource
+  /** event 配置项。 */
   event?: Event
 }
 
+/** ToastMessageConfig 配置对象。 */
 export interface ToastMessageConfig extends Omit<ToastItemProps, 'open' | 'defaultOpen'> {
+  /** 数据项唯一标识。 */
   key?: ToastMessageKey
+  /** 主体内容。 */
   content?: any
 }
 
+/** ToastUseMessageOptions 选项配置。 */
 export interface ToastUseMessageOptions extends Omit<ToastProps, 'children'> {
+  /** getContainer 配置项。 */
   getContainer?: ToastGetContainer
+  /** maxCount 配置项。 */
   maxCount?: number
+  /** duration 配置项。 */
   duration?: number | null
+  /** closable 配置项。 */
   closable?: boolean
+  /** pauseOnHover 配置项。 */
   pauseOnHover?: boolean
+  /** showIcon 图标内容。 */
   showIcon?: boolean
+  /** 组件视觉变体。 */
   variant?: ToastItemVariant
+  /** 组件类型或语义类型。 */
   type?: ToastItemType
 }
 
+/** ToastMessageApi 接口。 */
 export interface ToastMessageApi {
+  /** 受控打开状态。 */
   open: (config: ToastMessageConfig) => () => void
+  /** info 配置项。 */
   info: (config: Omit<ToastMessageConfig, 'type'>) => () => void
+  /** success 配置项。 */
   success: (config: Omit<ToastMessageConfig, 'type'>) => () => void
+  /** warning 配置项。 */
   warning: (config: Omit<ToastMessageConfig, 'type'>) => () => void
+  /** error 配置项。 */
   error: (config: Omit<ToastMessageConfig, 'type'>) => () => void
+  /** 是否展示加载态。 */
   loading: (config: Omit<ToastMessageConfig, 'type'>) => () => void
+  /** destroy 配置项。 */
   destroy: (key?: ToastMessageKey) => void
 }
 
+/** ToastItemProps 组件属性。 */
 export interface ToastItemProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 组件类型或语义类型。 */
   type?: ToastItemType
+  /** 组件视觉变体。 */
   variant?: ToastItemVariant
+  /** 图标内容。 */
   icon?: any
+  /** showIcon 图标内容。 */
   showIcon?: boolean
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** action 配置项。 */
   action?: any
+  /** closable 配置项。 */
   closable?: boolean
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** duration 配置项。 */
   duration?: number | null
+  /** pauseOnHover 配置项。 */
   pauseOnHover?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** descriptionClassName 附加类名。 */
   descriptionClassName?: string
+  /** iconClassName 附加类名。 */
   iconClassName?: string
+  /** actionClassName 附加类名。 */
   actionClassName?: string
+  /** closeClassName 附加类名。 */
   closeClassName?: string
+  /** 组件子内容。 */
   children?: any
+  /** 关闭时触发的回调。 */
   onClose?: (meta: ToastItemCloseMeta) => void
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean, meta: ToastItemCloseMeta) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ToastPartProps 组件属性。 */
 export interface ToastPartProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ToastCloseProps 组件属性。 */
 export interface ToastCloseProps extends ToastPartProps {
+  /** 图标内容。 */
   icon?: any
+  /** 展示标签。 */
   label?: string
 }
 
@@ -143,15 +226,18 @@ const placementMap: Record<
   end: { horizontal: 'end', vertical: 'bottom' },
 }
 
+/** 归一化 Space Value 的内部工具函数。 */
 const normalizeSpaceValue = (value?: number | string) => {
   if (typeof value === 'number') return `${value}px`
   return value
 }
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | false | null | undefined>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -162,10 +248,12 @@ const toChildArray = (children: any): any[] => {
   return [children]
 }
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any) => {
   return toChildArray(value).length > 0
 }
 
+/** 解析 Inset Style 的内部工具函数。 */
 const resolveInsetStyle = (inset?: ToastInset) => {
   if (inset == null) return null
 
@@ -182,6 +270,7 @@ const resolveInsetStyle = (inset?: ToastInset) => {
   return value == null ? null : { padding: value }
 }
 
+/** 解析 Direction Class 的内部工具函数。 */
 const resolveDirectionClass = (stack?: ToastStack, reverse?: boolean) => {
   if (stack === 'horizontal') {
     return reverse ? 'flex-row-reverse' : 'flex-row'
@@ -192,9 +281,11 @@ const resolveDirectionClass = (stack?: ToastStack, reverse?: boolean) => {
   return ''
 }
 
+/** TOAST_ITEM_BASE_CLASS 内部常量。 */
 const TOAST_ITEM_BASE_CLASS =
   'pointer-events-auto w-full max-w-sm rounded-[1.25rem] border px-4 py-3 text-left text-sm backdrop-blur transition'
 
+/** TOAST_ITEM_ROOT_CLASS_MAP 内部常量。 */
 const TOAST_ITEM_ROOT_CLASS_MAP: Record<ToastItemVariant, Record<ToastItemType, string>> = {
   soft: {
     neutral:
@@ -227,6 +318,7 @@ const TOAST_ITEM_ROOT_CLASS_MAP: Record<ToastItemVariant, Record<ToastItemType, 
   },
 }
 
+/** TOAST_ITEM_ICON_CLASS_MAP 内部常量。 */
 const TOAST_ITEM_ICON_CLASS_MAP: Record<ToastItemVariant, Record<ToastItemType, string>> = {
   soft: {
     neutral: 'bg-base-200 text-base-content/70',
@@ -254,6 +346,7 @@ const TOAST_ITEM_ICON_CLASS_MAP: Record<ToastItemVariant, Record<ToastItemType, 
   },
 }
 
+/** TOAST_ITEM_CLOSE_CLASS_MAP 内部常量。 */
 const TOAST_ITEM_CLOSE_CLASS_MAP: Record<ToastItemVariant, Record<ToastItemType, string>> = {
   soft: {
     neutral: 'text-base-content/50 hover:bg-base-200 hover:text-base-content',
@@ -281,7 +374,9 @@ const TOAST_ITEM_CLOSE_CLASS_MAP: Record<ToastItemVariant, Record<ToastItemType,
   },
 }
 
+/** TOAST_USE_MESSAGE_DEFAULT_DURATION 内部常量。 */
 const TOAST_USE_MESSAGE_DEFAULT_DURATION = 3
+/** TOAST_USE_MESSAGE_DEFAULT_PLACEMENT 内部常量。 */
 const TOAST_USE_MESSAGE_DEFAULT_PLACEMENT: ToastPlacement = 'top'
 
 interface ToastMessageRecord {
@@ -296,6 +391,7 @@ interface ToastMessageViewportProps extends ToastUseMessageOptions {
 
 let toastMessageSeed = 0
 
+/** trim Toast Message Records 的内部工具函数。 */
 const trimToastMessageRecords = (records: ToastMessageRecord[], maxCount?: number) => {
   if (typeof maxCount !== 'number' || maxCount <= 0 || records.length <= maxCount) {
     return records
@@ -304,6 +400,7 @@ const trimToastMessageRecords = (records: ToastMessageRecord[], maxCount?: numbe
   return records.slice(records.length - maxCount)
 }
 
+/** 解析 Toast Mount Element 的内部工具函数。 */
 const resolveToastMountElement = (
   getContainer: ToastGetContainer | undefined,
   holderElement?: HTMLElement | null,
@@ -332,6 +429,7 @@ const resolveToastMountElement = (
   return null
 }
 
+/** Toast Message Viewport 的内部工具函数。 */
 const ToastMessageViewport: FC<ToastMessageViewportProps> = ({
   records,
   onDestroy,
@@ -395,6 +493,7 @@ const ToastMessageViewport: FC<ToastMessageViewportProps> = ({
   )
 }
 
+/** use Toast Message 的内部工具函数。 */
 const useToastMessage = (options: ToastUseMessageOptions = {}) => {
   const apiRef = useRef<ToastMessageApi>()
   const recordsRef = useRef<ToastMessageRecord[]>([])
@@ -531,16 +630,19 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
   return [apiRef.current!, contextHolder] as const
 }
 
+/** 解析 Item Role 的内部工具函数。 */
 const resolveItemRole = (type?: ToastItemType) => {
   if (type === 'warning' || type === 'error') return 'alert'
   return 'status'
 }
 
+/** 解析 Item Aria Live 的内部工具函数。 */
 const resolveItemAriaLive = (type?: ToastItemType) => {
   if (type === 'warning' || type === 'error') return 'assertive'
   return 'polite'
 }
 
+/** 解析 Duration Ms 的内部工具函数。 */
 const resolveDurationMs = (duration?: number | null) => {
   if (typeof duration !== 'number' || duration <= 0) return null
   return duration * 1000
@@ -555,6 +657,7 @@ const toastItemCloseHandlerRegistry = new WeakMap<
   (source: ToastCloseSource, event?: Event) => void
 >()
 
+/** Info Icon 的内部工具函数。 */
 const InfoIcon: FC<ToastGlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -570,6 +673,7 @@ const InfoIcon: FC<ToastGlyphProps> = ({ className }) => (
   </svg>
 )
 
+/** Success Icon 的内部工具函数。 */
 const SuccessIcon: FC<ToastGlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -584,6 +688,7 @@ const SuccessIcon: FC<ToastGlyphProps> = ({ className }) => (
   </svg>
 )
 
+/** Warning Icon 的内部工具函数。 */
 const WarningIcon: FC<ToastGlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -599,6 +704,7 @@ const WarningIcon: FC<ToastGlyphProps> = ({ className }) => (
   </svg>
 )
 
+/** Error Icon 的内部工具函数。 */
 const ErrorIcon: FC<ToastGlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -614,6 +720,7 @@ const ErrorIcon: FC<ToastGlyphProps> = ({ className }) => (
   </svg>
 )
 
+/** Close Icon 的内部工具函数。 */
 const CloseIcon: FC<ToastGlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -628,6 +735,7 @@ const CloseIcon: FC<ToastGlyphProps> = ({ className }) => (
   </svg>
 )
 
+/** 渲染 Default Item Icon 的内部工具函数。 */
 const renderDefaultItemIcon = (type?: ToastItemType) => {
   const iconClassName = 'h-5 w-5'
   switch (type) {
@@ -646,6 +754,7 @@ const renderDefaultItemIcon = (type?: ToastItemType) => {
   }
 }
 
+/** Toast Icon 的内部工具函数。 */
 const ToastIcon: FC<ToastPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return (
@@ -661,6 +770,7 @@ const ToastIcon: FC<ToastPartProps> = ({ as = 'div', className, children, ...res
   )
 }
 
+/** Toast Content 的内部工具函数。 */
 const ToastContent: FC<ToastPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return (
@@ -670,6 +780,7 @@ const ToastContent: FC<ToastPartProps> = ({ as = 'div', className, children, ...
   )
 }
 
+/** Toast Title 的内部工具函数。 */
 const ToastTitle: FC<ToastPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return (
@@ -679,6 +790,7 @@ const ToastTitle: FC<ToastPartProps> = ({ as = 'div', className, children, ...re
   )
 }
 
+/** Toast Description 的内部工具函数。 */
 const ToastDescription: FC<ToastPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return (
@@ -691,6 +803,7 @@ const ToastDescription: FC<ToastPartProps> = ({ as = 'div', className, children,
   )
 }
 
+/** Toast Action 的内部工具函数。 */
 const ToastAction: FC<ToastPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return (
@@ -700,6 +813,7 @@ const ToastAction: FC<ToastPartProps> = ({ as = 'div', className, children, ...r
   )
 }
 
+/** Toast Close 的内部工具函数。 */
 const ToastClose: FC<ToastCloseProps> = ({
   as = 'button',
   className,
@@ -740,6 +854,7 @@ const ToastClose: FC<ToastCloseProps> = ({
   )
 }
 
+/** Toast Item 的内部工具函数。 */
 const ToastItem: FC<ToastItemProps> = ({
   as = 'div',
   open,
@@ -1032,6 +1147,7 @@ const ToastItem: FC<ToastItemProps> = ({
   )
 }
 
+/** Toast 的内部工具函数。 */
 const Toast: FC<ToastProps> = ({
   as = 'div',
   placement,
@@ -1098,4 +1214,5 @@ const ToastCompound: ToastCompound = Object.assign(Toast, {
   useMessage: useToastMessage,
 })
 
+/** 默认导出轻提示组件。 */
 export default ToastCompound

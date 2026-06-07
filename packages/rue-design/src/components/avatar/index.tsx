@@ -6,9 +6,13 @@ Avatar 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** AvatarStatus 状态类型。 */
 export type AvatarStatus = 'online' | 'offline' | 'placeholder'
+/** AvatarShape 类型。 */
 export type AvatarShape = 'circle' | 'square'
+/** AvatarImageFit 类型。 */
 export type AvatarImageFit = 'cover' | 'contain'
+/** AvatarColor 语义色类型。 */
 export type AvatarColor =
   | 'base'
   | 'neutral'
@@ -19,6 +23,7 @@ export type AvatarColor =
   | 'success'
   | 'warning'
   | 'error'
+/** AvatarSize 尺寸类型。 */
 export type AvatarSize =
   | 'xs'
   | 'sm'
@@ -38,52 +43,88 @@ interface AvatarSizeConfig {
   style?: Record<string, string>
 }
 
+/** AvatarProps 组件属性。 */
 export interface AvatarProps {
+  /** 组件状态。 */
   status?: AvatarStatus
+  /** 根节点附加类名。 */
   className?: string
+  /** bodyClassName 附加类名。 */
   bodyClassName?: string
+  /** imgClassName 附加类名。 */
   imgClassName?: string
+  /** 组件子内容。 */
   children?: any
+  /** src 配置项。 */
   src?: any
+  /** srcSet 配置项。 */
   srcSet?: string
+  /** alt 配置项。 */
   alt?: string
+  /** 图标内容。 */
   icon?: any
+  /** text 区域配置。 */
   text?: string
+  /** 组件形状。 */
   shape?: AvatarShape
+  /** 组件尺寸。 */
   size?: AvatarSize
+  /** 元素间距。 */
   gap?: number
+  /** 组件语义色。 */
   color?: AvatarColor
+  /** fit 配置项。 */
   fit?: AvatarImageFit
+  /** draggable 配置项。 */
   draggable?: boolean | 'true' | 'false'
+  /** crossOrigin 配置项。 */
   crossOrigin?: 'anonymous' | 'use-credentials' | ''
+  /** onError 事件回调。 */
   onError?: (event: Event) => boolean | void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** AvatarGroupItem 数据项结构。 */
 export interface AvatarGroupItem extends AvatarProps {
+  /** 数据项唯一标识。 */
   key?: string | number
 }
 
+/** AvatarGroupMaxConfig 配置对象。 */
 export interface AvatarGroupMaxConfig {
+  /** count 配置项。 */
   count?: number
+  /** 占位内容。 */
   placeholder?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** bodyClassName 附加类名。 */
   bodyClassName?: string
 }
 
+/** AvatarGroupProps 组件属性。 */
 export interface AvatarGroupProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<AvatarGroupItem>
+  /** 组件尺寸。 */
   size?: AvatarSize
+  /** 组件形状。 */
   shape?: AvatarShape
+  /** max 配置项。 */
   max?: number | AvatarGroupMaxConfig
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 归一化 Size 的内部工具函数。 */
 const normalizeSize = (size?: AvatarSize): AvatarSize => {
   switch (size) {
     case 'small':
@@ -99,6 +140,7 @@ const normalizeSize = (size?: AvatarSize): AvatarSize => {
   }
 }
 
+/** 解析 Size Config 的内部工具函数。 */
 const resolveSizeConfig = (size?: AvatarSize): AvatarSizeConfig => {
   const normalized = normalizeSize(size)
   if (typeof normalized === 'number') {
@@ -125,14 +167,17 @@ const resolveSizeConfig = (size?: AvatarSize): AvatarSizeConfig => {
   }
 }
 
+/** 解析 Shape Class 的内部工具函数。 */
 const resolveShapeClass = (shape?: AvatarShape) => {
   return shape === 'square' ? 'rounded-2xl' : 'rounded-full'
 }
 
+/** 解析 Fit Class 的内部工具函数。 */
 const resolveFitClass = (fit?: AvatarImageFit) => {
   return fit === 'contain' ? 'object-contain' : 'object-cover'
 }
 
+/** 解析 Color Classes 的内部工具函数。 */
 const resolveColorClasses = (color?: AvatarColor, preferPlaceholder?: boolean) => {
   switch (color) {
     case 'base':
@@ -158,6 +203,7 @@ const resolveColorClasses = (color?: AvatarColor, preferPlaceholder?: boolean) =
   }
 }
 
+/** 转换为 Primitive Text 的内部工具函数。 */
 const toPrimitiveText = (value: any) => {
   if (typeof value === 'string' || typeof value === 'number') {
     return String(value)
@@ -165,12 +211,14 @@ const toPrimitiveText = (value: any) => {
   return undefined
 }
 
+/** 解析 Text Font Size 的内部工具函数。 */
 const resolveTextFontSize = (content: string, avatarPixels: number, gap: number) => {
   const safeGap = Math.max(gap, 0)
   const estimated = (avatarPixels - safeGap * 2) / Math.max(content.length * 0.62, 1)
   return Math.max(10, Math.min(avatarPixels * 0.42, estimated))
 }
 
+/** flatten Children 的内部工具函数。 */
 const flattenChildren = (value: any) => {
   const result: any[] = []
   const walk = (item: any) => {
@@ -188,6 +236,7 @@ const flattenChildren = (value: any) => {
   return result
 }
 
+/** 归一化 Max 的内部工具函数。 */
 const normalizeMax = (max?: number | AvatarGroupMaxConfig) => {
   if (typeof max === 'number') {
     return { count: max }
@@ -195,6 +244,7 @@ const normalizeMax = (max?: number | AvatarGroupMaxConfig) => {
   return max
 }
 
+/** Default Avatar Icon 的内部工具函数。 */
 const DefaultAvatarIcon: FC = () => {
   return (
     <svg
@@ -347,6 +397,7 @@ const Avatar: FC<AvatarProps> = ({
   )
 }
 
+/** Group 的内部工具函数。 */
 const Group: FC<AvatarGroupProps> = ({ className, children, items, size, shape, max }) => {
   const maxConfig = normalizeMax(max)
   const maxCount =
@@ -421,4 +472,5 @@ const AvatarCompound: AvatarCompound = Object.assign(Avatar, {
   Group,
 })
 
+/** 默认导出头像组件。 */
 export default AvatarCompound

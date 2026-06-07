@@ -1,6 +1,7 @@
 import { computed, type FC, reactive, ref, useState } from '@rue-js/rue'
 import { RouterLink as Link } from '@rue-js/router'
 import Code from './components/Code'
+import { useCodeCopy } from './components/CodeShared'
 
 const FeatureCard: FC<{
   title: string
@@ -261,6 +262,8 @@ const createCommandOptions = [
   { id: 'yarn', label: 'yarn', command: 'yarn dlx create-rue@latest' },
 ] as const
 
+type CreateCommandOption = (typeof createCommandOptions)[number]
+
 type PartnerLink = {
   name: string
   href: string
@@ -339,6 +342,14 @@ const demoSpotlights: readonly DemoSpotlight[] = [
     accentClassName:
       'border-amber-200 bg-linear-to-br from-amber-500/12 via-base-100 to-orange-500/10 hover:border-amber-400/60',
   },
+  {
+    title: 'Text.js 全栈应用框架',
+    desc: '基于 Vite、Rue、RSC 与文件系统路由，了解 App Router、SSR、API 路由和 Workers 部署。',
+    to: '/textjs',
+    eyebrow: 'Full-stack',
+    accentClassName:
+      'border-cyan-200 bg-linear-to-br from-cyan-500/12 via-base-100 to-blue-500/10 hover:border-cyan-400/60',
+  },
 ] as const
 
 const PartnerSection: FC<{
@@ -389,12 +400,13 @@ const PartnerSection: FC<{
 )
 
 const SiteHome: FC = () => {
-  const activeCreateCommand = ref<(typeof createCommandOptions)[number]['id']>('npm')
+  const activeCreateCommand = ref<CreateCommandOption['id']>('npm')
   const selectedCreateCommand = computed(
     () =>
       createCommandOptions.find(option => option.id === activeCreateCommand.value) ??
       createCommandOptions[0],
   )
+  const createCommandCopy = useCodeCopy(() => selectedCreateCommand.get().command)
 
   return (
     <>
@@ -480,16 +492,32 @@ const SiteHome: FC = () => {
                         ? 'bg-white text-slate-950 shadow-sm'
                         : 'text-white/65 hover:text-white'
                     }`}
-                    onClick={() => (activeCreateCommand.value = option.id)}
+                    onClick={() => {
+                      activeCreateCommand.value = option.id
+                    }}
                   >
                     {option.label}
                   </button>
                 ))}
               </div>
             </div>
-            <pre className="overflow-x-auto text-sm md:text-base text-white/92">
-              <code>$ {selectedCreateCommand.get().command}</code>
-            </pre>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <pre className="min-w-0 flex-1 overflow-x-auto text-sm text-white/92 md:text-base">
+                <code>$ {selectedCreateCommand.get().command}</code>
+              </pre>
+              <button
+                type="button"
+                className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-medium transition ${
+                  createCommandCopy.copied.value
+                    ? 'border-emerald-300/30 bg-emerald-400/15 text-emerald-100'
+                    : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white'
+                }`}
+                aria-label={`复制 ${selectedCreateCommand.get().label} 创建命令`}
+                onClick={createCommandCopy.handleCopy}
+              >
+                {createCommandCopy.copied.value ? '已复制' : '复制'}
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -538,12 +566,15 @@ const SiteHome: FC = () => {
             <Link to="/design/button" className="btn btn-outline">
               组件库
             </Link>
+            <Link to="/textjs" className="btn btn-outline">
+              Text.js
+            </Link>
           </div>
         </div>
       </section>
 
       <section className="max-w-[1100px] mx-auto mt-8">
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {demoSpotlights.map(item => (
             <Link
               key={item.to}

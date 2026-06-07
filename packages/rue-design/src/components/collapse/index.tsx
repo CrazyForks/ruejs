@@ -9,62 +9,114 @@ import { ref } from '@rue-js/rue'
 
 let collapseGroupSeed = 0
 
+/** CollapseItemKey 标识键类型。 */
 export type CollapseItemKey = string | number
+/** CollapseIcon 类型。 */
 export type CollapseIcon = 'arrow' | 'plus'
+/** CollapseSize 尺寸类型。 */
 export type CollapseSize = 'sm' | 'md' | 'lg' | 'small' | 'middle' | 'large'
+/** CollapseCollapsible 类型。 */
 export type CollapseCollapsible = 'header' | 'icon' | 'disabled'
 
+/** CollapseItem 数据项结构。 */
 export interface CollapseItem {
+  /** 数据项唯一标识。 */
   key?: CollapseItemKey
+  /** 展示标签。 */
   label?: any
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** 组件子内容。 */
   children?: any
+  /** 主体内容。 */
   content?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** descriptionClassName 附加类名。 */
   descriptionClassName?: string
+  /** extraClassName 附加类名。 */
   extraClassName?: string
+  /** 图标内容。 */
   icon?: CollapseIcon
+  /** showArrow 配置项。 */
   showArrow?: boolean
+  /** 受控打开状态。 */
   open?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** collapsible 配置项。 */
   collapsible?: CollapseCollapsible
 }
 
+/** CollapseChangeContext 事件或渲染上下文。 */
 export interface CollapseChangeContext {
+  /** 数据项唯一标识。 */
   key: CollapseItemKey
+  /** index 配置项。 */
   index: number
+  /** 受控打开状态。 */
   open: boolean
+  /** item 区域配置。 */
   item?: CollapseItem
 }
 
+/** CollapseProps 组件属性。 */
 export interface CollapseProps {
+  /** 图标内容。 */
   icon?: CollapseIcon
+  /** arrow 配置项。 */
   arrow?: boolean
+  /** plus 配置项。 */
   plus?: boolean
+  /** showArrow 配置项。 */
   showArrow?: boolean
+  /** 受控打开状态。 */
   open?: boolean
+  /** 关闭按钮区域配置。 */
   close?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** activeKey 标识键。 */
   activeKey?: CollapseItemKey | ReadonlyArray<CollapseItemKey> | null
+  /** defaultActiveKey 标识键。 */
   defaultActiveKey?: CollapseItemKey | ReadonlyArray<CollapseItemKey> | null
+  /** accordion 配置项。 */
   accordion?: boolean
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** ghost 配置项。 */
   ghost?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** collapsible 配置项。 */
   collapsible?: CollapseCollapsible
+  /** 组件尺寸。 */
   size?: CollapseSize
+  /** expandIconPlacement 配置项。 */
   expandIconPlacement?: 'start' | 'end'
+  /** tabIndex 配置项。 */
   tabIndex?: number
+  /** tag 配置项。 */
   tag?: 'div' | 'details'
+  /** 根节点附加类名。 */
   className?: string
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<CollapseItem>
+  /** 组件子内容。 */
   children?: any
+  /** 值或状态变化时触发的回调。 */
   onChange?: (
     nextValue: CollapseItemKey | ReadonlyArray<CollapseItemKey> | null,
     context: CollapseChangeContext,
@@ -88,11 +140,13 @@ interface NormalizedCollapseItem extends CollapseItem {
   content: any
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
+/** 读取 Collapse Group Roots 的内部工具函数。 */
 const getCollapseGroupRoots = (groupName: string, source?: Element | null) => {
   const queryRoot = source?.getRootNode?.()
   const scope =
@@ -109,18 +163,21 @@ const getCollapseGroupRoots = (groupName: string, source?: Element | null) => {
   )
 }
 
+/** 读取 Direct Collapse Title 的内部工具函数。 */
 const getDirectCollapseTitle = (root: Element) => {
   return Array.from(root.children).find(
     child => child instanceof HTMLElement && child.classList.contains('collapse-title'),
   ) as HTMLElement | undefined
 }
 
+/** 判断 Title Trigger Target 的内部工具函数。 */
 const isTitleTriggerTarget = (root: Element, target: EventTarget | null) => {
   if (!(target instanceof Node)) return false
   const title = getDirectCollapseTitle(root)
   return !!title?.contains(target)
 }
 
+/** 读取 Direct Collapse Input 的内部工具函数。 */
 const getDirectCollapseInput = (root: Element) => {
   return Array.from(root.children).find(
     child =>
@@ -128,6 +185,7 @@ const getDirectCollapseInput = (root: Element) => {
   ) as HTMLInputElement | undefined
 }
 
+/** sync Collapse Panel State 的内部工具函数。 */
 const syncCollapsePanelState = (root: Element, open: boolean) => {
   if (!(root instanceof HTMLElement)) return
 
@@ -156,6 +214,7 @@ const syncCollapsePanelState = (root: Element, open: boolean) => {
   }
 }
 
+/** sync Legacy Interactive State 的内部工具函数。 */
 const syncLegacyInteractiveState = (root: HTMLDivElement, open: boolean) => {
   root.classList.remove('collapse-open', 'collapse-close')
   root.classList.add(open ? 'collapse-open' : 'collapse-close')
@@ -166,6 +225,7 @@ const syncLegacyInteractiveState = (root: HTMLDivElement, open: boolean) => {
   }
 }
 
+/** unique Keys 的内部工具函数。 */
 const uniqueKeys = (keys: ReadonlyArray<CollapseItemKey>) => {
   const next: CollapseItemKey[] = []
   keys.forEach(key => {
@@ -176,6 +236,7 @@ const uniqueKeys = (keys: ReadonlyArray<CollapseItemKey>) => {
   return next
 }
 
+/** 归一化 Size 的内部工具函数。 */
 const normalizeSize = (size?: CollapseSize) => {
   switch (size) {
     case 'small':
@@ -189,6 +250,7 @@ const normalizeSize = (size?: CollapseSize) => {
   }
 }
 
+/** 归一化 Icon 的内部工具函数。 */
 const normalizeIcon = (
   icon: CollapseIcon | undefined,
   arrow: boolean | undefined,
@@ -200,6 +262,7 @@ const normalizeIcon = (
   return undefined
 }
 
+/** key Value To Array 的内部工具函数。 */
 const keyValueToArray = (
   value: CollapseItemKey | ReadonlyArray<CollapseItemKey> | null | undefined,
 ) => {
@@ -208,6 +271,7 @@ const keyValueToArray = (
   return [value]
 }
 
+/** 归一化 Open Keys 的内部工具函数。 */
 const normalizeOpenKeys = (
   value: CollapseItemKey | ReadonlyArray<CollapseItemKey> | null | undefined,
   accordion?: boolean,
@@ -216,6 +280,7 @@ const normalizeOpenKeys = (
   return accordion ? normalized.slice(0, 1) : normalized
 }
 
+/** 解析 Title Size Class 的内部工具函数。 */
 const resolveTitleSizeClass = (size?: CollapseSize) => {
   switch (normalizeSize(size)) {
     case 'sm':
@@ -227,6 +292,7 @@ const resolveTitleSizeClass = (size?: CollapseSize) => {
   }
 }
 
+/** 解析 Content Size Class 的内部工具函数。 */
 const resolveContentSizeClass = (size?: CollapseSize) => {
   switch (normalizeSize(size)) {
     case 'sm':
@@ -238,6 +304,7 @@ const resolveContentSizeClass = (size?: CollapseSize) => {
   }
 }
 
+/** resolve Legacy State Class 的内部工具函数。 */
 const _resolveLegacyStateClass = (
   open: boolean | undefined,
   close: boolean | undefined,
@@ -249,6 +316,7 @@ const _resolveLegacyStateClass = (
   return ''
 }
 
+/** 解析 Items Default Open Keys 的内部工具函数。 */
 const resolveItemsDefaultOpenKeys = (
   items: ReadonlyArray<NormalizedCollapseItem>,
   defaultActiveKey: CollapseProps['defaultActiveKey'],
@@ -263,6 +331,7 @@ const resolveItemsDefaultOpenKeys = (
   )
 }
 
+/** 构建 Next Open Keys 的内部工具函数。 */
 const buildNextOpenKeys = (
   currentKeys: ReadonlyArray<CollapseItemKey>,
   key: CollapseItemKey,
@@ -278,6 +347,7 @@ const buildNextOpenKeys = (
   return currentKeys.filter(current => current !== key)
 }
 
+/** 解析 Group Class Name 的内部工具函数。 */
 const resolveGroupClassName = (
   bordered: boolean,
   ghost: boolean | undefined,
@@ -292,12 +362,14 @@ const resolveGroupClassName = (
   return appendClassName(cls, className)
 }
 
+/** 解析 Panel Surface Class 的内部工具函数。 */
 const resolvePanelSurfaceClass = (bordered: boolean, ghost: boolean | undefined) => {
   if (bordered) return ''
   if (ghost) return 'bg-transparent'
   return 'rounded-box border border-base-300 bg-base-100'
 }
 
+/** Arrow Icon 的内部工具函数。 */
 const ArrowIcon: FC<{ open: boolean }> = ({ open }) => {
   return (
     <span
@@ -318,6 +390,7 @@ const ArrowIcon: FC<{ open: boolean }> = ({ open }) => {
   )
 }
 
+/** Plus Icon 的内部工具函数。 */
 const PlusIcon: FC<{ open: boolean }> = ({ open }) => {
   return (
     <span aria-hidden="true" className="relative inline-flex size-5 items-center justify-center">
@@ -330,10 +403,12 @@ const PlusIcon: FC<{ open: boolean }> = ({ open }) => {
   )
 }
 
+/** 渲染 Expand Icon 的内部工具函数。 */
 const renderExpandIcon = (icon: CollapseIcon, open: boolean) => {
   return icon === 'plus' ? <PlusIcon open={open} /> : <ArrowIcon open={open} />
 }
 
+/** 渲染 Title Body 的内部工具函数。 */
 const renderTitleBody = (
   title: any,
   description: any,
@@ -719,4 +794,5 @@ const CollapseCompound: CollapseCompound = Object.assign(Collapse, {
   Content,
 })
 
+/** 默认导出折叠面板组件。 */
 export default CollapseCompound

@@ -283,7 +283,12 @@ const installBrowserBridge = () => {
  * @param opts overlay/console 开关
  * @returns 组合 API：on/emit/installConsole/installOverlay
  */
-export function useError(opts?: { overlay?: boolean; console?: boolean }) {
+export function useError(opts?: {
+  /** 是否立即安装页面错误覆盖层。 */
+  overlay?: boolean
+  /** 是否立即安装控制台错误输出。 */
+  console?: boolean
+}) {
   /** 安装控制台输出处理 */
   const installConsole = () => {
     installBrowserBridge()

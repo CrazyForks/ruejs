@@ -8,6 +8,7 @@ Select 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** SelectColor 语义色类型。 */
 export type SelectColor =
   | 'neutral'
   | 'primary'
@@ -18,7 +19,9 @@ export type SelectColor =
   | 'warning'
   | 'error'
 
+/** SelectStatus 状态类型。 */
 export type SelectStatus = 'success' | 'warning' | 'error'
+/** SelectVariant 视觉或语义变体类型。 */
 export type SelectVariant = 'outlined' | 'filled' | 'ghost' | 'borderless'
 
 const selectSizeMap = {
@@ -33,128 +36,221 @@ const selectSizeMap = {
   large: 'lg',
 } as const
 
+/** SelectVisualSize 尺寸类型。 */
 export type SelectVisualSize = keyof typeof selectSizeMap
 type SelectResolvedSize = (typeof selectSizeMap)[SelectVisualSize]
 type SelectSizeProp = SelectVisualSize | number | string
+/** SelectValue 值类型。 */
 export type SelectValue = string | number
+/** SelectRawValue 值类型。 */
 export type SelectRawValue = SelectValue | SelectValue[]
 
+/** SelectFieldNames 接口。 */
 export interface SelectFieldNames {
+  /** 展示标签。 */
   label?: string
+  /** 受控值。 */
   value?: string
+  /** 可选项数据。 */
   options?: string
+  /** 是否禁用交互。 */
   disabled?: string
+  /** 标题内容。 */
   title?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** groupLabel 标签内容。 */
   groupLabel?: string
 }
 
+/** SelectOptionData 数据项结构。 */
 export interface SelectOptionData {
+  /** 展示标签。 */
   label?: any
+  /** 受控值。 */
   value?: SelectValue
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 标题内容。 */
   title?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 可选项数据。 */
   options?: SelectOptionData[]
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** SelectLabeledValue 接口。 */
 export interface SelectLabeledValue {
+  /** 受控值。 */
   value: SelectValue
+  /** 展示标签。 */
   label: any
+  /** 数据项唯一标识。 */
   key: SelectValue
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 标题内容。 */
   title?: string
 }
 
+/** SelectResolvedOption 选项配置。 */
 export interface SelectResolvedOption {
+  /** 数据项唯一标识。 */
   key: string
+  /** 受控值。 */
   value: SelectValue
+  /** 展示标签。 */
   label: any
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 标题内容。 */
   title?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** groupLabel 标签内容。 */
   groupLabel?: any
+  /** raw 配置项。 */
   raw?: SelectOptionData
 }
 
+/** SelectChangeContext 事件或渲染上下文。 */
 export interface SelectChangeContext {
+  /** values 配置项。 */
   values: SelectValue[]
+  /** labels 配置项。 */
   labels: any[]
+  /** 可选项数据。 */
   options: SelectResolvedOption[]
+  /** nativeEvent 配置项。 */
   nativeEvent: Event
 }
 
+/** SelectProps 组件属性。 */
 export interface SelectProps {
+  /** 受控值。 */
   value?: SelectRawValue
+  /** 非受控初始值。 */
   defaultValue?: SelectRawValue
+  /** 组件语义色。 */
   color?: SelectColor
+  /** 组件状态。 */
   status?: SelectStatus
+  /** 组件视觉变体。 */
   variant?: SelectVariant
+  /** 组件尺寸。 */
   size?: SelectSizeProp
+  /** uiSize 尺寸。 */
   uiSize?: SelectVisualSize
+  /** nativeSize 尺寸。 */
   nativeSize?: number | string
+  /** ghost 配置项。 */
   ghost?: boolean
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** loadingText 文本内容。 */
   loadingText?: any
+  /** 可选项数据。 */
   options?: SelectOptionData[]
+  /** 自定义数据字段映射。 */
   fieldNames?: SelectFieldNames
+  /** 占位内容。 */
   placeholder?: any
+  /** placeholderValue 值。 */
   placeholderValue?: SelectValue | ''
+  /** placeholderDisabled 配置项。 */
   placeholderDisabled?: boolean
+  /** notFoundContent 配置项。 */
   notFoundContent?: any
+  /** 是否允许一键清空。 */
   allowClear?: boolean
+  /** clearLabel 标签内容。 */
   clearLabel?: string
+  /** 清空时触发的回调。 */
   onClear?: (event: MouseEvent) => void
+  /** 前缀内容。 */
   prefix?: any
+  /** 后缀内容。 */
   suffix?: any
+  /** 输入前置附加内容。 */
   addonBefore?: any
+  /** 输入后置附加内容。 */
   addonAfter?: any
+  /** suffixIcon 图标内容。 */
   suffixIcon?: any
+  /** showArrow 配置项。 */
   showArrow?: boolean
+  /** mode 配置项。 */
   mode?: 'multiple'
+  /** labelInValue 值。 */
   labelInValue?: boolean
+  /** optionLabelProp 配置项。 */
   optionLabelProp?: string
+  /** maxCount 配置项。 */
   maxCount?: number
+  /** 值或状态变化时触发的回调。 */
   onChange?: (event: Event) => void
+  /** onValueChange 事件回调。 */
   onValueChange?: (
     value: SelectValue | SelectValue[] | SelectLabeledValue | SelectLabeledValue[] | null,
     context: SelectChangeContext,
   ) => void
+  /** 选中项时触发的回调。 */
   onSelect?: (
     value: SelectValue | SelectLabeledValue,
     option: SelectResolvedOption,
     event: Event,
   ) => void
+  /** 取消选中项时触发的回调。 */
   onDeselect?: (
     value: SelectValue | SelectLabeledValue,
     option: SelectResolvedOption,
     event: Event,
   ) => void
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** selectClassName 附加类名。 */
   selectClassName?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** SelectOptionProps 组件属性。 */
 export interface SelectOptionProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** SelectOptGroupProps 组件属性。 */
 export interface SelectOptGroupProps {
+  /** 展示标签。 */
   label: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** SelectShellProps 组件属性。 */
 export interface SelectShellProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -185,14 +281,17 @@ const defaultFieldNames: Required<SelectFieldNames> = {
   groupLabel: 'label',
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 判断 Visual Size 的内部工具函数。 */
 const isVisualSize = (value?: SelectSizeProp): value is SelectVisualSize => {
   return typeof value === 'string' && value in selectSizeMap
 }
 
+/** 解析 Visual Size 的内部工具函数。 */
 const resolveVisualSize = (
   size?: SelectSizeProp,
   uiSize?: SelectVisualSize,
@@ -206,6 +305,7 @@ const resolveVisualSize = (
   return undefined
 }
 
+/** 解析 Native Size 的内部工具函数。 */
 const resolveNativeSize = (size?: SelectSizeProp, nativeSize?: number | string) => {
   if (nativeSize !== undefined && nativeSize !== null) {
     return String(nativeSize)
@@ -219,6 +319,7 @@ const resolveNativeSize = (size?: SelectSizeProp, nativeSize?: number | string) 
   return undefined
 }
 
+/** 解析 Select Variant Class Name 的内部工具函数。 */
 const resolveSelectVariantClassName = (variant?: SelectVariant, ghost?: boolean) => {
   const resolvedVariant = ghost ? 'ghost' : variant
   switch (resolvedVariant) {
@@ -233,6 +334,7 @@ const resolveSelectVariantClassName = (variant?: SelectVariant, ghost?: boolean)
   }
 }
 
+/** 解析 Shell Variant Class Name 的内部工具函数。 */
 const resolveShellVariantClassName = (variant?: SelectVariant, ghost?: boolean) => {
   const resolvedVariant = ghost ? 'ghost' : variant
   switch (resolvedVariant) {
@@ -247,6 +349,7 @@ const resolveShellVariantClassName = (variant?: SelectVariant, ghost?: boolean) 
   }
 }
 
+/** 构建 Select Class Name 的内部工具函数。 */
 const buildSelectClassName = (
   color?: SelectColor,
   status?: SelectStatus,
@@ -268,6 +371,7 @@ const buildSelectClassName = (
   return cls
 }
 
+/** 构建 Shell Class Name 的内部工具函数。 */
 const buildShellClassName = (
   color?: SelectColor,
   status?: SelectStatus,
@@ -290,6 +394,7 @@ const buildShellClassName = (
   return cls
 }
 
+/** read Option Field 的内部工具函数。 */
 const readOptionField = (
   option: SelectOptionData,
   field: keyof Required<SelectFieldNames>,
@@ -299,6 +404,7 @@ const readOptionField = (
   return option[fieldName]
 }
 
+/** flatten Data Options 的内部工具函数。 */
 const flattenDataOptions = (
   options: SelectOptionData[],
   fieldNames?: SelectFieldNames,
@@ -332,6 +438,7 @@ const flattenDataOptions = (
   })
 }
 
+/** 创建 Option Meta Map 的内部工具函数。 */
 const createOptionMetaMap = (options?: SelectOptionData[], fieldNames?: SelectFieldNames) => {
   const map: Record<string, FlattenedSelectOption> = {}
 
@@ -347,6 +454,7 @@ const createOptionMetaMap = (options?: SelectOptionData[], fieldNames?: SelectFi
   return map
 }
 
+/** 渲染 Data Options 的内部工具函数。 */
 const renderDataOptions = (
   options: SelectOptionData[],
   fieldNames?: SelectFieldNames,
@@ -392,6 +500,7 @@ const renderDataOptions = (
   })
 }
 
+/** 判断 Listbox Size 的内部工具函数。 */
 const isListboxSize = (nativeSizeValue?: string) => {
   if (!nativeSizeValue) return false
   const resolved = Number(nativeSizeValue)
@@ -400,8 +509,10 @@ const isListboxSize = (nativeSizeValue?: string) => {
 
 let pendingCompactOpenRestoreKey: string | null = null
 let pendingCompactOpenRestoreTimer: ReturnType<typeof setTimeout> | null = null
+/** COMPACT_OPEN_RESTORE_TIMEOUT 内部常量。 */
 const COMPACT_OPEN_RESTORE_TIMEOUT = 160
 
+/** clear Pending Compact Open Restore 的内部工具函数。 */
 const clearPendingCompactOpenRestore = () => {
   if (pendingCompactOpenRestoreTimer) {
     clearTimeout(pendingCompactOpenRestoreTimer)
@@ -411,6 +522,7 @@ const clearPendingCompactOpenRestore = () => {
   pendingCompactOpenRestoreKey = null
 }
 
+/** 解析 Compact Open Restore Key 的内部工具函数。 */
 const resolveCompactOpenRestoreKey = (root?: Element | null): string | null => {
   if (!root || typeof document === 'undefined') {
     return null
@@ -436,6 +548,7 @@ const resolveCompactOpenRestoreKey = (root?: Element | null): string | null => {
   return segments.reverse().join('.')
 }
 
+/** 解析 Compact Open Persistence Key 的内部工具函数。 */
 const resolveCompactOpenPersistenceKey = (
   nativeProps: Record<string, any>,
   options: SelectOptionData[] | undefined,
@@ -470,6 +583,7 @@ const resolveCompactOpenPersistenceKey = (
   return `options:${placeholderKey}:${classKey}:${optionFingerprint}`
 }
 
+/** mark Pending Compact Open Restore 的内部工具函数。 */
 const markPendingCompactOpenRestore = (nextKey?: string | null) => {
   if (!nextKey) {
     return
@@ -485,6 +599,7 @@ const markPendingCompactOpenRestore = (nextKey?: string | null) => {
   }, COMPACT_OPEN_RESTORE_TIMEOUT)
 }
 
+/** consume Pending Compact Open Restore 的内部工具函数。 */
 const consumePendingCompactOpenRestore = (nextKey?: string | null) => {
   if (!nextKey || !pendingCompactOpenRestoreKey) {
     return false
@@ -499,6 +614,7 @@ const consumePendingCompactOpenRestore = (nextKey?: string | null) => {
   return matched
 }
 
+/** 解析 Option Label 的内部工具函数。 */
 const resolveOptionLabel = (
   option: HTMLOptionElement,
   meta: FlattenedSelectOption | undefined,
@@ -521,6 +637,7 @@ const resolveOptionLabel = (
   return option.textContent ?? option.label ?? option.value
 }
 
+/** 解析 Option Value 的内部工具函数。 */
 const resolveOptionValue = (option: HTMLOptionElement, meta: FlattenedSelectOption | undefined) => {
   if (meta?.value !== undefined && meta.value !== null) {
     return meta.value
@@ -528,6 +645,7 @@ const resolveOptionValue = (option: HTMLOptionElement, meta: FlattenedSelectOpti
   return option.value
 }
 
+/** 转换为 Labeled Value 的内部工具函数。 */
 const toLabeledValue = (
   option: HTMLOptionElement,
   meta: FlattenedSelectOption | undefined,
@@ -543,6 +661,7 @@ const toLabeledValue = (
   }
 }
 
+/** 转换为 Resolved Option 的内部工具函数。 */
 const toResolvedOption = (
   option: HTMLOptionElement,
   meta: FlattenedSelectOption | undefined,
@@ -561,6 +680,7 @@ const toResolvedOption = (
   }
 }
 
+/** 构建 Change State 的内部工具函数。 */
 const buildChangeState = (
   select: HTMLSelectElement,
   optionMetaMap: Record<string, FlattenedSelectOption>,
@@ -588,6 +708,7 @@ const buildChangeState = (
   }
 }
 
+/** clamp Selection To Max Count 的内部工具函数。 */
 const clampSelectionToMaxCount = (
   select: HTMLSelectElement,
   previousValues: string[],
@@ -627,17 +748,20 @@ const clampSelectionToMaxCount = (
   return Array.from(select.selectedOptions).map(option => option.value)
 }
 
+/** find Option Element By Value 的内部工具函数。 */
 const findOptionElementByValue = (select: HTMLSelectElement, value: string) => {
   return Array.from(select.options).find(option => option.value === value) as
     | HTMLOptionElement
     | undefined
 }
 
+/** 归一化 Select Values 的内部工具函数。 */
 const normalizeSelectValues = (value?: SelectRawValue) => {
   if (value === undefined || value === null) return []
   return Array.isArray(value) ? value.map(item => String(item)) : [String(value)]
 }
 
+/** group Resolved Options 的内部工具函数。 */
 const groupResolvedOptions = (options: SelectResolvedOption[]) => {
   const groups: SelectResolvedOptionGroup[] = []
   const groupMap = new Map<string, SelectResolvedOptionGroup>()
@@ -673,6 +797,7 @@ const groupResolvedOptions = (options: SelectResolvedOption[]) => {
   return groups
 }
 
+/** 转换为 Resolved Option From Flat 的内部工具函数。 */
 const toResolvedOptionFromFlat = (option: FlattenedSelectOption): SelectResolvedOption => {
   const value = option.value ?? option.key
   return {
@@ -687,6 +812,7 @@ const toResolvedOptionFromFlat = (option: FlattenedSelectOption): SelectResolved
   }
 }
 
+/** Default Chevron 的内部工具函数。 */
 const DefaultChevron: FC = () => {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4 shrink-0 opacity-60">
@@ -701,6 +827,7 @@ const DefaultChevron: FC = () => {
   )
 }
 
+/** Shell 的内部工具函数。 */
 const Shell: FC<SelectShellProps> = ({ className, children, ...rest }) => {
   return (
     <label {...rest} className={mergeClassName('input', className)}>
@@ -709,6 +836,7 @@ const Shell: FC<SelectShellProps> = ({ className, children, ...rest }) => {
   )
 }
 
+/** Option 的内部工具函数。 */
 const Option: FC<SelectOptionProps> = ({ className, children, ...rest }) => {
   return (
     <option {...rest} className={className}>
@@ -717,6 +845,7 @@ const Option: FC<SelectOptionProps> = ({ className, children, ...rest }) => {
   )
 }
 
+/** Opt Group 的内部工具函数。 */
 const OptGroup: FC<SelectOptGroupProps> = ({ label, className, children, ...rest }) => {
   return (
     <optgroup {...rest} label={label} className={className}>
@@ -731,6 +860,7 @@ type SelectCompound = FC<SelectProps> & {
   Shell: FC<SelectShellProps>
 }
 
+/** Select Root 的内部工具函数。 */
 const SelectRoot: FC<SelectProps> = ({
   value,
   defaultValue,
@@ -1456,4 +1586,5 @@ const Select: SelectCompound = Object.assign(SelectRoot, {
   Shell,
 })
 
+/** 默认导出选择器组件。 */
 export default Select

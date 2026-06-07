@@ -192,10 +192,10 @@ Content-Security-Policy: default-src 'self';
 
 ```ts
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import rue from '@rue-js/vite-plugin-rue'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [rue()],
   server: {
     headers: {
       'Content-Security-Policy':

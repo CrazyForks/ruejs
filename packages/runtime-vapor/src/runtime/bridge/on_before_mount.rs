@@ -1,3 +1,8 @@
+/*
+生命周期桥接：onBeforeMount
+
+注册组件挂载前回调。重入期间无法借用 runtime 时，会先进入 pending hooks 队列。
+*/
 use super::WasmRue;
 use crate::runtime::globals::push_pending_hook;
 use wasm_bindgen::JsValue;

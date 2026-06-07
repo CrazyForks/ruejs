@@ -17,9 +17,12 @@ type TransitionGroupChildInput = unknown
 
 const renderedTransitionGroupContainers = new WeakSet<HTMLElement>()
 
+/** TransitionGroup 组件属性，面向 keyed 多子节点列表。 */
 export type TransitionGroupProps = PropsWithChildren<
   BaseTransitionProps & {
+    /** 渲染容器标签，默认 span + display: contents。 */
     tag?: string
+    /** FLIP 移动过渡使用的类名，默认 `${name}-move`。 */
     moveClass?: string
   }
 >

@@ -7,6 +7,7 @@ Textarea 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
 
+/** TextareaTone 语义色类型。 */
 export type TextareaTone =
   | 'neutral'
   | 'primary'
@@ -17,7 +18,9 @@ export type TextareaTone =
   | 'warning'
   | 'error'
 
+/** TextareaColor 语义色类型。 */
 export type TextareaColor = 'default' | TextareaTone
+/** TextareaSize 尺寸类型。 */
 export type TextareaSize =
   | 'xs'
   | 'sm'
@@ -28,60 +31,97 @@ export type TextareaSize =
   | 'middle'
   | 'medium'
   | 'large'
+/** TextareaStatus 状态类型。 */
 export type TextareaStatus = 'warning' | 'error'
+/** TextareaVariant 视觉或语义变体类型。 */
 export type TextareaVariant = 'outlined' | 'filled' | 'ghost'
+/** TextareaResize 类型。 */
 export type TextareaResize = 'none' | 'vertical' | 'horizontal' | 'both'
 
+/** TextareaAutoSizeConfig 配置对象。 */
 export interface TextareaAutoSizeConfig {
+  /** minRows 配置项。 */
   minRows?: number
+  /** maxRows 配置项。 */
   maxRows?: number
 }
 
+/** TextareaShowCountInfo 接口。 */
 export interface TextareaShowCountInfo {
+  /** count 配置项。 */
   count: number
+  /** maxLength 配置项。 */
   maxLength?: number
 }
 
+/** TextareaShowCountConfig 配置对象。 */
 export interface TextareaShowCountConfig {
+  /** formatter 配置项。 */
   formatter?: (info: TextareaShowCountInfo) => any
 }
 
+/** TextareaAllowClearConfig 配置对象。 */
 export interface TextareaAllowClearConfig {
+  /** 清空图标。 */
   clearIcon?: any
 }
 
+/** TextareaProps 组件属性。 */
 export interface TextareaProps {
+  /** 组件语义色。 */
   color?: TextareaColor
+  /** 组件尺寸。 */
   size?: TextareaSize
+  /** 组件状态。 */
   status?: TextareaStatus
+  /** 组件视觉变体。 */
   variant?: TextareaVariant
+  /** resize 配置项。 */
   resize?: TextareaResize
+  /** ghost 配置项。 */
   ghost?: boolean
+  /** showCount 配置项。 */
   showCount?: boolean | TextareaShowCountConfig
+  /** 是否允许一键清空。 */
   allowClear?: boolean | TextareaAllowClearConfig
+  /** autoSize 尺寸。 */
   autoSize?: boolean | TextareaAutoSizeConfig
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** countClassName 附加类名。 */
   countClassName?: string
+  /** clearButtonClassName 附加类名。 */
   clearButtonClassName?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 受控值。 */
   value?: string | number
+  /** 非受控初始值。 */
   defaultValue?: string | number
+  /** 清空时触发的回调。 */
   onClear?: (event: MouseEvent) => void
+  /** onInput 事件回调。 */
   onInput?: (event: Event) => void
+  /** 值或状态变化时触发的回调。 */
   onChange?: (event: Event) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 解析 Text Value 的内部工具函数。 */
 const resolveTextValue = (value?: string | number) => {
   if (value == null) return ''
   return String(value)
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: TextareaSize) => {
   switch (size) {
     case 'small':
@@ -96,6 +136,7 @@ const resolveSizeClass = (size?: TextareaSize) => {
   }
 }
 
+/** 解析 Status Tone 的内部工具函数。 */
 const resolveStatusTone = (status?: TextareaStatus) => {
   switch (status) {
     case 'warning':
@@ -107,6 +148,7 @@ const resolveStatusTone = (status?: TextareaStatus) => {
   }
 }
 
+/** 解析 Resize Class 的内部工具函数。 */
 const resolveResizeClass = (resize?: TextareaResize) => {
   switch (resize) {
     case 'none':
@@ -122,6 +164,7 @@ const resolveResizeClass = (resize?: TextareaResize) => {
   }
 }
 
+/** 构建 Textarea Class Name 的内部工具函数。 */
 const buildTextareaClassName = ({
   color,
   status,
@@ -149,6 +192,7 @@ const buildTextareaClassName = ({
   return cls
 }
 
+/** 渲染 Count Content 的内部工具函数。 */
 const renderCountContent = (
   showCount: boolean | TextareaShowCountConfig | undefined,
   info: TextareaShowCountInfo,
@@ -162,11 +206,13 @@ const renderCountContent = (
   return String(info.count)
 }
 
+/** stringify Count Content 的内部工具函数。 */
 const stringifyCountContent = (content: any) => {
   if (content == null) return ''
   return typeof content === 'string' ? content : String(content)
 }
 
+/** Default Clear Icon 的内部工具函数。 */
 const DefaultClearIcon: FC = () => {
   return (
     <svg
@@ -183,6 +229,7 @@ const DefaultClearIcon: FC = () => {
   )
 }
 
+/** Textarea 的内部工具函数。 */
 const Textarea: FC<TextareaProps> = ({
   color,
   size,
@@ -490,4 +537,5 @@ const Textarea: FC<TextareaProps> = ({
   )
 }
 
+/** 默认导出多行输入组件。 */
 export default Textarea

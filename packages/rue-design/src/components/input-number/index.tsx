@@ -15,54 +15,93 @@ import Input, {
   type InputVariant,
 } from '../input'
 
+/** InputNumberValue 值类型。 */
 export type InputNumberValue = number | string
+/** InputNumberEmitter 类型。 */
 export type InputNumberEmitter = 'handler' | 'keydown' | 'wheel'
 
+/** InputNumberFormatterInfo 接口。 */
 export interface InputNumberFormatterInfo {
+  /** userTyping 配置项。 */
   userTyping: boolean
+  /** input 区域配置。 */
   input: string
 }
 
+/** InputNumberControlsConfig 配置对象。 */
 export interface InputNumberControlsConfig {
+  /** upIcon 图标内容。 */
   upIcon?: any
+  /** downIcon 图标内容。 */
   downIcon?: any
 }
 
+/** InputNumberStepInfo 接口。 */
 export interface InputNumberStepInfo {
+  /** offset 配置项。 */
   offset: number
+  /** 组件类型或语义类型。 */
   type: 'up' | 'down'
+  /** emitter 配置项。 */
   emitter: InputNumberEmitter
 }
 
+/** InputNumberProps 组件属性。 */
 export interface InputNumberProps extends Omit<
   InputProps,
   'type' | 'value' | 'defaultValue' | 'onChange'
 > {
+  /** 受控值。 */
   value?: InputNumberValue | null
+  /** 非受控初始值。 */
   defaultValue?: InputNumberValue
+  /** min 配置项。 */
   min?: InputNumberValue
+  /** max 配置项。 */
   max?: InputNumberValue
+  /** step 配置项。 */
   step?: InputNumberValue
+  /** precision 配置项。 */
   precision?: number
+  /** stringMode 配置项。 */
   stringMode?: boolean
+  /** keyboard 配置项。 */
   keyboard?: boolean
+  /** changeOnWheel 配置项。 */
   changeOnWheel?: boolean
+  /** changeOnBlur 配置项。 */
   changeOnBlur?: boolean
+  /** controls 配置项。 */
   controls?: boolean | InputNumberControlsConfig
+  /** decimalSeparator 配置项。 */
   decimalSeparator?: string
+  /** 组件语义色。 */
   color?: InputColor
+  /** 组件尺寸。 */
   size?: InputSize
+  /** 组件状态。 */
   status?: InputStatus
+  /** 组件视觉变体。 */
   variant?: InputVariant
+  /** readOnly 配置项。 */
   readOnly?: boolean
+  /** formatter 配置项。 */
   formatter?: (value: InputNumberValue | null, info: InputNumberFormatterInfo) => string
+  /** parser 配置项。 */
   parser?: (input: string) => number | string | null | undefined
+  /** 值或状态变化时触发的回调。 */
   onChange?: (value: InputNumberValue | null) => void
+  /** onStep 事件回调。 */
   onStep?: (value: InputNumberValue, info: InputNumberStepInfo) => void
+  /** 失去焦点时触发的回调。 */
   onBlur?: (event: FocusEvent) => void
+  /** 获得焦点时触发的回调。 */
   onFocus?: (event: FocusEvent) => void
+  /** onWheel 事件回调。 */
   onWheel?: (event: WheelEvent) => void
+  /** onCompositionStart 事件回调。 */
   onCompositionStart?: (event: CompositionEvent) => void
+  /** onCompositionEnd 事件回调。 */
   onCompositionEnd?: (event: CompositionEvent) => void
 }
 
@@ -81,10 +120,12 @@ interface InputNumberControlVisualConfig {
   suffixClassName: string
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...classNames: Array<string | undefined | false | null>) => {
   return classNames.filter(Boolean).join(' ')
 }
 
+/** 解析 Control Size 的内部工具函数。 */
 const resolveControlSize = (size?: InputSize) => {
   switch (size) {
     case 'small':
@@ -99,6 +140,7 @@ const resolveControlSize = (size?: InputSize) => {
   }
 }
 
+/** 解析 Control Visual Config 的内部工具函数。 */
 const resolveControlVisualConfig = (size?: InputSize): InputNumberControlVisualConfig => {
   switch (resolveControlSize(size)) {
     case 'xs':
@@ -139,15 +181,18 @@ const resolveControlVisualConfig = (size?: InputSize): InputNumberControlVisualC
   }
 }
 
+/** 转换为 Finite Number 的内部工具函数。 */
 const toFiniteNumber = (value: any) => {
   const nextValue = Number(value)
   return Number.isFinite(nextValue) ? nextValue : undefined
 }
 
+/** 归一化 Negative Zero 的内部工具函数。 */
 const normalizeNegativeZero = (value: number) => {
   return Object.is(value, -0) ? 0 : value
 }
 
+/** round With Precision 的内部工具函数。 */
 const roundWithPrecision = (value: number, precision?: number) => {
   if (typeof precision !== 'number' || precision < 0) {
     return normalizeNegativeZero(value)
@@ -156,6 +201,7 @@ const roundWithPrecision = (value: number, precision?: number) => {
   return normalizeNegativeZero(Math.round(value * factor) / factor)
 }
 
+/** count Fraction Digits 的内部工具函数。 */
 const countFractionDigits = (value: string | number | undefined) => {
   if (value == null) return 0
   const text = String(value).toLowerCase()
@@ -170,6 +216,7 @@ const countFractionDigits = (value: string | number | undefined) => {
   return text.includes('.') ? text.length - text.indexOf('.') - 1 : 0
 }
 
+/** 解析 Bounds 的内部工具函数。 */
 const resolveBounds = (min?: InputNumberValue, max?: InputNumberValue) => {
   const resolvedMin = toFiniteNumber(min) ?? Number.MIN_SAFE_INTEGER
   const resolvedMax = toFiniteNumber(max) ?? Number.MAX_SAFE_INTEGER
@@ -187,17 +234,20 @@ const resolveBounds = (min?: InputNumberValue, max?: InputNumberValue) => {
   }
 }
 
+/** 解析 Step 的内部工具函数。 */
 const resolveStep = (step?: InputNumberValue) => {
   const resolved = toFiniteNumber(step) ?? 1
   return resolved > 0 ? resolved : 1
 }
 
+/** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => {
   if (value < min) return min
   if (value > max) return max
   return value
 }
 
+/** 转换为 Display Decimal 的内部工具函数。 */
 const toDisplayDecimal = (value: string, decimalSeparator?: string) => {
   if (decimalSeparator && decimalSeparator !== '.') {
     return value.replace('.', decimalSeparator)
@@ -205,6 +255,7 @@ const toDisplayDecimal = (value: string, decimalSeparator?: string) => {
   return value
 }
 
+/** sanitize Numeric Input 的内部工具函数。 */
 const sanitizeNumericInput = (input: string, decimalSeparator?: string) => {
   const separator = decimalSeparator === ',' ? ',' : '.'
   const normalizedInput = typeof input.normalize === 'function' ? input.normalize('NFKC') : input
@@ -237,10 +288,12 @@ const sanitizeNumericInput = (input: string, decimalSeparator?: string) => {
   return `${sign}${integerPart}${hasSeparator ? `.${fractionPart}` : ''}`
 }
 
+/** 判断 Transient Numeric Text 的内部工具函数。 */
 const isTransientNumericText = (value: string) => {
   return value === '-' || value === '.' || value === '-.'
 }
 
+/** 归一化 Committed Value 的内部工具函数。 */
 const normalizeCommittedValue = (
   value: InputNumberValue | null | undefined,
   stringMode: boolean,
@@ -262,6 +315,7 @@ const normalizeCommittedValue = (
   return stringMode ? normalized : normalizeNegativeZero(numeric)
 }
 
+/** serialize Numeric Value 的内部工具函数。 */
 const serializeNumericValue = (
   numeric: number,
   stringMode: boolean,
@@ -287,6 +341,7 @@ const serializeNumericValue = (
   return rounded
 }
 
+/** format Committed Text 的内部工具函数。 */
 const formatCommittedText = (
   value: InputNumberValue | null,
   precision?: number,
@@ -312,6 +367,7 @@ const formatCommittedText = (
   return toDisplayDecimal(nextText, decimalSeparator)
 }
 
+/** parse Input Value 的内部工具函数。 */
 const parseInputValue = (
   input: string,
   parser: InputNumberProps['parser'],
@@ -377,6 +433,7 @@ const parseInputValue = (
   }
 }
 
+/** 渲染 Formatted Value 的内部工具函数。 */
 const renderFormattedValue = (
   formatter: InputNumberProps['formatter'],
   value: InputNumberValue | null,
@@ -388,6 +445,7 @@ const renderFormattedValue = (
   return formatted == null ? input : String(formatted)
 }
 
+/** 构建 Step Value 的内部工具函数。 */
 const buildStepValue = (current: number, offset: number, step: number, precision?: number) => {
   const scale =
     10 ** Math.max(countFractionDigits(current), countFractionDigits(step), precision ?? 0)
@@ -395,6 +453,7 @@ const buildStepValue = (current: number, offset: number, step: number, precision
   return roundWithPrecision(nextValue, precision)
 }
 
+/** 解析 Step Base Value 的内部工具函数。 */
 const resolveStepBaseValue = (currentValue: InputNumberValue | null, min: number, max: number) => {
   const currentNumeric = currentValue == null ? undefined : toFiniteNumber(currentValue)
   if (currentNumeric !== undefined) {
@@ -405,6 +464,7 @@ const resolveStepBaseValue = (currentValue: InputNumberValue | null, min: number
   return 0
 }
 
+/** Default Up Icon 的内部工具函数。 */
 const DefaultUpIcon: FC<{ className?: string }> = ({ className }) => {
   return (
     <svg
@@ -421,6 +481,7 @@ const DefaultUpIcon: FC<{ className?: string }> = ({ className }) => {
   )
 }
 
+/** Default Down Icon 的内部工具函数。 */
 const DefaultDownIcon: FC<{ className?: string }> = ({ className }) => {
   return (
     <svg
@@ -437,6 +498,7 @@ const DefaultDownIcon: FC<{ className?: string }> = ({ className }) => {
   )
 }
 
+/** Input Number 的内部工具函数。 */
 const InputNumber: FC<InputNumberProps> = ({
   value,
   defaultValue,
@@ -865,4 +927,5 @@ const InputNumber: FC<InputNumberProps> = ({
   )
 }
 
+/** 默认导出数字输入框组件。 */
 export default InputNumber

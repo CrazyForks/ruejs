@@ -6,31 +6,49 @@ Hover3D 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** Hover3DAs 类型。 */
 export type Hover3DAs = 'div' | 'a'
 
+/** Hover3DSurfaceProps 组件属性。 */
 export interface Hover3DSurfaceProps {
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** Hover3DProps 组件属性。 */
 export interface Hover3DProps {
+  /** 自定义渲染的宿主元素。 */
   as?: Hover3DAs
+  /** 链接地址。 */
   href?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** surfaceAs 配置项。 */
   surfaceAs?: string
+  /** surfaceClassName 附加类名。 */
   surfaceClassName?: string
+  /** surfaceProps 透传属性。 */
   surfaceProps?: Hover3DSurfaceProps
+  /** overlays 配置项。 */
   overlays?: boolean
+  /** overlayClassName 附加类名。 */
   overlayClassName?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...classNames: Array<string | undefined | false>) => {
   return classNames.filter(Boolean).join(' ')
 }
 
+/** Overlay Divs 的内部工具函数。 */
 const OverlayDivs: FC<{ className?: string }> = ({ className }) => (
   <>
     <div aria-hidden="true" data-hover3d-overlay="" className={className}></div>
@@ -44,6 +62,7 @@ const OverlayDivs: FC<{ className?: string }> = ({ className }) => (
   </>
 )
 
+/** 渲染 Surface 的内部工具函数。 */
 const renderSurface = (
   children: any,
   surfaceAs?: string,
@@ -69,6 +88,7 @@ const renderSurface = (
   )
 }
 
+/** Hover3 D 的内部工具函数。 */
 const Hover3D: FC<Hover3DProps> = ({
   as,
   href,
@@ -100,4 +120,5 @@ const Hover3D: FC<Hover3DProps> = ({
   )
 }
 
+/** 默认导出Hover3d组件。 */
 export default Hover3D

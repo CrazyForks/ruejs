@@ -51,12 +51,11 @@ fn renderable_identity(v: &JsValue) -> Option<JsValue> {
     let nodes = get_object_field(&obj, "nodes");
     if Array::is_array(&nodes) {
         let arr = Array::from(&nodes);
-        if arr.length() == 1 {
-            let first = arr.get(0);
-            if !first.is_undefined() && !first.is_null() {
-                return Some(first);
-            }
+        if arr.length() != 1 {
+            return None;
         }
+        let first = arr.get(0);
+        return (!first.is_undefined() && !first.is_null()).then_some(first);
     }
 
     None
@@ -96,10 +95,9 @@ fn renderable_reference_identity(v: &JsValue) -> Option<JsValue> {
 }
 
 fn same_renderable_reference(a: &JsValue, b: &JsValue) -> bool {
-    match (renderable_reference_identity(a), renderable_reference_identity(b)) {
-        (Some(left), Some(right)) => js_sys::Object::is(&left, &right),
-        _ => false,
-    }
+    let left = renderable_reference_identity(a).expect("left renderable identity");
+    let right = renderable_reference_identity(b).expect("right renderable identity");
+    js_sys::Object::is(&left, &right)
 }
 
 fn normalized_renderable_scalar(v: &JsValue) -> Option<JsValue> {
@@ -194,11 +192,7 @@ fn shallow_equal_renderable_like(a: &JsValue, b: &JsValue) -> Option<bool> {
     while i < len {
         let ai = aa.get(i);
         let bi = bb.get(i);
-        if let Some(equal) = shallow_equal_renderable_like(&ai, &bi) {
-            if !equal {
-                return Some(false);
-            }
-        } else if !js_sys::Object::is(&ai, &bi) {
+        if !shallow_equal_renderable_like(&ai, &bi).unwrap_or(false) {
             return Some(false);
         }
         i += 1;
@@ -221,9 +215,6 @@ pub fn shallow_equal_prop(a: &JsValue, b: &JsValue) -> bool {
     if let Some(equal) = shallow_equal_renderable_like(a, b) {
         return equal;
     }
-    if is_dom_node_like(a) || is_dom_node_like(b) {
-        return js_sys::Object::is(a, b);
-    }
     if a.is_object() && b.is_object() {
         let ao: Object = a.clone().unchecked_into();
         let bo: Object = b.clone().unchecked_into();
@@ -236,13 +227,7 @@ pub fn shallow_equal_prop(a: &JsValue, b: &JsValue) -> bool {
         let mut i = 0;
         while i < len {
             let k = ak.get(i);
-            let key_str = match k.as_string() {
-                Some(s) => s,
-                None => {
-                    i += 1;
-                    continue;
-                }
-            };
+            let key_str = k.as_string().expect("Object.keys entries are strings");
             let key_js = JsValue::from_str(&key_str);
             let has = js_sys::Reflect::has(&bo, &key_js).unwrap_or(false);
             if !has {
@@ -251,9 +236,11 @@ pub fn shallow_equal_prop(a: &JsValue, b: &JsValue) -> bool {
             let av = js_sys::Reflect::get(&ao, &key_js).unwrap_or(JsValue::UNDEFINED);
             let bv = js_sys::Reflect::get(&bo, &key_js).unwrap_or(JsValue::UNDEFINED);
             if let Some(equal) = shallow_equal_portable_component(&av, &bv) {
-                if !equal {
-                    return false;
+                if equal {
+                    i += 1;
+                    continue;
                 }
+                return false;
             } else if let Some(equal) = shallow_equal_renderable_like(&av, &bv) {
                 if !equal {
                     return false;
@@ -349,6 +336,88 @@ pub fn props_reactive_js(initial: JsValue, force_global: Option<bool>) -> JsValu
     let res = reactive_js(initial, Some(opts.into()), force_global);
     eq.forget();
     res
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wasm_bindgen_test::*;
+
+    fn object_with(key: &str, value: JsValue) -> JsValue {
+        let obj = Object::new();
+        Reflect::set(&obj, &JsValue::from_str(key), &value).unwrap();
+        obj.into()
+    }
+
+    #[wasm_bindgen_test]
+    fn shallow_equal_prop_covers_renderable_and_portable_edges() {
+        let host = Object::new();
+        Reflect::set(&host, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
+
+        let host_bridge_a = object_with("__rue_host_node", host.clone().into());
+        let host_bridge_b = object_with("__rue_host_node", host.clone().into());
+        assert!(shallow_equal_prop(&host_bridge_a, &host_bridge_b));
+
+        let nodes_a = Array::new();
+        nodes_a.push(&host.clone().into());
+        let nodes_b = Array::new();
+        nodes_b.push(&host.clone().into());
+        assert!(shallow_equal_prop(&nodes_a.clone().into(), &nodes_b.into()));
+
+        let different = Object::new();
+        Reflect::set(&different, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
+        let different_nodes = Array::new();
+        different_nodes.push(&different.into());
+        assert!(!shallow_equal_prop(&nodes_a.into(), &different_nodes.into()));
+
+        let render = Function::new_no_args("return null");
+        let component_a = Object::new();
+        Reflect::set(&component_a, &JsValue::from_str("__rue_component_type"), &render).unwrap();
+        Reflect::set(
+            &component_a,
+            &JsValue::from_str("props"),
+            &object_with("id", JsValue::from_f64(1.0)),
+        )
+        .unwrap();
+        let component_b = Object::new();
+        Reflect::set(&component_b, &JsValue::from_str("__rue_component_type"), &render).unwrap();
+        Reflect::set(
+            &component_b,
+            &JsValue::from_str("props"),
+            &object_with("id", JsValue::from_f64(1.0)),
+        )
+        .unwrap();
+        assert!(shallow_equal_prop(&component_a.clone().into(), &component_b.into()));
+
+        let component_c = Object::new();
+        Reflect::set(
+            &component_c,
+            &JsValue::from_str("__rue_component_type"),
+            &Function::new_no_args("return null"),
+        )
+        .unwrap();
+        assert!(!shallow_equal_prop(&component_a.into(), &component_c.into()));
+    }
+
+    #[wasm_bindgen_test]
+    fn shallow_and_readonly_helpers_accept_non_object_options_and_reuse_slots() {
+        let inst = Object::new();
+        crate::reactive::context::set_current_instance(inst.clone().into());
+
+        let root = object_with("nested", object_with("value", JsValue::from_f64(1.0)));
+        let first = shallow_reactive_js(root.clone(), Some(JsValue::from_str("bad")), None);
+        let hooks: Object =
+            Reflect::get(&inst, &JsValue::from_str("__hooks")).unwrap().unchecked_into();
+        Reflect::set(&hooks, &JsValue::from_str("__forcedIndex"), &JsValue::from_f64(0.0)).unwrap();
+        let second = shallow_reactive_js(root, None, None);
+        assert!(Object::is(&first, &second));
+
+        let readonly = readonly_js(object_with("a", JsValue::from_f64(1.0)), Some(true));
+        Reflect::set(&readonly, &JsValue::from_str("a"), &JsValue::from_f64(2.0)).ok();
+        assert_eq!(Reflect::get(&readonly, &JsValue::from_str("a")).unwrap().as_f64(), Some(1.0));
+
+        crate::reactive::context::set_current_instance(JsValue::UNDEFINED);
+    }
 }
 
 #[wasm_bindgen(typescript_custom_section)]

@@ -14,10 +14,13 @@ use crate::vapor::VaporTransform;
 /// 典型输出：
 /// - `const _el1 = _$createElement("div", _root);`
 /// - `_$appendChild(_root, _el1);`
+///
 /// 标签名解析规则：
 /// - 标识符直接使用其字符串值作为标签（如 `div`/`span`）
 /// - 复杂场景（成员/命名空间）统一回退为 `div` 以保证生成有效 DOM
+///
 /// 参考：`tests/spec4.rs`、`tests/basic.rs`
+///
 /// 设计权衡：编译期不做复杂的自定义元素名分辨；遇到非常规命名一律回退，避免生成无效节点导致运行时错误。
 pub fn resolve_tag_name(name: &JSXElementName) -> String {
     let tag = match name {
@@ -46,6 +49,6 @@ pub fn emit_create_element(
     stmts.push(append_child(parent.clone(), Expr::Ident(el_ident.clone())));
     // 记录元素标识符对应的标签名，后续如 style 文本等需要根据标签做适配处理
     vt.el_tag_by_ident.insert(el_ident.sym.to_string(), tag.to_string());
-    log::debug(&format!("element_node: create tag={} id={}", tag, el_ident.sym.to_string()));
+    log::debug(&format!("element_node: create tag={} id={}", tag, el_ident.sym));
     el_ident
 }

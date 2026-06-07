@@ -12,21 +12,36 @@ import { signal, watchEffect } from '../reactivity'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
 import {
   isSuspenseThenable,
+  RUE_SUSPENSE_COMPONENT_MARKER,
   RUE_SUSPENSE_BOUNDARY_KEY,
   type SuspenseBoundary,
   withSuspenseBoundary,
 } from './suspenseContext'
 
+/** Suspense 组件属性。 */
 export interface SuspenseProps extends PropsWithChildren<Record<string, unknown>> {
+  /** pending 时显示的兜底内容。 */
   fallback?: unknown
+  /** 已有 resolved 内容时，延迟显示 fallback 的毫秒数。 */
   timeout?: number | string
+  /** 进入 pending 状态时触发。 */
   onPending?: () => void
+  /** pending 完成并显示内容时触发。 */
   onResolve?: () => void
+  /** fallback 实际显示时触发。 */
   onFallback?: () => void
 }
 
 type SuspenseChildInput = Parameters<typeof renderBetween>[0]
 type SuspenseStatus = 'initial' | 'pending' | 'resolved'
+
+const SERVER_RENDERING_FLAG = '__rue_is_server_rendering__'
+const RUE_SUSPENSE_STAGING_KEY = '__rue_suspense_staging'
+
+const isServerRendering = () => {
+  const serverRenderingCount = (globalThis as Record<string, unknown>)[SERVER_RENDERING_FLAG]
+  return typeof serverRenderingCount === 'number' && serverRenderingCount > 0
+}
 
 const cloneRenderable = (value: unknown): unknown =>
   Array.isArray(value) ? value.map(cloneRenderable) : value
@@ -58,6 +73,7 @@ const callSuspenseHook = (hook: unknown) => {
   }
 }
 
+/** 为异步子树提供 pending 捕获、fallback 渲染和 resolved 内容恢复。 */
 export const Suspense: FC<SuspenseProps> = props => {
   const ctx = useSetup(() => {
     const container = createElement('div') as HTMLElement
@@ -71,6 +87,7 @@ export const Suspense: FC<SuspenseProps> = props => {
     if (stagingHost && stagingHost.style && typeof stagingHost.style === 'object') {
       stagingHost.style.display = 'none'
     }
+    ;(stagingHost as any)[RUE_SUSPENSE_STAGING_KEY] = true
     const stagingRoot =
       typeof stagingHost.attachShadow === 'function'
         ? ((stagingHost.attachShadow({ mode: 'open' }) as unknown as HTMLElement) ?? stagingHost)
@@ -352,6 +369,10 @@ export const Suspense: FC<SuspenseProps> = props => {
     renderBetween([] as any, ctx.fallbackContainer, ctx.fallbackStartEl, ctx.fallbackEndEl)
   })
 
+  if (isServerRendering()) {
+    return ctx.container as any
+  }
+
   return vapor(() => {
     if (ctx.lastProps !== props) {
       ctx.lastProps = props
@@ -363,3 +384,9 @@ export const Suspense: FC<SuspenseProps> = props => {
     return ctx.container as any
   })
 }
+
+Object.defineProperty(Suspense, RUE_SUSPENSE_COMPONENT_MARKER, {
+  configurable: false,
+  enumerable: false,
+  value: true,
+})

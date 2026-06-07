@@ -1,71 +1,131 @@
+/*
+QRCode 模块概述
+- 汇总二维码组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 import { onMounted, useRef, watch } from '@rue-js/rue'
 import { encodeQrMatrix, type EncodedQrCode, type QRCodeErrorCorrectionLevel } from './encoder'
 
+/** 重导出二维码纠错等级类型，供组件使用方复用编码配置。 */
 export type { QRCodeErrorCorrectionLevel } from './encoder'
 
+/** QRCodeType 视觉或语义变体类型。 */
 export type QRCodeType = 'canvas' | 'svg'
+/** QRCodeStatus 状态类型。 */
 export type QRCodeStatus = 'active' | 'expired' | 'loading' | 'scanned'
 
+/** QRCodeLocale 接口。 */
 export interface QRCodeLocale {
+  /** expired 配置项。 */
   expired?: any
+  /** refresh 配置项。 */
   refresh?: any
+  /** scanned 配置项。 */
   scanned?: any
+  /** 是否展示加载态。 */
   loading?: any
+  /** overflow 配置项。 */
   overflow?: any
 }
 
+/** QRCodeStatusRenderInfo 接口。 */
 export interface QRCodeStatusRenderInfo {
+  /** 组件状态。 */
   status: Exclude<QRCodeStatus, 'active'>
+  /** locale 配置项。 */
   locale: QRCodeLocale
+  /** onRefresh 事件回调。 */
   onRefresh?: () => void
 }
 
+/** QRCodeClassNames 局部类名配置。 */
 export interface QRCodeClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** frame 配置项。 */
   frame?: string
+  /** code 配置项。 */
   code?: string
+  /** svg 配置项。 */
   svg?: string
+  /** canvas 配置项。 */
   canvas?: string
+  /** cover 配置项。 */
   cover?: string
+  /** 组件状态。 */
   status?: string
+  /** action 配置项。 */
   action?: string
+  /** 图标内容。 */
   icon?: string
 }
 
+/** QRCodeStyles 局部样式配置。 */
 export interface QRCodeStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** frame 配置项。 */
   frame?: Record<string, any>
+  /** code 配置项。 */
   code?: Record<string, any>
+  /** svg 配置项。 */
   svg?: Record<string, any>
+  /** canvas 配置项。 */
   canvas?: Record<string, any>
+  /** cover 配置项。 */
   cover?: Record<string, any>
+  /** 组件状态。 */
   status?: Record<string, any>
+  /** action 配置项。 */
   action?: Record<string, any>
+  /** 图标内容。 */
   icon?: Record<string, any>
 }
 
+/** QRCodeProps 组件属性。 */
 export interface QRCodeProps {
+  /** 受控值。 */
   value?: string
+  /** 组件类型或语义类型。 */
   type?: QRCodeType
+  /** 图标内容。 */
   icon?: string
+  /** 组件尺寸。 */
   size?: number
+  /** iconSize 尺寸。 */
   iconSize?: number | { width?: number; height?: number }
+  /** 组件语义色。 */
   color?: string
+  /** bgColor 颜色。 */
   bgColor?: string
+  /** errorLevel 配置项。 */
   errorLevel?: QRCodeErrorCorrectionLevel
+  /** 组件状态。 */
   status?: QRCodeStatus
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** onRefresh 事件回调。 */
   onRefresh?: () => void
+  /** statusRender 自定义渲染函数。 */
   statusRender?: (info: QRCodeStatusRenderInfo) => any
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** marginSize 尺寸。 */
   marginSize?: number
+  /** locale 配置项。 */
   locale?: QRCodeLocale
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: QRCodeClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: QRCodeStyles
+  /** boostLevel 配置项。 */
   boostLevel?: boolean
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -82,6 +142,7 @@ interface SvgIconLayout {
   padding: number
 }
 
+/** DEFAULT_LOCALE 内部常量。 */
 const DEFAULT_LOCALE: Required<QRCodeLocale> = {
   expired: '二维码已过期',
   refresh: '刷新二维码',
@@ -90,9 +151,11 @@ const DEFAULT_LOCALE: Required<QRCodeLocale> = {
   overflow: '内容过长，请缩短后重试',
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (...parts: Array<string | undefined | null | false>) =>
   parts.filter(Boolean).join(' ')
 
+/** clamp Number 的内部工具函数。 */
 const clampNumber = (value: number, min: number, max: number) => {
   if (!Number.isFinite(value)) {
     return min
@@ -101,6 +164,7 @@ const clampNumber = (value: number, min: number, max: number) => {
   return Math.min(Math.max(value, min), max)
 }
 
+/** 归一化 Icon Size 的内部工具函数。 */
 const normalizeIconSize = (iconSize: QRCodeProps['iconSize'], innerSize: number): IconSizeShape => {
   const fallbackSide = clampNumber(Math.round(innerSize * 0.24), 22, Math.round(innerSize * 0.42))
 
@@ -122,6 +186,7 @@ const normalizeIconSize = (iconSize: QRCodeProps['iconSize'], innerSize: number)
   }
 }
 
+/** 构建 Svg Path 的内部工具函数。 */
 const buildSvgPath = (matrix: boolean[][], margin: number) => {
   let path = ''
 
@@ -147,6 +212,7 @@ const buildSvgPath = (matrix: boolean[][], margin: number) => {
   return path
 }
 
+/** 解析 Svg Icon Layout 的内部工具函数。 */
 const resolveSvgIconLayout = (
   totalUnits: number,
   innerSize: number,
@@ -168,6 +234,7 @@ const resolveSvgIconLayout = (
   }
 }
 
+/** draw Canvas Icon 的内部工具函数。 */
 const drawCanvasIcon = (
   context: CanvasRenderingContext2D,
   pixelSize: number,
@@ -186,6 +253,7 @@ const drawCanvasIcon = (
   context.drawImage(image, x, y, width, height)
 }
 
+/** encode Safe 的内部工具函数。 */
 const encodeSafe = (
   value: string,
   errorLevel: QRCodeErrorCorrectionLevel,
@@ -204,8 +272,10 @@ const encodeSafe = (
   }
 }
 
+/** Loading Indicator 的内部工具函数。 */
 const LoadingIndicator = () => <span className="loading loading-spinner loading-sm" />
 
+/** Expired Icon 的内部工具函数。 */
 const ExpiredIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 3" />
@@ -213,6 +283,7 @@ const ExpiredIcon = () => (
   </svg>
 )
 
+/** Scanned Icon 的内部工具函数。 */
 const ScannedIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="m7 12 3 3 7-7" />
@@ -220,6 +291,7 @@ const ScannedIcon = () => (
   </svg>
 )
 
+/** Warning Icon 的内部工具函数。 */
 const WarningIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="m12 4 8 14H4L12 4Z" />
@@ -228,12 +300,14 @@ const WarningIcon = () => (
   </svg>
 )
 
+/** Refresh Icon 的内部工具函数。 */
 const RefreshIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
     <path strokeLinecap="round" strokeLinejoin="round" d="M20 12a8 8 0 1 1-2.34-5.66L20 8V4h-4" />
   </svg>
 )
 
+/** Overflow State 的内部工具函数。 */
 const OverflowState: FC<{ locale: Required<QRCodeLocale>; message: string }> = ({
   locale,
   message,
@@ -249,6 +323,7 @@ const OverflowState: FC<{ locale: Required<QRCodeLocale>; message: string }> = (
   )
 }
 
+/** Default Status Content 的内部工具函数。 */
 const DefaultStatusContent: FC<QRCodeStatusRenderInfo> = ({ status, locale, onRefresh }) => {
   if (status === 'loading') {
     return (
@@ -289,6 +364,7 @@ const DefaultStatusContent: FC<QRCodeStatusRenderInfo> = ({ status, locale, onRe
   )
 }
 
+/** Custom Status Content 的内部工具函数。 */
 const CustomStatusContent: FC<{
   render: NonNullable<QRCodeProps['statusRender']>
   info: QRCodeStatusRenderInfo
@@ -296,6 +372,7 @@ const CustomStatusContent: FC<{
   return render(info)
 }
 
+/** QRCode 的内部工具函数。 */
 const QRCode: FC<QRCodeProps> = ({
   value,
   type = 'canvas',
@@ -610,4 +687,5 @@ const QRCode: FC<QRCodeProps> = ({
   )
 }
 
+/** 默认导出二维码组件。 */
 export default QRCode

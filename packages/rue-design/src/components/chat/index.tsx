@@ -7,7 +7,9 @@ Chat 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** ChatPlacement 位置或方向类型。 */
 export type ChatPlacement = 'start' | 'end'
+/** BubbleColor 语义色类型。 */
 export type BubbleColor =
   | 'neutral'
   | 'primary'
@@ -18,81 +20,138 @@ export type BubbleColor =
   | 'warning'
   | 'error'
 
+/** ChatPartProps 组件属性。 */
 export interface ChatPartProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
 }
 
+/** ChatAvatarConfig 配置对象。 */
 export interface ChatAvatarConfig {
+  /** src 配置项。 */
   src?: string
+  /** alt 配置项。 */
   alt?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** bodyClassName 附加类名。 */
   bodyClassName?: string
+  /** imgClassName 附加类名。 */
   imgClassName?: string
+  /** 主体内容。 */
   content?: any
+  /** 组件子内容。 */
   children?: any
 }
 
+/** ChatSemanticMessageProps 组件属性。 */
 export interface ChatSemanticMessageProps {
+  /** 弹出层或内容展示位置。 */
   placement?: ChatPlacement
+  /** 根节点附加类名。 */
   className?: string
+  /** message 配置项。 */
   message?: any
+  /** text 区域配置。 */
   text?: any
+  /** 组件语义色。 */
   color?: BubbleColor
+  /** bubbleClassName 附加类名。 */
   bubbleClassName?: string
+  /** avatar 配置项。 */
   avatar?: any
+  /** avatarSrc 配置项。 */
   avatarSrc?: string
+  /** avatarAlt 配置项。 */
   avatarAlt?: string
+  /** avatarClassName 附加类名。 */
   avatarClassName?: string
+  /** avatarBodyClassName 附加类名。 */
   avatarBodyClassName?: string
+  /** avatarImgClassName 附加类名。 */
   avatarImgClassName?: string
+  /** imageSrc 配置项。 */
   imageSrc?: string
+  /** imageAlt 配置项。 */
   imageAlt?: string
+  /** imageClassName 附加类名。 */
   imageClassName?: string
+  /** 头部区域内容。 */
   header?: any
+  /** author 配置项。 */
   author?: any
+  /** headerName 配置项。 */
   headerName?: any
+  /** timestamp 配置项。 */
   timestamp?: any
+  /** headerTime 配置项。 */
   headerTime?: any
+  /** headerClassName 附加类名。 */
   headerClassName?: string
+  /** 底部区域内容。 */
   footer?: any
+  /** footerClassName 附加类名。 */
   footerClassName?: string
+  /** typing 配置项。 */
   typing?: boolean
+  /** typingIndicator 配置项。 */
   typingIndicator?: any
 }
 
+/** ChatDataItem 数据项结构。 */
 export interface ChatDataItem extends ChatSemanticMessageProps {
+  /** 数据项唯一标识。 */
   key?: string | number
 }
 
+/** ChatProps 组件属性。 */
 export interface ChatProps extends ChatSemanticMessageProps {
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<ChatDataItem>
 }
 
+/** BubbleProps 组件属性。 */
 export interface BubbleProps extends ChatPartProps {
+  /** 组件语义色。 */
   color?: BubbleColor
+  /** typing 配置项。 */
   typing?: boolean
+  /** typingIndicator 配置项。 */
   typingIndicator?: any
 }
 
+/** HeaderProps 组件属性。 */
 export interface HeaderProps extends ChatPartProps {
+  /** author 配置项。 */
   author?: any
+  /** time 配置项。 */
   time?: any
+  /** timeClassName 附加类名。 */
   timeClassName?: string
 }
 
+/** ImageProps 组件属性。 */
 export interface ImageProps extends ChatPartProps {
+  /** src 配置项。 */
   src?: string
+  /** alt 配置项。 */
   alt?: string
+  /** bodyClassName 附加类名。 */
   bodyClassName?: string
+  /** imgClassName 附加类名。 */
   imgClassName?: string
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 判断是否存在 Renderable Node 的内部工具函数。 */
 const hasRenderableNode = (value: any): boolean => {
   if (Array.isArray(value)) {
     return value.some(item => hasRenderableNode(item))
@@ -100,10 +159,12 @@ const hasRenderableNode = (value: any): boolean => {
   return value !== null && value !== undefined && value !== false
 }
 
+/** 解析 Placement 的内部工具函数。 */
 const resolvePlacement = (placement?: ChatPlacement) => {
   return placement ?? 'start'
 }
 
+/** 判断 Avatar Config 的内部工具函数。 */
 const isAvatarConfig = (value: any): value is ChatAvatarConfig => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return false
@@ -119,6 +180,7 @@ const isAvatarConfig = (value: any): value is ChatAvatarConfig => {
   )
 }
 
+/** 判断是否存在 Semantic Message 的内部工具函数。 */
 const hasSemanticMessage = (message: ChatSemanticMessageProps) => {
   return (
     message.message != null ||
@@ -141,6 +203,7 @@ const hasSemanticMessage = (message: ChatSemanticMessageProps) => {
   )
 }
 
+/** 解析 Message Text 的内部工具函数。 */
 const resolveMessageText = (message: ChatSemanticMessageProps) => {
   return message.message ?? message.text
 }
@@ -218,6 +281,7 @@ const Image: FC<ImageProps> = ({ className, children, src, alt, bodyClassName, i
   )
 }
 
+/** 渲染 Avatar 的内部工具函数。 */
 const renderAvatar = (message: ChatSemanticMessageProps) => {
   const avatarSrc = message.avatarSrc ?? message.imageSrc
   const avatarAlt = message.avatarAlt ?? message.imageAlt
@@ -256,6 +320,7 @@ const renderAvatar = (message: ChatSemanticMessageProps) => {
   return null
 }
 
+/** 渲染 Header 的内部工具函数。 */
 const renderHeader = (message: ChatSemanticMessageProps) => {
   if (message.header != null) {
     return <Header className={message.headerClassName}>{message.header}</Header>
@@ -271,6 +336,7 @@ const renderHeader = (message: ChatSemanticMessageProps) => {
   return <Header className={message.headerClassName} author={author} time={time} />
 }
 
+/** 渲染 Semantic Message 的内部工具函数。 */
 const renderSemanticMessage = (message: ChatSemanticMessageProps, key?: string | number) => {
   const messageText = resolveMessageText(message)
   const placement = resolvePlacement(message.placement)
@@ -422,4 +488,5 @@ const ChatCompound: ChatCompound = Object.assign(Chat, {
   Image,
 })
 
+/** 默认导出聊天组件。 */
 export default ChatCompound

@@ -1,7 +1,9 @@
-import { type FC, useState, watch } from '@rue-js/rue'
+import { type FC, useComponent, useState, watch } from '@rue-js/rue'
 import { useI18n } from '@rue-js/i18n'
 import { RouterLink } from '@rue-js/router'
 import { resolveLocale } from '../../../i18n'
+
+const DocSearchBox = useComponent(() => import('../DocSearchBox'))
 
 const DEFAULT_THEME = 'luxury'
 
@@ -163,7 +165,7 @@ const Header: FC = () => {
   return (
     <header className="site-header fixed top-0 left-0 right-0 z-50 w-full">
       <div className="navbar bg-transparent max-w-[1400px] mx-auto w-full px-6 items-center">
-        <div className="navbar-start">
+        <div className="navbar-start gap-4">
           <RouterLink to="/" className="flex items-center gap-3">
             <span className="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 shadow-lg ring-1 ring-white/30">
               <span className="text-white font-extrabold text-[32px] md:text-[50px]">R</span>
@@ -172,6 +174,7 @@ const Header: FC = () => {
               {_('后悔药 Rue.js')}
             </span>
           </RouterLink>
+          <DocSearchBox />
         </div>
         <div className="navbar-center hidden md:flex">
           <ul className="menu menu-horizontal px-1 text-sm">
@@ -255,6 +258,11 @@ const Header: FC = () => {
                 <li>
                   <RouterLink to="/page/guide/scaling-up/tooling" onMouseDown={() => setOpen(null)}>
                     {_('工具链')}
+                  </RouterLink>
+                </li>
+                <li>
+                  <RouterLink to="/textjs" onMouseDown={() => setOpen(null)}>
+                    Text.js
                   </RouterLink>
                 </li>
                 <li>
@@ -408,6 +416,11 @@ const Footer: FC = () => {
                 {_('路由指南')}
               </RouterLink>
             </li>
+            <li>
+              <RouterLink to="/textjs" className="hover:underline">
+                Text.js
+              </RouterLink>
+            </li>
           </ul>
         </div>
       </div>
@@ -431,7 +444,7 @@ const SiteLayout: FC<{ title?: string }> = props => {
     <div className="min-h-screen bg-base-100 text-base-content">
       <Header />
       <main className="min-h-[60vh] pt-24">
-        <div className="max-w-[1100px] mx-auto px-6 py-10">{props.children}</div>
+        <div className="max-w-[1400px] mx-auto px-6 py-10">{props.children}</div>
       </main>
       <Footer />
     </div>

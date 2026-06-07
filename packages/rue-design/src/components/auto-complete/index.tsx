@@ -7,8 +7,11 @@ AutoComplete 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** AutoCompleteValue 值类型。 */
 export type AutoCompleteValue = string | number
+/** AutoCompletePlacement 位置或方向类型。 */
 export type AutoCompletePlacement = 'top' | 'bottom'
+/** AutoCompleteSize 尺寸类型。 */
 export type AutoCompleteSize =
   | 'xs'
   | 'sm'
@@ -19,117 +22,213 @@ export type AutoCompleteSize =
   | 'middle'
   | 'medium'
   | 'large'
+/** AutoCompleteStatus 状态类型。 */
 export type AutoCompleteStatus = 'warning' | 'error'
+/** AutoCompleteVariant 视觉或语义变体类型。 */
 export type AutoCompleteVariant = 'outlined' | 'filled' | 'ghost' | 'borderless' | 'underlined'
 
+/** AutoCompleteAllowClearConfig 配置对象。 */
 export interface AutoCompleteAllowClearConfig {
+  /** 清空图标。 */
   clearIcon?: any
 }
 
+/** AutoCompleteOption 选项配置。 */
 export interface AutoCompleteOption {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 受控值。 */
   value: AutoCompleteValue
+  /** 展示标签。 */
   label?: any
+  /** 描述内容。 */
   description?: any
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** keywords 配置项。 */
   keywords?: Array<string | number>
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 标题内容。 */
   title?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** AutoCompleteOptionGroup 接口。 */
 export interface AutoCompleteOptionGroup {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 展示标签。 */
   label: any
+  /** 可选项数据。 */
   options: AutoCompleteOption[]
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** AutoCompleteOptionData 类型。 */
 export type AutoCompleteOptionData = AutoCompleteOption | AutoCompleteOptionGroup
 
+/** AutoCompleteClassNames 局部类名配置。 */
 export interface AutoCompleteClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** control 配置项。 */
   control?: string
+  /** input 区域配置。 */
   input?: string
+  /** popup 区域配置。 */
   popup?: string
+  /** list 区域配置。 */
   list?: string
+  /** item 区域配置。 */
   item?: string
+  /** group 配置项。 */
   group?: string
+  /** empty 配置项。 */
   empty?: string
+  /** clear 配置项。 */
   clear?: string
+  /** 是否展示加载态。 */
   loading?: string
 }
 
+/** AutoCompleteStyles 局部样式配置。 */
 export interface AutoCompleteStyles {
+  /** 根节点区域配置。 */
   root?: any
+  /** control 配置项。 */
   control?: any
+  /** input 区域配置。 */
   input?: any
+  /** popup 区域配置。 */
   popup?: any
+  /** list 区域配置。 */
   list?: any
+  /** item 区域配置。 */
   item?: any
+  /** group 配置项。 */
   group?: any
+  /** empty 配置项。 */
   empty?: any
+  /** clear 配置项。 */
   clear?: any
+  /** 是否展示加载态。 */
   loading?: any
 }
 
+/** AutoCompleteRef 对外暴露的实例引用。 */
 export interface AutoCompleteRef {
+  /** nativeElement 配置项。 */
   nativeElement?: HTMLInputElement
+  /** focus 配置项。 */
   focus: () => void
+  /** blur 配置项。 */
   blur: () => void
 }
 
+/** AutoCompleteProps 组件属性。 */
 export interface AutoCompleteProps {
+  /** 受控值。 */
   value?: AutoCompleteValue
+  /** 非受控初始值。 */
   defaultValue?: AutoCompleteValue
+  /** 可选项数据。 */
   options?: AutoCompleteOptionData[]
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** readOnly 配置项。 */
   readOnly?: boolean
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** 占位内容。 */
   placeholder?: string
+  /** 是否允许一键清空。 */
   allowClear?: boolean | AutoCompleteAllowClearConfig
+  /** backfill 配置项。 */
   backfill?: boolean
+  /** defaultActiveFirstOption 配置项。 */
   defaultActiveFirstOption?: boolean
+  /** filterOption 配置项。 */
   filterOption?: boolean | ((inputValue: string, option: AutoCompleteOption) => boolean)
+  /** notFoundContent 配置项。 */
   notFoundContent?: any
+  /** popupMatchSelectWidth 配置项。 */
   popupMatchSelectWidth?: boolean | number
+  /** popupRender 自定义渲染函数。 */
   popupRender?: (originNode: any) => any
+  /** optionLabelProp 配置项。 */
   optionLabelProp?: string
+  /** 弹出层或内容展示位置。 */
   placement?: AutoCompletePlacement
+  /** 组件尺寸。 */
   size?: AutoCompleteSize
+  /** 组件状态。 */
   status?: AutoCompleteStatus
+  /** 组件视觉变体。 */
   variant?: AutoCompleteVariant
+  /** 前缀内容。 */
   prefix?: any
+  /** 后缀内容。 */
   suffix?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** controlClassName 附加类名。 */
   controlClassName?: string
+  /** inputClassName 附加类名。 */
   inputClassName?: string
+  /** popupClassName 附加类名。 */
   popupClassName?: string
+  /** clearButtonClassName 附加类名。 */
   clearButtonClassName?: string
+  /** popupStyle 内联样式。 */
   popupStyle?: any
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: AutoCompleteClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: AutoCompleteStyles
+  /** 值或状态变化时触发的回调。 */
   onChange?: (value: string) => void
+  /** 搜索文本变化时触发的回调。 */
   onSearch?: (value: string) => void
+  /** 选中项时触发的回调。 */
   onSelect?: (value: AutoCompleteValue, option: AutoCompleteOption) => void
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** 清空时触发的回调。 */
   onClear?: (event: MouseEvent) => void
+  /** 获得焦点时触发的回调。 */
   onFocus?: (event: FocusEvent) => void
+  /** 失去焦点时触发的回调。 */
   onBlur?: (event: FocusEvent) => void
+  /** onKeyDown 事件回调。 */
   onKeyDown?: (event: KeyboardEvent) => void
+  /** onInputKeyDown 事件回调。 */
   onInputKeyDown?: (event: KeyboardEvent) => void
+  /** onPressEnter 事件回调。 */
   onPressEnter?: (event: KeyboardEvent) => void
+  /** onPopupScroll 事件回调。 */
   onPopupScroll?: (event: Event) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** DEFAULT_INPUT_FOCUS_RESTORE_SNAPSHOT 内部常量。 */
 const DEFAULT_INPUT_FOCUS_RESTORE_SNAPSHOT = {
   shouldRestore: false,
   selectionStart: null,
@@ -171,20 +270,24 @@ const sizeClassMap = {
   large: 'lg',
 } as const
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...classNames: Array<string | undefined | false | null>) => {
   return classNames.filter(Boolean).join(' ')
 }
 
+/** 解析 Input Value 的内部工具函数。 */
 const resolveInputValue = (value?: AutoCompleteValue) => {
   if (value == null) return ''
   return String(value)
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: AutoCompleteSize) => {
   if (!size) return undefined
   return sizeClassMap[size]
 }
 
+/** 解析 Variant Class Name 的内部工具函数。 */
 const resolveVariantClassName = (variant?: AutoCompleteVariant) => {
   switch (variant) {
     case 'filled':
@@ -200,6 +303,7 @@ const resolveVariantClassName = (variant?: AutoCompleteVariant) => {
   }
 }
 
+/** 构建 Control Class Name 的内部工具函数。 */
 const buildControlClassName = ({
   size,
   status,
@@ -222,6 +326,7 @@ const buildControlClassName = ({
   return cls
 }
 
+/** 创建 Array View 的内部工具函数。 */
 const createArrayView = <T,>(source?: T[]) => {
   if (!source || typeof (source as any).length !== 'number') {
     return [] as T[]
@@ -240,6 +345,7 @@ const createArrayView = <T,>(source?: T[]) => {
   return list
 }
 
+/** stringify Search Part 的内部工具函数。 */
 const stringifySearchPart = (value: any): string => {
   if (value == null || typeof value === 'boolean') return ''
   if (typeof value === 'string' || typeof value === 'number') return String(value)
@@ -259,12 +365,14 @@ const stringifySearchPart = (value: any): string => {
   return ''
 }
 
+/** 判断 Option Group 的内部工具函数。 */
 const isOptionGroup = (item: AutoCompleteOptionData): item is AutoCompleteOptionGroup => {
   return (
     !!item && typeof item === 'object' && 'options' in item && Array.isArray((item as any).options)
   )
 }
 
+/** 归一化 Option 的内部工具函数。 */
 const normalizeOption = (
   item: AutoCompleteOption,
   groupKey: string,
@@ -296,6 +404,7 @@ const normalizeOption = (
   }
 }
 
+/** 归一化 Groups 的内部工具函数。 */
 const normalizeGroups = (options?: AutoCompleteOptionData[]) => {
   const source = createArrayView(options)
   const groups: NormalizedGroup[] = []
@@ -335,6 +444,7 @@ const normalizeGroups = (options?: AutoCompleteOptionData[]) => {
   return groups
 }
 
+/** filter Groups 的内部工具函数。 */
 const filterGroups = (
   groups: NormalizedGroup[],
   inputValue: string,
@@ -367,14 +477,17 @@ const filterGroups = (
     .filter(group => group.options.length > 0)
 }
 
+/** flatten Groups 的内部工具函数。 */
 const flattenGroups = (groups: NormalizedGroup[]) => {
   return groups.flatMap(group => group.options)
 }
 
+/** find First Enabled Index 的内部工具函数。 */
 const findFirstEnabledIndex = (options: NormalizedOption[]) => {
   return options.findIndex(option => !option.disabled)
 }
 
+/** 解析 Active Index 的内部工具函数。 */
 const resolveActiveIndex = (
   options: NormalizedOption[],
   candidateIndex: number,
@@ -394,6 +507,7 @@ const resolveActiveIndex = (
   return findFirstEnabledIndex(options)
 }
 
+/** find Next Enabled Index 的内部工具函数。 */
 const findNextEnabledIndex = (
   options: NormalizedOption[],
   currentIndex: number,
@@ -414,6 +528,7 @@ const findNextEnabledIndex = (
   return -1
 }
 
+/** 解析 Option Text 的内部工具函数。 */
 const resolveOptionText = (option: AutoCompleteOption, optionLabelProp?: string) => {
   if (optionLabelProp && optionLabelProp !== 'value') {
     const candidate = option[optionLabelProp]
@@ -425,6 +540,7 @@ const resolveOptionText = (option: AutoCompleteOption, optionLabelProp?: string)
   return resolveInputValue(option.value)
 }
 
+/** assign Forwarded Ref 的内部工具函数。 */
 const assignForwardedRef = (forwardedRef: any, value: AutoCompleteRef | null) => {
   if (typeof forwardedRef === 'function') {
     forwardedRef(value)
@@ -436,6 +552,7 @@ const assignForwardedRef = (forwardedRef: any, value: AutoCompleteRef | null) =>
   }
 }
 
+/** Default Clear Icon 的内部工具函数。 */
 const DefaultClearIcon: FC = () => {
   return (
     <svg
@@ -452,6 +569,7 @@ const DefaultClearIcon: FC = () => {
   )
 }
 
+/** Default Loading Content 的内部工具函数。 */
 const DefaultLoadingContent: FC<{ className?: string }> = ({ className }) => {
   return (
     <div
@@ -466,6 +584,7 @@ const DefaultLoadingContent: FC<{ className?: string }> = ({ className }) => {
   )
 }
 
+/** Auto Complete Root 的内部工具函数。 */
 const AutoCompleteRoot: FC<AutoCompleteProps> = ({
   value,
   defaultValue,
@@ -1630,4 +1749,5 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
 
 const AutoComplete = AutoCompleteRoot as FC<AutoCompleteProps>
 
+/** 默认导出自动完成组件。 */
 export default AutoComplete

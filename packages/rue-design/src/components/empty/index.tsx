@@ -1,81 +1,131 @@
+/*
+Empty 模块概述
+- 汇总空状态组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 import { h } from '@rue-js/rue'
 
+/** EmptySize 尺寸类型。 */
 export type EmptySize = 'sm' | 'md' | 'lg' | 'small' | 'default' | 'large'
+/** EmptyAlign 对齐方式类型。 */
 export type EmptyAlign = 'center' | 'start'
+/** EmptyVariant 视觉或语义变体类型。 */
 export type EmptyVariant = 'surface' | 'soft' | 'outline'
 
+/** EmptyClassNames 局部类名配置。 */
 export interface EmptyClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** image 区域配置。 */
   image?: string
+  /** 描述内容。 */
   description?: string
+  /** 底部区域内容。 */
   footer?: string
 }
 
+/** EmptyStyles 局部样式配置。 */
 export interface EmptyStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** image 区域配置。 */
   image?: Record<string, any>
+  /** 描述内容。 */
   description?: Record<string, any>
+  /** 底部区域内容。 */
   footer?: Record<string, any>
 }
 
+/** EmptyPresentedImageProps 组件属性。 */
 export interface EmptyPresentedImageProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件尺寸。 */
   size?: EmptySize
 }
 
+/** EmptyProps 组件属性。 */
 export interface EmptyProps {
+  /** image 区域配置。 */
   image?: string | FC<EmptyPresentedImageProps> | any
+  /** 描述内容。 */
   description?: any
+  /** imageStyle 内联样式。 */
   imageStyle?: any
+  /** imageAlt 配置项。 */
   imageAlt?: string
+  /** 组件子内容。 */
   children?: any
+  /** 组件尺寸。 */
   size?: EmptySize
+  /** 交叉轴或内容对齐方式。 */
   align?: EmptyAlign
+  /** 组件视觉变体。 */
   variant?: EmptyVariant
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: EmptyClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: EmptyStyles
+  /** role 配置项。 */
   role?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** EmptyType 接口。 */
 export interface EmptyType extends FC<EmptyProps> {
+  /** PRESENTED_IMAGE_DEFAULT 配置项。 */
   PRESENTED_IMAGE_DEFAULT: FC<EmptyPresentedImageProps>
+  /** PRESENTED_IMAGE_SIMPLE 配置项。 */
   PRESENTED_IMAGE_SIMPLE: FC<EmptyPresentedImageProps>
 }
 
+/** DEFAULT_DESCRIPTION 内部常量。 */
 const DEFAULT_DESCRIPTION = '暂无数据'
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
+/** merge Styles 的内部工具函数。 */
 const mergeStyles = (...styles: Array<Record<string, any> | undefined>) => {
   return Object.assign({}, ...styles.filter(Boolean))
 }
 
+/** SVG_NEUTRAL_CLASS 内部常量。 */
 const SVG_NEUTRAL_CLASS = 'text-base-content'
+/** SVG_ACCENT_CLASS 内部常量。 */
 const SVG_ACCENT_CLASS = 'text-primary'
 
+/** svg Fill Mix Style 的内部工具函数。 */
 const svgFillMixStyle = (strength: number) => ({
   fill: `color-mix(in oklab, currentColor ${strength}%, transparent)`,
 })
 
+/** svg Stroke Mix Style 的内部工具函数。 */
 const svgStrokeMixStyle = (strength: number) => ({
   stroke: `color-mix(in oklab, currentColor ${strength}%, transparent)`,
 })
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value === undefined || value === null || value === false || value === '') return false
   if (Array.isArray(value)) return value.some(item => hasRenderableContent(item))
   return true
 }
 
+/** 归一化 Size 的内部工具函数。 */
 const normalizeSize = (size?: EmptySize): 'sm' | 'md' | 'lg' => {
   switch (size) {
     case 'small':
@@ -92,6 +142,7 @@ const normalizeSize = (size?: EmptySize): 'sm' | 'md' | 'lg' => {
   }
 }
 
+/** 解析 Variant Class 的内部工具函数。 */
 const resolveVariantClass = (variant: EmptyVariant) => {
   switch (variant) {
     case 'soft':
@@ -103,6 +154,7 @@ const resolveVariantClass = (variant: EmptyVariant) => {
   }
 }
 
+/** 解析 Root Spacing Class 的内部工具函数。 */
 const resolveRootSpacingClass = (size: 'sm' | 'md' | 'lg') => {
   switch (size) {
     case 'sm':
@@ -114,6 +166,7 @@ const resolveRootSpacingClass = (size: 'sm' | 'md' | 'lg') => {
   }
 }
 
+/** 解析 Content Gap Class 的内部工具函数。 */
 const resolveContentGapClass = (size: 'sm' | 'md' | 'lg') => {
   switch (size) {
     case 'sm':
@@ -125,6 +178,7 @@ const resolveContentGapClass = (size: 'sm' | 'md' | 'lg') => {
   }
 }
 
+/** 解析 Description Class 的内部工具函数。 */
 const resolveDescriptionClass = (size: 'sm' | 'md' | 'lg') => {
   switch (size) {
     case 'sm':
@@ -136,12 +190,14 @@ const resolveDescriptionClass = (size: 'sm' | 'md' | 'lg') => {
   }
 }
 
+/** 解析 Footer Class 的内部工具函数。 */
 const resolveFooterClass = (align: EmptyAlign) => {
   return align === 'start'
     ? 'flex flex-wrap items-center justify-start gap-3'
     : 'flex flex-wrap items-center justify-center gap-3'
 }
 
+/** 解析 Image Shell Width Class 的内部工具函数。 */
 const resolveImageShellWidthClass = (size: 'sm' | 'md' | 'lg') => {
   switch (size) {
     case 'sm':
@@ -153,6 +209,7 @@ const resolveImageShellWidthClass = (size: 'sm' | 'md' | 'lg') => {
   }
 }
 
+/** 解析 Presented Image Width Class 的内部工具函数。 */
 const resolvePresentedImageWidthClass = (size: 'sm' | 'md' | 'lg', kind: 'default' | 'simple') => {
   if (kind === 'simple') {
     switch (size) {
@@ -175,12 +232,14 @@ const resolvePresentedImageWidthClass = (size: 'sm' | 'md' | 'lg', kind: 'defaul
   }
 }
 
+/** 解析 Alt Text 的内部工具函数。 */
 const resolveAltText = (description: any, imageAlt?: string) => {
   if (typeof imageAlt === 'string' && imageAlt.trim()) return imageAlt
   if (typeof description === 'string' || typeof description === 'number') return String(description)
   return 'empty'
 }
 
+/** Default Presented Image 的内部工具函数。 */
 const DefaultPresentedImage: FC<EmptyPresentedImageProps> = ({ className, style, size }) => {
   const normalizedSize = normalizeSize(size)
   const widthClass = resolvePresentedImageWidthClass(normalizedSize, 'default')
@@ -286,6 +345,7 @@ const DefaultPresentedImage: FC<EmptyPresentedImageProps> = ({ className, style,
   )
 }
 
+/** Simple Presented Image 的内部工具函数。 */
 const SimplePresentedImage: FC<EmptyPresentedImageProps> = ({ className, style, size }) => {
   const normalizedSize = normalizeSize(size)
   const widthClass = resolvePresentedImageWidthClass(normalizedSize, 'simple')
@@ -447,8 +507,11 @@ const Empty = (({
 Empty.PRESENTED_IMAGE_DEFAULT = DefaultPresentedImage
 Empty.PRESENTED_IMAGE_SIMPLE = SimplePresentedImage
 
+/** 导出 Empty 内置展示图资源，便于按需复用。 */
 export {
   DefaultPresentedImage as PRESENTED_IMAGE_DEFAULT,
   SimplePresentedImage as PRESENTED_IMAGE_SIMPLE,
 }
+
+/** 默认导出空状态组件。 */
 export default Empty

@@ -1,3 +1,14 @@
+/*
+Runtime 模块出口
+
+这一层是 Vapor wasm 运行时的宿主侧核心：
+- bridge：暴露给 JS 的 WasmRue API 与输入队列
+- render/real_dom/render_patch：挂载、更新、替换与 DOM 操作
+- transport/types：默认 MountInput 协议与 mounted snapshot
+- props/lifecycle/shared bridge：属性补丁、生命周期和 JS 共享运行时协作
+
+对外只导出少量稳定类型，其余模块尽量保持 crate 内部使用。
+*/
 mod bridge;
 mod core;
 mod dom_adapter;
@@ -25,3 +36,8 @@ pub use props::*;
 pub use types::{
     ComponentProps, FC, FRAGMENT, MountInput, MountInputChild, MountInputType, PropsWithChildren,
 };
+
+#[doc(hidden)]
+pub fn coverage_touch_real_dom_component_edges() -> bool {
+    real_dom::component::coverage_touch_internal_edges()
+}

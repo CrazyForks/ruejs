@@ -1,0 +1,55 @@
+{
+  "name": "@rue-js/server-renderer",
+  "version": "0.3.10",
+  "description": "Server renderer for Rue SSR and static generation.",
+  "keywords": [
+    "rue",
+    "server-renderer",
+    "ssr"
+  ],
+  "homepage": "https://github.com/hunzhiwange/ruejs/tree/main/packages/server-renderer#readme",
+  "bugs": {
+    "url": "https://github.com/hunzhiwange/ruejs/issues"
+  },
+  "license": "MIT",
+  "author": "Xiangmin Liu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hunzhiwange/ruejs.git",
+    "directory": "packages/server-renderer"
+  },
+  "files": [
+    "index.js",
+    "dist",
+    "src"
+  ],
+  "sideEffects": false,
+  "main": "index.js",
+  "module": "dist/server-renderer.esm-bundler.js",
+  "types": "dist/server-renderer.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "node": {
+        "production": "./dist/server-renderer.cjs.prod.js",
+        "development": "./dist/server-renderer.cjs.js",
+        "default": "./index.js"
+      },
+      "development": "./src/index.ts",
+      "module": "./dist/server-renderer.esm-bundler.js",
+      "import": "./dist/server-renderer.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
+  "dependencies": {
+    "@rue-js/runtime": "workspace:*"
+  },
+  "buildOptions": {
+    "name": "RueServerRenderer",
+    "formats": [
+      "esm-bundler",
+      "cjs"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "fixture-pages-basic",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "text": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

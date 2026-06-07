@@ -8,8 +8,11 @@ Filter 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** FilterMode 类型。 */
 export type FilterMode = 'form' | 'div'
+/** FilterInputType 视觉或语义变体类型。 */
 export type FilterInputType = 'radio' | 'checkbox'
+/** FilterTone 语义色类型。 */
 export type FilterTone =
   | 'neutral'
   | 'primary'
@@ -19,93 +22,155 @@ export type FilterTone =
   | 'success'
   | 'warning'
   | 'error'
+/** FilterColor 语义色类型。 */
 export type FilterColor = 'default' | 'danger' | FilterTone
+/** FilterVariant 视觉或语义变体类型。 */
 export type FilterVariant = 'solid' | 'filled' | 'outlined' | 'dashed' | 'text'
+/** FilterSize 尺寸类型。 */
 export type FilterSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium' | 'middle' | 'large'
+/** FilterValue 值类型。 */
 export type FilterValue = string | number | boolean
 
+/** FilterItemChangeMeta 接口。 */
 export interface FilterItemChangeMeta {
+  /** 受控选中状态。 */
   checked: boolean
+  /** 受控值。 */
   value?: FilterValue
+  /** item 区域配置。 */
   item?: FilterItemData
 }
 
+/** FilterChangeMeta 接口。 */
 export interface FilterChangeMeta extends FilterItemChangeMeta {
+  /** values 配置项。 */
   values: FilterValue[]
 }
 
+/** FilterItemData 数据项结构。 */
 export interface FilterItemData {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 展示标签。 */
   label?: any
+  /** 受控值。 */
   value?: FilterValue
+  /** 受控选中状态。 */
   checked?: boolean
+  /** 非受控初始选中状态。 */
   defaultChecked?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件语义色。 */
   color?: FilterColor
+  /** 组件尺寸。 */
   size?: FilterSize
+  /** 组件视觉变体。 */
   variant?: FilterVariant
+  /** 是否处于激活态。 */
   active?: boolean
+  /** 标题内容。 */
   title?: string
+  /** 表单 name 属性或分组名称。 */
   name?: string
+  /** 组件类型或语义类型。 */
   type?: FilterInputType
+  /** 值或状态变化时触发的回调。 */
   onChange?: (event: Event, meta: FilterItemChangeMeta) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FilterProps 组件属性。 */
 export interface FilterProps {
+  /** 自定义渲染的宿主元素。 */
   as?: FilterMode
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<FilterItemData | FilterValue>
+  /** 表单 name 属性或分组名称。 */
   name?: string
+  /** 组件类型或语义类型。 */
   type?: FilterInputType
+  /** multiple 配置项。 */
   multiple?: boolean
+  /** 受控值。 */
   value?: FilterValue | ReadonlyArray<FilterValue>
+  /** 非受控初始值。 */
   defaultValue?: FilterValue | ReadonlyArray<FilterValue>
+  /** 值或状态变化时触发的回调。 */
   onChange?: (
     value: FilterValue | FilterValue[] | undefined,
     event: Event,
     meta: FilterChangeMeta,
   ) => void
+  /** 组件尺寸。 */
   size?: FilterSize
+  /** 组件语义色。 */
   color?: FilterColor
+  /** 组件视觉变体。 */
   variant?: FilterVariant
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** itemClassName 附加类名。 */
   itemClassName?: string
+  /** reset 配置项。 */
   reset?: boolean | FilterResetProps
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FilterItemProps 组件属性。 */
 export interface FilterItemProps extends FilterItemData {}
 
+/** FilterResetProps 组件属性。 */
 export interface FilterResetProps {
+  /** mode 配置项。 */
   mode?: FilterMode
+  /** 展示标签。 */
   label?: any
+  /** 受控选中状态。 */
   checked?: boolean
+  /** 非受控初始选中状态。 */
   defaultChecked?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件语义色。 */
   color?: FilterColor
+  /** 组件尺寸。 */
   size?: FilterSize
+  /** 组件视觉变体。 */
   variant?: FilterVariant
+  /** 值或状态变化时触发的回调。 */
   onChange?: (event: Event) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
 let filterNameSeed = 0
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...values: Array<string | undefined>) => {
   return values.filter(Boolean).join(' ').trim()
 }
 
+/** omit Nullish Props 的内部工具函数。 */
 const omitNullishProps = <T extends Record<string, any>>(values: T) => {
   return Object.fromEntries(
     Object.entries(values).filter(([, value]) => value != null),
   ) as Partial<T>
 }
 
+/** 解析 Size Token 的内部工具函数。 */
 const resolveSizeToken = (size?: FilterSize) => {
   switch (size) {
     case 'small':
@@ -120,6 +185,7 @@ const resolveSizeToken = (size?: FilterSize) => {
   }
 }
 
+/** serialize Value 的内部工具函数。 */
 const serializeValue = (value: FilterValue) => {
   switch (typeof value) {
     case 'number':
@@ -131,6 +197,7 @@ const serializeValue = (value: FilterValue) => {
   }
 }
 
+/** deserialize Value 的内部工具函数。 */
 const deserializeValue = (serialized?: string): FilterValue | undefined => {
   if (!serialized) return undefined
   const separatorIndex = serialized.indexOf(':')
@@ -142,10 +209,12 @@ const deserializeValue = (serialized?: string): FilterValue | undefined => {
   return rawValue
 }
 
+/** 判断 Primitive Value 的内部工具函数。 */
 const isPrimitiveValue = (value: any): value is FilterValue => {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
 }
 
+/** unique Values 的内部工具函数。 */
 const uniqueValues = (values: ReadonlyArray<FilterValue>) => {
   const next: FilterValue[] = []
   values.forEach(value => {
@@ -156,6 +225,7 @@ const uniqueValues = (values: ReadonlyArray<FilterValue>) => {
   return next
 }
 
+/** 归一化 Value List 的内部工具函数。 */
 const normalizeValueList = (
   value: FilterValue | ReadonlyArray<FilterValue> | undefined,
   type: FilterInputType,
@@ -167,6 +237,7 @@ const normalizeValueList = (
   return [value]
 }
 
+/** 归一化 Items 的内部工具函数。 */
 const normalizeItems = (items?: ReadonlyArray<FilterItemData | FilterValue>): FilterItemData[] => {
   return (items ?? []).map((item, index) => {
     if (isPrimitiveValue(item)) {
@@ -193,6 +264,7 @@ const normalizeItems = (items?: ReadonlyArray<FilterItemData | FilterValue>): Fi
   })
 }
 
+/** 解析 Variant Class Name 的内部工具函数。 */
 const resolveVariantClassName = (variant?: FilterVariant) => {
   switch (variant) {
     case 'outlined':
@@ -208,6 +280,7 @@ const resolveVariantClassName = (variant?: FilterVariant) => {
   }
 }
 
+/** 解析 Button Class Name 的内部工具函数。 */
 const resolveButtonClassName = ({
   color,
   size,
@@ -235,11 +308,13 @@ const resolveButtonClassName = ({
   return cls
 }
 
+/** 解析 Item Label 的内部工具函数。 */
 const resolveItemLabel = (label: any, fallbackChildren?: any) => {
   if (label !== undefined) return label
   return fallbackChildren
 }
 
+/** 解析 Item Value 的内部工具函数。 */
 const resolveItemValue = (props: {
   value?: FilterValue
   label?: any
@@ -251,6 +326,7 @@ const resolveItemValue = (props: {
   return isPrimitiveValue(label) ? label : undefined
 }
 
+/** read Input String 的内部工具函数。 */
 const readInputString = (input: HTMLInputElement, key: string) => {
   const value = input.dataset[key as keyof DOMStringMap]
   if (!value || !value.length || value === 'undefined' || value === 'null') {
@@ -259,6 +335,7 @@ const readInputString = (input: HTMLInputElement, key: string) => {
   return value
 }
 
+/** read Input Config 的内部工具函数。 */
 const readInputConfig = (input: HTMLInputElement) => {
   return {
     role: readInputString(input, 'rueFilterRole'),
@@ -275,6 +352,7 @@ const readInputConfig = (input: HTMLInputElement) => {
   }
 }
 
+/** Filter 的内部工具函数。 */
 const Filter: FC<FilterProps> = ({
   as = 'form',
   className,
@@ -589,6 +667,7 @@ const Filter: FC<FilterProps> = ({
   )
 }
 
+/** Item 的内部工具函数。 */
 const Item: FC<FilterItemProps> = ({
   label,
   children,
@@ -702,6 +781,7 @@ const Item: FC<FilterItemProps> = ({
   )
 }
 
+/** Reset 的内部工具函数。 */
 const Reset: FC<FilterResetProps> = ({
   mode,
   label,
@@ -792,4 +872,5 @@ const FilterCompound: FilterCompound = Object.assign(Filter, {
   Reset,
 })
 
+/** 默认导出过滤器组件。 */
 export default FilterCompound

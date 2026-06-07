@@ -17,46 +17,75 @@ import Typography, {
   type TypographyTone,
 } from '../typography'
 
+/** TextRotateTone 语义色类型。 */
 export type TextRotateTone = TypographyTone
+/** TextRotateHeadingLevel 类型。 */
 export type TextRotateHeadingLevel = TypographyHeadingLevel
+/** TextRotateTextTag 类型。 */
 export type TextRotateTextTag = TypographyTextTag
+/** TextRotateInlineProps 组件属性类型。 */
 export type TextRotateInlineProps = TypographyInlineProps
+/** TextRotateTextProps 组件属性类型。 */
 export type TextRotateTextProps = TypographyTextProps
+/** TextRotateLinkProps 组件属性类型。 */
 export type TextRotateLinkProps = TypographyLinkProps
+/** TextRotateTitleProps 组件属性类型。 */
 export type TextRotateTitleProps = TypographyTitleProps
+/** TextRotateParagraphProps 组件属性类型。 */
 export type TextRotateParagraphProps = TypographyParagraphProps
 
+/** TextRotateItem 数据项结构。 */
 export interface TextRotateItem extends TypographyInlineProps {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** text 区域配置。 */
   text?: any
+  /** 链接地址。 */
   href?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** 自定义渲染的宿主元素。 */
   as?: TextRotateTextTag
 }
 
+/** TextRotateProps 组件属性。 */
 export interface TextRotateProps {
+  /** 自定义渲染的宿主元素。 */
   as?: 'span' | 'div'
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<TextRotateItem>
+  /** innerClassName 附加类名。 */
   innerClassName?: string
+  /** innerStyle 内联样式。 */
   innerStyle?: any
+  /** itemClassName 附加类名。 */
   itemClassName?: string
+  /** itemStyle 内联样式。 */
   itemStyle?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** merge Style 的内部工具函数。 */
 const mergeStyle = (base?: any, extra?: any) => {
   if (base && extra) return { ...base, ...extra }
   return extra ?? base
 }
 
+/** 渲染 Item 的内部工具函数。 */
 const renderItem = (
   item: TextRotateItem,
   index: number,
@@ -113,6 +142,7 @@ const renderItem = (
   )
 }
 
+/** Text Rotate Root 的内部工具函数。 */
 const TextRotateRoot: FC<TextRotateProps> = ({
   as = 'span',
   className,
@@ -164,4 +194,5 @@ const TextRotate: TextRotateCompound = Object.assign(TextRotateRoot, {
   Paragraph: Typography.Paragraph,
 })
 
+/** 默认导出文字轮播组件。 */
 export default TextRotate

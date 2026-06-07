@@ -1,11 +1,12 @@
-/*
-路由架构概述
-- 历史驱动：通过 HistoryLike 抽象适配不同历史实现（支持 Web Hash / Web History）。
-- 信号状态：currentPath/route 使用响应式 signal 保存当前路径与匹配结果。
-- 路由匹配：编译 path 模式为正则与参数键列表，实现 params 提取。
-- 容器绑定：每个应用容器绑定一个 Router，支持通过 attachRouter/useRouter 访问。
-- 视图渲染：RouterView 在单锚点前渲染匹配到的组件；RouterLink 处理导航行为与 children 归一化。
-*/
+/**
+ * Rue Router 入口模块。
+ *
+ * 模块按「历史实现 -> 路由编译/匹配 -> 导航解析 -> 组件渲染」组织：
+ * - HistoryLike 屏蔽 hash/history 等环境差异，统一提供 location、push、replace 和 listen。
+ * - createRouter 将静态路由表编译为正则分支，负责命名路由、redirect、守卫和失败类型。
+ * - install/attachRouter 把 Router 绑定到当前容器，同时维护一个进程级活动 Router。
+ * - RouterView 依据 matched 链和嵌套深度渲染组件，RouterLink 则提供声明式导航入口。
+ */
 import {
   type FC,
   type BlockInstance,
@@ -23,69 +24,137 @@ import {
   watchEffect,
   useSetup,
 } from '@rue-js/rue'
+import {
+  appendChild,
+  createComment,
+  createElement as createDomElement,
+  insertBefore,
+  removeChild,
+  setStyle,
+} from '@rue-js/runtime/dom'
 
-/** 路由静态记录：
- * - path：形如 '/users/:id(\\d+)' 的匹配模式（支持命名参数与可选正则）
- * - component：匹配成功时渲染的组件（接收 { params }）
- * - name：命名路由，可通过 router.push({ name, params }) 导航
- * - redirect：重定向目标，可用于默认子路由重定向
- * - children：子路由配置，路径会相对父级拼接
- * - meta：路由元信息，匹配后会按父 -> 子合并到当前 route.meta
- * - beforeEnter：路由独享守卫，返回 false 取消，返回 string 重定向
- */
+/** 可同步或异步返回的值，主要用于导航守卫。 */
 type Awaitable<T> = T | Promise<T>
+
+/** 路由元信息对象，匹配后会按父路由到子路由的顺序浅合并。 */
 export type RouteMeta = Record<string, unknown>
+
+/** 命名路由标识，用于通过 `{ name, params }` 生成目标路径。 */
 export type RouteName = string
+
+/** 命名路由参数允许传入的基础值；null/undefined 会被忽略。 */
 export type RouteParamValue = string | number | boolean | null | undefined
+
+/** 命名路由参数输入对象，最终会被字符串化并 encode 到路径中。 */
 export type RouteParamsInput = Record<string, RouteParamValue>
-export type PathRouteLocation = { path: string }
-export type NamedRouteLocation = { name: RouteName; params?: RouteParamsInput }
+
+/** 基于显式 path 的导航位置。 */
+export type PathRouteLocation = {
+  /** 目标路径，会被规范化为以 `/` 开头且无尾斜杠的路径。 */
+  path: string
+}
+
+/** 基于路由 name 和 params 的导航位置。 */
+export type NamedRouteLocation = {
+  /** 目标路由名称，必须对应已注册的 RouteRecord.name。 */
+  name: RouteName
+  /** 用于填充目标路由动态参数的值。 */
+  params?: RouteParamsInput
+}
+
+/** Router 支持的原始导航目标：字符串路径、path 对象或命名路由对象。 */
 export type RouteLocationRaw = string | PathRouteLocation | NamedRouteLocation
+
+/** 导航守卫返回值；false 取消导航，路径/位置对象表示重定向。 */
 export type NavigationGuardResult = void | boolean | RouteLocationRaw
+
+/** 路由记录重定向配置，支持静态目标或根据当前命中 route 动态计算。 */
 export type RouteRecordRedirect = RouteLocationRaw | ((to: Route) => RouteLocationRaw)
+
+/** 路由组件懒加载函数，支持动态 import 的 default 导出。 */
+export type RouteComponentLoader = () => Promise<{ default: FC<any> } | FC<any>>
+
+/** 带懒加载元信息的路由组件包装。 */
+export type LazyRouteComponent = FC<any> & {
+  readonly __rue_route_loader: RouteComponentLoader
+  __rue_route_resolved?: FC<any>
+  __rue_route_pending?: Promise<FC<any>>
+}
+
+/** 导航失败类型常量。 */
 export const NavigationFailureType = {
+  /** 导航被守卫显式返回 false 终止。 */
   aborted: 'aborted',
+  /** 导航在异步守卫期间被新的导航请求取代。 */
   cancelled: 'cancelled',
+  /** 导航目标与当前路径相同。 */
   duplicated: 'duplicated',
 } as const
+
+/** 导航失败类型字面量联合。 */
 export type NavigationFailureType =
   (typeof NavigationFailureType)[keyof typeof NavigationFailureType]
+
+/** 静态路由记录，createRouter 会将它编译为内部匹配结构。 */
 export type RouteRecord = {
+  /** 路由匹配模式，例如 `/users/:id(\\d+)`；子路由路径会相对父路由拼接。 */
   path: string
+  /** 命名路由，可通过 `router.push({ name, params })` 导航。 */
   name?: RouteName
-  component?: FC<any>
+  /** 匹配成功时渲染的 Rue 组件，RouterView 会向其传入 `{ params }`。 */
+  component?: FC<any> | LazyRouteComponent
+  /** 匹配该记录后触发的重定向目标。 */
   redirect?: RouteRecordRedirect
+  /** 子路由配置，参与 matched 链和嵌套 RouterView 渲染。 */
   children?: RouteRecord[]
+  /** 路由元信息，命中后按 matched 链顺序浅合并到 `route.meta`。 */
   meta?: RouteMeta
+  /** 路由独享前置守卫，执行顺序在全局 beforeEach 之后。 */
   beforeEnter?: NavigationGuard
 }
+
+/** 公开的原始路由记录别名，保留给外部类型语义使用。 */
 export type RouteRecordRaw = RouteRecord
-/** 路由参数对象：命名参数的解码后字串映射 */
+
+/** 路由参数对象，保存从路径捕获并 decode 后的命名参数。 */
 export type RouteParams = Record<string, string>
-/** 当前路由匹配结果：
- * - record：命中的最深层路由记录
- * - matched：从父到子的命中链，供嵌套 RouterView 按层级渲染
- * - params：从路径中提取的参数
- * - meta：由 matched 链按顺序合并后的元信息
- * - path：当前匹配的原始路径
- * - 为 null 表示无匹配（RouterView 将清空渲染区域）
- */
+
+/** 当前路由匹配结果；为 null 表示路径未命中任何路由记录。 */
 export type Route = {
+  /** 命中的最深层路由记录。 */
   record: RouteRecord
+  /** 当前命中记录的 name。 */
   name?: RouteName
+  /** 从父到子的命中链，供嵌套 RouterView 按层级渲染。 */
   matched: RouteRecord[]
+  /** 从路径中提取的参数。 */
   params: RouteParams
+  /** 由 matched 链按顺序合并后的元信息。 */
   meta: RouteMeta
+  /** 当前匹配的规范化路径。 */
   path: string
 } | null
+
+/** 导航失败对象，包含失败类型、目标 route 和来源 route。 */
 export type NavigationFailure = {
+  /** 失败类型。 */
   type: NavigationFailureType
+  /** 导航目标 route。 */
   to: Route
+  /** 导航发起前的 route。 */
   from: Route
 }
+
+/** 导航前置守卫函数。 */
 export type NavigationGuard = (to: Route, from: Route) => Awaitable<NavigationGuardResult>
+
+/** afterEach 接收到的失败值，可能是标准导航失败或守卫/重定向抛出的 Error。 */
 export type AfterEachFailure = NavigationFailure | Error
+
+/** 导航后置守卫函数；无论导航成功、失败或抛错都会在相应路径中触发。 */
 export type AfterEachGuard = (to: Route, from: Route, failure?: AfterEachFailure) => void
+
+/** 判断一个值是否为 Router 产生的导航失败，可选按失败类型过滤。 */
 export const isNavigationFailure = (
   value: unknown,
   type?: NavigationFailureType,
@@ -106,60 +175,75 @@ export const isNavigationFailure = (
 
   return type ? knownType === type : true
 }
-/** Router 核心接口：
- * - currentPath：当前历史位置（字符串）信号
- * - route：当前匹配结果信号（Route 或 null）
- * - push/replace/back：导航 API，委托给历史实现
- * - beforeEach：注册全局前置守卫
- * - afterEach：注册全局后置守卫
- * - routes：注册的路由表（顺序即匹配优先级）
- * - history：历史实现（HistoryLike）
- * - install：把 Router 绑定到当前容器上下文
- */
+
+/** Router 核心接口，负责持有导航状态、执行导航和注册守卫。 */
 export type Router = {
+  /** 当前历史位置的响应式信号。 */
   currentPath: SignalHandle<string>
+  /** 当前匹配结果的响应式信号。 */
   route: SignalHandle<Route>
+  /** 推入一条新历史记录并导航到目标位置。 */
   push: (p: RouteLocationRaw) => Promise<NavigationFailure | undefined>
+  /** 替换当前历史记录并导航到目标位置。 */
   replace: (p: RouteLocationRaw) => Promise<NavigationFailure | undefined>
+  /** 等待当前导航队列完成，SSR 中通常在 push(url) 后调用。 */
+  isReady: () => Promise<void>
+  /** 后退一步，优先委托给 HistoryLike.back。 */
   back: () => void
+  /** 注册全局前置守卫，返回取消注册函数。 */
   beforeEach: (guard: NavigationGuard) => () => void
+  /** 注册全局后置守卫，返回取消注册函数。 */
   afterEach: (guard: AfterEachGuard) => () => void
+  /** 创建 Router 时传入的原始路由表，顺序即匹配优先级。 */
   routes: RouteRecord[]
+  /** 当前 Router 使用的历史实现。 */
   history: HistoryLike
+  /** 插件安装方法，把 Router 绑定到当前 Rue 容器上下文。 */
   install: (app: unknown, options: unknown[]) => void
 }
 
-/** 历史实现抽象：
- * - location：返回当前位置的字符串（不含井号的路径）
- * - push/replace：更新位置并通知监听者
- * - listen：订阅位置变化（用于驱动信号）
- * - back：可选，后退一步（Web 环境委托给 window.history）
- */
+/** 历史实现抽象，用于适配 Web Hash、Web History 或测试中的自定义历史。 */
 export type HistoryLike = {
+  /** 返回当前位置的路径字符串，hash 模式下不包含 `#`。 */
   location: () => string
+  /** 推入新位置，并负责通知 listen 订阅者。 */
   push: (p: string) => void
+  /** 替换当前位置，并负责通知 listen 订阅者。 */
   replace: (p: string) => void
+  /** 订阅底层位置变化，用于驱动 Router 的响应式信号。 */
   listen: (cb: () => void) => void
+  /** 可选的后退能力，Web 环境通常委托给 `window.history.back()`。 */
   back?: () => void
+  /** 可选的 href 生成能力，RouterLink 会用它生成 `<a href>`。 */
   createHref?: (p: string) => string
 }
 
+// 容器级 Router 映射用于多应用场景；活动 Router 则提供全局兜底访问。
 const __routerByContainer = new WeakMap<HTMLElement, Router>()
+// RouterLink 的编译快路径会通过实例级 resolver 把 to 转为路径。
 const __routerResolvePathByInstance = new WeakMap<Router, (to: RouteLocationRaw) => string>()
 let __activeRouter: Router | null = null
+// 嵌套 RouterView 使用 depth context 定位 matched 链上的对应记录。
 const RouterViewDepthContext = createContext(0)
+const isRueServerRendering = () => {
+  const renderingCount = (globalThis as Record<string, unknown>).__rue_is_server_rendering__
+  return typeof renderingCount === 'number' && renderingCount > 0
+}
 
+/** 编译后的路由记录，额外保存完整路径和路径正则。 */
 type CompiledRouteRecord = Omit<RouteRecord, 'children'> & {
   children?: CompiledRouteRecord[]
   _fullPath: string
   _c: { re: RegExp; keys: string[] }
 }
 
+/** 一条可匹配分支，record 是末端记录，matched 是父到子的完整链。 */
 type RouteBranch = {
   record: CompiledRouteRecord
   matched: CompiledRouteRecord[]
 }
 
+/** 守卫归一化后的决策，方便导航解析统一处理。 */
 type GuardDecision =
   | { kind: 'allow' }
   | { kind: 'abort' }
@@ -167,12 +251,14 @@ type GuardDecision =
   | { kind: 'error'; error: Error }
   | { kind: 'redirect'; path: string }
 
+/** 一次导航解析的结果，尚未提交到 history 或响应式状态。 */
 type NavigationResolution =
   | { kind: 'allow'; path: string; route: Route }
   | { kind: 'abort'; path: string; route: Route }
   | { kind: 'cancelled'; path: string; route: Route }
   | { kind: 'error'; path: string; route: Route; error: Error }
 
+/** 等待底层 history 通知回流的导航事务。 */
 type PendingNavigation = {
   id: number
   path: string
@@ -188,6 +274,8 @@ const resolveRecordParams = (
   previousRecord: RouteRecord | null,
   previousParams: RouteParams | null,
 ) => {
+  // 每层 RouterView 只把当前记录声明过的动态参数传给组件；
+  // 参数未变化时复用旧对象，减少组件块的无意义重建。
   const recordKeys = ((record as Partial<CompiledRouteRecord>)._c?.keys ?? []) as string[]
 
   if (!recordKeys.length) {
@@ -224,6 +312,7 @@ const resolveRecordParams = (
 }
 
 const normalizeRoutePath = (path: string) => {
+  // 路由内部统一使用无 hash、以 / 开头、无尾斜杠的路径，避免匹配分支膨胀。
   const raw = String(path || '')
   if (!raw) return '/'
 
@@ -239,6 +328,7 @@ const normalizeRoutePath = (path: string) => {
 }
 
 const joinRoutePath = (parentPath: string, path: string) => {
+  // 子路由相对父路径拼接；绝对路径保持自身语义。
   if (!path) {
     return parentPath || '/'
   }
@@ -255,14 +345,17 @@ const joinRoutePath = (parentPath: string, path: string) => {
 }
 
 const isPathRouteLocation = (value: unknown): value is PathRouteLocation => {
+  // 仅做形态判断，具体 path 合法性在 resolveLocationPath 中统一规范化。
   return !!value && typeof value === 'object' && 'path' in (value as Record<string, unknown>)
 }
 
 const isNamedRouteLocation = (value: unknown): value is NamedRouteLocation => {
+  // 命名路由的位置对象以 name 字段识别，params 在后续字符串化时处理。
   return !!value && typeof value === 'object' && 'name' in (value as Record<string, unknown>)
 }
 
 const toNavigationError = (error: unknown): Error => {
+  // 守卫或 redirect 可以抛任意值，对外统一成 Error 便于 afterEach 和调用方处理。
   if (error instanceof Error) {
     return error
   }
@@ -270,14 +363,73 @@ const toNavigationError = (error: unknown): Error => {
   return new Error(String(error))
 }
 
-/** 将 Router 绑定到当前容器并设置为活动路由 */
+const normalizeLoadedRouteComponent = (value: { default: FC<any> } | FC<any>) =>
+  typeof value === 'function' ? value : value.default
+
+const isLazyRouteComponent = (component: unknown): component is LazyRouteComponent =>
+  typeof component === 'function' &&
+  typeof (component as Partial<LazyRouteComponent>).__rue_route_loader === 'function'
+
+const resolveRouteComponent = (component: RouteRecord['component']) =>
+  isLazyRouteComponent(component) ? component.__rue_route_resolved : component
+
+const loadRouteComponent = (component: RouteRecord['component']) => {
+  if (!isLazyRouteComponent(component)) {
+    return Promise.resolve()
+  }
+
+  if (component.__rue_route_resolved) {
+    return Promise.resolve()
+  }
+
+  if (!component.__rue_route_pending) {
+    component.__rue_route_pending = Promise.resolve(component.__rue_route_loader())
+      .then(value => {
+        const resolved = normalizeLoadedRouteComponent(value)
+        component.__rue_route_resolved = resolved
+        return resolved
+      })
+      .finally(() => {
+        component.__rue_route_pending = undefined
+      })
+  }
+
+  return component.__rue_route_pending.then(() => undefined)
+}
+
+const loadRouteComponents = (route: Route) =>
+  Promise.all((route?.matched ?? []).map(record => loadRouteComponent(record.component))).then(
+    () => undefined,
+  )
+
+export const defineAsyncRouteComponent = (loader: RouteComponentLoader): LazyRouteComponent => {
+  const AsyncRouteComponent = ((props: any) => {
+    const resolved = AsyncRouteComponent.__rue_route_resolved
+    return resolved ? h(resolved, props) : null
+  }) as LazyRouteComponent
+
+  Object.defineProperty(AsyncRouteComponent, '__rue_route_loader', {
+    value: loader,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  })
+
+  return AsyncRouteComponent
+}
+
+/** 将 Router 绑定到当前 Rue 容器，并设置为进程级活动 Router。 */
 export const attachRouter = (router: Router) => {
   const c = getCurrentContainer() as HTMLElement | null
   if (c) __routerByContainer.set(c, router)
   __activeRouter = router
 }
 
-/** 创建基于 hash 的 Web 历史实现 */
+/**
+ * 创建基于 URL hash 的 Web 历史实现。
+ *
+ * 内部路径不包含 `#`，RouterLink 生成 href 时会通过 createHref 补回 hash 前缀。
+ */
 export const createWebHashHistory = () => {
   const g = globalThis as any
   const normalize = (path: string) => {
@@ -336,7 +488,46 @@ export const createWebHashHistory = () => {
   } as HistoryLike
 }
 
-/** 创建基于 history API 的 Web 历史实现 */
+/**
+ * 创建内存历史实现。
+ *
+ * 适用于 SSR、单元测试和没有浏览器 history/location 的宿主。它不会读取或写入
+ * globalThis.location，所有导航状态都保存在当前 History 实例中。
+ */
+export const createMemoryHistory = (initialPath = '/') => {
+  let current = normalizeRoutePath(initialPath)
+  const listeners = new Set<() => void>()
+
+  const notify = () => {
+    listeners.forEach(listener => listener())
+  }
+
+  return {
+    location: () => current,
+    push: (p: string) => {
+      const next = normalizeRoutePath(p)
+      if (next === current) return
+      current = next
+      notify()
+    },
+    replace: (p: string) => {
+      const next = normalizeRoutePath(p)
+      if (next === current) return
+      current = next
+      notify()
+    },
+    listen: (cb: () => void) => {
+      listeners.add(cb)
+    },
+    createHref: (p: string) => normalizeRoutePath(p),
+  } as HistoryLike
+}
+
+/**
+ * 创建基于 History API 的 Web 历史实现。
+ *
+ * 适合服务端已配置 SPA fallback 的应用；路径直接写入 pathname。
+ */
 export const createWebHistory = () => {
   const g = globalThis as any
   const normalize = (path: string) => {
@@ -387,15 +578,16 @@ export const createWebHistory = () => {
   } as HistoryLike
 }
 
-/** 创建 Router
- * - 编译所有路由规则为正则与键列表
- * - 监听历史变化更新 currentPath 与 route
- * @param options {history, routes}
- * @returns Router 实例
+/**
+ * 创建 Router 实例。
+ *
+ * createRouter 会编译所有路由规则、解析初始位置和 redirect，并监听 history
+ * 变化来同步 currentPath/route 信号。push/replace 的异步结果会在守卫和底层
+ * history 通知完成后结算。
  */
 export const createRouter = (options: { history: HistoryLike; routes: RouteRecord[] }): Router => {
-  /** 编译路径模式为正则与参数键 */
   const compilePath = (path: string) => {
+    // 将 `/users/:id(\\d+)` 这类模式编译成完整正则，同时记录捕获组对应的参数名。
     const keys: string[] = []
     const reStr =
       '^' +
@@ -414,6 +606,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   const routeByName = new Map<RouteName, CompiledRouteRecord>()
 
   const normalizeParamsInput = (params?: RouteParamsInput): RouteParams => {
+    // 命名路由参数统一转成字符串；null/undefined 不参与路径生成。
     const nextParams: RouteParams = {}
 
     if (!params) {
@@ -433,6 +626,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   }
 
   const stringifyRoutePath = (path: string, params?: RouteParamsInput) => {
+    // 用传入 params 填充动态路径片段，缺失必填参数时直接抛错。
     const normalizedParams = normalizeParamsInput(params)
 
     return normalizeRoutePath(
@@ -448,6 +642,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   }
 
   const resolveLocationPath = (to: RouteLocationRaw, inheritedParams?: RouteParamsInput) => {
+    // 所有导航入口最终都会落到规范化 path；命名路由会继承当前参数再覆盖显式参数。
     if (typeof to === 'string') {
       return normalizeRoutePath(to)
     }
@@ -472,6 +667,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   }
 
   const resolveRouteRedirect = (to: Route) => {
+    // redirect 从最深层记录向父级查找，子路由可以覆盖父级重定向行为。
     if (!to) {
       return { kind: 'none' } as const
     }
@@ -495,6 +691,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
 
   const compileRecords = (records: RouteRecord[], parentPath = ''): CompiledRouteRecord[] =>
     records.map(record => {
+      // 编译时同时建立 name -> record 映射，后续命名导航无需遍历路由表。
       const fullPath = joinRoutePath(parentPath, record.path)
       const children = record.children ? compileRecords(record.children, fullPath) : undefined
 
@@ -517,6 +714,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     })
 
   const collectBranches = (records: CompiledRouteRecord[]) => {
+    // 将树形路由摊平成可顺序匹配的分支列表，并保留每个叶/中间节点的 matched 链。
     const branches: RouteBranch[] = []
 
     const visit = (record: CompiledRouteRecord, matched: CompiledRouteRecord[]) => {
@@ -536,8 +734,8 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   const compiled = compileRecords(options.routes)
   const branches = collectBranches(compiled)
 
-  /** 匹配路径并提取参数 */
   const match = (path: string): Route => {
+    // 按声明顺序匹配分支，命中后提取 params，并合并 matched 链上的 meta。
     const normalizedPath = normalizeRoutePath(path)
 
     for (let i = 0; i < branches.length; i++) {
@@ -571,6 +769,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     rawPath: string,
     redirectDepth = 0,
   ): { path: string; route: Route } => {
+    // 初始化阶段没有 from，也不运行守卫，只解析静态 redirect 并限制重定向深度。
     if (redirectDepth > 20) {
       throw new Error('Too many redirects while navigating to ' + rawPath)
     }
@@ -598,6 +797,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   const afterGuards: AfterEachGuard[] = []
   let pendingNavigation: PendingNavigation | null = null
   let navigationRequestId = 0
+  let readyPromise: Promise<void> = Promise.resolve()
 
   const createNavigationFailure = (
     type: NavigationFailureType,
@@ -606,6 +806,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   ): NavigationFailure => ({ type, to, from })
 
   const runAfterGuards = (to: Route, from: Route, failure?: AfterEachFailure) => {
+    // afterEach 不影响导航结果，因此按注册顺序同步调用。
     for (let i = 0; i < afterGuards.length; i++) {
       afterGuards[i](to, from, failure)
     }
@@ -614,6 +815,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   const isStaleNavigation = (requestId: number) => requestId !== navigationRequestId
 
   const resolveGuardDecision = (result: NavigationGuardResult, to: Route): GuardDecision => {
+    // 守卫返回值在这里收敛成四类控制流：放行、取消、重定向或错误。
     if (result === false) {
       return { kind: 'abort' }
     }
@@ -634,6 +836,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     from: Route,
     requestId: number,
   ): Promise<GuardDecision> => {
+    // 全局 beforeEach 先运行，随后按 matched 链从父到子执行 beforeEnter。
     for (let i = 0; i < beforeGuards.length; i++) {
       let result: NavigationGuardResult
       try {
@@ -697,6 +900,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     redirectDepth = 0,
   ): Promise<NavigationResolution> => {
     const execute = async (): Promise<NavigationResolution> => {
+      // 一次导航解析包括：位置归一化、路由匹配、redirect 解析和守卫执行。
       if (redirectDepth > 20) {
         return {
           kind: 'error',
@@ -752,13 +956,62 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     return execute()
   }
 
+  const resolveNavigationSync = (
+    rawPath: RouteLocationRaw,
+    from: Route,
+    redirectDepth = 0,
+  ): NavigationResolution => {
+    if (redirectDepth > 20) {
+      return {
+        kind: 'error',
+        path: typeof rawPath === 'string' ? normalizeRoutePath(rawPath) : currentPath.get(),
+        route: from,
+        error: new Error('Too many redirects while navigating to ' + String(rawPath)),
+      }
+    }
+
+    let path: string
+    try {
+      path = resolveLocationPath(rawPath)
+    } catch (error) {
+      return {
+        kind: 'error',
+        path: currentPath.get(),
+        route: null,
+        error: toNavigationError(error),
+      }
+    }
+
+    const targetRoute = match(path)
+    const redirect = resolveRouteRedirect(targetRoute)
+    if (redirect.kind === 'redirect') {
+      return resolveNavigationSync(redirect.path, from, redirectDepth + 1)
+    }
+
+    if (redirect.kind === 'error') {
+      return { kind: 'error', path, route: targetRoute, error: redirect.error }
+    }
+
+    return { kind: 'allow', path, route: targetRoute }
+  }
+
+  const hasBeforeEnterGuards = (to: Route) =>
+    !!to?.matched?.some(record => typeof record.beforeEnter === 'function')
+
+  const hasPendingLazyRouteComponents = (to: Route) =>
+    !!to?.matched?.some(
+      record => isLazyRouteComponent(record.component) && !record.component.__rue_route_resolved,
+    )
+
   const commitNavigation = (path: string, nextRoute: Route, from: Route) => {
+    // 状态提交集中在这里，保证 currentPath/route 和 afterEach 的顺序稳定。
     currentPath.set(path)
     route.set(nextRoute)
     runAfterGuards(nextRoute, from)
   }
 
   const settlePendingNavigation = () => {
+    // push/replace 先写入底层 history，再等待 listen 回调确认当前位置已经变化。
     const nextPending = pendingNavigation
     if (!nextPending) {
       return false
@@ -779,12 +1032,76 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     return true
   }
 
+  const commitHistoryNavigation = (
+    path: string,
+    nextRoute: Route,
+    from: Route,
+    requestId: number,
+    method: 'push' | 'replace',
+  ) => {
+    pendingNavigation = {
+      id: requestId,
+      path,
+      route: nextRoute,
+      from,
+      notify: true,
+    }
+
+    options.history[method](path)
+
+    if (pendingNavigation?.id === requestId) {
+      settlePendingNavigation()
+    }
+
+    if (pendingNavigation?.id === requestId) {
+      pendingNavigation = null
+      commitNavigation(path, nextRoute, from)
+    }
+
+    return undefined
+  }
+
   const navigate = async (
     rawPath: RouteLocationRaw,
     method: 'push' | 'replace',
   ): Promise<NavigationFailure | undefined> => {
+    // 编程式导航先解析和跑守卫，只有 allow 后才委托给 history 修改地址。
     const from = route.get()
     const requestId = ++navigationRequestId
+
+    if (beforeGuards.length === 0) {
+      const syncResolution = resolveNavigationSync(rawPath, from)
+      const canCommitSync =
+        syncResolution.kind !== 'allow' ||
+        (!hasBeforeEnterGuards(syncResolution.route) &&
+          !hasPendingLazyRouteComponents(syncResolution.route))
+
+      if (canCommitSync) {
+        if (syncResolution.kind === 'error') {
+          runAfterGuards(syncResolution.route, from, syncResolution.error)
+          throw syncResolution.error
+        }
+
+        if (syncResolution.path === currentPath.get()) {
+          const failure = createNavigationFailure(
+            NavigationFailureType.duplicated,
+            syncResolution.route,
+            from,
+          )
+          runAfterGuards(syncResolution.route, from, failure)
+          return failure
+        }
+
+        return commitHistoryNavigation(
+          syncResolution.path,
+          syncResolution.route,
+          from,
+          requestId,
+          method,
+        )
+      }
+    }
+
     const resolution = await resolveNavigation(rawPath, from, requestId)
 
     if (resolution.kind === 'error') {
@@ -818,7 +1135,9 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       return failure
     }
 
-    return await new Promise<NavigationFailure | undefined>(resolve => {
+    await loadRouteComponents(resolution.route)
+
+    const navigationPromise = new Promise<NavigationFailure | undefined>(resolve => {
       pendingNavigation = {
         id: requestId,
         path: resolution.path,
@@ -831,9 +1150,21 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       options.history[method](resolution.path)
       settlePendingNavigation()
     })
+
+    const currentReadyPromise = navigationPromise.then(
+      () => undefined,
+      () => undefined,
+    )
+    readyPromise = currentReadyPromise
+
+    return await navigationPromise.finally(() => {
+      if (readyPromise === currentReadyPromise) {
+        readyPromise = Promise.resolve()
+      }
+    })
   }
 
-  // route：派生信号，保存当前路径对应的匹配结果
+  // route 保存当前路径对应的匹配结果；当前实现要求初始路径必须命中路由。
   const matchRoute = initialRouteState.route
   if (null === matchRoute) {
     throw new Error('No route matched path ' + currentPath.get())
@@ -844,7 +1175,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     options.history.replace(initialRouteState.path)
   }
 
-  // 监听历史变化同步信号
+  // 监听浏览器前进/后退或 history 主动通知，并走同一套导航解析流程。
   options.history.listen(() => {
     void (async () => {
       const p = normalizeRoutePath(options.history.location())
@@ -916,6 +1247,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       }
 
       if (resolution.path !== p) {
+        await loadRouteComponents(resolution.route)
         pendingNavigation = {
           id: requestId,
           path: resolution.path,
@@ -928,6 +1260,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
         return
       }
 
+      await loadRouteComponents(resolution.route)
       commitNavigation(resolution.path, resolution.route, from)
     })()
   })
@@ -937,6 +1270,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     route,
     push: (p: RouteLocationRaw) => navigate(p, 'push'),
     replace: (p: RouteLocationRaw) => navigate(p, 'replace'),
+    isReady: () => readyPromise.then(() => loadRouteComponents(route.get())),
     back: () => {
       // 优先使用 HistoryLike.back；否则退回到全局 history
       if (options.history.back) return options.history.back()
@@ -971,7 +1305,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   return router
 }
 
-/** 获取当前上下文的 Router（优先容器绑定，其次活动路由） */
+/** 获取当前上下文中的 Router，优先使用容器绑定，其次使用活动 Router。 */
 export const useRouter = (): Router => {
   const c = getCurrentContainer() as HTMLElement | null
   const r = (c ? __routerByContainer.get(c) || null : null) || __activeRouter
@@ -979,17 +1313,18 @@ export const useRouter = (): Router => {
   return r
 }
 
-const insertNodeAtTarget = (target: RenderTarget, node: Node) => {
+const insertNodeAtTarget = (target: RenderTarget, node: any) => {
+  // RouterView 通过 renderAnchor 接入不同挂载目标，这里统一处理真实 DOM 插入位置。
   switch (target.kind) {
     case 'container':
-      ;(target.container as Node).appendChild(node)
+      appendChild(target.container as any, node)
       return
     case 'between':
-      ;(target.parent as Node).insertBefore(node, target.end as Node)
+      insertBefore(target.parent as any, node, target.end as any)
       return
     case 'anchor':
     case 'static':
-      ;(target.parent as Node).insertBefore(node, target.anchor as Node)
+      insertBefore(target.parent as any, node, target.anchor as any)
       return
   }
 }
@@ -999,29 +1334,31 @@ const createRouteComponentBlock = (
   params: RouteParams,
   nextDepth: number,
 ): BlockInstance => {
-  let host: HTMLSpanElement | null = null
+  // 每个路由组件块都包一层 display: contents 的宿主节点，便于卸载时清理整段渲染。
+  let host: any = null
 
   return {
     kind: 'block',
     mount(target) {
-      const routeHost = document.createElement('span')
-      routeHost.style.display = 'contents'
+      const routeHost = createDomElement('span') as any
+      setStyle(routeHost, { display: 'contents' } as any)
       host = routeHost
       insertNodeAtTarget(target, routeHost)
 
-      if (!component) {
+      const resolvedComponent = resolveRouteComponent(component)
+
+      if (!resolvedComponent) {
         render(null as any, routeHost as any)
         return
       }
 
-      render(
-        h(
-          RouterViewDepthContext.Provider as any,
-          { value: nextDepth },
-          h(component, { params }) as any,
-        ) as any,
-        routeHost as any,
-      )
+      const routeContent = h(
+        RouterViewDepthContext.Provider as any,
+        { value: nextDepth },
+        h(resolvedComponent, { params }) as any,
+      ) as any
+
+      render(routeContent, routeHost as any)
     },
     unmount() {
       if (!host) {
@@ -1032,7 +1369,7 @@ const createRouteComponentBlock = (
 
       const parent = host.parentNode
       if (parent) {
-        parent.removeChild(host)
+        removeChild(parent as any, host as any)
       }
 
       host = null
@@ -1040,25 +1377,53 @@ const createRouteComponentBlock = (
   }
 }
 
-/** RouterView：根据当前上下文深度，在单个尾锚点前渲染匹配链上的对应组件 */
+/**
+ * 路由视图组件。
+ *
+ * RouterView 会根据当前嵌套深度读取 route.matched[depth]，并在单个锚点前
+ * 渲染对应组件；子组件中的 RouterView 会通过 context 自动进入下一层深度。
+ */
 export const RouterView: FC = () => {
   const depth = useContext(RouterViewDepthContext)
 
+  if (__SSR__ && isRueServerRendering()) {
+    const r = useRouter()
+    const data = r.route.get()
+    const record = data?.matched?.[depth] || null
+
+    if (!record || !data || !record.component) {
+      return null
+    }
+
+    const recordParams = resolveRecordParams(record, data.params, null, null)
+    const resolvedComponent = resolveRouteComponent(record.component)
+
+    if (!resolvedComponent) {
+      return null
+    }
+
+    const routeContent = h(resolvedComponent, { params: recordParams }) as any
+
+    return h(RouterViewDepthContext.Provider as any, { value: depth + 1 }, routeContent) as any
+  }
+
   const { container } = useSetup(() => {
     const r = useRouter()
-    const container = document.createElement('span')
-    container.style.display = 'contents'
-    const anchorEl = document.createComment('rue-router-view-anchor')
-    container.appendChild(anchorEl)
+    const container = createDomElement('span') as any
+    setStyle(container, { display: 'contents' } as any)
+    const anchorEl = createComment('rue-router-view-anchor') as any
+    appendChild(container, anchorEl)
     let previousRecord: RouteRecord | null = null
     let previousParams: RouteParams | null = null
 
     watchEffect(() => {
+      // route 是 signal，需要在 effect 中读取以订阅导航变化。
       const data = r.route.get()
       const record = data?.matched?.[depth] || null
       const parent = (anchorEl as any).parentNode || container
 
       untrack(() => {
+        // 渲染 DOM 本身不应收集当前 effect 之外的依赖，避免重复订阅。
         if (!record || !data || !record.component) {
           previousRecord = null
           previousParams = null
@@ -1073,6 +1438,7 @@ export const RouterView: FC = () => {
           previousParams,
         )
         if (previousRecord === record && previousParams === recordParams) {
+          // 记录和当前层参数均未变化时保留原块，避免组件被重挂载。
           return
         }
         previousRecord = record
@@ -1094,12 +1460,14 @@ export const RouterView: FC = () => {
 
 type RouterLinkProps = { to: RouteLocationRaw; replace?: boolean } & Record<string, unknown>
 
+/** RouterLink 暴露给编译快路径的静态能力。 */
 type RouterLinkFastPath = FC<RouterLinkProps> & {
   __rueHref: (to: unknown) => string
   __rueOnClick: (e: MouseEvent, to: unknown, replace?: unknown) => void
 }
 
 const resolveRouterLocationPath = (router: Router | null, to: unknown) => {
+  // 生成 href 时也复用 Router 的命名路由解析逻辑，保证链接和导航目标一致。
   if (!router) {
     if (typeof to === 'string') {
       return normalizeRoutePath(to)
@@ -1121,12 +1489,14 @@ const resolveRouterLocationPath = (router: Router | null, to: unknown) => {
 }
 
 const routerLinkHref = (to: unknown) => {
+  // HistoryLike.createHref 负责把内部路径转换成用户可点击的 href。
   const path = resolveRouterLocationPath(__activeRouter, to)
   const createHref = __activeRouter?.history?.createHref
   return createHref ? createHref(path) : path || '/'
 }
 
 const routerLinkNavigate = (to: unknown, replace?: unknown) => {
+  // 快路径事件处理无法直接捕获组件内 router，因此使用当前活动 Router。
   const router = __activeRouter
   if (!router) throw new Error('Router not installed for current application/container')
 
@@ -1136,6 +1506,7 @@ const routerLinkNavigate = (to: unknown, replace?: unknown) => {
 }
 
 const routerLinkOnClick = (e: MouseEvent, to: unknown, replace?: unknown) => {
+  // 保留新标签页、下载、辅助键等浏览器原生行为，只拦截普通左键点击。
   if (
     (e as any).defaultPrevented ||
     e.button !== 0 ||
@@ -1150,7 +1521,6 @@ const routerLinkOnClick = (e: MouseEvent, to: unknown, replace?: unknown) => {
   routerLinkNavigate(to, replace)
 }
 
-/** RouterLink：渲染链接并处理导航 */
 const RouterLinkImpl: FC<RouterLinkProps> = props => {
   const r = useRouter()
   const to = (props as any).to as RouteLocationRaw
@@ -1158,6 +1528,7 @@ const RouterLinkImpl: FC<RouterLinkProps> = props => {
   const { children, to: _to, replace: _replace, ...rest } = props as any
 
   const click = (e: MouseEvent) => {
+    // 组件路径下使用上下文 Router，避免多个应用共存时误用活动 Router。
     if (
       (e as any).defaultPrevented ||
       e.button !== 0 ||
@@ -1179,16 +1550,23 @@ const RouterLinkImpl: FC<RouterLinkProps> = props => {
       ? [children]
       : []
 
+  // children 归一化为数组后透传给 h，其他属性直接落到最终的 a 元素上。
   return h('a', { href: routerLinkHref(to), onClick: click, ...rest }, ...childList)
 }
 
+/**
+ * 路由链接组件。
+ *
+ * 渲染为 `<a>`，默认拦截普通左键点击并调用 router.push；传入 replace 时调用
+ * router.replace。href 会根据当前 history 模式生成，保证可复制和可降级。
+ */
 export const RouterLink = Object.assign(RouterLinkImpl, {
   __rueHref: routerLinkHref,
   __rueOnClick: routerLinkOnClick,
 }) as RouterLinkFastPath
 
-/** 获取当前路由信号 */
-export const useRoute = () => {
+/** 获取当前路由匹配结果的响应式信号。 */
+export const useRoute = (): SignalHandle<Route> => {
   const c = getCurrentContainer() as HTMLElement | null
   const r = (c ? __routerByContainer.get(c) || null : null) || __activeRouter
   if (!r) throw new Error('Router not installed for current application/container')

@@ -6,6 +6,13 @@ use swc_core::ecma::parser::{Parser, StringInput, Syntax, TsSyntax};
 
 use crate::emit;
 
+/*
+v-for/r-for 预处理：
+- 输入形态：`<li v-for="(item, key, index) in source">...</li>`。
+- 输出形态：把该子元素替换为 `{ normalized(source).map(([item, key, index]) => <li>...</li>) }`。
+- source 归一化：数组、数字和对象统一转成 `[value, key, index]` 三元组，后续列表编译只处理 map。
+- 设计取舍：这里只做浅层语法改写，不直接生成 DOM；真正的 keyed diff 与锚点插入交给 Vapor 列表模块。
+*/
 const FOR_DIRECTIVE_NAMES: &[&str] = &["v-for", "r-for"];
 
 struct ForDirectiveSpec {
@@ -60,6 +67,7 @@ fn find_top_level_separator(input: &str) -> Option<(usize, usize)> {
     let mut escaped = false;
 
     for (idx, ch) in input.char_indices() {
+        // 只在顶层寻找 ` in ` / ` of `，避免误切到回调、对象字面量或字符串内部。
         if let Some(active_quote) = quote {
             if escaped {
                 escaped = false;
@@ -132,6 +140,7 @@ fn parse_aliases(src: &str) -> Option<Vec<Pat>> {
         return None;
     }
 
+    // 借助 SWC 自己解析箭头函数参数，直接复用对解构、默认值等 pattern 的支持。
     let arrow_src = format!("({}) => null", inner);
     let expr = parse_expr(&arrow_src)?;
     if let Expr::Arrow(arrow) = expr {
@@ -144,6 +153,8 @@ fn parse_aliases(src: &str) -> Option<Vec<Pat>> {
 }
 
 fn parse_directive_attr(attr: &JSXAttr) -> Option<ForDirectiveSpec> {
+    // 指令值只接受字符串形态，便于写成接近模板语法的 `item in list`。
+    // 若用户传入普通表达式对象，这里不猜测语义，直接放弃改写。
     let raw = match &attr.value {
         Some(JSXAttrValue::Str(s)) => s.value.as_str().unwrap_or("").to_owned(),
         Some(JSXAttrValue::JSXExprContainer(ec)) => match &ec.expr {
@@ -156,6 +167,9 @@ fn parse_directive_attr(attr: &JSXAttr) -> Option<ForDirectiveSpec> {
         _ => return None,
     };
 
+    // 先切出左侧别名与右侧数据源，再分别交给 SWC 解析：
+    // - 左侧：解析成 callback 参数 pattern，支持解构；
+    // - 右侧：解析成普通表达式，允许调用链、三元等复杂 source。
     let (sep_idx, sep_len) = find_top_level_separator(&raw)?;
     let aliases = parse_aliases(raw[..sep_idx].trim())?;
     let source = parse_expr(raw[sep_idx + sep_len..].trim())?;
@@ -228,6 +242,7 @@ fn build_safe_object_source_expr(source_ident: &Ident) -> Expr {
 fn build_array_normalized_expr(source_ident: &Ident) -> Expr {
     let value_ident = emit::ident("value");
     let index_ident = emit::ident("index");
+    // 数组本身已有稳定索引：value/key/index 分别使用 item、index、index。
     let tuple = array_expr(vec![
         Expr::Ident(value_ident.clone()),
         Expr::Ident(index_ident.clone()),
@@ -249,6 +264,8 @@ fn build_array_normalized_expr(source_ident: &Ident) -> Expr {
 fn build_number_normalized_expr(source_ident: &Ident) -> Expr {
     let unused_ident = emit::ident("__rue_v_for_unused");
     let index_ident = emit::ident("index");
+    // 数字循环遵循模板直觉：`n in 3` 产出 1、2、3；
+    // key/index 仍使用从 0 开始的索引，方便后续列表复用。
     let tuple = array_expr(vec![
         Expr::Bin(BinExpr {
             span: DUMMY_SP,
@@ -285,6 +302,8 @@ fn build_object_normalized_expr(source_ident: &Ident) -> Expr {
     let key_ident = emit::ident("key");
     let value_ident = emit::ident("value");
     let index_ident = emit::ident("index");
+    // 对象统一转成 Object.entries，并对 null/undefined 兜底为空对象；
+    // 这样下游 map callback 始终收到 `[value, key, index]`。
     let entries_expr = call_member_expr(
         Expr::Ident(emit::ident("Object")),
         "entries",
@@ -342,6 +361,7 @@ fn build_normalized_iterable_expr(source: Expr) -> Expr {
             alt: Box::new(build_object_normalized_expr(&source_ident)),
         })),
     });
+    // 通过立即调用箭头函数保存 source，避免复杂表达式在多次分支判断中被重复求值。
     Expr::Call(CallExpr {
         span: DUMMY_SP,
         callee: Callee::Expr(Box::new(Expr::Paren(ParenExpr {
@@ -367,6 +387,7 @@ fn transform_directive_element(el: &JSXElement) -> Option<JSXElementChild> {
     let attr = get_directive_attr(el, FOR_DIRECTIVE_NAMES)?;
     let spec = parse_directive_attr(attr)?;
     let mut clean = el.clone();
+    // map 回调里继续保留原 JSX 内容，但必须移除指令属性，避免后续阶段再次处理。
     remove_directives(&mut clean);
     let expr = build_map_expr(clean, spec);
     Some(JSXElementChild::JSXExprContainer(JSXExprContainer {
@@ -378,6 +399,7 @@ fn transform_directive_element(el: &JSXElement) -> Option<JSXElementChild> {
 pub fn transform_element(el: &mut JSXElement) {
     let mut i = 0;
     while i < el.children.len() {
+        // v-for 是“子节点级”结构指令：父元素保留，命中的子元素被替换为表达式容器。
         let next_child = match &el.children[i] {
             JSXElementChild::JSXElement(child) => transform_directive_element(child.as_ref()),
             _ => None,
@@ -390,155 +412,5 @@ pub fn transform_element(el: &mut JSXElement) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use swc_core::ecma::ast::{ExprStmt, Module, ModuleItem, Program, Stmt};
-    use swc_core::ecma::codegen::{Emitter, text_writer::JsWriter};
-    use swc_ecma_parser::{Parser, StringInput, Syntax, TsSyntax};
-
-    fn parse_jsx_element(src: &str) -> JSXElement {
-        let cm = Arc::new(SourceMap::default());
-        let fm = cm.new_source_file(
-            FileName::Custom("for-directive-test.tsx".into()).into(),
-            src.to_string(),
-        );
-        let mut parser = Parser::new(
-            Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
-            StringInput::from(&*fm),
-            None,
-        );
-        match *parser.parse_expr().expect("parse jsx element") {
-            Expr::JSXElement(el) => *el,
-            other => panic!("expected JSXElement, got {other:?}"),
-        }
-    }
-
-    fn emit_expr(expr: Expr) -> String {
-        let cm = Arc::new(SourceMap::default());
-        let module = Module {
-            span: DUMMY_SP,
-            body: vec![ModuleItem::Stmt(Stmt::Expr(ExprStmt {
-                span: DUMMY_SP,
-                expr: Box::new(expr),
-            }))],
-            shebang: None,
-        };
-        let mut buf = Vec::new();
-        let mut emitter = Emitter {
-            cfg: Default::default(),
-            comments: None,
-            cm: cm.clone(),
-            wr: JsWriter::new(cm, "\n", &mut buf, None),
-        };
-        emitter.emit_program(&Program::Module(module)).expect("emit expr");
-        String::from_utf8(buf).expect("utf8")
-    }
-
-    fn normalize(src: &str) -> String {
-        let mut out = String::new();
-        let mut prev_space = false;
-        for ch in src.chars() {
-            if ch.is_whitespace() {
-                if !prev_space {
-                    out.push(' ');
-                    prev_space = true;
-                }
-            } else {
-                out.push(ch);
-                prev_space = false;
-            }
-        }
-        out.trim().to_string()
-    }
-
-    #[test]
-    fn parses_top_level_separators_without_entering_nested_structures() {
-        let raw = "(item, key) in records.filter(entry => entry.kind === 'inbox')";
-        let (sep_idx, sep_len) = find_top_level_separator(raw).expect("separator");
-        assert_eq!(raw[..sep_idx].trim(), "(item, key)");
-        assert_eq!(
-            raw[sep_idx + sep_len..].trim(),
-            "records.filter(entry => entry.kind === 'inbox')"
-        );
-
-        let raw_of = "([value, key], index) of sourceMap";
-        let (sep_idx, sep_len) = find_top_level_separator(raw_of).expect("of separator");
-        assert_eq!(raw_of[..sep_idx].trim(), "([value, key], index)");
-        assert_eq!(raw_of[sep_idx + sep_len..].trim(), "sourceMap");
-
-        assert!(find_top_level_separator("item => item + 1").is_none());
-    }
-
-    #[test]
-    fn parses_aliases_and_directive_specs_for_supported_forms() {
-        let single = parse_aliases("item").expect("single alias");
-        assert_eq!(single.len(), 1);
-        assert!(matches!(&single[0], Pat::Ident(binding) if binding.id.sym.as_ref() == "item"));
-
-        let triple = parse_aliases("(value, key, index)").expect("triple alias");
-        assert_eq!(triple.len(), 3);
-        assert!(parse_aliases("(a, b, c, d)").is_none());
-        assert!(parse_aliases("()").is_none());
-
-        let directive_el = parse_jsx_element("<li v-for=\"(item, index) in list\" />");
-        let attr = get_directive_attr(&directive_el, FOR_DIRECTIVE_NAMES).expect("v-for attr");
-        let spec = parse_directive_attr(attr).expect("directive spec");
-        assert_eq!(spec.aliases.len(), 2);
-        assert_eq!(normalize(&emit_expr(spec.source)), normalize("list;"));
-
-        let invalid_el = parse_jsx_element("<li v-for={items} />");
-        let invalid_attr =
-            get_directive_attr(&invalid_el, FOR_DIRECTIVE_NAMES).expect("invalid attr");
-        assert!(parse_directive_attr(invalid_attr).is_none());
-    }
-
-    #[test]
-    fn normalizes_array_number_and_object_sources_before_mapping() {
-        let normalized = normalize(&emit_expr(build_normalized_iterable_expr(
-            parse_expr("source").expect("source expr"),
-        )));
-
-        assert!(normalized.contains("Array.isArray(__rue_v_for_source)"));
-        assert!(
-            normalized.contains("__rue_v_for_source.map((value, index)=>[ value, index, index ])")
-        );
-        assert!(normalized.contains("Array.from({ length: __rue_v_for_source }, (__rue_v_for_unused, index)=>[ index + 1, index, index ])"));
-        assert!(normalized.contains("Object.entries(__rue_v_for_source == null ? {} : __rue_v_for_source).map(([key, value], index)=>[ value, key, index ])"));
-    }
-
-    #[test]
-    fn rewrites_v_for_children_to_map_expr_and_preserves_other_children() {
-        let mut parent = parse_jsx_element(
-            "<ul><li v-for=\"(item, key, index) in itemsMap\" key={item.id}>{index}:{key}:{item.name}</li><li>Static</li></ul>",
-        );
-        transform_element(&mut parent);
-
-        assert_eq!(parent.children.len(), 2);
-        let first = match &parent.children[0] {
-            JSXElementChild::JSXExprContainer(container) => match &container.expr {
-                JSXExpr::Expr(expr) => expr.as_ref(),
-                _ => panic!("expected expr child"),
-            },
-            other => panic!("expected expr container, got {other:?}"),
-        };
-        let rendered = normalize(&emit_expr(first.clone()));
-        assert!(rendered.contains("Array.isArray(__rue_v_for_source)"));
-        assert!(rendered.contains(".map(([item, key, index])=>"));
-        assert!(!rendered.contains("v-for"));
-        assert!(rendered.contains("key={item.id}"));
-        assert!(matches!(&parent.children[1], JSXElementChild::JSXElement(_)));
-
-        let mut r_for_parent = parse_jsx_element("<div><span r-for=\"n in 3\">{n}</span></div>");
-        transform_element(&mut r_for_parent);
-        let r_for_expr = match &r_for_parent.children[0] {
-            JSXElementChild::JSXExprContainer(container) => match &container.expr {
-                JSXExpr::Expr(expr) => expr.as_ref(),
-                _ => panic!("expected r-for expr"),
-            },
-            other => panic!("expected expr container, got {other:?}"),
-        };
-        let r_for_rendered = normalize(&emit_expr(r_for_expr.clone()));
-        assert!(r_for_rendered.contains("Array.from({ length: __rue_v_for_source }"));
-        assert!(r_for_rendered.contains(".map(([n])=>"));
-    }
-}
+#[path = "for_directive_tests.rs"]
+mod tests;

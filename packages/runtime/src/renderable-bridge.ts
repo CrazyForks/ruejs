@@ -16,7 +16,18 @@ import {
 } from './renderable-lifecycle'
 import type { BlockFactory, BlockInstance, NormalizedRenderable, RenderTarget } from './renderable'
 
+/*
+默认 Renderable 桥接层概述
+- materializeRenderable 先把 NormalizedRenderable 挂载到临时 Fragment，统一收集最终 DOM 节点。
+- mountNormalizedRenderableToTarget 负责清理旧 owner、清空目标区间，再把新节点插入真实目标。
+- BlockFactory / BlockInstance 会通过 RenderTarget 协议接入，并把 cleanup 挂到 owner 上。
+- markers 是临时桥接锚点，只用于物化阶段，插入真实 DOM 前会被移除。
+*/
+
+/** RenderTarget 的 kind 联合类型，便于桥接函数复用目标分支。 */
 export type BridgeTargetKind = RenderTarget['kind']
+
+/** 默认 renderable 路径创建的 owner，用于记录本次渲染实际插入的 DOM 节点。 */
 export type DirectRenderableOwner = Record<string, unknown> & { nodes: DomNodeLike[] }
 
 const RUE_EFFECT_SCOPE_ID_KEY = '__rue_effect_scope_id'
@@ -78,6 +89,7 @@ const removeTrackedNodes = (nodes: readonly DomNodeLike[]) => {
   }
 }
 
+/** 把规范化后的默认渲染值挂载到指定目标，并返回可供下次更新清理的 owner。 */
 export const mountNormalizedRenderableToTarget = (
   value: NormalizedRenderable,
   target: RenderTarget,

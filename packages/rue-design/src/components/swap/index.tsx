@@ -8,45 +8,76 @@ Swap 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** SwapEffect 类型。 */
 export type SwapEffect = 'rotate' | 'flip'
 
+/** SwapChangeMeta 接口。 */
 export interface SwapChangeMeta {
+  /** 受控选中状态。 */
   checked: boolean
+  /** indeterminate 配置项。 */
   indeterminate: boolean
+  /** 是否处于激活态。 */
   active: boolean
+  /** mode 配置项。 */
   mode: 'input' | 'class'
 }
 
+/** SwapProps 组件属性。 */
 export interface SwapProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 是否处于激活态。 */
   active?: boolean
+  /** 受控选中状态。 */
   checked?: boolean
+  /** 非受控初始选中状态。 */
   defaultChecked?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** indeterminate 配置项。 */
   indeterminate?: boolean
+  /** defaultIndeterminate 配置项。 */
   defaultIndeterminate?: boolean
+  /** rotate 配置项。 */
   rotate?: boolean
+  /** flip 配置项。 */
   flip?: boolean
+  /** effect 配置项。 */
   effect?: SwapEffect
+  /** 根节点附加类名。 */
   className?: string
+  /** inputClassName 附加类名。 */
   inputClassName?: string
+  /** inputProps 透传属性。 */
   inputProps?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** 值或状态变化时触发的回调。 */
   onChange?: (event: Event, meta: SwapChangeMeta) => void
+  /** onCheckedChange 事件回调。 */
   onCheckedChange?: (checked: boolean, event: Event) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** SwapPartProps 组件属性。 */
 export interface SwapPartProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
 
+/** flatten Children 的内部工具函数。 */
 const flattenChildren = (children: any, out: any[] = []) => {
   if (children == null || children === false) {
     return out
@@ -59,12 +90,14 @@ const flattenChildren = (children: any, out: any[] = []) => {
   return out
 }
 
+/** 判断是否存在 Checkbox Input Child 的内部工具函数。 */
 const hasCheckboxInputChild = (children: any) =>
   flattenChildren(children).some(child => {
     if (!child || typeof child !== 'object') return false
     return (child as any).type === 'input' && (child as any).props?.type === 'checkbox'
   })
 
+/** 构建 Root Class Name 的内部工具函数。 */
 const buildRootClassName = (
   active?: boolean,
   rotate?: boolean,
@@ -82,6 +115,7 @@ const buildRootClassName = (
   return cls
 }
 
+/** Swap Root 的内部工具函数。 */
 const SwapRoot: FC<SwapProps> = ({
   as = 'label',
   active,
@@ -215,6 +249,7 @@ const SwapRoot: FC<SwapProps> = ({
   )
 }
 
+/** On 的内部工具函数。 */
 const On: FC<SwapPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return (
@@ -224,6 +259,7 @@ const On: FC<SwapPartProps> = ({ as = 'div', className, children, ...rest }) => 
   )
 }
 
+/** Off 的内部工具函数。 */
 const Off: FC<SwapPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return (
@@ -233,6 +269,7 @@ const Off: FC<SwapPartProps> = ({ as = 'div', className, children, ...rest }) =>
   )
 }
 
+/** Indeterminate 的内部工具函数。 */
 const Indeterminate: FC<SwapPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
   return (
@@ -254,4 +291,5 @@ const SwapCompound: SwapCompound = Object.assign(SwapRoot, {
   Indeterminate,
 })
 
+/** 默认导出切换组件。 */
 export default SwapCompound

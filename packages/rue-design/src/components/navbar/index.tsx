@@ -1,63 +1,110 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Navbar 模块概述
+- 汇总导航栏组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 
+/** NavbarPlacement 位置或方向类型。 */
 export type NavbarPlacement = 'start' | 'center' | 'end'
+/** NavbarAlign 对齐方式类型。 */
 export type NavbarAlign = 'start' | 'center' | 'end' | 'between'
 
+/** NavbarSectionProps 组件属性。 */
 export interface NavbarSectionProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 交叉轴或内容对齐方式。 */
   align?: NavbarAlign
+  /** grow 配置项。 */
   grow?: boolean
+  /** wrap 配置项。 */
   wrap?: boolean
+  /** 弹出层或内容展示位置。 */
   placement?: NavbarPlacement
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** NavbarItemProps 组件属性。 */
 export interface NavbarItemProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 主体内容。 */
   content?: any
+  /** grow 配置项。 */
   grow?: boolean
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** NavbarItem 数据项结构。 */
 export interface NavbarItem extends Omit<NavbarItemProps, 'content'> {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 弹出层或内容展示位置。 */
   placement?: NavbarPlacement
+  /** 主体内容。 */
   content?: any
 }
 
+/** NavbarRootProps 组件属性。 */
 export interface NavbarRootProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** brand 配置项。 */
   brand?: any
+  /** start 配置项。 */
   start?: any
+  /** center 配置项。 */
   center?: any
+  /** end 配置项。 */
   end?: any
+  /** 操作区内容。 */
   actions?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<NavbarItem>
+  /** startProps 透传属性。 */
   startProps?: Omit<NavbarSectionProps, 'children' | 'placement'>
+  /** centerProps 透传属性。 */
   centerProps?: Omit<NavbarSectionProps, 'children' | 'placement'>
+  /** endProps 透传属性。 */
   endProps?: Omit<NavbarSectionProps, 'children' | 'placement'>
+  /** wrap 配置项。 */
   wrap?: boolean
+  /** sticky 配置项。 */
   sticky?: boolean
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...values: Array<string | undefined | false>) =>
   values.filter(Boolean).join(' ')
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value == null) return false
   if (Array.isArray(value)) return value.some(item => hasRenderableContent(item))
   return true
 }
 
+/** 解析 Align Class 的内部工具函数。 */
 const resolveAlignClass = (align?: NavbarAlign, placement?: NavbarPlacement) => {
   if (align === 'between') return 'justify-between'
   if (align === 'center') return 'justify-center'
@@ -68,6 +115,7 @@ const resolveAlignClass = (align?: NavbarAlign, placement?: NavbarPlacement) => 
   return undefined
 }
 
+/** 构建 Section Class Name 的内部工具函数。 */
 const buildSectionClassName = (
   placement: NavbarPlacement,
   align?: NavbarAlign,
@@ -84,6 +132,7 @@ const buildSectionClassName = (
   )
 }
 
+/** Section 的内部工具函数。 */
 const Section: FC<NavbarSectionProps> = ({
   as = 'div',
   className,
@@ -102,6 +151,7 @@ const Section: FC<NavbarSectionProps> = ({
   )
 }
 
+/** Item 的内部工具函数。 */
 const Item: FC<NavbarItemProps> = ({ as = 'div', className, children, content, grow, ...rest }) => {
   const Component = as as any
   return (
@@ -114,21 +164,26 @@ const Item: FC<NavbarItemProps> = ({ as = 'div', className, children, content, g
   )
 }
 
+/** Start 的内部工具函数。 */
 const Start: FC<Omit<NavbarSectionProps, 'placement'>> = props => (
   <Section {...props} placement="start" />
 )
+/** Center 的内部工具函数。 */
 const Center: FC<Omit<NavbarSectionProps, 'placement'>> = props => (
   <Section {...props} placement="center" />
 )
+/** End 的内部工具函数。 */
 const End: FC<Omit<NavbarSectionProps, 'placement'>> = props => (
   <Section {...props} placement="end" />
 )
 
+/** 渲染 Slot Item 的内部工具函数。 */
 const renderSlotItem = (content: any, key: string) => {
   if (!hasRenderableContent(content)) return null
   return <Item key={key}>{content}</Item>
 }
 
+/** 渲染 Placement Items 的内部工具函数。 */
 const renderPlacementItems = (
   items: ReadonlyArray<NavbarItem> | undefined,
   placement: NavbarPlacement,
@@ -141,6 +196,7 @@ const renderPlacementItems = (
     })
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<NavbarRootProps> = ({
   as = 'div',
   className,
@@ -221,4 +277,5 @@ const Navbar: NavbarCompound = Object.assign(Root, {
   Item,
 })
 
+/** 默认导出导航栏组件。 */
 export default Navbar

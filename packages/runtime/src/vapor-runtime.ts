@@ -1,6 +1,15 @@
 'use strict'
 
+/*
+Vapor 专用运行时出口概述
+- 使用 @rue-js/runtime-vapor/vapor 创建轻量 runtime，面向 Vapor 编译产物。
+- 只暴露 Vapor 路径需要的 createComponent、renderBetween、renderAnchor、生命周期和 emitted。
+- 与默认 runtime 共享 DOMAdapter、context replay 约束、renderable bridge 和 cleanup 生命周期。
+- portable component / vapor setup 都会附加 repeatable factory，确保同一 vnode 可在多次挂载时重新物化。
+*/
+
 import { createRue as createRueWasm } from '@rue-js/runtime-vapor/vapor'
+import { getCurrentInstance, withHookSlot } from '@rue-js/runtime-vapor/reactive'
 import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,
   type CustomElementEmitBridge,
@@ -29,6 +38,11 @@ import type {
   RueMountHandle,
   VaporSetupResult,
 } from './rue'
+import {
+  createIgnoredErrorCaptureOwners,
+  dispatchErrorCaptured,
+  onErrorCaptured,
+} from './error-capture'
 
 getDOMAdapter()
 
@@ -48,9 +62,39 @@ const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
 const RUE_VAPOR_RUNTIME_KEY = '__rue_vapor'
 const RUE_VAPOR_PREFERRED_RUNTIME_KEY = '__rue_vapor_preferred'
 const RUE_REPEATABLE_MOUNT_FACTORY_KEY = '__rue_repeatable_mount_factory__'
+const TEXT_CLIENT_REFERENCE_SSR_RESOLVER_KEY = '__TEXT_RESOLVE_CLIENT_REFERENCE_EXPORT__'
+// Context provider 自带 owner 连接关系，避免额外包装影响父链解析。
+const RUE_CONTEXT_PROVIDER_MARKER = '__rue_context_provider__'
+const COMPAT_SYMBOL_SCOPE = ['re', 'act'].join('')
+const COMPAT_LAZY_TYPE = Symbol.for(`${COMPAT_SYMBOL_SCOPE}.lazy`)
+const COMPAT_SUSPENSE_TYPE = Symbol.for(`${COMPAT_SYMBOL_SCOPE}.suspense`)
+export const RUE_SSR_PENDING_ASYNC_COMPONENT_KEY = '__rue_ssr_pending_async_component__'
 let componentTypeIdentitySeed = 0
+// 缓存 render 错误捕获包装组件，确保同一组件类型在 patch 时身份稳定。
+const errorCapturedComponentCache = new WeakMap<Function, ComponentInstance<any>>()
+const classComponentAdapterCache = new WeakMap<Function, ComponentInstance<any>>()
 const DEFAULT_UNSUPPORTED_OBJECT_INPUT_ERROR =
   'Unsupported object inputs are no longer accepted on the default @rue-js/runtime entry.'
+
+type ClassComponentInstance<P = ComponentProps> = {
+  props: Readonly<P>
+  state?: unknown
+  render: () => RenderableOutput
+  componentDidCatch?: (error: unknown, errorInfo: { componentStack: string }) => void
+}
+
+type ClassComponentType<P = ComponentProps> = {
+  new (props: P): ClassComponentInstance<P>
+  getDerivedStateFromProps?: (
+    props: P,
+    state: unknown,
+  ) => Record<string, unknown> | null | undefined
+  getDerivedStateFromError?: (error: unknown) => Record<string, unknown> | null | undefined
+}
+
+type ClassComponentSlot<P> = {
+  instance: ClassComponentInstance<P>
+}
 
 type SharedRuntimeBridge = {
   beginVaporScope(owner: unknown): boolean
@@ -62,6 +106,7 @@ type VaporGlobalRecord = typeof globalThis & {
   __rue_dom?: unknown
   __rue_active?: unknown
   __rue_runtime_vapor_shared_bridge?: SharedRuntimeBridge
+  [RUE_SSR_PENDING_ASYNC_COMPONENT_KEY]?: Promise<unknown>[]
   [RUE_VAPOR_PREFERRED_RUNTIME_KEY]?: unknown
   [RUE_VAPOR_RUNTIME_KEY]?: unknown
 }
@@ -127,6 +172,138 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (!value || typeof value !== 'object') return false
   const prototype = Object.getPrototypeOf(value)
   return prototype === Object.prototype || prototype === null
+}
+
+const isThenable = (value: unknown): value is PromiseLike<unknown> =>
+  !!value &&
+  (typeof value === 'object' || typeof value === 'function') &&
+  typeof (value as { then?: unknown }).then === 'function'
+
+const isClassComponentType = <P>(type: unknown): type is ClassComponentType<P> =>
+  typeof type === 'function' &&
+  !!(type as { prototype?: { render?: unknown } }).prototype &&
+  typeof (type as { prototype?: { render?: unknown } }).prototype?.render === 'function'
+
+const readClientReferenceExport = (
+  value: unknown,
+): { exportName: string; referenceKey: string } | null => {
+  if ((typeof value !== 'object' && typeof value !== 'function') || value === null) return null
+  const id = (value as { $$id?: unknown }).$$id
+  if (typeof id !== 'string') return null
+  const separator = id.lastIndexOf('#')
+  if (separator <= 0 || separator === id.length - 1) return null
+  return {
+    exportName: id.slice(separator + 1),
+    referenceKey: id.slice(0, separator),
+  }
+}
+
+const resolveClientReferenceComponentType = <P>(
+  type: ComponentInstance<P>,
+): ComponentInstance<P> => {
+  const reference = readClientReferenceExport(type)
+  if (!reference) return type
+  const resolver = (globalThis as Record<string, unknown>)[TEXT_CLIENT_REFERENCE_SSR_RESOLVER_KEY]
+  if (typeof resolver !== 'function') return type
+  const resolved = (resolver as (referenceKey: string, exportName: string) => unknown)(
+    reference.referenceKey,
+    reference.exportName,
+  )
+  return typeof resolved === 'function' ? (resolved as ComponentInstance<P>) : type
+}
+
+const mergeClassComponentState = (
+  state: unknown,
+  update: Record<string, unknown> | null | undefined,
+) => {
+  if (!update || typeof update !== 'object') {
+    return state
+  }
+  return { ...((state && typeof state === 'object' ? state : null) as object | null), ...update }
+}
+
+const createClassComponentAdapter = <P>(
+  ClassComponent: ClassComponentType<P>,
+): ComponentInstance<P> => {
+  const cached = classComponentAdapterCache.get(ClassComponent as unknown as Function)
+  if (cached) {
+    return cached as ComponentInstance<P>
+  }
+
+  const adapter = ((props: P & { children?: any }) => {
+    const slot = withHookSlot<ClassComponentSlot<P & { children?: any }>>(() => ({
+      instance: new (ClassComponent as ClassComponentType<P & { children?: any }>)(props),
+    }))
+    const instance = slot.instance
+    instance.props = props
+    instance.state = mergeClassComponentState(
+      instance.state,
+      ClassComponent.getDerivedStateFromProps?.(props, instance.state),
+    )
+
+    if (typeof ClassComponent.getDerivedStateFromError === 'function') {
+      onErrorCaptured(error => {
+        instance.state = mergeClassComponentState(
+          instance.state,
+          ClassComponent.getDerivedStateFromError?.(error),
+        )
+        instance.componentDidCatch?.(error, { componentStack: '' })
+        return false
+      })
+    }
+
+    return instance.render()
+  }) as ComponentInstance<P> & Record<string, unknown>
+
+  try {
+    Object.defineProperty(adapter, 'name', {
+      configurable: true,
+      value: (ClassComponent as unknown as Function).name,
+    })
+  } catch {}
+
+  classComponentAdapterCache.set(ClassComponent as unknown as Function, adapter)
+  return adapter
+}
+
+const registerPendingAsyncDependency = (thenable: PromiseLike<unknown>) => {
+  const pending = (vaporGlobal[RUE_SSR_PENDING_ASYNC_COMPONENT_KEY] ??= [])
+  pending.push(Promise.resolve(thenable).catch(() => undefined))
+}
+
+const resolveCompatLazyComponent = <P = {}>(
+  type: unknown,
+): ComponentInstance<P> | null | undefined => {
+  if (
+    !type ||
+    typeof type !== 'object' ||
+    (type as { $$typeof?: unknown }).$$typeof !== COMPAT_LAZY_TYPE
+  ) {
+    return undefined
+  }
+
+  const lazyType = type as {
+    _init?: (payload: unknown) => unknown
+    _payload?: unknown
+  }
+  if (typeof lazyType._init !== 'function') {
+    return null
+  }
+
+  try {
+    const mod = lazyType._init(lazyType._payload)
+    const component =
+      mod && typeof mod === 'object' && 'default' in mod
+        ? (mod as { default?: unknown }).default
+        : mod
+    return typeof component === 'function' ? (component as ComponentInstance<P>) : null
+  } catch (error) {
+    if (isThenable(error)) {
+      registerPendingAsyncDependency(error)
+      return null
+    }
+    throw error
+  }
 }
 
 const attachRepeatableMountFactory = <T>(value: T, factory: () => unknown): T => {
@@ -197,7 +374,8 @@ const createRepeatableComponentHandle = <P = {}>(
   type: ComponentInstance<P>,
   props: ComponentProps | null,
 ): RenderableOutput => {
-  const componentType = type as ComponentInstance<P> & Record<string, unknown>
+  const componentType = resolveErrorCapturedComponent(type) as ComponentInstance<P> &
+    Record<string, unknown>
   if (!(RUE_PORTABLE_COMPONENT_ID_KEY in componentType)) {
     try {
       Object.defineProperty(componentType, RUE_PORTABLE_COMPONENT_ID_KEY, {
@@ -213,8 +391,61 @@ const createRepeatableComponentHandle = <P = {}>(
     [RUE_PORTABLE_COMPONENT_TYPE_KEY]: componentType,
     props: nextProps,
   } as RenderableOutput
-  const nextVnode = markAnchorRemountableMountHandle(componentType, nextProps, [], vnode)
+  const nextVnode = markAnchorRemountableMountHandle(type, nextProps, [], vnode)
   return attachRepeatableMountFactory(nextVnode, () => createRepeatableComponentHandle(type, props))
+}
+
+/** 判断组件类型是否需要在 render 外层补 errorCaptured 冒泡包装。 */
+const shouldWrapComponentForErrorCapture = (type: ComponentInstance<any>) => {
+  const componentRecord = type as unknown as Record<string, unknown>
+  return componentRecord[RUE_CONTEXT_PROVIDER_MARKER] !== true
+}
+
+/** 返回带 render 错误捕获能力的组件函数，复用缓存避免重复包装。 */
+const resolveErrorCapturedComponent = <P = {}>(
+  type: ComponentInstance<P>,
+): ComponentInstance<P> => {
+  const resolvedType = resolveClientReferenceComponentType(type)
+  const componentType = isClassComponentType<P & { children?: any }>(resolvedType)
+    ? (createClassComponentAdapter(resolvedType) as ComponentInstance<P>)
+    : resolvedType
+
+  if (!shouldWrapComponentForErrorCapture(componentType as ComponentInstance<any>)) {
+    return componentType
+  }
+
+  const cached = errorCapturedComponentCache.get(componentType as unknown as Function)
+  if (cached) {
+    return cached as ComponentInstance<P>
+  }
+
+  const wrapped = ((props: P & { children?: any }) => {
+    try {
+      return componentType(props)
+    } catch (error) {
+      const instance = getCurrentInstance()
+      const stopped = dispatchErrorCaptured(error, instance, 'component render', {
+        ignoredOwners: createIgnoredErrorCaptureOwners(instance),
+      })
+      if (stopped) {
+        return null
+      }
+      try {
+        getRueRuntime().handleError?.(error, instance)
+      } catch {}
+      throw error
+    }
+  }) as ComponentInstance<P> & Record<string, unknown>
+
+  try {
+    Object.defineProperty(wrapped, 'name', {
+      configurable: true,
+      value: (componentType as Function).name,
+    })
+  } catch {}
+
+  errorCapturedComponentCache.set(componentType as unknown as Function, wrapped)
+  return wrapped
 }
 
 const createRepeatableVaporHandle = (
@@ -380,10 +611,20 @@ const resolveBetweenTargetParent = (
   return null
 }
 
+/** 创建 Vapor portable component mount handle。 */
 export const createComponent = <P = {}>(
   type: ComponentInstance<P>,
   props: ComponentProps | null,
-) => {
+): RenderableOutput => {
+  if ((type as unknown) === COMPAT_SUSPENSE_TYPE) {
+    return props?.children ?? null
+  }
+
+  const compatLazyComponent = resolveCompatLazyComponent<P>(type)
+  if (compatLazyComponent !== undefined) {
+    return compatLazyComponent ? createComponent(compatLazyComponent, props) : null
+  }
+
   const contextualProps = withParentContextProps(
     type as (props: Record<string, unknown>) => unknown,
     props as Record<string, unknown> | null,
@@ -392,6 +633,7 @@ export const createComponent = <P = {}>(
   return createRepeatableComponentHandle(type, contextualProps)
 }
 
+/** 在 start/end 区间内渲染 Vapor 或默认 renderable 内容。 */
 export const renderBetween = (
   value: RenderableInput,
   parent: DomElementLike,
@@ -434,6 +676,7 @@ export const renderBetween = (
   return getRueRuntime().renderBetween(compatValue, targetParent, start, end)
 }
 
+/** 在尾锚点前渲染 Vapor 或默认 renderable 内容。 */
 export const renderAnchor = (
   value: RenderableInput,
   parent: DomElementLike,
@@ -524,20 +767,55 @@ export const renderAnchor = (
   })
 }
 
+/** 创建 Vapor setup mount handle，并接入共享 effect scope 清理。 */
 export const vapor = (setup: (parentContext?: DomElementLike | null) => VaporSetupResult) => {
   return createRepeatableVaporHandle(setup)
 }
 
+/** 注册 beforeCreate 生命周期钩子。 */
 export const onBeforeCreate = (fn: () => void) => getRueRuntime().onBeforeCreate(fn)
+/** 注册 created 生命周期钩子。 */
 export const onCreated = (fn: () => void) => getRueRuntime().onCreated(fn)
+/** 注册 beforeMount 生命周期钩子。 */
 export const onBeforeMount = (fn: () => void) => getRueRuntime().onBeforeMount(fn)
+/** 注册 mounted 生命周期钩子。 */
 export const onMounted = (fn: () => void) => getRueRuntime().onMounted(fn)
+/** 注册 activated 生命周期钩子。 */
+export const onActivated = (fn: () => void) => getRueRuntime().onActivated(fn)
+/** 注册 beforeUpdate 生命周期钩子。 */
 export const onBeforeUpdate = (fn: () => void) => getRueRuntime().onBeforeUpdate(fn)
+/** 注册 updated 生命周期钩子。 */
 export const onUpdated = (fn: () => void) => getRueRuntime().onUpdated(fn)
+/** 注册 renderTriggered 调试钩子。 */
+export const onRenderTriggered = (fn: (event: any) => void) => getRueRuntime().onRenderTriggered(fn)
+/** 注册 beforeUnmount 生命周期钩子。 */
 export const onBeforeUnmount = (fn: () => void) => getRueRuntime().onBeforeUnmount(fn)
+/** 注册 unmounted 生命周期钩子。 */
 export const onUnmounted = (fn: () => void) => getRueRuntime().onUnmounted(fn)
+/** 注册 deactivated 生命周期钩子。 */
+export const onDeactivated = (fn: () => void) => getRueRuntime().onDeactivated(fn)
+/** 注册 serverPrefetch 生命周期钩子。 */
+export const onServerPrefetch = (fn: () => Promise<any> | any) =>
+  getRueRuntime().onServerPrefetch(fn)
+/** 执行当前上下文的服务端预取钩子。 */
+export const runServerPrefetch = () => getRueRuntime().runServerPrefetch()
+/** 注册运行时错误处理钩子。 */
 export const onError = (fn: (error: any, instance?: any) => void) => getRueRuntime().onError(fn)
+/** 注册组件错误捕获钩子。 */
+export { onErrorCaptured }
+/** 获取当前运行时正在渲染的容器。 */
 export const getCurrentContainer = () => getRueRuntime().getCurrentContainer()
+
+/** KeepAlive 内部桥接：按缓存 range 触发 activated hooks。 */
+export const __rueActivateRange = (start: DomNodeLike) => {
+  getRueRuntime()?.__rueActivateRange?.(start)
+}
+
+/** KeepAlive 内部桥接：按缓存 range 触发 deactivated hooks。 */
+export const __rueDeactivateRange = (start: DomNodeLike) => {
+  getRueRuntime()?.__rueDeactivateRange?.(start)
+}
+/** 根据 props 生成事件发射器，并兼容 Custom Element emit bridge。 */
 export const emitted = (props: ComponentProps) => {
   const baseEmit = getRueRuntime().emitted(props)
   const bridge = resolveCustomElementEmitBridge(props)

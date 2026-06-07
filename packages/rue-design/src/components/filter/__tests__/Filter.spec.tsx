@@ -127,10 +127,10 @@ describe('Filter', () => {
       <Filter
         data-testid="filter-form-items"
         items={[
-          { label: 'Vue', value: 'vue' },
-          { label: 'React', value: 'react' },
+          { label: 'Draft', value: 'draft' },
+          { label: 'Published', value: 'published' },
         ]}
-        defaultValue="vue"
+        defaultValue="draft"
         onChange={value => {
           changes.push(
             Array.isArray(value)
@@ -143,31 +143,31 @@ describe('Filter', () => {
     )
 
     await waitForContent(() => {
-      const vue = container.querySelector('[aria-label="Vue"]') as HTMLInputElement
-      const react = container.querySelector('[aria-label="React"]') as HTMLInputElement
+      const draft = container.querySelector('[aria-label="Draft"]') as HTMLInputElement
+      const published = container.querySelector('[aria-label="Published"]') as HTMLInputElement
       expect(container.querySelector('[data-testid="filter-form-items"]')).toBeTruthy()
-      expect(vue.checked).toBe(true)
-      expect(react.checked).toBe(false)
+      expect(draft.checked).toBe(true)
+      expect(published.checked).toBe(false)
     })
 
     const form = container.querySelector('[data-testid="filter-form-items"]') as HTMLFormElement
-    const vue = container.querySelector('[aria-label="Vue"]') as HTMLInputElement
-    const react = container.querySelector('[aria-label="React"]') as HTMLInputElement
+    const draft = container.querySelector('[aria-label="Draft"]') as HTMLInputElement
+    const published = container.querySelector('[aria-label="Published"]') as HTMLInputElement
 
-    react.checked = true
-    react.dispatchEvent(new Event('change', { bubbles: true }))
+    published.checked = true
+    published.dispatchEvent(new Event('change', { bubbles: true }))
 
     await waitForContent(() => {
-      expect(react.checked).toBe(true)
-      expect(changes[changes.length - 1]).toBe('react')
+      expect(published.checked).toBe(true)
+      expect(changes[changes.length - 1]).toBe('published')
     })
 
     form.dispatchEvent(new Event('reset', { bubbles: true }))
 
     await waitForContent(() => {
-      expect(vue.checked).toBe(true)
-      expect(react.checked).toBe(false)
-      expect(changes[changes.length - 1]).toBe('vue')
+      expect(draft.checked).toBe(true)
+      expect(published.checked).toBe(false)
+      expect(changes[changes.length - 1]).toBe('draft')
     })
   })
 

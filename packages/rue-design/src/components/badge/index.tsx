@@ -7,6 +7,7 @@ Badge 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** BadgeVariant 视觉或语义变体类型。 */
 export type BadgeVariant =
   | 'neutral'
   | 'primary'
@@ -17,39 +18,70 @@ export type BadgeVariant =
   | 'warning'
   | 'error'
 
+/** BadgeStatus 状态类型。 */
 export type BadgeStatus = BadgeVariant | 'default' | 'processing'
+/** BadgeSize 尺寸类型。 */
 export type BadgeSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium'
+/** BadgeRibbonPlacement 位置或方向类型。 */
 export type BadgeRibbonPlacement = 'start' | 'end'
 
+/** BadgeProps 组件属性。 */
 export interface BadgeProps {
+  /** 组件视觉变体。 */
   variant?: BadgeVariant
+  /** 组件尺寸。 */
   size?: BadgeSize
+  /** outline 配置项。 */
   outline?: boolean
+  /** dash 配置项。 */
   dash?: boolean
+  /** soft 配置项。 */
   soft?: boolean
+  /** ghost 配置项。 */
   ghost?: boolean
+  /** count 配置项。 */
   count?: any
+  /** overflowCount 配置项。 */
   overflowCount?: number
+  /** showZero 配置项。 */
   showZero?: boolean
+  /** dot 配置项。 */
   dot?: boolean
+  /** 组件状态。 */
   status?: BadgeStatus
+  /** 组件语义色。 */
   color?: string
+  /** text 区域配置。 */
   text?: any
+  /** offset 配置项。 */
   offset?: [number | string, number | string]
+  /** 标题内容。 */
   title?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** indicatorClassName 附加类名。 */
   indicatorClassName?: string
+  /** indicatorStyle 内联样式。 */
   indicatorStyle?: Record<string, any>
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
 }
 
+/** BadgeRibbonProps 组件属性。 */
 export interface BadgeRibbonProps {
+  /** text 区域配置。 */
   text?: any
+  /** 组件语义色。 */
   color?: string
+  /** 弹出层或内容展示位置。 */
   placement?: BadgeRibbonPlacement
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
 }
 
@@ -57,6 +89,7 @@ interface BadgeComponent extends FC<BadgeProps> {
   Ribbon: FC<BadgeRibbonProps>
 }
 
+/** PRESET_VARIANTS 内部常量。 */
 const PRESET_VARIANTS: BadgeVariant[] = [
   'neutral',
   'primary',
@@ -68,14 +101,17 @@ const PRESET_VARIANTS: BadgeVariant[] = [
   'error',
 ]
 
+/** 判断 Preset Variant 的内部工具函数。 */
 const isPresetVariant = (value?: string): value is BadgeVariant => {
   return !!value && PRESET_VARIANTS.includes(value as BadgeVariant)
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...parts: Array<string | false | null | undefined>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: BadgeSize) => {
   switch (size) {
     case 'small':
@@ -87,6 +123,7 @@ const resolveSizeClass = (size?: BadgeSize) => {
   }
 }
 
+/** 解析 Status Tone 的内部工具函数。 */
 const resolveStatusTone = (status?: BadgeStatus): BadgeVariant | undefined => {
   switch (status) {
     case 'default':
@@ -98,6 +135,7 @@ const resolveStatusTone = (status?: BadgeStatus): BadgeVariant | undefined => {
   }
 }
 
+/** 解析 Primitive Number 的内部工具函数。 */
 const resolvePrimitiveNumber = (value: any) => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value
@@ -115,10 +153,12 @@ const resolvePrimitiveNumber = (value: any) => {
   return null
 }
 
+/** 判断 Empty Value 的内部工具函数。 */
 const isEmptyValue = (value: any) => {
   return value === null || value === undefined || value === false || value === ''
 }
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (Array.isArray(value)) {
     return value.some(item => hasRenderableContent(item))
@@ -127,6 +167,7 @@ const hasRenderableContent = (value: any): boolean => {
   return !isEmptyValue(value)
 }
 
+/** negate Offset 的内部工具函数。 */
 const negateOffset = (value: number | string) => {
   if (typeof value === 'number') {
     return `${-value}px`
@@ -134,6 +175,7 @@ const negateOffset = (value: number | string) => {
   return value.startsWith('-') ? value.slice(1) : `-${value}`
 }
 
+/** 归一化 Offset Value 的内部工具函数。 */
 const normalizeOffsetValue = (value: number | string) => {
   if (typeof value === 'number') {
     return `${value}px`
@@ -141,6 +183,7 @@ const normalizeOffsetValue = (value: number | string) => {
   return value
 }
 
+/** 创建 Badge Class Name 的内部工具函数。 */
 const createBadgeClassName = ({
   variant,
   size,
@@ -170,6 +213,7 @@ const createBadgeClassName = ({
   return cls
 }
 
+/** 解析 Count Display 的内部工具函数。 */
 const resolveCountDisplay = (count: any, overflowCount: number) => {
   const numericValue = resolvePrimitiveNumber(count)
   if (numericValue !== null && numericValue > overflowCount) {
@@ -178,10 +222,12 @@ const resolveCountDisplay = (count: any, overflowCount: number) => {
   return count
 }
 
+/** should Show Text 的内部工具函数。 */
 const shouldShowText = (text: any) => {
   return !(text === null || text === undefined || text === false || text === '')
 }
 
+/** 解析 Indicator Variant 的内部工具函数。 */
 const resolveIndicatorVariant = ({
   variant,
   status,
@@ -193,6 +239,7 @@ const resolveIndicatorVariant = ({
   return resolveStatusTone(status) ?? variant ?? 'error'
 }
 
+/** 解析 Indicator Offset Style 的内部工具函数。 */
 const resolveIndicatorOffsetStyle = (offset?: [number | string, number | string]) => {
   if (!offset) {
     return undefined
@@ -203,6 +250,7 @@ const resolveIndicatorOffsetStyle = (offset?: [number | string, number | string]
   }
 }
 
+/** 解析 Count Indicator Style 的内部工具函数。 */
 const resolveCountIndicatorStyle = ({
   color,
   offset,
@@ -224,6 +272,7 @@ const resolveCountIndicatorStyle = ({
   }
 }
 
+/** 解析 Dot Indicator Style 的内部工具函数。 */
 const resolveDotIndicatorStyle = ({
   color,
   offset,
@@ -244,6 +293,7 @@ const resolveDotIndicatorStyle = ({
   }
 }
 
+/** 解析 Status Size Class 的内部工具函数。 */
 const resolveStatusSizeClass = (size?: BadgeSize) => {
   switch (resolveSizeClass(size)) {
     case 'xs':
@@ -259,6 +309,7 @@ const resolveStatusSizeClass = (size?: BadgeSize) => {
   }
 }
 
+/** 解析 Standalone Indicator Content Class Name 的内部工具函数。 */
 const resolveStandaloneIndicatorContentClassName = ({
   dot,
   displayCount,
@@ -282,6 +333,7 @@ const resolveStandaloneIndicatorContentClassName = ({
   return 'pe-6'
 }
 
+/** 渲染 Indicator Container 的内部工具函数。 */
 const renderIndicatorContainer = ({
   className,
   style,
@@ -301,6 +353,7 @@ const renderIndicatorContainer = ({
   )
 }
 
+/** Badge Base 的内部工具函数。 */
 const BadgeBase: FC<BadgeProps> = ({
   variant,
   size,
@@ -540,6 +593,7 @@ const BadgeBase: FC<BadgeProps> = ({
   )
 }
 
+/** Badge Ribbon 的内部工具函数。 */
 const BadgeRibbon: FC<BadgeRibbonProps> = ({
   text,
   color,
@@ -581,4 +635,5 @@ const Badge = BadgeBase as BadgeComponent
 
 Badge.Ribbon = BadgeRibbon
 
+/** 默认导出徽标组件。 */
 export default Badge

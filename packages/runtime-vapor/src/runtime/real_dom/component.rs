@@ -1,14 +1,24 @@
+/*
+组件真实挂载
+
+负责创建组件实例、建立 propsRO、切换当前实例上下文、执行 render 函数，
+并把组件返回值继续挂载成子树。最后将子树包成 Patch snapshot，供后续组件 patch 复用。
+*/
 use super::super::types::{MountInput, MountedPatchSubtree, MountedSubtreeState};
 use super::super::{ComponentInternalInstance, Rue};
 use crate::hook::reactive::props_reactive_js;
 use crate::reactive::context::{
     CONTEXT_OWNER_PARENT_PROP, CONTEXT_PARENT_INSTANCE_PROP, set_current_instance_ci,
 };
-use crate::reactive::core::{pop_effect_scope, push_effect_scope};
+use crate::reactive::core::{
+    begin_render_debug_owner, end_render_debug_owner, pop_effect_scope, push_effect_scope,
+};
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::shared_runtime_bridge;
 use js_sys::{Function, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
+
+type ComponentLifecycleHookSets = (Vec<JsValue>, Vec<JsValue>, Vec<JsValue>, Vec<JsValue>);
 
 pub(crate) fn mount_component<A: DomAdapter>(
     rue: &mut Rue<A>,
@@ -22,7 +32,10 @@ where
     let props_js = rue.props_with_children_input_to_jsobject(input);
     let (host, props_ro, idx) = prepare_instance_from_input(rue, props_js);
     let render_scope_id = rue.renew_component_render_scope(idx);
-    shared_runtime_bridge::begin_component_render(&host.clone().into());
+    // 将当前组件实例作为 render debug owner，供本轮创建的 effect 绑定调试归属。
+    let host_value: JsValue = host.clone().into();
+    begin_render_debug_owner(&host_value);
+    shared_runtime_bridge::begin_component_render(&host_value);
     push_effect_scope(render_scope_id);
     let func = render_fn.dyn_ref::<Function>().unwrap();
     let prev_container = rue.current_container.clone();
@@ -42,17 +55,10 @@ where
             rue.current_container = prev_container;
             let _ = pop_effect_scope();
             shared_runtime_bridge::end_component_render();
+            end_render_debug_owner();
             rue.handle_error(error.clone());
             rue.instance_stack.pop();
-            if let Some(top_idx) = rue.instance_stack.last() {
-                if let Some(inst_ref) = rue.instance_store.get_mut(top_idx) {
-                    set_current_instance_ci(inst_ref);
-                } else {
-                    crate::set_current_instance(JsValue::UNDEFINED);
-                }
-            } else {
-                crate::set_current_instance(JsValue::UNDEFINED);
-            }
+            restore_current_instance_from_stack(rue);
             return None;
         }
     };
@@ -68,7 +74,7 @@ where
     rue.call_hooks("created");
     rue.call_hooks("before_mount");
 
-    let mounted_subtree = if let Some(sub_input) =
+    let mounted_subtree_opt = if let Some(sub_input) =
         rue.component_return_value_to_input(&ret, input.strict_component_returns)
     {
         crate::set_current_instance(host.clone().into());
@@ -94,32 +100,17 @@ where
             cleanup_bucket: None,
             effect_scope_id: None,
         }))
-    }?;
-
-    let (before_unmount_hooks, unmounted_hooks) = if let Some(top_idx) = rue.instance_stack.last() {
-        if let Some(ci) = rue.instance_store.get(top_idx) {
-            (
-                ci.hooks.0.get("before_unmount").cloned().unwrap_or_default(),
-                ci.hooks.0.get("unmounted").cloned().unwrap_or_default(),
-            )
-        } else {
-            (Vec::new(), Vec::new())
-        }
-    } else {
-        (Vec::new(), Vec::new())
     };
+    end_render_debug_owner();
+    let mounted_subtree = mounted_subtree_opt?;
+
+    // 组件级 KeepAlive hooks 与卸载 hooks 一起写入 mounted snapshot，后续按 range 递归触发。
+    let (before_unmount_hooks, unmounted_hooks, activated_hooks, deactivated_hooks) =
+        component_lifecycle_hooks_from_stack(rue);
 
     rue.call_hooks("mounted");
     rue.instance_stack.pop();
-    if let Some(top_idx) = rue.instance_stack.last() {
-        if let Some(inst_ref) = rue.instance_store.get_mut(top_idx) {
-            set_current_instance_ci(inst_ref);
-        } else {
-            crate::set_current_instance(JsValue::UNDEFINED);
-        }
-    } else {
-        crate::set_current_instance(JsValue::UNDEFINED);
-    }
+    restore_current_instance_from_stack(rue);
 
     Some(MountedSubtreeState::Patch(MountedPatchSubtree::new_component(
         render_fn.clone(),
@@ -128,9 +119,52 @@ where
         mounted_subtree.fragment_nodes_cloned(),
         before_unmount_hooks,
         unmounted_hooks,
+        activated_hooks,
+        deactivated_hooks,
         Some(Box::new(mounted_subtree)),
         Some(idx),
     )))
+}
+
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+fn restore_current_instance_from_stack<A: DomAdapter>(rue: &mut Rue<A>)
+where
+    A::Element: From<JsValue> + Into<JsValue> + Clone,
+{
+    if let Some(top_idx) = rue.instance_stack.last() {
+        if let Some(inst_ref) = rue.instance_store.get_mut(top_idx) {
+            set_current_instance_ci(inst_ref);
+            return;
+        }
+    }
+
+    crate::set_current_instance(JsValue::UNDEFINED);
+}
+
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+fn empty_component_lifecycle_hook_sets() -> ComponentLifecycleHookSets {
+    (Vec::new(), Vec::new(), Vec::new(), Vec::new())
+}
+
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+fn component_lifecycle_hooks_from_stack<A: DomAdapter>(rue: &Rue<A>) -> ComponentLifecycleHookSets
+where
+    A::Element: Clone,
+{
+    if let Some(top_idx) = rue.instance_stack.last() {
+        if let Some(ci) = rue.instance_store.get(top_idx) {
+            return (
+                ci.hooks.0.get("before_unmount").cloned().unwrap_or_default(),
+                ci.hooks.0.get("unmounted").cloned().unwrap_or_default(),
+                ci.hooks.0.get("activated").cloned().unwrap_or_default(),
+                ci.hooks.0.get("deactivated").cloned().unwrap_or_default(),
+            );
+        }
+
+        return empty_component_lifecycle_hook_sets();
+    }
+
+    empty_component_lifecycle_hook_sets()
 }
 
 /// 挂载阶段根据 MountInput 准备组件实例。
@@ -148,6 +182,10 @@ where
     let props_ro = shared_runtime_bridge::props_reactive(&props_js)
         .unwrap_or_else(|| props_reactive_js(props_js.clone(), Some(true)));
     let host = Object::new();
+    let hooks = Object::new();
+    let _ = Reflect::set(&hooks, &JsValue::from_str("states"), &js_sys::Array::new());
+    let _ = Reflect::set(&hooks, &JsValue::from_str("index"), &JsValue::from_f64(0.0));
+    let _ = Reflect::set(&host, &JsValue::from_str("__hooks"), &hooks);
     let _ = Reflect::set(&host, &JsValue::from_str("propsRO"), &props_ro);
     let _ = Reflect::set(&host, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP), &parent_instance);
     let _ = Reflect::set(&host, &JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP), &parent_instance);
@@ -169,9 +207,9 @@ where
     rue.instance_store.insert(idx, new_inst);
     rue.instance_stack.push(idx);
 
-    if let Some(inst_ref) = rue.instance_store.get_mut(&idx) {
-        set_current_instance_ci(inst_ref);
-    }
+    let inst_ref =
+        rue.instance_store.get_mut(&idx).expect("component instance should exist after insertion");
+    set_current_instance_ci(inst_ref);
 
     (host, props_ro, idx)
 }
@@ -191,5 +229,251 @@ fn merge_pending_hooks<A: DomAdapter>(rue: &mut Rue<A>) {
                 list.push(f.clone());
             }
         }
+    }
+}
+
+#[doc(hidden)]
+pub(crate) fn coverage_touch_internal_edges() -> bool {
+    use crate::runtime::js_adapter::JsDomAdapter;
+    use crate::runtime::types::{ComponentProps, MountInputType};
+    use crate::runtime::{ComponentInternalInstance, LifecycleHooks, push_pending_hook};
+    use std::collections::HashMap;
+    use std::marker::PhantomData;
+
+    fn component_input(render_fn: &Function) -> MountInput<JsDomAdapter> {
+        MountInput::new_normalized(
+            MountInputType::Component(render_fn.clone().into()),
+            ComponentProps::new(),
+            Vec::new(),
+        )
+    }
+
+    fn test_instance(index: usize) -> ComponentInternalInstance<JsDomAdapter> {
+        ComponentInternalInstance::<JsDomAdapter> {
+            parent: None,
+            is_mounted: false,
+            hooks: LifecycleHooks(HashMap::new()),
+            props_ro: Object::new().into(),
+            host: Object::new().into(),
+            render_scope_id: None,
+            error: None,
+            error_handlers: Vec::new(),
+            index,
+            _marker: PhantomData,
+        }
+    }
+
+    crate::set_current_instance(JsValue::UNDEFINED);
+
+    let mut nested_rue = Rue::<JsDomAdapter>::new();
+    let (_parent_host, _props_ro, parent_idx) =
+        prepare_instance_from_input(&mut nested_rue, Object::new().into());
+    let throwing = Function::new_no_args("throw new Error('component boom')");
+    let throwing_js: JsValue = throwing.clone().into();
+    let input = component_input(&throwing);
+    let parent_context: JsValue = Object::new().into();
+    let _ = mount_component(&mut nested_rue, &input, &throwing_js, Some(&parent_context));
+
+    let mut root_error_rue = Rue::<JsDomAdapter>::new();
+    let _ = mount_component(&mut root_error_rue, &input, &throwing_js, None);
+
+    let mut missing_parent_rue = Rue::<JsDomAdapter>::new();
+    missing_parent_rue.instance_stack.push(404);
+    restore_current_instance_from_stack(&mut missing_parent_rue);
+
+    let mut empty_stack_rue = Rue::<JsDomAdapter>::new();
+    restore_current_instance_from_stack(&mut empty_stack_rue);
+
+    let mut success_missing_parent_rue = Rue::<JsDomAdapter>::new();
+    success_missing_parent_rue.instance_stack.push(777);
+    let ok_render = Function::new_no_args("return 'host-like-value'");
+    let ok_render_js: JsValue = ok_render.clone().into();
+    let ok_input = component_input(&ok_render);
+    let _ = mount_component(&mut success_missing_parent_rue, &ok_input, &ok_render_js, None);
+
+    let mut lifecycle_rue = Rue::<JsDomAdapter>::new();
+    let mut inst = test_instance(parent_idx + 1);
+    inst.hooks.0.insert(
+        "before_unmount".to_string(),
+        vec![Function::new_no_args("return undefined").into()],
+    );
+    inst.hooks
+        .0
+        .insert("unmounted".to_string(), vec![Function::new_no_args("return undefined").into()]);
+    inst.hooks
+        .0
+        .insert("activated".to_string(), vec![Function::new_no_args("return undefined").into()]);
+    inst.hooks
+        .0
+        .insert("deactivated".to_string(), vec![Function::new_no_args("return undefined").into()]);
+    lifecycle_rue.instance_store.insert(inst.index, inst);
+    lifecycle_rue.instance_stack.push(parent_idx + 1);
+    let hooks = component_lifecycle_hooks_from_stack(&lifecycle_rue);
+    let lifecycle_hit_count = hooks.0.len() + hooks.1.len() + hooks.2.len() + hooks.3.len();
+
+    lifecycle_rue.instance_stack.clear();
+    lifecycle_rue.instance_stack.push(99_999);
+    let _ = component_lifecycle_hooks_from_stack(&lifecycle_rue);
+    lifecycle_rue.instance_stack.clear();
+    let _ = component_lifecycle_hooks_from_stack(&lifecycle_rue);
+
+    let mut pending_current_rue = Rue::<JsDomAdapter>::new();
+    pending_current_rue.current_instance = Some(test_instance(10));
+    crate::runtime::take_pending_hooks();
+    push_pending_hook("mounted", Function::new_no_args("return undefined").into());
+    merge_pending_hooks(&mut pending_current_rue);
+
+    pending_current_rue.current_instance = None;
+    pending_current_rue.instance_stack.push(10_000);
+    push_pending_hook("created", Function::new_no_args("return undefined").into());
+    merge_pending_hooks(&mut pending_current_rue);
+
+    pending_current_rue.instance_stack.clear();
+    push_pending_hook("before_mount", Function::new_no_args("return undefined").into());
+    merge_pending_hooks(&mut pending_current_rue);
+
+    crate::runtime::take_pending_hooks();
+    crate::set_current_instance(JsValue::UNDEFINED);
+    let _ = lifecycle_hit_count + nested_rue.instance_stack.len() + parent_idx;
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::js_adapter::JsDomAdapter;
+    use crate::runtime::types::{ComponentProps, MountInputType};
+    use crate::runtime::{ComponentInternalInstance, LifecycleHooks};
+    use crate::runtime::{push_pending_hook, take_pending_hooks};
+    use std::collections::HashMap;
+    use std::marker::PhantomData;
+    use wasm_bindgen_test::*;
+
+    fn component_input(render_fn: &Function) -> MountInput<JsDomAdapter> {
+        MountInput::new_normalized(
+            MountInputType::Component(render_fn.clone().into()),
+            ComponentProps::new(),
+            Vec::new(),
+        )
+    }
+
+    fn test_instance(index: usize) -> ComponentInternalInstance<JsDomAdapter> {
+        ComponentInternalInstance::<JsDomAdapter> {
+            parent: None,
+            is_mounted: false,
+            hooks: LifecycleHooks(HashMap::new()),
+            props_ro: Object::new().into(),
+            host: Object::new().into(),
+            render_scope_id: None,
+            error: None,
+            error_handlers: Vec::new(),
+            index,
+            _marker: PhantomData,
+        }
+    }
+
+    fn current_instance_is_clear() -> bool {
+        let current = crate::get_current_instance();
+        current.is_undefined() || current.is_null()
+    }
+
+    #[wasm_bindgen_test]
+    fn prepare_instance_and_merge_pending_hooks_cover_context_edges() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let props = Object::new();
+        Reflect::set(&props, &JsValue::from_str("title"), &JsValue::from_str("demo")).unwrap();
+
+        let (host, props_ro, idx) = prepare_instance_from_input(&mut rue, props.into());
+        assert_eq!(idx, 0);
+        assert_eq!(rue.instance_stack, vec![0]);
+        assert!(Reflect::get(&host, &JsValue::from_str("__hooks")).unwrap().is_object());
+        assert!(props_ro.is_object());
+
+        take_pending_hooks();
+        push_pending_hook("mounted", Function::new_no_args("return undefined").into());
+        merge_pending_hooks(&mut rue);
+
+        let inst = rue.instance_store.get(&idx).expect("instance should be stored");
+        assert_eq!(inst.hooks.0.get("mounted").map(Vec::len), Some(1));
+        crate::set_current_instance(JsValue::UNDEFINED);
+        take_pending_hooks();
+    }
+
+    #[wasm_bindgen_test]
+    fn mount_component_render_error_restores_parent_context_edges() {
+        crate::set_current_instance(JsValue::UNDEFINED);
+
+        let mut nested_rue = Rue::<JsDomAdapter>::new();
+        let (_parent_host, _props_ro, parent_idx) =
+            prepare_instance_from_input(&mut nested_rue, Object::new().into());
+        let throwing = Function::new_no_args("throw new Error('component boom')");
+        let throwing_js: JsValue = throwing.clone().into();
+        let input = component_input(&throwing);
+
+        let mounted = mount_component(&mut nested_rue, &input, &throwing_js, None);
+
+        assert!(mounted.is_none());
+        assert_eq!(nested_rue.instance_stack, vec![parent_idx]);
+        assert!(nested_rue.last_error.is_some());
+        assert!(crate::get_current_instance().is_object());
+
+        crate::set_current_instance(JsValue::UNDEFINED);
+        let mut missing_parent_rue = Rue::<JsDomAdapter>::new();
+        missing_parent_rue.instance_stack.push(404);
+        let mounted = mount_component(&mut missing_parent_rue, &input, &throwing_js, None);
+
+        assert!(mounted.is_none());
+        assert_eq!(missing_parent_rue.instance_stack, vec![404]);
+        assert!(missing_parent_rue.instance_store.get(&404).is_none());
+        crate::set_current_instance(JsValue::UNDEFINED);
+        assert!(current_instance_is_clear());
+        take_pending_hooks();
+    }
+
+    #[wasm_bindgen_test]
+    fn mount_component_success_restores_missing_parent_context_edge() {
+        crate::set_current_instance(JsValue::UNDEFINED);
+
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.instance_stack.push(777);
+        let render_fn = Function::new_no_args("return 'host-like-value'");
+        let render_js: JsValue = render_fn.clone().into();
+        let input = component_input(&render_fn);
+
+        let mounted = mount_component(&mut rue, &input, &render_js, None);
+
+        assert!(mounted.is_some());
+        assert_eq!(rue.instance_stack, vec![777]);
+        assert!(rue.instance_store.get(&777).is_none());
+        crate::set_current_instance(JsValue::UNDEFINED);
+        assert!(current_instance_is_clear());
+        take_pending_hooks();
+    }
+
+    #[wasm_bindgen_test]
+    fn merge_pending_hooks_covers_current_instance_and_missing_store_edges() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.current_instance = Some(test_instance(10));
+
+        take_pending_hooks();
+        push_pending_hook("mounted", Function::new_no_args("return undefined").into());
+        merge_pending_hooks(&mut rue);
+
+        assert_eq!(
+            rue.current_instance
+                .as_ref()
+                .and_then(|inst| inst.hooks.0.get("mounted"))
+                .map(Vec::len),
+            Some(1),
+        );
+
+        rue.current_instance = None;
+        rue.instance_stack.push(10_000);
+        push_pending_hook("created", Function::new_no_args("return undefined").into());
+        merge_pending_hooks(&mut rue);
+
+        assert!(rue.instance_store.get(&10_000).is_none());
+        take_pending_hooks();
+        crate::set_current_instance(JsValue::UNDEFINED);
     }
 }

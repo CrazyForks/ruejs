@@ -1,3 +1,9 @@
+/*
+useCallback：缓存函数引用
+
+实现策略非常薄：把函数本身交给 useMemo 缓存，依赖不变时返回同一个 Function 引用。
+它主要服务于组件 props、effect 依赖和事件处理器等需要“稳定引用”的场景。
+*/
 use js_sys::Function;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;

@@ -7,52 +7,94 @@ Result 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** ResultTone 语义色类型。 */
 export type ResultTone = 'info' | 'success' | 'warning' | 'error'
+/** ResultExceptionStatus 状态类型。 */
 export type ResultExceptionStatus = 403 | 404 | 500 | '403' | '404' | '500'
+/** ResultStatus 状态类型。 */
 export type ResultStatus = ResultTone | ResultExceptionStatus
+/** ResultVariant 视觉或语义变体类型。 */
 export type ResultVariant = 'surface' | 'soft' | 'outline'
+/** ResultSize 尺寸类型。 */
 export type ResultSize = 'sm' | 'md' | 'lg'
+/** ResultAlign 对齐方式类型。 */
 export type ResultAlign = 'center' | 'start'
 
+/** ResultProps 组件属性。 */
 export interface ResultProps {
+  /** 组件状态。 */
   status?: ResultStatus
+  /** 图标内容。 */
   icon?: any
+  /** 标题内容。 */
   title?: any
+  /** subTitle 配置项。 */
   subTitle?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** 组件子内容。 */
   children?: any
+  /** 组件视觉变体。 */
   variant?: ResultVariant
+  /** 组件尺寸。 */
   size?: ResultSize
+  /** 交叉轴或内容对齐方式。 */
   align?: ResultAlign
+  /** showIcon 图标内容。 */
   showIcon?: boolean
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** role 配置项。 */
   role?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** iconClassName 附加类名。 */
   iconClassName?: string
+  /** iconStyle 内联样式。 */
   iconStyle?: any
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** contentStyle 内联样式。 */
   contentStyle?: any
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** titleStyle 内联样式。 */
   titleStyle?: any
+  /** subTitleClassName 附加类名。 */
   subTitleClassName?: string
+  /** subTitleStyle 内联样式。 */
   subTitleStyle?: any
+  /** extraClassName 附加类名。 */
   extraClassName?: string
+  /** extraStyle 内联样式。 */
   extraStyle?: any
+  /** bodyClassName 附加类名。 */
   bodyClassName?: string
+  /** bodyStyle 内联样式。 */
   bodyStyle?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ResultPresentedImageProps 组件属性。 */
 export interface ResultPresentedImageProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件尺寸。 */
   size?: ResultSize
 }
 
+/** ResultType 接口。 */
 export interface ResultType extends FC<ResultProps> {
+  /** PRESENTED_IMAGE_403 配置项。 */
   PRESENTED_IMAGE_403: FC<ResultPresentedImageProps>
+  /** PRESENTED_IMAGE_404 配置项。 */
   PRESENTED_IMAGE_404: FC<ResultPresentedImageProps>
+  /** PRESENTED_IMAGE_500 配置项。 */
   PRESENTED_IMAGE_500: FC<ResultPresentedImageProps>
 }
 
@@ -63,25 +105,30 @@ interface ExceptionMeta {
   scene: string
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value === undefined || value === null || value === false || value === '') return false
   if (Array.isArray(value)) return value.some(item => hasRenderableContent(item))
   return true
 }
 
+/** 归一化 Status 的内部工具函数。 */
 const normalizeStatus = (status?: ResultStatus) => {
   if (status === undefined || status === null) return 'info'
   return `${status}`
 }
 
+/** 判断 Exception Status 的内部工具函数。 */
 const isExceptionStatus = (status: string): status is '403' | '404' | '500' => {
   return status === '403' || status === '404' || status === '500'
 }
 
+/** 解析 Tone 的内部工具函数。 */
 const resolveTone = (status: string): ResultTone => {
   if (status === 'success' || status === 'warning' || status === 'error') return status
   if (status === '403') return 'warning'
@@ -89,6 +136,7 @@ const resolveTone = (status: string): ResultTone => {
   return 'info'
 }
 
+/** 解析 Variant Class 的内部工具函数。 */
 const resolveVariantClass = (variant: ResultVariant, bordered: boolean) => {
   let cls = ''
 
@@ -111,6 +159,7 @@ const resolveVariantClass = (variant: ResultVariant, bordered: boolean) => {
   return cls.trim()
 }
 
+/** 解析 Glow Class 的内部工具函数。 */
 const resolveGlowClass = (tone: ResultTone) => {
   switch (tone) {
     case 'success':
@@ -124,6 +173,7 @@ const resolveGlowClass = (tone: ResultTone) => {
   }
 }
 
+/** 解析 Tone Text Class 的内部工具函数。 */
 const resolveToneTextClass = (tone: ResultTone) => {
   switch (tone) {
     case 'success':
@@ -137,6 +187,7 @@ const resolveToneTextClass = (tone: ResultTone) => {
   }
 }
 
+/** 解析 Tone Panel Class 的内部工具函数。 */
 const resolveTonePanelClass = (tone: ResultTone) => {
   switch (tone) {
     case 'success':
@@ -150,6 +201,7 @@ const resolveTonePanelClass = (tone: ResultTone) => {
   }
 }
 
+/** 解析 Title Size Class 的内部工具函数。 */
 const resolveTitleSizeClass = (size: ResultSize) => {
   switch (size) {
     case 'sm':
@@ -161,6 +213,7 @@ const resolveTitleSizeClass = (size: ResultSize) => {
   }
 }
 
+/** 解析 Glyph Size Class 的内部工具函数。 */
 const resolveGlyphSizeClass = (size: ResultSize) => {
   switch (size) {
     case 'sm':
@@ -172,6 +225,7 @@ const resolveGlyphSizeClass = (size: ResultSize) => {
   }
 }
 
+/** 解析 Icon Shell Class 的内部工具函数。 */
 const resolveIconShellClass = (size: ResultSize) => {
   switch (size) {
     case 'sm':
@@ -183,6 +237,7 @@ const resolveIconShellClass = (size: ResultSize) => {
   }
 }
 
+/** 解析 Illustration Width Class 的内部工具函数。 */
 const resolveIllustrationWidthClass = (size: ResultSize) => {
   switch (size) {
     case 'sm':
@@ -215,6 +270,7 @@ const exceptionMetaMap: Record<'403' | '404' | '500', ExceptionMeta> = {
   },
 }
 
+/** Status Glyph 的内部工具函数。 */
 const StatusGlyph: FC<{ status: ResultTone; className?: string }> = ({ status, className }) => {
   if (status === 'success') {
     return (
@@ -281,6 +337,7 @@ const StatusGlyph: FC<{ status: ResultTone; className?: string }> = ({ status, c
   )
 }
 
+/** Exception Illustration 的内部工具函数。 */
 const ExceptionIllustration: FC<
   ResultPresentedImageProps & { status: '403' | '404' | '500'; tone: ResultTone }
 > = ({ status, tone, className, style, size = 'md' }) => {
@@ -340,6 +397,7 @@ const ExceptionIllustration: FC<
   )
 }
 
+/** 构建 Default Icon 的内部工具函数。 */
 const buildDefaultIcon = (status: string, tone: ResultTone, size: ResultSize) => {
   if (isExceptionStatus(status)) {
     return <ExceptionIllustration status={status} tone={tone} size={size} />
@@ -355,18 +413,22 @@ const buildDefaultIcon = (status: string, tone: ResultTone, size: ResultSize) =>
   )
 }
 
+/** Presented Image403 的内部工具函数。 */
 const PresentedImage403: FC<ResultPresentedImageProps> = props => {
   return <ExceptionIllustration {...props} status="403" tone="warning" />
 }
 
+/** Presented Image404 的内部工具函数。 */
 const PresentedImage404: FC<ResultPresentedImageProps> = props => {
   return <ExceptionIllustration {...props} status="404" tone="info" />
 }
 
+/** Presented Image500 的内部工具函数。 */
 const PresentedImage500: FC<ResultPresentedImageProps> = props => {
   return <ExceptionIllustration {...props} status="500" tone="error" />
 }
 
+/** Result Base 的内部工具函数。 */
 const ResultBase: FC<ResultProps> = ({
   status = 'info',
   icon,
@@ -507,4 +569,5 @@ const Result = Object.assign(ResultBase, {
   PRESENTED_IMAGE_500: PresentedImage500,
 }) as ResultType
 
+/** 默认导出结果页组件。 */
 export default Result

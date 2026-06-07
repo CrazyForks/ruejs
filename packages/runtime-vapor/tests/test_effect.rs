@@ -1,6 +1,7 @@
 use js_sys::{Function, Promise};
 use rue_runtime_vapor::{
-    batch, create_effect, create_signal, on_cleanup, set_reactive_scheduling, untrack,
+    batch, create_effect, create_signal, on_cleanup, on_watcher_cleanup, set_reactive_scheduling,
+    untrack,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -175,6 +176,70 @@ async fn effect_with_custom_scheduler_defers_initial_run() {
     assert_eq!(*hits.borrow(), 1);
     cb.forget();
     scheduler.forget();
+}
+
+#[wasm_bindgen_test]
+fn effect_accepts_non_object_options_and_ignores_watcher_cleanup_without_watcher() {
+    set_reactive_scheduling("sync");
+
+    let hits = Rc::new(RefCell::new(0));
+    let hits2 = hits.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        let cleanup = Function::new_no_args("globalThis.__unexpected_watcher_cleanup = true");
+        on_watcher_cleanup(cleanup, Some(true));
+    }) as Box<dyn FnMut()>);
+    let f: Function = cb.as_ref().clone().into();
+
+    let _eh = create_effect(f, Some(JsValue::from_str("not-options")));
+    assert_eq!(*hits.borrow(), 1);
+
+    let cleanup = Function::new_no_args("globalThis.__unexpected_watcher_cleanup = true");
+    on_watcher_cleanup(cleanup, Some(false));
+    assert!(js_sys::Reflect::get(
+        &js_sys::global(),
+        &JsValue::from_str("__unexpected_watcher_cleanup"),
+    )
+    .unwrap_or(JsValue::UNDEFINED)
+    .is_undefined());
+
+    let silent_cleanup = Function::new_no_args("globalThis.__unexpected_watcher_cleanup = true");
+    on_watcher_cleanup(silent_cleanup, Some(true));
+    assert!(js_sys::Reflect::get(
+        &js_sys::global(),
+        &JsValue::from_str("__unexpected_watcher_cleanup"),
+    )
+    .unwrap_or(JsValue::UNDEFINED)
+    .is_undefined());
+
+    cb.forget();
+}
+
+#[wasm_bindgen_test]
+fn on_cleanup_outside_effect_is_noop() {
+    let cleanup = Function::new_no_args("globalThis.__unexpected_effect_cleanup = true");
+    on_cleanup(cleanup);
+
+    assert!(
+        js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str("__unexpected_effect_cleanup"),)
+            .unwrap_or(JsValue::UNDEFINED)
+            .is_undefined()
+    );
+}
+
+#[wasm_bindgen_test]
+#[should_panic]
+fn untrack_rethrows_callback_errors() {
+    let throwing = Function::new_no_args("throw new Error('untrack boom')");
+    let _ = untrack(throwing);
+}
+
+#[wasm_bindgen_test]
+#[should_panic]
+fn create_effect_rethrows_callback_errors_after_restoring_context() {
+    set_reactive_scheduling("sync");
+    let throwing = Function::new_no_args("throw new Error('effect boom')");
+    let _ = create_effect(throwing, None);
 }
 
 #[wasm_bindgen_test(async)]

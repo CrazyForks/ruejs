@@ -8,47 +8,81 @@ Splitter 组件概述
 import type { FC } from '@rue-js/rue'
 import { h, onMounted, onUnmounted, render as renderRue, useRef } from '@rue-js/rue'
 
+/** SplitterOrientation 类型。 */
 export type SplitterOrientation = 'horizontal' | 'vertical'
+/** SplitterSize 尺寸类型。 */
 export type SplitterSize = number | string
+/** SplitterCollapsibleIconMode 类型。 */
 export type SplitterCollapsibleIconMode = boolean | 'auto'
 
+/** SplitterCollapsibleConfig 配置对象。 */
 export interface SplitterCollapsibleConfig {
+  /** start 配置项。 */
   start?: boolean
+  /** end 配置项。 */
   end?: boolean
+  /** showCollapsibleIcon 图标内容。 */
   showCollapsibleIcon?: SplitterCollapsibleIconMode
 }
 
+/** SplitterProps 组件属性。 */
 export interface SplitterProps {
+  /** orientation 配置项。 */
   orientation?: SplitterOrientation
+  /** layout 配置项。 */
   layout?: SplitterOrientation
+  /** vertical 配置项。 */
   vertical?: boolean
+  /** lazy 配置项。 */
   lazy?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** draggerIcon 图标内容。 */
   draggerIcon?: any
+  /** collapsibleIcon 图标内容。 */
   collapsibleIcon?: {
     start?: any
     end?: any
   }
+  /** onDraggerDoubleClick 事件回调。 */
   onDraggerDoubleClick?: (index: number) => void
+  /** onResizeStart 事件回调。 */
   onResizeStart?: (sizes: number[]) => void
+  /** onResize 事件回调。 */
   onResize?: (sizes: number[]) => void
+  /** onResizeEnd 事件回调。 */
   onResizeEnd?: (sizes: number[]) => void
+  /** onCollapse 事件回调。 */
   onCollapse?: (collapsed: boolean[], sizes: number[]) => void
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** SplitterPanelProps 组件属性。 */
 export interface SplitterPanelProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** min 配置项。 */
   min?: SplitterSize
+  /** max 配置项。 */
   max?: SplitterSize
+  /** 组件尺寸。 */
   size?: SplitterSize
+  /** defaultSize 尺寸。 */
   defaultSize?: SplitterSize
+  /** resizable 配置项。 */
   resizable?: boolean
+  /** collapsible 配置项。 */
   collapsible?: boolean | SplitterCollapsibleConfig
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -88,17 +122,23 @@ interface HandleRecord {
   nextIconHost?: HTMLSpanElement
 }
 
+/** EPSILON 内部常量。 */
 const EPSILON = 0.5
+/** HANDLE_SIZE 内部常量。 */
 const HANDLE_SIZE = 10
 
+/** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
 
+/** 归一化 Css Length 的内部工具函数。 */
 const normalizeCssLength = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) ? `${value}px` : value
 
+/** 归一化 Root Style 的内部工具函数。 */
 const normalizeRootStyle = (style: any) => {
   if (!style || typeof style !== 'object' || Array.isArray(style)) {
     return undefined
@@ -115,6 +155,7 @@ const normalizeRootStyle = (style: any) => {
   }
 }
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -125,10 +166,13 @@ const toChildArray = (children: any): any[] => {
   return [children]
 }
 
+/** serialize Sizes 的内部工具函数。 */
 const serializeSizes = (sizes: number[]) => sizes.map(size => Math.max(0, Math.round(size)))
 
+/** sum Sizes 的内部工具函数。 */
 const sumSizes = (sizes: number[]) => sizes.reduce((total, size) => total + size, 0)
 
+/** scale Sizes To Target 的内部工具函数。 */
 const scaleSizesToTarget = (sizes: number[], target: number) => {
   const total = sumSizes(sizes)
   if (target <= 0 || total <= EPSILON) return sizes.slice()
@@ -136,11 +180,13 @@ const scaleSizesToTarget = (sizes: number[], target: number) => {
   return sizes.map(size => size * ratio)
 }
 
+/** arrays Almost Equal 的内部工具函数。 */
 const arraysAlmostEqual = (left: number[], right: number[]) => {
   if (left.length !== right.length) return false
   return left.every((value, index) => Math.abs(value - right[index]) <= EPSILON)
 }
 
+/** 解析 Orientation 的内部工具函数。 */
 const resolveOrientation = (
   orientation?: SplitterOrientation,
   layout?: SplitterOrientation,
@@ -151,6 +197,7 @@ const resolveOrientation = (
   return vertical ? 'vertical' : 'horizontal'
 }
 
+/** parse Size To Pixels 的内部工具函数。 */
 const parseSizeToPixels = (value: SplitterSize | undefined, availableSize: number) => {
   if (value == null) return undefined
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -172,6 +219,7 @@ const parseSizeToPixels = (value: SplitterSize | undefined, availableSize: numbe
   return Math.max(0, parsed)
 }
 
+/** 归一化 Collapsible 的内部工具函数。 */
 const normalizeCollapsible = (
   value: SplitterPanelProps['collapsible'],
 ): NormalizedCollapsibleConfig => {
@@ -264,6 +312,7 @@ const normalizeSizes = (
   return next
 }
 
+/** 读取 Container Size 的内部工具函数。 */
 const getContainerSize = (element: HTMLElement | undefined, orientation: SplitterOrientation) => {
   if (!element) return 0
   const rect = element.getBoundingClientRect()
@@ -273,9 +322,11 @@ const getContainerSize = (element: HTMLElement | undefined, orientation: Splitte
   return rect.width || element.clientWidth || 0
 }
 
+/** measure Point 的内部工具函数。 */
 const measurePoint = (event: MouseEvent, orientation: SplitterOrientation) =>
   orientation === 'vertical' ? event.clientY : event.clientX
 
+/** 构建 Constraints 的内部工具函数。 */
 const buildConstraints = (
   configs: PanelConfig[],
   availableSize: number,
@@ -295,6 +346,7 @@ const buildConstraints = (
   })
 }
 
+/** 构建 Sizes From Configs 的内部工具函数。 */
 const buildSizesFromConfigs = (
   configs: PanelConfig[],
   availableSize: number,
@@ -324,6 +376,7 @@ const buildSizesFromConfigs = (
   return normalizeSizes(desiredSizes, constraints, availableSize)
 }
 
+/** apply Drag Delta 的内部工具函数。 */
 const applyDragDelta = (
   sizes: number[],
   constraints: PanelConstraint[],
@@ -343,6 +396,7 @@ const applyDragDelta = (
   return next
 }
 
+/** 归一化 Sizes With Locked Index 的内部工具函数。 */
 const normalizeSizesWithLockedIndex = (
   desiredSizes: number[],
   constraints: PanelConstraint[],
@@ -377,6 +431,7 @@ const normalizeSizesWithLockedIndex = (
   return next
 }
 
+/** 创建 Chevron Svg 的内部工具函数。 */
 const createChevronSvg = (direction: 'left' | 'right' | 'up' | 'down') => {
   let path = 'M10 6 6 10l4 4'
   if (direction === 'right') path = 'm6 6 4 4-4 4'
@@ -399,6 +454,7 @@ const createChevronSvg = (direction: 'left' | 'right' | 'up' | 'down') => {
   return svg
 }
 
+/** 创建 Default Dragger 的内部工具函数。 */
 const createDefaultDragger = (orientation: SplitterOrientation) => {
   const host = document.createElement('span')
   host.className =
@@ -415,6 +471,7 @@ const createDefaultDragger = (orientation: SplitterOrientation) => {
   return host
 }
 
+/** mount Content 的内部工具函数。 */
 const mountContent = (host: HTMLElement, content: any, fallback: () => Node) => {
   host.innerHTML = ''
 
@@ -440,6 +497,7 @@ const mountContent = (host: HTMLElement, content: any, fallback: () => Node) => 
   }
 }
 
+/** 解析 Collapse Direction 的内部工具函数。 */
 const resolveCollapseDirection = (
   side: 'start' | 'end',
   collapsed: boolean,
@@ -453,6 +511,7 @@ const resolveCollapseDirection = (
   return collapsed ? 'left' : 'right'
 }
 
+/** read Panel Config 的内部工具函数。 */
 const readPanelConfig = (element: HTMLElement): PanelConfig => {
   const readValue = (name: string) => element.getAttribute(name) ?? undefined
   const readBoolean = (name: string, fallback = false) => {
@@ -475,6 +534,7 @@ const readPanelConfig = (element: HTMLElement): PanelConfig => {
   }
 }
 
+/** Splitter Panel Root 的内部工具函数。 */
 const SplitterPanelRoot: FC<SplitterPanelProps> = ({
   className,
   style,
@@ -1103,4 +1163,5 @@ const Splitter = Object.assign(SplitterRoot, {
   Panel: SplitterPanelRoot,
 }) as SplitterCompound
 
+/** 默认导出分割面板组件。 */
 export default Splitter

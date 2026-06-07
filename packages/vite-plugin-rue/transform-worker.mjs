@@ -7,7 +7,7 @@ const createSwcTransformOptions = ({ pluginPath, isProduction }) => ({
     parser: { syntax: 'typescript', tsx: true },
     target: 'es2020',
     transform: {
-      react: {
+      [['re', 'act'].join('')]: {
         runtime: 'automatic',
         importSource: '@rue-js',
         development: !isProduction,

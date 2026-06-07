@@ -32,6 +32,7 @@ use wasm_bindgen::prelude::*;
 
 #[cfg(feature = "dev")]
 use crate::log::{log, want_log};
+use crate::reactive::core::{mark_effect_as_watcher, run_effect};
 use crate::reactive::effect::{EffectHandle, create_effect};
 use crate::reactive::signal::SignalHandle;
 
@@ -58,6 +59,13 @@ fn call_handler_untracked(handler: &Function, newv: &JsValue, oldv: &JsValue, _p
         }
         wasm_bindgen::throw_val(e.clone());
     }
+}
+
+/// 创建 watch/watchEffect 内部 effect，并标记为 watcher 供 onWatcherCleanup 校验。
+fn create_watcher_effect(cb: Function, options: Option<JsValue>) -> EffectHandle {
+    let eh = create_effect(cb, options);
+    mark_effect_as_watcher(eh.id);
+    eh
 }
 
 struct ParsedOptions {
@@ -232,8 +240,8 @@ pub fn watch_fn(getter: Function, handler: Function, options: Option<JsValue>) -
         let _ = Reflect::set(&opts, &JsValue::from_str("scheduler"), s);
     }
     let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(true));
-    let eh = create_effect(func, Some(opts.into()));
-    crate::reactive::core::run_effect(eh.id);
+    let eh = create_watcher_effect(func, Some(opts.into()));
+    run_effect(eh.id);
     eh
 }
 
@@ -278,8 +286,8 @@ pub fn watch_effect(cb: Function, options: Option<JsValue>) -> EffectHandle {
         let _ = Reflect::set(&opts, &JsValue::from_str("scheduler"), s);
     }
     let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(true));
-    let eh = create_effect(cb, Some(opts.into()));
-    crate::reactive::core::run_effect(eh.id);
+    let eh = create_watcher_effect(cb, Some(opts.into()));
+    run_effect(eh.id);
     eh
 }
 
@@ -318,8 +326,8 @@ pub fn watch_signal(
         let _ = Reflect::set(&opts, &JsValue::from_str("scheduler"), s);
     }
     let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(true));
-    let eh = create_effect(func, Some(opts.into()));
-    crate::reactive::core::run_effect(eh.id);
+    let eh = create_watcher_effect(func, Some(opts.into()));
+    run_effect(eh.id);
     eh
 }
 
@@ -399,8 +407,8 @@ pub fn watch_deep_signal(
         let _ = Reflect::set(&opts, &JsValue::from_str("scheduler"), s);
     }
     let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(true));
-    let eh = create_effect(func, Some(opts.into()));
-    crate::reactive::core::run_effect(eh.id);
+    let eh = create_watcher_effect(func, Some(opts.into()));
+    run_effect(eh.id);
     eh
 }
 
@@ -450,8 +458,8 @@ pub fn watch_path(
         let _ = Reflect::set(&opts, &JsValue::from_str("scheduler"), s);
     }
     let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(true));
-    let eh = create_effect(func, Some(opts.into()));
-    crate::reactive::core::run_effect(eh.id);
+    let eh = create_watcher_effect(func, Some(opts.into()));
+    run_effect(eh.id);
     eh
 }
 
@@ -527,8 +535,8 @@ pub fn watch(source: JsValue, handler: Function, options_raw: Option<JsValue>) -
                 let _ = Reflect::set(&opts, &JsValue::from_str("scheduler"), s);
             }
             let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(true));
-            let eh = create_effect(func, Some(opts.into()));
-            crate::reactive::core::run_effect(eh.id);
+            let eh = create_watcher_effect(func, Some(opts.into()));
+            run_effect(eh.id);
             return eh;
         }
     }
@@ -599,9 +607,10 @@ pub fn watch(source: JsValue, handler: Function, options_raw: Option<JsValue>) -
         if let Some(s) = final_scheduler {
             let _ = Reflect::set(&opts, &JsValue::from_str("scheduler"), &s);
         }
-        // 数组 watch 同样选择非惰性，立即完成首轮求值
-        let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(false));
-        return create_effect(func, Some(opts.into()));
+        let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(true));
+        let eh = create_watcher_effect(func, Some(opts.into()));
+        run_effect(eh.id);
+        return eh;
     }
     // 其余情况：视为“常量来源”，以闭包返回固定值进行比较
     let ParsedOptions { immediate, scheduler, equals, debounce } =
@@ -621,9 +630,10 @@ pub fn watch(source: JsValue, handler: Function, options_raw: Option<JsValue>) -
     if let Some(s) = final_scheduler {
         let _ = Reflect::set(&opts, &JsValue::from_str("scheduler"), &s);
     }
-    // 非惰性：进行首轮求值（仅当 immediate 时会触发 handler）
-    let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(false));
-    create_effect(func, Some(opts.into()))
+    let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(true));
+    let eh = create_watcher_effect(func, Some(opts.into()));
+    run_effect(eh.id);
+    eh
 }
 
 #[wasm_bindgen(typescript_custom_section)]

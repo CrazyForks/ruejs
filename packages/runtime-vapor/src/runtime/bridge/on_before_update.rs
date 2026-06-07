@@ -1,3 +1,8 @@
+/*
+生命周期桥接：onBeforeUpdate
+
+注册更新前回调。当前实现保持与其他生命周期一致的 pending-hook 兜底语义。
+*/
 use super::WasmRue;
 use crate::runtime::globals::push_pending_hook;
 use wasm_bindgen::JsValue;

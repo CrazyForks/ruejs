@@ -22,7 +22,7 @@ pub(crate) struct ComponentChildrenRewrite {
 fn jsx_name_to_expr(name: &JSXElementName) -> Option<Expr> {
     fn jsx_object_to_expr(obj: &JSXObject) -> Option<Expr> {
         match obj {
-            JSXObject::Ident(id) => Some(Expr::Ident(id.clone().into())),
+            JSXObject::Ident(id) => Some(Expr::Ident(id.clone())),
             JSXObject::JSXMemberExpr(member) => Some(Expr::Member(MemberExpr {
                 span: DUMMY_SP,
                 obj: Box::new(jsx_object_to_expr(&member.obj)?),
@@ -32,7 +32,7 @@ fn jsx_name_to_expr(name: &JSXElementName) -> Option<Expr> {
     }
 
     match name {
-        JSXElementName::Ident(id) => Some(Expr::Ident(id.clone().into())),
+        JSXElementName::Ident(id) => Some(Expr::Ident(id.clone())),
         JSXElementName::JSXMemberExpr(member) => Some(Expr::Member(MemberExpr {
             span: DUMMY_SP,
             obj: Box::new(jsx_object_to_expr(&member.obj)?),
@@ -73,7 +73,7 @@ fn jsx_attr_name_to_prop_name(name: &JSXAttrName) -> Option<PropName> {
         JSXAttrName::Ident(id) => {
             let raw = id.sym.as_ref();
             if is_safe_prop_ident(raw) {
-                Some(PropName::Ident(id.clone().into()))
+                Some(PropName::Ident(id.clone()))
             } else {
                 Some(PropName::Str(str_lit(raw)))
             }
@@ -200,10 +200,12 @@ fn is_substantive_slot_child(child: &JSXElementChild) -> bool {
 fn lower_expr_slot_value(vt: &mut VaporTransform, expr: &Expr) -> Option<LoweredSlotValue> {
     match crate::utils::unwrap_expr(expr) {
         Expr::JSXElement(jsx_el) => {
+            // 表达式本身就是 JSX：把它临时当成一个 child 交给统一 slot lowering。
             let wrapped = vec![JSXElementChild::JSXElement(jsx_el.clone())];
             lower_slot_value(vt, &wrapped)
         }
         Expr::JSXFragment(jsx_frag) => {
+            // Fragment 与 JSXElement 一样，最终都要变成可挂载的 slot 值。
             let wrapped = vec![JSXElementChild::JSXFragment(jsx_frag.clone())];
             lower_slot_value(vt, &wrapped)
         }
@@ -211,6 +213,8 @@ fn lower_expr_slot_value(vt: &mut VaporTransform, expr: &Expr) -> Option<Lowered
             let cons_inner = crate::utils::unwrap_expr(cons.as_ref());
             let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
 
+            // 只在“一边是 slot，一边是静态空值”的情况下折叠。
+            // 两边都复杂时交给上层插槽表达式编译，避免丢失分支语义。
             if let Some(lowered_cons) = lower_expr_slot_value(vt, cons_inner) {
                 if crate::utils::is_static_empty_like(alt_inner) {
                     return Some(LoweredSlotValue {
@@ -244,6 +248,8 @@ fn lower_expr_slot_value(vt: &mut VaporTransform, expr: &Expr) -> Option<Lowered
             None
         }
         Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, left, right, .. }) => {
+            // `ok && <Slot/>` 转成 `ok ? loweredSlot : undefined`，
+            // 让 slot bag 不渲染空分支，而不是塞入布尔值。
             let lowered_right =
                 lower_expr_slot_value(vt, crate::utils::unwrap_expr(right.as_ref()))?;
 
@@ -261,6 +267,7 @@ fn lower_expr_slot_value(vt: &mut VaporTransform, expr: &Expr) -> Option<Lowered
         Expr::Call(call)
             if crate::element_expr::contains_jsx_in_expr(&Expr::Call(call.clone())) =>
         {
+            // useMemo/map/自定义 render helper 若返回 JSX，统一转成可挂载 slot 表达式。
             Some(LoweredSlotValue {
                 stmts: vec![],
                 expr: crate::element_expr::make_expr_for_slot(vt, expr),
@@ -278,6 +285,7 @@ fn lower_slot_value(
     let has_substantive_child = children.iter().any(is_substantive_slot_child);
 
     if !has_substantive_child {
+        // 纯空白、空表达式、null/false 这类 children 不生成 slot prop。
         return None;
     }
 
@@ -289,6 +297,8 @@ fn lower_slot_value(
             JSXElementChild::JSXElement(el_box)
                 if crate::utils::is_component(&el_box.opening.name) =>
             {
+                // 单个组件 child 可以先创建组件实例，再把实例标识符直接作为 children。
+                // 这样避免额外包一层 DocumentFragment，slot 结构更薄。
                 let mut child_component = (**el_box).clone();
                 let rewrite = rewrite_component_children_to_props(vt, &mut child_component);
                 let mount_expr = rewrite
@@ -306,6 +316,7 @@ fn lower_slot_value(
                 });
             }
             JSXElementChild::JSXText(text) => {
+                // 单个文本 child 直接降为字符串 prop，组件无需再执行 vapor setup。
                 let normalized = crate::text::normalize_text(&text.value);
                 if let Some(content) =
                     crate::text::compute_jsx_text_content(children, 0, &normalized)
@@ -320,6 +331,7 @@ fn lower_slot_value(
             JSXElementChild::JSXExprContainer(ec) => {
                 if let JSXExpr::Expr(expr) = &ec.expr {
                     let inner = crate::utils::unwrap_expr(expr.as_ref());
+                    // 表达式里如果能继续降成 slot 值，优先复用递归 lowering。
                     if let Some(lowered) = lower_expr_slot_value(vt, inner) {
                         return Some(lowered);
                     }
@@ -332,6 +344,8 @@ fn lower_slot_value(
                             });
                         }
                         _ if !crate::element_expr::contains_jsx_in_expr(inner) => {
+                            // 普通表达式（含函数字面量）直接作为 children；
+                            // 函数字面量会触发 slot bag，保留 scoped slot 语义。
                             return Some(LoweredSlotValue {
                                 stmts: vec![],
                                 expr: inner.clone(),
@@ -348,6 +362,7 @@ fn lower_slot_value(
 
     let child_ident = vt.next_child_ident();
     let child_root = ident("_root");
+    // 多 child 或复杂 child 需要包装成独立 vapor 片段，作为可挂载 children 值传入组件。
     let mut child_body: Vec<Stmt> =
         vec![const_decl(child_root.clone(), call_ident("_$createDocumentFragment", vec![]))];
     crate::element_children::emit_element_children(vt, &child_root, children, &mut child_body);
@@ -381,8 +396,10 @@ fn lower_named_slot_element(
 ) -> Option<(Expr, LoweredSlotValue)> {
     let slot_name_expr = extract_slot_name_expr(&jsx_el.opening.attrs)?;
     let mut slot_el = jsx_el.clone();
+    // slot 属性只用于编译期决定 slot 名，传给真实 child 前必须移除。
     remove_jsx_attr_ident(&mut slot_el.opening.attrs, "slot");
     let lowered = if is_slot_carrier_wrapper(&slot_el) {
+        // Fragment/Template 是 slot 内容承载壳，本身不应该成为 slot 子节点。
         lower_slot_value(vt, &slot_el.children)
     } else {
         let wrapped = vec![JSXElementChild::JSXElement(Box::new(slot_el))];
@@ -470,6 +487,7 @@ pub(crate) fn build_component_mount_expr(comp_el: &JSXElement) -> Expr {
     let mut native_events: Vec<(String, Expr)> = Vec::new();
     let mut attrs = comp_el.opening.attrs.clone();
     if is_slot_component(comp_el) && !jsx_attrs_has_ident(&attrs, "source") {
+        // <Slot> 默认从当前实例的只读 props 上取 slot source，调用方未传时自动补齐。
         attrs.push(make_source_attr());
     }
     let props = attrs
@@ -480,6 +498,7 @@ pub(crate) fn build_component_mount_expr(comp_el: &JSXElement) -> Expr {
                 expr: spread.expr.clone(),
             })),
             JSXAttrOrSpread::JSXAttr(attr) => {
+                // 无值属性按 JSX 约定视为 true；其它值统一转成 JS 表达式进入 props 对象。
                 let value = match &attr.value {
                     Some(value) => jsx_attr_value_to_expr(value)?,
                     None => Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })),
@@ -489,6 +508,7 @@ pub(crate) fn build_component_mount_expr(comp_el: &JSXElement) -> Expr {
                     if let Some(event_name) =
                         name.sym.as_ref().strip_prefix(COMPONENT_NATIVE_EVENT_PREFIX)
                     {
+                        // `.native` 事件不放进组件 props，而是在创建后绑定到组件根节点。
                         native_events.push((event_name.to_ascii_lowercase(), value));
                         return None;
                     }
@@ -509,6 +529,7 @@ pub(crate) fn build_component_mount_expr(comp_el: &JSXElement) -> Expr {
         return mount_expr;
     }
 
+    // 组件根原生事件需要在组件创建结果外再包一层运行时 helper。
     let native_events_expr = Expr::Object(ObjectLit {
         span: DUMMY_SP,
         props: native_events
@@ -742,6 +763,7 @@ fn build_transition_group_children_expr(
 /// - 插入占位：`const _list1 = _$createComment("rue:slot:start"); const _list2 = _$createComment("rue:slot:end");`
 /// - 包裹 children：`children={vapor(()=>{ const _root = _$createDocumentFragment(); ... return _root })}`
 /// - 渲染：`watchEffect(()=>{ renderBetween(<Comp {...props} />, parent, start, end) })`
+///
 /// 组件 children 默认会被改写为 `children` 属性传入；
 /// `TransitionGroup` 这类依赖原始 keyed JSX children 的组件在此处保留原始 children。
 pub(crate) fn rewrite_component_children_to_props(
@@ -754,6 +776,8 @@ pub(crate) fn rewrite_component_children_to_props(
     let is_transition_group = crate::utils::is_transition_group_component(comp_el);
 
     if !comp_el.children.is_empty() && is_transition_group {
+        // TransitionGroup 需要直接看原始 keyed children 做过渡编排；
+        // 因此这里只把 children 整体表达式塞进 prop，不走普通 slot bag lowering。
         if let Some(children_expr) = build_transition_group_children_expr(vt, &comp_el.children) {
             let mut new_attrs = comp_el.opening.attrs.clone();
             new_attrs.push(JSXAttrOrSpread::JSXAttr(JSXAttr {
@@ -781,6 +805,7 @@ pub(crate) fn rewrite_component_children_to_props(
                 JSXElementChild::JSXElement(el_box) => {
                     let slot_name = extract_slot_name_expr(&el_box.opening.attrs);
                     if let Some(slot_name_expr) = slot_name {
+                        // 带 `slot="name"` 的元素从默认 children 中分流到具名 slot。
                         let mut slot_el = (*el_box).clone();
                         remove_jsx_attr_ident(&mut slot_el.opening.attrs, "slot");
                         let lowered = if is_slot_carrier_wrapper(&slot_el) {
@@ -801,6 +826,7 @@ pub(crate) fn rewrite_component_children_to_props(
                         if let Some((slot_name_expr, lowered)) =
                             lower_named_slot_expr(vt, expr.as_ref())
                         {
+                            // 条件/逻辑表达式包着具名 slot 时，同样保留 slot 名并 lowering 分支内容。
                             named_slots.push((slot_name_expr, lowered));
                             continue;
                         }
@@ -821,6 +847,8 @@ pub(crate) fn rewrite_component_children_to_props(
         let default_in_slot_bag = has_named_slots || default_requires_slot_bag;
 
         if default_in_slot_bag {
+            // 只要存在具名 slot，或者默认 slot 本身是函数，就统一走 __rue_slots 对象。
+            // 这样组件内部拿到的 slot 结构保持一致。
             let mut slot_props: Vec<PropOrSpread> = Vec::new();
 
             if let Some(default_slot_value) = &default_slot {
@@ -865,6 +893,7 @@ pub(crate) fn rewrite_component_children_to_props(
                     child_stmts.extend(default_slot_value.stmts.iter().cloned());
                 }
                 if crate::utils::is_builtin_fragment_element(comp_el) {
+                    // 内建 Fragment 只是透明容器，可直接渲染 children，避免再创建组件实例。
                     direct_render_expr = Some(default_slot_value.expr.clone());
                 }
                 new_attrs.push(JSXAttrOrSpread::JSXAttr(JSXAttr {
@@ -881,6 +910,7 @@ pub(crate) fn rewrite_component_children_to_props(
             }
         }
 
+        // children 已经全部改写进 props/slot bag，原 JSX children 清空，避免后续重复编译。
         comp_el.opening.attrs = new_attrs;
         comp_el.children = vec![];
         comp_el.opening.self_closing = true;

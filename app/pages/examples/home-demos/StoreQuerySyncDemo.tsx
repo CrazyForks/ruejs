@@ -45,7 +45,7 @@ const DEMO_ITEMS: DemoItem[] = [
   },
   {
     id: 'store-rue',
-    title: 'defineStore 选项式写法',
+    title: 'defineStore 对象配置写法',
     tab: 'store',
     teaser: '使用 state、getters、actions 组织集中式状态。',
     badge: 'Store',

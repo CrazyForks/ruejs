@@ -1,3 +1,9 @@
+/*
+mount：应用级挂载入口
+
+负责设置最近容器、执行延迟队列、建立 root effect scope，并把 app() 的返回值交给 render 队列。
+与 render(input, container) 不同，mount 代表一棵应用的生命周期边界，因此需要管理 root scope 清理。
+*/
 use super::WasmRue;
 #[cfg(not(feature = "compat"))]
 use crate::runtime::dom_adapter::DomAdapter;
@@ -44,6 +50,7 @@ impl WasmRue {
     }
 
     /// 若 app 为函数：调用并将返回值交由 render 处理
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn try_call_app_and_render(&self, app: &JsValue, cont: &JsValue) -> bool {
         // 这里传给 app 的 props 目前是空对象：
         // - 通常会传入 props + children

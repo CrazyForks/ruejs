@@ -19,7 +19,7 @@
   "files": [
     "index.js",
     "dist",
-    "src/vapor.ts"
+    "src"
   ],
   "sideEffects": false,
   "main": "index.js",
@@ -28,28 +28,43 @@
   "unpkg": "dist/runtime.global.js",
   "exports": {
     ".": {
-      "types": "./dist/runtime.d.ts",
-      "development": "./src/index.ts",
+      "types": "./src/index.ts",
       "node": {
         "production": "./dist/runtime.cjs.prod.js",
         "development": "./dist/runtime.cjs.js",
         "default": "./index.js"
       },
+      "development": "./src/index.ts",
       "module": "./dist/runtime.esm-bundler.js",
       "import": "./dist/runtime.esm-bundler.js",
       "require": "./index.js"
     },
+    "./server": {
+      "types": "./src/server.ts",
+      "node": {
+        "production": "./dist/runtime.server.cjs.prod.js",
+        "development": "./dist/runtime.server.cjs.js",
+        "default": "./dist/runtime.server.cjs.js"
+      },
+      "development": "./src/server.ts",
+      "module": "./dist/runtime.server.esm-bundler.js",
+      "import": "./dist/runtime.server.esm-bundler.js",
+      "require": "./dist/runtime.server.cjs.js"
+    },
     "./vapor": {
       "types": "./src/vapor.ts",
-      "development": "./src/vapor.ts",
       "node": {
         "production": "./dist/runtime.vapor.cjs.prod.js",
         "development": "./dist/runtime.vapor.cjs.js",
         "default": "./dist/runtime.vapor.cjs.js"
       },
+      "development": "./src/vapor.ts",
       "module": "./dist/runtime.vapor.esm-bundler.js",
       "import": "./dist/runtime.vapor.esm-bundler.js",
       "require": "./dist/runtime.vapor.cjs.js"
+    },
+    "./dom": {
+      "types": "./src/dom.ts"
     },
     "./*": "./*"
   },
@@ -71,6 +86,14 @@
       "global"
     ],
     "subEntries": [
+      {
+        "entry": "src/server.ts",
+        "filename": "runtime.server",
+        "formats": [
+          "esm-bundler",
+          "cjs"
+        ]
+      },
       {
         "entry": "src/vapor.ts",
         "filename": "runtime.vapor",

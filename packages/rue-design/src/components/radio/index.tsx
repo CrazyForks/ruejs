@@ -7,6 +7,7 @@ Radio 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** RadioColor 语义色类型。 */
 export type RadioColor =
   | 'neutral'
   | 'primary'
@@ -17,87 +18,153 @@ export type RadioColor =
   | 'info'
   | 'error'
 
+/** RadioSize 尺寸类型。 */
 export type RadioSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium' | 'middle' | 'large'
+/** RadioValue 值类型。 */
 export type RadioValue = string | number | boolean
+/** RadioOptionType 视觉或语义变体类型。 */
 export type RadioOptionType = 'default' | 'button'
+/** RadioButtonStyle 样式值类型。 */
 export type RadioButtonStyle = 'outline' | 'solid'
+/** RadioOrientation 类型。 */
 export type RadioOrientation = 'horizontal' | 'vertical'
 
+/** RadioChangeMeta 接口。 */
 export interface RadioChangeMeta {
+  /** 受控选中状态。 */
   checked: boolean
+  /** 受控值。 */
   value?: RadioValue
+  /** optionType 配置项。 */
   optionType: RadioOptionType
 }
 
+/** RadioProps 组件属性。 */
 export interface RadioProps {
+  /** 组件语义色。 */
   color?: RadioColor
+  /** 组件尺寸。 */
   size?: RadioSize
+  /** 受控选中状态。 */
   checked?: boolean
+  /** 非受控初始选中状态。 */
   defaultChecked?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 受控值。 */
   value?: RadioValue
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 根节点内联样式。 */
   rootStyle?: any
+  /** 组件子内容。 */
   children?: any
+  /** 标题内容。 */
   title?: string
+  /** 元素或数据项标识。 */
   id?: string
+  /** 表单 name 属性或分组名称。 */
   name?: string
+  /** optionType 配置项。 */
   optionType?: RadioOptionType
+  /** buttonStyle 内联样式。 */
   buttonStyle?: RadioButtonStyle
+  /** block 配置项。 */
   block?: boolean
+  /** 值或状态变化时触发的回调。 */
   onChange?: (event: Event, meta: RadioChangeMeta) => void
+  /** onCheckedChange 事件回调。 */
   onCheckedChange?: (checked: boolean, event: Event) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** RadioOption 选项配置。 */
 export interface RadioOption {
+  /** 展示标签。 */
   label: any
+  /** 受控值。 */
   value: RadioValue
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 标题内容。 */
   title?: string
+  /** 元素或数据项标识。 */
   id?: string
+  /** required 配置项。 */
   required?: boolean
+  /** 组件语义色。 */
   color?: RadioColor
+  /** 组件尺寸。 */
   size?: RadioSize
+  /** 值或状态变化时触发的回调。 */
   onChange?: (event: Event, meta: RadioChangeMeta) => void
 }
 
+/** RadioGroupChangeMeta 接口。 */
 export interface RadioGroupChangeMeta extends RadioChangeMeta {
+  /** previousValue 值。 */
   previousValue?: RadioValue
+  /** option 配置项。 */
   option?: RadioOption
 }
 
+/** RadioGroupProps 组件属性。 */
 export interface RadioGroupProps {
+  /** 受控值。 */
   value?: RadioValue
+  /** 非受控初始值。 */
   defaultValue?: RadioValue
+  /** 可选项数据。 */
   options?: ReadonlyArray<RadioOption | RadioValue>
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 表单 name 属性或分组名称。 */
   name?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** optionType 配置项。 */
   optionType?: RadioOptionType
+  /** buttonStyle 内联样式。 */
   buttonStyle?: RadioButtonStyle
+  /** 组件尺寸。 */
   size?: RadioSize
+  /** 组件语义色。 */
   color?: RadioColor
+  /** block 配置项。 */
   block?: boolean
+  /** orientation 配置项。 */
   orientation?: RadioOrientation
+  /** vertical 配置项。 */
   vertical?: boolean
+  /** 值或状态变化时触发的回调。 */
   onChange?: (value: RadioValue | undefined, event: Event, meta: RadioGroupChangeMeta) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
 interface NormalizedRadioOption extends RadioOption {}
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 解析 Size Token 的内部工具函数。 */
 const resolveSizeToken = (size?: RadioSize) => {
   switch (size) {
     case 'small':
@@ -112,6 +179,7 @@ const resolveSizeToken = (size?: RadioSize) => {
   }
 }
 
+/** 构建 Input Class Name 的内部工具函数。 */
 const buildInputClassName = (color?: RadioColor, size?: RadioSize, className?: string) => {
   let cls = 'radio'
   const resolvedSize = resolveSizeToken(size)
@@ -123,6 +191,7 @@ const buildInputClassName = (color?: RadioColor, size?: RadioSize, className?: s
   return cls
 }
 
+/** 构建 Default Root Class Name 的内部工具函数。 */
 const buildDefaultRootClassName = (disabled?: boolean, rootClassName?: string, block?: boolean) => {
   let cls = 'inline-flex items-start gap-3 text-sm leading-5 text-base-content'
 
@@ -134,6 +203,7 @@ const buildDefaultRootClassName = (disabled?: boolean, rootClassName?: string, b
   return cls
 }
 
+/** 构建 Button Root Class Name 的内部工具函数。 */
 const buildButtonRootClassName = (disabled?: boolean, rootClassName?: string, block?: boolean) => {
   let cls = 'inline-flex'
 
@@ -145,10 +215,12 @@ const buildButtonRootClassName = (disabled?: boolean, rootClassName?: string, bl
   return cls
 }
 
+/** 构建 Content Class Name 的内部工具函数。 */
 const buildContentClassName = (contentClassName?: string) => {
   return appendClassName('min-w-0 flex-1', contentClassName)
 }
 
+/** 解析 Button Size Class 的内部工具函数。 */
 const resolveButtonSizeClass = (size?: RadioSize) => {
   switch (resolveSizeToken(size)) {
     case 'xs':
@@ -164,6 +236,7 @@ const resolveButtonSizeClass = (size?: RadioSize) => {
   }
 }
 
+/** 解析 Outline Selected Classes 的内部工具函数。 */
 const resolveOutlineSelectedClasses = (color?: RadioColor) => {
   switch (color ?? 'primary') {
     case 'neutral':
@@ -185,6 +258,7 @@ const resolveOutlineSelectedClasses = (color?: RadioColor) => {
   }
 }
 
+/** 解析 Solid Selected Classes 的内部工具函数。 */
 const resolveSolidSelectedClasses = (color?: RadioColor) => {
   switch (color ?? 'primary') {
     case 'neutral':
@@ -206,6 +280,7 @@ const resolveSolidSelectedClasses = (color?: RadioColor) => {
   }
 }
 
+/** 构建 Button Surface Class Name 的内部工具函数。 */
 const buildButtonSurfaceClassName = ({
   color,
   size,
@@ -238,6 +313,7 @@ const buildButtonSurfaceClassName = ({
   return cls
 }
 
+/** 解析 Group Class Name 的内部工具函数。 */
 const resolveGroupClassName = ({
   optionType,
   orientation,
@@ -264,6 +340,7 @@ const resolveGroupClassName = ({
   return cls
 }
 
+/** serialize Value 的内部工具函数。 */
 const serializeValue = (value: RadioValue) => {
   switch (typeof value) {
     case 'number':
@@ -275,6 +352,7 @@ const serializeValue = (value: RadioValue) => {
   }
 }
 
+/** deserialize Value 的内部工具函数。 */
 const deserializeValue = (serialized?: string): RadioValue | undefined => {
   if (!serialized) return undefined
 
@@ -290,6 +368,7 @@ const deserializeValue = (serialized?: string): RadioValue | undefined => {
   return rawValue
 }
 
+/** 归一化 Options 的内部工具函数。 */
 const normalizeOptions = (options?: ReadonlyArray<RadioOption | RadioValue>) => {
   return (options ?? []).map<NormalizedRadioOption>(option => {
     if (typeof option === 'string' || typeof option === 'number' || typeof option === 'boolean') {
@@ -303,6 +382,7 @@ const normalizeOptions = (options?: ReadonlyArray<RadioOption | RadioValue>) => 
   })
 }
 
+/** 解析 Orientation 的内部工具函数。 */
 const resolveOrientation = (
   orientation?: RadioOrientation,
   vertical?: boolean,
@@ -310,6 +390,7 @@ const resolveOrientation = (
   return orientation ?? (vertical ? 'vertical' : 'horizontal')
 }
 
+/** read Group Config 的内部工具函数。 */
 const readGroupConfig = (input?: HTMLInputElement | null) => {
   const group = input?.closest('[data-rue-radio-group="true"]') as HTMLElement | null
 
@@ -332,6 +413,7 @@ const readGroupConfig = (input?: HTMLInputElement | null) => {
   }
 }
 
+/** Radio Root 的内部工具函数。 */
 const RadioRoot: FC<RadioProps> = ({
   color,
   size,
@@ -515,6 +597,7 @@ const RadioRoot: FC<RadioProps> = ({
   )
 }
 
+/** Group 的内部工具函数。 */
 const Group: FC<RadioGroupProps> = ({
   value,
   defaultValue,
@@ -718,6 +801,7 @@ const Group: FC<RadioGroupProps> = ({
   )
 }
 
+/** Radio Button 的内部工具函数。 */
 const RadioButton: FC<RadioProps> = props => {
   return <RadioRoot {...props} optionType="button" />
 }
@@ -732,4 +816,5 @@ const Radio: RadioCompound = Object.assign(RadioRoot, {
   Button: RadioButton,
 })
 
+/** 默认导出单选框组件。 */
 export default Radio

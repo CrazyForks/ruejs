@@ -1,4 +1,9 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Diff 模块概述
+- 汇总差异对比组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 
@@ -10,46 +15,80 @@ interface StyleObject {
 
 type DiffStyle = string | StyleObject
 
+/** DiffProps 组件属性。 */
 export interface DiffProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: DiffStyle
+  /** tabIndex 配置项。 */
   tabIndex?: number
+  /** 受控值。 */
   value?: number
+  /** 非受控初始值。 */
   defaultValue?: number
+  /** min 配置项。 */
   min?: number
+  /** max 配置项。 */
   max?: number
+  /** step 配置项。 */
   step?: number
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** item1 配置项。 */
   item1?: any
+  /** item2 配置项。 */
   item2?: any
+  /** item1Label 标签内容。 */
   item1Label?: any
+  /** item2Label 标签内容。 */
   item2Label?: any
+  /** resizerContent 配置项。 */
   resizerContent?: any
+  /** 组件子内容。 */
   children?: any
+  /** 值或状态变化时触发的回调。 */
   onChange?: (value: number, event: Event) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** DiffItemProps 组件属性。 */
 export interface DiffItemProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: DiffStyle
+  /** role 配置项。 */
   role?: string
+  /** tabIndex 配置项。 */
   tabIndex?: number
+  /** 展示标签。 */
   label?: any
+  /** labelClassName 附加类名。 */
   labelClassName?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** DiffResizerProps 组件属性。 */
 export interface DiffResizerProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: DiffStyle
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 
+/** serialize Style 的内部工具函数。 */
 const serializeStyle = (style?: DiffStyle) => {
   if (!style) {
     return ''
@@ -64,6 +103,7 @@ const serializeStyle = (style?: DiffStyle) => {
     .join('; ')
 }
 
+/** merge Style 的内部工具函数。 */
 const mergeStyle = (...styles: Array<DiffStyle | undefined>) => {
   return styles
     .map(style => serializeStyle(style))
@@ -77,17 +117,20 @@ const diffRootLayoutStyle: StyleObject = {
   alignItems: 'stretch',
 }
 
+/** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => {
   if (value < min) return min
   if (value > max) return max
   return value
 }
 
+/** 转换为 Finite Number 的内部工具函数。 */
 const toFiniteNumber = (value: any, fallback: number) => {
   const next = Number(value)
   return Number.isFinite(next) ? next : fallback
 }
 
+/** 解析 Bounds 的内部工具函数。 */
 const resolveBounds = (min?: number, max?: number) => {
   const resolvedMin = toFiniteNumber(min, 0)
   const resolvedMax = toFiniteNumber(max, 100)
@@ -97,33 +140,40 @@ const resolveBounds = (min?: number, max?: number) => {
   return { min: resolvedMin, max: resolvedMax }
 }
 
+/** 解析 Step 的内部工具函数。 */
 const resolveStep = (step?: number) => {
   const resolvedStep = toFiniteNumber(step, 1)
   return resolvedStep > 0 ? resolvedStep : 1
 }
 
+/** 解析 Value 的内部工具函数。 */
 const resolveValue = (value: any, min: number, max: number, fallback: number) => {
   return clamp(toFiniteNumber(value, fallback), min, max)
 }
 
+/** 解析 Percent 的内部工具函数。 */
 const resolvePercent = (value: number, min: number, max: number) => {
   return ((value - min) / (max - min)) * 100
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 渲染 Quick Item Content 的内部工具函数。 */
 const renderQuickItemContent = (content: any) => {
   return <div className="relative h-full [&>*]:h-full [&>*]:w-full [&>*]:max-w-none">{content}</div>
 }
 
+/** 判断是否存在 Renderable Children 的内部工具函数。 */
 const hasRenderableChildren = (children: any) => {
   if (children == null) return false
   if (Array.isArray(children)) return children.length > 0
   return true
 }
 
+/** assign Forwarded Ref 的内部工具函数。 */
 const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   if (typeof forwardedRef === 'function') {
     forwardedRef(element)
@@ -132,6 +182,7 @@ const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   }
 }
 
+/** Item1 的内部工具函数。 */
 const Item1: FC<DiffItemProps> = ({
   className,
   style,
@@ -181,6 +232,7 @@ const Item1: FC<DiffItemProps> = ({
   )
 }
 
+/** Item2 的内部工具函数。 */
 const Item2: FC<DiffItemProps> = ({
   className,
   style,
@@ -230,6 +282,7 @@ const Item2: FC<DiffItemProps> = ({
   )
 }
 
+/** Resizer 的内部工具函数。 */
 const Resizer: FC<DiffResizerProps> = ({ className, style, children, ...rest }) => {
   const forwardedRef = rest.ref
   if ('ref' in rest) {
@@ -254,6 +307,7 @@ const Resizer: FC<DiffResizerProps> = ({ className, style, children, ...rest }) 
   )
 }
 
+/** Diff 的内部工具函数。 */
 const Diff: FC<DiffProps> = ({
   className,
   style,
@@ -486,4 +540,5 @@ const DiffCompound: DiffCompound = Object.assign(Diff, {
   Resizer,
 })
 
+/** 默认导出差异对比组件。 */
 export default DiffCompound

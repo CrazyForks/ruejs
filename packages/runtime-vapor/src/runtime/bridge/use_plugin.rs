@@ -1,3 +1,9 @@
+/*
+use(plugin)：插件安装桥接
+
+将 options 归一化为数组，并把安装动作延迟到 mount 前执行。
+延迟执行可以确保插件逻辑处在正确的容器与应用 scope 上下文里。
+*/
 use super::WasmRue;
 use js_sys::Array;
 use wasm_bindgen::JsValue;

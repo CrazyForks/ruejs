@@ -52,3 +52,73 @@ pub fn push_pending_hook(name: &str, f: JsValue) {
 pub fn take_pending_hooks() -> Vec<(String, JsValue)> {
     PENDING_HOOKS.with(|q| q.borrow_mut().drain(..).collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::types::MountInputType;
+    use wasm_bindgen_test::*;
+
+    #[wasm_bindgen_test]
+    fn crash_state_records_and_can_be_cleared() {
+        RUNTIME_CRASHED.with(|flag| flag.set(false));
+        LAST_HOOK_ERROR.with(|cell| *cell.borrow_mut() = None);
+
+        assert!(!is_runtime_crashed());
+        assert!(last_hook_error().is_none());
+
+        mark_crashed_from_hook(&JsValue::from_str("hook failed"));
+
+        assert!(is_runtime_crashed());
+        assert_eq!(
+            last_hook_error().and_then(|err| err.as_string()).as_deref(),
+            Some("hook failed")
+        );
+
+        RUNTIME_CRASHED.with(|flag| flag.set(false));
+        LAST_HOOK_ERROR.with(|cell| *cell.borrow_mut() = None);
+        assert!(!is_runtime_crashed());
+        assert!(last_hook_error().is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn pending_hooks_push_take_and_drain_in_order() {
+        PENDING_HOOKS.with(|queue| queue.borrow_mut().clear());
+
+        push_pending_hook("before_mount", JsValue::from_str("a"));
+        push_pending_hook("mounted", JsValue::from_str("b"));
+
+        let hooks = take_pending_hooks();
+        assert_eq!(hooks.len(), 2);
+        assert_eq!(hooks[0].0, "before_mount");
+        assert_eq!(hooks[0].1.as_string().as_deref(), Some("a"));
+        assert_eq!(hooks[1].0, "mounted");
+        assert_eq!(hooks[1].1.as_string().as_deref(), Some("b"));
+        assert!(take_pending_hooks().is_empty());
+    }
+
+    #[wasm_bindgen_test]
+    fn mount_input_registry_stores_reads_and_clears_entries() {
+        MOUNT_INPUT_REGISTRY.with(|registry| {
+            let mut entries = registry.borrow_mut();
+            entries.clear();
+            entries.push(Some(MountInput::new_normalized(
+                MountInputType::Text("raw".to_string()),
+                Default::default(),
+                vec![],
+            )));
+            entries.push(None);
+
+            assert_eq!(entries.len(), 2);
+            let first = entries[0].as_ref().expect("entry should be stored");
+            assert!(matches!(first.r#type, MountInputType::Text(ref text) if text == "raw"));
+
+            let taken = entries[0].take().expect("entry should be removable");
+            assert!(matches!(taken.r#type, MountInputType::Text(ref text) if text == "raw"));
+            assert!(entries[0].is_none());
+
+            entries.clear();
+            assert!(entries.is_empty());
+        });
+    }
+}

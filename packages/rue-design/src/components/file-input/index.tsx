@@ -8,6 +8,7 @@ FileInput 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
 
+/** FileInputVariant 视觉或语义变体类型。 */
 export type FileInputVariant =
   | 'neutral'
   | 'primary'
@@ -18,6 +19,7 @@ export type FileInputVariant =
   | 'warning'
   | 'error'
 
+/** FileInputSize 尺寸类型。 */
 export type FileInputSize =
   | 'xs'
   | 'sm'
@@ -28,31 +30,54 @@ export type FileInputSize =
   | 'middle'
   | 'medium'
   | 'large'
+/** FileInputListType 视觉或语义变体类型。 */
 export type FileInputListType = 'text' | 'picture' | 'picture-card'
+/** FileInputStatus 状态类型。 */
 export type FileInputStatus = 'ready' | 'uploading' | 'done' | 'error' | 'removed'
 
+/** FileInputFile 接口。 */
 export interface FileInputFile {
+  /** uid 配置项。 */
   uid?: string
+  /** 表单 name 属性或分组名称。 */
   name: string
+  /** 组件状态。 */
   status?: FileInputStatus
+  /** 组件尺寸。 */
   size?: number
+  /** 组件类型或语义类型。 */
   type?: string
+  /** percent 配置项。 */
   percent?: number
+  /** url 配置项。 */
   url?: string
+  /** thumbUrl 配置项。 */
   thumbUrl?: string
+  /** preview 配置项。 */
   preview?: string
+  /** lastModified 配置项。 */
   lastModified?: number
+  /** originFileObj 配置项。 */
   originFileObj?: File | Blob | null
+  /** response 配置项。 */
   response?: any
+  /** error 配置项。 */
   error?: any
+  /** 描述内容。 */
   description?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FileInputShowUploadList 接口。 */
 export interface FileInputShowUploadList {
+  /** showPreviewIcon 图标内容。 */
   showPreviewIcon?: boolean
+  /** showRemoveIcon 图标内容。 */
   showRemoveIcon?: boolean
+  /** 额外操作或补充内容。 */
   extra?: any | ((file: FileInputFile) => any)
+  /** itemRender 自定义渲染函数。 */
   itemRender?: (
     file: FileInputFile,
     defaultNode: any,
@@ -60,13 +85,19 @@ export interface FileInputShowUploadList {
   ) => any
 }
 
+/** FileInputChangeInfo 接口。 */
 export interface FileInputChangeInfo {
+  /** file 配置项。 */
   file: FileInputFile
+  /** fileList 配置项。 */
   fileList: FileInputFile[]
+  /** source 配置项。 */
   source: 'select' | 'drop' | 'remove'
+  /** nativeEvent 配置项。 */
   nativeEvent?: Event | DragEvent
 }
 
+/** FileInputBeforeUploadResult 类型。 */
 export type FileInputBeforeUploadResult =
   | boolean
   | File
@@ -74,43 +105,78 @@ export type FileInputBeforeUploadResult =
   | typeof FILE_INPUT_LIST_IGNORE
   | Promise<boolean | File | Blob | typeof FILE_INPUT_LIST_IGNORE>
 
+/** FileInputBeforeUpload 类型。 */
 export type FileInputBeforeUpload = (file: File, fileList: File[]) => FileInputBeforeUploadResult
+/** FileInputPreviewHandler 类型。 */
 export type FileInputPreviewHandler = (file: FileInputFile) => void | Promise<void>
+/** FileInputRemoveHandler 类型。 */
 export type FileInputRemoveHandler = (
   file: FileInputFile,
 ) => boolean | void | Promise<boolean | void>
+/** FileInputPreviewFile 类型。 */
 export type FileInputPreviewFile = (file: File | Blob) => Promise<string>
 
+/** FileInputProps 组件属性。 */
 export interface FileInputProps {
+  /** 组件视觉变体。 */
   variant?: FileInputVariant
+  /** 组件尺寸。 */
   size?: FileInputSize
+  /** ghost 配置项。 */
   ghost?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** triggerClassName 附加类名。 */
   triggerClassName?: string
+  /** listClassName 附加类名。 */
   listClassName?: string
+  /** itemClassName 附加类名。 */
   itemClassName?: string
+  /** drag 配置项。 */
   drag?: boolean
+  /** listType 配置项。 */
   listType?: FileInputListType
+  /** showUploadList 配置项。 */
   showUploadList?: boolean | FileInputShowUploadList
+  /** fileList 配置项。 */
   fileList?: FileInputFile[]
+  /** defaultFileList 配置项。 */
   defaultFileList?: FileInputFile[]
+  /** maxCount 配置项。 */
   maxCount?: number
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** hint 配置项。 */
   hint?: any
+  /** buttonText 文本内容。 */
   buttonText?: any
+  /** empty 配置项。 */
   empty?: any
+  /** multiple 配置项。 */
   multiple?: boolean
+  /** directory 配置项。 */
   directory?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** openFileDialogOnClick 配置项。 */
   openFileDialogOnClick?: boolean
+  /** 组件子内容。 */
   children?: any
+  /** beforeUpload 配置项。 */
   beforeUpload?: FileInputBeforeUpload
+  /** onPreview 事件回调。 */
   onPreview?: FileInputPreviewHandler
+  /** onRemove 事件回调。 */
   onRemove?: FileInputRemoveHandler
+  /** previewFile 配置项。 */
   previewFile?: FileInputPreviewFile
+  /** 值或状态变化时触发的回调。 */
   onChange?: ((event: Event) => void) | ((info: FileInputChangeInfo) => void)
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -119,17 +185,21 @@ type FileInputCompound = FC<FileInputProps> & {
   LIST_IGNORE: typeof FILE_INPUT_LIST_IGNORE
 }
 
+/** FILE_INPUT_LIST_IGNORE 内部常量。 */
 const FILE_INPUT_LIST_IGNORE = Symbol('RUE_FILE_INPUT_LIST_IGNORE')
 let uidSeed = 0
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | undefined | false | null>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** 判断 Promise Like 的内部工具函数。 */
 const isPromiseLike = <T,>(value: any): value is Promise<T> => {
   return !!value && typeof value === 'object' && typeof value.then === 'function'
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: FileInputSize) => {
   switch (size) {
     case 'small':
@@ -144,6 +214,7 @@ const resolveSizeClass = (size?: FileInputSize) => {
   }
 }
 
+/** 构建 Native Input Class Name 的内部工具函数。 */
 const buildNativeInputClassName = ({
   variant,
   size,
@@ -159,6 +230,7 @@ const buildNativeInputClassName = ({
   return cls
 }
 
+/** 构建 Trigger Button Class Name 的内部工具函数。 */
 const buildTriggerButtonClassName = ({
   variant,
   size,
@@ -174,6 +246,7 @@ const buildTriggerButtonClassName = ({
   return cls
 }
 
+/** 构建 Dropzone Class Name 的内部工具函数。 */
 const buildDropzoneClassName = ({
   variant,
   disabled,
@@ -196,6 +269,7 @@ const buildDropzoneClassName = ({
   )
 }
 
+/** 构建 Status Badge Class Name 的内部工具函数。 */
 const buildStatusBadgeClassName = (status?: FileInputStatus) => {
   switch (status) {
     case 'done':
@@ -211,16 +285,19 @@ const buildStatusBadgeClassName = (status?: FileInputStatus) => {
   }
 }
 
+/** 判断 Picture Type 的内部工具函数。 */
 const isPictureType = (listType?: FileInputListType) => {
   return listType === 'picture' || listType === 'picture-card'
 }
 
+/** 判断 Image Like 的内部工具函数。 */
 const isImageLike = (file: FileInputFile) => {
   if (file.type?.startsWith('image/')) return true
   const url = file.thumbUrl ?? file.url ?? file.preview ?? ''
   return /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(url)
 }
 
+/** read File As Data Url 的内部工具函数。 */
 const readFileAsDataUrl = (file: File | Blob) => {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -230,19 +307,23 @@ const readFileAsDataUrl = (file: File | Blob) => {
   })
 }
 
+/** default Preview File 的内部工具函数。 */
 const defaultPreviewFile: FileInputPreviewFile = file => {
   return readFileAsDataUrl(file)
 }
 
+/** 创建 Uid 的内部工具函数。 */
 const createUid = () => {
   uidSeed += 1
   return `rue-file-${uidSeed}`
 }
 
+/** clone File Item 的内部工具函数。 */
 const cloneFileItem = (file: FileInputFile): FileInputFile => {
   return { ...file }
 }
 
+/** 转换为 File Item 的内部工具函数。 */
 const toFileItem = (file: File | Blob, fallbackName?: string): FileInputFile => {
   const source = file as File
   const name =
@@ -263,6 +344,7 @@ const toFileItem = (file: File | Blob, fallbackName?: string): FileInputFile => 
   }
 }
 
+/** 归一化 File Item 的内部工具函数。 */
 const normalizeFileItem = (file: FileInputFile, index: number): FileInputFile => {
   return {
     status: 'done',
@@ -272,16 +354,19 @@ const normalizeFileItem = (file: FileInputFile, index: number): FileInputFile =>
   }
 }
 
+/** 归一化 File List 的内部工具函数。 */
 const normalizeFileList = (fileList?: FileInputFile[]) => {
   return (fileList ?? []).map((file, index) => normalizeFileItem(cloneFileItem(file), index))
 }
 
+/** apply Max Count 的内部工具函数。 */
 const applyMaxCount = (fileList: FileInputFile[], maxCount?: number) => {
   if (!maxCount || maxCount <= 0) return fileList
   if (maxCount === 1) return fileList.slice(-1)
   return fileList.slice(-maxCount)
 }
 
+/** format File Size 的内部工具函数。 */
 const formatFileSize = (size?: number) => {
   if (typeof size !== 'number' || !Number.isFinite(size)) return ''
   if (size < 1024) return `${size} B`
@@ -289,6 +374,7 @@ const formatFileSize = (size?: number) => {
   return `${(size / (1024 * 1024)).toFixed(size >= 1024 * 1024 * 10 ? 0 : 1)} MB`
 }
 
+/** 判断 Enhanced Mode 的内部工具函数。 */
 const isEnhancedMode = (props: FileInputProps) => {
   const hasCustomChildren =
     props.children !== undefined &&
@@ -320,6 +406,7 @@ const isEnhancedMode = (props: FileInputProps) => {
   )
 }
 
+/** Default Upload Icon 的内部工具函数。 */
 const DefaultUploadIcon: FC<{ className?: string }> = ({ className }) => {
   return (
     <svg
@@ -341,6 +428,7 @@ const DefaultUploadIcon: FC<{ className?: string }> = ({ className }) => {
   )
 }
 
+/** Default Plus Icon 的内部工具函数。 */
 const DefaultPlusIcon: FC = () => {
   return (
     <svg
@@ -357,6 +445,7 @@ const DefaultPlusIcon: FC = () => {
   )
 }
 
+/** Default File Icon 的内部工具函数。 */
 const DefaultFileIcon: FC = () => {
   return (
     <svg
@@ -378,6 +467,7 @@ const DefaultFileIcon: FC = () => {
   )
 }
 
+/** Default Image Icon 的内部工具函数。 */
 const DefaultImageIcon: FC = () => {
   return (
     <svg
@@ -396,6 +486,7 @@ const DefaultImageIcon: FC = () => {
   )
 }
 
+/** Default Preview Icon 的内部工具函数。 */
 const DefaultPreviewIcon: FC = () => {
   return (
     <svg
@@ -417,6 +508,7 @@ const DefaultPreviewIcon: FC = () => {
   )
 }
 
+/** Default Remove Icon 的内部工具函数。 */
 const DefaultRemoveIcon: FC = () => {
   return (
     <svg
@@ -433,6 +525,7 @@ const DefaultRemoveIcon: FC = () => {
   )
 }
 
+/** File Input Root 的内部工具函数。 */
 const FileInputRoot: FC<FileInputProps> = ({
   variant,
   size,
@@ -1133,6 +1226,7 @@ const FileInputRoot: FC<FileInputProps> = ({
   )
 }
 
+/** Dragger 的内部工具函数。 */
 const Dragger: FC<FileInputProps> = props => {
   return <FileInputRoot {...props} drag />
 }
@@ -1142,4 +1236,5 @@ const FileInput: FileInputCompound = Object.assign(FileInputRoot, {
   LIST_IGNORE: FILE_INPUT_LIST_IGNORE as typeof FILE_INPUT_LIST_IGNORE,
 })
 
+/** 默认导出文件输入组件。 */
 export default FileInput

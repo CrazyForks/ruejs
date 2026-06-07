@@ -22,7 +22,11 @@ export const {
   createRue,
   createSignal,
   getCurrentInstance,
+  /** 测试环境导出 isProxy，供 runtime 层 API 兼容测试复用。 */
+  isProxy,
   isReactive,
+  /** 测试环境导出 isReadonly，保持与浏览器/Node runtime 入口一致。 */
+  isReadonly,
   onCleanup,
   propsReactive,
   reactive,

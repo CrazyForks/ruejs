@@ -1,0 +1,12 @@
+{
+  "name": "ecosystem-text-intl",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@rue-js/text": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

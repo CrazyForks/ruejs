@@ -6,6 +6,18 @@ use wasm_bindgen_test::*;
 use rue_runtime_vapor::{set_current_instance, use_callback, use_memo, use_ref, use_setup};
 
 wasm_bindgen_test_configure!(run_in_browser);
+
+fn force_hook_slot(inst: &Object, index: u32) {
+    let hooks = Reflect::get(inst, &JsValue::from_str("__hooks")).unwrap_or(JsValue::UNDEFINED);
+    if hooks.is_object() {
+        let _ = Reflect::set(
+            &hooks.unchecked_into::<Object>(),
+            &JsValue::from_str("__forcedIndex"),
+            &JsValue::from_f64(index as f64),
+        );
+    }
+}
+
 #[wasm_bindgen_test]
 fn use_memo_caches_until_deps_change() {
     let inst = Object::new();
@@ -66,6 +78,73 @@ fn use_memo_caches_until_deps_change() {
     );
     let _v5 = use_memo(f.clone(), JsValue::from_str("x"));
     assert_eq!(*hits.borrow(), 4);
+
+    factory.forget();
+}
+
+#[wasm_bindgen_test]
+fn use_memo_empty_deps_reuses_jsx_like_object_value() {
+    let inst = Object::new();
+    set_current_instance(inst.clone().into());
+
+    let hits = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let hits2 = hits.clone();
+    let factory = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        let vnode = Object::new();
+        Reflect::set(&vnode, &JsValue::from_str("type"), &JsValue::from_str("span")).unwrap();
+        Reflect::set(&vnode, &JsValue::from_str("props"), &Object::new()).unwrap();
+        vnode.into()
+    }) as Box<dyn FnMut() -> JsValue>);
+    let f: Function = factory.as_ref().clone().unchecked_into();
+
+    let first = use_memo(f.clone(), Array::new().into());
+    force_hook_slot(&inst, 0);
+    let second = use_memo(f.clone(), Array::new().into());
+
+    assert!(Object::is(&first, &second));
+    assert_eq!(*hits.borrow(), 1);
+
+    factory.forget();
+}
+
+#[wasm_bindgen_test]
+fn use_memo_normalizes_value_like_deps_and_recomputes_on_value_change() {
+    let inst = Object::new();
+    set_current_instance(inst.clone().into());
+
+    let hits = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let hits2 = hits.clone();
+    let factory = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits2.borrow_mut() += 1;
+        JsValue::from_f64(*hits2.borrow() as f64)
+    }) as Box<dyn FnMut() -> JsValue>);
+    let f: Function = factory.as_ref().clone().unchecked_into();
+
+    let dep1 = Object::new();
+    Reflect::set(&dep1, &JsValue::from_str("value"), &JsValue::from_f64(1.0)).unwrap();
+    let deps1 = Array::new();
+    deps1.push(&dep1.into());
+    let first = use_memo(f.clone(), deps1.into());
+    assert_eq!(first.as_f64(), Some(1.0));
+
+    let dep2 = Object::new();
+    Reflect::set(&dep2, &JsValue::from_str("value"), &JsValue::from_f64(1.0)).unwrap();
+    let deps2 = Array::new();
+    deps2.push(&dep2.into());
+    force_hook_slot(&inst, 0);
+    let second = use_memo(f.clone(), deps2.into());
+    assert_eq!(second.as_f64(), Some(1.0));
+    assert_eq!(*hits.borrow(), 1);
+
+    let dep3 = Object::new();
+    Reflect::set(&dep3, &JsValue::from_str("value"), &JsValue::from_f64(2.0)).unwrap();
+    let deps3 = Array::new();
+    deps3.push(&dep3.into());
+    force_hook_slot(&inst, 0);
+    let third = use_memo(f.clone(), deps3.into());
+    assert_eq!(third.as_f64(), Some(2.0));
+    assert_eq!(*hits.borrow(), 2);
 
     factory.forget();
 }

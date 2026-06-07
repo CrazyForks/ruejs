@@ -1,0 +1,432 @@
+/**
+ * Prefetch cache eviction tests.
+ *
+ * Verifies that storePrefetchResponse() sweeps expired entries before
+ * falling back to FIFO eviction, preventing expired entries from wasting
+ * cache slots on link-heavy pages.
+ *
+ * The navigation module computes `isServer = typeof window === "undefined"`
+ * at load time, so we must set globalThis.window BEFORE importing it via
+ * vi.resetModules() + dynamic import().
+ */
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vite-plus/test'
+import { AppElementsWire } from '../src/server/app-elements.js'
+import { TEXT_RSC_COMPATIBILITY_ID_HEADER } from '../src/server/app-rsc-cache-busting.js'
+
+type Navigation = typeof import('../src/shims/navigation.js')
+let storePrefetchResponse: Navigation['storePrefetchResponse']
+let consumePrefetchResponse: Navigation['consumePrefetchResponse']
+let getPrefetchCache: Navigation['getPrefetchCache']
+let getPrefetchedUrls: Navigation['getPrefetchedUrls']
+let getCurrentInterceptionContext: Navigation['getCurrentInterceptionContext']
+let MAX_PREFETCH_CACHE_SIZE: Navigation['MAX_PREFETCH_CACHE_SIZE']
+let PREFETCH_CACHE_TTL: Navigation['PREFETCH_CACHE_TTL']
+let snapshotRscResponse: Navigation['snapshotRscResponse']
+let restoreRscResponse: Navigation['restoreRscResponse']
+let invalidatePrefetchCache: Navigation['invalidatePrefetchCache']
+let appRouterInstance: Navigation['appRouterInstance']
+
+beforeEach(async () => {
+  // Set window BEFORE importing so isServer evaluates to false
+  ;(globalThis as any).window = {
+    __TEXT_RSC_PREFETCH_CACHE__: new Map(),
+    __TEXT_RSC_PREFETCHED_URLS__: new Set(),
+    location: {
+      origin: 'http://localhost',
+      pathname: '/',
+      search: '',
+      hash: '',
+      href: 'http://localhost/',
+    },
+    addEventListener: () => {},
+    history: { pushState: () => {}, replaceState: () => {}, state: null },
+    dispatchEvent: () => {},
+  }
+  vi.resetModules()
+  const nav = await import('../src/shims/navigation.js')
+  storePrefetchResponse = nav.storePrefetchResponse
+  consumePrefetchResponse = nav.consumePrefetchResponse
+  getPrefetchCache = nav.getPrefetchCache
+  getPrefetchedUrls = nav.getPrefetchedUrls
+  getCurrentInterceptionContext = nav.getCurrentInterceptionContext
+  MAX_PREFETCH_CACHE_SIZE = nav.MAX_PREFETCH_CACHE_SIZE
+  PREFETCH_CACHE_TTL = nav.PREFETCH_CACHE_TTL
+  snapshotRscResponse = nav.snapshotRscResponse
+  restoreRscResponse = nav.restoreRscResponse
+  invalidatePrefetchCache = nav.invalidatePrefetchCache
+  appRouterInstance = nav.appRouterInstance
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  delete (globalThis as any).window
+  delete (globalThis as any).fetch
+})
+
+/** Helper: fill cache with `count` entries at a given timestamp. */
+function fillCache(count: number, timestamp: number, keyPrefix = '/page-'): void {
+  const cache = getPrefetchCache()
+  const prefetched = getPrefetchedUrls()
+  for (let i = 0; i < count; i++) {
+    const key = `${keyPrefix}${i}.rsc`
+    const body = `body-${i}`
+    const buffer = new TextEncoder().encode(body).buffer
+    cache.set(key, {
+      snapshot: {
+        buffer,
+        contentType: 'text/x-component',
+        paramsHeader: null,
+        url: key,
+      },
+      outcome: 'cache-seeded',
+      timestamp,
+    })
+    prefetched.add(key)
+  }
+}
+
+async function waitForPrefetchSetup(isReady: () => boolean = () => true): Promise<void> {
+  const deadline = Date.now() + 1_000
+
+  do {
+    await Promise.resolve()
+    if (isReady()) return
+    await new Promise(resolve => setTimeout(resolve, 0))
+  } while (Date.now() < deadline)
+}
+
+describe('prefetch cache eviction', () => {
+  it('router.prefetch ignores external absolute URLs', async () => {
+    const fetch = vi.fn()
+    ;(globalThis as any).fetch = fetch
+
+    appRouterInstance.prefetch('https://external.example/dashboard')
+    await waitForPrefetchSetup()
+
+    expect(fetch).not.toHaveBeenCalled()
+    expect(getPrefetchedUrls().size).toBe(0)
+  })
+
+  it('router.prefetch normalizes same-origin absolute URLs before caching', async () => {
+    let fetchedUrl: unknown
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      fetchedUrl = input
+      return new Response('flight', { headers: { 'content-type': 'text/x-component' } })
+    })
+    ;(globalThis as any).fetch = fetch
+
+    appRouterInstance.prefetch('http://localhost/dashboard?tab=1')
+    await waitForPrefetchSetup(() => fetch.mock.calls.length > 0)
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(fetchedUrl).toMatch(/^\/dashboard\.rsc\?tab=1&_rsc(?:=.+)?$/)
+    expect(getPrefetchedUrls().has(AppElementsWire.encodeCacheKey(String(fetchedUrl), null))).toBe(
+      true,
+    )
+  })
+
+  it('router.prefetch calls onInvalidate once when the prefetched response is invalidated', async () => {
+    let fetchedUrl: unknown
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      fetchedUrl = input
+      return new Response('flight', { headers: { 'content-type': 'text/x-component' } })
+    })
+    const onInvalidate = vi.fn()
+    ;(globalThis as any).fetch = fetch
+
+    appRouterInstance.prefetch('/dashboard', { onInvalidate })
+    await waitForPrefetchSetup(() => getPrefetchCache().size > 0)
+
+    const cacheKey = AppElementsWire.encodeCacheKey(String(fetchedUrl), null)
+    expect(getPrefetchedUrls().has(cacheKey)).toBe(true)
+
+    invalidatePrefetchCache()
+
+    expect(onInvalidate).toHaveBeenCalledTimes(1)
+    expect(getPrefetchedUrls().has(cacheKey)).toBe(false)
+    expect(getPrefetchCache().has(cacheKey)).toBe(false)
+
+    invalidatePrefetchCache()
+    expect(onInvalidate).toHaveBeenCalledTimes(1)
+  })
+
+  it('router.prefetch preserves onInvalidate callbacks attached to an already-prefetched URL', async () => {
+    const fetch = vi.fn(
+      async () => new Response('flight', { headers: { 'content-type': 'text/x-component' } }),
+    )
+    const firstInvalidate = vi.fn()
+    const secondInvalidate = vi.fn()
+    ;(globalThis as any).fetch = fetch
+
+    appRouterInstance.prefetch('/dashboard', { onInvalidate: firstInvalidate })
+    await waitForPrefetchSetup(() => getPrefetchCache().size > 0)
+    appRouterInstance.prefetch('/dashboard', { onInvalidate: secondInvalidate })
+    await waitForPrefetchSetup(() => {
+      const entry = getPrefetchCache().values()['ne' + 'xt']().value
+      return entry?.onInvalidateCallbacks?.size === 2
+    })
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+
+    invalidatePrefetchCache()
+
+    expect(firstInvalidate).toHaveBeenCalledTimes(1)
+    expect(secondInvalidate).toHaveBeenCalledTimes(1)
+  })
+
+  it('reuses a prefetched response only when mounted-slot context matches', () => {
+    const cache = getPrefetchCache()
+    const prefetched = getPrefetchedUrls()
+    const rscUrl = '/dashboard.rsc'
+    const snapshot = {
+      buffer: new TextEncoder().encode('flight').buffer,
+      contentType: 'text/x-component',
+      mountedSlotsHeader: 'slot:auth:/',
+      paramsHeader: null,
+      url: rscUrl,
+    }
+
+    cache.set(rscUrl, { outcome: 'cache-seeded', snapshot, timestamp: Date.now() })
+    prefetched.add(rscUrl)
+
+    expect(consumePrefetchResponse(rscUrl, null, 'slot:auth:/')).toEqual(snapshot)
+    expect(cache.has(rscUrl)).toBe(false)
+    expect(prefetched.has(rscUrl)).toBe(false)
+  })
+
+  it('rejects a prefetched response when mounted-slot context differs', () => {
+    const cache = getPrefetchCache()
+    const prefetched = getPrefetchedUrls()
+    const rscUrl = '/dashboard.rsc'
+
+    cache.set(rscUrl, {
+      outcome: 'cache-seeded',
+      snapshot: {
+        buffer: new TextEncoder().encode('flight').buffer,
+        contentType: 'text/x-component',
+        mountedSlotsHeader: 'slot:auth:/',
+        paramsHeader: null,
+        url: rscUrl,
+      },
+      timestamp: Date.now(),
+    })
+    prefetched.add(rscUrl)
+
+    expect(consumePrefetchResponse(rscUrl, null, 'slot:nav:/')).toBeNull()
+    expect(cache.has(rscUrl)).toBe(false)
+    expect(prefetched.has(rscUrl)).toBe(false)
+  })
+
+  it('keeps learning-only prefetch responses out of navigation consumption', () => {
+    const cache = getPrefetchCache()
+    const prefetched = getPrefetchedUrls()
+    const rscUrl = '/blog/hello.rsc'
+
+    cache.set(rscUrl, {
+      cacheForNavigation: false,
+      outcome: 'cache-seeded',
+      snapshot: {
+        buffer: new TextEncoder().encode('flight').buffer,
+        contentType: 'text/x-component',
+        mountedSlotsHeader: null,
+        paramsHeader: null,
+        url: rscUrl,
+      },
+      timestamp: Date.now(),
+    })
+    prefetched.add(rscUrl)
+
+    expect(consumePrefetchResponse(rscUrl, null, null)).toBeNull()
+    expect(cache.has(rscUrl)).toBe(true)
+    expect(prefetched.has(rscUrl)).toBe(true)
+  })
+
+  it('derives the interception context from the current pathname', () => {
+    ;(globalThis as any).window.location.pathname = '/feed'
+
+    expect(getCurrentInterceptionContext()).toBe('/feed')
+  })
+
+  it('allows separate interception-context entries for the same RSC URL', () => {
+    storePrefetchResponse('/photos/42.rsc', new Response('feed'), '/feed')
+    storePrefetchResponse('/photos/42.rsc', new Response('gallery'), '/gallery')
+
+    const feedKey = AppElementsWire.encodeCacheKey('/photos/42.rsc', '/feed')
+    const galleryKey = AppElementsWire.encodeCacheKey('/photos/42.rsc', '/gallery')
+    expect(feedKey).not.toBe(galleryKey)
+    expect(getPrefetchCache().has(feedKey)).toBe(true)
+    expect(getPrefetchCache().has(galleryKey)).toBe(true)
+  })
+
+  it('preserves RSC metadata when replaying cached responses', async () => {
+    const response = new Response('flight', {
+      headers: {
+        'content-type': 'text/x-component',
+        [TEXT_RSC_COMPATIBILITY_ID_HEADER]: 'compat-a',
+        'x-text-params': encodeURIComponent('{"id":"2"}'),
+      },
+    })
+
+    const snapshot = await snapshotRscResponse(response)
+    const restored = restoreRscResponse(snapshot)
+
+    expect(restored.headers.get('content-type')).toBe('text/x-component')
+    expect(restored.headers.get(TEXT_RSC_COMPATIBILITY_ID_HEADER)).toBe('compat-a')
+    expect(restored.headers.get('x-text-params')).toBe(encodeURIComponent('{"id":"2"}'))
+    await expect(restored.text()).resolves.toBe('flight')
+  })
+
+  it('settles router.prefetch as a consumable cache-seeded response without visible navigation', async () => {
+    let resolveResponse!: (response: Response) => void
+    const fetchPromise = new Promise<Response>(resolve => {
+      resolveResponse = resolve
+    })
+    let fetchedUrl: RequestInfo | URL | undefined
+    const fetch = vi.fn((input: RequestInfo | URL) => {
+      fetchedUrl = input
+      return fetchPromise
+    })
+    const navigate = vi.fn()
+    ;(globalThis as any).fetch = fetch
+    ;(globalThis as any).window[Symbol.for('text.navigationRuntime')] = {
+      bootstrap: {
+        routeManifest: null,
+        rsc: undefined,
+      },
+      functions: {
+        navigate,
+      },
+    }
+
+    appRouterInstance.prefetch('/dashboard')
+    await waitForPrefetchSetup(() => fetch.mock.calls.length > 0)
+
+    if (fetchedUrl === undefined) {
+      throw new Error('Expected router.prefetch to fetch an RSC URL')
+    }
+
+    const rscUrl =
+      typeof fetchedUrl === 'string'
+        ? fetchedUrl
+        : fetchedUrl instanceof URL
+          ? fetchedUrl.href
+          : fetchedUrl.url
+    const cacheKey = AppElementsWire.encodeCacheKey(rscUrl, null)
+
+    expect(getPrefetchCache().get(cacheKey)?.outcome).toBe('pending')
+
+    resolveResponse(new Response('flight', { headers: { 'content-type': 'text/x-component' } }))
+    await waitForPrefetchSetup(
+      () =>
+        getPrefetchCache().get(cacheKey)?.outcome === 'cache-seeded' &&
+        getPrefetchCache().get(cacheKey)?.pending === undefined,
+    )
+
+    const entry = getPrefetchCache().get(cacheKey)
+    expect(entry?.outcome).toBe('cache-seeded')
+    expect(entry?.pending).toBeUndefined()
+
+    const consumed = consumePrefetchResponse(rscUrl, null, null)
+    expect(consumed?.mountedSlotsHeader).toBeNull()
+    expect(getPrefetchCache().has(cacheKey)).toBe(false)
+    expect(getPrefetchedUrls().has(cacheKey)).toBe(false)
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('sweeps all expired entries before FIFO', () => {
+    // Use fixed arbitrary values to avoid any dependency on the real wall clock
+    const now = 1_000_000
+    const expired = now - PREFETCH_CACHE_TTL - 1_000 // 31s before `now`
+
+    fillCache(MAX_PREFETCH_CACHE_SIZE, expired)
+    expect(getPrefetchCache().size).toBe(MAX_PREFETCH_CACHE_SIZE)
+    expect(getPrefetchedUrls().size).toBe(MAX_PREFETCH_CACHE_SIZE)
+
+    vi.spyOn(Date, 'now').mockReturnValue(now)
+    storePrefetchResponse('/new.rsc', new Response('new'))
+
+    const cache = getPrefetchCache()
+    expect(cache.size).toBe(1)
+    expect(cache.has('/new.rsc')).toBe(true)
+    // All evicted entries should be removed from prefetched URL set
+    expect(getPrefetchedUrls().size).toBe(0)
+  })
+
+  it('falls back to FIFO when all entries are fresh', () => {
+    // Use fixed arbitrary values to avoid any dependency on the real wall clock
+    const now = 1_000_000
+
+    fillCache(MAX_PREFETCH_CACHE_SIZE, now)
+    expect(getPrefetchCache().size).toBe(MAX_PREFETCH_CACHE_SIZE)
+    expect(getPrefetchedUrls().size).toBe(MAX_PREFETCH_CACHE_SIZE)
+
+    vi.spyOn(Date, 'now').mockReturnValue(now)
+    storePrefetchResponse('/new.rsc', new Response('new'))
+
+    const cache = getPrefetchCache()
+    // FIFO evicted one, new one added → still at capacity
+    expect(cache.size).toBe(MAX_PREFETCH_CACHE_SIZE)
+    expect(cache.has('/new.rsc')).toBe(true)
+    // First inserted entry should be evicted
+    expect(cache.has('/page-0.rsc')).toBe(false)
+    // Second entry should survive
+    expect(cache.has('/page-1.rsc')).toBe(true)
+    // FIFO-evicted entry should be removed from prefetched URL set
+    expect(getPrefetchedUrls().size).toBe(MAX_PREFETCH_CACHE_SIZE - 1)
+    expect(getPrefetchedUrls().has('/page-0.rsc')).toBe(false)
+  })
+
+  it('sweeps only expired entries when cache has a mix', () => {
+    // Use fixed arbitrary values to avoid any dependency on the real wall clock
+    const now = 1_000_000
+    const expired = now - PREFETCH_CACHE_TTL - 1_000
+
+    const half = Math.floor(MAX_PREFETCH_CACHE_SIZE / 2)
+    const rest = MAX_PREFETCH_CACHE_SIZE - half
+
+    fillCache(half, expired, '/expired-')
+    fillCache(rest, now, '/fresh-')
+    expect(getPrefetchCache().size).toBe(MAX_PREFETCH_CACHE_SIZE)
+    expect(getPrefetchedUrls().size).toBe(MAX_PREFETCH_CACHE_SIZE)
+
+    vi.spyOn(Date, 'now').mockReturnValue(now)
+    storePrefetchResponse('/new.rsc', new Response('new'))
+
+    const cache = getPrefetchCache()
+    // expired swept, fresh kept, 1 new added
+    expect(cache.size).toBe(rest + 1)
+    expect(cache.has('/new.rsc')).toBe(true)
+
+    // All expired entries should be gone
+    for (let i = 0; i < half; i++) {
+      expect(cache.has(`/expired-${i}.rsc`)).toBe(false)
+    }
+    // All fresh entries should survive
+    for (let i = 0; i < rest; i++) {
+      expect(cache.has(`/fresh-${i}.rsc`)).toBe(true)
+    }
+    // Only fresh entries remain in prefetched URL set
+    expect(getPrefetchedUrls().size).toBe(rest)
+  })
+
+  it('does not sweep when cache is below capacity', () => {
+    // Use fixed arbitrary values to avoid any dependency on the real wall clock
+    const now = 1_000_000
+    const expired = now - PREFETCH_CACHE_TTL - 1_000
+
+    const belowCapacity = MAX_PREFETCH_CACHE_SIZE - 1
+    fillCache(belowCapacity, expired)
+
+    vi.spyOn(Date, 'now').mockReturnValue(now)
+    storePrefetchResponse('/new.rsc', new Response('new'))
+
+    const cache = getPrefetchCache()
+    // Below capacity — no eviction, all entries kept + 1 new
+    expect(cache.size).toBe(belowCapacity + 1)
+    // storePrefetchResponse only manages the prefetch cache — the caller
+    // (router.prefetch()) is responsible for adding to prefetchedUrls. So
+    // the new entry (/new.rsc) is NOT in prefetchedUrls here, and the count
+    // stays at belowCapacity (no evictions triggered).
+    expect(getPrefetchedUrls().size).toBe(belowCapacity)
+  })
+})

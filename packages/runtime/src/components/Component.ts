@@ -15,7 +15,9 @@ import {
 import { withParentContextProps } from '../context'
 import { resolveCurrentRuntimeComponent } from '../component-registry'
 
+/** <Component> 动态组件属性。 */
 export interface DynamicComponentProps extends PropsWithChildren<Record<string, unknown>> {
+  /** 目标标签名、已注册组件名或组件函数。 */
   is?: string | ComponentInstance<any> | null
 }
 
@@ -66,6 +68,7 @@ const splitForwardedProps = (props: DynamicComponentProps): ForwardedComponentIn
   }
 }
 
+/** 根据 is 属性动态渲染原生标签或已注册组件。 */
 export const Component: FC<DynamicComponentProps> = props => {
   const resolvedType = resolveDynamicComponentType(props.is)
 

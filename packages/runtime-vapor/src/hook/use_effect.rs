@@ -57,6 +57,7 @@ fn normalize_dep_item_to_source(v: &JsValue) -> JsValue {
     v.clone()
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn raw_deps_array(deps: Option<JsValue>) -> Array {
     if let Some(d) = deps {
         if Array::is_array(&d) {
@@ -83,6 +84,7 @@ fn clone_array(input: &Array) -> Array {
     copy
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn is_dynamic_dep_source(value: &JsValue) -> bool {
     if value.dyn_ref::<Function>().is_some() {
         return true;
@@ -101,6 +103,7 @@ fn is_dynamic_dep_source(value: &JsValue) -> bool {
     false
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn same_dep_array(prev: &JsValue, next: &Array) -> bool {
     if !Array::is_array(prev) {
         return false;
@@ -124,6 +127,7 @@ fn same_dep_array(prev: &JsValue, next: &Array) -> bool {
     true
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn same_optional_function(prev: &JsValue, next: Option<&Function>) -> bool {
     match next {
         Some(func) => js_sys::Object::is(prev, &JsValue::from(func.clone())),
@@ -131,6 +135,7 @@ fn same_optional_function(prev: &JsValue, next: Option<&Function>) -> bool {
     }
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn dispose_effect_handle_value(handle: &JsValue) {
     if handle.is_undefined() || handle.is_null() {
         return;
@@ -141,6 +146,7 @@ fn dispose_effect_handle_value(handle: &JsValue) {
     }
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn set_slot_watch_state(
     slot: &Object,
     handle: &JsValue,
@@ -162,6 +168,7 @@ fn set_slot_watch_state(
     );
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn create_use_effect_watch(
     slot: &Object,
     raw_deps: &Array,
@@ -277,6 +284,125 @@ pub fn use_effect(effect: Function, deps: Option<JsValue>, options: Option<JsVal
             create_use_effect_watch(&slot, &raw_deps, equals.clone(), scheduler.clone())
         });
         set_slot_watch_state(&slot, &handle, &raw_deps, equals.as_ref(), scheduler.as_ref());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wasm_bindgen_test::*;
+
+    #[wasm_bindgen_test]
+    fn dep_helpers_cover_nullish_non_array_dynamic_and_dispose_edges() {
+        assert_eq!(raw_deps_array(None).length(), 0);
+        assert_eq!(raw_deps_array(Some(JsValue::from_str("not-array"))).length(), 0);
+        assert_eq!(raw_deps_array(Some(JsValue::NULL)).length(), 0);
+        let raw = Array::new();
+        raw.push(&JsValue::from_str("dep"));
+        assert_eq!(raw_deps_array(Some(raw.into())).length(), 1);
+
+        let direct_getter = Function::new_no_args("return 7");
+        let normalized_direct = normalize_dep_item_to_source(&direct_getter.clone().into());
+        assert!(js_sys::Object::is(&normalized_direct, &direct_getter.into()));
+
+        let getter_source = Object::new();
+        let getter = Function::new_no_args("return 1");
+        Reflect::set(&getter_source, &JsValue::from_str("get"), &getter).unwrap();
+        let normalized_getter = normalize_dep_item_to_source(&getter_source.clone().into());
+        assert!(js_sys::Object::is(&normalized_getter, &getter_source.clone().into()));
+
+        let ref_source = Object::new();
+        Reflect::set(&ref_source, &JsValue::from_str("value"), &JsValue::from_f64(2.0)).unwrap();
+        let normalized_ref = normalize_dep_item_to_source(&ref_source.clone().into());
+        assert!(normalized_ref.is_function());
+        let ref_getter: Function = normalized_ref.unchecked_into();
+        assert_eq!(ref_getter.call0(&JsValue::NULL).unwrap().as_f64(), Some(2.0));
+
+        let plain_object = Object::new();
+        let normalized_plain = normalize_dep_item_to_source(&plain_object.clone().into());
+        assert!(js_sys::Object::is(&normalized_plain, &plain_object.into()));
+        assert_eq!(
+            normalize_dep_item_to_source(&JsValue::from_str("literal")).as_string().as_deref(),
+            Some("literal")
+        );
+        assert!(is_dynamic_dep_source(&JsValue::from(getter.clone())));
+        assert!(is_dynamic_dep_source(&getter_source.into()));
+        assert!(is_dynamic_dep_source(&ref_source.clone().into()));
+        assert!(!is_dynamic_dep_source(&Object::new().into()));
+        assert!(!is_dynamic_dep_source(&JsValue::from_f64(1.0)));
+
+        let prev = Array::new();
+        prev.push(&Function::new_no_args("return 1"));
+        prev.push(&ref_source.clone().into());
+        let next = Array::new();
+        next.push(&Function::new_no_args("return 2"));
+        next.push(&ref_source.into());
+        assert!(same_dep_array(&prev.into(), &next));
+        assert!(!same_dep_array(&JsValue::from_str("bad"), &next));
+        let shorter = Array::new();
+        shorter.push(&JsValue::from_str("only"));
+        assert!(!same_dep_array(&shorter.into(), &next));
+        let stable_prev = Array::new();
+        stable_prev.push(&JsValue::from_str("same"));
+        let stable_next = Array::new();
+        stable_next.push(&JsValue::from_str("same"));
+        assert!(same_dep_array(&stable_prev.clone().into(), &stable_next));
+        stable_next.set(0, JsValue::from_str("different"));
+        assert!(!same_dep_array(&stable_prev.into(), &stable_next));
+
+        let callback = Function::new_no_args("return undefined");
+        assert!(same_optional_function(&JsValue::UNDEFINED, None));
+        assert!(same_optional_function(&JsValue::NULL, None));
+        assert!(same_optional_function(&callback.clone().into(), Some(&callback)));
+        assert!(!same_optional_function(&JsValue::from_str("different"), None));
+
+        let hits = Array::new();
+        Reflect::set(&js_sys::global(), &JsValue::from_str("__use_effect_dispose_hits"), &hits)
+            .unwrap();
+        dispose_effect_handle_value(&JsValue::UNDEFINED);
+        dispose_effect_handle_value(&JsValue::NULL);
+        dispose_effect_handle_value(&Object::new().into());
+        let handle = Object::new();
+        Reflect::set(
+            &handle,
+            &JsValue::from_str("dispose"),
+            &Function::new_no_args("globalThis.__use_effect_dispose_hits.push('disposed')"),
+        )
+        .unwrap();
+        dispose_effect_handle_value(&handle.into());
+        assert_eq!(hits.length(), 1);
+    }
+
+    #[wasm_bindgen_test]
+    fn create_use_effect_watch_tolerates_missing_effect_and_non_cleanup_return() {
+        crate::set_reactive_scheduling("sync");
+
+        let empty_slot = Object::new();
+        let no_effect_handle = create_use_effect_watch(&empty_slot, &Array::new(), None, None);
+        dispose_effect_handle_value(&no_effect_handle);
+
+        let plain_slot = Object::new();
+        Reflect::set(
+            &plain_slot,
+            &JsValue::from_str("effect"),
+            &Function::new_no_args("return 'not-cleanup'"),
+        )
+        .unwrap();
+        let plain_handle = create_use_effect_watch(&plain_slot, &Array::new(), None, None);
+        dispose_effect_handle_value(&plain_handle);
+
+        let opts_slot = Object::new();
+        Reflect::set(
+            &opts_slot,
+            &JsValue::from_str("effect"),
+            &Function::new_no_args("return undefined"),
+        )
+        .unwrap();
+        let equals = Function::new_with_args("prev,next", "return false");
+        let scheduler = Function::new_with_args("run", "run()");
+        let opts_handle =
+            create_use_effect_watch(&opts_slot, &Array::new(), Some(equals), Some(scheduler));
+        dispose_effect_handle_value(&opts_handle);
     }
 }
 

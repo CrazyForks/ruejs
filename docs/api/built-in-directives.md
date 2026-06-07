@@ -1,237 +1,497 @@
 # 内置指令 {#built-in-directives}
 
-Rue 使用 JSX/TSX 作为主要模板语法，因此大多数 Vue 的模板指令在 Rue 中通过 JSX 表达式或 JavaScript 逻辑实现。以下是 Rue 中对应的实现方式：
+Rue 使用 JSX/TSX 作为主要模板语法，同时在编译阶段支持一组面向 JSX 的内置指令。大多数指令都同时提供 `v-` 和 `r-` 前缀，两者语义相同：`v-` 方便迁移 Vue 心智模型，`r-` 更贴近 Rue 命名。
 
-## 文本渲染 {#text-rendering}
-
-在 JSX 中直接渲染文本：
+指令值可以使用 JSX 表达式，也可以在部分指令上使用字符串表达式：
 
 ```tsx
-// 直接渲染
-<span>{msg}</span>
+<div v-if={ready.value}>Ready</div>
+<div r-if="ready.value">Ready</div>
 ```
 
-## 原始 HTML {#raw-html}
+::: tip
+如果你更习惯原生 JSX，也可以继续使用三元表达式、`Array.map()`、`onClick`、`value/onInput` 等写法。下面每个指令都会优先展示 Rue 指令写法，并在需要时补充 JSX 等价写法。
+:::
 
-使用 `dangerouslySetInnerHTML` 属性：
+## `v-text` / `r-text` {#v-text}
+
+更新元素的文本内容。`v-text` / `r-text` 会替换元素内部子节点。
 
 ```tsx
-<div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+import { ref } from '@rue-js/rue'
+
+const title = ref('Rue 文本指令')
+const status = ref('等待同步')
+
+export default function Demo() {
+  return (
+    <section>
+      <h2 v-text="title.value"></h2>
+      <p r-text={status.value}></p>
+    </section>
+  )
+}
+```
+
+JSX 等价写法：
+
+```tsx
+<h2>{title.value}</h2>
+<p>{status.value}</p>
+```
+
+## `v-html` / `r-html` {#v-html}
+
+更新元素的 HTML 内容。`v-html` / `r-html` 会被编译为 `dangerouslySetInnerHTML`。
+
+```tsx
+import { ref } from '@rue-js/rue'
+
+const articleHtml = ref('<strong>草稿</strong><span> 文档仍在编辑中。</span>')
+const badgeHtml = ref('<strong>Pro</strong><span> 专业版在线</span>')
+
+export default function Demo() {
+  return (
+    <section>
+      <div v-html="articleHtml.value" className="alert alert-info"></div>
+      <p r-html={badgeHtml.value} className="badge badge-success"></p>
+    </section>
+  )
+}
+```
+
+JSX 等价写法：
+
+```tsx
+<div dangerouslySetInnerHTML={{ __html: articleHtml.value }} />
 ```
 
 ::: warning 安全提示
-在您的网站上动态渲染任意 HTML 可能非常危险，因为它很容易导致 [XSS 攻击](https://en.wikipedia.org/wiki/Cross-site_scripting)。仅在受信任的内容上使用原始 HTML，**绝不**在用户提供的内容上使用。
+动态渲染任意 HTML 可能导致 [XSS 攻击](https://en.wikipedia.org/wiki/Cross-site_scripting)。只在受信任内容上使用 `v-html` / `r-html`，不要渲染未经处理的用户输入。
 :::
 
-## 条件渲染 {#conditional-rendering}
+## `v-show` / `r-show` {#v-show}
 
-使用 JavaScript 条件表达式：
+根据表达式切换元素的 `display`，但不会销毁节点，适合频繁显示/隐藏且需要保留 DOM 状态的内容。
 
 ```tsx
-// v-if / v-else-if / v-else
-<div>
-  {type === 'A' ? (
-    <span>A</span>
-  ) : type === 'B' ? (
-    <span>B</span>
-  ) : type === 'C' ? (
-    <span>C</span>
+import { ref } from '@rue-js/rue'
+
+const showChart = ref(true)
+const showNotice = ref(false)
+
+export default function Demo() {
+  return (
+    <section>
+      <div v-show={showChart.value} className="panel">
+        图表面板
+      </div>
+
+      <p r-show={showNotice.value} className="notice">
+        通知内容
+      </p>
+    </section>
+  )
+}
+```
+
+JSX 等价写法：
+
+```tsx
+<div style={{ display: showChart.value ? undefined : 'none' }}>图表面板</div>
+```
+
+## `v-if` / `r-if` {#v-if}
+
+根据表达式决定是否渲染当前元素。`v-if` / `r-if` 会创建条件分支，不满足条件时不会保留对应节点。
+
+```tsx
+import { ref } from '@rue-js/rue'
+
+const phase = ref<'draft' | 'review' | 'published'>('draft')
+const plan = ref<'pro' | 'basic' | 'offline'>('pro')
+
+export default function Demo() {
+  return (
+    <section>
+      <div v-if={phase.value === 'draft'} className="alert alert-info">
+        草稿中
+      </div>
+
+      <p r-if={plan.value === 'pro'} className="badge badge-success">
+        专业版在线
+      </p>
+    </section>
+  )
+}
+```
+
+完整交互示例见 [`v-if / r-if` 指令页面](/jsx/v-if-r-if)。
+
+## `v-else-if` / `r-else-if` {#v-else-if}
+
+用于紧跟在 `v-if` / `r-if` 后的条件分支。中间只能有空白文本，不能插入其他节点或表达式。
+
+```tsx
+<section>
+  <div v-if={phase.value === 'draft'} className="alert alert-info">
+    草稿中
+  </div>
+  <div v-else-if={phase.value === 'review'} className="alert alert-warning">
+    审核中
+  </div>
+  <div v-else className="alert alert-success">
+    已发布
+  </div>
+
+  <p r-if={plan.value === 'pro'} className="badge badge-success">
+    专业版在线
+  </p>
+  <p r-else-if={plan.value === 'basic'} className="badge badge-info">
+    标准版在线
+  </p>
+  <p r-else className="badge badge-error">
+    当前离线
+  </p>
+</section>
+```
+
+JSX 等价写法：
+
+```tsx
+{
+  phase.value === 'draft' ? (
+    <div>草稿中</div>
+  ) : phase.value === 'review' ? (
+    <div>审核中</div>
   ) : (
-    <span>Not A/B/C</span>
-  )}
-</div>
-
-// v-show (使用 CSS display)
-<div style={{ display: shouldShow ? 'block' : 'none' }}>
-  条件显示的内容
-</div>
+    <div>已发布</div>
+  )
+}
 ```
 
-## 列表渲染 {#list-rendering}
+## `v-else` / `r-else` {#v-else}
 
-使用 JavaScript 的 `map` 方法：
+用于 `v-if` / `r-if` 条件链的兜底分支，不需要传入值。
 
 ```tsx
-// v-for 替代
+<div v-if={ready.value}>Ready</div>
+<div v-else>Loading</div>
+
+<div r-if={online.value}>Online</div>
+<div r-else>Offline</div>
+```
+
+## `v-for` / `r-for` {#v-for}
+
+遍历数组、对象或数字范围。表达式沿用 `item in source`、`(item, index) in source`、`(value, key) in object` 这类写法。
+
+::: tip
+`v-for` / `r-for` 的局部变量由 Rue 编译转换引入。如果你的 TypeScript 检查流程直接读取转换前源码，可能需要在示例文件中临时使用 `// @ts-nocheck`。
+:::
+
+```tsx
+import { ref } from '@rue-js/rue'
+
+const fruits = ref([
+  { id: 1, name: 'Apple' },
+  { id: 2, name: 'Banana' },
+  { id: 3, name: 'Cherry' },
+])
+
+const meta = {
+  framework: 'Rue',
+  renderer: 'Vapor',
+}
+
+const count = ref(3)
+
+export default function Demo() {
+  return (
+    <section>
+      <ul>
+        <li v-for="(item, index) in fruits.value" key={item.id}>
+          {index + 1}. {item.name}
+        </li>
+      </ul>
+
+      <span r-for="(value, key) in meta" key={key}>
+        {key}: {value}
+      </span>
+
+      <span v-for="step in count.value" key={step}>
+        Step {step}
+      </span>
+    </section>
+  )
+}
+```
+
+JSX 等价写法：
+
+```tsx
 <ul>
-  {items.map(item => (
-    <li key={item.id}>{item.text}</li>
+  {fruits.value.map((item, index) => (
+    <li key={item.id}>
+      {index + 1}. {item.name}
+    </li>
   ))}
 </ul>
-
-// 带索引
-<ul>
-  {items.map((item, index) => (
-    <li key={item.id}>{index}: {item.text}</li>
-  ))}
-</ul>
 ```
 
-## 事件处理 {#event-handling}
+完整交互示例见 [`v-for / r-for` 指令页面](/jsx/v-for-r-for)。
 
-使用标准 JSX 事件属性：
+## `v-on` / `r-on` {#v-on}
+
+绑定事件监听器。可以使用命名空间写法 `v-on:click`，也可以使用安全属性名写法 `v-on:click-stop-prevent` / `r-on:input`。
 
 ```tsx
-// 基础事件处理
-<button onClick={handleClick}>点击我</button>
+import { ref } from '@rue-js/rue'
 
-// 带参数
-<button onClick={() => handleClick('hello')}>点击我</button>
+const count = ref(0)
+const keyword = ref('')
 
-// 事件对象
-<button onClick={(e) => handleClick(e)}>点击我</button>
+function increment() {
+  count.value += 1
+}
 
-// 阻止默认行为
-<button onClick={(e) => {
-  e.preventDefault()
-  handleClick()
-}}>提交</button>
+function updateKeyword(event: Event) {
+  keyword.value = (event.target as HTMLInputElement).value
+}
 
-// 停止冒泡
-<button onClick={(e) => {
-  e.stopPropagation()
-  handleClick()
-}}>点击</button>
+export default function Demo() {
+  return (
+    <section>
+      <button v-on:click="increment">点击 {count.value}</button>
 
-// 键盘事件
-<input onKeyUp={(e) => {
-  if (e.key === 'Enter') {
-    handleEnter()
-  }
-}} />
+      <input value={keyword.value} r-on:input="updateKeyword($event)" />
+
+      <a href="/submit" v-on:click-stop-prevent="increment">
+        阻止跳转并计数
+      </a>
+    </section>
+  )
+}
 ```
 
-## 属性绑定 {#attribute-binding}
-
-使用 JSX 展开语法或单独属性：
+常用修饰符可以直接写在指令名上：
 
 ```tsx
-// 基础绑定
-<a href={linkHref}>查看详情</a>
+<button v-on:click-once="submit" />
+<div v-on:click-self="selectPanel" />
+<input v-on:keyup-enter="submit" />
+<button r-on:click-meta-exact="openCommandMenu" />
+```
 
-// 动态属性名
-<button {...{ [dynamicKey]: value }}>点击</button>
+JSX 等价写法：
 
-// 类绑定
-<div className={isActive ? 'active' : ''} />
-<div className={`base-class ${isActive ? 'active' : ''}`} />
-<div className={['base', isActive && 'active'].filter(Boolean).join(' ')} />
+```tsx
+<button onClick={increment}>点击 {count.value}</button>
+<input value={keyword.value} onInput={updateKeyword} />
+```
 
-// 样式绑定
-<div style={{ color: 'red', fontSize: size + 'px' }} />
-<div style={styleObject} />
+完整交互示例见 [`v-on / r-on` 指令页面](/jsx/v-on-r-on)。
 
-// 绑定对象
-<div {...{ id: someProp, 'data-custom': otherProp }} />
+## `v-bind` {#v-bind}
 
-// 传递所有 props
+在 Rue TSX 中，动态属性通常直接使用 JSX 表达式或展开语法，不需要额外的 `v-bind`。
+
+```tsx
+<a href={linkHref.value}>查看详情</a>
+<button {...{ [dynamicKey.value]: dynamicValue.value }}>点击</button>
+<div className={isActive.value ? 'active' : ''} />
+<div style={{ color: 'red', fontSize: `${size.value}px` }} />
 <ChildComponent {...props} />
 ```
 
-## 双向绑定 {#two-way-binding}
+## `v-model` / `r-model` {#v-model}
 
-使用受控组件模式：
-
-```tsx
-import { useState } from '@rue-js/rue'
-
-// 输入框
-const [value, setValue] = useState('')
-<input
-  value={value}
-  onChange={(e) => setValue(e.target.value)}
-/>
-
-// 复选框
-const [checked, setChecked] = useState(false)
-<input
-  type="checkbox"
-  checked={checked}
-  onChange={(e) => setChecked(e.target.checked)}
-/>
-
-// 选择框
-const [selected, setSelected] = useState('')
-<select value={selected} onChange={(e) => setSelected(e.target.value)}>
-  <option value="a">A</option>
-  <option value="b">B</option>
-</select>
-
-// 文本域
-<textarea
-  value={content}
-  onChange={(e) => setContent(e.target.value)}
-/>
-```
-
-## 渲染一次 {#render-once}
-
-使用 `useMemo` 或常量：
+在原生表单元素或组件上创建双向绑定。原生输入会被编译为对应的 `value` / `checked` 与输入事件；组件会被编译为 `modelValue` / `onUpdateModelValue` 或带参数的 prop 组合。
 
 ```tsx
-import { useMemo } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 
-// 使用 useMemo 缓存内容
-const staticContent = useMemo(
-  () => (
-    <div>
-      <h1>Comment</h1>
-      <p>{msg}</p>
-    </div>
-  ),
-  [],
-)
+const message = ref('Rue model')
+const trimmed = ref(' keep edges tidy ')
+const age = ref<string | number>('18')
+const accepted = ref(false)
+const title = ref('Guide draft')
 
-// 或者直接在组件外部定义
-const staticMessage = <span>This will never change: {initialMsg}</span>
-```
-
-## 备忘优化 {#memo-optimization}
-
-使用 `memo` 或 `useMemo`：
-
-```tsx
-import { memo, useMemo } from '@rue-js/rue'
-
-// 组件级别的 memo
-const MemoizedComponent = memo(({ valueA, valueB }) => {
+export default function Demo() {
   return (
-    <div>
-      {valueA} - {valueB}
-    </div>
-  )
-})
+    <section>
+      <input v-model={message.value} />
+      <input v-model:trim={trimmed.value} />
+      <input type="number" r-model:number={age.value} />
+      <input type="checkbox" v-model={accepted.value} />
 
-// 内容级别的 memo
-const memoizedContent = useMemo(
-  () => (
-    <div>
-      <p>
-        ID: {item.id} - selected: {item.id === selected}
-      </p>
-      <p>...more child nodes</p>
-    </div>
-  ),
-  [item.id, selected],
-)
+      <ModelField v-model={title.value} />
+    </section>
+  )
+}
 ```
 
-## 原始 Vue 指令参考 {#original-vue-directives}
+带参数和多个 model：
 
-以下 Vue 模板指令在 Rue 的 JSX/TSX 中有等效实现：
+```tsx
+<TitleField v-model:trim-title={articleTitle.value} />
 
-| Vue 指令          | Rue JSX 实现                |
-| ----------------- | --------------------------- |
-| `v-text`          | `{text}` 表达式             |
-| `v-html`          | `dangerouslySetInnerHTML`   |
-| `v-show`          | CSS `display` 属性          |
-| `v-if` / `v-else` | 三元运算符或 `&&` 运算符    |
-| `v-for`           | `Array.map()`               |
-| `v-on`            | `onEvent` 属性              |
-| `v-bind`          | `{}` 表达式或展开运算符     |
-| `v-model`         | 受控组件模式                |
-| `v-slot`          | 组件的子元素或 render props |
-| `v-pre`           | 无需等效（JSX 按原样编译）  |
-| `v-once`          | `useMemo` 或组件外部的常量  |
-| `v-memo`          | `memo` 或 `useMemo`         |
-| `v-cloak`         | 无需等效（JSX 已编译）      |
+<UserNameEditor
+  v-model:trim-first-name={firstName.value}
+  v-model:lazy-last-name={lastName.value}
+/>
+```
+
+JSX 等价写法：
+
+```tsx
+<input
+  value={message.value}
+  onInput={event => {
+    message.value = (event.target as HTMLInputElement).value
+  }}
+/>
+
+<ModelField
+  modelValue={title.value}
+  onUpdateModelValue={value => {
+    title.value = value
+  }}
+/>
+```
+
+完整交互示例见 [`v-model / r-model` 指令页面](/jsx/v-model-r-model)。
+
+## `v-slot` {#v-slot}
+
+Rue 组件通常通过 JSX 子元素、render props 或显式的 `slot` 属性表达插槽内容。对于 TSX，优先使用组件约定，而不是 Vue SFC 风格的 `v-slot`。
+
+```tsx
+<Panel>
+  <h2 slot="header">标题</h2>
+  <p>默认内容</p>
+  <button slot="footer">确认</button>
+</Panel>
+```
+
+使用 render props 时：
+
+```tsx
+<DataProvider>{({ data }) => <pre>{JSON.stringify(data, null, 2)}</pre>}</DataProvider>
+```
+
+## `v-pre` / `r-pre` {#v-pre}
+
+跳过当前元素及其子树中的 Rue 指令改写，用于展示原始指令片段或保留一段不会参与指令编译的 JSX。
+
+```tsx
+import { ref } from '@rue-js/rue'
+
+const phase = ref<'draft' | 'published'>('draft')
+const plan = ref<'pro' | 'basic'>('pro')
+
+export default function Demo() {
+  return (
+    <section>
+      <div v-pre>
+        <span v-if={phase.value === 'draft'}>{'{{ phase.value }}'}</span>
+      </div>
+
+      <div r-pre>
+        <span r-if={plan.value === 'pro'}>{'{{ plan.value }}'}</span>
+      </div>
+    </section>
+  )
+}
+```
+
+完整交互示例见 [`v-pre / r-pre` 指令页面](/jsx/v-pre-r-pre)。
+
+## `v-once` / `r-once` {#v-once}
+
+只渲染一次当前元素内容，后续响应式更新不会重新计算这段子树。
+
+```tsx
+import { ref } from '@rue-js/rue'
+
+const message = ref('首次渲染')
+const count = ref(0)
+
+export default function Demo() {
+  return (
+    <section>
+      <span v-once>{message.value}</span>
+      <strong r-once>count: {count.value}</strong>
+    </section>
+  )
+}
+```
+
+JSX 等价写法通常是把静态内容提升到组件外部，或根据场景使用缓存：
+
+```tsx
+const staticMessage = <span>This will never change</span>
+```
+
+完整交互示例见 [`v-once / r-once` 指令页面](/jsx/v-once-r-once)。
+
+## `v-memo` / `r-memo` {#v-memo}
+
+根据依赖数组缓存一段子树。只有依赖变化时，这段子树才会重新计算。
+
+```tsx
+import { ref } from '@rue-js/rue'
+
+const selectedId = ref(1)
+const refreshCount = ref(0)
+const rows = [
+  { id: 1, name: 'Alpha' },
+  { id: 2, name: 'Beta' },
+]
+
+export default function Demo() {
+  return (
+    <section>
+      {rows.map(row => (
+        <div key={row.id} v-memo={[row.id === selectedId.value]}>
+          <span>{row.name}</span>
+          <span>selected: {row.id === selectedId.value ? 'yes' : 'no'}</span>
+          <span>refresh: {refreshCount.value}</span>
+        </div>
+      ))}
+
+      <p r-memo={[selectedId.value]}>selected id: {selectedId.value}</p>
+    </section>
+  )
+}
+```
+
+完整交互示例见 [`v-memo / r-memo` 指令页面](/jsx/v-memo-r-memo)。
+
+## `v-cloak` {#v-cloak}
+
+Rue 使用编译后的 JSX/TSX 运行，通常不需要 `v-cloak`。如果应用有自定义的首屏隐藏需求，可以用普通属性和 CSS 自行控制：
+
+```tsx
+<div data-cloak={hydrated.value ? undefined : ''}>{content.value}</div>
+```
+
+## 指令速查 {#directive-reference}
+
+| 指令                      | Rue TSX 写法                                       | JSX 等价写法                                                      |
+| ------------------------- | -------------------------------------------------- | ----------------------------------------------------------------- |
+| `v-text` / `r-text`       | `<span v-text="msg.value" />`                      | `<span>{msg.value}</span>`                                        |
+| `v-html` / `r-html`       | `<div r-html={html.value} />`                      | `<div dangerouslySetInnerHTML={{ __html: html.value }} />`        |
+| `v-show` / `r-show`       | `<div v-show={visible.value} />`                   | `<div style={{ display: visible.value ? undefined : 'none' }} />` |
+| `v-if` / `r-if`           | `<div v-if={ok.value}>OK</div>`                    | `{ok.value ? <div>OK</div> : null}`                               |
+| `v-else-if` / `r-else-if` | `<div v-else-if={pending.value}>Pending</div>`     | 三元表达式的中间分支                                              |
+| `v-else` / `r-else`       | `<div v-else>Fallback</div>`                       | 三元表达式的兜底分支                                              |
+| `v-for` / `r-for`         | `<li v-for="item in items.value" key={item.id} />` | `items.value.map(item => <li key={item.id} />)`                   |
+| `v-on` / `r-on`           | `<button v-on:click="save" />`                     | `<button onClick={save} />`                                       |
+| `v-bind`                  | 直接使用 JSX 表达式                                | `<a href={url.value} />`                                          |
+| `v-model` / `r-model`     | `<input v-model={text.value} />`                   | `value` + `onInput`                                               |
+| `v-slot`                  | 使用 JSX children / render props                   | `<Panel><div slot="header" /></Panel>`                            |
+| `v-pre` / `r-pre`         | `<div v-pre><span v-if={raw} /></div>`             | 不参与 Rue 指令改写                                               |
+| `v-once` / `r-once`       | `<span v-once>{msg.value}</span>`                  | 静态提升或缓存                                                    |
+| `v-memo` / `r-memo`       | `<div v-memo={[dep.value]} />`                     | 根据依赖缓存子树                                                  |
+| `v-cloak`                 | 通常不需要                                         | 自定义属性 + CSS                                                  |

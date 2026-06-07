@@ -17,82 +17,148 @@ import {
   watch,
 } from '@rue-js/rue'
 
+/** DescriptionsSize 尺寸类型。 */
 export type DescriptionsSize = 'small' | 'default' | 'middle' | 'large' | 'sm' | 'md' | 'lg'
+/** DescriptionsLayout 类型。 */
 export type DescriptionsLayout = 'horizontal' | 'vertical'
+/** DescriptionsBreakpoint 类型。 */
 export type DescriptionsBreakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
+/** DescriptionsResponsiveValue 值类型。 */
 export type DescriptionsResponsiveValue<T> = Partial<Record<DescriptionsBreakpoint, T>>
+/** DescriptionsSpan 类型。 */
 export type DescriptionsSpan = number | 'filled' | DescriptionsResponsiveValue<number>
 
+/** DescriptionsClassNames 局部类名配置。 */
 export interface DescriptionsClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** 头部区域内容。 */
   header?: string
+  /** 标题内容。 */
   title?: string
+  /** 额外操作或补充内容。 */
   extra?: string
+  /** 主体区域配置。 */
   body?: string
+  /** row 配置项。 */
   row?: string
+  /** item 区域配置。 */
   item?: string
+  /** 展示标签。 */
   label?: string
+  /** 主体内容。 */
   content?: string
 }
 
+/** DescriptionsStyles 局部样式配置。 */
 export interface DescriptionsStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** 头部区域内容。 */
   header?: Record<string, any>
+  /** 标题内容。 */
   title?: Record<string, any>
+  /** 额外操作或补充内容。 */
   extra?: Record<string, any>
+  /** 主体区域配置。 */
   body?: Record<string, any>
+  /** row 配置项。 */
   row?: Record<string, any>
+  /** item 区域配置。 */
   item?: Record<string, any>
+  /** 展示标签。 */
   label?: Record<string, any>
+  /** 主体内容。 */
   content?: Record<string, any>
 }
 
+/** DescriptionsItemClassNames 局部类名配置。 */
 export interface DescriptionsItemClassNames {
+  /** item 区域配置。 */
   item?: string
+  /** 展示标签。 */
   label?: string
+  /** 主体内容。 */
   content?: string
 }
 
+/** DescriptionsItemStyles 局部样式配置。 */
 export interface DescriptionsItemStyles {
+  /** item 区域配置。 */
   item?: Record<string, any>
+  /** 展示标签。 */
   label?: Record<string, any>
+  /** 主体内容。 */
   content?: Record<string, any>
 }
 
+/** DescriptionsItemProps 组件属性。 */
 export interface DescriptionsItemProps {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 展示标签。 */
   label?: any
+  /** 组件子内容。 */
   children?: any
+  /** 主体内容。 */
   content?: any
+  /** span 配置项。 */
   span?: DescriptionsSpan
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** labelClassName 附加类名。 */
   labelClassName?: string
+  /** labelStyle 内联样式。 */
   labelStyle?: Record<string, any>
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** contentStyle 内联样式。 */
   contentStyle?: Record<string, any>
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: DescriptionsItemClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: DescriptionsItemStyles
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** DescriptionsProps 组件属性。 */
 export interface DescriptionsProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 标题内容。 */
   title?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** 组件尺寸。 */
   size?: DescriptionsSize
+  /** 组件子内容。 */
   children?: any
+  /** layout 配置项。 */
   layout?: DescriptionsLayout
+  /** colon 配置项。 */
   colon?: boolean
+  /** column 配置项。 */
   column?: number | DescriptionsResponsiveValue<number>
+  /** labelStyle 内联样式。 */
   labelStyle?: Record<string, any>
+  /** contentStyle 内联样式。 */
   contentStyle?: Record<string, any>
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: DescriptionsClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: DescriptionsStyles
+  /** 数据驱动渲染项。 */
   items?: DescriptionsItemProps[]
+  /** 元素或数据项标识。 */
   id?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -118,12 +184,19 @@ interface DescriptionsSizeConfig {
   inlineLayoutClassName: string
 }
 
+/** RUE_COMPONENT_TYPE_KEY 内部常量。 */
 const RUE_COMPONENT_TYPE_KEY = '__rue_component_type'
+/** RUE_SLOT_KEY 内部常量。 */
 const RUE_SLOT_KEY = '__rue_slots'
+/** RUE_PROXY_ATTR 内部常量。 */
 const RUE_PROXY_ATTR = 'data-rue-descriptions-proxy'
+/** RUE_PROXY_LABEL_ATTR 内部常量。 */
 const RUE_PROXY_LABEL_ATTR = 'data-rue-descriptions-proxy-label'
+/** RUE_PROXY_CONTENT_ATTR 内部常量。 */
 const RUE_PROXY_CONTENT_ATTR = 'data-rue-descriptions-proxy-content'
+/** BREAKPOINT_SEQUENCE 内部常量。 */
 const BREAKPOINT_SEQUENCE: DescriptionsBreakpoint[] = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl']
+/** BREAKPOINT_MIN_WIDTH 内部常量。 */
 const BREAKPOINT_MIN_WIDTH: Record<DescriptionsBreakpoint, number> = {
   xs: 0,
   sm: 576,
@@ -135,6 +208,7 @@ const BREAKPOINT_MIN_WIDTH: Record<DescriptionsBreakpoint, number> = {
 const viewportSubscribers = new Set<() => void>()
 const descriptionsProxyMetaMap = new WeakMap<HTMLElement, DescriptionsItemProps>()
 
+/** Descriptions Item 的内部工具函数。 */
 const DescriptionsItem: FC<DescriptionsItemProps> = ({
   key,
   label,
@@ -191,19 +265,23 @@ const DescriptionsItem: FC<DescriptionsItemProps> = ({
   )
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...parts: Array<string | false | null | undefined>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** merge Styles 的内部工具函数。 */
 const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   const next = Object.assign({}, ...parts.filter(part => part && typeof part === 'object'))
   return Object.keys(next).length ? next : undefined
 }
 
+/** 判断 Renderable Node 的内部工具函数。 */
 const isRenderableNode = (value: unknown): value is Record<string, any> => {
   return !!value && typeof value === 'object'
 }
 
+/** 归一化 Children 的内部工具函数。 */
 const normalizeChildren = (children: any, result: any[] = []) => {
   if (children == null || typeof children === 'boolean') return result
   if (typeof children === 'function' && (children as { kind?: unknown }).kind === 'block-factory') {
@@ -222,11 +300,13 @@ const normalizeChildren = (children: any, result: any[] = []) => {
   return result
 }
 
+/** 判断 Responsive Map 的内部工具函数。 */
 const isResponsiveMap = <T,>(value: unknown): value is DescriptionsResponsiveValue<T> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   return Object.keys(value).some(key => BREAKPOINT_SEQUENCE.includes(key as DescriptionsBreakpoint))
 }
 
+/** clamp Positive Integer 的内部工具函数。 */
 const clampPositiveInteger = (value: unknown, fallback: number) => {
   const next = Number(value)
   if (!Number.isFinite(next)) return fallback
@@ -234,15 +314,18 @@ const clampPositiveInteger = (value: unknown, fallback: number) => {
   return normalized || fallback
 }
 
+/** 读取 Viewport Width 的内部工具函数。 */
 const getViewportWidth = () => {
   if (typeof window === 'undefined') return BREAKPOINT_MIN_WIDTH.xl
   return window.innerWidth || document.documentElement?.clientWidth || BREAKPOINT_MIN_WIDTH.xl
 }
 
+/** notify Viewport Subscribers 的内部工具函数。 */
 const notifyViewportSubscribers = () => {
   viewportSubscribers.forEach(notify => notify())
 }
 
+/** subscribe Viewport 的内部工具函数。 */
 const subscribeViewport = (notify: () => void) => {
   if (typeof window === 'undefined') {
     return () => {}
@@ -262,6 +345,7 @@ const subscribeViewport = (notify: () => void) => {
   }
 }
 
+/** 解析 Responsive Value 的内部工具函数。 */
 const resolveResponsiveValue = <T,>(
   value: T | DescriptionsResponsiveValue<T> | undefined,
   width: number,
@@ -279,6 +363,7 @@ const resolveResponsiveValue = <T,>(
   return resolved
 }
 
+/** 解析 Column Count 的内部工具函数。 */
 const resolveColumnCount = (
   column: number | DescriptionsResponsiveValue<number> | undefined,
   width: number,
@@ -287,11 +372,13 @@ const resolveColumnCount = (
   return clampPositiveInteger(resolved ?? 3, 3)
 }
 
+/** 创建 Key Text 的内部工具函数。 */
 const createKeyText = (key: string | number | undefined, index: number) => {
   if (key == null) return `index:${index}`
   return `${typeof key}:${String(key)}`
 }
 
+/** 解析 Item Span 的内部工具函数。 */
 const resolveItemSpan = (span: DescriptionsSpan | undefined, width: number) => {
   if (span === 'filled') {
     return {
@@ -310,6 +397,7 @@ const resolveItemSpan = (span: DescriptionsSpan | undefined, width: number) => {
   }
 }
 
+/** 解析 Default Slot Children 的内部工具函数。 */
 const resolveDefaultSlotChildren = (source: Record<string, unknown>, fallback: any) => {
   const slots = source[RUE_SLOT_KEY]
   if (slots && typeof slots === 'object' && 'default' in (slots as Record<string, unknown>)) {
@@ -321,6 +409,7 @@ const resolveDefaultSlotChildren = (source: Record<string, unknown>, fallback: a
   return fallback
 }
 
+/** collect Child Items 的内部工具函数。 */
 const collectChildItems = (children?: any) => {
   return normalizeChildren(children).flatMap<DescriptionsItemProps>((child, index) => {
     if (!isRenderableNode(child)) return []
@@ -342,6 +431,7 @@ const collectChildItems = (children?: any) => {
   })
 }
 
+/** 归一化 Items 的内部工具函数。 */
 const normalizeItems = (
   items: DescriptionsItemProps[] | undefined,
   children: any,
@@ -360,6 +450,7 @@ const normalizeItems = (
   })
 }
 
+/** group Rows 的内部工具函数。 */
 const groupRows = (items: NormalizedDescriptionsItem[], columnCount: number) => {
   let rows: NormalizedDescriptionsItem[][] = []
   let currentRow: NormalizedDescriptionsItem[] = []
@@ -415,6 +506,7 @@ const groupRows = (items: NormalizedDescriptionsItem[], columnCount: number) => 
   return rows
 }
 
+/** 解析 Size Config 的内部工具函数。 */
 const resolveSizeConfig = (size?: DescriptionsSize): DescriptionsSizeConfig => {
   switch (size) {
     case 'small':
@@ -455,6 +547,7 @@ const resolveSizeConfig = (size?: DescriptionsSize): DescriptionsSizeConfig => {
   }
 }
 
+/** 渲染 Label Content 的内部工具函数。 */
 const renderLabelContent = (
   item: NormalizedDescriptionsItem,
   showColon: boolean,
@@ -509,6 +602,7 @@ const renderLabelContent = (
   }
 }
 
+/** clone Element Children 的内部工具函数。 */
 const cloneElementChildren = (element?: Element | null) => {
   if (!element) return undefined
 
@@ -524,6 +618,7 @@ const cloneElementChildren = (element?: Element | null) => {
   return nodes
 }
 
+/** Descriptions 的内部工具函数。 */
 const Descriptions: FC<DescriptionsProps> = ({
   title,
   extra,
@@ -925,4 +1020,5 @@ const DescriptionsCompound: DescriptionsCompound = Object.assign(Descriptions, {
   Item: DescriptionsItem,
 })
 
+/** 默认导出描述列表组件。 */
 export default DescriptionsCompound

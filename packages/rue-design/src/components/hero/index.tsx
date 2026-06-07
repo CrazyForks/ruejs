@@ -1,6 +1,12 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Hero 模块概述
+- 汇总首屏展示组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 
+/** HeroTone 语义色类型。 */
 export type HeroTone =
   | 'default'
   | 'base-100'
@@ -15,13 +21,21 @@ export type HeroTone =
   | 'warning'
   | 'error'
 
+/** HeroSize 尺寸类型。 */
 export type HeroSize = 'sm' | 'md' | 'lg' | 'xl' | 'screen'
+/** HeroContentLayout 类型。 */
 export type HeroContentLayout = 'inherit' | 'center' | 'split' | 'split-reverse'
+/** HeroAlign 对齐方式类型。 */
 export type HeroAlign = 'start' | 'center' | 'end'
+/** HeroTextAlign 对齐方式类型。 */
 export type HeroTextAlign = 'start' | 'center' | 'end'
+/** HeroGap 类型。 */
 export type HeroGap = 'sm' | 'md' | 'lg' | 'xl'
+/** HeroTitleSize 尺寸类型。 */
 export type HeroTitleSize = 'sm' | 'md' | 'lg' | 'xl'
+/** HeroDescriptionSize 尺寸类型。 */
 export type HeroDescriptionSize = 'sm' | 'md' | 'lg'
+/** HeroOverlayTone 语义色类型。 */
 export type HeroOverlayTone =
   | 'default'
   | 'base-content'
@@ -33,6 +47,7 @@ export type HeroOverlayTone =
   | 'success'
   | 'warning'
   | 'error'
+/** HeroOverlayOpacity 类型。 */
 export type HeroOverlayOpacity = 'soft' | 'medium' | 'strong' | number
 
 interface HeroInlineStyle {
@@ -47,43 +62,71 @@ interface HeroPartProps {
   [key: string]: any
 }
 
+/** HeroProps 组件属性。 */
 export interface HeroProps extends HeroPartProps {
+  /** 组件语义色调。 */
   tone?: HeroTone
+  /** 组件尺寸。 */
   size?: HeroSize
+  /** fullHeight 配置项。 */
   fullHeight?: boolean
+  /** backgroundImage 配置项。 */
   backgroundImage?: string
+  /** backgroundPosition 配置项。 */
   backgroundPosition?: string
+  /** backgroundSize 尺寸。 */
   backgroundSize?: string
+  /** backgroundRepeat 配置项。 */
   backgroundRepeat?: string
+  /** overlay 配置项。 */
   overlay?: boolean | HeroOverlayProps
 }
 
+/** HeroContentProps 组件属性。 */
 export interface HeroContentProps extends HeroPartProps {
+  /** layout 配置项。 */
   layout?: HeroContentLayout
+  /** 交叉轴或内容对齐方式。 */
   align?: HeroAlign
+  /** textAlign 配置项。 */
   textAlign?: HeroTextAlign
+  /** 元素间距。 */
   gap?: HeroGap
 }
 
+/** HeroOverlayProps 组件属性。 */
 export interface HeroOverlayProps extends HeroPartProps {
+  /** 组件语义色调。 */
   tone?: HeroOverlayTone
+  /** opacity 配置项。 */
   opacity?: HeroOverlayOpacity
+  /** blur 配置项。 */
   blur?: boolean
 }
 
+/** HeroTitleProps 组件属性。 */
 export interface HeroTitleProps extends HeroPartProps {
+  /** 组件尺寸。 */
   size?: HeroTitleSize
+  /** balanced 配置项。 */
   balanced?: boolean
 }
 
+/** HeroDescriptionProps 组件属性。 */
 export interface HeroDescriptionProps extends HeroPartProps {
+  /** 组件尺寸。 */
   size?: HeroDescriptionSize
+  /** muted 配置项。 */
   muted?: boolean
 }
 
+/** HeroActionsProps 组件属性。 */
 export interface HeroActionsProps extends HeroPartProps {
+  /** 交叉轴或内容对齐方式。 */
   align?: HeroAlign
+  /** 布局方向。 */
   direction?: 'row' | 'column'
+  /** stackOnMobile 配置项。 */
   stackOnMobile?: boolean
 }
 
@@ -159,10 +202,12 @@ const heroDescriptionSizeClassMap: Record<HeroDescriptionSize, string> = {
   lg: 'text-lg md:text-xl',
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...classNames: Array<string | false | null | undefined>) => {
   return classNames.filter(Boolean).join(' ')
 }
 
+/** merge Style 的内部工具函数。 */
 const mergeStyle = (base?: HeroInlineStyle, extra?: HeroInlineStyle) => {
   if (!base && !extra) {
     return undefined
@@ -173,6 +218,7 @@ const mergeStyle = (base?: HeroInlineStyle, extra?: HeroInlineStyle) => {
   }
 }
 
+/** 解析 Overlay Props 的内部工具函数。 */
 const resolveOverlayProps = (overlay?: boolean | HeroOverlayProps) => {
   if (!overlay) {
     return undefined
@@ -183,6 +229,7 @@ const resolveOverlayProps = (overlay?: boolean | HeroOverlayProps) => {
   return overlay
 }
 
+/** 解析 Overlay Opacity Style 的内部工具函数。 */
 const resolveOverlayOpacityStyle = (opacity?: HeroOverlayOpacity) => {
   if (opacity == null) {
     return undefined
@@ -200,6 +247,7 @@ const resolveOverlayOpacityStyle = (opacity?: HeroOverlayOpacity) => {
   }
 }
 
+/** 解析 Hero Background Style 的内部工具函数。 */
 const resolveHeroBackgroundStyle = ({
   backgroundImage,
   backgroundPosition,
@@ -221,6 +269,7 @@ const resolveHeroBackgroundStyle = ({
   }
 }
 
+/** 解析 Actions Alignment Class 的内部工具函数。 */
 const resolveActionsAlignmentClass = (
   align: HeroAlign | undefined,
   direction: 'row' | 'column',
@@ -262,6 +311,7 @@ const resolveActionsAlignmentClass = (
   }
 }
 
+/** Hero 的内部工具函数。 */
 const Hero: FC<HeroProps> = ({
   as = 'div',
   className,
@@ -303,6 +353,7 @@ const Hero: FC<HeroProps> = ({
   )
 }
 
+/** Content 的内部工具函数。 */
 const Content: FC<HeroContentProps> = ({
   as = 'div',
   className,
@@ -332,6 +383,7 @@ const Content: FC<HeroContentProps> = ({
   )
 }
 
+/** Overlay 的内部工具函数。 */
 const Overlay: FC<HeroOverlayProps> = ({
   as = 'div',
   className,
@@ -360,6 +412,7 @@ const Overlay: FC<HeroOverlayProps> = ({
   )
 }
 
+/** Title 的内部工具函数。 */
 const Title: FC<HeroTitleProps> = ({
   as = 'h1',
   className,
@@ -385,6 +438,7 @@ const Title: FC<HeroTitleProps> = ({
   )
 }
 
+/** Description 的内部工具函数。 */
 const Description: FC<HeroDescriptionProps> = ({
   as = 'p',
   className,
@@ -410,6 +464,7 @@ const Description: FC<HeroDescriptionProps> = ({
   )
 }
 
+/** Actions 的内部工具函数。 */
 const Actions: FC<HeroActionsProps> = ({
   as = 'div',
   className,
@@ -456,4 +511,5 @@ const HeroCompound: HeroCompound = Object.assign(Hero, {
   Actions,
 })
 
+/** 默认导出首屏展示组件。 */
 export default HeroCompound

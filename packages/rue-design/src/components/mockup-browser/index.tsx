@@ -1,59 +1,106 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+MockupBrowser 模块概述
+- 汇总浏览器样机组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 
+/** MockupBrowserAddressBarStatus 状态类型。 */
 export type MockupBrowserAddressBarStatus = 'default' | 'success' | 'warning' | 'error'
+/** MockupBrowserContentPadding 类型。 */
 export type MockupBrowserContentPadding = 'none' | 'sm' | 'md' | 'lg'
 
+/** MockupBrowserProps 组件属性。 */
 export interface MockupBrowserProps {
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** background 配置项。 */
   background?: boolean
+  /** showToolbar 配置项。 */
   showToolbar?: boolean
+  /** url 配置项。 */
   url?: any
+  /** toolbar 配置项。 */
   toolbar?: any
+  /** toolbarStart 配置项。 */
   toolbarStart?: any
+  /** toolbarEnd 配置项。 */
   toolbarEnd?: any
+  /** toolbarClassName 附加类名。 */
   toolbarClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** contentBordered 配置项。 */
   contentBordered?: boolean
+  /** contentBackground 配置项。 */
   contentBackground?: boolean
+  /** contentPadding 配置项。 */
   contentPadding?: MockupBrowserContentPadding
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** MockupBrowserToolbarProps 组件属性。 */
 export interface MockupBrowserToolbarProps {
+  /** start 配置项。 */
   start?: any
+  /** end 配置项。 */
   end?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** MockupBrowserAddressBarProps 组件属性。 */
 export interface MockupBrowserAddressBarProps {
+  /** 链接地址。 */
   href?: string
+  /** 前缀内容。 */
   prefix?: any
+  /** 后缀内容。 */
   suffix?: any
+  /** interactive 配置项。 */
   interactive?: boolean
+  /** 组件状态。 */
   status?: MockupBrowserAddressBarStatus
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** MockupBrowserContentProps 组件属性。 */
 export interface MockupBrowserContentProps {
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** background 配置项。 */
   background?: boolean
+  /** padding 配置项。 */
   padding?: MockupBrowserContentPadding
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...tokens: Array<string | false | null | undefined>) => {
   return tokens.filter(Boolean).join(' ')
 }
 
+/** 解析 Address Bar Status Class 的内部工具函数。 */
 const resolveAddressBarStatusClass = (status: MockupBrowserAddressBarStatus = 'default') => {
   switch (status) {
     case 'success':
@@ -67,6 +114,7 @@ const resolveAddressBarStatusClass = (status: MockupBrowserAddressBarStatus = 'd
   }
 }
 
+/** 解析 Padding Class 的内部工具函数。 */
 const resolvePaddingClass = (padding: MockupBrowserContentPadding = 'none') => {
   switch (padding) {
     case 'sm':
@@ -80,6 +128,7 @@ const resolvePaddingClass = (padding: MockupBrowserContentPadding = 'none') => {
   }
 }
 
+/** Address Bar 的内部工具函数。 */
 const AddressBar: FC<MockupBrowserAddressBarProps> = ({
   href,
   prefix,
@@ -120,6 +169,7 @@ const AddressBar: FC<MockupBrowserAddressBarProps> = ({
   )
 }
 
+/** Content 的内部工具函数。 */
 const Content: FC<MockupBrowserContentProps> = ({
   bordered = true,
   background,
@@ -143,6 +193,7 @@ const Content: FC<MockupBrowserContentProps> = ({
   )
 }
 
+/** Toolbar 的内部工具函数。 */
 const Toolbar: FC<MockupBrowserToolbarProps> = ({ start, end, className, children, ...rest }) => {
   return (
     <div {...rest} className={joinClassName('mockup-browser-toolbar gap-3', className)}>
@@ -153,6 +204,7 @@ const Toolbar: FC<MockupBrowserToolbarProps> = ({ start, end, className, childre
   )
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<MockupBrowserProps> = ({
   bordered,
   background,
@@ -232,4 +284,5 @@ const MockupBrowser: MockupBrowserCompound = Object.assign(Root, {
   Content,
 })
 
+/** 默认导出浏览器样机组件。 */
 export default MockupBrowser

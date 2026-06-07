@@ -249,8 +249,6 @@ describe('native controlled input through compat children shell', () => {
     const initialInput = container.querySelector(
       '[data-testid="split-controlled-input"]',
     ) as HTMLInputElement | null
-    const initialField = initialInput?.parentElement
-
     expect(initialInput).not.toBeNull()
 
     initialInput!.focus()

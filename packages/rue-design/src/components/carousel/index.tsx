@@ -8,77 +8,138 @@ Carousel 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** CarouselAlign 对齐方式类型。 */
 export type CarouselAlign = 'start' | 'center' | 'end'
+/** CarouselDirection 位置或方向类型。 */
 export type CarouselDirection = 'horizontal' | 'vertical'
+/** CarouselEffect 类型。 */
 export type CarouselEffect = 'scrollx' | 'fade'
+/** CarouselDotPlacement 位置或方向类型。 */
 export type CarouselDotPlacement = 'top' | 'bottom' | 'start' | 'end'
+/** CarouselAutoDirection 位置或方向类型。 */
 export type CarouselAutoDirection = 'forward' | 'backward'
 
+/** CarouselDataItem 数据项结构。 */
 export interface CarouselDataItem {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 主体内容。 */
   content: any
+  /** 根节点附加类名。 */
   className?: string
 }
 
+/** CarouselDotsConfig 配置对象。 */
 export interface CarouselDotsConfig {
+  /** 根节点附加类名。 */
   className?: string
 }
 
+/** CarouselAutoplayConfig 配置对象。 */
 export interface CarouselAutoplayConfig {
+  /** dotDuration 配置项。 */
   dotDuration?: boolean
 }
 
+/** CarouselArrowRenderProps 组件属性。 */
 export interface CarouselArrowRenderProps {
+  /** 是否禁用交互。 */
   disabled: boolean
+  /** 点击时触发的回调。 */
   onClick: () => void
+  /** 布局方向。 */
   direction: 'prev' | 'next'
 }
 
+/** CarouselRef 对外暴露的实例引用。 */
 export interface CarouselRef {
+  /** nativeElement 配置项。 */
   nativeElement?: HTMLDivElement
+  /** goTo 配置项。 */
   goTo: (slide: number, dontAnimate?: boolean) => void
+  /** next 配置项。 */
   next: () => void
+  /** prev 配置项。 */
   prev: () => void
+  /** autoPlay 配置项。 */
   autoPlay: (playType?: 'update' | 'leave' | 'blur') => void
+  /** stop 配置项。 */
   stop: () => void
 }
 
+/** CarouselProps 组件属性。 */
 export interface CarouselProps {
+  /** 交叉轴或内容对齐方式。 */
   align?: CarouselAlign
+  /** 布局方向。 */
   direction?: CarouselDirection
+  /** effect 配置项。 */
   effect?: CarouselEffect
+  /** fade 配置项。 */
   fade?: boolean
+  /** auto 配置项。 */
   auto?: boolean
+  /** autoplay 配置项。 */
   autoplay?: boolean | CarouselAutoplayConfig
+  /** interval 配置项。 */
   interval?: number
+  /** autoplaySpeed 配置项。 */
   autoplaySpeed?: number
+  /** loop 配置项。 */
   loop?: boolean
+  /** infinite 配置项。 */
   infinite?: boolean
+  /** autoDirection 配置项。 */
   autoDirection?: CarouselAutoDirection
+  /** activeIndex 配置项。 */
   activeIndex?: number
+  /** defaultActiveIndex 配置项。 */
   defaultActiveIndex?: number
+  /** initialSlide 配置项。 */
   initialSlide?: number
+  /** slickGoTo 配置项。 */
   slickGoTo?: number
+  /** dots 配置项。 */
   dots?: boolean | CarouselDotsConfig
+  /** arrows 配置项。 */
   arrows?: boolean
+  /** prevArrow 配置项。 */
   prevArrow?: any | ((props: CarouselArrowRenderProps) => any)
+  /** nextArrow 配置项。 */
   nextArrow?: any | ((props: CarouselArrowRenderProps) => any)
+  /** dotPlacement 配置项。 */
   dotPlacement?: CarouselDotPlacement
+  /** dotPosition 配置项。 */
   dotPosition?: CarouselDotPlacement | 'left' | 'right'
+  /** draggable 配置项。 */
   draggable?: boolean
+  /** waitForAnimate 配置项。 */
   waitForAnimate?: boolean
+  /** speed 配置项。 */
   speed?: number
+  /** easing 配置项。 */
   easing?: string
+  /** pauseOnHover 配置项。 */
   pauseOnHover?: boolean
+  /** adaptiveHeight 配置项。 */
   adaptiveHeight?: boolean
+  /** onIndexChange 事件回调。 */
   onIndexChange?: (index: number) => void
+  /** beforeChange 配置项。 */
   beforeChange?: (current: number, next: number) => void
+  /** afterChange 配置项。 */
   afterChange?: (current: number) => void
+  /** apiRef 配置项。 */
   apiRef?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: string | Record<string, string | number | null | undefined>
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<CarouselDataItem>
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -90,8 +151,10 @@ interface CarouselItemProps {
 
 type InlineStyle = string | Record<string, string | number | null | undefined>
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 
+/** serialize Style 的内部工具函数。 */
 const serializeStyle = (style?: InlineStyle) => {
   if (!style) return undefined
   if (typeof style === 'string') {
@@ -107,9 +170,11 @@ const serializeStyle = (style?: InlineStyle) => {
   return serialized || undefined
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
 
+/** flatten Children 的内部工具函数。 */
 const flattenChildren = (value: any): any[] => {
   if (value == null || value === false) return []
   if (Array.isArray(value)) {
@@ -118,8 +183,10 @@ const flattenChildren = (value: any): any[] => {
   return [value]
 }
 
+/** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
+/** 归一化 Index 的内部工具函数。 */
 const normalizeIndex = (value: number, count: number, loop: boolean) => {
   if (count <= 0) return 0
   if (loop) {
@@ -129,6 +196,7 @@ const normalizeIndex = (value: number, count: number, loop: boolean) => {
   return clamp(value, 0, count - 1)
 }
 
+/** 解析 Dot Placement 的内部工具函数。 */
 const resolveDotPlacement = (
   placement: CarouselDotPlacement | 'left' | 'right' | undefined,
 ): CarouselDotPlacement => {
@@ -142,6 +210,7 @@ const resolveDotPlacement = (
   }
 }
 
+/** assign Forwarded Ref 的内部工具函数。 */
 const assignForwardedRef = (forwardedRef: any, value: CarouselRef | null) => {
   if (typeof forwardedRef === 'function') {
     forwardedRef(value)
@@ -152,6 +221,7 @@ const assignForwardedRef = (forwardedRef: any, value: CarouselRef | null) => {
   }
 }
 
+/** 解析 Arrow Node 的内部工具函数。 */
 const resolveArrowNode = (
   arrow: any | ((props: CarouselArrowRenderProps) => any) | undefined,
   props: CarouselArrowRenderProps,
@@ -162,6 +232,7 @@ const resolveArrowNode = (
   return fallback
 }
 
+/** 读取 Offset By Align 的内部工具函数。 */
 const getOffsetByAlign = (
   align: CarouselAlign,
   viewportSize: number,
@@ -179,12 +250,14 @@ const getOffsetByAlign = (
   return clamp(target, 0, maxOffset)
 }
 
+/** clear Transition Style 的内部工具函数。 */
 const clearTransitionStyle = (element: HTMLElement) => {
   element.style.transitionProperty = ''
   element.style.transitionDuration = ''
   element.style.transitionTimingFunction = ''
 }
 
+/** reset Scroll Slide Style 的内部工具函数。 */
 const resetScrollSlideStyle = (slide: HTMLElement) => {
   slide.style.position = ''
   slide.style.inset = ''
@@ -898,4 +971,5 @@ const CarouselCompound: CarouselCompound = Object.assign(Carousel, {
   Item,
 })
 
+/** 默认导出轮播组件。 */
 export default CarouselCompound

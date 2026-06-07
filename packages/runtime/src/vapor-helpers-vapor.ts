@@ -27,6 +27,7 @@ import {
 import type { DomElementLike, DomNodeLike, DOMEventHandler } from './dom'
 import type { BlockFactory, BlockInstance, RenderTarget } from './renderable'
 
+/** 根据条件生成 display 显隐样式，兼容字符串和对象 style。 */
 export const vaporShowStyle = (s: any, cond: any) => {
   if (typeof s === 'string') {
     return cond ? s : s + '; display: none'
@@ -37,6 +38,7 @@ export const vaporShowStyle = (s: any, cond: any) => {
   return { display: cond ? '' : 'none' }
 }
 
+/** 为编译产物生成的可挂载值附加稳定 key。 */
 export const vaporWithKey = <T>(value: T, key: unknown): T => {
   if (key == null) {
     return value
@@ -50,13 +52,21 @@ export const vaporWithKey = <T>(value: T, key: unknown): T => {
   return value
 }
 
+/** keyed list 中单个条目在 DOM 中的范围和响应式状态。 */
 export type VaporListItemRange = {
+  /** 多根条目的起始锚点。 */
   start?: DomNodeLike
+  /** 条目结束锚点；单根模式下也是尾锚点。 */
   end: DomNodeLike
+  /** 停止该条目 render effect 的清理函数。 */
   stop?: () => void
+  /** 是否使用单根锚点优化。 */
   singleRoot?: boolean
+  /** 当前 item/index 的实时状态。 */
   current?: ReturnType<typeof signal<{ item: any; index: number; rawIdentity: unknown }>>
+  /** 驱动结构重渲染的状态。 */
   renderState?: ReturnType<typeof signal<{ item: any; index: number; rawIdentity: unknown }>>
+  /** trackIndex=false 时复用的稳定 item proxy。 */
   stableItem?: unknown
 }
 
@@ -111,6 +121,7 @@ const matchesKeyModifier = (event: any, modifier: string) => {
   return actual === modifier.replace(/_/g, '-').toLowerCase()
 }
 
+/** 为事件处理器应用 stop/prevent/self/key/system 等模板修饰符。 */
 export const vaporWithEventModifiers = (
   handler: DOMEventHandler,
   modifiers: string[],
@@ -254,6 +265,7 @@ const mountNativeEventRange = (target: RenderTarget) => {
   }
 }
 
+/** 把 native 事件委托到一段 block 渲染范围上。 */
 export const vaporWithNativeEvents = <T>(
   value: T,
   nativeEvents: VaporNativeEventMap,
@@ -322,15 +334,25 @@ export const vaporWithNativeEvents = <T>(
   return factory
 }
 
+/** 基于 key 维护 Vapor 列表 DOM 范围，支持重排、增删和单根优化。 */
 export const vaporKeyedList = <T>(args: {
+  /** 当前列表数据。 */
   items: T[]
+  /** 从 item/index 计算稳定 key 的函数。 */
   getKey: (item: T, index: number) => any
+  /** 上一次渲染留下的 key -> DOM 范围表，会被原地更新。 */
   elements: Map<any, VaporListItemRange>
+  /** 列表所在父节点。 */
   parent: any
+  /** 整个列表的尾锚点或插入参照节点。 */
   before: any
+  /** 列表起始锚点，用于识别范围边界。 */
   start?: any
+  /** 是否使用单根条目优化。 */
   singleRoot?: boolean
+  /** 是否把 index 变化视为需要刷新结构。 */
   trackIndex?: boolean
+  /** 渲染单个条目的回调。 */
   renderItem: (item: T, parent: any, start: any, end: any, idx?: number) => void
 }) => {
   const {
@@ -625,6 +647,7 @@ export const vaporKeyedList = <T>(args: {
   return elements
 }
 
+/** 反应式绑定 useRef 结果，支持函数 ref 和对象 ref。 */
 export const vaporBindUseRef = (el: any, getRef: () => any) => {
   let prev: any
   const stop = watchEffect(() => {
@@ -657,6 +680,7 @@ export const vaporBindUseRef = (el: any, getRef: () => any) => {
   return stop
 }
 
+/** 以稳定 hook id 执行 runner，避免编译产物重排时 hook 槽位漂移。 */
 export function vaporWithHookId<T>(id: string, runner: () => T): T {
   const instance = getCurrentInstance() as any
   if (!instance) return runner()

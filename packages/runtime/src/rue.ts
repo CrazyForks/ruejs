@@ -8,6 +8,7 @@ Rue 运行时架构概述
 'use strict'
 
 import { createRue as createRueWasm } from '@rue-js/runtime-vapor'
+import { getCurrentInstance, withHookSlot } from '@rue-js/runtime-vapor/reactive'
 import type { DomNodeLike, DomElementLike } from './dom'
 import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,
@@ -32,35 +33,67 @@ import { mountNormalizedRenderableToTarget, type DirectRenderableOwner } from '.
 import { registerOwnerCleanup, runOwnerCleanupBucket } from './renderable-lifecycle'
 import { normalizeRenderable } from './renderable-normalize'
 import type { NormalizedRenderable, Renderable } from './renderable'
+import {
+  RUE_SUSPENSE_COMPONENT_MARKER,
+  RUE_SUSPENSE_ELEMENT_MARKER,
+} from './components/suspenseContext'
+import {
+  createIgnoredErrorCaptureOwners,
+  dispatchErrorCaptured,
+  onErrorCaptured,
+  wasErrorCapturedDispatched,
+} from './error-capture'
 
 getDOMAdapter()
 
+/** JSX/组件 props 的通用结构，允许任意属性和 children。 */
 export interface ComponentProps {
+  /** 组件或元素属性。 */
   [key: string]: any
+  /** JSX 子节点。 */
   children?: ChildInput
 }
+
+/** Wasm/runtime-vapor 返回的可挂载句柄集合。 */
 export type RueMountHandle =
   | {
+      /** 传统 mount handle 标识。 */
       __rue_mount_id: unknown
     }
   | {
+      /** portable component 的组件类型或类型标识。 */
       __rue_component_type: unknown
+      /** portable component 的 props 快照。 */
       props?: unknown
     }
   | {
+      /** vapor setup 函数句柄。 */
       __rue_vapor_setup: unknown
     }
 
+/** 默认 runtime 可接受的顶层渲染输入。 */
 export type RenderableInput = Renderable | RueMountHandle | ReadonlyArray<RenderableInput>
+
+/** 组件和 JSX 工厂可返回的渲染输出。 */
 export type RenderableOutput = Renderable | RueMountHandle | ReadonlyArray<RenderableOutput>
 /** @deprecated Prefer RenderableOutput. */
 export type RenderOutput = RenderableOutput
+
+/** Vapor setup 返回的 DOM 节点。 */
 export type VaporSetupResult = DomNodeLike
 type Child = RenderableOutput
 type ChildInput = Child | ReadonlyArray<ChildInput>
+
+/** 给组件 props 自动附加 children 字段。 */
 export type PropsWithChildren<P = {}> = P & { children?: ChildInput }
+
+/** Rue 函数组件类型。 */
 export type FC<P = {}> = (props: PropsWithChildren<P>) => RenderableOutput
+
+/** 组件实例类型，当前等价于函数组件。 */
 export type ComponentInstance<P = {}> = FC<P>
+
+/** Rue runtime 实例类型；底层由 Wasm 工厂返回，暂以 any 兼容。 */
 export type Rue = any
 
 type SharedRuntimeBridge = {
@@ -79,10 +112,123 @@ const RUE_VAPOR_PREFERRED_RUNTIME_KEY = '__rue_vapor_preferred'
 const RUE_JS_ERROR_BRIDGE_KEY = '__rue_js_error_bridge_installed'
 const RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY = '__rue_force_container_anchor_render__'
 const RUE_REPEATABLE_MOUNT_FACTORY_KEY = '__rue_repeatable_mount_factory__'
+const TEXT_CLIENT_REFERENCE_SSR_RESOLVER_KEY = '__TEXT_RESOLVE_CLIENT_REFERENCE_EXPORT__'
+// Context provider 会自行连接 owner 父链，跳过包装可避免错误捕获链重复一层。
+const RUE_CONTEXT_PROVIDER_MARKER = '__rue_context_provider__'
 let componentTypeIdentitySeed = 0
+// 组件函数到错误捕获包装函数的缓存，保持组件类型身份稳定。
+const errorCapturedComponentCache = new WeakMap<Function, ComponentInstance<any>>()
+const classComponentAdapterCache = new WeakMap<Function, ComponentInstance<any>>()
+
+type ClassComponentInstance<P = PropsWithChildren<Record<string, unknown>>> = {
+  props: Readonly<P>
+  state?: unknown
+  render: () => RenderableOutput
+  componentDidCatch?: (error: unknown, errorInfo: { componentStack: string }) => void
+}
+
+type ClassComponentType<P = PropsWithChildren<Record<string, unknown>>> = {
+  new (props: P): ClassComponentInstance<P>
+  getDerivedStateFromProps?: (
+    props: P,
+    state: unknown,
+  ) => Record<string, unknown> | null | undefined
+  getDerivedStateFromError?: (error: unknown) => Record<string, unknown> | null | undefined
+}
+
+type ClassComponentSlot<P> = {
+  instance: ClassComponentInstance<P>
+}
 
 const canTrackRuntime = (runtime: unknown): runtime is object =>
   (typeof runtime === 'object' || typeof runtime === 'function') && runtime != null
+
+const isClassComponentType = <P>(type: unknown): type is ClassComponentType<P> =>
+  typeof type === 'function' &&
+  !!(type as { prototype?: { render?: unknown } }).prototype &&
+  typeof (type as { prototype?: { render?: unknown } }).prototype?.render === 'function'
+
+const readClientReferenceExport = (
+  value: unknown,
+): { exportName: string; referenceKey: string } | null => {
+  if ((typeof value !== 'object' && typeof value !== 'function') || value === null) return null
+  const id = (value as { $$id?: unknown }).$$id
+  if (typeof id !== 'string') return null
+  const separator = id.lastIndexOf('#')
+  if (separator <= 0 || separator === id.length - 1) return null
+  return {
+    exportName: id.slice(separator + 1),
+    referenceKey: id.slice(0, separator),
+  }
+}
+
+const resolveClientReferenceComponentType = <P>(
+  type: ComponentInstance<P>,
+): ComponentInstance<P> => {
+  const reference = readClientReferenceExport(type)
+  if (!reference) return type
+  const resolver = (globalThis as Record<string, unknown>)[TEXT_CLIENT_REFERENCE_SSR_RESOLVER_KEY]
+  if (typeof resolver !== 'function') return type
+  const resolved = (resolver as (referenceKey: string, exportName: string) => unknown)(
+    reference.referenceKey,
+    reference.exportName,
+  )
+  return typeof resolved === 'function' ? (resolved as ComponentInstance<P>) : type
+}
+
+const mergeClassComponentState = (
+  state: unknown,
+  update: Record<string, unknown> | null | undefined,
+) => {
+  if (!update || typeof update !== 'object') {
+    return state
+  }
+  return { ...((state && typeof state === 'object' ? state : null) as object | null), ...update }
+}
+
+const createClassComponentAdapter = <P>(
+  ClassComponent: ClassComponentType<P>,
+): ComponentInstance<P> => {
+  const cached = classComponentAdapterCache.get(ClassComponent as unknown as Function)
+  if (cached) {
+    return cached as ComponentInstance<P>
+  }
+
+  const adapter = ((props: PropsWithChildren<P>) => {
+    const slot = withHookSlot<ClassComponentSlot<PropsWithChildren<P>>>(() => ({
+      instance: new (ClassComponent as ClassComponentType<PropsWithChildren<P>>)(props),
+    }))
+    const instance = slot.instance
+    instance.props = props
+    instance.state = mergeClassComponentState(
+      instance.state,
+      ClassComponent.getDerivedStateFromProps?.(props, instance.state),
+    )
+
+    if (typeof ClassComponent.getDerivedStateFromError === 'function') {
+      onErrorCaptured(error => {
+        instance.state = mergeClassComponentState(
+          instance.state,
+          ClassComponent.getDerivedStateFromError?.(error),
+        )
+        instance.componentDidCatch?.(error, { componentStack: '' })
+        return false
+      })
+    }
+
+    return instance.render()
+  }) as ComponentInstance<P> & Record<string, unknown>
+
+  try {
+    Object.defineProperty(adapter, 'name', {
+      configurable: true,
+      value: (ClassComponent as unknown as Function).name,
+    })
+  } catch {}
+
+  classComponentAdapterCache.set(ClassComponent as unknown as Function, adapter)
+  return adapter
+}
 
 const installRuntimeErrorBridge = <T>(runtime: T): T => {
   if (!canTrackRuntime(runtime)) {
@@ -114,6 +260,10 @@ const installRuntimeErrorBridge = <T>(runtime: T): T => {
   }
 
   ;(runtime as { handleError?: unknown }).handleError = (error: any, instance?: any) => {
+    if (!wasErrorCapturedDispatched(error) && dispatchErrorCaptured(error, instance)) {
+      return false
+    }
+
     if (originalHandleError) {
       try {
         originalHandleError(error, instance)
@@ -129,12 +279,15 @@ const installRuntimeErrorBridge = <T>(runtime: T): T => {
         handler(error, instance)
       } catch {}
     })
+
+    return true
   }
 
   ;(runtime as Record<string, unknown>)[RUE_JS_ERROR_BRIDGE_KEY] = true
   return runtime
 }
 
+/** 读取指定 runtime 已绑定的 DOM bridge。 */
 export const getMarkedRuntimeDOMBridge = (runtime: unknown) => {
   if (!canTrackRuntime(runtime)) {
     return undefined
@@ -142,6 +295,7 @@ export const getMarkedRuntimeDOMBridge = (runtime: unknown) => {
   return runtimeDOMBridgeByInstance.get(runtime)
 }
 
+/** 标记指定 runtime 已同步到某个 DOM bridge。 */
 export const markRuntimeDOMBridge = (runtime: unknown, bridge: unknown) => {
   if (!canTrackRuntime(runtime)) {
     return
@@ -149,6 +303,7 @@ export const markRuntimeDOMBridge = (runtime: unknown, bridge: unknown) => {
   runtimeDOMBridgeByInstance.set(runtime, bridge)
 }
 
+/** 临时切换当前激活 runtime，并在 runner 结束后恢复。 */
 export const runWithRuntime = <T>(runtime: unknown, runner: () => T): T => {
   if (!canTrackRuntime(runtime)) {
     return runner()
@@ -282,6 +437,57 @@ const reportRuntimeError = (error: Error) => {
   try {
     runtime.handleError(error)
   } catch {}
+}
+
+/** 判断组件是否需要套上 render 阶段错误捕获包装器。 */
+const shouldWrapComponentForErrorCapture = (type: ComponentInstance<any>) => {
+  const componentRecord = type as unknown as Record<string, unknown>
+  return componentRecord[RUE_CONTEXT_PROVIDER_MARKER] !== true
+}
+
+/** 返回带 errorCaptured 冒泡能力的组件函数，并复用缓存保持组件身份稳定。 */
+const resolveErrorCapturedComponent = <P = {}>(
+  type: ComponentInstance<P>,
+): ComponentInstance<P> => {
+  const resolvedType = resolveClientReferenceComponentType(type)
+  const componentType = isClassComponentType<PropsWithChildren<P>>(resolvedType)
+    ? (createClassComponentAdapter(resolvedType) as ComponentInstance<P>)
+    : resolvedType
+
+  if (!shouldWrapComponentForErrorCapture(componentType as ComponentInstance<any>)) {
+    return componentType
+  }
+
+  const cached = errorCapturedComponentCache.get(componentType as unknown as Function)
+  if (cached) {
+    return cached as ComponentInstance<P>
+  }
+
+  const wrapped = ((props: PropsWithChildren<P>) => {
+    try {
+      return componentType(props)
+    } catch (error) {
+      const instance = getCurrentInstance()
+      const stopped = dispatchErrorCaptured(error, instance, 'component render', {
+        ignoredOwners: createIgnoredErrorCaptureOwners(instance),
+      })
+      if (stopped) {
+        return null
+      }
+      reportRuntimeError(error instanceof Error ? error : new Error(String(error)))
+      throw error
+    }
+  }) as ComponentInstance<P> & Record<string, unknown>
+
+  try {
+    Object.defineProperty(wrapped, 'name', {
+      configurable: true,
+      value: (componentType as Function).name,
+    })
+  } catch {}
+
+  errorCapturedComponentCache.set(componentType as unknown as Function, wrapped)
+  return wrapped
 }
 
 const withCapturedReportedRuntimeError = <T>(runner: () => T): T => {
@@ -469,6 +675,41 @@ const resolveComponentPropsWithChildren = (
   return nextProps
 }
 
+const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
+const TEXT_HEAD_RECORD = Symbol.for('text.head.record')
+
+const attachHeadRecordSnapshot = (
+  vnode: RenderableOutput,
+  type: string | ComponentInstance<any>,
+  props: ComponentProps | null,
+  children: ChildInput[],
+) => {
+  if (!vnode || typeof vnode !== 'object' || typeof type !== 'string') {
+    return vnode
+  }
+
+  const nextProps = props ? { ...props } : ({} as Record<string, unknown>)
+  if (children.length > 0 && nextProps.children === undefined) {
+    nextProps.children = children.length === 1 ? children[0] : children
+  }
+
+  try {
+    Object.defineProperty(vnode, RUE_ELEMENT_HEAD_RECORD, {
+      configurable: true,
+      enumerable: false,
+      value: {
+        [TEXT_HEAD_RECORD]: true,
+        key: (nextProps as Record<string, unknown>).key ?? null,
+        props: nextProps,
+        type,
+      },
+      writable: true,
+    })
+  } catch {}
+
+  return vnode
+}
+
 const createRepeatableElementHandle = <P = {}>(
   type: string | ComponentInstance<P>,
   props: ComponentProps | null,
@@ -483,6 +724,7 @@ const createRepeatableElementHandle = <P = {}>(
   const nextChildren = replayMountAwareValue(children) as ChildInput[]
   const vnode = getRue().createElement(type, nextProps, nextChildren as any) as RenderableOutput
   const nextVnode = finalize ? finalize(vnode, nextProps, nextChildren) : vnode
+  attachHeadRecordSnapshot(nextVnode, type, nextProps, nextChildren)
   return attachRepeatableMountFactory(nextVnode, () =>
     createRepeatableElementHandle(type, props, children, finalize),
   )
@@ -492,7 +734,8 @@ const createRepeatableComponentHandle = <P = {}>(
   type: ComponentInstance<P>,
   props: ComponentProps | null,
 ): RenderableOutput => {
-  const componentType = type as ComponentInstance<P> & Record<string, unknown>
+  const componentType = resolveErrorCapturedComponent(type) as ComponentInstance<P> &
+    Record<string, unknown>
   if (!(RUE_PORTABLE_COMPONENT_ID_KEY in componentType)) {
     try {
       Object.defineProperty(componentType, RUE_PORTABLE_COMPONENT_ID_KEY, {
@@ -509,7 +752,14 @@ const createRepeatableComponentHandle = <P = {}>(
     props: nextProps,
     ...(nextProps?.key == null ? null : { key: nextProps.key }),
   } as RenderableOutput
-  const nextVnode = markAnchorRemountableMountHandle(componentType, nextProps, [], vnode)
+  if ((type as unknown as Record<PropertyKey, unknown>)[RUE_SUSPENSE_COMPONENT_MARKER] === true) {
+    Object.defineProperty(vnode as Record<PropertyKey, unknown>, RUE_SUSPENSE_ELEMENT_MARKER, {
+      configurable: true,
+      enumerable: false,
+      value: true,
+    })
+  }
+  const nextVnode = markAnchorRemountableMountHandle(type, nextProps, [], vnode)
   return attachRepeatableMountFactory(nextVnode, () => createRepeatableComponentHandle(type, props))
 }
 
@@ -678,6 +928,28 @@ const assertDefaultChildren = (props: ComponentProps | null, children: ChildInpu
     analyzeDefaultRenderableInput(child)
   }
 }
+
+const normalizeDomElementProps = (props: ComponentProps | null): ComponentProps | null => {
+  if (!props) return props
+
+  let changed = false
+  const normalized: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(props)) {
+    if (value === undefined) {
+      changed = true
+      continue
+    }
+    if ((key.startsWith('data-') || key.startsWith('aria-')) && typeof value === 'boolean') {
+      normalized[key] = String(value)
+      changed = true
+      continue
+    }
+    normalized[key] = value
+  }
+
+  return changed ? (normalized as ComponentProps) : props
+}
+
 /** 创建元素（JSX 工厂同源）
  * @param type 标签字符串或组件实例
  * @param props 属性对象
@@ -701,15 +973,17 @@ export const createElement = <P = {}>(
       resolveComponentPropsWithChildren(contextualProps, normalizedChildren),
     )
   }
+  const elementProps = normalizeDomElementProps(contextualProps)
   return createRepeatableElementHandle(
     resolvedType,
-    contextualProps,
+    elementProps,
     normalizedChildren,
     (vnode, nextProps, nextChildren) =>
       markAnchorRemountableMountHandle(resolvedType, nextProps, nextChildren, vnode),
   )
 }
 
+/** 创建 portable component mount handle，供 Vapor 编译产物直接引用。 */
 export const createComponent = <P = {}>(
   type: ComponentInstance<P>,
   props: ComponentProps | null,
@@ -721,7 +995,7 @@ export const createComponent = <P = {}>(
   assertDefaultChildren(contextualProps, [])
   return createRepeatableComponentHandle(type, contextualProps)
 }
-/** 渲染到容器 */
+/** 渲染到容器；支持默认 renderable 和 Wasm mount handle 两条路径。 */
 export const render = (value: RenderableInput, container: DomElementLike) => {
   return withRenderEntryGuard('render', 'container', container as object, () => {
     const analysis = analyzeDefaultRenderableInput(value)
@@ -776,7 +1050,7 @@ export const render = (value: RenderableInput, container: DomElementLike) => {
     return withCapturedReportedRuntimeError(() => getRue().render(compatValue, container))
   })
 }
-/** 在区间 [start,end] 之间渲染 */
+/** 在区间 [start,end] 之间渲染，并保留区间两端锚点。 */
 export const renderBetween = (
   value: RenderableInput,
   parent: DomElementLike,
@@ -842,7 +1116,7 @@ export const renderBetween = (
     )
   })
 }
-/** 在单个尾锚点前渲染 */
+/** 在单个尾锚点前渲染，可重复更新同一锚点前的内容。 */
 export const renderAnchor = (
   value: RenderableInput,
   parent: DomElementLike,
@@ -934,7 +1208,7 @@ export const renderAnchor = (
     })
   })
 }
-/** 在单个临时锚点前执行一次性静态渲染 */
+/** 在单个临时锚点前执行一次性静态渲染，完成后可移除锚点。 */
 export const renderStatic = (
   value: RenderableInput,
   parent: DomElementLike,
@@ -973,10 +1247,11 @@ export const renderStatic = (
     return getRue().renderStatic(compatValue, targetParent, anchor)
   })
 }
-/** 挂载应用到容器 */
+/** 挂载组件应用到容器或选择器。 */
 export const mount = (App: ComponentInstance, container: string | DomElementLike) =>
   getRue().mount(App, container)
-/** 安装插件 */
+
+/** 安装 Rue 插件。 */
 export const use = (plugin: any, ...options: any[]) => getRue().use(plugin, ...options)
 const resolveCustomElementEmitBridge = (props: ComponentProps): CustomElementEmitBridge | null => {
   if (!props || typeof props !== 'object') {
@@ -985,7 +1260,7 @@ const resolveCustomElementEmitBridge = (props: ComponentProps): CustomElementEmi
   const bridge = (props as Record<string, unknown>)[CUSTOM_ELEMENT_EMIT_BRIDGE_KEY]
   return typeof bridge === 'function' ? (bridge as CustomElementEmitBridge) : null
 }
-/** 生成事件发射器（根据 props） */
+/** 根据 props 生成事件发射器，并兼容 Custom Element emit bridge。 */
 export const emitted = (props: ComponentProps) => {
   const baseEmit = getRue().emitted(props)
   const bridge = resolveCustomElementEmitBridge(props)
@@ -997,7 +1272,7 @@ export const emitted = (props: ComponentProps) => {
     bridge(eventName, args)
   }
 }
-/** Vapor 块模式：返回 runtime-vapor 的最小挂载句柄，而不是旧的 type/props dev object */
+/** 创建 Vapor 块挂载句柄，setup 会在 runtime-vapor 作用域内执行。 */
 export const vapor = (setup: (parentContext?: DomElementLike | null) => VaporSetupResult) => {
   return createRepeatableVaporHandle(setup)
 }
@@ -1009,21 +1284,61 @@ export const onCreated = (fn: () => void) => getRue().onCreated(fn)
 export const onBeforeMount = (fn: () => void) => getRue().onBeforeMount(fn)
 /** 生命周期：已挂载 */
 export const onMounted = (fn: () => void) => getRue().onMounted(fn)
+/** 生命周期：缓存实例已激活 */
+export const onActivated = (fn: () => void) => {
+  const keepAliveTarget = (globalThis as any).__rue_keep_alive_hook_target__
+  const hooks = keepAliveTarget?.activatedHooks
+  if (hooks instanceof Set) {
+    hooks.add(fn)
+  }
+  return getRue().onActivated(fn)
+}
 /** 生命周期：更新前 */
 export const onBeforeUpdate = (fn: () => void) => getRue().onBeforeUpdate(fn)
 /** 生命周期：已更新 */
 export const onUpdated = (fn: () => void) => getRue().onUpdated(fn)
+/** 调试钩子：渲染依赖触发组件更新时调用。 */
+export const onRenderTriggered = (fn: (event: any) => void) => getRue().onRenderTriggered(fn)
 /** 生命周期：卸载前 */
 export const onBeforeUnmount = (fn: () => void) => getRue().onBeforeUnmount(fn)
 /** 生命周期：已卸载 */
 export const onUnmounted = (fn: () => void) => getRue().onUnmounted(fn)
+/** 生命周期：缓存实例已停用 */
+export const onDeactivated = (fn: () => void) => {
+  const keepAliveTarget = (globalThis as any).__rue_keep_alive_hook_target__
+  const hooks = keepAliveTarget?.deactivatedHooks
+  if (hooks instanceof Set) {
+    hooks.add(fn)
+  }
+  return getRue().onDeactivated(fn)
+}
+/** 生命周期：服务端渲染预取 */
+export const onServerPrefetch = (fn: () => Promise<any> | any) => getRue().onServerPrefetch(fn)
+/** 执行当前上下文的服务端预取钩子。 */
+export const runServerPrefetch = () => getRue().runServerPrefetch()
 /** 错误处理钩子 */
 export const onError = (fn: (error: any, instance?: any) => void) => getRue().onError(fn)
+/** 组件错误捕获钩子 */
+export { onErrorCaptured }
 /** 获取当前容器（挂载上下文） */
 export const getCurrentContainer = () => getRue().getCurrentContainer()
+
+/** KeepAlive 内部桥接：按缓存 range 触发 activated hooks。 */
+export const __rueActivateRange = (start: DomNodeLike) => {
+  const runtime = getRue()
+  runtime?.__rueActivateRange?.(start)
+}
+
+/** KeepAlive 内部桥接：按缓存 range 触发 deactivated hooks。 */
+export const __rueDeactivateRange = (start: DomNodeLike) => {
+  const runtime = getRue()
+  runtime?.__rueDeactivateRange?.(start)
+}
+
+/** 默认全局 Rue runtime 实例。 */
 export default rue
 
-/** 直接创建 Rue 实例（用于独立初始化） */
+/** 直接创建独立 Rue 实例，并绑定当前 DOMAdapter bridge。 */
 export function createRue() {
   if (!(globalThis as any).__rue_dom) {
     getDOMAdapter()
@@ -1034,8 +1349,10 @@ export function createRue() {
   return runtime
 }
 
-// 为 JSX/TSX 提供工厂函数
 /** JSX/TSX 工厂函数：与 createElement 同源
+ * @param type 标签字符串或组件函数
+ * @param props 属性对象
+ * @param children 子节点集合
  * @returns RenderableOutput
  */
 export function h<P = {}>(
@@ -1045,7 +1362,45 @@ export function h<P = {}>(
 ): RenderableOutput {
   return createElement(type, props, ...children)
 }
-/** 片段标记：用于 JSX 片段渲染 */
-export const Fragment = 'fragment'
 
-// 类型导出（已在上方直接导出）
+function normalizeJsxProps(
+  props: ComponentProps | null | undefined,
+  key?: unknown,
+): ComponentProps | null {
+  if (!props && key === undefined) return null
+  const nextProps: ComponentProps = {}
+  if (props) {
+    for (const propKey in props) {
+      const value = props[propKey]
+      if (value !== undefined) nextProps[propKey] = value
+    }
+  }
+  if (key !== undefined) nextProps.key = key
+  return Object.keys(nextProps).length > 0 ? nextProps : null
+}
+
+export function jsx<P = {}>(
+  type: string | ComponentInstance<P>,
+  props?: ComponentProps | null,
+  key?: unknown,
+): RenderableOutput {
+  const nextProps = normalizeJsxProps(props, key)
+  const children = props ? props.children : undefined
+  return Array.isArray(children)
+    ? createElement(type, nextProps, ...children)
+    : children !== undefined
+      ? createElement(type, nextProps, children)
+      : createElement(type, nextProps)
+}
+
+export const jsxs = jsx
+
+export function jsxDEV<P = {}>(
+  type: string | ComponentInstance<P>,
+  props?: ComponentProps | null,
+  key?: unknown,
+): RenderableOutput {
+  return jsx(type, props, key)
+}
+/** JSX Fragment 标记，最终由底层 runtime 识别为片段渲染。 */
+export const Fragment = 'fragment'

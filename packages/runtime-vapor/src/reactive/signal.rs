@@ -30,10 +30,80 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
-use crate::reactive::core::{CURRENT_EFFECT, EFFECTS, Effect, Signal, schedule_effect_run};
+use crate::reactive::core::{
+    CURRENT_EFFECT, EFFECTS, Effect, Signal, create_render_triggered_event,
+    emit_render_triggered_for_effect, schedule_effect_run,
+};
 #[wasm_bindgen]
 pub struct SignalHandle {
     pub(crate) inner: Rc<RefCell<Signal>>,
+}
+
+#[cfg(feature = "dev")]
+const SIGNAL_LOG_VALUE_LIMIT: usize = 160;
+#[cfg(feature = "dev")]
+const SIGNAL_LOG_KEY_LIMIT: u32 = 8;
+
+#[cfg(feature = "dev")]
+fn truncate_log_value(value: String) -> String {
+    if value.chars().count() <= SIGNAL_LOG_VALUE_LIMIT {
+        return value;
+    }
+
+    let mut truncated = value.chars().take(SIGNAL_LOG_VALUE_LIMIT).collect::<String>();
+    truncated.push_str("...");
+    truncated
+}
+
+#[cfg(feature = "dev")]
+fn describe_signal_log_value(value: &JsValue) -> String {
+    if value.is_undefined() {
+        return "undefined".to_string();
+    }
+    if value.is_null() {
+        return "null".to_string();
+    }
+    if let Some(boolean) = value.as_bool() {
+        return if boolean { "true".to_string() } else { "false".to_string() };
+    }
+    if let Some(number) = value.as_f64() {
+        return number.to_string();
+    }
+    if let Some(text) = value.as_string() {
+        return format!("{:?}", truncate_log_value(text));
+    }
+    if let Some(function) = value.dyn_ref::<Function>() {
+        let name = String::from(function.name());
+        return if name.is_empty() {
+            "[Function]".to_string()
+        } else {
+            format!("[Function {}]", name)
+        };
+    }
+    if Array::is_array(value) {
+        let length = Reflect::get(value, &JsValue::from_str("length"))
+            .unwrap_or(JsValue::UNDEFINED)
+            .as_f64()
+            .unwrap_or(0.0) as u32;
+        return format!("[Array length={}]", length);
+    }
+    if value.is_object() {
+        let object = Object::from(value.clone());
+        let keys = Object::keys(&object);
+        let mut shown = Vec::new();
+        let limit = keys.length().min(SIGNAL_LOG_KEY_LIMIT);
+        for index in 0..limit {
+            shown.push(keys.get(index).as_string().unwrap_or_else(|| "<key>".to_string()));
+        }
+        let suffix = if keys.length() > SIGNAL_LOG_KEY_LIMIT {
+            format!(", ...+{}", keys.length() - SIGNAL_LOG_KEY_LIMIT)
+        } else {
+            String::new()
+        };
+        return format!("{{keys=[{}{}]}}", shown.join(", "), suffix);
+    }
+
+    "<unknown>".to_string()
 }
 
 /// 信号句柄复制
@@ -50,6 +120,7 @@ impl SignalHandle {
     ///
     /// 这样触发阶段就能按路径做“选择性唤醒”，而不是像旧实现那样只要根对象换了，
     /// 就把同根下所有 effect 全部重新跑一遍。
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(crate) fn set_internal(&self, v: JsValue, changed_path: Option<&Array>) {
         let maybe_setter = { self.inner.borrow().setter.clone() };
         if let Some(st) = maybe_setter {
@@ -58,6 +129,7 @@ impl SignalHandle {
         }
 
         let mut signal = self.inner.borrow_mut();
+        let old_root = signal.value.clone();
         let changed = if let Some(eq) = &signal.equals {
             let res = eq.call2(&JsValue::NULL, &signal.value, &v).unwrap_or(JsValue::FALSE);
             !res.as_bool().unwrap_or(false)
@@ -68,14 +140,8 @@ impl SignalHandle {
         #[cfg(feature = "dev")]
         {
             if changed && crate::log::want_log("debug", "reactive:signal set") {
-                let prev_js: js_sys::JsString = js_sys::JSON::stringify(&signal.value)
-                    .unwrap_or(JsValue::from_str("<unstringifiable>").into());
-                let next_js: js_sys::JsString = js_sys::JSON::stringify(&v)
-                    .unwrap_or(JsValue::from_str("<unstringifiable>").into());
-                let prev_val: JsValue = prev_js.into();
-                let next_val: JsValue = next_js.into();
-                let prev_str = prev_val.as_string().unwrap_or("<unknown>".to_string());
-                let next_str = next_val.as_string().unwrap_or("<unknown>".to_string());
+                let prev_str = describe_signal_log_value(&signal.value);
+                let next_str = describe_signal_log_value(&v);
                 let subs_count = total_signal_subscriber_count(&signal);
                 crate::log::log(
                     "debug",
@@ -87,16 +153,44 @@ impl SignalHandle {
             }
         }
 
-        signal.value = v;
+        signal.value = v.clone();
         if !changed {
             return;
         }
 
         let changed_path = changed_path.filter(|path| path.length() > 0);
+        // 复制变更路径，后续构造 renderTriggered 事件时还需要读取 key/path。
+        let changed_path_snapshot = changed_path.cloned();
         let to_run = collect_affected_subscribers(&mut signal, changed_path);
         drop(signal);
 
         for id in to_run {
+            // renderTriggered 事件尽量对齐 Vue：嵌套路径更新时 target 指向父对象，key 指向末段。
+            let (target, key, old_value, new_value) = match changed_path_snapshot.as_ref() {
+                Some(path) if path.length() > 0 => {
+                    let parent_path = Array::new();
+                    for index in 0..path.length().saturating_sub(1) {
+                        parent_path.push(&path.get(index));
+                    }
+                    (
+                        get_at_path(&v, &parent_path),
+                        path.get(path.length() - 1),
+                        get_at_path(&old_root, path),
+                        get_at_path(&v, path),
+                    )
+                }
+                _ => (v.clone(), JsValue::UNDEFINED, old_root.clone(), v.clone()),
+            };
+            let event = create_render_triggered_event(
+                id,
+                target,
+                "set",
+                key,
+                old_value,
+                new_value,
+                changed_path_snapshot.as_ref(),
+            );
+            emit_render_triggered_for_effect(id, &event);
             schedule_effect_run(id);
         }
     }
@@ -114,6 +208,7 @@ pub fn signal_from_proxy(proxy: &JsValue) -> Option<JsValue> {
     Some(sig_v)
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn subscribe_effect_id(subs: &mut Vec<usize>, id: usize) {
     if !subs.contains(&id) {
         subs.push(id);
@@ -173,9 +268,6 @@ fn path_segment_key(seg: &JsValue) -> String {
 
 fn path_key(path: &Array) -> String {
     let len = path.length();
-    if len == 0 {
-        return String::new();
-    }
     let mut parts: Vec<String> = Vec::with_capacity(len as usize);
     for i in 0..len {
         parts.push(path_segment_key(&path.get(i)));
@@ -189,11 +281,9 @@ fn retain_active_subscribers(
     seen: &mut HashSet<usize>,
     to_run: &mut Vec<usize>,
 ) {
+    let mut retained = HashSet::new();
     subs.retain(|id| {
-        if let Some(effect) = effects.get(id) {
-            if effect.disposed {
-                return false;
-            }
+        if effects.get(id).is_some() && retained.insert(*id) {
             if seen.insert(*id) {
                 to_run.push(*id);
             }
@@ -238,11 +328,7 @@ pub(crate) fn collect_affected_subscribers(
             }
         };
 
-        let mut unique_keys: HashSet<String> = HashSet::new();
         for key in raw_keys {
-            if !unique_keys.insert(key.clone()) {
-                continue;
-            }
             if let Some(subs) = signal.path_subs.get_mut(&key) {
                 retain_active_subscribers(subs, &effects, &mut seen, &mut to_run);
             }
@@ -310,17 +396,14 @@ impl SignalHandle {
                 return;
             }
             computed.evaluating = true;
-            computed.effect_id
+            computed.effect_id.expect("computed effect id must be initialized")
         };
 
-        if let Some(id) = effect_id {
-            crate::reactive::core::run_effect(id);
-        }
+        crate::reactive::core::run_effect(effect_id);
 
         let mut inner = self.inner.borrow_mut();
-        if let Some(computed) = inner.computed.as_mut() {
-            computed.evaluating = false;
-        }
+        let computed = inner.computed.as_mut().expect("computed signal state must exist");
+        computed.evaluating = false;
     }
 
     /// 便于调试：`JSON.stringify(signal)` 时返回内部值
@@ -346,6 +429,21 @@ impl SignalHandle {
             Ok(s) => s.as_string().unwrap_or_else(|| "[object SignalHandle]".to_string()),
             Err(_) => "[object SignalHandle]".to_string(),
         }
+    }
+
+    #[wasm_bindgen(getter, js_name = __rue_ref__)]
+    /// ref/computed 识别标记；普通 signal 不暴露为 ref。
+    pub fn ref_marker(&self) -> bool {
+        self.inner.borrow().computed.is_some()
+    }
+
+    #[wasm_bindgen(getter, js_name = __isReadonly__)]
+    /// readonly 识别标记；无 setter 的 computed 视为只读。
+    pub fn readonly_marker(&self) -> bool {
+        let inner = self.inner.borrow();
+        let has_computed = inner.computed.is_some();
+        let has_setter = inner.setter.is_some();
+        has_computed & !has_setter
     }
 
     /// 只读调试：`signal.value` 直接返回内部值（不进行依赖收集）
@@ -390,6 +488,38 @@ impl SignalHandle {
     #[wasm_bindgen(js_name = set)]
     pub fn set_js(&self, v: JsValue) {
         self.set_internal(v, None);
+    }
+
+    /// 手动触发当前信号的订阅者，不修改值且不经过 equals 比较。
+    #[wasm_bindgen(js_name = trigger)]
+    pub fn trigger_js(&self) {
+        let to_run = {
+            let mut signal = self.inner.borrow_mut();
+            collect_affected_subscribers(&mut signal, None)
+        };
+
+        for id in to_run {
+            schedule_effect_run(id);
+        }
+    }
+
+    /// 手动触发指定路径的订阅者，不修改值且不经过 equals 比较。
+    #[wasm_bindgen(js_name = triggerPath)]
+    pub fn trigger_path_js(&self, path: JsValue) {
+        let arr = normalize_path_to_array(&path);
+        if arr.length() == 0 {
+            self.trigger_js();
+            return;
+        }
+
+        let to_run = {
+            let mut signal = self.inner.borrow_mut();
+            collect_affected_subscribers(&mut signal, Some(&arr))
+        };
+
+        for id in to_run {
+            schedule_effect_run(id);
+        }
     }
 
     /// 根据回调对当前值进行计算并设置（相当于 set( updater(current) )）
@@ -760,6 +890,12 @@ pub fn create_ref(initial: JsValue, options: Option<JsValue>) -> JsValue {
     // 将初始值封装为 `{ value: any }`，统一为“对象路径写入”的模型
     let root = Object::new();
     Reflect::set(&root, &JsValue::from_str("value"), &initial).ok();
+    Reflect::set(&root, &JsValue::from_str("__rue_ref__"), &JsValue::TRUE).ok();
+    let marker = Object::new();
+    let _ = Reflect::set(&marker, &JsValue::from_str("value"), &JsValue::TRUE);
+    let _ = Reflect::set(&marker, &JsValue::from_str("enumerable"), &JsValue::FALSE);
+    let _ = Reflect::set(&marker, &JsValue::from_str("configurable"), &JsValue::FALSE);
+    let _ = js_sys::Object::define_property(&root, &JsValue::from_str("__rue_ref__"), &marker);
     let mut opts_out: Option<JsValue> = None;
     if let Some(opts) = options.clone() {
         if opts.is_object() {
@@ -854,9 +990,7 @@ pub fn create_reactive(initial: JsValue, options: Option<JsValue>) -> JsValue {
             );
             let wrapped =
                 factory.call1(&JsValue::NULL, &eqf.clone().into()).unwrap_or(JsValue::UNDEFINED);
-            if let Some(wf) = wrapped.dyn_ref::<Function>() {
-                equals = Some(wf.clone());
-            }
+            equals = Some(wrapped.unchecked_into());
         }
     }
     // 以 `SignalHandle` 存储根对象，统一通过路径进行读写与依赖管理
@@ -877,29 +1011,9 @@ pub fn create_reactive(initial: JsValue, options: Option<JsValue>) -> JsValue {
 
 fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag: bool) -> JsValue {
     let current_holder = sig.peek_path_js(path.clone().into());
-    // 选择 Proxy 的 target：使用“镜像快照”而非当前 holder 引用，避免修改 target 影响真实值
-    // - 数组：新建空数组并复制元素
-    // - 对象：新建空对象并复制键值
-    // - 其他：空对象
+    // 选择 Proxy 的 target：只保留 Array/Object 形状，具体快照在 Proxy 创建后统一同步。
     let target: JsValue = if js_sys::Array::is_array(&current_holder) {
-        let out = js_sys::Array::new();
-        let arr = js_sys::Array::from(&current_holder);
-        let len = arr.length();
-        for i in 0..len {
-            out.push(&arr.get(i));
-        }
-        out.into()
-    } else if current_holder.is_object() {
-        let out = js_sys::Object::new();
-        let obj: js_sys::Object = current_holder.clone().unchecked_into();
-        let keys = js_sys::Object::keys(&obj);
-        let len = keys.length();
-        for i in 0..len {
-            let k = keys.get(i);
-            let v = js_sys::Reflect::get(&obj, &k).unwrap_or(JsValue::UNDEFINED);
-            let _ = js_sys::Reflect::set(&out, &k, &v);
-        }
-        out.into()
+        js_sys::Array::new().into()
     } else {
         Object::new().into()
     };
@@ -946,10 +1060,13 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
                 if s == "__isReactive__" {
                     return JsValue::from_bool(true);
                 }
+                if s == "__isReadonly__" {
+                    return JsValue::from_bool(readonly_flag);
+                }
                 if s == "__rue_path__" {
                     return p_get.clone().into();
                 }
-                if s == "__rue_raw__" || s == "__rue_target__" {
+                if s == "__rue_target__" {
                     let holder = s_get.peek_path_js(p_get.clone().into());
                     return holder;
                 }
@@ -1154,30 +1271,25 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
         }
         let keys = js_sys::Reflect::own_keys(&obj).unwrap_or(js_sys::Array::new());
 
-        if target_obj.is_object() {
-            let target: Object = target_obj.clone().unchecked_into();
-            let target_keys =
-                js_sys::Reflect::own_keys(&target_obj).unwrap_or(js_sys::Array::new());
-            for i in 0..target_keys.length() {
-                let tk = target_keys.get(i);
-                let td = js_sys::Object::get_own_property_descriptor(&target, &tk);
-                if td.is_object() {
-                    let configurable = Reflect::get(&td, &JsValue::from_str("configurable"))
-                        .unwrap_or(JsValue::TRUE)
-                        .as_bool()
-                        .unwrap_or(true);
-                    if !configurable {
-                        let mut exists = false;
-                        for j in 0..keys.length() {
-                            if js_sys::Object::is(&keys.get(j), &tk) {
-                                exists = true;
-                                break;
-                            }
-                        }
-                        if !exists {
-                            keys.push(&tk);
-                        }
+        let target: Object = target_obj.clone().unchecked_into();
+        let target_keys = js_sys::Reflect::own_keys(&target_obj).unwrap_or(js_sys::Array::new());
+        for i in 0..target_keys.length() {
+            let tk = target_keys.get(i);
+            let td = js_sys::Object::get_own_property_descriptor(&target, &tk);
+            let configurable = Reflect::get(&td, &JsValue::from_str("configurable"))
+                .unwrap_or(JsValue::TRUE)
+                .as_bool()
+                .unwrap_or(true);
+            if td.is_object() && !configurable {
+                let mut exists = false;
+                for j in 0..keys.length() {
+                    if js_sys::Object::is(&keys.get(j), &tk) {
+                        exists = true;
+                        break;
                     }
+                }
+                if !exists {
+                    keys.push(&tk);
                 }
             }
         }
@@ -1199,18 +1311,14 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
         wasm_bindgen::closure::Closure::wrap(Box::new(move |target_obj: JsValue, key: JsValue| {
             // 属性描述符获取：优先返回 Proxy target 上的真实描述符，
             // 避免数组 `length` 等非可配置属性违反 Proxy 不变式。
-            if target_obj.is_object() {
-                let t: Object = target_obj.clone().unchecked_into();
-                let td = js_sys::Object::get_own_property_descriptor(&t, &key);
-                if td.is_object() {
-                    let configurable = Reflect::get(&td, &JsValue::from_str("configurable"))
-                        .unwrap_or(JsValue::TRUE)
-                        .as_bool()
-                        .unwrap_or(true);
-                    if !configurable {
-                        return td;
-                    }
-                }
+            let t: Object = target_obj.clone().unchecked_into();
+            let td = js_sys::Object::get_own_property_descriptor(&t, &key);
+            let configurable = Reflect::get(&td, &JsValue::from_str("configurable"))
+                .unwrap_or(JsValue::TRUE)
+                .as_bool()
+                .unwrap_or(true);
+            if td.is_object() && !configurable {
+                return td;
             }
 
             let obj = s_desc.get_path_js(p_desc.clone().into());
@@ -1263,49 +1371,185 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
         sync_proxy_target_snapshot(&target, &latest0);
     }
 
-    {
-        // 设计说明（修改点）：
-        // - 针对原始值代理（形如 { value }），在 Proxy 上定义只读的 value 访问器：
-        //   1) 读取 value 时始终从 holder（真实值）取出，避免镜像 target 导致 undefined。
-        //   2) 通过访问器隐藏 ownKeys 的 "value"（与上面的 ownKeys trap 配合），保持 DevTools 展示友好。
-        let s_for_val = sig.clone();
-        let p_for_val = path.clone();
-        let v = s_for_val.peek_path_js(p_for_val.clone().into());
-        if v.is_object() {
-            let o: Object = v.clone().unchecked_into();
-            let keys = Object::keys(&o);
-            if keys.length() == 1 {
-                let k = keys.get(0);
-                if k.as_string() == Some("value".to_string()) {
-                    let value_getter = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-                        let v2 = s_for_val.peek_path_js(p_for_val.clone().into());
-                        if v2.is_object() {
-                            let o2: Object = v2.clone().unchecked_into();
-                            let vv = Reflect::get(&o2, &JsValue::from_str("value"))
-                                .unwrap_or(JsValue::UNDEFINED);
-                            return vv;
-                        }
-                        v2
-                    })
-                        as Box<dyn FnMut() -> JsValue>);
-                    let desc = Object::new();
-                    Reflect::set(
-                        &desc,
-                        &JsValue::from_str("get"),
-                        &value_getter.as_ref().clone().into(),
-                    )
-                    .ok();
-                    Reflect::set(&desc, &JsValue::from_str("configurable"), &JsValue::TRUE).ok();
-                    Reflect::set(&desc, &JsValue::from_str("enumerable"), &JsValue::TRUE).ok();
-                    let proxy_obj: Object = proxy.clone().unchecked_into();
-                    js_sys::Object::define_property(&proxy_obj, &JsValue::from_str("value"), &desc);
-                    value_getter.forget();
-                }
+    proxy
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::reactive::core::{ComputedState, EFFECTS, Effect, Signal};
+    use std::collections::HashMap;
+    use wasm_bindgen_test::*;
+
+    fn reset_effect_entries(ids: &[usize]) {
+        EFFECTS.with(|effects| {
+            let mut effects = effects.borrow_mut();
+            for id in ids {
+                effects.remove(id);
             }
-        }
+        });
     }
 
-    proxy
+    #[wasm_bindgen_test]
+    fn signal_private_path_helpers_cover_empty_numeric_symbol_and_json_fallbacks() {
+        let empty = Array::new();
+        assert_eq!(path_key(&empty), "");
+
+        let numeric_string = normalize_path_segment(&JsValue::from_str("42"));
+        assert_eq!(numeric_string.as_f64(), Some(42.0));
+        let non_numeric_string = normalize_path_segment(&JsValue::from_str("04x"));
+        assert_eq!(non_numeric_string.as_string().as_deref(), Some("04x"));
+
+        let symbol = Function::new_no_args("return Symbol('rue-private-path')")
+            .call0(&JsValue::NULL)
+            .unwrap();
+        assert_eq!(path_segment_key(&symbol.into()), "j:<unknown>");
+
+        let circular = Function::new_no_args("const value = {}; value.self = value; return value")
+            .call0(&JsValue::NULL)
+            .unwrap();
+        assert_eq!(path_segment_key(&circular), "j:<unknown>");
+    }
+
+    #[wasm_bindgen_test]
+    fn signal_private_clone_and_snapshot_helpers_cover_primitives_arrays_and_objects() {
+        assert_eq!(
+            clone_js_value(&JsValue::from_str("primitive")).as_string().as_deref(),
+            Some("primitive")
+        );
+
+        let source_array = Array::new();
+        source_array.push(&JsValue::from_str("a"));
+        let cloned_array = clone_js_value(&source_array.clone().into());
+        let cloned_array = Array::from(&cloned_array);
+        assert_eq!(cloned_array.length(), 1);
+        source_array.push(&JsValue::from_str("b"));
+        assert_eq!(cloned_array.length(), 1);
+
+        let source_object = Object::new();
+        Reflect::set(&source_object, &JsValue::from_str("one"), &JsValue::from_f64(1.0)).unwrap();
+        let cloned_object = clone_js_value(&source_object.clone().into());
+        assert_eq!(
+            Reflect::get(&cloned_object, &JsValue::from_str("one")).unwrap().as_f64(),
+            Some(1.0)
+        );
+
+        let target_array = Array::new();
+        target_array.push(&JsValue::from_str("stale"));
+        sync_proxy_target_snapshot(&target_array.clone().into(), &source_array.clone().into());
+        assert_eq!(target_array.length(), 2);
+        assert_eq!(target_array.get(1).as_string().as_deref(), Some("b"));
+
+        let target_object = Object::new();
+        Reflect::set(&target_object, &JsValue::from_str("stale"), &JsValue::TRUE).unwrap();
+        sync_proxy_target_snapshot(&target_object.clone().into(), &source_object.clone().into());
+        assert!(
+            Reflect::get(&target_object, &JsValue::from_str("stale"))
+                .unwrap_or(JsValue::UNDEFINED)
+                .is_undefined()
+        );
+        assert_eq!(
+            Reflect::get(&target_object, &JsValue::from_str("one")).unwrap().as_f64(),
+            Some(1.0)
+        );
+
+        sync_proxy_target_snapshot(&target_object.into(), &JsValue::from_str("ignored"));
+    }
+
+    #[wasm_bindgen_test]
+    fn signal_private_collect_subscribers_prunes_missing_entries_and_dedupes_active_effects() {
+        reset_effect_entries(&[91_001, 91_002]);
+        EFFECTS.with(|effects| {
+            let mut effects = effects.borrow_mut();
+            effects.insert(
+                91_002,
+                Effect {
+                    cb: Function::new_no_args("return"),
+                    cleanups: Vec::new(),
+                    disposed: false,
+                    scheduler: None,
+                    watcher: false,
+                    scope_id: None,
+                    render_debug_owner: None,
+                },
+            );
+        });
+
+        let path = Array::new();
+        path.push(&JsValue::from_str("user"));
+        let descendant_path = Array::new();
+        descendant_path.push(&JsValue::from_str("user"));
+        descendant_path.push(&JsValue::from_str("name"));
+
+        let mut signal = Signal {
+            value: Object::new().into(),
+            subs: vec![91_002, 91_002, 91_003],
+            path_subs: HashMap::from([
+                (path_key(&path), vec![91_002]),
+                (path_key(&descendant_path), vec![91_002, 91_003]),
+            ]),
+            equals: None,
+            setter: None,
+            computed: None,
+        };
+
+        let affected = collect_affected_subscribers(&mut signal, Some(&path));
+        assert_eq!(affected, vec![91_002]);
+        assert_eq!(signal.subs, vec![91_002]);
+        assert_eq!(signal.path_subs.get(&path_key(&path)).cloned(), Some(vec![91_002]));
+        assert_eq!(signal.path_subs.get(&path_key(&descendant_path)).cloned(), Some(vec![91_002]));
+
+        reset_effect_entries(&[91_002]);
+    }
+
+    #[wasm_bindgen_test]
+    fn signal_private_readonly_marker_covers_computed_setter_shapes() {
+        let readonly = SignalHandle {
+            inner: Rc::new(RefCell::new(Signal {
+                value: JsValue::UNDEFINED,
+                subs: Vec::new(),
+                path_subs: HashMap::new(),
+                equals: None,
+                setter: None,
+                computed: Some(ComputedState {
+                    effect_id: None,
+                    dirty: true,
+                    initialized: false,
+                    evaluating: false,
+                }),
+            })),
+        };
+        assert!(readonly.readonly_marker());
+
+        let writable = SignalHandle {
+            inner: Rc::new(RefCell::new(Signal {
+                value: JsValue::UNDEFINED,
+                subs: Vec::new(),
+                path_subs: HashMap::new(),
+                equals: None,
+                setter: Some(Function::new_no_args("return")),
+                computed: Some(ComputedState {
+                    effect_id: None,
+                    dirty: true,
+                    initialized: false,
+                    evaluating: false,
+                }),
+            })),
+        };
+        assert!(!writable.readonly_marker());
+    }
+
+    #[wasm_bindgen_test]
+    fn signal_private_make_proxy_handles_primitive_holder_target() {
+        let signal = create_signal(JsValue::from_str("leaf"), None);
+        let proxy = make_proxy(signal, Array::new(), false, false);
+        assert!(proxy.is_object());
+        assert!(
+            Reflect::get(&proxy, &JsValue::from_str("missing"))
+                .unwrap_or(JsValue::UNDEFINED)
+                .is_undefined()
+        );
+    }
 }
 
 #[wasm_bindgen(typescript_custom_section)]

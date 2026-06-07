@@ -1,0 +1,522 @@
+import { createElement } from './rue-test-utils.js'
+import { decodeRuePayloadReadableStream } from '@rue-js/rsc/core/payload'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { dispatchAppPage } from '../src/server/app-page-dispatch.js'
+import { AppElementsWire, type AppWireElements } from '../src/server/app-elements.js'
+import type { AppPageMiddlewareContext } from '../src/server/app-page-response.js'
+import type { ISRCacheEntry } from '../src/server/isr-cache.js'
+import type { CachedAppPageValue } from '../src/shims/cache.js'
+
+type TestRoute = {
+  error?: { default?: unknown } | null
+  errors?: readonly ({ default?: unknown } | null | undefined)[]
+  forbiddens?: readonly ({ default?: unknown } | null | undefined)[]
+  isDynamic: boolean
+  layouts: readonly { default?: unknown }[]
+  layoutTreePositions?: readonly number[]
+  loading?: { default?: unknown } | null
+  notFounds?: readonly ({ default?: unknown } | null | undefined)[]
+  params: readonly string[]
+  pattern: string
+  routeSegments: readonly string[]
+  unauthorizeds?: readonly ({ default?: unknown } | null | undefined)[]
+}
+type DispatchOptions = Parameters<typeof dispatchAppPage<TestRoute>>[0]
+
+function createStream(chunks: string[]): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(new TextEncoder().encode(chunk))
+      }
+      controller.close()
+    },
+  })
+}
+
+function buildISRCacheEntry(value: CachedAppPageValue, isStale = false): ISRCacheEntry {
+  return {
+    isStale,
+    value: {
+      lastModified: Date.now(),
+      value,
+    },
+  }
+}
+
+function buildCachedAppPageValue(
+  html: string,
+  rscData?: ArrayBuffer,
+  status?: number,
+): CachedAppPageValue {
+  return {
+    kind: 'APP_PAGE',
+    html,
+    rscData,
+    headers: undefined,
+    postponed: undefined,
+    status,
+  }
+}
+
+function createRoute(overrides: Partial<TestRoute> = {}): TestRoute {
+  return {
+    isDynamic: false,
+    layouts: [],
+    params: [],
+    pattern: '/posts/[slug]',
+    routeSegments: ['posts', '[slug]'],
+    ...overrides,
+  }
+}
+
+function createDispatchOptions(
+  overrides: {
+    buildPageElement?: DispatchOptions['buildPageElement']
+    clearRequestContext?: DispatchOptions['clearRequestContext']
+    createRedirectPayloadThrower?: DispatchOptions['createRedirectPayloadThrower']
+    generateStaticParams?: DispatchOptions['generateStaticParams']
+    formState?: DispatchOptions['formState']
+    actionError?: DispatchOptions['actionError']
+    actionFailed?: DispatchOptions['actionFailed']
+    isProgressiveActionRender?: DispatchOptions['isProgressiveActionRender']
+    isProduction?: boolean
+    isRscRequest?: boolean
+    isrGet?: DispatchOptions['isrGet']
+    isrSet?: DispatchOptions['isrSet']
+    loadSsrHandler?: DispatchOptions['loadSsrHandler']
+    middlewareContext?: AppPageMiddlewareContext
+    renderToReadableStream?: DispatchOptions['renderToReadableStream']
+    request?: Request
+    revalidateSeconds?: number | null
+    route?: TestRoute
+    scheduleBackgroundRegeneration?: DispatchOptions['scheduleBackgroundRegeneration']
+    searchParams?: URLSearchParams
+    setNavigationContext?: DispatchOptions['setNavigationContext']
+    ssrPayloadDecoder?: DispatchOptions['ssrPayloadDecoder']
+  } = {},
+) {
+  const route = overrides.route ?? createRoute()
+  const buildPageElement =
+    overrides.buildPageElement ?? (async () => createElement('main', null, 'page'))
+  const clearRequestContext = overrides.clearRequestContext ?? (() => {})
+  const isrGet = overrides.isrGet ?? (async () => null)
+  const setNavigationContext = overrides.setNavigationContext ?? (() => {})
+  const renderToReadableStream: DispatchOptions['renderToReadableStream'] =
+    overrides.renderToReadableStream ?? (() => createStream(['payload']))
+  const options: DispatchOptions = {
+    buildPageElement,
+    cleanPathname: '/posts/hello',
+    clearRequestContext,
+    createRscOnErrorHandler() {
+      return () => null
+    },
+    createRedirectPayloadThrower:
+      overrides.createRedirectPayloadThrower ??
+      ((digest: string) => createElement('text-redirect-payload-thrower', { digest })),
+    draftModeSecret: 'draft-secret',
+    findIntercept() {
+      return null
+    },
+    generateStaticParams: overrides.generateStaticParams ?? null,
+    getFontLinks() {
+      return []
+    },
+    getFontPreloads() {
+      return []
+    },
+    getFontStyles() {
+      return []
+    },
+    getNavigationContext() {
+      return { pathname: '/posts/hello' }
+    },
+    getSourceRoute() {
+      return undefined
+    },
+    hasGenerateStaticParams: typeof overrides.generateStaticParams === 'function',
+    hasPageDefaultExport: true,
+    hasPageModule: true,
+    handlerStart: 10,
+    formState: overrides.formState,
+    actionError: overrides.actionError,
+    actionFailed: overrides.actionFailed,
+    interceptionContext: null,
+    isProgressiveActionRender: overrides.isProgressiveActionRender,
+    isProduction: overrides.isProduction ?? false,
+    isRscRequest: overrides.isRscRequest ?? false,
+    isrGet,
+    isrHtmlKey(pathname: string) {
+      return `html:${pathname}`
+    },
+    isrRscKey(pathname: string, mountedSlotsHeader?: string | null) {
+      return mountedSlotsHeader ? `rsc:${pathname}:${mountedSlotsHeader}` : `rsc:${pathname}`
+    },
+    isrSet: overrides.isrSet ?? vi.fn(async () => {}),
+    loadSsrHandler:
+      overrides.loadSsrHandler ??
+      (async () => {
+        return {
+          async handleSsr() {
+            return createStream(['<html>page</html>'])
+          },
+        }
+      }),
+    middlewareContext: overrides.middlewareContext ?? {
+      headers: null,
+      status: null,
+    },
+    params: { slug: 'hello' },
+    probeLayoutAt() {
+      return null
+    },
+    probePage() {
+      return null
+    },
+    renderErrorBoundaryPage: vi.fn(async () => null),
+    renderHttpAccessFallbackPage: vi.fn(async () => null),
+    renderToReadableStream,
+    request: overrides.request ?? new Request('https://example.test/posts/hello'),
+    revalidateSeconds: overrides.revalidateSeconds ?? null,
+    route,
+    runWithSuppressedHookWarning<T>(probe: () => Promise<T>) {
+      return probe()
+    },
+    scheduleBackgroundRegeneration: overrides.scheduleBackgroundRegeneration ?? vi.fn(),
+    searchParams: overrides.searchParams ?? new URLSearchParams(),
+    setNavigationContext,
+    ssrPayloadDecoder: overrides.ssrPayloadDecoder,
+  }
+
+  return {
+    buildPageElement,
+    clearRequestContext,
+    isrGet,
+    route,
+    setNavigationContext,
+    options,
+  }
+}
+
+describe('app page dispatch', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('serves cached production HTML instead of revalidating params or rendering', async () => {
+    const { options } = createDispatchOptions({
+      async buildPageElement() {
+        throw new Error('cache hit should not render the page')
+      },
+      async generateStaticParams() {
+        throw new Error('cache hit should not validate static params')
+      },
+      isProduction: true,
+      isrGet: vi.fn(async () => buildISRCacheEntry(buildCachedAppPageValue('<html>cached</html>'))),
+      revalidateSeconds: 60,
+      route: createRoute({ isDynamic: true, params: ['slug'] }),
+    })
+
+    const response = await dispatchAppPage(options)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('x-text-cache')).toBe('HIT')
+    await expect(response.text()).resolves.toBe('<!DOCTYPE html><html>cached</html>')
+  })
+
+  it('passes in-process App payloads to stale HTML cache regeneration SSR', async () => {
+    const payload: AppWireElements = {
+      [AppElementsWire.keys.interceptionContext]: null,
+      [AppElementsWire.keys.rootLayout]: '/',
+      [AppElementsWire.keys.route]: AppElementsWire.encodeRouteId('/posts/[slug]', null),
+      [AppElementsWire.encodePageId('/posts/[slug]', null)]: 'fresh page',
+    }
+    const scheduledRegenerations: Promise<void>[] = []
+    const ssrPayloadDecoder = vi.fn(async () => payload)
+    const handleSsr = vi.fn<Awaited<ReturnType<DispatchOptions['loadSsrHandler']>>['handleSsr']>(
+      async (_rscStream, _navigationContext, _fontData, ssrOptions) => {
+        expect(ssrOptions?.ssrPayload).toBe(payload)
+        expect(ssrOptions?.ssrPayloadDecoder).toBe(ssrPayloadDecoder)
+        if (ssrOptions?.capturedRscDataRef) {
+          ssrOptions.capturedRscDataRef.value = Promise.resolve(new ArrayBuffer(0))
+        }
+        return createStream(['<html>fresh</html>'])
+      },
+    )
+    const { options } = createDispatchOptions({
+      buildPageElement: vi.fn(async () => payload),
+      isProduction: true,
+      isrGet: vi.fn(async () =>
+        buildISRCacheEntry(buildCachedAppPageValue('<html>stale</html>'), true),
+      ),
+      isrSet: vi.fn(async () => {}),
+      loadSsrHandler: vi.fn(async () => ({ handleSsr })),
+      renderToReadableStream: vi.fn(element => {
+        expect(element).toBe(payload)
+        return createStream(['flight'])
+      }),
+      revalidateSeconds: 60,
+      ssrPayloadDecoder,
+      scheduleBackgroundRegeneration: vi.fn((_key, renderFn) => {
+        scheduledRegenerations.push(renderFn())
+      }),
+    })
+
+    const response = await dispatchAppPage(options)
+
+    expect(response.headers.get('x-text-cache')).toBe('STALE')
+    await expect(response.text()).resolves.toBe('<!DOCTYPE html><html>stale</html>')
+    await Promise.all(scheduledRegenerations)
+    expect(handleSsr).toHaveBeenCalledTimes(1)
+    expect(options.isrSet).toHaveBeenCalledTimes(2)
+  })
+
+  it('bypasses cached production HTML when draft mode is enabled', async () => {
+    const isrGet = vi.fn(async () =>
+      buildISRCacheEntry(buildCachedAppPageValue('<html>stale</html>')),
+    )
+    const { options } = createDispatchOptions({
+      buildPageElement: vi.fn(async () => createElement('main', null, 'draft page')),
+      isProduction: true,
+      isrGet,
+      request: new Request('https://example.test/posts/hello', {
+        headers: { Cookie: '__prerender_bypass=draft-secret' },
+      }),
+      revalidateSeconds: 60,
+      renderToReadableStream() {
+        return createStream(['flight'])
+      },
+    })
+
+    const response = await dispatchAppPage(options)
+
+    expect(isrGet).not.toHaveBeenCalled()
+    expect(response.headers.get('x-text-cache')).toBeNull()
+    await expect(response.text()).resolves.toBe('<!DOCTYPE html><html>page</html>')
+  })
+
+  it('bypasses cached production HTML when rendering action form state', async () => {
+    const formState = ['action-result', 'key-path', 'reference-id', 1] as never
+    const isrGet = vi.fn(async () =>
+      buildISRCacheEntry(buildCachedAppPageValue('<html>cached initial state</html>')),
+    )
+    const { options } = createDispatchOptions({
+      formState,
+      isProgressiveActionRender: true,
+      isProduction: true,
+      isrGet,
+      revalidateSeconds: 60,
+    })
+
+    const response = await dispatchAppPage(options)
+
+    expect(isrGet).not.toHaveBeenCalled()
+    expect(response.headers.get('x-text-cache')).toBeNull()
+    expect(response.headers.get('cache-control')).toBe('no-store, must-revalidate')
+    await expect(response.text()).resolves.toBe('<!DOCTYPE html><html>page</html>')
+  })
+
+  it('bypasses cached production HTML when a progressive action returns no form state', async () => {
+    const isrGet = vi.fn(async () =>
+      buildISRCacheEntry(buildCachedAppPageValue('<html>cached initial state</html>')),
+    )
+    const { options } = createDispatchOptions({
+      isProgressiveActionRender: true,
+      isProduction: true,
+      isrGet,
+      revalidateSeconds: 60,
+    })
+
+    const response = await dispatchAppPage(options)
+
+    expect(isrGet).not.toHaveBeenCalled()
+    expect(options.isrSet).not.toHaveBeenCalled()
+    expect(response.headers.get('x-text-cache')).toBeNull()
+    expect(response.headers.get('cache-control')).toBe('no-store, must-revalidate')
+    await expect(response.text()).resolves.toBe('<!DOCTYPE html><html>page</html>')
+  })
+
+  it('renders not-found HTML when a progressive action calls notFound()', async () => {
+    const buildPageElement = vi.fn(async () => createElement('main', null, 'page'))
+    const renderHttpAccessFallbackPage = vi.fn(
+      async () => new Response('<html>not found</html>', { status: 404 }),
+    )
+    const { options } = createDispatchOptions({
+      actionError: { digest: 'TEXT_HTTP_ERROR_FALLBACK;404' },
+      actionFailed: true,
+      buildPageElement,
+      isProgressiveActionRender: true,
+    })
+    options.renderHttpAccessFallbackPage = renderHttpAccessFallbackPage
+
+    const response = await dispatchAppPage(options)
+
+    expect(response.status).toBe(404)
+    await expect(response.text()).resolves.toBe('<html>not found</html>')
+    expect(buildPageElement).not.toHaveBeenCalled()
+    expect(renderHttpAccessFallbackPage).toHaveBeenCalledWith(
+      404,
+      { matchedParams: { slug: 'hello' } },
+      null,
+    )
+  })
+
+  it('builds Rue-native redirect payloads for RSC redirects', async () => {
+    const digest = 'TEXT_REDIRECT;replace;/redirected;307;'
+    const createRedirectPayloadThrower = vi.fn((receivedDigest: string) =>
+      createElement('text-redirect-payload-thrower', { digest: receivedDigest }),
+    )
+    const renderToReadableStream = vi.fn<DispatchOptions['renderToReadableStream']>(
+      (element, { onError }) => {
+        expect(element).toMatchObject({ props: { digest } })
+        expect(onError(new Error('redirect'), null, null)).toBe(digest)
+        return createStream([`payload:${digest}`])
+      },
+    )
+    const { options } = createDispatchOptions({
+      actionError: { digest },
+      actionFailed: true,
+      createRedirectPayloadThrower,
+      isProgressiveActionRender: true,
+      isRscRequest: true,
+      renderToReadableStream,
+    })
+
+    const response = await dispatchAppPage(options)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('text/x-component')
+    expect(createRedirectPayloadThrower).not.toHaveBeenCalled()
+    expect(renderToReadableStream).not.toHaveBeenCalled()
+    await expect(response.clone().text()).resolves.toContain(digest)
+
+    const decoded = await decodeRuePayloadReadableStream<() => unknown>(response.body!)
+    try {
+      decoded()
+      throw new Error('decoded redirect payload should throw')
+    } catch (error) {
+      expect((error as { digest?: unknown }).digest).toBe(digest)
+    }
+  })
+
+  it('does not bypass cached production HTML for arbitrary draft cookie values', async () => {
+    const isrGet = vi.fn(async () =>
+      buildISRCacheEntry(buildCachedAppPageValue('<html>cached</html>')),
+    )
+    const { options } = createDispatchOptions({
+      async buildPageElement() {
+        throw new Error('invalid draft cookie should still use the page cache')
+      },
+      isProduction: true,
+      isrGet,
+      request: new Request('https://example.test/posts/hello', {
+        headers: { Cookie: '__prerender_bypass=wrong-secret' },
+      }),
+      revalidateSeconds: 60,
+    })
+
+    const response = await dispatchAppPage(options)
+
+    expect(isrGet).toHaveBeenCalledOnce()
+    expect(response.headers.get('x-text-cache')).toBe('HIT')
+    await expect(response.text()).resolves.toBe('<!DOCTYPE html><html>cached</html>')
+  })
+
+  it('serves cached production HTML for indefinite revalidate=false pages', async () => {
+    const { options } = createDispatchOptions({
+      async buildPageElement() {
+        throw new Error('revalidate=false cache hit should not render the page')
+      },
+      isProduction: true,
+      isrGet: vi.fn(async () =>
+        buildISRCacheEntry(buildCachedAppPageValue('<html>static cached</html>')),
+      ),
+      revalidateSeconds: Infinity,
+    })
+
+    const response = await dispatchAppPage(options)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('s-maxage=31536000, stale-while-revalidate')
+    expect(response.headers.get('x-text-cache')).toBe('HIT')
+    await expect(response.text()).resolves.toBe('<!DOCTYPE html><html>static cached</html>')
+  })
+
+  it('returns method policy responses instead of rendering unsupported methods', async () => {
+    const { options } = createDispatchOptions({
+      async buildPageElement() {
+        throw new Error('unsupported methods should not render the page')
+      },
+      request: new Request('https://example.test/posts/hello', { method: 'POST' }),
+    })
+
+    const response = await dispatchAppPage(options)
+
+    expect(response.status).toBe(405)
+    expect(response.headers.get('allow')).toBe('GET, HEAD')
+  })
+
+  it('returns not found for dynamicParams=false paths outside generated params', async () => {
+    const { options } = createDispatchOptions({
+      async buildPageElement() {
+        throw new Error('unknown static params should not render the page')
+      },
+      async generateStaticParams() {
+        return [{ slug: 'known' }]
+      },
+      route: createRoute({ isDynamic: true, params: ['slug'] }),
+    })
+
+    const response = await dispatchAppPage({
+      ...options,
+      dynamicParamsConfig: false,
+    })
+
+    expect(response.status).toBe(404)
+    await expect(response.text()).resolves.toBe('This page could not be found')
+  })
+
+  it('serves intercepted RSC source-route payloads with middleware response state', async () => {
+    const sourceRoute = createRoute({ params: [], pattern: '/feed', routeSegments: ['feed'] })
+    const currentRoute = createRoute({ params: ['id'], pattern: '/photos/[id]' })
+    const middlewareHeaders = new Headers({ 'x-from-middleware': 'yes' })
+    const { options } = createDispatchOptions({
+      async buildPageElement(route, params, opts) {
+        return `${route.pattern}:${JSON.stringify(params)}:${opts?.interceptSlotKey ?? 'direct'}`
+      },
+      isRscRequest: true,
+      middlewareContext: {
+        headers: middlewareHeaders,
+        status: 202,
+      },
+      renderToReadableStream(element) {
+        if (typeof element !== 'string') {
+          throw new Error('expected intercepted payload to be rendered from a string element')
+        }
+        return createStream([element])
+      },
+      route: currentRoute,
+      searchParams: new URLSearchParams('from=feed'),
+    })
+
+    const response = await dispatchAppPage({
+      ...options,
+      findIntercept() {
+        return {
+          matchedParams: { id: '123' },
+          page: { default: 'modal-page' },
+          slotKey: 'modal@app/feed/@modal',
+          sourceRouteIndex: 1,
+        }
+      },
+      getSourceRoute(sourceRouteIndex) {
+        return sourceRouteIndex === 1 ? sourceRoute : undefined
+      },
+    })
+
+    expect(response.status).toBe(202)
+    expect(response.headers.get('content-type')).toBe('text/x-component')
+    expect(response.headers.get('x-from-middleware')).toBe('yes')
+    await expect(response.text()).resolves.toBe('/feed:{}:modal@app/feed/@modal')
+  })
+})

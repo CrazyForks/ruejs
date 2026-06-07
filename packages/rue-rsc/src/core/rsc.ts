@@ -1,0 +1,162 @@
+import { memoize, tinyassert } from '@hiogawa/utils'
+import type { BundlerConfig, ImportManifestEntry, ModuleMap } from '../types'
+import { RUE_CLIENT_REFERENCE_SYMBOL } from './payload'
+import {
+  SERVER_DECODE_CLIENT_PREFIX,
+  SERVER_REFERENCE_PREFIX,
+  createReferenceCacheTag,
+  removeReferenceCacheTag,
+  setInternalRequire,
+} from './shared'
+
+let init = false
+let requireModule!: (id: string) => unknown
+
+export const RueClientReferenceSymbol: symbol = RUE_CLIENT_REFERENCE_SYMBOL
+
+export type RueClientReferenceRecord = {
+  $$typeof: symbol
+  $$id: string
+  $$referenceKey: string
+  $$exportName: string
+}
+
+export function createClientReference<T>(
+  proxy: T,
+  id: string,
+  name: string,
+): T & RueClientReferenceRecord {
+  const target =
+    (typeof proxy === 'object' && proxy !== null) || typeof proxy === 'function'
+      ? proxy
+      : () => {
+          throw new Error(`Unexpectedly client reference export '${name}' is called on server`)
+        }
+
+  return Object.defineProperties(target, {
+    $$typeof: { value: RueClientReferenceSymbol },
+    $$id: { value: `${id}#${name}` },
+    $$referenceKey: { value: id },
+    $$exportName: { value: name },
+  }) as T & RueClientReferenceRecord
+}
+
+export function setRequireModule(options: { load: (id: string) => unknown }): void {
+  if (init) return
+  init = true
+
+  requireModule = id => {
+    return options.load(removeReferenceCacheTag(id))
+  }
+
+  // need memoize to return stable promise from __webpack_require__
+  ;(globalThis as any).__vite_rsc_server_require__ = memoize(async (id: string) => {
+    if (id.startsWith(SERVER_DECODE_CLIENT_PREFIX)) {
+      // decode client reference on the server
+      id = id.slice(SERVER_DECODE_CLIENT_PREFIX.length)
+      id = removeReferenceCacheTag(id)
+      const target = {} as any
+      const getOrCreateClientReference = (name: string) => {
+        return (target[name] ??= createClientReference(
+          () => {
+            throw new Error(`Unexpectedly client reference export '${name}' is called on server`)
+          },
+          id,
+          name,
+        ))
+      }
+      return new Proxy(target, {
+        // Some consumers use hasOwnProperty.call() to check for exports.
+        getOwnPropertyDescriptor(_target, name) {
+          if (typeof name !== 'string' || name === 'then') {
+            return Reflect.getOwnPropertyDescriptor(target, name)
+          }
+          getOrCreateClientReference(name)
+          return Reflect.getOwnPropertyDescriptor(target, name)
+        },
+      })
+    }
+    return requireModule(id)
+  })
+
+  setInternalRequire()
+}
+
+export async function loadServerAction(id: string): Promise<Function> {
+  const [file, name] = id.split('#') as [string, string]
+  const mod: any = await requireModule(file)
+  return mod[name]
+}
+
+export function createServerManifest(): BundlerConfig {
+  const cacheTag = import.meta.env.DEV ? createReferenceCacheTag() : ''
+
+  return new Proxy(
+    {},
+    {
+      get(_target, $$id, _receiver) {
+        tinyassert(typeof $$id === 'string')
+        let [id, name] = $$id.split('#')
+        tinyassert(id)
+        tinyassert(name)
+        return {
+          id: SERVER_REFERENCE_PREFIX + id + cacheTag,
+          name,
+          chunks: [],
+          async: true,
+        } satisfies ImportManifestEntry
+      },
+    },
+  )
+}
+
+export function createServerDecodeClientManifest(): ModuleMap {
+  return new Proxy(
+    {},
+    {
+      get(_target, id: string) {
+        return new Proxy(
+          {},
+          {
+            get(_target, name: string) {
+              return {
+                id: SERVER_REFERENCE_PREFIX + SERVER_DECODE_CLIENT_PREFIX + id,
+                name,
+                chunks: [],
+                async: true,
+              }
+            },
+          },
+        )
+      },
+    },
+  )
+}
+
+export function createClientManifest(options?: {
+  /**
+   * @internal
+   */
+  onClientReference?: (metadata: { id: string; name: string }) => void
+}): BundlerConfig {
+  const cacheTag = import.meta.env.DEV ? createReferenceCacheTag() : ''
+
+  return new Proxy(
+    {},
+    {
+      get(_target, $$id, _receiver) {
+        tinyassert(typeof $$id === 'string')
+        let [id, name] = $$id.split('#')
+        tinyassert(id)
+        tinyassert(name)
+        options?.onClientReference?.({ id, name })
+        return {
+          id: id + cacheTag,
+          name,
+          chunks: [],
+          async: true,
+        } satisfies ImportManifestEntry
+      },
+    },
+  )
+}

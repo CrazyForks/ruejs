@@ -55,6 +55,7 @@ use super::template_directive;
 /// - seen_ids/dup_count：保留字段（可用于未来重复 ID 统计或消歧）
 /// - scope_stack/next_scope：作用域链编号栈，进入函数/模块等时递增，形成 "1.2.3" 链
 /// - hook_index_stack：同一作用域内 Hook 调用的递增索引
+#[derive(Default)]
 pub struct PreTransform {
     in_component: bool,
     #[allow(dead_code)]
@@ -102,18 +103,9 @@ impl VisitMut for HookIdDeduper {
     }
 }
 
-impl Default for PreTransform {
-    fn default() -> Self {
-        Self {
-            in_component: false,
-            seen_ids: HashSet::new(),
-            dup_count: HashMap::new(),
-            scope_stack: Vec::new(),
-            next_scope: 0,
-            hook_index_stack: Vec::new(),
-        }
-    }
-}
+#[cfg(test)]
+#[path = "transform_tests.rs"]
+mod tests;
 
 impl VisitMut for PreTransform {
     fn visit_mut_module(&mut self, m: &mut Module) {

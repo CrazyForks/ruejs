@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import VitePluginRue from '@rue-js/vite-plugin-rue'
 import { resolve } from 'node:path'
 import wasm from 'vite-plugin-wasm'
+import { DevTools } from '@vitejs/devtools'
 
 const rootDir = resolve(__dirname)
 
@@ -18,6 +19,7 @@ const vitestProjects = [
         ...configDefaults.exclude,
         '**/e2e/**',
         'temp/**',
+        'packages/text/**',
         '**/{rue,rue-design,runtime,jsx-runtime}/**',
         'packages/runtime/__tests__/transition-utils.spec.ts',
       ],
@@ -66,6 +68,7 @@ export default defineConfig(({ command }) => {
 
   return {
     plugins: [
+      !isVitest && DevTools(),
       wasm(),
       tailwindcss() as any,
       VitePluginRue({
@@ -108,6 +111,7 @@ export default defineConfig(({ command }) => {
         input: {
           main: path.resolve(__dirname, 'index.html'),
         },
+        devtools: {}, // enable devtools mode
       },
     },
     test: {
@@ -167,6 +171,7 @@ export default defineConfig(({ command }) => {
         '@rue-js/jsx-runtime': path.resolve(rootDir, 'packages/jsx-runtime/src'),
         '@rue-js/jsx-dev-runtime': path.resolve(rootDir, 'packages/jsx-dev-runtime/src'),
         '@rue-js/runtime': path.resolve(rootDir, 'packages/runtime/src'),
+        '@rue-js/server-renderer': path.resolve(rootDir, 'packages/server-renderer/src'),
         '@rue-js/vite-plugin-rue': path.resolve(rootDir, 'packages/vite-plugin-rue/index.mjs'),
         '@rue-js/shared': path.resolve(rootDir, 'packages/shared/src'),
         '@rue-js/design': path.resolve(rootDir, 'packages/rue-design/src'),

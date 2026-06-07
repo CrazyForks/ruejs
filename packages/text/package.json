@@ -1,0 +1,288 @@
+{
+  "name": "@rue-js/text",
+  "version": "0.3.10",
+  "description": "@rue-js/text",
+  "keywords": [
+    "rue"
+  ],
+  "homepage": "https://github.com/hunzhiwange/ruejs/tree/main/packages/text#readme",
+  "bugs": {
+    "url": "https://github.com/hunzhiwange/ruejs/issues"
+  },
+  "license": "MIT",
+  "author": "Xiangmin Liu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hunzhiwange/ruejs.git",
+    "directory": "packages/text"
+  },
+  "bin": {
+    "ruetext": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./cache": {
+      "types": "./dist/cache.d.ts",
+      "import": "./dist/cache.js"
+    },
+    "./navigation": {
+      "types": "./dist/navigation.d.ts",
+      "import": "./dist/navigation.js"
+    },
+    "./link": {
+      "types": "./dist/link.d.ts",
+      "import": "./dist/link.js"
+    },
+    "./head": {
+      "types": "./dist/shims/head.d.ts",
+      "import": "./dist/shims/head.js"
+    },
+    "./image": {
+      "types": "./dist/shims/image.d.ts",
+      "import": "./dist/shims/image.js"
+    },
+    "./legacy/image": {
+      "types": "./dist/shims/legacy-image.d.ts",
+      "import": "./dist/shims/legacy-image.js"
+    },
+    "./router": {
+      "types": "./dist/shims/router.d.ts",
+      "import": "./dist/shims/router.js"
+    },
+    "./compat/router": {
+      "types": "./dist/shims/compat-router.d.ts",
+      "import": "./dist/shims/compat-router.js"
+    },
+    "./headers": {
+      "types": "./dist/shims/headers.d.ts",
+      "import": "./dist/shims/headers.js"
+    },
+    "./server": {
+      "types": "./dist/shims/server.d.ts",
+      "import": "./dist/shims/server.js"
+    },
+    "./dynamic": {
+      "types": "./dist/shims/dynamic.d.ts",
+      "import": "./dist/shims/dynamic.js"
+    },
+    "./config": {
+      "types": "./dist/shims/config.d.ts",
+      "import": "./dist/shims/config.js"
+    },
+    "./script": {
+      "types": "./dist/shims/script.d.ts",
+      "import": "./dist/shims/script.js"
+    },
+    "./font/google": {
+      "types": "./dist/shims/font-google.d.ts",
+      "import": "./dist/shims/font-google.js"
+    },
+    "./font/local": {
+      "types": "./dist/shims/font-local.d.ts",
+      "import": "./dist/shims/font-local.js"
+    },
+    "./og": {
+      "types": "./dist/shims/og.d.ts",
+      "import": "./dist/shims/og.js"
+    },
+    "./constants": {
+      "types": "./dist/shims/constants.d.ts",
+      "import": "./dist/shims/constants.js"
+    },
+    "./amp": {
+      "types": "./dist/shims/amp.d.ts",
+      "import": "./dist/shims/amp.js"
+    },
+    "./document": {
+      "types": "./dist/shims/document.d.ts",
+      "import": "./dist/shims/document.js"
+    },
+    "./app": {
+      "types": "./dist/shims/app.d.ts",
+      "import": "./dist/shims/app.js"
+    },
+    "./error": {
+      "types": "./dist/shims/error.d.ts",
+      "import": "./dist/shims/error.js"
+    },
+    "./form": {
+      "types": "./dist/shims/form.d.ts",
+      "import": "./dist/shims/form.js"
+    },
+    "./web-vitals": {
+      "types": "./dist/shims/web-vitals.d.ts",
+      "import": "./dist/shims/web-vitals.js"
+    },
+    "./dist/shared/lib/router-context.shared-runtime": {
+      "types": "./dist/shims/internal/router-context.d.ts",
+      "import": "./dist/shims/internal/router-context.js"
+    },
+    "./dist/shared/lib/app-router-context.shared-runtime": {
+      "types": "./dist/shims/internal/app-router-context.d.ts",
+      "import": "./dist/shims/internal/app-router-context.js"
+    },
+    "./dist/shared/lib/app-router-context": {
+      "types": "./dist/shims/internal/app-router-context.d.ts",
+      "import": "./dist/shims/internal/app-router-context.js"
+    },
+    "./dist/shared/lib/utils": {
+      "types": "./dist/shims/internal/utils.d.ts",
+      "import": "./dist/shims/internal/utils.js"
+    },
+    "./dist/server/api-utils": {
+      "types": "./dist/shims/internal/api-utils.d.ts",
+      "import": "./dist/shims/internal/api-utils.js"
+    },
+    "./dist/server/web/spec-extension/cookies": {
+      "types": "./dist/shims/internal/cookies.d.ts",
+      "import": "./dist/shims/internal/cookies.js"
+    },
+    "./dist/compiled/@edge-runtime/cookies": {
+      "types": "./dist/shims/internal/cookies.d.ts",
+      "import": "./dist/shims/internal/cookies.js"
+    },
+    "./dist/server/app-render/work-unit-async-storage.external": {
+      "types": "./dist/shims/internal/work-unit-async-storage.d.ts",
+      "import": "./dist/shims/internal/work-unit-async-storage.js"
+    },
+    "./dist/client/components/work-unit-async-storage.external": {
+      "types": "./dist/shims/internal/work-unit-async-storage.d.ts",
+      "import": "./dist/shims/internal/work-unit-async-storage.js"
+    },
+    "./dist/client/components/request-async-storage.external": {
+      "types": "./dist/shims/internal/work-unit-async-storage.d.ts",
+      "import": "./dist/shims/internal/work-unit-async-storage.js"
+    },
+    "./dist/client/components/request-async-storage": {
+      "types": "./dist/shims/internal/work-unit-async-storage.d.ts",
+      "import": "./dist/shims/internal/work-unit-async-storage.js"
+    },
+    "./dist/client/components/navigation": {
+      "types": "./dist/shims/navigation.d.ts",
+      "import": "./dist/shims/navigation.js"
+    },
+    "./dist/server/config-shared": {
+      "types": "./dist/shims/internal/utils.d.ts",
+      "import": "./dist/shims/internal/utils.js"
+    },
+    "./shims/*": {
+      "types": "./dist/shims/*.d.ts",
+      "import": "./dist/shims/*.js"
+    },
+    "./server/prod-server": {
+      "types": "./dist/server/prod-server.d.ts",
+      "import": "./dist/server/prod-server.js"
+    },
+    "./server/pages-i18n": {
+      "types": "./dist/server/pages-i18n.d.ts",
+      "import": "./dist/server/pages-i18n.js"
+    },
+    "./cloudflare": {
+      "types": "./dist/cloudflare/index.d.ts",
+      "import": "./dist/cloudflare/index.js"
+    },
+    "./server/image-optimization": {
+      "types": "./dist/server/image-optimization.d.ts",
+      "import": "./dist/server/image-optimization.js"
+    },
+    "./server/request-pipeline": {
+      "types": "./dist/server/request-pipeline.d.ts",
+      "import": "./dist/server/request-pipeline.js"
+    },
+    "./server/app-router-entry": {
+      "types": "./dist/server/app-router-entry.d.ts",
+      "import": "./dist/server/app-router-entry.js"
+    },
+    "./config/config-matchers": {
+      "types": "./dist/config/config-matchers.d.ts",
+      "import": "./dist/config/config-matchers.js"
+    },
+    "./server/worker-utils": {
+      "types": "./dist/server/worker-utils.d.ts",
+      "import": "./dist/server/worker-utils.js"
+    },
+    "./utils/query": {
+      "types": "./dist/utils/query.d.ts",
+      "import": "./dist/utils/query.js"
+    }
+  },
+  "scripts": {
+    "build": "vp pack && node ../../scripts/copy-text-runtime-vapor-artifacts.js && node ../../scripts/ensure-text-bin-executable.js",
+    "check": "vp pack --no-write --no-clean",
+    "prepack": "vp run build",
+    "dev": "vp pack --watch",
+    "test": "pnpm run build && vp test run --environment jsdom --teardownTimeout 60000 --exclude \"__tests__/e2e/**\"",
+    "test-unit": "pnpm run build && node ../../scripts/run-text-unit-tests.mjs"
+  },
+  "dependencies": {
+    "@rue-js/jsx-dev-runtime": "workspace:*",
+    "@rue-js/jsx-runtime": "workspace:*",
+    "@rue-js/rsc": "workspace:*",
+    "@rue-js/rue": "workspace:*",
+    "@rue-js/runtime": "workspace:*",
+    "@rue-js/runtime-vapor": "workspace:*",
+    "@rue-js/server-renderer": "workspace:*",
+    "@rue-js/shared": "workspace:*",
+    "@rue-js/vite-plugin-rue": "workspace:*",
+    "@vercel/og": "catalog:",
+    "image-size": "catalog:",
+    "ipaddr.js": "catalog:",
+    "jiti": "catalog:",
+    "magic-string": "catalog:",
+    "vite-plugin-commonjs": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "web-vitals": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "better-auth": "catalog:",
+    "kysely": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "peerDependencies": {
+    "@mdx-js/rollup": "^3.0.0",
+    "@rue-js/rue": "^0.3.10",
+    "vite": "^7.0.0 || ^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@mdx-js/rollup": {
+      "optional": true
+    },
+    "@rue-js/rue": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "buildOptions": {
+    "name": "RueText",
+    "formats": [
+      "esm-bundler"
+    ],
+    "preserveModules": true,
+    "copyRuntimeArtifacts": [
+      "runtime-vapor"
+    ],
+    "external": [
+      "@rue-js/rsc",
+      "@rue-js/server-renderer",
+      "@rue-js/text",
+      "private-text-instrumentation-client",
+      "text",
+      "virtual:text-rsc",
+      "virtual:text-rsc-entry",
+      "virtual:text-server-entry"
+    ]
+  }
+}

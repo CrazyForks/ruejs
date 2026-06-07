@@ -121,3 +121,7 @@ pub fn emit_component_root(transform: &mut VaporTransform, el: &JSXElement) -> B
     stmts.push(return_root(root.clone()));
     BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts }
 }
+
+#[cfg(test)]
+#[path = "component_tests.rs"]
+mod tests;

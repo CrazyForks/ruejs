@@ -90,6 +90,17 @@ fn vapor_block_children_emits_trimmed_text_and_flattens_nested_fragments() {
 }
 
 #[test]
+fn vapor_block_children_skips_block_whitespace_text() {
+    let frag = parse_fragment("<>\n    \n</>");
+    let mut vt = new_vt();
+    let mut stmts = Vec::new();
+
+    emit_children(&mut vt, &crate::emit::ident("root"), &frag.children, &mut stmts);
+
+    assert!(stmts.is_empty());
+}
+
+#[test]
 fn vapor_block_children_dispatches_expr_nested_element_and_ignores_spread() {
     let mut frag = parse_fragment("<>{props.children}<span>child</span></>");
     frag.children.push(JSXElementChild::JSXSpreadChild(JSXSpreadChild {

@@ -14,10 +14,12 @@ const RUE_CONTEXT_LINKED_INSTANCE_PROP = '__rue_context_linked_instance__'
 const RUE_CONTEXT_OWNER_PARENT_PROP = '__rue_context_owner_parent__'
 const RUE_CONTEXT_PARENT_INSTANCE_PROP = '__rue_context_parent_instance__'
 const RUE_CONTEXT_PROVIDER_MARKER = '__rue_context_provider__'
+const RUE_CONTEXT_PROVIDER_CONTEXT_PROP = '__rue_context_provider_context__'
 const RUE_CONTEXT_PROVIDER_PROPS_MARKER = '__rue_context_provider_props__'
 const RUE_PORTABLE_COMPONENT_TYPE_PROP = '__rue_component_type'
 const RUE_PORTABLE_PROPS_PROP = 'props'
 const RUE_REPEATABLE_MOUNT_FACTORY_PROP = '__rue_repeatable_mount_factory__'
+const TEXT_COMPAT_CONTEXT_VALUE_STACK_KEY = Symbol.for('text.compatContextValueStack')
 
 type ContextualComponent = (props: Record<string, unknown>) => unknown
 
@@ -38,15 +40,21 @@ type ContextCarrier = {
 
 type ContextProviderComponent = ContextualComponent & {
   [RUE_CONTEXT_PROVIDER_MARKER]?: boolean
+  [RUE_CONTEXT_PROVIDER_CONTEXT_PROP]?: RueContext<unknown>
 }
 
 export interface ContextProviderProps<T> {
+  /** 向后代提供的 context 值，允许是 ref、函数或任意对象引用。 */
   value: T
+  /** Provider 包裹的子节点。 */
   children?: ComponentProps['children']
 }
 
+/** createContext 返回的上下文对象。 */
 export interface RueContext<T> {
+  /** Provider 组件，用于在组件树中写入当前 context 值。 */
   Provider: (props: ContextProviderProps<T>) => unknown
+  /** 没有祖先 Provider 时 useContext 返回的默认值。 */
   defaultValue: T
 }
 
@@ -83,6 +91,23 @@ const asContextCarrier = (value: unknown): ContextCarrier | null => {
   return value as ContextCarrier
 }
 
+const readTextCompatContextValue = <T>(
+  context: RueContext<T>,
+): { found: true; value: T } | { found: false } => {
+  const stack = (globalThis as { [TEXT_COMPAT_CONTEXT_VALUE_STACK_KEY]?: unknown })[
+    TEXT_COMPAT_CONTEXT_VALUE_STACK_KEY
+  ]
+  if (!Array.isArray(stack)) return { found: false }
+
+  for (let i = stack.length - 1; i >= 0; i -= 1) {
+    const scope = stack[i]
+    if (scope instanceof Map && scope.has(context)) {
+      return { found: true, value: scope.get(context) as T }
+    }
+  }
+  return { found: false }
+}
+
 const getParentContextPropDescriptor = (value: unknown) => {
   const carrier = asContextCarrier(value)
   if (!carrier) {
@@ -90,17 +115,6 @@ const getParentContextPropDescriptor = (value: unknown) => {
   }
 
   return Object.getOwnPropertyDescriptor(carrier, RUE_CONTEXT_PARENT_INSTANCE_PROP) ?? null
-}
-
-const defineParentContextProp = (target: Record<string, unknown>, parentInstance: unknown) => {
-  Object.defineProperty(target, RUE_CONTEXT_PARENT_INSTANCE_PROP, {
-    configurable: true,
-    enumerable: false,
-    value: parentInstance,
-    writable: true,
-  })
-
-  return target
 }
 
 const markContextProviderProps = <T extends Record<string, unknown>>(target: T): T => {
@@ -114,11 +128,13 @@ const markContextProviderProps = <T extends Record<string, unknown>>(target: T):
   return target
 }
 
+/** 判断 props 对象是否来自 Rue context Provider。 */
 export const isContextProviderProps = (value: unknown): boolean => {
   const carrier = asContextCarrier(value)
   return carrier?.[RUE_CONTEXT_PROVIDER_PROPS_MARKER] === true
 }
 
+/** 复制 Provider props 的隐藏 marker，避免 replay 时深拷贝 Provider value。 */
 export const copyContextProviderPropsMarker = <T extends Record<string, unknown>>(
   source: unknown,
   target: T,
@@ -130,6 +146,7 @@ export const copyContextProviderPropsMarker = <T extends Record<string, unknown>
   return target
 }
 
+/** 复制隐藏的父 context owner 指针。 */
 export const copyParentContextProp = <T extends Record<string, unknown>>(
   source: unknown,
   target: T,
@@ -196,6 +213,7 @@ const getParentContextInstance = (instance: unknown) => {
   return props[RUE_CONTEXT_OWNER_PARENT_PROP] ?? props[RUE_CONTEXT_PARENT_INSTANCE_PROP] ?? null
 }
 
+/** 为组件 props 附加当前 owner 指针，让子组件可沿运行时链路查找 context。 */
 export const withParentContextProps = <T extends Record<string, unknown> | null>(
   type: string | ContextualComponent,
   props: T,
@@ -282,6 +300,7 @@ const bindProviderChildrenToCurrentInstance = (children: unknown): unknown => {
   return children
 }
 
+/** 创建可跨组件树传递值的 Rue context。 */
 export const createContext = <T>(defaultValue: T): RueContext<T> => {
   const ProviderImpl = (props: ContextProviderProps<T>) => {
     const providerValue = props.value
@@ -312,10 +331,23 @@ export const createContext = <T>(defaultValue: T): RueContext<T> => {
     Provider: ProviderImpl,
   } as RueContext<T>
 
+  Object.defineProperty(ProviderImpl, RUE_CONTEXT_PROVIDER_CONTEXT_PROP, {
+    configurable: false,
+    enumerable: false,
+    value: context,
+    writable: false,
+  })
+
   return context
 }
 
+/** 从当前组件 owner 向上查找 context 值，未命中时返回默认值。 */
 export const useContext = <T>(context: RueContext<T>): T => {
+  const textCompatProvided = readTextCompatContextValue(context)
+  if (textCompatProvided.found) {
+    return textCompatProvided.value
+  }
+
   let currentInstance = getCurrentInstance()
   const visited = new Set<unknown>()
 

@@ -18,6 +18,7 @@ use crate::vapor::VaporTransform;
 /// - 原生元素：`const _el1 = _$createElement("ul"); _$appendChild(_root, _el1);`
 /// - 属性：`_el1.setAttribute("class","list-disc pl-6")`
 /// - 子节点文本：`_$settextContent(_span, idx + 1)`
+///
 /// 统一入口：集中处理元素与组件分支，避免分散到多个调用点导致的逻辑重复。
 pub fn build_element(
     vt: &mut VaporTransform,
@@ -69,3 +70,7 @@ pub fn build_element(
         crate::element_children::emit_element_children(vt, &el_ident, &jsx_el.children, stmts);
     }
 }
+
+#[cfg(test)]
+#[path = "elements_tests.rs"]
+mod tests;

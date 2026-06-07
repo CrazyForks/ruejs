@@ -1,7 +1,13 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Notification 模块概述
+- 汇总通知提醒组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 import { onUnmounted, ref, render, useRef, useState, watch } from '@rue-js/rue'
 
+/** NotificationPlacements 常量。 */
 export const NotificationPlacements = [
   'top',
   'topLeft',
@@ -11,11 +17,17 @@ export const NotificationPlacements = [
   'bottomRight',
 ] as const
 
+/** NotificationPlacement 位置或方向类型。 */
 export type NotificationPlacement = (typeof NotificationPlacements)[number]
+/** NotificationType 视觉或语义变体类型。 */
 export type NotificationType = 'success' | 'info' | 'warning' | 'error'
+/** NotificationVariant 视觉或语义变体类型。 */
 export type NotificationVariant = 'soft' | 'solid' | 'outline'
+/** NotificationCloseSource 类型。 */
 export type NotificationCloseSource = 'close' | 'timeout'
+/** NotificationKey 标识键类型。 */
 export type NotificationKey = string | number
+/** NotificationMountTarget 类型。 */
 export type NotificationMountTarget =
   | string
   | HTMLElement
@@ -25,113 +37,203 @@ export type NotificationMountTarget =
 
 type NotificationTone = NotificationType | 'neutral'
 
+/** NotificationClassNames 局部类名配置。 */
 export interface NotificationClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** 图标内容。 */
   icon?: string
+  /** 标题内容。 */
   title?: string
+  /** 描述内容。 */
   description?: string
+  /** 操作区内容。 */
   actions?: string
+  /** progress 配置项。 */
   progress?: string
+  /** 关闭按钮区域配置。 */
   close?: string
 }
 
+/** NotificationStyles 局部样式配置。 */
 export interface NotificationStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** 图标内容。 */
   icon?: Record<string, any>
+  /** 标题内容。 */
   title?: Record<string, any>
+  /** 描述内容。 */
   description?: Record<string, any>
+  /** 操作区内容。 */
   actions?: Record<string, any>
+  /** progress 配置项。 */
   progress?: Record<string, any>
+  /** 关闭按钮区域配置。 */
   close?: Record<string, any>
 }
 
+/** NotificationCloseMeta 接口。 */
 export interface NotificationCloseMeta {
+  /** source 配置项。 */
   source: NotificationCloseSource
+  /** event 配置项。 */
   event?: Event
 }
 
+/** NotificationClosableConfig 配置对象。 */
 export interface NotificationClosableConfig {
+  /** 图标内容。 */
   icon?: any
+  /** 展示标签。 */
   label?: string
+  /** 关闭时触发的回调。 */
   onClose?: (meta: NotificationCloseMeta) => void
 }
 
+/** NotificationClosable 类型。 */
 export type NotificationClosable = boolean | NotificationClosableConfig
 
+/** NotificationProps 组件属性。 */
 export interface NotificationProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** inline 配置项。 */
   inline?: boolean
+  /** 弹出层或内容展示位置。 */
   placement?: NotificationPlacement
+  /** top 配置项。 */
   top?: number | string
+  /** bottom 配置项。 */
   bottom?: number | string
+  /** 元素间距。 */
   gap?: number | string
+  /** zIndex 配置项。 */
   zIndex?: number | string
+  /** maxWidth 配置项。 */
   maxWidth?: number | string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** NotificationItemProps 组件属性。 */
 export interface NotificationItemProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 组件类型或语义类型。 */
   type?: NotificationType
+  /** 组件视觉变体。 */
   variant?: NotificationVariant
+  /** 图标内容。 */
   icon?: any
+  /** showIcon 图标内容。 */
   showIcon?: boolean
+  /** 标题内容。 */
   title?: any
+  /** message 配置项。 */
   message?: any
+  /** 描述内容。 */
   description?: any
+  /** 操作区内容。 */
   actions?: any
+  /** btn 配置项。 */
   btn?: any
+  /** closable 配置项。 */
   closable?: NotificationClosable
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** duration 配置项。 */
   duration?: number | false | null
+  /** pauseOnHover 配置项。 */
   pauseOnHover?: boolean
+  /** showProgress 配置项。 */
   showProgress?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: NotificationClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: NotificationStyles
+  /** props 配置项。 */
   props?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** 关闭时触发的回调。 */
   onClose?: (meta: NotificationCloseMeta) => void
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean, meta: NotificationCloseMeta) => void
+  /** 点击时触发的回调。 */
   onClick?: (event: MouseEvent) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** NotificationArgsProps 组件属性。 */
 export interface NotificationArgsProps extends Omit<NotificationItemProps, 'open' | 'defaultOpen'> {
+  /** 数据项唯一标识。 */
   key?: NotificationKey
+  /** 弹出层或内容展示位置。 */
   placement?: NotificationPlacement
 }
 
+/** NotificationUseOptions 选项配置。 */
 export interface NotificationUseOptions extends Omit<NotificationProps, 'children'> {
+  /** getContainer 配置项。 */
   getContainer?: NotificationMountTarget
+  /** maxCount 配置项。 */
   maxCount?: number
+  /** duration 配置项。 */
   duration?: number | false | null
+  /** closable 配置项。 */
   closable?: NotificationClosable
+  /** pauseOnHover 配置项。 */
   pauseOnHover?: boolean
+  /** showProgress 配置项。 */
   showProgress?: boolean
+  /** showIcon 图标内容。 */
   showIcon?: boolean
+  /** 组件视觉变体。 */
   variant?: NotificationVariant
+  /** 组件类型或语义类型。 */
   type?: NotificationType
+  /** closeIcon 图标内容。 */
   closeIcon?: any
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: NotificationClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: NotificationStyles
+  /** props 配置项。 */
   props?: Record<string, any>
 }
 
+/** NotificationGlobalConfig 配置对象。 */
 export interface NotificationGlobalConfig extends NotificationUseOptions {}
 
+/** NotificationInstance 对外暴露的实例能力。 */
 export interface NotificationInstance {
+  /** 受控打开状态。 */
   open: (config: NotificationArgsProps) => () => void
+  /** success 配置项。 */
   success: (config: Omit<NotificationArgsProps, 'type'>) => () => void
+  /** info 配置项。 */
   info: (config: Omit<NotificationArgsProps, 'type'>) => () => void
+  /** warning 配置项。 */
   warning: (config: Omit<NotificationArgsProps, 'type'>) => () => void
+  /** error 配置项。 */
   error: (config: Omit<NotificationArgsProps, 'type'>) => () => void
+  /** destroy 配置项。 */
   destroy: (key?: NotificationKey) => void
 }
 
@@ -146,10 +248,15 @@ interface NotificationViewportProps extends NotificationUseOptions {
   onDestroy: (key?: NotificationKey) => void
 }
 
+/** DEFAULT_PLACEMENT 内部常量。 */
 const DEFAULT_PLACEMENT: NotificationPlacement = 'topRight'
+/** DEFAULT_DURATION 内部常量。 */
 const DEFAULT_DURATION = 4.5
+/** DEFAULT_TOP 内部常量。 */
 const DEFAULT_TOP = 24
+/** DEFAULT_BOTTOM 内部常量。 */
 const DEFAULT_BOTTOM = 24
+/** DEFAULT_GAP 内部常量。 */
 const DEFAULT_GAP = 14
 
 let notificationSeed = 0
@@ -157,33 +264,42 @@ let globalOptions: NotificationGlobalConfig = {}
 let globalRecords: NotificationRecord[] = []
 let globalViewportElement: HTMLDivElement | undefined
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | false | null | undefined>) =>
   parts.filter(Boolean).join(' ')
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) return children.flatMap(item => toChildArray(item))
   if (children == null || children === false) return []
   return [children]
 }
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any) => toChildArray(value).length > 0
 
+/** 归一化 Space Value 的内部工具函数。 */
 const normalizeSpaceValue = (value?: number | string) => {
   if (typeof value === 'number') return `${value}px`
   return value
 }
 
+/** 解析 Duration Ms 的内部工具函数。 */
 const resolveDurationMs = (duration?: number | false | null) => {
   if (typeof duration !== 'number' || duration <= 0) return null
   return duration * 1000
 }
 
+/** 解析 Tone 的内部工具函数。 */
 const resolveTone = (type?: NotificationType): NotificationTone => type ?? 'neutral'
+/** 解析 Role 的内部工具函数。 */
 const resolveRole = (type?: NotificationType) =>
   type === 'warning' || type === 'error' ? 'alert' : 'status'
+/** 解析 Aria Live 的内部工具函数。 */
 const resolveAriaLive = (type?: NotificationType) =>
   type === 'warning' || type === 'error' ? 'assertive' : 'polite'
 
+/** merge Semantic Class Names 的内部工具函数。 */
 const mergeSemanticClassNames = (
   base?: NotificationClassNames,
   override?: NotificationClassNames,
@@ -200,6 +316,7 @@ const mergeSemanticClassNames = (
   }
 }
 
+/** merge Semantic Styles 的内部工具函数。 */
 const mergeSemanticStyles = (
   base?: NotificationStyles,
   override?: NotificationStyles,
@@ -216,11 +333,13 @@ const mergeSemanticStyles = (
   }
 }
 
+/** trim Records 的内部工具函数。 */
 const trimRecords = (records: NotificationRecord[], maxCount?: number) => {
   if (typeof maxCount !== 'number' || maxCount <= 0 || records.length <= maxCount) return records
   return records.slice(records.length - maxCount)
 }
 
+/** 解析 Mount Target 的内部工具函数。 */
 const resolveMountTarget = (
   getContainer: NotificationMountTarget | undefined,
   holderElement?: HTMLElement | null,
@@ -307,6 +426,7 @@ const toneStyleMap: Record<
   },
 }
 
+/** ITEM_BASE_CLASS 内部常量。 */
 const ITEM_BASE_CLASS =
   'pointer-events-auto relative w-full max-w-full overflow-hidden rounded-[1.5rem] border px-4 py-4 text-left shadow-[0_24px_80px_-40px_rgba(15,23,42,0.65)] backdrop-blur transition sm:w-[26rem]'
 
@@ -314,6 +434,7 @@ interface GlyphProps {
   className?: string
 }
 
+/** Notice Icon 的内部工具函数。 */
 const NoticeIcon: FC<GlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -331,6 +452,7 @@ const NoticeIcon: FC<GlyphProps> = ({ className }) => (
     <path d="M9.75 18a2.25 2.25 0 0 0 4.5 0" strokeLinecap="round" />
   </svg>
 )
+/** Info Icon 的内部工具函数。 */
 const InfoIcon: FC<GlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -345,6 +467,7 @@ const InfoIcon: FC<GlyphProps> = ({ className }) => (
     <path d="M12 7.5h.01" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
+/** Success Icon 的内部工具函数。 */
 const SuccessIcon: FC<GlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -358,6 +481,7 @@ const SuccessIcon: FC<GlyphProps> = ({ className }) => (
     <path d="m8.5 12 2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
+/** Warning Icon 的内部工具函数。 */
 const WarningIcon: FC<GlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -372,6 +496,7 @@ const WarningIcon: FC<GlyphProps> = ({ className }) => (
     <path d="M12 16.5h.01" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
+/** Error Icon 的内部工具函数。 */
 const ErrorIcon: FC<GlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -386,6 +511,7 @@ const ErrorIcon: FC<GlyphProps> = ({ className }) => (
     <path d="m15 9-6 6" strokeLinecap="round" />
   </svg>
 )
+/** Close Icon 的内部工具函数。 */
 const CloseIcon: FC<GlyphProps> = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -400,6 +526,7 @@ const CloseIcon: FC<GlyphProps> = ({ className }) => (
   </svg>
 )
 
+/** 渲染 Default Icon 的内部工具函数。 */
 const renderDefaultIcon = (type?: NotificationType) => {
   const className = 'h-5 w-5'
   switch (type) {
@@ -416,6 +543,7 @@ const renderDefaultIcon = (type?: NotificationType) => {
   }
 }
 
+/** 解析 Closable 的内部工具函数。 */
 const resolveClosable = (closable?: NotificationClosable, closeIcon?: any) => {
   if (!closable)
     return { enabled: false, icon: closeIcon, label: '关闭通知', onClose: undefined as any }
@@ -430,6 +558,7 @@ const resolveClosable = (closable?: NotificationClosable, closeIcon?: any) => {
   return { enabled: true, icon: closeIcon, label: '关闭通知', onClose: undefined as any }
 }
 
+/** Notification Item 的内部工具函数。 */
 const NotificationItem: FC<NotificationItemProps> = ({
   as = 'div',
   open,
@@ -767,6 +896,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
   )
 }
 
+/** Notification Root 的内部工具函数。 */
 const NotificationRoot: FC<NotificationProps> = ({
   as = 'div',
   inline = false,
@@ -809,6 +939,7 @@ const NotificationRoot: FC<NotificationProps> = ({
   )
 }
 
+/** group Records 的内部工具函数。 */
 const groupRecords = (records: NotificationRecord[], fallbackPlacement: NotificationPlacement) => {
   const grouped: Record<NotificationPlacement, NotificationRecord[]> = {
     top: [],
@@ -825,6 +956,7 @@ const groupRecords = (records: NotificationRecord[], fallbackPlacement: Notifica
   return grouped
 }
 
+/** Notification Viewport 的内部工具函数。 */
 const NotificationViewport: FC<NotificationViewportProps> = ({
   records,
   inline = false,
@@ -913,6 +1045,7 @@ const NotificationViewport: FC<NotificationViewportProps> = ({
   )
 }
 
+/** useNotification 组合式能力入口。 */
 export const useNotification = (options: NotificationUseOptions = {}) => {
   const apiRef = useRef<NotificationInstance>()
   const recordsRef = useRef<NotificationRecord[]>([])
@@ -1027,6 +1160,7 @@ export const useNotification = (options: NotificationUseOptions = {}) => {
   return [apiRef.current!, contextHolder] as const
 }
 
+/** ensure Global Viewport 的内部工具函数。 */
 const ensureGlobalViewport = () => {
   const target = resolveMountTarget(globalOptions.getContainer, null, true)
   if (!target) return null
@@ -1040,6 +1174,7 @@ const ensureGlobalViewport = () => {
   return globalViewportElement
 }
 
+/** destroy Global Notifications 的内部工具函数。 */
 const destroyGlobalNotifications = (key?: NotificationKey) => {
   if (key == null) {
     if (globalRecords.length > 0) {
@@ -1055,6 +1190,7 @@ const destroyGlobalNotifications = (key?: NotificationKey) => {
   }
 }
 
+/** sync Global Viewport 的内部工具函数。 */
 const syncGlobalViewport = () => {
   if (typeof document === 'undefined') return
   if (globalRecords.length === 0 && globalViewportElement == null) return
@@ -1070,6 +1206,7 @@ const syncGlobalViewport = () => {
   )
 }
 
+/** open Global Notification 的内部工具函数。 */
 const openGlobalNotification = (config: NotificationArgsProps) => {
   const nextKey = config.key ?? `rue-notification-${notificationSeed++}`
   const nextRecord: NotificationRecord = { key: nextKey, config: { ...config, key: nextKey } }
@@ -1088,6 +1225,7 @@ const openGlobalNotification = (config: NotificationArgsProps) => {
   return () => destroyGlobalNotifications(nextKey)
 }
 
+/** config Global Notification 的内部工具函数。 */
 const configGlobalNotification = (options: NotificationGlobalConfig) => {
   globalOptions = { ...globalOptions, ...options }
   syncGlobalViewport()
@@ -1121,4 +1259,5 @@ const NotificationCompound: NotificationCompound = Object.assign(NotificationRoo
   config: configGlobalNotification,
 })
 
+/** 默认导出通知提醒组件。 */
 export default NotificationCompound

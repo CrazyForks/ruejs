@@ -21,25 +21,43 @@ type StatusSemantic = 'default' | 'processing' | 'success' | 'warning' | 'error'
 type StatusColor = StatusTone | string
 type StatusOffset = [number | string, number | string]
 
+/** StatusProps 组件属性。 */
 export interface StatusProps {
+  /** 自定义渲染的宿主元素。 */
   as?: StatusAs
+  /** ariaLabel 标签内容。 */
   ariaLabel?: string
+  /** 组件尺寸。 */
   size?: StatusSize
+  /** 组件语义色。 */
   color?: StatusColor
+  /** 组件状态。 */
   status?: StatusSemantic | StatusTone
+  /** text 区域配置。 */
   text?: any
+  /** count 配置项。 */
   count?: any
+  /** showZero 配置项。 */
   showZero?: boolean
+  /** overflowCount 配置项。 */
   overflowCount?: number
+  /** dot 配置项。 */
   dot?: boolean
+  /** offset 配置项。 */
   offset?: StatusOffset
+  /** 标题内容。 */
   title?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** STATUS_TONES 内部常量。 */
 const STATUS_TONES: StatusTone[] = [
   'neutral',
   'primary',
@@ -51,20 +69,24 @@ const STATUS_TONES: StatusTone[] = [
   'error',
 ]
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...values: Array<string | undefined | false | null>) => {
   return values.filter(Boolean).join(' ')
 }
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value === undefined || value === null || value === false || value === '') return false
   if (Array.isArray(value)) return value.some(item => hasRenderableContent(item))
   return true
 }
 
+/** 判断 Status Tone 的内部工具函数。 */
 const isStatusTone = (value?: string): value is StatusTone => {
   return !!value && STATUS_TONES.includes(value as StatusTone)
 }
 
+/** 解析 Semantic Tone 的内部工具函数。 */
 const resolveSemanticTone = (status?: StatusSemantic | StatusTone): StatusTone | undefined => {
   switch (status) {
     case 'default':
@@ -80,6 +102,7 @@ const resolveSemanticTone = (status?: StatusSemantic | StatusTone): StatusTone |
   }
 }
 
+/** 解析 Size 的内部工具函数。 */
 const resolveSize = (size?: StatusSize) => {
   switch (size) {
     case 'small':
@@ -94,6 +117,7 @@ const resolveSize = (size?: StatusSize) => {
   }
 }
 
+/** 解析 Count Size Class 的内部工具函数。 */
 const resolveCountSizeClass = (size?: StatusSize) => {
   switch (resolveSize(size) ?? 'md') {
     case 'xs':
@@ -109,6 +133,7 @@ const resolveCountSizeClass = (size?: StatusSize) => {
   }
 }
 
+/** 解析 Tone Classes 的内部工具函数。 */
 const resolveToneClasses = (tone?: StatusTone) => {
   switch (tone) {
     case 'primary':
@@ -168,14 +193,17 @@ const resolveToneClasses = (tone?: StatusTone) => {
   }
 }
 
+/** to Css Length 的内部工具函数。 */
 const _toCssLength = (value: number | string) => {
   return typeof value === 'number' ? `${value}px` : value
 }
 
+/** 归一化 Offset Value 的内部工具函数。 */
 const normalizeOffsetValue = (value: number | string) => {
   return typeof value === 'number' ? `${Math.abs(value)}px` : String(value).trim().replace(/^-/, '')
 }
 
+/** negate Offset 的内部工具函数。 */
 const negateOffset = (value: number | string) => {
   if (typeof value === 'number') {
     return `${value * -1}px`
@@ -185,6 +213,7 @@ const negateOffset = (value: number | string) => {
   return normalized.startsWith('-') ? normalized.slice(1) : `-${normalized}`
 }
 
+/** 解析 Indicator Offset Style 的内部工具函数。 */
 const resolveIndicatorOffsetStyle = (offset?: StatusOffset) => {
   if (!offset) {
     return undefined
@@ -196,6 +225,7 @@ const resolveIndicatorOffsetStyle = (offset?: StatusOffset) => {
   }
 }
 
+/** 解析 Standalone Indicator Content Class Name 的内部工具函数。 */
 const resolveStandaloneIndicatorContentClassName = ({
   dot,
   displayCount,
@@ -219,6 +249,7 @@ const resolveStandaloneIndicatorContentClassName = ({
   return 'pe-6'
 }
 
+/** 归一化 Count 的内部工具函数。 */
 const normalizeCount = (count: any, overflowCount: number) => {
   if (typeof count === 'number' && count > overflowCount) {
     return `${overflowCount}+`
@@ -226,6 +257,7 @@ const normalizeCount = (count: any, overflowCount: number) => {
   return count
 }
 
+/** Status 的内部工具函数。 */
 const Status: FC<StatusProps> = ({
   as = 'span',
   ariaLabel,
@@ -437,4 +469,5 @@ const Status: FC<StatusProps> = ({
   )
 }
 
+/** 默认导出状态点组件。 */
 export default Status

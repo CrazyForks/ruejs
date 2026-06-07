@@ -305,6 +305,7 @@ const defaultTableLocale: Required<TableLocale> = {
   cancelSort: '取消排序',
 }
 
+/** 读取 Val 的内部工具函数。 */
 const getVal = (record: any, dataIndex?: string | string[]) => {
   if (!dataIndex) return undefined
   if (Array.isArray(dataIndex)) {
@@ -318,17 +319,20 @@ const getVal = (record: any, dataIndex?: string | string[]) => {
   return record?.[dataIndex]
 }
 
+/** align Class 的内部工具函数。 */
 const alignClass = (align?: ColumnAlign) => {
   if (align === 'right') return 'text-right'
   if (align === 'center') return 'text-center'
   return 'text-left'
 }
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | undefined>) => {
   const cls = parts.filter(Boolean).join(' ').trim()
   return cls || undefined
 }
 
+/** merge Styles 的内部工具函数。 */
 const mergeStyles = (...styles: Array<Record<string, any> | undefined>) => {
   let merged: Record<string, any> | undefined
   styles.forEach(style => {
@@ -338,6 +342,7 @@ const mergeStyles = (...styles: Array<Record<string, any> | undefined>) => {
   return merged
 }
 
+/** 归一化 Filter Values 的内部工具函数。 */
 const normalizeFilterValues = (value: any): any[] => {
   if (value == null || value === false) return []
   if (Array.isArray(value)) return [...value]
@@ -347,6 +352,7 @@ const normalizeFilterValues = (value: any): any[] => {
   return [value]
 }
 
+/** 读取 Column Key 的内部工具函数。 */
 const getColumnKey = (column: ColumnItem, indexPath: number[]) => {
   if (column.key) return column.key
   if (typeof column.dataIndex === 'string') return column.dataIndex
@@ -355,9 +361,11 @@ const getColumnKey = (column: ColumnItem, indexPath: number[]) => {
   return `column-${indexPath.join('-')}`
 }
 
+/** 读取 Visible Children 的内部工具函数。 */
 const getVisibleChildren = (column: ColumnItem) =>
   (column.children ?? []).filter(child => !child.hidden)
 
+/** count Leaf Columns 的内部工具函数。 */
 const countLeafColumns = (columns: ColumnItem[]): number => {
   return columns.reduce((count, column) => {
     if (column.hidden) return count
@@ -367,6 +375,7 @@ const countLeafColumns = (columns: ColumnItem[]): number => {
   }, 0)
 }
 
+/** 读取 Column Depth 的内部工具函数。 */
 const getColumnDepth = (columns: ColumnItem[]) => {
   let maxDepth = 1
   columns.forEach(column => {
@@ -379,6 +388,7 @@ const getColumnDepth = (columns: ColumnItem[]) => {
   return maxDepth
 }
 
+/** flatten Leaf Columns 的内部工具函数。 */
 const flattenLeafColumns = (columns: ColumnItem[], path: number[] = []) => {
   const result: Array<{ column: ColumnItem; indexPath: number[]; key: string }> = []
   columns.forEach((column, index) => {
@@ -394,6 +404,7 @@ const flattenLeafColumns = (columns: ColumnItem[], path: number[] = []) => {
   return result
 }
 
+/** 构建 Header Rows 的内部工具函数。 */
 const buildHeaderRows = (columns: ColumnItem[]) => {
   const visibleColumns = columns.filter(column => !column.hidden)
   const depth = getColumnDepth(visibleColumns)
@@ -423,6 +434,7 @@ const buildHeaderRows = (columns: ColumnItem[]) => {
   return rows
 }
 
+/** 解析 Fixed Column 的内部工具函数。 */
 const resolveFixedColumn = (column: ColumnItem) => {
   return !!(
     column.fixedCol ||
@@ -432,15 +444,18 @@ const resolveFixedColumn = (column: ColumnItem) => {
   )
 }
 
+/** 判断 Sorter Config 的内部工具函数。 */
 const isSorterConfig = (sorter: ColumnItem['sorter']): sorter is SorterConfig => {
   return typeof sorter === 'object' && sorter !== null
 }
 
+/** 读取 Sorter Multiple 的内部工具函数。 */
 const getSorterMultiple = (column: ColumnItem) => {
   if (!isSorterConfig(column.sorter)) return undefined
   return column.sorter.multiple
 }
 
+/** 归一化 Sort States 的内部工具函数。 */
 const normalizeSortStates = (sortStates: SortStateInput[]) => {
   return sortStates
     .filter((state): state is SortState => !!state?.order)
@@ -452,6 +467,7 @@ const normalizeSortStates = (sortStates: SortStateInput[]) => {
     })
 }
 
+/** 解析 Initial Sort 的内部工具函数。 */
 const resolveInitialSort = (leafColumns: Array<{ column: ColumnItem; key: string }>) => {
   const controlledStates = normalizeSortStates(
     leafColumns
@@ -474,6 +490,7 @@ const resolveInitialSort = (leafColumns: Array<{ column: ColumnItem; key: string
   )
 }
 
+/** 解析 Initial Filters 的内部工具函数。 */
 const resolveInitialFilters = (leafColumns: Array<{ column: ColumnItem; key: string }>) => {
   const filters: Record<string, any[]> = {}
   leafColumns.forEach(({ column, key }) => {
@@ -488,17 +505,20 @@ const resolveInitialFilters = (leafColumns: Array<{ column: ColumnItem; key: str
   return filters
 }
 
+/** clamp Page 的内部工具函数。 */
 const clampPage = (page: number, pageCount: number) => {
   if (page <= 1) return 1
   if (page >= pageCount) return pageCount
   return page
 }
 
+/** as Css Size 的内部工具函数。 */
 const asCssSize = (value?: string | number) => {
   if (typeof value === 'number') return `${value}px`
   return value
 }
 
+/** 解析 Table Size Class 的内部工具函数。 */
 const resolveTableSizeClass = (size?: TableSize) => {
   switch (size) {
     case 'small':
@@ -518,11 +538,13 @@ const resolveTableSizeClass = (size?: TableSize) => {
   }
 }
 
+/** 解析 Locale 的内部工具函数。 */
 const resolveLocale = (locale?: TableLocale) => ({
   ...defaultTableLocale,
   ...locale,
 })
 
+/** 解析 Semantic Value 的内部工具函数。 */
 const resolveSemanticValue = <T extends Record<string, any>>(
   value: SemanticRecord<T> | undefined,
   props: TableProps,
@@ -531,12 +553,14 @@ const resolveSemanticValue = <T extends Record<string, any>>(
   return (value ?? {}) as T
 }
 
+/** should Show Ellipsis Title 的内部工具函数。 */
 const shouldShowEllipsisTitle = (ellipsis?: ColumnItem['ellipsis']) => {
   if (!ellipsis) return false
   if (ellipsis === true) return true
   return ellipsis.showTitle !== false
 }
 
+/** map Pagination Position 的内部工具函数。 */
 const mapPaginationPosition = (position: PaginationPosition): PaginationPlacement => {
   switch (position) {
     case 'topLeft':
@@ -557,6 +581,7 @@ const mapPaginationPosition = (position: PaginationPosition): PaginationPlacemen
   }
 }
 
+/** 解析 Pagination Placements 的内部工具函数。 */
 const resolvePaginationPlacements = (pagination?: false | PaginationConfig) => {
   if (pagination == null || pagination === false) return [] as PaginationPlacement[]
   const placements = pagination.placement?.length
@@ -570,6 +595,7 @@ const resolvePaginationPlacements = (pagination?: false | PaginationConfig) => {
   })
 }
 
+/** 读取 Pagination Placement Class 的内部工具函数。 */
 const getPaginationPlacementClass = (placement: PaginationPlacement) => {
   switch (placement) {
     case 'topStart':
@@ -585,11 +611,13 @@ const getPaginationPlacementClass = (placement: PaginationPlacement) => {
   }
 }
 
+/** 读取 Tree Children 的内部工具函数。 */
 const getTreeChildren = (record: any, childrenColumnName: string) => {
   const children = record?.[childrenColumnName]
   return Array.isArray(children) ? children : []
 }
 
+/** Render Table Section 的内部工具函数。 */
 const RenderTableSection: FC<{ render?: ((currentData: any[]) => any) | null; data: any[] }> = ({
   render,
   data,
@@ -598,11 +626,13 @@ const RenderTableSection: FC<{ render?: ((currentData: any[]) => any) | null; da
   return render(data)
 }
 
+/** 判断 Primitive Node 的内部工具函数。 */
 const isPrimitiveNode = (value: any) => {
   const type = typeof value
   return type === 'string' || type === 'number'
 }
 
+/** Table 的内部工具函数。 */
 const Table: FC<TableProps> = props => {
   const {
     size,
@@ -2041,26 +2071,32 @@ interface TablePartProps {
   children?: any
 }
 
+/** Head 的内部工具函数。 */
 const Head: FC<TablePartProps> = ({ className, children }) => {
   return <thead className={className || undefined}>{children}</thead>
 }
 
+/** Body 的内部工具函数。 */
 const Body: FC<TablePartProps> = ({ className, children }) => {
   return <tbody className={className || undefined}>{children}</tbody>
 }
 
+/** Foot 的内部工具函数。 */
 const Foot: FC<TablePartProps> = ({ className, children }) => {
   return <tfoot className={className || undefined}>{children}</tfoot>
 }
 
+/** TR 内部常量。 */
 const TR: FC<TablePartProps> = ({ className, children }) => {
   return <tr className={className || undefined}>{children}</tr>
 }
 
+/** TH 内部常量。 */
 const TH: FC<TablePartProps> = ({ className, children }) => {
   return <th className={className || undefined}>{children}</th>
 }
 
+/** TD 内部常量。 */
 const TD: FC<TablePartProps> = ({ className, children }) => {
   return <td className={className || undefined}>{children}</td>
 }
@@ -2083,4 +2119,5 @@ const TableCompound: TableCompound = Object.assign(Table, {
   TD,
 })
 
+/** 默认导出表格组件。 */
 export default TableCompound

@@ -1,6 +1,7 @@
 import { type FC, computed, useRef, useState } from '@rue-js/rue'
 import { extend } from '@rue-js/shared'
 import { RouterLink, useRoute } from '@rue-js/router'
+import PageContentAnchor from './PageContentAnchor'
 
 export type SidebarItem = {
   id: string
@@ -107,7 +108,19 @@ type SidebarPlaygroundProps = {
   currentPath?: string
 }
 
-const SidebarItemsList: FC<{ items: SidebarItem[]; currentPath: string }> = props => {
+const useOptionalRoute = () => {
+  try {
+    return useRoute()
+  } catch {
+    return null
+  }
+}
+
+const SidebarItemsList: FC<{
+  items: SidebarItem[]
+  currentPath: string
+  useRouterLinks: boolean
+}> = props => {
   return (
     <>
       {props.items.map(item => (
@@ -116,16 +129,27 @@ const SidebarItemsList: FC<{ items: SidebarItem[]; currentPath: string }> = prop
             <div>
               <div className="px-3 py-2 font-medium text-base-content/80">{item.title}</div>
               <ul className="menu menu-sm bg-transparent rounded-box w-full">
-                <SidebarItemsList items={item.children} currentPath={props.currentPath} />
+                <SidebarItemsList
+                  items={item.children}
+                  currentPath={props.currentPath}
+                  useRouterLinks={props.useRouterLinks}
+                />
               </ul>
             </div>
-          ) : item.href ? (
+          ) : item.href && props.useRouterLinks ? (
             <RouterLink
               to={`${item.href}`}
               className={`${props.currentPath === item.href ? 'active' : ''} w-full`}
             >
               {item.title}
             </RouterLink>
+          ) : item.href ? (
+            <a
+              href={item.href}
+              className={`${props.currentPath === item.href ? 'active' : ''} w-full`}
+            >
+              {item.title}
+            </a>
           ) : (
             <span className="block w-full cursor-default rounded-btn px-3 py-2 text-base-content/45">
               {item.title}
@@ -148,12 +172,12 @@ export const createPersistentSidebarPlayground = ({
   let sharedSearchQuery: string | null = null
 
   const SidebarPlaygroundNavigation: FC<SidebarPlaygroundProps> = props => {
-    const route = useRoute()
+    const route = useOptionalRoute()
     const currentPath = computed(() => {
       if (props.currentPath !== undefined) {
         return props.currentPath
       }
-      if (!fallbackToRoute) {
+      if (!fallbackToRoute || !route) {
         return ''
       }
       return ((route.get() as any)?.path || '') as string
@@ -302,7 +326,11 @@ export const createPersistentSidebarPlayground = ({
                   </button>
                   <div className="collapse-content px-0">
                     <ul className="menu menu-sm bg-transparent rounded-box w-full">
-                      <SidebarItemsList items={section.items} currentPath={currentPath.get()} />
+                      <SidebarItemsList
+                        items={section.items}
+                        currentPath={currentPath.get()}
+                        useRouterLinks={!!route}
+                      />
                     </ul>
                   </div>
                 </div>
@@ -319,12 +347,15 @@ export const createPersistentSidebarPlayground = ({
   }
 
   const SidebarPlayground: FC<SidebarPlaygroundProps> = props => {
+    const contentRef = useRef<HTMLElement>()
     const rootClassName = [
       'sidebar-playground',
       wrapperClassName,
       'md:flex',
       'md:items-start',
       'md:gap-6',
+      'xl:grid',
+      'xl:grid-cols-[11.25rem_minmax(0,1fr)_15rem]',
     ]
       .filter(Boolean)
       .join(' ')
@@ -334,7 +365,10 @@ export const createPersistentSidebarPlayground = ({
         <div className="md:w-45 shrink-0">
           <SidebarPlaygroundNavigation currentPath={props.currentPath} />
         </div>
-        <article class="component-preview">{props.children}</article>
+        <article ref={contentRef} class="component-preview min-w-0">
+          {props.children}
+        </article>
+        <PageContentAnchor containerRef={contentRef} />
       </div>
     )
   }

@@ -138,7 +138,7 @@ Rue 提供了官方状态管理库 `@rue-js/store`。它建立在 Rue 自身的�
 `@rue-js/store` 的核心特性包括：
 
 - 使用 `createStore()` 创建应用级 store root，并通过 `app.use()` 安装
-- 使用 `defineStore()` 定义 store，同时支持 options 风格与 setup 风格
+- 使用 `defineStore()` 定义 store，同时支持函数式写法与对象配置式写法
 - 通过 `$patch()`、`$set()`、`$reset()`、`$subscribe()` 统一管理状态变更
 - 支持 `root.use()` 注册 store 插件，便于扩展调试、同步和持久化能力
 
@@ -158,7 +158,7 @@ const store = createStore()
 useApp(Root).use(store).mount('#app')
 ```
 
-然后定义一个 setup 风格的 store：
+然后定义一个函数式 store：
 
 ```ts [stores/counter.ts]
 import { computed, ref } from '@rue-js/rue'
@@ -195,9 +195,9 @@ export const Counter: FC = () => {
 }
 ```
 
-### Options Store、状态操作与异步
+### 对象配置式 Store、状态操作与异步
 
-除了 setup 风格，`defineStore()` 也支持 options 风格，这在需要显式组织 `state`、`getters` 和 `actions` 时尤其有用：
+除了函数式写法，`defineStore()` 也支持对象配置式写法，这在需要显式组织 `state`、`getters` 和 `actions` 时尤其有用：
 
 ```ts [stores/user.ts]
 import { defineStore } from '@rue-js/store'

@@ -1,6 +1,12 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+MockupPhone 模块概述
+- 汇总手机样机组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 
+/** MockupPhoneTone 语义色类型。 */
 export type MockupPhoneTone =
   | 'default'
   | 'neutral'
@@ -12,6 +18,7 @@ export type MockupPhoneTone =
   | 'warning'
   | 'error'
 
+/** MockupPhoneSize 尺寸类型。 */
 export type MockupPhoneSize =
   | 'xs'
   | 'sm'
@@ -23,37 +30,59 @@ export type MockupPhoneSize =
   | 'medium'
   | 'large'
 
+/** MockupPhonePartProps 组件属性。 */
 export interface MockupPhonePartProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** MockupPhoneCameraConfig 配置对象。 */
 export interface MockupPhoneCameraConfig extends MockupPhonePartProps {}
 
+/** MockupPhoneDisplayConfig 配置对象。 */
 export interface MockupPhoneDisplayConfig {
+  /** 根节点附加类名。 */
   className?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** 组件子内容。 */
   children?: any
+  /** src 配置项。 */
   src?: string
+  /** alt 配置项。 */
   alt?: string
+  /** imgClassName 附加类名。 */
   imgClassName?: string
 }
 
+/** MockupPhoneRootProps 组件属性。 */
 export interface MockupPhoneRootProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件尺寸。 */
   size?: MockupPhoneSize
+  /** 组件语义色。 */
   color?: MockupPhoneTone
+  /** camera 配置项。 */
   camera?: boolean | MockupPhoneCameraConfig
+  /** display 配置项。 */
   display?: MockupPhoneDisplayConfig
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: MockupPhoneSize) => {
   switch (size) {
     case 'xs':
@@ -75,6 +104,7 @@ const resolveSizeClass = (size?: MockupPhoneSize) => {
   }
 }
 
+/** 解析 Tone Class 的内部工具函数。 */
 const resolveToneClass = (color?: MockupPhoneTone) => {
   if (!color || color === 'default') {
     return undefined
@@ -82,6 +112,7 @@ const resolveToneClass = (color?: MockupPhoneTone) => {
   return `border-${color}`
 }
 
+/** Camera 的内部工具函数。 */
 const Camera: FC<MockupPhonePartProps> = ({ className, children, ...rest }) => {
   return (
     <div {...rest} className={mergeClassName('mockup-phone-camera', className)}>
@@ -90,6 +121,7 @@ const Camera: FC<MockupPhonePartProps> = ({ className, children, ...rest }) => {
   )
 }
 
+/** Display 的内部工具函数。 */
 const Display: FC<MockupPhonePartProps> = ({ className, children, ...rest }) => {
   return (
     <div {...rest} className={mergeClassName('mockup-phone-display', className)}>
@@ -98,6 +130,7 @@ const Display: FC<MockupPhonePartProps> = ({ className, children, ...rest }) => 
   )
 }
 
+/** 渲染 Display Content 的内部工具函数。 */
 const renderDisplayContent = (display: MockupPhoneDisplayConfig) => {
   const { src, alt = 'mockup phone wallpaper', imgClassName, children, contentClassName } = display
 
@@ -116,6 +149,7 @@ const renderDisplayContent = (display: MockupPhoneDisplayConfig) => {
   )
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<MockupPhoneRootProps> = ({
   className,
   size,
@@ -161,4 +195,5 @@ const MockupPhone: MockupPhoneCompound = Object.assign(Root, {
   Display,
 })
 
+/** 默认导出手机样机组件。 */
 export default MockupPhone

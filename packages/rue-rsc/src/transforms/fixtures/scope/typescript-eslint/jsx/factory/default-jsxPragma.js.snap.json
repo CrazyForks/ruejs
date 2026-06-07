@@ -1,0 +1,15 @@
+{
+  "type": "Program",
+  "declarations": ["Rue", "_jsx"],
+  "references": [
+    {
+      "name": "_jsx",
+      "declaredAt": "Program"
+    },
+    {
+      "name": "Foo",
+      "declaredAt": null
+    }
+  ],
+  "children": []
+}

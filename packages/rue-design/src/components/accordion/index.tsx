@@ -11,59 +11,105 @@ import { ref } from '@rue-js/rue'
 
 let accordionNameSeed = 0
 
+/** AccordionIcon 类型。 */
 export type AccordionIcon = 'arrow' | 'plus'
+/** AccordionForce 类型。 */
 export type AccordionForce = 'open' | 'close'
+/** AccordionUse 类型。 */
 export type AccordionUse = 'radio' | 'details'
+/** AccordionItemKey 标识键类型。 */
 export type AccordionItemKey = string | number
 
+/** AccordionDataItem 数据项结构。 */
 export interface AccordionDataItem {
+  /** 数据项唯一标识。 */
   key?: AccordionItemKey
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** 主体内容。 */
   content?: any
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** descriptionClassName 附加类名。 */
   descriptionClassName?: string
+  /** extraClassName 附加类名。 */
   extraClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** 图标内容。 */
   icon?: AccordionIcon
+  /** force 配置项。 */
   force?: AccordionForce
+  /** use 配置项。 */
   use?: AccordionUse
+  /** 受控打开状态。 */
   open?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
 }
 
+/** AccordionChangeContext 事件或渲染上下文。 */
 export interface AccordionChangeContext {
+  /** 数据项唯一标识。 */
   key: AccordionItemKey
+  /** index 配置项。 */
   index: number
+  /** 受控打开状态。 */
   open: boolean
+  /** item 区域配置。 */
   item?: AccordionDataItem
 }
 
+/** AccordionProps 组件属性。 */
 export interface AccordionProps {
+  /** 图标内容。 */
   icon?: AccordionIcon
+  /** force 配置项。 */
   force?: AccordionForce
+  /** use 配置项。 */
   use?: AccordionUse
+  /** 表单 name 属性或分组名称。 */
   name?: string
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** activeKey 标识键。 */
   activeKey?: AccordionItemKey | null
+  /** defaultActiveKey 标识键。 */
   defaultActiveKey?: AccordionItemKey | null
+  /** openKeys 标识键集合。 */
   openKeys?: ReadonlyArray<AccordionItemKey>
+  /** defaultOpenKeys 标识键集合。 */
   defaultOpenKeys?: ReadonlyArray<AccordionItemKey>
+  /** multiple 配置项。 */
   multiple?: boolean
+  /** collapsible 配置项。 */
   collapsible?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<AccordionDataItem>
+  /** 值或状态变化时触发的回调。 */
   onChange?: (
     nextValue: AccordionItemKey | ReadonlyArray<AccordionItemKey> | null,
     context: AccordionChangeContext,
   ) => void
+  /** onToggle 事件回调。 */
   onToggle?: (open: boolean, context: AccordionChangeContext) => void
 }
 
@@ -78,11 +124,13 @@ interface AccordionPartProps {
   as?: 'div' | 'summary' | 'button'
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
+/** unique Keys 的内部工具函数。 */
 const uniqueKeys = (keys: ReadonlyArray<AccordionItemKey>) => {
   const next: AccordionItemKey[] = []
   keys.forEach(key => {
@@ -93,6 +141,7 @@ const uniqueKeys = (keys: ReadonlyArray<AccordionItemKey>) => {
   return next
 }
 
+/** 归一化 Open Keys 的内部工具函数。 */
 const normalizeOpenKeys = (
   keys: ReadonlyArray<AccordionItemKey> | null | undefined,
   multiple?: boolean,
@@ -101,10 +150,12 @@ const normalizeOpenKeys = (
   return multiple ? normalized : normalized.slice(0, 1)
 }
 
+/** key To Array 的内部工具函数。 */
 const keyToArray = (key: AccordionItemKey | null | undefined) => {
   return key == null ? [] : [key]
 }
 
+/** 解析 Initial Group Open Keys 的内部工具函数。 */
 const resolveInitialGroupOpenKeys = (
   normalizedItems: ReadonlyArray<NormalizedAccordionItem>,
   activeKey: AccordionItemKey | null | undefined,
@@ -124,6 +175,7 @@ const resolveInitialGroupOpenKeys = (
   )
 }
 
+/** 解析 Initial Single Open 的内部工具函数。 */
 const resolveInitialSingleOpen = (
   open: boolean | undefined,
   defaultOpen: boolean | undefined,
@@ -136,12 +188,14 @@ const resolveInitialSingleOpen = (
   return false
 }
 
+/** 读取 State Class 的内部工具函数。 */
 const getStateClass = (open: boolean, force: AccordionForce | undefined) => {
   if (force === 'open') return 'collapse-open'
   if (force === 'close') return 'collapse-close'
   return open ? 'collapse-open' : 'collapse-close'
 }
 
+/** 读取 Accordion Group Roots 的内部工具函数。 */
 const getAccordionGroupRoots = (groupName: string, source?: Element | null) => {
   const queryRoot = source?.getRootNode?.()
   const scope =
@@ -158,6 +212,7 @@ const getAccordionGroupRoots = (groupName: string, source?: Element | null) => {
   )
 }
 
+/** 读取 Direct Accordion Input 的内部工具函数。 */
 const getDirectAccordionInput = (root: Element) => {
   return Array.from(root.children).find(
     child =>
@@ -165,12 +220,14 @@ const getDirectAccordionInput = (root: Element) => {
   ) as HTMLInputElement | undefined
 }
 
+/** 读取 Direct Accordion Title 的内部工具函数。 */
 const getDirectAccordionTitle = (root: Element) => {
   return Array.from(root.children).find(
     child => child instanceof HTMLElement && child.classList.contains('collapse-title'),
   ) as HTMLElement | undefined
 }
 
+/** sync Accordion Panel State 的内部工具函数。 */
 const syncAccordionPanelState = (
   root: Element,
   open: boolean,
@@ -196,6 +253,7 @@ const syncAccordionPanelState = (
   }
 }
 
+/** 构建 Group Next Keys 的内部工具函数。 */
 const buildGroupNextKeys = (
   currentKeys: ReadonlyArray<AccordionItemKey>,
   key: AccordionItemKey,
@@ -221,8 +279,10 @@ const buildGroupNextKeys = (
   return currentKeys.some(current => current === key) ? [...currentKeys] : [key]
 }
 
+/** 判断 Radio Input 的内部工具函数。 */
 const isRadioInput = (input: HTMLInputElement | null | undefined) => input?.type === 'radio'
 
+/** 渲染 Header Body 的内部工具函数。 */
 const renderHeaderBody = (item: AccordionDataItem) => {
   if (item.description == null && item.extra == null) {
     return item.title
@@ -578,4 +638,5 @@ const AccordionCompound: AccordionCompound = Object.assign(Accordion, {
   Content,
 })
 
+/** 默认导出手风琴组件。 */
 export default AccordionCompound

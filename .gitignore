@@ -1,6 +1,5 @@
 node_modules/
 dist/
-build/
 coverage/
 target-local/
 logs/
@@ -32,7 +31,6 @@ Thumbs.db
 nyc_output/
 .playwright-report/
 test-results/
-coverage/
 .vapor-tmp/
 .doc/
 src/vite-plugin-rue/rue_transform/target/
@@ -53,3 +51,39 @@ packages/runtime-vapor/pkg-vapor/
 /state/
 /.playwright-cli
 /.vite/
+.test-tmp
+
+out/
+.turbo/
+.ecosystem-test/
+.next/
+.wrangler/
+playwright-report/
+out-e2e
+
+# Environment + secrets
+# wrangler convention for local-only secrets passed to `wrangler dev`
+.dev.vars
+.dev.vars.*
+
+# Logs / coverage
+reports/
+
+# Worktrees
+.worktrees/
+.claude
+
+# Next.js reference clone (for searching source/tests)
+.nextjs-ref/
+
+# OS / editor
+.claude/
+
+# Nix
+result
+result-*
+.direnv/
+.corepack/
+
+.text
+text-env.d.ts

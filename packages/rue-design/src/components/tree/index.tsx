@@ -1,209 +1,375 @@
+/* RUE_VAPOR_TRANSFORMED */
+/* oxlint-disable eslint/no-unused-vars -- Rue's transformed TSX in this file leaves helper usage opaque to oxlint. */
 /*
 Tree 组件概述
 - 目标：补齐 Rue Design 缺失的树形组件，覆盖展开、选择、勾选、异步加载，并继续向 antd Tree 的目录树、拖拽和虚拟滚动能力靠拢。
 - 视觉：延续 Rue 当前卡片化和 badge / border 语义，不照搬 ant-design 的视觉实现。
-- 实现：保持普通 TSX 源码交给编译器参与转换，不写入预转换标记。
+- 实现：保持手写 TSX 结构，避免被 Vite 阶段重复 Vapor-transform。
 */
 import type { FC } from '@rue-js/rue'
-import { batch, ref } from '@rue-js/rue'
+import { batch, onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
 
+/** TreeKey 标识键类型。 */
 export type TreeKey = string | number
+/** TreeStatus 状态类型。 */
 export type TreeStatus = 'warning' | 'error'
+/** TreeSize 尺寸类型。 */
 export type TreeSize = 'small' | 'default' | 'middle' | 'large' | 'sm' | 'md' | 'lg'
+/** TreeExpandAction 类型。 */
 export type TreeExpandAction = false | 'click' | 'doubleClick'
+/** TreeDropPosition 位置或方向类型。 */
 export type TreeDropPosition = -1 | 0 | 1
+/** DirectoryTreeRangeSelectMode 类型。 */
 export type DirectoryTreeRangeSelectMode = false | 'append' | 'replace'
 
+/** TreeFieldNames 接口。 */
 export interface TreeFieldNames {
+  /** 标题内容。 */
   title?: string
+  /** 数据项唯一标识。 */
   key?: string
+  /** 组件子内容。 */
   children?: string
+  /** 是否禁用交互。 */
   disabled?: string
+  /** selectable 配置项。 */
   selectable?: string
+  /** checkable 配置项。 */
   checkable?: string
+  /** disableCheckbox 配置项。 */
   disableCheckbox?: string
+  /** isLeaf 配置项。 */
   isLeaf?: string
+  /** 图标内容。 */
   icon?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 元素或数据项标识。 */
   id?: string
+  /** pId 配置项。 */
   pId?: string
 }
 
+/** TreeDataNode 接口。 */
 export interface TreeDataNode {
+  /** 标题内容。 */
   title?: any
+  /** 数据项唯一标识。 */
   key?: TreeKey
+  /** 组件子内容。 */
   children?: TreeDataNode[]
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** selectable 配置项。 */
   selectable?: boolean
+  /** checkable 配置项。 */
   checkable?: boolean
+  /** disableCheckbox 配置项。 */
   disableCheckbox?: boolean
+  /** isLeaf 配置项。 */
   isLeaf?: boolean
+  /** 图标内容。 */
   icon?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** TreeSimpleModeConfig 配置对象。 */
 export interface TreeSimpleModeConfig {
+  /** 元素或数据项标识。 */
   id?: string
+  /** pId 配置项。 */
   pId?: string
+  /** rootPId 配置项。 */
   rootPId?: string | number | null
 }
 
+/** TreeCheckedKeysObject 接口。 */
 export interface TreeCheckedKeysObject {
+  /** 受控选中状态。 */
   checked: TreeKey[]
+  /** halfChecked 配置项。 */
   halfChecked: TreeKey[]
 }
 
+/** TreeNode 接口。 */
 export interface TreeNode {
+  /** 数据项唯一标识。 */
   key: TreeKey
+  /** keyText 文本内容。 */
   keyText: string
+  /** 标题内容。 */
   title: any
+  /** depth 配置项。 */
   depth: number
+  /** 组件子内容。 */
   children: TreeNode[]
+  /** raw 配置项。 */
   raw: TreeDataNode
+  /** 是否禁用交互。 */
   disabled: boolean
+  /** selectable 配置项。 */
   selectable: boolean
+  /** checkable 配置项。 */
   checkable: boolean
+  /** disableCheckbox 配置项。 */
   disableCheckbox: boolean
+  /** isLeaf 配置项。 */
   isLeaf: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 图标内容。 */
   icon?: any
+  /** parentKeyText 文本内容。 */
   parentKeyText?: string
 }
 
+/** TreeEventInfo 接口。 */
 export interface TreeEventInfo {
+  /** node 配置项。 */
   node: TreeNode
+  /** nativeEvent 配置项。 */
   nativeEvent?: Event | MouseEvent
+  /** selected 配置项。 */
   selected?: boolean
+  /** 受控选中状态。 */
   checked?: boolean
+  /** expanded 配置项。 */
   expanded?: boolean
+  /** checkedNodes 配置项。 */
   checkedNodes?: TreeNode[]
+  /** selectedNodes 配置项。 */
   selectedNodes?: TreeNode[]
+  /** halfCheckedKeys 标识键集合。 */
   halfCheckedKeys?: TreeKey[]
 }
 
+/** TreeDragEventInfo 接口。 */
 export interface TreeDragEventInfo {
+  /** event 配置项。 */
   event: DragEvent | Event
+  /** node 配置项。 */
   node: TreeNode
+  /** expandedKeys 标识键集合。 */
   expandedKeys?: TreeKey[]
 }
 
+/** TreeDropInfo 接口。 */
 export interface TreeDropInfo extends TreeDragEventInfo {
+  /** dragNode 配置项。 */
   dragNode: TreeNode
+  /** dragNodesKeys 标识键集合。 */
   dragNodesKeys: TreeKey[]
+  /** dropPosition 配置项。 */
   dropPosition: TreeDropPosition
+  /** dropToGap 配置项。 */
   dropToGap: boolean
 }
 
+/** TreeAllowDropInfo 接口。 */
 export interface TreeAllowDropInfo {
+  /** dragNode 配置项。 */
   dragNode: TreeNode
+  /** dropNode 配置项。 */
   dropNode: TreeNode
+  /** dropPosition 配置项。 */
   dropPosition: TreeDropPosition
+  /** dropToGap 配置项。 */
   dropToGap: boolean
 }
 
+/** TreeDraggableConfig 配置对象。 */
 export interface TreeDraggableConfig {
+  /** 图标内容。 */
   icon?: any | false
+  /** nodeDraggable 配置项。 */
   nodeDraggable?: (node: TreeNode) => boolean
 }
 
+/** TreeDraggable 类型。 */
 export type TreeDraggable = boolean | ((node: TreeNode) => boolean) | TreeDraggableConfig
 
+/** TreeClassNames 局部类名配置。 */
 export interface TreeClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** 头部区域内容。 */
   header?: string
+  /** 主体区域配置。 */
   body?: string
+  /** search 配置项。 */
   search?: string
+  /** node 配置项。 */
   node?: string
+  /** switcher 配置项。 */
   switcher?: string
+  /** checkbox 配置项。 */
   checkbox?: string
+  /** dragHandle 配置项。 */
   dragHandle?: string
+  /** 展示标签。 */
   label?: string
+  /** empty 配置项。 */
   empty?: string
 }
 
+/** TreeStyles 局部样式配置。 */
 export interface TreeStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** 头部区域内容。 */
   header?: Record<string, any>
+  /** 主体区域配置。 */
   body?: Record<string, any>
+  /** search 配置项。 */
   search?: Record<string, any>
+  /** node 配置项。 */
   node?: Record<string, any>
+  /** switcher 配置项。 */
   switcher?: Record<string, any>
+  /** checkbox 配置项。 */
   checkbox?: Record<string, any>
+  /** dragHandle 配置项。 */
   dragHandle?: Record<string, any>
+  /** 展示标签。 */
   label?: Record<string, any>
+  /** empty 配置项。 */
   empty?: Record<string, any>
 }
 
-const TreeTitleContent: FC<{ render: () => any }> = ({ render }) => render()
-
+/** TreeTitleRenderProps 组件属性。 */
 export interface TreeTitleRenderProps {
+  /** node 配置项。 */
   node: TreeNode
+  /** expanded 配置项。 */
   expanded: boolean
+  /** selected 配置项。 */
   selected: boolean
+  /** 受控选中状态。 */
   checked: boolean
+  /** halfChecked 配置项。 */
   halfChecked: boolean
+  /** 是否展示加载态。 */
   loading: boolean
 }
 
+/** TreeProps 组件属性。 */
 export interface TreeProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** treeData 配置项。 */
   treeData?: TreeDataNode[]
+  /** 自定义数据字段映射。 */
   fieldNames?: TreeFieldNames
+  /** treeDataSimpleMode 配置项。 */
   treeDataSimpleMode?: boolean | TreeSimpleModeConfig
+  /** selectedKeys 标识键集合。 */
   selectedKeys?: TreeKey[]
+  /** defaultSelectedKeys 标识键集合。 */
   defaultSelectedKeys?: TreeKey[]
+  /** checkedKeys 标识键集合。 */
   checkedKeys?: TreeKey[] | TreeCheckedKeysObject
+  /** defaultCheckedKeys 标识键集合。 */
   defaultCheckedKeys?: TreeKey[]
+  /** expandedKeys 标识键集合。 */
   expandedKeys?: TreeKey[]
+  /** defaultExpandedKeys 标识键集合。 */
   defaultExpandedKeys?: TreeKey[]
+  /** defaultExpandAll 配置项。 */
   defaultExpandAll?: boolean
+  /** multiple 配置项。 */
   multiple?: boolean
+  /** checkable 配置项。 */
   checkable?: boolean
+  /** checkStrictly 配置项。 */
   checkStrictly?: boolean
+  /** showLine 配置项。 */
   showLine?: boolean
+  /** showIcon 图标内容。 */
   showIcon?: boolean
+  /** blockNode 配置项。 */
   blockNode?: boolean
+  /** selectable 配置项。 */
   selectable?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 组件尺寸。 */
   size?: TreeSize
+  /** 组件状态。 */
   status?: TreeStatus
+  /** draggable 配置项。 */
   draggable?: TreeDraggable
+  /** allowDrop 配置项。 */
   allowDrop?: (info: TreeAllowDropInfo) => boolean
+  /** virtual 配置项。 */
   virtual?: boolean
+  /** height 配置项。 */
   height?: number
+  /** itemHeight 配置项。 */
   itemHeight?: number
+  /** titleRender 自定义渲染函数。 */
   titleRender?: (props: TreeTitleRenderProps) => any
+  /** switcherIcon 图标内容。 */
   switcherIcon?: any | ((props: TreeTitleRenderProps) => any)
+  /** 图标内容。 */
   icon?: any | ((props: TreeTitleRenderProps) => any)
+  /** filterTreeNode 配置项。 */
   filterTreeNode?: boolean | ((inputValue: string, node: TreeNode) => boolean)
+  /** searchValue 值。 */
   searchValue?: string
+  /** defaultSearchValue 值。 */
   defaultSearchValue?: string
+  /** searchPlaceholder 配置项。 */
   searchPlaceholder?: any
+  /** allowSearch 配置项。 */
   allowSearch?: boolean
+  /** loadData 配置项。 */
   loadData?: (node: TreeNode) => Promise<any> | void
+  /** emptyText 文本内容。 */
   emptyText?: any
+  /** 选中项时触发的回调。 */
   onSelect?: (selectedKeys: TreeKey[], info: TreeEventInfo) => void
+  /** onCheck 事件回调。 */
   onCheck?: (checkedKeys: TreeKey[] | TreeCheckedKeysObject, info: TreeEventInfo) => void
+  /** onExpand 事件回调。 */
   onExpand?: (expandedKeys: TreeKey[], info: TreeEventInfo) => void
+  /** 搜索文本变化时触发的回调。 */
   onSearch?: (value: string) => void
+  /** onDoubleClick 事件回调。 */
   onDoubleClick?: (event: MouseEvent, node: TreeNode) => void
+  /** onDragStart 事件回调。 */
   onDragStart?: (info: TreeDragEventInfo) => void
+  /** onDragEnter 事件回调。 */
   onDragEnter?: (info: TreeDragEventInfo) => void
+  /** onDragOver 事件回调。 */
   onDragOver?: (info: TreeDragEventInfo) => void
+  /** onDragLeave 事件回调。 */
   onDragLeave?: (info: TreeDragEventInfo) => void
+  /** onDragEnd 事件回调。 */
   onDragEnd?: (info: TreeDragEventInfo) => void
+  /** onDrop 事件回调。 */
   onDrop?: (info: TreeDropInfo) => void
+  /** onScroll 事件回调。 */
   onScroll?: (event: UIEvent) => void
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: TreeClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: TreeStyles
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** DirectoryTreeProps 组件属性。 */
 export interface DirectoryTreeProps extends TreeProps {
+  /** expandAction 配置项。 */
   expandAction?: TreeExpandAction
+  /** toggleSelect 配置项。 */
   toggleSelect?: boolean
+  /** rangeSelect 配置项。 */
   rangeSelect?: DirectoryTreeRangeSelectMode
 }
 
@@ -258,20 +424,25 @@ const defaultFieldNames: Required<TreeFieldNames> = {
   pId: 'pId',
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...parts: Array<string | false | null | undefined>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** 判断 Object Record 的内部工具函数。 */
 const isObjectRecord = (value: unknown): value is Record<string, any> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+/** 判断 Tree Key 的内部工具函数。 */
 const isTreeKey = (value: unknown): value is TreeKey => {
   return typeof value === 'string' || typeof value === 'number'
 }
 
+/** serialize Key 的内部工具函数。 */
 const serializeKey = (key: TreeKey) => `${typeof key}:${String(key)}`
 
+/** uniq Keys 的内部工具函数。 */
 const uniqKeys = (keys?: ReadonlyArray<TreeKey>) => {
   const next: TreeKey[] = []
   const seen = new Set<string>()
@@ -286,11 +457,82 @@ const uniqKeys = (keys?: ReadonlyArray<TreeKey>) => {
   return next
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
+const LoadingIcon: FC = () => {
+  return <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+}
+
+const ChevronIcon: FC<{ expanded: boolean; hidden?: boolean }> = ({ expanded, hidden }) => {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className={appendClassName(
+        'size-4 transition-transform duration-200',
+        hidden ? 'opacity-0' : expanded ? 'rotate-90' : '',
+      )}
+      aria-hidden="true"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6 3.5 4 4.5-4 4.5" />
+    </svg>
+  )
+}
+
+const DragHandleIcon: FC = () => {
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor" className="size-4" aria-hidden="true">
+      <path d="M5 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM11 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM5 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM11 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM5 14a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM11 14a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
+    </svg>
+  )
+}
+
+const DirectoryFolderIcon: FC<{ expanded: boolean }> = ({ expanded }) => {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      className="size-4"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d={
+          expanded
+            ? 'M2.5 6.5h11l-1.2 6h-9.1l-1.2-6ZM2.5 5V3.5h4l1.2 1.5h5.8v1.5'
+            : 'M2.5 4.5h4l1.2 1.5h5.8v6.5h-11v-8Z'
+        }
+      />
+    </svg>
+  )
+}
+
+const DirectoryFileIcon: FC = () => {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      className="size-4"
+      aria-hidden="true"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 2.5h5l3 3v8H4v-11Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 2.5v3h3" />
+    </svg>
+  )
+}
+
+/** 解析 Field 的内部工具函数。 */
 const resolveField = (
   node: TreeDataNode,
   field: keyof Required<TreeFieldNames>,
@@ -300,14 +542,17 @@ const resolveField = (
   return node[fieldName]
 }
 
+/** 解析 Title 的内部工具函数。 */
 const resolveTitle = (node: TreeDataNode, fieldNames?: TreeFieldNames) => {
   return resolveField(node, 'title', fieldNames) ?? node.title ?? node.key
 }
 
+/** 转换为 Key Text Set 的内部工具函数。 */
 const toKeyTextSet = (keys?: ReadonlyArray<TreeKey>) => {
   return new Set(uniqKeys(keys).map(serializeKey))
 }
 
+/** 转换为 Search Text 的内部工具函数。 */
 const toSearchText = (value: any): string => {
   if (value == null || typeof value === 'boolean') return ''
   if (typeof value === 'string' || typeof value === 'number') return String(value)
@@ -325,6 +570,7 @@ const toSearchText = (value: any): string => {
   return ''
 }
 
+/** 构建 Simple Mode Tree Data 的内部工具函数。 */
 const buildSimpleModeTreeData = (
   treeData: TreeDataNode[],
   treeDataSimpleMode?: boolean | TreeSimpleModeConfig,
@@ -377,6 +623,7 @@ const buildSimpleModeTreeData = (
   return roots
 }
 
+/** 归一化 Tree Data 的内部工具函数。 */
 const normalizeTreeData = (
   treeData: TreeDataNode[],
   fieldNames?: TreeFieldNames,
@@ -432,6 +679,7 @@ const normalizeTreeData = (
   }
 }
 
+/** 读取 Descendant Check Keys 的内部工具函数。 */
 const getDescendantCheckKeys = (node: TreeNode) => {
   const collected: string[] = []
 
@@ -446,6 +694,7 @@ const getDescendantCheckKeys = (node: TreeNode) => {
   return collected
 }
 
+/** 读取 Subtree Keys 的内部工具函数。 */
 const getSubtreeKeys = (node: TreeNode) => {
   const keys: TreeKey[] = []
 
@@ -458,6 +707,7 @@ const getSubtreeKeys = (node: TreeNode) => {
   return keys
 }
 
+/** derive Check State 的内部工具函数。 */
 const deriveCheckState = (roots: TreeNode[], baseCheckedKeys: Set<string>, strict: boolean) => {
   const checkedKeys = new Set<string>()
   const halfCheckedKeys = new Set<string>()
@@ -501,6 +751,7 @@ const deriveCheckState = (roots: TreeNode[], baseCheckedKeys: Set<string>, stric
   return { checkedKeys, halfCheckedKeys, stateMap }
 }
 
+/** 转换为 Checked Payload 的内部工具函数。 */
 const toCheckedPayload = (
   checkedKeyTexts: string[],
   halfCheckedKeyTexts: string[],
@@ -525,6 +776,7 @@ const toCheckedPayload = (
   }
 }
 
+/** filter Visible Nodes 的内部工具函数。 */
 const filterVisibleNodes = (
   roots: TreeNode[],
   expandedKeys: Set<string>,
@@ -566,6 +818,7 @@ const filterVisibleNodes = (
   return roots.flatMap(node => visitFiltered(node))
 }
 
+/** matches Tree Node 的内部工具函数。 */
 const matchesTreeNode = (
   node: TreeNode,
   inputValue: string,
@@ -577,6 +830,7 @@ const matchesTreeNode = (
   return toSearchText(node.title).toLowerCase().includes(inputValue.toLowerCase())
 }
 
+/** 判断 Ancestor Node 的内部工具函数。 */
 const isAncestorNode = (
   possibleAncestor: TreeNode,
   node: TreeNode,
@@ -590,6 +844,7 @@ const isAncestorNode = (
   return false
 }
 
+/** 解析 Draggable Config 的内部工具函数。 */
 const resolveDraggableConfig = (draggable?: TreeDraggable) => {
   const enabled = !!draggable
   const config = isObjectRecord(draggable) ? (draggable as TreeDraggableConfig) : undefined
@@ -611,6 +866,7 @@ const resolveDraggableConfig = (draggable?: TreeDraggable) => {
   }
 }
 
+/** 构建 Virtual Slice 的内部工具函数。 */
 const buildVirtualSlice = (
   items: VisibleTreeNode[],
   scrollTop: number,
@@ -645,6 +901,7 @@ const buildVirtualSlice = (
   } satisfies TreeRenderSlice
 }
 
+/** 转换为 Drop Intent 的内部工具函数。 */
 const toDropIntent = (dropPosition?: TreeDropPosition) => {
   if (dropPosition === -1) return 'before'
   if (dropPosition === 1) return 'after'
@@ -652,10 +909,12 @@ const toDropIntent = (dropPosition?: TreeDropPosition) => {
   return undefined
 }
 
+/** key Texts To Keys 的内部工具函数。 */
 const keyTextsToKeys = (keyTexts: string[], byKeyText: Record<string, TreeNode>) => {
   return keyTexts.map(keyText => byKeyText[keyText]?.key).filter(isTreeKey)
 }
 
+/** same Key Text Set 的内部工具函数。 */
 const sameKeyTextSet = (left: Set<string>, right: Set<string>) => {
   if (left.size !== right.size) return false
   for (const keyText of left) {
@@ -664,6 +923,7 @@ const sameKeyTextSet = (left: Set<string>, right: Set<string>) => {
   return true
 }
 
+/** size Config 的内部工具函数。 */
 const sizeConfig = (size?: TreeSize) => {
   switch (size) {
     case 'small':
@@ -698,6 +958,7 @@ const sizeConfig = (size?: TreeSize) => {
   }
 }
 
+/** 解析 Status Class Name 的内部工具函数。 */
 const resolveStatusClassName = (status?: TreeStatus) => {
   switch (status) {
     case 'error':
@@ -709,84 +970,7 @@ const resolveStatusClassName = (status?: TreeStatus) => {
   }
 }
 
-const ChevronIcon: FC<{ expanded: boolean; hidden?: boolean }> = ({ expanded, hidden }) => {
-  return (
-    <span
-      aria-hidden="true"
-      className={joinClassName(
-        'inline-flex size-4 items-center justify-center text-base-content/55 transition-transform duration-150',
-        expanded && 'rotate-90',
-        hidden && 'opacity-0',
-      )}
-    >
-      <svg viewBox="0 0 20 20" fill="none" className="size-4">
-        <path
-          d="M7.5 5.5L12.5 10L7.5 14.5"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
-  )
-}
-
-const LoadingIcon: FC = () => {
-  return (
-    <span className="loading loading-spinner loading-xs text-base-content/55" aria-hidden="true" />
-  )
-}
-
-const DragHandleIcon: FC = () => {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="size-4">
-      <circle cx="6" cy="5" r="1.2" />
-      <circle cx="6" cy="10" r="1.2" />
-      <circle cx="6" cy="15" r="1.2" />
-      <circle cx="13" cy="5" r="1.2" />
-      <circle cx="13" cy="10" r="1.2" />
-      <circle cx="13" cy="15" r="1.2" />
-    </svg>
-  )
-}
-
-const DirectoryFolderIcon: FC<{ expanded: boolean }> = ({ expanded }) => {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-5">
-      {expanded ? (
-        <path
-          d="M3 8.5a2 2 0 0 1 2-2h4l1.4 1.5H19a2 2 0 0 1 1.9 2.6l-1.4 5A2 2 0 0 1 17.6 17H6a2 2 0 0 1-1.93-1.48L3 8.5Z"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinejoin="round"
-        />
-      ) : (
-        <path
-          d="M3 7.5a2 2 0 0 1 2-2h4l1.4 1.5H19a2 2 0 0 1 2 2V16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5Z"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinejoin="round"
-        />
-      )}
-    </svg>
-  )
-}
-
-const DirectoryFileIcon: FC = () => {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-5">
-      <path
-        d="M8 3.5h6l4 4V19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path d="M14 3.5V8h4" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
+/** Tree Root 的内部工具函数。 */
 const TreeRoot: FC<InternalTreeProps> = ({
   className,
   style,
@@ -847,6 +1031,8 @@ const TreeRoot: FC<InternalTreeProps> = ({
 }) => {
   const sourceTreeData = buildSimpleModeTreeData(treeData, treeDataSimpleMode, fieldNames)
   const normalizedTree = normalizeTreeData(sourceTreeData, fieldNames)
+  const normalizedTreeRef = useRef<NormalizedTreeResult>()
+  normalizedTreeRef.current = normalizedTree
   const componentSize = sizeConfig(size)
   const dragConfig = resolveDraggableConfig(draggable)
   const initialExpandedKeys = defaultExpandAll
@@ -855,9 +1041,12 @@ const TreeRoot: FC<InternalTreeProps> = ({
         .map(node => node.key)
     : (defaultExpandedKeys ?? [])
 
+  const renderVersion = ref(0)
   const uncontrolledSelectedKeysRef = ref(uniqKeys(defaultSelectedKeys ?? selectedKeys))
   const uncontrolledCheckedKeysRef = ref(uniqKeys(defaultCheckedKeys))
   const uncontrolledExpandedKeysRef = ref(uniqKeys(initialExpandedKeys))
+  const controlledSelectedKeysRef = ref(uniqKeys(selectedKeys))
+  const controlledExpandedKeysRef = ref(uniqKeys(expandedKeys))
   const controlledCheckedKeyTextsRef = ref<Set<string>>(
     checkedKeys === undefined
       ? new Set<string>()
@@ -870,6 +1059,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
   const scrollTopRef = ref(0)
   const directoryLastSelectedKeyTextRef = ref<string | null>(null)
   const directoryCachedSelectedKeyTextsRef = ref<string[]>([])
+  const bodyHostRef = useRef<HTMLDivElement>()
   const dragStateRef = ref<TreeDragState>({})
   const dragHoverDepthRef = ref<Record<string, number>>({})
 
@@ -883,37 +1073,114 @@ const TreeRoot: FC<InternalTreeProps> = ({
     }
   }
 
-  const mergedSelectedKeys =
-    selectedKeys !== undefined ? uniqKeys(selectedKeys) : uncontrolledSelectedKeysRef.value
-  const mergedExpandedKeys =
-    expandedKeys !== undefined ? uniqKeys(expandedKeys) : uncontrolledExpandedKeysRef.value
-  const mergedSearchValue = searchValue !== undefined ? searchValue : searchValueRef.value
-  const mergedCheckedKeyTexts = (() => {
-    if (checkedKeys === undefined) return toKeyTextSet(uncontrolledCheckedKeysRef.value)
-    return controlledCheckedKeyTextsRef.value
-  })()
-  const selectedKeyTextSet = toKeyTextSet(mergedSelectedKeys)
-  const expandedKeyTextSet = toKeyTextSet(mergedExpandedKeys)
-  const checkState = deriveCheckState(normalizedTree.roots, mergedCheckedKeyTexts, !!checkStrictly)
-  const visibleNodes = filterVisibleNodes(
-    normalizedTree.roots,
-    expandedKeyTextSet,
-    mergedSearchValue,
-    node => matchesTreeNode(node, mergedSearchValue, filterTreeNode),
-  )
+  if (
+    selectedKeys !== undefined &&
+    !sameKeyTextSet(toKeyTextSet(controlledSelectedKeysRef.value), toKeyTextSet(selectedKeys))
+  ) {
+    controlledSelectedKeysRef.value = uniqKeys(selectedKeys)
+  }
+
+  if (
+    expandedKeys !== undefined &&
+    !sameKeyTextSet(toKeyTextSet(controlledExpandedKeysRef.value), toKeyTextSet(expandedKeys))
+  ) {
+    controlledExpandedKeysRef.value = uniqKeys(expandedKeys)
+  }
+
   const estimatedRowHeight = itemHeight ?? componentSize.rowEstimate
   const viewportHeight = typeof height === 'number' && height > 0 ? height : undefined
   const fixedVirtualRowHeight =
     virtual !== false && viewportHeight && typeof itemHeight === 'number' && itemHeight > 0
       ? itemHeight
       : undefined
-  const virtualSlice = buildVirtualSlice(
-    visibleNodes,
-    scrollTopRef.value,
-    viewportHeight,
-    estimatedRowHeight,
-    virtual !== false && !!viewportHeight,
-  )
+
+  function requestRender() {
+    renderVersion.value += 1
+    syncTreeBodyDom()
+  }
+
+  function rebuildNormalizedTree() {
+    const nextSourceTreeData = buildSimpleModeTreeData(treeData, treeDataSimpleMode, fieldNames)
+    const nextNormalizedTree = normalizeTreeData(nextSourceTreeData, fieldNames)
+    normalizedTreeRef.current = nextNormalizedTree
+    return nextNormalizedTree
+  }
+
+  function getNormalizedTree() {
+    return normalizedTreeRef.current ?? rebuildNormalizedTree()
+  }
+
+  function readMergedSelectedKeys() {
+    return selectedKeys !== undefined
+      ? controlledSelectedKeysRef.value
+      : uncontrolledSelectedKeysRef.value
+  }
+
+  function readMergedExpandedKeys() {
+    return expandedKeys !== undefined
+      ? controlledExpandedKeysRef.value
+      : uncontrolledExpandedKeysRef.value
+  }
+
+  function readMergedSearchValue() {
+    return searchValue !== undefined ? searchValue : searchValueRef.value
+  }
+
+  function readMergedCheckedKeyTexts() {
+    if (checkedKeys === undefined) return toKeyTextSet(uncontrolledCheckedKeysRef.value)
+    return controlledCheckedKeyTextsRef.value
+  }
+
+  function readVisibleNodes() {
+    const currentTree = rebuildNormalizedTree()
+    const currentExpandedKeyTexts = toKeyTextSet(readMergedExpandedKeys())
+    const currentSearchValue = readMergedSearchValue()
+
+    return filterVisibleNodes(
+      currentTree.roots,
+      currentExpandedKeyTexts,
+      currentSearchValue,
+      node => matchesTreeNode(node, currentSearchValue, filterTreeNode),
+    )
+  }
+
+  function readRenderSnapshot() {
+    void renderVersion.value
+
+    const currentTree = rebuildNormalizedTree()
+    const currentSearchValue = readMergedSearchValue()
+    const currentSelectedKeyTextSet = toKeyTextSet(readMergedSelectedKeys())
+    const currentExpandedKeyTextSet = toKeyTextSet(readMergedExpandedKeys())
+    const currentCheckedKeyTexts = readMergedCheckedKeyTexts()
+    const currentCheckState = deriveCheckState(
+      currentTree.roots,
+      currentCheckedKeyTexts,
+      !!checkStrictly,
+    )
+    const currentVisibleNodes = filterVisibleNodes(
+      currentTree.roots,
+      currentExpandedKeyTextSet,
+      currentSearchValue,
+      node => matchesTreeNode(node, currentSearchValue, filterTreeNode),
+    )
+    const currentVirtualSlice = buildVirtualSlice(
+      currentVisibleNodes,
+      scrollTopRef.value,
+      viewportHeight,
+      estimatedRowHeight,
+      virtual !== false && !!viewportHeight,
+    )
+
+    return {
+      searchValue: currentSearchValue,
+      selectedKeyTextSet: currentSelectedKeyTextSet,
+      expandedKeyTextSet: currentExpandedKeyTextSet,
+      checkState: currentCheckState,
+      visibleNodes: currentVisibleNodes,
+      virtualSlice: currentVirtualSlice,
+      dragState: dragStateRef.value,
+    }
+  }
 
   const emitExpand = (
     nextExpandedKeys: TreeKey[],
@@ -922,6 +1189,8 @@ const TreeRoot: FC<InternalTreeProps> = ({
   ) => {
     const normalizedKeys = uniqKeys(nextExpandedKeys)
     if (expandedKeys === undefined) uncontrolledExpandedKeysRef.value = normalizedKeys
+    else controlledExpandedKeysRef.value = normalizedKeys
+    requestRender()
     if (onExpand) {
       onExpand(normalizedKeys, {
         node,
@@ -937,14 +1206,17 @@ const TreeRoot: FC<InternalTreeProps> = ({
     node: TreeNode,
     nativeEvent?: Event | MouseEvent,
   ) => {
+    const currentTree = getNormalizedTree()
     const cleanedKeys = uniqKeys(nextSelectedKeys).filter(
-      key => normalizedTree.byKeyText[serializeKey(key)],
+      key => currentTree.byKeyText[serializeKey(key)],
     )
     const selectedNodes = cleanedKeys
-      .map(key => normalizedTree.byKeyText[serializeKey(key)])
+      .map(key => currentTree.byKeyText[serializeKey(key)])
       .filter(Boolean)
 
     if (selectedKeys === undefined) uncontrolledSelectedKeysRef.value = cleanedKeys
+    else controlledSelectedKeysRef.value = cleanedKeys
+    requestRender()
 
     if (onSelect) {
       onSelect(cleanedKeys, {
@@ -961,15 +1233,12 @@ const TreeRoot: FC<InternalTreeProps> = ({
     node: TreeNode,
     nativeEvent?: Event | MouseEvent,
   ) => {
-    const nextCheckState = deriveCheckState(
-      normalizedTree.roots,
-      nextCheckedKeyTexts,
-      !!checkStrictly,
-    )
+    const currentTree = getNormalizedTree()
+    const nextCheckState = deriveCheckState(currentTree.roots, nextCheckedKeyTexts, !!checkStrictly)
     const checkedPayload = toCheckedPayload(
       Array.from(nextCheckState.checkedKeys),
       Array.from(nextCheckState.halfCheckedKeys),
-      normalizedTree.flat,
+      currentTree.flat,
       !!checkStrictly,
     )
 
@@ -980,6 +1249,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
     } else {
       controlledCheckedKeyTextsRef.value = new Set(nextCheckState.checkedKeys)
     }
+    requestRender()
 
     if (onCheck) {
       onCheck(checkedPayload, {
@@ -987,28 +1257,35 @@ const TreeRoot: FC<InternalTreeProps> = ({
         nativeEvent,
         checked: nextCheckState.checkedKeys.has(node.keyText),
         checkedNodes: Array.from(nextCheckState.checkedKeys)
-          .map(keyText => normalizedTree.byKeyText[keyText])
+          .map(keyText => currentTree.byKeyText[keyText])
           .filter(Boolean),
         halfCheckedKeys: Array.from(nextCheckState.halfCheckedKeys)
-          .map(keyText => normalizedTree.byKeyText[keyText]?.key)
+          .map(keyText => currentTree.byKeyText[keyText]?.key)
           .filter(isTreeKey),
       })
     }
   }
 
   const toggleExpanded = async (node: TreeNode, nativeEvent?: Event | MouseEvent) => {
-    if (disabled || node.disabled) return mergedExpandedKeys
+    const currentExpandedKeys = readMergedExpandedKeys()
+    const currentExpandedKeyTexts = toKeyTextSet(currentExpandedKeys)
 
-    const currentlyExpanded = expandedKeyTextSet.has(node.keyText)
+    if (disabled || node.disabled) return currentExpandedKeys
+
+    const currentlyExpanded = currentExpandedKeyTexts.has(node.keyText)
     const nextExpandedKeys = currentlyExpanded
-      ? mergedExpandedKeys.filter(key => serializeKey(key) !== node.keyText)
-      : [...mergedExpandedKeys, node.key]
+      ? currentExpandedKeys.filter(key => serializeKey(key) !== node.keyText)
+      : [...currentExpandedKeys, node.key]
+    const committedExpandedKeys = emitExpand(nextExpandedKeys, node, nativeEvent)
 
     if (!currentlyExpanded && loadData && !node.isLeaf && node.children.length === 0) {
       if (!loadingKeyTextsRef.value.includes(node.keyText)) {
         loadingKeyTextsRef.value = [...loadingKeyTextsRef.value, node.keyText]
+        requestRender()
         try {
           await loadData(node)
+          rebuildNormalizedTree()
+          requestRender()
         } finally {
           loadingKeyTextsRef.value = loadingKeyTextsRef.value.filter(
             keyText => keyText !== node.keyText,
@@ -1017,7 +1294,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
       }
     }
 
-    return emitExpand(nextExpandedKeys, node, nativeEvent)
+    return committedExpandedKeys
   }
 
   const handleExpandToggle = (node: TreeNode, event: MouseEvent) => {
@@ -1029,6 +1306,9 @@ const TreeRoot: FC<InternalTreeProps> = ({
   const selectTreeNode = (node: TreeNode, nativeEvent?: MouseEvent) => {
     if (disabled || node.disabled || !selectable || !node.selectable) return
 
+    const currentSelectedKeys = readMergedSelectedKeys()
+    const currentSelectedKeyTexts = toKeyTextSet(currentSelectedKeys)
+
     if (directoryMode) {
       const controlPick =
         !!multiple && !!toggleSelect && !!(nativeEvent?.ctrlKey || nativeEvent?.metaKey)
@@ -1039,7 +1319,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
         !!directoryLastSelectedKeyTextRef.value
 
       if (multiple && shiftPick) {
-        const orderedVisibleKeyTexts = visibleNodes.map(item => item.node.keyText)
+        const orderedVisibleKeyTexts = readVisibleNodes().map(item => item.node.keyText)
         const anchorKeyText = directoryLastSelectedKeyTextRef.value ?? node.keyText
         const startIndex = orderedVisibleKeyTexts.indexOf(anchorKeyText)
         const endIndex = orderedVisibleKeyTexts.indexOf(node.keyText)
@@ -1050,11 +1330,11 @@ const TreeRoot: FC<InternalTreeProps> = ({
           rangeSelect === 'append'
             ? directoryCachedSelectedKeyTextsRef.value.length
               ? directoryCachedSelectedKeyTextsRef.value
-              : mergedSelectedKeys.map(serializeKey)
+              : currentSelectedKeys.map(serializeKey)
             : []
         const nextSelectedKeyTexts = Array.from(new Set([...cachedKeyTexts, ...rangeKeyTexts]))
         commitSelectedKeys(
-          keyTextsToKeys(nextSelectedKeyTexts, normalizedTree.byKeyText),
+          keyTextsToKeys(nextSelectedKeyTexts, getNormalizedTree().byKeyText),
           node,
           nativeEvent,
         )
@@ -1062,9 +1342,9 @@ const TreeRoot: FC<InternalTreeProps> = ({
       }
 
       if (multiple && controlPick) {
-        const nextSelectedKeys = selectedKeyTextSet.has(node.keyText)
-          ? mergedSelectedKeys.filter(key => serializeKey(key) !== node.keyText)
-          : [...mergedSelectedKeys, node.key]
+        const nextSelectedKeys = currentSelectedKeyTexts.has(node.keyText)
+          ? currentSelectedKeys.filter(key => serializeKey(key) !== node.keyText)
+          : [...currentSelectedKeys, node.key]
         directoryLastSelectedKeyTextRef.value = node.keyText
         directoryCachedSelectedKeyTextsRef.value = nextSelectedKeys.map(serializeKey)
         commitSelectedKeys(nextSelectedKeys, node, nativeEvent)
@@ -1078,14 +1358,14 @@ const TreeRoot: FC<InternalTreeProps> = ({
     }
 
     if (multiple) {
-      const nextSelectedKeys = selectedKeyTextSet.has(node.keyText)
-        ? mergedSelectedKeys.filter(key => serializeKey(key) !== node.keyText)
-        : [...mergedSelectedKeys, node.key]
+      const nextSelectedKeys = currentSelectedKeyTexts.has(node.keyText)
+        ? currentSelectedKeys.filter(key => serializeKey(key) !== node.keyText)
+        : [...currentSelectedKeys, node.key]
       commitSelectedKeys(nextSelectedKeys, node, nativeEvent)
       return
     }
 
-    const nextSelectedKeys = selectedKeyTextSet.has(node.keyText) ? [] : [node.key]
+    const nextSelectedKeys = currentSelectedKeyTexts.has(node.keyText) ? [] : [node.key]
     commitSelectedKeys(nextSelectedKeys, node, nativeEvent)
   }
 
@@ -1094,8 +1374,14 @@ const TreeRoot: FC<InternalTreeProps> = ({
     event.stopPropagation()
     if (disabled || node.disabled || !node.checkable || node.disableCheckbox) return
 
-    const nextCheckedKeys = new Set(mergedCheckedKeyTexts)
-    const isChecked = checkState.checkedKeys.has(node.keyText)
+    const currentCheckedKeyTexts = readMergedCheckedKeyTexts()
+    const currentCheckState = deriveCheckState(
+      getNormalizedTree().roots,
+      currentCheckedKeyTexts,
+      !!checkStrictly,
+    )
+    const nextCheckedKeys = new Set(currentCheckedKeyTexts)
+    const isChecked = currentCheckState.checkedKeys.has(node.keyText)
 
     if (checkStrictly) {
       if (isChecked) nextCheckedKeys.delete(node.keyText)
@@ -1111,11 +1397,13 @@ const TreeRoot: FC<InternalTreeProps> = ({
 
   const handleSearchInput = (value: string) => {
     if (searchValue === undefined) searchValueRef.value = value
+    requestRender()
     if (onSearch) onSearch(value)
   }
 
   const handleBodyScroll = (event: UIEvent) => {
     scrollTopRef.value = (event.currentTarget as HTMLElement).scrollTop
+    requestRender()
     if (onScroll) onScroll(event)
   }
 
@@ -1124,6 +1412,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
     dragStateRef.value = {
       dragKeyText: dragStateRef.value.dragKeyText,
     }
+    requestRender()
   }
 
   const setDragHoverState = (keyText: string, dropPosition: TreeDropPosition) => {
@@ -1139,6 +1428,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
       overKeyText: keyText,
       dropPosition,
     }
+    requestRender()
   }
 
   const updateDragHoverDepth = (keyText: string, delta: 1 | -1) => {
@@ -1150,12 +1440,14 @@ const TreeRoot: FC<InternalTreeProps> = ({
     else delete nextDepths[keyText]
 
     dragHoverDepthRef.value = nextDepths
+    requestRender()
     return nextDepth
   }
 
   const resetDragState = () => {
     dragHoverDepthRef.value = {}
     dragStateRef.value = {}
+    requestRender()
   }
 
   const resolveDropContext = (
@@ -1163,11 +1455,12 @@ const TreeRoot: FC<InternalTreeProps> = ({
     event: DragEvent | Event,
     currentTarget?: HTMLElement | null,
   ) => {
+    const currentTree = getNormalizedTree()
     const dragKeyText = dragStateRef.value.dragKeyText
     if (!dragKeyText) return null
-    const dragNode = normalizedTree.byKeyText[dragKeyText]
+    const dragNode = currentTree.byKeyText[dragKeyText]
     if (!dragNode || dragNode.keyText === dropNode.keyText) return null
-    if (isAncestorNode(dragNode, dropNode, normalizedTree.byKeyText)) return null
+    if (isAncestorNode(dragNode, dropNode, currentTree.byKeyText)) return null
 
     const rect = currentTarget?.getBoundingClientRect?.()
     const clientY = 'clientY' in event ? (event as DragEvent).clientY : undefined
@@ -1189,7 +1482,14 @@ const TreeRoot: FC<InternalTreeProps> = ({
   }
 
   const handleDragStartNode = (node: TreeNode, event: DragEvent) => {
-    if (!dragConfig.enabled || !dragConfig.nodeDraggable(node) || disabled || node.disabled) return
+    const currentDragConfig = resolveDraggableConfig(draggable)
+    if (
+      !currentDragConfig.enabled ||
+      !currentDragConfig.nodeDraggable(node) ||
+      disabled ||
+      node.disabled
+    )
+      return
 
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move'
@@ -1198,6 +1498,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
 
     dragHoverDepthRef.value = {}
     dragStateRef.value = { dragKeyText: node.keyText }
+    requestRender()
 
     if (onDragStart) {
       onDragStart({ event, node })
@@ -1218,13 +1519,14 @@ const TreeRoot: FC<InternalTreeProps> = ({
     event.preventDefault()
     setDragHoverState(node.keyText, dropContext.dropPosition)
 
-    let nextExpandedKeys = mergedExpandedKeys
+    let nextExpandedKeys = readMergedExpandedKeys()
+    const currentExpandedKeyTexts = toKeyTextSet(nextExpandedKeys)
     if (
       dropContext.dropPosition === 0 &&
-      !expandedKeyTextSet.has(node.keyText) &&
+      !currentExpandedKeyTexts.has(node.keyText) &&
       (node.children.length > 0 || !node.isLeaf)
     ) {
-      nextExpandedKeys = emitExpand([...mergedExpandedKeys, node.key], node, event)
+      nextExpandedKeys = emitExpand([...nextExpandedKeys, node.key], node, event)
     }
 
     if (onDragEnter) {
@@ -1283,14 +1585,20 @@ const TreeRoot: FC<InternalTreeProps> = ({
     event.preventDefault()
     event.stopPropagation()
 
+    const dropPosition =
+      dragStateRef.value.overKeyText === node.keyText &&
+      dragStateRef.value.dropPosition !== undefined
+        ? dragStateRef.value.dropPosition
+        : dropContext.dropPosition
+
     if (onDrop) {
       onDrop({
         event,
         node,
         dragNode: dropContext.dragNode,
         dragNodesKeys: getSubtreeKeys(dropContext.dragNode),
-        dropPosition: dropContext.dropPosition,
-        dropToGap: dropContext.dropPosition !== 0,
+        dropPosition,
+        dropToGap: dropPosition !== 0,
       })
     }
 
@@ -1431,22 +1739,195 @@ const TreeRoot: FC<InternalTreeProps> = ({
     }
   }
 
+  const renderTreeBodyContent = () => {
+    const snapshot = readRenderSnapshot()
+
+    return (
+      <>
+        {snapshot.virtualSlice.topSpacer > 0 ? (
+          <div style={{ height: `${snapshot.virtualSlice.topSpacer}px` }} aria-hidden="true" />
+        ) : null}
+        {snapshot.virtualSlice.items.map(({ node }) => {
+          const state = snapshot.checkState.stateMap[node.keyText] ?? {
+            checked: false,
+            halfChecked: false,
+            participates: true,
+          }
+          const expanded = snapshot.searchValue
+            ? true
+            : snapshot.expandedKeyTextSet.has(node.keyText)
+          const selected = snapshot.selectedKeyTextSet.has(node.keyText)
+          const loading = loadingKeyTextsRef.value.includes(node.keyText)
+          const canExpand = !!loadData || node.children.length > 0 || !node.isLeaf
+          const rowIsDragTarget = snapshot.dragState.overKeyText === node.keyText
+          const canDragNode =
+            dragConfig.enabled && dragConfig.nodeDraggable(node) && !disabled && !node.disabled
+          const dropIntent = rowIsDragTarget
+            ? toDropIntent(snapshot.dragState.dropPosition)
+            : undefined
+          const renderProps: TreeTitleRenderProps = {
+            node,
+            expanded,
+            selected,
+            checked: state.checked,
+            halfChecked: state.halfChecked,
+            loading,
+          }
+
+          return (
+            <div
+              key={node.keyText}
+              className={appendClassName(
+                joinClassName(
+                  'rue-tree-node',
+                  showLine && node.depth > 0 && 'border-l border-base-300/60',
+                  node.className,
+                ),
+                classNames?.node,
+              )}
+              style={{
+                paddingLeft: `${node.depth * 18 + 8}px`,
+                height: fixedVirtualRowHeight ? `${fixedVirtualRowHeight}px` : undefined,
+                minHeight: fixedVirtualRowHeight ? undefined : `${componentSize.rowMinHeight}px`,
+                ...styles?.node,
+              }}
+              data-rue-tree-node={node.keyText}
+              data-rue-tree-drop-intent={dropIntent ?? ''}
+              data-rue-tree-drop-position={
+                rowIsDragTarget ? String(snapshot.dragState.dropPosition ?? 0) : ''
+              }
+              draggable={canDragNode}
+              onDragStart={(event: DragEvent) => handleDragStartNode(node, event)}
+              onDragEnter={(event: DragEvent) => handleDragEnterNode(node, event)}
+              onDragOver={(event: DragEvent) => handleDragOverNode(node, event)}
+              onDragLeave={(event: DragEvent) => handleDragLeaveNode(node, event)}
+              onDragEnd={(event: DragEvent) => handleDragEndNode(node, event)}
+              onDrop={(event: DragEvent) => handleDropNode(node, event)}
+            >
+              {dropIntent === 'before' ? renderGapPlaceholder(node, 'before') : null}
+              <button
+                type="button"
+                disabled={!canExpand || disabled || node.disabled}
+                aria-label={expanded ? '折叠节点' : '展开节点'}
+                onClick={(event: MouseEvent) => handleExpandToggle(node, event)}
+              >
+                {renderSwitcher(
+                  node,
+                  expanded,
+                  selected,
+                  state.checked,
+                  state.halfChecked,
+                  loading,
+                )}
+              </button>
+              {checkable ? (
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={state.halfChecked ? 'mixed' : state.checked ? 'true' : 'false'}
+                  disabled={disabled || node.disabled || node.disableCheckbox || !node.checkable}
+                  onClick={(event: MouseEvent) => handleCheck(node, event)}
+                >
+                  {state.halfChecked ? '−' : state.checked ? '✓' : ''}
+                </button>
+              ) : null}
+              {renderDragHandle(node)}
+              {showIcon || node.icon !== undefined || icon !== undefined
+                ? renderNodeIcon(
+                    node,
+                    expanded,
+                    selected,
+                    state.checked,
+                    state.halfChecked,
+                    loading,
+                  )
+                : null}
+              <button
+                type="button"
+                className={appendClassName(
+                  joinClassName(selected ? 'selected' : '', blockNode ? 'w-full' : ''),
+                  classNames?.label,
+                )}
+                style={styles?.label}
+                disabled={disabled || node.disabled || !selectable || !node.selectable}
+                onClick={(event: MouseEvent) => handleLabelActivate(node, event, 'click')}
+                onDblClick={(event: MouseEvent) => handleLabelActivate(node, event, 'doubleClick')}
+              >
+                {titleRender ? titleRender(renderProps) : <span>{node.title}</span>}
+                {dropIntent ? (
+                  <span data-rue-tree-drop-placeholder={dropIntent}>
+                    {dropIntent === 'inside' ? '放入' : dropIntent === 'before' ? '插前' : '插后'}
+                  </span>
+                ) : selected ? (
+                  <span>选中</span>
+                ) : null}
+              </button>
+              {dropIntent === 'after' ? renderGapPlaceholder(node, 'after') : null}
+            </div>
+          )
+        })}
+        {snapshot.virtualSlice.bottomSpacer > 0 ? (
+          <div style={{ height: `${snapshot.virtualSlice.bottomSpacer}px` }} aria-hidden="true" />
+        ) : null}
+        {!snapshot.visibleNodes.length ? (
+          <div className={classNames?.empty}>{emptyText}</div>
+        ) : null}
+      </>
+    )
+  }
+
+  function syncTreeBodyDom() {
+    const bodyHost = bodyHostRef.current
+    if (!bodyHost) return
+    const equalIgnoringInlineStyle = (left: HTMLElement, right: HTMLElement) => {
+      const cloneWithoutStyle = (node: HTMLElement) => {
+        const clone = node.cloneNode(true) as HTMLElement
+        clone.removeAttribute('style')
+        clone
+          .querySelectorAll<HTMLElement>('[style]')
+          .forEach(item => item.removeAttribute('style'))
+        return clone
+      }
+      return cloneWithoutStyle(left).isEqualNode(cloneWithoutStyle(right))
+    }
+    const previousRows = new Map(
+      Array.from(bodyHost.querySelectorAll<HTMLElement>('[data-rue-tree-node]')).map(row => [
+        row.getAttribute('data-rue-tree-node') ?? '',
+        row,
+      ]),
+    )
+    renderRue(renderTreeBodyContent(), bodyHost)
+    bodyHost.querySelectorAll<HTMLElement>('[data-rue-tree-node]').forEach(row => {
+      const key = row.getAttribute('data-rue-tree-node') ?? ''
+      const previousRow = previousRows.get(key)
+      if (previousRow && previousRow !== row && equalIgnoringInlineStyle(previousRow, row)) {
+        row.replaceWith(previousRow)
+      }
+    })
+  }
+
+  onMounted(syncTreeBodyDom)
+
+  watch(
+    () => [treeData, selectedKeys, checkedKeys, expandedKeys, searchValue],
+    () => {
+      rebuildNormalizedTree()
+      syncTreeBodyDom()
+    },
+  )
+
   const bodyViewportStyle = viewportHeight
     ? virtual !== false
       ? { height: `${viewportHeight}px`, overflowY: 'auto' }
       : { maxHeight: `${viewportHeight}px`, overflowY: 'auto' }
     : { overflowY: 'visible' }
-
   return (
     <section
       {...rest}
       className={appendClassName(
         appendClassName(
           appendClassName(
-            joinClassName(
-              'rue-tree overflow-hidden rounded-[1.35rem] border border-base-300/70 bg-gradient-to-b from-base-100 via-base-100 to-base-200/35 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.35)]',
-              directoryMode && 'rue-directory-tree',
-            ),
+            'rue-tree rounded-box border border-base-300 bg-base-100',
             resolveStatusClassName(status),
           ),
           classNames?.root,
@@ -1455,283 +1936,31 @@ const TreeRoot: FC<InternalTreeProps> = ({
       )}
       style={{ ...styles?.root, ...style }}
       data-rue-tree="true"
+      data-rue-tree-version={String(renderVersion.value)}
     >
       {allowSearch ? (
-        <div
-          className={appendClassName(
-            appendClassName(
-              `border-b border-base-300/70 ${componentSize.headerPadding}`,
-              classNames?.header,
-            ),
-            classNames?.search,
-          )}
-          style={{ ...styles?.header, ...styles?.search }}
-        >
-          <label className="input input-bordered flex w-full items-center gap-2 rounded-2xl border-base-300/80 bg-base-100/85 px-3 shadow-sm focus-within:border-primary/45 focus-within:outline-none">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              className="size-4 text-base-content/50"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path strokeLinecap="round" d="m20 20-3.5-3.5" />
-            </svg>
-            <input
-              type="text"
-              value={mergedSearchValue}
-              placeholder={searchPlaceholder}
-              className="grow border-none bg-transparent px-0 py-2 text-sm outline-none"
-              onInput={(event: Event) =>
-                handleSearchInput((event.currentTarget as HTMLInputElement).value)
-              }
-            />
-          </label>
+        <div className={classNames?.search} style={styles?.search}>
+          <input
+            type="text"
+            value={readRenderSnapshot().searchValue}
+            placeholder={searchPlaceholder}
+            onInput={(event: Event) =>
+              handleSearchInput((event.currentTarget as HTMLInputElement).value)
+            }
+          />
         </div>
       ) : null}
-
       <div
-        className={appendClassName(`flex flex-col ${componentSize.bodyPadding}`, classNames?.body)}
-        style={styles?.body}
-      >
-        <div
-          className={viewportHeight ? 'overflow-auto' : 'overflow-visible'}
-          style={bodyViewportStyle}
-          onScroll={(event: UIEvent) => handleBodyScroll(event)}
-          data-rue-tree-body="true"
-        >
-          <>
-            {virtualSlice.topSpacer > 0 ? (
-              <div style={{ height: `${virtualSlice.topSpacer}px` }} aria-hidden="true" />
-            ) : null}
-            <div
-              className={visibleNodes.length ? 'space-y-1' : 'hidden'}
-              aria-hidden={visibleNodes.length ? undefined : 'true'}
-            >
-              {virtualSlice.items.map(({ node, matched }) => {
-                const state = checkState.stateMap[node.keyText] ?? {
-                  checked: false,
-                  halfChecked: false,
-                  participates: true,
-                }
-                const expanded = mergedSearchValue ? true : expandedKeyTextSet.has(node.keyText)
-                const selected = selectedKeyTextSet.has(node.keyText)
-                const loading = loadingKeyTextsRef.value.includes(node.keyText)
-                const canExpand = !!loadData || node.children.length > 0 || !node.isLeaf
-                const rowIsDragTarget = dragStateRef.value.overKeyText === node.keyText
-                const canDragNode =
-                  dragConfig.enabled &&
-                  dragConfig.nodeDraggable(node) &&
-                  !disabled &&
-                  !node.disabled
-                const dropIntent = rowIsDragTarget
-                  ? toDropIntent(dragStateRef.value.dropPosition)
-                  : undefined
-                const dragIndicatorClassName = rowIsDragTarget
-                  ? dragStateRef.value.dropPosition === 0
-                    ? 'ring-2 ring-primary/35 ring-inset'
-                    : ''
-                  : ''
-                const renderProps: TreeTitleRenderProps = {
-                  node,
-                  expanded,
-                  selected,
-                  checked: state.checked,
-                  halfChecked: state.halfChecked,
-                  loading,
-                }
-
-                return (
-                  <div key={node.keyText} className="relative flex flex-col">
-                    {dropIntent === 'before' ? renderGapPlaceholder(node, 'before') : null}
-                    <div
-                      className={appendClassName(
-                        appendClassName(
-                          joinClassName(
-                            `group flex items-center gap-2 rounded-2xl px-2.5 ${componentSize.rowPadding} transition duration-200 ease-out`,
-                            matched && 'bg-primary/8',
-                            selected &&
-                              'bg-primary/18 ring-1 ring-primary/30 shadow-[0_18px_32px_-24px_rgba(37,99,235,0.85)]',
-                            showLine && node.depth > 0 && 'border-l border-base-300/60',
-                            blockNode ? 'w-full' : '',
-                            dragIndicatorClassName,
-                            node.className,
-                          ),
-                          classNames?.node,
-                        ),
-                        disabled || node.disabled ? 'opacity-55' : '',
-                      )}
-                      style={{
-                        paddingLeft: `${node.depth * 18 + 8}px`,
-                        minHeight: fixedVirtualRowHeight
-                          ? undefined
-                          : `${componentSize.rowMinHeight}px`,
-                        height: fixedVirtualRowHeight ? `${fixedVirtualRowHeight}px` : undefined,
-                        boxSizing: fixedVirtualRowHeight ? 'border-box' : undefined,
-                        ...styles?.node,
-                      }}
-                      data-rue-tree-node={node.keyText}
-                      data-rue-tree-drop-position={
-                        rowIsDragTarget ? String(dragStateRef.value.dropPosition ?? 0) : ''
-                      }
-                      data-rue-tree-drop-intent={dropIntent ?? ''}
-                      draggable={canDragNode}
-                      onDragStart={(event: DragEvent) => handleDragStartNode(node, event)}
-                      onDragEnter={(event: DragEvent) => handleDragEnterNode(node, event)}
-                      onDragOver={(event: DragEvent) => handleDragOverNode(node, event)}
-                      onDragLeave={(event: DragEvent) => handleDragLeaveNode(node, event)}
-                      onDragEnd={(event: DragEvent) => handleDragEndNode(node, event)}
-                      onDrop={(event: DragEvent) => handleDropNode(node, event)}
-                    >
-                      <button
-                        type="button"
-                        className={appendClassName(
-                          'inline-flex size-7 shrink-0 items-center justify-center rounded-xl hover:bg-base-200 disabled:cursor-not-allowed',
-                          classNames?.switcher,
-                        )}
-                        style={styles?.switcher}
-                        disabled={!canExpand || disabled || node.disabled}
-                        aria-label={expanded ? '折叠节点' : '展开节点'}
-                        onClick={(event: MouseEvent) => handleExpandToggle(node, event)}
-                      >
-                        {renderSwitcher(
-                          node,
-                          expanded,
-                          selected,
-                          state.checked,
-                          state.halfChecked,
-                          loading,
-                        )}
-                      </button>
-
-                      {checkable ? (
-                        <button
-                          key={`checkbox-${node.keyText}-${state.checked ? 'checked' : state.halfChecked ? 'mixed' : 'unchecked'}`}
-                          type="button"
-                          role="checkbox"
-                          aria-checked={
-                            state.halfChecked ? 'mixed' : state.checked ? 'true' : 'false'
-                          }
-                          className={appendClassName(
-                            appendClassName(
-                              joinClassName(
-                                'inline-flex size-[1.1rem] shrink-0 items-center justify-center rounded-[0.4rem] border text-[0.75rem] font-semibold shadow-sm transition-all duration-150',
-                                state.checked || state.halfChecked
-                                  ? 'border-primary/95 bg-primary text-primary-content shadow-[0_0_0_1px_rgba(37,99,235,0.22)]'
-                                  : 'border-base-content/30 bg-base-100 text-base-content/0 shadow-[0_0_0_1px_rgba(15,23,42,0.06)]',
-                                (disabled ||
-                                  node.disabled ||
-                                  node.disableCheckbox ||
-                                  !node.checkable) &&
-                                  'opacity-45',
-                              ),
-                              classNames?.checkbox,
-                            ),
-                            disabled || node.disabled || node.disableCheckbox || !node.checkable
-                              ? 'cursor-not-allowed'
-                              : '',
-                          )}
-                          style={styles?.checkbox}
-                          disabled={
-                            disabled || node.disabled || node.disableCheckbox || !node.checkable
-                          }
-                          onClick={(event: MouseEvent) => handleCheck(node, event)}
-                        >
-                          {state.halfChecked ? '−' : state.checked ? '✓' : ''}
-                        </button>
-                      ) : null}
-
-                      {renderDragHandle(node)}
-
-                      {showIcon || node.icon !== undefined || icon !== undefined
-                        ? renderNodeIcon(
-                            node,
-                            expanded,
-                            selected,
-                            state.checked,
-                            state.halfChecked,
-                            loading,
-                          )
-                        : null}
-
-                      <button
-                        type="button"
-                        className={appendClassName(
-                          appendClassName(
-                            joinClassName(
-                              `flex min-w-0 flex-1 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left ${componentSize.textClass} transition-colors duration-150`,
-                              directoryMode
-                                ? selected
-                                  ? 'bg-base-200/85 text-base-content'
-                                  : 'text-base-content hover:bg-base-200/70'
-                                : selected
-                                  ? 'bg-primary/10 font-semibold text-primary'
-                                  : 'text-base-content hover:bg-base-200/70',
-                              disabled || node.disabled || !selectable || !node.selectable
-                                ? 'cursor-not-allowed opacity-55'
-                                : '',
-                            ),
-                            classNames?.label,
-                          ),
-                          blockNode ? 'w-full' : '',
-                        )}
-                        style={styles?.label}
-                        disabled={disabled || node.disabled || !selectable || !node.selectable}
-                        onClick={(event: MouseEvent) => handleLabelActivate(node, event, 'click')}
-                        onDblClick={(event: MouseEvent) =>
-                          handleLabelActivate(node, event, 'doubleClick')
-                        }
-                      >
-                        {titleRender ? (
-                          <div className="min-w-0 flex-1">
-                            <TreeTitleContent render={() => titleRender(renderProps)} />
-                          </div>
-                        ) : (
-                          <span className="min-w-0 flex-1 truncate">{node.title}</span>
-                        )}
-                        {dropIntent ? (
-                          <span
-                            className="badge badge-primary badge-xs"
-                            data-rue-tree-drop-placeholder={dropIntent}
-                          >
-                            {dropIntent === 'inside'
-                              ? '放入'
-                              : dropIntent === 'before'
-                                ? '插前'
-                                : '插后'}
-                          </span>
-                        ) : selected ? (
-                          <span className="badge badge-primary badge-outline badge-xs">选中</span>
-                        ) : null}
-                      </button>
-                    </div>
-                    {dropIntent === 'after' ? renderGapPlaceholder(node, 'after') : null}
-                  </div>
-                )
-              })}
-            </div>
-            {virtualSlice.bottomSpacer > 0 ? (
-              <div style={{ height: `${virtualSlice.bottomSpacer}px` }} aria-hidden="true" />
-            ) : null}
-            {!visibleNodes.length ? (
-              <div
-                className={appendClassName(
-                  'grid min-h-40 place-items-center rounded-2xl border border-dashed border-base-300/70 bg-base-100/50 px-6 py-8 text-center text-sm text-base-content/55',
-                  classNames?.empty,
-                )}
-                style={styles?.empty}
-              >
-                <div>{emptyText}</div>
-              </div>
-            ) : null}
-          </>
-        </div>
-      </div>
+        ref={bodyHostRef}
+        data-rue-tree-body="true"
+        style={bodyViewportStyle}
+        onScroll={handleBodyScroll}
+      />
     </section>
   )
 }
 
+/** DirectoryTree 导出函数。 */
 export const DirectoryTree: FC<DirectoryTreeProps> = ({
   className,
   showIcon = true,
@@ -1758,4 +1987,5 @@ type TreeCompoundComponent = FC<TreeProps> & {
 const Tree = TreeRoot as TreeCompoundComponent
 Tree.DirectoryTree = DirectoryTree
 
+/** 默认导出树组件。 */
 export default Tree

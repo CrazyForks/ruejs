@@ -5,17 +5,26 @@ ColorPicker 组件概述
 - 组件源码保持 TSX 形态，让 Rue 编译器直接参与，不写预转换标记。
 */
 import type { FC } from '@rue-js/rue'
-import { Teleport, onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
+import { Teleport, onMounted, onUnmounted, ref, useRef, useState, watch } from '@rue-js/rue'
 
+/** FORMAT_HEX 常量。 */
 export const FORMAT_HEX = 'hex'
+/** FORMAT_RGB 常量。 */
 export const FORMAT_RGB = 'rgb'
+/** FORMAT_HSB 常量。 */
 export const FORMAT_HSB = 'hsb'
+/** COLOR_PICKER_MODE_SINGLE 常量。 */
 export const COLOR_PICKER_MODE_SINGLE = 'single'
+/** COLOR_PICKER_MODE_GRADIENT 常量。 */
 export const COLOR_PICKER_MODE_GRADIENT = 'gradient'
 
+/** ColorFormatType 视觉或语义变体类型。 */
 export type ColorFormatType = typeof FORMAT_HEX | typeof FORMAT_RGB | typeof FORMAT_HSB
+/** ColorPickerMode 类型。 */
 export type ColorPickerMode = typeof COLOR_PICKER_MODE_SINGLE | typeof COLOR_PICKER_MODE_GRADIENT
+/** ColorPickerTrigger 类型。 */
 export type ColorPickerTrigger = 'click' | 'hover'
+/** ColorPickerPlacement 位置或方向类型。 */
 export type ColorPickerPlacement =
   | 'top'
   | 'topLeft'
@@ -29,98 +38,168 @@ export type ColorPickerPlacement =
   | 'right'
   | 'rightTop'
   | 'rightBottom'
+/** ColorPickerSize 尺寸类型。 */
 export type ColorPickerSize =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
   | 'small'
   | 'default'
   | 'middle'
   | 'medium'
   | 'large'
-  | 'sm'
-  | 'md'
-  | 'lg'
+/** ColorPickerArrow 类型。 */
 export type ColorPickerArrow = boolean | { pointAtCenter?: boolean }
+/** ColorPickerGetPopupContainer 类型。 */
 export type ColorPickerGetPopupContainer =
   | string
   | HTMLElement
   | false
   | ((triggerNode?: HTMLElement) => string | HTMLElement | false | null | undefined)
+/** ColorPickerValue 值类型。 */
 export type ColorPickerValue = string | Color | ColorPickerGradientStop[] | null
+/** ColorPickerPresetValue 值类型。 */
 export type ColorPickerPresetValue = string | Color | ColorPickerGradientStop[]
 
+/** ColorPickerAllowClearConfig 配置对象。 */
 export interface ColorPickerAllowClearConfig {
+  /** 清空图标。 */
   clearIcon?: any
 }
 
+/** ColorPickerPresetItem 数据项结构。 */
 export interface ColorPickerPresetItem {
+  /** 展示标签。 */
   label: any
+  /** colors 配置项。 */
   colors: ColorPickerPresetValue[]
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 数据项唯一标识。 */
   key?: string | number
 }
 
+/** ColorPickerGradientStop 接口。 */
 export interface ColorPickerGradientStop {
+  /** 组件语义色。 */
   color: string | Color
+  /** percent 配置项。 */
   percent: number
+  /** 元素或数据项标识。 */
   id?: string | number
 }
 
+/** ColorPickerClassNames 局部类名配置。 */
 export interface ColorPickerClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** trigger 区域配置。 */
   trigger?: string
+  /** popup 区域配置。 */
   popup?: string
+  /** panel 区域配置。 */
   panel?: string
+  /** 主体区域配置。 */
   body?: string
+  /** saturation 配置项。 */
   saturation?: string
+  /** sliders 配置项。 */
   sliders?: string
+  /** formatBar 配置项。 */
   formatBar?: string
+  /** valueInput 配置项。 */
   valueInput?: string
+  /** presets 配置项。 */
   presets?: string
+  /** presetItem 配置项。 */
   presetItem?: string
+  /** clear 配置项。 */
   clear?: string
 }
 
+/** ColorPickerStyles 局部样式配置。 */
 export interface ColorPickerStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** trigger 区域配置。 */
   trigger?: Record<string, any>
+  /** popup 区域配置。 */
   popup?: Record<string, any>
+  /** panel 区域配置。 */
   panel?: Record<string, any>
+  /** 主体区域配置。 */
   body?: Record<string, any>
+  /** saturation 配置项。 */
   saturation?: Record<string, any>
+  /** sliders 配置项。 */
   sliders?: Record<string, any>
+  /** formatBar 配置项。 */
   formatBar?: Record<string, any>
+  /** valueInput 配置项。 */
   valueInput?: Record<string, any>
+  /** presets 配置项。 */
   presets?: Record<string, any>
 }
 
+/** ColorPickerPanelRenderProps 组件属性。 */
 export interface ColorPickerPanelRenderProps {
+  /** 组件语义色。 */
   color: Color | GradientColor | null
+  /** format 配置项。 */
   format: ColorFormatType
+  /** mode 配置项。 */
   mode: ColorPickerMode
 }
 
+/** ColorPickerProps 组件属性。 */
 export interface ColorPickerProps {
+  /** 受控值。 */
   value?: ColorPickerValue
+  /** 非受控初始值。 */
   defaultValue?: ColorPickerValue
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 弹出层或内容展示位置。 */
   placement?: ColorPickerPlacement
+  /** trigger 区域配置。 */
   trigger?: ColorPickerTrigger
+  /** format 配置项。 */
   format?: ColorFormatType
+  /** defaultFormat 配置项。 */
   defaultFormat?: ColorFormatType
+  /** 是否允许一键清空。 */
   allowClear?: boolean | ColorPickerAllowClearConfig
+  /** presets 配置项。 */
   presets?: ColorPickerPresetItem[]
+  /** mode 配置项。 */
   mode?: ColorPickerMode | ColorPickerMode[]
+  /** defaultMode 配置项。 */
   defaultMode?: ColorPickerMode
+  /** arrow 配置项。 */
   arrow?: ColorPickerArrow
+  /** showText 文本内容。 */
   showText?: boolean | ((color: Color | GradientColor) => any)
+  /** 组件尺寸。 */
   size?: ColorPickerSize
+  /** disabledAlpha 配置项。 */
   disabledAlpha?: boolean
+  /** disabledFormat 配置项。 */
   disabledFormat?: boolean
+  /** getPopupContainer 配置项。 */
   getPopupContainer?: ColorPickerGetPopupContainer
+  /** autoAdjustOverflow 配置项。 */
   autoAdjustOverflow?: boolean
+  /** destroyTooltipOnHide 配置项。 */
   destroyTooltipOnHide?: boolean
+  /** destroyOnHidden 配置项。 */
   destroyOnHidden?: boolean
+  /** panelRender 自定义渲染函数。 */
   panelRender?: (
     panel: any,
     extra: {
@@ -131,20 +210,35 @@ export interface ColorPickerProps {
       state: ColorPickerPanelRenderProps
     },
   ) => any
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** triggerClassName 附加类名。 */
   triggerClassName?: string
+  /** popupClassName 附加类名。 */
   popupClassName?: string
+  /** panelClassName 附加类名。 */
   panelClassName?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: ColorPickerClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: ColorPickerStyles
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** onFormatChange 事件回调。 */
   onFormatChange?: (format: ColorFormatType) => void
+  /** 值或状态变化时触发的回调。 */
   onChange?: (value: Color | GradientColor | null, css: string) => void
+  /** 清空时触发的回调。 */
   onClear?: () => void
+  /** onChangeComplete 事件回调。 */
   onChangeComplete?: (value: Color | GradientColor) => void
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -193,18 +287,58 @@ type ColorLike =
       a?: number
     }
 
+/** Rue 全局 runtime 标记，用于组件回调中恢复 active runtime。 */
+type RuntimeGlobalRecord = typeof globalThis & {
+  __rue_active?: unknown
+  __rue?: unknown
+}
+
+/** DEFAULT_COLOR 内部常量。 */
 const DEFAULT_COLOR = '#1677ff'
+/** EMPTY_COLOR_TEXT 内部常量。 */
 const EMPTY_COLOR_TEXT = '无色'
+/** DEFAULT_GRADIENT_STOPS 内部常量。 */
 const DEFAULT_GRADIENT_STOPS: ColorPickerGradientStop[] = [
   { color: 'rgb(16, 142, 233)', percent: 0 },
   { color: 'rgb(135, 208, 104)', percent: 100 },
 ]
+/** DEFAULT_PICKER_MODES 内部常量。 */
 const DEFAULT_PICKER_MODES: ColorPickerMode[] = [COLOR_PICKER_MODE_SINGLE]
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (...parts: Array<string | undefined | null | false>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** 解析当前 active runtime；优先使用临时 active，其次回退全局 runtime。 */
+const resolveActiveRuntime = () => {
+  const globalRecord = globalThis as RuntimeGlobalRecord
+  return globalRecord.__rue_active ?? globalRecord.__rue
+}
+
+/** 在用户回调执行期间恢复捕获到的 active runtime，保证回调内 render/watch 归属正确。 */
+const runWithActiveRuntime = <T,>(runtime: unknown, runner: () => T): T => {
+  if ((typeof runtime !== 'object' && typeof runtime !== 'function') || runtime == null) {
+    return runner()
+  }
+
+  const globalRecord = globalThis as RuntimeGlobalRecord
+  const hadActiveRuntime = Object.prototype.hasOwnProperty.call(globalRecord, '__rue_active')
+  const previousRuntime = globalRecord.__rue_active
+
+  globalRecord.__rue_active = runtime
+  try {
+    return runner()
+  } finally {
+    if (hadActiveRuntime) {
+      globalRecord.__rue_active = previousRuntime
+    } else {
+      delete globalRecord.__rue_active
+    }
+  }
+}
+
+/** 判断是否存在 Renderable Slot Content 的内部工具函数。 */
 const hasRenderableSlotContent = (value: any): boolean => {
   if (Array.isArray(value)) {
     return value.some(item => hasRenderableSlotContent(item))
@@ -212,32 +346,38 @@ const hasRenderableSlotContent = (value: any): boolean => {
   return value !== undefined && value !== null && value !== false && value !== ''
 }
 
+/** clamp Number 的内部工具函数。 */
 const clampNumber = (value: number, min: number, max: number) => {
   if (!Number.isFinite(value)) return min
   return Math.min(Math.max(value, min), max)
 }
 
+/** round To 的内部工具函数。 */
 const roundTo = (value: number, precision = 2) => {
   const factor = 10 ** precision
   return Math.round(value * factor) / factor
 }
 
+/** pad Hex 的内部工具函数。 */
 const padHex = (value: number) => {
   return Math.round(clampNumber(value, 0, 255))
     .toString(16)
     .padStart(2, '0')
 }
 
+/** 归一化 Alpha 的内部工具函数。 */
 const normalizeAlpha = (value: number) => {
   return clampNumber(roundTo(value, 3), 0, 1)
 }
 
+/** 归一化 Hue 的内部工具函数。 */
 const normalizeHue = (value: number) => {
   if (!Number.isFinite(value)) return 0
   const normalized = value % 360
   return normalized < 0 ? normalized + 360 : normalized
 }
 
+/** 归一化 Hsba 的内部工具函数。 */
 const normalizeHsba = (
   value: Partial<HSBAColor> | { h?: number; s?: number; v?: number; a?: number },
 ) => {
@@ -250,6 +390,7 @@ const normalizeHsba = (
   }
 }
 
+/** hsba To Rgba 的内部工具函数。 */
 const hsbaToRgba = (value: HSBAColor): RGBAColor => {
   const h = normalizeHue(value.h)
   const s = clampNumber(value.s, 0, 100) / 100
@@ -292,6 +433,7 @@ const hsbaToRgba = (value: HSBAColor): RGBAColor => {
   }
 }
 
+/** rgba To Hsba 的内部工具函数。 */
 const rgbaToHsba = (value: Partial<RGBAColor>): HSBAColor => {
   const red = clampNumber(value.r ?? 0, 0, 255) / 255
   const green = clampNumber(value.g ?? 0, 0, 255) / 255
@@ -322,6 +464,7 @@ const rgbaToHsba = (value: Partial<RGBAColor>): HSBAColor => {
   }
 }
 
+/** parse Hex Color 的内部工具函数。 */
 const parseHexColor = (value: string): HSBAColor | null => {
   const normalized = value.replace(/^#/, '').trim()
 
@@ -345,6 +488,7 @@ const parseHexColor = (value: string): HSBAColor | null => {
   return rgbaToHsba({ r: red, g: green, b: blue, a: alpha })
 }
 
+/** split Numeric Parts 的内部工具函数。 */
 const splitNumericParts = (value: string) => {
   return value
     .split(',')
@@ -352,6 +496,7 @@ const splitNumericParts = (value: string) => {
     .filter(Boolean)
 }
 
+/** parse Alpha Part 的内部工具函数。 */
 const parseAlphaPart = (value?: string) => {
   if (!value) return 1
   if (value.endsWith('%')) {
@@ -360,6 +505,7 @@ const parseAlphaPart = (value?: string) => {
   return normalizeAlpha(Number.parseFloat(value))
 }
 
+/** parse Rgb Color 的内部工具函数。 */
 const parseRgbColor = (value: string): HSBAColor | null => {
   const matched = value.trim().match(/^rgba?\((.*)\)$/i)
   if (!matched) return null
@@ -377,6 +523,7 @@ const parseRgbColor = (value: string): HSBAColor | null => {
   return rgbaToHsba({ r: red, g: green, b: blue, a: alpha })
 }
 
+/** parse Hsb Color 的内部工具函数。 */
 const parseHsbColor = (value: string): HSBAColor | null => {
   const matched = value.trim().match(/^hs(v|b)a?\((.*)\)$/i)
   if (!matched) return null
@@ -394,6 +541,7 @@ const parseHsbColor = (value: string): HSBAColor | null => {
   return normalizeHsba({ h: hue, s: saturation, b: brightness, a: alpha })
 }
 
+/** parse Color Input 的内部工具函数。 */
 const parseColorInput = (value: ColorLike): HSBAColor | null => {
   if (value == null) return null
 
@@ -431,33 +579,40 @@ const parseColorInput = (value: ColorLike): HSBAColor | null => {
   return null
 }
 
+/** Color 工具类。 */
 export class Color {
   private hsba: HSBAColor
 
+  /**  配置项。 */
   constructor(value: ColorLike = DEFAULT_COLOR) {
     this.hsba = normalizeHsba(
       parseColorInput(value) ?? parseColorInput(DEFAULT_COLOR) ?? { h: 215, s: 91, b: 100, a: 1 },
     )
   }
 
+  /** clone 方法。 */
   clone() {
     return new Color(this.hsba)
   }
 
+  /** toHex 方法。 */
   toHex() {
     const rgba = hsbaToRgba(this.hsba)
     const alphaHex = this.hsba.a < 1 ? padHex(this.hsba.a * 255) : ''
     return `${padHex(rgba.r)}${padHex(rgba.g)}${padHex(rgba.b)}${alphaHex}`
   }
 
+  /** toHexString 方法。 */
   toHexString() {
     return `#${this.toHex()}`
   }
 
+  /** toRgb 方法。 */
   toRgb(): RGBAColor {
     return hsbaToRgba(this.hsba)
   }
 
+  /** toRgbString 方法。 */
   toRgbString() {
     const rgb = this.toRgb()
     if (rgb.a < 1) {
@@ -466,10 +621,12 @@ export class Color {
     return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`
   }
 
+  /** toHsb 方法。 */
   toHsb(): HSBAColor {
     return { ...this.hsba }
   }
 
+  /** toHsbString 方法。 */
   toHsbString() {
     if (this.hsba.a < 1) {
       return `hsba(${Math.round(this.hsba.h)}, ${roundTo(this.hsba.s, 1)}%, ${roundTo(this.hsba.b, 1)}%, ${roundTo(this.hsba.a, 3)})`
@@ -477,18 +634,22 @@ export class Color {
     return `hsb(${Math.round(this.hsba.h)}, ${roundTo(this.hsba.s, 1)}%, ${roundTo(this.hsba.b, 1)}%)`
   }
 
+  /** toCssString 方法。 */
   toCssString() {
     return this.toRgbString()
   }
 
+  /** withAlpha 方法。 */
   withAlpha(alpha: number) {
     return new Color({ ...this.hsba, a: normalizeAlpha(alpha) })
   }
 
+  /** withHue 方法。 */
   withHue(hue: number) {
     return new Color({ ...this.hsba, h: normalizeHue(hue) })
   }
 
+  /** withSaturationBrightness 方法。 */
   withSaturationBrightness(saturation: number, brightness: number) {
     return new Color({
       ...this.hsba,
@@ -498,6 +659,7 @@ export class Color {
   }
 }
 
+/** ensure Color 的内部工具函数。 */
 const ensureColor = (value: ColorLike, disabledAlpha?: boolean) => {
   const parsed = parseColorInput(value)
   if (!parsed) return null
@@ -505,6 +667,7 @@ const ensureColor = (value: ColorLike, disabledAlpha?: boolean) => {
   return new Color(normalized)
 }
 
+/** strip Alpha If Needed 的内部工具函数。 */
 const stripAlphaIfNeeded = (color: Color | null, disabledAlpha?: boolean) => {
   if (!color) return null
   return disabledAlpha ? color.withAlpha(1) : color
@@ -512,6 +675,7 @@ const stripAlphaIfNeeded = (color: Color | null, disabledAlpha?: boolean) => {
 
 let gradientStopIdSeed = 0
 
+/** 判断 Gradient Stop Value 的内部工具函数。 */
 const isGradientStopValue = (value: unknown): value is ColorPickerGradientStop => {
   return (
     !!value &&
@@ -521,10 +685,12 @@ const isGradientStopValue = (value: unknown): value is ColorPickerGradientStop =
   )
 }
 
+/** 判断 Gradient Value 的内部工具函数。 */
 const isGradientValue = (value: unknown): value is ColorPickerGradientStop[] => {
   return Array.isArray(value) && value.every(isGradientStopValue)
 }
 
+/** 归一化 Gradient Stops 的内部工具函数。 */
 const normalizeGradientStops = (value: ColorPickerGradientStop[], disabledAlpha?: boolean) => {
   const normalized = value
     .map(stop => {
@@ -553,9 +719,11 @@ const normalizeGradientStops = (value: ColorPickerGradientStop[], disabledAlpha?
   return normalized
 }
 
+/** GradientColor 工具类。 */
 export class GradientColor {
   private stops: GradientColorStopState[]
 
+  /**  配置项。 */
   constructor(value: ColorPickerGradientStop[] = DEFAULT_GRADIENT_STOPS, disabledAlpha?: boolean) {
     this.stops =
       normalizeGradientStops(value, disabledAlpha) ??
@@ -563,10 +731,12 @@ export class GradientColor {
       []
   }
 
+  /** clone 方法。 */
   clone() {
     return new GradientColor(this.toStops())
   }
 
+  /** toStops 方法。 */
   toStops() {
     return this.stops.map(stop => ({
       id: stop.id,
@@ -575,6 +745,7 @@ export class GradientColor {
     }))
   }
 
+  /** toCssString 方法。 */
   toCssString() {
     const stops = this.toStops()
       .sort((left, right) => left.percent - right.percent)
@@ -583,6 +754,7 @@ export class GradientColor {
     return `linear-gradient(90deg, ${stops})`
   }
 
+  /** withStopColor 颜色。 */
   withStopColor(id: string, color: Color) {
     return new GradientColor(
       this.toStops().map(stop => ({
@@ -592,6 +764,7 @@ export class GradientColor {
     )
   }
 
+  /** withStopPercent 方法。 */
   withStopPercent(id: string, percent: number) {
     return new GradientColor(
       this.toStops().map(stop => ({
@@ -601,6 +774,7 @@ export class GradientColor {
     )
   }
 
+  /** addStop 方法。 */
   addStop(percent: number, color: Color) {
     return new GradientColor([
       ...this.toStops(),
@@ -612,6 +786,7 @@ export class GradientColor {
     ])
   }
 
+  /** removeStop 方法。 */
   removeStop(id: string) {
     const nextStops = this.toStops().filter(stop => stop.id !== id)
     if (nextStops.length < 2) return this.clone()
@@ -619,12 +794,14 @@ export class GradientColor {
   }
 }
 
+/** ensure Gradient Color 的内部工具函数。 */
 const ensureGradientColor = (value: unknown, disabledAlpha?: boolean) => {
   if (value instanceof GradientColor) return new GradientColor(value.toStops(), disabledAlpha)
   if (!isGradientValue(value)) return null
   return new GradientColor(value, disabledAlpha)
 }
 
+/** 归一化 Modes 的内部工具函数。 */
 const normalizeModes = (value?: ColorPickerMode | ColorPickerMode[]) => {
   const modes = Array.isArray(value) ? value : value ? [value] : DEFAULT_PICKER_MODES
   const filtered = modes.filter(
@@ -633,6 +810,7 @@ const normalizeModes = (value?: ColorPickerMode | ColorPickerMode[]) => {
   return filtered.length ? filtered : DEFAULT_PICKER_MODES
 }
 
+/** 读取 Drafts From Color 的内部工具函数。 */
 const getDraftsFromColor = (color: Color | null): ColorChannelDrafts => {
   const currentColor = color ?? new Color(DEFAULT_COLOR)
   const rgb = currentColor.toRgb()
@@ -650,8 +828,31 @@ const getDraftsFromColor = (color: Color | null): ColorChannelDrafts => {
   }
 }
 
+/** 判断 Same Draft Inputs 的内部工具函数。 */
+const isSameDraftInputs = (left: ColorChannelDrafts, right: ColorChannelDrafts) => {
+  return (
+    left.hex === right.hex &&
+    left.r === right.r &&
+    left.g === right.g &&
+    left.b === right.b &&
+    left.h === right.h &&
+    left.s === right.s &&
+    left.v === right.v &&
+    left.a === right.a
+  )
+}
+
+/** 解析 Size Tokens 的内部工具函数。 */
 const resolveSizeTokens = (size?: ColorPickerSize) => {
   switch (size) {
+    case 'xs':
+      return {
+        triggerClassName: 'min-h-6 px-1.5 py-0.5 text-xs',
+        compactTriggerClassName: 'h-6 w-6 p-[2px]',
+        swatchSizeClassName: 'size-3',
+        compactSwatchSizeClassName: 'size-[0.85rem]',
+        popupWidthClassName: 'w-[min(94vw,17rem)]',
+      }
     case 'small':
     case 'sm':
       return {
@@ -669,6 +870,14 @@ const resolveSizeTokens = (size?: ColorPickerSize) => {
         swatchSizeClassName: 'size-5',
         compactSwatchSizeClassName: 'size-[1.45rem]',
         popupWidthClassName: 'w-[min(94vw,22rem)]',
+      }
+    case 'xl':
+      return {
+        triggerClassName: 'min-h-12 px-4 py-2.5 text-base',
+        compactTriggerClassName: 'h-12 w-12 p-[5px]',
+        swatchSizeClassName: 'size-6',
+        compactSwatchSizeClassName: 'size-[1.75rem]',
+        popupWidthClassName: 'w-[min(94vw,24rem)]',
       }
     case 'medium':
     case 'middle':
@@ -688,6 +897,7 @@ interface ColorPickerPlacementLayout {
   align: 'start' | 'center' | 'end'
 }
 
+/** 解析 Placement Layout 的内部工具函数。 */
 const resolvePlacementLayout = (placement: ColorPickerPlacement): ColorPickerPlacementLayout => {
   switch (placement) {
     case 'top':
@@ -718,14 +928,17 @@ const resolvePlacementLayout = (placement: ColorPickerPlacement): ColorPickerPla
   }
 }
 
+/** 解析 Arrow Enabled 的内部工具函数。 */
 const resolveArrowEnabled = (arrow?: ColorPickerArrow) => {
   return arrow !== false
 }
 
+/** 解析 Arrow Point At Center 的内部工具函数。 */
 const resolveArrowPointAtCenter = (arrow?: ColorPickerArrow) => {
   return typeof arrow === 'object' && !!arrow.pointAtCenter
 }
 
+/** 解析 Arrow Class Name 的内部工具函数。 */
 const resolveArrowClassName = (placement: ColorPickerPlacement, pointAtCenter: boolean) => {
   const layout = resolvePlacementLayout(placement)
 
@@ -772,11 +985,13 @@ const resolveArrowClassName = (placement: ColorPickerPlacement, pointAtCenter: b
   )
 }
 
+/** 解析 Container 的内部工具函数。 */
 const resolveContainer = (container?: ColorPickerGetPopupContainer, triggerNode?: HTMLElement) => {
   if (typeof container === 'function') return container(triggerNode)
   return container
 }
 
+/** format Color Text 的内部工具函数。 */
 const formatColorText = (color: Color | null, format: ColorFormatType) => {
   if (!color) return ''
   switch (format) {
@@ -789,11 +1004,13 @@ const formatColorText = (color: Color | null, format: ColorFormatType) => {
   }
 }
 
+/** 判断 Same Color Value 的内部工具函数。 */
 const isSameColorValue = (left: Color | null, right: Color | null) => {
   if (!left || !right) return false
   return left.toHexString() === right.toHexString() && left.toRgbString() === right.toRgbString()
 }
 
+/** 判断 Same Gradient Value 的内部工具函数。 */
 const isSameGradientValue = (left: GradientColor | null, right: GradientColor | null) => {
   if (!left || !right) return false
   const leftStops = left.toStops()
@@ -820,6 +1037,7 @@ const checkerboardStyle = {
 const sliderInputClassName =
   'block h-4 w-full cursor-pointer appearance-none bg-transparent outline-none disabled:cursor-not-allowed disabled:opacity-60 [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-[-4px] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-base-100 [&::-webkit-slider-thumb]:bg-base-100 [&::-webkit-slider-thumb]:shadow-[0_0_0_1px_rgba(15,23,42,0.16),0_3px_10px_rgba(15,23,42,0.2)] [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:border-0 [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-base-100 [&::-moz-range-thumb]:bg-base-100 [&::-moz-range-thumb]:shadow-[0_0_0_1px_rgba(15,23,42,0.16),0_3px_10px_rgba(15,23,42,0.2)]'
 
+/** 渲染 Swatch Style 的内部工具函数。 */
 const renderSwatchStyle = (color: Color | GradientColor | null) => {
   if (color instanceof GradientColor) {
     return {
@@ -835,6 +1053,7 @@ const renderSwatchStyle = (color: Color | GradientColor | null) => {
   }
 }
 
+/** 渲染 Preset Swatch Style 的内部工具函数。 */
 const renderPresetSwatchStyle = (color: Color | GradientColor | null) => {
   if (color instanceof GradientColor) {
     return {
@@ -846,6 +1065,7 @@ const renderPresetSwatchStyle = (color: Color | GradientColor | null) => {
   return renderSwatchStyle(color)
 }
 
+/** HIDDEN_POPUP_STYLE 内部常量。 */
 const HIDDEN_POPUP_STYLE = {
   left: '0px',
   top: '0px',
@@ -905,10 +1125,12 @@ interface PresetsSectionRenderContext {
   requestRender: () => void
 }
 
+/** apply Format Value 的内部工具函数。 */
 const applyFormatValue = (event: Event, setFormatValue: (nextFormat: ColorFormatType) => void) => {
   setFormatValue((event.currentTarget as HTMLSelectElement).value as ColorFormatType)
 }
 
+/** Chevron Icon 的内部工具函数。 */
 const ChevronIcon: FC<{ open?: boolean }> = ({ open }) => {
   return (
     <svg
@@ -926,6 +1148,7 @@ const ChevronIcon: FC<{ open?: boolean }> = ({ open }) => {
   )
 }
 
+/** 渲染 Picker Section 的内部工具函数。 */
 const renderPickerSection = ({
   getColor,
   getGradient,
@@ -966,7 +1189,6 @@ const renderPickerSection = ({
     label: string,
     inputMode: 'text' | 'numeric' = 'numeric',
   ) => {
-    const focused = !!inputFocusState.value[key]
     return (
       <label className="grid gap-0.5">
         <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-base-content/45">
@@ -979,9 +1201,7 @@ const renderPickerSection = ({
           disabled={disabled}
           className={appendClassName(
             'h-8 w-full rounded-[0.65rem] border bg-base-100 px-2 text-[13px] font-medium text-base-content/85 outline-none transition-[border-color,box-shadow] duration-200 ease-out',
-            focused
-              ? 'border-primary ring-2 ring-primary/15'
-              : 'border-base-300 hover:border-primary/55',
+            'border-base-300 hover:border-primary/55 focus:border-primary focus:ring-2 focus:ring-primary/15',
             classNames?.valueInput,
           )}
           style={styles?.valueInput}
@@ -990,14 +1210,12 @@ const renderPickerSection = ({
               ...inputFocusState.value,
               [key]: true,
             }
-            requestRender()
           }}
           onInput={(event: Event) => {
             inputDrafts.value = {
               ...inputDrafts.value,
               [key]: (event.currentTarget as HTMLInputElement).value,
             }
-            requestRender()
           }}
           onBlur={() => {
             inputFocusState.value = {
@@ -1300,6 +1518,7 @@ const renderPickerSection = ({
   )
 }
 
+/** 渲染 Presets Section 的内部工具函数。 */
 const renderPresetsSection = ({
   presets,
   disabledAlpha,
@@ -1453,6 +1672,7 @@ const renderPresetsSection = ({
   )
 }
 
+/** Color Picker 的内部工具函数。 */
 const ColorPicker: FC<ColorPickerProps> = ({
   value,
   defaultValue = DEFAULT_COLOR,
@@ -1498,6 +1718,9 @@ const ColorPicker: FC<ColorPickerProps> = ({
   const isControlledFormat = format !== undefined
   const sizeTokens = resolveSizeTokens(size)
   const availableModes = normalizeModes(modeProp)
+  // 回调可能在 DOM 事件委托中触发，捕获 runtime 后可在回调里继续使用 Rue API。
+  const callbackRuntime = resolveActiveRuntime()
+  const withCallbackRuntime = <T,>(runner: () => T) => runWithActiveRuntime(callbackRuntime, runner)
   const initialResolvedValue = isControlledValue ? value : defaultValue
   const initialGradientValue = ensureGradientColor(initialResolvedValue, disabledAlpha)
   const resolvedInitialMode =
@@ -1511,6 +1734,8 @@ const ColorPicker: FC<ColorPickerProps> = ({
   const popupRef = useRef<HTMLElement>()
   const saturationRef = useRef<HTMLElement>()
   const popupRafRef = useRef<number>()
+  const renderRafRef = useRef<number>()
+  const renderTimerRef = useRef<number>()
   const hoverCloseTimerRef = useRef<number>()
   const panelContextRef = useRef<{
     picker?: PickerSectionRenderContext
@@ -1552,11 +1777,44 @@ const ColorPicker: FC<ColorPickerProps> = ({
   const activePresetGroupKey = ref('')
   const activeGradientStopId = ref('')
   const popupFloatingStyle = ref<Record<string, any>>(HIDDEN_POPUP_STYLE)
-  const renderVersion = ref(0)
+  const [renderVersion, setRenderVersion] = useState(0)
   const popupHostId = ref(`rue-color-picker-popup-${++colorPickerPopupHostIdSeed}`)
 
+  const clearDeferredRender = () => {
+    if (typeof window === 'undefined') return
+    if (renderTimerRef.current == null) return
+    window.clearTimeout(renderTimerRef.current)
+    renderTimerRef.current = undefined
+  }
+
   const requestRender = () => {
-    renderVersion.value += 1
+    clearDeferredRender()
+    const bumpRenderVersion = () => {
+      setRenderVersion(renderVersion.value + 1)
+    }
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      withCallbackRuntime(bumpRenderVersion)
+      return
+    }
+    if (renderRafRef.current != null) return
+    renderRafRef.current = window.requestAnimationFrame(() => {
+      renderRafRef.current = undefined
+      withCallbackRuntime(bumpRenderVersion)
+    })
+  }
+
+  const requestDeferredRender = () => {
+    if (typeof window === 'undefined') {
+      requestRender()
+      return
+    }
+    if (renderTimerRef.current != null) {
+      window.clearTimeout(renderTimerRef.current)
+    }
+    renderTimerRef.current = window.setTimeout(() => {
+      renderTimerRef.current = undefined
+      requestRender()
+    }, 120) as unknown as number
   }
 
   const syncPresetState = () => {
@@ -1624,7 +1882,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
     }
   }
 
-  const syncDraftInputs = (force = false) => {
+  const syncDraftInputs = (force = false, deferredRender = false) => {
     const nextDrafts = getDraftsFromColor(getWorkingColor())
     const mergedDrafts: ColorChannelDrafts = { ...inputDrafts.value }
     ;(Object.keys(nextDrafts) as Array<keyof ColorChannelDrafts>).forEach(key => {
@@ -1632,7 +1890,12 @@ const ColorPicker: FC<ColorPickerProps> = ({
         mergedDrafts[key] = nextDrafts[key]
       }
     })
+    if (isSameDraftInputs(inputDrafts.value, mergedDrafts)) return
     inputDrafts.value = mergedDrafts
+    if (deferredRender) {
+      requestDeferredRender()
+      return
+    }
     requestRender()
   }
 
@@ -1673,7 +1936,9 @@ const ColorPicker: FC<ColorPickerProps> = ({
       schedulePopupPositionSync()
     }
     if (onOpenChange) {
-      onOpenChange(nextOpen)
+      withCallbackRuntime(() => {
+        onOpenChange(nextOpen)
+      })
     }
   }
 
@@ -1692,26 +1957,50 @@ const ColorPicker: FC<ColorPickerProps> = ({
   }
 
   const setFormatValue = (nextFormat: ColorFormatType) => {
+    if (nextFormat === currentFormat.value) return
     if (!isControlledFormat) {
       currentFormat.value = nextFormat
     }
     syncDraftInputs(true)
     if (onFormatChange) {
-      onFormatChange(nextFormat)
+      withCallbackRuntime(() => {
+        onFormatChange(nextFormat)
+      })
     }
   }
 
   const emitGradientChange = (nextGradient: GradientColor | null, complete?: boolean) => {
+    const previousGradient = previewGradient.value
+    const gradientChanged =
+      nextGradient || previousGradient
+        ? !isSameGradientValue(previousGradient, nextGradient)
+        : false
+
+    if (!gradientChanged) {
+      if (complete && nextGradient && onChangeComplete) {
+        withCallbackRuntime(() => {
+          onChangeComplete(nextGradient.clone())
+        })
+      }
+      return
+    }
+
     previewGradient.value = nextGradient ? nextGradient.clone() : null
     syncGradientStopState(nextGradient)
-    syncDraftInputs(true)
+    syncDraftInputs(true, true)
+    syncTriggerDom(nextGradient)
+    requestDeferredRender()
 
     if (onChange) {
-      onChange(nextGradient ? nextGradient.clone() : null, nextGradient?.toCssString() ?? '')
+      withCallbackRuntime(() => {
+        onChange(nextGradient ? nextGradient.clone() : null, nextGradient?.toCssString() ?? '')
+      })
     }
 
     if (complete && nextGradient && onChangeComplete) {
-      onChangeComplete(nextGradient.clone())
+      withCallbackRuntime(() => {
+        onChangeComplete(nextGradient.clone())
+      })
     }
   }
 
@@ -1731,18 +2020,37 @@ const ColorPicker: FC<ColorPickerProps> = ({
       return
     }
 
+    const previousColor = previewColor.value
+    const colorChanged =
+      normalizedColor || previousColor ? !isSameColorValue(previousColor, normalizedColor) : false
+
+    if (!colorChanged) {
+      if (complete && normalizedColor && onChangeComplete) {
+        withCallbackRuntime(() => {
+          onChangeComplete(normalizedColor.clone())
+        })
+      }
+      return
+    }
+
     previewColor.value = normalizedColor ? normalizedColor.clone() : null
-    syncDraftInputs(true)
+    syncDraftInputs(true, true)
+    syncTriggerDom(normalizedColor)
+    requestDeferredRender()
 
     if (onChange) {
-      onChange(
-        normalizedColor ? normalizedColor.clone() : null,
-        normalizedColor?.toCssString() ?? '',
-      )
+      withCallbackRuntime(() => {
+        onChange(
+          normalizedColor ? normalizedColor.clone() : null,
+          normalizedColor?.toCssString() ?? '',
+        )
+      })
     }
 
     if (complete && normalizedColor && onChangeComplete) {
-      onChangeComplete(normalizedColor.clone())
+      withCallbackRuntime(() => {
+        onChangeComplete(normalizedColor.clone())
+      })
     }
   }
 
@@ -1999,11 +2307,16 @@ const ColorPicker: FC<ColorPickerProps> = ({
       previewColor.value = null
     }
     syncDraftInputs(true)
+    syncTriggerDom(null)
     if (onChange) {
-      onChange(null, '')
+      withCallbackRuntime(() => {
+        onChange(null, '')
+      })
     }
     if (onClear) {
-      onClear()
+      withCallbackRuntime(() => {
+        onClear()
+      })
     }
   }
 
@@ -2028,6 +2341,28 @@ const ColorPicker: FC<ColorPickerProps> = ({
     return activeValue instanceof GradientColor
       ? activeValue.toCssString()
       : formatColorText(activeValue, currentFormat.value)
+  }
+
+  const syncTriggerDom = (activeValue: Color | GradientColor | null) => {
+    const triggerElement = triggerRef.current
+    if (!triggerElement) return
+
+    const swatch = triggerElement.firstElementChild as HTMLElement | null
+    if (swatch) {
+      Object.assign(swatch.style, renderSwatchStyle(activeValue))
+    }
+
+    if (hasCustomTrigger || !usesShowText) return
+
+    const textContent = renderTriggerText(activeValue)
+    if (typeof textContent !== 'string' && typeof textContent !== 'number') return
+
+    const textHost = triggerElement.querySelector('[aria-label]') as HTMLElement | null
+    if (!textHost) return
+
+    const nextText = String(textContent)
+    textHost.setAttribute('aria-label', nextText)
+    textHost.textContent = nextText
   }
 
   const activeColor = (() => {
@@ -2095,7 +2430,6 @@ const ColorPicker: FC<ColorPickerProps> = ({
   const hasCustomTrigger = hasRenderableSlotContent(children)
   const usesShowText = showText === true || typeof showText === 'function'
   const compactTrigger = !hasCustomTrigger && !usesShowText
-  const renderTick = renderVersion.value
   const resolvedContainer = resolveContainer(
     getPopupContainer,
     triggerRef.current ?? rootRef.current,
@@ -2161,6 +2495,10 @@ const ColorPicker: FC<ColorPickerProps> = ({
     onUnmounted(() => {
       draggingRef.value.stop?.()
       clearHoverCloseTimer()
+      clearDeferredRender()
+      if (renderRafRef.current != null) {
+        window.cancelAnimationFrame(renderRafRef.current)
+      }
       if (popupRafRef.current != null) {
         window.cancelAnimationFrame(popupRafRef.current)
       }
@@ -2211,7 +2549,8 @@ const ColorPicker: FC<ColorPickerProps> = ({
   watch(
     () => format,
     () => {
-      currentFormat.value = format ?? defaultFormat
+      if (format === undefined || currentFormat.value === format) return
+      currentFormat.value = format
       syncDraftInputs(true)
     },
   )
@@ -2263,7 +2602,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
       )}
       style={{ ...styles?.root, ...style }}
       data-rue-color-picker="true"
-      data-rue-color-picker-version={String(renderTick)}
+      data-rue-color-picker-version={String(renderVersion.value)}
       onMouseEnter={() => {
         if (disabled || trigger !== 'hover') return
         clearHoverCloseTimer()
@@ -2398,7 +2737,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
             }}
             id={popupHostId.value}
             data-rue-color-picker-popup-host="true"
-            data-rue-color-picker-popup-version={String(renderTick)}
+            data-rue-color-picker-popup-version={String(renderVersion.value)}
             className={appendClassName(
               'fixed left-0 top-0 z-[1200] pointer-events-auto',
               sizeTokens.popupWidthClassName,
@@ -2440,7 +2779,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
               )}
               style={{ ...styles?.panel }}
               data-rue-color-picker-popup="true"
-              data-rue-color-picker-panel-version={String(renderTick)}
+              data-rue-color-picker-panel-version={String(renderVersion.value)}
             >
               {renderPopupPanel()}
             </div>
@@ -2461,7 +2800,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
             }}
             id={popupHostId.value}
             data-rue-color-picker-popup-host="true"
-            data-rue-color-picker-popup-version={String(renderTick)}
+            data-rue-color-picker-popup-version={String(renderVersion.value)}
             className={appendClassName(
               'fixed left-0 top-0 z-[1200] pointer-events-auto',
               sizeTokens.popupWidthClassName,
@@ -2503,7 +2842,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
               )}
               style={{ ...styles?.panel }}
               data-rue-color-picker-popup="true"
-              data-rue-color-picker-panel-version={String(renderTick)}
+              data-rue-color-picker-panel-version={String(renderVersion.value)}
             >
               {renderPopupPanel()}
             </div>
@@ -2516,4 +2855,5 @@ const ColorPicker: FC<ColorPickerProps> = ({
   return rootNode
 }
 
+/** 默认导出颜色选择器组件。 */
 export default ColorPicker

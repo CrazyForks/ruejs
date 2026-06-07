@@ -7,47 +7,76 @@ MockupWindow 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** MockupWindowPadding 类型。 */
 export type MockupWindowPadding = 'none' | 'sm' | 'md' | 'lg'
 
+/** MockupWindowProps 组件属性。 */
 export interface MockupWindowProps {
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** background 配置项。 */
   background?: boolean
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** toolbar 配置项。 */
   toolbar?: any
+  /** 操作区内容。 */
   actions?: any
+  /** padding 配置项。 */
   padding?: MockupWindowPadding
+  /** bodyClassName 附加类名。 */
   bodyClassName?: string
+  /** headerClassName 附加类名。 */
   headerClassName?: string
+  /** actionsClassName 附加类名。 */
   actionsClassName?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** MockupWindowPartProps 组件属性。 */
 export interface MockupWindowPartProps {
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** MockupWindowHeaderProps 组件属性。 */
 export interface MockupWindowHeaderProps extends MockupWindowPartProps {
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** 额外操作或补充内容。 */
   extra?: any
 }
 
+/** MockupWindowBodyProps 组件属性。 */
 export interface MockupWindowBodyProps extends MockupWindowPartProps {
+  /** padding 配置项。 */
   padding?: MockupWindowPadding
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (base && className) return `${base} ${className}`
   return base ?? className ?? ''
 }
 
+/** 解析 Padding Class 的内部工具函数。 */
 const resolvePaddingClass = (padding: MockupWindowPadding) => {
   switch (padding) {
     case 'none':
@@ -61,11 +90,13 @@ const resolvePaddingClass = (padding: MockupWindowPadding) => {
   }
 }
 
+/** 判断是否存在 Visible Children 的内部工具函数。 */
 const hasVisibleChildren = (children: any) => {
   if (Array.isArray(children)) return children.length > 0
   return children != null
 }
 
+/** Header 的内部工具函数。 */
 const Header: FC<MockupWindowHeaderProps> = ({
   title,
   description,
@@ -105,6 +136,7 @@ const Header: FC<MockupWindowHeaderProps> = ({
   )
 }
 
+/** Body 的内部工具函数。 */
 const Body: FC<MockupWindowBodyProps> = ({
   padding = 'none',
   className,
@@ -128,6 +160,7 @@ const Body: FC<MockupWindowBodyProps> = ({
   )
 }
 
+/** Toolbar 的内部工具函数。 */
 const Toolbar: FC<MockupWindowPartProps> = ({ className, style, children, ...rest }) => {
   return (
     <div
@@ -143,6 +176,7 @@ const Toolbar: FC<MockupWindowPartProps> = ({ className, style, children, ...res
   )
 }
 
+/** Actions 的内部工具函数。 */
 const Actions: FC<MockupWindowPartProps> = ({ className, style, children, ...rest }) => {
   return (
     <div
@@ -158,6 +192,7 @@ const Actions: FC<MockupWindowPartProps> = ({ className, style, children, ...res
   )
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<MockupWindowProps> = ({
   bordered,
   background,
@@ -229,4 +264,5 @@ const MockupWindow: MockupWindowCompound = Object.assign(Root, {
   Actions,
 })
 
+/** 默认导出窗口样机组件。 */
 export default MockupWindow

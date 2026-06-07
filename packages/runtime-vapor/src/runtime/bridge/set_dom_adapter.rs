@@ -1,3 +1,8 @@
+/*
+setDOMAdapter：替换宿主 DOM 适配器
+
+运行时所有 DOM 原语都通过 DomAdapter 间接调用；这里允许 JS 侧在创建后补充或替换适配器。
+*/
 use super::WasmRue;
 use crate::runtime::js_adapter::JsDomAdapter;
 use wasm_bindgen::JsValue;

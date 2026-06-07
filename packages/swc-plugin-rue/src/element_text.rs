@@ -67,30 +67,25 @@ pub fn render_text_between_with_watch(
     }
 
     // 静态文本字面量：直接设置一次
-    if crate::utils::is_static_text_literal(inner_expr) {
-        if let Some(val_expr) = crate::utils::get_static_text_literal_expr(inner_expr) {
-            // 设置静态文本字面量（字符串或数字转字符串）到 textContent：
-            // - 直接一次性赋值，避免不必要的 watch
-            // CallExpr 字段级说明：
-            // - callee：标识符 `_$settextContent`
-            // - args：包装元素 + 静态文本表达式
-            // - ctxt：`SyntaxContext::empty()`
-            let set_text = Expr::Call(CallExpr {
-                span: DUMMY_SP,
-                callee: Callee::Expr(Box::new(Expr::Ident(ident("_$settextContent")))),
-                args: vec![
-                    ExprOrSpread {
-                        spread: None,
-                        expr: Box::new(Expr::Ident(expr_wrapper.clone())),
-                    },
-                    ExprOrSpread { spread: None, expr: Box::new(val_expr) },
-                ],
-                type_args: None,
-                ctxt: SyntaxContext::empty(),
-            });
-            stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(set_text) }));
-            return;
-        }
+    if let Some(val_expr) = crate::utils::get_static_text_literal_expr(inner_expr) {
+        // 设置静态文本字面量（字符串或数字转字符串）到 textContent：
+        // - 直接一次性赋值，避免不必要的 watch
+        // CallExpr 字段级说明：
+        // - callee：标识符 `_$settextContent`
+        // - args：包装元素 + 静态文本表达式
+        // - ctxt：`SyntaxContext::empty()`
+        let set_text = Expr::Call(CallExpr {
+            span: DUMMY_SP,
+            callee: Callee::Expr(Box::new(Expr::Ident(ident("_$settextContent")))),
+            args: vec![
+                ExprOrSpread { spread: None, expr: Box::new(Expr::Ident(expr_wrapper.clone())) },
+                ExprOrSpread { spread: None, expr: Box::new(val_expr) },
+            ],
+            type_args: None,
+            ctxt: SyntaxContext::empty(),
+        });
+        stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(set_text) }));
+        return;
     }
 
     // once 子树中的动态表达式只在首次创建时赋值，不建立后续响应式更新。

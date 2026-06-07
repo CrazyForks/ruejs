@@ -254,7 +254,7 @@
 
 - **另请参阅** [深入响应式系统](/guide/guide/extras/reactivity-in-depth)
 
-## onActivated() {#onactivated} @todo
+## onActivated() {#onactivated}
 
 注册一个回调，在组件实例作为被 [`<KeepAlive>`](/api/api/built-in-components#keepalive) 缓存的树的一部分插入到 DOM 后调用。
 
@@ -268,7 +268,7 @@
 
 - **另请参阅** [指南 - 缓存实例的生命周期](/guide/guide/built-ins/keep-alive#lifecycle-of-cached-instance)
 
-## onDeactivated() {#ondeactivated} @todo
+## onDeactivated() {#ondeactivated}
 
 注册一个回调，在组件实例作为被 [`<KeepAlive>`](/api/api/built-in-components#keepalive) 缓存的树的一部分从 DOM 中移除后调用。
 
@@ -282,7 +282,7 @@
 
 - **另请参阅** [指南 - 缓存实例的生命周期](/guide/guide/built-ins/keep-alive#lifecycle-of-cached-instance)
 
-## onServerPrefetch() {#onserverprefetch} @todo
+## onServerPrefetch() {#onserverprefetch}
 
 注册一个异步函数，在组件实例即将在服务器上渲染之前解析。
 

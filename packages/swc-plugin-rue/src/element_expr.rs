@@ -285,7 +285,7 @@ fn rewrite_use_memo_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> O
     let first = next.args.first_mut()?;
     let rewritten =
         vt.with_once_context(|vt| rewrite_arrow_expr_body_for_slot(vt, first.expr.as_ref()))?;
-    first.expr = Box::new(rewritten);
+    *first.expr = rewritten;
     Some(Expr::Call(next))
 }
 
@@ -297,7 +297,7 @@ fn rewrite_hook_wrapped_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) 
     let mut next = call.clone();
     let runner = next.args.get_mut(1)?;
     let rewritten = rewrite_arrow_expr_body_for_slot(vt, runner.expr.as_ref())?;
-    runner.expr = Box::new(rewritten);
+    *runner.expr = rewritten;
     Some(Expr::Call(next))
 }
 
@@ -405,15 +405,6 @@ fn expr_is_renderable_local_alias_source(
             expr_is_renderable_local_alias_source(left.as_ref(), known_renderable_locals)
                 || expr_is_renderable_local_alias_source(right.as_ref(), known_renderable_locals)
         }
-        Expr::Paren(ParenExpr { expr, .. }) => {
-            expr_is_renderable_local_alias_source(expr.as_ref(), known_renderable_locals)
-        }
-        Expr::TsAs(ts_as) => {
-            expr_is_renderable_local_alias_source(ts_as.expr.as_ref(), known_renderable_locals)
-        }
-        Expr::TsTypeAssertion(ts_assert) => {
-            expr_is_renderable_local_alias_source(ts_assert.expr.as_ref(), known_renderable_locals)
-        }
         _ => false,
     }
 }
@@ -475,9 +466,6 @@ fn contains_nested_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> 
             contains_nested_opaque_renderable_expr(vt, left.as_ref())
                 || contains_nested_opaque_renderable_expr(vt, right.as_ref())
         }
-        Expr::Paren(ParenExpr { expr, .. }) => {
-            contains_nested_opaque_renderable_expr(vt, expr.as_ref())
-        }
         _ => false,
     }
 }
@@ -505,7 +493,6 @@ fn contains_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> bool {
             contains_nested_opaque_renderable_expr(vt, left.as_ref())
                 || contains_nested_opaque_renderable_expr(vt, right.as_ref())
         }
-        Expr::Paren(ParenExpr { expr, .. }) => contains_opaque_renderable_expr(vt, expr.as_ref()),
         _ => false,
     }
 }
@@ -518,6 +505,7 @@ fn contains_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> bool {
 ///   生成示例（参考 `tests/conditional_rendering*.rs`）：
 /// - `cond ? <A/> : <B/>` => `cond ? vapor(()=>{...}) : vapor(()=>{...})`
 /// - `ok && <X/>` => `ok ? vapor(()=>{...}) : ""`
+///
 /// 设计动机：在表达式中内嵌 JSX 时，统一转化为可挂载块值以复用同一套插槽渲染路径，避免多种表达式形态下的分支爆炸。
 pub fn make_expr_for_slot(vt: &mut VaporTransform, inner: &Expr) -> Expr {
     match inner {
@@ -534,6 +522,10 @@ pub fn make_expr_for_slot(vt: &mut VaporTransform, inner: &Expr) -> Expr {
             // 条件表达式：分支中若含 JSX，分别编译为 vapor 片段
             let cons_inner = crate::utils::unwrap_expr(cons.as_ref());
             let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
+            // 每个分支独立判断：
+            // - 直接 JSX：立即编译成 vapor 片段；
+            // - 间接 JSX（useMemo/map 等）：递归规范；
+            // - 静态空值：统一转成空字符串，避免 runtime 渲染 undefined/null。
             let new_cons: Expr = if let Some(slot_expr) = jsx_expr_to_slot_expr(vt, cons_inner) {
                 slot_expr
             } else if expr_returns_jsx_renderable(cons_inner) {
@@ -571,6 +563,8 @@ pub fn make_expr_for_slot(vt: &mut VaporTransform, inner: &Expr) -> Expr {
                 *right.clone()
             };
             let left_inner = crate::utils::unwrap_expr(left.as_ref());
+            // JS 的 `0 && <A/>` 会返回 0；React 类语义里 0 常需要显示。
+            // 因此数值/NaN 的 false 分支保留左值，其它 falsey 情况用空字符串。
             let new_alt: Expr = match left_inner {
                 Expr::Lit(Lit::Num(_)) => *left.clone(),
                 Expr::Ident(id) if id.sym.as_ref() == "NaN" => *left.clone(),
@@ -612,6 +606,7 @@ pub fn make_expr_for_slot(vt: &mut VaporTransform, inner: &Expr) -> Expr {
         }
         Expr::Call(call) if call_returns_jsx_renderable(call) => {
             log::debug("element_expr: slot CallExpr");
+            // 对会返回 JSX 的调用做定向改写；无法识别时保持原调用，交给运行时兼容层。
             rewrite_call_for_slot(vt, call).unwrap_or_else(|| inner.clone())
         }
         _ => inner.clone(),
@@ -701,6 +696,7 @@ pub fn emit_element_expr_container_child(
             if let Expr::Call(call) = inner.clone() {
                 if crate::element_list::try_build_list_from_map(vt, el_ident, &call, stmts) {
                     log::debug("element_expr: list map path");
+                    // map(JSX) 已经被列表模块完整接管，后续不再当普通表达式处理。
                     return;
                 }
             }
@@ -727,11 +723,14 @@ pub fn emit_element_expr_container_child(
                     crate::element_expr::contains_opaque_renderable_expr(vt, &inner_top);
                 if contains_jsx || (!parent_is_style && !parent_is_svg && is_opaque_renderable_expr)
                 {
+                    // 含 JSX 或“可能返回可挂载内容”的不透明表达式走 slot path；
+                    // style/svg 文本环境例外，那里表达式更可能是纯文本内容。
                     log::debug("element_expr: renderable-like expr -> slot");
                     let expr_for_slot = crate::element_expr::make_expr_for_slot(vt, &inner_top);
                     let render_once = is_empty_deps_memoized_jsx_expr(&inner_top)
                         || is_empty_deps_memoized_jsx_expr(&expr_for_slot);
                     if render_once {
+                        // 空依赖 memo/useMemo 包住的 JSX 在语义上只创建一次，可直接一次性渲染。
                         crate::element_slot::render_once_for_slot(
                             vt,
                             el_ident,
@@ -750,6 +749,7 @@ pub fn emit_element_expr_container_child(
                 } else {
                     log::debug("element_expr: text content path");
                     if matches!(parent_tag.as_deref(), Some("style")) {
+                        // <style>{css}</style> 不能插入包装节点，只能直接改 style 元素的 textContent。
                         if crate::utils::is_static_empty_like(&inner_expr) {
                             let set_text = Expr::Call(CallExpr {
                                 span: DUMMY_SP,

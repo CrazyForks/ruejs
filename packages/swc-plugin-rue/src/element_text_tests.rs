@@ -114,6 +114,14 @@ fn stringifies_static_number_literal_without_watch() {
 }
 
 #[test]
+fn emits_ts_wrapped_static_text_without_watch() {
+    let out = compile_render_text("'typed' as string", false, false);
+
+    assert!(out.contains("_$settextContent(_el1,'typed');"));
+    assert!(!out.contains("watchEffect("));
+}
+
+#[test]
 fn emits_once_dynamic_text_without_watch_effect() {
     let out = compile_render_text("colorValue", false, true);
 

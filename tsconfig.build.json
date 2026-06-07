@@ -14,9 +14,11 @@
     "packages/rue/src",
     "packages/router/src",
     "packages/store/src",
+    "packages/i18n/src",
     "packages/jsx-runtime/src",
     "packages/jsx-dev-runtime/src",
     "packages/runtime/src",
+    "packages/server-renderer/src",
     "packages/rue-design/src",
     "packages/shared/src"
   ]

@@ -1,0 +1,13 @@
+{
+  "name": "test-validator",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "validator": "catalog:"
+  },
+  "devDependencies": {
+    "@rue-js/text": "workspace:*",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

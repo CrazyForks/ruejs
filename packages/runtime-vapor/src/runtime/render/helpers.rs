@@ -1,3 +1,9 @@
+/*
+渲染辅助方法
+
+集中维护 mounted 映射、查找/压缩容器记录、组件 scope 更新、props/children 转换等杂务。
+这些方法支撑 container/anchor/range 三类渲染入口，避免主流程被细节淹没。
+*/
 use super::super::Rue;
 use super::super::types::{
     AnchorMountState, ComponentProps, MountInput, MountedState, RangeMountState,
@@ -46,6 +52,7 @@ impl<A: DomAdapter> Rue<A>
 where
     A::Element: Clone,
 {
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(super) fn patch_root_mounted_state(
         &mut self,
         old_mount: MountedState<A>,
@@ -68,6 +75,7 @@ where
     ///
     /// 这层作用域专门解决“组件函数每次重跑都再次创建 computed/useEffect/watchEffect，
     /// 但旧的一轮没有释放”导致的持续堆积问题。
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(crate) fn renew_component_render_scope(&mut self, inst_index: usize) -> usize {
         if let Some(inst) = self.instance_store.get_mut(&inst_index) {
             if let Some(prev_scope_id) = inst.render_scope_id.take() {
@@ -82,6 +90,7 @@ where
     }
 
     /// 在组件卸载时释放最后一轮渲染作用域。
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(crate) fn dispose_component_render_scope(&mut self, inst_index: usize) {
         if let Some(inst) = self.instance_store.get_mut(&inst_index) {
             if let Some(scope_id) = inst.render_scope_id.take() {
@@ -96,6 +105,7 @@ where
     /// - host：组件宿主对象（JS 对象）
     /// 行为：
     /// - 若存在 __hooks，则把其 index 设为 0
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub fn reset_hook_index(host: &Object) {
         let hooks = Reflect::get(host, &JsValue::from_str("__hooks")).unwrap_or(JsValue::UNDEFINED);
         if hooks.is_undefined() || hooks.is_null() {
@@ -116,10 +126,12 @@ where
     }
 
     /// 清理单锚点映射中过期记录，并触发对应 mounted subtree 的卸载生命周期
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(crate) fn compact_anchor_map_preserving(&mut self, preserve_anchor: Option<&A::Element>)
     where
         <A as DomAdapter>::Element: Into<JsValue>,
     {
+        #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
         fn in_detached_fragment(node: &JsValue) -> bool {
             let mut cur = node.clone();
             for _ in 0..16 {
@@ -142,6 +154,7 @@ where
             false
         }
 
+        #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
         fn has_detached_fragment_ancestor_by_adapter<B: DomAdapter>(
             adapter: &B,
             anchor: &B::Element,
@@ -212,6 +225,7 @@ where
         self.anchor_map = kept;
     }
 
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(crate) fn compact_anchor_map(&mut self)
     where
         <A as DomAdapter>::Element: Into<JsValue>,
@@ -237,6 +251,7 @@ where
     /// - 优先读取 DOM 的 `node.isConnected`（最准确：直接表示该节点是否还在文档树里）。
     /// - 若无 `isConnected`（例如测试适配器的 Element 不是原生 DOM）：退化到 `DomAdapter.get_parent_node`。
     /// - 若也没有适配器：最后再反射 `parentNode` 是否存在。
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(super) fn compact_range_map(&mut self)
     where
         <A as DomAdapter>::Element: Into<JsValue>,
@@ -244,6 +259,7 @@ where
         // 判定节点是否位于“未挂载的 DocumentFragment/片段树”中：
         // - 这类节点沿 parentNode 仍可向上遍历，但不属于已挂载的文档树；
         // - 需要排除 ShadowRoot（nodeType 也是 11，但它拥有 host，属于已挂载场景）。
+        #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
         fn in_detached_fragment(node: &JsValue, current_anchor: Option<&JsValue>) -> bool {
             let mut cur = node.clone();
             for _ in 0..16 {
@@ -286,6 +302,7 @@ where
 
         // 通过适配器沿祖先链判定是否存在“fragment”祖先：
         // - 若存在，说明该 start 当前位于一个临时片段容器中，视为未挂载，应当被清理。
+        #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
         fn has_detached_fragment_ancestor_by_adapter<B: DomAdapter>(
             adapter: &B,
             start: &B::Element,
@@ -345,10 +362,10 @@ where
                             )
                     } else {
                         // 无适配器时，额外通过 JS 反射判定是否处于“未挂载的 fragment”
-                        let ca_js_opt = self.current_anchor.as_ref().map(|e| {
-                            let j: JsValue = e.clone().into();
-                            j
-                        });
+                        let ca_js_opt = match self.current_anchor.as_ref() {
+                            Some(e) => Some(e.clone().into()),
+                            None => None,
+                        };
                         let ca_js_ref = ca_js_opt.as_ref();
                         if in_detached_fragment(&sv, ca_js_ref) {
                             false
@@ -398,6 +415,7 @@ where
     }
 
     /// 将新的 MountInput props 与 children 同步写入只读 reactive 视图（props_ro）。
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(crate) fn sync_props_children_input(
         &mut self,
         props_ro: &JsValue,
@@ -455,6 +473,7 @@ where
     /// - container：目标容器
     /// 返回：
     /// - Some(index) 或 None
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(crate) fn find_container_index(&mut self, container: &A::Element) -> Option<usize> {
         if let Some(adapter) = self.get_dom_adapter() {
             for (i, entry) in self.container_map.iter().enumerate() {
@@ -470,6 +489,7 @@ where
     }
 
     /// 在单锚点映射中查找与目标 anchor 等价的记录下标
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(super) fn find_anchor_index(&mut self, anchor: &A::Element) -> Option<usize>
     where
         <A as DomAdapter>::Element: Into<JsValue>,
@@ -500,7 +520,8 @@ where
     /// - start：区间起点
     /// 返回：
     /// - Some(index) 或 None
-    pub(super) fn find_range_index(&mut self, start: &A::Element) -> Option<usize>
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+    pub(crate) fn find_range_index(&mut self, start: &A::Element) -> Option<usize>
     where
         <A as DomAdapter>::Element: Into<JsValue>,
     {
@@ -526,5 +547,608 @@ where
     /// 获取当前渲染容器（若存在）
     pub fn get_current_container(&self) -> Option<A::Element> {
         self.current_container.clone()
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+mod tests {
+    use super::super::super::types::{
+        AnchorMountState, ContainerMountState, MountInputChild, MountInputType,
+        MountedPatchSubtree, MountedState, MountedSubtreeState, MountedTextSubtree,
+        RangeMountState,
+    };
+    use super::*;
+    use crate::reactive::signal::create_reactive;
+    use crate::runtime::js_adapter::JsDomAdapter;
+    use crate::runtime::{ComponentInternalInstance, LifecycleHooks};
+    use js_sys::{Array, Function, Object, Reflect};
+    use std::collections::HashMap;
+    use std::marker::PhantomData;
+    use wasm_bindgen_test::*;
+
+    fn node(tag: &str, node_type: f64) -> JsValue {
+        let obj = Object::new();
+        Reflect::set(&obj, &JsValue::from_str("tag"), &JsValue::from_str(tag)).unwrap();
+        Reflect::set(&obj, &JsValue::from_str("nodeType"), &JsValue::from_f64(node_type)).unwrap();
+        obj.into()
+    }
+
+    fn set_parent(child: &JsValue, parent: &JsValue) {
+        Reflect::set(child, &JsValue::from_str("parentNode"), parent).unwrap();
+    }
+
+    fn block_state(host: JsValue) -> MountedState<JsDomAdapter> {
+        MountedState::from_subtree_root(MountedSubtreeState::Text(MountedTextSubtree {
+            host: Some(host),
+            key: None,
+            cleanup_bucket: None,
+            effect_scope_id: None,
+        }))
+    }
+
+    fn test_instance(index: usize) -> ComponentInternalInstance<JsDomAdapter> {
+        ComponentInternalInstance {
+            parent: None,
+            is_mounted: false,
+            hooks: LifecycleHooks(HashMap::new()),
+            props_ro: Object::new().into(),
+            host: Object::new().into(),
+            render_scope_id: None,
+            error: None,
+            error_handlers: Vec::new(),
+            index,
+            _marker: PhantomData,
+        }
+    }
+
+    fn set_bool(target: &JsValue, key: &str, value: bool) {
+        Reflect::set(target, &JsValue::from_str(key), &JsValue::from_bool(value)).unwrap();
+    }
+
+    fn alias_node(tag: &str, alias: &str) -> JsValue {
+        let n = node(tag, 1.0);
+        Reflect::set(&n, &JsValue::from_str("alias"), &JsValue::from_str(alias)).unwrap();
+        n
+    }
+
+    fn alias_adapter() -> JsDomAdapter {
+        let adapter = Object::new();
+        let methods = [
+            ("createElement", "tag", "return { tag, children: [], nodeType: 1 }"),
+            ("createTextNode", "text", "return { tag: '#text', text, children: [], nodeType: 3 }"),
+            (
+                "createDocumentFragment",
+                "",
+                "return { tag: 'fragment', children: [], nodeType: 11 }",
+            ),
+            ("isFragment", "el", "return !!el && el.tag === 'fragment'"),
+            ("collectFragmentChildren", "el", "return Array.from(el && el.children || [])"),
+            ("setTextContent", "el,text", "el.text = text"),
+            (
+                "appendChild",
+                "p,c",
+                "p.children = p.children || []; p.children.push(c); c.parentNode = p",
+            ),
+            (
+                "insertBefore",
+                "p,c,b",
+                "p.children = p.children || []; const i = p.children.indexOf(b); p.children.splice(i < 0 ? p.children.length : i, 0, c); c.parentNode = p",
+            ),
+            (
+                "removeChild",
+                "p,c",
+                "p.children = (p.children || []).filter(x => x !== c); c.parentNode = null",
+            ),
+            ("contains", "p,c", "return p === c || (!!p && !!c && p.alias && p.alias === c.alias)"),
+            ("getParentNode", "el", "return el && el.parentNode || null"),
+            ("setClassName", "el,v", "el.className = v"),
+            ("patchStyle", "el,oldv,newv", "el.style = newv"),
+            ("setInnerHTML", "el,html", "el.children = []; el.text = html"),
+            ("setValue", "el,v", "el.value = v"),
+            ("setChecked", "el,b", "el.checked = !!b"),
+            ("setDisabled", "el,b", "el.disabled = !!b"),
+            ("clearRef", "r", "return"),
+            ("applyRef", "el,r", "return"),
+            ("setAttribute", "el,k,v", "el.attrs = el.attrs || {}; el.attrs[k] = v"),
+            ("removeAttribute", "el,k", "if (el.attrs) delete el.attrs[k]"),
+            ("getTagName", "el", "return el.tag || ''"),
+            ("addEventListener", "el,event,handler", "return"),
+            ("removeEventListener", "el,event,handler", "return"),
+            ("hasValueProperty", "el", "return 'value' in el"),
+            ("isSelectMultiple", "el", "return false"),
+            ("querySelector", "selector", "return null"),
+        ];
+
+        for (name, args, body) in methods {
+            Reflect::set(
+                &adapter,
+                &JsValue::from_str(name),
+                &Function::new_with_args(args, body).into(),
+            )
+            .unwrap();
+        }
+
+        JsDomAdapter::new(adapter.into())
+    }
+
+    fn component_patch_state(render: &Function, host: JsValue) -> MountedState<JsDomAdapter> {
+        MountedState::from_subtree_root(MountedSubtreeState::Patch(
+            MountedPatchSubtree::new_component(
+                render.clone().into(),
+                Some(host),
+                None,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                None,
+                None,
+            ),
+        ))
+    }
+
+    fn hostless_component_patch_state(render: &Function) -> MountedState<JsDomAdapter> {
+        MountedState::from_subtree_root(MountedSubtreeState::Patch(
+            MountedPatchSubtree::new_component(
+                render.clone().into(),
+                None,
+                None,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                None,
+                None,
+            ),
+        ))
+    }
+
+    #[wasm_bindgen_test]
+    fn debug_record_sidebar_compaction_covers_return_and_record_paths() {
+        let global = js_sys::global();
+        let key = JsValue::from_str("__rue_debug_compact__");
+        let enabled_key = JsValue::from_str("__rue_debug_compact_enabled__");
+        let _ = Reflect::set(&global, &key, &JsValue::UNDEFINED);
+        let _ = Reflect::set(&global, &enabled_key, &JsValue::FALSE);
+
+        let plain = Object::new();
+        Reflect::set(&plain, &JsValue::from_str("className"), &JsValue::from_str("plain")).unwrap();
+        debug_record_sidebar_compaction("plain", &plain.into());
+
+        let sidebar = Object::new();
+        Reflect::set(
+            &sidebar,
+            &JsValue::from_str("className"),
+            &JsValue::from_str("sidebar-playground panel"),
+        )
+        .unwrap();
+        let sidebar_js: JsValue = sidebar.into();
+        debug_record_sidebar_compaction("disabled", &sidebar_js);
+
+        Reflect::set(&global, &enabled_key, &JsValue::TRUE).unwrap();
+        Reflect::set(&global, &key, &JsValue::from_str("not-array")).unwrap();
+        debug_record_sidebar_compaction("range", &sidebar_js);
+        let first = Array::from(&Reflect::get(&global, &key).unwrap());
+        assert_eq!(first.length(), 1);
+
+        debug_record_sidebar_compaction("anchor", &sidebar_js);
+        let second = Array::from(&Reflect::get(&global, &key).unwrap());
+        assert_eq!(second.length(), 2);
+
+        let _ = Reflect::set(&global, &enabled_key, &JsValue::FALSE);
+    }
+
+    #[wasm_bindgen_test]
+    fn patch_root_mounted_state_covers_component_patch_path() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(alias_adapter());
+        let mut parent = node("parent", 1.0);
+        let host = node("old-host", 1.0);
+        set_parent(&host, &parent);
+        let render =
+            Function::new_no_args("return { type: 'span', props: {}, children: ['next'] }");
+        let old = component_patch_state(&render, host);
+        let input = MountInput::new_normalized(
+            MountInputType::Component(render.into()),
+            ComponentProps::new(),
+            vec![MountInputChild::Text("child".to_string())],
+        );
+
+        let next = rue.patch_root_mounted_state(old, &input, &mut parent);
+        assert!(next.into_patch_state().is_some());
+    }
+
+    #[wasm_bindgen_test]
+    #[should_panic]
+    fn patch_root_mounted_state_rejects_block_state() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let mut parent = node("parent", 1.0);
+        let input = MountInput::new_normalized(
+            MountInputType::Text("next".to_string()),
+            HashMap::new(),
+            vec![],
+        );
+
+        let _ = rue.patch_root_mounted_state(block_state(node("old", 3.0)), &input, &mut parent);
+    }
+
+    #[wasm_bindgen_test]
+    fn render_scope_helpers_cover_missing_and_existing_instances() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+
+        let missing_scope = rue.renew_component_render_scope(99);
+        dispose_effect_scope(missing_scope);
+        rue.dispose_component_render_scope(99);
+
+        rue.instance_store.insert(1, test_instance(1));
+        let first_scope = rue.renew_component_render_scope(1);
+        let second_scope = rue.renew_component_render_scope(1);
+        assert_ne!(first_scope, second_scope);
+        assert_eq!(
+            rue.instance_store.get(&1).and_then(|inst| inst.render_scope_id),
+            Some(second_scope)
+        );
+
+        rue.dispose_component_render_scope(1);
+        assert_eq!(rue.instance_store.get(&1).and_then(|inst| inst.render_scope_id), None);
+        rue.dispose_component_render_scope(1);
+    }
+
+    #[wasm_bindgen_test]
+    fn reset_hook_index_covers_missing_and_existing_hooks() {
+        let host = Object::new();
+        Rue::<JsDomAdapter>::reset_hook_index(&host);
+
+        let hooks = Object::new();
+        Reflect::set(&hooks, &JsValue::from_str("index"), &JsValue::from_f64(7.0)).unwrap();
+        Reflect::set(&host, &JsValue::from_str("__hooks"), &hooks).unwrap();
+        Rue::<JsDomAdapter>::reset_hook_index(&host);
+        assert_eq!(Reflect::get(&hooks, &JsValue::from_str("index")).unwrap().as_f64(), Some(0.0));
+    }
+
+    #[wasm_bindgen_test]
+    fn find_helpers_cover_no_adapter_miss_and_adapter_equivalence() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let container = alias_node("container", "container-a");
+        let container_equiv = alias_node("container", "container-a");
+        let container_miss = alias_node("container", "container-b");
+        rue.container_map.push(ContainerMountState::new(
+            container.clone(),
+            block_state(node("container-host", 1.0)),
+        ));
+        assert_eq!(rue.find_container_index(&container_equiv), None);
+
+        let anchor = alias_node("anchor", "anchor-a");
+        let anchor_equiv = alias_node("anchor", "anchor-a");
+        let anchor_miss = alias_node("anchor", "anchor-b");
+        rue.anchor_map
+            .push(AnchorMountState::new(anchor.clone(), block_state(node("anchor-host", 1.0))));
+        assert_eq!(rue.find_anchor_index(&anchor_miss), None);
+
+        let start = alias_node("start", "range-a");
+        let start_equiv = alias_node("start", "range-a");
+        let start_miss = alias_node("start", "range-b");
+        rue.range_map.push(RangeMountState::new(
+            start.clone(),
+            node("end", 8.0),
+            block_state(node("range-host", 1.0)),
+        ));
+        assert_eq!(rue.find_range_index(&start_miss), None);
+
+        rue.set_dom_adapter(alias_adapter());
+        assert_eq!(rue.find_container_index(&container_equiv), Some(0));
+        assert_eq!(rue.find_container_index(&container_miss), None);
+        assert_eq!(rue.find_anchor_index(&anchor_equiv), Some(0));
+        assert_eq!(rue.find_range_index(&start_equiv), Some(0));
+    }
+
+    #[wasm_bindgen_test]
+    fn find_helpers_cover_adapter_first_contains_false_and_second_true_edges() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(alias_adapter());
+
+        let anchor = alias_node("anchor", "anchor-a");
+        let anchor_one_way = alias_node("anchor", "");
+        rue.anchor_map
+            .push(AnchorMountState::new(anchor.clone(), block_state(node("anchor-host", 1.0))));
+        assert_eq!(rue.find_anchor_index(&anchor_one_way), None);
+
+        let range = alias_node("start", "range-a");
+        let range_one_way = alias_node("start", "");
+        rue.range_map.push(RangeMountState::new(
+            range.clone(),
+            node("end", 8.0),
+            block_state(node("range-host", 1.0)),
+        ));
+        assert_eq!(rue.find_range_index(&range_one_way), None);
+    }
+
+    #[wasm_bindgen_test]
+    fn sync_props_children_input_covers_early_returns_and_updates() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let mut props = ComponentProps::new();
+        props.insert("title".to_string(), JsValue::from_str("next"));
+        rue.sync_props_children_input(&Object::new().into(), &props, &[]);
+
+        let fake_no_peek = Object::new();
+        Reflect::set(&fake_no_peek, &JsValue::from_str("__signal__"), &Object::new()).unwrap();
+        rue.sync_props_children_input(&fake_no_peek.into(), &props, &[]);
+
+        let fake_no_set = Object::new();
+        let sig = Object::new();
+        Reflect::set(
+            &sig,
+            &JsValue::from_str("peekPath"),
+            &Function::new_no_args("return undefined").into(),
+        )
+        .unwrap();
+        Reflect::set(&fake_no_set, &JsValue::from_str("__signal__"), &sig).unwrap();
+        rue.sync_props_children_input(&fake_no_set.into(), &props, &[]);
+
+        let initial = Object::new();
+        Reflect::set(&initial, &JsValue::from_str("title"), &JsValue::from_str("old")).unwrap();
+        let props_ro = create_reactive(initial.into(), None);
+        let children = vec![MountInputChild::<JsDomAdapter>::Text("child".to_string())];
+        rue.sync_props_children_input(&props_ro, &props, &children);
+
+        assert_eq!(
+            Reflect::get(&props_ro, &JsValue::from_str("title")).unwrap().as_string().as_deref(),
+            Some("next")
+        );
+        let synced_children =
+            Array::from(&Reflect::get(&props_ro, &JsValue::from_str("children")).unwrap());
+        assert_eq!(synced_children.get(0).as_string().as_deref(), Some("child"));
+
+        let mut props_with_children = ComponentProps::new();
+        props_with_children.insert("children".to_string(), JsValue::NULL);
+        rue.sync_props_children_input(&props_ro, &props_with_children, &[]);
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_covers_parent_node_detached_and_shadow_paths() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let detached_fragment = node("fragment", 11.0);
+        let shadow_root = node("shadow-root", 11.0);
+        Reflect::set(&shadow_root, &JsValue::from_str("host"), &node("host", 1.0)).unwrap();
+
+        let stale_anchor = node("stale-anchor", 8.0);
+        set_parent(&stale_anchor, &detached_fragment);
+        let shadow_anchor = node("shadow-anchor", 8.0);
+        set_parent(&shadow_anchor, &shadow_root);
+        let parented_anchor = node("parented-anchor", 8.0);
+        set_parent(&parented_anchor, &node("parent", 1.0));
+
+        rue.anchor_map.push(AnchorMountState::new(
+            stale_anchor.clone(),
+            block_state(node("stale-host", 1.0)),
+        ));
+        rue.anchor_map.push(AnchorMountState::new(
+            shadow_anchor.clone(),
+            block_state(node("shadow-host", 1.0)),
+        ));
+        rue.anchor_map.push(AnchorMountState::new(
+            parented_anchor.clone(),
+            block_state(node("parented-host", 1.0)),
+        ));
+
+        rue.compact_anchor_map();
+
+        assert_eq!(rue.anchor_map.len(), 2);
+        assert!(rue.find_anchor_index(&shadow_anchor).is_some());
+        assert!(rue.find_anchor_index(&parented_anchor).is_some());
+        assert!(rue.find_anchor_index(&stale_anchor).is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_covers_preserve_is_connected_and_empty_mount_paths() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let preserve = node("preserve", 8.0);
+        set_bool(&preserve, "isConnected", false);
+
+        let connected = node("connected", 8.0);
+        set_bool(&connected, "isConnected", true);
+
+        let empty_mount = node("empty-mount", 8.0);
+        set_bool(&empty_mount, "isConnected", false);
+        let mut empty_entry =
+            AnchorMountState::new(empty_mount.clone(), block_state(node("empty-host", 1.0)));
+        empty_entry.clear();
+
+        rue.anchor_map
+            .push(AnchorMountState::new(preserve.clone(), block_state(node("preserve-host", 1.0))));
+        rue.anchor_map.push(AnchorMountState::new(
+            connected.clone(),
+            block_state(node("connected-host", 1.0)),
+        ));
+        rue.anchor_map.push(empty_entry);
+
+        rue.compact_anchor_map_preserving(Some(&preserve));
+
+        assert_eq!(rue.anchor_map.len(), 2);
+        assert!(rue.find_anchor_index(&preserve).is_some());
+        assert!(rue.find_anchor_index(&connected).is_some());
+        assert!(rue.find_anchor_index(&empty_mount).is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_covers_js_parent_fallback_without_adapter() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let parent = node("parent", 1.0);
+        let parented = node("parented", 8.0);
+        set_parent(&parented, &parent);
+        let child_parent = node("child-parent", 1.0);
+        set_parent(&child_parent, &parent);
+        let nested = node("nested", 8.0);
+        set_parent(&nested, &child_parent);
+
+        rue.anchor_map
+            .push(AnchorMountState::new(parented.clone(), block_state(node("parented-host", 1.0))));
+        rue.anchor_map
+            .push(AnchorMountState::new(nested.clone(), block_state(node("nested-host", 1.0))));
+
+        rue.compact_anchor_map();
+
+        assert_eq!(rue.anchor_map.len(), 2);
+        assert!(rue.find_anchor_index(&parented).is_some());
+        assert!(rue.find_anchor_index(&nested).is_some());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_covers_adapter_preserve_and_parent_paths() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(alias_adapter());
+
+        let preserve_anchor = alias_node("preserve", "same-anchor");
+        let preserve_equiv = alias_node("preserve", "same-anchor");
+        set_bool(&preserve_anchor, "isConnected", false);
+
+        let parent = node("parent", 1.0);
+        let parented = node("parented", 8.0);
+        set_parent(&parented, &parent);
+
+        rue.anchor_map.push(AnchorMountState::new(
+            preserve_anchor.clone(),
+            block_state(node("preserve-host", 1.0)),
+        ));
+        rue.anchor_map
+            .push(AnchorMountState::new(parented.clone(), block_state(node("parented-host", 1.0))));
+
+        rue.compact_anchor_map_preserving(Some(&preserve_equiv));
+
+        assert_eq!(rue.anchor_map.len(), 2);
+        assert!(rue.find_anchor_index(&preserve_anchor).is_some());
+        assert!(rue.find_anchor_index(&parented).is_some());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_maps_drop_hostless_mounts_without_debug_host() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let render = Function::new_no_args("return null");
+        let detached_fragment = node("fragment", 11.0);
+
+        let stale_anchor = node("stale-anchor", 8.0);
+        set_parent(&stale_anchor, &detached_fragment);
+        rue.anchor_map
+            .push(AnchorMountState::new(stale_anchor, hostless_component_patch_state(&render)));
+
+        let stale_start = node("stale-start", 8.0);
+        set_parent(&stale_start, &detached_fragment);
+        rue.range_map.push(RangeMountState::new(
+            stale_start,
+            node("stale-end", 8.0),
+            hostless_component_patch_state(&render),
+        ));
+
+        rue.compact_anchor_map();
+        rue.compact_range_map();
+
+        assert!(rue.anchor_map.is_empty());
+        assert!(rue.range_map.is_empty());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_range_map_covers_current_anchor_and_detached_parent_paths() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let fragment = node("fragment", 11.0);
+        let current_anchor = node("current-anchor", 8.0);
+        set_parent(&current_anchor, &fragment);
+        rue.current_anchor = Some(current_anchor.clone());
+
+        let kept_start = node("kept-start", 8.0);
+        set_parent(&kept_start, &fragment);
+        let kept_end = node("kept-end", 8.0);
+        let stale_start = node("stale-start", 8.0);
+        set_parent(&stale_start, &node("detached-fragment", 11.0));
+        let stale_end = node("stale-end", 8.0);
+
+        rue.range_map.push(RangeMountState::new(
+            kept_start.clone(),
+            kept_end,
+            block_state(node("kept-host", 1.0)),
+        ));
+        rue.range_map.push(RangeMountState::new(
+            stale_start.clone(),
+            stale_end,
+            block_state(node("stale-host", 1.0)),
+        ));
+
+        rue.compact_range_map();
+
+        assert_eq!(rue.range_map.len(), 1);
+        assert!(rue.find_range_index(&kept_start).is_some());
+        assert!(rue.find_range_index(&stale_start).is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_range_map_covers_js_fallback_and_empty_mount_paths() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let parent = node("parent", 1.0);
+        let kept_start = node("kept-start", 8.0);
+        set_parent(&kept_start, &parent);
+
+        let fragment = node("fragment", 11.0);
+        let stale_start = node("stale-start", 8.0);
+        set_parent(&stale_start, &fragment);
+
+        let disconnected = node("disconnected", 8.0);
+        set_bool(&disconnected, "isConnected", false);
+        let mut empty_entry = RangeMountState::new(
+            disconnected.clone(),
+            node("empty-end", 8.0),
+            block_state(node("empty-host", 1.0)),
+        );
+        empty_entry.clear();
+
+        rue.range_map.push(RangeMountState::new(
+            kept_start.clone(),
+            node("kept-end", 8.0),
+            block_state(node("kept-host", 1.0)),
+        ));
+        rue.range_map.push(RangeMountState::new(
+            stale_start.clone(),
+            node("stale-end", 8.0),
+            block_state(node("stale-host", 1.0)),
+        ));
+        rue.range_map.push(empty_entry);
+
+        rue.compact_range_map();
+
+        assert_eq!(rue.range_map.len(), 1);
+        assert!(rue.find_range_index(&kept_start).is_some());
+        assert!(rue.find_range_index(&stale_start).is_none());
+        assert!(rue.find_range_index(&disconnected).is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_range_map_covers_connected_and_adapter_parent_paths() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(alias_adapter());
+
+        let connected = node("connected", 8.0);
+        set_bool(&connected, "isConnected", true);
+
+        let parent = node("parent", 1.0);
+        let parented = node("parented", 8.0);
+        set_parent(&parented, &parent);
+
+        rue.range_map.push(RangeMountState::new(
+            connected.clone(),
+            node("connected-end", 8.0),
+            block_state(node("connected-host", 1.0)),
+        ));
+        rue.range_map.push(RangeMountState::new(
+            parented.clone(),
+            node("parented-end", 8.0),
+            block_state(node("parented-host", 1.0)),
+        ));
+
+        rue.compact_range_map();
+
+        assert_eq!(rue.range_map.len(), 2);
+        assert!(rue.find_range_index(&connected).is_some());
+        assert!(rue.find_range_index(&parented).is_some());
     }
 }

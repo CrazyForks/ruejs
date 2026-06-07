@@ -57,7 +57,7 @@ app.config.errorHandler = (err, instance, info) => {
 app.mount('#app')
 ```
 
-[Sentry](https://docs.sentry.io/platforms/javascript/guides/react/) 和 [Bugsnag](https://docs.bugsnag.com/platforms/javascript/react/) 等服务也为 Rue/React 提供官方集成。
+[Sentry](https://docs.sentry.io/platforms/javascript/) 和 [Bugsnag](https://docs.bugsnag.com/platforms/javascript/) 等服务也提供 JavaScript 应用集成。
 
 ## 生产优化检查清单 (Production Optimization Checklist) {#production-optimization-checklist}
 

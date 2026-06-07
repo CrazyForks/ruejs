@@ -97,3 +97,8 @@ impl VaporTransform {
         BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts }
     }
 }
+
+#[cfg(test)]
+// JSX block 转换测试拆到独立文件，避免生产转换逻辑继续膨胀。
+#[path = "jsx_tests.rs"]
+mod tests;

@@ -26,7 +26,7 @@
 
 // 提供 Effect/Signal 的注册、运行、调度以及批量更新机制。
 // 该模块以线程局部存储维护运行时全局状态，确保在 WebAssembly 场景下安全共享。
-use js_sys::{Function, JSON, Promise, Reflect};
+use js_sys::{Array, Function, JSON, Object, Promise, Reflect};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -78,6 +78,7 @@ thread_local! {
     - EFFECT_SCOPE_STACK：当前执行上下文的 scope 栈（push/pop 用于“绑定当前 scope”）
     - EFFECT_SCOPES_EFFECTS：scope_id -> [effect_id]，记录该 scope 内创建的所有 effect
     - EFFECT_SCOPES_CHILDREN：scope_id -> [child_scope_id]，记录 scope 的父子关系（支持嵌套 Vapor）
+    - EFFECT_SCOPES_CLEANUPS：scope_id -> [cleanup]，记录 onScopeDispose 注册的作用域清理函数
 
     生命周期：
     - Vapor setup 执行前 push_effect_scope(scope_id)，执行完 pop_effect_scope()
@@ -88,6 +89,11 @@ thread_local! {
     pub(crate) static EFFECT_SCOPE_STACK: RefCell<Vec<usize>> = RefCell::new(Vec::new());
     pub(crate) static EFFECT_SCOPES_EFFECTS: RefCell<HashMap<usize, Vec<usize>>> = RefCell::new(HashMap::new());
     pub(crate) static EFFECT_SCOPES_CHILDREN: RefCell<HashMap<usize, Vec<usize>>> = RefCell::new(HashMap::new());
+    pub(crate) static EFFECT_SCOPES_CLEANUPS: RefCell<HashMap<usize, Vec<Function>>> = RefCell::new(HashMap::new());
+    // 当前组件 render owner 栈，create_effect 会记录栈顶以支持 onRenderTriggered。
+    pub(crate) static RENDER_DEBUG_OWNER_STACK: RefCell<Vec<JsValue>> = RefCell::new(Vec::new());
+    // Hook 初始化等内部读取会临时增加抑制深度，避免被调试钩子误认为 render 依赖。
+    pub(crate) static RENDER_DEBUG_SUPPRESS_DEPTH: RefCell<usize> = RefCell::new(0);
 
 }
 
@@ -101,6 +107,8 @@ pub(crate) struct Effect {
     pub(crate) cleanups: Vec<Function>,
     pub(crate) disposed: bool,
     pub(crate) scheduler: Option<Function>,
+    /// 是否由 watch/watchEffect 系列 API 创建。
+    pub(crate) watcher: bool,
     /// 创建该 effect 时所在的 scope（由 create_effect 读取 current_effect_scope 绑定）
     ///
     /// 说明：
@@ -108,6 +116,115 @@ pub(crate) struct Effect {
     ///   EFFECT_SCOPES_EFFECTS 里的 effect 列表逐个 dispose。
     /// - 这里保存 scope_id 主要用于调试/日志与未来扩展（例如把 effect 从 scope 列表里移除）。
     pub(crate) scope_id: Option<usize>,
+    /// 创建 effect 时绑定的 render owner，用于依赖触发时回调 onRenderTriggered。
+    pub(crate) render_debug_owner: Option<JsValue>,
+}
+
+const RENDER_TRIGGERED_HOOKS_KEY: &str = "__rue_render_triggered_hooks";
+
+/// 进入组件 render 时压入 owner，使该阶段创建的 effect 能绑定调试归属。
+#[cfg(feature = "runtime")]
+pub(crate) fn begin_render_debug_owner(owner: &JsValue) {
+    RENDER_DEBUG_OWNER_STACK.with(|stack| {
+        stack.borrow_mut().push(owner.clone());
+    });
+}
+
+/// 离开组件 render 时弹出 owner。
+#[cfg(feature = "runtime")]
+pub(crate) fn end_render_debug_owner() {
+    RENDER_DEBUG_OWNER_STACK.with(|stack| {
+        stack.borrow_mut().pop();
+    });
+}
+
+/// 临时关闭 render 调试依赖归属，避免 Hook 初始化读写污染 onRenderTracked/onRenderTriggered。
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+pub(crate) fn suppress_render_debug_tracking<T>(runner: impl FnOnce() -> T) -> T {
+    RENDER_DEBUG_SUPPRESS_DEPTH.with(|depth| {
+        *depth.borrow_mut() += 1;
+    });
+    let out = runner();
+    RENDER_DEBUG_SUPPRESS_DEPTH.with(|depth| {
+        let mut value = depth.borrow_mut();
+        if *value > 0 {
+            *value -= 1;
+        }
+    });
+    out
+}
+
+/// 返回当前可绑定的 render 调试 owner；抑制期间返回 None。
+pub(crate) fn current_render_debug_owner() -> Option<JsValue> {
+    let suppressed = RENDER_DEBUG_SUPPRESS_DEPTH.with(|depth| *depth.borrow() > 0);
+    if suppressed {
+        return None;
+    }
+    RENDER_DEBUG_OWNER_STACK.with(|stack| stack.borrow().last().cloned())
+}
+
+/// 在组件 owner 上登记 renderTriggered 回调列表。
+#[cfg(feature = "runtime")]
+pub(crate) fn register_render_triggered_hook(owner: &JsValue, hook: JsValue) {
+    if !owner.is_object() || !hook.is_function() {
+        return;
+    }
+
+    let hooks = Reflect::get(owner, &JsValue::from_str(RENDER_TRIGGERED_HOOKS_KEY))
+        .unwrap_or(JsValue::UNDEFINED);
+    let hooks = if Array::is_array(&hooks) {
+        Array::from(&hooks)
+    } else {
+        let next = Array::new();
+        let _ = Reflect::set(owner, &JsValue::from_str(RENDER_TRIGGERED_HOOKS_KEY), &next);
+        next
+    };
+    hooks.push(&hook);
+}
+
+/// 根据 effect 创建时记录的 owner 派发 renderTriggered 调试事件。
+pub(crate) fn emit_render_triggered_for_effect(effect_id: usize, event: &JsValue) {
+    let owner = EFFECTS.with(|effects| {
+        effects.borrow().get(&effect_id).and_then(|effect| effect.render_debug_owner.clone())
+    });
+    let Some(owner) = owner else {
+        return;
+    };
+    let hooks = Reflect::get(&owner, &JsValue::from_str(RENDER_TRIGGERED_HOOKS_KEY))
+        .unwrap_or(JsValue::UNDEFINED);
+    if !Array::is_array(&hooks) {
+        return;
+    }
+    let hooks = Array::from(&hooks);
+    for index in 0..hooks.length() {
+        if let Some(hook) = hooks.get(index).dyn_ref::<Function>() {
+            let _ = hook.call1(&JsValue::NULL, event);
+        }
+    }
+}
+
+/// 构造与 Vue DebuggerEvent 形态接近的 renderTriggered 事件对象。
+pub(crate) fn create_render_triggered_event(
+    effect_id: usize,
+    target: JsValue,
+    event_type: &str,
+    key: JsValue,
+    old_value: JsValue,
+    new_value: JsValue,
+    path: Option<&Array>,
+) -> JsValue {
+    let event = Object::new();
+    let _ =
+        Reflect::set(&event, &JsValue::from_str("effect"), &JsValue::from_f64(effect_id as f64));
+    let _ = Reflect::set(&event, &JsValue::from_str("target"), &target);
+    let _ = Reflect::set(&event, &JsValue::from_str("type"), &JsValue::from_str(event_type));
+    let _ = Reflect::set(&event, &JsValue::from_str("key"), &key);
+    let _ = Reflect::set(&event, &JsValue::from_str("oldValue"), &old_value);
+    let _ = Reflect::set(&event, &JsValue::from_str("newValue"), &new_value);
+    if let Some(path) = path {
+        let _ = Reflect::set(&event, &JsValue::from_str("path"), path);
+    }
+    event.into()
 }
 
 pub(crate) struct ComputedState {
@@ -134,6 +251,9 @@ fn create_effect_scope_with_parent(parent: Option<usize>) -> usize {
         m.borrow_mut().insert(id, Vec::new());
     });
     EFFECT_SCOPES_CHILDREN.with(|m| {
+        m.borrow_mut().insert(id, Vec::new());
+    });
+    EFFECT_SCOPES_CLEANUPS.with(|m| {
         m.borrow_mut().insert(id, Vec::new());
     });
     if let Some(p) = parent {
@@ -219,6 +339,21 @@ pub fn current_effect_scope() -> Option<usize> {
     EFFECT_SCOPE_STACK.with(|s| s.borrow().last().copied())
 }
 
+#[wasm_bindgen(js_name = "__rueGetCurrentEffectScope")]
+/// 导出给 JS 包装层读取当前 scope id，并在 JS 侧包装成 EffectScope。
+pub fn current_effect_scope_wasm() -> JsValue {
+    current_effect_scope()
+        .map(|scope_id| JsValue::from_f64(scope_id as f64))
+        .unwrap_or(JsValue::UNDEFINED)
+}
+
+#[wasm_bindgen(js_name = "__rueCurrentEffectId")]
+/// 调试/测试入口：返回当前正在执行的 effect id。
+pub fn current_effect_id() -> JsValue {
+    CURRENT_EFFECT
+        .with(|c| c.borrow().map(|id| JsValue::from_f64(id as f64)).unwrap_or(JsValue::UNDEFINED))
+}
+
 /// 将 effect 登记到指定 scope
 ///
 /// 说明：
@@ -229,6 +364,49 @@ pub(crate) fn register_effect_in_scope(effect_id: usize, scope_id: usize) {
         let mut mm = m.borrow_mut();
         mm.entry(scope_id).or_insert_with(Vec::new).push(effect_id);
     });
+}
+
+/// 标记指定 effect 为 watcher，供 onWatcherCleanup 判断当前上下文是否有效。
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+pub(crate) fn mark_effect_as_watcher(effect_id: usize) {
+    EFFECTS.with(|m| {
+        if let Some(effect) = m.borrow_mut().get_mut(&effect_id) {
+            effect.watcher = true;
+        }
+    });
+}
+
+/// 判断指定 effect 是否为 watcher。
+pub(crate) fn is_watcher_effect(effect_id: usize) -> bool {
+    EFFECTS.with(|m| m.borrow().get(&effect_id).map(|effect| effect.watcher).unwrap_or(false))
+}
+
+/// 将清理函数登记到指定 scope，供 onScopeDispose 使用。
+pub(crate) fn register_cleanup_in_scope(scope_id: usize, cleanup: Function) {
+    EFFECT_SCOPES_CLEANUPS.with(|m| {
+        let mut mm = m.borrow_mut();
+        mm.entry(scope_id).or_insert_with(Vec::new).push(cleanup);
+    });
+}
+
+/// 在当前活动 effect scope 上注册清理函数。
+///
+/// 该 API 对齐 Vue 的 onScopeDispose：
+/// - 存在当前 scope 时，回调会在 scope dispose 时执行一次；
+/// - 不存在当前 scope 且 fail_silently != true 时，仅输出 warning，不抛错。
+#[wasm_bindgen(js_name = onScopeDispose)]
+pub fn on_scope_dispose(cleanup: Function, fail_silently: Option<bool>) {
+    if let Some(scope_id) = current_effect_scope() {
+        register_cleanup_in_scope(scope_id, cleanup);
+        return;
+    }
+
+    if !fail_silently.unwrap_or(false) {
+        crate::log::log(
+            "warning",
+            "onScopeDispose() is called when there is no active effect scope.",
+        );
+    }
 }
 
 /// 销毁一个 effect：从全局表移除并执行所有已注册清理函数
@@ -282,7 +460,11 @@ pub fn dispose_effect_scope(scope_id: usize) {
         let mut mm = m.borrow_mut();
         mm.remove(&scope_id).unwrap_or_default()
     });
-    if children.is_empty() && effects.is_empty() {
+    let cleanups = EFFECT_SCOPES_CLEANUPS.with(|m| {
+        let mut mm = m.borrow_mut();
+        mm.remove(&scope_id).unwrap_or_default()
+    });
+    if children.is_empty() && effects.is_empty() && cleanups.is_empty() {
         return;
     }
     for c in children.iter().copied() {
@@ -294,16 +476,20 @@ pub fn dispose_effect_scope(scope_id: usize) {
             crate::log::log(
                 "debug",
                 &format!(
-                    "reactive:scope dispose id={} effects={} children={}",
+                    "reactive:scope dispose id={} effects={} children={} cleanups={}",
                     scope_id,
                     effects.len(),
-                    children.len()
+                    children.len(),
+                    cleanups.len()
                 ),
             );
         }
     }
     for id in effects {
         dispose_effect(id);
+    }
+    for cleanup in cleanups {
+        let _ = cleanup.call0(&JsValue::NULL);
     }
 }
 
@@ -337,19 +523,10 @@ pub(crate) struct Signal {
 /// - 执行过程中设置 `CURRENT_EFFECT` 以便 Signal 读取进行依赖收集
 /// - 支持嵌套 effect：内部 effect 运行结束后，恢复外层的 `CURRENT_EFFECT`
 pub(crate) fn run_effect(id: usize) {
-    // 先检查是否已处置，避免不必要的借用与执行
-    let disposed = EFFECTS.with(|m| {
-        let map = m.borrow();
-        map.get(&id).map(|e| e.disposed).unwrap_or(true)
-    });
-    if disposed {
-        return;
-    }
-
     // 取出需要的信息与清理函数，缩小可变借用作用域，避免在回调执行期间发生可变重入借用导致 panic
     let maybe = EFFECTS.with(|m| {
         let mut map = m.borrow_mut();
-        if let Some(e) = map.get_mut(&id) {
+        if let Some(e) = map.get_mut(&id).filter(|effect| !effect.disposed) {
             let cleans = std::mem::take(&mut e.cleanups);
             let cb = e.cb.clone();
             Some((cleans, cb))
@@ -661,11 +838,8 @@ pub(crate) fn schedule_effect_run(id: usize) {
     // - 也使得 schedule_effect_run_default 的队列状态更干净
     remove_pending_effect(id);
     // 是否已由自定义调度器处理
-    let scheduler = EFFECTS.with(|m| {
-        m.borrow()
-            .get(&id)
-            .and_then(|effect| if effect.disposed { None } else { effect.scheduler.clone() })
-    });
+    let scheduler =
+        EFFECTS.with(|m| m.borrow().get(&id).and_then(|effect| effect.scheduler.clone()));
     let mut handled = false;
     if let Some(s) = scheduler {
         #[cfg(feature = "dev")]
@@ -742,6 +916,7 @@ pub(crate) fn schedule_effect_run(id: usize) {
 }
 
 /// 批量更新作用域：在回调执行期间延迟 effect 运行，并在最外层结束时统一 flush
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 pub fn batch_scope<F: FnOnce()>(cb: F) {
     // batch_scope 的语义：把一段“可能触发多次 Signal 更新”的逻辑包起来，
     // 在这段逻辑执行期间：
@@ -757,9 +932,7 @@ pub fn batch_scope<F: FnOnce()>(cb: F) {
     cb();
     BATCH_DEPTH.with(|bd| {
         let mut b = bd.borrow_mut();
-        if *b > 0 {
-            *b -= 1;
-        }
+        *b -= 1;
     });
     BATCH_DEPTH.with(|bd| {
         if *bd.borrow() == 0 {
@@ -808,6 +981,7 @@ fn create_flush_waiter_promise() -> Promise {
     Promise::new(&mut init)
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn chain_promise_callback(promise: Promise, callback: Function) -> Promise {
     let then =
         Reflect::get(promise.as_ref(), &JsValue::from_str("then")).unwrap_or(JsValue::UNDEFINED);
@@ -868,6 +1042,34 @@ pub fn to_value(x: JsValue) -> JsValue {
         }
     }
     x
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen_test::*;
+
+    #[wasm_bindgen_test]
+    fn chain_promise_callback_falls_back_when_then_is_missing_or_throws() {
+        let callback = Function::new_no_args("globalThis.__rue_chain_called = true");
+
+        let no_then = Object::new();
+        let no_then_promise: Promise = no_then.clone().unchecked_into();
+        let returned = chain_promise_callback(no_then_promise, callback.clone());
+        assert!(Object::is(returned.as_ref(), &no_then.into()));
+
+        let throwing_then = Object::new();
+        Reflect::set(
+            &throwing_then,
+            &JsValue::from_str("then"),
+            &Function::new_no_args("throw new Error('then failed')").into(),
+        )
+        .unwrap();
+        let throwing_promise: Promise = throwing_then.clone().unchecked_into();
+        let returned_throwing = chain_promise_callback(throwing_promise, callback);
+        assert!(Object::is(returned_throwing.as_ref(), &throwing_then.into()));
+    }
 }
 
 #[wasm_bindgen(typescript_custom_section)]

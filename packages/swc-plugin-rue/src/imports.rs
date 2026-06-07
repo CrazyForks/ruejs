@@ -23,6 +23,7 @@ struct RuntimeUseCollector {
     known_values: HashSet<&'static str>,
     used_values: HashSet<String>,
     used_types: HashSet<String>,
+    used_type_refs: HashSet<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -40,9 +41,11 @@ impl NamedImportSpec {
 }
 
 const VAPOR_SAFE_VALUE_IMPORTS: &[&str] = &[
+    // 响应式与生命周期 API 必须允许从 vapor 子入口导入，保证编译产物不会回到默认 runtime。
     "effect",
     "batch",
     "onCleanup",
+    "onScopeDispose",
     "untrack",
     "setCurrentInstance",
     "getCurrentInstance",
@@ -60,8 +63,14 @@ const VAPOR_SAFE_VALUE_IMPORTS: &[&str] = &[
     "useEffect",
     "signal",
     "ref",
+    "shallowRef",
+    "triggerRef",
+    "toRef",
+    "toRefs",
     "computed",
+    "isProxy",
     "isReactive",
+    "isReadonly",
     "reactive",
     "shallowReactive",
     "readonly",
@@ -83,6 +92,7 @@ const VAPOR_SAFE_VALUE_IMPORTS: &[&str] = &[
     "onMounted",
     "onBeforeUpdate",
     "onUpdated",
+    "onRenderTracked",
     "onBeforeUnmount",
     "onUnmounted",
     "onError",
@@ -137,7 +147,12 @@ impl RuntimeUseCollector {
                 "_$setDisabled",
             ])
             .collect();
-        Self { known_values, used_values: HashSet::new(), used_types: HashSet::new() }
+        Self {
+            known_values,
+            used_values: HashSet::new(),
+            used_types: HashSet::new(),
+            used_type_refs: HashSet::new(),
+        }
     }
 }
 
@@ -154,6 +169,7 @@ impl Visit for RuntimeUseCollector {
 
     fn visit_ts_type_ref(&mut self, t: &TsTypeRef) {
         if let TsEntityName::Ident(id) = &t.type_name {
+            self.used_type_refs.insert(id.sym.to_string());
             if id.sym.as_ref() == "FC" {
                 self.used_types.insert("FC".to_string());
             }
@@ -197,8 +213,8 @@ fn is_safe_vapor_value_import(name: &str) -> bool {
     VAPOR_SAFE_VALUE_IMPORTS.contains(&name)
 }
 
-fn mark_root_type_only_imports(m: &mut Module, used_types: &HashSet<String>) {
-    if used_types.is_empty() {
+fn mark_root_type_only_imports(m: &mut Module, used_type_refs: &HashSet<String>) {
+    if used_type_refs.is_empty() {
         return;
     }
 
@@ -226,7 +242,9 @@ fn mark_root_type_only_imports(m: &mut Module, used_types: &HashSet<String>) {
             if !FORCED_ROOT_TYPE_IMPORTS.contains(&export_name.as_str()) {
                 continue;
             }
-            if !used_types.contains(export_name.as_str()) {
+            if !used_type_refs.contains(export_name.as_str())
+                && !used_type_refs.contains(named.local.sym.as_ref())
+            {
                 continue;
             }
 
@@ -341,7 +359,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
 
     let mut collector = RuntimeUseCollector::new();
     m.visit_with(&mut collector);
-    mark_root_type_only_imports(m, &collector.used_types);
+    mark_root_type_only_imports(m, &collector.used_type_refs);
 
     let mut helper_specs: Vec<NamedImportSpec> = collector
         .used_values
@@ -383,6 +401,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "onMounted",
         "onBeforeUpdate",
         "onUpdated",
+        "onRenderTracked",
         "onBeforeUnmount",
         "onUnmounted",
         "onError",
@@ -402,6 +421,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "effect",
         "batch",
         "onCleanup",
+        "onScopeDispose",
         "untrack",
         "setCurrentInstance",
         "getCurrentInstance",
@@ -419,8 +439,12 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "useEffect",
         "signal",
         "ref",
+        "shallowRef",
+        "triggerRef",
         "computed",
+        "isProxy",
         "isReactive",
+        "isReadonly",
         "reactive",
         "shallowReactive",
         "readonly",
@@ -483,3 +507,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         insert_import(m, &type_import_source, type_specs);
     }
 }
+
+#[cfg(test)]
+#[path = "imports_tests.rs"]
+mod tests;

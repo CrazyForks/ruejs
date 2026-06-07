@@ -1,3 +1,8 @@
+/*
+生命周期桥接：onMounted
+
+组件真实挂载完成后触发。这里与其他 hook 一样支持重入时进入 pending 队列。
+*/
 use super::WasmRue;
 use crate::runtime::globals::push_pending_hook;
 use wasm_bindgen::JsValue;

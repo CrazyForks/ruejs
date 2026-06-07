@@ -8,130 +8,226 @@ List 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
 
+/** ListSize 尺寸类型。 */
 export type ListSize = 'small' | 'default' | 'large' | 'sm' | 'md' | 'lg'
+/** ListItemLayout 类型。 */
 export type ListItemLayout = 'horizontal' | 'vertical'
+/** ListPaginationPosition 位置或方向类型。 */
 export type ListPaginationPosition = 'top' | 'bottom' | 'both'
+/** ListPaginationAlign 对齐方式类型。 */
 export type ListPaginationAlign = 'start' | 'center' | 'end'
+/** ListKey 标识键类型。 */
 export type ListKey = string | number
 
+/** ListGridType 接口。 */
 export interface ListGridType {
+  /** 栅格间距。 */
   gutter?: number | string
+  /** column 配置项。 */
   column?: number
+  /** xs 配置项。 */
   xs?: number
+  /** sm 配置项。 */
   sm?: number
+  /** md 配置项。 */
   md?: number
+  /** lg 配置项。 */
   lg?: number
+  /** xl 配置项。 */
   xl?: number
+  /** xxl 配置项。 */
   xxl?: number
+  /** xxxl 配置项。 */
   xxxl?: number
 }
 
+/** ListPaginationConfig 配置对象。 */
 export interface ListPaginationConfig {
+  /** current 配置项。 */
   current?: number
+  /** defaultCurrent 配置项。 */
   defaultCurrent?: number
+  /** pageSize 尺寸。 */
   pageSize?: number
+  /** defaultPageSize 尺寸。 */
   defaultPageSize?: number
+  /** total 配置项。 */
   total?: number
+  /** position 配置项。 */
   position?: ListPaginationPosition
+  /** 交叉轴或内容对齐方式。 */
   align?: ListPaginationAlign
+  /** hideOnSinglePage 配置项。 */
   hideOnSinglePage?: boolean
+  /** showTotal 配置项。 */
   showTotal?: (total: number, range: [number, number]) => any
+  /** 值或状态变化时触发的回调。 */
   onChange?: (page: number, pageSize: number) => void
 }
 
+/** ListLoadingConfig 配置对象。 */
 export interface ListLoadingConfig {
+  /** spinning 配置项。 */
   spinning?: boolean
+  /** tip 配置项。 */
   tip?: any
+  /** indicator 配置项。 */
   indicator?: any
 }
 
+/** ListLocale 接口。 */
 export interface ListLocale {
+  /** emptyText 文本内容。 */
   emptyText?: any
 }
 
+/** ListColDataItem 数据项结构。 */
 export interface ListColDataItem {
+  /** 组件类型或语义类型。 */
   type: 'grow' | 'wrap'
+  /** 自定义渲染的宿主元素。 */
   as?: 'div' | 'p' | 'span'
+  /** 根节点附加类名。 */
   className?: string
+  /** 主体内容。 */
   content?: any
 }
 
+/** ListDataItem 数据项结构。 */
 export interface ListDataItem {
+  /** 数据项唯一标识。 */
   key?: ListKey
+  /** 组件类型或语义类型。 */
   type?: 'row' | 'item'
+  /** normal 配置项。 */
   normal?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 主体内容。 */
   content?: any
+  /** cols 配置项。 */
   cols?: ReadonlyArray<ListColDataItem>
+  /** 标题内容。 */
   title?: any
+  /** 描述内容。 */
   description?: any
+  /** avatar 配置项。 */
   avatar?: any
+  /** 操作区内容。 */
   actions?: any[]
+  /** 额外操作或补充内容。 */
   extra?: any
 }
 
+/** ListProps 组件属性。 */
 export interface ListProps<T = any> {
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 数据源。 */
   dataSource?: ReadonlyArray<T>
+  /** emptyText 文本内容。 */
   emptyText?: any
+  /** 底部区域内容。 */
   footer?: any
+  /** grid 配置项。 */
   grid?: ListGridType
+  /** 头部区域内容。 */
   header?: any
+  /** itemLayout 配置项。 */
   itemLayout?: ListItemLayout
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<ListDataItem>
+  /** 是否展示加载态。 */
   loading?: boolean | ListLoadingConfig
+  /** loadMore 配置项。 */
   loadMore?: any
+  /** locale 配置项。 */
   locale?: ListLocale
+  /** pagination 配置项。 */
   pagination?: boolean | ListPaginationConfig | false
+  /** renderItem 配置项。 */
   renderItem?: (item: T, index: number) => any
+  /** rowKey 标识键。 */
   rowKey?: keyof T | ((item: T, index: number) => ListKey)
+  /** 组件尺寸。 */
   size?: ListSize
+  /** split 配置项。 */
   split?: boolean
+  /** 根节点内联样式。 */
   style?: Record<string, any>
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ListRowProps 组件属性。 */
 export interface ListRowProps {
+  /** normal 配置项。 */
   normal?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ListColProps 组件属性。 */
 export interface ListColProps {
+  /** 自定义渲染的宿主元素。 */
   as?: 'div' | 'p' | 'span'
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ListItemMetaProps 组件属性。 */
 export interface ListItemMetaProps {
+  /** avatar 配置项。 */
   avatar?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 描述内容。 */
   description?: any
+  /** 标题内容。 */
   title?: any
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ListItemProps 组件属性。 */
 export interface ListItemProps {
+  /** 操作区内容。 */
   actions?: any[]
+  /** 根节点附加类名。 */
   className?: string
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: {
     actions?: string
     extra?: string
     meta?: string
   }
+  /** 额外操作或补充内容。 */
   extra?: any
+  /** itemLayout 配置项。 */
   itemLayout?: ListItemLayout
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: {
     actions?: Record<string, any>
     extra?: Record<string, any>
     meta?: Record<string, any>
   }
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -149,22 +245,26 @@ interface NormalizedPaginationConfig extends ListPaginationConfig {
   align: ListPaginationAlign
 }
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | false | null | undefined>) => {
   const cls = parts.filter(Boolean).join(' ').trim()
   return cls || undefined
 }
 
+/** as Css Size 的内部工具函数。 */
 const asCssSize = (value?: number | string) => {
   if (typeof value === 'number') return `${value}px`
   return value
 }
 
+/** clamp Page 的内部工具函数。 */
 const clampPage = (page: number, pageCount: number) => {
   if (page <= 1) return 1
   if (page >= pageCount) return pageCount
   return page
 }
 
+/** 判断 Legacy List Data Item 的内部工具函数。 */
 const isLegacyListDataItem = (item: any): item is ListDataItem => {
   return !!(
     item &&
@@ -182,6 +282,7 @@ const isLegacyListDataItem = (item: any): item is ListDataItem => {
   )
 }
 
+/** 解析 Renderable Item Content 的内部工具函数。 */
 const resolveRenderableItemContent = (item: any) => {
   if (item == null || typeof item === 'boolean') {
     return item
@@ -211,10 +312,12 @@ const resolveRenderableItemContent = (item: any) => {
   }
 }
 
+/** 判断 Empty Node 的内部工具函数。 */
 const isEmptyNode = (value: any) => {
   return value === undefined || value === null || (Array.isArray(value) && value.length === 0)
 }
 
+/** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: ListSize) => {
   switch (size) {
     case 'small':
@@ -228,6 +331,7 @@ const resolveSizeClass = (size?: ListSize) => {
   }
 }
 
+/** 归一化 Loading 的内部工具函数。 */
 const normalizeLoading = (loading?: boolean | ListLoadingConfig): NormalizedLoadingConfig => {
   if (typeof loading === 'object') {
     return {
@@ -241,6 +345,7 @@ const normalizeLoading = (loading?: boolean | ListLoadingConfig): NormalizedLoad
   }
 }
 
+/** 读取 Record Key 的内部工具函数。 */
 const getRecordKey = <T,>(
   item: T,
   index: number,
@@ -252,11 +357,13 @@ const getRecordKey = <T,>(
   return `list-item-${index}`
 }
 
+/** 读取 Grid Column Count 的内部工具函数。 */
 const getGridColumnCount = (grid?: ListGridType) => {
   if (!grid) return undefined
   return grid.xxxl ?? grid.xxl ?? grid.xl ?? grid.lg ?? grid.md ?? grid.sm ?? grid.xs ?? grid.column
 }
 
+/** 读取 Grid Style 的内部工具函数。 */
 const getGridStyle = (grid?: ListGridType, style?: Record<string, any>) => {
   if (!grid) return style
   const columnCount = getGridColumnCount(grid)
@@ -268,6 +375,7 @@ const getGridStyle = (grid?: ListGridType, style?: Record<string, any>) => {
   }
 }
 
+/** 解析 Pagination 的内部工具函数。 */
 const resolvePagination = (
   pagination: boolean | ListPaginationConfig | false | undefined,
   total: number,
@@ -290,6 +398,7 @@ const resolvePagination = (
   }
 }
 
+/** 渲染 Cols 的内部工具函数。 */
 const renderCols = (cols?: ReadonlyArray<ListColDataItem>) => {
   if (!cols) return null
   return cols.map((col, index) => {
@@ -308,6 +417,7 @@ const renderCols = (cols?: ReadonlyArray<ListColDataItem>) => {
   })
 }
 
+/** 渲染 Legacy Item 的内部工具函数。 */
 const renderLegacyItem = (item: ListDataItem, index: number) => {
   const key = item.key ?? index
   const type =
@@ -347,6 +457,7 @@ const renderLegacyItem = (item: ListDataItem, index: number) => {
   )
 }
 
+/** 渲染 Loading 的内部工具函数。 */
 const renderLoading = (loading: NormalizedLoadingConfig) => {
   if (!loading.spinning) return null
   return (
@@ -357,15 +468,18 @@ const renderLoading = (loading: NormalizedLoadingConfig) => {
   )
 }
 
+/** 渲染 Empty 的内部工具函数。 */
 const renderEmpty = (emptyText: any) => {
   return <li className="p-8 text-center text-sm opacity-60">{emptyText ?? 'No data'}</li>
 }
 
+/** 渲染 Section 的内部工具函数。 */
 const renderSection = (content: any, className: string) => {
   if (isEmptyNode(content)) return null
   return <li className={className}>{content}</li>
 }
 
+/** 渲染 Pager 的内部工具函数。 */
 const renderPager = (
   config: NormalizedPaginationConfig | null,
   onChange: (page: number) => void,
@@ -638,6 +752,7 @@ const ColWrap: FC<ListColProps> = ({ as = 'div', className, children, ...rest })
   )
 }
 
+/** Meta 的内部工具函数。 */
 const Meta: FC<ListItemMetaProps> = ({
   avatar,
   className,
@@ -735,4 +850,5 @@ const ListCompound: ListCompound = Object.assign(List, {
   Item: ItemCompound,
 })
 
+/** 默认导出列表组件。 */
 export default ListCompound

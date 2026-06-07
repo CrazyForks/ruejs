@@ -17,12 +17,6 @@ const AsyncRouterDemoLabPage = useComponent(async () => ({
 }))
 
 const routes: RouteRecordRaw[] = [
-  { path: '/about', component: useComponent(() => import('../pages/About')) },
-  { path: '/posts', component: useComponent(() => import('../pages/PostsList')) },
-  { path: '/posts/:id', component: useComponent(() => import('../pages/PostDetail')) },
-  { path: '/use-cart', component: useComponent(() => import('../pages/UseCart')) },
-  { path: '/vapor', component: useComponent(() => import('../pages/Vapor')) },
-  { path: '/vapor-jsx', component: useComponent(() => import('../pages/VaporJSXDemo')) },
   { path: '/jsx', component: useComponent(() => import('../pages/jsx/Index')) },
   {
     path: '/jsx/basic-elements',
@@ -148,20 +142,78 @@ const routes: RouteRecordRaw[] = [
     component: useComponent(() => import('../pages/examples/HelloWorld')),
   },
   {
+    path: '/examples/on-deactivated',
+    component: useComponent(() => import('../pages/examples/OnDeactivated')),
+  },
+  {
     path: '/examples/reactive-counter',
     component: useComponent(() => import('../pages/examples/ReactiveCounter')),
+  },
+  // 响应式工具 API 示例，保持与侧边栏中 ref/reactive 相关条目顺序一致。
+  {
+    path: '/examples/to-refs',
+    component: useComponent(() => import('../pages/examples/ToRefs')),
+  },
+  {
+    path: '/examples/to-ref',
+    component: useComponent(() => import('../pages/examples/ToRef')),
+  },
+  {
+    path: '/examples/is-ref',
+    component: useComponent(() => import('../pages/examples/IsRef')),
   },
   {
     path: '/examples/shallow-ref',
     component: useComponent(() => import('../pages/examples/ShallowRef')),
   },
   {
+    path: '/examples/trigger-ref',
+    component: useComponent(() => import('../pages/examples/TriggerRef')),
+  },
+  {
+    path: '/examples/on-activated',
+    component: useComponent(() => import('../pages/examples/OnActivatedDemo')),
+  },
+  {
+    path: '/examples/is-proxy',
+    component: useComponent(() => import('../pages/examples/IsProxy')),
+  },
+  {
+    path: '/examples/is-readonly',
+    component: useComponent(() => import('../pages/examples/IsReadonly')),
+  },
+  {
     path: '/examples/next-tick',
     component: useComponent(() => import('../pages/examples/NextTick')),
+  },
+  // 调度、scope 与渲染调试 API 示例，集中注册便于文档站按能力分组维护。
+  {
+    path: '/examples/watch-post-effect',
+    component: useComponent(() => import('../pages/examples/WatchPostEffect')),
+  },
+  {
+    path: '/examples/on-watcher-cleanup',
+    component: useComponent(() => import('../pages/examples/OnWatcherCleanup')),
+  },
+  {
+    path: '/examples/on-scope-dispose',
+    component: useComponent(() => import('../pages/examples/OnScopeDispose')),
+  },
+  {
+    path: '/examples/get-current-scope',
+    component: useComponent(() => import('../pages/examples/GetCurrentScope')),
   },
   {
     path: '/examples/render-counter',
     component: useComponent(() => import('../pages/examples/RenderCounter')),
+  },
+  {
+    path: '/examples/on-render-tracked',
+    component: useComponent(() => import('../pages/examples/OnRenderTracked')),
+  },
+  {
+    path: '/examples/on-render-triggered',
+    component: useComponent(() => import('../pages/examples/OnRenderTriggered')),
   },
   {
     path: '/examples/use-state-counter',
@@ -256,6 +308,10 @@ const routes: RouteRecordRaw[] = [
     component: useComponent(() => import('../pages/examples/SimpleComponent')),
   },
   {
+    path: '/examples/on-error-captured',
+    component: useComponent(() => import('../pages/examples/OnErrorCaptured')),
+  },
+  {
     path: '/examples/reactive-props-destructure',
     component: useComponent(() => import('../pages/examples/ReactivePropsDestructure')),
   },
@@ -278,6 +334,10 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/examples/fetching-data',
     component: useComponent(() => import('../pages/examples/FetchingData')),
+  },
+  {
+    path: '/examples/on-server-prefetch',
+    component: useComponent(() => import('../pages/examples/OnServerPrefetch')),
   },
   {
     path: '/examples/resources',
@@ -517,6 +577,7 @@ const routes: RouteRecordRaw[] = [
     component: useComponent(() => import('../pages/e2e/RouterUnmountProbeB')),
   },
   { path: '/', component: useComponent(() => import('../pages/site/SiteHome')) },
+  { path: '/textjs', component: useComponent(() => import('../pages/TextJs')) },
   {
     path: '/guide/:path(.*)',
     component: useComponent(() => import('../pages/site/GuideDocDetail')),

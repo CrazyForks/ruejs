@@ -24,10 +24,13 @@ pub use computed::create_computed;
 pub use context::vapor_with_hook_id;
 pub use context::{get_current_instance, set_current_instance, with_hook_slot};
 // 暂不导出 on_mounted/on_unmounted/on_error/trigger_mounted/trigger_unmounted/emit_error
-// 核心：调度模式设置、nextTick 与通用取值转换
-pub use core::{next_tick, set_reactive_scheduling, to_value};
+// 核心：调度模式、nextTick、通用取值转换与 effect scope 清理
+pub use core::{
+    current_effect_id, current_effect_scope_wasm, next_tick, on_scope_dispose,
+    set_reactive_scheduling, to_value,
+};
 // 副作用：注册、调度与清理能力，以及批量更新
-pub use effect::{EffectHandle, batch, create_effect, on_cleanup, untrack};
+pub use effect::{EffectHandle, batch, create_effect, on_cleanup, on_watcher_cleanup, untrack};
 // 资源：基于信号驱动的异步数据加载器
 pub use resource::create_resource;
 // 信号：可订阅的可变数据容器（支持自定义等值比较）

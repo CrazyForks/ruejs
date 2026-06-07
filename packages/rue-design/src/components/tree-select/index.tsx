@@ -8,156 +8,279 @@ TreeSelect 组件概述
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** SHOW_ALL 常量。 */
 export const SHOW_ALL = 'SHOW_ALL' as const
+/** SHOW_PARENT 常量。 */
 export const SHOW_PARENT = 'SHOW_PARENT' as const
+/** SHOW_CHILD 常量。 */
 export const SHOW_CHILD = 'SHOW_CHILD' as const
 
+/** TreeSelectValue 值类型。 */
 export type TreeSelectValue = string | number
+/** TreeSelectShowCheckedStrategy 类型。 */
 export type TreeSelectShowCheckedStrategy = typeof SHOW_ALL | typeof SHOW_PARENT | typeof SHOW_CHILD
 
+/** TreeSelectFieldNames 接口。 */
 export interface TreeSelectFieldNames {
+  /** 展示标签。 */
   label?: string
+  /** 受控值。 */
   value?: string
+  /** 组件子内容。 */
   children?: string
+  /** 数据项唯一标识。 */
   key?: string
+  /** 是否禁用交互。 */
   disabled?: string
+  /** selectable 配置项。 */
   selectable?: string
+  /** checkable 配置项。 */
   checkable?: string
+  /** disableCheckbox 配置项。 */
   disableCheckbox?: string
+  /** isLeaf 配置项。 */
   isLeaf?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 图标内容。 */
   icon?: string
+  /** 元素或数据项标识。 */
   id?: string
+  /** pId 配置项。 */
   pId?: string
 }
 
+/** TreeSelectDataNode 接口。 */
 export interface TreeSelectDataNode {
+  /** 标题内容。 */
   title?: any
+  /** 展示标签。 */
   label?: any
+  /** 受控值。 */
   value?: TreeSelectValue
+  /** 数据项唯一标识。 */
   key?: TreeSelectValue
+  /** 组件子内容。 */
   children?: TreeSelectDataNode[]
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** selectable 配置项。 */
   selectable?: boolean
+  /** checkable 配置项。 */
   checkable?: boolean
+  /** disableCheckbox 配置项。 */
   disableCheckbox?: boolean
+  /** isLeaf 配置项。 */
   isLeaf?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 图标内容。 */
   icon?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** TreeSelectSimpleModeConfig 配置对象。 */
 export interface TreeSelectSimpleModeConfig {
+  /** 元素或数据项标识。 */
   id?: string
+  /** pId 配置项。 */
   pId?: string
+  /** rootPId 配置项。 */
   rootPId?: string | number | null
 }
 
+/** TreeSelectLabeledValue 接口。 */
 export interface TreeSelectLabeledValue {
+  /** 受控值。 */
   value: TreeSelectValue
+  /** 数据项唯一标识。 */
   key: TreeSelectValue
+  /** 展示标签。 */
   label: any
+  /** halfChecked 配置项。 */
   halfChecked?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
 }
 
+/** TreeSelectShowSearchConfig 配置对象。 */
 export interface TreeSelectShowSearchConfig {
+  /** autoClearSearchValue 值。 */
   autoClearSearchValue?: boolean
+  /** filterTreeNode 配置项。 */
   filterTreeNode?: boolean | ((inputValue: string, node: TreeSelectNormalizedNode) => boolean)
+  /** searchValue 值。 */
   searchValue?: string
+  /** treeNodeFilterProp 配置项。 */
   treeNodeFilterProp?: string
+  /** 搜索文本变化时触发的回调。 */
   onSearch?: (value: string) => void
 }
 
+/** TreeSelectChangeExtra 接口。 */
 export interface TreeSelectChangeExtra {
+  /** triggerValue 值。 */
   triggerValue?: TreeSelectValue | null
+  /** selected 配置项。 */
   selected?: boolean
+  /** 受控选中状态。 */
   checked?: boolean
+  /** clear 配置项。 */
   clear?: boolean
+  /** triggerNode 配置项。 */
   triggerNode?: TreeSelectNormalizedNode | null
+  /** checkedNodes 配置项。 */
   checkedNodes?: TreeSelectNormalizedNode[]
+  /** displayNodes 配置项。 */
   displayNodes?: TreeSelectNormalizedNode[]
+  /** halfCheckedKeys 标识键集合。 */
   halfCheckedKeys?: TreeSelectValue[]
 }
 
+/** TreeSelectTagRenderProps 组件属性。 */
 export interface TreeSelectTagRenderProps {
+  /** 展示标签。 */
   label: any
+  /** 受控值。 */
   value: TreeSelectValue
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** closable 配置项。 */
   closable: boolean
+  /** node 配置项。 */
   node: TreeSelectNormalizedNode
+  /** 关闭时触发的回调。 */
   onClose: (event: MouseEvent) => void
 }
 
+/** TreeSelectSwitcherRenderContext 事件或渲染上下文。 */
 export interface TreeSelectSwitcherRenderContext {
+  /** expanded 配置项。 */
   expanded: boolean
+  /** 是否展示加载态。 */
   loading: boolean
+  /** selected 配置项。 */
   selected: boolean
+  /** 受控选中状态。 */
   checked: boolean
+  /** halfChecked 配置项。 */
   halfChecked: boolean
+  /** node 配置项。 */
   node: TreeSelectNormalizedNode
 }
 
+/** TreeSelectProps 组件属性。 */
 export interface TreeSelectProps {
+  /** 受控值。 */
   value?:
     | TreeSelectValue
     | TreeSelectValue[]
     | TreeSelectLabeledValue
     | TreeSelectLabeledValue[]
     | null
+  /** 非受控初始值。 */
   defaultValue?:
     | TreeSelectValue
     | TreeSelectValue[]
     | TreeSelectLabeledValue
     | TreeSelectLabeledValue[]
     | null
+  /** treeData 配置项。 */
   treeData?: TreeSelectDataNode[]
+  /** 自定义数据字段映射。 */
   fieldNames?: TreeSelectFieldNames
+  /** treeDataSimpleMode 配置项。 */
   treeDataSimpleMode?: boolean | TreeSelectSimpleModeConfig
+  /** multiple 配置项。 */
   multiple?: boolean
+  /** treeCheckable 配置项。 */
   treeCheckable?: boolean
+  /** treeCheckStrictly 配置项。 */
   treeCheckStrictly?: boolean
+  /** showCheckedStrategy 配置项。 */
   showCheckedStrategy?: TreeSelectShowCheckedStrategy
+  /** labelInValue 值。 */
   labelInValue?: boolean
+  /** showSearch 配置项。 */
   showSearch?: boolean | TreeSelectShowSearchConfig
+  /** searchValue 值。 */
   searchValue?: string
+  /** filterTreeNode 配置项。 */
   filterTreeNode?: boolean | ((inputValue: string, node: TreeSelectNormalizedNode) => boolean)
+  /** treeNodeFilterProp 配置项。 */
   treeNodeFilterProp?: string
+  /** 占位内容。 */
   placeholder?: any
+  /** 是否允许一键清空。 */
   allowClear?: boolean | { clearIcon?: any }
+  /** clearLabel 标签内容。 */
   clearLabel?: string
+  /** notFoundContent 配置项。 */
   notFoundContent?: any
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** treeDefaultExpandAll 配置项。 */
   treeDefaultExpandAll?: boolean
+  /** treeDefaultExpandedKeys 标识键集合。 */
   treeDefaultExpandedKeys?: TreeSelectValue[]
+  /** treeExpandedKeys 标识键集合。 */
   treeExpandedKeys?: TreeSelectValue[]
+  /** treeLoadedKeys 标识键集合。 */
   treeLoadedKeys?: TreeSelectValue[]
+  /** onTreeExpand 事件回调。 */
   onTreeExpand?: (keys: TreeSelectValue[]) => void
+  /** loadData 配置项。 */
   loadData?: (node: TreeSelectNormalizedNode) => Promise<any> | void
+  /** maxCount 配置项。 */
   maxCount?: number
+  /** maxTagCount 配置项。 */
   maxTagCount?: number | 'responsive'
+  /** maxTagPlaceholder 配置项。 */
   maxTagPlaceholder?: any | ((omittedValues: TreeSelectNormalizedNode[]) => any)
+  /** maxTagTextLength 配置项。 */
   maxTagTextLength?: number
+  /** listHeight 配置项。 */
   listHeight?: number
+  /** 弹出层或内容展示位置。 */
   placement?: 'bottomLeft' | 'bottomRight' | 'topLeft' | 'topRight'
+  /** popupMatchSelectWidth 配置项。 */
   popupMatchSelectWidth?: boolean | number
+  /** 组件尺寸。 */
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'medium' | 'middle' | 'large'
+  /** 组件状态。 */
   status?: 'error' | 'warning'
+  /** 组件视觉变体。 */
   variant?: 'outlined' | 'filled' | 'borderless' | 'underlined'
+  /** 前缀内容。 */
   prefix?: any
+  /** 后缀内容。 */
   suffix?: any
+  /** suffixIcon 图标内容。 */
   suffixIcon?: any
+  /** showArrow 配置项。 */
   showArrow?: boolean
+  /** switcherIcon 图标内容。 */
   switcherIcon?: any | ((context: TreeSelectSwitcherRenderContext) => any)
+  /** treeTitleRender 自定义渲染函数。 */
   treeTitleRender?: (node: TreeSelectNormalizedNode) => any
+  /** treeNodeLabelProp 配置项。 */
   treeNodeLabelProp?: string
+  /** treeLine 配置项。 */
   treeLine?: boolean | { showLeafIcon?: boolean }
+  /** tagRender 自定义渲染函数。 */
   tagRender?: (props: TreeSelectTagRenderProps) => any
+  /** 搜索文本变化时触发的回调。 */
   onSearch?: (value: string) => void
+  /** 值或状态变化时触发的回调。 */
   onChange?: (
     value:
       | TreeSelectValue
@@ -168,48 +291,81 @@ export interface TreeSelectProps {
     label: any,
     extra: TreeSelectChangeExtra,
   ) => void
+  /** 选中项时触发的回调。 */
   onSelect?: (
     value: TreeSelectValue | TreeSelectLabeledValue,
     node: TreeSelectNormalizedNode,
     extra: TreeSelectChangeExtra,
   ) => void
+  /** 取消选中项时触发的回调。 */
   onDeselect?: (
     value: TreeSelectValue | TreeSelectLabeledValue,
     node: TreeSelectNormalizedNode,
     extra: TreeSelectChangeExtra,
   ) => void
+  /** 清空时触发的回调。 */
   onClear?: (event: MouseEvent) => void
+  /** onPopupScroll 事件回调。 */
   onPopupScroll?: (event: UIEvent) => void
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** selectorClassName 附加类名。 */
   selectorClassName?: string
+  /** selectorStyle 内联样式。 */
   selectorStyle?: any
+  /** popupClassName 附加类名。 */
   popupClassName?: string
+  /** popupStyle 内联样式。 */
   popupStyle?: any
+  /** dropdownClassName 附加类名。 */
   dropdownClassName?: string
+  /** dropdownStyle 内联样式。 */
   dropdownStyle?: any
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: Record<string, any>
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: Record<string, any>
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** TreeSelectNormalizedNode 接口。 */
 export interface TreeSelectNormalizedNode {
+  /** 数据项唯一标识。 */
   key: string
+  /** 受控值。 */
   value: TreeSelectValue
+  /** valueKey 标识键。 */
   valueKey: string
+  /** 展示标签。 */
   label: any
+  /** labelText 文本内容。 */
   labelText: string
+  /** depth 配置项。 */
   depth: number
+  /** parentValueKey 标识键。 */
   parentValueKey?: string
+  /** 组件子内容。 */
   children: TreeSelectNormalizedNode[]
+  /** raw 配置项。 */
   raw: TreeSelectDataNode
+  /** 是否禁用交互。 */
   disabled: boolean
+  /** selectable 配置项。 */
   selectable: boolean
+  /** checkable 配置项。 */
   checkable: boolean
+  /** disableCheckbox 配置项。 */
   disableCheckbox: boolean
+  /** isLeaf 配置项。 */
   isLeaf: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 图标内容。 */
   icon?: any
 }
 
@@ -271,27 +427,33 @@ const defaultFieldNames: Required<TreeSelectFieldNames> = {
   pId: 'pId',
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...parts: Array<string | false | null | undefined>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** 判断 Object Record 的内部工具函数。 */
 const isObjectRecord = (value: unknown): value is Record<string, any> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+/** 判断 Tree Select Value 的内部工具函数。 */
 const isTreeSelectValue = (value: unknown): value is TreeSelectValue => {
   return typeof value === 'string' || typeof value === 'number'
 }
 
+/** 转换为 Array 的内部工具函数。 */
 const toArray = <T,>(value: T | T[] | null | undefined) => {
   if (value === undefined || value === null) return [] as T[]
   return Array.isArray(value) ? value : [value]
 }
 
+/** serialize Value 的内部工具函数。 */
 const serializeValue = (value: TreeSelectValue) => {
   return `${typeof value}:${String(value)}`
 }
 
+/** 解析 Input Value 的内部工具函数。 */
 const resolveInputValue = (candidate: unknown): TreeSelectValue | undefined => {
   if (isTreeSelectValue(candidate)) return candidate
   if (isObjectRecord(candidate) && isTreeSelectValue(candidate.value)) {
@@ -300,6 +462,7 @@ const resolveInputValue = (candidate: unknown): TreeSelectValue | undefined => {
   return undefined
 }
 
+/** 归一化 Input Values 的内部工具函数。 */
 const normalizeInputValues = (value: unknown) => {
   return toArray(value).flatMap(item => {
     const resolved = resolveInputValue(item)
@@ -307,6 +470,7 @@ const normalizeInputValues = (value: unknown) => {
   })
 }
 
+/** read Tree Field 的内部工具函数。 */
 const readTreeField = (
   node: TreeSelectDataNode,
   field: keyof Required<TreeSelectFieldNames>,
@@ -316,6 +480,7 @@ const readTreeField = (
   return node[fieldName]
 }
 
+/** 解析 Raw Node Label 的内部工具函数。 */
 const resolveRawNodeLabel = (node: TreeSelectDataNode, fieldNames?: TreeSelectFieldNames) => {
   return (
     readTreeField(node, 'label', fieldNames) ??
@@ -326,6 +491,7 @@ const resolveRawNodeLabel = (node: TreeSelectDataNode, fieldNames?: TreeSelectFi
   )
 }
 
+/** 转换为 Label Text 的内部工具函数。 */
 const toLabelText = (label: any) => {
   if (typeof label === 'string' || typeof label === 'number') {
     return String(label)
@@ -333,6 +499,7 @@ const toLabelText = (label: any) => {
   return ''
 }
 
+/** 构建 Simple Mode Tree Data 的内部工具函数。 */
 const buildSimpleModeTreeData = (
   treeData: TreeSelectDataNode[],
   treeDataSimpleMode?: boolean | TreeSelectSimpleModeConfig,
@@ -390,6 +557,7 @@ const buildSimpleModeTreeData = (
   return roots
 }
 
+/** 归一化 Tree Data 的内部工具函数。 */
 const normalizeTreeData = (
   treeData: TreeSelectDataNode[],
   fieldNames?: TreeSelectFieldNames,
@@ -449,6 +617,7 @@ const normalizeTreeData = (
   }
 }
 
+/** 读取 Subtree Check Keys 的内部工具函数。 */
 const getSubtreeCheckKeys = (node: TreeSelectNormalizedNode) => {
   const collected: string[] = []
 
@@ -463,6 +632,7 @@ const getSubtreeCheckKeys = (node: TreeSelectNormalizedNode) => {
   return collected
 }
 
+/** 读取 Descendant Check Keys 的内部工具函数。 */
 const getDescendantCheckKeys = (node: TreeSelectNormalizedNode) => {
   const collected: string[] = []
 
@@ -473,6 +643,7 @@ const getDescendantCheckKeys = (node: TreeSelectNormalizedNode) => {
   return collected
 }
 
+/** expand Checked Value Keys 的内部工具函数。 */
 const expandCheckedValueKeys = (
   inputValueKeys: string[],
   byValueKey: Record<string, TreeSelectNormalizedNode>,
@@ -504,6 +675,7 @@ const expandCheckedValueKeys = (
   return selectedKeys
 }
 
+/** derive Check State 的内部工具函数。 */
 const deriveCheckState = (
   roots: TreeSelectNormalizedNode[],
   baseSelectedKeys: Set<string>,
@@ -560,6 +732,7 @@ const deriveCheckState = (
   }
 }
 
+/** 解析 Display Checked Nodes 的内部工具函数。 */
 const resolveDisplayCheckedNodes = (
   roots: TreeSelectNormalizedNode[],
   stateMap: Record<string, TreeCheckState>,
@@ -616,6 +789,7 @@ const resolveDisplayCheckedNodes = (
   return displayNodes
 }
 
+/** 解析 Node Label Prop 的内部工具函数。 */
 const resolveNodeLabelProp = (node: TreeSelectNormalizedNode, labelProp?: string) => {
   if (labelProp && node.raw[labelProp] !== undefined) {
     return node.raw[labelProp]
@@ -623,6 +797,7 @@ const resolveNodeLabelProp = (node: TreeSelectNormalizedNode, labelProp?: string
   return node.label
 }
 
+/** 转换为 Labeled Value 的内部工具函数。 */
 const toLabeledValue = (
   node: TreeSelectNormalizedNode,
   halfChecked: boolean,
@@ -637,6 +812,7 @@ const toLabeledValue = (
   }
 }
 
+/** 构建 Emitted Value 的内部工具函数。 */
 const buildEmittedValue = (
   nodes: TreeSelectNormalizedNode[],
   multiple: boolean,
@@ -655,6 +831,7 @@ const buildEmittedValue = (
   return payload[0] ?? null
 }
 
+/** 构建 Emitted Label 的内部工具函数。 */
 const buildEmittedLabel = (
   nodes: TreeSelectNormalizedNode[],
   multiple: boolean,
@@ -664,6 +841,7 @@ const buildEmittedLabel = (
   return multiple ? labels : (labels[0] ?? null)
 }
 
+/** 解析 Search Target 的内部工具函数。 */
 const resolveSearchTarget = (
   node: TreeSelectNormalizedNode,
   propName: string,
@@ -678,10 +856,12 @@ const resolveSearchTarget = (
   return String(node.raw[propName] ?? '')
 }
 
+/** 解析 Default Search Targets 的内部工具函数。 */
 const resolveDefaultSearchTargets = (node: TreeSelectNormalizedNode, labelProp?: string) => {
   return [String(node.value ?? ''), String(resolveNodeLabelProp(node, labelProp) ?? '')]
 }
 
+/** filter Visible Nodes 的内部工具函数。 */
 const filterVisibleNodes = (
   roots: TreeSelectNormalizedNode[],
   expandedKeys: Set<string>,
@@ -740,6 +920,7 @@ const filterVisibleNodes = (
   return visibleNodes
 }
 
+/** 解析 Semantic Class Name 的内部工具函数。 */
 const resolveSemanticClassName = (classNames: Record<string, any> | undefined, key: string) => {
   const direct = classNames?.[key]
   if (typeof direct === 'string') return direct
@@ -747,6 +928,7 @@ const resolveSemanticClassName = (classNames: Record<string, any> | undefined, k
   return undefined
 }
 
+/** 解析 Semantic Style 的内部工具函数。 */
 const resolveSemanticStyle = (styles: Record<string, any> | undefined, key: string) => {
   const direct = styles?.[key]
   if (isObjectRecord(direct) && !('root' in direct)) return direct
@@ -754,6 +936,7 @@ const resolveSemanticStyle = (styles: Record<string, any> | undefined, key: stri
   return undefined
 }
 
+/** truncate Tag Label 的内部工具函数。 */
 const truncateTagLabel = (label: any, maxTagTextLength?: number) => {
   const text = typeof label === 'string' || typeof label === 'number' ? String(label) : label
   if (typeof text !== 'string' || !maxTagTextLength || text.length <= maxTagTextLength) {
@@ -762,6 +945,7 @@ const truncateTagLabel = (label: any, maxTagTextLength?: number) => {
   return `${text.slice(0, maxTagTextLength)}...`
 }
 
+/** 转换为 Display Text 的内部工具函数。 */
 const toDisplayText = (value: any) => {
   if (typeof value === 'string' || typeof value === 'number') {
     return String(value)
@@ -772,11 +956,13 @@ const toDisplayText = (value: any) => {
   return String(value)
 }
 
+/** apply Inline Style 的内部工具函数。 */
 const applyInlineStyle = (element: HTMLElement, style: any) => {
   if (!isObjectRecord(style)) return
   Object.assign(element.style, style)
 }
 
+/** Default Switcher Icon 的内部工具函数。 */
 const _DefaultSwitcherIcon: FC<{ expanded: boolean; hidden?: boolean }> = ({
   expanded,
   hidden,
@@ -803,12 +989,14 @@ const _DefaultSwitcherIcon: FC<{ expanded: boolean; hidden?: boolean }> = ({
   )
 }
 
+/** Loading Switcher Icon 的内部工具函数。 */
 const _LoadingSwitcherIcon: FC = () => {
   return (
     <span className="loading loading-spinner loading-xs text-base-content/55" aria-hidden="true" />
   )
 }
 
+/** Default Arrow Icon 的内部工具函数。 */
 const _DefaultArrowIcon: FC<{ open: boolean }> = ({ open }) => {
   return (
     <span
@@ -831,6 +1019,7 @@ const _DefaultArrowIcon: FC<{ open: boolean }> = ({ open }) => {
   )
 }
 
+/** Clear Icon 的内部工具函数。 */
 const ClearIcon: FC = () => {
   return (
     <svg viewBox="0 0 20 20" fill="none" className="block h-4 w-4">
@@ -844,6 +1033,7 @@ const ClearIcon: FC = () => {
   )
 }
 
+/** Tree Select Root 的内部工具函数。 */
 const TreeSelectRoot: FC<TreeSelectProps> = ({
   value,
   defaultValue,
@@ -2029,4 +2219,5 @@ TreeSelect.SHOW_ALL = SHOW_ALL
 TreeSelect.SHOW_PARENT = SHOW_PARENT
 TreeSelect.SHOW_CHILD = SHOW_CHILD
 
+/** 默认导出树选择组件。 */
 export default TreeSelect

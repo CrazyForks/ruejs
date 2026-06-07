@@ -7,7 +7,10 @@
 - 类型推断与时长：inferType/resolveDuration 综合 computed styles 与显式配置，得到最终过渡类型与时长（毫秒）。
 - 结束监听：whenTransitionEnds 通过事件监听并结合超时兜底，确保在最坏情况下也能执行回调。
 */
+/** 浏览器过渡结束事件类型。 */
 export type TransitionType = 'transition' | 'animation'
+
+/** Rue 过渡阶段。 */
 export type TransitionPhase = 'enter' | 'leave' | 'appear'
 
 /** 为元素添加类（支持空格分隔的多个类） */

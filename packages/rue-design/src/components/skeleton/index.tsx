@@ -1,4 +1,9 @@
 /* RUE_VAPOR_TRANSFORMED */
+/*
+Skeleton 模块概述
+- 汇总骨架屏组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import {
   h,
   onMounted,
@@ -11,6 +16,7 @@ import {
   type FC,
 } from '@rue-js/rue'
 
+/** SkeletonSize 尺寸类型。 */
 export type SkeletonSize =
   | 'xs'
   | 'sm'
@@ -23,25 +29,42 @@ export type SkeletonSize =
   | 'middle'
   | 'large'
   | number
+/** SkeletonAvatarShape 类型。 */
 export type SkeletonAvatarShape = 'circle' | 'square'
+/** SkeletonButtonShape 类型。 */
 export type SkeletonButtonShape = 'default' | 'square' | 'round' | 'circle'
+/** SkeletonWidth 类型。 */
 export type SkeletonWidth = string | number
 
+/** SkeletonClassNames 局部类名配置。 */
 export interface SkeletonClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** 头部区域内容。 */
   header?: string
+  /** section 配置项。 */
   section?: string
+  /** avatar 配置项。 */
   avatar?: string
+  /** 标题内容。 */
   title?: string
+  /** paragraph 配置项。 */
   paragraph?: string
 }
 
+/** SkeletonStyles 局部样式配置。 */
 export interface SkeletonStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** 头部区域内容。 */
   header?: Record<string, any>
+  /** section 配置项。 */
   section?: Record<string, any>
+  /** avatar 配置项。 */
   avatar?: Record<string, any>
+  /** 标题内容。 */
   title?: Record<string, any>
+  /** paragraph 配置项。 */
   paragraph?: Record<string, any>
 }
 
@@ -55,51 +78,83 @@ interface SkeletonBaseProps {
 
 type SkeletonReactiveValue<T> = T | (() => T) | { value?: T; get?: () => T }
 
+/** SkeletonAvatarProps 组件属性。 */
 export interface SkeletonAvatarProps extends SkeletonBaseProps {
+  /** 组件尺寸。 */
   size?: SkeletonSize
+  /** 组件形状。 */
   shape?: SkeletonAvatarShape
 }
 
+/** SkeletonButtonProps 组件属性。 */
 export interface SkeletonButtonProps extends SkeletonBaseProps {
+  /** 组件尺寸。 */
   size?: SkeletonSize
+  /** 组件形状。 */
   shape?: SkeletonButtonShape
+  /** block 配置项。 */
   block?: boolean
 }
 
+/** SkeletonInputProps 组件属性。 */
 export interface SkeletonInputProps extends SkeletonBaseProps {
+  /** 组件尺寸。 */
   size?: SkeletonSize
+  /** block 配置项。 */
   block?: boolean
 }
 
+/** SkeletonNodeProps 组件属性。 */
 export interface SkeletonNodeProps extends Omit<SkeletonBaseProps, 'active'> {
+  /** 是否处于激活态。 */
   active?: SkeletonReactiveValue<boolean>
+  /** 自定义渲染的宿主元素。 */
   as?: any
 }
 
+/** SkeletonImageProps 组件属性。 */
 export interface SkeletonImageProps extends SkeletonNodeProps {
+  /** aspect 配置项。 */
   aspect?: SkeletonReactiveValue<'square' | 'video'>
 }
 
+/** SkeletonTitleProps 组件属性。 */
 export interface SkeletonTitleProps extends SkeletonBaseProps {
+  /** width 配置项。 */
   width?: SkeletonWidth
 }
 
+/** SkeletonParagraphProps 组件属性。 */
 export interface SkeletonParagraphProps extends SkeletonBaseProps {
+  /** rows 配置项。 */
   rows?: number
+  /** width 配置项。 */
   width?: SkeletonWidth | SkeletonWidth[]
+  /** rowClassName 附加类名。 */
   rowClassName?: string
 }
 
+/** SkeletonProps 组件属性。 */
 export interface SkeletonProps extends SkeletonBaseProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** text 区域配置。 */
   text?: boolean
+  /** 是否展示加载态。 */
   loading?: boolean
+  /** avatar 配置项。 */
   avatar?: boolean | SkeletonAvatarProps
+  /** 标题内容。 */
   title?: boolean | SkeletonTitleProps
+  /** paragraph 配置项。 */
   paragraph?: boolean | SkeletonParagraphProps
+  /** round 配置项。 */
   round?: boolean
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: SkeletonClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: SkeletonStyles
 }
 
@@ -108,10 +163,12 @@ interface NormalizedToggleProps<T> {
   props: Partial<T>
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...values: Array<string | false | null | undefined>) => {
   return values.filter(Boolean).join(' ')
 }
 
+/** merge Style 的内部工具函数。 */
 const mergeStyle = (...values: Array<Record<string, any> | undefined>) => {
   const merged: Record<string, any> = {}
   values.forEach(value => {
@@ -122,11 +179,13 @@ const mergeStyle = (...values: Array<Record<string, any> | undefined>) => {
   return Object.keys(merged).length > 0 ? merged : undefined
 }
 
+/** 解析 Dimension 的内部工具函数。 */
 const resolveDimension = (value?: SkeletonWidth) => {
   if (value == null) return undefined
   return typeof value === 'number' ? `${value}px` : value
 }
 
+/** 归一化 Size 的内部工具函数。 */
 const normalizeSize = (size?: SkeletonSize): Exclude<SkeletonSize, number> | number => {
   switch (size) {
     case 'small':
@@ -142,6 +201,7 @@ const normalizeSize = (size?: SkeletonSize): Exclude<SkeletonSize, number> | num
   }
 }
 
+/** 归一化 Toggle Props 的内部工具函数。 */
 const normalizeToggleProps = <T extends Record<string, any>>(
   value: boolean | T | undefined,
   defaultEnabled: boolean,
@@ -155,6 +215,7 @@ const normalizeToggleProps = <T extends Record<string, any>>(
   return { enabled: value === true || defaultEnabled, props: {} } as NormalizedToggleProps<T>
 }
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -162,15 +223,18 @@ const toChildArray = (children: any): any[] => {
   return children == null || typeof children === 'boolean' ? [] : [children]
 }
 
+/** clone Renderable Children 的内部工具函数。 */
 const cloneRenderableChildren = (children: unknown): unknown =>
   Array.isArray(children) ? children.map(child => cloneRenderableChildren(child)) : children
 
+/** snapshot Skeleton Node Props 的内部工具函数。 */
 const snapshotSkeletonNodeProps = <T extends SkeletonNodeProps>(props: T): T =>
   ({
     ...(props as Record<string, unknown>),
     children: cloneRenderableChildren(props.children),
   }) as unknown as T
 
+/** 解析 Reactive Value 的内部工具函数。 */
 const resolveReactiveValue = <T,>(value: SkeletonReactiveValue<T> | undefined): T | undefined => {
   if (value == null) {
     return undefined
@@ -190,15 +254,18 @@ const resolveReactiveValue = <T,>(value: SkeletonReactiveValue<T> | undefined): 
   return value as T
 }
 
+/** 渲染 Element 的内部工具函数。 */
 const renderElement = (as: any, props: Record<string, any>, children?: any) => {
   const nextChildren = toChildArray(children)
   return h(as as any, props, ...nextChildren)
 }
 
+/** 构建 Primitive Class Name 的内部工具函数。 */
 const buildPrimitiveClassName = (className?: string, text?: boolean, active?: boolean) => {
   return mergeClassName('skeleton', text && 'skeleton-text', active && 'animate-pulse', className)
 }
 
+/** 构建 Avatar Size 的内部工具函数。 */
 const buildAvatarSize = (size?: SkeletonSize) => {
   const normalized = normalizeSize(size)
   if (typeof normalized === 'number') {
@@ -225,6 +292,7 @@ const buildAvatarSize = (size?: SkeletonSize) => {
   }
 }
 
+/** 构建 Control Height 的内部工具函数。 */
 const buildControlHeight = (size?: SkeletonSize) => {
   const normalized = normalizeSize(size)
   if (typeof normalized === 'number') {
@@ -250,6 +318,7 @@ const buildControlHeight = (size?: SkeletonSize) => {
   }
 }
 
+/** 渲染 Skeleton Node View 的内部工具函数。 */
 const renderSkeletonNodeView = ({
   as = 'div',
   active,
@@ -279,6 +348,7 @@ const renderSkeletonNodeView = ({
   )
 }
 
+/** 构建 Skeleton Node Class Name 的内部工具函数。 */
 const buildSkeletonNodeClassName = (className?: string, active?: boolean) =>
   buildPrimitiveClassName(
     mergeClassName(
@@ -289,6 +359,7 @@ const buildSkeletonNodeClassName = (className?: string, active?: boolean) =>
     active,
   )
 
+/** 构建 Skeleton Image Class Name 的内部工具函数。 */
 const buildSkeletonImageClassName = (
   className?: string,
   aspect: 'square' | 'video' = 'video',
@@ -299,6 +370,7 @@ const buildSkeletonImageClassName = (
     active,
   )
 
+/** 读取 Avatar Basic Props 的内部工具函数。 */
 const getAvatarBasicProps = (
   hasTitle: boolean,
   hasParagraph: boolean,
@@ -309,6 +381,7 @@ const getAvatarBasicProps = (
   return { size: 'lg', shape: 'circle' }
 }
 
+/** 读取 Title Basic Props 的内部工具函数。 */
 const getTitleBasicProps = (
   hasAvatar: boolean,
   hasParagraph: boolean,
@@ -322,6 +395,7 @@ const getTitleBasicProps = (
   return {}
 }
 
+/** 读取 Paragraph Basic Props 的内部工具函数。 */
 const getParagraphBasicProps = (
   hasAvatar: boolean,
   hasTitle: boolean,
@@ -332,6 +406,7 @@ const getParagraphBasicProps = (
   }
 }
 
+/** Primitive Skeleton 的内部工具函数。 */
 const PrimitiveSkeleton: FC<SkeletonProps> = ({
   as = 'div',
   text,
@@ -360,6 +435,7 @@ const PrimitiveSkeleton: FC<SkeletonProps> = ({
   )
 }
 
+/** Skeleton Avatar 的内部工具函数。 */
 const SkeletonAvatar: FC<SkeletonAvatarProps> = ({
   active,
   className,
@@ -386,6 +462,7 @@ const SkeletonAvatar: FC<SkeletonAvatarProps> = ({
   )
 }
 
+/** Skeleton Button 的内部工具函数。 */
 const SkeletonButton: FC<SkeletonButtonProps> = ({
   active,
   className,
@@ -419,6 +496,7 @@ const SkeletonButton: FC<SkeletonButtonProps> = ({
   )
 }
 
+/** Skeleton Input 的内部工具函数。 */
 const SkeletonInput: FC<SkeletonInputProps> = ({
   active,
   className,
@@ -441,6 +519,7 @@ const SkeletonInput: FC<SkeletonInputProps> = ({
   )
 }
 
+/** Skeleton Node 的内部工具函数。 */
 const SkeletonNode: FC<SkeletonNodeProps> = ({ ...props }) => {
   const ctx = useSetup(() => ({
     container: null as HTMLElement | null,
@@ -541,6 +620,7 @@ const SkeletonNode: FC<SkeletonNodeProps> = ({ ...props }) => {
   })
 }
 
+/** 渲染 Image Placeholder Icon 的内部工具函数。 */
 const renderImagePlaceholderIcon = () =>
   h(
     'svg',
@@ -550,6 +630,7 @@ const renderImagePlaceholderIcon = () =>
     }),
   )
 
+/** 渲染 Skeleton Image View 的内部工具函数。 */
 const renderSkeletonImageView = ({
   as = 'div',
   active,
@@ -575,6 +656,7 @@ const renderSkeletonImageView = ({
   )
 }
 
+/** Skeleton Image 的内部工具函数。 */
 const SkeletonImage: FC<SkeletonImageProps> = ({ ...props }) => {
   const ctx = useSetup(() => ({
     container: null as HTMLElement | null,
@@ -680,6 +762,7 @@ const SkeletonImage: FC<SkeletonImageProps> = ({ ...props }) => {
   })
 }
 
+/** 渲染 Title 的内部工具函数。 */
 const renderTitle = (
   props: Partial<SkeletonTitleProps>,
   active?: boolean,
@@ -701,6 +784,7 @@ const renderTitle = (
   )
 }
 
+/** 解析 Paragraph Row Width 的内部工具函数。 */
 const resolveParagraphRowWidth = (
   width: SkeletonParagraphProps['width'],
   index: number,
@@ -716,6 +800,7 @@ const resolveParagraphRowWidth = (
   return undefined
 }
 
+/** 渲染 Paragraph 的内部工具函数。 */
 const renderParagraph = (
   props: Partial<SkeletonParagraphProps>,
   active?: boolean,
@@ -745,6 +830,7 @@ const renderParagraph = (
   )
 }
 
+/** Skeleton Root 的内部工具函数。 */
 const SkeletonRoot: FC<SkeletonProps> = props => {
   const {
     loading,
@@ -854,4 +940,5 @@ const Skeleton: SkeletonCompound = Object.assign(SkeletonRoot, {
   Node: SkeletonNode,
 })
 
+/** 默认导出骨架屏组件。 */
 export default Skeleton

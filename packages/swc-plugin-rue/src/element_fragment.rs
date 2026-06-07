@@ -14,6 +14,7 @@ JSX 片段子节点编译：
 /// - 表达式容器：若为 `props.children` 则原样作为槽值；否则改写为可挂载槽值表达式
 /// - 嵌套 JSX/Fragment：递归构建
 ///   生成代码参考：`tests/spec12.rs`、`tests/spec14.rs`
+///
 /// 设计说明：片段根使用 `DocumentFragment`，在插入子节点时不会引入额外包裹元素，保持与 JSX 语义一致。
 pub fn emit_fragment_children(
     vt: &mut crate::vapor::VaporTransform,
@@ -30,12 +31,7 @@ pub fn emit_fragment_children(
                 JSXExpr::JSXEmptyExpr(_) => {}
                 JSXExpr::Expr(expr) => {
                     let inner_top = crate::utils::unwrap_expr(expr.as_ref());
-                    let is_children = if let Expr::Member(m) = inner_top {
-                        matches!((&*m.obj, &m.prop), (Expr::Ident(id), MemberProp::Ident(pi))
-                            if id.sym.as_ref() == "props" && pi.sym.as_ref() == "children")
-                    } else {
-                        false
-                    };
+                    let is_children = crate::utils::is_children_member_expr(inner_top);
 
                     if !is_children {
                         if let Expr::Call(call) = inner_top {

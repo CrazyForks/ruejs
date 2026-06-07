@@ -6,82 +6,137 @@ Footer 组件概述
 */
 import type { FC } from '@rue-js/rue'
 
+/** FooterDirection 位置或方向类型。 */
 export type FooterDirection = 'vertical' | 'horizontal'
 
+/** FooterLinkProps 组件属性。 */
 export interface FooterLinkProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 主体内容。 */
   content?: any
+  /** 链接地址。 */
   href?: string
+  /** 链接或定位目标。 */
   target?: string
+  /** 链接 rel 属性。 */
   rel?: string
+  /** hover 配置项。 */
   hover?: boolean
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FooterItem 数据项结构。 */
 export interface FooterItem extends Omit<FooterLinkProps, 'content'> {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 展示标签。 */
   label?: any
+  /** 主体内容。 */
   content?: any
 }
 
+/** FooterTitleProps 组件属性。 */
 export interface FooterTitleProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 主体内容。 */
   content?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FooterBrandProps 组件属性。 */
 export interface FooterBrandProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 主体内容。 */
   content?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FooterSectionProps 组件属性。 */
 export interface FooterSectionProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 标题内容。 */
   title?: any
+  /** titleClassName 附加类名。 */
   titleClassName?: string
+  /** 主体内容。 */
   content?: any
+  /** 数据驱动渲染项。 */
   items?: ReadonlyArray<FooterItem | any>
+  /** inline 配置项。 */
   inline?: boolean
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** FooterSection 接口。 */
 export interface FooterSection extends Omit<FooterSectionProps, 'content'> {
+  /** 数据项唯一标识。 */
   key?: string | number
+  /** 主体内容。 */
   content?: any
 }
 
+/** FooterProps 组件属性。 */
 export interface FooterProps {
+  /** 自定义渲染的宿主元素。 */
   as?: any
+  /** 布局方向。 */
   direction?: FooterDirection
+  /** center 配置项。 */
   center?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** brand 配置项。 */
   brand?: any
+  /** sections 配置项。 */
   sections?: ReadonlyArray<FooterSection>
+  /** wrap 配置项。 */
   wrap?: boolean
+  /** bordered 配置项。 */
   bordered?: boolean
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...values: Array<string | undefined | false>) =>
   values.filter(Boolean).join(' ')
 
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value == null) return false
   if (Array.isArray(value)) return value.some(item => hasRenderableContent(item))
   return true
 }
 
+/** Title 的内部工具函数。 */
 const Title: FC<FooterTitleProps> = ({ as = 'h6', className, children, content, ...rest }) => {
   const Component = as as any
   return (
@@ -91,6 +146,7 @@ const Title: FC<FooterTitleProps> = ({ as = 'h6', className, children, content, 
   )
 }
 
+/** Link 的内部工具函数。 */
 const Link: FC<FooterLinkProps> = ({
   as,
   className,
@@ -138,6 +194,7 @@ const Link: FC<FooterLinkProps> = ({
   )
 }
 
+/** 判断 Footer Item Config 的内部工具函数。 */
 const isFooterItemConfig = (value: any): value is FooterItem => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   return (
@@ -153,6 +210,7 @@ const isFooterItemConfig = (value: any): value is FooterItem => {
   )
 }
 
+/** 渲染 Footer Item 的内部工具函数。 */
 const renderFooterItem = (item: FooterItem | any, index: number) => {
   if (!hasRenderableContent(item)) return null
 
@@ -168,6 +226,7 @@ const renderFooterItem = (item: FooterItem | any, index: number) => {
   return <Link key={`item-${index}`}>{item}</Link>
 }
 
+/** Brand 的内部工具函数。 */
 const Brand: FC<FooterBrandProps> = ({ as = 'aside', className, children, content, ...rest }) => {
   const Component = as as any
   return (
@@ -177,6 +236,7 @@ const Brand: FC<FooterBrandProps> = ({ as = 'aside', className, children, conten
   )
 }
 
+/** Section 的内部工具函数。 */
 const Section: FC<FooterSectionProps> = ({
   as = 'nav',
   className,
@@ -212,6 +272,7 @@ const Section: FC<FooterSectionProps> = ({
   )
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<FooterProps> = ({
   as = 'footer',
   direction,
@@ -269,4 +330,5 @@ const Footer: FooterCompound = Object.assign(Root, {
   Link,
 })
 
+/** 默认导出页脚组件。 */
 export default Footer

@@ -20,6 +20,7 @@ use swc_core::ecma::ast::*;
 /// - `is_props_member_expr`：识别 `props.xxx`，用于 children/slot 的特殊处理。
 /// - `is_static_empty_like`/`is_static_text_literal`：静态空值与文本字面量判定，优化无需 watch 的一次性设置路径。
 /// - `get_static_text_literal_expr`：数字转字符串以保持 textContent 的一致类型。
+///
 /// 去掉表达式外层的括号与 TS 类型断言，获得真实表达式
 pub fn unwrap_expr(e: &Expr) -> &Expr {
     let mut x = e;
@@ -32,6 +33,18 @@ pub fn unwrap_expr(e: &Expr) -> &Expr {
                 x = &*a.expr;
             }
             Expr::TsTypeAssertion(a) => {
+                x = &*a.expr;
+            }
+            Expr::TsConstAssertion(a) => {
+                x = &*a.expr;
+            }
+            Expr::TsNonNull(a) => {
+                x = &*a.expr;
+            }
+            Expr::TsInstantiation(a) => {
+                x = &*a.expr;
+            }
+            Expr::TsSatisfies(a) => {
                 x = &*a.expr;
             }
             _ => break,
@@ -249,116 +262,5 @@ pub fn component_has_no_dynamic_props_excluding_children(el: &JSXElement) -> boo
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Arc;
-    use swc_core::common::{FileName, SourceMap};
-    use swc_ecma_parser::{Parser, StringInput, Syntax, TsSyntax};
-
-    fn parse_expr(src: &str, tsx: bool) -> Expr {
-        let cm = Arc::new(SourceMap::default());
-        let fm =
-            cm.new_source_file(FileName::Custom("utils-test.tsx".into()).into(), src.to_string());
-        let mut parser = Parser::new(
-            Syntax::Typescript(TsSyntax { tsx, ..Default::default() }),
-            StringInput::from(&*fm),
-            None,
-        );
-        *parser.parse_expr().expect("parse expr")
-    }
-
-    fn parse_jsx_element(src: &str) -> JSXElement {
-        match parse_expr(src, true) {
-            Expr::JSXElement(el) => *el,
-            other => panic!("expected JSXElement, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn unwraps_ts_wrappers_and_detects_component_like_elements() {
-        let paren_expr = parse_expr("(((foo)))", false);
-        assert!(matches!(unwrap_expr(&paren_expr), Expr::Ident(id) if id.sym.as_ref() == "foo"));
-
-        let as_expr = parse_expr("foo as number", false);
-        assert!(matches!(unwrap_expr(&as_expr), Expr::Ident(id) if id.sym.as_ref() == "foo"));
-
-        let type_assert_expr = parse_expr("<number>foo", false);
-        assert!(
-            matches!(unwrap_expr(&type_assert_expr), Expr::Ident(id) if id.sym.as_ref() == "foo")
-        );
-
-        assert!(is_component(&parse_jsx_element("<Dialog />").opening.name));
-        assert!(!is_component(&parse_jsx_element("<dialog />").opening.name));
-        assert!(is_component(&parse_jsx_element("<Dialog.Header />").opening.name));
-        assert!(is_builtin_fragment_element(&parse_jsx_element("<Fragment />")));
-        assert!(is_transition_group_component(&parse_jsx_element("<TransitionGroup />")));
-        assert!(is_transition_group_component(&parse_jsx_element("<UI.TransitionGroup />")));
-        assert!(!is_transition_group_component(&parse_jsx_element("<UI.Panel />")));
-    }
-
-    #[test]
-    fn detects_children_members_and_static_literal_shapes() {
-        assert!(is_children_member_expr(&parse_expr("props.children", false)));
-        assert!(is_children_member_expr(&parse_expr("ctx.children", false)));
-        assert!(!is_children_member_expr(&parse_expr("props['children']", false)));
-
-        assert!(is_static_empty_like(&parse_expr("null", false)));
-        assert!(is_static_empty_like(&parse_expr("false", false)));
-        assert!(is_static_empty_like(&parse_expr("undefined", false)));
-        assert!(is_static_empty_like(&parse_expr("void 0", false)));
-        assert!(!is_static_empty_like(&parse_expr("1", false)));
-
-        assert!(is_static_text_literal(&parse_expr("'hello'", false)));
-        assert!(is_static_text_literal(&parse_expr("42", false)));
-        assert!(!is_static_text_literal(&parse_expr("true", false)));
-
-        let str_expr =
-            get_static_text_literal_expr(&parse_expr("'hello'", false)).expect("string lit");
-        assert!(
-            matches!(str_expr, Expr::Lit(Lit::Str(s)) if s.value.as_str().unwrap_or("") == "hello")
-        );
-
-        let number_expr =
-            get_static_text_literal_expr(&parse_expr("42", false)).expect("number lit");
-        assert!(
-            matches!(number_expr, Expr::Lit(Lit::Str(s)) if s.value.as_str().unwrap_or("") == "42")
-        );
-    }
-
-    #[test]
-    fn detects_static_component_shortcuts() {
-        assert!(is_static_component_without_props(&parse_jsx_element("<Card />")));
-        assert!(!is_static_component_without_props(&parse_jsx_element("<Card title=\"x\" />")));
-        assert!(!is_static_component_without_props(&parse_jsx_element("<Card>Child</Card>")));
-        assert!(!is_static_component_without_props(&parse_jsx_element("<div />")));
-
-        assert!(is_static_component_children_ident(&parse_jsx_element("<Card children={slot} />")));
-        assert!(!is_static_component_children_ident(&parse_jsx_element(
-            "<Card children=\"slot\" />"
-        )));
-        assert!(!is_static_component_children_ident(&parse_jsx_element(
-            "<Card children={slot} extra=\"x\" />"
-        )));
-        assert!(!is_static_component_children_ident(&parse_jsx_element("<div children={slot} />")));
-    }
-
-    #[test]
-    fn distinguishes_dynamic_component_props_from_allowed_static_and_callback_forms() {
-        let static_component = parse_jsx_element(
-            "<Card title=\"ok\" count={1} active={true} onClick={handleClick} footerCallback={handleFooter} renderFn={() => null} children={slot} />",
-        );
-        assert!(component_has_no_dynamic_props_excluding_children(&static_component));
-
-        let dynamic_ident_prop = parse_jsx_element("<Card data={store} />");
-        assert!(!component_has_no_dynamic_props_excluding_children(&dynamic_ident_prop));
-
-        let spread_component = parse_jsx_element("<Card {...props} title=\"ok\" />");
-        assert!(!component_has_no_dynamic_props_excluding_children(&spread_component));
-
-        let dynamic_expr_component = parse_jsx_element("<Card title={label + suffix} />");
-        assert!(!component_has_no_dynamic_props_excluding_children(&dynamic_expr_component));
-
-        let native_el = parse_jsx_element("<div title=\"ok\" />");
-        assert!(!component_has_no_dynamic_props_excluding_children(&native_el));
-    }
-}
+#[path = "utils_tests.rs"]
+mod tests;

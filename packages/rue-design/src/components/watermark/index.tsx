@@ -6,35 +6,61 @@ Watermark 组件概述
 - inherit 通过 CSS 自定义属性把当前水印图案继续传递给后代 Watermark；子级未显式传入 content/image 时，可直接复用上层图案。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, useRef, watch } from '@rue-js/rue'
+import { onMounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** WatermarkFont 接口。 */
 export interface WatermarkFont {
+  /** 组件语义色。 */
   color?: string
+  /** fontSize 尺寸。 */
   fontSize?: number | string
+  /** fontWeight 配置项。 */
   fontWeight?: 'normal' | 'lighter' | 'bold' | 'bolder' | number
+  /** fontStyle 内联样式。 */
   fontStyle?: 'none' | 'normal' | 'italic' | 'oblique'
+  /** fontFamily 配置项。 */
   fontFamily?: string
+  /** textAlign 配置项。 */
   textAlign?: 'left' | 'right' | 'center' | 'start' | 'end'
 }
 
+/** WatermarkProps 组件属性。 */
 export interface WatermarkProps {
+  /** zIndex 配置项。 */
   zIndex?: number
+  /** rotate 配置项。 */
   rotate?: number
+  /** width 配置项。 */
   width?: number
+  /** height 配置项。 */
   height?: number
+  /** image 区域配置。 */
   image?: string
+  /** 主体内容。 */
   content?: string | string[]
+  /** font 配置项。 */
   font?: WatermarkFont
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** overlayClassName 附加类名。 */
   overlayClassName?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** overlayStyle 内联样式。 */
   overlayStyle?: any
+  /** 元素间距。 */
   gap?: [number, number]
+  /** offset 配置项。 */
   offset?: [number, number]
+  /** opacity 配置项。 */
   opacity?: number
+  /** 组件子内容。 */
   children?: any
+  /** inherit 配置项。 */
   inherit?: boolean
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -53,22 +79,43 @@ interface MarkDimensions {
   fontSizePx: number
 }
 
+interface ParsedColor {
+  r: number
+  g: number
+  b: number
+  a: number
+}
+
+/** DEFAULT_GAP_X 内部常量。 */
 const DEFAULT_GAP_X = 100
+/** DEFAULT_GAP_Y 内部常量。 */
 const DEFAULT_GAP_Y = 100
+/** DEFAULT_Z_INDEX 内部常量。 */
 const DEFAULT_Z_INDEX = 9
+/** DEFAULT_OPACITY 内部常量。 */
 const DEFAULT_OPACITY = 1
-const DEFAULT_TEXT_COLOR = 'rgba(15, 23, 42, 0.14)'
+/** DEFAULT_DARK_TEXT_COLOR 内部常量。 */
+const DEFAULT_DARK_TEXT_COLOR = 'rgba(15, 23, 42, 0.2)'
+/** DEFAULT_LIGHT_TEXT_COLOR 内部常量。 */
+const DEFAULT_LIGHT_TEXT_COLOR = 'rgba(248, 250, 252, 0.28)'
+/** DEFAULT_FONT_FAMILY 内部常量。 */
 const DEFAULT_FONT_FAMILY =
   'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+/** DEFAULT_IMAGE_WIDTH 内部常量。 */
 const DEFAULT_IMAGE_WIDTH = 120
+/** DEFAULT_IMAGE_HEIGHT 内部常量。 */
 const DEFAULT_IMAGE_HEIGHT = 64
+/** MIN_MARK_WIDTH 内部常量。 */
 const MIN_MARK_WIDTH = 32
+/** MIN_MARK_HEIGHT 内部常量。 */
 const MIN_MARK_HEIGHT = 24
 
+/** join Class Name 的内部工具函数。 */
 const joinClassName = (...classNames: Array<string | undefined | null | false>) => {
   return classNames.filter(Boolean).join(' ')
 }
 
+/** assign Forwarded Ref 的内部工具函数。 */
 const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   if (typeof forwardedRef === 'function') {
     forwardedRef(element)
@@ -77,11 +124,13 @@ const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   }
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (property: string) => {
   if (property.startsWith('--')) return property
   return property.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 }
 
+/** serialize Style Record 的内部工具函数。 */
 const serializeStyleRecord = (style: Record<string, any>) => {
   return Object.entries(style)
     .filter(([, value]) => value !== undefined)
@@ -89,6 +138,7 @@ const serializeStyleRecord = (style: Record<string, any>) => {
     .join('; ')
 }
 
+/** merge Style Input 的内部工具函数。 */
 const mergeStyleInput = (
   baseStyle: Record<string, any>,
   extraStyle?: Record<string, any> | string,
@@ -105,10 +155,12 @@ const mergeStyleInput = (
   return `${serializedBaseStyle}; ${serializedExtraStyle}`
 }
 
+/** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => {
   return Math.min(max, Math.max(min, value))
 }
 
+/** escape Xml 的内部工具函数。 */
 const escapeXml = (value: string) => {
   return value
     .replace(/&/g, '&amp;')
@@ -118,6 +170,209 @@ const escapeXml = (value: string) => {
     .replace(/'/g, '&apos;')
 }
 
+/** 解析 CSS Alpha 的内部工具函数。 */
+const parseCssAlpha = (value?: string) => {
+  if (!value) return 1
+
+  const normalizedValue = value.trim()
+  if (!normalizedValue || normalizedValue === 'none') return 1
+
+  const numericValue = Number.parseFloat(normalizedValue)
+  if (!Number.isFinite(numericValue)) return 1
+
+  return normalizedValue.endsWith('%') ? clamp(numericValue / 100, 0, 1) : clamp(numericValue, 0, 1)
+}
+
+/** 解析 CSS RGB Channel 的内部工具函数。 */
+const parseCssRgbChannel = (value: string) => {
+  const normalizedValue = value.trim()
+  if (normalizedValue === 'none') return 0
+
+  const numericValue = Number.parseFloat(normalizedValue)
+  if (!Number.isFinite(numericValue)) return 0
+
+  return normalizedValue.endsWith('%')
+    ? clamp(Math.round((numericValue / 100) * 255), 0, 255)
+    : clamp(Math.round(numericValue), 0, 255)
+}
+
+/** 解析 CSS Number 或 Percentage 的内部工具函数。 */
+const parseCssNumberOrPercentage = (value: string, percentageBase = 1) => {
+  const normalizedValue = value.trim()
+  if (normalizedValue === 'none') return 0
+
+  const numericValue = Number.parseFloat(normalizedValue)
+  if (!Number.isFinite(numericValue)) return 0
+
+  return normalizedValue.endsWith('%') ? (numericValue / 100) * percentageBase : numericValue
+}
+
+/** 解析 CSS Hue 的内部工具函数。 */
+const parseCssHue = (value?: string) => {
+  if (!value) return 0
+
+  const normalizedValue = value.trim()
+  if (!normalizedValue || normalizedValue === 'none') return 0
+
+  const numericValue = Number.parseFloat(normalizedValue)
+  if (!Number.isFinite(numericValue)) return 0
+
+  if (normalizedValue.endsWith('rad')) {
+    return (numericValue * 180) / Math.PI
+  }
+  if (normalizedValue.endsWith('grad')) {
+    return numericValue * 0.9
+  }
+  if (normalizedValue.endsWith('turn')) {
+    return numericValue * 360
+  }
+
+  return numericValue
+}
+
+/** 转换 Oklch 为 RGB 的内部工具函数。 */
+const convertOklchToRgb = (lightness: number, chroma: number, hue: number, alpha: number) => {
+  const hueRadians = (hue * Math.PI) / 180
+  const oklabA = chroma * Math.cos(hueRadians)
+  const oklabB = chroma * Math.sin(hueRadians)
+
+  const lPrime = lightness + 0.3963377774 * oklabA + 0.2158037573 * oklabB
+  const mPrime = lightness - 0.1055613458 * oklabA - 0.0638541728 * oklabB
+  const sPrime = lightness - 0.0894841775 * oklabA - 1.291485548 * oklabB
+
+  const l = lPrime ** 3
+  const m = mPrime ** 3
+  const s = sPrime ** 3
+
+  const convertLinearChannelToRgb = (channel: number) => {
+    const srgbChannel =
+      channel <= 0.0031308 ? 12.92 * channel : 1.055 * channel ** (1 / 2.4) - 0.055
+    return clamp(Math.round(srgbChannel * 255), 0, 255)
+  }
+
+  return {
+    r: convertLinearChannelToRgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    g: convertLinearChannelToRgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    b: convertLinearChannelToRgb(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
+    a: alpha,
+  }
+}
+
+/** 解析 CSS Color 的内部工具函数。 */
+const parseCssColor = (value?: string | null): ParsedColor | null => {
+  if (!value) return null
+
+  const normalizedValue = value.trim().toLowerCase()
+  if (!normalizedValue || normalizedValue === 'transparent') {
+    return null
+  }
+
+  const rgbMatch = normalizedValue.match(/^rgba?\((.+)\)$/)
+  if (rgbMatch) {
+    const [channelsPart, slashAlpha] = rgbMatch[1].split(/\s*\/\s*/)
+    const usesCommas = channelsPart.includes(',')
+    const channelParts = usesCommas
+      ? channelsPart.split(',').map(part => part.trim())
+      : channelsPart.trim().split(/\s+/)
+    const alphaPart = slashAlpha ?? (usesCommas ? channelParts[3] : undefined)
+
+    if (channelParts.length >= 3) {
+      return {
+        r: parseCssRgbChannel(channelParts[0]),
+        g: parseCssRgbChannel(channelParts[1]),
+        b: parseCssRgbChannel(channelParts[2]),
+        a: parseCssAlpha(alphaPart),
+      }
+    }
+  }
+
+  const oklchMatch = normalizedValue.match(/^oklch\((.+)\)$/)
+  if (oklchMatch) {
+    const [channelsPart, slashAlpha] = oklchMatch[1].split(/\s*\/\s*/)
+    const channelParts = channelsPart.trim().split(/\s+/)
+
+    if (channelParts.length >= 3) {
+      const lightness = clamp(parseCssNumberOrPercentage(channelParts[0]), 0, 1)
+      const chroma = Math.max(parseCssNumberOrPercentage(channelParts[1], 0.4), 0)
+      const hue = parseCssHue(channelParts[2])
+
+      return convertOklchToRgb(lightness, chroma, hue, parseCssAlpha(slashAlpha))
+    }
+  }
+
+  const hexMatch = normalizedValue.match(/^#([0-9a-f]{3,8})$/)
+  if (!hexMatch) {
+    return null
+  }
+
+  const hex = hexMatch[1]
+  if (hex.length === 3 || hex.length === 4) {
+    return {
+      r: Number.parseInt(hex[0] + hex[0], 16),
+      g: Number.parseInt(hex[1] + hex[1], 16),
+      b: Number.parseInt(hex[2] + hex[2], 16),
+      a: hex.length === 4 ? Number.parseInt(hex[3] + hex[3], 16) / 255 : 1,
+    }
+  }
+
+  if (hex.length === 6 || hex.length === 8) {
+    return {
+      r: Number.parseInt(hex.slice(0, 2), 16),
+      g: Number.parseInt(hex.slice(2, 4), 16),
+      b: Number.parseInt(hex.slice(4, 6), 16),
+      a: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1,
+    }
+  }
+
+  return null
+}
+
+/** 计算相对亮度的内部工具函数。 */
+const getRelativeLuminance = ({ r, g, b }: ParsedColor) => {
+  const normalizeChannel = (channel: number) => {
+    const normalizedChannel = channel / 255
+    if (normalizedChannel <= 0.03928) {
+      return normalizedChannel / 12.92
+    }
+
+    return ((normalizedChannel + 0.055) / 1.055) ** 2.4
+  }
+
+  const red = normalizeChannel(r)
+  const green = normalizeChannel(g)
+  const blue = normalizeChannel(b)
+  return red * 0.2126 + green * 0.7152 + blue * 0.0722
+}
+
+/** 解析默认 Text Color 的内部工具函数。 */
+const resolveDefaultTextColor = (element: HTMLElement | null) => {
+  if (!element || typeof window === 'undefined') {
+    return DEFAULT_DARK_TEXT_COLOR
+  }
+
+  let currentElement: HTMLElement | null = element
+  while (currentElement) {
+    const backgroundColor = parseCssColor(window.getComputedStyle(currentElement).backgroundColor)
+    if (backgroundColor && backgroundColor.a > 0.01) {
+      return getRelativeLuminance(backgroundColor) < 0.35
+        ? DEFAULT_LIGHT_TEXT_COLOR
+        : DEFAULT_DARK_TEXT_COLOR
+    }
+
+    currentElement = currentElement.parentElement
+  }
+
+  const textColor = parseCssColor(window.getComputedStyle(element).color)
+  if (textColor) {
+    return getRelativeLuminance(textColor) > 0.6
+      ? DEFAULT_LIGHT_TEXT_COLOR
+      : DEFAULT_DARK_TEXT_COLOR
+  }
+
+  return DEFAULT_DARK_TEXT_COLOR
+}
+
+/** 归一化 Font Size 的内部工具函数。 */
 const normalizeFontSize = (fontSize?: number | string) => {
   if (typeof fontSize === 'number' && Number.isFinite(fontSize)) {
     return fontSize
@@ -136,6 +391,7 @@ const normalizeFontSize = (fontSize?: number | string) => {
   return 16
 }
 
+/** 归一化 Content 的内部工具函数。 */
 const normalizeContent = (content?: string | string[]) => {
   if (content == null) {
     return [] as string[]
@@ -145,10 +401,12 @@ const normalizeContent = (content?: string | string[]) => {
   return items.flatMap(item => String(item).split(/\r?\n/))
 }
 
+/** 判断是否存在 Meaningful Content 的内部工具函数。 */
 const hasMeaningfulContent = (lines: string[]) => {
   return lines.some(line => line.trim().length > 0)
 }
 
+/** measure Text Block 的内部工具函数。 */
 const measureTextBlock = (
   lines: string[],
   font: WatermarkFont,
@@ -214,6 +472,7 @@ const measureTextBlock = (
   }
 }
 
+/** 解析 Text Anchor 的内部工具函数。 */
 const resolveTextAnchor = (textAlign?: WatermarkFont['textAlign']) => {
   switch (textAlign) {
     case 'left':
@@ -227,6 +486,7 @@ const resolveTextAnchor = (textAlign?: WatermarkFont['textAlign']) => {
   }
 }
 
+/** 构建 Overlay Placement 的内部工具函数。 */
 const buildOverlayPlacement = (
   gapX: number,
   gapY: number,
@@ -266,6 +526,7 @@ const buildOverlayPlacement = (
   }
 }
 
+/** 构建 Pattern Url 的内部工具函数。 */
 const buildPatternUrl = ({
   image,
   lines,
@@ -292,7 +553,7 @@ const buildPatternUrl = ({
   const translateY = gapY / 2
   const rotateCx = translateX + markWidth / 2
   const rotateCy = translateY + markHeight / 2
-  const color = font.color ?? DEFAULT_TEXT_COLOR
+  const color = font.color ?? DEFAULT_DARK_TEXT_COLOR
   const fontWeight = font.fontWeight ?? 'normal'
   const fontStyle = font.fontStyle && font.fontStyle !== 'none' ? font.fontStyle : 'normal'
   const fontFamily = font.fontFamily ?? DEFAULT_FONT_FAMILY
@@ -325,6 +586,7 @@ const buildPatternUrl = ({
   }
 }
 
+/** Watermark 的内部工具函数。 */
 const Watermark: FC<WatermarkProps> = ({
   zIndex,
   rotate = -22,
@@ -348,6 +610,7 @@ const Watermark: FC<WatermarkProps> = ({
   const forwardedRef = rest.ref
   const rootRef = useRef<HTMLElement | null>(null)
   const overlayRef = useRef<HTMLElement | null>(null)
+  const autoTextColor = ref<string | undefined>(undefined)
   if ('ref' in rest) {
     delete rest.ref
   }
@@ -355,73 +618,111 @@ const Watermark: FC<WatermarkProps> = ({
   const lines = normalizeContent(content)
   const [gapX = DEFAULT_GAP_X, gapY = DEFAULT_GAP_Y] = gap
   const hasLocalPattern = !!image || hasMeaningfulContent(lines)
-  const dimensions = measureTextBlock(lines, font, width, height, image)
-  const placement = buildOverlayPlacement(gapX, gapY, offset)
-  const nextOpacity = clamp(opacity, 0, 1)
-  const pattern = hasLocalPattern
-    ? buildPatternUrl({
-        image,
-        lines: lines.length ? lines : [''],
-        rotate,
-        font,
-        gapX,
-        gapY,
-        dimensions,
-        opacity: nextOpacity,
-      })
-    : null
+  const getResolvedFont = () => {
+    if (!image && !font.color && hasMeaningfulContent(lines) && autoTextColor.value) {
+      return { ...font, color: autoTextColor.value }
+    }
 
-  const rootStyleRecord: Record<string, any> = {
-    position: style?.position ?? 'relative',
-    overflow: style?.overflow ?? 'hidden',
-    isolation: style?.isolation ?? 'isolate',
+    return font
   }
 
-  if (pattern) {
-    rootStyleRecord['--rue-watermark-image'] = pattern.url
-    rootStyleRecord['--rue-watermark-size'] = `${pattern.tileWidth}px ${pattern.tileHeight}px`
-    rootStyleRecord['--rue-watermark-position'] = placement.backgroundPosition
-    rootStyleRecord['--rue-watermark-left'] = placement.left
-    rootStyleRecord['--rue-watermark-top'] = placement.top
-    rootStyleRecord['--rue-watermark-width'] = placement.width
-    rootStyleRecord['--rue-watermark-height'] = placement.height
-    rootStyleRecord['--rue-watermark-z-index'] = String(zIndex ?? DEFAULT_Z_INDEX)
-  } else if (!inherit) {
-    rootStyleRecord['--rue-watermark-image'] = 'none'
-    rootStyleRecord['--rue-watermark-size'] = 'auto'
-    rootStyleRecord['--rue-watermark-position'] = '0px 0px'
-    rootStyleRecord['--rue-watermark-left'] = '0px'
-    rootStyleRecord['--rue-watermark-top'] = '0px'
-    rootStyleRecord['--rue-watermark-width'] = '100%'
-    rootStyleRecord['--rue-watermark-height'] = '100%'
-    rootStyleRecord['--rue-watermark-z-index'] = '0'
+  const getPatternState = () => {
+    const nextResolvedFont = getResolvedFont()
+    const nextPlacement = buildOverlayPlacement(gapX, gapY, offset)
+    const nextDimensions = measureTextBlock(lines, nextResolvedFont, width, height, image)
+    const nextPattern = hasLocalPattern
+      ? buildPatternUrl({
+          image,
+          lines: lines.length ? lines : [''],
+          rotate,
+          font: nextResolvedFont,
+          gapX,
+          gapY,
+          dimensions: nextDimensions,
+          opacity: clamp(opacity, 0, 1),
+        })
+      : null
+
+    return {
+      placement: nextPlacement,
+      pattern: nextPattern,
+    }
   }
 
-  const rootStyleText = mergeStyleInput(rootStyleRecord, style)
+  const createRootStyleText = (
+    nextPlacement: OverlayPlacement,
+    nextPattern: ReturnType<typeof buildPatternUrl> | null,
+  ) => {
+    const rootStyleRecord: Record<string, any> = {
+      position: style?.position ?? 'relative',
+      overflow: style?.overflow ?? 'hidden',
+      isolation: style?.isolation ?? 'isolate',
+    }
 
-  const overlayResolvedStyleRecord: Record<string, any> = {
-    position: 'absolute',
-    left: pattern ? placement.left : 'var(--rue-watermark-left, 0px)',
-    top: pattern ? placement.top : 'var(--rue-watermark-top, 0px)',
-    width: pattern ? placement.width : 'var(--rue-watermark-width, 100%)',
-    height: pattern ? placement.height : 'var(--rue-watermark-height, 100%)',
-    pointerEvents: 'none',
-    backgroundRepeat: 'repeat',
-    backgroundImage: pattern ? pattern.url : inherit ? 'var(--rue-watermark-image, none)' : 'none',
-    backgroundSize: pattern
-      ? `${pattern.tileWidth}px ${pattern.tileHeight}px`
-      : inherit
-        ? 'var(--rue-watermark-size, auto)'
-        : 'auto',
-    backgroundPosition: pattern
-      ? placement.backgroundPosition
-      : inherit
-        ? 'var(--rue-watermark-position, 0px 0px)'
-        : '0px 0px',
-    zIndex: pattern ? (zIndex ?? DEFAULT_Z_INDEX) : inherit ? 'var(--rue-watermark-z-index, 9)' : 0,
+    if (nextPattern) {
+      rootStyleRecord['--rue-watermark-image'] = nextPattern.url
+      rootStyleRecord['--rue-watermark-size'] =
+        `${nextPattern.tileWidth}px ${nextPattern.tileHeight}px`
+      rootStyleRecord['--rue-watermark-position'] = nextPlacement.backgroundPosition
+      rootStyleRecord['--rue-watermark-left'] = nextPlacement.left
+      rootStyleRecord['--rue-watermark-top'] = nextPlacement.top
+      rootStyleRecord['--rue-watermark-width'] = nextPlacement.width
+      rootStyleRecord['--rue-watermark-height'] = nextPlacement.height
+      rootStyleRecord['--rue-watermark-z-index'] = String(zIndex ?? DEFAULT_Z_INDEX)
+    } else if (!inherit) {
+      rootStyleRecord['--rue-watermark-image'] = 'none'
+      rootStyleRecord['--rue-watermark-size'] = 'auto'
+      rootStyleRecord['--rue-watermark-position'] = '0px 0px'
+      rootStyleRecord['--rue-watermark-left'] = '0px'
+      rootStyleRecord['--rue-watermark-top'] = '0px'
+      rootStyleRecord['--rue-watermark-width'] = '100%'
+      rootStyleRecord['--rue-watermark-height'] = '100%'
+      rootStyleRecord['--rue-watermark-z-index'] = '0'
+    }
+
+    return mergeStyleInput(rootStyleRecord, style)
   }
 
-  const overlayStyleText = mergeStyleInput(overlayResolvedStyleRecord, overlayStyle)
+  const createOverlayStyleText = (
+    nextPlacement: OverlayPlacement,
+    nextPattern: ReturnType<typeof buildPatternUrl> | null,
+  ) => {
+    const overlayResolvedStyleRecord: Record<string, any> = {
+      position: 'absolute',
+      left: nextPattern ? nextPlacement.left : 'var(--rue-watermark-left, 0px)',
+      top: nextPattern ? nextPlacement.top : 'var(--rue-watermark-top, 0px)',
+      width: nextPattern ? nextPlacement.width : 'var(--rue-watermark-width, 100%)',
+      height: nextPattern ? nextPlacement.height : 'var(--rue-watermark-height, 100%)',
+      pointerEvents: 'none',
+      backgroundRepeat: 'repeat',
+      backgroundImage: nextPattern
+        ? nextPattern.url
+        : inherit
+          ? 'var(--rue-watermark-image, none)'
+          : 'none',
+      backgroundSize: nextPattern
+        ? `${nextPattern.tileWidth}px ${nextPattern.tileHeight}px`
+        : inherit
+          ? 'var(--rue-watermark-size, auto)'
+          : 'auto',
+      backgroundPosition: nextPattern
+        ? nextPlacement.backgroundPosition
+        : inherit
+          ? 'var(--rue-watermark-position, 0px 0px)'
+          : '0px 0px',
+      zIndex: nextPattern
+        ? (zIndex ?? DEFAULT_Z_INDEX)
+        : inherit
+          ? 'var(--rue-watermark-z-index, 9)'
+          : 0,
+    }
+
+    return mergeStyleInput(overlayResolvedStyleRecord, overlayStyle)
+  }
+
+  const { placement, pattern } = getPatternState()
+  const rootStyleText = createRootStyleText(placement, pattern)
+  const overlayStyleText = createOverlayStyleText(placement, pattern)
 
   const syncStyleText = (element: HTMLElement | null | undefined, styleText: string) => {
     if (!element) return
@@ -429,6 +730,30 @@ const Watermark: FC<WatermarkProps> = ({
       element.setAttribute('style', styleText)
     } else {
       element.removeAttribute('style')
+    }
+  }
+
+  const syncPatternStyles = () => {
+    const nextPatternState = getPatternState()
+    syncStyleText(
+      rootRef.current,
+      createRootStyleText(nextPatternState.placement, nextPatternState.pattern),
+    )
+    syncStyleText(
+      overlayRef.current,
+      createOverlayStyleText(nextPatternState.placement, nextPatternState.pattern),
+    )
+  }
+
+  const syncAutoTextColor = () => {
+    if (image || font.color || !hasMeaningfulContent(lines)) {
+      return
+    }
+
+    const nextColor = resolveDefaultTextColor(rootRef.current ?? null)
+    if (autoTextColor.value !== nextColor) {
+      autoTextColor.value = nextColor
+      syncPatternStyles()
     }
   }
 
@@ -446,12 +771,14 @@ const Watermark: FC<WatermarkProps> = ({
   onMounted(() => {
     syncStyleText(rootRef.current, rootStyleText)
     syncStyleText(overlayRef.current, overlayStyleText)
+    syncAutoTextColor()
   })
 
   watch(
     () => rootStyleText,
     (nextStyle: string) => {
       syncStyleText(rootRef.current, nextStyle)
+      syncAutoTextColor()
     },
     { immediate: true },
   )
@@ -483,4 +810,5 @@ const Watermark: FC<WatermarkProps> = ({
   )
 }
 
+/** 默认导出水印组件。 */
 export default Watermark

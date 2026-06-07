@@ -17,122 +17,216 @@ interface ThemeStyleRecord {
   [key: string]: string | number | undefined
 }
 
+/** ThemeColorTokens 接口。 */
 export interface ThemeColorTokens {
+  /** primary 配置项。 */
   primary: string
+  /** primaryContent 配置项。 */
   primaryContent: string
+  /** secondary 配置项。 */
   secondary: string
+  /** secondaryContent 配置项。 */
   secondaryContent: string
+  /** accent 配置项。 */
   accent: string
+  /** accentContent 配置项。 */
   accentContent: string
+  /** neutral 配置项。 */
   neutral: string
+  /** neutralContent 配置项。 */
   neutralContent: string
+  /** base100 配置项。 */
   base100: string
+  /** base200 配置项。 */
   base200: string
+  /** base300 配置项。 */
   base300: string
+  /** baseContent 配置项。 */
   baseContent: string
+  /** info 配置项。 */
   info: string
+  /** infoContent 配置项。 */
   infoContent: string
+  /** success 配置项。 */
   success: string
+  /** successContent 配置项。 */
   successContent: string
+  /** warning 配置项。 */
   warning: string
+  /** warningContent 配置项。 */
   warningContent: string
+  /** error 配置项。 */
   error: string
+  /** errorContent 配置项。 */
   errorContent: string
 }
 
+/** ThemeRadiusTokens 接口。 */
 export interface ThemeRadiusTokens {
+  /** selector 配置项。 */
   selector: string
+  /** field 配置项。 */
   field: string
+  /** box 配置项。 */
   box: string
 }
 
+/** ThemeSizeTokens 接口。 */
 export interface ThemeSizeTokens {
+  /** selector 配置项。 */
   selector: string
+  /** field 配置项。 */
   field: string
 }
 
+/** ThemeSpacingTokens 接口。 */
 export interface ThemeSpacingTokens {
+  /** xs 配置项。 */
   xs: string
+  /** sm 配置项。 */
   sm: string
+  /** md 配置项。 */
   md: string
+  /** lg 配置项。 */
   lg: string
+  /** xl 配置项。 */
   xl: string
 }
 
+/** ThemeTypographyTokens 接口。 */
 export interface ThemeTypographyTokens {
+  /** family 配置项。 */
   family: string
+  /** monoFamily 配置项。 */
   monoFamily: string
+  /** 组件尺寸。 */
   size: string
+  /** lineHeight 配置项。 */
   lineHeight: string
 }
 
+/** ThemeShadowTokens 接口。 */
 export interface ThemeShadowTokens {
+  /** sm 配置项。 */
   sm: string
+  /** md 配置项。 */
   md: string
+  /** lg 配置项。 */
   lg: string
 }
 
+/** ThemeDesignToken 接口。 */
 export interface ThemeDesignToken {
+  /** themeName 配置项。 */
   themeName: string
+  /** resolvedThemeName 配置项。 */
   resolvedThemeName?: string
+  /** appearance 配置项。 */
   appearance: ThemeAppearance
+  /** density 配置项。 */
   density: ThemeDensity
+  /** colorScheme 配置项。 */
   colorScheme: ThemeAppearance
+  /** colors 配置项。 */
   colors: ThemeColorTokens
+  /** radius 配置项。 */
   radius: ThemeRadiusTokens
+  /** 组件尺寸。 */
   size: ThemeSizeTokens
+  /** spacing 配置项。 */
   spacing: ThemeSpacingTokens
+  /** typography 配置项。 */
   typography: ThemeTypographyTokens
+  /** shadow 配置项。 */
   shadow: ThemeShadowTokens
+  /** borderWidth 配置项。 */
   borderWidth: string
+  /** depth 配置项。 */
   depth: 0 | 1
+  /** noise 配置项。 */
   noise: 0 | 1
 }
 
+/** ThemeTokenOverride 接口。 */
 export interface ThemeTokenOverride {
+  /** appearance 配置项。 */
   appearance?: ThemeAppearance
+  /** density 配置项。 */
   density?: ThemeDensity
+  /** colorScheme 配置项。 */
   colorScheme?: ThemeAppearance
+  /** colors 配置项。 */
   colors?: Partial<ThemeColorTokens>
+  /** radius 配置项。 */
   radius?: Partial<ThemeRadiusTokens>
+  /** 组件尺寸。 */
   size?: Partial<ThemeSizeTokens>
+  /** spacing 配置项。 */
   spacing?: Partial<ThemeSpacingTokens>
+  /** typography 配置项。 */
   typography?: Partial<ThemeTypographyTokens>
+  /** shadow 配置项。 */
   shadow?: Partial<ThemeShadowTokens>
+  /** borderWidth 配置项。 */
   borderWidth?: string
+  /** depth 配置项。 */
   depth?: 0 | 1
+  /** noise 配置项。 */
   noise?: 0 | 1
 }
 
+/** ThemeAlgorithm 类型。 */
 export type ThemeAlgorithm = (token: ThemeDesignToken) => ThemeDesignToken
 
+/** ThemeConfig 配置对象。 */
 export interface ThemeConfig {
+  /** theme 配置项。 */
   theme?: string
+  /** token 配置项。 */
   token?: ThemeTokenOverride
+  /** algorithm 配置项。 */
   algorithm?: ThemeAlgorithm | readonly ThemeAlgorithm[]
+  /** baseToken 配置项。 */
   baseToken?: ThemeDesignToken
 }
 
+/** ThemeTokenRuntime 接口。 */
 export interface ThemeTokenRuntime {
+  /** theme 配置项。 */
   theme: string
+  /** resolvedTheme 配置项。 */
   resolvedTheme?: string
+  /** token 配置项。 */
   token: ThemeDesignToken
+  /** cssVariables 配置项。 */
   cssVariables: ThemeStyleRecord
 }
 
+/** ThemeProviderProps 组件属性。 */
 export interface ThemeProviderProps extends ThemeConfig {
+  /** 自定义渲染的宿主元素。 */
   as?: ThemeProviderTag
+  /** 根节点附加类名。 */
   className?: string
+  /** render 配置项。 */
   render?: (scope: ThemeTokenRuntime) => any
+  /** 根节点内联样式。 */
   style?: ThemeStyleRecord | string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** ThemeControllerProps 组件属性。 */
 export interface ThemeControllerProps {
+  /** 组件类型或语义类型。 */
   type?: ThemeInputType
+  /** 根节点附加类名。 */
   className?: string
+  /** theme 配置项。 */
   theme?: string
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -342,6 +436,7 @@ const defaultConfig: ThemeConfig = {
   theme: 'default',
 }
 
+/** clone Theme Token 的内部工具函数。 */
 const cloneThemeToken = (token: ThemeDesignToken): ThemeDesignToken => {
   return {
     ...token,
@@ -354,6 +449,7 @@ const cloneThemeToken = (token: ThemeDesignToken): ThemeDesignToken => {
   }
 }
 
+/** merge Theme Token 的内部工具函数。 */
 const mergeThemeToken = (
   baseToken: ThemeDesignToken,
   override?: ThemeTokenOverride,
@@ -378,17 +474,20 @@ const mergeThemeToken = (
   return nextToken
 }
 
+/** 归一化 Algorithm List 的内部工具函数。 */
 const normalizeAlgorithmList = (algorithm?: ThemeConfig['algorithm']) => {
   if (!algorithm) return []
   return Array.isArray(algorithm) ? [...algorithm] : [algorithm]
 }
 
+/** 解析 Theme Name 的内部工具函数。 */
 const resolveThemeName = (config?: ThemeConfig) => {
   if (config?.theme) return config.theme
   if (config?.baseToken?.themeName) return config.baseToken.themeName
   return defaultConfig.theme ?? 'default'
 }
 
+/** 构建 Preset Token 的内部工具函数。 */
 const buildPresetToken = (themeName: string) => {
   const baseToken = cloneThemeToken(defaultSeed)
   const preset = themePresets[themeName]
@@ -397,6 +496,7 @@ const buildPresetToken = (themeName: string) => {
   return mergedToken
 }
 
+/** default Algorithm 的内部工具函数。 */
 const defaultAlgorithm: ThemeAlgorithm = inputToken => {
   const nextToken = cloneThemeToken(inputToken)
   nextToken.colorScheme = nextToken.appearance
@@ -404,6 +504,7 @@ const defaultAlgorithm: ThemeAlgorithm = inputToken => {
   return nextToken
 }
 
+/** dark Algorithm 的内部工具函数。 */
 const darkAlgorithm: ThemeAlgorithm = inputToken => {
   const nextToken = cloneThemeToken(inputToken)
   nextToken.appearance = 'dark'
@@ -429,6 +530,7 @@ const darkAlgorithm: ThemeAlgorithm = inputToken => {
   return nextToken
 }
 
+/** compact Algorithm 的内部工具函数。 */
 const compactAlgorithm: ThemeAlgorithm = inputToken => {
   const nextToken = cloneThemeToken(inputToken)
   nextToken.density = 'compact'
@@ -455,6 +557,7 @@ const compactAlgorithm: ThemeAlgorithm = inputToken => {
   return nextToken
 }
 
+/** 读取 Design Token 的内部工具函数。 */
 const getDesignToken = (config?: ThemeConfig) => {
   const themeName = resolveThemeName(config)
   const baseToken = config?.baseToken
@@ -472,6 +575,7 @@ const getDesignToken = (config?: ThemeConfig) => {
   return defaultAlgorithm(mergedToken)
 }
 
+/** 创建 Css Variables 的内部工具函数。 */
 const createCssVariables = (token: ThemeDesignToken): ThemeStyleRecord => {
   return {
     '--color-primary': token.colors.primary,
@@ -517,6 +621,7 @@ const createCssVariables = (token: ThemeDesignToken): ThemeStyleRecord => {
   }
 }
 
+/** use Token 的内部工具函数。 */
 const useToken = (config?: ThemeConfig): ThemeTokenRuntime => {
   const token = getDesignToken(config)
   return {
@@ -527,10 +632,12 @@ const useToken = (config?: ThemeConfig): ThemeTokenRuntime => {
   }
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** assign Forwarded Ref 的内部工具函数。 */
 const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   if (typeof forwardedRef === 'function') {
     forwardedRef(element)
@@ -539,11 +646,13 @@ const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   }
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (property: string) => {
   if (property.startsWith('--')) return property
   return property.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 }
 
+/** serialize Style Record 的内部工具函数。 */
 const serializeStyleRecord = (style: ThemeStyleRecord) => {
   return Object.entries(style)
     .filter(([, value]) => value !== undefined)
@@ -551,6 +660,7 @@ const serializeStyleRecord = (style: ThemeStyleRecord) => {
     .join('; ')
 }
 
+/** merge Style Input 的内部工具函数。 */
 const mergeStyleInput = (baseStyle: ThemeStyleRecord, extraStyle?: ThemeStyleRecord | string) => {
   const serializedBaseStyle = serializeStyleRecord(baseStyle)
   if (!extraStyle) return serializedBaseStyle
@@ -684,4 +794,5 @@ const ThemeController: ThemeControllerCompound = Object.assign(ThemeInput, {
   useToken,
 })
 
+/** 默认导出主题组件。 */
 export default ThemeController

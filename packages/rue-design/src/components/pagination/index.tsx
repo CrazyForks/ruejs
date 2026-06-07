@@ -7,71 +7,125 @@ Pagination 组件概述
 import type { FC } from '@rue-js/rue'
 import { ref, useRef } from '@rue-js/rue'
 
+/** PaginationDirection 位置或方向类型。 */
 export type PaginationDirection = 'horizontal' | 'vertical'
+/** PaginationAlign 对齐方式类型。 */
 export type PaginationAlign = 'start' | 'center' | 'end'
+/** PaginationSize 尺寸类型。 */
 export type PaginationSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'large'
+/** PaginationItemType 视觉或语义变体类型。 */
 export type PaginationItemType = 'page' | 'prev' | 'next' | 'jump-prev' | 'jump-next'
 
+/** PaginationSimpleConfig 配置对象。 */
 export interface PaginationSimpleConfig {
+  /** readOnly 配置项。 */
   readOnly?: boolean
 }
 
+/** PaginationLocale 接口。 */
 export interface PaginationLocale {
+  /** prev 配置项。 */
   prev?: any
+  /** next 配置项。 */
   next?: any
+  /** jumpPrev 配置项。 */
   jumpPrev?: any
+  /** jumpNext 配置项。 */
   jumpNext?: any
+  /** pageSuffix 配置项。 */
   pageSuffix?: any
+  /** itemsPerPage 配置项。 */
   itemsPerPage?: any
+  /** pageTitle 配置项。 */
   pageTitle?: (page: number) => string
+  /** jumpTo 配置项。 */
   jumpTo?: any
+  /** previousPage 配置项。 */
   previousPage?: any
+  /** nextPage 配置项。 */
   nextPage?: any
+  /** jumpPrevTitle 配置项。 */
   jumpPrevTitle?: any
+  /** jumpNextTitle 配置项。 */
   jumpNextTitle?: any
 }
 
+/** PaginationItemRender 自定义渲染函数类型。 */
 export type PaginationItemRender = (
   page: number,
   type: PaginationItemType,
   originalElement: any,
 ) => any
+/** PaginationShowTotal 类型。 */
 export type PaginationShowTotal = (total: number, range: [number, number]) => any
 
+/** PaginationProps 组件属性。 */
 export interface PaginationProps {
+  /** 布局方向。 */
   direction?: PaginationDirection
+  /** 交叉轴或内容对齐方式。 */
   align?: PaginationAlign
+  /** 组件尺寸。 */
   size?: PaginationSize
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** current 配置项。 */
   current?: number
+  /** defaultCurrent 配置项。 */
   defaultCurrent?: number
+  /** total 配置项。 */
   total?: number
+  /** pageSize 尺寸。 */
   pageSize?: number
+  /** defaultPageSize 尺寸。 */
   defaultPageSize?: number
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** simple 配置项。 */
   simple?: boolean | PaginationSimpleConfig
+  /** showSizeChanger 配置项。 */
   showSizeChanger?: boolean
+  /** pageSizeOptions 选项配置。 */
   pageSizeOptions?: Array<number | string>
+  /** showQuickJumper 配置项。 */
   showQuickJumper?: boolean | { goButton?: any }
+  /** showLessItems 配置项。 */
   showLessItems?: boolean
+  /** hideOnSinglePage 配置项。 */
   hideOnSinglePage?: boolean
+  /** showTitle 配置项。 */
   showTitle?: boolean
+  /** showTotal 配置项。 */
   showTotal?: PaginationShowTotal
+  /** itemRender 自定义渲染函数。 */
   itemRender?: PaginationItemRender
+  /** 值或状态变化时触发的回调。 */
   onChange?: (page: number, pageSize: number) => void
+  /** onShowSizeChange 事件回调。 */
   onShowSizeChange?: (current: number, pageSize: number) => void
+  /** locale 配置项。 */
   locale?: PaginationLocale
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** PaginationItemProps 组件属性。 */
 export interface PaginationItemProps {
+  /** tag 配置项。 */
   tag?: any
+  /** 是否处于激活态。 */
   active?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 组件尺寸。 */
   size?: PaginationSize
+  /** 根节点附加类名。 */
   className?: string
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -81,24 +135,29 @@ interface PaginationDisplayItem {
   label: any
 }
 
+/** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (...values: Array<string | undefined | false>) => {
   return values.filter(Boolean).join(' ')
 }
 
+/** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => {
   return Math.min(Math.max(value, min), max)
 }
 
+/** 归一化 Positive Int 的内部工具函数。 */
 const normalizePositiveInt = (value: any, fallback: number) => {
   const numeric = Number(value)
   if (!Number.isFinite(numeric) || numeric <= 0) return fallback
   return Math.floor(numeric)
 }
 
+/** 解析 Size Token 的内部工具函数。 */
 const resolveSizeToken = (size?: PaginationSize) => {
   switch (size) {
     case 'small':
@@ -112,6 +171,7 @@ const resolveSizeToken = (size?: PaginationSize) => {
   }
 }
 
+/** 解析 Align Class Name 的内部工具函数。 */
 const resolveAlignClassName = (align?: PaginationAlign) => {
   switch (align) {
     case 'center':
@@ -123,12 +183,14 @@ const resolveAlignClassName = (align?: PaginationAlign) => {
   }
 }
 
+/** 构建 Join Class Name 的内部工具函数。 */
 const buildJoinClassName = (direction?: PaginationDirection) => {
   let cls = 'join'
   if (direction) cls += ` join-${direction}`
   return cls
 }
 
+/** 构建 Button Class Name 的内部工具函数。 */
 const buildButtonClassName = (
   size?: PaginationSize,
   active?: boolean,
@@ -144,6 +206,7 @@ const buildButtonClassName = (
   return cls
 }
 
+/** 构建 Select Class Name 的内部工具函数。 */
 const buildSelectClassName = (size?: PaginationSize, className?: string) => {
   const resolvedSize = resolveSizeToken(size)
   let cls = 'select select-bordered'
@@ -152,6 +215,7 @@ const buildSelectClassName = (size?: PaginationSize, className?: string) => {
   return cls
 }
 
+/** 构建 Input Class Name 的内部工具函数。 */
 const buildInputClassName = (size?: PaginationSize, className?: string) => {
   const resolvedSize = resolveSizeToken(size)
   let cls = 'input input-bordered'
@@ -160,6 +224,7 @@ const buildInputClassName = (size?: PaginationSize, className?: string) => {
   return cls
 }
 
+/** 构建 Number Input Class Name 的内部工具函数。 */
 const buildNumberInputClassName = (size?: PaginationSize, className?: string) => {
   return appendClassName(
     buildInputClassName(size),
@@ -168,6 +233,7 @@ const buildNumberInputClassName = (size?: PaginationSize, className?: string) =>
   )
 }
 
+/** 解析 Number Input Width Class 的内部工具函数。 */
 const resolveNumberInputWidthClass = (pageCount: number, mode: 'simple' | 'quick') => {
   const digits = String(Math.max(1, pageCount)).length
 
@@ -182,6 +248,7 @@ const resolveNumberInputWidthClass = (pageCount: number, mode: 'simple' | 'quick
   return 'w-20'
 }
 
+/** 解析 Page Size Select Width Class 的内部工具函数。 */
 const resolvePageSizeSelectWidthClass = (options: Array<number | string>) => {
   const maxDigits = options.reduce<number>((result, option) => {
     return Math.max(result, String(option).length)
@@ -192,6 +259,7 @@ const resolvePageSizeSelectWidthClass = (options: Array<number | string>) => {
   return 'w-20'
 }
 
+/** 判断 Data Mode 的内部工具函数。 */
 const isDataMode = (props: PaginationProps) => {
   return (
     props.current !== undefined ||
@@ -216,6 +284,7 @@ const isDataMode = (props: PaginationProps) => {
   )
 }
 
+/** 读取 Range 的内部工具函数。 */
 const getRange = (current: number, pageSize: number, total: number): [number, number] => {
   if (total <= 0) return [0, 0]
   const start = (current - 1) * pageSize + 1
@@ -223,6 +292,7 @@ const getRange = (current: number, pageSize: number, total: number): [number, nu
   return [start, end]
 }
 
+/** 读取 Display Items 的内部工具函数。 */
 const getDisplayItems = (
   current: number,
   pageCount: number,
@@ -278,6 +348,7 @@ const getDisplayItems = (
   return items
 }
 
+/** Item 的内部工具函数。 */
 const Item: FC<PaginationItemProps> = ({
   tag = 'button',
   active,
@@ -310,6 +381,7 @@ const Item: FC<PaginationItemProps> = ({
   return <Tag {...props}>{children}</Tag>
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<PaginationProps> = ({
   direction,
   align,
@@ -682,4 +754,5 @@ const Pagination: PaginationCompound = Object.assign(Root, {
   Item,
 })
 
+/** 默认导出分页组件。 */
 export default Pagination

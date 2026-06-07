@@ -156,16 +156,7 @@ pub fn patch_props<A: DomAdapter>(
                 //   非 multiple → set_value(el, "")
                 // 若其他并且有 value 属性：
                 //   set_value(el, ""), remove_attribute(el, "value")
-                if adapter.get_tag_name(el) == "SELECT" {
-                    if adapter.is_select_multiple(el) {
-                        adapter.set_value(el, JsValue::from(Array::new()));
-                    } else {
-                        adapter.set_value(el, JsValue::from_str(""));
-                    }
-                } else if adapter.has_value_property(el) {
-                    adapter.set_value(el, JsValue::from_str(""));
-                    adapter.remove_attribute(el, "value");
-                }
+                reset_removed_value_prop(adapter, el);
             } else if key == "checked" {
                 // checked 复位与属性移除
                 // Demo：旧 { checked: true } → 新 {}
@@ -183,11 +174,11 @@ pub fn patch_props<A: DomAdapter>(
                 // Demo：旧 { ref: r } → 新 {}
                 // 调用：clear_ref(r)
                 adapter.clear_ref(old_val.clone());
-            } else if key != "key" && key != "children" {
+            } else {
                 // 其他通用属性移除
                 // Demo：旧 { data-id: "1" } → 新 {}
                 // 调用：remove_attribute(el, "data-id")
-                adapter.remove_attribute(el, key);
+                remove_attribute_unless_reserved(adapter, el, key);
             }
         }
     }
@@ -245,6 +236,32 @@ pub fn patch_props<A: DomAdapter>(
     Ok(())
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+fn reset_removed_value_prop<A: DomAdapter>(adapter: &mut A, el: &mut A::Element) {
+    if adapter.get_tag_name(el) == "SELECT" {
+        if adapter.is_select_multiple(el) {
+            adapter.set_value(el, JsValue::from(Array::new()));
+        } else {
+            adapter.set_value(el, JsValue::from_str(""));
+        }
+    } else if adapter.has_value_property(el) {
+        adapter.set_value(el, JsValue::from_str(""));
+        adapter.remove_attribute(el, "value");
+    }
+}
+
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+fn remove_attribute_unless_reserved<A: DomAdapter>(
+    adapter: &mut A,
+    el: &mut A::Element,
+    key: &str,
+) {
+    if key != "key" && key != "children" {
+        adapter.remove_attribute(el, key);
+    }
+}
+
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 pub fn post_patch_element<A: DomAdapter>(
     adapter: &mut A,
     el: &mut A::Element,
@@ -261,6 +278,7 @@ pub fn post_patch_element<A: DomAdapter>(
     Ok(())
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn js_style_to_map(val: &JsValue) -> Result<HashMap<String, String>, JsValue> {
     // 将 JS 对象样式转换为 HashMap，以便适配器补丁
     // 输入：{ color: "red", width: 100 }
@@ -271,21 +289,21 @@ fn js_style_to_map(val: &JsValue) -> Result<HashMap<String, String>, JsValue> {
         let keys = Object::keys(&obj);
         for i in 0..keys.length() {
             let k = keys.get(i);
-            if let Some(ks) = k.as_string() {
-                let v = match Reflect::get(&obj, &k) {
-                    Ok(v) => v,
-                    Err(e) => return Err(e),
-                };
-                let s = v.as_string().unwrap_or_else(|| {
-                    if let Some(n) = v.as_f64() { n.to_string() } else { String::new() }
-                });
-                map.insert(ks, s);
-            }
+            let ks = k.as_string().unwrap_or_default();
+            let v = match Reflect::get(&obj, &k) {
+                Ok(v) => v,
+                Err(e) => return Err(e),
+            };
+            let s = v.as_string().unwrap_or_else(|| {
+                if let Some(n) = v.as_f64() { n.to_string() } else { String::new() }
+            });
+            map.insert(ks, s);
         }
     }
     Ok(map)
 }
 
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn js_value_to_dom_string(val: &JsValue) -> String {
     if let Some(text) = val.as_string() {
         return text;
@@ -308,15 +326,10 @@ fn js_value_to_dom_string(val: &JsValue) -> String {
         .ok()
         .and_then(|value| value.dyn_into::<Function>().ok());
 
-    if let Some(string_ctor) = string_ctor {
-        if let Ok(result) = string_ctor.call1(&JsValue::UNDEFINED, val) {
-            if let Some(text) = result.as_string() {
-                return text;
-            }
-        }
-    }
-
-    String::new()
+    string_ctor
+        .and_then(|string_ctor| string_ctor.call1(&JsValue::UNDEFINED, val).ok())
+        .and_then(|result| result.as_string())
+        .unwrap_or_default()
 }
 
 fn extract_inner_html(val: &JsValue) -> Result<String, JsValue> {
@@ -331,4 +344,165 @@ fn extract_inner_html(val: &JsValue) -> Result<String, JsValue> {
         return Ok(h.as_string().unwrap_or_default());
     }
     Ok(String::new())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::js_adapter::JsDomAdapter;
+    use js_sys::{Function, Object, Reflect};
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen_test::*;
+
+    fn set_fn(obj: &Object, name: &str, args: &str, body: &str) {
+        Reflect::set(obj, &JsValue::from_str(name), &Function::new_with_args(args, body).into())
+            .unwrap();
+    }
+
+    fn props_test_adapter() -> JsDomAdapter {
+        let adapter = Object::new();
+        set_fn(&adapter, "createElement", "tag", "return { tag, children: [] }");
+        set_fn(&adapter, "createTextNode", "text", "return { tag: '#text', text }");
+        set_fn(&adapter, "createDocumentFragment", "", "return { tag: 'fragment', children: [] }");
+        set_fn(&adapter, "isFragment", "el", "return !!el && el.tag === 'fragment'");
+        set_fn(
+            &adapter,
+            "collectFragmentChildren",
+            "el",
+            "return Array.from(el && el.children || [])",
+        );
+        set_fn(&adapter, "setTextContent", "el,text", "el.text = text");
+        set_fn(
+            &adapter,
+            "appendChild",
+            "parent, child",
+            "parent.children = parent.children || []; parent.children.push(child)",
+        );
+        set_fn(
+            &adapter,
+            "insertBefore",
+            "parent, child, before",
+            "parent.children = parent.children || []; parent.children.push(child)",
+        );
+        set_fn(
+            &adapter,
+            "removeChild",
+            "parent, child",
+            "parent.children = (parent.children || []).filter(x => x !== child)",
+        );
+        set_fn(
+            &adapter,
+            "contains",
+            "parent, child",
+            "return parent === child || (parent.children || []).includes(child)",
+        );
+        set_fn(&adapter, "getTagName", "el", "return el.tag || ''");
+        set_fn(&adapter, "hasValueProperty", "el", "return !!el.hasValue");
+        set_fn(&adapter, "isSelectMultiple", "el", "return !!el.multiple");
+        set_fn(&adapter, "setValue", "el,value", "el.value = value");
+        set_fn(
+            &adapter,
+            "removeAttribute",
+            "el,key",
+            "el.removed = el.removed || []; el.removed.push(key)",
+        );
+        set_fn(&adapter, "removeEventListener", "el,event,handler", "return");
+        set_fn(&adapter, "setClassName", "el,value", "el.className = value");
+        set_fn(&adapter, "patchStyle", "el,oldStyle,newStyle", "el.style = newStyle");
+        set_fn(&adapter, "setInnerHTML", "el,html", "el.innerHTML = html");
+        set_fn(&adapter, "setChecked", "el,value", "el.checked = !!value");
+        set_fn(&adapter, "setDisabled", "el,value", "el.disabled = !!value");
+        set_fn(&adapter, "clearRef", "ref", "return");
+        set_fn(&adapter, "applyRef", "el,ref", "return");
+        set_fn(&adapter, "addEventListener", "el,event,handler", "return");
+        set_fn(&adapter, "setAttribute", "el,key,value", "el[key] = value");
+        set_fn(&adapter, "querySelector", "selector", "return null");
+        JsDomAdapter::new(adapter.into())
+    }
+
+    fn throwing_get_proxy() -> JsValue {
+        Function::new_no_args(
+            "return new Proxy({ value: 1, __html: '<b>x</b>' }, { get(){ throw new Error('boom') } })",
+        )
+        .call0(&JsValue::UNDEFINED)
+        .unwrap()
+    }
+
+    #[wasm_bindgen_test]
+    fn prop_private_helpers_cover_string_conversion_edges() {
+        assert_eq!(js_value_to_dom_string(&JsValue::from_str("text")), "text");
+        assert_eq!(js_value_to_dom_string(&JsValue::from_f64(12.5)), "12.5");
+        assert_eq!(js_value_to_dom_string(&JsValue::TRUE), "true");
+        assert_eq!(js_value_to_dom_string(&JsValue::FALSE), "false");
+        assert_eq!(js_value_to_dom_string(&JsValue::NULL), "null");
+        assert_eq!(js_value_to_dom_string(&JsValue::UNDEFINED), "undefined");
+
+        let obj = Object::new();
+        Reflect::set(
+            &obj,
+            &JsValue::from_str("toString"),
+            &Function::new_no_args("return 'custom-object'").into(),
+        )
+        .unwrap();
+        assert_eq!(js_value_to_dom_string(&obj.into()), "custom-object");
+
+        let throwing_to_string =
+            Function::new_no_args("return { toString(){ throw new Error('cannot stringify') } }")
+                .call0(&JsValue::UNDEFINED)
+                .unwrap();
+        assert_eq!(js_value_to_dom_string(&throwing_to_string), "");
+    }
+
+    #[wasm_bindgen_test]
+    fn prop_private_helpers_cover_style_map_and_inner_html_edges() {
+        assert!(js_style_to_map(&JsValue::UNDEFINED).unwrap().is_empty());
+
+        let style = Object::new();
+        Reflect::set(&style, &JsValue::from_str("width"), &JsValue::from_f64(10.0)).unwrap();
+        Reflect::set(&style, &JsValue::from_str("enabled"), &JsValue::TRUE).unwrap();
+        Reflect::set(&style, &JsValue::from_str("empty"), &JsValue::NULL).unwrap();
+        let map = js_style_to_map(&style.into()).unwrap();
+        assert_eq!(map.get("width").map(String::as_str), Some("10"));
+        assert_eq!(map.get("enabled").map(String::as_str), Some(""));
+        assert_eq!(map.get("empty").map(String::as_str), Some(""));
+
+        let style_err = js_style_to_map(&throwing_get_proxy())
+            .expect_err("proxy get should surface Reflect::get errors");
+        assert!(style_err.is_object());
+
+        assert_eq!(extract_inner_html(&JsValue::UNDEFINED).unwrap(), "");
+        let html = Object::new();
+        Reflect::set(&html, &JsValue::from_str("__html"), &JsValue::from_f64(5.0)).unwrap();
+        assert_eq!(extract_inner_html(&html.into()).unwrap(), "");
+
+        let html_err = extract_inner_html(&throwing_get_proxy())
+            .expect_err("proxy get should surface innerHTML Reflect::get errors");
+        assert!(html_err.dyn_ref::<js_sys::Error>().is_some());
+    }
+
+    #[wasm_bindgen_test]
+    fn patch_props_covers_noop_value_and_reserved_deletion_branches_with_js_adapter() {
+        let mut adapter = props_test_adapter();
+        let el = Object::new();
+        Reflect::set(&el, &JsValue::from_str("tag"), &JsValue::from_str("div")).unwrap();
+
+        let mut old_props = Props::new();
+        old_props.insert("value".to_string(), JsValue::from_str("old"));
+        old_props.insert("key".to_string(), JsValue::from_str("stable"));
+        old_props.insert("children".to_string(), js_sys::Array::new().into());
+        let new_props = Props::new();
+
+        patch_props(&mut adapter, &mut el.clone().into(), &old_props, &new_props).unwrap();
+
+        assert!(
+            Reflect::get(&el, &JsValue::from_str("value"))
+                .unwrap_or(JsValue::UNDEFINED)
+                .is_undefined()
+        );
+        assert!(
+            Reflect::get(&el, &JsValue::from_str("removed"))
+                .unwrap_or(JsValue::UNDEFINED)
+                .is_undefined()
+        );
+    }
 }

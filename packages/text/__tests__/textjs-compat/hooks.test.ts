@@ -1,0 +1,194 @@
+/**
+ * Text.js Compatibility Tests: hooks
+ *
+ * Ported from: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/hooks.test.ts
+ *
+ * Tests hook behavior in the App Router at the HTTP/SSR level:
+ * - useParams returns correct single, nested, and catch-all dynamic params
+ * - useSearchParams reads query string values and handles missing params
+ * - usePathname returns the correct path
+ * - useRouter page renders correctly with pathname
+ * - text/compat/router returns null in App Router context (for shared components)
+ *
+ * NOTE: Browser-only hook behavior (client-side navigation, router.push,
+ * router.back, etc.) requires Playwright and is not tested here.
+ *
+ * Fixture pages live in:
+ * - fixtures/app-basic/app/textjs-compat/hooks-params/[id]/page.tsx
+ * - fixtures/app-basic/app/textjs-compat/hooks-params/[id]/[subid]/page.tsx
+ * - fixtures/app-basic/app/textjs-compat/hooks-params/catchall/[...slug]/page.tsx
+ * - fixtures/app-basic/app/textjs-compat/hooks-search/page.tsx
+ * - fixtures/app-basic/app/textjs-compat/hooks-search-readonly/page.tsx
+ * - fixtures/app-basic/app/textjs-compat/hooks-router/page.tsx
+ * - fixtures/app-basic/app/textjs-compat/compat-router/page.tsx
+ */
+
+import { describe, it, expect, beforeAll, afterAll } from 'vite-plus/test'
+import type { ViteDevServer } from 'vite-plus'
+import { APP_FIXTURE_DIR, startFixtureServer, fetchHtml } from '../helpers.js'
+
+describe('Text.js compat: hooks', () => {
+  let server: ViteDevServer
+  let baseUrl: string
+
+  beforeAll(async () => {
+    ;({ server, baseUrl } = await startFixtureServer(APP_FIXTURE_DIR, {
+      appRouter: true,
+    }))
+    // Warm up
+    await fetchHtml(baseUrl, '/textjs-compat/hooks-params/test-id')
+  }, 60_000)
+
+  afterAll(async () => {
+    await server?.close()
+  })
+
+  // ── useParams SSR ───────────────────────────────────────────
+  // Text.js: 'should have the correct hooks at /adapter-hooks/1'
+  // Source: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/hooks.test.ts
+
+  it('useParams returns correct single dynamic param in SSR', async () => {
+    const { html } = await fetchHtml(baseUrl, '/textjs-compat/hooks-params/my-id')
+    expect(html).toContain('<p id="param-id">my-id</p>')
+  })
+
+  // Text.js: 'should have the correct hooks at /adapter-hooks/1'
+  // Source: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/hooks.test.ts
+
+  it('useParams returns correct nested dynamic params in SSR', async () => {
+    const { html } = await fetchHtml(baseUrl, '/textjs-compat/hooks-params/parent-id/child-id')
+    expect(html).toContain('parent-id')
+    expect(html).toContain('child-id')
+  })
+
+  // Text.js: 'should have the correct hooks at /adapter-hooks/1'
+  // Source: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/hooks.test.ts
+
+  it('useParams returns correct catch-all params in SSR', async () => {
+    const { html } = await fetchHtml(baseUrl, '/textjs-compat/hooks-params/catchall/a/b/c')
+    // Rue HTML-encodes quotes in SSR output: &quot; instead of "
+    expect(html).toContain('[&quot;a&quot;,&quot;b&quot;,&quot;c&quot;]')
+  })
+
+  // ── useSearchParams SSR ─────────────────────────────────────
+  // Text.js: 'should have the correct hooks at /adapter-hooks/1'
+  // Source: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/hooks.test.ts
+
+  it('useSearchParams reads query string in SSR', async () => {
+    const { html } = await fetchHtml(baseUrl, '/textjs-compat/hooks-search?q=hello&page=3')
+    expect(html).toContain('hello')
+    expect(html).toContain('3')
+  })
+
+  // Text.js: 'should have the correct hooks at /adapter-hooks/1'
+  // Source: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/hooks.test.ts
+
+  it('useSearchParams returns empty when no query', async () => {
+    const { html } = await fetchHtml(baseUrl, '/textjs-compat/hooks-search')
+    // Both q and page should show "N/A" when no query string is provided
+    expect(html).toContain('<p id="param-q">N/A</p>')
+    expect(html).toContain('<p id="param-page">N/A</p>')
+  })
+
+  // Text.js: 'should be able to use instanceof ReadonlyURLSearchParams'
+  // Source: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/hooks.test.ts
+  // Source fixture: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/app/hooks/use-search-params/instanceof/page.js
+
+  it('useSearchParams returns a ReadonlyURLSearchParams instance in SSR', async () => {
+    const { html } = await fetchHtml(
+      baseUrl,
+      '/textjs-compat/hooks-search-readonly?foo=bar&foo=baz&zap=zazzle',
+    )
+
+    expect(html).toContain('PASS instanceof check')
+    expect(html).toContain('PASS mutation blocked')
+    expect(html).toContain('foo=bar&amp;foo=baz&amp;zap=zazzle')
+    expect(html).not.toContain('attempted=1')
+  })
+
+  // Text regression coverage for readonly behavior. Text.js enforces this at runtime
+  // with ReadonlyURLSearchParams, so verify the thrown error text is surfaced in SSR too.
+
+  it('useSearchParams blocks mutation methods during SSR', async () => {
+    const { html } = await fetchHtml(baseUrl, '/textjs-compat/hooks-search-readonly?foo=bar')
+
+    expect(html).toContain('PASS mutation blocked')
+    expect(html).toContain('Method unavailable on `ReadonlyURLSearchParams`.')
+    expect(html).toContain('foo=bar')
+    expect(html).not.toContain('attempted=1')
+  })
+
+  // ── usePathname SSR ─────────────────────────────────────────
+  // Text.js: 'should have the correct hooks at /adapter-hooks/1'
+  // Source: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/hooks.test.ts
+
+  it('usePathname returns correct path in SSR', async () => {
+    const { html } = await fetchHtml(baseUrl, '/textjs-compat/hooks-search')
+    expect(html).toContain('/textjs-compat/hooks-search')
+  })
+
+  // Text.js: 'should have the canonical url pathname on rewrite'
+  // Source: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/hooks.test.ts
+  // After a text.config.js (afterFiles) rewrite, usePathname() must return the
+  // CANONICAL (external) URL the user requested, not the internal rewrite target
+  // used for route matching.
+  it('usePathname returns the canonical URL after a config rewrite', async () => {
+    const { html } = await fetchHtml(baseUrl, '/rewritten-use-pathname')
+    expect(html).toContain('<p id="current-pathname">/rewritten-use-pathname</p>')
+    expect(html).not.toContain('<p id="current-pathname">/textjs-compat/hooks-search</p>')
+  })
+
+  // Same canonical-URL behavior must hold for middleware rewrites: usePathname()
+  // should reflect what the user typed in the address bar, not the rewrite
+  // destination used for internal route matching.
+  it('usePathname returns the canonical URL after a middleware rewrite', async () => {
+    const { html } = await fetchHtml(baseUrl, '/middleware-rewritten-use-pathname')
+    expect(html).toContain('<p id="current-pathname">/middleware-rewritten-use-pathname</p>')
+    expect(html).not.toContain('<p id="current-pathname">/textjs-compat/hooks-search</p>')
+  })
+
+  // ── useRouter SSR ───────────────────────────────────────────
+  // Text.js: 'should have the correct hooks at /adapter-hooks/1'
+  // Source: https://github.com/vercel/next.js/blob/canary/test/e2e/app-dir/hooks/hooks.test.ts
+
+  it('useRouter page renders correctly in SSR', async () => {
+    const { html } = await fetchHtml(baseUrl, '/textjs-compat/hooks-router')
+    expect(html).toContain('Router Test Page')
+    expect(html).toContain('/textjs-compat/hooks-router')
+  })
+
+  // ── text/compat/router SSR ──────────────────────────────────
+  // Tests the shared-component use case: a client component that imports from
+  // text/compat/router and works in both App Router and Pages Router contexts.
+  // In App Router context, useRouter() must return null (no RouterContext.Provider
+  // is mounted), allowing the component to branch on null and render gracefully.
+
+  it('text/compat/router useRouter returns null in App Router context', async () => {
+    const { html } = await fetchHtml(baseUrl, '/textjs-compat/compat-router')
+    expect(html).toContain('compat/router test (App Router)')
+    // The shared component detects no Pages Router provider and renders the
+    // app-router branch (router === null path)
+    expect(html).toContain('data-testid="router-context"')
+    expect(html).toContain('app-router')
+    expect(html).not.toContain('pages-router')
+  })
+
+  // ── Browser-only tests (documented, not ported) ──────────────
+  //
+  // The following tests ALL require Playwright and are N/A for HTTP-level testing:
+  //
+  // N/A: useParams identity (object stability across renders)
+  //   Tests that useParams returns the same object reference on re-render
+  //
+  // N/A: useRouter.push / replace / back / forward
+  //   Tests client-side navigation triggered by router methods
+  //
+  // N/A: useRouter.refresh
+  //   Tests client-side refresh behavior after hydration
+  //
+  // N/A: useSearchParams updates after client-side navigation
+  //   Tests reading search params after pushState or router.push
+  //
+  // N/A: usePathname updates after client-side navigation
+  //   Tests pathname changes after router.push or Link clicks
+})

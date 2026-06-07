@@ -2,7 +2,7 @@ import { clickByText, defineSplitHomeExampleActualSpec } from './splitHomeExampl
 
 defineSplitHomeExampleActualSpec({
   name: 'ReactStyleConditional',
-  route: '/examples/react-style-conditional',
+  route: '/examples/rue-conditional',
   importPage: () => import('../../../app/pages/examples/ReactStyleConditional'),
   expectedTexts: ['条件渲染', 'React 风格条件渲染', '等级状态：普通', '消息：Hello'],
   interaction: async container => {

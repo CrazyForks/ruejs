@@ -222,7 +222,7 @@ h(Transition, {
 
   当 `max={0}` 时，缓存会被完全禁用，子树切换时会直接卸载而不是保留。
 
-  当前实现**没有**额外暴露 `activated` / `deactivated` 专用生命周期钩子。
+  可以在被缓存的组件中使用 `onActivated()` / `onDeactivated()` 监听进入活动区间与移入离线缓存区间。
 
 - **示例**
 

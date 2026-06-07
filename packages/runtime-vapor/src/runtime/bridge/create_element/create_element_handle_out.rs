@@ -1,3 +1,9 @@
+/*
+createElement 输出辅助
+
+负责把已经规范化的 Component/Element MountInput 写入默认输入注册表，
+并返回 JS 侧可继续传递的 mount handle。
+*/
 use super::super::WasmRue;
 use crate::runtime::js_adapter::JsDomAdapter;
 use crate::runtime::transport::DefaultMountHandleStorePolicy;

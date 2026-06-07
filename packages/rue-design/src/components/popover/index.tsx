@@ -7,6 +7,7 @@ Popover 组件概述
 import type { FC } from '@rue-js/rue'
 import { h, onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 
+/** PopoverPlacement 位置或方向类型。 */
 export type PopoverPlacement =
   | 'top'
   | 'topLeft'
@@ -21,56 +22,102 @@ export type PopoverPlacement =
   | 'rightTop'
   | 'rightBottom'
 
+/** PopoverTrigger 类型。 */
 export type PopoverTrigger = 'hover' | 'focus' | 'click' | 'contextMenu'
+/** PopoverArrow 类型。 */
 export type PopoverArrow = boolean | { pointAtCenter?: boolean }
 
+/** PopoverClassNames 局部类名配置。 */
 export interface PopoverClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** trigger 区域配置。 */
   trigger?: string
+  /** overlay 配置项。 */
   overlay?: string
+  /** panel 区域配置。 */
   panel?: string
+  /** arrow 配置项。 */
   arrow?: string
+  /** 头部区域内容。 */
   header?: string
+  /** 标题内容。 */
   title?: string
+  /** 主体内容。 */
   content?: string
 }
 
+/** PopoverStyles 局部样式配置。 */
 export interface PopoverStyles {
+  /** 根节点区域配置。 */
   root?: Record<string, any>
+  /** trigger 区域配置。 */
   trigger?: Record<string, any>
+  /** overlay 配置项。 */
   overlay?: Record<string, any>
+  /** panel 区域配置。 */
   panel?: Record<string, any>
+  /** arrow 配置项。 */
   arrow?: Record<string, any>
+  /** 头部区域内容。 */
   header?: Record<string, any>
+  /** 标题内容。 */
   title?: Record<string, any>
+  /** 主体内容。 */
   content?: Record<string, any>
 }
 
+/** PopoverProps 组件属性。 */
 export interface PopoverProps {
+  /** 自定义渲染的宿主元素。 */
   as?: string
+  /** 标题内容。 */
   title?: any
+  /** 主体内容。 */
   content?: any
+  /** overlay 配置项。 */
   overlay?: any
+  /** 弹出层或内容展示位置。 */
   placement?: PopoverPlacement
+  /** trigger 区域配置。 */
   trigger?: PopoverTrigger | PopoverTrigger[]
+  /** 受控打开状态。 */
   open?: boolean
+  /** 非受控初始打开状态。 */
   defaultOpen?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** arrow 配置项。 */
   arrow?: PopoverArrow
+  /** destroyOnHidden 配置项。 */
   destroyOnHidden?: boolean
+  /** mouseEnterDelay 配置项。 */
   mouseEnterDelay?: number
+  /** mouseLeaveDelay 配置项。 */
   mouseLeaveDelay?: number
+  /** zIndex 配置项。 */
   zIndex?: number
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: string | Record<string, any>
+  /** triggerClassName 附加类名。 */
   triggerClassName?: string
+  /** triggerStyle 内联样式。 */
   triggerStyle?: string | Record<string, any>
+  /** overlayClassName 附加类名。 */
   overlayClassName?: string
+  /** overlayStyle 内联样式。 */
   overlayStyle?: Record<string, any>
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: PopoverClassNames
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: PopoverStyles
+  /** 打开状态变化时触发的回调。 */
   onOpenChange?: (open: boolean) => void
+  /** 组件子内容。 */
   children?: any
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -79,10 +126,12 @@ interface PlacementLayout {
   align: 'start' | 'center' | 'end'
 }
 
+/** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | undefined | false | null>) => {
   return parts.filter(Boolean).join(' ')
 }
 
+/** merge Styles 的内部工具函数。 */
 const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   const merged: Record<string, any> = {}
   parts.forEach(part => {
@@ -91,8 +140,10 @@ const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
   return merged
 }
 
+/** 转换为 Kebab Case 的内部工具函数。 */
 const toKebabCase = (value: string) => value.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
 
+/** serialize Style 的内部工具函数。 */
 const serializeStyle = (style?: string | Record<string, any>) => {
   if (!style) return ''
   if (typeof style === 'string') return style.trim()
@@ -102,6 +153,7 @@ const serializeStyle = (style?: string | Record<string, any>) => {
     .join('; ')
 }
 
+/** merge Style Value 的内部工具函数。 */
 const mergeStyleValue = (
   base?: string | Record<string, any>,
   extra?: string | Record<string, any>,
@@ -112,23 +164,28 @@ const mergeStyleValue = (
   return merged || undefined
 }
 
+/** 归一化 Trigger 的内部工具函数。 */
 const normalizeTrigger = (trigger?: PopoverTrigger | PopoverTrigger[]) => {
   const source = Array.isArray(trigger) ? trigger : trigger ? [trigger] : ['hover']
   return Array.from(new Set(source)) as PopoverTrigger[]
 }
 
+/** call Handler 的内部工具函数。 */
 const callHandler = (handler: ((event: any) => void) | undefined, event: any) => {
   if (typeof handler === 'function') handler(event)
 }
 
+/** 解析 Renderable 的内部工具函数。 */
 const resolveRenderable = (value: any) => {
   return typeof value === 'function' ? value() : value
 }
 
+/** 判断 Renderable 的内部工具函数。 */
 const isRenderable = (value: any) => {
   return value !== undefined && value !== null && value !== false
 }
 
+/** 解析 Placement Layout 的内部工具函数。 */
 const resolvePlacementLayout = (placement: PopoverPlacement): PlacementLayout => {
   switch (placement) {
     case 'top':
@@ -159,6 +216,7 @@ const resolvePlacementLayout = (placement: PopoverPlacement): PlacementLayout =>
   }
 }
 
+/** 读取 Overlay Placement Class 的内部工具函数。 */
 const getOverlayPlacementClass = (placement: PopoverPlacement) => {
   switch (placement) {
     case 'top':
@@ -189,6 +247,7 @@ const getOverlayPlacementClass = (placement: PopoverPlacement) => {
   }
 }
 
+/** 读取 Transform Origin Class 的内部工具函数。 */
 const getTransformOriginClass = (placement: PopoverPlacement) => {
   switch (placement) {
     case 'top':
@@ -211,6 +270,7 @@ const getTransformOriginClass = (placement: PopoverPlacement) => {
   }
 }
 
+/** 解析 Arrow Class Name 的内部工具函数。 */
 const resolveArrowClassName = (placement: PopoverPlacement, pointAtCenter: boolean) => {
   const layout = resolvePlacementLayout(placement)
   if (layout.direction === 'top') {
@@ -256,6 +316,7 @@ const resolveArrowClassName = (placement: PopoverPlacement, pointAtCenter: boole
   )
 }
 
+/** 渲染 Root 的内部工具函数。 */
 const renderRoot = (
   Component: any,
   domProps: Record<string, any>,
@@ -376,6 +437,7 @@ const renderRoot = (
   )
 }
 
+/** Root 的内部工具函数。 */
 const Root: FC<PopoverProps> = ({
   as = 'div',
   title,
@@ -729,4 +791,5 @@ const Root: FC<PopoverProps> = ({
   )
 }
 
+/** 默认导出气泡卡片组件。 */
 export default Root

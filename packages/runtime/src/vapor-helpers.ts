@@ -47,25 +47,41 @@ export const vaporWithKey = <T>(value: T, key: unknown): T => {
 
 /** 列表项在 DOM 中的范围定义 */
 export type VaporListItemRange = {
+  /** 多根条目的起始锚点。 */
   start?: DomNodeLike
+  /** 条目结束锚点；单根模式下也是尾锚点。 */
   end: DomNodeLike
+  /** 停止该条目 render effect 的清理函数。 */
   stop?: () => void
+  /** 是否使用单根锚点优化。 */
   singleRoot?: boolean
+  /** 当前 item/index 的实时状态。 */
   current?: ReturnType<typeof signal<{ item: any; index: number; rawIdentity: unknown }>>
+  /** 驱动结构重渲染的状态。 */
   renderState?: ReturnType<typeof signal<{ item: any; index: number; rawIdentity: unknown }>>
+  /** trackIndex=false 时复用的稳定 item proxy。 */
   stableItem?: unknown
 }
 
 /** 基于 Key 的列表渲染与重排 */
 export const vaporKeyedList = <T>(args: {
+  /** 当前列表数据。 */
   items: T[]
+  /** 从 item/index 计算稳定 key 的函数。 */
   getKey: (item: T, index: number) => any
+  /** 上一次渲染留下的 key -> DOM 范围表，会被原地更新。 */
   elements: Map<any, VaporListItemRange>
+  /** 列表所在父节点。 */
   parent: any
+  /** 整个列表的尾锚点或插入参照节点。 */
   before: any
+  /** 列表起始锚点，用于识别范围边界。 */
   start?: any
+  /** 是否使用单根条目优化。 */
   singleRoot?: boolean
+  /** 是否把 index 变化视为需要刷新结构。 */
   trackIndex?: boolean
+  /** 渲染单个条目的回调。 */
   renderItem: (item: T, parent: any, start: any, end: any, idx?: number) => void
 }) => {
   const {

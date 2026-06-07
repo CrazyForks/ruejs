@@ -1,20 +1,38 @@
+/*
+二维码编码器模块概述
+- 负责把文本编码为 QR Code 矩阵，包含版本选择、纠错码生成、掩码评估和格式信息写入。
+- 导出的类型描述编码入参和结果结构，内部注释标明关键算法步骤。
+*/
+/** QRCodeErrorCorrectionLevel 类型。 */
 export type QRCodeErrorCorrectionLevel = 'L' | 'M' | 'Q' | 'H'
 
+/** EncodeQrMatrixOptions 选项配置。 */
 export interface EncodeQrMatrixOptions {
+  /** errorLevel 配置项。 */
   errorLevel?: QRCodeErrorCorrectionLevel
+  /** boostLevel 配置项。 */
   boostLevel?: boolean
 }
 
+/** EncodedQrCode 接口。 */
 export interface EncodedQrCode {
+  /** version 配置项。 */
   version: number
+  /** 组件尺寸。 */
   size: number
+  /** 遮罩层区域配置。 */
   mask: number
+  /** level 配置项。 */
   level: QRCodeErrorCorrectionLevel
+  /** matrix 配置项。 */
   matrix: boolean[][]
 }
 
+/** MODE_INDICATOR_BYTE 内部常量。 */
 const MODE_INDICATOR_BYTE = 0x4
+/** PAD_CODEWORDS 内部常量。 */
 const PAD_CODEWORDS = [0xec, 0x11] as const
+/** FORMAT_BITS_BY_LEVEL 内部常量。 */
 const FORMAT_BITS_BY_LEVEL: Record<QRCodeErrorCorrectionLevel, number> = {
   L: 1,
   M: 0,
@@ -22,18 +40,25 @@ const FORMAT_BITS_BY_LEVEL: Record<QRCodeErrorCorrectionLevel, number> = {
   H: 2,
 }
 
+/** PENALTY_N1 内部常量。 */
 const PENALTY_N1 = 3
+/** PENALTY_N2 内部常量。 */
 const PENALTY_N2 = 3
+/** PENALTY_N3 内部常量。 */
 const PENALTY_N3 = 40
+/** PENALTY_N4 内部常量。 */
 const PENALTY_N4 = 10
 
+/** FINDER_PENALTY_PATTERNS 内部常量。 */
 const FINDER_PENALTY_PATTERNS = [
   [true, false, true, true, true, false, true, false, false, false, false],
   [false, false, false, false, true, false, true, true, true, false, true],
 ] as const
 
+/** LEVEL_ORDER 内部常量。 */
 const LEVEL_ORDER: QRCodeErrorCorrectionLevel[] = ['L', 'M', 'Q', 'H']
 
+/** ECC_CODEWORDS_PER_BLOCK 内部常量。 */
 const ECC_CODEWORDS_PER_BLOCK: Record<QRCodeErrorCorrectionLevel, number[]> = {
   L: [
     -1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30,
@@ -53,6 +78,7 @@ const ECC_CODEWORDS_PER_BLOCK: Record<QRCodeErrorCorrectionLevel, number[]> = {
   ],
 }
 
+/** NUM_ERROR_CORRECTION_BLOCKS 内部常量。 */
 const NUM_ERROR_CORRECTION_BLOCKS: Record<QRCodeErrorCorrectionLevel, number[]> = {
   L: [
     -1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14,
@@ -72,17 +98,21 @@ const NUM_ERROR_CORRECTION_BLOCKS: Record<QRCodeErrorCorrectionLevel, number[]> 
   ],
 }
 
+/** 创建 Matrix 的内部工具函数。 */
 const createMatrix = <T>(size: number, value: T) =>
   Array.from({ length: size }, () => Array.from({ length: size }, () => value))
 
+/** clone Matrix 的内部工具函数。 */
 const cloneMatrix = (matrix: boolean[][]) => matrix.map(row => row.slice())
 
+/** append Bits 的内部工具函数。 */
 const appendBits = (buffer: number[], value: number, length: number) => {
   for (let index = length - 1; index >= 0; index -= 1) {
     buffer.push((value >>> index) & 1)
   }
 }
 
+/** 转换为 Codewords 的内部工具函数。 */
 const toCodewords = (bits: number[]) => {
   const codewords: number[] = []
 
@@ -99,6 +129,7 @@ const toCodewords = (bits: number[]) => {
   return codewords
 }
 
+/** 读取 Num Raw Data Modules 的内部工具函数。 */
 const getNumRawDataModules = (version: number) => {
   let result = (16 * version + 128) * version + 64
 
@@ -114,6 +145,7 @@ const getNumRawDataModules = (version: number) => {
   return result
 }
 
+/** 读取 Num Data Codewords 的内部工具函数。 */
 const getNumDataCodewords = (version: number, level: QRCodeErrorCorrectionLevel) => {
   return (
     Math.floor(getNumRawDataModules(version) / 8) -
@@ -121,6 +153,7 @@ const getNumDataCodewords = (version: number, level: QRCodeErrorCorrectionLevel)
   )
 }
 
+/** choose Version 的内部工具函数。 */
 const chooseVersion = (
   byteLength: number,
   requestedLevel: QRCodeErrorCorrectionLevel,
@@ -154,6 +187,7 @@ const chooseVersion = (
   return null
 }
 
+/** reed Solomon Multiply 的内部工具函数。 */
 const reedSolomonMultiply = (x: number, y: number) => {
   let value = 0
 
@@ -167,6 +201,7 @@ const reedSolomonMultiply = (x: number, y: number) => {
   return value & 0xff
 }
 
+/** reed Solomon Compute Divisor 的内部工具函数。 */
 const reedSolomonComputeDivisor = (degree: number) => {
   const result: number[] = Array.from({ length: degree }, () => 0)
   result[degree - 1] = 1
@@ -187,6 +222,7 @@ const reedSolomonComputeDivisor = (degree: number) => {
   return result
 }
 
+/** reed Solomon Compute Remainder 的内部工具函数。 */
 const reedSolomonComputeRemainder = (data: number[], divisor: number[]) => {
   const result = divisor.map(() => 0)
 
@@ -203,6 +239,7 @@ const reedSolomonComputeRemainder = (data: number[], divisor: number[]) => {
   return result
 }
 
+/** add Ecc And Interleave 的内部工具函数。 */
 const addEccAndInterleave = (
   dataCodewords: number[],
   version: number,
@@ -247,6 +284,7 @@ const addEccAndInterleave = (
   return result
 }
 
+/** 读取 Alignment Pattern Positions 的内部工具函数。 */
 const getAlignmentPatternPositions = (version: number) => {
   if (version === 1) {
     return [] as number[]
@@ -265,6 +303,7 @@ const getAlignmentPatternPositions = (version: number) => {
   return result
 }
 
+/** draw Finder Pattern 的内部工具函数。 */
 const drawFinderPattern = (
   centerX: number,
   centerY: number,
@@ -286,6 +325,7 @@ const drawFinderPattern = (
   }
 }
 
+/** draw Alignment Pattern 的内部工具函数。 */
 const drawAlignmentPattern = (
   centerX: number,
   centerY: number,
@@ -299,6 +339,7 @@ const drawAlignmentPattern = (
   }
 }
 
+/** draw Format Bits 的内部工具函数。 */
 const drawFormatBits = (
   modules: boolean[][],
   isFunction: boolean[][],
@@ -343,6 +384,7 @@ const drawFormatBits = (
   setFunctionModule(8, size - 8, true)
 }
 
+/** draw Version Bits 的内部工具函数。 */
 const drawVersionBits = (modules: boolean[][], isFunction: boolean[][], version: number) => {
   if (version < 7) {
     return
@@ -371,6 +413,7 @@ const drawVersionBits = (modules: boolean[][], isFunction: boolean[][], version:
   }
 }
 
+/** draw Function Patterns 的内部工具函数。 */
 const drawFunctionPatterns = (
   version: number,
   modules: boolean[][],
@@ -411,6 +454,7 @@ const drawFunctionPatterns = (
   drawVersionBits(modules, isFunction, version)
 }
 
+/** draw Codewords 的内部工具函数。 */
 const drawCodewords = (dataCodewords: number[], modules: boolean[][], isFunction: boolean[][]) => {
   const size = modules.length
   let bitIndex = 0
@@ -437,6 +481,7 @@ const drawCodewords = (dataCodewords: number[], modules: boolean[][], isFunction
   }
 }
 
+/** 读取 Mask Bit 的内部工具函数。 */
 const getMaskBit = (mask: number, x: number, y: number) => {
   switch (mask) {
     case 0:
@@ -460,6 +505,7 @@ const getMaskBit = (mask: number, x: number, y: number) => {
   }
 }
 
+/** apply Mask 的内部工具函数。 */
 const applyMask = (modules: boolean[][], isFunction: boolean[][], mask: number) => {
   for (let y = 0; y < modules.length; y += 1) {
     for (let x = 0; x < modules.length; x += 1) {
@@ -470,12 +516,14 @@ const applyMask = (modules: boolean[][], isFunction: boolean[][], mask: number) 
   }
 }
 
+/** matches Finder Pattern 的内部工具函数。 */
 const matchesFinderPattern = (modules: boolean[]) => {
   return FINDER_PENALTY_PATTERNS.some(pattern =>
     pattern.every((value, index) => value === modules[index]),
   )
 }
 
+/** 读取 Penalty Score 的内部工具函数。 */
 const getPenaltyScore = (modules: boolean[][]) => {
   const size = modules.length
   let result = 0
@@ -569,6 +617,7 @@ const getPenaltyScore = (modules: boolean[][]) => {
   return result
 }
 
+/** encode Text To Bytes 的内部工具函数。 */
 const encodeTextToBytes = (value: string) => {
   if (typeof TextEncoder !== 'undefined') {
     return Array.from(new TextEncoder().encode(value))
@@ -579,6 +628,7 @@ const encodeTextToBytes = (value: string) => {
   )
 }
 
+/** encodeQrMatrix 导出函数。 */
 export const encodeQrMatrix = (
   value: string,
   options: EncodeQrMatrixOptions = {},

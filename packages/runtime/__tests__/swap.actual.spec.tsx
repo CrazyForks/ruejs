@@ -22,7 +22,7 @@ afterEach(() => {
 })
 
 describe('Swap actual page', () => {
-  it('renders swap demos, reacts to checkbox and class mode, and restores preview after toggling code', async () => {
+  it('renders swap demos, rues to checkbox and class mode, and restores preview after toggling code', async () => {
     const container = mountContainer()
     resetActiveRuntime()
     render(<SwapPage />, container)

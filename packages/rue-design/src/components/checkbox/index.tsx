@@ -7,6 +7,7 @@ Checkbox 组件概述
 import type { FC } from '@rue-js/rue'
 import { h, onMounted, ref, useRef, watch } from '@rue-js/rue'
 
+/** CheckboxColor 语义色类型。 */
 export type CheckboxColor =
   | 'primary'
   | 'secondary'
@@ -17,55 +18,98 @@ export type CheckboxColor =
   | 'info'
   | 'error'
 
+/** CheckboxSize 尺寸类型。 */
 export type CheckboxSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+/** CheckboxValue 值类型。 */
 export type CheckboxValue = string | number | boolean
 
+/** CheckboxChangeMeta 接口。 */
 export interface CheckboxChangeMeta {
+  /** 受控选中状态。 */
   checked: boolean
+  /** indeterminate 配置项。 */
   indeterminate: boolean
+  /** 受控值。 */
   value?: CheckboxValue
 }
 
+/** CheckboxProps 组件属性。 */
 export interface CheckboxProps {
+  /** 组件语义色。 */
   color?: CheckboxColor
+  /** 组件尺寸。 */
   size?: CheckboxSize
+  /** 受控选中状态。 */
   checked?: boolean
+  /** 非受控初始选中状态。 */
   defaultChecked?: boolean
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** indeterminate 配置项。 */
   indeterminate?: boolean
+  /** 受控值。 */
   value?: CheckboxValue
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点附加类名。 */
   rootClassName?: string
+  /** contentClassName 附加类名。 */
   contentClassName?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 根节点内联样式。 */
   rootStyle?: any
+  /** 组件子内容。 */
   children?: any
+  /** 值或状态变化时触发的回调。 */
   onChange?: (event: Event, meta: CheckboxChangeMeta) => void
+  /** onCheckedChange 事件回调。 */
   onCheckedChange?: (checked: boolean, event: Event) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
+/** CheckboxOption 选项配置。 */
 export interface CheckboxOption {
+  /** 展示标签。 */
   label: any
+  /** 受控值。 */
   value: CheckboxValue
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 标题内容。 */
   title?: string
+  /** 元素或数据项标识。 */
   id?: string
+  /** indeterminate 配置项。 */
   indeterminate?: boolean
 }
 
+/** CheckboxGroupProps 组件属性。 */
 export interface CheckboxGroupProps {
+  /** 受控值。 */
   value?: CheckboxValue[]
+  /** 非受控初始值。 */
   defaultValue?: CheckboxValue[]
+  /** 可选项数据。 */
   options?: ReadonlyArray<CheckboxOption | CheckboxValue>
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 表单 name 属性或分组名称。 */
   name?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 组件子内容。 */
   children?: any
+  /** 值或状态变化时触发的回调。 */
   onChange?: (checkedValue: CheckboxValue[]) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -73,10 +117,12 @@ interface NormalizedCheckboxOption extends CheckboxOption {}
 
 let checkboxContentIdSeed = 0
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
 }
 
+/** 构建 Input Class Name 的内部工具函数。 */
 const buildInputClassName = (color?: CheckboxColor, size?: CheckboxSize, className?: string) => {
   let cls = 'checkbox'
   if (color) cls += ` checkbox-${color}`
@@ -85,6 +131,7 @@ const buildInputClassName = (color?: CheckboxColor, size?: CheckboxSize, classNa
   return cls
 }
 
+/** 构建 Root Class Name 的内部工具函数。 */
 const buildRootClassName = (disabled?: boolean, rootClassName?: string) => {
   let cls = 'inline-flex items-start gap-3 text-sm leading-5 text-base-content'
   if (disabled) cls += ' cursor-not-allowed opacity-60'
@@ -93,10 +140,12 @@ const buildRootClassName = (disabled?: boolean, rootClassName?: string) => {
   return cls
 }
 
+/** 构建 Content Class Name 的内部工具函数。 */
 const buildContentClassName = (contentClassName?: string) => {
   return appendClassName('min-w-0 flex-1', contentClassName)
 }
 
+/** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
     return children.flatMap(item => toChildArray(item))
@@ -105,6 +154,7 @@ const toChildArray = (children: any): any[] => {
   return children == null || typeof children === 'boolean' ? [] : [children]
 }
 
+/** serialize Value 的内部工具函数。 */
 const serializeValue = (value: CheckboxValue) => {
   switch (typeof value) {
     case 'number':
@@ -116,6 +166,7 @@ const serializeValue = (value: CheckboxValue) => {
   }
 }
 
+/** deserialize Value 的内部工具函数。 */
 const deserializeValue = (serialized?: string): CheckboxValue | undefined => {
   if (!serialized) return undefined
   const separatorIndex = serialized.indexOf(':')
@@ -127,6 +178,7 @@ const deserializeValue = (serialized?: string): CheckboxValue | undefined => {
   return rawValue
 }
 
+/** 归一化 Value List 的内部工具函数。 */
 const normalizeValueList = (values?: ReadonlyArray<CheckboxValue>) => {
   const next: CheckboxValue[] = []
   ;(values ?? []).forEach(value => {
@@ -137,6 +189,7 @@ const normalizeValueList = (values?: ReadonlyArray<CheckboxValue>) => {
   return next
 }
 
+/** 归一化 Options 的内部工具函数。 */
 const normalizeOptions = (options?: ReadonlyArray<CheckboxOption | CheckboxValue>) => {
   return (options ?? []).map<NormalizedCheckboxOption>(option => {
     if (typeof option === 'string' || typeof option === 'number' || typeof option === 'boolean') {
@@ -149,6 +202,7 @@ const normalizeOptions = (options?: ReadonlyArray<CheckboxOption | CheckboxValue
   })
 }
 
+/** Checkbox 的内部工具函数。 */
 const Checkbox: FC<CheckboxProps> = ({
   color,
   size,
@@ -329,6 +383,7 @@ const Checkbox: FC<CheckboxProps> = ({
   )
 }
 
+/** Group 的内部工具函数。 */
 const Group: FC<CheckboxGroupProps> = ({
   value,
   defaultValue,
@@ -529,4 +584,5 @@ const CheckboxCompound: CheckboxCompound = Object.assign(Checkbox, {
   Group,
 })
 
+/** 默认导出复选框组件。 */
 export default CheckboxCompound

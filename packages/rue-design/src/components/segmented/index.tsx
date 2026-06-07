@@ -1,63 +1,112 @@
+/*
+Segmented 模块概述
+- 汇总分段控制组件的公开类型、渲染入口和局部工具逻辑。
+- 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
+*/
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, onUpdated, ref, renderAnchor, useRef, watch } from '@rue-js/rue'
 
 let segmentedNameSeed = 0
+/** SEGMENTED_THUMB_TRANSITION_MS 内部常量。 */
 const SEGMENTED_THUMB_TRANSITION_MS = 420
+/** SEGMENTED_THUMB_TRANSITION_EASING 内部常量。 */
 const SEGMENTED_THUMB_TRANSITION_EASING = 'cubic-bezier(0.2, 0, 0, 1)'
 
+/** SegmentedValue 值类型。 */
 export type SegmentedValue = string | number
+/** SegmentedOrientation 类型。 */
 export type SegmentedOrientation = 'horizontal' | 'vertical'
+/** SegmentedShape 类型。 */
 export type SegmentedShape = 'default' | 'round'
+/** SegmentedSize 尺寸类型。 */
 export type SegmentedSize = 'small' | 'default' | 'middle' | 'medium' | 'large' | 'sm' | 'md' | 'lg'
 
+/** SegmentedSemanticClassNames 局部类名配置。 */
 export interface SegmentedSemanticClassNames {
+  /** 根节点区域配置。 */
   root?: string
+  /** item 区域配置。 */
   item?: string
+  /** 图标内容。 */
   icon?: string
+  /** 展示标签。 */
   label?: string
 }
 
+/** SegmentedSemanticStyles 局部样式配置。 */
 export interface SegmentedSemanticStyles {
+  /** 根节点区域配置。 */
   root?: any
+  /** item 区域配置。 */
   item?: any
+  /** 图标内容。 */
   icon?: any
+  /** 展示标签。 */
   label?: any
 }
 
+/** SegmentedLabeledOption 选项配置。 */
 export interface SegmentedLabeledOption<ValueType = SegmentedValue> {
+  /** 受控值。 */
   value: ValueType
+  /** 展示标签。 */
   label?: any
+  /** 图标内容。 */
   icon?: any
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 标题内容。 */
   title?: string
+  /** tooltip 配置项。 */
   tooltip?: string | { title?: any }
+  /** ariaLabel 标签内容。 */
   ariaLabel?: string
 }
 
+/** SegmentedOptions 类型。 */
 export type SegmentedOptions<ValueType = SegmentedValue> = Array<
   ValueType | SegmentedLabeledOption<ValueType>
 >
 
 type SegmentedSemanticInput<T> = T | ((info: { props: SegmentedProps<any> }) => T)
 
+/** SegmentedProps 组件属性。 */
 export interface SegmentedProps<ValueType = SegmentedValue> {
+  /** 可选项数据。 */
   options?: SegmentedOptions<ValueType>
+  /** 受控值。 */
   value?: ValueType
+  /** 非受控初始值。 */
   defaultValue?: ValueType
+  /** 是否禁用交互。 */
   disabled?: boolean
+  /** block 配置项。 */
   block?: boolean
+  /** 组件尺寸。 */
   size?: SegmentedSize
+  /** vertical 配置项。 */
   vertical?: boolean
+  /** orientation 配置项。 */
   orientation?: SegmentedOrientation
+  /** 组件形状。 */
   shape?: SegmentedShape
+  /** 表单 name 属性或分组名称。 */
   name?: string
+  /** 根节点附加类名。 */
   className?: string
+  /** 根节点内联样式。 */
   style?: any
+  /** 按局部区域覆盖的类名集合。 */
   classNames?: SegmentedSemanticInput<SegmentedSemanticClassNames>
+  /** 按局部区域覆盖的内联样式集合。 */
   styles?: SegmentedSemanticInput<SegmentedSemanticStyles>
+  /** 值或状态变化时触发的回调。 */
   onChange?: (value: ValueType) => void
+  /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
 
@@ -73,17 +122,20 @@ interface NormalizedSegmentedOption<ValueType = SegmentedValue> {
   ariaLabel?: string
 }
 
+/** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (!base) return className ?? ''
   return className ? `${base} ${className}` : base
 }
 
+/** merge Styles 的内部工具函数。 */
 const mergeStyles = (...styles: any[]) => {
   const resolved = styles.filter(Boolean)
   if (!resolved.length) return undefined
   return Object.assign({}, ...resolved)
 }
 
+/** sync Managed Renderable Host 的内部工具函数。 */
 const syncManagedRenderableHost = (
   host: HTMLElement,
   nextContent: unknown,
@@ -104,6 +156,7 @@ const syncManagedRenderableHost = (
   return host
 }
 
+/** clear Managed Renderable Host 的内部工具函数。 */
 const clearManagedRenderableHost = (
   host: HTMLElement,
   cache: WeakMap<HTMLElement, unknown>,
@@ -119,18 +172,21 @@ const clearManagedRenderableHost = (
   cache.delete(host)
 }
 
+/** serialize Value 的内部工具函数。 */
 const serializeValue = (value: unknown) => {
   if (value === undefined) return '__undefined__'
   if (value === null) return '__null__'
   return `${typeof value}:${String(value)}`
 }
 
+/** 判断 Option Object 的内部工具函数。 */
 const isOptionObject = <ValueType,>(
   option: unknown,
 ): option is SegmentedLabeledOption<ValueType> => {
   return !!option && typeof option === 'object' && !Array.isArray(option) && 'value' in option
 }
 
+/** 解析 Tooltip Title 的内部工具函数。 */
 const resolveTooltipTitle = (tooltip?: string | { title?: any }) => {
   if (typeof tooltip === 'string') return tooltip
   if (tooltip && typeof tooltip === 'object' && tooltip.title != null) {
@@ -139,6 +195,7 @@ const resolveTooltipTitle = (tooltip?: string | { title?: any }) => {
   return undefined
 }
 
+/** 解析 Orientation 的内部工具函数。 */
 const resolveOrientation = (
   orientation?: SegmentedOrientation,
   vertical?: boolean,
@@ -147,6 +204,7 @@ const resolveOrientation = (
   return vertical ? 'vertical' : 'horizontal'
 }
 
+/** 解析 Size Config 的内部工具函数。 */
 const resolveSizeConfig = (size?: SegmentedSize) => {
   switch (size) {
     case 'small':
@@ -172,6 +230,7 @@ const resolveSizeConfig = (size?: SegmentedSize) => {
   }
 }
 
+/** 解析 Shape Class Name 的内部工具函数。 */
 const resolveShapeClassName = (shape?: SegmentedShape) => {
   if (shape === 'round') {
     return {
@@ -186,6 +245,7 @@ const resolveShapeClassName = (shape?: SegmentedShape) => {
   }
 }
 
+/** 归一化 Options 的内部工具函数。 */
 const normalizeOptions = <ValueType,>(options?: SegmentedOptions<ValueType>) => {
   return (options ?? []).map<NormalizedSegmentedOption<ValueType>>(option => {
     if (!isOptionObject<ValueType>(option)) {
@@ -212,6 +272,7 @@ const normalizeOptions = <ValueType,>(options?: SegmentedOptions<ValueType>) => 
   })
 }
 
+/** find Option 的内部工具函数。 */
 const findOption = <ValueType,>(
   options: NormalizedSegmentedOption<ValueType>[],
   value: unknown,
@@ -220,10 +281,12 @@ const findOption = <ValueType,>(
   return options.find(option => serializeValue(option.value) === serialized)
 }
 
+/** 解析 Fallback Option 的内部工具函数。 */
 const resolveFallbackOption = <ValueType,>(options: NormalizedSegmentedOption<ValueType>[]) => {
   return options.find(option => !option.disabled) ?? options[0]
 }
 
+/** 解析 Uncontrolled Value 的内部工具函数。 */
 const resolveUncontrolledValue = <ValueType,>(
   currentValue: unknown,
   options: NormalizedSegmentedOption<ValueType>[],
@@ -236,6 +299,7 @@ const resolveUncontrolledValue = <ValueType,>(
   )
 }
 
+/** 解析 Semantic Config 的内部工具函数。 */
 const resolveSemanticConfig = <T,>(
   input: SegmentedSemanticInput<T> | undefined,
   props: SegmentedProps<any>,
@@ -247,6 +311,7 @@ const resolveSemanticConfig = <T,>(
   return input
 }
 
+/** 解析 Accessible Label 的内部工具函数。 */
 const resolveAccessibleLabel = <ValueType,>(option: NormalizedSegmentedOption<ValueType>) => {
   if (option.ariaLabel) return option.ariaLabel
   if (typeof option.label === 'string' || typeof option.label === 'number')
@@ -255,6 +320,7 @@ const resolveAccessibleLabel = <ValueType,>(option: NormalizedSegmentedOption<Va
   return String(option.value)
 }
 
+/** Segmented 的内部工具函数。 */
 const Segmented: FC<SegmentedProps<any>> = props => {
   const {
     options = [],
@@ -771,4 +837,5 @@ const Segmented: FC<SegmentedProps<any>> = props => {
   )
 }
 
+/** 默认导出分段控制组件。 */
 export default Segmented

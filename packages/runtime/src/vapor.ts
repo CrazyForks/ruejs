@@ -1,14 +1,27 @@
+/*
+Vapor 入口公共出口概述
+- 面向 Vapor 编译产物导出专用 runtime、DOM helper、列表/ref/event 辅助和内置组件。
+- 与默认 index.ts 保持 API 形态接近，但 render 入口收敛到 renderAnchor/renderBetween。
+- 响应式 API 直接透传 runtime-vapor/reactive，createResource 继续使用 runtime 包装以支持 Suspense。
+*/
+
 export {
   vapor,
   onBeforeCreate,
   onCreated,
   onBeforeMount,
   onMounted,
+  onActivated,
   onBeforeUpdate,
   onUpdated,
+  onRenderTriggered,
   onBeforeUnmount,
   onUnmounted,
+  onDeactivated,
+  onServerPrefetch,
+  runServerPrefetch,
   onError,
+  onErrorCaptured,
   getCurrentContainer,
   renderAnchor,
   renderBetween,
@@ -57,6 +70,9 @@ export {
   batch,
   nextTick,
   onCleanup,
+  onWatcherCleanup,
+  onRenderTracked,
+  onScopeDispose,
   untrack,
   setCurrentInstance,
   getCurrentInstance,
@@ -64,6 +80,7 @@ export {
   toValue,
   watchFn,
   watchEffect,
+  watchPostEffect,
   watchSignal,
   watchDeepSignal,
   watchPath,
@@ -74,8 +91,14 @@ export {
   signal,
   ref,
   shallowRef,
+  triggerRef,
+  toRef,
+  toRefs,
   computed,
+  isRef,
+  isProxy,
   isReactive,
+  isReadonly,
   reactive,
   shallowReactive,
   readonly,

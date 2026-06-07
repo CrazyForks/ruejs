@@ -43,10 +43,8 @@ pub fn build_setup_with_binds(
                                 out.insert(id.sym.to_string(), id.clone());
                             }
                             Pat::Array(arr) => {
-                                for e in &arr.elems {
-                                    if let Some(ep) = e {
-                                        collect(ep, out);
-                                    }
+                                for ep in arr.elems.iter().flatten() {
+                                    collect(ep, out);
                                 }
                             }
                             Pat::Object(obj) => {

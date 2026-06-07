@@ -25,10 +25,15 @@ import {
 import type { DomElementLike, DomNodeLike } from '../dom'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
 
+/** Teleport 组件属性。 */
 export interface TeleportProps {
+  /** 目标容器选择器或元素。 */
   to?: string | HTMLElement
+  /** 为 true 时禁用传送，内容留在原位置渲染。 */
   disabled?: boolean
+  /** 预留延迟解析目标的兼容属性。 */
   defer?: boolean
+  /** 需要传送的子内容。 */
   children?: any
 }
 
@@ -59,6 +64,7 @@ const toRenderable = (children: unknown) => {
   return children ?? []
 }
 
+/** 将子内容渲染到指定 DOM 目标，并在卸载时清理目标区间。 */
 export const Teleport: FC<TeleportProps> = props => {
   const ctx = useSetup(() => {
     const container = createElement('span') as HTMLElement

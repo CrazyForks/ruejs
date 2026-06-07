@@ -1,3 +1,14 @@
+/*
+Mounted snapshot 类型体系
+
+渲染完成后，runtime 不只需要 DOM 节点，还需要一份“可更新、可卸载”的状态快照：
+- host/fragment_nodes：定位真实 DOM
+- key/type：判断下一次 patch 是否可复用
+- lifecycle record：统一执行 cleanup bucket、effect scope 与组件 hooks
+- comp_subtree/inst_index：组件更新时复用实例并递归 patch 子树
+
+这份 snapshot 是 render、patch、replace、unmount 之间共享的核心数据结构。
+*/
 use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
 
@@ -69,6 +80,10 @@ pub(crate) struct MountLifecycleRecord {
     pub effect_scope_id: Option<usize>,
     pub component_before_unmount_hooks: Vec<JsValue>,
     pub component_unmounted_hooks: Vec<JsValue>,
+    /// KeepAlive range 重新激活时触发的组件级 hooks。
+    pub component_activated_hooks: Vec<JsValue>,
+    /// KeepAlive range 移入缓存容器时触发的组件级 hooks。
+    pub component_deactivated_hooks: Vec<JsValue>,
     pub component_inst_index: Option<usize>,
     pub children: Vec<MountLifecycleRecord>,
 }
@@ -121,6 +136,10 @@ pub(crate) struct MountedPatchSubtree<A: DomAdapter> {
     pub fragment_nodes: Vec<A::Element>,
     pub component_before_unmount_hooks: Vec<JsValue>,
     pub component_unmounted_hooks: Vec<JsValue>,
+    /// 当前组件子树缓存激活时需要触发的 activated hooks。
+    pub component_activated_hooks: Vec<JsValue>,
+    /// 当前组件子树缓存停用时需要触发的 deactivated hooks。
+    pub component_deactivated_hooks: Vec<JsValue>,
     pub comp_subtree: Option<Box<MountedSubtreeState<A>>>,
     pub comp_inst_index: Option<usize>,
 }
@@ -196,6 +215,7 @@ impl MountedPatchSubtreeType {
 }
 
 impl MountedVaporSubtreeType {
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(crate) fn matches_input_type<A: DomAdapter>(&self, input_type: &MountInputType<A>) -> bool {
         match (self, input_type) {
             (Self::Vapor, MountInputType::Vapor) => true,
@@ -218,6 +238,7 @@ impl<A: DomAdapter> MountedSubtreeChild<A>
 where
     A::Element: Clone,
 {
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub fn lifecycle_record(&self) -> Option<MountLifecycleRecord> {
         match self {
             Self::Subtree(subtree) => Some(subtree.lifecycle_record()),
@@ -303,6 +324,8 @@ where
                 effect_scope_id: text.effect_scope_id,
                 component_before_unmount_hooks: Vec::new(),
                 component_unmounted_hooks: Vec::new(),
+                component_activated_hooks: Vec::new(),
+                component_deactivated_hooks: Vec::new(),
                 component_inst_index: None,
                 children: Vec::new(),
             },
@@ -312,6 +335,8 @@ where
                 effect_scope_id: vapor.effect_scope_id,
                 component_before_unmount_hooks: Vec::new(),
                 component_unmounted_hooks: Vec::new(),
+                component_activated_hooks: Vec::new(),
+                component_deactivated_hooks: Vec::new(),
                 component_inst_index: None,
                 children: Vec::new(),
             },
@@ -331,6 +356,8 @@ where
             effect_scope_id: None,
             component_before_unmount_hooks: self.component_before_unmount_hooks.clone(),
             component_unmounted_hooks: self.component_unmounted_hooks.clone(),
+            component_activated_hooks: self.component_activated_hooks.clone(),
+            component_deactivated_hooks: self.component_deactivated_hooks.clone(),
             component_inst_index: self.comp_inst_index,
             children: self
                 .comp_subtree
@@ -365,6 +392,8 @@ where
             fragment_nodes,
             component_before_unmount_hooks: Vec::new(),
             component_unmounted_hooks: Vec::new(),
+            component_activated_hooks: Vec::new(),
+            component_deactivated_hooks: Vec::new(),
             comp_subtree: None,
             comp_inst_index: None,
         }
@@ -377,6 +406,8 @@ where
         fragment_nodes: Vec<A::Element>,
         component_before_unmount_hooks: Vec<JsValue>,
         component_unmounted_hooks: Vec<JsValue>,
+        component_activated_hooks: Vec<JsValue>,
+        component_deactivated_hooks: Vec<JsValue>,
         comp_subtree: Option<Box<MountedSubtreeState<A>>>,
         comp_inst_index: Option<usize>,
     ) -> Self {
@@ -389,6 +420,8 @@ where
             fragment_nodes,
             component_before_unmount_hooks,
             component_unmounted_hooks,
+            component_activated_hooks,
+            component_deactivated_hooks,
             comp_subtree,
             comp_inst_index,
         }
@@ -399,6 +432,7 @@ where
         self.component_lifecycle_record()
     }
 
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn into_component_root_state(self, lifecycle: MountLifecycleRecord) -> MountedState<A> {
         match self.r#type {
             MountedPatchSubtreeType::Component(render_fn) => {
@@ -513,6 +547,8 @@ where
             self.fragment_nodes,
             self.lifecycle.component_before_unmount_hooks,
             self.lifecycle.component_unmounted_hooks,
+            self.lifecycle.component_activated_hooks,
+            self.lifecycle.component_deactivated_hooks,
             self.subtree,
             self.inst_index,
         ))
@@ -532,6 +568,7 @@ where
     }
 
     #[cfg(feature = "compat")]
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub fn into_patch_state(self) -> Option<MountedSubtreeState<A>> {
         match self {
             Self::Compat(root) => Some(compat_patch_root::compat_root_into_patch_state(root)),
@@ -558,6 +595,16 @@ where
 }
 
 impl<A: DomAdapter> MountedState<A> {
+    /// 获取 mounted 子树的生命周期快照，供 KeepAlive 按 range 重放 activated/deactivated。
+    pub fn lifecycle_record(&self) -> MountLifecycleRecord {
+        match self {
+            Self::Block(block) => block.lifecycle.clone(),
+            #[cfg(feature = "compat")]
+            Self::Compat(root) => compat_patch_root::compat_root_lifecycle_record(root),
+            Self::Component(component) => component.lifecycle.clone(),
+        }
+    }
+
     pub fn into_dom_identity(self) -> (MountLifecycleRecord, Option<A::Element>, Vec<A::Element>) {
         match self {
             Self::Block(block) => (block.lifecycle, block.host, block.fragment_nodes),
@@ -619,6 +666,7 @@ impl<A: DomAdapter> AnchorMountState<A> {
     }
 
     #[allow(dead_code)]
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub fn clear(&mut self) {
         self.mounted = None;
     }
@@ -638,7 +686,80 @@ impl<A: DomAdapter> RangeMountState<A> {
     }
 
     #[allow(dead_code)]
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub fn clear(&mut self) {
         self.mounted = None;
+    }
+}
+
+#[cfg(test)]
+mod plan999_mounted_tests {
+    use super::*;
+    use crate::runtime::js_adapter::JsDomAdapter;
+    use js_sys::Function;
+    use wasm_bindgen_test::*;
+
+    fn lifecycle() -> MountLifecycleRecord {
+        MountLifecycleRecord {
+            kind: MountLifecycleKind::Other,
+            cleanup_bucket: None,
+            effect_scope_id: None,
+            component_before_unmount_hooks: Vec::new(),
+            component_unmounted_hooks: Vec::new(),
+            component_activated_hooks: Vec::new(),
+            component_deactivated_hooks: Vec::new(),
+            component_inst_index: None,
+            children: Vec::new(),
+        }
+    }
+
+    fn block_state(host: JsValue) -> MountedState<JsDomAdapter> {
+        MountedState::Block(MountedBlock {
+            host: Some(host),
+            fragment_nodes: Vec::new(),
+            lifecycle: lifecycle(),
+        })
+    }
+
+    #[wasm_bindgen_test]
+    fn mounted_vapor_type_mismatch_and_plain_child_lifecycle_edges() {
+        let vapor_setup = MountedVaporSubtreeType::VaporWithSetup(Function::new_no_args("").into());
+        let text_input = MountInputType::<JsDomAdapter>::Text("text".to_string());
+        assert!(!vapor_setup.matches_input_type(&text_input));
+
+        let text_child = MountedSubtreeChild::<JsDomAdapter>::Text("child".to_string());
+        let bool_child = MountedSubtreeChild::<JsDomAdapter>::Bool(false);
+        let null_child = MountedSubtreeChild::<JsDomAdapter>::Null;
+        assert!(text_child.lifecycle_record().is_none());
+        assert!(bool_child.lifecycle_record().is_none());
+        assert!(null_child.lifecycle_record().is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn mounted_state_block_patch_none_and_anchor_range_clear_edges() {
+        let host = JsValue::from_str("host");
+        let block = block_state(host.clone());
+        assert!(block.into_patch_state().is_none());
+
+        let mut anchor =
+            AnchorMountState::new(JsValue::from_str("anchor"), block_state(host.clone()));
+        assert!(anchor.mounted.is_some());
+        anchor.clear();
+        assert!(anchor.mounted.is_none());
+        anchor.store_mount(block_state(host.clone()));
+        assert!(anchor.take_mount().is_some());
+        assert!(anchor.take_mount().is_none());
+
+        let mut range = RangeMountState::new(
+            JsValue::from_str("start"),
+            JsValue::from_str("end"),
+            block_state(host),
+        );
+        assert!(range.mounted.is_some());
+        range.clear();
+        assert!(range.mounted.is_none());
+        range.store_mount(block_state(JsValue::from_str("next")));
+        assert!(range.take_mount().is_some());
+        assert!(range.take_mount().is_none());
     }
 }

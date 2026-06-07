@@ -38,6 +38,9 @@ jobs:
       - name: Run unit tests
         run: pnpm run test-unit
 
+      - name: Run @rue-js/text unit tests
+        run: pnpm run test:text-unit
+
   # unit-test-windows:
   #   runs-on: windows-latest
   #   env:
@@ -145,6 +148,9 @@ jobs:
 
       - name: Run tsgo type check
         run: pnpm run check
+
+      - name: Run @rue-js/text package check
+        run: pnpm run check:text
 
       - run: pnpm --filter @rue-js/swc-plugin-rue build
       - run: pnpm --filter @rue-js/runtime-vapor build-node

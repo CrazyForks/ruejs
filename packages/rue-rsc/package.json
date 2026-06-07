@@ -1,0 +1,128 @@
+{
+  "name": "@rue-js/rsc",
+  "version": "0.3.10",
+  "description": "Rue-owned RSC runtime and Vite integration.",
+  "keywords": [
+    "rsc",
+    "rue",
+    "vite",
+    "vite-plugin"
+  ],
+  "homepage": "https://github.com/hunzhiwange/ruejs/tree/main/packages/rue-rsc#readme",
+  "bugs": {
+    "url": "https://github.com/hunzhiwange/ruejs/issues"
+  },
+  "license": "MIT",
+  "author": "Xiangmin Liu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hunzhiwange/ruejs.git",
+    "directory": "packages/rue-rsc"
+  },
+  "files": [
+    "dist",
+    "types"
+  ],
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    "./types": "./types/index.d.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "development": "./src/plugin.ts",
+      "import": "./dist/plugin.js",
+      "default": "./dist/plugin.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "development": "./src/browser.ts",
+      "import": "./dist/browser.js",
+      "default": "./dist/browser.js"
+    },
+    "./ssr": {
+      "types": "./dist/ssr.d.ts",
+      "development": "./src/ssr.tsx",
+      "import": "./dist/ssr.js",
+      "default": "./dist/ssr.js"
+    },
+    "./rsc": {
+      "types": "./dist/rsc.d.ts",
+      "development": "./src/rsc.tsx",
+      "import": "./dist/rsc.js",
+      "default": "./dist/rsc.js"
+    },
+    "./core/payload": {
+      "types": "./dist/core/payload.d.ts",
+      "development": "./src/core/payload.ts",
+      "import": "./dist/core/payload.js",
+      "default": "./dist/core/payload.js"
+    },
+    "./transforms": {
+      "types": "./dist/transforms/index.d.ts",
+      "development": "./src/transforms/index.ts",
+      "import": "./dist/transforms/index.js",
+      "default": "./dist/transforms/index.js"
+    },
+    "./utils/rpc": {
+      "types": "./dist/utils/rpc.d.ts",
+      "development": "./src/utils/rpc.ts",
+      "import": "./dist/utils/rpc.js",
+      "default": "./dist/utils/rpc.js"
+    },
+    "./utils/encryption-runtime": {
+      "types": "./dist/utils/encryption-runtime.d.ts",
+      "development": "./src/utils/encryption-runtime.ts",
+      "import": "./dist/utils/encryption-runtime.js",
+      "default": "./dist/utils/encryption-runtime.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --sourcemap --watch",
+    "test": "vitest",
+    "test-unit": "vitest run src/transforms"
+  },
+  "dependencies": {
+    "@hiogawa/utils": "^1.7.0",
+    "@rolldown/pluginutils": "^1.0.1",
+    "es-module-lexer": "^2.1.0",
+    "estree-walker": "^3.0.3",
+    "magic-string": "catalog:",
+    "srvx": "^0.11.16",
+    "strip-literal": "^3.1.0",
+    "turbo-stream": "^3.2.0",
+    "vitefu": "^1.1.3"
+  },
+  "devDependencies": {
+    "@tsconfig/strictest": "^2.0.8",
+    "@types/estree": "^1.0.9",
+    "@types/node": "catalog:",
+    "@vitejs/test-dep-cjs-and-esm": "./test-dep/cjs-and-esm",
+    "@vitejs/test-dep-cjs-falsy-primitive": "./test-dep/cjs-falsy-primitive",
+    "tsdown": "^0.22.1",
+    "vite": "catalog:",
+    "vitest": "4.1.5"
+  },
+  "peerDependencies": {
+    "vite": "*"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "upstream": {
+    "name": "Rue RSC plugin lineage",
+    "version": "0.5.27",
+    "license": "MIT"
+  }
+}
