@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/hunzhiwange/ruejs/compare/v0.3.10...v0.5.0) (2026-06-07)
+
+
+### Features
+
+* new version ([43dec71](https://github.com/hunzhiwange/ruejs/commit/43dec71195e141384b7c9604d14c19c2a3f5d25c))
+
 ## [0.3.10](https://github.com/hunzhiwange/ruejs/compare/v0.3.9...v0.3.10) (2026-05-24)
 
 ## [0.3.9](https://github.com/hunzhiwange/ruejs/compare/v0.3.8...v0.3.9) (2026-05-24)
