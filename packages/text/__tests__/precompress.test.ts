@@ -13,6 +13,10 @@ import os from 'node:os'
 import zlib from 'node:zlib'
 import { precompressAssets } from '../src/build/precompress.js'
 
+const hasZstdSync =
+  typeof zlib.zstdCompressSync === 'function' && typeof zlib.zstdDecompressSync === 'function'
+const itWithZstd = hasZstdSync ? it : it.skip
+
 /** Write a file with repeated content to ensure it exceeds compression threshold. */
 async function writeAsset(clientDir: string, relativePath: string, content: string): Promise<void> {
   const fullPath = path.join(clientDir, relativePath)
@@ -162,7 +166,7 @@ describe('precompressAssets', () => {
     expect(fs.existsSync(path.join(clientDir, '_text/static/main-eee555.js.br'))).toBe(true)
   })
 
-  it('generates .zst files alongside .br and .gz', async () => {
+  itWithZstd('generates .zst files alongside .br and .gz', async () => {
     const jsContent = 'const x = 1;\n'.repeat(200)
     await writeAsset(clientDir, '_text/static/zstd-aaa111.js', jsContent)
 
@@ -174,7 +178,7 @@ describe('precompressAssets', () => {
     expect(result.filesCompressed).toBe(1)
   })
 
-  it('zstd output decompresses to original content', async () => {
+  itWithZstd('zstd output decompresses to original content', async () => {
     const jsContent = "export function hello() { return 'world'; }\n".repeat(100)
     await writeAsset(clientDir, '_text/static/hello-zstd.js', jsContent)
 

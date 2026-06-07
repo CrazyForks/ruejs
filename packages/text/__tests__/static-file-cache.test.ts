@@ -174,7 +174,7 @@ describe('StaticFileCache', () => {
   it('detects zstandard precompressed variant', async () => {
     const content = 'const zstd = true;\n'.repeat(200)
     await writeFile(clientDir, '_text/static/app-zstd.js', content)
-    const zstdContent = zlib.zstdCompressSync(Buffer.from(content))
+    const zstdContent = Buffer.from('precompressed zstd')
     await writeFile(clientDir, '_text/static/app-zstd.js.zst', zstdContent)
 
     const cache = await StaticFileCache.create(clientDir)
@@ -217,11 +217,7 @@ describe('StaticFileCache', () => {
       zlib.brotliCompressSync(Buffer.from(content)),
     )
     await writeFile(clientDir, '_text/static/app-abc123.js.gz', zlib.gzipSync(Buffer.from(content)))
-    await writeFile(
-      clientDir,
-      '_text/static/app-abc123.js.zst',
-      zlib.zstdCompressSync(Buffer.from(content)),
-    )
+    await writeFile(clientDir, '_text/static/app-abc123.js.zst', Buffer.from('precompressed zstd'))
 
     const cache = await StaticFileCache.create(clientDir)
 

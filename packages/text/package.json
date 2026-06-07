@@ -220,8 +220,8 @@
     "check": "vp pack --no-write --no-clean",
     "prepack": "vp run build",
     "dev": "vp pack --watch",
-    "test": "pnpm run build && vp test run --environment jsdom --teardownTimeout 60000 --exclude \"__tests__/e2e/**\"",
-    "test-unit": "pnpm run build && node ../../scripts/run-text-unit-tests.mjs"
+    "test": "node ../../scripts/ensure-text-test-dependencies.js && pnpm run build && vp test run --environment jsdom --teardownTimeout 60000 --exclude \"__tests__/e2e/**\"",
+    "test-unit": "node ../../scripts/ensure-text-test-dependencies.js && pnpm run build && node ../../scripts/run-text-unit-tests.mjs"
   },
   "dependencies": {
     "@rue-js/jsx-dev-runtime": "workspace:*",

@@ -497,7 +497,7 @@ describe('tryServeStatic (with StaticFileCache)', () => {
   it('serves precompressed zstd when client accepts zstd', async () => {
     const jsContent = 'const zstd = true;\n'.repeat(200)
     await writeFile(clientDir, '_text/static/zstd-ggg777.js', jsContent)
-    const zstdContent = zlib.zstdCompressSync(Buffer.from(jsContent))
+    const zstdContent = Buffer.from('precompressed zstd')
     await writeFile(clientDir, '_text/static/zstd-ggg777.js.zst', zstdContent)
 
     const cache = await StaticFileCache.create(clientDir)
@@ -517,9 +517,7 @@ describe('tryServeStatic (with StaticFileCache)', () => {
     expect(served).toBe(true)
     expect(captured.headers['Content-Encoding']).toBe('zstd')
     expect(captured.headers['Content-Length']).toBe(String(zstdContent.length))
-    // Verify content decompresses correctly
-    const decompressed = zlib.zstdDecompressSync(captured.body).toString()
-    expect(decompressed).toBe(jsContent)
+    expect(captured.body).toEqual(zstdContent)
   })
 
   it('prefers zstd over br when both accepted and available', async () => {
@@ -528,7 +526,7 @@ describe('tryServeStatic (with StaticFileCache)', () => {
     await writeFile(
       clientDir,
       '_text/static/priority-hhh888.js.zst',
-      zlib.zstdCompressSync(Buffer.from(jsContent)),
+      Buffer.from('precompressed zstd'),
     )
     await writeFile(
       clientDir,
