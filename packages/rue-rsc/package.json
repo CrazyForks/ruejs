@@ -106,6 +106,7 @@
     "@vitejs/test-dep-cjs-and-esm": "./test-dep/cjs-and-esm",
     "@vitejs/test-dep-cjs-falsy-primitive": "./test-dep/cjs-falsy-primitive",
     "tsdown": "^0.22.1",
+    "unrun": "^0.3.1",
     "vite": "catalog:",
     "vitest": "4.1.5"
   },
