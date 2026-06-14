@@ -4,7 +4,12 @@ import { attachRouter, createRouter } from '@rue-js/router'
 
 import { render, setReactiveScheduling } from '../src'
 import { createPersistentSidebarPlayground } from '../../../app/pages/site/persistentSidebarPlayground'
-import { createMemoryHistory, createStaticHistory, mountContainer, waitForContent } from './page-test-utils'
+import {
+  createMemoryHistory,
+  createStaticHistory,
+  mountContainer,
+  waitForContent,
+} from './page-test-utils'
 
 setReactiveScheduling('sync')
 

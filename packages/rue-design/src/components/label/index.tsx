@@ -514,11 +514,7 @@ const renderControlNode = ({
 
   if (as === 'div') {
     return (
-      <div
-        {...rest}
-        className={controlClassName}
-        {...controlAriaProps}
-      >
+      <div {...rest} className={controlClassName} {...controlAriaProps}>
         {renderControlAffix(prefix, affixClassName)}
         {children}
         {renderControlAffix(suffix, affixClassName)}
@@ -527,11 +523,7 @@ const renderControlNode = ({
   }
 
   return (
-    <label
-      {...rest}
-      className={controlClassName}
-      {...controlAriaProps}
-    >
+    <label {...rest} className={controlClassName} {...controlAriaProps}>
       {renderControlAffix(prefix, affixClassName)}
       {children}
       {renderControlAffix(suffix, affixClassName)}

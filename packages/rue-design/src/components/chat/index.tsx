@@ -202,11 +202,6 @@ const hasSemanticMessage = (message: ChatSemanticMessageProps) => {
   )
 }
 
-/** 解析 Message Text 的内部工具函数。 */
-const resolveMessageText = (message: ChatSemanticMessageProps) => {
-  return message.message ?? message.text
-}
-
 /** 气泡子组件：支持颜色类与 typing 态。 */
 const Bubble: FC<BubbleProps> = ({ color, className, children, typing, typingIndicator }) => {
   const bubbleClassName = appendClassName(

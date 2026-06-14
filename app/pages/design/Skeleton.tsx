@@ -930,8 +930,7 @@ const listLoading = ref(true)
         <div className="not-prose mt-10 space-y-2">
           <h2 className="text-2xl font-semibold">元素 API</h2>
           <p className="text-sm text-base-content/70">
-            提供一组 Button / Avatar / Input / Image / Node 示范，但保留 Rue
-            自己的视觉基底。
+            提供一组 Button / Avatar / Input / Image / Node 示范，但保留 Rue 自己的视觉基底。
           </p>
         </div>
 

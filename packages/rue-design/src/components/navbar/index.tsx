@@ -159,10 +159,7 @@ const Section: FC<NavbarSectionProps> = ({
 }) => {
   const Component = as as any
   return (
-    <Component
-      {...rest}
-      className={buildSectionClassName(placement, align, grow, wrap, className)}
-    >
+    <Component {...rest} className={buildSectionClassName(placement, align, grow, wrap, className)}>
       {children}
     </Component>
   )

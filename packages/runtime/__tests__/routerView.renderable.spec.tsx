@@ -27,9 +27,7 @@ import SidebarPlaygroundDesign, {
 import SidebarPlaygroundExample, {
   ExamplesRouteLayout,
 } from '../../../app/pages/site/SidebarPlaygroundExample'
-import SidebarPlaygroundApi, {
-  ApiRouteLayout,
-} from '../../../app/pages/site/SidebarPlaygroundApi'
+import SidebarPlaygroundApi, { ApiRouteLayout } from '../../../app/pages/site/SidebarPlaygroundApi'
 import SidebarPlaygroundGuide, {
   GuideRouteLayout,
 } from '../../../app/pages/site/SidebarPlaygroundGuide'

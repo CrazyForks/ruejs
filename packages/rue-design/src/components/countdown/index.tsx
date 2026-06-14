@@ -351,7 +351,7 @@ const Countdown: FC<CountdownProps> = ({
   return (
     <span ref={setRootElement} className={resolvedClassName.get()}>
       {hasItems.get()
-        ? (items ?? []).map((item, index) =>
+        ? (items ?? []).map(item =>
             isValueItem(item) ? (
               <span
                 style={buildValueStyle(item.value, item.digits)}

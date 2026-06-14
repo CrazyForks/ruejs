@@ -18,11 +18,7 @@ const createPlugin = (options: RueVitePluginOptions = {}) =>
   VitePluginRue({ include: ['/app/'], ...options })
 const fixtureId = (name: string) => `/app/test-fixtures/${name}.tsx`
 
-const invokeTransform = async (
-  source: string,
-  id: string,
-  options: RueVitePluginOptions = {},
-) => {
+const invokeTransform = async (source: string, id: string, options: RueVitePluginOptions = {}) => {
   const plugin = createPlugin(options)
   const transformHook = plugin.transform
 

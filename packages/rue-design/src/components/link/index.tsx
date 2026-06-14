@@ -1016,12 +1016,11 @@ const Link: FC<LinkProps> = ({
 
     const titleProps = titleValue !== undefined ? { title: titleValue } : {}
     const expanded = getIsExpanded()
-    const textClassName =
-      expanded
-        ? 'min-w-0 max-w-full whitespace-normal break-words align-bottom'
-        : ellipsisConfig.rows > 1
-          ? 'min-w-0 max-w-full overflow-hidden align-bottom'
-          : 'min-w-0 max-w-full truncate align-bottom'
+    const textClassName = expanded
+      ? 'min-w-0 max-w-full whitespace-normal break-words align-bottom'
+      : ellipsisConfig.rows > 1
+        ? 'min-w-0 max-w-full overflow-hidden align-bottom'
+        : 'min-w-0 max-w-full truncate align-bottom'
     const textStyle = expanded
       ? {
           minWidth: 0,
@@ -1086,7 +1085,7 @@ const Link: FC<LinkProps> = ({
           {iconNode}
           {textNode}
         </>
-    )
+      )
 
     const anchorStyle = ellipsisConfig.enabled ? mergeStyles(style, { minWidth: 0 }) : style
     const anchorTitleProps =
@@ -1149,8 +1148,7 @@ const Link: FC<LinkProps> = ({
     const expanded = getIsExpanded()
     const anchor = renderAnchor()
     const showExpandButton =
-      !!ellipsisConfig.expandable &&
-      (!expanded || ellipsisConfig.expandable === 'collapsible')
+      !!ellipsisConfig.expandable && (!expanded || ellipsisConfig.expandable === 'collapsible')
 
     if (!hasInlineActions && !showExpandButton) {
       return anchor

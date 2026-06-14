@@ -486,11 +486,7 @@ const SkeletonNode: FC<SkeletonNodeProps> = ({
 
 /** Image Placeholder Icon 的内部组件。 */
 const ImagePlaceholderIcon: FC = () => (
-  <svg
-    viewBox="0 0 64 64"
-    className="h-10 w-10 fill-current opacity-60"
-    aria-hidden="true"
-  >
+  <svg viewBox="0 0 64 64" className="h-10 w-10 fill-current opacity-60" aria-hidden="true">
     <path d="M10 14a4 4 0 0 1 4-4h36a4 4 0 0 1 4 4v36a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V14Zm4 0v28.28l9.64-9.63a3 3 0 0 1 4.24 0L36 40.77l6.64-6.63a3 3 0 0 1 4.24 0L50 37.25V14H14Zm36 36V42.9l-5.24-5.23L38.12 44.3a3 3 0 0 1-4.24 0l-8.12-8.11L14 47.97V50h36ZM22 28a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
   </svg>
 )

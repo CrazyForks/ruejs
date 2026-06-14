@@ -601,11 +601,6 @@ function runWithAppClientReferenceSsr<T>(callback: () => T): T {
   }
 }
 
-async function renderRueRenderableToString(element: TextRenderable): Promise<string> {
-  const { renderToString } = await import('@rue-js/server-renderer')
-  return renderToString(element)
-}
-
 function stringToAppSsrStream(value: string): AppSsrReadableStream {
   return new ReadableStream<Uint8Array>({
     start(controller) {

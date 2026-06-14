@@ -623,16 +623,14 @@ const foldSidebarPlaygroundRoutes = (
   const groupEntries = groups.map(group => ({
     group,
     prefix: `${group.path}/`,
-    childRoutes: [
-      ...(group.redirect
-        ? [
-            {
-              path: '',
-              redirect: group.redirect,
-            } as RouteRecordRaw,
-          ]
-        : []),
-    ] as RouteRecordRaw[],
+    childRoutes: (group.redirect
+      ? [
+          {
+            path: '',
+            redirect: group.redirect,
+          } as RouteRecordRaw,
+        ]
+      : []) as RouteRecordRaw[],
     seenChildPaths: new Set<string>(),
   }))
   const nonSidebarRoutes: RouteRecordRaw[] = []
@@ -647,8 +645,7 @@ const foldSidebarPlaygroundRoutes = (
       return
     }
 
-    const childPath =
-      route.path === entry.group.path ? '' : route.path.slice(entry.prefix.length)
+    const childPath = route.path === entry.group.path ? '' : route.path.slice(entry.prefix.length)
     if (entry.seenChildPaths.has(childPath)) {
       return
     }
