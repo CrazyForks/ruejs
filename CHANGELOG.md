@@ -1,3 +1,10 @@
+## [0.5.6](https://github.com/hunzhiwange/ruejs/compare/v0.5.5...v0.5.6) (2026-06-14)
+
+
+### Bug Fixes
+
+* fix for ci ([d33b69c](https://github.com/hunzhiwange/ruejs/commit/d33b69c9ca077d6a31a93c076798b3d5a22c64e9))
+
 ## [0.5.5](https://github.com/hunzhiwange/ruejs/compare/v0.5.4...v0.5.5) (2026-06-14)
 
 
