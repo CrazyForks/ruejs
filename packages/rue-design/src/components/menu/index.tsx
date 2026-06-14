@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Menu 组件概述
 - 保留 Rue 当前 menu 视觉结构，并补齐更接近成熟组件库的导航能力。
@@ -341,6 +340,8 @@ export interface MenuSubMenuProps {
   disabled?: boolean
   /** 根节点附加类名。 */
   className?: string
+  /** 标题按钮附加类名。 */
+  titleClassName?: string
   /** popupClassName 附加类名。 */
   popupClassName?: string
   /** 受控打开状态。 */
@@ -430,8 +431,13 @@ const hasKey = (keys: ReadonlyArray<MenuKey>, target?: MenuKey) => {
 }
 
 /** 判断 Renderable Node 的内部工具函数。 */
-const isRenderableNode = (value: unknown): value is Record<string, unknown> =>
+const isRenderableNode = (value: unknown): value is Record<string, any> =>
   !!value && typeof value === 'object'
+
+/** 判断组件类型是否匹配的内部工具函数。 */
+const isVNodeOfType = (value: Record<string, any>, type: unknown) => {
+  return value[RUE_COMPONENT_TYPE_KEY] === type || value.type === type || value.component === type
+}
 
 /** inject Menu Context 的内部工具函数。 */
 const injectMenuContext = (value: unknown, menuContext: MenuContextValue): unknown => {
@@ -454,13 +460,14 @@ const injectMenuContext = (value: unknown, menuContext: MenuContextValue): unkno
     nextProps.children = injectMenuContext(nextProps.children, menuContext)
   }
 
-  const type = value[RUE_COMPONENT_TYPE_KEY]
-  if (type === Item || type === SubMenu) {
+  if (isVNodeOfType(value, Item) || isVNodeOfType(value, SubMenu)) {
     nextProps[MENU_CONTEXT_PROP] = menuContext
   }
 
-  value.props = nextProps
-  return value
+  return {
+    ...value,
+    props: nextProps,
+  }
 }
 
 /** toggle Key 的内部工具函数。 */
@@ -787,6 +794,85 @@ const Submenu: FC<SubmenuProps> = ({ className, children }) => {
   return <ul className={className}>{children}</ul>
 }
 
+interface LegacyDropdownItemProps {
+  entryKey: MenuKey
+  itemEntry: MenuItemData
+  content: any
+  menuContext: MenuContextValue
+  keyPath: MenuKey[]
+}
+
+const LegacyDropdownItem: FC<LegacyDropdownItemProps> = ({
+  entryKey,
+  itemEntry,
+  content,
+  menuContext,
+  keyPath,
+}) => {
+  const dropdownToggle = itemEntry.dropdownToggle
+  const dropdown = itemEntry.dropdown
+  const initialOpen =
+    dropdownToggle?.visible ?? dropdownToggle?.show ?? dropdown?.visible ?? dropdown?.show
+  const dropdownOpen = ref(!!initialOpen)
+  const toggleDropdown = (event: MouseEvent) => {
+    if (itemEntry.disabled) return
+    dropdownOpen.value = !dropdownOpen.value
+    if (dropdownToggle?.onClick) dropdownToggle.onClick(event)
+  }
+
+  return (
+    <li className={itemEntry.liClassName} key={entryKey}>
+      {renderMenuAction(
+        {
+          eventKey: itemEntry.key,
+          as: itemEntry.as,
+          href: itemEntry.href,
+          to: itemEntry.to,
+          target: itemEntry.target,
+          rel: itemEntry.rel,
+          title: itemEntry.title,
+          icon: itemEntry.icon,
+          extra: itemEntry.extra,
+          danger: itemEntry.danger,
+          onClick: itemEntry.onClick,
+          disabled: itemEntry.disabled,
+          active: itemEntry.active,
+          selected: itemEntry.selected,
+          focus: itemEntry.focus,
+          className: itemEntry.className,
+          children: content,
+        },
+        menuContext,
+        itemEntry,
+        keyPath,
+      )}
+      {dropdownToggle ? (
+        <DropdownToggle
+          visible={dropdownOpen.value}
+          className={dropdownToggle.className}
+          onClick={toggleDropdown}
+        >
+          {dropdownToggle.children}
+        </DropdownToggle>
+      ) : null}
+      {dropdown ? (
+        <Dropdown visible={dropdownOpen.value} className={dropdown.className}>
+          {dropdown.items?.map((child, childIndex) =>
+            renderDataEntry(child, childIndex, menuContext, keyPath),
+          )}
+        </Dropdown>
+      ) : null}
+      {itemEntry.submenu ? (
+        <Submenu className={itemEntry.submenu.className}>
+          {itemEntry.submenu.items?.map((child, childIndex) =>
+            renderDataEntry(child, childIndex, menuContext, keyPath),
+          )}
+        </Submenu>
+      ) : null}
+    </li>
+  )
+}
+
 /** Item 的内部工具函数。 */
 const Item: FC<MenuItemProps & { __menuContext?: MenuContextValue | null }> = ({
   liClassName,
@@ -831,6 +917,7 @@ const SubMenu: FC<MenuSubMenuProps> = ({
   extra,
   disabled,
   className,
+  titleClassName,
   popupClassName,
   open,
   defaultOpen,
@@ -882,6 +969,7 @@ const SubMenu: FC<MenuSubMenuProps> = ({
         className={getItemClassName({
           disabled,
           selected: mergedOpen,
+          className: titleClassName,
         })}
         aria-expanded={mergedOpen ? 'true' : 'false'}
         aria-disabled={disabled ? 'true' : undefined}
@@ -894,7 +982,7 @@ const SubMenu: FC<MenuSubMenuProps> = ({
           icon,
           content: title,
           extra,
-          suffix: <span>{mergedOpen ? '▾' : '▸'}</span>,
+          suffix: mergedOpen ? '▾' : '▸',
         })}
       </button>
       <ul
@@ -967,6 +1055,7 @@ const renderDataEntry = (
         className={subMenuEntry.className}
         popupClassName={subMenuEntry.popupClassName}
         onTitleClick={subMenuEntry.onTitleClick}
+        __menuContext={menuContext}
       >
         {subMenuEntry.children?.map((child, childIndex) =>
           renderDataEntry(child, childIndex, menuContext, keyPath),
@@ -979,62 +1068,41 @@ const renderDataEntry = (
   const content = itemEntry.label ?? itemEntry.children
   const keyPath = itemEntry.key !== undefined ? [...parentKeyPath, itemEntry.key] : parentKeyPath
 
+  if (itemEntry.submenu && !itemEntry.dropdown && !itemEntry.dropdownToggle) {
+    const subMenuKey = itemEntry.key ?? entryKey
+    const subMenuKeyPath = [...parentKeyPath, subMenuKey]
+    const legacySubMenuContext = { ...menuContext, triggerSubMenuAction: 'click' as const }
+    return (
+      <SubMenu
+        key={entryKey}
+        eventKey={subMenuKey}
+        title={content}
+        icon={itemEntry.icon}
+        extra={itemEntry.extra}
+        disabled={itemEntry.disabled}
+        className={itemEntry.liClassName}
+        titleClassName={itemEntry.className}
+        popupClassName={itemEntry.submenu.className}
+        onTitleClick={itemEntry.onClick ? info => itemEntry.onClick?.(info.domEvent) : undefined}
+        __menuContext={legacySubMenuContext}
+      >
+        {itemEntry.submenu.items?.map((child, childIndex) =>
+          renderDataEntry(child, childIndex, legacySubMenuContext, subMenuKeyPath),
+        )}
+      </SubMenu>
+    )
+  }
+
   if (itemEntry.dropdown || itemEntry.submenu || itemEntry.dropdownToggle) {
     return (
-      <li className={itemEntry.liClassName} key={entryKey}>
-        {renderMenuAction(
-          {
-            eventKey: itemEntry.key,
-            as: itemEntry.as,
-            href: itemEntry.href,
-            to: itemEntry.to,
-            target: itemEntry.target,
-            rel: itemEntry.rel,
-            title: itemEntry.title,
-            icon: itemEntry.icon,
-            extra: itemEntry.extra,
-            danger: itemEntry.danger,
-            onClick: itemEntry.onClick,
-            disabled: itemEntry.disabled,
-            active: itemEntry.active,
-            selected: itemEntry.selected,
-            focus: itemEntry.focus,
-            className: itemEntry.className,
-            children: content,
-          },
-          menuContext,
-          itemEntry,
-          keyPath,
-        )}
-        {itemEntry.dropdownToggle ? (
-          <DropdownToggle
-            show={(itemEntry.dropdownToggle as any).show}
-            visible={itemEntry.dropdownToggle.visible}
-            className={itemEntry.dropdownToggle.className}
-            onClick={itemEntry.dropdownToggle.onClick}
-          >
-            {itemEntry.dropdownToggle.children}
-          </DropdownToggle>
-        ) : null}
-        {itemEntry.dropdown ? (
-          <Dropdown
-            show={(itemEntry.dropdown as any).show}
-            visible={itemEntry.dropdown.visible}
-            className={itemEntry.dropdown.className}
-          >
-            {itemEntry.dropdown.items?.map((child, childIndex) =>
-              renderDataEntry(child, childIndex, menuContext, keyPath),
-            )}
-          </Dropdown>
-        ) : null}
-        {itemEntry.submenu ? (
-          <Submenu className={itemEntry.submenu.className}>
-            {itemEntry.submenu.items?.map((child, childIndex) =>
-              renderDataEntry(child, childIndex, menuContext, keyPath),
-            )}
-          </Submenu>
-        ) : null}
-      </li>
+      <LegacyDropdownItem
+        key={entryKey}
+        entryKey={entryKey}
+        itemEntry={itemEntry}
+        content={content}
+        menuContext={menuContext}
+        keyPath={keyPath}
+      />
     )
   }
 
@@ -1058,6 +1126,7 @@ const renderDataEntry = (
       focus={itemEntry.focus}
       liClassName={itemEntry.liClassName}
       className={itemEntry.className}
+      __menuContext={menuContext}
     >
       {content}
     </Item>

@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Button 组件概述
 - 提供语义化按钮 API，内部仍映射到 rue 当前的 btn 系列视觉类。
@@ -6,7 +5,7 @@ Button 组件概述
 - 组件仅保留当前推荐 API，不再承载旧版兼容分支。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, onUnmounted, useRef, watch } from '@rue-js/rue'
+import { onMounted, onUnmounted, useRef } from '@rue-js/rue'
 
 /** ButtonTone 语义色类型。 */
 export type ButtonTone =
@@ -250,6 +249,47 @@ const DefaultLoadingIcon: FC<{ size?: ButtonSize }> = ({ size }) => {
   return <span className={`loading loading-spinner ${resolveLoadingSizeClass(size)}`.trim()} />
 }
 
+/** ButtonContentSlot 内部子节点插槽。 */
+const ButtonContentSlot: FC<{ children?: any }> = ({ children }) => {
+  return <span>{children}</span>
+}
+
+/** ButtonIconSlot 内部图标插槽，确保外部节点通过 children 锚点渲染。 */
+const ButtonIconSlot: FC<{ hiddenFromA11y?: boolean; children?: any }> = ({
+  hiddenFromA11y,
+  children,
+}) => {
+  return (
+    <span
+      className="inline-flex items-center justify-center"
+      aria-hidden={hiddenFromA11y ? 'true' : undefined}
+    >
+      {children}
+    </span>
+  )
+}
+
+/** ButtonChildren 内部内容编排组件，避免 Fragment 换行产生文本节点。 */
+const ButtonChildren: FC<{
+  iconPlacement: ButtonIconPlacement
+  iconNode: any
+  hasIcon: boolean
+  hasChildren: boolean
+  children?: any
+}> = ({ iconPlacement, iconNode, hasIcon, hasChildren, children }) => {
+  return iconPlacement === 'end' ? (
+    <>
+      {hasChildren ? <ButtonContentSlot>{children}</ButtonContentSlot> : null}
+      {hasIcon ? <ButtonIconSlot hiddenFromA11y={hasChildren}>{iconNode}</ButtonIconSlot> : null}
+    </>
+  ) : (
+    <>
+      {hasIcon ? <ButtonIconSlot hiddenFromA11y={hasChildren}>{iconNode}</ButtonIconSlot> : null}
+      {hasChildren ? <ButtonContentSlot>{children}</ButtonContentSlot> : null}
+    </>
+  )
+}
+
 /** sync Button Group Items 的内部工具函数。 */
 const syncButtonGroupItems = (
   root: HTMLElement | null | undefined,
@@ -301,7 +341,6 @@ const ButtonGroup: FC<ButtonGroupProps> = ({
   children,
   ...rest
 }) => {
-  const Tag = (as ?? 'div') as any
   const groupRef = useRef<HTMLElement | null>(null)
   const observerRef = useRef<MutationObserver | undefined>(undefined)
 
@@ -330,18 +369,57 @@ const ButtonGroup: FC<ButtonGroupProps> = ({
     observerRef.current = undefined
   })
 
-  watch(
-    () => `${size ?? ''}|${shape ?? ''}|${direction ?? ''}|${block ? 'block' : ''}`,
-    () => {
-      syncGroupItems()
-    },
-    { immediate: true },
-  )
-
   let cls = 'join'
   if (direction === 'vertical') cls += ' join-vertical flex-col'
   if (block) cls += ' w-full'
   if (className) cls += ` ${className}`
+
+  if (!as || as === 'div') {
+    return (
+      <div
+        {...rest}
+        ref={groupRef}
+        className={cls}
+        style={style}
+        data-rue-button-group="true"
+        data-rue-button-group-direction={direction ?? 'horizontal'}
+      >
+        {children}
+      </div>
+    )
+  }
+
+  if (as === 'section') {
+    return (
+      <section
+        {...rest}
+        ref={groupRef}
+        className={cls}
+        style={style}
+        data-rue-button-group="true"
+        data-rue-button-group-direction={direction ?? 'horizontal'}
+      >
+        {children}
+      </section>
+    )
+  }
+
+  if (as === 'nav') {
+    return (
+      <nav
+        {...rest}
+        ref={groupRef}
+        className={cls}
+        style={style}
+        data-rue-button-group="true"
+        data-rue-button-group-direction={direction ?? 'horizontal'}
+      >
+        {children}
+      </nav>
+    )
+  }
+
+  const Tag = as as any
 
   return (
     <Tag
@@ -442,31 +520,14 @@ const Button: FC<ButtonProps> = ({
         aria-busy={loadingVisible ? 'true' : undefined}
         onClick={handleClick}
       >
-        {iconPlacement === 'end' ? (
-          <>
-            {hasChildren ? <span>{children}</span> : null}
-            {hasIcon ? (
-              <span
-                className="inline-flex items-center justify-center"
-                aria-hidden={hasChildren ? 'true' : undefined}
-              >
-                {iconNode}
-              </span>
-            ) : null}
-          </>
-        ) : (
-          <>
-            {hasIcon ? (
-              <span
-                className="inline-flex items-center justify-center"
-                aria-hidden={hasChildren ? 'true' : undefined}
-              >
-                {iconNode}
-              </span>
-            ) : null}
-            {hasChildren ? <span>{children}</span> : null}
-          </>
-        )}
+        <ButtonChildren
+          iconPlacement={iconPlacement}
+          iconNode={iconNode}
+          hasIcon={hasIcon}
+          hasChildren={hasChildren}
+        >
+          {children}
+        </ButtonChildren>
       </a>
     )
   }
@@ -482,31 +543,14 @@ const Button: FC<ButtonProps> = ({
         aria-busy={loadingVisible ? 'true' : undefined}
         onClick={handleClick}
       >
-        {iconPlacement === 'end' ? (
-          <>
-            {hasChildren ? <span>{children}</span> : null}
-            {hasIcon ? (
-              <span
-                className="inline-flex items-center justify-center"
-                aria-hidden={hasChildren ? 'true' : undefined}
-              >
-                {iconNode}
-              </span>
-            ) : null}
-          </>
-        ) : (
-          <>
-            {hasIcon ? (
-              <span
-                className="inline-flex items-center justify-center"
-                aria-hidden={hasChildren ? 'true' : undefined}
-              >
-                {iconNode}
-              </span>
-            ) : null}
-            {hasChildren ? <span>{children}</span> : null}
-          </>
-        )}
+        <ButtonChildren
+          iconPlacement={iconPlacement}
+          iconNode={iconNode}
+          hasIcon={hasIcon}
+          hasChildren={hasChildren}
+        >
+          {children}
+        </ButtonChildren>
       </div>
     )
   }
@@ -520,31 +564,14 @@ const Button: FC<ButtonProps> = ({
       aria-busy={loadingVisible ? 'true' : undefined}
       onClick={handleClick}
     >
-      {iconPlacement === 'end' ? (
-        <>
-          {hasChildren ? <span>{children}</span> : null}
-          {hasIcon ? (
-            <span
-              className="inline-flex items-center justify-center"
-              aria-hidden={hasChildren ? 'true' : undefined}
-            >
-              {iconNode}
-            </span>
-          ) : null}
-        </>
-      ) : (
-        <>
-          {hasIcon ? (
-            <span
-              className="inline-flex items-center justify-center"
-              aria-hidden={hasChildren ? 'true' : undefined}
-            >
-              {iconNode}
-            </span>
-          ) : null}
-          {hasChildren ? <span>{children}</span> : null}
-        </>
-      )}
+      <ButtonChildren
+        iconPlacement={iconPlacement}
+        iconNode={iconNode}
+        hasIcon={hasIcon}
+        hasChildren={hasChildren}
+      >
+        {children}
+      </ButtonChildren>
     </button>
   )
 }

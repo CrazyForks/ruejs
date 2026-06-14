@@ -54,6 +54,7 @@ export {
   setValue as _$setValue,
   setChecked as _$setChecked,
   setDisabled as _$setDisabled,
+  spreadAttributes as _$spreadAttributes,
   getTagName as _$getTagName,
 } from './dom'
 // Vapor 编译辅助：keyed list、ref 绑定、v-show 样式和稳定 key 标记。

@@ -131,6 +131,37 @@ describe('Accordion', () => {
     expect(titles.length).toBe(2)
   })
 
+  it('updates items details panels when summary is clicked', async () => {
+    const c = document.createElement('div')
+    render(
+      h(Accordion, {
+        use: 'details',
+        name: 'group4-click',
+        items: [
+          { key: 'a', title: 'A', content: 'a', open: true },
+          { key: 'b', title: 'B', content: 'b' },
+        ],
+      }),
+      c,
+    )
+    await waitAccordionRender()
+
+    const details = c.querySelectorAll('details.collapse')
+    const titles = c.querySelectorAll('summary.collapse-title')
+
+    expect((details[0] as HTMLDetailsElement).open).toBe(true)
+    expect((details[1] as HTMLDetailsElement).open).toBe(false)
+
+    titles[1].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await waitAccordionRender()
+
+    expect((details[0] as HTMLDetailsElement).open).toBe(false)
+    expect((details[1] as HTMLDetailsElement).open).toBe(true)
+    expect((details[0] as HTMLElement).classList.contains('collapse-close')).toBe(true)
+    expect((details[1] as HTMLElement).classList.contains('collapse-open')).toBe(true)
+    expect((titles[1] as HTMLElement).getAttribute('aria-expanded')).toBe('true')
+  })
+
   it('supports controlled activeKey and onChange in items mode', async () => {
     const c = document.createElement('div')
     const spy = vi.fn()

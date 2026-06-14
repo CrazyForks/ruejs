@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Hero 模块概述
 - 汇总首屏展示组件的公开类型、渲染入口和局部工具逻辑。

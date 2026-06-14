@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Divider 组件概述
 - 保留 Rue 现有的 daisyUI 视觉基础。
@@ -70,32 +69,23 @@ export interface DividerProps {
   [key: string]: any
 }
 
-const toneSet: DividerTone[] = [
-  'neutral',
-  'primary',
-  'secondary',
-  'accent',
-  'success',
-  'warning',
-  'info',
-  'error',
-]
-
-const lineVariantSet: DividerLineVariant[] = ['solid', 'dashed', 'dotted']
-
 /** 判断 Tone 的内部工具函数。 */
 const isTone = (value?: string): value is DividerTone => {
-  return !!value && toneSet.includes(value as DividerTone)
+  return (
+    value === 'neutral' ||
+    value === 'primary' ||
+    value === 'secondary' ||
+    value === 'accent' ||
+    value === 'success' ||
+    value === 'warning' ||
+    value === 'info' ||
+    value === 'error'
+  )
 }
 
 /** 判断 Line Variant 的内部工具函数。 */
 const isLineVariant = (value?: string): value is DividerLineVariant => {
-  return !!value && lineVariantSet.includes(value as DividerLineVariant)
-}
-
-/** merge Class Name 的内部工具函数。 */
-const mergeClassName = (...parts: Array<string | false | null | undefined>) => {
-  return parts.filter(Boolean).join(' ')
+  return value === 'solid' || value === 'dashed' || value === 'dotted'
 }
 
 /** 归一化 Spacing Value 的内部工具函数。 */
@@ -103,6 +93,14 @@ const normalizeSpacingValue = (value?: string | number) => {
   if (typeof value === 'number') return value
   if (typeof value !== 'string') return undefined
   return /^\d+(\.\d+)?$/.test(value) ? Number(value) : value
+}
+
+/** 判断 Divider 是否存在可见内容。 */
+const hasDividerContent = (value: any): boolean => {
+  if (value == null || typeof value === 'boolean') return false
+  if (typeof value === 'string') return value.trim().length > 0
+  if (Array.isArray(value)) return value.some(hasDividerContent)
+  return true
 }
 
 /** 解析 Legacy Direction Class 的内部工具函数。 */
@@ -153,24 +151,21 @@ const Divider: FC<DividerProps> = ({
   const isVerticalSeparator =
     (orientation ?? type ?? (vertical ? 'vertical' : 'horizontal')) === 'vertical'
   const contentMargin = normalizeSpacingValue(orientationMargin)
+  const hasContent = !isVerticalSeparator && hasDividerContent(children)
 
-  const cls = mergeClassName(
-    'divider',
-    orientationClass,
-    resolvedTone ? `divider-${resolvedTone}` : undefined,
-    resolvedPlacement && resolvedPlacement !== 'center'
-      ? `divider-${resolvedPlacement}`
-      : undefined,
-    resolvedLineVariant === 'dashed' ? 'before:border-dashed after:border-dashed' : undefined,
-    resolvedLineVariant === 'dotted' ? 'before:border-dotted after:border-dotted' : undefined,
-    className,
-  )
+  let cls = 'divider'
+  if (orientationClass) cls += ` ${orientationClass}`
+  if (resolvedTone) cls += ` divider-${resolvedTone}`
+  if (resolvedPlacement && resolvedPlacement !== 'center') cls += ` divider-${resolvedPlacement}`
+  if (resolvedLineVariant === 'dashed') cls += ' before:border-dashed after:border-dashed'
+  if (resolvedLineVariant === 'dotted') cls += ' before:border-dotted after:border-dotted'
+  if (!hasContent) cls += ' gap-0'
+  if (className) cls += ` ${className}`
 
-  const textCls = mergeClassName(
-    'whitespace-nowrap',
-    plain ? 'font-normal opacity-80' : undefined,
-    contentClassName,
-  )
+  let textCls = 'whitespace-nowrap'
+  if (plain) textCls += ' font-normal opacity-80'
+  if (contentClassName) textCls += ` ${contentClassName}`
+
   const textStyle =
     resolvedPlacement === 'start'
       ? { marginInlineStart: contentMargin, ...contentStyle }
@@ -186,7 +181,7 @@ const Divider: FC<DividerProps> = ({
       aria-orientation={isVerticalSeparator ? 'vertical' : 'horizontal'}
       {...rest}
     >
-      {!isVerticalSeparator && children != null ? (
+      {hasContent ? (
         <span className={textCls} style={textStyle}>
           {children}
         </span>

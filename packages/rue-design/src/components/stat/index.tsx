@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Stat 组件概述
 - 列表容器：水平/垂直布局；支持 children 或 items 数据驱动。
 - 复合组件：保留 Item/Title/Value/Desc/Figure/Actions 组合能力。
 - 增强数值展示：补齐 formatter / precision / prefix / suffix / loading / timer。
 */
-import { onUnmounted, ref, useRef, watch, type FC } from '@rue-js/rue'
+import { onUnmounted, ref, watch, type FC } from '@rue-js/rue'
 
 /** DEFAULT_DECIMAL_SEPARATOR 内部常量。 */
 const DEFAULT_DECIMAL_SEPARATOR = '.'
@@ -56,6 +55,10 @@ interface StatsProps {
 interface StatPartProps {
   className?: string
   style?: any
+  children?: any
+}
+
+interface StatValueTextProps {
   children?: any
 }
 
@@ -362,8 +365,8 @@ const resolveTimerInterval = (format: string, interval?: number) => {
   return format.includes('S') ? MILLISECOND_INTERVAL : SECOND_INTERVAL
 }
 
-/** 渲染 Item Content 的内部工具函数。 */
-const renderItemContent = ({
+/** ItemContent 的内部工具函数。 */
+const ItemContent: FC<Omit<StatItemProps, 'center' | 'className' | 'children'>> = ({
   figure,
   figureClassName,
   figureStyle,
@@ -387,7 +390,7 @@ const renderItemContent = ({
   actions,
   actionsClassName,
   actionsStyle,
-}: Omit<StatItemProps, 'center' | 'className' | 'children'>) => {
+}) => {
   return (
     <>
       {hasContent(figure) ? (
@@ -483,33 +486,35 @@ const Item: FC<StatItemProps> = ({
 
   return (
     <div className={cls}>
-      {shouldRenderChildren
-        ? children
-        : renderItemContent({
-            figure,
-            figureClassName,
-            figureStyle,
-            title,
-            titleClassName,
-            titleStyle,
-            value,
-            valueClassName,
-            valueStyle,
-            valueRender,
-            prefix,
-            suffix,
-            loading,
-            formatter,
-            precision,
-            decimalSeparator,
-            groupSeparator,
-            desc,
-            descClassName,
-            descStyle,
-            actions,
-            actionsClassName,
-            actionsStyle,
-          })}
+      {shouldRenderChildren ? (
+        children
+      ) : (
+        <ItemContent
+          figure={figure}
+          figureClassName={figureClassName}
+          figureStyle={figureStyle}
+          title={title}
+          titleClassName={titleClassName}
+          titleStyle={titleStyle}
+          value={value}
+          valueClassName={valueClassName}
+          valueStyle={valueStyle}
+          valueRender={valueRender}
+          prefix={prefix}
+          suffix={suffix}
+          loading={loading}
+          formatter={formatter}
+          precision={precision}
+          decimalSeparator={decimalSeparator}
+          groupSeparator={groupSeparator}
+          desc={desc}
+          descClassName={descClassName}
+          descStyle={descStyle}
+          actions={actions}
+          actionsClassName={actionsClassName}
+          actionsStyle={actionsStyle}
+        />
+      )}
     </div>
   )
 }
@@ -520,6 +525,15 @@ const Title: FC<StatPartProps> = ({ className, style, children }) => {
     <div className={mergeClassName('stat-title', className)} style={style}>
       {children}
     </div>
+  )
+}
+
+/** 数值区域 */
+const ValueText: FC<StatValueTextProps> = ({ children }) => {
+  return (
+    <span className="stat-value-text" data-stat-value="true">
+      {children}
+    </span>
   )
 }
 
@@ -565,9 +579,7 @@ const Value: FC<StatValueProps> = ({
           aria-hidden="true"
         />
       ) : hasContent(content) ? (
-        <span className="stat-value-text" data-stat-value="true">
-          {content}
-        </span>
+        <ValueText>{content}</ValueText>
       ) : null}
       {hasContent(suffix) ? (
         <span
@@ -638,13 +650,14 @@ const Timer: FC<StatTimerProps> = ({
   onFinish,
 }) => {
   const duration = ref(0)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const finishedRef = useRef(false)
+  const cls = mergeClassName(center ? 'stat place-items-center' : 'stat', className)
+  let timer: ReturnType<typeof setInterval> | null = null
+  let finished = false
 
   const stopTimer = () => {
-    if (timerRef.current != null) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
+    if (timer != null) {
+      clearInterval(timer)
+      timer = null
     }
   }
 
@@ -664,27 +677,27 @@ const Timer: FC<StatTimerProps> = ({
 
     if (type === 'countdown' && nextDuration <= 0) {
       stopTimer()
-      if (!finishedRef.current) {
-        finishedRef.current = true
+      if (!finished) {
+        finished = true
         if (onFinish) onFinish()
       }
       return false
     }
 
-    finishedRef.current = false
+    finished = false
     return true
   }
 
   const startTimer = () => {
     stopTimer()
     if (!syncDuration()) return
-    timerRef.current = setInterval(syncDuration, resolveTimerInterval(format, interval))
+    timer = setInterval(syncDuration, resolveTimerInterval(format, interval))
   }
 
   watch(
     () => `${type}|${parseTargetTime(value) ?? 'invalid'}|${format}|${interval ?? ''}`,
     () => {
-      finishedRef.current = false
+      finished = false
       startTimer()
     },
     { immediate: true },
@@ -693,16 +706,24 @@ const Timer: FC<StatTimerProps> = ({
   onUnmounted(stopTimer)
 
   return (
-    <Item
-      center={center}
-      className={className}
-      figure={figure}
-      figureClassName={figureClassName}
-      figureStyle={figureStyle}
-      title={title}
-      titleClassName={titleClassName}
-      titleStyle={titleStyle}
-      value={
+    <div className={cls}>
+      {hasContent(figure) ? (
+        <Figure className={figureClassName} style={figureStyle}>
+          {figure}
+        </Figure>
+      ) : null}
+      {hasContent(title) ? (
+        <Title className={titleClassName} style={titleStyle}>
+          {title}
+        </Title>
+      ) : null}
+      <Value
+        className={valueClassName}
+        style={valueStyle}
+        prefix={prefix}
+        suffix={suffix}
+        loading={loading}
+      >
         <span
           data-stat-timer={type}
           aria-live={ariaLive ?? (format.includes('S') ? 'off' : 'polite')}
@@ -710,19 +731,18 @@ const Timer: FC<StatTimerProps> = ({
         >
           {formatTimerDuration(duration.value, format)}
         </span>
-      }
-      valueClassName={valueClassName}
-      valueStyle={valueStyle}
-      prefix={prefix}
-      suffix={suffix}
-      loading={loading}
-      desc={desc}
-      descClassName={descClassName}
-      descStyle={descStyle}
-      actions={actions}
-      actionsClassName={actionsClassName}
-      actionsStyle={actionsStyle}
-    />
+      </Value>
+      {hasContent(desc) ? (
+        <Desc className={descClassName} style={descStyle}>
+          {desc}
+        </Desc>
+      ) : null}
+      {hasContent(actions) ? (
+        <Actions className={actionsClassName} style={actionsStyle}>
+          {actions}
+        </Actions>
+      ) : null}
+    </div>
   )
 }
 

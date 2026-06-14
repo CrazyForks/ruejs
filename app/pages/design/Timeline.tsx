@@ -688,7 +688,9 @@ const items = [
   },
 ]
 
-<Timeline items={items} />`
+<div className="overflow-x-auto pb-2">
+  <Timeline items={items} className="min-w-[860px]" />
+</div>`
 
 const dataApiCode = `import { Timeline } from '@rue-js/design'
 
@@ -754,7 +756,9 @@ const items = [
   { title: 'Wear', content: 'Apple Watch 成型', color: 'success', contentBox: true },
 ]
 
-<Timeline items={items} />`
+<div className="overflow-x-auto pb-2">
+  <Timeline items={items} className="min-w-[860px]" />
+</div>`
 
 const noIconsCode = `import { Timeline } from '@rue-js/design'
 
@@ -967,7 +971,11 @@ const TimelineDemo: FC = () => {
           title="Timeline 通过数据渲染（数组，组件内部）"
           summary="如果你已经习惯 Rue 旧版的 start / middle / end 结构，现在仍然可以通过 items 直接交给组件内部渲染。"
           tab={tabArrayInternal}
-          preview={() => <Timeline items={legacyTimelineItems} />}
+          preview={() => (
+            <div className="overflow-x-auto pb-2">
+              <Timeline items={legacyTimelineItems} className="min-w-[860px]" />
+            </div>
+          )}
           code={internalArrayCode}
         />
 
@@ -1014,7 +1022,11 @@ const TimelineDemo: FC = () => {
           title="彩色线条"
           summary="新增 color 支持会同步作用于默认圆点和连接线，让状态型时间线更清晰。"
           tab={tabColorfulLines}
-          preview={() => <Timeline items={createColoredTimelineItems()} />}
+          preview={() => (
+            <div className="overflow-x-auto pb-2">
+              <Timeline items={createColoredTimelineItems()} className="min-w-[860px]" />
+            </div>
+          )}
           code={colorfulCode}
         />
 

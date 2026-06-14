@@ -111,6 +111,26 @@ describe('vapor entry interop', () => {
     expect(container.querySelector('[data-testid="anchor-child"]')?.textContent).toBe('child')
   })
 
+  it('mounts multiple compat component children through the vapor renderAnchor entry', async () => {
+    const container = document.createElement('div')
+    const anchor = document.createComment('multi-compat-anchor')
+
+    document.body.appendChild(container)
+    container.append(anchor)
+
+    const Label = (props: { value: string }) => <strong>{props.value}</strong>
+
+    renderAnchor(
+      [h(Label, { value: 'A' }), h(Label, { value: 'B' })] as any,
+      container as any,
+      anchor as any,
+    )
+    await flush()
+
+    expect(container.textContent).toBe('AB')
+    expect(container.querySelectorAll('strong')).toHaveLength(2)
+  })
+
   it('keeps a vapor child interactive when forwarded through props.children', async () => {
     const container = document.createElement('div')
     document.body.appendChild(container)

@@ -86,6 +86,7 @@ fn run_full_transform(program: Program) -> Program {
         did_transform: false,
         el_tag_by_ident: std::collections::HashMap::new(),
         renderable_local_scopes: Vec::new(),
+        plain_local_scopes: Vec::new(),
     });
     log::info("rue-swc: apply(pre+vapor) done");
     p

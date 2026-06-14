@@ -196,25 +196,37 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
 
 const ControlledFilterPreview: FC = () => {
   const activeStage = ref<string | undefined>(undefined)
+  const clearStage = () => {
+    activeStage.value = undefined
+  }
 
   return (
     <div className="card bg-base-100 shadow-sm">
       <div className="card-body gap-4">
-        <Filter
-          as="div"
-          items={viewModes}
-          value={activeStage.value}
-          onChange={(
-            value: string | number | boolean | Array<string | number | boolean> | undefined,
-          ) => {
-            activeStage.value = Array.isArray(value)
-              ? String(value[0] ?? '') || undefined
-              : (value as string | undefined)
-          }}
-          reset={{ label: '全' }}
-          color="primary"
-          variant="outlined"
-        />
+        <div className="flex flex-wrap gap-1">
+          <button
+            type="button"
+            className={`btn btn-primary btn-outline ${activeStage.value === undefined ? 'btn-active' : ''}`}
+            onClick={clearStage}
+            aria-label="全"
+          >
+            全
+          </button>
+          <Filter
+            as="div"
+            items={viewModes}
+            value={activeStage.value}
+            onChange={(
+              value: string | number | boolean | Array<string | number | boolean> | undefined,
+            ) => {
+              activeStage.value = Array.isArray(value)
+                ? String(value[0] ?? '') || undefined
+                : (value as string | undefined)
+            }}
+            color="primary"
+            variant="outlined"
+          />
+        </div>
         <div className="text-sm text-base-content/70">
           当前阶段：<code>{activeStage.value ?? 'all'}</code>
         </div>
@@ -288,6 +300,10 @@ const FilterPage: FC = () => {
           preview={<ControlledFilterPreview />}
           code={`const stage = ref<string | undefined>()
 
+const clearStage = () => {
+  stage.value = undefined
+}
+
 const items = [
   { label: '规划中', value: 'planning' },
   { label: '开发中', value: 'building' },
@@ -295,17 +311,26 @@ const items = [
   { label: '已发布', value: 'released' },
 ] as const
 
-<Filter
-  as="div"
-  items={items}
-  value={stage.value}
-  onChange={value => {
-    stage.value = Array.isArray(value) ? String(value[0] ?? '') || undefined : (value as string | undefined)
-  }}
-  reset={{ label: '全' }}
-  color="primary"
-  variant="outlined"
-/>`}
+<div className="flex flex-wrap gap-1">
+  <button
+    type="button"
+    className={\`btn btn-primary btn-outline \${stage.value === undefined ? 'btn-active' : ''}\`}
+    onClick={clearStage}
+    aria-label="全"
+  >
+    全
+  </button>
+  <Filter
+    as="div"
+    items={items}
+    value={stage.value}
+    onChange={value => {
+      stage.value = Array.isArray(value) ? String(value[0] ?? '') || undefined : (value as string | undefined)
+    }}
+    color="primary"
+    variant="outlined"
+  />
+</div>`}
         />
 
         <PreviewBlock

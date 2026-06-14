@@ -136,6 +136,51 @@ const createKeyedButtonsVapor = (title: string, labels: string[]) =>
     return root as any
   }) as any
 
+const createPanelListVapor = (active: string) =>
+  vapor(() => {
+    const root = document.createDocumentFragment()
+    const start = document.createComment('rue:list:start')
+    const end = document.createComment('rue:list:end')
+    const labels = ['plan', 'build', 'ship']
+    let elements = new Map()
+
+    root.append(start, end)
+
+    watchEffect(() => {
+      elements = _$vaporKeyedList({
+        items: labels,
+        getKey: label => label,
+        elements,
+        parent: start.parentNode as any,
+        before: end as any,
+        start: start as any,
+        renderItem: (label, parent, itemStart, itemEnd) => {
+          renderBetween(
+            h(
+              'div',
+              { className: `collapse ${active === label ? 'collapse-open' : 'collapse-close'}` },
+              label,
+            ) as any,
+            parent as any,
+            itemStart as any,
+            itemEnd as any,
+          )
+        },
+      })
+    })
+
+    return root as any
+  }) as any
+
+const NestedPanelList: FC<{ active: string }> = props => createPanelListVapor(props.active)
+
+const createNestedPanelShell = (active: string) =>
+  h(
+    'div',
+    { className: 'card' },
+    h('div', { className: 'body' }, h('span', null, active), h(NestedPanelList, { active })),
+  )
+
 describe('render entry Renderable bridge', () => {
   it('throws a descriptive error for reentrant container renders on the same target', () => {
     const container = document.createElement('div')
@@ -443,6 +488,34 @@ describe('render entry Renderable bridge', () => {
     expect(parent.querySelectorAll('strong')).toHaveLength(1)
     expect(parent.childNodes[0]).toBe(start)
     expect(parent.childNodes[parent.childNodes.length - 1]).toBe(end)
+  })
+
+  it('keeps nested vapor fragment replacements inside their local parent during range updates', async () => {
+    const parent = document.createElement('section')
+    const start = document.createComment('outer:start')
+    const end = document.createComment('outer:end')
+
+    parent.append(start, end)
+
+    renderBetween(createNestedPanelShell('build') as any, parent as any, start as any, end as any)
+    await flushEffects()
+
+    expect(parent.querySelectorAll('.body .collapse')).toHaveLength(3)
+    expect(parent.querySelectorAll(':scope > .collapse')).toHaveLength(0)
+
+    renderBetween(createNestedPanelShell('plan') as any, parent as any, start as any, end as any)
+    await flushEffects()
+
+    expect(parent.querySelectorAll('.body .collapse')).toHaveLength(3)
+    expect(parent.querySelectorAll(':scope > .collapse')).toHaveLength(0)
+    expect(parent.querySelector('.body')?.textContent).toContain('plan')
+
+    renderBetween(createNestedPanelShell('ship') as any, parent as any, start as any, end as any)
+    await flushEffects()
+
+    expect(parent.querySelectorAll('.body .collapse')).toHaveLength(3)
+    expect(parent.querySelectorAll('.collapse')).toHaveLength(3)
+    expect(parent.querySelector('.collapse-open')?.textContent).toBe('ship')
   })
 
   it('bridges renderAnchor blocks through a temporary anchor target', async () => {

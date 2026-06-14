@@ -99,9 +99,8 @@ const SparkIndicator = () => (
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z"
+        d="m12 6 1.8 4.2L18 12l-4.2 1.8L12 18l-1.8-4.2L6 12l4.2-1.8L12 6Z"
       />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 18h.01M19 18h.01M12 21h.01" />
     </svg>
   </span>
 )
@@ -252,6 +251,7 @@ const LoadingPage: FC = () => {
                 </button>
               </div>
               <Loading
+                key={nestedSpinning.value ? 'nested-loading' : 'nested-idle'}
                 spinning={nestedSpinning.value}
                 description="正在拉取洞察"
                 className="rounded-box"
@@ -338,7 +338,12 @@ const LoadingPage: FC = () => {
               >
                 {delayedSpinning.value ? '结束请求' : '模拟请求'}
               </button>
-              <Loading spinning={delayedSpinning.value} delay={600} description="延迟 600ms 后出现">
+              <Loading
+                key={delayedSpinning.value ? 'delay-loading' : 'delay-idle'}
+                spinning={delayedSpinning.value}
+                delay={600}
+                description="延迟 600ms 后出现"
+              >
                 <div className="rounded-box border border-dashed border-base-300 bg-base-100 p-8 text-sm opacity-80">
                   快速请求不会立即打断用户视线，超过 delay 后才出现 loading。
                 </div>
@@ -444,6 +449,7 @@ const LoadingPage: FC = () => {
                 </button>
                 <p className="m-0 text-sm opacity-70">打开后点击遮罩关闭，避免示例页被永久盖住。</p>
                 <Loading
+                  key={fullscreenSpinning.value ? 'fullscreen-loading' : 'fullscreen-idle'}
                   fullscreen
                   spinning={fullscreenSpinning.value}
                   percent={72}

@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Card 组件概述
 - 保留 rue 现有的低层 card class 组合能力，同时补一层更顺手的语义化 API。
@@ -274,6 +273,9 @@ const LoadingPlaceholder: FC<{ size?: CardSize }> = ({ size }) => {
     </div>
   )
 }
+
+/** 保持 prop 传入的 renderable / Vapor handle 走插槽路径。 */
+const RenderableValue: FC<{ value?: any }> = ({ value }) => <>{value}</>
 
 /** 卡片主体区域。 */
 const Body: FC<CardPartProps> = ({ className, style, children, ...rest }) => {
@@ -586,7 +588,7 @@ const Card: FC<CardProps> = ({
               {normalizedActions.map((action, index) => (
                 <li key={`action-${index}`} className="flex-1">
                   <div className="flex h-full items-center justify-center px-4 py-3 text-sm">
-                    {action}
+                    <RenderableValue value={action} />
                   </div>
                 </li>
               ))}

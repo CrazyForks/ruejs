@@ -1,10 +1,9 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Stack 模块概述
 - 汇总堆叠布局组件的公开类型、渲染入口和局部工具逻辑。
 - 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
 */
-import { h, type FC } from '@rue-js/rue'
+import type { FC } from '@rue-js/rue'
 
 /** StackVerticalAlign 对齐方式类型。 */
 export type StackVerticalAlign = 'center' | 'top' | 'bottom'
@@ -45,6 +44,18 @@ export interface StackProps {
 /** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
+
+/** 构建 Stack Class Name 的内部工具函数。 */
+const buildStackClassName = (
+  vertical?: StackVerticalAlign,
+  horizontal?: StackHorizontalAlign,
+  className?: string,
+) => {
+  let cls = 'stack'
+  if (vertical && vertical !== 'center') cls += ` stack-${vertical}`
+  if (horizontal && horizontal !== 'center') cls += ` stack-${horizontal}`
+  return mergeClassName(cls, className)
+}
 
 /** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
@@ -96,17 +107,15 @@ const Stack: FC<StackProps> = ({
   const placementPreset = resolvePlacement(placement)
   const resolvedVertical = vertical ?? placementPreset.vertical
   const resolvedHorizontal = horizontal ?? placementPreset.horizontal
-  const childNodes = toChildArray(children)
-  const renderedChildren = reverse ? [...childNodes].reverse() : childNodes
+  const renderedChildren = reverse ? [...toChildArray(children)].reverse() : children
 
-  let cls = 'stack'
-  if (resolvedVertical && resolvedVertical !== 'center') cls += ` stack-${resolvedVertical}`
-  if (resolvedHorizontal && resolvedHorizontal !== 'center') cls += ` stack-${resolvedHorizontal}`
-
-  return h(
-    Component,
-    { ...rest, className: mergeClassName(cls, className) },
-    ...(renderedChildren as any[]),
+  return (
+    <Component
+      {...rest}
+      className={buildStackClassName(resolvedVertical, resolvedHorizontal, className)}
+    >
+      {renderedChildren}
+    </Component>
   )
 }
 

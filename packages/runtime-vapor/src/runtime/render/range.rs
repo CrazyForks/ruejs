@@ -200,7 +200,7 @@ where
         batch_scope(|| {
             self.current_anchor = Some(end.clone());
             self.call_hooks("before_mount");
-            self.compact_range_map();
+            self.maybe_compact_range_map();
             if let Some(idx) = self.find_range_index(&start) {
                 #[cfg(feature = "dev")]
                 {

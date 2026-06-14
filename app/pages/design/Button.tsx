@@ -1,11 +1,12 @@
 import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
-import { Button, Tabs } from '@rue-js/design'
+import { Button } from '@rue-js/design'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import { renderDesignPreview } from './preview-test-gate'
 
 type TabMode = 'preview' | 'code'
+const EXAMPLE_TAB_MODES: TabMode[] = ['preview', 'code']
 
 interface ExampleBlockProps {
   title: string
@@ -43,6 +44,27 @@ interface StyleExample {
   variant: DemoVariant
 }
 
+const renderExampleModeTabs = (value: TabMode, onChange: (value: TabMode) => void) => {
+  return (
+    <div role="tablist" className="tabs tabs-box mb-3 mt-4">
+      {EXAMPLE_TAB_MODES.map(mode => {
+        const isActive = value === mode
+        return (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={isActive ? 'true' : 'false'}
+            className={`tab ${isActive ? 'tab-active' : ''}`}
+            onClick={() => onChange(mode)}
+          >
+            {mode === 'preview' ? '预览' : 'JSX代码'}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">
@@ -52,16 +74,7 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
           {summary ? <p className="m-0 text-sm opacity-70">{summary}</p> : null}
         </div>
       </div>
-      <Tabs
-        style="box"
-        items={[
-          { key: 'preview', label: '预览' },
-          { key: 'code', label: 'JSX代码' },
-        ]}
-        activeKey={tab.value}
-        onChange={key => (tab.value = key as TabMode)}
-        className="mb-3 mt-4"
-      />
+      {renderExampleModeTabs(tab.value, mode => (tab.value = mode))}
       {tab.value === 'preview' ? (
         renderDesignPreview(title, preview)
       ) : (

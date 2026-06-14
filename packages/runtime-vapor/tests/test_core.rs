@@ -672,4 +672,29 @@ fn to_value_variants() {
         .unwrap();
     let r5 = rue_runtime_vapor::to_value(obj3.clone().into());
     assert!(js_sys::Object::is(&r5, &obj3.into()));
+
+    let obj4 = js_sys::Object::new();
+    js_sys::Reflect::set(&obj4, &JsValue::from_str("value"), &JsValue::from_str("value-first"))
+        .unwrap();
+    js_sys::Reflect::set(
+        &obj4,
+        &JsValue::from_str("get"),
+        &js_sys::Function::new_no_args("return 'get-second';"),
+    )
+    .unwrap();
+    let r6 = rue_runtime_vapor::to_value(obj4.into());
+    assert_eq!(r6.as_string().as_deref(), Some("value-first"));
+
+    let obj5 = js_sys::Object::new();
+    js_sys::Reflect::set(&obj5, &JsValue::from_str("__rue_ref__"), &JsValue::TRUE).unwrap();
+    js_sys::Reflect::set(&obj5, &JsValue::from_str("value"), &JsValue::from_str("stale-value"))
+        .unwrap();
+    js_sys::Reflect::set(
+        &obj5,
+        &JsValue::from_str("get"),
+        &js_sys::Function::new_no_args("return 'live-get';"),
+    )
+    .unwrap();
+    let r7 = rue_runtime_vapor::to_value(obj5.into());
+    assert_eq!(r7.as_string().as_deref(), Some("live-get"));
 }

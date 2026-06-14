@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Pagination 组件概述
 - 保留 Rue 当前基于 join + btn 的视觉风格，同时补齐更接近成熟组件库的分页能力。
 - 同时支持静态组合模式（`Pagination.Item`）与数据驱动模式（`total/current/pageSize`）。
 */
 import type { FC } from '@rue-js/rue'
-import { ref, useRef } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 
 /** PaginationDirection 位置或方向类型。 */
 export type PaginationDirection = 'horizontal' | 'vertical'
@@ -464,26 +463,17 @@ const Root: FC<PaginationProps> = ({
         ? {}
         : undefined
   const pagerItems = getDisplayItems(mergedCurrent, pageCount, showLessItems)
-  const inputDraftRef = useRef<{
-    page: number
-    simple: string
-    quick: string
-  }>()
-  if (!inputDraftRef.current) {
-    const initialValue = String(mergedCurrent)
-    inputDraftRef.current = {
-      page: mergedCurrent,
-      simple: initialValue,
-      quick: initialValue,
-    }
-  } else if (inputDraftRef.current.page !== mergedCurrent) {
+  const inputDraftPage = ref(mergedCurrent)
+  const simpleInputValue = ref(String(mergedCurrent))
+  const quickInputValue = ref(String(mergedCurrent))
+
+  if (inputDraftPage.value !== mergedCurrent) {
     const syncedValue = String(mergedCurrent)
-    inputDraftRef.current.page = mergedCurrent
-    inputDraftRef.current.simple = syncedValue
-    inputDraftRef.current.quick = syncedValue
+    inputDraftPage.value = mergedCurrent
+    simpleInputValue.value = syncedValue
+    quickInputValue.value = syncedValue
   }
 
-  const inputDraft = inputDraftRef.current
   const labels: Required<PaginationLocale> = {
     prev: locale?.prev ?? '‹',
     next: locale?.next ?? '›',
@@ -551,7 +541,7 @@ const Root: FC<PaginationProps> = ({
     const fallbackContent = label
     const renderedContent = itemRender ? itemRender(page, type, fallbackContent) : fallbackContent
     return (
-      <Pagination.Item
+      <Item
         size={size}
         active={options?.active}
         disabled={renderedDisabled}
@@ -567,98 +557,9 @@ const Root: FC<PaginationProps> = ({
         }}
       >
         {renderedContent}
-      </Pagination.Item>
+      </Item>
     )
   }
-
-  const pagerNode = simpleConfig ? (
-    <div className={buildJoinClassName()}>
-      {renderItem(Math.max(1, mergedCurrent - 1), 'prev', labels.prev, {
-        disabled: mergedCurrent <= 1,
-        title: labels.previousPage,
-      })}
-      <div
-        className={buildInputClassName(
-          size,
-          'join-item inline-flex shrink-0 items-center gap-1 px-2 text-sm',
-        )}
-      >
-        {simpleConfig.readOnly ? (
-          <span className="tabular-nums">{mergedCurrent}</span>
-        ) : (
-          <input
-            key={`simple-${mergedCurrent}-${pageCount}`}
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            min="1"
-            max={String(pageCount)}
-            value={inputDraft.simple}
-            disabled={disabled}
-            className={appendClassName(
-              'border-0 bg-transparent p-0 text-right outline-none appearance-none [appearance:textfield] tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
-              resolveNumberInputWidthClass(pageCount, 'simple'),
-            )}
-            onInput={(event: Event) => {
-              inputDraft.simple = (event.currentTarget as HTMLInputElement).value
-            }}
-            onKeyDown={(event: KeyboardEvent) => {
-              if (event.key !== 'Enter') return
-              const target = event.currentTarget as HTMLInputElement
-              updatePage(Number(target.value))
-            }}
-            onBlur={(event: FocusEvent) => {
-              if (disabled) return
-              const target = event.currentTarget as HTMLInputElement
-              if (target.value === '') {
-                target.value = String(mergedCurrent)
-                inputDraft.simple = target.value
-                return
-              }
-              updatePage(Number(target.value))
-            }}
-          />
-        )}
-        <span className="inline-flex items-center opacity-60">
-          {labels.pageSuffix === '/ page' ? `/ ${pageCount}` : `${labels.pageSuffix} ${pageCount}`}
-        </span>
-      </div>
-      {renderItem(Math.min(pageCount, mergedCurrent + 1), 'next', labels.next, {
-        disabled: mergedCurrent >= pageCount,
-        title: labels.nextPage,
-      })}
-    </div>
-  ) : (
-    <div className={buildJoinClassName(direction)}>
-      {renderItem(Math.max(1, mergedCurrent - 1), 'prev', labels.prev, {
-        disabled: mergedCurrent <= 1,
-        title: labels.previousPage,
-      })}
-      {pagerItems.map(item => {
-        const label =
-          item.type === 'jump-prev'
-            ? labels.jumpPrev
-            : item.type === 'jump-next'
-              ? labels.jumpNext
-              : item.label
-
-        return renderItem(item.page, item.type, label, {
-          active: item.type === 'page' && item.page === mergedCurrent,
-          disabled: item.type !== 'page' ? !!disabled : false,
-          title:
-            item.type === 'page'
-              ? labels.pageTitle(item.page)
-              : item.type === 'jump-prev'
-                ? labels.jumpPrevTitle
-                : labels.jumpNextTitle,
-        })
-      })}
-      {renderItem(Math.min(pageCount, mergedCurrent + 1), 'next', labels.next, {
-        disabled: mergedCurrent >= pageCount,
-        title: labels.nextPage,
-      })}
-    </div>
-  )
 
   return (
     <div
@@ -674,7 +575,96 @@ const Root: FC<PaginationProps> = ({
           {showTotal(normalizedTotal, totalRange)}
         </div>
       ) : null}
-      {pagerNode}
+      {simpleConfig ? (
+        <div className={buildJoinClassName()}>
+          {renderItem(Math.max(1, mergedCurrent - 1), 'prev', labels.prev, {
+            disabled: mergedCurrent <= 1,
+            title: labels.previousPage,
+          })}
+          <div
+            className={buildInputClassName(
+              size,
+              'join-item inline-flex shrink-0 items-center gap-1 px-2 text-sm',
+            )}
+          >
+            {simpleConfig.readOnly ? (
+              <span className="tabular-nums">{mergedCurrent}</span>
+            ) : (
+              <input
+                key={`simple-${mergedCurrent}-${pageCount}`}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min="1"
+                max={String(pageCount)}
+                value={simpleInputValue.value}
+                disabled={disabled}
+                className={appendClassName(
+                  'border-0 bg-transparent p-0 text-right outline-none appearance-none [appearance:textfield] tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+                  resolveNumberInputWidthClass(pageCount, 'simple'),
+                )}
+                onInput={(event: Event) => {
+                  simpleInputValue.value = (event.currentTarget as HTMLInputElement).value
+                }}
+                onKeyDown={(event: KeyboardEvent) => {
+                  if (event.key !== 'Enter') return
+                  const target = event.currentTarget as HTMLInputElement
+                  updatePage(Number(target.value))
+                }}
+                onBlur={(event: FocusEvent) => {
+                  if (disabled) return
+                  const target = event.currentTarget as HTMLInputElement
+                  if (target.value === '') {
+                    target.value = String(mergedCurrent)
+                    simpleInputValue.value = target.value
+                    return
+                  }
+                  updatePage(Number(target.value))
+                }}
+              />
+            )}
+            <span className="inline-flex items-center opacity-60">
+              {labels.pageSuffix === '/ page'
+                ? `/ ${pageCount}`
+                : `${labels.pageSuffix} ${pageCount}`}
+            </span>
+          </div>
+          {renderItem(Math.min(pageCount, mergedCurrent + 1), 'next', labels.next, {
+            disabled: mergedCurrent >= pageCount,
+            title: labels.nextPage,
+          })}
+        </div>
+      ) : (
+        <div className={buildJoinClassName(direction)}>
+          {renderItem(Math.max(1, mergedCurrent - 1), 'prev', labels.prev, {
+            disabled: mergedCurrent <= 1,
+            title: labels.previousPage,
+          })}
+          {pagerItems.map(item => {
+            const label =
+              item.type === 'jump-prev'
+                ? labels.jumpPrev
+                : item.type === 'jump-next'
+                  ? labels.jumpNext
+                  : item.label
+
+            return renderItem(item.page, item.type, label, {
+              active: item.type === 'page' && item.page === mergedCurrent,
+              disabled: item.type !== 'page' ? !!disabled : false,
+              title:
+                item.type === 'page'
+                  ? labels.pageTitle(item.page)
+                  : item.type === 'jump-prev'
+                    ? labels.jumpPrevTitle
+                    : labels.jumpNextTitle,
+            })
+          })}
+          {renderItem(Math.min(pageCount, mergedCurrent + 1), 'next', labels.next, {
+            disabled: mergedCurrent >= pageCount,
+            title: labels.nextPage,
+          })}
+        </div>
+      )}
       {showSizeChanger ? (
         <label className="flex items-center gap-2 text-sm opacity-80">
           <select
@@ -707,14 +697,14 @@ const Root: FC<PaginationProps> = ({
             pattern="[0-9]*"
             min="1"
             max={String(pageCount)}
-            value={inputDraft.quick}
+            value={quickInputValue.value}
             disabled={disabled}
             className={buildNumberInputClassName(
               size,
               `${resolveNumberInputWidthClass(pageCount, 'quick')} text-center tabular-nums`,
             )}
             onInput={(event: Event) => {
-              inputDraft.quick = (event.currentTarget as HTMLInputElement).value
+              quickInputValue.value = (event.currentTarget as HTMLInputElement).value
             }}
             onKeyDown={(event: KeyboardEvent) => {
               if (event.key !== 'Enter') return

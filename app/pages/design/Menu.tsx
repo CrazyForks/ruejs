@@ -125,11 +125,14 @@ const MenuDemo: FC = () => {
   const tArray = ref<'preview' | 'code'>('preview')
   const tArrayInternal = ref<'preview' | 'code'>('preview')
   const tNavigation = ref<'preview' | 'code'>('preview')
-  const recommendedSelectedKeys = ref<string[]>(['overview'])
+  const recommendedSelectedKey = ref('overview')
   const recommendedOpenKeys = ref<string[]>(['workspace'])
-  const multipleSelectedKeys = ref<string[]>(['mentions', 'archived'])
   const compoundSelectedKeys = ref<string[]>(['profile'])
   const compoundOpenKeys = ref<string[]>(['settings'])
+  const recommendedMenuClassName =
+    "bg-base-200 rounded-box w-80 [&_button[aria-expanded='true'].menu-active]:!bg-transparent [&_button[aria-expanded='true'].menu-active]:!text-base-content"
+  const fileTreeMenuClassName =
+    'bg-base-200 rounded-box max-w-xs w-full [&_button>span]:inline-flex [&_button>span]:items-center [&_button>span]:gap-2 [&_button>span>svg]:shrink-0 [&_summary]:flex [&_summary]:items-center [&_summary]:gap-2 [&_summary>svg]:shrink-0'
 
   const toggleDropdownByClass = (event: MouseEvent) => {
     const toggle = event.currentTarget as HTMLElement | null
@@ -354,11 +357,11 @@ const MenuDemo: FC = () => {
           {tRecommended.value === 'preview' ? (
             <Menu
               mode="inline"
-              className="bg-base-200 rounded-box w-80"
+              className={recommendedMenuClassName}
               items={recommendedItems}
-              selectedKeys={recommendedSelectedKeys.value}
+              selectedKeys={[recommendedSelectedKey.value]}
               openKeys={recommendedOpenKeys.value}
-              onSelect={info => (recommendedSelectedKeys.value = info.selectedKeys as string[])}
+              onSelect={info => (recommendedSelectedKey.value = String(info.key))}
               onOpenChange={keys => (recommendedOpenKeys.value = keys as string[])}
             />
           ) : (
@@ -368,7 +371,7 @@ const MenuDemo: FC = () => {
               code={`import { Badge, Menu } from '@rue-js/design';
 import { ref } from '@rue-js/rue';
 
-const selectedKeys = ref(['overview']);
+const selectedKey = ref('overview');
 const openKeys = ref(['workspace']);
 
 const items = [
@@ -409,11 +412,11 @@ const items = [
 
 <Menu
   mode="inline"
-  className="bg-base-200 rounded-box w-80"
+  className="bg-base-200 rounded-box w-80 [&_button[aria-expanded='true'].menu-active]:!bg-transparent [&_button[aria-expanded='true'].menu-active]:!text-base-content"
   items={items}
-  selectedKeys={selectedKeys.value}
+  selectedKeys={[selectedKey.value]}
   openKeys={openKeys.value}
-  onSelect={info => (selectedKeys.value = info.selectedKeys as string[])}
+  onSelect={info => (selectedKey.value = String(info.key))}
   onOpenChange={keys => (openKeys.value = keys as string[])}
 />`}
             />
@@ -441,17 +444,13 @@ const items = [
               className="bg-base-200 rounded-box w-80"
               items={multipleItems}
               multiple
-              selectedKeys={multipleSelectedKeys.value}
-              onSelect={info => (multipleSelectedKeys.value = info.selectedKeys as string[])}
-              onDeselect={info => (multipleSelectedKeys.value = info.selectedKeys as string[])}
+              defaultSelectedKeys={['mentions', 'archived']}
             />
           ) : (
             <Code
               className="mt-2"
               lang="tsx"
-              code={`const selectedKeys = ref(['mentions', 'archived']);
-
-const items = [
+              code={`const items = [
   {
     type: 'group',
     label: 'Inbox',
@@ -475,9 +474,7 @@ const items = [
   className="bg-base-200 rounded-box w-80"
   items={items}
   multiple
-  selectedKeys={selectedKeys.value}
-  onSelect={info => (selectedKeys.value = info.selectedKeys as string[])}
-  onDeselect={info => (selectedKeys.value = info.selectedKeys as string[])}
+  defaultSelectedKeys={['mentions', 'archived']}
 />`}
             />
           )}
@@ -1733,7 +1730,7 @@ const toggleDropdownByClass = (event: MouseEvent) => {
             className="mb-3"
           />
           {tFileTree.value === 'preview' ? (
-            <Menu size="xs" className="bg-base-200 rounded-box max-w-xs w-full">
+            <Menu size="xs" className={fileTreeMenuClassName}>
               <Menu.Item as="button">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -1927,7 +1924,10 @@ const toggleDropdownByClass = (event: MouseEvent) => {
             <Code
               className="mt-2"
               lang="tsx"
-              code={`<Menu size="xs" className="bg-base-200 rounded-box max-w-xs w-full">
+              code={`<Menu
+  size="xs"
+  className="bg-base-200 rounded-box max-w-xs w-full [&_button>span]:inline-flex [&_button>span]:items-center [&_button>span]:gap-2 [&_button>span>svg]:shrink-0 [&_summary]:flex [&_summary]:items-center [&_summary]:gap-2 [&_summary>svg]:shrink-0"
+>
   <Menu.Item as="button">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />

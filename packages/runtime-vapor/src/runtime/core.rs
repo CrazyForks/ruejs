@@ -34,6 +34,10 @@ where
     pub(crate) mounted_queue: Vec<Box<dyn FnMut()>>,
     /// 区间渲染的挂载映射（start/end -> mount）
     pub(crate) range_map: Vec<RangeMountState<A>>,
+    /// 下一次触发 anchor 映射压缩的长度阈值
+    pub(crate) anchor_map_next_compact_at: usize,
+    /// 下一次触发 range 映射压缩的长度阈值
+    pub(crate) range_map_next_compact_at: usize,
     /// 当前区间锚点（渲染 Between 时使用）
     pub(crate) current_anchor: Option<A::Element>,
     /// 错误处理器集合（按实例索引）
@@ -73,6 +77,8 @@ where
             instance_store: HashMap::new(),
             mounted_queue: Vec::new(),
             range_map: Vec::new(),
+            anchor_map_next_compact_at: 0,
+            range_map_next_compact_at: 0,
             current_anchor: None,
             error_handlers: HashSet::new(),
             current_container: None,
@@ -246,6 +252,8 @@ mod tests {
         assert_eq!(rue.container_mount_count(), 0);
         assert_eq!(rue.anchor_mount_count(), 0);
         assert_eq!(rue.range_mount_count(), 0);
+        assert_eq!(rue.anchor_map_next_compact_at, 0);
+        assert_eq!(rue.range_map_next_compact_at, 0);
 
         rue.set_dom_adapter(NoopAdapter);
         assert!(rue.get_dom_adapter().is_some());

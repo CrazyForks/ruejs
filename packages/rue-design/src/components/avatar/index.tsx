@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Avatar 组件概述
 - 在保留 daisyUI 原子组合能力的前提下，补齐图片、图标、文字、尺寸、形状与失败回退等语义化 API。

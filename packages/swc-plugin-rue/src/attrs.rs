@@ -210,6 +210,32 @@ fn try_emit_static_expr_attr(
 pub fn emit_attrs_for(stmts: &mut Vec<Stmt>, target: &Ident, opening: &JSXOpeningElement) {
     log::debug(&format!("attrs: start count={}", opening.attrs.len()));
     for a in &opening.attrs {
+        if let JSXAttrOrSpread::SpreadElement(spread) = a {
+            let spread_expr = Expr::Paren(ParenExpr { span: DUMMY_SP, expr: spread.expr.clone() });
+            let apply_spread =
+                call_ident("_$spreadAttributes", vec![Expr::Ident(target.clone()), spread_expr]);
+            let arrow = Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                params: vec![],
+                body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+                    span: DUMMY_SP,
+                    ctxt: SyntaxContext::empty(),
+                    stmts: vec![Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: Box::new(apply_spread),
+                    })],
+                })),
+                is_async: false,
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+                ctxt: SyntaxContext::empty(),
+            });
+            let watch = call_ident("watchEffect", vec![arrow]);
+            stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
+            continue;
+        }
+
         if let JSXAttrOrSpread::JSXAttr(attr) = a {
             if let JSXAttrName::Ident(n) = &attr.name {
                 let name = n.sym.to_string();

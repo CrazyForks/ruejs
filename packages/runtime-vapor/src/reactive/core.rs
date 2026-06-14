@@ -1032,11 +1032,20 @@ pub fn to_value(x: JsValue) -> JsValue {
         return f.call0(&JsValue::NULL).unwrap_or(JsValue::UNDEFINED);
     }
     if x.is_object() {
+        let is_rue_ref = Reflect::get(&x, &JsValue::from_str("__rue_ref__"))
+            .unwrap_or(JsValue::FALSE)
+            .as_bool()
+            .unwrap_or(false);
+        let getf = Reflect::get(&x, &JsValue::from_str("get")).unwrap_or(JsValue::UNDEFINED);
+        if is_rue_ref {
+            if let Some(g) = getf.dyn_ref::<Function>() {
+                return g.call0(&x).unwrap_or(JsValue::UNDEFINED);
+            }
+        }
         let v = Reflect::get(&x, &JsValue::from_str("value")).unwrap_or(JsValue::UNDEFINED);
         if !v.is_undefined() {
             return v;
         }
-        let getf = Reflect::get(&x, &JsValue::from_str("get")).unwrap_or(JsValue::UNDEFINED);
         if let Some(g) = getf.dyn_ref::<Function>() {
             return g.call0(&x).unwrap_or(JsValue::UNDEFINED);
         }

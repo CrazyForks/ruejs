@@ -12,12 +12,10 @@
 //!   ```
 //!
 //! 配置方法：
-//! - 启用/禁用：`log::set_log_enabled(true)`
+//! - 默认启用 debug 级别日志
 //! - 级别阈值：`log::set_log_level("info")`（低于该级别不输出）
 //! - 控制台输出：`log::set_log_console(true)`
-//! - 文件输出：
-//!   - 通过环境变量：`RUE_LOG_FILE=target/rue-plugin.log`
-//!   - 或代码设置：`log::set_log_file("target/rue-plugin.log")`
+//! - 文件输出：`log::set_log_file("target/rue-plugin.log")`
 //!
 //! 过滤：
 //! - 包含过滤：`log::add_log_include("vapor")`（仅匹配的消息输出）
@@ -39,14 +37,12 @@ use std::fs::OpenOptions;
 use std::io::Write;
 
 thread_local! {
-    static LOG_ENABLED: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
+    static LOG_ENABLED: std::cell::RefCell<bool> = const { std::cell::RefCell::new(true) };
     static LOG_CONSOLE: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
     static LOG_LEVEL: std::cell::RefCell<u8> = const { std::cell::RefCell::new(0) };
     static LOG_INCLUDE: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
     static LOG_EXCLUDE: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
-    static LOG_INCLUDE_TOUCHED: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
-    static LOG_EXCLUDE_TOUCHED: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
-    static LOG_FILE_PATH: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(std::env::var("RUE_LOG_FILE").ok());
+    static LOG_FILE_PATH: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
 }
 
 /// 级别名称映射为数值，便于比较
@@ -64,72 +60,8 @@ fn level_to_num(level: &str) -> u8 {
     }
 }
 
-/// 读取 localStorage 某键的字符串值
-#[allow(dead_code)]
-fn read_localstorage_value(_key: &str) -> Option<String> {
-    None
-}
-
-/// 宽松解析布尔值字符串
-fn parse_bool(s: &str) -> Option<bool> {
-    let v = s.trim().to_ascii_lowercase();
-    match v.as_str() {
-        "1" | "true" | "yes" | "on" => Some(true),
-        "0" | "false" | "no" | "off" => Some(false),
-        _ => None,
-    }
-}
-
-fn sync_log_config_from_env() {
-    if let Ok(enabled_str) =
-        std::env::var("RUE_LOG_ENABLED").or_else(|_| std::env::var("RUE_LOGS_ENABLED"))
-    {
-        if let Some(b) = parse_bool(&enabled_str) {
-            LOG_ENABLED.with(|e| *e.borrow_mut() = b);
-        }
-    }
-    if let Ok(level_str) =
-        std::env::var("RUE_LOG_LEVEL").or_else(|_| std::env::var("RUE_LOGS_LEVEL"))
-    {
-        let num = level_to_num(&level_str.trim().to_ascii_lowercase());
-        LOG_LEVEL.with(|l| *l.borrow_mut() = num);
-    }
-    // include/exclude 仅在“未通过 API 修改过”时读取环境变量，避免混淆优先级
-    let include_touched = LOG_INCLUDE_TOUCHED.with(|t| *t.borrow());
-    if !include_touched && std::env::var("RUE_LOG_INCLUDE").is_ok() {
-        let inc = std::env::var("RUE_LOG_INCLUDE").unwrap_or_default();
-        let vals: Vec<String> = inc
-            .split(',')
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-            .map(|s| s.to_string())
-            .collect();
-        LOG_INCLUDE.with(|f| {
-            let mut w = f.borrow_mut();
-            w.clear();
-            w.extend(vals);
-        });
-    }
-    let exclude_touched = LOG_EXCLUDE_TOUCHED.with(|t| *t.borrow());
-    if !exclude_touched && std::env::var("RUE_LOG_EXCLUDE").is_ok() {
-        let exc = std::env::var("RUE_LOG_EXCLUDE").unwrap_or_default();
-        let vals: Vec<String> = exc
-            .split(',')
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-            .map(|s| s.to_string())
-            .collect();
-        LOG_EXCLUDE.with(|f| {
-            let mut w = f.borrow_mut();
-            w.clear();
-            w.extend(vals);
-        });
-    }
-}
-
 /// 判断消息是否应被输出：考虑启用状态、级别阈值、包含/排除过滤
 fn should_log(level: u8, msg: &str) -> bool {
-    // no-op: local configuration via env or setters
     let enabled = LOG_ENABLED.with(|e| *e.borrow());
     if !enabled {
         return false;
@@ -184,22 +116,18 @@ pub fn set_log_level(level: &str) {
 
 pub fn add_log_include(filter: &str) {
     LOG_INCLUDE.with(|f| f.borrow_mut().push(filter.to_string()));
-    LOG_INCLUDE_TOUCHED.with(|t| *t.borrow_mut() = true);
 }
 
 pub fn clear_log_include() {
     LOG_INCLUDE.with(|f| f.borrow_mut().clear());
-    LOG_INCLUDE_TOUCHED.with(|t| *t.borrow_mut() = true);
 }
 
 pub fn add_log_exclude(filter: &str) {
     LOG_EXCLUDE.with(|f| f.borrow_mut().push(filter.to_string()));
-    LOG_EXCLUDE_TOUCHED.with(|t| *t.borrow_mut() = true);
 }
 
 pub fn clear_log_exclude() {
     LOG_EXCLUDE.with(|f| f.borrow_mut().clear());
-    LOG_EXCLUDE_TOUCHED.with(|t| *t.borrow_mut() = true);
 }
 
 pub fn set_log_file(path: &str) {
@@ -215,7 +143,6 @@ fn unix_timestamp_secs(now: std::time::SystemTime) -> String {
 
 /// 实际写入日志：按规则检查后输出到 console
 fn write(level: &str, msg: &str) {
-    sync_log_config_from_env();
     let lv = level_to_num(level);
     if !should_log(lv, msg) {
         return;
@@ -302,13 +229,11 @@ pub fn emergency(msg: &str) {
 
 #[cfg(test)]
 fn reset_for_test() {
-    LOG_ENABLED.with(|e| *e.borrow_mut() = false);
+    LOG_ENABLED.with(|e| *e.borrow_mut() = true);
     LOG_CONSOLE.with(|c| *c.borrow_mut() = false);
     LOG_LEVEL.with(|l| *l.borrow_mut() = 0);
     LOG_INCLUDE.with(|f| f.borrow_mut().clear());
     LOG_EXCLUDE.with(|f| f.borrow_mut().clear());
-    LOG_INCLUDE_TOUCHED.with(|t| *t.borrow_mut() = false);
-    LOG_EXCLUDE_TOUCHED.with(|t| *t.borrow_mut() = false);
     LOG_FILE_PATH.with(|p| *p.borrow_mut() = None);
 }
 

@@ -430,7 +430,7 @@ export const vaporKeyedList = <T>(args: {
   const createStableItemProxy = (
     current: ReturnType<typeof signal<{ item: T; index: number; rawIdentity: unknown }>>,
   ) => {
-    const readCurrentItem = () => untrack(() => current.get().item as any)
+    const readCurrentItem = () => current.get().item as any
     const readCurrentItemRaw = () => {
       const item = readCurrentItem()
       if (isObjectLike(item)) {

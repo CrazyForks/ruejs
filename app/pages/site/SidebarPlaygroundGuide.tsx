@@ -1,7 +1,31 @@
+import { type FC, useState } from '@rue-js/rue'
+import { RouterView, useRoute } from '@rue-js/router'
 import {
   createPersistentSidebarPlayground,
   type SidebarSection,
 } from './persistentSidebarPlayground'
+
+const readCurrentHashPath = (): string => {
+  const hash = globalThis.location?.hash || ''
+  if (hash.startsWith('#')) {
+    return hash.slice(1) || '/'
+  }
+  return hash || globalThis.location?.pathname || ''
+}
+
+const SIDEBAR_LAYOUT_META = 'guide'
+
+const useInsideSidebarRouteLayout = (): boolean => {
+  try {
+    const route = useRoute()
+    const routeData = route.get() as any
+    return !!routeData?.matched?.some(
+      (record: any) => record?.meta?.sidebarPlaygroundLayout === SIDEBAR_LAYOUT_META,
+    )
+  } catch {
+    return false
+  }
+}
 
 export const SECTIONS_BY_TYPE: Record<'guide', SidebarSection[]> = {
   guide: [
@@ -271,8 +295,41 @@ export const SECTIONS_BY_TYPE: Record<'guide', SidebarSection[]> = {
   ],
 }
 
-export default createPersistentSidebarPlayground({
+const BaseSidebarPlayground = createPersistentSidebarPlayground({
   sections: SECTIONS_BY_TYPE.guide,
   showCounts: true,
   fallbackToRoute: false,
 })
+
+const RouteSidebarPlayground = createPersistentSidebarPlayground({
+  sections: SECTIONS_BY_TYPE.guide,
+  showCounts: true,
+})
+
+type SidebarPlaygroundProps = {
+  currentPath?: string
+}
+
+const SidebarPlayground: FC<SidebarPlaygroundProps> = props => {
+  if (useInsideSidebarRouteLayout()) {
+    return <>{props.children}</>
+  }
+
+  const [initialCurrentPath] = useState(readCurrentHashPath)
+
+  return (
+    <BaseSidebarPlayground currentPath={props.currentPath ?? initialCurrentPath.value}>
+      {props.children}
+    </BaseSidebarPlayground>
+  )
+}
+
+export const GuideRouteLayout: FC = () => {
+  return (
+    <RouteSidebarPlayground>
+      <RouterView />
+    </RouteSidebarPlayground>
+  )
+}
+
+export default SidebarPlayground

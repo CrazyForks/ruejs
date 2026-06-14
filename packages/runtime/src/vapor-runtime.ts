@@ -20,6 +20,9 @@ import {
   withParentContextProps,
 } from './context'
 import {
+  appendChild,
+  createComment,
+  createDocumentFragment,
   getDOMAdapter,
   getParentNode,
   hasActiveTextControlWithin,
@@ -395,6 +398,29 @@ const createRepeatableComponentHandle = <P = {}>(
   return attachRepeatableMountFactory(nextVnode, () => createRepeatableComponentHandle(type, props))
 }
 
+const createRepeatableElementHandle = <P = {}>(
+  type: string | ComponentInstance<P>,
+  props: ComponentProps | null,
+  children: ChildInput[],
+  finalize?: (
+    vnode: RenderableOutput,
+    nextProps: ComponentProps | null,
+    nextChildren: ChildInput[],
+  ) => RenderableOutput,
+): RenderableOutput => {
+  const nextProps = replayMountAwareValue(props) as ComponentProps | null
+  const nextChildren = replayMountAwareValue(children) as ChildInput[]
+  const vnode = getRueRuntime().createElement(
+    type,
+    nextProps,
+    nextChildren as any,
+  ) as RenderableOutput
+  const nextVnode = finalize ? finalize(vnode, nextProps, nextChildren) : vnode
+  return attachRepeatableMountFactory(nextVnode, () =>
+    createRepeatableElementHandle(type, props, children, finalize),
+  )
+}
+
 /** 判断组件类型是否需要在 render 外层补 errorCaptured 冒泡包装。 */
 const shouldWrapComponentForErrorCapture = (type: ComponentInstance<any>) => {
   const componentRecord = type as unknown as Record<string, unknown>
@@ -470,6 +496,21 @@ const createRepeatableVaporHandle = (
   return attachRepeatableMountFactory(handle, () => createRepeatableVaporHandle(setup))
 }
 
+const createRepeatableFragmentHandle = (children: unknown[]): RenderableOutput =>
+  createRepeatableVaporHandle(() => {
+    const root = createDocumentFragment()
+    const nextChildren = replayMountAwareValue(children) as unknown[]
+
+    nextChildren.forEach(child => {
+      if (child === null || child === undefined) return
+      const anchor = createComment('rue:fragment:anchor')
+      appendChild(root, anchor)
+      renderAnchor(child as RenderableInput, root as unknown as DomElementLike, anchor)
+    })
+
+    return root
+  })
+
 const normalizeMountHandleSingletonInput = (value: unknown): unknown => {
   if (!Array.isArray(value)) {
     return value
@@ -478,6 +519,10 @@ const normalizeMountHandleSingletonInput = (value: unknown): unknown => {
   const meaningfulValues = value.filter(item => item !== null && item !== undefined)
   if (meaningfulValues.length === 1 && isMountHandle(meaningfulValues[0])) {
     return meaningfulValues[0]
+  }
+
+  if (meaningfulValues.length > 1 && meaningfulValues.some(item => isMountHandle(item))) {
+    return createRepeatableFragmentHandle(meaningfulValues)
   }
 
   return value
@@ -553,7 +598,7 @@ const containsDomNodeLikeInput = (value: unknown): boolean => {
 }
 
 const markAnchorRemountableMountHandle = <P = {}>(
-  type: ComponentInstance<P>,
+  type: string | ComponentInstance<P>,
   props: ComponentProps | null,
   normalizedChildren: ChildInput[],
   vnode: RenderableOutput,
@@ -567,12 +612,18 @@ const markAnchorRemountableMountHandle = <P = {}>(
     (effectiveChildren.length > 0 && builtinName !== 'TransitionGroup') ||
     builtinName === 'Transition'
   const shouldForceRemount =
-    builtinName === 'Transition' ||
-    builtinName === 'Template' ||
-    hasDomNodeLikeChildren ||
-    hasDomNodeLikeProp
+    typeof type === 'function' &&
+    (builtinName === 'Transition' ||
+      builtinName === 'Template' ||
+      hasDomNodeLikeChildren ||
+      hasDomNodeLikeProp)
 
-  if (shouldUseComponentChildrenAnchor && vnode && typeof vnode === 'object') {
+  if (
+    typeof type === 'function' &&
+    shouldUseComponentChildrenAnchor &&
+    vnode &&
+    typeof vnode === 'object'
+  ) {
     ;(vnode as Record<string, unknown>)[RUE_COMPONENT_CHILDREN_KEY] = true
   }
   if (shouldForceRemount && vnode && typeof vnode === 'object') {
@@ -585,6 +636,45 @@ const assertDefaultChildren = (props: ComponentProps | null, children: ChildInpu
   for (const child of getEffectiveChildren(props, children)) {
     analyzeDefaultRenderableInput(child)
   }
+}
+
+const normalizeCreateElementChild = (value: ChildInput): ChildInput => {
+  if (Array.isArray(value)) {
+    return value.map(item => normalizeCreateElementChild(item as ChildInput)) as ChildInput
+  }
+  if (typeof value === 'number') {
+    return String(value) as ChildInput
+  }
+  return value
+}
+
+const normalizeCreateElementChildren = (children: ChildInput[]): ChildInput[] =>
+  children.map(child => normalizeCreateElementChild(child))
+
+const normalizeDomElementProps = (props: ComponentProps | null): ComponentProps | null => {
+  if (!props) return props
+
+  let changed = false
+  const normalized: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(props)) {
+    if (value === undefined) {
+      changed = true
+      continue
+    }
+    if ((key.startsWith('data-') || key.startsWith('aria-')) && typeof value === 'boolean') {
+      normalized[key] = String(value)
+      changed = true
+      continue
+    }
+    if (key === 'style' && typeof value === 'string') {
+      normalized[key] = { cssText: value }
+      changed = true
+      continue
+    }
+    normalized[key] = value
+  }
+
+  return changed ? (normalized as ComponentProps) : props
 }
 
 const resolveAnchorTargetParent = (parent: DomElementLike, anchor: DomNodeLike) => {
@@ -613,9 +703,28 @@ const resolveBetweenTargetParent = (
 
 /** 创建 Vapor portable component mount handle。 */
 export const createComponent = <P = {}>(
-  type: ComponentInstance<P>,
+  type: string | ComponentInstance<P>,
   props: ComponentProps | null,
 ): RenderableOutput => {
+  if (typeof type === 'string') {
+    const contextualProps = withParentContextProps(
+      type,
+      props as Record<string, unknown> | null,
+    ) as ComponentProps | null
+    const normalizedChildren = normalizeCreateElementChildren(
+      getEffectiveChildren(contextualProps, []),
+    )
+    assertDefaultChildren(contextualProps, normalizedChildren)
+    const elementProps = normalizeDomElementProps(contextualProps)
+    return createRepeatableElementHandle(
+      type,
+      elementProps,
+      normalizedChildren,
+      (vnode, nextProps, nextChildren) =>
+        markAnchorRemountableMountHandle(type, nextProps, nextChildren, vnode),
+    )
+  }
+
   if ((type as unknown) === COMPAT_SUSPENSE_TYPE) {
     return props?.children ?? null
   }

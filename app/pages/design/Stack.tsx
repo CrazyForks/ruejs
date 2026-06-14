@@ -420,7 +420,7 @@ const StackPage: FC = () => {
                     <div className="rounded-box border border-base-300 bg-base-100 p-4">
                       v2 Review notes
                     </div>
-                    <div className="rounded-box border border-primary/30 bg-primary/5 p-4 text-primary">
+                    <div className="rounded-box border border-primary bg-primary p-4 text-primary-content shadow-sm">
                       v3 Final copy
                     </div>
                   </Stack>
@@ -431,7 +431,7 @@ const StackPage: FC = () => {
           code={`<Stack className="w-44" reverse>
   <div className="rounded-box border border-base-300 bg-base-100 p-4">v1 Initial draft</div>
   <div className="rounded-box border border-base-300 bg-base-100 p-4">v2 Review notes</div>
-  <div className="rounded-box border border-primary/30 bg-primary/5 p-4 text-primary">v3 Final copy</div>
+  <div className="rounded-box border border-primary bg-primary p-4 text-primary-content shadow-sm">v3 Final copy</div>
 </Stack>`}
         />
 

@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Notification 模块概述
 - 汇总通知提醒组件的公开类型、渲染入口和局部工具逻辑。
@@ -247,6 +246,20 @@ interface NotificationViewportProps extends NotificationUseOptions {
   inline?: boolean
   onDestroy: (key?: NotificationKey) => void
 }
+
+interface MutableCell<T> {
+  value: T
+}
+
+interface NotificationHookStore {
+  api?: NotificationInstance
+  records: NotificationRecord[]
+  holderElement?: HTMLDivElement
+  viewportElement?: HTMLDivElement
+  options: NotificationUseOptions
+}
+
+const createCell = <T,>(value: T): MutableCell<T> => ({ value })
 
 /** DEFAULT_PLACEMENT 内部常量。 */
 const DEFAULT_PLACEMENT: NotificationPlacement = 'topRight'
@@ -558,6 +571,8 @@ const resolveClosable = (closable?: NotificationClosable, closeIcon?: any) => {
   return { enabled: true, icon: closeIcon, label: '关闭通知', onClose: undefined as any }
 }
 
+const NotificationSlot: FC<{ children?: any }> = ({ children }) => <>{children}</>
+
 /** Notification Item 的内部工具函数。 */
 const NotificationItem: FC<NotificationItemProps> = ({
   as = 'div',
@@ -596,9 +611,9 @@ const NotificationItem: FC<NotificationItemProps> = ({
     kind: 'ref',
   })
   const hovered = ref(false)
-  const closeTimerRef = useRef<number>()
-  const timerStartedAtRef = useRef<number>()
-  const remainingDurationRef = useRef<number | null>(resolveDurationMs(duration))
+  const closeTimerRef = createCell<number | undefined>(undefined)
+  const timerStartedAtRef = createCell<number | undefined>(undefined)
+  const remainingDurationRef = createCell<number | null>(resolveDurationMs(duration))
   const {
     onMouseEnter: userOnMouseEnter,
     onMouseLeave: userOnMouseLeave,
@@ -609,7 +624,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
     'data-rue-notification-type': providedNotificationType,
     ...forwardedComponentProps
   }: Record<string, any> = { ...itemProps, ...rest }
-  let rootElement: HTMLElement | null = null
+  const rootElement = createCell<HTMLElement | null>(null)
   const visible = isControlled ? !!open : currentOpen.value
 
   const tone = resolveTone(type)
@@ -638,40 +653,37 @@ const NotificationItem: FC<NotificationItemProps> = ({
   const notificationTestId = componentProps['data-testid']
 
   const syncItemDom = (nextOpen: boolean) => {
-    if (!rootElement) return
-    rootElement.style.display = nextOpen ? '' : 'none'
+    const element = rootElement.value
+    if (!element) return
+    element.style.display = nextOpen ? '' : 'none'
     if (nextOpen) {
-      rootElement.removeAttribute('aria-hidden')
-      rootElement.setAttribute('data-rue-notification-item', String(notificationMarker))
-      rootElement.setAttribute('data-rue-notification-type', String(notificationType))
+      element.removeAttribute('aria-hidden')
+      element.setAttribute('data-rue-notification-item', String(notificationMarker))
+      element.setAttribute('data-rue-notification-type', String(notificationType))
       if (notificationTestId != null)
-        rootElement.setAttribute('data-testid', String(notificationTestId))
+        element.setAttribute('data-testid', String(notificationTestId))
       return
     }
-    rootElement.setAttribute('aria-hidden', 'true')
-    rootElement.removeAttribute('data-rue-notification-item')
-    rootElement.removeAttribute('data-rue-notification-type')
-    if (notificationTestId != null) rootElement.removeAttribute('data-testid')
+    element.setAttribute('aria-hidden', 'true')
+    element.removeAttribute('data-rue-notification-item')
+    element.removeAttribute('data-rue-notification-type')
+    if (notificationTestId != null) element.removeAttribute('data-testid')
   }
 
   const clearAutoCloseTimer = (captureRemaining = false) => {
-    if (closeTimerRef.current == null) return
-    if (
-      captureRemaining &&
-      remainingDurationRef.current != null &&
-      timerStartedAtRef.current != null
-    ) {
-      const elapsed = Date.now() - timerStartedAtRef.current
-      remainingDurationRef.current = Math.max(0, remainingDurationRef.current - elapsed)
+    if (closeTimerRef.value == null) return
+    if (captureRemaining && remainingDurationRef.value != null && timerStartedAtRef.value != null) {
+      const elapsed = Date.now() - timerStartedAtRef.value
+      remainingDurationRef.value = Math.max(0, remainingDurationRef.value - elapsed)
     }
-    window.clearTimeout(closeTimerRef.current)
-    closeTimerRef.current = undefined
-    timerStartedAtRef.current = undefined
+    window.clearTimeout(closeTimerRef.value)
+    closeTimerRef.value = undefined
+    timerStartedAtRef.value = undefined
   }
 
   const requestClose = (source: NotificationCloseSource, event?: Event) => {
     clearAutoCloseTimer()
-    remainingDurationRef.current = 0
+    remainingDurationRef.value = 0
     if (!currentOpen.value) return
     setCurrentOpen(false)
     syncItemDom(false)
@@ -686,19 +698,19 @@ const NotificationItem: FC<NotificationItemProps> = ({
     clearAutoCloseTimer()
     if (!currentOpen.value) return
     if (pauseOnHover && hovered.value) return
-    if (remainingDurationRef.current == null || remainingDurationRef.current <= 0) return
-    timerStartedAtRef.current = Date.now()
-    closeTimerRef.current = window.setTimeout(() => {
-      closeTimerRef.current = undefined
-      timerStartedAtRef.current = undefined
-      remainingDurationRef.current = 0
+    if (remainingDurationRef.value == null || remainingDurationRef.value <= 0) return
+    timerStartedAtRef.value = Date.now()
+    closeTimerRef.value = window.setTimeout(() => {
+      closeTimerRef.value = undefined
+      timerStartedAtRef.value = undefined
+      remainingDurationRef.value = 0
       requestClose('timeout')
-    }, remainingDurationRef.current)
+    }, remainingDurationRef.value)
   }
 
   const refreshAutoCloseTimer = (resetRemaining = true) => {
     clearAutoCloseTimer()
-    if (resetRemaining) remainingDurationRef.current = resolveDurationMs(duration)
+    if (resetRemaining) remainingDurationRef.value = resolveDurationMs(duration)
     startAutoCloseTimer()
   }
 
@@ -745,7 +757,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
     () => duration,
     () => {
       if (!currentOpen.value) {
-        remainingDurationRef.current = resolveDurationMs(duration)
+        remainingDurationRef.value = resolveDurationMs(duration)
         return
       }
       refreshAutoCloseTimer(true)
@@ -775,7 +787,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
         className={mergeClassNames(ITEM_BASE_CLASS, rootToneClass, classNames?.root, className)}
         style={mergedRootStyle}
         ref={(element: HTMLElement | null) => {
-          rootElement = element
+          rootElement.value = element
           syncItemDom(currentOpen.value)
         }}
         onClick={(event: MouseEvent) => {
@@ -805,7 +817,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
               )}
               style={styles?.icon}
             >
-              {resolvedIcon}
+              <NotificationSlot>{resolvedIcon}</NotificationSlot>
             </div>
           ) : null}
           <div className="min-w-0 flex-1">
@@ -819,7 +831,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
                     )}
                     style={styles?.title}
                   >
-                    {resolvedTitle}
+                    <NotificationSlot>{resolvedTitle}</NotificationSlot>
                   </div>
                 ) : null}
                 {hasRenderableContent(description) ? (
@@ -832,7 +844,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
                     )}
                     style={styles?.description}
                   >
-                    {description}
+                    <NotificationSlot>{description}</NotificationSlot>
                   </div>
                 ) : null}
               </div>
@@ -848,7 +860,9 @@ const NotificationItem: FC<NotificationItemProps> = ({
                   style={styles?.close}
                   onClick={(event: MouseEvent) => requestClose('close', event)}
                 >
-                  {resolvedClosable.icon ?? <CloseIcon className="h-4 w-4" />}
+                  <NotificationSlot>
+                    {resolvedClosable.icon ?? <CloseIcon className="h-4 w-4" />}
+                  </NotificationSlot>
                 </button>
               ) : null}
             </div>
@@ -875,7 +889,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
                 )}
                 style={styles?.actions}
               >
-                {resolvedActions}
+                <NotificationSlot>{resolvedActions}</NotificationSlot>
               </div>
             ) : null}
           </div>
@@ -1047,58 +1061,60 @@ const NotificationViewport: FC<NotificationViewportProps> = ({
 
 /** useNotification 组合式能力入口。 */
 export const useNotification = (options: NotificationUseOptions = {}) => {
-  const apiRef = useRef<NotificationInstance>()
-  const recordsRef = useRef<NotificationRecord[]>([])
-  const holderElementRef = useRef<HTMLDivElement>()
-  const viewportElementRef = useRef<HTMLDivElement>()
-  const optionsRef = useRef(options)
-  optionsRef.current = options
+  const storeRef = useRef<NotificationHookStore>()
+  if (storeRef.current == null) {
+    storeRef.current = {
+      records: [],
+      options,
+    }
+  }
+  const store = storeRef.current
+  store.options = options
 
   const ensureViewportElement = () => {
     const target = resolveMountTarget(
-      (optionsRef.current ?? {}).getContainer,
-      holderElementRef.current ?? null,
+      (store.options ?? {}).getContainer,
+      store.holderElement ?? null,
       true,
     )
     if (!target) return null
-    if (viewportElementRef.current == null) {
+    if (store.viewportElement == null) {
       const element = document.createElement('div')
       element.style.display = 'contents'
       element.dataset.rueNotificationViewport = 'true'
-      viewportElementRef.current = element
+      store.viewportElement = element
     }
-    if (viewportElementRef.current.parentNode !== target)
-      target.appendChild(viewportElementRef.current)
-    return viewportElementRef.current
+    if (store.viewportElement.parentNode !== target) target.appendChild(store.viewportElement)
+    return store.viewportElement
   }
 
   const destroy = (key?: NotificationKey) => {
-    const current = recordsRef.current ?? []
+    const current = store.records ?? []
     if (key == null) {
       if (current.length > 0) {
-        recordsRef.current = []
+        store.records = []
         syncViewport()
       }
       return
     }
     const next = current.filter(record => record.key !== key)
     if (next.length !== current.length) {
-      recordsRef.current = next
+      store.records = next
       syncViewport()
     }
   }
 
   const syncViewport = () => {
-    const currentRecords = recordsRef.current ?? []
-    if (currentRecords.length === 0 && viewportElementRef.current == null) return
+    const currentRecords = store.records ?? []
+    if (currentRecords.length === 0 && store.viewportElement == null) return
     const viewportElement = ensureViewportElement()
     if (!viewportElement) return
     render(
       <NotificationViewport
         records={currentRecords}
         onDestroy={destroy}
-        inline={(optionsRef.current ?? {}).getContainer === false}
-        {...(optionsRef.current ?? {})}
+        inline={(store.options ?? {}).getContainer === false}
+        {...(store.options ?? {})}
       />,
       viewportElement,
     )
@@ -1107,23 +1123,23 @@ export const useNotification = (options: NotificationUseOptions = {}) => {
   const open = (config: NotificationArgsProps) => {
     const nextKey = config.key ?? `rue-notification-${notificationSeed++}`
     const nextRecord: NotificationRecord = { key: nextKey, config: { ...config, key: nextKey } }
-    const current = recordsRef.current ?? []
+    const current = store.records ?? []
     const currentIndex = current.findIndex(record => record.key === nextKey)
     let next =
       currentIndex === -1
         ? [...current, nextRecord]
         : [...current.slice(0, currentIndex), nextRecord, ...current.slice(currentIndex + 1)]
-    next = trimRecords(next, (optionsRef.current ?? {}).maxCount)
-    recordsRef.current = next
+    next = trimRecords(next, (store.options ?? {}).maxCount)
+    store.records = next
     syncViewport()
     return () => destroy(nextKey)
   }
 
-  if (apiRef.current == null) {
+  if (store.api == null) {
     const createTypedOpen =
       (nextType: NotificationType) => (config: Omit<NotificationArgsProps, 'type'>) =>
         open({ ...config, type: nextType })
-    apiRef.current = {
+    store.api = {
       open,
       success: createTypedOpen('success'),
       info: createTypedOpen('info'),
@@ -1134,30 +1150,30 @@ export const useNotification = (options: NotificationUseOptions = {}) => {
   }
 
   onUnmounted(() => {
-    recordsRef.current = []
-    if (viewportElementRef.current) {
-      viewportElementRef.current.remove()
-      viewportElementRef.current = undefined
+    store.records = []
+    if (store.viewportElement) {
+      store.viewportElement.remove()
+      store.viewportElement = undefined
     }
-    holderElementRef.current = undefined
+    store.holderElement = undefined
   })
 
   const contextHolder = (
     <div
       style={{ display: 'contents' }}
       ref={(element: HTMLDivElement | null) => {
-        holderElementRef.current = element ?? undefined
+        store.holderElement = element ?? undefined
         if (
-          (optionsRef.current ?? {}).getContainer === false &&
+          (store.options ?? {}).getContainer === false &&
           element &&
-          (recordsRef.current ?? []).length > 0
+          (store.records ?? []).length > 0
         )
           syncViewport()
       }}
     />
   )
 
-  return [apiRef.current!, contextHolder] as const
+  return [store.api!, contextHolder] as const
 }
 
 /** ensure Global Viewport 的内部工具函数。 */

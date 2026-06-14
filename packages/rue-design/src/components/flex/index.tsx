@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Flex 组件概述
 - 提供接近 antd Flex 的核心容器语义：方向、对齐、换行、间距与 flex 简写。
 - 保留 Rue 的轻量组合方式：不额外包裹子节点，继续支持 className 与 style 直出。
 - 同时兼容 as 与 component 两套根节点声明，便于延续现有 Rue 组件书写习惯。
 */
-import { h, type FC } from '@rue-js/rue'
+import type { FC } from '@rue-js/rue'
 
 /** FlexOrientation 类型。 */
 export type FlexOrientation = 'horizontal' | 'vertical'
@@ -87,14 +86,6 @@ const GAP_PRESET_MAP: Record<FlexGapPreset, string> = {
 /** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
-}
-
-/** 转换为 Child Array 的内部工具函数。 */
-const toChildArray = (children: any): any[] => {
-  if (Array.isArray(children)) {
-    return children.flatMap(item => toChildArray(item))
-  }
-  return children == null ? [] : [children]
 }
 
 /**
@@ -183,7 +174,6 @@ const Flex: FC<FlexProps> = ({
   const resolvedOrientation = resolveOrientation(orientation, vertical)
   const resolvedWrap = resolveWrap(wrap)
   const resolvedGap = resolveGap(gap)
-  const childNodes = toChildArray(children)
   const mergedStyle: Record<string, any> = {
     ...style,
     display: inline ? 'inline-flex' : 'flex',
@@ -196,15 +186,15 @@ const Flex: FC<FlexProps> = ({
   if (flex !== undefined && flex !== null) mergedStyle.flex = flex
   if (resolvedGap !== undefined) mergedStyle.gap = resolvedGap
 
-  return h(
-    Component,
-    {
-      ...rest,
-      className: mergeClassName('rue-flex', className),
-      style: mergedStyle,
-      'data-rue-orientation': resolvedOrientation,
-    },
-    ...(childNodes as any[]),
+  return (
+    <Component
+      {...rest}
+      className={mergeClassName('rue-flex', className)}
+      style={mergedStyle}
+      data-rue-orientation={resolvedOrientation}
+    >
+      {children}
+    </Component>
   )
 }
 

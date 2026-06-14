@@ -1,5 +1,5 @@
 import type { FC } from '@rue-js/rue'
-import { ref, useRef } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import { Pagination, Tabs } from '@rue-js/design'
@@ -21,12 +21,7 @@ interface ApiRow {
 }
 
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, preview, code }) => {
-  const tabRef = useRef<{ value: TabMode }>()
-  if (!tabRef.current) {
-    tabRef.current = ref<TabMode>('preview')
-  }
-
-  const tab = tabRef.current
+  const tab = ref<TabMode>('preview')
 
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">
@@ -154,46 +149,17 @@ const apiRows: ApiRow[] = [
 ]
 
 const PaginationPage: FC = () => {
-  const stateRef = useRef<{
-    drivenPrimaryPage: { value: number }
-    drivenSecondaryPage: { value: number }
-    controlledPage: { value: number }
-    controlledPageSize: { value: number }
-    simplePage: { value: number }
-    simpleReadonlyPage: { value: number }
-    advancedPage: { value: number }
-    advancedPageSize: { value: number }
-    advancedCompactPage: { value: number }
-    advancedCompactPageSize: { value: number }
-    customPage: { value: number }
-  }>()
-  if (!stateRef.current) {
-    stateRef.current = {
-      drivenPrimaryPage: ref(2),
-      drivenSecondaryPage: ref(6),
-      controlledPage: ref(4),
-      controlledPageSize: ref(10),
-      simplePage: ref(2),
-      simpleReadonlyPage: ref(2),
-      advancedPage: ref(3),
-      advancedPageSize: ref(20),
-      advancedCompactPage: ref(3),
-      advancedCompactPageSize: ref(10),
-      customPage: ref(6),
-    }
-  }
-
-  const drivenPrimaryPage = stateRef.current.drivenPrimaryPage
-  const drivenSecondaryPage = stateRef.current.drivenSecondaryPage
-  const controlledPage = stateRef.current.controlledPage
-  const controlledPageSize = stateRef.current.controlledPageSize
-  const simplePage = stateRef.current.simplePage
-  const simpleReadonlyPage = stateRef.current.simpleReadonlyPage
-  const advancedPage = stateRef.current.advancedPage
-  const advancedPageSize = stateRef.current.advancedPageSize
-  const advancedCompactPage = stateRef.current.advancedCompactPage
-  const advancedCompactPageSize = stateRef.current.advancedCompactPageSize
-  const customPage = stateRef.current.customPage
+  const drivenPrimaryPage = ref(2)
+  const drivenSecondaryPage = ref(6)
+  const controlledPage = ref(4)
+  const controlledPageSize = ref(10)
+  const simplePage = ref(2)
+  const simpleReadonlyPage = ref(2)
+  const advancedPage = ref(3)
+  const advancedPageSize = ref(20)
+  const advancedCompactPage = ref(3)
+  const advancedCompactPageSize = ref(10)
+  const customPage = ref(6)
 
   return (
     <SidebarPlayground>

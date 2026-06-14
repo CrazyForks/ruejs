@@ -109,21 +109,70 @@ const flattenSignature = (items: PageContentAnchorItem[]): string => {
 
 const PageContentAnchor: FC<PageContentAnchorProps> = ({ containerRef }) => {
   const shellRef = useRef<HTMLElement>()
+  const scrollPanelRef = useRef<HTMLDivElement>()
   const anchorHostRef = useRef<HTMLDivElement>()
-  const frameRef = useRef<number | undefined>()
+  const collectTaskRef = useRef<{ kind: 'idle' | 'timeout'; id: number } | undefined>()
+  const renderTaskRef = useRef<number | undefined>()
+  const pendingAnchorItemsRef = useRef<PageContentAnchorItem[] | null | undefined>()
   const observerRef = useRef<MutationObserver | undefined>()
   const signatureRef = useRef('')
 
-  const renderAnchor = (items: PageContentAnchorItem[]) => {
-    const shell = shellRef.current
-    const anchorHost = anchorHostRef.current
-    if (!shell || !anchorHost) {
+  const scrollAnchorLinkIntoView = (href?: string) => {
+    const scrollPanel = scrollPanelRef.current
+    if (!scrollPanel) {
       return
     }
 
-    if (items.length === 0) {
-      shell.setAttribute('aria-hidden', 'true')
-      shell.style.visibility = 'hidden'
+    const links = Array.from(
+      scrollPanel.querySelectorAll<HTMLAnchorElement>('[data-rue-anchor-href]'),
+    )
+    const activeLink = href
+      ? links.find(link => link.getAttribute('data-rue-anchor-href') === href)
+      : links.find(link => link.getAttribute('data-active') === 'true')
+
+    if (!activeLink) {
+      return
+    }
+
+    const padding = 12
+    const panelRect = scrollPanel.getBoundingClientRect()
+    const linkRect = activeLink.getBoundingClientRect()
+    const topOverflow = linkRect.top - panelRect.top - padding
+    const bottomOverflow = linkRect.bottom - panelRect.bottom + padding
+
+    if (topOverflow < 0) {
+      scrollPanel.scrollTop += topOverflow
+      return
+    }
+
+    if (bottomOverflow > 0) {
+      scrollPanel.scrollTop += bottomOverflow
+    }
+  }
+
+  const scheduleAnchorLinkScroll = (href?: string) => {
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      scrollAnchorLinkIntoView(href)
+      return
+    }
+
+    window.requestAnimationFrame(() => {
+      scrollAnchorLinkIntoView(href)
+    })
+  }
+
+  const commitAnchorRender = (items: PageContentAnchorItem[] | null) => {
+    const shell = shellRef.current
+    const anchorHost = anchorHostRef.current
+    if (!anchorHost) {
+      return
+    }
+
+    if (!shell || !items || items.length === 0) {
+      shell?.setAttribute('aria-hidden', 'true')
+      if (shell) {
+        shell.style.visibility = 'hidden'
+      }
       render(null as any, anchorHost)
       return
     }
@@ -135,6 +184,9 @@ const PageContentAnchor: FC<PageContentAnchorProps> = ({ containerRef }) => {
         affix={false}
         targetOffset={96}
         items={items}
+        onChange={href => {
+          scheduleAnchorLinkScroll(href)
+        }}
         classNames={{
           root: 'rounded-box border-base-300/60 bg-base-100/95 p-3 shadow-sm backdrop-blur',
           list: 'space-y-1',
@@ -145,6 +197,49 @@ const PageContentAnchor: FC<PageContentAnchorProps> = ({ containerRef }) => {
       />,
       anchorHost,
     )
+  }
+
+  const flushAnchorRender = () => {
+    renderTaskRef.current = undefined
+    const items = pendingAnchorItemsRef.current
+    pendingAnchorItemsRef.current = undefined
+    if (items === undefined) {
+      return
+    }
+
+    try {
+      commitAnchorRender(items)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (message.includes('Reentrant render detected')) {
+        pendingAnchorItemsRef.current = items
+        scheduleAnchorRender()
+        return
+      }
+      throw error
+    }
+  }
+
+  const scheduleAnchorRender = (items?: PageContentAnchorItem[] | null) => {
+    if (items !== undefined) {
+      pendingAnchorItemsRef.current = items
+    }
+    if (typeof window === 'undefined') {
+      flushAnchorRender()
+      return
+    }
+    if (renderTaskRef.current != null) {
+      return
+    }
+
+    renderTaskRef.current = window.setTimeout(flushAnchorRender, 0)
+  }
+
+  const cancelScheduledAnchorRender = () => {
+    if (typeof window !== 'undefined' && renderTaskRef.current != null) {
+      window.clearTimeout(renderTaskRef.current)
+    }
+    renderTaskRef.current = undefined
   }
 
   const collectItems = () => {
@@ -160,23 +255,54 @@ const PageContentAnchor: FC<PageContentAnchorProps> = ({ containerRef }) => {
     }
 
     signatureRef.current = nextSignature
-    renderAnchor(nextItems)
+    scheduleAnchorRender(nextItems)
+  }
+
+  const cancelScheduledCollect = () => {
+    const task = collectTaskRef.current
+    if (!task || typeof window === 'undefined') {
+      return
+    }
+
+    const idleWindow = window as typeof window & {
+      cancelIdleCallback?: (id: number) => void
+    }
+    if (task.kind === 'idle' && typeof idleWindow.cancelIdleCallback === 'function') {
+      idleWindow.cancelIdleCallback(task.id)
+    } else {
+      window.clearTimeout(task.id)
+    }
+    collectTaskRef.current = undefined
   }
 
   const scheduleCollect = () => {
-    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+    if (typeof window === 'undefined') {
       collectItems()
       return
     }
 
-    if (frameRef.current != null) {
-      window.cancelAnimationFrame(frameRef.current)
+    cancelScheduledCollect()
+
+    const idleWindow = window as typeof window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number
+    }
+    if (typeof idleWindow.requestIdleCallback === 'function') {
+      const id = idleWindow.requestIdleCallback(
+        () => {
+          collectTaskRef.current = undefined
+          collectItems()
+        },
+        { timeout: 250 },
+      )
+      collectTaskRef.current = { kind: 'idle', id }
+      return
     }
 
-    frameRef.current = window.requestAnimationFrame(() => {
-      frameRef.current = undefined
+    const id = window.setTimeout(() => {
+      collectTaskRef.current = undefined
       collectItems()
-    })
+    }, 16)
+    collectTaskRef.current = { kind: 'timeout', id }
   }
 
   onMounted(() => {
@@ -200,18 +326,10 @@ const PageContentAnchor: FC<PageContentAnchorProps> = ({ containerRef }) => {
   onUnmounted(() => {
     observerRef.current?.disconnect()
     observerRef.current = undefined
-    if (anchorHostRef.current) {
-      render(null as any, anchorHostRef.current)
-    }
 
-    if (
-      typeof window !== 'undefined' &&
-      typeof window.cancelAnimationFrame === 'function' &&
-      frameRef.current != null
-    ) {
-      window.cancelAnimationFrame(frameRef.current)
-    }
-    frameRef.current = undefined
+    cancelScheduledCollect()
+    cancelScheduledAnchorRender()
+    scheduleAnchorRender(null)
   })
 
   return (
@@ -222,6 +340,7 @@ const PageContentAnchor: FC<PageContentAnchorProps> = ({ containerRef }) => {
       style={{ visibility: 'hidden' }}
     >
       <div
+        ref={scrollPanelRef}
         className="fixed top-24 w-60 max-h-[calc(100vh-7rem)] overflow-auto"
         style={{
           right: 'max(1.5rem, calc((100vw - 1400px) / 2 + 1.5rem))',

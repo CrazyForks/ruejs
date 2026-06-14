@@ -48,10 +48,10 @@ where
         if let Some(a) = self.get_dom_adapter_mut() {
             let tn = a.create_text_node(s);
             if let Some(am) = self.get_dom_adapter_mut() {
-                match cursor {
-                    Some(ref cur) => am.insert_before(parent, &tn, cur),
+                match cursor.as_ref() {
+                    Some(cur) => am.insert_before(parent, &tn, cur),
                     None => {
-                        if let Some(ref anchor) = anchor_opt {
+                        if let Some(anchor) = anchor_opt {
                             am.insert_before(parent, &tn, anchor);
                         } else {
                             am.append_child(parent, &tn);
@@ -89,10 +89,10 @@ where
         if let Some(mut text_node) = mounted.host.clone() {
             if let Some(adapter) = self.get_dom_adapter_mut() {
                 adapter.set_text_content(&mut text_node, s);
-                match cursor {
-                    Some(ref cur) => adapter.insert_before(parent, &text_node, cur),
+                match cursor.as_ref() {
+                    Some(cur) => adapter.insert_before(parent, &text_node, cur),
                     None => {
-                        if let Some(ref anchor) = anchor_opt {
+                        if let Some(anchor) = anchor_opt {
                             adapter.insert_before(parent, &text_node, anchor);
                         } else {
                             adapter.append_child(parent, &text_node);
@@ -130,10 +130,10 @@ where
             if !fragment_nodes.is_empty() {
                 if let Some(am) = self.get_dom_adapter_mut() {
                     for n in fragment_nodes.iter() {
-                        match cursor {
-                            Some(ref cur) => am.insert_before(parent, n, cur),
+                        match cursor.as_ref() {
+                            Some(cur) => am.insert_before(parent, n, cur),
                             None => {
-                                if let Some(ref anchor) = anchor_opt {
+                                if let Some(anchor) = anchor_opt {
                                     am.insert_before(parent, n, anchor);
                                 } else {
                                     am.append_child(parent, n);
@@ -146,20 +146,20 @@ where
             }
 
             if node_for_move.is_none() {
-                if let Some(ref el_c) = mounted.host_cloned() {
+                if let Some(el_c) = mounted.host_cloned() {
                     if let Some(am) = self.get_dom_adapter_mut() {
-                        match cursor {
-                            Some(ref cur) => am.insert_before(parent, el_c, cur),
+                        match cursor.as_ref() {
+                            Some(cur) => am.insert_before(parent, &el_c, cur),
                             None => {
-                                if let Some(ref anchor) = anchor_opt {
-                                    am.insert_before(parent, el_c, anchor);
+                                if let Some(anchor) = anchor_opt {
+                                    am.insert_before(parent, &el_c, anchor);
                                 } else {
-                                    am.append_child(parent, el_c);
+                                    am.append_child(parent, &el_c);
                                 }
                             }
                         }
                     }
-                    node_for_move = Some(el_c.clone());
+                    node_for_move = Some(el_c);
                 }
             }
             *cursor = node_for_move.clone().or(cursor.clone());
@@ -186,10 +186,10 @@ where
             if !fragment_nodes.is_empty() {
                 if let Some(am) = self.get_dom_adapter_mut() {
                     for n in fragment_nodes.iter() {
-                        match cursor {
-                            Some(ref cur) => am.insert_before(parent, n, cur),
+                        match cursor.as_ref() {
+                            Some(cur) => am.insert_before(parent, n, cur),
                             None => {
-                                if let Some(ref anchor) = anchor_opt {
+                                if let Some(anchor) = anchor_opt {
                                     am.insert_before(parent, n, anchor);
                                 } else {
                                     am.append_child(parent, n);
@@ -200,10 +200,10 @@ where
                 }
             } else if let Some(child_el) = mounted.host_cloned() {
                 if let Some(am) = self.get_dom_adapter_mut() {
-                    match cursor {
-                        Some(ref cur) => am.insert_before(parent, &child_el, cur),
+                    match cursor.as_ref() {
+                        Some(cur) => am.insert_before(parent, &child_el, cur),
                         None => {
-                            if let Some(ref anchor) = anchor_opt {
+                            if let Some(anchor) = anchor_opt {
                                 am.insert_before(parent, &child_el, anchor);
                             } else {
                                 am.append_child(parent, &child_el);

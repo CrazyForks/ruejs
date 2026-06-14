@@ -44,6 +44,7 @@ export {
   setValue as _$setValue,
   setChecked as _$setChecked,
   setDisabled as _$setDisabled,
+  spreadAttributes as _$spreadAttributes,
 } from './dom'
 
 export {

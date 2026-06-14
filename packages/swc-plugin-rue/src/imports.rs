@@ -145,6 +145,7 @@ impl RuntimeUseCollector {
                 "_$setValue",
                 "_$setChecked",
                 "_$setDisabled",
+                "_$spreadAttributes",
             ])
             .collect();
         Self {
@@ -480,7 +481,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
     let mut merged_type = type_specs.is_empty();
     let mut merged_helper = helper_specs.is_empty();
     for item in &mut m.body {
-        if let ModuleItem::ModuleDecl(ModuleDecl::Import(ref mut decl)) = item {
+        if let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item {
             if !merged_type && decl.src.value.as_str() == Some("@rue-js/rue") {
                 append_missing_specifiers(decl, &type_specs);
                 merged_type = true;

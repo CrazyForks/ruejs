@@ -129,6 +129,7 @@ describe('Link', () => {
         {
           ellipsis: {
             expandable: 'collapsible',
+            suffix: '.md',
             onExpand,
           },
         },
@@ -158,8 +159,16 @@ describe('Link', () => {
 
     const expandButton = c.querySelector('[data-rue-link-expand]') as HTMLButtonElement
     expect(expandButton).toBeTruthy()
-    expandButton.click()
+    expect(c.textContent).toContain('.md')
+    await click(expandButton)
+    await waitLinkRender()
+
+    const expandedText = c.querySelector('.truncate') as HTMLElement | null
+    const collapseButton = c.querySelector('[data-rue-link-expand]') as HTMLButtonElement
     expect(onExpand).toHaveBeenCalledWith(expect.any(MouseEvent), { expanded: true })
+    expect(expandedText).toBeNull()
+    expect(collapseButton.textContent).toContain('收起')
+    expect(c.textContent).toContain('.md')
   })
 
   it('supports text decorations', async () => {
@@ -193,6 +202,34 @@ describe('Link', () => {
 
     expect(writeText).toHaveBeenCalledWith('copy me')
     expect(onCopy).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back when clipboard writeText is rejected and shows copied feedback', async () => {
+    const c = document.createElement('div')
+    const writeText = vi.fn(() => Promise.reject(new DOMException('denied', 'NotAllowedError')))
+    const execCommand = vi.fn(() => true)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: execCommand,
+    })
+    const onCopy = vi.fn()
+
+    render(h(Link, { copyable: { text: 'copy me', onCopy } }, 'Label'), c)
+    await waitLinkRender()
+    const button = c.querySelector('[data-rue-link-copy]') as HTMLButtonElement
+    button.click()
+    await Promise.resolve()
+    await Promise.resolve()
+    await waitLinkRender()
+
+    expect(writeText).toHaveBeenCalledWith('copy me')
+    expect(execCommand).toHaveBeenCalledWith('copy')
+    expect(onCopy).toHaveBeenCalledTimes(1)
+    expect(button.getAttribute('aria-label')).toBe('已复制')
   })
 
   it('renders editable controls and commits changes', async () => {

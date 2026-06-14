@@ -1,7 +1,7 @@
 [package]
 name = "rue-runtime-vapor"
 version = "0.0.1"
-edition = "2021"
+edition = "2024"
 description = "Rue runtime implemented in Rust and compiled to WebAssembly"
 repository = "https://github.com/hunzhiwange/ruejs/tree/main/packages/runtime-vapor"
 license = "MIT"

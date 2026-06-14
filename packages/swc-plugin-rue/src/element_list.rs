@@ -414,6 +414,25 @@ fn collect_declared_idents_in_stmts(stmts: &[Stmt]) -> std::collections::HashSet
     out
 }
 
+fn collect_render_item_local_scopes(
+    vt: &VaporTransform,
+    prefix_stmts: &[Stmt],
+    local_names: &[String],
+) -> (std::collections::HashSet<String>, std::collections::HashSet<String>) {
+    let renderable_locals = crate::element_expr::collect_renderable_local_alias_names(
+        prefix_stmts.iter(),
+        &vt.current_renderable_local_names(),
+    );
+    let mut plain_locals = collect_declared_idents_in_stmts(prefix_stmts);
+    for name in local_names {
+        plain_locals.insert(name.clone());
+    }
+    for name in &renderable_locals {
+        plain_locals.remove(name);
+    }
+    (renderable_locals, plain_locals)
+}
+
 struct IdentUseCollector<'a> {
     names: &'a std::collections::HashSet<String>,
     found: bool,
@@ -1066,11 +1085,23 @@ pub(crate) fn try_build_list_from_map(
                                     && is_single_root_native_fragment_children(&jsx_el.children);
                             if crate::utils::is_component(&jsx_el.opening.name) {
                                 let mut component_el = (**jsx_el).clone();
+                                let render_item_local_names =
+                                    vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
+                                let (renderable_locals, plain_locals) =
+                                    collect_render_item_local_scopes(
+                                        vt,
+                                        &render_item_prefix_stmts,
+                                        &render_item_local_names,
+                                    );
+                                vt.push_renderable_local_scope(renderable_locals);
+                                vt.push_plain_local_scope(plain_locals);
                                 let rewrite =
                                     crate::element_component::rewrite_component_children_to_props(
                                         vt,
                                         &mut component_el,
                                     );
+                                vt.pop_plain_local_scope();
+                                vt.pop_renderable_local_scope();
                                 let slot_expr =
                                     rewrite.direct_render_expr.clone().unwrap_or_else(|| {
                                         crate::element_component::build_component_mount_expr(
@@ -1162,7 +1193,19 @@ pub(crate) fn try_build_list_from_map(
                                 if is_native_single_root_jsx_element(jsx_el) {
                                     use_single_root_anchor = true;
                                 }
+                                let render_item_local_names =
+                                    vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
+                                let (renderable_locals, plain_locals) =
+                                    collect_render_item_local_scopes(
+                                        vt,
+                                        &render_item_prefix_stmts,
+                                        &render_item_local_names,
+                                    );
+                                vt.push_renderable_local_scope(renderable_locals);
+                                vt.push_plain_local_scope(plain_locals);
                                 build_element(vt, jsx_el, &child_root.clone(), &mut child_body);
+                                vt.pop_plain_local_scope();
+                                vt.pop_renderable_local_scope();
                                 if let Some(key_expr) =
                                     extract_key_expr_from_root_attr_effect(&child_body, &child_root)
                                 {
@@ -1281,12 +1324,24 @@ pub(crate) fn try_build_list_from_map(
                             if is_single_root_native_jsx_fragment(frag) {
                                 use_single_root_anchor = true;
                             }
+                            let render_item_local_names =
+                                vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
+                            let (renderable_locals, plain_locals) =
+                                collect_render_item_local_scopes(
+                                    vt,
+                                    &render_item_prefix_stmts,
+                                    &render_item_local_names,
+                                );
+                            vt.push_renderable_local_scope(renderable_locals);
+                            vt.push_plain_local_scope(plain_locals);
                             crate::element_fragment::emit_fragment_children(
                                 vt,
                                 &child_root.clone(),
                                 &frag.children,
                                 &mut child_body,
                             );
+                            vt.pop_plain_local_scope();
+                            vt.pop_renderable_local_scope();
                             child_body.push(return_root(child_root.clone()));
                             let arrow_setup = Expr::Arrow(ArrowExpr {
                                 span: DUMMY_SP,

@@ -1,12 +1,11 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Grid 组件概述
-- 提供接近 Ant Design Grid 的 24 栅格 Row / Col API，同时保持 Rue 当前轻量的 className + style 组合方式。
+- 提供 Grid 的 24 栅格 Row / Col API，同时保持 Rue 当前轻量的 className + style 组合方式。
 - Row 负责 gutter、主轴/交叉轴对齐、换行与响应式 gutter；Col 负责 span、offset、push/pull、flex 与断点覆盖。
 - 默认导出可直接当作 Row 使用，并挂载 Row / Col 子组件，便于业务代码在简写与显式写法之间切换。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, onUnmounted, useRef } from '@rue-js/rue'
+import { computed, onMounted, onUnmounted, ref } from '@rue-js/rue'
 
 /** GridBreakpoint 类型。 */
 export type GridBreakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
@@ -168,6 +167,8 @@ const getViewportWidth = () => {
   if (typeof window === 'undefined') return BREAKPOINT_MIN_WIDTH.xl
   return window.innerWidth || document.documentElement?.clientWidth || BREAKPOINT_MIN_WIDTH.xl
 }
+
+const viewportWidth = ref(getViewportWidth())
 
 /** notify Viewport Subscribers 的内部工具函数。 */
 const notifyViewportSubscribers = () => {
@@ -448,59 +449,43 @@ const Row: FC<GridRowProps> = ({
   className,
   style,
   children,
+  ref: forwardedRef,
   ...rest
 }) => {
   const requiresViewport = hasResponsiveGutter(gutter)
-  const forwardedRef = rest.ref
-  const rootRef = useRef<HTMLDivElement>()
   let stopTracking: (() => void) | undefined
-
-  if ('ref' in rest) {
-    delete rest.ref
-  }
 
   if (requiresViewport) {
     onMounted(() => {
       stopTracking = subscribeViewport(() => {
-        applyResolvedStyle()
+        viewportWidth.value = getViewportWidth()
       })
-      applyResolvedStyle()
+      viewportWidth.value = getViewportWidth()
     })
     onUnmounted(() => {
       if (stopTracking) stopTracking()
     })
   }
 
-  const applyResolvedStyle = () => {
-    const element = rootRef.current
-    if (!element) return
-
-    const [gutterX, gutterY] = resolveGutterPair(gutter, getViewportWidth())
-    const resolvedStyle = mergeStyle(buildRowStyle(gutterX, gutterY, justify, align, wrap), style)
-
-    if (resolvedStyle) {
-      element.setAttribute('style', resolvedStyle)
-    } else {
-      element.removeAttribute('style')
-    }
-  }
-
   const applyRef = (element: HTMLDivElement | null) => {
-    rootRef.current = element ?? undefined
-
-    if (element) {
-      applyResolvedStyle()
-    }
-
     assignForwardedRef(forwardedRef, element)
   }
+  const resolvedClassName = computed(() => appendClassName('rue-grid rue-grid-row', className))
+  const resolvedStyle = computed(() => {
+    const [gutterX, gutterY] = resolveGutterPair(
+      gutter,
+      requiresViewport ? viewportWidth.value : getViewportWidth(),
+    )
+    return mergeStyle(buildRowStyle(gutterX, gutterY, justify, align, wrap), style)
+  })
 
   return (
     <div
       {...rest}
       ref={applyRef}
       data-rue-grid-row
-      className={appendClassName('rue-grid rue-grid-row', className)}
+      className={resolvedClassName.get()}
+      style={resolvedStyle.get()}
     >
       {children}
     </div>
@@ -511,69 +496,61 @@ const Row: FC<GridRowProps> = ({
  * Col 在 24 栅格体系里负责具体占位。
  * 基础 props 定义默认形态，各断点配置在命中时覆盖默认值。
  */
-const Col: FC<GridColProps> = ({ className, style, children, ...rest }) => {
-  const requiresViewport = hasResponsiveColProps(rest as GridColProps)
-  const forwardedRef = rest.ref
-  const rootRef = useRef<HTMLDivElement>()
+const Col: FC<GridColProps> = ({
+  span,
+  order,
+  offset,
+  push,
+  pull,
+  flex,
+  xs,
+  sm,
+  md,
+  lg,
+  xl,
+  xxl,
+  className,
+  style,
+  children,
+  gutter: _gutter,
+  ref: forwardedRef,
+  ...domProps
+}) => {
+  const gridProps: GridColProps = { span, order, offset, push, pull, flex, xs, sm, md, lg, xl, xxl }
+  const requiresViewport = hasResponsiveColProps(gridProps)
   let stopTracking: (() => void) | undefined
-
-  if ('ref' in rest) {
-    delete rest.ref
-  }
 
   if (requiresViewport) {
     onMounted(() => {
       stopTracking = subscribeViewport(() => {
-        applyResolvedStyle()
+        viewportWidth.value = getViewportWidth()
       })
-      applyResolvedStyle()
+      viewportWidth.value = getViewportWidth()
     })
     onUnmounted(() => {
       if (stopTracking) stopTracking()
     })
   }
 
-  const {
-    xs: _xs,
-    sm: _sm,
-    md: _md,
-    lg: _lg,
-    xl: _xl,
-    xxl: _xxl,
-    gutter: _gutter,
-    ...domProps
-  } = rest as GridColProps & { gutter?: GridGutter }
-
-  const applyResolvedStyle = () => {
-    const element = rootRef.current
-    if (!element) return
-
-    const resolvedConfig = resolveColConfig(rest as GridColProps, getViewportWidth())
-    const resolvedStyle = mergeStyle(buildColStyle(resolvedConfig), style)
-
-    if (resolvedStyle) {
-      element.setAttribute('style', resolvedStyle)
-    } else {
-      element.removeAttribute('style')
-    }
-  }
-
   const applyRef = (element: HTMLDivElement | null) => {
-    rootRef.current = element ?? undefined
-
-    if (element) {
-      applyResolvedStyle()
-    }
-
     assignForwardedRef(forwardedRef, element)
   }
+  const resolvedClassName = computed(() => appendClassName('rue-grid-col', className))
+  const resolvedStyle = computed(() => {
+    const resolvedConfig = resolveColConfig(
+      gridProps,
+      requiresViewport ? viewportWidth.value : getViewportWidth(),
+    )
+    return mergeStyle(buildColStyle(resolvedConfig), style)
+  })
 
   return (
     <div
       {...domProps}
       ref={applyRef}
       data-rue-grid-col
-      className={appendClassName('rue-grid-col', className)}
+      className={resolvedClassName.get()}
+      style={resolvedStyle.get()}
     >
       {children}
     </div>

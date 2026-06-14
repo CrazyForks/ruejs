@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Loading 组件概述
 - 保留 daisyUI loading 的 spinner / dots / ring 等 Rue 视觉语言。
 - 补齐 Spin 常用能力：spinning、嵌套包裹、description、delay、indicator、fullscreen、percent。
 - 继续兼容旧版 style="spinner" 写法；当 style 传入对象时作为根元素内联样式使用。
 */
-import { h, onMounted, onUnmounted, ref, useRef, watch, type FC } from '@rue-js/rue'
+import { onMounted, onUnmounted, ref, watch, type FC } from '@rue-js/rue'
 
 /** LoadingStyle 样式值类型。 */
 export type LoadingStyle = 'spinner' | 'dots' | 'ring' | 'ball' | 'bars' | 'infinity'
@@ -189,6 +188,13 @@ const shouldDelay = (spinning: boolean, delay?: number) => {
   return spinning && typeof delay === 'number' && delay > 0 && Number.isFinite(delay)
 }
 
+/** 获取 delay 等待阶段 class 的内部工具函数。 */
+const getDelayHiddenClass = (spinning: boolean, delay: number | undefined, ready: boolean) => {
+  return shouldDelay(spinning, delay) && !ready
+    ? 'opacity-0 transition-opacity duration-200'
+    : undefined
+}
+
 /** 转换为 Child Array 的内部工具函数。 */
 const toChildArray = (children: any): any[] => {
   if (Array.isArray(children)) {
@@ -197,24 +203,60 @@ const toChildArray = (children: any): any[] => {
   return children == null || typeof children === 'boolean' ? [] : [children]
 }
 
-/** 渲染 Element 的内部工具函数。 */
-const renderElement = (as: string, props: Record<string, any>, children?: any) => {
-  const nextChildren = toChildArray(children)
-  switch (as) {
-    case 'span':
-      return <span {...props}>{nextChildren}</span>
-    case 'section':
-      return <section {...props}>{nextChildren}</section>
-    case 'article':
-      return <article {...props}>{nextChildren}</article>
-    case 'main':
-      return <main {...props}>{nextChildren}</main>
-    case 'div':
-      return <div {...props}>{nextChildren}</div>
-    default:
-      return h(as as any, props, ...nextChildren)
-  }
+/** 提取原生透传属性的内部工具函数。 */
+const getRestProps = (props: LoadingProps) => {
+  const rest: Record<string, any> = { ...props }
+  delete rest.as
+  delete rest.style
+  delete rest.indicatorStyle
+  delete rest.variant
+  delete rest.type
+  delete rest.size
+  delete rest.spinning
+  delete rest.delay
+  delete rest.indicator
+  delete rest.description
+  delete rest.tip
+  delete rest.fullscreen
+  delete rest.percent
+  delete rest.rootClassName
+  delete rest.wrapperClassName
+  delete rest.classNames
+  delete rest.styles
+  delete rest.className
+  delete rest.children
+  return rest
 }
+
+/** 读取 Loading props 快照，避免复杂 JSX 分支反复触发 props phase 拆分。 */
+const getLoadingSnapshot = (props: LoadingProps) => ({
+  as: props.as,
+  style: props.style,
+  indicatorStyle: props.indicatorStyle,
+  variant: props.variant,
+  type: props.type,
+  size: props.size,
+  spinning: props.spinning ?? true,
+  delay: props.delay ?? 0,
+  indicator: props.indicator,
+  description: props.description,
+  tip: props.tip,
+  fullscreen: props.fullscreen ?? false,
+  percent: props.percent,
+  rootClassName: props.rootClassName,
+  wrapperClassName: props.wrapperClassName,
+  classNames: props.classNames,
+  styles: props.styles,
+  className: props.className,
+  children: props.children,
+  rest: getRestProps(props),
+})
+
+/** 读取当前 spinning，供受控场景在深编译后继续响应父级更新。 */
+const readCurrentSpinning = (props: LoadingProps) => props.spinning ?? true
+
+/** 读取当前 delay，供受控场景在深编译后继续响应父级更新。 */
+const readCurrentDelay = (props: LoadingProps) => props.delay ?? 0
 
 /** 构建 Indicator Class Name 的内部工具函数。 */
 const buildIndicatorClassName = (
@@ -225,44 +267,28 @@ const buildIndicatorClassName = (
   return mergeClassNames('loading', `loading-${style}`, `loading-${size}`, className)
 }
 
-/** 渲染 Default Indicator 的内部工具函数。 */
-const renderDefaultIndicator = (
-  indicatorClassName: string,
-  indicatorStyle?: Record<string, any>,
-  label?: any,
-) => {
-  return (
-    <span
-      className={indicatorClassName}
-      style={indicatorStyle}
-      aria-hidden={label != null ? 'true' : undefined}
-    />
-  )
-}
-
 /** Loading Root 的内部工具函数。 */
-const LoadingRoot: FC<LoadingProps> = ({
-  as,
-  style,
-  indicatorStyle,
-  variant,
-  type,
-  size,
-  spinning = true,
-  delay = 0,
-  indicator,
-  description,
-  tip,
-  fullscreen = false,
-  percent,
-  rootClassName,
-  wrapperClassName,
-  classNames,
-  styles,
-  className,
-  children,
-  ...rest
-}) => {
+const LoadingRoot: FC<LoadingProps> = props => {
+  const {
+    as,
+    style,
+    indicatorStyle,
+    variant,
+    type,
+    size,
+    indicator,
+    description,
+    tip,
+    fullscreen,
+    percent,
+    rootClassName,
+    wrapperClassName,
+    classNames,
+    styles,
+    className,
+    children,
+    rest,
+  } = getLoadingSnapshot(props)
   const resolvedStyle = resolveIndicatorStyle(style, indicatorStyle, variant, type)
   const normalizedSize = normalizeSize(size)
   const rootStyle = resolveRootStyle(style)
@@ -274,39 +300,56 @@ const LoadingRoot: FC<LoadingProps> = ({
   const hasCustomIndicator = indicator != null || defaultIndicator != null
   const isEnhancedStandalone = hasDescription || hasPercent || hasCustomIndicator
   const isNested = hasChildren || fullscreen
-  const visible = ref(spinning)
-  const delayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const delayTargetRef = useRef<HTMLElement>()
+  const visible = ref(readCurrentSpinning(props))
+  const delayReady = ref(!shouldDelay(readCurrentSpinning(props), readCurrentDelay(props)))
+  let delayTimer: ReturnType<typeof setTimeout> | null = null
+  let delayTargetElement: HTMLElement | null = null
 
   const clearDelayTimer = () => {
-    if (delayTimerRef.current != null) {
-      clearTimeout(delayTimerRef.current)
-      delayTimerRef.current = null
+    if (delayTimer != null) {
+      clearTimeout(delayTimer)
+      delayTimer = null
+    }
+  }
+
+  const revealDelayTarget = () => {
+    if (delayTargetElement) {
+      delayTargetElement.classList.remove('opacity-0')
+    }
+  }
+
+  const setDelayTarget = (element: HTMLElement | null) => {
+    delayTargetElement = element
+    if (delayReady.value) {
+      revealDelayTarget()
     }
   }
 
   const syncVisible = () => {
     clearDelayTimer()
+    const currentSpinning = readCurrentSpinning(props)
+    const currentDelay = readCurrentDelay(props)
 
-    if (!spinning) {
+    if (!currentSpinning) {
       visible.value = false
+      delayReady.value = false
       return
     }
 
     visible.value = true
 
-    if (shouldDelay(spinning, delay)) {
-      delayTimerRef.current = setTimeout(() => {
-        if (delayTargetRef.current) {
-          delayTargetRef.current.classList.remove('opacity-0')
-        }
-      }, delay)
+    if (shouldDelay(currentSpinning, currentDelay)) {
+      delayReady.value = false
+      delayTimer = setTimeout(() => {
+        delayTimer = null
+        delayReady.value = true
+        revealDelayTarget()
+      }, currentDelay)
       return
     }
 
-    if (delayTargetRef.current) {
-      delayTargetRef.current.classList.remove('opacity-0')
-    }
+    delayReady.value = true
+    revealDelayTarget()
   }
 
   onMounted(() => {
@@ -317,31 +360,36 @@ const LoadingRoot: FC<LoadingProps> = ({
     clearDelayTimer()
   })
 
-  watch(() => spinning, syncVisible, { immediate: true })
-  watch(() => delay, syncVisible)
+  watch(() => readCurrentSpinning(props), syncVisible, { immediate: true })
+  watch(() => readCurrentDelay(props), syncVisible)
 
   const mergedPercent =
     percent === undefined ? undefined : percent === 'auto' ? undefined : clampPercent(percent)
   const progressValue = typeof mergedPercent === 'number' ? Math.round(mergedPercent) : undefined
-  const delayHiddenClass = shouldDelay(spinning, delay)
-    ? 'opacity-0 transition-opacity duration-200'
-    : undefined
 
   const indicatorClassName = buildIndicatorClassName(
     resolvedStyle,
     normalizedSize,
     mergeClassNames(classNames?.indicator, styles?.indicator ? 'inline-flex' : undefined),
   )
-  const indicatorNode = hasCustomIndicator
-    ? typeof (indicator ?? defaultIndicator) === 'function'
-      ? (indicator ?? defaultIndicator)({
-          percent: mergedPercent,
-          size: normalizedSize,
-          style: resolvedStyle,
-          spinning: visible.value,
-        })
-      : (indicator ?? defaultIndicator)
-    : renderDefaultIndicator(indicatorClassName, styles?.indicator, hasDescription || hasPercent)
+  const indicatorNode = hasCustomIndicator ? (
+    typeof (indicator ?? defaultIndicator) === 'function' ? (
+      (indicator ?? defaultIndicator)({
+        percent: mergedPercent,
+        size: normalizedSize,
+        style: resolvedStyle,
+        spinning: visible.value,
+      })
+    ) : (
+      (indicator ?? defaultIndicator)
+    )
+  ) : (
+    <span
+      className={indicatorClassName}
+      style={styles?.indicator}
+      aria-hidden={hasDescription || hasPercent ? 'true' : undefined}
+    />
+  )
 
   const progressNode = hasPercent ? (
     <div
@@ -361,7 +409,6 @@ const LoadingRoot: FC<LoadingProps> = ({
       : isNested
         ? 'pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-box bg-base-100/70 text-center text-base-content backdrop-blur-[1px]'
         : 'inline-flex flex-col items-center justify-center gap-2 text-center align-middle',
-    delayHiddenClass,
     classNames?.section,
   )
   const descriptionClassName = mergeClassNames(
@@ -391,38 +438,64 @@ const LoadingRoot: FC<LoadingProps> = ({
   )
   const rootStyleValue = typeof rootStyle === 'string' ? rootStyle : mergedRootStyle
 
-  const sectionNode = visible.value
-    ? renderElement(
-        !fullscreen && !isNested ? 'span' : 'div',
-        {
-          ref: delayTargetRef,
-          className: sectionClassName,
-          style: styles?.section,
-          'data-rue-loading-section': 'true',
-        },
-        <>
-          {hasCustomIndicator ? (
-            <span
-              className={mergeClassNames(
-                'inline-flex items-center justify-center',
-                classNames?.indicator,
-              )}
-              style={styles?.indicator}
-            >
-              {indicatorNode}
-            </span>
-          ) : (
-            indicatorNode
+  const sectionContent = (
+    <>
+      {hasCustomIndicator ? (
+        <span
+          className={mergeClassNames(
+            'inline-flex items-center justify-center',
+            classNames?.indicator,
           )}
-          {hasDescription ? (
-            <div className={descriptionClassName} style={styles?.description}>
-              {descriptionNode}
-            </div>
-          ) : null}
-          {progressNode}
-        </>,
-      )
-    : null
+          style={styles?.indicator}
+        >
+          {indicatorNode}
+        </span>
+      ) : (
+        indicatorNode
+      )}
+      {hasDescription ? (
+        <div className={descriptionClassName} style={styles?.description}>
+          {descriptionNode}
+        </div>
+      ) : null}
+      {progressNode}
+    </>
+  )
+  const sectionNode = visible.value ? (
+    !fullscreen && !isNested ? (
+      <span
+        ref={setDelayTarget}
+        className={mergeClassNames(
+          sectionClassName,
+          getDelayHiddenClass(
+            readCurrentSpinning(props),
+            readCurrentDelay(props),
+            delayReady.value,
+          ),
+        )}
+        style={styles?.section}
+        data-rue-loading-section="true"
+      >
+        {sectionContent}
+      </span>
+    ) : (
+      <div
+        ref={setDelayTarget}
+        className={mergeClassNames(
+          sectionClassName,
+          getDelayHiddenClass(
+            readCurrentSpinning(props),
+            readCurrentDelay(props),
+            delayReady.value,
+          ),
+        )}
+        style={styles?.section}
+        data-rue-loading-section="true"
+      >
+        {sectionContent}
+      </div>
+    )
+  ) : null
 
   if (fullscreen) {
     if (!visible.value) return null
@@ -442,16 +515,7 @@ const LoadingRoot: FC<LoadingProps> = ({
 
   if (hasChildren) {
     const rootTag = as ?? 'div'
-    return renderElement(
-      rootTag,
-      {
-        ...rest,
-        className: rootClass,
-        style: rootStyleValue,
-        role: rest.role ?? 'status',
-        'aria-live': rest['aria-live'] ?? 'polite',
-        'aria-busy': visible.value ? 'true' : 'false',
-      },
+    const nestedContent = (
       <>
         {sectionNode}
         <div
@@ -461,7 +525,80 @@ const LoadingRoot: FC<LoadingProps> = ({
         >
           {childNodes}
         </div>
-      </>,
+      </>
+    )
+
+    if (rootTag === 'span') {
+      return (
+        <span
+          {...rest}
+          className={rootClass}
+          style={rootStyleValue}
+          role={rest.role ?? 'status'}
+          aria-live={rest['aria-live'] ?? 'polite'}
+          aria-busy={visible.value ? 'true' : 'false'}
+        >
+          {nestedContent}
+        </span>
+      )
+    }
+
+    if (rootTag === 'section') {
+      return (
+        <section
+          {...rest}
+          className={rootClass}
+          style={rootStyleValue}
+          role={rest.role ?? 'status'}
+          aria-live={rest['aria-live'] ?? 'polite'}
+          aria-busy={visible.value ? 'true' : 'false'}
+        >
+          {nestedContent}
+        </section>
+      )
+    }
+
+    if (rootTag === 'article') {
+      return (
+        <article
+          {...rest}
+          className={rootClass}
+          style={rootStyleValue}
+          role={rest.role ?? 'status'}
+          aria-live={rest['aria-live'] ?? 'polite'}
+          aria-busy={visible.value ? 'true' : 'false'}
+        >
+          {nestedContent}
+        </article>
+      )
+    }
+
+    if (rootTag === 'main') {
+      return (
+        <main
+          {...rest}
+          className={rootClass}
+          style={rootStyleValue}
+          role={rest.role ?? 'status'}
+          aria-live={rest['aria-live'] ?? 'polite'}
+          aria-busy={visible.value ? 'true' : 'false'}
+        >
+          {nestedContent}
+        </main>
+      )
+    }
+
+    return (
+      <div
+        {...rest}
+        className={rootClass}
+        style={rootStyleValue}
+        role={rest.role ?? 'status'}
+        aria-live={rest['aria-live'] ?? 'polite'}
+        aria-busy={visible.value ? 'true' : 'false'}
+      >
+        {nestedContent}
+      </div>
     )
   }
 
@@ -473,35 +610,197 @@ const LoadingRoot: FC<LoadingProps> = ({
       typeof rootStyleValue === 'string'
         ? rootStyleValue
         : mergeStyles(rootStyleValue, styles?.indicator)
-    return renderElement(rootTag, {
-      ...rest,
-      ref: delayTargetRef,
-      className: mergeClassNames(
-        indicatorClassName,
-        delayHiddenClass,
-        rootClassName,
-        classNames?.root,
-        className,
-      ),
-      style: standaloneStyle,
-      role: rest.role ?? 'status',
-      'aria-live': rest['aria-live'] ?? 'polite',
-      'aria-busy': 'true',
-    })
+    if (rootTag === 'div') {
+      return (
+        <div
+          {...rest}
+          ref={setDelayTarget}
+          className={mergeClassNames(
+            indicatorClassName,
+            getDelayHiddenClass(
+              readCurrentSpinning(props),
+              readCurrentDelay(props),
+              delayReady.value,
+            ),
+            rootClassName,
+            classNames?.root,
+            className,
+          )}
+          style={standaloneStyle}
+          role={rest.role ?? 'status'}
+          aria-live={rest['aria-live'] ?? 'polite'}
+          aria-busy="true"
+        />
+      )
+    }
+
+    if (rootTag === 'section') {
+      return (
+        <section
+          {...rest}
+          ref={setDelayTarget}
+          className={mergeClassNames(
+            indicatorClassName,
+            getDelayHiddenClass(
+              readCurrentSpinning(props),
+              readCurrentDelay(props),
+              delayReady.value,
+            ),
+            rootClassName,
+            classNames?.root,
+            className,
+          )}
+          style={standaloneStyle}
+          role={rest.role ?? 'status'}
+          aria-live={rest['aria-live'] ?? 'polite'}
+          aria-busy="true"
+        />
+      )
+    }
+
+    if (rootTag === 'article') {
+      return (
+        <article
+          {...rest}
+          ref={setDelayTarget}
+          className={mergeClassNames(
+            indicatorClassName,
+            getDelayHiddenClass(
+              readCurrentSpinning(props),
+              readCurrentDelay(props),
+              delayReady.value,
+            ),
+            rootClassName,
+            classNames?.root,
+            className,
+          )}
+          style={standaloneStyle}
+          role={rest.role ?? 'status'}
+          aria-live={rest['aria-live'] ?? 'polite'}
+          aria-busy="true"
+        />
+      )
+    }
+
+    if (rootTag === 'main') {
+      return (
+        <main
+          {...rest}
+          ref={setDelayTarget}
+          className={mergeClassNames(
+            indicatorClassName,
+            getDelayHiddenClass(
+              readCurrentSpinning(props),
+              readCurrentDelay(props),
+              delayReady.value,
+            ),
+            rootClassName,
+            classNames?.root,
+            className,
+          )}
+          style={standaloneStyle}
+          role={rest.role ?? 'status'}
+          aria-live={rest['aria-live'] ?? 'polite'}
+          aria-busy="true"
+        />
+      )
+    }
+
+    return (
+      <span
+        {...rest}
+        ref={setDelayTarget}
+        className={mergeClassNames(
+          indicatorClassName,
+          getDelayHiddenClass(
+            readCurrentSpinning(props),
+            readCurrentDelay(props),
+            delayReady.value,
+          ),
+          rootClassName,
+          classNames?.root,
+          className,
+        )}
+        style={standaloneStyle}
+        role={rest.role ?? 'status'}
+        aria-live={rest['aria-live'] ?? 'polite'}
+        aria-busy="true"
+      />
+    )
   }
 
   const rootTag = as ?? 'span'
-  return renderElement(
-    rootTag,
-    {
-      ...rest,
-      className: rootClass,
-      style: rootStyleValue,
-      role: rest.role ?? 'status',
-      'aria-live': rest['aria-live'] ?? 'polite',
-      'aria-busy': 'true',
-    },
-    sectionNode,
+  if (rootTag === 'div') {
+    return (
+      <div
+        {...rest}
+        className={rootClass}
+        style={rootStyleValue}
+        role={rest.role ?? 'status'}
+        aria-live={rest['aria-live'] ?? 'polite'}
+        aria-busy="true"
+      >
+        {sectionNode}
+      </div>
+    )
+  }
+
+  if (rootTag === 'section') {
+    return (
+      <section
+        {...rest}
+        className={rootClass}
+        style={rootStyleValue}
+        role={rest.role ?? 'status'}
+        aria-live={rest['aria-live'] ?? 'polite'}
+        aria-busy="true"
+      >
+        {sectionNode}
+      </section>
+    )
+  }
+
+  if (rootTag === 'article') {
+    return (
+      <article
+        {...rest}
+        className={rootClass}
+        style={rootStyleValue}
+        role={rest.role ?? 'status'}
+        aria-live={rest['aria-live'] ?? 'polite'}
+        aria-busy="true"
+      >
+        {sectionNode}
+      </article>
+    )
+  }
+
+  if (rootTag === 'main') {
+    return (
+      <main
+        {...rest}
+        className={rootClass}
+        style={rootStyleValue}
+        role={rest.role ?? 'status'}
+        aria-live={rest['aria-live'] ?? 'polite'}
+        aria-busy="true"
+      >
+        {sectionNode}
+      </main>
+    )
+  }
+
+  return (
+    <span
+      {...rest}
+      className={rootClass}
+      style={rootStyleValue}
+      role={rest.role ?? 'status'}
+      aria-live={rest['aria-live'] ?? 'polite'}
+      aria-busy="true"
+    >
+      {sectionNode}
+    </span>
   )
 }
 

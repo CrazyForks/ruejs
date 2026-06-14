@@ -21,6 +21,7 @@ fn new_vt() -> crate::vapor::VaporTransform {
         did_transform: false,
         el_tag_by_ident: HashMap::new(),
         renderable_local_scopes: Vec::new(),
+        plain_local_scopes: Vec::new(),
     }
 }
 
@@ -84,8 +85,10 @@ fn jsx_to_block_builds_native_root_attrs_children_and_return() {
     assert!(out.contains("watchEffect(()=>{_$setClassName(_root,String((klass)));"));
     assert!(out.contains("_$appendChild(_root,_$createTextNode(\"hello\"));"));
     assert!(out.contains("const_el1=_$createElement(\"span\",_root);"));
-    assert!(out.contains("const_el2=_$createTextWrapper(_el1);"));
-    assert!(out.contains("_$settextContent(_el2,name);"));
+    assert!(out.contains("_$createComment(\"rue:slot:anchor\")"));
+    assert!(out.contains(
+        "watchEffect(()=>{const__slot=(name);untrack(()=>renderAnchor(__slot,_el1,_list1));});"
+    ));
     assert!(out.ends_with("return_root;}"));
 }
 

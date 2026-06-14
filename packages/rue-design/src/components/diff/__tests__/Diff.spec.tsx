@@ -110,11 +110,14 @@ describe('Diff', () => {
       expect(rootStyle).toContain('display:grid')
       expect(rootStyle).toContain('justify-content:normal')
       expect(rootStyle).toContain('align-items:stretch')
+      expect(rootStyle).toContain('--rue-diff-position:30%')
       expect(item1.classList.contains('absolute')).toBe(true)
       expect(item2.classList.contains('absolute')).toBe(true)
-      expect(item1Style).toContain('clip-path:inset(0 70% 0 0)')
-      expect(item2Style).toContain('clip-path:inset(0 0 0 30%)')
-      expect(resizerStyle).toContain('left:30%')
+      expect(item1Style).toContain(
+        'clip-path:inset(0 calc(100% - var(--rue-diff-position, 50%)) 0 0)',
+      )
+      expect(item2Style).toContain('clip-path:inset(0 0 0 var(--rue-diff-position, 50%))')
+      expect(resizerStyle).toContain('left:var(--rue-diff-position, 50%)')
       expect(resizerStyle).toContain('width:0')
       expect(container.textContent).toContain('Before')
       expect(container.textContent).toContain('After')
@@ -147,18 +150,45 @@ describe('Diff', () => {
     input.dispatchEvent(new Event('input', { bubbles: true }))
 
     await waitForContent(() => {
-      const item1 = container.querySelector('.diff-item-1') as HTMLElement
-      const item2 = container.querySelector('.diff-item-2') as HTMLElement
-      const resizer = container.querySelector('.diff-resizer') as HTMLElement
-      const item1Style = item1.getAttribute('style') ?? ''
-      const item2Style = item2.getAttribute('style') ?? ''
-      const resizerStyle = resizer.getAttribute('style') ?? ''
+      const root = container.querySelector('figure.diff') as HTMLElement
+      const rootStyle = root.getAttribute('style') ?? ''
       expect(handleChange).toHaveBeenCalledTimes(1)
       expect(handleChange).toHaveBeenCalledWith(80, expect.any(Event))
-      expect(item1Style).toContain('clip-path:inset(0 20% 0 0)')
-      expect(item2Style).toContain('clip-path:inset(0 0 0 80%)')
-      expect(resizerStyle).toContain('left:80%')
-      expect(resizerStyle).toContain('width:0')
+      expect(rootStyle.replace(/\s/g, '')).toContain('--rue-diff-position:80%')
+    })
+  })
+
+  it('keeps controlled dragging visual-only until the value is committed', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const handleChange = vi.fn()
+
+    render(
+      <Diff value={25} item1={<div>Alpha</div>} item2={<div>Beta</div>} onChange={handleChange} />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const input = container.querySelector('input[type="range"]') as HTMLInputElement
+      expect(input.value).toBe('25')
+    })
+
+    const input = container.querySelector('input[type="range"]') as HTMLInputElement
+    input.value = '80'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+
+    await waitForContent(() => {
+      const root = container.querySelector('figure.diff') as HTMLElement
+      const rootStyle = root.getAttribute('style') ?? ''
+      expect(rootStyle.replace(/\s/g, '')).toContain('--rue-diff-position:80%')
+      expect(handleChange).not.toHaveBeenCalled()
+    })
+
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+
+    await waitForContent(() => {
+      expect(handleChange).toHaveBeenCalledTimes(1)
+      expect(handleChange).toHaveBeenCalledWith(80, expect.any(Event))
     })
   })
 })

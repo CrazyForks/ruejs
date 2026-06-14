@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import VitePluginRue from '@rue-js/vite-plugin-rue'
 import { resolve } from 'node:path'
 import wasm from 'vite-plugin-wasm'
-import { DevTools } from '@vitejs/devtools'
+// import { DevTools } from '@vitejs/devtools'
 
 const rootDir = resolve(__dirname)
 
@@ -68,7 +68,7 @@ export default defineConfig(({ command }) => {
 
   return {
     plugins: [
-      !isVitest && DevTools(),
+      // !isVitest && DevTools(),
       wasm(),
       tailwindcss() as any,
       VitePluginRue({

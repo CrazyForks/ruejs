@@ -269,7 +269,7 @@ fn emits_dynamic_attrs_events_and_skips_unsupported_attr_shapes() {
     assert!(out.contains(&normalize("_$addEventListener(el, \"click\", (handleClick))")));
     assert!(out.contains(&normalize("_$setAttribute(el, \"data-id\", String((id)))")));
     assert!(!out.contains("ns:name"));
-    assert!(!out.contains("spread"));
+    assert!(out.contains(&normalize("watchEffect(()=>{ _$spreadAttributes(el, (spread)); })")));
 }
 
 #[test]
@@ -312,7 +312,9 @@ fn covers_dynamic_attr_false_edges_for_member_roots_and_non_ident_attrs() {
     );
     assert!(mixed_out.contains(&normalize("watchEffect(()=>{ _$setValue(el, selected); })")));
     assert!(!mixed_out.contains("data:track"));
-    assert!(!mixed_out.contains("spread"));
+    assert!(
+        mixed_out.contains(&normalize("watchEffect(()=>{ _$spreadAttributes(el, (spread)); })"))
+    );
 }
 
 #[test]

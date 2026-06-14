@@ -1,4 +1,5 @@
-import { type FC, useState } from '@rue-js/rue'
+import { type FC, onUnmounted, useRef, useState } from '@rue-js/rue'
+import { RouterView } from '@rue-js/router'
 import { extend } from '@rue-js/shared'
 import {
   type SidebarSection,
@@ -502,13 +503,48 @@ const BaseSidebarPlayground = createPersistentSidebarPlayground({
   fallbackToRoute: false,
 })
 
+const RouteSidebarPlayground = createPersistentSidebarPlayground({
+  sections: SECTIONS_BY_TYPE.design,
+  showCounts: true,
+})
+
+let activeDesignRouteLayoutCount = 0
+
 const SidebarPlayground: FC = props => {
+  if (activeDesignRouteLayoutCount > 0) {
+    return <>{props.children}</>
+  }
+
   const [initialCurrentPath] = useState(readCurrentHashPath)
 
   return (
     <BaseSidebarPlayground currentPath={initialCurrentPath.value}>
       {props.children}
     </BaseSidebarPlayground>
+  )
+}
+
+export const DesignRouteLayout: FC = () => {
+  const registeredRef = useRef(false)
+
+  if (!registeredRef.current) {
+    registeredRef.current = true
+    activeDesignRouteLayoutCount += 1
+  }
+
+  onUnmounted(() => {
+    if (!registeredRef.current) {
+      return
+    }
+
+    registeredRef.current = false
+    activeDesignRouteLayoutCount = Math.max(0, activeDesignRouteLayoutCount - 1)
+  })
+
+  return (
+    <RouteSidebarPlayground>
+      <RouterView />
+    </RouteSidebarPlayground>
   )
 }
 

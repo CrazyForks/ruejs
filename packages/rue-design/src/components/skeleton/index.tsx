@@ -1,20 +1,9 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Skeleton 模块概述
 - 汇总骨架屏组件的公开类型、渲染入口和局部工具逻辑。
 - 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
 */
-import {
-  h,
-  onMounted,
-  onUnmounted,
-  renderBetween,
-  signal,
-  useSetup,
-  vapor,
-  watchEffect,
-  type FC,
-} from '@rue-js/rue'
+import type { FC } from '@rue-js/rue'
 
 /** SkeletonSize 尺寸类型。 */
 export type SkeletonSize =
@@ -215,24 +204,13 @@ const normalizeToggleProps = <T extends Record<string, any>>(
   return { enabled: value === true || defaultEnabled, props: {} } as NormalizedToggleProps<T>
 }
 
-/** 转换为 Child Array 的内部工具函数。 */
-const toChildArray = (children: any): any[] => {
+/** 判断是否存在 Renderable Content 的内部工具函数。 */
+const hasRenderableContent = (children: any): boolean => {
   if (Array.isArray(children)) {
-    return children.flatMap(item => toChildArray(item))
+    return children.some(item => hasRenderableContent(item))
   }
-  return children == null || typeof children === 'boolean' ? [] : [children]
+  return children != null && typeof children !== 'boolean'
 }
-
-/** clone Renderable Children 的内部工具函数。 */
-const cloneRenderableChildren = (children: unknown): unknown =>
-  Array.isArray(children) ? children.map(child => cloneRenderableChildren(child)) : children
-
-/** snapshot Skeleton Node Props 的内部工具函数。 */
-const snapshotSkeletonNodeProps = <T extends SkeletonNodeProps>(props: T): T =>
-  ({
-    ...(props as Record<string, unknown>),
-    children: cloneRenderableChildren(props.children),
-  }) as unknown as T
 
 /** 解析 Reactive Value 的内部工具函数。 */
 const resolveReactiveValue = <T,>(value: SkeletonReactiveValue<T> | undefined): T | undefined => {
@@ -252,12 +230,6 @@ const resolveReactiveValue = <T,>(value: SkeletonReactiveValue<T> | undefined): 
     }
   }
   return value as T
-}
-
-/** 渲染 Element 的内部工具函数。 */
-const renderElement = (as: any, props: Record<string, any>, children?: any) => {
-  const nextChildren = toChildArray(children)
-  return h(as as any, props, ...nextChildren)
 }
 
 /** 构建 Primitive Class Name 的内部工具函数。 */
@@ -316,36 +288,6 @@ const buildControlHeight = (size?: SkeletonSize) => {
     default:
       return { className: 'h-10', style: undefined }
   }
-}
-
-/** 渲染 Skeleton Node View 的内部工具函数。 */
-const renderSkeletonNodeView = ({
-  as = 'div',
-  active,
-  className,
-  style,
-  children,
-  ...rest
-}: SkeletonNodeProps) => {
-  const Component = as as any
-  const resolvedActive = resolveReactiveValue(active)
-
-  return renderElement(
-    Component,
-    {
-      ...rest,
-      className: buildPrimitiveClassName(
-        mergeClassName(
-          'flex min-h-24 w-full items-center justify-center rounded-2xl text-base-content/40',
-          className,
-        ),
-        false,
-        resolvedActive,
-      ),
-      style,
-    },
-    children,
-  )
 }
 
 /** 构建 Skeleton Node Class Name 的内部工具函数。 */
@@ -420,18 +362,18 @@ const PrimitiveSkeleton: FC<SkeletonProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  return renderElement(
-    Component,
-    {
-      ...rest,
-      className: buildPrimitiveClassName(
+  return (
+    <Component
+      {...rest}
+      className={buildPrimitiveClassName(
         mergeClassName(classNames?.root, className, rootClassName),
         text,
         active,
-      ),
-      style: mergeStyle(styles?.root, style),
-    },
-    children,
+      )}
+      style={mergeStyle(styles?.root, style)}
+    >
+      {children}
+    </Component>
   )
 }
 
@@ -520,118 +462,41 @@ const SkeletonInput: FC<SkeletonInputProps> = ({
 }
 
 /** Skeleton Node 的内部工具函数。 */
-const SkeletonNode: FC<SkeletonNodeProps> = ({ ...props }) => {
-  const ctx = useSetup(() => ({
-    container: null as HTMLElement | null,
-    startEl: null as Comment | null,
-    endEl: null as Comment | null,
-    propsSig: signal(snapshotSkeletonNodeProps(props), {}, true),
-    started: false,
-    effect: null as { dispose: () => void } | null,
-  }))
+const SkeletonNode: FC<SkeletonNodeProps> = ({
+  as = 'div',
+  active,
+  className,
+  style,
+  children,
+  ...rest
+}) => {
+  const Component = as as any
+  const resolvedActive = resolveReactiveValue(active)
 
-  const ensureHost = () => {
-    if (ctx.container || typeof document === 'undefined') {
-      return
-    }
-
-    const container = document.createElement('span')
-    container.style.display = 'contents'
-
-    const startEl = document.createComment('rue-skeleton-node-start')
-    const endEl = document.createComment('rue-skeleton-node-end')
-
-    container.appendChild(startEl)
-    container.appendChild(endEl)
-
-    ctx.container = container
-    ctx.startEl = startEl
-    ctx.endEl = endEl
-  }
-
-  const resolveHostElement = () => {
-    if (!ctx.startEl || !ctx.endEl) {
-      return null
-    }
-
-    let node = ctx.startEl.nextSibling
-    while (node && node !== ctx.endEl) {
-      if (node.nodeType === 1) {
-        return node as HTMLElement
-      }
-      node = node.nextSibling
-    }
-
-    return null
-  }
-
-  onMounted(() => {
-    if (ctx.started) {
-      return
-    }
-
-    ctx.started = true
-    ensureHost()
-
-    if (ctx.container && ctx.startEl && ctx.endEl) {
-      renderBetween(
-        renderSkeletonNodeView(ctx.propsSig.get()) as any,
-        ctx.container as any,
-        ctx.startEl as any,
-        ctx.endEl as any,
-      )
-    }
-
-    ctx.effect = watchEffect(() => {
-      const curProps = ctx.propsSig.get()
-      const host = resolveHostElement()
-      const resolvedActive = resolveReactiveValue(curProps.active)
-
-      if (!host) {
-        return
-      }
-
-      host.className = buildSkeletonNodeClassName(curProps.className, resolvedActive)
-    })
-  })
-
-  onUnmounted(() => {
-    if (ctx.effect) {
-      ctx.effect.dispose()
-      ctx.effect = null
-    }
-
-    ctx.started = false
-
-    if (ctx.container && ctx.startEl && ctx.endEl) {
-      renderBetween([], ctx.container as any, ctx.startEl as any, ctx.endEl as any)
-    }
-  })
-
-  return vapor(() => {
-    ensureHost()
-
-    if (!ctx.container) {
-      return renderSkeletonNodeView(props) as any
-    }
-
-    ctx.propsSig.set(snapshotSkeletonNodeProps(props))
-    return ctx.container as any
-  })
+  return (
+    <Component
+      {...rest}
+      className={buildSkeletonNodeClassName(className, resolvedActive)}
+      style={style}
+    >
+      {children}
+    </Component>
+  )
 }
 
-/** 渲染 Image Placeholder Icon 的内部工具函数。 */
-const renderImagePlaceholderIcon = () =>
-  h(
-    'svg',
-    { viewBox: '0 0 64 64', className: 'h-10 w-10 fill-current opacity-60', 'aria-hidden': 'true' },
-    h('path', {
-      d: 'M10 14a4 4 0 0 1 4-4h36a4 4 0 0 1 4 4v36a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V14Zm4 0v28.28l9.64-9.63a3 3 0 0 1 4.24 0L36 40.77l6.64-6.63a3 3 0 0 1 4.24 0L50 37.25V14H14Zm36 36V42.9l-5.24-5.23L38.12 44.3a3 3 0 0 1-4.24 0l-8.12-8.11L14 47.97V50h36ZM22 28a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z',
-    }),
-  )
+/** Image Placeholder Icon 的内部组件。 */
+const ImagePlaceholderIcon: FC = () => (
+  <svg
+    viewBox="0 0 64 64"
+    className="h-10 w-10 fill-current opacity-60"
+    aria-hidden="true"
+  >
+    <path d="M10 14a4 4 0 0 1 4-4h36a4 4 0 0 1 4 4v36a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V14Zm4 0v28.28l9.64-9.63a3 3 0 0 1 4.24 0L36 40.77l6.64-6.63a3 3 0 0 1 4.24 0L50 37.25V14H14Zm36 36V42.9l-5.24-5.23L38.12 44.3a3 3 0 0 1-4.24 0l-8.12-8.11L14 47.97V50h36ZM22 28a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
+  </svg>
+)
 
-/** 渲染 Skeleton Image View 的内部工具函数。 */
-const renderSkeletonImageView = ({
+/** Skeleton Image 的内部工具函数。 */
+const SkeletonImage: FC<SkeletonImageProps> = ({
   as = 'div',
   active,
   aspect = 'video',
@@ -639,127 +504,20 @@ const renderSkeletonImageView = ({
   children,
   style,
   ...rest
-}: SkeletonImageProps) => {
+}) => {
+  const Component = as as any
   const resolvedAspect = resolveReactiveValue(aspect) ?? 'video'
   const resolvedActive = resolveReactiveValue(active)
-  const resolvedChildren =
-    toChildArray(children).length > 0 ? children : renderImagePlaceholderIcon()
 
-  return renderElement(
-    as as any,
-    {
-      ...rest,
-      className: buildSkeletonImageClassName(className, resolvedAspect, resolvedActive),
-      style,
-    },
-    resolvedChildren,
+  return (
+    <Component
+      {...rest}
+      className={buildSkeletonImageClassName(className, resolvedAspect, resolvedActive)}
+      style={style}
+    >
+      {hasRenderableContent(children) ? children : <ImagePlaceholderIcon />}
+    </Component>
   )
-}
-
-/** Skeleton Image 的内部工具函数。 */
-const SkeletonImage: FC<SkeletonImageProps> = ({ ...props }) => {
-  const ctx = useSetup(() => ({
-    container: null as HTMLElement | null,
-    startEl: null as Comment | null,
-    endEl: null as Comment | null,
-    propsSig: signal(snapshotSkeletonNodeProps(props), {}, true),
-    started: false,
-    effect: null as { dispose: () => void } | null,
-  }))
-
-  const ensureHost = () => {
-    if (ctx.container || typeof document === 'undefined') {
-      return
-    }
-
-    const container = document.createElement('span')
-    container.style.display = 'contents'
-
-    const startEl = document.createComment('rue-skeleton-image-start')
-    const endEl = document.createComment('rue-skeleton-image-end')
-
-    container.appendChild(startEl)
-    container.appendChild(endEl)
-
-    ctx.container = container
-    ctx.startEl = startEl
-    ctx.endEl = endEl
-  }
-
-  const resolveHostElement = () => {
-    if (!ctx.startEl || !ctx.endEl) {
-      return null
-    }
-
-    let node = ctx.startEl.nextSibling
-    while (node && node !== ctx.endEl) {
-      if (node.nodeType === 1) {
-        return node as HTMLElement
-      }
-      node = node.nextSibling
-    }
-
-    return null
-  }
-
-  onMounted(() => {
-    if (ctx.started) {
-      return
-    }
-
-    ctx.started = true
-    ensureHost()
-
-    if (ctx.container && ctx.startEl && ctx.endEl) {
-      renderBetween(
-        renderSkeletonImageView(ctx.propsSig.get() as SkeletonImageProps) as any,
-        ctx.container as any,
-        ctx.startEl as any,
-        ctx.endEl as any,
-      )
-    }
-
-    ctx.effect = watchEffect(() => {
-      const curProps = ctx.propsSig.get() as SkeletonImageProps
-      const host = resolveHostElement()
-      const resolvedAspect = resolveReactiveValue(curProps.aspect) ?? 'video'
-      const resolvedActive = resolveReactiveValue(curProps.active)
-
-      if (!host) {
-        return
-      }
-
-      host.className = buildSkeletonImageClassName(
-        curProps.className,
-        resolvedAspect,
-        resolvedActive,
-      )
-    })
-  })
-
-  onUnmounted(() => {
-    if (ctx.effect) {
-      ctx.effect.dispose()
-      ctx.effect = null
-    }
-
-    ctx.started = false
-
-    if (ctx.container && ctx.startEl && ctx.endEl) {
-      renderBetween([], ctx.container as any, ctx.startEl as any, ctx.endEl as any)
-    }
-  })
-
-  return vapor(() => {
-    ensureHost()
-
-    if (!ctx.container) {
-      return renderSkeletonImageView(props) as any
-    }
-
-    ctx.propsSig.set(snapshotSkeletonNodeProps(props))
-    return ctx.container as any
-  })
 }
 
 /** 渲染 Title 的内部工具函数。 */

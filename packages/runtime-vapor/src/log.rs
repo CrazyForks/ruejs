@@ -38,7 +38,11 @@ thread_local! {
     static LOG_INCLUDE: std::cell::RefCell<Vec<String>> = std::cell::RefCell::new(Vec::new());
     // 排除过滤：若消息包含其中任意关键字，则不输出
     static LOG_EXCLUDE: std::cell::RefCell<Vec<String>> = std::cell::RefCell::new(Vec::new());
+    // localStorage 配置刷新计数。日志探测可能位于极热路径，不能每次都跨 Wasm/JS 读宿主配置。
+    static LOG_SYNC_PROBE_COUNT: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
 }
+
+const LOG_CONFIG_SYNC_INTERVAL: u32 = 10024;
 
 const NOISY_DEBUG_PREFIXES: &[&str] = &[
     "reactive:scope create",
@@ -148,6 +152,15 @@ fn parse_bool(s: &str) -> Option<bool> {
 
 /// 同步日志配置：从 localStorage 读取并更新启用状态与级别
 fn sync_log_config_from_localstorage() {
+    let should_sync = LOG_SYNC_PROBE_COUNT.with(|count| {
+        let current = count.get();
+        count.set(current.wrapping_add(1));
+        current == 0 || current % LOG_CONFIG_SYNC_INTERVAL == 0
+    });
+    if !should_sync {
+        return;
+    }
+
     if let Some(enabled_str) = read_localstorage_value("rue.logs.enabled") {
         if let Some(b) = parse_bool(&enabled_str) {
             LOG_ENABLED.with(|e| *e.borrow_mut() = b);
@@ -408,4 +421,136 @@ pub fn log_js_label(label: &str) {
 pub fn want_log(level: &str, hint: &str) -> bool {
     let lv = level_to_num(level);
     should_log(lv, hint)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use js_sys::{Function, Object, Reflect};
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen::JsValue;
+    use wasm_bindgen_test::*;
+
+    fn reset_log_state_for_test() {
+        set_log_enabled(false);
+        set_log_console(false);
+        set_log_level("debug");
+        clear_log_include();
+        clear_log_exclude();
+        LOG_VERBOSE_DEBUG.with(|value| *value.borrow_mut() = false);
+        LOG_SYNC_PROBE_COUNT.with(|count| count.set(0));
+    }
+
+    fn clear_fake_local_storage() {
+        let global = js_sys::global();
+        let _ = Reflect::delete_property(&global, &JsValue::from_str("localStorage"));
+        for key in [
+            "__rue_test_log_enabled",
+            "__rue_test_log_level",
+            "__rue_test_log_verbose",
+            "__rue_test_log_include",
+            "__rue_test_log_exclude",
+            "__rue_test_log_get_item_calls",
+        ] {
+            let _ = Reflect::delete_property(&global, &JsValue::from_str(key));
+        }
+    }
+
+    fn install_fake_local_storage() {
+        clear_fake_local_storage();
+
+        let storage = Object::new();
+        let get_item = Function::new_with_args(
+            "key",
+            r#"
+globalThis.__rue_test_log_get_item_calls =
+  (globalThis.__rue_test_log_get_item_calls || 0) + 1;
+switch (key) {
+  case 'rue.logs.enabled':
+    return globalThis.__rue_test_log_enabled ?? null;
+  case 'rue.logs.level':
+    return globalThis.__rue_test_log_level ?? null;
+  case 'rue.logs.verboseDebug':
+    return globalThis.__rue_test_log_verbose ?? null;
+  case 'rue.logs.include':
+    return globalThis.__rue_test_log_include ?? null;
+  case 'rue.logs.exclude':
+    return globalThis.__rue_test_log_exclude ?? null;
+  default:
+    return null;
+}
+"#,
+        );
+        Reflect::set(&storage, &JsValue::from_str("getItem"), &get_item.into()).unwrap();
+
+        let descriptor = Object::new();
+        Reflect::set(&descriptor, &JsValue::from_str("value"), &storage).unwrap();
+        Reflect::set(&descriptor, &JsValue::from_str("configurable"), &JsValue::TRUE).unwrap();
+        let global = js_sys::global();
+        let global_obj = global.dyn_ref::<Object>().expect("global should be an object");
+        Object::define_property(global_obj, &JsValue::from_str("localStorage"), &descriptor);
+    }
+
+    fn set_fake_storage_value(name: &str, value: &str) {
+        Reflect::set(&js_sys::global(), &JsValue::from_str(name), &JsValue::from_str(value))
+            .unwrap();
+    }
+
+    fn fake_storage_get_item_calls() -> u32 {
+        Reflect::get(&js_sys::global(), &JsValue::from_str("__rue_test_log_get_item_calls"))
+            .unwrap_or(JsValue::UNDEFINED)
+            .as_f64()
+            .unwrap_or(0.0) as u32
+    }
+
+    #[wasm_bindgen_test]
+    fn localstorage_sync_is_throttled_to_first_probe_and_configured_interval() {
+        assert_eq!(LOG_CONFIG_SYNC_INTERVAL, 10024);
+        reset_log_state_for_test();
+        install_fake_local_storage();
+        set_fake_storage_value("__rue_test_log_enabled", "true");
+        set_fake_storage_value("__rue_test_log_level", "debug");
+        set_fake_storage_value("__rue_test_log_verbose", "false");
+        set_fake_storage_value("__rue_test_log_include", "throttle-target");
+        set_fake_storage_value("__rue_test_log_exclude", "");
+
+        assert!(want_log("warning", "throttle-target"));
+        assert_eq!(fake_storage_get_item_calls(), 5);
+
+        set_fake_storage_value("__rue_test_log_enabled", "false");
+        for _ in 1..LOG_CONFIG_SYNC_INTERVAL {
+            assert!(want_log("warning", "throttle-target"));
+        }
+        assert_eq!(fake_storage_get_item_calls(), 5);
+        assert_eq!(LOG_SYNC_PROBE_COUNT.with(|count| count.get()), LOG_CONFIG_SYNC_INTERVAL);
+
+        assert!(!want_log("warning", "throttle-target"));
+        assert_eq!(fake_storage_get_item_calls(), 10);
+        assert_eq!(LOG_SYNC_PROBE_COUNT.with(|count| count.get()), LOG_CONFIG_SYNC_INTERVAL + 1);
+
+        clear_fake_local_storage();
+    }
+
+    #[wasm_bindgen_test]
+    fn localstorage_sync_counter_wraps_then_resyncs_on_zero() {
+        assert_ne!(u32::MAX % LOG_CONFIG_SYNC_INTERVAL, 0);
+        reset_log_state_for_test();
+        install_fake_local_storage();
+        set_fake_storage_value("__rue_test_log_enabled", "true");
+        set_fake_storage_value("__rue_test_log_level", "debug");
+        set_fake_storage_value("__rue_test_log_verbose", "false");
+        set_fake_storage_value("__rue_test_log_include", "wrap-target");
+        set_fake_storage_value("__rue_test_log_exclude", "");
+        LOG_SYNC_PROBE_COUNT.with(|count| count.set(u32::MAX));
+
+        assert!(!want_log("warning", "wrap-target"));
+        assert_eq!(fake_storage_get_item_calls(), 0);
+        assert_eq!(LOG_SYNC_PROBE_COUNT.with(|count| count.get()), 0);
+
+        assert!(want_log("warning", "wrap-target"));
+        assert_eq!(fake_storage_get_item_calls(), 5);
+        assert_eq!(LOG_SYNC_PROBE_COUNT.with(|count| count.get()), 1);
+
+        clear_fake_local_storage();
+    }
 }

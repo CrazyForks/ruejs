@@ -11,6 +11,7 @@ const resetActiveRuntime = () => {
 }
 
 afterEach(() => {
+  Modal.destroyAll()
   document.body.innerHTML = ''
 })
 
@@ -320,6 +321,130 @@ describe('Modal', () => {
       expect(teleportedRoot.classList.contains('modal-open')).toBe(true)
       expect(target.textContent).toContain('Portal modal')
       expect(target.textContent).toContain('content')
+    })
+  })
+
+  it('opens and closes a confirm dialog through the static api', async () => {
+    resetActiveRuntime()
+    const onOk = vi.fn()
+    const afterClose = vi.fn()
+
+    Modal.confirm({
+      title: 'Delete draft?',
+      content: 'This action cannot be undone.',
+      okText: 'Delete',
+      cancelText: 'Back',
+      onOk,
+      afterClose,
+    })
+
+    await waitForContent(() => {
+      const root = document.body.querySelector('[data-rue-modal-api-type="confirm"]') as HTMLElement
+      expect(root).toBeTruthy()
+      expect(root.textContent).toContain('Delete draft?')
+      expect(root.textContent).toContain('This action cannot be undone.')
+    })
+
+    const footerButtons = Array.from(
+      document.body.querySelectorAll('[data-rue-modal-api-type="confirm"] .modal-action .btn'),
+    ) as HTMLButtonElement[]
+    expect(footerButtons.length).toBe(2)
+    expect(footerButtons[0]?.textContent).toContain('Back')
+    expect(footerButtons[1]?.textContent).toContain('Delete')
+
+    footerButtons[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    await waitForContent(() => {
+      expect(onOk).toHaveBeenCalledTimes(1)
+      expect(afterClose).toHaveBeenCalledTimes(1)
+      expect(document.body.querySelector('[data-rue-modal-api-type="confirm"]')).toBeNull()
+    })
+  })
+
+  it('updates and destroys a static modal instance', async () => {
+    resetActiveRuntime()
+
+    const modal = Modal.info({
+      title: 'Preparing',
+      content: 'Generating preview...',
+    })
+
+    await waitForContent(() => {
+      expect(document.body.textContent).toContain('Preparing')
+      expect(document.body.textContent).toContain('Generating preview...')
+    })
+
+    modal.update(prev => ({
+      title: `${prev.title} ready`,
+      content: 'Preview is ready.',
+    }))
+
+    await waitForContent(() => {
+      expect(document.body.textContent).toContain('Preparing ready')
+      expect(document.body.textContent).toContain('Preview is ready.')
+    })
+
+    modal.destroy()
+
+    await waitForContent(() => {
+      expect(document.body.querySelector('[data-rue-modal-api-type="info"]')).toBeNull()
+    })
+  })
+
+  it('keeps a static confirm dialog open while onOk promise is pending', async () => {
+    resetActiveRuntime()
+    let resolveOk: () => void = () => {}
+    const pending = new Promise<void>(resolve => {
+      resolveOk = resolve
+    })
+
+    Modal.confirm({
+      title: 'Publish release?',
+      content: 'The OK button should enter loading state.',
+      onOk: () => pending,
+    })
+
+    await waitForContent(() => {
+      const root = document.body.querySelector('[data-rue-modal-api-type="confirm"]') as HTMLElement
+      expect(root).toBeTruthy()
+    })
+
+    const footerButtons = Array.from(
+      document.body.querySelectorAll('[data-rue-modal-api-type="confirm"] .modal-action .btn'),
+    ) as HTMLButtonElement[]
+    const okButton = footerButtons[1]
+    okButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    await waitForContent(() => {
+      const currentButtons = Array.from(
+        document.body.querySelectorAll('[data-rue-modal-api-type="confirm"] .modal-action .btn'),
+      ) as HTMLButtonElement[]
+      expect(currentButtons[1]?.getAttribute('aria-busy')).toBe('true')
+      expect(document.body.querySelector('[data-rue-modal-api-type="confirm"]')).toBeTruthy()
+    })
+
+    resolveOk()
+    await Promise.resolve()
+
+    await waitForContent(() => {
+      expect(document.body.querySelector('[data-rue-modal-api-type="confirm"]')).toBeNull()
+    })
+  })
+
+  it('destroys all static modal dialogs', async () => {
+    resetActiveRuntime()
+
+    Modal.warning({ title: 'First', content: 'Warning content' })
+    Modal.error({ title: 'Second', content: 'Error content' })
+
+    await waitForContent(() => {
+      expect(document.body.querySelectorAll('[data-rue-modal-api-type]').length).toBe(2)
+    })
+
+    Modal.destroyAll()
+
+    await waitForContent(() => {
+      expect(document.body.querySelectorAll('[data-rue-modal-api-type]').length).toBe(0)
     })
   })
 })

@@ -26,6 +26,26 @@ describe('Divider', () => {
     })
   })
 
+  it('removes the center gap when rendered without content', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+    render(h(Divider, null), c)
+
+    await waitForContent(() => {
+      const el = c.querySelector('.divider') as HTMLElement
+      expect(el.classList.contains('gap-0')).toBe(true)
+      expect(el.querySelector('span')).toBeNull()
+    })
+
+    render(h(Divider, null, ''), c)
+
+    await waitForContent(() => {
+      const el = c.querySelector('.divider') as HTMLElement
+      expect(el.classList.contains('gap-0')).toBe(true)
+      expect(el.querySelector('span')).toBeNull()
+    })
+  })
+
   it('applies direction classes', async () => {
     const c = mountContainer()
     resetActiveRuntime()

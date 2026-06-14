@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { attachRouter, createRouter, createWebHashHistory, RouterView } from '@rue-js/router'
+import {
+  attachRouter,
+  createMemoryHistory,
+  createRouter,
+  createWebHashHistory,
+  RouterView,
+} from '@rue-js/router'
 
 import {
   onUnmounted,
@@ -15,7 +21,18 @@ import ExamplePlayground from '../../../app/pages/examples/ExamplePlayground'
 import AttributeBindings from '../../../app/pages/examples/AttributeBindings'
 import HandlingInput from '../../../app/pages/examples/HandlingInput'
 import HelloWorld from '../../../app/pages/examples/HelloWorld'
-import SidebarPlaygroundExample from '../../../app/pages/site/SidebarPlaygroundExample'
+import SidebarPlaygroundDesign, {
+  DesignRouteLayout,
+} from '../../../app/pages/site/SidebarPlaygroundDesign'
+import SidebarPlaygroundExample, {
+  ExamplesRouteLayout,
+} from '../../../app/pages/site/SidebarPlaygroundExample'
+import SidebarPlaygroundApi, {
+  ApiRouteLayout,
+} from '../../../app/pages/site/SidebarPlaygroundApi'
+import SidebarPlaygroundGuide, {
+  GuideRouteLayout,
+} from '../../../app/pages/site/SidebarPlaygroundGuide'
 import UseStateCounterDemo from '../../../app/pages/examples/home-demos/UseStateCounterDemo'
 
 setReactiveScheduling('sync')
@@ -161,6 +178,122 @@ describe('RouterView renderable boundary', () => {
 
     expect(container.textContent).toBe('other')
     expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps design sidebar layout mounted while design child routes switch', async () => {
+    const DesignChild: FC<{ label: string }> = ({ label }) => (
+      <SidebarPlaygroundDesign>
+        <h1>{label}</h1>
+      </SidebarPlaygroundDesign>
+    )
+
+    const router = createRouter({
+      history: createMemoryHistory('/design/button'),
+      routes: [
+        {
+          path: '/design',
+          component: DesignRouteLayout,
+          children: [
+            { path: 'button', component: () => <DesignChild label="Button page" /> },
+            { path: 'tabs', component: () => <DesignChild label="Tabs page" /> },
+          ],
+        },
+      ],
+    })
+    attachRouter(router)
+
+    const container = mountTestContainer()
+    render(<RouterView />, container)
+
+    await flush()
+    await flush()
+
+    const layoutRoot = container.querySelector('.sidebar-playground')
+    expect(layoutRoot).toBeTruthy()
+    expect(container.querySelectorAll('.sidebar-playground')).toHaveLength(1)
+    expect(container.textContent).toContain('Button page')
+
+    await router.push('/design/tabs')
+    await router.isReady()
+    await flush()
+    await flush()
+
+    expect(container.querySelector('.sidebar-playground')).toBe(layoutRoot)
+    expect(container.querySelectorAll('.sidebar-playground')).toHaveLength(1)
+    expect(container.textContent).toContain('Tabs page')
+    expect(container.textContent).not.toContain('Button page')
+  })
+
+  it('keeps docs and examples sidebar layouts mounted while child routes switch', async () => {
+    const cases: {
+      basePath: string
+      layoutId: string
+      Layout: FC
+      Sidebar: FC
+    }[] = [
+      { basePath: '/api', layoutId: 'api', Layout: ApiRouteLayout, Sidebar: SidebarPlaygroundApi },
+      {
+        basePath: '/examples',
+        layoutId: 'examples',
+        Layout: ExamplesRouteLayout,
+        Sidebar: SidebarPlaygroundExample,
+      },
+      {
+        basePath: '/guide',
+        layoutId: 'guide',
+        Layout: GuideRouteLayout,
+        Sidebar: SidebarPlaygroundGuide,
+      },
+    ]
+
+    for (const current of cases) {
+      const Child: FC<{ label: string }> = ({ label }) => (
+        <current.Sidebar>
+          <h1>{label}</h1>
+        </current.Sidebar>
+      )
+
+      const router = createRouter({
+        history: createMemoryHistory(`${current.basePath}/first`),
+        routes: [
+          {
+            path: current.basePath,
+            component: current.Layout,
+            meta: {
+              sidebarPlaygroundLayout: current.layoutId,
+            },
+            children: [
+              { path: 'first', component: () => <Child label="First page" /> },
+              { path: 'second', component: () => <Child label="Second page" /> },
+            ],
+          },
+        ],
+      })
+      attachRouter(router)
+
+      const container = mountTestContainer()
+      render(<RouterView />, container)
+
+      await flush()
+      await flush()
+
+      const layoutRoot = container.querySelector('.sidebar-playground')
+      expect(layoutRoot).toBeTruthy()
+      expect(container.querySelectorAll('.sidebar-playground')).toHaveLength(1)
+      expect(container.textContent).toContain('First page')
+
+      await router.push(`${current.basePath}/second`)
+      await router.isReady()
+      await flush()
+      await flush()
+
+      expect(container.querySelector('.sidebar-playground')).toBe(layoutRoot)
+      expect(container.querySelectorAll('.sidebar-playground')).toHaveLength(1)
+      expect(container.textContent).toContain('Second page')
+      expect(container.textContent).not.toContain('First page')
+
+      render(null as any, container)
+    }
   })
 
   it('keeps lazy route page interactions reactive through a preview shell', async () => {

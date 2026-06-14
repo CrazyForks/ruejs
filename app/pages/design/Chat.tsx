@@ -147,35 +147,30 @@ const legacyChatData: ReadonlyArray<ChatDataItem> = [
 const legacyChatItems: ReadonlyArray<ChatDataItem> = [
   {
     placement: 'start',
-    message: (
-      <>
-        <span>It's over Anakin,</span>
-        <br />I have the high ground.
-      </>
-    ),
+    message: "It's over Anakin, I have the high ground.",
   },
   { placement: 'end', message: 'You underestimate my power!' },
   {
     placement: 'start',
     avatarSrc: photos.obi,
-    author: <span>Obi-Wan Kenobi</span>,
-    timestamp: <span>12:45</span>,
+    author: 'Obi-Wan Kenobi',
+    timestamp: '12:45',
     message: 'You were the Chosen One!',
-    footer: <span>Delivered</span>,
+    footer: 'Delivered',
   },
   {
     placement: 'end',
     avatarSrc: photos.anakin,
-    author: <span>Anakin</span>,
-    timestamp: <span>12:46</span>,
+    author: 'Anakin',
+    timestamp: '12:46',
     color: 'success' as const,
-    message: <span>I hate you!</span>,
-    footer: <span>Seen at 12:46</span>,
+    message: 'I hate you!',
+    footer: 'Seen at 12:46',
   },
   {
     placement: 'start',
     color: 'primary' as const,
-    message: <em>What kind of nonsense is this</em>,
+    message: 'What kind of nonsense is this',
   },
 ]
 
@@ -643,18 +638,11 @@ const ChatDemo: FC = () => {
     {
       key: 'rue',
       placement: 'start',
-      avatar: {
-        className: 'avatar',
-        content: (
-          <div className="grid w-10 place-items-center rounded-full bg-neutral text-neutral-content text-xs font-semibold">
-            AI
-          </div>
-        ),
-      },
+      avatarSrc: photos.rue,
       author: 'Rue Agent',
       timestamp: '09:32',
       message: '我保留了原有 demo，只把结构收敛进更清晰的 API。',
-      footer: <span className="opacity-60">Preview ready</span>,
+      footer: 'Preview ready',
     },
     {
       key: 'you',
@@ -665,24 +653,17 @@ const ChatDemo: FC = () => {
       message: '别删旧场景，把新 API 讲清楚。',
       color: 'primary' as const,
       bubbleClassName: 'shadow-sm',
-      footer: <span className="opacity-60">Seen</span>,
+      footer: 'Seen',
     },
     {
       key: 'qa',
       placement: 'start',
-      avatar: {
-        className: 'avatar',
-        content: (
-          <div className="grid w-10 place-items-center rounded-full bg-warning text-warning-content text-[11px] font-semibold">
-            QA
-          </div>
-        ),
-      },
+      avatarSrc: photos.obi,
       author: 'QA',
       timestamp: '09:34',
       typing: true,
-      typingIndicator: <span className="text-xs opacity-70">正在等待截图比对</span>,
-      footer: <span className="opacity-60">Monitoring</span>,
+      typingIndicator: '正在等待截图比对',
+      footer: 'Monitoring',
     },
   ]
 

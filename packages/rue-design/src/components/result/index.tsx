@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Result 组件概述
 - 参考 antd Result 的 status、title、subTitle、extra、children 主能力，为 Rue 补齐结果反馈入口。
@@ -466,10 +465,6 @@ const ResultBase: FC<ResultProps> = ({
   const resolvedTitle = title ?? exceptionMeta?.title
   const resolvedSubTitle = subTitle ?? exceptionMeta?.subTitle
   const isIconHidden = showIcon === false || icon === null || icon === false
-  const renderedIcon =
-    icon !== undefined && icon !== null && icon !== false
-      ? icon
-      : buildDefaultIcon(normalizedStatus, tone, size)
   const contentAlignmentClass =
     align === 'start' ? 'items-start text-left' : 'items-center text-center'
   const titleAlignmentClass =
@@ -502,7 +497,9 @@ const ResultBase: FC<ResultProps> = ({
       >
         {isIconHidden ? null : (
           <div className={iconClassName} style={iconStyle} data-rue-result-icon-slot="true">
-            {renderedIcon}
+            {icon !== undefined && icon !== null && icon !== false
+              ? icon
+              : buildDefaultIcon(normalizedStatus, tone, size)}
           </div>
         )}
 

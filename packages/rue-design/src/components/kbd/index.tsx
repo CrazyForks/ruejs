@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Kbd 组件概述
 - 保留 Rue 当前 `kbd` 视觉风格，同时把单键和组合键都整理成更顺手的语义 API。
@@ -121,6 +120,11 @@ export interface KbdSeparatorProps {
   [key: string]: any
 }
 
+interface ComboItemsProps extends Pick<
+  KbdComboProps,
+  'items' | 'size' | 'itemClassName' | 'separator' | 'separatorClassName'
+> {}
+
 /** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
@@ -239,45 +243,40 @@ const Separator: FC<KbdSeparatorProps> = ({ as = 'span', className, children = '
   )
 }
 
-/** 渲染 Combo Items 的内部工具函数。 */
-const renderComboItems = ({
+/** Combo Items 的内部工具组件。 */
+const ComboItems: FC<ComboItemsProps> = ({
   items,
   size,
   itemClassName,
   separator,
   separatorClassName,
-}: Pick<
-  KbdComboProps,
-  'items' | 'size' | 'itemClassName' | 'separator' | 'separatorClassName'
->) => {
-  const normalizedItems = items?.map((item, index) => normalizeItem(item, index)) ?? []
+}) => {
+  return (
+    <>
+      {(items ?? []).map((rawItem, index) => {
+        const item = normalizeItem(rawItem, index)
+        const itemKey = item.key ?? index
+        const { key: _key, size: itemSize, className: itemOwnClassName, ...itemRest } = item
 
-  return normalizedItems.flatMap((item, index) => {
-    const itemKey = item.key ?? index
-    const itemNodes = []
-
-    if (index > 0) {
-      itemNodes.push(
-        <Separator key={`separator-${itemKey}`} className={separatorClassName}>
-          {hasRenderableContent(separator) ? separator : '+'}
-        </Separator>,
-      )
-    }
-
-    const { key: _key, size: itemSize, className: itemOwnClassName, ...itemRest } = item
-    itemNodes.push(
-      <KeyRoot
-        key={`key-${itemKey}`}
-        size={itemSize ?? size}
-        className={joinClassName(itemClassName, itemOwnClassName)}
-        {...itemRest}
-      >
-        {renderItemContent(item)}
-      </KeyRoot>,
-    )
-
-    return itemNodes
-  })
+        return (
+          <span key={`item-${itemKey}`} className="contents">
+            {index > 0 ? (
+              <Separator className={separatorClassName}>
+                {hasRenderableContent(separator) ? separator : '+'}
+              </Separator>
+            ) : null}
+            <KeyRoot
+              size={itemSize ?? size}
+              className={joinClassName(itemClassName, itemOwnClassName)}
+              {...itemRest}
+            >
+              {renderItemContent(item)}
+            </KeyRoot>
+          </span>
+        )
+      })}
+    </>
+  )
 }
 
 /** Group 的内部工具函数。 */
@@ -305,15 +304,17 @@ const Group: FC<KbdGroupProps> = ({
 
   return (
     <Component {...rest} className={groupClassName}>
-      {hasRenderableContent(children)
-        ? children
-        : renderComboItems({
-            items,
-            size,
-            itemClassName,
-            separator,
-            separatorClassName,
-          })}
+      {hasRenderableContent(children) ? (
+        children
+      ) : (
+        <ComboItems
+          items={items}
+          size={size}
+          itemClassName={itemClassName}
+          separator={separator}
+          separatorClassName={separatorClassName}
+        />
+      )}
     </Component>
   )
 }

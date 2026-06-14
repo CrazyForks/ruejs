@@ -369,7 +369,29 @@ fn is_text_coercion_call_name(name: &str) -> bool {
     matches!(name, "String" | "Number" | "Boolean" | "BigInt" | "Date" | "parseInt" | "parseFloat")
 }
 
+fn is_accessor_get_call_expr(call: &CallExpr) -> bool {
+    if !call.args.is_empty() {
+        return false;
+    }
+
+    let Callee::Expr(callee) = &call.callee else {
+        return false;
+    };
+
+    let Expr::Member(MemberExpr { prop: MemberProp::Ident(prop), .. }) =
+        crate::utils::unwrap_expr(callee.as_ref())
+    else {
+        return false;
+    };
+
+    prop.sym.as_ref() == "get"
+}
+
 fn is_opaque_renderable_call_expr(call: &CallExpr) -> bool {
+    if is_accessor_get_call_expr(call) {
+        return true;
+    }
+
     let Some(callee_name) = call_callee_ident_name(call) else {
         return false;
     };
@@ -450,15 +472,25 @@ fn contains_nested_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> 
     }
 
     match unwrapped {
-        Expr::Ident(id) => vt.is_renderable_local_ident(id.sym.as_ref()),
+        Expr::Ident(id) => {
+            let name = id.sym.as_ref();
+            if vt.current_renderable_local_names().contains(name) {
+                true
+            } else {
+                !vt.current_plain_local_names().contains(name)
+            }
+        }
         Expr::Member(_) => is_non_ref_member_expr(unwrapped),
         Expr::Call(call) => is_opaque_renderable_call_expr(call),
         Expr::Cond(CondExpr { cons, alt, .. }) => {
             contains_nested_opaque_renderable_expr(vt, cons.as_ref())
                 || contains_nested_opaque_renderable_expr(vt, alt.as_ref())
         }
+        Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, right, .. }) => {
+            contains_nested_opaque_renderable_expr(vt, right.as_ref())
+        }
         Expr::Bin(BinExpr {
-            op: BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+            op: BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
             left,
             right,
             ..
@@ -477,15 +509,25 @@ fn contains_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> bool {
     }
 
     match unwrapped {
-        Expr::Ident(id) => vt.is_renderable_local_ident(id.sym.as_ref()),
+        Expr::Ident(id) => {
+            let name = id.sym.as_ref();
+            if vt.current_renderable_local_names().contains(name) {
+                true
+            } else {
+                !vt.current_plain_local_names().contains(name)
+            }
+        }
         Expr::Member(_) => is_non_ref_member_expr(unwrapped),
         Expr::Call(call) => is_opaque_renderable_call_expr(call),
         Expr::Cond(CondExpr { cons, alt, .. }) => {
             contains_nested_opaque_renderable_expr(vt, cons.as_ref())
                 || contains_nested_opaque_renderable_expr(vt, alt.as_ref())
         }
+        Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd, right, .. }) => {
+            contains_nested_opaque_renderable_expr(vt, right.as_ref())
+        }
         Expr::Bin(BinExpr {
-            op: BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+            op: BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
             left,
             right,
             ..

@@ -86,6 +86,42 @@ const apiRows: ApiRow[] = [
   },
 ]
 
+const ForceOpenPreview: FC = () => {
+  const controlledOpen = ref(true)
+
+  return (
+    <div className="flex flex-wrap items-center gap-4">
+      <Tooltip data-testid="tooltip-open" title="Always visible" open={true} color="primary">
+        <button className="btn btn-primary">Force open</button>
+      </Tooltip>
+      <Tooltip
+        title={controlledOpen.value ? '点击任一按钮都可以关闭' : '点击任一按钮都可以打开'}
+        open={controlledOpen.value}
+      >
+        <button
+          className="btn btn-soft"
+          onClick={() => (controlledOpen.value = !controlledOpen.value)}
+        >
+          Controlled tooltip
+        </button>
+      </Tooltip>
+      <button
+        className="btn btn-outline"
+        onClick={() => (controlledOpen.value = !controlledOpen.value)}
+      >
+        {controlledOpen.value ? 'Hide controlled tooltip' : 'Show controlled tooltip'}
+      </button>
+      <Tooltip title="包一层 span 可兼容禁用按钮" placement="bottom">
+        <span className="inline-flex">
+          <button className="btn btn-disabled" disabled={true}>
+            Disabled button
+          </button>
+        </span>
+      </Tooltip>
+    </div>
+  )
+}
+
 const TooltipPage: FC = () => {
   const tabBasic = ref<PreviewTabMode>('preview')
   const tabPlacements = ref<PreviewTabMode>('preview')
@@ -93,7 +129,6 @@ const TooltipPage: FC = () => {
   const tabColors = ref<PreviewTabMode>('preview')
   const tabTriggers = ref<PreviewTabMode>('preview')
   const tabOpen = ref<PreviewTabMode>('preview')
-  const controlledOpen = ref(true)
 
   return (
     <SidebarPlayground>
@@ -341,42 +376,7 @@ const TooltipPage: FC = () => {
         <PreviewBlock
           title="Force open"
           tab={tabOpen}
-          preview={() => (
-            <div className="flex flex-wrap items-center gap-4">
-              <Tooltip
-                data-testid="tooltip-open"
-                title="Always visible"
-                open={true}
-                color="primary"
-              >
-                <button className="btn btn-primary">Force open</button>
-              </Tooltip>
-              <Tooltip
-                title={controlledOpen.value ? '点击任一按钮都可以关闭' : '点击任一按钮都可以打开'}
-                open={controlledOpen.value}
-              >
-                <button
-                  className="btn btn-soft"
-                  onClick={() => (controlledOpen.value = !controlledOpen.value)}
-                >
-                  Controlled tooltip
-                </button>
-              </Tooltip>
-              <button
-                className="btn btn-outline"
-                onClick={() => (controlledOpen.value = !controlledOpen.value)}
-              >
-                {controlledOpen.value ? 'Hide controlled tooltip' : 'Show controlled tooltip'}
-              </button>
-              <Tooltip title="包一层 span 可兼容禁用按钮" placement="bottom">
-                <span className="inline-flex">
-                  <button className="btn btn-disabled" disabled={true}>
-                    Disabled button
-                  </button>
-                </span>
-              </Tooltip>
-            </div>
-          )}
+          preview={ForceOpenPreview}
           code={`const controlledOpen = ref(true)
 
 <div className="flex flex-wrap items-center gap-4">

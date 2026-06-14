@@ -1,5 +1,5 @@
 import type { FC } from '@rue-js/rue'
-import { ref } from '@rue-js/rue'
+import { computed, ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import PreviewBlock, { type PreviewTabMode } from './PreviewBlock'
 import Progress from '../../../packages/rue-design/src/components/progress/index'
@@ -59,6 +59,10 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
 const DynamicProgressPreview: FC = () => {
   const percent = ref(68)
   const shape = ref<'line' | 'circle' | 'dashboard'>('line')
+  const progressStatus = computed(() =>
+    percent.value >= 100 ? 'success' : percent.value > 80 ? 'active' : 'normal',
+  )
+  const successProgress = computed(() => ({ percent: Math.min(percent.value, 30) }))
 
   return (
     <div className="space-y-5">
@@ -106,10 +110,10 @@ const DynamicProgressPreview: FC = () => {
         <div className="space-y-4">
           <Progress
             type={shape.value}
-            percent={percent.value}
+            percent={percent}
             className="w-full"
-            status={percent.value >= 100 ? 'success' : percent.value > 80 ? 'active' : 'normal'}
-            success={{ percent: Math.min(percent.value, 30) }}
+            status={progressStatus}
+            success={successProgress}
             strokeColor={{ from: '#38bdf8', to: '#8b5cf6', direction: 'to right' }}
             percentPosition={shape.value === 'line' ? { align: 'end', type: 'outer' } : undefined}
             size={shape.value === 'line' ? { height: 12 } : 140}

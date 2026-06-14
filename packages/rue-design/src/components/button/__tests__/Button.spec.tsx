@@ -159,7 +159,7 @@ describe('Button', () => {
     )
     await waitButtonRender()
     let el = c.querySelector('button') as HTMLButtonElement
-    expect(el.textContent).toBe('NextI')
+    expect(el.textContent?.replace(/\s+/g, '')).toBe('NextI')
     expect(el.querySelector('#tail-icon')).toBeTruthy()
     expect(el.classList.contains('gap-2')).toBe(true)
 

@@ -278,6 +278,94 @@ describe('Menu', () => {
     })
   })
 
+  it('toggles legacy dropdown entries from items array', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+    const onToggleClick = vi.fn()
+    const items = [
+      {
+        kind: 'item',
+        children: 'Enterprise',
+        dropdownToggle: { children: 'More', onClick: onToggleClick },
+        dropdown: {
+          visible: true,
+          items: [
+            { kind: 'item', children: 'CRM software' },
+            { kind: 'item', children: 'Marketing management' },
+          ],
+        },
+      },
+    ] as any
+    render(h(Menu, { items }), c)
+
+    await waitForContent(() => {
+      const toggle = c.querySelector('.menu-dropdown-toggle') as HTMLElement
+      const dropdown = c.querySelector('.menu-dropdown') as HTMLElement
+      expect(toggle.classList.contains('menu-dropdown-show')).toBe(true)
+      expect(toggle.getAttribute('aria-expanded')).toBe('true')
+      expect(dropdown.classList.contains('menu-dropdown-show')).toBe(true)
+    })
+
+    ;(c.querySelector('.menu-dropdown-toggle') as HTMLElement).click()
+    await waitForContent(() => {
+      const toggle = c.querySelector('.menu-dropdown-toggle') as HTMLElement
+      const dropdown = c.querySelector('.menu-dropdown') as HTMLElement
+      expect(toggle.classList.contains('menu-dropdown-show')).toBe(false)
+      expect(toggle.getAttribute('aria-expanded')).toBe('false')
+      expect(dropdown.classList.contains('menu-dropdown-show')).toBe(false)
+      expect(onToggleClick).toHaveBeenCalledTimes(1)
+    })
+
+    ;(c.querySelector('.menu-dropdown-toggle') as HTMLElement).click()
+    await waitForContent(() => {
+      const dropdown = c.querySelector('.menu-dropdown') as HTMLElement
+      expect(dropdown.classList.contains('menu-dropdown-show')).toBe(true)
+      expect(onToggleClick).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('toggles legacy submenu entries from items array', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+    const items = [
+      {
+        kind: 'item',
+        children: 'Parent',
+        submenu: {
+          items: [
+            { kind: 'item', children: 'Sub 1' },
+            { kind: 'item', children: 'Sub 2' },
+          ],
+        },
+      },
+    ] as any
+    render(h(Menu, { items }), c)
+
+    await waitForContent(() => {
+      const button = c.querySelector('.menu li button') as HTMLButtonElement
+      const submenu = c.querySelector('.menu li ul') as HTMLElement
+      expect(button).toBeTruthy()
+      expect(button.getAttribute('aria-expanded')).toBe('false')
+      expect(submenu.classList.contains('hidden')).toBe(true)
+    })
+
+    ;(c.querySelector('.menu li button') as HTMLButtonElement).click()
+    await waitForContent(() => {
+      const button = c.querySelector('.menu li button') as HTMLButtonElement
+      const submenu = c.querySelector('.menu li ul') as HTMLElement
+      expect(button.getAttribute('aria-expanded')).toBe('true')
+      expect(submenu.classList.contains('hidden')).toBe(false)
+    })
+
+    ;(c.querySelector('.menu li button') as HTMLButtonElement).click()
+    await waitForContent(() => {
+      const button = c.querySelector('.menu li button') as HTMLButtonElement
+      const submenu = c.querySelector('.menu li ul') as HTMLElement
+      expect(button.getAttribute('aria-expanded')).toBe('false')
+      expect(submenu.classList.contains('hidden')).toBe(true)
+    })
+  })
+
   it('supports to/href/target in items array', async () => {
     const c = mountContainer()
     resetActiveRuntime()

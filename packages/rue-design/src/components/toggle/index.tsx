@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Toggle 组件概述
 - 保留 Rue 当前的 toggle 视觉类，同时补齐 Switch 常见的受控/非受控、loading、状态文案能力。
@@ -6,7 +5,7 @@ Toggle 组件概述
 - `value` 与 `defaultValue` 在传入 boolean 时分别作为 `checked` 与 `defaultChecked` 的别名；传入 string / number 时仍保留原生 input 值语义。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, useRef, watch } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 
 /** ToggleColor 语义色类型。 */
 export type ToggleColor =
@@ -191,14 +190,13 @@ const Toggle: FC<ToggleProps> = ({
   onNativeChange,
   ...rest
 }) => {
-  const inputRef = useRef<HTMLInputElement>()
-  const controlledChecked = resolveControlledChecked(checked, value)
+  const readControlledChecked = () => resolveControlledChecked(checked, value)
+  const readChecked = () => readControlledChecked() ?? uncontrolledChecked.value
   const uncontrolledChecked = ref(
-    resolveDefaultChecked(defaultChecked, defaultValue, controlledChecked ?? false),
+    resolveDefaultChecked(defaultChecked, defaultValue, readControlledChecked() ?? false),
   )
   const mergedDisabled = !!disabled || !!loading
   const hasStateSlot = checkedChildren != null || unCheckedChildren != null
-  const currentChecked = controlledChecked ?? uncontrolledChecked.value
   const needsWrapper =
     !!loading ||
     children != null ||
@@ -208,22 +206,6 @@ const Toggle: FC<ToggleProps> = ({
     !!contentClassName ||
     !!stateClassName
 
-  const syncInputChecked = (nextChecked: boolean) => {
-    if (inputRef.current) {
-      inputRef.current.checked = nextChecked
-    }
-  }
-
-  const syncStateSlot = (nextChecked: boolean) => {
-    const root = inputRef.current?.closest('[data-rue-toggle-root="true"]') as HTMLElement | null
-    const stateInput = root?.querySelector(
-      '[data-rue-toggle-state-input="true"]',
-    ) as HTMLInputElement | null
-    if (stateInput) {
-      stateInput.checked = nextChecked
-    }
-  }
-
   const handleClick = (event: Event) => {
     const target = event.target as HTMLInputElement | null
     onClick?.(target?.checked === true, event)
@@ -232,45 +214,25 @@ const Toggle: FC<ToggleProps> = ({
   const handleChange = (event: Event) => {
     const target = event.target as HTMLInputElement | null
     const nextChecked = target?.checked === true
-    const visualChecked = controlledChecked === undefined ? nextChecked : controlledChecked
+    const controlledChecked = readControlledChecked()
 
     if (controlledChecked === undefined) {
       uncontrolledChecked.value = nextChecked
-    } else {
-      syncInputChecked(controlledChecked)
+    } else if (target) {
+      target.checked = controlledChecked
     }
-
-    syncStateSlot(visualChecked)
 
     onNativeChange?.(event)
     onChange?.(nextChecked, event)
     onCheckedChange?.(nextChecked, event)
   }
 
-  onMounted(() => {
-    syncInputChecked(controlledChecked ?? uncontrolledChecked.value)
-    syncStateSlot(controlledChecked ?? uncontrolledChecked.value)
-  })
-
-  watch(
-    () => resolveControlledChecked(checked, value),
-    nextControlledChecked => {
-      if (typeof nextControlledChecked === 'boolean') {
-        uncontrolledChecked.value = nextControlledChecked
-        syncInputChecked(nextControlledChecked)
-        syncStateSlot(nextControlledChecked)
-      }
-    },
-    { immediate: true },
-  )
-
   const inputNode = (
     <input
       {...rest}
-      ref={inputRef}
       type="checkbox"
-      checked={controlledChecked}
-      defaultChecked={resolveDefaultChecked(defaultChecked, defaultValue, currentChecked)}
+      checked={readChecked()}
+      defaultChecked={resolveDefaultChecked(defaultChecked, defaultValue, readChecked())}
       value={resolveNativeValue(value) as any}
       defaultValue={resolveNativeDefaultValue(defaultValue) as any}
       disabled={mergedDisabled}
@@ -311,11 +273,7 @@ const Toggle: FC<ToggleProps> = ({
   }
 
   return (
-    <label
-      className={buildRootClassName(mergedDisabled, rootClassName)}
-      style={rootStyle}
-      data-rue-toggle-root="true"
-    >
+    <label className={buildRootClassName(mergedDisabled, rootClassName)} style={rootStyle}>
       {switchNode}
       <span className={buildContentClassName(contentClassName)}>
         {children != null ? (
@@ -326,11 +284,10 @@ const Toggle: FC<ToggleProps> = ({
             <span className="swap pointer-events-none min-h-0 min-w-0">
               <input
                 type="checkbox"
-                checked={currentChecked}
+                checked={readChecked()}
                 tabIndex={-1}
                 aria-hidden="true"
                 className="sr-only"
-                data-rue-toggle-state-input="true"
               />
               <span className="swap-on inline-flex items-center gap-2">{checkedChildren}</span>
               <span className="swap-off inline-flex items-center gap-2">{unCheckedChildren}</span>

@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Timeline 组件概述
 - 保留 Rue 当前基于 daisyUI timeline 的视觉结构，不额外引入样式文件。
@@ -7,7 +6,7 @@ Timeline 组件概述
   2. 更接近数据驱动 items API。
 - 数据驱动模式补齐了常用能力：mode、reverse、pending、icon、loading、color、title/content。
 */
-import { h, type FC } from '@rue-js/rue'
+import type { FC } from '@rue-js/rue'
 
 /** TimelineDirection 位置或方向类型。 */
 export type TimelineDirection = 'horizontal' | 'vertical'
@@ -161,17 +160,6 @@ const SEMANTIC_LINE_CLASS_MAP: Record<string, string> = {
 /** join Class Name 的内部工具函数。 */
 const joinClassName = (...values: Array<string | undefined | false>) => {
   return values.filter(Boolean).join(' ')
-}
-
-/** 转换为 Child Array 的内部工具函数。 */
-const toChildArray = (children: any): any[] => {
-  if (Array.isArray(children)) {
-    return children.flatMap(item => toChildArray(item))
-  }
-  if (!isDefined(children)) {
-    return []
-  }
-  return [children]
 }
 
 /** 判断 Defined 的内部工具函数。 */
@@ -439,17 +427,14 @@ const Timeline: FC<TimelineProps> = ({
     className,
   )
 
-  if (items && items.length) {
-    const renderedItems = normalizeItems(items, mode, reverse, pending, pendingDot)
-    return h('ul', { className: cls }, ...(renderedItems.map(renderTimelineItem) as any[]))
-  }
+  const renderedItems =
+    items && items.length
+      ? normalizeItems(items, mode, reverse, pending, pendingDot)
+      : pending
+        ? normalizeItems([], mode, reverse, pending, pendingDot)
+        : null
 
-  if (pending) {
-    const renderedItems = normalizeItems([], mode, reverse, pending, pendingDot)
-    return h('ul', { className: cls }, ...(renderedItems.map(renderTimelineItem) as any[]))
-  }
-
-  return h('ul', { className: cls }, ...(toChildArray(children) as any[]))
+  return <ul className={cls}>{renderedItems ? renderedItems.map(renderTimelineItem) : children}</ul>
 }
 
 type TimelineCompound = FC<TimelineProps> & {

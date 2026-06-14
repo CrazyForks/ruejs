@@ -315,18 +315,26 @@ const SpreadChildren: FC<{ as?: any; children?: any; [key: string]: any }> = ({
   return h(as as any, rest, ...(toChildArray(children) as any[]))
 }
 
-const DemoToggleButton: FC<{ active?: boolean; onClick?: () => void; children?: any }> = ({
-  active,
-  onClick,
-  children,
-}) => {
+type DemoToggleButtonActive = boolean | (() => boolean)
+
+const readDemoToggleActive = (active: DemoToggleButtonActive | undefined) =>
+  typeof active === 'function' ? active() : !!active
+
+const DemoToggleButton: FC<{
+  active?: DemoToggleButtonActive
+  onClick?: () => void
+  children?: any
+}> = props => {
+  const active = () => readDemoToggleActive(props.active)
+
   return (
     <button
-      className={`btn btn-xs ${active ? 'btn-primary' : 'btn-outline'}`.trim()}
+      className={`btn btn-xs ${active() ? 'btn-primary' : 'btn-outline'}`.trim()}
       type="button"
-      onClick={onClick}
+      aria-pressed={active() ? 'true' : 'false'}
+      onClick={props.onClick}
     >
-      {children}
+      {props.children}
     </button>
   )
 }
@@ -475,19 +483,19 @@ const ElementVariantsPreview: FC = () => {
       <div className="space-y-5" data-testid="skeleton-elements-demo">
         <div className="flex flex-wrap items-center gap-2">
           <DemoToggleButton
-            active={elementActive.value}
+            active={() => elementActive.value}
             onClick={() => (elementActive.value = !elementActive.value)}
           >
             {elementActive.value ? '关闭 active' : '开启 active'}
           </DemoToggleButton>
           <DemoToggleButton
-            active={elementBlock.value}
+            active={() => elementBlock.value}
             onClick={() => (elementBlock.value = !elementBlock.value)}
           >
             {elementBlock.value ? '关闭 block' : '开启 block'}
           </DemoToggleButton>
           <DemoToggleButton
-            active={avatarShape.value === 'circle'}
+            active={() => avatarShape.value === 'circle'}
             onClick={() =>
               (avatarShape.value = avatarShape.value === 'circle' ? 'square' : 'circle')
             }
@@ -495,7 +503,7 @@ const ElementVariantsPreview: FC = () => {
             Avatar: {avatarShape.value}
           </DemoToggleButton>
           <DemoToggleButton
-            active={imageAspect.value === 'video'}
+            active={() => imageAspect.value === 'video'}
             onClick={() => (imageAspect.value = imageAspect.value === 'video' ? 'square' : 'video')}
           >
             Image: {imageAspect.value}
@@ -507,7 +515,7 @@ const ElementVariantsPreview: FC = () => {
             {elementSizes.map(size => (
               <DemoToggleButton
                 key={size}
-                active={elementSize.value === size}
+                active={() => elementSize.value === size}
                 onClick={() => (elementSize.value = size)}
               >
                 size: {size}
@@ -518,7 +526,7 @@ const ElementVariantsPreview: FC = () => {
             {buttonShapes.map(shape => (
               <DemoToggleButton
                 key={shape}
-                active={buttonShape.value === shape}
+                active={() => buttonShape.value === shape}
                 onClick={() => (buttonShape.value = shape)}
               >
                 button: {shape}
@@ -641,7 +649,6 @@ const SkeletonPage: FC = () => {
             <div className="text-xs font-semibold uppercase tracking-wide text-accent">
               保持 Rue 风格
             </div>
-            <div className="mt-2 text-sm font-medium">不照搬 Ant 视觉，只借鉴交互组织方式</div>
             <p className="mt-2 text-sm opacity-70">
               依旧用 Rue 当前 daisyUI 底色，只做布局能力和 demo 丰富度增强。
             </p>
@@ -734,7 +741,7 @@ const SkeletonPage: FC = () => {
         <div className="not-prose mt-10 space-y-2">
           <h2 className="text-2xl font-semibold">组合骨架</h2>
           <p className="text-sm text-base-content/70">
-            这一组对齐 Ant 的主要场景：复杂内容组合、children 切换、列表加载，以及圆角行样式。
+            主要场景：复杂内容组合、children 切换、列表加载，以及圆角行样式。
           </p>
         </div>
 
@@ -923,7 +930,7 @@ const listLoading = ref(true)
         <div className="not-prose mt-10 space-y-2">
           <h2 className="text-2xl font-semibold">元素 API</h2>
           <p className="text-sm text-base-content/70">
-            这一组对应 Ant 的 Button / Avatar / Input / Image / Node 示范，但保留 Rue
+            提供一组 Button / Avatar / Input / Image / Node 示范，但保留 Rue
             自己的视觉基底。
           </p>
         </div>
@@ -961,7 +968,7 @@ const NodeIcon = () => (
         <div className="not-prose mt-12 space-y-4">
           <h2 className="text-2xl font-semibold">API</h2>
           <p className="text-sm text-base-content/70">
-            根组件保留 Ant 常见的组合式参数，同时继续兼容 Rue 原本的原子骨架写法。新增的{' '}
+            根组件提供常见的组合式参数，同时继续兼容 Rue 原本的原子骨架写法。新增的{' '}
             <code>rootClassName</code>、<code>classNames</code> 和 <code>styles</code>{' '}
             用来只改局部槽位，不影响整棵骨架的默认结构。
           </p>

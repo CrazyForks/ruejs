@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { render, setReactiveScheduling } from '@rue-js/rue'
+import { ref, render, setReactiveScheduling } from '@rue-js/rue'
 import Filter from '../index'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 
@@ -89,7 +89,7 @@ describe('Filter', () => {
     })
 
     const open = container.querySelector('[aria-label="Open"]') as HTMLInputElement
-    const clear = container.querySelector('[aria-label="Clear"]') as HTMLInputElement
+    const clear = container.querySelector('[aria-label="Clear"]') as HTMLElement
 
     open.checked = true
     open.dispatchEvent(new Event('change', { bubbles: true }))
@@ -107,13 +107,62 @@ describe('Filter', () => {
       expect(changes[changes.length - 1]).toBe('open')
     })
 
-    clear.checked = true
-    clear.dispatchEvent(new Event('change', { bubbles: true }))
+    clear.click()
 
     await waitForContent(() => {
       expect(clear.classList.contains('filter-reset')).toBe(true)
       expect(open.checked).toBe(false)
-      expect(clear.checked).toBe(true)
+      expect(changes[changes.length - 1]).toBe(undefined)
+    })
+  })
+
+  it('clears controlled radio selection on the first div reset click', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const changes: Array<string | undefined> = []
+
+    const ControlledFilter = () => {
+      const active = ref<string | undefined>('open')
+
+      return (
+        <Filter
+          as="div"
+          items={[
+            { label: 'Open', value: 'open' },
+            { label: 'Closed', value: 'closed' },
+          ]}
+          reset={{ label: 'All' }}
+          value={active.value}
+          onChange={value => {
+            const next = Array.isArray(value)
+              ? String(value[0] ?? '') || undefined
+              : (value as string | undefined)
+            changes.push(next)
+            active.value = next
+          }}
+        />
+      )
+    }
+
+    render(<ControlledFilter />, container)
+
+    await waitForContent(() => {
+      const open = container.querySelector('[aria-label="Open"]') as HTMLInputElement
+      const reset = container.querySelector('[aria-label="All"]') as HTMLInputElement
+      expect(open.checked).toBe(true)
+      expect(open.classList.contains('btn-active')).toBe(true)
+      expect(reset.tagName.toLowerCase()).toBe('input')
+      expect(reset.checked).toBe(false)
+    })
+
+    const open = container.querySelector('[aria-label="Open"]') as HTMLInputElement
+    const reset = container.querySelector('[aria-label="All"]') as HTMLElement
+
+    reset.click()
+
+    await waitForContent(() => {
+      expect(open.checked).toBe(false)
+      expect(open.classList.contains('btn-active')).toBe(false)
       expect(changes[changes.length - 1]).toBe(undefined)
     })
   })

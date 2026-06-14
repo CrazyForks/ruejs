@@ -1,10 +1,9 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Fab 模块概述
 - 汇总悬浮按钮组件的公开类型、渲染入口和局部工具逻辑。
 - 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
 */
-import { h, onMounted, onUnmounted, ref, type FC, watch } from '@rue-js/rue'
+import { onMounted, onUnmounted, ref, type FC, useState, watch } from '@rue-js/rue'
 import Badge from '../badge'
 import type { BadgeProps } from '../badge'
 import Button from '../button'
@@ -101,17 +100,6 @@ interface FabPartProps {
 const mergeClassName = (...parts: Array<string | undefined | false | null>) =>
   parts.filter(Boolean).join(' ')
 
-/** 转换为 Child Array 的内部工具函数。 */
-const toChildArray = (children: any): any[] => {
-  if (Array.isArray(children)) {
-    return children.flatMap(item => toChildArray(item))
-  }
-  if (children == null || typeof children === 'boolean') {
-    return []
-  }
-  return [children]
-}
-
 /** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any): boolean => {
   if (value === undefined || value === null || value === false || value === '') return false
@@ -173,27 +161,31 @@ const isTooltipConfig = (tooltip: any): tooltip is TooltipProps => {
   ].some(key => key in tooltip)
 }
 
-/** with Tooltip 的内部工具函数。 */
-const withTooltip = (node: any, tooltip: any, placement: TooltipPlacement) => {
-  if (tooltip == null || tooltip === false) return node
+/** Maybe Tooltip 的内部工具函数。 */
+const MaybeTooltip: FC<{ tooltip?: any; placement: TooltipPlacement; children?: any }> = ({
+  tooltip,
+  placement,
+  children,
+}) => {
+  if (tooltip == null || tooltip === false) return children
   if (isTooltipConfig(tooltip)) {
     return (
       <Tooltip placement={tooltip.placement ?? placement} {...tooltip}>
-        {node}
+        {children}
       </Tooltip>
     )
   }
   return (
     <Tooltip title={tooltip} placement={placement}>
-      {node}
+      {children}
     </Tooltip>
   )
 }
 
-/** with Badge 的内部工具函数。 */
-const withBadge = (node: any, badge?: FabBadgeProps) => {
-  if (!badge) return node
-  return <Badge {...badge}>{node}</Badge>
+/** Maybe Badge 的内部工具函数。 */
+const MaybeBadge: FC<{ badge?: FabBadgeProps; children?: any }> = ({ badge, children }) => {
+  if (!badge) return children
+  return <Badge {...badge}>{children}</Badge>
 }
 
 /** Default Menu Icon 的内部工具函数。 */
@@ -209,6 +201,42 @@ const DefaultCloseIcon: FC = () => (
     x
   </span>
 )
+
+/** 读取 Menu Open Icon 的内部工具函数。 */
+const renderMenuOpenIcon = (menuIcon: any, icon: any) => {
+  if (menuIcon != null) return menuIcon
+  if (icon != null) return icon
+  return <DefaultMenuIcon />
+}
+
+/** Fab Toggle Icon 的内部工具函数。 */
+const FabToggleIcon: FC<{
+  open?: boolean
+  icon?: any
+  closeIcon?: any
+  menuIcon?: any
+}> = ({ open, icon, closeIcon, menuIcon }) => {
+  return (
+    <span data-rue-fab-toggle-icon="true" className="inline-flex items-center justify-center">
+      <span data-rue-fab-open-icon="true" className={open ? 'hidden' : undefined}>
+        {renderMenuOpenIcon(menuIcon, icon)}
+      </span>
+      <span data-rue-fab-close-icon="true" className={open ? undefined : 'hidden'}>
+        {closeIcon ?? <DefaultCloseIcon />}
+      </span>
+    </span>
+  )
+}
+
+/** 渲染 Fab Toggle Icon 的内部工具函数。 */
+const renderFabToggleIcon = (
+  open: boolean | undefined,
+  icon: any,
+  closeIcon: any,
+  menuIcon: any,
+) => {
+  return <FabToggleIcon open={open} icon={icon} closeIcon={closeIcon} menuIcon={menuIcon} />
+}
 
 /** Action Button 的内部工具函数。 */
 const ActionButton: FC<
@@ -247,18 +275,6 @@ const ActionButton: FC<
 }) => {
   const mergedContent = hasRenderableContent(children) ? children : (content ?? description)
   const resolvedShape = resolveShape(shape, mergedContent)
-  const mergedIcon = menuAction ? (
-    <span data-rue-fab-toggle-icon="true" className="inline-flex items-center justify-center">
-      <span data-rue-fab-open-icon="true" className={open ? 'hidden' : undefined}>
-        {menuIcon ?? icon ?? <DefaultMenuIcon />}
-      </span>
-      <span data-rue-fab-close-icon="true" className={open ? undefined : 'hidden'}>
-        {closeIcon ?? <DefaultCloseIcon />}
-      </span>
-    </span>
-  ) : (
-    icon
-  )
   const actionClassName = mergeClassName(
     'shadow-lg transition-all duration-200',
     resolvedShape === 'circle'
@@ -267,53 +283,67 @@ const ActionButton: FC<
     className,
   )
 
-  let node = (
-    <Button
-      {...rest}
-      href={href}
-      target={target}
-      htmlType={htmlType}
-      size="large"
-      color={resolveActionColor(type, color)}
-      shape={resolvedShape === 'circle' ? 'circle' : undefined}
-      icon={mergedIcon}
-      iconPlacement="start"
-      disabled={disabled}
-      className={actionClassName}
-      aria-label={
-        rest['aria-label'] ?? (typeof mergedContent === 'string' ? mergedContent : undefined)
-      }
-      onClick={(event: MouseEvent) => {
-        if (onClick) onClick(event)
-        if (onActionClick)
-          onActionClick(event, {
-            ...rest,
-            icon,
-            content,
-            description,
-            tooltip,
-            badge,
-            type,
-            color,
-            shape,
-            href,
-            target,
-            htmlType,
-            disabled,
-            className,
-            children,
-            closeOnClick,
-            onClick,
-          })
-      }}
-    >
-      {resolvedShape === 'circle' ? null : mergedContent}
-    </Button>
-  )
+  const handleClick = (event: MouseEvent) => {
+    if (onClick) onClick(event)
+    if (onActionClick)
+      onActionClick(event, {
+        ...rest,
+        icon,
+        content,
+        description,
+        tooltip,
+        badge,
+        type,
+        color,
+        shape,
+        href,
+        target,
+        htmlType,
+        disabled,
+        className,
+        children,
+        closeOnClick,
+        onClick,
+      })
+  }
 
-  node = withBadge(node, badge)
-  node = withTooltip(node, tooltip, tooltipPlacement)
-  return node
+  const buttonProps = {
+    ...rest,
+    href,
+    target,
+    htmlType,
+    size: 'large' as const,
+    color: resolveActionColor(type, color),
+    shape: resolvedShape === 'circle' ? ('circle' as const) : undefined,
+    iconPlacement: 'start' as const,
+    disabled,
+    className: actionClassName,
+    'aria-label':
+      rest['aria-label'] ?? (typeof mergedContent === 'string' ? mergedContent : undefined),
+    onClick: handleClick,
+  }
+
+  if (menuAction) {
+    return (
+      <MaybeTooltip tooltip={tooltip} placement={tooltipPlacement}>
+        <MaybeBadge badge={badge}>
+          <Button {...buttonProps} icon={renderFabToggleIcon(open, icon, closeIcon, menuIcon)}>
+            {resolvedShape === 'circle' ? null : mergedContent}
+          </Button>
+        </MaybeBadge>
+      </MaybeTooltip>
+    )
+  }
+
+  return (
+    <MaybeTooltip tooltip={tooltip} placement={tooltipPlacement}>
+      <MaybeBadge badge={badge}>
+        <Button {...buttonProps} icon={icon}>
+          {resolvedShape === 'circle' ? null : mergedContent}
+        </Button>
+      </MaybeBadge>
+    </MaybeTooltip>
+  )
 }
 
 /** 读取 Linear Panel Position 的内部工具函数。 */
@@ -373,7 +403,11 @@ const Fab: FC<FabProps> = props => {
     if (flower) cls += ' fab-flower'
     if (className) cls += ` ${className}`
 
-    return h('div', { ...rest, className: cls }, ...(toChildArray(children) as any[]))
+    return (
+      <div {...rest} className={cls}>
+        {children}
+      </div>
+    )
   }
 
   const {
@@ -412,7 +446,9 @@ const Fab: FC<FabProps> = props => {
 
   const isControlled = typeof open === 'boolean'
   const uncontrolledOpen = ref(defaultOpen)
-  const currentOpen = ref(isControlled ? !!open : uncontrolledOpen.value)
+  const [currentOpen, setCurrentOpen] = useState(isControlled ? !!open : uncontrolledOpen.value, {
+    kind: 'ref',
+  })
   const currentTrigger = ref(mergedTrigger)
   const mergedOpen = currentOpen.value
   let rootElement: HTMLDivElement | null = null
@@ -445,7 +481,7 @@ const Fab: FC<FabProps> = props => {
 
   const requestOpenChange = (nextOpen: boolean) => {
     if (currentOpen.value === nextOpen) return
-    currentOpen.value = nextOpen
+    setCurrentOpen(nextOpen)
     if (!isControlled) {
       uncontrolledOpen.value = nextOpen
     }
@@ -457,7 +493,7 @@ const Fab: FC<FabProps> = props => {
     () => open,
     nextOpen => {
       if (typeof nextOpen === 'boolean') {
-        currentOpen.value = nextOpen
+        setCurrentOpen(nextOpen)
         syncMenuDom(nextOpen)
       }
     },
@@ -478,7 +514,7 @@ const Fab: FC<FabProps> = props => {
       if (!isControlled) {
         const nextOpen = !!nextDefaultOpen
         uncontrolledOpen.value = nextOpen
-        currentOpen.value = nextOpen
+        setCurrentOpen(nextOpen)
         syncMenuDom(nextOpen)
       }
     },
@@ -566,21 +602,6 @@ const Fab: FC<FabProps> = props => {
     )
   })
 
-  const triggerNode = (
-    <ActionButton
-      {...actionProps}
-      children={children}
-      icon={actionProps.icon}
-      onClick={isMenuMode ? undefined : handleSingleButtonClick}
-      tooltipPlacement={linearPanel.tooltipPlacement}
-      menuAction={isMenuMode}
-      open={mergedOpen}
-      closeIcon={closeIcon}
-      menuIcon={menuIcon}
-      aria-expanded={isMenuMode ? (mergedOpen ? 'true' : 'false') : undefined}
-    />
-  )
-
   return (
     <div
       {...rootProps}
@@ -636,7 +657,18 @@ const Fab: FC<FabProps> = props => {
           if (onClick) onClick(event)
         }}
       >
-        {triggerNode}
+        <ActionButton
+          {...actionProps}
+          children={children}
+          icon={actionProps.icon}
+          onClick={isMenuMode ? undefined : handleSingleButtonClick}
+          tooltipPlacement={linearPanel.tooltipPlacement}
+          menuAction={isMenuMode}
+          open={mergedOpen}
+          closeIcon={closeIcon}
+          menuIcon={menuIcon}
+          aria-expanded={isMenuMode ? (mergedOpen ? 'true' : 'false') : undefined}
+        />
       </div>
     </div>
   )
@@ -658,26 +690,30 @@ const Trigger: FC<FabPartProps> = ({ as = 'div', className, children, ...rest })
     }
   }
 
-  return h(Component, { ...triggerProps, className }, ...(toChildArray(children) as any[]))
+  return (
+    <Component {...triggerProps} className={className}>
+      {children}
+    </Component>
+  )
 }
 
 /** Close 的内部工具函数。 */
 const Close: FC<FabPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
-  return h(
-    Component,
-    { ...rest, className: mergeClassName('fab-close', className) },
-    ...(toChildArray(children) as any[]),
+  return (
+    <Component {...rest} className={mergeClassName('fab-close', className)}>
+      {children}
+    </Component>
   )
 }
 
 /** Main Action 的内部工具函数。 */
 const MainAction: FC<FabPartProps> = ({ as = 'div', className, children, ...rest }) => {
   const Component = as as any
-  return h(
-    Component,
-    { ...rest, className: mergeClassName('fab-main-action', className) },
-    ...(toChildArray(children) as any[]),
+  return (
+    <Component {...rest} className={mergeClassName('fab-main-action', className)}>
+      {children}
+    </Component>
   )
 }
 

@@ -1,4 +1,5 @@
 import { type FC, useState } from '@rue-js/rue'
+import { RouterView, useRoute } from '@rue-js/router'
 import {
   createPersistentSidebarPlayground,
   type SidebarSection,
@@ -19,6 +20,20 @@ const isTestEnvironment = (): boolean => {
     import.meta.env?.VITEST === 'true' ||
     !!(globalThis as any).vitest
   )
+}
+
+const SIDEBAR_LAYOUT_META = 'examples'
+
+const useInsideSidebarRouteLayout = (): boolean => {
+  try {
+    const route = useRoute()
+    const routeData = route.get() as any
+    return !!routeData?.matched?.some(
+      (record: any) => record?.meta?.sidebarPlaygroundLayout === SIDEBAR_LAYOUT_META,
+    )
+  } catch {
+    return false
+  }
 }
 
 export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
@@ -531,13 +546,35 @@ const BaseSidebarPlayground = createPersistentSidebarPlayground({
   fallbackToRoute: false,
 })
 
-const SidebarPlayground: FC = props => {
+const RouteSidebarPlayground = createPersistentSidebarPlayground({
+  sections: activeSections,
+  showCounts: true,
+  wrapperClassName: 'sidebar-playground-examples',
+})
+
+type SidebarPlaygroundProps = {
+  currentPath?: string
+}
+
+const SidebarPlayground: FC<SidebarPlaygroundProps> = props => {
+  if (useInsideSidebarRouteLayout()) {
+    return <>{props.children}</>
+  }
+
   const [initialCurrentPath] = useState(readCurrentHashPath)
 
   return (
-    <BaseSidebarPlayground currentPath={initialCurrentPath.value}>
+    <BaseSidebarPlayground currentPath={props.currentPath ?? initialCurrentPath.value}>
       {props.children}
     </BaseSidebarPlayground>
+  )
+}
+
+export const ExamplesRouteLayout: FC = () => {
+  return (
+    <RouteSidebarPlayground>
+      <RouterView />
+    </RouteSidebarPlayground>
   )
 }
 

@@ -1443,7 +1443,7 @@ export async function compileRueStatic(code, options = {}) {
 }
 
 /** 在 worker 线程内执行 SWC 转换，开发阶段可通过超时终止异常转换。 */
-const runSwcTransformInWorker = ({ code, id, pluginPath, timeoutMs }) =>
+const runSwcTransformInWorker = ({ code, id, pluginPath, timeoutMs, isProduction }) =>
   new Promise((resolve, reject) => {
     let settled = false
     let timer = null
@@ -1467,7 +1467,7 @@ const runSwcTransformInWorker = ({ code, id, pluginPath, timeoutMs }) =>
         workerData: {
           code,
           pluginPath,
-          isProduction: process.env.NODE_ENV === 'production',
+          isProduction: isProduction ?? process.env.NODE_ENV === 'production',
         },
       })
     } catch (error) {
@@ -1535,8 +1535,9 @@ export default function VitePluginRue(options = {}) {
     transformTimeoutMs = DEFAULT_TRANSFORM_TIMEOUT_MS,
     transformExecutor = runSwcTransformInWorker,
   } = options
-  // build 阶段会切换到 inline 转换；dev 阶段默认使用 worker 转换以保护 Vite 会话。
+  // 默认始终使用 worker 转换，确保 dev/build 阶段都能通过超时保护终止卡住的编译。
   let activeTransformExecutor = transformExecutor
+  let isProductionTransform = process.env.NODE_ENV === 'production'
 
   /**
    * 判断文件是否命中 include/exclude 规则。
@@ -1555,8 +1556,9 @@ export default function VitePluginRue(options = {}) {
       return false
     }
 
-    const matched = id.match(
-      /[\\/]packages[\\/]rue-design[\\/]src[\\/]components[\\/]([^\\/]+)[\\/]/,
+    const normalizedId = id.split('?')[0]
+    const matched = normalizedId.match(
+      /(?:^|[\\/])packages[\\/]rue-design[\\/]src[\\/]components[\\/]([^\\/]+)[\\/]/,
     )
 
     return matched ? RUE_DESIGN_PATH_SKIPPED_COMPONENTS.has(matched[1]) : false
@@ -1592,6 +1594,7 @@ export default function VitePluginRue(options = {}) {
           id,
           pluginPath,
           timeoutMs: transformTimeoutMs,
+          isProduction: isProductionTransform,
         }),
         { id, timeoutMs: transformTimeoutMs },
       )
@@ -1670,12 +1673,10 @@ export default function VitePluginRue(options = {}) {
       // 返回转换后的代码与空映射
       return { code: out, map: null }
     },
-    /** Vite 配置解析完成钩子：根据命令选择当前线程或 worker 线程转换。 */
+    /** Vite 配置解析完成钩子：默认执行器保持 worker 隔离，避免 build 阶段同步卡住。 */
     configResolved(config) {
-      activeTransformExecutor =
-        config.command === 'build' && transformExecutor === runSwcTransformInWorker
-          ? runSwcTransformInline
-          : transformExecutor
+      isProductionTransform = config.command === 'build' || process.env.NODE_ENV === 'production'
+      activeTransformExecutor = transformExecutor
     },
   }
 }

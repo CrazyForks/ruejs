@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Label 组件概述
 - 保留 Rue 当前 input / select 包装与 floating-label 复合写法。
@@ -477,6 +476,69 @@ const renderHelp = (help: any, error: any, status?: LabelStatus, className?: str
   )
 }
 
+/** 渲染 Control Affix 的内部工具函数。 */
+const renderControlAffix = (content: any, className?: string) => {
+  if (!hasNode(content)) return null
+  return <span className={mergeClassName('label', className)}>{content}</span>
+}
+
+/** 渲染 Control Node 的内部工具函数。 */
+const renderControlNode = ({
+  as,
+  rest,
+  controlClassName,
+  required,
+  resolvedStatus,
+  disabled,
+  prefix,
+  suffix,
+  affixClassName,
+  children,
+}: {
+  as?: LabelRootAs
+  rest: Record<string, any>
+  controlClassName: string
+  required?: boolean
+  resolvedStatus?: LabelStatus
+  disabled?: boolean
+  prefix?: any
+  suffix?: any
+  affixClassName?: string
+  children?: any
+}) => {
+  const controlAriaProps = {
+    'aria-required': required ? 'true' : rest['aria-required'],
+    'aria-invalid': resolvedStatus === 'error' ? 'true' : rest['aria-invalid'],
+    'aria-disabled': disabled ? 'true' : rest['aria-disabled'],
+  }
+
+  if (as === 'div') {
+    return (
+      <div
+        {...rest}
+        className={controlClassName}
+        {...controlAriaProps}
+      >
+        {renderControlAffix(prefix, affixClassName)}
+        {children}
+        {renderControlAffix(suffix, affixClassName)}
+      </div>
+    )
+  }
+
+  return (
+    <label
+      {...rest}
+      className={controlClassName}
+      {...controlAriaProps}
+    >
+      {renderControlAffix(prefix, affixClassName)}
+      {children}
+      {renderControlAffix(suffix, affixClassName)}
+    </label>
+  )
+}
+
 /** Label Root 的内部工具函数。 */
 const LabelRoot: FC<LabelRootProps> = ({
   as,
@@ -511,7 +573,6 @@ const LabelRoot: FC<LabelRootProps> = ({
   ...rest
 }) => {
   const resolvedStatus = status ?? (hasNode(error) ? 'error' : undefined)
-  const Component = (as ?? 'label') as any
   const controlClassName = buildControlClassName({
     control,
     color,
@@ -532,37 +593,23 @@ const LabelRoot: FC<LabelRootProps> = ({
     hasNode(optional) ||
     !!rootClassName ||
     layout === 'inline'
-  const captionNode = renderCaption({
-    label,
-    required,
-    optional,
-    extra,
-    labelClassName,
-    extraClassName,
-  })
-  const descriptionNode = renderDescription(description, descriptionClassName)
-  const helpNode = renderHelp(help, error, resolvedStatus, helpClassName)
   const fieldClassName = buildFieldClassName(layout, block, rootClassName)
   const fieldStyle = resolveInlineWidthStyle(layout, labelWidth)
-  const controlNode = (
-    <Component
-      {...rest}
-      className={controlClassName}
-      aria-required={required ? 'true' : undefined}
-      aria-invalid={resolvedStatus === 'error' ? 'true' : undefined}
-      aria-disabled={disabled ? 'true' : undefined}
-    >
-      {hasNode(prefix) ? (
-        <span className={mergeClassName('label', affixClassName)}>{prefix}</span>
-      ) : null}
-      {children}
-      {hasNode(suffix) ? (
-        <span className={mergeClassName('label', affixClassName)}>{suffix}</span>
-      ) : null}
-    </Component>
-  )
 
-  if (!hasFieldLayout) return controlNode
+  if (!hasFieldLayout) {
+    return renderControlNode({
+      as,
+      rest,
+      controlClassName,
+      required,
+      resolvedStatus,
+      disabled,
+      prefix,
+      suffix,
+      affixClassName,
+      children,
+    })
+  }
 
   if (layout === 'inline') {
     return (
@@ -571,12 +618,30 @@ const LabelRoot: FC<LabelRootProps> = ({
         style={fieldStyle}
       >
         <div>
-          {captionNode}
-          {descriptionNode}
+          {renderCaption({
+            label,
+            required,
+            optional,
+            extra,
+            labelClassName,
+            extraClassName,
+          })}
+          {renderDescription(description, descriptionClassName)}
         </div>
         <div className="grid gap-1">
-          {controlNode}
-          {helpNode}
+          {renderControlNode({
+            as,
+            rest,
+            controlClassName,
+            required,
+            resolvedStatus,
+            disabled,
+            prefix,
+            suffix,
+            affixClassName,
+            children,
+          })}
+          {renderHelp(help, error, resolvedStatus, helpClassName)}
         </div>
       </div>
     )
@@ -584,10 +649,28 @@ const LabelRoot: FC<LabelRootProps> = ({
 
   return (
     <div className={fieldClassName}>
-      {captionNode}
-      {descriptionNode}
-      {controlNode}
-      {helpNode}
+      {renderCaption({
+        label,
+        required,
+        optional,
+        extra,
+        labelClassName,
+        extraClassName,
+      })}
+      {renderDescription(description, descriptionClassName)}
+      {renderControlNode({
+        as,
+        rest,
+        controlClassName,
+        required,
+        resolvedStatus,
+        disabled,
+        prefix,
+        suffix,
+        affixClassName,
+        children,
+      })}
+      {renderHelp(help, error, resolvedStatus, helpClassName)}
     </div>
   )
 }
@@ -614,6 +697,55 @@ const FloatingText: FC<LabelTextProps> = ({
       {children}
       {required ? <RequiredMark /> : null}
     </span>
+  )
+}
+
+/** 渲染 Floating Node 的内部工具函数。 */
+const renderFloatingNode = ({
+  rest,
+  required,
+  resolvedStatus,
+  disabled,
+  block,
+  className,
+  children,
+  text,
+  textClassName,
+}: {
+  rest: Record<string, any>
+  required?: boolean
+  resolvedStatus?: LabelStatus
+  disabled?: boolean
+  block?: boolean
+  className?: string
+  children?: any
+  text?: any
+  textClassName?: string
+}) => {
+  const floatingAriaProps = {
+    'aria-required': required ? 'true' : rest['aria-required'],
+    'aria-invalid': resolvedStatus === 'error' ? 'true' : rest['aria-invalid'],
+    'aria-disabled': disabled ? 'true' : rest['aria-disabled'],
+  }
+
+  return (
+    <label
+      {...rest}
+      className={mergeClassName(
+        'floating-label',
+        disabled && 'opacity-60 cursor-not-allowed',
+        block && 'w-full',
+        className,
+      )}
+      {...floatingAriaProps}
+    >
+      {children}
+      {hasNode(text) ? (
+        <FloatingText required={required} className={textClassName}>
+          {text}
+        </FloatingText>
+      ) : null}
+    </label>
   )
 }
 
@@ -653,41 +785,22 @@ const Floating: FC<FloatingLabelProps> = ({
     hasNode(optional) ||
     !!rootClassName ||
     layout === 'inline'
-  const captionNode = renderCaption({
-    label: caption,
-    required,
-    optional,
-    extra,
-    labelClassName: captionClassName,
-    extraClassName,
-  })
-  const descriptionNode = renderDescription(description, descriptionClassName)
-  const helpNode = renderHelp(help, error, resolvedStatus, helpClassName)
   const fieldClassName = buildFieldClassName(layout, block, rootClassName)
   const fieldStyle = resolveInlineWidthStyle(layout, labelWidth)
-  const floatingNode = (
-    <label
-      {...rest}
-      className={mergeClassName(
-        'floating-label',
-        disabled && 'opacity-60 cursor-not-allowed',
-        block && 'w-full',
-        className,
-      )}
-      aria-required={required ? 'true' : undefined}
-      aria-invalid={resolvedStatus === 'error' ? 'true' : undefined}
-      aria-disabled={disabled ? 'true' : undefined}
-    >
-      {children}
-      {hasNode(text) ? (
-        <FloatingText required={required} className={textClassName}>
-          {text}
-        </FloatingText>
-      ) : null}
-    </label>
-  )
 
-  if (!hasFieldLayout) return floatingNode
+  if (!hasFieldLayout) {
+    return renderFloatingNode({
+      rest,
+      required,
+      resolvedStatus,
+      disabled,
+      block,
+      className,
+      children,
+      text,
+      textClassName,
+    })
+  }
 
   if (layout === 'inline') {
     return (
@@ -696,12 +809,29 @@ const Floating: FC<FloatingLabelProps> = ({
         style={fieldStyle}
       >
         <div>
-          {captionNode}
-          {descriptionNode}
+          {renderCaption({
+            label: caption,
+            required,
+            optional,
+            extra,
+            labelClassName: captionClassName,
+            extraClassName,
+          })}
+          {renderDescription(description, descriptionClassName)}
         </div>
         <div className="grid gap-1">
-          {floatingNode}
-          {helpNode}
+          {renderFloatingNode({
+            rest,
+            required,
+            resolvedStatus,
+            disabled,
+            block,
+            className,
+            children,
+            text,
+            textClassName,
+          })}
+          {renderHelp(help, error, resolvedStatus, helpClassName)}
         </div>
       </div>
     )
@@ -709,10 +839,27 @@ const Floating: FC<FloatingLabelProps> = ({
 
   return (
     <div className={fieldClassName}>
-      {captionNode}
-      {descriptionNode}
-      {floatingNode}
-      {helpNode}
+      {renderCaption({
+        label: caption,
+        required,
+        optional,
+        extra,
+        labelClassName: captionClassName,
+        extraClassName,
+      })}
+      {renderDescription(description, descriptionClassName)}
+      {renderFloatingNode({
+        rest,
+        required,
+        resolvedStatus,
+        disabled,
+        block,
+        className,
+        children,
+        text,
+        textClassName,
+      })}
+      {renderHelp(help, error, resolvedStatus, helpClassName)}
     </div>
   )
 }

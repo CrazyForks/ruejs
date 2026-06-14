@@ -45,6 +45,8 @@ pub struct VaporTransform {
     pub el_tag_by_ident: std::collections::HashMap<String, String>,
     /// 当前可见的“renderable local” 变量名栈，用于把 bare ident child 判定为 slot 候选
     pub renderable_local_scopes: Vec<HashSet<String>>,
+    /// 当前可见的普通局部变量名栈，用于避免把列表/块内文本临时变量误判为 slot
+    pub plain_local_scopes: Vec<HashSet<String>>,
 }
 
 impl VaporTransform {
@@ -75,8 +77,20 @@ impl VaporTransform {
         self.renderable_local_scopes.pop();
     }
 
-    pub(crate) fn is_renderable_local_ident(&self, name: &str) -> bool {
-        self.renderable_local_scopes.iter().rev().any(|scope| scope.contains(name))
+    pub(crate) fn current_plain_local_names(&self) -> HashSet<String> {
+        let mut names = HashSet::new();
+        for scope in &self.plain_local_scopes {
+            names.extend(scope.iter().cloned());
+        }
+        names
+    }
+
+    pub(crate) fn push_plain_local_scope(&mut self, scope: HashSet<String>) {
+        self.plain_local_scopes.push(scope);
+    }
+
+    pub(crate) fn pop_plain_local_scope(&mut self) {
+        self.plain_local_scopes.pop();
     }
 }
 

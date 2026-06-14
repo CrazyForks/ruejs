@@ -1150,6 +1150,35 @@ const View: ViewType = (props) => {
 }
 
 #[test]
+fn transform_entry_routes_accessor_get_children_as_renderable_slots() {
+    let src = r#"
+import { computed } from '@rue-js/rue';
+
+function View(props) {
+  const indicator = computed(() => props.done ? <span className="ok">ok</span> : `${props.percent}%`);
+  return <section>
+    <div>{indicator.get()}</div>
+    <div>{(indicator.get() as any) ?? props.fallback}</div>
+    <div>{props.ready && indicator.get()}</div>
+    <span>{String(indicator.get())}</span>
+    <span>{props.reader.get(0)}</span>
+  </section>;
+}
+"#;
+    let (program, cm) = parse_program(src);
+    let out = normalize(&emit(transform(program, empty_plugin_metadata()), cm));
+
+    assert!(out.contains("@rue-js/rue/vapor"), "{out}");
+    assert!(out.contains("const __slot = indicator.get();"), "{out}");
+    assert!(out.contains("indicator.get() as any) ?? props.fallback"), "{out}");
+    assert!(out.contains("props.ready ? indicator.get() : \"\""), "{out}");
+    assert!(out.matches("renderAnchor(__slot").count() >= 3, "{out}");
+    assert!(!out.contains("_$settextContent(_") || !out.contains(", indicator.get());"), "{out}");
+    assert!(out.contains("String(indicator.get())"), "{out}");
+    assert!(out.contains("props.reader.get(0)"), "{out}");
+}
+
+#[test]
 fn transform_entry_hardens_slot_routerlink_modelled_lists_and_show_combo() {
     let src = r#"
 function View(props) {

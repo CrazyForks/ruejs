@@ -15,6 +15,19 @@ use js_sys::{Array, Function, Object, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
+const ANCHOR_MAP_COMPACT_STEP: usize = 64;
+const RANGE_MAP_COMPACT_STEP: usize = 64;
+
+fn next_compact_threshold(len: usize, step: usize) -> usize {
+    len.saturating_add(step).max(step)
+}
+
+fn has_native_contains_method(value: &JsValue) -> bool {
+    Reflect::get(value, &JsValue::from_str("contains"))
+        .ok()
+        .is_some_and(|contains| contains.is_function())
+}
+
 fn debug_record_sidebar_compaction(kind: &str, host: &JsValue) {
     let host_class = Reflect::get(host, &JsValue::from_str("className"))
         .unwrap_or(JsValue::UNDEFINED)
@@ -39,6 +52,34 @@ fn debug_record_sidebar_compaction(kind: &str, host: &JsValue) {
     let _ = Reflect::set(&record, &JsValue::from_str("hostClass"), &JsValue::from_str(&host_class));
     array.push(&record);
     let _ = Reflect::set(&global, &key, &array.into());
+}
+
+fn parent_node_js(node: &JsValue) -> Option<JsValue> {
+    let parent =
+        js_sys::Reflect::get(node, &JsValue::from_str("parentNode")).unwrap_or(JsValue::UNDEFINED);
+    if parent.is_undefined() || parent.is_null() { None } else { Some(parent) }
+}
+
+fn dom_root_js(node: &JsValue) -> JsValue {
+    let mut cur = node.clone();
+    for _ in 0..32 {
+        let Some(parent) = parent_node_js(&cur) else {
+            return cur;
+        };
+        cur = parent;
+    }
+    cur
+}
+
+fn shares_dom_root_js(left: &JsValue, right: &JsValue) -> bool {
+    let left_root = dom_root_js(left);
+    let right_root = dom_root_js(right);
+    Object::is(&left_root, &right_root)
+}
+
+fn is_explicitly_disconnected(node: &JsValue) -> bool {
+    Reflect::get(node, &JsValue::from_str("isConnected")).ok().and_then(|v| v.as_bool())
+        == Some(false)
 }
 
 // 渲染辅助方法：
@@ -135,11 +176,9 @@ where
         fn in_detached_fragment(node: &JsValue) -> bool {
             let mut cur = node.clone();
             for _ in 0..16 {
-                let pn = js_sys::Reflect::get(&cur, &JsValue::from_str("parentNode"))
-                    .unwrap_or(JsValue::UNDEFINED);
-                if pn.is_undefined() || pn.is_null() {
+                let Some(pn) = parent_node_js(&cur) else {
                     return false;
-                }
+                };
                 let nt = js_sys::Reflect::get(&pn, &JsValue::from_str("nodeType"))
                     .unwrap_or(JsValue::UNDEFINED)
                     .as_f64()
@@ -181,11 +220,16 @@ where
             if let Some(preserve) = preserve_anchor {
                 let entry_js: JsValue = entry.anchor.clone().into();
                 let preserve_js: JsValue = preserve.clone().into();
-                let matches_current = js_sys::Object::is(&entry_js, &preserve_js)
-                    || adapter_owned.as_ref().is_some_and(|adapter| {
+                let matches_current = if js_sys::Object::is(&entry_js, &preserve_js) {
+                    true
+                } else if has_native_contains_method(&preserve_js) {
+                    false
+                } else {
+                    adapter_owned.as_ref().is_some_and(|adapter| {
                         adapter.contains(&entry.anchor, preserve)
                             && adapter.contains(preserve, &entry.anchor)
-                    });
+                    })
+                };
                 if matches_current {
                     kept.push(entry);
                     continue;
@@ -197,14 +241,19 @@ where
                 Reflect::get(&av, &JsValue::from_str("isConnected")).ok().and_then(|v| v.as_bool());
             let keep = match connected {
                 Some(true) => true,
-                Some(false) | None => {
+                // Detached roots are valid render targets in tests and offscreen rendering. Keep
+                // entries that still belong to the same root as the current anchor; otherwise
+                // consider the disconnected entry stale and dispose it.
+                Some(false) => preserve_anchor.is_some_and(|preserve| {
+                    let preserve_js: JsValue = preserve.clone().into();
+                    shares_dom_root_js(&av, &preserve_js)
+                }),
+                None => {
                     if let Some(adapter) = adapter_owned.as_ref() {
                         adapter.get_parent_node(&entry.anchor).is_some()
                             && !has_detached_fragment_ancestor_by_adapter(adapter, &entry.anchor)
                     } else {
-                        let ret = js_sys::Reflect::get(&av, &JsValue::from_str("parentNode"))
-                            .unwrap_or(JsValue::UNDEFINED);
-                        !ret.is_undefined() && !ret.is_null() && !in_detached_fragment(&av)
+                        parent_node_js(&av).is_some() && !in_detached_fragment(&av)
                     }
                 }
             };
@@ -223,6 +272,24 @@ where
         }
 
         self.anchor_map = kept;
+        self.anchor_map_next_compact_at =
+            next_compact_threshold(self.anchor_map.len(), ANCHOR_MAP_COMPACT_STEP);
+    }
+
+    pub(crate) fn maybe_compact_anchor_map_preserving(
+        &mut self,
+        preserve_anchor: Option<&A::Element>,
+    ) where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        let len = self.anchor_map.len();
+        if len == 0 {
+            self.anchor_map_next_compact_at = ANCHOR_MAP_COMPACT_STEP;
+            return;
+        }
+        if len <= ANCHOR_MAP_COMPACT_STEP || len >= self.anchor_map_next_compact_at {
+            self.compact_anchor_map_preserving(preserve_anchor);
+        }
     }
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -263,11 +330,9 @@ where
         fn in_detached_fragment(node: &JsValue, current_anchor: Option<&JsValue>) -> bool {
             let mut cur = node.clone();
             for _ in 0..16 {
-                let pn = js_sys::Reflect::get(&cur, &JsValue::from_str("parentNode"))
-                    .unwrap_or(JsValue::UNDEFINED);
-                if pn.is_undefined() || pn.is_null() {
+                let Some(pn) = parent_node_js(&cur) else {
                     return false;
-                }
+                };
                 let nt = js_sys::Reflect::get(&pn, &JsValue::from_str("nodeType"))
                     .unwrap_or(JsValue::UNDEFINED)
                     .as_f64()
@@ -285,11 +350,9 @@ where
                             if js_sys::Object::is(&pn, &cur2) {
                                 return false;
                             }
-                            let up = js_sys::Reflect::get(&cur2, &JsValue::from_str("parentNode"))
-                                .unwrap_or(JsValue::UNDEFINED);
-                            if up.is_undefined() || up.is_null() {
+                            let Some(up) = parent_node_js(&cur2) else {
                                 break;
-                            }
+                            };
                             cur2 = up;
                         }
                     }
@@ -346,11 +409,14 @@ where
                 Reflect::get(&sv, &JsValue::from_str("isConnected")).ok().and_then(|v| v.as_bool());
             // keep 判定逻辑（强到弱）：
             // 1) isConnected === true：保留
-            // 2) isConnected === false：丢弃
+            // 2) isConnected === false：仅在当前 anchor 也明确处于离线 root 时保留
             // 3) isConnected 缺失：用适配器或 parentNode 继续判定，同时排除“未挂载的 fragment”情形
             let keep = match connected {
                 Some(true) => true,
-                Some(false) => false,
+                Some(false) => self.current_anchor.as_ref().is_some_and(|anchor| {
+                    let anchor_js: JsValue = anchor.clone().into();
+                    is_explicitly_disconnected(&anchor_js) && shares_dom_root_js(&sv, &anchor_js)
+                }),
                 None => {
                     if let Some(adapter) = adapter_owned.as_ref() {
                         let anchor_opt = self.current_anchor.as_ref();
@@ -370,9 +436,7 @@ where
                         if in_detached_fragment(&sv, ca_js_ref) {
                             false
                         } else {
-                            let ret = js_sys::Reflect::get(&sv, &JsValue::from_str("parentNode"))
-                                .unwrap_or(JsValue::UNDEFINED);
-                            !ret.is_undefined() && !ret.is_null()
+                            parent_node_js(&sv).is_some()
                         }
                     }
                 }
@@ -412,6 +476,22 @@ where
         }
 
         self.range_map = kept;
+        self.range_map_next_compact_at =
+            next_compact_threshold(self.range_map.len(), RANGE_MAP_COMPACT_STEP);
+    }
+
+    pub(super) fn maybe_compact_range_map(&mut self)
+    where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        let len = self.range_map.len();
+        if len == 0 {
+            self.range_map_next_compact_at = RANGE_MAP_COMPACT_STEP;
+            return;
+        }
+        if len <= RANGE_MAP_COMPACT_STEP || len >= self.range_map_next_compact_at {
+            self.compact_range_map();
+        }
     }
 
     /// 将新的 MountInput props 与 children 同步写入只读 reactive 视图（props_ro）。
@@ -474,10 +554,21 @@ where
     /// 返回：
     /// - Some(index) 或 None
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-    pub(crate) fn find_container_index(&mut self, container: &A::Element) -> Option<usize> {
-        if let Some(adapter) = self.get_dom_adapter() {
-            for (i, entry) in self.container_map.iter().enumerate() {
-                // 双向 contains 作为“等价容器”的判定准则
+    pub(crate) fn find_container_index(&mut self, container: &A::Element) -> Option<usize>
+    where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        let target_js: JsValue = container.clone().into();
+        let target_has_native_contains = has_native_contains_method(&target_js);
+        for (i, entry) in self.container_map.iter().enumerate() {
+            let entry_js: JsValue = entry.container.clone().into();
+            if js_sys::Object::is(&entry_js, &target_js) {
+                return Some(i);
+            }
+            if target_has_native_contains {
+                continue;
+            }
+            if let Some(adapter) = self.get_dom_adapter() {
                 if adapter.contains(&entry.container, container)
                     && adapter.contains(container, &entry.container)
                 {
@@ -497,11 +588,15 @@ where
         if self.anchor_map.is_empty() {
             return None;
         }
+        let target_js: JsValue = anchor.clone().into();
+        let target_has_native_contains = has_native_contains_method(&target_js);
         for (i, entry) in self.anchor_map.iter().enumerate() {
             let av: JsValue = entry.anchor.clone().into();
-            let at: JsValue = anchor.clone().into();
-            if js_sys::Object::is(&av, &at) {
+            if js_sys::Object::is(&av, &target_js) {
                 return Some(i);
+            }
+            if target_has_native_contains {
+                continue;
             }
             if let Some(adapter) = self.get_dom_adapter() {
                 if adapter.contains(&entry.anchor, anchor)
@@ -528,12 +623,17 @@ where
         if self.range_map.is_empty() {
             return None;
         }
-        // 优先对象同一性（Object::is），其次用适配器双向 contains 判断等价
+        // 优先对象同一性（Object::is）。真实 DOM 节点的双向 contains 与 Object::is 等价，
+        // 只在非 DOM adapter 上保留 contains fallback，避免首屏构建时对 range_map 做 O(N²) DOM contains。
+        let target_js: JsValue = start.clone().into();
+        let target_has_native_contains = has_native_contains_method(&target_js);
         for (i, entry) in self.range_map.iter().enumerate() {
             let sv: JsValue = entry.start.clone().into();
-            let st: JsValue = start.clone().into();
-            if js_sys::Object::is(&sv, &st) {
+            if js_sys::Object::is(&sv, &target_js) {
                 return Some(i);
+            }
+            if target_has_native_contains {
+                continue;
             }
             if let Some(adapter) = self.get_dom_adapter() {
                 if adapter.contains(&entry.start, start) && adapter.contains(start, &entry.start) {
@@ -559,12 +659,19 @@ mod tests {
         RangeMountState,
     };
     use super::*;
-    use crate::reactive::signal::create_reactive;
+    use crate::reactive::core::{
+        create_effect_scope, pop_effect_scope, push_effect_scope, set_reactive_scheduling,
+    };
+    use crate::reactive::effect::create_effect;
+    use crate::reactive::signal::{create_reactive, create_signal};
     use crate::runtime::js_adapter::JsDomAdapter;
     use crate::runtime::{ComponentInternalInstance, LifecycleHooks};
     use js_sys::{Array, Function, Object, Reflect};
+    use std::cell::Cell;
     use std::collections::HashMap;
     use std::marker::PhantomData;
+    use std::rc::Rc;
+    use wasm_bindgen::closure::Closure;
     use wasm_bindgen_test::*;
 
     fn node(tag: &str, node_type: f64) -> JsValue {
@@ -587,6 +694,15 @@ mod tests {
         }))
     }
 
+    fn scoped_block_state(host: JsValue, effect_scope_id: usize) -> MountedState<JsDomAdapter> {
+        MountedState::from_subtree_root(MountedSubtreeState::Text(MountedTextSubtree {
+            host: Some(host),
+            key: None,
+            cleanup_bucket: None,
+            effect_scope_id: Some(effect_scope_id),
+        }))
+    }
+
     fn test_instance(index: usize) -> ComponentInternalInstance<JsDomAdapter> {
         ComponentInternalInstance {
             parent: None,
@@ -604,6 +720,15 @@ mod tests {
 
     fn set_bool(target: &JsValue, key: &str, value: bool) {
         Reflect::set(target, &JsValue::from_str(key), &JsValue::from_bool(value)).unwrap();
+    }
+
+    fn set_native_contains_method(target: &JsValue) {
+        Reflect::set(
+            target,
+            &JsValue::from_str("contains"),
+            &Function::new_with_args("other", "return this === other").into(),
+        )
+        .unwrap();
     }
 
     fn alias_node(tag: &str, alias: &str) -> JsValue {
@@ -810,6 +935,28 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
+    fn compact_threshold_helpers_are_stable() {
+        assert_eq!(ANCHOR_MAP_COMPACT_STEP, 64);
+        assert_eq!(RANGE_MAP_COMPACT_STEP, 64);
+        assert_eq!(next_compact_threshold(0, ANCHOR_MAP_COMPACT_STEP), 64);
+        assert_eq!(next_compact_threshold(1, ANCHOR_MAP_COMPACT_STEP), 65);
+        assert_eq!(next_compact_threshold(64, ANCHOR_MAP_COMPACT_STEP), 128);
+        assert_eq!(next_compact_threshold(usize::MAX, ANCHOR_MAP_COMPACT_STEP), usize::MAX);
+    }
+
+    #[wasm_bindgen_test]
+    fn native_contains_detection_requires_a_function() {
+        let plain = node("plain", 1.0);
+        assert!(!has_native_contains_method(&plain));
+
+        Reflect::set(&plain, &JsValue::from_str("contains"), &JsValue::TRUE).unwrap();
+        assert!(!has_native_contains_method(&plain));
+
+        set_native_contains_method(&plain);
+        assert!(has_native_contains_method(&plain));
+    }
+
+    #[wasm_bindgen_test]
     fn find_helpers_cover_no_adapter_miss_and_adapter_equivalence() {
         let mut rue = Rue::<JsDomAdapter>::new();
         let container = alias_node("container", "container-a");
@@ -841,6 +988,71 @@ mod tests {
         rue.set_dom_adapter(alias_adapter());
         assert_eq!(rue.find_container_index(&container_equiv), Some(0));
         assert_eq!(rue.find_container_index(&container_miss), None);
+        assert_eq!(rue.find_anchor_index(&anchor_equiv), Some(0));
+        assert_eq!(rue.find_range_index(&start_equiv), Some(0));
+    }
+
+    #[wasm_bindgen_test]
+    fn find_helpers_skip_adapter_equivalence_for_native_contains_targets() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(alias_adapter());
+
+        let container = alias_node("container", "same-container");
+        set_native_contains_method(&container);
+        let container_equiv = alias_node("container", "same-container");
+        set_native_contains_method(&container_equiv);
+        rue.container_map.push(ContainerMountState::new(
+            container.clone(),
+            block_state(node("container-host", 1.0)),
+        ));
+        assert_eq!(rue.find_container_index(&container), Some(0));
+        assert_eq!(rue.find_container_index(&container_equiv), None);
+
+        let anchor = alias_node("anchor", "same-anchor");
+        set_native_contains_method(&anchor);
+        let anchor_equiv = alias_node("anchor", "same-anchor");
+        set_native_contains_method(&anchor_equiv);
+        rue.anchor_map
+            .push(AnchorMountState::new(anchor.clone(), block_state(node("anchor-host", 1.0))));
+        assert_eq!(rue.find_anchor_index(&anchor), Some(0));
+        assert_eq!(rue.find_anchor_index(&anchor_equiv), None);
+
+        let start = alias_node("start", "same-range");
+        set_native_contains_method(&start);
+        let start_equiv = alias_node("start", "same-range");
+        set_native_contains_method(&start_equiv);
+        rue.range_map.push(RangeMountState::new(
+            start.clone(),
+            node("end", 8.0),
+            block_state(node("range-host", 1.0)),
+        ));
+        assert_eq!(rue.find_range_index(&start), Some(0));
+        assert_eq!(rue.find_range_index(&start_equiv), None);
+    }
+
+    #[wasm_bindgen_test]
+    fn find_helpers_keep_adapter_equivalence_for_non_native_targets() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(alias_adapter());
+
+        let container = alias_node("container", "non-native-container");
+        let container_equiv = alias_node("container", "non-native-container");
+        rue.container_map
+            .push(ContainerMountState::new(container, block_state(node("container-host", 1.0))));
+
+        let anchor = alias_node("anchor", "non-native-anchor");
+        let anchor_equiv = alias_node("anchor", "non-native-anchor");
+        rue.anchor_map.push(AnchorMountState::new(anchor, block_state(node("anchor-host", 1.0))));
+
+        let start = alias_node("start", "non-native-range");
+        let start_equiv = alias_node("start", "non-native-range");
+        rue.range_map.push(RangeMountState::new(
+            start,
+            node("end", 8.0),
+            block_state(node("range-host", 1.0)),
+        ));
+
+        assert_eq!(rue.find_container_index(&container_equiv), Some(0));
         assert_eq!(rue.find_anchor_index(&anchor_equiv), Some(0));
         assert_eq!(rue.find_range_index(&start_equiv), Some(0));
     }
@@ -974,6 +1186,164 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
+    fn compact_anchor_map_drops_disconnected_anchor_with_parent_chain() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let detached_parent = node("detached-parent", 1.0);
+        let stale_anchor = node("stale-anchor", 8.0);
+        set_bool(&stale_anchor, "isConnected", false);
+        set_parent(&stale_anchor, &detached_parent);
+
+        rue.anchor_map.push(AnchorMountState::new(
+            stale_anchor.clone(),
+            block_state(node("stale-host", 1.0)),
+        ));
+
+        rue.compact_anchor_map();
+
+        assert!(rue.anchor_map.is_empty());
+        assert!(rue.find_anchor_index(&stale_anchor).is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_preserves_current_disconnected_anchor_by_identity() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let detached_parent = node("detached-parent", 1.0);
+        let current_anchor = node("current-anchor", 8.0);
+        set_bool(&current_anchor, "isConnected", false);
+        set_parent(&current_anchor, &detached_parent);
+
+        rue.anchor_map.push(AnchorMountState::new(
+            current_anchor.clone(),
+            block_state(node("current-host", 1.0)),
+        ));
+
+        rue.compact_anchor_map_preserving(Some(&current_anchor));
+
+        assert_eq!(rue.anchor_map.len(), 1);
+        assert!(rue.find_anchor_index(&current_anchor).is_some());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_preserves_disconnected_anchor_in_current_detached_root() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let detached_parent = node("detached-parent", 1.0);
+        let stale_anchor = node("stale-anchor", 8.0);
+        let current_anchor = node("current-anchor", 8.0);
+        set_bool(&stale_anchor, "isConnected", false);
+        set_parent(&stale_anchor, &detached_parent);
+        set_parent(&current_anchor, &detached_parent);
+
+        rue.anchor_map.push(AnchorMountState::new(
+            stale_anchor.clone(),
+            block_state(node("stale-host", 1.0)),
+        ));
+
+        rue.compact_anchor_map_preserving(Some(&current_anchor));
+
+        assert_eq!(rue.anchor_map.len(), 1);
+        assert!(rue.find_anchor_index(&stale_anchor).is_some());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_drops_disconnected_anchor_before_adapter_parent_fallback() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(alias_adapter());
+        let detached_parent = node("detached-parent", 1.0);
+        let stale_anchor = alias_node("stale-anchor", "adapter-stale");
+        set_bool(&stale_anchor, "isConnected", false);
+        set_parent(&stale_anchor, &detached_parent);
+
+        rue.anchor_map.push(AnchorMountState::new(
+            stale_anchor.clone(),
+            block_state(node("stale-host", 1.0)),
+        ));
+
+        rue.compact_anchor_map();
+
+        assert!(rue.anchor_map.is_empty());
+        assert!(rue.find_anchor_index(&stale_anchor).is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_native_contains_preserve_does_not_keep_disconnected_alias() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(alias_adapter());
+        let stale_anchor = alias_node("stale-anchor", "native-stale");
+        let preserve_alias = alias_node("preserve-anchor", "native-stale");
+        set_native_contains_method(&preserve_alias);
+        set_bool(&stale_anchor, "isConnected", false);
+        set_parent(&stale_anchor, &node("detached-parent", 1.0));
+
+        rue.anchor_map.push(AnchorMountState::new(
+            stale_anchor.clone(),
+            block_state(node("stale-host", 1.0)),
+        ));
+
+        rue.compact_anchor_map_preserving(Some(&preserve_alias));
+
+        assert!(rue.anchor_map.is_empty());
+        assert!(rue.find_anchor_index(&stale_anchor).is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_drops_many_disconnected_parented_anchors_and_resets_threshold() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let live_anchor = node("live-anchor", 8.0);
+        set_bool(&live_anchor, "isConnected", true);
+        rue.anchor_map
+            .push(AnchorMountState::new(live_anchor.clone(), block_state(node("live-host", 1.0))));
+
+        for index in 0..(ANCHOR_MAP_COMPACT_STEP + 8) {
+            let stale_anchor = node(&format!("stale-anchor-{index}"), 8.0);
+            set_bool(&stale_anchor, "isConnected", false);
+            set_parent(&stale_anchor, &node(&format!("detached-parent-{index}"), 1.0));
+            rue.anchor_map
+                .push(AnchorMountState::new(stale_anchor, block_state(node("stale-host", 1.0))));
+        }
+
+        rue.compact_anchor_map();
+
+        assert_eq!(rue.anchor_map.len(), 1);
+        assert!(rue.find_anchor_index(&live_anchor).is_some());
+        assert_eq!(rue.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP + 1);
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_disposes_effect_scope_for_disconnected_parented_anchor() {
+        set_reactive_scheduling("sync");
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let source = create_signal(JsValue::from_f64(0.0), None);
+        let hits = Rc::new(Cell::new(0));
+        let scope_id = create_effect_scope();
+
+        push_effect_scope(scope_id);
+        let source_for_effect = source.clone();
+        let hits_for_effect = hits.clone();
+        let effect = Closure::wrap(Box::new(move || {
+            let _ = source_for_effect.get_js();
+            hits_for_effect.set(hits_for_effect.get() + 1);
+        }) as Box<dyn FnMut()>);
+        let _handle = create_effect(effect.as_ref().clone().unchecked_into(), None);
+        effect.forget();
+        assert_eq!(pop_effect_scope(), Some(scope_id));
+        assert_eq!(hits.get(), 1);
+
+        let stale_anchor = node("stale-anchor", 8.0);
+        set_bool(&stale_anchor, "isConnected", false);
+        set_parent(&stale_anchor, &node("detached-parent", 1.0));
+        rue.anchor_map.push(AnchorMountState::new(
+            stale_anchor,
+            scoped_block_state(node("stale-host", 1.0), scope_id),
+        ));
+
+        rue.compact_anchor_map();
+        source.set_js(JsValue::from_f64(1.0));
+
+        assert!(rue.anchor_map.is_empty());
+        assert_eq!(hits.get(), 1);
+    }
+
+    #[wasm_bindgen_test]
     fn compact_anchor_map_covers_js_parent_fallback_without_adapter() {
         let mut rue = Rue::<JsDomAdapter>::new();
         let parent = node("parent", 1.0);
@@ -1021,6 +1391,77 @@ mod tests {
         assert_eq!(rue.anchor_map.len(), 2);
         assert!(rue.find_anchor_index(&preserve_anchor).is_some());
         assert!(rue.find_anchor_index(&parented).is_some());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_anchor_map_does_not_preserve_native_contains_equivalent_aliases() {
+        let mut native_rue = Rue::<JsDomAdapter>::new();
+        native_rue.set_dom_adapter(alias_adapter());
+        let native_entry = alias_node("anchor", "preserve-me");
+        let native_preserve = alias_node("anchor", "preserve-me");
+        set_native_contains_method(&native_preserve);
+        native_rue.anchor_map.push(AnchorMountState::new(
+            native_entry.clone(),
+            block_state(node("native-host", 1.0)),
+        ));
+
+        native_rue.compact_anchor_map_preserving(Some(&native_preserve));
+
+        assert!(native_rue.anchor_map.is_empty());
+        assert_eq!(native_rue.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP);
+
+        let mut adapter_rue = Rue::<JsDomAdapter>::new();
+        adapter_rue.set_dom_adapter(alias_adapter());
+        let adapter_entry = alias_node("anchor", "preserve-me");
+        let adapter_preserve = alias_node("anchor", "preserve-me");
+        adapter_rue.anchor_map.push(AnchorMountState::new(
+            adapter_entry.clone(),
+            block_state(node("adapter-host", 1.0)),
+        ));
+
+        adapter_rue.compact_anchor_map_preserving(Some(&adapter_preserve));
+
+        assert_eq!(adapter_rue.anchor_map.len(), 1);
+        assert!(adapter_rue.find_anchor_index(&adapter_entry).is_some());
+        assert_eq!(adapter_rue.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP + 1);
+    }
+
+    #[wasm_bindgen_test]
+    fn maybe_compact_anchor_map_respects_empty_small_and_deferred_thresholds() {
+        let mut empty = Rue::<JsDomAdapter>::new();
+        empty.anchor_map_next_compact_at = 999;
+        empty.maybe_compact_anchor_map_preserving(None);
+        assert!(empty.anchor_map.is_empty());
+        assert_eq!(empty.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP);
+
+        let mut small = Rue::<JsDomAdapter>::new();
+        small.anchor_map_next_compact_at = 999;
+        let small_stale = node("small-stale", 8.0);
+        set_bool(&small_stale, "isConnected", false);
+        small
+            .anchor_map
+            .push(AnchorMountState::new(small_stale, block_state(node("small-host", 1.0))));
+        small.maybe_compact_anchor_map_preserving(None);
+        assert!(small.anchor_map.is_empty());
+        assert_eq!(small.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP);
+
+        let mut deferred = Rue::<JsDomAdapter>::new();
+        deferred.anchor_map_next_compact_at = ANCHOR_MAP_COMPACT_STEP * 2;
+        for index in 0..=ANCHOR_MAP_COMPACT_STEP {
+            let stale = node(&format!("deferred-anchor-{index}"), 8.0);
+            set_bool(&stale, "isConnected", false);
+            deferred
+                .anchor_map
+                .push(AnchorMountState::new(stale, block_state(node("deferred-host", 1.0))));
+        }
+        deferred.maybe_compact_anchor_map_preserving(None);
+        assert_eq!(deferred.anchor_map.len(), ANCHOR_MAP_COMPACT_STEP + 1);
+        assert_eq!(deferred.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP * 2);
+
+        deferred.anchor_map_next_compact_at = ANCHOR_MAP_COMPACT_STEP + 1;
+        deferred.maybe_compact_anchor_map_preserving(None);
+        assert!(deferred.anchor_map.is_empty());
+        assert_eq!(deferred.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP);
     }
 
     #[wasm_bindgen_test]
@@ -1123,6 +1564,50 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
+    fn compact_range_map_drops_disconnected_start_with_parent_chain() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let detached_parent = node("detached-parent", 1.0);
+        let stale_start = node("stale-start", 8.0);
+        set_bool(&stale_start, "isConnected", false);
+        set_parent(&stale_start, &detached_parent);
+
+        rue.range_map.push(RangeMountState::new(
+            stale_start.clone(),
+            node("stale-end", 8.0),
+            block_state(node("stale-host", 1.0)),
+        ));
+
+        rue.compact_range_map();
+
+        assert!(rue.range_map.is_empty());
+        assert!(rue.find_range_index(&stale_start).is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_range_map_preserves_disconnected_start_in_current_detached_root() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let detached_parent = node("detached-parent", 1.0);
+        let current_end = node("current-end", 8.0);
+        let kept_start = node("kept-start", 8.0);
+        set_bool(&kept_start, "isConnected", false);
+        set_bool(&current_end, "isConnected", false);
+        set_parent(&kept_start, &detached_parent);
+        set_parent(&current_end, &detached_parent);
+        rue.current_anchor = Some(current_end);
+
+        rue.range_map.push(RangeMountState::new(
+            kept_start.clone(),
+            node("kept-end", 8.0),
+            block_state(node("kept-host", 1.0)),
+        ));
+
+        rue.compact_range_map();
+
+        assert_eq!(rue.range_map.len(), 1);
+        assert!(rue.find_range_index(&kept_start).is_some());
+    }
+
+    #[wasm_bindgen_test]
     fn compact_range_map_covers_connected_and_adapter_parent_paths() {
         let mut rue = Rue::<JsDomAdapter>::new();
         rue.set_dom_adapter(alias_adapter());
@@ -1150,5 +1635,47 @@ mod tests {
         assert_eq!(rue.range_map.len(), 2);
         assert!(rue.find_range_index(&connected).is_some());
         assert!(rue.find_range_index(&parented).is_some());
+    }
+
+    #[wasm_bindgen_test]
+    fn maybe_compact_range_map_respects_empty_small_and_deferred_thresholds() {
+        let mut empty = Rue::<JsDomAdapter>::new();
+        empty.range_map_next_compact_at = 999;
+        empty.maybe_compact_range_map();
+        assert!(empty.range_map.is_empty());
+        assert_eq!(empty.range_map_next_compact_at, RANGE_MAP_COMPACT_STEP);
+
+        let mut small = Rue::<JsDomAdapter>::new();
+        small.range_map_next_compact_at = 999;
+        let small_stale = node("small-range-stale", 8.0);
+        set_bool(&small_stale, "isConnected", false);
+        small.range_map.push(RangeMountState::new(
+            small_stale,
+            node("small-range-end", 8.0),
+            block_state(node("small-range-host", 1.0)),
+        ));
+        small.maybe_compact_range_map();
+        assert!(small.range_map.is_empty());
+        assert_eq!(small.range_map_next_compact_at, RANGE_MAP_COMPACT_STEP);
+
+        let mut deferred = Rue::<JsDomAdapter>::new();
+        deferred.range_map_next_compact_at = RANGE_MAP_COMPACT_STEP * 2;
+        for index in 0..=RANGE_MAP_COMPACT_STEP {
+            let stale = node(&format!("deferred-range-{index}"), 8.0);
+            set_bool(&stale, "isConnected", false);
+            deferred.range_map.push(RangeMountState::new(
+                stale,
+                node("deferred-range-end", 8.0),
+                block_state(node("deferred-range-host", 1.0)),
+            ));
+        }
+        deferred.maybe_compact_range_map();
+        assert_eq!(deferred.range_map.len(), RANGE_MAP_COMPACT_STEP + 1);
+        assert_eq!(deferred.range_map_next_compact_at, RANGE_MAP_COMPACT_STEP * 2);
+
+        deferred.range_map_next_compact_at = RANGE_MAP_COMPACT_STEP + 1;
+        deferred.maybe_compact_range_map();
+        assert!(deferred.range_map.is_empty());
+        assert_eq!(deferred.range_map_next_compact_at, RANGE_MAP_COMPACT_STEP);
     }
 }

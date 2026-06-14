@@ -443,7 +443,7 @@ const readCopyText = async (config: NormalizedCopyConfig, children: any) => {
 
 /** fallback Copy Text 的内部工具函数。 */
 const fallbackCopyText = (text: string) => {
-  if (typeof document === 'undefined') return
+  if (typeof document === 'undefined') return false
   const textarea = document.createElement('textarea')
   textarea.value = text
   textarea.setAttribute('readonly', 'true')
@@ -451,26 +451,58 @@ const fallbackCopyText = (text: string) => {
   textarea.style.opacity = '0'
   document.body.appendChild(textarea)
   textarea.select()
-  document.execCommand?.('copy')
-  document.body.removeChild(textarea)
+  try {
+    if (typeof document.execCommand !== 'function') return true
+    return document.execCommand('copy') !== false
+  } finally {
+    document.body.removeChild(textarea)
+  }
 }
 
 /** write Clipboard 的内部工具函数。 */
 const writeClipboard = async (text: string, format?: LinkCopyConfig['format']) => {
   const clipboard = (globalThis as any).navigator?.clipboard
   if (format === 'text/html' && clipboard?.write && (globalThis as any).ClipboardItem) {
-    const item = new (globalThis as any).ClipboardItem({
-      'text/html': new Blob([text], { type: 'text/html' }),
-      'text/plain': new Blob([text], { type: 'text/plain' }),
-    })
-    await clipboard.write([item])
-    return
+    try {
+      const item = new (globalThis as any).ClipboardItem({
+        'text/html': new Blob([text], { type: 'text/html' }),
+        'text/plain': new Blob([text], { type: 'text/plain' }),
+      })
+      await clipboard.write([item])
+      return true
+    } catch {
+      // Fall through to plain text/fallback copy when browser permission rejects rich writes.
+    }
   }
   if (clipboard?.writeText) {
-    await clipboard.writeText(text)
-    return
+    try {
+      await clipboard.writeText(text)
+      return true
+    } catch {
+      // Permission can be denied in dev/browser automation; keep the user gesture fallback alive.
+    }
   }
-  fallbackCopyText(text)
+  return fallbackCopyText(text)
+}
+
+const expandableEllipsisStyleId = 'rue-link-expandable-ellipsis-style'
+const expandableEllipsisStyle = `
+[data-rue-link-actions][data-rue-link-expanded="true"] [data-rue-link-ellipsis-text] {
+  display: inline !important;
+  overflow: visible !important;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  -webkit-box-orient: initial !important;
+  -webkit-line-clamp: unset !important;
+}
+`
+
+const ensureExpandableEllipsisStyle = () => {
+  if (typeof document === 'undefined' || document.getElementById(expandableEllipsisStyleId)) return
+  const styleElement = document.createElement('style')
+  styleElement.id = expandableEllipsisStyleId
+  styleElement.textContent = expandableEllipsisStyle
+  document.head.appendChild(styleElement)
 }
 
 /** 渲染 Decorated Content 的内部工具函数。 */
@@ -604,11 +636,14 @@ const Link: FC<LinkProps> = ({
   const copyConfig = normalizeCopyConfig(copyable)
   const editConfig = normalizeEditConfig(editable)
   const ellipsisConfig = resolveEllipsis(ellipsis)
+  if (ellipsisConfig.expandable) ensureExpandableEllipsisStyle()
   const copied = ref(false)
   const uncontrolledEditing = ref(!!editConfig.editing)
   const uncontrolledExpanded = ref(!!ellipsisConfig.defaultExpanded)
   const isTextEllipsed = ref(false)
   const editValue = ref(editConfig.text ?? toText(children))
+  let copyButtonElement: HTMLButtonElement | undefined
+  let copyButtonIdleHTML = ''
   const ellipsisTextRef = useRef<HTMLElement>()
   const editorRef = useRef<HTMLInputElement | HTMLTextAreaElement>()
   const resizeObserverRef = useRef<ResizeObserver>()
@@ -719,6 +754,55 @@ const Link: FC<LinkProps> = ({
     scheduleEllipsisMeasure()
   }
 
+  const setCopyButtonRef = (element: HTMLButtonElement | null) => {
+    copyButtonElement = element ?? undefined
+    if (element && !copyButtonIdleHTML) {
+      copyButtonIdleHTML = element.innerHTML
+    }
+  }
+
+  const resolveCopyButtonFromEvent = (event: MouseEvent) => {
+    const currentTarget = (event as any).currentTarget
+    if (currentTarget?.tagName === 'BUTTON') return currentTarget as HTMLButtonElement
+    const target = (event as any).target
+    if (target?.closest) {
+      return target.closest('[data-rue-link-copy]') as HTMLButtonElement | null
+    }
+    return copyButtonElement
+  }
+
+  const syncCopiedDom = (value: boolean, buttonElement = copyButtonElement) => {
+    if (!buttonElement) return
+    if (!copyButtonIdleHTML) {
+      copyButtonIdleHTML = buttonElement.innerHTML
+    }
+
+    buttonElement.setAttribute('aria-label', value ? '已复制' : '复制链接文本')
+    const titleValue = copyConfig.tooltips ?? (value ? '已复制' : '复制')
+    if (typeof titleValue === 'string') {
+      buttonElement.setAttribute('title', titleValue)
+    }
+
+    if (value) {
+      buttonElement.textContent = '✓'
+    } else if (copyButtonIdleHTML) {
+      buttonElement.innerHTML = copyButtonIdleHTML
+    }
+  }
+
+  const showCopiedFeedback = (buttonElement = copyButtonElement) => {
+    copied.value = true
+    syncCopiedDom(true, buttonElement)
+    renderDynamicRegion()
+    if (typeof window === 'undefined') return
+    window.clearTimeout(copyFeedbackTimer)
+    copyFeedbackTimer = window.setTimeout(() => {
+      copied.value = false
+      syncCopiedDom(false, buttonElement)
+      renderDynamicRegion()
+    }, 1500)
+  }
+
   const startEdit = (event?: MouseEvent) => {
     if (disabled) return
     stopEvent(event)
@@ -747,9 +831,9 @@ const Link: FC<LinkProps> = ({
   const toggleExpanded = (event: MouseEvent) => {
     stopEvent(event)
     const canCollapse = ellipsisConfig.expandable === 'collapsible'
-    const expanded = getIsExpanded()
-    const nextExpanded = expanded ? (canCollapse ? false : true) : true
-    if (nextExpanded === expanded) return
+    const currentExpanded = getIsExpanded()
+    const nextExpanded = currentExpanded ? (canCollapse ? false : true) : true
+    if (nextExpanded === currentExpanded) return
     if (ellipsisConfig.onExpand) ellipsisConfig.onExpand(event, { expanded: nextExpanded })
     if (ellipsisConfig.expanded === undefined) uncontrolledExpanded.value = nextExpanded
     renderDynamicRegion()
@@ -788,19 +872,23 @@ const Link: FC<LinkProps> = ({
     }
 
     stopEvent(event)
+    const copyButton = resolveCopyButtonFromEvent(event)
+    showCopiedFeedback(copyButton ?? undefined)
     readCopyText(copyConfig, children)
       .then(text => writeClipboard(String(text), copyConfig.format))
-      .then(() => {
-        copied.value = true
-        if (copyConfig.onCopy) copyConfig.onCopy(event)
-        renderDynamicRegion()
-        if (typeof window !== 'undefined') {
-          window.clearTimeout(copyFeedbackTimer)
-          copyFeedbackTimer = window.setTimeout(() => {
-            copied.value = false
-            renderDynamicRegion()
-          }, 1500)
+      .then(copiedToClipboard => {
+        if (!copiedToClipboard) {
+          copied.value = false
+          syncCopiedDom(false, copyButton ?? undefined)
+          renderDynamicRegion()
+          return
         }
+        if (copyConfig.onCopy) copyConfig.onCopy(event)
+      })
+      .catch(() => {
+        copied.value = false
+        syncCopiedDom(false, copyButton ?? undefined)
+        renderDynamicRegion()
       })
   }
 
@@ -926,30 +1014,54 @@ const Link: FC<LinkProps> = ({
       return <span className="min-w-0">{decoratedContent}</span>
     }
 
+    const titleProps = titleValue !== undefined ? { title: titleValue } : {}
+    const expanded = getIsExpanded()
     const textClassName =
-      ellipsisConfig.rows > 1
-        ? 'min-w-0 max-w-full overflow-hidden align-bottom'
-        : 'min-w-0 max-w-full truncate align-bottom'
-    const textStyle = buildEllipsisStyle(ellipsisConfig.rows)
+      expanded
+        ? 'min-w-0 max-w-full whitespace-normal break-words align-bottom'
+        : ellipsisConfig.rows > 1
+          ? 'min-w-0 max-w-full overflow-hidden align-bottom'
+          : 'min-w-0 max-w-full truncate align-bottom'
+    const textStyle = expanded
+      ? {
+          minWidth: 0,
+          whiteSpace: 'normal',
+          overflow: 'visible',
+          textOverflow: 'clip',
+        }
+      : buildEllipsisStyle(ellipsisConfig.rows)
 
     if (ellipsisConfig.rows === 1 && ellipsisConfig.suffix) {
       return (
         <span className="inline-flex min-w-0 max-w-full items-baseline align-bottom">
           <span
+            key={expanded ? 'expanded' : 'collapsed'}
             ref={setEllipsisTextRef}
+            data-rue-link-ellipsis-text="true"
+            data-rue-link-ellipsis-rows={String(ellipsisConfig.rows)}
             className={textClassName}
             style={mergeStyles(textStyle, { minWidth: 0 })}
-            title={titleValue}
+            {...titleProps}
           >
             {decoratedContent}
           </span>
-          <span className="shrink-0">{ellipsisConfig.suffix}</span>
+          <span data-rue-link-ellipsis-suffix="true" className="shrink-0">
+            {ellipsisConfig.suffix}
+          </span>
         </span>
       )
     }
 
     return (
-      <span ref={setEllipsisTextRef} className={textClassName} style={textStyle} title={titleValue}>
+      <span
+        key={expanded ? 'expanded' : 'collapsed'}
+        ref={setEllipsisTextRef}
+        data-rue-link-ellipsis-text="true"
+        data-rue-link-ellipsis-rows={String(ellipsisConfig.rows)}
+        className={textClassName}
+        style={textStyle}
+        {...titleProps}
+      >
         {decoratedContent}
         {ellipsisConfig.suffix ? <span>{ellipsisConfig.suffix}</span> : null}
       </span>
@@ -974,9 +1086,11 @@ const Link: FC<LinkProps> = ({
           {iconNode}
           {textNode}
         </>
-      )
+    )
 
     const anchorStyle = ellipsisConfig.enabled ? mergeStyles(style, { minWidth: 0 }) : style
+    const anchorTitleProps =
+      !ellipsisConfig.enabled && titleValue !== undefined ? { title: titleValue } : {}
 
     if (disabled) {
       return (
@@ -985,7 +1099,7 @@ const Link: FC<LinkProps> = ({
           role={rest.role ?? 'link'}
           className={linkClassName}
           style={anchorStyle}
-          title={!ellipsisConfig.enabled ? titleValue : undefined}
+          {...anchorTitleProps}
           aria-disabled="true"
           onClick={handleBaseClick}
         >
@@ -1003,7 +1117,7 @@ const Link: FC<LinkProps> = ({
           rel={anchorRel}
           className={linkClassName}
           style={anchorStyle}
-          title={!ellipsisConfig.enabled ? titleValue : undefined}
+          {...anchorTitleProps}
           tabIndex={rest.tabIndex}
           tabindex={rest.tabIndex}
           onClick={handleRouterClick}
@@ -1021,7 +1135,7 @@ const Link: FC<LinkProps> = ({
         rel={anchorRel}
         className={linkClassName}
         style={anchorStyle}
-        title={!ellipsisConfig.enabled ? titleValue : undefined}
+        {...anchorTitleProps}
         tabIndex={rest.tabIndex}
         tabindex={rest.tabIndex}
         onClick={handleBaseClick}
@@ -1032,10 +1146,11 @@ const Link: FC<LinkProps> = ({
   }
 
   const renderContent = () => {
+    const expanded = getIsExpanded()
     const anchor = renderAnchor()
     const showExpandButton =
       !!ellipsisConfig.expandable &&
-      (!getIsExpanded() || ellipsisConfig.expandable === 'collapsible')
+      (!expanded || ellipsisConfig.expandable === 'collapsible')
 
     if (!hasInlineActions && !showExpandButton) {
       return anchor
@@ -1043,7 +1158,10 @@ const Link: FC<LinkProps> = ({
 
     return (
       <span
+        data-rue-link-actions="true"
+        data-rue-link-expanded={ellipsisConfig.enabled ? (expanded ? 'true' : 'false') : undefined}
         className={mergeClassNames(
+          'rue-link-inline-actions',
           block
             ? 'flex w-full flex-wrap items-start gap-1 align-baseline'
             : 'inline-flex max-w-full flex-wrap items-start gap-1 align-baseline',
@@ -1055,15 +1173,16 @@ const Link: FC<LinkProps> = ({
             type="button"
             data-rue-link-expand="true"
             className="link link-hover text-xs no-underline opacity-70"
-            aria-label={getIsExpanded() ? '收起全文' : '展开全文'}
+            aria-label={expanded ? '收起全文' : '展开全文'}
             onClick={toggleExpanded}
           >
-            {resolveExpandSymbol(ellipsisConfig, getIsExpanded())}
+            {resolveExpandSymbol(ellipsisConfig, expanded)}
           </button>
         ) : null}
         {copyConfig.enabled ? (
           <button
             type="button"
+            ref={setCopyButtonRef}
             data-rue-link-copy="true"
             className="btn btn-ghost btn-xs"
             aria-label={copied.value ? '已复制' : '复制链接文本'}

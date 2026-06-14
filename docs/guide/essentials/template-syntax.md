@@ -121,21 +121,57 @@ JSX 支持在绑定中使用完整的 JavaScript 表达式：
 
 ## 条件渲染 {#conditional-rendering}
 
-Rue 支持多种条件渲染方式：
+Rue 支持 Vue 风格的 JSX 指令，也支持原生 JavaScript 表达式。推荐在模板结构明显时使用 `v-if` / `v-else-if` / `v-else`，在需要保留 DOM 状态、只切换可见性时使用 `v-show`。
 
-### 三元表达式 {#ternary-operator}
+### `v-if` {#v-if}
+
+`v-if` 根据表达式决定是否渲染当前元素。条件为假时，对应节点不会保留在 DOM 中：
+
+```tsx
+<section>
+  <h1 v-if={awesome.value}>Rue 太棒了！</h1>
+</section>
+```
+
+### `v-else-if` 和 `v-else` {#v-else}
+
+`v-else-if` 和 `v-else` 必须紧跟在 `v-if` 或另一个 `v-else-if` 后面，用来声明同一组条件分支：
+
+```tsx
+<section>
+  <p v-if={status.value === 'ready'}>已就绪</p>
+  <p v-else-if={status.value === 'loading'}>加载中...</p>
+  <p v-else>暂不可用</p>
+</section>
+```
+
+### `v-show` {#v-show}
+
+`v-show` 会始终渲染元素，只通过 `display` 样式切换显示与隐藏：
+
+```tsx
+<aside v-show={panelOpen.value}>面板内容</aside>
+```
+
+`v-if` 适合条件不常变化、或希望切换时创建 / 销毁节点的场景；`v-show` 适合频繁显示隐藏，且希望保留元素状态的场景。
+
+### JavaScript 表达式写法 {#javascript-conditional-expressions}
+
+如果你更习惯 JSX，也可以直接使用 JavaScript 表达式：
+
+#### 三元表达式 {#ternary-operator}
 
 ```tsx
 <div>{ok ? <p>YES</p> : <p>NO</p>}</div>
 ```
 
-### 逻辑与运算符 {#logical-and}
+#### 逻辑与运算符 {#logical-and}
 
 ```tsx
 <div>{seen && <p>Now you see me</p>}</div>
 ```
 
-### 提前返回 {#early-return}
+#### 提前返回 {#early-return}
 
 ```tsx
 const App: FC = () => {
@@ -147,7 +183,9 @@ const App: FC = () => {
 }
 ```
 
-## 列表渲染 {#list-rendering}\n
+更多条件渲染细节见[条件渲染指南](/guide/guide/essentials/conditional)。
+
+## 列表渲染 {#list-rendering}
 
 使用 `map()` 渲染列表：
 

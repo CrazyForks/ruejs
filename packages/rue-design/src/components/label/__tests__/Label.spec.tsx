@@ -31,8 +31,31 @@ describe('Label', () => {
       const text = container.querySelector('[data-testid="text"]') as HTMLSpanElement
       expect(root.classList.contains('input')).toBe(true)
       expect(root.classList.contains('w-full')).toBe(true)
+      expect(root.hasAttribute('aria-required')).toBe(false)
+      expect(root.hasAttribute('aria-invalid')).toBe(false)
+      expect(root.hasAttribute('aria-disabled')).toBe(false)
       expect(text.classList.contains('label')).toBe(true)
       expect(root.querySelector('input')).not.toBeNull()
+    })
+  })
+
+  it('supports div as the control wrapper under vapor compilation', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Label as="div" label="Plain wrapper" data-testid="div-root">
+        <input type="text" placeholder="Plain" />
+      </Label>,
+      container,
+    )
+
+    await waitForContent(() => {
+      const root = container.querySelector('[data-testid="div-root"]') as HTMLDivElement
+      expect(root.tagName).toBe('DIV')
+      expect(root.classList.contains('input')).toBe(true)
+      expect(root.querySelector('input')).not.toBeNull()
+      expect(container.textContent).toContain('Plain wrapper')
     })
   })
 

@@ -4,7 +4,7 @@ import { attachRouter, createRouter } from '@rue-js/router'
 
 import { render, setReactiveScheduling } from '../src'
 import { createPersistentSidebarPlayground } from '../../../app/pages/site/persistentSidebarPlayground'
-import { createStaticHistory, mountContainer, waitForContent } from './page-test-utils'
+import { createMemoryHistory, createStaticHistory, mountContainer, waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
 
@@ -14,6 +14,57 @@ afterEach(() => {
 })
 
 describe('persistentSidebarPlayground actual', () => {
+  it('updates the active link on route changes without replacing the sidebar nav', async () => {
+    const Sidebar = createPersistentSidebarPlayground({
+      sections: [
+        {
+          id: 'design',
+          title: '设计',
+          items: [
+            { id: 'button', title: '按钮', href: '/design/button' },
+            { id: 'tabs', title: '标签页', href: '/design/tabs' },
+          ],
+        },
+      ],
+      fallbackToRoute: true,
+    })
+
+    const router = createRouter({
+      history: createMemoryHistory('/design/button'),
+      routes: [{ path: '/:path(.*)', component: (() => null) as any }],
+    })
+    attachRouter(router)
+
+    const container = mountContainer()
+    render(
+      <Sidebar>
+        <div>content</div>
+      </Sidebar>,
+      container,
+    )
+
+    const getButtonLink = () =>
+      container.querySelector<HTMLAnchorElement>('[data-rue-sidebar-href="/design/button"]')
+    const getTabsLink = () =>
+      container.querySelector<HTMLAnchorElement>('[data-rue-sidebar-href="/design/tabs"]')
+
+    await waitForContent(() => {
+      expect(getButtonLink()?.classList.contains('active')).toBe(true)
+      expect(getTabsLink()?.classList.contains('active')).toBe(false)
+    })
+
+    const nav = container.querySelector('nav')
+
+    await router.push('/design/tabs')
+
+    await waitForContent(() => {
+      expect(container.querySelector('nav')).toBe(nav)
+      expect(getButtonLink()?.classList.contains('active')).toBe(false)
+      expect(getTabsLink()?.classList.contains('active')).toBe(true)
+      expect(getTabsLink()?.getAttribute('aria-current')).toBe('page')
+    })
+  })
+
   it('filters sidebar items by english ids and chinese titles while updating visible counts', async () => {
     const Sidebar = createPersistentSidebarPlayground({
       sections: [

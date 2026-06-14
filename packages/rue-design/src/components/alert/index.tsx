@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Alert 组件概述
 - 在 daisyUI 的 alert 视觉基础上，补齐更完整的 Rue 语义 API。

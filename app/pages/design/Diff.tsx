@@ -186,13 +186,79 @@ const compoundApiRows: ApiRow[] = [
   },
 ]
 
+const controlledBeforeContent = (
+  <div className="grid h-full w-full place-content-center bg-slate-950 text-center text-white">
+    <div className="space-y-2">
+      <div className="text-xs uppercase tracking-[0.35em] text-fuchsia-200/70">Old palette</div>
+      <div className="text-5xl font-black">RUE</div>
+      <div className="mx-auto h-2 w-28 rounded-full bg-fuchsia-500" />
+    </div>
+  </div>
+)
+
+const controlledAfterContent = (
+  <div className="grid h-full w-full place-content-center bg-neutral-100 text-center text-slate-900">
+    <div className="space-y-2">
+      <div className="text-xs uppercase tracking-[0.35em] text-cyan-700/60">New palette</div>
+      <div className="text-5xl font-black">RUE</div>
+      <div className="mx-auto h-2 w-28 rounded-full bg-cyan-500" />
+    </div>
+  </div>
+)
+
+const ControlledDiffPreview: FC = () => {
+  const controlledValue = ref(38)
+
+  return (
+    <div className="card bg-base-100 shadow-sm">
+      <div className="card-body gap-4">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="badge badge-outline">当前值 {controlledValue.value}</span>
+          <button className="btn btn-xs" onClick={() => (controlledValue.value = 20)}>
+            20
+          </button>
+          <button className="btn btn-xs" onClick={() => (controlledValue.value = 50)}>
+            50
+          </button>
+          <button className="btn btn-xs" onClick={() => (controlledValue.value = 80)}>
+            80
+          </button>
+        </div>
+        <input
+          type="range"
+          className="range range-primary"
+          min="0"
+          max="100"
+          value={String(controlledValue.value)}
+          onChange={(event: Event) => {
+            const target = event.target as HTMLInputElement
+            controlledValue.value = Number(target.value)
+          }}
+        />
+        <Diff
+          className="rounded-box aspect-[16/9] border border-base-300"
+          value={controlledValue.value}
+          onChange={nextValue => {
+            controlledValue.value = nextValue
+          }}
+          item1Label="Before"
+          item2Label="After"
+          resizerContent="sync"
+          aria-label="品牌色调整对比"
+          item1={controlledBeforeContent}
+          item2={controlledAfterContent}
+        />
+      </div>
+    </div>
+  )
+}
+
 const DiffDemo: FC = () => {
   const tabEnhanced = ref<TabMode>('preview')
   const tabControlled = ref<TabMode>('preview')
   const tabReadonly = ref<TabMode>('preview')
   const tabLegacyImage = ref<TabMode>('preview')
   const tabLegacyText = ref<TabMode>('preview')
-  const controlledValue = ref(38)
 
   return (
     <SidebarPlayground>
@@ -337,68 +403,7 @@ const DiffDemo: FC = () => {
           title="受控位置"
           summary="value 和 onChange 可以把 Diff 变成受控组件，适合和外部滑杆、表单或讲解步骤联动。"
           tab={tabControlled}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body gap-4">
-                <div className="flex flex-wrap items-center gap-3 text-sm">
-                  <span className="badge badge-outline">当前值 {controlledValue.value}</span>
-                  <button className="btn btn-xs" onClick={() => (controlledValue.value = 20)}>
-                    20
-                  </button>
-                  <button className="btn btn-xs" onClick={() => (controlledValue.value = 50)}>
-                    50
-                  </button>
-                  <button className="btn btn-xs" onClick={() => (controlledValue.value = 80)}>
-                    80
-                  </button>
-                </div>
-                <input
-                  type="range"
-                  className="range range-primary"
-                  min="0"
-                  max="100"
-                  value={String(controlledValue.value)}
-                  onInput={(event: Event) => {
-                    const target = event.target as HTMLInputElement
-                    controlledValue.value = Number(target.value)
-                  }}
-                />
-                <Diff
-                  className="rounded-box aspect-[16/9] border border-base-300"
-                  value={controlledValue.value}
-                  onChange={nextValue => {
-                    controlledValue.value = nextValue
-                  }}
-                  item1Label="Before"
-                  item2Label="After"
-                  resizerContent={`${controlledValue.value}%`}
-                  aria-label="品牌色调整对比"
-                  item1={
-                    <div className="grid h-full w-full place-content-center bg-slate-950 text-center text-white">
-                      <div className="space-y-2">
-                        <div className="text-xs uppercase tracking-[0.35em] text-fuchsia-200/70">
-                          Old palette
-                        </div>
-                        <div className="text-5xl font-black">RUE</div>
-                        <div className="mx-auto h-2 w-28 rounded-full bg-fuchsia-500" />
-                      </div>
-                    </div>
-                  }
-                  item2={
-                    <div className="grid h-full w-full place-content-center bg-neutral-100 text-center text-slate-900">
-                      <div className="space-y-2">
-                        <div className="text-xs uppercase tracking-[0.35em] text-cyan-700/60">
-                          New palette
-                        </div>
-                        <div className="text-5xl font-black">RUE</div>
-                        <div className="mx-auto h-2 w-28 rounded-full bg-cyan-500" />
-                      </div>
-                    </div>
-                  }
-                />
-              </div>
-            </div>
-          )}
+          preview={() => <ControlledDiffPreview />}
           code={`const value = ref(38)
 
 <input
@@ -407,7 +412,7 @@ const DiffDemo: FC = () => {
   min="0"
   max="100"
   value={String(value.value)}
-  onInput={event => {
+  onChange={event => {
     const target = event.target as HTMLInputElement
     value.value = Number(target.value)
   }}
@@ -421,7 +426,7 @@ const DiffDemo: FC = () => {
   }}
   item1Label="Before"
   item2Label="After"
-  resizerContent={\`\${value.value}%\`}
+  resizerContent="sync"
   aria-label="品牌色调整对比"
   item1={
     <div className="grid h-full w-full place-content-center bg-slate-950 text-center text-white">

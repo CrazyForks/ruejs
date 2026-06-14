@@ -1,12 +1,11 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Filter 组件概述
 - 保留 Rue 当前基于 daisyUI `filter + btn` 的视觉组合。
 - 同时支持旧的 `children + Filter.Item/Reset` 方式，以及 `items/value/onChange/reset` 的增强用法。
-- 组内状态通过轻量 DOM 同步完成，避免依赖运行时不稳定的 context 能力。
+- 数据驱动模式直接通过 JSX 输出完整 input 属性，适配 Vapor 深编译路径。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
+import { computed, ref, watch } from '@rue-js/rue'
 
 /** FilterMode 类型。 */
 export type FilterMode = 'form' | 'div'
@@ -150,6 +149,8 @@ export interface FilterResetProps {
   size?: FilterSize
   /** 组件视觉变体。 */
   variant?: FilterVariant
+  /** 是否处于激活态。 */
+  active?: boolean
   /** 值或状态变化时触发的回调。 */
   onChange?: (event: Event) => void
   /** 允许透传原生属性或扩展字段。 */
@@ -195,18 +196,6 @@ const serializeValue = (value: FilterValue) => {
     default:
       return `string:${value}`
   }
-}
-
-/** deserialize Value 的内部工具函数。 */
-const deserializeValue = (serialized?: string): FilterValue | undefined => {
-  if (!serialized) return undefined
-  const separatorIndex = serialized.indexOf(':')
-  if (separatorIndex === -1) return serialized
-  const type = serialized.slice(0, separatorIndex)
-  const rawValue = serialized.slice(separatorIndex + 1)
-  if (type === 'number') return Number(rawValue)
-  if (type === 'boolean') return rawValue === 'true'
-  return rawValue
 }
 
 /** 判断 Primitive Value 的内部工具函数。 */
@@ -326,30 +315,41 @@ const resolveItemValue = (props: {
   return isPrimitiveValue(label) ? label : undefined
 }
 
-/** read Input String 的内部工具函数。 */
-const readInputString = (input: HTMLInputElement, key: string) => {
-  const value = input.dataset[key as keyof DOMStringMap]
-  if (!value || !value.length || value === 'undefined' || value === 'null') {
-    return undefined
-  }
-  return value
-}
+/** 构建 Managed Item 原生属性的内部工具函数。 */
+const buildManagedItemInputProps = (item: FilterItemData) => {
+  const {
+    key: _key,
+    label,
+    children,
+    checked: _checked,
+    defaultChecked: _defaultChecked,
+    disabled: _disabled,
+    className: _className,
+    color: _color,
+    size: _size,
+    variant: _variant,
+    active: _active,
+    name: _name,
+    type: _type,
+    onChange: _onChange,
+    ...rest
+  } = item
+  const itemValue = resolveItemValue(item)
+  const itemLabel = resolveItemLabel(label ?? rest['aria-label'], children)
+  const inputProps = { ...rest }
 
-/** read Input Config 的内部工具函数。 */
-const readInputConfig = (input: HTMLInputElement) => {
-  return {
-    role: readInputString(input, 'rueFilterRole'),
-    mode: readInputString(input, 'rueFilterMode') as FilterMode | undefined,
-    type: readInputString(input, 'rueFilterType') as FilterInputType | undefined,
-    name: readInputString(input, 'rueFilterName'),
-    size: readInputString(input, 'rueFilterSize') as FilterSize | undefined,
-    color: readInputString(input, 'rueFilterColor') as FilterColor | undefined,
-    variant: readInputString(input, 'rueFilterVariant') as FilterVariant | undefined,
-    className: readInputString(input, 'rueFilterClassName'),
-    active: input.dataset.rueFilterActive === 'true',
-    disabled: input.dataset.rueFilterDisabled === 'true',
-    value: deserializeValue(readInputString(input, 'rueFilterValue')),
+  if (
+    itemLabel !== undefined &&
+    inputProps['aria-label'] === undefined &&
+    isPrimitiveValue(itemLabel)
+  ) {
+    inputProps['aria-label'] = String(itemLabel)
   }
+  if (itemValue !== undefined && inputProps.value === undefined) {
+    inputProps.value = String(itemValue)
+  }
+
+  return inputProps
 }
 
 /** Filter 的内部工具函数。 */
@@ -371,12 +371,11 @@ const Filter: FC<FilterProps> = ({
   disabled,
   itemClassName,
   reset,
+  onClick,
   onReset,
   ...rest
 }) => {
   const Component = as as any
-  const groupRef = useRef<HTMLElement>()
-  const observerRef = useRef<MutationObserver>()
   const normalizedItems = normalizeItems(items)
   const resolvedType: FilterInputType = multiple ? 'checkbox' : (type ?? 'radio')
   const generatedName = ref(`rue-filter-${++filterNameSeed}`)
@@ -384,109 +383,14 @@ const Filter: FC<FilterProps> = ({
   const defaultValues = normalizeValueList(defaultValue, resolvedType)
   const controlledValues = ref<FilterValue[]>(normalizeValueList(value, resolvedType))
   const uncontrolledValues = ref<FilterValue[]>(defaultValues)
-  const controlled = value !== undefined
-  const managed =
-    controlled || defaultValue !== undefined || !!onChange || normalizedItems.length > 0
-
-  const getCurrentValues = () => {
-    return controlled ? controlledValues.value : uncontrolledValues.value
-  }
-
-  const observeGroup = () => {
-    const container = groupRef.current
-    const observer = observerRef.current
-    if (!container || !observer) return
-
-    observer.observe(container, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ['class', 'type', 'name', 'checked', 'value'],
-    })
-  }
-
-  const scheduleSyncChildInputs = () => {
-    queueMicrotask(() => {
-      syncChildInputs()
-    })
-
-    setTimeout(() => {
-      syncChildInputs()
-    }, 0)
-  }
-
-  const syncChildInputs = () => {
-    const container = groupRef.current
-    if (!container) return
-
-    observerRef.current?.disconnect()
-
-    const currentValues = getCurrentValues()
-    const inputs = Array.from(
-      container.querySelectorAll<HTMLInputElement>('input[data-rue-filter-role]'),
-    )
-
-    inputs.forEach(input => {
-      const config = readInputConfig(input)
-
-      if (config.role === 'reset') {
-        const resetMode = config.mode ?? as
-        const resetChecked =
-          resetMode === 'div' && managed ? currentValues.length === 0 : input.checked === true
-        const mergedClassName = resolveButtonClassName({
-          color: config.color ?? color,
-          size: config.size ?? size,
-          variant: config.variant ?? variant,
-          active: config.active || resetChecked,
-          className: mergeClassNames(itemClassName, config.className),
-        })
-        input.type = resetMode === 'form' ? 'reset' : 'radio'
-        input.disabled = disabled ? true : config.disabled
-        input.className = mergeClassNames(
-          mergedClassName,
-          resetMode === 'form' ? 'btn-square' : 'filter-reset',
-        )
-
-        if (resetMode === 'div') {
-          if (resolvedType === 'radio' && (config.name ?? resolvedName)) {
-            input.name = config.name ?? resolvedName ?? ''
-          } else {
-            input.removeAttribute('name')
-          }
-          if (managed) {
-            input.checked = currentValues.length === 0
-          }
-        }
-        return
-      }
-
-      const itemChecked =
-        managed && config.value !== undefined
-          ? currentValues.some(
-              current => serializeValue(current) === serializeValue(config.value as FilterValue),
-            )
-          : input.checked === true
-      const mergedClassName = resolveButtonClassName({
-        color: config.color ?? color,
-        size: config.size ?? size,
-        variant: config.variant ?? variant,
-        active: config.active || itemChecked,
-        className: mergeClassNames(itemClassName, config.className),
-      })
-      input.type = config.type ?? resolvedType
-      if (input.type === 'radio' && (config.name ?? resolvedName)) {
-        input.name = config.name ?? resolvedName ?? ''
-      }
-      input.disabled = disabled ? true : config.disabled
-      input.className = mergedClassName
-
-      if (managed && config.value !== undefined) {
-        input.checked = itemChecked
-      }
-    })
-
-    observeGroup()
-  }
+  const controlledMode = ref(value !== undefined)
+  const isControlled = () => controlledMode.value
+  const getCurrentValues = () =>
+    isControlled() ? controlledValues.value : uncontrolledValues.value
+  const currentValues = computed(() => getCurrentValues())
+  const hasValue = (itemValue: FilterValue | undefined) =>
+    itemValue !== undefined &&
+    currentValues.get().some(current => serializeValue(current) === serializeValue(itemValue))
 
   const emitChange = (
     nextValues: FilterValue[],
@@ -495,14 +399,12 @@ const Filter: FC<FilterProps> = ({
     checked = false,
   ) => {
     const normalizedNext = normalizeValueList(nextValues, resolvedType)
-    if (managed) {
-      if (controlled) {
-        if (onChange) {
-          controlledValues.value = normalizedNext
-        }
-      } else {
-        uncontrolledValues.value = normalizedNext
+    if (isControlled()) {
+      if (onChange) {
+        controlledValues.value = normalizedNext
       }
+    } else {
+      uncontrolledValues.value = normalizedNext
     }
     if (onChange) {
       onChange(resolvedType === 'checkbox' ? normalizedNext : normalizedNext[0], event, {
@@ -514,11 +416,16 @@ const Filter: FC<FilterProps> = ({
     }
   }
 
-  const handleItemChange = (itemValue: FilterValue | undefined, checked: boolean, event: Event) => {
+  const handleItemChange = (
+    item: FilterItemData,
+    itemValue: FilterValue | undefined,
+    checked: boolean,
+    event: Event,
+  ) => {
     const currentValues = getCurrentValues()
 
     if (itemValue === undefined) {
-      emitChange(currentValues, event, undefined, checked)
+      emitChange(currentValues, event, item, checked)
       return
     }
 
@@ -531,11 +438,11 @@ const Filter: FC<FilterProps> = ({
           ? currentValues
           : [...currentValues, itemValue]
         : currentValues.filter(current => serializeValue(current) !== serializeValue(itemValue))
-      emitChange(nextValues, event, undefined, checked)
+      emitChange(nextValues, event, item, checked)
       return
     }
 
-    emitChange(checked ? [itemValue] : [], event, undefined, checked)
+    emitChange(checked ? [itemValue] : [], event, item, checked)
   }
 
   const clearSelection = (event: Event) => {
@@ -548,96 +455,135 @@ const Filter: FC<FilterProps> = ({
 
   const resetProps = typeof reset === 'object' ? reset : undefined
   const resolvedResetMode = resetProps?.mode ?? as
-  const resetNode = reset ? <Reset {...resetProps} mode={resolvedResetMode} /> : null
   const renderResetAfterItems = resolvedType === 'checkbox' && resolvedResetMode === 'form'
-  const content =
-    normalizedItems.length > 0 ? (
-      <>
-        {!renderResetAfterItems ? resetNode : null}
-        {normalizedItems.map((item, index) => (
-          <Item key={item.key ?? `filter-item-${index}`} {...item} />
-        ))}
-        {renderResetAfterItems ? resetNode : null}
-      </>
-    ) : (
-      children
-    )
 
-  const handleGroupChange = (event: Event) => {
-    const target = event.target as HTMLInputElement | null
-    if (!target || target.tagName.toLowerCase() !== 'input' || !target.dataset.rueFilterRole) {
-      return
-    }
-
-    const config = readInputConfig(target)
-    if (config.role === 'reset') {
-      if ((config.mode ?? as) !== 'form') {
-        clearSelection(event)
-        syncChildInputs()
-        scheduleSyncChildInputs()
-      }
-      return
-    }
-
-    handleItemChange(config.value, target.checked === true, event)
-    syncChildInputs()
-    scheduleSyncChildInputs()
+  const handleManagedResetClick = (event: Event, resetOnChange?: (event: Event) => void) => {
+    const markedEvent = event as Event & { __rueFilterResetHandled?: boolean }
+    if (markedEvent.__rueFilterResetHandled) return
+    markedEvent.__rueFilterResetHandled = true
+    resetOnChange?.(event)
+    clearSelection(event)
   }
 
-  onMounted(() => {
-    if (typeof MutationObserver === 'function') {
-      observerRef.current = new MutationObserver(() => {
-        syncChildInputs()
-      })
-      observeGroup()
+  const handleGroupClick = (event: Event) => {
+    if (normalizedItems.length === 0) return
+    const target = event.target as HTMLElement | null
+    if (
+      !target ||
+      target.dataset.rueFilterRole !== 'reset' ||
+      (target.dataset.rueFilterMode as FilterMode | undefined) === 'form'
+    ) {
+      return
+    }
+    handleManagedResetClick(event, resetProps?.onChange)
+  }
+
+  const createManagedResetProps = ({
+    mode: resetMode,
+    name: resetName,
+    checked: resetChecked,
+  }: {
+    mode: FilterMode
+    name?: string
+    checked?: boolean
+  }) => {
+    const {
+      mode: _mode,
+      label,
+      checked: _checked,
+      defaultChecked,
+      disabled: resetDisabled,
+      className: resetClassName,
+      color: resetColor,
+      size: resetSize,
+      variant: resetVariant,
+      active: resetActive,
+      onChange: resetOnChange,
+      ...resetRest
+    } = resetProps ?? {}
+    const resolvedLabel = resolveItemLabel(label ?? resetRest['aria-label'] ?? resetRest.value, '×')
+    const domProps = { ...resetRest }
+    let mergedClassName = resolveButtonClassName({
+      color: resetColor ?? color,
+      size: resetSize ?? size,
+      variant: resetVariant ?? variant,
+      active: resetActive || resetChecked,
+      className: mergeClassNames(itemClassName, resetClassName),
+    })
+
+    if (resetMode === 'form') {
+      mergedClassName += ' btn-square'
+      if (domProps.value === undefined && isPrimitiveValue(resolvedLabel)) {
+        domProps.value = String(resolvedLabel)
+      }
+    } else {
+      mergedClassName += ' filter-reset'
+      if (domProps['aria-label'] === undefined && isPrimitiveValue(resolvedLabel)) {
+        domProps['aria-label'] = String(resolvedLabel)
+      }
     }
 
-    syncChildInputs()
-  })
+    const dataProps = omitNullishProps({
+      'data-rue-filter-role': 'reset',
+      'data-rue-filter-mode': resetMode,
+      'data-rue-filter-name': resetName ?? domProps.name,
+      'data-rue-filter-size': resetSize,
+      'data-rue-filter-color': resetColor,
+      'data-rue-filter-variant': resetVariant,
+      'data-rue-filter-class-name': resetClassName,
+      'data-rue-filter-disabled': disabled || resetDisabled ? 'true' : 'false',
+    })
+    const inputProps = omitNullishProps({
+      ...domProps,
+      ...dataProps,
+    })
 
-  onUnmounted(() => {
-    observerRef.current?.disconnect()
-    observerRef.current = undefined
-  })
+    return {
+      inputProps,
+      label: resolvedLabel,
+      name: resetName ?? domProps.name,
+      type: domProps.type ?? (resetMode === 'form' ? 'reset' : 'radio'),
+      defaultChecked,
+      className: mergedClassName,
+      disabled: disabled || resetDisabled,
+      onChange: resetOnChange,
+    }
+  }
+
+  const leadingResetProps =
+    !renderResetAfterItems && reset
+      ? createManagedResetProps({
+          mode: resolvedResetMode,
+          name:
+            resolvedResetMode === 'div' && resolvedType === 'radio'
+              ? resolvedName
+              : resetProps?.name,
+        })
+      : undefined
+  const trailingResetProps =
+    renderResetAfterItems && reset
+      ? createManagedResetProps({
+          mode: 'form',
+          name: resetProps?.name,
+        })
+      : undefined
+  const managedEntries = [
+    ...(leadingResetProps
+      ? [{ kind: 'reset' as const, mode: resolvedResetMode, reset: leadingResetProps }]
+      : []),
+    ...normalizedItems.map((item, index) => ({ kind: 'item' as const, item, index })),
+    ...(trailingResetProps
+      ? [{ kind: 'reset' as const, mode: 'form' as const, reset: trailingResetProps }]
+      : []),
+  ]
 
   watch(
     () => value,
     (nextValue: FilterProps['value']) => {
+      if (nextValue !== undefined) {
+        controlledMode.value = true
+      }
       controlledValues.value = normalizeValueList(nextValue, resolvedType)
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => uncontrolledValues.value,
-    () => {
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => disabled,
-    () => {
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => resolvedName,
-    () => {
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () =>
-      `${as}|${resolvedType}|${color ?? ''}|${variant ?? ''}|${size ?? ''}|${itemClassName ?? ''}|${normalizedItems.length}`,
-    () => {
-      syncChildInputs()
     },
     { immediate: true },
   )
@@ -645,14 +591,14 @@ const Filter: FC<FilterProps> = ({
   return (
     <Component
       {...rest}
-      ref={groupRef}
       style={style}
-      onChange={handleGroupChange}
       onReset={(event: Event) => {
         restoreDefaultSelection(event)
-        syncChildInputs()
-        scheduleSyncChildInputs()
         if (onReset) onReset(event)
+      }}
+      onClick={(event: Event) => {
+        handleGroupClick(event)
+        if (onClick) onClick(event)
       }}
       className={mergeClassNames(
         resolvedType === 'radio' ? 'filter' : 'flex flex-wrap gap-1',
@@ -662,7 +608,84 @@ const Filter: FC<FilterProps> = ({
       data-rue-filter-mode={as}
       data-rue-filter-type={resolvedType}
     >
-      {content}
+      {normalizedItems.length > 0 ? (
+        <>
+          {managedEntries.map(entry =>
+            entry.kind === 'reset' ? (
+              <input
+                key={`filter-reset-${entry.mode}`}
+                {...entry.reset.inputProps}
+                name={entry.reset.name}
+                type={entry.reset.type}
+                defaultChecked={entry.reset.defaultChecked}
+                className={entry.reset.className}
+                disabled={entry.reset.disabled}
+                onPointerDown={(event: Event) => {
+                  if (entry.mode !== 'form') {
+                    handleManagedResetClick(event, entry.reset.onChange)
+                  }
+                }}
+                onMouseDown={(event: Event) => {
+                  if (entry.mode !== 'form') {
+                    handleManagedResetClick(event, entry.reset.onChange)
+                  }
+                }}
+                onChange={(event: Event) => {
+                  if (entry.mode === 'form') {
+                    entry.reset.onChange?.(event)
+                  } else {
+                    handleManagedResetClick(event, entry.reset.onChange)
+                  }
+                }}
+              />
+            ) : (
+              <input
+                key={entry.item.key ?? `filter-item-${entry.index}`}
+                {...buildManagedItemInputProps(entry.item)}
+                data-rue-filter-role="item"
+                data-rue-filter-name={entry.item.name}
+                data-rue-filter-type={entry.item.type}
+                data-rue-filter-size={entry.item.size}
+                data-rue-filter-color={entry.item.color}
+                data-rue-filter-variant={entry.item.variant}
+                data-rue-filter-class-name={entry.item.className}
+                data-rue-filter-active={entry.item.active ? 'true' : 'false'}
+                data-rue-filter-disabled={disabled || entry.item.disabled ? 'true' : 'false'}
+                data-rue-filter-value={
+                  resolveItemValue(entry.item) !== undefined
+                    ? serializeValue(resolveItemValue(entry.item) as FilterValue)
+                    : undefined
+                }
+                type={entry.item.type ?? resolvedType}
+                name={entry.item.name ?? resolvedName}
+                checked={hasValue(resolveItemValue(entry.item))}
+                defaultChecked={entry.item.defaultChecked}
+                disabled={disabled || entry.item.disabled}
+                className={resolveButtonClassName({
+                  color: entry.item.color ?? color,
+                  size: entry.item.size ?? size,
+                  variant: entry.item.variant ?? variant,
+                  active: entry.item.active || hasValue(resolveItemValue(entry.item)),
+                  className: mergeClassNames(itemClassName, entry.item.className),
+                })}
+                onChange={(event: Event) => {
+                  const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
+                  const itemValue = resolveItemValue(entry.item)
+                  const meta = {
+                    checked: nextChecked,
+                    value: itemValue,
+                    item: entry.item,
+                  }
+                  entry.item.onChange?.(event, meta)
+                  handleItemChange(entry.item, itemValue, nextChecked, event)
+                }}
+              />
+            ),
+          )}
+        </>
+      ) : (
+        children
+      )}
     </Component>
   )
 }
@@ -684,7 +707,6 @@ const Item: FC<FilterItemProps> = ({
   onChange,
   ...rest
 }) => {
-  const inputRef = useRef<HTMLInputElement>()
   const mergedType = type ?? 'radio'
   const mergedName = name
   const mergedDisabled = !!disabled
@@ -728,31 +750,18 @@ const Item: FC<FilterItemProps> = ({
   })
   const inputProps = omitNullishProps({
     ...domProps,
-    name: mergedName,
-    type: mergedType,
-    checked,
-    defaultChecked,
-    className: mergedClassName,
-    disabled: mergedDisabled,
     ...dataProps,
-  })
-
-  const syncStandaloneProps = () => {
-    if (!inputRef.current) return
-    inputRef.current.className = mergedClassName
-    inputRef.current.disabled = mergedDisabled
-    if (mergedName) inputRef.current.name = mergedName
-    inputRef.current.type = mergedType
-  }
-
-  onMounted(() => {
-    syncStandaloneProps()
   })
 
   return (
     <input
       {...inputProps}
-      ref={inputRef}
+      name={mergedName}
+      type={mergedType}
+      checked={checked}
+      defaultChecked={defaultChecked}
+      className={mergedClassName}
+      disabled={mergedDisabled}
       onChange={(event: Event) => {
         const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
         if (onChange) {
@@ -792,10 +801,10 @@ const Reset: FC<FilterResetProps> = ({
   color,
   size,
   variant,
+  active,
   onChange,
   ...rest
 }) => {
-  const inputRef = useRef<HTMLInputElement>()
   const resolvedMode = mode ?? 'div'
   const mergedDisabled = !!disabled
   const resolvedLabel = resolveItemLabel(label ?? rest['aria-label'] ?? rest.value, '×')
@@ -803,6 +812,7 @@ const Reset: FC<FilterResetProps> = ({
     color,
     size,
     variant,
+    active: active || checked,
     className,
   })
   const domProps = { ...rest }
@@ -819,17 +829,6 @@ const Reset: FC<FilterResetProps> = ({
     }
   }
 
-  const syncStandaloneProps = () => {
-    if (!inputRef.current) return
-    inputRef.current.className = mergedClassName
-    inputRef.current.disabled = mergedDisabled
-    inputRef.current.type = domProps.type ?? (resolvedMode === 'form' ? 'reset' : 'radio')
-  }
-
-  onMounted(() => {
-    syncStandaloneProps()
-  })
-
   const dataProps = omitNullishProps({
     'data-rue-filter-role': 'reset',
     'data-rue-filter-mode': resolvedMode,
@@ -842,19 +841,18 @@ const Reset: FC<FilterResetProps> = ({
   })
   const inputProps = omitNullishProps({
     ...domProps,
-    name: domProps.name,
-    type: domProps.type ?? (resolvedMode === 'form' ? 'reset' : 'radio'),
-    checked,
-    defaultChecked,
-    className: mergedClassName,
-    disabled: mergedDisabled,
     ...dataProps,
   })
 
   return (
     <input
       {...inputProps}
-      ref={inputRef}
+      name={domProps.name}
+      type={domProps.type ?? (resolvedMode === 'form' ? 'reset' : 'radio')}
+      checked={checked}
+      defaultChecked={defaultChecked}
+      className={mergedClassName}
+      disabled={mergedDisabled}
       onChange={(event: Event) => {
         if (onChange) onChange(event)
       }}

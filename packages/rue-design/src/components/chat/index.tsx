@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Chat 组件概述
 - 保留 daisyUI chat 视觉语义：start/end 布局、chat-bubble 颜色与复合子组件结构。
@@ -281,82 +280,86 @@ const Image: FC<ImageProps> = ({ className, children, src, alt, bodyClassName, i
   )
 }
 
-/** 渲染 Avatar 的内部工具函数。 */
-const renderAvatar = (message: ChatSemanticMessageProps) => {
-  const avatarSrc = message.avatarSrc ?? message.imageSrc
-  const avatarAlt = message.avatarAlt ?? message.imageAlt
-  const avatarClassName = message.avatarClassName ?? message.imageClassName
-
-  if (message.avatar != null) {
-    if (isAvatarConfig(message.avatar)) {
-      return (
-        <Image
-          className={appendClassName(avatarClassName ?? '', message.avatar.className)}
-          src={message.avatar.src ?? avatarSrc}
-          alt={message.avatar.alt ?? avatarAlt}
-          bodyClassName={message.avatar.bodyClassName ?? message.avatarBodyClassName}
-          imgClassName={message.avatar.imgClassName ?? message.avatarImgClassName}
-        >
-          {message.avatar.content ?? message.avatar.children}
-        </Image>
-      )
-    }
-
-    return <Image className={avatarClassName}>{message.avatar}</Image>
-  }
-
-  if (avatarSrc != null) {
-    return (
-      <Image
-        className={avatarClassName}
-        src={avatarSrc}
-        alt={avatarAlt}
-        bodyClassName={message.avatarBodyClassName}
-        imgClassName={message.avatarImgClassName}
-      />
-    )
-  }
-
-  return null
-}
-
-/** 渲染 Header 的内部工具函数。 */
-const renderHeader = (message: ChatSemanticMessageProps) => {
-  if (message.header != null) {
-    return <Header className={message.headerClassName}>{message.header}</Header>
-  }
-
-  const author = message.author ?? message.headerName
-  const time = message.timestamp ?? message.headerTime
-
-  if (author == null && time == null) {
-    return null
-  }
-
-  return <Header className={message.headerClassName} author={author} time={time} />
-}
-
-/** 渲染 Semantic Message 的内部工具函数。 */
-const renderSemanticMessage = (message: ChatSemanticMessageProps, key?: string | number) => {
-  const messageText = resolveMessageText(message)
-  const placement = resolvePlacement(message.placement)
-  const rootClassName = appendClassName(`chat chat-${placement}`, message.className)
+/** 语义消息组件：避免 helper 返回 JSX 时被深编译到组件边界之外。 */
+const SemanticMessage: FC<ChatSemanticMessageProps> = ({
+  placement,
+  className,
+  message,
+  text,
+  color,
+  bubbleClassName,
+  avatar,
+  avatarSrc,
+  avatarAlt,
+  avatarClassName,
+  avatarBodyClassName,
+  avatarImgClassName,
+  imageSrc,
+  imageAlt,
+  imageClassName,
+  header,
+  author,
+  headerName,
+  timestamp,
+  headerTime,
+  headerClassName,
+  footer,
+  footerClassName,
+  typing,
+  typingIndicator,
+}) => {
+  const resolvedAvatarSrc = avatarSrc ?? imageSrc
+  const resolvedAvatarAlt = avatarAlt ?? imageAlt
+  const resolvedAvatarClassName = avatarClassName ?? imageClassName
+  const resolvedAuthor = author ?? headerName
+  const resolvedTime = timestamp ?? headerTime
+  const messageText = message ?? text
+  const rootClassName = appendClassName(`chat chat-${resolvePlacement(placement)}`, className)
 
   return (
-    <div className={rootClassName} key={key}>
-      {renderAvatar(message)}
-      {renderHeader(message)}
-      {messageText != null || message.typing ? (
+    <div className={rootClassName}>
+      {avatar != null ? (
+        isAvatarConfig(avatar) ? (
+          <Image
+            className={appendClassName(resolvedAvatarClassName ?? '', avatar.className)}
+            src={avatar.src ?? resolvedAvatarSrc}
+            alt={avatar.alt ?? resolvedAvatarAlt}
+            bodyClassName={avatar.bodyClassName ?? avatarBodyClassName}
+            imgClassName={avatar.imgClassName ?? avatarImgClassName}
+          >
+            {avatar.content ?? avatar.children}
+          </Image>
+        ) : (
+          <Image className={resolvedAvatarClassName}>{avatar}</Image>
+        )
+      ) : resolvedAvatarSrc != null ? (
+        <Image
+          className={resolvedAvatarClassName}
+          src={resolvedAvatarSrc}
+          alt={resolvedAvatarAlt}
+          bodyClassName={avatarBodyClassName}
+          imgClassName={avatarImgClassName}
+        />
+      ) : null}
+
+      {header != null ? (
+        <Header className={headerClassName}>{header}</Header>
+      ) : resolvedAuthor != null || resolvedTime != null ? (
+        <Header className={headerClassName} author={resolvedAuthor} time={resolvedTime} />
+      ) : null}
+
+      {messageText != null || typing ? (
         <Bubble
-          className={message.bubbleClassName}
-          color={message.color}
-          typing={message.typing}
-          typingIndicator={message.typingIndicator}
+          className={bubbleClassName}
+          color={color}
+          typing={typing}
+          typingIndicator={typingIndicator}
         >
           {messageText}
         </Bubble>
       ) : null}
-      <Footer className={message.footerClassName}>{message.footer}</Footer>
+
+      <Footer className={footerClassName}>{footer}</Footer>
     </div>
   )
 }
@@ -394,16 +397,36 @@ const Chat: FC<ChatProps> = ({
   if (items && items.length) {
     return (
       <>
-        {items.map((item, index) =>
-          renderSemanticMessage(
-            {
-              ...item,
-              placement: resolvePlacement(item.placement),
-              className: appendClassName(className ?? '', item.className),
-            },
-            item.key ?? index,
-          ),
-        )}
+        {items.map((item, index) => (
+          <SemanticMessage
+            key={item.key ?? index}
+            placement={resolvePlacement(item.placement)}
+            className={appendClassName(className ?? '', item.className)}
+            message={item.message}
+            text={item.text}
+            color={item.color}
+            bubbleClassName={item.bubbleClassName}
+            avatar={item.avatar}
+            avatarSrc={item.avatarSrc}
+            avatarAlt={item.avatarAlt}
+            avatarClassName={item.avatarClassName}
+            avatarBodyClassName={item.avatarBodyClassName}
+            avatarImgClassName={item.avatarImgClassName}
+            imageSrc={item.imageSrc}
+            imageAlt={item.imageAlt}
+            imageClassName={item.imageClassName}
+            header={item.header}
+            author={item.author}
+            headerName={item.headerName}
+            timestamp={item.timestamp}
+            headerTime={item.headerTime}
+            headerClassName={item.headerClassName}
+            footer={item.footer}
+            footerClassName={item.footerClassName}
+            typing={item.typing}
+            typingIndicator={item.typingIndicator}
+          />
+        ))}
       </>
     )
   }
@@ -438,33 +461,35 @@ const Chat: FC<ChatProps> = ({
       typingIndicator,
     })
   ) {
-    return renderSemanticMessage({
-      placement,
-      className,
-      message,
-      text,
-      color,
-      bubbleClassName,
-      avatar,
-      avatarSrc,
-      avatarAlt,
-      avatarClassName,
-      avatarBodyClassName,
-      avatarImgClassName,
-      imageSrc,
-      imageAlt,
-      imageClassName,
-      header,
-      author,
-      headerName,
-      timestamp,
-      headerTime,
-      headerClassName,
-      footer,
-      footerClassName,
-      typing,
-      typingIndicator,
-    })
+    return (
+      <SemanticMessage
+        placement={placement}
+        className={className}
+        message={message}
+        text={text}
+        color={color}
+        bubbleClassName={bubbleClassName}
+        avatar={avatar}
+        avatarSrc={avatarSrc}
+        avatarAlt={avatarAlt}
+        avatarClassName={avatarClassName}
+        avatarBodyClassName={avatarBodyClassName}
+        avatarImgClassName={avatarImgClassName}
+        imageSrc={imageSrc}
+        imageAlt={imageAlt}
+        imageClassName={imageClassName}
+        header={header}
+        author={author}
+        headerName={headerName}
+        timestamp={timestamp}
+        headerTime={headerTime}
+        headerClassName={headerClassName}
+        footer={footer}
+        footerClassName={footerClassName}
+        typing={typing}
+        typingIndicator={typingIndicator}
+      />
+    )
   }
 
   return (

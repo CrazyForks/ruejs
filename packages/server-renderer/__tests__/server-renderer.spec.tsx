@@ -63,6 +63,14 @@ describe('rue server-renderer', () => {
     )
   })
 
+  it('defaults no-value data-editor-content to true', async () => {
+    const App: FC = () => <section data-editor-content />
+
+    await expect(renderToString(App)).resolves.toBe(
+      '<section data-editor-content="true"></section>',
+    )
+  })
+
   it('honors the includeComments render option', async () => {
     const WithComment: FC = () => _$createComment('rue:ssr') as any
 

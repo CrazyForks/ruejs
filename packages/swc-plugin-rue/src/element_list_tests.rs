@@ -28,6 +28,7 @@ fn new_vt() -> VaporTransform {
         did_transform: false,
         el_tag_by_ident: HashMap::new(),
         renderable_local_scopes: Vec::new(),
+        plain_local_scopes: Vec::new(),
     }
 }
 

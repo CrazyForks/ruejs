@@ -1,5 +1,5 @@
 import type { FC } from '@rue-js/rue'
-import { h, ref } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import PreviewBlock, { type PreviewTabMode } from './PreviewBlock'
 import { Fab } from '@rue-js/design'
@@ -9,16 +9,6 @@ interface ApiRow {
   description: string
   type: string
   defaultValue: string
-}
-
-const toChildArray = (children: any): any[] => {
-  if (Array.isArray(children)) {
-    return children.flatMap(item => toChildArray(item))
-  }
-  if (children == null || typeof children === 'boolean') {
-    return []
-  }
-  return [children]
 }
 
 const GlyphIcon: FC<{ label: string; glyph: string }> = ({ label, glyph }) => {
@@ -73,14 +63,12 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
 }
 
 const DemoCard: FC<{ children?: any }> = ({ children }) => {
-  return h(
-    'div',
-    { className: 'card bg-base-100 shadow-sm overflow-visible' },
-    h(
-      'div',
-      { className: 'card-body' },
-      h('div', { className: 'relative h-64' }, ...(toChildArray(children) as any[])),
-    ),
+  return (
+    <div className="card bg-base-100 shadow-sm overflow-visible">
+      <div className="card-body">
+        <div className="relative h-64">{children}</div>
+      </div>
+    </div>
   )
 }
 

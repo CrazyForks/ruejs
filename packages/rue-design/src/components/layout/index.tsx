@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Layout 组件概述
 - 提供接近 ant-design Layout 的复合容器：Layout / Header / Sider / Content / Footer。
@@ -382,13 +381,8 @@ const Sider: FC<LayoutSiderProps> = ({
   const isControlled = typeof collapsed === 'boolean'
   const collapsedState = ref(isControlled ? !!collapsed : !!defaultCollapsed)
   const belowState = ref(false)
-  const viewportWidth = ref(getViewportWidth())
   const collapsedSize = resolveSize(collapsedWidth, 80)
   const expandedSize = resolveSize(width, 240)
-  let rootElement: HTMLElement | null = null
-  let bodyElement: HTMLDivElement | null = null
-  let footerElement: HTMLDivElement | null = null
-  let triggerElement: HTMLButtonElement | null = null
 
   const isZeroWidthCollapsed = (nextCollapsed: boolean) => {
     return (
@@ -399,74 +393,6 @@ const Sider: FC<LayoutSiderProps> = ({
     )
   }
 
-  const syncManagedDom = (nextCollapsed: boolean, nextBelow: boolean) => {
-    const zeroWidth = isZeroWidthCollapsed(nextCollapsed)
-    const currentWidth = nextCollapsed ? collapsedSize : expandedSize
-    const hideFooter = nextCollapsed && !zeroWidth
-
-    if (rootElement) {
-      rootElement.setAttribute('data-collapsed', nextCollapsed ? 'true' : 'false')
-      rootElement.setAttribute('data-below', nextBelow ? 'true' : 'false')
-      rootElement.setAttribute('data-zero-width', zeroWidth ? 'true' : 'false')
-      rootElement.style.flex = `0 0 ${currentWidth}`
-      rootElement.style.width = currentWidth
-      rootElement.style.minWidth = currentWidth
-      rootElement.style.maxWidth = currentWidth
-      rootElement.style.opacity = zeroWidth ? '0' : '1'
-      rootElement.classList.toggle('pointer-events-none', zeroWidth)
-      rootElement.classList.toggle('border-transparent', zeroWidth)
-      rootElement.classList.toggle('shadow-none', zeroWidth)
-    }
-
-    if (bodyElement) {
-      bodyElement.classList.toggle('items-center', nextCollapsed && !zeroWidth)
-      bodyElement.classList.toggle('px-2', nextCollapsed && !zeroWidth)
-    }
-
-    if (footerElement) {
-      footerElement.setAttribute('aria-hidden', hideFooter ? 'true' : 'false')
-      footerElement.style.display = hideFooter ? 'none' : ''
-      footerElement.classList.toggle('px-2', nextCollapsed && !zeroWidth)
-      footerElement.classList.toggle('text-center', nextCollapsed && !zeroWidth)
-    }
-
-    if (triggerElement) {
-      triggerElement.setAttribute('aria-label', nextCollapsed ? '展开侧边栏' : '收起侧边栏')
-      triggerElement.setAttribute('data-rue-layout-sider-trigger', zeroWidth ? 'zero' : 'default')
-      triggerElement.classList.toggle('pointer-events-auto', zeroWidth)
-      triggerElement.classList.toggle('right-3', !zeroWidth && triggerPosition !== 'start')
-      triggerElement.classList.toggle('left-3', !zeroWidth && triggerPosition === 'start')
-      triggerElement.classList.toggle('bottom-3', !zeroWidth)
-      triggerElement.classList.toggle('right-0', zeroWidth)
-      triggerElement.classList.toggle('top-6', zeroWidth)
-      triggerElement.classList.toggle('bottom-auto', zeroWidth)
-      triggerElement.classList.toggle('translate-x-1/2', zeroWidth)
-      triggerElement.classList.toggle('rounded-full', zeroWidth)
-
-      const triggerInlineStyle = mergeStyle(zeroWidth ? zeroWidthTriggerStyle : triggerStyle)
-      if (triggerInlineStyle) {
-        triggerElement.setAttribute('style', triggerInlineStyle)
-      } else {
-        triggerElement.removeAttribute('style')
-      }
-
-      const arrowElement = triggerElement.querySelector(
-        '[data-rue-layout-trigger-arrow="true"]',
-      ) as HTMLElement | null
-      const labelElement = triggerElement.querySelector(
-        '[data-rue-layout-trigger-label="true"]',
-      ) as HTMLElement | null
-
-      if (arrowElement) {
-        arrowElement.textContent = resolveChevron(nextCollapsed, reverseArrow)
-      }
-
-      if (labelElement) {
-        labelElement.textContent = nextCollapsed ? '展开' : '收起'
-      }
-    }
-  }
-
   const handleCollapse = (nextCollapsed: boolean, type: LayoutCollapseType) => {
     if (!isControlled) {
       collapsedState.value = nextCollapsed
@@ -475,10 +401,9 @@ const Sider: FC<LayoutSiderProps> = ({
   }
 
   const syncResponsiveState = () => {
-    viewportWidth.value = getViewportWidth()
     if (!breakpoint) return
 
-    const broken = viewportWidth.value <= BREAKPOINT_MAX_WIDTH[breakpoint]
+    const broken = getViewportWidth() <= BREAKPOINT_MAX_WIDTH[breakpoint]
     if (broken === belowState.value) return
 
     belowState.value = broken
@@ -492,7 +417,6 @@ const Sider: FC<LayoutSiderProps> = ({
 
   onMounted(() => {
     syncResponsiveState()
-    syncManagedDom(collapsedState.value, belowState.value)
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', syncResponsiveState)
     }
@@ -515,121 +439,71 @@ const Sider: FC<LayoutSiderProps> = ({
   )
 
   watch(
-    () => collapsedState.value,
-    (nextCollapsed: boolean) => {
-      syncManagedDom(nextCollapsed, belowState.value)
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => belowState.value,
-    (nextBelow: boolean) => {
-      syncManagedDom(collapsedState.value, nextBelow)
-    },
-    { immediate: true },
-  )
-
-  watch(
     () => breakpoint,
     () => {
       syncResponsiveState()
     },
     { immediate: true },
   )
-  const meta: LayoutSiderTriggerRenderMeta = {
+
+  const getZeroWidthCollapsed = () => isZeroWidthCollapsed(collapsedState.value)
+  const getCurrentWidth = () => (collapsedState.value ? collapsedSize : expandedSize)
+  const shouldHideFooter = () => collapsedState.value && !getZeroWidthCollapsed()
+  const hasDefaultTrigger = trigger === undefined
+  const hasCustomTrigger = trigger !== null && trigger !== false && trigger !== '' && trigger !== 0
+  const shouldRenderTrigger = collapsible && (hasDefaultTrigger || hasCustomTrigger)
+  const triggerMeta = (): LayoutSiderTriggerRenderMeta => ({
     collapsed: collapsedState.value,
     below: belowState.value,
-    zeroWidth:
-      collapsedState.value &&
-      (isNumeric(collapsedWidth)
-        ? Number(collapsedWidth) === 0
-        : collapsedSize === '0px' || collapsedSize === '0'),
+    zeroWidth: getZeroWidthCollapsed(),
     toggle,
-  }
+  })
 
-  const renderedTrigger =
-    trigger === null
-      ? null
-      : typeof trigger === 'function'
-        ? trigger(meta)
-        : (trigger ?? (
-            <Trigger>
-              <span data-rue-layout-trigger-arrow="true">
-                {resolveChevron(collapsedState.value, reverseArrow)}
-              </span>
-              <span data-rue-layout-trigger-label="true">
-                {collapsedState.value ? '展开' : '收起'}
-              </span>
-            </Trigger>
-          ))
+  const renderSiderTrigger = () => {
+    if (trigger === null) return null
+    if (typeof trigger === 'function') return trigger(triggerMeta())
+    if (trigger != null) return trigger
+
+    return (
+      <Trigger>
+        <span data-rue-layout-trigger-arrow="true">
+          {resolveChevron(collapsedState.value, reverseArrow)}
+        </span>
+        <span data-rue-layout-trigger-label="true">{collapsedState.value ? '展开' : '收起'}</span>
+      </Trigger>
+    )
+  }
 
   return (
     <Component
       {...rest}
-      ref={(element: HTMLElement | null) => {
-        rootElement = element
-        if (element) {
-          syncManagedDom(collapsedState.value, belowState.value)
-        }
-      }}
       className={joinClassName(
         'rue-layout-sider relative flex min-h-0 shrink-0 flex-col overflow-hidden rounded-[1.75rem] border shadow-[0_28px_70px_-42px_rgba(15,23,42,0.5)] transition-[width,flex-basis,max-width,min-width,transform,opacity] duration-300 ease-out',
         resolveThemeClassName(theme),
-        collapsedState.value &&
-          (isNumeric(collapsedWidth)
-            ? Number(collapsedWidth) === 0
-            : collapsedSize === '0px' || collapsedSize === '0') &&
-          'pointer-events-none border-transparent shadow-none',
+        getZeroWidthCollapsed() && 'pointer-events-none border-transparent shadow-none',
         className,
       )}
       style={mergeStyle(
         {
-          flex: `0 0 ${collapsedState.value ? collapsedSize : expandedSize}`,
-          width: collapsedState.value ? collapsedSize : expandedSize,
-          minWidth: collapsedState.value ? collapsedSize : expandedSize,
-          maxWidth: collapsedState.value ? collapsedSize : expandedSize,
-          opacity:
-            collapsedState.value &&
-            (isNumeric(collapsedWidth)
-              ? Number(collapsedWidth) === 0
-              : collapsedSize === '0px' || collapsedSize === '0')
-              ? 0
-              : 1,
+          flex: `0 0 ${getCurrentWidth()}`,
+          width: getCurrentWidth(),
+          minWidth: getCurrentWidth(),
+          maxWidth: getCurrentWidth(),
+          opacity: getZeroWidthCollapsed() ? 0 : 1,
         },
         style,
       )}
       data-rue-layout-sider="true"
       data-collapsed={collapsedState.value ? 'true' : 'false'}
       data-below={belowState.value ? 'true' : 'false'}
-      data-zero-width={
-        collapsedState.value &&
-        (isNumeric(collapsedWidth)
-          ? Number(collapsedWidth) === 0
-          : collapsedSize === '0px' || collapsedSize === '0')
-          ? 'true'
-          : 'false'
-      }
+      data-zero-width={getZeroWidthCollapsed() ? 'true' : 'false'}
       data-theme={theme}
     >
       <div
-        ref={(element: HTMLDivElement | null) => {
-          bodyElement = element
-          if (element) {
-            syncManagedDom(collapsedState.value, belowState.value)
-          }
-        }}
         className={joinClassName(
           'rue-layout-sider-body flex min-h-0 flex-1 flex-col gap-4 p-4 transition-[padding] duration-300 ease-out',
           resolveSiderBodyClassName(theme),
-          collapsedState.value &&
-            !(
-              collapsedState.value &&
-              (isNumeric(collapsedWidth)
-                ? Number(collapsedWidth) === 0
-                : collapsedSize === '0px' || collapsedSize === '0')
-            ) &&
-            'items-center px-2',
+          collapsedState.value && !getZeroWidthCollapsed() && 'items-center px-2',
           bodyClassName,
         )}
         style={mergeStyle(bodyStyle)}
@@ -639,38 +513,20 @@ const Sider: FC<LayoutSiderProps> = ({
 
       {hasRenderableContent(footer) ? (
         <div
-          ref={(element: HTMLDivElement | null) => {
-            footerElement = element
-            if (element) {
-              syncManagedDom(collapsedState.value, belowState.value)
-            }
-          }}
           className={joinClassName(
             'rue-layout-sider-footer border-t border-current/10 px-4 py-3 text-xs opacity-80',
-            collapsedState.value &&
-              !(
-                collapsedState.value &&
-                (isNumeric(collapsedWidth)
-                  ? Number(collapsedWidth) === 0
-                  : collapsedSize === '0px' || collapsedSize === '0')
-              ) &&
-              'px-2 text-center',
+            collapsedState.value && !getZeroWidthCollapsed() && 'px-2 text-center',
             footerClassName,
           )}
-          style={mergeStyle(footerStyle)}
+          style={mergeStyle({ display: shouldHideFooter() ? 'none' : undefined }, footerStyle)}
+          aria-hidden={shouldHideFooter() ? 'true' : 'false'}
         >
           {footer}
         </div>
       ) : null}
 
-      {collapsible && renderedTrigger ? (
+      {shouldRenderTrigger ? (
         <button
-          ref={(element: HTMLButtonElement | null) => {
-            triggerElement = element
-            if (element) {
-              syncManagedDom(collapsedState.value, belowState.value)
-            }
-          }}
           type="button"
           onClick={toggle}
           className={joinClassName(
@@ -678,32 +534,15 @@ const Sider: FC<LayoutSiderProps> = ({
             triggerPosition === 'start'
               ? 'left-3 bottom-3 justify-start'
               : 'right-3 bottom-3 justify-end',
-            collapsedState.value &&
-              (isNumeric(collapsedWidth)
-                ? Number(collapsedWidth) === 0
-                : collapsedSize === '0px' || collapsedSize === '0') &&
+            getZeroWidthCollapsed() &&
               'pointer-events-auto right-0 top-6 bottom-auto translate-x-1/2 rounded-full',
             triggerClassName,
           )}
-          style={mergeStyle(
-            collapsedState.value &&
-              (isNumeric(collapsedWidth)
-                ? Number(collapsedWidth) === 0
-                : collapsedSize === '0px' || collapsedSize === '0')
-              ? zeroWidthTriggerStyle
-              : triggerStyle,
-          )}
+          style={mergeStyle(getZeroWidthCollapsed() ? zeroWidthTriggerStyle : triggerStyle)}
           aria-label={collapsedState.value ? '展开侧边栏' : '收起侧边栏'}
-          data-rue-layout-sider-trigger={
-            collapsedState.value &&
-            (isNumeric(collapsedWidth)
-              ? Number(collapsedWidth) === 0
-              : collapsedSize === '0px' || collapsedSize === '0')
-              ? 'zero'
-              : 'default'
-          }
+          data-rue-layout-sider-trigger={getZeroWidthCollapsed() ? 'zero' : 'default'}
         >
-          {renderedTrigger}
+          {renderSiderTrigger()}
         </button>
       ) : null}
     </Component>

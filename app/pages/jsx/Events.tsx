@@ -147,7 +147,7 @@ const Events: FC = () => {
                 </div>
 
                 <button className="btn btn-primary btn-sm" onClick={handleClick}>
-                  onClick={handleClick}
+                  {'onClick={handleClick}'}
                 </button>
               </section>
 

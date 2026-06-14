@@ -253,6 +253,53 @@ describe('Skeleton actual page', () => {
     })
   })
 
+  it('updates the element variant control selected state when options change', async () => {
+    setEnabledPreviews('Element Variants')
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<SkeletonPage />, container)
+
+    let elementsDemo: HTMLElement | null = null
+
+    await waitForContent(() => {
+      elementsDemo = findDemo(container, '# Element Variants') as HTMLElement | null
+      expect(elementsDemo).not.toBeNull()
+
+      const mdButton = findButton(elementsDemo!, 'size: md') as HTMLButtonElement | null
+      const smButton = findButton(elementsDemo!, 'size: sm') as HTMLButtonElement | null
+      expect(mdButton?.classList.contains('btn-primary')).toBe(true)
+      expect(mdButton?.getAttribute('aria-pressed')).toBe('true')
+      expect(smButton?.classList.contains('btn-outline')).toBe(true)
+      expect(smButton?.getAttribute('aria-pressed')).toBe('false')
+    })
+
+    await click(findButton(elementsDemo!, 'size: sm'))
+    await click(findButton(elementsDemo!, 'button: round'))
+
+    await waitForContent(() => {
+      const refreshedDemo = findDemo(container, '# Element Variants') as HTMLElement | null
+      expect(refreshedDemo).not.toBeNull()
+
+      const smButton = findButton(refreshedDemo!, 'size: sm') as HTMLButtonElement | null
+      const mdButton = findButton(refreshedDemo!, 'size: md') as HTMLButtonElement | null
+      const defaultButton = findButton(
+        refreshedDemo!,
+        'button: default',
+      ) as HTMLButtonElement | null
+      const roundButton = findButton(refreshedDemo!, 'button: round') as HTMLButtonElement | null
+
+      expect(smButton?.classList.contains('btn-primary')).toBe(true)
+      expect(smButton?.getAttribute('aria-pressed')).toBe('true')
+      expect(mdButton?.classList.contains('btn-outline')).toBe(true)
+      expect(mdButton?.getAttribute('aria-pressed')).toBe('false')
+      expect(defaultButton?.classList.contains('btn-outline')).toBe(true)
+      expect(defaultButton?.getAttribute('aria-pressed')).toBe('false')
+      expect(roundButton?.classList.contains('btn-primary')).toBe(true)
+      expect(roundButton?.getAttribute('aria-pressed')).toBe('true')
+    })
+  })
+
   it('switches the element demo to its alternate visual state', async () => {
     const container = mountContainer()
     resetActiveRuntime()

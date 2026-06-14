@@ -16,7 +16,23 @@ const AsyncRouterDemoLabPage = useComponent(async () => ({
   default: (await loadRouterDemoScene()).RouterDemoLabPage,
 }))
 
-const routes: RouteRecordRaw[] = [
+const AsyncDesignRouteLayout = useComponent(async () => ({
+  default: (await import('../pages/site/SidebarPlaygroundDesign')).DesignRouteLayout,
+}))
+
+const AsyncExamplesRouteLayout = useComponent(async () => ({
+  default: (await import('../pages/site/SidebarPlaygroundExample')).ExamplesRouteLayout,
+}))
+
+const AsyncGuideRouteLayout = useComponent(async () => ({
+  default: (await import('../pages/site/SidebarPlaygroundGuide')).GuideRouteLayout,
+}))
+
+const AsyncApiRouteLayout = useComponent(async () => ({
+  default: (await import('../pages/site/SidebarPlaygroundApi')).ApiRouteLayout,
+}))
+
+const flatRoutes: RouteRecordRaw[] = [
   { path: '/jsx', component: useComponent(() => import('../pages/jsx/Index')) },
   {
     path: '/jsx/basic-elements',
@@ -592,6 +608,99 @@ const routes: RouteRecordRaw[] = [
     component: useComponent(() => import('../pages/report-bi-arch/index')),
   },
 ]
+
+type SidebarRouteGroup = {
+  path: string
+  component: RouteRecordRaw['component']
+  layoutId: string
+  redirect?: RouteRecordRaw['redirect']
+}
+
+const foldSidebarPlaygroundRoutes = (
+  sourceRoutes: RouteRecordRaw[],
+  groups: SidebarRouteGroup[],
+): RouteRecordRaw[] => {
+  const groupEntries = groups.map(group => ({
+    group,
+    prefix: `${group.path}/`,
+    childRoutes: [
+      ...(group.redirect
+        ? [
+            {
+              path: '',
+              redirect: group.redirect,
+            } as RouteRecordRaw,
+          ]
+        : []),
+    ] as RouteRecordRaw[],
+    seenChildPaths: new Set<string>(),
+  }))
+  const nonSidebarRoutes: RouteRecordRaw[] = []
+
+  sourceRoutes.forEach(route => {
+    const entry = groupEntries.find(({ group, prefix }) => {
+      return route.path === group.path || route.path.startsWith(prefix)
+    })
+
+    if (!entry) {
+      nonSidebarRoutes.push(route)
+      return
+    }
+
+    const childPath =
+      route.path === entry.group.path ? '' : route.path.slice(entry.prefix.length)
+    if (entry.seenChildPaths.has(childPath)) {
+      return
+    }
+
+    entry.seenChildPaths.add(childPath)
+    entry.childRoutes.push({
+      ...route,
+      path: childPath,
+    })
+  })
+
+  return [
+    ...nonSidebarRoutes,
+    ...groupEntries.map(({ group, childRoutes }) => ({
+      path: group.path,
+      component: group.component,
+      meta: {
+        sidebarPlaygroundLayout: group.layoutId,
+      },
+      children: childRoutes,
+    })),
+  ]
+}
+
+const routes = foldSidebarPlaygroundRoutes(flatRoutes, [
+  {
+    path: '/design',
+    component: AsyncDesignRouteLayout,
+    layoutId: 'design',
+    redirect: '/design/button',
+  },
+  {
+    path: '/examples',
+    component: AsyncExamplesRouteLayout,
+    layoutId: 'examples',
+  },
+  {
+    path: '/jsx',
+    component: AsyncExamplesRouteLayout,
+    layoutId: 'examples',
+  },
+  {
+    path: '/guide',
+    component: AsyncGuideRouteLayout,
+    layoutId: 'guide',
+  },
+  {
+    path: '/api',
+    component: AsyncApiRouteLayout,
+    layoutId: 'api',
+  },
+])
 
 export default createRouter({
   history: createWebHistory(),

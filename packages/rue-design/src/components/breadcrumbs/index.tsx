@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Breadcrumbs 组件概述
 - 推荐使用 items：补齐 path/params、itemRender、menu 与自定义 separator 等能力。
@@ -320,6 +319,64 @@ interface RenderItemContentOptions {
   fallbackChildren?: any
 }
 
+interface RenderableBreadcrumbsItem {
+  item: BreadcrumbsRouteItem
+  index: number
+  href?: string
+  isLast: boolean
+  separatorBefore?: any
+  paths: string[]
+}
+
+/** 构建可渲染 Items，避免 JSX map 内部依赖可变闭包状态。 */
+const buildRenderableItems = (
+  mergedItems: ReadonlyArray<BreadcrumbsDataItem>,
+  params: BreadcrumbsParams,
+  resolvedSeparator: any,
+) => {
+  const routeItems = mergedItems.filter(item => !isSeparatorItem(item)) as BreadcrumbsRouteItem[]
+  const renderableItems: RenderableBreadcrumbsItem[] = []
+  const paths: string[] = []
+  let routeIndex = -1
+  let hasRenderedItem = false
+  let separatorBefore = resolvedSeparator
+
+  mergedItems.forEach((item, index) => {
+    if (isSeparatorItem(item)) {
+      separatorBefore = item.separator ?? resolvedSeparator
+      return
+    }
+
+    routeIndex += 1
+
+    const pathSegment = resolvePath(params, item.path)
+    const pathsForItem =
+      pathSegment !== undefined && pathSegment !== '' ? [...paths, pathSegment] : [...paths]
+    const href = resolveHref(item.href, pathsForItem, pathSegment !== undefined)
+
+    if (pathSegment !== undefined && pathSegment !== '') {
+      paths.push(pathSegment)
+    }
+
+    renderableItems.push({
+      item,
+      index,
+      href,
+      isLast: routeIndex === routeItems.length - 1,
+      separatorBefore: hasRenderedItem ? separatorBefore : undefined,
+      paths: pathsForItem,
+    })
+
+    hasRenderedItem = true
+    separatorBefore = resolvedSeparator
+  })
+
+  return {
+    routeItems,
+    renderableItems,
+  }
+}
+
 /** 渲染 Item Content 的内部工具函数。 */
 const renderItemContent = ({
   item,
@@ -427,38 +484,20 @@ const Breadcrumbs: FC<BreadcrumbsProps> = ({
   if (className) cls += ` ${className}`
 
   if (mergedItems && mergedItems.length) {
-    const renderableItems = mergedItems.filter(
-      item => !isSeparatorItem(item),
-    ) as BreadcrumbsRouteItem[]
     const resolvedSeparator = separator ?? <DefaultSeparator />
-    const paths: string[] = []
-    let routeIndex = -1
-    let hasRenderedItem = false
-    let separatorBefore = resolvedSeparator
+    const { routeItems, renderableItems } = buildRenderableItems(
+      mergedItems,
+      params,
+      resolvedSeparator,
+    )
 
     return (
       <div className={cls}>
         <ul>
-          {mergedItems.map((item, index) => {
-            if (isSeparatorItem(item)) {
-              separatorBefore = item.separator ?? resolvedSeparator
-              return null
-            }
-
-            routeIndex += 1
-
-            const pathSegment = resolvePath(params, item.path)
-            const pathsForItem =
-              pathSegment !== undefined && pathSegment !== '' ? [...paths, pathSegment] : [...paths]
-            const href = resolveHref(item.href, pathsForItem, pathSegment !== undefined)
-
-            if (pathSegment !== undefined && pathSegment !== '') {
-              paths.push(pathSegment)
-            }
-
-            const rendered = (
+          {renderableItems.map(({ item, index, href, isLast, separatorBefore, paths }) => {
+            return (
               <li className={item.className ?? undefined} key={item.key ?? index}>
-                {hasRenderedItem ? (
+                {separatorBefore !== undefined ? (
                   <span
                     className="pointer-events-none inline-flex shrink-0 items-center justify-center ms-2 me-3 text-base-content/40"
                     aria-hidden="true"
@@ -469,29 +508,27 @@ const Breadcrumbs: FC<BreadcrumbsProps> = ({
                 {renderItemContent({
                   item,
                   href,
-                  isLast: routeIndex === renderableItems.length - 1,
+                  isLast,
                   allowAutoCurrent: true,
                   params,
-                  routes: renderableItems,
-                  paths: pathsForItem,
+                  routes: routeItems,
+                  paths,
                   dropdownIcon,
                   itemRender,
                 })}
               </li>
             )
-
-            hasRenderedItem = true
-            separatorBefore = resolvedSeparator
-            return rendered
           })}
         </ul>
       </div>
     )
   }
 
+  const childNodes = _normalizeChildren(children)
+
   return (
     <div className={cls}>
-      <ul>{children}</ul>
+      <ul>{childNodes.map(child => child)}</ul>
     </div>
   )
 }

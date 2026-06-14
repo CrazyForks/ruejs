@@ -23,6 +23,25 @@ where
     A::Element: Clone,
 {
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+    fn contextual_insert_anchor(
+        &self,
+        parent: &A::Element,
+        fallback: &Option<A::Element>,
+    ) -> Option<A::Element> {
+        if let Some(anchor) = self.current_anchor.clone() {
+            if let Some(adapter) = self.get_dom_adapter() {
+                if adapter.is_fragment(parent) || adapter.contains(parent, &anchor) {
+                    return Some(anchor);
+                }
+            } else {
+                return Some(anchor);
+            }
+        }
+
+        fallback.clone()
+    }
+
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn debug_record_cleared_sidebar(&self, parent: &A::Element, host: &A::Element)
     where
         <A as DomAdapter>::Element: Into<JsValue>,
@@ -334,7 +353,7 @@ where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         // 计算有效锚点：优先当前区间的 end 注释，其次使用外部传入的插入锚点
-        let effective_anchor = self.current_anchor.clone().or(insert_anchor.clone());
+        let effective_anchor = self.contextual_insert_anchor(parent, insert_anchor);
         if let Some(end) = effective_anchor.clone() {
             if let Some(a) = self.get_dom_adapter_mut() {
                 // 解析真实父节点：当父为片段或父不包含 end 时，读取 end.parentNode 作为插入的参照父
@@ -483,7 +502,7 @@ where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         // 计算有效锚点：优先使用当前区间 end，其次使用外部传入的锚点
-        let effective_anchor = self.current_anchor.clone().or(insert_anchor.clone());
+        let effective_anchor = self.contextual_insert_anchor(parent, insert_anchor);
         if let Some(end) = effective_anchor.clone() {
             if let Some(a) = self.get_dom_adapter_mut() {
                 // 解析真实父节点：当父为片段或父不包含 end 时，读取 end.parentNode
@@ -888,6 +907,37 @@ mod tests {
         let fallback_child = node("fallback-child");
         rue.insert_with_end_anchor_opt(&mut no_anchor_parent, &fallback_child, &None);
         assert_eq!(child_tags(&no_anchor_parent), vec!["fallback-child"]);
+
+        let mut outer_parent = node("outer-parent");
+        let outer_anchor = node("outer-anchor");
+        set_children(&outer_parent, &[outer_anchor.clone()]);
+        let mut nested_parent = node("nested-parent");
+        let nested_child = node("nested-child");
+        rue.current_anchor = Some(outer_anchor.clone());
+        rue.insert_with_end_anchor_opt(&mut nested_parent, &nested_child, &None);
+        assert_eq!(child_tags(&nested_parent), vec!["nested-child"]);
+        assert_eq!(child_tags(&outer_parent), vec!["outer-anchor"]);
+
+        let nested_fragment = node("fragment");
+        let nested_fragment_child = node("nested-fragment-child");
+        set_children(&nested_fragment, &[nested_fragment_child.clone()]);
+        let mut nested_fragment_parent = node("nested-fragment-parent");
+        rue.insert_fragment_children_preferring_end(
+            &mut nested_fragment_parent,
+            &nested_fragment,
+            &None,
+        );
+        assert_eq!(child_tags(&nested_fragment_parent), vec!["nested-fragment-child"]);
+        assert_eq!(child_tags(&outer_parent), vec!["outer-anchor"]);
+
+        let mut containing_parent = node("containing-parent");
+        let containing_anchor = node("containing-anchor");
+        let containing_child = node("containing-child");
+        set_children(&containing_parent, &[containing_anchor.clone()]);
+        rue.current_anchor = Some(containing_anchor);
+        rue.insert_with_end_anchor_opt(&mut containing_parent, &containing_child, &None);
+        assert_eq!(child_tags(&containing_parent), vec!["containing-child", "containing-anchor"]);
+        rue.current_anchor = None;
 
         let mut anchor_parent = node("anchor-parent");
         let anchor = node("anchor");

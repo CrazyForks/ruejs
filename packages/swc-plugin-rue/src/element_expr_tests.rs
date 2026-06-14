@@ -16,6 +16,7 @@ fn new_vt() -> VaporTransform {
         did_transform: false,
         el_tag_by_ident: HashMap::new(),
         renderable_local_scopes: Vec::new(),
+        plain_local_scopes: Vec::new(),
     }
 }
 
@@ -86,6 +87,21 @@ fn emit_expr(expr: Expr) -> String {
 
 fn compact(src: &str) -> String {
     src.chars().filter(|ch| !ch.is_whitespace()).collect()
+}
+
+fn compile_expr_child_for_parent(expr_src: &str, parent_tag: &str) -> String {
+    let mut vt = new_vt();
+    vt.el_tag_by_ident.insert("root".to_string(), parent_tag.to_string());
+    let mut stmts = Vec::new();
+
+    emit_element_expr_container_child(
+        &mut vt,
+        &ident("root"),
+        &expr_container(expr_src, true),
+        &mut stmts,
+    );
+
+    compact(&emit_stmts(stmts))
 }
 
 #[test]
@@ -219,6 +235,128 @@ fn emits_slot_render_once_and_style_text_paths_for_expr_children() {
     let style_out = compact(&emit_stmts(style_stmts));
     assert!(style_out.contains("_$settextContent(styleEl,colorValue);"));
     assert!(!style_out.contains("watchEffect("));
+}
+
+#[test]
+fn routes_opaque_identifier_children_through_slot_anchor_in_html_elements() {
+    let out = compile_expr_child_for_parent("extra", "div");
+
+    assert!(out.contains("_$createComment(\"rue:slot:anchor\")"));
+    assert!(out.contains(
+        "watchEffect(()=>{const__slot=(extra);untrack(()=>renderAnchor(__slot,root,_list1));});"
+    ));
+    assert!(!out.contains("_$settextContent"));
+}
+
+#[test]
+fn routes_opaque_conditional_and_logical_children_through_slot_anchor_in_html_elements() {
+    let conditional = compile_expr_child_for_parent("enabled ? extra : fallback", "div");
+    assert!(conditional.contains("_$createComment(\"rue:slot:anchor\")"));
+    assert!(conditional.contains("const__slot=enabled?extra:fallback;"));
+    assert!(conditional.contains("renderAnchor(__slot,root,_list1)"));
+    assert!(!conditional.contains("_$settextContent"));
+
+    let logical = compile_expr_child_for_parent("visible && extra", "div");
+    assert!(logical.contains("_$createComment(\"rue:slot:anchor\")"));
+    assert!(logical.contains("const__slot=visible?extra:\"\";"));
+    assert!(logical.contains("renderAnchor(__slot,root,_list1)"));
+    assert!(!logical.contains("_$settextContent"));
+
+    let nullish = compile_expr_child_for_parent("extra ?? fallback", "div");
+    assert!(nullish.contains("_$createComment(\"rue:slot:anchor\")"));
+    assert!(nullish.contains("const__slot=extra??fallback;"));
+    assert!(nullish.contains("renderAnchor(__slot,root,_list1)"));
+    assert!(!nullish.contains("_$settextContent"));
+}
+
+#[test]
+fn routes_accessor_get_children_through_slot_anchor_in_html_elements() {
+    let out = compile_expr_child_for_parent("indicator.get()", "div");
+
+    assert!(out.contains("_$createComment(\"rue:slot:anchor\")"));
+    assert!(out.contains("const__slot=indicator.get();"));
+    assert!(out.contains("renderAnchor(__slot,root,_list1)"));
+    assert!(!out.contains("_$settextContent"));
+
+    let member_text = compile_expr_child_for_parent("sha.slice(0, 7)", "div");
+    assert!(member_text.contains("_$createTextWrapper(root)"));
+    assert!(member_text.contains("watchEffect(()=>{_$settextContent(_el1,sha.slice(0,7));});"));
+    assert!(!member_text.contains("renderAnchor"));
+}
+
+#[test]
+fn routes_wrapped_and_nested_accessor_get_children_through_slot_anchor() {
+    for (src, expected) in [
+        ("(indicator.get() as any)", "const__slot=indicator.get();"),
+        ("indicator.get() ?? fallback", "const__slot=indicator.get()??fallback;"),
+        ("ready ? indicator.get() : fallback", "const__slot=ready?indicator.get():fallback;"),
+        ("indicator.get() || fallback", "const__slot=indicator.get()||fallback;"),
+        ("ready && indicator.get()", "const__slot=ready?indicator.get():\"\";"),
+        ("store.current.get()", "const__slot=store.current.get();"),
+    ] {
+        let out = compile_expr_child_for_parent(src, "div");
+
+        assert!(out.contains("_$createComment(\"rue:slot:anchor\")"), "{src}: {out}");
+        assert!(out.contains(expected), "{src}: {out}");
+        assert!(out.contains("renderAnchor(__slot,root,_list1)"), "{src}: {out}");
+        assert!(!out.contains("_$settextContent"), "{src}: {out}");
+    }
+}
+
+#[test]
+fn keeps_accessor_get_text_contexts_and_non_accessor_member_calls_on_text_path() {
+    for (src, parent_tag) in [("indicator.get()", "style"), ("indicator.get()", "text")] {
+        let out = compile_expr_child_for_parent(src, parent_tag);
+
+        assert!(out.contains("_$settextContent"), "{src} in {parent_tag}: {out}");
+        assert!(!out.contains("renderAnchor"), "{src} in {parent_tag}: {out}");
+    }
+
+    for src in [
+        "showB && 'B 显示（&&）'",
+        "indicator.get(0)",
+        "indicator.peek()",
+        "sha.slice(0, 7)",
+        "String(indicator.get())",
+        "Number(indicator.get())",
+        "parseInt(indicator.get(), 10)",
+    ] {
+        let out = compile_expr_child_for_parent(src, "div");
+
+        assert!(out.contains("_$createTextWrapper(root)"), "{src}: {out}");
+        assert!(out.contains("_$settextContent"), "{src}: {out}");
+        assert!(!out.contains("renderAnchor"), "{src}: {out}");
+    }
+}
+
+#[test]
+fn keeps_static_literals_on_text_content_path_for_html_children() {
+    let string_out = compile_expr_child_for_parent("'ready'", "div");
+    assert!(string_out.contains("_$createTextWrapper(root)"));
+    assert!(string_out.contains("_$settextContent(_el1,'ready');"));
+    assert!(!string_out.contains("renderAnchor"));
+
+    let number_out = compile_expr_child_for_parent("42", "div");
+    assert!(number_out.contains("_$createTextWrapper(root)"));
+    assert!(number_out.contains("_$settextContent(_el1,\"42\");"));
+    assert!(!number_out.contains("renderAnchor"));
+
+    let empty_out = compile_expr_child_for_parent("null", "div");
+    assert!(empty_out.contains("_$createTextWrapper(root)"));
+    assert!(empty_out.contains("_$settextContent(_el1,\"\");"));
+    assert!(!empty_out.contains("renderAnchor"));
+}
+
+#[test]
+fn keeps_style_and_svg_identifier_children_on_text_content_path() {
+    let style_out = compile_expr_child_for_parent("cssText", "style");
+    assert!(style_out.contains("watchEffect(()=>{_$settextContent(root,cssText);});"));
+    assert!(!style_out.contains("renderAnchor"));
+
+    let svg_out = compile_expr_child_for_parent("label", "text");
+    assert!(svg_out.contains("_$createTextWrapper(root)"));
+    assert!(svg_out.contains("watchEffect(()=>{_$settextContent(_el1,label);});"));
+    assert!(!svg_out.contains("renderAnchor"));
 }
 
 #[test]
@@ -392,9 +530,22 @@ fn detects_nested_opaque_renderables_and_svg_ref_exceptions() {
     assert!(contains_opaque_renderable_expr(&vt, &parse_expr("ok ? null : registry.view", false),));
     assert!(contains_opaque_renderable_expr(&vt, &parse_expr("slotView || fallback", false),));
     assert!(contains_opaque_renderable_expr(&vt, &parse_expr("(maybe ?? renderThing())", false),));
+    assert!(contains_opaque_renderable_expr(&vt, &parse_expr("indicator.get()", false),));
+    assert!(contains_opaque_renderable_expr(
+        &vt,
+        &parse_expr("(indicator.get() as any) ?? fallback", true),
+    ));
+    assert!(contains_opaque_renderable_expr(
+        &vt,
+        &parse_expr("ready && store.current.get()", false),
+    ));
+    assert!(!contains_opaque_renderable_expr(&vt, &parse_expr("showB && 'B 显示（&&）'", false),));
     assert!(is_non_ref_member_expr(&parse_expr("registry['view']", false)));
     assert!(!contains_opaque_renderable_expr(&vt, &parse_expr("count.value", false),));
     assert!(!contains_opaque_renderable_expr(&vt, &parse_expr("String(registry.view)", false),));
+    assert!(!contains_opaque_renderable_expr(&vt, &parse_expr("sha.slice(0, 7)", false),));
+    assert!(!contains_opaque_renderable_expr(&vt, &parse_expr("indicator.get(0)", false),));
+    assert!(!contains_opaque_renderable_expr(&vt, &parse_expr("indicator.peek()", false),));
 
     let mut svg_vt = new_vt();
     svg_vt.el_tag_by_ident.insert("svgRoot".to_string(), "circle".to_string());

@@ -16,6 +16,7 @@ fn new_vt() -> VaporTransform {
         did_transform: false,
         el_tag_by_ident: HashMap::new(),
         renderable_local_scopes: Vec::new(),
+        plain_local_scopes: Vec::new(),
     }
 }
 
@@ -1170,7 +1171,7 @@ fn hardens_member_named_slots_source_defaults_and_slot_attr_removal() {
     assert!(stmts_out.contains("_$createComponent(Namespace.Header"));
     assert!(stmts_out.contains("title:title"));
     assert!(stmts_out.contains("children:__child"));
-    assert!(!stmts_out.contains("slot:"));
+    assert!(!stmts_out.contains("slot:\"header\""));
     assert_eq!(expr_out, "__child2;");
 
     let slot_without_source = parse_jsx_element("<Slot name=\"default\" />");

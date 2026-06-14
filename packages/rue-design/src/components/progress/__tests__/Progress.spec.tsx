@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { render, setReactiveScheduling } from '@rue-js/rue'
+import { computed, ref, render, setReactiveScheduling } from '@rue-js/rue'
 import Progress from '..'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 
@@ -90,6 +90,87 @@ describe('Progress', () => {
       expect(element.querySelector('svg')).toBeTruthy()
       expect(element.querySelector('progress')).toBeFalsy()
       expect(element.textContent).toContain('60%')
+    })
+  })
+
+  it('updates enhanced progress from ref and computed props without remounting from the parent', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const percent = ref(40)
+    const status = computed(() =>
+      percent.value >= 100 ? 'success' : percent.value > 80 ? 'active' : 'normal',
+    )
+    const success = computed(() => ({ percent: Math.min(percent.value, 30) }))
+
+    render(
+      <Progress data-testid="ref-progress" percent={percent} status={status} success={success} />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const element = container.querySelector('[data-testid="ref-progress"]') as HTMLElement
+      expect(element.getAttribute('aria-valuenow')).toBe('40')
+      expect(element.textContent).toContain('40%')
+    })
+
+    percent.value = 86
+
+    await waitForContent(() => {
+      const element = container.querySelector('[data-testid="ref-progress"]') as HTMLElement
+      expect(element.getAttribute('aria-valuenow')).toBe('86')
+      expect(element.textContent).toContain('86%')
+    })
+
+    percent.value = 100
+
+    await waitForContent(() => {
+      const element = container.querySelector('[data-testid="ref-progress"]') as HTMLElement
+      expect(element.getAttribute('aria-valuenow')).toBe('100')
+      expect(element.textContent).not.toContain('[object Object]')
+      expect(element.querySelector('.text-success svg')).toBeTruthy()
+    })
+  })
+
+  it('updates computed status passed through a parent component boundary', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    let setPercent = (_value: number) => {}
+    const Preview = () => {
+      const percent = ref(68)
+      const status = computed(() =>
+        percent.value >= 100 ? 'success' : percent.value > 80 ? 'active' : 'normal',
+      )
+      const success = computed(() => ({ percent: Math.min(percent.value, 30) }))
+      setPercent = value => {
+        percent.value = value
+      }
+
+      return (
+        <Progress
+          data-testid="boundary-progress"
+          percent={percent}
+          status={status}
+          success={success}
+          strokeColor={{ from: '#38bdf8', to: '#8b5cf6', direction: 'to right' }}
+        />
+      )
+    }
+
+    render(<Preview />, container)
+
+    await waitForContent(() => {
+      const element = container.querySelector('[data-testid="boundary-progress"]') as HTMLElement
+      expect(element.textContent).toContain('68%')
+    })
+
+    setPercent(100)
+
+    await waitForContent(() => {
+      const element = container.querySelector('[data-testid="boundary-progress"]') as HTMLElement
+      expect(element.getAttribute('aria-valuenow')).toBe('100')
+      expect(element.textContent).not.toContain('[object Object]')
+      expect(element.querySelector('.text-success svg')).toBeTruthy()
     })
   })
 })

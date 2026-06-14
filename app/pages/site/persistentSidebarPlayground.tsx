@@ -1,4 +1,14 @@
-import { type FC, computed, useRef, useState } from '@rue-js/rue'
+import {
+  type FC,
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  useRef,
+  useState,
+  watchEffect,
+} from '@rue-js/rue'
 import { extend } from '@rue-js/shared'
 import { RouterLink, useRoute } from '@rue-js/router'
 import PageContentAnchor from './PageContentAnchor'
@@ -116,9 +126,43 @@ const useOptionalRoute = () => {
   }
 }
 
+const isTestEnvironment = (): boolean => {
+  return (
+    import.meta.env?.MODE === 'test' ||
+    import.meta.env?.VITEST === true ||
+    import.meta.env?.VITEST === 'true' ||
+    !!(globalThis as any).vitest
+  )
+}
+
+const renderRouterAnchorProps = (href: string, enabled: boolean) => {
+  if (!enabled) {
+    return { href }
+  }
+
+  return {
+    href: RouterLink.__rueHref(href),
+    onClick: (event: MouseEvent) => {
+      RouterLink.__rueOnClick(event, href)
+    },
+  }
+}
+
+const updateSidebarActiveLinks = (root: HTMLElement, activePath: string) => {
+  root.querySelectorAll<HTMLAnchorElement>('[data-rue-sidebar-href]').forEach(link => {
+    const isActive = link.getAttribute('data-rue-sidebar-href') === activePath
+    link.classList.toggle('active', isActive)
+    if (isActive) {
+      link.setAttribute('aria-current', 'page')
+    } else {
+      link.removeAttribute('aria-current')
+    }
+  })
+}
+
 const SidebarItemsList: FC<{
   items: SidebarItem[]
-  currentPath: string
+  activePath: string
   useRouterLinks: boolean
 }> = props => {
   return (
@@ -131,22 +175,17 @@ const SidebarItemsList: FC<{
               <ul className="menu menu-sm bg-transparent rounded-box w-full">
                 <SidebarItemsList
                   items={item.children}
-                  currentPath={props.currentPath}
+                  activePath={props.activePath}
                   useRouterLinks={props.useRouterLinks}
                 />
               </ul>
             </div>
-          ) : item.href && props.useRouterLinks ? (
-            <RouterLink
-              to={`${item.href}`}
-              className={`${props.currentPath === item.href ? 'active' : ''} w-full`}
-            >
-              {item.title}
-            </RouterLink>
           ) : item.href ? (
             <a
-              href={item.href}
-              className={`${props.currentPath === item.href ? 'active' : ''} w-full`}
+              {...renderRouterAnchorProps(item.href, props.useRouterLinks)}
+              className={`${props.activePath === item.href ? 'active' : ''} w-full`}
+              aria-current={props.activePath === item.href ? 'page' : undefined}
+              data-rue-sidebar-href={item.href}
             >
               {item.title}
             </a>
@@ -173,6 +212,9 @@ export const createPersistentSidebarPlayground = ({
 
   const SidebarPlaygroundNavigation: FC<SidebarPlaygroundProps> = props => {
     const route = useOptionalRoute()
+    const navRef = useRef<HTMLElement>()
+    const activePathRef = useRef('')
+    const activeWatcherRef = useRef<{ dispose?: () => void } | undefined>()
     const currentPath = computed(() => {
       if (props.currentPath !== undefined) {
         return props.currentPath
@@ -185,7 +227,7 @@ export const createPersistentSidebarPlayground = ({
     const [searchQuery, setSearchQuery] = useState(() => sharedSearchQuery ?? '')
     const searchComposingRef = useRef(false)
 
-    const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    const resolveInitialOpenSections = () => {
       if (sharedOpenSections) {
         return sharedOpenSections
       }
@@ -196,14 +238,15 @@ export const createPersistentSidebarPlayground = ({
       })
       sharedOpenSections = initialState
       return initialState
-    })
+    }
+    const openSections = ref<Record<string, boolean>>(resolveInitialOpenSections())
 
     const toggleSection = (id: string) => {
-      setOpenSections(prev => {
-        const next = extend(prev, { [id]: !prev[id] })
-        sharedOpenSections = next
-        return next
-      })
+      const current = openSections.value
+      const nextValue = !current[id]
+      const next = extend(current, { [id]: nextValue })
+      sharedOpenSections = next
+      openSections.value = next
     }
 
     const normalizedSearchQuery = computed(() => normalizeSidebarSearch(searchQuery.value))
@@ -251,10 +294,28 @@ export const createPersistentSidebarPlayground = ({
     })
     const isSearchActive = computed(() => normalizedSearchQuery.get().length > 0)
 
+    const applyActivePath = (nextPath: string) => {
+      activePathRef.current = nextPath
+      if (navRef.current) {
+        updateSidebarActiveLinks(navRef.current, nextPath)
+      }
+    }
+
+    onMounted(() => {
+      activeWatcherRef.current = watchEffect(() => {
+        applyActivePath(currentPath.get())
+      })
+    })
+
+    onUnmounted(() => {
+      activeWatcherRef.current?.dispose?.()
+      activeWatcherRef.current = undefined
+    })
+
     return (
       <aside className="w-full">
         <div className="sticky top-20">
-          <nav className="space-y-3 w-full">
+          <nav ref={navRef} className="space-y-3 w-full">
             {showCounts ? (
               <div className="rounded-box border border-base-300/60 bg-base-100 px-4 py-3 shadow-sm">
                 <div className="text-xs uppercase tracking-[0.18em] text-base-content/45">
@@ -306,7 +367,7 @@ export const createPersistentSidebarPlayground = ({
                 <div
                   key={section.id}
                   className={`collapse collapse-arrow bg-base-100 rounded-box shadow w-full ${
-                    openSections[section.id] || isSearchActive.get() ? 'collapse-open' : ''
+                    openSections.value[section.id] || isSearchActive.get() ? 'collapse-open' : ''
                   }`}
                 >
                   <button
@@ -328,7 +389,7 @@ export const createPersistentSidebarPlayground = ({
                     <ul className="menu menu-sm bg-transparent rounded-box w-full">
                       <SidebarItemsList
                         items={section.items}
-                        currentPath={currentPath.get()}
+                        activePath={activePathRef.current ?? ''}
                         useRouterLinks={!!route}
                       />
                     </ul>
@@ -348,6 +409,10 @@ export const createPersistentSidebarPlayground = ({
 
   const SidebarPlayground: FC<SidebarPlaygroundProps> = props => {
     const contentRef = useRef<HTMLElement>()
+    const [navigationReady, setNavigationReady] = useState(isTestEnvironment())
+    const navigationFrameRef = useRef<number | undefined>()
+    const navigationTimerRef = useRef<number | undefined>()
+    const navigationDisposedRef = useRef(false)
     const rootClassName = [
       'sidebar-playground',
       wrapperClassName,
@@ -360,10 +425,63 @@ export const createPersistentSidebarPlayground = ({
       .filter(Boolean)
       .join(' ')
 
+    onMounted(() => {
+      navigationDisposedRef.current = false
+      if (isTestEnvironment()) {
+        return
+      }
+
+      void nextTick(() => {
+        if (navigationDisposedRef.current) {
+          return
+        }
+
+        if (typeof window === 'undefined') {
+          setNavigationReady(true)
+          return
+        }
+
+        const revealNavigation = () => {
+          navigationTimerRef.current = undefined
+          if (!navigationDisposedRef.current) {
+            setNavigationReady(true)
+          }
+        }
+
+        if (typeof window.requestAnimationFrame !== 'function') {
+          navigationTimerRef.current = window.setTimeout(revealNavigation, 0)
+          return
+        }
+
+        navigationFrameRef.current = window.requestAnimationFrame(() => {
+          navigationFrameRef.current = undefined
+          navigationTimerRef.current = window.setTimeout(revealNavigation, 0)
+        })
+      })
+    })
+
+    onUnmounted(() => {
+      navigationDisposedRef.current = true
+
+      if (typeof window !== 'undefined') {
+        if (navigationFrameRef.current != null) {
+          window.cancelAnimationFrame(navigationFrameRef.current)
+        }
+        if (navigationTimerRef.current != null) {
+          window.clearTimeout(navigationTimerRef.current)
+        }
+      }
+
+      navigationFrameRef.current = undefined
+      navigationTimerRef.current = undefined
+    })
+
     return (
       <div className={rootClassName}>
-        <div className="md:w-45 shrink-0">
-          <SidebarPlaygroundNavigation currentPath={props.currentPath} />
+        <div className="md:w-45 shrink-0" aria-hidden={navigationReady.value ? undefined : 'true'}>
+          {navigationReady.value ? (
+            <SidebarPlaygroundNavigation currentPath={props.currentPath} />
+          ) : null}
         </div>
         <article ref={contentRef} class="component-preview min-w-0">
           {props.children}

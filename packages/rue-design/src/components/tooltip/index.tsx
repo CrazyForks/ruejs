@@ -1,10 +1,9 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Tooltip 模块概述
 - 汇总文字提示组件的公开类型、渲染入口和局部工具逻辑。
 - 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
 */
-import { h, type FC } from '@rue-js/rue'
+import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 
 /** TooltipPresetColor 语义色类型。 */
@@ -179,14 +178,6 @@ const serializeStyle = (style?: string | Record<string, any>) => {
     .join('; ')
 }
 
-/** 转换为 Child Array 的内部工具函数。 */
-const toChildArray = (children: any): any[] => {
-  if (Array.isArray(children)) {
-    return children.flatMap(item => toChildArray(item))
-  }
-  return children == null || typeof children === 'boolean' ? [] : [children]
-}
-
 /** toggle Class Tokens 的内部工具函数。 */
 const toggleClassTokens = (
   element: HTMLElement,
@@ -301,16 +292,45 @@ const callHandler = (handler: ((event: any) => void) | undefined, event: any) =>
 /** Content 的内部工具函数。 */
 const Content: FC<TooltipContentProps> = ({ as = 'div', className, style, children, ...rest }) => {
   const Component = as as any
-  const contentProps = { ...rest, className: mergeClassNames('tooltip-content', className), style }
-  const contentChildren = toChildArray(children) as any[]
+  const contentClassName = mergeClassNames('tooltip-content', className)
 
-  if (as === 'span') return h('span', contentProps, ...contentChildren)
-  if (as === 'p') return h('p', contentProps, ...contentChildren)
-  if (as === 'section') return h('section', contentProps, ...contentChildren)
+  if (as === 'span') {
+    return (
+      <span {...rest} className={contentClassName} style={style}>
+        {children}
+      </span>
+    )
+  }
 
-  return as === 'div'
-    ? h('div', contentProps, ...contentChildren)
-    : h(Component, contentProps, ...contentChildren)
+  if (as === 'p') {
+    return (
+      <p {...rest} className={contentClassName} style={style}>
+        {children}
+      </p>
+    )
+  }
+
+  if (as === 'section') {
+    return (
+      <section {...rest} className={contentClassName} style={style}>
+        {children}
+      </section>
+    )
+  }
+
+  if (as === 'div') {
+    return (
+      <div {...rest} className={contentClassName} style={style}>
+        {children}
+      </div>
+    )
+  }
+
+  return (
+    <Component {...rest} className={contentClassName} style={style}>
+      {children}
+    </Component>
+  )
 }
 
 /** Root 的内部工具函数。 */
@@ -339,7 +359,7 @@ const Root: FC<TooltipProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const bodyId = ref(`rue-tooltip-${tooltipIdSeed++}`)
+  const bodyId = `rue-tooltip-${tooltipIdSeed++}`
   const uncontrolledOpen = ref(defaultOpen ?? false)
   const resolvedContent = resolveTooltipContent(overlay, title, content, tip)
   const hasContent =
@@ -454,33 +474,83 @@ const Root: FC<TooltipProps> = ({
   }
 
   if (useBodyNode && !disabled) {
-    rootProps['aria-describedby'] = bodyId.value
+    rootProps['aria-describedby'] = bodyId
   }
 
-  const bodyNode =
-    useBodyNode && !disabled
-      ? h(
-          Content,
-          {
-            id: bodyId.value,
-            className: bodyClassName,
-            style: Object.keys(bodyFinalStyle).length > 0 ? bodyFinalStyle : undefined,
-          },
-          resolvedContent,
-        )
-      : null
+  const renderOverlayBody = () => {
+    if (!useBodyNode || disabled) return null
 
-  const rootChildren = [...(bodyNode ? [bodyNode] : []), ...(toChildArray(children) as any[])]
+    return (
+      <div
+        id={bodyId}
+        className={mergeClassNames('tooltip-content', bodyClassName)}
+        style={Object.keys(bodyFinalStyle).length > 0 ? bodyFinalStyle : undefined}
+      >
+        {resolvedContent}
+      </div>
+    )
+  }
 
-  if (as === 'span') return h('span', rootProps, ...rootChildren)
-  if (as === 'label') return h('label', rootProps, ...rootChildren)
-  if (as === 'button') return h('button', rootProps, ...rootChildren)
-  if (as === 'section') return h('section', rootProps, ...rootChildren)
-  if (as === 'article') return h('article', rootProps, ...rootChildren)
+  if (as === 'span') {
+    return (
+      <span {...rootProps}>
+        {renderOverlayBody()}
+        {children}
+      </span>
+    )
+  }
 
-  return as === 'div'
-    ? h('div', rootProps, ...rootChildren)
-    : h(Component, rootProps, ...rootChildren)
+  if (as === 'label') {
+    return (
+      <label {...rootProps}>
+        {renderOverlayBody()}
+        {children}
+      </label>
+    )
+  }
+
+  if (as === 'button') {
+    return (
+      <button {...rootProps}>
+        {renderOverlayBody()}
+        {children}
+      </button>
+    )
+  }
+
+  if (as === 'section') {
+    return (
+      <section {...rootProps}>
+        {renderOverlayBody()}
+        {children}
+      </section>
+    )
+  }
+
+  if (as === 'article') {
+    return (
+      <article {...rootProps}>
+        {renderOverlayBody()}
+        {children}
+      </article>
+    )
+  }
+
+  if (as === 'div') {
+    return (
+      <div {...rootProps}>
+        {renderOverlayBody()}
+        {children}
+      </div>
+    )
+  }
+
+  return (
+    <Component {...rootProps}>
+      {renderOverlayBody()}
+      {children}
+    </Component>
+  )
 }
 
 type TooltipCompound = FC<TooltipProps> & {

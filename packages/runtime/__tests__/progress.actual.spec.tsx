@@ -70,4 +70,60 @@ describe('Progress actual page', () => {
       expect(restored!.querySelectorAll('progress.progress').length).toBe(5)
     })
   })
+
+  it('renders Dynamic success indicator without object-object text', async () => {
+    setEnabledPreviews('Dynamic')
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<ProgressPage />, container)
+
+    await waitForContent(() => {
+      expect(findDemo(container, '# Dynamic')).not.toBeNull()
+    })
+
+    const dynamicDemo = findDemo(container, '# Dynamic') as HTMLElement
+    const setFullButton = Array.from(dynamicDemo.querySelectorAll('button')).find(
+      button => button.textContent?.trim() === '100%',
+    )
+
+    await click(setFullButton ?? null)
+
+    await waitForContent(() => {
+      expect(dynamicDemo.textContent).toContain('100%')
+      expect(dynamicDemo.textContent).not.toContain('[object Object]')
+      expect(dynamicDemo.querySelector('.text-success svg')).toBeTruthy()
+    })
+  })
+
+  it('keeps Dynamic preview stable across repeated range updates', async () => {
+    setEnabledPreviews('Dynamic')
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<ProgressPage />, container)
+
+    await waitForContent(() => {
+      expect(findDemo(container, '# Dynamic')).not.toBeNull()
+    })
+
+    const dynamicDemo = findDemo(container, '# Dynamic') as HTMLElement
+    const range = dynamicDemo.querySelector('input[type="range"]') as HTMLInputElement | null
+    expect(range).not.toBeNull()
+
+    const initialProgressCount = dynamicDemo.querySelectorAll('.rue-progress').length
+    const initialRangeCount = dynamicDemo.querySelectorAll('input[type="range"]').length
+
+    for (let index = 0; index < 80; index += 1) {
+      range!.value = String((index * 7) % 101)
+      range!.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }))
+    }
+
+    await waitForContent(() => {
+      expect(dynamicDemo.textContent).toContain('48%')
+      expect(dynamicDemo.textContent).not.toContain('[object Object]')
+      expect(dynamicDemo.querySelectorAll('.rue-progress').length).toBe(initialProgressCount)
+      expect(dynamicDemo.querySelectorAll('input[type="range"]').length).toBe(initialRangeCount)
+    })
+  })
 })

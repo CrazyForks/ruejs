@@ -2,7 +2,7 @@
 /*
 List 组件概述
 - 保留 Rue/daisyUI 的 list 视觉与 Row/ColGrow/ColWrap 组合 API。
-- 增强 Ant Design 风格的数据 API：dataSource/renderItem、header/footer、loading、pagination、grid、empty。
+- 增强的数据 API：dataSource/renderItem、header/footer、loading、pagination、grid、empty。
 - Item 支持 actions、extra、Meta，便于组织更完整的信息列表。
 */
 import type { FC } from '@rue-js/rue'

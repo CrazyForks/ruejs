@@ -1,5 +1,5 @@
 import type { FC } from '@rue-js/rue'
-import { computed, onMounted, onUnmounted, ref, useRef } from '@rue-js/rue'
+import { computed, onMounted, onUnmounted, ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import { Countdown, Tabs } from '@rue-js/design'
@@ -19,27 +19,6 @@ interface ApiRow {
   description: string
   type: string
   defaultValue: string
-}
-
-interface CountdownParts {
-  days: number
-  hours: number
-  minutes: number
-  seconds: number
-  milliseconds: number
-}
-
-const splitCountdown = (duration: number): CountdownParts => {
-  const safeDuration = Math.max(duration, 0)
-  const totalSeconds = Math.floor(safeDuration / 1000)
-
-  return {
-    days: Math.floor(totalSeconds / (24 * 60 * 60)),
-    hours: Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60)),
-    minutes: Math.floor((totalSeconds % (60 * 60)) / 60),
-    seconds: totalSeconds % 60,
-    milliseconds: safeDuration % 1000,
-  }
 }
 
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
@@ -166,10 +145,7 @@ const apiRows: ApiRow[] = [
 
 const CountdownDemo: FC = () => {
   const counter = ref(59)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const precisionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const demoNow = ref(Date.now())
-  const precisionNow = ref(Date.now())
+  let timer: ReturnType<typeof setInterval> | null = null
   const comboTarget = ref(Date.now() + 10 * 60 * 60 * 1000 + 24 * 60 * 1000 + 59 * 1000)
   const comboTotalSeconds = ref(Math.max(Math.floor((comboTarget.value - Date.now()) / 1000), 0))
   const comboHours = ref(Math.floor(comboTotalSeconds.value / (60 * 60)))
@@ -191,45 +167,26 @@ const CountdownDemo: FC = () => {
   }
 
   const stopTimer = () => {
-    if (timerRef.current != null) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-
-    if (precisionTimerRef.current != null) {
-      clearInterval(precisionTimerRef.current)
-      precisionTimerRef.current = null
+    if (timer != null) {
+      clearInterval(timer)
+      timer = null
     }
   }
 
   const startTimer = () => {
-    if (timerRef.current != null) {
+    if (timer != null) {
       return
     }
 
     syncComboCountdown()
-    demoNow.value = Date.now()
-    timerRef.current = setInterval(() => {
+    timer = setInterval(() => {
       counter.value = counter.value > 0 ? counter.value - 1 : 59
-      demoNow.value = Date.now()
       syncComboCountdown()
     }, 1000)
   }
 
-  const startPrecisionTimer = () => {
-    if (precisionTimerRef.current != null) {
-      return
-    }
-
-    precisionNow.value = Date.now()
-    precisionTimerRef.current = setInterval(() => {
-      precisionNow.value = Date.now()
-    }, 1000 / 30)
-  }
-
   onMounted(() => {
     startTimer()
-    startPrecisionTimer()
   })
   onUnmounted(stopTimer)
 
@@ -257,17 +214,14 @@ const CountdownDemo: FC = () => {
 
   const restartTargetDemo = () => {
     basicTarget.value = Date.now() + 1000 * 60 * 60 * 10 + 1000 * 60 * 24 + 1000 * 59
-    demoNow.value = Date.now()
   }
 
   const restartMillisecondDemo = () => {
     millisecondTarget.value = Date.now() + 10 * 1000
-    precisionNow.value = Date.now()
   }
 
   const restartDayLevelDemo = () => {
     dayLevelTarget.value = Date.now() + 2 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000 + 45 * 1000
-    demoNow.value = Date.now()
   }
 
   const restartCallbackDemo = () => {
@@ -275,47 +229,6 @@ const CountdownDemo: FC = () => {
     callbackRemaining.value = 10_000
     callbackTarget.value = Date.now() + 10 * 1000
   }
-
-  const targetCountdownItems = computed(() => {
-    const parts = splitCountdown(basicTarget.value - demoNow.value)
-
-    return [
-      { value: parts.hours, digits: 2 },
-      { content: ':' },
-      { value: parts.minutes, digits: 2 },
-      { content: ':' },
-      { value: parts.seconds, digits: 2 },
-    ]
-  })
-
-  const millisecondCountdownItems = computed(() => {
-    const parts = splitCountdown(millisecondTarget.value - precisionNow.value)
-
-    return [
-      { value: parts.hours, digits: 2 },
-      { content: ':' },
-      { value: parts.minutes, digits: 2 },
-      { content: ':' },
-      { value: parts.seconds, digits: 2 },
-      { content: ':' },
-      { value: parts.milliseconds, digits: 3 },
-    ]
-  })
-
-  const dayLevelCountdownItems = computed(() => {
-    const parts = splitCountdown(dayLevelTarget.value - demoNow.value)
-
-    return [
-      { value: parts.days },
-      { content: ' days ' },
-      { value: parts.hours, digits: 2 },
-      { content: ' hours ' },
-      { value: parts.minutes, digits: 2 },
-      { content: ' minutes ' },
-      { value: parts.seconds, digits: 2 },
-      { content: ' seconds' },
-    ]
-  })
 
   return (
     <SidebarPlayground>
@@ -332,8 +245,13 @@ const CountdownDemo: FC = () => {
           tab={tabTarget}
           preview={() => (
             <div className="space-y-4">
-              <Countdown className="font-mono text-4xl" items={targetCountdownItems.get()} />
-              <button className="btn btn-sm btn-outline" onClick={restartTargetDemo}>
+              <Countdown
+                key={basicTarget.value}
+                className="font-mono text-4xl"
+                value={basicTarget.value}
+                format="HH:mm:ss"
+              />
+              <button className="btn btn-sm btn-outline ml-3" onClick={restartTargetDemo}>
                 重新开始
               </button>
             </div>
@@ -353,8 +271,14 @@ const CountdownDemo: FC = () => {
           tab={tabMillisecond}
           preview={() => (
             <div className="space-y-4">
-              <Countdown className="font-mono text-3xl" items={millisecondCountdownItems.get()} />
-              <button className="btn btn-sm btn-outline" onClick={restartMillisecondDemo}>
+              <Countdown
+                key={millisecondTarget.value}
+                className="font-mono text-3xl"
+                value={millisecondTarget.value}
+                format="HH:mm:ss:SSS"
+                interval={250}
+              />
+              <button className="btn btn-sm btn-outline ml-3" onClick={restartMillisecondDemo}>
                 再来 10 秒
               </button>
             </div>
@@ -365,6 +289,7 @@ const CountdownDemo: FC = () => {
   className="font-mono text-3xl"
   value={preciseDeadline}
   format="HH:mm:ss:SSS"
+  interval={250}
 />`}
         />
 
@@ -374,8 +299,13 @@ const CountdownDemo: FC = () => {
           tab={tabDayLevel}
           preview={() => (
             <div className="space-y-4">
-              <Countdown className="font-mono text-2xl" items={dayLevelCountdownItems.get()} />
-              <button className="btn btn-sm btn-outline" onClick={restartDayLevelDemo}>
+              <Countdown
+                key={dayLevelTarget.value}
+                className="font-mono text-2xl"
+                value={dayLevelTarget.value}
+                format="D [days] H [hours] m [minutes] s [seconds]"
+              />
+              <button className="btn btn-sm btn-outline ml-3" onClick={restartDayLevelDemo}>
                 重置长倒计时
               </button>
             </div>
@@ -397,9 +327,11 @@ const CountdownDemo: FC = () => {
           preview={() => (
             <div className="space-y-4">
               <Countdown
+                key={callbackTarget.value}
                 className="font-mono text-3xl"
                 value={callbackTarget.value}
                 format="s.SSS"
+                interval={250}
                 onChange={remaining => {
                   callbackRemaining.value = Math.max(Math.round(remaining ?? 0), 0)
                 }}
@@ -424,6 +356,7 @@ const lastRemaining = ref(10_000)
   className="font-mono text-3xl"
   value={target}
   format="s.SSS"
+  interval={250}
   onChange={remaining => {
     lastRemaining.value = Math.max(Math.round(remaining ?? 0), 0)
   }}
@@ -442,9 +375,8 @@ const lastRemaining = ref(10_000)
           title="Countdown"
           tab={tabBasic}
           preview={() => (
-            <Countdown key={comboTotalSeconds.value}>
+            <Countdown>
               <Countdown.Value
-                key={comboTotalSeconds.value}
                 value={comboTotalSeconds.value}
                 ariaLabel={`${comboTotalSeconds.value} seconds remaining`}
               />
@@ -461,9 +393,8 @@ const lastRemaining = ref(10_000)
           title="Large Text With 2 Digits"
           tab={tabLarge2}
           preview={() => (
-            <Countdown key={comboSeconds.value} className="font-mono text-6xl">
+            <Countdown className="font-mono text-6xl">
               <Countdown.Value
-                key={comboSeconds.value}
                 value={comboSeconds.value}
                 digits={2}
                 ariaLabel={`${comboSeconds.value} seconds remaining`}
@@ -484,25 +415,16 @@ const lastRemaining = ref(10_000)
           title="Clock Countdown"
           tab={tabClock}
           preview={() => (
-            <Countdown
-              key={`${comboHours.value}:${comboMinutes.value}:${comboSeconds.value}`}
-              className="font-mono text-2xl"
-            >
-              <Countdown.Value
-                key={`h:${comboHours.value}`}
-                value={comboHours.value}
-                ariaLabel={`${comboHours.value} hours`}
-              />
+            <Countdown className="font-mono text-2xl">
+              <Countdown.Value value={comboHours.value} ariaLabel={`${comboHours.value} hours`} />
               h
               <Countdown.Value
-                key={`m:${comboMinutes.value}`}
                 value={comboMinutes.value}
                 digits={2}
                 ariaLabel={`${comboMinutes.value} minutes`}
               />
               m
               <Countdown.Value
-                key={`s:${comboSeconds.value}`}
                 value={comboSeconds.value}
                 digits={2}
                 ariaLabel={`${comboSeconds.value} seconds`}

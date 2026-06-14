@@ -632,6 +632,43 @@ fn rewrite_transition_group_map_callback_body(
     }
 }
 
+fn collect_transition_group_callback_plain_locals(
+    params: &[Pat],
+) -> std::collections::HashSet<String> {
+    fn collect_from_pat(pat: &Pat, out: &mut std::collections::HashSet<String>) {
+        match pat {
+            Pat::Ident(binding) => {
+                out.insert(binding.id.sym.to_string());
+            }
+            Pat::Array(arr) => {
+                for elem in arr.elems.iter().flatten() {
+                    collect_from_pat(elem, out);
+                }
+            }
+            Pat::Object(obj) => {
+                for prop in &obj.props {
+                    match prop {
+                        ObjectPatProp::KeyValue(kv) => collect_from_pat(&kv.value, out),
+                        ObjectPatProp::Assign(assign) => {
+                            out.insert(assign.key.sym.to_string());
+                        }
+                        ObjectPatProp::Rest(rest) => collect_from_pat(&rest.arg, out),
+                    }
+                }
+            }
+            Pat::Assign(assign) => collect_from_pat(&assign.left, out),
+            Pat::Rest(rest) => collect_from_pat(&rest.arg, out),
+            _ => {}
+        }
+    }
+
+    let mut out = std::collections::HashSet::new();
+    for param in params {
+        collect_from_pat(param, &mut out);
+    }
+    out
+}
+
 fn rewrite_transition_group_returns_in_block(vt: &mut VaporTransform, block: &mut BlockStmt) {
     for stmt in &mut block.stmts {
         rewrite_transition_group_returns_in_stmt(vt, stmt);
@@ -687,10 +724,14 @@ fn rewrite_transition_group_map_expr(vt: &mut VaporTransform, call: &CallExpr) -
     let Expr::Arrow(arrow) = callback_expr else {
         return None;
     };
+    let plain_locals = collect_transition_group_callback_plain_locals(&arrow.params);
+    vt.push_plain_local_scope(plain_locals);
+    let rewritten_body = rewrite_transition_group_map_callback_body(vt, arrow.body.as_ref());
+    vt.pop_plain_local_scope();
     let rewritten_arrow = Expr::Arrow(ArrowExpr {
         span: arrow.span,
         params: arrow.params.clone(),
-        body: Box::new(rewrite_transition_group_map_callback_body(vt, arrow.body.as_ref())),
+        body: Box::new(rewritten_body),
         is_async: arrow.is_async,
         is_generator: arrow.is_generator,
         type_params: arrow.type_params.clone(),

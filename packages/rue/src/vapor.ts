@@ -181,6 +181,8 @@ export {
   _$setChecked,
   /** 编译器 helper：设置表单元素 disabled。 */
   _$setDisabled,
+  /** 编译器 helper：批量透传 JSX spread 属性。 */
+  _$spreadAttributes,
   /** 在组件 setup 阶段初始化并缓存值。 */
   useSetup,
   /** 创建稳定引用对象，适合保存 DOM 或可变实例。 */

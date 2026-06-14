@@ -150,4 +150,23 @@ describe('Avatar', () => {
     expect(overflow.classList.contains('avatar-placeholder')).toBe(true)
     expect(overflow.textContent).toContain('+2')
   })
+
+  it('renders grouped overflow avatar from children with max config', async () => {
+    const c = document.createElement('div')
+    render(
+      h(
+        Avatar.Group,
+        { max: { count: 1 } },
+        h(Avatar, null, h('div', { className: 'w-12' }, 'A')),
+        h(Avatar, null, h('div', { className: 'w-12' }, 'B')),
+        h(Avatar, null, h('div', { className: 'w-12' }, 'C')),
+      ),
+      c,
+    )
+    await waitAvatarRender()
+    const avatars = c.querySelectorAll('.avatar')
+    expect(avatars.length).toBe(2)
+    expect((avatars[1] as HTMLElement).classList.contains('avatar-placeholder')).toBe(true)
+    expect(avatars[1].textContent).toContain('+2')
+  })
 })

@@ -97,6 +97,50 @@ describe('Countdown', () => {
     expect(wrapper.textContent).toBe('::')
   })
 
+  it('restarts target countdown when the parent target changes', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-01T00:00:00.000Z'))
+
+    const c = document.createElement('div')
+    const firstTarget = Date.now() + 5_000
+    render(h(Countdown, { key: firstTarget, value: firstTarget, format: 's', interval: 1000 }), c)
+    await waitCountdownRender()
+
+    const readSeconds = () => {
+      const value = c.querySelector('.countdown > span') as HTMLElement
+      return getCountdownValue(value)
+    }
+
+    expect(readSeconds()).toBe('5')
+
+    const nextTarget = Date.now() + 9_000
+    render(h(Countdown, { key: nextTarget, value: nextTarget, format: 's', interval: 1000 }), c)
+    await waitCountdownRender()
+
+    expect(readSeconds()).toBe('9')
+  })
+
+  it('updates target countdown values without remounting fixed format slots', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-01T00:00:00.000Z'))
+
+    const c = document.createElement('div')
+    const onChange = vi.fn()
+    render(h(Countdown, { value: Date.now() + 3_000, format: 's', interval: 1000, onChange }), c)
+    await waitCountdownRender()
+
+    const firstSlot = c.querySelector('.countdown > span') as HTMLElement
+    expect(getCountdownValue(firstSlot)).toBe('3')
+
+    await vi.advanceTimersByTimeAsync(1000)
+    await waitCountdownRender()
+
+    const nextSlot = c.querySelector('.countdown > span') as HTMLElement
+    expect(onChange).toHaveBeenLastCalledWith(2000)
+    expect(nextSlot).toBe(firstSlot)
+    expect(getCountdownValue(nextSlot)).toBe('2')
+  })
+
   it('supports literal text segments in format mode', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-01T00:00:00.000Z'))
@@ -113,7 +157,9 @@ describe('Countdown', () => {
     expect(getCountdownValue(spans[1])).toBe('3')
     expect(getCountdownValue(spans[2])).toBe('4')
     expect(getCountdownValue(spans[3])).toBe('5')
-    expect(wrapper.textContent).toBe(' days  hours  minutes  seconds')
+    expect(wrapper.textContent).toBe(
+      '\u00a0days\u00a0\u00a0hours\u00a0\u00a0minutes\u00a0\u00a0seconds',
+    )
   })
 
   it('fires onChange and onFinish once in countdown mode', async () => {

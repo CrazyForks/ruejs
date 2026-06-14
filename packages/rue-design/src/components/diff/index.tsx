@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Diff 模块概述
 - 汇总差异对比组件的公开类型、渲染入口和局部工具逻辑。
 - 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
 */
 import type { FC } from '@rue-js/rue'
-import { ref } from '@rue-js/rue'
+import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
 type StyleValue = string | number | null | undefined
 
@@ -14,6 +13,11 @@ interface StyleObject {
 }
 
 type DiffStyle = string | StyleObject
+
+interface PendingDiffChange {
+  value: number
+  event: Event
+}
 
 /** DiffProps 组件属性。 */
 export interface DiffProps {
@@ -111,6 +115,11 @@ const mergeStyle = (...styles: Array<DiffStyle | undefined>) => {
     .join('; ')
 }
 
+/** 解析 Style Attr 的内部工具函数。 */
+const resolveStyleAttr = (style?: DiffStyle) => {
+  return serializeStyle(style) || undefined
+}
+
 const diffRootLayoutStyle: StyleObject = {
   display: 'grid',
   justifyContent: 'normal',
@@ -177,9 +186,54 @@ const hasRenderableChildren = (children: any) => {
 const assignForwardedRef = (forwardedRef: any, element: HTMLElement | null) => {
   if (typeof forwardedRef === 'function') {
     forwardedRef(element)
-  } else if (forwardedRef && typeof forwardedRef === 'object' && 'current' in forwardedRef) {
+    return
+  }
+  if (forwardedRef && typeof forwardedRef === 'object') {
     forwardedRef.current = element ?? undefined
   }
+}
+
+/** 获取 Quick Position 样式的内部工具函数。 */
+const getQuickPositionStyle = (percent: number) => {
+  return serializeStyle({
+    '--rue-diff-position': `${percent}%`,
+  })
+}
+
+/** 获取 Quick Item1 样式的内部工具函数。 */
+const getQuickItem1Style = () => {
+  return serializeStyle({
+    clipPath: 'inset(0 calc(100% - var(--rue-diff-position, 50%)) 0 0)',
+  })
+}
+
+/** 获取 Quick Item2 样式的内部工具函数。 */
+const getQuickItem2Style = () => {
+  return serializeStyle({
+    clipPath: 'inset(0 0 0 var(--rue-diff-position, 50%))',
+  })
+}
+
+/** 获取 Quick Resizer 样式的内部工具函数。 */
+const getQuickResizerStyle = () => {
+  return serializeStyle({
+    left: 'var(--rue-diff-position, 50%)',
+    width: 0,
+    minWidth: 0,
+    maxWidth: 0,
+    clipPath: 'none',
+    overflow: 'visible',
+    opacity: 1,
+    resize: 'none',
+    transform: 'translateX(-50%)',
+  })
+}
+
+/** 获取 Quick Resizer Content 样式的内部工具函数。 */
+const getQuickResizerContentStyle = () => {
+  return serializeStyle({
+    left: 'var(--rue-diff-position, 50%)',
+  })
 }
 
 /** Item1 的内部工具函数。 */
@@ -197,23 +251,13 @@ const Item1: FC<DiffItemProps> = ({
   if ('ref' in rest) {
     delete rest.ref
   }
-  const resolvedStyle = serializeStyle(style)
-  const applyRef = (element: HTMLDivElement | null) => {
-    if (element) {
-      if (resolvedStyle) {
-        element.setAttribute('style', resolvedStyle)
-      } else {
-        element.removeAttribute('style')
-      }
-    }
-    assignForwardedRef(forwardedRef, element)
-  }
 
   return (
     <div
       {...rest}
-      ref={applyRef}
+      ref={(element: HTMLDivElement | null) => assignForwardedRef(forwardedRef, element)}
       className={mergeClassName('diff-item-1 relative', className)}
+      style={resolveStyleAttr(style)}
       role={role}
       tabIndex={tabIndex}
     >
@@ -247,23 +291,13 @@ const Item2: FC<DiffItemProps> = ({
   if ('ref' in rest) {
     delete rest.ref
   }
-  const resolvedStyle = serializeStyle(style)
-  const applyRef = (element: HTMLDivElement | null) => {
-    if (element) {
-      if (resolvedStyle) {
-        element.setAttribute('style', resolvedStyle)
-      } else {
-        element.removeAttribute('style')
-      }
-    }
-    assignForwardedRef(forwardedRef, element)
-  }
 
   return (
     <div
       {...rest}
-      ref={applyRef}
+      ref={(element: HTMLDivElement | null) => assignForwardedRef(forwardedRef, element)}
       className={mergeClassName('diff-item-2 relative', className)}
+      style={resolveStyleAttr(style)}
       role={role}
       tabIndex={tabIndex}
     >
@@ -288,20 +322,14 @@ const Resizer: FC<DiffResizerProps> = ({ className, style, children, ...rest }) 
   if ('ref' in rest) {
     delete rest.ref
   }
-  const resolvedStyle = serializeStyle(style)
-  const applyRef = (element: HTMLDivElement | null) => {
-    if (element) {
-      if (resolvedStyle) {
-        element.setAttribute('style', resolvedStyle)
-      } else {
-        element.removeAttribute('style')
-      }
-    }
-    assignForwardedRef(forwardedRef, element)
-  }
 
   return (
-    <div {...rest} ref={applyRef} className={mergeClassName('diff-resizer', className)}>
+    <div
+      {...rest}
+      ref={(element: HTMLDivElement | null) => assignForwardedRef(forwardedRef, element)}
+      className={mergeClassName('diff-resizer', className)}
+      style={resolveStyleAttr(style)}
+    >
       {children}
     </div>
   )
@@ -327,6 +355,10 @@ const Diff: FC<DiffProps> = ({
   onChange,
   ...rest
 }) => {
+  const rootRef = useRef<HTMLElement>()
+  const inputRef = useRef<HTMLInputElement>()
+  const changeFrameRef = useRef<number>()
+  const pendingChangeRef = useRef<PendingDiffChange>()
   const forwardedRef = rest.ref
   if ('ref' in rest) {
     delete rest.ref
@@ -345,65 +377,51 @@ const Diff: FC<DiffProps> = ({
   const rootClassName = quickMode
     ? mergeClassName('diff relative isolate overflow-hidden select-none', className)
     : mergeClassName('diff', className)
-  const rootStyle = mergeStyle(style, diffRootLayoutStyle)
-  let item1Element: HTMLDivElement | null = null
-  let item2Element: HTMLDivElement | null = null
-  let resizerElement: HTMLDivElement | null = null
-  let resizerContentElement: HTMLSpanElement | null = null
-  let inputElement: HTMLInputElement | null = null
+  const rootStyle = mergeStyle(
+    style,
+    diffRootLayoutStyle,
+    quickMode ? getQuickPositionStyle(percent) : undefined,
+  )
 
-  const applyRootRef = (element: HTMLElement | null) => {
-    if (element) {
-      if (rootStyle) {
-        element.setAttribute('style', rootStyle)
-      } else {
-        element.removeAttribute('style')
-      }
-    }
+  const assignRootRef = (element: HTMLElement | null) => {
+    rootRef.current = element ?? undefined
     assignForwardedRef(forwardedRef, element)
   }
 
   const syncQuickModeStyles = (nextValue: number) => {
     const nextPercent = resolvePercent(nextValue, bounds.min, bounds.max)
-    if (item1Element) {
-      item1Element.setAttribute(
-        'style',
-        serializeStyle({
-          clipPath: `inset(0 ${100 - nextPercent}% 0 0)`,
-        }),
-      )
+    if (rootRef.current) {
+      rootRef.current.style.setProperty('--rue-diff-position', `${nextPercent}%`)
     }
-    if (item2Element) {
-      item2Element.setAttribute(
-        'style',
-        serializeStyle({
-          clipPath: `inset(0 0 0 ${nextPercent}%)`,
-        }),
-      )
+    if (inputRef.current) {
+      inputRef.current.setAttribute('aria-valuenow', String(nextValue))
+      inputRef.current.value = String(nextValue)
     }
-    if (resizerElement) {
-      resizerElement.setAttribute(
-        'style',
-        serializeStyle({
-          left: `${nextPercent}%`,
-          width: 0,
-          minWidth: 0,
-          maxWidth: 0,
-          clipPath: 'none',
-          overflow: 'visible',
-          opacity: 1,
-          resize: 'none',
-          transform: 'translateX(-50%)',
-        }),
-      )
+  }
+
+  const flushPendingChange = () => {
+    const pendingChange = pendingChangeRef.current
+    changeFrameRef.current = undefined
+    pendingChangeRef.current = undefined
+    if (pendingChange && onChange) {
+      onChange(pendingChange.value, pendingChange.event)
     }
-    if (resizerContentElement) {
-      resizerContentElement.style.left = `${nextPercent}%`
+  }
+
+  const emitChange = (nextValue: number, event: Event) => {
+    if (!onChange) return
+    if (
+      controlled &&
+      typeof window !== 'undefined' &&
+      typeof window.requestAnimationFrame === 'function'
+    ) {
+      pendingChangeRef.current = { value: nextValue, event }
+      if (changeFrameRef.current === undefined) {
+        changeFrameRef.current = window.requestAnimationFrame(flushPendingChange)
+      }
+      return
     }
-    if (inputElement) {
-      inputElement.setAttribute('aria-valuenow', String(nextValue))
-      inputElement.value = String(nextValue)
-    }
+    onChange(nextValue, event)
   }
 
   const handleInput = (event: Event) => {
@@ -411,19 +429,57 @@ const Diff: FC<DiffProps> = ({
     const nextValue = resolveValue(target?.value, bounds.min, bounds.max, currentValue)
     if (!controlled) {
       uncontrolledValue.value = nextValue
+      emitChange(nextValue, event)
     }
     syncQuickModeStyles(nextValue)
-    if (onChange) {
-      onChange(nextValue, event)
+  }
+
+  const handleChange = (event: Event) => {
+    const target = event.target as HTMLInputElement | null
+    const nextValue = resolveValue(target?.value, bounds.min, bounds.max, currentValue)
+    syncQuickModeStyles(nextValue)
+    if (controlled) {
+      emitChange(nextValue, event)
     }
   }
+
+  onMounted(() => {
+    if (quickMode) {
+      syncQuickModeStyles(currentValue)
+    }
+  })
+
+  watch(
+    () => value,
+    nextValue => {
+      if (quickMode && controlled) {
+        syncQuickModeStyles(
+          resolveValue(nextValue, bounds.min, bounds.max, uncontrolledValue.value),
+        )
+      }
+    },
+    { immediate: true },
+  )
+
+  onUnmounted(() => {
+    if (
+      changeFrameRef.current !== undefined &&
+      typeof window !== 'undefined' &&
+      typeof window.cancelAnimationFrame === 'function'
+    ) {
+      window.cancelAnimationFrame(changeFrameRef.current)
+    }
+    changeFrameRef.current = undefined
+    pendingChangeRef.current = undefined
+  })
 
   if (!quickMode) {
     return (
       <figure
         {...rest}
-        ref={applyRootRef}
+        ref={assignRootRef}
         className={rootClassName}
+        style={rootStyle}
         tabIndex={tabIndex}
         aria-disabled={disabled ? 'true' : undefined}
       >
@@ -437,28 +493,26 @@ const Diff: FC<DiffProps> = ({
   return (
     <figure
       {...rest}
-      ref={applyRootRef}
+      ref={assignRootRef}
       className={rootClassName}
+      style={rootStyle}
       tabIndex={undefined}
       aria-disabled={disabled ? 'true' : undefined}
+      data-rue-diff-root="true"
     >
       <Item1
         className="absolute inset-0 z-10 overflow-hidden"
         role="img"
-        ref={(element: HTMLDivElement | null) => {
-          item1Element = element
-          syncQuickModeStyles(currentValue)
-        }}
+        style={getQuickItem1Style()}
+        data-rue-diff-item="1"
       >
         {renderQuickItemContent(item1)}
       </Item1>
       <Item2
         className="absolute inset-0 overflow-hidden after:hidden"
         role="img"
-        ref={(element: HTMLDivElement | null) => {
-          item2Element = element
-          syncQuickModeStyles(currentValue)
-        }}
+        style={getQuickItem2Style()}
+        data-rue-diff-item="2"
       >
         {renderQuickItemContent(item2)}
       </Item2>
@@ -474,32 +528,16 @@ const Diff: FC<DiffProps> = ({
       ) : null}
       <Resizer
         className="pointer-events-none absolute inset-y-0 z-20"
-        ref={(element: HTMLDivElement | null) => {
-          resizerElement = element
-          syncQuickModeStyles(currentValue)
-        }}
-        style={{
-          left: `${percent}%`,
-          width: 0,
-          minWidth: 0,
-          maxWidth: 0,
-          clipPath: 'none',
-          overflow: 'visible',
-          opacity: 1,
-          resize: 'none',
-          transform: 'translateX(-50%)',
-        }}
+        style={getQuickResizerStyle()}
+        data-rue-diff-resizer="true"
       >
         <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-base-100 shadow-sm" />
       </Resizer>
       {resizerContent != null ? (
         <span
-          ref={(element: HTMLSpanElement | null) => {
-            resizerContentElement = element
-            syncQuickModeStyles(currentValue)
-          }}
           className="pointer-events-none absolute top-1/2 z-30 inline-flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-base-300 bg-base-100/85 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-base-content shadow-sm backdrop-blur"
-          style={{ left: `${percent}%` }}
+          style={getQuickResizerContentStyle()}
+          data-rue-diff-resizer-content="true"
         >
           {resizerContent}
         </span>
@@ -508,9 +546,9 @@ const Diff: FC<DiffProps> = ({
         type="range"
         className="absolute inset-0 z-30 h-full w-full cursor-col-resize opacity-0 disabled:cursor-not-allowed"
         ref={(element: HTMLInputElement | null) => {
-          inputElement = element
-          syncQuickModeStyles(currentValue)
+          inputRef.current = element ?? undefined
         }}
+        data-rue-diff-input="true"
         min={String(bounds.min)}
         max={String(bounds.max)}
         step={String(rangeStep)}
@@ -522,7 +560,7 @@ const Diff: FC<DiffProps> = ({
         aria-valuemax={String(bounds.max)}
         aria-valuenow={String(currentValue)}
         onInput={handleInput}
-        onChange={handleInput}
+        onChange={handleChange}
       />
     </figure>
   )

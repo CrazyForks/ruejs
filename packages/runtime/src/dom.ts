@@ -1125,6 +1125,256 @@ export const setDisabled = (el: DomElementLike, disabled: boolean) =>
   getCurrentDOMAdapter().setDisabled(el, disabled)
 /** 获取标签名（便捷函数） */
 export const getTagName = (el: DomElementLike) => getCurrentDOMAdapter().getTagName(el)
+
+type SpreadAttributesRecord = {
+  keys: string[]
+  values: Record<string, any>
+  source?: object
+  signature: string
+}
+
+type SpreadAttributesState = {
+  cursor: number
+  resetScheduled: boolean
+  merged: Record<string, any>
+  records: SpreadAttributesRecord[]
+  sources: WeakMap<object, SpreadAttributesRecord>
+}
+
+const spreadAttributesCache = new WeakMap<object, SpreadAttributesState>()
+
+const isEventPropName = (name: string) =>
+  name.length > 2 && name.startsWith('on') && /[A-Z]/.test(name[2] ?? '')
+
+const toEventName = (name: string) => name.slice(2).toLowerCase()
+
+const normalizeAttributeName = (name: string) =>
+  name === 'className' ? 'class' : name === 'htmlFor' ? 'for' : name
+
+const removeSpreadAttribute = (el: DomElementLike, key: string, value: any) => {
+  if (key === 'children' || key === 'key' || key === 'ref') return
+  if (isEventPropName(key) && typeof value === 'function') {
+    removeEventListener(el, toEventName(key), value)
+    return
+  }
+  if (key === 'className') {
+    setClassName(el, '')
+    return
+  }
+  if (key === 'style') {
+    setStyle(el, undefined)
+    return
+  }
+  if (key === 'value') {
+    setValue(el, '')
+    return
+  }
+  if (key === 'checked') {
+    setChecked(el, false)
+    return
+  }
+  if (key === 'disabled') {
+    setDisabled(el, false)
+    return
+  }
+  if (key === 'tabIndex') {
+    ;(el as any).tabIndex = -1
+    removeAttribute(el, 'tabindex')
+    return
+  }
+  removeAttribute(el, normalizeAttributeName(key))
+}
+
+const setSpreadAttribute = (el: DomElementLike, key: string, value: any, previous: any) => {
+  if (key === 'children' || key === 'key' || key === 'ref') return
+  if (isEventPropName(key)) {
+    const eventName = toEventName(key)
+    if (typeof previous === 'function' && previous !== value) {
+      removeEventListener(el, eventName, previous)
+    }
+    if (typeof value === 'function' && previous !== value) {
+      addEventListener(el, eventName, value)
+    }
+    return
+  }
+  if (value === undefined || value === null || value === false) {
+    removeSpreadAttribute(el, key, previous)
+    return
+  }
+  if (key === 'className') {
+    setClassName(el, String(value))
+    return
+  }
+  if (key === 'style') {
+    setStyle(el, value)
+    return
+  }
+  if (key === 'value') {
+    setValue(el, value)
+    return
+  }
+  if (key === 'checked') {
+    setChecked(el, !!value)
+    return
+  }
+  if (key === 'disabled') {
+    setDisabled(el, !!value)
+    return
+  }
+  if (key === 'tabIndex') {
+    ;(el as any).tabIndex = value
+    return
+  }
+  setAttribute(el, normalizeAttributeName(key), value === true ? 'true' : value)
+}
+
+const getSpreadAttributesState = (el: DomElementLike) => {
+  let state = spreadAttributesCache.get(el as object)
+  if (!state) {
+    state = {
+      cursor: 0,
+      resetScheduled: false,
+      merged: {},
+      records: [],
+      sources: new WeakMap(),
+    }
+    spreadAttributesCache.set(el as object, state)
+  }
+
+  if (!state.resetScheduled) {
+    state.resetScheduled = true
+    queueMicrotask(() => {
+      if (state.cursor < state.records.length) {
+        state.records = state.records.slice(0, state.cursor)
+        state.sources = createSpreadSources(state.records)
+        applySpreadAttributes(el, state, mergeSpreadAttributeRecords(state.records))
+      }
+      state.cursor = 0
+      state.resetScheduled = false
+    })
+  }
+
+  return state
+}
+
+const createSpreadSignature = (keys: string[]) => keys.slice().sort().join('\u0000')
+
+const toSpreadRecordValues = (props: Record<string, any>, keys: string[]) => {
+  const values: Record<string, any> = {}
+  keys.forEach(key => {
+    values[key] = props[key]
+  })
+  return values
+}
+
+const findUniqueSpreadRecordBySignature = (
+  records: SpreadAttributesRecord[],
+  signature: string,
+) => {
+  let match: SpreadAttributesRecord | undefined
+
+  for (const record of records) {
+    if (record.signature !== signature) continue
+    if (match) return undefined
+    match = record
+  }
+
+  return match
+}
+
+const resolveSpreadAttributesRecord = (
+  state: SpreadAttributesState,
+  source: Record<string, any>,
+  keys: string[],
+) => {
+  const sourceObject = source && typeof source === 'object' ? source : undefined
+  const signature = createSpreadSignature(keys)
+  let record = sourceObject ? state.sources.get(sourceObject) : undefined
+
+  if (!record && state.cursor >= state.records.length) {
+    record = { keys: [], values: {}, source: sourceObject, signature }
+    state.records.push(record)
+  }
+
+  if (!record) {
+    record = findUniqueSpreadRecordBySignature(state.records, signature)
+  }
+
+  if (!record) {
+    record = state.records[state.cursor]
+  }
+
+  if (!record) {
+    record = { keys: [], values: {}, source: sourceObject, signature }
+    state.records.push(record)
+  }
+
+  if (sourceObject) {
+    record.source = sourceObject
+    state.sources.set(sourceObject, record)
+  }
+  state.cursor += 1
+  return record
+}
+
+const mergeSpreadAttributeRecords = (records: SpreadAttributesRecord[]) => {
+  const merged: Record<string, any> = {}
+  records.forEach(record => {
+    Object.keys(record.values).forEach(key => {
+      merged[key] = record.values[key]
+    })
+  })
+  return merged
+}
+
+const createSpreadSources = (records: SpreadAttributesRecord[]) => {
+  const sources = new WeakMap<object, SpreadAttributesRecord>()
+  records.forEach(record => {
+    if (record.source) {
+      sources.set(record.source, record)
+    }
+  })
+  return sources
+}
+
+const applySpreadAttributes = (
+  el: DomElementLike,
+  state: SpreadAttributesState,
+  merged: Record<string, any>,
+) => {
+  const previous = state.merged
+
+  Object.keys(previous).forEach(key => {
+    if (!(key in merged)) {
+      removeSpreadAttribute(el, key, previous[key])
+    }
+  })
+
+  Object.keys(merged).forEach(key => {
+    const value = merged[key]
+    if (previous[key] !== value) {
+      setSpreadAttribute(el, key, value, previous[key])
+    }
+  })
+
+  state.merged = { ...merged }
+}
+
+/** 批量透传 JSX spread 属性，供 Vapor 编译产物使用。 */
+export const spreadAttributes = (
+  el: DomElementLike,
+  props: Record<string, any> | null | undefined,
+) => {
+  const next = props && typeof props === 'object' ? props : {}
+  const state = getSpreadAttributesState(el)
+  const keys = Object.keys(next)
+  const record = resolveSpreadAttributesRecord(state, next, keys)
+  record.keys = keys
+  record.values = toSpreadRecordValues(next, keys)
+  record.signature = createSpreadSignature(keys)
+
+  applySpreadAttributes(el, state, mergeSpreadAttributeRecords(state.records))
+}
 /** 判断包含关系（便捷函数） */
 export const contains = (parent: DomNodeLike, child: DomNodeLike) =>
   getCurrentDOMAdapter().contains(parent, child)

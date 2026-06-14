@@ -383,6 +383,12 @@ const Segmented: FC<SegmentedProps<any>> = props => {
     hostAnchorsRef.current = new WeakMap()
   }
 
+  const setRootRef = (element: HTMLDivElement | null) => {
+    if (element) {
+      rootRef.current = element
+    }
+  }
+
   const clearThumbMotion = () => {
     if (thumbHideTimerRef.current !== undefined) {
       clearTimeout(thumbHideTimerRef.current)
@@ -565,7 +571,7 @@ const Segmented: FC<SegmentedProps<any>> = props => {
   })
 
   onUpdated(() => {
-    flushManagedDomSync()
+    scheduleSyncDom()
   })
 
   onUnmounted(() => {
@@ -580,6 +586,7 @@ const Segmented: FC<SegmentedProps<any>> = props => {
     managedHostsRef.current?.clear()
     resizeObserverRef.current?.disconnect()
     resizeObserverRef.current = undefined
+    rootRef.current = undefined
   })
 
   watch(
@@ -713,7 +720,7 @@ const Segmented: FC<SegmentedProps<any>> = props => {
   return (
     <div
       {...rest}
-      ref={rootRef}
+      ref={setRootRef}
       className={rootClassName}
       style={mergeStyles(semanticStyles.root, style)}
       role="radiogroup"

@@ -155,7 +155,7 @@ where
         batch_scope(|| {
             self.current_anchor = Some(anchor.clone());
             self.call_hooks("before_mount");
-            self.compact_anchor_map_preserving(Some(&anchor));
+            self.maybe_compact_anchor_map_preserving(Some(&anchor));
 
             if let Some(idx) = self.find_anchor_index(&anchor) {
                 #[cfg(feature = "dev")]

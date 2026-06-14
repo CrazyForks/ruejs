@@ -143,8 +143,11 @@ describe('Collapse', () => {
     const item = c.querySelector('.collapse') as HTMLElement
     const header = c.querySelector('.collapse-title') as HTMLElement
     const extra = c.querySelector('.collapse-title .shrink-0') as HTMLElement
+    const badge = extra.querySelector('.badge') as HTMLElement
 
     expect(item.classList.contains('collapse-open')).toBe(true)
+    expect(badge).toBeTruthy()
+    expect(badge.textContent).toBe('Beta')
 
     extra.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await waitCollapseRender()

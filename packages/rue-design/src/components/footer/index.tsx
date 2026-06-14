@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Footer 组件概述
 - 保留原有 `children + className` 直出方式，继续兼容 daisyUI 风格拼装。
@@ -250,24 +249,20 @@ const Section: FC<FooterSectionProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const renderedItems = (items ?? [])
-    .map((item, index) => renderFooterItem(item, index))
-    .filter(Boolean)
-  const body =
-    hasRenderableContent(content) || hasRenderableContent(children) ? (
-      (content ?? children)
-    ) : inline ? (
-      <div className={joinClassName('grid grid-flow-col auto-cols-max gap-4', contentClassName)}>
-        {renderedItems}
-      </div>
-    ) : (
-      renderedItems
-    )
+  const hasCustomContent = hasRenderableContent(content) || hasRenderableContent(children)
 
   return (
     <Component {...rest} className={className}>
       {hasRenderableContent(title) ? <Title className={titleClassName}>{title}</Title> : null}
-      {body}
+      {hasCustomContent ? (
+        (content ?? children)
+      ) : inline ? (
+        <div className={joinClassName('grid grid-flow-col auto-cols-max gap-4', contentClassName)}>
+          {(items ?? []).map((item, index) => renderFooterItem(item, index))}
+        </div>
+      ) : (
+        (items ?? []).map((item, index) => renderFooterItem(item, index))
+      )}
     </Component>
   )
 }

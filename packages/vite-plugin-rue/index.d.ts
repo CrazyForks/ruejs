@@ -10,6 +10,8 @@ export interface RueTransformExecutorPayload {
   pluginPath: string
   /** 单次转换允许的最长耗时，单位为毫秒。 */
   timeoutMs: number
+  /** 是否按生产模式编译当前模块。 */
+  isProduction?: boolean
 }
 
 /** Rue Vite 插件配置项。 */

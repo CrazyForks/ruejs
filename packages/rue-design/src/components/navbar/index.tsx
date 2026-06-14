@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Navbar 模块概述
 - 汇总导航栏组件的公开类型、渲染入口和局部工具逻辑。
@@ -93,6 +92,15 @@ export interface NavbarRootProps {
   [key: string]: any
 }
 
+interface NavbarSlotItemProps {
+  content?: any
+}
+
+interface NavbarPlacementItemsProps {
+  items?: ReadonlyArray<NavbarItem>
+  placement: NavbarPlacement
+}
+
 /** join Class Name 的内部工具函数。 */
 const joinClassName = (...values: Array<string | undefined | false>) =>
   values.filter(Boolean).join(' ')
@@ -103,6 +111,12 @@ const hasRenderableContent = (value: any): boolean => {
   if (Array.isArray(value)) return value.some(item => hasRenderableContent(item))
   return true
 }
+
+/** 判断指定位置是否存在数据驱动项。 */
+const hasPlacementItems = (
+  items: ReadonlyArray<NavbarItem> | undefined,
+  placement: NavbarPlacement,
+) => (items ?? []).some(item => (item.placement ?? 'start') === placement)
 
 /** 解析 Align Class 的内部工具函数。 */
 const resolveAlignClass = (align?: NavbarAlign, placement?: NavbarPlacement) => {
@@ -145,7 +159,10 @@ const Section: FC<NavbarSectionProps> = ({
 }) => {
   const Component = as as any
   return (
-    <Component {...rest} className={buildSectionClassName(placement, align, grow, wrap, className)}>
+    <Component
+      {...rest}
+      className={buildSectionClassName(placement, align, grow, wrap, className)}
+    >
       {children}
     </Component>
   )
@@ -177,23 +194,26 @@ const End: FC<Omit<NavbarSectionProps, 'placement'>> = props => (
   <Section {...props} placement="end" />
 )
 
-/** 渲染 Slot Item 的内部工具函数。 */
-const renderSlotItem = (content: any, key: string) => {
+/** SlotItem 的内部工具函数。 */
+const SlotItem: FC<NavbarSlotItemProps> = ({ content }) => {
   if (!hasRenderableContent(content)) return null
-  return <Item key={key}>{content}</Item>
+  return <Item>{content}</Item>
 }
 
-/** 渲染 Placement Items 的内部工具函数。 */
-const renderPlacementItems = (
-  items: ReadonlyArray<NavbarItem> | undefined,
-  placement: NavbarPlacement,
-) => {
-  return (items ?? [])
-    .filter(item => (item.placement ?? 'start') === placement)
-    .map((item, index) => {
-      const { key, placement: _placement, content, children, ...rest } = item
-      return <Item key={key ?? `${placement}-${index}`} {...rest} content={content ?? children} />
-    })
+/** PlacementItems 的内部工具函数。 */
+const PlacementItems: FC<NavbarPlacementItemsProps> = ({ items, placement }) => {
+  return (
+    <>
+      {(items ?? [])
+        .filter(item => (item.placement ?? 'start') === placement)
+        .map((item, index) => {
+          const { key, placement: _placement, content, children, ...rest } = item
+          return (
+            <Item key={key ?? `${placement}-${index}`} {...rest} content={content ?? children} />
+          )
+        })}
+    </>
+  )
 }
 
 /** Root 的内部工具函数。 */
@@ -217,19 +237,12 @@ const Root: FC<NavbarRootProps> = ({
 }) => {
   const Component = as as any
   const hasChildren = hasRenderableContent(children)
-  const startNodes = [
-    renderSlotItem(brand, 'brand'),
-    renderSlotItem(start, 'start'),
-    ...renderPlacementItems(items, 'start'),
-  ]
-  const centerNodes = [renderSlotItem(center, 'center'), ...renderPlacementItems(items, 'center')]
-  const endNodes = [
-    ...renderPlacementItems(items, 'end'),
-    renderSlotItem(end, 'end'),
-    renderSlotItem(actions, 'actions'),
-  ]
-  const hasStructuredSlots =
-    startNodes.some(Boolean) || centerNodes.some(Boolean) || endNodes.some(Boolean)
+  const hasStart =
+    hasRenderableContent(brand) || hasRenderableContent(start) || hasPlacementItems(items, 'start')
+  const hasCenter = hasRenderableContent(center) || hasPlacementItems(items, 'center')
+  const hasEnd =
+    hasPlacementItems(items, 'end') || hasRenderableContent(end) || hasRenderableContent(actions)
+  const hasStructuredSlots = hasStart || hasCenter || hasEnd
 
   return (
     <Component
@@ -246,14 +259,25 @@ const Root: FC<NavbarRootProps> = ({
         children
       ) : (
         <>
-          {hasStructuredSlots && startNodes.some(Boolean) ? (
-            <Start {...startProps}>{startNodes}</Start>
+          {hasStructuredSlots && hasStart ? (
+            <Start {...startProps}>
+              <SlotItem content={brand} />
+              <SlotItem content={start} />
+              <PlacementItems items={items} placement="start" />
+            </Start>
           ) : null}
-          {hasStructuredSlots && centerNodes.some(Boolean) ? (
-            <Center {...centerProps}>{centerNodes}</Center>
+          {hasStructuredSlots && hasCenter ? (
+            <Center {...centerProps}>
+              <SlotItem content={center} />
+              <PlacementItems items={items} placement="center" />
+            </Center>
           ) : null}
-          {hasStructuredSlots && endNodes.some(Boolean) ? (
-            <End {...endProps}>{endNodes}</End>
+          {hasStructuredSlots && hasEnd ? (
+            <End {...endProps}>
+              <PlacementItems items={items} placement="end" />
+              <SlotItem content={end} />
+              <SlotItem content={actions} />
+            </End>
           ) : null}
         </>
       )}

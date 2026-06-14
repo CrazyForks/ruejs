@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Countdown 组件概述
 - 兼容静态 children / items / Countdown.Value 组合写法。
 - 新增目标时间倒计时模式，支持 format / onChange / onFinish。
 - 继续保持 Rue 当前基于 daisyUI countdown 的视觉与分隔符约束。
 */
-import { onUnmounted, ref, useRef, watch, type FC } from '@rue-js/rue'
+import { computed, onUnmounted, ref, watch, type FC } from '@rue-js/rue'
 
 /** DEFAULT_FORMAT 内部常量。 */
 const DEFAULT_FORMAT = 'HH:mm:ss'
@@ -186,60 +185,62 @@ const getUnitValues = (duration: number, tokens: CountdownFormatToken[]) => {
   return values
 }
 
-/** 构建 Items From Duration 的内部工具函数。 */
-const buildItemsFromDuration = (
-  duration: number,
-  format: string,
-  ariaLive: CountdownAriaLive,
-): CountdownItem[] => {
-  const tokens = parseFormat(format)
-  const values = getUnitValues(duration, tokens)
-
-  return tokens.flatMap<CountdownItem>(token => {
-    if (token.type === 'literal') {
-      return token.content ? [{ content: token.content }] : []
-    }
-
-    const nextValue = values[token.unit] ?? 0
-    return [
-      {
-        value: nextValue,
-        digits: token.digits > 1 ? token.digits : undefined,
-        ariaLive,
-        ariaLabel: String(nextValue),
-      },
-    ]
-  })
-}
-
 /** 解析 Timer Interval 的内部工具函数。 */
 const resolveTimerInterval = (format: string, interval?: number) => {
   if (typeof interval === 'number' && interval > 0) return interval
   return format.includes('S') ? MILLISECOND_INTERVAL : SECOND_INTERVAL
 }
 
-/** 渲染 Items 的内部工具函数。 */
-const renderItems = (items: ReadonlyArray<CountdownItem>) => {
-  return items.map((it, index) => {
-    if ('value' in it) {
-      const { value, digits, className, ariaLive, ariaLabel, children } = it
-      return (
-        <Value
-          key={`${index}:${value}:${digits ?? ''}:${ariaLabel ?? ''}`}
-          value={value}
-          digits={digits}
-          className={className}
-          ariaLive={ariaLive}
-          ariaLabel={ariaLabel}
-        >
-          {children}
-        </Value>
-      )
-    }
+/** 判断 Countdown Item 是否为数值段。 */
+const isValueItem = (item: CountdownItem): item is CountdownValueItem => {
+  return 'value' in item
+}
 
-    // daisyUI countdown expects separators like ":" or "h" to stay as text nodes.
-    return it.content
-  })
+/** 构建 Value 的 CSS 变量字符串，避免 callback ref 在 Vapor 更新路径里只跑首次挂载。 */
+const buildValueStyle = (value: number, digits?: number) => {
+  let style = `--value: ${String(value)};`
+  if (digits != null) {
+    style += ` --digits: ${String(digits)};`
+  }
+  return style
+}
+
+/** 在 countdown 的 inline-flex 文本分隔符中保留 format 写出的空格。 */
+const renderLiteralContent = (content: any) => {
+  return typeof content === 'string' ? content.replace(/ /g, '\u00a0') : content
+}
+
+/** 读取 format token 对应的显示位数。 */
+const getTokenDigits = (token: CountdownUnitToken) => {
+  return token.digits > 1 ? token.digits : undefined
+}
+
+/** 读取 format token 对应的当前值。 */
+const getTokenValue = (
+  token: CountdownUnitToken,
+  values: Partial<Record<CountdownFormatUnit, number>>,
+) => {
+  return values[token.unit] ?? 0
+}
+
+/** 将当前倒计时值同步到实际数字槽位。 */
+const syncValueElement = (
+  element: HTMLElement,
+  value: number,
+  digits: number | undefined,
+  ariaLive: CountdownAriaLive,
+) => {
+  element.style.setProperty('--value', String(value))
+  if (digits != null) {
+    element.style.setProperty('--digits', String(digits))
+    element.setAttribute('data-countdown-digits', String(digits))
+  } else {
+    element.style.removeProperty('--digits')
+    element.removeAttribute('data-countdown-digits')
+  }
+  element.setAttribute('aria-live', ariaLive)
+  element.setAttribute('aria-label', String(value))
+  element.setAttribute('data-countdown-value', String(value))
 }
 
 /** 倒计时组件：支持静态拼装与目标时间倒计时两种模式 */
@@ -255,13 +256,15 @@ const Countdown: FC<CountdownProps> = ({
   onFinish,
 }) => {
   const remaining = ref(0)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const finishedRef = useRef(false)
+  let timer: ReturnType<typeof setInterval> | null = null
+  let finished = false
+  let rootElement: HTMLElement | null = null
+  let syncTimerDom = () => {}
 
   const stopTimer = () => {
-    if (timerRef.current != null) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
+    if (timer != null) {
+      clearInterval(timer)
+      timer = null
     }
   }
 
@@ -269,6 +272,7 @@ const Countdown: FC<CountdownProps> = ({
     const target = parseTargetTime(value)
     if (target == null) {
       remaining.value = 0
+      syncTimerDom()
       if (onChange) onChange(undefined)
       stopTimer()
       return false
@@ -276,32 +280,36 @@ const Countdown: FC<CountdownProps> = ({
 
     const nextRemaining = Math.max(target - Date.now(), 0)
     remaining.value = nextRemaining
+    syncTimerDom()
     if (onChange) onChange(nextRemaining)
 
     if (nextRemaining <= 0) {
       stopTimer()
-      if (!finishedRef.current) {
-        finishedRef.current = true
+      if (!finished) {
+        finished = true
         if (onFinish) onFinish()
       }
       return false
     }
 
-    finishedRef.current = false
+    finished = false
     return true
   }
 
   const startTimer = () => {
     stopTimer()
-    if (value == null) return
+    if (value == null) {
+      remaining.value = 0
+      return
+    }
     if (!syncRemaining()) return
-    timerRef.current = setInterval(syncRemaining, resolveTimerInterval(format, interval))
+    timer = setInterval(syncRemaining, resolveTimerInterval(format, interval))
   }
 
   watch(
     () => `${parseTargetTime(value) ?? 'invalid'}|${format}|${interval ?? ''}`,
     () => {
-      finishedRef.current = false
+      finished = false
       startTimer()
     },
     { immediate: true },
@@ -309,21 +317,79 @@ const Countdown: FC<CountdownProps> = ({
 
   onUnmounted(stopTimer)
 
-  const resolvedClassName = mergeClassName('countdown', className)
-  const hasItems = !!(items && items.length)
-  const usesTimerMode = !hasItems && value != null
-  const resolvedAriaLive: CountdownAriaLive = ariaLive ?? (format.includes('S') ? 'off' : 'polite')
+  const resolvedClassName = computed(() => mergeClassName('countdown', className))
+  const hasItems = computed(() => !!(items && items.length))
+  const usesTimerMode = computed(() => !hasItems.get() && value != null)
+  const formatTokens = computed(() => parseFormat(format))
+  const resolvedAriaLive = computed<CountdownAriaLive>(
+    () => ariaLive ?? (format.includes('S') ? 'off' : 'polite'),
+  )
+  const getTimerTokenValue = (token: CountdownUnitToken) => {
+    return getTokenValue(token, getUnitValues(remaining.value, formatTokens.get()))
+  }
+  syncTimerDom = () => {
+    const active = usesTimerMode.get()
+    const tokens = formatTokens.get()
+    const values = getUnitValues(remaining.value, tokens)
+    const live = resolvedAriaLive.get()
 
-  if (hasItems) {
-    return <span className={resolvedClassName}>{renderItems(items!)}</span>
+    if (!rootElement || !active) return
+
+    Array.from(rootElement.children).forEach(element => {
+      const valueElement = element as HTMLElement
+      const tokenIndex = Number(valueElement.dataset.countdownTokenIndex)
+      const token = tokens[tokenIndex]
+      if (!token || token.type !== 'unit') return
+      syncValueElement(valueElement, getTokenValue(token, values), getTokenDigits(token), live)
+    })
+  }
+  const setRootElement = (element: HTMLElement | null) => {
+    rootElement = element
+    syncTimerDom()
   }
 
-  if (usesTimerMode) {
-    const timerItems = buildItemsFromDuration(remaining.value, format, resolvedAriaLive)
-    return <span className={resolvedClassName}>{renderItems(timerItems)}</span>
-  }
-
-  return <span className={resolvedClassName}>{children}</span>
+  return (
+    <span ref={setRootElement} className={resolvedClassName.get()}>
+      {hasItems.get()
+        ? (items ?? []).map((item, index) =>
+            isValueItem(item) ? (
+              <span
+                style={buildValueStyle(item.value, item.digits)}
+                aria-live={item.ariaLive ?? 'polite'}
+                aria-label={item.ariaLabel ?? String(item.value)}
+                data-countdown-value={String(item.value)}
+                {...(item.digits != null ? { 'data-countdown-digits': String(item.digits) } : {})}
+                className={item.className ? item.className.trim() : ''}
+              >
+                {item.children}
+              </span>
+            ) : (
+              // daisyUI countdown expects separators like ":" or "h" to stay as text nodes.
+              renderLiteralContent(item.content)
+            ),
+          )
+        : usesTimerMode.get()
+          ? formatTokens.get().map((token, index) =>
+              token.type === 'unit' ? (
+                <span
+                  key={index}
+                  data-countdown-token-index={String(index)}
+                  style={buildValueStyle(getTimerTokenValue(token), getTokenDigits(token))}
+                  aria-live={resolvedAriaLive.get()}
+                  aria-label={String(getTimerTokenValue(token))}
+                  data-countdown-value={String(getTimerTokenValue(token))}
+                  {...(getTokenDigits(token) != null
+                    ? { 'data-countdown-digits': String(getTokenDigits(token)) }
+                    : {})}
+                />
+              ) : (
+                // daisyUI countdown expects separators like ":" or "h" to stay as text nodes.
+                renderLiteralContent(token.content)
+              ),
+            )
+          : children}
+    </span>
+  )
 }
 
 /** 数值子组件：通过 CSS 变量控制显示位数 */
@@ -335,27 +401,16 @@ const Value: FC<ValueProps> = ({
   ariaLabel,
   children,
 }) => {
-  const applyRef = (element: HTMLSpanElement | null) => {
-    if (!element) {
-      return
-    }
-
-    element.style.setProperty('--value', String(value))
-    if (digits != null) {
-      element.style.setProperty('--digits', String(digits))
-    } else {
-      element.style.removeProperty('--digits')
-    }
-  }
+  const resolvedClassName = className ? className.trim() : ''
 
   return (
     <span
-      ref={applyRef}
+      style={buildValueStyle(value, digits)}
       aria-live={ariaLive}
       aria-label={ariaLabel ?? String(value)}
       data-countdown-value={String(value)}
-      data-countdown-digits={digits != null ? String(digits) : undefined}
-      className={className?.trim()}
+      {...(digits != null ? { 'data-countdown-digits': String(digits) } : {})}
+      className={resolvedClassName}
     >
       {children != null ? children : String(value)}
     </span>

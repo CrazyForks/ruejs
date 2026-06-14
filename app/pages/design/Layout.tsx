@@ -435,12 +435,6 @@ const renderOpsRail = () => (
   </div>
 )
 
-const syncTextContent = (element: HTMLElement | null, value: string) => {
-  if (element) {
-    element.textContent = value
-  }
-}
-
 const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
   return (
     <div className="not-prose overflow-x-auto rounded-box border border-base-300 bg-base-100">
@@ -474,6 +468,107 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
   )
 }
 
+const CollapsibleSiderPreview: FC = () => {
+  const collapsedInfo = ref('ready')
+
+  return (
+    <Layout hasSider className="rounded-[2rem] bg-base-200/45 p-4">
+      <Layout.Sider
+        collapsible
+        defaultCollapsed
+        width={264}
+        collapsedWidth={72}
+        theme="dark"
+        footer="Auto save every 24s"
+        data-testid="layout-collapsible-sider"
+        onCollapse={nextCollapsed => {
+          collapsedInfo.value = nextCollapsed ? 'collapsed' : 'expanded'
+        }}
+      >
+        {renderPrimaryNav(true)}
+      </Layout.Sider>
+      <Layout>
+        <Layout.Header>
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-base-content/45">
+              sider status
+            </div>
+            <div className="text-lg font-semibold" data-testid="layout-collapse-status">
+              {collapsedInfo.value}
+            </div>
+          </div>
+          <Badge outline>defaultCollapsed</Badge>
+        </Layout.Header>
+        <Layout.Content>
+          <div className="rounded-[1.25rem] border border-dashed border-base-300 bg-base-100/75 p-5 text-sm leading-6 opacity-80">
+            Trigger 会自动驱动 current width、collapsed state 和 footer
+            排版。需要更细的文案时，可以接 onCollapse。
+          </div>
+        </Layout.Content>
+      </Layout>
+    </Layout>
+  )
+}
+
+const ResponsiveSiderPreview: FC = () => {
+  const responsiveInfo = ref('desktop')
+  const responsiveCollapse = ref('expanded')
+
+  return (
+    <Layout hasSider className="rounded-[2rem] bg-base-200/45 p-4">
+      <Layout.Sider
+        collapsible
+        breakpoint="lg"
+        collapsedWidth={0}
+        width={240}
+        theme="dark"
+        data-testid="layout-responsive-sider"
+        onBreakpoint={broken => {
+          responsiveInfo.value = broken ? 'broken' : 'desktop'
+        }}
+        onCollapse={nextCollapsed => {
+          responsiveCollapse.value = nextCollapsed ? 'collapsed' : 'expanded'
+        }}
+      >
+        {renderPrimaryNav(false)}
+      </Layout.Sider>
+      <Layout>
+        <Layout.Header>
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-base-content/45">
+              responsive
+            </div>
+            <div className="text-lg font-semibold" data-testid="layout-breakpoint-status">
+              {responsiveInfo.value}
+            </div>
+          </div>
+          <span className="badge badge-outline" data-testid="layout-responsive-collapse">
+            {responsiveCollapse.value}
+          </span>
+        </Layout.Header>
+        <Layout.Content>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-[1.25rem] border border-base-300/70 bg-base-100/90 p-5 shadow-sm">
+              <div className="text-sm font-semibold">Try narrow viewport</div>
+              <div className="mt-2 text-sm opacity-75">
+                In browser, shrinking below lg collapses the rail to zero width and leaves a
+                floating trigger.
+              </div>
+            </div>
+            <div className="rounded-[1.25rem] border border-base-300/70 bg-base-100/90 p-5 shadow-sm">
+              <div className="text-sm font-semibold">Callbacks included</div>
+              <div className="mt-2 text-sm opacity-75">
+                onBreakpoint and onCollapse stay separate, so breakpoint and collapse state can be
+                handled independently.
+              </div>
+            </div>
+          </div>
+        </Layout.Content>
+      </Layout>
+    </Layout>
+  )
+}
+
 const LayoutPage: FC = () => {
   const tabBasic = ref<PreviewTabMode>('preview')
   const tabShell = ref<PreviewTabMode>('preview')
@@ -481,13 +576,6 @@ const LayoutPage: FC = () => {
   const tabCustom = ref<PreviewTabMode>('preview')
   const tabResponsive = ref<PreviewTabMode>('preview')
   const tabNested = ref<PreviewTabMode>('preview')
-
-  const collapsedInfo = ref('ready')
-  const responsiveInfo = ref('desktop')
-  const responsiveCollapse = ref('expanded')
-  let collapseStatusElement: HTMLElement | null = null
-  let responsiveStatusElement: HTMLElement | null = null
-  let responsiveCollapseElement: HTMLElement | null = null
 
   return (
     <SidebarPlayground>
@@ -626,51 +714,7 @@ const LayoutPage: FC = () => {
           title="Collapsible sider"
           summary="Sider 直接自带折叠状态，无需在业务层额外拼宽度与 trigger。"
           tab={tabCollapse}
-          preview={() => (
-            <Layout hasSider className="rounded-[2rem] bg-base-200/45 p-4">
-              <Layout.Sider
-                collapsible
-                defaultCollapsed
-                width={264}
-                collapsedWidth={72}
-                theme="dark"
-                footer="Auto save every 24s"
-                data-testid="layout-collapsible-sider"
-                onCollapse={nextCollapsed => {
-                  collapsedInfo.value = nextCollapsed ? 'collapsed' : 'expanded'
-                  syncTextContent(collapseStatusElement, collapsedInfo.value)
-                }}
-              >
-                {renderPrimaryNav(true)}
-              </Layout.Sider>
-              <Layout>
-                <Layout.Header>
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.24em] text-base-content/45">
-                      sider status
-                    </div>
-                    <div
-                      ref={(element: HTMLElement | null) => {
-                        collapseStatusElement = element
-                        syncTextContent(element, collapsedInfo.value)
-                      }}
-                      className="text-lg font-semibold"
-                      data-testid="layout-collapse-status"
-                    >
-                      {collapsedInfo.value}
-                    </div>
-                  </div>
-                  <Badge outline>defaultCollapsed</Badge>
-                </Layout.Header>
-                <Layout.Content>
-                  <div className="rounded-[1.25rem] border border-dashed border-base-300 bg-base-100/75 p-5 text-sm leading-6 opacity-80">
-                    Trigger 会自动驱动 current width、collapsed state 和 footer
-                    排版。需要更细的文案时，可以接 onCollapse。
-                  </div>
-                </Layout.Content>
-              </Layout>
-            </Layout>
-          )}
+          preview={CollapsibleSiderPreview}
           code={collapseCode}
         />
 
@@ -727,75 +771,7 @@ const LayoutPage: FC = () => {
           title="Responsive zero-width sider"
           summary="breakpoint + collapsedWidth=0 会切到零宽模式，并保留浮动 trigger。"
           tab={tabResponsive}
-          preview={() => (
-            <Layout hasSider className="rounded-[2rem] bg-base-200/45 p-4">
-              <Layout.Sider
-                collapsible
-                breakpoint="lg"
-                collapsedWidth={0}
-                width={240}
-                theme="dark"
-                data-testid="layout-responsive-sider"
-                onBreakpoint={broken => {
-                  responsiveInfo.value = broken ? 'broken' : 'desktop'
-                  syncTextContent(responsiveStatusElement, responsiveInfo.value)
-                }}
-                onCollapse={nextCollapsed => {
-                  responsiveCollapse.value = nextCollapsed ? 'collapsed' : 'expanded'
-                  syncTextContent(responsiveCollapseElement, responsiveCollapse.value)
-                }}
-              >
-                {renderPrimaryNav(false)}
-              </Layout.Sider>
-              <Layout>
-                <Layout.Header>
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.24em] text-base-content/45">
-                      responsive
-                    </div>
-                    <div
-                      ref={(element: HTMLElement | null) => {
-                        responsiveStatusElement = element
-                        syncTextContent(element, responsiveInfo.value)
-                      }}
-                      className="text-lg font-semibold"
-                      data-testid="layout-breakpoint-status"
-                    >
-                      {responsiveInfo.value}
-                    </div>
-                  </div>
-                  <span
-                    ref={(element: HTMLElement | null) => {
-                      responsiveCollapseElement = element
-                      syncTextContent(element, responsiveCollapse.value)
-                    }}
-                    className="badge badge-outline"
-                    data-testid="layout-responsive-collapse"
-                  >
-                    {responsiveCollapse.value}
-                  </span>
-                </Layout.Header>
-                <Layout.Content>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-[1.25rem] border border-base-300/70 bg-base-100/90 p-5 shadow-sm">
-                      <div className="text-sm font-semibold">Try narrow viewport</div>
-                      <div className="mt-2 text-sm opacity-75">
-                        In browser, shrinking below lg collapses the rail to zero width and leaves a
-                        floating trigger.
-                      </div>
-                    </div>
-                    <div className="rounded-[1.25rem] border border-base-300/70 bg-base-100/90 p-5 shadow-sm">
-                      <div className="text-sm font-semibold">Callbacks included</div>
-                      <div className="mt-2 text-sm opacity-75">
-                        onBreakpoint and onCollapse stay separate, so breakpoint and collapse state
-                        can be handled independently.
-                      </div>
-                    </div>
-                  </div>
-                </Layout.Content>
-              </Layout>
-            </Layout>
-          )}
+          preview={ResponsiveSiderPreview}
           code={responsiveCode}
         />
 
