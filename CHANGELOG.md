@@ -1,3 +1,9 @@
+## [0.5.7](https://github.com/hunzhiwange/ruejs/compare/v0.5.6...v0.5.7) (2026-06-18)
+
+
+### Bug Fixes
+
+* new version ([f541565](https://github.com/hunzhiwange/ruejs/commit/f5415656a24625b7a9f0221bb9a22e858974b688))
 
 ## [0.5.6](https://github.com/hunzhiwange/ruejs/compare/v0.5.5...v0.5.6) (2026-06-14)
 
