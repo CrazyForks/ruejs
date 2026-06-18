@@ -1,5 +1,5 @@
 import type { FC } from '@rue-js/rue'
-import { h, ref } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import PreviewBlock, { type PreviewTabMode } from './PreviewBlock'
 import Splitter from '../../../packages/rue-design/src/components/splitter/index'
@@ -12,16 +12,6 @@ interface ApiRow {
 }
 
 const defaultTriptychSizes = [180, 260, 160]
-
-const toChildArray = (children: any): any[] => {
-  if (Array.isArray(children)) {
-    return children.flatMap(item => toChildArray(item))
-  }
-  if (children == null || typeof children === 'boolean') {
-    return []
-  }
-  return [children]
-}
 
 const apiRows: ApiRow[] = [
   {
@@ -37,12 +27,6 @@ const apiRows: ApiRow[] = [
     defaultValue: 'false',
   },
   {
-    prop: 'draggerIcon / collapsibleIcon',
-    description: '自定义中间拖拽柄与折叠按钮内容，保持 Rue 自己的 handle 结构。',
-    type: 'any / { start?: any; end?: any }',
-    defaultValue: '-',
-  },
-  {
     prop: 'onResizeStart / onResize / onResizeEnd',
     description: '拖拽开始、拖拽中、拖拽结束的回调，统一返回当前所有面板尺寸。',
     type: '(sizes: number[]) => void',
@@ -52,12 +36,6 @@ const apiRows: ApiRow[] = [
     prop: 'onDraggerDoubleClick',
     description: '双击分隔柄时触发，适合和“重置布局”联动。',
     type: '(index: number) => void',
-    defaultValue: '-',
-  },
-  {
-    prop: 'onCollapse',
-    description: '折叠或展开面板后触发，返回 collapsed 状态与最新尺寸。',
-    type: '(collapsed: boolean[], sizes: number[]) => void',
     defaultValue: '-',
   },
   {
@@ -83,12 +61,6 @@ const apiRows: ApiRow[] = [
     description: '禁用相邻分隔柄的拖拽能力，但保留布局结构。',
     type: 'boolean',
     defaultValue: 'true',
-  },
-  {
-    prop: 'Splitter.Panel collapsible',
-    description: '支持 boolean 快速折叠，也支持 start/end/showCollapsibleIcon 精细控制按钮展示。',
-    type: 'boolean | { start?: boolean; end?: boolean; showCollapsibleIcon?: boolean | auto }',
-    defaultValue: 'false',
   },
 ]
 
@@ -238,58 +210,6 @@ const VerticalSplitterDemo: FC = () => {
 
 export default VerticalSplitterDemo`
 
-const collapsibleCode = `import type { FC } from '@rue-js/rue'
-import { Splitter } from '@rue-js/design'
-
-const CollapsibleSplitterDemo: FC = () => {
-  return (
-    <Splitter
-      style={{ height: 320 }}
-      draggerIcon={<span className="inline-flex h-4 w-4 items-center justify-center text-[10px] font-black leading-none text-base-content/70">|||</span>}
-      collapsibleIcon={{
-        start: <span className="text-xs">+</span>,
-        end: <span className="text-xs">-</span>,
-      }}
-    >
-      <Splitter.Panel defaultSize="28%" collapsible={{ end: true }}>
-        <div className="h-full rounded-box border border-base-300 bg-base-100 p-4">
-          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-base-content/45">
-            Palette
-          </div>
-          <div className="space-y-2 text-sm text-base-content/70">
-            <div className="rounded-box bg-base-200/70 px-3 py-2">Components</div>
-            <div className="rounded-box bg-base-200/70 px-3 py-2">Tokens</div>
-            <div className="rounded-box bg-base-200/70 px-3 py-2">Layers</div>
-          </div>
-        </div>
-      </Splitter.Panel>
-
-      <Splitter.Panel collapsible={{ start: true, end: true }}>
-        <div className="flex h-full items-center justify-center rounded-box border border-base-300 bg-base-100 p-4">
-          <div className="flex h-40 w-full items-center justify-center rounded-box border border-dashed border-base-300 bg-base-200/40 text-sm text-base-content/55">
-            Main canvas
-          </div>
-        </div>
-      </Splitter.Panel>
-
-      <Splitter.Panel defaultSize="22%" collapsible={{ start: true }}>
-        <div className="h-full rounded-box border border-base-300 bg-base-100 p-4">
-          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-base-content/45">
-            Inspector
-          </div>
-          <div className="space-y-2 text-sm text-base-content/70">
-            <div>Width: 320</div>
-            <div>Height: 180</div>
-            <div>Radius: 16</div>
-          </div>
-        </div>
-      </Splitter.Panel>
-    </Splitter>
-  )
-}
-
-export default CollapsibleSplitterDemo`
-
 const resetCode = `import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 import { Splitter } from '@rue-js/design'
@@ -435,19 +355,16 @@ const Pane: FC<{ title: string; subtitle: string; className?: string; children?:
   className,
   children,
 }) => {
-  return h(
-    'div',
-    {
-      className:
-        `h-full rounded-box border border-base-300/75 bg-base-100/95 p-4 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.55)] ${className ?? ''}`.trim(),
-    },
-    h(
-      'div',
-      { className: 'mb-3 text-[11px] uppercase tracking-[0.24em] text-base-content/45' },
-      title,
-    ),
-    h('div', { className: 'mb-4 text-sm leading-6 text-base-content/70' }, subtitle),
-    h('div', { className: 'min-h-0' }, ...toChildArray(children)),
+  return (
+    <div
+      className={`h-full rounded-box border border-base-300/75 bg-base-100/95 p-4 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.55)] ${className ?? ''}`.trim()}
+    >
+      <div className="mb-3 text-[11px] uppercase tracking-[0.24em] text-base-content/45">
+        {title}
+      </div>
+      <div className="mb-4 text-sm leading-6 text-base-content/70">{subtitle}</div>
+      <div className="min-h-0">{children}</div>
+    </div>
   )
 }
 
@@ -601,7 +518,6 @@ const SplitterPage: FC = () => {
     basic: ref<PreviewTabMode>('preview'),
     controlled: ref<PreviewTabMode>('preview'),
     vertical: ref<PreviewTabMode>('preview'),
-    collapsible: ref<PreviewTabMode>('preview'),
     reset: ref<PreviewTabMode>('preview'),
     lazy: ref<PreviewTabMode>('preview'),
   }
@@ -613,8 +529,8 @@ const SplitterPage: FC = () => {
         <p className="text-sm mt-3 mb-3">
           Splitter 在 Rue
           里不是一条简单的分隔线，而是一套适合工作台、配置台和双栏内容区的布局行为层。 它保留 Rue
-          Design 当前的柔和卡片气质和细颗粒 handle 视觉，同时补上可拖拽、受控尺寸、垂直布局、
-          折叠、lazy 拖拽和双击重置这些更接近成熟组件库的核心能力。
+          Design 当前的柔和卡片气质和 3px 分隔条视觉，同时补上可拖拽、受控尺寸、垂直布局、lazy
+          拖拽和双击重置这些常用能力。
         </p>
 
         <h2>何时使用</h2>
@@ -623,7 +539,7 @@ const SplitterPage: FC = () => {
           <li>
             需要把筛选区、编辑区、预览区、日志区这类不同角色的面板拆开，但仍保持同一个页面上下文。
           </li>
-          <li>需要在布局层提供折叠、受控重置和 lazy 拖拽，而不是只做静态栅格分栏。</li>
+          <li>需要在布局层提供受控重置和 lazy 拖拽，而不是只做静态栅格分栏。</li>
         </ul>
 
         <h2>推荐用法</h2>
@@ -691,53 +607,6 @@ const SplitterPage: FC = () => {
             </Splitter>
           )}
           code={verticalCode}
-        />
-
-        <PreviewBlock
-          title="Collapsible panels and custom handle"
-          summary="折叠按钮和自定义 draggerIcon 适合三栏工作区，让辅助区可以快速收起。"
-          tab={tabs.collapsible}
-          preview={() => (
-            <Splitter
-              style={{ height: 320 }}
-              draggerIcon={
-                <span className="inline-flex h-4 w-4 items-center justify-center text-[10px] font-black leading-none text-base-content/70">
-                  |||
-                </span>
-              }
-              collapsibleIcon={{
-                start: <span className="text-xs">+</span>,
-                end: <span className="text-xs">-</span>,
-              }}
-            >
-              <Splitter.Panel defaultSize="28%" collapsible={{ end: true }}>
-                <Pane title="Palette" subtitle="左栏可快速折叠，适合图层、筛选器或工具箱。">
-                  <div className="space-y-2 text-sm text-base-content/70">
-                    <div className="rounded-box bg-base-200/70 px-3 py-2">Components</div>
-                    <div className="rounded-box bg-base-200/70 px-3 py-2">Tokens</div>
-                    <div className="rounded-box bg-base-200/70 px-3 py-2">Layers</div>
-                  </div>
-                </Pane>
-              </Splitter.Panel>
-              <Splitter.Panel collapsible={{ start: true, end: true }}>
-                <Pane title="Canvas" subtitle="中间主区保留最大的操作空间。">
-                  <div className="flex h-40 items-center justify-center rounded-box border border-dashed border-base-300 bg-base-200/40 text-sm text-base-content/55">
-                    Main canvas
-                  </div>
-                </Pane>
-              </Splitter.Panel>
-              <Splitter.Panel defaultSize="22%" collapsible={{ start: true }}>
-                <Pane title="Inspector" subtitle="右侧检查面板按需展开，减少噪音。">
-                  <div className="space-y-2 text-sm text-base-content/70">
-                    <div>Width: 320</div>
-                    <div>Height: 180</div>
-                    <div>Radius: 16</div>
-                  </div>
-                </Pane>
-              </Splitter.Panel>
-            </Splitter>
-          )}
-          code={collapsibleCode}
         />
 
         <PreviewBlock

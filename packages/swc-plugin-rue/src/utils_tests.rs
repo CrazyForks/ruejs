@@ -142,10 +142,10 @@ fn detects_static_component_shortcuts() {
 fn rejects_non_ident_children_and_namespaced_dynamic_callback_attrs() {
     let mut namespaced_children = parse_jsx_element("<Card children={slot} />");
     let source = parse_jsx_element("<Card data:children={slot} />");
-    if let JSXAttrOrSpread::JSXAttr(source_attr) = &source.opening.attrs[0] {
-        if let JSXAttrOrSpread::JSXAttr(target_attr) = &mut namespaced_children.opening.attrs[0] {
-            target_attr.name = source_attr.name.clone();
-        }
+    if let JSXAttrOrSpread::JSXAttr(source_attr) = &source.opening.attrs[0]
+        && let JSXAttrOrSpread::JSXAttr(target_attr) = &mut namespaced_children.opening.attrs[0]
+    {
+        target_attr.name = source_attr.name.clone();
     }
     assert!(!is_static_component_children_ident(&namespaced_children));
 

@@ -12,7 +12,8 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::throw_val;
 
 use crate::hook::use_memo;
-use crate::reactive::context::with_current_instance_hook_scope;
+use crate::reactive::context::{get_current_instance, with_current_instance_hook_scope};
+use crate::reactive::core::dispatch_error_captured;
 use crate::runtime::mark_crashed_from_hook;
 
 #[wasm_bindgen(js_name = useSetup)]
@@ -23,6 +24,10 @@ pub fn use_setup(factory: Function) -> JsValue {
         with_current_instance_hook_scope(|| match factory.call0(&JsValue::NULL) {
             Ok(value) => value,
             Err(error) => {
+                let instance = get_current_instance();
+                if dispatch_error_captured(&error, &instance, "setup") {
+                    return JsValue::NULL;
+                }
                 mark_crashed_from_hook(&error);
                 throw_val(error.clone());
             }

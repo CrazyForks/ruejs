@@ -79,8 +79,18 @@ const SimpleSlotBox: FC<{ title?: any; footer?: any }> = (props) => (
   <span slot="footer">自定义底部</span>
 </SimpleSlotBox>
 
+type SimpleScopeItem = {
+  label: string;
+  value: string;
+};
+
+const rows: SimpleScopeItem[] = [
+  { label: 'CPU', value: '37%' },
+  { label: '内存', value: '1.2GB' },
+];
+
 const SimpleScopeList: FC<{
-  item?: (props: { label: string; value: string }) => any;
+  item?: (props: SimpleScopeItem) => any;
 }> = (props) => (
   <ul>
     {rows.map((row) => (
@@ -537,7 +547,7 @@ const Slots: FC = () => {
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-lg font-semibold">省略 slot 之后</h3>
+                      <h3 className="text-lg font-semibold">未传 slot 时</h3>
                       <span className="badge badge-warning badge-outline">fallback 接管</span>
                     </div>
 
@@ -595,13 +605,19 @@ const Slots: FC = () => {
                       <code>{'<Slot source={props} name="title">fallback</Slot>'}</code>
                     </pre>
                     <pre data-prefix="2">
-                      <code>{'<Template slot="title">...</Template>'}</code>
+                      <code>
+                        {'<Template slot="title"><h2>支付面板</h2><p>多个兄弟节点</p></Template>'}
+                      </code>
                     </pre>
                     <pre data-prefix="3">
                       <code>{'<button slot="actions">刷新</button>'}</code>
                     </pre>
                     <pre data-prefix="4">
-                      <code>{'<SlotPanel row={(slotProps) => ...}>...</SlotPanel>'}</code>
+                      <code>
+                        {
+                          '<SlotPanel row={(slotProps) => <strong>{slotProps.label}: {slotProps.value}</strong>}><p>default slot 内容</p></SlotPanel>'
+                        }
+                      </code>
                     </pre>
                   </div>
                   <p className="text-sm opacity-70 leading-6">

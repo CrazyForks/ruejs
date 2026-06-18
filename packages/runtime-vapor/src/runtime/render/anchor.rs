@@ -200,7 +200,9 @@ where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         if let Some(mounted) = self.mount_from_input(input, Some(parent)) {
-            let el = Self::mounted_host_for_anchor(&mounted)?;
+            let Some(el) = Self::mounted_host_for_anchor(&mounted) else {
+                return Some(MountedState::from_subtree_root(mounted));
+            };
             let mut dest_parent = self.resolve_dest_parent_for_end(parent, anchor);
             let is_fragment =
                 self.get_dom_adapter().map(|adapter| adapter.is_fragment(&el)).unwrap_or(false);

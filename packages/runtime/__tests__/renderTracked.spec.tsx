@@ -11,6 +11,8 @@ import {
   setReactiveScheduling,
   signal,
   untrack,
+  useSetup,
+  type FC,
 } from '@rue-js/rue'
 
 let activeContainer: HTMLElement | null = null
@@ -80,5 +82,46 @@ describe('onRenderTracked', () => {
 
     expect(activeContainer.textContent).toBe('0')
     expect(events).toHaveLength(0)
+  })
+
+  it('keeps the user signal handle as target when registered from useSetup', async () => {
+    setReactiveScheduling('sync')
+    const events: any[] = []
+    type DemoState = { count: ReturnType<typeof signal<number>> }
+    let count!: DemoState['count']
+
+    const Demo: FC = () => {
+      const state = useSetup(() => {
+        count = signal(0)
+        onRenderTracked(event => {
+          events.push(event)
+        })
+        return { count }
+      }) as DemoState
+
+      return (
+        <button type="button" onClick={() => state.count.set(state.count.peek() + 1)}>
+          {state.count.get()}
+        </button>
+      )
+    }
+
+    activeContainer = document.createElement('div')
+    document.body.appendChild(activeContainer)
+
+    render(<Demo />, activeContainer)
+    await settle()
+
+    expect(activeContainer.textContent).toBe('0')
+    expect(events.some(event => event.target === count && event.type === 'get')).toBe(true)
+
+    events.length = 0
+    activeContainer.querySelector('button')?.click()
+    await settle()
+
+    expect(activeContainer.textContent).toBe('1')
+    expect(
+      events.some(event => event.target === count && event.type === 'get' && event.key === 'value'),
+    ).toBe(true)
   })
 })

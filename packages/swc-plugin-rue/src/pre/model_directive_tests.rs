@@ -54,10 +54,7 @@ fn ident_attr<'a>(opening: &'a JSXOpeningElement, name: &str) -> &'a JSXAttr {
         .attrs
         .iter()
         .find_map(|attr| match attr {
-            JSXAttrOrSpread::JSXAttr(attr) => match &attr.name {
-                JSXAttrName::Ident(ident) if ident.sym.as_ref() == name => Some(attr),
-                _ => None,
-            },
+            JSXAttrOrSpread::JSXAttr(attr) if jsx_attr_name_matches(&attr.name, name) => Some(attr),
             _ => None,
         })
         .expect("expected attr")
@@ -255,7 +252,6 @@ fn covers_model_helper_fallbacks_and_static_attr_edges() {
         assert_eq!(get_static_truthy_bool(&parse_expr(src, "truthy.tsx").expect(src)), expected);
     }
 
-    assert_eq!(pascalize_prop_name(""), "");
     assert!(!is_raw_model_modifier_token("..."));
     assert_eq!(parse_raw_model_suffix("plain"), None);
     assert_eq!(parse_raw_model_suffix(":---"), None);

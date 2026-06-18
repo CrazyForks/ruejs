@@ -43,20 +43,44 @@ const BoundaryFallback: FC<{ title: string; detail: string }> = props => (
   </div>
 )
 
-const demoCode = `import { Suspense, useComponent } from '@rue-js/rue';
+const demoCode = `import { Suspense, type FC, useComponent } from '@rue-js/rue';
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+const resolveAfter = <P,>(component: FC<P>, ms: number) =>
+  wait(ms).then(() => ({ default: component }));
+
+const RevenuePanel: FC<{ period?: string }> = props => (
+  <article className="rounded-box border border-primary/25 bg-primary/10 p-4">
+    <div className="text-xs uppercase tracking-[0.22em] opacity-60">Revenue</div>
+    <div className="mt-2 text-3xl font-semibold">¥ 342,800</div>
+    <div className="mt-1 text-sm opacity-75">
+      {props.period ?? '本周'} 转化收入，环比 +12.6%
+    </div>
+  </article>
+);
+
+const ActivityPanel: FC<{ title?: string }> = props => (
+  <section className="rounded-box border border-accent/25 bg-accent/10 p-4">
+    <div className="text-xs uppercase tracking-[0.22em] opacity-60">Activity</div>
+    <h3 className="mt-2 text-xl font-semibold">{props.title ?? '异步活动流'}</h3>
+    <ol className="mt-4 space-y-2 text-sm">
+      <li>收入组件和活动流组件共享同一个 Suspense fallback。</li>
+      <li>加载完成后，边界重新渲染 children 内容。</li>
+    </ol>
+  </section>
+);
+
 const AsyncRevenuePanel = useComponent(() =>
-  wait(900).then(() => import('./suspense/AsyncRevenuePanel')),
+  resolveAfter(RevenuePanel, 900),
 );
 
 const AsyncActivityPanel = useComponent(() =>
-  wait(1400).then(() => import('./suspense/AsyncActivityPanel')),
+  resolveAfter(ActivityPanel, 1400),
 );
 
 const AsyncLocalActivityPanel = useComponent(
-  () => wait(1800).then(() => import('./suspense/AsyncActivityPanel')),
+  () => resolveAfter(ActivityPanel, 1800),
   {
     loading: () => <div>本地 loading</div>,
     suspensible: false,
@@ -65,9 +89,10 @@ const AsyncLocalActivityPanel = useComponent(
 
 export default function Demo() {
   return (
-    <Suspense fallback={<div>统一 fallback...</div>}>
+    <Suspense fallback={<div>统一 fallback 正在加载</div>}>
       <AsyncRevenuePanel period="Q2" />
       <AsyncActivityPanel title="统一边界内的活动流" />
+      <AsyncLocalActivityPanel title="本地 loading 控制的活动流" />
     </Suspense>
   );
 }`

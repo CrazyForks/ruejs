@@ -201,6 +201,14 @@ fn lowers_derived_consts_through_helper_aliases_in_functions() {
 }
 
 #[test]
+fn wraps_object_literals_in_computed_arrow_expr_bodies() {
+    let rendered =
+        normalize(&emit_expr(wrap_expr_in_computed(parse_expr("({ x: source.value })", false))));
+
+    assert!(rendered.contains("computed(()=>({ x: source.value }))"), "{rendered}");
+}
+
+#[test]
 fn collects_setup_and_injects_use_setup_for_hoistable_statements() {
     let fn_decl = parse_fn_decl(
         "function Comp() { const state = ref(0); const helper = () => state.value; watchEffect(() => console.log(state.value)); return <div>{state.value}</div>; }",
@@ -247,6 +255,48 @@ fn lowers_derived_consts_in_arrow_only_for_dynamic_live_candidates() {
     assert!(rendered.contains(&normalize("const snapshot = ref(seed);")));
     assert!(!rendered.contains(&normalize("const seed = computed(()=>props.seed + 1);")));
     assert!(!rendered.contains("__rue_phase2_seed"));
+}
+
+#[test]
+fn skips_phase2_lowering_for_props_derived_objects_that_are_mutated() {
+    let mut arrow = parse_arrow(
+        "(props) => { const componentProps = { ...(props.props ?? {}), ...props.rest }; const userOnClick = componentProps.onClick; if ('onClick' in componentProps) delete componentProps.onClick; componentProps.role = componentProps.role ?? 'status'; componentProps.count++; return <button {...componentProps}>{userOnClick}</button>; }",
+    );
+
+    assert!(lower_props_derived_consts_in_arrow(&mut arrow));
+
+    let rendered = normalize(&emit_expr(Expr::Arrow(arrow)));
+
+    assert!(!rendered.contains(&normalize("const componentProps = computed(")), "{rendered}");
+    assert!(!rendered.contains("__rue_phase2_componentProps"), "{rendered}");
+    assert!(rendered.contains(&normalize("delete componentProps.onClick")), "{rendered}");
+    assert!(rendered.contains(&normalize("componentProps.role = componentProps.role ?? 'status'")));
+    assert!(rendered.contains(&normalize("componentProps.count++")), "{rendered}");
+    assert!(
+        rendered.contains(&normalize("const userOnClick = computed(()=>componentProps.onClick);"))
+    );
+}
+
+#[test]
+fn skips_phase2_lowering_for_props_derived_objects_mutated_by_known_helpers() {
+    let mut fn_decl = parse_fn_decl(
+        "function Comp(props) { const componentProps = { ...props }; Object.assign(componentProps, props.patch); Reflect.set(componentProps, 'role', 'status'); return <button {...componentProps} />; }",
+    );
+
+    assert!(!lower_props_derived_consts_in_function(&mut fn_decl.function));
+
+    let rendered = normalize(&emit_stmts(vec![Stmt::Decl(Decl::Fn(fn_decl))]));
+
+    assert!(!rendered.contains(&normalize("const componentProps = computed(")), "{rendered}");
+    assert!(!rendered.contains("__rue_phase2_componentProps"), "{rendered}");
+    assert!(
+        rendered.contains(&normalize("Object.assign(componentProps, props.patch);")),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(&normalize("Reflect.set(componentProps, 'role', 'status');")),
+        "{rendered}"
+    );
 }
 
 #[test]
@@ -1674,14 +1724,14 @@ fn hardens_additional_props_rewriter_and_setup_hoist_edges() {
         parse_var_declarator("const View = (): JSX.Element => { return value; };");
     if let Some(Expr::Arrow(arrow)) = expr_typed_block_arrow.init.as_mut().map(|init| init.as_mut())
     {
-        arrow.body = Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+        *arrow.body = BlockStmtOrExpr::BlockStmt(BlockStmt {
             span: DUMMY_SP,
             ctxt: Default::default(),
             stmts: vec![Stmt::Return(ReturnStmt {
                 span: DUMMY_SP,
                 arg: Some(Box::new(parse_expr("value", false))),
             })],
-        }));
+        });
     }
     assert!(!is_untyped_arrow_component_decl(&expr_typed_block_arrow));
 }
@@ -1689,7 +1739,7 @@ fn hardens_additional_props_rewriter_and_setup_hoist_edges() {
 #[test]
 fn hardens_manual_invalid_patterns_and_setup_collection_tolerance() {
     let invalid_pat = Pat::Invalid(Invalid { span: DUMMY_SP });
-    assert!(collect_param_idents(&[invalid_pat.clone()]).is_empty());
+    assert!(collect_param_idents(std::slice::from_ref(&invalid_pat)).is_empty());
 
     let invalid_decl = Stmt::Decl(Decl::Var(Box::new(VarDecl {
         span: DUMMY_SP,

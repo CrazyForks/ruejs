@@ -127,9 +127,9 @@ export interface DOMAdapter {
   removeEventListener(el: DomElementLike, eventName: string, listener: DOMEventHandler): void
   /** 设置类名
    * @param el 目标元素
-   * @param value 类名字符串
+   * @param value 类名值，null/undefined 会清空
    */
-  setClassName(el: DomElementLike, value: string): void
+  setClassName(el: DomElementLike, value: any): void
   /** 设置 innerHTML
    * @param el 目标元素（HTMLElement）
    * @param html HTML 字符串
@@ -257,6 +257,28 @@ const getElementTagName = (parent: DomElementLike | null | undefined) => {
   return typeof p?.tagName === 'string' ? p.tagName.toLowerCase() : ''
 }
 
+const applyStyleProperty = (style: CSSStyleDeclaration, key: string, value: any) => {
+  if (key.startsWith('--')) {
+    if (value == null || value === '') {
+      style.removeProperty(key)
+      return
+    }
+    style.setProperty(key, String(value))
+    return
+  }
+
+  ;(style as any)[key] = value == null ? '' : value
+}
+
+const applyStyleObject = (
+  elementStyle: CSSStyleDeclaration,
+  style: Partial<CSSStyleDeclaration> | Record<string, any>,
+) => {
+  for (const [key, value] of Object.entries(style)) {
+    applyStyleProperty(elementStyle, key, value)
+  }
+}
+
 const isSVGNamespaceParent = (parent: DomElementLike | null | undefined) => {
   const p = parent as any
   // foreignObject 重新切回 HTML 解析上下文，子节点不能继续继承 SVG namespace。
@@ -311,6 +333,7 @@ let trackedTextControl: {
 } | null = null
 let textControlTrackingInstalled = false
 let trackedTextControlRestoreRequestId = 0
+let textControlRestoreSuppressedByPointer = false
 let trackedTextControlIdentity: {
   dataTestId?: string
   id?: string
@@ -350,6 +373,7 @@ const isTextControlElement = (
 
 const rememberTrackedTextControl = (event: Event) => {
   if (isTextControlElement(event.target)) {
+    textControlRestoreSuppressedByPointer = false
     trackedTextControl = event.target
     const target = event.target as {
       getAttribute?: (name: string) => string | null
@@ -378,8 +402,13 @@ const setTrackedTextControlComposing = (event: Event, composing: boolean) => {
     return
   }
 
+  textControlRestoreSuppressedByPointer = false
   trackedTextControl = event.target
   ;(event.target as unknown as Record<string, unknown>)[RUE_TEXT_CONTROL_COMPOSING_KEY] = composing
+}
+
+const updateTextControlRestoreSuppressionFromPointer = (event: Event) => {
+  textControlRestoreSuppressedByPointer = !isTextControlElement(event.target)
 }
 
 const clearTrackedTextControl = (event: Event) => {
@@ -471,6 +500,12 @@ const ensureTextControlTracking = () => {
   }
 
   textControlTrackingInstalled = true
+  ownerDocument.addEventListener(
+    'pointerdown',
+    updateTextControlRestoreSuppressionFromPointer,
+    true,
+  )
+  ownerDocument.addEventListener('mousedown', updateTextControlRestoreSuppressionFromPointer, true)
   ownerDocument.addEventListener('focusin', rememberTrackedTextControl, true)
   ownerDocument.addEventListener('input', rememberTrackedTextControl, true)
   ownerDocument.addEventListener(
@@ -536,6 +571,10 @@ export const hasActiveTextControlWithin = (parent: DomNodeLike | null | undefine
     return false
   }
 
+  if (textControlRestoreSuppressedByPointer) {
+    return false
+  }
+
   const contains = (parent as { contains?: (node: unknown) => boolean }).contains
   if (typeof contains !== 'function') {
     return false
@@ -563,6 +602,10 @@ export const hasActiveTextControlWithin = (parent: DomNodeLike | null | undefine
 /** 尝试在目标子树内恢复最近跟踪的文本控件焦点。 */
 export const restoreTrackedTextControlWithin = (parent: DomNodeLike | null | undefined) => {
   ensureTextControlTracking()
+
+  if (textControlRestoreSuppressedByPointer) {
+    return false
+  }
 
   const tracked = resolveTrackedTextControlWithin(parent)
   if (!parent || !isTextControlElement(tracked)) {
@@ -614,6 +657,10 @@ export const scheduleTrackedTextControlRestoreWithin = (
 
   const attemptRestore = (remainingAttempts: number) => {
     if (requestId !== trackedTextControlRestoreRequestId || remainingAttempts <= 0) {
+      return
+    }
+
+    if (textControlRestoreSuppressedByPointer) {
       return
     }
 
@@ -724,7 +771,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
     if (typeof style === 'string') {
       ;(el as any).setAttribute('style', style)
     } else if (style && typeof style === 'object') {
-      Object.assign((el as any).style, style)
+      applyStyleObject((el as any).style, style)
     } else {
       ;(el as any).removeAttribute('style')
     }
@@ -775,28 +822,39 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 添加事件监听：支持由 listener.__rue_options 携带的原生监听选项 */
   addEventListener(el: DomElementLike, eventName: string, listener: DOMEventHandler) {
-    const options = listener?.__rue_options
-    if (options !== undefined) {
-      ;(el as any).addEventListener(eventName, listener, options)
+    if (typeof listener !== 'function') {
       return
     }
-    ;(el as any).addEventListener(eventName, listener)
+
+    const boundListener = bindEventHandlerToCurrentRuntime(listener)
+    const options = boundListener?.__rue_options
+    if (options !== undefined) {
+      ;(el as any).addEventListener(eventName, boundListener, options)
+      return
+    }
+    ;(el as any).addEventListener(eventName, boundListener)
   }
   /** 移除事件监听：移除时复用 listener.__rue_options 里的 capture 信息 */
   removeEventListener(el: DomElementLike, eventName: string, listener: DOMEventHandler) {
-    const options = listener?.__rue_options
-    if (options !== undefined) {
-      ;(el as any).removeEventListener(eventName, listener, options)
+    if (typeof listener !== 'function') {
       return
     }
-    ;(el as any).removeEventListener(eventName, listener)
+
+    const boundListener = getBoundEventHandlerForRemoval(listener)
+    const options = boundListener?.__rue_options
+    if (options !== undefined) {
+      ;(el as any).removeEventListener(eventName, boundListener, options)
+      return
+    }
+    ;(el as any).removeEventListener(eventName, boundListener)
   }
-  /** 设置类名：SVG 用属性 'class'，HTML 用 className */
-  setClassName(el: DomElementLike, value: string) {
+  /** 设置类名：SVG 用属性 'class'，HTML 用 className；null/undefined 会清空 */
+  setClassName(el: DomElementLike, value: any) {
+    const className = value == null ? '' : String(value)
     if ((el as any) instanceof SVGElement) {
-      ;(el as any).setAttribute('class', value)
+      ;(el as any).setAttribute('class', className)
     } else {
-      ;(el as any as HTMLElement).className = value
+      ;(el as any as HTMLElement).className = className
     }
   }
   /** 设置 innerHTML：仅 HTMLElement 生效 */
@@ -812,9 +870,9 @@ export class BrowserDOMAdapter implements DOMAdapter {
     const prev = oldStyle || {}
     const next = newStyle || {}
     for (const k of Object.keys(prev)) {
-      if (!(k in next)) ((el as any).style as any)[k] = ''
+      if (!(k in next)) applyStyleProperty((el as any).style, k, '')
     }
-    Object.assign((el as any).style, next)
+    applyStyleObject((el as any).style, next)
   }
   /** 设置表单值：兼容 select[multiple]、select 与可写 value 元素 */
   setValue(el: DomElementLike, value: any) {
@@ -949,7 +1007,7 @@ type GlobalDOMBridge = {
   insertBefore: (parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null) => void
   removeChild: (parent: DomNodeLike, child: DomNodeLike) => void
   contains: (parent: DomNodeLike, child: DomNodeLike) => boolean
-  setClassName: (el: DomElementLike, value: string) => void
+  setClassName: (el: DomElementLike, value: any) => void
   patchStyle: (
     el: DomElementLike,
     oldStyle: Record<string, string>,
@@ -1109,7 +1167,7 @@ export const removeEventListener = (
   listener: DOMEventHandler,
 ) => getCurrentDOMAdapter().removeEventListener(el, eventName, listener)
 /** 设置类名（便捷函数） */
-export const setClassName = (el: DomElementLike, value: string) =>
+export const setClassName = (el: DomElementLike, value: any) =>
   getCurrentDOMAdapter().setClassName(el, value)
 /** 设置 innerHTML（便捷函数） */
 export const setInnerHTML = (el: DomElementLike, html: string) =>
@@ -1403,4 +1461,66 @@ export type DOMEventListenerOptions = boolean | AddEventListenerOptions | undefi
 export type DOMEventHandler = ((evt: any) => void) & {
   /** 由事件修饰符生成的原生监听配置。 */
   __rue_options?: DOMEventListenerOptions
+}
+
+const runtimeBoundEventHandlers = new WeakMap<DOMEventHandler, DOMEventHandler>()
+
+const getActiveRuntimeForDOMEvent = () => {
+  const globalRecord = globalThis as typeof globalThis & {
+    __rue?: unknown
+    __rue_active?: unknown
+    __rue_vapor?: unknown
+    __rue_vapor_preferred?: unknown
+  }
+  return (
+    globalRecord.__rue_active ||
+    globalRecord.__rue_vapor_preferred ||
+    globalRecord.__rue ||
+    globalRecord.__rue_vapor
+  )
+}
+
+const runWithCapturedRuntime = <T>(runtime: unknown, runner: () => T): T => {
+  if (!runtime || (typeof runtime !== 'object' && typeof runtime !== 'function')) {
+    return runner()
+  }
+
+  const globalRecord = globalThis as typeof globalThis & {
+    __rue_active?: unknown
+  }
+  const hadActiveRuntime = Object.prototype.hasOwnProperty.call(globalRecord, '__rue_active')
+  const previousRuntime = globalRecord.__rue_active
+
+  globalRecord.__rue_active = runtime
+  try {
+    return runner()
+  } finally {
+    if (hadActiveRuntime) {
+      globalRecord.__rue_active = previousRuntime
+    } else {
+      delete globalRecord.__rue_active
+    }
+  }
+}
+
+const bindEventHandlerToCurrentRuntime = (listener: DOMEventHandler): DOMEventHandler => {
+  const runtime = getActiveRuntimeForDOMEvent()
+  if (!runtime) return listener
+
+  const cached = runtimeBoundEventHandlers.get(listener)
+  if (cached && (cached as any).__rue_runtime === runtime) {
+    return cached
+  }
+
+  const bound = function (this: unknown, event: any) {
+    return runWithCapturedRuntime(runtime, () => listener.call(this, event))
+  } as DOMEventHandler
+  bound.__rue_options = listener.__rue_options
+  ;(bound as any).__rue_runtime = runtime
+  runtimeBoundEventHandlers.set(listener, bound)
+  return bound
+}
+
+const getBoundEventHandlerForRemoval = (listener: DOMEventHandler): DOMEventHandler => {
+  return runtimeBoundEventHandlers.get(listener) ?? listener
 }

@@ -334,24 +334,24 @@ fn wrap_alias_expr_if_needed(expr: Expr) -> Expr {
 
 impl VisitMut for AliasExprRewriter<'_> {
     fn visit_mut_expr(&mut self, expr: &mut Expr) {
-        if let Expr::Ident(ident) = expr {
-            if let Some(rewritten) = self.alias_exprs.get(ident.sym.as_ref()) {
-                *expr = wrap_alias_expr_if_needed(rewritten.clone());
-                return;
-            }
+        if let Expr::Ident(ident) = expr
+            && let Some(rewritten) = self.alias_exprs.get(ident.sym.as_ref())
+        {
+            *expr = wrap_alias_expr_if_needed(rewritten.clone());
+            return;
         }
         expr.visit_mut_children_with(self);
     }
 
     fn visit_mut_prop(&mut self, prop: &mut Prop) {
-        if let Prop::Shorthand(ident) = prop {
-            if let Some(rewritten) = self.alias_exprs.get(ident.sym.as_ref()) {
-                *prop = Prop::KeyValue(KeyValueProp {
-                    key: PropName::Ident(ident.clone().into()),
-                    value: Box::new(wrap_alias_expr_if_needed(rewritten.clone())),
-                });
-                return;
-            }
+        if let Prop::Shorthand(ident) = prop
+            && let Some(rewritten) = self.alias_exprs.get(ident.sym.as_ref())
+        {
+            *prop = Prop::KeyValue(KeyValueProp {
+                key: PropName::Ident(ident.clone().into()),
+                value: Box::new(wrap_alias_expr_if_needed(rewritten.clone())),
+            });
+            return;
         }
         prop.visit_mut_children_with(self);
     }
@@ -478,13 +478,12 @@ impl Visit for ExternalReactivePrefixCollector<'_> {
 
         if let Expr::Ident(obj_ident) = utils::unwrap_expr(member.obj.as_ref()) {
             let is_local = self.local_names.contains(obj_ident.sym.as_ref());
-            if !is_local {
-                if let MemberProp::Ident(prop) = &member.prop {
-                    if prop.sym.as_ref() == "value" {
-                        self.found = true;
-                        return;
-                    }
-                }
+            if !is_local
+                && let MemberProp::Ident(prop) = &member.prop
+                && prop.sym.as_ref() == "value"
+            {
+                self.found = true;
+                return;
             }
         }
 
@@ -496,19 +495,18 @@ impl Visit for ExternalReactivePrefixCollector<'_> {
             return;
         }
 
-        if let Callee::Expr(callee) = &call.callee {
-            if let Expr::Member(member) = utils::unwrap_expr(callee.as_ref()) {
-                if let Expr::Ident(obj_ident) = utils::unwrap_expr(member.obj.as_ref()) {
-                    let is_local = self.local_names.contains(obj_ident.sym.as_ref());
-                    if !is_local {
-                        if let MemberProp::Ident(prop) = &member.prop {
-                            if prop.sym.as_ref() == "get" && call.args.is_empty() {
-                                self.found = true;
-                                return;
-                            }
-                        }
-                    }
-                }
+        if let Callee::Expr(callee) = &call.callee
+            && let Expr::Member(member) = utils::unwrap_expr(callee.as_ref())
+            && let Expr::Ident(obj_ident) = utils::unwrap_expr(member.obj.as_ref())
+        {
+            let is_local = self.local_names.contains(obj_ident.sym.as_ref());
+            if !is_local
+                && let MemberProp::Ident(prop) = &member.prop
+                && prop.sym.as_ref() == "get"
+                && call.args.is_empty()
+            {
+                self.found = true;
+                return;
             }
         }
 
@@ -604,26 +602,26 @@ fn is_single_root_native_jsx_fragment(frag: &JSXFragment) -> bool {
 
 fn extract_jsx_element_key_expr(jsx_el: &JSXElement) -> Option<Expr> {
     for attr in &jsx_el.opening.attrs {
-        if let JSXAttrOrSpread::JSXAttr(attr) = attr {
-            if let JSXAttrName::Ident(name) = &attr.name {
-                if name.sym.as_ref() != "key" {
-                    continue;
+        if let JSXAttrOrSpread::JSXAttr(attr) = attr
+            && let JSXAttrName::Ident(name) = &attr.name
+        {
+            if name.sym.as_ref() != "key" {
+                continue;
+            }
+            match &attr.value {
+                Some(JSXAttrValue::Str(s)) => {
+                    return Some(Expr::Lit(Lit::Str(Str {
+                        span: DUMMY_SP,
+                        value: s.value.clone(),
+                        raw: None,
+                    })));
                 }
-                match &attr.value {
-                    Some(JSXAttrValue::Str(s)) => {
-                        return Some(Expr::Lit(Lit::Str(Str {
-                            span: DUMMY_SP,
-                            value: s.value.clone(),
-                            raw: None,
-                        })));
+                Some(JSXAttrValue::JSXExprContainer(ec)) => {
+                    if let JSXExpr::Expr(expr) = &ec.expr {
+                        return Some(crate::utils::unwrap_expr(expr.as_ref()).clone());
                     }
-                    Some(JSXAttrValue::JSXExprContainer(ec)) => {
-                        if let JSXExpr::Expr(expr) = &ec.expr {
-                            return Some(crate::utils::unwrap_expr(expr.as_ref()).clone());
-                        }
-                    }
-                    _ => {}
                 }
+                _ => {}
             }
         }
     }
@@ -761,10 +759,10 @@ fn extract_render_root_key_expr(expr: &Expr) -> Option<Expr> {
                 let Expr::Arrow(arrow) = crate::utils::unwrap_expr(first.expr.as_ref()) else {
                     return None;
                 };
-                if let Some(body_expr) = extract_arrow_body_expr(&arrow.body) {
-                    if let Some(key_expr) = extract_render_root_key_expr(body_expr) {
-                        return Some(key_expr);
-                    }
+                if let Some(body_expr) = extract_arrow_body_expr(&arrow.body)
+                    && let Some(key_expr) = extract_render_root_key_expr(body_expr)
+                {
+                    return Some(key_expr);
                 }
                 if let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() {
                     return extract_returned_root_key_expr_from_block(&block.stmts);
@@ -776,10 +774,10 @@ fn extract_render_root_key_expr(expr: &Expr) -> Option<Expr> {
                 let Expr::Arrow(arrow) = crate::utils::unwrap_expr(runner.expr.as_ref()) else {
                     return None;
                 };
-                if let Some(body_expr) = extract_arrow_body_expr(&arrow.body) {
-                    if let Some(key_expr) = extract_render_root_key_expr(body_expr) {
-                        return Some(key_expr);
-                    }
+                if let Some(body_expr) = extract_arrow_body_expr(&arrow.body)
+                    && let Some(key_expr) = extract_render_root_key_expr(body_expr)
+                {
+                    return Some(key_expr);
                 }
                 if let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() {
                     return extract_returned_root_key_expr_from_block(&block.stmts);
@@ -823,600 +821,306 @@ pub(crate) fn try_build_list_from_map(
     // - 若项为单根原生元素且开启单锚点优化，则改为 `renderAnchor(vapor(()=>{ ... }), parent, start)`
     // 参考测试：`tests/lists_and_keys.rs`、`tests/spec14.rs`
     // 仅处理 obj.map(cb) 且仅一个参数的情形
-    if let Callee::Expr(expr_callee) = &call.callee {
-        if let Expr::Member(MemberExpr { obj, prop: MemberProp::Ident(prop_ident), .. }) =
+    if let Callee::Expr(expr_callee) = &call.callee
+        && let Expr::Member(MemberExpr { obj, prop: MemberProp::Ident(prop_ident), .. }) =
             &**expr_callee
-        {
-            if prop_ident.sym == *"map" && call.args.len() == 1 {
-                let cb = &call.args[0];
-                let cb_expr = utils::unwrap_expr(&cb.expr);
-                if !matches!(cb_expr, Expr::Arrow(_)) {
-                    return false;
+        && prop_ident.sym == *"map"
+        && call.args.len() == 1
+    {
+        let cb = &call.args[0];
+        let cb_expr = utils::unwrap_expr(&cb.expr);
+        if !matches!(cb_expr, Expr::Arrow(_)) {
+            return false;
+        }
+        let arr_expr = utils::unwrap_expr(obj).clone();
+
+        log::debug("list: detected Array.map -> keyed list");
+        // 占位标记
+        let start = vt.next_list_ident();
+        let end = vt.next_list_ident();
+        // 生成列表渲染锚点：后续 renderBetween 仅在两注释之间进行插入/移动
+        // 注释锚点创建细节：
+        // - callee：标识符 `_$createComment`
+        // - args：标记字符串（start/end）
+        // - ctxt：统一 `SyntaxContext::empty()`，由 emit::call_ident 设置
+        let make_start = call_ident("_$createComment", vec![string_expr("rue:list:start")]);
+        let make_end = call_ident("_$createComment", vec![string_expr("rue:list:end")]);
+        stmts.push(const_decl(start.clone(), make_start));
+        stmts.push(const_decl(end.clone(), make_end));
+        stmts.push(append_child(el_ident.clone(), Expr::Ident(start.clone())));
+        stmts.push(append_child(el_ident.clone(), Expr::Ident(end.clone())));
+
+        // 使用 Map 键控闭包实现列表渲染与复用
+        // 先声明持久 Map：let _mapX_elements = new Map();
+        let map_base = vt.next_map_base();
+        let elements_ident = ident(&format!("{}{}", map_base, "_elements"));
+        // 持久化 Map，实现跨次渲染的片段复用（key -> {start,end,stop}）
+        let new_map_expr = Expr::New(NewExpr {
+            span: DUMMY_SP,
+            callee: Box::new(Expr::Ident(ident("Map"))),
+            args: None,
+            type_args: None,
+            ctxt: SyntaxContext::empty(),
+        });
+        let elements_decl = Stmt::Decl(Decl::Var(Box::new(VarDecl {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            kind: VarDeclKind::Let,
+            declare: false,
+            decls: vec![VarDeclarator {
+                span: DUMMY_SP,
+                name: Pat::Ident(BindingIdent { id: elements_ident.clone(), type_ann: None }),
+                init: Some(Box::new(new_map_expr)),
+                definite: false,
+            }],
+        })));
+        stmts.push(elements_decl);
+        log::debug("list: emitted anchors and elements Map");
+
+        // 构造 watchEffect 箭头函数体
+        let map_current = ident(&format!("{}{}", map_base, "_current"));
+        let or_arr = Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::LogicalOr,
+            left: Box::new(arr_expr.clone()),
+            right: Box::new(Expr::Array(ArrayLit { span: DUMMY_SP, elems: vec![] })),
+        });
+        let decl_current = const_decl(map_current.clone(), or_arr);
+
+        let map_new = ident(&format!("{}{}", map_base, "_newElements"));
+
+        let mut body_stmts: Vec<Stmt> = vec![decl_current.clone()];
+
+        // 构造 for 循环：for (let idx = 0; idx < _map_current.length; idx++) { const item = _map_current[idx]; ... }
+        let mut idx_ident = ident("idx");
+        let mut item_ident = ident("item");
+        let mut item_param_pattern: Option<Pat> = None;
+        let mut parent_param_ident = ident("parent");
+        let mut start_param_ident = ident("start");
+        let mut end_param_ident = ident("end");
+        let mut item_alias_exprs = std::collections::HashMap::new();
+        if let Expr::Arrow(ArrowExpr { params, body, .. }) = cb_expr {
+            if !params.is_empty() {
+                match &params[0] {
+                    Pat::Ident(bi) => {
+                        item_ident = bi.id.clone();
+                    }
+                    Pat::Object(_) | Pat::Array(_) => {
+                        item_param_pattern = Some(params[0].clone());
+                    }
+                    Pat::Assign(assign) => match assign.left.as_ref() {
+                        Pat::Ident(binding) => {
+                            item_alias_exprs.insert(
+                                binding.id.sym.to_string(),
+                                defaulted_param_expr(
+                                    Expr::Ident(item_ident.clone()),
+                                    *assign.right.clone(),
+                                ),
+                            );
+                        }
+                        Pat::Object(_) | Pat::Array(_) => {
+                            item_param_pattern = Some(params[0].clone());
+                        }
+                        _ => {}
+                    },
+                    _ => {}
                 }
-                let arr_expr = utils::unwrap_expr(obj).clone();
+            }
+            if params.len() >= 2
+                && let Pat::Ident(bi) = &params[1]
+            {
+                idx_ident = bi.id.clone();
+            }
+            if let Some(pat) = &item_param_pattern {
+                let mut pattern_bound_idents = std::collections::HashSet::new();
+                collect_declared_idents_from_pat(pat, &mut pattern_bound_idents);
 
-                log::debug("list: detected Array.map -> keyed list");
-                // 占位标记
-                let start = vt.next_list_ident();
-                let end = vt.next_list_ident();
-                // 生成列表渲染锚点：后续 renderBetween 仅在两注释之间进行插入/移动
-                // 注释锚点创建细节：
-                // - callee：标识符 `_$createComment`
-                // - args：标记字符串（start/end）
-                // - ctxt：统一 `SyntaxContext::empty()`，由 emit::call_ident 设置
-                let make_start = call_ident("_$createComment", vec![string_expr("rue:list:start")]);
-                let make_end = call_ident("_$createComment", vec![string_expr("rue:list:end")]);
-                stmts.push(const_decl(start.clone(), make_start));
-                stmts.push(const_decl(end.clone(), make_end));
-                stmts.push(append_child(el_ident.clone(), Expr::Ident(start.clone())));
-                stmts.push(append_child(el_ident.clone(), Expr::Ident(end.clone())));
+                let mut internal_param_names = pattern_bound_idents.clone();
+                item_ident = fresh_ident_avoiding("item", &internal_param_names);
+                internal_param_names.insert(item_ident.sym.to_string());
 
-                // 使用 Map 键控闭包实现列表渲染与复用
-                // 先声明持久 Map：let _mapX_elements = new Map();
-                let map_base = vt.next_map_base();
-                let elements_ident = ident(&format!("{}{}", map_base, "_elements"));
-                // 持久化 Map，实现跨次渲染的片段复用（key -> {start,end,stop}）
-                let new_map_expr = Expr::New(NewExpr {
-                    span: DUMMY_SP,
-                    callee: Box::new(Expr::Ident(ident("Map"))),
-                    args: None,
-                    type_args: None,
-                    ctxt: SyntaxContext::empty(),
-                });
-                let elements_decl = Stmt::Decl(Decl::Var(Box::new(VarDecl {
-                    span: DUMMY_SP,
-                    ctxt: SyntaxContext::empty(),
-                    kind: VarDeclKind::Let,
-                    declare: false,
-                    decls: vec![VarDeclarator {
-                        span: DUMMY_SP,
-                        name: Pat::Ident(BindingIdent {
-                            id: elements_ident.clone(),
-                            type_ann: None,
-                        }),
-                        init: Some(Box::new(new_map_expr)),
-                        definite: false,
-                    }],
-                })));
-                stmts.push(elements_decl);
-                log::debug("list: emitted anchors and elements Map");
+                if params.len() < 2 {
+                    idx_ident = fresh_ident_avoiding("idx", &internal_param_names);
+                }
+                internal_param_names.insert(idx_ident.sym.to_string());
 
-                // 构造 watchEffect 箭头函数体
-                let map_current = ident(&format!("{}{}", map_base, "_current"));
-                let or_arr = Expr::Bin(BinExpr {
-                    span: DUMMY_SP,
-                    op: BinaryOp::LogicalOr,
-                    left: Box::new(arr_expr.clone()),
-                    right: Box::new(Expr::Array(ArrayLit { span: DUMMY_SP, elems: vec![] })),
-                });
-                let decl_current = const_decl(map_current.clone(), or_arr);
+                parent_param_ident = fresh_ident_avoiding("parent", &internal_param_names);
+                internal_param_names.insert(parent_param_ident.sym.to_string());
 
-                let map_new = ident(&format!("{}{}", map_base, "_newElements"));
+                start_param_ident = fresh_ident_avoiding("start", &internal_param_names);
+                internal_param_names.insert(start_param_ident.sym.to_string());
 
-                let mut body_stmts: Vec<Stmt> = vec![decl_current.clone()];
+                end_param_ident = fresh_ident_avoiding("end", &internal_param_names);
 
-                // 构造 for 循环：for (let idx = 0; idx < _map_current.length; idx++) { const item = _map_current[idx]; ... }
-                let mut idx_ident = ident("idx");
-                let mut item_ident = ident("item");
-                let mut item_param_pattern: Option<Pat> = None;
-                let mut parent_param_ident = ident("parent");
-                let mut start_param_ident = ident("start");
-                let mut end_param_ident = ident("end");
-                let mut item_alias_exprs = std::collections::HashMap::new();
-                if let Expr::Arrow(ArrowExpr { params, body, .. }) = cb_expr {
-                    if !params.is_empty() {
-                        match &params[0] {
-                            Pat::Ident(bi) => {
-                                item_ident = bi.id.clone();
-                            }
-                            Pat::Object(_) | Pat::Array(_) => {
-                                item_param_pattern = Some(params[0].clone());
-                            }
-                            Pat::Assign(assign) => match assign.left.as_ref() {
-                                Pat::Ident(binding) => {
-                                    item_alias_exprs.insert(
-                                        binding.id.sym.to_string(),
-                                        defaulted_param_expr(
-                                            Expr::Ident(item_ident.clone()),
-                                            *assign.right.clone(),
-                                        ),
-                                    );
-                                }
-                                Pat::Object(_) | Pat::Array(_) => {
-                                    item_param_pattern = Some(params[0].clone());
-                                }
-                                _ => {}
-                            },
-                            _ => {}
-                        }
-                    }
-                    if params.len() >= 2 {
-                        if let Pat::Ident(bi) = &params[1] {
-                            idx_ident = bi.id.clone();
-                        }
-                    }
-                    if let Some(pat) = &item_param_pattern {
-                        let mut pattern_bound_idents = std::collections::HashSet::new();
-                        collect_declared_idents_from_pat(pat, &mut pattern_bound_idents);
+                collect_alias_exprs_from_pat(
+                    pat,
+                    Expr::Ident(item_ident.clone()),
+                    &mut item_alias_exprs,
+                );
+            }
+            // 提取 JSX 根 key 表达式（若无则使用 idx）
+            let mut item_key_expr: Expr = Expr::Ident(idx_ident.clone());
+            let simple_block_render = match &**body {
+                // 只有“纯声明前缀 + 最后 return”的简单 block，
+                // 才允许走 direct vapor 快路径。
+                // 一旦不是这种形态，就交给后面的 fallback 路径保留原控制流。
+                BlockStmtOrExpr::BlockStmt(block) => collect_decl_prefix_and_final_return(block),
+                BlockStmtOrExpr::Expr(_) => None,
+            };
 
-                        let mut internal_param_names = pattern_bound_idents.clone();
-                        item_ident = fresh_ident_avoiding("item", &internal_param_names);
-                        internal_param_names.insert(item_ident.sym.to_string());
-
-                        if params.len() < 2 {
-                            idx_ident = fresh_ident_avoiding("idx", &internal_param_names);
-                        }
-                        internal_param_names.insert(idx_ident.sym.to_string());
-
-                        parent_param_ident = fresh_ident_avoiding("parent", &internal_param_names);
-                        internal_param_names.insert(parent_param_ident.sym.to_string());
-
-                        start_param_ident = fresh_ident_avoiding("start", &internal_param_names);
-                        internal_param_names.insert(start_param_ident.sym.to_string());
-
-                        end_param_ident = fresh_ident_avoiding("end", &internal_param_names);
-
-                        collect_alias_exprs_from_pat(
-                            pat,
-                            Expr::Ident(item_ident.clone()),
-                            &mut item_alias_exprs,
-                        );
-                    }
-                    // 提取 JSX 根 key 表达式（若无则使用 idx）
-                    let mut item_key_expr: Expr = Expr::Ident(idx_ident.clone());
-                    let simple_block_render = match &**body {
-                        // 只有“纯声明前缀 + 最后 return”的简单 block，
-                        // 才允许走 direct vapor 快路径。
-                        // 一旦不是这种形态，就交给后面的 fallback 路径保留原控制流。
-                        BlockStmtOrExpr::BlockStmt(block) => {
-                            collect_decl_prefix_and_final_return(block)
-                        }
-                        BlockStmtOrExpr::Expr(_) => None,
-                    };
-
-                    if let Some((_, ret_expr)) = simple_block_render.as_ref() {
-                        if let Some(key_expr) = extract_render_root_key_expr(ret_expr) {
-                            item_key_expr = key_expr;
-                        }
-                    } else {
-                        match &**body {
-                            BlockStmtOrExpr::BlockStmt(block) => {
-                                // 这里不再只看“最后一个 return”，而是先把 block 内所有 return expr 都扫出来。
-                                // 原因是 key 可能出现在 if / else 的任意分支里；
-                                // 如果只抽最后一个 return，会漏掉前面分支上的 JSX key。
-                                let mut return_exprs = Vec::new();
-                                collect_return_exprs_in_block(block, &mut return_exprs);
-                                for expr in &return_exprs {
-                                    if let Some(key_expr) = extract_render_root_key_expr(expr) {
-                                        item_key_expr = key_expr;
-                                    }
-                                }
-                            }
-                            BlockStmtOrExpr::Expr(expr_ret) => {
-                                if let Some(key_expr) =
-                                    extract_render_root_key_expr(expr_ret.as_ref())
-                                {
-                                    item_key_expr = key_expr;
-                                }
-                            }
-                        }
-                    }
-
-                    let direct_render_expr = match &**body {
-                        BlockStmtOrExpr::Expr(ret_expr) => {
-                            Some(utils::unwrap_expr(ret_expr.as_ref()).clone())
-                        }
-                        BlockStmtOrExpr::BlockStmt(_block) => {
-                            simple_block_render.as_ref().map(|(_, ret_expr)| ret_expr.clone())
-                        }
-                    };
-
-                    let direct_render_expr = direct_render_expr.map(|mut expr| {
-                        rewrite_alias_exprs_in_expr(&mut expr, &item_alias_exprs);
-                        expr
-                    });
-
-                    if let Some(ret_expr) = direct_render_expr.as_ref() {
-                        if let Some(key_expr) = extract_render_root_key_expr(ret_expr) {
-                            item_key_expr = key_expr;
-                        }
-                    }
-
-                    let callback_prefix_stmts = simple_block_render
-                        .as_ref()
-                        .map(|(prefix, _)| prefix.clone())
-                        .unwrap_or_default();
-
-                    let mut rewritten_callback_prefix_stmts = callback_prefix_stmts.clone();
-                    for stmt in &mut rewritten_callback_prefix_stmts {
-                        rewrite_alias_exprs_in_stmt(stmt, &item_alias_exprs);
-                    }
-
-                    let mut render_prefix_local_names =
-                        collect_declared_idents_in_stmts(&rewritten_callback_prefix_stmts);
-                    render_prefix_local_names.insert(item_ident.sym.to_string());
-                    render_prefix_local_names.insert(idx_ident.sym.to_string());
-                    let prefix_has_external_reactive_reads = prefix_reads_external_reactive_values(
-                        &rewritten_callback_prefix_stmts,
-                        &render_prefix_local_names,
-                    );
-                    let reactive_prefix_inline_alias_exprs = if prefix_has_external_reactive_reads {
-                        collect_inline_alias_exprs_from_prefix(&rewritten_callback_prefix_stmts)
-                    } else {
-                        None
-                    };
-                    let render_item_prefix_stmts = if prefix_has_external_reactive_reads
-                        && reactive_prefix_inline_alias_exprs.is_some()
-                    {
-                        Vec::new()
-                    } else {
-                        rewritten_callback_prefix_stmts.clone()
-                    };
-                    let render_item_direct_expr = if prefix_has_external_reactive_reads {
-                        reactive_prefix_inline_alias_exprs.as_ref().and_then(|alias_exprs| {
-                            direct_render_expr.as_ref().map(|expr| {
-                                let mut next = expr.clone();
-                                rewrite_alias_exprs_in_expr(&mut next, alias_exprs);
-                                next
-                            })
-                        })
-                    } else {
-                        direct_render_expr.clone()
-                    };
-
-                    let mut use_single_root_anchor = false;
-                    let track_index = params.len() >= 2;
-
-                    // renderItem(item, start, end)
-                    // `_$vaporKeyedList` 的 `renderItem` 约定参数：
-                    // - `item`：当前项
-                    // - `parent`：父元素（插入点所在）
-                    // - `start`/`end`：锚点注释，用于片段插入边界
-                    // - `idx`：当前索引
-                    // 渲染策略：使用 `renderBetween(vapor(()=>{ ... }), parent, start, end)`
-                    let mut render_item_stmts: Vec<Stmt> = Vec::new();
-                    if let Some(inner_ret) = render_item_direct_expr.as_ref() {
-                        if let Expr::JSXElement(jsx_el) = inner_ret {
-                            if let Some(key_expr) = extract_jsx_element_key_expr(jsx_el) {
+            if let Some((_, ret_expr)) = simple_block_render.as_ref() {
+                if let Some(key_expr) = extract_render_root_key_expr(ret_expr) {
+                    item_key_expr = key_expr;
+                }
+            } else {
+                match &**body {
+                    BlockStmtOrExpr::BlockStmt(block) => {
+                        // 这里不再只看“最后一个 return”，而是先把 block 内所有 return expr 都扫出来。
+                        // 原因是 key 可能出现在 if / else 的任意分支里；
+                        // 如果只抽最后一个 return，会漏掉前面分支上的 JSX key。
+                        let mut return_exprs = Vec::new();
+                        collect_return_exprs_in_block(block, &mut return_exprs);
+                        for expr in &return_exprs {
+                            if let Some(key_expr) = extract_render_root_key_expr(expr) {
                                 item_key_expr = key_expr;
                             }
-                            let builtin_fragment_single_root =
-                                crate::utils::is_builtin_fragment_element(jsx_el)
-                                    && is_single_root_native_fragment_children(&jsx_el.children);
-                            if crate::utils::is_component(&jsx_el.opening.name) {
-                                let mut component_el = (**jsx_el).clone();
-                                let render_item_local_names =
-                                    vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
-                                let (renderable_locals, plain_locals) =
-                                    collect_render_item_local_scopes(
-                                        vt,
-                                        &render_item_prefix_stmts,
-                                        &render_item_local_names,
-                                    );
-                                vt.push_renderable_local_scope(renderable_locals);
-                                vt.push_plain_local_scope(plain_locals);
-                                let rewrite =
-                                    crate::element_component::rewrite_component_children_to_props(
-                                        vt,
-                                        &mut component_el,
-                                    );
-                                vt.pop_plain_local_scope();
-                                vt.pop_renderable_local_scope();
-                                let slot_expr =
-                                    rewrite.direct_render_expr.clone().unwrap_or_else(|| {
-                                        crate::element_component::build_component_mount_expr(
-                                            &component_el,
-                                        )
-                                    });
-                                render_item_stmts.extend(render_item_prefix_stmts.iter().cloned());
-                                render_item_stmts.extend(rewrite.stmts);
-                                if builtin_fragment_single_root {
-                                    use_single_root_anchor = true;
-                                }
-                                let render_item_call = if builtin_fragment_single_root {
-                                    Expr::Call(CallExpr {
-                                        span: DUMMY_SP,
-                                        callee: Callee::Expr(Box::new(Expr::Ident(ident(
-                                            "renderAnchor",
-                                        )))),
-                                        args: vec![
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(ident("__slot"))),
-                                            },
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(
-                                                    parent_param_ident.clone(),
-                                                )),
-                                            },
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(
-                                                    start_param_ident.clone(),
-                                                )),
-                                            },
-                                        ],
-                                        type_args: None,
-                                        ctxt: SyntaxContext::empty(),
-                                    })
-                                } else {
-                                    Expr::Call(CallExpr {
-                                        span: DUMMY_SP,
-                                        callee: Callee::Expr(Box::new(Expr::Ident(ident(
-                                            "renderBetween",
-                                        )))),
-                                        args: vec![
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(ident("__slot"))),
-                                            },
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(
-                                                    parent_param_ident.clone(),
-                                                )),
-                                            },
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(
-                                                    start_param_ident.clone(),
-                                                )),
-                                            },
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(
-                                                    end_param_ident.clone(),
-                                                )),
-                                            },
-                                        ],
-                                        type_args: None,
-                                        ctxt: SyntaxContext::empty(),
-                                    })
-                                };
-                                render_item_stmts.push(const_decl(ident("__slot"), slot_expr));
-                                render_item_stmts.push(Stmt::Expr(ExprStmt {
-                                    span: DUMMY_SP,
-                                    expr: Box::new(render_item_call),
-                                }));
-                            } else {
-                                // direct vapor 快路径：
-                                // 只适用于表达式体，或“纯声明前缀 + 最后 return”的简单 block。
-                                // 这种情况下可以把前缀声明搬进 vapor setup，
-                                // 然后像普通 JSX 一样生成 DocumentFragment。
-                                let child_root = ident("_root");
-                                let mut child_body: Vec<Stmt> = vec![const_decl(
-                                    child_root.clone(),
-                                    call_ident("_$createDocumentFragment", vec![]),
-                                )];
-                                child_body.extend(render_item_prefix_stmts.iter().cloned());
-                                if is_native_single_root_jsx_element(jsx_el) {
-                                    use_single_root_anchor = true;
-                                }
-                                let render_item_local_names =
-                                    vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
-                                let (renderable_locals, plain_locals) =
-                                    collect_render_item_local_scopes(
-                                        vt,
-                                        &render_item_prefix_stmts,
-                                        &render_item_local_names,
-                                    );
-                                vt.push_renderable_local_scope(renderable_locals);
-                                vt.push_plain_local_scope(plain_locals);
-                                build_element(vt, jsx_el, &child_root.clone(), &mut child_body);
-                                vt.pop_plain_local_scope();
-                                vt.pop_renderable_local_scope();
-                                if let Some(key_expr) =
-                                    extract_key_expr_from_root_attr_effect(&child_body, &child_root)
-                                {
-                                    item_key_expr = key_expr;
-                                }
-                                child_body.push(return_root(child_root.clone()));
-                                let arrow_setup = Expr::Arrow(ArrowExpr {
-                                    span: DUMMY_SP,
-                                    params: vec![],
-                                    body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
-                                        span: DUMMY_SP,
-                                        ctxt: SyntaxContext::empty(),
-                                        stmts: child_body,
-                                    })),
-                                    is_async: false,
-                                    is_generator: false,
-                                    type_params: None,
-                                    return_type: None,
-                                    ctxt: SyntaxContext::empty(),
-                                });
-                                let child_vapor_expr = call_ident("vapor", vec![arrow_setup]);
-                                let render_item_call = if use_single_root_anchor {
-                                    Expr::Call(CallExpr {
-                                        span: DUMMY_SP,
-                                        callee: Callee::Expr(Box::new(Expr::Ident(ident(
-                                            "renderAnchor",
-                                        )))),
-                                        args: vec![
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(ident("__slot"))),
-                                            },
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(
-                                                    parent_param_ident.clone(),
-                                                )),
-                                            },
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(
-                                                    start_param_ident.clone(),
-                                                )),
-                                            },
-                                        ],
-                                        type_args: None,
-                                        ctxt: SyntaxContext::empty(),
-                                    })
-                                } else {
-                                    Expr::Call(CallExpr {
-                                        span: DUMMY_SP,
-                                        callee: Callee::Expr(Box::new(Expr::Ident(ident(
-                                            "renderBetween",
-                                        )))),
-                                        args: vec![
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(ident("__slot"))),
-                                            },
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(
-                                                    parent_param_ident.clone(),
-                                                )),
-                                            },
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(
-                                                    start_param_ident.clone(),
-                                                )),
-                                            },
-                                            ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(
-                                                    end_param_ident.clone(),
-                                                )),
-                                            },
-                                        ],
-                                        type_args: None,
-                                        ctxt: SyntaxContext::empty(),
-                                    })
-                                };
-                                render_item_stmts
-                                    .push(const_decl(ident("__slot"), child_vapor_expr));
-                                render_item_stmts.push(Stmt::Expr(ExprStmt {
-                                    span: DUMMY_SP,
-                                    expr: Box::new(render_item_call),
-                                }));
-                            }
-                        } else if let Expr::JSXFragment(frag) = inner_ret {
-                            // direct vapor 快路径：
-                            // 只适用于表达式体，或“纯声明前缀 + 最后 return”的简单 block。
-                            // 这种情况下可以把前缀声明搬进 vapor setup，
-                            // 然后像普通 JSX 一样生成 DocumentFragment。
-                            let child_root = ident("_root");
-                            let mut child_body: Vec<Stmt> = vec![const_decl(
-                                child_root.clone(),
-                                call_ident("_$createDocumentFragment", vec![]),
-                            )];
-                            if let Some(pat) = &item_param_pattern {
-                                let destruct_decl = Stmt::Decl(Decl::Var(Box::new(VarDecl {
-                                    span: DUMMY_SP,
-                                    ctxt: SyntaxContext::empty(),
-                                    kind: VarDeclKind::Const,
-                                    declare: false,
-                                    decls: vec![VarDeclarator {
-                                        span: DUMMY_SP,
-                                        name: pat.clone(),
-                                        init: Some(Box::new(Expr::Ident(item_ident.clone()))),
-                                        definite: false,
-                                    }],
-                                })));
-                                child_body.push(destruct_decl);
-                            }
-                            child_body.extend(render_item_prefix_stmts.iter().cloned());
-                            if is_single_root_native_jsx_fragment(frag) {
-                                use_single_root_anchor = true;
-                            }
-                            let render_item_local_names =
-                                vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
-                            let (renderable_locals, plain_locals) =
-                                collect_render_item_local_scopes(
-                                    vt,
-                                    &render_item_prefix_stmts,
-                                    &render_item_local_names,
-                                );
-                            vt.push_renderable_local_scope(renderable_locals);
-                            vt.push_plain_local_scope(plain_locals);
-                            crate::element_fragment::emit_fragment_children(
-                                vt,
-                                &child_root.clone(),
-                                &frag.children,
-                                &mut child_body,
-                            );
-                            vt.pop_plain_local_scope();
-                            vt.pop_renderable_local_scope();
-                            child_body.push(return_root(child_root.clone()));
-                            let arrow_setup = Expr::Arrow(ArrowExpr {
+                        }
+                    }
+                    BlockStmtOrExpr::Expr(expr_ret) => {
+                        if let Some(key_expr) = extract_render_root_key_expr(expr_ret.as_ref()) {
+                            item_key_expr = key_expr;
+                        }
+                    }
+                }
+            }
+
+            let direct_render_expr = match &**body {
+                BlockStmtOrExpr::Expr(ret_expr) => {
+                    Some(utils::unwrap_expr(ret_expr.as_ref()).clone())
+                }
+                BlockStmtOrExpr::BlockStmt(_block) => {
+                    simple_block_render.as_ref().map(|(_, ret_expr)| ret_expr.clone())
+                }
+            };
+
+            let direct_render_expr = direct_render_expr.map(|mut expr| {
+                rewrite_alias_exprs_in_expr(&mut expr, &item_alias_exprs);
+                expr
+            });
+
+            if let Some(ret_expr) = direct_render_expr.as_ref()
+                && let Some(key_expr) = extract_render_root_key_expr(ret_expr)
+            {
+                item_key_expr = key_expr;
+            }
+
+            let callback_prefix_stmts =
+                simple_block_render.as_ref().map(|(prefix, _)| prefix.clone()).unwrap_or_default();
+
+            let mut rewritten_callback_prefix_stmts = callback_prefix_stmts.clone();
+            for stmt in &mut rewritten_callback_prefix_stmts {
+                rewrite_alias_exprs_in_stmt(stmt, &item_alias_exprs);
+            }
+
+            let mut render_prefix_local_names =
+                collect_declared_idents_in_stmts(&rewritten_callback_prefix_stmts);
+            render_prefix_local_names.insert(item_ident.sym.to_string());
+            render_prefix_local_names.insert(idx_ident.sym.to_string());
+            let prefix_has_external_reactive_reads = prefix_reads_external_reactive_values(
+                &rewritten_callback_prefix_stmts,
+                &render_prefix_local_names,
+            );
+            let reactive_prefix_inline_alias_exprs = if prefix_has_external_reactive_reads {
+                collect_inline_alias_exprs_from_prefix(&rewritten_callback_prefix_stmts)
+            } else {
+                None
+            };
+            let render_item_prefix_stmts = if prefix_has_external_reactive_reads
+                && reactive_prefix_inline_alias_exprs.is_some()
+            {
+                Vec::new()
+            } else {
+                rewritten_callback_prefix_stmts.clone()
+            };
+            let render_item_direct_expr = if prefix_has_external_reactive_reads {
+                reactive_prefix_inline_alias_exprs.as_ref().and_then(|alias_exprs| {
+                    direct_render_expr.as_ref().map(|expr| {
+                        let mut next = expr.clone();
+                        rewrite_alias_exprs_in_expr(&mut next, alias_exprs);
+                        next
+                    })
+                })
+            } else {
+                direct_render_expr.clone()
+            };
+
+            let mut use_single_root_anchor = false;
+            let track_index = params.len() >= 2;
+
+            // renderItem(item, start, end)
+            // `_$vaporKeyedList` 的 `renderItem` 约定参数：
+            // - `item`：当前项
+            // - `parent`：父元素（插入点所在）
+            // - `start`/`end`：锚点注释，用于片段插入边界
+            // - `idx`：当前索引
+            // 渲染策略：使用 `renderBetween(vapor(()=>{ ... }), parent, start, end)`
+            let mut render_item_stmts: Vec<Stmt> = Vec::new();
+            if let Some(inner_ret) = render_item_direct_expr.as_ref() {
+                if let Expr::JSXElement(jsx_el) = inner_ret {
+                    if let Some(key_expr) = extract_jsx_element_key_expr(jsx_el) {
+                        item_key_expr = key_expr;
+                    }
+                    let builtin_fragment_single_root =
+                        crate::utils::is_builtin_fragment_element(jsx_el)
+                            && is_single_root_native_fragment_children(&jsx_el.children);
+                    if crate::utils::is_component(&jsx_el.opening.name) {
+                        let mut component_el = (**jsx_el).clone();
+                        let render_item_local_names =
+                            vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
+                        let (renderable_locals, plain_locals) = collect_render_item_local_scopes(
+                            vt,
+                            &render_item_prefix_stmts,
+                            &render_item_local_names,
+                        );
+                        vt.push_renderable_local_scope(renderable_locals);
+                        vt.push_plain_local_scope(plain_locals);
+                        let rewrite = crate::element_component::rewrite_component_children_to_props(
+                            vt,
+                            &mut component_el,
+                        );
+                        vt.pop_plain_local_scope();
+                        vt.pop_renderable_local_scope();
+                        let slot_expr = rewrite.direct_render_expr.clone().unwrap_or_else(|| {
+                            crate::element_component::build_component_mount_expr(&component_el)
+                        });
+                        render_item_stmts.extend(render_item_prefix_stmts.iter().cloned());
+                        render_item_stmts.extend(rewrite.stmts);
+                        if builtin_fragment_single_root {
+                            use_single_root_anchor = true;
+                        }
+                        let render_item_call = if builtin_fragment_single_root {
+                            Expr::Call(CallExpr {
                                 span: DUMMY_SP,
-                                params: vec![],
-                                body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
-                                    span: DUMMY_SP,
-                                    ctxt: SyntaxContext::empty(),
-                                    stmts: child_body,
-                                })),
-                                is_async: false,
-                                is_generator: false,
-                                type_params: None,
-                                return_type: None,
+                                callee: Callee::Expr(Box::new(Expr::Ident(ident("renderAnchor")))),
+                                args: vec![
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(ident("__slot"))),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(parent_param_ident.clone())),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(start_param_ident.clone())),
+                                    },
+                                ],
+                                type_args: None,
                                 ctxt: SyntaxContext::empty(),
-                            });
-                            let child_vapor_expr = call_ident("vapor", vec![arrow_setup]);
-                            let render_item_call = if use_single_root_anchor {
-                                Expr::Call(CallExpr {
-                                    span: DUMMY_SP,
-                                    callee: Callee::Expr(Box::new(Expr::Ident(ident(
-                                        "renderAnchor",
-                                    )))),
-                                    args: vec![
-                                        ExprOrSpread {
-                                            spread: None,
-                                            expr: Box::new(Expr::Ident(ident("__slot"))),
-                                        },
-                                        ExprOrSpread {
-                                            spread: None,
-                                            expr: Box::new(Expr::Ident(parent_param_ident.clone())),
-                                        },
-                                        ExprOrSpread {
-                                            spread: None,
-                                            expr: Box::new(Expr::Ident(start_param_ident.clone())),
-                                        },
-                                    ],
-                                    type_args: None,
-                                    ctxt: SyntaxContext::empty(),
-                                })
-                            } else {
-                                Expr::Call(CallExpr {
-                                    span: DUMMY_SP,
-                                    callee: Callee::Expr(Box::new(Expr::Ident(ident(
-                                        "renderBetween",
-                                    )))),
-                                    args: vec![
-                                        ExprOrSpread {
-                                            spread: None,
-                                            expr: Box::new(Expr::Ident(ident("__slot"))),
-                                        },
-                                        ExprOrSpread {
-                                            spread: None,
-                                            expr: Box::new(Expr::Ident(parent_param_ident.clone())),
-                                        },
-                                        ExprOrSpread {
-                                            spread: None,
-                                            expr: Box::new(Expr::Ident(start_param_ident.clone())),
-                                        },
-                                        ExprOrSpread {
-                                            spread: None,
-                                            expr: Box::new(Expr::Ident(end_param_ident.clone())),
-                                        },
-                                    ],
-                                    type_args: None,
-                                    ctxt: SyntaxContext::empty(),
-                                })
-                            };
-                            render_item_stmts.push(const_decl(ident("__slot"), child_vapor_expr));
-                            render_item_stmts.push(Stmt::Expr(ExprStmt {
-                                span: DUMMY_SP,
-                                expr: Box::new(render_item_call),
-                            }));
+                            })
                         } else {
-                            let slot_expr = crate::element_expr::make_expr_for_slot(vt, inner_ret);
-                            let render_item_call = Expr::Call(CallExpr {
+                            Expr::Call(CallExpr {
                                 span: DUMMY_SP,
                                 callee: Callee::Expr(Box::new(Expr::Ident(ident("renderBetween")))),
                                 args: vec![
@@ -1439,41 +1143,52 @@ pub(crate) fn try_build_list_from_map(
                                 ],
                                 type_args: None,
                                 ctxt: SyntaxContext::empty(),
-                            });
-                            render_item_stmts.extend(render_item_prefix_stmts.iter().cloned());
-                            render_item_stmts.push(const_decl(ident("__slot"), slot_expr));
-                            render_item_stmts.push(Stmt::Expr(ExprStmt {
-                                span: DUMMY_SP,
-                                expr: Box::new(render_item_call),
-                            }));
-                        }
+                            })
+                        };
+                        render_item_stmts.push(const_decl(ident("__slot"), slot_expr));
+                        render_item_stmts.push(Stmt::Expr(ExprStmt {
+                            span: DUMMY_SP,
+                            expr: Box::new(render_item_call),
+                        }));
                     } else {
-                        // fallback 路径：
-                        // 说明当前 block body 已经不是“声明前缀 + 最后 return”的简单形态，
-                        // 典型场景是 if/else 多分支 return、try/switch 等复杂控制流。
-                        //
-                        // 这里不再试图把 block 拆碎重组，而是保留原 block 结构，
-                        // 在 renderItem 内执行一个立即调用函数拿到 __slot，
-                        // 再把原始值直接交给 runtime 的 Renderable/compat 边界。
-                        //
-                        // 这样做的好处是：
-                        // 1. 条件 return 的原始语义不会被破坏；
-                        // 2. 不需要继续扩张“前缀语句搬运”的规则；
-                        // 3. 列表主路径不再额外依赖旧的中间对象 helper 生成包装值。
-                        let mut slot_block_stmts: Vec<Stmt> = Vec::new();
-                        if let BlockStmtOrExpr::BlockStmt(block) = &**body {
-                            slot_block_stmts.extend(block.stmts.iter().cloned());
-                            for stmt in &mut slot_block_stmts {
-                                rewrite_alias_exprs_in_stmt(stmt, &item_alias_exprs);
-                            }
+                        // direct vapor 快路径：
+                        // 只适用于表达式体，或“纯声明前缀 + 最后 return”的简单 block。
+                        // 这种情况下可以把前缀声明搬进 vapor setup，
+                        // 然后像普通 JSX 一样生成 DocumentFragment。
+                        let child_root = ident("_root");
+                        let mut child_body: Vec<Stmt> = vec![const_decl(
+                            child_root.clone(),
+                            call_ident("_$createDocumentFragment", vec![]),
+                        )];
+                        child_body.extend(render_item_prefix_stmts.iter().cloned());
+                        if is_native_single_root_jsx_element(jsx_el) {
+                            use_single_root_anchor = true;
                         }
-                        let slot_arrow = Expr::Arrow(ArrowExpr {
+                        let render_item_local_names =
+                            vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
+                        let (renderable_locals, plain_locals) = collect_render_item_local_scopes(
+                            vt,
+                            &render_item_prefix_stmts,
+                            &render_item_local_names,
+                        );
+                        vt.push_renderable_local_scope(renderable_locals);
+                        vt.push_plain_local_scope(plain_locals);
+                        build_element(vt, jsx_el, &child_root.clone(), &mut child_body);
+                        vt.pop_plain_local_scope();
+                        vt.pop_renderable_local_scope();
+                        if let Some(key_expr) =
+                            extract_key_expr_from_root_attr_effect(&child_body, &child_root)
+                        {
+                            item_key_expr = key_expr;
+                        }
+                        child_body.push(return_root(child_root.clone()));
+                        let arrow_setup = Expr::Arrow(ArrowExpr {
                             span: DUMMY_SP,
                             params: vec![],
                             body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
                                 span: DUMMY_SP,
                                 ctxt: SyntaxContext::empty(),
-                                stmts: slot_block_stmts,
+                                stmts: child_body,
                             })),
                             is_async: false,
                             is_generator: false,
@@ -1481,17 +1196,145 @@ pub(crate) fn try_build_list_from_map(
                             return_type: None,
                             ctxt: SyntaxContext::empty(),
                         });
-                        let slot_expr = Expr::Call(CallExpr {
-                            span: DUMMY_SP,
-                            callee: Callee::Expr(Box::new(Expr::Paren(ParenExpr {
+                        let child_vapor_expr = call_ident("vapor", vec![arrow_setup]);
+                        let render_item_call = if use_single_root_anchor {
+                            Expr::Call(CallExpr {
                                 span: DUMMY_SP,
-                                expr: Box::new(slot_arrow),
-                            }))),
-                            args: vec![],
+                                callee: Callee::Expr(Box::new(Expr::Ident(ident("renderAnchor")))),
+                                args: vec![
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(ident("__slot"))),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(parent_param_ident.clone())),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(start_param_ident.clone())),
+                                    },
+                                ],
+                                type_args: None,
+                                ctxt: SyntaxContext::empty(),
+                            })
+                        } else {
+                            Expr::Call(CallExpr {
+                                span: DUMMY_SP,
+                                callee: Callee::Expr(Box::new(Expr::Ident(ident("renderBetween")))),
+                                args: vec![
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(ident("__slot"))),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(parent_param_ident.clone())),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(start_param_ident.clone())),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Box::new(Expr::Ident(end_param_ident.clone())),
+                                    },
+                                ],
+                                type_args: None,
+                                ctxt: SyntaxContext::empty(),
+                            })
+                        };
+                        render_item_stmts.push(const_decl(ident("__slot"), child_vapor_expr));
+                        render_item_stmts.push(Stmt::Expr(ExprStmt {
+                            span: DUMMY_SP,
+                            expr: Box::new(render_item_call),
+                        }));
+                    }
+                } else if let Expr::JSXFragment(frag) = inner_ret {
+                    // direct vapor 快路径：
+                    // 只适用于表达式体，或“纯声明前缀 + 最后 return”的简单 block。
+                    // 这种情况下可以把前缀声明搬进 vapor setup，
+                    // 然后像普通 JSX 一样生成 DocumentFragment。
+                    let child_root = ident("_root");
+                    let mut child_body: Vec<Stmt> = vec![const_decl(
+                        child_root.clone(),
+                        call_ident("_$createDocumentFragment", vec![]),
+                    )];
+                    if let Some(pat) = &item_param_pattern {
+                        let destruct_decl = Stmt::Decl(Decl::Var(Box::new(VarDecl {
+                            span: DUMMY_SP,
+                            ctxt: SyntaxContext::empty(),
+                            kind: VarDeclKind::Const,
+                            declare: false,
+                            decls: vec![VarDeclarator {
+                                span: DUMMY_SP,
+                                name: pat.clone(),
+                                init: Some(Box::new(Expr::Ident(item_ident.clone()))),
+                                definite: false,
+                            }],
+                        })));
+                        child_body.push(destruct_decl);
+                    }
+                    child_body.extend(render_item_prefix_stmts.iter().cloned());
+                    if is_single_root_native_jsx_fragment(frag) {
+                        use_single_root_anchor = true;
+                    }
+                    let render_item_local_names =
+                        vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
+                    let (renderable_locals, plain_locals) = collect_render_item_local_scopes(
+                        vt,
+                        &render_item_prefix_stmts,
+                        &render_item_local_names,
+                    );
+                    vt.push_renderable_local_scope(renderable_locals);
+                    vt.push_plain_local_scope(plain_locals);
+                    crate::element_fragment::emit_fragment_children(
+                        vt,
+                        &child_root.clone(),
+                        &frag.children,
+                        &mut child_body,
+                    );
+                    vt.pop_plain_local_scope();
+                    vt.pop_renderable_local_scope();
+                    child_body.push(return_root(child_root.clone()));
+                    let arrow_setup = Expr::Arrow(ArrowExpr {
+                        span: DUMMY_SP,
+                        params: vec![],
+                        body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+                            span: DUMMY_SP,
+                            ctxt: SyntaxContext::empty(),
+                            stmts: child_body,
+                        })),
+                        is_async: false,
+                        is_generator: false,
+                        type_params: None,
+                        return_type: None,
+                        ctxt: SyntaxContext::empty(),
+                    });
+                    let child_vapor_expr = call_ident("vapor", vec![arrow_setup]);
+                    let render_item_call = if use_single_root_anchor {
+                        Expr::Call(CallExpr {
+                            span: DUMMY_SP,
+                            callee: Callee::Expr(Box::new(Expr::Ident(ident("renderAnchor")))),
+                            args: vec![
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Box::new(Expr::Ident(ident("__slot"))),
+                                },
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Box::new(Expr::Ident(parent_param_ident.clone())),
+                                },
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Box::new(Expr::Ident(start_param_ident.clone())),
+                                },
+                            ],
                             type_args: None,
                             ctxt: SyntaxContext::empty(),
-                        });
-                        let render_item_call = Expr::Call(CallExpr {
+                        })
+                    } else {
+                        Expr::Call(CallExpr {
                             span: DUMMY_SP,
                             callee: Callee::Expr(Box::new(Expr::Ident(ident("renderBetween")))),
                             args: vec![
@@ -1514,199 +1357,73 @@ pub(crate) fn try_build_list_from_map(
                             ],
                             type_args: None,
                             ctxt: SyntaxContext::empty(),
-                        });
-                        render_item_stmts.push(const_decl(ident("__slot"), slot_expr));
-                        render_item_stmts.push(Stmt::Expr(ExprStmt {
-                            span: DUMMY_SP,
-                            expr: Box::new(render_item_call),
-                        }));
-                    }
-                    let render_item_arrow = Expr::Arrow(ArrowExpr {
-                        span: DUMMY_SP,
-                        params: vec![
-                            Pat::Ident(BindingIdent { id: item_ident.clone(), type_ann: None }),
-                            Pat::Ident(BindingIdent {
-                                id: parent_param_ident.clone(),
-                                type_ann: None,
-                            }),
-                            Pat::Ident(BindingIdent {
-                                id: start_param_ident.clone(),
-                                type_ann: None,
-                            }),
-                            Pat::Ident(BindingIdent {
-                                id: end_param_ident.clone(),
-                                type_ann: None,
-                            }),
-                            Pat::Ident(BindingIdent { id: idx_ident.clone(), type_ann: None }),
-                        ],
-                        body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
-                            span: DUMMY_SP,
-                            ctxt: SyntaxContext::empty(),
-                            stmts: render_item_stmts,
-                        })),
-                        is_async: false,
-                        is_generator: false,
-                        type_params: None,
-                        return_type: None,
-                        ctxt: SyntaxContext::empty(),
-                    });
-
-                    // getKey 箭头函数
-                    // 若 `map` 参数是对象/数组解构，这里不再手动插入
-                    // `const { ... } = item; return <key-expr>;`。
-                    // 这种“拆成声明 + 表达式”的重组方式，在后续打包重命名时
-                    // 可能让 key 表达式里的别名引用和解构声明脱钩。
-                    //
-                    // 改为保留原始 pattern 作为一个立即调用的箭头函数参数：
-                    // - `(__rue_item)=>(([item, index])=>item.id)(__rue_item)`
-                    // 这样 key 表达式和解构绑定仍在同一棵 AST 子树里，
-                    // 后续改名时不会再出现 `const [item1] = ...; return item.id` 这类悬空引用。
-                    let mut rewritten_item_key_expr = item_key_expr.clone();
-                    rewrite_alias_exprs_in_expr(&mut rewritten_item_key_expr, &item_alias_exprs);
-
-                    let key_needs_prefix_scope = expr_uses_declared_prefix(
-                        &rewritten_item_key_expr,
-                        &rewritten_callback_prefix_stmts,
-                    );
-                    // 这里不再因为“callback 是 block body”就无脑生成块体 getKey。
-                    // 现在只有两种情况才会包块：
-                    // 1. 参数本身是解构，需要先把 item 解构出来；
-                    // 2. key 确实依赖声明前缀里的局部变量。
-                    //
-                    // 这样可以把这次修复范围收窄到“作用域真正需要的部分”，
-                    // 避免为了兼容 block body 而让所有 getKey 都发生额外 codegen 变化。
-                    let get_key_body = if key_needs_prefix_scope {
-                        let mut get_key_stmts: Vec<Stmt> = Vec::new();
-                        get_key_stmts.extend(rewritten_callback_prefix_stmts.iter().cloned());
-                        get_key_stmts.push(Stmt::Return(ReturnStmt {
-                            span: DUMMY_SP,
-                            arg: Some(Box::new(rewritten_item_key_expr.clone())),
-                        }));
-                        BlockStmtOrExpr::BlockStmt(BlockStmt {
-                            span: DUMMY_SP,
-                            ctxt: SyntaxContext::empty(),
-                            stmts: get_key_stmts,
                         })
-                    } else {
-                        BlockStmtOrExpr::Expr(Box::new(rewritten_item_key_expr.clone()))
                     };
-                    let get_key_arrow = Expr::Arrow(ArrowExpr {
+                    render_item_stmts.push(const_decl(ident("__slot"), child_vapor_expr));
+                    render_item_stmts.push(Stmt::Expr(ExprStmt {
                         span: DUMMY_SP,
-                        params: vec![
-                            Pat::Ident(BindingIdent { id: item_ident.clone(), type_ann: None }),
-                            Pat::Ident(BindingIdent { id: idx_ident.clone(), type_ann: None }),
-                        ],
-                        body: Box::new(get_key_body),
-                        is_async: false,
-                        is_generator: false,
-                        type_params: None,
-                        return_type: None,
-                        ctxt: SyntaxContext::empty(),
-                    });
-
-                    // _$vaporKeyedList({ items, getKey, elements, parent, before, start, renderItem })
-                    let parent_expr = if el_ident.sym.as_ref() == "_root" {
-                        // 对于块体根 _root，renderBetween 的 parent 取 start.parentNode；元素上下文直接用 el_ident
-                        Expr::Member(MemberExpr {
-                            span: DUMMY_SP,
-                            obj: Box::new(Expr::Ident(start.clone())),
-                            prop: MemberProp::Ident(ident_name("parentNode")),
-                        })
-                    } else {
-                        Expr::Ident(el_ident.clone())
-                    };
-                    // 传入 keyedList 所需参数：items、key 计算、元素映射以及父/锚点位置
-                    let mut keyed_list_props = vec![
-                        PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                            key: PropName::Ident(ident_name("items")),
-                            value: Box::new(Expr::Ident(map_current.clone())),
-                        }))),
-                        PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                            key: PropName::Ident(ident_name("getKey")),
-                            value: Box::new(get_key_arrow),
-                        }))),
-                        PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                            key: PropName::Ident(ident_name("elements")),
-                            value: Box::new(Expr::Ident(elements_ident.clone())),
-                        }))),
-                        PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                            key: PropName::Ident(ident_name("parent")),
-                            value: Box::new(parent_expr),
-                        }))),
-                        PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                            key: PropName::Ident(ident_name("before")),
-                            value: Box::new(Expr::Ident(end.clone())),
-                        }))),
-                    ];
-
-                    if use_single_root_anchor {
-                        keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(
-                            KeyValueProp {
-                                key: PropName::Ident(ident_name("singleRoot")),
-                                value: Box::new(Expr::Lit(Lit::Bool(Bool {
-                                    span: DUMMY_SP,
-                                    value: true,
-                                }))),
+                        expr: Box::new(render_item_call),
+                    }));
+                } else {
+                    let slot_expr = crate::element_expr::make_expr_for_slot(vt, inner_ret);
+                    let render_item_call = Expr::Call(CallExpr {
+                        span: DUMMY_SP,
+                        callee: Callee::Expr(Box::new(Expr::Ident(ident("renderBetween")))),
+                        args: vec![
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Box::new(Expr::Ident(ident("__slot"))),
                             },
-                        ))));
-                        if !track_index {
-                            keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(
-                                KeyValueProp {
-                                    key: PropName::Ident(ident_name("trackIndex")),
-                                    value: Box::new(Expr::Lit(Lit::Bool(Bool {
-                                        span: DUMMY_SP,
-                                        value: false,
-                                    }))),
-                                },
-                            ))));
-                        }
-                    }
-
-                    keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(
-                        KeyValueProp {
-                            key: PropName::Ident(ident_name("start")),
-                            value: Box::new(Expr::Ident(start.clone())),
-                        },
-                    ))));
-                    keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(
-                        KeyValueProp {
-                            key: PropName::Ident(ident_name("renderItem")),
-                            value: Box::new(render_item_arrow),
-                        },
-                    ))));
-
-                    let args_obj =
-                        Expr::Object(ObjectLit { span: DUMMY_SP, props: keyed_list_props });
-                    // _$vaporKeyedList 调用细节：
-                    // - callee：标识符 `_$vaporKeyedList`
-                    // - args：对象字面量，包含 `items/getKey/elements/parent/before/start/renderItem`
-                    // - ctxt：统一 `SyntaxContext::empty()`
-                    let decl_new =
-                        const_decl(map_new.clone(), call_ident("_$vaporKeyedList", vec![args_obj]));
-                    body_stmts.push(decl_new);
-                    // elements = newElements
-                    // 更新持久 Map 引用，保持下一轮复用
-                    body_stmts.push(Stmt::Expr(ExprStmt {
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Box::new(Expr::Ident(parent_param_ident.clone())),
+                            },
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Box::new(Expr::Ident(start_param_ident.clone())),
+                            },
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Box::new(Expr::Ident(end_param_ident.clone())),
+                            },
+                        ],
+                        type_args: None,
+                        ctxt: SyntaxContext::empty(),
+                    });
+                    render_item_stmts.extend(render_item_prefix_stmts.iter().cloned());
+                    render_item_stmts.push(const_decl(ident("__slot"), slot_expr));
+                    render_item_stmts.push(Stmt::Expr(ExprStmt {
                         span: DUMMY_SP,
-                        expr: Box::new(Expr::Assign(AssignExpr {
-                            span: DUMMY_SP,
-                            op: AssignOp::Assign,
-                            left: AssignTarget::Simple(SimpleAssignTarget::Ident(
-                                elements_ident.clone().into(),
-                            )),
-                            right: Box::new(Expr::Ident(map_new.clone())),
-                        })),
+                        expr: Box::new(render_item_call),
                     }));
                 }
-
-                // watchEffect(() => { ... })
-                let arrow = Expr::Arrow(ArrowExpr {
+            } else {
+                // fallback 路径：
+                // 说明当前 block body 已经不是“声明前缀 + 最后 return”的简单形态，
+                // 典型场景是 if/else 多分支 return、try/switch 等复杂控制流。
+                //
+                // 这里不再试图把 block 拆碎重组，而是保留原 block 结构，
+                // 在 renderItem 内执行一个立即调用函数拿到 __slot，
+                // 再把原始值直接交给 runtime 的 Renderable/compat 边界。
+                //
+                // 这样做的好处是：
+                // 1. 条件 return 的原始语义不会被破坏；
+                // 2. 不需要继续扩张“前缀语句搬运”的规则；
+                // 3. 列表主路径不再额外依赖旧的中间对象 helper 生成包装值。
+                let mut slot_block_stmts: Vec<Stmt> = Vec::new();
+                if let BlockStmtOrExpr::BlockStmt(block) = &**body {
+                    slot_block_stmts.extend(block.stmts.iter().cloned());
+                    for stmt in &mut slot_block_stmts {
+                        rewrite_alias_exprs_in_stmt(stmt, &item_alias_exprs);
+                    }
+                }
+                let slot_arrow = Expr::Arrow(ArrowExpr {
                     span: DUMMY_SP,
                     params: vec![],
                     body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
                         span: DUMMY_SP,
                         ctxt: SyntaxContext::empty(),
-                        stmts: body_stmts,
+                        stmts: slot_block_stmts,
                     })),
                     is_async: false,
                     is_generator: false,
@@ -1714,16 +1431,225 @@ pub(crate) fn try_build_list_from_map(
                     return_type: None,
                     ctxt: SyntaxContext::empty(),
                 });
-                // watch 调用细节：
-                // - callee：标识符 `watchEffect`
-                // - args：箭头函数体封装列表的 diff 与渲染逻辑
-                // - ctxt：`SyntaxContext::empty()`
-                let watch_call = call_ident("watchEffect", vec![arrow]);
-                stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch_call) }));
-
-                return true;
+                let slot_expr = Expr::Call(CallExpr {
+                    span: DUMMY_SP,
+                    callee: Callee::Expr(Box::new(Expr::Paren(ParenExpr {
+                        span: DUMMY_SP,
+                        expr: Box::new(slot_arrow),
+                    }))),
+                    args: vec![],
+                    type_args: None,
+                    ctxt: SyntaxContext::empty(),
+                });
+                let render_item_call = Expr::Call(CallExpr {
+                    span: DUMMY_SP,
+                    callee: Callee::Expr(Box::new(Expr::Ident(ident("renderBetween")))),
+                    args: vec![
+                        ExprOrSpread { spread: None, expr: Box::new(Expr::Ident(ident("__slot"))) },
+                        ExprOrSpread {
+                            spread: None,
+                            expr: Box::new(Expr::Ident(parent_param_ident.clone())),
+                        },
+                        ExprOrSpread {
+                            spread: None,
+                            expr: Box::new(Expr::Ident(start_param_ident.clone())),
+                        },
+                        ExprOrSpread {
+                            spread: None,
+                            expr: Box::new(Expr::Ident(end_param_ident.clone())),
+                        },
+                    ],
+                    type_args: None,
+                    ctxt: SyntaxContext::empty(),
+                });
+                render_item_stmts.push(const_decl(ident("__slot"), slot_expr));
+                render_item_stmts.push(Stmt::Expr(ExprStmt {
+                    span: DUMMY_SP,
+                    expr: Box::new(render_item_call),
+                }));
             }
+            let render_item_arrow = Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                params: vec![
+                    Pat::Ident(BindingIdent { id: item_ident.clone(), type_ann: None }),
+                    Pat::Ident(BindingIdent { id: parent_param_ident.clone(), type_ann: None }),
+                    Pat::Ident(BindingIdent { id: start_param_ident.clone(), type_ann: None }),
+                    Pat::Ident(BindingIdent { id: end_param_ident.clone(), type_ann: None }),
+                    Pat::Ident(BindingIdent { id: idx_ident.clone(), type_ann: None }),
+                ],
+                body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+                    span: DUMMY_SP,
+                    ctxt: SyntaxContext::empty(),
+                    stmts: render_item_stmts,
+                })),
+                is_async: false,
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+                ctxt: SyntaxContext::empty(),
+            });
+
+            // getKey 箭头函数
+            // 若 `map` 参数是对象/数组解构，这里不再手动插入
+            // `const { ... } = item; return <key-expr>;`。
+            // 这种“拆成声明 + 表达式”的重组方式，在后续打包重命名时
+            // 可能让 key 表达式里的别名引用和解构声明脱钩。
+            //
+            // 改为保留原始 pattern 作为一个立即调用的箭头函数参数：
+            // - `(__rue_item)=>(([item, index])=>item.id)(__rue_item)`
+            // 这样 key 表达式和解构绑定仍在同一棵 AST 子树里，
+            // 后续改名时不会再出现 `const [item1] = ...; return item.id` 这类悬空引用。
+            let mut rewritten_item_key_expr = item_key_expr.clone();
+            rewrite_alias_exprs_in_expr(&mut rewritten_item_key_expr, &item_alias_exprs);
+
+            let key_needs_prefix_scope = expr_uses_declared_prefix(
+                &rewritten_item_key_expr,
+                &rewritten_callback_prefix_stmts,
+            );
+            // 这里不再因为“callback 是 block body”就无脑生成块体 getKey。
+            // 现在只有两种情况才会包块：
+            // 1. 参数本身是解构，需要先把 item 解构出来；
+            // 2. key 确实依赖声明前缀里的局部变量。
+            //
+            // 这样可以把这次修复范围收窄到“作用域真正需要的部分”，
+            // 避免为了兼容 block body 而让所有 getKey 都发生额外 codegen 变化。
+            let get_key_body = if key_needs_prefix_scope {
+                let mut get_key_stmts: Vec<Stmt> = Vec::new();
+                get_key_stmts.extend(rewritten_callback_prefix_stmts.iter().cloned());
+                get_key_stmts.push(Stmt::Return(ReturnStmt {
+                    span: DUMMY_SP,
+                    arg: Some(Box::new(rewritten_item_key_expr.clone())),
+                }));
+                BlockStmtOrExpr::BlockStmt(BlockStmt {
+                    span: DUMMY_SP,
+                    ctxt: SyntaxContext::empty(),
+                    stmts: get_key_stmts,
+                })
+            } else {
+                BlockStmtOrExpr::Expr(Box::new(rewritten_item_key_expr.clone()))
+            };
+            let get_key_arrow = Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                params: vec![
+                    Pat::Ident(BindingIdent { id: item_ident.clone(), type_ann: None }),
+                    Pat::Ident(BindingIdent { id: idx_ident.clone(), type_ann: None }),
+                ],
+                body: Box::new(get_key_body),
+                is_async: false,
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+                ctxt: SyntaxContext::empty(),
+            });
+
+            // _$vaporKeyedList({ items, getKey, elements, parent, before, start, renderItem })
+            let parent_expr = if el_ident.sym.as_ref() == "_root" {
+                // 对于块体根 _root，renderBetween 的 parent 取 start.parentNode；元素上下文直接用 el_ident
+                Expr::Member(MemberExpr {
+                    span: DUMMY_SP,
+                    obj: Box::new(Expr::Ident(start.clone())),
+                    prop: MemberProp::Ident(ident_name("parentNode")),
+                })
+            } else {
+                Expr::Ident(el_ident.clone())
+            };
+            // 传入 keyedList 所需参数：items、key 计算、元素映射以及父/锚点位置
+            let mut keyed_list_props = vec![
+                PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("items")),
+                    value: Box::new(Expr::Ident(map_current.clone())),
+                }))),
+                PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("getKey")),
+                    value: Box::new(get_key_arrow),
+                }))),
+                PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("elements")),
+                    value: Box::new(Expr::Ident(elements_ident.clone())),
+                }))),
+                PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("parent")),
+                    value: Box::new(parent_expr),
+                }))),
+                PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("before")),
+                    value: Box::new(Expr::Ident(end.clone())),
+                }))),
+            ];
+
+            if use_single_root_anchor {
+                keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("singleRoot")),
+                    value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
+                }))));
+                if !track_index {
+                    keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(
+                        KeyValueProp {
+                            key: PropName::Ident(ident_name("trackIndex")),
+                            value: Box::new(Expr::Lit(Lit::Bool(Bool {
+                                span: DUMMY_SP,
+                                value: false,
+                            }))),
+                        },
+                    ))));
+                }
+            }
+
+            keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                key: PropName::Ident(ident_name("start")),
+                value: Box::new(Expr::Ident(start.clone())),
+            }))));
+            keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                key: PropName::Ident(ident_name("renderItem")),
+                value: Box::new(render_item_arrow),
+            }))));
+
+            let args_obj = Expr::Object(ObjectLit { span: DUMMY_SP, props: keyed_list_props });
+            // _$vaporKeyedList 调用细节：
+            // - callee：标识符 `_$vaporKeyedList`
+            // - args：对象字面量，包含 `items/getKey/elements/parent/before/start/renderItem`
+            // - ctxt：统一 `SyntaxContext::empty()`
+            let decl_new =
+                const_decl(map_new.clone(), call_ident("_$vaporKeyedList", vec![args_obj]));
+            body_stmts.push(decl_new);
+            // elements = newElements
+            // 更新持久 Map 引用，保持下一轮复用
+            body_stmts.push(Stmt::Expr(ExprStmt {
+                span: DUMMY_SP,
+                expr: Box::new(Expr::Assign(AssignExpr {
+                    span: DUMMY_SP,
+                    op: AssignOp::Assign,
+                    left: AssignTarget::Simple(SimpleAssignTarget::Ident(
+                        elements_ident.clone().into(),
+                    )),
+                    right: Box::new(Expr::Ident(map_new.clone())),
+                })),
+            }));
         }
+
+        // watchEffect(() => { ... })
+        let arrow = Expr::Arrow(ArrowExpr {
+            span: DUMMY_SP,
+            params: vec![],
+            body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+                span: DUMMY_SP,
+                ctxt: SyntaxContext::empty(),
+                stmts: body_stmts,
+            })),
+            is_async: false,
+            is_generator: false,
+            type_params: None,
+            return_type: None,
+            ctxt: SyntaxContext::empty(),
+        });
+        // watch 调用细节：
+        // - callee：标识符 `watchEffect`
+        // - args：箭头函数体封装列表的 diff 与渲染逻辑
+        // - ctxt：`SyntaxContext::empty()`
+        let watch_call = call_ident("watchEffect", vec![arrow]);
+        stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch_call) }));
+
+        return true;
     }
     false
 }

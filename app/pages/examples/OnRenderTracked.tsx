@@ -16,6 +16,24 @@ type TrackedEntry = {
   value: string
 }
 
+type TrackedDemoState = {
+  activeTab: ReturnType<typeof signal<'preview' | 'code'>>
+  captureNextRender: () => void
+  count: ReturnType<typeof signal<number>>
+  events: ReturnType<typeof signal<TrackedEntry[]>>
+  flushQueued: boolean
+  isCapturing: boolean
+  nextId: number
+  pendingEntries: TrackedEntry[]
+  showDetails: ReturnType<typeof signal<boolean>>
+  title: ReturnType<typeof signal<string>>
+}
+
+const queueTask =
+  typeof queueMicrotask === 'function'
+    ? queueMicrotask
+    : (fn: () => void) => Promise.resolve().then(fn)
+
 const code = `import { type DebuggerEvent, onRenderTracked, signal, useSetup } from '@rue-js/rue'
 
 const createState = () => {
@@ -23,28 +41,51 @@ const createState = () => {
   const title = signal('Rue Render Debugger')
   const showDetails = signal(true)
   const events = signal([])
+  let capture = true
+  let queued = false
+  let pending = []
 
   onRenderTracked((event: DebuggerEvent) => {
-    if (event.target !== count && event.target !== title && event.target !== showDetails) {
+    const source =
+      event.target === count
+        ? 'count'
+        : event.target === title
+          ? 'title'
+          : event.target === showDetails
+            ? 'showDetails'
+            : null
+
+    if (!capture || !source) {
       return
     }
 
-    events.set([
-      {
-        source: event.target === count ? 'count' : event.target === title ? 'title' : 'showDetails',
-        key: String(event.key),
-      },
-      ...events.peek(),
-    ].slice(0, 6))
+    pending.push({ source, key: String(event.key) })
+    if (!queued) {
+      queued = true
+      queueMicrotask(() => {
+        queued = false
+        capture = false
+        events.set([...pending.reverse(), ...events.peek()].slice(0, 6))
+        pending = []
+      })
+    }
   })
 
-  return { count, title, showDetails, events }
+  return {
+    count,
+    title,
+    showDetails,
+    events,
+    captureNextRender: () => {
+      capture = true
+    },
+  }
 }`
 
 /** 将 DebuggerEvent 映射为示例表格中的稳定展示项。 */
 const describeTrackedEvent = (
   event: DebuggerEvent,
-  state: ReturnType<typeof createTrackedDemoState>,
+  state: TrackedDemoState,
 ): TrackedEntry | null => {
   if (event.target === state.count) {
     return {
@@ -73,27 +114,55 @@ const describeTrackedEvent = (
   return null
 }
 
+const queueTrackedFlush = (state: TrackedDemoState) => {
+  if (state.flushQueued) {
+    return
+  }
+  state.flushQueued = true
+  queueTask(() => {
+    state.flushQueued = false
+    state.isCapturing = false
+    const pending = state.pendingEntries.splice(0).reverse()
+    if (pending.length === 0) {
+      return
+    }
+    state.events.set([...pending, ...state.events.peek()].slice(0, 8))
+  })
+}
+
 const createTrackedDemoState = () => {
   const count = signal(1)
   const title = signal('Rue Render Debugger')
   const showDetails = signal(true)
   const activeTab = signal<'preview' | 'code'>('preview')
   const events = signal<TrackedEntry[]>([])
-  const state = {
+  let state!: TrackedDemoState
+  const captureNextRender = () => {
+    state.isCapturing = true
+  }
+  state = {
     activeTab,
+    captureNextRender,
     count,
     events,
+    flushQueued: false,
+    isCapturing: true,
     nextId: 0,
+    pendingEntries: [],
     showDetails,
     title,
   }
 
   onRenderTracked(event => {
+    if (!state.isCapturing) {
+      return
+    }
     const entry = describeTrackedEvent(event, state)
     if (!entry) {
       return
     }
-    events.set([entry, ...events.peek()].slice(0, 8))
+    state.pendingEntries.push(entry)
+    queueTrackedFlush(state)
   })
 
   return state
@@ -101,8 +170,6 @@ const createTrackedDemoState = () => {
 
 const OnRenderTracked: FC = () => {
   const state = useSetup(createTrackedDemoState) as ReturnType<typeof createTrackedDemoState>
-  const activeTab = state.activeTab.get()
-  const events = state.events.get()
 
   return (
     <SidebarPlayground>
@@ -110,8 +177,9 @@ const OnRenderTracked: FC = () => {
       <div role="tablist" className="tabs tabs-box">
         <button
           role="tab"
-          className={`tab ${activeTab === 'preview' ? 'tab-active' : ''}`}
+          className={`tab ${state.activeTab.get() === 'preview' ? 'tab-active' : ''}`}
           onClick={() => {
+            state.captureNextRender()
             state.activeTab.set('preview')
           }}
         >
@@ -119,7 +187,7 @@ const OnRenderTracked: FC = () => {
         </button>
         <button
           role="tab"
-          className={`tab ${activeTab === 'code' ? 'tab-active' : ''}`}
+          className={`tab ${state.activeTab.get() === 'code' ? 'tab-active' : ''}`}
           onClick={() => {
             state.activeTab.set('code')
           }}
@@ -129,7 +197,7 @@ const OnRenderTracked: FC = () => {
       </div>
 
       <div className="mt-4 grid md:grid-cols-1 gap-6 items-start">
-        {activeTab === 'code' && (
+        {state.activeTab.get() === 'code' && (
           <div className="card bg-base-100 shadow overflow-auto">
             <div className="card-body p-0">
               <Code className="h-full" lang="tsx" code={code} />
@@ -137,7 +205,7 @@ const OnRenderTracked: FC = () => {
           </div>
         )}
 
-        {activeTab === 'preview' && (
+        {state.activeTab.get() === 'preview' && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
             <div className="card bg-base-100 shadow">
               <div className="card-body gap-5">
@@ -172,6 +240,7 @@ const OnRenderTracked: FC = () => {
                     className="input input-bordered w-full"
                     value={state.title.get()}
                     onInput={(event: Event) => {
+                      state.captureNextRender()
                       state.title.set((event.target as HTMLInputElement).value)
                     }}
                   />
@@ -181,6 +250,7 @@ const OnRenderTracked: FC = () => {
                   <button
                     className="btn btn-primary"
                     onClick={() => {
+                      state.captureNextRender()
                       state.count.set(state.count.peek() + 1)
                     }}
                   >
@@ -189,6 +259,7 @@ const OnRenderTracked: FC = () => {
                   <button
                     className="btn btn-outline"
                     onClick={() => {
+                      state.captureNextRender()
                       state.showDetails.set(!state.showDetails.peek())
                     }}
                   >
@@ -210,12 +281,12 @@ const OnRenderTracked: FC = () => {
               <div className="card-body">
                 <h2 className="card-title">Tracked events</h2>
                 <div className="space-y-2">
-                  {events.length === 0 && (
+                  {state.events.get().length === 0 && (
                     <div className="rounded-lg bg-base-200 p-4 text-sm text-base-content/60">
-                      与左侧预览交互后，这里会显示最近的依赖读取。
+                      组件首次渲染或与左侧预览交互后，这里会显示最近的依赖读取。
                     </div>
                   )}
-                  {events.map((item: TrackedEntry) => (
+                  {state.events.get().map((item: TrackedEntry) => (
                     <div
                       key={item.id}
                       className="rounded-lg border border-base-300 bg-base-200 p-3"

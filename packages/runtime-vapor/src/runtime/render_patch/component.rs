@@ -6,7 +6,8 @@
 */
 use super::super::Rue;
 use super::super::types::{
-    MountInput, MountInputType, MountedPatchSubtree, MountedPatchSubtreeType, MountedSubtreeState,
+    MountInput, MountInputType, MountedPatchSubtree, MountedPatchSubtreeType, MountedState,
+    MountedSubtreeState,
 };
 use crate::hook::reactive::props_reactive_js;
 use crate::reactive::context::{CONTEXT_OWNER_PARENT_PROP, CONTEXT_PARENT_INSTANCE_PROP};
@@ -252,6 +253,12 @@ fn apply_component_subtree_snapshot<A: DomAdapter>(
     }
 }
 
+fn clear_component_subtree_snapshot<A: DomAdapter>(old: &mut MountedPatchSubtree<A>) {
+    old.el = None;
+    old.fragment_nodes.clear();
+    old.comp_subtree = None;
+}
+
 impl<A: DomAdapter> Rue<A>
 where
     A::Element: Clone,
@@ -295,10 +302,35 @@ where
         let parent_instance = crate::get_current_instance();
         // host 是 Hook/上下文使用的组件宿主对象；每轮 render 前都刷新父实例引用。
         let _ = Reflect::set(&host, &JsValue::from_str("propsRO"), &props_ro);
-        let _ =
-            Reflect::set(&host, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP), &parent_instance);
-        let _ =
-            Reflect::set(&host, &JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP), &parent_instance);
+        let should_refresh_parent = !parent_instance.is_undefined() && !parent_instance.is_null();
+        if should_refresh_parent {
+            let _ = Reflect::set(
+                &host,
+                &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP),
+                &parent_instance,
+            );
+            let _ = Reflect::set(
+                &host,
+                &JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP),
+                &parent_instance,
+            );
+        } else {
+            let props_parent =
+                Reflect::get(&props_ro, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP))
+                    .unwrap_or(JsValue::UNDEFINED);
+            if !props_parent.is_undefined() && !props_parent.is_null() {
+                let _ = Reflect::set(
+                    &host,
+                    &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP),
+                    &props_parent,
+                );
+                let _ = Reflect::set(
+                    &host,
+                    &JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP),
+                    &props_parent,
+                );
+            }
+        }
         Self::reset_hook_index(&host);
 
         let hooks = stored_hooks.unwrap_or_default();
@@ -379,11 +411,10 @@ where
                 if did_push_current_container {
                     shared_runtime_bridge::pop_current_container();
                 }
-                self.current_container = prev_container;
+                self.current_container = prev_container.clone();
                 let _ = pop_effect_scope();
                 shared_runtime_bridge::end_component_render();
                 end_render_debug_owner();
-                self.handle_error(e.clone());
                 self.instance_stack.pop();
                 if let Some(top_idx) = self.instance_stack.last() {
                     if let Some(inst_ref) = self.instance_store.get_mut(top_idx) {
@@ -394,7 +425,17 @@ where
                 } else {
                     crate::set_current_instance(JsValue::UNDEFINED);
                 }
-                wasm_bindgen::throw_val(e.clone());
+                let captured = shared_runtime_bridge::dispatch_error_captured(
+                    &e,
+                    &host_value,
+                    "component render",
+                );
+                if captured {
+                    JsValue::NULL
+                } else {
+                    self.handle_error(e.clone());
+                    wasm_bindgen::throw_val(e.clone());
+                }
             }
         };
         if did_push_current_container {
@@ -622,13 +663,26 @@ where
         let render_fn = component_render_fn_from_input(new);
         let (props_ro, host, idx) = self.comp_prepare_instance(old.comp_inst_index, new);
         let ret = self.comp_execute_and_collect(render_fn, &props_ro, &host, idx, Some(parent));
-        let new_sub_opt = self.comp_make_sub_from_ret(&ret, new.strict_component_returns);
+        let empty_component_return = ret.is_null() || ret.is_undefined();
+        let new_sub_opt = if empty_component_return {
+            None
+        } else {
+            self.comp_make_sub_from_ret(&ret, new.strict_component_returns)
+        };
         let mut mounted_subtree = old.comp_subtree.as_deref().cloned();
-        if let Some(new_sub) = new_sub_opt {
+        if empty_component_return {
+            if let Some(old_subtree) = old.comp_subtree.take() {
+                self.clear_mounted_state(parent, MountedState::from_subtree_root(*old_subtree));
+            }
+            mounted_subtree = None;
+        } else if let Some(new_sub) = new_sub_opt {
             // patch 子树期间仍属于当前组件 render，保持调试 owner 一致。
-            begin_render_debug_owner(&host.clone().into());
-            crate::set_current_instance(host.clone().into());
+            let host_value: JsValue = host.clone().into();
+            begin_render_debug_owner(&host_value);
+            shared_runtime_bridge::begin_component_render(&host_value);
+            crate::set_current_instance(host_value);
             mounted_subtree = self.comp_mount_or_patch_subtree(old, parent, new_sub);
+            shared_runtime_bridge::end_component_render();
             end_render_debug_owner();
         }
         let hooks = self.comp_finalize();
@@ -641,7 +695,11 @@ where
         old.component_activated_hooks = hooks.get("activated").cloned().unwrap_or_default();
         old.component_deactivated_hooks = hooks.get("deactivated").cloned().unwrap_or_default();
 
-        apply_component_subtree_snapshot(old, mounted_subtree);
+        if empty_component_return {
+            clear_component_subtree_snapshot(old);
+        } else {
+            apply_component_subtree_snapshot(old, mounted_subtree);
+        }
 
         old.r#type = MountedPatchSubtreeType::Component(render_fn.clone());
     }

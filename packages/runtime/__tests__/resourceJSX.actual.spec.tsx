@@ -14,7 +14,7 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
   default: () => null,
 }))
 
-setReactiveScheduling('sync')
+setReactiveScheduling('microtask')
 
 const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active = (globalThis as any).__rue

@@ -47,13 +47,14 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const a = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-            const pre = a.value + 1;
-            _$vaporWithHookId("watchEffect:1:1", ()=>watchEffect(()=>console.log('setup', pre)));
+            const pre = _$vaporWithHookId("computed:1:1", ()=>computed(()=>a.value + 1));
+            const __rue_phase2_pre = pre;
+            _$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>console.log('setup', __rue_phase2_pre.get())));
             switch(a.value % 3){
                 case 0:
                     {
@@ -67,7 +68,7 @@ const Comp: FC = ()=>{
                     }
                 case 1:
                     {
-                        _$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>console.log('case1', a.value)));
+                        _$vaporWithHookId("watchEffect:1:3", ()=>watchEffect(()=>console.log('case1', a.value)));
                         break;
                     }
                 case 2:
@@ -75,7 +76,7 @@ const Comp: FC = ()=>{
                         try {
                             const d = a.value + 4;
                         } finally{
-                            _$vaporWithHookId("watchEffect:1:3", ()=>watchEffect(()=>onBeforeUnmount(()=>console.log('case2', a.value))));
+                            _$vaporWithHookId("watchEffect:1:4", ()=>watchEffect(()=>onBeforeUnmount(()=>console.log('case2', a.value))));
                         }
                         break;
                     }
@@ -90,7 +91,7 @@ const Comp: FC = ()=>{
             };
         }));
     const { a: a, pre: pre } = _$useSetup;
-    return <div>{pre}</div>;
+    return <div>{pre.get()}</div>;
 };
 "##;
 

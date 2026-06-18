@@ -13,16 +13,13 @@ const EmitChild: FC<{ onSave?: (message: string) => void }> = props => {
 
 const EmitInputChild: FC<{
   modelValue?: string
-  ['onUpdate:modelValue']?: (value: string) => void
-  vModel?: { value: string }
+  onUpdateModelValue?: (value: string) => void
 }> = props => {
   return (
     <input
       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-400 focus:ring focus:ring-blue-200 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 px-3 py-2"
       value={props.modelValue ?? ''}
-      onInput={(event: any) =>
-        props['onUpdate:modelValue']?.((event.target as HTMLInputElement).value)
-      }
+      onInput={(event: any) => props.onUpdateModelValue?.((event.target as HTMLInputElement).value)}
     />
   )
 }
@@ -33,7 +30,7 @@ const emitName = ref('')
 const ComponentEmitDemo: FC = () => {
   const emitInputBindings = {
     modelValue: emitName.value,
-    'onUpdate:modelValue': (value: string) => {
+    onUpdateModelValue: (value: string) => {
       emitName.value = value
     },
   }

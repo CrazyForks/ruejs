@@ -182,6 +182,12 @@ const menuApiRows: ApiRow[] = [
     defaultValue: '-',
   },
   {
+    prop: 'menu.triggerSubMenuAction',
+    description: '增强命令菜单默认点击展开和折叠子菜单；需要悬浮展开时可显式设为 hover。',
+    type: "'click' | 'hover'",
+    defaultValue: "'click'",
+  },
+  {
     prop: 'closeOnClick',
     description: '点击菜单项后是否自动关闭；命令菜单推荐保留默认 true，筛选面板常见设为 false。',
     type: 'boolean',
@@ -665,88 +671,118 @@ const filterKeys = ref(['mentions', 'comment']);
           title="Positions"
           tab={tabs.positions}
           preview={() => (
-            <div className="flex flex-wrap gap-12 py-20">
-              <Dropdown align="start">
-                <Dropdown.Trigger
-                  as="button"
-                  type="button"
-                  className="btn m-1"
-                  data-testid="dropdown-position-start"
-                >
-                  Start
-                </Dropdown.Trigger>
-                <Dropdown.Content
-                  as="ul"
-                  tabIndex={-1}
-                  className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
-                >
-                  <li>
-                    <button>Item 1</button>
-                  </li>
-                  <li>
-                    <button>Item 2</button>
-                  </li>
-                </Dropdown.Content>
-              </Dropdown>
-              <Dropdown align="center" direction="top">
-                <Dropdown.Trigger
-                  as="button"
-                  type="button"
-                  className="btn m-1"
-                  data-testid="dropdown-position-top-center"
-                >
-                  Top Center
-                </Dropdown.Trigger>
-                <Dropdown.Content
-                  as="ul"
-                  tabIndex={-1}
-                  className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
-                >
-                  <li>
-                    <button>Item 1</button>
-                  </li>
-                  <li>
-                    <button>Item 2</button>
-                  </li>
-                </Dropdown.Content>
-              </Dropdown>
-              <Dropdown direction="left" align="end">
-                <Dropdown.Trigger
-                  as="button"
-                  type="button"
-                  className="btn m-1"
-                  data-testid="dropdown-position-left-end"
-                >
-                  Left End
-                </Dropdown.Trigger>
-                <Dropdown.Content
-                  as="ul"
-                  tabIndex={-1}
-                  className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
-                >
-                  <li>
-                    <button>Item 1</button>
-                  </li>
-                  <li>
-                    <button>Item 2</button>
-                  </li>
-                </Dropdown.Content>
-              </Dropdown>
+            <div className="grid gap-x-16 gap-y-24 py-24 md:grid-cols-2 xl:grid-cols-[minmax(10rem,1fr)_minmax(12rem,1fr)_minmax(20rem,1.2fr)]">
+              <div className="flex min-h-28 items-start justify-start">
+                <Dropdown align="start">
+                  <Dropdown.Trigger
+                    as="button"
+                    type="button"
+                    className="btn m-1"
+                    data-testid="dropdown-position-start"
+                  >
+                    Start
+                  </Dropdown.Trigger>
+                  <Dropdown.Content
+                    as="ul"
+                    tabIndex={-1}
+                    className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
+                  >
+                    <li>
+                      <button>Item 1</button>
+                    </li>
+                    <li>
+                      <button>Item 2</button>
+                    </li>
+                  </Dropdown.Content>
+                </Dropdown>
+              </div>
+              <div className="flex min-h-28 items-end justify-center">
+                <Dropdown align="center" direction="top">
+                  <Dropdown.Trigger
+                    as="button"
+                    type="button"
+                    className="btn m-1"
+                    data-testid="dropdown-position-top-center"
+                  >
+                    Top Center
+                  </Dropdown.Trigger>
+                  <Dropdown.Content
+                    as="ul"
+                    tabIndex={-1}
+                    className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
+                  >
+                    <li>
+                      <button>Item 1</button>
+                    </li>
+                    <li>
+                      <button>Item 2</button>
+                    </li>
+                  </Dropdown.Content>
+                </Dropdown>
+              </div>
+              <div
+                className="flex min-h-28 min-w-80 items-end justify-end sm:ps-56"
+                data-testid="dropdown-position-left-end-slot"
+              >
+                <Dropdown direction="left" align="end">
+                  <Dropdown.Trigger
+                    as="button"
+                    type="button"
+                    className="btn m-1"
+                    data-testid="dropdown-position-left-end"
+                  >
+                    Left End
+                  </Dropdown.Trigger>
+                  <Dropdown.Content
+                    as="ul"
+                    tabIndex={-1}
+                    className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm"
+                  >
+                    <li>
+                      <button>Item 1</button>
+                    </li>
+                    <li>
+                      <button>Item 2</button>
+                    </li>
+                  </Dropdown.Content>
+                </Dropdown>
+              </div>
             </div>
           )}
           code={`<Dropdown align="start">
   <Dropdown.Trigger as="button" type="button" className="btn m-1">Start</Dropdown.Trigger>
-  <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">...</Dropdown.Content>
+  <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
+    <li>
+      <button>Item 1</button>
+    </li>
+    <li>
+      <button>Item 2</button>
+    </li>
+  </Dropdown.Content>
 </Dropdown>
 
 <Dropdown align="center" direction="top">
   <Dropdown.Trigger as="button" type="button" className="btn m-1">Top Center</Dropdown.Trigger>
-  <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">...</Dropdown.Content>
+  <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
+    <li>
+      <button>Item 1</button>
+    </li>
+    <li>
+      <button>Item 2</button>
+    </li>
+  </Dropdown.Content>
 </Dropdown>
 
 <Dropdown direction="left" align="end">
   <Dropdown.Trigger as="button" type="button" className="btn m-1">Left End</Dropdown.Trigger>
-  <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">...</Dropdown.Content>
+  <Dropdown.Content as="ul" tabIndex={-1} className="menu z-1 w-52 rounded-box bg-base-100 p-2 shadow-sm">
+    <li>
+      <button>Item 1</button>
+    </li>
+    <li>
+      <button>Item 2</button>
+    </li>
+  </Dropdown.Content>
 </Dropdown>`}
         />
 

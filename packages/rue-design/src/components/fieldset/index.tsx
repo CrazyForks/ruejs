@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Fieldset 模块概述
 - 汇总字段集组件的公开类型、渲染入口和局部工具逻辑。
@@ -361,48 +360,13 @@ const Item: FC<FieldsetItemProps> = ({
   ...rest
 }) => {
   const resolvedTone = invalid ? 'error' : tone
-  const labelNode = hasRenderableContent(label) ? (
-    <Label
-      {...labelProps}
-      className={joinClassName(
-        'justify-start gap-2 font-medium',
-        resolveLabelTextClass(size),
-        labelClassName,
-      )}
-      tone={resolvedTone}
-    >
-      <span>{label}</span>
-      {required ? <span className="text-error text-xs font-medium">必填</span> : null}
-      {!required && optional ? <span className="text-xs opacity-60">可选</span> : null}
-    </Label>
-  ) : null
-  const descriptionNode = hasRenderableContent(description) ? (
-    <Label
-      {...descriptionProps}
-      as="p"
-      className={joinClassName(
-        'mt-0 min-h-0 px-0 pb-0',
-        resolveHintTextClass(size),
-        descriptionClassName,
-      )}
-      tone={invalid ? 'error' : (descriptionProps?.tone ?? 'muted')}
-    >
-      {description}
-    </Label>
-  ) : null
-  const hintNode = hasRenderableContent(hint) ? (
-    <Label
-      {...hintProps}
-      as="p"
-      className={joinClassName('mt-0 min-h-0 px-0 pt-1', resolveHintTextClass(size), hintClassName)}
-      tone={invalid ? 'error' : (hintProps?.tone ?? 'muted')}
-    >
-      {hint}
-    </Label>
-  ) : null
+  const hasLabel = hasRenderableContent(label)
+  const hasDescription = hasRenderableContent(description)
+  const hasHint = hasRenderableContent(hint)
   const controlNode = control ?? children
-  const hasMeta = !!labelNode || !!descriptionNode
-  const hasControl = hasRenderableContent(controlNode) || !!hintNode
+  const hasControlContent = hasRenderableContent(controlNode)
+  const hasMeta = hasLabel || hasDescription
+  const hasControl = hasControlContent || hasHint
 
   return (
     <div
@@ -414,14 +378,54 @@ const Item: FC<FieldsetItemProps> = ({
     >
       {hasMeta ? (
         <div className="min-w-0">
-          {labelNode}
-          {descriptionNode}
+          {hasLabel ? (
+            <Label
+              {...labelProps}
+              className={joinClassName(
+                'justify-start gap-2 font-medium',
+                resolveLabelTextClass(size),
+                labelClassName,
+              )}
+              tone={resolvedTone}
+            >
+              <span>{label}</span>
+              {required ? <span className="text-error text-xs font-medium">必填</span> : null}
+              {!required && optional ? <span className="text-xs opacity-60">可选</span> : null}
+            </Label>
+          ) : null}
+          {hasDescription ? (
+            <Label
+              {...descriptionProps}
+              as="p"
+              className={joinClassName(
+                'mt-0 min-h-0 px-0 pb-0',
+                resolveHintTextClass(size),
+                descriptionClassName,
+              )}
+              tone={invalid ? 'error' : (descriptionProps?.tone ?? 'muted')}
+            >
+              {description}
+            </Label>
+          ) : null}
         </div>
       ) : null}
       {hasControl ? (
         <div className={joinClassName('min-w-0', contentClassName)}>
-          {controlNode}
-          {hintNode}
+          {hasControlContent ? controlNode : null}
+          {hasHint ? (
+            <Label
+              {...hintProps}
+              as="p"
+              className={joinClassName(
+                'mt-0 min-h-0 px-0 pt-1',
+                resolveHintTextClass(size),
+                hintClassName,
+              )}
+              tone={invalid ? 'error' : (hintProps?.tone ?? 'muted')}
+            >
+              {hint}
+            </Label>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -448,29 +452,27 @@ const Root: FC<FieldsetRootProps> = ({
   hintClassName,
   contentClassName,
   actionsClassName,
+  'aria-invalid': ariaInvalidProp,
   ...rest
 }) => {
   const hasChildren = hasRenderableContent(children)
-  const structuredContent = hasRenderableContent(content)
-    ? content
-    : (items ?? []).map((item, index) => {
-        const { key, ...itemProps } = item
-        return (
-          <Item
-            key={key ?? index}
-            {...itemProps}
-            size={item.size ?? size}
-            invalid={item.invalid ?? invalid}
-          />
-        )
-      })
-  const ariaInvalid = invalid ? 'true' : rest['aria-invalid']
-  if ('aria-invalid' in rest) {
-    delete rest['aria-invalid']
-  }
+  const hasContent = hasRenderableContent(content)
+  const hasItems = !!items?.length
+  const ariaInvalid = invalid ? 'true' : ariaInvalidProp
   const fieldsetAriaInvalidProps: Record<string, any> = {}
   if (ariaInvalid !== undefined && ariaInvalid !== null) {
     fieldsetAriaInvalidProps['aria-invalid'] = ariaInvalid
+  }
+  const renderItem = (item: FieldsetItemData, index: number) => {
+    const { key, ...itemProps } = item
+    return (
+      <Item
+        key={key ?? index}
+        {...itemProps}
+        size={item.size ?? size}
+        invalid={item.invalid ?? invalid}
+      />
+    )
   }
 
   return (
@@ -506,9 +508,14 @@ const Root: FC<FieldsetRootProps> = ({
               {description}
             </Label>
           ) : null}
-          {hasRenderableContent(structuredContent) ? (
+          {hasContent ? (
             <div className={joinClassName('grid min-w-0', resolveGapClass(size), contentClassName)}>
-              {structuredContent}
+              {content}
+            </div>
+          ) : null}
+          {!hasContent && hasItems ? (
+            <div className={joinClassName('grid min-w-0', resolveGapClass(size), contentClassName)}>
+              {items.map((item, index) => renderItem(item, index))}
             </div>
           ) : null}
           {hasRenderableContent(hint) ? (

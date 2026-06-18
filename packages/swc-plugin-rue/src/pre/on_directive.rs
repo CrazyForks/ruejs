@@ -167,10 +167,10 @@ fn parse_inline_handler_source(src: &str) -> Option<Expr> {
         return Some(build_noop_handler());
     }
 
-    if !trimmed.contains(';') {
-        if let Some(expr) = parse_expr(trimmed, "v-on-handler.tsx") {
-            return Some(expr);
-        }
+    if !trimmed.contains(';')
+        && let Some(expr) = parse_expr(trimmed, "v-on-handler.tsx")
+    {
+        return Some(expr);
     }
 
     parse_expr(&format!("($event) => {{ {} }}", trimmed), "v-on-handler-inline-statements.tsx")

@@ -5,6 +5,7 @@ import PreviewBlock, { type PreviewTabMode } from './PreviewBlock'
 import TreeSelect, {
   type TreeSelectDataNode,
   type TreeSelectLabeledValue,
+  type TreeSelectValue,
 } from '../../../packages/rue-design/src/components/tree-select/index'
 
 interface ApiRow {
@@ -259,17 +260,23 @@ const treeData: TreeSelectDataNode[] = [
 ]
 
 const values = ref<TreeSelectValue[]>(['analytics', 'minutes'])
+const open = ref(false)
 
 <TreeSelect
   value={values.value}
+  open={open.value}
   treeData={treeData}
   multiple
   treeDefaultExpandAll
   allowClear
   maxTagCount={2}
   placeholder="选择多个项目"
-  onChange={nextValue => {
+  onOpenChange={nextOpen => {
+    open.value = nextOpen
+  }}
+  onChange={(nextValue, _label, extra) => {
     values.value = Array.isArray(nextValue) ? nextValue.map(item => String(item)) : []
+    if (!extra.clear) open.value = true
   }}
 />
 `
@@ -299,17 +306,23 @@ const treeData: TreeSelectDataNode[] = [
 ]
 
 const values = ref<TreeSelectValue[]>(['build', 'quality'])
+const open = ref(false)
 
 <TreeSelect
   value={values.value}
+  open={open.value}
   treeData={treeData}
   treeCheckable
   maxTagCount={2}
   maxTagPlaceholder="..."
   allowClear
   treeDefaultExpandAll
-  onChange={nextValue => {
+  onOpenChange={nextOpen => {
+    open.value = nextOpen
+  }}
+  onChange={(nextValue, _label, extra) => {
     values.value = Array.isArray(nextValue) ? nextValue.map(item => String(item)) : []
+    if (!extra.clear) open.value = true
   }}
 />
 `
@@ -341,13 +354,17 @@ const treeData: TreeSelectDataNode[] = [
   },
 ]
 
-const selected = ref<TreeSelectLabeledValue | null>(null)
+const selected = ref<TreeSelectLabeledValue | null>({
+  value: 'release',
+  key: 'release',
+  label: '发布管道',
+})
 
 <TreeSelect
+  value={selected.value}
   treeData={treeData}
   labelInValue
   treeDefaultExpandAll
-  defaultValue="release"
   onChange={nextValue => {
     selected.value = (nextValue as TreeSelectLabeledValue | null) ?? null
   }}
@@ -355,9 +372,10 @@ const selected = ref<TreeSelectLabeledValue | null>(null)
 `
 
 const asyncCode = `import { ref } from '@rue-js/rue'
-import TreeSelect, { type TreeSelectDataNode } from '@rue-js/design'
+import TreeSelect, { type TreeSelectDataNode, type TreeSelectValue } from '@rue-js/design'
 
 const value = ref<string | null>(null)
+const expandedKeys = ref<TreeSelectValue[]>([])
 const treeData = ref<TreeSelectDataNode[]>([
   { title: '按需加载目录', value: 'async-root', isLeaf: false },
 ])
@@ -381,9 +399,13 @@ const loadData = async (node: TreeSelectDataNode) => {
 
 <TreeSelect
   value={value.value}
+  treeExpandedKeys={expandedKeys.value}
   treeData={treeData.value}
   allowClear
   loadData={loadData}
+  onTreeExpand={nextKeys => {
+    expandedKeys.value = nextKeys
+  }}
   onChange={nextValue => {
     value.value = nextValue == null ? null : String(nextValue)
   }}
@@ -515,10 +537,17 @@ const TreeSelectPage: FC = () => {
   const noClearValue = ref('docs')
   const simpleValue = ref('workflow')
   const multipleValue = ref<Array<string | number>>(['analytics', 'minutes'])
+  const multipleOpen = ref(false)
   const checkableValue = ref<Array<string | number>>(['build', 'quality'])
-  const semanticValue = ref<TreeSelectLabeledValue | null>(null)
+  const checkableOpen = ref(false)
+  const semanticValue = ref<TreeSelectLabeledValue | null>({
+    value: 'release',
+    key: 'release',
+    label: '发布管道',
+  })
   const shellValue = ref('prod')
   const asyncValue = ref<string | null>(null)
+  const asyncExpandedKeys = ref<TreeSelectValue[]>([])
   const asyncTreeData = ref<TreeSelectDataNode[]>([
     { title: '按需加载目录', value: 'async-root', isLeaf: false },
   ])
@@ -664,14 +693,19 @@ const TreeSelectPage: FC = () => {
               <div className="card-body gap-3">
                 <TreeSelect
                   value={multipleValue.value}
+                  open={multipleOpen.value}
                   treeData={multipleTree}
                   multiple
                   treeDefaultExpandAll
                   allowClear
                   maxTagCount={2}
                   placeholder="选择多个项目"
-                  onChange={nextValue => {
+                  onOpenChange={nextOpen => {
+                    multipleOpen.value = nextOpen
+                  }}
+                  onChange={(nextValue, _label, extra) => {
                     multipleValue.value = extractValueList(nextValue)
+                    if (!extra.clear) multipleOpen.value = true
                   }}
                 />
                 <div className="text-sm text-base-content/70">
@@ -693,14 +727,19 @@ const TreeSelectPage: FC = () => {
                 <div className="grid gap-3">
                   <TreeSelect
                     value={checkableValue.value}
+                    open={checkableOpen.value}
                     treeData={organizationTree}
                     treeCheckable
                     maxTagCount={2}
                     maxTagPlaceholder="..."
                     allowClear
                     treeDefaultExpandAll
-                    onChange={nextValue => {
+                    onOpenChange={nextOpen => {
+                      checkableOpen.value = nextOpen
+                    }}
+                    onChange={(nextValue, _label, extra) => {
                       checkableValue.value = extractValueList(nextValue)
+                      if (!extra.clear) checkableOpen.value = true
                     }}
                   />
                   <div className="text-sm text-base-content/70">
@@ -751,10 +790,10 @@ const TreeSelectPage: FC = () => {
               <div className="card-body grid gap-4 lg:grid-cols-[minmax(0,22rem),1fr] lg:items-start">
                 <div className="grid gap-3">
                   <TreeSelect
+                    value={semanticValue.value}
                     treeData={organizationTree}
                     labelInValue
                     treeDefaultExpandAll
-                    defaultValue="release"
                     onChange={nextValue => {
                       semanticValue.value = (nextValue as TreeSelectLabeledValue | null) ?? null
                     }}
@@ -779,9 +818,13 @@ const TreeSelectPage: FC = () => {
                 <div className="grid gap-3">
                   <TreeSelect
                     value={asyncValue.value}
+                    treeExpandedKeys={asyncExpandedKeys.value}
                     treeData={asyncTreeData.value}
                     allowClear
                     loadData={loadAsyncTree}
+                    onTreeExpand={nextKeys => {
+                      asyncExpandedKeys.value = nextKeys
+                    }}
                     onChange={nextValue => {
                       asyncValue.value = String(extractSingleValue(nextValue) ?? '')
                     }}

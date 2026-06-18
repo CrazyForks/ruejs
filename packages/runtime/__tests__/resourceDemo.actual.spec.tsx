@@ -14,7 +14,7 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
   default: () => null,
 }))
 
-setReactiveScheduling('sync')
+setReactiveScheduling('microtask')
 
 const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active = (globalThis as any).__rue
@@ -43,7 +43,7 @@ afterEach(() => {
 })
 
 describe('ResourceDemo actual page', () => {
-  it('uses Suspense fallback for pending resources and renders the resolved data after completion', async () => {
+  it('uses the loading state for pending resources and renders the resolved data after completion', async () => {
     const mainRequest = deferred<any>()
     const betaRequest = deferred<any>()
 

@@ -10,8 +10,8 @@ interface ExampleBlockProps {
   title: string
   summary?: string
   tab: { value: TabMode }
-  preview: () => any
   code: string
+  children?: any
 }
 
 interface ApiRow {
@@ -21,7 +21,7 @@ interface ApiRow {
   defaultValue: string
 }
 
-const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
+const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, code, children }) => {
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -40,7 +40,7 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
         onChange={key => (tab.value = key as TabMode)}
         className="mb-3 mt-4"
       />
-      {tab.value === 'preview' ? preview() : <Code className="mt-2" lang="tsx" code={code} />}
+      {tab.value === 'preview' ? children : <Code className="mt-2" lang="tsx" code={code} />}
     </div>
   )
 }
@@ -76,10 +76,6 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
       </table>
     </div>
   )
-}
-
-const Dot: FC<{ className: string }> = ({ className }) => {
-  return <span className={`inline-block size-2 rounded-full ${className}`} />
 }
 
 const apiRows: ApiRow[] = [
@@ -183,88 +179,15 @@ const MockupWindowPage: FC = () => {
 
         <ExampleBlock
           title="结构化窗口"
-          summary="推荐用法：根组件直接负责标题、工具区、内容区和底部操作区。"
+          summary="推荐用法：根组件直接负责标题、工具文字、内容区和底部操作区。"
           tab={tabStructured}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupWindow
-                  bordered
-                  background
-                  title="Deployment Preview"
-                  description="把常见预览面板的标题、状态和操作整理成一套更顺手的写法。"
-                  toolbar={
-                    <MockupWindow.Toolbar>
-                      <div className="hidden items-center gap-2 text-xs opacity-70 sm:flex">
-                        <Dot className="bg-success" />
-                        Preview ready
-                      </div>
-                      <Button size="sm" type="outlined">
-                        Share
-                      </Button>
-                    </MockupWindow.Toolbar>
-                  }
-                  actions={
-                    <>
-                      <Button type="text">Cancel</Button>
-                      <Button color="primary">Publish</Button>
-                    </>
-                  }
-                  bodyClassName="grid gap-4 md:grid-cols-[1.3fr_0.7fr]"
-                  data-testid="mockup-window-structured"
-                >
-                  <div className="rounded-box border border-base-300 bg-base-200/60 p-4">
-                    <div className="text-xs font-medium uppercase tracking-[0.2em] opacity-60">
-                      Preview
-                    </div>
-                    <div className="mt-4 grid gap-3">
-                      <div className="h-24 rounded-box bg-base-100" />
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div className="h-16 rounded-box bg-base-100" />
-                        <div className="h-16 rounded-box bg-base-100" />
-                        <div className="h-16 rounded-box bg-base-100" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="rounded-box border border-base-300 p-4">
-                      <div className="text-sm font-semibold">Build info</div>
-                      <div className="mt-2 text-sm opacity-70">Branch: feat/mockup-window</div>
-                      <div className="text-sm opacity-70">Runtime: 82ms</div>
-                    </div>
-                    <div className="rounded-box border border-base-300 p-4">
-                      <div className="text-sm font-semibold">Checklist</div>
-                      <ul className="mt-2 space-y-2 text-sm opacity-70">
-                        <li>Visual review passed</li>
-                        <li>API examples updated</li>
-                        <li>Ready for handoff</li>
-                      </ul>
-                    </div>
-                  </div>
-                </MockupWindow>
-              </div>
-            </div>
-          )}
           code={`<MockupWindow
   bordered
   background
   title="Deployment Preview"
   description="把常见预览面板的标题、状态和操作整理成一套更顺手的写法。"
-  toolbar={
-    <MockupWindow.Toolbar>
-      <div className="hidden items-center gap-2 text-xs opacity-70 sm:flex">
-        <span className="inline-block size-2 rounded-full bg-success" />
-        Preview ready
-      </div>
-      <Button size="sm" type="outlined">Share</Button>
-    </MockupWindow.Toolbar>
-  }
-  actions={
-    <>
-      <Button type="text">Cancel</Button>
-      <Button color="primary">Publish</Button>
-    </>
-  }
+  toolbar="Preview ready"
+  actions="Publish"
   bodyClassName="grid gap-4 md:grid-cols-[1.3fr_0.7fr]"
 >
   <div className="rounded-box border border-base-300 bg-base-200/60 p-4">
@@ -294,65 +217,67 @@ const MockupWindowPage: FC = () => {
     </div>
   </div>
 </MockupWindow>`}
-        />
+        >
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body">
+              <MockupWindow
+                bordered
+                background
+                title="Deployment Preview"
+                description="把常见预览面板的标题、状态和操作整理成一套更顺手的写法。"
+                toolbar="Preview ready"
+                actions="Publish"
+                bodyClassName="grid gap-4 md:grid-cols-[1.3fr_0.7fr]"
+                data-testid="mockup-window-structured"
+              >
+                <div className="rounded-box border border-base-300 bg-base-200/60 p-4">
+                  <div className="text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Preview
+                  </div>
+                  <div className="mt-4 grid gap-3">
+                    <div className="h-24 rounded-box bg-base-100" />
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="h-16 rounded-box bg-base-100" />
+                      <div className="h-16 rounded-box bg-base-100" />
+                      <div className="h-16 rounded-box bg-base-100" />
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="rounded-box border border-base-300 p-4">
+                    <div className="text-sm font-semibold">Build info</div>
+                    <div className="mt-2 text-sm opacity-70">Branch: feat/mockup-window</div>
+                    <div className="text-sm opacity-70">Runtime: 82ms</div>
+                  </div>
+                  <div className="rounded-box border border-base-300 p-4">
+                    <div className="text-sm font-semibold">Checklist</div>
+                    <ul className="mt-2 space-y-2 text-sm opacity-70">
+                      <li>Visual review passed</li>
+                      <li>API examples updated</li>
+                      <li>Ready for handoff</li>
+                    </ul>
+                  </div>
+                </div>
+              </MockupWindow>
+            </div>
+          </div>
+        </ExampleBlock>
 
         <ExampleBlock
           title="复合子组件"
           summary="需要更细粒度控制时，用 Header / Toolbar / Body / Actions 手动拼装。"
           tab={tabCompound}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupWindow bordered className="w-full" data-testid="mockup-window-compound">
-                  <MockupWindow.Header
-                    title="Analytics Snapshot"
-                    description="低层用法适合需要自定义头部排版的场景。"
-                    extra={
-                      <MockupWindow.Toolbar>
-                        <Button size="sm" type="text">
-                          This week
-                        </Button>
-                        <Button size="sm" type="outlined">
-                          Export
-                        </Button>
-                      </MockupWindow.Toolbar>
-                    }
-                  />
-                  <MockupWindow.Body className="grid gap-3 bg-base-100 p-4 sm:grid-cols-3">
-                    <div className="rounded-box border border-base-300 p-4">
-                      <div className="text-xs uppercase tracking-[0.2em] opacity-60">Views</div>
-                      <div className="mt-2 text-2xl font-semibold">128k</div>
-                    </div>
-                    <div className="rounded-box border border-base-300 p-4">
-                      <div className="text-xs uppercase tracking-[0.2em] opacity-60">Signups</div>
-                      <div className="mt-2 text-2xl font-semibold">3.2k</div>
-                    </div>
-                    <div className="rounded-box border border-base-300 p-4">
-                      <div className="text-xs uppercase tracking-[0.2em] opacity-60">
-                        Conversion
-                      </div>
-                      <div className="mt-2 text-2xl font-semibold">5.8%</div>
-                    </div>
-                  </MockupWindow.Body>
-                  <MockupWindow.Actions>
-                    <Button type="text">Dismiss</Button>
-                    <Button color="primary">Open report</Button>
-                  </MockupWindow.Actions>
-                </MockupWindow>
-              </div>
-            </div>
-          )}
           code={`<MockupWindow bordered className="w-full">
-  <MockupWindow.Header
-    title="Analytics Snapshot"
-    description="低层用法适合需要自定义头部排版的场景。"
-    extra={
-      <MockupWindow.Toolbar>
-        <Button size="sm" type="text">This week</Button>
-        <Button size="sm" type="outlined">Export</Button>
-      </MockupWindow.Toolbar>
-    }
-  />
+  <MockupWindow.Header>
+    <div className="min-w-0 flex-1">
+      <div className="truncate text-sm font-semibold">Analytics Snapshot</div>
+      <div className="mt-1 text-xs opacity-70">低层用法适合需要自定义头部排版的场景。</div>
+    </div>
+    <MockupWindow.Toolbar>
+      <Button size="sm" type="text">This week</Button>
+      <Button size="sm" type="outlined">Export</Button>
+    </MockupWindow.Toolbar>
+  </MockupWindow.Header>
   <MockupWindow.Body className="grid gap-3 bg-base-100 p-4 sm:grid-cols-3">
     <div className="rounded-box border border-base-300 p-4">
       <div className="text-xs uppercase tracking-[0.2em] opacity-60">Views</div>
@@ -372,80 +297,59 @@ const MockupWindowPage: FC = () => {
     <Button color="primary">Open report</Button>
   </MockupWindow.Actions>
 </MockupWindow>`}
-        />
+        >
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body">
+              <MockupWindow bordered className="w-full" data-testid="mockup-window-compound">
+                <MockupWindow.Header>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">Analytics Snapshot</div>
+                    <div className="mt-1 text-xs opacity-70">
+                      低层用法适合需要自定义头部排版的场景。
+                    </div>
+                  </div>
+                  <MockupWindow.Toolbar>
+                    <Button size="sm" type="text">
+                      This week
+                    </Button>
+                    <Button size="sm" type="outlined">
+                      Export
+                    </Button>
+                  </MockupWindow.Toolbar>
+                </MockupWindow.Header>
+                <MockupWindow.Body className="grid gap-3 bg-base-100 p-4 sm:grid-cols-3">
+                  <div className="rounded-box border border-base-300 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] opacity-60">Views</div>
+                    <div className="mt-2 text-2xl font-semibold">128k</div>
+                  </div>
+                  <div className="rounded-box border border-base-300 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] opacity-60">Signups</div>
+                    <div className="mt-2 text-2xl font-semibold">3.2k</div>
+                  </div>
+                  <div className="rounded-box border border-base-300 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] opacity-60">Conversion</div>
+                    <div className="mt-2 text-2xl font-semibold">5.8%</div>
+                  </div>
+                </MockupWindow.Body>
+                <MockupWindow.Actions>
+                  <Button type="text">Dismiss</Button>
+                  <Button color="primary">Open report</Button>
+                </MockupWindow.Actions>
+              </MockupWindow>
+            </div>
+          </div>
+        </ExampleBlock>
 
         <ExampleBlock
           title="工作台布局"
           summary="结构化 API 和低层 Body 可以混用，快速拼出更复杂的后台窗口。"
           tab={tabWorkspace}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupWindow
-                  bordered
-                  background
-                  title="Workspace Activity"
-                  description="适合承载列表、侧栏和操作条的中等复杂度展示区域。"
-                  toolbar={
-                    <MockupWindow.Toolbar className="justify-end">
-                      <Button size="sm" type="text">
-                        Filters
-                      </Button>
-                      <Button size="sm" type="outlined">
-                        New panel
-                      </Button>
-                    </MockupWindow.Toolbar>
-                  }
-                  padding="none"
-                  bodyClassName="grid divide-x divide-base-300 md:grid-cols-[220px_1fr]"
-                >
-                  <div className="bg-base-100 p-4">
-                    <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
-                      Sections
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="rounded-box bg-base-200/70 px-3 py-2 font-medium">
-                        Overview
-                      </div>
-                      <div className="rounded-box px-3 py-2 opacity-70">Reports</div>
-                      <div className="rounded-box px-3 py-2 opacity-70">Releases</div>
-                    </div>
-                  </div>
-                  <div className="space-y-3 bg-base-100 p-4">
-                    <div className="grid gap-3 lg:grid-cols-2">
-                      <div className="rounded-box border border-base-300 p-4">
-                        <div className="text-sm font-semibold">Queue</div>
-                        <div className="mt-3 space-y-2">
-                          <div className="h-10 rounded-box bg-base-200/70" />
-                          <div className="h-10 rounded-box bg-base-200/70" />
-                          <div className="h-10 rounded-box bg-base-200/70" />
-                        </div>
-                      </div>
-                      <div className="rounded-box border border-base-300 p-4">
-                        <div className="text-sm font-semibold">Notes</div>
-                        <div className="mt-3 h-36 rounded-box bg-base-200/70" />
-                      </div>
-                    </div>
-                    <div className="rounded-box border border-dashed border-base-300 p-4 text-sm opacity-70">
-                      这里保持的是 Rue 自己的展示型窗口风格，不把 MockupWindow
-                      做成真正的模态框或桌面应用壳。
-                    </div>
-                  </div>
-                </MockupWindow>
-              </div>
-            </div>
-          )}
           code={`<MockupWindow
   bordered
   background
   title="Workspace Activity"
   description="适合承载列表、侧栏和操作条的中等复杂度展示区域。"
-  toolbar={
-    <MockupWindow.Toolbar className="justify-end">
-      <Button size="sm" type="text">Filters</Button>
-      <Button size="sm" type="outlined">New panel</Button>
-    </MockupWindow.Toolbar>
-  }
+  toolbar="Filters / New panel"
   padding="none"
   bodyClassName="grid divide-x divide-base-300 md:grid-cols-[220px_1fr]"
 >
@@ -477,51 +381,94 @@ const MockupWindowPage: FC = () => {
     </div>
   </div>
 </MockupWindow>`}
-        />
+        >
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body">
+              <MockupWindow
+                bordered
+                background
+                title="Workspace Activity"
+                description="适合承载列表、侧栏和操作条的中等复杂度展示区域。"
+                toolbar="Filters / New panel"
+                padding="none"
+                bodyClassName="grid divide-x divide-base-300 md:grid-cols-[220px_1fr]"
+              >
+                <div className="bg-base-100 p-4">
+                  <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] opacity-60">
+                    Sections
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="rounded-box bg-base-200/70 px-3 py-2 font-medium">Overview</div>
+                    <div className="rounded-box px-3 py-2 opacity-70">Reports</div>
+                    <div className="rounded-box px-3 py-2 opacity-70">Releases</div>
+                  </div>
+                </div>
+                <div className="space-y-3 bg-base-100 p-4">
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-box border border-base-300 p-4">
+                      <div className="text-sm font-semibold">Queue</div>
+                      <div className="mt-3 space-y-2">
+                        <div className="h-10 rounded-box bg-base-200/70" />
+                        <div className="h-10 rounded-box bg-base-200/70" />
+                        <div className="h-10 rounded-box bg-base-200/70" />
+                      </div>
+                    </div>
+                    <div className="rounded-box border border-base-300 p-4">
+                      <div className="text-sm font-semibold">Notes</div>
+                      <div className="mt-3 h-36 rounded-box bg-base-200/70" />
+                    </div>
+                  </div>
+                  <div className="rounded-box border border-dashed border-base-300 p-4 text-sm opacity-70">
+                    这里保持的是 Rue 自己的展示型窗口风格，不把 MockupWindow
+                    做成真正的模态框或桌面应用壳。
+                  </div>
+                </div>
+              </MockupWindow>
+            </div>
+          </div>
+        </ExampleBlock>
 
         <ExampleBlock
           title="window mockup with border"
           summary="保留原有经典 demo，不改动原始 children 透传写法。"
           tab={tabBorder}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupWindow
-                  className="border border-base-300 w-full"
-                  data-testid="mockup-window-border"
-                >
-                  <div className="grid place-content-center border-t border-base-300 h-80">
-                    Hello!
-                  </div>
-                </MockupWindow>
-              </div>
-            </div>
-          )}
           code={`<MockupWindow className="border border-base-300 w-full">
   <div className="grid place-content-center border-t border-base-300 h-80">Hello!</div>
 </MockupWindow>`}
-        />
+        >
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body">
+              <MockupWindow
+                className="border border-base-300 w-full"
+                data-testid="mockup-window-border"
+              >
+                <div className="grid place-content-center border-t border-base-300 h-80">
+                  Hello!
+                </div>
+              </MockupWindow>
+            </div>
+          </div>
+        </ExampleBlock>
 
         <ExampleBlock
           title="window mockup with background color"
           summary="原有背景版本也继续保留，适合最简单的展示壳层。"
           tab={tabBackground}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupWindow
-                  className="bg-base-100 border border-base-300 w-full"
-                  data-testid="mockup-window-background"
-                >
-                  <div className="grid place-content-center h-80">Hello!</div>
-                </MockupWindow>
-              </div>
-            </div>
-          )}
           code={`<MockupWindow className="bg-base-100 border border-base-300 w-full">
   <div className="grid place-content-center h-80">Hello!</div>
 </MockupWindow>`}
-        />
+        >
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body">
+              <MockupWindow
+                className="bg-base-100 border border-base-300 w-full"
+                data-testid="mockup-window-background"
+              >
+                <div className="grid place-content-center h-80">Hello!</div>
+              </MockupWindow>
+            </div>
+          </div>
+        </ExampleBlock>
 
         <h2 id="mockup-window-api">API</h2>
         <p>MockupWindow 同时支持“旧的 children 直出模式”和“新的结构化窗口模式”。</p>

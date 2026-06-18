@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 MockupBrowser 模块概述
 - 汇总浏览器样机组件的公开类型、渲染入口和局部工具逻辑。
@@ -95,6 +94,12 @@ export interface MockupBrowserContentProps {
   [key: string]: any
 }
 
+interface AddressBarInnerProps {
+  prefix?: any
+  suffix?: any
+  children?: any
+}
+
 /** join Class Name 的内部工具函数。 */
 const joinClassName = (...tokens: Array<string | false | null | undefined>) => {
   return tokens.filter(Boolean).join(' ')
@@ -128,6 +133,17 @@ const resolvePaddingClass = (padding: MockupBrowserContentPadding = 'none') => {
   }
 }
 
+/** AddressBarInner 的内部工具函数。 */
+const AddressBarInner: FC<AddressBarInnerProps> = ({ prefix, suffix, children }) => {
+  return (
+    <>
+      {prefix != null ? <span className="shrink-0 opacity-55">{prefix}</span> : null}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {suffix != null ? <span className="shrink-0 opacity-55">{suffix}</span> : null}
+    </>
+  )
+}
+
 /** Address Bar 的内部工具函数。 */
 const AddressBar: FC<MockupBrowserAddressBarProps> = ({
   href,
@@ -146,25 +162,21 @@ const AddressBar: FC<MockupBrowserAddressBarProps> = ({
     className,
   )
 
-  const inner = (
-    <>
-      {prefix != null ? <span className="shrink-0 opacity-55">{prefix}</span> : null}
-      <span className="min-w-0 flex-1 truncate">{content}</span>
-      {suffix != null ? <span className="shrink-0 opacity-55">{suffix}</span> : null}
-    </>
-  )
-
   if ((interactive || href) && typeof href === 'string') {
     return (
       <a {...rest} href={href} className={mergedClassName}>
-        {inner}
+        <AddressBarInner prefix={prefix} suffix={suffix}>
+          {content}
+        </AddressBarInner>
       </a>
     )
   }
 
   return (
     <div {...rest} className={mergedClassName}>
-      {inner}
+      <AddressBarInner prefix={prefix} suffix={suffix}>
+        {content}
+      </AddressBarInner>
     </div>
   )
 }
@@ -222,11 +234,6 @@ const Root: FC<MockupBrowserProps> = ({
   children,
   ...rest
 }) => {
-  const toolbarContent =
-    toolbar ??
-    (url != null ? (
-      <AddressBar href={typeof url === 'string' ? url : undefined}>{url}</AddressBar>
-    ) : null)
   const shouldRenderToolbar =
     showToolbar !== false &&
     (toolbar != null ||
@@ -253,7 +260,11 @@ const Root: FC<MockupBrowserProps> = ({
     >
       {shouldRenderToolbar ? (
         <Toolbar className={toolbarClassName} start={toolbarStart} end={toolbarEnd}>
-          {toolbarContent}
+          {toolbar != null ? (
+            toolbar
+          ) : url != null ? (
+            <AddressBar href={typeof url === 'string' ? url : undefined}>{url}</AddressBar>
+          ) : null}
         </Toolbar>
       ) : null}
       {shouldWrapContent ? (

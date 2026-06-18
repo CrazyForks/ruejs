@@ -95,6 +95,23 @@ const StatusStrip: FC<{ title: string; detail: string }> = (props) => (
   </section>
 );
 
+const RegisteredMetric: FC<{ title: string; value?: string; detail: string }> = (props) => (
+  <article className="rounded-box border border-secondary/25 bg-secondary/10 p-4">
+    <div className="text-xs uppercase tracking-[0.22em] opacity-60">{props.title}</div>
+    <div className="mt-2 text-2xl font-semibold">{props.value ?? 'Registered'}</div>
+    <div className="mt-1 text-sm opacity-75">{props.detail}</div>
+    <div className="mt-4">{props.children}</div>
+  </article>
+);
+
+const RegisteredNotice: FC<{ title: string; detail: string }> = (props) => (
+  <section className="rounded-box border border-warning/35 bg-warning/15 p-4">
+    <div className="font-semibold">{props.title}</div>
+    <div className="mt-1 text-sm opacity-75">{props.detail}</div>
+    <div className="mt-4">{props.children}</div>
+  </section>
+);
+
 const Demo: FC = () => {
   const shell = ref<'native' | 'card' | 'notice'>('native');
   const registryMode = ref<'metric' | 'notice'>('metric');
@@ -306,7 +323,8 @@ const DynamicComponent: FC = () => {
                   <h2 className="text-xl font-semibold">2. 运行时注册字符串组件名</h2>
                   <p className="text-sm opacity-75">
                     下面这个小区域直接在当前页面里使用导出的 {'<Component>'}，并通过
-                    useApp().component(...) 把字符串名注册到当前 runtime。
+                    useApp().component('RegisteredMetric', RegisteredMetric) 把字符串名注册到当前
+                    runtime。
                   </p>
                 </div>
 
@@ -338,7 +356,7 @@ const DynamicComponent: FC = () => {
                     value="CardView"
                     detail={
                       registryTarget.value === 'metric'
-                        ? '通过 useApp().component(...) 注册后，字符串名会被解析成组件定义'
+                        ? "通过 useApp().component('RegisteredMetric', RegisteredMetric) 注册后，字符串名会被解析成组件定义"
                         : '切到另一个已注册组件名，仍然走同一个动态入口'
                     }
                   >

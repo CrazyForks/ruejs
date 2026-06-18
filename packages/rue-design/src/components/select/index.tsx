@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Select 组件概述
 - 默认保持原生 select 语义与浏览器下拉行为；只有在传入前后缀、附加说明或清空能力时，才增加轻量 shell 包裹。
@@ -6,7 +5,7 @@ Select 组件概述
 - 支持 options / fieldNames / placeholder / allowClear / status / variant / 多选上限等增强能力，同时继续兼容原有 children 写法。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
+import { onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 
 /** SelectColor 语义色类型。 */
 export type SelectColor =
@@ -507,46 +506,7 @@ const isListboxSize = (nativeSizeValue?: string) => {
   return Number.isFinite(resolved) && resolved > 1
 }
 
-let pendingCompactOpenRestoreKey: string | null = null
-let pendingCompactOpenRestoreTimer: ReturnType<typeof setTimeout> | null = null
-/** COMPACT_OPEN_RESTORE_TIMEOUT 内部常量。 */
-const COMPACT_OPEN_RESTORE_TIMEOUT = 160
-
-/** clear Pending Compact Open Restore 的内部工具函数。 */
-const clearPendingCompactOpenRestore = () => {
-  if (pendingCompactOpenRestoreTimer) {
-    clearTimeout(pendingCompactOpenRestoreTimer)
-    pendingCompactOpenRestoreTimer = null
-  }
-
-  pendingCompactOpenRestoreKey = null
-}
-
-/** 解析 Compact Open Restore Key 的内部工具函数。 */
-const resolveCompactOpenRestoreKey = (root?: Element | null): string | null => {
-  if (!root || typeof document === 'undefined') {
-    return null
-  }
-
-  const segments: number[] = []
-  let current: Element | null = root
-
-  while (current && current !== document.body) {
-    const parentElement: HTMLElement | null = current.parentElement
-    if (!parentElement) {
-      return null
-    }
-
-    segments.push(Array.from(parentElement.children).indexOf(current))
-    current = parentElement
-  }
-
-  if (current !== document.body) {
-    return null
-  }
-
-  return segments.reverse().join('.')
-}
+const compactOpenStore = new Map<string, boolean>()
 
 /** 解析 Compact Open Persistence Key 的内部工具函数。 */
 const resolveCompactOpenPersistenceKey = (
@@ -583,35 +543,15 @@ const resolveCompactOpenPersistenceKey = (
   return `options:${placeholderKey}:${classKey}:${optionFingerprint}`
 }
 
-/** mark Pending Compact Open Restore 的内部工具函数。 */
-const markPendingCompactOpenRestore = (nextKey?: string | null) => {
-  if (!nextKey) {
-    return
+/** 读取 Compact Open 状态的内部工具函数。 */
+const readCompactOpenState = (key?: string | null) =>
+  key ? compactOpenStore.get(key) === true : false
+
+/** 写入 Compact Open 状态的内部工具函数。 */
+const writeCompactOpenState = (key: string | null, open: boolean) => {
+  if (key) {
+    compactOpenStore.set(key, open)
   }
-
-  clearPendingCompactOpenRestore()
-  pendingCompactOpenRestoreKey = nextKey
-  pendingCompactOpenRestoreTimer = setTimeout(() => {
-    if (pendingCompactOpenRestoreKey === nextKey) {
-      pendingCompactOpenRestoreKey = null
-    }
-    pendingCompactOpenRestoreTimer = null
-  }, COMPACT_OPEN_RESTORE_TIMEOUT)
-}
-
-/** consume Pending Compact Open Restore 的内部工具函数。 */
-const consumePendingCompactOpenRestore = (nextKey?: string | null) => {
-  if (!nextKey || !pendingCompactOpenRestoreKey) {
-    return false
-  }
-
-  const matched = pendingCompactOpenRestoreKey === nextKey
-
-  if (matched) {
-    clearPendingCompactOpenRestore()
-  }
-
-  return matched
 }
 
 /** 解析 Option Label 的内部工具函数。 */
@@ -708,25 +648,20 @@ const buildChangeState = (
   }
 }
 
-/** clamp Selection To Max Count 的内部工具函数。 */
-const clampSelectionToMaxCount = (
-  select: HTMLSelectElement,
+/** 裁剪 Select Values 的内部工具函数。 */
+const clampSelectValues = (
+  currentValues: string[],
   previousValues: string[],
   maxCount?: number,
 ) => {
-  if (!select.multiple || !maxCount || maxCount <= 0) {
-    return Array.from(select.selectedOptions).map(option => option.value)
-  }
-
-  const currentValues = Array.from(select.selectedOptions).map(option => option.value)
-  if (currentValues.length <= maxCount) {
+  if (!maxCount || maxCount <= 0 || currentValues.length <= maxCount) {
     return currentValues
   }
 
   const keptValues: string[] = []
-  currentValues.forEach(value => {
+  previousValues.forEach(value => {
     if (
-      previousValues.includes(value) &&
+      currentValues.includes(value) &&
       !keptValues.includes(value) &&
       keptValues.length < maxCount
     ) {
@@ -739,6 +674,22 @@ const clampSelectionToMaxCount = (
       keptValues.push(value)
     }
   })
+
+  return keptValues
+}
+
+/** clamp Selection To Max Count 的内部工具函数。 */
+const clampSelectionToMaxCount = (
+  select: HTMLSelectElement,
+  previousValues: string[],
+  maxCount?: number,
+) => {
+  if (!select.multiple || !maxCount || maxCount <= 0) {
+    return Array.from(select.selectedOptions).map(option => option.value)
+  }
+
+  const currentValues = Array.from(select.selectedOptions).map(option => option.value)
+  const keptValues = clampSelectValues(currentValues, previousValues, maxCount)
 
   const allowedValues = new Set(keptValues)
   Array.from(select.options).forEach(option => {
@@ -904,23 +855,9 @@ const SelectRoot: FC<SelectProps> = ({
   disabled,
   ...rest
 }) => {
-  const rootRef = useRef<HTMLDivElement>()
-  const selectRef = useRef<HTMLSelectElement>()
-  const compactTriggerRef = useRef<HTMLDivElement>()
-  const compactValueAreaRef = useRef<HTMLDivElement>()
-  const compactPopupRef = useRef<HTMLDivElement>()
-  const previousSelectedValuesRef = useRef<string[]>([])
   const nativeProps = rest as Record<string, any>
   const hasOptions = Array.isArray(options) && options.length > 0
   const hasChildren = children !== undefined && children !== null
-  const initialCompactResolvedOptions = hasOptions
-    ? flattenDataOptions(options!, fieldNames).map(option => toResolvedOptionFromFlat(option))
-    : []
-  const compactRenderVersion = ref(0)
-  const compactSelectedValues = ref<string[]>(
-    normalizeSelectValues(value !== undefined ? value : defaultValue),
-  )
-  const compactResolvedOptions = ref<SelectResolvedOption[]>(initialCompactResolvedOptions)
   const mergedDisabled = !!disabled || !!loading
   const isNativeMultiple = !!multiple
   const isEnhancedMultiple = mode === 'multiple'
@@ -928,6 +865,10 @@ const SelectRoot: FC<SelectProps> = ({
   const nativeSizeValue = resolveNativeSize(size, nativeSize)
   const shouldRenderListbox = isNativeMultiple || isListboxSize(nativeSizeValue)
   const useCompactMultiple = isEnhancedMultiple && !shouldRenderListbox
+  const resolveCompactOptions = () =>
+    hasOptions
+      ? flattenDataOptions(options!, fieldNames).map(option => toResolvedOptionFromFlat(option))
+      : []
   const compactPersistenceKey = useCompactMultiple
     ? resolveCompactOpenPersistenceKey(
         nativeProps,
@@ -938,9 +879,12 @@ const SelectRoot: FC<SelectProps> = ({
         selectClassName,
       )
     : null
-  const compactOpenRef = useRef(
-    compactPersistenceKey !== null && pendingCompactOpenRestoreKey === compactPersistenceKey,
+  const compactOpen = ref(readCompactOpenState(compactPersistenceKey))
+  const compactSelectedValues = ref<string[]>(
+    normalizeSelectValues(value !== undefined ? value : defaultValue),
   )
+  const compactResolvedOptions = ref<SelectResolvedOption[]>(resolveCompactOptions())
+  let previousSelectedValues = compactSelectedValues.value.slice()
   const hasShellDecorators =
     prefix !== undefined ||
     suffix !== undefined ||
@@ -950,48 +894,59 @@ const SelectRoot: FC<SelectProps> = ({
     !!loading ||
     suffixIcon !== undefined
   const useShell = useCompactMultiple || (hasShellDecorators && !shouldRenderListbox)
-  const optionMetaMap = createOptionMetaMap(options, fieldNames)
   const renderedOptions = hasOptions ? renderDataOptions(options!, fieldNames) : children
   const loadingOptionContent = loadingText ?? '正在加载...'
   const emptyOptionContent = notFoundContent ?? '暂无可选项'
   const compactPlaceholder = placeholder ?? 'Select options'
-  const isCompactOpen = () => compactOpenRef.current === true
+  const isCompactOpen = () => compactOpen.value === true
+  const getUseCompactMultiple = () => useCompactMultiple
+  const getUseShell = () => useShell
+  const hasNoProvidedOptions = () => !hasOptions && !hasChildren
+  const getNativeSizeAttrs = () => (nativeSizeValue !== undefined ? { size: nativeSizeValue } : {})
+  const getSelectValueAttrs = () => {
+    if (useCompactMultiple) {
+      return {}
+    }
+
+    if (value !== undefined) {
+      return { value: value as any }
+    }
+
+    if (defaultValue !== undefined) {
+      return { defaultValue: defaultValue as any }
+    }
+
+    return {}
+  }
+  const getCompactSelectAttrs = () => ({
+    tabIndex: useCompactMultiple ? -1 : rest.tabIndex,
+    ariaHidden: useCompactMultiple ? 'true' : undefined,
+  })
+  const getSelectClassName = () => {
+    if (useCompactMultiple) {
+      return mergeClassName(
+        'pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0',
+        selectClassName,
+      )
+    }
+
+    if (useShell) {
+      return mergeClassName(
+        'min-w-0 grow appearance-none border-none bg-transparent pr-1 text-base-content outline-none',
+        selectClassName,
+      )
+    }
+
+    return mergeClassName(baseSelectClassName, selectClassName)
+  }
 
   const setCompactOpen = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      clearPendingCompactOpenRestore()
-    }
-
-    if (compactOpenRef.current === nextOpen) {
+    if (compactOpen.value === nextOpen) {
       return
     }
 
-    compactOpenRef.current = nextOpen
-    syncCompactOpenDom()
-  }
-
-  const preserveCompactOpenAcrossUpdate = () => {
-    if (!useCompactMultiple || !isCompactOpen()) {
-      return
-    }
-
-    markPendingCompactOpenRestore(
-      compactPersistenceKey ?? resolveCompactOpenRestoreKey(rootRef.current),
-    )
-  }
-
-  const restorePendingCompactOpen = () => {
-    if (
-      !useCompactMultiple ||
-      !consumePendingCompactOpenRestore(
-        compactPersistenceKey ?? resolveCompactOpenRestoreKey(rootRef.current),
-      )
-    ) {
-      return
-    }
-
-    compactOpenRef.current = true
-    syncCompactOpenDom()
+    compactOpen.value = nextOpen
+    writeCompactOpenState(compactPersistenceKey, nextOpen)
   }
 
   const getCompactSelectedOptions = () => {
@@ -1002,138 +957,55 @@ const SelectRoot: FC<SelectProps> = ({
       .filter(Boolean) as SelectResolvedOption[]
   }
 
-  const syncCompactValueAreaDom = () => {
-    const container = compactValueAreaRef.current
-    if (!container || typeof document === 'undefined') return
-
-    const selectedOptions = getCompactSelectedOptions()
-    container.replaceChildren()
-
-    if (!selectedOptions.length) {
-      const placeholderNode = document.createElement('span')
-      placeholderNode.className = 'truncate text-sm text-base-content/40'
-      placeholderNode.textContent = String(compactPlaceholder)
-      container.appendChild(placeholderNode)
-      return
-    }
-
-    selectedOptions.forEach(option => {
-      const optionValue = String(option.value)
-      const chip = document.createElement('span')
-      chip.className =
-        'inline-flex max-w-full items-center gap-1 rounded-md bg-base-200 px-2 py-1 text-xs text-base-content'
-
-      const labelNode = document.createElement('span')
-      labelNode.className = 'truncate'
-      labelNode.textContent = String(option.label ?? option.value)
-      chip.appendChild(labelNode)
-
-      if (!mergedDisabled) {
-        const removeButton = document.createElement('button')
-        removeButton.type = 'button'
-        removeButton.className = 'btn btn-ghost btn-xs h-4 min-h-0 w-4 rounded-full p-0 text-[10px]'
-        removeButton.setAttribute('aria-label', `移除 ${String(option.label ?? option.value)}`)
-        removeButton.textContent = '×'
-        removeButton.addEventListener('click', event => {
-          removeCompactOption(optionValue, event as MouseEvent)
-        })
-        chip.appendChild(removeButton)
-      }
-
-      container.appendChild(chip)
-    })
-  }
-
-  const syncCompactPopupDom = () => {
-    const popup = compactPopupRef.current
-    if (!popup) return
-
-    const selectedValueSet = new Set(compactSelectedValues.value)
-    Array.from(popup.querySelectorAll('[data-rue-select-option]')).forEach(node => {
-      const button = node as HTMLButtonElement
-      const optionValue = button.getAttribute('data-rue-select-option') ?? ''
-      const selected = selectedValueSet.has(optionValue)
-      button.setAttribute('aria-selected', selected ? 'true' : 'false')
-      button.classList.toggle('bg-primary/10', selected)
-      button.classList.toggle('text-primary', selected)
-      button.classList.toggle('hover:bg-base-200', !selected && !button.disabled)
-
-      const checkNode = button.querySelector('[data-rue-select-check="true"]') as HTMLElement | null
-      if (checkNode) {
-        checkNode.classList.toggle('opacity-100', selected)
-        checkNode.classList.toggle('opacity-0', !selected)
-      }
-    })
-  }
-
-  const syncCompactOpenDom = () => {
-    const open = isCompactOpen()
-    const trigger = compactTriggerRef.current
-    if (trigger) {
-      trigger.setAttribute('aria-expanded', open ? 'true' : 'false')
-      trigger.classList.toggle('ring', open)
-      trigger.classList.toggle('ring-primary/15', open)
-    }
-
-    const popup = compactPopupRef.current
-    if (!popup) return
-    popup.hidden = !open
-    popup.setAttribute('aria-hidden', open ? 'false' : 'true')
-  }
-
-  const syncCompactStateFromDom = () => {
-    const select = selectRef.current
-    if (!select) return
-
-    compactSelectedValues.value = Array.from(select.selectedOptions).map(option => option.value)
-    compactResolvedOptions.value = Array.from(select.options).map(option => {
-      return toResolvedOption(option, optionMetaMap[option.value], optionLabelProp)
-    })
-    compactRenderVersion.value += 1
-    syncCompactOpenDom()
-    syncCompactValueAreaDom()
-    syncCompactPopupDom()
-  }
-
   const syncSelectionToDom = (nextValues: string[]) => {
-    const select = selectRef.current
-    if (!select) return
+    return (select: HTMLSelectElement | null) => {
+      if (!select) return
 
-    if (select.multiple) {
-      const selectedValueSet = new Set(nextValues)
-      Array.from(select.options).forEach(option => {
-        option.selected = selectedValueSet.has(option.value)
-      })
-      return
+      if (select.multiple) {
+        const selectedValueSet = new Set(nextValues)
+        Array.from(select.options).forEach(option => {
+          option.selected = selectedValueSet.has(option.value)
+        })
+        return
+      }
+
+      select.value = nextValues[0] ?? ''
     }
-
-    select.value = nextValues[0] ?? ''
   }
 
   const syncSelectionFromProps = () => {
     const sourceValue = value !== undefined ? value : defaultValue
     if (sourceValue === undefined) {
-      syncCompactStateFromDom()
       return
     }
 
-    syncSelectionToDom(normalizeSelectValues(sourceValue))
-    syncCompactStateFromDom()
+    const nextValues = normalizeSelectValues(sourceValue)
+    compactSelectedValues.value = nextValues
+    previousSelectedValues = nextValues.slice()
   }
 
   const syncSelectedSnapshot = () => {
-    if (!selectRef.current) return
-    previousSelectedValuesRef.current = Array.from(selectRef.current.selectedOptions).map(
-      option => option.value,
-    )
+    previousSelectedValues = compactSelectedValues.value.slice()
+  }
+
+  const findSelectFromEvent = (event: Event) => {
+    const target = event.target as Element | null
+    if (target instanceof HTMLSelectElement) {
+      return target
+    }
+
+    const current = event.currentTarget as Element | null
+    const root = current?.closest?.('[data-rue-select-root="true"]')
+    return (root?.querySelector('select') as HTMLSelectElement | null) ?? null
   }
 
   const emitSemanticCallbacks = (event: Event) => {
-    const select = selectRef.current
+    const select = findSelectFromEvent(event)
     if (!select) return
 
-    const previousValues = (previousSelectedValuesRef.current ?? []).slice()
+    const previousValues = previousSelectedValues.slice()
     const nextValues = clampSelectionToMaxCount(select, previousValues, maxCount)
+    const optionMetaMap = createOptionMetaMap(options, fieldNames)
     const changeState = buildChangeState(select, optionMetaMap, optionLabelProp, labelInValue)
     const nextValueKeys = nextValues.map(current => String(current))
     const addedValues = nextValueKeys.filter(current => !previousValues.includes(current))
@@ -1172,19 +1044,21 @@ const SelectRoot: FC<SelectProps> = ({
       })
     }
 
-    previousSelectedValuesRef.current = nextValueKeys
+    previousSelectedValues = nextValueKeys
   }
 
   const handleChange = (event: Event) => {
     emitSemanticCallbacks(event)
-    syncCompactStateFromDom()
+    const select = findSelectFromEvent(event)
+    if (select) {
+      compactSelectedValues.value = Array.from(select.selectedOptions).map(option => option.value)
+    }
     if (onChange) {
       onChange(event)
     }
   }
 
-  const dispatchNativeSelectionChange = () => {
-    const select = selectRef.current
+  const dispatchNativeSelectionChange = (select: HTMLSelectElement | null) => {
     if (!select) return
     select.dispatchEvent(new Event('input', { bubbles: true }))
     select.dispatchEvent(new Event('change', { bubbles: true }))
@@ -1194,40 +1068,49 @@ const SelectRoot: FC<SelectProps> = ({
     event.preventDefault()
     event.stopPropagation()
 
-    const select = selectRef.current
+    const select = findSelectFromEvent(event)
     if (!select || mergedDisabled) {
       return
     }
 
-    const option = findOptionElementByValue(select, optionValue)
+    const option = compactResolvedOptions.value.find(
+      current => String(current.value) === optionValue,
+    )
     if (!option || option.disabled) {
       return
     }
 
-    option.selected = !option.selected
-    syncCompactStateFromDom()
-    preserveCompactOpenAcrossUpdate()
-    dispatchNativeSelectionChange()
+    const previousValues = compactSelectedValues.value.slice()
+    const nextValues = previousValues.includes(optionValue)
+      ? previousValues.filter(valueKey => valueKey !== optionValue)
+      : previousValues.concat(optionValue)
+    const clampedValues = clampSelectValues(nextValues, previousValues, maxCount)
+
+    compactSelectedValues.value = clampedValues
+    syncSelectionToDom(clampedValues)(select)
+    dispatchNativeSelectionChange(select)
   }
 
   const removeCompactOption = (optionValue: string, event: MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
 
-    const select = selectRef.current
+    const select = findSelectFromEvent(event)
     if (!select || mergedDisabled) {
       return
     }
 
-    const option = findOptionElementByValue(select, optionValue)
-    if (!option || option.disabled || !option.selected) {
+    const option = compactResolvedOptions.value.find(
+      current => String(current.value) === optionValue,
+    )
+    if (!option || option.disabled || !compactSelectedValues.value.includes(optionValue)) {
       return
     }
 
-    option.selected = false
-    syncCompactStateFromDom()
-    preserveCompactOpenAcrossUpdate()
-    dispatchNativeSelectionChange()
+    const nextValues = compactSelectedValues.value.filter(valueKey => valueKey !== optionValue)
+    compactSelectedValues.value = nextValues
+    syncSelectionToDom(nextValues)(select)
+    dispatchNativeSelectionChange(select)
   }
 
   const handleCompactTriggerClick = (event: MouseEvent) => {
@@ -1252,7 +1135,7 @@ const SelectRoot: FC<SelectProps> = ({
   }
 
   const clearSelection = (event: MouseEvent) => {
-    const select = selectRef.current
+    const select = findSelectFromEvent(event)
 
     if (!select || mergedDisabled) {
       return
@@ -1269,9 +1152,8 @@ const SelectRoot: FC<SelectProps> = ({
       select.value = ''
     }
 
-    syncCompactStateFromDom()
-    preserveCompactOpenAcrossUpdate()
-    dispatchNativeSelectionChange()
+    compactSelectedValues.value = []
+    dispatchNativeSelectionChange(select)
 
     if (onClear) {
       onClear(event)
@@ -1281,16 +1163,14 @@ const SelectRoot: FC<SelectProps> = ({
   onMounted(() => {
     syncSelectionFromProps()
     syncSelectedSnapshot()
-    syncCompactStateFromDom()
-    restorePendingCompactOpen()
 
     if (typeof window === 'undefined') return
 
     const handleWindowPointerDown = (event: PointerEvent) => {
       if (!isCompactOpen()) return
-      const target = event.target as Node | null
+      const target = event.target as Element | null
       if (!target) return
-      if (rootRef.current?.contains(target)) return
+      if (target.closest?.('[data-rue-select-root="true"]')) return
       setCompactOpen(false)
     }
 
@@ -1313,8 +1193,6 @@ const SelectRoot: FC<SelectProps> = ({
     () => {
       syncSelectionFromProps()
       syncSelectedSnapshot()
-      syncCompactStateFromDom()
-      restorePendingCompactOpen()
     },
     { immediate: true },
   )
@@ -1324,18 +1202,15 @@ const SelectRoot: FC<SelectProps> = ({
     () => {
       syncSelectionFromProps()
       syncSelectedSnapshot()
-      syncCompactStateFromDom()
-      restorePendingCompactOpen()
     },
   )
 
   watch(
     () => options,
     () => {
+      compactResolvedOptions.value = resolveCompactOptions()
       syncSelectionFromProps()
       syncSelectedSnapshot()
-      syncCompactStateFromDom()
-      restorePendingCompactOpen()
     },
   )
 
@@ -1344,8 +1219,6 @@ const SelectRoot: FC<SelectProps> = ({
     () => {
       syncSelectionFromProps()
       syncSelectedSnapshot()
-      syncCompactStateFromDom()
-      restorePendingCompactOpen()
     },
   )
 
@@ -1360,66 +1233,70 @@ const SelectRoot: FC<SelectProps> = ({
   )
   const shellClassName = buildShellClassName(color, status, variant, size, uiSize, ghost, className)
   const resolvedArrow = showArrow ? (suffixIcon ?? <DefaultChevron />) : suffixIcon
-  const compactSelectedOptions = getCompactSelectedOptions()
-  const compactGroups = groupResolvedOptions(compactResolvedOptions.value)
+  const getCompactGroups = () => groupResolvedOptions(compactResolvedOptions.value)
+  const isCompactValueSelected = (optionValue: string) =>
+    compactSelectedValues.value.includes(optionValue)
+  const getCompactNativeOptions = () =>
+    compactResolvedOptions.value.map(option => {
+      const optionValue = String(option.value)
+      return (
+        <option
+          key={option.key}
+          value={option.value as any}
+          disabled={option.disabled}
+          title={option.title}
+          className={option.className}
+          {...(isCompactValueSelected(optionValue) ? { selected: true } : {})}
+        >
+          {option.label ?? option.value}
+        </option>
+      )
+    })
 
   const selectNode = (
     <select
       {...rest}
-      {...(nativeSizeValue !== undefined ? { size: nativeSizeValue } : {})}
+      {...getNativeSizeAttrs()}
       {...(mergedMultiple ? { multiple: true } : {})}
       {...(mergedDisabled ? { disabled: true } : {})}
-      {...(defaultValue !== undefined ? { defaultValue: defaultValue as any } : {})}
-      {...(value !== undefined ? { value: value as any } : {})}
-      ref={selectRef}
-      tabIndex={useCompactMultiple ? -1 : rest.tabIndex}
-      aria-hidden={useCompactMultiple ? 'true' : undefined}
+      {...getSelectValueAttrs()}
+      tabIndex={getCompactSelectAttrs().tabIndex}
+      aria-hidden={getCompactSelectAttrs().ariaHidden}
       aria-busy={loading ? 'true' : undefined}
-      className={
-        useCompactMultiple
-          ? mergeClassName(
-              'pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0',
-              selectClassName,
-            )
-          : useShell
-            ? mergeClassName(
-                'min-w-0 grow appearance-none border-none bg-transparent pr-1 text-base-content outline-none',
-                selectClassName,
-              )
-            : mergeClassName(baseSelectClassName, selectClassName)
-      }
+      className={getSelectClassName()}
       onChange={handleChange}
     >
-      {!mergedMultiple && placeholder !== undefined && placeholder !== null ? (
+      {!getUseCompactMultiple() &&
+      !mergedMultiple &&
+      placeholder !== undefined &&
+      placeholder !== null ? (
         <option value={placeholderValue as any} disabled={placeholderDisabled}>
           {placeholder}
         </option>
       ) : null}
-      {renderedOptions}
-      {loading && !hasOptions && !hasChildren ? (
+      {getUseCompactMultiple() ? getCompactNativeOptions() : renderedOptions}
+      {!getUseCompactMultiple() && loading && hasNoProvidedOptions() ? (
         <option disabled={true}>{loadingOptionContent}</option>
       ) : null}
-      {!loading && !hasOptions && !hasChildren ? (
+      {!getUseCompactMultiple() && !loading && hasNoProvidedOptions() ? (
         <option disabled={true}>{emptyOptionContent}</option>
       ) : null}
     </select>
   )
 
-  if (!useShell) {
+  if (!getUseShell()) {
     return selectNode
   }
 
-  if (useCompactMultiple) {
+  if (getUseCompactMultiple()) {
     return (
       <div
-        ref={rootRef}
         className={mergeClassName('relative', rootClassName)}
         data-rue-select-root="true"
         aria-disabled={mergedDisabled ? 'true' : undefined}
       >
         {selectNode}
         <div
-          ref={compactTriggerRef}
           className={mergeClassName(
             mergeClassName(shellClassName, 'flex min-h-12 items-center gap-2 py-2'),
             isCompactOpen() ? 'ring ring-primary/15' : undefined,
@@ -1429,7 +1306,6 @@ const SelectRoot: FC<SelectProps> = ({
           aria-haspopup="listbox"
           aria-expanded={isCompactOpen() ? 'true' : 'false'}
           data-rue-select-trigger="true"
-          data-rue-select-version={String(compactRenderVersion.value)}
           onClick={handleCompactTriggerClick}
           onKeyDown={handleCompactTriggerKeyDown}
         >
@@ -1439,11 +1315,36 @@ const SelectRoot: FC<SelectProps> = ({
           {prefix !== undefined ? (
             <span className="shrink-0 text-sm text-base-content/60">{prefix}</span>
           ) : null}
-          <div
-            ref={compactValueAreaRef}
-            className="flex min-w-0 flex-1 flex-wrap items-center gap-1"
-          />
-          {!loading && allowClear && compactSelectedOptions.length ? (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+            {getCompactSelectedOptions().length ? (
+              getCompactSelectedOptions().map(option => {
+                const optionValue = String(option.value)
+                return (
+                  <span
+                    key={optionValue}
+                    className="inline-flex max-w-full items-center gap-1 rounded-md bg-base-200 px-2 py-1 text-xs text-base-content"
+                  >
+                    <span className="truncate">{option.label ?? option.value}</span>
+                    {!mergedDisabled ? (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs h-4 min-h-0 w-4 rounded-full p-0 text-[10px]"
+                        aria-label={`移除 ${String(option.label ?? option.value)}`}
+                        onClick={(event: MouseEvent) => removeCompactOption(optionValue, event)}
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </span>
+                )
+              })
+            ) : (
+              <span className="truncate text-sm text-base-content/40">
+                {String(compactPlaceholder)}
+              </span>
+            )}
+          </div>
+          {!loading && allowClear && getCompactSelectedOptions().length ? (
             <button
               type="button"
               className="btn btn-ghost btn-xs btn-circle shrink-0"
@@ -1474,18 +1375,17 @@ const SelectRoot: FC<SelectProps> = ({
           ) : null}
         </div>
         <div
-          ref={compactPopupRef}
           className="absolute z-30 mt-2 w-full rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
           data-rue-select-popup="true"
           aria-hidden={isCompactOpen() ? 'false' : 'true'}
-          hidden={!isCompactOpen()}
+          {...(!isCompactOpen() ? { hidden: true } : {})}
         >
           <div
             role="listbox"
             aria-multiselectable="true"
             className="max-h-72 space-y-2 overflow-auto"
           >
-            {compactGroups.map(group => (
+            {getCompactGroups().map(group => (
               <div key={group.key} className="space-y-1">
                 {group.label !== undefined ? (
                   <div className="px-3 pt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/45">
@@ -1494,7 +1394,7 @@ const SelectRoot: FC<SelectProps> = ({
                 ) : null}
                 {group.options.map(option => {
                   const optionValue = String(option.value)
-                  const selected = compactSelectedValues.value.includes(optionValue)
+                  const selected = isCompactValueSelected(optionValue)
                   return (
                     <button
                       key={optionValue}
@@ -1534,7 +1434,6 @@ const SelectRoot: FC<SelectProps> = ({
 
   return (
     <div
-      ref={rootRef}
       className={mergeClassName(shellClassName, rootClassName)}
       data-rue-select-root="true"
       aria-disabled={mergedDisabled ? 'true' : undefined}

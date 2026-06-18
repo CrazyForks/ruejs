@@ -83,6 +83,37 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
         (node as any).nodeType === 1 && !(node as HTMLElement).hasAttribute('data-rue-leaving'),
     )
 
+  const readElementKey = (el: HTMLElement): string =>
+    el.getAttribute('key') ?? el.getAttribute('data-rue-key') ?? ''
+
+  const alignElementsToKeys = (container: HTMLElement, elements: HTMLElement[]) => {
+    const keyedElements = new Map<string, HTMLElement[]>()
+    elements.forEach(el => {
+      const key = readElementKey(el)
+      if (!key) return
+      const list = keyedElements.get(key) ?? []
+      list.push(el)
+      keyedElements.set(key, list)
+    })
+
+    const ordered = nextKeys.map((key, index) => {
+      if (!key) return elements[index]
+      return keyedElements.get(key)?.shift() ?? elements[index]
+    })
+
+    let cursor: ChildNode | null = null
+    for (let index = ordered.length - 1; index >= 0; index -= 1) {
+      const el = ordered[index]
+      if (!el) continue
+      if (el.nextSibling !== cursor) {
+        container.insertBefore(el, cursor)
+      }
+      cursor = el
+    }
+
+    return ordered.filter((el): el is HTMLElement => !!el)
+  }
+
   onUnmounted(() => {
     ctx.renderVersion = null
   })
@@ -116,7 +147,7 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
     const container = containerRef.current
     if (!container) return
 
-    const nextElements = collectDirectElements(container)
+    const nextElements = alignElementsToKeys(container, collectDirectElements(container))
     const elementsByKey: Map<string, HTMLElement> = new Map()
     const existingKeys = new Set<string>()
 

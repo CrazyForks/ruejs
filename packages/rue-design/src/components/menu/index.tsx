@@ -585,15 +585,16 @@ const renderMenuAction = (
     ...rest
   } = props
 
-  const mergedSelected =
+  const isMergedSelected = () =>
     menuContext?.isSelected(eventKey, selected ?? active) ?? !!(selected ?? active)
-  const innerClassName = getItemClassName({
-    disabled,
-    selected: mergedSelected,
-    focus,
-    danger,
-    className,
-  })
+  const getInnerClassName = () =>
+    getItemClassName({
+      disabled,
+      selected: isMergedSelected(),
+      focus,
+      danger,
+      className,
+    })
 
   const handleClick = (event: MouseEvent) => {
     if (disabled) {
@@ -639,10 +640,10 @@ const renderMenuAction = (
       <button
         {...rest}
         type={rest.type ?? 'button'}
-        className={innerClassName}
+        className={getInnerClassName()}
         title={title}
         disabled={disabled}
-        aria-current={mergedSelected ? 'page' : undefined}
+        aria-current={isMergedSelected() ? 'page' : undefined}
         onClick={handleClick}
       >
         {contentNode}
@@ -654,11 +655,11 @@ const renderMenuAction = (
     return (
       <span
         {...rest}
-        className={innerClassName}
+        className={getInnerClassName()}
         title={title}
         role={rest.role ?? 'menuitem'}
         tabIndex={disabled ? -1 : (rest.tabIndex ?? 0)}
-        aria-current={mergedSelected ? 'page' : undefined}
+        aria-current={isMergedSelected() ? 'page' : undefined}
         aria-disabled={disabled ? 'true' : undefined}
         onClick={handleClick}
       >
@@ -672,11 +673,11 @@ const renderMenuAction = (
       return (
         <span
           {...rest}
-          className={innerClassName}
+          className={getInnerClassName()}
           title={title}
           role={rest.role ?? 'menuitem'}
           tabIndex={-1}
-          aria-current={mergedSelected ? 'page' : undefined}
+          aria-current={isMergedSelected() ? 'page' : undefined}
           aria-disabled="true"
           onClick={handleClick}
         >
@@ -696,10 +697,10 @@ const renderMenuAction = (
     return (
       <a
         {...rest}
-        className={innerClassName}
+        className={getInnerClassName()}
         href={resolveRouterHref(to)}
         title={title}
-        aria-current={mergedSelected ? 'page' : undefined}
+        aria-current={isMergedSelected() ? 'page' : undefined}
         aria-disabled={disabled ? 'true' : undefined}
         onClick={handleRouterClick}
       >
@@ -712,12 +713,12 @@ const renderMenuAction = (
     return (
       <a
         {...rest}
-        className={innerClassName}
+        className={getInnerClassName()}
         href={disabled ? undefined : href}
         target={target}
         rel={getAnchorRel(target, rel)}
         title={title}
-        aria-current={mergedSelected ? 'page' : undefined}
+        aria-current={isMergedSelected() ? 'page' : undefined}
         aria-disabled={disabled ? 'true' : undefined}
         onClick={handleClick}
       >
@@ -729,9 +730,9 @@ const renderMenuAction = (
   return (
     <a
       {...rest}
-      className={innerClassName}
+      className={getInnerClassName()}
       title={title}
-      aria-current={mergedSelected ? 'page' : undefined}
+      aria-current={isMergedSelected() ? 'page' : undefined}
       aria-disabled={disabled ? 'true' : undefined}
       onClick={handleClick}
     >
@@ -928,7 +929,7 @@ const SubMenu: FC<MenuSubMenuProps> = ({
 }) => {
   const menuContext = __menuContext
   const uncontrolledOpen = ref(!!defaultOpen)
-  const mergedOpen =
+  const isMergedOpen = () =>
     eventKey !== undefined && menuContext
       ? menuContext.isOpen(eventKey, open)
       : (open ?? uncontrolledOpen.value)
@@ -968,25 +969,25 @@ const SubMenu: FC<MenuSubMenuProps> = ({
         type="button"
         className={getItemClassName({
           disabled,
-          selected: mergedOpen,
+          selected: isMergedOpen(),
           className: titleClassName,
         })}
-        aria-expanded={mergedOpen ? 'true' : 'false'}
+        aria-expanded={isMergedOpen() ? 'true' : 'false'}
         aria-disabled={disabled ? 'true' : undefined}
         onClick={(event: MouseEvent) => {
           if (triggerAction !== 'click') return
-          commitOpen(!mergedOpen, event as any)
+          commitOpen(!isMergedOpen(), event as any)
         }}
       >
         {renderItemContent({
           icon,
           content: title,
           extra,
-          suffix: mergedOpen ? '▾' : '▸',
+          suffix: isMergedOpen() ? '▾' : '▸',
         })}
       </button>
       <ul
-        className={appendClassName(mergedOpen ? '' : 'hidden', popupClassName)}
+        className={appendClassName(isMergedOpen() ? '' : 'hidden', popupClassName)}
         style={
           menuContext?.mode === 'inline'
             ? { paddingInlineStart: `${menuContext.inlineIndent}px` }
@@ -1158,9 +1159,9 @@ const Menu: FC<MenuProps> = ({
   const resolvedMode = getMenuMode(mode, direction)
   const uncontrolledSelectedKeys = ref(normalizeKeys(defaultSelectedKeys ?? selectedKeys))
   const uncontrolledOpenKeys = ref(normalizeKeys(defaultOpenKeys ?? openKeys))
-  const mergedSelectedKeys =
+  const getMergedSelectedKeys = () =>
     selectedKeys !== undefined ? normalizeKeys(selectedKeys) : uncontrolledSelectedKeys.value
-  const mergedOpenKeys =
+  const getMergedOpenKeys = () =>
     openKeys !== undefined ? normalizeKeys(openKeys) : uncontrolledOpenKeys.value
 
   const commitSelectedKeys = (nextSelectedKeys: MenuKey[]) => {
@@ -1178,10 +1179,14 @@ const Menu: FC<MenuProps> = ({
     selectable,
     multiple,
     triggerSubMenuAction,
-    selectedKeys: mergedSelectedKeys,
-    openKeys: mergedOpenKeys,
-    isSelected: (key, explicit) => explicit ?? hasKey(mergedSelectedKeys, key),
-    isOpen: (key, explicit) => explicit ?? hasKey(mergedOpenKeys, key),
+    get selectedKeys() {
+      return getMergedSelectedKeys()
+    },
+    get openKeys() {
+      return getMergedOpenKeys()
+    },
+    isSelected: (key, explicit) => explicit ?? hasKey(getMergedSelectedKeys(), key),
+    isOpen: (key, explicit) => explicit ?? hasKey(getMergedOpenKeys(), key),
     onItemClick: (event, item, keyPath = item.key !== undefined ? [item.key] : []) => {
       const info: MenuClickInfo = {
         key: item.key,
@@ -1192,6 +1197,7 @@ const Menu: FC<MenuProps> = ({
       if (onClick) onClick(info)
       if (!selectable || item.key === undefined) return
 
+      const mergedSelectedKeys = getMergedSelectedKeys()
       const nextSelectedKeys = multiple ? toggleKey(mergedSelectedKeys, item.key) : [item.key]
       const isSelected = hasKey(mergedSelectedKeys, item.key)
       commitSelectedKeys(nextSelectedKeys)
@@ -1210,6 +1216,7 @@ const Menu: FC<MenuProps> = ({
       if (onSelect) onSelect(selectInfo)
     },
     onSubMenuToggle: (key, nextOpen, _event, _item) => {
+      const mergedOpenKeys = getMergedOpenKeys()
       const nextOpenKeys = nextOpen
         ? hasKey(mergedOpenKeys, key)
           ? mergedOpenKeys

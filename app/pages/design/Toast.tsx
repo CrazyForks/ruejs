@@ -1,4 +1,4 @@
-import { h, ref, type FC } from '@rue-js/rue'
+import { ref, type FC } from '@rue-js/rue'
 import { Tabs, Toast } from '@rue-js/design'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
@@ -123,18 +123,15 @@ const DemoSurface: FC<{ minHeight?: string; children?: any }> = ({
   minHeight = '14rem',
   children,
 }) => {
-  return h(
-    'div',
-    { className: 'not-prose rounded-[1.5rem] border border-base-300 bg-base-200/50 p-4 shadow-sm' },
-    h(
-      'div',
-      {
-        className:
-          'relative overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100/90',
-        style: { minHeight },
-      },
-      ...(toChildArray(children) as any[]),
-    ),
+  return (
+    <div className="not-prose rounded-[1.5rem] border border-base-300 bg-base-200/50 p-4 shadow-sm">
+      <div
+        className="relative overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100/90"
+        style={{ minHeight }}
+      >
+        {toChildArray(children)}
+      </div>
+    </div>
   )
 }
 
@@ -434,6 +431,121 @@ const messageConfigRows: ApiRow[] = [
   },
 ]
 
+const ControlledAutoClosePreview: FC = () => {
+  const [messageApi, contextHolder] = Toast.useMessage({
+    getContainer: false,
+    className: 'absolute',
+    placement: 'top-end',
+    inset: { x: 16, y: 56 },
+    gap: 12,
+    maxCount: 3,
+    duration: 4,
+    closable: true,
+    pauseOnHover: true,
+  })
+
+  return (
+    <DemoSurface minHeight="19rem">
+      <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => {
+            messageApi.open({
+              key: 'deployment-paused',
+              type: 'warning',
+              title: 'Deployment paused',
+              description:
+                'This one is controlled by messageApi.destroy(key), so it can stay linked to page state.',
+              duration: 0,
+              closable: true,
+            })
+          }}
+        >
+          重新显示受控提示
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm btn-ghost"
+          onClick={() => {
+            messageApi.destroy('deployment-paused')
+          }}
+        >
+          关闭受控提示
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline"
+          onClick={() => {
+            messageApi.success({
+              key: `auto-save-${Date.now()}`,
+              title: 'Auto saved',
+              description: 'This toast closes itself after 4 seconds and pauses while hovered.',
+              duration: 4,
+            })
+          }}
+        >
+          重新触发自动关闭
+        </button>
+      </div>
+      {contextHolder}
+      <div className="absolute inset-x-4 bottom-4 rounded-[1rem] border border-base-300 bg-base-100/85 px-4 py-3 text-sm text-base-content/70 backdrop-blur">
+        受控提示使用固定 key 反复显示或销毁；自动关闭提示每次生成新 key，悬停时会暂停倒计时。
+      </div>
+    </DemoSurface>
+  )
+}
+
+const controlledAutoCloseCode = `const [messageApi, contextHolder] = Toast.useMessage({
+  getContainer: false,
+  className: 'absolute',
+  placement: 'top-end',
+  inset: { x: 16, y: 56 },
+  gap: 12,
+  maxCount: 3,
+  duration: 4,
+  closable: true,
+  pauseOnHover: true,
+})
+
+const showControlledToast = () => {
+  messageApi.open({
+    key: 'deployment-paused',
+    type: 'warning',
+    title: 'Deployment paused',
+    description: 'This one is controlled by messageApi.destroy(key).',
+    duration: 0,
+    closable: true,
+  })
+}
+
+const closeControlledToast = () => {
+  messageApi.destroy('deployment-paused')
+}
+
+const showAutoCloseToast = () => {
+  messageApi.success({
+    key: \`auto-save-\${Date.now()}\`,
+    title: 'Auto saved',
+    description: 'This toast closes itself after 4 seconds and pauses while hovered.',
+    duration: 4,
+  })
+}
+
+<div className="relative min-h-80 overflow-hidden rounded-box border border-base-300">
+  <button type="button" onClick={showControlledToast}>
+    重新显示受控提示
+  </button>
+  <button type="button" onClick={closeControlledToast}>
+    关闭受控提示
+  </button>
+  <button type="button" onClick={showAutoCloseToast}>
+    重新触发自动关闭
+  </button>
+
+  {contextHolder}
+</div>`
+
 const ToastPage: FC = () => {
   const tabs = {
     items: ref<TabMode>('preview'),
@@ -448,9 +560,6 @@ const ToastPage: FC = () => {
     host: ref<TabMode>('preview'),
   }
 
-  const controlledOpen = ref(true)
-  const controlledToastKey = ref(0)
-  const autoToastKey = ref(0)
   const [messageApi, messageContextHolder] = Toast.useMessage({
     placement: 'top-end',
     inset: { x: 16, y: 68 },
@@ -567,87 +676,8 @@ const ToastPage: FC = () => {
           title="Controlled and auto close"
           summary="受控关闭适合和外部状态联动；自动关闭则补齐了 message 常用的短时反馈体验，并支持 hover 暂停。"
           tab={tabs.controlled}
-          preview={() => (
-            <DemoSurface minHeight="19rem">
-              <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={() => {
-                    controlledToastKey.value += 1
-                    controlledOpen.value = true
-                  }}
-                >
-                  重新显示受控提示
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline"
-                  onClick={() => {
-                    autoToastKey.value += 1
-                  }}
-                >
-                  重新触发自动关闭
-                </button>
-              </div>
-              <Toast className="absolute" placement="top-end" inset={{ x: 16, y: 56 }} gap={12}>
-                <Toast.Item
-                  key={controlledToastKey.value}
-                  open={controlledOpen.value}
-                  type="warning"
-                  title="Deployment paused"
-                  description="This one is controlled from the outside so you can coordinate with page state."
-                  closable
-                  onOpenChange={(nextOpen: boolean) => {
-                    controlledOpen.value = nextOpen
-                  }}
-                />
-                <Toast.Item
-                  key={autoToastKey.value}
-                  type="success"
-                  title="Auto saved"
-                  description="This toast closes itself after 4 seconds and pauses while hovered."
-                  duration={4}
-                  closable
-                />
-              </Toast>
-            </DemoSurface>
-          )}
-          code={`const controlledOpen = ref(true)
-const controlledToastKey = ref(0)
-const autoToastKey = ref(0)
-
-<button
-  type="button"
-  onClick={() => {
-    controlledToastKey.value += 1
-    controlledOpen.value = true
-  }}
->
-  重新显示受控提示
-</button>
-
-<Toast className="absolute" placement="top-end" inset={{ x: 16, y: 56 }} gap={12}>
-  <Toast.Item
-    key={controlledToastKey.value}
-    open={controlledOpen.value}
-    type="warning"
-    title="Deployment paused"
-    description="This one is controlled from the outside."
-    closable
-    onOpenChange={nextOpen => {
-      controlledOpen.value = nextOpen
-    }}
-  />
-  <Toast.Item
-    key={autoToastKey.value}
-    type="success"
-    title="Auto saved"
-    description="This toast closes itself after 4 seconds."
-    duration={4}
-    closable
-  />
-</Toast>`}
+          preview={() => <ControlledAutoClosePreview />}
+          code={controlledAutoCloseCode}
         />
 
         <ExampleBlock

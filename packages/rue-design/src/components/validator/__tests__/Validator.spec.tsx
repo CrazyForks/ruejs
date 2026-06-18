@@ -133,7 +133,7 @@ describe('Validator', () => {
       expect(hint.classList.contains('hidden')).toBe(true)
       expect(hint.textContent).toContain('Required')
       expect(hint.textContent).toContain('Use company email')
-      expect(hint.querySelectorAll('span')).toHaveLength(2)
+      expect(hint.querySelectorAll('span.block')).toHaveLength(2)
     })
   })
 

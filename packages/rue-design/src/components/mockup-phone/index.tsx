@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 MockupPhone 模块概述
 - 汇总手机样机组件的公开类型、渲染入口和局部工具逻辑。
@@ -130,25 +129,6 @@ const Display: FC<MockupPhonePartProps> = ({ className, children, ...rest }) => 
   )
 }
 
-/** 渲染 Display Content 的内部工具函数。 */
-const renderDisplayContent = (display: MockupPhoneDisplayConfig) => {
-  const { src, alt = 'mockup phone wallpaper', imgClassName, children, contentClassName } = display
-
-  const contentNode =
-    children == null ? null : contentClassName ? (
-      <div className={contentClassName}>{children}</div>
-    ) : (
-      children
-    )
-
-  return (
-    <>
-      {src ? <img alt={alt} src={src} className={imgClassName} /> : null}
-      {contentNode}
-    </>
-  )
-}
-
 /** Root 的内部工具函数。 */
 const Root: FC<MockupPhoneRootProps> = ({
   className,
@@ -166,21 +146,32 @@ const Root: FC<MockupPhoneRootProps> = ({
   if (toneClass) cls += ` ${toneClass}`
   if (className) cls += ` ${className}`
 
-  if (!display) {
-    return (
-      <div {...rest} className={cls}>
-        {children}
-      </div>
-    )
-  }
-
   const showCamera = camera !== false
   const cameraProps = typeof camera === 'object' ? camera : undefined
+  const displayAlt = display?.alt ?? 'mockup phone wallpaper'
+  const hasDisplayChildren = display?.children != null
 
   return (
     <div {...rest} className={cls}>
-      {showCamera ? <Camera {...cameraProps} /> : null}
-      <Display className={display.className}>{renderDisplayContent(display)}</Display>
+      {display ? (
+        <>
+          {showCamera ? <Camera {...cameraProps} /> : null}
+          <Display className={display.className}>
+            {display.src ? (
+              <img alt={displayAlt} src={display.src} className={display.imgClassName} />
+            ) : null}
+            {hasDisplayChildren ? (
+              display.contentClassName ? (
+                <div className={display.contentClassName}>{display.children}</div>
+              ) : (
+                display.children
+              )
+            ) : null}
+          </Display>
+        </>
+      ) : (
+        children
+      )}
     </div>
   )
 }

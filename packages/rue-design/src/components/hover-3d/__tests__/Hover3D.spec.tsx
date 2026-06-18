@@ -1,9 +1,49 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h } from '@rue-js/rue'
 import { render } from '@rue-js/rue'
+import {
+  renderAnchor,
+  vapor,
+  _$appendChild,
+  _$createComment,
+  _$createComponent,
+  _$createDocumentFragment,
+  _$createElement,
+  _$setAttribute,
+  _$setClassName,
+} from '@rue-js/rue/vapor'
 import Hover3D from '..'
 
 const waitHover3DRender = () => new Promise(resolve => setTimeout(resolve, 0))
+
+const ManualOverlayFragment = () =>
+  vapor(() => {
+    const root = _$createDocumentFragment()
+
+    for (let i = 0; i < 8; i += 1) {
+      const overlay = _$createElement('div', root)
+      _$appendChild(root, overlay)
+      _$setAttribute(overlay, 'aria-hidden', 'true')
+      _$setAttribute(overlay, 'data-hover3d-overlay', '')
+    }
+
+    return root
+  })
+
+const ManualVaporHoverRoot = ({ children }: { children?: any }) =>
+  vapor(parent => {
+    const root = _$createElement('div', parent)
+    _$setClassName(root, 'hover-3d')
+
+    const childAnchor = _$createComment('rue:slot:anchor')
+    _$appendChild(root, childAnchor)
+    renderAnchor(children, root, childAnchor)
+
+    const overlayAnchor = _$createComment('rue:component:anchor')
+    _$appendChild(root, overlayAnchor)
+    renderAnchor(_$createComponent(ManualOverlayFragment, null), root, overlayAnchor)
+
+    return root
+  })
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -12,11 +52,39 @@ afterEach(() => {
 describe('Hover3D', () => {
   it('renders with base class and overlays', async () => {
     const c = document.createElement('div')
-    render(h(Hover3D, null, h('figure', null, h('img', { src: 'x', alt: 'y' }))), c)
+    render(
+      <Hover3D>
+        <figure>
+          <img src="x" alt="y" />
+        </figure>
+      </Hover3D>,
+      c,
+    )
     await waitHover3DRender()
     const el = c.querySelector('.hover-3d') as HTMLElement
     expect(el).toBeTruthy()
     expect(el.classList.contains('hover-3d')).toBe(true)
+    expect(el.children.length).toBe(9)
+    expect(el.firstElementChild?.tagName).toBe('FIGURE')
+    const overlayDivs = el.querySelectorAll(':scope > [data-hover3d-overlay]')
+    expect(overlayDivs.length).toBe(8)
+  })
+
+  it('keeps Vapor component fragments flattened as direct children', async () => {
+    const c = document.createElement('div')
+    render(
+      <ManualVaporHoverRoot>
+        <figure>
+          <img src="x" alt="y" />
+        </figure>
+      </ManualVaporHoverRoot>,
+      c,
+    )
+    await waitHover3DRender()
+    const el = c.querySelector('.hover-3d') as HTMLElement
+    expect(el).toBeTruthy()
+    expect(el.children.length).toBe(9)
+    expect(el.firstElementChild?.tagName).toBe('FIGURE')
     const overlayDivs = el.querySelectorAll(':scope > [data-hover3d-overlay]')
     expect(overlayDivs.length).toBe(8)
   })
@@ -24,7 +92,9 @@ describe('Hover3D', () => {
   it('renders anchor root from href and fills safe rel defaults', async () => {
     const c = document.createElement('div')
     render(
-      h(Hover3D, { href: '/docs', target: '_blank', className: 'cursor-pointer' }, 'content'),
+      <Hover3D href="/docs" target="_blank" className="cursor-pointer">
+        content
+      </Hover3D>,
       c,
     )
     await waitHover3DRender()
@@ -39,20 +109,18 @@ describe('Hover3D', () => {
   it('supports surface wrapper and root prop passthrough', async () => {
     const c = document.createElement('div')
     render(
-      h(
-        Hover3D,
-        {
-          id: 'hover-root',
-          'data-tone': 'tilt',
-          surfaceAs: 'figure',
-          surfaceClassName: 'rounded-2xl',
-          surfaceProps: {
-            id: 'hover-surface',
-            'data-role': 'surface',
-          },
-        },
-        h('img', { src: 'x', alt: 'wrapped surface' }),
-      ),
+      <Hover3D
+        id="hover-root"
+        data-tone="tilt"
+        surfaceAs="figure"
+        surfaceClassName="rounded-2xl"
+        surfaceProps={{
+          id: 'hover-surface',
+          'data-role': 'surface',
+        }}
+      >
+        <img src="x" alt="wrapped surface" />
+      </Hover3D>,
       c,
     )
     await waitHover3DRender()
@@ -70,7 +138,7 @@ describe('Hover3D', () => {
 
   it('applies overlay class names to generated hover zones', async () => {
     const c = document.createElement('div')
-    render(h(Hover3D, { overlayClassName: 'overlay-zone' }, 'content'), c)
+    render(<Hover3D overlayClassName="overlay-zone">content</Hover3D>, c)
     await waitHover3DRender()
     const el = c.querySelector('.hover-3d') as HTMLElement
     const overlayDivs = Array.from(
@@ -84,7 +152,7 @@ describe('Hover3D', () => {
 
   it('can disable overlays', async () => {
     const c = document.createElement('div')
-    render(h(Hover3D, { overlays: false }, 'content'), c)
+    render(<Hover3D overlays={false}>content</Hover3D>, c)
     await waitHover3DRender()
     const el = c.querySelector('.hover-3d') as HTMLElement
     const overlayDivs = el.querySelectorAll(':scope > [data-hover3d-overlay]')

@@ -24,39 +24,41 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
-        function build() {
-            return {
-                x: a.value,
-                nested: [
-                    a.value,
-                    {
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
+            function build() {
+                return {
+                    x: a.value,
+                    nested: [
+                        a.value,
+                        {
+                            y: a.value
+                        }
+                    ]
+                };
+            }
+            const obj = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+                        ...build(),
                         y: a.value
-                    }
-                ]
+                    })));
+            const __rue_phase2_obj = obj;
+            const arr = _$vaporWithHookId("computed:1:2", ()=>computed(()=>[
+                        ...build().nested,
+                        a.value
+                    ]));
+            const __rue_phase2_arr = arr;
+            return {
+                a: a,
+                build: build,
+                obj: obj,
+                arr: arr
             };
-        }
-        const obj = {
-            ...build(),
-            y: a.value
-        };
-        const arr = [
-            ...build().nested,
-            a.value
-        ];
-        return {
-            a: a,
-            build: build,
-            obj: obj,
-            arr: arr
-        };
-    }));
+        }));
     const { a: a, build: build, obj: obj, arr: arr } = _$useSetup;
-    return <div>{obj.y}-{arr[2]}</div>;
+    return <div>{obj.get().y}-{arr.get()[2]}</div>;
 };
 "##;
 

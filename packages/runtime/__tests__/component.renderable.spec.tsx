@@ -7,11 +7,14 @@ import {
   renderAnchor,
   setReactiveScheduling,
   signal,
+  useSetup,
+  useState,
   useApp,
   vapor,
   watchEffect,
   type FC,
 } from '../src'
+import { _$createComponent, _$vaporWithHookId } from '../src/vapor'
 import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
@@ -305,5 +308,195 @@ describe('Component renderable boundary', () => {
     expect(host.querySelector('[data-testid="mail-icon"]')).toBeNull()
     expect(host.querySelector('[data-testid="bell-icon"]')).toBeTruthy()
     expect(host.textContent).toContain('channel')
+  })
+
+  it('keeps ref props read by h-created child components live across updates', async () => {
+    const host = document.createElement('div')
+    let setCount: (value: number | ((ref: { value: number }) => number | void)) => void = () => {}
+
+    document.body.appendChild(host)
+
+    const CounterValue: FC<{ count: { value: number } }> = props =>
+      vapor(() => {
+        const root = document.createElement('span')
+        const anchor = document.createComment('rue:counter-value')
+
+        root.setAttribute('data-testid', 'counter-value')
+        root.appendChild(anchor)
+
+        watchEffect(() => {
+          renderAnchor(props.count.value, root as any, anchor as any)
+        })
+
+        return root as any
+      }) as any
+
+    const App: FC = () => {
+      const [count, updateCount] = useState(0, { kind: 'ref' })
+      setCount = updateCount
+
+      return h('section', null, h(CounterValue, { count }))
+    }
+
+    render(h(App, null), host)
+    await flush()
+
+    expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('0')
+
+    setCount(ref => {
+      ref.value += 1
+    })
+    await flush()
+
+    expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('1')
+
+    setCount(ref => {
+      ref.value += 1
+    })
+    await flush()
+
+    expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('2')
+
+    setCount(0)
+    await flush()
+
+    expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('0')
+  })
+
+  it('replays component children after a props.children branch is unmounted and shown again', async () => {
+    const host = document.createElement('div')
+    const showingPreview = signal(true)
+
+    document.body.appendChild(host)
+
+    const CounterValue: FC<{ count: { value: number } }> = props =>
+      vapor(() => {
+        const root = document.createElement('span')
+        const anchor = document.createComment('rue:counter-value')
+
+        root.setAttribute('data-testid', 'counter-value')
+        root.appendChild(anchor)
+
+        watchEffect(() => {
+          renderAnchor(props.count.value, root as any, anchor as any)
+        })
+
+        return root as any
+      }) as any
+
+    const CounterDemo: FC = () => {
+      const setupState = _$vaporWithHookId('useSetup:counter-demo', () =>
+        useSetup(() => {
+          const [count, setCount] = _$vaporWithHookId('useState:counter-demo', () =>
+            useState(0, { kind: 'ref' }),
+          )
+          _$vaporWithHookId('useSetup:counter-demo-watch', () =>
+            useSetup(() => {
+              _$vaporWithHookId('watchEffect:counter-demo', () =>
+                watchEffect(() => {
+                  void count.value
+                }),
+              )
+            }),
+          )
+
+          return { count, setCount }
+        }),
+      )
+      const { count, setCount } = setupState
+
+      return h(
+        'div',
+        null,
+        h(CounterValue, { count }),
+        h(
+          'button',
+          {
+            onClick: () =>
+              setCount(value => {
+                value.value += 1
+              }),
+          },
+          '+1',
+        ),
+      )
+    }
+
+    const renderPlaygroundContent = (props: { children?: unknown }) => {
+      const content = showingPreview.get() ? (
+        <section data-testid="preview">{props.children}</section>
+      ) : (
+        <section data-testid="code">code</section>
+      )
+
+      return vapor(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('rue:playground-content')
+
+        root.appendChild(anchor)
+        renderAnchor(_$createComponent(MockSidebar, { children: content }), root as any, anchor)
+
+        return root as any
+      }) as any
+    }
+
+    const PreviewSwitcher: FC = props =>
+      vapor(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('rue:preview-switcher')
+
+        root.appendChild(anchor)
+
+        watchEffect(() => {
+          renderAnchor(renderPlaygroundContent(props), root as any, anchor as any)
+        })
+
+        return root as any
+      }) as any
+
+    const MockSidebar: FC = props => <div data-testid="mock-sidebar">{props.children}</div>
+
+    const ExamplePage: FC = () => {
+      const child = _$createComponent(CounterDemo, {})
+
+      return vapor(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('rue:compiled-page')
+
+        root.appendChild(anchor)
+
+        watchEffect(() => {
+          renderAnchor(_$createComponent(PreviewSwitcher, { children: child }), root as any, anchor)
+        })
+
+        return root as any
+      }) as any
+    }
+
+    render(<ExamplePage />, host)
+    await flush()
+
+    expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('0')
+
+    ;(host.querySelector('button') as HTMLButtonElement).click()
+    await flush()
+
+    expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('1')
+
+    showingPreview.set(false)
+    await flush()
+
+    expect(host.querySelector('[data-testid="counter-value"]')).toBeNull()
+    expect(host.querySelector('[data-testid="code"]')?.textContent).toBe('code')
+
+    showingPreview.set(true)
+    await flush()
+
+    expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('0')
+
+    ;(host.querySelector('button') as HTMLButtonElement).click()
+    await flush()
+
+    expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('1')
   })
 })

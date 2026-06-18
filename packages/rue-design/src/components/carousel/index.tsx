@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Carousel 组件概述
 - 视图模型：以索引为单一真相源，统一承载受控、非受控、自动播放、箭头与 dots。
@@ -6,7 +5,7 @@ Carousel 组件概述
 - 兼容目标：继续支持旧版 align/direction/auto/interval/loop/activeIndex/items 写法，同时补齐常用能力。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 
 /** CarouselAlign 对齐方式类型。 */
 export type CarouselAlign = 'start' | 'center' | 'end'
@@ -221,6 +220,17 @@ const assignForwardedRef = (forwardedRef: any, value: CarouselRef | null) => {
   }
 }
 
+/** clear Forwarded Ref 的内部工具函数。 */
+const clearForwardedRef = (forwardedRef: any, value: CarouselRef) => {
+  if (typeof forwardedRef === 'function') {
+    forwardedRef(null)
+    return
+  }
+  if (forwardedRef && typeof forwardedRef === 'object' && (forwardedRef as any).current === value) {
+    ;(forwardedRef as any).current = undefined
+  }
+}
+
 /** 解析 Arrow Node 的内部工具函数。 */
 const resolveArrowNode = (
   arrow: any | ((props: CarouselArrowRenderProps) => any) | undefined,
@@ -351,21 +361,22 @@ const Carousel: FC<CarouselProps> = ({
     mergedLoop,
   )
 
-  const rootRef = useRef<HTMLDivElement>()
-  const trackRef = useRef<HTMLDivElement>()
-  const autoplayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const resizeHandlerRef = useRef<(() => void) | null>(null)
-  const loadHandlerRef = useRef<((event: Event) => void) | null>(null)
-  const pendingControlledIndexRef = useRef<number | null>(null)
-  const animationLockedRef = useRef(false)
-  const dragStartRef = useRef<number | null>(null)
+  let rootElement: HTMLDivElement | undefined
+  let trackElement: HTMLDivElement | undefined
+  let autoplayTimer: ReturnType<typeof setInterval> | null = null
+  let transitionTimer: ReturnType<typeof setTimeout> | null = null
+  let resizeHandler: (() => void) | null = null
+  let loadHandler: ((event: Event) => void) | null = null
+  let pendingControlledIndex: number | null = null
+  let layoutSyncRequest = 0
+  let animationLocked = false
+  let dragStart: number | null = null
   const progressToken = ref(0)
   const hovered = ref(false)
   const currentIndexState = ref(initialIndex)
 
   const getRenderedSlides = () => {
-    const track = trackRef.current
+    const track = trackElement
     if (!track) return [] as HTMLElement[]
     return Array.from(track.children).filter(
       (node): node is HTMLElement => node instanceof HTMLElement,
@@ -378,16 +389,16 @@ const Carousel: FC<CarouselProps> = ({
   }
 
   const clearTransitionTimer = () => {
-    if (transitionTimerRef.current != null) {
-      clearTimeout(transitionTimerRef.current)
-      transitionTimerRef.current = null
+    if (transitionTimer != null) {
+      clearTimeout(transitionTimer)
+      transitionTimer = null
     }
-    animationLockedRef.current = false
+    animationLocked = false
   }
 
   const restartDotProgress = () => {
     if (!mergedShowDotDuration) return
-    const root = rootRef.current
+    const root = rootElement
     if (!root) return
     const progress = root.querySelector<HTMLElement>('[data-rue-carousel-dot-progress="active"]')
     if (!progress) return
@@ -402,12 +413,12 @@ const Carousel: FC<CarouselProps> = ({
   const scheduleAfterChange = (next: number, dontAnimate: boolean) => {
     clearTransitionTimer()
     if (!dontAnimate && speed > 0) {
-      animationLockedRef.current = true
+      animationLocked = true
     }
 
-    transitionTimerRef.current = setTimeout(
+    transitionTimer = setTimeout(
       () => {
-        animationLockedRef.current = false
+        animationLocked = false
         if (afterChange) afterChange(next)
       },
       dontAnimate || speed <= 0 ? 0 : speed,
@@ -415,9 +426,9 @@ const Carousel: FC<CarouselProps> = ({
   }
 
   const stopAutoplay = () => {
-    if (autoplayTimerRef.current != null) {
-      clearInterval(autoplayTimerRef.current)
-      autoplayTimerRef.current = null
+    if (autoplayTimer != null) {
+      clearInterval(autoplayTimer)
+      autoplayTimer = null
     }
   }
 
@@ -426,7 +437,7 @@ const Carousel: FC<CarouselProps> = ({
     if (!mergedAutoplay || getResolvedCount() <= 1) return
     if (mergedPauseOnHover && hovered.value) return
 
-    autoplayTimerRef.current = setInterval(() => {
+    autoplayTimer = setInterval(() => {
       const delta = autoDirection === 'backward' ? -1 : 1
       commitIndex(currentIndexState.value + delta, {
         source: 'autoplay',
@@ -458,13 +469,13 @@ const Carousel: FC<CarouselProps> = ({
   }
 
   const syncRef = () => {
-    api.nativeElement = rootRef.current
-    assignForwardedRef(forwardedRef, rootRef.current ? api : null)
-    assignForwardedRef(apiRef, rootRef.current ? api : null)
+    api.nativeElement = rootElement
+    assignForwardedRef(forwardedRef, rootElement ? api : null)
+    assignForwardedRef(apiRef, rootElement ? api : null)
   }
 
   const syncControls = () => {
-    const root = rootRef.current
+    const root = rootElement
     if (!root) return
 
     const resolvedIndex = normalizeIndex(
@@ -502,8 +513,8 @@ const Carousel: FC<CarouselProps> = ({
   }
 
   const syncScrollLayout = (dontAnimate: boolean) => {
-    const root = rootRef.current
-    const track = trackRef.current
+    const root = rootElement
+    const track = trackElement
     if (!root || !track) return
     const slides = getRenderedSlides()
 
@@ -540,7 +551,6 @@ const Carousel: FC<CarouselProps> = ({
     const slideSize = direction === 'vertical' ? targetSlide.offsetHeight : targetSlide.offsetWidth
     const trackSize = direction === 'vertical' ? track.scrollHeight : track.scrollWidth
     const offset = getOffsetByAlign(align, viewportSize, slideStart, slideSize, trackSize)
-
     track.style.transform =
       direction === 'vertical'
         ? `translate3d(0, -${offset}px, 0)`
@@ -554,8 +564,8 @@ const Carousel: FC<CarouselProps> = ({
   }
 
   const syncFadeLayout = (dontAnimate: boolean) => {
-    const root = rootRef.current
-    const track = trackRef.current
+    const root = rootElement
+    const track = trackElement
     if (!root || !track) return
     const slides = getRenderedSlides()
 
@@ -614,6 +624,20 @@ const Carousel: FC<CarouselProps> = ({
     })
   }
 
+  const requestLayoutSync = (dontAnimate = true) => {
+    const request = ++layoutSyncRequest
+    const syncIfLatest = () => {
+      if (request !== layoutSyncRequest) return
+      syncLayout(dontAnimate)
+    }
+
+    nextTick(syncIfLatest)
+    setTimeout(syncIfLatest, 0)
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(syncIfLatest)
+    }
+  }
+
   const commitIndex = (
     targetIndex: number,
     options: {
@@ -626,7 +650,7 @@ const Carousel: FC<CarouselProps> = ({
 
     const nextIndex = normalizeIndex(targetIndex, count, mergedLoop)
     const currentIndex = normalizeIndex(currentIndexState.value, count, mergedLoop)
-    if (waitForAnimate && animationLockedRef.current && !options.dontAnimate) {
+    if (waitForAnimate && animationLocked && !options.dontAnimate) {
       return
     }
 
@@ -641,7 +665,7 @@ const Carousel: FC<CarouselProps> = ({
 
     currentIndexState.value = nextIndex
     if (options.source !== 'prop') {
-      pendingControlledIndexRef.current = nextIndex
+      pendingControlledIndex = nextIndex
     }
     if (onIndexChange) {
       onIndexChange(nextIndex)
@@ -658,16 +682,36 @@ const Carousel: FC<CarouselProps> = ({
     return !!target.closest('button, a, input, select, textarea, label')
   }
 
+  const setRootElement = (element: HTMLDivElement | null) => {
+    if (!element) return
+    rootElement = element
+    syncRef()
+    requestLayoutSync(true)
+  }
+
+  const setTrackElement = (element: HTMLDivElement | null) => {
+    if (!element) return
+    trackElement = element
+    requestLayoutSync(true)
+  }
+
+  const handlePointerDown = (event: PointerEvent) => {
+    if (typeof userOnPointerDown === 'function') userOnPointerDown(event)
+    if (!draggable || isInteractiveTarget(event.target)) return
+    dragStart = direction === 'vertical' ? event.clientY : event.clientX
+  }
+
+  const handlePointerCancel = (event: PointerEvent) => {
+    if (typeof userOnPointerCancel === 'function') userOnPointerCancel(event)
+    dragStart = null
+  }
+
   const handlePointerEnd = (event: Event) => {
-    if (!draggable || dragStartRef.current == null) return
+    if (!draggable || dragStart == null) return
     const point = event instanceof PointerEvent ? event : null
-    const end = point
-      ? direction === 'vertical'
-        ? point.clientY
-        : point.clientX
-      : dragStartRef.current
-    const delta = end - dragStartRef.current
-    dragStartRef.current = null
+    const end = point ? (direction === 'vertical' ? point.clientY : point.clientX) : dragStart
+    const delta = end - dragStart
+    dragStart = null
 
     if (Math.abs(delta) < 40) return
     if (delta < 0) {
@@ -706,72 +750,40 @@ const Carousel: FC<CarouselProps> = ({
       : `${base} absolute right-4 top-1/2 flex -translate-y-1/2 flex-col`
   })()
 
-  const renderScrollSlides = () => {
-    if (normalizedItems.length > 0) {
-      return normalizedItems.map((item, index) => (
-        <div
-          key={item.key ?? index}
-          className={`carousel-item${item.className ? ` ${item.className}` : ''}`}
-          data-rue-carousel-slide={String(index)}
-        >
-          {item.content}
-        </div>
-      ))
-    }
-    return children
-  }
-
-  const renderFadeSlides = () => {
-    if (normalizedItems.length > 0) {
-      return normalizedItems.map((item, index) => (
-        <div
-          key={item.key ?? index}
-          className={`carousel-item${item.className ? ` ${item.className}` : ''}`}
-          data-rue-carousel-slide={String(index)}
-        >
-          {item.content}
-        </div>
-      ))
-    }
-
-    return normalizedChildList.map((child, index) => (
-      <div key={index} className="w-full h-full" data-rue-carousel-slide={String(index)}>
-        {child}
-      </div>
-    ))
-  }
-
   onMounted(() => {
     syncRef()
-    syncLayout(true)
+    requestLayoutSync(true)
     startAutoplay()
 
-    resizeHandlerRef.current = () => {
+    resizeHandler = () => {
       syncLayout(true)
     }
-    loadHandlerRef.current = () => {
+    loadHandler = () => {
       syncLayout(true)
     }
 
-    if (typeof window !== 'undefined' && resizeHandlerRef.current) {
-      window.addEventListener('resize', resizeHandlerRef.current)
+    if (typeof window !== 'undefined' && resizeHandler) {
+      window.addEventListener('resize', resizeHandler)
     }
-    if (rootRef.current && loadHandlerRef.current) {
-      rootRef.current.addEventListener('load', loadHandlerRef.current, true)
+    if (rootElement && loadHandler) {
+      rootElement.addEventListener('load', loadHandler, true)
     }
   })
 
   onUnmounted(() => {
     stopAutoplay()
     clearTransitionTimer()
-    if (typeof window !== 'undefined' && resizeHandlerRef.current) {
-      window.removeEventListener('resize', resizeHandlerRef.current)
+    if (typeof window !== 'undefined' && resizeHandler) {
+      window.removeEventListener('resize', resizeHandler)
     }
-    if (rootRef.current && loadHandlerRef.current) {
-      rootRef.current.removeEventListener('load', loadHandlerRef.current, true)
+    if (rootElement && loadHandler) {
+      rootElement.removeEventListener('load', loadHandler, true)
     }
-    assignForwardedRef(forwardedRef, null)
-    assignForwardedRef(apiRef, null)
+    clearForwardedRef(forwardedRef, api)
+    clearForwardedRef(apiRef, api)
+    api.nativeElement = undefined
+    rootElement = undefined
+    trackElement = undefined
   })
 
   watch(
@@ -780,8 +792,8 @@ const Carousel: FC<CarouselProps> = ({
       if (typeof next !== 'number') return
       const count = getResolvedCount() || 1
       const normalized = normalizeIndex(next, count, mergedLoop)
-      if (pendingControlledIndexRef.current === normalized) {
-        pendingControlledIndexRef.current = null
+      if (pendingControlledIndex === normalized) {
+        pendingControlledIndex = null
         currentIndexState.value = normalized
         syncLayout(false)
         return
@@ -805,10 +817,7 @@ const Carousel: FC<CarouselProps> = ({
   return (
     <div
       {...rest}
-      ref={(element: HTMLDivElement | null) => {
-        rootRef.current = element ?? undefined
-        syncRef()
-      }}
+      ref={setRootElement}
       className={rootClassName}
       style={serializedStyle}
       data-rue-carousel-current={String(currentIndexState.value)}
@@ -825,17 +834,14 @@ const Carousel: FC<CarouselProps> = ({
         if (typeof userOnMouseLeave === 'function') userOnMouseLeave(event)
       }}
       onPointerDown={(event: PointerEvent) => {
-        if (typeof userOnPointerDown === 'function') userOnPointerDown(event)
-        if (!draggable || isInteractiveTarget(event.target)) return
-        dragStartRef.current = direction === 'vertical' ? event.clientY : event.clientX
+        handlePointerDown(event)
       }}
       onPointerUp={(event: PointerEvent) => {
         if (typeof userOnPointerUp === 'function') userOnPointerUp(event)
         handlePointerEnd(event)
       }}
       onPointerCancel={(event: PointerEvent) => {
-        if (typeof userOnPointerCancel === 'function') userOnPointerCancel(event)
-        dragStartRef.current = null
+        handlePointerCancel(event)
       }}
       onPointerLeave={(event: PointerEvent) => {
         if (typeof userOnPointerLeave === 'function') userOnPointerLeave(event)
@@ -844,9 +850,7 @@ const Carousel: FC<CarouselProps> = ({
       }}
     >
       <div
-        ref={(element: HTMLDivElement | null) => {
-          trackRef.current = element ?? undefined
-        }}
+        ref={setTrackElement}
         className={mergeClassName(
           mergedEffect === 'fade' ? 'relative w-full h-full' : 'will-change-transform',
           mergedEffect === 'scrollx' && direction === 'vertical'
@@ -857,7 +861,29 @@ const Carousel: FC<CarouselProps> = ({
         )}
         data-rue-carousel-track="true"
       >
-        {mergedEffect === 'fade' ? renderFadeSlides() : renderScrollSlides()}
+        {mergedEffect === 'fade'
+          ? normalizedItems.length > 0
+            ? normalizedItems.map((item, index) => (
+                <div
+                  key={item.key ?? index}
+                  className={`carousel-item${item.className ? ` ${item.className}` : ''}`}
+                  data-rue-carousel-slide={String(index)}
+                >
+                  {item.content}
+                </div>
+              ))
+            : children
+          : normalizedItems.length > 0
+            ? normalizedItems.map((item, index) => (
+                <div
+                  key={item.key ?? index}
+                  className={`carousel-item${item.className ? ` ${item.className}` : ''}`}
+                  data-rue-carousel-slide={String(index)}
+                >
+                  {item.content}
+                </div>
+              ))
+            : children}
       </div>
 
       {arrows && canShowControls ? (

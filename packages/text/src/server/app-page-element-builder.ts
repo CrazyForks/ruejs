@@ -196,6 +196,7 @@ export async function buildPageElements<
       markRenderRequestApiUsage('searchParams')
     }
   }
+  pageProps.__textLayoutSegmentMap = { children: [] }
 
   const mountedSlotIds = mountedSlotsHeader ? new Set(mountedSlotsHeader.split(' ')) : null
 

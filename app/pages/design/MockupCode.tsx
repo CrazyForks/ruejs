@@ -10,7 +10,7 @@ interface ExampleBlockProps {
   title: string
   summary?: string
   tab: { value: TabMode }
-  preview: () => any
+  preview: FC
   code: string
 }
 
@@ -22,7 +22,7 @@ interface ApiRow {
 }
 
 const PreviewRenderer: FC<{ preview: ExampleBlockProps['preview'] }> = ({ preview }) => {
-  const PreviewComponent = preview as FC
+  const PreviewComponent = preview
   return <PreviewComponent />
 }
 
@@ -178,37 +178,175 @@ const lineApiRows: ApiRow[] = [
 ]
 
 const createInstallItems = () => [
-  { children: <code>pnpm add @rue-js/design</code> },
-  { prefix: '>', children: <code>Resolving workspace packages...</code>, tone: 'warning' as const },
-  { prefix: '>', children: <code>Done in 2.1s</code>, tone: 'success' as const },
+  { code: 'pnpm add @rue-js/design' },
+  { prefix: '>', code: 'Resolving workspace packages...', tone: 'warning' as const },
+  { prefix: '>', code: 'Done in 2.1s', tone: 'success' as const },
 ]
 
 const createNumberedItems = () => [
-  { prefix: '37', children: <code>{`import { MockupCode } from '@rue-js/design'`}</code> },
-  { prefix: '38', children: <code /> },
-  { prefix: '39', children: <code>{'export default function Demo() {'}</code> },
+  { prefix: '37', code: `import { MockupCode } from '@rue-js/design'` },
+  { prefix: '38', code: '' },
+  { prefix: '39', code: 'export default function Demo() {' },
   {
     prefix: '40',
-    children: <code>{'  return <MockupCode lineNumbers items={lines} />'}</code>,
+    code: '  return <MockupCode lineNumbers items={lines} />',
     tone: 'primary' as const,
   },
-  { prefix: '41', children: <code>{'}'}</code> },
+  { prefix: '41', code: '}' },
 ]
 
 const createDiffItems = () => [
-  { prefix: '-', children: <code>{'const theme = "light"'}</code>, tone: 'error' as const },
+  { prefix: '-', code: 'const theme = "light"', tone: 'error' as const },
   {
     prefix: '+',
-    children: <code>{'const theme = "rue-night"'}</code>,
+    code: 'const theme = "rue-night"',
     tone: 'success' as const,
     highlight: true,
   },
   {
     prefix: '~',
-    children: <code>{'const panel = createWorkspace(theme)'}</code>,
+    code: 'const panel = createWorkspace(theme)',
     tone: 'info' as const,
   },
 ]
+
+const ItemsPreview: FC = () => (
+  <div className="card bg-base-100 shadow-sm">
+    <div className="card-body">
+      <MockupCode
+        className="w-full"
+        data-testid="mockup-code-items"
+        prefix="$"
+        items={createInstallItems()}
+      />
+    </div>
+  </div>
+)
+
+const LinePreview: FC = () => (
+  <div className="card bg-base-100 shadow-sm">
+    <div className="card-body">
+      <MockupCode className="w-full" data-testid="mockup-code-line-component">
+        <MockupCode.Line prefix="21">
+          <code>{`import { MockupCode } from '@rue-js/design'`}</code>
+        </MockupCode.Line>
+        <MockupCode.Line prefix="22">
+          <code />
+        </MockupCode.Line>
+        <MockupCode.Line prefix="23">
+          <code>{`const lines = [{ children: <code>hello rue</code> }]`}</code>
+        </MockupCode.Line>
+        <MockupCode.Line prefix="24" highlight tone="primary">
+          <code>{`<MockupCode items={lines} />`}</code>
+        </MockupCode.Line>
+      </MockupCode>
+    </div>
+  </div>
+)
+
+const NumbersPreview: FC = () => (
+  <div className="card bg-base-100 shadow-sm">
+    <div className="card-body">
+      <MockupCode
+        className="w-full"
+        data-testid="mockup-code-line-numbers"
+        items={createNumberedItems()}
+      />
+    </div>
+  </div>
+)
+
+const PrefixPreview: FC = () => (
+  <div className="card bg-base-100 shadow-sm">
+    <div className="card-body">
+      <MockupCode className="w-full" data-testid="mockup-code-prefix">
+        <pre data-prefix="$">
+          <code>npm i daisyui</code>
+        </pre>
+      </MockupCode>
+    </div>
+  </div>
+)
+
+const MultiPreview: FC = () => (
+  <div className="card bg-base-100 shadow-sm">
+    <div className="card-body">
+      <MockupCode className="w-full" data-testid="mockup-code-multi">
+        <pre data-prefix="$">
+          <code>npm i daisyui</code>
+        </pre>
+        <pre data-prefix=">" className="text-warning">
+          <code>installing...</code>
+        </pre>
+        <pre data-prefix=">" className="text-success">
+          <code>Done!</code>
+        </pre>
+      </MockupCode>
+    </div>
+  </div>
+)
+
+const HighlightPreview: FC = () => (
+  <div className="card bg-base-100 shadow-sm">
+    <div className="card-body gap-4">
+      <MockupCode className="w-full" data-testid="mockup-code-highlight">
+        <pre data-prefix="1">
+          <code>npm i daisyui</code>
+        </pre>
+        <pre data-prefix="2">
+          <code>installing...</code>
+        </pre>
+        <pre data-prefix="3" className="bg-warning text-warning-content">
+          <code>Error!</code>
+        </pre>
+      </MockupCode>
+
+      <MockupCode className="w-full" items={createDiffItems()} />
+    </div>
+  </div>
+)
+
+const LongLinePreview: FC = () => (
+  <div className="card bg-base-100 shadow-sm">
+    <div className="card-body overflow-x-auto">
+      <MockupCode className="w-full" data-testid="mockup-code-long-line">
+        <pre data-prefix="~">
+          <code>
+            Magnam dolore beatae necessitatibus nemopsum itaque sit. Et porro quae qui et et dolore
+            ratione.
+          </code>
+        </pre>
+      </MockupCode>
+    </div>
+  </div>
+)
+
+const NoPrefixPreview: FC = () => (
+  <div className="card bg-base-100 shadow-sm">
+    <div className="card-body">
+      <MockupCode className="w-full" data-testid="mockup-code-without-prefix">
+        <pre>
+          <code>without prefix</code>
+        </pre>
+      </MockupCode>
+    </div>
+  </div>
+)
+
+const ColorPreview: FC = () => (
+  <div className="card bg-base-100 shadow-sm">
+    <div className="card-body">
+      <MockupCode
+        className="bg-primary text-primary-content w-full"
+        data-testid="mockup-code-color"
+      >
+        <pre>
+          <code>can be any color!</code>
+        </pre>
+      </MockupCode>
+    </div>
+  </div>
+)
 
 const MockupCodePage: FC = () => {
   const tabItems = ref<TabMode>('preview')
@@ -244,22 +382,11 @@ const MockupCodePage: FC = () => {
           title="推荐：items 数据驱动"
           summary="适合命令日志场景，根节点 prefix 可给整组行提供默认前缀。"
           tab={tabItems}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupCode
-                  className="w-full"
-                  data-testid="mockup-code-items"
-                  prefix="$"
-                  items={createInstallItems()}
-                />
-              </div>
-            </div>
-          )}
+          preview={ItemsPreview}
           code={`const items = [
-  { children: <code>pnpm add @rue-js/design</code> },
-  { prefix: '>', children: <code>Resolving workspace packages...</code>, tone: 'warning' },
-  { prefix: '>', children: <code>Done in 2.1s</code>, tone: 'success' },
+  { code: 'pnpm add @rue-js/design' },
+  { prefix: '>', code: 'Resolving workspace packages...', tone: 'warning' },
+  { prefix: '>', code: 'Done in 2.1s', tone: 'success' },
 ]
 
 <MockupCode className="w-full" prefix="$" items={items} />`}
@@ -269,26 +396,7 @@ const MockupCodePage: FC = () => {
           title="组合子项"
           summary="需要混合前缀、原生节点和 highlight 时，用 MockupCode.Line 会更直观。"
           tab={tabLine}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupCode className="w-full" data-testid="mockup-code-line-component">
-                  <MockupCode.Line prefix="21">
-                    <code>{`import { MockupCode } from '@rue-js/design'`}</code>
-                  </MockupCode.Line>
-                  <MockupCode.Line prefix="22">
-                    <code />
-                  </MockupCode.Line>
-                  <MockupCode.Line prefix="23">
-                    <code>{`const lines = [{ children: <code>hello rue</code> }]`}</code>
-                  </MockupCode.Line>
-                  <MockupCode.Line prefix="24" highlight tone="primary">
-                    <code>{`<MockupCode items={lines} />`}</code>
-                  </MockupCode.Line>
-                </MockupCode>
-              </div>
-            </div>
-          )}
+          preview={LinePreview}
           code={`<MockupCode className="w-full">
   <MockupCode.Line prefix="21">
     <code>{\`import { MockupCode } from '@rue-js/design'\`}</code>
@@ -309,23 +417,13 @@ const MockupCodePage: FC = () => {
           title="自动行号"
           summary="当前示例先用显式前缀展示带行号片段，预览区可稳定看到完整内容。"
           tab={tabNumbers}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupCode
-                  className="w-full"
-                  data-testid="mockup-code-line-numbers"
-                  items={createNumberedItems()}
-                />
-              </div>
-            </div>
-          )}
+          preview={NumbersPreview}
           code={`const lines = [
-  { prefix: '37', children: <code>{\`import { MockupCode } from '@rue-js/design'\`}</code> },
-  { prefix: '38', children: <code /> },
-  { prefix: '39', children: <code>{'export default function Demo() {'}</code> },
-  { prefix: '40', children: <code>{'  return <MockupCode lineNumbers items={lines} />'}</code>, tone: 'primary' },
-  { prefix: '41', children: <code>{'}'}</code> },
+  { prefix: '37', code: \`import { MockupCode } from '@rue-js/design'\` },
+  { prefix: '38', code: '' },
+  { prefix: '39', code: 'export default function Demo() {' },
+  { prefix: '40', code: '  return <MockupCode lineNumbers items={lines} />', tone: 'primary' },
+  { prefix: '41', code: '}' },
 ]
 
 <MockupCode className="w-full" items={lines} />`}
@@ -335,17 +433,7 @@ const MockupCodePage: FC = () => {
           title="单行前缀"
           summary="保留旧的原生写法，适合最简单的安装命令展示。"
           tab={tabPrefix}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupCode className="w-full" data-testid="mockup-code-prefix">
-                  <pre data-prefix="$">
-                    <code>npm i daisyui</code>
-                  </pre>
-                </MockupCode>
-              </div>
-            </div>
-          )}
+          preview={PrefixPreview}
           code={`<MockupCode className="w-full">
   <pre data-prefix="$">
     <code>npm i daisyui</code>
@@ -357,23 +445,7 @@ const MockupCodePage: FC = () => {
           title="多行日志"
           summary="原有多行 demo 继续保留，适合完全透传现成结构。"
           tab={tabMulti}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupCode className="w-full" data-testid="mockup-code-multi">
-                  <pre data-prefix="$">
-                    <code>npm i daisyui</code>
-                  </pre>
-                  <pre data-prefix=">" className="text-warning">
-                    <code>installing...</code>
-                  </pre>
-                  <pre data-prefix=">" className="text-success">
-                    <code>Done!</code>
-                  </pre>
-                </MockupCode>
-              </div>
-            </div>
-          )}
+          preview={MultiPreview}
           code={`<MockupCode className="w-full">
   <pre data-prefix="$">
     <code>npm i daisyui</code>
@@ -391,25 +463,7 @@ const MockupCodePage: FC = () => {
           title="高亮与语义色"
           summary="highlight 和 tone 适合做差异提示、错误定位和关键输出。"
           tab={tabHighlight}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body gap-4">
-                <MockupCode className="w-full" data-testid="mockup-code-highlight">
-                  <pre data-prefix="1">
-                    <code>npm i daisyui</code>
-                  </pre>
-                  <pre data-prefix="2">
-                    <code>installing...</code>
-                  </pre>
-                  <pre data-prefix="3" className="bg-warning text-warning-content">
-                    <code>Error!</code>
-                  </pre>
-                </MockupCode>
-
-                <MockupCode className="w-full" items={createDiffItems()} />
-              </div>
-            </div>
-          )}
+          preview={HighlightPreview}
           code={`<MockupCode className="w-full">
   <pre data-prefix="1">
     <code>npm i daisyui</code>
@@ -425,9 +479,9 @@ const MockupCodePage: FC = () => {
 <MockupCode
   className="w-full"
   items={[
-    { prefix: '-', children: <code>{'const theme = "light"'}</code>, tone: 'error' },
-    { prefix: '+', children: <code>{'const theme = "rue-night"'}</code>, tone: 'success', highlight: true },
-    { prefix: '~', children: <code>{'const panel = createWorkspace(theme)'}</code>, tone: 'info' },
+    { prefix: '-', code: 'const theme = "light"', tone: 'error' },
+    { prefix: '+', code: 'const theme = "rue-night"', tone: 'success', highlight: true },
+    { prefix: '~', code: 'const panel = createWorkspace(theme)', tone: 'info' },
   ]}
 />`}
         />
@@ -436,20 +490,7 @@ const MockupCodePage: FC = () => {
           title="长行滚动"
           summary="根节点仍然保持最薄的样式层，横向滚动继续交给外层布局容器。"
           tab={tabLongLine}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body overflow-x-auto">
-                <MockupCode className="w-full" data-testid="mockup-code-long-line">
-                  <pre data-prefix="~">
-                    <code>
-                      Magnam dolore beatae necessitatibus nemopsum itaque sit. Et porro quae qui et
-                      et dolore ratione.
-                    </code>
-                  </pre>
-                </MockupCode>
-              </div>
-            </div>
-          )}
+          preview={LongLinePreview}
           code={`<div className="overflow-x-auto">
   <MockupCode className="w-full">
     <pre data-prefix="~">
@@ -465,17 +506,7 @@ const MockupCodePage: FC = () => {
           title="无前缀"
           summary="没有行号或提示符的短内容也可以直接放进 MockupCode。"
           tab={tabNoPrefix}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupCode className="w-full" data-testid="mockup-code-without-prefix">
-                  <pre>
-                    <code>without prefix</code>
-                  </pre>
-                </MockupCode>
-              </div>
-            </div>
-          )}
+          preview={NoPrefixPreview}
           code={`<MockupCode className="w-full">
   <pre>
     <code>without prefix</code>
@@ -487,20 +518,7 @@ const MockupCodePage: FC = () => {
           title="自定义底色"
           summary="组件继续遵循 Rue 的样式组合方式，主题色交给 className 自由叠加。"
           tab={tabColor}
-          preview={() => (
-            <div className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <MockupCode
-                  className="bg-primary text-primary-content w-full"
-                  data-testid="mockup-code-color"
-                >
-                  <pre>
-                    <code>can be any color!</code>
-                  </pre>
-                </MockupCode>
-              </div>
-            </div>
-          )}
+          preview={ColorPreview}
           code={`<MockupCode className="bg-primary text-primary-content w-full">
   <pre>
     <code>can be any color!</code>

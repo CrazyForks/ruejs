@@ -85,6 +85,48 @@ const Comp: FC<Props> = ({ showSearch, label = 'fallback' }) => {
 }
 
 #[test]
+fn lowers_local_reactive_derived_arrays_into_computed_and_rewrites_reads() {
+    let src = r##"
+import { type FC, computed, reactive, ref, shallowRef, toRef } from '@rue-js/rue'
+
+const Comp: FC = () => {
+  const count = ref(1)
+  const shallow = shallowRef({ label: 'shallow' })
+  const state = reactive({ name: 'Rue' })
+  const nameRef = toRef(state, 'name')
+  const doubled = computed(() => count.value * 2)
+  const rows = [
+    { name: 'ref', value: count.value },
+    { name: 'shallow', value: shallow.value.label },
+    { name: 'toRef', value: nameRef.value },
+    { name: 'computed', value: doubled.get() },
+    { name: 'reactive', value: state.name },
+  ]
+
+  return <table>{rows.map((row, idx) => <tr key={idx}><td>{row.value}</td></tr>)}</table>
+}
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply_pre(program);
+    let out = utils::emit(program, cm);
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    println!("{}", normalized);
+
+    assert!(normalized.contains(&utils::normalize(
+        r#"const rows = _$vaporWithHookId("computed:1:3", ()=>computed(()=>["#,
+    )));
+    assert!(normalized.contains(&utils::normalize(r#"{ name: 'ref', value: count.value }"#,)));
+    assert!(normalized.contains(&utils::normalize(r#"{ name: 'reactive', value: state.name }"#,)));
+    assert!(normalized.contains(&utils::normalize(
+        r#"return <table>{rows.get().map((row, idx)=><tr key={idx}><td>{row.value}</td></tr>)}</table>;"#,
+    )));
+    assert!(normalized.contains(&utils::normalize(
+        r#"const { count: count, shallow: shallow, state: state, nameRef: nameRef, doubled: doubled, rows: rows } = _$useSetup;"#,
+    )));
+}
+
+#[test]
 fn preserves_hygiene_for_nested_props_derived_computed_reads() {
     let src = r##"
   import { type FC, ref } from '@rue-js/rue'

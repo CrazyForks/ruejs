@@ -479,7 +479,7 @@ const DockDemo: FC = () => {
                     size="xs"
                     className="relative border border-base-300"
                     items={createSizeItems()}
-                    activeIndex={1}
+                    defaultActiveIndex={1}
                   />
                 </DockStage>
               </div>
@@ -492,7 +492,7 @@ const DockDemo: FC = () => {
                     size="sm"
                     className="relative border border-base-300"
                     items={createSizeItems()}
-                    activeIndex={1}
+                    defaultActiveIndex={1}
                   />
                 </DockStage>
               </div>
@@ -505,7 +505,7 @@ const DockDemo: FC = () => {
                     size="md"
                     className="relative border border-base-300"
                     items={createSizeItemsWithLabel()}
-                    activeIndex={1}
+                    defaultActiveIndex={1}
                   />
                 </DockStage>
               </div>
@@ -518,7 +518,7 @@ const DockDemo: FC = () => {
                     size="lg"
                     className="relative border border-base-300"
                     items={createSizeItemsWithLabel()}
-                    activeIndex={1}
+                    defaultActiveIndex={1}
                   />
                 </DockStage>
               </div>
@@ -531,17 +531,17 @@ const DockDemo: FC = () => {
                     size="xl"
                     className="relative border border-base-300"
                     items={createSizeItemsWithLabel()}
-                    activeIndex={1}
+                    defaultActiveIndex={1}
                   />
                 </DockStage>
               </div>
             </div>
           )}
-          code={`<Dock size="xs" className="relative border border-base-300" items={[{ icon: <HomeIcon /> }, { icon: <InboxIcon /> }, { icon: <SettingsIcon /> }]} activeIndex={1} />
-<Dock size="sm" className="relative border border-base-300" items={[{ icon: <HomeIcon /> }, { icon: <InboxIcon /> }, { icon: <SettingsIcon /> }]} activeIndex={1} />
-<Dock size="md" className="relative border border-base-300" items={[{ icon: <HomeIcon />, label: 'Home' }, { icon: <InboxIcon />, label: 'Inbox' }, { icon: <SettingsIcon />, label: 'Settings' }]} activeIndex={1} />
-<Dock size="lg" className="relative border border-base-300" items={[{ icon: <HomeIcon />, label: 'Home' }, { icon: <InboxIcon />, label: 'Inbox' }, { icon: <SettingsIcon />, label: 'Settings' }]} activeIndex={1} />
-<Dock size="xl" className="relative border border-base-300" items={[{ icon: <HomeIcon />, label: 'Home' }, { icon: <InboxIcon />, label: 'Inbox' }, { icon: <SettingsIcon />, label: 'Settings' }]} activeIndex={1} />`}
+          code={`<Dock size="xs" className="relative border border-base-300" items={[{ icon: <HomeIcon /> }, { icon: <InboxIcon /> }, { icon: <SettingsIcon /> }]} defaultActiveIndex={1} />
+<Dock size="sm" className="relative border border-base-300" items={[{ icon: <HomeIcon /> }, { icon: <InboxIcon /> }, { icon: <SettingsIcon /> }]} defaultActiveIndex={1} />
+<Dock size="md" className="relative border border-base-300" items={[{ icon: <HomeIcon />, label: 'Home' }, { icon: <InboxIcon />, label: 'Inbox' }, { icon: <SettingsIcon />, label: 'Settings' }]} defaultActiveIndex={1} />
+<Dock size="lg" className="relative border border-base-300" items={[{ icon: <HomeIcon />, label: 'Home' }, { icon: <InboxIcon />, label: 'Inbox' }, { icon: <SettingsIcon />, label: 'Settings' }]} defaultActiveIndex={1} />
+<Dock size="xl" className="relative border border-base-300" items={[{ icon: <HomeIcon />, label: 'Home' }, { icon: <InboxIcon />, label: 'Inbox' }, { icon: <SettingsIcon />, label: 'Settings' }]} defaultActiveIndex={1} />`}
         />
 
         <ExampleBlock

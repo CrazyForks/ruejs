@@ -2,7 +2,6 @@ import {
   batch,
   computed,
   createEffect as effect,
-  createResource as createResourceRaw,
   getCurrentScope,
   getCurrentInstance,
   isRef,
@@ -40,6 +39,7 @@ import {
   watchPostEffect,
   watchSignal,
   withHookSlot,
+  useSetup,
 } from '@rue-js/runtime-vapor/reactive'
 import type { SignalHandle } from '@rue-js/runtime-vapor/reactive'
 
@@ -89,6 +89,7 @@ type SignalStateSetter<T> = (value: T | ((signal: SignalHandle<T>) => T | void))
 
 type SuspenseResourceState = {
   boundaries: Map<symbol, BoundaryRef>
+  scheduled: Map<symbol, Promise<unknown>>
   pending: Promise<unknown> | null
 }
 
@@ -226,16 +227,36 @@ const findSuspenseBoundary = (): SuspenseBoundary | null => {
 
 const registerPendingForCurrentBoundary = (state: SuspenseResourceState) => {
   if (!state.pending) {
-    return
+    return false
+  }
+
+  const currentBoundary = getCurrentSuspenseBoundary()
+  if (currentBoundary) {
+    rememberBoundary(state, currentBoundary)
+    throw state.pending
   }
 
   const boundary = findSuspenseBoundary()
   if (!boundary) {
-    return
+    return false
   }
 
   rememberBoundary(state, boundary)
-  boundary.register(state.pending)
+  if (state.scheduled.get(boundary.id) === state.pending) {
+    return true
+  }
+
+  const pending = state.pending
+  state.scheduled.set(boundary.id, pending)
+  queueMicrotask(() => {
+    if (state.pending === pending) {
+      boundary.register(pending)
+    }
+    if (state.scheduled.get(boundary.id) === pending) {
+      state.scheduled.delete(boundary.id)
+    }
+  })
+  return true
 }
 
 const createSuspenseAwareHandle = <T>(
@@ -246,13 +267,17 @@ const createSuspenseAwareHandle = <T>(
     get(target, prop) {
       if (prop === 'get') {
         return () => {
-          registerPendingForCurrentBoundary(state)
+          if (registerPendingForCurrentBoundary(state)) {
+            return undefined
+          }
           return handle.get()
         }
       }
 
       if (prop === 'value') {
-        registerPendingForCurrentBoundary(state)
+        if (registerPendingForCurrentBoundary(state)) {
+          return undefined
+        }
         return Reflect.get(target, prop, target)
       }
 
@@ -319,17 +344,25 @@ export {
   propsReactive,
 }
 
-/** 创建异步资源，并自动接入当前 Suspense 边界。 */
-export function createResource<TSrc, TData>(
+const createSuspenseResource = <TSrc, TData>(
   src: SignalHandle<TSrc>,
   fetcher: (src: TSrc) => Promise<TData>,
-): Resource<TData> {
+): Resource<TData> => {
   const state: SuspenseResourceState = {
     boundaries: new Map(),
+    scheduled: new Map(),
     pending: null,
   }
+  const data = signal<TData | undefined>(undefined, undefined, true) as SignalHandle<TData>
+  const error = signal<any>(undefined, undefined, true)
+  const loading = signal(true, undefined, true)
+  let currentSource = untrack(() => src.get())
+  let version = 0
 
-  const resource = createResourceRaw<TSrc, TData>(src, value => {
+  const load = (value: TSrc) => {
+    const currentVersion = ++version
+    loading.set(true)
+    error.set(undefined)
     const pending = Promise.resolve().then(() => fetcher(value))
     state.pending = pending
 
@@ -337,17 +370,52 @@ export function createResource<TSrc, TData>(
       boundary.register(pending)
     })
 
-    void pending.finally(() => {
-      if (state.pending === pending) {
-        state.pending = null
-      }
-    })
+    void pending
+      .then(
+        value => {
+          if (version !== currentVersion) {
+            return
+          }
+          data.set(value)
+          loading.set(false)
+        },
+        reason => {
+          if (version !== currentVersion) {
+            return
+          }
+          error.set(reason)
+          loading.set(false)
+        },
+      )
+      .finally(() => {
+        if (state.pending === pending) {
+          state.pending = null
+        }
+      })
+  }
 
-    return pending
-  }) as Resource<TData>
+  load(currentSource)
+
+  watchEffect(() => {
+    const nextSource = src.get()
+    if (Object.is(nextSource, currentSource)) {
+      return
+    }
+    currentSource = nextSource
+    load(nextSource)
+  })
 
   return {
-    ...resource,
-    data: createSuspenseAwareHandle(resource.data, state),
+    data: createSuspenseAwareHandle(data, state),
+    error,
+    loading,
   }
+}
+
+/** 创建异步资源，并自动接入当前 Suspense 边界。 */
+export function createResource<TSrc, TData>(
+  src: SignalHandle<TSrc>,
+  fetcher: (src: TSrc) => Promise<TData>,
+): Resource<TData> {
+  return useSetup(() => createSuspenseResource(src, fetcher)) as Resource<TData>
 }

@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 InputNumber 组件概述
 - 基于 Rue Input 的视觉壳层扩展数值输入语义，复用 prefix/suffix、addon、状态与变体能力。
@@ -6,13 +5,17 @@ InputNumber 组件概述
 - 默认保持文本输入，不依赖原生 type=number，避免浏览器内建步进与格式化行为干扰。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, useRef, watch } from '@rue-js/rue'
-import Input, {
-  type InputColor,
-  type InputProps,
-  type InputSize,
-  type InputStatus,
-  type InputVariant,
+import { computed, onUnmounted, ref } from '@rue-js/rue'
+import type {
+  InputAllowClearConfig,
+  InputColor,
+  InputProps,
+  InputShowCountConfig,
+  InputShowCountInfo,
+  InputSize,
+  InputStatus,
+  InputTone,
+  InputVariant,
 } from '../input'
 
 /** InputNumberValue 值类型。 */
@@ -120,6 +123,28 @@ interface InputNumberControlVisualConfig {
   suffixClassName: string
 }
 
+type InputNumberStepHandler = (
+  type: InputNumberStepInfo['type'],
+  emitter: InputNumberEmitter,
+  event?: Event,
+) => void
+
+const STEP_REPEAT_START_DELAY = 450
+const STEP_REPEAT_INTERVAL = 80
+
+interface InputNumberControlsProps {
+  controlsConfig?: InputNumberControlsConfig
+  visualConfig: InputNumberControlVisualConfig
+  onPointerStepStart: (type: InputNumberStepInfo['type'], event: PointerEvent) => void
+  onMouseStepStart: (type: InputNumberStepInfo['type'], event: MouseEvent) => void
+  onClickStep: (type: InputNumberStepInfo['type'], event: MouseEvent) => void
+}
+
+interface InputNumberSuffixProps extends InputNumberControlsProps {
+  suffix?: any
+  showControls: boolean
+}
+
 /** merge Class Name 的内部工具函数。 */
 const mergeClassName = (...classNames: Array<string | undefined | false | null>) => {
   return classNames.filter(Boolean).join(' ')
@@ -138,6 +163,106 @@ const resolveControlSize = (size?: InputSize) => {
     default:
       return size
   }
+}
+
+/** 解析 Input Size Class 的内部工具函数。 */
+const resolveInputSizeClass = (size?: InputSize) => {
+  switch (size) {
+    case 'small':
+      return 'sm'
+    case 'middle':
+    case 'medium':
+      return 'md'
+    case 'large':
+      return 'lg'
+    default:
+      return size
+  }
+}
+
+/** 解析 Input Status Tone 的内部工具函数。 */
+const resolveInputStatusTone = (status?: InputStatus) => {
+  switch (status) {
+    case 'warning':
+      return 'warning' as InputTone
+    case 'error':
+      return 'error' as InputTone
+    default:
+      return undefined
+  }
+}
+
+/** 解析 Input Variant Class Name 的内部工具函数。 */
+const resolveInputVariantClassName = (variant?: InputVariant, ghost?: boolean) => {
+  const resolvedVariant = ghost ? 'ghost' : variant
+  switch (resolvedVariant) {
+    case 'filled':
+      return 'border-transparent bg-base-200/70 shadow-none focus-within:bg-base-100'
+    case 'borderless':
+      return 'input-ghost bg-transparent border-transparent shadow-none'
+    case 'ghost':
+      return 'input-ghost'
+    default:
+      return undefined
+  }
+}
+
+/** 构建 Input Class Name 的内部工具函数。 */
+const buildInputClassName = ({
+  color,
+  status,
+  size,
+  variant,
+  ghost,
+  className,
+  shell,
+}: {
+  color?: InputColor
+  status?: InputStatus
+  size?: InputSize
+  variant?: InputVariant
+  ghost?: boolean
+  className?: string
+  shell?: boolean
+}) => {
+  let cls = 'input'
+  const resolvedTone = color && color !== 'default' ? color : resolveInputStatusTone(status)
+  const resolvedSize = resolveInputSizeClass(size)
+  const variantClassName = resolveInputVariantClassName(variant, ghost)
+
+  if (resolvedTone) cls += ` input-${resolvedTone}`
+  if (resolvedSize) cls += ` input-${resolvedSize}`
+  if (variantClassName) cls += ` ${variantClassName}`
+  if (shell) cls += ' flex items-center gap-2'
+  if (className) cls += ` ${className}`
+  return cls
+}
+
+/** 渲染 Count Content 的内部工具函数。 */
+const renderCountContent = (
+  showCount: boolean | InputShowCountConfig | undefined,
+  info: InputShowCountInfo,
+) => {
+  if (showCount && typeof showCount === 'object' && typeof showCount.formatter === 'function') {
+    return showCount.formatter(info)
+  }
+  if (typeof info.maxLength === 'number') {
+    return `${info.count} / ${info.maxLength}`
+  }
+  return String(info.count)
+}
+
+/** stringify Content 的内部工具函数。 */
+const stringifyContent = (content: any) => {
+  if (content == null) return ''
+  return typeof content === 'string' ? content : String(content)
+}
+
+/** read Max Length 的内部工具函数。 */
+const readMaxLength = (props: Record<string, any>) => {
+  if (typeof props.maxLength === 'number') return props.maxLength
+  if (typeof props.maxlength === 'number') return props.maxlength
+  return undefined
 }
 
 /** 解析 Control Visual Config 的内部工具函数。 */
@@ -498,6 +623,125 @@ const DefaultDownIcon: FC<{ className?: string }> = ({ className }) => {
   )
 }
 
+/** Addon 的内部工具函数。 */
+const InputNumberAddon: FC<{ children: any; className?: string }> = ({ children, className }) => {
+  return (
+    <span
+      className={mergeClassName(
+        'join-item inline-flex items-center border border-base-300 bg-base-200 px-3 text-sm text-base-content/65',
+        className,
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+/** Default Clear Icon 的内部工具函数。 */
+const DefaultClearIcon: FC = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className="size-4"
+      aria-hidden="true"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m7 7 10 10M17 7 7 17" />
+    </svg>
+  )
+}
+
+/** InputNumber 控制按钮图标容器。 */
+const InputNumberControlIcon: FC<{ children: any }> = ({ children }) => {
+  return (
+    <span className="pointer-events-none inline-flex items-center justify-center">{children}</span>
+  )
+}
+
+/** InputNumber 步进控制按钮。 */
+const InputNumberControls: FC<InputNumberControlsProps> = ({
+  controlsConfig,
+  visualConfig,
+  onPointerStepStart,
+  onMouseStepStart,
+  onClickStep,
+}) => {
+  const handlePointerDown = (type: InputNumberStepInfo['type'], event: PointerEvent) => {
+    if ((event as any).pointerType === 'mouse') return
+    onPointerStepStart(type, event)
+  }
+
+  return (
+    <span
+      className={mergeClassName(
+        'inline-flex shrink-0 self-stretch flex-col',
+        visualConfig.groupClassName,
+      )}
+      data-rue-input-number-controls="true"
+    >
+      <button
+        type="button"
+        aria-label="Increase value"
+        className={mergeClassName(
+          'btn btn-ghost flex-1 min-h-0 border border-base-300/65 bg-base-100/75 p-0 text-base-content/70 hover:border-base-300 hover:bg-base-100 hover:text-base-content',
+          visualConfig.buttonClassName,
+        )}
+        onMouseDown={(event: MouseEvent) => onMouseStepStart('up', event)}
+        onPointerDown={(event: PointerEvent) => handlePointerDown('up', event)}
+        onClick={(event: MouseEvent) => onClickStep('up', event)}
+      >
+        <InputNumberControlIcon>
+          {controlsConfig?.upIcon ?? <DefaultUpIcon className={visualConfig.iconClassName} />}
+        </InputNumberControlIcon>
+      </button>
+      <button
+        type="button"
+        aria-label="Decrease value"
+        className={mergeClassName(
+          'btn btn-ghost flex-1 min-h-0 border border-base-300/65 bg-base-100/75 p-0 text-base-content/70 hover:border-base-300 hover:bg-base-100 hover:text-base-content',
+          visualConfig.buttonClassName,
+        )}
+        onMouseDown={(event: MouseEvent) => onMouseStepStart('down', event)}
+        onPointerDown={(event: PointerEvent) => handlePointerDown('down', event)}
+        onClick={(event: MouseEvent) => onClickStep('down', event)}
+      >
+        <InputNumberControlIcon>
+          {controlsConfig?.downIcon ?? <DefaultDownIcon className={visualConfig.iconClassName} />}
+        </InputNumberControlIcon>
+      </button>
+    </span>
+  )
+}
+
+/** InputNumber 后缀区域，合并业务 suffix 和步进控件。 */
+const InputNumberSuffix: FC<InputNumberSuffixProps> = ({
+  suffix,
+  showControls,
+  controlsConfig,
+  visualConfig,
+  onPointerStepStart,
+  onMouseStepStart,
+  onClickStep,
+}) => {
+  return (
+    <span className={mergeClassName('inline-flex items-center', visualConfig.suffixClassName)}>
+      {suffix}
+      {showControls ? (
+        <InputNumberControls
+          controlsConfig={controlsConfig}
+          visualConfig={visualConfig}
+          onPointerStepStart={onPointerStepStart}
+          onMouseStepStart={onMouseStepStart}
+          onClickStep={onClickStep}
+        />
+      ) : null}
+    </span>
+  )
+}
+
 /** Input Number 的内部工具函数。 */
 const InputNumber: FC<InputNumberProps> = ({
   value,
@@ -514,10 +758,27 @@ const InputNumber: FC<InputNumberProps> = ({
   decimalSeparator,
   formatter,
   parser,
+  color,
+  status,
+  variant,
+  ghost,
+  prefix,
+  addonBefore,
+  addonAfter,
+  addonBeforeBare,
+  addonAfterBare,
+  showCount,
+  allowClear,
+  rootClassName,
+  inputClassName,
+  countClassName,
+  clearButtonClassName,
+  className,
   readOnly,
   disabled,
   size,
   suffix,
+  onClear,
   onChange,
   onStep,
   onInput,
@@ -530,31 +791,46 @@ const InputNumber: FC<InputNumberProps> = ({
   onCompositionEnd,
   ...rest
 }) => {
-  const inputRef = useRef<HTMLInputElement>()
+  let inputElement: HTMLInputElement | null = null
   const forwardedRef = rest.ref
+  const inputProps = { ...rest }
   const draftText = ref('')
   const userTyping = ref(false)
   const composing = ref(false)
   const controlled = value !== undefined
-  const resolvedBounds = resolveBounds(min, max)
-  const stepValue = resolveStep(step)
-  const controlledValue = ref<InputNumberValue | null>(
-    normalizeCommittedValue(value, stringMode, decimalSeparator),
-  )
+  const resolvedBounds = computed(() => resolveBounds(min, max))
+  const stepValue = computed(() => resolveStep(step))
+  const initialControlledValue = normalizeCommittedValue(value, stringMode, decimalSeparator)
+  let lastControlledValue = initialControlledValue
+  const optimisticControlledValue = ref<InputNumberValue | null | undefined>(undefined)
   const internalValue = ref<InputNumberValue | null>(
     normalizeCommittedValue(controlled ? value : defaultValue, stringMode, decimalSeparator),
   )
-  const inputDisplay = ref('')
-  const ariaValueNow = ref<string | undefined>(undefined)
-  const ariaValueText = ref<string | undefined>(undefined)
-  const programmaticInputSync = ref(false)
+  const committedValue = computed(() => {
+    if (!controlled) return internalValue.value
+    const externalValue = normalizeCommittedValue(value, stringMode, decimalSeparator)
+    if (externalValue !== lastControlledValue) {
+      lastControlledValue = externalValue
+      optimisticControlledValue.value = undefined
+      return externalValue
+    }
+    const optimisticValue = optimisticControlledValue.value
+    if (optimisticValue !== undefined) {
+      if (optimisticValue === externalValue) {
+        optimisticControlledValue.value = undefined
+        return externalValue
+      }
+      return optimisticValue
+    }
+    return externalValue
+  })
 
-  if ('ref' in rest) {
-    delete rest.ref
+  if ('ref' in inputProps) {
+    delete inputProps.ref
   }
 
   const syncForwardedRef = (element: HTMLInputElement | null) => {
-    inputRef.current = element ?? undefined
+    inputElement = element
     if (typeof forwardedRef === 'function') {
       forwardedRef(element)
       return
@@ -564,8 +840,70 @@ const InputNumber: FC<InputNumberProps> = ({
     }
   }
 
+  let repeatDelayTimer: ReturnType<typeof setTimeout> | null = null
+  let repeatIntervalTimer: ReturnType<typeof setInterval> | null = null
+  let repeatWindow: Window | null = null
+  let repeatTarget: HTMLButtonElement | null = null
+  let suppressNextControlClick = false
+
+  const clearRepeatTimers = () => {
+    if (repeatDelayTimer) {
+      clearTimeout(repeatDelayTimer)
+      repeatDelayTimer = null
+    }
+    if (repeatIntervalTimer) {
+      clearInterval(repeatIntervalTimer)
+      repeatIntervalTimer = null
+    }
+  }
+
+  const stopControlStepRepeat = (event?: Event) => {
+    clearRepeatTimers()
+    repeatWindow?.removeEventListener('pointerup', stopControlStepRepeat)
+    repeatWindow?.removeEventListener('pointercancel', stopControlStepRepeat)
+    repeatWindow?.removeEventListener('mouseup', stopControlStepRepeat)
+    repeatWindow?.removeEventListener('blur', stopControlStepRepeat)
+    if (event?.type === 'pointercancel' || event?.type === 'blur') {
+      suppressNextControlClick = false
+    }
+    repeatWindow = null
+    repeatTarget = null
+  }
+
+  const resolveInputElementFromEvent = (event?: Event) => {
+    const target = event?.target as HTMLInputElement | null
+    if (target?.tagName === 'INPUT') {
+      return target
+    }
+
+    const currentTarget = event?.currentTarget as HTMLElement | null
+    const shellElement = currentTarget?.closest(
+      '[data-rue-input-shell="true"]',
+    ) as HTMLElement | null
+    return shellElement?.querySelector('input') as HTMLInputElement | null
+  }
+
+  const rememberInputElement = (element: HTMLInputElement | null | undefined) => {
+    if (element && element !== inputElement) {
+      syncForwardedRef(element)
+    }
+  }
+
+  const blurExternalActiveElementAfterPointerStep = (event?: Event) => {
+    const isPointerStep =
+      event?.type === 'pointerdown' ||
+      event?.type === 'mousedown' ||
+      ((event as MouseEvent | undefined)?.detail ?? 0) > 0
+    if (!isPointerStep) return
+
+    const activeElement = document.activeElement as HTMLElement | null
+    if (!activeElement || activeElement === document.body) return
+
+    activeElement.blur?.()
+  }
+
   const getCommittedValue = () => {
-    return controlled ? controlledValue.value : internalValue.value
+    return committedValue.get()
   }
 
   const renderValue = () => {
@@ -590,48 +928,46 @@ const InputNumber: FC<InputNumberProps> = ({
     return renderFormattedValue(formatter, committedValue, formattedText, false)
   }
 
-  const syncDisplayState = () => {
+  const inputDisplay = computed(() => renderValue())
+  const ariaValueNow = computed(() => {
     const committedValue = getCommittedValue()
     const currentNumeric = committedValue == null ? undefined : toFiniteNumber(committedValue)
-    const nextDisplayValue = renderValue()
-
-    inputDisplay.value = nextDisplayValue
-    ariaValueNow.value = currentNumeric == null ? undefined : String(currentNumeric)
-    ariaValueText.value = nextDisplayValue || undefined
-  }
-
-  const syncInputElement = (notifyInputRoot = false) => {
-    const element = inputRef.current
+    return currentNumeric == null ? undefined : String(currentNumeric)
+  })
+  const ariaValueText = computed(() => inputDisplay.get() || undefined)
+  const syncInputElement = () => {
+    const element = inputElement
     if (!element) return
 
-    const changed = element.value !== inputDisplay.value
-
-    if (changed) {
-      element.value = inputDisplay.value
+    const displayValue = renderValue()
+    if (element.value !== displayValue) {
+      element.value = displayValue
     }
 
-    if (ariaValueNow.value !== undefined) {
-      element.setAttribute('aria-valuenow', ariaValueNow.value)
+    const committedValue = getCommittedValue()
+    const currentNumeric = committedValue == null ? undefined : toFiniteNumber(committedValue)
+    const valueNow = currentNumeric == null ? undefined : String(currentNumeric)
+    if (valueNow !== undefined) {
+      element.setAttribute('aria-valuenow', valueNow)
     } else {
       element.removeAttribute('aria-valuenow')
     }
 
-    if (ariaValueText.value !== undefined) {
-      element.setAttribute('aria-valuetext', ariaValueText.value)
+    const valueText = displayValue || undefined
+    if (valueText !== undefined) {
+      element.setAttribute('aria-valuetext', valueText)
     } else {
       element.removeAttribute('aria-valuetext')
-    }
-
-    if (notifyInputRoot && changed) {
-      programmaticInputSync.value = true
-      element.dispatchEvent(new Event('input', { bubbles: true }))
     }
   }
 
   const updateInternalValue = (nextValue: InputNumberValue | null) => {
     if (!controlled) {
       internalValue.value = nextValue
+      return
     }
+
+    optimisticControlledValue.value = nextValue
   }
 
   const emitNormalizedChange = (nextValue: InputNumberValue | null) => {
@@ -643,9 +979,7 @@ const InputNumber: FC<InputNumberProps> = ({
   const syncComposingDraft = (rawInput: string) => {
     userTyping.value = true
     draftText.value = rawInput
-    inputDisplay.value = rawInput
-    ariaValueNow.value = undefined
-    ariaValueText.value = rawInput || undefined
+    syncInputElement()
   }
 
   const handleDraftInput = (rawInput: string) => {
@@ -667,30 +1001,27 @@ const InputNumber: FC<InputNumberProps> = ({
       updateInternalValue(nextValue)
       emitNormalizedChange(nextValue)
     }
-
-    syncDisplayState()
-    syncInputElement(false)
+    syncInputElement()
   }
 
   const commitParsedValue = (parsed: ParsedInputNumberValue, clampToRange: boolean) => {
     if (parsed.empty) {
       updateInternalValue(null)
       emitNormalizedChange(null)
-      syncDisplayState()
-      syncInputElement(true)
+      syncInputElement()
       return null
     }
 
     if (parsed.numeric === undefined) {
-      syncDisplayState()
-      syncInputElement(true)
+      syncInputElement()
       return getCommittedValue()
     }
 
     let nextNumeric = parsed.numeric
     nextNumeric = roundWithPrecision(nextNumeric, precision)
     if (clampToRange) {
-      nextNumeric = clamp(nextNumeric, resolvedBounds.min, resolvedBounds.max)
+      const bounds = resolvedBounds.get()
+      nextNumeric = clamp(nextNumeric, bounds.min, bounds.max)
       nextNumeric = roundWithPrecision(nextNumeric, precision)
     }
 
@@ -701,29 +1032,30 @@ const InputNumber: FC<InputNumberProps> = ({
     if (nextValue !== committedValue) {
       emitNormalizedChange(nextValue)
     }
-
-    syncDisplayState()
-    syncInputElement(true)
+    syncInputElement()
 
     return nextValue
   }
 
-  const stepValueBy = (type: InputNumberStepInfo['type'], emitter: InputNumberEmitter) => {
+  const stepValueBy: InputNumberStepHandler = (type, emitter, event) => {
     if (disabled || readOnly) return
 
+    rememberInputElement(resolveInputElementFromEvent(event))
+    blurExternalActiveElementAfterPointerStep(event)
     const parsedDraft = parseInputValue(
-      inputRef.current?.value ?? draftText.value,
+      inputElement?.value ?? draftText.value,
       parser,
       decimalSeparator,
     )
     const committedValue = getCommittedValue()
+    const bounds = resolvedBounds.get()
+    const resolvedStepValue = stepValue.get()
     const baseValue =
-      parsedDraft.numeric ??
-      resolveStepBaseValue(committedValue, resolvedBounds.min, resolvedBounds.max)
+      parsedDraft.numeric ?? resolveStepBaseValue(committedValue, bounds.min, bounds.max)
     const nextNumeric = clamp(
-      buildStepValue(baseValue, type === 'up' ? 1 : -1, stepValue, precision),
-      resolvedBounds.min,
-      resolvedBounds.max,
+      buildStepValue(baseValue, type === 'up' ? 1 : -1, resolvedStepValue, precision),
+      bounds.min,
+      bounds.max,
     )
     const nextValue = serializeNumericValue(nextNumeric, stringMode, precision)
 
@@ -734,196 +1066,365 @@ const InputNumber: FC<InputNumberProps> = ({
     if (nextValue !== committedValue) {
       emitNormalizedChange(nextValue)
     }
-
-    syncDisplayState()
-    syncInputElement(true)
+    syncInputElement()
 
     onStep?.(nextValue, {
-      offset: type === 'up' ? stepValue : -stepValue,
+      offset: type === 'up' ? resolvedStepValue : -resolvedStepValue,
       type,
       emitter,
     })
-
-    inputRef.current?.focus()
   }
 
-  watch(
-    () => value,
-    (nextValue: InputNumberValue | null | undefined) => {
-      if (controlled) {
-        controlledValue.value = normalizeCommittedValue(nextValue, stringMode, decimalSeparator)
-        userTyping.value = false
-        syncDisplayState()
-        syncInputElement(true)
-      }
-    },
-    { immediate: true },
-  )
+  const startControlStepRepeat = (
+    type: InputNumberStepInfo['type'],
+    event: MouseEvent | PointerEvent,
+  ) => {
+    if (event.button !== 0) return
 
-  syncDisplayState()
+    event.preventDefault?.()
+    if (repeatTarget) return
 
-  onMounted(() => {
-    syncInputElement(false)
-  })
+    suppressNextControlClick = true
+    stopControlStepRepeat()
+
+    const target = event.currentTarget as HTMLButtonElement
+    repeatTarget = target
+    repeatWindow = target.ownerDocument?.defaultView ?? window
+
+    repeatWindow.addEventListener('pointerup', stopControlStepRepeat)
+    repeatWindow.addEventListener('pointercancel', stopControlStepRepeat)
+    repeatWindow.addEventListener('mouseup', stopControlStepRepeat)
+    repeatWindow.addEventListener('blur', stopControlStepRepeat)
+
+    rememberInputElement(resolveInputElementFromEvent(event))
+    blurExternalActiveElementAfterPointerStep(event)
+
+    const runStep = () => stepValueBy(type, 'handler')
+
+    runStep()
+
+    repeatDelayTimer = setTimeout(() => {
+      runStep()
+      repeatIntervalTimer = setInterval(() => {
+        runStep()
+      }, STEP_REPEAT_INTERVAL)
+    }, STEP_REPEAT_START_DELAY)
+  }
+
+  const handleControlClickStep = (type: InputNumberStepInfo['type'], event: MouseEvent) => {
+    if (suppressNextControlClick) {
+      suppressNextControlClick = false
+      event.preventDefault?.()
+      event.stopPropagation?.()
+      return
+    }
+
+    stepValueBy(type, 'handler', event)
+  }
+
+  onUnmounted(stopControlStepRepeat)
 
   const controlsConfig = controls && typeof controls === 'object' ? controls : undefined
   const showControls = controls !== false && !disabled && !readOnly
-  const controlVisualConfig = resolveControlVisualConfig(size)
+  const controlVisualConfig = computed(() => resolveControlVisualConfig(size))
+  const currentBounds = resolvedBounds.get()
+  const currentStepValue = stepValue.get()
+  const clearable = !!allowClear
+  const clearConfig = allowClear && typeof allowClear === 'object' ? allowClear : undefined
+  const usesShell = prefix !== undefined || suffix !== undefined || showControls || clearable
+  const usesAddonGroup = addonBefore !== undefined || addonAfter !== undefined
+  const addonControlClassName = usesAddonGroup ? 'join-item min-w-0 flex-1' : undefined
+  const nativeReadOnlyProps: Record<string, any> = {}
+  if (readOnly !== undefined) {
+    nativeReadOnlyProps.readOnly = readOnly
+  }
+  const nativeAriaInvalid = status === 'error' ? 'true' : inputProps['aria-invalid']
+  const nativeAriaInvalidProps: Record<string, any> = {}
+  if (nativeAriaInvalid !== undefined && nativeAriaInvalid !== null) {
+    nativeAriaInvalidProps['aria-invalid'] = nativeAriaInvalid
+  }
+  if ('aria-invalid' in inputProps) {
+    delete inputProps['aria-invalid']
+  }
+  const rawInputClassName = buildInputClassName({
+    color,
+    status,
+    size,
+    variant,
+    ghost,
+    className: mergeClassName(className, addonControlClassName),
+  })
+  const shellClassName = buildInputClassName({
+    color,
+    status,
+    size,
+    variant,
+    ghost,
+    shell: true,
+    className: mergeClassName(className, addonControlClassName),
+  })
+  const displayText = inputDisplay.get()
+  const clearButtonClass = mergeClassName(
+    'btn btn-ghost btn-xs btn-circle h-7 min-h-0 w-7 shrink-0 p-0 text-base-content/55 hover:text-base-content',
+    displayText.length > 0 && !disabled && !readOnly ? undefined : 'hidden',
+    clearButtonClassName,
+  )
+  const countContent = stringifyContent(
+    renderCountContent(showCount, {
+      value: displayText,
+      count: displayText.length,
+      maxLength: readMaxLength(inputProps),
+    }),
+  )
+  const renderSuffix = () => {
+    if (suffix === undefined && !showControls) {
+      return undefined
+    }
 
-  const controlsNode = showControls ? (
-    <span
-      className={mergeClassName(
-        'inline-flex shrink-0 self-stretch flex-col',
-        controlVisualConfig.groupClassName,
-      )}
-      data-rue-input-number-controls="true"
-    >
-      <button
-        type="button"
-        aria-label="Increase value"
-        className={mergeClassName(
-          'btn btn-ghost flex-1 min-h-0 border border-base-300/65 bg-base-100/75 p-0 text-base-content/70 hover:border-base-300 hover:bg-base-100 hover:text-base-content',
-          controlVisualConfig.buttonClassName,
-        )}
-        onMouseDown={(event: MouseEvent) => {
-          if (typeof (event as any).preventDefault === 'function') {
-            ;(event as any).preventDefault()
+    return (
+      <InputNumberSuffix
+        suffix={suffix}
+        showControls={showControls}
+        controlsConfig={controlsConfig}
+        visualConfig={controlVisualConfig.get()}
+        onPointerStepStart={startControlStepRepeat}
+        onMouseStepStart={startControlStepRepeat}
+        onClickStep={handleControlClickStep}
+      />
+    )
+  }
+
+  const handleClear = (event: MouseEvent) => {
+    const element = resolveInputElementFromEvent(event)
+    rememberInputElement(element)
+    if (!inputElement || disabled || readOnly) return
+
+    if (typeof (event as any).preventDefault === 'function') {
+      ;(event as any).preventDefault()
+    }
+    if (typeof (event as any).stopPropagation === 'function') {
+      ;(event as any).stopPropagation()
+    }
+
+    composing.value = false
+    userTyping.value = false
+    draftText.value = ''
+    updateInternalValue(null)
+    emitNormalizedChange(null)
+    syncInputElement()
+    inputElement.focus()
+    onClear?.(event)
+  }
+
+  const handleShellMouseDown = (event: MouseEvent) => {
+    if (disabled) return
+
+    const target = event.target as HTMLElement | null
+    if (target?.closest?.('button,input,textarea,select,a')) {
+      return
+    }
+
+    if (typeof (event as any).preventDefault === 'function') {
+      ;(event as any).preventDefault()
+    }
+
+    rememberInputElement(resolveInputElementFromEvent(event))
+    inputElement?.focus()
+  }
+
+  const renderInputNode = (shell = false) => {
+    return (
+      <input
+        {...inputProps}
+        {...nativeReadOnlyProps}
+        {...nativeAriaInvalidProps}
+        type="text"
+        inputMode={
+          inputProps.inputMode ??
+          (countFractionDigits(currentStepValue) > 0 || precision !== undefined
+            ? 'decimal'
+            : 'numeric')
+        }
+        disabled={disabled}
+        className={
+          shell
+            ? mergeClassName(
+                'min-w-0 grow border-0 bg-transparent p-0 text-inherit outline-none placeholder:text-base-content/40',
+                inputClassName,
+              )
+            : rawInputClassName
+        }
+        role="spinbutton"
+        aria-valuemin={String(currentBounds.min)}
+        aria-valuemax={String(currentBounds.max)}
+        value={displayText}
+        aria-valuenow={ariaValueNow.get()}
+        aria-valuetext={ariaValueText.get()}
+        onInput={(event: Event) => {
+          const target = event.target as HTMLInputElement | null
+          rememberInputElement(target)
+          const rawInput = target?.value ?? ''
+
+          if (composing.value || !!(event as any).isComposing) {
+            syncComposingDraft(rawInput)
+            onInput?.(event)
+            return
+          }
+
+          handleDraftInput(rawInput)
+
+          onInput?.(event)
+        }}
+        onKeyDown={(event: KeyboardEvent) => {
+          rememberInputElement(resolveInputElementFromEvent(event))
+          onKeyDown?.(event)
+          if ((event as any).key === 'Enter') {
+            onPressEnter?.(event)
+          }
+          if ((event as any).defaultPrevented || !keyboard) return
+
+          if ((event as any).key === 'ArrowUp') {
+            ;(event as any).preventDefault?.()
+            stepValueBy('up', 'keydown', event)
+            return
+          }
+
+          if ((event as any).key === 'ArrowDown') {
+            ;(event as any).preventDefault?.()
+            stepValueBy('down', 'keydown', event)
           }
         }}
-        onClick={() => stepValueBy('up', 'handler')}
-      >
-        {controlsConfig?.upIcon ?? <DefaultUpIcon className={controlVisualConfig.iconClassName} />}
-      </button>
-      <button
-        type="button"
-        aria-label="Decrease value"
-        className={mergeClassName(
-          'btn btn-ghost flex-1 min-h-0 border border-base-300/65 bg-base-100/75 p-0 text-base-content/70 hover:border-base-300 hover:bg-base-100 hover:text-base-content',
-          controlVisualConfig.buttonClassName,
-        )}
-        onMouseDown={(event: MouseEvent) => {
-          if (typeof (event as any).preventDefault === 'function') {
-            ;(event as any).preventDefault()
-          }
+        onFocus={(event: FocusEvent) => {
+          rememberInputElement(resolveInputElementFromEvent(event))
+          syncInputElement()
+          onFocus?.(event)
         }}
-        onClick={() => stepValueBy('down', 'handler')}
-      >
-        {controlsConfig?.downIcon ?? (
-          <DefaultDownIcon className={controlVisualConfig.iconClassName} />
-        )}
-      </button>
-    </span>
-  ) : null
+        onCompositionStart={(event: CompositionEvent) => {
+          rememberInputElement(resolveInputElementFromEvent(event))
+          composing.value = true
+          syncComposingDraft((event.target as HTMLInputElement | null)?.value ?? draftText.value)
+          onCompositionStart?.(event)
+        }}
+        onCompositionEnd={(event: CompositionEvent) => {
+          rememberInputElement(resolveInputElementFromEvent(event))
+          composing.value = false
+          handleDraftInput((event.target as HTMLInputElement | null)?.value ?? draftText.value)
+          onCompositionEnd?.(event)
+        }}
+        onBlur={(event: FocusEvent) => {
+          rememberInputElement(resolveInputElementFromEvent(event))
+          const target = event.target as HTMLInputElement | null
+          const parsed = parseInputValue(target?.value ?? draftText.value, parser, decimalSeparator)
 
-  const mergedSuffix =
-    suffix !== undefined || controlsNode ? (
-      <span
-        className={mergeClassName('inline-flex items-center', controlVisualConfig.suffixClassName)}
+          composing.value = false
+          userTyping.value = false
+          draftText.value = parsed.display
+          commitParsedValue(parsed, changeOnBlur)
+          syncInputElement()
+          onBlur?.(event)
+        }}
+        onWheel={(event: WheelEvent) => {
+          rememberInputElement(resolveInputElementFromEvent(event))
+          onWheel?.(event)
+          if (
+            (event as any).defaultPrevented ||
+            !changeOnWheel ||
+            disabled ||
+            readOnly ||
+            document.activeElement !== inputElement
+          ) {
+            return
+          }
+
+          if ((event as any).deltaY === 0) return
+
+          ;(event as any).preventDefault?.()
+          stepValueBy((event as any).deltaY < 0 ? 'up' : 'down', 'wheel', event)
+        }}
+      />
+    )
+  }
+
+  const renderControlNode = () => {
+    if (!usesShell) {
+      return renderInputNode()
+    }
+
+    return (
+      <div
+        className={shellClassName}
+        aria-disabled={disabled ? 'true' : undefined}
+        data-rue-input-shell="true"
+        onMouseDown={handleShellMouseDown}
       >
-        {suffix}
-        {controlsNode}
-      </span>
-    ) : undefined
+        {prefix !== undefined ? (
+          <span className="shrink-0 text-sm text-base-content/60">{prefix}</span>
+        ) : null}
+        {renderInputNode(true)}
+        {clearable && !disabled && !readOnly ? (
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label="Clear text"
+            className={clearButtonClass}
+            onMouseDown={(event: MouseEvent) => {
+              if (typeof event.preventDefault === 'function') event.preventDefault()
+            }}
+            onClick={handleClear}
+          >
+            {(clearConfig as InputAllowClearConfig | undefined)?.clearIcon ?? <DefaultClearIcon />}
+          </button>
+        ) : null}
+        {renderSuffix()}
+      </div>
+    )
+  }
+
+  const renderGroupedControlNode = () => {
+    if (!usesAddonGroup) return renderControlNode()
+    return (
+      <div className="join w-full items-stretch">
+        {addonBefore !== undefined ? (
+          addonBeforeBare ? (
+            addonBefore
+          ) : (
+            <InputNumberAddon>{addonBefore}</InputNumberAddon>
+          )
+        ) : null}
+        {renderControlNode()}
+        {addonAfter !== undefined ? (
+          addonAfterBare ? (
+            addonAfter
+          ) : (
+            <InputNumberAddon>{addonAfter}</InputNumberAddon>
+          )
+        ) : null}
+      </div>
+    )
+  }
+
+  if (!showCount && !rootClassName) {
+    return renderGroupedControlNode()
+  }
 
   return (
-    <Input
-      {...rest}
-      ref={syncForwardedRef}
-      type="text"
-      inputMode={
-        rest.inputMode ??
-        (countFractionDigits(stepValue) > 0 || precision !== undefined ? 'decimal' : 'numeric')
-      }
-      disabled={disabled}
-      readOnly={readOnly}
-      size={size}
-      suffix={mergedSuffix}
-      role="spinbutton"
-      aria-valuemin={String(resolvedBounds.min)}
-      aria-valuemax={String(resolvedBounds.max)}
-      value={inputDisplay.value}
-      aria-valuenow={ariaValueNow.value}
-      aria-valuetext={ariaValueText.value}
-      onInput={event => {
-        if (programmaticInputSync.value) {
-          programmaticInputSync.value = false
-          return
-        }
-
-        const target = event.target as HTMLInputElement | null
-        const rawInput = target?.value ?? ''
-
-        if (composing.value || !!(event as any).isComposing) {
-          syncComposingDraft(rawInput)
-          onInput?.(event)
-          return
-        }
-
-        handleDraftInput(rawInput)
-
-        onInput?.(event)
-      }}
-      onKeyDown={event => {
-        onKeyDown?.(event)
-        if ((event as any).defaultPrevented || !keyboard) return
-
-        if ((event as any).key === 'ArrowUp') {
-          ;(event as any).preventDefault?.()
-          stepValueBy('up', 'keydown')
-          return
-        }
-
-        if ((event as any).key === 'ArrowDown') {
-          ;(event as any).preventDefault?.()
-          stepValueBy('down', 'keydown')
-        }
-      }}
-      onPressEnter={onPressEnter}
-      onFocus={(event: FocusEvent) => {
-        syncDisplayState()
-        syncInputElement(false)
-        onFocus?.(event)
-      }}
-      onCompositionStart={(event: CompositionEvent) => {
-        composing.value = true
-        syncComposingDraft((event.target as HTMLInputElement | null)?.value ?? draftText.value)
-        onCompositionStart?.(event)
-      }}
-      onCompositionEnd={(event: CompositionEvent) => {
-        composing.value = false
-        handleDraftInput((event.target as HTMLInputElement | null)?.value ?? draftText.value)
-        onCompositionEnd?.(event)
-      }}
-      onBlur={(event: FocusEvent) => {
-        const target = event.target as HTMLInputElement | null
-        const parsed = parseInputValue(target?.value ?? draftText.value, parser, decimalSeparator)
-
-        composing.value = false
-        userTyping.value = false
-        draftText.value = parsed.display
-        commitParsedValue(parsed, changeOnBlur)
-        syncDisplayState()
-        syncInputElement(true)
-        onBlur?.(event)
-      }}
-      onWheel={(event: WheelEvent) => {
-        onWheel?.(event)
-        if (
-          (event as any).defaultPrevented ||
-          !changeOnWheel ||
-          disabled ||
-          readOnly ||
-          document.activeElement !== inputRef.current
-        ) {
-          return
-        }
-
-        if ((event as any).deltaY === 0) return
-
-        ;(event as any).preventDefault?.()
-        stepValueBy((event as any).deltaY < 0 ? 'up' : 'down', 'wheel')
-      }}
-    />
+    <div
+      className={mergeClassName(showCount ? 'flex flex-col gap-2' : undefined, rootClassName)}
+      data-rue-input-root="true"
+    >
+      {renderGroupedControlNode()}
+      {showCount ? (
+        <div
+          className={mergeClassName(
+            'flex justify-end text-xs leading-5 text-base-content/60',
+            countClassName,
+          )}
+          data-rue-input-count="true"
+        >
+          {countContent}
+        </div>
+      ) : null}
+    </div>
   )
 }
 

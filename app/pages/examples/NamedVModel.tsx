@@ -3,7 +3,7 @@ import NamedVModelDemo from './home-demos/NamedVModelDemo'
 import source from './home-demos/NamedVModelDemo.tsx?raw'
 
 const NamedVModel = createHomeSplitExamplePage({
-  title: '命名 vModel',
+  title: '命名 v-model',
   source,
   Demo: NamedVModelDemo,
 })

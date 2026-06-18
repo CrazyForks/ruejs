@@ -54,7 +54,7 @@ describe('Slots actual page', () => {
     })
 
     const providedDemo = findDemoSection(container, '传入 slot 之后')
-    const fallbackDemo = findDemoSection(container, '省略 slot 之后')
+    const fallbackDemo = findDemoSection(container, '未传 slot 时')
     expect(providedDemo).not.toBeNull()
     expect(fallbackDemo).not.toBeNull()
     expect(providedDemo?.textContent).toContain('支付面板')

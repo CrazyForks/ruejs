@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 MockupCode 模块概述
 - 汇总代码样机组件的公开类型、渲染入口和局部工具逻辑。
@@ -135,6 +134,60 @@ const resolveToneClassName = (tone?: MockupCodeTone, highlight?: boolean) => {
   }
 }
 
+/** 生成单行通用属性的内部工具函数。 */
+const createLineProps = ({
+  rest,
+  resolvedPrefix,
+  tone,
+  highlight,
+  className,
+}: {
+  rest: Record<string, any>
+  resolvedPrefix: any
+  tone?: MockupCodeTone
+  highlight?: boolean
+  className?: string
+}) => ({
+  ...rest,
+  'data-prefix': resolvedPrefix == null ? undefined : String(resolvedPrefix),
+  className: joinClassName(resolveToneClassName(tone, highlight), className),
+})
+
+/** 生成根节点通用属性的内部工具函数。 */
+const createRootProps = ({
+  rest,
+  className,
+}: {
+  rest: Record<string, any>
+  className?: string
+}) => ({
+  ...rest,
+  className: mergeClassName('mockup-code', className),
+})
+
+/** 渲染数据驱动代码行的内部工具函数。 */
+const renderMockupCodeItem = (
+  item: MockupCodeLineData,
+  index: number,
+  prefix: any,
+  lineNumbers: boolean | undefined,
+  start: number,
+  codeClassName: string | undefined,
+) => {
+  const itemPrefix = hasContent(item.prefix) ? item.prefix : prefix
+  const lineNumber = lineNumbers ? start + index : undefined
+
+  return (
+    <Line
+      key={item.key ?? index}
+      {...item}
+      prefix={itemPrefix}
+      lineNumber={lineNumber}
+      codeClassName={item.codeClassName ?? codeClassName}
+    />
+  )
+}
+
 /** Line 的内部工具函数。 */
 const Line: FC<MockupCodeLineProps> = ({
   as = 'pre',
@@ -148,21 +201,62 @@ const Line: FC<MockupCodeLineProps> = ({
   tone,
   ...rest
 }) => {
-  const Component = as as any
   const resolvedPrefix = hasContent(prefix) ? prefix : lineNumber
+  const lineProps = createLineProps({
+    rest,
+    resolvedPrefix,
+    tone,
+    highlight,
+    className,
+  })
+  const hasChildren = hasContent(children)
+  const hasLineCode = hasContent(lineCode)
+
+  if (as === 'div') {
+    return (
+      <div {...lineProps}>
+        {hasChildren ? (
+          children
+        ) : hasLineCode ? (
+          <code className={codeClassName}>{lineCode}</code>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (as === 'li') {
+    return (
+      <li {...lineProps}>
+        {hasChildren ? (
+          children
+        ) : hasLineCode ? (
+          <code className={codeClassName}>{lineCode}</code>
+        ) : null}
+      </li>
+    )
+  }
+
+  if (typeof as === 'function') {
+    const Component = as as any
+    return (
+      <Component {...lineProps}>
+        {hasChildren ? (
+          children
+        ) : hasLineCode ? (
+          <code className={codeClassName}>{lineCode}</code>
+        ) : null}
+      </Component>
+    )
+  }
 
   return (
-    <Component
-      {...rest}
-      data-prefix={resolvedPrefix == null ? undefined : String(resolvedPrefix)}
-      className={joinClassName(resolveToneClassName(tone, highlight), className)}
-    >
-      {hasContent(children) ? (
+    <pre {...lineProps}>
+      {hasChildren ? (
         children
-      ) : hasContent(lineCode) ? (
+      ) : hasLineCode ? (
         <code className={codeClassName}>{lineCode}</code>
       ) : null}
-    </Component>
+    </pre>
   )
 }
 
@@ -178,27 +272,49 @@ const Root: FC<MockupCodeProps> = ({
   codeClassName,
   ...rest
 }) => {
-  const Component = as as any
-  const renderedItems = items?.map((item, index) => {
-    const itemPrefix = hasContent(item.prefix) ? item.prefix : prefix
-    const lineNumber = lineNumbers ? start + index : undefined
+  const rootProps = createRootProps({ rest, className })
 
+  if (as === 'section') {
     return (
-      <Line
-        key={item.key ?? index}
-        {...item}
-        prefix={itemPrefix}
-        lineNumber={lineNumber}
-        codeClassName={item.codeClassName ?? codeClassName}
-      />
+      <section {...rootProps}>
+        {(items ?? []).map((item, index) =>
+          renderMockupCodeItem(item, index, prefix, lineNumbers, start, codeClassName),
+        )}
+        {children}
+      </section>
     )
-  })
+  }
+
+  if (as === 'article') {
+    return (
+      <article {...rootProps}>
+        {(items ?? []).map((item, index) =>
+          renderMockupCodeItem(item, index, prefix, lineNumbers, start, codeClassName),
+        )}
+        {children}
+      </article>
+    )
+  }
+
+  if (typeof as === 'function') {
+    const Component = as as any
+    return (
+      <Component {...rootProps}>
+        {(items ?? []).map((item, index) =>
+          renderMockupCodeItem(item, index, prefix, lineNumbers, start, codeClassName),
+        )}
+        {children}
+      </Component>
+    )
+  }
 
   return (
-    <Component {...rest} className={mergeClassName('mockup-code', className)}>
-      {renderedItems}
+    <div {...rootProps}>
+      {(items ?? []).map((item, index) =>
+        renderMockupCodeItem(item, index, prefix, lineNumbers, start, codeClassName),
+      )}
       {children}
-    </Component>
+    </div>
   )
 }
 

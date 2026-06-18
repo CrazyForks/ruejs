@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 RadialProgress 模块概述
 - 汇总环形进度组件的公开类型、渲染入口和局部工具逻辑。
@@ -99,15 +98,6 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 /** merge Class Name 的内部工具函数。 */
 const mergeClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
-
-/** assign Forwarded Ref 的内部工具函数。 */
-const assignForwardedRef = (forwardedRef: any, element: HTMLDivElement | null) => {
-  if (typeof forwardedRef === 'function') {
-    forwardedRef(element)
-  } else if (forwardedRef && typeof forwardedRef === 'object' && 'current' in forwardedRef) {
-    forwardedRef.current = element ?? undefined
-  }
-}
 
 /** parse Numberish 的内部工具函数。 */
 const parseNumberish = (value?: string | number) => {
@@ -372,6 +362,14 @@ const serializeStyle = (style?: string | StyleObject) => {
     .join('; ')
 }
 
+/** 合并 Style 文本的内部工具函数。 */
+const mergeSerializedStyles = (...styles: Array<string | undefined>) => {
+  return styles
+    .map(style => style?.trim())
+    .filter(Boolean)
+    .join('; ')
+}
+
 /** Radial Progress 的内部工具函数。 */
 const RadialProgress: FC<RadialProgressProps> = ({
   value,
@@ -446,35 +444,31 @@ const RadialProgress: FC<RadialProgressProps> = ({
     status: resolvedStatus,
   })
   const progressStrokeColor = Array.isArray(strokeColor) ? strokeColor[0] : strokeColor
-  const userStyle = serializeStyle(style)
+  const rootStyle = mergeSerializedStyles(
+    serializeStyle(style),
+    serializeStyle({
+      '--value': resolvedPercent,
+      '--size': resolvedSize,
+      '--thickness': resolvedThickness,
+      width: resolvedSize,
+      height: resolvedSize,
+    }),
+  )
   const trackPath = describeArcPath(50, 50, 42, startAngle, endAngle)
   const indicatorFontSize = `clamp(0.75rem, calc(${resolvedSize} / 4.5), 1.75rem)`
-
-  const applyRef = (element: HTMLDivElement | null) => {
-    if (element) {
-      if (userStyle) {
-        element.setAttribute('style', userStyle)
-      } else {
-        element.removeAttribute('style')
-      }
-      element.style.setProperty('--value', String(resolvedPercent))
-      element.style.setProperty('--size', resolvedSize)
-      element.style.setProperty('--thickness', resolvedThickness)
-      element.style.width = resolvedSize
-      element.style.height = resolvedSize
-    }
-
-    assignForwardedRef(forwardedRef, element)
-  }
+  const stepIndexes = stepsConfig
+    ? Array.from({ length: stepsConfig.count }, (_, index) => index)
+    : []
 
   return (
     <div
       {...rest}
-      ref={applyRef}
+      ref={forwardedRef}
       role={role ?? 'progressbar'}
       aria-valuemin={ariaValueMin ?? '0'}
       aria-valuemax={ariaValueMax ?? '100'}
       aria-valuenow={String(ariaValueNow ?? Math.round(resolvedPercent))}
+      style={rootStyle}
       className={mergeClassName(
         'rue-radial-progress relative inline-grid shrink-0 place-items-center align-middle',
         className,
@@ -500,7 +494,7 @@ const RadialProgress: FC<RadialProgressProps> = ({
           className={resolvedRailColor ? undefined : 'text-base-300/70'}
         />
         {stepsConfig
-          ? Array.from({ length: stepsConfig.count }, (_, index) => {
+          ? stepIndexes.map(index => {
               const gap = clamp(stepsConfig.gap, 0, sweepAngle / Math.max(stepsConfig.count * 2, 1))
               const segmentSweep = Math.max(
                 (sweepAngle - gap * (stepsConfig.count - 1)) / stepsConfig.count,

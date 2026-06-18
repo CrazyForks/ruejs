@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Dock 组件概述
 - 形态：保留原有 children / items 双写法，并补充 key、disabled、链接语义等增强能力。
@@ -6,6 +5,7 @@ Dock 组件概述
 - 复合组件：Item / Label 仍可独立组合，保持 Rue 当前 dock 视觉风格。
 */
 import type { FC } from '@rue-js/rue'
+import { computed, ref } from '@rue-js/rue'
 
 /** DockRootAs 类型。 */
 export type DockRootAs = 'div' | 'nav'
@@ -158,14 +158,31 @@ const resolveSelectedKey = (
   items: ReadonlyArray<NormalizedDockItem>,
   activeKey: DockItemKey | null | undefined,
   activeIndex: number | undefined,
-  defaultActiveKey: DockItemKey | null | undefined,
-  defaultActiveIndex: number | undefined,
+  uncontrolledActiveKey: DockItemKey | null,
 ) => {
   if (activeKey !== undefined) return activeKey
   if (activeIndex !== undefined) return items[activeIndex]?.key ?? null
+  return uncontrolledActiveKey
+}
+
+/** 解析 Initial Selected Key 的内部工具函数。 */
+const resolveInitialSelectedKey = (
+  items: ReadonlyArray<NormalizedDockItem>,
+  defaultActiveKey: DockItemKey | null | undefined,
+  defaultActiveIndex: number | undefined,
+) => {
   if (defaultActiveKey !== undefined) return defaultActiveKey
   if (defaultActiveIndex !== undefined) return items[defaultActiveIndex]?.key ?? null
-  return null
+  return items.find(item => item.active)?.key ?? null
+}
+
+/** 构建 Item Class Name 的内部工具函数。 */
+const buildItemClassName = (active?: boolean, disabled?: boolean, className?: string) => {
+  let cls = ''
+  if (active) cls += ' dock-active'
+  if (disabled) cls += ' opacity-50'
+  if (className) cls += ` ${className}`
+  return cls.trim() || undefined
 }
 
 /** Item 的内部工具函数。 */
@@ -183,11 +200,7 @@ const Item: FC<DockItemProps> = ({
   children,
 }) => {
   const renderAs = as ?? (href ? 'a' : 'button')
-  let cls = ''
-  if (active) cls += ' dock-active'
-  if (disabled) cls += ' opacity-50'
-  if (className) cls += ` ${className}`
-  const clsTrim = cls.trim() || undefined
+  const clsTrim = buildItemClassName(active, disabled, className)
 
   const handleClick = (event: MouseEvent) => {
     if (disabled) {
@@ -275,70 +288,90 @@ const Dock: FC<DockProps> = ({
       key: item.key ?? index,
       index,
     }))
-    const selectedKey = resolveSelectedKey(
-      normalizedItems,
-      activeKey,
-      activeIndex,
-      defaultActiveKey,
-      defaultActiveIndex,
+    const uncontrolledActiveKey = ref(
+      resolveInitialSelectedKey(normalizedItems, defaultActiveKey, defaultActiveIndex),
     )
-
-    const content = normalizedItems.map(item => {
+    const currentSelectedKey = computed(() =>
+      resolveSelectedKey(normalizedItems, activeKey, activeIndex, uncontrolledActiveKey.value),
+    )
+    const getEffectiveSelectedKey = () => currentSelectedKey.get()
+    const isControlled = activeKey !== undefined || activeIndex !== undefined
+    const isItemActive = (item: NormalizedDockItem) =>
+      getEffectiveSelectedKey() != null
+        ? getEffectiveSelectedKey() === item.key
+        : activeIndex != null
+          ? activeIndex === item.index
+          : !!item.active
+    const handleItemClick = (
+      event: MouseEvent,
+      item: NormalizedDockItem,
+      context: DockChangeContext,
+    ) => {
+      if (item.disabled) {
+        if (typeof (event as any).preventDefault === 'function') {
+          ;(event as any).preventDefault()
+        }
+        if (typeof (event as any).stopPropagation === 'function') {
+          ;(event as any).stopPropagation()
+        }
+        return
+      }
+      if (!isControlled) uncontrolledActiveKey.value = item.key
+      if (item.onClick) item.onClick(event, context)
+      if (onChange) onChange(item.index, context)
+      if (onSelect) onSelect(item.key, context)
+    }
+    const renderItemContent = (item: NormalizedDockItem) => (
+      <>
+        {item.icon != null ? (
+          <span
+            className={appendClassName(
+              'inline-flex items-center justify-center',
+              item.iconClassName,
+            )}
+          >
+            {item.icon}
+          </span>
+        ) : null}
+        {item.label != null ? <Label className={item.labelClassName}>{item.label}</Label> : null}
+      </>
+    )
+    const renderDataItem = (item: NormalizedDockItem) => {
       const context: DockChangeContext = {
         key: item.key,
         index: item.index,
         item,
       }
-      const isActive =
-        selectedKey != null
-          ? selectedKey === item.key
-          : activeIndex != null
-            ? activeIndex === item.index
-            : !!item.active
 
       return (
         <Item
           key={item.key}
-          as={item.as ?? (item.href ? 'a' : 'button')}
-          className={item.className}
-          active={isActive}
+          as={item.as}
+          active={isItemActive(item)}
           disabled={item.disabled}
+          className={item.className}
           href={item.href}
           target={item.target}
           rel={item.rel}
           htmlType={item.htmlType}
           ariaLabel={item.ariaLabel}
-          onClick={event => {
-            if (item.onClick) item.onClick(event, context)
-            if (onChange) onChange(item.index, context)
-            if (onSelect) onSelect(item.key, context)
-          }}
+          onClick={(event: MouseEvent) => handleItemClick(event, item, context)}
         >
-          {item.icon != null ? (
-            <span
-              className={appendClassName(
-                'inline-flex items-center justify-center',
-                item.iconClassName,
-              )}
-            >
-              {item.icon}
-            </span>
-          ) : null}
-          {item.label != null ? <Label className={item.labelClassName}>{item.label}</Label> : null}
+          {renderItemContent(item)}
         </Item>
       )
-    })
+    }
 
     if (as === 'nav') {
       return (
         <nav className={cls} aria-label={ariaLabel}>
-          {content}
+          {normalizedItems.map(item => renderDataItem(item))}
         </nav>
       )
     }
     return (
       <div className={cls} aria-label={ariaLabel}>
-        {content}
+        {normalizedItems.map(item => renderDataItem(item))}
       </div>
     )
   }

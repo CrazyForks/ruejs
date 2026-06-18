@@ -23529,8 +23529,8 @@
       "title": "组件 v-model",
       "sectionTitle": "实现自定义输入组件",
       "type": "code",
-      "text": "import { ref } from '@rue-js/rue' interface ChildProps { modelValue?: number onUpdateModelValue?: (value: number) => void } function Child({ modelValue = 0, onUpdateModelValue }: ChildProps) { function update() { onUpdateModelValue?.(modelValue + 1) } return ( <div> <div>Parent bound value is: {modelValue}</div> <button onClick={update}>Increment</button> </div> ) }",
-      "searchText": "组件 v-model 实现自定义输入组件 import { ref } from '@rue-js/rue' interface childprops { modelvalue?: number onupdatemodelvalue?: (value: number) => void } function child({ modelvalue = 0, onupdatemodelvalue }: childprops) { function update() { onupdatemodelvalue?.(modelvalue + 1) } return ( <div> <div>parent bound value is: {modelvalue}</div> <button onclick={update}>increment</button> </div> ) } guide/components/v-model"
+      "text": "import { ref } from '@rue-js/rue' interface ChildProps { modelValue?: number onUpdateModelValue?: (value: number) => void } function Child(props: ChildProps) { const modelValue = props.modelValue ?? 0 function update() { props.onUpdateModelValue?.(modelValue + 1) } return ( <div> <div>Parent bound value is: {modelValue}</div> <button onClick={update}>Increment</button> </div> ) }",
+      "searchText": "组件 v-model 实现自定义输入组件 import { ref } from '@rue-js/rue' interface childprops { modelvalue?: number onupdatemodelvalue?: (value: number) => void } function child(props: childprops) { const modelvalue = props.modelvalue ?? 0 function update() { props.onupdatemodelvalue?.(modelvalue + 1) } return ( <div> <div>parent bound value is: {modelvalue}</div> <button onclick={update}>increment</button> </div> ) } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:5",
@@ -23540,8 +23540,8 @@
       "title": "组件 v-model",
       "sectionTitle": "实现自定义输入组件",
       "type": "paragraph",
-      "text": "父组件可以通过 props 和回调绑定一个值：",
-      "searchText": "组件 v-model 实现自定义输入组件 父组件可以通过 props 和回调绑定一个值： guide/components/v-model"
+      "text": "父组件可以通过 v-model 绑定一个值：",
+      "searchText": "组件 v-model 实现自定义输入组件 父组件可以通过 v-model 绑定一个值： guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:6",
@@ -23551,8 +23551,8 @@
       "title": "组件 v-model",
       "sectionTitle": "实现自定义输入组件",
       "type": "code",
-      "text": "import { ref } from '@rue-js/rue' function Parent() { const countModel = ref(0) return <Child modelValue={countModel.value} onUpdateModelValue={v => (countModel.value = v)} /> }",
-      "searchText": "组件 v-model 实现自定义输入组件 import { ref } from '@rue-js/rue' function parent() { const countmodel = ref(0) return <child modelvalue={countmodel.value} onupdatemodelvalue={v => (countmodel.value = v)} /> } guide/components/v-model"
+      "text": "import { ref } from '@rue-js/rue' function Parent() { const countModel = ref(0) return <Child v-model={countModel.value} /> }",
+      "searchText": "组件 v-model 实现自定义输入组件 import { ref } from '@rue-js/rue' function parent() { const countmodel = ref(0) return <child v-model={countmodel.value} /> } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:7",
@@ -23573,41 +23573,41 @@
       "title": "组件 v-model",
       "sectionTitle": "实现自定义输入组件",
       "type": "code",
-      "text": "interface CustomInputProps { modelValue?: string onUpdateModelValue?: (value: string) => void } function CustomInput({ modelValue = '', onUpdateModelValue }: CustomInputProps) { return <input value={modelValue} onInput={e => onUpdateModelValue?.(e.currentTarget.value)} /> }",
-      "searchText": "组件 v-model 实现自定义输入组件 interface custominputprops { modelvalue?: string onupdatemodelvalue?: (value: string) => void } function custominput({ modelvalue = '', onupdatemodelvalue }: custominputprops) { return <input value={modelvalue} oninput={e => onupdatemodelvalue?.(e.currenttarget.value)} /> } guide/components/v-model"
+      "text": "interface CustomInputProps { modelValue?: string onUpdateModelValue?: (value: string) => void } function CustomInput(props: CustomInputProps) { return ( <input value={props.modelValue ?? ''} onInput={e => props.onUpdateModelValue?.(e.currentTarget.value)} /> ) }",
+      "searchText": "组件 v-model 实现自定义输入组件 interface custominputprops { modelvalue?: string onupdatemodelvalue?: (value: string) => void } function custominput(props: custominputprops) { return ( <input value={props.modelvalue ?? ''} oninput={e => props.onupdatemodelvalue?.(e.currenttarget.value)} /> ) } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:9",
       "docId": "guide/components/v-model",
       "route": "/guide/guide/components/v-model",
-      "href": "/guide/guide/components/v-model#-简化用法",
+      "href": "/guide/guide/components/v-model#-本地访问器",
       "title": "组件 v-model",
-      "sectionTitle": "简化用法",
+      "sectionTitle": "本地访问器",
       "type": "heading",
-      "text": "简化用法",
-      "searchText": "组件 v-model 简化用法 简化用法 guide/components/v-model"
+      "text": "本地访问器",
+      "searchText": "组件 v-model 本地访问器 本地访问器 guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:10",
       "docId": "guide/components/v-model",
       "route": "/guide/guide/components/v-model",
-      "href": "/guide/guide/components/v-model#-简化用法",
+      "href": "/guide/guide/components/v-model#-本地访问器",
       "title": "组件 v-model",
-      "sectionTitle": "简化用法",
+      "sectionTitle": "本地访问器",
       "type": "paragraph",
-      "text": "Rue 提供了 useVModel 组合式函数来简化 v-model 的实现：",
-      "searchText": "组件 v-model 简化用法 rue 提供了 usevmodel 组合式函数来简化 v-model 的实现： guide/components/v-model"
+      "text": "如果组件内部想像读写本地状态一样操作 model，可以把 props 和更新回调包装成一个小访问器：",
+      "searchText": "组件 v-model 本地访问器 如果组件内部想像读写本地状态一样操作 model，可以把 props 和更新回调包装成一个小访问器： guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:11",
       "docId": "guide/components/v-model",
       "route": "/guide/guide/components/v-model",
-      "href": "/guide/guide/components/v-model#-简化用法",
+      "href": "/guide/guide/components/v-model#-本地访问器",
       "title": "组件 v-model",
-      "sectionTitle": "简化用法",
+      "sectionTitle": "本地访问器",
       "type": "code",
-      "text": "import { useVModel } from '@rue-js/rue' interface CustomInputProps { modelValue?: string onUpdateModelValue?: (value: string) => void } function CustomInput(props: CustomInputProps) { const model = useVModel(props, 'modelValue') return <input value={model.value} onInput={e => (model.value = e.currentTarget.value)} /> }",
-      "searchText": "组件 v-model 简化用法 import { usevmodel } from '@rue-js/rue' interface custominputprops { modelvalue?: string onupdatemodelvalue?: (value: string) => void } function custominput(props: custominputprops) { const model = usevmodel(props, 'modelvalue') return <input value={model.value} oninput={e => (model.value = e.currenttarget.value)} /> } guide/components/v-model"
+      "text": "interface CustomInputProps { modelValue?: string onUpdateModelValue?: (value: string) => void } function CustomInput(props: CustomInputProps) { const model = { get value() { return props.modelValue ?? '' }, set value(value: string) { props.onUpdateModelValue?.(value) }, } return <input value={model.value} onInput={e => (model.value = e.currentTarget.value)} /> }",
+      "searchText": "组件 v-model 本地访问器 interface custominputprops { modelvalue?: string onupdatemodelvalue?: (value: string) => void } function custominput(props: custominputprops) { const model = { get value() { return props.modelvalue ?? '' }, set value(value: string) { props.onupdatemodelvalue?.(value) }, } return <input value={model.value} oninput={e => (model.value = e.currenttarget.value)} /> } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:12",
@@ -23639,8 +23639,8 @@
       "title": "组件 v-model",
       "sectionTitle": "带参数的 v-model",
       "type": "code",
-      "text": "function Parent() { const bookTitle = ref('') return <MyComponent title={bookTitle.value} onUpdateTitle={v => (bookTitle.value = v)} /> }",
-      "searchText": "组件 v-model 带参数的 v-model function parent() { const booktitle = ref('') return <mycomponent title={booktitle.value} onupdatetitle={v => (booktitle.value = v)} /> } guide/components/v-model"
+      "text": "function Parent() { const bookTitle = ref('') return <MyComponent v-model:title={bookTitle.value} /> }",
+      "searchText": "组件 v-model 带参数的 v-model function parent() { const booktitle = ref('') return <mycomponent v-model:title={booktitle.value} /> } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:15",
@@ -23661,8 +23661,8 @@
       "title": "组件 v-model",
       "sectionTitle": "带参数的 v-model",
       "type": "code",
-      "text": "interface MyComponentProps { title?: string onUpdateTitle?: (value: string) => void } function MyComponent({ title = '', onUpdateTitle }: MyComponentProps) { return <input type=\"text\" value={title} onInput={e => onUpdateTitle?.(e.currentTarget.value)} /> }",
-      "searchText": "组件 v-model 带参数的 v-model interface mycomponentprops { title?: string onupdatetitle?: (value: string) => void } function mycomponent({ title = '', onupdatetitle }: mycomponentprops) { return <input type=\"text\" value={title} oninput={e => onupdatetitle?.(e.currenttarget.value)} /> } guide/components/v-model"
+      "text": "interface MyComponentProps { title?: string onUpdateTitle?: (value: string) => void } function MyComponent(props: MyComponentProps) { return ( <input type=\"text\" value={props.title ?? ''} onInput={e => props.onUpdateTitle?.(e.currentTarget.value)} /> ) }",
+      "searchText": "组件 v-model 带参数的 v-model interface mycomponentprops { title?: string onupdatetitle?: (value: string) => void } function mycomponent(props: mycomponentprops) { return ( <input type=\"text\" value={props.title ?? ''} oninput={e => props.onupdatetitle?.(e.currenttarget.value)} /> ) } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:17",
@@ -23683,8 +23683,8 @@
       "title": "组件 v-model",
       "sectionTitle": "带参数的 v-model",
       "type": "code",
-      "text": "interface MyComponentProps { title: string onUpdateTitle: (value: string) => void } function MyComponent({ title, onUpdateTitle }: MyComponentProps) { return <input type=\"text\" value={title} onInput={e => onUpdateTitle(e.currentTarget.value)} /> }",
-      "searchText": "组件 v-model 带参数的 v-model interface mycomponentprops { title: string onupdatetitle: (value: string) => void } function mycomponent({ title, onupdatetitle }: mycomponentprops) { return <input type=\"text\" value={title} oninput={e => onupdatetitle(e.currenttarget.value)} /> } guide/components/v-model"
+      "text": "interface MyComponentProps { title: string onUpdateTitle: (value: string) => void } function MyComponent(props: MyComponentProps) { return ( <input type=\"text\" value={props.title} onInput={e => props.onUpdateTitle(e.currentTarget.value)} /> ) }",
+      "searchText": "组件 v-model 带参数的 v-model interface mycomponentprops { title: string onupdatetitle: (value: string) => void } function mycomponent(props: mycomponentprops) { return ( <input type=\"text\" value={props.title} oninput={e => props.onupdatetitle(e.currenttarget.value)} /> ) } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:19",
@@ -23727,8 +23727,8 @@
       "title": "组件 v-model",
       "sectionTitle": "多个 v-model 绑定",
       "type": "code",
-      "text": "function Parent() { const first = ref('') const last = ref('') return ( <UserName firstName={first.value} lastName={last.value} onUpdateFirstName={v => (first.value = v)} onUpdateLastName={v => (last.value = v)} /> ) }",
-      "searchText": "组件 v-model 多个 v-model 绑定 function parent() { const first = ref('') const last = ref('') return ( <username firstname={first.value} lastname={last.value} onupdatefirstname={v => (first.value = v)} onupdatelastname={v => (last.value = v)} /> ) } guide/components/v-model"
+      "text": "function Parent() { const first = ref('') const last = ref('') return <UserName v-model:first-name={first.value} v-model:last-name={last.value} /> }",
+      "searchText": "组件 v-model 多个 v-model 绑定 function parent() { const first = ref('') const last = ref('') return <username v-model:first-name={first.value} v-model:last-name={last.value} /> } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:23",
@@ -23738,8 +23738,8 @@
       "title": "组件 v-model",
       "sectionTitle": "多个 v-model 绑定",
       "type": "code",
-      "text": "interface UserNameProps { firstName?: string lastName?: string onUpdateFirstName?: (value: string) => void onUpdateLastName?: (value: string) => void } function UserName({ firstName = '', lastName = '', onUpdateFirstName, onUpdateLastName, }: UserNameProps) { return ( <> <input type=\"text\" value={firstName} onInput={e => onUpdateFirstName?.(e.currentTarget.value)} /> <input type=\"text\" value={lastName} onInput={e => onUpdateLastName?.(e.currentTarget.value)} /> </> ) }",
-      "searchText": "组件 v-model 多个 v-model 绑定 interface usernameprops { firstname?: string lastname?: string onupdatefirstname?: (value: string) => void onupdatelastname?: (value: string) => void } function username({ firstname = '', lastname = '', onupdatefirstname, onupdatelastname, }: usernameprops) { return ( <> <input type=\"text\" value={firstname} oninput={e => onupdatefirstname?.(e.currenttarget.value)} /> <input type=\"text\" value={lastname} oninput={e => onupdatelastname?.(e.currenttarget.value)} /> </> ) } guide/components/v-model"
+      "text": "interface UserNameProps { firstName?: string lastName?: string onUpdateFirstName?: (value: string) => void onUpdateLastName?: (value: string) => void } function UserName(props: UserNameProps) { return ( <> <input type=\"text\" value={props.firstName ?? ''} onInput={e => props.onUpdateFirstName?.(e.currentTarget.value)} /> <input type=\"text\" value={props.lastName ?? ''} onInput={e => props.onUpdateLastName?.(e.currentTarget.value)} /> </> ) }",
+      "searchText": "组件 v-model 多个 v-model 绑定 interface usernameprops { firstname?: string lastname?: string onupdatefirstname?: (value: string) => void onupdatelastname?: (value: string) => void } function username(props: usernameprops) { return ( <> <input type=\"text\" value={props.firstname ?? ''} oninput={e => props.onupdatefirstname?.(e.currenttarget.value)} /> <input type=\"text\" value={props.lastname ?? ''} oninput={e => props.onupdatelastname?.(e.currenttarget.value)} /> </> ) } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:24",
@@ -23760,8 +23760,8 @@
       "title": "组件 v-model",
       "sectionTitle": "处理 v-model 修饰符",
       "type": "paragraph",
-      "text": "当我们学习表单输入绑定时，我们看到 v-model 有内置修饰符 - .trim、.number 和 .lazy。在某些情况下，你可能也希望自定义输入组件上的 v-model 支持自定义修饰符。",
-      "searchText": "组件 v-model 处理 v-model 修饰符 当我们学习表单输入绑定时，我们看到 v-model 有内置修饰符 - .trim、.number 和 .lazy。在某些情况下，你可能也希望自定义输入组件上的 v-model 支持自定义修饰符。 guide/components/v-model"
+      "text": "当我们学习表单输入绑定时，我们看到 v-model 有内置修饰符 - .trim、.number 和 .lazy。Rue 会为这些内置修饰符自动生成 modelModifiers / xxxModifiers；自定义修饰符也可以使用同一 props 协议，但需要显式传入对应的 modifiers prop。",
+      "searchText": "组件 v-model 处理 v-model 修饰符 当我们学习表单输入绑定时，我们看到 v-model 有内置修饰符 - .trim、.number 和 .lazy。rue 会为这些内置修饰符自动生成 modelmodifiers / xxxmodifiers；自定义修饰符也可以使用同一 props 协议，但需要显式传入对应的 modifiers prop。 guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:26",
@@ -23782,8 +23782,8 @@
       "title": "组件 v-model",
       "sectionTitle": "处理 v-model 修饰符",
       "type": "code",
-      "text": "interface MyComponentProps { modelValue?: string modelModifiers?: { capitalize?: boolean } onUpdateModelValue?: (value: string) => void } function MyComponent({ modelValue = '', modelModifiers = {}, onUpdateModelValue, }: MyComponentProps) { function emitValue(value: string) { if (modelModifiers.capitalize) { value = value.charAt(0).toUpperCase() + value.slice(1) } onUpdateModelValue?.(value) } return <input type=\"text\" value={modelValue} onInput={e => emitValue(e.currentTarget.value)} /> }",
-      "searchText": "组件 v-model 处理 v-model 修饰符 interface mycomponentprops { modelvalue?: string modelmodifiers?: { capitalize?: boolean } onupdatemodelvalue?: (value: string) => void } function mycomponent({ modelvalue = '', modelmodifiers = {}, onupdatemodelvalue, }: mycomponentprops) { function emitvalue(value: string) { if (modelmodifiers.capitalize) { value = value.charat(0).touppercase() + value.slice(1) } onupdatemodelvalue?.(value) } return <input type=\"text\" value={modelvalue} oninput={e => emitvalue(e.currenttarget.value)} /> } guide/components/v-model"
+      "text": "interface MyComponentProps { modelValue?: string modelModifiers?: { capitalize?: boolean } onUpdateModelValue?: (value: string) => void } function MyComponent(props: MyComponentProps) { function emitValue(value: string) { if (props.modelModifiers?.capitalize) { value = value.charAt(0).toUpperCase() + value.slice(1) } props.onUpdateModelValue?.(value) } return ( <input type=\"text\" value={props.modelValue ?? ''} onInput={e => emitValue(e.currentTarget.value)} /> ) }",
+      "searchText": "组件 v-model 处理 v-model 修饰符 interface mycomponentprops { modelvalue?: string modelmodifiers?: { capitalize?: boolean } onupdatemodelvalue?: (value: string) => void } function mycomponent(props: mycomponentprops) { function emitvalue(value: string) { if (props.modelmodifiers?.capitalize) { value = value.charat(0).touppercase() + value.slice(1) } props.onupdatemodelvalue?.(value) } return ( <input type=\"text\" value={props.modelvalue ?? ''} oninput={e => emitvalue(e.currenttarget.value)} /> ) } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:28",
@@ -23804,8 +23804,8 @@
       "title": "组件 v-model",
       "sectionTitle": "处理 v-model 修饰符",
       "type": "code",
-      "text": "function Parent() { const myText = ref('') return ( <MyComponent modelValue={myText.value} modelModifiers={{ capitalize: true }} onUpdateModelValue={v => (myText.value = v)} /> ) }",
-      "searchText": "组件 v-model 处理 v-model 修饰符 function parent() { const mytext = ref('') return ( <mycomponent modelvalue={mytext.value} modelmodifiers={{ capitalize: true }} onupdatemodelvalue={v => (mytext.value = v)} /> ) } guide/components/v-model"
+      "text": "function Parent() { const myText = ref('') return <MyComponent v-model={myText.value} modelModifiers={{ capitalize: true }} /> }",
+      "searchText": "组件 v-model 处理 v-model 修饰符 function parent() { const mytext = ref('') return <mycomponent v-model={mytext.value} modelmodifiers={{ capitalize: true }} /> } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:30",
@@ -23837,8 +23837,8 @@
       "title": "组件 v-model",
       "sectionTitle": "带参数的 v-model 修饰符",
       "type": "code",
-      "text": "function Parent() { const myText = ref('') return ( <MyComponent title={myText.value} titleModifiers={{ capitalize: true }} onUpdateTitle={v => (myText.value = v)} /> ) }",
-      "searchText": "组件 v-model 带参数的 v-model 修饰符 function parent() { const mytext = ref('') return ( <mycomponent title={mytext.value} titlemodifiers={{ capitalize: true }} onupdatetitle={v => (mytext.value = v)} /> ) } guide/components/v-model"
+      "text": "function Parent() { const myText = ref('') return <MyComponent v-model:title={myText.value} titleModifiers={{ capitalize: true }} /> }",
+      "searchText": "组件 v-model 带参数的 v-model 修饰符 function parent() { const mytext = ref('') return <mycomponent v-model:title={mytext.value} titlemodifiers={{ capitalize: true }} /> } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:33",
@@ -23859,8 +23859,8 @@
       "title": "组件 v-model",
       "sectionTitle": "带参数的 v-model 修饰符",
       "type": "code",
-      "text": "interface MyComponentProps { title?: string titleModifiers?: { capitalize?: boolean } onUpdateTitle?: (value: string) => void } function MyComponent({ title = '', titleModifiers = {}, onUpdateTitle }: MyComponentProps) { console.log(titleModifiers) // { capitalize: true } function emitValue(value: string) { if (titleModifiers.capitalize) { value = value.charAt(0).toUpperCase() + value.slice(1) } onUpdateTitle?.(value) } return <input type=\"text\" value={title} onInput={e => emitValue(e.currentTarget.value)} /> }",
-      "searchText": "组件 v-model 带参数的 v-model 修饰符 interface mycomponentprops { title?: string titlemodifiers?: { capitalize?: boolean } onupdatetitle?: (value: string) => void } function mycomponent({ title = '', titlemodifiers = {}, onupdatetitle }: mycomponentprops) { console.log(titlemodifiers) // { capitalize: true } function emitvalue(value: string) { if (titlemodifiers.capitalize) { value = value.charat(0).touppercase() + value.slice(1) } onupdatetitle?.(value) } return <input type=\"text\" value={title} oninput={e => emitvalue(e.currenttarget.value)} /> } guide/components/v-model"
+      "text": "interface MyComponentProps { title?: string titleModifiers?: { capitalize?: boolean } onUpdateTitle?: (value: string) => void } function MyComponent(props: MyComponentProps) { console.log(props.titleModifiers) // { capitalize: true } function emitValue(value: string) { if (props.titleModifiers?.capitalize) { value = value.charAt(0).toUpperCase() + value.slice(1) } props.onUpdateTitle?.(value) } return ( <input type=\"text\" value={props.title ?? ''} onInput={e => emitValue(e.currentTarget.value)} /> ) }",
+      "searchText": "组件 v-model 带参数的 v-model 修饰符 interface mycomponentprops { title?: string titlemodifiers?: { capitalize?: boolean } onupdatetitle?: (value: string) => void } function mycomponent(props: mycomponentprops) { console.log(props.titlemodifiers) // { capitalize: true } function emitvalue(value: string) { if (props.titlemodifiers?.capitalize) { value = value.charat(0).touppercase() + value.slice(1) } props.onupdatetitle?.(value) } return ( <input type=\"text\" value={props.title ?? ''} oninput={e => emitvalue(e.currenttarget.value)} /> ) } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:35",
@@ -23881,8 +23881,8 @@
       "title": "组件 v-model",
       "sectionTitle": "带参数的 v-model 修饰符",
       "type": "code",
-      "text": "function Parent() { const first = ref('') const last = ref('') return ( <UserName firstName={first.value} firstNameModifiers={{ capitalize: true }} lastName={last.value} lastNameModifiers={{ uppercase: true }} onUpdateFirstName={v => (first.value = v)} onUpdateLastName={v => (last.value = v)} /> ) }",
-      "searchText": "组件 v-model 带参数的 v-model 修饰符 function parent() { const first = ref('') const last = ref('') return ( <username firstname={first.value} firstnamemodifiers={{ capitalize: true }} lastname={last.value} lastnamemodifiers={{ uppercase: true }} onupdatefirstname={v => (first.value = v)} onupdatelastname={v => (last.value = v)} /> ) } guide/components/v-model"
+      "text": "function Parent() { const first = ref('') const last = ref('') return ( <UserName v-model:first-name={first.value} firstNameModifiers={{ capitalize: true }} v-model:last-name={last.value} lastNameModifiers={{ uppercase: true }} /> ) }",
+      "searchText": "组件 v-model 带参数的 v-model 修饰符 function parent() { const first = ref('') const last = ref('') return ( <username v-model:first-name={first.value} firstnamemodifiers={{ capitalize: true }} v-model:last-name={last.value} lastnamemodifiers={{ uppercase: true }} /> ) } guide/components/v-model"
     },
     {
       "id": "guide/components/v-model:37",
@@ -36553,8 +36553,8 @@
       "title": "渲染函数与 JSX",
       "sectionTitle": "v-model",
       "type": "paragraph",
-      "text": "v-model 在手写渲染函数里需要你显式提供 modelValue 和 onUpdate:modelValue：",
-      "searchText": "渲染函数与 jsx v-model v-model 在手写渲染函数里需要你显式提供 modelvalue 和 onupdate:modelvalue： guide/extras/render-function"
+      "text": "v-model 在手写渲染函数里需要你显式提供 modelValue 和 onUpdateModelValue：",
+      "searchText": "渲染函数与 jsx v-model v-model 在手写渲染函数里需要你显式提供 modelvalue 和 onupdatemodelvalue： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:92",
@@ -36564,8 +36564,8 @@
       "title": "渲染函数与 JSX",
       "sectionTitle": "v-model",
       "type": "code",
-      "text": "import type { FC } from '@rue-js/rue' interface Props { modelValue: string 'onUpdate:modelValue'?: (value: string) => void } const MyInput: FC<Props> = props => { return ( <input value={props.modelValue} onInput={event => props['onUpdate:modelValue']?.((event.target as HTMLInputElement).value)} /> ) }",
-      "searchText": "渲染函数与 jsx v-model import type { fc } from '@rue-js/rue' interface props { modelvalue: string 'onupdate:modelvalue'?: (value: string) => void } const myinput: fc<props> = props => { return ( <input value={props.modelvalue} oninput={event => props['onupdate:modelvalue']?.((event.target as htmlinputelement).value)} /> ) } guide/extras/render-function"
+      "text": "import type { FC } from '@rue-js/rue' interface Props { modelValue: string onUpdateModelValue?: (value: string) => void } const MyInput: FC<Props> = props => { return ( <input value={props.modelValue} onInput={event => props.onUpdateModelValue?.((event.target as HTMLInputElement).value)} /> ) }",
+      "searchText": "渲染函数与 jsx v-model import type { fc } from '@rue-js/rue' interface props { modelvalue: string onupdatemodelvalue?: (value: string) => void } const myinput: fc<props> = props => { return ( <input value={props.modelvalue} oninput={event => props.onupdatemodelvalue?.((event.target as htmlinputelement).value)} /> ) } guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:93",
@@ -36630,8 +36630,8 @@
       "title": "渲染函数与 JSX",
       "sectionTitle": "函数式组件",
       "type": "paragraph",
-      "text": "如果组件需要向父级发信号，优先把它建模成显式 callback props，例如 onSendMessage、onClose、onUpdate:modelValue。如果组件需要默认内容或 render prop，则继续使用 props.children。",
-      "searchText": "渲染函数与 jsx 函数式组件 如果组件需要向父级发信号，优先把它建模成显式 callback props，例如 onsendmessage、onclose、onupdate:modelvalue。如果组件需要默认内容或 render prop，则继续使用 props.children。 guide/extras/render-function"
+      "text": "如果组件需要向父级发信号，优先把它建模成显式 callback props，例如 onSendMessage、onClose、onUpdateModelValue。如果组件需要默认内容或 render prop，则继续使用 props.children。",
+      "searchText": "渲染函数与 jsx 函数式组件 如果组件需要向父级发信号，优先把它建模成显式 callback props，例如 onsendmessage、onclose、onupdatemodelvalue。如果组件需要默认内容或 render prop，则继续使用 props.children。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:99",

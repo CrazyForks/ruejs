@@ -1023,6 +1023,7 @@ const shouldKeepField = (entity: RegisteredFieldEntity, formPreserve?: boolean) 
 const createFormInstance = (): InternalFormInstance => {
   const version = ref(0)
   const fields = new Map<string, RegisteredFieldEntity>()
+  const fieldRegistrationKeys = new Map<string, string>()
   const fieldMeta = new Map<string, InternalFieldMeta>()
   const subscribers = new Set<() => void>()
   let notifyQueued = false
@@ -1061,6 +1062,11 @@ const createFormInstance = (): InternalFormInstance => {
     }
     fieldMeta.set(pathKey, next)
     return next
+  }
+
+  const getEntityRegistrationKey = (entity: RegisteredFieldEntity) => {
+    const namePath = entity.getNamePath()
+    return namePath && namePath.length ? `${entity.kind}:${getPathKey(namePath)}` : entity.id
   }
 
   const buildFieldData = (namePath: NamePathSegment[]): FieldData => {
@@ -1181,7 +1187,14 @@ const createFormInstance = (): InternalFormInstance => {
   }
 
   const registerField = (entity: RegisteredFieldEntity) => {
+    const registrationKey = getEntityRegistrationKey(entity)
+    const previousEntityId = fieldRegistrationKeys.get(registrationKey)
+    if (previousEntityId && previousEntityId !== entity.id) {
+      fields.delete(previousEntityId)
+    }
     fields.set(entity.id, entity)
+    fieldRegistrationKeys.set(registrationKey, entity.id)
+
     const namePath = entity.getNamePath()
     if (namePath && namePath.length) {
       const initialValue = entity.getInitialValue()
@@ -1195,7 +1208,11 @@ const createFormInstance = (): InternalFormInstance => {
     }
 
     return () => {
+      const isActiveEntity = fieldRegistrationKeys.get(registrationKey) === entity.id
       fields.delete(entity.id)
+      if (!isActiveEntity) return
+      fieldRegistrationKeys.delete(registrationKey)
+
       const entityPath = entity.getNamePath()
       if (!entityPath || !entityPath.length) return
       if (!shouldKeepField(entity, runtimeOptions.preserve)) {
@@ -1218,8 +1235,13 @@ const createFormInstance = (): InternalFormInstance => {
     const names = nameList?.map(name => toNamePathArray(name))
     const errorFields: FieldError[] = []
     const entities = Array.from(fields.values())
+    const validatedKeys = new Set<string>()
 
     for (const entity of entities) {
+      const registrationKey = getEntityRegistrationKey(entity)
+      if (validatedKeys.has(registrationKey)) continue
+      validatedKeys.add(registrationKey)
+
       const entityPath = entity.getNamePath()
       if (!entityPath || !entityPath.length) continue
       if (names && !names.some(namePath => pathMatches(entityPath, namePath))) continue
@@ -1243,8 +1265,19 @@ const createFormInstance = (): InternalFormInstance => {
   const scrollToField = (name: NamePath, options?: ScrollIntoViewOptions & { focus?: boolean }) => {
     const namePath = toNamePathArray(name)
     const formName = runtimeOptions.name?.trim()
-    const id = [formName, ...namePath].filter(Boolean).join('__')
-    const target = rootElement?.querySelector(`#${CSS.escape(id)}`) as HTMLElement | null
+    const fieldId = namePath.map(segment => String(segment)).join('__')
+    const ids = formName ? [`${formName}__${fieldId}`, fieldId] : [fieldId]
+    const target =
+      ids
+        .map(id => rootElement?.querySelector(`#${CSS.escape(id)}`) as HTMLElement | null)
+        .find(Boolean) ??
+      ids
+        .map(id =>
+          typeof document === 'undefined'
+            ? null
+            : (document.getElementById(id) as HTMLElement | null),
+        )
+        .find(Boolean)
     if (!target) return
     target.scrollIntoView(options)
     if (options?.focus && 'focus' in target && typeof target.focus === 'function') {
@@ -1329,7 +1362,14 @@ const createFormInstance = (): InternalFormInstance => {
     },
     getFieldsError(nameList?: NamePath[]) {
       if (!nameList?.length) {
+        const seenKeys = new Set<string>()
         return Array.from(fields.values())
+          .filter(entity => {
+            const registrationKey = getEntityRegistrationKey(entity)
+            if (seenKeys.has(registrationKey)) return false
+            seenKeys.add(registrationKey)
+            return true
+          })
           .map(entity => entity.getNamePath())
           .filter((path): path is NamePathSegment[] => !!path && path.length > 0)
           .map(path => {
@@ -1988,7 +2028,6 @@ const FormRoot: FC<FormProps> = ({
   }) as Record<string, unknown>
   const internalFormRef = useRef<InternalFormInstance>()
   const rootElementRef = useRef<HTMLElement | null>(null)
-  const nativeSubmitHandlerRef = useRef<(event: Event) => void>()
   const subscriptionFormRef = useRef<InternalFormInstance | undefined>(undefined)
   const unsubscribeRenderRef = useRef<(() => void) | null>(null)
   const [renderVersion, setRenderVersion] = useState(0, { kind: 'ref' })
@@ -2000,6 +2039,8 @@ const FormRoot: FC<FormProps> = ({
   const resolvedForm = ((form as InternalFormInstance | undefined) ??
     internalFormRef.current) as InternalFormInstance
   const initializedNow = resolvedForm.__INTERNAL__.ensureInitialized(initialValues)
+  // Keep render-prop consumers subscribed when they read values through the form instance.
+  const formVersionSnapshot = resolvedForm.__INTERNAL__.version.value
 
   resolvedForm.__INTERNAL__.setRuntimeOptions({
     name,
@@ -2024,7 +2065,7 @@ const FormRoot: FC<FormProps> = ({
     })
   }
 
-  nativeSubmitHandlerRef.current = (event: Event) => {
+  const handleNativeSubmit = (event: Event) => {
     event.preventDefault()
     onSubmit?.(event)
     resolvedForm.submit()
@@ -2040,12 +2081,11 @@ const FormRoot: FC<FormProps> = ({
     unsubscribeRenderRef.current?.()
     unsubscribeRenderRef.current = null
     subscriptionFormRef.current = undefined
-    if (rootElementRef.current && nativeSubmitHandlerRef.current) {
-      rootElementRef.current.removeEventListener('submit', nativeSubmitHandlerRef.current)
-    }
   })
 
   const resolveContent = () => {
+    void formVersionSnapshot
+
     return typeof render === 'function' ? (
       <>{render(resolvedForm)}</>
     ) : typeof children === 'function' &&
@@ -2065,18 +2105,13 @@ const FormRoot: FC<FormProps> = ({
   const rootProps = {
     ...rest,
     ref: (element: HTMLElement | null) => {
-      if (rootElementRef.current && nativeSubmitHandlerRef.current) {
-        rootElementRef.current.removeEventListener('submit', nativeSubmitHandlerRef.current)
-      }
       rootElementRef.current = element
       resolvedForm.__INTERNAL__.setRootElement(element)
-      if (component === 'form' && element && nativeSubmitHandlerRef.current) {
-        element.addEventListener('submit', nativeSubmitHandlerRef.current)
-      }
     },
+    onSubmit: component === 'form' ? handleNativeSubmit : undefined,
     className: mergeClassName(
       'rue-form',
-      layout === 'inline' ? 'flex flex-wrap items-start gap-5' : 'grid gap-6',
+      layout === 'inline' ? 'flex flex-wrap items-start gap-5' : 'grid content-start gap-6',
       className,
     ),
     style,

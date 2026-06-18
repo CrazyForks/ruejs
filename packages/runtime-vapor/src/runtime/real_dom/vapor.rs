@@ -198,6 +198,23 @@ where
                 }));
             }
             Err(e) => {
+                let instance = crate::get_current_instance();
+                if shared_runtime_bridge::dispatch_error_captured(&e, &instance, "vapor setup") {
+                    let Some(adapter) = rue.get_dom_adapter_mut() else {
+                        return None;
+                    };
+                    let el = adapter.create_element_in_parent("div", parent_context);
+                    rue.set_owner_scope_on_element(Some(scope_id), &el);
+                    let fragment_nodes = rue.fragment_nodes_for_element(&el);
+                    return Some(MountedSubtreeState::Vapor(MountedVaporSubtree {
+                        r#type: MountedVaporSubtreeType::VaporWithSetup(f.clone()),
+                        host: Some(el),
+                        key: input.key.clone(),
+                        fragment_nodes,
+                        cleanup_bucket: input.mount_cleanup_bucket.clone(),
+                        effect_scope_id: Some(scope_id),
+                    }));
+                }
                 rue.handle_error(e.clone());
                 wasm_bindgen::throw_val(e.clone());
             }

@@ -30,76 +30,78 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(5));
-        function build1() {
-            return {
-                x: a.value,
-                arr: [
-                    a.value,
-                    {
-                        y: `y=${a.value}-${a.value > 0 ? 'A' : 'B'}`
-                    }
-                ]
-            };
-        }
-        function build2() {
-            return {
-                obj: {
-                    z: a.value > 0 ? 'ok' : 'no'
-                },
-                arr2: [
-                    a.value,
-                    'm'
-                ]
-            };
-        }
-        function build3() {
-            return {
-                more: `m=${a.value}`,
-                arr3: [
-                    {
-                        k: a.value
-                    },
-                    a.value > 3 ? 'X' : 'Y'
-                ]
-            };
-        }
-        const combined = {
-            ...build1(),
-            ...build2(),
-            ...build3(),
-            extra: a.value > 0 ? [
-                't',
-                a.value
-            ] : [
-                'f'
-            ]
-        };
-        const list = [
-            ...build1().arr,
-            ...build2().arr2,
-            ...build3().arr3,
-            a.value > 0 ? {
-                p: a.value
-            } : {
-                p: 0
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(5));
+            function build1() {
+                return {
+                    x: a.value,
+                    arr: [
+                        a.value,
+                        {
+                            y: `y=${a.value}-${a.value > 0 ? 'A' : 'B'}`
+                        }
+                    ]
+                };
             }
-        ];
-        return {
-            a: a,
-            build1: build1,
-            build2: build2,
-            build3: build3,
-            combined: combined,
-            list: list
-        };
-    }));
+            function build2() {
+                return {
+                    obj: {
+                        z: a.value > 0 ? 'ok' : 'no'
+                    },
+                    arr2: [
+                        a.value,
+                        'm'
+                    ]
+                };
+            }
+            function build3() {
+                return {
+                    more: `m=${a.value}`,
+                    arr3: [
+                        {
+                            k: a.value
+                        },
+                        a.value > 3 ? 'X' : 'Y'
+                    ]
+                };
+            }
+            const combined = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+                        ...build1(),
+                        ...build2(),
+                        ...build3(),
+                        extra: a.value > 0 ? [
+                            't',
+                            a.value
+                        ] : [
+                            'f'
+                        ]
+                    })));
+            const __rue_phase2_combined = combined;
+            const list = _$vaporWithHookId("computed:1:2", ()=>computed(()=>[
+                        ...build1().arr,
+                        ...build2().arr2,
+                        ...build3().arr3,
+                        a.value > 0 ? {
+                            p: a.value
+                        } : {
+                            p: 0
+                        }
+                    ]));
+            const __rue_phase2_list = list;
+            return {
+                a: a,
+                build1: build1,
+                build2: build2,
+                build3: build3,
+                combined: combined,
+                list: list
+            };
+        }));
     const { a: a, build1: build1, build2: build2, build3: build3, combined: combined, list: list } = _$useSetup;
-    return <div>{combined.extra[0]}-{list[3].p}</div>;
+    return <div>{combined.get().extra[0]}-{list.get()[3].p}</div>;
 };
 "##;
 

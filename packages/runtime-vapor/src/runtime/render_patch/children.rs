@@ -22,6 +22,22 @@ where
         mounted.fragment_nodes().first().cloned().or_else(|| mounted.host_cloned())
     }
 
+    pub(super) fn mounted_child_dom_nodes(child: &MountedSubtreeChild<A>) -> Vec<A::Element> {
+        match child {
+            MountedSubtreeChild::Subtree(mounted) => {
+                let fragment_nodes = mounted.fragment_nodes();
+                if !fragment_nodes.is_empty() {
+                    fragment_nodes.to_vec()
+                } else {
+                    mounted.host_cloned().into_iter().collect()
+                }
+            }
+            MountedSubtreeChild::Text(_)
+            | MountedSubtreeChild::Bool(_)
+            | MountedSubtreeChild::Null => Vec::new(),
+        }
+    }
+
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn keyed_old_key_map(
         old_children: &mut [MountedSubtreeChild<A>],
@@ -35,6 +51,68 @@ where
             }
         }
         old_key_map
+    }
+
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+    fn keyed_stable_old_indexes(
+        old_key_map: &std::collections::HashMap<String, usize>,
+        new_children: &[MountInputChild<A>],
+    ) -> std::collections::HashSet<usize> {
+        let mut old_indexes = Vec::new();
+        let mut seen_old_indexes = std::collections::HashSet::new();
+        for child in new_children {
+            let MountInputChild::Input(input) = child else {
+                continue;
+            };
+            let Some(key) = input.key.as_ref() else {
+                continue;
+            };
+            let Some(old_index) = old_key_map.get(key).copied() else {
+                continue;
+            };
+            if seen_old_indexes.insert(old_index) {
+                old_indexes.push(old_index);
+            }
+        }
+
+        if old_indexes.len() <= 1 {
+            return old_indexes.into_iter().collect();
+        }
+
+        let mut predecessors: Vec<Option<usize>> = vec![None; old_indexes.len()];
+        let mut tails: Vec<usize> = Vec::new();
+
+        for (pos, old_index) in old_indexes.iter().copied().enumerate() {
+            let mut low = 0usize;
+            let mut high = tails.len();
+            while low < high {
+                let mid = (low + high) / 2;
+                if old_indexes[tails[mid]] < old_index {
+                    low = mid + 1;
+                } else {
+                    high = mid;
+                }
+            }
+
+            if low > 0 {
+                predecessors[pos] = Some(tails[low - 1]);
+            }
+
+            if low == tails.len() {
+                tails.push(pos);
+            } else {
+                tails[low] = pos;
+            }
+        }
+
+        let mut stable_old_indexes = std::collections::HashSet::new();
+        let mut cursor = tails.last().copied();
+        while let Some(pos) = cursor {
+            stable_old_indexes.insert(old_indexes[pos]);
+            cursor = predecessors[pos];
+        }
+
+        stable_old_indexes
     }
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -108,26 +186,18 @@ where
     }
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-    fn keyed_move_or_create_input_existing(
+    fn keyed_place_existing_mounted_dom(
         &mut self,
         parent: &mut A::Element,
-        nc: &MountInput<A>,
-        old_children: &mut [MountedSubtreeChild<A>],
-        old_key_map: &std::collections::HashMap<String, usize>,
+        mounted: &MountedSubtreeState<A>,
         cursor: &mut Option<A::Element>,
         anchor_opt: &Option<A::Element>,
-    ) -> Option<MountedSubtreeState<A>>
-    where
-        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
-    {
-        if let Some(MountedSubtreeChild::Subtree(oldv)) =
-            old_children.get_mut(*old_key_map.get(&nc.key.clone().unwrap()).unwrap())
-        {
-            self.patch(oldv, nc, parent);
-            let mounted = oldv.clone();
-            let mut node_for_move: Option<A::Element> = None;
-            let fragment_nodes = mounted.fragment_nodes();
-            if !fragment_nodes.is_empty() {
+        should_move: bool,
+    ) {
+        let mut node_for_move: Option<A::Element> = None;
+        let fragment_nodes = mounted.fragment_nodes();
+        if !fragment_nodes.is_empty() {
+            if should_move {
                 if let Some(am) = self.get_dom_adapter_mut() {
                     for n in fragment_nodes.iter() {
                         match cursor.as_ref() {
@@ -142,11 +212,13 @@ where
                         }
                     }
                 }
-                node_for_move = fragment_nodes.first().cloned();
             }
+            node_for_move = fragment_nodes.first().cloned();
+        }
 
-            if node_for_move.is_none() {
-                if let Some(el_c) = mounted.host_cloned() {
+        if node_for_move.is_none() {
+            if let Some(el_c) = mounted.host_cloned() {
+                if should_move {
                     if let Some(am) = self.get_dom_adapter_mut() {
                         match cursor.as_ref() {
                             Some(cur) => am.insert_before(parent, &el_c, cur),
@@ -159,10 +231,39 @@ where
                             }
                         }
                     }
-                    node_for_move = Some(el_c);
                 }
+                node_for_move = Some(el_c);
             }
-            *cursor = node_for_move.clone().or(cursor.clone());
+        }
+        *cursor = node_for_move.clone().or(cursor.clone());
+    }
+
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+    fn keyed_move_or_create_input_existing(
+        &mut self,
+        parent: &mut A::Element,
+        nc: &MountInput<A>,
+        old_children: &mut [MountedSubtreeChild<A>],
+        old_key_map: &std::collections::HashMap<String, usize>,
+        stable_old_indexes: &std::collections::HashSet<usize>,
+        cursor: &mut Option<A::Element>,
+        anchor_opt: &Option<A::Element>,
+    ) -> Option<MountedSubtreeState<A>>
+    where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let old_index = *old_key_map.get(&nc.key.clone().unwrap()).unwrap();
+        if let Some(MountedSubtreeChild::Subtree(oldv)) = old_children.get_mut(old_index) {
+            self.patch(oldv, nc, parent);
+            let mounted = oldv.clone();
+            let should_move = !stable_old_indexes.contains(&old_index);
+            self.keyed_place_existing_mounted_dom(
+                parent,
+                &mounted,
+                cursor,
+                anchor_opt,
+                should_move,
+            );
             Some(mounted)
         } else {
             None
@@ -273,6 +374,7 @@ where
             self.get_dom_adapter().is_some_and(|adapter| adapter.contains(parent, anchor))
         });
         let old_key_map = Self::keyed_old_key_map(old_children);
+        let stable_old_indexes = Self::keyed_stable_old_indexes(&old_key_map, new_children);
 
         let mut reused_old_indexes = std::collections::HashSet::new();
         let mut cursor: Option<A::Element> = None;
@@ -314,6 +416,7 @@ where
                                 nc,
                                 old_children,
                                 &old_key_map,
+                                &stable_old_indexes,
                                 &mut cursor,
                                 &anchor_opt,
                             )
@@ -365,8 +468,10 @@ where
 mod tests {
     use super::*;
     use crate::runtime::js_adapter::JsDomAdapter;
+    use crate::runtime::types::compat_state::MountedCompatPatchKind;
     use crate::runtime::types::{
-        ComponentProps, MountInputType, MountedVaporSubtree, MountedVaporSubtreeType,
+        ComponentProps, MountInputType, MountedPatchSubtree, MountedVaporSubtree,
+        MountedVaporSubtreeType,
     };
     use js_sys::{Array, Function, Object, Reflect};
     use std::collections::HashMap;
@@ -390,6 +495,23 @@ mod tests {
             cleanup_bucket: None,
             effect_scope_id: None,
         })
+    }
+
+    fn compat_element_state(
+        key: &str,
+        tag: &str,
+        host: JsValue,
+    ) -> MountedSubtreeState<JsDomAdapter> {
+        MountedSubtreeState::Patch(MountedPatchSubtree::new_compat(
+            MountedCompatPatchKind::Element(tag.to_string()),
+            ComponentProps::new(),
+            Vec::new(),
+            Some(host),
+            Some(key.to_string()),
+            Vec::new(),
+            None,
+            None,
+        ))
     }
 
     fn keyed_input(key: &str, r#type: MountInputType<JsDomAdapter>) -> MountInput<JsDomAdapter> {
@@ -433,6 +555,7 @@ mod tests {
             "p.children = p.children || []; \
              const items = c && c.tag === 'fragment' ? Array.from(c.children || []) : [c]; \
              for (const item of items) { \
+               if (p.opLog) { const label = item && item.tag === '#text' ? item.text : item && item.tag; p.opLog.push('append:' + String(label)); } \
                const old = item && item.parentNode; \
                if (old && old.children) old.children = old.children.filter(x => x !== item); \
                p.children.push(item); item.parentNode = p; \
@@ -445,6 +568,7 @@ mod tests {
             "p.children = p.children || []; \
              const items = c && c.tag === 'fragment' ? Array.from(c.children || []) : [c]; \
              for (const item of items) { \
+               if (p.opLog) { const label = item && item.tag === '#text' ? item.text : item && item.tag; const beforeLabel = b && b.tag === '#text' ? b.text : b && b.tag; p.opLog.push('insert:' + String(label) + ':' + String(beforeLabel)); } \
                const old = item && item.parentNode; \
                if (old && old.children) old.children = old.children.filter(x => x !== item); \
                const i = p.children.indexOf(b); \
@@ -456,7 +580,8 @@ mod tests {
             &obj,
             "removeChild",
             "p,c",
-            "p.children = (p.children || []).filter(x => x !== c); if (c) c.parentNode = null",
+            "if (p.opLog) { const label = c && c.tag === '#text' ? c.text : c && c.tag; p.opLog.push('remove:' + String(label)); } \
+             p.children = (p.children || []).filter(x => x !== c); if (c) c.parentNode = null",
         );
         set_fn(
             &obj,
@@ -500,6 +625,27 @@ mod tests {
         Reflect::set(&obj, &JsValue::from_str("children"), &Array::new().into()).unwrap();
         Reflect::set(&obj, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
         obj.into()
+    }
+
+    fn text_node(text: &str) -> JsValue {
+        let obj = Object::new();
+        Reflect::set(&obj, &JsValue::from_str("tag"), &JsValue::from_str("#text")).unwrap();
+        Reflect::set(&obj, &JsValue::from_str("tagName"), &JsValue::from_str("#TEXT")).unwrap();
+        Reflect::set(&obj, &JsValue::from_str("text"), &JsValue::from_str(text)).unwrap();
+        Reflect::set(&obj, &JsValue::from_str("nodeValue"), &JsValue::from_str(text)).unwrap();
+        Reflect::set(&obj, &JsValue::from_str("children"), &Array::new().into()).unwrap();
+        Reflect::set(&obj, &JsValue::from_str("nodeType"), &JsValue::from_f64(3.0)).unwrap();
+        obj.into()
+    }
+
+    fn enable_op_log(parent: &JsValue) {
+        Reflect::set(parent, &JsValue::from_str("opLog"), &Array::new().into()).unwrap();
+    }
+
+    fn op_log_entries(parent: &JsValue) -> Vec<String> {
+        let entries =
+            Reflect::get(parent, &JsValue::from_str("opLog")).unwrap_or(Array::new().into());
+        Array::from(&entries).iter().map(|entry| entry.as_string().unwrap_or_default()).collect()
     }
 
     fn set_children(parent: &JsValue, children: &[JsValue]) {
@@ -639,6 +785,7 @@ mod tests {
                 &ghost,
                 non_subtree_old.as_mut_slice(),
                 &old_key_map,
+                &std::collections::HashSet::new(),
                 &mut cursor,
                 &None,
             )
@@ -657,6 +804,7 @@ mod tests {
                 &text,
                 keyed_text_old.as_mut_slice(),
                 &old_key_map,
+                &std::collections::HashSet::new(),
                 &mut cursor,
                 &None,
             )
@@ -675,6 +823,7 @@ mod tests {
                 &fragment,
                 fragment_old.as_mut_slice(),
                 &old_key_map,
+                &std::collections::HashSet::new(),
                 &mut cursor,
                 &None,
             )
@@ -740,6 +889,67 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
+    fn patch_children_keyed_deleting_middle_keeps_stable_siblings_in_place() {
+        let mut rue: Rue<JsDomAdapter> = Rue::new();
+        rue.set_dom_adapter(adapter());
+        let mut parent = node("parent");
+        let first = text_node("first");
+        let middle = text_node("middle");
+        let tail = text_node("tail");
+        set_children(&parent, &[first.clone(), middle.clone(), tail.clone()]);
+        enable_op_log(&parent);
+
+        let mut old_children = vec![
+            MountedSubtreeChild::Subtree(text_state(Some("first"), Some(first))),
+            MountedSubtreeChild::Subtree(text_state(Some("middle"), Some(middle))),
+            MountedSubtreeChild::Subtree(text_state(Some("tail"), Some(tail))),
+        ];
+        let new_children = vec![
+            MountInputChild::Input(keyed_input("first", MountInputType::Text("first".to_string()))),
+            MountInputChild::Input(keyed_input("tail", MountInputType::Text("tail".to_string()))),
+        ];
+
+        let mounted =
+            rue.patch_children_keyed(&mut parent, old_children.as_mut_slice(), &new_children);
+
+        assert_eq!(mounted.len(), 2);
+        assert_eq!(child_labels(&parent), vec!["first", "tail"]);
+        assert_eq!(op_log_entries(&parent), vec!["remove:middle"]);
+    }
+
+    #[wasm_bindgen_test]
+    fn patch_children_keyed_deleting_middle_keeps_stable_compat_elements_in_place() {
+        let mut rue: Rue<JsDomAdapter> = Rue::new();
+        rue.set_dom_adapter(adapter());
+        let mut parent = node("parent");
+        let first = node("first");
+        let middle = node("middle");
+        let tail = node("tail");
+        set_children(&parent, &[first.clone(), middle.clone(), tail.clone()]);
+        enable_op_log(&parent);
+
+        let mut old_children = vec![
+            MountedSubtreeChild::Subtree(compat_element_state("first", "div", first)),
+            MountedSubtreeChild::Subtree(compat_element_state("middle", "div", middle)),
+            MountedSubtreeChild::Subtree(compat_element_state("tail", "div", tail)),
+        ];
+        let new_children = vec![
+            MountInputChild::Input(keyed_input(
+                "first",
+                MountInputType::Element("div".to_string()),
+            )),
+            MountInputChild::Input(keyed_input("tail", MountInputType::Element("div".to_string()))),
+        ];
+
+        let mounted =
+            rue.patch_children_keyed(&mut parent, old_children.as_mut_slice(), &new_children);
+
+        assert_eq!(mounted.len(), 2);
+        assert_eq!(child_labels(&parent), vec!["first", "tail"]);
+        assert_eq!(op_log_entries(&parent), vec!["remove:middle"]);
+    }
+
+    #[wasm_bindgen_test]
     fn keyed_helpers_cover_fragment_host_cursor_and_detached_anchor_paths() {
         let mut rue: Rue<JsDomAdapter> = Rue::new();
         rue.set_dom_adapter(adapter());
@@ -773,6 +983,7 @@ mod tests {
                 &fragment,
                 fragment_old.as_mut_slice(),
                 &old_key_map,
+                &std::collections::HashSet::new(),
                 &mut cursor,
                 &None,
             )
@@ -794,6 +1005,7 @@ mod tests {
                 &host_input,
                 host_old.as_mut_slice(),
                 &old_key_map,
+                &std::collections::HashSet::new(),
                 &mut cursor,
                 &Some(anchor.clone()),
             )

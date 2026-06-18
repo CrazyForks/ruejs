@@ -389,7 +389,7 @@ export function useCustomElement<P = Record<string, unknown>>(
         watchEffect(() => {
           void propsVersion.value
           runWithRuntime(runtime, () => {
-            const props = getPropsState<P>(host) ?? ({} as Partial<P>)
+            const props = { ...(getPropsState<P>(host) ?? ({} as Partial<P>)) }
             const child = createRueElement(ScopedResolvedComponent as any, props as any)
             renderAnchor(child as any, root as any, anchor as any)
           })

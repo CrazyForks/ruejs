@@ -1,18 +1,45 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  Component as RueComponent,
+  KeepAlive as RueKeepAlive,
+  onDeactivated as onDeactivatedFromRue,
+} from '@rue-js/rue'
+import {
+  _$createElement as _$createElementFromRueVapor,
+  _$settextContent as _$settextContentFromRueVapor,
+  _$vaporWithHookId as _$vaporWithHookIdFromRueVapor,
+  renderAnchor as renderAnchorFromRueVapor,
+  ref as refFromRueVapor,
+  untrack as untrackFromRueVapor,
+  useSetup as useSetupFromRueVapor,
+  useState as useStateFromRueVapor,
+  vapor as vaporFromRueVapor,
+  watchEffect as watchEffectFromRueVapor,
+} from '@rue-js/rue/vapor'
+import {
   Component,
   KeepAlive,
+  _$createElement,
+  _$settextContent,
+  _$vaporWithHookId,
   onActivated,
   onDeactivated,
+  onUnmounted,
   render,
   renderAnchor,
   setReactiveScheduling,
   signal,
+  useSetup,
+  useState,
   vapor,
   watchEffect,
   type FC,
 } from '../src'
+import {
+  onActivated as onActivatedFromVapor,
+  onDeactivated as onDeactivatedFromVapor,
+} from '../src/vapor'
 
 setReactiveScheduling('sync')
 
@@ -190,6 +217,540 @@ describe('KeepAlive renderable boundary', () => {
     const B: FC = () => {
       onActivated(bActivated)
       onDeactivated(bDeactivated)
+      return <div data-testid="panel-B">B</div>
+    }
+
+    mountKeepAliveSwitch(host, {
+      active,
+      views: { A, B },
+    })
+    await flush()
+    expect(aActivated).toHaveBeenCalledTimes(1)
+    expect(bActivated).toHaveBeenCalledTimes(0)
+
+    active.set('B')
+    await flush()
+    expect(aActivated).toHaveBeenCalledTimes(1)
+    expect(aDeactivated).toHaveBeenCalledTimes(1)
+    expect(bActivated).toHaveBeenCalledTimes(1)
+    expect(bDeactivated).toHaveBeenCalledTimes(0)
+
+    active.set('A')
+    await flush()
+    expect(aActivated).toHaveBeenCalledTimes(2)
+    expect(aDeactivated).toHaveBeenCalledTimes(1)
+    expect(bActivated).toHaveBeenCalledTimes(1)
+    expect(bDeactivated).toHaveBeenCalledTimes(1)
+  })
+
+  it('registers deactivated hooks after component state hooks are used', async () => {
+    const host = document.createElement('div')
+    const active = signal('A')
+    const aDeactivated = vi.fn()
+    const bDeactivated = vi.fn()
+    document.body.appendChild(host)
+
+    const A: FC = () => {
+      const [text] = useState('alpha')
+      onDeactivated(() => {
+        aDeactivated(text.value)
+      })
+      return <div data-testid="panel-A">{text.value}</div>
+    }
+    const B: FC = () => {
+      const [count] = useState(1)
+      onDeactivated(() => {
+        bDeactivated(count.value)
+      })
+      return <div data-testid="panel-B">{count.value}</div>
+    }
+
+    mountKeepAliveSwitch(host, {
+      active,
+      views: { A, B },
+    })
+    await flush()
+
+    active.set('B')
+    await flush()
+    expect(aDeactivated).toHaveBeenCalledTimes(1)
+    expect(aDeactivated).toHaveBeenLastCalledWith('alpha')
+
+    active.set('A')
+    await flush()
+    expect(bDeactivated).toHaveBeenCalledTimes(1)
+    expect(bDeactivated).toHaveBeenLastCalledWith(1)
+  })
+
+  it('registers deactivated hooks from compiler-style setup blocks', async () => {
+    const host = document.createElement('div')
+    const active = signal('A')
+    const aDeactivated = vi.fn()
+    const bDeactivated = vi.fn()
+    document.body.appendChild(host)
+
+    const A: FC = () => {
+      const state = useSetup(() => {
+        const [text] = useState('alpha')
+        onDeactivated(() => {
+          aDeactivated(text.value)
+        })
+        return { text }
+      })
+      return <div data-testid="panel-A">{state.text.value}</div>
+    }
+    const B: FC = () => {
+      const state = useSetup(() => {
+        const [count] = useState(1)
+        onDeactivated(() => {
+          bDeactivated(count.value)
+        })
+        return { count }
+      })
+      return <div data-testid="panel-B">{state.count.value}</div>
+    }
+
+    mountKeepAliveSwitch(host, {
+      active,
+      views: { A, B },
+    })
+    await flush()
+
+    active.set('B')
+    await flush()
+    expect(aDeactivated).toHaveBeenCalledTimes(1)
+    expect(aDeactivated).toHaveBeenLastCalledWith('alpha')
+
+    active.set('A')
+    await flush()
+    expect(bDeactivated).toHaveBeenCalledTimes(1)
+    expect(bDeactivated).toHaveBeenLastCalledWith(1)
+  })
+
+  it('registers deactivated hooks from compiler-style vapor mount handles', async () => {
+    const host = document.createElement('div')
+    const active = signal('A')
+    const aDeactivated = vi.fn()
+    const bDeactivated = vi.fn()
+    document.body.appendChild(host)
+
+    const A: FC = () => {
+      const state = _$vaporWithHookId('useSetup:keep-alive:A', () =>
+        useSetup(() => {
+          const [text] = _$vaporWithHookId('useState:keep-alive:A', () => useState('alpha'))
+          onDeactivated(() => {
+            aDeactivated(text.value)
+          })
+          return { text }
+        }),
+      )
+      return vapor(parent => {
+        const root = _$createElement('div', parent) as HTMLElement
+        root.setAttribute('data-testid', 'panel-A')
+        watchEffect(() => {
+          _$settextContent(root, state.text.value)
+        })
+        return root as any
+      }) as any
+    }
+
+    const B: FC = () => {
+      const state = _$vaporWithHookId('useSetup:keep-alive:B', () =>
+        useSetup(() => {
+          const [count] = _$vaporWithHookId('useState:keep-alive:B', () => useState(1))
+          onDeactivated(() => {
+            bDeactivated(count.value)
+          })
+          return { count }
+        }),
+      )
+      return vapor(parent => {
+        const root = _$createElement('div', parent) as HTMLElement
+        root.setAttribute('data-testid', 'panel-B')
+        watchEffect(() => {
+          _$settextContent(root, String(state.count.value))
+        })
+        return root as any
+      }) as any
+    }
+
+    mountKeepAliveSwitch(host, {
+      active,
+      views: { A, B },
+    })
+    await flush()
+
+    active.set('B')
+    await flush()
+    expect(aDeactivated).toHaveBeenCalledTimes(1)
+    expect(aDeactivated).toHaveBeenLastCalledWith('alpha')
+
+    active.set('A')
+    await flush()
+    expect(bDeactivated).toHaveBeenCalledTimes(1)
+    expect(bDeactivated).toHaveBeenLastCalledWith(1)
+  })
+
+  it('lets deactivated hooks update parent reactive state through props callbacks', async () => {
+    const host = document.createElement('div')
+    const active = signal('A')
+    document.body.appendChild(host)
+
+    const A: FC<{ writeLog: (message: string) => void }> = props => {
+      onDeactivated(() => {
+        props.writeLog('A deactivated')
+      })
+      return <div data-testid="panel-A">A</div>
+    }
+    const B: FC<{ writeLog: (message: string) => void }> = props => {
+      onDeactivated(() => {
+        props.writeLog('B deactivated')
+      })
+      return <div data-testid="panel-B">B</div>
+    }
+    const views: Record<string, FC<{ writeLog: (message: string) => void }>> = { A, B }
+
+    const App: FC = () => {
+      const logs = signal<string[]>([])
+      const writeLog = (message: string) => {
+        logs.set([message, ...logs.get()])
+      }
+
+      return vapor(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('keep-alive-anchor')
+        const log = document.createElement('output')
+        root.appendChild(anchor)
+        root.appendChild(log)
+
+        watchEffect(() => {
+          const activeName = active.get()
+          renderAnchor(
+            <KeepAlive>
+              <Component is={views[activeName]} key={activeName} writeLog={writeLog} />
+            </KeepAlive>,
+            root as any,
+            anchor as any,
+          )
+        })
+        watchEffect(() => {
+          log.textContent = logs.get().join(',')
+        })
+
+        return root as any
+      }) as any
+    }
+
+    render(<App />, host)
+    await flush()
+
+    active.set('B')
+    await flush()
+    expect(host.querySelector('output')?.textContent).toContain('A deactivated')
+
+    active.set('A')
+    await flush()
+    expect(host.querySelector('output')?.textContent).toContain('B deactivated')
+  })
+
+  it('registers deactivated hooks when compiled code mixes rue and rue/vapor entries', async () => {
+    const host = document.createElement('div')
+    const active = signal('A')
+    const aDeactivated = vi.fn()
+    const bDeactivated = vi.fn()
+    document.body.appendChild(host)
+
+    const A: FC = () => {
+      const state = _$vaporWithHookIdFromRueVapor('useSetup:mixed:A', () =>
+        useSetupFromRueVapor(() => {
+          const [text] = _$vaporWithHookIdFromRueVapor('useState:mixed:A', () =>
+            useStateFromRueVapor('alpha'),
+          )
+          onDeactivatedFromRue(() => {
+            aDeactivated(text.value)
+          })
+          return { text }
+        }),
+      )
+      return vaporFromRueVapor(parent => {
+        const root = _$createElementFromRueVapor('div', parent) as HTMLElement
+        root.setAttribute('data-testid', 'panel-A')
+        watchEffectFromRueVapor(() => {
+          _$settextContentFromRueVapor(root, state.text.value)
+        })
+        return root as any
+      }) as any
+    }
+
+    const B: FC = () => {
+      const state = _$vaporWithHookIdFromRueVapor('useSetup:mixed:B', () =>
+        useSetupFromRueVapor(() => {
+          const [count] = _$vaporWithHookIdFromRueVapor('useState:mixed:B', () =>
+            useStateFromRueVapor(1),
+          )
+          onDeactivatedFromRue(() => {
+            bDeactivated(count.value)
+          })
+          return { count }
+        }),
+      )
+      return vaporFromRueVapor(parent => {
+        const root = _$createElementFromRueVapor('div', parent) as HTMLElement
+        root.setAttribute('data-testid', 'panel-B')
+        watchEffectFromRueVapor(() => {
+          _$settextContentFromRueVapor(root, String(state.count.value))
+        })
+        return root as any
+      }) as any
+    }
+    const views: Record<string, FC> = { A, B }
+
+    const App: FC = () =>
+      vaporFromRueVapor(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('keep-alive-anchor')
+        root.appendChild(anchor)
+
+        watchEffectFromRueVapor(() => {
+          const activeName = active.get()
+          renderAnchorFromRueVapor(
+            <RueKeepAlive>
+              <RueComponent is={views[activeName]} key={activeName} />
+            </RueKeepAlive>,
+            root as any,
+            anchor as any,
+          )
+        })
+
+        return root as any
+      }) as any
+
+    render(<App />, host)
+    await flush()
+
+    active.set('B')
+    await flush()
+    expect(aDeactivated).toHaveBeenCalledTimes(1)
+    expect(aDeactivated).toHaveBeenLastCalledWith('alpha')
+
+    active.set('A')
+    await flush()
+    expect(bDeactivated).toHaveBeenCalledTimes(1)
+    expect(bDeactivated).toHaveBeenLastCalledWith(1)
+  })
+
+  it('keeps deactivated hooks through a nested compiled KeepAlive viewport', async () => {
+    const host = document.createElement('div')
+    const aDeactivated = vi.fn()
+    const bDeactivated = vi.fn()
+    let activePanelRef: { value: string } | null = null
+    document.body.appendChild(host)
+
+    const A: FC<{ writeLog: (message: string) => void }> = props => {
+      const state = _$vaporWithHookIdFromRueVapor('useSetup:nested:A', () =>
+        useSetupFromRueVapor(() => {
+          const [text] = _$vaporWithHookIdFromRueVapor('useState:nested:A', () =>
+            useStateFromRueVapor('alpha'),
+          )
+          onDeactivatedFromRue(() => {
+            props.writeLog(text.value)
+          })
+          return { text }
+        }),
+      )
+      return vaporFromRueVapor(parent => {
+        const root = _$createElementFromRueVapor('div', parent) as HTMLElement
+        root.setAttribute('data-testid', 'panel-A')
+        watchEffectFromRueVapor(() => {
+          _$settextContentFromRueVapor(root, state.text.value)
+        })
+        return root as any
+      }) as any
+    }
+    const B: FC<{ writeLog: (message: string) => void }> = props => {
+      const state = _$vaporWithHookIdFromRueVapor('useSetup:nested:B', () =>
+        useSetupFromRueVapor(() => {
+          const [count] = _$vaporWithHookIdFromRueVapor('useState:nested:B', () =>
+            useStateFromRueVapor(1),
+          )
+          onDeactivatedFromRue(() => {
+            props.writeLog(String(count.value))
+          })
+          return { count }
+        }),
+      )
+      return vaporFromRueVapor(parent => {
+        const root = _$createElementFromRueVapor('div', parent) as HTMLElement
+        root.setAttribute('data-testid', 'panel-B')
+        watchEffectFromRueVapor(() => {
+          _$settextContentFromRueVapor(root, String(state.count.value))
+        })
+        return root as any
+      }) as any
+    }
+    const views: Record<string, FC<{ writeLog: (message: string) => void }>> = { A, B }
+
+    const KeepAliveViewport: FC<{
+      activePanel: { value: string }
+      writeLog: (message: string) => void
+    }> = props =>
+      vaporFromRueVapor(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('nested-keep-alive-anchor')
+        root.appendChild(anchor)
+
+        watchEffectFromRueVapor(() => {
+          const slot = (
+            <RueKeepAlive>
+              <RueComponent
+                is={views[props.activePanel.value]}
+                key={props.activePanel.value}
+                writeLog={props.writeLog}
+              />
+            </RueKeepAlive>
+          )
+          untrackFromRueVapor(() => renderAnchorFromRueVapor(slot, root as any, anchor as any))
+        })
+
+        return root as any
+      }) as any
+
+    const App: FC = () => {
+      const setup = _$vaporWithHookIdFromRueVapor('useSetup:nested:App', () =>
+        useSetupFromRueVapor(() => {
+          const activePanel = _$vaporWithHookIdFromRueVapor('ref:nested:active', () =>
+            refFromRueVapor('A'),
+          )
+          activePanelRef = activePanel
+          const writeLog = (message: string) => {
+            if (message === 'alpha') {
+              aDeactivated(message)
+            } else {
+              bDeactivated(message)
+            }
+          }
+          return { activePanel, writeLog }
+        }),
+      )
+      const { activePanel, writeLog } = setup
+
+      return vaporFromRueVapor(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('viewport-anchor')
+        root.appendChild(anchor)
+
+        watchEffectFromRueVapor(() => {
+          const slot = <KeepAliveViewport activePanel={activePanel} writeLog={writeLog} />
+          untrackFromRueVapor(() => renderAnchorFromRueVapor(slot, root as any, anchor as any))
+        })
+
+        return root as any
+      }) as any
+    }
+
+    render(<App />, host)
+    await flush()
+
+    expect(host.querySelector('[data-testid="panel-A"]')).not.toBeNull()
+    expect(activePanelRef).not.toBeNull()
+
+    activePanelRef!.value = 'B'
+    await flush()
+    expect(aDeactivated).toHaveBeenCalledTimes(1)
+    expect(aDeactivated).toHaveBeenLastCalledWith('alpha')
+
+    activePanelRef!.value = 'A'
+    await flush()
+    expect(bDeactivated).toHaveBeenCalledTimes(1)
+    expect(bDeactivated).toHaveBeenLastCalledWith('1')
+  })
+
+  it('switches keyed dynamic views that share the same inner component type', async () => {
+    const host = document.createElement('div')
+    const active = signal('profile')
+    const clickHits: Record<string, number> = { profile: 0, settings: 0 }
+    const unmountedHits: Record<string, number> = { profile: 0, settings: 0 }
+    document.body.appendChild(host)
+
+    const Panel: FC<{ name: string }> = props => {
+      const clicks = signal(0)
+      onUnmounted(() => {
+        unmountedHits[props.name] += 1
+      })
+      return (
+        <section data-testid={`panel-${props.name}`}>
+          <h2>{props.name}</h2>
+          <button
+            data-testid={`count-${props.name}`}
+            onClick={() => {
+              clickHits[props.name] += 1
+              clicks.set(clicks.get() + 1)
+            }}
+          >
+            {clicks.get()}
+          </button>
+        </section>
+      )
+    }
+
+    const views: Record<string, FC> = {
+      profile: () => <Panel name="profile" />,
+      settings: () => <Panel name="settings" />,
+    }
+
+    mountKeepAliveSwitch(host, {
+      active,
+      views,
+    })
+    await flush()
+
+    expect(host.querySelector('[data-testid="panel-profile"]')).not.toBeNull()
+    expect(host.querySelector('[data-testid="panel-settings"]')).toBeNull()
+    ;(host.querySelector('[data-testid="count-profile"]') as HTMLButtonElement).click()
+    await flush()
+    expect(clickHits.profile).toBe(1)
+    expect(host.querySelector('[data-testid="count-profile"]')?.textContent).toBe('1')
+
+    active.set('settings')
+    await flush()
+    expect(unmountedHits.profile).toBe(0)
+    expect(host.querySelector('[data-testid="panel-profile"]')).toBeNull()
+    expect(host.querySelector('[data-testid="panel-settings"]')).not.toBeNull()
+    ;(host.querySelector('[data-testid="count-settings"]') as HTMLButtonElement).click()
+    await flush()
+    expect(clickHits.settings).toBe(1)
+    expect(host.querySelector('[data-testid="count-settings"]')?.textContent).toBe('1')
+
+    active.set('profile')
+    await flush()
+    expect(unmountedHits.profile).toBe(0)
+    expect(unmountedHits.settings).toBe(0)
+    expect(host.querySelector('[data-testid="panel-profile"]')).not.toBeNull()
+    expect(host.querySelector('[data-testid="panel-settings"]')).toBeNull()
+    expect(host.querySelector('[data-testid="count-profile"]')?.textContent).toBe('1')
+    ;(host.querySelector('[data-testid="count-profile"]') as HTMLButtonElement).click()
+    await flush()
+    expect(clickHits.profile).toBe(2)
+    expect(host.querySelector('[data-testid="count-profile"]')?.textContent).toBe('2')
+  })
+
+  it('fires lifecycle hooks registered through the Vapor entry', async () => {
+    const host = document.createElement('div')
+    const active = signal('A')
+    const aActivated = vi.fn()
+    const aDeactivated = vi.fn()
+    const bActivated = vi.fn()
+    const bDeactivated = vi.fn()
+    document.body.appendChild(host)
+
+    const A: FC = () => {
+      onActivatedFromVapor(aActivated)
+      onDeactivatedFromVapor(aDeactivated)
+      return <div data-testid="panel-A">A</div>
+    }
+    const B: FC = () => {
+      onActivatedFromVapor(bActivated)
+      onDeactivatedFromVapor(bDeactivated)
       return <div data-testid="panel-B">B</div>
     }
 

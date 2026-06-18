@@ -410,7 +410,7 @@ export default Demo;`
                 <div className="grid gap-4 xl:grid-cols-2">
                   <section className="space-y-4 rounded-box border border-secondary/30 bg-secondary/10 p-4">
                     <div>
-                      <h3 className="font-semibold">显式 {'<Template slot="...">'} 命名片段</h3>
+                      <h3 className="font-semibold">显式 {'<Template slot="header">'} 命名片段</h3>
                       <p className="text-sm opacity-70">
                         header 和 actions 都通过 Template slot 注入，actions slot
                         里放了两个兄弟节点。

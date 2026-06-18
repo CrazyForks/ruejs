@@ -48,9 +48,16 @@ export const installSharedBridge = sharedRuntime => {
       // context 祖先链挂在 owner 上。
       // 如果当前没有更外层实例，或者 currentInstance 已经是 target，自身绝不能再回写成自己的 owner parent；
       // 那会制造 self-loop，让 useContext 退化成错误回退甚至慢循环。
+      const activeRenderOwner =
+        renderOwnerStack.length > 0 ? renderOwnerStack[renderOwnerStack.length - 1] : undefined
+      const fallbackRenderTriggeredOwner = asBridgeOwner(bridge.__rue_render_triggered_owner)
       const ownerParent =
         prevInstance == null || prevInstance === target
-          ? target[RUE_CONTEXT_OWNER_PARENT_KEY]
+          ? activeRenderOwner && activeRenderOwner !== target
+            ? activeRenderOwner
+            : fallbackRenderTriggeredOwner && fallbackRenderTriggeredOwner !== target
+              ? fallbackRenderTriggeredOwner
+              : target[RUE_CONTEXT_OWNER_PARENT_KEY]
           : prevInstance
       target[RUE_CONTEXT_OWNER_PARENT_KEY] = ownerParent == null ? undefined : ownerParent
       disposeScopeKey(sharedRuntime, target, RUE_SHARED_RENDER_SCOPE_KEY)
@@ -59,12 +66,14 @@ export const installSharedBridge = sharedRuntime => {
       sharedRuntime.setCurrentInstance(target)
       sharedRuntime.__ruePushEffectScope(scopeId)
       renderOwnerStack.push(target)
+      sharedRuntime.__rueBeginRenderDebugOwner?.(target)
       renderScopeStack.push(true)
     },
     endComponentRender() {
       const hadScope = renderScopeStack.pop()
       if (hadScope) {
         sharedRuntime.__ruePopEffectScope()
+        sharedRuntime.__rueEndRenderDebugOwner?.()
       }
       renderOwnerStack.pop()
       const prev = instanceStack.pop()
@@ -87,9 +96,16 @@ export const installSharedBridge = sharedRuntime => {
       vaporInstanceStack.push(prevInstance)
       // raw vapor owner 没有组件 render 那层天然的父子栈，所以这里也要沿用同样的规则：
       // 只有遇到“不同的外层 owner”时才更新 owner parent；否则保留已有祖先，避免自指。
+      const activeRenderOwner =
+        renderOwnerStack.length > 0 ? renderOwnerStack[renderOwnerStack.length - 1] : undefined
+      const fallbackRenderTriggeredOwner = asBridgeOwner(bridge.__rue_render_triggered_owner)
       const ownerParent =
         prevInstance == null || prevInstance === target
-          ? target[RUE_CONTEXT_OWNER_PARENT_KEY]
+          ? activeRenderOwner && activeRenderOwner !== target
+            ? activeRenderOwner
+            : fallbackRenderTriggeredOwner && fallbackRenderTriggeredOwner !== target
+              ? fallbackRenderTriggeredOwner
+              : target[RUE_CONTEXT_OWNER_PARENT_KEY]
           : prevInstance
       target[RUE_CONTEXT_OWNER_PARENT_KEY] = ownerParent == null ? undefined : ownerParent
       // raw vapor handle 没有组件实例栈那层自动“谁是当前 owner”的保护。
@@ -109,11 +125,13 @@ export const installSharedBridge = sharedRuntime => {
       sharedRuntime.setCurrentInstance(target)
       sharedRuntime.__ruePushEffectScope(scopeId)
       renderOwnerStack.push(target)
+      sharedRuntime.__rueBeginRenderDebugOwner?.(target)
       return true
     },
     endVaporScope(didPush) {
       if (didPush) {
         sharedRuntime.__ruePopEffectScope()
+        sharedRuntime.__rueEndRenderDebugOwner?.()
         renderOwnerStack.pop()
       }
       const prev = vaporInstanceStack.pop()
@@ -150,6 +168,10 @@ export const installSharedBridge = sharedRuntime => {
     },
     propsReactive(initial) {
       return sharedRuntime.propsReactive(initial, true)
+    },
+    dispatchErrorCaptured(error, instance, info) {
+      const dispatch = globalThis.__rue_dispatch_error_captured
+      return typeof dispatch === 'function' && dispatch(error, instance, info) === true
     },
   }
 

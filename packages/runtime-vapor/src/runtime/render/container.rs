@@ -59,16 +59,19 @@ where
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        let el = mounted.host_cloned()?;
-        let is_fragment =
-            self.get_dom_adapter().map(|adapter| adapter.is_fragment(&el)).unwrap_or(false);
+        let el = mounted.host_cloned();
+        let is_fragment = el.as_ref().is_some_and(|host| {
+            self.get_dom_adapter().map(|adapter| adapter.is_fragment(host)).unwrap_or(false)
+        });
 
         let adapter = self.get_dom_adapter_mut().unwrap_or_else(Self::missing_render_mount_adapter);
         adapter.set_inner_html(container, "");
-        if is_fragment {
-            self.insert_fragment_children(container, &el, &None);
-        } else {
-            adapter.append_child(container, &el);
+        if let Some(el) = el {
+            if is_fragment {
+                self.insert_fragment_children(container, &el, &None);
+            } else {
+                adapter.append_child(container, &el);
+            }
         }
 
         Some(MountedState::from_subtree_root(mounted))

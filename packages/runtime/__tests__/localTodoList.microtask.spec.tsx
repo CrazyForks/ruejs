@@ -33,10 +33,11 @@ it('preserves row identity when LocalTodoList deletes the middle item under micr
   setReactiveScheduling('microtask')
   resetActiveRuntime()
 
-  const { default: Page } = await import('../../../app/pages/examples/LocalTodoList')
+  const { default: LocalTodoListDemo } =
+    await import('../../../app/pages/examples/home-demos/LocalTodoListDemo')
   const container = mountContainer()
 
-  render(h(Page as any, null), container)
+  render(h(LocalTodoListDemo as any, null), container)
 
   await waitForContent(() => {
     expect(normalizeText(container.textContent)).toContain('总计: 3 | 已完成: 1')
@@ -70,15 +71,40 @@ it('preserves row identity when LocalTodoList deletes the middle item under micr
   expect(tailDeleteButton?.textContent?.trim()).toBe('删除')
   expect(middleDeleteButton?.textContent?.trim()).toBe('删除')
 
-  await click(middleDeleteButton)
+  const placementNodes: Node[] = []
+  const originalAppendChild = Node.prototype.appendChild
+  const originalInsertBefore = Node.prototype.insertBefore
+  ;(Node.prototype as any).appendChild = function (this: Node, node: Node) {
+    placementNodes.push(node)
+    return originalAppendChild.call(this, node)
+  }
+  ;(Node.prototype as any).insertBefore = function (this: Node, node: Node, child: Node | null) {
+    placementNodes.push(node)
+    return originalInsertBefore.call(this, node, child)
+  }
 
-  await waitForContent(() => {
-    const content = normalizeText(container.textContent)
-    expect(content).toContain('总计: 2 | 已完成: 0')
-    expect(content).toContain('学习响应式框架')
-    expect(content).not.toContain('编写示例代码')
-    expect(content).toContain('测试功能')
-  })
+  try {
+    await click(middleDeleteButton)
+
+    await waitForContent(() => {
+      const content = normalizeText(container.textContent)
+      expect(content).toContain('总计: 2 | 已完成: 0')
+      expect(content).toContain('学习响应式框架')
+      expect(content).not.toContain('编写示例代码')
+      expect(content).toContain('测试功能')
+    })
+  } finally {
+    ;(Node.prototype as any).appendChild = originalAppendChild
+    ;(Node.prototype as any).insertBefore = originalInsertBefore
+  }
+
+  const preservedPlacements = placementNodes.filter(
+    node =>
+      node === firstRow ||
+      node === tailRow ||
+      (firstRow?.contains(node) ?? false) ||
+      (tailRow?.contains(node) ?? false),
+  )
 
   const currentFirstRow = findTodoRow(scope, '学习响应式框架')
   const currentTailRow = findTodoRow(scope, '测试功能')
@@ -96,4 +122,5 @@ it('preserves row identity when LocalTodoList deletes the middle item under micr
   expect(currentTailText).toBe(tailText)
   expect(currentFirstDeleteButton).toBe(firstDeleteButton)
   expect(currentTailDeleteButton).toBe(tailDeleteButton)
+  expect(preservedPlacements).toEqual([])
 })

@@ -83,8 +83,8 @@ const GetCurrentScope: FC = () => {
   const checkOutsideScope = () => {
     report(
       getCurrentScope()
-        ? '事件处理器中读到了 active scope'
-        : '事件处理器中没有 active scope，返回 undefined',
+        ? '事件处理器中意外读到了 active scope'
+        : '事件处理器默认没有 active scope，getCurrentScope() 返回 undefined',
     )
   }
 

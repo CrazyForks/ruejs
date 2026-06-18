@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, render, setReactiveScheduling } from '@rue-js/rue'
-import { Carousel } from '@rue-js/design'
+import { Button, Carousel } from '@rue-js/design'
 import {
   click,
   mountContainer,
@@ -109,6 +109,73 @@ describe('Carousel', () => {
       const activeDot = c.querySelector('[aria-current="true"]') as HTMLElement
       expect(activeDot).toBeTruthy()
       expect(activeDot.getAttribute('aria-label')).toBe('Go to slide 2')
+    })
+  })
+
+  it('renders fade children as slides instead of stringifying JSX nodes', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <Carousel effect="fade" dots speed={0}>
+        <Carousel.Item className="w-full">
+          <img className="w-full" src="x" alt="Fade 1" />
+        </Carousel.Item>
+        <Carousel.Item className="w-full">
+          <img className="w-full" src="y" alt="Fade 2" />
+        </Carousel.Item>
+      </Carousel>,
+      c,
+    )
+
+    await waitForContent(() => {
+      expect(c.textContent).not.toContain('[object Object]')
+      expect(c.querySelectorAll('.carousel-item').length).toBe(2)
+      expect(c.querySelector('img[alt="Fade 1"]')).toBeTruthy()
+      expect(c.querySelector('img[alt="Fade 2"]')).toBeTruthy()
+    })
+  })
+
+  it('lets external Button controls drive children slides through apiRef', async () => {
+    const c = mountContainer()
+    resetActiveRuntime()
+
+    const carouselRef: { current?: any } = { current: undefined }
+    const spy = vi.fn()
+
+    render(
+      <div>
+        <Button size="sm" onClick={() => carouselRef.current?.goTo(2)}>
+          Go to 3
+        </Button>
+        <Carousel apiRef={carouselRef} dots speed={0} onIndexChange={spy}>
+          <Carousel.Item className="w-full">
+            <div>Slide 1</div>
+          </Carousel.Item>
+          <Carousel.Item className="w-full">
+            <div>Slide 2</div>
+          </Carousel.Item>
+          <Carousel.Item className="w-full">
+            <div>Slide 3</div>
+          </Carousel.Item>
+        </Carousel>
+      </div>,
+      c,
+    )
+
+    await waitForContent(() => {
+      expect(typeof carouselRef.current?.goTo).toBe('function')
+      expect(c.querySelector('[aria-label="Go to slide 1"]')?.getAttribute('aria-current')).toBe(
+        'true',
+      )
+    })
+
+    await click(c.querySelector('button.btn'))
+
+    await waitForContent(() => {
+      expect(spy).toHaveBeenCalledWith(2)
+      const activeDot = c.querySelector('[aria-current="true"]') as HTMLElement
+      expect(activeDot.getAttribute('aria-label')).toBe('Go to slide 3')
     })
   })
 

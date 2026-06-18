@@ -16,9 +16,25 @@ const sizes = ['xs', 'sm', 'md', 'lg', 'xl'] as const
 const wholeValues = ['1', '2', '3', '4', '5']
 const _halfValues = ['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5']
 const feedbackTips = ['很难用', '能用', '稳定', '顺手', '非常喜欢']
-const legacyVisibleItemClassName = 'opacity-[0.35] checked:opacity-100 has-[~:checked]:opacity-100'
+const legacyVisibleItemTransitionClassName = 'transition-opacity duration-150'
 
 const codeBlock = (lines: string[]) => lines.join('\n')
+
+const isLegacyRatingItemActive = (currentValue: string, itemValue: string) => {
+  if (!currentValue) return false
+  return Number(itemValue) <= Number(currentValue)
+}
+
+const buildLegacyVisibleItemClassName = (
+  currentValue: string,
+  itemValue: string,
+  className: string,
+) => {
+  const opacityClass = isLegacyRatingItemActive(currentValue, itemValue)
+    ? 'opacity-100'
+    : 'opacity-[0.35]'
+  return `${className} ${legacyVisibleItemTransitionClassName} ${opacityClass}`
+}
 
 const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
   return (
@@ -354,7 +370,7 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               clearValue.value = '1'
             }}
-            className={`mask mask-star-2 ${legacyVisibleItemClassName}`}
+            className={buildLegacyVisibleItemClassName(clearValue.value, '1', 'mask mask-star-2')}
           />
           <Rating.Item
             name="rating-clearable"
@@ -364,7 +380,7 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               clearValue.value = '2'
             }}
-            className={`mask mask-star-2 ${legacyVisibleItemClassName}`}
+            className={buildLegacyVisibleItemClassName(clearValue.value, '2', 'mask mask-star-2')}
           />
           <Rating.Item
             name="rating-clearable"
@@ -374,7 +390,7 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               clearValue.value = '3'
             }}
-            className={`mask mask-star-2 ${legacyVisibleItemClassName}`}
+            className={buildLegacyVisibleItemClassName(clearValue.value, '3', 'mask mask-star-2')}
           />
           <Rating.Item
             name="rating-clearable"
@@ -384,7 +400,7 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               clearValue.value = '4'
             }}
-            className={`mask mask-star-2 ${legacyVisibleItemClassName}`}
+            className={buildLegacyVisibleItemClassName(clearValue.value, '4', 'mask mask-star-2')}
           />
           <Rating.Item
             name="rating-clearable"
@@ -394,7 +410,7 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               clearValue.value = '5'
             }}
-            className={`mask mask-star-2 ${legacyVisibleItemClassName}`}
+            className={buildLegacyVisibleItemClassName(clearValue.value, '5', 'mask mask-star-2')}
           />
         </Rating>
         <p className="m-0 text-sm text-base-content/70">当前评分：{clearValue.value || 'clear'}</p>
@@ -418,7 +434,11 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               halfValue.value = '0.5'
             }}
-            className={`bg-green-500 mask mask-star-2 ${legacyVisibleItemClassName} mask-half-1`}
+            className={buildLegacyVisibleItemClassName(
+              halfValue.value,
+              '0.5',
+              'bg-green-500 mask mask-star-2 mask-half-1',
+            )}
           />
           <Rating.Item
             name="rating-half"
@@ -428,7 +448,11 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               halfValue.value = '1'
             }}
-            className={`bg-green-500 mask mask-star-2 ${legacyVisibleItemClassName} mask-half-2`}
+            className={buildLegacyVisibleItemClassName(
+              halfValue.value,
+              '1',
+              'bg-green-500 mask mask-star-2 mask-half-2',
+            )}
           />
           <Rating.Item
             name="rating-half"
@@ -438,7 +462,11 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               halfValue.value = '1.5'
             }}
-            className={`bg-green-500 mask mask-star-2 ${legacyVisibleItemClassName} mask-half-1`}
+            className={buildLegacyVisibleItemClassName(
+              halfValue.value,
+              '1.5',
+              'bg-green-500 mask mask-star-2 mask-half-1',
+            )}
           />
           <Rating.Item
             name="rating-half"
@@ -448,7 +476,11 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               halfValue.value = '2'
             }}
-            className={`bg-green-500 mask mask-star-2 ${legacyVisibleItemClassName} mask-half-2`}
+            className={buildLegacyVisibleItemClassName(
+              halfValue.value,
+              '2',
+              'bg-green-500 mask mask-star-2 mask-half-2',
+            )}
           />
           <Rating.Item
             name="rating-half"
@@ -458,7 +490,11 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               halfValue.value = '2.5'
             }}
-            className={`bg-green-500 mask mask-star-2 ${legacyVisibleItemClassName} mask-half-1`}
+            className={buildLegacyVisibleItemClassName(
+              halfValue.value,
+              '2.5',
+              'bg-green-500 mask mask-star-2 mask-half-1',
+            )}
           />
           <Rating.Item
             name="rating-half"
@@ -468,7 +504,11 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               halfValue.value = '3'
             }}
-            className={`bg-green-500 mask mask-star-2 ${legacyVisibleItemClassName} mask-half-2`}
+            className={buildLegacyVisibleItemClassName(
+              halfValue.value,
+              '3',
+              'bg-green-500 mask mask-star-2 mask-half-2',
+            )}
           />
           <Rating.Item
             name="rating-half"
@@ -478,7 +518,11 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               halfValue.value = '3.5'
             }}
-            className={`bg-green-500 mask mask-star-2 ${legacyVisibleItemClassName} mask-half-1`}
+            className={buildLegacyVisibleItemClassName(
+              halfValue.value,
+              '3.5',
+              'bg-green-500 mask mask-star-2 mask-half-1',
+            )}
           />
           <Rating.Item
             name="rating-half"
@@ -488,7 +532,11 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               halfValue.value = '4'
             }}
-            className={`bg-green-500 mask mask-star-2 ${legacyVisibleItemClassName} mask-half-2`}
+            className={buildLegacyVisibleItemClassName(
+              halfValue.value,
+              '4',
+              'bg-green-500 mask mask-star-2 mask-half-2',
+            )}
           />
           <Rating.Item
             name="rating-half"
@@ -498,7 +546,11 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               halfValue.value = '4.5'
             }}
-            className={`bg-green-500 mask mask-star-2 ${legacyVisibleItemClassName} mask-half-1`}
+            className={buildLegacyVisibleItemClassName(
+              halfValue.value,
+              '4.5',
+              'bg-green-500 mask mask-star-2 mask-half-1',
+            )}
           />
           <Rating.Item
             name="rating-half"
@@ -508,7 +560,11 @@ const LegacyClearAndHalfPreview: FC = () => {
             onChange={() => {
               halfValue.value = '5'
             }}
-            className={`bg-green-500 mask mask-star-2 ${legacyVisibleItemClassName} mask-half-2`}
+            className={buildLegacyVisibleItemClassName(
+              halfValue.value,
+              '5',
+              'bg-green-500 mask mask-star-2 mask-half-2',
+            )}
           />
         </Rating>
         <p className="m-0 text-sm text-base-content/70">当前评分：{halfValue.value || 'clear'}</p>
@@ -811,7 +867,18 @@ const RatingPage: FC = () => {
             '  <Rating.Item className="mask mask-heart bg-red-400" aria-label="2 star" checked={true} />',
             '</Rating>',
             '',
-            '<Rating size="lg">...</Rating>',
+            '<Rating size="lg">',
+            "  {['1', '2', '3', '4', '5'].map(value => (",
+            '    <Rating.Item',
+            '      key={value}',
+            '      name="rating-size-lg"',
+            '      value={value}',
+            "      checked={value === '2'}",
+            '      className="mask mask-star-2 bg-orange-400"',
+            '      aria-label={`${value} star`}',
+            '    />',
+            '  ))}',
+            '</Rating>',
           ])}
         />
 
@@ -822,6 +889,7 @@ const RatingPage: FC = () => {
           code={codeBlock([
             "const wholeValues = ['1', '2', '3', '4', '5']",
             "const halfValues = ['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5']",
+            "const ratingOpacity = (active) => active ? 'opacity-100' : 'opacity-[0.35]'",
             '',
             '<Rating size="lg">',
             '  <Rating.Item hidden={true} name="rating-clearable" aria-label="clear" />',
@@ -831,7 +899,7 @@ const RatingPage: FC = () => {
             '      name="rating-clearable"',
             '      value={value}',
             '      aria-label={`${value} star`}',
-            '      className="mask mask-star-2 opacity-[0.35] checked:opacity-100 has-[~:checked]:opacity-100"',
+            '      className={`mask mask-star-2 transition-opacity duration-150 ${ratingOpacity(Number(value) <= Number(currentValue.value))}`}',
             '    />',
             '  ))}',
             '</Rating>',
@@ -844,7 +912,7 @@ const RatingPage: FC = () => {
             '      name="rating-half"',
             '      value={value}',
             '      aria-label={`${value} star`}',
-            "      className={`bg-green-500 mask mask-star-2 opacity-[0.35] checked:opacity-100 has-[~:checked]:opacity-100 ${index % 2 === 0 ? 'mask-half-1' : 'mask-half-2'}`}",
+            "      className={`bg-green-500 mask mask-star-2 transition-opacity duration-150 ${ratingOpacity(Number(value) <= Number(currentValue.value))} ${index % 2 === 0 ? 'mask-half-1' : 'mask-half-2'}`}",
             '    />',
             '  ))}',
             '</Rating>',

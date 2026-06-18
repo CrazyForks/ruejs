@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Range 组件概述
 - 保留 Rue 当前的 range 视觉类，同时补齐常用的受控/非受控、值展示、marks 和辅助文案能力。
@@ -6,7 +5,7 @@ Range 组件概述
 - 语义回调通过 onValueChange / onValueCommit 暴露，原生 onInput / onChange 仍然继续透传。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, useRef, watch } from '@rue-js/rue'
+import { batch, computed, onScopeDispose, ref, toValue } from '@rue-js/rue'
 
 /** RangeColor 语义色类型。 */
 export type RangeColor =
@@ -23,6 +22,8 @@ export type RangeColor =
 export type RangeSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'default' | 'medium' | 'large'
 /** RangeValue 值类型。 */
 export type RangeValue = string | number
+/** RangeMaybeRef 允许父级把 ref/computed 直接传给高频变化的 value。 */
+export type RangeMaybeRef<T> = T | (() => T) | { value?: T; get?: () => T }
 
 /** RangeMark 接口。 */
 export interface RangeMark {
@@ -85,15 +86,15 @@ export interface RangeProps {
   /** 根节点内联样式。 */
   rootStyle?: any
   /** min 配置项。 */
-  min?: RangeValue
+  min?: RangeMaybeRef<RangeValue | undefined>
   /** max 配置项。 */
-  max?: RangeValue
+  max?: RangeMaybeRef<RangeValue | undefined>
   /** step 配置项。 */
-  step?: RangeValue
+  step?: RangeMaybeRef<RangeValue | undefined>
   /** 受控值。 */
-  value?: RangeValue
+  value?: RangeMaybeRef<RangeValue | undefined>
   /** 非受控初始值。 */
-  defaultValue?: RangeValue
+  defaultValue?: RangeMaybeRef<RangeValue | undefined>
   /** showValue 值。 */
   showValue?: boolean | RangeValueDisplayConfig
   /** formatter 配置项。 */
@@ -128,7 +129,34 @@ interface NormalizedValueDisplayConfig {
   formatter?: (value: number, info: RangeFormatterInfo) => any
 }
 
+type ScheduledValueFlush =
+  | { type: 'frame'; id: number }
+  | { type: 'timeout'; id: ReturnType<typeof setTimeout> }
+
 let rangeIdSeed = 0
+
+const RANGE_COLOR_CLASS_NAMES: Record<RangeColor, string> = {
+  neutral: 'range-neutral',
+  primary: 'range-primary',
+  secondary: 'range-secondary',
+  accent: 'range-accent',
+  success: 'range-success',
+  warning: 'range-warning',
+  info: 'range-info',
+  error: 'range-error',
+}
+
+const RANGE_SIZE_CLASS_NAMES: Record<RangeSize, string> = {
+  xs: 'range-xs',
+  sm: 'range-sm',
+  md: 'range-md',
+  lg: 'range-lg',
+  xl: 'range-xl',
+  small: 'range-sm',
+  default: 'range-md',
+  medium: 'range-md',
+  large: 'range-lg',
+}
 
 /** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
@@ -146,6 +174,12 @@ const clamp = (value: number, min: number, max: number) => {
   if (value < min) return min
   if (value > max) return max
   return value
+}
+
+/** 解析 MaybeRef 的内部工具函数。 */
+const resolveMaybeRef = <T,>(value: RangeMaybeRef<T> | undefined): T | undefined => {
+  if (value === undefined) return undefined
+  return toValue(value as T | (() => T) | { value?: T; get?: () => T })
 }
 
 /** 解析 Bounds 的内部工具函数。 */
@@ -166,17 +200,7 @@ const resolveStep = (step?: RangeValue) => {
 
 /** 解析 Size Class 的内部工具函数。 */
 const resolveSizeClass = (size?: RangeSize) => {
-  switch (size) {
-    case 'small':
-      return 'sm'
-    case 'default':
-    case 'medium':
-      return 'md'
-    case 'large':
-      return 'lg'
-    default:
-      return size
-  }
+  return size ? RANGE_SIZE_CLASS_NAMES[size] : undefined
 }
 
 /** 解析 Value 的内部工具函数。 */
@@ -255,11 +279,32 @@ const formatRangeValue = (
 /** 构建 Input Class Name 的内部工具函数。 */
 const buildInputClassName = (color?: RangeColor, size?: RangeSize, className?: string) => {
   let cls = 'range'
-  if (color) cls += ` range-${color}`
+  if (color) cls += ` ${RANGE_COLOR_CLASS_NAMES[color]}`
   const resolvedSize = resolveSizeClass(size)
-  if (resolvedSize) cls += ` range-${resolvedSize}`
+  if (resolvedSize) cls += ` ${resolvedSize}`
   if (className) cls += ` ${className}`
   return cls
+}
+
+/** 安排拖动值更新的内部工具函数。 */
+const scheduleValueFlush = (callback: () => void): ScheduledValueFlush => {
+  if (typeof requestAnimationFrame === 'function') {
+    return { type: 'frame', id: requestAnimationFrame(callback) }
+  }
+
+  return { type: 'timeout', id: setTimeout(callback, 0) }
+}
+
+/** 取消拖动值更新的内部工具函数。 */
+const cancelValueFlush = (flush: ScheduledValueFlush) => {
+  if (flush.type === 'frame') {
+    if (typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(flush.id)
+    }
+    return
+  }
+
+  clearTimeout(flush.id)
 }
 
 /** Range 的内部工具函数。 */
@@ -294,193 +339,226 @@ const Range: FC<RangeProps> = ({
   onValueCommit,
   ...rest
 }) => {
-  const inputRef = useRef<HTMLInputElement>()
-  const rootRef = useRef<HTMLDivElement>()
-  const forwardedRef = rest.ref
-  const generatedId = ref(`rue-range-${rangeIdSeed++}`)
-  const bounds = resolveBounds(min, max)
-  const rangeStep = resolveStep(step)
-  const controlled = value !== undefined
+  const generatedId = `rue-range-${rangeIdSeed++}`
+  const bounds = computed(() => resolveBounds(resolveMaybeRef(min), resolveMaybeRef(max)))
+  const rangeStep = computed(() => resolveStep(resolveMaybeRef(step)))
+  const controlled = computed(() => resolveMaybeRef(value) !== undefined)
   const uncontrolledValue = ref(
-    resolveValue(defaultValue ?? value ?? bounds.min, bounds.min, bounds.max, bounds.min),
+    resolveValue(
+      resolveMaybeRef(defaultValue) ?? resolveMaybeRef(value) ?? bounds.get().min,
+      bounds.get().min,
+      bounds.get().max,
+      bounds.get().min,
+    ),
   )
-  const currentValue = controlled
-    ? resolveValue(value, bounds.min, bounds.max, uncontrolledValue.value)
-    : resolveValue(uncontrolledValue.value, bounds.min, bounds.max, bounds.min)
-  const valueDisplay = normalizeValueDisplay(showValue)
-  const normalizedMarks = normalizeMarks(marks, bounds.min, bounds.max)
-  const inputId = id ?? generatedId.value
-  const info: RangeFormatterInfo = {
-    min: bounds.min,
-    max: bounds.max,
-    percent: resolvePercent(currentValue, bounds.min, bounds.max),
-  }
-  const displayFormatter = valueDisplay.formatter ?? formatter
-  const displayValue = formatRangeValue(currentValue, displayFormatter, info)
-  const ariaValueText =
-    typeof displayValue === 'string' || typeof displayValue === 'number'
-      ? String(displayValue)
+  const currentValue = computed(() => {
+    const currentBounds = bounds.get()
+    const controlledValue = resolveMaybeRef(value)
+    return controlledValue !== undefined
+      ? resolveValue(controlledValue, currentBounds.min, currentBounds.max, uncontrolledValue.value)
+      : resolveValue(
+          uncontrolledValue.value,
+          currentBounds.min,
+          currentBounds.max,
+          currentBounds.min,
+        )
+  })
+  const interacting = ref(false)
+  const interactionValue = ref(currentValue.get())
+  const presentedValue = computed(() => {
+    const currentBounds = bounds.get()
+    return interacting.value
+      ? resolveValue(
+          interactionValue.value,
+          currentBounds.min,
+          currentBounds.max,
+          currentValue.get(),
+        )
+      : currentValue.get()
+  })
+  const valueDisplay = computed(() => normalizeValueDisplay(showValue))
+  const normalizedMarks = computed(() => {
+    const currentBounds = bounds.get()
+    return normalizeMarks(marks, currentBounds.min, currentBounds.max)
+  })
+  const inputId = computed(() => id ?? generatedId)
+  const displayFormatter = computed(() => valueDisplay.get().formatter ?? formatter)
+  const info = computed<RangeFormatterInfo>(() => {
+    const currentBounds = bounds.get()
+    return {
+      min: currentBounds.min,
+      max: currentBounds.max,
+      percent: resolvePercent(presentedValue.get(), currentBounds.min, currentBounds.max),
+    }
+  })
+  const displayValue = computed(() =>
+    formatRangeValue(presentedValue.get(), displayFormatter.get(), info.get()),
+  )
+  const ariaValueText = computed(() => {
+    const currentDisplayValue = displayValue.get()
+    return typeof currentDisplayValue === 'string' || typeof currentDisplayValue === 'number'
+      ? String(currentDisplayValue)
       : undefined
-  const needsWrapper =
-    label != null ||
-    hint != null ||
-    helper != null ||
-    valueDisplay.visible ||
-    normalizedMarks.length > 0 ||
-    !!rootClassName ||
-    !!rootStyle ||
-    !!labelClassName ||
-    !!hintClassName ||
-    !!helperClassName ||
-    !!valueClassName ||
-    !!marksClassName
+  })
+  const needsWrapper = computed(
+    () =>
+      label != null ||
+      hint != null ||
+      helper != null ||
+      valueDisplay.get().visible ||
+      normalizedMarks.get().length > 0 ||
+      !!rootClassName ||
+      !!rootStyle ||
+      !!labelClassName ||
+      !!hintClassName ||
+      !!helperClassName ||
+      !!valueClassName ||
+      !!marksClassName,
+  )
 
   if ('ref' in rest) {
     delete rest.ref
   }
 
-  const assignForwardedRef = (element: HTMLInputElement | null) => {
-    if (typeof forwardedRef === 'function') {
-      forwardedRef(element)
+  let pendingValueChange: { value: number; event: Event } | null = null
+  let valueChangeFlush: ScheduledValueFlush | null = null
+  let lastEmittedValue: number | undefined
+  let interactionHasEmittedValue = false
+
+  const startInteraction = (nextValue: number) => {
+    batch(() => {
+      interactionValue.value = nextValue
+      if (!interacting.value) {
+        interactionHasEmittedValue = false
+        interacting.value = true
+      }
+    })
+  }
+
+  const stopInteraction = () => {
+    batch(() => {
+      interactionValue.value = currentValue.get()
+      interacting.value = false
+    })
+  }
+
+  const flushValueChange = () => {
+    valueChangeFlush = null
+
+    if (!pendingValueChange) {
       return
     }
-    if (forwardedRef && typeof forwardedRef === 'object') {
-      ;(forwardedRef as any).current = element ?? undefined
+
+    const next = pendingValueChange
+    pendingValueChange = null
+
+    interactionValue.value = next.value
+    if (!controlled.get()) {
+      uncontrolledValue.value = next.value
     }
+    lastEmittedValue = next.value
+    interactionHasEmittedValue = true
+    onValueChange?.(next.value, next.event)
   }
 
-  const assignInputRef = (element: HTMLInputElement | null) => {
-    inputRef.current = element ?? undefined
-    assignForwardedRef(element)
-  }
+  const scheduleValueChange = (nextValue: number, event: Event) => {
+    pendingValueChange = { value: nextValue, event }
 
-  const renderDisplayValue = (nextValue: number) => {
-    return formatRangeValue(nextValue, displayFormatter, {
-      min: bounds.min,
-      max: bounds.max,
-      percent: resolvePercent(nextValue, bounds.min, bounds.max),
-    })
-  }
-
-  const syncVisualState = (nextValue: number) => {
-    const nextDisplayValue = renderDisplayValue(nextValue)
-    const nextAriaValueText =
-      typeof nextDisplayValue === 'string' || typeof nextDisplayValue === 'number'
-        ? String(nextDisplayValue)
-        : undefined
-
-    if (inputRef.current) {
-      inputRef.current.value = String(nextValue)
-      inputRef.current.setAttribute('aria-valuenow', String(nextValue))
-      if (nextAriaValueText !== undefined) {
-        inputRef.current.setAttribute('aria-valuetext', nextAriaValueText)
-      } else {
-        inputRef.current.removeAttribute('aria-valuetext')
-      }
+    if (valueChangeFlush) {
+      return
     }
 
-    if (!rootRef.current) return
-
-    if (nextAriaValueText !== undefined) {
-      const outputs = rootRef.current.querySelectorAll('[data-rue-range-output="true"]')
-      outputs.forEach(outputNode => {
-        outputNode.textContent = nextAriaValueText
-      })
-    }
-
-    const marks = rootRef.current.querySelectorAll('[data-rue-range-mark]')
-    marks.forEach(markNode => {
-      const mark = markNode as HTMLSpanElement
-      const markerValue = Number(mark.getAttribute('data-rue-range-mark'))
-      const active = nextValue >= markerValue
-
-      mark.className = `absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1 text-[11px] ${active ? 'font-medium text-base-content' : 'text-base-content/55'}`
-      const tick = mark.firstElementChild as HTMLElement | null
-      if (tick) {
-        tick.className = active ? 'h-2 w-px bg-base-content/80' : 'h-2 w-px bg-base-content/25'
-      }
-    })
+    valueChangeFlush = scheduleValueFlush(flushValueChange)
   }
+
+  onScopeDispose(() => {
+    if (valueChangeFlush) {
+      cancelValueFlush(valueChangeFlush)
+      valueChangeFlush = null
+    }
+    pendingValueChange = null
+  })
 
   const handleInput = (event: Event) => {
     const target = event.target as HTMLInputElement | null
-    const nextValue = resolveValue(target?.value, bounds.min, bounds.max, currentValue)
-    if (!controlled) {
-      uncontrolledValue.value = nextValue
-      syncVisualState(nextValue)
-    }
+    const currentBounds = bounds.get()
+    const nextValue = resolveValue(
+      target?.value,
+      currentBounds.min,
+      currentBounds.max,
+      presentedValue.get(),
+    )
+    startInteraction(nextValue)
     onInput?.(event)
-    onValueChange?.(nextValue, event)
+    if (!controlled.get() || onValueChange) {
+      scheduleValueChange(nextValue, event)
+    }
   }
 
   const handleChange = (event: Event) => {
     const target = event.target as HTMLInputElement | null
-    const nextValue = resolveValue(target?.value, bounds.min, bounds.max, currentValue)
-    if (!controlled) {
+    const currentBounds = bounds.get()
+    const nextValue = resolveValue(
+      target?.value,
+      currentBounds.min,
+      currentBounds.max,
+      presentedValue.get(),
+    )
+    startInteraction(nextValue)
+    if (valueChangeFlush) {
+      pendingValueChange = { value: nextValue, event }
+      cancelValueFlush(valueChangeFlush)
+      flushValueChange()
+    } else if (!interactionHasEmittedValue || lastEmittedValue !== nextValue) {
+      lastEmittedValue = nextValue
+      interactionHasEmittedValue = true
+      onValueChange?.(nextValue, event)
+    }
+    if (!controlled.get()) {
       uncontrolledValue.value = nextValue
-      syncVisualState(nextValue)
     }
     onChange?.(event)
     onValueCommit?.(nextValue, event)
+    stopInteraction()
   }
 
-  onMounted(() => {
-    syncVisualState(currentValue)
-  })
-
-  watch(
-    () => value,
-    nextValue => {
-      if (controlled) {
-        syncVisualState(resolveValue(nextValue, bounds.min, bounds.max, uncontrolledValue.value))
-      }
-    },
-    { immediate: true },
-  )
-
-  const inputNode = (
-    <input
-      {...rest}
-      ref={assignInputRef}
-      id={inputId}
-      type="range"
-      className={buildInputClassName(color, size, className)}
-      style={style}
-      min={String(bounds.min)}
-      max={String(bounds.max)}
-      step={step === undefined ? undefined : String(rangeStep)}
-      value={String(currentValue)}
-      disabled={disabled}
-      aria-valuemin={String(bounds.min)}
-      aria-valuemax={String(bounds.max)}
-      aria-valuenow={String(currentValue)}
-      aria-valuetext={ariaValueText}
-      onInput={handleInput}
-      onChange={handleChange}
-    />
-  )
-
-  if (!needsWrapper) {
-    return inputNode
+  if (!needsWrapper.get()) {
+    return (
+      <input
+        {...rest}
+        id={inputId.get()}
+        type="range"
+        className={buildInputClassName(color, size, className)}
+        style={style}
+        min={String(bounds.get().min)}
+        max={String(bounds.get().max)}
+        step={resolveMaybeRef(step) === undefined ? undefined : String(rangeStep.get())}
+        value={String(presentedValue.get())}
+        disabled={disabled}
+        aria-valuemin={String(bounds.get().min)}
+        aria-valuemax={String(bounds.get().max)}
+        aria-valuenow={String(presentedValue.get())}
+        aria-valuetext={ariaValueText.get()}
+        onInput={handleInput}
+        onChange={handleChange}
+      />
+    )
   }
 
   return (
     <div
-      ref={(element: HTMLDivElement | null) => {
-        rootRef.current = element ?? undefined
-      }}
       className={appendClassName('w-full space-y-3', rootClassName)}
       style={rootStyle}
       data-rue-range-root="true"
     >
       {label != null ||
       hint != null ||
-      (valueDisplay.visible && valueDisplay.placement === 'inline') ? (
+      (valueDisplay.get().visible && valueDisplay.get().placement === 'inline') ? (
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 space-y-1">
             {label != null ? (
               <label
-                htmlFor={inputId}
+                htmlFor={inputId.get()}
                 className={appendClassName(
                   'block text-sm font-medium text-base-content',
                   labelClassName,
@@ -495,51 +573,70 @@ const Range: FC<RangeProps> = ({
               </p>
             ) : null}
           </div>
-          {valueDisplay.visible && valueDisplay.placement === 'inline' ? (
+          {valueDisplay.get().visible && valueDisplay.get().placement === 'inline' ? (
             <output
-              htmlFor={inputId}
+              htmlFor={inputId.get()}
               className={appendClassName(
                 appendClassName(
                   'shrink-0 rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content',
-                  valueDisplay.className,
+                  valueDisplay.get().className,
                 ),
                 valueClassName,
               )}
               data-rue-range-output="true"
             >
-              {displayValue}
+              {displayValue.get()}
             </output>
           ) : null}
         </div>
       ) : null}
 
-      <div className="w-full">{inputNode}</div>
+      <div className="w-full">
+        <input
+          {...rest}
+          id={inputId.get()}
+          type="range"
+          className={buildInputClassName(color, size, className)}
+          style={style}
+          min={String(bounds.get().min)}
+          max={String(bounds.get().max)}
+          step={resolveMaybeRef(step) === undefined ? undefined : String(rangeStep.get())}
+          value={String(presentedValue.get())}
+          disabled={disabled}
+          aria-valuemin={String(bounds.get().min)}
+          aria-valuemax={String(bounds.get().max)}
+          aria-valuenow={String(presentedValue.get())}
+          aria-valuetext={ariaValueText.get()}
+          onInput={handleInput}
+          onChange={handleChange}
+        />
+      </div>
 
-      {valueDisplay.visible && valueDisplay.placement === 'below' ? (
+      {valueDisplay.get().visible && valueDisplay.get().placement === 'below' ? (
         <div className="flex justify-end">
           <output
-            htmlFor={inputId}
+            htmlFor={inputId.get()}
             className={appendClassName(
               appendClassName(
                 'rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content',
-                valueDisplay.className,
+                valueDisplay.get().className,
               ),
               valueClassName,
             )}
             data-rue-range-output="true"
           >
-            {displayValue}
+            {displayValue.get()}
           </output>
         </div>
       ) : null}
 
-      {normalizedMarks.length > 0 ? (
+      {normalizedMarks.get().length > 0 ? (
         <div
           className={appendClassName('relative h-10', marksClassName)}
           data-rue-range-marks="true"
         >
-          {normalizedMarks.map(mark => {
-            const active = currentValue >= mark.value
+          {normalizedMarks.get().map(mark => {
+            const active = presentedValue.get() >= mark.value
             return (
               <span
                 key={mark.key}

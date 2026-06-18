@@ -124,7 +124,7 @@ const ApiDocDetail: FC<ApiDocDetailProps> = props => {
     <SidebarPlayground currentPath={currentPath.get()}>
       <div>
         <div
-          className="prose prose-sm md:prose-base"
+          className="max-w-none prose prose-sm md:prose-base"
           id="doc-body"
           dangerouslySetInnerHTML={{ __html: html.value }}
         ></div>

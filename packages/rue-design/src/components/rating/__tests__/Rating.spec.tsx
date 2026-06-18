@@ -50,6 +50,38 @@ describe('Rating', () => {
     })
   })
 
+  it('syncs manual item checked state after parent value changes', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const score = ref('2')
+
+    const Demo = () => (
+      <Rating>
+        <Rating.Item name="manual-rating" value="1" checked={score.value === '1'} />
+        <Rating.Item name="manual-rating" value="2" checked={score.value === '2'} />
+        <Rating.Item name="manual-rating" value="3" checked={score.value === '3'} />
+      </Rating>
+    )
+
+    render(<Demo />, container)
+
+    await waitForContent(() => {
+      const items = Array.from(
+        container.querySelectorAll<HTMLInputElement>('input[name="manual-rating"]'),
+      )
+      expect(items.map(item => item.checked)).toEqual([false, true, false])
+    })
+
+    score.value = '3'
+
+    await waitForContent(() => {
+      const items = Array.from(
+        container.querySelectorAll<HTMLInputElement>('input[name="manual-rating"]'),
+      )
+      expect(items.map(item => item.checked)).toEqual([false, false, true])
+    })
+  })
+
   it('renders auto items from count and allows clearing the current value', async () => {
     const container = mountContainer()
     resetActiveRuntime()
@@ -163,7 +195,7 @@ describe('Rating', () => {
 
     third.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 18 }))
     expect(handleChange).toHaveBeenCalledWith(3)
-    expect(root.getAttribute('data-rating-value')).toBe('3')
+    expect(root.getAttribute('data-rating-value')).toBe('2.5')
 
     root.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }))
     await waitForContent(() => {

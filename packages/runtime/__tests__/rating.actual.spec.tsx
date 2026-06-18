@@ -128,6 +128,48 @@ describe('Rating actual page', () => {
       expect(updatedLegacyDemo!.querySelector('input.mask.mask-star-2')?.className).toContain(
         'opacity-[0.35]',
       )
+      const clearableItems = Array.from(
+        updatedLegacyDemo!.querySelectorAll<HTMLInputElement>(
+          'input[name="rating-clearable"].mask.mask-star-2',
+        ),
+      )
+      expect(clearableItems.every(item => item.classList.contains('opacity-[0.35]'))).toBe(true)
+      expect(
+        (
+          updatedLegacyDemo!.querySelector(
+            'input[name="rating-clearable"][aria-label="clear"]',
+          ) as HTMLInputElement
+        ).checked,
+      ).toBe(true)
+    })
+
+    const halfFourPointFive = legacyAdvancedDemo()!.querySelector(
+      'input[name="rating-half"][value="4.5"]',
+    ) as HTMLInputElement
+    halfFourPointFive.checked = true
+    halfFourPointFive.dispatchEvent(new Event('change', { bubbles: true }))
+
+    await waitForContent(() => {
+      const updatedLegacyDemo = legacyAdvancedDemo() as HTMLElement | null
+      const halfItems = Array.from(
+        updatedLegacyDemo!.querySelectorAll<HTMLInputElement>('input[name="rating-half"].mask'),
+      )
+      expect(updatedLegacyDemo!.textContent).toContain('当前评分：4.5')
+      expect(halfItems).toHaveLength(10)
+      expect(halfItems.map(item => item.classList.contains('opacity-100'))).toEqual([
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+      ])
+      expect(halfItems[9]?.classList.contains('opacity-[0.35]')).toBe(true)
+      expect(halfItems[8]?.checked).toBe(true)
     })
 
     await click(findTabButton(legacyAdvancedDemo()!, 'JSX代码'))
@@ -146,9 +188,16 @@ describe('Rating actual page', () => {
         restored!.querySelectorAll('.rating')[1]?.querySelectorAll('input[type="radio"]').length,
       ).toBe(11)
       expect(restored!.querySelectorAll('.rating')[1]?.className).toContain('rating-half')
-      expect(restored!.querySelector('input.mask.mask-star-2')?.className).toContain(
-        'opacity-[0.35]',
+      const restoredClearableItems = Array.from(
+        restored!.querySelectorAll<HTMLInputElement>('input[name="rating-clearable"].mask'),
       )
+      expect(restoredClearableItems.map(item => item.classList.contains('opacity-100'))).toEqual([
+        true,
+        true,
+        false,
+        false,
+        false,
+      ])
     })
   })
 })

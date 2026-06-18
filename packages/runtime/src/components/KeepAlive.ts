@@ -70,7 +70,82 @@ type ChildDescriptor = {
 const DEFAULT_CACHE_KEY = Symbol('rue-keep-alive-default')
 // onActivated/onDeactivated 注册时通过全局临时槽找到正在 render 的 KeepAlive entry。
 const RUE_KEEP_ALIVE_HOOK_TARGET_KEY = '__rue_keep_alive_hook_target__'
+const RUE_KEEP_ALIVE_RANGE_KEY = '__rue_keep_alive_range__'
 const RUE_MOUNT_ID_KEY = '__rue_mount_id'
+
+const markKeepAliveHookTarget = (value: unknown, entry: CacheEntry) => {
+  if (Array.isArray(value)) {
+    value.forEach(item => markKeepAliveHookTarget(item, entry))
+    return
+  }
+
+  if ((typeof value !== 'object' && typeof value !== 'function') || value == null) {
+    return
+  }
+
+  try {
+    Object.defineProperty(value, RUE_KEEP_ALIVE_HOOK_TARGET_KEY, {
+      configurable: true,
+      enumerable: false,
+      value: entry,
+      writable: true,
+    })
+  } catch {
+    try {
+      ;(value as Record<string, unknown>)[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = entry
+    } catch {}
+  }
+}
+
+const setKeepAliveRangeMarker = (node: DomNodeLike, cached: boolean) => {
+  const target = node as unknown as Record<string, unknown>
+
+  try {
+    if (cached) {
+      Object.defineProperty(target, RUE_KEEP_ALIVE_RANGE_KEY, {
+        configurable: true,
+        enumerable: false,
+        value: true,
+        writable: true,
+      })
+    } else {
+      delete target[RUE_KEEP_ALIVE_RANGE_KEY]
+    }
+    return
+  } catch {
+    try {
+      if (cached) {
+        target[RUE_KEEP_ALIVE_RANGE_KEY] = true
+      } else {
+        delete target[RUE_KEEP_ALIVE_RANGE_KEY]
+      }
+    } catch {}
+  }
+}
+
+const setKeepAliveSubtreeMarker = (root: DomNodeLike, cached: boolean) => {
+  setKeepAliveRangeMarker(root, cached)
+
+  let child: DomNodeLike | null = root.firstChild ?? null
+  while (child) {
+    const next: DomNodeLike | null = child.nextSibling ?? null
+    setKeepAliveSubtreeMarker(child, cached)
+    child = next
+  }
+}
+
+const setKeepAliveRangeMarkers = (entry: CacheEntry, cached: boolean) => {
+  let node: DomNodeLike | null = entry.start
+
+  while (node) {
+    const next: DomNodeLike | null = node.nextSibling ?? null
+    setKeepAliveSubtreeMarker(node, cached)
+    if (node === entry.end) {
+      break
+    }
+    node = next
+  }
+}
 
 const cloneRenderable = (value: unknown): unknown =>
   Array.isArray(value) ? value.map(cloneRenderable) : value
@@ -288,6 +363,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     if (getParentNode(entry.start) !== ctx.storage) {
       moveRange(entry, ctx.storage, null)
     }
+    setKeepAliveRangeMarkers(entry, entry.cacheable && !entry.disposed)
   }
 
   const createEntry = (descriptor: ChildDescriptor, cacheable: boolean): CacheEntry => {
@@ -298,7 +374,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     insertBefore(parent, start, ctx.end)
     insertBefore(parent, end, ctx.end)
 
-    return {
+    const entry: CacheEntry = {
       key: descriptor.key,
       name: descriptor.name,
       start,
@@ -310,6 +386,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
       activatedHooks: new Set(),
       deactivatedHooks: new Set(),
     }
+    return entry
   }
 
   /** 渲染缓存 entry，并在同步 render 阶段暴露 hook target 供生命周期注册。 */
@@ -317,6 +394,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     const parent = (getParentNode(entry.start) as DomElementLike | null) ?? getActiveParent()
     const globalRecord = globalThis as typeof globalThis & Record<string, unknown>
     const prevHookTarget = globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY]
+    markKeepAliveHookTarget(child, entry)
     globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = entry
     renderBetween(child, parent, entry.start, entry.end)
     setTimeout(() => {
@@ -369,6 +447,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
       notifyDeactivated(entry)
     }
     entry.disposed = true
+    setKeepAliveRangeMarkers(entry, false)
 
     const parent = getParentNode(entry.start) as DomElementLike | null
     if (parent && getParentNode(entry.end) === parent) {
@@ -400,6 +479,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     }
 
     moveRange(entry, getActiveParent(), ctx.end)
+    setKeepAliveRangeMarkers(entry, false)
     if (!entry.isActive) {
       entry.isActive = true
       entry.justActivated = true
@@ -481,6 +561,9 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
       const entry = ctx.activeEntry
       entry.name = descriptor.name
       entry.cacheable = cacheable
+      if (!cacheable) {
+        setKeepAliveRangeMarkers(entry, false)
+      }
 
       if (cacheable) {
         ctx.cache.set(entry.key, entry)

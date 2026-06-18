@@ -87,15 +87,19 @@ fn make_attr(name: &str, expr: Expr) -> JSXAttrOrSpread {
     })
 }
 
+fn jsx_attr_name_matches(name: &JSXAttrName, expected: &str) -> bool {
+    match name {
+        JSXAttrName::Ident(ident) => ident.sym.as_ref() == expected,
+        JSXAttrName::JSXNamespacedName(_) => false,
+    }
+}
+
 fn upsert_attr(opening: &mut JSXOpeningElement, name: &str, expr: Expr) {
     for attr_or_spread in &mut opening.attrs {
         let JSXAttrOrSpread::JSXAttr(attr) = attr_or_spread else {
             continue;
         };
-        let JSXAttrName::Ident(ident) = &attr.name else {
-            continue;
-        };
-        if ident.sym.as_ref() != name {
+        if !jsx_attr_name_matches(&attr.name, name) {
             continue;
         }
         attr.value = Some(jsx_attr_value_from_expr(expr));
@@ -269,7 +273,7 @@ fn is_raw_model_modifier_token(raw: &str) -> bool {
 
 fn parse_model_spec(raw_arg: Option<String>, modifiers: Vec<String>) -> ModelDirectiveSpec {
     let prop_name = raw_arg.unwrap_or_else(|| "modelValue".to_string());
-    // 组件 v-model 的公开协议保持 Vue 风格：
+    // 组件 v-model 的公开协议保持 JSX 友好的 Rue 风格：
     // prop 为 modelValue/自定义参数，更新事件为 onUpdateXxx，修饰符落到 xxxModifiers。
     let update_name = format!("onUpdate{}", pascalize_prop_name(&prop_name));
     let modifiers_prop_name = if prop_name == "modelValue" {

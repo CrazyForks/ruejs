@@ -22,6 +22,11 @@ const SERVER_RENDERER_REQUIRED_FILES = [
   'dist/server-renderer.cjs.prod.js',
 ] as const
 const RUNTIME_VAPOR_PACKAGE_DIRS = ['pkg', 'pkg-node', 'pkg-node-reactive', 'pkg-node-vapor']
+const RUNTIME_VAPOR_REQUIRED_FILES = [
+  'package.json',
+  'rue_runtime_vapor.js',
+  'rue_runtime_vapor_bg.wasm',
+] as const
 
 export type FixtureDevServer = {
   process: ChildProcess
@@ -209,13 +214,19 @@ async function ensureTextRuntimeVaporArtifacts(): Promise<void> {
   const outputRoot = path.join(TEXT_PACKAGE_ROOT, 'dist/runtime-vapor')
   const completeMarker = path.join(outputRoot, '.copy-complete')
   const releaseLock = await acquireSetupLock('runtime-vapor-copy')
+  const tempRoot = path.join(
+    TEXT_PACKAGE_ROOT,
+    'dist',
+    `.runtime-vapor-${process.pid}-${Date.now()}.tmp`,
+  )
 
   try {
     if (await hasRuntimeVaporArtifacts(outputRoot, completeMarker)) {
       return
     }
 
-    await fsp.mkdir(outputRoot, { recursive: true })
+    await fsp.rm(tempRoot, { force: true, recursive: true })
+    await fsp.mkdir(tempRoot, { recursive: true })
 
     for (const dir of RUNTIME_VAPOR_PACKAGE_DIRS) {
       const sourceDir = path.join(runtimeVaporRoot, dir)
@@ -230,14 +241,17 @@ async function ensureTextRuntimeVaporArtifacts(): Promise<void> {
         throw error
       }
 
-      await fsp.cp(sourceDir, path.join(outputRoot, dir), {
+      await fsp.cp(sourceDir, path.join(tempRoot, dir), {
         force: true,
         recursive: true,
       })
     }
 
-    await fsp.writeFile(completeMarker, `${Date.now()}\n`)
+    await fsp.writeFile(path.join(tempRoot, '.copy-complete'), `${Date.now()}\n`)
+    await fsp.rm(outputRoot, { force: true, recursive: true })
+    await fsp.rename(tempRoot, outputRoot)
   } finally {
+    await fsp.rm(tempRoot, { force: true, recursive: true })
     await releaseLock()
   }
 }
@@ -248,7 +262,11 @@ async function hasRuntimeVaporArtifacts(
 ): Promise<boolean> {
   try {
     await fsp.access(completeMarker)
-    await Promise.all(RUNTIME_VAPOR_PACKAGE_DIRS.map(dir => fsp.access(path.join(outputRoot, dir))))
+    await Promise.all(
+      RUNTIME_VAPOR_PACKAGE_DIRS.flatMap(dir =>
+        RUNTIME_VAPOR_REQUIRED_FILES.map(file => fsp.access(path.join(outputRoot, dir, file))),
+      ),
+    )
     return true
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {

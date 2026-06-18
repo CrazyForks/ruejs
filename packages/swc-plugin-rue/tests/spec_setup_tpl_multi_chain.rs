@@ -22,23 +22,26 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
-        const b = a.value + 2;
-        const c = b * 3;
-        const t = `a=${a.value}-${a.value > 0 ? `b=${b}-${b > 3 ? `c=${c}` : 'lo'}` : 'none'}`;
-        return {
-            a: a,
-            b: b,
-            c: c,
-            t: t
-        };
-    }));
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
+            const b = _$vaporWithHookId("computed:1:1", ()=>computed(()=>a.value + 2));
+            const __rue_phase2_b = b;
+            const c = _$vaporWithHookId("computed:1:2", ()=>computed(()=>__rue_phase2_b.get() * 3));
+            const __rue_phase2_c = c;
+            const t = _$vaporWithHookId("computed:1:3", ()=>computed(()=>`a=${a.value}-${a.value > 0 ? `b=${__rue_phase2_b.get()}-${__rue_phase2_b.get() > 3 ? `c=${__rue_phase2_c.get()}` : 'lo'}` : 'none'}`));
+            const __rue_phase2_t = t;
+            return {
+                a: a,
+                b: b,
+                c: c,
+                t: t
+            };
+        }));
     const { a: a, b: b, c: c, t: t } = _$useSetup;
-    return <div>{t}</div>;
+    return <div>{t.get()}</div>;
 };
 "##;
 

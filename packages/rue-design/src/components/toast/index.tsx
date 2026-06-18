@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Toast 组件概述
 - 保留 Toast 根容器的定位与堆叠语义，兼容 placement / horizontal / vertical / inset / gap / zIndex。
 - 新增 Toast.Item 这一层，参考 message 的单条提示模型补齐 type、icon、title、description、action、closable、duration。
 - `Toast.useMessage()` 默认挂到全局页面层；传 `getContainer={false}` 时可显式回退到局部 holder。
 */
-import { onUnmounted, ref, render, useRef, useState, watch, type FC } from '@rue-js/rue'
+import { onUnmounted, ref, render, useSetup, useState, watch, type FC } from '@rue-js/rue'
 
 /** ToastHorizontal 类型。 */
 export type ToastHorizontal = 'start' | 'center' | 'end'
@@ -384,6 +383,24 @@ interface ToastMessageRecord {
   config: ToastMessageConfig
 }
 
+interface ToastItemContext {
+  uncontrolledOpen: { value: boolean }
+  lastDefaultOpen: { value: boolean }
+  hovered: { value: boolean }
+  closeTimer: number | undefined
+  timerStartedAt: number | undefined
+  remainingDuration: number | null
+  rootElement: HTMLElement | null
+}
+
+interface ToastMessageContext {
+  api: ToastMessageApi | undefined
+  records: ToastMessageRecord[]
+  holderElement: HTMLDivElement | undefined
+  viewportElement: HTMLDivElement | undefined
+  options: ToastUseMessageOptions
+}
+
 interface ToastMessageViewportProps extends ToastUseMessageOptions {
   records: ToastMessageRecord[]
   onDestroy: (key: ToastMessageKey) => void
@@ -495,42 +512,47 @@ const ToastMessageViewport: FC<ToastMessageViewportProps> = ({
 
 /** use Toast Message 的内部工具函数。 */
 const useToastMessage = (options: ToastUseMessageOptions = {}) => {
-  const apiRef = useRef<ToastMessageApi>()
-  const recordsRef = useRef<ToastMessageRecord[]>([])
-  const holderElementRef = useRef<HTMLDivElement>()
-  const viewportElementRef = useRef<HTMLDivElement>()
-  const optionsRef = useRef(options)
+  const ctx = useSetup(
+    () =>
+      ({
+        api: undefined,
+        records: [],
+        holderElement: undefined,
+        viewportElement: undefined,
+        options,
+      }) as ToastMessageContext,
+  )
 
-  optionsRef.current = options
+  ctx.options = options
 
   const ensureViewportElement = () => {
-    const currentOptions = optionsRef.current ?? {}
+    const currentOptions = ctx.options ?? {}
     const target = resolveToastMountElement(
       currentOptions.getContainer,
-      holderElementRef.current ?? null,
+      ctx.holderElement ?? null,
       true,
     )
     if (!target) return null
 
-    if (viewportElementRef.current == null) {
+    if (ctx.viewportElement == null) {
       const viewportElement = document.createElement('div')
       viewportElement.style.display = 'contents'
       viewportElement.dataset.rueToastMessageViewport = 'true'
-      viewportElementRef.current = viewportElement
+      ctx.viewportElement = viewportElement
     }
 
-    if (viewportElementRef.current.parentElement !== target) {
-      target.appendChild(viewportElementRef.current)
+    if (ctx.viewportElement.parentElement !== target) {
+      target.appendChild(ctx.viewportElement)
     }
 
-    return viewportElementRef.current
+    return ctx.viewportElement
   }
 
   const syncViewport = () => {
     const viewportElement = ensureViewportElement()
     if (!viewportElement) return
-    const currentOptions = optionsRef.current ?? {}
-    const currentRecords = recordsRef.current ?? []
+    const currentOptions = ctx.options ?? {}
+    const currentRecords = ctx.records ?? []
 
     render(
       <ToastMessageViewport records={currentRecords} onDestroy={destroy} {...currentOptions} />,
@@ -539,11 +561,11 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
   }
 
   const destroy = (key?: ToastMessageKey) => {
-    const currentRecords = recordsRef.current ?? []
+    const currentRecords = ctx.records ?? []
 
     if (key == null) {
       if (currentRecords.length > 0) {
-        recordsRef.current = []
+        ctx.records = []
         syncViewport()
       }
       return
@@ -551,7 +573,7 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
 
     const nextRecords = currentRecords.filter(record => record.key !== key)
     if (nextRecords.length !== currentRecords.length) {
-      recordsRef.current = nextRecords
+      ctx.records = nextRecords
       syncViewport()
     }
   }
@@ -563,7 +585,7 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
       config: { ...config, key: nextKey },
     }
 
-    const currentRecords = recordsRef.current ?? []
+    const currentRecords = ctx.records ?? []
     const currentIndex = currentRecords.findIndex(record => record.key === nextKey)
     let nextRecords =
       currentIndex === -1
@@ -574,8 +596,8 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
             ...currentRecords.slice(currentIndex + 1),
           ]
 
-    nextRecords = trimToastMessageRecords(nextRecords, (optionsRef.current ?? {}).maxCount)
-    recordsRef.current = nextRecords
+    nextRecords = trimToastMessageRecords(nextRecords, (ctx.options ?? {}).maxCount)
+    ctx.records = nextRecords
     syncViewport()
 
     return () => {
@@ -583,7 +605,7 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
     }
   }
 
-  if (apiRef.current == null) {
+  if (ctx.api == null) {
     const createTypedOpen = (type: ToastItemType, fallbackDuration?: number | null) => {
       return (config: Omit<ToastMessageConfig, 'type'>) =>
         open({
@@ -593,7 +615,7 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
         })
     }
 
-    apiRef.current = {
+    ctx.api = {
       open,
       info: createTypedOpen('info'),
       success: createTypedOpen('success'),
@@ -605,29 +627,29 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
   }
 
   onUnmounted(() => {
-    recordsRef.current = []
+    ctx.records = []
 
-    if (viewportElementRef.current) {
-      viewportElementRef.current.remove()
-      viewportElementRef.current = undefined
+    if (ctx.viewportElement) {
+      ctx.viewportElement.remove()
+      ctx.viewportElement = undefined
     }
 
-    holderElementRef.current = undefined
+    ctx.holderElement = undefined
   })
 
   const contextHolder = (
     <div
       style={{ display: 'contents' }}
       ref={(element: HTMLDivElement | null) => {
-        holderElementRef.current = element ?? undefined
-        if (optionsRef.current?.getContainer === false && element) {
+        ctx.holderElement = element ?? undefined
+        if (ctx.options?.getContainer === false && element) {
           syncViewport()
         }
       }}
     />
   )
 
-  return [apiRef.current!, contextHolder] as const
+  return [ctx.api!, contextHolder] as const
 }
 
 /** 解析 Item Role 的内部工具函数。 */
@@ -884,20 +906,28 @@ const ToastItem: FC<ToastItemProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const uncontrolledOpen = ref(defaultOpen)
-  const lastDefaultOpen = ref(!!defaultOpen)
   const isControlled = typeof open === 'boolean'
-  const [currentOpen, setCurrentOpen] = useState(isControlled ? !!open : uncontrolledOpen.value, {
-    kind: 'ref',
-  })
-  const hovered = ref(false)
-  const closeTimerRef = useRef<number>()
-  const timerStartedAtRef = useRef<number>()
-  const remainingDurationRef = useRef<number | null>(resolveDurationMs(duration))
+  const itemCtx = useSetup(
+    () =>
+      ({
+        uncontrolledOpen: ref(!!defaultOpen),
+        lastDefaultOpen: ref(!!defaultOpen),
+        hovered: ref(false),
+        closeTimer: undefined,
+        timerStartedAt: undefined,
+        remainingDuration: resolveDurationMs(duration),
+        rootElement: null,
+      }) as ToastItemContext,
+  )
+  const [currentOpen, setCurrentOpen] = useState(
+    isControlled ? !!open : itemCtx.uncontrolledOpen.value,
+    {
+      kind: 'ref',
+    },
+  )
   const componentProps: Record<string, any> = { ...rest }
   const userOnMouseEnter = componentProps.onMouseEnter
   const userOnMouseLeave = componentProps.onMouseLeave
-  let rootElement: HTMLElement | null = null
   const resolvedOpen = isControlled ? !!open : currentOpen.value
 
   if ('onMouseEnter' in componentProps) delete componentProps.onMouseEnter
@@ -914,66 +944,63 @@ const ToastItem: FC<ToastItemProps> = ({
   const toastItemType = componentProps['data-rue-toast-type']
 
   function syncItemDom(nextOpen: boolean) {
-    if (!rootElement) return
+    const element = itemCtx.rootElement
+    if (!element) return
 
-    rootElement.style.display = nextOpen ? '' : 'none'
+    element.style.display = nextOpen ? '' : 'none'
 
     if (nextOpen) {
-      rootElement.removeAttribute('aria-hidden')
-      rootElement.setAttribute('data-rue-toast-item', String(toastItemMarker))
-      rootElement.setAttribute('data-rue-toast-type', String(toastItemType))
+      element.removeAttribute('aria-hidden')
+      element.setAttribute('data-rue-toast-item', String(toastItemMarker))
+      element.setAttribute('data-rue-toast-type', String(toastItemType))
       if (toastItemTestId != null) {
-        rootElement.setAttribute('data-testid', String(toastItemTestId))
+        element.setAttribute('data-testid', String(toastItemTestId))
       }
       return
     }
 
-    rootElement.setAttribute('aria-hidden', 'true')
-    rootElement.removeAttribute('data-rue-toast-item')
-    rootElement.removeAttribute('data-rue-toast-type')
+    element.setAttribute('aria-hidden', 'true')
+    element.removeAttribute('data-rue-toast-item')
+    element.removeAttribute('data-rue-toast-type')
     if (toastItemTestId != null) {
-      rootElement.removeAttribute('data-testid')
+      element.removeAttribute('data-testid')
     }
   }
 
   const clearAutoCloseTimer = (captureRemaining = false) => {
-    if (closeTimerRef.current == null) return
+    if (itemCtx.closeTimer == null) return
 
-    if (
-      captureRemaining &&
-      remainingDurationRef.current != null &&
-      timerStartedAtRef.current != null
-    ) {
-      const elapsed = Date.now() - timerStartedAtRef.current
-      remainingDurationRef.current = Math.max(0, remainingDurationRef.current - elapsed)
+    if (captureRemaining && itemCtx.remainingDuration != null && itemCtx.timerStartedAt != null) {
+      const elapsed = Date.now() - itemCtx.timerStartedAt
+      itemCtx.remainingDuration = Math.max(0, itemCtx.remainingDuration - elapsed)
     }
 
-    window.clearTimeout(closeTimerRef.current)
-    closeTimerRef.current = undefined
-    timerStartedAtRef.current = undefined
+    window.clearTimeout(itemCtx.closeTimer)
+    itemCtx.closeTimer = undefined
+    itemCtx.timerStartedAt = undefined
   }
 
   const startAutoCloseTimer = () => {
     clearAutoCloseTimer()
 
     if (!currentOpen.value) return
-    if (pauseOnHover && hovered.value) return
-    if (remainingDurationRef.current == null || remainingDurationRef.current <= 0) return
+    if (pauseOnHover && itemCtx.hovered.value) return
+    if (itemCtx.remainingDuration == null || itemCtx.remainingDuration <= 0) return
 
-    timerStartedAtRef.current = Date.now()
-    closeTimerRef.current = window.setTimeout(() => {
-      closeTimerRef.current = undefined
-      timerStartedAtRef.current = undefined
-      remainingDurationRef.current = 0
+    itemCtx.timerStartedAt = Date.now()
+    itemCtx.closeTimer = window.setTimeout(() => {
+      itemCtx.closeTimer = undefined
+      itemCtx.timerStartedAt = undefined
+      itemCtx.remainingDuration = 0
       requestClose('timeout')
-    }, remainingDurationRef.current)
+    }, itemCtx.remainingDuration)
   }
 
   const refreshAutoCloseTimer = (resetRemaining = true) => {
     clearAutoCloseTimer()
 
     if (resetRemaining) {
-      remainingDurationRef.current = resolveDurationMs(duration)
+      itemCtx.remainingDuration = resolveDurationMs(duration)
     }
 
     startAutoCloseTimer()
@@ -981,7 +1008,7 @@ const ToastItem: FC<ToastItemProps> = ({
 
   const requestClose = (source: ToastCloseSource, event?: Event) => {
     clearAutoCloseTimer()
-    remainingDurationRef.current = 0
+    itemCtx.remainingDuration = 0
 
     if (!currentOpen.value) return
 
@@ -989,7 +1016,7 @@ const ToastItem: FC<ToastItemProps> = ({
     syncItemDom(false)
 
     if (!isControlled) {
-      uncontrolledOpen.value = false
+      itemCtx.uncontrolledOpen.value = false
     }
 
     const meta = { source, event }
@@ -1015,9 +1042,9 @@ const ToastItem: FC<ToastItemProps> = ({
     () => defaultOpen,
     nextDefaultOpen => {
       const normalizedDefaultOpen = !!nextDefaultOpen
-      if (!isControlled && normalizedDefaultOpen !== lastDefaultOpen.value) {
-        lastDefaultOpen.value = normalizedDefaultOpen
-        uncontrolledOpen.value = normalizedDefaultOpen
+      if (!isControlled && normalizedDefaultOpen !== itemCtx.lastDefaultOpen.value) {
+        itemCtx.lastDefaultOpen.value = normalizedDefaultOpen
+        itemCtx.uncontrolledOpen.value = normalizedDefaultOpen
         setCurrentOpen(normalizedDefaultOpen)
       }
     },
@@ -1043,7 +1070,7 @@ const ToastItem: FC<ToastItemProps> = ({
     () => duration,
     () => {
       if (!currentOpen.value) {
-        remainingDurationRef.current = resolveDurationMs(duration)
+        itemCtx.remainingDuration = resolveDurationMs(duration)
         return
       }
 
@@ -1081,19 +1108,19 @@ const ToastItem: FC<ToastItemProps> = ({
           className={mergeClassNames(TOAST_ITEM_BASE_CLASS, resolvedRootClassName, className)}
           style={style}
           ref={(element: HTMLElement | null) => {
-            rootElement = element
+            itemCtx.rootElement = element
             if (element) {
               toastItemCloseHandlerRegistry.set(element, requestClose)
             }
             syncItemDom(currentOpen.value)
           }}
           onMouseEnter={(event: MouseEvent) => {
-            hovered.value = true
+            itemCtx.hovered.value = true
             if (pauseOnHover) clearAutoCloseTimer(true)
             if (typeof userOnMouseEnter === 'function') userOnMouseEnter(event)
           }}
           onMouseLeave={(event: MouseEvent) => {
-            hovered.value = false
+            itemCtx.hovered.value = false
             if (pauseOnHover) startAutoCloseTimer()
             if (typeof userOnMouseLeave === 'function') userOnMouseLeave(event)
           }}

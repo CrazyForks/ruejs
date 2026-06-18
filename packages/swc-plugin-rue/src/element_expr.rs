@@ -735,12 +735,12 @@ pub fn emit_element_expr_container_child(
         JSXExpr::JSXEmptyExpr(_) => {}
         JSXExpr::Expr(expr) => {
             let inner = crate::utils::unwrap_expr(expr.as_ref());
-            if let Expr::Call(call) = inner.clone() {
-                if crate::element_list::try_build_list_from_map(vt, el_ident, &call, stmts) {
-                    log::debug("element_expr: list map path");
-                    // map(JSX) 已经被列表模块完整接管，后续不再当普通表达式处理。
-                    return;
-                }
+            if let Expr::Call(call) = inner.clone()
+                && crate::element_list::try_build_list_from_map(vt, el_ident, &call, stmts)
+            {
+                log::debug("element_expr: list map path");
+                // map(JSX) 已经被列表模块完整接管，后续不再当普通表达式处理。
+                return;
             }
 
             let inner_expr = crate::utils::unwrap_expr(expr.as_ref()).clone();

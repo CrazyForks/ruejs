@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Theme 组件概述
 - 默认导出仍是可直接渲染的 theme-controller 输入控件，兼容现有 daisyUI 用法。
@@ -6,7 +5,6 @@ Theme 组件概述
 - Provider 通过 data-theme 与 CSS 变量做“作用域主题岛”，不依赖运行时 context，也能支持嵌套继承。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, useRef, watch } from '@rue-js/rue'
 
 type ThemeInputType = 'checkbox' | 'radio'
 type ThemeAppearance = 'light' | 'dark'
@@ -699,13 +697,9 @@ const ThemeProvider: FC<ThemeProviderProps> = ({
   token,
   algorithm,
   baseToken,
+  ref: forwardedRef,
   ...rest
 }) => {
-  const forwardedRef = rest.ref
-  const rootRef = useRef<HTMLElement | null>(null)
-  if ('ref' in rest) {
-    delete rest.ref
-  }
   const runtime = useToken({
     theme,
     token,
@@ -716,41 +710,20 @@ const ThemeProvider: FC<ThemeProviderProps> = ({
   const mergedStyle = mergeStyleInput(
     {
       colorScheme: runtime.token.colorScheme,
+      color: runtime.token.colors.baseContent,
       ...runtime.cssVariables,
     },
     style,
   )
-  const syncScopedStyle = (styleText: string) => {
-    const element = rootRef.current
-    if (!element) return
-    if (styleText) {
-      element.setAttribute('style', styleText)
-    } else {
-      element.removeAttribute('style')
-    }
-  }
   const applyRef = (element: HTMLElement | null) => {
-    rootRef.current = element
-    syncScopedStyle(mergedStyle)
     assignForwardedRef(forwardedRef, element)
   }
-
-  onMounted(() => {
-    syncScopedStyle(mergedStyle)
-  })
-
-  watch(
-    () => mergedStyle,
-    (nextStyle: string) => {
-      syncScopedStyle(nextStyle)
-    },
-    { immediate: true },
-  )
 
   const commonProps = {
     ...rest,
     ref: applyRef,
     className: mergeClassName('rue-theme-scope', className),
+    style: mergedStyle,
     'data-theme': runtime.resolvedTheme,
     'data-rue-theme': runtime.theme,
     'data-rue-appearance': runtime.token.appearance,

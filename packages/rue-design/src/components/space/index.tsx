@@ -1,10 +1,9 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Space 模块概述
 - 汇总间距组件的公开类型、渲染入口和局部工具逻辑。
 - 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
 */
-import { h, type FC } from '@rue-js/rue'
+import type { FC } from '@rue-js/rue'
 
 /** SpaceDirection 位置或方向类型。 */
 export type SpaceDirection = 'horizontal' | 'vertical'
@@ -71,6 +70,27 @@ export interface SpaceCompactProps {
   children?: any
   /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
+}
+
+interface SpaceItemProps {
+  child?: any
+  direction: SpaceDirection
+  align?: SpaceAlign
+  itemClassName?: string
+  itemStyle?: Record<string, any>
+  showSeparator?: boolean
+  separator?: any
+  separatorGap?: string
+}
+
+interface SpaceCompactItemProps {
+  child?: any
+  direction: SpaceDirection
+  index: number
+  total: number
+  block?: boolean
+  blockItemStyle?: Record<string, any>
+  compactShellStyle?: Record<string, any>
 }
 
 /** SPACE_SIZE_TOKENS 内部常量。 */
@@ -240,6 +260,74 @@ const renderSpaceSeparator = (separator: any, direction: SpaceDirection) => {
   )
 }
 
+/** Space Item 的内部工具函数。 */
+const SpaceItem: FC<SpaceItemProps> = ({
+  child,
+  direction,
+  align,
+  itemClassName,
+  itemStyle,
+  showSeparator,
+  separator,
+  separatorGap,
+}) => {
+  return (
+    <div
+      className={mergeClassNames('rue-space-item min-w-0 max-w-full', itemClassName)}
+      style={mergeStyle(
+        {
+          display: 'flex',
+          flexDirection: direction === 'vertical' ? 'column' : 'row',
+          alignItems: align,
+          minWidth: 0,
+          maxWidth: '100%',
+          ...(showSeparator
+            ? direction === 'vertical'
+              ? { rowGap: separatorGap }
+              : { columnGap: separatorGap }
+            : {}),
+        },
+        itemStyle,
+      )}
+    >
+      {child}
+      {showSeparator ? renderSpaceSeparator(resolveSeparatorContent(separator), direction) : null}
+    </div>
+  )
+}
+
+/** Space Compact Item 的内部工具函数。 */
+const SpaceCompactItem: FC<SpaceCompactItemProps> = ({
+  child,
+  direction,
+  index,
+  total,
+  block,
+  blockItemStyle,
+  compactShellStyle,
+}) => {
+  return (
+    <div
+      data-rue-space-compact-item=""
+      className={mergeClassNames(
+        resolveCompactItemClassName(direction, index, total),
+        block && (direction === 'vertical' ? 'w-full' : 'flex-1'),
+      )}
+      style={mergeStyle(
+        {
+          display: 'flex',
+          minWidth: 0,
+          maxWidth: '100%',
+        },
+        blockItemStyle,
+        compactShellStyle,
+      )}
+    >
+      {child}
+    </div>
+  )
+}
+
 /** Space Root 的内部工具函数。 */
 const SpaceRoot: FC<SpaceProps> = ({
   as = 'div',
@@ -268,12 +356,11 @@ const SpaceRoot: FC<SpaceProps> = ({
   const mergedSeparator = separator ?? split
   const separatorGap = resolvedDirection === 'vertical' ? gap.rowGap : gap.columnGap
 
-  return h(
-    Component,
-    {
-      ...rest,
-      className: mergeClassNames('rue-space min-w-0 max-w-full', className),
-      style: mergeStyle(
+  return (
+    <Component
+      {...rest}
+      className={mergeClassNames('rue-space min-w-0 max-w-full', className)}
+      style={mergeStyle(
         {
           display: block ? 'flex' : 'inline-flex',
           flexDirection: resolvedDirection === 'vertical' ? 'column' : 'row',
@@ -285,42 +372,30 @@ const SpaceRoot: FC<SpaceProps> = ({
           rowGap: gap.rowGap,
         },
         style,
-      ),
-      'data-rue-space': '',
-      'data-rue-space-direction': resolvedDirection,
-      'aria-orientation': resolvedDirection,
-    },
-    ...childNodes.map((child, index) => {
-      const key = child?.key ?? child?.props?.key ?? index
-      const showSeparator = mergedSeparator != null && index < childNodes.length - 1
+      )}
+      data-rue-space=""
+      data-rue-space-direction={resolvedDirection}
+      aria-orientation={resolvedDirection}
+    >
+      {childNodes.map((child, index) => {
+        const key = child?.key ?? child?.props?.key ?? index
+        const showSeparator = mergedSeparator != null && index < childNodes.length - 1
 
-      return (
-        <div
-          key={key}
-          className={mergeClassNames('rue-space-item min-w-0 max-w-full', itemClassName)}
-          style={mergeStyle(
-            {
-              display: 'flex',
-              flexDirection: resolvedDirection === 'vertical' ? 'column' : 'row',
-              alignItems: resolvedAlign,
-              minWidth: 0,
-              maxWidth: '100%',
-              ...(showSeparator
-                ? resolvedDirection === 'vertical'
-                  ? { rowGap: separatorGap }
-                  : { columnGap: separatorGap }
-                : {}),
-            },
-            itemStyle,
-          )}
-        >
-          {child}
-          {showSeparator
-            ? renderSpaceSeparator(resolveSeparatorContent(mergedSeparator), resolvedDirection)
-            : null}
-        </div>
-      )
-    }),
+        return (
+          <SpaceItem
+            key={key}
+            child={child}
+            direction={resolvedDirection}
+            align={resolvedAlign}
+            itemClassName={itemClassName}
+            itemStyle={itemStyle}
+            showSeparator={showSeparator}
+            separator={mergedSeparator}
+            separatorGap={separatorGap}
+          />
+        )
+      })}
+    </Component>
   )
 }
 
@@ -352,12 +427,11 @@ const SpaceCompact: FC<SpaceCompactProps> = ({
     : undefined
   const compactShellStyle = resolveCompactShellStyle(size)
 
-  return h(
-    Component,
-    {
-      ...rest,
-      className: mergeClassNames('rue-space-compact max-w-full', className),
-      style: mergeStyle(
+  return (
+    <Component
+      {...rest}
+      className={mergeClassNames('rue-space-compact max-w-full', className)}
+      style={mergeStyle(
         {
           display: 'flex',
           flexDirection: resolvedDirection === 'vertical' ? 'column' : 'row',
@@ -365,34 +439,26 @@ const SpaceCompact: FC<SpaceCompactProps> = ({
           maxWidth: '100%',
         },
         style,
-      ),
-      'data-rue-space-compact': '',
-      'data-rue-space-direction': resolvedDirection,
-      'aria-orientation': resolvedDirection,
-    },
-    ...childNodes.map((child, index) => {
-      return (
-        <div
-          key={index}
-          data-rue-space-compact-item=""
-          className={mergeClassNames(
-            resolveCompactItemClassName(resolvedDirection, index, childNodes.length),
-            block && (resolvedDirection === 'vertical' ? 'w-full' : 'flex-1'),
-          )}
-          style={mergeStyle(
-            {
-              display: 'flex',
-              minWidth: 0,
-              maxWidth: '100%',
-            },
-            blockItemStyle,
-            compactShellStyle,
-          )}
-        >
-          {child}
-        </div>
-      )
-    }),
+      )}
+      data-rue-space-compact=""
+      data-rue-space-direction={resolvedDirection}
+      aria-orientation={resolvedDirection}
+    >
+      {childNodes.map((child, index) => {
+        return (
+          <SpaceCompactItem
+            key={index}
+            child={child}
+            direction={resolvedDirection}
+            index={index}
+            total={childNodes.length}
+            block={block}
+            blockItemStyle={blockItemStyle}
+            compactShellStyle={compactShellStyle}
+          />
+        )
+      })}
+    </Component>
   )
 }
 

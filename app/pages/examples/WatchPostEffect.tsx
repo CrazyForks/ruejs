@@ -9,6 +9,13 @@ import Code from '../site/components/Code'
 
 const demoSource = `import { type FC, nextTick, ref, useRef, watchPostEffect } from '@rue-js/rue';
 
+const timingNotes = [
+  '修改 count.value 后，响应式状态会立刻变化，DOM patch 会进入同一轮 flush。',
+  '在事件函数里同步读取 DOM，可能拿到的是本轮 patch 前的旧文本。',
+  'watchPostEffect 会在 DOM 更新完成后运行，适合读取布局、文本或同步第三方 DOM 插件。',
+  'await nextTick() 是命令式等待一次 flush；watchPostEffect 会自动追踪依赖并重复执行。',
+] as const;
+
 const WatchPostEffectDemo: FC = () => {
   const count = ref(0);
   const syncDomText = ref('尚未读取');
@@ -31,6 +38,14 @@ const WatchPostEffectDemo: FC = () => {
 
   return (
     <div className="grid gap-4">
+      <div className="rounded-box border border-info/30 bg-info/10 p-4 text-sm leading-6">
+        <div className="font-medium text-info">DOM 读取时机说明</div>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          {timingNotes.map(note => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      </div>
       <div>状态值：{count.value}</div>
       <div>
         DOM 文本：<span ref={countRef}>{count.value}</span>
@@ -44,6 +59,13 @@ const WatchPostEffectDemo: FC = () => {
 };
 
 export default WatchPostEffectDemo;`
+
+const timingNotes = [
+  '修改 count.value 后，响应式状态会立刻变化，DOM patch 会进入同一轮 flush。',
+  '在事件函数里同步读取 DOM，可能拿到的是本轮 patch 前的旧文本。',
+  'watchPostEffect 会在 DOM 更新完成后运行，适合读取布局、文本或同步第三方 DOM 插件。',
+  'await nextTick() 是命令式等待一次 flush；watchPostEffect 会自动追踪依赖并重复执行。',
+] as const
 
 const WatchPostEffectDemo: FC = () => {
   const count = ref(0)
@@ -99,6 +121,15 @@ const WatchPostEffectDemo: FC = () => {
           `watchPostEffect()` 适合在响应式更新已经写入 DOM
           之后执行副作用，比如测量元素尺寸、读取最新文本、同步第三方 DOM 插件。
         </p>
+
+        <div className="rounded-box border border-info/30 bg-info/10 p-4 text-sm leading-6 text-base-content/80">
+          <div className="font-medium text-info">DOM 读取时机说明</div>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {timingNotes.map(note => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        </div>
 
         <div className="rounded-box border border-base-300 bg-base-200/40 p-5">
           <div className="text-sm uppercase tracking-[0.24em] text-base-content/50">响应式状态</div>

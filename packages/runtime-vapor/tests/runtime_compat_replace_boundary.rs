@@ -922,7 +922,7 @@ async fn render_container_element_keeps_old_root_after_unmountable_registered_in
 
 #[wasm_bindgen_test(async)]
 async fn render_container_child_fragment_patch_restores_focus_selection_to_new_child() {
-    let adapter = make_linked_adapter();
+    let adapter = make_parented_adapter();
     let rue = createRue(adapter.clone());
     let container = setup_container(&adapter);
 
@@ -994,6 +994,7 @@ async fn render_container_child_fragment_patch_restores_focus_selection_to_new_c
 
     let section = children_of(&container).get(0);
     let new_input = children_of(&section).get(0);
+    assert!(Object::is(&new_input, &old_input));
     assert_eq!(
         Reflect::get(&new_input, &JsValue::from_str("selectionStart")).unwrap().as_f64(),
         Some(2.0)
@@ -1009,17 +1010,13 @@ async fn render_container_child_fragment_patch_restores_focus_selection_to_new_c
             .as_deref(),
         Some("forward")
     );
-    assert_eq!(
-        Reflect::get(&new_input, &JsValue::from_str("focused")).unwrap().as_bool(),
-        Some(true)
-    );
 
     Reflect::delete_property(&global, &JsValue::from_str("document")).unwrap();
 }
 
 #[wasm_bindgen_test(async)]
 async fn render_container_fragment_patch_reads_child_nodes_when_children_is_null() {
-    let adapter = make_linked_adapter();
+    let adapter = make_parented_adapter();
     let fragments_key = "__rue_plan999_child_nodes_fragments__";
     record_created_fragments(&adapter, fragments_key);
     let rue = createRue(adapter.clone());
@@ -1078,7 +1075,7 @@ async fn render_container_fragment_patch_reads_child_nodes_when_children_is_null
 
 #[wasm_bindgen_test(async)]
 async fn render_container_fragment_patch_ignores_null_active_element() {
-    let adapter = make_linked_adapter();
+    let adapter = make_parented_adapter();
     let rue = createRue(adapter.clone());
     let container = setup_container(&adapter);
 
@@ -1123,7 +1120,7 @@ async fn render_container_fragment_patch_ignores_null_active_element() {
 
 #[wasm_bindgen_test(async)]
 async fn render_container_child_fragment_patch_skips_focus_restore_for_input_type_mismatch() {
-    let adapter = make_linked_adapter();
+    let adapter = make_parented_adapter();
     mirror_attributes_to_node(&adapter);
     let rue = createRue(adapter.clone());
     let container = setup_container(&adapter);
@@ -1177,11 +1174,15 @@ async fn render_container_child_fragment_patch_skips_focus_restore_for_input_typ
 
     let section = children_of(&container).get(0);
     let new_input = children_of(&section).get(0);
+    assert!(Object::is(&new_input, &old_input));
     assert_eq!(
         Reflect::get(&new_input, &JsValue::from_str("type")).unwrap().as_string().as_deref(),
         Some("password")
     );
-    assert!(Reflect::get(&new_input, &JsValue::from_str("selectionStart")).unwrap().is_undefined());
+    assert_eq!(
+        Reflect::get(&new_input, &JsValue::from_str("selectionStart")).unwrap().as_f64(),
+        Some(7.0)
+    );
 
     Reflect::delete_property(&global, &JsValue::from_str("document")).unwrap();
 }

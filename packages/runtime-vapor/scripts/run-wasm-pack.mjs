@@ -1,6 +1,10 @@
 import { spawnSync } from 'node:child_process'
+import { existsSync, readdirSync, statSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
 const isWin = process.platform === 'win32'
+const runnerBinaryName = isWin ? 'wasm-bindgen-test-runner.exe' : 'wasm-bindgen-test-runner'
 const args = process.argv.slice(2)
 
 if (args.length === 0) {
@@ -64,6 +68,103 @@ function run(command, commandArgs, options = {}) {
   })
 }
 
+function hasExplicitMode(rawArgs) {
+  return rawArgs.some(arg => arg === '--mode' || arg === '-m' || arg.startsWith('--mode='))
+}
+
+function isNodeTest(rawArgs) {
+  return (
+    rawArgs[0] === 'test' &&
+    rawArgs.includes('--node') &&
+    !rawArgs.includes('--firefox') &&
+    !rawArgs.includes('--chrome') &&
+    !rawArgs.includes('--safari') &&
+    !hasExplicitMode(rawArgs)
+  )
+}
+
+function versionScore(value) {
+  const match = value.match(/wasm-bindgen-cargo-install-(\d+)\.(\d+)\.(\d+)/)
+  if (!match) {
+    return [0, 0, 0]
+  }
+  return match.slice(1).map(Number)
+}
+
+function compareRunnerCandidates(a, b) {
+  const aVersion = versionScore(a)
+  const bVersion = versionScore(b)
+  for (let index = 0; index < aVersion.length; index += 1) {
+    if (aVersion[index] !== bVersion[index]) {
+      return bVersion[index] - aVersion[index]
+    }
+  }
+  return statSync(b).mtimeMs - statSync(a).mtimeMs
+}
+
+function collectCachedRunners(root, out = []) {
+  if (!root || !existsSync(root)) {
+    return out
+  }
+
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const entryPath = join(root, entry.name)
+    if (entry.isFile() && entry.name === runnerBinaryName) {
+      out.push(entryPath)
+    } else if (entry.isDirectory()) {
+      collectCachedRunners(entryPath, out)
+    }
+  }
+
+  return out
+}
+
+function findWasmBindgenTestRunner() {
+  const pathResult = run(runnerBinaryName, ['--help'], { stdio: 'ignore' })
+  if (!pathResult.error && pathResult.status === 0) {
+    return runnerBinaryName
+  }
+
+  const cacheRoots = [
+    process.env.WASM_PACK_CACHE,
+    join(homedir(), 'Library', 'Caches', '.wasm-pack'),
+    join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), '.wasm-pack'),
+  ]
+  const candidates = cacheRoots.flatMap(root => collectCachedRunners(root))
+  candidates.sort(compareRunnerCandidates)
+  return candidates[0]
+}
+
+function ensureWasmTarget() {
+  const targetResult = run('rustup', ['target', 'list', '--installed'], { stdio: 'pipe' })
+  if (
+    !targetResult.error &&
+    targetResult.status === 0 &&
+    targetResult.stdout.toString().split(/\r?\n/).includes('wasm32-unknown-unknown')
+  ) {
+    return
+  }
+
+  const installResult = run('rustup', ['target', 'add', 'wasm32-unknown-unknown'], {
+    stdio: 'inherit',
+  })
+  if (installResult.error || installResult.status !== 0) {
+    console.error('[runtime-vapor] Failed to install the wasm32-unknown-unknown target.')
+    process.exit(installResult.status ?? 1)
+  }
+}
+
+function cargoArgsForNodeTest(rawArgs) {
+  const cargoArgs = ['test', '--target', 'wasm32-unknown-unknown']
+  for (const arg of rawArgs.slice(1)) {
+    if (arg === '--node' || arg === '--headless') {
+      continue
+    }
+    cargoArgs.push(arg)
+  }
+  return normalizeWasmPackArgs(cargoArgs)
+}
+
 function ensureWasmPack() {
   const versionResult = run('wasm-pack', ['--version'], { stdio: 'pipe' })
   if (!versionResult.error && versionResult.status === 0) {
@@ -83,6 +184,26 @@ function ensureWasmPack() {
   if (installResult.error || installResult.status !== 0) {
     console.error('[runtime-vapor] Failed to install wasm-pack automatically.')
     process.exit(installResult.status ?? 1)
+  }
+}
+
+if (isNodeTest(args)) {
+  const runner = findWasmBindgenTestRunner()
+  if (runner) {
+    ensureWasmTarget()
+    const execResult = run('cargo', cargoArgsForNodeTest(args), {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: runner,
+        WASM_BINDGEN_TEST_ONLY_NODE: '1',
+      },
+    })
+    if (execResult.error) {
+      console.error('[runtime-vapor] Failed to execute cargo wasm tests.')
+      process.exit(1)
+    }
+    process.exit(execResult.status ?? 1)
   }
 }
 

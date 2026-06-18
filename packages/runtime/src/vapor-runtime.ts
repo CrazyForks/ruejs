@@ -9,7 +9,12 @@ Vapor 专用运行时出口概述
 */
 
 import { createRue as createRueWasm } from '@rue-js/runtime-vapor/vapor'
-import { getCurrentInstance, withHookSlot } from '@rue-js/runtime-vapor/reactive'
+import {
+  getCurrentInstance,
+  isRef,
+  untrack as reactiveUntrack,
+  withHookSlot,
+} from '@rue-js/runtime-vapor/reactive'
 import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,
   type CustomElementEmitBridge,
@@ -27,10 +32,15 @@ import {
   getParentNode,
   hasActiveTextControlWithin,
   scheduleTrackedTextControlRestoreWithin,
+  settextContent,
 } from './dom'
 import type { DomElementLike, DomNodeLike } from './dom'
 import { mountNormalizedRenderableToTarget, type DirectRenderableOwner } from './renderable-bridge'
-import { registerOwnerCleanup, runOwnerCleanupBucket } from './renderable-lifecycle'
+import {
+  registerOwnerCleanup,
+  RUE_CLEANUP_BUCKET_KEY,
+  runOwnerCleanupBucket,
+} from './renderable-lifecycle'
 import { normalizeRenderable } from './renderable-normalize'
 import type { NormalizedRenderable } from './renderable'
 import type {
@@ -41,16 +51,13 @@ import type {
   RueMountHandle,
   VaporSetupResult,
 } from './rue'
-import {
-  createIgnoredErrorCaptureOwners,
-  dispatchErrorCaptured,
-  onErrorCaptured,
-} from './error-capture'
+import { onErrorCaptured } from './error-capture'
 
 getDOMAdapter()
 
 const renderOwnerByRangeStart = new WeakMap<object, unknown>()
 const renderOwnerByAnchor = new WeakMap<object, unknown>()
+const lastCompatAnchorValueByAnchor = new WeakMap<object, unknown>()
 const compatMountHandleOwner = Object.freeze({ __rue_compat_mount_handle_owner: true })
 const pendingCompatAnchorRenders = new WeakMap<
   object,
@@ -59,6 +66,7 @@ const pendingCompatAnchorRenders = new WeakMap<
 const RUE_FORCE_REMOUNT_ANCHOR_KEY = '__rue_force_remount_anchor'
 const RUE_COMPONENT_CHILDREN_KEY = '__rue_component_children'
 const RUE_MOUNT_ID_KEY = '__rue_mount_id'
+const RUE_KEEP_ALIVE_HOOK_TARGET_KEY = '__rue_keep_alive_hook_target__'
 const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
 const RUE_PORTABLE_COMPONENT_ID_KEY = '__rue_component_type_id'
 const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
@@ -66,16 +74,18 @@ const RUE_VAPOR_RUNTIME_KEY = '__rue_vapor'
 const RUE_VAPOR_PREFERRED_RUNTIME_KEY = '__rue_vapor_preferred'
 const RUE_REPEATABLE_MOUNT_FACTORY_KEY = '__rue_repeatable_mount_factory__'
 const TEXT_CLIENT_REFERENCE_SSR_RESOLVER_KEY = '__TEXT_RESOLVE_CLIENT_REFERENCE_EXPORT__'
-// Context provider 自带 owner 连接关系，避免额外包装影响父链解析。
-const RUE_CONTEXT_PROVIDER_MARKER = '__rue_context_provider__'
+const RUE_CONTEXT_OWNER_PARENT_PROP = '__rue_context_owner_parent__'
+const RUE_CONTEXT_PARENT_INSTANCE_PROP = '__rue_context_parent_instance__'
 const COMPAT_SYMBOL_SCOPE = ['re', 'act'].join('')
 const COMPAT_LAZY_TYPE = Symbol.for(`${COMPAT_SYMBOL_SCOPE}.lazy`)
 const COMPAT_SUSPENSE_TYPE = Symbol.for(`${COMPAT_SYMBOL_SCOPE}.suspense`)
 export const RUE_SSR_PENDING_ASYNC_COMPONENT_KEY = '__rue_ssr_pending_async_component__'
 let componentTypeIdentitySeed = 0
-// 缓存 render 错误捕获包装组件，确保同一组件类型在 patch 时身份稳定。
-const errorCapturedComponentCache = new WeakMap<Function, ComponentInstance<any>>()
 const classComponentAdapterCache = new WeakMap<Function, ComponentInstance<any>>()
+const keepAliveHookTargetComponentCache = new WeakMap<
+  object,
+  WeakMap<Function, ComponentInstance<any>>
+>()
 const DEFAULT_UNSUPPORTED_OBJECT_INPUT_ERROR =
   'Unsupported object inputs are no longer accepted on the default @rue-js/runtime entry.'
 
@@ -103,12 +113,14 @@ type SharedRuntimeBridge = {
   beginVaporScope(owner: unknown): boolean
   endVaporScope(didPush: boolean): void
   disposeVaporScope(owner: unknown): void
+  getCurrentRenderOwner?(): unknown
 }
 
 type VaporGlobalRecord = typeof globalThis & {
   __rue_dom?: unknown
   __rue_active?: unknown
   __rue_runtime_vapor_shared_bridge?: SharedRuntimeBridge
+  [RUE_KEEP_ALIVE_HOOK_TARGET_KEY]?: unknown
   [RUE_SSR_PENDING_ASYNC_COMPONENT_KEY]?: Promise<unknown>[]
   [RUE_VAPOR_PREFERRED_RUNTIME_KEY]?: unknown
   [RUE_VAPOR_RUNTIME_KEY]?: unknown
@@ -129,6 +141,113 @@ const getRue = () =>
 const getRueRuntime = (): any => getRue()
 
 const getSharedRuntimeBridge = () => vaporGlobal.__rue_runtime_vapor_shared_bridge
+
+const resolveCurrentErrorCaptureInstance = () => {
+  const instance = getCurrentInstance()
+  return instance ?? getSharedRuntimeBridge()?.getCurrentRenderOwner?.()
+}
+
+const readKeepAliveHookTarget = (source: unknown): unknown => {
+  if ((typeof source !== 'object' && typeof source !== 'function') || source == null) {
+    return undefined
+  }
+  return (source as Record<string, unknown>)[RUE_KEEP_ALIVE_HOOK_TARGET_KEY]
+}
+
+const setKeepAliveHookTargetMetadata = <T>(value: T, target: unknown): T => {
+  if (!target || (typeof value !== 'object' && typeof value !== 'function') || value == null) {
+    return value
+  }
+
+  try {
+    Object.defineProperty(value, RUE_KEEP_ALIVE_HOOK_TARGET_KEY, {
+      configurable: true,
+      enumerable: false,
+      value: target,
+      writable: true,
+    })
+  } catch {
+    try {
+      ;(value as Record<string, unknown>)[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = target
+    } catch {}
+  }
+  return value
+}
+
+const withActiveKeepAliveHookTargetMetadata = <T>(value: T): T =>
+  setKeepAliveHookTargetMetadata(value, vaporGlobal[RUE_KEEP_ALIVE_HOOK_TARGET_KEY])
+
+const runWithKeepAliveHookTarget = <T>(target: unknown, fn: () => T): T => {
+  if (!target) {
+    return fn()
+  }
+
+  const prevHookTarget = vaporGlobal[RUE_KEEP_ALIVE_HOOK_TARGET_KEY]
+  vaporGlobal[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = target
+  try {
+    return fn()
+  } finally {
+    if (vaporGlobal[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] === target) {
+      vaporGlobal[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = prevHookTarget
+    }
+  }
+}
+
+const resolveKeepAliveHookTargetComponent = <P>(
+  componentType: ComponentInstance<P> & Record<string, unknown>,
+  target: unknown,
+) => {
+  if ((typeof target !== 'object' && typeof target !== 'function') || target == null) {
+    return componentType
+  }
+
+  let targetCache = keepAliveHookTargetComponentCache.get(target)
+  if (!targetCache) {
+    targetCache = new WeakMap()
+    keepAliveHookTargetComponentCache.set(target, targetCache)
+  }
+
+  const cached = targetCache.get(componentType)
+  if (cached) {
+    return cached as ComponentInstance<P> & Record<string, unknown>
+  }
+
+  const wrapped = ((props: ComponentProps) =>
+    runWithKeepAliveHookTarget(target, () =>
+      componentType(props as any),
+    )) as unknown as ComponentInstance<P> & Record<string, unknown>
+
+  try {
+    Object.defineProperty(wrapped, 'name', {
+      configurable: true,
+      value: (componentType as Function).name,
+    })
+  } catch {}
+  if (RUE_PORTABLE_COMPONENT_ID_KEY in componentType) {
+    try {
+      Object.defineProperty(wrapped, RUE_PORTABLE_COMPONENT_ID_KEY, {
+        configurable: false,
+        enumerable: false,
+        value: componentType[RUE_PORTABLE_COMPONENT_ID_KEY],
+        writable: false,
+      })
+    } catch {}
+  }
+
+  targetCache.set(componentType, wrapped)
+  return wrapped
+}
+
+const registerKeepAliveHook = (hookName: 'activatedHooks' | 'deactivatedHooks', fn: () => void) => {
+  const keepAliveTarget = vaporGlobal[RUE_KEEP_ALIVE_HOOK_TARGET_KEY]
+  const hooks =
+    keepAliveTarget && typeof keepAliveTarget === 'object'
+      ? (keepAliveTarget as Record<string, unknown>)[hookName]
+      : undefined
+  if (hooks instanceof Set) {
+    hooks.add(fn)
+  }
+}
 
 const resolveCustomElementEmitBridge = (props: ComponentProps): CustomElementEmitBridge | null => {
   if (!props || typeof props !== 'object') {
@@ -164,6 +283,44 @@ const syncRenderableOwner = (owners: WeakMap<object, unknown>, key: object, next
 const isDirectRenderableOwner = (value: unknown): value is DirectRenderableOwner =>
   !!value && typeof value === 'object' && Array.isArray((value as { nodes?: unknown }).nodes)
 
+const hasOwnerCleanupBucket = (value: unknown) =>
+  (typeof value === 'object' || typeof value === 'function') &&
+  value != null &&
+  Array.isArray((value as { [RUE_CLEANUP_BUCKET_KEY]?: unknown })[RUE_CLEANUP_BUCKET_KEY])
+
+const resolvePrimitiveRenderableText = (value: unknown): string | null => {
+  if (value == null || typeof value === 'boolean') {
+    return ''
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value)
+  }
+  return null
+}
+
+const updatePrimitiveAnchorRenderable = (
+  prevOwner: DirectRenderableOwner,
+  nextText: string,
+): boolean => {
+  const prevNodes = prevOwner.nodes
+  if (nextText === '' && prevNodes.length === 0) {
+    return true
+  }
+  if (prevNodes.length !== 1) {
+    return false
+  }
+
+  const node = prevNodes[0]
+  if (!node || (node as any).nodeType !== 3) {
+    return false
+  }
+
+  if ((node as any).nodeValue !== nextText) {
+    settextContent(node, nextText)
+  }
+  return true
+}
+
 const isMountHandle = (value: unknown): value is RueMountHandle =>
   !!value &&
   typeof value === 'object' &&
@@ -176,6 +333,43 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   const prototype = Object.getPrototypeOf(value)
   return prototype === Object.prototype || prototype === null
 }
+
+const readPortableComponentType = (value: unknown): unknown =>
+  value && typeof value === 'object'
+    ? (value as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
+    : undefined
+
+const readPortableComponentProps = (value: unknown): Record<string, unknown> | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  const props = (value as Record<string, unknown>).props
+  return props && typeof props === 'object' ? (props as Record<string, unknown>) : null
+}
+
+const areShallowEqualProps = (
+  left: Record<string, unknown> | null,
+  right: Record<string, unknown> | null,
+) => {
+  if (left === right) {
+    return true
+  }
+  if (!left || !right) {
+    return !left && !right
+  }
+  const leftKeys = Object.keys(left).filter(key => key !== RUE_CONTEXT_PARENT_INSTANCE_PROP)
+  const rightKeys = Object.keys(right).filter(key => key !== RUE_CONTEXT_PARENT_INSTANCE_PROP)
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+  return leftKeys.every(
+    key => Object.prototype.hasOwnProperty.call(right, key) && Object.is(left[key], right[key]),
+  )
+}
+
+const areEquivalentPortableComponentHandles = (left: unknown, right: unknown) =>
+  readPortableComponentType(left) === readPortableComponentType(right) &&
+  areShallowEqualProps(readPortableComponentProps(left), readPortableComponentProps(right))
 
 const isThenable = (value: unknown): value is PromiseLike<unknown> =>
   !!value &&
@@ -320,10 +514,92 @@ const attachRepeatableMountFactory = <T>(value: T, factory: () => unknown): T =>
   return value
 }
 
+const PORTABLE_MOUNT_METADATA_KEYS = [
+  'key',
+  '__rue_cleanup_bucket',
+  '__rue_effect_scope_id',
+  RUE_KEEP_ALIVE_HOOK_TARGET_KEY,
+  RUE_FORCE_REMOUNT_ANCHOR_KEY,
+  RUE_COMPONENT_CHILDREN_KEY,
+] as const
+
+const copyPortableMountHandleMetadata = <T>(source: unknown, target: T): T => {
+  if (!source || typeof source !== 'object' || !target || typeof target !== 'object') {
+    return target
+  }
+
+  const sourceRecord = source as Record<string, unknown>
+  const targetRecord = target as Record<string, unknown>
+  PORTABLE_MOUNT_METADATA_KEYS.forEach(key => {
+    if (!(key in sourceRecord)) {
+      return
+    }
+
+    if (key === '__rue_cleanup_bucket') {
+      const sourceBucket = sourceRecord[key]
+      const targetBucket = targetRecord[key]
+      if (Array.isArray(sourceBucket) && Array.isArray(targetBucket)) {
+        sourceBucket.forEach(cleanup => {
+          if (!targetBucket.includes(cleanup)) {
+            targetBucket.push(cleanup)
+          }
+        })
+        return
+      }
+      if (!(key in targetRecord)) {
+        targetRecord[key] = sourceBucket
+      }
+      return
+    }
+
+    if (key === '__rue_effect_scope_id' && key in targetRecord) {
+      return
+    }
+
+    targetRecord[key] = sourceRecord[key]
+  })
+  const hookTarget = sourceRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY]
+  const componentType = targetRecord[RUE_PORTABLE_COMPONENT_TYPE_KEY]
+  if (typeof componentType === 'function') {
+    targetRecord[RUE_PORTABLE_COMPONENT_TYPE_KEY] = resolveKeepAliveHookTargetComponent(
+      componentType as ComponentInstance & Record<string, unknown>,
+      hookTarget,
+    )
+  }
+  return target
+}
+
+const normalizePortableComponentProps = (props: unknown): ComponentProps | null =>
+  props && typeof props === 'object' ? (props as ComponentProps) : null
+
 const createFreshMountHandle = (value: unknown): unknown => {
   if (!isMountHandle(value)) return value
-  const replayFactory = (value as Record<string, unknown>)[RUE_REPEATABLE_MOUNT_FACTORY_KEY]
-  return typeof replayFactory === 'function' ? replayFactory() : value
+  const record = value as Record<string, unknown>
+  const replayFactory = record[RUE_REPEATABLE_MOUNT_FACTORY_KEY]
+  if (typeof replayFactory === 'function') {
+    return copyPortableMountHandleMetadata(value, replayFactory())
+  }
+
+  const componentType = record[RUE_PORTABLE_COMPONENT_TYPE_KEY]
+  if (typeof componentType === 'function') {
+    return createRepeatableResolvedComponentHandle(
+      componentType as ComponentInstance & Record<string, unknown>,
+      normalizePortableComponentProps(record.props),
+      value,
+    )
+  }
+
+  const setup = record[RUE_PORTABLE_VAPOR_SETUP_KEY]
+  if (typeof setup === 'function') {
+    return copyPortableMountHandleMetadata(
+      value,
+      createRepeatableVaporHandle(
+        setup as (parentContext?: DomElementLike | null) => VaporSetupResult,
+      ),
+    )
+  }
+
+  return value
 }
 
 const replayMountAwareValue = (value: unknown): unknown => {
@@ -335,6 +611,10 @@ const replayMountAwareValue = (value: unknown): unknown => {
       return replayed
     })
     return changed ? nextValue : value
+  }
+
+  if (reactiveUntrack(() => isRef(value))) {
+    return value
   }
 
   if (isMountHandle(value)) {
@@ -373,12 +653,11 @@ const replayMountAwareValue = (value: unknown): unknown => {
   return clone
 }
 
-const createRepeatableComponentHandle = <P = {}>(
-  type: ComponentInstance<P>,
+const createRepeatableResolvedComponentHandle = <P = {}>(
+  componentType: ComponentInstance<P> & Record<string, unknown>,
   props: ComponentProps | null,
+  metadataSource?: unknown,
 ): RenderableOutput => {
-  const componentType = resolveErrorCapturedComponent(type) as ComponentInstance<P> &
-    Record<string, unknown>
   if (!(RUE_PORTABLE_COMPONENT_ID_KEY in componentType)) {
     try {
       Object.defineProperty(componentType, RUE_PORTABLE_COMPONENT_ID_KEY, {
@@ -390,12 +669,28 @@ const createRepeatableComponentHandle = <P = {}>(
     } catch {}
   }
   const nextProps = replayMountAwareValue(props) as ComponentProps | null
+  const hookTarget = readKeepAliveHookTarget(metadataSource)
+  const mountedComponentType = resolveKeepAliveHookTargetComponent(componentType, hookTarget)
   const vnode = {
-    [RUE_PORTABLE_COMPONENT_TYPE_KEY]: componentType,
+    [RUE_PORTABLE_COMPONENT_TYPE_KEY]: mountedComponentType,
     props: nextProps,
   } as RenderableOutput
-  const nextVnode = markAnchorRemountableMountHandle(type, nextProps, [], vnode)
-  return attachRepeatableMountFactory(nextVnode, () => createRepeatableComponentHandle(type, props))
+  const nextVnode = copyPortableMountHandleMetadata(
+    metadataSource,
+    markAnchorRemountableMountHandle(mountedComponentType, nextProps, [], vnode),
+  )
+  return attachRepeatableMountFactory(nextVnode, () =>
+    createRepeatableResolvedComponentHandle(componentType, props, metadataSource),
+  )
+}
+
+const createRepeatableComponentHandle = <P = {}>(
+  type: ComponentInstance<P>,
+  props: ComponentProps | null,
+): RenderableOutput => {
+  const componentType = resolveRenderableComponent(type) as ComponentInstance<P> &
+    Record<string, unknown>
+  return createRepeatableResolvedComponentHandle(componentType, props)
 }
 
 const createRepeatableElementHandle = <P = {}>(
@@ -421,79 +716,47 @@ const createRepeatableElementHandle = <P = {}>(
   )
 }
 
-/** 判断组件类型是否需要在 render 外层补 errorCaptured 冒泡包装。 */
-const shouldWrapComponentForErrorCapture = (type: ComponentInstance<any>) => {
-  const componentRecord = type as unknown as Record<string, unknown>
-  return componentRecord[RUE_CONTEXT_PROVIDER_MARKER] !== true
-}
-
-/** 返回带 render 错误捕获能力的组件函数，复用缓存避免重复包装。 */
-const resolveErrorCapturedComponent = <P = {}>(
-  type: ComponentInstance<P>,
-): ComponentInstance<P> => {
+/** 解析可挂载组件类型，并复用 class component 适配器保持组件身份稳定。 */
+const resolveRenderableComponent = <P = {}>(type: ComponentInstance<P>): ComponentInstance<P> => {
   const resolvedType = resolveClientReferenceComponentType(type)
-  const componentType = isClassComponentType<P & { children?: any }>(resolvedType)
+  return isClassComponentType<P & { children?: any }>(resolvedType)
     ? (createClassComponentAdapter(resolvedType) as ComponentInstance<P>)
     : resolvedType
-
-  if (!shouldWrapComponentForErrorCapture(componentType as ComponentInstance<any>)) {
-    return componentType
-  }
-
-  const cached = errorCapturedComponentCache.get(componentType as unknown as Function)
-  if (cached) {
-    return cached as ComponentInstance<P>
-  }
-
-  const wrapped = ((props: P & { children?: any }) => {
-    try {
-      return componentType(props)
-    } catch (error) {
-      const instance = getCurrentInstance()
-      const stopped = dispatchErrorCaptured(error, instance, 'component render', {
-        ignoredOwners: createIgnoredErrorCaptureOwners(instance),
-      })
-      if (stopped) {
-        return null
-      }
-      try {
-        getRueRuntime().handleError?.(error, instance)
-      } catch {}
-      throw error
-    }
-  }) as ComponentInstance<P> & Record<string, unknown>
-
-  try {
-    Object.defineProperty(wrapped, 'name', {
-      configurable: true,
-      value: (componentType as Function).name,
-    })
-  } catch {}
-
-  errorCapturedComponentCache.set(componentType as unknown as Function, wrapped)
-  return wrapped
 }
 
 const createRepeatableVaporHandle = (
   setup: (parentContext?: DomElementLike | null) => VaporSetupResult,
+  inheritedParentOwner?: unknown,
 ): RenderableOutput => {
   const bridge = getSharedRuntimeBridge()
-  const owner = {}
-  const wrappedSetup = (parentContext?: DomElementLike | null) => {
-    const didPush = bridge?.beginVaporScope(owner) ?? false
-    try {
-      return setup(parentContext)
-    } finally {
-      bridge?.endVaporScope(didPush)
-    }
+  const owner: Record<string, unknown> = {}
+  const parentOwner = inheritedParentOwner ?? resolveCurrentErrorCaptureInstance()
+  if (
+    (typeof parentOwner === 'object' || typeof parentOwner === 'function') &&
+    parentOwner != null
+  ) {
+    owner[RUE_CONTEXT_OWNER_PARENT_PROP] = parentOwner
+    owner[RUE_CONTEXT_PARENT_INSTANCE_PROP] = parentOwner
   }
-  const handle = {
+  let handle: RenderableOutput | undefined
+  const wrappedSetup = (parentContext?: DomElementLike | null) => {
+    const hookTarget = readKeepAliveHookTarget(handle)
+    return runWithKeepAliveHookTarget(hookTarget, () => {
+      const didPush = bridge?.beginVaporScope(owner) ?? false
+      try {
+        return setup(parentContext)
+      } finally {
+        bridge?.endVaporScope(didPush)
+      }
+    })
+  }
+  handle = {
     [RUE_PORTABLE_VAPOR_SETUP_KEY]: wrappedSetup,
   } as RenderableOutput
   registerOwnerCleanup(handle, () => {
     bridge?.disposeVaporScope(owner)
   })
-  return attachRepeatableMountFactory(handle, () => createRepeatableVaporHandle(setup))
+  return attachRepeatableMountFactory(handle, () => createRepeatableVaporHandle(setup, parentOwner))
 }
 
 const createRepeatableFragmentHandle = (children: unknown[]): RenderableOutput =>
@@ -648,8 +911,20 @@ const normalizeCreateElementChild = (value: ChildInput): ChildInput => {
   return value
 }
 
-const normalizeCreateElementChildren = (children: ChildInput[]): ChildInput[] =>
-  children.map(child => normalizeCreateElementChild(child))
+const pushNormalizedCreateElementChild = (value: ChildInput, out: ChildInput[]) => {
+  const normalized = normalizeCreateElementChild(value)
+  if (Array.isArray(normalized)) {
+    normalized.forEach(item => pushNormalizedCreateElementChild(item as ChildInput, out))
+    return
+  }
+  out.push(normalized)
+}
+
+const normalizeCreateElementChildren = (children: ChildInput[]): ChildInput[] => {
+  const normalized: ChildInput[] = []
+  children.forEach(child => pushNormalizedCreateElementChild(child, normalized))
+  return normalized
+}
 
 const normalizeDomElementProps = (props: ComponentProps | null): ComponentProps | null => {
   if (!props) return props
@@ -716,12 +991,14 @@ export const createComponent = <P = {}>(
     )
     assertDefaultChildren(contextualProps, normalizedChildren)
     const elementProps = normalizeDomElementProps(contextualProps)
-    return createRepeatableElementHandle(
-      type,
-      elementProps,
-      normalizedChildren,
-      (vnode, nextProps, nextChildren) =>
-        markAnchorRemountableMountHandle(type, nextProps, nextChildren, vnode),
+    return withActiveKeepAliveHookTargetMetadata(
+      createRepeatableElementHandle(
+        type,
+        elementProps,
+        normalizedChildren,
+        (vnode, nextProps, nextChildren) =>
+          markAnchorRemountableMountHandle(type, nextProps, nextChildren, vnode),
+      ),
     )
   }
 
@@ -739,7 +1016,9 @@ export const createComponent = <P = {}>(
     props as Record<string, unknown> | null,
   ) as ComponentProps | null
   assertDefaultChildren(contextualProps, [])
-  return createRepeatableComponentHandle(type, contextualProps)
+  return withActiveKeepAliveHookTargetMetadata(
+    createRepeatableComponentHandle(type, contextualProps),
+  )
 }
 
 /** 在 start/end 区间内渲染 Vapor 或默认 renderable 内容。 */
@@ -786,7 +1065,7 @@ export const renderBetween = (
 }
 
 /** 在尾锚点前渲染 Vapor 或默认 renderable 内容。 */
-export const renderAnchor = (
+const renderAnchorUntracked = (
   value: RenderableInput,
   parent: DomElementLike,
   anchor: DomNodeLike,
@@ -797,15 +1076,29 @@ export const renderAnchor = (
   const targetParent = resolveAnchorTargetParent(parent, anchor)
   if (!targetParent) {
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, undefined)
+    lastCompatAnchorValueByAnchor.delete(anchor as object)
+    return
+  }
+
+  const prevOwner = renderOwnerByAnchor.get(anchor as object)
+  const primitiveText = resolvePrimitiveRenderableText(normalizedValue)
+  if (
+    primitiveText !== null &&
+    isDirectRenderableOwner(prevOwner) &&
+    !hasOwnerCleanupBucket(prevOwner) &&
+    updatePrimitiveAnchorRenderable(prevOwner, primitiveText)
+  ) {
+    lastCompatAnchorValueByAnchor.delete(anchor as object)
+    scheduleTrackedTextControlRestoreWithin(targetParent)
     return
   }
 
   const analysis = analyzeDefaultRenderableInput(normalizedValue)
   if (analysis.kind === 'renderable') {
-    const prevOwner = renderOwnerByAnchor.get(anchor as object)
     if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
-      getRueRuntime().renderAnchor(null, parent, anchor)
+      getRueRuntime().renderAnchor(null, targetParent, anchor)
     }
+    lastCompatAnchorValueByAnchor.delete(anchor as object)
     const owner = mountNormalizedRenderableToTarget(
       analysis.value,
       {
@@ -827,27 +1120,47 @@ export const renderAnchor = (
     !!normalizedValue &&
     typeof normalizedValue === 'object' &&
     RUE_COMPONENT_CHILDREN_KEY in (normalizedValue as object)
-  const prevOwner = renderOwnerByAnchor.get(anchor as object)
+  const hasVaporSetup =
+    !!normalizedValue &&
+    typeof normalizedValue === 'object' &&
+    RUE_PORTABLE_VAPOR_SETUP_KEY in (normalizedValue as object)
   const componentType =
     !!normalizedValue && typeof normalizedValue === 'object'
       ? (normalizedValue as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
       : undefined
+  const hasPortableComponent = typeof componentType === 'function'
   const componentName = typeof componentType === 'function' ? componentType.name : ''
   const shouldPreserveCompatChildrenInstance =
     componentName === 'KeepAlive' ||
     (!shouldForceRemount && hasActiveTextControlWithin(targetParent))
+  const shouldTrackCompatMountOwner = hasPortableComponent || hasComponentChildren || hasVaporSetup
   const shouldRemountCompatChildren =
     prevOwner === compatMountHandleOwner &&
-    (shouldForceRemount || (hasComponentChildren && !shouldPreserveCompatChildrenInstance))
+    (shouldForceRemount ||
+      hasVaporSetup ||
+      (hasComponentChildren && !shouldPreserveCompatChildrenInstance))
+  const lastCompatValue = lastCompatAnchorValueByAnchor.get(anchor as object)
+  const shouldSkipCompatComponentRender =
+    prevOwner === compatMountHandleOwner &&
+    hasPortableComponent &&
+    !shouldRemountCompatChildren &&
+    reactiveUntrack(() => areEquivalentPortableComponentHandles(lastCompatValue, normalizedValue))
+  if (shouldSkipCompatComponentRender) {
+    lastCompatAnchorValueByAnchor.set(anchor as object, normalizedValue)
+    scheduleTrackedTextControlRestoreWithin(targetParent)
+    return
+  }
   if (!shouldRemountCompatChildren) {
-    if (!hasComponentChildren) {
+    if (!shouldTrackCompatMountOwner) {
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, normalizedValue as unknown)
       const result = getRueRuntime().renderAnchor(compatValue, targetParent, anchor)
+      lastCompatAnchorValueByAnchor.set(anchor as object, normalizedValue)
       scheduleTrackedTextControlRestoreWithin(targetParent)
       return result
     }
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
     const result = getRueRuntime().renderAnchor(compatValue, targetParent, anchor)
+    lastCompatAnchorValueByAnchor.set(anchor as object, normalizedValue)
     scheduleTrackedTextControlRestoreWithin(targetParent)
     return result
   }
@@ -866,19 +1179,25 @@ export const renderAnchor = (
     const mountedParent = resolveAnchorTargetParent(pending.parent, anchor)
     if (!mountedParent) {
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, undefined)
+      lastCompatAnchorValueByAnchor.delete(anchor as object)
       return
     }
 
     getRueRuntime().renderAnchor(null, mountedParent, anchor)
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
     getRueRuntime().renderAnchor(createFreshMountHandle(pending.value), mountedParent, anchor)
+    lastCompatAnchorValueByAnchor.set(anchor as object, pending.value)
     scheduleTrackedTextControlRestoreWithin(mountedParent)
   })
 }
 
+/** 在尾锚点前渲染 Vapor 或默认 renderable 内容，patch 阶段不向外层 effect 泄露依赖。 */
+export const renderAnchor = (value: RenderableInput, parent: DomElementLike, anchor: DomNodeLike) =>
+  reactiveUntrack(() => renderAnchorUntracked(value, parent, anchor))
+
 /** 创建 Vapor setup mount handle，并接入共享 effect scope 清理。 */
 export const vapor = (setup: (parentContext?: DomElementLike | null) => VaporSetupResult) => {
-  return createRepeatableVaporHandle(setup)
+  return withActiveKeepAliveHookTargetMetadata(createRepeatableVaporHandle(setup))
 }
 
 /** 注册 beforeCreate 生命周期钩子。 */
@@ -890,7 +1209,10 @@ export const onBeforeMount = (fn: () => void) => getRueRuntime().onBeforeMount(f
 /** 注册 mounted 生命周期钩子。 */
 export const onMounted = (fn: () => void) => getRueRuntime().onMounted(fn)
 /** 注册 activated 生命周期钩子。 */
-export const onActivated = (fn: () => void) => getRueRuntime().onActivated(fn)
+export const onActivated = (fn: () => void) => {
+  registerKeepAliveHook('activatedHooks', fn)
+  return getRueRuntime().onActivated(fn)
+}
 /** 注册 beforeUpdate 生命周期钩子。 */
 export const onBeforeUpdate = (fn: () => void) => getRueRuntime().onBeforeUpdate(fn)
 /** 注册 updated 生命周期钩子。 */
@@ -902,7 +1224,10 @@ export const onBeforeUnmount = (fn: () => void) => getRueRuntime().onBeforeUnmou
 /** 注册 unmounted 生命周期钩子。 */
 export const onUnmounted = (fn: () => void) => getRueRuntime().onUnmounted(fn)
 /** 注册 deactivated 生命周期钩子。 */
-export const onDeactivated = (fn: () => void) => getRueRuntime().onDeactivated(fn)
+export const onDeactivated = (fn: () => void) => {
+  registerKeepAliveHook('deactivatedHooks', fn)
+  return getRueRuntime().onDeactivated(fn)
+}
 /** 注册 serverPrefetch 生命周期钩子。 */
 export const onServerPrefetch = (fn: () => Promise<any> | any) =>
   getRueRuntime().onServerPrefetch(fn)

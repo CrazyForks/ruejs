@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Textarea 组件概述
 - 保留 Rue 当前 textarea 视觉类，并补齐更顺手的语义 API：status、allowClear、showCount、autoSize、resize。
@@ -177,7 +176,7 @@ const buildTextareaClassName = ({
   TextareaProps,
   'color' | 'status' | 'size' | 'variant' | 'ghost' | 'className' | 'allowClear'
 >) => {
-  let cls = 'textarea'
+  let cls = 'textarea w-full'
   const resolvedColor = color && color !== 'default' ? color : resolveStatusTone(status)
   const resolvedSize = resolveSizeClass(size)
   const isGhost = ghost || variant === 'ghost'
@@ -253,24 +252,33 @@ const Textarea: FC<TextareaProps> = ({
   ...rest
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>()
-  let countElement: HTMLDivElement | null = null
-  let clearButtonElement: HTMLButtonElement | null = null
+  const countElementRef = useRef<HTMLDivElement>()
+  const clearButtonElementRef = useRef<HTMLButtonElement>()
   const forwardedRef = rest.ref
+  const nativeRest = { ...rest }
   const isControlled = value !== undefined
-  const currentValue = ref(resolveTextValue(isControlled ? value : defaultValue))
+  const initialTextValue = resolveTextValue(isControlled ? value : defaultValue)
+  const currentValue = ref(initialTextValue)
+  const currentLength = () => currentValue.value.length
   const hasCount = !!showCount
   const clearConfig = allowClear && typeof allowClear === 'object' ? allowClear : undefined
   const clearable = !!allowClear
-  const currentLength = () => currentValue.value.length
+  const resolvedResize = resize ?? (autoSize ? 'none' : undefined)
+  const nativeRows =
+    typeof nativeRest.rows === 'number'
+      ? nativeRest.rows
+      : typeof nativeRest.rows === 'string'
+        ? Number.parseInt(nativeRest.rows, 10)
+        : undefined
   const maxLength =
-    typeof rest.maxLength === 'number'
-      ? rest.maxLength
-      : typeof rest.maxlength === 'number'
-        ? rest.maxlength
+    typeof nativeRest.maxLength === 'number'
+      ? nativeRest.maxLength
+      : typeof nativeRest.maxlength === 'number'
+        ? nativeRest.maxlength
         : undefined
 
-  if ('ref' in rest) {
-    delete rest.ref
+  if ('ref' in nativeRest) {
+    delete nativeRest.ref
   }
 
   const syncValueState = () => {
@@ -280,7 +288,7 @@ const Textarea: FC<TextareaProps> = ({
   }
 
   const syncCountDisplay = () => {
-    if (!countElement || !hasCount) return
+    if (!countElementRef.current || !hasCount) return
     renderRue(
       stringifyCountContent(
         renderCountContent(showCount, {
@@ -288,13 +296,13 @@ const Textarea: FC<TextareaProps> = ({
           maxLength,
         }),
       ),
-      countElement,
+      countElementRef.current,
     )
   }
 
   const syncClearButtonVisibility = () => {
-    if (!clearButtonElement) return
-    clearButtonElement.classList.toggle('hidden', currentLength() <= 0 || !!disabled)
+    if (!clearButtonElementRef.current) return
+    clearButtonElementRef.current.classList.toggle('hidden', currentLength() <= 0 || !!disabled)
   }
 
   const syncAffixes = () => {
@@ -330,8 +338,8 @@ const Textarea: FC<TextareaProps> = ({
     const minRows =
       typeof config?.minRows === 'number' && config.minRows > 0
         ? config.minRows
-        : typeof rest.rows === 'number'
-          ? rest.rows
+        : typeof nativeRows === 'number' && Number.isFinite(nativeRows) && nativeRows > 0
+          ? nativeRows
           : undefined
     const maxRows =
       typeof config?.maxRows === 'number' && config.maxRows > 0
@@ -358,6 +366,9 @@ const Textarea: FC<TextareaProps> = ({
 
   const assignRefs = (element: HTMLTextAreaElement | null) => {
     textareaRef.current = element ?? undefined
+    if (element && element.value !== currentValue.value) {
+      element.value = currentValue.value
+    }
     if (typeof forwardedRef === 'function') {
       forwardedRef(element)
       return
@@ -436,17 +447,17 @@ const Textarea: FC<TextareaProps> = ({
     { immediate: true },
   )
 
-  if (rest.rows !== undefined && rest.rows !== null) {
-    rest.rows = String(rest.rows)
+  if (nativeRest.rows !== undefined && nativeRest.rows !== null) {
+    nativeRest.rows = String(nativeRest.rows)
   }
 
-  if (autoSize && (rest.rows === undefined || rest.rows === null)) {
+  if (autoSize && (nativeRest.rows === undefined || nativeRest.rows === null)) {
     const minRows =
       typeof autoSize === 'object' && typeof autoSize.minRows === 'number'
         ? autoSize.minRows
         : undefined
     if (minRows) {
-      rest.rows = String(minRows)
+      nativeRest.rows = String(minRows)
     }
   }
 
@@ -458,72 +469,87 @@ const Textarea: FC<TextareaProps> = ({
     nativeValueProps.defaultValue = defaultValue
   }
 
-  const rawTextareaNode = (
-    <textarea
-      {...rest}
-      {...nativeValueProps}
-      ref={assignRefs}
-      disabled={disabled}
-      aria-invalid={status === 'error' ? 'true' : rest['aria-invalid']}
-      data-rue-textarea-input="true"
-      className={appendClassName(
-        buildTextareaClassName({
-          color,
-          status,
-          size,
-          variant,
-          ghost,
-          className,
-          allowClear: clearable,
-        }),
-        resolveResizeClass(resize),
-      )}
-      onInput={handleInput}
-      onChange={handleChange}
-    />
-  )
-
   if (!clearable && !hasCount && !rootClassName) {
-    return rawTextareaNode
+    return (
+      <textarea
+        {...nativeRest}
+        {...nativeValueProps}
+        ref={assignRefs}
+        disabled={disabled}
+        aria-invalid={status === 'error' ? 'true' : nativeRest['aria-invalid']}
+        data-rue-textarea-input="true"
+        className={appendClassName(
+          buildTextareaClassName({
+            color,
+            status,
+            size,
+            variant,
+            ghost,
+            className,
+            allowClear: clearable,
+          }),
+          resolveResizeClass(resolvedResize),
+        )}
+        onInput={handleInput}
+        onChange={handleChange}
+      />
+    )
   }
-
-  const textareaNode = (
-    <div className={appendClassName('relative', clearable ? 'w-full' : undefined)}>
-      {rawTextareaNode}
-      {clearable && !disabled ? (
-        <button
-          ref={(element: HTMLButtonElement | null) => {
-            clearButtonElement = element
-            syncClearButtonVisibility()
-          }}
-          type="button"
-          tabIndex={-1}
-          aria-label="Clear text"
-          className={appendClassName(
-            appendClassName(
-              'btn btn-ghost btn-xs absolute right-2 top-2 h-7 min-h-0 w-7 rounded-full p-0 text-base-content/55 hover:text-base-content',
-              currentLength() > 0 ? undefined : 'hidden',
-            ),
-            clearButtonClassName,
-          )}
-          onClick={handleClear}
-        >
-          {clearConfig?.clearIcon ?? <DefaultClearIcon />}
-        </button>
-      ) : null}
-    </div>
-  )
 
   return (
     <div
-      className={appendClassName('flex flex-col gap-2', rootClassName)}
+      className={appendClassName('flex w-full flex-col gap-2', rootClassName)}
       data-rue-textarea-root="true"
     >
-      {textareaNode}
+      <div className="relative w-full">
+        <textarea
+          {...nativeRest}
+          {...nativeValueProps}
+          ref={assignRefs}
+          disabled={disabled}
+          aria-invalid={status === 'error' ? 'true' : nativeRest['aria-invalid']}
+          data-rue-textarea-input="true"
+          className={appendClassName(
+            buildTextareaClassName({
+              color,
+              status,
+              size,
+              variant,
+              ghost,
+              className,
+              allowClear: clearable,
+            }),
+            resolveResizeClass(resolvedResize),
+          )}
+          onInput={handleInput}
+          onChange={handleChange}
+        />
+        {clearable && !disabled ? (
+          <button
+            ref={(element: HTMLButtonElement | null) => {
+              clearButtonElementRef.current = element ?? undefined
+              syncClearButtonVisibility()
+            }}
+            type="button"
+            tabIndex={-1}
+            aria-label="Clear text"
+            className={appendClassName(
+              appendClassName(
+                'btn btn-ghost btn-xs absolute right-2 top-2 h-7 min-h-0 w-7 rounded-full p-0 text-base-content/55 hover:text-base-content',
+                initialTextValue.length > 0 ? undefined : 'hidden',
+              ),
+              clearButtonClassName,
+            )}
+            onClick={handleClear}
+          >
+            {clearConfig?.clearIcon ?? <DefaultClearIcon />}
+          </button>
+        ) : null}
+      </div>
       {hasCount ? (
         <div
           ref={(element: HTMLDivElement | null) => {
-            countElement = element
+            countElementRef.current = element ?? undefined
             syncCountDisplay()
           }}
           className={appendClassName(

@@ -29,44 +29,48 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
-        const b = a.value + 2;
-        const base = {
-            k: 'v'
-        };
-        const extra = {
-            z: ()=>a.value + b
-        };
-        const arr0 = [
-            a.value,
-            b
-        ];
-        const obj = {
-            ...base,
-            ...extra,
-            arr: [
-                ...arr0,
-                ()=>a.value > 0 ? b : a.value
-            ],
-            meth () {
-                return a.value + b;
-            }
-        };
-        return {
-            a: a,
-            b: b,
-            base: base,
-            extra: extra,
-            arr0: arr0,
-            obj: obj
-        };
-    }));
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
+            const b = _$vaporWithHookId("computed:1:1", ()=>computed(()=>a.value + 2));
+            const __rue_phase2_b = b;
+            const base = {
+                k: 'v'
+            };
+            const extra = _$vaporWithHookId("computed:1:2", ()=>computed(()=>({
+                        z: ()=>a.value + __rue_phase2_b.get()
+                    })));
+            const __rue_phase2_extra = extra;
+            const arr0 = _$vaporWithHookId("computed:1:3", ()=>computed(()=>[
+                        a.value,
+                        __rue_phase2_b.get()
+                    ]));
+            const __rue_phase2_arr0 = arr0;
+            const obj = _$vaporWithHookId("computed:1:4", ()=>computed(()=>({
+                        ...base,
+                        ...__rue_phase2_extra.get(),
+                        arr: [
+                            ...__rue_phase2_arr0.get(),
+                            ()=>a.value > 0 ? __rue_phase2_b.get() : a.value
+                        ],
+                        meth () {
+                            return a.value + __rue_phase2_b.get();
+                        }
+                    })));
+            const __rue_phase2_obj = obj;
+            return {
+                a: a,
+                b: b,
+                base: base,
+                extra: extra,
+                arr0: arr0,
+                obj: obj
+            };
+        }));
     const { a: a, b: b, base: base, extra: extra, arr0: arr0, obj: obj } = _$useSetup;
-    return <div>{obj.meth()}-{obj.arr[2]()}-{obj.z()}</div>;
+    return <div>{obj.get().meth()}-{obj.get().arr[2]()}-{obj.get().z()}</div>;
 };
 "##;
 

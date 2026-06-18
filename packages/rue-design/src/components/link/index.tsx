@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Link 组件概述
 - 保留 Rue 当前 link/link-* 视觉基底，同时补齐 Typography.Link 风格的文本能力。
@@ -6,7 +5,7 @@ Link 组件概述
 - to 链接在点击时复用 RouterLink 的导航逻辑，避免无 Router 环境下渲染期报错。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, onUnmounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
+import { onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 import { RouterLink } from '@rue-js/router'
 
 /** LinkVariant 视觉或语义变体类型。 */
@@ -185,6 +184,13 @@ interface NormalizedEllipsisConfig extends LinkEllipsisConfig {
   rows: number
   tooltip: boolean | string
   expandable: boolean | 'collapsible'
+}
+
+interface DecoratedContentProps {
+  mark?: boolean
+  code?: boolean
+  keyboard?: boolean
+  children?: any
 }
 
 /** merge Class Names 的内部工具函数。 */
@@ -505,31 +511,32 @@ const ensureExpandableEllipsisStyle = () => {
   document.head.appendChild(styleElement)
 }
 
-/** 渲染 Decorated Content 的内部工具函数。 */
-const renderDecoratedContent = (
-  content: any,
-  {
-    mark,
-    code,
-    keyboard,
-  }: {
-    mark?: boolean
-    code?: boolean
-    keyboard?: boolean
-  },
-) => {
-  let node = content
-  if (keyboard) {
-    node = <kbd className="kbd kbd-sm align-middle">{node}</kbd>
-  }
-  if (code) {
-    node = <code className="rounded bg-base-200 px-1.5 py-0.5 text-[0.9em]">{node}</code>
-  }
-  if (mark) {
-    node = <mark className="rounded bg-warning/20 px-1 py-0.5 text-inherit">{node}</mark>
-  }
-  return node
-}
+/** DecoratedContent 的内部工具组件。 */
+const DecoratedContent: FC<DecoratedContentProps> = ({ mark, code, keyboard, children }) => (
+  <>
+    {mark ? (
+      <mark className="rounded bg-warning/20 px-1 py-0.5 text-inherit">
+        {code ? (
+          <code className="rounded bg-base-200 px-1.5 py-0.5 text-[0.9em]">
+            {keyboard ? <kbd className="kbd kbd-sm align-middle">{children}</kbd> : children}
+          </code>
+        ) : keyboard ? (
+          <kbd className="kbd kbd-sm align-middle">{children}</kbd>
+        ) : (
+          children
+        )}
+      </mark>
+    ) : code ? (
+      <code className="rounded bg-base-200 px-1.5 py-0.5 text-[0.9em]">
+        {keyboard ? <kbd className="kbd kbd-sm align-middle">{children}</kbd> : children}
+      </code>
+    ) : keyboard ? (
+      <kbd className="kbd kbd-sm align-middle">{children}</kbd>
+    ) : (
+      children
+    )}
+  </>
+)
 
 /** Copy Icon 的内部工具函数。 */
 const CopyIcon: FC = () => (
@@ -642,12 +649,9 @@ const Link: FC<LinkProps> = ({
   const uncontrolledExpanded = ref(!!ellipsisConfig.defaultExpanded)
   const isTextEllipsed = ref(false)
   const editValue = ref(editConfig.text ?? toText(children))
-  let copyButtonElement: HTMLButtonElement | undefined
-  let copyButtonIdleHTML = ''
-  const ellipsisTextRef = useRef<HTMLElement>()
-  const editorRef = useRef<HTMLInputElement | HTMLTextAreaElement>()
-  const resizeObserverRef = useRef<ResizeObserver>()
-  const dynamicHostRef = useRef<HTMLElement>()
+  let ellipsisTextElement: HTMLElement | undefined
+  let editorElement: HTMLInputElement | HTMLTextAreaElement | undefined
+  let resizeObserver: ResizeObserver | undefined
   let ellipsisTimer = 0
   let copyFeedbackTimer = 0
 
@@ -677,12 +681,12 @@ const Link: FC<LinkProps> = ({
   const titleValue = resolveTitleValue(title, ellipsisConfig, displayText)
 
   const setEditorRef = (element: HTMLInputElement | HTMLTextAreaElement | null) => {
-    editorRef.current = element ?? undefined
+    editorElement = element ?? undefined
   }
 
   const syncEditorAutoSize = () => {
-    if (!editConfig.autoSize || !(editorRef.current instanceof HTMLTextAreaElement)) return
-    syncTextareaAutoSize(editorRef.current, editConfig.autoSize)
+    if (!editConfig.autoSize || !(editorElement instanceof HTMLTextAreaElement)) return
+    syncTextareaAutoSize(editorElement, editConfig.autoSize)
   }
 
   const getIsEditing = () => editConfig.editing ?? uncontrolledEditing.value
@@ -707,7 +711,7 @@ const Link: FC<LinkProps> = ({
       emitEllipsisChange(false)
       return
     }
-    const element = ellipsisTextRef.current
+    const element = ellipsisTextElement
     if (!element) {
       emitEllipsisChange(false)
       return
@@ -727,20 +731,12 @@ const Link: FC<LinkProps> = ({
     ellipsisTimer = window.setTimeout(syncEllipsisState, 0)
   }
 
-  const renderDynamicRegion = () => {
-    if (!dynamicHostRef.current) return
-    renderRue(
-      editConfig.enabled && getIsEditing() ? renderEditor() : renderContent(),
-      dynamicHostRef.current,
-    )
-  }
-
   const setEllipsisTextRef = (element: HTMLElement | null) => {
-    ellipsisTextRef.current = element ?? undefined
+    ellipsisTextElement = element ?? undefined
 
-    if (resizeObserverRef.current) {
-      resizeObserverRef.current.disconnect()
-      resizeObserverRef.current = undefined
+    if (resizeObserver) {
+      resizeObserver.disconnect()
+      resizeObserver = undefined
     }
 
     if (element && typeof ResizeObserver !== 'undefined') {
@@ -748,58 +744,18 @@ const Link: FC<LinkProps> = ({
         scheduleEllipsisMeasure()
       })
       observer.observe(element)
-      resizeObserverRef.current = observer
+      resizeObserver = observer
     }
 
     scheduleEllipsisMeasure()
   }
 
-  const setCopyButtonRef = (element: HTMLButtonElement | null) => {
-    copyButtonElement = element ?? undefined
-    if (element && !copyButtonIdleHTML) {
-      copyButtonIdleHTML = element.innerHTML
-    }
-  }
-
-  const resolveCopyButtonFromEvent = (event: MouseEvent) => {
-    const currentTarget = (event as any).currentTarget
-    if (currentTarget?.tagName === 'BUTTON') return currentTarget as HTMLButtonElement
-    const target = (event as any).target
-    if (target?.closest) {
-      return target.closest('[data-rue-link-copy]') as HTMLButtonElement | null
-    }
-    return copyButtonElement
-  }
-
-  const syncCopiedDom = (value: boolean, buttonElement = copyButtonElement) => {
-    if (!buttonElement) return
-    if (!copyButtonIdleHTML) {
-      copyButtonIdleHTML = buttonElement.innerHTML
-    }
-
-    buttonElement.setAttribute('aria-label', value ? '已复制' : '复制链接文本')
-    const titleValue = copyConfig.tooltips ?? (value ? '已复制' : '复制')
-    if (typeof titleValue === 'string') {
-      buttonElement.setAttribute('title', titleValue)
-    }
-
-    if (value) {
-      buttonElement.textContent = '✓'
-    } else if (copyButtonIdleHTML) {
-      buttonElement.innerHTML = copyButtonIdleHTML
-    }
-  }
-
-  const showCopiedFeedback = (buttonElement = copyButtonElement) => {
+  const showCopiedFeedback = () => {
     copied.value = true
-    syncCopiedDom(true, buttonElement)
-    renderDynamicRegion()
     if (typeof window === 'undefined') return
     window.clearTimeout(copyFeedbackTimer)
     copyFeedbackTimer = window.setTimeout(() => {
       copied.value = false
-      syncCopiedDom(false, buttonElement)
-      renderDynamicRegion()
     }, 1500)
   }
 
@@ -809,7 +765,6 @@ const Link: FC<LinkProps> = ({
     editValue.value = editConfig.text ?? linkText
     if (editConfig.onStart) editConfig.onStart()
     if (editConfig.editing === undefined) uncontrolledEditing.value = true
-    renderDynamicRegion()
     scheduleEditorAutoSize()
   }
 
@@ -817,7 +772,6 @@ const Link: FC<LinkProps> = ({
     stopEvent(event)
     if (editConfig.onCancel) editConfig.onCancel()
     if (editConfig.editing === undefined) uncontrolledEditing.value = false
-    renderDynamicRegion()
   }
 
   const finishEdit = (event?: MouseEvent | KeyboardEvent) => {
@@ -825,7 +779,6 @@ const Link: FC<LinkProps> = ({
     if (editConfig.onChange) editConfig.onChange(editValue.value)
     if (editConfig.onEnd) editConfig.onEnd()
     if (editConfig.editing === undefined) uncontrolledEditing.value = false
-    renderDynamicRegion()
   }
 
   const toggleExpanded = (event: MouseEvent) => {
@@ -836,7 +789,6 @@ const Link: FC<LinkProps> = ({
     if (nextExpanded === currentExpanded) return
     if (ellipsisConfig.onExpand) ellipsisConfig.onExpand(event, { expanded: nextExpanded })
     if (ellipsisConfig.expanded === undefined) uncontrolledExpanded.value = nextExpanded
-    renderDynamicRegion()
     scheduleEllipsisMeasure()
   }
 
@@ -872,28 +824,22 @@ const Link: FC<LinkProps> = ({
     }
 
     stopEvent(event)
-    const copyButton = resolveCopyButtonFromEvent(event)
-    showCopiedFeedback(copyButton ?? undefined)
+    showCopiedFeedback()
     readCopyText(copyConfig, children)
       .then(text => writeClipboard(String(text), copyConfig.format))
       .then(copiedToClipboard => {
         if (!copiedToClipboard) {
           copied.value = false
-          syncCopiedDom(false, copyButton ?? undefined)
-          renderDynamicRegion()
           return
         }
         if (copyConfig.onCopy) copyConfig.onCopy(event)
       })
       .catch(() => {
         copied.value = false
-        syncCopiedDom(false, copyButton ?? undefined)
-        renderDynamicRegion()
       })
   }
 
   onMounted(() => {
-    renderDynamicRegion()
     scheduleEllipsisMeasure()
     scheduleEditorAutoSize()
     if (typeof window !== 'undefined') {
@@ -907,9 +853,9 @@ const Link: FC<LinkProps> = ({
       window.clearTimeout(copyFeedbackTimer)
       window.removeEventListener('resize', scheduleEllipsisMeasure)
     }
-    if (resizeObserverRef.current) {
-      resizeObserverRef.current.disconnect()
-      resizeObserverRef.current = undefined
+    if (resizeObserver) {
+      resizeObserver.disconnect()
+      resizeObserver = undefined
     }
   })
 
@@ -937,7 +883,7 @@ const Link: FC<LinkProps> = ({
     { immediate: true },
   )
 
-  const renderEditor = () => {
+  const EditorView: FC = () => {
     const editorClassName = editConfig.autoSize
       ? 'textarea textarea-bordered textarea-sm min-h-24 min-w-56 leading-6'
       : 'input input-bordered input-xs min-w-36'
@@ -1007,42 +953,48 @@ const Link: FC<LinkProps> = ({
     )
   }
 
-  const renderTextNode = () => {
-    const decoratedContent = renderDecoratedContent(children, { mark, code, keyboard })
-
+  const TextNode: FC = () => {
     if (!ellipsisConfig.enabled) {
-      return <span className="min-w-0">{decoratedContent}</span>
+      return (
+        <span className="min-w-0">
+          <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+            {children}
+          </DecoratedContent>
+        </span>
+      )
     }
 
     const titleProps = titleValue !== undefined ? { title: titleValue } : {}
-    const expanded = getIsExpanded()
-    const textClassName = expanded
-      ? 'min-w-0 max-w-full whitespace-normal break-words align-bottom'
-      : ellipsisConfig.rows > 1
-        ? 'min-w-0 max-w-full overflow-hidden align-bottom'
-        : 'min-w-0 max-w-full truncate align-bottom'
-    const textStyle = expanded
-      ? {
-          minWidth: 0,
-          whiteSpace: 'normal',
-          overflow: 'visible',
-          textOverflow: 'clip',
-        }
-      : buildEllipsisStyle(ellipsisConfig.rows)
+    const resolveTextClassName = () =>
+      getIsExpanded()
+        ? 'min-w-0 max-w-full whitespace-normal break-words align-bottom'
+        : ellipsisConfig.rows > 1
+          ? 'min-w-0 max-w-full overflow-hidden align-bottom'
+          : 'min-w-0 max-w-full truncate align-bottom'
+    const resolveTextStyle = () =>
+      getIsExpanded()
+        ? {
+            minWidth: 0,
+            whiteSpace: 'normal',
+            overflow: 'visible',
+            textOverflow: 'clip',
+          }
+        : buildEllipsisStyle(ellipsisConfig.rows)
 
     if (ellipsisConfig.rows === 1 && ellipsisConfig.suffix) {
       return (
         <span className="inline-flex min-w-0 max-w-full items-baseline align-bottom">
           <span
-            key={expanded ? 'expanded' : 'collapsed'}
             ref={setEllipsisTextRef}
             data-rue-link-ellipsis-text="true"
             data-rue-link-ellipsis-rows={String(ellipsisConfig.rows)}
-            className={textClassName}
-            style={mergeStyles(textStyle, { minWidth: 0 })}
+            className={resolveTextClassName()}
+            style={mergeStyles(resolveTextStyle(), { minWidth: 0 })}
             {...titleProps}
           >
-            {decoratedContent}
+            <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+              {children}
+            </DecoratedContent>
           </span>
           <span data-rue-link-ellipsis-suffix="true" className="shrink-0">
             {ellipsisConfig.suffix}
@@ -1053,40 +1005,50 @@ const Link: FC<LinkProps> = ({
 
     return (
       <span
-        key={expanded ? 'expanded' : 'collapsed'}
         ref={setEllipsisTextRef}
         data-rue-link-ellipsis-text="true"
         data-rue-link-ellipsis-rows={String(ellipsisConfig.rows)}
-        className={textClassName}
-        style={textStyle}
+        className={resolveTextClassName()}
+        style={resolveTextStyle()}
         {...titleProps}
       >
-        {decoratedContent}
+        <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+          {children}
+        </DecoratedContent>
         {ellipsisConfig.suffix ? <span>{ellipsisConfig.suffix}</span> : null}
       </span>
     )
   }
 
-  const renderAnchor = () => {
-    const textNode = renderTextNode()
-    const iconNode = hasIcon ? (
-      <span className="inline-flex shrink-0 items-center" aria-hidden="true">
-        {icon}
-      </span>
-    ) : null
-    const anchorChildren =
-      iconPlacement === 'end' ? (
-        <>
-          {textNode}
-          {iconNode}
-        </>
-      ) : (
-        <>
-          {iconNode}
-          {textNode}
-        </>
-      )
+  const AnchorIcon: FC = () => (
+    <>
+      {hasIcon ? (
+        <span className="inline-flex shrink-0 items-center" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
+    </>
+  )
 
+  const AnchorChildren: FC = () => {
+    return (
+      <>
+        {iconPlacement === 'end' ? (
+          <>
+            <TextNode />
+            <AnchorIcon />
+          </>
+        ) : (
+          <>
+            <AnchorIcon />
+            <TextNode />
+          </>
+        )}
+      </>
+    )
+  }
+
+  const AnchorView: FC = () => {
     const anchorStyle = ellipsisConfig.enabled ? mergeStyles(style, { minWidth: 0 }) : style
     const anchorTitleProps =
       !ellipsisConfig.enabled && titleValue !== undefined ? { title: titleValue } : {}
@@ -1102,7 +1064,7 @@ const Link: FC<LinkProps> = ({
           aria-disabled="true"
           onClick={handleBaseClick}
         >
-          {anchorChildren}
+          <AnchorChildren />
         </span>
       )
     }
@@ -1121,7 +1083,7 @@ const Link: FC<LinkProps> = ({
           tabindex={rest.tabIndex}
           onClick={handleRouterClick}
         >
-          {anchorChildren}
+          <AnchorChildren />
         </a>
       )
     }
@@ -1139,25 +1101,26 @@ const Link: FC<LinkProps> = ({
         tabindex={rest.tabIndex}
         onClick={handleBaseClick}
       >
-        {anchorChildren}
+        <AnchorChildren />
       </a>
     )
   }
 
-  const renderContent = () => {
-    const expanded = getIsExpanded()
-    const anchor = renderAnchor()
-    const showExpandButton =
-      !!ellipsisConfig.expandable && (!expanded || ellipsisConfig.expandable === 'collapsible')
+  const ContentView: FC = () => {
+    const shouldShowExpandButton = () =>
+      !!ellipsisConfig.expandable &&
+      (!getIsExpanded() || ellipsisConfig.expandable === 'collapsible')
 
-    if (!hasInlineActions && !showExpandButton) {
-      return anchor
+    if (!hasInlineActions && !shouldShowExpandButton()) {
+      return <AnchorView />
     }
 
     return (
       <span
         data-rue-link-actions="true"
-        data-rue-link-expanded={ellipsisConfig.enabled ? (expanded ? 'true' : 'false') : undefined}
+        data-rue-link-expanded={
+          ellipsisConfig.enabled ? (getIsExpanded() ? 'true' : 'false') : undefined
+        }
         className={mergeClassNames(
           'rue-link-inline-actions',
           block
@@ -1165,22 +1128,21 @@ const Link: FC<LinkProps> = ({
             : 'inline-flex max-w-full flex-wrap items-start gap-1 align-baseline',
         )}
       >
-        {anchor}
-        {showExpandButton ? (
+        <AnchorView />
+        {shouldShowExpandButton() ? (
           <button
             type="button"
             data-rue-link-expand="true"
             className="link link-hover text-xs no-underline opacity-70"
-            aria-label={expanded ? '收起全文' : '展开全文'}
+            aria-label={getIsExpanded() ? '收起全文' : '展开全文'}
             onClick={toggleExpanded}
           >
-            {resolveExpandSymbol(ellipsisConfig, expanded)}
+            {resolveExpandSymbol(ellipsisConfig, getIsExpanded())}
           </button>
         ) : null}
         {copyConfig.enabled ? (
           <button
             type="button"
-            ref={setCopyButtonRef}
             data-rue-link-copy="true"
             className="btn btn-ghost btn-xs"
             aria-label={copied.value ? '已复制' : '复制链接文本'}
@@ -1211,15 +1173,9 @@ const Link: FC<LinkProps> = ({
   }
 
   return (
-    <span
-      className="contents"
-      ref={(element: HTMLElement | null) => {
-        dynamicHostRef.current = element ?? undefined
-        if (element) {
-          renderDynamicRegion()
-        }
-      }}
-    />
+    <span className="contents">
+      {editConfig.enabled && getIsEditing() ? <EditorView /> : <ContentView />}
+    </span>
   )
 }
 

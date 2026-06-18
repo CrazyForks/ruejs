@@ -33,17 +33,16 @@ pub fn emit_fragment_children(
                     let inner_top = crate::utils::unwrap_expr(expr.as_ref());
                     let is_children = crate::utils::is_children_member_expr(inner_top);
 
-                    if !is_children {
-                        if let Expr::Call(call) = inner_top {
-                            if crate::element_list::try_build_list_from_map(
-                                vt,
-                                parent_ident,
-                                call,
-                                stmts,
-                            ) {
-                                continue;
-                            }
-                        }
+                    if !is_children
+                        && let Expr::Call(call) = inner_top
+                        && crate::element_list::try_build_list_from_map(
+                            vt,
+                            parent_ident,
+                            call,
+                            stmts,
+                        )
+                    {
+                        continue;
                     }
 
                     // children 槽值直接渲染；其它表达式统一改写为可挂载槽值表达式

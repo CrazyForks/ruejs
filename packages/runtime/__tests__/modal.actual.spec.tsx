@@ -40,7 +40,7 @@ describe('Modal actual page', () => {
 
     expect(document.body.querySelector('.modal-mask')?.textContent).toContain('Custom Header')
     expect(document.body.querySelector('.modal-mask')?.textContent).toContain(
-      'Custom body content here...',
+      'Custom body content is rendered inside the transitioned modal.',
     )
     expect(document.body.querySelector('.modal-default-button')).not.toBeNull()
   })

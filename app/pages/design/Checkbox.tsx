@@ -543,15 +543,15 @@ const GroupPreview: FC = () => {
 const CheckAllPreview: FC = () => {
   const checkedList = ref<string[]>(['home'])
   const allValues = checklistOptions.map(option => option.value)
-  const allChecked = checkedList.value.length === allValues.length
-  const partiallyChecked = checkedList.value.length > 0 && !allChecked
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-box border border-base-300 bg-base-200/50 px-4 py-3">
         <Checkbox
-          checked={allChecked}
-          indeterminate={partiallyChecked}
+          checked={checkedList.value.length === allValues.length}
+          indeterminate={
+            checkedList.value.length > 0 && checkedList.value.length < allValues.length
+          }
           rootClassName="items-center [&>span:first-child]:pt-0 [&>span:last-child]:pt-1 [&>span:last-child]:leading-none"
           onChange={(_, meta) => {
             checkedList.value = meta.checked ? [...allValues] : []

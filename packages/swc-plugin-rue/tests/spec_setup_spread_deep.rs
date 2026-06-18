@@ -27,42 +27,44 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
-        const base = {
-            k: 'v'
-        };
-        const inner = [
-            a.value,
-            {
-                t: `x=${a.value}`
-            }
-        ];
-        const calc = ()=>a.value + 1;
-        const obj = {
-            ...base,
-            arr: [
-                ...inner,
-                calc()
-            ],
-            map: {
-                x: a.value,
-                y: ()=>a.value > 0 ? 'yes' : 'no'
-            }
-        };
-        return {
-            a: a,
-            base: base,
-            inner: inner,
-            calc: calc,
-            obj: obj
-        };
-    }));
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
+            const base = {
+                k: 'v'
+            };
+            const inner = _$vaporWithHookId("computed:1:1", ()=>computed(()=>[
+                        a.value,
+                        {
+                            t: `x=${a.value}`
+                        }
+                    ]));
+            const __rue_phase2_inner = inner;
+            const calc = ()=>a.value + 1;
+            const obj = _$vaporWithHookId("computed:1:2", ()=>computed(()=>({
+                        ...base,
+                        arr: [
+                            ...__rue_phase2_inner.get(),
+                            calc()
+                        ],
+                        map: {
+                            x: a.value,
+                            y: ()=>a.value > 0 ? 'yes' : 'no'
+                        }
+                    })));
+            const __rue_phase2_obj = obj;
+            return {
+                a: a,
+                base: base,
+                inner: inner,
+                calc: calc,
+                obj: obj
+            };
+        }));
     const { a: a, base: base, inner: inner, calc: calc, obj: obj } = _$useSetup;
-    return <div>{obj.arr[0]}-{obj.map.y()}</div>;
+    return <div>{obj.get().arr[0]}-{obj.get().map.y()}</div>;
 };
 "##;
 

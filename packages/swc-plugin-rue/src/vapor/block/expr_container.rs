@@ -22,10 +22,10 @@ pub(crate) fn handle_expr_container(
         JSXExpr::Expr(expr) => {
             let inner = unwrap_expr(expr.as_ref());
             // 优先识别 Array.map(JSX) 并走键控复用列表路径
-            if let Expr::Call(call) = inner.clone() {
-                if crate::element_list::try_build_list_from_map(vt, root, &call, stmts) {
-                    return;
-                }
+            if let Expr::Call(call) = inner.clone()
+                && crate::element_list::try_build_list_from_map(vt, root, &call, stmts)
+            {
+                return;
             }
             let is_children = crate::utils::is_children_member_expr(inner);
 

@@ -1244,21 +1244,26 @@ const Transfer: FC<TransferProps<any>> = ({
     const error = new Error(
       `${TRANSFER_REENTRANT_RENDER_ERROR} Transfer blocked ${mutation} while the ${activeRegion} managed region was rendering.`,
     )
-    const runtime =
-      (globalThis as { __rue_active?: { handleError?: (error: Error, instance?: any) => void } })
-        .__rue_active ??
-      (
-        globalThis as {
-          __rue_vapor_preferred?: { handleError?: (error: Error, instance?: any) => void }
-        }
-      ).__rue_vapor_preferred ??
-      (globalThis as { __rue?: { handleError?: (error: Error, instance?: any) => void } }).__rue
-
-    try {
-      runtime?.handleError?.(error, null)
-    } catch {
-      // Ignore secondary error reporting failures and preserve the original error.
+    const globalRuntime = globalThis as {
+      __rue_active?: { handleError?: (error: Error, instance?: any) => void }
+      __rue_vapor_preferred?: { handleError?: (error: Error, instance?: any) => void }
+      __rue?: { handleError?: (error: Error, instance?: any) => void }
     }
+    const runtimes = Array.from(
+      new Set([
+        globalRuntime.__rue_active,
+        globalRuntime.__rue_vapor_preferred,
+        globalRuntime.__rue,
+      ]),
+    )
+
+    runtimes.forEach(runtime => {
+      try {
+        runtime?.handleError?.(error, null)
+      } catch {
+        // Ignore secondary error reporting failures and preserve the original error.
+      }
+    })
   }
 
   const renderManagedTarget = (

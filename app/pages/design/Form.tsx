@@ -100,7 +100,7 @@ const BasicSubmitShowcase: FC = () => {
   const result = ref('等待提交，右侧会展示 payload 或校验摘要。')
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
       <Form
         className="rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7"
         initialValues={initialValues}
@@ -205,25 +205,48 @@ const InstanceMethodsShowcase: FC = () => {
   const activity = ref('等待实例方法操作。')
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
       <Form
         form={form}
-        className="rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7"
+        className="content-start gap-5 rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7"
         initialValues={{
           role: 'viewer',
           region: 'cn-hz',
           notes: '仅开放只读权限',
         }}
+        scrollToFirstError={true}
+        validateMessages={{
+          required: '请填写 ${label}',
+        }}
         onFinish={values => {
           activity.value = 'submit()\n' + formatJson(values)
         }}
+        onFinishFailed={info => {
+          activity.value =
+            'submit() failed\n' +
+            formatJson(
+              info.errorFields.map(field => ({
+                name: field.name.join('.'),
+                errors: field.errors,
+                warnings: field.warnings,
+              })),
+            )
+        }}
         render={formInstance => (
           <>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               <Form.Item
                 form={formInstance}
                 name="role"
                 label="角色"
+                rules={[
+                  { required: true },
+                  {
+                    pattern: /^(viewer|editor|admin)$/,
+                    message: '角色只能是 viewer、editor 或 admin',
+                  },
+                ]}
+                hasFeedback={true}
                 render={control => <Input {...control} placeholder="viewer / editor / admin" />}
               />
 
@@ -231,6 +254,14 @@ const InstanceMethodsShowcase: FC = () => {
                 form={formInstance}
                 name="region"
                 label="区域"
+                rules={[
+                  { required: true },
+                  {
+                    pattern: /^(cn|us|eu)-[a-z]+$/,
+                    message: '区域格式示例：cn-hz、us-east、eu-west',
+                  },
+                ]}
+                hasFeedback={true}
                 render={control => <Input {...control} placeholder="cn-hz" />}
               />
             </div>
@@ -239,10 +270,11 @@ const InstanceMethodsShowcase: FC = () => {
               form={formInstance}
               name="notes"
               label="交付备注"
+              rules={[{ required: true }, { min: 6 }]}
               render={control => <Input {...control} placeholder="写入审批说明或 rollout 策略" />}
             />
 
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-wrap gap-3 pt-1">
               <Button
                 size="sm"
                 onClick={() => {
@@ -264,6 +296,21 @@ const InstanceMethodsShowcase: FC = () => {
                 }}
               >
                 填充预设
+              </Button>
+              <Button
+                size="sm"
+                type="outlined"
+                onClick={() => {
+                  form.setFieldsValue({
+                    role: 'guest',
+                    region: 'hangzhou',
+                    notes: '',
+                  })
+                  activity.value =
+                    'setFieldsValue({ role: "guest", region: "hangzhou", notes: "" })'
+                }}
+              >
+                填入异常值
               </Button>
               <Button
                 size="sm"
@@ -798,7 +845,7 @@ const CompositeNoStyleShowcase: FC = () => {
                 <div className="text-[0.95rem] leading-7 font-medium text-base-content/78">
                   回调地址
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
                   <span className="rounded-full bg-base-200 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-base-content/55">
                     https://
                   </span>
@@ -807,7 +854,7 @@ const CompositeNoStyleShowcase: FC = () => {
                     name="host"
                     noStyle={true}
                     render={control => (
-                      <div className="min-w-[18rem] flex-1">
+                      <div className="min-w-0">
                         <Input {...control} placeholder="api.rue.dev" />
                       </div>
                     )}
@@ -825,7 +872,7 @@ const CompositeNoStyleShowcase: FC = () => {
                 <div className="text-[0.95rem] leading-7 font-medium text-base-content/78">
                   资源路径
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
                   <span className="rounded-full bg-base-200 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-base-content/55">
                     /hooks/
                   </span>
@@ -839,7 +886,7 @@ const CompositeNoStyleShowcase: FC = () => {
                         .replace(/^\/+/, '')
                     }
                     render={control => (
-                      <div className="min-w-[16rem] flex-1">
+                      <div className="min-w-0">
                         <Input {...control} placeholder="release-hooks" />
                       </div>
                     )}
@@ -961,7 +1008,14 @@ const LongFormScrollShowcase: FC = () => {
       </div>
 
       <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4 shadow-sm lg:p-5">
-        <div className="max-h-[38rem] overflow-auto pr-2" style={{ scrollBehavior: 'smooth' }}>
+        <div
+          className="overflow-y-auto overscroll-contain pr-2"
+          style={{
+            height: 'min(34rem, 72vh)',
+            scrollBehavior: 'smooth',
+            scrollbarGutter: 'stable',
+          }}
+        >
           <Form
             form={form}
             name="advanced-scroll-demo"
@@ -1178,54 +1232,94 @@ const DynamicListShowcase: FC = () => {
     (Form.useWatch('members', form) as Array<{ name?: string; role?: string }> | undefined) ?? []
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-      <Form
-        form={form}
-        className="rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7"
-        initialValues={{
-          members: [
-            { name: 'Rue', role: 'Owner' },
-            { name: 'Vapor', role: 'Reviewer' },
-          ],
-        }}
-        render={formInstance => (
-          <Form.List
-            form={formInstance}
-            name="members"
-            rules={[
-              {
-                validator: (_rule, value) => {
-                  if (!Array.isArray(value) || value.length < 2) {
-                    return '至少保留 2 名审批成员，才适合真实协作流程。'
-                  }
-                  return undefined
+    <div className="grid gap-6">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
+        <Form
+          form={form}
+          className="content-start gap-5 rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7"
+          initialValues={{
+            members: [
+              { name: 'Rue', role: 'Owner' },
+              { name: 'Vapor', role: 'Reviewer' },
+            ],
+          }}
+          render={formInstance => (
+            <Form.List
+              form={formInstance}
+              name="members"
+              rules={[
+                {
+                  validator: (_rule, value) => {
+                    if (!Array.isArray(value) || value.length < 2) {
+                      return '至少保留 2 名审批成员，才适合真实协作流程。'
+                    }
+                    return undefined
+                  },
                 },
-              },
-            ]}
-            render={(fields, operation, meta) => (
-              <div className="grid gap-4">
-                {fields.length === 0 ? (
-                  <div className="rounded-[1.25rem] border border-dashed border-base-300 bg-base-200/40 p-4 text-sm text-base-content/60">
-                    暂无成员，点击下方按钮即可追加一组字段。
-                  </div>
-                ) : null}
+              ]}
+              render={(fields, operation, meta) => (
+                <div className="grid gap-4">
+                  {fields.length === 0 ? (
+                    <div className="rounded-[1.25rem] border border-dashed border-base-300 bg-base-200/40 p-4 text-sm text-base-content/60">
+                      暂无成员，点击下方按钮即可追加一组字段。
+                    </div>
+                  ) : null}
 
-                {fields.map((field, index) => (
-                  <div
-                    key={field.key}
-                    className="rounded-[1.25rem] border border-base-300 bg-base-50/60 p-5"
-                  >
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+                  {fields.map((field, index) => (
+                    <div
+                      key={field.key}
+                      className="rounded-[1.25rem] border border-base-300 bg-base-50/60 p-4 lg:p-5"
+                    >
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+                            Member {index + 1}
+                          </div>
+                          <div className="mt-1 text-sm font-medium text-base-content">
+                            审批成员 {index + 1}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {index > 0 ? (
+                            <Button
+                              size="sm"
+                              type="outlined"
+                              onClick={() => operation.move(field.name, field.name - 1)}
+                            >
+                              上移
+                            </Button>
+                          ) : null}
+                          {index < fields.length - 1 ? (
+                            <Button
+                              size="sm"
+                              type="outlined"
+                              onClick={() => operation.move(field.name, field.name + 1)}
+                            >
+                              下移
+                            </Button>
+                          ) : null}
+                          <Button
+                            size="sm"
+                            type="text"
+                            onClick={() => operation.remove(field.name)}
+                          >
+                            删除
+                          </Button>
+                        </div>
+                      </div>
+
                       <div className="grid gap-4 md:grid-cols-2">
                         <Form.Item
                           form={formInstance}
+                          layout="vertical"
                           name={['members', field.name, 'name']}
-                          label={'成员 ' + String(index + 1)}
+                          label="成员名称"
                           rules={[{ required: true }]}
                           render={control => <Input {...control} placeholder="输入成员名称" />}
                         />
                         <Form.Item
                           form={formInstance}
+                          layout="vertical"
                           name={['members', field.name, 'role']}
                           label="职责"
                           rules={[{ required: true }]}
@@ -1234,94 +1328,98 @@ const DynamicListShowcase: FC = () => {
                           )}
                         />
                       </div>
-                      <div className="flex flex-wrap gap-2 lg:w-40 lg:flex-col lg:items-stretch">
-                        {index > 0 ? (
-                          <Button
-                            size="sm"
-                            type="outlined"
-                            onClick={() => operation.move(field.name, field.name - 1)}
-                          >
-                            上移
-                          </Button>
-                        ) : null}
-                        {index < fields.length - 1 ? (
-                          <Button
-                            size="sm"
-                            type="outlined"
-                            onClick={() => operation.move(field.name, field.name + 1)}
-                          >
-                            下移
-                          </Button>
-                        ) : null}
-                        <Button size="sm" type="text" onClick={() => operation.remove(field.name)}>
-                          删除
-                        </Button>
-                      </div>
                     </div>
+                  ))}
+
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    <Button
+                      size="sm"
+                      color="primary"
+                      onClick={() => {
+                        operation.add({ name: '新成员 ' + String(fields.length + 1), role: 'QA' })
+                      }}
+                    >
+                      新增成员
+                    </Button>
+                    <Button
+                      size="sm"
+                      type="outlined"
+                      onClick={() => operation.add({ name: 'Head reviewer', role: 'QA' }, 0)}
+                    >
+                      头部插入
+                    </Button>
                   </div>
-                ))}
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    color="primary"
-                    onClick={() => {
-                      operation.add({ name: '新成员 ' + String(fields.length + 1) })
-                    }}
-                  >
-                    新增成员
-                  </Button>
-                  <Button
-                    size="sm"
-                    type="outlined"
-                    onClick={() => operation.add({ name: 'Head reviewer', role: 'QA' }, 0)}
-                  >
-                    头部插入
-                  </Button>
+                  {meta.errors.length > 0 || meta.warnings.length > 0 ? (
+                    <Form.ErrorList
+                      errors={meta.errors}
+                      warnings={meta.warnings}
+                      className="rounded-[1.25rem] border border-error/15 bg-error/5 p-4 text-sm"
+                    />
+                  ) : null}
                 </div>
+              )}
+            />
+          )}
+        />
 
-                <Form.ErrorList
-                  errors={meta.errors}
-                  warnings={meta.warnings}
-                  className="rounded-[1.25rem] border border-error/15 bg-error/5 p-4 text-sm"
-                />
+        <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7">
+          <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+            List snapshot
+          </div>
+          <div className="mt-3 inline-flex rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content/65">
+            {members.length} members
+          </div>
+          <div className="mt-4 grid gap-3">
+            {members.length > 0 ? (
+              members.map((member, index) => (
+                <div
+                  key={String(index)}
+                  className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm text-base-content/80"
+                >
+                  <div className="text-xs uppercase tracking-[0.22em] text-base-content/45">
+                    成员 {index + 1}
+                  </div>
+                  <div className="mt-2 text-base font-medium text-base-content">
+                    {member?.name ? String(member.name) : '未命名成员'}
+                  </div>
+                  <div className="mt-1 text-xs text-base-content/55">
+                    {member?.role ? String(member.role) : '未分配职责'}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm text-base-content/60">
+                当前列表为空。
               </div>
             )}
-          />
-        )}
-      />
+          </div>
+        </div>
+      </div>
 
       <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7">
         <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
-          List snapshot
+          List behavior
         </div>
-        <p className="mt-3 mb-0 text-sm text-base-content/65">
-          这里展示动态列表字段的常见组织方式
-          Item：列表项支持新增、插入、重排和删除，右侧快照会跟着字段结构一起变化。
-        </p>
-        <div className="mt-4 grid gap-3">
-          {members.length > 0 ? (
-            members.map((member, index) => (
-              <div
-                key={String(index)}
-                className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm text-base-content/80"
-              >
-                <div className="text-xs uppercase tracking-[0.22em] text-base-content/45">
-                  成员 {index + 1}
-                </div>
-                <div className="mt-2 text-base font-medium text-base-content">
-                  {member?.name ? String(member.name) : '未命名成员'}
-                </div>
-                <div className="mt-1 text-xs text-base-content/55">
-                  {member?.role ? String(member.role) : '未分配职责'}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm text-base-content/60">
-              当前列表为空。
-            </div>
-          )}
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="rounded-[1.25rem] bg-base-200/70 p-4">
+            <div className="text-sm font-semibold text-base-content">列表级规则</div>
+            <p className="mt-2 mb-0 text-sm leading-6 text-base-content/65">
+              rules 挂在 Form.List 上，校验整个 members 数组。
+            </p>
+          </div>
+          <div className="rounded-[1.25rem] bg-base-200/70 p-4">
+            <div className="text-sm font-semibold text-base-content">重排操作</div>
+            <p className="mt-2 mb-0 text-sm leading-6 text-base-content/65">
+              operation.move 保持字段状态跟随成员顺序移动。
+            </p>
+          </div>
+          <div className="rounded-[1.25rem] bg-base-200/70 p-4">
+            <div className="text-sm font-semibold text-base-content">错误出口</div>
+            <p className="mt-2 mb-0 text-sm leading-6 text-base-content/65">
+              Form.ErrorList 只展示列表自身的错误，不和单个字段提示混在一起。
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -1816,7 +1914,8 @@ const FormPage: FC = () => {
 
         <div className="not-prose rounded-[1.5rem] border border-base-300 bg-base-100 p-6 text-sm leading-7 text-base-content/75 shadow-sm">
           当前 Rue runtime 下，推荐通过 <code>Form.useForm()</code> 或{' '}
-          <code>render=form =&gt; ...</code> 显式持有并传递 <code>form</code>。 下面所有 demo
+          <code>{'render={form => <Form.Item form={form} name="title" />}'}</code> 显式持有并传递{' '}
+          <code>form</code>。 下面所有 demo
           都按这个稳定路径组织，不再依赖隐式祖先解析；你也会在示例里反复看到几条关键规则：
           `initialValues` 优先于子字段默认值，`Checkbox` 要切到 `checked` 语义，`dependencies` 和
           `shouldUpdate` 分工不同。
@@ -1876,31 +1975,191 @@ const FormPage: FC = () => {
           summary="用 Form.useForm 和 Form.useWatch 把同一个表单实例共享给按钮和摘要面板。"
           tab={tabInstance}
           preview={() => <InstanceMethodsShowcase />}
-          code={`const [form] = Form.useForm()
-const role = Form.useWatch('role', form)
-const region = Form.useWatch('region', form)
+          code={`const InstanceMethodsShowcase: FC = () => {
+  const [form] = Form.useForm()
+  const role = Form.useWatch('role', form) ?? 'viewer'
+  const region = Form.useWatch('region', form) ?? 'cn-hz'
+  const notes = Form.useWatch('notes', form) ?? ''
+  const activity = ref('等待实例方法操作。')
 
-<Form
-  form={form}
-  initialValues={{ role: 'viewer', region: 'cn-hz', notes: '仅开放只读权限' }}
-  render={formInstance => (
-    <>
-      <Form.Item
-        form={formInstance}
-        name="role"
-        label="角色"
-        render={control => <Input {...control} />}
+  return (
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+      <Form
+        form={form}
+        className="content-start gap-5 rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7"
+        initialValues={{
+          role: 'viewer',
+          region: 'cn-hz',
+          notes: '仅开放只读权限',
+        }}
+        scrollToFirstError={true}
+        validateMessages={{
+          required: '请填写 \${label}',
+        }}
+        onFinish={values => {
+          activity.value = 'submit()\\n' + formatJson(values)
+        }}
+        onFinishFailed={info => {
+          activity.value =
+            'submit() failed\\n' +
+            formatJson(
+              info.errorFields.map(field => ({
+                name: field.name.join('.'),
+                errors: field.errors,
+                warnings: field.warnings,
+              })),
+            )
+        }}
+        render={formInstance => (
+          <>
+            <div className="grid gap-5 md:grid-cols-2">
+              <Form.Item
+                form={formInstance}
+                name="role"
+                label="角色"
+                rules={[
+                  { required: true },
+                  {
+                    pattern: /^(viewer|editor|admin)$/,
+                    message: '角色只能是 viewer、editor 或 admin',
+                  },
+                ]}
+                hasFeedback={true}
+                render={control => <Input {...control} placeholder="viewer / editor / admin" />}
+              />
+
+              <Form.Item
+                form={formInstance}
+                name="region"
+                label="区域"
+                rules={[
+                  { required: true },
+                  {
+                    pattern: /^(cn|us|eu)-[a-z]+$/,
+                    message: '区域格式示例：cn-hz、us-east、eu-west',
+                  },
+                ]}
+                hasFeedback={true}
+                render={control => <Input {...control} placeholder="cn-hz" />}
+              />
+            </div>
+
+            <Form.Item
+              form={formInstance}
+              name="notes"
+              label="交付备注"
+              rules={[{ required: true }, { min: 6 }]}
+              render={control => <Input {...control} placeholder="写入审批说明或 rollout 策略" />}
+            />
+
+            <div className="flex flex-wrap gap-3 pt-1">
+              <Button
+                size="sm"
+                onClick={() => {
+                  form.setFieldValue('role', 'editor')
+                  activity.value = "setFieldValue('role', 'editor')"
+                }}
+              >
+                设为 editor
+              </Button>
+              <Button
+                size="sm"
+                type="outlined"
+                onClick={() => {
+                  form.setFieldsValue({
+                    region: 'us-east',
+                    notes: '需要双人复核',
+                  })
+                  activity.value = 'setFieldsValue({ region: "us-east", notes: "需要双人复核" })'
+                }}
+              >
+                填充预设
+              </Button>
+              <Button
+                size="sm"
+                type="outlined"
+                onClick={() => {
+                  form.setFieldsValue({
+                    role: 'guest',
+                    region: 'hangzhou',
+                    notes: '',
+                  })
+                  activity.value = 'setFieldsValue({ role: "guest", region: "hangzhou", notes: "" })'
+                }}
+              >
+                填入异常值
+              </Button>
+              <Button
+                size="sm"
+                type="text"
+                onClick={() => {
+                  form.resetFields()
+                  activity.value = 'resetFields()'
+                }}
+              >
+                恢复初始值
+              </Button>
+              <Button
+                size="sm"
+                color="primary"
+                onClick={() => {
+                  form.submit()
+                }}
+              >
+                程序化提交
+              </Button>
+              <Button
+                size="sm"
+                type="outlined"
+                onClick={() => {
+                  void form
+                    .validateFields()
+                    .then(values => {
+                      activity.value = 'validateFields()\\n' + formatJson(values)
+                    })
+                    .catch(info => {
+                      activity.value = 'validateFields() failed\\n' + formatJson(info.errorFields)
+                    })
+                }}
+              >
+                validateFields
+              </Button>
+            </div>
+          </>
+        )}
       />
 
-      <Button onClick={() => form.setFieldValue('role', 'editor')}>
-        设为 editor
-      </Button>
-      <Button onClick={() => form.submit()}>
-        程序化提交
-      </Button>
-    </>
-  )}
-/>
+      <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7">
+        <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+          Reactive summary
+        </div>
+        <p className="mt-3 mb-0 text-sm text-base-content/65">
+          这里把表单实例方法和 Watch Hooks
+          两类示例：同一个实例被按钮、摘要卡片和提交流程共享，字段变化会同步反映到右侧。
+        </p>
+        <div className="mt-4 grid gap-3">
+          <div className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm">
+            <div className="text-xs uppercase tracking-[0.22em] text-base-content/45">role</div>
+            <div className="mt-2 text-lg font-semibold text-base-content">{String(role)}</div>
+          </div>
+          <div className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm">
+            <div className="text-xs uppercase tracking-[0.22em] text-base-content/45">region</div>
+            <div className="mt-2 text-lg font-semibold text-base-content">{String(region)}</div>
+          </div>
+          <div className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm">
+            <div className="text-xs uppercase tracking-[0.22em] text-base-content/45">notes</div>
+            <div className="mt-2 text-sm leading-6 text-base-content/80">
+              {String(notes) || '未填写'}
+            </div>
+          </div>
+        </div>
+        <pre className="mt-4 whitespace-pre-wrap break-words rounded-box bg-neutral text-neutral-content p-4 text-xs leading-6">
+          {activity.value}
+        </pre>
+      </div>
+    </div>
+  )
+}
 `}
         />
 
@@ -2034,18 +2293,36 @@ const region = Form.useWatch('region', form)
   <>
     <div className="grid gap-3">
       <div>回调地址</div>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
         <span>https://</span>
-        <Form.Item form={formInstance} name="host" noStyle render={control => <Input {...control} />} />
+        <Form.Item
+          form={formInstance}
+          name="host"
+          noStyle
+          render={control => (
+            <div className="min-w-0">
+              <Input {...control} />
+            </div>
+          )}
+        />
         <span>:443</span>
       </div>
     </div>
 
     <div className="grid gap-3">
       <div>资源路径</div>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
         <span>/hooks/</span>
-        <Form.Item form={formInstance} name="path" noStyle render={control => <Input {...control} />} />
+        <Form.Item
+          form={formInstance}
+          name="path"
+          noStyle
+          render={control => (
+            <div className="min-w-0">
+              <Input {...control} />
+            </div>
+          )}
+        />
         <span>POST target</span>
       </div>
     </div>
@@ -2059,42 +2336,201 @@ const region = Form.useWatch('region', form)
           summary="用 Form.List 组织动态数组字段，并补上列表级规则、重排操作和 ErrorList。"
           tab={tabList}
           preview={() => <DynamicListShowcase />}
-          code={`const [form] = Form.useForm()
+          code={`const DynamicListShowcase: FC = () => {
+  const [form] = Form.useForm()
+  const members =
+    (Form.useWatch('members', form) as Array<{ name?: string; role?: string }> | undefined) ?? []
 
-<Form
-  form={form}
-  initialValues={{ members: [{ name: 'Rue', role: 'Owner' }, { name: 'Vapor', role: 'Reviewer' }] }}
-  render={formInstance => (
-    <Form.List
-      form={formInstance}
-      name="members"
-      rules={[
-        {
-          validator: (_rule, value) => {
-            if (!Array.isArray(value) || value.length < 2) {
-              return '至少保留 2 名审批成员'
-            }
-          },
-        },
-      ]}
-      render={(fields, operation, meta) => (
-        <>
-          {fields.map((field, index) => (
-            <div key={field.key}>
-              <Form.Item form={formInstance} name={['members', field.name, 'name']} label={'成员 ' + String(index + 1)} render={control => <Input {...control} />} />
-              <Form.Item form={formInstance} name={['members', field.name, 'role']} label="职责" render={control => <Input {...control} />} />
-            </div>
-          ))}
+  return (
+    <div className="grid gap-6">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
+        <Form
+          form={form}
+          className="content-start gap-5 rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7"
+          initialValues={{
+            members: [
+              { name: 'Rue', role: 'Owner' },
+              { name: 'Vapor', role: 'Reviewer' },
+            ],
+          }}
+          render={formInstance => (
+            <Form.List
+              form={formInstance}
+              name="members"
+              rules={[
+                {
+                  validator: (_rule, value) => {
+                    if (!Array.isArray(value) || value.length < 2) {
+                      return '至少保留 2 名审批成员，才适合真实协作流程。'
+                    }
+                    return undefined
+                  },
+                },
+              ]}
+              render={(fields, operation, meta) => (
+                <div className="grid gap-4">
+                  {fields.length === 0 ? (
+                    <div className="rounded-[1.25rem] border border-dashed border-base-300 bg-base-200/40 p-4 text-sm text-base-content/60">
+                      暂无成员，点击下方按钮即可追加一组字段。
+                    </div>
+                  ) : null}
 
-          <Button onClick={() => operation.add({ name: '新成员 ' + String(fields.length + 1), role: 'QA' })}>
-            新增成员
-          </Button>
-          <Form.ErrorList errors={meta.errors} warnings={meta.warnings} />
-        </>
-      )}
-    />
-  )}
-/>
+                  {fields.map((field, index) => (
+                    <div
+                      key={field.key}
+                      className="rounded-[1.25rem] border border-base-300 bg-base-50/60 p-4 lg:p-5"
+                    >
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+                            Member {index + 1}
+                          </div>
+                          <div className="mt-1 text-sm font-medium text-base-content">
+                            审批成员 {index + 1}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {index > 0 ? (
+                            <Button
+                              size="sm"
+                              type="outlined"
+                              onClick={() => operation.move(field.name, field.name - 1)}
+                            >
+                              上移
+                            </Button>
+                          ) : null}
+                          {index < fields.length - 1 ? (
+                            <Button
+                              size="sm"
+                              type="outlined"
+                              onClick={() => operation.move(field.name, field.name + 1)}
+                            >
+                              下移
+                            </Button>
+                          ) : null}
+                          <Button size="sm" type="text" onClick={() => operation.remove(field.name)}>
+                            删除
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <Form.Item
+                          form={formInstance}
+                          layout="vertical"
+                          name={['members', field.name, 'name']}
+                          label="成员名称"
+                          rules={[{ required: true }]}
+                          render={control => <Input {...control} placeholder="输入成员名称" />}
+                        />
+                        <Form.Item
+                          form={formInstance}
+                          layout="vertical"
+                          name={['members', field.name, 'role']}
+                          label="职责"
+                          rules={[{ required: true }]}
+                          render={control => (
+                            <Input {...control} placeholder="Owner / Reviewer / QA" />
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    <Button
+                      size="sm"
+                      color="primary"
+                      onClick={() => {
+                        operation.add({ name: '新成员 ' + String(fields.length + 1), role: 'QA' })
+                      }}
+                    >
+                      新增成员
+                    </Button>
+                    <Button
+                      size="sm"
+                      type="outlined"
+                      onClick={() => operation.add({ name: 'Head reviewer', role: 'QA' }, 0)}
+                    >
+                      头部插入
+                    </Button>
+                  </div>
+
+                  {meta.errors.length > 0 || meta.warnings.length > 0 ? (
+                    <Form.ErrorList
+                      errors={meta.errors}
+                      warnings={meta.warnings}
+                      className="rounded-[1.25rem] border border-error/15 bg-error/5 p-4 text-sm"
+                    />
+                  ) : null}
+                </div>
+              )}
+            />
+          )}
+        />
+
+        <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7">
+          <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+            List snapshot
+          </div>
+          <div className="mt-3 inline-flex rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content/65">
+            {members.length} members
+          </div>
+          <div className="mt-4 grid gap-3">
+            {members.length > 0 ? (
+              members.map((member, index) => (
+                <div
+                  key={String(index)}
+                  className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm text-base-content/80"
+                >
+                  <div className="text-xs uppercase tracking-[0.22em] text-base-content/45">
+                    成员 {index + 1}
+                  </div>
+                  <div className="mt-2 text-base font-medium text-base-content">
+                    {member?.name ? String(member.name) : '未命名成员'}
+                  </div>
+                  <div className="mt-1 text-xs text-base-content/55">
+                    {member?.role ? String(member.role) : '未分配职责'}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-[1.25rem] bg-base-200/70 p-4 text-sm text-base-content/60">
+                当前列表为空。
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm lg:p-7">
+        <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+          List behavior
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="rounded-[1.25rem] bg-base-200/70 p-4">
+            <div className="text-sm font-semibold text-base-content">列表级规则</div>
+            <p className="mt-2 mb-0 text-sm leading-6 text-base-content/65">
+              rules 挂在 Form.List 上，校验整个 members 数组。
+            </p>
+          </div>
+          <div className="rounded-[1.25rem] bg-base-200/70 p-4">
+            <div className="text-sm font-semibold text-base-content">重排操作</div>
+            <p className="mt-2 mb-0 text-sm leading-6 text-base-content/65">
+              operation.move 保持字段状态跟随成员顺序移动。
+            </p>
+          </div>
+          <div className="rounded-[1.25rem] bg-base-200/70 p-4">
+            <div className="text-sm font-semibold text-base-content">错误出口</div>
+            <p className="mt-2 mb-0 text-sm leading-6 text-base-content/65">
+              Form.ErrorList 只展示列表自身的错误，不和单个字段提示混在一起。
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 `}
         />
 
@@ -2103,26 +2539,276 @@ const region = Form.useWatch('region', form)
           summary="在可滚动长表单里同时展示 scrollToField 和 scrollToFirstError 的定位行为。"
           tab={tabScroll}
           preview={() => <LongFormScrollShowcase />}
-          code={`const [form] = Form.useForm()
+          code={`const LongFormScrollShowcase: FC = () => {
+  const [form] = Form.useForm()
+  const activity = ref(
+    '点击左侧按钮可调用 scrollToField；提交时会用 scrollToFirstError 自动滚到首个错误字段。',
+  )
 
-form.scrollToField(['rollback', 'ticket'], { block: 'center', focus: true })
+  const jumpToField = (name: string | Array<string | number>, label: string) => {
+    form.scrollToField(name, { block: 'center', focus: true })
+    activity.value = \`scrollToField -> \${label}\`
+  }
 
-<Form
-  form={form}
-  name="advanced-scroll-demo"
-  scrollToFirstError={{ block: 'center', focus: true }}
-  onFinishFailed={info => {
-    console.log(info.errorFields[0])
-  }}
-  render={formInstance => (
-    <>
-      <Form.Item form={formInstance} name="releaseName" label="发布名称" rules={[{ required: true }]} render={control => <Input {...control} />} />
-      <Form.Item form={formInstance} name={['strategy', 'batchSize']} label="灰度批次" rules={[{ required: true }]} render={control => <Input {...control} />} />
-      <Form.Item form={formInstance} name={['rollback', 'ticket']} label="回滚单号" rules={[{ required: true }]} render={control => <Input {...control} />} />
-      <Button color="primary" htmlType="submit">提交长表单</Button>
-    </>
-  )}
-/>
+  return (
+    <div className="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-6 shadow-sm">
+        <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+          Scroll actions
+        </div>
+        <p className="mt-3 mb-0 text-sm text-base-content/65">
+          这个示例把手动 scrollToField
+          和提交失败自动滚动放进同一个长表单容器里，方便直接比较两种行为。
+        </p>
+        <div className="mt-4 grid gap-2">
+          <Button size="sm" onClick={() => jumpToField('releaseName', '发布名称')}>
+            滚到发布名称
+          </Button>
+          <Button
+            size="sm"
+            type="outlined"
+            onClick={() => jumpToField(['strategy', 'batchSize'], '灰度批次')}
+          >
+            滚到灰度批次
+          </Button>
+          <Button
+            size="sm"
+            type="outlined"
+            onClick={() => jumpToField(['observability', 'dashboard'], '监控看板')}
+          >
+            滚到监控看板
+          </Button>
+          <Button
+            size="sm"
+            type="outlined"
+            onClick={() => jumpToField(['rollback', 'ticket'], '回滚单号')}
+          >
+            滚到回滚单号
+          </Button>
+        </div>
+        <pre className="mt-4 whitespace-pre-wrap break-words rounded-[1.25rem] bg-neutral p-4 text-xs leading-6 text-neutral-content">
+          {activity.value}
+        </pre>
+      </div>
+
+      <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4 shadow-sm lg:p-5">
+        <div
+          className="overflow-y-auto overscroll-contain pr-2"
+          style={{
+            height: 'min(34rem, 72vh)',
+            scrollBehavior: 'smooth',
+            scrollbarGutter: 'stable',
+          }}
+        >
+          <Form
+            form={form}
+            name="advanced-scroll-demo"
+            className="pb-4"
+            scrollToFirstError={{ block: 'center', focus: true }}
+            initialValues={{
+              application: 'rue-design',
+              environment: 'staging',
+              strategy: { batchSize: '10%', pauseWindow: '15m' },
+              observability: { dashboard: '' },
+            }}
+            onFinish={values => {
+              activity.value = '提交成功\\n' + formatJson(values)
+            }}
+            onFinishFailed={info => {
+              activity.value =
+                '校验失败，已定位到首个错误字段\\n' +
+                formatJson({
+                  firstError: info.errorFields[0]?.name.join('.'),
+                  errorFields: info.errorFields,
+                })
+            }}
+            render={formInstance => (
+              <>
+                <section className="rounded-[1.25rem] border border-base-300 bg-base-50/50 p-5 lg:p-6">
+                  <div className="mb-4">
+                    <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+                      Section 1
+                    </div>
+                    <div className="mt-1 text-lg font-semibold text-base-content">基础信息</div>
+                  </div>
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <Form.Item
+                      form={formInstance}
+                      name="releaseName"
+                      label="发布名称"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="2026.05 release" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name="application"
+                      label="应用名"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="rue-design" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name="environment"
+                      label="环境"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="staging" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name="owner"
+                      label="发布负责人"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="release-captain" />}
+                    />
+                  </div>
+                </section>
+
+                <section className="rounded-[1.25rem] border border-base-300 bg-base-50/50 p-5 lg:p-6">
+                  <div className="mb-4">
+                    <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+                      Section 2
+                    </div>
+                    <div className="mt-1 text-lg font-semibold text-base-content">发布策略</div>
+                  </div>
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <Form.Item
+                      form={formInstance}
+                      name={['strategy', 'batchSize']}
+                      label="灰度批次"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="10%" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name={['strategy', 'pauseWindow']}
+                      label="观察窗口"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="15m" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name={['strategy', 'rollbackThreshold']}
+                      label="回滚阈值"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="error rate > 2%" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name={['strategy', 'approvalWindow']}
+                      label="审批窗口"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="30m" />}
+                    />
+                  </div>
+                </section>
+
+                <section className="rounded-[1.25rem] border border-base-300 bg-base-50/50 p-5 lg:p-6">
+                  <div className="mb-4">
+                    <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+                      Section 3
+                    </div>
+                    <div className="mt-1 text-lg font-semibold text-base-content">观测与审批</div>
+                  </div>
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <Form.Item
+                      form={formInstance}
+                      name={['observability', 'dashboard']}
+                      label="监控看板"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="Grafana release board" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name={['observability', 'alertChannel']}
+                      label="告警通道"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="#release-alerts" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name={['approval', 'owner']}
+                      label="审批负责人"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="ops-squad" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name={['approval', 'qaOwner']}
+                      label="QA 负责人"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="qa-squad" />}
+                    />
+                  </div>
+                </section>
+
+                <section className="rounded-[1.25rem] border border-base-300 bg-base-50/50 p-5 lg:p-6">
+                  <div className="mb-4">
+                    <div className="text-xs font-medium uppercase tracking-[0.22em] text-base-content/45">
+                      Section 4
+                    </div>
+                    <div className="mt-1 text-lg font-semibold text-base-content">回滚预案</div>
+                  </div>
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <Form.Item
+                      form={formInstance}
+                      name={['rollback', 'ticket']}
+                      label="回滚单号"
+                      rules={[{ required: true }]}
+                      extra="这里故意放在长表单靠后的位置，方便观察 scrollToFirstError。"
+                      render={control => <Input {...control} placeholder="RB-2026-0514" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name={['rollback', 'owner']}
+                      label="回滚负责人"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="rollback-owner" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name={['rollback', 'window']}
+                      label="回滚窗口"
+                      rules={[{ required: true }]}
+                      render={control => <Input {...control} placeholder="20m" />}
+                    />
+                    <Form.Item
+                      form={formInstance}
+                      name={['rollback', 'watchers']}
+                      label="通知对象"
+                      rules={[{ required: true }]}
+                      render={control => (
+                        <Input {...control} placeholder="platform / qa / support" />
+                      )}
+                    />
+                  </div>
+                </section>
+
+                <div className="sticky bottom-0 rounded-[1.25rem] border border-base-300 bg-base-100/95 p-4 shadow-sm backdrop-blur">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-sm text-base-content/65">
+                      留空深层字段后点击提交，会自动滚到首个错误项。
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="outlined"
+                        onClick={() => jumpToField(['rollback', 'ticket'], '回滚单号')}
+                      >
+                        滚到回滚单号
+                      </Button>
+                      <Button color="primary" htmlType="submit">
+                        提交长表单
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
 `}
         />
 

@@ -14,9 +14,11 @@ interface ChildProps {
   onUpdateModelValue?: (value: number) => void
 }
 
-function Child({ modelValue = 0, onUpdateModelValue }: ChildProps) {
+function Child(props: ChildProps) {
+  const modelValue = props.modelValue ?? 0
+
   function update() {
-    onUpdateModelValue?.(modelValue + 1)
+    props.onUpdateModelValue?.(modelValue + 1)
   }
 
   return (
@@ -28,7 +30,7 @@ function Child({ modelValue = 0, onUpdateModelValue }: ChildProps) {
 }
 ```
 
-父组件可以通过 props 和回调绑定一个值：
+父组件可以通过 `v-model` 绑定一个值：
 
 ```tsx [Parent.tsx]
 import { ref } from '@rue-js/rue'
@@ -36,7 +38,7 @@ import { ref } from '@rue-js/rue'
 function Parent() {
   const countModel = ref(0)
 
-  return <Child modelValue={countModel.value} onUpdateModelValue={v => (countModel.value = v)} />
+  return <Child v-model={countModel.value} />
 }
 ```
 
@@ -48,25 +50,35 @@ interface CustomInputProps {
   onUpdateModelValue?: (value: string) => void
 }
 
-function CustomInput({ modelValue = '', onUpdateModelValue }: CustomInputProps) {
-  return <input value={modelValue} onInput={e => onUpdateModelValue?.(e.currentTarget.value)} />
+function CustomInput(props: CustomInputProps) {
+  return (
+    <input
+      value={props.modelValue ?? ''}
+      onInput={e => props.onUpdateModelValue?.(e.currentTarget.value)}
+    />
+  )
 }
 ```
 
-### 简化用法
+### 本地访问器
 
-Rue 提供了 `useVModel` 组合式函数来简化 v-model 的实现：
+如果组件内部想像读写本地状态一样操作 model，可以把 props 和更新回调包装成一个小访问器：
 
 ```tsx
-import { useVModel } from '@rue-js/rue'
-
 interface CustomInputProps {
   modelValue?: string
   onUpdateModelValue?: (value: string) => void
 }
 
 function CustomInput(props: CustomInputProps) {
-  const model = useVModel(props, 'modelValue')
+  const model = {
+    get value() {
+      return props.modelValue ?? ''
+    },
+    set value(value: string) {
+      props.onUpdateModelValue?.(value)
+    },
+  }
 
   return <input value={model.value} onInput={e => (model.value = e.currentTarget.value)} />
 }
@@ -80,7 +92,7 @@ function CustomInput(props: CustomInputProps) {
 function Parent() {
   const bookTitle = ref('')
 
-  return <MyComponent title={bookTitle.value} onUpdateTitle={v => (bookTitle.value = v)} />
+  return <MyComponent v-model:title={bookTitle.value} />
 }
 ```
 
@@ -92,8 +104,14 @@ interface MyComponentProps {
   onUpdateTitle?: (value: string) => void
 }
 
-function MyComponent({ title = '', onUpdateTitle }: MyComponentProps) {
-  return <input type="text" value={title} onInput={e => onUpdateTitle?.(e.currentTarget.value)} />
+function MyComponent(props: MyComponentProps) {
+  return (
+    <input
+      type="text"
+      value={props.title ?? ''}
+      onInput={e => props.onUpdateTitle?.(e.currentTarget.value)}
+    />
+  )
 }
 ```
 
@@ -105,8 +123,14 @@ interface MyComponentProps {
   onUpdateTitle: (value: string) => void
 }
 
-function MyComponent({ title, onUpdateTitle }: MyComponentProps) {
-  return <input type="text" value={title} onInput={e => onUpdateTitle(e.currentTarget.value)} />
+function MyComponent(props: MyComponentProps) {
+  return (
+    <input
+      type="text"
+      value={props.title}
+      onInput={e => props.onUpdateTitle(e.currentTarget.value)}
+    />
+  )
 }
 ```
 
@@ -121,14 +145,7 @@ function Parent() {
   const first = ref('')
   const last = ref('')
 
-  return (
-    <UserName
-      firstName={first.value}
-      lastName={last.value}
-      onUpdateFirstName={v => (first.value = v)}
-      onUpdateLastName={v => (last.value = v)}
-    />
-  )
+  return <UserName v-model:first-name={first.value} v-model:last-name={last.value} />
 }
 ```
 
@@ -140,23 +157,18 @@ interface UserNameProps {
   onUpdateLastName?: (value: string) => void
 }
 
-function UserName({
-  firstName = '',
-  lastName = '',
-  onUpdateFirstName,
-  onUpdateLastName,
-}: UserNameProps) {
+function UserName(props: UserNameProps) {
   return (
     <>
       <input
         type="text"
-        value={firstName}
-        onInput={e => onUpdateFirstName?.(e.currentTarget.value)}
+        value={props.firstName ?? ''}
+        onInput={e => props.onUpdateFirstName?.(e.currentTarget.value)}
       />
       <input
         type="text"
-        value={lastName}
-        onInput={e => onUpdateLastName?.(e.currentTarget.value)}
+        value={props.lastName ?? ''}
+        onInput={e => props.onUpdateLastName?.(e.currentTarget.value)}
       />
     </>
   )
@@ -165,7 +177,7 @@ function UserName({
 
 ## 处理 v-model 修饰符 {#handling-v-model-modifiers}
 
-当我们学习表单输入绑定时，我们看到 `v-model` 有[内置修饰符](/guide/guide/essentials/forms#modifiers) - `.trim`、`.number` 和 `.lazy`。在某些情况下，你可能也希望自定义输入组件上的 `v-model` 支持自定义修饰符。
+当我们学习表单输入绑定时，我们看到 `v-model` 有[内置修饰符](/guide/guide/essentials/forms#modifiers) - `.trim`、`.number` 和 `.lazy`。Rue 会为这些内置修饰符自动生成 `modelModifiers` / `xxxModifiers`；自定义修饰符也可以使用同一 props 协议，但需要显式传入对应的 modifiers prop。
 
 让我们创建一个示例自定义修饰符 `capitalize`，它将 `v-model` 绑定提供的字符串的首字母大写：
 
@@ -176,19 +188,21 @@ interface MyComponentProps {
   onUpdateModelValue?: (value: string) => void
 }
 
-function MyComponent({
-  modelValue = '',
-  modelModifiers = {},
-  onUpdateModelValue,
-}: MyComponentProps) {
+function MyComponent(props: MyComponentProps) {
   function emitValue(value: string) {
-    if (modelModifiers.capitalize) {
+    if (props.modelModifiers?.capitalize) {
       value = value.charAt(0).toUpperCase() + value.slice(1)
     }
-    onUpdateModelValue?.(value)
+    props.onUpdateModelValue?.(value)
   }
 
-  return <input type="text" value={modelValue} onInput={e => emitValue(e.currentTarget.value)} />
+  return (
+    <input
+      type="text"
+      value={props.modelValue ?? ''}
+      onInput={e => emitValue(e.currentTarget.value)}
+    />
+  )
 }
 ```
 
@@ -198,13 +212,7 @@ function MyComponent({
 function Parent() {
   const myText = ref('')
 
-  return (
-    <MyComponent
-      modelValue={myText.value}
-      modelModifiers={{ capitalize: true }}
-      onUpdateModelValue={v => (myText.value = v)}
-    />
-  )
+  return <MyComponent v-model={myText.value} modelModifiers={{ capitalize: true }} />
 }
 ```
 
@@ -216,13 +224,7 @@ function Parent() {
 function Parent() {
   const myText = ref('')
 
-  return (
-    <MyComponent
-      title={myText.value}
-      titleModifiers={{ capitalize: true }}
-      onUpdateTitle={v => (myText.value = v)}
-    />
-  )
+  return <MyComponent v-model:title={myText.value} titleModifiers={{ capitalize: true }} />
 }
 ```
 
@@ -235,17 +237,19 @@ interface MyComponentProps {
   onUpdateTitle?: (value: string) => void
 }
 
-function MyComponent({ title = '', titleModifiers = {}, onUpdateTitle }: MyComponentProps) {
-  console.log(titleModifiers) // { capitalize: true }
+function MyComponent(props: MyComponentProps) {
+  console.log(props.titleModifiers) // { capitalize: true }
 
   function emitValue(value: string) {
-    if (titleModifiers.capitalize) {
+    if (props.titleModifiers?.capitalize) {
       value = value.charAt(0).toUpperCase() + value.slice(1)
     }
-    onUpdateTitle?.(value)
+    props.onUpdateTitle?.(value)
   }
 
-  return <input type="text" value={title} onInput={e => emitValue(e.currentTarget.value)} />
+  return (
+    <input type="text" value={props.title ?? ''} onInput={e => emitValue(e.currentTarget.value)} />
+  )
 }
 ```
 
@@ -258,12 +262,10 @@ function Parent() {
 
   return (
     <UserName
-      firstName={first.value}
+      v-model:first-name={first.value}
       firstNameModifiers={{ capitalize: true }}
-      lastName={last.value}
+      v-model:last-name={last.value}
       lastNameModifiers={{ uppercase: true }}
-      onUpdateFirstName={v => (first.value = v)}
-      onUpdateLastName={v => (last.value = v)}
     />
   )
 }

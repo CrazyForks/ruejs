@@ -27,57 +27,59 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(3));
-        function build1() {
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(3));
+            function build1() {
+                return {
+                    u: a.value,
+                    nested2: [
+                        a.value,
+                        {
+                            q: `q=${a.value}-${a.value > 0 ? 'X' : 'Y'}`
+                        }
+                    ]
+                };
+            }
+            function build2() {
+                return {
+                    nested: [
+                        a.value,
+                        {
+                            w: a.value > 0 ? 'ok' : 'no'
+                        }
+                    ]
+                };
+            }
+            const obj = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+                        ...build1(),
+                        ...build2(),
+                        more: `p=${a.value}-${a.value > 0 ? 'x' : 'y'}`
+                    })));
+            const __rue_phase2_obj = obj;
+            const arr = _$vaporWithHookId("computed:1:2", ()=>computed(()=>[
+                        ...build2().nested,
+                        ...build1().nested2,
+                        a.value > 0 ? [
+                            't',
+                            a.value
+                        ] : [
+                            'f'
+                        ]
+                    ]));
+            const __rue_phase2_arr = arr;
             return {
-                u: a.value,
-                nested2: [
-                    a.value,
-                    {
-                        q: `q=${a.value}-${a.value > 0 ? 'X' : 'Y'}`
-                    }
-                ]
+                a: a,
+                build1: build1,
+                build2: build2,
+                obj: obj,
+                arr: arr
             };
-        }
-        function build2() {
-            return {
-                nested: [
-                    a.value,
-                    {
-                        w: a.value > 0 ? 'ok' : 'no'
-                    }
-                ]
-            };
-        }
-        const obj = {
-            ...build1(),
-            ...build2(),
-            more: `p=${a.value}-${a.value > 0 ? 'x' : 'y'}`
-        };
-        const arr = [
-            ...build2().nested,
-            ...build1().nested2,
-            a.value > 0 ? [
-                't',
-                a.value
-            ] : [
-                'f'
-            ]
-        ];
-        return {
-            a: a,
-            build1: build1,
-            build2: build2,
-            obj: obj,
-            arr: arr
-        };
-    }));
+        }));
     const { a: a, build1: build1, build2: build2, obj: obj, arr: arr } = _$useSetup;
-    return <div>{obj.more}-{arr[3][0]}</div>;
+    return <div>{obj.get().more}-{arr.get()[3][0]}</div>;
 };
 "##;
 

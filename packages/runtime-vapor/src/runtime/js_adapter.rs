@@ -27,7 +27,7 @@ const adapter = {
   setClassName: (el, v) => { el.class = v },
   patchStyle: (el, old, next) => { Object.keys(next).forEach(k => (el.style ||= {}, el.style[k] = next[k])) },
   setInnerHTML: (el, html) => { el.children = []; el.text = html },
-  setValue: (el, v) => { el.value = v },
+  setValue: (el, v) => { if (String(el.value ?? '') !== String(v ?? '')) el.value = v },
   setChecked: (el, b) => { el.checked = !!b },
   setDisabled: (el, b) => { el.disabled = !!b },
   clearRef: (_r) => {},
@@ -335,6 +335,9 @@ impl DomAdapter for JsDomAdapter {
     }
 
     fn set_value(&mut self, el: &mut Self::Element, value: JsValue) {
+        if should_skip_same_value_write(self, el, &value) {
+            return;
+        }
         let f =
             Reflect::get(&self.inner, &JsValue::from_str("setValue")).unwrap_or(JsValue::UNDEFINED);
         if let Some(func) = f.dyn_ref::<Function>() {
@@ -496,6 +499,41 @@ fn map_to_js_obj(map: &HashMap<String, String>) -> JsValue {
         let _ = Reflect::set(&obj, &JsValue::from_str(k), &JsValue::from_str(v));
     }
     obj.into()
+}
+
+fn dom_value_string(value: &JsValue) -> Option<String> {
+    if value.is_object() {
+        return None;
+    }
+    if let Some(text) = value.as_string() {
+        return Some(text);
+    }
+    if let Some(number) = value.as_f64() {
+        return Some(number.to_string());
+    }
+    if let Some(boolean) = value.as_bool() {
+        return Some(if boolean { "true" } else { "false" }.to_string());
+    }
+    if value.is_null() || value.is_undefined() {
+        return Some(String::new());
+    }
+    None
+}
+
+fn should_skip_same_value_write(
+    adapter: &JsDomAdapter,
+    el: &<JsDomAdapter as DomAdapter>::Element,
+    next: &JsValue,
+) -> bool {
+    let tag = adapter.get_tag_name(el).to_uppercase();
+    if tag != "INPUT" && tag != "TEXTAREA" {
+        return false;
+    }
+    let current = Reflect::get(el, &JsValue::from_str("value")).unwrap_or(JsValue::UNDEFINED);
+    match (dom_value_string(&current), dom_value_string(next)) {
+        (Some(current), Some(next)) => current == next,
+        _ => false,
+    }
 }
 
 fn call0_or_throw(func: &Function, this: &JsValue) -> JsValue {

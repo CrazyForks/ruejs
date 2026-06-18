@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Rating 组件概述
 - 默认提供语义化评分 API，支持受控/非受控、清除、半星、悬停反馈与自定义字符。
@@ -6,7 +5,7 @@ Rating 组件概述
 - 自动模式使用字符双层填充实现分数显示，既能保留 Rue 当前轻量视觉，也能承载自定义字符。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, useRef, watch } from '@rue-js/rue'
+import { computed, ref } from '@rue-js/rue'
 
 let ratingSeed = 0
 
@@ -107,6 +106,8 @@ export interface RatingItemProps {
   as?: any
   /** hidden 配置项。 */
   hidden?: boolean
+  /** checked 配置项。 */
+  checked?: boolean
   /** 组件类型或语义类型。 */
   type?: string
   /** 根节点附加类名。 */
@@ -247,17 +248,25 @@ const buildCharacterWrapperClassName = (size?: RatingSize, characterClassName?: 
   )
 }
 
-/** sync Legacy Mask State 的内部工具函数。 */
-const syncLegacyMaskState = (legacyMask: HTMLElement, fill: number, disabled: boolean) => {
-  legacyMask.classList.remove(LEGACY_ACTIVE_BACKGROUND_CLASS, LEGACY_INACTIVE_BACKGROUND_CLASS)
-  legacyMask.classList.add(
-    disabled || fill <= 0 ? LEGACY_INACTIVE_BACKGROUND_CLASS : LEGACY_ACTIVE_BACKGROUND_CLASS,
+/** 构建 Legacy Mask Class Name 的内部工具函数。 */
+const buildLegacyMaskClassName = (fill: number, disabled: boolean, characterClassName?: string) => {
+  return appendClassName(
+    appendClassName(
+      'mask mask-star inline-block size-[1em] transition-colors duration-150',
+      disabled
+        ? `${LEGACY_INACTIVE_BACKGROUND_CLASS} opacity-45`
+        : fill > 0
+          ? `${LEGACY_ACTIVE_BACKGROUND_CLASS} opacity-100`
+          : `${LEGACY_INACTIVE_BACKGROUND_CLASS} opacity-[0.35]`,
+    ),
+    characterClassName,
   )
-  legacyMask.style.opacity = disabled
-    ? LEGACY_DISABLED_OPACITY
-    : fill > 0
-      ? LEGACY_FILLED_OPACITY
-      : LEGACY_EMPTY_OPACITY
+}
+
+/** 解析 Legacy Mask Opacity 的内部工具函数。 */
+const resolveLegacyMaskOpacity = (fill: number, disabled: boolean) => {
+  if (disabled) return LEGACY_DISABLED_OPACITY
+  return fill > 0 ? LEGACY_FILLED_OPACITY : LEGACY_EMPTY_OPACITY
 }
 
 /** 解析 Tooltip Title 的内部工具函数。 */
@@ -294,13 +303,14 @@ const resolveCharacterNode = (
   if (typeof character === 'function') {
     return character(context)
   }
-  return character ?? <DefaultStarIcon />
+  return character ?? DefaultStarIcon({})
 }
 
 /** Item 的内部工具函数。 */
 const Item: FC<RatingItemProps> = ({
   as = 'input',
   hidden,
+  checked,
   type,
   className,
   children,
@@ -310,7 +320,47 @@ const Item: FC<RatingItemProps> = ({
   const cls = appendClassName(hidden ? 'rating-hidden' : undefined, className).trim()
 
   if (Component === 'input') {
-    return <input {...rest} type={type ?? 'radio'} className={cls || undefined} />
+    return <input {...rest} type={type ?? 'radio'} checked={checked} className={cls || undefined} />
+  }
+
+  if (Component === 'div') {
+    return (
+      <div {...rest} className={cls || undefined}>
+        {children}
+      </div>
+    )
+  }
+
+  if (Component === 'span') {
+    return (
+      <span {...rest} className={cls || undefined}>
+        {children}
+      </span>
+    )
+  }
+
+  if (Component === 'button') {
+    return (
+      <button {...rest} type={type ?? 'button'} className={cls || undefined}>
+        {children}
+      </button>
+    )
+  }
+
+  if (Component === 'label') {
+    return (
+      <label {...rest} className={cls || undefined}>
+        {children}
+      </label>
+    )
+  }
+
+  if (Component === 'a') {
+    return (
+      <a {...rest} className={cls || undefined}>
+        {children}
+      </a>
+    )
   }
 
   return (
@@ -349,30 +399,30 @@ const RatingRoot: FC<RatingProps> = ({
   onKeyDown,
   ...rest
 }) => {
-  const mergedAllowHalf = allowHalf ?? half ?? false
-  const mergedCount = normalizeCount(count)
-  const generatedName = ref(name ?? `rue-rating-${ratingSeed++}`)
-  const rootRef = useRef<HTMLDivElement>()
+  const generatedName = `rue-rating-${ratingSeed++}`
+  const mergedAllowHalf = computed(() => allowHalf ?? half ?? false)
+  const mergedCount = computed(() => normalizeCount(count))
+  const controlledValue = computed(() =>
+    typeof value === 'number'
+      ? normalizeRatingValue(value, mergedAllowHalf.get(), mergedCount.get())
+      : undefined,
+  )
   const uncontrolledValue = ref(
-    normalizeRatingValue(defaultValue ?? value ?? 0, mergedAllowHalf, mergedCount),
+    normalizeRatingValue(defaultValue ?? value ?? 0, mergedAllowHalf.get(), mergedCount.get()),
   )
   const hoveredValue = ref<number | null>(null)
-  const controlledValue =
-    typeof value === 'number'
-      ? normalizeRatingValue(value, mergedAllowHalf, mergedCount)
-      : undefined
-
-  if (controlledValue !== undefined && uncontrolledValue.value !== controlledValue) {
-    uncontrolledValue.value = controlledValue
-  }
-
-  const mergedValue =
-    controlledValue !== undefined
-      ? controlledValue
-      : normalizeRatingValue(uncontrolledValue.value, mergedAllowHalf, mergedCount)
-  const displayValue = hoveredValue.value ?? mergedValue
-  const interactive = !disabled && !readOnly
-  const useLegacyMaskDefault = character == null && !mergedAllowHalf
+  const mergedValue = computed(() => {
+    const nextControlledValue = controlledValue.get()
+    if (nextControlledValue !== undefined) return nextControlledValue
+    return normalizeRatingValue(uncontrolledValue.value, mergedAllowHalf.get(), mergedCount.get())
+  })
+  const displayValue = computed(() => hoveredValue.value ?? mergedValue.get())
+  const interactive = computed(() => !disabled && !readOnly)
+  const useLegacyMaskDefault = computed(() => character == null && !mergedAllowHalf.get())
+  const renderedName = computed(() => name ?? generatedName)
+  const buttonIndexes = computed(() =>
+    Array.from({ length: mergedCount.get() }, (_, index) => index),
+  )
   const { onMouseLeave: externalMouseLeave, ...restProps } = rest as {
     onMouseLeave?: (event: MouseEvent) => void
     [key: string]: any
@@ -382,62 +432,6 @@ const RatingRoot: FC<RatingProps> = ({
     if (onHoverChange) onHoverChange(nextValue)
   }
 
-  const syncDom = () => {
-    const root = rootRef.current
-
-    if (!root) return
-
-    const currentValue = normalizeRatingValue(uncontrolledValue.value, mergedAllowHalf, mergedCount)
-    const currentDisplayValue = hoveredValue.value ?? currentValue
-
-    root.dataset.ratingValue = String(currentValue)
-    root.dataset.ratingHover = hoveredValue.value == null ? '' : String(hoveredValue.value)
-
-    const hiddenInput = root.querySelector(
-      'input[type="hidden"][data-rating-hidden="true"]',
-    ) as HTMLInputElement | null
-    if (hiddenInput) {
-      hiddenInput.value = String(currentValue)
-    }
-
-    const buttons = Array.from(
-      root.querySelectorAll<HTMLButtonElement>('button[data-rating-index]'),
-    )
-    buttons.forEach(button => {
-      const index = Number(button.dataset.ratingIndex ?? 0)
-      const itemValue = index + 1
-      const fill = clamp(currentDisplayValue - index, 0, 1)
-      const activeLayer = button.querySelector(
-        '[data-rating-active-layer="true"]',
-      ) as HTMLElement | null
-      const legacyMask = button.querySelector(
-        '[data-rating-legacy-mask="true"]',
-      ) as HTMLElement | null
-
-      button.dataset.ratingFill = String(fill)
-      if (currentValue === itemValue) button.dataset.ratingCurrent = 'true'
-      else delete button.dataset.ratingCurrent
-      button.setAttribute('aria-pressed', fill > 0 ? 'true' : 'false')
-      button.tabIndex = disabled
-        ? -1
-        : currentValue > 0
-          ? Math.ceil(currentValue) - 1 === index
-            ? 0
-            : -1
-          : index === 0
-            ? 0
-            : -1
-
-      if (activeLayer) {
-        activeLayer.style.width = `${fill * 100}%`
-      }
-
-      if (legacyMask) {
-        syncLegacyMaskState(legacyMask, fill, !!disabled)
-      }
-    })
-  }
-
   /**
    * hover 态只用于预览分值；离开根节点后统一回落到真实值，避免每个 item 自己做清理导致闪烁。
    */
@@ -445,23 +439,23 @@ const RatingRoot: FC<RatingProps> = ({
     if (hoveredValue.value !== null) {
       hoveredValue.value = null
       emitHoverChange(0)
-      syncDom()
     }
   }
 
   const commitValue = (rawValue: number) => {
-    if (!interactive) return
-    const normalizedNext = normalizeRatingValue(rawValue, mergedAllowHalf, mergedCount)
-    const nextValue = allowClear && mergedValue === normalizedNext ? 0 : normalizedNext
+    if (!interactive.get()) return
+    const normalizedNext = normalizeRatingValue(rawValue, mergedAllowHalf.get(), mergedCount.get())
+    const nextValue = allowClear && mergedValue.get() === normalizedNext ? 0 : normalizedNext
 
-    uncontrolledValue.value = nextValue
+    if (controlledValue.get() === undefined) {
+      uncontrolledValue.value = nextValue
+    }
     hoveredValue.value = null
     emitHoverChange(0)
-    syncDom()
     if (onChange) onChange(nextValue)
   }
 
-  const step = mergedAllowHalf ? 0.5 : 1
+  const step = computed(() => (mergedAllowHalf.get() ? 0.5 : 1))
 
   const handleKeyCommit = (event: Event, index: number) => {
     const nativeEvent = event as KeyboardEvent
@@ -469,13 +463,21 @@ const RatingRoot: FC<RatingProps> = ({
     let nextValue: number | null = null
 
     if (key === 'ArrowRight' || key === 'ArrowUp') {
-      nextValue = clamp(mergedValue + step, allowClear ? 0 : step, mergedCount)
+      nextValue = clamp(
+        mergedValue.get() + step.get(),
+        allowClear ? 0 : step.get(),
+        mergedCount.get(),
+      )
     } else if (key === 'ArrowLeft' || key === 'ArrowDown') {
-      nextValue = clamp(mergedValue - step, allowClear ? 0 : step, mergedCount)
+      nextValue = clamp(
+        mergedValue.get() - step.get(),
+        allowClear ? 0 : step.get(),
+        mergedCount.get(),
+      )
     } else if (key === 'Home') {
-      nextValue = allowClear ? 0 : step
+      nextValue = allowClear ? 0 : step.get()
     } else if (key === 'End') {
-      nextValue = mergedCount
+      nextValue = mergedCount.get()
     } else if ((key === 'Backspace' || key === 'Delete') && allowClear) {
       nextValue = 0
     } else if (key === ' ' || key === 'Enter') {
@@ -489,11 +491,12 @@ const RatingRoot: FC<RatingProps> = ({
 
     nativeEvent.preventDefault?.()
     if (nextValue === 0) {
-      uncontrolledValue.value = 0
+      if (controlledValue.get() === undefined) {
+        uncontrolledValue.value = 0
+      }
       hoveredValue.value = null
       emitHoverChange(0)
-      syncDom()
-      if (interactive && onChange) onChange(0)
+      if (interactive.get() && onChange) onChange(0)
     } else {
       commitValue(nextValue)
     }
@@ -501,55 +504,33 @@ const RatingRoot: FC<RatingProps> = ({
     if (onKeyDown) onKeyDown(event)
   }
 
-  onMounted(() => {
-    syncDom()
-  })
-
-  watch(
-    () =>
-      typeof value === 'number'
-        ? normalizeRatingValue(value, mergedAllowHalf, mergedCount)
-        : undefined,
-    nextValue => {
-      if (typeof nextValue === 'number') {
-        uncontrolledValue.value = nextValue
-      }
-      syncDom()
-    },
-    { immediate: true },
-  )
-
   if (hasRenderableChildren(children)) {
     return (
       <div
         {...restProps}
         style={style}
-        className={buildManualRootClassName(size, mergedAllowHalf, className)}
+        className={buildManualRootClassName(size, mergedAllowHalf.get(), className)}
       >
         {children}
       </div>
     )
   }
 
-  const renderedName = name ?? generatedName.value
-  const buttonCount = Array.from({ length: mergedCount }, (_, index) => index)
-
   return (
     <div
       {...restProps}
-      ref={rootRef}
       style={style}
       className={buildAutoRootClassName(
         size,
         !!disabled,
         !!readOnly,
-        useLegacyMaskDefault,
+        useLegacyMaskDefault.get(),
         className,
       )}
       data-rating-mode="auto"
-      data-rating-value={String(mergedValue)}
+      data-rating-value={String(mergedValue.get())}
       data-rating-hover={hoveredValue.value == null ? '' : String(hoveredValue.value)}
-      data-rating-name={renderedName}
+      data-rating-name={renderedName.get()}
       onMouseLeave={(event: MouseEvent) => {
         clearHover()
         if (externalMouseLeave) externalMouseLeave(event as any)
@@ -559,16 +540,16 @@ const RatingRoot: FC<RatingProps> = ({
         <input
           type="hidden"
           name={name}
-          value={mergedValue}
+          value={mergedValue.get()}
           disabled={disabled}
           data-rating-hidden="true"
         />
       ) : null}
-      {buttonCount.map(index => {
+      {buttonIndexes.get().map(index => {
         const itemValue = index + 1
-        const fill = clamp(displayValue - index, 0, 1)
-        const checked = mergedValue >= itemValue
-        const hovered = hoveredValue.value !== null && displayValue >= itemValue
+        const fill = clamp(displayValue.get() - index, 0, 1)
+        const checked = mergedValue.get() >= itemValue
+        const hovered = hoveredValue.value !== null && displayValue.get() >= itemValue
         const tooltipTitle = resolveTooltipTitle(tooltips, index)
         const characterContext = {
           index,
@@ -576,7 +557,7 @@ const RatingRoot: FC<RatingProps> = ({
           fill,
           checked,
           hovered,
-          half: mergedAllowHalf,
+          half: mergedAllowHalf.get(),
         }
         const wrapperClassName = buildCharacterWrapperClassName(size, characterClassName)
         const resolvedInactiveCharacterClassName =
@@ -584,8 +565,8 @@ const RatingRoot: FC<RatingProps> = ({
         const resolvedActiveCharacterClassName = activeCharacterClassName ?? 'text-orange-400'
         const tabIndex = disabled
           ? -1
-          : mergedValue > 0
-            ? Math.ceil(mergedValue) - 1 === index
+          : mergedValue.get() > 0
+            ? Math.ceil(mergedValue.get()) - 1 === index
               ? 0
               : -1
             : index === 0
@@ -594,7 +575,7 @@ const RatingRoot: FC<RatingProps> = ({
 
         return (
           <button
-            key={`${renderedName}-${index}`}
+            key={`${renderedName.get()}-${index}`}
             type="button"
             role="button"
             title={tooltipTitle}
@@ -603,10 +584,14 @@ const RatingRoot: FC<RatingProps> = ({
             aria-pressed={fill > 0 ? 'true' : 'false'}
             tabIndex={tabIndex}
             disabled={disabled}
-            className={buildAutoButtonClassName(interactive, useLegacyMaskDefault, itemClassName)}
+            className={buildAutoButtonClassName(
+              interactive.get(),
+              useLegacyMaskDefault.get(),
+              itemClassName,
+            )}
             data-rating-index={String(index)}
             data-rating-fill={String(fill)}
-            data-rating-current={mergedValue === itemValue ? 'true' : undefined}
+            data-rating-current={mergedValue.get() === itemValue ? 'true' : undefined}
             onFocus={(event: FocusEvent) => {
               if (onFocus) onFocus(event as any)
             }}
@@ -614,33 +599,23 @@ const RatingRoot: FC<RatingProps> = ({
               if (onBlur) onBlur(event as any)
             }}
             onMouseMove={(event: MouseEvent) => {
-              if (!interactive) return
-              const nextValue = resolvePointerValue(event as any, index, mergedAllowHalf)
+              if (!interactive.get()) return
+              const nextValue = resolvePointerValue(event as any, index, mergedAllowHalf.get())
               if (hoveredValue.value !== nextValue) {
                 hoveredValue.value = nextValue
                 emitHoverChange(nextValue)
-                syncDom()
               }
             }}
             onClick={(event: MouseEvent) => {
               event.preventDefault?.()
-              commitValue(resolvePointerValue(event as any, index, mergedAllowHalf))
+              commitValue(resolvePointerValue(event as any, index, mergedAllowHalf.get()))
             }}
             onKeyDown={(event: KeyboardEvent) => handleKeyCommit(event as any, index)}
           >
-            {useLegacyMaskDefault ? (
+            {useLegacyMaskDefault.get() ? (
               <span
-                className={appendClassName(
-                  appendClassName(
-                    'mask mask-star inline-block size-[1em] transition-colors duration-150',
-                    disabled
-                      ? `${LEGACY_INACTIVE_BACKGROUND_CLASS} opacity-45`
-                      : fill > 0
-                        ? `${LEGACY_ACTIVE_BACKGROUND_CLASS} opacity-100`
-                        : `${LEGACY_INACTIVE_BACKGROUND_CLASS} opacity-[0.35]`,
-                  ),
-                  characterClassName,
-                )}
+                className={buildLegacyMaskClassName(fill, !!disabled, characterClassName)}
+                style={{ opacity: resolveLegacyMaskOpacity(fill, !!disabled) }}
                 aria-hidden="true"
                 data-rating-legacy-mask="true"
               />
@@ -672,7 +647,10 @@ const RatingRoot: FC<RatingProps> = ({
                 </span>
               </span>
             )}
-            {allowClear && interactive && mergedValue > 0 && mergedValue === itemValue ? (
+            {allowClear &&
+            interactive.get() &&
+            mergedValue.get() > 0 &&
+            mergedValue.get() === itemValue ? (
               <span className="sr-only">{clearLabel}</span>
             ) : null}
           </button>

@@ -222,13 +222,13 @@ const TodoApp: FC = ()=>{
                         const _el8 = _$createElement("div", _el6);
                         _$appendChild(_el6, _el8);
                         watchEffect(()=>{
-                            _$setClassName(_el8, String(`flex items-center justify-between rounded-lg border p-3 mb-2 ${todo.completed ? 'bg-gray-50' : 'bg-white'}`));
+                            _$setClassName(_el8, `flex items-center justify-between rounded-lg border p-3 mb-2 ${todo.completed ? 'bg-gray-50' : 'bg-white'}`);
                         });
                         const _el9 = _$createElement("span", _el8);
                         _$appendChild(_el8, _el9);
                         _$addEventListener(_el9, "click", (()=>toggleTodo(todo.id)));
                         watchEffect(()=>{
-                            _$setClassName(_el9, String(`cursor-pointer ${todo.completed ? 'line-through text-gray-500' : 'text-gray-800'}`));
+                            _$setClassName(_el9, `cursor-pointer ${todo.completed ? 'line-through text-gray-500' : 'text-gray-800'}`);
                         });
                         const _list4 = _$createComment("rue:slot:anchor");
                         _$appendChild(_el9, _list4);

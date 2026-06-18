@@ -32,8 +32,16 @@ use wasm_bindgen::prelude::*;
 
 use crate::reactive::core::{
     CURRENT_EFFECT, EFFECTS, Effect, Signal, create_render_triggered_event,
-    emit_render_triggered_for_effect, schedule_effect_run,
+    emit_render_triggered_for_effect, schedule_effect_run, sync_effect_render_debug_owner,
 };
+
+thread_local! {
+    static NEXT_SIGNAL_DEBUG_ID: RefCell<usize> = RefCell::new(1);
+}
+
+const SHARED_BRIDGE_KEY: &str = "__rue_runtime_vapor_shared_bridge";
+const DISPATCH_RENDER_TRIGGERED_FOR_EFFECT: &str = "dispatchRenderTriggeredForEffect";
+
 #[wasm_bindgen]
 pub struct SignalHandle {
     pub(crate) inner: Rc<RefCell<Signal>>,
@@ -179,7 +187,12 @@ impl SignalHandle {
                         get_at_path(&v, path),
                     )
                 }
-                _ => (v.clone(), JsValue::UNDEFINED, old_root.clone(), v.clone()),
+                _ => (
+                    JsValue::from(self.clone()),
+                    JsValue::from_str("value"),
+                    old_root.clone(),
+                    v.clone(),
+                ),
             };
             let event = create_render_triggered_event(
                 id,
@@ -190,7 +203,9 @@ impl SignalHandle {
                 new_value,
                 changed_path_snapshot.as_ref(),
             );
-            emit_render_triggered_for_effect(id, &event);
+            if !emit_render_triggered_for_effect(id, &event) {
+                emit_shared_render_triggered_for_effect(id, &event);
+            }
             schedule_effect_run(id);
         }
     }
@@ -222,6 +237,31 @@ fn should_skip_effect_subscription(signal: &Signal, effect_id: usize) -> bool {
         .and_then(|computed| computed.effect_id)
         .map(|computed_effect_id| computed_effect_id == effect_id)
         .unwrap_or(false)
+}
+
+fn emit_shared_render_triggered_for_effect(effect_id: usize, event: &JsValue) {
+    let global = js_sys::global();
+    let bridge =
+        Reflect::get(&global, &JsValue::from_str(SHARED_BRIDGE_KEY)).unwrap_or(JsValue::UNDEFINED);
+    if !bridge.is_object() {
+        return;
+    }
+    let dispatcher =
+        Reflect::get(&bridge, &JsValue::from_str(DISPATCH_RENDER_TRIGGERED_FOR_EFFECT))
+            .unwrap_or(JsValue::UNDEFINED);
+    let Some(dispatcher) = dispatcher.dyn_ref::<Function>() else {
+        return;
+    };
+    let _ = dispatcher.call2(&bridge, &JsValue::from_f64(effect_id as f64), event);
+}
+
+pub(crate) fn next_signal_debug_id() -> usize {
+    NEXT_SIGNAL_DEBUG_ID.with(|next_id| {
+        let mut value = next_id.borrow_mut();
+        let id = *value;
+        *value += 1;
+        id
+    })
 }
 
 /// 统一路径段的表示，避免 `"0"` 和 `0` 被当成两个不同的数组索引路径。
@@ -437,6 +477,12 @@ impl SignalHandle {
         self.inner.borrow().computed.is_some()
     }
 
+    #[wasm_bindgen(getter, js_name = __rue_signal_id__)]
+    /// 调试身份标记；JS 包装层用它把 Rust 事件目标规范化为用户持有的 SignalHandle。
+    pub fn signal_debug_id(&self) -> usize {
+        self.inner.borrow().debug_id
+    }
+
     #[wasm_bindgen(getter, js_name = __isReadonly__)]
     /// readonly 识别标记；无 setter 的 computed 视为只读。
     pub fn readonly_marker(&self) -> bool {
@@ -478,6 +524,7 @@ impl SignalHandle {
                     return;
                 }
                 subscribe_effect_id(&mut inner.subs, id);
+                sync_effect_render_debug_owner(id);
             }
         });
         // 返回当前信号值（不改变值，仅建立订阅）
@@ -604,6 +651,7 @@ impl SignalHandle {
                     let subs = inner.path_subs.entry(key).or_default();
                     subscribe_effect_id(subs, id);
                 }
+                sync_effect_render_debug_owner(id);
             }
         });
         // 读取当前根，并按路径逐级取值
@@ -813,6 +861,7 @@ fn sync_proxy_target_snapshot(target: &JsValue, latest: &JsValue) {
 fn make_signal(initial: JsValue, equals: Option<Function>) -> SignalHandle {
     SignalHandle {
         inner: Rc::new(RefCell::new(Signal {
+            debug_id: next_signal_debug_id(),
             value: initial,
             subs: Default::default(),
             path_subs: Default::default(),
@@ -1482,6 +1531,7 @@ mod tests {
         descendant_path.push(&JsValue::from_str("name"));
 
         let mut signal = Signal {
+            debug_id: next_signal_debug_id(),
             value: Object::new().into(),
             subs: vec![91_002, 91_002, 91_003],
             path_subs: HashMap::from([
@@ -1506,6 +1556,7 @@ mod tests {
     fn signal_private_readonly_marker_covers_computed_setter_shapes() {
         let readonly = SignalHandle {
             inner: Rc::new(RefCell::new(Signal {
+                debug_id: next_signal_debug_id(),
                 value: JsValue::UNDEFINED,
                 subs: Vec::new(),
                 path_subs: HashMap::new(),
@@ -1523,6 +1574,7 @@ mod tests {
 
         let writable = SignalHandle {
             inner: Rc::new(RefCell::new(Signal {
+                debug_id: next_signal_debug_id(),
                 value: JsValue::UNDEFINED,
                 subs: Vec::new(),
                 path_subs: HashMap::new(),

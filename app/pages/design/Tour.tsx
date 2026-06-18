@@ -169,8 +169,8 @@ const openTour = () => {
   <button ref={element => { saveRef.current = element ?? undefined }} data-basic-tour-target="save" type="button" className="btn btn-primary">
     Save
   </button>
-  <button ref={element => { moreRef.current = element ?? undefined }} data-basic-tour-target="more" type="button" className="btn btn-square btn-outline" aria-label="More actions">
-    ...
+  <button ref={element => { moreRef.current = element ?? undefined }} data-basic-tour-target="more" type="button" className="btn btn-outline" aria-label="More actions">
+    More
   </button>
 </div>
 
@@ -504,9 +504,9 @@ const BasicWorkspacePreview: FC = () => {
               data-basic-tour-target="more"
               type="button"
               aria-label="More actions"
-              className="btn btn-square btn-outline rounded-2xl text-lg"
+              className="btn btn-outline rounded-2xl px-5"
             >
-              ...
+              More
             </button>
           </div>
         </div>

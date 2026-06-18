@@ -47,7 +47,9 @@ type RueRenderableHandle = {
 }
 
 const noopRetry = () => {}
+const RUE_SUSPENSE_COMPONENT_MARKER = Symbol.for('rue.suspense.component')
 const RUE_SUSPENSE_ELEMENT_MARKER = Symbol.for('rue.suspense.element')
+const TEXT_DYNAMIC_RESOLVED_COMPONENT_MARKER = Symbol.for('text.dynamic.resolvedComponent')
 let rueHandleId = 0
 
 function createRueHandle(
@@ -78,6 +80,11 @@ function createRueHandle(
 function TextRueSuspenseBoundary(_props: { children?: unknown; fallback?: unknown }) {
   return null
 }
+Object.defineProperty(TextRueSuspenseBoundary, RUE_SUSPENSE_COMPONENT_MARKER, {
+  configurable: true,
+  enumerable: false,
+  value: true,
+})
 
 function createRueSuspenseHandle(
   props: Record<string, unknown>,
@@ -113,6 +120,15 @@ function hasDefaultExport<P>(
 
 function normalizeResolvedModule<P>(mod: ComponentModule<P> | ComponentType<P>): ComponentType<P> {
   return hasDefaultExport(mod) ? mod.default : mod
+}
+
+function markTextDynamicResolvedComponent<P>(component: ComponentType<P>): ComponentType<P> {
+  Object.defineProperty(component, TEXT_DYNAMIC_RESOLVED_COMPONENT_MARKER, {
+    configurable: true,
+    enumerable: false,
+    value: true,
+  })
+  return component
 }
 
 function normalizeLoader<P extends object>(loader: Loader<P>): LoaderFn<P> {
@@ -155,7 +171,7 @@ function createRenderableDynamicComponent<P extends object>(
 
   const preloadPromise = loader().then(
     mod => {
-      resolvedComponent = normalizeResolvedModule(mod)
+      resolvedComponent = markTextDynamicResolvedComponent(normalizeResolvedModule(mod))
       status = 'resolved'
     },
     cause => {
@@ -171,7 +187,7 @@ function createRenderableDynamicComponent<P extends object>(
   Object.defineProperty(TextRueAsyncDynamic, '__text_dynamic_loader__', {
     configurable: true,
     enumerable: false,
-    value: async () => normalizeResolvedModule(await loader()),
+    value: async () => markTextDynamicResolvedComponent(normalizeResolvedModule(await loader())),
   })
 
   const RenderableDynamic = (props: P): RenderableOutput => {
@@ -214,7 +230,7 @@ function createTextDynamicComponent<P extends object>(
     if (!loadPromise) {
       loadPromise = loader().then(
         mod => {
-          resolvedComponent = normalizeResolvedModule(mod)
+          resolvedComponent = markTextDynamicResolvedComponent(normalizeResolvedModule(mod))
           status = 'resolved'
         },
         cause => {

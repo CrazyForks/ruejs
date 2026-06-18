@@ -11,6 +11,15 @@ use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
+const RUE_KEEP_ALIVE_RANGE_KEY: &str = "__rue_keep_alive_range__";
+
+fn is_keep_alive_range_start(node: &JsValue) -> bool {
+    js_sys::Reflect::get(node, &JsValue::from_str(RUE_KEEP_ALIVE_RANGE_KEY))
+        .ok()
+        .and_then(|v| v.as_bool())
+        == Some(true)
+}
+
 // 区间渲染的原子操作集合：
 // - vapor_insert_new_range：将新范围插入到 end 前（片段走子节点原子插入）
 // - collect_fragment_children_atomic / insert_fragment_children_atomic：片段子节点的原子化收集与插入
@@ -53,6 +62,11 @@ where
         let drained = std::mem::take(&mut self.range_map);
         let mut kept = Vec::with_capacity(drained.len());
         for mut entry in drained.into_iter() {
+            let start_js: JsValue = entry.start.clone().into();
+            if is_keep_alive_range_start(&start_js) {
+                kept.push(entry);
+                continue;
+            }
             if should_remove(&entry.start) {
                 if let Some(mount) = entry.take_mount() {
                     let lifecycle = mount.into_lifecycle();

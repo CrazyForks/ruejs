@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h } from '@rue-js/rue'
+import { h, ref } from '@rue-js/rue'
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import { Table } from '@rue-js/design'
 import {
@@ -201,6 +201,70 @@ describe('Table', () => {
         order: 'ascend',
       })
       expect(changes[changes.length - 1]?.extra?.action).toBe('sort')
+    })
+  })
+
+  it('updates rows when controlled sortOrder changes from header clicks', async () => {
+    const c = mountContainer()
+    const dataSource = [
+      { key: '1', name: 'A', age: 28 },
+      { key: '2', name: 'B', age: 42 },
+    ]
+
+    const Demo = () => {
+      const sortOrder = ref<'ascend' | 'descend' | null>(null)
+      const buildColumns = () => [
+        { title: 'Name', dataIndex: 'name' },
+        {
+          key: 'age',
+          title: 'Age',
+          dataIndex: 'age',
+          sorter: (a: any, b: any) => a.age - b.age,
+          sortDirections: ['descend' as const, 'ascend' as const],
+          sortOrder: sortOrder.value,
+        },
+      ]
+      const columns = ref(buildColumns())
+
+      return (
+        <Table
+          columns={columns.value}
+          dataSource={dataSource}
+          sortDirections={['descend', 'ascend']}
+          onChange={(_pagination: any, _filters: any, sorter: any) => {
+            sortOrder.value = sorter?.order ?? null
+            columns.value = buildColumns()
+          }}
+        />
+      )
+    }
+
+    resetActiveRuntime()
+    render(<Demo />, c)
+
+    await waitForContent(() => {
+      const names = Array.from(c.querySelectorAll('tbody tr td:first-child')).map(el =>
+        el.textContent?.trim(),
+      )
+      expect(names).toEqual(['A', 'B'])
+    })
+
+    await click(c.querySelector('button[aria-label="sort-age"]'))
+
+    await waitForContent(() => {
+      const names = Array.from(c.querySelectorAll('tbody tr td:first-child')).map(el =>
+        el.textContent?.trim(),
+      )
+      expect(names).toEqual(['B', 'A'])
+    })
+
+    await click(c.querySelector('button[aria-label="sort-age"]'))
+
+    await waitForContent(() => {
+      const names = Array.from(c.querySelectorAll('tbody tr td:first-child')).map(el =>
+        el.textContent?.trim(),
+      )
+      expect(names).toEqual(['A', 'B'])
     })
   })
 
@@ -465,6 +529,118 @@ describe('Table', () => {
     const tds = Array.from(c.querySelectorAll('tbody td')).map(el => el.textContent?.trim())
     expect(ths).toEqual(['Name'])
     expect(tds).toEqual(['A'])
+  })
+
+  it('updates hidden columns when columns prop changes', async () => {
+    const c = mountContainer()
+    const dataSource = [{ key: '1', name: 'A', job: 'Dev' }]
+
+    const Demo = () => {
+      const columns = ref([
+        { title: 'Name', dataIndex: 'name' },
+        { title: 'Job', dataIndex: 'job', hidden: false },
+      ])
+
+      return (
+        <div>
+          <button
+            type="button"
+            onClick={() => {
+              columns.value = [
+                { title: 'Name', dataIndex: 'name' },
+                { title: 'Job', dataIndex: 'job', hidden: true },
+              ]
+            }}
+          >
+            toggle
+          </button>
+          <Table columns={columns.value} dataSource={dataSource} />
+        </div>
+      )
+    }
+
+    resetActiveRuntime()
+    render(<Demo />, c)
+
+    await waitForContent(() => {
+      const ths = Array.from(c.querySelectorAll('thead th')).map(el => el.textContent?.trim())
+      expect(ths).toEqual(['Name', 'Job'])
+    })
+
+    await click(c.querySelector('button'))
+
+    await waitForContent(() => {
+      const ths = Array.from(c.querySelectorAll('thead th')).map(el => el.textContent?.trim())
+      const tds = Array.from(c.querySelectorAll('tbody td')).map(el => el.textContent?.trim())
+      expect(ths).toEqual(['Name'])
+      expect(tds).toEqual(['A'])
+    })
+  })
+
+  it('updates hidden child columns in grouped headers when columns prop changes', async () => {
+    const c = mountContainer()
+    const dataSource = [{ key: '1', name: 'A', score: 90, salary: 100 }]
+    const buildColumns = (showSalary: boolean) => [
+      {
+        title: 'Member',
+        children: [{ title: 'Name', dataIndex: 'name' }],
+      },
+      {
+        title: 'Comp',
+        children: [
+          { title: 'Score', dataIndex: 'score' },
+          { title: 'Salary', dataIndex: 'salary', hidden: !showSalary },
+        ],
+      },
+    ]
+
+    const Demo = () => {
+      const showSalary = ref(true)
+      const columns = ref(buildColumns(showSalary.value))
+
+      return (
+        <div>
+          <button
+            type="button"
+            onClick={() => {
+              showSalary.value = !showSalary.value
+              columns.value = buildColumns(showSalary.value)
+            }}
+          >
+            toggle
+          </button>
+          <Table columns={columns.value} dataSource={dataSource} />
+        </div>
+      )
+    }
+
+    resetActiveRuntime()
+    render(<Demo />, c)
+
+    await waitForContent(() => {
+      const ths = Array.from(c.querySelectorAll('thead th')).map(el => el.textContent?.trim())
+      const tds = Array.from(c.querySelectorAll('tbody td')).map(el => el.textContent?.trim())
+      expect(ths).toEqual(['Member', 'Comp', 'Name', 'Score', 'Salary'])
+      expect(tds).toEqual(['A', '90', '100'])
+    })
+
+    await click(c.querySelector('button'))
+
+    await waitForContent(() => {
+      const ths = Array.from(c.querySelectorAll('thead th')).map(el => el.textContent?.trim())
+      const tds = Array.from(c.querySelectorAll('tbody td')).map(el => el.textContent?.trim())
+      expect(ths).toEqual(['Member', 'Comp', 'Name', 'Score'])
+      expect(tds).toEqual(['A', '90'])
+    })
+
+    await click(c.querySelector('button'))
+
+    await waitForContent(() => {
+      const ths = Array.from(c.querySelectorAll('thead th')).map(el => el.textContent?.trim())
+      const tds = Array.from(c.querySelectorAll('tbody td')).map(el => el.textContent?.trim())
+      expect(ths).toEqual(['Member', 'Comp', 'Name', 'Score', 'Salary'])
+      expect(tds).toEqual(['A', '90', '100'])
+    })
   })
 
   it('renders summary and pagination in tfoot', async () => {

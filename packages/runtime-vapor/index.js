@@ -1,6 +1,7 @@
 import * as runtimeVapor from './pkg/rue_runtime_vapor.js'
 
 import { wrapCreateRue } from './runtime-entry-wrap.js'
+import { installSharedBridge } from './vapor-bridge.js'
 // JS 包装层补充响应式便捷 API 与调试 hooks，默认入口与 reactive 子入口保持同一实现。
 import {
   computed,
@@ -23,6 +24,7 @@ import {
   watchPostEffect,
 } from './reactive.js'
 
+installSharedBridge(runtimeVapor)
 const createRue = wrapCreateRue(runtimeVapor.createRue)
 
 const {

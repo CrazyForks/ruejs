@@ -192,7 +192,7 @@ const OnServerPrefetch: FC = () => {
 
   return (
     <SidebarPlayground>
-      <h1 className="text-5xl font-semibold mb-4 md:mb-4">服务端预取</h1>
+      <h1 className="text-5xl font-semibold mb-4 md:mb-4">服务端预取 onServerPrefetch</h1>
 
       <div role="tablist" className="tabs tabs-box">
         <button

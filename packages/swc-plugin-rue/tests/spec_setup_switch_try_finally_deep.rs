@@ -41,48 +41,49 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-        const info = {
-            x: a.value,
-            arr: [
-                a.value,
-                `t=${a.value > 0 ? 'Y' : 'N'}`
-            ]
-        };
-        _$vaporWithHookId("watchEffect:1:1", ()=>watchEffect(()=>console.log('pre', info.x)));
-        switch(a.value % 2){
-            case 0:
-                {
-                    try {
-                        const b = a.value + 1;
-                    } finally{
-                        _$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>{
-                                onBeforeUnmount(()=>console.log('cleanup', a.value, info.arr[1]));
-                            }));
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(0));
+            const info = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+                        x: a.value,
+                        arr: [
+                            a.value,
+                            `t=${a.value > 0 ? 'Y' : 'N'}`
+                        ]
+                    })));
+            const __rue_phase2_info = info;
+            _$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>console.log('pre', __rue_phase2_info.get().x)));
+            switch(a.value % 2){
+                case 0:
+                    {
+                        try {
+                            const b = a.value + 1;
+                        } finally{
+                            _$vaporWithHookId("watchEffect:1:3", ()=>watchEffect(()=>{
+                                    onBeforeUnmount(()=>console.log('cleanup', a.value, __rue_phase2_info.get().arr[1]));
+                                }));
+                        }
+                        break;
                     }
-                    break;
-                }
-            default:
-                {
-                    try {
-                        const c = a.value + 2;
-                        console.log(c);
-                    } finally{
-                        onBeforeUnmount(()=>_$vaporWithHookId("watchEffect:1:3", ()=>watchEffect(()=>console.log('done', a.value))));
+                default:
+                    {
+                        try {
+                            const c = a.value + 2;
+                            console.log(c);
+                        } finally{
+                            onBeforeUnmount(()=>_$vaporWithHookId("watchEffect:1:4", ()=>watchEffect(()=>console.log('done', a.value))));
+                        }
                     }
-                }
-        }
-        return {
-            a: a,
-            info: info
-        };
-    }));
+            }
+            return {
+                a: a,
+                info: info
+            };
+        }));
     const { a: a, info: info } = _$useSetup;
-    return <div>{info.arr[1]}</div>;
+    return <div>{info.get().arr[1]}</div>;
 };
 "##;
 

@@ -60,6 +60,7 @@ type AppSsrStreamTask = Promise<string>
 const RUE_SERVER_RENDERING_FLAG = '__rue_is_server_rendering__'
 const RUE_CONTEXT_PROVIDER_CONTEXT_PROP = '__rue_context_provider_context__'
 const TEXT_CLIENT_REFERENCE_SSR_KEY = Symbol.for('text.clientReferenceSsr')
+const TEXT_DYNAMIC_RESOLVED_COMPONENT_MARKER = Symbol.for('text.dynamic.resolvedComponent')
 const VOID_HTML_TAGS = new Set([
   'area',
   'base',
@@ -237,7 +238,7 @@ async function renderAppSsrNodeToHtmlOnce(
   if (typeof type === 'function') {
     try {
       const renderComponent = () => renderProtocolComponentToHtml(type, props, options)
-      return await (resolvedClientReferenceForSsr
+      return await (resolvedClientReferenceForSsr || isTextDynamicResolvedComponent(type)
         ? runWithAppClientReferenceSsr(renderComponent)
         : renderComponent())
     } catch (error) {
@@ -417,6 +418,13 @@ function isDynamicLoadableComponent(type: unknown): type is AppDynamicLoadableCo
   return (
     typeof type === 'function' &&
     typeof (type as AppDynamicLoadableComponent).__text_dynamic_loader__ === 'function'
+  )
+}
+
+function isTextDynamicResolvedComponent(type: unknown): boolean {
+  return (
+    typeof type === 'function' &&
+    (type as Record<PropertyKey, unknown>)[TEXT_DYNAMIC_RESOLVED_COMPONENT_MARKER] === true
   )
 }
 

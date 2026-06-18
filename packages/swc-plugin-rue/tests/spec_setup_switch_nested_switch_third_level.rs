@@ -58,69 +58,70 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-        const pre = {
-            t: `t=${a.value}`,
-            arr: [
-                a.value,
-                a.value > 0 ? 'X' : 'Y'
-            ]
-        };
-        _$vaporWithHookId("watchEffect:1:1", ()=>watchEffect(()=>console.log('setup', pre.t)));
-        switch(a.value % 2){
-            case 0:
-                {
-                    const b = a.value + 1;
-                    switch(b % 3){
-                        case 1:
-                            {
-                                try {
-                                    const c = a.value + 5;
-                                } catch (e) {
-                                    console.log(e);
-                                } finally{
-                                    switch(c % 2){
-                                        case 0:
-                                            {
-                                                _$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>onBeforeUnmount(()=>console.log('third', pre.arr[1]))));
-                                                break;
-                                            }
-                                        default:
-                                            {
-                                                onBeforeUnmount(()=>console.log('third-other', a.value));
-                                            }
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(0));
+            const pre = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+                        t: `t=${a.value}`,
+                        arr: [
+                            a.value,
+                            a.value > 0 ? 'X' : 'Y'
+                        ]
+                    })));
+            const __rue_phase2_pre = pre;
+            _$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>console.log('setup', __rue_phase2_pre.get().t)));
+            switch(a.value % 2){
+                case 0:
+                    {
+                        const b = a.value + 1;
+                        switch(b % 3){
+                            case 1:
+                                {
+                                    try {
+                                        const c = a.value + 5;
+                                    } catch (e) {
+                                        console.log(e);
+                                    } finally{
+                                        switch(c % 2){
+                                            case 0:
+                                                {
+                                                    _$vaporWithHookId("watchEffect:1:3", ()=>watchEffect(()=>onBeforeUnmount(()=>console.log('third', __rue_phase2_pre.get().arr[1]))));
+                                                    break;
+                                                }
+                                            default:
+                                                {
+                                                    onBeforeUnmount(()=>console.log('third-other', a.value));
+                                                }
+                                        }
                                     }
+                                    break;
                                 }
-                                break;
-                            }
-                        default:
-                            {
-                                onBeforeUnmount(()=>console.log('other', a.value));
-                            }
+                            default:
+                                {
+                                    onBeforeUnmount(()=>console.log('other', a.value));
+                                }
+                        }
+                        break;
                     }
-                    break;
-                }
-            case 1:
-                {
-                    try {
-                        const d = a.value + 2;
-                    } finally{
-                        _$vaporWithHookId("watchEffect:1:3", ()=>watchEffect(()=>console.log('fin', a.value)));
+                case 1:
+                    {
+                        try {
+                            const d = a.value + 2;
+                        } finally{
+                            _$vaporWithHookId("watchEffect:1:4", ()=>watchEffect(()=>console.log('fin', a.value)));
+                        }
+                        break;
                     }
-                    break;
-                }
-        }
-        return {
-            a: a,
-            pre: pre
-        };
-    }));
+            }
+            return {
+                a: a,
+                pre: pre
+            };
+        }));
     const { a: a, pre: pre } = _$useSetup;
-    return <div>{pre.arr[0]}</div>;
+    return <div>{pre.get().arr[0]}</div>;
 };
 "##;
 

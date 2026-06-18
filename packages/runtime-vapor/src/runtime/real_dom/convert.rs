@@ -168,6 +168,14 @@ where
     where
         A::Element: From<JsValue> + Into<JsValue> + Clone,
     {
+        if value.is_null() || value.is_undefined() {
+            return Some(MountInput::new_normalized(
+                MountInputType::<A>::Text(String::new()),
+                Default::default(),
+                Vec::new(),
+            ));
+        }
+
         if strict_component_returns {
             // strict 组件返回面只接受默认协议对象/handle；避免把任意对象误当宿主节点。
             if let Some(input) = self.object_value_to_input(value) {

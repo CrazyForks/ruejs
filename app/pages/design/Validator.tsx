@@ -24,7 +24,6 @@ interface ApiRow {
 }
 
 type NativeValidatorField = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-type InvalidStateRef = { value: boolean }
 
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
   return (
@@ -86,14 +85,16 @@ const ApiTable: FC<{ title: string; rows: ApiRow[] }> = ({ title, rows }) => {
   )
 }
 
-const syncNativeValidity = (event: Event, invalidRef: InvalidStateRef) => {
+const syncNativeValidity = (event: Event) => {
   const field = event.currentTarget as NativeValidatorField | null
   if (!field) return
-  invalidRef.value = !field.checkValidity()
+  field.setAttribute('aria-invalid', field.checkValidity() ? 'false' : 'true')
 }
 
-const syncNativeInvalid = (_event: Event, invalidRef: InvalidStateRef) => {
-  invalidRef.value = true
+const syncNativeInvalid = (event: Event) => {
+  const field = event.currentTarget as NativeValidatorField | null
+  if (!field) return
+  field.setAttribute('aria-invalid', 'true')
 }
 
 const preventPreviewSubmit = (event: Event) => {
@@ -101,8 +102,6 @@ const preventPreviewSubmit = (event: Event) => {
 }
 
 const PasswordRulePreview: FC = () => {
-  const invalid = ref(false)
-
   return (
     <form className="grid gap-2" onSubmit={preventPreviewSubmit}>
       <Validator
@@ -113,10 +112,10 @@ const PasswordRulePreview: FC = () => {
         pattern="(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}"
         title="Must include number, lowercase and uppercase letters"
         placeholder="Password"
-        aria-invalid={invalid.value ? 'true' : 'false'}
-        onInvalid={(event: Event) => syncNativeInvalid(event, invalid)}
-        onInput={(event: Event) => syncNativeValidity(event, invalid)}
-        onBlur={(event: Event) => syncNativeValidity(event, invalid)}
+        aria-invalid="false"
+        onInvalid={syncNativeInvalid}
+        onInput={syncNativeValidity}
+        onBlur={syncNativeValidity}
       />
       <Validator.Hint
         hideUntilInvalid={true}
@@ -133,8 +132,6 @@ const PasswordRulePreview: FC = () => {
 }
 
 const UsernameRulePreview: FC = () => {
-  const invalid = ref(false)
-
   return (
     <form className="grid gap-2" onSubmit={preventPreviewSubmit}>
       <Validator
@@ -146,10 +143,10 @@ const UsernameRulePreview: FC = () => {
         pattern="[A-Za-z0-9-]+"
         title="Only letters, numbers or dash"
         placeholder="Username"
-        aria-invalid={invalid.value ? 'true' : 'false'}
-        onInvalid={(event: Event) => syncNativeInvalid(event, invalid)}
-        onInput={(event: Event) => syncNativeValidity(event, invalid)}
-        onBlur={(event: Event) => syncNativeValidity(event, invalid)}
+        aria-invalid="false"
+        onInvalid={syncNativeInvalid}
+        onInput={syncNativeValidity}
+        onBlur={syncNativeValidity}
       />
       <Validator.Hint
         hideUntilInvalid={true}
@@ -426,18 +423,17 @@ const ValidatorPage: FC = () => {
               <UsernameRulePreview />
             </div>
           )}
-          code={`const syncNativeValidity = (event: Event, invalidRef: { value: boolean }) => {
+          code={`const syncNativeValidity = (event: Event) => {
   const field = event.currentTarget as HTMLInputElement | null
   if (!field) return
-  invalidRef.value = !field.checkValidity()
+  field.setAttribute('aria-invalid', field.checkValidity() ? 'false' : 'true')
 }
 
-const syncNativeInvalid = (_event: Event, invalidRef: { value: boolean }) => {
-  invalidRef.value = true
+const syncNativeInvalid = (event: Event) => {
+  const field = event.currentTarget as HTMLInputElement | null
+  if (!field) return
+  field.setAttribute('aria-invalid', 'true')
 }
-
-const passwordInvalid = ref(false)
-const usernameInvalid = ref(false)
 
 <form className="grid gap-2" onSubmit={event => event.preventDefault()}>
   <Validator
@@ -448,10 +444,10 @@ const usernameInvalid = ref(false)
     pattern="(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}"
     title="Must include number, lowercase and uppercase letters"
     placeholder="Password"
-    aria-invalid={passwordInvalid.value ? 'true' : 'false'}
-    onInvalid={(event: Event) => syncNativeInvalid(event, passwordInvalid)}
-    onInput={(event: Event) => syncNativeValidity(event, passwordInvalid)}
-    onBlur={(event: Event) => syncNativeValidity(event, passwordInvalid)}
+    aria-invalid="false"
+    onInvalid={syncNativeInvalid}
+    onInput={syncNativeValidity}
+    onBlur={syncNativeValidity}
   />
   <Validator.Hint
     hideUntilInvalid={true}
@@ -472,10 +468,10 @@ const usernameInvalid = ref(false)
     pattern="[A-Za-z0-9-]+"
     title="Only letters, numbers or dash"
     placeholder="Username"
-    aria-invalid={usernameInvalid.value ? 'true' : 'false'}
-    onInvalid={(event: Event) => syncNativeInvalid(event, usernameInvalid)}
-    onInput={(event: Event) => syncNativeValidity(event, usernameInvalid)}
-    onBlur={(event: Event) => syncNativeValidity(event, usernameInvalid)}
+    aria-invalid="false"
+    onInvalid={syncNativeInvalid}
+    onInput={syncNativeValidity}
+    onBlur={syncNativeValidity}
   />
   <Validator.Hint
     hideUntilInvalid={true}

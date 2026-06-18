@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Indicator 组件概述
 - 保留 Rue 当前 indicator / indicator-item 的轻量结构与视觉类名。
@@ -129,59 +128,77 @@ const resolvePlacement = (placement?: IndicatorPlacement) => {
   return placement ? placementMap[placement] : {}
 }
 
-/**
- * offset 直接覆写 daisyUI indicator 的 CSS 变量，避免额外包裹节点或依赖自定义样式文件。
- */
-const applyOffsetVariables = (
-  element: HTMLElement | null,
+/** 解析 Indicator Item 类名的内部工具函数。 */
+const buildItemClassName = (
+  horizontal?: IndicatorHorizontal,
+  vertical?: IndicatorVertical,
+  className?: string,
+) => {
+  let cls = 'indicator-item'
+  if (horizontal) cls += ` indicator-${horizontal}`
+  if (vertical) cls += ` indicator-${vertical}`
+  if (className) cls += ` ${className}`
+  return cls
+}
+
+/** offset 通过 daisyUI indicator CSS 变量声明式落到 style 上。 */
+const resolveOffsetStyle = (
   horizontal?: IndicatorHorizontal,
   vertical?: IndicatorVertical,
   offset?: IndicatorOffset,
 ) => {
-  if (!element) {
-    return
+  if (!offset) {
+    return undefined
   }
 
-  const variables: Record<string, string | undefined> = {
-    '--indicator-s': undefined,
-    '--indicator-e': undefined,
-    '--indicator-t': undefined,
-    '--indicator-b': undefined,
+  const [offsetX, offsetY] = offset
+  const style: Record<string, string> = {}
+
+  if (horizontal === 'start') {
+    style['--indicator-s'] = resolveCalcValue('0px', offsetX)
+    style['--indicator-e'] = 'auto'
+  } else if (horizontal === 'center') {
+    style['--indicator-s'] = resolveCalcValue('50%', offsetX)
+    style['--indicator-e'] = resolveCalcValue('50%', offsetX, true)
+  } else if (horizontal === 'end') {
+    style['--indicator-s'] = 'auto'
+    style['--indicator-e'] = resolveCalcValue('0px', offsetX, true)
   }
 
-  if (offset) {
-    const [offsetX, offsetY] = offset
-
-    if (horizontal === 'start') {
-      variables['--indicator-s'] = resolveCalcValue('0px', offsetX)
-      variables['--indicator-e'] = 'auto'
-    } else if (horizontal === 'center') {
-      variables['--indicator-s'] = resolveCalcValue('50%', offsetX)
-      variables['--indicator-e'] = resolveCalcValue('50%', offsetX, true)
-    } else if (horizontal === 'end') {
-      variables['--indicator-s'] = 'auto'
-      variables['--indicator-e'] = resolveCalcValue('0px', offsetX, true)
-    }
-
-    if (vertical === 'top') {
-      variables['--indicator-t'] = resolveCalcValue('0px', offsetY)
-      variables['--indicator-b'] = 'auto'
-    } else if (vertical === 'middle') {
-      variables['--indicator-t'] = resolveCalcValue('50%', offsetY)
-      variables['--indicator-b'] = resolveCalcValue('50%', offsetY, true)
-    } else if (vertical === 'bottom') {
-      variables['--indicator-t'] = 'auto'
-      variables['--indicator-b'] = resolveCalcValue('0px', offsetY, true)
-    }
+  if (vertical === 'top') {
+    style['--indicator-t'] = resolveCalcValue('0px', offsetY)
+    style['--indicator-b'] = 'auto'
+  } else if (vertical === 'middle') {
+    style['--indicator-t'] = resolveCalcValue('50%', offsetY)
+    style['--indicator-b'] = resolveCalcValue('50%', offsetY, true)
+  } else if (vertical === 'bottom') {
+    style['--indicator-t'] = 'auto'
+    style['--indicator-b'] = resolveCalcValue('0px', offsetY, true)
   }
 
-  Object.entries(variables).forEach(([name, value]) => {
-    if (value === undefined) {
-      element.style.removeProperty(name)
-      return
-    }
-    element.style.setProperty(name, value)
-  })
+  return Object.keys(style).length > 0 ? style : undefined
+}
+
+/** 合并用户 style 与 offset style，保持 offset 对 CSS 变量的最终控制权。 */
+const mergeItemStyle = (
+  style?: Record<string, any> | string,
+  offsetStyle?: Record<string, string>,
+) => {
+  if (!offsetStyle) {
+    return style
+  }
+
+  if (typeof style === 'string') {
+    const offsetText = Object.entries(offsetStyle)
+      .map(([name, value]) => `${name}: ${value}`)
+      .join('; ')
+    return style.trim() ? `${style}; ${offsetText}` : offsetText
+  }
+
+  return {
+    ...style,
+    ...offsetStyle,
+  }
 }
 
 /** Indicator 的内部工具函数。 */
@@ -196,24 +213,21 @@ const Indicator: FC<IndicatorProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const shortcutItems =
-    Array.isArray(items) && items.length > 0
-      ? items.map((config, index) => (
+  const hasItems = Array.isArray(items) && items.length > 0
+
+  return (
+    <Component {...rest} className={mergeClassName('indicator', className)} style={style}>
+      {hasItems ? (
+        items.map((config, index) => (
           <Item key={config.key ?? index} {...config}>
             {config.children}
           </Item>
         ))
-      : item != null
-        ? [
-            <Item key="__indicator_item__" {...itemProps}>
-              {item}
-            </Item>,
-          ]
-        : []
-
-  return (
-    <Component {...rest} className={mergeClassName('indicator', className)} style={style}>
-      {shortcutItems}
+      ) : item != null ? (
+        <Item key="__indicator_item__" {...itemProps}>
+          {item}
+        </Item>
+      ) : null}
       {children}
     </Component>
   )
@@ -235,30 +249,13 @@ const Item: FC<IndicatorItemProps> = ({
   const placementPreset = resolvePlacement(placement)
   const resolvedHorizontal = horizontal ?? placementPreset.horizontal
   const resolvedVertical = vertical ?? placementPreset.vertical
-  const forwardedRef = rest.ref
-
-  if ('ref' in rest) {
-    delete rest.ref
-  }
-
-  let cls = 'indicator-item'
-  if (resolvedHorizontal) cls += ` indicator-${resolvedHorizontal}`
-  if (resolvedVertical) cls += ` indicator-${resolvedVertical}`
-  if (className) cls += ` ${className}`
+  const offsetStyle = resolveOffsetStyle(resolvedHorizontal, resolvedVertical, offset)
 
   return (
     <Component
       {...rest}
-      ref={(element: HTMLElement | null) => {
-        if (typeof forwardedRef === 'function') {
-          forwardedRef(element)
-        } else if (forwardedRef && typeof forwardedRef === 'object') {
-          ;(forwardedRef as any).current = element ?? undefined
-        }
-        applyOffsetVariables(element, resolvedHorizontal, resolvedVertical, offset)
-      }}
-      className={cls}
-      style={style}
+      className={buildItemClassName(resolvedHorizontal, resolvedVertical, className)}
+      style={mergeItemStyle(style, offsetStyle)}
     >
       {children}
     </Component>

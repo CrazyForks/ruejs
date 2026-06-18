@@ -1,6 +1,6 @@
 import type { FC } from '@rue-js/rue'
-import { ref } from '@rue-js/rue'
-import { Badge, Button, Card, Watermark } from '@rue-js/design'
+import { batch, onScopeDispose, ref } from '@rue-js/rue'
+import { Badge, Button, Card, Range, Watermark } from '@rue-js/design'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import PreviewBlock, { type PreviewTabMode } from './PreviewBlock'
 
@@ -129,6 +129,452 @@ const ApiTable: FC<{ rows: ApiRow[] }> = ({ rows }) => {
   )
 }
 
+type WatermarkNumericControlKey =
+  | 'rotate'
+  | 'gapX'
+  | 'gapY'
+  | 'offsetX'
+  | 'offsetY'
+  | 'fontSize'
+  | 'zIndex'
+
+type WatermarkNumericControls = Record<WatermarkNumericControlKey, number>
+
+type ScheduledWatermarkControlFlush =
+  | { type: 'frame'; id: number }
+  | { type: 'timeout'; id: ReturnType<typeof setTimeout> }
+
+const defaultWatermarkNumericControls: WatermarkNumericControls = {
+  rotate: -22,
+  gapX: 120,
+  gapY: 96,
+  offsetX: 48,
+  offsetY: 48,
+  fontSize: 18,
+  zIndex: 12,
+}
+
+const sparseWatermarkNumericControls: WatermarkNumericControls = {
+  rotate: -8,
+  gapX: 156,
+  gapY: 124,
+  offsetX: 64,
+  offsetY: 32,
+  fontSize: 14,
+  zIndex: 10,
+}
+
+const scheduleWatermarkControlFlush = (callback: () => void): ScheduledWatermarkControlFlush => {
+  if (typeof requestAnimationFrame === 'function') {
+    return { type: 'frame', id: requestAnimationFrame(callback) }
+  }
+
+  return { type: 'timeout', id: setTimeout(callback, 0) }
+}
+
+const cancelWatermarkControlFlush = (flush: ScheduledWatermarkControlFlush) => {
+  if (flush.type === 'frame') {
+    if (typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(flush.id)
+    }
+    return
+  }
+
+  clearTimeout(flush.id)
+}
+
+interface WatermarkControlRangeProps {
+  label: string
+  value: { value: number }
+  min: number
+  max: number
+  onValueChange: (value: number) => void
+  onValueCommit: (value: number) => void
+}
+
+const WatermarkControlRange: FC<WatermarkControlRangeProps> = ({
+  label,
+  value,
+  min,
+  max,
+  onValueChange,
+  onValueCommit,
+}) => {
+  return (
+    <Range
+      className="range-sm"
+      rootClassName="space-y-2"
+      valueClassName="min-w-12 text-center tabular-nums"
+      label={label}
+      min={min}
+      max={max}
+      value={value}
+      showValue={{ formatter: nextValue => String(nextValue) }}
+      onValueChange={onValueChange}
+      onValueCommit={onValueCommit}
+    />
+  )
+}
+
+const WatermarkCustomControlsDemo: FC = () => {
+  const content = ref('Rue Design')
+  const rotate = ref(defaultWatermarkNumericControls.rotate)
+  const gapX = ref(defaultWatermarkNumericControls.gapX)
+  const gapY = ref(defaultWatermarkNumericControls.gapY)
+  const offsetX = ref(defaultWatermarkNumericControls.offsetX)
+  const offsetY = ref(defaultWatermarkNumericControls.offsetY)
+  const fontSize = ref(defaultWatermarkNumericControls.fontSize)
+  const zIndex = ref(defaultWatermarkNumericControls.zIndex)
+  const rotateControl = ref(defaultWatermarkNumericControls.rotate)
+  const gapXControl = ref(defaultWatermarkNumericControls.gapX)
+  const gapYControl = ref(defaultWatermarkNumericControls.gapY)
+  const offsetXControl = ref(defaultWatermarkNumericControls.offsetX)
+  const offsetYControl = ref(defaultWatermarkNumericControls.offsetY)
+  const fontSizeControl = ref(defaultWatermarkNumericControls.fontSize)
+  const zIndexControl = ref(defaultWatermarkNumericControls.zIndex)
+  const color = ref('')
+
+  const controlRefs: Record<WatermarkNumericControlKey, { value: number }> = {
+    rotate: rotateControl,
+    gapX: gapXControl,
+    gapY: gapYControl,
+    offsetX: offsetXControl,
+    offsetY: offsetYControl,
+    fontSize: fontSizeControl,
+    zIndex: zIndexControl,
+  }
+
+  let pendingControls: WatermarkNumericControls = { ...defaultWatermarkNumericControls }
+  let controlFlush: ScheduledWatermarkControlFlush | null = null
+
+  const writePreviewControls = (nextControls: WatermarkNumericControls) => {
+    rotate.value = nextControls.rotate
+    gapX.value = nextControls.gapX
+    gapY.value = nextControls.gapY
+    offsetX.value = nextControls.offsetX
+    offsetY.value = nextControls.offsetY
+    fontSize.value = nextControls.fontSize
+    zIndex.value = nextControls.zIndex
+  }
+
+  const writeRangeControls = (nextControls: WatermarkNumericControls) => {
+    rotateControl.value = nextControls.rotate
+    gapXControl.value = nextControls.gapX
+    gapYControl.value = nextControls.gapY
+    offsetXControl.value = nextControls.offsetX
+    offsetYControl.value = nextControls.offsetY
+    fontSizeControl.value = nextControls.fontSize
+    zIndexControl.value = nextControls.zIndex
+  }
+
+  const clearControlFlush = () => {
+    if (!controlFlush) return
+    cancelWatermarkControlFlush(controlFlush)
+    controlFlush = null
+  }
+
+  const flushPreviewControls = () => {
+    controlFlush = null
+    batch(() => {
+      writePreviewControls(pendingControls)
+    })
+  }
+
+  const queuePreviewControl = (key: WatermarkNumericControlKey, nextValue: number) => {
+    pendingControls[key] = nextValue
+    if (controlFlush) return
+    controlFlush = scheduleWatermarkControlFlush(flushPreviewControls)
+  }
+
+  const commitPreviewControl = (key: WatermarkNumericControlKey, nextValue: number) => {
+    pendingControls[key] = nextValue
+    clearControlFlush()
+    batch(() => {
+      writePreviewControls(pendingControls)
+      controlRefs[key].value = nextValue
+    })
+  }
+
+  const applyWatermarkState = ({
+    nextContent,
+    nextColor,
+    nextControls,
+  }: {
+    nextContent: string
+    nextColor: string
+    nextControls: WatermarkNumericControls
+  }) => {
+    clearControlFlush()
+    pendingControls = { ...nextControls }
+    batch(() => {
+      content.value = nextContent
+      color.value = nextColor
+      writePreviewControls(nextControls)
+      writeRangeControls(nextControls)
+    })
+  }
+
+  const reset = () =>
+    applyWatermarkState({
+      nextContent: 'Rue Design',
+      nextColor: '',
+      nextControls: defaultWatermarkNumericControls,
+    })
+
+  const applySparse = () =>
+    applyWatermarkState({
+      nextContent: 'Shared with Partner',
+      nextColor: 'rgba(34, 197, 94, 0.22)',
+      nextControls: sparseWatermarkNumericControls,
+    })
+
+  onScopeDispose(clearControlFlush)
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <Watermark
+        content={[content.value, 'Scenario Sandbox']}
+        rotate={rotate.value}
+        gap={[gapX.value, gapY.value]}
+        offset={[offsetX.value, offsetY.value]}
+        zIndex={zIndex.value}
+        width={180}
+        height={72}
+        font={{
+          color: color.value || undefined,
+          fontSize: fontSize.value,
+          fontWeight: 700,
+          textAlign: 'center',
+        }}
+        className="rounded-[1.75rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200 shadow-sm"
+      >
+        <div className="space-y-4 p-5 md:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.18em] text-base-content/45">
+                Scenario Sandbox
+              </div>
+              <div className="mt-2 text-2xl font-semibold text-base-content">
+                参数调整后的实时预览
+              </div>
+            </div>
+            <Badge outline>z-index {zIndex.value}</Badge>
+          </div>
+          <p className="m-0 max-w-2xl text-sm leading-7 text-base-content/65">
+            这里故意放了文字、徽标和按钮，方便观察水印对不同内容密度与层次关系的影响。
+          </p>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="bg-base-100/90 shadow-sm md:col-span-2">
+              <Card.Body>
+                <div className="text-sm font-semibold text-base-content">内容流</div>
+                <p className="m-0 text-sm leading-7 text-base-content/65">
+                  Rue Watermark
+                  会把铺设逻辑限制在当前容器内部，圆角、阴影和内容布局都可以继续由宿主容器控制。
+                </p>
+              </Card.Body>
+            </Card>
+            <div className="rounded-[1.25rem] bg-accent px-4 py-5 text-accent-content shadow-sm">
+              <div className="text-xs uppercase tracking-[0.2em] opacity-70">Preset</div>
+              <div className="mt-2 text-2xl font-black">{content.value}</div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button size="sm" color="primary" onClick={reset}>
+              重置参数
+            </Button>
+            <Button size="sm" type="outlined" onClick={applySparse}>
+              切换到稀疏模式
+            </Button>
+          </div>
+        </div>
+      </Watermark>
+
+      <Card className="bg-base-100 shadow-sm">
+        <Card.Body className="gap-4">
+          <div>
+            <div className="text-sm font-semibold text-base-content">文本</div>
+            <input
+              className="input input-bordered mt-2 w-full"
+              value={content.value}
+              onInput={(event: Event) => {
+                content.value = (event.currentTarget as HTMLInputElement).value
+              }}
+            />
+          </div>
+
+          <WatermarkControlRange
+            label="Rotate"
+            min={-90}
+            max={90}
+            value={rotateControl}
+            onValueChange={value => queuePreviewControl('rotate', value)}
+            onValueCommit={value => commitPreviewControl('rotate', value)}
+          />
+          <WatermarkControlRange
+            label="Font size"
+            min={12}
+            max={28}
+            value={fontSizeControl}
+            onValueChange={value => queuePreviewControl('fontSize', value)}
+            onValueCommit={value => commitPreviewControl('fontSize', value)}
+          />
+          <WatermarkControlRange
+            label="Gap X"
+            min={72}
+            max={180}
+            value={gapXControl}
+            onValueChange={value => queuePreviewControl('gapX', value)}
+            onValueCommit={value => commitPreviewControl('gapX', value)}
+          />
+          <WatermarkControlRange
+            label="Gap Y"
+            min={72}
+            max={180}
+            value={gapYControl}
+            onValueChange={value => queuePreviewControl('gapY', value)}
+            onValueCommit={value => commitPreviewControl('gapY', value)}
+          />
+          <WatermarkControlRange
+            label="Offset X"
+            min={0}
+            max={120}
+            value={offsetXControl}
+            onValueChange={value => queuePreviewControl('offsetX', value)}
+            onValueCommit={value => commitPreviewControl('offsetX', value)}
+          />
+          <WatermarkControlRange
+            label="Offset Y"
+            min={0}
+            max={120}
+            value={offsetYControl}
+            onValueChange={value => queuePreviewControl('offsetY', value)}
+            onValueCommit={value => commitPreviewControl('offsetY', value)}
+          />
+          <WatermarkControlRange
+            label="z-index"
+            min={1}
+            max={24}
+            value={zIndexControl}
+            onValueChange={value => queuePreviewControl('zIndex', value)}
+            onValueCommit={value => commitPreviewControl('zIndex', value)}
+          />
+
+          <div>
+            <div className="text-sm font-medium text-base-content">Color override</div>
+            <input
+              className="input input-bordered mt-2 w-full"
+              placeholder="auto"
+              value={color.value}
+              onInput={(event: Event) => {
+                color.value = (event.currentTarget as HTMLInputElement).value
+              }}
+            />
+          </div>
+        </Card.Body>
+      </Card>
+    </div>
+  )
+}
+
+const customControlsCode = `const WatermarkCustomControlsDemo = () => {
+  const content = ref('Rue Design')
+  const rotate = ref(-22)
+  const rotateControl = ref(-22)
+  const gapX = ref(120)
+  const gapXControl = ref(120)
+  const gapY = ref(96)
+  const offsetX = ref(48)
+  const offsetY = ref(48)
+  const fontSize = ref(18)
+  const zIndex = ref(12)
+  const color = ref('')
+  let pendingFrame = 0
+  let pendingRotate = rotate.value
+  let pendingGapX = gapX.value
+
+  const flushPreview = () => {
+    pendingFrame = 0
+    batch(() => {
+      rotate.value = pendingRotate
+      gapX.value = pendingGapX
+    })
+  }
+
+  const queuePreview = () => {
+    if (pendingFrame) return
+    pendingFrame = requestAnimationFrame(flushPreview)
+  }
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <Watermark
+        content={[content.value, 'Scenario Sandbox']}
+        rotate={rotate.value}
+        gap={[gapX.value, gapY.value]}
+        offset={[offsetX.value, offsetY.value]}
+        zIndex={zIndex.value}
+        width={180}
+        height={72}
+        font={{
+          color: color.value || undefined,
+          fontSize: fontSize.value,
+          fontWeight: 700,
+          textAlign: 'center',
+        }}
+      >
+        {/* preview content */}
+      </Watermark>
+
+      <Card>
+        <Card.Body>
+          <Range
+            className="range-sm"
+            min={-90}
+            max={90}
+            label="Rotate"
+            value={rotateControl}
+            showValue
+            onValueChange={value => {
+              pendingRotate = value
+              queuePreview()
+            }}
+            onValueCommit={value => {
+              pendingRotate = value
+              rotate.value = value
+              rotateControl.value = value
+            }}
+          />
+          <Range
+            className="range-sm"
+            min={72}
+            max={180}
+            label="Gap X"
+            value={gapXControl}
+            showValue
+            onValueChange={value => {
+              pendingGapX = value
+              queuePreview()
+            }}
+            onValueCommit={value => {
+              pendingGapX = value
+              gapX.value = value
+              gapXControl.value = value
+            }}
+          />
+          <input
+            className="input input-bordered"
+            placeholder="auto"
+            value={color.value}
+            onInput={(event: Event) => {
+              color.value = (event.currentTarget as HTMLInputElement).value
+            }}
+          />
+        </Card.Body>
+      </Card>
+    </div>
+  )
+}`
+
 const WatermarkPage: FC = () => {
   const tabs = {
     basic: ref<PreviewTabMode>('preview'),
@@ -137,16 +583,6 @@ const WatermarkPage: FC = () => {
     inherit: ref<PreviewTabMode>('preview'),
     custom: ref<PreviewTabMode>('preview'),
   }
-
-  const content = ref('Rue Design')
-  const rotate = ref(-22)
-  const gapX = ref(120)
-  const gapY = ref(96)
-  const offsetX = ref(48)
-  const offsetY = ref(48)
-  const fontSize = ref(18)
-  const zIndex = ref(12)
-  const color = ref('rgba(15, 23, 42, 0.16)')
 
   return (
     <SidebarPlayground>
@@ -490,456 +926,10 @@ const WatermarkPage: FC = () => {
 
         <PreviewBlock
           title="Custom controls"
-          summary="把可调 demo 落到 Rue 风格里，用原生表单快速调整排版参数。"
+          summary="把可调 demo 落到 Rue 风格里，用 Range 的按帧更新快速调整排版参数。"
           tab={tabs.custom}
-          preview={
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-              <Watermark
-                content={[content.value, 'Scenario Sandbox']}
-                rotate={rotate.value}
-                gap={[gapX.value, gapY.value]}
-                offset={[offsetX.value, offsetY.value]}
-                zIndex={zIndex.value}
-                width={180}
-                height={72}
-                font={{
-                  color: color.value,
-                  fontSize: fontSize.value,
-                  fontWeight: 700,
-                  textAlign: 'center',
-                }}
-                className="rounded-[1.75rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200 shadow-sm"
-              >
-                <div className="space-y-4 p-5 md:p-6">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.18em] text-base-content/45">
-                        Scenario Sandbox
-                      </div>
-                      <div className="mt-2 text-2xl font-semibold text-base-content">
-                        参数调整后的实时预览
-                      </div>
-                    </div>
-                    <Badge outline>z-index {zIndex.value}</Badge>
-                  </div>
-                  <p className="m-0 max-w-2xl text-sm leading-7 text-base-content/65">
-                    这里故意放了文字、徽标和按钮，方便观察水印对不同内容密度与层次关系的影响。
-                  </p>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <Card className="bg-base-100/90 shadow-sm md:col-span-2">
-                      <Card.Body>
-                        <div className="text-sm font-semibold text-base-content">内容流</div>
-                        <p className="m-0 text-sm leading-7 text-base-content/65">
-                          Rue Watermark
-                          会把铺设逻辑限制在当前容器内部，圆角、阴影和内容布局都可以继续由宿主容器控制。
-                        </p>
-                      </Card.Body>
-                    </Card>
-                    <div className="rounded-[1.25rem] bg-accent px-4 py-5 text-accent-content shadow-sm">
-                      <div className="text-xs uppercase tracking-[0.2em] opacity-70">Preset</div>
-                      <div className="mt-2 text-2xl font-black">{content.value}</div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      size="sm"
-                      color="primary"
-                      onClick={() => {
-                        content.value = 'Rue Design'
-                        rotate.value = -22
-                        gapX.value = 120
-                        gapY.value = 96
-                        offsetX.value = 48
-                        offsetY.value = 48
-                        fontSize.value = 18
-                        zIndex.value = 12
-                        color.value = 'rgba(15, 23, 42, 0.16)'
-                      }}
-                    >
-                      重置参数
-                    </Button>
-                    <Button
-                      size="sm"
-                      type="outlined"
-                      onClick={() => {
-                        content.value = 'Shared with Partner'
-                        rotate.value = -8
-                        gapX.value = 156
-                        gapY.value = 124
-                        offsetX.value = 64
-                        offsetY.value = 32
-                        fontSize.value = 14
-                        zIndex.value = 10
-                        color.value = 'rgba(20, 83, 45, 0.16)'
-                      }}
-                    >
-                      切换到稀疏模式
-                    </Button>
-                  </div>
-                </div>
-              </Watermark>
-
-              <Card className="bg-base-100 shadow-sm">
-                <Card.Body className="gap-4">
-                  <div>
-                    <div className="text-sm font-semibold text-base-content">文本</div>
-                    <input
-                      className="input input-bordered mt-2 w-full"
-                      value={content.value}
-                      onInput={(event: Event) => {
-                        content.value = (event.currentTarget as HTMLInputElement).value
-                      }}
-                    />
-                  </div>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-medium text-base-content">
-                      Rotate {rotate.value}
-                    </span>
-                    <input
-                      className="range range-sm"
-                      type="range"
-                      min="-90"
-                      max="90"
-                      value={String(rotate.value)}
-                      onInput={(event: Event) => {
-                        rotate.value = Number((event.currentTarget as HTMLInputElement).value)
-                      }}
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-medium text-base-content">
-                      Font size {fontSize.value}
-                    </span>
-                    <input
-                      className="range range-sm"
-                      type="range"
-                      min="12"
-                      max="28"
-                      value={String(fontSize.value)}
-                      onInput={(event: Event) => {
-                        fontSize.value = Number((event.currentTarget as HTMLInputElement).value)
-                      }}
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-medium text-base-content">
-                      Gap X {gapX.value}
-                    </span>
-                    <input
-                      className="range range-sm"
-                      type="range"
-                      min="72"
-                      max="180"
-                      value={String(gapX.value)}
-                      onInput={(event: Event) => {
-                        gapX.value = Number((event.currentTarget as HTMLInputElement).value)
-                      }}
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-medium text-base-content">
-                      Gap Y {gapY.value}
-                    </span>
-                    <input
-                      className="range range-sm"
-                      type="range"
-                      min="72"
-                      max="180"
-                      value={String(gapY.value)}
-                      onInput={(event: Event) => {
-                        gapY.value = Number((event.currentTarget as HTMLInputElement).value)
-                      }}
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-medium text-base-content">
-                      Offset X {offsetX.value}
-                    </span>
-                    <input
-                      className="range range-sm"
-                      type="range"
-                      min="0"
-                      max="120"
-                      value={String(offsetX.value)}
-                      onInput={(event: Event) => {
-                        offsetX.value = Number((event.currentTarget as HTMLInputElement).value)
-                      }}
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-medium text-base-content">
-                      Offset Y {offsetY.value}
-                    </span>
-                    <input
-                      className="range range-sm"
-                      type="range"
-                      min="0"
-                      max="120"
-                      value={String(offsetY.value)}
-                      onInput={(event: Event) => {
-                        offsetY.value = Number((event.currentTarget as HTMLInputElement).value)
-                      }}
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-sm font-medium text-base-content">
-                      z-index {zIndex.value}
-                    </span>
-                    <input
-                      className="range range-sm"
-                      type="range"
-                      min="1"
-                      max="24"
-                      value={String(zIndex.value)}
-                      onInput={(event: Event) => {
-                        zIndex.value = Number((event.currentTarget as HTMLInputElement).value)
-                      }}
-                    />
-                  </label>
-
-                  <div>
-                    <div className="text-sm font-medium text-base-content">Color</div>
-                    <input
-                      className="input input-bordered mt-2 w-full"
-                      value={color.value}
-                      onInput={(event: Event) => {
-                        color.value = (event.currentTarget as HTMLInputElement).value
-                      }}
-                    />
-                  </div>
-                </Card.Body>
-              </Card>
-            </div>
-          }
-          code={`const content = ref('Rue Design')
-const rotate = ref(-22)
-const gapX = ref(120)
-const gapY = ref(96)
-const offsetX = ref(48)
-const offsetY = ref(48)
-const fontSize = ref(18)
-const zIndex = ref(12)
-const color = ref('rgba(15, 23, 42, 0.16)')
-
-<div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-  <Watermark
-    content={[content.value, 'Scenario Sandbox']}
-    rotate={rotate.value}
-    gap={[gapX.value, gapY.value]}
-    offset={[offsetX.value, offsetY.value]}
-    zIndex={zIndex.value}
-    width={180}
-    height={72}
-    font={{
-      color: color.value,
-      fontSize: fontSize.value,
-      fontWeight: 700,
-      textAlign: 'center',
-    }}
-    className="rounded-[1.75rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200 shadow-sm"
-  >
-    <div className="space-y-4 p-5 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs uppercase tracking-[0.18em] text-base-content/45">
-            Scenario Sandbox
-          </div>
-          <div className="mt-2 text-2xl font-semibold text-base-content">参数调整后的实时预览</div>
-        </div>
-        <Badge outline>z-index {zIndex.value}</Badge>
-      </div>
-
-      <p className="m-0 max-w-2xl text-sm leading-7 text-base-content/65">
-        这里故意放了文字、徽标和按钮，方便观察水印对不同内容密度与层次关系的影响。
-      </p>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-base-100/90 shadow-sm md:col-span-2">
-          <Card.Body>
-            <div className="text-sm font-semibold text-base-content">内容流</div>
-            <p className="m-0 text-sm leading-7 text-base-content/65">
-              Rue Watermark 会把铺设逻辑限制在当前容器内部，圆角、阴影和内容布局都可以继续由宿主容器控制。
-            </p>
-          </Card.Body>
-        </Card>
-
-        <div className="rounded-[1.25rem] bg-accent px-4 py-5 text-accent-content shadow-sm">
-          <div className="text-xs uppercase tracking-[0.2em] opacity-70">Preset</div>
-          <div className="mt-2 text-2xl font-black">{content.value}</div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <Button
-          size="sm"
-          color="primary"
-          onClick={() => {
-            content.value = 'Rue Design'
-            rotate.value = -22
-            gapX.value = 120
-            gapY.value = 96
-            offsetX.value = 48
-            offsetY.value = 48
-            fontSize.value = 18
-            zIndex.value = 12
-            color.value = 'rgba(15, 23, 42, 0.16)'
-          }}
-        >
-          重置参数
-        </Button>
-
-        <Button
-          size="sm"
-          type="outlined"
-          onClick={() => {
-            content.value = 'Shared with Partner'
-            rotate.value = -8
-            gapX.value = 156
-            gapY.value = 124
-            offsetX.value = 64
-            offsetY.value = 32
-            fontSize.value = 14
-            zIndex.value = 10
-            color.value = 'rgba(20, 83, 45, 0.16)'
-          }}
-        >
-          切换到稀疏模式
-        </Button>
-      </div>
-    </div>
-  </Watermark>
-
-  <Card className="bg-base-100 shadow-sm">
-    <Card.Body className="gap-4">
-      <div>
-        <div className="text-sm font-semibold text-base-content">文本</div>
-        <input
-          className="input input-bordered mt-2 w-full"
-          value={content.value}
-          onInput={(event: Event) => {
-            content.value = (event.currentTarget as HTMLInputElement).value
-          }}
-        />
-      </div>
-
-      <label className="grid gap-2">
-        <span className="text-sm font-medium text-base-content">Rotate {rotate.value}</span>
-        <input
-          className="range range-sm"
-          type="range"
-          min="-90"
-          max="90"
-          value={String(rotate.value)}
-          onInput={(event: Event) => {
-            rotate.value = Number((event.currentTarget as HTMLInputElement).value)
-          }}
-        />
-      </label>
-
-      <label className="grid gap-2">
-        <span className="text-sm font-medium text-base-content">Font size {fontSize.value}</span>
-        <input
-          className="range range-sm"
-          type="range"
-          min="12"
-          max="28"
-          value={String(fontSize.value)}
-          onInput={(event: Event) => {
-            fontSize.value = Number((event.currentTarget as HTMLInputElement).value)
-          }}
-        />
-      </label>
-
-      <label className="grid gap-2">
-        <span className="text-sm font-medium text-base-content">Gap X {gapX.value}</span>
-        <input
-          className="range range-sm"
-          type="range"
-          min="72"
-          max="180"
-          value={String(gapX.value)}
-          onInput={(event: Event) => {
-            gapX.value = Number((event.currentTarget as HTMLInputElement).value)
-          }}
-        />
-      </label>
-
-      <label className="grid gap-2">
-        <span className="text-sm font-medium text-base-content">Gap Y {gapY.value}</span>
-        <input
-          className="range range-sm"
-          type="range"
-          min="72"
-          max="180"
-          value={String(gapY.value)}
-          onInput={(event: Event) => {
-            gapY.value = Number((event.currentTarget as HTMLInputElement).value)
-          }}
-        />
-      </label>
-
-      <label className="grid gap-2">
-        <span className="text-sm font-medium text-base-content">Offset X {offsetX.value}</span>
-        <input
-          className="range range-sm"
-          type="range"
-          min="0"
-          max="120"
-          value={String(offsetX.value)}
-          onInput={(event: Event) => {
-            offsetX.value = Number((event.currentTarget as HTMLInputElement).value)
-          }}
-        />
-      </label>
-
-      <label className="grid gap-2">
-        <span className="text-sm font-medium text-base-content">Offset Y {offsetY.value}</span>
-        <input
-          className="range range-sm"
-          type="range"
-          min="0"
-          max="120"
-          value={String(offsetY.value)}
-          onInput={(event: Event) => {
-            offsetY.value = Number((event.currentTarget as HTMLInputElement).value)
-          }}
-        />
-      </label>
-
-      <label className="grid gap-2">
-        <span className="text-sm font-medium text-base-content">z-index {zIndex.value}</span>
-        <input
-          className="range range-sm"
-          type="range"
-          min="1"
-          max="24"
-          value={String(zIndex.value)}
-          onInput={(event: Event) => {
-            zIndex.value = Number((event.currentTarget as HTMLInputElement).value)
-          }}
-        />
-      </label>
-
-      <div>
-        <div className="text-sm font-medium text-base-content">Color</div>
-        <input
-          className="input input-bordered mt-2 w-full"
-          value={color.value}
-          onInput={(event: Event) => {
-            color.value = (event.currentTarget as HTMLInputElement).value
-          }}
-        />
-      </div>
-    </Card.Body>
-  </Card>
-</div>`}
+          preview={<WatermarkCustomControlsDemo />}
+          code={customControlsCode}
         />
 
         <h2>API</h2>

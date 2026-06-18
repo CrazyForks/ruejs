@@ -26,7 +26,7 @@
 
 // 提供 Effect/Signal 的注册、运行、调度以及批量更新机制。
 // 该模块以线程局部存储维护运行时全局状态，确保在 WebAssembly 场景下安全共享。
-use js_sys::{Array, Function, JSON, Object, Promise, Reflect};
+use js_sys::{Array, Function, JSON, Object, Promise, Reflect, Set};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -43,6 +43,8 @@ thread_local! {
     pub(crate) static NEXT_EFFECT_ID: RefCell<usize> = RefCell::new(1);
     // 当前正在执行的副作用 id，用于依赖收集（Signal 读取时订阅到该 id）
     pub(crate) static CURRENT_EFFECT: RefCell<Option<usize>> = RefCell::new(None);
+    // errorCaptured handler 运行期间，信号修复不应同步重入刚失败的 effect。
+    pub(crate) static ERROR_CAPTURE_EFFECT: RefCell<Option<usize>> = RefCell::new(None);
     // watch handler 在“无依赖收集”模式下执行时，仍允许 on_cleanup 把清理函数挂到外层 effect。
     pub(crate) static CURRENT_UNTRACKED_HANDLER_EFFECT: RefCell<Option<usize>> = RefCell::new(None);
     // 批量更新深度计数；>0 时 Signal 改变不会立即运行副作用，而是入队
@@ -121,21 +123,31 @@ pub(crate) struct Effect {
 }
 
 const RENDER_TRIGGERED_HOOKS_KEY: &str = "__rue_render_triggered_hooks";
+const RENDER_DEBUG_OWNER_PARENT_KEY: &str = "__rue_context_owner_parent__";
+const ERROR_CAPTURE_DISPATCH_KEY: &str = "__rue_dispatch_error_captured";
 
 /// 进入组件 render 时压入 owner，使该阶段创建的 effect 能绑定调试归属。
-#[cfg(feature = "runtime")]
 pub(crate) fn begin_render_debug_owner(owner: &JsValue) {
     RENDER_DEBUG_OWNER_STACK.with(|stack| {
         stack.borrow_mut().push(owner.clone());
     });
 }
 
+#[wasm_bindgen(js_name = "__rueBeginRenderDebugOwner")]
+pub fn begin_render_debug_owner_wasm(owner: JsValue) {
+    begin_render_debug_owner(&owner);
+}
+
 /// 离开组件 render 时弹出 owner。
-#[cfg(feature = "runtime")]
 pub(crate) fn end_render_debug_owner() {
     RENDER_DEBUG_OWNER_STACK.with(|stack| {
         stack.borrow_mut().pop();
     });
+}
+
+#[wasm_bindgen(js_name = "__rueEndRenderDebugOwner")]
+pub fn end_render_debug_owner_wasm() {
+    end_render_debug_owner();
 }
 
 /// 临时关闭 render 调试依赖归属，避免 Hook 初始化读写污染 onRenderTracked/onRenderTriggered。
@@ -160,7 +172,27 @@ pub(crate) fn current_render_debug_owner() -> Option<JsValue> {
     if suppressed {
         return None;
     }
-    RENDER_DEBUG_OWNER_STACK.with(|stack| stack.borrow().last().cloned())
+    let stacked = RENDER_DEBUG_OWNER_STACK.with(|stack| stack.borrow().last().cloned());
+    if stacked.is_some() {
+        return stacked;
+    }
+    let instance = crate::reactive::context::get_current_instance();
+    if instance.is_object() || instance.is_function() { Some(instance) } else { None }
+}
+
+/// 在依赖收集时把当前 render owner 同步到 effect。
+///
+/// 部分渲染 effect 会先创建，随后在组件 render 栈内运行并读取 signal。
+/// 仅在 create_effect 时绑定 owner 会漏掉这类依赖，因此订阅 signal 时也需要刷新归属。
+pub(crate) fn sync_effect_render_debug_owner(effect_id: usize) {
+    let Some(owner) = current_render_debug_owner() else {
+        return;
+    };
+    EFFECTS.with(|effects| {
+        if let Some(effect) = effects.borrow_mut().get_mut(&effect_id) {
+            effect.render_debug_owner = Some(owner);
+        }
+    });
 }
 
 /// 在组件 owner 上登记 renderTriggered 回调列表。
@@ -183,24 +215,66 @@ pub(crate) fn register_render_triggered_hook(owner: &JsValue, hook: JsValue) {
 }
 
 /// 根据 effect 创建时记录的 owner 派发 renderTriggered 调试事件。
-pub(crate) fn emit_render_triggered_for_effect(effect_id: usize, event: &JsValue) {
+pub(crate) fn emit_render_triggered_for_effect(effect_id: usize, event: &JsValue) -> bool {
     let owner = EFFECTS.with(|effects| {
         effects.borrow().get(&effect_id).and_then(|effect| effect.render_debug_owner.clone())
     });
-    let Some(owner) = owner else {
-        return;
+    let Some(mut current) = owner else {
+        return false;
     };
-    let hooks = Reflect::get(&owner, &JsValue::from_str(RENDER_TRIGGERED_HOOKS_KEY))
-        .unwrap_or(JsValue::UNDEFINED);
-    if !Array::is_array(&hooks) {
-        return;
-    }
-    let hooks = Array::from(&hooks);
-    for index in 0..hooks.length() {
-        if let Some(hook) = hooks.get(index).dyn_ref::<Function>() {
-            let _ = hook.call1(&JsValue::NULL, event);
+    let visited = Set::new(&JsValue::UNDEFINED);
+    let mut did_dispatch = false;
+
+    while current.is_object() && !visited.has(&current) {
+        visited.add(&current);
+        let hooks = Reflect::get(&current, &JsValue::from_str(RENDER_TRIGGERED_HOOKS_KEY))
+            .unwrap_or(JsValue::UNDEFINED);
+        if Array::is_array(&hooks) {
+            let hooks = Array::from(&hooks);
+            for index in 0..hooks.length() {
+                if let Some(hook) = hooks.get(index).dyn_ref::<Function>() {
+                    let _ = hook.call1(&JsValue::NULL, event);
+                    did_dispatch = true;
+                }
+            }
         }
+
+        current = Reflect::get(&current, &JsValue::from_str(RENDER_DEBUG_OWNER_PARENT_KEY))
+            .unwrap_or(JsValue::UNDEFINED);
     }
+    did_dispatch
+}
+
+pub(crate) fn dispatch_error_captured(error: &JsValue, instance: &JsValue, info: &str) -> bool {
+    let global = js_sys::global();
+    let dispatch =
+        Reflect::get(&global, &JsValue::from_str(ERROR_CAPTURE_DISPATCH_KEY)).unwrap_or_default();
+    let Some(dispatch) = dispatch.dyn_ref::<Function>() else {
+        return false;
+    };
+
+    dispatch
+        .call3(&JsValue::UNDEFINED, error, instance, &JsValue::from_str(info))
+        .ok()
+        .is_some_and(|value| value.as_bool() == Some(true))
+}
+
+fn dispatch_error_captured_for_effect(effect_id: usize, error: &JsValue) -> bool {
+    let owner = EFFECTS
+        .with(|effects| {
+            effects.borrow().get(&effect_id).and_then(|effect| effect.render_debug_owner.clone())
+        })
+        .unwrap_or(JsValue::NULL);
+
+    dispatch_error_captured(error, &owner, "reactive effect")
+}
+
+fn with_error_capture_effect<T>(effect_id: usize, runner: impl FnOnce() -> T) -> T {
+    let prev = ERROR_CAPTURE_EFFECT.with(|current| current.borrow().clone());
+    ERROR_CAPTURE_EFFECT.with(|current| *current.borrow_mut() = Some(effect_id));
+    let result = runner();
+    ERROR_CAPTURE_EFFECT.with(|current| *current.borrow_mut() = prev);
+    result
 }
 
 /// 构造与 Vue DebuggerEvent 形态接近的 renderTriggered 事件对象。
@@ -504,6 +578,7 @@ pub fn dispose_effect_scope_wasm(scope_id: usize) {
 /// path_subs: 按“规范化路径”分桶的订阅集合，用来避免读取某个叶子字段时把整棵根 signal 一起订阅
 /// equals: 可选的等值比较函数（(prev, next) -> bool），返回 true 表示相等（不触发）
 pub(crate) struct Signal {
+    pub(crate) debug_id: usize,
     pub(crate) value: JsValue,
     pub(crate) subs: Vec<usize>,
     pub(crate) path_subs: HashMap<String, Vec<usize>>,
@@ -563,7 +638,17 @@ pub(crate) fn run_effect(id: usize) {
     if let Some(sid) = scope_id {
         push_effect_scope(sid);
     }
+    let effect_owner =
+        EFFECTS.with(|m| m.borrow().get(&id).and_then(|effect| effect.render_debug_owner.clone()));
+    let prev_instance = effect_owner.as_ref().map(|owner| {
+        let prev = crate::reactive::context::get_current_instance();
+        crate::reactive::context::set_current_instance(owner.clone());
+        prev
+    });
     let ret = cb.call0(&JsValue::NULL);
+    if let Some(prev) = prev_instance {
+        crate::reactive::context::set_current_instance(prev);
+    }
     if scope_id.is_some() {
         let _ = pop_effect_scope();
     }
@@ -581,6 +666,10 @@ pub(crate) fn run_effect(id: usize) {
                 msg_val.as_string().unwrap_or("<unknown>".to_string())
             ),
         );
+
+        if with_error_capture_effect(id, || dispatch_error_captured_for_effect(id, &err)) {
+            return;
+        }
 
         throw_val(err.clone());
     }
@@ -865,7 +954,8 @@ pub(crate) fn schedule_effect_run(id: usize) {
                 let is_self = CURRENT_EFFECT.with(|c| match *c.borrow() {
                     Some(cur) if cur == id => true,
                     _ => false,
-                });
+                }) || ERROR_CAPTURE_EFFECT
+                    .with(|current| *current.borrow() == Some(id));
                 if is_self {
                     #[cfg(feature = "dev")]
                     {

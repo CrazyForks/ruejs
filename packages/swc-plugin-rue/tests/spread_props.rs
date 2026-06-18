@@ -32,17 +32,16 @@ export default SpreadProps;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const Button: FC<{
     text: string;
     className?: string;
-}> = (props)=>vapor(()=>{
-        const _root = _$createElement("button");
+}> = (props)=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("button", __rue_parent_context);
         watchEffect(()=>{
-            _$setClassName(_root, String((props.className)));
+            _$setClassName(_root, (props.className));
         });
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list1);
@@ -66,10 +65,10 @@ const SpreadProps: FC = ()=>{
             };
         }));
     const { base: base, extra: extra } = _$useSetup;
-    return vapor(()=>{
-        const _root = _$createElement("div");
+    return vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3");
+        const _el1 = _$createElement("h3", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "text-xl font-semibold");
         _$appendChild(_el1, _$createTextNode("对象展开属性（spread props）"));
@@ -82,7 +81,7 @@ const SpreadProps: FC = ()=>{
             });
             untrack(()=>renderAnchor(__slot3, _root, _list2));
         });
-        const _el2 = _$createElement("a");
+        const _el2 = _$createElement("a", _root);
         _$appendChild(_root, _el2);
         watchEffect(()=>{
             _$setAttribute(_el2, "href", String(RouterLink.__rueHref("/jsx")));

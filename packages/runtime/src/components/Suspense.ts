@@ -174,7 +174,7 @@ export const Suspense: FC<SuspenseProps> = props => {
 
   const trackThenable = (thenable: PromiseLike<unknown>) => {
     if (ctx.pendingThenables.has(thenable)) {
-      return
+      return false
     }
 
     ctx.pendingThenables.add(thenable)
@@ -189,6 +189,7 @@ export const Suspense: FC<SuspenseProps> = props => {
         triggerRetry()
       },
     )
+    return true
   }
 
   const collectRangeNodes = (start: unknown, end: unknown, clone: boolean) => {
@@ -307,7 +308,11 @@ export const Suspense: FC<SuspenseProps> = props => {
   }
 
   ctx.boundary.register = thenable => {
-    trackThenable(thenable)
+    const tracked = trackThenable(thenable)
+    if (!tracked && ctx.status === 'pending') {
+      return
+    }
+
     const curProps = ctx.propsSig.get()
 
     if (ctx.status !== 'pending') {

@@ -32,8 +32,8 @@ use wasm_bindgen::prelude::*;
 
 use crate::reactive::core::{
     CURRENT_EFFECT, CURRENT_UNTRACKED_HANDLER_EFFECT, EFFECTS, Effect, NEXT_EFFECT_ID,
-    current_effect_scope, current_render_debug_owner, dispose_effect, is_watcher_effect,
-    register_effect_in_scope, run_effect,
+    current_effect_scope, current_render_debug_owner, dispatch_error_captured, dispose_effect,
+    is_watcher_effect, register_effect_in_scope, run_effect,
 };
 
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -289,6 +289,10 @@ pub fn untrack(cb: Function) -> JsValue {
     match ret {
         Ok(v) => v,
         Err(e) => {
+            let instance = crate::reactive::context::get_current_instance();
+            if dispatch_error_captured(&e, &instance, "untrack") {
+                return JsValue::NULL;
+            }
             wasm_bindgen::throw_val(e.clone());
         }
     }

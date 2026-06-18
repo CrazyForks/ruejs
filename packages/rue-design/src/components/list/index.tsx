@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 List 组件概述
 - 保留 Rue/daisyUI 的 list 视觉与 Row/ColGrow/ColWrap 组合 API。
@@ -6,7 +5,7 @@ List 组件概述
 - Item 支持 actions、extra、Meta，便于组织更完整的信息列表。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
+import { computed, ref } from '@rue-js/rue'
 
 /** ListSize 尺寸类型。 */
 export type ListSize = 'small' | 'default' | 'large' | 'sm' | 'md' | 'lg'
@@ -398,25 +397,6 @@ const resolvePagination = (
   }
 }
 
-/** 渲染 Cols 的内部工具函数。 */
-const renderCols = (cols?: ReadonlyArray<ListColDataItem>) => {
-  if (!cols) return null
-  return cols.map((col, index) => {
-    if (col.type === 'grow') {
-      return (
-        <ColGrow as={col.as} className={col.className} key={index}>
-          {col.content}
-        </ColGrow>
-      )
-    }
-    return (
-      <ColWrap as={col.as} className={col.className} key={index}>
-        {col.content}
-      </ColWrap>
-    )
-  })
-}
-
 /** 渲染 Legacy Item 的内部工具函数。 */
 const renderLegacyItem = (item: ListDataItem, index: number) => {
   const key = item.key ?? index
@@ -444,7 +424,7 @@ const renderLegacyItem = (item: ListDataItem, index: number) => {
         <Meta avatar={item.avatar} title={item.title} description={item.description}>
           {item.content}
         </Meta>
-        {renderCols(item.cols)}
+        <ListDataCols cols={item.cols} />
       </Item>
     )
   }
@@ -452,7 +432,7 @@ const renderLegacyItem = (item: ListDataItem, index: number) => {
   return (
     <Row normal={item.normal} className={item.className} key={key}>
       {item.content}
-      {renderCols(item.cols)}
+      <ListDataCols cols={item.cols} />
     </Row>
   )
 }
@@ -574,9 +554,6 @@ const List: FC<ListProps> = ({
   const pageSizeRef = ref(
     typeof pagination === 'object' ? (pagination.defaultPageSize ?? pagination.pageSize ?? 10) : 10,
   )
-  const itemsHostRef = useRef<HTMLElement>()
-  const topPagerHostRef = useRef<HTMLElement>()
-  const bottomPagerHostRef = useRef<HTMLElement>()
   const hasDataSource = Array.isArray(dataSource)
   const dataItems = hasDataSource ? dataSource : items
   const hasPagination = !!pagination
@@ -615,36 +592,15 @@ const List: FC<ListProps> = ({
     if (!pager) return dataItems
     return dataItems.slice((pager.current - 1) * pager.pageSize, pager.current * pager.pageSize)
   }
-
-  const renderPaginatedContent = () => {
-    if (!hasPagination) return
-    const pager = getPagerSnapshot()
-    const listContent = loadingConfig.spinning
+  const pager = computed(() => getPagerSnapshot())
+  const pagedItems = computed(() => getPageDataSnapshot(pager.get()))
+  const paginatedListContent = computed(() =>
+    loadingConfig.spinning
       ? renderLoading(loadingConfig)
       : dataItems && dataItems.length === 0
         ? renderEmpty(locale?.emptyText ?? emptyText)
-        : renderPageItems(getPageDataSnapshot(pager), pager)
-
-    if (itemsHostRef.current) {
-      renderRue(listContent ?? null, itemsHostRef.current)
-    }
-    if (topPagerHostRef.current) {
-      renderRue(
-        pager && (pager.position === 'top' || pager.position === 'both')
-          ? renderPager(pager, handlePageChange, 'div')
-          : null,
-        topPagerHostRef.current,
-      )
-    }
-    if (bottomPagerHostRef.current) {
-      renderRue(
-        pager && (pager.position === 'bottom' || pager.position === 'both')
-          ? renderPager(pager, handlePageChange, 'div')
-          : null,
-        bottomPagerHostRef.current,
-      )
-    }
-  }
+        : renderPageItems(pagedItems.get(), pager.get()),
+  )
 
   const handlePageChange = (nextPage: number) => {
     const pager = getPagerSnapshot()
@@ -656,15 +612,7 @@ const List: FC<ListProps> = ({
     }
     pageSizeRef.value = pager.pageSize
     if (pager.onChange) pager.onChange(safePage, pager.pageSize)
-    renderPaginatedContent()
   }
-
-  onMounted(renderPaginatedContent)
-
-  watch(
-    () => [currentRef.value, pageSizeRef.value, dataItems?.length, loadingConfig.spinning],
-    renderPaginatedContent,
-  )
 
   if (hasPagination) {
     const wrapperCls = mergeClassNames(
@@ -682,18 +630,20 @@ const List: FC<ListProps> = ({
 
     return (
       <div {...rest} className={wrapperCls} style={!grid ? style : undefined}>
-        <div ref={topPagerHostRef} />
+        {pager.get() && (pager.get()?.position === 'top' || pager.get()?.position === 'both')
+          ? renderPager(pager.get(), handlePageChange, 'div')
+          : null}
         {isEmptyNode(header) ? null : (
           <div className="p-4 pb-2 text-sm font-medium opacity-70">{header}</div>
         )}
-        <ul
-          ref={itemsHostRef}
-          className={listCls}
-          style={getGridStyle(grid, grid ? style : undefined)}
-        />
+        <ul className={listCls} style={getGridStyle(grid, grid ? style : undefined)}>
+          {paginatedListContent.get()}
+        </ul>
         {isEmptyNode(footer) ? null : <div className="p-4 pt-2 text-sm opacity-70">{footer}</div>}
         {isEmptyNode(loadMore) ? null : <div className="p-3 text-center">{loadMore}</div>}
-        <div ref={bottomPagerHostRef} />
+        {pager.get() && (pager.get()?.position === 'bottom' || pager.get()?.position === 'both')
+          ? renderPager(pager.get(), handlePageChange, 'div')
+          : null}
       </div>
     )
   }
@@ -752,6 +702,34 @@ const ColWrap: FC<ListColProps> = ({ as = 'div', className, children, ...rest })
   )
 }
 
+/** 数据列渲染组件。 */
+const ListDataCol: FC<{ col: ListColDataItem }> = ({ col }) => {
+  if (col.type === 'grow') {
+    return (
+      <ColGrow as={col.as} className={col.className}>
+        {col.content}
+      </ColGrow>
+    )
+  }
+  return (
+    <ColWrap as={col.as} className={col.className}>
+      {col.content}
+    </ColWrap>
+  )
+}
+
+/** 数据列集合渲染组件。 */
+const ListDataCols: FC<{ cols?: ReadonlyArray<ListColDataItem> }> = ({ cols }) => {
+  if (!cols) return null
+  return (
+    <>
+      {cols.map((col, index) => (
+        <ListDataCol col={col} key={index} />
+      ))}
+    </>
+  )
+}
+
 /** Meta 的内部工具函数。 */
 const Meta: FC<ListItemMetaProps> = ({
   avatar,
@@ -771,6 +749,11 @@ const Meta: FC<ListItemMetaProps> = ({
       </div>
     </div>
   )
+}
+
+/** Action 渲染组件。 */
+const ListActionItem: FC<{ action: any }> = ({ action }) => {
+  return <li>{action}</li>
 }
 
 /** 项组件：默认保持普通 li；传入 actions/extra 时自动组织为信息行。 */
@@ -816,7 +799,7 @@ const Item: FC<ListItemProps> = ({
             style={styles?.actions}
           >
             {actions.map((action, index) => (
-              <li key={index}>{action}</li>
+              <ListActionItem action={action} key={index} />
             ))}
           </ul>
         ) : null}

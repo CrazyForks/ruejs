@@ -332,10 +332,6 @@ const flatRoutes: RouteRecordRaw[] = [
     component: useComponent(() => import('../pages/examples/ReactivePropsDestructure')),
   },
   {
-    path: '/examples/freeze-compiler-trap',
-    component: useComponent(() => import('../pages/examples/FreezeCompilerTrap')),
-  },
-  {
     path: '/examples/props-setup-boundary',
     component: useComponent(() => import('../pages/examples/PropsSetupBoundary')),
   },

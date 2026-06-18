@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import { render, setReactiveScheduling } from '@rue-js/rue'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ref, render, setReactiveScheduling } from '@rue-js/rue'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 import Watermark from '../index'
 
@@ -35,7 +35,8 @@ describe('Watermark', () => {
       expect(root.style.position).toBe('relative')
       expect(root.style.overflow).toBe('hidden')
       expect(overlay).toBeTruthy()
-      expect(overlay.style.backgroundImage).toContain('data:image/svg+xml')
+      expect(root.style.getPropertyValue('--rue-watermark-image')).toContain('data:image/svg+xml')
+      expect(overlay.style.backgroundImage).toBe('var(--rue-watermark-image, none)')
       expect(content.textContent).toContain('content')
     })
   })
@@ -71,8 +72,8 @@ describe('Watermark', () => {
       expect(overlay.style.top).toBe('20px')
       expect(overlay.style.width).toBe('calc(100% - 30px)')
       expect(overlay.style.height).toBe('calc(100% - 20px)')
-      expect(overlay.style.backgroundPosition).toBe('0px 0px')
-      expect(overlay.style.zIndex).toBe('15')
+      expect(overlay.style.backgroundPosition).toBe('var(--rue-watermark-position, 0px 0px)')
+      expect(overlay.style.zIndex).toBe('var(--rue-watermark-z-index, 9)')
     })
   })
 
@@ -93,10 +94,9 @@ describe('Watermark', () => {
 
     await waitForContent(() => {
       const root = container.querySelector('[data-testid="watermark-root"]') as HTMLElement
-      const overlay = root.querySelector('[data-rue-watermark-overlay="true"]') as HTMLElement
 
       expect(root.style.backgroundColor).toBe('rgb(15, 23, 42)')
-      expect(overlay.style.backgroundImage).toContain(
+      expect(root.style.getPropertyValue('--rue-watermark-image')).toContain(
         encodeURIComponent('rgba(248, 250, 252, 0.28)'),
       )
     })
@@ -119,12 +119,43 @@ describe('Watermark', () => {
 
     await waitForContent(() => {
       const root = container.querySelector('[data-testid="watermark-root"]') as HTMLElement
-      const overlay = root.querySelector('[data-rue-watermark-overlay="true"]') as HTMLElement
 
       expect(root.style.backgroundColor).toBe('oklch(0.22 0.04 265)')
-      expect(overlay.style.backgroundImage).toContain(
+      expect(root.style.getPropertyValue('--rue-watermark-image')).toContain(
         encodeURIComponent('rgba(248, 250, 252, 0.28)'),
       )
+    })
+  })
+
+  it('uses theme scope variables to choose a light fallback text color', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <div
+        data-rue-appearance="dark"
+        style={{
+          colorScheme: 'dark',
+          color: '#f8fafc',
+          '--color-base-100': '#111827',
+          '--color-base-content': '#a7f3d0',
+        }}
+      >
+        <Watermark content="Rue Design" data-testid="watermark-root">
+          <div>panel</div>
+        </Watermark>
+      </div>,
+      container,
+    )
+
+    await waitForContent(() => {
+      const root = container.querySelector('[data-testid="watermark-root"]') as HTMLElement
+      const overlay = root.querySelector('[data-rue-watermark-overlay="true"]') as HTMLElement
+
+      expect(root.style.getPropertyValue('--rue-watermark-image')).toContain(
+        encodeURIComponent('rgba(167, 243, 208, 0.28)'),
+      )
+      expect(overlay.style.backgroundImage).toBe('var(--rue-watermark-image, none)')
     })
   })
 
@@ -179,5 +210,104 @@ describe('Watermark', () => {
       expect(childOverlay.style.backgroundImage).toBe('none')
       expect(childOverlay.style.zIndex).toBe('0')
     })
+  })
+
+  it('reactively updates pattern styles from parent-controlled props', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    const content = ref('Draft')
+    const gapX = ref(120)
+    const color = ref('rgba(15, 23, 42, 0.16)')
+
+    const Demo = () => (
+      <Watermark
+        content={content.value}
+        width={100}
+        height={40}
+        gap={[gapX.value, 80]}
+        font={{ color: color.value }}
+        data-testid="watermark-root"
+      >
+        <div>panel</div>
+      </Watermark>
+    )
+
+    render(<Demo />, container)
+
+    await waitForContent(() => {
+      const root = container.querySelector('[data-testid="watermark-root"]') as HTMLElement
+
+      expect(root.style.getPropertyValue('--rue-watermark-size')).toBe('220px 120px')
+      expect(root.style.getPropertyValue('--rue-watermark-image')).toContain(
+        encodeURIComponent('Draft'),
+      )
+    })
+
+    content.value = 'Reviewed'
+    gapX.value = 160
+    color.value = 'rgba(20, 83, 45, 0.16)'
+
+    await waitForContent(() => {
+      const root = container.querySelector('[data-testid="watermark-root"]') as HTMLElement
+
+      expect(root.style.getPropertyValue('--rue-watermark-size')).toBe('260px 120px')
+      expect(root.style.getPropertyValue('--rue-watermark-image')).toContain(
+        encodeURIComponent('Reviewed'),
+      )
+      expect(root.style.getPropertyValue('--rue-watermark-image')).toContain(
+        encodeURIComponent('rgba(20, 83, 45, 0.16)'),
+      )
+    })
+  })
+
+  it('reuses measured text dimensions when only layout controls change', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const offsetX = ref(50)
+    const zIndex = ref(9)
+    const gapX = ref(120)
+    const measureText = vi.fn(() => ({ width: 96 }))
+    const getContextSpy = vi
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue({ measureText } as any)
+
+    const Demo = () => (
+      <Watermark
+        content="Cached"
+        gap={[gapX.value, 80]}
+        offset={[offsetX.value, 40]}
+        zIndex={zIndex.value}
+        font={{ color: 'rgba(15, 23, 42, 0.16)' }}
+        data-testid="watermark-root"
+      >
+        <div>panel</div>
+      </Watermark>
+    )
+
+    try {
+      render(<Demo />, container)
+
+      let measuredCalls = 0
+      await waitForContent(() => {
+        const root = container.querySelector('[data-testid="watermark-root"]') as HTMLElement
+        expect(root.style.getPropertyValue('--rue-watermark-size')).toBe('216px 104px')
+        measuredCalls = getContextSpy.mock.calls.length
+        expect(measuredCalls).toBeGreaterThan(0)
+      })
+
+      offsetX.value = 90
+      zIndex.value = 15
+      gapX.value = 160
+
+      await waitForContent(() => {
+        const root = container.querySelector('[data-testid="watermark-root"]') as HTMLElement
+        expect(root.style.getPropertyValue('--rue-watermark-size')).toBe('256px 104px')
+        expect(root.style.getPropertyValue('--rue-watermark-z-index')).toBe('15')
+        expect(getContextSpy.mock.calls.length).toBe(measuredCalls)
+      })
+    } finally {
+      getContextSpy.mockRestore()
+    }
   })
 })

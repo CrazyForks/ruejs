@@ -1,3 +1,4 @@
+
 ## [0.5.6](https://github.com/hunzhiwange/ruejs/compare/v0.5.5...v0.5.6) (2026-06-14)
 
 

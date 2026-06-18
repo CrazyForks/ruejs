@@ -80,6 +80,8 @@ const appSsrComponentAdapters = new WeakSet<Function>()
 const TEXT_CLIENT_REFERENCE_SSR_KEY = Symbol.for('text.clientReferenceSsr')
 const RUE_CONTEXT_PROVIDER_CONTEXT_PROP = '__rue_context_provider_context__'
 const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
+const RUE_SUSPENSE_COMPONENT_MARKER = Symbol.for('rue.suspense.component')
+const TEXT_DYNAMIC_RESOLVED_COMPONENT_MARKER = Symbol.for('text.dynamic.resolvedComponent')
 const TEXT_HEAD_RECORD = Symbol.for('text.head.record')
 const APP_LAYOUT_SEGMENT_MAP_PROP = '__textLayoutSegmentMap'
 const APP_SSR_ERROR_BOUNDARY_COMPONENT_NAMES = new Set([
@@ -288,10 +290,35 @@ function containsAppServerProtocolOrClientReference(value: unknown): boolean {
 
   const type = readRueRenderableHandleType(value)
   if (isAppRscServerClientReference(type)) return true
+  if (isRueSuspenseComponentType(type)) return true
+  if (isTextDynamicLoadableComponent(type)) return true
+  if (isTextDynamicResolvedComponent(type)) return true
 
   const headRecord = readRueElementHeadRecord(value)
   const props = headRecord?.props ?? readRueRenderableHandleProps(value)
   return Object.values(props).some(containsAppServerProtocolOrClientReference)
+}
+
+function isRueSuspenseComponentType(type: unknown): boolean {
+  return (
+    (typeof type === 'object' || typeof type === 'function') &&
+    type !== null &&
+    (type as Record<PropertyKey, unknown>)[RUE_SUSPENSE_COMPONENT_MARKER] === true
+  )
+}
+
+function isTextDynamicLoadableComponent(type: unknown): boolean {
+  return (
+    typeof type === 'function' &&
+    typeof (type as { __text_dynamic_loader__?: unknown }).__text_dynamic_loader__ === 'function'
+  )
+}
+
+function isTextDynamicResolvedComponent(type: unknown): boolean {
+  return (
+    typeof type === 'function' &&
+    (type as Record<PropertyKey, unknown>)[TEXT_DYNAMIC_RESOLVED_COMPONENT_MARKER] === true
+  )
 }
 
 function createAppServerProtocolElementFromRueHandle(
@@ -441,6 +468,13 @@ function getAppSsrComponentAdapter(
   if (displayName) {
     AppSsrComponentAdapter.displayName = displayName
   }
+  if (isTextDynamicResolvedComponent(type)) {
+    Object.defineProperty(AppSsrComponentAdapter, TEXT_DYNAMIC_RESOLVED_COMPONENT_MARKER, {
+      configurable: true,
+      enumerable: false,
+      value: true,
+    })
+  }
 
   appSsrComponentAdapterCache.set(type, AppSsrComponentAdapter)
   appSsrComponentAdapters.add(AppSsrComponentAdapter)
@@ -463,6 +497,13 @@ function getAppInlineSsrComponentAdapter(
 
   if (displayName) {
     AppInlineSsrComponentAdapter.displayName = displayName
+  }
+  if (isTextDynamicResolvedComponent(type)) {
+    Object.defineProperty(AppInlineSsrComponentAdapter, TEXT_DYNAMIC_RESOLVED_COMPONENT_MARKER, {
+      configurable: true,
+      enumerable: false,
+      value: true,
+    })
   }
   const ssrUnwrapChildren = readAppRenderDependencySsrUnwrap(type)
   if (ssrUnwrapChildren !== null) {

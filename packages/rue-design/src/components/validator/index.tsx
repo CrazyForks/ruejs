@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Validator 组件概述
 - 保留 daisyUI validator / validator-hint 的原生浏览器校验体验。
@@ -157,17 +156,6 @@ const buildValidatorClassName = (
   )
 }
 
-/** 渲染 Stacked Content 的内部工具函数。 */
-const renderStackedContent = (content: any) => {
-  if (!Array.isArray(content)) return content
-
-  return content.map((item, index) => (
-    <span key={`validator-line-${index}`} className="block">
-      {item}
-    </span>
-  ))
-}
-
 /** Root 的内部工具函数。 */
 const Root: FC<ValidatorProps> = ({
   as,
@@ -210,19 +198,41 @@ const Hint: FC<ValidatorHintProps> = ({
   lines,
   ...rest
 }) => {
-  const Component = as as any
+  const cls = joinClassNames('validator-hint', hideUntilInvalid ? 'hidden' : undefined, className)
+  const hasLines = !!lines?.length
+
+  if (as === 'div') {
+    return (
+      <div {...rest} className={cls}>
+        {hasLines
+          ? (lines ?? []).map((item, index) => (
+              <span key={`validator-line-${index}`} className="block" r-text={item}></span>
+            ))
+          : children}
+      </div>
+    )
+  }
+
+  if (as === 'span') {
+    return (
+      <span {...rest} className={cls}>
+        {hasLines
+          ? (lines ?? []).map((item, index) => (
+              <span key={`validator-line-${index}`} className="block" r-text={item}></span>
+            ))
+          : children}
+      </span>
+    )
+  }
 
   return (
-    <Component
-      {...rest}
-      className={joinClassNames(
-        'validator-hint',
-        hideUntilInvalid ? 'hidden' : undefined,
-        className,
-      )}
-    >
-      {lines?.length ? renderStackedContent(lines) : children}
-    </Component>
+    <p {...rest} className={cls}>
+      {hasLines
+        ? (lines ?? []).map((item, index) => (
+            <span key={`validator-line-${index}`} className="block" r-text={item}></span>
+          ))
+        : children}
+    </p>
   )
 }
 
@@ -249,15 +259,61 @@ const Field: FC<ValidatorFieldProps> = ({
   children,
   ...rest
 }) => {
-  const Wrapper = fieldAs as any
   const controlId = typeof id === 'string' && id.trim() ? id : undefined
   const generatedHintId =
     controlId && hint != null && rest['aria-describedby'] == null ? `${controlId}-hint` : undefined
   const describedBy = rest['aria-describedby'] ?? generatedHintId
   const showRequiredMark = requiredMark ?? rest.required === true
+  const fieldCls = buildFieldClassName(fieldAs, className)
+
+  if (fieldAs === 'div') {
+    return (
+      <div className={fieldCls}>
+        {label != null ? (
+          <label className={joinClassNames('label', labelClassName)} for={controlId}>
+            <span>{label}</span>
+            {showRequiredMark ? (
+              <span className="text-error" aria-hidden="true">
+                *
+              </span>
+            ) : null}
+          </label>
+        ) : null}
+
+        <Root {...rest} id={controlId} aria-describedby={describedBy} className={controlClassName}>
+          {children}
+        </Root>
+
+        {hint != null ? (
+          <Hint
+            id={generatedHintId}
+            as={hintAs}
+            className={hintClassName}
+            hideUntilInvalid={hideHintWhenValid}
+          >
+            {Array.isArray(hint)
+              ? hint.map((item, index) => (
+                  <span key={`validator-line-${index}`} className="block" r-text={item}></span>
+                ))
+              : hint}
+          </Hint>
+        ) : null}
+
+        {extra != null ? (
+          <p className={joinClassNames('label text-xs opacity-70', extraClassName)}>
+            {Array.isArray(extra)
+              ? extra.map((item, index) => (
+                  <span key={`validator-line-${index}`} className="block" r-text={item}></span>
+                ))
+              : extra}
+          </p>
+        ) : null}
+      </div>
+    )
+  }
 
   return (
-    <Wrapper className={buildFieldClassName(fieldAs, className)}>
+    <fieldset className={fieldCls}>
       {label != null ? (
         <label className={joinClassNames('label', labelClassName)} for={controlId}>
           <span>{label}</span>
@@ -280,16 +336,24 @@ const Field: FC<ValidatorFieldProps> = ({
           className={hintClassName}
           hideUntilInvalid={hideHintWhenValid}
         >
-          {renderStackedContent(hint)}
+          {Array.isArray(hint)
+            ? hint.map((item, index) => (
+                <span key={`validator-line-${index}`} className="block" r-text={item}></span>
+              ))
+            : hint}
         </Hint>
       ) : null}
 
       {extra != null ? (
         <p className={joinClassNames('label text-xs opacity-70', extraClassName)}>
-          {renderStackedContent(extra)}
+          {Array.isArray(extra)
+            ? extra.map((item, index) => (
+                <span key={`validator-line-${index}`} className="block" r-text={item}></span>
+              ))
+            : extra}
         </p>
       ) : null}
-    </Wrapper>
+    </fieldset>
   )
 }
 

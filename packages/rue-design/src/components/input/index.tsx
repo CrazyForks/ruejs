@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Input 组件概述
 - 在 Rue 现有 input 视觉基座上补齐更高层的语义 API：prefix/suffix、allowClear、showCount、状态与变体。
@@ -6,7 +5,7 @@ Input 组件概述
 - 保留当前 Shell 入口，兼容文档里直接把 input 当作壳层容器使用的写法。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, useRef, watch } from '@rue-js/rue'
+import { ref, watch } from '@rue-js/rue'
 import Textarea, { type TextareaProps } from '../textarea'
 
 /** InputTone 语义色类型。 */
@@ -359,25 +358,22 @@ const EyeClosedIcon: FC = () => {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2.2"
       className="size-4"
       aria-hidden="true"
     >
-      <path strokeLinecap="round" strokeLinejoin="round" d="m3 3 18 18" />
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="M10.6 5.3A10.2 10.2 0 0 1 12 5.2c6 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.1 3.9"
+        d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
       />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M6.7 6.8C4.1 8.4 2.5 11.2 2.5 11.2s3.5 6 9.5 6c1.8 0 3.4-.5 4.8-1.2"
-      />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.9 9.8A3 3 0 0 0 14.2 14" />
+      <circle cx="12" cy="12" r="3" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m4 4 16 16" />
     </svg>
   )
 }
+
+let passwordVisibilitySyncSeed = 0
 
 /** Input Root 的内部工具函数。 */
 const InputRoot: FC<InputProps> = ({
@@ -411,10 +407,9 @@ const InputRoot: FC<InputProps> = ({
   onPressEnter,
   ...rest
 }) => {
-  const inputRef = useRef<HTMLInputElement>()
-  let countElement: HTMLDivElement | null = null
-  let clearButtonElement: HTMLButtonElement | null = null
+  let inputElement: HTMLInputElement | null = null
   const forwardedRef = rest.ref
+  const nativeRest = { ...rest }
   const isControlled = value !== undefined
   const hasCount = !!showCount
   const clearable = !!allowClear
@@ -423,48 +418,12 @@ const InputRoot: FC<InputProps> = ({
   const usesAddonGroup = addonBefore !== undefined || addonAfter !== undefined
   const currentValue = ref(resolveInputValue(isControlled ? value : defaultValue))
 
-  if ('ref' in rest) {
-    delete rest.ref
-  }
-
-  const syncValueState = () => {
-    currentValue.value = resolveInputValue(
-      isControlled ? value : (inputRef.current?.value ?? defaultValue),
-    )
-  }
-
-  const syncUncontrolledDefaultValue = () => {
-    if (isControlled || defaultValue === undefined || !inputRef.current) return
-    if (inputRef.current.value !== '') return
-    inputRef.current.value = resolveInputValue(defaultValue)
-  }
-
-  const syncCountDisplay = () => {
-    if (!countElement || !hasCount) return
-    countElement.textContent = stringifyContent(
-      renderCountContent(showCount, {
-        value: currentValue.value,
-        count: currentValue.value.length,
-        maxLength: readMaxLength(rest),
-      }),
-    )
-  }
-
-  const syncClearButtonVisibility = () => {
-    if (!clearButtonElement) return
-    clearButtonElement.classList.toggle(
-      'hidden',
-      currentValue.value.length <= 0 || !!disabled || !!readOnly,
-    )
-  }
-
-  const syncAffixes = () => {
-    syncCountDisplay()
-    syncClearButtonVisibility()
+  if ('ref' in nativeRest) {
+    delete nativeRest.ref
   }
 
   const assignRefs = (element: HTMLInputElement | null) => {
-    inputRef.current = element ?? undefined
+    inputElement = element
     if (typeof forwardedRef === 'function') {
       forwardedRef(element)
       return
@@ -482,14 +441,12 @@ const InputRoot: FC<InputProps> = ({
   const handleInput = (event: Event) => {
     const target = event.target as HTMLInputElement | null
     currentValue.value = target?.value ?? ''
-    syncAffixes()
     if (onInput) onInput(event)
   }
 
   const handleChange = (event: Event) => {
     const target = event.target as HTMLInputElement | null
     currentValue.value = target?.value ?? ''
-    syncAffixes()
     if (onChange) onChange(event)
   }
 
@@ -501,7 +458,10 @@ const InputRoot: FC<InputProps> = ({
   }
 
   const handleClear = (event: MouseEvent) => {
-    const element = inputRef.current
+    const trigger = event.currentTarget as HTMLElement | null
+    const shellElement = trigger?.closest('[data-rue-input-shell="true"]') as HTMLElement | null
+    const element =
+      inputElement ?? (shellElement?.querySelector('input') as HTMLInputElement | null)
     if (!element || disabled || readOnly) return
 
     if (typeof (event as any).preventDefault === 'function') {
@@ -513,157 +473,166 @@ const InputRoot: FC<InputProps> = ({
 
     element.value = ''
     currentValue.value = ''
-    syncAffixes()
     element.focus()
     triggerNativeChangeEvents(element)
     if (onClear) onClear(event)
   }
 
-  onMounted(() => {
-    syncUncontrolledDefaultValue()
-    syncValueState()
-    syncAffixes()
-  })
-
   watch(
     () => value,
     () => {
-      if (isControlled && inputRef.current) {
-        inputRef.current.value = resolveInputValue(value)
+      if (isControlled) {
+        const nextValue = resolveInputValue(value)
+        currentValue.value = nextValue
+        if (inputElement && inputElement.value !== nextValue) {
+          inputElement.value = nextValue
+        }
       }
-      syncValueState()
-      syncAffixes()
     },
     { immediate: true },
   )
 
   const nativeValueProps: Record<string, any> = {}
   if (value !== undefined) {
-    nativeValueProps.value = value
+    nativeValueProps.value = resolveInputValue(value)
   }
   if (defaultValue !== undefined) {
-    nativeValueProps.defaultValue = defaultValue
+    nativeValueProps.defaultValue = resolveInputValue(defaultValue)
   }
   const nativeReadOnlyProps: Record<string, any> = {}
   if (readOnly !== undefined) {
     nativeReadOnlyProps.readOnly = readOnly
   }
-  const ariaInvalid = status === 'error' ? 'true' : rest['aria-invalid']
-  if ('aria-invalid' in rest) {
-    delete rest['aria-invalid']
+  const ariaInvalid = status === 'error' ? 'true' : nativeRest['aria-invalid']
+  if ('aria-invalid' in nativeRest) {
+    delete nativeRest['aria-invalid']
   }
   const nativeAriaInvalidProps: Record<string, any> = {}
   if (ariaInvalid !== undefined && ariaInvalid !== null) {
     nativeAriaInvalidProps['aria-invalid'] = ariaInvalid
   }
-
-  const rawInputNode = (
-    <input
-      {...rest}
-      {...nativeValueProps}
-      {...nativeReadOnlyProps}
-      {...nativeAriaInvalidProps}
-      ref={assignRefs}
-      type={type}
-      disabled={disabled}
-      className={buildClassName({
-        color,
-        status,
-        size,
-        variant,
-        ghost,
-        className: mergeClassName(
-          className,
-          usesAddonGroup ? 'join-item min-w-0 flex-1' : undefined,
-        ),
-      })}
-      onInput={handleInput}
-      onChange={handleChange}
-      onKeyDown={handleKeyDown}
-    />
+  const addonControlClassName = usesAddonGroup ? 'join-item min-w-0 flex-1' : undefined
+  const rawInputClassName = buildClassName({
+    color,
+    status,
+    size,
+    variant,
+    ghost,
+    className: mergeClassName(className, addonControlClassName),
+  })
+  const shellClassName = buildClassName({
+    color,
+    status,
+    size,
+    variant,
+    ghost,
+    shell: true,
+    className: mergeClassName(className, addonControlClassName),
+  })
+  const clearButtonClass = mergeClassName(
+    'btn btn-ghost btn-xs btn-circle h-7 min-h-0 w-7 shrink-0 p-0 text-base-content/55 hover:text-base-content',
+    currentValue.value.length > 0 && !disabled && !readOnly ? undefined : 'hidden',
+    clearButtonClassName,
+  )
+  const countContent = stringifyContent(
+    renderCountContent(showCount, {
+      value: currentValue.value,
+      count: currentValue.value.length,
+      maxLength: readMaxLength(nativeRest),
+    }),
   )
 
-  const shellNode = usesShell ? (
-    <label
-      className={buildClassName({
-        color,
-        status,
-        size,
-        variant,
-        ghost,
-        shell: true,
-        className: mergeClassName(
-          className,
-          usesAddonGroup ? 'join-item min-w-0 flex-1' : undefined,
-        ),
-      })}
-      aria-disabled={disabled ? 'true' : undefined}
-      data-rue-input-shell="true"
-    >
-      {prefix !== undefined ? (
-        <span className="shrink-0 text-sm text-base-content/60">{prefix}</span>
-      ) : null}
+  const renderRawInputNode = () => {
+    return (
       <input
-        {...rest}
+        {...nativeRest}
         {...nativeValueProps}
         {...nativeReadOnlyProps}
         {...nativeAriaInvalidProps}
         ref={assignRefs}
         type={type}
         disabled={disabled}
-        className={mergeClassName(
-          'min-w-0 grow border-0 bg-transparent p-0 text-inherit outline-none placeholder:text-base-content/40',
-          inputClassName,
-        )}
+        className={rawInputClassName}
         onInput={handleInput}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
       />
-      {clearable && !disabled && !readOnly ? (
-        <button
-          ref={(element: HTMLButtonElement | null) => {
-            clearButtonElement = element
-            syncClearButtonVisibility()
-          }}
-          type="button"
-          tabIndex={-1}
-          aria-label="Clear text"
+    )
+  }
+
+  const renderShellNode = () => {
+    return (
+      <label
+        className={shellClassName}
+        aria-disabled={disabled ? 'true' : undefined}
+        data-rue-input-shell="true"
+      >
+        {prefix !== undefined ? (
+          <span className="shrink-0 text-sm text-base-content/60">{prefix}</span>
+        ) : null}
+        <input
+          {...nativeRest}
+          {...nativeValueProps}
+          {...nativeReadOnlyProps}
+          {...nativeAriaInvalidProps}
+          ref={assignRefs}
+          type={type}
+          disabled={disabled}
           className={mergeClassName(
-            'btn btn-ghost btn-xs btn-circle h-7 min-h-0 w-7 shrink-0 p-0 text-base-content/55 hover:text-base-content',
-            currentValue.value.length > 0 ? undefined : 'hidden',
-            clearButtonClassName,
+            'min-w-0 grow border-0 bg-transparent p-0 text-inherit outline-none placeholder:text-base-content/40',
+            inputClassName,
           )}
-          onClick={handleClear}
-        >
-          {clearConfig?.clearIcon ?? <DefaultClearIcon />}
-        </button>
-      ) : null}
-      {suffix !== undefined ? (
-        <span className="shrink-0 text-sm text-base-content/60">{suffix}</span>
-      ) : null}
-    </label>
-  ) : null
+          onInput={handleInput}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+        />
+        {clearable && !disabled && !readOnly ? (
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label="Clear text"
+            className={clearButtonClass}
+            onClick={handleClear}
+          >
+            {clearConfig?.clearIcon ?? <DefaultClearIcon />}
+          </button>
+        ) : null}
+        {suffix !== undefined ? (
+          <span className="shrink-0 text-sm text-base-content/60">{suffix}</span>
+        ) : null}
+      </label>
+    )
+  }
 
-  const controlNode = shellNode ?? rawInputNode
+  const renderControlNode = () => {
+    return usesShell ? renderShellNode() : renderRawInputNode()
+  }
 
-  const groupedControlNode = usesAddonGroup ? (
-    <div className="join w-full items-stretch">
-      {addonBefore !== undefined ? (
-        addonBeforeBare ? (
-          addonBefore
-        ) : (
-          <Addon>{addonBefore}</Addon>
-        )
-      ) : null}
-      {controlNode}
-      {addonAfter !== undefined ? addonAfterBare ? addonAfter : <Addon>{addonAfter}</Addon> : null}
-    </div>
-  ) : (
-    controlNode
-  )
+  const renderGroupedControlNode = () => {
+    if (!usesAddonGroup) return renderControlNode()
+    return (
+      <div className="join w-full items-stretch">
+        {addonBefore !== undefined ? (
+          addonBeforeBare ? (
+            addonBefore
+          ) : (
+            <Addon>{addonBefore}</Addon>
+          )
+        ) : null}
+        {renderControlNode()}
+        {addonAfter !== undefined ? (
+          addonAfterBare ? (
+            addonAfter
+          ) : (
+            <Addon>{addonAfter}</Addon>
+          )
+        ) : null}
+      </div>
+    )
+  }
 
   if (!hasCount && !rootClassName) {
-    return groupedControlNode
+    return renderGroupedControlNode()
   }
 
   return (
@@ -671,26 +640,16 @@ const InputRoot: FC<InputProps> = ({
       className={mergeClassName(hasCount ? 'flex flex-col gap-2' : undefined, rootClassName)}
       data-rue-input-root="true"
     >
-      {groupedControlNode}
+      {renderGroupedControlNode()}
       {hasCount ? (
         <div
-          ref={(element: HTMLDivElement | null) => {
-            countElement = element
-            syncCountDisplay()
-          }}
           className={mergeClassName(
             'flex justify-end text-xs leading-5 text-base-content/60',
             countClassName,
           )}
           data-rue-input-count="true"
         >
-          {stringifyContent(
-            renderCountContent(showCount, {
-              value: currentValue.value,
-              count: currentValue.value.length,
-              maxLength: readMaxLength(rest),
-            }),
-          )}
+          {countContent}
         </div>
       ) : null}
     </div>
@@ -736,64 +695,86 @@ const Search: FC<SearchProps> = ({
   onSearch,
   onPressEnter,
   onClear,
+  onInput,
+  onChange,
   suffix,
   addonAfter,
   disabled,
+  value,
+  defaultValue,
   ...rest
 }) => {
-  const inputRef = useRef<HTMLInputElement>()
+  const currentValue = ref(resolveInputValue(value !== undefined ? value : defaultValue))
   const actionContent = enterButton === true ? '搜索' : (enterButton ?? addonAfter)
+
+  const readEventValue = (event: Event) => {
+    return ((event.target as HTMLInputElement | null)?.value ?? currentValue.value) as string
+  }
+
+  watch(
+    () => value,
+    () => {
+      if (value !== undefined) {
+        currentValue.value = resolveInputValue(value)
+      }
+    },
+    { immediate: true },
+  )
 
   const triggerSearch = (event: MouseEvent | KeyboardEvent, source: SearchInfo['source']) => {
     if (disabled || loading) return
     if (onSearch) {
-      onSearch(inputRef.current?.value ?? '', event, { source })
+      onSearch(currentValue.value, event, { source })
     }
   }
 
-  const suffixButton = (
-    <button
-      type="button"
-      aria-label="Search"
-      className={mergeClassName('btn btn-ghost join-item', buttonClassName)}
-      onClick={(event: MouseEvent) => triggerSearch(event, 'input')}
-      disabled={disabled || loading}
-    >
-      {loading ? (
-        <span className="loading loading-spinner loading-xs" aria-hidden="true" />
-      ) : (
-        <DefaultSearchIcon />
-      )}
-    </button>
-  )
-
-  const addonButton =
-    actionContent !== undefined ? (
+  const renderSearchButton = () => {
+    if (actionContent !== undefined) {
+      return (
+        <button
+          type="button"
+          className={mergeClassName('btn btn-primary join-item', buttonClassName)}
+          onClick={(event: MouseEvent) => triggerSearch(event, 'input')}
+          disabled={disabled || loading}
+          aria-busy={loading ? 'true' : undefined}
+        >
+          {loading ? (
+            <span className="loading loading-spinner loading-sm" aria-hidden="true" />
+          ) : (
+            actionContent
+          )}
+        </button>
+      )
+    }
+    return (
       <button
         type="button"
-        className={mergeClassName('btn btn-primary join-item', buttonClassName)}
+        aria-label="Search"
+        className={mergeClassName('btn btn-ghost join-item', buttonClassName)}
         onClick={(event: MouseEvent) => triggerSearch(event, 'input')}
         disabled={disabled || loading}
-        aria-busy={loading ? 'true' : undefined}
       >
         {loading ? (
-          <span className="loading loading-spinner loading-sm" aria-hidden="true" />
+          <span className="loading loading-spinner loading-xs" aria-hidden="true" />
         ) : (
-          actionContent
+          <DefaultSearchIcon />
         )}
       </button>
-    ) : null
+    )
+  }
 
   return (
     <InputRoot
       {...rest}
-      ref={inputRef}
+      value={value}
+      defaultValue={defaultValue}
       type="text"
       disabled={disabled}
       suffix={suffix}
-      addonAfter={actionContent === undefined ? suffixButton : addonButton}
+      addonAfter={renderSearchButton()}
       addonAfterBare={true}
       onClear={(event: MouseEvent) => {
+        currentValue.value = ''
         if (onClear) onClear(event)
         if (onSearch) {
           onSearch('', event, { source: 'clear' })
@@ -803,23 +784,132 @@ const Search: FC<SearchProps> = ({
         if (onPressEnter) onPressEnter(event)
         triggerSearch(event, 'input')
       }}
+      onInput={(event: Event) => {
+        currentValue.value = readEventValue(event)
+        if (onInput) onInput(event)
+      }}
+      onChange={(event: Event) => {
+        currentValue.value = readEventValue(event)
+        if (onChange) onChange(event)
+      }}
     />
   )
 }
 
 /** Password 的内部工具函数。 */
 const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suffix, ...rest }) => {
-  const inputRef = useRef<HTMLInputElement>()
+  let inputElement: HTMLInputElement | null = null
+  let visibilityButtonElement: HTMLButtonElement | null = null
+  const forwardedRef = rest.ref
+  const inputProps = { ...rest }
+  const isValueControlled = inputProps.value !== undefined
+  const originalOnInput = inputProps.onInput
+  const originalOnChange = inputProps.onChange
+  let lastUncontrolledValue =
+    inputProps.defaultValue === undefined ? undefined : resolveInputValue(inputProps.defaultValue)
   const uncontrolledVisible = ref(false)
   const visibilityConfig =
     visibilityToggle && typeof visibilityToggle === 'object' ? visibilityToggle : undefined
   const isControlled = visibilityConfig?.visible !== undefined
-  const visible = isControlled ? !!visibilityConfig?.visible : uncontrolledVisible.value
   const visibilityEnabled = visibilityToggle !== false
+  let currentVisible = isControlled ? !!visibilityConfig?.visible : uncontrolledVisible.value
+  const readVisible = () => currentVisible
+  const visible = readVisible()
 
-  const handleVisibleChange = (nextVisible: boolean) => {
-    if (inputRef.current) {
-      inputRef.current.type = nextVisible ? 'text' : 'password'
+  if ('ref' in inputProps) {
+    delete inputProps.ref
+  }
+
+  const assignPasswordRef = (element: HTMLInputElement | null) => {
+    inputElement = element
+    if (!isValueControlled && element && lastUncontrolledValue !== undefined) {
+      element.value = lastUncontrolledValue
+    }
+    if (typeof forwardedRef === 'function') {
+      forwardedRef(element)
+      return
+    }
+    if (forwardedRef && typeof forwardedRef === 'object') {
+      ;(forwardedRef as any).current = element ?? undefined
+    }
+  }
+
+  const handlePasswordInput = (event: Event) => {
+    const target = event.target as HTMLInputElement | null
+    if (!isValueControlled) {
+      lastUncontrolledValue = target?.value ?? ''
+    }
+    if (originalOnInput) originalOnInput(event)
+  }
+
+  const handlePasswordChange = (event: Event) => {
+    const target = event.target as HTMLInputElement | null
+    if (!isValueControlled) {
+      lastUncontrolledValue = target?.value ?? ''
+    }
+    if (originalOnChange) originalOnChange(event)
+  }
+
+  const resolvePasswordShellElement = (trigger?: HTMLElement | null) => {
+    return (trigger ?? visibilityButtonElement)?.closest(
+      '[data-rue-input-shell="true"]',
+    ) as HTMLElement | null
+  }
+
+  const resolvePasswordInputElement = (trigger?: HTMLElement | null) => {
+    const shellElement = resolvePasswordShellElement(trigger)
+    const element = shellElement?.querySelector('input') as HTMLInputElement | null
+    return element ?? inputElement
+  }
+
+  const syncPasswordVisibilityDom = (
+    nextVisible: boolean,
+    valueSnapshot?: string | null,
+    trigger?: HTMLElement | null,
+  ) => {
+    const element = resolvePasswordInputElement(trigger)
+    if (element) {
+      inputElement = element
+      if (!isValueControlled && valueSnapshot !== undefined && valueSnapshot !== null) {
+        lastUncontrolledValue = valueSnapshot
+        element.value = valueSnapshot
+      }
+      element.type = nextVisible ? 'text' : 'password'
+    }
+    const shellElement = resolvePasswordShellElement(trigger)
+    const buttonElement =
+      (shellElement?.querySelector(
+        '[data-rue-password-toggle="true"]',
+      ) as HTMLButtonElement | null) ?? visibilityButtonElement
+    if (buttonElement) {
+      visibilityButtonElement = buttonElement
+      buttonElement.setAttribute('aria-label', nextVisible ? 'Hide password' : 'Show password')
+      const visibleIcon = buttonElement.querySelector('[data-rue-password-visible-icon="true"]')
+      const hiddenIcon = buttonElement.querySelector('[data-rue-password-hidden-icon="true"]')
+      if (visibleIcon instanceof HTMLElement) {
+        visibleIcon.style.display = nextVisible ? 'inline-flex' : 'none'
+      }
+      if (hiddenIcon instanceof HTMLElement) {
+        hiddenIcon.style.display = nextVisible ? 'none' : 'inline-flex'
+      }
+    }
+  }
+
+  const handleVisibleChange = (nextVisible: boolean, trigger?: HTMLElement | null) => {
+    if (trigger instanceof HTMLButtonElement) {
+      visibilityButtonElement = trigger
+    }
+    const shellElement = resolvePasswordShellElement(trigger)
+    const syncId = String(++passwordVisibilitySyncSeed)
+    shellElement?.setAttribute('data-rue-password-visibility-sync-id', syncId)
+    const element = resolvePasswordInputElement(trigger)
+    const valueSnapshot = element?.value ?? null
+    if (element) {
+      inputElement = element
+    }
+    currentVisible = nextVisible
+    if (inputElement) {
+      inputElement.type = nextVisible ? 'text' : 'password'
     }
     if (!isControlled) {
       uncontrolledVisible.value = nextVisible
@@ -827,21 +917,61 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
     if (visibilityConfig?.onVisibleChange) {
       visibilityConfig.onVisibleChange(nextVisible)
     }
+    syncPasswordVisibilityDom(nextVisible, valueSnapshot, trigger)
+    queueMicrotask(() => {
+      if (
+        shellElement &&
+        shellElement.getAttribute('data-rue-password-visibility-sync-id') !== syncId
+      ) {
+        return
+      }
+      syncPasswordVisibilityDom(nextVisible, valueSnapshot, shellElement ?? trigger)
+    })
+    setTimeout(() => {
+      if (
+        shellElement &&
+        shellElement.getAttribute('data-rue-password-visibility-sync-id') !== syncId
+      ) {
+        return
+      }
+      syncPasswordVisibilityDom(nextVisible, valueSnapshot, shellElement ?? trigger)
+    }, 0)
   }
 
   const visibilityButton = visibilityEnabled ? (
     <button
       type="button"
+      data-rue-password-toggle="true"
+      ref={(element: HTMLButtonElement | null) => {
+        visibilityButtonElement = element
+        syncPasswordVisibilityDom(readVisible())
+      }}
       aria-label={visible ? 'Hide password' : 'Show password'}
       className="btn btn-ghost btn-xs btn-circle h-7 min-h-0 w-7 shrink-0 p-0"
       onClick={(event: MouseEvent) => {
         if (typeof (event as any).preventDefault === 'function') {
           ;(event as any).preventDefault()
         }
-        handleVisibleChange(!visible)
+        if (typeof (event as any).stopPropagation === 'function') {
+          ;(event as any).stopPropagation()
+        }
+        handleVisibleChange(!readVisible(), event.currentTarget as HTMLElement)
       }}
     >
-      {iconRender ? iconRender(visible) : visible ? <EyeClosedIcon /> : <EyeOpenIcon />}
+      <span
+        data-rue-password-visible-icon="true"
+        className="items-center justify-center"
+        style={{ display: visible ? 'inline-flex' : 'none' }}
+      >
+        {iconRender ? iconRender(true) : <EyeOpenIcon />}
+      </span>
+      <span
+        data-rue-password-hidden-icon="true"
+        className="items-center justify-center"
+        style={{ display: visible ? 'none' : 'inline-flex' }}
+      >
+        {iconRender ? iconRender(false) : <EyeClosedIcon />}
+      </span>
     </button>
   ) : null
 
@@ -856,10 +986,12 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
 
   return (
     <InputRoot
-      {...rest}
-      ref={inputRef}
+      {...inputProps}
+      ref={assignPasswordRef}
       type={visible ? 'text' : 'password'}
       suffix={mergedSuffix}
+      onInput={handlePasswordInput}
+      onChange={handlePasswordChange}
     />
   )
 }

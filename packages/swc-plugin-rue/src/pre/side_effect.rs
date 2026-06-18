@@ -90,17 +90,17 @@ pub fn collect_idents_in_expr(expr: &Expr, acc: &mut HashSet<String>) {
                             }
                         }
                     }
-                    if let Stmt::Decl(Decl::Fn(f)) = st {
-                        if let Some(body) = &f.function.body {
-                            for st2 in &body.stmts {
-                                if let Stmt::Expr(es) = st2 {
-                                    collect_idents_in_expr(es.expr.as_ref(), acc);
-                                }
-                                if let Stmt::Decl(Decl::Var(v2)) = st2 {
-                                    for d2 in &v2.decls {
-                                        if let Some(init2) = &d2.init {
-                                            collect_idents_in_expr(init2.as_ref(), acc);
-                                        }
+                    if let Stmt::Decl(Decl::Fn(f)) = st
+                        && let Some(body) = &f.function.body
+                    {
+                        for st2 in &body.stmts {
+                            if let Stmt::Expr(es) = st2 {
+                                collect_idents_in_expr(es.expr.as_ref(), acc);
+                            }
+                            if let Stmt::Decl(Decl::Var(v2)) = st2 {
+                                for d2 in &v2.decls {
+                                    if let Some(init2) = &d2.init {
+                                        collect_idents_in_expr(init2.as_ref(), acc);
                                     }
                                 }
                             }
@@ -254,10 +254,10 @@ pub fn expr_has_impure_ops(expr: &Expr, locals: &HashSet<String>) -> bool {
         }
         Expr::Call(c) => {
             // 调用表达式：先检查 callee 与参数是否含副作用
-            if let Callee::Expr(e) = &c.callee {
-                if expr_has_impure_ops(e, locals) {
-                    return true;
-                }
+            if let Callee::Expr(e) = &c.callee
+                && expr_has_impure_ops(e, locals)
+            {
+                return true;
             }
             // 特判 Object.assign(Object, ...)：视为可能修改对象（副作用）
             let is_object_assign = if let Callee::Expr(e) = &c.callee {
@@ -299,10 +299,10 @@ pub fn expr_has_impure_ops(expr: &Expr, locals: &HashSet<String>) -> bool {
                         }
                     }
                     PropOrSpread::Prop(pb) => {
-                        if let Prop::KeyValue(kv) = pb.as_ref() {
-                            if expr_has_impure_ops(kv.value.as_ref(), locals) {
-                                return true;
-                            }
+                        if let Prop::KeyValue(kv) = pb.as_ref()
+                            && expr_has_impure_ops(kv.value.as_ref(), locals)
+                        {
+                            return true;
                         }
                     }
                 }

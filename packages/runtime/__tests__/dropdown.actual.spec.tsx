@@ -34,6 +34,7 @@ describe('Dropdown actual page', () => {
   it('renders dropdown demos, opens the controlled dropdown, and keeps native demos clickable', async () => {
     setEnabledPreviews(
       '受控开关与来源',
+      '右键上下文菜单',
       'Dropdown using details and summary',
       'Dropdown menu',
       'Positions',
@@ -41,6 +42,7 @@ describe('Dropdown actual page', () => {
 
     const container = mountContainer()
     const detailsDemoTitle = '# Dropdown using details and summary'
+    const contextMenuDemoTitle = '# 右键上下文菜单'
     const focusDemoTitle = '# Dropdown menu'
     const positionsDemoTitle = '# Positions'
 
@@ -54,22 +56,30 @@ describe('Dropdown actual page', () => {
 
     await waitForContent(() => {
       const currentDetailsDemo = findDemo(container, detailsDemoTitle) as HTMLElement | null
+      const currentContextMenuDemo = findDemo(container, contextMenuDemoTitle) as HTMLElement | null
       const currentFocusDemo = findDemo(container, focusDemoTitle) as HTMLElement | null
       const currentPositionsDemo = findDemo(container, positionsDemoTitle) as HTMLElement | null
       expect(currentDetailsDemo).not.toBeNull()
+      expect(currentContextMenuDemo).not.toBeNull()
       expect(currentFocusDemo).not.toBeNull()
       expect(currentPositionsDemo).not.toBeNull()
       expect(currentDetailsDemo!.querySelector('details.dropdown')).not.toBeNull()
+      expect(currentContextMenuDemo!.querySelector('[aria-haspopup="menu"]')).not.toBeNull()
       expect(currentFocusDemo!.querySelector('.dropdown-content')).not.toBeNull()
       expect(
         currentPositionsDemo!.querySelector('[data-testid="dropdown-position-start"]'),
       ).not.toBeNull()
+      expect(
+        currentPositionsDemo!.querySelector('[data-testid="dropdown-position-left-end-slot"]'),
+      ).not.toBeNull()
     })
 
     const detailsDemo = findDemo(container, detailsDemoTitle) as HTMLElement | null
+    const contextMenuDemo = findDemo(container, contextMenuDemoTitle) as HTMLElement | null
     const focusDemo = findDemo(container, focusDemoTitle) as HTMLElement | null
     const positionsDemo = findDemo(container, positionsDemoTitle) as HTMLElement | null
     expect(detailsDemo).not.toBeNull()
+    expect(contextMenuDemo).not.toBeNull()
     expect(focusDemo).not.toBeNull()
     expect(positionsDemo).not.toBeNull()
 
@@ -114,9 +124,29 @@ describe('Dropdown actual page', () => {
     const positionLeftEndTrigger = positionsDemo!.querySelector(
       '[data-testid="dropdown-position-left-end"]',
     ) as HTMLButtonElement
+    const positionLeftEndSlot = positionsDemo!.querySelector(
+      '[data-testid="dropdown-position-left-end-slot"]',
+    ) as HTMLElement
     expect(positionStartTrigger.tagName).toBe('BUTTON')
     expect(positionTopCenterTrigger.tagName).toBe('BUTTON')
     expect(positionLeftEndTrigger.tagName).toBe('BUTTON')
+    expect(positionLeftEndSlot.classList.contains('justify-end')).toBe(true)
+    expect(positionLeftEndSlot.classList.contains('sm:ps-56')).toBe(true)
+
+    const contextTrigger = contextMenuDemo!.querySelector('[aria-haspopup="menu"]') as HTMLElement
+    contextTrigger.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, clientX: 72, clientY: 128 }),
+    )
+
+    await waitForContent(() => {
+      const contextDropdown = contextMenuDemo!.querySelector('.dropdown') as HTMLElement
+      const contextOverlay = contextMenuDemo!.querySelector('.dropdown-content') as HTMLElement
+      expect(contextDropdown.classList.contains('dropdown-open')).toBe(true)
+      expect(contextOverlay.style.position).toBe('fixed')
+      expect(contextOverlay.style.left).toBe('72px')
+      expect(contextOverlay.style.top).toBe('128px')
+      expect(contextOverlay.style.margin).toBe('0px')
+    })
 
     await click(findTabButton(detailsDemo!, 'JSX代码'))
     const detailsDemoInCode = findDemo(container, detailsDemoTitle) as HTMLElement | null

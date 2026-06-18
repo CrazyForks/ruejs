@@ -5,6 +5,7 @@ import {
   computed,
   reactive,
   renderAnchor,
+  renderBetween,
   setReactiveScheduling,
   vapor,
   watchEffect,
@@ -22,6 +23,58 @@ const flushEffects = async () => {
 }
 
 describe('vaporKeyedList', () => {
+  it('skips stale async updates after the list anchors detach', async () => {
+    setReactiveScheduling('async')
+
+    try {
+      const items = reactive([{ id: 'root', label: 'Root' }]) as any
+      const parent = document.createElement('div')
+      const start = document.createComment('rue:list:start')
+      const end = document.createComment('rue:list:end')
+
+      parent.append(start, end)
+      document.body.appendChild(parent)
+
+      let elements = new Map<any, any>()
+      watchEffect(() => {
+        elements = _$vaporKeyedList({
+          items: items.map((item: any) => item),
+          getKey: (item: any) => item.id,
+          elements,
+          parent: start.parentNode as any,
+          before: end as any,
+          start: start as any,
+          renderItem: (item: any, listParent: any, itemStart: any, itemEnd: any) => {
+            renderBetween(
+              vapor(() => {
+                const row = document.createElement('div')
+                row.className = 'row'
+                row.textContent = item.label
+                return row as any
+              }) as any,
+              listParent,
+              itemStart,
+              itemEnd,
+            )
+          },
+        })
+      })
+
+      await flushEffects()
+
+      expect(parent.querySelector('.row')?.textContent).toBe('Root')
+
+      parent.replaceChildren()
+      items.push({ id: 'child', label: 'Child' })
+
+      await flushEffects()
+
+      expect(parent.childNodes).toHaveLength(0)
+    } finally {
+      setReactiveScheduling('sync')
+    }
+  })
+
   it('keeps keyed single-root rows aligned after removing the first reactive object item', async () => {
     const items = reactive([
       { label: 'A', value: 100 },

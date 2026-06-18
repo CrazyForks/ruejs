@@ -131,12 +131,12 @@ pub fn transform_opening(opening: &mut JSXOpeningElement) {
     // 1) 扫描是否存在 v-show/r-show 指令属性，并记录其索引
     let mut show_directive_idx: Option<usize> = None;
     for (i, a) in opening.attrs.iter().enumerate() {
-        if let JSXAttrOrSpread::JSXAttr(attr) = a {
-            if let JSXAttrName::Ident(n) = &attr.name {
-                let name = n.sym.as_ref();
-                if SHOW_DIRECTIVE_NAMES.contains(&name) {
-                    show_directive_idx = Some(i);
-                }
+        if let JSXAttrOrSpread::JSXAttr(attr) = a
+            && let JSXAttrName::Ident(n) = &attr.name
+        {
+            let name = n.sym.as_ref();
+            if SHOW_DIRECTIVE_NAMES.contains(&name) {
+                show_directive_idx = Some(i);
             }
         }
     }
@@ -161,12 +161,11 @@ pub fn transform_opening(opening: &mut JSXOpeningElement) {
             // 3) 查找是否存在 style 属性
             let mut style_idx: Option<usize> = None;
             for (i, a) in opening.attrs.iter().enumerate() {
-                if let JSXAttrOrSpread::JSXAttr(attr) = a {
-                    if let JSXAttrName::Ident(n) = &attr.name {
-                        if n.sym.as_ref() == "style" {
-                            style_idx = Some(i);
-                        }
-                    }
+                if let JSXAttrOrSpread::JSXAttr(attr) = a
+                    && let JSXAttrName::Ident(n) = &attr.name
+                    && n.sym.as_ref() == "style"
+                {
+                    style_idx = Some(i);
                 }
             }
             match style_idx {

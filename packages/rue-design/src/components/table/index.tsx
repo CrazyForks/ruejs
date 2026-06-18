@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Table 组件概述
 - 数据驱动：基于 columns 与 dataSource 渲染表格，支持排序、筛选、分页、选择、展开与分组表头。
@@ -6,7 +5,7 @@ Table 组件概述
 - 复合组件：Head/Body/Foot/TR/TH/TD 便于自定义结构；也可直接传 children。
 */
 import type { FC } from '@rue-js/rue'
-import { useState } from '@rue-js/rue'
+import { Fragment, useState } from '@rue-js/rue'
 import Dropdown from '../dropdown/index'
 
 type TableSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'small' | 'middle' | 'large'
@@ -626,6 +625,17 @@ const RenderTableSection: FC<{ render?: ((currentData: any[]) => any) | null; da
   return render(data)
 }
 
+const RenderExpandedRowContent: FC<{
+  render?: ((record: any, index: number, indent: number, expanded: boolean) => any) | null
+  record: any
+  index: number
+  indent: number
+  expanded: boolean
+}> = ({ render, record, index, indent, expanded }) => {
+  if (typeof render !== 'function') return null
+  return render(record, index, indent, expanded)
+}
+
 /** 判断 Primitive Node 的内部工具函数。 */
 const isPrimitiveNode = (value: any) => {
   const type = typeof value
@@ -1232,7 +1242,7 @@ const Table: FC<TableProps> = props => {
       const visible = column
         ? resolveFilterDropdownOpen(column, columnKey)
         : openFilterMenuKey.value === columnKey
-      if (visible) {
+      if (visible || draftFilterStateRef.value[columnKey] !== undefined) {
         return normalizeFilterValues(
           draftFilterStateRef.value[columnKey] ?? currentFilters[columnKey],
         )
@@ -1251,12 +1261,13 @@ const Table: FC<TableProps> = props => {
     const syncFilterDropdownVisible = (leafKey: string, column: ColumnItem, visible: boolean) => {
       const wasVisible = resolveFilterDropdownOpen(column, leafKey)
       if (visible) {
-        setDraftFilterStateRef({
+        draftFilterStateRef.value = {
           ...draftFilterStateRef.value,
           [leafKey]: normalizeFilterValues(currentFilters[leafKey]),
-        })
+        }
       }
       if (
+        !visible &&
         column.filterDropdownProps?.open === undefined &&
         column.filterDropdownOpen === undefined
       ) {
@@ -1264,7 +1275,7 @@ const Table: FC<TableProps> = props => {
           visible ? leafKey : openFilterMenuKey.value === leafKey ? null : openFilterMenuKey.value,
         )
       }
-      if (wasVisible !== visible || visible) bumpStateVersion()
+      if (!visible && wasVisible !== visible) bumpStateVersion()
       column.filterDropdownProps?.onOpenChange?.(visible)
       column.onFilterDropdownOpenChange?.(visible)
     }
@@ -1759,6 +1770,9 @@ const Table: FC<TableProps> = props => {
           ? rowSelection.columnTitle(selectionHeaderOriginNode)
           : rowSelection.columnTitle
         : selectionHeaderOriginNode
+    const handleScroll = (event: any) => {
+      if (onScroll) onScroll(event)
+    }
 
     return (
       <div
@@ -1772,7 +1786,7 @@ const Table: FC<TableProps> = props => {
           wrapperCls,
         )}
         style={mergeStyles(semanticStyles.root, wrapperStyle)}
-        onScroll={onScroll}
+        onScroll={handleScroll}
       >
         {showPager
           ? pagerPlacements.filter(placement => placement.startsWith('top')).map(renderPager)
@@ -1855,7 +1869,7 @@ const Table: FC<TableProps> = props => {
             className={semanticClasses.tbody}
             style={semanticStyles.tbody}
           >
-            {pageRows.flatMap((row, rowIndex) => {
+            {pageRows.map((row, rowIndex) => {
               const expandableState = getExpandableState(row, rowIndex)
               const rowProps = onRow ? onRow(row.record, rowIndex) || {} : {}
               const {
@@ -1874,136 +1888,143 @@ const Table: FC<TableProps> = props => {
                 if (target?.closest('button, input, a, label')) return
                 toggleExpandedRow(row, rowIndex)
               }
-              const rows = [
-                <tr
-                  key={`row-${String(row.key)}`}
-                  {...restRowProps}
-                  onClick={mergedRowClick}
-                  className={mergeClassNames(
-                    semanticClasses.bodyRow,
-                    rowPropClassName,
-                    baseRowClassName,
-                    hoverClassName,
-                  )}
-                  style={mergeStyles(
-                    semanticStyles.bodyRow,
-                    rowPropStyle as Record<string, any> | undefined,
-                  )}
-                >
-                  {expandColumnVisible ? (
-                    <td
-                      className={mergeClassNames(semanticClasses.cell, alignClass('center'))}
-                      style={mergeStyles(
-                        semanticStyles.cell,
-                        expandable?.columnWidth
-                          ? { width: expandable.columnWidth as any }
-                          : undefined,
-                        row.indent > 0
-                          ? { paddingLeft: `${row.indent * indentSize}px` }
-                          : undefined,
-                      )}
-                    >
-                      {renderExpandControl(row, rowIndex, expandableState)}
-                    </td>
-                  ) : null}
-                  {hasSelection ? renderSelectionCell(row, rowIndex) : null}
-                  {leafColumns.map((leaf, colIndex) => {
-                    const value = getVal(row.record, leaf.column.dataIndex)
-                    const rendered = leaf.column.render
-                      ? leaf.column.render(value, row.record, rowIndex)
-                      : value
-                    const cellProps = leaf.column.onCell
-                      ? leaf.column.onCell(row.record, rowIndex) || {}
-                      : {}
-                    const {
-                      className: cellPropClassName,
-                      style: cellPropStyle,
-                      ...restCellProps
-                    } = cellProps
-                    const colSpan = cellProps.colSpan ?? 1
-                    const rowSpan = cellProps.rowSpan ?? 1
-                    if (colSpan === 0 || rowSpan === 0) return null
-                    const inlineExpand = !expandColumnVisible && colIndex === 0
-                    const CellTag =
-                      leaf.column.rowScope || (pinCols && resolveFixedColumn(leaf.column))
-                        ? 'th'
-                        : 'td'
-                    const className = mergeClassNames(
-                      semanticClasses.cell,
-                      alignClass(leaf.column.align),
-                      leaf.column.className,
-                      leaf.column.ellipsis ? 'truncate' : undefined,
-                      cellPropClassName,
-                    )
-                    const style = mergeStyles(
-                      semanticStyles.cell,
-                      leaf.column.width || leaf.column.minWidth
-                        ? {
-                            ...(leaf.column.width ? { width: leaf.column.width as any } : {}),
-                            ...(leaf.column.minWidth
-                              ? { minWidth: leaf.column.minWidth as any }
-                              : {}),
-                          }
-                        : undefined,
-                      inlineExpand && row.indent > 0
-                        ? { paddingLeft: `${row.indent * indentSize}px` }
-                        : undefined,
-                      cellPropStyle as Record<string, any> | undefined,
-                    )
-                    const cellTitle =
-                      leaf.column.ellipsis &&
-                      shouldShowEllipsisTitle(leaf.column.ellipsis) &&
-                      isPrimitiveNode(rendered)
-                        ? String(rendered)
-                        : undefined
-                    const content = inlineExpand ? (
-                      <div className="flex items-center gap-2">
-                        {renderExpandControl(row, rowIndex, expandableState)}
-                        <span className={leaf.column.ellipsis ? 'truncate' : undefined}>
-                          {rendered}
-                        </span>
-                      </div>
-                    ) : (
-                      rendered
-                    )
-                    return (
-                      <CellTag
-                        key={`cell-${String(row.key)}-${leaf.key}-${colIndex}`}
-                        className={className}
-                        style={style}
-                        title={cellTitle}
-                        colSpan={colSpan}
-                        rowSpan={rowSpan}
-                        scope={leaf.column.rowScope}
-                        data-rue-table-indent={
-                          inlineExpand && row.indent > 0 ? String(row.indent) : undefined
-                        }
-                        {...restCellProps}
-                      >
-                        {content}
-                      </CellTag>
-                    )
-                  })}
-                </tr>,
-              ]
-              if (
+              const showExpandedRow =
                 hasExpandedRowRender &&
                 expandableState.hasExpandedRowRender &&
                 expandableState.expanded
-              ) {
-                const expandedRowClassName =
-                  typeof expandable?.expandedRowClassName === 'function'
-                    ? expandable.expandedRowClassName(row.record, rowIndex, row.indent)
-                    : expandable?.expandedRowClassName
-                rows.push(
-                  <tr key={`expanded-${String(row.key)}`} className={expandedRowClassName}>
-                    <td colSpan={bodyColSpan}>
-                      {expandable!.expandedRowRender!(row.record, rowIndex, row.indent, true)}
-                    </td>
-                  </tr>,
-                )
-              }
-              return rows
+              const expandedRowClassName = showExpandedRow
+                ? typeof expandable?.expandedRowClassName === 'function'
+                  ? expandable.expandedRowClassName(row.record, rowIndex, row.indent)
+                  : expandable?.expandedRowClassName
+                : undefined
+
+              return (
+                <Fragment key={`row-group-${String(row.key)}`}>
+                  <tr
+                    key={`row-${String(row.key)}`}
+                    {...restRowProps}
+                    onClick={mergedRowClick}
+                    className={mergeClassNames(
+                      semanticClasses.bodyRow,
+                      rowPropClassName,
+                      baseRowClassName,
+                      hoverClassName,
+                    )}
+                    style={mergeStyles(
+                      semanticStyles.bodyRow,
+                      rowPropStyle as Record<string, any> | undefined,
+                    )}
+                  >
+                    {expandColumnVisible ? (
+                      <td
+                        className={mergeClassNames(semanticClasses.cell, alignClass('center'))}
+                        style={mergeStyles(
+                          semanticStyles.cell,
+                          expandable?.columnWidth
+                            ? { width: expandable.columnWidth as any }
+                            : undefined,
+                          row.indent > 0
+                            ? { paddingLeft: `${row.indent * indentSize}px` }
+                            : undefined,
+                        )}
+                      >
+                        {renderExpandControl(row, rowIndex, expandableState)}
+                      </td>
+                    ) : null}
+                    {hasSelection ? renderSelectionCell(row, rowIndex) : null}
+                    {leafColumns.map((leaf, colIndex) => {
+                      const value = getVal(row.record, leaf.column.dataIndex)
+                      const rendered = leaf.column.render
+                        ? leaf.column.render(value, row.record, rowIndex)
+                        : value
+                      const cellProps = leaf.column.onCell
+                        ? leaf.column.onCell(row.record, rowIndex) || {}
+                        : {}
+                      const {
+                        className: cellPropClassName,
+                        style: cellPropStyle,
+                        ...restCellProps
+                      } = cellProps
+                      const colSpan = cellProps.colSpan ?? 1
+                      const rowSpan = cellProps.rowSpan ?? 1
+                      if (colSpan === 0 || rowSpan === 0) return null
+                      const inlineExpand = !expandColumnVisible && colIndex === 0
+                      const CellTag =
+                        leaf.column.rowScope || (pinCols && resolveFixedColumn(leaf.column))
+                          ? 'th'
+                          : 'td'
+                      const className = mergeClassNames(
+                        semanticClasses.cell,
+                        alignClass(leaf.column.align),
+                        leaf.column.className,
+                        leaf.column.ellipsis ? 'truncate' : undefined,
+                        cellPropClassName,
+                      )
+                      const style = mergeStyles(
+                        semanticStyles.cell,
+                        leaf.column.width || leaf.column.minWidth
+                          ? {
+                              ...(leaf.column.width ? { width: leaf.column.width as any } : {}),
+                              ...(leaf.column.minWidth
+                                ? { minWidth: leaf.column.minWidth as any }
+                                : {}),
+                            }
+                          : undefined,
+                        inlineExpand && row.indent > 0
+                          ? { paddingLeft: `${row.indent * indentSize}px` }
+                          : undefined,
+                        cellPropStyle as Record<string, any> | undefined,
+                      )
+                      const cellTitle =
+                        leaf.column.ellipsis &&
+                        shouldShowEllipsisTitle(leaf.column.ellipsis) &&
+                        isPrimitiveNode(rendered)
+                          ? String(rendered)
+                          : undefined
+                      const content = inlineExpand ? (
+                        <div className="flex items-center gap-2">
+                          {renderExpandControl(row, rowIndex, expandableState)}
+                          <span className={leaf.column.ellipsis ? 'truncate' : undefined}>
+                            {rendered}
+                          </span>
+                        </div>
+                      ) : (
+                        rendered
+                      )
+                      return (
+                        <CellTag
+                          key={`cell-${String(row.key)}-${leaf.key}-${colIndex}`}
+                          className={className}
+                          style={style}
+                          title={cellTitle}
+                          colSpan={colSpan}
+                          rowSpan={rowSpan}
+                          scope={leaf.column.rowScope}
+                          data-rue-table-indent={
+                            inlineExpand && row.indent > 0 ? String(row.indent) : undefined
+                          }
+                          {...restCellProps}
+                        >
+                          {content}
+                        </CellTag>
+                      )
+                    })}
+                  </tr>
+                  {showExpandedRow ? (
+                    <tr key={`expanded-${String(row.key)}`} className={expandedRowClassName}>
+                      <td colSpan={bodyColSpan}>
+                        <RenderExpandedRowContent
+                          render={expandable?.expandedRowRender}
+                          record={row.record}
+                          index={rowIndex}
+                          indent={row.indent}
+                          expanded
+                        />
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
+              )
             })}
             {pageRows.length === 0 ? (
               <tr>

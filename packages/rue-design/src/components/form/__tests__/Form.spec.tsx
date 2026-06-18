@@ -59,6 +59,172 @@ describe('Form', () => {
     })
   })
 
+  it('prevents native submit navigation for submit buttons', async () => {
+    const container = mountContainer()
+    const handleSubmit = vi.fn()
+    const handleFinish = vi.fn()
+    resetActiveRuntime()
+
+    render(
+      <Form
+        initialValues={{ profile: { name: 'Rue' } }}
+        onSubmit={handleSubmit}
+        onFinish={handleFinish}
+        render={form => (
+          <>
+            <Form.Item
+              form={form}
+              name={['profile', 'name']}
+              label="名称"
+              rules={[{ required: true }]}
+              render={control => <Input {...control} />}
+            />
+            <Button htmlType="submit">提交</Button>
+          </>
+        )}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(container.querySelector('form')).toBeTruthy()
+    })
+
+    const formElement = container.querySelector('form') as HTMLFormElement
+    const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
+
+    expect(formElement.dispatchEvent(submitEvent)).toBe(false)
+    expect(submitEvent.defaultPrevented).toBe(true)
+    expect(handleSubmit).toHaveBeenCalledWith(submitEvent)
+
+    await waitForContent(() => {
+      expect(handleFinish).toHaveBeenCalledWith({ profile: { name: 'Rue' } })
+    })
+  })
+
+  it('does not duplicate item content or errors after repeated failed submits', async () => {
+    const container = mountContainer()
+    const handleFinishFailed = vi.fn()
+    let formApi: any
+    resetActiveRuntime()
+
+    render(
+      <Form
+        onFinishFailed={handleFinishFailed}
+        initialValues={{
+          profile: {
+            name: '',
+            email: 'team@rue.dev',
+          },
+          agree: true,
+        }}
+        render={form => {
+          formApi = form
+          return (
+            <>
+              <Form.Item
+                form={form}
+                name={['profile', 'name']}
+                label="名称"
+                rules={[{ required: true }]}
+                extra="名称字段会直接参与 submit payload。"
+                render={control => <Input {...control} />}
+              />
+              <Form.Item
+                form={form}
+                name={['profile', 'email']}
+                label="邮箱"
+                rules={[{ required: true }, { type: 'email' }]}
+                hasFeedback={true}
+                extra="这里演示 Rue Form 当前支持的校验消息、反馈图标和 scrollToFirstError 行为。"
+                render={control => <Input {...control} />}
+              />
+              <Form.Item
+                form={form}
+                name="agree"
+                label="发布确认"
+                valuePropName="checked"
+                render={control => <Checkbox {...control}>允许直接覆盖 staging 配置</Checkbox>}
+              />
+              <Button htmlType="submit">提交</Button>
+            </>
+          )
+        }}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(container.querySelectorAll('.rue-form-item')).toHaveLength(3)
+    })
+
+    formApi.submit()
+    formApi.submit()
+    formApi.submit()
+
+    await waitForContent(() => {
+      expect(container.querySelectorAll('.rue-form-item')).toHaveLength(3)
+      expect(container.querySelectorAll('input[type="text"], input:not([type])')).toHaveLength(2)
+      expect(container.querySelectorAll('input[type="checkbox"]')).toHaveLength(1)
+      expect(handleFinishFailed).toHaveBeenCalledTimes(3)
+    })
+
+    const latestFailure = handleFinishFailed.mock.calls[handleFinishFailed.mock.calls.length - 1][0]
+    expect(latestFailure.errorFields).toHaveLength(1)
+    expect(latestFailure.errorFields[0].name).toEqual(['profile', 'name'])
+  })
+
+  it('scrolls named forms to fields with generated item ids', async () => {
+    const container = mountContainer()
+    const scrollIntoView = vi.fn()
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
+    let formApi: any
+    resetActiveRuntime()
+
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    })
+
+    try {
+      render(
+        <Form
+          name="profile-form"
+          render={form => {
+            formApi = form
+            return (
+              <Form.Item
+                form={form}
+                name={['profile', 'name']}
+                label="名称"
+                render={control => <Input {...control} />}
+              />
+            )
+          }}
+        />,
+        container,
+      )
+
+      await waitForContent(() => {
+        expect(container.querySelector('#profile__name')).toBeTruthy()
+      })
+
+      formApi.scrollToField(['profile', 'name'], { block: 'center', focus: true })
+
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', focus: true })
+      expect(document.activeElement).toBe(container.querySelector('#profile__name'))
+    } finally {
+      if (originalScrollIntoView) {
+        Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+          configurable: true,
+          value: originalScrollIntoView,
+        })
+      } else {
+        delete (HTMLElement.prototype as any).scrollIntoView
+      }
+    }
+  })
+
   it('shows validation errors and emits finish failed info', async () => {
     const container = mountContainer()
     const handleFinishFailed = vi.fn()

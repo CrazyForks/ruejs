@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 MockupWindow 组件概述
 - 保留 daisyUI 的 mockup-window 外框和既有 children 用法。
@@ -96,6 +95,9 @@ const hasVisibleChildren = (children: any) => {
   return children != null
 }
 
+/** 保持外部传入的 JSX / Vapor handle 始终通过插槽锚点渲染。 */
+const RenderableSlot: FC<{ value?: any }> = ({ value }) => <>{value}</>
+
 /** Header 的内部工具函数。 */
 const Header: FC<MockupWindowHeaderProps> = ({
   title,
@@ -118,17 +120,25 @@ const Header: FC<MockupWindowHeaderProps> = ({
       style={style}
     >
       {hasCustomChildren ? (
-        children
+        <RenderableSlot value={children} />
       ) : (
         <>
           <div className="min-w-0 flex-1">
-            {title != null ? <div className="truncate text-sm font-semibold">{title}</div> : null}
+            {title != null ? (
+              <div className="truncate text-sm font-semibold">
+                <RenderableSlot value={title} />
+              </div>
+            ) : null}
             {description != null ? (
-              <div className="mt-1 text-xs opacity-70">{description}</div>
+              <div className="mt-1 text-xs opacity-70">
+                <RenderableSlot value={description} />
+              </div>
             ) : null}
           </div>
           {extra != null ? (
-            <div className="flex shrink-0 flex-wrap items-center gap-2">{extra}</div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <RenderableSlot value={extra} />
+            </div>
           ) : null}
         </>
       )}
@@ -155,7 +165,7 @@ const Body: FC<MockupWindowBodyProps> = ({
       )}
       style={style}
     >
-      {children}
+      <RenderableSlot value={children} />
     </div>
   )
 }
@@ -171,7 +181,7 @@ const Toolbar: FC<MockupWindowPartProps> = ({ className, style, children, ...res
       )}
       style={style}
     >
-      {children}
+      <RenderableSlot value={children} />
     </div>
   )
 }
@@ -187,7 +197,7 @@ const Actions: FC<MockupWindowPartProps> = ({ className, style, children, ...res
       )}
       style={style}
     >
-      {children}
+      <RenderableSlot value={children} />
     </div>
   )
 }
@@ -227,7 +237,7 @@ const Root: FC<MockupWindowProps> = ({
   if (!hasStructuredSlots) {
     return (
       <div {...rest} className={rootClassName} style={style}>
-        {children}
+        <RenderableSlot value={children} />
       </div>
     )
   }

@@ -444,21 +444,21 @@ const App: FC = () => h(Transition, { mode: 'out-in' })
 
 ### `v-model` {#v-model}
 
-`v-model` 在手写渲染函数里需要你显式提供 `modelValue` 和 `onUpdate:modelValue`：
+`v-model` 在手写渲染函数里需要你显式提供 `modelValue` 和 `onUpdateModelValue`：
 
 ```tsx
 import type { FC } from '@rue-js/rue'
 
 interface Props {
   modelValue: string
-  'onUpdate:modelValue'?: (value: string) => void
+  onUpdateModelValue?: (value: string) => void
 }
 
 const MyInput: FC<Props> = props => {
   return (
     <input
       value={props.modelValue}
-      onInput={event => props['onUpdate:modelValue']?.((event.target as HTMLInputElement).value)}
+      onInput={event => props.onUpdateModelValue?.((event.target as HTMLInputElement).value)}
     />
   )
 }
@@ -485,7 +485,7 @@ const MyComponent: FC<Props> = props => {
 }
 ```
 
-如果组件需要向父级发信号，优先把它建模成显式 callback props，例如 `onSendMessage`、`onClose`、`onUpdate:modelValue`。如果组件需要默认内容或 render prop，则继续使用 `props.children`。
+如果组件需要向父级发信号，优先把它建模成显式 callback props，例如 `onSendMessage`、`onClose`、`onUpdateModelValue`。如果组件需要默认内容或 render prop，则继续使用 `props.children`。
 
 函数组件可以像普通组件一样被导入、注册和消费；把函数传给 `h()` 的第一个参数时，它就会被视为组件。
 

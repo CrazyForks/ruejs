@@ -22,33 +22,34 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-        const info = {
-            x: a.value,
-            arr: [
-                a.value,
-                `t=${a.value}`
-            ]
-        };
-        _$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>{
-                console.log('tick', info.x, info.arr[0]);
-                onBeforeUnmount(()=>_$vaporWithHookId("watchEffect:1:1", ()=>watchEffect(()=>console.log('cleanup', a.value))));
-            }));
-        const assign = Object.assign(window as any, {
-            a
-        });
-        return {
-            a: a,
-            info: info,
-            assign: assign
-        };
-    }));
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(0));
+            const info = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+                        x: a.value,
+                        arr: [
+                            a.value,
+                            `t=${a.value}`
+                        ]
+                    })));
+            const __rue_phase2_info = info;
+            _$vaporWithHookId("watchEffect:1:3", ()=>watchEffect(()=>{
+                    console.log('tick', __rue_phase2_info.get().x, __rue_phase2_info.get().arr[0]);
+                    onBeforeUnmount(()=>_$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>console.log('cleanup', a.value))));
+                }));
+            const assign = Object.assign(window as any, {
+                a
+            });
+            return {
+                a: a,
+                info: info,
+                assign: assign
+            };
+        }));
     const { a: a, info: info, assign: assign } = _$useSetup;
-    return <div>{info.arr[1]}</div>;
+    return <div>{info.get().arr[1]}</div>;
 };
 "##;
 

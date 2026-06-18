@@ -206,3 +206,10 @@ export const dispatchErrorCaptured = (
 
   return false
 }
+
+;(
+  globalThis as typeof globalThis & {
+    __rue_dispatch_error_captured?: (error: any, instance?: any, info?: string) => boolean
+  }
+).__rue_dispatch_error_captured = (error, instance, info) =>
+  wasErrorCapturedDispatched(error) ? false : dispatchErrorCaptured(error, instance, info)

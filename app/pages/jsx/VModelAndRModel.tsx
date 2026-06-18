@@ -93,16 +93,105 @@ const UserNameEditor: FC<UserNameEditorProps> = props => {
   )
 }
 
-const vModelAttr = ['v', '-model'].join('')
-const vModelTrimAttr = ['v', '-model', ':trim'].join('')
+const defaultModelAttr = ['v', '-model'].join('')
+const trimModelAttr = ['v', '-model', ':trim'].join('')
 const rModelNumberAttr = ['r', '-model', ':number'].join('')
 const rModelLazyAttr = ['r', '-model', ':lazy'].join('')
-const vModelTitleTrimAttr = ['v', '-model', ':trim-title'].join('')
-const vModelFirstNameAttr = ['v', '-model', ':trim-first-name'].join('')
-const vModelLastNameAttr = ['v', '-model', ':lazy-last-name'].join('')
+const titleTrimModelAttr = ['v', '-model', ':trim-title'].join('')
+const firstNameTrimModelAttr = ['v', '-model', ':trim-first-name'].join('')
+const lastNameLazyModelAttr = ['v', '-model', ':lazy-last-name'].join('')
 
 const directiveCode = [
   "import { type FC, ref } from '@rue-js/rue'",
+  '',
+  'type ModelFieldProps = {',
+  '  label: string',
+  '  modelValue?: string',
+  '  onUpdateModelValue?: (value: string) => void',
+  '}',
+  '',
+  'const ModelField: FC<ModelFieldProps> = props => (',
+  '  <label className="floating-label">',
+  '    <input',
+  '      className="input input-bordered w-full"',
+  "      value={props.modelValue ?? ''}",
+  '      onInput={(event: Event) => {',
+  '        props.onUpdateModelValue?.((event.target as HTMLInputElement).value)',
+  '      }}',
+  '    />',
+  '    <span>{props.label}</span>',
+  '  </label>',
+  ')',
+  '',
+  'type TitleFieldProps = {',
+  '  title?: string',
+  '  titleModifiers?: { trim?: boolean; lazy?: boolean }',
+  '  onUpdateTitle?: (value: string) => void',
+  '}',
+  '',
+  'const TitleField: FC<TitleFieldProps> = props => {',
+  '  const emitTitleUpdate = (event: Event) => {',
+  '    const rawValue = (event.target as HTMLInputElement).value',
+  '    props.onUpdateTitle?.(props.titleModifiers?.trim ? rawValue.trim() : rawValue)',
+  '  }',
+  '',
+  '  return (',
+  '    <label className="floating-label">',
+  '      <input',
+  '        className="input input-bordered w-full"',
+  "        value={props.title ?? ''}",
+  '        onInput={props.titleModifiers?.lazy ? undefined : emitTitleUpdate}',
+  '        onChange={props.titleModifiers?.lazy ? emitTitleUpdate : undefined}',
+  '      />',
+  '      <span>title</span>',
+  '    </label>',
+  '  )',
+  '}',
+  '',
+  'type UserNameEditorProps = {',
+  '  firstName?: string',
+  '  lastName?: string',
+  '  firstNameModifiers?: { trim?: boolean; lazy?: boolean }',
+  '  lastNameModifiers?: { trim?: boolean; lazy?: boolean }',
+  '  onUpdateFirstName?: (value: string) => void',
+  '  onUpdateLastName?: (value: string) => void',
+  '}',
+  '',
+  'const UserNameEditor: FC<UserNameEditorProps> = props => {',
+  '  const emitFirstNameUpdate = (event: Event) => {',
+  '    const rawValue = (event.target as HTMLInputElement).value',
+  '    props.onUpdateFirstName?.(props.firstNameModifiers?.trim ? rawValue.trim() : rawValue)',
+  '  }',
+  '',
+  '  const emitLastNameUpdate = (event: Event) => {',
+  '    const rawValue = (event.target as HTMLInputElement).value',
+  '    props.onUpdateLastName?.(props.lastNameModifiers?.trim ? rawValue.trim() : rawValue)',
+  '  }',
+  '',
+  '  return (',
+  '    <div className="grid gap-3 md:grid-cols-2">',
+  '      <label className="floating-label">',
+  '        <input',
+  '          className="input input-bordered w-full"',
+  "          value={props.firstName ?? ''}",
+  '          onInput={props.firstNameModifiers?.lazy ? undefined : emitFirstNameUpdate}',
+  '          onChange={props.firstNameModifiers?.lazy ? emitFirstNameUpdate : undefined}',
+  '        />',
+  '        <span>firstName</span>',
+  '      </label>',
+  '',
+  '      <label className="floating-label">',
+  '        <input',
+  '          className="input input-bordered w-full"',
+  "          value={props.lastName ?? ''}",
+  '          onInput={props.lastNameModifiers?.lazy ? undefined : emitLastNameUpdate}',
+  '          onChange={props.lastNameModifiers?.lazy ? emitLastNameUpdate : undefined}',
+  '        />',
+  '        <span>lastName</span>',
+  '      </label>',
+  '    </div>',
+  '  )',
+  '}',
   '',
   'const Demo: FC = () => {',
   "  const message = ref('  Rue model  ')",
@@ -117,19 +206,19 @@ const directiveCode = [
   '',
   '  return (',
   '    <section className="grid gap-4">',
-  '      <input className="input input-bordered" ' + vModelAttr + '={message.value} />',
-  '      <input className="input input-bordered" ' + vModelTrimAttr + '={trimmed.value} />',
+  '      <input className="input input-bordered" ' + defaultModelAttr + '={message.value} />',
+  '      <input className="input input-bordered" ' + trimModelAttr + '={trimmed.value} />',
   '      <input type="number" className="input input-bordered" ' +
     rModelNumberAttr +
     '={age.value} />',
   '      <input className="input input-bordered" ' + rModelLazyAttr + '={lazyNote.value} />',
-  '      <input type="checkbox" className="checkbox" ' + vModelAttr + '={accepted.value} />',
+  '      <input type="checkbox" className="checkbox" ' + defaultModelAttr + '={accepted.value} />',
   '',
-  '      <ModelField label="默认组件 model" ' + vModelAttr + '={title.value} />',
-  '      <TitleField ' + vModelTitleTrimAttr + '={articleTitle.value} />',
+  '      <ModelField label="默认组件 model" ' + defaultModelAttr + '={title.value} />',
+  '      <TitleField ' + titleTrimModelAttr + '={articleTitle.value} />',
   '      <UserNameEditor',
-  '        ' + vModelFirstNameAttr + '={firstName.value}',
-  '        ' + vModelLastNameAttr + '={lastName.value}',
+  '        ' + firstNameTrimModelAttr + '={firstName.value}',
+  '        ' + lastNameLazyModelAttr + '={lastName.value}',
   '      />',
   '    </section>',
   '  )',
@@ -139,6 +228,95 @@ const directiveCode = [
 ].join('\n')
 
 const manualCompareCode = `import { type FC, ref } from '@rue-js/rue'
+
+type ModelFieldProps = {
+  label: string
+  modelValue?: string
+  onUpdateModelValue?: (value: string) => void
+}
+
+const ModelField: FC<ModelFieldProps> = props => (
+  <label className="floating-label">
+    <input
+      className="input input-bordered w-full"
+      value={props.modelValue ?? ''}
+      onInput={(event: Event) => {
+        props.onUpdateModelValue?.((event.target as HTMLInputElement).value)
+      }}
+    />
+    <span>{props.label}</span>
+  </label>
+)
+
+type TitleFieldProps = {
+  title?: string
+  titleModifiers?: { trim?: boolean; lazy?: boolean }
+  onUpdateTitle?: (value: string) => void
+}
+
+const TitleField: FC<TitleFieldProps> = props => {
+  const emitTitleUpdate = (event: Event) => {
+    const rawValue = (event.target as HTMLInputElement).value
+    props.onUpdateTitle?.(props.titleModifiers?.trim ? rawValue.trim() : rawValue)
+  }
+
+  return (
+    <label className="floating-label">
+      <input
+        className="input input-bordered w-full"
+        value={props.title ?? ''}
+        onInput={props.titleModifiers?.lazy ? undefined : emitTitleUpdate}
+        onChange={props.titleModifiers?.lazy ? emitTitleUpdate : undefined}
+      />
+      <span>title</span>
+    </label>
+  )
+}
+
+type UserNameEditorProps = {
+  firstName?: string
+  lastName?: string
+  firstNameModifiers?: { trim?: boolean; lazy?: boolean }
+  lastNameModifiers?: { trim?: boolean; lazy?: boolean }
+  onUpdateFirstName?: (value: string) => void
+  onUpdateLastName?: (value: string) => void
+}
+
+const UserNameEditor: FC<UserNameEditorProps> = props => {
+  const emitFirstNameUpdate = (event: Event) => {
+    const rawValue = (event.target as HTMLInputElement).value
+    props.onUpdateFirstName?.(props.firstNameModifiers?.trim ? rawValue.trim() : rawValue)
+  }
+
+  const emitLastNameUpdate = (event: Event) => {
+    const rawValue = (event.target as HTMLInputElement).value
+    props.onUpdateLastName?.(props.lastNameModifiers?.trim ? rawValue.trim() : rawValue)
+  }
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      <label className="floating-label">
+        <input
+          className="input input-bordered w-full"
+          value={props.firstName ?? ''}
+          onInput={props.firstNameModifiers?.lazy ? undefined : emitFirstNameUpdate}
+          onChange={props.firstNameModifiers?.lazy ? emitFirstNameUpdate : undefined}
+        />
+        <span>firstName</span>
+      </label>
+
+      <label className="floating-label">
+        <input
+          className="input input-bordered w-full"
+          value={props.lastName ?? ''}
+          onInput={props.lastNameModifiers?.lazy ? undefined : emitLastNameUpdate}
+          onChange={props.lastNameModifiers?.lazy ? emitLastNameUpdate : undefined}
+        />
+        <span>lastName</span>
+      </label>
+    </div>
+  )
+}
 
 const Demo: FC = () => {
   const message = ref('  Rue model  ')
@@ -231,54 +409,226 @@ const Demo: FC = () => {
 
 export default Demo`
 
-const modifierSyntaxCode = [
-  '// TSX-safe 内建修饰符写法',
-  '<input ' + vModelTrimAttr + '={message.value} />',
-  '<input ' + rModelNumberAttr + '={age.value} />',
-  '<input ' + rModelLazyAttr + '={lazyNote.value} />',
-  '<TitleField ' + vModelTitleTrimAttr + '={articleTitle.value} />',
-  '<UserNameEditor ' + vModelFirstNameAttr + '={firstName.value} />',
-  '<UserNameEditor ' + vModelLastNameAttr + '={lastName.value} />',
-  '',
-  '// 冒号后的前导内建修饰符会映射到 xxxModifiers，并在原生元素上切换 input/change 等行为',
-].join('\n')
+const modifierSyntaxCode = `import { type FC, ref } from '@rue-js/rue'
 
-const componentMappingCode = `// 实际 Rue TSX
-<ModelField v-model={title.value} />
-<TitleField v-model:trim-title={articleTitle.value} />
-<UserNameEditor
-  v-model:trim-first-name={firstName.value}
-  v-model:lazy-last-name={lastName.value}
-/>
+type TitleFieldProps = {
+  title?: string
+  titleModifiers?: { trim?: boolean; lazy?: boolean }
+  onUpdateTitle?: (value: string) => void
+}
 
-// 等价手写 props
-<ModelField
-  modelValue={title.value}
-  onUpdateModelValue={value => {
-    title.value = value
-  }}
-/>
+const TitleField: FC<TitleFieldProps> = props => {
+  const emitTitleUpdate = (event: Event) => {
+    const rawValue = (event.target as HTMLInputElement).value
+    props.onUpdateTitle?.(props.titleModifiers?.trim ? rawValue.trim() : rawValue)
+  }
 
-<TitleField
-  title={articleTitle.value}
-  titleModifiers={{ trim: true }}
-  onUpdateTitle={value => {
-    articleTitle.value = value
-  }}
-/>
+  return (
+    <label className="floating-label">
+      <input
+        className="input input-bordered w-full"
+        value={props.title ?? ''}
+        onInput={props.titleModifiers?.lazy ? undefined : emitTitleUpdate}
+        onChange={props.titleModifiers?.lazy ? emitTitleUpdate : undefined}
+      />
+      <span>title</span>
+    </label>
+  )
+}
 
-<UserNameEditor
-  firstName={firstName.value}
-  lastName={lastName.value}
-  firstNameModifiers={{ trim: true }}
-  lastNameModifiers={{ lazy: true }}
-  onUpdateFirstName={value => {
-    firstName.value = value
-  }}
-  onUpdateLastName={value => {
-    lastName.value = value
-  }}
-/>`
+type UserNameEditorProps = {
+  firstName?: string
+  lastName?: string
+  firstNameModifiers?: { trim?: boolean; lazy?: boolean }
+  lastNameModifiers?: { trim?: boolean; lazy?: boolean }
+  onUpdateFirstName?: (value: string) => void
+  onUpdateLastName?: (value: string) => void
+}
+
+const UserNameEditor: FC<UserNameEditorProps> = props => {
+  const emitFirstNameUpdate = (event: Event) => {
+    const rawValue = (event.target as HTMLInputElement).value
+    props.onUpdateFirstName?.(props.firstNameModifiers?.trim ? rawValue.trim() : rawValue)
+  }
+
+  const emitLastNameUpdate = (event: Event) => {
+    const rawValue = (event.target as HTMLInputElement).value
+    props.onUpdateLastName?.(props.lastNameModifiers?.trim ? rawValue.trim() : rawValue)
+  }
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      <input
+        className="input input-bordered"
+        value={props.firstName ?? ''}
+        onInput={props.firstNameModifiers?.lazy ? undefined : emitFirstNameUpdate}
+        onChange={props.firstNameModifiers?.lazy ? emitFirstNameUpdate : undefined}
+      />
+      <input
+        className="input input-bordered"
+        value={props.lastName ?? ''}
+        onInput={props.lastNameModifiers?.lazy ? undefined : emitLastNameUpdate}
+        onChange={props.lastNameModifiers?.lazy ? emitLastNameUpdate : undefined}
+      />
+    </div>
+  )
+}
+
+const Demo: FC = () => {
+  const message = ref('  Rue model  ')
+  const age = ref<string | number>('18')
+  const lazyNote = ref('blur to sync')
+  const articleTitle = ref('Inside Rue')
+  const firstName = ref('Rue')
+  const lastName = ref('JSX')
+
+  return (
+    <section className="grid gap-4">
+      <input className="input input-bordered" v-model:trim={message.value} />
+      <input type="number" className="input input-bordered" r-model:number={age.value} />
+      <input className="input input-bordered" r-model:lazy={lazyNote.value} />
+      <TitleField v-model:trim-title={articleTitle.value} />
+      <UserNameEditor
+        v-model:trim-first-name={firstName.value}
+        v-model:lazy-last-name={lastName.value}
+      />
+    </section>
+  )
+}
+
+export default Demo`
+
+const componentMappingCode = `import { type FC, ref } from '@rue-js/rue'
+
+type ModelFieldProps = {
+  label: string
+  modelValue?: string
+  onUpdateModelValue?: (value: string) => void
+}
+
+const ModelField: FC<ModelFieldProps> = props => (
+  <label className="floating-label">
+    <input
+      className="input input-bordered w-full"
+      value={props.modelValue ?? ''}
+      onInput={(event: Event) => {
+        props.onUpdateModelValue?.((event.target as HTMLInputElement).value)
+      }}
+    />
+    <span>{props.label}</span>
+  </label>
+)
+
+type TitleFieldProps = {
+  title?: string
+  titleModifiers?: { trim?: boolean; lazy?: boolean }
+  onUpdateTitle?: (value: string) => void
+}
+
+const TitleField: FC<TitleFieldProps> = props => {
+  const emitTitleUpdate = (event: Event) => {
+    const rawValue = (event.target as HTMLInputElement).value
+    props.onUpdateTitle?.(props.titleModifiers?.trim ? rawValue.trim() : rawValue)
+  }
+
+  return (
+    <input
+      className="input input-bordered"
+      value={props.title ?? ''}
+      onInput={props.titleModifiers?.lazy ? undefined : emitTitleUpdate}
+      onChange={props.titleModifiers?.lazy ? emitTitleUpdate : undefined}
+    />
+  )
+}
+
+type UserNameEditorProps = {
+  firstName?: string
+  lastName?: string
+  firstNameModifiers?: { trim?: boolean; lazy?: boolean }
+  lastNameModifiers?: { trim?: boolean; lazy?: boolean }
+  onUpdateFirstName?: (value: string) => void
+  onUpdateLastName?: (value: string) => void
+}
+
+const UserNameEditor: FC<UserNameEditorProps> = props => {
+  const emitFirstNameUpdate = (event: Event) => {
+    const rawValue = (event.target as HTMLInputElement).value
+    props.onUpdateFirstName?.(props.firstNameModifiers?.trim ? rawValue.trim() : rawValue)
+  }
+
+  const emitLastNameUpdate = (event: Event) => {
+    const rawValue = (event.target as HTMLInputElement).value
+    props.onUpdateLastName?.(props.lastNameModifiers?.trim ? rawValue.trim() : rawValue)
+  }
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      <input
+        className="input input-bordered"
+        value={props.firstName ?? ''}
+        onInput={props.firstNameModifiers?.lazy ? undefined : emitFirstNameUpdate}
+        onChange={props.firstNameModifiers?.lazy ? emitFirstNameUpdate : undefined}
+      />
+      <input
+        className="input input-bordered"
+        value={props.lastName ?? ''}
+        onInput={props.lastNameModifiers?.lazy ? undefined : emitLastNameUpdate}
+        onChange={props.lastNameModifiers?.lazy ? emitLastNameUpdate : undefined}
+      />
+    </div>
+  )
+}
+
+const Demo: FC = () => {
+  const title = ref('Guide draft')
+  const articleTitle = ref('Inside Rue')
+  const firstName = ref('Rue')
+  const lastName = ref('JSX')
+
+  return (
+    <section className="grid gap-6">
+      <div className="grid gap-3">
+        <ModelField label="默认组件 model" v-model={title.value} />
+        <TitleField v-model:trim-title={articleTitle.value} />
+        <UserNameEditor
+          v-model:trim-first-name={firstName.value}
+          v-model:lazy-last-name={lastName.value}
+        />
+      </div>
+
+      <div className="grid gap-3">
+        <ModelField
+          label="默认组件 model"
+          modelValue={title.value}
+          onUpdateModelValue={value => {
+            title.value = value
+          }}
+        />
+        <TitleField
+          title={articleTitle.value}
+          titleModifiers={{ trim: true }}
+          onUpdateTitle={value => {
+            articleTitle.value = value
+          }}
+        />
+        <UserNameEditor
+          firstName={firstName.value}
+          lastName={lastName.value}
+          firstNameModifiers={{ trim: true }}
+          lastNameModifiers={{ lazy: true }}
+          onUpdateFirstName={value => {
+            firstName.value = value
+          }}
+          onUpdateLastName={value => {
+            lastName.value = value
+          }}
+        />
+      </div>
+    </section>
+  )
+}
+
+export default Demo`
 
 const updateText = (model: { value: string }, event: Event) => {
   model.value = (event.target as HTMLInputElement).value
@@ -527,7 +877,7 @@ const VModelAndRModel: FC = () => {
                   <div className="rounded-box border border-base-300 bg-base-100 p-4 grid gap-4">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="font-semibold">等价手写 props</h3>
-                      <span className="badge badge-secondary">modelValue / onUpdateX</span>
+                      <span className="badge badge-secondary">modelValue / onUpdateXxx</span>
                     </div>
 
                     <Code className="h-full" lang="tsx" code={componentMappingCode} />

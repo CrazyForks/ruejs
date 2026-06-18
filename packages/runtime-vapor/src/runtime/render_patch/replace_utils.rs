@@ -11,6 +11,13 @@ use js_sys::JsString;
 use js_sys::{Array, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 
+const RUE_KEEP_ALIVE_RANGE_KEY: &str = "__rue_keep_alive_range__";
+
+fn is_keep_alive_range_start(node: &JsValue) -> bool {
+    Reflect::get(node, &JsValue::from_str(RUE_KEEP_ALIVE_RANGE_KEY)).ok().and_then(|v| v.as_bool())
+        == Some(true)
+}
+
 // 替换与插入辅助工具：
 // - resolve_dest_parent：当父为片段或锚点/旧 el 不在父内时，解析真实父节点。
 // - insert_with_anchor_opt：依据锚点存在与否选择前插或尾部追加。
@@ -235,6 +242,9 @@ where
             let mut hit = None;
             for (i, entry) in self.anchor_map.iter().enumerate() {
                 let av: JsValue = entry.anchor.clone().into();
+                if is_keep_alive_range_start(&av) {
+                    continue;
+                }
                 if js_sys::Object::is(&av, &anchor_js) {
                     hit = Some(i);
                     break;
@@ -293,6 +303,9 @@ where
             let mut hit = None;
             for (i, entry) in self.range_map.iter().enumerate() {
                 let sv: JsValue = entry.start.clone().into();
+                if is_keep_alive_range_start(&sv) {
+                    continue;
+                }
                 if js_sys::Object::is(&sv, &start_js) {
                     hit = Some(i);
                     break;
@@ -454,6 +467,9 @@ where
                     let node_js: JsValue = node_el.clone().into();
                     for (i, entry) in self.range_map.iter().enumerate() {
                         let sv: JsValue = entry.start.clone().into();
+                        if is_keep_alive_range_start(&sv) {
+                            continue;
+                        }
                         if js_sys::Object::is(&sv, &node_js) {
                             hit = Some(i);
                             break;
@@ -908,7 +924,7 @@ mod tests {
         rue.insert_with_end_anchor_opt(&mut no_anchor_parent, &fallback_child, &None);
         assert_eq!(child_tags(&no_anchor_parent), vec!["fallback-child"]);
 
-        let mut outer_parent = node("outer-parent");
+        let outer_parent = node("outer-parent");
         let outer_anchor = node("outer-anchor");
         set_children(&outer_parent, &[outer_anchor.clone()]);
         let mut nested_parent = node("nested-parent");

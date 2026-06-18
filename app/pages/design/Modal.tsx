@@ -886,7 +886,20 @@ const ModalPage: FC = () => {
     wideOpen.value = false
   }}
 >
-  <div className="grid gap-4 py-2 md:grid-cols-2">...</div>
+  <div className="grid gap-4 py-2 md:grid-cols-2">
+    <div className="rounded-box bg-base-200 p-4">
+      <h3 className="mt-0 text-base font-semibold">Highlights</h3>
+      <p className="mb-0 text-sm text-base-content/70">
+        Routing docs refreshed, design pages expanded, and runtime tests tightened.
+      </p>
+    </div>
+    <div className="rounded-box bg-base-200 p-4">
+      <h3 className="mt-0 text-base font-semibold">Notes</h3>
+      <p className="mb-0 text-sm text-base-content/70">
+        Use modal width utilities on className when the default box is too narrow.
+      </p>
+    </div>
+  </div>
 </Modal>`}
         />
 
@@ -946,12 +959,28 @@ const asyncLoading = ref(false)
     renderOpen.value = false
   }}
 >
-  <div className="grid gap-4 py-2 md:grid-cols-2">...</div>
+  <div className="grid gap-4 py-2 md:grid-cols-2">
+    <label className="form-control gap-2">
+      <span className="label-text font-medium">Environment</span>
+      <select className="select select-bordered">
+        <option>Staging</option>
+        <option>Production</option>
+      </select>
+    </label>
+    <label className="form-control gap-2">
+      <span className="label-text font-medium">Deploy channel</span>
+      <select className="select select-bordered">
+        <option>Web</option>
+        <option>Desktop</option>
+      </select>
+    </label>
+  </div>
+  <p className="mb-0 text-sm text-base-content/70">Saved count: {guardCount.value}</p>
 </Modal>`}
         />
 
         <ExampleBlock
-          title="Static API"
+          title="API"
           summary="支持如下的命令式弹窗：`Modal.confirm/info/success/warning/error` 会直接打开弹窗，并返回可 `update/destroy` 的实例。"
           tab={tabApi}
           preview={ApiModalPreview}
@@ -1037,7 +1066,15 @@ Modal.destroyAll()`}
     keepMountedOpen.value = false
   }}
 >
-  <textarea className="textarea textarea-bordered min-h-32 w-full" defaultValue="..." />
+  <div className="space-y-3 py-2">
+    <textarea
+      className="textarea textarea-bordered min-h-32 w-full"
+      defaultValue="This textarea keeps its DOM state after the modal is hidden."
+    />
+    <div className="alert alert-info text-sm">
+      这里禁用了遮罩点击和 ESC 关闭，只保留右上角关闭按钮，方便演示 maskClosable 与 keyboard。
+    </div>
+  </div>
 </Modal>`}
         />
 

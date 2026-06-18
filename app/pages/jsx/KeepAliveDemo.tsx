@@ -116,7 +116,23 @@ const DraftPanel: FC = () => {
   );
 };
 
-const views = { CounterPanel, DraftPanel, FeedPanel };
+const FeedPanel: FC = () => {
+  const [items, setItems] = useState<string[]>(['初始化记录']);
+  return (
+    <div>
+      <button onClick={() => setItems(value => [\`记录 \${value.length + 1}\`, ...value])}>
+        添加记录
+      </button>
+      <ul>
+        {items.map(item => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+const views: Record<ViewName, FC> = { CounterPanel, DraftPanel, FeedPanel };
 
 const Demo: FC = () => {
   const activeView = ref<ViewName>('CounterPanel');
@@ -129,7 +145,9 @@ const Demo: FC = () => {
       />
     </KeepAlive>
   );
-};`
+};
+
+export default Demo;`
 
 const resolveKeepAliveProps = (mode: CacheMode) => {
   if (mode === 'excludeDraft') {

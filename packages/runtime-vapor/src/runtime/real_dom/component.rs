@@ -52,13 +52,22 @@ where
             if did_push_current_container {
                 shared_runtime_bridge::pop_current_container();
             }
-            rue.current_container = prev_container;
+            rue.current_container = prev_container.clone();
             let _ = pop_effect_scope();
             shared_runtime_bridge::end_component_render();
             end_render_debug_owner();
-            rue.handle_error(error.clone());
             rue.instance_stack.pop();
             restore_current_instance_from_stack(rue);
+            let captured = shared_runtime_bridge::dispatch_error_captured(
+                &error,
+                &host_value,
+                "component render",
+            );
+            if captured {
+                rue.last_error = Some(error.clone());
+            } else {
+                rue.handle_error(error.clone());
+            }
             return None;
         }
     };
@@ -67,14 +76,16 @@ where
     }
     rue.current_container = prev_container;
     let _ = pop_effect_scope();
-    shared_runtime_bridge::end_component_render();
 
     merge_pending_hooks(rue);
     rue.call_hooks("before_create");
     rue.call_hooks("created");
     rue.call_hooks("before_mount");
 
-    let mounted_subtree_opt = if let Some(sub_input) =
+    let empty_component_return = ret.is_null() || ret.is_undefined();
+    let mounted_subtree_opt = if empty_component_return {
+        None
+    } else if let Some(sub_input) =
         rue.component_return_value_to_input(&ret, input.strict_component_returns)
     {
         crate::set_current_instance(host.clone().into());
@@ -101,27 +112,45 @@ where
             effect_scope_id: None,
         }))
     };
+    shared_runtime_bridge::end_component_render();
     end_render_debug_owner();
-    let mounted_subtree = mounted_subtree_opt?;
+    if mounted_subtree_opt.is_none() && !empty_component_return {
+        rue.instance_stack.pop();
+        restore_current_instance_from_stack(rue);
+        return None;
+    }
+
+    rue.call_hooks("mounted");
+    merge_pending_hooks(rue);
 
     // 组件级 KeepAlive hooks 与卸载 hooks 一起写入 mounted snapshot，后续按 range 递归触发。
+    // mounted 回调内部也允许注册 onUnmounted，这些清理必须被纳入当前 mounted state。
     let (before_unmount_hooks, unmounted_hooks, activated_hooks, deactivated_hooks) =
         component_lifecycle_hooks_from_stack(rue);
 
-    rue.call_hooks("mounted");
     rue.instance_stack.pop();
     restore_current_instance_from_stack(rue);
 
+    let (host, fragment_nodes, comp_subtree) = if let Some(mounted_subtree) = mounted_subtree_opt {
+        (
+            mounted_subtree.host_cloned(),
+            mounted_subtree.fragment_nodes_cloned(),
+            Some(Box::new(mounted_subtree)),
+        )
+    } else {
+        (None, Vec::new(), None)
+    };
+
     Some(MountedSubtreeState::Patch(MountedPatchSubtree::new_component(
         render_fn.clone(),
-        mounted_subtree.host_cloned(),
+        host,
         input.key.clone(),
-        mounted_subtree.fragment_nodes_cloned(),
+        fragment_nodes,
         before_unmount_hooks,
         unmounted_hooks,
         activated_hooks,
         deactivated_hooks,
-        Some(Box::new(mounted_subtree)),
+        comp_subtree,
         Some(idx),
     )))
 }
@@ -187,8 +216,21 @@ where
     let _ = Reflect::set(&hooks, &JsValue::from_str("index"), &JsValue::from_f64(0.0));
     let _ = Reflect::set(&host, &JsValue::from_str("__hooks"), &hooks);
     let _ = Reflect::set(&host, &JsValue::from_str("propsRO"), &props_ro);
-    let _ = Reflect::set(&host, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP), &parent_instance);
-    let _ = Reflect::set(&host, &JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP), &parent_instance);
+    let effective_parent = if !parent_instance.is_undefined() && !parent_instance.is_null() {
+        parent_instance
+    } else {
+        Reflect::get(&props_ro, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP))
+            .unwrap_or(JsValue::UNDEFINED)
+    };
+    if !effective_parent.is_undefined() && !effective_parent.is_null() {
+        let _ =
+            Reflect::set(&host, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP), &effective_parent);
+        let _ = Reflect::set(
+            &host,
+            &JsValue::from_str(CONTEXT_PARENT_INSTANCE_PROP),
+            &effective_parent,
+        );
+    }
     super::helpers::reset_hook_index(&host);
 
     let idx = rue.instance_store.len();
@@ -377,6 +419,36 @@ mod tests {
         current.is_undefined() || current.is_null()
     }
 
+    struct SharedRuntimeBridgeGuard {
+        previous: JsValue,
+        had_previous: bool,
+    }
+
+    impl Drop for SharedRuntimeBridgeGuard {
+        fn drop(&mut self) {
+            let global = js_sys::global();
+            let key = JsValue::from_str("__rue_runtime_vapor_shared_bridge");
+            if self.had_previous {
+                let _ = Reflect::set(&global, &key, &self.previous);
+            } else {
+                let _ = Reflect::delete_property(&global, &key);
+            }
+        }
+    }
+
+    fn install_capturing_error_bridge() -> SharedRuntimeBridgeGuard {
+        let global = js_sys::global();
+        let key = JsValue::from_str("__rue_runtime_vapor_shared_bridge");
+        let had_previous = Reflect::has(&global, &key).unwrap_or(false);
+        let previous = Reflect::get(&global, &key).unwrap_or(JsValue::UNDEFINED);
+        let bridge = Object::new();
+        let dispatch: JsValue = Function::new_no_args("return true").into();
+        Reflect::set(&bridge, &JsValue::from_str("dispatchErrorCaptured"), &dispatch).unwrap();
+        Reflect::set(&global, &key, &bridge).unwrap();
+
+        SharedRuntimeBridgeGuard { previous, had_previous }
+    }
+
     #[wasm_bindgen_test]
     fn prepare_instance_and_merge_pending_hooks_cover_context_edges() {
         let mut rue = Rue::<JsDomAdapter>::new();
@@ -401,6 +473,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn mount_component_render_error_restores_parent_context_edges() {
+        let _bridge = install_capturing_error_bridge();
         crate::set_current_instance(JsValue::UNDEFINED);
 
         let mut nested_rue = Rue::<JsDomAdapter>::new();

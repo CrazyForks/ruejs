@@ -1,4 +1,3 @@
-import { createElement, type TextRenderable } from './rue-test-utils.js'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import {
   APP_ARTIFACT_COMPATIBILITY_KEY,
@@ -17,6 +16,10 @@ import {
 } from '../src/server/artifact-compatibility.js'
 import { AppRscServerClientReferenceSymbol } from '../src/server/app-rsc-client-reference-protocol-core.js'
 import { setAppClientReferenceResolver } from '../src/server/app-client-reference-resolver.js'
+import {
+  createAppServerElement as createElement,
+  type AppServerRenderable as TextRenderable,
+} from '../src/server/app-server-tree.js'
 import type { LayoutClassificationOptions } from '../src/server/app-page-execution.js'
 import { renderAppPageLifecycle } from '../src/server/app-page-render.js'
 import type { CachedAppPageValue } from '../src/shims/cache.js'

@@ -2,20 +2,22 @@ import * as reactiveRuntime from './pkg/rue_runtime_vapor.js'
 
 import { installSharedBridge } from './vapor-bridge.js'
 
-installSharedBridge(reactiveRuntime)
-
 const currentEffectIdExport = Reflect.get(reactiveRuntime, '__rueCurrentEffectId')
 const getCurrentEffectScopeExport = Reflect.get(reactiveRuntime, '__rueGetCurrentEffectScope')
 const RUE_RENDER_TRACKED_HOOKS_KEY = '__rue_render_tracked_hooks__'
+const RUE_RENDER_TRIGGERED_HOOKS_KEY = '__rue_render_triggered_hooks'
 const RUE_CONTEXT_OWNER_PARENT_KEY = '__rue_context_owner_parent__'
 const RUE_REF_FLAG = '__rue_ref__'
 const RUE_SIGNAL_RENDER_TRACKING_PATCHED = Symbol.for('rue.signal.renderTrackingPatched')
+const RUE_SIGNAL_WRAPPER_REGISTRY_KEY = Symbol.for('rue.signal.wrapperRegistry')
+const RUE_SIGNAL_ID_KEY = '__rue_signal_id__'
 
 const effectRenderOwnerById = new Map()
 const scopeHandleCache = new Map()
 const stoppedScopeIds = new Set()
 const postFlushQueue = new Set()
 let isDispatchingRenderTracked = false
+let isDispatchingRenderTriggered = false
 let postFlushPending = false
 
 // post flush 队列优先复用原生 queueMicrotask，兼容旧环境时退回 Promise microtask。
@@ -152,8 +154,97 @@ const disposeEffectScope =
     ? reactiveRuntime.__rueDisposeEffectScope.bind(reactiveRuntime)
     : undefined
 
+const markScopeStopped = id => {
+  if (Number.isInteger(id)) {
+    stoppedScopeIds.add(id)
+    scopeHandleCache.delete(id)
+  }
+}
+
+export const __rueDisposeEffectScope = id => {
+  markScopeStopped(id)
+  return disposeEffectScope?.(id)
+}
+
 const isObjectLike = value =>
   (typeof value === 'object' || typeof value === 'function') && value != null
+
+const signalWrapperRegistry = (() => {
+  const existing = globalThis[RUE_SIGNAL_WRAPPER_REGISTRY_KEY]
+  if (existing instanceof Map) {
+    return existing
+  }
+  const registry = new Map()
+  Object.defineProperty(globalThis, RUE_SIGNAL_WRAPPER_REGISTRY_KEY, {
+    value: registry,
+    enumerable: false,
+    configurable: true,
+  })
+  return registry
+})()
+
+const toSignalWrapperRef = signal => (typeof WeakRef === 'function' ? new WeakRef(signal) : signal)
+
+const resolveSignalWrapperRef = ref =>
+  typeof WeakRef === 'function' && ref instanceof WeakRef ? ref.deref() : ref
+
+const rememberSignalWrapper = signal => {
+  if (!isObjectLike(signal)) {
+    return
+  }
+  try {
+    const id = Reflect.get(signal, RUE_SIGNAL_ID_KEY)
+    if (Number.isInteger(id)) {
+      if (resolveSignalWrapperRef(signalWrapperRegistry.get(id)) !== signal) {
+        signalWrapperRegistry.set(id, toSignalWrapperRef(signal))
+      }
+    }
+  } catch {}
+}
+
+const resolveCanonicalSignalTarget = target => {
+  if (!isObjectLike(target)) {
+    return undefined
+  }
+
+  let signalId
+  try {
+    signalId = Reflect.get(target, RUE_SIGNAL_ID_KEY)
+  } catch {
+    signalId = undefined
+  }
+
+  if (!Number.isInteger(signalId)) {
+    return undefined
+  }
+
+  const canonicalTarget = resolveSignalWrapperRef(signalWrapperRegistry.get(signalId))
+  if (!canonicalTarget) {
+    signalWrapperRegistry.delete(signalId)
+    return undefined
+  }
+
+  return canonicalTarget
+}
+
+const normalizeRenderTriggeredEvent = event => {
+  if (!isObjectLike(event)) {
+    return event
+  }
+
+  const canonicalTarget = resolveCanonicalSignalTarget(Reflect.get(event, 'target'))
+  if (!canonicalTarget) {
+    return event
+  }
+  if (Reflect.get(event, 'target') === canonicalTarget) {
+    return event
+  }
+
+  try {
+    Reflect.set(event, 'target', canonicalTarget)
+  } catch {}
+  return event
+}
 
 const readonlyProxyFallbacks = new WeakSet()
 const runtimeIsReadonly =
@@ -351,12 +442,72 @@ const dispatchRenderTracked = (owner, event) => {
   }
 }
 
+/** 沿 Context owner 父链派发 renderTriggered 调试事件。 */
+const dispatchRenderTriggered = (owner, event) => {
+  if (!isObjectLike(owner) || isDispatchingRenderTriggered) {
+    return
+  }
+  const visited = new Set()
+  let current = owner
+  isDispatchingRenderTriggered = true
+  try {
+    while (isObjectLike(current) && !visited.has(current)) {
+      visited.add(current)
+      const hooks = current[RUE_RENDER_TRIGGERED_HOOKS_KEY]
+      if (Array.isArray(hooks)) {
+        for (const hook of hooks.slice()) {
+          if (typeof hook !== 'function') {
+            continue
+          }
+          try {
+            if (typeof reactiveRuntime.untrack === 'function') {
+              reactiveRuntime.untrack(() => hook(event))
+            } else {
+              hook(event)
+            }
+          } catch (error) {
+            globalThis.console?.error?.(error)
+          }
+        }
+      }
+      current = current[RUE_CONTEXT_OWNER_PARENT_KEY]
+    }
+  } finally {
+    isDispatchingRenderTriggered = false
+  }
+}
+
+/** 接收 Rust core 的实际 to_run effect id，并通过 JS owner 映射派发 renderTriggered。 */
+const installRenderTriggeredBridge = () => {
+  const bridge = globalThis.__rue_runtime_vapor_shared_bridge
+  if (!bridge || bridge.__rue_render_triggered_dispatch_installed__) {
+    return
+  }
+  const previousDispatch =
+    typeof bridge.dispatchRenderTriggeredForEffect === 'function'
+      ? bridge.dispatchRenderTriggeredForEffect.bind(bridge)
+      : undefined
+  bridge.dispatchRenderTriggeredForEffect = (effect, event) => {
+    previousDispatch?.(effect, event)
+    const owner = effectRenderOwnerById.get(effect)
+    if (!isObjectLike(owner)) {
+      return
+    }
+    dispatchRenderTriggered(owner, normalizeRenderTriggeredEvent(event))
+  }
+  Object.defineProperty(bridge, '__rue_render_triggered_dispatch_installed__', {
+    value: true,
+    configurable: true,
+  })
+}
+
 /** 在 signal get/getPath 时记录 DebuggerEvent 并派发到当前组件。 */
 const notifyRenderTracked = (target, type, key) => {
   const effect = __rueCurrentEffectId()
   if (effect == null) {
     return
   }
+  rememberSignalWrapper(target)
   const activeOwner = currentRenderOwner()
   if (isObjectLike(activeOwner)) {
     effectRenderOwnerById.set(effect, activeOwner)
@@ -365,7 +516,12 @@ const notifyRenderTracked = (target, type, key) => {
   if (!isObjectLike(owner)) {
     return
   }
-  dispatchRenderTracked(owner, { effect, target, type, key })
+  dispatchRenderTracked(owner, {
+    effect,
+    target: resolveCanonicalSignalTarget(target) ?? target,
+    type,
+    key,
+  })
 }
 
 /** Monkey patch SignalHandle 读取方法，以便 JS 侧实现 onRenderTracked。 */
@@ -400,6 +556,7 @@ const patchSignalRenderTracking = runtime => {
 }
 
 patchSignalRenderTracking(reactiveRuntime)
+installRenderTriggeredBridge()
 
 /** 注册当前组件的 renderTracked 调试钩子，返回取消注册函数。 */
 export const onRenderTracked = callback => {
@@ -571,6 +728,7 @@ const runtimeWithShallowRef = {
   createComputed,
   createReactive,
   getCurrentScope,
+  __rueDisposeEffectScope,
   isRef,
   isReadonly,
   nextTick,
@@ -587,6 +745,8 @@ const runtimeWithShallowRef = {
   triggerRef,
   watchPostEffect,
 }
+
+installSharedBridge(runtimeWithShallowRef)
 
 export * from './pkg/rue_runtime_vapor.js'
 export default runtimeWithShallowRef

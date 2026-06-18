@@ -476,7 +476,23 @@ const InputPage: FC = () => {
           title="Text input with text label inside"
           tab={tabShell}
           preview={() => <SearchShell />}
-          code={`<Input.Shell>\n  <svg className="h-[1em] opacity-50" viewBox="0 0 24 24">...</svg>\n  <input type="search" className="grow" placeholder="Search" />\n  <Kbd size="sm">⌘</Kbd>\n  <Kbd size="sm">K</Kbd>\n</Input.Shell>`}
+          code={`<Input.Shell>
+  <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <g
+      stroke-linejoin="round"
+      stroke-linecap="round"
+      stroke-width="2.5"
+      fill="none"
+      stroke="currentColor"
+    >
+      <circle cx="11" cy="11" r="8"></circle>
+      <path d="m21 21-4.3-4.3"></path>
+    </g>
+  </svg>
+  <input type="search" className="grow" placeholder="Search" />
+  <Kbd size="sm">⌘</Kbd>
+  <Kbd size="sm">K</Kbd>
+</Input.Shell>`}
         />
 
         <PreviewBlock

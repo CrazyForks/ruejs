@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Watermark 组件概述
 - 使用单个绝对定位覆盖层在容器内部重复平铺水印，不引入额外的 canvas 生命周期或 DOM 观察器。
@@ -6,7 +5,7 @@ Watermark 组件概述
 - inherit 通过 CSS 自定义属性把当前水印图案继续传递给后代 Watermark；子级未显式传入 content/image 时，可直接复用上层图案。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, useRef, watch } from '@rue-js/rue'
+import { computed, onMounted, ref } from '@rue-js/rue'
 
 /** WatermarkFont 接口。 */
 export interface WatermarkFont {
@@ -79,6 +78,12 @@ interface MarkDimensions {
   fontSizePx: number
 }
 
+interface WatermarkPatternResult {
+  url: string
+  tileWidth: number
+  tileHeight: number
+}
+
 interface ParsedColor {
   r: number
   g: number
@@ -94,10 +99,14 @@ const DEFAULT_GAP_Y = 100
 const DEFAULT_Z_INDEX = 9
 /** DEFAULT_OPACITY 内部常量。 */
 const DEFAULT_OPACITY = 1
+/** DEFAULT_DARK_TEXT_ALPHA 内部常量。 */
+const DEFAULT_DARK_TEXT_ALPHA = 0.2
+/** DEFAULT_LIGHT_TEXT_ALPHA 内部常量。 */
+const DEFAULT_LIGHT_TEXT_ALPHA = 0.28
 /** DEFAULT_DARK_TEXT_COLOR 内部常量。 */
-const DEFAULT_DARK_TEXT_COLOR = 'rgba(15, 23, 42, 0.2)'
+const DEFAULT_DARK_TEXT_COLOR = `rgba(15, 23, 42, ${DEFAULT_DARK_TEXT_ALPHA})`
 /** DEFAULT_LIGHT_TEXT_COLOR 内部常量。 */
-const DEFAULT_LIGHT_TEXT_COLOR = 'rgba(248, 250, 252, 0.28)'
+const DEFAULT_LIGHT_TEXT_COLOR = `rgba(248, 250, 252, ${DEFAULT_LIGHT_TEXT_ALPHA})`
 /** DEFAULT_FONT_FAMILY 内部常量。 */
 const DEFAULT_FONT_FAMILY =
   'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
@@ -109,6 +118,12 @@ const DEFAULT_IMAGE_HEIGHT = 64
 const MIN_MARK_WIDTH = 32
 /** MIN_MARK_HEIGHT 内部常量。 */
 const MIN_MARK_HEIGHT = 24
+/** WATERMARK_CACHE_LIMIT 内部常量。 */
+const WATERMARK_CACHE_LIMIT = 80
+/** watermarkDimensionsCache 内部缓存。 */
+const watermarkDimensionsCache = new Map<string, MarkDimensions>()
+/** watermarkPatternCache 内部缓存。 */
+const watermarkPatternCache = new Map<string, WatermarkPatternResult>()
 
 /** join Class Name 的内部工具函数。 */
 const joinClassName = (...classNames: Array<string | undefined | null | false>) => {
@@ -344,19 +359,66 @@ const getRelativeLuminance = ({ r, g, b }: ParsedColor) => {
   return red * 0.2126 + green * 0.7152 + blue * 0.0722
 }
 
+/** 格式化 RGB Alpha Color 的内部工具函数。 */
+const formatRgbAlphaColor = (color: ParsedColor, alpha: number) => {
+  return `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`
+}
+
+/** 判断是否为暗色外观的内部工具函数。 */
+const hasDarkAppearance = (element: HTMLElement, computedStyle: CSSStyleDeclaration) => {
+  const appearance =
+    element.getAttribute('data-rue-appearance') ?? element.getAttribute('data-theme')
+  if (appearance === 'dark' || appearance === 'night' || appearance === 'coffee') {
+    return true
+  }
+
+  return computedStyle.colorScheme.split(/\s+/).includes('dark')
+}
+
+/** 按背景明暗选择 Text Color 的内部工具函数。 */
+const resolveTextColorFromBackground = (
+  color: ParsedColor,
+  themeTextColor?: ParsedColor | null,
+) => {
+  const isDarkBackground = getRelativeLuminance(color) < 0.35
+  if (themeTextColor) {
+    return formatRgbAlphaColor(
+      themeTextColor,
+      isDarkBackground ? DEFAULT_LIGHT_TEXT_ALPHA : DEFAULT_DARK_TEXT_ALPHA,
+    )
+  }
+
+  return isDarkBackground ? DEFAULT_LIGHT_TEXT_COLOR : DEFAULT_DARK_TEXT_COLOR
+}
+
 /** 解析默认 Text Color 的内部工具函数。 */
 const resolveDefaultTextColor = (element: HTMLElement | null) => {
   if (!element || typeof window === 'undefined') {
     return DEFAULT_DARK_TEXT_COLOR
   }
 
+  let detectedDarkAppearance = false
+  let detectedThemeTextColor: ParsedColor | null = null
   let currentElement: HTMLElement | null = element
   while (currentElement) {
-    const backgroundColor = parseCssColor(window.getComputedStyle(currentElement).backgroundColor)
+    const computedStyle = window.getComputedStyle(currentElement)
+    const themeTextColor = parseCssColor(computedStyle.getPropertyValue('--color-base-content'))
+    if (themeTextColor && themeTextColor.a > 0.01) {
+      detectedThemeTextColor = themeTextColor
+    }
+
+    const backgroundColor = parseCssColor(computedStyle.backgroundColor)
     if (backgroundColor && backgroundColor.a > 0.01) {
-      return getRelativeLuminance(backgroundColor) < 0.35
-        ? DEFAULT_LIGHT_TEXT_COLOR
-        : DEFAULT_DARK_TEXT_COLOR
+      return resolveTextColorFromBackground(backgroundColor, detectedThemeTextColor)
+    }
+
+    const themeBaseColor = parseCssColor(computedStyle.getPropertyValue('--color-base-100'))
+    if (themeBaseColor && themeBaseColor.a > 0.01) {
+      return resolveTextColorFromBackground(themeBaseColor, detectedThemeTextColor)
+    }
+
+    if (hasDarkAppearance(currentElement, computedStyle)) {
+      detectedDarkAppearance = true
     }
 
     currentElement = currentElement.parentElement
@@ -365,8 +427,15 @@ const resolveDefaultTextColor = (element: HTMLElement | null) => {
   const textColor = parseCssColor(window.getComputedStyle(element).color)
   if (textColor) {
     return getRelativeLuminance(textColor) > 0.6
-      ? DEFAULT_LIGHT_TEXT_COLOR
-      : DEFAULT_DARK_TEXT_COLOR
+      ? formatRgbAlphaColor(textColor, DEFAULT_LIGHT_TEXT_ALPHA)
+      : formatRgbAlphaColor(textColor, DEFAULT_DARK_TEXT_ALPHA)
+  }
+
+  if (detectedDarkAppearance) {
+    if (detectedThemeTextColor) {
+      return formatRgbAlphaColor(detectedThemeTextColor, DEFAULT_LIGHT_TEXT_ALPHA)
+    }
+    return DEFAULT_LIGHT_TEXT_COLOR
   }
 
   return DEFAULT_DARK_TEXT_COLOR
@@ -484,6 +553,96 @@ const resolveTextAnchor = (textAlign?: WatermarkFont['textAlign']) => {
     default:
       return { anchor: 'middle', xRatio: 0.5 }
   }
+}
+
+/** 构建 Font Cache Key 的内部工具函数。 */
+const buildFontCacheKey = (font: WatermarkFont) => {
+  return [
+    font.color ?? '',
+    font.fontSize ?? '',
+    font.fontWeight ?? '',
+    font.fontStyle ?? '',
+    font.fontFamily ?? '',
+    font.textAlign ?? '',
+  ]
+}
+
+/** 构建 Dimensions Cache Key 的内部工具函数。 */
+const buildDimensionsCacheKey = ({
+  image,
+  lines,
+  font,
+  width,
+  height,
+}: {
+  image?: string
+  lines: string[]
+  font: WatermarkFont
+  width?: number
+  height?: number
+}) => {
+  return JSON.stringify([image ?? '', lines, buildFontCacheKey(font), width ?? '', height ?? ''])
+}
+
+/** 构建 Pattern Cache Key 的内部工具函数。 */
+const buildPatternCacheKey = ({
+  image,
+  lines,
+  rotate,
+  font,
+  gapX,
+  gapY,
+  dimensions,
+  opacity,
+}: {
+  image?: string
+  lines: string[]
+  rotate: number
+  font: WatermarkFont
+  gapX: number
+  gapY: number
+  dimensions: MarkDimensions
+  opacity: number
+}): string => {
+  return JSON.stringify([
+    image ?? '',
+    lines,
+    rotate,
+    buildFontCacheKey(font),
+    gapX,
+    gapY,
+    dimensions.markWidth,
+    dimensions.markHeight,
+    dimensions.lineHeight,
+    dimensions.fontSizePx,
+    opacity,
+  ])
+}
+
+/** 读取 Cache Value 的内部工具函数。 */
+const readCacheValue = <T,>(cache: Map<string, T>, key: string) => {
+  const value = cache.get(key)
+  if (value !== undefined) {
+    cache.delete(key)
+    cache.set(key, value)
+  }
+  return value
+}
+
+/** 写入 Cache Value 的内部工具函数。 */
+const writeCacheValue = <T,>(cache: Map<string, T>, key: string, value: T) => {
+  cache.delete(key)
+  cache.set(key, value)
+
+  while (cache.size > WATERMARK_CACHE_LIMIT) {
+    const firstKey = cache.keys().next().value
+    if (firstKey === undefined) {
+      break
+    }
+    cache.delete(firstKey)
+  }
+
+  return value
 }
 
 /** 构建 Overlay Placement 的内部工具函数。 */
@@ -605,15 +764,14 @@ const Watermark: FC<WatermarkProps> = ({
   opacity = DEFAULT_OPACITY,
   children,
   inherit = true,
+  ref: forwardedRef,
   ...rest
 }) => {
-  const forwardedRef = rest.ref
-  const rootRef = useRef<HTMLElement | null>(null)
-  const overlayRef = useRef<HTMLElement | null>(null)
   const autoTextColor = ref<string | undefined>(undefined)
-  if ('ref' in rest) {
-    delete rest.ref
-  }
+  let rootElement: HTMLElement | null = null
+  let overlayElement: HTMLElement | null = null
+  let lastAutoTextColorElement: HTMLElement | null = null
+  let lastAutoTextColorSignature = ''
 
   const lines = normalizeContent(content)
   const [gapX = DEFAULT_GAP_X, gapY = DEFAULT_GAP_Y] = gap
@@ -626,22 +784,59 @@ const Watermark: FC<WatermarkProps> = ({
     return font
   }
 
+  const getCachedDimensions = (nextResolvedFont: WatermarkFont) => {
+    const dimensionsKey = buildDimensionsCacheKey({
+      image,
+      lines,
+      font: nextResolvedFont,
+      width,
+      height,
+    })
+    const cachedDimensions = readCacheValue(watermarkDimensionsCache, dimensionsKey)
+    if (cachedDimensions) {
+      return cachedDimensions
+    }
+
+    const nextDimensions = measureTextBlock(lines, nextResolvedFont, width, height, image)
+    return writeCacheValue(watermarkDimensionsCache, dimensionsKey, nextDimensions)
+  }
+
+  const getCachedPattern = (nextResolvedFont: WatermarkFont, nextDimensions: MarkDimensions) => {
+    const patternLines = lines.length ? lines : ['']
+    const nextOpacity = clamp(opacity, 0, 1)
+    const patternKey = buildPatternCacheKey({
+      image,
+      lines: patternLines,
+      rotate,
+      font: nextResolvedFont,
+      gapX,
+      gapY,
+      dimensions: nextDimensions,
+      opacity: nextOpacity,
+    })
+    const cachedPattern = readCacheValue(watermarkPatternCache, patternKey)
+    if (cachedPattern) {
+      return cachedPattern
+    }
+
+    const nextPattern = buildPatternUrl({
+      image,
+      lines: patternLines,
+      rotate,
+      font: nextResolvedFont,
+      gapX,
+      gapY,
+      dimensions: nextDimensions,
+      opacity: nextOpacity,
+    })
+    return writeCacheValue(watermarkPatternCache, patternKey, nextPattern)
+  }
+
   const getPatternState = () => {
     const nextResolvedFont = getResolvedFont()
     const nextPlacement = buildOverlayPlacement(gapX, gapY, offset)
-    const nextDimensions = measureTextBlock(lines, nextResolvedFont, width, height, image)
-    const nextPattern = hasLocalPattern
-      ? buildPatternUrl({
-          image,
-          lines: lines.length ? lines : [''],
-          rotate,
-          font: nextResolvedFont,
-          gapX,
-          gapY,
-          dimensions: nextDimensions,
-          opacity: clamp(opacity, 0, 1),
-        })
-      : null
+    const nextDimensions = getCachedDimensions(nextResolvedFont)
+    const nextPattern = hasLocalPattern ? getCachedPattern(nextResolvedFont, nextDimensions) : null
 
     return {
       placement: nextPlacement,
@@ -696,22 +891,22 @@ const Watermark: FC<WatermarkProps> = ({
       pointerEvents: 'none',
       backgroundRepeat: 'repeat',
       backgroundImage: nextPattern
-        ? nextPattern.url
+        ? 'var(--rue-watermark-image, none)'
         : inherit
           ? 'var(--rue-watermark-image, none)'
           : 'none',
       backgroundSize: nextPattern
-        ? `${nextPattern.tileWidth}px ${nextPattern.tileHeight}px`
+        ? 'var(--rue-watermark-size, auto)'
         : inherit
           ? 'var(--rue-watermark-size, auto)'
           : 'auto',
       backgroundPosition: nextPattern
-        ? nextPlacement.backgroundPosition
+        ? 'var(--rue-watermark-position, 0px 0px)'
         : inherit
           ? 'var(--rue-watermark-position, 0px 0px)'
           : '0px 0px',
       zIndex: nextPattern
-        ? (zIndex ?? DEFAULT_Z_INDEX)
+        ? 'var(--rue-watermark-z-index, 9)'
         : inherit
           ? 'var(--rue-watermark-z-index, 9)'
           : 0,
@@ -720,11 +915,33 @@ const Watermark: FC<WatermarkProps> = ({
     return mergeStyleInput(overlayResolvedStyleRecord, overlayStyle)
   }
 
-  const { placement, pattern } = getPatternState()
-  const rootStyleText = createRootStyleText(placement, pattern)
-  const overlayStyleText = createOverlayStyleText(placement, pattern)
+  const createAutoTextColorSignature = () => {
+    const styleSignature =
+      typeof style === 'string'
+        ? style
+        : [
+            style?.background,
+            style?.backgroundColor,
+            style?.color,
+            style?.colorScheme,
+            style?.['--color-base-100'],
+            style?.['--color-base-content'],
+          ].join('|')
 
-  const syncStyleText = (element: HTMLElement | null | undefined, styleText: string) => {
+    return JSON.stringify([lines, className ?? '', rootClassName ?? '', styleSignature])
+  }
+
+  const patternState = computed(() => getPatternState())
+  const rootStyleText = computed(() => {
+    const nextPatternState = patternState.get()
+    return createRootStyleText(nextPatternState.placement, nextPatternState.pattern)
+  })
+  const overlayStyleText = computed(() => {
+    const nextPatternState = patternState.get()
+    return createOverlayStyleText(nextPatternState.placement, nextPatternState.pattern)
+  })
+
+  const syncStyleText = (element: HTMLElement | null, styleText: string) => {
     if (!element) return
     if (styleText) {
       element.setAttribute('style', styleText)
@@ -736,21 +953,41 @@ const Watermark: FC<WatermarkProps> = ({
   const syncPatternStyles = () => {
     const nextPatternState = getPatternState()
     syncStyleText(
-      rootRef.current,
+      rootElement,
       createRootStyleText(nextPatternState.placement, nextPatternState.pattern),
     )
     syncStyleText(
-      overlayRef.current,
+      overlayElement,
       createOverlayStyleText(nextPatternState.placement, nextPatternState.pattern),
     )
   }
 
-  const syncAutoTextColor = () => {
+  const syncAutoTextColor = (force = false) => {
     if (image || font.color || !hasMeaningfulContent(lines)) {
       return
     }
 
-    const nextColor = resolveDefaultTextColor(rootRef.current ?? null)
+    const nextSignature = createAutoTextColorSignature()
+    if (
+      !force &&
+      rootElement === lastAutoTextColorElement &&
+      nextSignature === lastAutoTextColorSignature
+    ) {
+      return
+    }
+
+    if (rootElement) {
+      const nextPatternState = getPatternState()
+      syncStyleText(
+        rootElement,
+        createRootStyleText(nextPatternState.placement, nextPatternState.pattern),
+      )
+    }
+
+    const nextColor = resolveDefaultTextColor(rootElement)
+    lastAutoTextColorElement = rootElement
+    lastAutoTextColorSignature = nextSignature
+
     if (autoTextColor.value !== nextColor) {
       autoTextColor.value = nextColor
       syncPatternStyles()
@@ -758,44 +995,40 @@ const Watermark: FC<WatermarkProps> = ({
   }
 
   const applyRootRef = (element: HTMLElement | null) => {
-    rootRef.current = element
-    syncStyleText(element, rootStyleText)
+    if (rootElement === element) {
+      return
+    }
+
+    rootElement = element
     assignForwardedRef(forwardedRef, element)
+    syncAutoTextColor(true)
   }
 
   const applyOverlayRef = (element: HTMLElement | null) => {
-    overlayRef.current = element
-    syncStyleText(element, overlayStyleText)
+    overlayElement = element
+  }
+
+  const scheduleAutoTextColorSync = () => {
+    const run = () => syncAutoTextColor(true)
+    if (typeof queueMicrotask === 'function') {
+      queueMicrotask(run)
+      return
+    }
+
+    Promise.resolve().then(run)
   }
 
   onMounted(() => {
-    syncStyleText(rootRef.current, rootStyleText)
-    syncStyleText(overlayRef.current, overlayStyleText)
-    syncAutoTextColor()
+    syncAutoTextColor(true)
+    scheduleAutoTextColorSync()
   })
-
-  watch(
-    () => rootStyleText,
-    (nextStyle: string) => {
-      syncStyleText(rootRef.current, nextStyle)
-      syncAutoTextColor()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => overlayStyleText,
-    (nextStyle: string) => {
-      syncStyleText(overlayRef.current, nextStyle)
-    },
-    { immediate: true },
-  )
 
   return (
     <div
       {...rest}
       ref={applyRootRef}
       className={joinClassName('rue-watermark', className, rootClassName)}
+      style={rootStyleText.get()}
       data-rue-watermark-root="true"
       data-rue-watermark-inherit={inherit ? 'true' : 'false'}
     >
@@ -803,6 +1036,7 @@ const Watermark: FC<WatermarkProps> = ({
         aria-hidden="true"
         ref={applyOverlayRef}
         className={joinClassName('rue-watermark-overlay', overlayClassName)}
+        style={overlayStyleText.get()}
         data-rue-watermark-overlay="true"
       />
       {children}

@@ -845,7 +845,8 @@ async fn compat_children_patch_updates_contained_fragment_host_using_old_host_an
     update_siblings(&container);
 
     let section = children_of(&container).get(0);
-    assert_eq!(child_sequence(&section), vec!["B", "fragment"]);
+    assert_eq!(child_sequence(&section), vec!["fragment"]);
+    assert_eq!(first_child_text(&children_of(&section).get(0)), "B");
 }
 
 #[wasm_bindgen_test(async)]

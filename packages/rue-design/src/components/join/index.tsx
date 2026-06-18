@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Join 模块概述
 - 汇总组合容器组件的公开类型、渲染入口和局部工具逻辑。
@@ -87,7 +86,7 @@ const hasRenderableChildren = (children: any) => {
 /** Item 的内部工具函数。 */
 const Item: FC<JoinItemProps> = ({
   as,
-  tag = 'button',
+  tag,
   className,
   active,
   disabled,
@@ -96,7 +95,7 @@ const Item: FC<JoinItemProps> = ({
   children,
   ...rest
 }) => {
-  const Tag = (as ?? tag) as any
+  const Tag = (as ?? tag ?? 'button') as any
   const supportsDisabledAttr = isDisabledAttrTag(Tag)
   const disabledLikeButton = !!disabled && (Tag === 'a' || isButtonLikeClass(className))
   const mergedClassName = mergeClassNames(
@@ -147,6 +146,46 @@ const Item: FC<JoinItemProps> = ({
     )
   }
 
+  if (Tag === 'input') {
+    return (
+      <input
+        {...rest}
+        disabled={disabled}
+        className={mergedClassName}
+        aria-disabled={disabled ? 'true' : undefined}
+        onClick={handleClick}
+      />
+    )
+  }
+
+  if (Tag === 'select') {
+    return (
+      <select
+        {...rest}
+        disabled={disabled}
+        className={mergedClassName}
+        aria-disabled={disabled ? 'true' : undefined}
+        onClick={handleClick}
+      >
+        {children}
+      </select>
+    )
+  }
+
+  if (Tag === 'textarea') {
+    return (
+      <textarea
+        {...rest}
+        disabled={disabled}
+        className={mergedClassName}
+        aria-disabled={disabled ? 'true' : undefined}
+        onClick={handleClick}
+      >
+        {children}
+      </textarea>
+    )
+  }
+
   return (
     <Tag
       {...rest}
@@ -159,19 +198,6 @@ const Item: FC<JoinItemProps> = ({
       {children}
     </Tag>
   )
-}
-
-/** 渲染 Items 的内部工具函数。 */
-const renderItems = (items: JoinItemConfig[], itemClassName?: string) => {
-  return items.map((item, index) => {
-    const { key, label, children, className, ...rest } = item
-    const content = Object.prototype.hasOwnProperty.call(item, 'children') ? children : label
-    return (
-      <Item key={key ?? index} {...rest} className={mergeClassNames(itemClassName, className)}>
-        {content}
-      </Item>
-    )
-  })
 }
 
 /** Join Root 的内部工具函数。 */
@@ -200,7 +226,27 @@ const JoinRoot: FC<JoinProps> = ({
       {hasRenderableChildren(children)
         ? children
         : items
-          ? renderItems(items, itemClassName)
+          ? items.map((item, index) => {
+              const {
+                key,
+                label,
+                children: itemChildren,
+                className: itemClassNameFromItem,
+                ...itemRest
+              } = item
+              const content = Object.prototype.hasOwnProperty.call(item, 'children')
+                ? itemChildren
+                : label
+              return (
+                <Item
+                  key={key ?? index}
+                  {...itemRest}
+                  className={mergeClassNames(itemClassName, itemClassNameFromItem)}
+                >
+                  {content}
+                </Item>
+              )
+            })
           : null}
     </Tag>
   )

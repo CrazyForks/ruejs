@@ -85,6 +85,13 @@ const findDemo = (root: ParentNode, title: string) =>
     node => normalize(node.querySelector('h2')?.textContent) === title,
   ) ?? null
 
+const assignFiles = (input: HTMLInputElement, files: File[]) => {
+  Object.defineProperty(input, 'files', {
+    configurable: true,
+    value: files,
+  })
+}
+
 afterEach(() => {
   previewState.enabledTitles.clear()
   document.body.innerHTML = ''
@@ -132,6 +139,96 @@ describe('FileInput actual page', () => {
       expect(
         findDemo(container, '# File input sizes')?.querySelectorAll('input[type="file"]').length,
       ).toBe(5)
+    })
+  })
+
+  it('sets recommended accept filters without enabling directory picking', async () => {
+    previewState.enabledTitles.add('Recommended upload-like')
+    previewState.enabledTitles.add('beforeUpload Validation')
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<FileInputPage />, container)
+
+    await waitForContent(() => {
+      const recommendedDemo = findDemo(container, '# Recommended upload-like') as HTMLElement | null
+      const validationDemo = findDemo(container, '# beforeUpload Validation') as HTMLElement | null
+
+      const recommendedInput = recommendedDemo?.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement | null
+
+      expect(recommendedInput?.accept).toBe('.pdf,.png,.mp4,application/pdf,image/png,video/mp4')
+      expect(recommendedInput?.id).toBe('recommended-upload-like')
+      expect(recommendedInput?.hasAttribute('directory')).toBe(false)
+      expect(recommendedInput?.hasAttribute('webkitdirectory')).toBe(false)
+      expect(
+        (validationDemo?.querySelector('input[type="file"]') as HTMLInputElement | null)?.accept,
+      ).toBe('image/*')
+    })
+  })
+
+  it('opens the native picker from the recommended upload-like trigger', async () => {
+    previewState.enabledTitles.add('Recommended upload-like')
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<FileInputPage />, container)
+
+    await waitForContent(() => {
+      expect(findDemo(container, '# Recommended upload-like')).not.toBeNull()
+    })
+
+    const recommendedDemo = findDemo(container, '# Recommended upload-like') as HTMLElement
+    const input = recommendedDemo.querySelector('input[type="file"]') as HTMLInputElement
+    const inputClick = vi.spyOn(input, 'click').mockImplementation(() => {})
+    const trigger = Array.from(recommendedDemo.querySelectorAll('button')).find(button =>
+      normalize(button.textContent).includes('选择素材'),
+    )
+
+    expect(input.accept).toBe('.pdf,.png,.mp4,application/pdf,image/png,video/mp4')
+    expect(input.id).toBe('recommended-upload-like')
+    expect(input.hasAttribute('directory')).toBe(false)
+    expect(input.hasAttribute('webkitdirectory')).toBe(false)
+    expect(trigger).toBeTruthy()
+
+    await click(trigger as HTMLButtonElement)
+
+    expect(inputClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the three selected files from the recommended upload-like demo', async () => {
+    previewState.enabledTitles.add('Recommended upload-like')
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<FileInputPage />, container)
+
+    await waitForContent(() => {
+      expect(findDemo(container, '# Recommended upload-like')).not.toBeNull()
+    })
+
+    const recommendedDemo = findDemo(container, '# Recommended upload-like') as HTMLElement
+    const input = recommendedDemo.querySelector('input[type="file"]') as HTMLInputElement
+    const root = recommendedDemo.querySelector('[data-rue-file-input-root]') as HTMLElement
+    expect(input.accept).toBe('.pdf,.png,.mp4,application/pdf,image/png,video/mp4')
+    expect(input.id).toBe('recommended-upload-like')
+    expect(input.hasAttribute('directory')).toBe(false)
+    expect(input.hasAttribute('webkitdirectory')).toBe(false)
+
+    assignFiles(input, [
+      new File(['cover'], 'fresh-cover.png', { type: 'image/png' }),
+      new File(['detail'], 'fresh-detail.png', { type: 'image/png' }),
+      new File(['clip'], 'fresh-clip.mp4', { type: 'video/mp4' }),
+    ])
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+
+    await waitForContent(() => {
+      expect(root.getAttribute('data-rue-file-input-count')).toBe('3')
+      expect(recommendedDemo.textContent).not.toContain('campaign-brief.pdf')
+      expect(recommendedDemo.textContent).toContain('fresh-cover.png')
+      expect(recommendedDemo.textContent).toContain('fresh-detail.png')
+      expect(recommendedDemo.textContent).toContain('fresh-clip.mp4')
     })
   })
 })

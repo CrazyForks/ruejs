@@ -1,5 +1,5 @@
 import type { FC } from '@rue-js/rue'
-import { ref, useRef } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 import { Button, Carousel, Tabs } from '@rue-js/design'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
@@ -353,7 +353,7 @@ const widthCode = buildCode([
 
 const verticalCode = buildCode([
   '<div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">',
-  '  <Carousel align="center" className="rounded-box w-full">',
+  '  <Carousel align="center" className="rounded-box w-full" auto interval={1600}>',
   '    <Carousel.Item><img alt="Forest river view" src="https://picsum.photos/id/1011/600/300" /></Carousel.Item>',
   '    <Carousel.Item><img alt="Sea cliff sunset" src="https://picsum.photos/id/1015/600/300" /></Carousel.Item>',
   '    <Carousel.Item><img alt="Foggy mountain ridge" src="https://picsum.photos/id/1016/600/300" /></Carousel.Item>',
@@ -362,7 +362,7 @@ const verticalCode = buildCode([
   '    <Carousel direction="vertical" className="h-80 rounded-box" auto interval={1500}>',
   '      <Carousel.Item className="h-full"><img src="https://img.daisyui.com/images/stock/photo-1559703248-dcaaec9fab78.webp" alt="Vertical gallery" /></Carousel.Item>',
   '    </Carousel>',
-  '    <Carousel direction="vertical" className="rounded-box w-80 h-64">',
+  '    <Carousel direction="vertical" className="rounded-box w-80 h-64" auto interval={1700}>',
   '      <Carousel.Item><img alt="Street corner" src="https://picsum.photos/id/1005/320/200" /></Carousel.Item>',
   '      <Carousel.Item><img alt="Window light" src="https://picsum.photos/id/1018/320/200" /></Carousel.Item>',
   '      <Carousel.Item><img alt="Coastal trail" src="https://picsum.photos/id/1025/320/200" /></Carousel.Item>',
@@ -388,7 +388,7 @@ const arrowsCode = buildCode([
 ])
 
 const indicatorCode = buildCode([
-  'const indicatorApiRef = useRef<any>()',
+  'const indicatorApiRef: { current?: any } = { current: undefined }',
   'const indicatorIndex = ref(0)',
   '',
   '<Carousel',
@@ -405,23 +405,21 @@ const indicatorCode = buildCode([
   '',
   '<div className="flex justify-center gap-2 py-3">',
   '  {[0, 1, 2, 3].map(index => (',
-  '    <Button',
+  '    <button',
+  '      type="button"',
   '      key={index}',
-  '      size="xs"',
-  '      color={indicatorIndex.value === index ? "primary" : "default"}',
-  '      onClick={() => {',
-  '        indicatorIndex.value = index',
-  '        indicatorApiRef.current?.goTo(index)',
-  '      }}',
+  '      className={`btn btn-xs ${indicatorIndex.value === index ? "btn-primary" : ""}`}',
+  '      aria-pressed={indicatorIndex.value === index ? "true" : "false"}',
+  '      onClick={() => indicatorApiRef.current?.goTo(index)}',
   '    >',
   '      {index + 1}',
-  '    </Button>',
+  '    </button>',
   '  ))}',
   '</div>',
 ])
 
 const apiControlCode = buildCode([
-  'const apiRef = useRef<any>()',
+  'const apiRef: { current?: any } = { current: undefined }',
   'const currentIndex = ref(0)',
   '',
   '<div className="space-y-4">',
@@ -433,9 +431,9 @@ const apiControlCode = buildCode([
   '    <span className="text-sm opacity-70">当前索引：{currentIndex.value}</span>',
   '  </div>',
   '  <Carousel apiRef={apiRef} dots onIndexChange={index => (currentIndex.value = index)} className="rounded-box w-full">',
-  '    <Carousel.Item><img alt="Forest river view" src="https://picsum.photos/id/1011/600/300" /></Carousel.Item>',
-  '    <Carousel.Item><img alt="Sea cliff sunset" src="https://picsum.photos/id/1015/600/300" /></Carousel.Item>',
-  '    <Carousel.Item><img alt="Foggy mountain ridge" src="https://picsum.photos/id/1016/600/300" /></Carousel.Item>',
+  '    <Carousel.Item className="w-full"><img className="w-full object-cover" alt="Forest river view" src="https://picsum.photos/id/1011/600/300" /></Carousel.Item>',
+  '    <Carousel.Item className="w-full"><img className="w-full object-cover" alt="Sea cliff sunset" src="https://picsum.photos/id/1015/600/300" /></Carousel.Item>',
+  '    <Carousel.Item className="w-full"><img className="w-full object-cover" alt="Foggy mountain ridge" src="https://picsum.photos/id/1016/600/300" /></Carousel.Item>',
   '  </Carousel>',
   '</div>',
 ])
@@ -500,6 +498,9 @@ const itemsCode = buildCode([
   '<Carousel className="rounded-box w-full" align="center" arrows dots items={items} />',
 ])
 
+const indicatorApiRef: { current?: any } = { current: undefined }
+const methodsApiRef: { current?: any } = { current: undefined }
+
 const CarouselDemo: FC = () => {
   const tabSnap = ref<TabMode>('preview')
   const tabWidth = ref<TabMode>('preview')
@@ -511,8 +512,6 @@ const CarouselDemo: FC = () => {
   const tabEffects = ref<TabMode>('preview')
   const tabItems = ref<TabMode>('preview')
 
-  const indicatorApiRef = useRef<any>()
-  const methodsApiRef = useRef<any>()
   const indicatorIndex = ref(0)
   const methodsIndex = ref(0)
 
@@ -522,7 +521,6 @@ const CarouselDemo: FC = () => {
   }))
 
   const indicatorGo = (index: number) => {
-    indicatorIndex.value = index
     indicatorApiRef.current?.goTo(index)
   }
 
@@ -537,11 +535,9 @@ const CarouselDemo: FC = () => {
       return
     }
     if (action === 'go-2') {
-      methodsIndex.value = 2
       methodsApiRef.current.goTo(2)
       return
     }
-    methodsIndex.value = 0
     methodsApiRef.current.goTo(0, true)
   }
 
@@ -652,7 +648,7 @@ const CarouselDemo: FC = () => {
             <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
               <div className="rounded-box border border-base-300 bg-base-100 p-4">
                 <div className="mb-3 text-sm font-medium">基础（水平居中）</div>
-                <Carousel align="center" className="rounded-box w-full">
+                <Carousel align="center" className="rounded-box w-full" auto interval={1600}>
                   {renderImageSlides(picsumSlides)}
                 </Carousel>
               </div>
@@ -669,7 +665,12 @@ const CarouselDemo: FC = () => {
                 </div>
                 <div className="rounded-box border border-base-300 bg-base-100 p-4">
                   <div className="mb-3 text-sm font-medium">垂直方向</div>
-                  <Carousel direction="vertical" className="rounded-box w-80 h-64">
+                  <Carousel
+                    direction="vertical"
+                    className="rounded-box w-80 h-64"
+                    auto
+                    interval={1700}
+                  >
                     {renderImageSlides(verticalSlides)}
                   </Carousel>
                 </div>
@@ -731,14 +732,15 @@ const CarouselDemo: FC = () => {
               </Carousel>
               <div className="flex flex-wrap justify-center gap-2 py-3">
                 {[0, 1, 2, 3].map(index => (
-                  <Button
+                  <button
+                    type="button"
                     key={index}
-                    size="xs"
-                    color={indicatorIndex.value === index ? 'primary' : 'default'}
+                    className={`btn btn-xs ${indicatorIndex.value === index ? 'btn-primary' : ''}`}
+                    aria-pressed={indicatorIndex.value === index ? 'true' : 'false'}
                     onClick={() => indicatorGo(index)}
                   >
                     {index + 1}
-                  </Button>
+                  </button>
                 ))}
               </div>
             </div>
@@ -773,7 +775,7 @@ const CarouselDemo: FC = () => {
                 className="rounded-box w-full"
                 onIndexChange={index => (methodsIndex.value = index)}
               >
-                {renderImageSlides(picsumSlides)}
+                {renderImageSlides(picsumSlides, 'w-full', 'w-full object-cover')}
               </Carousel>
             </div>
           )}

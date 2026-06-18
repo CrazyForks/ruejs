@@ -186,4 +186,71 @@ describe('Textarea', () => {
       delete (HTMLTextAreaElement.prototype as any).scrollHeight
     }
   })
+
+  it('keeps wrapped autoSize textarea stable and honors rows as min height', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const originalScrollHeight = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      'scrollHeight',
+    )
+    const computedStyleSpy = vi.spyOn(window, 'getComputedStyle').mockImplementation(
+      () =>
+        ({
+          lineHeight: '18px',
+          fontSize: '12px',
+          borderTopWidth: '1px',
+          borderBottomWidth: '1px',
+          paddingTop: '4px',
+          paddingBottom: '4px',
+        }) as CSSStyleDeclaration,
+    )
+
+    Object.defineProperty(HTMLTextAreaElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get() {
+        return 24
+      },
+    })
+
+    render(
+      <Textarea autoSize={true} rows={3} allowClear={true} showCount={true} defaultValue="Rue" />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const root = container.querySelector('[data-rue-textarea-root="true"]') as HTMLDivElement
+      const inputWrap = root.querySelector('.relative.w-full') as HTMLDivElement
+      const textarea = root.querySelector('textarea.textarea') as HTMLTextAreaElement
+      const clearButton = root.querySelector('button[aria-label="Clear text"]') as HTMLButtonElement
+
+      expect(root.classList.contains('w-full')).toBe(true)
+      expect(inputWrap).toBeTruthy()
+      expect(textarea.classList.contains('w-full')).toBe(true)
+      expect(textarea.classList.contains('resize-none')).toBe(true)
+      expect(textarea.rows).toBe(3)
+      expect(textarea.style.height).toBe('64px')
+      expect(clearButton.classList.contains('hidden')).toBe(false)
+    })
+
+    computedStyleSpy.mockRestore()
+    if (originalScrollHeight) {
+      Object.defineProperty(HTMLTextAreaElement.prototype, 'scrollHeight', originalScrollHeight)
+    } else {
+      delete (HTMLTextAreaElement.prototype as any).scrollHeight
+    }
+  })
+
+  it('allows explicit resize direction to override autoSize default lock', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(<Textarea autoSize={true} resize="vertical" defaultValue="Rue" />, container)
+
+    await waitForContent(() => {
+      const textarea = container.querySelector('textarea.textarea') as HTMLTextAreaElement
+      expect(textarea.classList.contains('resize-y')).toBe(true)
+      expect(textarea.classList.contains('resize-none')).toBe(false)
+    })
+  })
 })

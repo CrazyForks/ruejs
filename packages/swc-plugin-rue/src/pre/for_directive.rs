@@ -22,12 +22,12 @@ struct ForDirectiveSpec {
 
 fn get_directive_attr<'a>(el: &'a JSXElement, names: &[&str]) -> Option<&'a JSXAttr> {
     for a in &el.opening.attrs {
-        if let JSXAttrOrSpread::JSXAttr(attr) = a {
-            if let JSXAttrName::Ident(n) = &attr.name {
-                let name = n.sym.as_ref();
-                if names.contains(&name) {
-                    return Some(attr);
-                }
+        if let JSXAttrOrSpread::JSXAttr(attr) = a
+            && let JSXAttrName::Ident(n) = &attr.name
+        {
+            let name = n.sym.as_ref();
+            if names.contains(&name) {
+                return Some(attr);
             }
         }
     }

@@ -47,11 +47,11 @@ const Comp: FC<{ query?: string; count: number; label?: string }> = ({
     )));
 
     assert!(normalized.contains(&utils::normalize(
-        r#"const payload = _$vaporWithHookId("computed:1:1", ()=>computed(()=>{
+        r#"const payload = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
         total: __rue_props.count,
         text: (__rue_props.label === void 0 ? 'fallback' : __rue_props.label),
         query: (__rue_props.query === void 0 ? ' hello ' : __rue_props.query)
-    }));"#,
+    })));"#,
     )));
 
     assert!(normalized.contains(&utils::normalize(r#"const __rue_phase2_payload = payload;"#,)));

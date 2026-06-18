@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Status 组件概述
 - 保留 Rue 原有的 status dot 视觉，同时融合 badge 的 dot / count / text / offset / wrapper 能力。
@@ -55,6 +54,44 @@ export interface StatusProps {
   children?: any
   /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
+}
+
+interface StatusRootProps {
+  as?: StatusAs
+  ariaLabel?: string
+  rootClassName?: string
+  rootStyle?: any
+  className?: string
+  style?: any
+  restProps?: Record<string, any>
+  children?: any
+}
+
+interface StatusDotProps {
+  size?: StatusSize
+  dotClass?: string
+  processingClassName?: string
+  className?: string
+  style?: any
+  title?: string
+  customColor?: string
+}
+
+interface StatusCountProps {
+  size?: StatusSize
+  badgeClass?: string
+  className?: string
+  style?: any
+  title?: string
+  customColor?: string
+  displayCount?: any
+}
+
+interface StatusTextProps {
+  text?: any
+  usesTone?: boolean
+  textClass?: string
+  customColor?: string
 }
 
 /** STATUS_TONES 内部常量。 */
@@ -257,6 +294,99 @@ const normalizeCount = (count: any, overflowCount: number) => {
   return count
 }
 
+const resolveRootStyle = (style: any, rootStyle: any) => {
+  return style || rootStyle ? { ...style, ...rootStyle } : undefined
+}
+
+const StatusRoot: FC<StatusRootProps> = ({
+  as = 'span',
+  ariaLabel,
+  rootClassName,
+  rootStyle,
+  className,
+  style,
+  restProps,
+  children,
+}) => {
+  const common = {
+    ...restProps,
+    ...(ariaLabel !== undefined ? { 'aria-label': ariaLabel } : {}),
+    className: mergeClassNames(rootClassName, className),
+    style: resolveRootStyle(style, rootStyle),
+  }
+
+  if (as === 'div') {
+    return <div {...common}>{children}</div>
+  }
+
+  return <span {...common}>{children}</span>
+}
+
+const StatusDot: FC<StatusDotProps> = ({
+  size,
+  dotClass,
+  processingClassName,
+  className,
+  style,
+  title,
+  customColor,
+}) => {
+  const resolvedSize = resolveSize(size)
+
+  return (
+    <span
+      className={mergeClassNames(
+        'status',
+        resolvedSize ? `status-${resolvedSize}` : undefined,
+        dotClass,
+        processingClassName,
+        className,
+      )}
+      style={customColor ? { backgroundColor: customColor, color: customColor, ...style } : style}
+      title={title}
+    />
+  )
+}
+
+const StatusCount: FC<StatusCountProps> = ({
+  size,
+  badgeClass,
+  className,
+  style,
+  title,
+  customColor,
+  displayCount,
+}) => {
+  return (
+    <span
+      className={mergeClassNames(
+        'inline-flex items-center justify-center whitespace-nowrap rounded-full font-medium leading-none shadow-sm',
+        resolveCountSizeClass(size),
+        badgeClass,
+        className,
+      )}
+      style={customColor ? { backgroundColor: customColor, color: '#fff', ...style } : style}
+      title={title}
+    >
+      {displayCount}
+    </span>
+  )
+}
+
+const StatusText: FC<StatusTextProps> = ({ text, usesTone, textClass, customColor }) => {
+  return (
+    <span
+      className={mergeClassNames(
+        'text-sm leading-none',
+        usesTone && !customColor ? textClass : undefined,
+      )}
+      style={usesTone && customColor ? { color: customColor } : undefined}
+    >
+      {text}
+    </span>
+  )
+}
+
 /** Status 的内部工具函数。 */
 const Status: FC<StatusProps> = ({
   as = 'span',
@@ -307,127 +437,98 @@ const Status: FC<StatusProps> = ({
       ? `${displayCount}`
       : undefined)
 
-  const renderRoot = (content: any, rootClassName?: string, rootStyle?: any) => {
-    const common: Record<string, any> = {
-      ...rest,
-      className: mergeClassNames(rootClassName, className),
-      style: style || rootStyle ? { ...style, ...rootStyle } : undefined,
-    }
-    if (ariaLabel !== undefined) {
-      common['aria-label'] = ariaLabel
-    }
-    if (as === 'div') {
-      return <div {...common}>{content}</div>
-    }
-    return <span {...common}>{content}</span>
-  }
-
-  const renderDot = (dotClassName?: string, dotStyle?: any, dotTitle?: string) => {
+  const simpleStandaloneDot = !hasChildren && !showText && (showAsDot || !hasExplicitCount)
+  if (simpleStandaloneDot) {
     return (
-      <span
-        className={mergeClassNames(
+      <StatusRoot
+        as={as}
+        ariaLabel={ariaLabel}
+        rootClassName={mergeClassNames(
           'status',
           resolvedSize ? `status-${resolvedSize}` : undefined,
           toneClasses.dotClass,
           processingClassName,
-          dotClassName,
         )}
-        style={
-          customColor ? { backgroundColor: customColor, color: customColor, ...dotStyle } : dotStyle
-        }
-        title={dotTitle}
+        rootStyle={customColor ? { backgroundColor: customColor, color: customColor } : undefined}
+        className={className}
+        style={style}
+        restProps={rest}
       />
     )
   }
 
-  const renderCount = (countClassName?: string, countStyle?: any) => {
-    return (
-      <span
-        className={mergeClassNames(
-          'inline-flex items-center justify-center whitespace-nowrap rounded-full font-medium leading-none shadow-sm',
-          resolveCountSizeClass(size),
-          toneClasses.badgeClass,
-          countClassName,
-        )}
-        style={
-          customColor ? { backgroundColor: customColor, color: '#fff', ...countStyle } : countStyle
-        }
-        title={indicatorTitle}
-      >
-        {displayCount}
-      </span>
-    )
-  }
-
-  const simpleStandaloneDot = !hasChildren && !showText && (showAsDot || !hasExplicitCount)
-  if (simpleStandaloneDot) {
-    return renderRoot(
-      null,
-      mergeClassNames(
-        'status',
-        resolvedSize ? `status-${resolvedSize}` : undefined,
-        toneClasses.dotClass,
-        processingClassName,
-      ),
-      customColor ? { backgroundColor: customColor, color: customColor } : undefined,
-    )
-  }
-
-  const textNode = showText ? (
-    <span
-      className={mergeClassNames(
-        'text-sm leading-none',
-        usesStatusLabelMode && !customColor ? toneClasses.textClass : undefined,
-      )}
-      style={usesStatusLabelMode && customColor ? { color: customColor } : undefined}
-    >
-      {text}
-    </span>
-  ) : null
-
   const indicatorOffsetStyle = resolveIndicatorOffsetStyle(offset)
-  const standaloneIndicatorLabelNode = showLeadingStatusDot ? (
-    <span className="inline-flex items-center gap-2">
-      {renderDot('shrink-0')}
-      <span className="text-sm leading-none">{text}</span>
-    </span>
-  ) : (
-    text
-  )
-
-  const renderStandaloneIndicator = (indicatorNode: any) => {
-    return renderRoot(
-      <span className="indicator inline-flex align-middle">
-        {indicatorNode}
-        <span
-          className={mergeClassNames(
-            'inline-flex items-center text-sm leading-none text-base-content',
-            resolveStandaloneIndicatorContentClassName({ dot: showAsDot, displayCount }),
-          )}
-        >
-          {standaloneIndicatorLabelNode}
-        </span>
-      </span>,
-    )
-  }
 
   if (!hasChildren && (showAsDot || !hasExplicitCount)) {
     if (showStandaloneIndicator) {
-      return renderStandaloneIndicator(
-        renderDot(
-          'indicator-item ring-2 ring-base-100 shadow-sm',
-          indicatorOffsetStyle,
-          indicatorTitle,
-        ),
+      return (
+        <StatusRoot
+          as={as}
+          ariaLabel={ariaLabel}
+          className={className}
+          style={style}
+          restProps={rest}
+        >
+          <span className="indicator inline-flex align-middle">
+            <StatusDot
+              size={size}
+              dotClass={toneClasses.dotClass}
+              processingClassName={processingClassName}
+              className="indicator-item ring-2 ring-base-100 shadow-sm"
+              style={indicatorOffsetStyle}
+              title={indicatorTitle}
+              customColor={customColor}
+            />
+            <span
+              className={mergeClassNames(
+                'inline-flex items-center text-sm leading-none text-base-content',
+                resolveStandaloneIndicatorContentClassName({ dot: showAsDot, displayCount }),
+              )}
+            >
+              {showLeadingStatusDot ? (
+                <span className="inline-flex items-center gap-2">
+                  <StatusDot
+                    size={size}
+                    dotClass={toneClasses.dotClass}
+                    processingClassName={processingClassName}
+                    className="shrink-0"
+                    customColor={customColor}
+                  />
+                  <span className="text-sm leading-none">{text}</span>
+                </span>
+              ) : (
+                text
+              )}
+            </span>
+          </span>
+        </StatusRoot>
       )
     }
 
-    return renderRoot(
-      <>
-        {renderDot()}
-        {textNode}
-      </>,
-      'inline-flex items-center gap-2 align-middle',
+    return (
+      <StatusRoot
+        as={as}
+        ariaLabel={ariaLabel}
+        rootClassName="inline-flex items-center gap-2 align-middle"
+        className={className}
+        style={style}
+        restProps={rest}
+      >
+        <StatusDot
+          size={size}
+          dotClass={toneClasses.dotClass}
+          processingClassName={processingClassName}
+          customColor={customColor}
+        />
+        {showText ? (
+          <StatusText
+            text={text}
+            usesTone={usesStatusLabelMode}
+            textClass={toneClasses.textClass}
+            customColor={customColor}
+          />
+        ) : null}
+      </StatusRoot>
     )
   }
 
@@ -437,35 +538,120 @@ const Status: FC<StatusProps> = ({
     }
 
     if (showStandaloneIndicator) {
-      return renderStandaloneIndicator(renderCount('indicator-item', indicatorOffsetStyle))
+      return (
+        <StatusRoot
+          as={as}
+          ariaLabel={ariaLabel}
+          className={className}
+          style={style}
+          restProps={rest}
+        >
+          <span className="indicator inline-flex align-middle">
+            <StatusCount
+              size={size}
+              badgeClass={toneClasses.badgeClass}
+              className="indicator-item"
+              style={indicatorOffsetStyle}
+              title={indicatorTitle}
+              customColor={customColor}
+              displayCount={displayCount}
+            />
+            <span
+              className={mergeClassNames(
+                'inline-flex items-center text-sm leading-none text-base-content',
+                resolveStandaloneIndicatorContentClassName({ dot: showAsDot, displayCount }),
+              )}
+            >
+              {showLeadingStatusDot ? (
+                <span className="inline-flex items-center gap-2">
+                  <StatusDot
+                    size={size}
+                    dotClass={toneClasses.dotClass}
+                    processingClassName={processingClassName}
+                    className="shrink-0"
+                    customColor={customColor}
+                  />
+                  <span className="text-sm leading-none">{text}</span>
+                </span>
+              ) : (
+                text
+              )}
+            </span>
+          </span>
+        </StatusRoot>
+      )
     }
 
-    return renderRoot(
-      <>
-        {renderCount()}
-        {textNode}
-      </>,
-      'inline-flex items-center gap-2 align-middle',
+    return (
+      <StatusRoot
+        as={as}
+        ariaLabel={ariaLabel}
+        rootClassName="inline-flex items-center gap-2 align-middle"
+        className={className}
+        style={style}
+        restProps={rest}
+      >
+        <StatusCount
+          size={size}
+          badgeClass={toneClasses.badgeClass}
+          title={indicatorTitle}
+          customColor={customColor}
+          displayCount={displayCount}
+        />
+        {showText ? (
+          <StatusText
+            text={text}
+            usesTone={usesStatusLabelMode}
+            textClass={toneClasses.textClass}
+            customColor={customColor}
+          />
+        ) : null}
+      </StatusRoot>
     )
   }
 
-  return renderRoot(
-    <>
+  return (
+    <StatusRoot
+      as={as}
+      ariaLabel={ariaLabel}
+      rootClassName="inline-flex items-center gap-2 align-middle"
+      className={className}
+      style={style}
+      restProps={rest}
+    >
       <span className="indicator inline-flex w-fit shrink-0 align-middle">
-        {showAsDot
-          ? renderDot(
-              'indicator-item ring-2 ring-base-100 shadow-sm',
-              indicatorOffsetStyle,
-              indicatorTitle,
-            )
-          : !ignoreCount
-            ? renderCount('indicator-item ring-2 ring-base-100', indicatorOffsetStyle)
-            : null}
+        {showAsDot ? (
+          <StatusDot
+            size={size}
+            dotClass={toneClasses.dotClass}
+            processingClassName={processingClassName}
+            className="indicator-item ring-2 ring-base-100 shadow-sm"
+            style={indicatorOffsetStyle}
+            title={indicatorTitle}
+            customColor={customColor}
+          />
+        ) : !ignoreCount ? (
+          <StatusCount
+            size={size}
+            badgeClass={toneClasses.badgeClass}
+            className="indicator-item ring-2 ring-base-100"
+            style={indicatorOffsetStyle}
+            title={indicatorTitle}
+            customColor={customColor}
+            displayCount={displayCount}
+          />
+        ) : null}
         <span className="inline-flex w-fit shrink-0 align-middle">{children}</span>
       </span>
-      {textNode}
-    </>,
-    'inline-flex items-center gap-2 align-middle',
+      {showText ? (
+        <StatusText
+          text={text}
+          usesTone={usesStatusLabelMode}
+          textClass={toneClasses.textClass}
+          customColor={customColor}
+        />
+      ) : null}
+    </StatusRoot>
   )
 }
 

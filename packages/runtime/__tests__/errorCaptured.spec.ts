@@ -5,7 +5,8 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { h, onError, onErrorCaptured, render, type FC } from '../src'
+import { h, onError, onErrorCaptured, render, setReactiveScheduling, type FC } from '../src'
+setReactiveScheduling('sync')
 
 afterEach(() => {
   document.body.innerHTML = ''

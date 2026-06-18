@@ -74,7 +74,7 @@ const DEMO_ITEMS: DemoItem[] = [
 ]
 
 const DEMO_TABS: Array<{ id: DemoTab; label: string; hint: string }> = [
-  { id: 'all', label: '全部', hint: '默认值会从 URL 里省略。' },
+  { id: 'all', label: '全部', hint: '默认值不会写入 URL。' },
   { id: 'router', label: 'Router', hint: '切换时走 throttle + history push。' },
   { id: 'store', label: 'Store', hint: '观察 defineStore 与 query sync 的配合。' },
   { id: 'runtime', label: 'Runtime', hint: '保持同一路径，只替换 search 状态。' },

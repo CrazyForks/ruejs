@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Radio 组件概述
 - 保留 Rue 当前 radio 视觉类，同时补齐受控/非受控、标签包装、Radio.Group、Radio.Button 与 options 配置能力。
-- Group 通过轻量 DOM 同步兼容 children 直出和 options 配置两种写法，不依赖运行时 context。
+- Group 优先通过 JSX props 管理 options 配置写法，并用 callback ref 兼容 children 直出。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, useRef, watch } from '@rue-js/rue'
+import { ref, useSetup, watchEffect } from '@rue-js/rue'
 
 /** RadioColor 语义色类型。 */
 export type RadioColor =
@@ -81,6 +80,20 @@ export interface RadioProps {
   onChange?: (event: Event, meta: RadioChangeMeta) => void
   /** onCheckedChange 事件回调。 */
   onCheckedChange?: (checked: boolean, event: Event) => void
+  /** Group 内部受控值。 */
+  __rueRadioGroupValue?: RadioValue
+  /** Group 内部禁用态。 */
+  __rueRadioGroupDisabled?: boolean
+  /** Group 内部是否为受控模式。 */
+  __rueRadioGroupControlled?: boolean
+  /** Group 内部变更回调。 */
+  __rueRadioGroupOnChange?: (
+    value: RadioValue | undefined,
+    event: Event,
+    option?: RadioOption,
+  ) => void
+  /** Group 内部选项数据。 */
+  __rueRadioOption?: RadioOption
   /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
@@ -158,6 +171,12 @@ export interface RadioGroupProps {
 }
 
 interface NormalizedRadioOption extends RadioOption {}
+
+let radioGroupNameSeed = 0
+
+/** RUE_COMPONENT_TYPE_KEY 内部常量。 */
+const RUE_COMPONENT_TYPE_KEY = '__rue_component_type'
+const RADIO_GROUP_CHANGE_HANDLED = '__rueRadioGroupChangeHandled'
 
 /** append Class Name 的内部工具函数。 */
 const appendClassName = (base: string, className?: string) => {
@@ -390,28 +409,28 @@ const resolveOrientation = (
   return orientation ?? (vertical ? 'vertical' : 'horizontal')
 }
 
-/** read Group Config 的内部工具函数。 */
-const readGroupConfig = (input?: HTMLInputElement | null) => {
-  const group = input?.closest('[data-rue-radio-group="true"]') as HTMLElement | null
+/** 判断 Renderable Node 的内部工具函数。 */
+const isRenderableNode = (value: unknown): value is Record<string, any> =>
+  !!value && typeof value === 'object'
 
-  if (!group) {
-    return {
-      optionType: undefined as RadioOptionType | undefined,
-      buttonStyle: undefined as RadioButtonStyle | undefined,
-      size: undefined as RadioSize | undefined,
-      color: undefined as RadioColor | undefined,
-      block: undefined as boolean | undefined,
-    }
-  }
-
-  return {
-    optionType: group.dataset.rueRadioGroupOptionType as RadioOptionType | undefined,
-    buttonStyle: group.dataset.rueRadioGroupButtonStyle as RadioButtonStyle | undefined,
-    size: group.dataset.rueRadioGroupSize as RadioSize | undefined,
-    color: group.dataset.rueRadioGroupColor as RadioColor | undefined,
-    block: group.dataset.rueRadioGroupBlock === 'true',
-  }
+/** 判断组件类型是否匹配的内部工具函数。 */
+const isVNodeOfType = (value: Record<string, any>, type: unknown) => {
+  return value[RUE_COMPONENT_TYPE_KEY] === type || value.type === type || value.component === type
 }
+
+type RadioGroupInjectedProps = Pick<
+  RadioProps,
+  | '__rueRadioGroupValue'
+  | '__rueRadioGroupDisabled'
+  | '__rueRadioGroupControlled'
+  | '__rueRadioGroupOnChange'
+  | 'name'
+  | 'optionType'
+  | 'buttonStyle'
+  | 'size'
+  | 'color'
+  | 'block'
+>
 
 /** Radio Root 的内部工具函数。 */
 const RadioRoot: FC<RadioProps> = ({
@@ -435,133 +454,93 @@ const RadioRoot: FC<RadioProps> = ({
   block,
   onChange,
   onCheckedChange,
+  __rueRadioGroupValue,
+  __rueRadioGroupDisabled,
+  __rueRadioGroupControlled,
+  __rueRadioGroupOnChange,
+  __rueRadioOption,
   ...rest
 }) => {
-  const inputRef = useRef<HTMLInputElement>()
-  const buttonRootRef = useRef<HTMLLabelElement>()
-  const buttonSurfaceRef = useRef<HTMLSpanElement>()
-  const inheritedOptionType = ref<RadioOptionType | undefined>(undefined)
-  const inheritedButtonStyle = ref<RadioButtonStyle | undefined>(undefined)
-  const inheritedSize = ref<RadioSize | undefined>(undefined)
-  const inheritedColor = ref<RadioColor | undefined>(undefined)
-  const inheritedBlock = ref<boolean | undefined>(undefined)
-
-  const syncControlledState = () => {
-    if (typeof checked === 'boolean' && inputRef.current) {
-      inputRef.current.checked = checked
-    }
+  const uncontrolledChecked = ref(checked ?? !!defaultChecked)
+  const readGroupChecked = () =>
+    __rueRadioGroupOnChange && value !== undefined ? __rueRadioGroupValue === value : undefined
+  const readControlledChecked = () => {
+    if (typeof checked === 'boolean') return checked
+    return readGroupChecked()
   }
-
-  const syncGroupConfig = () => {
-    const config = readGroupConfig(inputRef.current)
-
-    inheritedOptionType.value = config.optionType
-    inheritedButtonStyle.value = config.buttonStyle
-    inheritedSize.value = config.size
-    inheritedColor.value = config.color
-    inheritedBlock.value = config.block
-
-    if (buttonRootRef.current) {
-      buttonRootRef.current.className = buildButtonRootClassName(
-        disabled,
-        rootClassName,
-        block ?? config.block ?? false,
-      )
-    }
-
-    if (buttonSurfaceRef.current) {
-      buttonSurfaceRef.current.className = buildButtonSurfaceClassName({
-        color: color ?? config.color,
-        size: size ?? config.size,
-        buttonStyle: buttonStyle ?? config.buttonStyle ?? 'outline',
-        className,
-        block: block ?? config.block ?? false,
-      })
-    }
-  }
+  const readChecked = () => readControlledChecked() ?? uncontrolledChecked.value
+  const mergedOptionType = optionType ?? 'default'
+  const mergedButtonStyle = buttonStyle ?? 'outline'
+  const mergedSize = size
+  const mergedColor = color
+  const mergedBlock = block ?? false
+  const mergedDisabled = !!(disabled || __rueRadioGroupDisabled)
+  const mergedName = name
+  const isButton = mergedOptionType === 'button'
 
   const handleChange = (event: Event) => {
     const target = event.target as HTMLInputElement | null
     const nextChecked = target?.checked === true
+    const controlledChecked = readControlledChecked()
 
-    syncGroupConfig()
-
-    if (typeof checked === 'boolean' && inputRef.current) {
-      inputRef.current.checked = checked
+    if (__rueRadioGroupOnChange && nextChecked) {
+      ;(event as unknown as Record<string, boolean>)[RADIO_GROUP_CHANGE_HANDLED] = true
+      __rueRadioGroupOnChange(value, event, __rueRadioOption)
+    } else if (controlledChecked === undefined) {
+      uncontrolledChecked.value = nextChecked
     }
-
-    const resolvedOptionType = optionType ?? inheritedOptionType.value ?? 'default'
 
     if (onChange) {
       onChange(event, {
         checked: nextChecked,
         value,
-        optionType: resolvedOptionType,
+        optionType: mergedOptionType,
       })
     }
 
     if (onCheckedChange) {
       onCheckedChange(nextChecked, event)
     }
+
+    const resolvedChecked = readControlledChecked()
+    if (
+      resolvedChecked !== undefined &&
+      target &&
+      (!__rueRadioGroupOnChange || __rueRadioGroupControlled)
+    ) {
+      target.checked = resolvedChecked
+    }
   }
-
-  onMounted(() => {
-    syncControlledState()
-    syncGroupConfig()
-  })
-
-  watch(
-    () => checked,
-    () => {
-      syncControlledState()
-    },
-    { immediate: true },
-  )
-
-  const mergedOptionType = optionType ?? inheritedOptionType.value ?? 'default'
-  const mergedButtonStyle = buttonStyle ?? inheritedButtonStyle.value ?? 'outline'
-  const mergedSize = size ?? inheritedSize.value
-  const mergedColor = color ?? inheritedColor.value
-  const mergedBlock = block ?? inheritedBlock.value ?? false
-  const isButton = mergedOptionType === 'button'
-
-  const inputNode = (
-    <input
-      {...rest}
-      ref={inputRef}
-      id={id}
-      name={name}
-      title={title}
-      type="radio"
-      value={value as any}
-      checked={checked}
-      defaultChecked={defaultChecked}
-      disabled={disabled}
-      style={isButton ? undefined : style}
-      className={isButton ? 'peer sr-only' : buildInputClassName(color, size, className)}
-      data-rue-radio-input="true"
-      data-rue-radio-disabled={disabled ? 'true' : 'false'}
-      data-rue-radio-option-type={mergedOptionType}
-      data-rue-radio-value={value !== undefined ? serializeValue(value) : undefined}
-      onChange={handleChange}
-    />
-  )
 
   if (isButton) {
     const buttonLabel = children ?? (value !== undefined ? String(value) : null)
 
     return (
       <label
-        ref={buttonRootRef}
-        className={buildButtonRootClassName(disabled, rootClassName, mergedBlock)}
+        className={buildButtonRootClassName(mergedDisabled, rootClassName, mergedBlock)}
         style={rootStyle}
         title={title}
         data-rue-radio-root="true"
         data-rue-radio-option-type="button"
       >
-        {inputNode}
+        <input
+          {...rest}
+          id={id}
+          name={mergedName}
+          title={title}
+          type="radio"
+          value={value as any}
+          checked={readChecked()}
+          defaultChecked={defaultChecked ?? readChecked()}
+          disabled={mergedDisabled}
+          className="peer sr-only"
+          data-rue-radio-input="true"
+          data-rue-radio-disabled={mergedDisabled ? 'true' : 'false'}
+          data-rue-radio-option-type={mergedOptionType}
+          data-rue-radio-value={value !== undefined ? serializeValue(value) : undefined}
+          onChange={handleChange}
+        />
         <span
-          ref={buttonSurfaceRef}
           className={buildButtonSurfaceClassName({
             color: mergedColor,
             size: mergedSize,
@@ -578,23 +557,109 @@ const RadioRoot: FC<RadioProps> = ({
   }
 
   if (children == null && !rootClassName && !rootStyle && !contentClassName) {
-    return inputNode
+    return (
+      <input
+        {...rest}
+        id={id}
+        name={mergedName}
+        title={title}
+        type="radio"
+        value={value as any}
+        checked={readChecked()}
+        defaultChecked={defaultChecked ?? readChecked()}
+        disabled={mergedDisabled}
+        style={style}
+        className={buildInputClassName(mergedColor, mergedSize, className)}
+        data-rue-radio-input="true"
+        data-rue-radio-disabled={mergedDisabled ? 'true' : 'false'}
+        data-rue-radio-option-type={mergedOptionType}
+        data-rue-radio-value={value !== undefined ? serializeValue(value) : undefined}
+        onChange={handleChange}
+      />
+    )
   }
 
   return (
     <label
-      className={buildDefaultRootClassName(disabled, rootClassName, mergedBlock)}
+      className={buildDefaultRootClassName(mergedDisabled, rootClassName, mergedBlock)}
       style={rootStyle}
       title={title}
       data-rue-radio-root="true"
       data-rue-radio-option-type="default"
     >
-      <span className="shrink-0 pt-0.5">{inputNode}</span>
+      <span className="shrink-0 pt-0.5">
+        <input
+          {...rest}
+          id={id}
+          name={mergedName}
+          title={title}
+          type="radio"
+          value={value as any}
+          checked={readChecked()}
+          defaultChecked={defaultChecked ?? readChecked()}
+          disabled={mergedDisabled}
+          style={style}
+          className={buildInputClassName(mergedColor, mergedSize, className)}
+          data-rue-radio-input="true"
+          data-rue-radio-disabled={mergedDisabled ? 'true' : 'false'}
+          data-rue-radio-option-type={mergedOptionType}
+          data-rue-radio-value={value !== undefined ? serializeValue(value) : undefined}
+          onChange={handleChange}
+        />
+      </span>
       {children != null ? (
         <span className={buildContentClassName(contentClassName)}>{children}</span>
       ) : null}
     </label>
   )
+}
+
+/** inject Radio Group Props 的内部工具函数。 */
+const injectRadioGroupProps = (value: unknown, injectedProps: RadioGroupInjectedProps): unknown => {
+  if (typeof value === 'function' && (value as { kind?: unknown }).kind === 'block-factory') {
+    return injectRadioGroupProps((value as () => unknown)(), injectedProps)
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(child => injectRadioGroupProps(child, injectedProps))
+  }
+  if (!isRenderableNode(value)) {
+    return value
+  }
+
+  const props = value.props
+  if (!props || typeof props !== 'object') {
+    return value
+  }
+
+  const nextProps = {
+    ...(props as Record<string, unknown>),
+  }
+
+  if ('children' in nextProps) {
+    nextProps.children = injectRadioGroupProps(nextProps.children, injectedProps)
+  }
+
+  if (isVNodeOfType(value, RadioRoot) || isVNodeOfType(value, RadioButton)) {
+    nextProps.__rueRadioGroupValue = injectedProps.__rueRadioGroupValue
+    nextProps.__rueRadioGroupDisabled = injectedProps.__rueRadioGroupDisabled
+    nextProps.__rueRadioGroupControlled = injectedProps.__rueRadioGroupControlled
+    nextProps.__rueRadioGroupOnChange = injectedProps.__rueRadioGroupOnChange
+    nextProps.name = nextProps.name ?? injectedProps.name
+    nextProps.optionType = nextProps.optionType ?? injectedProps.optionType
+    nextProps.buttonStyle = nextProps.buttonStyle ?? injectedProps.buttonStyle
+    nextProps.size = nextProps.size ?? injectedProps.size
+    nextProps.color = nextProps.color ?? injectedProps.color
+    nextProps.block = nextProps.block ?? injectedProps.block
+    if (nextProps.value !== undefined) {
+      nextProps.checked = injectedProps.__rueRadioGroupValue === nextProps.value
+    }
+  }
+
+  return {
+    ...value,
+    props: nextProps,
+  }
 }
 
 /** Group 的内部工具函数。 */
@@ -617,43 +682,46 @@ const Group: FC<RadioGroupProps> = ({
   onChange,
   ...rest
 }) => {
-  const groupRef = useRef<HTMLDivElement>()
-  const generatedName = ref<string | undefined>(undefined)
+  const instance = useSetup(() => ({
+    generatedName: `rue-radio-group-${++radioGroupNameSeed}`,
+    root: undefined as HTMLDivElement | undefined,
+  }))
   const selectedValue = ref<RadioValue | undefined>(value ?? defaultValue)
   const normalizedOptions = normalizeOptions(options)
 
-  if (!generatedName.value) {
-    generatedName.value = `rue-radio-group-${Math.random().toString(36).slice(2, 10)}`
-  }
-
-  const mergedName = name ?? generatedName.value
+  const mergedName = name ?? instance.generatedName
   const mergedOrientation = resolveOrientation(orientation, vertical)
 
-  const syncChildInputs = () => {
-    const container = groupRef.current
+  const readCurrentValue = () => (value !== undefined ? value : selectedValue.value)
 
-    if (!container) {
-      return
-    }
+  const syncChildInputs = () => {
+    const root = instance.root
+    if (!root) return
 
     const selectedSerializedValue =
-      selectedValue.value !== undefined ? serializeValue(selectedValue.value) : undefined
+      readCurrentValue() !== undefined
+        ? serializeValue(readCurrentValue() as RadioValue)
+        : undefined
     const inputs = Array.from(
-      container.querySelectorAll<HTMLInputElement>(
-        'input[type="radio"][data-rue-radio-input="true"]',
-      ),
+      root.querySelectorAll<HTMLInputElement>('input[type="radio"][data-rue-radio-input="true"]'),
     )
 
     inputs.forEach(input => {
       const serializedValue = input.dataset.rueRadioValue
-
       if (serializedValue) {
         input.checked =
           selectedSerializedValue !== undefined && serializedValue === selectedSerializedValue
       }
-
       input.name = mergedName
       input.disabled = disabled ? true : input.dataset.rueRadioDisabled === 'true'
+    })
+  }
+
+  const bindGroupRoot = (root: HTMLDivElement | null) => {
+    instance.root = root ?? undefined
+    syncChildInputs()
+    Promise.resolve().then(() => {
+      syncChildInputs()
     })
   }
 
@@ -661,8 +729,8 @@ const Group: FC<RadioGroupProps> = ({
     nextValue: RadioValue | undefined,
     event: Event,
     option?: NormalizedRadioOption,
-    controlled?: boolean,
   ) => {
+    const controlled = value !== undefined
     const previousValue = controlled ? value : selectedValue.value
 
     if (!controlled) {
@@ -688,76 +756,67 @@ const Group: FC<RadioGroupProps> = ({
     }
   }
 
-  const handleGroupChange = (event: Event) => {
+  const handleRadioChange = (
+    nextValue: RadioValue | undefined,
+    event: Event,
+    providedOption?: RadioOption,
+  ) => {
+    const resolvedValue =
+      nextValue !== undefined
+        ? nextValue
+        : deserializeValue((event.target as HTMLElement | null)?.dataset.rueRadioValue)
+    const serializedValue = resolvedValue !== undefined ? serializeValue(resolvedValue) : undefined
+    const matchedOption = normalizedOptions.find(
+      option => serializeValue(option.value) === serializedValue,
+    )
+
+    if (resolvedValue === undefined) {
+      return
+    }
+
+    commitValue(
+      resolvedValue,
+      event,
+      (providedOption ?? matchedOption) as NormalizedRadioOption | undefined,
+    )
+    syncChildInputs()
+  }
+
+  const handleChildrenChange = (event: Event) => {
+    if ((event as unknown as Record<string, boolean>)[RADIO_GROUP_CHANGE_HANDLED]) {
+      return
+    }
+
     const target = event.target as HTMLInputElement | null
 
     if (!target || target.type !== 'radio' || target.dataset.rueRadioInput !== 'true') {
       return
     }
 
-    const serializedValue = target.dataset.rueRadioValue
-    const resolvedValue = deserializeValue(serializedValue)
-    const matchedOption = normalizedOptions.find(
-      option => serializeValue(option.value) === serializedValue,
-    )
-    const controlled = value !== undefined
-
-    if (resolvedValue === undefined) {
-      if (controlled) {
-        syncChildInputs()
-      }
-      return
-    }
-
-    commitValue(resolvedValue, event, matchedOption, controlled)
-    syncChildInputs()
+    handleRadioChange(deserializeValue(target.dataset.rueRadioValue), event)
   }
 
-  onMounted(() => {
+  watchEffect(() => {
     syncChildInputs()
   })
 
-  watch(
-    () => value,
-    (nextValue: RadioValue | undefined) => {
-      if (nextValue !== undefined) {
-        selectedValue.value = nextValue
-      }
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => selectedValue.value,
-    () => {
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => disabled,
-    () => {
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => mergedName,
-    () => {
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  const currentValue = value !== undefined ? value : selectedValue.value
+  const injectedChildren = injectRadioGroupProps(children, {
+    __rueRadioGroupValue: readCurrentValue(),
+    __rueRadioGroupDisabled: disabled,
+    __rueRadioGroupControlled: value !== undefined,
+    __rueRadioGroupOnChange: handleRadioChange,
+    name: mergedName,
+    optionType,
+    buttonStyle,
+    size,
+    color,
+    block,
+  })
 
   return (
     <div
       {...rest}
-      ref={groupRef}
+      ref={bindGroupRoot}
       role={rest.role ?? 'radiogroup'}
       className={resolveGroupClassName({
         optionType,
@@ -772,15 +831,15 @@ const Group: FC<RadioGroupProps> = ({
       data-rue-radio-group-color={color}
       data-rue-radio-group-option-type={optionType}
       data-rue-radio-group-size={resolveSizeToken(size)}
-      onChange={handleGroupChange}
+      onChange={normalizedOptions.length ? undefined : handleChildrenChange}
     >
       {normalizedOptions.length
         ? normalizedOptions.map(option => (
             <RadioRoot
               key={serializeValue(option.value)}
               value={option.value}
-              checked={currentValue === option.value}
-              disabled={disabled || option.disabled}
+              checked={readCurrentValue() === option.value}
+              disabled={option.disabled}
               name={mergedName}
               title={option.title}
               id={option.id}
@@ -792,11 +851,16 @@ const Group: FC<RadioGroupProps> = ({
               block={block}
               rootClassName={option.className}
               rootStyle={option.style}
+              __rueRadioGroupValue={readCurrentValue()}
+              __rueRadioGroupDisabled={disabled}
+              __rueRadioGroupControlled={value !== undefined}
+              __rueRadioGroupOnChange={handleRadioChange}
+              __rueRadioOption={option}
             >
               {option.label}
             </RadioRoot>
           ))
-        : children}
+        : injectedChildren}
     </div>
   )
 }

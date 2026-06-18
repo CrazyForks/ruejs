@@ -2,7 +2,8 @@ import type { FC } from '@rue-js/rue'
 import { ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import PreviewBlock, { type PreviewTabMode } from './PreviewBlock'
-import { Button, FileInput } from '@rue-js/design'
+import Button from '../../../packages/rue-design/src/components/button/index'
+import FileInput from '../../../packages/rue-design/src/components/file-input/index'
 import type {
   FileInputChangeInfo,
   FileInputFile,
@@ -13,6 +14,18 @@ interface ApiRow {
   description: string
   type: string
   defaultValue: string
+}
+
+interface FileInputMessageProps {
+  message: { value: any }
+}
+
+const FileInputMessage: FC<FileInputMessageProps> = ({ message }) => {
+  return (
+    <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm text-base-content/70">
+      {message.value}
+    </div>
+  )
 }
 
 const createImageDataUrl = (label: string, background: string, foreground = '#ffffff') => {
@@ -79,10 +92,10 @@ const pictureSeed: FileInputFile[] = [
 
 const apiRows: ApiRow[] = [
   {
-    prop: 'variant / size / ghost',
+    prop: 'color / variant / size / ghost',
     description:
-      '原始 daisyUI `file-input-*` 风格入口继续保留；不传增强 API 时仍直接渲染原生 input。',
-    type: 'FileInputVariant / FileInputSize / boolean',
+      '`color` 对齐 Rue Design 语义色；`variant` 作为旧版颜色写法继续兼容。不传增强 API 时仍直接渲染原生 input。',
+    type: 'FileInputColor / FileInputVariant / FileInputSize / boolean',
     defaultValue: '-',
   },
   {
@@ -191,10 +204,17 @@ const FileInputDemo: FC = () => {
   }
 
   const controlledFiles = ref<FileInputFile[]>(cloneFiles(controlledSeed))
+  const recommendedMessage = ref(
+    '适合“先选择，再统一上传”的工作流，默认列表已接近 Upload 的核心体验。',
+  )
   const controlledMessage = ref('当前为受控模式，列表变化会先进入业务状态，再决定何时上传。')
   const previewMessage = ref('点击卡片右上角预览按钮，会在这里记录最近一次预览。')
   const validationFiles = ref<FileInputFile[]>([])
   const validationMessage = ref('仅允许 `image/*`，且每个文件不超过 2MB。')
+
+  const handleRecommendedChange = (info: FileInputChangeInfo) => {
+    recommendedMessage.value = `最近操作：${info.source} · ${info.file.name} · 当前 ${info.fileList.length} 项`
+  }
 
   const handleControlledChange = (info: FileInputChangeInfo) => {
     controlledFiles.value = info.fileList.map(file => ({
@@ -215,7 +235,7 @@ const FileInputDemo: FC = () => {
         <h1>File Input 文件选择</h1>
         <p className="text-sm mt-3 mb-3">
           Rue File Input 继续保留原始 <code>file-input</code> 样式入口，同时补齐更常用的
-          补齐更常用的文件列表、拖拽、图片卡片、受控/非受控和选择前校验能力。
+          文件列表、拖拽、图片卡片、受控/非受控和选择前校验能力。
         </p>
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
@@ -253,20 +273,26 @@ const FileInputDemo: FC = () => {
           preview={
             <div className="space-y-4">
               <FileInput
+                id="recommended-upload-like"
                 variant="primary"
                 multiple
                 maxCount={3}
+                accept=".pdf,.png,.mp4,application/pdf,image/png,video/mp4"
                 defaultFileList={cloneFiles(recommendedSeed)}
+                onChange={(info: FileInputChangeInfo | Event) =>
+                  handleRecommendedChange(info as FileInputChangeInfo)
+                }
                 title="推荐写法：把选择器和列表一起交给组件管理"
                 hint="PDF / PNG / MP4，最多 3 个文件"
                 buttonText="选择素材"
                 showUploadList={{
                   extra: (file: FileInputFile) => file.description ?? '待处理',
                 }}
+                onPreview={(file: FileInputFile) => {
+                  recommendedMessage.value = `最近预览：${file.name}`
+                }}
               />
-              <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm text-base-content/70">
-                适合“先选择，再统一上传”的工作流，默认列表已接近 Upload 的核心体验。
-              </div>
+              <FileInputMessage message={recommendedMessage} />
             </div>
           }
           code={`import { FileInput } from '@rue-js/design'
@@ -282,15 +308,23 @@ const defaultFileList = [
 ]
 
 <FileInput
+  id="recommended-upload-like"
   variant="primary"
   multiple
   maxCount={3}
+  accept=".pdf,.png,.mp4,application/pdf,image/png,video/mp4"
   defaultFileList={defaultFileList}
+  onChange={info => {
+    console.log(info.fileList)
+  }}
   title="推荐写法：把选择器和列表一起交给组件管理"
   hint="PDF / PNG / MP4，最多 3 个文件"
   buttonText="选择素材"
   showUploadList={{
     extra: file => file.description ?? '待处理',
+  }}
+  onPreview={file => {
+    console.log('preview', file.name)
   }}
 />`}
         />
@@ -316,6 +350,9 @@ const defaultFileList = [
                 onRemove={(file: FileInputFile) => {
                   controlledMessage.value = `已请求移除：${file.name}`
                 }}
+                onPreview={(file: FileInputFile) => {
+                  controlledMessage.value = `最近预览：${file.name}`
+                }}
                 multiple
                 title="受控列表"
                 buttonText="追加文件"
@@ -324,9 +361,7 @@ const defaultFileList = [
                   extra: (file: FileInputFile) => file.description ?? '待处理',
                 }}
               />
-              <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm text-base-content/70">
-                {controlledMessage.value}
-              </div>
+              <FileInputMessage message={controlledMessage} />
             </div>
           }
           code={`import { ref } from '@rue-js/rue'
@@ -344,6 +379,9 @@ const fileList = ref([
   }}
   onRemove={file => {
     console.log('remove', file.name)
+  }}
+  onPreview={file => {
+    console.log('preview', file.name)
   }}
   multiple
   title="受控列表"
@@ -399,9 +437,7 @@ const fileList = ref([
                   extra: (file: FileInputFile) => file.description,
                 }}
               />
-              <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm text-base-content/70">
-                {previewMessage.value}
-              </div>
+              <FileInputMessage message={previewMessage} />
             </div>
           }
           code={`import { FileInput } from '@rue-js/design'
@@ -436,15 +472,18 @@ const fileList = [
           tab={tabs.validation}
           preview={
             <div className="space-y-4">
-              <FileInput
+              <FileInput.Dragger
+                accept="image/*"
                 fileList={validationFiles.value}
                 listType="picture"
                 multiple
                 maxCount={4}
-                title="选择前校验图片格式和大小"
+                variant="info"
+                title="拖拽或选择图片，选择前校验格式和大小"
+                description="把图片拖到这里，或点击选择文件；非法文件不会进入列表。"
                 buttonText="添加图片"
                 hint="仅 image/*，单个文件不超过 2MB"
-                beforeUpload={(file: FileInputFile) => {
+                beforeUpload={(file: File) => {
                   if (!file.type?.startsWith('image/')) {
                     validationMessage.value = `已拦截 ${file.name}：只允许图片类型`
                     return FileInput.LIST_IGNORE
@@ -462,9 +501,7 @@ const fileList = [
                   extra: (file: FileInputFile) => file.description ?? '通过校验',
                 }}
               />
-              <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm text-base-content/70">
-                {validationMessage.value}
-              </div>
+              <FileInputMessage message={validationMessage} />
             </div>
           }
           code={`import { ref } from '@rue-js/rue'
@@ -472,12 +509,15 @@ import { FileInput } from '@rue-js/design'
 
 const fileList = ref([])
 
-<FileInput
+<FileInput.Dragger
+  accept="image/*"
   fileList={fileList.value}
   listType="picture"
   multiple
   maxCount={4}
-  title="选择前校验图片格式和大小"
+  variant="info"
+  title="拖拽或选择图片，选择前校验格式和大小"
+  description="把图片拖到这里，或点击选择文件；非法文件不会进入列表。"
   buttonText="添加图片"
   hint="仅 image/*，单个文件不超过 2MB"
   beforeUpload={file => {
@@ -552,24 +592,24 @@ const fileList = ref([])
           tab={tabs.colors}
           preview={
             <div className="grid gap-2">
-              <FileInput variant="primary" />
-              <FileInput variant="secondary" />
-              <FileInput variant="accent" />
-              <FileInput variant="neutral" />
-              <FileInput variant="info" />
-              <FileInput variant="success" />
-              <FileInput variant="warning" />
-              <FileInput variant="error" />
+              <FileInput color="primary" />
+              <FileInput color="secondary" />
+              <FileInput color="accent" />
+              <FileInput color="neutral" />
+              <FileInput color="info" />
+              <FileInput color="success" />
+              <FileInput color="warning" />
+              <FileInput color="error" />
             </div>
           }
-          code={`<FileInput variant="primary" />
-<FileInput variant="secondary" />
-<FileInput variant="accent" />
-<FileInput variant="neutral" />
-<FileInput variant="info" />
-<FileInput variant="success" />
-<FileInput variant="warning" />
-<FileInput variant="error" />`}
+          code={`<FileInput color="primary" />
+<FileInput color="secondary" />
+<FileInput color="accent" />
+<FileInput color="neutral" />
+<FileInput color="info" />
+<FileInput color="success" />
+<FileInput color="warning" />
+<FileInput color="error" />`}
         />
 
         <PreviewBlock

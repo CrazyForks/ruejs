@@ -104,6 +104,9 @@ describe('DrawerSidebar', () => {
 
     await waitForContent(() => {
       const root = container.querySelector('[data-rue-drawer-sidebar-root="true"]') as HTMLElement
+      const wrapper = container.querySelector(
+        '[data-rue-drawer-sidebar-wrapper="true"]',
+      ) as HTMLElement
       const panel = container.querySelector('[data-rue-drawer-sidebar-panel="true"]') as HTMLElement
       const header = container.querySelector(
         '[data-rue-drawer-sidebar-header="true"]',
@@ -118,15 +121,23 @@ describe('DrawerSidebar', () => {
       expect(root.getAttribute('data-rue-drawer-sidebar-mode')).toBe('panel')
       expect(root.style.zIndex).toBe('1000')
       expect(root.classList.contains('root-prop')).toBe(true)
+      expect(wrapper.classList.contains('min-h-0')).toBe(true)
+      expect(wrapper.classList.contains('min-w-0')).toBe(true)
       expect(panel.classList.contains('panel-prop')).toBe(true)
       expect(panel.classList.contains('panel-slot')).toBe(true)
+      expect(panel.classList.contains('min-h-0')).toBe(true)
+      expect(panel.classList.contains('overflow-hidden')).toBe(true)
       expect(panel.getAttribute('data-rue-drawer-sidebar-placement')).toBe('left')
       expect(panel.style.width).toBe('736px')
       expect(header.classList.contains('header-prop')).toBe(true)
+      expect(header.classList.contains('shrink-0')).toBe(true)
       expect(body.classList.contains('body-prop')).toBe(true)
       expect(body.classList.contains('body-slot')).toBe(true)
+      expect(body.classList.contains('min-h-0')).toBe(true)
+      expect(body.classList.contains('overflow-y-auto')).toBe(true)
       expect(body.textContent).toContain('Drawer body')
       expect(footer.classList.contains('footer-prop')).toBe(true)
+      expect(footer.classList.contains('shrink-0')).toBe(true)
       expect(footer.textContent).toContain('保存')
       expect(mask.classList.contains('mask-prop')).toBe(true)
       expect(container.querySelector('#drawer-extra')?.textContent).toBe('更多')

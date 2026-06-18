@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 HoverGallery 组件概述
 - 数据驱动：支持字符串 src、对象项或自定义节点 node。
@@ -57,7 +56,11 @@ export interface HoverGalleryProps {
 
 interface NormalizedGalleryItem {
   key: string | number
-  node: any
+  type: 'image' | 'node'
+  src?: string
+  alt?: string
+  className?: string
+  node?: any
   label?: any
 }
 
@@ -83,6 +86,21 @@ const resolveFitClass = (fit?: HoverGalleryFit) => {
   }
 }
 
+/** 解析 Image Class Name 的内部工具函数。 */
+const resolveImageClassName = (
+  fitClass?: string,
+  imageClassName?: string,
+  className?: string,
+  itemImageClassName?: string,
+) => {
+  return (
+    mergeClassName(
+      mergeClassName(fitClass ?? '', imageClassName),
+      mergeClassName(className ?? '', itemImageClassName),
+    ).trim() || undefined
+  )
+}
+
 /** 转换为 Array 的内部工具函数。 */
 const toArray = (value: any): any[] => {
   if (value == null || value === false) return []
@@ -105,16 +123,10 @@ const normalizeItem = (
   if (typeof item === 'string') {
     return {
       key: index,
-      node: (
-        <img
-          key={index}
-          src={item}
-          alt=""
-          className={
-            mergeClassName('', mergeClassName(fitClass ?? '', imageClassName)).trim() || undefined
-          }
-        />
-      ),
+      type: 'image',
+      src: item,
+      alt: '',
+      className: resolveImageClassName(fitClass, imageClassName),
     }
   }
 
@@ -124,6 +136,7 @@ const normalizeItem = (
     if (objectItem.node != null) {
       return {
         key: objectItem.key ?? index,
+        type: 'node',
         node: objectItem.node,
         label: objectItem.label,
       }
@@ -132,26 +145,23 @@ const normalizeItem = (
     if (objectItem.src) {
       return {
         key: objectItem.key ?? index,
-        label: objectItem.label,
-        node: (
-          <img
-            key={objectItem.key ?? index}
-            src={objectItem.src}
-            alt={objectItem.alt ?? ''}
-            className={
-              mergeClassName(
-                mergeClassName(fitClass ?? '', imageClassName),
-                mergeClassName(objectItem.className ?? '', objectItem.imageClassName),
-              ).trim() || undefined
-            }
-          />
+        type: 'image',
+        src: objectItem.src,
+        alt: objectItem.alt ?? '',
+        className: resolveImageClassName(
+          fitClass,
+          imageClassName,
+          objectItem.className,
+          objectItem.imageClassName,
         ),
+        label: objectItem.label,
       }
     }
   }
 
   return {
     key: index,
+    type: 'node',
     node: item,
   }
 }
@@ -169,6 +179,7 @@ const normalizeItems = (
 
   return toArray(children).map((child, index) => ({
     key: index,
+    type: 'node',
     node: child,
   }))
 }
@@ -176,57 +187,83 @@ const normalizeItems = (
 /**
  * 悬浮画廊：保持 daisyUI 的 hover-gallery 视觉基础，同时补齐数据驱动、图片层配置与引导遮罩。
  */
-const HoverGallery: FC<HoverGalleryProps> = props => {
-  const as = props.as ?? 'figure'
-  const className = props.className
-  const wrapperClassName = props.wrapperClassName
-  const children = props.children
-  const items = props.items
-  const imageClassName = props.imageClassName
-  const fit = props.fit
-  const showGuide = props.showGuide
-  const guideLabels = props.guideLabels
-  const guideClassName = props.guideClassName
-  const guideItemClassName = props.guideItemClassName
+const HoverGallery: FC<HoverGalleryProps> = ({
+  as = 'figure',
+  className,
+  wrapperClassName,
+  children,
+  items,
+  imageClassName,
+  fit,
+  showGuide,
+  guideLabels,
+  guideClassName,
+  guideItemClassName,
+  ...rest
+}) => {
   const fitClass = resolveFitClass(fit)
   const normalizedItems = normalizeItems(items, children, fitClass, imageClassName)
-  const galleryContent = normalizedItems.map(item => item.node)
   const guideCount = normalizedItems.length > 1 ? normalizedItems.length - 1 : 0
-  const Component = as as any
   const galleryClassName = mergeClassName('hover-gallery', className)
-  const rootProps = Object.assign({}, props) as Record<string, any>
-
-  delete rootProps.as
-  delete rootProps.className
-  delete rootProps.wrapperClassName
-  delete rootProps.children
-  delete rootProps.items
-  delete rootProps.imageClassName
-  delete rootProps.fit
-  delete rootProps.showGuide
-  delete rootProps.guideLabels
-  delete rootProps.guideClassName
-  delete rootProps.guideItemClassName
-
-  const galleryNode = (
-    <Component {...rootProps} className={galleryClassName}>
-      {galleryContent}
-    </Component>
-  )
+  const guideGridTemplateColumns = `repeat(${guideCount}, minmax(0, 1fr))`
 
   if (!showGuide || guideCount === 0) {
-    return galleryNode
+    if (as === 'div') {
+      return (
+        <div {...rest} className={galleryClassName}>
+          {normalizedItems.map(item =>
+            item.type === 'image' ? (
+              <img key={item.key} src={item.src} alt={item.alt ?? ''} className={item.className} />
+            ) : (
+              item.node
+            ),
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <figure {...rest} className={galleryClassName}>
+        {normalizedItems.map(item =>
+          item.type === 'image' ? (
+            <img key={item.key} src={item.src} alt={item.alt ?? ''} className={item.className} />
+          ) : (
+            item.node
+          ),
+        )}
+      </figure>
+    )
   }
 
   return (
     <div className={mergeClassName('grid *:[grid-area:1/1]', wrapperClassName)}>
-      {galleryNode}
+      {as === 'div' ? (
+        <div {...rest} className={galleryClassName}>
+          {normalizedItems.map(item =>
+            item.type === 'image' ? (
+              <img key={item.key} src={item.src} alt={item.alt ?? ''} className={item.className} />
+            ) : (
+              item.node
+            ),
+          )}
+        </div>
+      ) : (
+        <figure {...rest} className={galleryClassName}>
+          {normalizedItems.map(item =>
+            item.type === 'image' ? (
+              <img key={item.key} src={item.src} alt={item.alt ?? ''} className={item.className} />
+            ) : (
+              item.node
+            ),
+          )}
+        </figure>
+      )}
       <div
         className={mergeClassName(
           'pointer-events-none grid font-mono text-white text-shadow-lg',
           guideClassName,
         )}
-        style={{ gridTemplateColumns: `repeat(${guideCount}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns: guideGridTemplateColumns }}
         aria-hidden="true"
       >
         {normalizedItems.slice(1).map((item, index) => (

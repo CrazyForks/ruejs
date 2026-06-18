@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Checkbox 组件概述
 - 保留 Rue 当前 checkbox 视觉类，同时补齐受控/非受控、children 标签包装、indeterminate 能力。
 - Checkbox.Group 以 options 为主，兼容 children 直出，并提供受控/非受控选中值管理。
 */
 import type { FC } from '@rue-js/rue'
-import { h, onMounted, ref, useRef, watch } from '@rue-js/rue'
+import { ref, useSetup, watchEffect } from '@rue-js/rue'
 
 /** CheckboxColor 语义色类型。 */
 export type CheckboxColor =
@@ -65,6 +64,8 @@ export interface CheckboxProps {
   onChange?: (event: Event, meta: CheckboxChangeMeta) => void
   /** onCheckedChange 事件回调。 */
   onCheckedChange?: (checked: boolean, event: Event) => void
+  /** Group 内部管理标记。 */
+  __rueCheckboxManagedByGroup?: boolean
   /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
@@ -145,15 +146,6 @@ const buildContentClassName = (contentClassName?: string) => {
   return appendClassName('min-w-0 flex-1', contentClassName)
 }
 
-/** 转换为 Child Array 的内部工具函数。 */
-const toChildArray = (children: any): any[] => {
-  if (Array.isArray(children)) {
-    return children.flatMap(item => toChildArray(item))
-  }
-
-  return children == null || typeof children === 'boolean' ? [] : [children]
-}
-
 /** serialize Value 的内部工具函数。 */
 const serializeValue = (value: CheckboxValue) => {
   switch (typeof value) {
@@ -219,33 +211,48 @@ const Checkbox: FC<CheckboxProps> = ({
   children,
   onChange,
   onCheckedChange,
+  __rueCheckboxManagedByGroup,
   ...rest
 }) => {
-  const inputRef = useRef<HTMLInputElement>()
-  const contentIdRef = useRef<string>()
-
-  if (!contentIdRef.current) {
-    contentIdRef.current = `rue-checkbox-content-${checkboxContentIdSeed++}`
+  const instance = useSetup(() => ({
+    contentId: `rue-checkbox-content-${checkboxContentIdSeed++}`,
+    input: undefined as HTMLInputElement | undefined,
+  }))
+  const readControlledChecked = () => {
+    if (typeof checked === 'boolean') return checked
+    return undefined
   }
+  const uncontrolledChecked = ref(readControlledChecked() ?? !!defaultChecked)
+  const readChecked = () => readControlledChecked() ?? uncontrolledChecked.value
+  const readContentId = () =>
+    children != null ? (rest['aria-labelledby'] ?? instance.contentId) : undefined
 
-  const contentId = children != null ? (rest['aria-labelledby'] ?? contentIdRef.current) : undefined
-
-  const syncIndeterminate = () => {
-    if (inputRef.current) {
-      inputRef.current.indeterminate = !!indeterminate
+  const syncNativeInput = (input = instance.input) => {
+    const nextIndeterminate = !!indeterminate
+    const nextControlledChecked = readControlledChecked()
+    if (!input) return
+    input.indeterminate = nextIndeterminate
+    if (nextControlledChecked !== undefined && !__rueCheckboxManagedByGroup) {
+      input.checked = nextControlledChecked
     }
   }
+
+  const bindInput = (input: HTMLInputElement | null) => {
+    instance.input = input ?? undefined
+    syncNativeInput(input ?? undefined)
+  }
+
+  watchEffect(() => {
+    syncNativeInput()
+  })
 
   const handleChange = (event: Event) => {
     const target = event.target as HTMLInputElement | null
     const nextChecked = target?.checked === true
+    let resolvedChecked = readControlledChecked()
 
-    if (typeof checked === 'boolean' && inputRef.current) {
-      inputRef.current.checked = checked
-    }
-
-    if (indeterminate) {
-      syncIndeterminate()
+    if (resolvedChecked === undefined) {
+      uncontrolledChecked.value = nextChecked
     }
 
     if (onChange) {
@@ -258,128 +265,71 @@ const Checkbox: FC<CheckboxProps> = ({
     if (onCheckedChange) {
       onCheckedChange(nextChecked, event)
     }
+
+    resolvedChecked = readControlledChecked()
+    if (resolvedChecked !== undefined && target && !__rueCheckboxManagedByGroup) {
+      target.checked = resolvedChecked
+    }
+    syncNativeInput(target ?? undefined)
   }
-
-  const emitDirectToggle = (event: Event, nextChecked: boolean) => {
-    if (typeof checked !== 'boolean' && inputRef.current) {
-      inputRef.current.checked = nextChecked
-    }
-
-    if (indeterminate) {
-      syncIndeterminate()
-    }
-
-    if (onChange) {
-      onChange(event, {
-        checked: nextChecked,
-        indeterminate: !!indeterminate,
-        value,
-      })
-    }
-
-    if (onCheckedChange) {
-      onCheckedChange(nextChecked, event)
-    }
-  }
-
-  const handleRootClick = (event: Event) => {
-    const target = event.target as HTMLElement | null
-
-    if (!inputRef.current || disabled || target === inputRef.current) {
-      return
-    }
-
-    event.preventDefault()
-
-    const input = inputRef.current
-    const nextChecked = !input.checked
-    const shouldBubbleNativeChange =
-      checked === undefined &&
-      !onChange &&
-      !onCheckedChange &&
-      !!input.closest('[data-rue-checkbox-group="true"]')
-
-    if (shouldBubbleNativeChange) {
-      input.checked = nextChecked
-      input.dispatchEvent(new Event('change', { bubbles: true }))
-      return
-    }
-
-    emitDirectToggle(event, nextChecked)
-  }
-
-  onMounted(() => {
-    syncIndeterminate()
-  })
-
-  watch(
-    () => indeterminate,
-    () => {
-      syncIndeterminate()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => checked,
-    () => {
-      if (typeof checked === 'boolean' && inputRef.current) {
-        inputRef.current.checked = checked
-      }
-      if (indeterminate) {
-        syncIndeterminate()
-      }
-    },
-    { immediate: true },
-  )
-
-  const inputNode = (
-    <input
-      {...rest}
-      ref={inputRef}
-      type="checkbox"
-      value={value as any}
-      checked={checked}
-      defaultChecked={defaultChecked}
-      disabled={disabled}
-      style={style}
-      className={buildInputClassName(color, size, className)}
-      aria-labelledby={contentId}
-      aria-checked={indeterminate ? 'mixed' : rest['aria-checked']}
-      data-rue-checkbox-input="true"
-      data-rue-checkbox-disabled={disabled ? 'true' : 'false'}
-      data-rue-checkbox-value={value !== undefined ? serializeValue(value) : undefined}
-      onChange={handleChange}
-    />
-  )
 
   if (children == null && !rootClassName && !rootStyle && !contentClassName) {
-    return inputNode
+    return (
+      <input
+        {...rest}
+        ref={bindInput}
+        type="checkbox"
+        value={value as any}
+        checked={readChecked()}
+        defaultChecked={defaultChecked ?? readChecked()}
+        disabled={disabled}
+        style={style}
+        className={buildInputClassName(color, size, className)}
+        aria-labelledby={readContentId()}
+        aria-checked={indeterminate ? 'mixed' : rest['aria-checked']}
+        data-rue-checkbox-input="true"
+        data-rue-checkbox-disabled={disabled ? 'true' : 'false'}
+        data-rue-checkbox-value={value !== undefined ? serializeValue(value) : undefined}
+        onChange={handleChange}
+      />
+    )
   }
 
-  const contentNode =
-    children != null
-      ? h(
-          'span',
-          {
-            id: contentId,
-            className: buildContentClassName(contentClassName),
-            'data-rue-checkbox-content': 'true',
-          },
-          ...toChildArray(children),
-        )
-      : null
-
   return (
-    <div
+    <label
       className={buildRootClassName(disabled, rootClassName)}
       style={rootStyle}
       data-rue-checkbox-root="true"
-      onClick={handleRootClick}
     >
-      <span className="shrink-0 pt-0.5">{inputNode}</span>
-      {contentNode}
-    </div>
+      <span className="shrink-0 pt-0.5">
+        <input
+          {...rest}
+          ref={bindInput}
+          type="checkbox"
+          value={value as any}
+          checked={readChecked()}
+          defaultChecked={defaultChecked ?? readChecked()}
+          disabled={disabled}
+          style={style}
+          className={buildInputClassName(color, size, className)}
+          aria-labelledby={readContentId()}
+          aria-checked={indeterminate ? 'mixed' : rest['aria-checked']}
+          data-rue-checkbox-input="true"
+          data-rue-checkbox-disabled={disabled ? 'true' : 'false'}
+          data-rue-checkbox-value={value !== undefined ? serializeValue(value) : undefined}
+          onChange={handleChange}
+        />
+      </span>
+      {children != null ? (
+        <span
+          id={readContentId()}
+          className={buildContentClassName(contentClassName)}
+          data-rue-checkbox-content="true"
+        >
+          {children}
+        </span>
+      ) : null}
+    </label>
   )
 }
 
@@ -396,51 +346,31 @@ const Group: FC<CheckboxGroupProps> = ({
   onChange,
   ...rest
 }) => {
-  const groupRef = useRef<HTMLDivElement>()
   const normalizedOptions = normalizeOptions(options)
   const selectedValues = ref(normalizeValueList(value ?? defaultValue))
+  const instance = useSetup(() => ({
+    root: undefined as HTMLDivElement | undefined,
+  }))
+  const readCurrentValue = () =>
+    value !== undefined ? normalizeValueList(value) : selectedValues.value
 
-  const syncChildInputs = () => {
-    const container = groupRef.current
-    if (!container) return
-    const selectedSet = new Set(selectedValues.value.map(serializeValue))
-    const inputs = Array.from(
-      container.querySelectorAll<HTMLInputElement>(
-        'input[type="checkbox"][data-rue-checkbox-input="true"]',
-      ),
-    )
+  const sortValuesByRegistration = (values: ReadonlyArray<CheckboxValue>) => {
+    const normalizedValue = normalizeValueList(values)
+    const root = instance.root
+    if (!root) return normalizedValue
 
-    inputs.forEach(input => {
-      const serializedValue = input.dataset.rueCheckboxValue
-      if (serializedValue) {
-        input.checked = selectedSet.has(serializedValue)
-      }
-      if (name) {
-        input.name = name
-      }
-      if (disabled) {
-        input.disabled = true
-      } else {
-        input.disabled = input.dataset.rueCheckboxDisabled === 'true'
-      }
-    })
-  }
-
-  const sortValuesByDomOrder = (values: ReadonlyArray<CheckboxValue>) => {
-    const container = groupRef.current
-    if (!container) return normalizeValueList(values)
     const order = Array.from(
-      container.querySelectorAll<HTMLInputElement>(
+      root.querySelectorAll<HTMLInputElement>(
         'input[type="checkbox"][data-rue-checkbox-input="true"]',
       ),
     )
       .map(input => input.dataset.rueCheckboxValue)
       .filter((item): item is string => !!item)
 
-    if (!order.length) return normalizeValueList(values)
+    if (!order.length) return normalizedValue
 
     const orderMap = new Map(order.map((item, index) => [item, index]))
-    return normalizeValueList(values).sort((left, right) => {
+    return normalizedValue.sort((left, right) => {
       return (
         (orderMap.get(serializeValue(left)) ?? Number.MAX_SAFE_INTEGER) -
         (orderMap.get(serializeValue(right)) ?? Number.MAX_SAFE_INTEGER)
@@ -449,7 +379,7 @@ const Group: FC<CheckboxGroupProps> = ({
   }
 
   const commitValue = (nextValue: ReadonlyArray<CheckboxValue>, controlled?: boolean) => {
-    const sortedValue = sortValuesByDomOrder(nextValue)
+    const sortedValue = sortValuesByRegistration(nextValue)
     if (!controlled) {
       selectedValues.value = sortedValue
     }
@@ -477,6 +407,37 @@ const Group: FC<CheckboxGroupProps> = ({
     )
   }
 
+  const syncChildInputs = () => {
+    const root = instance.root
+    const selectedSet = new Set(readCurrentValue().map(serializeValue))
+    if (!root) return
+
+    root
+      .querySelectorAll<HTMLInputElement>('input[type="checkbox"][data-rue-checkbox-input="true"]')
+      .forEach(input => {
+        const serializedValue = input.dataset.rueCheckboxValue
+        if (serializedValue) {
+          input.checked = selectedSet.has(serializedValue)
+        }
+        if (name) {
+          input.name = name
+        }
+        if (disabled) {
+          input.disabled = true
+        } else {
+          input.disabled = input.dataset.rueCheckboxDisabled === 'true'
+        }
+      })
+  }
+
+  const bindGroupRoot = (root: HTMLDivElement | null) => {
+    instance.root = root ?? undefined
+    syncChildInputs()
+    Promise.resolve().then(() => {
+      syncChildInputs()
+    })
+  }
+
   const handleChildrenChange = (event: Event) => {
     const target = event.target as HTMLInputElement | null
     if (!target || target.type !== 'checkbox' || target.dataset.rueCheckboxInput !== 'true') {
@@ -486,62 +447,25 @@ const Group: FC<CheckboxGroupProps> = ({
     if (resolvedValue === undefined) {
       return
     }
-    const isControlled = value !== undefined
-    toggleOption(resolvedValue, target.checked, isControlled)
-    if (isControlled) {
-      syncChildInputs()
-    }
+    toggleOption(resolvedValue, target.checked, value !== undefined)
+    syncChildInputs()
   }
 
-  onMounted(() => {
+  watchEffect(() => {
     syncChildInputs()
-    Promise.resolve().then(() => {
-      syncChildInputs()
-    })
   })
 
-  watch(
-    () => value,
-    (nextValue: ReadonlyArray<CheckboxValue> | undefined) => {
-      if (nextValue !== undefined) {
-        selectedValues.value = normalizeValueList(nextValue)
-      }
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => selectedValues.value,
-    () => {
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => disabled,
-    () => {
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => name,
-    () => {
-      syncChildInputs()
-    },
-    { immediate: true },
-  )
-
-  const currentValue = value !== undefined ? normalizeValueList(value) : selectedValues.value
   const groupClassName = appendClassName('flex flex-col gap-3', className)
+  const readOptionItems = () =>
+    normalizedOptions.map(option => ({
+      option,
+      checked: readCurrentValue().some(item => item === option.value),
+    }))
 
   return (
     <div
       {...rest}
-      ref={groupRef}
+      ref={bindGroupRoot}
       role={rest.role ?? 'group'}
       className={groupClassName}
       style={style}
@@ -549,23 +473,25 @@ const Group: FC<CheckboxGroupProps> = ({
       onChange={normalizedOptions.length ? rest.onChange : handleChildrenChange}
     >
       {normalizedOptions.length
-        ? normalizedOptions.map(option => (
+        ? readOptionItems().map(({ option, checked }) => (
             <Checkbox
               key={serializeValue(option.value)}
               value={option.value}
-              checked={currentValue.some(item => item === option.value)}
+              checked={checked}
               disabled={disabled || option.disabled}
+              __rueCheckboxManagedByGroup={true}
               name={name}
               title={option.title}
               id={option.id}
               indeterminate={option.indeterminate}
               rootClassName={option.className}
               rootStyle={option.style}
-              onChange={(event, meta) => {
+              onChange={(_, meta) => {
                 toggleOption(option.value, meta.checked, value !== undefined)
-                if (value !== undefined) {
+                syncChildInputs()
+                Promise.resolve().then(() => {
                   syncChildInputs()
-                }
+                })
               }}
             >
               {option.label}

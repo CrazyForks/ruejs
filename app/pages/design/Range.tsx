@@ -101,9 +101,9 @@ const RangeValuePreview: FC = () => {
         data-testid="range-basic"
         min={0}
         max={100}
-        value={sliderValue.value}
-        onInput={(event: Event) => {
-          sliderValue.value = (event.target as HTMLInputElement).value
+        defaultValue={40}
+        onValueChange={nextValue => {
+          sliderValue.value = String(nextValue)
         }}
       />
       <p className="m-0 text-sm text-base-content/70">当前值：{sliderValue.value}</p>
@@ -120,7 +120,7 @@ const RangeStoryPreview: FC = () => {
         min={100}
         max={1000}
         step={50}
-        value={bandwidth.value}
+        defaultValue={250}
         color="primary"
         label="边缘带宽"
         hint="滑动查看不同档位的交付能力。"
@@ -177,7 +177,7 @@ const RangeCommitPreview: FC = () => {
         min={5}
         max={60}
         step={5}
-        value={seats.value}
+        defaultValue={12}
         color="secondary"
         showValue={{ formatter: value => `${value} seats`, placement: 'below' }}
         label="团队席位"
@@ -209,14 +209,12 @@ const RangeCommitPreview: FC = () => {
 }
 
 const RangeStepsPreview: FC = () => {
-  const value = ref(25)
-
   return (
     <div className="w-full max-w-sm">
       <Range
         min={0}
         max={100}
-        value={value.value}
+        defaultValue={25}
         step={25}
         showValue={{ placement: 'below', formatter: currentValue => `${currentValue}%` }}
         marks={[
@@ -226,44 +224,18 @@ const RangeStepsPreview: FC = () => {
           { value: 75, label: '4' },
           { value: 100, label: '5' },
         ]}
-        onValueChange={nextValue => {
-          value.value = nextValue
-        }}
       />
     </div>
   )
 }
 
 const RangeColorsPreview: FC = () => {
-  const values = ref<Record<string, number>>({
-    neutral: 40,
-    primary: 40,
-    secondary: 40,
-    accent: 40,
-    success: 40,
-    warning: 40,
-    info: 40,
-    error: 40,
-  })
-
   return (
     <div className="grid gap-4">
       {colors.map(color => (
         <div key={color} className="space-y-2 rounded-box border border-base-300 bg-base-100 p-4">
           <div className="text-xs uppercase tracking-wide text-base-content/60">{color}</div>
-          <Range
-            color={color}
-            min={0}
-            max={100}
-            value={values.value[color]}
-            showValue={true}
-            onValueChange={nextValue => {
-              values.value = {
-                ...values.value,
-                [color]: nextValue,
-              }
-            }}
-          />
+          <Range color={color} min={0} max={100} defaultValue={40} showValue={true} />
         </div>
       ))}
     </div>
@@ -271,19 +243,14 @@ const RangeColorsPreview: FC = () => {
 }
 
 const RangeCustomPreview: FC = () => {
-  const value = ref(40)
-
   return (
     <div className="w-full max-w-sm space-y-3 rounded-box border border-base-300 bg-base-100 p-4">
       <Range
         min={0}
         max={100}
-        value={value.value}
+        defaultValue={40}
         showValue={{ formatter: currentValue => `mix ${currentValue}` }}
         className="text-blue-300 [--range-bg:orange] [--range-thumb:blue] [--range-fill:0]"
-        onValueChange={nextValue => {
-          value.value = nextValue
-        }}
       />
     </div>
   )
@@ -431,7 +398,7 @@ const RangePage: FC = () => {
   min={100}
   max={1000}
   step={50}
-  value={bandwidth.value}
+  defaultValue={250}
   color="primary"
   label="边缘带宽"
   hint="滑动查看不同档位的交付能力。"
@@ -455,12 +422,10 @@ const RangePage: FC = () => {
           summary="旧 demo 保留，但把刻度线和标签收进 marks，减少样板代码。"
           tab={tabSteps}
           preview={() => <RangeStepsPreview />}
-          code={`const value = ref(25)
-
-<Range
+          code={`<Range
   min={0}
   max={100}
-  value={value.value}
+  defaultValue={25}
   step={25}
   showValue={{ placement: 'below', formatter: currentValue => currentValue + '%' }}
   marks={[
@@ -470,9 +435,6 @@ const RangePage: FC = () => {
     { value: 75, label: '4' },
     { value: 100, label: '5' },
   ]}
-  onValueChange={nextValue => {
-    value.value = nextValue
-  }}
 />`}
         />
 
@@ -482,16 +444,6 @@ const RangePage: FC = () => {
           tab={tabColors}
           preview={() => <RangeColorsPreview />}
           code={`const colors = ['neutral', 'primary', 'secondary', 'accent', 'success', 'warning', 'info', 'error'] as const
-const values = ref({
-  neutral: 40,
-  primary: 40,
-  secondary: 40,
-  accent: 40,
-  success: 40,
-  warning: 40,
-  info: 40,
-  error: 40,
-})
 
 <div className="grid gap-4">
   {colors.map(color => (
@@ -501,14 +453,8 @@ const values = ref({
         color={color}
         min={0}
         max={100}
-        value={values.value[color]}
+        defaultValue={40}
         showValue={true}
-        onValueChange={nextValue => {
-          values.value = {
-            ...values.value,
-            [color]: nextValue,
-          }
-        }}
       />
     </div>
   ))}
@@ -523,7 +469,7 @@ const values = ref({
             <div className="space-y-6">
               <div className="flex w-full max-w-sm flex-col gap-4">
                 {sizes.map((size, index) => (
-                  <Range key={size} size={size} min={0} max={100} value={30 + index * 10} />
+                  <Range key={size} size={size} min={0} max={100} defaultValue={30 + index * 10} />
                 ))}
               </div>
               <div className="grid gap-3 rounded-box border border-dashed border-base-300 bg-base-100 p-4 text-sm sm:grid-cols-3">
@@ -532,21 +478,21 @@ const values = ref({
                     <div className="text-xs uppercase tracking-wide text-base-content/60">
                       {size}
                     </div>
-                    <Range size={size} min={0} max={100} value={35 + index * 20} />
+                    <Range size={size} min={0} max={100} defaultValue={35 + index * 20} />
                   </div>
                 ))}
               </div>
             </div>
           )}
-          code={`<Range size="xs" min={0} max={100} value={30} />
-<Range size="sm" min={0} max={100} value={40} />
-<Range size="md" min={0} max={100} value={50} />
-<Range size="lg" min={0} max={100} value={60} />
-<Range size="xl" min={0} max={100} value={70} />
+          code={`<Range size="xs" min={0} max={100} defaultValue={30} />
+<Range size="sm" min={0} max={100} defaultValue={40} />
+<Range size="md" min={0} max={100} defaultValue={50} />
+<Range size="lg" min={0} max={100} defaultValue={60} />
+<Range size="xl" min={0} max={100} defaultValue={70} />
 
-<Range size="small" min={0} max={100} value={35} />
-<Range size="medium" min={0} max={100} value={55} />
-<Range size="large" min={0} max={100} value={75} />`}
+<Range size="small" min={0} max={100} defaultValue={35} />
+<Range size="medium" min={0} max={100} defaultValue={55} />
+<Range size="large" min={0} max={100} defaultValue={75} />`}
         />
 
         <ExampleBlock
@@ -561,7 +507,7 @@ const committedSeats = ref(12)
   min={5}
   max={60}
   step={5}
-  value={seats.value}
+  defaultValue={12}
   color="secondary"
   showValue={{ formatter: value => value + ' seats', placement: 'below' }}
   label="团队席位"
@@ -581,17 +527,12 @@ const committedSeats = ref(12)
           summary="原来的自定义 CSS 变量方案继续可用；增强 API 不会挡住底层变量覆写。"
           tab={tabCustom}
           preview={() => <RangeCustomPreview />}
-          code={`const value = ref(40)
-
-<Range
+          code={`<Range
   min={0}
   max={100}
-  value={value.value}
+  defaultValue={40}
   showValue={{ formatter: currentValue => 'mix ' + currentValue }}
   className="text-blue-300 [--range-bg:orange] [--range-thumb:blue] [--range-fill:0]"
-  onValueChange={nextValue => {
-    value.value = nextValue
-  }}
 />`}
         />
 

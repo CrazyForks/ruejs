@@ -1,4 +1,4 @@
-import { h, ref, type FC } from '@rue-js/rue'
+import { ref, type FC } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import { Status, Tabs } from '@rue-js/design'
@@ -30,16 +30,6 @@ const previewBodyClass = 'card-body gap-4'
 
 const mergeClassName = (base: string, className?: string) => {
   return className ? `${base} ${className}` : base
-}
-
-const toChildArray = (children: any) => {
-  if (Array.isArray(children)) {
-    return children
-  }
-  if (children == null) {
-    return []
-  }
-  return [children]
 }
 
 const BASIC_CODE = `<div className="flex flex-wrap items-center gap-6">
@@ -269,10 +259,10 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
 }
 
 const PreviewSurface: FC<{ className?: string; children?: any }> = ({ className, children }) => {
-  return h(
-    'div',
-    { className: mergeClassName(previewShellClass, className) },
-    h('div', { className: previewBodyClass }, ...(toChildArray(children) as any[])),
+  return (
+    <div className={mergeClassName(previewShellClass, className)}>
+      <div className={previewBodyClass}>{children}</div>
+    </div>
   )
 }
 
@@ -325,6 +315,127 @@ const WideDemoTile: FC<{ label: string }> = ({ label }) => {
   )
 }
 
+const BasicStatusPreview = () => {
+  return (
+    <PreviewSurface>
+      <div className="flex flex-wrap items-center gap-6">
+        <Status as="span" />
+        <Status status="processing" text="Deploying" />
+        <Status color="success" text="Online" />
+        <Status status="warning" text="Window closing soon" />
+      </div>
+    </PreviewSurface>
+  )
+}
+
+const SizeAndColorStatusPreview = () => {
+  return (
+    <PreviewSurface>
+      <div className="grid gap-5">
+        <div className="flex flex-wrap items-center gap-4">
+          <Status ariaLabel="status" size="xs" />
+          <Status ariaLabel="status" size="sm" />
+          <Status ariaLabel="status" size="md" />
+          <Status ariaLabel="status" size="lg" />
+          <Status ariaLabel="status" size="xl" />
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <Status ariaLabel="status" color="primary" />
+          <Status ariaLabel="status" color="secondary" />
+          <Status ariaLabel="status" color="accent" />
+          <Status ariaLabel="status" color="neutral" />
+          <Status ariaLabel="info" color="info" />
+          <Status ariaLabel="success" color="success" />
+          <Status ariaLabel="warning" color="warning" />
+          <Status ariaLabel="error" color="error" />
+        </div>
+      </div>
+    </PreviewSurface>
+  )
+}
+
+const LabelStatusPreview = () => {
+  return (
+    <PreviewSurface>
+      <div className="flex flex-col items-start gap-3">
+        <Status status="success" text="Published" />
+        <Status status="processing" text="Syncing data" />
+        <Status dot status="processing" text="Syncing edge cache" />
+        <Status count={7} color="#f97316" text="待审核" />
+      </div>
+    </PreviewSurface>
+  )
+}
+
+const BadgeStatusPreview = () => {
+  return (
+    <PreviewSurface>
+      <div className="flex flex-wrap items-center gap-8">
+        <Status dot color="success">
+          <DemoTile label="APP" />
+        </Status>
+        <Status dot color="warning" text="Pending review">
+          <DemoTile label="PR" />
+        </Status>
+        <Status count={5}>
+          <DemoTile label="Inbox" />
+        </Status>
+        <Status count={12} color="secondary" text="Messages">
+          <DemoTile label="Chat" />
+        </Status>
+      </div>
+    </PreviewSurface>
+  )
+}
+
+const OverflowStatusPreview = () => {
+  return (
+    <PreviewSurface>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="flex flex-wrap items-center gap-8">
+          <Status count={0}>
+            <DemoTile label="Draft" />
+          </Status>
+          <Status count={0} showZero color="info" text="No unread">
+            <DemoTile label="Mail" />
+          </Status>
+          <Status count={128} overflowCount={99} color="error">
+            <DemoTile label="Alerts" />
+          </Status>
+        </div>
+        <div className="flex flex-wrap items-center gap-8">
+          <Status count={8} offset={[8, 6]} color="primary">
+            <WideDemoTile label="Releases" />
+          </Status>
+          <Status dot offset={[10, 8]} color="#0f766e" text="Custom offset">
+            <WideDemoTile label="Jobs" />
+          </Status>
+        </div>
+      </div>
+    </PreviewSurface>
+  )
+}
+
+const MotionStatusPreview = () => {
+  return (
+    <PreviewSurface>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <div className="inline-grid *:[grid-area:1/1]">
+            <Status dot color="error" className="animate-ping" />
+            <Status dot color="error" />
+          </div>
+          <span>Server is down</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Status color="info" className="animate-bounce" />
+          <span>Unread messages</span>
+        </div>
+      </div>
+    </PreviewSurface>
+  )
+}
+
 const StatusDemo: FC = () => {
   const tabBasic = ref<TabMode>('preview')
   const tabScale = ref<TabMode>('preview')
@@ -353,16 +464,7 @@ const StatusDemo: FC = () => {
           title="基础状态与语义"
           summary="保留最基础的状态点体验，同时支持用 status 或 color 直接表达语义。"
           tab={tabBasic}
-          preview={() => (
-            <PreviewSurface>
-              <div className="flex flex-wrap items-center gap-6">
-                <Status as="span" />
-                <Status status="processing" text="Deploying" />
-                <Status color="success" text="Online" />
-                <Status status="warning" text="Window closing soon" />
-              </div>
-            </PreviewSurface>
-          )}
+          preview={BasicStatusPreview}
           code={BASIC_CODE}
         />
 
@@ -370,29 +472,7 @@ const StatusDemo: FC = () => {
           title="尺寸与色板"
           summary="单独作为状态点使用时，优先关注 size 和 color；它们仍然保持和 daisyUI 一致的视觉基底。"
           tab={tabScale}
-          preview={() => (
-            <PreviewSurface>
-              <div className="grid gap-5">
-                <div className="flex flex-wrap items-center gap-4">
-                  <Status ariaLabel="status" size="xs" />
-                  <Status ariaLabel="status" size="sm" />
-                  <Status ariaLabel="status" size="md" />
-                  <Status ariaLabel="status" size="lg" />
-                  <Status ariaLabel="status" size="xl" />
-                </div>
-                <div className="flex flex-wrap items-center gap-4">
-                  <Status ariaLabel="status" color="primary" />
-                  <Status ariaLabel="status" color="secondary" />
-                  <Status ariaLabel="status" color="accent" />
-                  <Status ariaLabel="status" color="neutral" />
-                  <Status ariaLabel="info" color="info" />
-                  <Status ariaLabel="success" color="success" />
-                  <Status ariaLabel="warning" color="warning" />
-                  <Status ariaLabel="error" color="error" />
-                </div>
-              </div>
-            </PreviewSurface>
-          )}
+          preview={SizeAndColorStatusPreview}
           code={SIZE_AND_COLOR_CODE}
         />
 
@@ -400,16 +480,7 @@ const StatusDemo: FC = () => {
           title="文案与 label 模式"
           summary="不传 children 时，text 会和状态点、dot 或 count 自动组合成一条状态说明。"
           tab={tabLabel}
-          preview={() => (
-            <PreviewSurface>
-              <div className="flex flex-col items-start gap-3">
-                <Status status="success" text="Published" />
-                <Status status="processing" text="Syncing data" />
-                <Status dot status="processing" text="Syncing edge cache" />
-                <Status count={7} color="#f97316" text="待审核" />
-              </div>
-            </PreviewSurface>
-          )}
+          preview={LabelStatusPreview}
           code={LABEL_CODE}
         />
 
@@ -417,24 +488,7 @@ const StatusDemo: FC = () => {
           title="包裹内容的角标模式"
           summary="传入 children 后会自动切到角标模式，适合消息入口、资源卡片和小型业务面板。"
           tab={tabBadge}
-          preview={() => (
-            <PreviewSurface>
-              <div className="flex flex-wrap items-center gap-8">
-                <Status dot color="success">
-                  <DemoTile label="APP" />
-                </Status>
-                <Status dot color="warning" text="Pending review">
-                  <DemoTile label="PR" />
-                </Status>
-                <Status count={5}>
-                  <DemoTile label="Inbox" />
-                </Status>
-                <Status count={12} color="secondary" text="Messages">
-                  <DemoTile label="Chat" />
-                </Status>
-              </div>
-            </PreviewSurface>
-          )}
+          preview={BadgeStatusPreview}
           code={BADGE_CODE}
         />
 
@@ -442,31 +496,7 @@ const StatusDemo: FC = () => {
           title="零值、溢出与偏移"
           summary="showZero、overflowCount 和 offset 可以覆盖更贴近真实业务的边界情况。"
           tab={tabOverflow}
-          preview={() => (
-            <PreviewSurface>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="flex flex-wrap items-center gap-8">
-                  <Status count={0}>
-                    <DemoTile label="Draft" />
-                  </Status>
-                  <Status count={0} showZero color="info" text="No unread">
-                    <DemoTile label="Mail" />
-                  </Status>
-                  <Status count={128} overflowCount={99} color="error">
-                    <DemoTile label="Alerts" />
-                  </Status>
-                </div>
-                <div className="flex flex-wrap items-center gap-8">
-                  <Status count={8} offset={[8, 6]} color="primary">
-                    <WideDemoTile label="Releases" />
-                  </Status>
-                  <Status dot offset={[10, 8]} color="#0f766e" text="Custom offset">
-                    <WideDemoTile label="Jobs" />
-                  </Status>
-                </div>
-              </div>
-            </PreviewSurface>
-          )}
+          preview={OverflowStatusPreview}
           code={OVERFLOW_CODE}
         />
 
@@ -474,23 +504,7 @@ const StatusDemo: FC = () => {
           title="动效状态"
           summary="Status 本身只是节点，动画可以继续通过 className 叠加，适合告警和提醒场景。"
           tab={tabMotion}
-          preview={() => (
-            <PreviewSurface>
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="inline-grid *:[grid-area:1/1]">
-                    <Status dot color="error" className="animate-ping" />
-                    <Status dot color="error" />
-                  </div>
-                  <span>Server is down</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Status color="info" className="animate-bounce" />
-                  <span>Unread messages</span>
-                </div>
-              </div>
-            </PreviewSurface>
-          )}
+          preview={MotionStatusPreview}
           code={MOTION_CODE}
         />
 

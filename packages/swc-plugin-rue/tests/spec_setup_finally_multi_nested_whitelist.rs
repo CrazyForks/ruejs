@@ -34,21 +34,21 @@ function Comp(): JSX.Element {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
-
+    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 function Comp(): JSX.Element {
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const a = _$vaporWithHookId("ref:1.2:0", ()=>ref(1));
-            const obj = {
-                z: a.value,
-                arr: [
-                    a.value,
-                    {
-                        w: a.value > 0 ? 'ok' : 'no'
-                    }
-                ]
-            };
-            _$vaporWithHookId("watchEffect:1.2:1", ()=>watchEffect(()=>{
+            const obj = _$vaporWithHookId("computed:1.2:1", ()=>computed(()=>({
+                        z: a.value,
+                        arr: [
+                            a.value,
+                            {
+                                w: a.value > 0 ? 'ok' : 'no'
+                            }
+                        ]
+                    })));
+            const __rue_phase2_obj = obj;
+            _$vaporWithHookId("watchEffect:1.2:2", ()=>watchEffect(()=>{
                     onBeforeUnmount(()=>console.log('phase1', a.value));
                 }));
             try {
@@ -57,8 +57,8 @@ function Comp(): JSX.Element {
                 try {
                     const m = a.value + 4;
                 } finally{
-                    _$vaporWithHookId("watchEffect:1.2:3", ()=>watchEffect(()=>{
-                            onBeforeUnmount(()=>_$vaporWithHookId("watchEffect:1.2:2", ()=>watchEffect(()=>console.log('phase3', obj.arr[1].w))));
+                    _$vaporWithHookId("watchEffect:1.2:4", ()=>watchEffect(()=>{
+                            onBeforeUnmount(()=>_$vaporWithHookId("watchEffect:1.2:3", ()=>watchEffect(()=>console.log('phase3', __rue_phase2_obj.get().arr[1].w))));
                         }));
                 }
             }
@@ -68,7 +68,7 @@ function Comp(): JSX.Element {
             };
         }));
     const { a: a, obj: obj } = _$useSetup;
-    return <div>{obj.arr[0]}</div>;
+    return <div>{obj.get().arr[0]}</div>;
 }
 "##;
 

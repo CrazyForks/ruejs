@@ -27,28 +27,30 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
-        const b = a.value + 1;
-        const c = b + a.value;
-        function log() {
-            console.log(a.value, b, c);
-        }
-        if (a.value > 0) {
-            const d = a.value + c;
-        }
-        return {
-            a: a,
-            b: b,
-            c: c,
-            log: log
-        };
-    }));
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
+            const b = _$vaporWithHookId("computed:1:1", ()=>computed(()=>a.value + 1));
+            const __rue_phase2_b = b;
+            const c = _$vaporWithHookId("computed:1:2", ()=>computed(()=>__rue_phase2_b.get() + a.value));
+            const __rue_phase2_c = c;
+            function log() {
+                console.log(a.value, __rue_phase2_b.get(), __rue_phase2_c.get());
+            }
+            if (a.value > 0) {
+                const d = a.value + __rue_phase2_c.get();
+            }
+            return {
+                a: a,
+                b: b,
+                c: c,
+                log: log
+            };
+        }));
     const { a: a, b: b, c: c, log: log } = _$useSetup;
-    return <div>{c}</div>;
+    return <div>{c.get()}</div>;
 };
 "##;
 

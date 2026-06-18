@@ -1,4 +1,4 @@
-import { createResource, signal, Suspense, type FC } from '@rue-js/rue'
+import { createResource, signal, type FC } from '@rue-js/rue'
 
 const API_URL = 'https://api.github.com/repos/rust-lang/rust/commits?per_page=3&sha='
 const BRANCHES = ['main', 'beta', 'stable'] as const
@@ -34,11 +34,6 @@ const formatError = (value: unknown) => {
   if (value instanceof Error) return value.message
   if (typeof value === 'string') return value
   return '请求失败'
-}
-
-const ResourceSuspenseProbe: FC<{ resource: CommitResource }> = props => {
-  props.resource.data.get()
-  return null
 }
 
 const ResourceContent: FC<{ resource: CommitResource }> = props => {
@@ -141,15 +136,11 @@ const ResourceJSXDemo: FC = () => {
           resource.loading = {String(resource.loading.get())}
         </p>
 
-        <Suspense
-          fallback={
-            <div role="status" className="alert alert-info alert-soft">
-              <span>Loading...</span>
-            </div>
-          }
-        >
-          <ResourceSuspenseProbe resource={resource} />
-        </Suspense>
+        {resource.loading.get() && (
+          <div role="status" className="alert alert-info alert-soft">
+            <span>Loading...</span>
+          </div>
+        )}
 
         {!resource.loading.get() && <ResourceContent resource={resource} />}
       </div>

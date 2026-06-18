@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { render, setReactiveScheduling } from '../src'
 import ListTransitionExample from '../../../app/pages/examples/ListTransition'
-import { click, mountContainer, waitForContent } from './page-test-utils'
+import { click, flush, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
   default: (props: { children?: unknown }) => (
@@ -30,6 +30,11 @@ const listNumbers = (root: ParentNode) =>
     node.textContent?.trim(),
   )
 
+const listItemByNumber = (root: ParentNode, label: string) =>
+  Array.from(root.querySelectorAll('.list-shell ul > li')).find(
+    item => item.querySelector('span')?.textContent?.trim() === label,
+  ) as HTMLLIElement | undefined
+
 afterEach(() => {
   document.body.innerHTML = ''
   vi.restoreAllMocks()
@@ -48,11 +53,16 @@ describe('ListTransitionExample actual page', () => {
       expect(findTab(container, '效果')?.className).toContain('tab-active')
       expect(listNumbers(container)).toEqual(['1', '2', '3', '4', '5'])
     })
+    await flush()
 
     const insertButton = Array.from(container.querySelectorAll('button')).find(
       button => button.textContent?.trim() === 'Insert at random index',
     )
     await click(insertButton ?? null)
+
+    const insertedItem = listItemByNumber(container, '6')
+    expect(insertedItem?.classList.contains('list-enter-active')).toBe(true)
+    expect(insertedItem?.classList.contains('list-enter-from')).toBe(true)
 
     await waitForContent(() => {
       expect(listNumbers(container)).toEqual(['6', '1', '2', '3', '4', '5'])

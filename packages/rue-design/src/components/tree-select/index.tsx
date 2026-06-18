@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 TreeSelect 组件概述
 - 目标：提供接近 antd TreeSelect 的核心能力，包括树数据源、单选/多选/勾选、搜索、异步加载、展开控制与标签回填。
@@ -6,7 +5,7 @@ TreeSelect 组件概述
 - 策略：受控/非受控、简单数据模式、showCheckedStrategy 与语义化样式扩展都收敛在一个文件内，便于后续继续增强而不拆碎行为路径。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
+import { computed, onMounted, onUnmounted, ref } from '@rue-js/rue'
 
 /** SHOW_ALL 常量。 */
 export const SHOW_ALL = 'SHOW_ALL' as const
@@ -410,6 +409,8 @@ const sizeClassMap = {
   middle: '',
   large: 'input-lg',
 } as const
+
+let treeSelectSeed = 0
 
 const defaultFieldNames: Required<TreeSelectFieldNames> = {
   label: 'title',
@@ -956,17 +957,8 @@ const toDisplayText = (value: any) => {
   return String(value)
 }
 
-/** apply Inline Style 的内部工具函数。 */
-const applyInlineStyle = (element: HTMLElement, style: any) => {
-  if (!isObjectRecord(style)) return
-  Object.assign(element.style, style)
-}
-
 /** Default Switcher Icon 的内部工具函数。 */
-const _DefaultSwitcherIcon: FC<{ expanded: boolean; hidden?: boolean }> = ({
-  expanded,
-  hidden,
-}) => {
+const DefaultSwitcherIcon: FC<{ expanded: boolean; hidden?: boolean }> = ({ expanded, hidden }) => {
   return (
     <span
       aria-hidden="true"
@@ -990,32 +982,9 @@ const _DefaultSwitcherIcon: FC<{ expanded: boolean; hidden?: boolean }> = ({
 }
 
 /** Loading Switcher Icon 的内部工具函数。 */
-const _LoadingSwitcherIcon: FC = () => {
+const LoadingSwitcherIcon: FC = () => {
   return (
     <span className="loading loading-spinner loading-xs text-base-content/55" aria-hidden="true" />
-  )
-}
-
-/** Default Arrow Icon 的内部工具函数。 */
-const _DefaultArrowIcon: FC<{ open: boolean }> = ({ open }) => {
-  return (
-    <span
-      aria-hidden="true"
-      className={joinClassName(
-        'inline-flex h-4 w-4 items-center justify-center text-base-content/55 transition-transform duration-150',
-        open && 'rotate-180',
-      )}
-    >
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-        <path
-          d="M5.5 7.5L10 12.5L14.5 7.5"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-    </span>
   )
 }
 
@@ -1030,6 +999,221 @@ const ClearIcon: FC = () => {
         stroke-linecap="round"
       />
     </svg>
+  )
+}
+
+const TreeSelectClearIcon: FC<{ icon?: any }> = ({ icon }) => {
+  if (icon !== undefined && icon !== null) {
+    return icon
+  }
+  return <ClearIcon />
+}
+
+interface TreeSelectTagProps {
+  node: TreeSelectNormalizedNode
+  label: any
+  rawLabel: any
+  disabled: boolean
+  tagRender?: (props: TreeSelectTagRenderProps) => any
+  tagClassName?: string
+  tagStyle?: any
+  onRemove: (node: TreeSelectNormalizedNode, event: MouseEvent) => void
+}
+
+const TreeSelectTag: FC<TreeSelectTagProps> = ({
+  node,
+  label,
+  rawLabel,
+  disabled,
+  tagRender,
+  tagClassName,
+  tagStyle,
+  onRemove,
+}) => {
+  const handleClose = (event: MouseEvent) => {
+    onRemove(node, event)
+  }
+
+  if (tagRender) {
+    return tagRender({
+      label,
+      value: node.value,
+      disabled: node.disabled,
+      closable: !disabled,
+      node,
+      onClose: handleClose,
+    })
+  }
+
+  return (
+    <span
+      data-rue-tree-select-tag-value={node.valueKey}
+      className={joinClassName(
+        'badge badge-outline inline-flex max-w-full items-center gap-1 rounded-md px-2 py-1 text-xs font-medium leading-none',
+        tagClassName,
+      )}
+      style={tagStyle}
+    >
+      <span className="truncate">{label}</span>
+      {!disabled ? (
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs inline-flex h-4 min-h-0 w-4 shrink-0 items-center justify-center rounded-full p-0 text-center leading-none"
+          aria-label={`移除 ${toDisplayText(rawLabel ?? node.value)}`}
+          onClick={handleClose}
+        >
+          ×
+        </button>
+      ) : null}
+    </span>
+  )
+}
+
+interface TreeSelectNodeRowProps {
+  node: TreeSelectNormalizedNode
+  matched: boolean
+  state: TreeCheckState
+  selected: boolean
+  halfChecked: boolean
+  expanded: boolean
+  loadingNode: boolean
+  canExpand: boolean
+  checkboxDisabled: boolean
+  label: any
+  mergedDisabled: boolean
+  treeCheckable?: boolean
+  treeLine?: TreeSelectProps['treeLine']
+  switcherIcon?: TreeSelectProps['switcherIcon']
+  onExpand: (node: TreeSelectNormalizedNode, event: MouseEvent) => void
+  onToggle: (node: TreeSelectNormalizedNode, event: MouseEvent) => void
+}
+
+interface TreeSelectSwitcherIconProps {
+  node: TreeSelectNormalizedNode
+  state: TreeCheckState
+  selected: boolean
+  halfChecked: boolean
+  expanded: boolean
+  loadingNode: boolean
+  canExpand: boolean
+  switcherIcon?: TreeSelectProps['switcherIcon']
+}
+
+const TreeSelectSwitcherIcon: FC<TreeSelectSwitcherIconProps> = ({
+  node,
+  state,
+  selected,
+  halfChecked,
+  expanded,
+  loadingNode,
+  canExpand,
+  switcherIcon,
+}) => {
+  if (loadingNode) {
+    return <LoadingSwitcherIcon />
+  }
+  if (typeof switcherIcon === 'function') {
+    return switcherIcon({
+      expanded,
+      loading: loadingNode,
+      selected,
+      checked: state.checked,
+      halfChecked,
+      node,
+    })
+  }
+  if (switcherIcon !== undefined) {
+    return switcherIcon
+  }
+  return <DefaultSwitcherIcon expanded={expanded} hidden={!canExpand} />
+}
+
+const TreeSelectNodeRow: FC<TreeSelectNodeRowProps> = ({
+  node,
+  matched,
+  state,
+  selected,
+  halfChecked,
+  expanded,
+  loadingNode,
+  canExpand,
+  checkboxDisabled,
+  label,
+  mergedDisabled,
+  treeCheckable,
+  treeLine,
+  switcherIcon,
+  onExpand,
+  onToggle,
+}) => {
+  return (
+    <div
+      data-rue-tree-select-node={node.valueKey}
+      className={joinClassName(
+        'group flex items-center gap-1 rounded-lg py-1.5 pr-2',
+        matched && 'bg-primary/8',
+        treeLine && node.depth > 0 && 'border-l border-base-300/60',
+        node.className,
+      )}
+      style={{ paddingLeft: `${node.depth * 16 + 4}px` }}
+    >
+      <button
+        type="button"
+        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md hover:bg-base-200 disabled:cursor-not-allowed"
+        disabled={!canExpand || mergedDisabled || node.disabled}
+        aria-label={expanded ? '折叠节点' : '展开节点'}
+        onClick={(event: MouseEvent) => {
+          onExpand(node, event)
+        }}
+      >
+        <TreeSelectSwitcherIcon
+          node={node}
+          state={state}
+          selected={selected}
+          halfChecked={halfChecked}
+          expanded={expanded}
+          loadingNode={loadingNode}
+          canExpand={canExpand}
+          switcherIcon={switcherIcon}
+        />
+      </button>
+
+      {treeCheckable ? (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={halfChecked ? 'mixed' : state.checked ? 'true' : 'false'}
+          disabled={checkboxDisabled}
+          className={joinClassName(
+            'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-150',
+            state.checked || halfChecked
+              ? 'border-primary bg-primary text-primary-content'
+              : 'border-base-content/40 bg-base-100 text-base-content/0',
+            checkboxDisabled && 'opacity-45',
+          )}
+          onClick={(event: MouseEvent) => {
+            onToggle(node, event)
+          }}
+        >
+          {halfChecked ? '−' : state.checked ? '✓' : ''}
+        </button>
+      ) : null}
+
+      <button
+        type="button"
+        className={joinClassName(
+          'flex min-w-0 flex-1 items-center gap-1 rounded-md px-1.5 py-1 text-left text-sm transition-colors duration-150',
+          selected ? 'bg-primary/12 text-primary' : 'text-base-content hover:bg-base-200/70',
+          (mergedDisabled || node.disabled || !node.selectable) && 'cursor-not-allowed opacity-55',
+        )}
+        disabled={mergedDisabled || node.disabled || !node.selectable}
+        onClick={(event: MouseEvent) => {
+          onToggle(node, event)
+        }}
+      >
+        {label}
+      </button>
+    </div>
   )
 }
 
@@ -1102,14 +1286,8 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
   children,
   ...rest
 }) => {
-  const rootRef = useRef<HTMLDivElement>()
-  const selectorRef = useRef<HTMLDivElement>()
-  const arrowIconRef = useRef<HTMLSpanElement>()
-  const selectionAreaRef = useRef<HTMLDivElement>()
-  const searchInputRef = useRef<HTMLInputElement>()
-  const clearButtonRef = useRef<HTMLButtonElement>()
-  const popupRef = useRef<HTMLDivElement>()
-  const treeBodyRef = useRef<HTMLDivElement>()
+  const rootRef = ref<HTMLDivElement | undefined>(undefined)
+  const instanceId = ref(`rue-tree-select-${treeSelectSeed++}`)
   const renderVersion = ref(0)
   const uncontrolledValue = ref(defaultValue ?? (treeCheckable || multiple ? [] : null))
   const internalOpen = ref(!!defaultOpen)
@@ -1125,14 +1303,11 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
   const internalSearch = ref('')
   const loadingNodeKeys = ref<string[]>([])
   const treeBodyScrollTop = ref(0)
+  const staleTreeNodeCleanupVersion = ref(0)
 
   const searchConfig = isObjectRecord(showSearch)
     ? (showSearch as TreeSelectShowSearchConfig)
     : undefined
-  const mergedTreeData = buildSimpleModeTreeData(treeData, treeDataSimpleMode, fieldNames)
-  const normalizedTree = normalizeTreeData(mergedTreeData, fieldNames)
-  const normalizedTreeRef = useRef<NormalizedTreeResult>()
-  normalizedTreeRef.current = normalizedTree
   const mergedMultiple = !!multiple || !!treeCheckable
   const mergedLabelInValue = !!labelInValue || !!treeCheckStrictly
   const mergedDisabled = !!disabled || !!loading
@@ -1151,14 +1326,11 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
   const tagSemanticStyle = resolveSemanticStyle(styles, 'tag')
   const rootSemanticClassName = resolveSemanticClassName(classNames, 'root')
   const rootSemanticStyle = resolveSemanticStyle(styles, 'root')
-  const rebuildNormalizedTree = () => {
-    const nextMergedTreeData = buildSimpleModeTreeData(treeData, treeDataSimpleMode, fieldNames)
-    const nextNormalizedTree = normalizeTreeData(nextMergedTreeData, fieldNames)
-    normalizedTreeRef.current = nextNormalizedTree
-    return nextNormalizedTree
-  }
   const getNormalizedTree = () => {
-    return normalizedTreeRef.current ?? normalizedTree
+    return normalizeTreeData(
+      buildSimpleModeTreeData(treeData, treeDataSimpleMode, fieldNames),
+      fieldNames,
+    )
   }
   const getMergedSearchValue = () => {
     return (
@@ -1250,36 +1422,6 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     )
   }
 
-  const requestRender = () => {
-    renderVersion.value += 1
-  }
-
-  const syncPopupDom = () => {
-    const popup = popupRef.current
-    if (!popup) return
-    const visible = getMergedOpen()
-    popup.hidden = !visible
-    popup.setAttribute('aria-hidden', visible ? 'false' : 'true')
-  }
-
-  const syncSelectorDom = () => {
-    const selector = selectorRef.current
-    if (!selector) return
-    selector.setAttribute('aria-expanded', getMergedOpen() ? 'true' : 'false')
-  }
-
-  const syncArrowDom = () => {
-    const arrow = arrowIconRef.current
-    if (!arrow) return
-    arrow.classList.toggle('rotate-180', getMergedOpen())
-  }
-
-  const syncOpenDom = () => {
-    syncSelectorDom()
-    syncPopupDom()
-    syncArrowDom()
-  }
-
   const buildSelectionPreview = (
     displayNodes: TreeSelectNormalizedNode[],
     derivedCheckStateOverride?: DerivedCheckState,
@@ -1314,263 +1456,14 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     return !!allowClearConfig && !mergedDisabled && visibleSelectionCount > 0
   }
 
-  const restoreTreeBodyScrollTop = () => {
-    const container = treeBodyRef.current
-    if (!container) return
-    const maxScrollTop =
-      container.scrollHeight > 0 || container.clientHeight > 0
-        ? Math.max(0, container.scrollHeight - container.clientHeight)
-        : treeBodyScrollTop.value
-    const nextScrollTop = Math.min(treeBodyScrollTop.value, maxScrollTop)
-    treeBodyScrollTop.value = nextScrollTop
-    if (container.scrollTop !== nextScrollTop) {
-      container.scrollTop = nextScrollTop
-    }
-  }
-
-  const syncClearButtonDom = (selectionOverride?: TreeSelectNormalizedNode[]) => {
-    const button = clearButtonRef.current
-    if (!button) return
-    const visible = getClearButtonVisible(selectionOverride)
-    button.classList.toggle('hidden', !visible)
-    button.classList.toggle('inline-flex', visible)
-    button.disabled = !visible
-  }
-
-  const syncSelectorContentDom = (selectionOverride?: TreeSelectNormalizedNode[]) => {
-    const container = selectionAreaRef.current
-    if (!container || typeof document === 'undefined') return
-
-    const selection = getSelectionSnapshot()
-    const displayNodes = selectionOverride ?? selection.displayNodes
-    const hasValue = displayNodes.length > 0
-    const visibleTagNodes =
-      visibleTagCount !== undefined ? displayNodes.slice(0, visibleTagCount) : displayNodes
-    const omittedTagNodes = visibleTagCount !== undefined ? displayNodes.slice(visibleTagCount) : []
-    const mergedSearchValue = getMergedSearchValue()
-    const mergedOpen = getMergedOpen()
-    const showSearchInput =
-      mergedShowSearch && (mergedMultiple || treeCheckable || mergedOpen || !hasValue)
-
-    container.replaceChildren()
-
-    visibleTagNodes.forEach(node => {
-      const label = truncateTagLabel(
-        resolveNodeLabelProp(node, treeNodeLabelProp),
-        maxTagTextLength,
-      )
-      const chip = document.createElement('span')
-      chip.className = joinClassName(
-        'badge badge-outline inline-flex max-w-full items-center gap-1 rounded-md px-2 py-1 text-xs font-medium leading-none',
-        tagSemanticClassName,
-      )
-      applyInlineStyle(chip, tagSemanticStyle)
-
-      const labelNode = document.createElement('span')
-      labelNode.className = 'truncate'
-      labelNode.textContent = toDisplayText(label)
-      chip.appendChild(labelNode)
-
-      if (!mergedDisabled) {
-        const closeButton = document.createElement('button')
-        closeButton.type = 'button'
-        closeButton.className =
-          'btn btn-ghost btn-xs inline-flex h-4 min-h-0 w-4 shrink-0 items-center justify-center rounded-full p-0 text-center leading-none'
-        closeButton.setAttribute(
-          'aria-label',
-          `移除 ${toDisplayText(resolveNodeLabelProp(node, treeNodeLabelProp) ?? node.value)}`,
-        )
-        closeButton.textContent = '×'
-        closeButton.addEventListener('click', event => {
-          const nextSelection = removeNodeFromSelection(node, event as MouseEvent)
-          if (nextSelection) {
-            syncSelectorContentDom(nextSelection.displayNodes)
-            syncClearButtonDom(nextSelection.displayNodes)
-            syncTreeBodyDom(nextSelection)
-            syncOpenDom()
-          }
-        })
-        chip.appendChild(closeButton)
-      }
-
-      container.appendChild(chip)
-    })
-
-    if (omittedTagNodes.length > 0) {
-      const omittedNode = document.createElement('span')
-      omittedNode.className =
-        'badge badge-ghost inline-flex max-w-full items-center rounded-md px-2 py-1 text-xs leading-none'
-      omittedNode.textContent =
-        typeof maxTagPlaceholder === 'function'
-          ? toDisplayText(maxTagPlaceholder(omittedTagNodes))
-          : toDisplayText(maxTagPlaceholder ?? `+${omittedTagNodes.length}`)
-      container.appendChild(omittedNode)
-    }
-
-    if (showSearchInput) {
-      const input = document.createElement('input')
-      input.value = mergedSearchValue
-      input.disabled = mergedDisabled
-      input.placeholder = toDisplayText(placeholder ?? '请选择')
-      input.className = joinClassName(
-        'min-w-[5rem] flex-1 border-0 bg-transparent px-0 py-0 text-sm leading-5 outline-none placeholder:text-base-content/40',
-        searchSemanticClassName,
-      )
-      applyInlineStyle(input, searchSemanticStyle)
-      input.addEventListener('click', event => event.stopPropagation())
-      input.addEventListener('input', event => {
-        setMergedOpen(true)
-        setMergedSearchValue((event.target as HTMLInputElement).value, { syncSelector: false })
-      })
-      searchInputRef.current = input
-      container.appendChild(input)
-      return
-    }
-
-    searchInputRef.current = undefined
-
-    const contentNode = document.createElement('span')
-    contentNode.className =
-      hasValue && !mergedMultiple && !treeCheckable
-        ? 'flex flex-1 items-center truncate text-sm leading-5'
-        : 'flex flex-1 items-center truncate text-sm leading-5 text-base-content/40'
-    contentNode.textContent =
-      hasValue && !mergedMultiple && !treeCheckable
-        ? toDisplayText(resolveNodeLabelProp(displayNodes[0], treeNodeLabelProp))
-        : toDisplayText(placeholder ?? '请选择')
-    container.appendChild(contentNode)
-  }
-
-  const syncTreeBodyDom = (selectionOverride?: TreeSelectSelectionPreview) => {
-    const container = treeBodyRef.current
-    if (!container || typeof document === 'undefined') return
-
-    const selection = selectionOverride ?? getSelectionSnapshot()
-    const visibleNodes = getVisibleNodes()
-    const mergedSearchValue = getMergedSearchValue()
-    const expandedKeySet = getExpandedKeySet()
-
-    container.replaceChildren()
-
-    if (!visibleNodes.length) {
-      const emptyNode = document.createElement('div')
-      emptyNode.className = 'rounded-md px-3 py-8 text-center text-sm text-base-content/55'
-      emptyNode.textContent = toDisplayText(notFoundContent ?? '暂无匹配项')
-      container.appendChild(emptyNode)
-      restoreTreeBodyScrollTop()
-      return
-    }
-
-    visibleNodes.forEach(({ node, matched }) => {
-      const state = selection.derivedCheckState.stateMap[node.valueKey] ?? {
-        checked: false,
-        halfChecked: false,
-        participates: true,
-      }
-      const selected = treeCheckable
-        ? state.checked
-        : selection.currentValueKeySet.has(node.valueKey)
-      const halfChecked = treeCheckable ? state.halfChecked : false
-      const expanded = mergedSearchValue ? true : expandedKeySet.has(node.valueKey)
-      const loadingNode = loadingNodeKeys.value.includes(node.valueKey)
-      const canExpand = !!loadData || node.children.length > 0 || !node.isLeaf
-
-      const row = document.createElement('div')
-      row.dataset.rueTreeSelectNode = node.valueKey
-      row.className = joinClassName(
-        'group flex items-center gap-1 rounded-lg py-1.5 pr-2',
-        matched && 'bg-primary/8',
-        treeLine && node.depth > 0 && 'border-l border-base-300/60',
-        node.className,
-      )
-      row.style.paddingLeft = `${node.depth * 16 + 4}px`
-
-      const expandButton = document.createElement('button')
-      expandButton.type = 'button'
-      expandButton.className =
-        'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md hover:bg-base-200 disabled:cursor-not-allowed'
-      expandButton.disabled = !canExpand || mergedDisabled || node.disabled
-      expandButton.setAttribute('aria-label', expanded ? '折叠节点' : '展开节点')
-      expandButton.textContent = loadingNode ? '…' : canExpand ? (expanded ? '▾' : '▸') : ''
-      expandButton.addEventListener('click', event => {
-        treeBodyScrollTop.value = container.scrollTop
-        handleExpandToggle(node, event as MouseEvent)
-        syncTreeBodyDom()
-        syncOpenDom()
-      })
-      row.appendChild(expandButton)
-
-      if (treeCheckable) {
-        const checkboxButton = document.createElement('button')
-        checkboxButton.type = 'button'
-        checkboxButton.setAttribute('role', 'checkbox')
-        checkboxButton.setAttribute(
-          'aria-checked',
-          halfChecked ? 'mixed' : state.checked ? 'true' : 'false',
-        )
-        checkboxButton.disabled =
-          mergedDisabled || node.disabled || node.disableCheckbox || !node.checkable
-        checkboxButton.className = joinClassName(
-          'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-150',
-          state.checked || halfChecked
-            ? 'border-primary bg-primary text-primary-content'
-            : 'border-base-content/40 bg-base-100 text-base-content/0',
-          (mergedDisabled || node.disabled || node.disableCheckbox || !node.checkable) &&
-            'opacity-45',
-        )
-        checkboxButton.textContent = halfChecked ? '−' : state.checked ? '✓' : ''
-        checkboxButton.addEventListener('click', event => {
-          treeBodyScrollTop.value = container.scrollTop
-          const nextSelection = handleNodeToggle(node, event as MouseEvent)
-          if (nextSelection) {
-            syncSelectorContentDom(nextSelection.displayNodes)
-            syncClearButtonDom(nextSelection.displayNodes)
-            syncTreeBodyDom(nextSelection)
-            syncOpenDom()
-          }
-        })
-        row.appendChild(checkboxButton)
-      }
-
-      const labelButton = document.createElement('button')
-      labelButton.type = 'button'
-      labelButton.className = joinClassName(
-        'flex min-w-0 flex-1 items-center gap-1 rounded-md px-1.5 py-1 text-left text-sm transition-colors duration-150',
-        selected ? 'bg-primary/12 text-primary' : 'text-base-content hover:bg-base-200/70',
-        (mergedDisabled || node.disabled || !node.selectable) && 'cursor-not-allowed opacity-55',
-      )
-      labelButton.disabled = mergedDisabled || node.disabled || !node.selectable
-      labelButton.textContent = toDisplayText(
-        treeTitleRender ? treeTitleRender(node) : resolveNodeLabelProp(node, treeNodeLabelProp),
-      )
-      labelButton.addEventListener('click', event => {
-        treeBodyScrollTop.value = container.scrollTop
-        const nextSelection = handleNodeToggle(node, event as MouseEvent)
-        if (nextSelection) {
-          syncSelectorContentDom(nextSelection.displayNodes)
-          syncClearButtonDom(nextSelection.displayNodes)
-          syncTreeBodyDom(nextSelection)
-          syncOpenDom()
-        }
-      })
-      row.appendChild(labelButton)
-
-      container.appendChild(row)
-    })
-
-    restoreTreeBodyScrollTop()
-  }
-
-  const syncDynamicDom = () => {
-    syncSelectorContentDom()
-    syncClearButtonDom()
-    syncTreeBodyDom()
-    syncOpenDom()
+  const requestRender = () => {
+    renderVersion.value += 1
+    restoreTreeBodyScroll()
   }
 
   const setMergedOpen = (
     nextOpen: boolean,
-    options?: { selectionOverride?: TreeSelectNormalizedNode[] },
+    _options?: { selectionOverride?: TreeSelectNormalizedNode[] },
   ) => {
     const previousOpen = getMergedOpen()
     const openStateChanged = previousOpen !== nextOpen
@@ -1581,40 +1474,35 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
         requestRender()
       }
     }
-    if (openStateChanged) {
-      syncSelectorContentDom(options?.selectionOverride)
-    }
-    syncOpenDom()
     if (openStateChanged && onOpenChange) {
       onOpenChange(nextOpen)
     }
-    if (openStateChanged && nextOpen && mergedShowSearch) {
-      Promise.resolve().then(() => {
-        searchInputRef.current?.focus()
-      })
+  }
+
+  const prepareKeepMultiplePopupOpen = () => {
+    if (open === undefined) {
+      setMergedOpen(true)
     }
   }
 
-  const setMergedSearchValue = (nextSearchValue: string, options?: { syncSelector?: boolean }) => {
+  const setMergedSearchValue = (nextSearchValue: string, _options?: { syncSelector?: boolean }) => {
+    let shouldRequestRender = false
     if (searchConfig?.searchValue === undefined && searchValue === undefined) {
       if (internalSearch.value === nextSearchValue) {
         return
       }
       internalSearch.value = nextSearchValue
-      requestRender()
-    }
-    if (options?.syncSelector === false) {
-      syncClearButtonDom()
-      syncTreeBodyDom()
-      syncOpenDom()
-    } else {
-      syncDynamicDom()
+      shouldRequestRender = true
     }
     if (searchConfig?.onSearch) {
       searchConfig.onSearch(nextSearchValue)
     }
     if (onSearch) {
       onSearch(nextSearchValue)
+    }
+    if (shouldRequestRender) {
+      requestRender()
+      cleanupStaleTreeNodes(getVisibleNodes().map(item => item.node.valueKey))
     }
   }
 
@@ -1623,7 +1511,6 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
       uncontrolledExpandedKeys.value = nextExpandedKeys
       requestRender()
     }
-    syncTreeBodyDom()
     if (onTreeExpand) {
       onTreeExpand(nextExpandedKeys)
     }
@@ -1634,7 +1521,22 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
       uncontrolledLoadedKeys.value = nextLoadedKeys
       requestRender()
     }
-    syncTreeBodyDom()
+  }
+
+  const canLoadNodeData = (
+    node: TreeSelectNormalizedNode,
+    loadedKeySet: Set<string> = getLoadedKeySet(),
+  ) => {
+    return (
+      !!loadData && !node.isLeaf && node.children.length === 0 && !loadedKeySet.has(node.valueKey)
+    )
+  }
+
+  const canExpandNode = (
+    node: TreeSelectNormalizedNode,
+    loadedKeySet: Set<string> = getLoadedKeySet(),
+  ) => {
+    return node.children.length > 0 || canLoadNodeData(node, loadedKeySet)
   }
 
   const emitSelectionCallbacks = (
@@ -1696,11 +1598,6 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
       requestRender()
     }
 
-    syncSelectorContentDom(nextNodes)
-    syncClearButtonDom(nextNodes)
-    syncTreeBodyDom()
-    syncOpenDom()
-
     emitSelectionCallbacks(
       currentSelection.displayNodes,
       nextNodes,
@@ -1726,9 +1623,13 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
           : nextNodes,
       })
     }
+
+    requestRender()
+    cleanupStaleTags(nextNodes.map(node => node.valueKey))
   }
 
   const removeNodeFromSelection = (node: TreeSelectNormalizedNode, event: MouseEvent) => {
+    rememberTreeBodyScroll(event)
     event.preventDefault()
     event.stopPropagation()
     const currentSelection = getSelectionSnapshot()
@@ -1772,6 +1673,7 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
   }
 
   const clearSelection = (event: MouseEvent) => {
+    rememberTreeBodyScroll(event)
     event.preventDefault()
     event.stopPropagation()
 
@@ -1788,20 +1690,20 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
       { clear: true, selected: false, checked: false, triggerNode: null, triggerValue: null },
       new Set<string>(),
     )
-
-    const clearedSelection = buildSelectionPreview([])
-    syncSelectorContentDom(clearedSelection.displayNodes)
-    syncClearButtonDom(clearedSelection.displayNodes)
-    syncTreeBodyDom(clearedSelection)
-    syncOpenDom()
   }
 
   const handleNodeToggle = (node: TreeSelectNormalizedNode, event: MouseEvent) => {
+    rememberTreeBodyScroll(event)
     event.preventDefault()
     event.stopPropagation()
 
     if (mergedDisabled || node.disabled) {
       return null
+    }
+
+    if (!mergedMultiple && !treeCheckable && canLoadNodeData(node)) {
+      handleExpandToggle(node, event)
+      return getSelectionSnapshot()
     }
 
     const currentSelection = getSelectionSnapshot()
@@ -1841,6 +1743,7 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
         return null
       }
 
+      prepareKeepMultiplePopupOpen()
       commitValue(
         nextDisplayNodes,
         {
@@ -1875,6 +1778,7 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
         return null
       }
 
+      prepareKeepMultiplePopupOpen()
       commitValue(
         nextDisplayNodes,
         {
@@ -1911,20 +1815,18 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
   }
 
   const handleExpandToggle = (node: TreeSelectNormalizedNode, event: MouseEvent) => {
+    rememberTreeBodyScroll(event)
     event.preventDefault()
     event.stopPropagation()
 
-    if (
-      mergedDisabled ||
-      node.disabled ||
-      (!loadData && node.children.length === 0 && node.isLeaf)
-    ) {
+    const loadedKeySet = getLoadedKeySet()
+
+    if (mergedDisabled || node.disabled || !canExpandNode(node, loadedKeySet)) {
       return
     }
 
     const expandedKeySet = getExpandedKeySet()
     const mergedLoadedValueKeys = getLoadedValueKeys()
-    const loadedKeySet = getLoadedKeySet()
     const mergedSearchValue = getMergedSearchValue()
     const activeTree = getNormalizedTree()
     const nextExpandedKeys = new Set(expandedKeySet)
@@ -1953,27 +1855,23 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     ) {
       loadingNodeKeys.value = [...loadingNodeKeys.value, node.valueKey]
       requestRender()
-      syncTreeBodyDom()
 
       Promise.resolve(loadData(node))
         .then(() => {
-          rebuildNormalizedTree()
           const nextLoadedKeys = Array.from(new Set([...mergedLoadedValueKeys, node.value]))
           setLoadedKeys(nextLoadedKeys)
-          syncDynamicDom()
         })
         .finally(() => {
           loadingNodeKeys.value = loadingNodeKeys.value.filter(
             valueKey => valueKey !== node.valueKey,
           )
-          rebuildNormalizedTree()
           requestRender()
-          syncTreeBodyDom()
         })
     }
   }
 
   const handleRootMouseDown = (event: MouseEvent) => {
+    event.stopPropagation()
     if (mergedDisabled) {
       event.preventDefault()
     }
@@ -1984,17 +1882,73 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     setMergedOpen(!getMergedOpen())
   }
 
+  const rememberTreeBodyScroll = (event: Event) => {
+    const target = event.currentTarget as HTMLElement | null
+    const treeBody = target?.closest('[role="tree"]') as HTMLElement | null
+    if (treeBody) {
+      treeBodyScrollTop.value = treeBody.scrollTop
+    }
+  }
+
+  const restoreTreeBodyScroll = () => {
+    setTimeout(() => {
+      const treeBody = document.querySelector(
+        '[data-rue-tree-select-popup="true"] [role="tree"]',
+      ) as HTMLElement | null
+      if (treeBody && treeBody.scrollTop !== treeBodyScrollTop.value) {
+        treeBody.scrollTop = treeBodyScrollTop.value
+      }
+    }, 0)
+  }
+
+  const cleanupStaleTags = (allowedValueKeys: string[]) => {
+    setTimeout(() => {
+      const allowedKeys = new Set(allowedValueKeys)
+      const root = document.querySelector(
+        `[data-rue-tree-select-id="${instanceId.value}"]`,
+      ) as HTMLElement | null
+      root?.querySelectorAll('[data-rue-tree-select-tag-value]').forEach(element => {
+        const valueKey = element.getAttribute('data-rue-tree-select-tag-value')
+        if (valueKey && !allowedKeys.has(valueKey)) {
+          element.remove()
+        }
+      })
+    }, 0)
+  }
+
+  const cleanupStaleTreeNodes = (allowedValueKeys: string[]) => {
+    staleTreeNodeCleanupVersion.value += 1
+    const cleanupVersion = staleTreeNodeCleanupVersion.value
+    setTimeout(() => {
+      if (cleanupVersion !== staleTreeNodeCleanupVersion.value) return
+      let allowedIndex = 0
+      const root = document.querySelector(
+        `[data-rue-tree-select-id="${instanceId.value}"]`,
+      ) as HTMLElement | null
+      root?.querySelectorAll('[data-rue-tree-select-node]').forEach(element => {
+        const valueKey = element.getAttribute('data-rue-tree-select-node')
+        if (valueKey === allowedValueKeys[allowedIndex]) {
+          allowedIndex += 1
+          return
+        }
+        if (valueKey) {
+          element.remove()
+        }
+      })
+    }, 0)
+  }
+
   onMounted(() => {
     if (typeof document === 'undefined') {
       return
     }
 
-    syncDynamicDom()
-
     const handleDocumentMouseDown = (event: MouseEvent) => {
       const target = event.target as Node | null
-      if (!target) return
-      if (rootRef.current?.contains(target)) return
+      const rootElement = rootRef.value
+      if (rootElement && target && rootElement.contains(target)) {
+        return
+      }
       setMergedOpen(false)
     }
 
@@ -2012,49 +1966,6 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
       document.removeEventListener('keydown', handleDocumentKeyDown)
     })
   })
-
-  watch(
-    () => value,
-    () => {
-      syncDynamicDom()
-    },
-  )
-
-  watch(
-    () => open,
-    () => {
-      syncDynamicDom()
-    },
-  )
-
-  watch(
-    () => searchValue,
-    () => {
-      syncDynamicDom()
-    },
-  )
-
-  watch(
-    () => treeData,
-    () => {
-      rebuildNormalizedTree()
-      syncDynamicDom()
-    },
-  )
-
-  watch(
-    () => treeExpandedKeys,
-    () => {
-      syncDynamicDom()
-    },
-  )
-
-  watch(
-    () => treeLoadedKeys,
-    () => {
-      syncDynamicDom()
-    },
-  )
 
   const resolvedSizeClass = sizeClassMap[size] ?? ''
   const selectorClass = joinClassName(
@@ -2084,28 +1995,68 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
       : typeof popupMatchSelectWidth === 'number'
         ? { width: `${popupMatchSelectWidth}px` }
         : { minWidth: '100%' }
-  const clearIcon = allowClearConfig?.clearIcon ?? <ClearIcon />
+  const selectionState = computed(() => {
+    void renderVersion.value
+    return getSelectionSnapshot()
+  })
+  const displayNodes = computed(() => selectionState.get().displayNodes)
+  const tagDisplayNodes = computed(() =>
+    mergedMultiple || treeCheckable ? displayNodes.get() : [],
+  )
+  const hasValue = computed(() => displayNodes.get().length > 0)
+  const visibleTagNodes = computed(() =>
+    visibleTagCount !== undefined
+      ? tagDisplayNodes.get().slice(0, visibleTagCount)
+      : tagDisplayNodes.get(),
+  )
+  const omittedTagNodes = computed(() =>
+    visibleTagCount !== undefined ? tagDisplayNodes.get().slice(visibleTagCount) : [],
+  )
+  const mergedOpenState = computed(() => {
+    void renderVersion.value
+    return getMergedOpen()
+  })
+  const mergedSearchValueState = computed(() => {
+    void renderVersion.value
+    return getMergedSearchValue()
+  })
+  const showSearchInput = computed(
+    () =>
+      mergedShowSearch &&
+      (mergedMultiple || treeCheckable || mergedOpenState.get() || !hasValue.get()),
+  )
+  const clearButtonVisible = computed(() => getClearButtonVisible(displayNodes.get()))
+  const visibleNodes = computed(() => {
+    void renderVersion.value
+    return getVisibleNodes()
+  })
+  const expandedKeySetState = computed(() => {
+    void renderVersion.value
+    return getExpandedKeySet()
+  })
+  const loadedKeySetState = computed(() => {
+    void renderVersion.value
+    return getLoadedKeySet()
+  })
 
   return (
     <div
       {...rest}
-      ref={rootRef}
+      ref={(element: HTMLDivElement | null) => {
+        rootRef.value = element ?? undefined
+      }}
       data-rue-tree-select-root="true"
-      data-rue-tree-select-version={String(renderVersion.value)}
+      data-rue-tree-select-id={instanceId.value}
       className={joinClassName('relative', rootSemanticClassName, className)}
       style={{ ...rootSemanticStyle, ...style }}
       onMouseDown={handleRootMouseDown}
     >
       <div
         data-rue-tree-select-selector="true"
-        ref={selectorRef}
         className={selectorClass}
         style={{ ...selectorSemanticStyle, ...selectorStyle }}
         role="combobox"
-        aria-expanded={(() => {
-          void renderVersion.value
-          return getMergedOpen()
-        })()}
+        aria-expanded={mergedOpenState.get()}
         aria-disabled={mergedDisabled}
         aria-haspopup="tree"
         onClick={handleSelectorClick}
@@ -2114,29 +2065,95 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
           <span className="flex shrink-0 items-center text-base-content/65">{prefix}</span>
         ) : null}
 
-        <div
-          ref={selectionAreaRef}
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 self-stretch py-1"
-        />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 self-stretch py-1">
+          {visibleTagNodes.get().map(node => {
+            const rawLabel = resolveNodeLabelProp(node, treeNodeLabelProp)
+            const label = truncateTagLabel(rawLabel, maxTagTextLength)
+            return (
+              <TreeSelectTag
+                key={node.valueKey}
+                node={node}
+                rawLabel={rawLabel}
+                label={label}
+                disabled={mergedDisabled}
+                tagRender={_tagRender}
+                tagClassName={tagSemanticClassName}
+                tagStyle={tagSemanticStyle}
+                onRemove={removeNodeFromSelection}
+              />
+            )
+          })}
+
+          {omittedTagNodes.get().length > 0 ? (
+            <span className="badge badge-ghost inline-flex max-w-full items-center rounded-md px-2 py-1 text-xs leading-none">
+              {typeof maxTagPlaceholder === 'function'
+                ? maxTagPlaceholder(omittedTagNodes.get())
+                : (maxTagPlaceholder ?? `+${omittedTagNodes.get().length}`)}
+            </span>
+          ) : null}
+
+          {showSearchInput.get() ? (
+            <input
+              data-rue-tree-select-search="true"
+              value={mergedSearchValueState.get()}
+              disabled={mergedDisabled}
+              placeholder={toDisplayText(placeholder ?? '请选择')}
+              className={joinClassName(
+                'min-w-[5rem] flex-1 border-0 bg-transparent px-0 py-0 text-sm leading-5 outline-none placeholder:text-base-content/40',
+                searchSemanticClassName,
+              )}
+              style={searchSemanticStyle}
+              onClick={(event: MouseEvent) => {
+                event.stopPropagation()
+                if (!mergedDisabled) {
+                  setMergedOpen(true)
+                }
+              }}
+              onFocus={() => {
+                if (!mergedDisabled) {
+                  setMergedOpen(true)
+                }
+              }}
+              onInput={(event: Event) => {
+                const input = event.target as HTMLInputElement
+                setMergedOpen(true)
+                setMergedSearchValue(input.value, {
+                  syncSelector: false,
+                })
+                Promise.resolve().then(() => {
+                  const activeInput = document.querySelector(
+                    '[data-rue-tree-select-search="true"]',
+                  ) as HTMLInputElement | null
+                  activeInput?.focus()
+                })
+              }}
+            />
+          ) : (
+            <span
+              className={
+                hasValue.get() && !mergedMultiple && !treeCheckable
+                  ? 'flex flex-1 items-center truncate text-sm leading-5'
+                  : 'flex flex-1 items-center truncate text-sm leading-5 text-base-content/40'
+              }
+            >
+              {hasValue.get() && !mergedMultiple && !treeCheckable
+                ? resolveNodeLabelProp(displayNodes.get()[0], treeNodeLabelProp)
+                : (placeholder ?? '请选择')}
+            </span>
+          )}
+        </div>
 
         <button
-          ref={clearButtonRef}
           type="button"
           className={joinClassName(
             'btn btn-ghost btn-xs btn-circle h-7 min-h-0 w-7 shrink-0 items-center justify-center self-center p-0 leading-none text-base-content/55 hover:text-base-content',
-            (() => {
-              void renderVersion.value
-              return getClearButtonVisible() ? 'inline-flex' : 'hidden'
-            })(),
+            clearButtonVisible.get() ? 'inline-flex' : 'hidden',
           )}
           aria-label={clearLabel}
-          disabled={(() => {
-            void renderVersion.value
-            return !getClearButtonVisible()
-          })()}
+          disabled={!clearButtonVisible.get()}
           onClick={clearSelection}
         >
-          {clearIcon}
+          <TreeSelectClearIcon icon={allowClearConfig?.clearIcon} />
         </button>
 
         {suffix !== undefined ? (
@@ -2147,15 +2164,11 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
           <span className="flex shrink-0 items-center">
             {suffixIcon ?? (
               <span
-                ref={arrowIconRef}
                 data-rue-tree-select-arrow="true"
                 aria-hidden="true"
                 className={joinClassName(
                   'inline-flex h-4 w-4 items-center justify-center text-base-content/55 transition-transform duration-150',
-                  (() => {
-                    void renderVersion.value
-                    return getMergedOpen()
-                  })() && 'rotate-180',
+                  mergedOpenState.get() && 'rotate-180',
                 )}
               >
                 <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
@@ -2174,12 +2187,9 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
       </div>
 
       <div
-        ref={popupRef}
         data-rue-tree-select-popup="true"
-        aria-hidden={(() => {
-          void renderVersion.value
-          return getMergedOpen() ? 'false' : 'true'
-        })()}
+        aria-hidden={mergedOpenState.get() ? 'false' : 'true'}
+        {...{ hidden: mergedOpenState.get() ? undefined : true }}
         className={popupClass}
         style={{
           ...popupSizingStyle,
@@ -2189,7 +2199,6 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
         }}
       >
         <div
-          ref={treeBodyRef}
           role="tree"
           className={joinClassName('overflow-auto p-2', treeSemanticClassName)}
           style={{ maxHeight: `${listHeight}px`, ...treeSemanticStyle }}
@@ -2199,7 +2208,58 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
               onPopupScroll(event as UIEvent)
             }
           }}
-        />
+        >
+          {visibleNodes.get().length ? (
+            visibleNodes.get().map(({ node, matched }) => {
+              const selection = selectionState.get()
+              const state = selection.derivedCheckState.stateMap[node.valueKey] ?? {
+                checked: false,
+                halfChecked: false,
+                participates: true,
+              }
+              const selected = treeCheckable
+                ? state.checked
+                : selection.currentValueKeySet.has(node.valueKey)
+              const halfChecked = treeCheckable ? state.halfChecked : false
+              const expanded = mergedSearchValueState.get()
+                ? true
+                : expandedKeySetState.get().has(node.valueKey)
+              const loadingNode = loadingNodeKeys.value.includes(node.valueKey)
+              const canExpand = canExpandNode(node, loadedKeySetState.get())
+              const checkboxDisabled =
+                mergedDisabled || node.disabled || node.disableCheckbox || !node.checkable
+              const label = treeTitleRender
+                ? treeTitleRender(node)
+                : resolveNodeLabelProp(node, treeNodeLabelProp)
+
+              return (
+                <TreeSelectNodeRow
+                  key={node.valueKey}
+                  node={node}
+                  matched={matched}
+                  state={state}
+                  selected={selected}
+                  halfChecked={halfChecked}
+                  expanded={expanded}
+                  loadingNode={loadingNode}
+                  canExpand={canExpand}
+                  checkboxDisabled={checkboxDisabled}
+                  label={label}
+                  mergedDisabled={mergedDisabled}
+                  treeCheckable={treeCheckable}
+                  treeLine={treeLine}
+                  switcherIcon={_switcherIcon}
+                  onExpand={handleExpandToggle}
+                  onToggle={handleNodeToggle}
+                />
+              )
+            })
+          ) : (
+            <div className="rounded-md px-3 py-8 text-center text-sm text-base-content/55">
+              {notFoundContent ?? '暂无匹配项'}
+            </div>
+          )}
+        </div>
       </div>
 
       {children}

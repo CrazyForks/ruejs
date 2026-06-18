@@ -9,7 +9,18 @@ const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active = (globalThis as any).__rue
 }
 
+const createPointerLikeEvent = (type: string, pointerId = 1) => {
+  const EventCtor = typeof PointerEvent === 'function' ? PointerEvent : MouseEvent
+  return new EventCtor(type, {
+    bubbles: true,
+    cancelable: true,
+    button: 0,
+    pointerId,
+  } as any)
+}
+
 afterEach(() => {
+  vi.useRealTimers()
   document.body.innerHTML = ''
 })
 
@@ -38,11 +49,37 @@ describe('InputNumber', () => {
       ) as HTMLElement
       expect(input.value).toBe('128')
       expect(input.getAttribute('role')).toBe('spinbutton')
+      expect(shell.tagName).toBe('DIV')
       expect(shell.classList.contains('input-warning')).toBe(true)
       expect(shell.classList.contains('border-transparent')).toBe(true)
       expect(controls).toBeTruthy()
       expect(shell.textContent).toContain('￥')
       expect(shell.textContent).toContain('CNY')
+    })
+  })
+
+  it('does not make plain inputs read-only unless requested', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <div>
+        <InputNumber data-testid="plain-input" readOnly={undefined} />
+        <InputNumber data-testid="readonly-input" defaultValue={8} readOnly={true} />
+      </div>,
+      container,
+    )
+
+    await waitForContent(() => {
+      const plainInput = container.querySelector('[data-testid="plain-input"]') as HTMLInputElement
+      const readonlyInput = container.querySelector(
+        '[data-testid="readonly-input"]',
+      ) as HTMLInputElement
+      expect(plainInput.hasAttribute('readonly')).toBe(false)
+      expect(plainInput.readOnly).toBe(false)
+      expect(readonlyInput.hasAttribute('readonly')).toBe(true)
+      expect(readonlyInput.readOnly).toBe(true)
+      expect(readonlyInput.getAttribute('readonly')).not.toBe('undefined')
     })
   })
 
@@ -122,6 +159,165 @@ describe('InputNumber', () => {
       offset: -0.5,
     })
     expect(handleChange).toHaveBeenLastCalledWith(0)
+  })
+
+  it('does not force input focus when a pointer clicks step controls', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <div>
+        <InputNumber data-testid="amount-input" defaultValue="0.1250" stringMode={true} />
+        <InputNumber data-testid="fee-input" defaultValue="0.0008" stringMode={true} />
+      </div>,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-testid="amount-input"]')).toBeTruthy()
+      expect(container.querySelector('[data-testid="fee-input"]')).toBeTruthy()
+    })
+
+    const amountInput = container.querySelector('[data-testid="amount-input"]') as HTMLInputElement
+    const feeInput = container.querySelector('[data-testid="fee-input"]') as HTMLInputElement
+    const increaseButtons = Array.from(
+      container.querySelectorAll('button[aria-label="Increase value"]'),
+    ) as HTMLButtonElement[]
+
+    amountInput.focus()
+    expect(document.activeElement).toBe(amountInput)
+
+    increaseButtons[0].dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+
+    await waitForContent(() => {
+      expect(amountInput.value).toBe('1.125')
+    })
+    expect(document.activeElement).not.toBe(amountInput)
+    expect(document.activeElement).not.toBe(feeInput)
+
+    amountInput.focus()
+    expect(document.activeElement).toBe(amountInput)
+
+    increaseButtons[1].dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+
+    await waitForContent(() => {
+      expect(feeInput.value).toBe('1.0008')
+    })
+    expect(document.activeElement).not.toBe(amountInput)
+    expect(document.activeElement).not.toBe(feeInput)
+  })
+
+  it('repeats formatter/parser steps while holding control buttons', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const handleChange = vi.fn()
+
+    const Demo = () => {
+      const budget = ref(1000)
+
+      return (
+        <InputNumber
+          data-testid="budget-input"
+          value={budget.value}
+          step={500}
+          precision={0}
+          formatter={(value, info) => (info.userTyping ? info.input : `$${value ?? ''}`)}
+          parser={input => input.replace(/\$/g, '')}
+          onChange={value => {
+            handleChange(value)
+            budget.value = Number(value ?? 0)
+          }}
+        />
+      )
+    }
+
+    render(<Demo />, container)
+
+    await waitForContent(() => {
+      const input = container.querySelector('[data-testid="budget-input"]') as HTMLInputElement
+      expect(input.value).toBe('$1000')
+    })
+
+    vi.useFakeTimers()
+
+    const input = container.querySelector('[data-testid="budget-input"]') as HTMLInputElement
+    const increaseButton = container.querySelector(
+      'button[aria-label="Increase value"]',
+    ) as HTMLButtonElement
+    const decreaseButton = container.querySelector(
+      'button[aria-label="Decrease value"]',
+    ) as HTMLButtonElement
+
+    increaseButton.dispatchEvent(createPointerLikeEvent('pointerdown'))
+    expect(input.value).toBe('$1500')
+
+    vi.advanceTimersByTime(450)
+    expect(input.value).toBe('$2000')
+
+    vi.advanceTimersByTime(160)
+    expect(input.value).toBe('$3000')
+
+    window.dispatchEvent(createPointerLikeEvent('pointerup'))
+    vi.advanceTimersByTime(240)
+    expect(input.value).toBe('$3000')
+
+    increaseButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    expect(input.value).toBe('$3000')
+
+    decreaseButton.dispatchEvent(
+      new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }),
+    )
+    expect(input.value).toBe('$2500')
+
+    vi.advanceTimersByTime(450)
+    expect(input.value).toBe('$2000')
+
+    vi.advanceTimersByTime(80)
+    expect(input.value).toBe('$1500')
+
+    window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }))
+
+    expect(handleChange).toHaveBeenLastCalledWith(1500)
+  })
+
+  it('keeps controlled formatter display responsive before parent value echoes back', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const handleChange = vi.fn()
+
+    render(
+      <InputNumber
+        data-testid="controlled-lag-input"
+        value={1000}
+        step={500}
+        precision={0}
+        formatter={(value, info) => (info.userTyping ? info.input : `$${value ?? ''}`)}
+        parser={input => input.replace(/\$/g, '')}
+        onChange={handleChange}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const input = container.querySelector(
+        '[data-testid="controlled-lag-input"]',
+      ) as HTMLInputElement
+      expect(input.value).toBe('$1000')
+    })
+
+    const input = container.querySelector(
+      '[data-testid="controlled-lag-input"]',
+    ) as HTMLInputElement
+    const increaseButton = container.querySelector(
+      'button[aria-label="Increase value"]',
+    ) as HTMLButtonElement
+
+    increaseButton.click()
+
+    await waitForContent(() => {
+      expect(input.value).toBe('$1500')
+    })
+    expect(handleChange).toHaveBeenLastCalledWith(1500)
   })
 
   it('supports formatter, parser, blur normalization and stringMode output', async () => {

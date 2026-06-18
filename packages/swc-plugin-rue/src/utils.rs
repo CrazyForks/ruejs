@@ -171,19 +171,15 @@ pub fn is_static_component_children_ident(el: &JSXElement) -> bool {
     if opening.attrs.len() != 1 {
         return false;
     }
-    if let JSXAttrOrSpread::JSXAttr(attr) = &opening.attrs[0] {
-        if let JSXAttrName::Ident(idn) = &attr.name {
-            if idn.sym.as_ref() == "children" {
-                if let Some(JSXAttrValue::JSXExprContainer(ec)) = &attr.value {
-                    if let JSXExpr::Expr(expr) = &ec.expr {
-                        if let Expr::Ident(_) = unwrap_expr(expr) {
-                            // children={ident} 以标识符引用的形式，视为静态 children（无需 watch）
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
+    if let JSXAttrOrSpread::JSXAttr(attr) = &opening.attrs[0]
+        && let JSXAttrName::Ident(idn) = &attr.name
+        && idn.sym.as_ref() == "children"
+        && let Some(JSXAttrValue::JSXExprContainer(ec)) = &attr.value
+        && let JSXExpr::Expr(expr) = &ec.expr
+        && let Expr::Ident(_) = unwrap_expr(expr)
+    {
+        // children={ident} 以标识符引用的形式，视为静态 children（无需 watch）
+        return true;
     }
     false
 }
@@ -219,10 +215,10 @@ pub fn component_has_no_dynamic_props_excluding_children(el: &JSXElement) -> boo
     }
     for a in &opening.attrs {
         if let JSXAttrOrSpread::JSXAttr(attr) = a {
-            if let JSXAttrName::Ident(idn) = &attr.name {
-                if idn.sym.as_ref() == "children" {
-                    continue;
-                }
+            if let JSXAttrName::Ident(idn) = &attr.name
+                && idn.sym.as_ref() == "children"
+            {
+                continue;
             }
             if is_event_attr(&attr.name) {
                 // 事件属性不影响静态性判定
@@ -236,11 +232,11 @@ pub fn component_has_no_dynamic_props_excluding_children(el: &JSXElement) -> boo
                             // 函数字面量作为属性值不影响静态性判定
                             continue;
                         }
-                        if let Expr::Ident(_) = unwrap_expr(expr) {
-                            if is_callback_attr(&attr.name) {
-                                // 形如 foo={bar}，当属性名表现为回调类语义时视为函数引用，不影响静态性
-                                continue;
-                            }
+                        if let Expr::Ident(_) = unwrap_expr(expr)
+                            && is_callback_attr(&attr.name)
+                        {
+                            // 形如 foo={bar}，当属性名表现为回调类语义时视为函数引用，不影响静态性
+                            continue;
                         }
                         if !is_static_literal_expr(expr) {
                             return false;

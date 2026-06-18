@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Tabs 组件概述
 - 保留 Rue 当前的 daisyUI 视觉基底，并补齐更接近成熟组件库的 tabs API。
 - 同时支持受控 / 非受控、items.children 内容面板、额外操作区与可编辑标签头部。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
+import { computed, ref } from '@rue-js/rue'
 
 /** TabsStyle 样式值类型。 */
 export type TabsStyle = 'box' | 'border' | 'lift'
@@ -229,35 +228,27 @@ const Tabs: FC<TabsProps> = ({
   const normalizedItems = items ?? []
   const resolvedPlacement = tabPlacement ?? placement ?? 'top'
   const resolvedStyle = resolveVisualStyle(style, type)
-  const currentSeedRef = useRef<string>()
-  if (!currentSeedRef.current) {
-    currentSeedRef.current = `rue-tabs-${tabsIdSeed++}`
-  }
-  const currentSeed = currentSeedRef.current!
+  const currentSeed = ref(`rue-tabs-${tabsIdSeed++}`)
   const uncontrolledActiveKey = ref(
     resolveInitialActiveKey(normalizedItems, defaultActiveKey ?? activeKey),
   )
-  const tabListHostRef = useRef<HTMLDivElement>()
-  const panelsHostRef = useRef<HTMLDivElement>()
-  const destroyPanelHostsRef = useRef<Map<string, HTMLDivElement>>()
-  const activeDestroyPanelKeyRef = useRef<string | null>()
-  const lastDestroyItemsRef = useRef<TabItem[] | null>()
-  if (!destroyPanelHostsRef.current) {
-    destroyPanelHostsRef.current = new Map()
-  }
   const hasPanels = normalizedItems.some(item => item.children != null)
   const extraContent = normalizeExtraContent(tabBarExtraContent)
   const isVertical = resolvedPlacement === 'start' || resolvedPlacement === 'end'
   const replaceDefaultIndicator = !!indicator && resolvedStyle === 'border'
 
-  const getEffectiveActiveKey = () => {
+  const currentActiveKey = computed(() => {
     const mergedActiveKey =
       activeKey ?? uncontrolledActiveKey.value ?? resolveInitialActiveKey(normalizedItems)
 
     return normalizedItems.some(item => item.key === mergedActiveKey)
       ? mergedActiveKey
       : resolveInitialActiveKey(normalizedItems, defaultActiveKey ?? activeKey)
-  }
+  })
+  const getEffectiveActiveKey = () => currentActiveKey.get()
+  const currentActiveItem = computed(() =>
+    normalizedItems.find(item => item.key === currentActiveKey.get()),
+  )
 
   const commitChange = (key: string) => {
     if (key === getEffectiveActiveKey()) return
@@ -283,16 +274,20 @@ const Tabs: FC<TabsProps> = ({
     appendClassName(tabBarClassName, isVertical ? 'w-full' : undefined),
   )
   const addTrigger = type === 'editable-card' && hideAdd !== true && !!onEdit
-  const addButtonNode = addTrigger ? (
-    <button
-      type="button"
-      className="btn btn-ghost btn-sm shrink-0"
-      aria-label="新增标签"
-      onClick={(event: MouseEvent) => handleEditAdd(event)}
-    >
-      {addIcon ?? '+'}
-    </button>
-  ) : null
+  const renderAddButtonNode = () => {
+    if (!addTrigger) return null
+
+    return (
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm shrink-0"
+        aria-label="新增标签"
+        onClick={(event: MouseEvent) => handleEditAdd(event)}
+      >
+        {addIcon ?? '+'}
+      </button>
+    )
+  }
 
   const renderTabsNode = () => (
     <div
@@ -301,10 +296,9 @@ const Tabs: FC<TabsProps> = ({
       className={tabsClassName}
     >
       {normalizedItems.map(item => {
-        const active = getEffectiveActiveKey() === item.key
         const closable = type === 'editable-card' && !!onEdit && (item.closable ?? !item.disabled)
-        const tabId = `${currentSeed}-tab-${item.key}`
-        const panelId = `${currentSeed}-panel-${item.key}`
+        const tabId = `${currentSeed.value}-tab-${item.key}`
+        const panelId = `${currentSeed.value}-panel-${item.key}`
 
         return (
           <button
@@ -312,7 +306,7 @@ const Tabs: FC<TabsProps> = ({
             role="tab"
             id={tabId}
             key={item.key}
-            aria-selected={active ? 'true' : 'false'}
+            aria-selected={getEffectiveActiveKey() === item.key ? 'true' : 'false'}
             aria-controls={item.children != null ? panelId : undefined}
             className={appendClassName(
               appendClassName(
@@ -320,7 +314,7 @@ const Tabs: FC<TabsProps> = ({
                   appendClassName(
                     appendClassName(
                       'tab',
-                      active
+                      getEffectiveActiveKey() === item.key
                         ? appendClassName(
                             'tab-active',
                             replaceDefaultIndicator
@@ -353,7 +347,7 @@ const Tabs: FC<TabsProps> = ({
             ) : null}
             <span className="relative inline-flex min-w-0 flex-col">
               <span className="truncate">{item.label}</span>
-              {active && indicator ? (
+              {getEffectiveActiveKey() === item.key && indicator ? (
                 <span
                   className={appendClassName(
                     'mt-1 inline-flex h-0.5 rounded-full bg-current opacity-70',
@@ -404,15 +398,15 @@ const Tabs: FC<TabsProps> = ({
     if (!hasPanels) return null
 
     if (destroyOnHidden) {
-      const activeItem = normalizedItems.find(item => item.key === getEffectiveActiveKey())
+      const activeItem = currentActiveItem.get()
       if (!activeItem || activeItem.children == null) return null
 
       return (
         <div
           key={`${activeItem.key}-panel`}
           role="tabpanel"
-          id={`${currentSeed}-panel-${activeItem.key}`}
-          aria-labelledby={`${currentSeed}-tab-${activeItem.key}`}
+          id={`${currentSeed.value}-panel-${activeItem.key}`}
+          aria-labelledby={`${currentSeed.value}-tab-${activeItem.key}`}
           aria-hidden="false"
           className={buildPanelClassName(activeItem.contentClassName)}
         >
@@ -424,16 +418,17 @@ const Tabs: FC<TabsProps> = ({
     return (
       <>
         {normalizedItems.map(item => {
-          const active = item.key === getEffectiveActiveKey()
-
           return (
             <div
               key={`${item.key}-panel`}
               role="tabpanel"
-              id={`${currentSeed}-panel-${item.key}`}
-              aria-labelledby={`${currentSeed}-tab-${item.key}`}
-              aria-hidden={active ? 'false' : 'true'}
-              className={buildPanelClassName(item.contentClassName, active)}
+              id={`${currentSeed.value}-panel-${item.key}`}
+              aria-labelledby={`${currentSeed.value}-tab-${item.key}`}
+              aria-hidden={item.key === getEffectiveActiveKey() ? 'false' : 'true'}
+              className={buildPanelClassName(
+                item.contentClassName,
+                item.key === getEffectiveActiveKey(),
+              )}
             >
               {item.children}
             </div>
@@ -442,115 +437,6 @@ const Tabs: FC<TabsProps> = ({
       </>
     )
   }
-
-  const syncDestroyPanelHost = (host: HTMLDivElement, item: TabItem) => {
-    host.setAttribute('role', 'tabpanel')
-    host.id = `${currentSeed}-panel-${item.key}`
-    host.setAttribute('aria-labelledby', `${currentSeed}-tab-${item.key}`)
-    host.setAttribute('aria-hidden', 'false')
-    host.className = buildPanelClassName(item.contentClassName)
-  }
-
-  const clearDestroyPanelHosts = () => {
-    for (const host of destroyPanelHostsRef.current!.values()) {
-      renderRue([], host)
-      host.remove()
-    }
-    destroyPanelHostsRef.current!.clear()
-    activeDestroyPanelKeyRef.current = null
-    lastDestroyItemsRef.current = null
-  }
-
-  const renderDestroyOnHiddenPanel = () => {
-    const parent = panelsHostRef.current
-    if (!parent) return
-
-    if (lastDestroyItemsRef.current && lastDestroyItemsRef.current !== normalizedItems) {
-      clearDestroyPanelHosts()
-    }
-    lastDestroyItemsRef.current = normalizedItems
-
-    const activeItem = normalizedItems.find(item => item.key === getEffectiveActiveKey())
-    const nextKey = activeItem?.key ?? null
-    const prevKey = activeDestroyPanelKeyRef.current ?? null
-
-    if (prevKey && prevKey !== nextKey) {
-      const prevHost = destroyPanelHostsRef.current!.get(prevKey)
-      if (prevHost && prevHost.parentNode === parent) {
-        parent.removeChild(prevHost)
-      }
-    }
-
-    if (!activeItem || activeItem.children == null) {
-      parent.replaceChildren()
-      activeDestroyPanelKeyRef.current = nextKey
-      return
-    }
-
-    let nextHost = destroyPanelHostsRef.current!.get(activeItem.key)
-    if (!nextHost) {
-      nextHost = document.createElement('div')
-      syncDestroyPanelHost(nextHost, activeItem)
-      renderRue(activeItem.children, nextHost)
-      destroyPanelHostsRef.current!.set(activeItem.key, nextHost)
-    } else if (prevKey === nextKey) {
-      syncDestroyPanelHost(nextHost, activeItem)
-      renderRue(activeItem.children, nextHost)
-    } else {
-      syncDestroyPanelHost(nextHost, activeItem)
-    }
-
-    if (
-      nextHost.parentNode !== parent ||
-      parent.childNodes.length !== 1 ||
-      parent.firstChild !== nextHost
-    ) {
-      parent.replaceChildren(nextHost)
-    }
-
-    activeDestroyPanelKeyRef.current = activeItem.key
-  }
-
-  const renderManagedRegions = () => {
-    if (tabListHostRef.current) {
-      renderRue(renderTabsNode(), tabListHostRef.current)
-    }
-    if (panelsHostRef.current) {
-      if (destroyOnHidden) {
-        renderDestroyOnHiddenPanel()
-      } else {
-        clearDestroyPanelHosts()
-        renderRue(renderPanelsNode(), panelsHostRef.current)
-      }
-    }
-  }
-
-  onMounted(() => {
-    renderManagedRegions()
-  })
-
-  watch(
-    () => [
-      activeKey,
-      defaultActiveKey,
-      uncontrolledActiveKey.value,
-      items,
-      destroyOnHidden,
-      resolvedPlacement,
-      resolvedStyle,
-      size,
-      centered,
-      indicator?.align,
-      indicator?.size,
-      indicator?.className,
-      tabBarClassName,
-      contentClassName,
-    ],
-    () => {
-      renderManagedRegions()
-    },
-    { immediate: true },
-  )
 
   if (isVertical) {
     return (
@@ -563,14 +449,10 @@ const Tabs: FC<TabsProps> = ({
         >
           <div className="flex w-full max-w-xs shrink-0 flex-col gap-3">
             {extraContent.left != null ? <div className="shrink-0">{extraContent.left}</div> : null}
-            <div
-              ref={(element: HTMLDivElement | null) =>
-                (tabListHostRef.current = element ?? undefined)
-              }
-            />
-            {addButtonNode != null || extraContent.right != null ? (
+            {renderTabsNode()}
+            {addTrigger || extraContent.right != null ? (
               <div className="flex flex-wrap items-center gap-2">
-                {addButtonNode}
+                {renderAddButtonNode()}
                 {extraContent.right != null ? (
                   <div className="shrink-0">{extraContent.right}</div>
                 ) : null}
@@ -578,12 +460,9 @@ const Tabs: FC<TabsProps> = ({
             ) : null}
           </div>
           {hasPanels ? (
-            <div
-              ref={(element: HTMLDivElement | null) =>
-                (panelsHostRef.current = element ?? undefined)
-              }
-              className={appendClassName('min-w-0 flex-1', contentClassName)}
-            />
+            <div className={appendClassName('min-w-0 flex-1', contentClassName)}>
+              {renderPanelsNode()}
+            </div>
           ) : null}
         </div>
       </div>
@@ -606,20 +485,15 @@ const Tabs: FC<TabsProps> = ({
               centered ? 'flex justify-center' : undefined,
             )}
           >
-            <div
-              ref={(element: HTMLDivElement | null) =>
-                (tabListHostRef.current = element ?? undefined)
-              }
-            />
+            {renderTabsNode()}
           </div>
-          {addButtonNode}
+          {renderAddButtonNode()}
           {extraContent.right != null ? <div className="shrink-0">{extraContent.right}</div> : null}
         </div>
         {hasPanels ? (
-          <div
-            ref={(element: HTMLDivElement | null) => (panelsHostRef.current = element ?? undefined)}
-            className={appendClassName('min-w-0 flex-1', contentClassName)}
-          />
+          <div className={appendClassName('min-w-0 flex-1', contentClassName)}>
+            {renderPanelsNode()}
+          </div>
         ) : null}
       </div>
     </div>

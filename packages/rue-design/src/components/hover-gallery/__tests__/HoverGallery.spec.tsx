@@ -67,6 +67,7 @@ describe('HoverGallery', () => {
       expect(fig).toBeTruthy()
       const imgs = fig.querySelectorAll('img')
       expect(imgs.length).toBe(3)
+      expect((imgs[0] as HTMLElement).getAttribute('class')).not.toBe('undefined')
     })
   })
 

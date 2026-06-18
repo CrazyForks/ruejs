@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, setReactiveScheduling } from '@rue-js/rue'
+import { ref, render, setReactiveScheduling } from '@rue-js/rue'
 import Input from '../index'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 
@@ -226,7 +226,12 @@ describe('Input', () => {
 
     await waitForContent(() => {
       const input = container.querySelector('[data-testid="password-input"]') as HTMLInputElement
+      const hiddenIcon = container.querySelector(
+        '[data-rue-password-hidden-icon="true"]',
+      ) as HTMLElement
       expect(input.type).toBe('password')
+      expect(hiddenIcon.style.display).toBe('inline-flex')
+      expect(hiddenIcon.querySelector('path[d="m4 4 16 16"]')).toBeTruthy()
     })
 
     const toggleButton = container.querySelector(
@@ -236,8 +241,86 @@ describe('Input', () => {
 
     await waitForContent(() => {
       const input = container.querySelector('[data-testid="password-input"]') as HTMLInputElement
+      const visibleIcon = container.querySelector(
+        '[data-rue-password-visible-icon="true"]',
+      ) as HTMLElement
+      const hiddenIcon = container.querySelector(
+        '[data-rue-password-hidden-icon="true"]',
+      ) as HTMLElement
       expect(input.type).toBe('text')
+      expect(visibleIcon.style.display).toBe('inline-flex')
+      expect(hiddenIcon.style.display).toBe('none')
     })
+  })
+
+  it('keeps an uncontrolled password value when visibility is controlled', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    const visible = ref(false)
+    const handleClear = vi.fn()
+    const ControlledPassword = () => (
+      <Input.Password
+        data-testid="controlled-password-input"
+        allowClear={true}
+        onClear={handleClear}
+        visibilityToggle={{
+          visible: visible.value,
+          onVisibleChange: next => {
+            visible.value = next
+          },
+        }}
+      />
+    )
+
+    render(<ControlledPassword />, container)
+
+    await waitForContent(() => {
+      const input = container.querySelector(
+        '[data-testid="controlled-password-input"]',
+      ) as HTMLInputElement
+      expect(input.type).toBe('password')
+    })
+
+    const input = container.querySelector(
+      '[data-testid="controlled-password-input"]',
+    ) as HTMLInputElement
+    input.value = 'typed-secret'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+
+    await waitForContent(() => {
+      const currentInput = container.querySelector(
+        '[data-testid="controlled-password-input"]',
+      ) as HTMLInputElement
+      expect(currentInput.value).toBe('typed-secret')
+    })
+
+    const toggleButton = container.querySelector(
+      'button[aria-label="Show password"]',
+    ) as HTMLButtonElement
+    toggleButton.click()
+
+    await waitForContent(() => {
+      const currentInput = container.querySelector(
+        '[data-testid="controlled-password-input"]',
+      ) as HTMLInputElement
+      expect(currentInput.type).toBe('text')
+      expect(currentInput.value).toBe('typed-secret')
+      expect(toggleButton.getAttribute('aria-label')).toBe('Hide password')
+    })
+
+    toggleButton.click()
+
+    await waitForContent(() => {
+      const currentInput = container.querySelector(
+        '[data-testid="controlled-password-input"]',
+      ) as HTMLInputElement
+      expect(currentInput.type).toBe('password')
+      expect(currentInput.value).toBe('typed-secret')
+      expect(toggleButton.getAttribute('aria-label')).toBe('Show password')
+    })
+
+    expect(handleClear).not.toHaveBeenCalled()
   })
 
   it('exposes TextArea through the Input namespace', async () => {

@@ -318,6 +318,11 @@ pre.shiki code,
   display: block;
 }
 
+.component-preview.not-prose .code-block {
+  max-height: min(34rem, calc(100vh - 8rem));
+  overflow: auto;
+}
+
 .sidebar-playground-examples .card:has(.code-block) {
   overflow: visible;
   height: auto;

@@ -89,6 +89,29 @@ const modalStyles = \`
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
 }
 
+.modal-header h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.modal-body {
+  margin: 1rem 0 1.25rem;
+  color: #475569;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-default-button {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  cursor: pointer;
+}
+
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 300ms ease;
@@ -123,7 +146,7 @@ const Modal: FC<{ visible: boolean; onClose?: () => void }> = (props) => (
                 <h3>Custom Header</h3>
               </div>
               <div className="modal-body">
-                <p>Custom body content here...</p>
+                <p>Custom body content is rendered inside the transitioned modal.</p>
               </div>
               <div className="modal-footer">
                 <button className="modal-default-button" onClick={() => props.onClose && props.onClose()}>
@@ -180,7 +203,7 @@ const Modal: FC<{
                 <h3>Custom Header</h3>
               </div>
               <div className="modal-body">
-                <p>Custom body content here...</p>
+                <p>Custom body content is rendered inside the transitioned modal.</p>
               </div>
               <div className="modal-footer">
                 <button

@@ -282,7 +282,7 @@ async fn plan999_props_patch_sets_and_removes_special_dom_props() {
     assert!(op_seen(&ops, "clearRef", "true"));
     assert!(op_seen(&ops, "removeAttr", "data-id"));
     assert!(op_seen(&ops, "attr", "null"));
-    assert!(op_seen(&ops, "attr", "undefined"));
+    assert!(op_seen(&ops, "removeAttr", "data-undef"));
     assert_eq!(child_sequence(&container), vec!["input"]);
 
     let odd_props = rue.create_element_wasm(

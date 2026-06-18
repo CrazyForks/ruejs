@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Masonry 组件概述
 - 提供瀑布流布局能力，既支持直接透传 children，也支持 items + renderItem 的数据驱动写法。
 - 布局底层采用 CSS multi-column，保持实现轻量，同时通过 break-inside 包装层避免单卡片被拆列。
 - columns 支持响应式断点；minColumnWidth 配合容器测量可自动推导列数，适合内容卡片墙和混合信息流。
 */
-import { h, onMounted, onUnmounted, type FC, useRef } from '@rue-js/rue'
+import { onMounted, onUnmounted, type FC } from '@rue-js/rue'
 
 /** MasonryBreakpoint 类型。 */
 export type MasonryBreakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
@@ -414,8 +413,8 @@ const Masonry: FC<MasonryProps<any>> = ({
   const Component = as as any
   const ItemComponent = itemAs as any
   const forwardedRef = rest.ref
-  const rootRef = useRef<HTMLElement>()
-  const resizeObserverRef = useRef<ResizeObserver>()
+  let rootElement: HTMLElement | undefined
+  let resizeObserver: ResizeObserver | undefined
   let stopViewportTracking: (() => void) | undefined
 
   if ('ref' in rest) {
@@ -434,7 +433,7 @@ const Masonry: FC<MasonryProps<any>> = ({
   const needsMeasurement = minColumnWidth != null
 
   const applyResolvedLayout = () => {
-    const element = rootRef.current
+    const element = rootElement
     if (!element) return
 
     const viewportWidth = getViewportWidth()
@@ -471,9 +470,9 @@ const Masonry: FC<MasonryProps<any>> = ({
   }
 
   const connectResizeObserver = (element: HTMLElement | null) => {
-    if (resizeObserverRef.current) {
-      resizeObserverRef.current.disconnect()
-      resizeObserverRef.current = undefined
+    if (resizeObserver) {
+      resizeObserver.disconnect()
+      resizeObserver = undefined
     }
 
     if (!element || !needsMeasurement || typeof ResizeObserver === 'undefined') return
@@ -482,11 +481,11 @@ const Masonry: FC<MasonryProps<any>> = ({
       applyResolvedLayout()
     })
     observer.observe(element)
-    resizeObserverRef.current = observer
+    resizeObserver = observer
   }
 
   const applyRef = (element: HTMLElement | null) => {
-    rootRef.current = element ?? undefined
+    rootElement = element ?? undefined
     connectResizeObserver(element)
 
     if (element) {
@@ -510,9 +509,9 @@ const Masonry: FC<MasonryProps<any>> = ({
       if (stopViewportTracking) {
         stopViewportTracking()
       }
-      if (resizeObserverRef.current) {
-        resizeObserverRef.current.disconnect()
-        resizeObserverRef.current = undefined
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+        resizeObserver = undefined
       }
     })
   }
@@ -560,15 +559,15 @@ const Masonry: FC<MasonryProps<any>> = ({
         ? [empty]
         : []
 
-  return h(
-    Component,
-    {
-      ...rest,
-      ref: applyRef,
-      className: mergeClassNames('rue-masonry', className),
-      'data-rue-masonry': '',
-    },
-    ...renderedChildren,
+  return (
+    <Component
+      {...rest}
+      ref={applyRef}
+      className={mergeClassNames('rue-masonry', className)}
+      data-rue-masonry=""
+    >
+      {renderedChildren}
+    </Component>
   )
 }
 

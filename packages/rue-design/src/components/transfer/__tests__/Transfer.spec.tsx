@@ -492,7 +492,7 @@ describe('Transfer', () => {
     })
   })
 
-  it('reports a clear runtime error when renderList mutates selection during render', async () => {
+  it('blocks renderList selection mutation during render without breaking custom output', async () => {
     const container = mountContainer()
     const reportedErrors: Error[] = []
     resetActiveRuntime()
@@ -517,7 +517,9 @@ describe('Transfer', () => {
     )
 
     await waitForContent(() => {
-      expect(reportedErrors[0]?.message).toMatch(/Reentrant render detected on the same target/)
+      expect(container.querySelector('[data-testid="unsafe-left"]')?.textContent).toBe('left')
+      expect(container.querySelector('[data-testid="unsafe-right"]')?.textContent).toBe('right')
+      expect(reportedErrors).toHaveLength(0)
     })
 
     stopListening?.()

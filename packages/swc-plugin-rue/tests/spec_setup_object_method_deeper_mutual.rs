@@ -28,31 +28,32 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1:0", ()=>ref(2));
-        const obj = {
-            meth () {
-                function f1() {
-                    return a.value;
-                }
-                const g1 = ()=>f1() + a.value;
-                const g2 = ()=>g1() + a.value;
-                function f2() {
-                    return a.value + g2();
-                }
-                return g2() + f2();
-            }
-        };
-        return {
-            a: a,
-            obj: obj
-        };
-    }));
+            const a = _$vaporWithHookId("ref:1:0", ()=>ref(2));
+            const obj = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+                        meth () {
+                            function f1() {
+                                return a.value;
+                            }
+                            const g1 = ()=>f1() + a.value;
+                            const g2 = ()=>g1() + a.value;
+                            function f2() {
+                                return a.value + g2();
+                            }
+                            return g2() + f2();
+                        }
+                    })));
+            const __rue_phase2_obj = obj;
+            return {
+                a: a,
+                obj: obj
+            };
+        }));
     const { a: a, obj: obj } = _$useSetup;
-    return <div>{obj.meth()}</div>;
+    return <div>{obj.get().meth()}</div>;
 };
 "##;
 

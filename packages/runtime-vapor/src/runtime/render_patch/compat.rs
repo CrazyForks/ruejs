@@ -369,13 +369,49 @@ where
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn patch_fragment_same(
         &mut self,
-        old: &MountedPatchSubtree<A>,
+        old: &mut MountedPatchSubtree<A>,
         new: &MountInput<A>,
         parent: &mut A::Element,
     ) -> Option<MountedSubtreeState<A>>
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
+        if matches!(new.r#type, MountInputType::Fragment) {
+            let old_fragment_host = old.el.clone();
+            let patch_inside_fragment_host = old_fragment_host
+                .as_ref()
+                .and_then(|host| self.get_dom_adapter().map(|adapter| !adapter.is_fragment(host)))
+                .unwrap_or(false);
+
+            let (mounted_children, fragment_nodes) = if patch_inside_fragment_host {
+                let mut fragment_host =
+                    old_fragment_host.clone().expect("fragment host checked above");
+                let mounted_children = {
+                    let old_children = old.compat_children_mut();
+                    self.patch_children_keyed(&mut fragment_host, old_children, &new.children)
+                };
+                old.el = Some(fragment_host);
+                (mounted_children, Vec::new())
+            } else {
+                let mounted_children = {
+                    let old_children = old.compat_children_mut();
+                    self.patch_children_keyed(parent, old_children, &new.children)
+                };
+                let fragment_nodes =
+                    mounted_children.iter().flat_map(Self::mounted_child_dom_nodes).collect();
+                (mounted_children, fragment_nodes)
+            };
+            old.replace_compat_patch_inputs(new.props.clone(), mounted_children);
+            old.key = new.key.clone();
+            old.fragment_nodes = fragment_nodes;
+            old.set_compat_mount_metadata(
+                new.mount_cleanup_bucket.clone(),
+                new.mount_effect_scope_id,
+            );
+            old.set_compat_patch_kind(MountedCompatPatchKind::Fragment);
+            return None;
+        }
+
         if let Some(mounted) = self.mount_from_input(new, Some(parent)) {
             let Some(el_new) = mounted.host_cloned() else {
                 return Some(mounted);
@@ -498,8 +534,8 @@ mod tests {
     use super::*;
     use crate::runtime::js_adapter::JsDomAdapter;
     use crate::runtime::types::{
-        ComponentProps, MountInputChild, MountedPatchSubtree, MountedSubtreeState,
-        MountedTextSubtree,
+        ComponentProps, MountInputChild, MountedPatchSubtree, MountedSubtreeChild,
+        MountedSubtreeState, MountedTextSubtree,
     };
     use js_sys::{Array, Object};
     use wasm_bindgen_futures::JsFuture;
@@ -534,7 +570,11 @@ mod tests {
             "p,c",
             "p.children = p.children || []; \
              const items = c && c.tag === 'fragment' ? Array.from(c.children || []) : [c]; \
-             for (const item of items) { if (!item) continue; p.children.push(item); item.parentNode = p; }",
+             for (const item of items) { if (!item) continue; \
+               const old = item.parentNode; \
+               if (old && old.children) old.children = old.children.filter(x => x !== item); \
+               p.children.push(item); item.parentNode = p; \
+             }",
         );
         set_fn(
             &obj,
@@ -542,7 +582,10 @@ mod tests {
             "p,c,b",
             "p.children = p.children || []; \
              const items = c && c.tag === 'fragment' ? Array.from(c.children || []) : [c]; \
-             for (const item of items) { if (!item) continue; const i = p.children.indexOf(b); \
+             for (const item of items) { if (!item) continue; \
+               const old = item.parentNode; \
+               if (old && old.children) old.children = old.children.filter(x => x !== item); \
+               const i = p.children.indexOf(b); \
                i >= 0 ? p.children.splice(i, 0, item) : p.children.push(item); item.parentNode = p; }",
         );
         set_fn(
@@ -652,16 +695,51 @@ mod tests {
         el: Option<JsValue>,
         fragment_nodes: Vec<JsValue>,
     ) -> MountedSubtreeState<JsDomAdapter> {
+        compat_state_with_children(kind, el, fragment_nodes, Vec::new())
+    }
+
+    fn compat_state_with_children(
+        kind: MountedCompatPatchKind,
+        el: Option<JsValue>,
+        fragment_nodes: Vec<JsValue>,
+        children: Vec<MountedSubtreeChild<JsDomAdapter>>,
+    ) -> MountedSubtreeState<JsDomAdapter> {
         MountedSubtreeState::Patch(MountedPatchSubtree::new_compat(
             kind,
             ComponentProps::new(),
-            Vec::new(),
+            children,
             el,
             None,
             fragment_nodes,
             None,
             None,
         ))
+    }
+
+    fn text_child(host: JsValue) -> MountedSubtreeChild<JsDomAdapter> {
+        MountedSubtreeChild::Subtree(MountedSubtreeState::Text(MountedTextSubtree {
+            host: Some(host),
+            key: None,
+            cleanup_bucket: None,
+            effect_scope_id: None,
+        }))
+    }
+
+    fn element_child(
+        tag: &str,
+        host: JsValue,
+        props: ComponentProps,
+    ) -> MountedSubtreeChild<JsDomAdapter> {
+        MountedSubtreeChild::Subtree(MountedSubtreeState::Patch(MountedPatchSubtree::new_compat(
+            MountedCompatPatchKind::Element(tag.to_string()),
+            props,
+            Vec::new(),
+            Some(host),
+            None,
+            Vec::new(),
+            None,
+            None,
+        )))
     }
 
     #[wasm_bindgen_test]
@@ -683,15 +761,20 @@ mod tests {
         }
         assert_eq!(tags(&old_el), vec!["next"]);
 
-        let old_child = node("old");
+        let old_child = node("#text");
+        Reflect::set(&old_child, &JsValue::from_str("text"), &JsValue::from_str("old")).unwrap();
         let fragment = node("fragment");
         set_children(&fragment, &[old_child.clone()]);
         set_children(&parent, &[old_child.clone()]);
-        let mut old_fragment =
-            compat_state(MountedCompatPatchKind::Fragment, Some(fragment), vec![old_child.clone()]);
+        let mut old_fragment = compat_state_with_children(
+            MountedCompatPatchKind::Fragment,
+            Some(fragment),
+            vec![old_child.clone()],
+            vec![text_child(old_child.clone())],
+        );
         match rue.patch_compat_boundary(&mut old_fragment, &fragment_input("fresh"), &mut parent) {
-            CompatPatchBoundaryOutcome::Replaced(_) => {}
-            _ => panic!("same fragment compat patch should rebuild and replace"),
+            CompatPatchBoundaryOutcome::Handled => {}
+            _ => panic!("same fragment compat patch should be handled"),
         }
         assert_eq!(tags(&parent), vec!["fresh"]);
 
@@ -1146,28 +1229,36 @@ mod tests {
         rue.set_dom_adapter(adapter());
         let mut parent = node("parent");
 
+        let old_text = node("#text");
+        Reflect::set(&old_text, &JsValue::from_str("text"), &JsValue::from_str("old")).unwrap();
         let old_host = node("old-host");
+        set_children(&old_host, &[old_text.clone()]);
         set_children(&parent, &[old_host.clone()]);
-        let old_with_host =
-            match compat_state(MountedCompatPatchKind::Fragment, Some(old_host), Vec::new()) {
-                MountedSubtreeState::Patch(node) => node,
-                _ => unreachable!(),
-            };
+        let mut old_with_host = match compat_state_with_children(
+            MountedCompatPatchKind::Fragment,
+            Some(old_host.clone()),
+            Vec::new(),
+            vec![text_child(old_text)],
+        ) {
+            MountedSubtreeState::Patch(node) => node,
+            _ => unreachable!(),
+        };
         let mounted =
-            rue.patch_fragment_same(&old_with_host, &fragment_input("before-old"), &mut parent);
-        assert!(mounted.is_some());
-        assert_eq!(tags(&parent), vec!["before-old"]);
+            rue.patch_fragment_same(&mut old_with_host, &fragment_input("before-old"), &mut parent);
+        assert!(mounted.is_none());
+        assert_eq!(tags(&parent), vec!["old-host"]);
+        assert_eq!(tags(&old_host), vec!["before-old"]);
 
         let anchor = node("anchor");
         set_children(&parent, &[anchor.clone()]);
         rue.current_anchor = Some(anchor.clone());
 
-        let old = match compat_state(MountedCompatPatchKind::Fragment, None, Vec::new()) {
+        let mut old = match compat_state(MountedCompatPatchKind::Fragment, None, Vec::new()) {
             MountedSubtreeState::Patch(node) => node,
             _ => unreachable!(),
         };
-        let mounted = rue.patch_fragment_same(&old, &fragment_input("fresh"), &mut parent);
-        assert!(mounted.is_some());
+        let mounted = rue.patch_fragment_same(&mut old, &fragment_input("fresh"), &mut parent);
+        assert!(mounted.is_none());
         assert_eq!(tags(&parent), vec!["fresh", "anchor"]);
 
         let phantom_input = MountInput {
@@ -1180,7 +1271,7 @@ mod tests {
             mount_effect_scope_id: None,
             el_hint: None,
         };
-        assert!(rue.patch_fragment_same(&old, &phantom_input, &mut parent).is_none());
+        assert!(rue.patch_fragment_same(&mut old, &phantom_input, &mut parent).is_none());
 
         Reflect::delete_property(&js_sys::global(), &JsValue::from_str("document")).unwrap();
         let mut rue_without_adapter = Rue::<JsDomAdapter>::new();
@@ -1213,7 +1304,7 @@ mod tests {
             ComponentProps::new(),
             Vec::new(),
         );
-        assert!(rue.patch_fragment_same(&old, &empty_component, &mut parent).is_some());
+        assert!(rue.patch_fragment_same(&mut old, &empty_component, &mut parent).is_some());
     }
 
     #[wasm_bindgen_test]
@@ -1264,17 +1355,17 @@ mod tests {
             _ => panic!("element/fragment mismatch should report not handled"),
         }
 
-        let old_fragment_without_host =
+        let mut old_fragment_without_host =
             match compat_state(MountedCompatPatchKind::Fragment, None, Vec::new()) {
                 MountedSubtreeState::Patch(node) => node,
                 _ => unreachable!(),
             };
         let mounted = rue.patch_fragment_same(
-            &old_fragment_without_host,
+            &mut old_fragment_without_host,
             &fragment_input("fresh"),
             &mut parent,
         );
-        assert!(mounted.is_some());
+        assert!(mounted.is_none());
 
         let empty_component = MountInput::new_normalized(
             MountInputType::Component(Function::new_no_args("return null").into()),
@@ -1282,7 +1373,7 @@ mod tests {
             Vec::new(),
         );
         let mounted =
-            rue.patch_fragment_same(&old_fragment_without_host, &empty_component, &mut parent);
+            rue.patch_fragment_same(&mut old_fragment_without_host, &empty_component, &mut parent);
         assert!(mounted.is_some());
 
         let phantom_input = MountInput {
@@ -1296,7 +1387,7 @@ mod tests {
             el_hint: None,
         };
         assert!(
-            rue.patch_fragment_same(&old_fragment_without_host, &phantom_input, &mut parent)
+            rue.patch_fragment_same(&mut old_fragment_without_host, &phantom_input, &mut parent)
                 .is_none()
         );
     }
@@ -1320,10 +1411,13 @@ mod tests {
         let global = js_sys::global();
         Reflect::set(&global, &JsValue::from_str("document"), &document).unwrap();
 
-        let old = match compat_state(
+        let mut old_input_props = ComponentProps::new();
+        old_input_props.insert("type".to_string(), JsValue::from_str("text"));
+        let mut old = match compat_state_with_children(
             MountedCompatPatchKind::Fragment,
             Some(old_fragment),
-            vec![old_input],
+            vec![old_input.clone()],
+            vec![element_child("input", old_input.clone(), old_input_props)],
         ) {
             MountedSubtreeState::Patch(node) => node,
             _ => unreachable!(),
@@ -1340,8 +1434,10 @@ mod tests {
             ))],
         );
 
-        let mounted = rue.patch_fragment_same(&old, &new_fragment, &mut parent);
-        assert!(mounted.is_some());
+        let mounted = rue.patch_fragment_same(&mut old, &new_fragment, &mut parent);
+        assert!(mounted.is_none());
+        let active = Reflect::get(&document, &JsValue::from_str("activeElement")).unwrap();
+        assert!(Object::is(&active, &old_input));
 
         Reflect::delete_property(&global, &JsValue::from_str("document")).unwrap();
     }

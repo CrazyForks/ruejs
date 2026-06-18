@@ -98,7 +98,7 @@ const ListTransitionExample: FC = () => {
         </div>
 
         <div className="list-shell rounded-xl border border-base-200 bg-base-100 p-3">
-          <TransitionGroup tag="ul" name="list" duration={350}>
+          <TransitionGroup tag="ul" name="list" type="transition" duration={350}>
             {items.value.map((item) => (
               <li key={item} className="rounded-md border border-base-200 bg-base-100 px-3 py-2 shadow-sm">
                 <span className="text-base-content">{item}</span>
@@ -199,12 +199,7 @@ const ListTransitionExample: FC = () => {
               </div>
 
               <div className="list-shell rounded-xl border border-base-200 bg-base-100 p-3">
-                <TransitionGroup
-                  key={items.value.join('-')}
-                  tag="ul"
-                  name="list"
-                  duration={TRANSITION_MS}
-                >
+                <TransitionGroup tag="ul" name="list" type="transition" duration={TRANSITION_MS}>
                   {items.value.map(item => (
                     <li
                       key={item}

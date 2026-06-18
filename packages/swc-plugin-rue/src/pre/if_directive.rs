@@ -96,12 +96,12 @@ fn get_text_attr_value_expr(attr: &JSXAttr) -> Option<Expr> {
 /// names：要匹配的属性名集合（如 ["v-if", "r-if"] 或 ["v-else", "r-else"]）
 fn get_directive_attr<'a>(el: &'a JSXElement, names: &[&str]) -> Option<&'a JSXAttr> {
     for a in &el.opening.attrs {
-        if let JSXAttrOrSpread::JSXAttr(attr) = a {
-            if let JSXAttrName::Ident(n) = &attr.name {
-                let name = n.sym.as_ref();
-                if names.contains(&name) {
-                    return Some(attr);
-                }
+        if let JSXAttrOrSpread::JSXAttr(attr) = a
+            && let JSXAttrName::Ident(n) = &attr.name
+        {
+            let name = n.sym.as_ref();
+            if names.contains(&name) {
+                return Some(attr);
             }
         }
     }
@@ -318,10 +318,10 @@ fn transform_html_directive(el: &mut JSXElement) {
 /// - 然后自后向前遍历链：若存在条件 test，则构建 test ? cons : alt；若无条件（else），alt = cons。
 fn build_cond_expr(chain: &[(JSXElement, Option<Expr>)]) -> Expr {
     let mut alt: Expr = Expr::Lit(Lit::Null(Null { span: DUMMY_SP }));
-    if let Some((el_last, test_last)) = chain.last() {
-        if test_last.is_none() {
-            alt = jsx_element_or_memo_expr(el_last.clone());
-        }
+    if let Some((el_last, test_last)) = chain.last()
+        && test_last.is_none()
+    {
+        alt = jsx_element_or_memo_expr(el_last.clone());
     }
     for (el, test) in chain.iter().rev() {
         if let Some(t) = test {

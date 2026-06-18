@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Typography 组件概述
 - Typography 复合 API，提供 Text、Link、Title、Paragraph 语义组件。
@@ -85,6 +84,13 @@ export interface TypographyTitleProps extends TypographyInlineProps {
 /** TypographyParagraphProps 组件属性。 */
 export interface TypographyParagraphProps extends TypographyInlineProps {}
 
+interface DecoratedContentProps {
+  mark?: boolean
+  code?: boolean
+  keyboard?: boolean
+  children?: any
+}
+
 /** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | undefined | false>) => {
   return parts.filter(Boolean).join(' ')
@@ -141,30 +147,55 @@ const buildInlineClassName = ({
   )
 }
 
-/** 渲染 Decorated Content 的内部工具函数。 */
-const renderDecoratedContent = (
-  content: any,
-  {
-    mark,
-    code,
-    keyboard,
-  }: {
-    mark?: boolean
-    code?: boolean
-    keyboard?: boolean
-  },
-) => {
-  let node = content
-  if (keyboard) {
-    node = <kbd className="kbd kbd-sm align-middle">{node}</kbd>
+/** DecoratedContent 的内部工具函数。 */
+const DecoratedContent: FC<DecoratedContentProps> = ({ mark, code, keyboard, children }) => {
+  if (mark && code && keyboard) {
+    return (
+      <mark className="rounded bg-warning/20 px-1 py-0.5 text-inherit">
+        <code className="rounded bg-base-200 px-1.5 py-0.5 text-[0.9em]">
+          <kbd className="kbd kbd-sm align-middle">{children}</kbd>
+        </code>
+      </mark>
+    )
   }
-  if (code) {
-    node = <code className="rounded bg-base-200 px-1.5 py-0.5 text-[0.9em]">{node}</code>
+
+  if (mark && code) {
+    return (
+      <mark className="rounded bg-warning/20 px-1 py-0.5 text-inherit">
+        <code className="rounded bg-base-200 px-1.5 py-0.5 text-[0.9em]">{children}</code>
+      </mark>
+    )
   }
+
+  if (mark && keyboard) {
+    return (
+      <mark className="rounded bg-warning/20 px-1 py-0.5 text-inherit">
+        <kbd className="kbd kbd-sm align-middle">{children}</kbd>
+      </mark>
+    )
+  }
+
+  if (code && keyboard) {
+    return (
+      <code className="rounded bg-base-200 px-1.5 py-0.5 text-[0.9em]">
+        <kbd className="kbd kbd-sm align-middle">{children}</kbd>
+      </code>
+    )
+  }
+
   if (mark) {
-    node = <mark className="rounded bg-warning/20 px-1 py-0.5 text-inherit">{node}</mark>
+    return <mark className="rounded bg-warning/20 px-1 py-0.5 text-inherit">{children}</mark>
   }
-  return node
+
+  if (code) {
+    return <code className="rounded bg-base-200 px-1.5 py-0.5 text-[0.9em]">{children}</code>
+  }
+
+  if (keyboard) {
+    return <kbd className="kbd kbd-sm align-middle">{children}</kbd>
+  }
+
+  return <>{children}</>
 }
 
 /** Typography Root 的内部工具函数。 */
@@ -207,7 +238,6 @@ const Text: FC<TypographyTextProps> = ({
   children,
   ...rest
 }) => {
-  const content = renderDecoratedContent(children, { mark, code, keyboard })
   const props = {
     ...rest,
     className: buildInlineClassName({
@@ -225,12 +255,30 @@ const Text: FC<TypographyTextProps> = ({
   }
 
   if (as === 'div') {
-    return <div {...props}>{content}</div>
+    return (
+      <div {...props}>
+        <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+          {children}
+        </DecoratedContent>
+      </div>
+    )
   }
   if (as === 'p') {
-    return <p {...props}>{content}</p>
+    return (
+      <p {...props}>
+        <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+          {children}
+        </DecoratedContent>
+      </p>
+    )
   }
-  return <span {...props}>{content}</span>
+  return (
+    <span {...props}>
+      <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+        {children}
+      </DecoratedContent>
+    </span>
+  )
 }
 
 /** Link 的内部工具函数。 */
@@ -253,8 +301,6 @@ const Link: FC<TypographyLinkProps> = ({
   tabIndex,
   ...rest
 }) => {
-  const content = renderDecoratedContent(children, { mark, code, keyboard })
-
   return (
     <a
       {...rest}
@@ -276,7 +322,9 @@ const Link: FC<TypographyLinkProps> = ({
       aria-disabled={disabled ? 'true' : undefined}
       tabindex={disabled ? '-1' : tabIndex === undefined ? undefined : String(tabIndex)}
     >
-      {content}
+      <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+        {children}
+      </DecoratedContent>
     </a>
   )
 }
@@ -331,13 +379,50 @@ const Title: FC<TypographyTitleProps> = ({
     style,
     'aria-disabled': disabled ? 'true' : undefined,
   }
-  const content = renderDecoratedContent(children, { mark, code, keyboard })
 
-  if (level === 1) return <h1 {...props}>{content}</h1>
-  if (level === 2) return <h2 {...props}>{content}</h2>
-  if (level === 3) return <h3 {...props}>{content}</h3>
-  if (level === 4) return <h4 {...props}>{content}</h4>
-  return <h5 {...props}>{content}</h5>
+  if (level === 1) {
+    return (
+      <h1 {...props}>
+        <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+          {children}
+        </DecoratedContent>
+      </h1>
+    )
+  }
+  if (level === 2) {
+    return (
+      <h2 {...props}>
+        <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+          {children}
+        </DecoratedContent>
+      </h2>
+    )
+  }
+  if (level === 3) {
+    return (
+      <h3 {...props}>
+        <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+          {children}
+        </DecoratedContent>
+      </h3>
+    )
+  }
+  if (level === 4) {
+    return (
+      <h4 {...props}>
+        <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+          {children}
+        </DecoratedContent>
+      </h4>
+    )
+  }
+  return (
+    <h5 {...props}>
+      <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+        {children}
+      </DecoratedContent>
+    </h5>
+  )
 }
 
 /** Paragraph 的内部工具函数。 */
@@ -374,7 +459,9 @@ const Paragraph: FC<TypographyParagraphProps> = ({
       style={style}
       aria-disabled={disabled ? 'true' : undefined}
     >
-      {renderDecoratedContent(children, { mark, code, keyboard })}
+      <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
+        {children}
+      </DecoratedContent>
     </p>
   )
 }

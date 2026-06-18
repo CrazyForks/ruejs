@@ -25,8 +25,8 @@ use crate::log::{log, want_log};
 #[cfg(feature = "runtime")]
 use crate::reactive::core::register_render_triggered_hook;
 use crate::reactive::core::{
-    create_detached_effect_scope, dispose_effect_scope, pop_effect_scope, push_effect_scope,
-    suppress_render_debug_tracking,
+    create_detached_effect_scope, dispatch_error_captured, dispose_effect_scope, pop_effect_scope,
+    push_effect_scope, suppress_render_debug_tracking,
 };
 use crate::runtime::mark_crashed_from_hook;
 use js_sys::Map;
@@ -453,6 +453,9 @@ pub fn with_hook_slot(factory: Function) -> JsValue {
                         log("error", "hook:withHookSlot factory threw (create slot)");
                     }
                 }
+                if dispatch_error_captured(&e, &i, "hook slot") {
+                    return JsValue::NULL;
+                }
                 mark_crashed_from_hook(&e);
                 throw_val(e.clone());
             }
@@ -555,6 +558,9 @@ pub fn vapor_with_hook_id(id: JsValue, runner: Function) -> JsValue {
         }
         Err(e) => {
             Reflect::set(&hooks_obj, &JsValue::from_str("__forcedIndex"), &JsValue::UNDEFINED).ok();
+            if dispatch_error_captured(&e, &i, "vapor hook") {
+                return JsValue::NULL;
+            }
             mark_crashed_from_hook(&e);
             throw_val(e.clone());
         }

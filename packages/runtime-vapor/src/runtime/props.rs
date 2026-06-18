@@ -124,68 +124,17 @@ pub fn patch_props<A: DomAdapter>(
     // 1) 删除旧属性：新 props 不包含的键需要撤销
     for (key, old_val) in old_props.iter() {
         if !new_props.contains_key(key) {
-            if key.starts_with("on") {
-                // 事件：移除旧处理器
-                // 约定：onClick → "click"，onInput → "input"，统一转小写后去掉前缀 "on"
-                // Demo：
-                // 旧：{ onClick: fn } 新：{}
-                // 调用：remove_event_listener(el, "click", fn)
-                let evt = key.to_lowercase()[2..].to_string();
-                adapter.remove_event_listener(el, &evt, old_val.clone());
-            } else if key == "className" {
-                // className 清空
-                // Demo：旧 { className: "a" } → 新 {}
-                // 调用：set_class_name(el, "")
-                adapter.set_class_name(el, "");
-            } else if key == "style" {
-                // style 清空
-                // Demo：旧 { style: { color: "red" } } → 新 {}
-                // 调用：patch_style(el, {}, {})
-                adapter.patch_style(el, &HashMap::new(), &HashMap::new());
-            } else if key == "dangerouslySetInnerHTML" {
-                // innerHTML 清空
-                // Demo：旧 { dangerouslySetInnerHTML: { __html: "<b>Hi</b>" } } → 新 {}
-                // 调用：set_inner_html(el, "")
-                adapter.set_inner_html(el, "");
-            } else if key == "value" {
-                // value 删除逻辑：SELECT 与其他元素有差异
-                // Demo：
-                // 旧：{ value: "1" } 新：{}
-                // 若 tagName === "SELECT":
-                //   multiple → set_value(el, [])
-                //   非 multiple → set_value(el, "")
-                // 若其他并且有 value 属性：
-                //   set_value(el, ""), remove_attribute(el, "value")
-                reset_removed_value_prop(adapter, el);
-            } else if key == "checked" {
-                // checked 复位与属性移除
-                // Demo：旧 { checked: true } → 新 {}
-                // 调用：set_checked(el, false), remove_attribute(el, "checked")
-                adapter.set_checked(el, false);
-                adapter.remove_attribute(el, "checked");
-            } else if key == "disabled" {
-                // disabled 复位与属性移除
-                // Demo：旧 { disabled: true } → 新 {}
-                // 调用：set_disabled(el, false), remove_attribute(el, "disabled")
-                adapter.set_disabled(el, false);
-                adapter.remove_attribute(el, "disabled");
-            } else if key == "ref" {
-                // ref 清除
-                // Demo：旧 { ref: r } → 新 {}
-                // 调用：clear_ref(r)
-                adapter.clear_ref(old_val.clone());
-            } else {
-                // 其他通用属性移除
-                // Demo：旧 { data-id: "1" } → 新 {}
-                // 调用：remove_attribute(el, "data-id")
-                remove_attribute_unless_reserved(adapter, el, key);
-            }
+            reset_removed_prop(adapter, el, key, old_val);
         }
     }
 
     // 2) 设置新属性：遍历新 props，执行相应的宿主操作
     for (key, new_val) in new_props.iter() {
-        if key == "className" {
+        if new_val.is_undefined() {
+            let undefined = JsValue::UNDEFINED;
+            let old_val = old_props.get(key).unwrap_or(&undefined);
+            reset_removed_prop(adapter, el, key, old_val);
+        } else if key == "className" {
             // Demo：新 { className: "btn" }
             // 调用：set_class_name(el, "btn")
             let class_name = js_value_to_dom_string(new_val);
@@ -234,6 +183,71 @@ pub fn patch_props<A: DomAdapter>(
         }
     }
     Ok(())
+}
+
+#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+fn reset_removed_prop<A: DomAdapter>(
+    adapter: &mut A,
+    el: &mut A::Element,
+    key: &str,
+    old_val: &JsValue,
+) {
+    if key.starts_with("on") {
+        // 事件：移除旧处理器
+        // 约定：onClick → "click"，onInput → "input"，统一转小写后去掉前缀 "on"
+        // Demo：
+        // 旧：{ onClick: fn } 新：{}
+        // 调用：remove_event_listener(el, "click", fn)
+        let evt = key.to_lowercase()[2..].to_string();
+        adapter.remove_event_listener(el, &evt, old_val.clone());
+    } else if key == "className" {
+        // className 清空
+        // Demo：旧 { className: "a" } → 新 {}
+        // 调用：set_class_name(el, "")
+        adapter.set_class_name(el, "");
+    } else if key == "style" {
+        // style 清空
+        // Demo：旧 { style: { color: "red" } } → 新 {}
+        // 调用：patch_style(el, {}, {})
+        adapter.patch_style(el, &HashMap::new(), &HashMap::new());
+    } else if key == "dangerouslySetInnerHTML" {
+        // innerHTML 清空
+        // Demo：旧 { dangerouslySetInnerHTML: { __html: "<b>Hi</b>" } } → 新 {}
+        // 调用：set_inner_html(el, "")
+        adapter.set_inner_html(el, "");
+    } else if key == "value" {
+        // value 删除逻辑：SELECT 与其他元素有差异
+        // Demo：
+        // 旧：{ value: "1" } 新：{}
+        // 若 tagName === "SELECT":
+        //   multiple → set_value(el, [])
+        //   非 multiple → set_value(el, "")
+        // 若其他并且有 value 属性：
+        //   set_value(el, ""), remove_attribute(el, "value")
+        reset_removed_value_prop(adapter, el);
+    } else if key == "checked" {
+        // checked 复位与属性移除
+        // Demo：旧 { checked: true } → 新 {}
+        // 调用：set_checked(el, false), remove_attribute(el, "checked")
+        adapter.set_checked(el, false);
+        adapter.remove_attribute(el, "checked");
+    } else if key == "disabled" {
+        // disabled 复位与属性移除
+        // Demo：旧 { disabled: true } → 新 {}
+        // 调用：set_disabled(el, false), remove_attribute(el, "disabled")
+        adapter.set_disabled(el, false);
+        adapter.remove_attribute(el, "disabled");
+    } else if key == "ref" {
+        // ref 清除
+        // Demo：旧 { ref: r } → 新 {}
+        // 调用：clear_ref(r)
+        adapter.clear_ref(old_val.clone());
+    } else {
+        // 其他通用属性移除
+        // Demo：旧 { data-id: "1" } → 新 {}
+        // 调用：remove_attribute(el, "data-id")
+        remove_attribute_unless_reserved(adapter, el, key);
+    }
 }
 
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -399,7 +413,12 @@ mod tests {
         set_fn(&adapter, "getTagName", "el", "return el.tag || ''");
         set_fn(&adapter, "hasValueProperty", "el", "return !!el.hasValue");
         set_fn(&adapter, "isSelectMultiple", "el", "return !!el.multiple");
-        set_fn(&adapter, "setValue", "el,value", "el.value = value");
+        set_fn(
+            &adapter,
+            "setValue",
+            "el,value",
+            "el.valueWriteCount = (el.valueWriteCount || 0) + 1; el.value = value",
+        );
         set_fn(
             &adapter,
             "removeAttribute",
@@ -504,5 +523,85 @@ mod tests {
                 .unwrap_or(JsValue::UNDEFINED)
                 .is_undefined()
         );
+    }
+
+    #[wasm_bindgen_test]
+    fn patch_props_treats_undefined_values_as_removed_props_with_js_adapter() {
+        let mut adapter = props_test_adapter();
+        let el = Object::new();
+        Reflect::set(&el, &JsValue::from_str("tag"), &JsValue::from_str("button")).unwrap();
+
+        let mut old_props = Props::new();
+        old_props.insert("className".to_string(), JsValue::from_str("btn"));
+        old_props.insert("title".to_string(), JsValue::from_str("Save"));
+        old_props.insert("checked".to_string(), JsValue::TRUE);
+
+        let mut new_props = Props::new();
+        new_props.insert("className".to_string(), JsValue::UNDEFINED);
+        new_props.insert("title".to_string(), JsValue::UNDEFINED);
+        new_props.insert("checked".to_string(), JsValue::UNDEFINED);
+
+        patch_props(&mut adapter, &mut el.clone().into(), &old_props, &new_props).unwrap();
+
+        assert_eq!(
+            Reflect::get(&el, &JsValue::from_str("className")).unwrap().as_string().as_deref(),
+            Some("")
+        );
+        assert_eq!(
+            Reflect::get(&el, &JsValue::from_str("checked")).unwrap().as_bool(),
+            Some(false)
+        );
+
+        let removed = Array::from(
+            &Reflect::get(&el, &JsValue::from_str("removed")).unwrap_or(JsValue::UNDEFINED),
+        );
+        let mut removed_keys =
+            removed.iter().filter_map(|value| value.as_string()).collect::<Vec<_>>();
+        removed_keys.sort();
+        assert_eq!(removed_keys, vec!["checked".to_string(), "title".to_string()]);
+    }
+
+    #[wasm_bindgen_test]
+    fn patch_props_skips_same_input_value_write_with_js_adapter() {
+        let mut adapter = props_test_adapter();
+        let el = Object::new();
+        Reflect::set(&el, &JsValue::from_str("tag"), &JsValue::from_str("input")).unwrap();
+        Reflect::set(&el, &JsValue::from_str("value"), &JsValue::from_str("42")).unwrap();
+
+        let old_props = Props::new();
+        let mut new_props = Props::new();
+        new_props.insert("value".to_string(), JsValue::from_f64(42.0));
+
+        patch_props(&mut adapter, &mut el.clone().into(), &old_props, &new_props).unwrap();
+
+        assert!(
+            Reflect::get(&el, &JsValue::from_str("valueWriteCount"))
+                .unwrap_or(JsValue::UNDEFINED)
+                .is_undefined()
+        );
+        assert_eq!(
+            Reflect::get(&el, &JsValue::from_str("value")).unwrap().as_string().as_deref(),
+            Some("42")
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn patch_props_writes_changed_input_value_with_js_adapter() {
+        let mut adapter = props_test_adapter();
+        let el = Object::new();
+        Reflect::set(&el, &JsValue::from_str("tag"), &JsValue::from_str("input")).unwrap();
+        Reflect::set(&el, &JsValue::from_str("value"), &JsValue::from_str("41")).unwrap();
+
+        let old_props = Props::new();
+        let mut new_props = Props::new();
+        new_props.insert("value".to_string(), JsValue::from_f64(42.0));
+
+        patch_props(&mut adapter, &mut el.clone().into(), &old_props, &new_props).unwrap();
+
+        assert_eq!(
+            Reflect::get(&el, &JsValue::from_str("valueWriteCount")).unwrap().as_f64(),
+            Some(1.0)
+        );
+        assert_eq!(Reflect::get(&el, &JsValue::from_str("value")).unwrap().as_f64(), Some(42.0));
     }
 }

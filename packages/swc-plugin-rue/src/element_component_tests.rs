@@ -222,11 +222,13 @@ fn builds_mount_expr_with_slot_source_native_events_and_string_props() {
     assert!(out.contains("source:getCurrentInstance()&&getCurrentInstance().propsRO"));
     assert!(out.contains("{\"click\":onClick}"));
 
-    let namespaced = parse_jsx_element("<Box foo:bar=\"skip\" normal />");
+    let namespaced =
+        parse_jsx_element("<Box foo:bar=\"dropped\" onUpdateModelValue={update} normal />");
     let namespaced_out = compact(&emit_expr(build_component_mount_expr(&namespaced)));
 
-    assert!(namespaced_out.contains("_$createComponent(Box,{normal:true})"));
-    assert!(!namespaced_out.contains("foo"));
+    assert!(!namespaced_out.contains("foo:bar"));
+    assert!(namespaced_out.contains("onUpdateModelValue:update"));
+    assert!(namespaced_out.contains("normal:true"));
 }
 
 #[test]
@@ -398,7 +400,7 @@ fn supports_member_component_names_template_members_and_jsx_attr_values() {
     let Expr::JSXElement(namespaced_el) = namespaced else {
         panic!("expected namespaced element");
     };
-    assert!(matches!(jsx_name_to_expr(&namespaced_el.opening.name), None));
+    assert!(jsx_name_to_expr(&namespaced_el.opening.name).is_none());
     assert!(
         compact(&emit_expr(build_component_mount_expr(&namespaced_el)))
             .contains("_$createComponent(\"div\",{})")

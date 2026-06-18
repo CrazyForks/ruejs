@@ -2,7 +2,6 @@ import {
   createResource,
   renderAnchor,
   type SignalHandle,
-  Suspense,
   type FC,
   ref,
   signal,
@@ -36,7 +35,7 @@ type CommitResource = ReturnType<typeof createResource<Branch, CommitItem[]>>
 type BranchSignal = SignalHandle<Branch>
 
 const SOURCE_CODE = [
-  "import { createResource, renderAnchor, type SignalHandle, Suspense, type FC, signal, vapor, watchEffect } from '@rue-js/rue';",
+  "import { createResource, renderAnchor, type SignalHandle, type FC, signal, vapor, watchEffect } from '@rue-js/rue';",
   '',
   "const API_URL = 'https://api.github.com/repos/rust-lang/rust/commits?per_page=3&sha=';",
   "const BRANCHES = ['main', 'beta', 'stable'] as const;",
@@ -90,11 +89,6 @@ const SOURCE_CODE = [
   '  ) : null;',
   '};',
   '',
-  'const ResourceSuspenseProbe: FC<{ resource: CommitResource }> = props => {',
-  '  props.resource.data.get();',
-  '  return null;',
-  '};',
-  '',
   'const PreviewPanel: FC = () => {',
   '  const currentBranch = signal<Branch>(BRANCHES[0]);',
   '  const commits = createResource<Branch, CommitItem[]>(currentBranch, async branch => {',
@@ -118,9 +112,7 @@ const SOURCE_CODE = [
   '        <div>',
   '          <p>rust@{currentBranch.get()}</p>',
   '          <p>resource.loading = {String(commits.loading.get())}</p>',
-  '          <Suspense fallback={<p>Loading...</p>}>',
-  '            <ResourceSuspenseProbe resource={commits} />',
-  '          </Suspense>',
+  '          {commits.loading.get() && <p>Loading...</p>}',
   '          {!commits.loading.get() && renderResourceResult(commits)}',
   '        </div>,',
   '        parent,',
@@ -192,11 +184,6 @@ const renderResourceResult = (resource: CommitResource) => {
   ) : null
 }
 
-const ResourceSuspenseProbe: FC<{ resource: CommitResource }> = props => {
-  props.resource.data.get()
-  return null
-}
-
 const ResourceContent: FC<{ resource: CommitResource }> = props =>
   renderResourceResult(props.resource)
 
@@ -237,15 +224,11 @@ const renderPreviewCard = (currentBranch: BranchSignal, resource: CommitResource
           resource.loading = {String(resource.loading.get())}
         </p>
 
-        <Suspense
-          fallback={
-            <div role="status" className="alert alert-info alert-soft">
-              <span>Loading...</span>
-            </div>
-          }
-        >
-          <ResourceSuspenseProbe resource={resource} />
-        </Suspense>
+        {resource.loading.get() && (
+          <div role="status" className="alert alert-info alert-soft">
+            <span>Loading...</span>
+          </div>
+        )}
 
         {!resource.loading.get() && <ResourceContent resource={resource} />}
       </div>

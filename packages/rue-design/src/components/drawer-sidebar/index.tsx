@@ -1,11 +1,10 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 DrawerSidebar 模块概述
 - 汇总抽屉侧栏组件的公开类型、渲染入口和局部工具逻辑。
 - 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
 */
 import type { FC } from '@rue-js/rue'
-import { Teleport, onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
+import { Teleport, computed, onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 
 /** DrawerSidebarPlacement 位置或方向类型。 */
 export type DrawerSidebarPlacement = 'left' | 'right' | 'top' | 'bottom'
@@ -506,83 +505,388 @@ const DefaultCloseIcon: FC = () => {
   )
 }
 
-/** Root 的内部工具函数。 */
-const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest }) => {
-  const shouldUseManagedMode =
-    !hasCompoundChildren(children) &&
-    getManagedModeSignature({ end, open, className, children, ...rest })
+interface DrawerSidebarCloseButtonProps {
+  className?: string
+  style?: DrawerSidebarInlineStyle
+  disabled?: boolean
+  icon?: any
+  onRequestClose?: (event: MouseEvent) => void
+}
 
-  if (!shouldUseManagedMode) {
-    let rootClassName = 'drawer'
-    if (end) rootClassName += ' drawer-end'
-    if (open) rootClassName += ' drawer-open'
+type DrawerSidebarReadableSignal<T> = {
+  get: () => T
+}
 
-    return (
+/** DrawerSidebarCloseButton 的内部工具函数。 */
+const DrawerSidebarCloseButton: FC<DrawerSidebarCloseButtonProps> = ({
+  className,
+  style,
+  disabled,
+  icon,
+  onRequestClose,
+}) => {
+  return (
+    <button
+      type="button"
+      aria-label="关闭"
+      disabled={disabled}
+      className={mergeClassName(
+        'btn btn-sm btn-circle btn-ghost shrink-0',
+        disabled ? 'btn-disabled pointer-events-none opacity-50' : undefined,
+        className,
+      )}
+      style={mergeStyleValue(style)}
+      onClick={(event: MouseEvent) => {
+        event.stopPropagation()
+        if (disabled) return
+        if (onRequestClose) onRequestClose(event)
+      }}
+      data-rue-drawer-sidebar-close="true"
+    >
+      {icon ?? <DefaultCloseIcon />}
+    </button>
+  )
+}
+
+interface DrawerSidebarManagedPanelProps {
+  managedRest?: Record<string, any>
+  mergedOpen: DrawerSidebarReadableSignal<boolean>
+  placement: DrawerSidebarReadableSignal<DrawerSidebarPlacement>
+  resolvedSize: DrawerSidebarReadableSignal<string | undefined>
+  resolvedClosable: DrawerSidebarReadableSignal<ReturnType<typeof resolveClosableConfig>>
+  showHeader: DrawerSidebarReadableSignal<boolean>
+  className?: string
+  panelClassName?: string
+  bodyClassName?: string
+  headerClassName?: string
+  footerClassName?: string
+  classNames?: DrawerSidebarClassNames
+  styles?: DrawerSidebarStyles
+  style?: DrawerSidebarInlineStyle
+  panelStyle?: DrawerSidebarInlineStyle
+  bodyStyle?: DrawerSidebarInlineStyle
+  headerStyle?: DrawerSidebarInlineStyle
+  footerStyle?: DrawerSidebarInlineStyle
+  title?: any
+  extra?: any
+  footer?: any
+  loading?: boolean
+  inline?: boolean
+  children?: any
+  setPanelElement?: (element: HTMLDivElement | null) => void
+  onRequestClose?: (event: MouseEvent) => void
+}
+
+/** DrawerSidebarManagedPanel 的内部工具函数。 */
+const DrawerSidebarManagedPanel: FC<DrawerSidebarManagedPanelProps> = ({
+  managedRest,
+  mergedOpen,
+  placement,
+  resolvedSize,
+  resolvedClosable,
+  showHeader,
+  className,
+  panelClassName,
+  bodyClassName,
+  headerClassName,
+  footerClassName,
+  classNames,
+  styles,
+  style,
+  panelStyle,
+  bodyStyle,
+  headerStyle,
+  footerStyle,
+  title,
+  extra,
+  footer,
+  loading,
+  inline,
+  children,
+  setPanelElement,
+  onRequestClose,
+}) => {
+  return (
+    <div
+      {...managedRest}
+      role="dialog"
+      aria-modal={mergedOpen.get() && !inline ? 'true' : 'false'}
+      aria-hidden={mergedOpen.get() ? undefined : 'true'}
+      className={mergeClassName(
+        'bg-base-100 text-base-content relative flex min-h-0 min-w-0 max-w-full max-h-full flex-col overflow-hidden shadow-2xl transition-transform duration-300 ease-out',
+        getPanelBaseClassName(placement.get()),
+        getPanelTransformClassName(placement.get(), mergedOpen.get()),
+        className,
+        panelClassName,
+        classNames?.panel,
+      )}
+      style={mergeStyleValue(
+        styles?.panel,
+        style,
+        panelStyle,
+        getPanelSizeStyle(placement.get(), resolvedSize.get()),
+      )}
+      onClick={(event: MouseEvent) => event.stopPropagation()}
+      ref={setPanelElement}
+      data-rue-drawer-sidebar-panel="true"
+      data-rue-drawer-sidebar-placement={placement.get()}
+    >
+      {showHeader.get() ? (
+        <div
+          className={mergeClassName(
+            'flex shrink-0 items-start gap-3 border-b border-base-300 px-5 py-4',
+            headerClassName,
+            classNames?.header,
+          )}
+          style={mergeStyleValue(styles?.header, headerStyle)}
+          data-rue-drawer-sidebar-header="true"
+        >
+          {resolvedClosable.get().placement === 'start' ? (
+            <DrawerSidebarCloseButton
+              disabled={resolvedClosable.get().disabled}
+              className={classNames?.close}
+              style={styles?.close}
+              icon={resolvedClosable.get().icon}
+              onRequestClose={onRequestClose}
+            />
+          ) : null}
+          <div
+            className={mergeClassName('min-w-0 flex-1', classNames?.title)}
+            style={mergeStyleValue(styles?.title)}
+          >
+            {title ? <div className="text-lg font-semibold leading-6">{title}</div> : null}
+          </div>
+          {extra ? <div className="shrink-0">{extra}</div> : null}
+          {resolvedClosable.get().placement === 'end' ? (
+            <DrawerSidebarCloseButton
+              disabled={resolvedClosable.get().disabled}
+              className={classNames?.close}
+              style={styles?.close}
+              icon={resolvedClosable.get().icon}
+              onRequestClose={onRequestClose}
+            />
+          ) : null}
+        </div>
+      ) : null}
       <div
-        {...rest}
-        className={mergeClassName(rootClassName, className)}
-        data-rue-drawer-sidebar-mode="compound"
+        className={mergeClassName(
+          'min-h-0 flex-1 overflow-y-auto px-5 py-5',
+          bodyClassName,
+          classNames?.body,
+        )}
+        style={mergeStyleValue(styles?.body, bodyStyle)}
+        aria-busy={loading ? 'true' : undefined}
+        data-rue-drawer-sidebar-body="true"
       >
-        {children}
+        {loading ? renderLoadingBody() : children}
       </div>
-    )
-  }
+      {footer !== undefined && footer !== null && footer !== false ? (
+        <div
+          className={mergeClassName(
+            'shrink-0 border-t border-base-300 px-5 py-4',
+            footerClassName,
+            classNames?.footer,
+          )}
+          style={mergeStyleValue(styles?.footer, footerStyle)}
+          data-rue-drawer-sidebar-footer="true"
+        >
+          {footer}
+        </div>
+      ) : null}
+    </div>
+  )
+}
 
-  const {
-    defaultOpen = false,
-    placement = end ? 'right' : 'right',
-    size,
-    width,
-    height,
-    title,
-    extra,
-    footer,
-    loading = false,
-    closable = true,
-    closeIcon,
-    keyboard = true,
-    mask = true,
-    maskClosable,
-    inline = false,
-    forceRender = false,
-    destroyOnClose,
-    destroyOnHidden = true,
-    zIndex,
-    rootClassName,
-    panelClassName,
-    bodyClassName,
-    headerClassName,
-    footerClassName,
-    maskClassName,
-    classNames,
-    styles,
-    style,
-    rootStyle,
-    panelStyle,
-    bodyStyle,
-    headerStyle,
-    footerStyle,
-    maskStyle,
-    getContainer,
-    drawerRender,
-    onClose,
-    onOpenChange,
-    afterOpenChange,
-    ...managedRest
-  } = rest
+/** render Managed Panel 的内部工具函数。 */
+const renderDrawerSidebarManagedPanel = (props: DrawerSidebarManagedPanelProps) => {
+  return <DrawerSidebarManagedPanel {...props} />
+}
 
+interface DrawerSidebarManagedFrameProps extends DrawerSidebarManagedPanelProps {
+  resolvedMaskConfig: DrawerSidebarReadableSignal<Required<DrawerSidebarMaskConfig>>
+  rootClassName?: string
+  maskClassName?: string
+  rootStyle?: DrawerSidebarInlineStyle
+  maskStyle?: DrawerSidebarInlineStyle
+  zIndex?: number
+  drawerRender?: (node: any) => any
+  setRootElement?: (element: HTMLDivElement | null) => void
+  setMaskElement?: (element: HTMLDivElement | null) => void
+}
+
+/** DrawerSidebarManagedFrame 的内部工具函数。 */
+const DrawerSidebarManagedFrame: FC<DrawerSidebarManagedFrameProps> = ({
+  mergedOpen,
+  placement,
+  resolvedMaskConfig,
+  rootClassName,
+  maskClassName,
+  classNames,
+  styles,
+  rootStyle,
+  maskStyle,
+  zIndex,
+  inline,
+  drawerRender,
+  setRootElement,
+  setMaskElement,
+  ...panelProps
+}) => {
+  return (
+    <div
+      className={mergeClassName(
+        inline ? 'absolute inset-0 overflow-hidden' : 'fixed inset-0 overflow-hidden',
+        mergedOpen.get() ? 'pointer-events-auto' : 'pointer-events-none',
+        rootClassName,
+        classNames?.root,
+      )}
+      style={mergeStyleValue(styles?.root, rootStyle, { zIndex: zIndex ?? DEFAULT_ROOT_Z_INDEX })}
+      ref={setRootElement}
+      data-rue-drawer-sidebar-root="true"
+      data-rue-drawer-sidebar-mode="panel"
+      data-rue-drawer-sidebar-open={mergedOpen.get() ? 'true' : 'false'}
+    >
+      {resolvedMaskConfig.get().enabled ? (
+        <div
+          aria-hidden="true"
+          className={mergeClassName(
+            'absolute inset-0 bg-base-content/35 transition-opacity duration-300',
+            resolvedMaskConfig.get().blur ? 'backdrop-blur-sm' : undefined,
+            mergedOpen.get() ? 'opacity-100' : 'opacity-0',
+            maskClassName,
+            classNames?.mask,
+          )}
+          style={mergeStyleValue(styles?.mask, maskStyle)}
+          ref={setMaskElement}
+          data-rue-drawer-sidebar-mask="true"
+        />
+      ) : null}
+      <div
+        className={mergeClassName(
+          'absolute inset-0 flex min-h-0 min-w-0',
+          getWrapperClassName(placement.get()),
+          classNames?.wrapper,
+        )}
+        style={mergeStyleValue(styles?.wrapper)}
+        onClick={(event: MouseEvent) => {
+          if (!resolvedMaskConfig.get().enabled || !resolvedMaskConfig.get().closable) return
+          if (event.target !== event.currentTarget) return
+          if (panelProps.onRequestClose) panelProps.onRequestClose(event)
+        }}
+        data-rue-drawer-sidebar-wrapper="true"
+      >
+        {drawerRender ? (
+          drawerRender(
+            renderDrawerSidebarManagedPanel({
+              ...panelProps,
+              mergedOpen,
+              placement,
+              classNames,
+              styles,
+              inline,
+            }),
+          )
+        ) : (
+          <DrawerSidebarManagedPanel
+            {...panelProps}
+            mergedOpen={mergedOpen}
+            placement={placement}
+            classNames={classNames}
+            styles={styles}
+            inline={inline}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** CompoundRoot 的内部工具函数。 */
+const CompoundRoot: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest }) => {
+  const rootClassName = computed(() =>
+    mergeClassName('drawer', end ? 'drawer-end' : undefined, open ? 'drawer-open' : undefined),
+  )
+
+  return (
+    <div
+      {...rest}
+      className={mergeClassName(rootClassName.get(), className)}
+      data-rue-drawer-sidebar-mode="compound"
+    >
+      {children}
+    </div>
+  )
+}
+
+/** ManagedRoot 的内部工具函数。 */
+const ManagedRoot: FC<DrawerSidebarProps> = ({
+  end,
+  open,
+  defaultOpen = false,
+  placement: placementProp,
+  size,
+  width,
+  height,
+  title,
+  extra,
+  footer,
+  loading = false,
+  closable = true,
+  closeIcon,
+  keyboard = true,
+  mask = true,
+  maskClosable,
+  inline = false,
+  forceRender = false,
+  destroyOnClose,
+  destroyOnHidden = true,
+  zIndex,
+  className,
+  rootClassName,
+  panelClassName,
+  bodyClassName,
+  headerClassName,
+  footerClassName,
+  maskClassName,
+  classNames,
+  styles,
+  style,
+  rootStyle,
+  panelStyle,
+  bodyStyle,
+  headerStyle,
+  footerStyle,
+  maskStyle,
+  getContainer,
+  drawerRender,
+  children,
+  onClose,
+  onOpenChange,
+  afterOpenChange,
+  ...managedRest
+}) => {
   const uncontrolledOpen = ref(defaultOpen)
   const lastDefaultOpen = ref(!!defaultOpen)
   const hasOpened = ref(defaultOpen)
   const locked = ref(false)
   const currentOpen = ref(typeof open === 'boolean' ? open : uncontrolledOpen.value)
   const currentKeyboard = ref(keyboard)
-  const isControlled = typeof open === 'boolean'
-  const mergedOpen = currentOpen.value
-  const mergedDestroyOnHidden = destroyOnHidden ?? destroyOnClose ?? true
-  const resolvedMaskConfig = resolveMaskConfig(mask, maskClosable)
-  const resolvedClosable = resolveClosableConfig(closable, closeIcon ?? <DefaultCloseIcon />)
-  const resolvedSize = resolveDrawerSize(size, placement, width, height)
+  const isControlled = computed(() => typeof open === 'boolean')
+  const mergedOpen = computed(() => currentOpen.value)
+  const placement = computed(() => placementProp ?? (end ? 'right' : 'right'))
+  const mergedDestroyOnHidden = computed(() => destroyOnHidden ?? destroyOnClose ?? true)
+  const resolvedMaskConfig = computed(() => resolveMaskConfig(mask, maskClosable))
+  const resolvedClosable = computed(() => resolveClosableConfig(closable, closeIcon))
+  const resolvedSize = computed(() => resolveDrawerSize(size, placement.get(), width, height))
+  const shouldMount = computed(
+    () => mergedOpen.get() || forceRender || (!mergedDestroyOnHidden.get() && hasOpened.value),
+  )
+  const showHeader = computed(
+    () => title != null || extra != null || resolvedClosable.get().enabled,
+  )
+  const resolvedContainer = computed(() =>
+    typeof getContainer === 'function' ? getContainer() : getContainer,
+  )
   let rootElement: HTMLDivElement | null = null
   let maskElement: HTMLDivElement | null = null
   let panelElement: HTMLDivElement | null = null
@@ -592,7 +896,7 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
       rootElement.setAttribute('data-rue-drawer-sidebar-open', nextOpen ? 'true' : 'false')
       rootElement.classList.toggle('pointer-events-auto', nextOpen)
       rootElement.classList.toggle('pointer-events-none', !nextOpen)
-      rootElement.style.display = mergedDestroyOnHidden && !nextOpen ? 'none' : ''
+      rootElement.style.display = mergedDestroyOnHidden.get() && !nextOpen ? 'none' : ''
     }
 
     if (maskElement) {
@@ -601,8 +905,8 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
     }
 
     if (panelElement) {
-      const openTransformClassName = getPanelTransformClassName(placement, true)
-      const closeTransformClassName = getPanelTransformClassName(placement, false)
+      const openTransformClassName = getPanelTransformClassName(placement.get(), true)
+      const closeTransformClassName = getPanelTransformClassName(placement.get(), false)
 
       panelElement.setAttribute('aria-hidden', nextOpen ? 'false' : 'true')
       panelElement.setAttribute('aria-modal', nextOpen && !inline ? 'true' : 'false')
@@ -614,7 +918,7 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
   const requestOpenChange = (nextOpen: boolean) => {
     if (currentOpen.value === nextOpen) return
     currentOpen.value = nextOpen
-    if (!isControlled) {
+    if (!isControlled.get()) {
       uncontrolledOpen.value = nextOpen
     }
     if (onOpenChange) onOpenChange(nextOpen)
@@ -627,7 +931,7 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
   }
 
   onMounted(() => {
-    if (mergedOpen && !inline) {
+    if (mergedOpen.get() && !inline) {
       lockDocumentScroll()
       locked.value = true
     }
@@ -687,7 +991,7 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
     () => defaultOpen,
     nextDefaultOpen => {
       const normalizedDefaultOpen = !!nextDefaultOpen
-      if (!isControlled && normalizedDefaultOpen !== lastDefaultOpen.value) {
+      if (!isControlled.get() && normalizedDefaultOpen !== lastDefaultOpen.value) {
         lastDefaultOpen.value = normalizedDefaultOpen
         uncontrolledOpen.value = normalizedDefaultOpen
         currentOpen.value = normalizedDefaultOpen
@@ -702,178 +1006,122 @@ const Root: FC<DrawerSidebarProps> = ({ end, open, className, children, ...rest 
     }
   })
 
-  const shouldMount = mergedOpen || forceRender || (!mergedDestroyOnHidden && hasOpened.value)
-  if (!shouldMount) return null
-
-  const showHeader = title != null || extra != null || resolvedClosable.enabled
-  const closeButtonNode = resolvedClosable.enabled ? (
-    <button
-      type="button"
-      aria-label="关闭"
-      disabled={resolvedClosable.disabled}
-      className={mergeClassName(
-        'btn btn-sm btn-circle btn-ghost shrink-0',
-        resolvedClosable.disabled ? 'btn-disabled pointer-events-none opacity-50' : undefined,
-        classNames?.close,
-      )}
-      style={mergeStyleValue(styles?.close)}
-      onClick={(event: MouseEvent) => {
-        event.stopPropagation()
-        if (resolvedClosable.disabled) return
-        emitClose(event)
-      }}
-      data-rue-drawer-sidebar-close="true"
-    >
-      {resolvedClosable.icon}
-    </button>
-  ) : null
-
-  const bodyNode = (
-    <div
-      className={mergeClassName(
-        'flex-1 overflow-y-auto px-5 py-5',
-        bodyClassName,
-        classNames?.body,
-      )}
-      style={mergeStyleValue(styles?.body, bodyStyle)}
-      aria-busy={loading ? 'true' : undefined}
-      data-rue-drawer-sidebar-body="true"
-    >
-      {loading ? renderLoadingBody() : children}
-    </div>
-  )
-
-  let panelNode = (
-    <div
-      {...managedRest}
-      role="dialog"
-      aria-modal={mergedOpen && !inline ? 'true' : 'false'}
-      aria-hidden={mergedOpen ? undefined : 'true'}
-      className={mergeClassName(
-        'bg-base-100 text-base-content relative flex max-w-full max-h-full flex-col shadow-2xl transition-transform duration-300 ease-out',
-        getPanelBaseClassName(placement),
-        getPanelTransformClassName(placement, mergedOpen),
-        className,
-        panelClassName,
-        classNames?.panel,
-      )}
-      style={mergeStyleValue(
-        styles?.panel,
-        style,
-        panelStyle,
-        getPanelSizeStyle(placement, resolvedSize),
-      )}
-      onClick={(event: MouseEvent) => event.stopPropagation()}
-      ref={(element: HTMLDivElement | null) => {
-        panelElement = element
-        syncManagedDom(currentOpen.value)
-      }}
-      data-rue-drawer-sidebar-panel="true"
-      data-rue-drawer-sidebar-placement={placement}
-    >
-      {showHeader ? (
-        <div
-          className={mergeClassName(
-            'flex items-start gap-3 border-b border-base-300 px-5 py-4',
-            headerClassName,
-            classNames?.header,
-          )}
-          style={mergeStyleValue(styles?.header, headerStyle)}
-          data-rue-drawer-sidebar-header="true"
-        >
-          {resolvedClosable.placement === 'start' ? closeButtonNode : null}
-          <div
-            className={mergeClassName('min-w-0 flex-1', classNames?.title)}
-            style={mergeStyleValue(styles?.title)}
+  return (
+    <>
+      {shouldMount.get() ? (
+        inline || resolvedContainer.get() === false || resolvedContainer.get() == null ? (
+          <DrawerSidebarManagedFrame
+            managedRest={managedRest}
+            mergedOpen={mergedOpen}
+            placement={placement}
+            resolvedSize={resolvedSize}
+            resolvedMaskConfig={resolvedMaskConfig}
+            resolvedClosable={resolvedClosable}
+            showHeader={showHeader}
+            className={className}
+            rootClassName={rootClassName}
+            panelClassName={panelClassName}
+            bodyClassName={bodyClassName}
+            headerClassName={headerClassName}
+            footerClassName={footerClassName}
+            maskClassName={maskClassName}
+            classNames={classNames}
+            styles={styles}
+            style={style}
+            rootStyle={rootStyle}
+            panelStyle={panelStyle}
+            bodyStyle={bodyStyle}
+            headerStyle={headerStyle}
+            footerStyle={footerStyle}
+            maskStyle={maskStyle}
+            title={title}
+            extra={extra}
+            footer={footer}
+            loading={loading}
+            inline={inline}
+            zIndex={zIndex}
+            drawerRender={drawerRender}
+            setRootElement={(element: HTMLDivElement | null) => {
+              rootElement = element
+              syncManagedDom(currentOpen.value)
+            }}
+            setMaskElement={(element: HTMLDivElement | null) => {
+              maskElement = element
+              syncManagedDom(currentOpen.value)
+            }}
+            setPanelElement={(element: HTMLDivElement | null) => {
+              panelElement = element
+              syncManagedDom(currentOpen.value)
+            }}
+            onRequestClose={emitClose}
           >
-            {title ? <div className="text-lg font-semibold leading-6">{title}</div> : null}
-          </div>
-          {extra ? <div className="shrink-0">{extra}</div> : null}
-          {resolvedClosable.placement === 'end' ? closeButtonNode : null}
-        </div>
+            {children}
+          </DrawerSidebarManagedFrame>
+        ) : (
+          <Teleport to={resolvedContainer.get() || undefined}>
+            <DrawerSidebarManagedFrame
+              managedRest={managedRest}
+              mergedOpen={mergedOpen}
+              placement={placement}
+              resolvedSize={resolvedSize}
+              resolvedMaskConfig={resolvedMaskConfig}
+              resolvedClosable={resolvedClosable}
+              showHeader={showHeader}
+              className={className}
+              rootClassName={rootClassName}
+              panelClassName={panelClassName}
+              bodyClassName={bodyClassName}
+              headerClassName={headerClassName}
+              footerClassName={footerClassName}
+              maskClassName={maskClassName}
+              classNames={classNames}
+              styles={styles}
+              style={style}
+              rootStyle={rootStyle}
+              panelStyle={panelStyle}
+              bodyStyle={bodyStyle}
+              headerStyle={headerStyle}
+              footerStyle={footerStyle}
+              maskStyle={maskStyle}
+              title={title}
+              extra={extra}
+              footer={footer}
+              loading={loading}
+              inline={inline}
+              zIndex={zIndex}
+              drawerRender={drawerRender}
+              setRootElement={(element: HTMLDivElement | null) => {
+                rootElement = element
+                syncManagedDom(currentOpen.value)
+              }}
+              setMaskElement={(element: HTMLDivElement | null) => {
+                maskElement = element
+                syncManagedDom(currentOpen.value)
+              }}
+              setPanelElement={(element: HTMLDivElement | null) => {
+                panelElement = element
+                syncManagedDom(currentOpen.value)
+              }}
+              onRequestClose={emitClose}
+            >
+              {children}
+            </DrawerSidebarManagedFrame>
+          </Teleport>
+        )
       ) : null}
-      {bodyNode}
-      {footer !== undefined && footer !== null && footer !== false ? (
-        <div
-          className={mergeClassName(
-            'border-t border-base-300 px-5 py-4',
-            footerClassName,
-            classNames?.footer,
-          )}
-          style={mergeStyleValue(styles?.footer, footerStyle)}
-          data-rue-drawer-sidebar-footer="true"
-        >
-          {footer}
-        </div>
-      ) : null}
-    </div>
+    </>
+  )
+}
+
+/** Root 的内部工具函数。 */
+const Root: FC<DrawerSidebarProps> = props => {
+  const shouldUseManagedMode = computed(
+    () => !hasCompoundChildren(props.children) && getManagedModeSignature(props),
   )
 
-  if (drawerRender) {
-    panelNode = drawerRender(panelNode)
-  }
-
-  const rootNode = (
-    <div
-      className={mergeClassName(
-        inline ? 'absolute inset-0 overflow-hidden' : 'fixed inset-0 overflow-hidden',
-        mergedOpen ? 'pointer-events-auto' : 'pointer-events-none',
-        rootClassName,
-        classNames?.root,
-      )}
-      style={mergeStyleValue(styles?.root, rootStyle, { zIndex: zIndex ?? DEFAULT_ROOT_Z_INDEX })}
-      ref={(element: HTMLDivElement | null) => {
-        rootElement = element
-        syncManagedDom(currentOpen.value)
-      }}
-      data-rue-drawer-sidebar-root="true"
-      data-rue-drawer-sidebar-mode="panel"
-      data-rue-drawer-sidebar-open={mergedOpen ? 'true' : 'false'}
-    >
-      {resolvedMaskConfig.enabled ? (
-        <div
-          aria-hidden="true"
-          className={mergeClassName(
-            'absolute inset-0 bg-base-content/35 transition-opacity duration-300',
-            resolvedMaskConfig.blur ? 'backdrop-blur-sm' : undefined,
-            mergedOpen ? 'opacity-100' : 'opacity-0',
-            maskClassName,
-            classNames?.mask,
-          )}
-          style={mergeStyleValue(styles?.mask, maskStyle)}
-          ref={(element: HTMLDivElement | null) => {
-            maskElement = element
-            syncManagedDom(currentOpen.value)
-          }}
-          data-rue-drawer-sidebar-mask="true"
-        />
-      ) : null}
-      <div
-        className={mergeClassName(
-          'absolute inset-0 flex',
-          getWrapperClassName(placement),
-          classNames?.wrapper,
-        )}
-        style={mergeStyleValue(styles?.wrapper)}
-        onClick={(event: MouseEvent) => {
-          if (!resolvedMaskConfig.enabled || !resolvedMaskConfig.closable) return
-          if (event.target !== event.currentTarget) return
-          emitClose(event)
-        }}
-        data-rue-drawer-sidebar-wrapper="true"
-      >
-        {panelNode}
-      </div>
-    </div>
+  return (
+    <>{shouldUseManagedMode.get() ? <ManagedRoot {...props} /> : <CompoundRoot {...props} />}</>
   )
-
-  const resolvedContainer = typeof getContainer === 'function' ? getContainer() : getContainer
-
-  if (inline || resolvedContainer === false || resolvedContainer == null) {
-    return rootNode
-  }
-
-  return <Teleport to={resolvedContainer}>{rootNode}</Teleport>
 }
 
 /** Toggle 的内部工具函数。 */

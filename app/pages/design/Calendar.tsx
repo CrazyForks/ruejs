@@ -88,6 +88,18 @@ const apiRows: ApiRow[] = [
     defaultValue: `'month'`,
   },
   {
+    prop: 'onRenderProfile',
+    description: '渲染诊断回调，报告本次更新阶段、耗时、cellRender 调用次数与慢单元格',
+    type: '(event: CalendarRenderProfileEvent) => void',
+    defaultValue: '-',
+  },
+  {
+    prop: 'renderProfileThreshold',
+    description: '渲染诊断的慢调用阈值，超过后会在 onRenderProfile 中标记 slow',
+    type: 'number',
+    defaultValue: '16',
+  },
+  {
     prop: 'showWeek',
     description: '月视图下显示 ISO 周序号，适合排班和周计划看板',
     type: 'boolean',
@@ -348,15 +360,20 @@ const HeroCard: FC<{ title: string; detail: string; badge: string }> = ({
 
 const NoticeCalendarPreview: FC = () => {
   const selectedValue = ref('2026-04-15')
+  const panelMode = ref<DemoCalendarMode>('month')
 
   return (
     <div className="space-y-4">
       <Calendar
         data-testid="notice-calendar"
         locale="zh-CN"
-        defaultValue={selectedValue.value}
+        value={selectedValue.value}
+        mode={panelMode.value}
         onChange={date => {
           selectedValue.value = formatIsoDate(date)
+        }}
+        onPanelChange={(_date, nextMode) => {
+          panelMode.value = nextMode as DemoCalendarMode
         }}
         cellRender={(date, info) => {
           if (info.type === 'month') {
@@ -403,6 +420,7 @@ const NoticeCalendarPreview: FC = () => {
 
 const CardCalendarPreview: FC = () => {
   const selectedValue = ref('2026-09-18')
+  const panelMode = ref<DemoCalendarMode>('month')
 
   return (
     <div className="space-y-4">
@@ -410,12 +428,16 @@ const CardCalendarPreview: FC = () => {
         <div className="max-w-full overflow-x-auto">
           <Calendar
             data-testid="card-calendar"
-            className="w-fit max-w-none min-w-[34rem]"
+            className="w-[34rem] max-w-none"
             locale="zh-CN"
             fullscreen={false}
-            defaultValue={selectedValue.value}
+            value={selectedValue.value}
+            mode={panelMode.value}
             onChange={date => {
               selectedValue.value = formatIsoDate(date)
+            }}
+            onPanelChange={(_date, nextMode) => {
+              panelMode.value = nextMode as DemoCalendarMode
             }}
             fullCellRender={(date, info) => {
               if (info.type !== 'date') {
@@ -481,7 +503,8 @@ const CustomHeaderCalendarPreview: FC = () => {
       <Calendar
         data-testid="custom-header-calendar"
         locale="zh-CN"
-        defaultValue={selectedValue.value}
+        value={selectedValue.value}
+        mode={panelMode.value}
         headerRender={({
           value: current,
           type,
@@ -722,14 +745,19 @@ const formatIsoDate = (date: Date) => {
 
 export default function NoticeCalendarDemo() {
   const selectedValue = ref('2026-04-15')
+  const panelMode = ref<'month' | 'year'>('month')
 
   return (
     <div className="space-y-4">
       <Calendar
         locale="zh-CN"
-        defaultValue={selectedValue.value}
+        value={selectedValue.value}
+        mode={panelMode.value}
         onChange={date => {
           selectedValue.value = formatIsoDate(date)
+        }}
+        onPanelChange={(_date, nextMode) => {
+          panelMode.value = nextMode
         }}
         cellRender={(date, info) => {
           if (info.type === 'month') {
@@ -807,18 +835,23 @@ const formatIsoDate = (date: Date) => {
 
 export default function CardCalendarDemo() {
   const selectedValue = ref('2026-09-18')
+  const panelMode = ref<'month' | 'year'>('month')
 
   return (
     <div className="space-y-4">
       <div className="grid gap-4">
         <div className="max-w-full overflow-x-auto">
           <Calendar
-            className="w-fit max-w-none min-w-[34rem]"
+            className="w-[34rem] max-w-none"
             locale="zh-CN"
             fullscreen={false}
-            defaultValue={selectedValue.value}
+            value={selectedValue.value}
+            mode={panelMode.value}
             onChange={date => {
               selectedValue.value = formatIsoDate(date)
+            }}
+            onPanelChange={(_date, nextMode) => {
+              panelMode.value = nextMode
             }}
             fullCellRender={(date, info) => {
               if (info.type !== 'date') {
@@ -911,7 +944,8 @@ export default function CustomHeaderCalendarDemo() {
     <div className="space-y-4">
       <Calendar
         locale="zh-CN"
-        defaultValue={selectedValue.value}
+        value={selectedValue.value}
+        mode={panelMode.value}
         headerRender={({ value: current, type, yearOptions, monthOptions, onMonthChange, onTypeChange, onYearChange }) => (
           <div className="border-b border-base-300/70 px-3 py-3">
             <div className="flex flex-wrap items-start justify-between gap-3">

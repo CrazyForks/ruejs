@@ -132,8 +132,6 @@ const createTriggeredDemoState = () => {
 /** onRenderTriggered 交互示例入口。 */
 const OnRenderTriggered: FC = () => {
   const state = useSetup(createTriggeredDemoState)
-  const activeTab = state.activeTab.get()
-  const events = state.events.get()
 
   return (
     <SidebarPlayground>
@@ -141,7 +139,7 @@ const OnRenderTriggered: FC = () => {
       <div role="tablist" className="tabs tabs-box">
         <button
           role="tab"
-          className={`tab ${activeTab === 'preview' ? 'tab-active' : ''}`}
+          className={`tab ${state.activeTab.get() === 'preview' ? 'tab-active' : ''}`}
           onClick={() => {
             state.activeTab.set('preview')
           }}
@@ -150,7 +148,7 @@ const OnRenderTriggered: FC = () => {
         </button>
         <button
           role="tab"
-          className={`tab ${activeTab === 'code' ? 'tab-active' : ''}`}
+          className={`tab ${state.activeTab.get() === 'code' ? 'tab-active' : ''}`}
           onClick={() => {
             state.activeTab.set('code')
           }}
@@ -160,7 +158,7 @@ const OnRenderTriggered: FC = () => {
       </div>
 
       <div className="mt-4 grid md:grid-cols-1 gap-6 items-start">
-        {activeTab === 'code' && (
+        {state.activeTab.get() === 'code' && (
           <div className="card bg-base-100 shadow overflow-auto">
             <div className="card-body p-0">
               <Code className="h-full" lang="tsx" code={code} />
@@ -168,7 +166,7 @@ const OnRenderTriggered: FC = () => {
           </div>
         )}
 
-        {activeTab === 'preview' && (
+        {state.activeTab.get() === 'preview' && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,400px)]">
             <div className="card bg-base-100 shadow">
               <div className="card-body gap-5">
@@ -249,12 +247,12 @@ const OnRenderTriggered: FC = () => {
               <div className="card-body">
                 <h2 className="card-title">Triggered events</h2>
                 <div className="space-y-2">
-                  {events.length === 0 && (
+                  {state.events.get().length === 0 && (
                     <div className="rounded-lg bg-base-200 p-4 text-sm text-base-content/60">
                       与左侧预览交互后，这里会显示最近的重渲染触发来源。
                     </div>
                   )}
-                  {events.map((item: TriggeredEntry) => (
+                  {state.events.get().map((item: TriggeredEntry) => (
                     <div
                       key={item.id}
                       className="rounded-lg border border-base-300 bg-base-200 p-3"

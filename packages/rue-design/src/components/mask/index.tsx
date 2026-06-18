@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Mask 模块概述
 - 汇总遮罩组件的公开类型、渲染入口和局部工具逻辑。
@@ -346,17 +345,43 @@ const Mask: FC<MaskProps> = ({
       as === 'figure')
 
   if (mediaMode) {
-    const Wrapper = (as === 'img' ? 'figure' : as) as any
-    const CaptionTag = (Wrapper === 'figure' ? 'figcaption' : 'div') as any
+    const wrapperClass = mergeClassName(
+      'relative inline-flex flex-col items-center gap-3',
+      wrapperClassName,
+    )
+
+    if (as === 'div') {
+      return (
+        <div {...rest} className={wrapperClass}>
+          <div className="relative inline-flex">
+            <img
+              {...imageProps}
+              src={src}
+              alt={alt}
+              className={mergeClassName(mergeClassName(cls, className), imageClassName)}
+            />
+            {hasRenderableContent(contentNode) ? (
+              <div
+                className={mergeClassName(
+                  'absolute inset-0 grid place-items-center p-4 text-center',
+                  contentClassName,
+                )}
+              >
+                {contentNode}
+              </div>
+            ) : null}
+          </div>
+          {caption != null ? (
+            <div className={mergeClassName('text-center text-sm opacity-70', captionClassName)}>
+              {caption}
+            </div>
+          ) : null}
+        </div>
+      )
+    }
 
     return (
-      <Wrapper
-        {...rest}
-        className={mergeClassName(
-          'relative inline-flex flex-col items-center gap-3',
-          wrapperClassName,
-        )}
-      >
+      <figure {...rest} className={wrapperClass}>
         <div className="relative inline-flex">
           <img
             {...imageProps}
@@ -376,23 +401,75 @@ const Mask: FC<MaskProps> = ({
           ) : null}
         </div>
         {caption != null ? (
-          <CaptionTag
+          <figcaption
             className={mergeClassName('text-center text-sm opacity-70', captionClassName)}
           >
             {caption}
-          </CaptionTag>
+          </figcaption>
         ) : null}
-      </Wrapper>
+      </figure>
     )
   }
 
-  const Component = as as any
+  const hostClassName = mergeClassName(cls, className)
 
-  return (
-    <Component {...rest} src={src} alt={alt} className={mergeClassName(cls, className)}>
-      {children}
-    </Component>
-  )
+  if (as === 'div') {
+    return (
+      <div {...rest} className={hostClassName}>
+        {children}
+      </div>
+    )
+  }
+
+  if (as === 'span') {
+    return (
+      <span {...rest} className={hostClassName}>
+        {children}
+      </span>
+    )
+  }
+
+  if (as === 'figure') {
+    return (
+      <figure {...rest} className={hostClassName}>
+        {children}
+      </figure>
+    )
+  }
+
+  if (as === 'section') {
+    return (
+      <section {...rest} className={hostClassName}>
+        {children}
+      </section>
+    )
+  }
+
+  if (as === 'article') {
+    return (
+      <article {...rest} className={hostClassName}>
+        {children}
+      </article>
+    )
+  }
+
+  if (as === 'a') {
+    return (
+      <a {...rest} className={hostClassName}>
+        {children}
+      </a>
+    )
+  }
+
+  if (as === 'button') {
+    return (
+      <button {...rest} className={hostClassName}>
+        {children}
+      </button>
+    )
+  }
+
+  return <img {...rest} src={src} alt={alt} className={hostClassName} />
 }
 
 /** 默认导出遮罩组件。 */

@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h } from '@rue-js/rue'
-import { render } from '@rue-js/rue'
+import { render, setReactiveScheduling } from '@rue-js/rue'
 import Dock from '../index'
+
+setReactiveScheduling('sync')
 
 const flushDock = async () => {
   await Promise.resolve()
@@ -117,14 +119,39 @@ describe('Dock', () => {
 
   it('supports defaultActiveKey in uncontrolled items mode', async () => {
     const c = document.createElement('div')
+    resetActiveRuntime()
     const items = [
       { key: 'home', icon: h('span', null, 'H'), label: 'Home' },
       { key: 'inbox', icon: h('span', null, 'I'), label: 'Inbox' },
     ]
     render(h(Dock, { items, defaultActiveKey: 'home' }), c)
     await flushDock()
-    const buttons = c.querySelectorAll('button')
+    let buttons = c.querySelectorAll('button')
     expect(buttons[0].classList.contains('dock-active')).toBe(true)
+    ;(buttons[1] as HTMLButtonElement).click()
+    await flushDock()
+    buttons = c.querySelectorAll('button')
+    expect(buttons[0].classList.contains('dock-active')).toBe(false)
+    expect(buttons[1].classList.contains('dock-active')).toBe(true)
+  })
+
+  it('supports defaultActiveIndex in uncontrolled items mode', async () => {
+    const c = document.createElement('div')
+    resetActiveRuntime()
+    const items = [
+      { icon: h('span', null, 'H'), label: 'Home' },
+      { icon: h('span', null, 'I'), label: 'Inbox' },
+      { icon: h('span', null, 'S'), label: 'Settings' },
+    ]
+    render(h(Dock, { items, defaultActiveIndex: 1 }), c)
+    await flushDock()
+    let buttons = c.querySelectorAll('button')
+    expect(buttons[1].classList.contains('dock-active')).toBe(true)
+    ;(buttons[2] as HTMLButtonElement).click()
+    await flushDock()
+    buttons = c.querySelectorAll('button')
+    expect(buttons[1].classList.contains('dock-active')).toBe(false)
+    expect(buttons[2].classList.contains('dock-active')).toBe(true)
   })
 
   it('renders anchors from item href and blocks disabled interaction', async () => {

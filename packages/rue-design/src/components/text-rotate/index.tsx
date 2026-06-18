@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 TextRotate 组件概述
 - 保留 Rue 当前 text-rotate 结构与视觉，并把排版语义职责交给独立 Typography 组件。
@@ -156,26 +155,31 @@ const TextRotateRoot: FC<TextRotateProps> = ({
   ...rest
 }) => {
   const cls = appendClassName('text-rotate', className)
-  const content =
-    items && items.length ? (
-      <span className={innerClassName} style={innerStyle}>
-        {items.map((item, index) => renderItem(item, index, itemClassName, itemStyle))}
-      </span>
-    ) : (
-      children
-    )
+  const hasItems = !!(items && items.length)
 
   if (as === 'div') {
     return (
       <div {...rest} className={cls} style={style}>
-        {content}
+        {hasItems ? (
+          <span className={innerClassName} style={innerStyle}>
+            {items.map((item, index) => renderItem(item, index, itemClassName, itemStyle))}
+          </span>
+        ) : (
+          children
+        )}
       </div>
     )
   }
 
   return (
     <span {...rest} className={cls} style={style}>
-      {content}
+      {hasItems ? (
+        <span className={innerClassName} style={innerStyle}>
+          {items.map((item, index) => renderItem(item, index, itemClassName, itemStyle))}
+        </span>
+      ) : (
+        children
+      )}
     </span>
   )
 }

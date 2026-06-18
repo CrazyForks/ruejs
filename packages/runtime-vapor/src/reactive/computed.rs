@@ -18,7 +18,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::reactive::core::{ComputedState, Signal, schedule_effect_run};
 use crate::reactive::effect::create_effect;
-use crate::reactive::signal::{SignalHandle, collect_affected_subscribers};
+use crate::reactive::signal::{SignalHandle, collect_affected_subscribers, next_signal_debug_id};
 
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn collect_computed_dirty_subscribers(handle: &SignalHandle) -> Vec<usize> {
@@ -118,6 +118,7 @@ pub fn create_computed(arg: JsValue) -> SignalHandle {
     };
     let sig = SignalHandle {
         inner: std::rc::Rc::new(std::cell::RefCell::new(Signal {
+            debug_id: next_signal_debug_id(),
             value: JsValue::UNDEFINED,
             subs: Default::default(),
             // computed 最终也表现为一个可被路径读取的 signal，

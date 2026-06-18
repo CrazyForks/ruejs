@@ -119,12 +119,12 @@ impl VisitMut for PreTransform {
         self.scope_stack.pop();
         // 对函数声明进行二次处理：若函数体返回 JSX，则进行 useSetup 注入
         for item in &mut m.body {
-            if let ModuleItem::Stmt(Stmt::Decl(Decl::Fn(fd))) = item {
-                if let Some(block) = &mut fd.function.body {
-                    let has_jsx_return = has_component_render_return_in_block(block);
-                    if has_jsx_return {
-                        process_function(&mut fd.function);
-                    }
+            if let ModuleItem::Stmt(Stmt::Decl(Decl::Fn(fd))) = item
+                && let Some(block) = &mut fd.function.body
+            {
+                let has_jsx_return = has_component_render_return_in_block(block);
+                if has_jsx_return {
+                    process_function(&mut fd.function);
                 }
             }
         }
@@ -160,10 +160,10 @@ impl VisitMut for PreTransform {
 
     fn visit_mut_expr(&mut self, expr: &mut Expr) {
         expr.visit_mut_children_with(self);
-        if let Expr::JSXElement(el) = expr {
-            if let Some(memo_expr) = if_directive::memo_or_once_element_expr(el.as_ref()) {
-                *expr = memo_expr;
-            }
+        if let Expr::JSXElement(el) = expr
+            && let Some(memo_expr) = if_directive::memo_or_once_element_expr(el.as_ref())
+        {
+            *expr = memo_expr;
         }
     }
 
@@ -234,33 +234,33 @@ impl VisitMut for PreTransform {
         // Hook 包装：将常见 Hook/响应式调用包裹到 _$vaporWithHookId 中，生成稳定的 ID
         let mut should_wrap = false;
         let mut hook_name: Option<String> = None;
-        if let Callee::Expr(e) = &c.callee {
-            if let Expr::Ident(id) = e.as_ref() {
-                let name = id.sym.as_ref();
-                if name == "useMemo"
-                    || name == "useEffect"
-                    || name == "useCallback"
-                    || name == "useRef"
-                    || name == "reactive"
-                    || name == "ref"
-                    || name == "useState"
-                    || name == "watchEffect"
-                    || name == "watch"
-                    || name == "watchSignal"
-                    || name == "watchFn"
-                    || name == "watchPath"
-                    || name == "watchDeepSignal"
-                    || name == "computed"
-                    || name == "signal"
-                    || name == "readonly"
-                    || name == "shallowReactive"
-                    || name == "useSignal"
-                    || name == "useSetup"
-                    || name == "shallowReadonly"
-                {
-                    should_wrap = true;
-                    hook_name = Some(name.to_string());
-                }
+        if let Callee::Expr(e) = &c.callee
+            && let Expr::Ident(id) = e.as_ref()
+        {
+            let name = id.sym.as_ref();
+            if name == "useMemo"
+                || name == "useEffect"
+                || name == "useCallback"
+                || name == "useRef"
+                || name == "reactive"
+                || name == "ref"
+                || name == "useState"
+                || name == "watchEffect"
+                || name == "watch"
+                || name == "watchSignal"
+                || name == "watchFn"
+                || name == "watchPath"
+                || name == "watchDeepSignal"
+                || name == "computed"
+                || name == "signal"
+                || name == "readonly"
+                || name == "shallowReactive"
+                || name == "useSignal"
+                || name == "useSetup"
+                || name == "shallowReadonly"
+            {
+                should_wrap = true;
+                hook_name = Some(name.to_string());
             }
         }
         if should_wrap {

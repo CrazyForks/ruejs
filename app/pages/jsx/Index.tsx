@@ -61,7 +61,7 @@ const Index: FC = () => (
           </li>
           <li>
             <RouterLink to="/jsx/fragments">
-              Fragments（<> … </>）
+              Fragments（<>children</>）
             </RouterLink>
           </li>
           <li>

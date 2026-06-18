@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 Swap 组件概述
 - 保留 Rue 当前 swap 视觉类与 compound 结构。
@@ -6,7 +5,7 @@ Swap 组件概述
 - 增强模式补齐 disabled、indeterminate、默认三态与变更回调，适合直接在业务里使用。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, useRef, watch } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 
 /** SwapEffect 类型。 */
 export type SwapEffect = 'rotate' | 'flip'
@@ -77,26 +76,6 @@ export interface SwapPartProps {
 const mergeClassName = (base: string, className?: string) =>
   className ? `${base} ${className}` : base
 
-/** flatten Children 的内部工具函数。 */
-const flattenChildren = (children: any, out: any[] = []) => {
-  if (children == null || children === false) {
-    return out
-  }
-  if (Array.isArray(children)) {
-    children.forEach(child => flattenChildren(child, out))
-    return out
-  }
-  out.push(children)
-  return out
-}
-
-/** 判断是否存在 Checkbox Input Child 的内部工具函数。 */
-const hasCheckboxInputChild = (children: any) =>
-  flattenChildren(children).some(child => {
-    if (!child || typeof child !== 'object') return false
-    return (child as any).type === 'input' && (child as any).props?.type === 'checkbox'
-  })
-
 /** 构建 Root Class Name 的内部工具函数。 */
 const buildRootClassName = (
   active?: boolean,
@@ -135,10 +114,8 @@ const SwapRoot: FC<SwapProps> = ({
   onCheckedChange,
   ...rest
 }) => {
-  const inputRef = useRef<HTMLInputElement>()
   const uncontrolledIndeterminate = ref(!!defaultIndeterminate)
-  const hasInputChild = hasCheckboxInputChild(children)
-  const hasManagedInputProps =
+  const shouldRenderAutoInput =
     typeof checked === 'boolean' ||
     typeof defaultChecked === 'boolean' ||
     typeof disabled === 'boolean' ||
@@ -148,17 +125,14 @@ const SwapRoot: FC<SwapProps> = ({
     !!inputProps ||
     !!onChange ||
     !!onCheckedChange
-  const shouldRenderAutoInput = !hasInputChild && hasManagedInputProps
-  const mode: SwapChangeMeta['mode'] = hasInputChild || shouldRenderAutoInput ? 'input' : 'class'
+  const mode: SwapChangeMeta['mode'] = shouldRenderAutoInput ? 'input' : 'class'
   const Component = as as any
-
-  const syncInputState = () => {
-    if (!inputRef.current) return
-    if (typeof checked === 'boolean') {
-      inputRef.current.checked = checked
-    }
-    inputRef.current.indeterminate =
-      typeof indeterminate === 'boolean' ? indeterminate : uncontrolledIndeterminate.value
+  const isControlledChecked = typeof checked === 'boolean'
+  const isIndeterminate =
+    typeof indeterminate === 'boolean' ? indeterminate : uncontrolledIndeterminate.value
+  const inputAriaChecked = isIndeterminate ? 'mixed' : inputProps?.['aria-checked']
+  const applyIndeterminate = (element: HTMLInputElement | null, value: boolean) => {
+    if (element) element.indeterminate = value
   }
 
   const handleChange = (event: Event) => {
@@ -170,11 +144,10 @@ const SwapRoot: FC<SwapProps> = ({
       uncontrolledIndeterminate.value = false
     }
 
-    if (typeof checked === 'boolean' && inputRef.current) {
-      inputRef.current.checked = checked
+    if (target) {
+      if (isControlledChecked) target.checked = checked
+      target.indeterminate = nextIndeterminate
     }
-
-    syncInputState()
 
     if (onChange) {
       onChange(event, {
@@ -189,33 +162,6 @@ const SwapRoot: FC<SwapProps> = ({
     }
   }
 
-  onMounted(() => {
-    syncInputState()
-  })
-
-  watch(
-    () => checked,
-    () => {
-      syncInputState()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => indeterminate,
-    () => {
-      syncInputState()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => uncontrolledIndeterminate.value,
-    () => {
-      syncInputState()
-    },
-  )
-
   return (
     <Component
       {...rest}
@@ -225,21 +171,29 @@ const SwapRoot: FC<SwapProps> = ({
       data-rue-swap-mode={mode}
       data-rue-swap-disabled={disabled ? 'true' : 'false'}
     >
-      {shouldRenderAutoInput ? (
+      {shouldRenderAutoInput && isControlledChecked ? (
         <input
           {...inputProps}
-          ref={inputRef}
+          ref={(element: HTMLInputElement | null) => applyIndeterminate(element, isIndeterminate)}
           type="checkbox"
           checked={checked}
+          disabled={disabled}
+          autoComplete={inputProps?.autoComplete ?? 'off'}
+          className={inputClassName}
+          aria-checked={inputAriaChecked}
+          data-rue-swap-input="true"
+          onChange={handleChange}
+        />
+      ) : shouldRenderAutoInput ? (
+        <input
+          {...inputProps}
+          ref={(element: HTMLInputElement | null) => applyIndeterminate(element, isIndeterminate)}
+          type="checkbox"
           defaultChecked={defaultChecked}
           disabled={disabled}
           autoComplete={inputProps?.autoComplete ?? 'off'}
           className={inputClassName}
-          aria-checked={
-            (typeof indeterminate === 'boolean' ? indeterminate : uncontrolledIndeterminate.value)
-              ? 'mixed'
-              : inputProps?.['aria-checked']
-          }
+          aria-checked={inputAriaChecked}
           data-rue-swap-input="true"
           onChange={handleChange}
         />

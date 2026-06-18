@@ -17,6 +17,7 @@ use wasm_bindgen::JsValue;
 
 const ANCHOR_MAP_COMPACT_STEP: usize = 64;
 const RANGE_MAP_COMPACT_STEP: usize = 64;
+const RUE_KEEP_ALIVE_RANGE_KEY: &str = "__rue_keep_alive_range__";
 
 fn next_compact_threshold(len: usize, step: usize) -> usize {
     len.saturating_add(step).max(step)
@@ -80,6 +81,11 @@ fn shares_dom_root_js(left: &JsValue, right: &JsValue) -> bool {
 fn is_explicitly_disconnected(node: &JsValue) -> bool {
     Reflect::get(node, &JsValue::from_str("isConnected")).ok().and_then(|v| v.as_bool())
         == Some(false)
+}
+
+fn is_keep_alive_range_start(node: &JsValue) -> bool {
+    Reflect::get(node, &JsValue::from_str(RUE_KEEP_ALIVE_RANGE_KEY)).ok().and_then(|v| v.as_bool())
+        == Some(true)
 }
 
 // 渲染辅助方法：
@@ -217,10 +223,15 @@ where
         let mut kept: Vec<AnchorMountState<A>> = Vec::with_capacity(drained.len());
 
         for mut entry in drained.into_iter() {
+            let av: JsValue = entry.anchor.clone().into();
+            if is_keep_alive_range_start(&av) {
+                kept.push(entry);
+                continue;
+            }
+
             if let Some(preserve) = preserve_anchor {
-                let entry_js: JsValue = entry.anchor.clone().into();
                 let preserve_js: JsValue = preserve.clone().into();
-                let matches_current = if js_sys::Object::is(&entry_js, &preserve_js) {
+                let matches_current = if js_sys::Object::is(&av, &preserve_js) {
                     true
                 } else if has_native_contains_method(&preserve_js) {
                     false
@@ -236,7 +247,6 @@ where
                 }
             }
 
-            let av: JsValue = entry.anchor.clone().into();
             let connected =
                 Reflect::get(&av, &JsValue::from_str("isConnected")).ok().and_then(|v| v.as_bool());
             let keep = match connected {
@@ -401,6 +411,10 @@ where
 
         for mut entry in drained.into_iter() {
             let sv: JsValue = entry.start.clone().into();
+            if is_keep_alive_range_start(&sv) {
+                kept.push(entry);
+                continue;
+            }
             // 尝试读取 `isConnected`：
             // - 浏览器 DOM 节点上该字段是 boolean；
             // - 若不是 DOM 节点（例如测试的 TestNode），Reflect::get 会返回 undefined，
@@ -1491,6 +1505,36 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
+    fn compact_anchor_map_preserves_keep_alive_marked_disconnected_anchors() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let storage = node("keep-alive-storage", 11.0);
+        let cached_anchor = node("cached-anchor", 8.0);
+        set_parent(&cached_anchor, &storage);
+        set_bool(&cached_anchor, "isConnected", false);
+        Reflect::set(&cached_anchor, &JsValue::from_str(RUE_KEEP_ALIVE_RANGE_KEY), &JsValue::TRUE)
+            .unwrap();
+
+        let stale_anchor = node("stale-anchor", 8.0);
+        set_parent(&stale_anchor, &storage);
+        set_bool(&stale_anchor, "isConnected", false);
+
+        rue.anchor_map.push(AnchorMountState::new(
+            cached_anchor.clone(),
+            block_state(node("cached-host", 1.0)),
+        ));
+        rue.anchor_map.push(AnchorMountState::new(
+            stale_anchor.clone(),
+            block_state(node("stale-host", 1.0)),
+        ));
+
+        rue.compact_anchor_map();
+
+        assert_eq!(rue.anchor_map.len(), 1);
+        assert!(rue.find_anchor_index(&cached_anchor).is_some());
+        assert!(rue.find_anchor_index(&stale_anchor).is_none());
+    }
+
+    #[wasm_bindgen_test]
     fn compact_range_map_covers_current_anchor_and_detached_parent_paths() {
         let mut rue = Rue::<JsDomAdapter>::new();
         let fragment = node("fragment", 11.0);
@@ -1561,6 +1605,40 @@ mod tests {
         assert!(rue.find_range_index(&kept_start).is_some());
         assert!(rue.find_range_index(&stale_start).is_none());
         assert!(rue.find_range_index(&disconnected).is_none());
+    }
+
+    #[wasm_bindgen_test]
+    fn compact_range_map_preserves_keep_alive_marked_disconnected_ranges() {
+        let mut rue = Rue::<JsDomAdapter>::new();
+        let storage = node("keep-alive-storage", 11.0);
+        let cached_start = node("cached-start", 8.0);
+        let cached_end = node("cached-end", 8.0);
+        set_parent(&cached_start, &storage);
+        set_bool(&cached_start, "isConnected", false);
+        Reflect::set(&cached_start, &JsValue::from_str(RUE_KEEP_ALIVE_RANGE_KEY), &JsValue::TRUE)
+            .unwrap();
+
+        let stale_start = node("stale-start", 8.0);
+        let stale_end = node("stale-end", 8.0);
+        set_parent(&stale_start, &storage);
+        set_bool(&stale_start, "isConnected", false);
+
+        rue.range_map.push(RangeMountState::new(
+            cached_start.clone(),
+            cached_end,
+            block_state(node("cached-host", 1.0)),
+        ));
+        rue.range_map.push(RangeMountState::new(
+            stale_start.clone(),
+            stale_end,
+            block_state(node("stale-host", 1.0)),
+        ));
+
+        rue.compact_range_map();
+
+        assert_eq!(rue.range_map.len(), 1);
+        assert!(rue.find_range_index(&cached_start).is_some());
+        assert!(rue.find_range_index(&stale_start).is_none());
     }
 
     #[wasm_bindgen_test]

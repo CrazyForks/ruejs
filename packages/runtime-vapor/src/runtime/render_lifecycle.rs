@@ -24,6 +24,11 @@ where
 {
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn dispose_mounted_component_scopes(&mut self, inst_index: usize) {
+        if let Some(inst) = self.instance_store.get(&inst_index) {
+            // 组件 render 期间 JS bridge 会把 currentInstance 暴露为 host；
+            // useSetup/onScopeDispose 的清理可能挂在 host 上，而不是 CI wrapper 上。
+            shared_runtime_bridge::dispose_component(&inst.host);
+        }
         if let Some(instance_wrapper) = component_instance_wrapper(inst_index) {
             // JS shared runtime 可能保存了组件级 hook scope/上下文栈，先通知它释放。
             shared_runtime_bridge::dispose_component(&instance_wrapper);

@@ -54,7 +54,7 @@ describe('Splitter actual page', () => {
     await waitForContent(() => {
       expect(container.textContent).toContain('Splitter 分割面板')
       expect(container.textContent).not.toContain('[object Object]')
-      expect(container.querySelectorAll('.component-preview').length).toBe(6)
+      expect(container.querySelectorAll('.component-preview').length).toBe(5)
     })
 
     const basicDemo = findDemo(container, '# Basic workspace split') as HTMLElement | null
@@ -102,6 +102,46 @@ describe('Splitter actual page', () => {
       mockSplitterRect(root, 600, 300)
       expect(controlledDemo!.querySelector('[data-rue-splitter-handle="0"]')).not.toBeNull()
     })
+
+    const edgeHandle = controlledDemo!.querySelector(
+      '[data-rue-splitter-handle="0"]',
+    ) as HTMLElement
+    edgeHandle.dispatchEvent(
+      new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: 228, button: 0 }),
+    )
+    window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }))
+    window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+
+    await waitForContent(() => {
+      const resizedPanels = controlledDemo!.querySelectorAll('[data-rue-splitter-panel="true"]')
+      const firstPanel = resizedPanels[0] as HTMLElement
+
+      expect(parseFloat(firstPanel.style.flexBasis)).toBe(0)
+      expect(edgeHandle.style.left).toBe('0px')
+    })
+
+    edgeHandle.dispatchEvent(
+      new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: 1, button: 0 }),
+    )
+    window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 180 }))
+    window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+
+    await waitForContent(() => {
+      const resizedPanels = controlledDemo!.querySelectorAll('[data-rue-splitter-panel="true"]')
+      const firstPanel = resizedPanels[0] as HTMLElement
+
+      expect(parseFloat(firstPanel.style.flexBasis)).toBeGreaterThan(170)
+    })
+
+    await click(findButton(controlledDemo!, '平分'))
+
+    await waitForContent(() => {
+      const resetPanels = controlledDemo!.querySelectorAll('[data-rue-splitter-panel="true"]')
+      const firstPanel = resetPanels[0] as HTMLElement
+
+      expect(parseFloat(firstPanel.style.flexBasis)).toBe(300)
+    })
+
     const panels = controlledDemo!.querySelectorAll('[data-rue-splitter-panel="true"]')
     const beforeLock = parseFloat((panels[0] as HTMLElement).style.flexBasis)
 

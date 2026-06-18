@@ -197,41 +197,81 @@ const Demo: FC = () => {
 
 export default Demo;`
 
-const modifierReferenceCode = `// Rue TSX 可直接写入的修饰符写法
-<button v-on:click-stop="onStop" />
-<button v-on:click-prevent="onPrevent" />
-<div v-on:click-self="onSelf" />
-<button v-on:click-once="onOnce" />
-<div v-on:click-capture="onCapture" />
-<div v-on:wheel-passive="onPassiveWheel" />
-<button v-on:click-ctrl="onCtrl" />
-<button v-on:click-shift="onShift" />
-<button v-on:click-alt="onAlt" />
-<button v-on:click-meta="onMeta" />
-<button v-on:click-meta-exact="onMetaExact" />
-<button v-on:click-middle="onMiddle" />
-<input v-on:keyup-enter="onEnter" />
-<input v-on:keyup-tab="onTab" />
-<input v-on:keyup-delete="onDelete" />
-<input v-on:keyup-esc="onEsc" />
-<input v-on:keyup-space="onSpace" />
-<input v-on:keyup-up="onArrowUp" />
-<input v-on:keyup-down="onArrowDown" />
-<input v-on:keyup-left="onArrowLeft" />
-<input v-on:keyup-right="onArrowRight" />
-<input v-on:keyup-13="onKeyCode13" />
-<NativeCard v-on:click-native-once="onNativeRootClick" />
+const modifierReferenceCode = `import { type FC, ref } from '@rue-js/rue';
 
-// 原生 TSX 常见手写等价模式
-onClick={event => { event.stopPropagation(); onStop(event); }}
-onClick={event => { event.preventDefault(); onPrevent(event); }}
-onClick={event => { if (event.target !== event.currentTarget) return; onSelf(event); }}
-onClick={event => { if (!event.metaKey) return; if (event.ctrlKey || event.altKey || event.shiftKey) return; onMetaExact(event); }}
-onClick={event => { if (event.button !== 1) return; onMiddle(event); }}
-onKeyUp={event => { if (event.key !== 'Enter') return; onEnter(event); }}
-onKeyUp={event => { if ((event.keyCode ?? event.which) !== 13) return; onKeyCode13(event); }}
+const NativeCard: FC<{
+  title: string;
+  'v-on:click-native-once'?: string;
+}> = props => (
+  <button className="btn btn-outline">
+    {props.title}
+  </button>
+);
 
-// once / capture / passive 通常需要组件内部自行管理 addEventListener options。`
+const Demo: FC = () => {
+  const lastEvent = ref('等待交互');
+  const write = (name: string) => {
+    lastEvent.value = name;
+  };
+
+  const onStop = (event: MouseEvent) => write('stop: ' + event.type);
+  const onPrevent = (event: MouseEvent) => write('prevent: ' + event.type);
+  const onSelf = (event: MouseEvent) => write('self: ' + event.type);
+  const onOnce = (event: MouseEvent) => write('once: ' + event.type);
+  const onCapture = (event: MouseEvent) => write('capture: ' + event.type);
+  const onPassiveWheel = (event: WheelEvent) => write('passive wheel: ' + event.type);
+  const onCtrl = (event: MouseEvent) => write('ctrl: ' + event.type);
+  const onShift = (event: MouseEvent) => write('shift: ' + event.type);
+  const onAlt = (event: MouseEvent) => write('alt: ' + event.type);
+  const onMeta = (event: MouseEvent) => write('meta: ' + event.type);
+  const onMetaExact = (event: MouseEvent) => write('meta exact: ' + event.type);
+  const onMiddle = (event: MouseEvent) => write('middle: ' + event.type);
+  const onEnter = (event: KeyboardEvent) => write('enter: ' + event.key);
+  const onTab = (event: KeyboardEvent) => write('tab: ' + event.key);
+  const onDelete = (event: KeyboardEvent) => write('delete: ' + event.key);
+  const onEsc = (event: KeyboardEvent) => write('esc: ' + event.key);
+  const onSpace = (event: KeyboardEvent) => write('space: ' + event.key);
+  const onArrowUp = (event: KeyboardEvent) => write('up: ' + event.key);
+  const onArrowDown = (event: KeyboardEvent) => write('down: ' + event.key);
+  const onArrowLeft = (event: KeyboardEvent) => write('left: ' + event.key);
+  const onArrowRight = (event: KeyboardEvent) => write('right: ' + event.key);
+  const onKeyCode13 = (event: KeyboardEvent) => write('keyCode 13: ' + event.key);
+  const onNativeRootClick = (event: MouseEvent) => write('native once: ' + event.type);
+
+  return (
+    <section className="grid gap-4">
+      <button v-on:click-stop="onStop">stop</button>
+      <button v-on:click-prevent="onPrevent">prevent</button>
+      <div v-on:click-self="onSelf">
+        self
+        <button>child button</button>
+      </div>
+      <button v-on:click-once="onOnce">once</button>
+      <div v-on:click-capture="onCapture">capture</div>
+      <div v-on:wheel-passive="onPassiveWheel">passive wheel</div>
+      <button v-on:click-ctrl="onCtrl">ctrl</button>
+      <button v-on:click-shift="onShift">shift</button>
+      <button v-on:click-alt="onAlt">alt</button>
+      <button v-on:click-meta="onMeta">meta</button>
+      <button v-on:click-meta-exact="onMetaExact">meta exact</button>
+      <button v-on:click-middle="onMiddle">middle</button>
+      <input v-on:keyup-enter="onEnter" placeholder="Enter" />
+      <input v-on:keyup-tab="onTab" placeholder="Tab" />
+      <input v-on:keyup-delete="onDelete" placeholder="Delete" />
+      <input v-on:keyup-esc="onEsc" placeholder="Esc" />
+      <input v-on:keyup-space="onSpace" placeholder="Space" />
+      <input v-on:keyup-up="onArrowUp" placeholder="ArrowUp" />
+      <input v-on:keyup-down="onArrowDown" placeholder="ArrowDown" />
+      <input v-on:keyup-left="onArrowLeft" placeholder="ArrowLeft" />
+      <input v-on:keyup-right="onArrowRight" placeholder="ArrowRight" />
+      <input v-on:keyup-13="onKeyCode13" placeholder="keyCode 13" />
+      <NativeCard title="root native once" v-on:click-native-once="onNativeRootClick" />
+      <output>{lastEvent.value}</output>
+    </section>
+  );
+};
+
+export default Demo;`
 
 const NativeCard: FC<{
   title: string
@@ -562,7 +602,7 @@ const VOnAndROn: FC = () => {
                       <code>{'<NativeCard v-on:click-native-once="onNativeRootClick" />'}</code>
                     </pre>
                     <pre data-prefix="2">
-                      <code>{'// 编译后包装为 _$vaporWithNativeEvents(...)'}</code>
+                      <code>{'// 编译后保留 native + once 的事件配置'}</code>
                     </pre>
                     <pre data-prefix="3">
                       <code>{'// native + once 仍然属于同一条修饰符编译链'}</code>

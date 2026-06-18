@@ -110,4 +110,43 @@ describe('Mask', () => {
       expect(el.classList.contains('ring-1')).toBe(true)
     })
   })
+
+  it('renders media content and captions with native host branches', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <div>
+        <Mask
+          src="https://picsum.photos/180/180"
+          alt="Captioned"
+          content="Overlay"
+          caption="Figure caption"
+          data-testid="mask-figure"
+        />
+        <Mask
+          as="div"
+          src="https://picsum.photos/180/180"
+          alt="Wrapped"
+          content="Panel"
+          caption="Div caption"
+          data-testid="mask-div-wrapper"
+        />
+      </div>,
+      container,
+    )
+
+    await waitForContent(() => {
+      const figure = container.querySelector('[data-testid="mask-figure"]') as HTMLElement
+      const divWrapper = container.querySelector('[data-testid="mask-div-wrapper"]') as HTMLElement
+
+      expect(figure.tagName.toLowerCase()).toBe('figure')
+      expect(figure.querySelector('figcaption')?.textContent).toBe('Figure caption')
+      expect(figure.textContent).toContain('Overlay')
+      expect(divWrapper.tagName.toLowerCase()).toBe('div')
+      expect(divWrapper.querySelector('figcaption')).toBeNull()
+      expect(divWrapper.textContent).toContain('Div caption')
+      expect(divWrapper.textContent).toContain('Panel')
+    })
+  })
 })

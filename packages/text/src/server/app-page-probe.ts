@@ -14,6 +14,8 @@ import {
 import { isAppRscServerClientReference } from './app-rsc-client-reference-protocol.js'
 import { runWithServerElementRuntime } from './server-element-runtime.js'
 
+const TEXT_CLIENT_REFERENCE_SSR_KEY = Symbol.for('text.clientReferenceSsr')
+
 /**
  * Build a probePage() invocation for the App Router request lifecycle.
  *
@@ -54,6 +56,48 @@ export function probeAppPage(options: {
   )
 }
 
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    (typeof value === 'object' || typeof value === 'function') &&
+    value !== null &&
+    typeof (value as { then?: unknown }).then === 'function'
+  )
+}
+
+function runWithAppClientReferenceSsr<T>(callback: () => T): T {
+  const globalState = globalThis as Record<symbol, unknown>
+  const previous = globalState[TEXT_CLIENT_REFERENCE_SSR_KEY]
+  const previousCount = typeof previous === 'number' ? previous : 0
+  globalState[TEXT_CLIENT_REFERENCE_SSR_KEY] = previousCount + 1
+
+  const restore = () => {
+    if (previous === undefined) {
+      delete globalState[TEXT_CLIENT_REFERENCE_SSR_KEY]
+    } else {
+      globalState[TEXT_CLIENT_REFERENCE_SSR_KEY] = previous
+    }
+  }
+
+  let restoreOnReturn = true
+  try {
+    const result = callback()
+    if (isThenable(result)) {
+      restoreOnReturn = false
+      return Promise.resolve(result).finally(restore) as T
+    }
+    return result
+  } finally {
+    if (restoreOnReturn) restore()
+  }
+}
+
+function runClientPageComponentForProbe(
+  component: (props: Record<string, unknown>) => unknown,
+  pageProps: Record<string, unknown>,
+): unknown {
+  return runWithAppClientReferenceSsr(() => runWithServerElementRuntime(() => component(pageProps)))
+}
+
 async function resolveAppClientPageComponentForProbe(
   pageComponent: unknown,
   pageProps: Record<string, unknown>,
@@ -71,15 +115,17 @@ async function resolveAppClientPageComponentForProbe(
   if (resolvedPageComponent) {
     return Promise.resolve(resolvedPageComponent).then(component =>
       typeof component === 'function'
-        ? runWithServerElementRuntime(() =>
-            (component as (props: Record<string, unknown>) => unknown)(pageProps),
+        ? runClientPageComponentForProbe(
+            component as (props: Record<string, unknown>) => unknown,
+            pageProps,
           )
         : null,
     )
   }
 
-  return runWithServerElementRuntime(() =>
-    (pageComponent as (props: Record<string, unknown>) => unknown)(pageProps),
+  return runClientPageComponentForProbe(
+    pageComponent as (props: Record<string, unknown>) => unknown,
+    pageProps,
   )
 }
 

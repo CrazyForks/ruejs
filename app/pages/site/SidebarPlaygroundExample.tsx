@@ -48,11 +48,6 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/hello-world',
         },
         {
-          id: 'on-deactivated',
-          title: 'onDeactivated',
-          href: '/examples/on-deactivated',
-        },
-        {
           id: 'handling-input',
           title: '处理输入',
           href: '/examples/handling-input',
@@ -78,24 +73,9 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/simple-component',
         },
         {
-          id: 'on-error-captured',
-          title: 'onErrorCaptured 错误捕获',
-          href: '/examples/on-error-captured',
-        },
-        {
           id: 'reactive-props-destructure',
           title: 'Reactive Props Destructure',
           href: '/examples/reactive-props-destructure',
-        },
-        {
-          id: 'to-refs',
-          title: 'toRefs 响应式解构',
-          href: '/examples/to-refs',
-        },
-        {
-          id: 'freeze-compiler-trap',
-          title: '卡死复现（编译器坏路径）',
-          href: '/examples/freeze-compiler-trap',
         },
         {
           id: 'props-setup-boundary',
@@ -310,6 +290,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/to-ref',
         },
         {
+          id: 'to-refs',
+          title: 'toRefs 响应式解构',
+          href: '/examples/to-refs',
+        },
+        {
           id: 'is-ref',
           title: 'isRef 判定示例',
           href: '/examples/is-ref',
@@ -364,6 +349,16 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           id: 'on-render-triggered',
           title: 'onRenderTriggered 调试',
           href: '/examples/on-render-triggered',
+        },
+        {
+          id: 'on-deactivated',
+          title: 'onDeactivated',
+          href: '/examples/on-deactivated',
+        },
+        {
+          id: 'on-error-captured',
+          title: 'onErrorCaptured 错误捕获',
+          href: '/examples/on-error-captured',
         },
         {
           id: 'use-state-counter',
@@ -445,12 +440,12 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
         },
         {
           id: 'component-v-model',
-          title: '组件级 vModel',
+          title: '组件级 v-model',
           href: '/examples/component-v-model',
         },
         {
           id: 'named-v-model',
-          title: '命名 vModel',
+          title: '命名 v-model',
           href: '/examples/named-v-model',
         },
         {

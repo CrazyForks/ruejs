@@ -82,7 +82,7 @@ fn jsx_to_block_builds_native_root_attrs_children_and_return() {
 
     assert!(out.contains("const_root=_$createElement(\"section\",__rue_parent_context);"));
     assert!(out.contains("_$setAttribute(_root,\"id\",\"app\");"));
-    assert!(out.contains("watchEffect(()=>{_$setClassName(_root,String((klass)));"));
+    assert!(out.contains("watchEffect(()=>{_$setClassName(_root,(klass));"));
     assert!(out.contains("_$appendChild(_root,_$createTextNode(\"hello\"));"));
     assert!(out.contains("const_el1=_$createElement(\"span\",_root);"));
     assert!(out.contains("_$createComment(\"rue:slot:anchor\")"));

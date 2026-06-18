@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /*
 FileInput 组件概述
 - 保留 Rue 当前 `input[type=file] + file-input-*` 的原始样式入口。
@@ -6,7 +5,16 @@ FileInput 组件概述
 - 组件仍聚焦“文件选择与列表编排”，真正的上传请求继续由业务侧处理。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
+import {
+  onMounted,
+  onUpdated,
+  ref,
+  render as renderRue,
+  toRaw,
+  useRef,
+  useSetup,
+  watch,
+} from '@rue-js/rue'
 
 /** FileInputVariant 视觉或语义变体类型。 */
 export type FileInputVariant =
@@ -19,6 +27,8 @@ export type FileInputVariant =
   | 'warning'
   | 'error'
 
+/** FileInputColor 语义色类型。 */
+export type FileInputColor = 'default' | FileInputVariant
 /** FileInputSize 尺寸类型。 */
 export type FileInputSize =
   | 'xs'
@@ -118,7 +128,9 @@ export type FileInputPreviewFile = (file: File | Blob) => Promise<string>
 
 /** FileInputProps 组件属性。 */
 export interface FileInputProps {
-  /** 组件视觉变体。 */
+  /** 组件语义色。 */
+  color?: FileInputColor
+  /** 组件视觉变体；兼容旧版颜色写法。 */
   variant?: FileInputVariant
   /** 组件尺寸。 */
   size?: FileInputSize
@@ -188,10 +200,27 @@ type FileInputCompound = FC<FileInputProps> & {
 /** FILE_INPUT_LIST_IGNORE 内部常量。 */
 const FILE_INPUT_LIST_IGNORE = Symbol('RUE_FILE_INPUT_LIST_IGNORE')
 let uidSeed = 0
+let inputIdSeed = 0
 
 /** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...parts: Array<string | undefined | false | null>) => {
   return parts.filter(Boolean).join(' ')
+}
+
+/** 判断 Children 是否有可渲染内容。 */
+const hasRenderableChildren = (children: any) => {
+  return (
+    children !== undefined && children !== null && (!Array.isArray(children) || children.length > 0)
+  )
+}
+
+/** 解析 Color Tone 的内部工具函数。 */
+const resolveColorTone = (
+  color?: FileInputColor,
+  variant?: FileInputVariant,
+): FileInputVariant | undefined => {
+  if (color && color !== 'default') return color
+  return variant
 }
 
 /** 判断 Promise Like 的内部工具函数。 */
@@ -214,17 +243,200 @@ const resolveSizeClass = (size?: FileInputSize) => {
   }
 }
 
+/** 解析 Native Input Size Class 的内部工具函数。 */
+const resolveNativeSizeClassName = (size?: FileInputSize) => {
+  switch (resolveSizeClass(size)) {
+    case 'xs':
+      return 'file-input-xs'
+    case 'sm':
+      return 'file-input-sm'
+    case 'md':
+      return 'file-input-md'
+    case 'lg':
+      return 'file-input-lg'
+    case 'xl':
+      return 'file-input-xl'
+    default:
+      return undefined
+  }
+}
+
+/** 解析 Button Size Class 的内部工具函数。 */
+const resolveButtonSizeClassName = (size?: FileInputSize) => {
+  switch (resolveSizeClass(size)) {
+    case 'xs':
+      return 'btn-xs'
+    case 'sm':
+      return 'btn-sm'
+    case 'md':
+      return 'btn-md'
+    case 'lg':
+      return 'btn-lg'
+    case 'xl':
+      return 'btn-xl'
+    default:
+      return undefined
+  }
+}
+
+/** 解析 Native Input Color Class 的内部工具函数。 */
+const resolveNativeColorClassName = (tone?: FileInputVariant) => {
+  switch (tone) {
+    case 'neutral':
+      return 'file-input-neutral'
+    case 'primary':
+      return 'file-input-primary'
+    case 'secondary':
+      return 'file-input-secondary'
+    case 'accent':
+      return 'file-input-accent'
+    case 'info':
+      return 'file-input-info'
+    case 'success':
+      return 'file-input-success'
+    case 'warning':
+      return 'file-input-warning'
+    case 'error':
+      return 'file-input-error'
+    default:
+      return undefined
+  }
+}
+
+/** 解析 Button Color Class 的内部工具函数。 */
+const resolveButtonColorClassName = (tone?: FileInputVariant) => {
+  switch (tone) {
+    case 'neutral':
+      return 'btn-neutral'
+    case 'primary':
+      return 'btn-primary'
+    case 'secondary':
+      return 'btn-secondary'
+    case 'accent':
+      return 'btn-accent'
+    case 'info':
+      return 'btn-info'
+    case 'success':
+      return 'btn-success'
+    case 'warning':
+      return 'btn-warning'
+    case 'error':
+      return 'btn-error'
+    default:
+      return undefined
+  }
+}
+
+/** 解析 Text Color Class 的内部工具函数。 */
+const resolveTextColorClassName = (tone?: FileInputVariant) => {
+  switch (tone) {
+    case 'neutral':
+      return 'text-neutral'
+    case 'primary':
+      return 'text-primary'
+    case 'secondary':
+      return 'text-secondary'
+    case 'accent':
+      return 'text-accent'
+    case 'info':
+      return 'text-info'
+    case 'success':
+      return 'text-success'
+    case 'warning':
+      return 'text-warning'
+    case 'error':
+      return 'text-error'
+    default:
+      return undefined
+  }
+}
+
+/** 解析 Dropzone Active Class 的内部工具函数。 */
+const resolveDropzoneActiveClassName = (tone?: FileInputVariant) => {
+  switch (tone) {
+    case 'neutral':
+      return 'border-neutral bg-neutral/5'
+    case 'primary':
+      return 'border-primary bg-primary/5'
+    case 'secondary':
+      return 'border-secondary bg-secondary/5'
+    case 'accent':
+      return 'border-accent bg-accent/5'
+    case 'info':
+      return 'border-info bg-info/5'
+    case 'success':
+      return 'border-success bg-success/5'
+    case 'warning':
+      return 'border-warning bg-warning/5'
+    case 'error':
+      return 'border-error bg-error/5'
+    default:
+      return 'border-primary bg-primary/5'
+  }
+}
+
+/** 解析 Dropzone Hover Border Class 的内部工具函数。 */
+const resolveDropzoneHoverClassName = (tone?: FileInputVariant) => {
+  switch (tone) {
+    case 'neutral':
+      return 'hover:border-neutral/40 hover:bg-base-200/40'
+    case 'primary':
+      return 'hover:border-primary/40 hover:bg-base-200/40'
+    case 'secondary':
+      return 'hover:border-secondary/40 hover:bg-base-200/40'
+    case 'accent':
+      return 'hover:border-accent/40 hover:bg-base-200/40'
+    case 'info':
+      return 'hover:border-info/40 hover:bg-base-200/40'
+    case 'success':
+      return 'hover:border-success/40 hover:bg-base-200/40'
+    case 'warning':
+      return 'hover:border-warning/40 hover:bg-base-200/40'
+    case 'error':
+      return 'hover:border-error/40 hover:bg-base-200/40'
+    default:
+      return 'hover:border-primary/40 hover:bg-base-200/40'
+  }
+}
+
+/** 解析 Dropzone Icon Color Class 的内部工具函数。 */
+const resolveDropzoneIconClassName = (tone?: FileInputVariant) => {
+  switch (tone) {
+    case 'neutral':
+      return 'bg-neutral/10 text-neutral'
+    case 'primary':
+      return 'bg-primary/10 text-primary'
+    case 'secondary':
+      return 'bg-secondary/10 text-secondary'
+    case 'accent':
+      return 'bg-accent/10 text-accent'
+    case 'info':
+      return 'bg-info/10 text-info'
+    case 'success':
+      return 'bg-success/10 text-success'
+    case 'warning':
+      return 'bg-warning/10 text-warning'
+    case 'error':
+      return 'bg-error/10 text-error'
+    default:
+      return 'bg-primary/10 text-primary'
+  }
+}
+
 /** 构建 Native Input Class Name 的内部工具函数。 */
 const buildNativeInputClassName = ({
+  color,
   variant,
   size,
   ghost,
   className,
-}: Pick<FileInputProps, 'variant' | 'size' | 'ghost' | 'className'>) => {
+}: Pick<FileInputProps, 'color' | 'variant' | 'size' | 'ghost' | 'className'>) => {
   let cls = 'file-input'
-  const resolvedSize = resolveSizeClass(size)
-  if (variant) cls += ` file-input-${variant}`
-  if (resolvedSize) cls += ` file-input-${resolvedSize}`
+  const resolvedTone = resolveColorTone(color, variant)
+  const resolvedColorClassName = resolveNativeColorClassName(resolvedTone)
+  const resolvedSizeClassName = resolveNativeSizeClassName(size)
+  if (resolvedColorClassName) cls += ` ${resolvedColorClassName}`
+  if (resolvedSizeClassName) cls += ` ${resolvedSizeClassName}`
   if (ghost) cls += ' file-input-ghost'
   if (className) cls += ` ${className}`
   return cls
@@ -232,15 +444,18 @@ const buildNativeInputClassName = ({
 
 /** 构建 Trigger Button Class Name 的内部工具函数。 */
 const buildTriggerButtonClassName = ({
+  color,
   variant,
   size,
   ghost,
   className,
-}: Pick<FileInputProps, 'variant' | 'size' | 'ghost'> & { className?: string }) => {
+}: Pick<FileInputProps, 'color' | 'variant' | 'size' | 'ghost'> & { className?: string }) => {
   let cls = 'btn'
-  const resolvedSize = resolveSizeClass(size)
-  if (variant) cls += ` btn-${variant}`
-  if (resolvedSize) cls += ` btn-${resolvedSize}`
+  const resolvedTone = resolveColorTone(color, variant)
+  const resolvedColorClassName = resolveButtonColorClassName(resolvedTone)
+  const resolvedSizeClassName = resolveButtonSizeClassName(size)
+  if (resolvedColorClassName) cls += ` ${resolvedColorClassName}`
+  if (resolvedSizeClassName) cls += ` ${resolvedSizeClassName}`
   if (ghost) cls += ' btn-ghost'
   if (className) cls += ` ${className}`
   return cls
@@ -248,23 +463,26 @@ const buildTriggerButtonClassName = ({
 
 /** 构建 Dropzone Class Name 的内部工具函数。 */
 const buildDropzoneClassName = ({
+  color,
   variant,
   disabled,
   dragging,
   className,
 }: {
+  color?: FileInputColor
   variant?: FileInputVariant
   disabled?: boolean
   dragging?: boolean
   className?: string
 }) => {
+  const resolvedTone = resolveColorTone(color, variant)
   return mergeClassNames(
     'rounded-box border-2 border-dashed bg-base-100 p-5 transition',
-    dragging ? 'border-primary bg-primary/5' : 'border-base-300',
-    variant ? `text-${variant}` : undefined,
+    dragging ? resolveDropzoneActiveClassName(resolvedTone) : 'border-base-300',
+    resolveTextColorClassName(resolvedTone),
     disabled
       ? 'cursor-not-allowed opacity-60'
-      : 'cursor-pointer hover:border-primary/40 hover:bg-base-200/40',
+      : `cursor-pointer ${resolveDropzoneHoverClassName(resolvedTone)}`,
     className,
   )
 }
@@ -297,19 +515,97 @@ const isImageLike = (file: FileInputFile) => {
   return /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(url)
 }
 
+/** 转义预览页文本的内部工具函数。 */
+const escapePreviewHtml = (value: string) => {
+  return value.replace(/[&<>"']/g, char => {
+    switch (char) {
+      case '&':
+        return '&amp;'
+      case '<':
+        return '&lt;'
+      case '>':
+        return '&gt;'
+      case '"':
+        return '&quot;'
+      case "'":
+        return '&#39;'
+      default:
+        return char
+    }
+  })
+}
+
+/** 读取原生 Blob，避免响应式代理传入 FileReader。 */
+const toNativeBlob = (value: unknown): File | Blob | null => {
+  if (value == null || typeof Blob === 'undefined') return null
+  const rawValue = toRaw<File | Blob | unknown>(value)
+  if (rawValue instanceof Blob) return rawValue
+  if (value instanceof Blob) return value
+  return null
+}
+
+/** 判断 Native File 的内部工具函数。 */
+const isNativeFile = (file: File | Blob): file is File => {
+  return typeof File !== 'undefined' && file instanceof File
+}
+
 /** read File As Data Url 的内部工具函数。 */
 const readFileAsDataUrl = (file: File | Blob) => {
   return new Promise<string>((resolve, reject) => {
+    const nativeFile = toNativeBlob(file)
+    if (!nativeFile) {
+      reject(new TypeError('FileInput previewFile expects a File or Blob.'))
+      return
+    }
     const reader = new FileReader()
     reader.onload = () => resolve((reader.result as string) ?? '')
     reader.onerror = error => reject(error)
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(nativeFile)
   })
 }
 
 /** default Preview File 的内部工具函数。 */
 const defaultPreviewFile: FileInputPreviewFile = file => {
   return readFileAsDataUrl(file)
+}
+
+/** 打开预览窗口的内部工具函数。 */
+const openPreviewWindow = (file: FileInputFile, previewUrl: string) => {
+  if (!previewUrl || typeof window === 'undefined') return
+  const previewWindow = window.open('', '_blank')
+  if (!previewWindow) return
+
+  try {
+    previewWindow.opener = null
+  } catch {
+    // ignore browsers that disallow mutating opener
+  }
+
+  const shouldRenderImage = isImageLike({ ...file, preview: previewUrl })
+  if (!shouldRenderImage) {
+    previewWindow.location.href = previewUrl
+    return
+  }
+
+  const title = escapePreviewHtml(file.name || 'Preview')
+  const src = escapePreviewHtml(previewUrl)
+  previewWindow.document.write(`<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<style>
+html,body{margin:0;min-height:100%;background:#111;color:#f8fafc;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+body{display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;}
+img{max-width:100%;max-height:100vh;object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+</style>
+</head>
+<body>
+<img src="${src}" alt="${title}">
+</body>
+</html>`)
+  previewWindow.document.close()
 }
 
 /** 创建 Uid 的内部工具函数。 */
@@ -359,6 +655,102 @@ const normalizeFileList = (fileList?: FileInputFile[]) => {
   return (fileList ?? []).map((file, index) => normalizeFileItem(cloneFileItem(file), index))
 }
 
+type UncontrolledFileListCacheEntry = {
+  fileList: FileInputFile[]
+  touchedAt: number
+}
+
+const MAX_UNCONTROLLED_FILE_LIST_CACHE_SIZE = 100
+const UNCONTROLLED_FILE_LIST_CACHE_TTL = 30_000
+const uncontrolledFileListCache = new Map<string, UncontrolledFileListCacheEntry>()
+
+/** stringify Cache Part 的内部工具函数。 */
+const stringifyCachePart = (value: any) => {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+  return ''
+}
+
+/** 创建 Default File List Signature 的内部工具函数。 */
+const createDefaultFileListSignature = (fileList?: FileInputFile[]) => {
+  return (fileList ?? [])
+    .map((file, index) =>
+      [
+        file.uid ?? '',
+        file.name ?? `index-${index}`,
+        file.type ?? '',
+        file.size ?? '',
+        file.status ?? '',
+      ].join(':'),
+    )
+    .join('|')
+}
+
+/** 解析 Uncontrolled File List Cache Key 的内部工具函数。 */
+const resolveUncontrolledFileListCacheKey = (options: {
+  id?: any
+  name?: any
+  title?: any
+  buttonText?: any
+  hint?: any
+  accept?: any
+  listType?: any
+  maxCount?: any
+  multiple?: any
+  directory?: any
+  defaultFileList?: FileInputFile[]
+}) => {
+  if (options.id !== undefined && options.id !== null && options.id !== '') {
+    return `id:${String(options.id)}`
+  }
+  if (typeof options.name === 'string' && options.name) {
+    return `name:${options.name}`
+  }
+
+  return [
+    'auto',
+    stringifyCachePart(options.title),
+    stringifyCachePart(options.buttonText),
+    stringifyCachePart(options.hint),
+    stringifyCachePart(options.accept),
+    stringifyCachePart(options.listType),
+    stringifyCachePart(options.maxCount),
+    options.multiple ? 'multiple' : 'single',
+    options.directory ? 'directory' : 'file',
+    createDefaultFileListSignature(options.defaultFileList),
+  ].join('\u001f')
+}
+
+/** 读取 Uncontrolled File List Cache 的内部工具函数。 */
+const readUncontrolledFileListCache = (cacheKey: string, defaultFileList?: FileInputFile[]) => {
+  const cached = uncontrolledFileListCache.get(cacheKey)
+  if (!cached) return normalizeFileList(defaultFileList)
+
+  if (Date.now() - cached.touchedAt > UNCONTROLLED_FILE_LIST_CACHE_TTL) {
+    uncontrolledFileListCache.delete(cacheKey)
+    return normalizeFileList(defaultFileList)
+  }
+
+  cached.touchedAt = Date.now()
+  return normalizeFileList(cached.fileList)
+}
+
+/** 写入 Uncontrolled File List Cache 的内部工具函数。 */
+const writeUncontrolledFileListCache = (cacheKey: string, fileList: FileInputFile[]) => {
+  uncontrolledFileListCache.set(cacheKey, {
+    fileList: fileList.map(cloneFileItem),
+    touchedAt: Date.now(),
+  })
+
+  if (uncontrolledFileListCache.size <= MAX_UNCONTROLLED_FILE_LIST_CACHE_SIZE) return
+
+  const oldestKey = Array.from(uncontrolledFileListCache.entries()).sort(
+    (left, right) => left[1].touchedAt - right[1].touchedAt,
+  )[0]?.[0]
+  if (oldestKey) uncontrolledFileListCache.delete(oldestKey)
+}
+
 /** apply Max Count 的内部工具函数。 */
 const applyMaxCount = (fileList: FileInputFile[], maxCount?: number) => {
   if (!maxCount || maxCount <= 0) return fileList
@@ -376,10 +768,7 @@ const formatFileSize = (size?: number) => {
 
 /** 判断 Enhanced Mode 的内部工具函数。 */
 const isEnhancedMode = (props: FileInputProps) => {
-  const hasCustomChildren =
-    props.children !== undefined &&
-    props.children !== null &&
-    (!Array.isArray(props.children) || props.children.length > 0)
+  const hasCustomChildren = hasRenderableChildren(props.children)
 
   return (
     props.drag === true ||
@@ -527,6 +916,7 @@ const DefaultRemoveIcon: FC = () => {
 
 /** File Input Root 的内部工具函数。 */
 const FileInputRoot: FC<FileInputProps> = ({
+  color,
   variant,
   size,
   ghost,
@@ -556,9 +946,43 @@ const FileInputRoot: FC<FileInputProps> = ({
   onRemove,
   previewFile,
   onChange,
+  id,
+  ref: _forwardedRef,
   ...rest
 }) => {
+  const controlled = fileList !== undefined
+  const uncontrolledFileListCacheKey = controlled
+    ? ''
+    : resolveUncontrolledFileListCacheKey({
+        id,
+        name: rest.name,
+        title,
+        buttonText,
+        hint,
+        accept: rest.accept,
+        listType,
+        maxCount,
+        multiple,
+        directory,
+        defaultFileList,
+      })
+  const instance = useSetup(() => ({
+    inputId: `rue-file-input-control-${inputIdSeed++}`,
+    dragging: ref(false),
+    currentFileList: ref(
+      controlled
+        ? normalizeFileList(fileList)
+        : readUncontrolledFileListCache(uncontrolledFileListCacheKey, defaultFileList),
+    ),
+    listVersion: ref(0),
+    lastControlledFileList: (controlled ? fileList : undefined) as FileInputFile[] | undefined,
+    effectsRegistered: false,
+    syncFromProps: (() => false) as () => boolean,
+    renderDynamicRegion: (() => {}) as () => void,
+  }))
+  const inputId = id ?? instance.inputId
   const enhancedMode = isEnhancedMode({
+    color,
     variant,
     size,
     ghost,
@@ -598,21 +1022,20 @@ const FileInputRoot: FC<FileInputProps> = ({
     return (
       <input
         {...rest}
+        id={id}
         type="file"
         multiple={multiple}
         disabled={disabled}
-        className={buildNativeInputClassName({ variant, size, ghost, className })}
+        className={buildNativeInputClassName({ color, variant, size, ghost, className })}
       />
     )
   }
 
   const inputRef = useRef<HTMLInputElement>()
   const dynamicHostRef = useRef<HTMLDivElement>()
-  const forwardedRef = rest.ref
-  const dragging = ref(false)
-  const controlled = fileList !== undefined
-  const currentFileList = ref(normalizeFileList(controlled ? fileList : defaultFileList))
-  const listVersion = ref(0)
+  const dragging = instance.dragging
+  const currentFileList = instance.currentFileList
+  const listVersion = instance.listVersion
   const uploadListConfig =
     resolvedShowUploadList && typeof resolvedShowUploadList === 'object'
       ? resolvedShowUploadList
@@ -621,34 +1044,51 @@ const FileInputRoot: FC<FileInputProps> = ({
   const showPreviewIcon = uploadListConfig?.showPreviewIcon ?? true
   const showRemoveIcon = uploadListConfig?.showRemoveIcon ?? true
   const acceptsMany = multiple || (typeof maxCount === 'number' && maxCount > 1)
-
-  if ('ref' in rest) {
-    delete rest.ref
-  }
+  const hasCustomChildren = hasRenderableChildren(children)
+  const triggerOpensPicker =
+    !disabled &&
+    resolvedOpenFileDialogOnClick &&
+    (hasCustomChildren || drag || resolvedListType === 'picture-card')
+  const directoryInputProps = directory ? { directory: '', webkitdirectory: '' } : {}
 
   const assignInputRef = (element: HTMLInputElement | null) => {
     inputRef.current = element ?? undefined
-    if (typeof forwardedRef === 'function') {
-      forwardedRef(element)
+    if (typeof _forwardedRef === 'function') {
+      _forwardedRef(element)
       return
     }
-    if (forwardedRef && typeof forwardedRef === 'object') {
-      ;(forwardedRef as any).current = element ?? undefined
+    if (_forwardedRef && typeof _forwardedRef === 'object') {
+      ;(_forwardedRef as any).current = element ?? undefined
+    }
+  }
+
+  const assignDynamicHostRef = (element: HTMLDivElement | null) => {
+    dynamicHostRef.current = element ?? undefined
+    if (element) {
+      instance.renderDynamicRegion()
     }
   }
 
   const syncFromProps = () => {
-    if (controlled) {
-      currentFileList.value = normalizeFileList(fileList)
-      listVersion.value += 1
+    if (!controlled) {
+      instance.lastControlledFileList = undefined
+      return false
     }
+    if (fileList === instance.lastControlledFileList) return false
+
+    instance.lastControlledFileList = fileList
+    currentFileList.value = normalizeFileList(fileList)
+    listVersion.value += 1
+    return true
   }
 
   const updateFileListState = (nextFileList: FileInputFile[]) => {
+    currentFileList.value = nextFileList
     if (!controlled) {
-      currentFileList.value = nextFileList
-      listVersion.value += 1
+      writeUncontrolledFileListCache(uncontrolledFileListCacheKey, nextFileList)
     }
+    listVersion.value += 1
+    instance.renderDynamicRegion()
   }
 
   const emitEnhancedChange = (info: FileInputChangeInfo) => {
@@ -657,14 +1097,20 @@ const FileInputRoot: FC<FileInputProps> = ({
     }
   }
 
-  const openPicker = () => {
-    if (disabled || !resolvedOpenFileDialogOnClick) return
-    inputRef.current?.click()
+  const readNativeInput = () => {
+    if (typeof document === 'undefined') return null
+    return document.getElementById(inputId) as HTMLInputElement | null
   }
 
-  const clearNativeInputValue = () => {
-    if (inputRef.current) {
-      inputRef.current.value = ''
+  const openPicker = () => {
+    if (disabled || !resolvedOpenFileDialogOnClick) return
+    ;(inputRef.current ?? readNativeInput())?.click()
+  }
+
+  const clearNativeInputValue = (input?: HTMLInputElement | null) => {
+    const element = input ?? readNativeInput()
+    if (element) {
+      element.value = ''
     }
   }
 
@@ -672,10 +1118,12 @@ const FileInputRoot: FC<FileInputProps> = ({
     if (file.thumbUrl) return file.thumbUrl
     if (file.url) return file.url
     if (file.preview) return file.preview
-    const originFile = file.originFileObj
+    const originFile = toNativeBlob(file.originFileObj)
     if (!originFile) return ''
     const previewData = await resolvedPreviewFile(originFile)
     file.preview = previewData
+    listVersion.value += 1
+    instance.renderDynamicRegion()
     return previewData
   }
 
@@ -685,9 +1133,7 @@ const FileInputRoot: FC<FileInputProps> = ({
       return
     }
     const previewUrl = await resolvePreviewUrl(file)
-    if (previewUrl && typeof window !== 'undefined') {
-      window.open(previewUrl, '_blank', 'noopener,noreferrer')
-    }
+    openPreviewWindow(file, previewUrl)
   }
 
   const applyRemove = (file: FileInputFile) => {
@@ -732,14 +1178,16 @@ const FileInputRoot: FC<FileInputProps> = ({
     beforeResult: boolean | File | Blob | typeof FILE_INPUT_LIST_IGNORE,
   ) => {
     if (beforeResult === FILE_INPUT_LIST_IGNORE) return null
-    if (beforeResult instanceof Blob) {
-      const transformedFile =
-        beforeResult instanceof File
-          ? beforeResult
-          : new File([beforeResult], selectedFile.name, {
-              type: beforeResult.type || selectedFile.type,
+    const beforeFile = toNativeBlob(beforeResult)
+    if (beforeFile) {
+      const transformedFile = isNativeFile(beforeFile)
+        ? beforeFile
+        : typeof File !== 'undefined'
+          ? new File([beforeFile], selectedFile.name, {
+              type: beforeFile.type || selectedFile.type,
               lastModified: selectedFile.lastModified,
             })
+          : beforeFile
       return toFileItem(transformedFile, selectedFile.name)
     }
     return toFileItem(selectedFile, selectedFile.name)
@@ -749,9 +1197,10 @@ const FileInputRoot: FC<FileInputProps> = ({
     resolvedFiles: FileInputFile[],
     source: 'select' | 'drop',
     nativeEvent?: Event | DragEvent,
+    inputElement?: HTMLInputElement | null,
   ) => {
     if (resolvedFiles.length <= 0) {
-      clearNativeInputValue()
+      clearNativeInputValue(inputElement)
       return
     }
 
@@ -766,19 +1215,20 @@ const FileInputRoot: FC<FileInputProps> = ({
       source,
       nativeEvent,
     })
-    clearNativeInputValue()
+    clearNativeInputValue(inputElement)
   }
 
   const buildSelectedList = (
     selectedFiles: File[],
     source: 'select' | 'drop',
     nativeEvent?: Event | DragEvent,
+    inputElement?: HTMLInputElement | null,
   ) => {
     const resolvedFiles: FileInputFile[] = []
 
     const processAt = (index: number): void => {
       if (index >= selectedFiles.length) {
-        commitSelectedFiles(resolvedFiles, source, nativeEvent)
+        commitSelectedFiles(resolvedFiles, source, nativeEvent, inputElement)
         return
       }
 
@@ -810,7 +1260,7 @@ const FileInputRoot: FC<FileInputProps> = ({
   const handleNativeChange = (event: Event) => {
     const target = event.target as HTMLInputElement | null
     const selectedFiles = Array.from(target?.files ?? [])
-    buildSelectedList(selectedFiles, 'select', event)
+    buildSelectedList(selectedFiles, 'select', event, target)
   }
 
   const handleDragOver = (event: DragEvent) => {
@@ -819,6 +1269,10 @@ const FileInputRoot: FC<FileInputProps> = ({
       ;(event as any).preventDefault()
     }
     dragging.value = true
+  }
+
+  const handleDragEnter = (event: DragEvent) => {
+    handleDragOver(event)
   }
 
   const handleDragLeave = (event: DragEvent) => {
@@ -855,14 +1309,21 @@ const FileInputRoot: FC<FileInputProps> = ({
     )
   }
 
-  const renderListItem = (file: FileInputFile) => {
-    const extraContent =
-      typeof uploadListConfig?.extra === 'function'
-        ? uploadListConfig.extra(file)
-        : uploadListConfig?.extra
+  const canPreviewFile = (file: FileInputFile) => {
+    return (
+      !!onPreview ||
+      !!file.thumbUrl ||
+      !!file.url ||
+      !!file.preview ||
+      !!toNativeBlob(file.originFileObj)
+    )
+  }
 
-    const defaultNode =
-      resolvedListType === 'picture-card' ? (
+  const renderDefaultListItem = (file: FileInputFile, extraContent: any) => {
+    const shouldShowPreviewIcon = showPreviewIcon && canPreviewFile(file)
+
+    if (resolvedListType === 'picture-card') {
+      return (
         <div
           className={mergeClassNames(
             'group relative flex aspect-square flex-col overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-sm',
@@ -873,7 +1334,7 @@ const FileInputRoot: FC<FileInputProps> = ({
             type="button"
             className="relative flex flex-1 items-center justify-center overflow-hidden bg-base-200/60 text-base-content"
             onClick={() => void handlePreview(file)}
-            disabled={disabled}
+            disabled={disabled || !canPreviewFile(file)}
           >
             {renderFileThumb(file)}
           </button>
@@ -883,9 +1344,9 @@ const FileInputRoot: FC<FileInputProps> = ({
               <div className="mt-1 text-xs text-base-content/60">{extraContent}</div>
             ) : null}
           </div>
-          {(showPreviewIcon || showRemoveIcon) && !disabled ? (
+          {(shouldShowPreviewIcon || showRemoveIcon) && !disabled ? (
             <div className="absolute top-2 right-2 flex gap-1 opacity-100 md:opacity-0 md:transition md:group-hover:opacity-100">
-              {showPreviewIcon ? (
+              {shouldShowPreviewIcon ? (
                 <button
                   type="button"
                   className="btn btn-circle btn-xs border-none bg-base-100/90 shadow-sm"
@@ -918,71 +1379,79 @@ const FileInputRoot: FC<FileInputProps> = ({
             </div>
           ) : null}
         </div>
-      ) : (
-        <div
-          className={mergeClassNames(
-            'flex items-center gap-3 rounded-box border border-base-300 bg-base-100 px-3 py-3 shadow-sm',
-            itemClassName,
-          )}
-        >
-          {isPictureType(resolvedListType) ? (
-            <button
-              type="button"
-              className="h-14 w-14 shrink-0 overflow-hidden rounded-box"
-              onClick={() => void handlePreview(file)}
-              disabled={disabled}
-            >
-              {renderFileThumb(file)}
-            </button>
-          ) : (
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-box bg-base-200 text-base-content/65">
-              {isImageLike(file) ? <DefaultImageIcon /> : <DefaultFileIcon />}
-            </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="truncate font-medium">{file.name}</span>
-              <span
-                className={mergeClassNames(
-                  'badge badge-sm',
-                  buildStatusBadgeClassName(file.status),
-                )}
-              >
-                {file.status ?? 'ready'}
-              </span>
-            </div>
-            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-base-content/60">
-              {file.type ? <span>{file.type}</span> : null}
-              {formatFileSize(file.size) ? <span>{formatFileSize(file.size)}</span> : null}
-              {extraContent !== undefined ? <span>{extraContent}</span> : null}
-            </div>
-          </div>
-          {(showPreviewIcon || showRemoveIcon) && !disabled ? (
-            <div className="flex shrink-0 items-center gap-1">
-              {showPreviewIcon ? (
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm btn-square"
-                  aria-label={`Preview ${file.name}`}
-                  onClick={() => void handlePreview(file)}
-                >
-                  <DefaultPreviewIcon />
-                </button>
-              ) : null}
-              {showRemoveIcon ? (
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm btn-square"
-                  aria-label={`Remove ${file.name}`}
-                  onClick={() => void handleRemove(file)}
-                >
-                  <DefaultRemoveIcon />
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
       )
+    }
+
+    return (
+      <div
+        className={mergeClassNames(
+          'flex items-center gap-3 rounded-box border border-base-300 bg-base-100 px-3 py-3 shadow-sm',
+          itemClassName,
+        )}
+      >
+        {isPictureType(resolvedListType) ? (
+          <button
+            type="button"
+            className="h-14 w-14 shrink-0 overflow-hidden rounded-box"
+            onClick={() => void handlePreview(file)}
+            disabled={disabled || !canPreviewFile(file)}
+          >
+            {renderFileThumb(file)}
+          </button>
+        ) : (
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-box bg-base-200 text-base-content/65">
+            {isImageLike(file) ? <DefaultImageIcon /> : <DefaultFileIcon />}
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate font-medium">{file.name}</span>
+            <span
+              className={mergeClassNames('badge badge-sm', buildStatusBadgeClassName(file.status))}
+            >
+              {file.status ?? 'ready'}
+            </span>
+          </div>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-base-content/60">
+            {file.type ? <span>{file.type}</span> : null}
+            {formatFileSize(file.size) ? <span>{formatFileSize(file.size)}</span> : null}
+            {extraContent !== undefined ? <span>{extraContent}</span> : null}
+          </div>
+        </div>
+        {(shouldShowPreviewIcon || showRemoveIcon) && !disabled ? (
+          <div className="flex shrink-0 items-center gap-1">
+            {shouldShowPreviewIcon ? (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm btn-square"
+                aria-label={`Preview ${file.name}`}
+                onClick={() => void handlePreview(file)}
+              >
+                <DefaultPreviewIcon />
+              </button>
+            ) : null}
+            {showRemoveIcon ? (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm btn-square"
+                aria-label={`Remove ${file.name}`}
+                onClick={() => void handleRemove(file)}
+              >
+                <DefaultRemoveIcon />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  const renderListItem = (file: FileInputFile) => {
+    const extraContent =
+      typeof uploadListConfig?.extra === 'function'
+        ? uploadListConfig.extra(file)
+        : uploadListConfig?.extra
+    const defaultNode = renderDefaultListItem(file, extraContent)
 
     if (uploadListConfig?.itemRender) {
       return uploadListConfig.itemRender(file, defaultNode, {
@@ -994,33 +1463,13 @@ const FileInputRoot: FC<FileInputProps> = ({
     return defaultNode
   }
 
-  onMounted(() => {
-    syncFromProps()
-    renderDynamicRegion()
-  })
-
-  const nativeInputNode = (
-    <input
-      {...rest}
-      ref={assignInputRef}
-      type="file"
-      className={mergeClassNames(
-        'sr-only pointer-events-none absolute h-0 w-0 opacity-0',
-        className,
-      )}
-      disabled={disabled}
-      multiple={acceptsMany}
-      onChange={handleNativeChange}
-      directory={directory ? '' : undefined}
-      webkitdirectory={directory ? '' : undefined}
-    />
-  )
-
   const renderDefaultTriggerNode = () => {
+    const resolvedTone = resolveColorTone(color, variant)
     if (drag) {
       return (
         <div
           className={buildDropzoneClassName({
+            color,
             variant,
             disabled,
             dragging: dragging.value,
@@ -1028,7 +1477,12 @@ const FileInputRoot: FC<FileInputProps> = ({
           })}
         >
           <div className="flex flex-col items-center text-center">
-            <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <span
+              className={mergeClassNames(
+                'mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full',
+                resolveDropzoneIconClassName(resolvedTone),
+              )}
+            >
               <DefaultUploadIcon className="size-6" />
             </span>
             <div className="text-sm font-semibold text-base-content">
@@ -1078,14 +1532,16 @@ const FileInputRoot: FC<FileInputProps> = ({
       >
         <button
           type="button"
+          disabled={disabled || !resolvedOpenFileDialogOnClick}
           className={buildTriggerButtonClassName({
+            color,
             variant,
             size,
             ghost,
-            className: disabled ? 'btn-disabled' : undefined,
+            className: disabled || !resolvedOpenFileDialogOnClick ? 'btn-disabled' : undefined,
           })}
+          aria-disabled={disabled || !resolvedOpenFileDialogOnClick ? 'true' : undefined}
           onClick={openPicker}
-          disabled={disabled}
         >
           <DefaultUploadIcon />
           <span>{buttonText ?? '选择文件'}</span>
@@ -1101,39 +1557,82 @@ const FileInputRoot: FC<FileInputProps> = ({
     )
   }
 
+  const renderAppendTriggerNode = () => {
+    if (!hasCustomChildren) return renderDefaultTriggerNode()
+    return (
+      <div
+        className={mergeClassNames(
+          'flex aspect-square flex-col items-center justify-center rounded-box border border-dashed border-base-300 bg-base-100 p-4 text-center shadow-sm transition hover:border-primary/40 hover:bg-base-200/40',
+          triggerClassName,
+        )}
+      >
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-base-200 text-base-content/70">
+          <DefaultPlusIcon />
+        </span>
+        <div className="mt-3 text-sm font-medium text-base-content">{buttonText ?? '继续添加'}</div>
+      </div>
+    )
+  }
+
+  const renderTriggerRegion = (triggerNode: any) => {
+    if (resolvedListType === 'picture-card' && currentFileList.value.length > 0) return null
+    return (
+      <div
+        role={triggerOpensPicker ? 'button' : undefined}
+        tabIndex={triggerOpensPicker ? 0 : undefined}
+        onClick={triggerOpensPicker ? openPicker : undefined}
+        onKeyDown={(event: KeyboardEvent) => {
+          const key = (event as any).key
+          if ((key === 'Enter' || key === ' ') && !disabled) {
+            if (typeof (event as any).preventDefault === 'function') {
+              ;(event as any).preventDefault()
+            }
+            openPicker()
+          }
+        }}
+        onDragEnter={drag ? handleDragEnter : undefined}
+        onDragOver={drag ? handleDragOver : undefined}
+        onDragLeave={drag ? handleDragLeave : undefined}
+        onDrop={drag ? handleDrop : undefined}
+      >
+        {triggerNode}
+      </div>
+    )
+  }
+
+  const renderAppendTrigger = () => {
+    const appendTriggerNode = renderAppendTriggerNode()
+    return (
+      <div
+        onClick={openPicker}
+        onKeyDown={(event: KeyboardEvent) => {
+          const key = (event as any).key
+          if (key === 'Enter' || key === ' ') {
+            if (typeof (event as any).preventDefault === 'function') {
+              ;(event as any).preventDefault()
+            }
+            openPicker()
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
+        {appendTriggerNode}
+      </div>
+    )
+  }
+
   const renderDynamicRegion = () => {
-    if (!dynamicHostRef.current) return
+    const dynamicHost = dynamicHostRef.current
+    if (!dynamicHost) return
     const defaultTriggerNode = renderDefaultTriggerNode()
-    const triggerNode = children ?? defaultTriggerNode
+    const triggerNode = hasCustomChildren ? children : defaultTriggerNode
     const canAppendCard = maxCount ? currentFileList.value.length < maxCount : true
 
+    renderRue(null, dynamicHost)
     renderRue(
       <>
-        <div
-          role={drag ? 'button' : undefined}
-          tabIndex={drag && !disabled ? 0 : undefined}
-          onClick={
-            children
-              ? openPicker
-              : drag || resolvedListType === 'picture-card'
-                ? openPicker
-                : undefined
-          }
-          onKeyDown={(event: KeyboardEvent) => {
-            const key = (event as any).key
-            if ((key === 'Enter' || key === ' ') && !disabled) {
-              if (typeof (event as any).preventDefault === 'function') {
-                ;(event as any).preventDefault()
-              }
-              openPicker()
-            }
-          }}
-          onDragOver={drag ? handleDragOver : undefined}
-          onDragLeave={drag ? handleDragLeave : undefined}
-          onDrop={drag ? handleDrop : undefined}
-        >
-          {triggerNode}
-        </div>
+        {renderTriggerRegion(triggerNode)}
 
         {listVisible ? (
           currentFileList.value.length > 0 ? (
@@ -1147,40 +1646,7 @@ const FileInputRoot: FC<FileInputProps> = ({
                 {currentFileList.value.map((file, index) => (
                   <div key={file.uid || `fallback-${index}`}>{renderListItem(file)}</div>
                 ))}
-                {canAppendCard && !disabled ? (
-                  <div
-                    onClick={openPicker}
-                    onKeyDown={(event: KeyboardEvent) => {
-                      const key = (event as any).key
-                      if (key === 'Enter' || key === ' ') {
-                        if (typeof (event as any).preventDefault === 'function') {
-                          ;(event as any).preventDefault()
-                        }
-                        openPicker()
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    {children === undefined ? (
-                      renderDefaultTriggerNode()
-                    ) : (
-                      <div
-                        className={mergeClassNames(
-                          'flex aspect-square flex-col items-center justify-center rounded-box border border-dashed border-base-300 bg-base-100 p-4 text-center shadow-sm transition hover:border-primary/40 hover:bg-base-200/40',
-                          triggerClassName,
-                        )}
-                      >
-                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-base-200 text-base-content/70">
-                          <DefaultPlusIcon />
-                        </span>
-                        <div className="mt-3 text-sm font-medium text-base-content">
-                          {buttonText ?? '继续添加'}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : null}
+                {canAppendCard && !disabled ? renderAppendTrigger() : null}
               </div>
             ) : (
               <div className={mergeClassNames('space-y-3', listClassName)}>
@@ -1201,27 +1667,56 @@ const FileInputRoot: FC<FileInputProps> = ({
           )
         ) : null}
       </>,
-      dynamicHostRef.current,
+      dynamicHost,
     )
   }
 
-  watch(
-    () => [listVersion.value, dragging.value],
-    () => {
-      renderDynamicRegion()
-    },
-  )
+  instance.syncFromProps = syncFromProps
+  instance.renderDynamicRegion = renderDynamicRegion
+  syncFromProps()
 
-  watch(() => fileList, syncFromProps)
+  if (!instance.effectsRegistered) {
+    instance.effectsRegistered = true
+    onMounted(() => {
+      instance.syncFromProps()
+      instance.renderDynamicRegion()
+    })
+
+    onUpdated(() => {
+      instance.syncFromProps()
+      instance.renderDynamicRegion()
+    })
+
+    watch(
+      () => [listVersion.value, dragging.value],
+      () => {
+        instance.renderDynamicRegion()
+      },
+    )
+  }
 
   return (
     <div
       className={mergeClassNames('space-y-4', rootClassName)}
       data-rue-file-input-root="true"
+      data-rue-file-input-count={String(currentFileList.value.length)}
       data-rue-file-input-version={String(listVersion.value)}
     >
-      {nativeInputNode}
-      <div ref={dynamicHostRef} />
+      <input
+        {...rest}
+        ref={assignInputRef}
+        id={inputId}
+        type="file"
+        className={mergeClassNames(
+          'sr-only pointer-events-none absolute h-0 w-0 opacity-0',
+          className,
+        )}
+        disabled={disabled}
+        multiple={acceptsMany}
+        onChange={handleNativeChange}
+        {...directoryInputProps}
+      />
+      <div ref={assignDynamicHostRef} />
     </div>
   )
 }

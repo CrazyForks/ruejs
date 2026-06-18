@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { render, setReactiveScheduling } from '../src'
-import VModelAndRModel from '../../../app/pages/jsx/VModelAndRModel'
 import { click, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
@@ -40,6 +39,7 @@ afterEach(() => {
 
 describe('VModelAndRModel actual page', () => {
   it('keeps directive-driven native and component models in sync on the preview tab', async () => {
+    const { default: VModelAndRModel } = await import('../../../app/pages/jsx/VModelAndRModel')
     const container = mountContainer()
     resetActiveRuntime()
     render(<VModelAndRModel />, container)

@@ -13,6 +13,7 @@ import {
   createDocumentFragment,
   insertBefore,
   appendChild,
+  getParentNode,
   removeChild,
   contains,
 } from './dom'
@@ -98,6 +99,36 @@ export const vaporKeyedList = <T>(args: {
   const nextElements = new Map<any, VaporListItemRange>()
   const syncEffectOptions = {
     scheduler: (run: () => void) => run(),
+  }
+
+  const resolveTargetParent = () => {
+    if (parent) {
+      return parent as DomNodeLike
+    }
+    const beforeParent = before ? getParentNode(before as DomNodeLike) : null
+    if (beforeParent) {
+      return beforeParent
+    }
+    const startParent = listStart ? getParentNode(listStart as DomNodeLike) : null
+    if (startParent) {
+      return startParent
+    }
+
+    for (const range of elements.values()) {
+      const rangeParent =
+        (range.start ? getParentNode(range.start) : null) ?? getParentNode(range.end)
+      if (rangeParent) {
+        return rangeParent
+      }
+    }
+
+    return null
+  }
+
+  const targetParent = resolveTargetParent()
+
+  if (!targetParent) {
+    return elements
   }
 
   const isListMarker = (node: DomNodeLike | null | undefined) => {
@@ -273,7 +304,9 @@ export const vaporKeyedList = <T>(args: {
       return range.start as DomNodeLike
     }
     const head = ((range.end as any).previousSibling as DomNodeLike | null) || null
-    return head && contains(parent as any, head as any) && !isListMarker(head) ? head : range.end
+    return head && contains(targetParent as any, head as any) && !isListMarker(head)
+      ? head
+      : range.end
   }
 
   let cursor: DomNodeLike | null = before as any
@@ -288,7 +321,7 @@ export const vaporKeyedList = <T>(args: {
     if (!range) {
       if (singleRoot) {
         end = createComment('rue:list:item:anchor')
-        insertBefore(parent, end, cursor as any)
+        insertBefore(targetParent, end, cursor as any)
         const entry: VaporListItemRange = { end, singleRoot: true }
         const renderState = syncCurrentItem(entry, item, index)
         const stop = watchEffect(() => {
@@ -296,7 +329,7 @@ export const vaporKeyedList = <T>(args: {
           untrack(() => {
             renderItem(
               (entry.stableItem as T | undefined) ?? next.item,
-              parent as any,
+              targetParent as any,
               end,
               end,
               next.index,
@@ -308,8 +341,8 @@ export const vaporKeyedList = <T>(args: {
       } else {
         start = createComment('rue:list:item:start')
         end = createComment('rue:list:item:end')
-        insertBefore(parent, end, cursor as any)
-        insertBefore(parent, start, end)
+        insertBefore(targetParent, end, cursor as any)
+        insertBefore(targetParent, start, end)
         const entry: VaporListItemRange = { start, end }
         const renderState = syncCurrentItem(entry, item, index)
         const stop = watchEffect(() => {
@@ -317,7 +350,7 @@ export const vaporKeyedList = <T>(args: {
           untrack(() => {
             renderItem(
               (entry.stableItem as T | undefined) ?? next.item,
-              parent as any,
+              targetParent as any,
               start,
               end,
               next.index,
@@ -343,9 +376,9 @@ export const vaporKeyedList = <T>(args: {
         if (node === end) break
         node = next
       }
-      const cursorIsChild = !!cursor && contains(parent, cursor as any)
-      if (cursorIsChild) insertBefore(parent, block, cursor as any)
-      else appendChild(parent, block)
+      const cursorIsChild = !!cursor && contains(targetParent, cursor as any)
+      if (cursorIsChild) insertBefore(targetParent, block, cursor as any)
+      else appendChild(targetParent, block)
     }
 
     nextElements.set(key, range!)
@@ -366,8 +399,8 @@ export const vaporKeyedList = <T>(args: {
       if (range.stop) range.stop()
 
       for (const staleNode of nodesToRemove) {
-        if (contains(parent as any, staleNode as any)) {
-          removeChild(parent as any, staleNode as any)
+        if (contains(targetParent as any, staleNode as any)) {
+          removeChild(targetParent as any, staleNode as any)
         }
       }
     }

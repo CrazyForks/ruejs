@@ -375,6 +375,139 @@ describe('built-in transition component regressions', () => {
     ).toEqual([1, 1, 1, 1, 1])
   })
 
+  it('keeps TransitionGroup children stable when inserting at the head', async () => {
+    const Example = () => {
+      const setupState = _$vaporWithHookId('useSetup:transition-group-head-insert:0', () =>
+        useSetup(() => ({
+          items: ref<number[]>([1, 2, 3, 4, 5]),
+          nextId: ref(6),
+        })),
+      ) as { items: { value: number[] }; nextId: { value: number } }
+
+      return vapor(() => {
+        const root = document.createElement('section')
+        const button = document.createElement('button')
+        const anchor = document.createComment('transition-group-head-anchor')
+
+        button.id = 'insert-head'
+        button.textContent = 'insert head'
+        button.addEventListener('click', () => {
+          const nextItems = setupState.items.value.slice()
+          nextItems.splice(0, 0, setupState.nextId.value)
+          setupState.items.value = nextItems
+          setupState.nextId.value += 1
+        })
+
+        root.append(button, anchor)
+
+        watchEffect(() => {
+          renderAnchor(
+            <TransitionGroup tag="ul" name="fade" type="transition" duration={1000}>
+              {setupState.items.value.map(item => (
+                <li data-testid={`head-item-${item}`} key={item}>
+                  {item}
+                  <button type="button">x</button>
+                </li>
+              ))}
+            </TransitionGroup>,
+            root,
+            anchor,
+          )
+        })
+
+        return root
+      })
+    }
+
+    const container = mountTestContainer()
+
+    render(<Example />, container)
+    await flush()
+
+    ;(container.querySelector('#insert-head') as HTMLButtonElement).click()
+    await flush()
+
+    expect(Array.from(container.querySelectorAll('li'), el => el.textContent)).toEqual([
+      '6x',
+      '1x',
+      '2x',
+      '3x',
+      '4x',
+      '5x',
+    ])
+    expect(
+      container
+        .querySelector('[data-testid="head-item-6"]')
+        ?.classList.contains('fade-enter-active'),
+    ).toBe(true)
+  })
+
+  it('keeps TransitionGroup children stable through a component children wrapper', async () => {
+    const Wrapper = (props: { children?: unknown }) => (
+      <div data-testid="wrapper">{props.children}</div>
+    )
+    const Example = () => {
+      const setupState = _$vaporWithHookId('useSetup:transition-group-wrapper-head-insert:0', () =>
+        useSetup(() => ({
+          items: ref<number[]>([1, 2, 3, 4, 5]),
+          nextId: ref(6),
+          activeTab: ref<'preview' | 'code'>('preview'),
+        })),
+      ) as {
+        items: { value: number[] }
+        nextId: { value: number }
+        activeTab: { value: 'preview' | 'code' }
+      }
+
+      const insert = () => {
+        const nextItems = setupState.items.value.slice()
+        nextItems.splice(0, 0, setupState.nextId.value)
+        setupState.items.value = nextItems
+        setupState.nextId.value += 1
+      }
+
+      return (
+        <Wrapper>
+          <button id="insert-wrapper-head" onClick={insert}>
+            insert head
+          </button>
+          {setupState.activeTab.value === 'preview' && (
+            <TransitionGroup tag="ul" name="fade" type="transition" duration={1000}>
+              {setupState.items.value.map(item => (
+                <li data-testid={`wrapper-item-${item}`} key={item}>
+                  {item}
+                  <button type="button">x</button>
+                </li>
+              ))}
+            </TransitionGroup>
+          )}
+        </Wrapper>
+      )
+    }
+
+    const container = mountTestContainer()
+
+    render(<Example />, container)
+    await flush()
+
+    ;(container.querySelector('#insert-wrapper-head') as HTMLButtonElement).click()
+    await flush()
+
+    expect(Array.from(container.querySelectorAll('li'), el => el.textContent)).toEqual([
+      '6x',
+      '1x',
+      '2x',
+      '3x',
+      '4x',
+      '5x',
+    ])
+    expect(
+      container
+        .querySelector('[data-testid="wrapper-item-6"]')
+        ?.classList.contains('fade-enter-active'),
+    ).toBe(true)
+  })
+
   it('opens and closes a Teleport + Transition modal from vapor-style component state', async () => {
     const Modal = (props: { visible: boolean; onClose: () => void }) => (
       <Teleport to="body">

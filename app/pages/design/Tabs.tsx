@@ -1,5 +1,5 @@
 import type { FC } from '@rue-js/rue'
-import { ref, useRef } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import { Tabs } from '@rue-js/design'
@@ -68,11 +68,7 @@ interface ExampleBlockProps {
 }
 
 const ExampleBlock: FC<ExampleBlockProps> = ({ title, code, children }) => {
-  const tabRef = useRef<{ value: TabMode }>()
-  if (!tabRef.current) {
-    tabRef.current = ref<TabMode>('preview')
-  }
-  const tab = tabRef.current
+  const tab = ref<TabMode>('preview')
   const previewNode = Array.isArray(children)
     ? children.find(child => child !== null && child !== undefined && child !== '')
     : children
@@ -510,85 +506,43 @@ const tabItemApiRows: ApiRow[] = [
   },
 ]
 
-const TabsDemo: FC = () => {
-  const stateRef = useRef<{
-    activeBasic: { value: string }
-    activeBorder: { value: string }
-    activeLift: { value: string }
-    activeBox: { value: string }
-    activeXs: { value: string }
-    activeSm: { value: string }
-    activeMd: { value: string }
-    activeLg: { value: string }
-    activeXl: { value: string }
-    activeBottom: { value: string }
-    activeDisabled: { value: string }
-    activeCustom: { value: string }
-    activeExtra: { value: string }
-    activeCentered: { value: string }
-    placementMode: { value: 'start' | 'end' }
-    activePlacementTab: { value: string }
-    activeIndicator: { value: string }
-    editableCounter: { value: number }
-    editableActiveKey: { value: string }
-    editableItems: {
-      value: Array<{ key: string; label: string; children: string; closable?: boolean }>
-    }
-  }>()
-  if (!stateRef.current) {
-    stateRef.current = {
-      activeBasic: ref('tab2'),
-      activeBorder: ref('tab2'),
-      activeLift: ref('tab2'),
-      activeBox: ref('tab2'),
-      activeXs: ref('xs2'),
-      activeSm: ref('sm2'),
-      activeMd: ref('md2'),
-      activeLg: ref('lg2'),
-      activeXl: ref('xl2'),
-      activeBottom: ref('b2'),
-      activeDisabled: ref('d2'),
-      activeCustom: ref('c2'),
-      activeExtra: ref('overview'),
-      activeCentered: ref('beta'),
-      placementMode: ref<'start' | 'end'>('start'),
-      activePlacementTab: ref('design'),
-      activeIndicator: ref('metrics'),
-      editableCounter: ref(3),
-      editableActiveKey: ref('draft-2'),
-      editableItems: ref([
-        { key: 'draft-1', label: 'Draft 1', children: '需求说明、依赖评估与风险梳理。' },
-        { key: 'draft-2', label: 'Draft 2', children: '设计走查与交互标注已经完成。' },
-        {
-          key: 'release',
-          label: 'Release',
-          children: '发布检查清单、灰度范围与回滚预案。',
-          closable: false,
-        },
-      ]),
-    }
-  }
+interface EditableDemoItem {
+  key: string
+  label: string
+  children: string
+  closable?: boolean
+}
 
-  const activeBasic = stateRef.current.activeBasic
-  const activeBorder = stateRef.current.activeBorder
-  const activeLift = stateRef.current.activeLift
-  const activeBox = stateRef.current.activeBox
-  const activeXs = stateRef.current.activeXs
-  const activeSm = stateRef.current.activeSm
-  const activeMd = stateRef.current.activeMd
-  const activeLg = stateRef.current.activeLg
-  const activeXl = stateRef.current.activeXl
-  const activeBottom = stateRef.current.activeBottom
-  const activeDisabled = stateRef.current.activeDisabled
-  const activeCustom = stateRef.current.activeCustom
-  const activeExtra = stateRef.current.activeExtra
-  const activeCentered = stateRef.current.activeCentered
-  const placementMode = stateRef.current.placementMode
-  const activePlacementTab = stateRef.current.activePlacementTab
-  const activeIndicator = stateRef.current.activeIndicator
-  const editableCounter = stateRef.current.editableCounter
-  const editableActiveKey = stateRef.current.editableActiveKey
-  const editableItems = stateRef.current.editableItems
+const TabsDemo: FC = () => {
+  const activeBasic = ref('tab2')
+  const activeBorder = ref('tab2')
+  const activeLift = ref('tab2')
+  const activeBox = ref('tab2')
+  const activeXs = ref('xs2')
+  const activeSm = ref('sm2')
+  const activeMd = ref('md2')
+  const activeLg = ref('lg2')
+  const activeXl = ref('xl2')
+  const activeBottom = ref('b2')
+  const activeDisabled = ref('d2')
+  const activeCustom = ref('c2')
+  const activeExtra = ref('overview')
+  const activeCentered = ref('beta')
+  const placementMode = ref<'start' | 'end'>('start')
+  const activePlacementTab = ref('design')
+  const activeIndicator = ref('metrics')
+  const editableCounter = ref(3)
+  const editableActiveKey = ref('draft-2')
+  const editableItems = ref<EditableDemoItem[]>([
+    { key: 'draft-1', label: 'Draft 1', children: '需求说明、依赖评估与风险梳理。' },
+    { key: 'draft-2', label: 'Draft 2', children: '设计走查与交互标注已经完成。' },
+    {
+      key: 'release',
+      label: 'Release',
+      children: '发布检查清单、灰度范围与回滚预案。',
+      closable: false,
+    },
+  ])
 
   const handleEditableEdit = (eventOrKey: MouseEvent | string, action: 'add' | 'remove') => {
     if (action === 'add') {

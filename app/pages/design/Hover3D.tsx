@@ -10,8 +10,8 @@ interface ExampleBlockProps {
   title: string
   summary?: string
   tab: { value: TabMode }
-  preview: () => any
   code: string
+  children?: any
 }
 
 interface ApiRow {
@@ -29,7 +29,7 @@ interface GalleryEntry {
   src: string
 }
 
-const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, code }) => {
+const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, code, children }) => {
   return (
     <div className="component-preview not-prose text-base-content my-6 lg:my-12">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -48,7 +48,7 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
         onChange={key => (tab.value = key as TabMode)}
         className="mb-3 mt-4"
       />
-      {tab.value === 'preview' ? preview() : <Code className="mt-2" lang="tsx" code={code} />}
+      {tab.value === 'preview' ? children : <Code className="mt-2" lang="tsx" code={code} />}
     </div>
   )
 }
@@ -236,7 +236,7 @@ const apiRows: ApiRow[] = [
   {
     prop: 'surfaceAs',
     description: '为第一层倾斜面板指定包装标签，例如 figure 或 article',
-    type: 'string',
+    type: `'div' | 'figure' | 'article' | 'section'`,
     defaultValue: '-',
   },
   {
@@ -314,122 +314,118 @@ const Hover3DDemo: FC = () => {
           title="基础图片悬浮"
           summary="保留原有图片 demo，用最直接的 1 + 8 结构工作。"
           tab={tabBasic}
-          preview={() => (
-            <div className="flex justify-center px-2 py-6">
-              <Hover3D className="mx-2">
-                <figure className="max-w-[26rem] overflow-hidden rounded-[1.75rem] shadow-2xl">
-                  <img
-                    src="https://img.daisyui.com/images/stock/creditcard.webp"
-                    alt="Hover 3D credit card preview"
-                  />
-                </figure>
-              </Hover3D>
-            </div>
-          )}
           code={basicImageCode}
-        />
+        >
+          <div className="flex justify-center px-2 py-6">
+            <Hover3D className="mx-2">
+              <figure className="max-w-[26rem] overflow-hidden rounded-[1.75rem] shadow-2xl">
+                <img
+                  src="https://img.daisyui.com/images/stock/creditcard.webp"
+                  alt="Hover 3D credit card preview"
+                />
+              </figure>
+            </Hover3D>
+          </div>
+        </ExampleBlock>
 
         <ExampleBlock
           title="整卡点击"
           summary="保留原有整卡链接 demo，并改成只传 href 就能得到链接根节点。"
           tab={tabLink}
-          preview={() => (
-            <div className="flex justify-center px-2 py-6">
-              <Hover3D href="#hover-3d-case-study" className="mx-2 cursor-pointer">
-                <Card className="w-[22rem] overflow-hidden border border-white/10 bg-neutral text-neutral-content shadow-2xl">
-                  <div className="card-body gap-6 font-mono">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.3em] opacity-60">
-                          Rue Capsule
-                        </div>
-                        <div className="mt-3 text-3xl font-semibold leading-none">03</div>
+          code={linkedCardCode}
+        >
+          <div className="flex justify-center px-2 py-6">
+            <Hover3D href="#hover-3d-case-study" className="mx-2 cursor-pointer">
+              <Card className="w-[22rem] overflow-hidden border border-white/10 bg-neutral text-neutral-content shadow-2xl">
+                <div className="card-body gap-6 font-mono">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.3em] opacity-60">
+                        Rue Capsule
                       </div>
-                      <span className="badge badge-outline border-white/20 text-white">
-                        link root
-                      </span>
+                      <div className="mt-3 text-3xl font-semibold leading-none">03</div>
                     </div>
-                    <div className="space-y-2 text-sm opacity-75">
-                      <p className="m-0">Hover the whole surface to read the motion.</p>
-                      <p className="m-0">Click stays on the wrapper instead of nested controls.</p>
+                    <span className="badge badge-outline border-white/20 text-white">
+                      link root
+                    </span>
+                  </div>
+                  <div className="space-y-2 text-sm opacity-75">
+                    <p className="m-0">Hover the whole surface to read the motion.</p>
+                    <p className="m-0">Click stays on the wrapper instead of nested controls.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.2em] opacity-40">Depth</div>
+                      <div className="mt-2">Responsive tilt</div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.2em] opacity-40">Depth</div>
-                        <div className="mt-2">Responsive tilt</div>
-                      </div>
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.2em] opacity-40">Root</div>
-                        <div className="mt-2">Anchor semantics</div>
-                      </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.2em] opacity-40">Root</div>
+                      <div className="mt-2">Anchor semantics</div>
                     </div>
                   </div>
-                </Card>
-              </Hover3D>
-            </div>
-          )}
-          code={linkedCardCode}
-        />
+                </div>
+              </Card>
+            </Hover3D>
+          </div>
+        </ExampleBlock>
 
         <ExampleBlock
           title="Surface 包装层"
           summary="用 surfaceAs 与 surfaceClassName 精简第一层结构，避免为了 figure 或 article 再手写外壳。"
           tab={tabSurface}
-          preview={() => (
-            <div className="flex justify-center px-2 py-6">
-              <Hover3D
-                className="max-w-[20rem]"
-                surfaceAs="figure"
-                surfaceClassName="overflow-hidden rounded-[2rem] border border-base-300 bg-base-100 shadow-xl"
-                surfaceProps={{ 'data-surface': 'poster' }}
-              >
-                <img
-                  src="https://img.daisyui.com/images/stock/card-2.webp?x"
-                  alt="surface wrapper demo"
-                />
-                <figcaption className="space-y-2 px-5 py-4">
-                  <div className="text-xs uppercase tracking-[0.24em] opacity-50">
-                    Surface wrapper
-                  </div>
-                  <div className="text-lg font-semibold">给第一层面板单独挂标签和类名</div>
-                  <p className="m-0 text-sm opacity-70">适合图片 + 文案一体化的倾斜卡片。</p>
-                </figcaption>
-              </Hover3D>
-            </div>
-          )}
           code={surfaceWrapperCode}
-        />
+        >
+          <div className="flex justify-center px-2 py-6">
+            <Hover3D
+              className="max-w-[20rem]"
+              surfaceAs="figure"
+              surfaceClassName="overflow-hidden rounded-[2rem] border border-base-300 bg-base-100 shadow-xl"
+              surfaceProps={{ 'data-surface': 'poster' }}
+            >
+              <img
+                src="https://img.daisyui.com/images/stock/card-2.webp?x"
+                alt="surface wrapper demo"
+              />
+              <figcaption className="space-y-2 px-5 py-4">
+                <div className="text-xs uppercase tracking-[0.24em] opacity-50">
+                  Surface wrapper
+                </div>
+                <div className="text-lg font-semibold">给第一层面板单独挂标签和类名</div>
+                <p className="m-0 text-sm opacity-70">适合图片 + 文案一体化的倾斜卡片。</p>
+              </figcaption>
+            </Hover3D>
+          </div>
+        </ExampleBlock>
 
         <ExampleBlock
           title="画廊矩阵"
           summary="保留原有多图 demo，并补上统一的排版、标题和标签信息。"
           tab={tabGallery}
-          preview={() => (
-            <div className="px-2 py-6">
-              <div className="grid gap-6 md:grid-cols-3">
-                {galleryEntries.map(entry => (
-                  <div key={entry.title} className="space-y-3">
-                    <Hover3D className="mx-1">
-                      <figure className="overflow-hidden rounded-[1.5rem] bg-base-200">
-                        <img src={entry.src} alt={entry.title} />
-                      </figure>
-                    </Hover3D>
-                    <div className="px-1">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="m-0 text-sm font-semibold">{entry.title}</h3>
-                        <span className={`badge badge-soft ${entry.badgeClassName}`}>
-                          {entry.label}
-                        </span>
-                      </div>
-                      <p className="m-0 mt-2 text-xs leading-5 opacity-70">{entry.summary}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
           code={galleryCode}
-        />
+        >
+          <div className="px-2 py-6">
+            <div className="grid gap-6 md:grid-cols-3">
+              {galleryEntries.map(entry => (
+                <div key={entry.title} className="space-y-3">
+                  <Hover3D className="mx-1">
+                    <figure className="overflow-hidden rounded-[1.5rem] bg-base-200">
+                      <img src={entry.src} alt={entry.title} />
+                    </figure>
+                  </Hover3D>
+                  <div className="px-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="m-0 text-sm font-semibold">{entry.title}</h3>
+                      <span className={`badge badge-soft ${entry.badgeClassName}`}>
+                        {entry.label}
+                      </span>
+                    </div>
+                    <p className="m-0 mt-2 text-xs leading-5 opacity-70">{entry.summary}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </ExampleBlock>
 
         <div className="component-preview not-prose text-base-content my-6 lg:my-12">
           <div className="flex flex-wrap items-start justify-between gap-3">

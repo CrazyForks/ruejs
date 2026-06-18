@@ -370,6 +370,92 @@ export const vaporKeyedList = <T>(args: {
   const syncEffectOptions = {
     scheduler: (run: () => void) => run(),
   }
+  const oldIndexByKey = new Map<any, number>()
+  let oldIndex = 0
+  elements.forEach((_range, key) => {
+    oldIndexByKey.set(key, oldIndex)
+    oldIndex += 1
+  })
+  const nextKeys = items.map((item, index) => getKey(item, index))
+  const reusedEntries: Array<{ key: any; oldIndex: number }> = []
+  const seenOldIndexes = new Set<number>()
+
+  nextKeys.forEach(key => {
+    const oldIndex = oldIndexByKey.get(key)
+    if (oldIndex === undefined || seenOldIndexes.has(oldIndex)) {
+      return
+    }
+
+    seenOldIndexes.add(oldIndex)
+    reusedEntries.push({ key, oldIndex })
+  })
+
+  const stableKeys = new Set<any>()
+  if (reusedEntries.length <= 1) {
+    reusedEntries.forEach(entry => stableKeys.add(entry.key))
+  } else {
+    const predecessors: Array<number | undefined> = new Array(reusedEntries.length)
+    const tails: number[] = []
+
+    reusedEntries.forEach((entry, index) => {
+      let low = 0
+      let high = tails.length
+      while (low < high) {
+        const mid = Math.floor((low + high) / 2)
+        if (reusedEntries[tails[mid]].oldIndex < entry.oldIndex) {
+          low = mid + 1
+        } else {
+          high = mid
+        }
+      }
+
+      if (low > 0) {
+        predecessors[index] = tails[low - 1]
+      }
+
+      if (low === tails.length) {
+        tails.push(index)
+      } else {
+        tails[low] = index
+      }
+    })
+
+    let stableIndex: number | undefined = tails[tails.length - 1]
+    while (stableIndex !== undefined) {
+      stableKeys.add(reusedEntries[stableIndex].key)
+      stableIndex = predecessors[stableIndex]
+    }
+  }
+
+  const resolveTargetParent = () => {
+    if (parent) {
+      return parent as DomNodeLike
+    }
+    const beforeParent = before ? getParentNode(before as DomNodeLike) : null
+    if (beforeParent) {
+      return beforeParent
+    }
+    const startParent = listStart ? getParentNode(listStart as DomNodeLike) : null
+    if (startParent) {
+      return startParent
+    }
+
+    for (const range of elements.values()) {
+      const rangeParent =
+        (range.start ? getParentNode(range.start) : null) ?? getParentNode(range.end)
+      if (rangeParent) {
+        return rangeParent
+      }
+    }
+
+    return null
+  }
+
+  const targetParent = resolveTargetParent()
+
+  if (!targetParent) {
+    return elements
+  }
 
   const isListMarker = (node: DomNodeLike | null | undefined) => {
     if (!node) {
@@ -544,22 +630,25 @@ export const vaporKeyedList = <T>(args: {
       return range.start as DomNodeLike
     }
     const head = ((range.end as any).previousSibling as DomNodeLike | null) || null
-    return head && contains(parent as any, head as any) && !isListMarker(head) ? head : range.end
+    return head && contains(targetParent as any, head as any) && !isListMarker(head)
+      ? head
+      : range.end
   }
 
   let cursor: DomNodeLike | null = before as any
 
   for (let index = items.length - 1; index >= 0; index -= 1) {
     const item = items[index]
-    const key = getKey(item, index)
+    const key = nextKeys[index]
     let range = elements.get(key)
+    const existingRange = range
     let start: DomNodeLike
     let end: DomNodeLike
 
     if (!range) {
       if (singleRoot) {
         end = createComment('rue:list:item:anchor')
-        insertBefore(parent, end, cursor as any)
+        insertBefore(targetParent, end, cursor as any)
         const entry: VaporListItemRange = { end, singleRoot: true }
         const renderState = syncCurrentItem(entry, item, index)
         const stop = watchEffect(() => {
@@ -567,7 +656,7 @@ export const vaporKeyedList = <T>(args: {
           untrack(() => {
             renderItem(
               (entry.stableItem as T | undefined) ?? next.item,
-              parent as any,
+              targetParent as any,
               end,
               end,
               next.index,
@@ -579,8 +668,8 @@ export const vaporKeyedList = <T>(args: {
       } else {
         start = createComment('rue:list:item:start')
         end = createComment('rue:list:item:end')
-        insertBefore(parent, end, cursor as any)
-        insertBefore(parent, start, end)
+        insertBefore(targetParent, end, cursor as any)
+        insertBefore(targetParent, start, end)
         const entry: VaporListItemRange = { start, end }
         const renderState = syncCurrentItem(entry, item, index)
         const stop = watchEffect(() => {
@@ -588,7 +677,7 @@ export const vaporKeyedList = <T>(args: {
           untrack(() => {
             renderItem(
               (entry.stableItem as T | undefined) ?? next.item,
-              parent as any,
+              targetParent as any,
               start,
               end,
               next.index,
@@ -604,7 +693,16 @@ export const vaporKeyedList = <T>(args: {
     }
 
     const blockStart = resolveStartNode(range)
-    if ((end as any).nextSibling !== cursor && cursor !== blockStart) {
+    const shouldKeepStablePlacement =
+      !!existingRange &&
+      stableKeys.has(key) &&
+      contains(targetParent as any, blockStart as any) &&
+      contains(targetParent as any, end as any)
+    if (
+      !shouldKeepStablePlacement &&
+      (end as any).nextSibling !== cursor &&
+      cursor !== blockStart
+    ) {
       const block = createDocumentFragment()
       let node: DomNodeLike | null = blockStart
       while (node) {
@@ -613,9 +711,9 @@ export const vaporKeyedList = <T>(args: {
         if (node === end) break
         node = next
       }
-      const cursorIsChild = !!cursor && contains(parent, cursor as any)
-      if (cursorIsChild) insertBefore(parent, block, cursor as any)
-      else appendChild(parent, block)
+      const cursorIsChild = !!cursor && contains(targetParent, cursor as any)
+      if (cursorIsChild) insertBefore(targetParent, block, cursor as any)
+      else appendChild(targetParent, block)
     }
 
     nextElements.set(key, range!)
@@ -636,14 +734,19 @@ export const vaporKeyedList = <T>(args: {
       if (range.stop) range.stop()
 
       for (const staleNode of nodesToRemove) {
-        if (contains(parent as any, staleNode as any)) {
-          removeChild(parent as any, staleNode as any)
+        if (contains(targetParent as any, staleNode as any)) {
+          removeChild(targetParent as any, staleNode as any)
         }
       }
     }
   })
   elements.clear()
-  nextElements.forEach((range, key) => elements.set(key, range))
+  nextKeys.forEach(key => {
+    const range = nextElements.get(key)
+    if (range) {
+      elements.set(key, range)
+    }
+  })
   return elements
 }
 

@@ -260,7 +260,7 @@ fn emits_dynamic_attrs_events_and_skips_unsupported_attr_shapes() {
     let out = normalize(&emit_stmts(stmts));
     assert!(out.contains(&normalize("watchEffect(()=>{ _$setValue(el, selected); })")));
     assert!(out.contains(&normalize("el.multiple = !!(isMulti)")));
-    assert!(out.contains(&normalize("_$setClassName(el, String((klass)))")));
+    assert!(out.contains(&normalize("_$setClassName(el, (klass))")));
     assert!(out.contains(&normalize("const el_style = (styleObj); _$setStyle(el, el_style);")));
     assert!(out.contains(&normalize("const __obj = (htmlObj);")));
     assert!(out.contains(&normalize(
@@ -306,9 +306,7 @@ fn covers_dynamic_attr_false_edges_for_member_roots_and_non_ident_attrs() {
     emit_attrs_for(&mut mixed_stmts, &target, &mixed_opening);
     let mixed_out = normalize(&emit_stmts(mixed_stmts));
     assert!(
-        mixed_out.contains(&normalize(
-            "watchEffect(()=>{ _$setClassName(el, String(klass + suffix)); })",
-        ))
+        mixed_out.contains(&normalize("watchEffect(()=>{ _$setClassName(el, klass + suffix); })",))
     );
     assert!(mixed_out.contains(&normalize("watchEffect(()=>{ _$setValue(el, selected); })")));
     assert!(!mixed_out.contains("data:track"));

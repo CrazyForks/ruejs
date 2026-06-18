@@ -44,7 +44,7 @@ describe('AttributeBindings actual page', () => {
       expect(container.querySelector('span[title="Hello World!"]')).not.toBeNull()
     })
 
-    const redLine = findParagraph(container, 'This should be red... but click me to toggle it.')
+    const redLine = findParagraph(container, 'This should be red, but click me to toggle it.')
     expect(redLine).not.toBeNull()
     expect(redLine!.className).toContain('text-red-600')
 
@@ -52,7 +52,7 @@ describe('AttributeBindings actual page', () => {
 
     await waitForContent(() => {
       expect(
-        findParagraph(container, 'This should be red... but click me to toggle it.')?.className,
+        findParagraph(container, 'This should be red, but click me to toggle it.')?.className,
       ).not.toContain('text-red-600')
     })
 
@@ -76,6 +76,6 @@ describe('AttributeBindings actual page', () => {
     await click(findTab(container, '代码'))
 
     expect(findTab(container, '代码')?.className).toContain('tab-active')
-    expect(findParagraph(container, 'This should be red... but click me to toggle it.')).toBeNull()
+    expect(findParagraph(container, 'This should be red, but click me to toggle it.')).toBeNull()
   })
 })

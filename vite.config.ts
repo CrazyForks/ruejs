@@ -8,6 +8,7 @@ import wasm from 'vite-plugin-wasm'
 // import { DevTools } from '@vitejs/devtools'
 
 const rootDir = resolve(__dirname)
+const testMaxWorkers = Number.parseInt(process.env.VITEST_MAX_WORKERS ?? '4', 10)
 
 const vitestProjects = [
   {
@@ -117,6 +118,8 @@ export default defineConfig(({ command }) => {
     test: {
       globals: true,
       pool: 'threads',
+      maxWorkers: Number.isFinite(testMaxWorkers) && testMaxWorkers > 0 ? testMaxWorkers : 4,
+      vmMemoryLimit: process.env.VITEST_VM_MEMORY_LIMIT ?? '2GB',
       setupFiles: 'scripts/setup-vitest.ts',
       testTimeout: 10_000,
       hookTimeout: 10_000,

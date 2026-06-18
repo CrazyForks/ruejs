@@ -201,6 +201,22 @@ fn shallow_equal_renderable_like(a: &JsValue, b: &JsValue) -> Option<bool> {
     Some(true)
 }
 
+fn is_plain_object_like(value: &JsValue) -> bool {
+    if !value.is_object() || Array::is_array(value) || value.is_function() {
+        return false;
+    }
+
+    let obj: Object = value.clone().unchecked_into();
+    let proto = Object::get_prototype_of(&obj);
+    if proto.is_null() {
+        return true;
+    }
+
+    let plain = Object::new();
+    let plain_proto = Object::get_prototype_of(&plain);
+    Object::is(&proto, &plain_proto)
+}
+
 // props / children 的浅相等判断：
 // - 普通情况下退化为 Object.is；
 // - 特别处理 Renderable / Renderable 数组的场景，优先用 DOM/host-node identity 来比；
@@ -215,7 +231,7 @@ pub fn shallow_equal_prop(a: &JsValue, b: &JsValue) -> bool {
     if let Some(equal) = shallow_equal_renderable_like(a, b) {
         return equal;
     }
-    if a.is_object() && b.is_object() {
+    if is_plain_object_like(a) && is_plain_object_like(b) {
         let ao: Object = a.clone().unchecked_into();
         let bo: Object = b.clone().unchecked_into();
         let ak = js_sys::Object::keys(&ao);

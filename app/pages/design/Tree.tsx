@@ -598,7 +598,10 @@ const reset = () => {
 
 <div className="space-y-4">
   <div className="rounded-box border border-dashed border-base-300 bg-base-100/80 p-4 text-sm text-base-content/70">
-    操作顺序：先单击 beta.ts，再按住 Cmd / Ctrl 单击 epsilon.ts，最后按住 Shift 单击 delta.ts。
+    基础行为：先单击 alpha.ts，再按住 Shift 单击 epsilon.ts，alpha.ts 到 epsilon.ts 都会选中。
+    <div className="mt-2">
+      append / replace 只影响已有额外非连续选择是否保留：先单击 beta.ts，再按住 Cmd / Ctrl 单击 epsilon.ts，最后按住 Shift 单击 delta.ts。
+    </div>
     <div className="mt-2">append 会保留 beta.ts；replace 只保留 delta.ts 到 epsilon.ts 这一段。</div>
   </div>
 
@@ -895,11 +898,11 @@ const apiRows: ApiRow[] = [
     defaultValue: '-',
   },
   {
-    prop: 'Tree.DirectoryTree / expandAction / toggleSelect / rangeSelect',
+    prop: 'rangeSelect / Tree.DirectoryTree / expandAction / toggleSelect',
     description:
-      '目录树快捷 API；除了展开动作，还能细化 ctrl/meta 追加选择和 shift 区间选择是 append 还是 replace。',
-    type: 'DirectoryTreeProps / false | "click" | "doubleClick" / boolean / false | "append" | "replace"',
-    defaultValue: 'blockNode=true / showIcon=true / "click" / true / "append"',
+      'Tree 多选和目录树都支持 shift 区间选择；目录树额外提供展开动作和 ctrl/meta 追加选择开关。',
+    type: 'false | "append" | "replace" / DirectoryTreeProps / false | "click" | "doubleClick" / boolean',
+    defaultValue: '"append" / blockNode=true / showIcon=true / "click" / true',
   },
   {
     prop: 'draggable / allowDrop / onDrop',
@@ -1017,20 +1020,32 @@ const patchTreeNode = (
 ): TreeDataNode[] => {
   const targetKeyText = toKeyText(targetKey)
 
-  return nodes.map(node => {
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index]
+
     if (toKeyText(node.key as TreeKey) === targetKeyText) {
-      return updater(node)
+      const nextNode = updater(node)
+      if (nextNode === node) return nodes
+
+      const nextNodes = nodes.slice()
+      nextNodes[index] = nextNode
+      return nextNodes
     }
 
-    if (Array.isArray(node.children)) {
-      return {
+    if (Array.isArray(node.children) && node.children.length) {
+      const nextChildren = patchTreeNode(node.children, targetKey, updater)
+      if (nextChildren === node.children) continue
+
+      const nextNodes = nodes.slice()
+      nextNodes[index] = {
         ...node,
-        children: patchTreeNode(node.children, targetKey, updater),
+        children: nextChildren,
       }
+      return nextNodes
     }
+  }
 
-    return node
-  })
+  return nodes
 }
 
 const countLoadedBranches = (nodes: TreeDataNode[]): number => {
@@ -1131,6 +1146,9 @@ const TreeDesign: FC = () => {
   const asyncVirtualTreeData = ref<TreeDataNode[]>(cloneTreeData(asyncVirtualTreeSeed))
   const asyncVirtualExpandedKeys = ref<TreeKey[]>([])
   const asyncVirtualSelectedKeys = ref<TreeKey[]>([])
+  const asyncVirtualLoadedBranchCount = computed(() =>
+    countLoadedBranches(asyncVirtualTreeData.value),
+  )
   const asyncTreeData = ref<TreeDataNode[]>([
     { title: '发布总线', key: 'release-bus', isLeaf: false },
   ])
@@ -1427,15 +1445,19 @@ const TreeDesign: FC = () => {
 
         <PreviewBlock
           title="shift append vs shift replace"
-          summary="这两个模式只有在“先做一次非连续多选，再用 shift 选区间”时才会分出差异；左边保留旧选择，右边只保留新区间。"
+          summary="Shift 的基础语义是先选一个节点，再 Shift 选另一个节点，中间连续区间都会选中；append / replace 只决定已有额外选择是否保留。"
           tab={tabs.directoryRange}
           code={directoryRangeCode}
           preview={
             <div className="space-y-4 not-prose">
               <div className="rounded-box border border-dashed border-base-300 bg-base-100/80 p-4 text-sm text-base-content/70">
                 <div>
-                  操作顺序：先单击 beta.ts，再按住 Cmd / Ctrl 单击 epsilon.ts，最后按住 Shift 单击
-                  delta.ts。
+                  基础行为：先单击 alpha.ts，再按住 Shift 单击 epsilon.ts，alpha.ts 到 epsilon.ts
+                  都会选中。
+                </div>
+                <div className="mt-2">
+                  append / replace 只影响已有额外非连续选择是否保留：重置后先单击 beta.ts，再按住
+                  Cmd / Ctrl 单击 epsilon.ts，最后按住 Shift 单击 delta.ts。
                 </div>
                 <div className="mt-2">
                   append 会保留 beta.ts；replace 只保留 delta.ts 到 epsilon.ts 这一段。
@@ -1877,7 +1899,7 @@ const TreeDesign: FC = () => {
                 <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-3 shadow-sm">
                   <div className="text-xs text-base-content/45">已加载分支</div>
                   <div className="mt-2 text-2xl font-semibold">
-                    {countLoadedBranches(asyncVirtualTreeData.value)}
+                    {asyncVirtualLoadedBranchCount.get()}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-3 shadow-sm">

@@ -34,19 +34,19 @@ function Comp(): JSX.Element {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
-
+    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
 function Comp(): JSX.Element {
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const a = _$vaporWithHookId("ref:1.2:0", ()=>ref(2));
-            const info = {
-                x: a.value,
-                arr: [
-                    a.value,
-                    `t=${a.value > 1 ? 'A' : 'B'}`
-                ]
-            };
-            _$vaporWithHookId("watchEffect:1.2:1", ()=>watchEffect(()=>console.log('pre', info.x)));
+            const info = _$vaporWithHookId("computed:1.2:1", ()=>computed(()=>({
+                        x: a.value,
+                        arr: [
+                            a.value,
+                            `t=${a.value > 1 ? 'A' : 'B'}`
+                        ]
+                    })));
+            const __rue_phase2_info = info;
+            _$vaporWithHookId("watchEffect:1.2:2", ()=>watchEffect(()=>console.log('pre', __rue_phase2_info.get().x)));
             try {
                 const x = a.value + 1;
             } finally{
@@ -56,7 +56,7 @@ function Comp(): JSX.Element {
                     try {
                         const z = a.value + 3;
                     } finally{
-                        onBeforeUnmount(()=>_$vaporWithHookId("watchEffect:1.2:2", ()=>watchEffect(()=>console.log('end', info.arr[1], a.value))));
+                        onBeforeUnmount(()=>_$vaporWithHookId("watchEffect:1.2:3", ()=>watchEffect(()=>console.log('end', __rue_phase2_info.get().arr[1], a.value))));
                     }
                 }
             }
@@ -66,7 +66,7 @@ function Comp(): JSX.Element {
             };
         }));
     const { a: a, info: info } = _$useSetup;
-    return <div>{info.arr[1]}</div>;
+    return <div>{info.get().arr[1]}</div>;
 }
 "##;
 

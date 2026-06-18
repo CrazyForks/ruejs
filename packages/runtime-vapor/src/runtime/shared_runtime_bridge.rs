@@ -55,6 +55,18 @@ fn call_bridge_method1_result(name: &str, arg: &JsValue) -> Option<JsValue> {
     func.call1(&bridge, arg).ok()
 }
 
+fn call_bridge_method3_result(
+    name: &str,
+    arg1: &JsValue,
+    arg2: &JsValue,
+    arg3: &JsValue,
+) -> Option<JsValue> {
+    let bridge = bridge_object()?;
+    let value = Reflect::get(&bridge, &JsValue::from_str(name)).unwrap_or(JsValue::UNDEFINED);
+    let func = value.dyn_ref::<Function>()?;
+    func.call3(&bridge, arg1, arg2, arg3).ok()
+}
+
 pub(crate) fn begin_component_render(instance: &JsValue) {
     call_bridge_method1("beginComponentRender", instance);
 }
@@ -82,6 +94,11 @@ pub(crate) fn dispose_component(instance: &JsValue) {
 
 pub(crate) fn props_reactive(initial: &JsValue) -> Option<JsValue> {
     call_bridge_method1_result("propsReactive", initial)
+}
+
+pub(crate) fn dispatch_error_captured(error: &JsValue, instance: &JsValue, info: &str) -> bool {
+    call_bridge_method3_result("dispatchErrorCaptured", error, instance, &JsValue::from_str(info))
+        .is_some_and(|value| value.as_bool() == Some(true))
 }
 
 #[cfg(test)]

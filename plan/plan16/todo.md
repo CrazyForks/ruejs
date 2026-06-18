@@ -1,7 +1,1 @@
-examples/component-v-model 组件级别的model根本不对，我们新开发的
-/examples/named-v-model 需要再次优化
 examples/component-emit 组件 emit 需要再次优化
-
-form
-table
-/design/calendar 卡死

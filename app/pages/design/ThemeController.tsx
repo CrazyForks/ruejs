@@ -65,27 +65,48 @@ const resolveAlgorithms = (mode: AlgorithmMode) => {
   }
 }
 
+const getReadableContentColor = (color: string) => {
+  const normalized = color.trim().replace(/^#/, '')
+  const hex =
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map(channel => `${channel}${channel}`)
+          .join('')
+      : normalized
+
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return '#f8fafc'
+
+  const red = Number.parseInt(hex.slice(0, 2), 16)
+  const green = Number.parseInt(hex.slice(2, 4), 16)
+  const blue = Number.parseInt(hex.slice(4, 6), 16)
+  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255
+
+  return luminance > 0.54 ? '#0f172a' : '#f8fafc'
+}
+
 const buildScopedThemeCode = () => {
   return [
     'const runtime = ThemeController.useToken({',
-    "  theme: 'night',",
-    '  algorithm: [ThemeController.darkAlgorithm, ThemeController.compactAlgorithm],',
+    "  theme: 'default',",
     '  token: {',
-    "    colors: { primary: '#38bdf8' },",
+    "    colors: { primary: '#2563eb', primaryContent: '#f8fafc' },",
     "    radius: { box: '1.1rem' },",
     '  },',
     '})',
     '',
     '<ThemeController.Provider',
-    '  theme="night"',
-    '  algorithm={[ThemeController.darkAlgorithm, ThemeController.compactAlgorithm]}',
-    "  token={{ colors: { primary: '#38bdf8' }, radius: { box: '1.1rem' } }}",
-    '  className="rounded-[2rem] border border-base-300 p-6"',
+    '  theme="default"',
+    '  token={{',
+    "    colors: { primary: '#2563eb', primaryContent: '#f8fafc' },",
+    "    radius: { box: '1.1rem' },",
+    '  }}',
+    '  className="rounded-[2rem] border border-base-300 bg-base-100 p-6"',
     '>',
     '  <Button color="primary">Publish</Button>',
     '</ThemeController.Provider>',
     '',
-    "runtime.token.colors.primary // '#38bdf8'",
+    "runtime.token.colors.primary // '#2563eb'",
   ].join('\n')
 }
 
@@ -407,10 +428,11 @@ const MoonIcon: FC = () => {
 }
 
 const ThemeWorkbenchPreview: FC = () => {
-  const activeTheme = ref<ThemePresetName>('night')
-  const algorithmMode = ref<AlgorithmMode>('darkCompact')
-  const primaryColor = ref('#38bdf8')
+  const activeTheme = ref<ThemePresetName>('default')
+  const algorithmMode = ref<AlgorithmMode>('default')
+  const primaryColor = ref('#2563eb')
   const radiusBox = ref('1.1rem')
+  const primaryContentColor = computed(() => getReadableContentColor(primaryColor.value))
   const runtime = computed(() =>
     ThemeController.useToken({
       theme: activeTheme.value,
@@ -418,6 +440,7 @@ const ThemeWorkbenchPreview: FC = () => {
       token: {
         colors: {
           primary: primaryColor.value,
+          primaryContent: primaryContentColor.get(),
         },
         radius: {
           box: radiusBox.value,
@@ -507,6 +530,22 @@ const ThemeWorkbenchPreview: FC = () => {
             <span className="mt-2 block font-mono text-xs">{primaryColor.value}</span>
           </label>
 
+          <div className="rounded-[1rem] border border-base-300/70 bg-base-100/70 p-3">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] opacity-60">
+              Primary Content
+            </span>
+            <div
+              className="flex h-11 items-center justify-center rounded-[0.9rem] border border-base-300 px-3 text-sm font-semibold"
+              style={{
+                backgroundColor: primaryColor.value,
+                color: primaryContentColor.get(),
+              }}
+            >
+              Aa
+            </div>
+            <span className="mt-2 block font-mono text-xs">{primaryContentColor.get()}</span>
+          </div>
+
           <label className="rounded-[1rem] border border-base-300/70 bg-base-100/70 p-3">
             <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] opacity-60">
               Box Radius
@@ -535,12 +574,13 @@ const ThemeWorkbenchPreview: FC = () => {
           token={{
             colors: {
               primary: primaryColor.value,
+              primaryContent: primaryContentColor.get(),
             },
             radius: {
               box: radiusBox.value,
             },
           }}
-          className="overflow-hidden rounded-[2rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200 p-6 shadow-[var(--rue-theme-shadow-md)]"
+          className="overflow-hidden rounded-[2rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200 p-6 text-base-content shadow-[var(--rue-theme-shadow-md)]"
           render={scopedRuntime => (
             <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
               <div className="space-y-5">
@@ -636,7 +676,7 @@ const ThemeWorkbenchPreview: FC = () => {
           <TokenFact label="theme" value={runtime.get().theme} />
           <TokenFact label="appearance" value={runtime.get().token.appearance} />
           <TokenFact label="density" value={runtime.get().token.density} />
-          <TokenFact label="colorScheme" value={runtime.get().token.colorScheme} />
+          <TokenFact label="primaryContent" value={runtime.get().token.colors.primaryContent} />
         </div>
       </div>
     </div>
@@ -968,7 +1008,7 @@ const ThemeControllerPage: FC = () => {
           </div>
           <div className="rounded-[1.5rem] border border-base-300 bg-base-100/80 p-5">
             <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
-              Static API quick use
+              API quick use
             </div>
             <Code
               className="mt-3"

@@ -75,7 +75,7 @@ const AttributeBindings: FC = () => {
           className={\`cursor-pointer \${isRed.value ? 'text-red-600' : ''}\`}
           onClick={toggleRed}
         >
-          This should be red... but click me to toggle it.
+          This should be red, but click me to toggle it.
         </p>
 
         <p className="cursor-pointer" style={{ color: color.value }} onClick={toggleColor}>
@@ -104,7 +104,7 @@ export default AttributeBindings;`}
                 className={`cursor-pointer ${isRed.value ? 'text-red-600' : ''}`}
                 onClick={toggleRed}
               >
-                This should be red... but click me to toggle it.
+                This should be red, but click me to toggle it.
               </p>
 
               <p className="cursor-pointer" style={{ color: color.value }} onClick={toggleColor}>

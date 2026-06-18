@@ -902,9 +902,12 @@ const MentionsRoot: FC<MentionsProps> = ({
     syncSelectionState()
   }
 
-  const selectMentionOption = (option: MentionsOption) => {
+  const selectMentionOption = (
+    option: MentionsOption,
+    fallbackElement?: HTMLTextAreaElement | null,
+  ) => {
     const trigger = activeTrigger.value
-    const element = textareaRef.current
+    const element = textareaRef.current ?? fallbackElement
 
     if (!trigger || !element || option.disabled) {
       return
@@ -921,13 +924,20 @@ const MentionsRoot: FC<MentionsProps> = ({
     const nextCaretPosition = before.length + insertedText.length
 
     element.value = nextValue
+    currentValue.value = nextValue
     lastCompositionCommittedValue.current = null
     dismissedTriggerKey.value = ''
     if (typeof element.setSelectionRange === 'function') {
       element.setSelectionRange(nextCaretPosition, nextCaretPosition)
     }
 
-    triggerSyntheticInput(element)
+    syncSelectionState()
+    syncAutoSize()
+    syncTriggerState(true)
+
+    if (onChange) {
+      onChange(nextValue)
+    }
 
     if (onSelect) {
       onSelect(option, triggerPrefix)
@@ -1046,11 +1056,15 @@ const MentionsRoot: FC<MentionsProps> = ({
         event.preventDefault()
         moveHighlight(-1)
       } else if (event.key === 'Enter') {
+        const fallbackIndex = findFirstEnabledIndex(resolvedOptions)
+        const optionIndex = highlightedIndex.value >= 0 ? highlightedIndex.value : fallbackIndex
         const option =
-          highlightedIndex.value >= 0 ? resolvedOptions[highlightedIndex.value] : undefined
+          optionIndex >= 0 && optionIndex < resolvedOptions.length
+            ? resolvedOptions[optionIndex]
+            : undefined
         if (option && !option.disabled) {
           event.preventDefault()
-          selectMentionOption(option)
+          selectMentionOption(option, event.currentTarget as HTMLTextAreaElement | null)
         }
       } else if (event.key === 'Escape') {
         dismissedTriggerKey.value = activeTrigger.value?.key ?? ''
@@ -1232,12 +1246,6 @@ const MentionsRoot: FC<MentionsProps> = ({
   const dataTestId = rest['data-testid']
 
   const nativeValueProps: Record<string, any> = {}
-  if (value !== undefined) {
-    nativeValueProps.value = composing.value ? currentValue.value : value
-  }
-  if (defaultValue !== undefined) {
-    nativeValueProps.defaultValue = defaultValue
-  }
 
   const nativeTextareaOptionalProps: Record<string, any> = {}
   if (readOnly) {

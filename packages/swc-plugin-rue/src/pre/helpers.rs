@@ -362,13 +362,12 @@ impl<'a> ReactivePropsDestructureRewriter<'a> {
     }
 
     fn rewrite_ident_expr(&self, expr: &mut Expr) -> bool {
-        if let Expr::Ident(ident) = expr {
-            if !self.is_shadowed(ident.sym.as_ref()) {
-                if let Some(rewritten) = self.alias_exprs.get(ident.sym.as_ref()) {
-                    *expr = wrap_alias_expr_if_needed(rewritten.clone());
-                    return true;
-                }
-            }
+        if let Expr::Ident(ident) = expr
+            && !self.is_shadowed(ident.sym.as_ref())
+            && let Some(rewritten) = self.alias_exprs.get(ident.sym.as_ref())
+        {
+            *expr = wrap_alias_expr_if_needed(rewritten.clone());
+            return true;
         }
         false
     }
@@ -431,16 +430,15 @@ impl VisitMut for ReactivePropsDestructureRewriter<'_> {
     }
 
     fn visit_mut_prop(&mut self, prop: &mut Prop) {
-        if let Prop::Shorthand(ident) = prop {
-            if !self.is_shadowed(ident.sym.as_ref()) {
-                if let Some(rewritten) = self.alias_exprs.get(ident.sym.as_ref()) {
-                    *prop = Prop::KeyValue(KeyValueProp {
-                        key: PropName::Ident(ident.clone().into()),
-                        value: Box::new(wrap_alias_expr_if_needed(rewritten.clone())),
-                    });
-                    return;
-                }
-            }
+        if let Prop::Shorthand(ident) = prop
+            && !self.is_shadowed(ident.sym.as_ref())
+            && let Some(rewritten) = self.alias_exprs.get(ident.sym.as_ref())
+        {
+            *prop = Prop::KeyValue(KeyValueProp {
+                key: PropName::Ident(ident.clone().into()),
+                value: Box::new(wrap_alias_expr_if_needed(rewritten.clone())),
+            });
+            return;
         }
         prop.visit_mut_children_with(self);
     }
@@ -504,16 +502,13 @@ impl VisitMut for ReactivePropsDestructureRewriter<'_> {
     }
 
     fn visit_mut_call_expr(&mut self, call: &mut CallExpr) {
-        if let Callee::Expr(callee_expr) = &call.callee {
-            if let Expr::Ident(callee_ident) = callee_expr.as_ref() {
-                if callee_ident.sym.as_ref() == "watch" {
-                    if let Some(first_arg) = call.args.first() {
-                        if let Expr::Ident(ident) = first_arg.expr.as_ref() {
-                            self.warning_for_watch_alias(ident);
-                        }
-                    }
-                }
-            }
+        if let Callee::Expr(callee_expr) = &call.callee
+            && let Expr::Ident(callee_ident) = callee_expr.as_ref()
+            && callee_ident.sym.as_ref() == "watch"
+            && let Some(first_arg) = call.args.first()
+            && let Expr::Ident(ident) = first_arg.expr.as_ref()
+        {
+            self.warning_for_watch_alias(ident);
         }
         call.visit_mut_children_with(self);
     }
@@ -535,7 +530,73 @@ fn call_expr_callee_ident_name(call: &CallExpr) -> Option<&str> {
     }
 }
 
+fn arrow_body_expr(arrow: &ArrowExpr) -> Option<&Expr> {
+    match arrow.body.as_ref() {
+        BlockStmtOrExpr::Expr(expr) => Some(crate::utils::unwrap_expr(expr.as_ref())),
+        BlockStmtOrExpr::BlockStmt(block) => block.stmts.iter().find_map(|stmt| match stmt {
+            Stmt::Return(ReturnStmt { arg: Some(expr), .. }) => {
+                Some(crate::utils::unwrap_expr(expr.as_ref()))
+            }
+            _ => None,
+        }),
+    }
+}
+
+fn is_phase2_reactive_source_call_name(name: &str) -> bool {
+    matches!(
+        name,
+        "ref"
+            | "shallowRef"
+            | "reactive"
+            | "shallowReactive"
+            | "readonly"
+            | "shallowReadonly"
+            | "propsReactive"
+            | "signal"
+            | "computed"
+            | "createComputed"
+            | "toRef"
+            | "toRefs"
+            | "useRef"
+            | "useState"
+            | "useSignal"
+    )
+}
+
+fn expr_is_phase2_reactive_source_initializer(expr: &Expr) -> bool {
+    let Expr::Call(call) = crate::utils::unwrap_expr(expr) else {
+        return false;
+    };
+
+    if call_expr_callee_ident_name(call).is_some_and(is_phase2_reactive_source_call_name) {
+        return true;
+    }
+
+    if call_expr_callee_ident_name(call) != Some("_$vaporWithHookId") {
+        return false;
+    }
+
+    let Some(runner) = call.args.get(1) else {
+        return false;
+    };
+    let Expr::Arrow(arrow) = crate::utils::unwrap_expr(runner.expr.as_ref()) else {
+        return false;
+    };
+    let Some(body_expr) = arrow_body_expr(arrow) else {
+        return false;
+    };
+    let Expr::Call(inner_call) = crate::utils::unwrap_expr(body_expr) else {
+        return false;
+    };
+
+    call_expr_callee_ident_name(inner_call).is_some_and(is_phase2_reactive_source_call_name)
+}
+
 fn expr_is_phase2_nonlowerable(expr: &Expr) -> bool {
+    if expr_is_phase2_reactive_source_initializer(expr) {
+        return true;
+    }
+
     match crate::utils::unwrap_expr(expr) {
         Expr::Arrow(_) | Expr::Fn(_) | Expr::JSXElement(_) | Expr::JSXFragment(_) => true,
         Expr::Call(call) => call_expr_callee_ident_name(call).is_some_and(|name| {
@@ -554,6 +615,10 @@ fn expr_is_phase2_nonlowerable(expr: &Expr) -> bool {
                     | "createEffect"
                     | "effect"
                     | "computed"
+                    | "createComputed"
+                    | "shallowRef"
+                    | "toRef"
+                    | "toRefs"
                     | "useSetup"
             )
         }),
@@ -570,6 +635,11 @@ fn value_member_expr(ident: Ident) -> Expr {
 }
 
 fn wrap_expr_in_computed(expr: Expr) -> Expr {
+    let computed_body = match expr {
+        Expr::Object(_) => Expr::Paren(ParenExpr { span: DUMMY_SP, expr: Box::new(expr) }),
+        _ => expr,
+    };
+
     Expr::Call(CallExpr {
         span: DUMMY_SP,
         ctxt: SyntaxContext::empty(),
@@ -579,7 +649,7 @@ fn wrap_expr_in_computed(expr: Expr) -> Expr {
             expr: Box::new(Expr::Arrow(ArrowExpr {
                 span: DUMMY_SP,
                 params: vec![],
-                body: Box::new(BlockStmtOrExpr::Expr(Box::new(expr))),
+                body: Box::new(BlockStmtOrExpr::Expr(Box::new(computed_body))),
                 is_async: false,
                 is_generator: false,
                 type_params: None,
@@ -632,6 +702,32 @@ fn collect_phase2_derived_const_candidates(
     }
 
     derived_names
+}
+
+fn collect_phase2_reactive_source_names(block: &BlockStmt, ret_idx: usize) -> HashSet<String> {
+    let mut names = HashSet::new();
+
+    for stmt in block.stmts.iter().take(ret_idx) {
+        let Stmt::Decl(Decl::Var(var)) = stmt else {
+            continue;
+        };
+
+        for decl in &var.decls {
+            let Some(init) = &decl.init else {
+                continue;
+            };
+            if !expr_is_phase2_reactive_source_initializer(init.as_ref()) {
+                continue;
+            }
+
+            let Pat::Ident(binding) = &decl.name else {
+                continue;
+            };
+            names.insert(binding.id.sym.to_string());
+        }
+    }
+
+    names
 }
 
 #[derive(Clone)]
@@ -889,11 +985,11 @@ impl Visit for Phase2UsageCollector<'_> {
     fn visit_expr(&mut self, expr: &Expr) {
         if let Expr::Ident(ident) = expr {
             let name = ident.sym.as_ref();
-            if !self.is_shadowed(name) {
-                if let Some(helper_name) = self.resolve_phase2_helper_name(name) {
-                    self.visit_phase2_helper_with_current_mode(&helper_name);
-                    return;
-                }
+            if !self.is_shadowed(name)
+                && let Some(helper_name) = self.resolve_phase2_helper_name(name)
+            {
+                self.visit_phase2_helper_with_current_mode(&helper_name);
+                return;
             }
             self.record_name(name);
         }
@@ -903,11 +999,11 @@ impl Visit for Phase2UsageCollector<'_> {
     fn visit_prop(&mut self, prop: &Prop) {
         if let Prop::Shorthand(ident) = prop {
             let name = ident.sym.as_ref();
-            if !self.is_shadowed(name) {
-                if let Some(helper_name) = self.resolve_phase2_helper_name(name) {
-                    self.visit_phase2_helper_with_current_mode(&helper_name);
-                    return;
-                }
+            if !self.is_shadowed(name)
+                && let Some(helper_name) = self.resolve_phase2_helper_name(name)
+            {
+                self.visit_phase2_helper_with_current_mode(&helper_name);
+                return;
             }
             self.record_name(name);
         }
@@ -915,16 +1011,15 @@ impl Visit for Phase2UsageCollector<'_> {
     }
 
     fn visit_call_expr(&mut self, call: &CallExpr) {
-        if let Some(name) = call_expr_callee_ident_name(call) {
-            if !self.is_shadowed(name) {
-                if let Some(helper_name) = self.resolve_phase2_helper_name(name) {
-                    for arg in &call.args {
-                        arg.visit_with(self);
-                    }
-                    self.visit_phase2_helper_with_current_mode(&helper_name);
-                    return;
-                }
+        if let Some(name) = call_expr_callee_ident_name(call)
+            && !self.is_shadowed(name)
+            && let Some(helper_name) = self.resolve_phase2_helper_name(name)
+        {
+            for arg in &call.args {
+                arg.visit_with(self);
             }
+            self.visit_phase2_helper_with_current_mode(&helper_name);
+            return;
         }
 
         call.visit_children_with(self);
@@ -1058,6 +1153,215 @@ fn select_phase2_live_derived_const_names(
     selected
 }
 
+fn phase2_mutation_root_from_expr(expr: &Expr) -> Option<String> {
+    match crate::utils::unwrap_expr(expr) {
+        Expr::Ident(ident) => Some(ident.sym.to_string()),
+        Expr::Member(member) => phase2_mutation_root_from_expr(member.obj.as_ref()),
+        Expr::OptChain(opt_chain) => match opt_chain.base.as_ref() {
+            OptChainBase::Member(member) => phase2_mutation_root_from_expr(member.obj.as_ref()),
+            OptChainBase::Call(call) => phase2_mutation_root_from_expr(call.callee.as_ref()),
+        },
+        _ => None,
+    }
+}
+
+fn phase2_mutation_root_from_simple_assign_target(target: &SimpleAssignTarget) -> Option<String> {
+    match target {
+        SimpleAssignTarget::Ident(ident) => Some(ident.id.sym.to_string()),
+        SimpleAssignTarget::Member(member) => phase2_mutation_root_from_expr(member.obj.as_ref()),
+        SimpleAssignTarget::Paren(paren) => phase2_mutation_root_from_expr(paren.expr.as_ref()),
+        SimpleAssignTarget::OptChain(opt_chain) => match opt_chain.base.as_ref() {
+            OptChainBase::Member(member) => phase2_mutation_root_from_expr(member.obj.as_ref()),
+            OptChainBase::Call(call) => phase2_mutation_root_from_expr(call.callee.as_ref()),
+        },
+        SimpleAssignTarget::TsAs(ts_as) => phase2_mutation_root_from_expr(ts_as.expr.as_ref()),
+        SimpleAssignTarget::TsSatisfies(ts_satisfies) => {
+            phase2_mutation_root_from_expr(ts_satisfies.expr.as_ref())
+        }
+        SimpleAssignTarget::TsNonNull(ts_non_null) => {
+            phase2_mutation_root_from_expr(ts_non_null.expr.as_ref())
+        }
+        SimpleAssignTarget::TsTypeAssertion(ts_type_assertion) => {
+            phase2_mutation_root_from_expr(ts_type_assertion.expr.as_ref())
+        }
+        SimpleAssignTarget::TsInstantiation(ts_instantiation) => {
+            phase2_mutation_root_from_expr(ts_instantiation.expr.as_ref())
+        }
+        SimpleAssignTarget::SuperProp(_) | SimpleAssignTarget::Invalid(_) => None,
+    }
+}
+
+fn phase2_mutation_root_from_assign_target(target: &AssignTarget) -> Option<String> {
+    match target {
+        AssignTarget::Simple(simple) => phase2_mutation_root_from_simple_assign_target(simple),
+        AssignTarget::Pat(_) => None,
+    }
+}
+
+fn phase2_call_mutated_arg_root(call: &CallExpr) -> Option<String> {
+    let Callee::Expr(callee) = &call.callee else {
+        return None;
+    };
+    let Expr::Member(member) = crate::utils::unwrap_expr(callee.as_ref()) else {
+        return None;
+    };
+    let Expr::Ident(obj_ident) = crate::utils::unwrap_expr(member.obj.as_ref()) else {
+        return None;
+    };
+    let MemberProp::Ident(prop_ident) = &member.prop else {
+        return None;
+    };
+
+    let mutates_first_arg = matches!(
+        (obj_ident.sym.as_ref(), prop_ident.sym.as_ref()),
+        ("Object", "assign" | "defineProperty" | "defineProperties" | "setPrototypeOf")
+            | ("Reflect", "set" | "deleteProperty" | "defineProperty" | "setPrototypeOf")
+    );
+    if !mutates_first_arg {
+        return None;
+    }
+
+    call.args.first().and_then(|arg| phase2_mutation_root_from_expr(arg.expr.as_ref()))
+}
+
+struct Phase2MutationCollector<'a> {
+    candidate_names: &'a HashSet<String>,
+    mutated_names: HashSet<String>,
+    scope_stack: Vec<HashSet<String>>,
+}
+
+impl<'a> Phase2MutationCollector<'a> {
+    fn new(candidate_names: &'a HashSet<String>) -> Self {
+        Self { candidate_names, mutated_names: HashSet::new(), scope_stack: vec![HashSet::new()] }
+    }
+
+    fn is_shadowed(&self, name: &str) -> bool {
+        self.scope_stack.iter().rev().any(|scope| scope.contains(name))
+    }
+
+    fn push_scope(&mut self, names: HashSet<String>) {
+        self.scope_stack.push(names);
+    }
+
+    fn pop_scope(&mut self) {
+        self.scope_stack.pop();
+    }
+
+    fn record_mutation_root(&mut self, root: Option<String>) {
+        let Some(name) = root else {
+            return;
+        };
+        if self.candidate_names.contains(&name) && !self.is_shadowed(&name) {
+            self.mutated_names.insert(name);
+        }
+    }
+}
+
+impl Visit for Phase2MutationCollector<'_> {
+    fn visit_assign_expr(&mut self, assign: &AssignExpr) {
+        self.record_mutation_root(phase2_mutation_root_from_assign_target(&assign.left));
+        assign.visit_children_with(self);
+    }
+
+    fn visit_update_expr(&mut self, update: &UpdateExpr) {
+        self.record_mutation_root(phase2_mutation_root_from_expr(update.arg.as_ref()));
+        update.visit_children_with(self);
+    }
+
+    fn visit_unary_expr(&mut self, unary: &UnaryExpr) {
+        if unary.op == UnaryOp::Delete {
+            self.record_mutation_root(phase2_mutation_root_from_expr(unary.arg.as_ref()));
+        }
+        unary.visit_children_with(self);
+    }
+
+    fn visit_call_expr(&mut self, call: &CallExpr) {
+        self.record_mutation_root(phase2_call_mutated_arg_root(call));
+        call.visit_children_with(self);
+    }
+
+    fn visit_block_stmt(&mut self, block: &BlockStmt) {
+        let declared = collect_block_declared_names(block);
+        self.push_scope(declared);
+        block.visit_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_function(&mut self, func: &Function) {
+        let mut scope = HashSet::new();
+        for param in &func.params {
+            collect_pat_declared_names(&param.pat, &mut scope);
+        }
+        if let Some(body) = &func.body {
+            scope.extend(collect_block_declared_names(body));
+        }
+
+        self.push_scope(scope);
+        func.visit_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_arrow_expr(&mut self, arrow: &ArrowExpr) {
+        let mut scope = HashSet::new();
+        for param in &arrow.params {
+            collect_pat_declared_names(param, &mut scope);
+        }
+        if let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() {
+            scope.extend(collect_block_declared_names(block));
+        }
+
+        self.push_scope(scope);
+        arrow.visit_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_catch_clause(&mut self, catch: &CatchClause) {
+        let mut scope = HashSet::new();
+        if let Some(param) = &catch.param {
+            collect_pat_declared_names(param, &mut scope);
+        }
+        self.push_scope(scope);
+        catch.visit_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_for_stmt(&mut self, for_stmt: &ForStmt) {
+        let names = collect_for_init_names(&for_stmt.init);
+        self.push_scope(names);
+        for_stmt.visit_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_for_in_stmt(&mut self, for_in: &ForInStmt) {
+        let names = collect_for_head_names(&for_in.left);
+        self.push_scope(names);
+        for_in.visit_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_for_of_stmt(&mut self, for_of: &ForOfStmt) {
+        let names = collect_for_head_names(&for_of.left);
+        self.push_scope(names);
+        for_of.visit_children_with(self);
+        self.pop_scope();
+    }
+}
+
+fn collect_phase2_mutated_candidate_names(
+    block: &BlockStmt,
+    candidate_names: &HashSet<String>,
+) -> HashSet<String> {
+    if candidate_names.is_empty() {
+        return HashSet::new();
+    }
+
+    let mut collector = Phase2MutationCollector::new(candidate_names);
+    for stmt in &block.stmts {
+        stmt.visit_with(&mut collector);
+    }
+    collector.mutated_names
+}
+
 struct DerivedConstUsageRewriter<'a> {
     derived_names: &'a HashSet<String>,
     replacement_idents: HashMap<String, Ident>,
@@ -1189,7 +1493,11 @@ fn apply_phase2_props_derived_const_lowering(
     ret_idx: usize,
     reactive_inputs: &HashSet<String>,
 ) -> bool {
-    let candidate_names = collect_phase2_derived_const_candidates(block, ret_idx, reactive_inputs);
+    let mut candidate_names =
+        collect_phase2_derived_const_candidates(block, ret_idx, reactive_inputs);
+    for mutated_name in collect_phase2_mutated_candidate_names(block, &candidate_names) {
+        candidate_names.remove(&mutated_name);
+    }
     let derived_names = select_phase2_live_derived_const_names(block, ret_idx, &candidate_names);
     if derived_names.is_empty() {
         return false;
@@ -1235,40 +1543,39 @@ fn apply_phase2_props_derived_const_lowering(
     for (stmt_idx, mut stmt) in std::mem::take(&mut block.stmts).into_iter().enumerate() {
         let mut alias_decls = Vec::new();
 
-        if stmt_idx < ret_idx {
-            if let Stmt::Decl(Decl::Var(var)) = &mut stmt {
-                if var.kind == VarDeclKind::Const {
-                    for decl in &mut var.decls {
-                        let Pat::Ident(binding) = &decl.name else {
-                            continue;
-                        };
-                        let name = binding.id.sym.to_string();
-                        if !derived_names.contains(&name) {
-                            continue;
-                        }
-
-                        if let Some(init) = decl.init.take() {
-                            decl.init = Some(Box::new(wrap_expr_in_computed(*init)));
-                        }
-
-                        let Some(alias_ident) = alias_idents.get(&name).cloned() else {
-                            continue;
-                        };
-
-                        alias_decls.push(Stmt::Decl(Decl::Var(Box::new(VarDecl {
-                            span: DUMMY_SP,
-                            kind: VarDeclKind::Const,
-                            declare: false,
-                            decls: vec![VarDeclarator {
-                                span: DUMMY_SP,
-                                name: Pat::Ident(BindingIdent { id: alias_ident, type_ann: None }),
-                                init: Some(Box::new(Expr::Ident(binding.id.clone()))),
-                                definite: false,
-                            }],
-                            ctxt: SyntaxContext::empty(),
-                        }))));
-                    }
+        if stmt_idx < ret_idx
+            && let Stmt::Decl(Decl::Var(var)) = &mut stmt
+            && var.kind == VarDeclKind::Const
+        {
+            for decl in &mut var.decls {
+                let Pat::Ident(binding) = &decl.name else {
+                    continue;
+                };
+                let name = binding.id.sym.to_string();
+                if !derived_names.contains(&name) {
+                    continue;
                 }
+
+                if let Some(init) = decl.init.take() {
+                    decl.init = Some(Box::new(wrap_expr_in_computed(*init)));
+                }
+
+                let Some(alias_ident) = alias_idents.get(&name).cloned() else {
+                    continue;
+                };
+
+                alias_decls.push(Stmt::Decl(Decl::Var(Box::new(VarDecl {
+                    span: DUMMY_SP,
+                    kind: VarDeclKind::Const,
+                    declare: false,
+                    decls: vec![VarDeclarator {
+                        span: DUMMY_SP,
+                        name: Pat::Ident(BindingIdent { id: alias_ident, type_ann: None }),
+                        init: Some(Box::new(Expr::Ident(binding.id.clone()))),
+                        definite: false,
+                    }],
+                    ctxt: SyntaxContext::empty(),
+                }))));
             }
         }
 
@@ -1288,7 +1595,8 @@ pub fn lower_props_derived_consts_in_arrow(arrow: &mut ArrowExpr) -> bool {
     let Some(ret_idx) = find_first_return_index(block) else {
         return false;
     };
-    let reactive_inputs = collect_param_idents(&arrow.params);
+    let mut reactive_inputs = collect_param_idents(&arrow.params);
+    reactive_inputs.extend(collect_phase2_reactive_source_names(block, ret_idx));
     apply_phase2_props_derived_const_lowering(block, ret_idx, &reactive_inputs)
 }
 
@@ -1300,7 +1608,8 @@ pub fn lower_props_derived_consts_in_function(func: &mut Function) -> bool {
         return false;
     };
     let params: Vec<Pat> = func.params.iter().map(|param| param.pat.clone()).collect();
-    let reactive_inputs = collect_param_idents(&params);
+    let mut reactive_inputs = collect_param_idents(&params);
+    reactive_inputs.extend(collect_phase2_reactive_source_names(block, ret_idx));
     apply_phase2_props_derived_const_lowering(block, ret_idx, &reactive_inputs)
 }
 
@@ -1592,10 +1901,10 @@ pub fn collect_setup(
             }
             Expr::Bin(b) => expr_contains_jsx(&b.left) || expr_contains_jsx(&b.right),
             Expr::Call(c) => {
-                if let Callee::Expr(e) = &c.callee {
-                    if expr_contains_jsx(e) {
-                        return true;
-                    }
+                if let Callee::Expr(e) = &c.callee
+                    && expr_contains_jsx(e)
+                {
+                    return true;
                 }
                 c.args.iter().any(|arg| expr_contains_jsx(arg.expr.as_ref()))
             }
@@ -1772,10 +2081,10 @@ pub fn collect_setup(
             )
         };
 
-        if let Some(name) = call_callee_ident_name(call) {
-            if is_setup_effect_name(name) {
-                return true;
-            }
+        if let Some(name) = call_callee_ident_name(call)
+            && is_setup_effect_name(name)
+        {
+            return true;
         }
 
         if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
@@ -2132,31 +2441,28 @@ pub fn is_fc_pat(name: &Pat) -> bool {
 /// - 箭头函数体是单表达式且表达式本身可渲染；
 /// - 箭头函数返回类型标注为 JSX.Element（且 body 为 BlockStmt）。
 pub fn is_untyped_arrow_component_decl(d: &VarDeclarator) -> bool {
-    if let Some(init) = d.init.as_ref() {
-        if let Expr::Arrow(a) = init.as_ref() {
-            match &*a.body {
-                BlockStmtOrExpr::BlockStmt(b) => {
-                    if has_component_render_return_in_block(b) {
-                        return true;
-                    }
-                }
-                BlockStmtOrExpr::Expr(expr) => {
-                    if expr_is_component_renderable(expr.as_ref()) {
-                        return true;
-                    }
+    if let Some(init) = d.init.as_ref()
+        && let Expr::Arrow(a) = init.as_ref()
+    {
+        match &*a.body {
+            BlockStmtOrExpr::BlockStmt(b) => {
+                if has_component_render_return_in_block(b) {
+                    return true;
                 }
             }
-            if let Some(ann) = &a.return_type {
-                if let TsType::TsTypeRef(tr) = &*ann.type_ann {
-                    if let TsEntityName::Ident(id) = &tr.type_name {
-                        if id.sym.as_ref() == "JSX.Element"
-                            && matches!(&*a.body, BlockStmtOrExpr::BlockStmt(_))
-                        {
-                            return true;
-                        }
-                    }
+            BlockStmtOrExpr::Expr(expr) => {
+                if expr_is_component_renderable(expr.as_ref()) {
+                    return true;
                 }
             }
+        }
+        if let Some(ann) = &a.return_type
+            && let TsType::TsTypeRef(tr) = &*ann.type_ann
+            && let TsEntityName::Ident(id) = &tr.type_name
+            && id.sym.as_ref() == "JSX.Element"
+            && matches!(&*a.body, BlockStmtOrExpr::BlockStmt(_))
+        {
+            return true;
         }
     }
     false
@@ -2211,10 +2517,10 @@ fn block_has_use_setup(block: &BlockStmt) -> bool {
         // 仅检查变量声明语句
         if let Stmt::Decl(Decl::Var(v)) = s {
             for d in &v.decls {
-                if let Pat::Ident(BindingIdent { id, .. }) = &d.name {
-                    if id.sym.as_ref() == "_$useSetup" {
-                        return true;
-                    }
+                if let Pat::Ident(BindingIdent { id, .. }) = &d.name
+                    && id.sym.as_ref() == "_$useSetup"
+                {
+                    return true;
                 }
             }
         }

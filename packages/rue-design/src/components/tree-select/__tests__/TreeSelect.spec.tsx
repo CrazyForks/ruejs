@@ -19,6 +19,27 @@ const triggerClick = (element: Element | null) => {
   )
 }
 
+const triggerMouseDown = (element: Element | null) => {
+  ;(element as HTMLElement | null)?.dispatchEvent(
+    new MouseEvent('mousedown', { bubbles: true, cancelable: true }),
+  )
+}
+
+const triggerBrowserClick = (element: Element | null) => {
+  triggerMouseDown(element)
+  triggerClick(element)
+}
+
+const triggerDocumentMouseDownFrom = (element: Element | null) => {
+  if (!element) return
+  const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'target', {
+    configurable: true,
+    value: element,
+  })
+  document.dispatchEvent(event)
+}
+
 const clickExpandButton = (container: HTMLElement, value: string) => {
   const row = getNodeRow(container, value)
   const buttons = row.querySelectorAll('button')
@@ -31,10 +52,22 @@ const clickCheckboxButton = (container: HTMLElement, value: string) => {
   triggerClick(buttons[1])
 }
 
+const browserClickCheckboxButton = (container: HTMLElement, value: string) => {
+  const row = getNodeRow(container, value)
+  const buttons = row.querySelectorAll('button')
+  triggerBrowserClick(buttons[1])
+}
+
 const clickLabelButton = (container: HTMLElement, value: string) => {
   const row = getNodeRow(container, value)
   const buttons = row.querySelectorAll('button')
   triggerClick(buttons[buttons.length - 1])
+}
+
+const browserClickLabelButton = (container: HTMLElement, value: string) => {
+  const row = getNodeRow(container, value)
+  const buttons = row.querySelectorAll('button')
+  triggerBrowserClick(buttons[buttons.length - 1])
 }
 
 afterEach(() => {
@@ -435,7 +468,7 @@ describe('TreeSelect', () => {
       expect(getNodeRow(container, 'team')).toBeTruthy()
     })
 
-    clickCheckboxButton(container, 'team')
+    browserClickCheckboxButton(container, 'team')
 
     await waitForContent(() => {
       const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
@@ -519,6 +552,140 @@ describe('TreeSelect', () => {
       expect(selectorAfterToggle.textContent).toContain('文档中心')
       expect(selectorAfterToggle.textContent).toContain('工程效率')
       expect(selectedValues.value).toEqual(['docs', 'components', 'engineering'])
+    })
+  })
+
+  it('keeps the popup open after checking with maxTagCount in controlled checkable mode', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const selectedValues = ref<string[]>(['build', 'quality'])
+
+    const Demo = () => {
+      return (
+        <TreeSelect
+          treeCheckable
+          allowClear
+          maxTagCount={2}
+          maxTagPlaceholder="..."
+          value={selectedValues.value}
+          treeDefaultExpandAll
+          treeData={[
+            {
+              title: '产品平台',
+              value: 'platform',
+              children: [
+                { title: '文档中心', value: 'docs' },
+                { title: '资源目录', value: 'assets' },
+                { title: '组件市场', value: 'components' },
+              ],
+            },
+            {
+              title: '工程效率',
+              value: 'engineering',
+              children: [
+                { title: '构建链路', value: 'build' },
+                { title: '质量门禁', value: 'quality' },
+                { title: '发布管道', value: 'release' },
+              ],
+            },
+          ]}
+          onChange={nextValue => {
+            selectedValues.value = Array.isArray(nextValue) ? nextValue.map(String) : []
+          }}
+        />
+      )
+    }
+
+    render(<Demo />, container)
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-rue-tree-select-selector="true"]')).toBeTruthy()
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      expect(popup.hidden).toBe(false)
+      expect(getNodeRow(container, 'release')).toBeTruthy()
+    })
+
+    browserClickCheckboxButton(container, 'release')
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      const releaseButtons = getNodeRow(container, 'release').querySelectorAll('button')
+      const releaseCheckbox = releaseButtons[1] as HTMLButtonElement
+      expect(popup.hidden).toBe(false)
+      expect(releaseCheckbox.getAttribute('aria-checked')).toBe('true')
+      expect(selectedValues.value).toEqual(['build', 'quality', 'release'])
+    })
+  })
+
+  it('keeps the popup open after toggling a checkable node label in controlled mode', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const selectedValues = ref<string[]>(['build', 'quality'])
+
+    const Demo = () => {
+      return (
+        <TreeSelect
+          treeCheckable
+          allowClear
+          maxTagCount={2}
+          maxTagPlaceholder="..."
+          value={selectedValues.value}
+          treeDefaultExpandAll
+          treeData={[
+            {
+              title: '产品平台',
+              value: 'platform',
+              children: [
+                { title: '文档中心', value: 'docs' },
+                { title: '资源目录', value: 'assets' },
+                { title: '组件市场', value: 'components' },
+              ],
+            },
+            {
+              title: '工程效率',
+              value: 'engineering',
+              children: [
+                { title: '构建链路', value: 'build' },
+                { title: '质量门禁', value: 'quality' },
+                { title: '发布管道', value: 'release' },
+              ],
+            },
+          ]}
+          onChange={nextValue => {
+            selectedValues.value = Array.isArray(nextValue) ? nextValue.map(String) : []
+          }}
+        />
+      )
+    }
+
+    render(<Demo />, container)
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-rue-tree-select-selector="true"]')).toBeTruthy()
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      expect(popup.hidden).toBe(false)
+      expect(getNodeRow(container, 'release')).toBeTruthy()
+    })
+
+    browserClickLabelButton(container, 'release')
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      const releaseButtons = getNodeRow(container, 'release').querySelectorAll('button')
+      const releaseLabel = releaseButtons[releaseButtons.length - 1] as HTMLButtonElement
+      expect(popup.hidden).toBe(false)
+      expect(releaseLabel.className).toContain('bg-primary/12')
+      expect(selectedValues.value).toEqual(['build', 'quality', 'release'])
     })
   })
 
@@ -714,12 +881,58 @@ describe('TreeSelect', () => {
       expect(getNodeRow(container, 'build')).toBeTruthy()
     })
 
-    clickLabelButton(container, 'build')
+    browserClickLabelButton(container, 'build')
 
     await waitForContent(() => {
       const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
       expect(popup.hidden).toBe(false)
       expect(container.querySelector('[aria-label="移除 构建链路"]')).toBeTruthy()
+    })
+  })
+
+  it('keeps the popup open when an internal multiple mousedown reaches the document listener', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+
+    render(
+      <TreeSelect
+        multiple
+        treeDefaultExpandAll
+        treeData={[
+          {
+            title: '协作面板',
+            value: 'workspace',
+            children: [
+              { title: '日报汇总', value: 'daily' },
+              { title: '设计交接', value: 'handoff' },
+            ],
+          },
+        ]}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-rue-tree-select-selector="true"]')).toBeTruthy()
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      expect(popup.hidden).toBe(false)
+      expect(getNodeRow(container, 'daily')).toBeTruthy()
+    })
+
+    const root = container.querySelector('[data-rue-tree-select-root="true"]') as HTMLElement
+    const row = getNodeRow(container, 'daily')
+    const buttons = row.querySelectorAll('button')
+    root.setAttribute('data-rue-tree-select-id', 'stale-tree-select-id')
+    triggerDocumentMouseDownFrom(buttons[buttons.length - 1])
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      expect(popup.hidden).toBe(false)
     })
   })
 
@@ -768,12 +981,75 @@ describe('TreeSelect', () => {
       expect(getNodeRow(container, 'build')).toBeTruthy()
     })
 
-    clickLabelButton(container, 'build')
+    browserClickLabelButton(container, 'build')
 
     await waitForContent(() => {
       const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
       expect(popup.hidden).toBe(false)
       expect(container.querySelector('[aria-label="移除 构建链路"]')).toBeTruthy()
+    })
+  })
+
+  it('keeps the popup open after selecting with maxTagCount in controlled multiple mode', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const selectedValues = ref<string[]>(['analytics', 'minutes'])
+
+    const Demo = () => {
+      return (
+        <TreeSelect
+          multiple
+          allowClear
+          maxTagCount={2}
+          value={selectedValues.value}
+          treeDefaultExpandAll
+          treeData={[
+            {
+              title: '协作面板',
+              value: 'workspace',
+              children: [
+                { title: '日报汇总', value: 'daily' },
+                { title: '设计交接', value: 'handoff' },
+                { title: '会议纪要', value: 'minutes' },
+              ],
+            },
+            {
+              title: '数据服务',
+              value: 'data',
+              children: [
+                { title: '分析订阅', value: 'analytics' },
+                { title: '实验指标', value: 'metrics' },
+                { title: '异常告警', value: 'alerts' },
+              ],
+            },
+          ]}
+          onChange={nextValue => {
+            selectedValues.value = Array.isArray(nextValue) ? nextValue.map(String) : []
+          }}
+        />
+      )
+    }
+
+    render(<Demo />, container)
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-rue-tree-select-selector="true"]')).toBeTruthy()
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      expect(popup.hidden).toBe(false)
+      expect(getNodeRow(container, 'daily')).toBeTruthy()
+    })
+
+    browserClickLabelButton(container, 'daily')
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      expect(popup.hidden).toBe(false)
+      expect(selectedValues.value).toEqual(['analytics', 'minutes', 'daily'])
     })
   })
 
@@ -885,6 +1161,123 @@ describe('TreeSelect', () => {
       ) as HTMLElement
       expect(selectorAfterClear.textContent).not.toContain('Workflow board')
       expect(container.querySelector('[data-testid="selected-value"]')?.textContent).toBe('')
+    })
+  })
+
+  it('renders the selected label after changing a single labelInValue selection', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const handleChange = vi.fn()
+
+    render(
+      <TreeSelect
+        labelInValue
+        defaultValue="release"
+        treeDefaultExpandAll
+        treeData={[
+          {
+            title: '工程效率',
+            value: 'engineering',
+            children: [
+              { title: '构建链路', value: 'build' },
+              { title: '质量门禁', value: 'quality' },
+              { title: '发布管道', value: 'release' },
+            ],
+          },
+        ]}
+        onChange={handleChange}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      const selector = container.querySelector(
+        '[data-rue-tree-select-selector="true"]',
+      ) as HTMLElement
+      expect(selector.textContent).toContain('发布管道')
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      expect(getNodeRow(container, 'build')).toBeTruthy()
+    })
+
+    clickLabelButton(container, 'build')
+
+    await waitForContent(() => {
+      const selector = container.querySelector(
+        '[data-rue-tree-select-selector="true"]',
+      ) as HTMLElement
+      expect(selector.textContent).toContain('构建链路')
+      expect(selector.textContent).not.toContain('发布管道')
+      expect(handleChange).toHaveBeenCalled()
+      const lastChangeCall = handleChange.mock.calls[handleChange.mock.calls.length - 1]
+      expect(lastChangeCall?.[0]).toMatchObject({
+        value: 'build',
+        key: 'build',
+      })
+    })
+  })
+
+  it('keeps labelInValue text visible when the parent renders the emitted structure', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const selectedValue = ref<any>(null)
+
+    const Demo = () => {
+      return (
+        <>
+          <TreeSelect
+            labelInValue
+            defaultValue="release"
+            treeDefaultExpandAll
+            treeData={[
+              {
+                title: '工程效率',
+                value: 'engineering',
+                children: [
+                  { title: '构建链路', value: 'build' },
+                  { title: '质量门禁', value: 'quality' },
+                  { title: '发布管道', value: 'release' },
+                ],
+              },
+            ]}
+            onChange={nextValue => {
+              selectedValue.value = nextValue
+            }}
+          />
+          <code data-testid="label-in-value-json">{JSON.stringify(selectedValue.value)}</code>
+        </>
+      )
+    }
+
+    render(<Demo />, container)
+
+    await waitForContent(() => {
+      const selector = container.querySelector(
+        '[data-rue-tree-select-selector="true"]',
+      ) as HTMLElement
+      expect(selector.textContent).toContain('发布管道')
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      expect(getNodeRow(container, 'build')).toBeTruthy()
+    })
+
+    clickLabelButton(container, 'build')
+
+    await waitForContent(() => {
+      const selector = container.querySelector(
+        '[data-rue-tree-select-selector="true"]',
+      ) as HTMLElement
+      expect(selector.textContent).toContain('构建链路')
+      expect(selector.textContent).not.toContain('发布管道')
+      expect(container.querySelector('[data-testid="label-in-value-json"]')?.textContent).toContain(
+        '"value":"build"',
+      )
     })
   })
 
@@ -1108,11 +1501,25 @@ describe('TreeSelect', () => {
       const selectorAfterClear = container.querySelector(
         '[data-rue-tree-select-selector="true"]',
       ) as HTMLElement
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
       expect(selectorAfterClear.textContent).not.toContain('设计系统')
       const inputAfterClear = selectorAfterClear.querySelector('input') as HTMLInputElement | null
       expect(inputAfterClear).toBeTruthy()
       expect(inputAfterClear?.value ?? '').toBe('')
       expect(inputAfterClear?.placeholder ?? '').toBe('选择节点')
+      expect(popup.hidden).toBe(true)
+    })
+
+    const inputAfterClear = container.querySelector(
+      '[data-rue-tree-select-search="true"]',
+    ) as HTMLInputElement
+    triggerClick(inputAfterClear)
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      expect(popup.hidden).toBe(false)
+      expect(getNodeRow(container, 'design')).toBeTruthy()
+      expect(getNodeRow(container, 'platform')).toBeTruthy()
     })
   })
 
@@ -1161,6 +1568,194 @@ describe('TreeSelect', () => {
     await waitForContent(() => {
       expect(handleLoadData).toHaveBeenCalledTimes(1)
       expect(container.textContent).toContain('已加载子节点')
+    })
+  })
+
+  it('keeps a loaded async branch expanded after closing and reopening when expansion is controlled', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const expandedKeys = ref<Array<string | number>>([])
+    const treeData = ref<TreeSelectDataNode[]>([
+      {
+        title: '按需加载',
+        value: 'async-root',
+        isLeaf: false,
+      },
+    ])
+    const handleLoadData = vi.fn(async () => {
+      treeData.value = [
+        {
+          title: '按需加载',
+          value: 'async-root',
+          isLeaf: false,
+          children: [{ title: '已加载子节点', value: 'loaded-child' }],
+        },
+      ]
+    })
+
+    const Demo = () => {
+      return (
+        <TreeSelect
+          treeData={treeData.value}
+          treeExpandedKeys={expandedKeys.value}
+          loadData={handleLoadData}
+          onTreeExpand={nextKeys => {
+            expandedKeys.value = nextKeys
+          }}
+        />
+      )
+    }
+
+    render(<Demo />, container)
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-rue-tree-select-selector="true"]')).toBeTruthy()
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      expect(getNodeRow(container, 'async-root')).toBeTruthy()
+    })
+
+    clickExpandButton(container, 'async-root')
+
+    await waitForContent(() => {
+      expect(handleLoadData).toHaveBeenCalledTimes(1)
+      expect(getNodeRow(container, 'loaded-child')).toBeTruthy()
+      expect(expandedKeys.value).toEqual(['async-root'])
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      expect(popup.hidden).toBe(true)
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      expect(popup.hidden).toBe(false)
+      expect(getNodeRow(container, 'loaded-child')).toBeTruthy()
+    })
+  })
+
+  it('expands an unloaded async branch from the label without closing the popup', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const treeData = ref<TreeSelectDataNode[]>([
+      {
+        title: '按需加载目录',
+        value: 'async-root',
+        isLeaf: false,
+      },
+    ])
+    const selectedValue = ref<string | null>(null)
+    const handleLoadData = vi.fn(async () => {
+      treeData.value = [
+        {
+          title: '按需加载目录',
+          value: 'async-root',
+          isLeaf: false,
+          children: [
+            { title: '实验看板', value: 'async-dashboard' },
+            { title: '巡检报告', value: 'async-report' },
+          ],
+        },
+      ]
+    })
+
+    const Demo = () => {
+      return (
+        <TreeSelect
+          value={selectedValue.value}
+          treeData={treeData.value}
+          loadData={handleLoadData}
+          onChange={nextValue => {
+            selectedValue.value = nextValue == null ? null : String(nextValue)
+          }}
+        />
+      )
+    }
+
+    render(<Demo />, container)
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-rue-tree-select-selector="true"]')).toBeTruthy()
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      expect(getNodeRow(container, 'async-root')).toBeTruthy()
+    })
+
+    clickLabelButton(container, 'async-root')
+
+    await waitForContent(() => {
+      const selector = container.querySelector(
+        '[data-rue-tree-select-selector="true"]',
+      ) as HTMLElement
+      const popup = container.querySelector('[data-rue-tree-select-popup="true"]') as HTMLElement
+      expect(handleLoadData).toHaveBeenCalledTimes(1)
+      expect(popup.hidden).toBe(false)
+      expect(getNodeRow(container, 'async-dashboard')).toBeTruthy()
+      expect(selectedValue.value).toBeNull()
+      expect(selector.textContent).not.toContain('按需加载目录')
+    })
+  })
+
+  it('hides the async switcher for loaded leaf nodes', async () => {
+    const container = mountContainer()
+    resetActiveRuntime()
+    const treeData = ref<TreeSelectDataNode[]>([
+      {
+        title: '按需加载目录',
+        value: 'async-root',
+        isLeaf: false,
+      },
+    ])
+
+    const Demo = () => {
+      return (
+        <TreeSelect
+          treeData={treeData.value}
+          loadData={async () => {
+            treeData.value = [
+              {
+                title: '按需加载目录',
+                value: 'async-root',
+                isLeaf: false,
+                children: [{ title: '实验看板', value: 'async-dashboard' }],
+              },
+            ]
+          }}
+        />
+      )
+    }
+
+    render(<Demo />, container)
+
+    await waitForContent(() => {
+      expect(container.querySelector('[data-rue-tree-select-selector="true"]')).toBeTruthy()
+    })
+
+    triggerClick(container.querySelector('[data-rue-tree-select-selector="true"]') as HTMLElement)
+
+    await waitForContent(() => {
+      expect(getNodeRow(container, 'async-root')).toBeTruthy()
+    })
+
+    clickExpandButton(container, 'async-root')
+
+    await waitForContent(() => {
+      const leafButtons = getNodeRow(container, 'async-dashboard').querySelectorAll('button')
+      const switcherButton = leafButtons[0] as HTMLButtonElement
+      const switcherIcon = switcherButton.querySelector('span') as HTMLElement
+      expect(switcherButton.disabled).toBe(true)
+      expect(switcherIcon.className).toContain('opacity-0')
     })
   })
 

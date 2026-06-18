@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module'
 
 import { wrapCreateRue } from './runtime-entry-wrap.js'
+import { installSharedBridge } from './vapor-bridge.js'
 // Node 入口复用 reactive.node.js 的 JS 包装 API，保持 SSR/测试环境和浏览器入口一致。
 import {
   computed,
@@ -25,6 +26,7 @@ import {
 
 const require = createRequire(import.meta.url)
 const runtimeVapor = require('./pkg-node/rue_runtime_vapor.js')
+installSharedBridge(runtimeVapor)
 const createRue = wrapCreateRue(runtimeVapor.createRue)
 
 const {
