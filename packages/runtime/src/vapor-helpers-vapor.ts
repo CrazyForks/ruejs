@@ -394,7 +394,10 @@ export const vaporKeyedList = <T>(args: {
   if (reusedEntries.length <= 1) {
     reusedEntries.forEach(entry => stableKeys.add(entry.key))
   } else {
-    const predecessors: Array<number | undefined> = new Array(reusedEntries.length)
+    const predecessors: Array<number | undefined> = Array.from(
+      { length: reusedEntries.length },
+      () => undefined,
+    )
     const tails: number[] = []
 
     reusedEntries.forEach((entry, index) => {

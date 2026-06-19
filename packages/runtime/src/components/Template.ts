@@ -7,6 +7,7 @@ Template 组件概述
 
 import { type FC, type PropsWithChildren, renderAnchor, renderBetween, vapor } from '../rue'
 import { appendChild, createComment, createDocumentFragment } from '../dom'
+import { markBuiltinComponent } from './builtinMarkers'
 
 /** Template 组件属性；运行时只关心 children。 */
 export type TemplateProps = PropsWithChildren<Record<string, unknown>>
@@ -31,3 +32,5 @@ export const Template: FC<TemplateProps> = props => {
     return root as any
   })
 }
+
+markBuiltinComponent(Template, 'Template')

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { render, setReactiveScheduling } from '../src'
+import { TransitionGroup, render, setReactiveScheduling } from '../src'
 import ListTransitionExample from '../../../app/pages/examples/ListTransition'
 import { click, flush, mountContainer, waitForContent } from './page-test-utils'
 
@@ -71,5 +71,39 @@ describe('ListTransitionExample actual page', () => {
     await click(findTab(container, '代码'))
 
     expect(container.querySelector('.list-shell')).toBeNull()
+  })
+
+  it('keeps transition behavior when the builtin component function name is minified', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+
+    const originalName = Object.getOwnPropertyDescriptor(TransitionGroup, 'name')
+    Object.defineProperty(TransitionGroup, 'name', {
+      value: 'R',
+      configurable: true,
+    })
+
+    try {
+      const container = mountContainer()
+      resetActiveRuntime()
+      render(<ListTransitionExample />, container)
+
+      await waitForContent(() => {
+        expect(listNumbers(container)).toEqual(['1', '2', '3', '4', '5'])
+      })
+      await flush()
+
+      const insertButton = Array.from(container.querySelectorAll('button')).find(
+        button => button.textContent?.trim() === 'Insert at random index',
+      )
+      await click(insertButton ?? null)
+
+      const insertedItem = listItemByNumber(container, '6')
+      expect(insertedItem?.classList.contains('list-enter-active')).toBe(true)
+      expect(insertedItem?.classList.contains('list-enter-from')).toBe(true)
+    } finally {
+      if (originalName) {
+        Object.defineProperty(TransitionGroup, 'name', originalName)
+      }
+    }
   })
 })

@@ -12,6 +12,7 @@ import { useRef, useSetup } from '@rue-js/runtime-vapor/reactive'
 import type { BaseTransitionProps } from './BaseTransition'
 import { createTransitionRunner } from './BaseTransition'
 import * as TransitionUtils from './transitionUtils'
+import { markBuiltinComponent } from './builtinMarkers'
 
 type TransitionGroupChildInput = unknown
 
@@ -255,3 +256,5 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
 
   return h(containerTag, containerProps as any, props.children as any)
 }
+
+markBuiltinComponent(TransitionGroup, 'TransitionGroup')

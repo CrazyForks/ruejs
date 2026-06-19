@@ -17,6 +17,7 @@ import {
   type SuspenseBoundary,
   withSuspenseBoundary,
 } from './suspenseContext'
+import { markBuiltinComponent } from './builtinMarkers'
 
 /** Suspense 组件属性。 */
 export interface SuspenseProps extends PropsWithChildren<Record<string, unknown>> {
@@ -395,3 +396,5 @@ Object.defineProperty(Suspense, RUE_SUSPENSE_COMPONENT_MARKER, {
   enumerable: false,
   value: true,
 })
+
+markBuiltinComponent(Suspense, 'Suspense')

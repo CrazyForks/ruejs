@@ -18,6 +18,7 @@ import { type BaseTransitionProps, createTransitionRunner } from './BaseTransiti
 import { createElement, createComment, appendChild } from '../dom'
 import type { DomNodeLike } from '../dom'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
+import { markBuiltinComponent } from './builtinMarkers'
 
 type FC<P = {}> = VaporFC<P>
 type PropsWithChildren<P = {}> = VaporPropsWithChildren<P>
@@ -155,3 +156,5 @@ export const Transition: FC<TransitionProps> = props => {
     return ctx.container
   })
 }
+
+markBuiltinComponent(Transition, 'Transition')

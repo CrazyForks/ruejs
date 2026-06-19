@@ -66,6 +66,7 @@ import {
   updateKeepAlivePropsFromPreviousHandle,
   withKeepAlivePropsRegistrationTarget,
 } from './components/keepAlivePropsBridge'
+import { copyBuiltinComponentMarker, getBuiltinComponentName } from './components/builtinMarkers'
 
 getDOMAdapter()
 
@@ -238,6 +239,7 @@ const resolveKeepAliveHookTargetComponent = <P>(
       value: (componentType as Function).name,
     })
   } catch {}
+  copyBuiltinComponentMarker(componentType, wrapped)
   if (RUE_PORTABLE_COMPONENT_ID_KEY in componentType) {
     try {
       Object.defineProperty(wrapped, RUE_PORTABLE_COMPONENT_ID_KEY, {
@@ -473,6 +475,7 @@ const createClassComponentAdapter = <P>(
       value: (ClassComponent as unknown as Function).name,
     })
   } catch {}
+  copyBuiltinComponentMarker(ClassComponent, adapter)
 
   classComponentAdapterCache.set(ClassComponent as unknown as Function, adapter)
   return adapter
@@ -855,6 +858,7 @@ const createComponentReturnAdapter = <P>(component: ComponentInstance<P>): Compo
       value: (component as unknown as Function).name,
     })
   } catch {}
+  copyBuiltinComponentMarker(component, adapter)
 
   componentReturnAdapterCache.set(component as unknown as Function, adapter)
   return adapter
@@ -1014,7 +1018,7 @@ const markAnchorRemountableMountHandle = <P = {}>(
   const hasDomNodeLikeChildren = effectiveChildren.some(child => containsDomNodeLikeInput(child))
   const hasDomNodeLikeProp =
     !!props && Object.values(props).some(value => containsDomNodeLikeInput(value))
-  const builtinName = typeof type === 'function' ? (type as Function).name : ''
+  const builtinName = getBuiltinComponentName(type)
   const shouldUseComponentChildrenAnchor =
     (effectiveChildren.length > 0 && builtinName !== 'TransitionGroup') ||
     builtinName === 'Transition'
@@ -1273,7 +1277,7 @@ const renderAnchorUntracked = (
       ? (normalizedValue as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
       : undefined
   const hasPortableComponent = typeof componentType === 'function'
-  const componentName = typeof componentType === 'function' ? componentType.name : ''
+  const componentName = getBuiltinComponentName(componentType)
   const shouldPreserveComponentChildrenInstance =
     componentName === 'KeepAlive' ||
     (!shouldForceRemount && hasActiveTextControlWithin(targetParent))
@@ -1370,8 +1374,7 @@ const renderAnchorUntracked = (
       !!pending.value && typeof pending.value === 'object'
         ? (pending.value as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
         : undefined
-    const pendingComponentName =
-      typeof pendingComponentType === 'function' ? pendingComponentType.name : ''
+    const pendingComponentName = getBuiltinComponentName(pendingComponentType)
     if (pendingComponentName === 'KeepAlive') {
       withKeepAlivePropsRegistrationTarget(pendingMountHandleValue, () => {
         getRueRuntime().renderAnchor(pendingMountHandleValue, mountedParent, anchor)

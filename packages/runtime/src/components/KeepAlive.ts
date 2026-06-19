@@ -30,6 +30,7 @@ import type { DomElementLike, DomNodeLike } from '../dom'
 import { signal, watchEffect } from '../reactivity'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
 import { registerKeepAlivePropsUpdater } from './keepAlivePropsBridge'
+import { markBuiltinComponent } from './builtinMarkers'
 
 /** KeepAlive 的 include/exclude 匹配模式。 */
 export type KeepAliveMatchPattern = string | RegExp | Array<string | RegExp>
@@ -662,3 +663,5 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     return ctx.container as any
   })
 }
+
+markBuiltinComponent(KeepAlive, 'KeepAlive')
