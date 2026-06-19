@@ -271,7 +271,7 @@ where
         }
 
         if record.kind.recurses_before_unmount_children() {
-            // Component/compat Fragment 这类拥有子树结构的节点需要继续向下释放资源。
+            // Component 这类拥有子树结构的节点需要继续向下释放资源。
             for child in record.children.iter() {
                 self.invoke_before_unmount_record(child);
             }
@@ -760,6 +760,29 @@ mod tests {
 
         let values = hits.iter().filter_map(|value| value.as_string()).collect::<Vec<_>>();
         assert_eq!(values, vec!["lower:payload".to_string()]);
+    }
+
+    #[wasm_bindgen_test]
+    fn emitted_maps_tsx_model_update_event_to_handler() {
+        let rue: Rue<JsDomAdapter> = Rue::new();
+        let hits = Array::new();
+        let hits_for_handler = hits.clone();
+        let handler = wasm_bindgen::closure::Closure::wrap(Box::new(move |value: JsValue| {
+            hits_for_handler.push(&value);
+        }) as Box<dyn FnMut(JsValue)>);
+
+        let mut props = ComponentProps::new();
+        props.insert(
+            "onUpdateModelValue".to_string(),
+            handler.as_ref().clone().unchecked_into::<Function>().into(),
+        );
+
+        let mut emit = rue.emitted(&props);
+        emit("updateModelValue".to_string(), vec![JsValue::from_str("Rue")]);
+        handler.forget();
+
+        assert_eq!(hits.length(), 1);
+        assert_eq!(hits.get(0).as_string().as_deref(), Some("Rue"));
     }
 
     #[wasm_bindgen_test]

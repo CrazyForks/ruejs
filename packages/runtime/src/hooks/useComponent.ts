@@ -82,7 +82,7 @@ const normalizeUseComponentSource = <P = any>(
   const resolvedOptions = (isAsyncComponentOptions(source) ? source : opts) as
     | (AsyncComponentOptions<P> & UseComponentOptions<P>)
     | undefined
-  const hasLegacyLoading = !!resolvedOptions?.loading
+  const hasLoadingAlias = !!resolvedOptions?.loading
 
   return {
     loader: resolvedLoader,
@@ -90,7 +90,7 @@ const normalizeUseComponentSource = <P = any>(
     error: resolvedOptions?.errorComponent ?? resolvedOptions?.error,
     hasCustomLoading: !!(resolvedOptions?.loadingComponent ?? resolvedOptions?.loading),
     delay:
-      resolvedOptions?.delay ?? (resolvedOptions?.loadingComponent && !hasLegacyLoading ? 200 : 0),
+      resolvedOptions?.delay ?? (resolvedOptions?.loadingComponent && !hasLoadingAlias ? 200 : 0),
     timeout: resolvedOptions?.timeout ?? Number.POSITIVE_INFINITY,
     suspensible: resolvedOptions?.suspensible !== false,
     onError: resolvedOptions?.onError,

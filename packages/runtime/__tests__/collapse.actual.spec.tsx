@@ -24,7 +24,7 @@ afterEach(() => {
 })
 
 describe('Collapse actual page', () => {
-  it('keeps legacy collapse demos and API module on the page', async () => {
+  it('keeps collapse demos and API module on the page', async () => {
     expect(collapsePageSource).toContain('Collapse 折叠面板')
     expect(collapsePageSource).toContain('增强能力')
     expect(collapsePageSource).toContain('API')

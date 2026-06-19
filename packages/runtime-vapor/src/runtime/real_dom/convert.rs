@@ -1,19 +1,16 @@
 /*
 JS 值到 MountInput 的转换
 
-组件 render、bridge 输入与 compat vnode 最终都会走到这里的一部分逻辑。
+组件 render 与 bridge 输入最终都会走到这里的一部分逻辑。
 它把 JS 值归一化成 runtime 能理解的 MountInput，并在需要时把跨适配器元素转成 JsDomAdapter 句柄。
 */
-#[cfg(feature = "compat")]
-use super::super::types::FRAGMENT;
 use super::super::types::{MountInput, MountInputChild, MountInputType};
-#[cfg(feature = "compat")]
-use super::super::vnode_helpers::{
-    compat_children_from_value as shared_compat_children_from_value,
-    compat_object_to_input as shared_compat_object_to_input,
-};
 use super::super::{JsDomAdapter, Rue};
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::input_props::{
+    children_from_value as shared_children_from_value,
+    input_from_values as shared_input_from_values,
+};
 use crate::runtime::transport;
 use js_sys::{Array, Object, Reflect};
 use wasm_bindgen::JsValue;
@@ -27,13 +24,11 @@ where
     MountInput {
         r#type: match &input.r#type {
             MountInputType::<A>::Text(text) => MountInputType::<JsDomAdapter>::Text(text.clone()),
-            #[cfg(feature = "compat")]
             MountInputType::<A>::Fragment => MountInputType::<JsDomAdapter>::Fragment,
             MountInputType::<A>::Vapor => MountInputType::<JsDomAdapter>::Vapor,
             MountInputType::<A>::VaporWithSetup(f) => {
                 MountInputType::<JsDomAdapter>::VaporWithSetup(f.clone())
             }
-            #[cfg(feature = "compat")]
             MountInputType::<A>::Element(tag) => {
                 MountInputType::<JsDomAdapter>::Element(tag.clone())
             }
@@ -127,37 +122,15 @@ where
                 set_mount_handle_wrapper_metadata(&handle, input);
                 handle.into()
             }
-            #[cfg(feature = "compat")]
-            MountInputType::<A>::Element(tag) => {
-                let handle = Object::new();
-                let props = Object::new();
-                for (key, value) in input.props.iter() {
-                    let _ = Reflect::set(&props, &JsValue::from_str(key.as_str()), value);
-                }
-                let children = self.normalized_children_input_array(&input.props, &input.children);
-                let _ = Reflect::set(&handle, &JsValue::from_str("type"), &JsValue::from_str(tag));
-                let _ = Reflect::set(&handle, &JsValue::from_str("props"), &props);
-                let _ = Reflect::set(&handle, &JsValue::from_str("children"), &children.into());
-                set_mount_handle_wrapper_metadata(&handle, input);
-                handle.into()
-            }
-            #[cfg(feature = "compat")]
-            MountInputType::<A>::Fragment => {
-                let handle = Object::new();
-                let props = Object::new();
-                for (key, value) in input.props.iter() {
-                    let _ = Reflect::set(&props, &JsValue::from_str(key.as_str()), value);
-                }
-                let children = self.normalized_children_input_array(&input.props, &input.children);
-                let _ =
-                    Reflect::set(&handle, &JsValue::from_str("type"), &JsValue::from_str(FRAGMENT));
-                let _ = Reflect::set(&handle, &JsValue::from_str("props"), &props);
-                let _ = Reflect::set(&handle, &JsValue::from_str("children"), &children.into());
-                set_mount_handle_wrapper_metadata(&handle, input);
-                handle.into()
-            }
             _ => default_mount_handle_value_from_jsdom_input(convert_mount_input_to_js_dom(input)),
         }
+    }
+
+    fn input_children_from_js_value(&mut self, value: &JsValue) -> Vec<MountInputChild<A>>
+    where
+        A::Element: From<JsValue> + Into<JsValue> + Clone,
+    {
+        shared_children_from_value::<A, _>(value, |child_value| self.value_to_input(child_value))
     }
 
     pub(crate) fn component_return_value_to_input(
@@ -182,11 +155,6 @@ where
                 return Some(input);
             }
 
-            #[cfg(feature = "compat")]
-            if value.is_object() {
-                return self.compat_vnode_object_to_input(&Object::from(value.clone()));
-            }
-
             None
         } else {
             self.value_to_input(value)
@@ -198,43 +166,8 @@ where
     where
         A::Element: From<JsValue> + Into<JsValue> + Clone,
     {
-        #[cfg(feature = "compat")]
-        if Array::is_array(value) {
-            // compat 下数组返回值仍表示 Fragment，并递归转换其 children。
-            let source = Object::from(value.clone());
-            let mut input = MountInput::new_normalized(
-                MountInputType::<A>::Fragment,
-                Default::default(),
-                self.children_from_js_input(value),
-            );
-            input.attach_mount_metadata_from_source(&source);
-            return Some(input);
-        }
-
         if let Some(input) = self.object_value_to_input(value) {
             return Some(input);
-        }
-
-        #[cfg(feature = "compat")]
-        if value.is_object() {
-            let obj = Object::from(value.clone());
-            let node_type =
-                Reflect::get(&obj, &JsValue::from_str("nodeType")).unwrap_or(JsValue::UNDEFINED);
-            if node_type.as_f64().is_some() {
-                // raw DOM node 直接纳入 Vapor snapshot，Rust runtime 不重新创建节点。
-                return Some(transport::element_value_to_vapor_input(
-                    self,
-                    &obj,
-                    JsValue::from(obj.clone()),
-                ));
-            }
-
-            #[cfg(feature = "compat")]
-            if let Some(input) = self.compat_vnode_object_to_input(&obj) {
-                return Some(input);
-            }
-
-            return None;
         }
 
         None
@@ -249,53 +182,27 @@ where
         }
 
         let obj = Object::from(value.clone());
-        // 默认对象只识别 mount handle / portable object / host-node bridge。
-        // 旧 vnode object 解析被隔离到 compat_vnode_object_to_input。
+        // 默认对象只识别 mount handle / portable object。
         if let Some(input) = transport::default_object_input(self, &obj) {
             return Some(input);
         }
 
-        None
-    }
-
-    #[cfg(feature = "compat")]
-    #[cfg_attr(not(test), allow(dead_code))]
-    fn compat_vnode_object_to_input(&mut self, obj: &Object) -> Option<MountInput<A>>
-    where
-        A::Element: From<JsValue> + Into<JsValue>,
-    {
-        shared_compat_object_to_input::<A, _, _>(
-            &JsValue::from(obj.clone()),
-            None,
-            |_| true,
-            |effective_children| self.children_from_js_input(effective_children),
-        )
-    }
-
-    #[cfg(feature = "compat")]
-    #[cfg_attr(not(test), allow(dead_code))]
-    fn child_value_to_input(&mut self, value: &JsValue) -> MountInput<A>
-    where
-        A::Element: From<JsValue> + Into<JsValue> + Clone,
-    {
-        if let Some(input) = self.value_to_input(value) {
-            return input;
+        let type_tag = Reflect::get(&obj, &JsValue::from_str("type")).unwrap_or(JsValue::UNDEFINED);
+        if !type_tag.is_undefined() && !type_tag.is_null() {
+            let props =
+                Reflect::get(&obj, &JsValue::from_str("props")).unwrap_or(JsValue::UNDEFINED);
+            let children =
+                Reflect::get(&obj, &JsValue::from_str("children")).unwrap_or(JsValue::UNDEFINED);
+            return shared_input_from_values::<A, _>(
+                &type_tag,
+                &props,
+                &children,
+                None,
+                |effective_children| self.input_children_from_js_value(effective_children),
+            );
         }
 
-        let error = JsValue::from_str(
-            "Unsupported object child on the default path. Return a raw node, fragment, host-node bridge, or tagged mount handle instead.",
-        );
-        self.handle_error(error.clone());
-        wasm_bindgen::throw_val(error);
-    }
-
-    #[cfg(feature = "compat")]
-    #[cfg_attr(not(test), allow(dead_code))]
-    fn children_from_js_input(&mut self, cc: &JsValue) -> Vec<MountInputChild<A>>
-    where
-        A::Element: From<JsValue> + Into<JsValue> + Clone,
-    {
-        shared_compat_children_from_value::<A, _>(cc, |item| Some(self.child_value_to_input(item)))
+        None
     }
 
     fn append_existing_children_prop(
@@ -380,7 +287,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(feature = "compat")]
     use crate::runtime::transport::DEFAULT_MOUNT_HANDLE_KEY;
     use crate::runtime::transport::PORTABLE_COMPONENT_TYPE_KEY;
     use crate::runtime::types::ComponentProps;
@@ -616,68 +522,6 @@ mod tests {
         assert!(js_sys::Object::is(&roundtrip.el_hint.unwrap(), &el));
     }
 
-    #[cfg(feature = "compat")]
-    #[wasm_bindgen_test]
-    fn props_with_children_input_to_jsobject_preserves_stable_child_objects() {
-        let mut rue: Rue<JsDomAdapter> = Rue::new();
-        let child = MountInput::new_normalized(
-            MountInputType::Element("strong".to_string()),
-            Default::default(),
-            vec![MountInputChild::Text("A".to_string())],
-        );
-        let parent = MountInput::new_normalized(
-            MountInputType::Fragment,
-            Default::default(),
-            vec![MountInputChild::Input(child)],
-        );
-
-        let props = Object::from(rue.props_with_children_input_to_jsobject(&parent));
-        let children = Array::from(
-            &Reflect::get(&props, &JsValue::from_str("children")).unwrap_or(JsValue::UNDEFINED),
-        );
-        let child_object = Object::from(children.get(0));
-
-        assert!(
-            !Reflect::has(&child_object, &JsValue::from_str(DEFAULT_MOUNT_HANDLE_KEY)).unwrap()
-        );
-        let type_value =
-            Reflect::get(&child_object, &JsValue::from_str("type")).unwrap_or(JsValue::UNDEFINED);
-        assert_eq!(type_value.as_string().as_deref(), Some("strong"));
-    }
-
-    #[wasm_bindgen_test]
-    fn host_node_bridge_input_lifts_mount_metadata_off_props() {
-        let mut rue: Rue<JsDomAdapter> = Rue::new();
-        let host: JsValue = JsObject::new().into();
-        let cleanup_bucket = Array::new();
-        cleanup_bucket.push(&JsValue::from_str("cleanup"));
-
-        let bridge = JsObject::new();
-        Reflect::set(&bridge, &JsValue::from_str("__rue_host_node"), &host).unwrap();
-        Reflect::set(
-            &bridge,
-            &JsValue::from_str("__rue_cleanup_bucket"),
-            &cleanup_bucket.clone().into(),
-        )
-        .unwrap();
-        Reflect::set(
-            &bridge,
-            &JsValue::from_str("__rue_effect_scope_id"),
-            &JsValue::from_f64(11.0),
-        )
-        .unwrap();
-
-        let input = rue
-            .object_value_to_input(&bridge.clone().into())
-            .expect("host-node bridge should convert");
-
-        assert!(matches!(input.r#type, MountInputType::Vapor));
-        assert!(input.mount_cleanup_bucket.is_some());
-        assert_eq!(input.mount_effect_scope_id, Some(11));
-        assert!(!input.props.contains_key("__rue_cleanup_bucket"));
-        assert!(!input.props.contains_key("__rue_effect_scope_id"));
-    }
-
     #[wasm_bindgen_test]
     fn tagged_mount_handle_object_lifts_wrapper_metadata() {
         let mut rue: Rue<JsDomAdapter> = Rue::new();
@@ -727,33 +571,6 @@ mod tests {
         assert_eq!(input.key.as_deref(), Some("portable-key"));
     }
 
-    #[cfg(feature = "compat")]
-    #[wasm_bindgen_test]
-    fn array_return_value_converts_to_fragment_with_primitive_children() {
-        let mut rue: Rue<JsDomAdapter> = Rue::new();
-        let child = MountInput::new_normalized(
-            MountInputType::Element("em".to_string()),
-            Default::default(),
-            vec![MountInputChild::Text("B".to_string())],
-        );
-        let child_handle = rue.input_to_mount_handle_value(&child);
-
-        let raw = Array::new();
-        raw.push(&JsValue::from_str("A"));
-        raw.push(&JsValue::from_f64(3.0));
-        raw.push(&child_handle);
-
-        let input = rue.value_to_input(&raw.into()).expect("array should become a fragment");
-
-        assert!(matches!(input.r#type, MountInputType::Fragment));
-        assert_eq!(input.children.len(), 3);
-        assert!(matches!(&input.children[0], MountInputChild::Text(text) if text == "A"));
-        assert!(matches!(&input.children[1], MountInputChild::Text(text) if text == "3"));
-        assert!(
-            matches!(&input.children[2], MountInputChild::Input(child) if matches!(child.r#type, MountInputType::Element(ref tag) if tag == "em"))
-        );
-    }
-
     #[wasm_bindgen_test]
     fn primitive_and_plain_object_inputs_are_rejected_on_default_surface() {
         let mut rue: Rue<JsDomAdapter> = Rue::new();
@@ -763,34 +580,6 @@ mod tests {
         let plain = JsObject::new();
         Reflect::set(&plain, &JsValue::from_str("notAProtocol"), &JsValue::TRUE).unwrap();
         assert!(rue.value_to_input(&plain.into()).is_none());
-    }
-
-    #[cfg(feature = "compat")]
-    #[wasm_bindgen_test]
-    fn strict_component_return_rejects_raw_host_node_but_accepts_mount_handle() {
-        let mut rue: Rue<JsDomAdapter> = Rue::new();
-        let host = JsObject::new();
-        Reflect::set(&host, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
-
-        assert!(rue.component_return_value_to_input(&host.clone().into(), true).is_none());
-        assert!(matches!(
-            rue.component_return_value_to_input(&host.into(), false)
-                .expect("non-strict component return should accept raw host node")
-                .r#type,
-            MountInputType::Vapor
-        ));
-
-        let handle = rue.input_to_mount_handle_value(&MountInput::new_normalized(
-            MountInputType::Vapor,
-            Default::default(),
-            vec![],
-        ));
-        assert!(matches!(
-            rue.component_return_value_to_input(&handle, true)
-                .expect("strict component return should accept tagged mount handles")
-                .r#type,
-            MountInputType::Vapor
-        ));
     }
 
     #[wasm_bindgen_test]
@@ -865,55 +654,6 @@ mod tests {
         assert!(!Reflect::has(&wrapper, &JsValue::from_str("__rue_effect_scope_id")).unwrap());
     }
 
-    #[cfg(feature = "compat")]
-    #[wasm_bindgen_test]
-    fn compat_vnode_object_input_flattens_nested_array_children() {
-        let mut rue: Rue<JsDomAdapter> = Rue::new();
-        let strong = MountInput::new_normalized(
-            MountInputType::Element("strong".to_string()),
-            Default::default(),
-            vec![MountInputChild::Text("B".to_string())],
-        );
-        let strong_handle = rue.input_to_mount_handle_value(&strong);
-
-        let nested = Array::new();
-        nested.push(&JsValue::from_str("A"));
-        nested.push(&strong_handle);
-
-        let children = Array::new();
-        children.push(&nested.clone().into());
-
-        let props = JsObject::new();
-        Reflect::set(&props, &JsValue::from_str("className"), &JsValue::from_str("raw")).unwrap();
-
-        let vnode = JsObject::new();
-        Reflect::set(&vnode, &JsValue::from_str("type"), &JsValue::from_str("div")).unwrap();
-        Reflect::set(&vnode, &JsValue::from_str("props"), &props).unwrap();
-        Reflect::set(&vnode, &JsValue::from_str("children"), &children.into()).unwrap();
-
-        let input = rue.value_to_input(&vnode.into()).expect("compat vnode object should convert");
-
-        assert!(matches!(input.r#type, MountInputType::Element(ref tag) if tag == "div"));
-        assert_eq!(input.children.len(), 2);
-        assert!(matches!(&input.children[0], MountInputChild::Text(text) if text == "A"));
-        assert!(
-            matches!(&input.children[1], MountInputChild::Input(child) if matches!(child.r#type, MountInputType::Element(ref tag) if tag == "strong"))
-        );
-    }
-
-    #[cfg(feature = "compat")]
-    #[wasm_bindgen_test]
-    #[should_panic]
-    fn unsupported_object_child_panics_on_default_child_path() {
-        let mut rue: Rue<JsDomAdapter> = Rue::new();
-        let unsupported = JsObject::new();
-        Reflect::set(&unsupported, &JsValue::from_str("notAProtocol"), &JsValue::TRUE).unwrap();
-        let children = Array::new();
-        children.push(&unsupported.into());
-
-        let _ = rue.children_from_js_input(&children.into());
-    }
-
     #[wasm_bindgen_test]
     fn non_js_adapter_mount_handle_conversion_covers_default_input_shapes() {
         let rue: Rue<AltAdapter> = Rue::new();
@@ -924,13 +664,6 @@ mod tests {
             vec![],
         ));
         assert!(!text_handle.is_undefined());
-
-        let fragment_handle = rue.input_to_mount_handle_value(&MountInput::new_normalized(
-            MountInputType::Fragment,
-            Default::default(),
-            vec![MountInputChild::Text("frag-child".to_string())],
-        ));
-        assert!(!fragment_handle.is_undefined());
 
         let component_handle = rue.input_to_mount_handle_value(&MountInput::new_normalized(
             MountInputType::Component(Function::new_no_args("return null").into()),
@@ -962,23 +695,11 @@ mod tests {
     #[wasm_bindgen_test]
     fn non_js_adapter_children_serialization_covers_wrappers_and_existing_children_props() {
         let mut rue: Rue<AltAdapter> = Rue::new();
-        let mut props: ComponentProps = Default::default();
-        props.insert("title".to_string(), JsValue::from_str("kept"));
 
         let vapor_setup = MountInput::new_normalized(
             MountInputType::VaporWithSetup(Function::new_no_args("return null").into()),
             Default::default(),
             vec![],
-        );
-        let element = MountInput::new_normalized(
-            MountInputType::Element("article".to_string()),
-            props,
-            vec![MountInputChild::Text("body".to_string())],
-        );
-        let fragment = MountInput::new_normalized(
-            MountInputType::Fragment,
-            Default::default(),
-            vec![MountInputChild::Text("fragment child".to_string())],
         );
         let vapor = MountInput::new_normalized(MountInputType::Vapor, Default::default(), vec![]);
         let text = MountInput::new_normalized(
@@ -991,8 +712,6 @@ mod tests {
             Default::default(),
             vec![
                 MountInputChild::Input(vapor_setup),
-                MountInputChild::Input(element),
-                MountInputChild::Input(fragment),
                 MountInputChild::Input(vapor),
                 MountInputChild::Input(text),
             ],
@@ -1002,26 +721,15 @@ mod tests {
         let children = Array::from(
             &Reflect::get(&props_obj, &JsValue::from_str("children")).unwrap_or(JsValue::UNDEFINED),
         );
-        assert_eq!(children.length(), 5);
+        assert_eq!(children.length(), 3);
         assert!(
             Reflect::has(&children.get(0), &JsValue::from_str(transport::PORTABLE_VAPOR_SETUP_KEY))
                 .unwrap()
         );
-        assert_eq!(
-            Reflect::get(&children.get(1), &JsValue::from_str("type"))
-                .unwrap()
-                .as_string()
-                .as_deref(),
-            Some("article")
+        assert!(
+            Reflect::has(&children.get(1), &JsValue::from_str(DEFAULT_MOUNT_HANDLE_KEY)).unwrap()
         );
-        assert_eq!(
-            Reflect::get(&children.get(2), &JsValue::from_str("type"))
-                .unwrap()
-                .as_string()
-                .as_deref(),
-            Some(FRAGMENT)
-        );
-        assert_eq!(children.get(4).as_string().as_deref(), Some("inline"));
+        assert_eq!(children.get(2).as_string().as_deref(), Some("inline"));
 
         let existing = Array::new();
         existing.push(&JsValue::from_str("existing-a"));
@@ -1039,23 +747,5 @@ mod tests {
         let mut props_with_null: ComponentProps = Default::default();
         props_with_null.insert("children".to_string(), JsValue::NULL);
         assert_eq!(rue.normalized_children_input_array(&props_with_null, &[]).length(), 0);
-    }
-
-    #[wasm_bindgen_test]
-    fn strict_component_return_with_non_js_adapter_accepts_compat_vnodes_and_rejects_primitives() {
-        let mut rue: Rue<AltAdapter> = Rue::new();
-        let vnode = JsObject::new();
-        Reflect::set(&vnode, &JsValue::from_str("type"), &JsValue::from_str("section")).unwrap();
-        Reflect::set(&vnode, &JsValue::from_str("props"), &JsObject::new()).unwrap();
-        Reflect::set(&vnode, &JsValue::from_str("children"), &Array::new().into()).unwrap();
-
-        let input = rue
-            .component_return_value_to_input(&vnode.into(), true)
-            .expect("strict compat vnode should convert");
-        assert!(matches!(input.r#type, MountInputType::Element(ref tag) if tag == "section"));
-
-        assert!(
-            rue.component_return_value_to_input(&JsValue::from_str("primitive"), true).is_none()
-        );
     }
 }

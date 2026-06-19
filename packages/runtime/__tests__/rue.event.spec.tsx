@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { h, render, type FC } from '../src'
+import { h, render, type FC, useEmit } from '../src'
 
 describe('DOM event binding and trigger', () => {
   it('attaches and triggers onClick', async () => {
@@ -55,22 +55,12 @@ describe('DOM event binding and trigger', () => {
   })
 })
 
-describe('emitted in component with camelCase and lowercase handler', () => {
+describe('useEmit in component with camelCase and lowercase handler', () => {
   const Emitter: FC<{
     onChange?: (v: number) => void
     onchange?: (v: number) => void
   }> = props => {
-    const emit = (evt: string, ...args: any[]) => {
-      const lower = `on${evt.toLowerCase()}`
-      const camel = `on${evt
-        .split(/[-_ ]+/)
-        .map(s => (s ? s[0].toUpperCase() + s.slice(1) : ''))
-        .join('')}`
-      const h1 = (props as any)[camel]
-      const h2 = (props as any)[lower]
-      if (typeof h1 === 'function') h1(...args)
-      if (typeof h2 === 'function') h2(...args)
-    }
+    const emit = useEmit(props as any)
     return (
       <button id="em" onClick={() => emit('change', 42)}>
         emit

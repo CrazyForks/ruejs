@@ -1,6 +1,6 @@
 /*
-运行时输入与 compat 类型体系
----------------------------
+运行时输入与 mounted 类型体系
+----------------------------
 默认主路径现在围绕 MountInput 组织：
 - MountInputType：默认挂载协议的节点语义（文本、片段、元素、组件、Vapor）
 - MountInput：默认调度/挂载/bridge 运输的数据货币
@@ -10,9 +10,8 @@ types.rs 现在只保留默认输入协议与公共别名；mounted/lifecycle �
 默认运行时不再把历史树对象契约当作并列数据货币。
 
 关键点：
-- el_hint: MountInput 可携带宿主提示节点，供 Vapor/host-node bridge 直接复用
+- el_hint: MountInput 可携带宿主提示节点，供内部 Vapor 输入直接复用
 - key: 仍用于 keyed 更新稳定性判断
-- FRAGMENT 常量：JS 桥接时用于识别片段构造
 */
 use crate::runtime::dom_adapter::DomAdapter;
 use js_sys::{Array, Object, Reflect};
@@ -20,18 +19,8 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use wasm_bindgen::JsValue;
 
-#[cfg(feature = "compat")]
-mod compat_lifecycle;
-#[cfg(feature = "compat")]
-mod compat_patch_root;
-#[cfg(feature = "compat")]
-pub(super) mod compat_state;
-#[cfg(feature = "compat")]
-mod compat_subtree;
 mod mounted;
 
-#[cfg(feature = "compat")]
-pub(crate) use mounted::MountedSubtreeChild;
 pub(crate) use mounted::{
     AnchorMountState, ContainerMountState, MountLifecycleRecord, MountedPatchSubtree,
     MountedPatchSubtreeType, MountedState, MountedSubtreeState, MountedTextSubtree,
@@ -44,11 +33,9 @@ pub type PropsWithChildren = ComponentProps;
 #[derive(Clone)]
 pub enum MountInputType<A: DomAdapter> {
     Text(String),
-    #[cfg(feature = "compat")]
     Fragment,
     Vapor,
     VaporWithSetup(JsValue),
-    #[cfg(feature = "compat")]
     Element(String),
     Component(JsValue),
     _Phantom(PhantomData<A>),
@@ -80,11 +67,9 @@ impl<A: DomAdapter> MountInputType<A> {
     pub(crate) fn debug_name(&self) -> String {
         match self {
             Self::Text(_) => "Text".to_string(),
-            #[cfg(feature = "compat")]
             Self::Fragment => "Fragment".to_string(),
             Self::Vapor => "Vapor".to_string(),
             Self::VaporWithSetup(_) => "VaporWithSetup".to_string(),
-            #[cfg(feature = "compat")]
             Self::Element(tag) => format!("Element({})", tag),
             Self::Component(_) => "Component".to_string(),
             Self::_Phantom(_) => "_Phantom".to_string(),
@@ -95,7 +80,7 @@ impl<A: DomAdapter> MountInputType<A> {
 impl<A: DomAdapter> MountInput<A> {
     /// 构造规范化后的默认挂载输入。
     ///
-    /// 这层与旧的 compat `create_element` 做同样的收口工作，但结果直接落成
+    /// 这层把入口字段收口成
     /// `MountInput`：
     /// - 提取 `key`
     /// - 把挂载元信息从 props 中剥离到专用字段

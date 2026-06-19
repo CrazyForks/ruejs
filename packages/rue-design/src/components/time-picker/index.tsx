@@ -5,7 +5,16 @@ TimePicker 组件概述
 - RangePicker 复用同一套内核，只组合两个时间输入并在输出阶段处理顺序与范围语义。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, onUnmounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
+import {
+  onMounted,
+  onUnmounted,
+  onUpdated,
+  ref,
+  render as renderRue,
+  toValue,
+  useRef,
+  watch,
+} from '@rue-js/rue'
 
 /** TimePickerSize 尺寸类型。 */
 export type TimePickerSize =
@@ -31,6 +40,7 @@ export type TimePickerPanelColumn = 'hour' | 'minute' | 'second' | 'meridiem'
 export type TimePickerChangeSource = 'panel' | 'input' | 'clear' | 'now' | 'confirm'
 /** TimeMeridiem 类型。 */
 export type TimeMeridiem = 'am' | 'pm'
+type MaybeReactiveValue<T> = T | { value: T }
 
 interface InternalTimeSelection {
   hour: number
@@ -126,7 +136,7 @@ export interface TimePickerAllowClearConfig {
 /** TimePickerProps 组件属性。 */
 export interface TimePickerProps {
   /** 受控值。 */
-  value?: string | null
+  value?: MaybeReactiveValue<string | null>
   /** 非受控初始值。 */
   defaultValue?: string | null
   /** defaultOpenValue 值。 */
@@ -226,7 +236,7 @@ export interface TimeRangePickerChangeInfo {
 /** TimeRangePickerProps 组件属性。 */
 export interface TimeRangePickerProps {
   /** 受控值。 */
-  value?: [string | null, string | null]
+  value?: MaybeReactiveValue<[string | null, string | null]>
   /** 非受控初始值。 */
   defaultValue?: [string | null, string | null]
   /** defaultOpenValue 值。 */
@@ -1083,52 +1093,53 @@ const ClockIcon: FC<{ iconRef?: { current?: SVGSVGElement } }> = ({ iconRef }) =
 }
 
 /** Time Picker Root 的内部工具函数。 */
-const TimePickerRoot: FC<TimePickerProps> = ({
-  value,
-  defaultValue,
-  defaultOpenValue,
-  open,
-  defaultOpen = false,
-  disabled,
-  allowClear,
-  clearLabel = '清空时间',
-  format,
-  use12Hours = false,
-  hourStep = 1,
-  minuteStep = 1,
-  secondStep = 1,
-  hideDisabledOptions = false,
-  inputReadOnly = false,
-  needConfirm = false,
-  showNow = true,
-  nowLabel = '此刻',
-  confirmLabel = '确定',
-  changeOnScroll = false,
-  placeholder = '请选择时间',
-  placement = 'bottomLeft',
-  status,
-  variant,
-  size,
-  prefix,
-  suffixIcon,
-  addonBefore,
-  addonAfter,
-  renderExtraFooter,
-  disabledTime,
-  cellRender,
-  rootClassName,
-  popupClassName,
-  panelClassName,
-  inputClassName,
-  className,
-  onChange,
-  onCalendarChange,
-  onOpenChange,
-  onInput,
-  onFocus,
-  onBlur,
-  ...rest
-}) => {
+const TimePickerRoot: FC<TimePickerProps> = props => {
+  const {
+    defaultValue,
+    defaultOpenValue,
+    open,
+    defaultOpen = false,
+    disabled,
+    allowClear,
+    clearLabel = '清空时间',
+    format,
+    use12Hours = false,
+    hourStep = 1,
+    minuteStep = 1,
+    secondStep = 1,
+    hideDisabledOptions = false,
+    inputReadOnly = false,
+    needConfirm = false,
+    showNow = true,
+    nowLabel = '此刻',
+    confirmLabel = '确定',
+    changeOnScroll = false,
+    placeholder = '请选择时间',
+    placement = 'bottomLeft',
+    status,
+    variant,
+    size,
+    prefix,
+    suffixIcon,
+    addonBefore,
+    addonAfter,
+    renderExtraFooter,
+    disabledTime,
+    cellRender,
+    rootClassName,
+    popupClassName,
+    panelClassName,
+    inputClassName,
+    className,
+    onChange,
+    onCalendarChange,
+    onOpenChange,
+    onInput,
+    onFocus,
+    onBlur,
+    ...rest
+  } = props
+  const readControlledValue = () => toValue(props.value as any) as string | null | undefined
   const rootRef = useRef<HTMLDivElement>()
   const shellRef = useRef<HTMLLabelElement>()
   const inputRef = useRef<HTMLInputElement>()
@@ -1146,14 +1157,14 @@ const TimePickerRoot: FC<TimePickerProps> = ({
   const resolvedFormatValue = resolveFormat(format, use12Hours)
   const visibleColumns = getVisibleColumns(resolvedFormatValue, use12Hours)
   const initialInputText = normalizeInputTextFromValue(
-    value !== undefined ? value : defaultValue,
+    readControlledValue() !== undefined ? readControlledValue() : defaultValue,
     resolvedFormatValue,
     use12Hours,
   )
   const shouldResumeControlledSelectionOpen =
     !isControlledOpen &&
-    value !== undefined &&
-    consumeControlledSelectionOpen(value, resolvedFormatValue, use12Hours)
+    readControlledValue() !== undefined &&
+    consumeControlledSelectionOpen(readControlledValue(), resolvedFormatValue, use12Hours)
   const popupOpen = useRef(
     isControlledOpen ? !!open : shouldResumeControlledSelectionOpen || !!defaultOpen,
   )
@@ -1459,13 +1470,14 @@ const TimePickerRoot: FC<TimePickerProps> = ({
   }
 
   const syncFromProps = () => {
-    const sourceValue = value !== undefined ? value : defaultValue
+    const controlledValue = readControlledValue()
+    const sourceValue = controlledValue !== undefined ? controlledValue : defaultValue
     const parsed = parseTimeString(sourceValue, resolvedFormatValue, use12Hours)
     const nextSelection = parsed ? sanitizeSelection(parsed, runtimeConfig()) : null
     const nextInputText = nextSelection
       ? formatTimeSelection(nextSelection, resolvedFormatValue)
       : ''
-    const shouldSyncDraft = value !== undefined || !popupOpen.current || !needConfirm
+    const shouldSyncDraft = controlledValue !== undefined || !popupOpen.current || !needConfirm
     const nextDraftSelection = shouldSyncDraft
       ? resolveDefaultSelection(nextSelection, defaultOpenValue, runtimeConfig())
       : null
@@ -1474,7 +1486,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     const draftChanged =
       shouldSyncDraft && !selectionsEqual(draftSelection.current ?? null, nextDraftSelection)
     const shouldPreserveFocusedControlledInput =
-      value !== undefined &&
+      controlledValue !== undefined &&
       inputRef.current?.ownerDocument.activeElement === inputRef.current &&
       lastSyncedPropInputText.current === nextInputText
 
@@ -1490,7 +1502,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
       draftSelection.current = nextDraftSelection ? { ...nextDraftSelection } : null
     }
 
-    if (value !== undefined) {
+    if (controlledValue !== undefined) {
       lastSyncedPropInputText.current = nextInputText
     }
 
@@ -1515,10 +1527,12 @@ const TimePickerRoot: FC<TimePickerProps> = ({
   const clearFastExtraFooterContent = () => {
     const host = fastExtraFooterHostRef.current
     if (!host) return
-    withCallbackRuntime(() => {
-      renderRue(null, host)
-    })
     fastExtraFooterHostRef.current = undefined
+    queueMicrotask(() => {
+      withCallbackRuntime(() => {
+        renderRue(null, host)
+      })
+    })
   }
 
   const clearPopupContent = (host: HTMLDivElement) => {
@@ -2093,6 +2107,10 @@ const TimePickerRoot: FC<TimePickerProps> = ({
     })
   })
 
+  onUpdated(() => {
+    syncFromProps()
+  })
+
   onUnmounted(() => {
     if (popupContentHostRef.current) {
       clearPopupContent(popupContentHostRef.current)
@@ -2101,7 +2119,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
   })
 
   watch(
-    () => value,
+    () => readControlledValue(),
     () => {
       syncFromProps()
     },
@@ -2111,7 +2129,7 @@ const TimePickerRoot: FC<TimePickerProps> = ({
   watch(
     () => defaultValue,
     () => {
-      if (value === undefined) {
+      if (readControlledValue() === undefined) {
         syncFromProps()
       }
     },
@@ -2249,6 +2267,8 @@ const RangePicker: FC<TimeRangePickerProps> = ({
   const defaultOpenValues = normalizeDefaultOpenValues(defaultOpenValue)
   const renderVersion = ref(0)
   const internalValues = ref<[string | null, string | null]>(normalizeRangeValue(defaultValue))
+  const readControlledRangeValue = () =>
+    toValue(value as any) as [string | null, string | null] | undefined
 
   const requestRender = () => {
     renderVersion.value += 1
@@ -2259,10 +2279,11 @@ const RangePicker: FC<TimeRangePickerProps> = ({
   }
 
   watch(
-    () => value,
+    () => readControlledRangeValue(),
     () => {
-      if (value !== undefined) {
-        const nextValues = normalizeRangeValue(value)
+      const controlledValue = readControlledRangeValue()
+      if (controlledValue !== undefined) {
+        const nextValues = normalizeRangeValue(controlledValue)
         if (!rangeValuesEqual(internalValues.value, nextValues)) {
           internalValues.value = nextValues
           requestRender()
@@ -2399,13 +2420,15 @@ type TimePickerCompound = FC<TimePickerProps> & {
   RangePicker: FC<TimeRangePickerProps>
 }
 
-const TimePicker: TimePickerCompound = ((props: TimePickerProps) => {
+const TimePickerComponent: FC<TimePickerProps> = props => {
   return (
     <div className="contents">
       <TimePickerRoot {...props} />
     </div>
   )
-}) as TimePickerCompound
+}
+
+const TimePicker: TimePickerCompound = TimePickerComponent as TimePickerCompound
 
 TimePicker.RangePicker = RangePicker
 

@@ -725,6 +725,7 @@ const CarouselDemo: FC = () => {
               <Carousel
                 className="w-full rounded-box"
                 apiRef={indicatorApiRef}
+                activeIndex={indicatorIndex.value}
                 dots
                 onIndexChange={index => (indicatorIndex.value = index)}
               >
@@ -771,6 +772,7 @@ const CarouselDemo: FC = () => {
               </div>
               <Carousel
                 apiRef={methodsApiRef}
+                activeIndex={methodsIndex.value}
                 dots
                 className="rounded-box w-full"
                 onIndexChange={index => (methodsIndex.value = index)}

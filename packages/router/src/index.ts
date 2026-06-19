@@ -249,14 +249,14 @@ type GuardDecision =
   | { kind: 'abort' }
   | { kind: 'cancelled' }
   | { kind: 'error'; error: Error }
-  | { kind: 'redirect'; path: string }
+  | { kind: 'redirect'; href: string }
 
 /** 一次导航解析的结果，尚未提交到 history 或响应式状态。 */
 type NavigationResolution =
-  | { kind: 'allow'; path: string; route: Route }
-  | { kind: 'abort'; path: string; route: Route }
-  | { kind: 'cancelled'; path: string; route: Route }
-  | { kind: 'error'; path: string; route: Route; error: Error }
+  | { kind: 'allow'; path: string; href: string; route: Route }
+  | { kind: 'abort'; path: string; href: string; route: Route }
+  | { kind: 'cancelled'; path: string; href: string; route: Route }
+  | { kind: 'error'; path: string; href: string; route: Route; error: Error }
 
 /** 等待底层 history 通知回流的导航事务。 */
 type PendingNavigation = {
@@ -327,6 +327,42 @@ const normalizeRoutePath = (path: string) => {
   return compact.endsWith('/') ? compact.slice(0, -1) : compact
 }
 
+const findRouteLocationSuffixIndex = (path: string) => {
+  const searchIndex = path.indexOf('?')
+  const hashIndex = path.indexOf('#')
+
+  if (searchIndex < 0) {
+    return hashIndex
+  }
+
+  if (hashIndex < 0) {
+    return searchIndex
+  }
+
+  return Math.min(searchIndex, hashIndex)
+}
+
+const normalizeRouteLocation = (path: string) => {
+  let raw = String(path || '')
+
+  if (raw.startsWith('#')) {
+    raw = raw.replace(/^#/, '')
+  }
+
+  const suffixIndex = findRouteLocationSuffixIndex(raw)
+  const rawPath = suffixIndex >= 0 ? raw.slice(0, suffixIndex) : raw
+  const suffix = suffixIndex >= 0 ? raw.slice(suffixIndex) : ''
+  const normalizedPath = normalizeRoutePath(rawPath)
+
+  return {
+    path: normalizedPath,
+    href: `${normalizedPath}${suffix}`,
+  }
+}
+
+const normalizeRouteLocationPath = (path: string) => normalizeRouteLocation(path).path
+const normalizeRouteLocationHref = (path: string) => normalizeRouteLocation(path).href
+
 const joinRoutePath = (parentPath: string, path: string) => {
   // 子路由相对父路径拼接；绝对路径保持自身语义。
   if (!path) {
@@ -345,7 +381,7 @@ const joinRoutePath = (parentPath: string, path: string) => {
 }
 
 const isPathRouteLocation = (value: unknown): value is PathRouteLocation => {
-  // 仅做形态判断，具体 path 合法性在 resolveLocationPath 中统一规范化。
+  // 仅做形态判断，具体 path 合法性在 resolveLocation 中统一规范化。
   return !!value && typeof value === 'object' && 'path' in (value as Record<string, unknown>)
 }
 
@@ -433,12 +469,7 @@ export const attachRouter = (router: Router) => {
 export const createWebHashHistory = () => {
   const g = globalThis as any
   const normalize = (path: string) => {
-    const next = String(path || '')
-    if (!next) return '/'
-    if (next.startsWith('/')) return next
-    if (next.startsWith('#/')) return next.slice(1)
-    if (next.startsWith('#')) return '/' + next.slice(1)
-    return '/' + next
+    return normalizeRouteLocationHref(path)
   }
   if (g && g.location) {
     // 没有 hash 时，默认跳到根路径 '/'
@@ -495,7 +526,7 @@ export const createWebHashHistory = () => {
  * globalThis.location，所有导航状态都保存在当前 History 实例中。
  */
 export const createMemoryHistory = (initialPath = '/') => {
-  let current = normalizeRoutePath(initialPath)
+  let current = normalizeRouteLocationHref(initialPath)
   const listeners = new Set<() => void>()
 
   const notify = () => {
@@ -505,13 +536,13 @@ export const createMemoryHistory = (initialPath = '/') => {
   return {
     location: () => current,
     push: (p: string) => {
-      const next = normalizeRoutePath(p)
+      const next = normalizeRouteLocationHref(p)
       if (next === current) return
       current = next
       notify()
     },
     replace: (p: string) => {
-      const next = normalizeRoutePath(p)
+      const next = normalizeRouteLocationHref(p)
       if (next === current) return
       current = next
       notify()
@@ -519,7 +550,7 @@ export const createMemoryHistory = (initialPath = '/') => {
     listen: (cb: () => void) => {
       listeners.add(cb)
     },
-    createHref: (p: string) => normalizeRoutePath(p),
+    createHref: (p: string) => normalizeRouteLocationHref(p),
   } as HistoryLike
 }
 
@@ -531,14 +562,13 @@ export const createMemoryHistory = (initialPath = '/') => {
 export const createWebHistory = () => {
   const g = globalThis as any
   const normalize = (path: string) => {
-    const next = String(path || '')
-    if (!next) return '/'
-    if (next.startsWith('/')) return next
-    return '/' + next
+    return normalizeRouteLocationHref(path)
   }
   const loc = () => {
     const pathname = g && g.location ? String(g.location.pathname || '') : ''
-    return pathname || '/'
+    const search = g && g.location ? String(g.location.search || '') : ''
+    const hash = g && g.location ? String(g.location.hash || '') : ''
+    return `${pathname || '/'}${search}${hash}`
   }
   const listen = (cb: () => void) => {
     if (g && g.addEventListener) g.addEventListener('popstate', cb)
@@ -641,14 +671,14 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     )
   }
 
-  const resolveLocationPath = (to: RouteLocationRaw, inheritedParams?: RouteParamsInput) => {
-    // 所有导航入口最终都会落到规范化 path；命名路由会继承当前参数再覆盖显式参数。
+  const resolveLocation = (to: RouteLocationRaw, inheritedParams?: RouteParamsInput) => {
+    // 导航入口会拆成两份：path 用于路由匹配，href 用于实际写入 history。
     if (typeof to === 'string') {
-      return normalizeRoutePath(to)
+      return normalizeRouteLocation(to)
     }
 
     if (isPathRouteLocation(to)) {
-      return normalizeRoutePath(to.path)
+      return normalizeRouteLocation(to.path)
     }
 
     if (isNamedRouteLocation(to)) {
@@ -657,13 +687,15 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
         throw new Error('No route matched name ' + to.name)
       }
 
-      return stringifyRoutePath(target._fullPath, {
+      const path = stringifyRoutePath(target._fullPath, {
         ...normalizeParamsInput(inheritedParams),
         ...normalizeParamsInput(to.params),
       })
+
+      return { path, href: path }
     }
 
-    return normalizeRoutePath(String(to || ''))
+    return normalizeRouteLocation(String(to || ''))
   }
 
   const resolveRouteRedirect = (to: Route) => {
@@ -680,7 +712,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
 
       try {
         const target = typeof redirect === 'function' ? redirect(to) : redirect
-        return { kind: 'redirect', path: resolveLocationPath(target, to.params) } as const
+        return { kind: 'redirect', href: resolveLocation(target, to.params).href } as const
       } catch (error) {
         return { kind: 'error', error: toNavigationError(error) } as const
       }
@@ -768,24 +800,24 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   const resolveInitialRoute = (
     rawPath: string,
     redirectDepth = 0,
-  ): { path: string; route: Route } => {
+  ): { path: string; href: string; route: Route } => {
     // 初始化阶段没有 from，也不运行守卫，只解析静态 redirect 并限制重定向深度。
     if (redirectDepth > 20) {
       throw new Error('Too many redirects while navigating to ' + rawPath)
     }
 
-    const path = normalizeRoutePath(rawPath)
-    const targetRoute = match(path)
+    const location = normalizeRouteLocation(rawPath)
+    const targetRoute = match(location.path)
     const redirect = resolveRouteRedirect(targetRoute)
     if (redirect.kind === 'redirect') {
-      return resolveInitialRoute(redirect.path, redirectDepth + 1)
+      return resolveInitialRoute(redirect.href, redirectDepth + 1)
     }
 
     if (redirect.kind === 'error') {
       throw redirect.error
     }
 
-    return { path, route: targetRoute }
+    return { path: location.path, href: location.href, route: targetRoute }
   }
 
   const initialRouteState = resolveInitialRoute(options.history.location())
@@ -825,7 +857,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     }
 
     try {
-      return { kind: 'redirect', path: resolveLocationPath(result, to?.params) }
+      return { kind: 'redirect', href: resolveLocation(result, to?.params).href }
     } catch (error) {
       return { kind: 'error', error: toNavigationError(error) }
     }
@@ -902,55 +934,72 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     const execute = async (): Promise<NavigationResolution> => {
       // 一次导航解析包括：位置归一化、路由匹配、redirect 解析和守卫执行。
       if (redirectDepth > 20) {
+        const href =
+          typeof rawPath === 'string' ? normalizeRouteLocationHref(rawPath) : currentPath.get()
         return {
           kind: 'error',
-          path: typeof rawPath === 'string' ? normalizeRoutePath(rawPath) : currentPath.get(),
+          path:
+            typeof rawPath === 'string' ? normalizeRouteLocationPath(rawPath) : currentPath.get(),
+          href,
           route: from,
           error: new Error('Too many redirects while navigating to ' + String(rawPath)),
         }
       }
 
-      let path: string
+      let location: { path: string; href: string }
       try {
-        path = resolveLocationPath(rawPath)
+        location = resolveLocation(rawPath)
       } catch (error) {
         return {
           kind: 'error',
           path: currentPath.get(),
+          href: currentPath.get(),
           route: null,
           error: toNavigationError(error),
         }
       }
 
-      const targetRoute = match(path)
+      const targetRoute = match(location.path)
       const redirect = resolveRouteRedirect(targetRoute)
       if (redirect.kind === 'redirect') {
-        return resolveNavigation(redirect.path, from, requestId, redirectDepth + 1)
+        return resolveNavigation(redirect.href, from, requestId, redirectDepth + 1)
       }
 
       if (redirect.kind === 'error') {
-        return { kind: 'error', path, route: targetRoute, error: redirect.error }
+        return {
+          kind: 'error',
+          path: location.path,
+          href: location.href,
+          route: targetRoute,
+          error: redirect.error,
+        }
       }
 
       const decision = await runBeforeGuards(targetRoute, from, requestId)
 
       if (decision.kind === 'redirect') {
-        return resolveNavigation(decision.path, from, requestId, redirectDepth + 1)
+        return resolveNavigation(decision.href, from, requestId, redirectDepth + 1)
       }
 
       if (decision.kind === 'abort') {
-        return { kind: 'abort', path, route: targetRoute }
+        return { kind: 'abort', path: location.path, href: location.href, route: targetRoute }
       }
 
       if (decision.kind === 'cancelled') {
-        return { kind: 'cancelled', path, route: targetRoute }
+        return { kind: 'cancelled', path: location.path, href: location.href, route: targetRoute }
       }
 
       if (decision.kind === 'error') {
-        return { kind: 'error', path, route: targetRoute, error: decision.error }
+        return {
+          kind: 'error',
+          path: location.path,
+          href: location.href,
+          route: targetRoute,
+          error: decision.error,
+        }
       }
 
-      return { kind: 'allow', path, route: targetRoute }
+      return { kind: 'allow', path: location.path, href: location.href, route: targetRoute }
     }
 
     return execute()
@@ -962,37 +1011,47 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     redirectDepth = 0,
   ): NavigationResolution => {
     if (redirectDepth > 20) {
+      const href =
+        typeof rawPath === 'string' ? normalizeRouteLocationHref(rawPath) : currentPath.get()
       return {
         kind: 'error',
-        path: typeof rawPath === 'string' ? normalizeRoutePath(rawPath) : currentPath.get(),
+        path: typeof rawPath === 'string' ? normalizeRouteLocationPath(rawPath) : currentPath.get(),
+        href,
         route: from,
         error: new Error('Too many redirects while navigating to ' + String(rawPath)),
       }
     }
 
-    let path: string
+    let location: { path: string; href: string }
     try {
-      path = resolveLocationPath(rawPath)
+      location = resolveLocation(rawPath)
     } catch (error) {
       return {
         kind: 'error',
         path: currentPath.get(),
+        href: currentPath.get(),
         route: null,
         error: toNavigationError(error),
       }
     }
 
-    const targetRoute = match(path)
+    const targetRoute = match(location.path)
     const redirect = resolveRouteRedirect(targetRoute)
     if (redirect.kind === 'redirect') {
-      return resolveNavigationSync(redirect.path, from, redirectDepth + 1)
+      return resolveNavigationSync(redirect.href, from, redirectDepth + 1)
     }
 
     if (redirect.kind === 'error') {
-      return { kind: 'error', path, route: targetRoute, error: redirect.error }
+      return {
+        kind: 'error',
+        path: location.path,
+        href: location.href,
+        route: targetRoute,
+        error: redirect.error,
+      }
     }
 
-    return { kind: 'allow', path, route: targetRoute }
+    return { kind: 'allow', path: location.path, href: location.href, route: targetRoute }
   }
 
   const hasBeforeEnterGuards = (to: Route) =>
@@ -1010,6 +1069,8 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     runAfterGuards(nextRoute, from)
   }
 
+  const getCurrentHistoryHref = () => normalizeRouteLocationHref(options.history.location())
+
   const settlePendingNavigation = () => {
     // push/replace 先写入底层 history，再等待 listen 回调确认当前位置已经变化。
     const nextPending = pendingNavigation
@@ -1017,7 +1078,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       return false
     }
 
-    const currentLocation = normalizeRoutePath(options.history.location())
+    const currentLocation = normalizeRouteLocationPath(options.history.location())
     if (currentLocation !== nextPending.path) {
       return false
     }
@@ -1033,6 +1094,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   }
 
   const commitHistoryNavigation = (
+    href: string,
     path: string,
     nextRoute: Route,
     from: Route,
@@ -1047,7 +1109,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       notify: true,
     }
 
-    options.history[method](path)
+    options.history[method](href)
 
     if (pendingNavigation?.id === requestId) {
       settlePendingNavigation()
@@ -1082,7 +1144,10 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
           throw syncResolution.error
         }
 
-        if (syncResolution.path === currentPath.get()) {
+        if (
+          syncResolution.path === currentPath.get() &&
+          syncResolution.href === getCurrentHistoryHref()
+        ) {
           const failure = createNavigationFailure(
             NavigationFailureType.duplicated,
             syncResolution.route,
@@ -1093,6 +1158,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
         }
 
         return commitHistoryNavigation(
+          syncResolution.href,
           syncResolution.path,
           syncResolution.route,
           from,
@@ -1125,7 +1191,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       return failure
     }
 
-    if (resolution.path === currentPath.get()) {
+    if (resolution.path === currentPath.get() && resolution.href === getCurrentHistoryHref()) {
       const failure = createNavigationFailure(
         NavigationFailureType.duplicated,
         resolution.route,
@@ -1147,7 +1213,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
         resolve,
       }
 
-      options.history[method](resolution.path)
+      options.history[method](resolution.href)
       settlePendingNavigation()
     })
 
@@ -1171,14 +1237,15 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   }
   const route = signal<Route>(matchRoute, {}, true)
 
-  if (initialRouteState.path !== normalizeRoutePath(options.history.location())) {
-    options.history.replace(initialRouteState.path)
+  if (initialRouteState.href !== getCurrentHistoryHref()) {
+    options.history.replace(initialRouteState.href)
   }
 
   // 监听浏览器前进/后退或 history 主动通知，并走同一套导航解析流程。
   options.history.listen(() => {
     void (async () => {
-      const p = normalizeRoutePath(options.history.location())
+      const rawLocation = options.history.location()
+      const p = normalizeRouteLocationPath(rawLocation)
 
       if (settlePendingNavigation()) {
         return
@@ -1191,7 +1258,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
 
       const from = route.get()
       const requestId = ++navigationRequestId
-      const resolution = await resolveNavigation(p, from, requestId)
+      const resolution = await resolveNavigation(rawLocation, from, requestId)
 
       if (resolution.kind === 'error') {
         runAfterGuards(resolution.route, from, resolution.error)
@@ -1255,7 +1322,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
           from,
           notify: true,
         }
-        options.history.replace(resolution.path)
+        options.history.replace(resolution.href)
         settlePendingNavigation()
         return
       }
@@ -1300,7 +1367,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     },
   }
 
-  __routerResolvePathByInstance.set(router, (to: RouteLocationRaw) => resolveLocationPath(to))
+  __routerResolvePathByInstance.set(router, (to: RouteLocationRaw) => resolveLocation(to).href)
 
   return router
 }
@@ -1470,11 +1537,11 @@ const resolveRouterLocationPath = (router: Router | null, to: unknown) => {
   // 生成 href 时也复用 Router 的命名路由解析逻辑，保证链接和导航目标一致。
   if (!router) {
     if (typeof to === 'string') {
-      return normalizeRoutePath(to)
+      return normalizeRouteLocationHref(to)
     }
 
     if (isPathRouteLocation(to)) {
-      return normalizeRoutePath(to.path)
+      return normalizeRouteLocationHref(to.path)
     }
 
     throw new Error('Router not installed for current application/container')

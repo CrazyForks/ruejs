@@ -13,6 +13,8 @@ use super::super::types::{
 use crate::log::{log, want_log};
 use crate::reactive::core::batch_scope;
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::error_strings;
+#[cfg(feature = "dev")]
 use js_sys::Reflect;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
@@ -35,7 +37,7 @@ where
             } else if let Some(e) = self.last_error.clone() {
                 wasm_bindgen::throw_val(e);
             } else {
-                throw_str("Rue runtime crashed");
+                throw_str(error_strings::RUNTIME_CRASHED);
             }
         }
     }
@@ -61,6 +63,7 @@ where
                     host: Some(host),
                     key: input.key.clone(),
                     fragment_nodes: Vec::new(),
+                    props: input.props.clone(),
                     cleanup_bucket: input.mount_cleanup_bucket.clone(),
                     effect_scope_id: input.mount_effect_scope_id,
                 }));
@@ -78,7 +81,7 @@ where
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn mounted_host_for_range(&self, mounted: &MountedSubtreeState<A>) -> A::Element {
-        mounted.host_cloned().expect("Rue vapor: mounted range subtree must expose a host")
+        mounted.host_cloned().expect(error_strings::RANGE_HOST_MISSING)
     }
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -87,10 +90,7 @@ where
             entry.end = end;
             entry.store_mount(mounted);
         } else {
-            let err = js_sys::Error::new(
-                "Rue vapor: renderBetween range_map index out of bounds (store)",
-            )
-            .into();
+            let err = js_sys::Error::new(error_strings::RANGE_STORE_OOB).into();
             self.handle_error(err);
             self.current_anchor = None;
         }
@@ -140,28 +140,36 @@ where
                 };
 
                 if let Some(old_mount) = taken {
-                    let global = js_sys::global();
-                    let source_key = JsValue::from_str("__rue_debug_clear_source__");
-                    let meta_key = JsValue::from_str("__rue_debug_clear_meta__");
-                    let start_js: JsValue = start.clone().into();
-                    let end_js: JsValue = end.clone().into();
-                    let _ = Reflect::set(&global, &source_key, &JsValue::from_str("clear_range"));
-                    let start_value = Reflect::get(&start_js, &JsValue::from_str("nodeValue"))
-                        .unwrap_or(JsValue::UNDEFINED)
-                        .as_string()
-                        .unwrap_or_default();
-                    let end_value = Reflect::get(&end_js, &JsValue::from_str("nodeValue"))
-                        .unwrap_or(JsValue::UNDEFINED)
-                        .as_string()
-                        .unwrap_or_default();
-                    let _ = Reflect::set(
-                        &global,
-                        &meta_key,
-                        &JsValue::from_str(&format!("{} -> {}", start_value, end_value)),
-                    );
+                    #[cfg(feature = "dev")]
+                    let (global, source_key, meta_key) = {
+                        let global = js_sys::global();
+                        let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                        let meta_key = JsValue::from_str("__rue_debug_clear_meta__");
+                        let start_js: JsValue = start.clone().into();
+                        let end_js: JsValue = end.clone().into();
+                        let _ =
+                            Reflect::set(&global, &source_key, &JsValue::from_str("clear_range"));
+                        let start_value = Reflect::get(&start_js, &JsValue::from_str("nodeValue"))
+                            .unwrap_or(JsValue::UNDEFINED)
+                            .as_string()
+                            .unwrap_or_default();
+                        let end_value = Reflect::get(&end_js, &JsValue::from_str("nodeValue"))
+                            .unwrap_or(JsValue::UNDEFINED)
+                            .as_string()
+                            .unwrap_or_default();
+                        let _ = Reflect::set(
+                            &global,
+                            &meta_key,
+                            &JsValue::from_str(&format!("{} -> {}", start_value, end_value)),
+                        );
+                        (global, source_key, meta_key)
+                    };
                     self.clear_mounted_state(&mut dest_parent, old_mount);
-                    let _ = Reflect::delete_property(&global, &source_key);
-                    let _ = Reflect::delete_property(&global, &meta_key);
+                    #[cfg(feature = "dev")]
+                    {
+                        let _ = Reflect::delete_property(&global, &source_key);
+                        let _ = Reflect::delete_property(&global, &meta_key);
+                    }
                 }
             }
 
@@ -250,19 +258,26 @@ where
             match old_mount {
                 MountedState::Block(old_block) => {
                     let mut dest_parent = self.resolve_dest_parent_for_end(parent, &end);
-                    let global = js_sys::global();
-                    let source_key = JsValue::from_str("__rue_debug_clear_source__");
-                    let _ = Reflect::set(
-                        &global,
-                        &source_key,
-                        &JsValue::from_str("render_between_hit:block"),
-                    );
+                    #[cfg(feature = "dev")]
+                    let (global, source_key) = {
+                        let global = js_sys::global();
+                        let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                        let _ = Reflect::set(
+                            &global,
+                            &source_key,
+                            &JsValue::from_str("render_between_hit:block"),
+                        );
+                        (global, source_key)
+                    };
                     self.clear_mounted_state(&mut dest_parent, MountedState::Block(old_block));
-                    let _ = Reflect::delete_property(&global, &source_key);
+                    #[cfg(feature = "dev")]
+                    {
+                        let _ = Reflect::delete_property(&global, &source_key);
+                    }
                     let Some(mounted) = self.mount_range_input_or_error(
                         input,
                         parent,
-                        "Rue vapor: renderBetween failed (block hit, create_real_dom=None)",
+                        error_strings::RANGE_BLOCK_HIT_FAILED_NO_DOM,
                     ) else {
                         return self.abort_range_mount();
                     };
@@ -290,7 +305,7 @@ where
             let Some(mounted) = self.mount_range_input_or_error(
                 input,
                 parent,
-                "Rue vapor: renderBetween failed (empty range hit, create_real_dom=None)",
+                error_strings::RANGE_EMPTY_HIT_FAILED_NO_DOM,
             ) else {
                 return self.abort_range_mount();
             };
@@ -311,11 +326,9 @@ where
     ) where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        if let Some(mounted) = self.mount_range_input_or_error(
-            input,
-            parent,
-            "Rue vapor: renderBetween failed (range miss, create_real_dom=None)",
-        ) {
+        if let Some(mounted) =
+            self.mount_range_input_or_error(input, parent, error_strings::RANGE_MISS_FAILED_NO_DOM)
+        {
             let el = self.mounted_host_for_range(&mounted);
             #[cfg(feature = "dev")]
             {
@@ -413,7 +426,7 @@ mod tests {
             (
                 "createDocumentFragment",
                 "",
-                "return { tag: 'fragment', tagName: 'FRAGMENT', children: [], nodeType: 11, isConnected: true }",
+                "return { tag: 'fragment', tagName: '#document-frag', children: [], nodeType: 11, isConnected: true }",
             ),
             ("isFragment", "el", "return !!el && el.tag === 'fragment'"),
             ("collectFragmentChildren", "el", "return Array.from(el && el.children || [])"),

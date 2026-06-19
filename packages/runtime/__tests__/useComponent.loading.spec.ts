@@ -138,8 +138,8 @@ describe('useComponent loading behavior', () => {
     const { useComponent } = await import('../src/hooks/useComponent')
     const Async = useComponent(loader)
 
-    const vnode: any = Async({ id: 1 })
-    expect(vnode).toBeDefined()
+    const renderOutput: any = Async({ id: 1 })
+    expect(renderOutput).toBeDefined()
     expect(renderAnchorMock).not.toHaveBeenCalled()
   })
 
@@ -176,8 +176,8 @@ describe('useComponent loading behavior', () => {
     const { useComponent } = await import('../src/hooks/useComponent')
     const Async = useComponent(loader)
 
-    const vnode: any = Async({ id: 1 })
-    const container = vnode
+    const renderOutput: any = Async({ id: 1 })
+    const container = renderOutput
     const anchorEl = container.children[0]
     const host = { tag: 'host', children: [] as any[] }
 
@@ -189,7 +189,7 @@ describe('useComponent loading behavior', () => {
     await flushMicrotasks()
 
     expect(renderAnchorMock).toHaveBeenCalledTimes(1)
-    expect(renderAnchorMock.mock.calls[0][1]).toBe(vnode)
+    expect(renderAnchorMock.mock.calls[0][1]).toBe(renderOutput)
     expect(renderAnchorMock.mock.calls[0][2]).toBe(anchorEl)
   })
 
@@ -199,8 +199,8 @@ describe('useComponent loading behavior', () => {
     const { useComponent } = await import('../src/hooks/useComponent')
     const Async = useComponent(loader)
 
-    const vnode: any = Async({ id: 1 })
-    const anchorEl = vnode.children[0]
+    const renderOutput: any = Async({ id: 1 })
+    const anchorEl = renderOutput.children[0]
 
     expect(onBeforeUnmountCallbacks).toHaveLength(1)
 
@@ -208,7 +208,7 @@ describe('useComponent loading behavior', () => {
 
     expect(renderAnchorMock).toHaveBeenCalledTimes(1)
     expect(renderAnchorMock.mock.calls[0][0]).toMatchObject({ tag: 'fragment' })
-    expect(renderAnchorMock.mock.calls[0][1]).toBe(vnode)
+    expect(renderAnchorMock.mock.calls[0][1]).toBe(renderOutput)
     expect(renderAnchorMock.mock.calls[0][2]).toBe(anchorEl)
   })
 

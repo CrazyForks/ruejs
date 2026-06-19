@@ -25,6 +25,7 @@ export {
   getCurrentContainer,
   renderAnchor,
   renderBetween,
+  useEmit,
   createComponent as _$createComponent,
 } from './vapor-runtime'
 

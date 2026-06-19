@@ -41,8 +41,8 @@ async fn component_numeric_props_keep_dom_attribute_values() {
     let _ =
         Reflect::set(&props_a, &JsValue::from_str("placeholder"), &JsValue::from_str("Username"));
 
-    let vnode_a = rue.create_component_wasm(component.clone().into(), props_a.into());
-    rue.render_wasm(vnode_a, container.clone().into());
+    let handle_a = rue.create_component_wasm(component.clone().into(), props_a.into());
+    rue.render_wasm(handle_a, container.clone().into());
     tick().await;
 
     let children_a = children_of(&container.clone().into());
@@ -63,8 +63,8 @@ async fn component_numeric_props_keep_dom_attribute_values() {
     let _ =
         Reflect::set(&props_b, &JsValue::from_str("placeholder"), &JsValue::from_str("Reviewer"));
 
-    let vnode_b = rue.create_component_wasm(component.into(), props_b.into());
-    rue.render_wasm(vnode_b, container.clone().into());
+    let handle_b = rue.create_component_wasm(component.into(), props_b.into());
+    rue.render_wasm(handle_b, container.clone().into());
     tick().await;
 
     let children_b = children_of(&container.clone().into());

@@ -5,10 +5,13 @@
 patch_replace 与 range/static 渲染都会依赖这些原语来保证 DOM 位置稳定。
 */
 use super::super::Rue;
-use super::super::types::{MountLifecycleRecord, MountedState};
+use super::super::types::{ComponentProps, MountLifecycleRecord, MountedState};
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::props::{Props as RuntimeProps, patch_props};
 use js_sys::JsString;
-use js_sys::{Array, Object, Reflect};
+use js_sys::Reflect;
+#[cfg(any(feature = "dev", test))]
+use js_sys::{Array, Object};
 use wasm_bindgen::{JsCast, JsValue};
 
 const RUE_KEEP_ALIVE_RANGE_KEY: &str = "__rue_keep_alive_range__";
@@ -48,6 +51,7 @@ where
         fallback.clone()
     }
 
+    #[cfg(any(feature = "dev", test))]
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn debug_record_cleared_sidebar(&self, parent: &A::Element, host: &A::Element)
     where
@@ -96,6 +100,7 @@ where
         let _ = Reflect::set(&global, &key, &array.into());
     }
 
+    #[cfg(any(feature = "dev", test))]
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn debug_record_component_anchor_owner(
         &self,
@@ -218,16 +223,38 @@ where
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
-        let (lifecycle, host, fragment_nodes) = mounted.into_dom_identity();
+        let (lifecycle, host, fragment_nodes, props) = mounted.into_dom_identity();
 
-        if let Some(host_ref) = host.as_ref() {
-            self.debug_record_cleared_sidebar(parent, host_ref);
+        #[cfg(any(feature = "dev", test))]
+        {
+            if let Some(host_ref) = host.as_ref() {
+                self.debug_record_cleared_sidebar(parent, host_ref);
+            }
+            self.debug_record_component_anchor_owner(parent, host.as_ref(), &fragment_nodes);
         }
-        self.debug_record_component_anchor_owner(parent, host.as_ref(), &fragment_nodes);
 
         self.invoke_before_unmount_record(&lifecycle);
+        self.reset_mounted_props(host.as_ref(), &props);
         self.clear_mounted_block_dom(parent, host.as_ref(), &fragment_nodes);
         self.invoke_unmounted_record(&lifecycle);
+    }
+
+    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
+    fn reset_mounted_props(&mut self, host: Option<&A::Element>, old_props: &ComponentProps)
+    where
+        <A as DomAdapter>::Element: Clone,
+    {
+        if old_props.is_empty() {
+            return;
+        }
+
+        let Some(host) = host else {
+            return;
+        };
+        if let Some(adapter) = self.get_dom_adapter_mut() {
+            let mut host = host.clone();
+            let _ = patch_props(adapter, &mut host, old_props, &RuntimeProps::new());
+        }
     }
 
     /// 若某个待删除的片段节点本身是 renderAnchor 管理的锚点，
@@ -274,21 +301,31 @@ where
             return;
         };
 
-        let global = js_sys::global();
-        let source_key = JsValue::from_str("__rue_debug_clear_source__");
-        let meta_key = JsValue::from_str("__rue_debug_clear_meta__");
-        let anchor_js: JsValue = anchor.clone().into();
-        let _ =
-            Reflect::set(&global, &source_key, &JsValue::from_str("clear_anchor_entry_if_present"));
-        let _ = Reflect::set(
-            &global,
-            &meta_key,
-            &Reflect::get(&anchor_js, &JsValue::from_str("nodeValue"))
-                .unwrap_or(JsValue::UNDEFINED),
-        );
+        #[cfg(any(feature = "dev", test))]
+        let (global, source_key, meta_key) = {
+            let global = js_sys::global();
+            let source_key = JsValue::from_str("__rue_debug_clear_source__");
+            let meta_key = JsValue::from_str("__rue_debug_clear_meta__");
+            let anchor_js: JsValue = anchor.clone().into();
+            let _ = Reflect::set(
+                &global,
+                &source_key,
+                &JsValue::from_str("clear_anchor_entry_if_present"),
+            );
+            let _ = Reflect::set(
+                &global,
+                &meta_key,
+                &Reflect::get(&anchor_js, &JsValue::from_str("nodeValue"))
+                    .unwrap_or(JsValue::UNDEFINED),
+            );
+            (global, source_key, meta_key)
+        };
         self.clear_mounted_state(parent, old_mount);
-        let _ = Reflect::delete_property(&global, &source_key);
-        let _ = Reflect::delete_property(&global, &meta_key);
+        #[cfg(any(feature = "dev", test))]
+        {
+            let _ = Reflect::delete_property(&global, &source_key);
+            let _ = Reflect::delete_property(&global, &meta_key);
+        }
     }
 
     /// 若某个待删除的片段节点本身是 renderBetween 管理的 start 锚点，
@@ -335,20 +372,31 @@ where
             return;
         };
 
-        let global = js_sys::global();
-        let source_key = JsValue::from_str("__rue_debug_clear_source__");
-        let meta_key = JsValue::from_str("__rue_debug_clear_meta__");
-        let start_js: JsValue = start.clone().into();
-        let _ =
-            Reflect::set(&global, &source_key, &JsValue::from_str("clear_range_entry_if_present"));
-        let _ = Reflect::set(
-            &global,
-            &meta_key,
-            &Reflect::get(&start_js, &JsValue::from_str("nodeValue")).unwrap_or(JsValue::UNDEFINED),
-        );
+        #[cfg(any(feature = "dev", test))]
+        let (global, source_key, meta_key) = {
+            let global = js_sys::global();
+            let source_key = JsValue::from_str("__rue_debug_clear_source__");
+            let meta_key = JsValue::from_str("__rue_debug_clear_meta__");
+            let start_js: JsValue = start.clone().into();
+            let _ = Reflect::set(
+                &global,
+                &source_key,
+                &JsValue::from_str("clear_range_entry_if_present"),
+            );
+            let _ = Reflect::set(
+                &global,
+                &meta_key,
+                &Reflect::get(&start_js, &JsValue::from_str("nodeValue"))
+                    .unwrap_or(JsValue::UNDEFINED),
+            );
+            (global, source_key, meta_key)
+        };
         self.clear_mounted_state(parent, old_mount);
-        let _ = Reflect::delete_property(&global, &source_key);
-        let _ = Reflect::delete_property(&global, &meta_key);
+        #[cfg(any(feature = "dev", test))]
+        {
+            let _ = Reflect::delete_property(&global, &source_key);
+            let _ = Reflect::delete_property(&global, &meta_key);
+        }
     }
 
     // 片段子节点插入（优先 end 锚点）：
@@ -821,6 +869,7 @@ mod tests {
             host: Some(host.clone()),
             key: None,
             fragment_nodes: Vec::new(),
+            props: Default::default(),
             cleanup_bucket: None,
             effect_scope_id: None,
         }))

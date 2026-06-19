@@ -53,6 +53,34 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
 use wasm_bindgen::throw_val;
 
+#[inline(never)]
+fn throw_adapter_missing(name: &str) -> ! {
+    #[cfg(feature = "dev")]
+    {
+        throw_str(&format!("Rue runtime: dom-adapter.{name} not found"));
+    }
+
+    #[cfg(not(feature = "dev"))]
+    {
+        let _ = name;
+        throw_str("RDA0");
+    }
+}
+
+#[inline(never)]
+fn throw_adapter_null_return(name: &str) -> ! {
+    #[cfg(feature = "dev")]
+    {
+        throw_str(&format!("Rue runtime: {name} returned undefined/null"));
+    }
+
+    #[cfg(not(feature = "dev"))]
+    {
+        let _ = name;
+        throw_str("RDA1");
+    }
+}
+
 #[derive(Clone)]
 pub struct JsDomAdapter {
     inner: JsValue,
@@ -100,6 +128,10 @@ impl JsDomAdapter {
                 }
             }
             if !missing.is_empty() {
+                #[cfg(not(feature = "dev"))]
+                throw_str("RDA2");
+
+                #[cfg(feature = "dev")]
                 throw_str(&format!(
                     "Rue runtime: dom-adapter missing methods: {}",
                     missing.join(",")
@@ -142,11 +174,11 @@ impl DomAdapter for JsDomAdapter {
             let parent_value = parent.cloned().unwrap_or(JsValue::UNDEFINED);
             let ret = call2_or_throw(func, &self.inner, &JsValue::from_str(tag), &parent_value);
             if ret.is_undefined() || ret.is_null() {
-                throw_str("Rue runtime: createElement returned undefined/null");
+                throw_adapter_null_return("createElement");
             }
             ret
         } else {
-            throw_str("Rue runtime: dom-adapter.createElement not found");
+            throw_adapter_missing("createElement");
             // diverges
         }
     }
@@ -157,11 +189,11 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let ret = call1_or_throw(func, &self.inner, &JsValue::from_str(text));
             if ret.is_undefined() || ret.is_null() {
-                throw_str("Rue runtime: createTextNode returned undefined/null");
+                throw_adapter_null_return("createTextNode");
             }
             ret
         } else {
-            throw_str("Rue runtime: dom-adapter.createTextNode not found");
+            throw_adapter_missing("createTextNode");
             // diverges
         }
     }
@@ -172,11 +204,11 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let ret = call0_or_throw(func, &self.inner);
             if ret.is_undefined() || ret.is_null() {
-                throw_str("Rue runtime: createDocumentFragment returned undefined/null");
+                throw_adapter_null_return("createDocumentFragment");
             }
             ret
         } else {
-            throw_str("Rue runtime: dom-adapter.createDocumentFragment not found");
+            throw_adapter_missing("createDocumentFragment");
             // diverges
         }
     }
@@ -188,7 +220,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             call1_or_throw(func, &self.inner, el).as_bool().unwrap_or(false)
         } else {
-            throw_str("Rue runtime: dom-adapter.isFragment not found");
+            throw_adapter_missing("isFragment");
             // diverges
         }
     }
@@ -205,7 +237,7 @@ impl DomAdapter for JsDomAdapter {
             }
             out
         } else {
-            throw_str("Rue runtime: dom-adapter.collectFragmentChildren not found");
+            throw_adapter_missing("collectFragmentChildren");
             // diverges
         }
     }
@@ -217,7 +249,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_str(text));
         } else {
-            throw_str("Rue runtime: dom-adapter.setTextContent not found");
+            throw_adapter_missing("setTextContent");
             // diverges
         }
     }
@@ -231,7 +263,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call2_or_throw(func, &self.inner, parent, child);
         } else {
-            throw_str("Rue runtime: dom-adapter.appendChild not found");
+            throw_adapter_missing("appendChild");
             // diverges
         }
     }
@@ -249,7 +281,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call3_or_throw(func, &self.inner, parent, child, before);
         } else {
-            throw_str("Rue runtime: dom-adapter.insertBefore not found");
+            throw_adapter_missing("insertBefore");
             // diverges
         }
     }
@@ -262,7 +294,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call2_or_throw(func, &self.inner, parent, child);
         } else {
-            throw_str("Rue runtime: dom-adapter.removeChild not found");
+            throw_adapter_missing("removeChild");
             // diverges
         }
     }
@@ -272,7 +304,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             call2_or_throw(func, &self.inner, parent, child).as_bool().unwrap_or(false)
         } else {
-            throw_str("Rue runtime: dom-adapter.contains not found");
+            throw_adapter_missing("contains");
             // diverges
         }
     }
@@ -299,7 +331,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_str(value));
         } else {
-            throw_str("Rue runtime: dom-adapter.setClassName not found");
+            throw_adapter_missing("setClassName");
             // diverges
         }
     }
@@ -316,7 +348,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call3_or_throw(func, &self.inner, el, &js_old, &js_new);
         } else {
-            throw_str("Rue runtime: dom-adapter.patchStyle not found");
+            throw_adapter_missing("patchStyle");
             // diverges
         }
     }
@@ -329,7 +361,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_str(html));
         } else {
-            throw_str("Rue runtime: dom-adapter.setInnerHTML not found");
+            throw_adapter_missing("setInnerHTML");
             // diverges
         }
     }
@@ -343,7 +375,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call2_or_throw(func, &self.inner, el, &value);
         } else {
-            throw_str("Rue runtime: dom-adapter.setValue not found");
+            throw_adapter_missing("setValue");
             // diverges
         }
     }
@@ -353,7 +385,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_bool(checked));
         } else {
-            throw_str("Rue runtime: dom-adapter.setChecked not found");
+            throw_adapter_missing("setChecked");
             // diverges
         }
     }
@@ -363,7 +395,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_bool(disabled));
         } else {
-            throw_str("Rue runtime: dom-adapter.setDisabled not found");
+            throw_adapter_missing("setDisabled");
             // diverges
         }
     }
@@ -374,7 +406,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call1_or_throw(func, &self.inner, &ref_handle);
         } else {
-            throw_str("Rue runtime: dom-adapter.clearRef not found");
+            throw_adapter_missing("clearRef");
             // diverges
         }
     }
@@ -384,7 +416,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call2_or_throw(func, &self.inner, el, &ref_handle);
         } else {
-            throw_str("Rue runtime: dom-adapter.applyRef not found");
+            throw_adapter_missing("applyRef");
             // diverges
         }
     }
@@ -401,7 +433,7 @@ impl DomAdapter for JsDomAdapter {
                 &JsValue::from_str(value),
             );
         } else {
-            throw_str("Rue runtime: dom-adapter.setAttribute not found");
+            throw_adapter_missing("setAttribute");
             // diverges
         }
     }
@@ -412,7 +444,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call2_or_throw(func, &self.inner, el, &JsValue::from_str(key));
         } else {
-            throw_str("Rue runtime: dom-adapter.removeAttribute not found");
+            throw_adapter_missing("removeAttribute");
         }
     }
     fn get_tag_name(&self, el: &Self::Element) -> String {
@@ -422,7 +454,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             call1_or_throw(func, &self.inner, el).as_string().unwrap_or_default()
         } else {
-            throw_str("Rue runtime: dom-adapter.getTagName not found");
+            throw_adapter_missing("getTagName");
         }
     }
     // 替换子节点：优先使用宿主 replaceChild
@@ -451,7 +483,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call3_or_throw(func, &self.inner, el, &JsValue::from_str(event), &handler);
         } else {
-            throw_str("Rue runtime: dom-adapter.addEventListener not found");
+            throw_adapter_missing("addEventListener");
         }
     }
     fn remove_event_listener(&mut self, el: &mut Self::Element, event: &str, handler: JsValue) {
@@ -461,7 +493,7 @@ impl DomAdapter for JsDomAdapter {
         if let Some(func) = f.dyn_ref::<Function>() {
             let _ = call3_or_throw(func, &self.inner, el, &JsValue::from_str(event), &handler);
         } else {
-            throw_str("Rue runtime: dom-adapter.removeEventListener not found");
+            throw_adapter_missing("removeEventListener");
         }
     }
 
@@ -487,7 +519,7 @@ impl DomAdapter for JsDomAdapter {
             let ret = call1_or_throw(func, &self.inner, &JsValue::from_str(selector));
             if ret.is_undefined() || ret.is_null() { None } else { Some(ret) }
         } else {
-            throw_str("Rue runtime: dom-adapter.querySelector not found");
+            throw_adapter_missing("querySelector");
         }
     }
 }

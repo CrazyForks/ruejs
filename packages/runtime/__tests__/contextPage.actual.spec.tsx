@@ -77,7 +77,7 @@ describe('Context example actual page', () => {
     })
   })
 
-  it('keeps the legacy /examples/context route working', async () => {
+  it('keeps the /examples/context route working', async () => {
     const Empty = () => null
     const router = createRouter({
       history: createStaticHistory('/examples/context'),

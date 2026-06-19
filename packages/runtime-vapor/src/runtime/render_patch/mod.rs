@@ -5,7 +5,6 @@ Patch 子系统入口
 - Text：直接改文本内容
 - Component：复用实例并重新执行组件 render
 - Vapor/host node：通常按替换处理
-- Compat：委托 compat 边界处理旧式 Element/Fragment
 */
 use super::Rue;
 use super::types::{MountInput, MountedSubtreeState};
@@ -18,10 +17,6 @@ use js_sys::Function;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
-#[cfg(feature = "compat")]
-mod children;
-#[cfg(feature = "compat")]
-mod compat;
 mod component;
 mod replace;
 mod replace_utils;
@@ -192,6 +187,7 @@ mod tests {
             host: Some(vapor_host.into()),
             key: None,
             fragment_nodes: Vec::new(),
+            props: Default::default(),
             cleanup_bucket: None,
             effect_scope_id: None,
         });
@@ -235,7 +231,7 @@ where
                 *old = MountedSubtreeState::Text(mounted_text);
             }
             MountedSubtreeState::Patch(node) => {
-                // Patch 节点目前主要是 Component/compat Element/Fragment，继续交给更具体的分支。
+                // Patch 节点只保留 Component 分支，继续交给组件更新路径。
                 self.patch_component_same(node, new, parent);
             }
             MountedSubtreeState::Vapor(_) => {
@@ -310,19 +306,6 @@ where
             // key 或类型变化说明身份已变，直接替换整棵子树，避免错误复用组件实例/DOM。
             self.patch_replace(old, new, parent);
             return;
-        }
-
-        #[cfg(feature = "compat")]
-        {
-            // compat Element/Fragment 有自己的 props/children diff；先让它接管旧协议 snapshot。
-            match self.patch_compat_boundary(old, new, parent) {
-                compat::CompatPatchBoundaryOutcome::Handled => return,
-                compat::CompatPatchBoundaryOutcome::Replaced(mounted) => {
-                    *old = mounted;
-                    return;
-                }
-                compat::CompatPatchBoundaryOutcome::NotCompat => {}
-            }
         }
 
         self.patch_core_same(old, new, parent);

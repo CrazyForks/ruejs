@@ -5,8 +5,9 @@ Slot 组件概述
 - 协议：命名/作用域插槽优先来自隐藏 slot bag（__rue_slots），其次兼容同名普通 prop；默认插槽兼容 props.children。
 */
 
+import { appendChild, createComment, createDocumentFragment } from '../dom'
 import { getCurrentInstance } from '../reactivity'
-import type { FC, PropsWithChildren, RenderableOutput } from '../rue'
+import { renderAnchor, vapor, type FC, type PropsWithChildren, type RenderableOutput } from '../rue'
 
 /** 编译器注入作用域插槽表时使用的隐藏 prop 名。 */
 export const RUE_SLOT_BAG_PROP = '__rue_slots'
@@ -40,8 +41,23 @@ const isScopedSlot = (value: unknown): value is (props: SlotRenderProps) => Rend
 const isMissingSlotValue = (value: SlotValue | undefined) =>
   value == null || (Array.isArray(value) && value.length === 0)
 
-const resolveFallback = (fallback: unknown): RenderableOutput =>
-  (fallback ?? []) as RenderableOutput
+const isEmptySlotValue = (value: unknown) =>
+  value == null || (Array.isArray(value) && value.length === 0)
+
+const createSlotValueHandle = (value: unknown): RenderableOutput => {
+  if (isEmptySlotValue(value)) {
+    return null
+  }
+
+  return vapor(() => {
+    const root = createDocumentFragment()
+    const anchor = createComment('rue-slot-anchor')
+
+    appendChild(root, anchor)
+    renderAnchor(value as any, root as any, anchor as any)
+    return root as any
+  })
+}
 
 const resolveSlotSource = (source?: Record<string, unknown> | null) => {
   if (source && typeof source === 'object') {
@@ -112,13 +128,13 @@ export const Slot: FC<SlotProps> = props => {
   const resolved = resolveSlotValue(source, name)
 
   if (!resolved.found || isMissingSlotValue(resolved.value)) {
-    return resolveFallback(props.children)
+    return createSlotValueHandle(props.children)
   }
 
   const value = resolved.value
   if (isScopedSlot(value)) {
-    return value(props.props ?? {})
+    return createSlotValueHandle(value(props.props ?? {}))
   }
 
-  return resolveFallback(value)
+  return createSlotValueHandle(value)
 }

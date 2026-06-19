@@ -5,7 +5,7 @@ Calendar 组件概述
 - 视觉层继续使用 Rue 当前的 daisyUI/Tailwind 体系，不引入额外样式文件。
 */
 import type { FC } from '@rue-js/rue'
-import { onUnmounted, ref, renderAnchor, useRef, useSetup } from '@rue-js/rue'
+import { onUnmounted, ref, renderAnchor, useRef, useSetup, vapor } from '@rue-js/rue'
 
 /** CalendarMode 类型。 */
 export type CalendarMode = 'month' | 'year'
@@ -274,8 +274,6 @@ interface OptimizedDefaultCalendarSnapshot {
   managedCellContent: Map<string, ManagedCalendarCellContent>
   hasDateCustomRender: boolean
   hasMonthCustomRender: boolean
-  patchKey: string
-  selectedKey: string
   onPrevious: () => void
   onToday: () => void
   onNext: () => void
@@ -489,84 +487,6 @@ const renderOptimizedDateButtonInnerHTML = (
 }
 
 /** 构建 Month Selection Patch Signature 的内部工具函数。 */
-const buildMonthSelectionPatchSignature = (
-  yearOptions: OptimizedCalendarYearOption[],
-  monthOptions: CalendarMonthOption[],
-  dateCellStates: Map<string, DefaultDateCellState>,
-) => {
-  const yearSignature = yearOptions
-    .map(option => `${option.value}:${option.disabled ? '1' : '0'}`)
-    .join(',')
-  const monthSignature = monthOptions
-    .map(option => `${option.value}:${option.disabled ? '1' : '0'}`)
-    .join(',')
-  const cellSignature = Array.from(dateCellStates.values())
-    .map(
-      state =>
-        `${state.key}:${state.inView ? '1' : '0'}:${state.isToday ? '1' : '0'}:${state.disabled ? '1' : '0'}`,
-    )
-    .join(',')
-  return `${yearSignature}|${monthSignature}|${cellSignature}`
-}
-
-/** can Patch Month Selection Only 的内部工具函数。 */
-const canPatchMonthSelectionOnly = (
-  prev: OptimizedDefaultCalendarSnapshot,
-  next: OptimizedDefaultCalendarSnapshot,
-) => {
-  return (
-    prev.currentMode === 'month' &&
-    next.currentMode === 'month' &&
-    prev.patchKey === next.patchKey &&
-    prev.selectedKey !== next.selectedKey
-  )
-}
-
-/** patch Month Selection Only 的内部工具函数。 */
-const patchMonthSelectionOnly = (
-  host: HTMLElement,
-  prev: OptimizedDefaultCalendarSnapshot,
-  next: OptimizedDefaultCalendarSnapshot,
-  managedMounts?: Map<string, ManagedCalendarMount>,
-) => {
-  const keys = new Set([prev.selectedKey, next.selectedKey])
-  for (const key of keys) {
-    const state = next.dateCellStates.get(key)
-    if (!state) {
-      continue
-    }
-
-    const button = host.querySelector(
-      `[data-rue-calendar-cell="${key}"]`,
-    ) as HTMLButtonElement | null
-    if (!button) {
-      continue
-    }
-
-    button.disabled = state.disabled
-    button.className = buildDateButtonClassName(
-      next.fullscreen,
-      state.selected,
-      state.disabled,
-      state.inView,
-      state.isToday,
-    )
-    button.setAttribute('aria-pressed', state.selected ? 'true' : 'false')
-    if (state.isToday) {
-      button.setAttribute('aria-current', 'date')
-    } else {
-      button.removeAttribute('aria-current')
-    }
-    if (next.hasDateCustomRender) {
-      if (managedMounts) {
-        syncManagedCalendarContent(host, managedMounts, next, [key])
-      }
-    } else {
-      button.innerHTML = renderOptimizedDateButtonInnerHTML(state, next.todayMarkerLabel)
-    }
-  }
-}
-
 /** 转义 fast HTML 渲染路径中的文本和属性值，避免用户传入内容破坏结构。 */
 const escapeCalendarHtml = (value: unknown) => {
   return `${value ?? ''}`.replace(/[&<>"']/g, char => {
@@ -1715,18 +1635,8 @@ const CalendarPanel: FC<CalendarProps> = ({
     managedContentMounts: new Map<string, ManagedCalendarMount>(),
     managedHeaderMount: null as ManagedCalendarMount | null,
     eventsAttached: false,
+    cleanupVersion: 0,
   }))
-
-  /** 创建 fast HTML 渲染宿主节点；后续更新只替换 innerHTML 或局部 patch。 */
-  const ensureHost = () => {
-    if (optimizedCtx.host || typeof document === 'undefined') {
-      return
-    }
-
-    const host = document.createElement('span')
-    host.style.display = 'contents'
-    optimizedCtx.host = host
-  }
 
   /** 绑定一次事件委托，把 fast HTML 中的 data 属性还原为 Calendar 交互回调。 */
   const ensureHostEvents = () => {
@@ -1823,39 +1733,10 @@ const CalendarPanel: FC<CalendarProps> = ({
     value: year,
     disabled: !resolveYearSelectable(createDate(year, currentValue.getMonth(), 1)),
   }))
-  const selectedKey = formatDateKey(currentValue)
-  const snapshotPatchKey = [
-    currentMode,
-    currentValue.getFullYear(),
-    currentValue.getMonth(),
-    fullscreen ? 'full' : 'card',
-    hasCustomHeader ? 'custom-header' : 'default-header',
-    showWeek ? 'week' : 'day',
-    rootClassName,
-    rowClassName,
-    todayMarkerLabel,
-    weekButtonLabel,
-    buildMonthSelectionPatchSignature(snapshotYearOptions, monthOptions, dateCellStates),
-    previousDisabled ? 'prev-off' : 'prev-on',
-    nextDisabled ? 'next-off' : 'next-on',
-    todayDisabled ? 'today-off' : 'today-on',
-  ].join('|')
-  const selectionOnlyPatchKeys =
-    optimizedCtx.lastSnapshot &&
-    optimizedCtx.lastSnapshot.currentMode === 'month' &&
-    currentMode === 'month' &&
-    optimizedCtx.lastSnapshot.patchKey === snapshotPatchKey &&
-    optimizedCtx.lastSnapshot.selectedKey !== selectedKey
-      ? new Set([optimizedCtx.lastSnapshot.selectedKey, selectedKey])
-      : null
-
   const managedCellContent = new Map<string, ManagedCalendarCellContent>()
   if (isMonthMode && hasDateCustomRender) {
     dateRows.forEach((row, rowIndex) => {
       row.cells.forEach((cell, columnIndex) => {
-        if (selectionOnlyPatchKeys && !selectionOnlyPatchKeys.has(cell.key)) {
-          return
-        }
         const state = dateCellStates.get(cell.key)!
         const cellMeta = {
           type: 'date' as const,
@@ -2072,8 +1953,6 @@ const CalendarPanel: FC<CalendarProps> = ({
     managedCellContent,
     hasDateCustomRender,
     hasMonthCustomRender,
-    patchKey: snapshotPatchKey,
-    selectedKey,
     onPrevious: () =>
       triggerChange(
         currentMode === 'month' ? addMonths(currentValue, -1) : addYears(currentValue, -1),
@@ -2094,58 +1973,50 @@ const CalendarPanel: FC<CalendarProps> = ({
   }
 
   onUnmounted(() => {
-    clearManagedCalendarContent(optimizedCtx.managedContentMounts)
-    clearManagedCalendarMount(optimizedCtx.managedHeaderMount)
-    optimizedCtx.managedHeaderMount = null
-    if (optimizedCtx.host) {
-      optimizedCtx.host.replaceChildren()
-    }
-    optimizedCtx.lastSnapshot = null
+    const cleanupVersion = ++optimizedCtx.cleanupVersion
+    queueMicrotask(() => {
+      if (optimizedCtx.cleanupVersion !== cleanupVersion) {
+        return
+      }
+      clearManagedCalendarContent(optimizedCtx.managedContentMounts)
+      clearManagedCalendarMount(optimizedCtx.managedHeaderMount)
+      optimizedCtx.managedHeaderMount = null
+      if (optimizedCtx.host) {
+        optimizedCtx.host.replaceChildren()
+      }
+      optimizedCtx.lastSnapshot = null
+    })
   })
 
-  ensureHost()
-  if (!optimizedCtx.host) {
+  if (typeof document === 'undefined') {
     emitCalendarRenderProfile(onRenderProfile, renderProfile, currentMode, 'jsx')
     return renderOptimizedDefaultCalendarView(optimizedSnapshot) as any
   }
-  ensureHostEvents()
 
-  let optimizedPhase: CalendarRenderProfileEvent['phase'] = 'html'
-  if (!optimizedCtx.lastSnapshot) {
+  return vapor(() => {
+    optimizedCtx.cleanupVersion += 1
     clearManagedCalendarContent(optimizedCtx.managedContentMounts)
     clearManagedCalendarMount(optimizedCtx.managedHeaderMount)
     optimizedCtx.managedHeaderMount = null
-    optimizedCtx.host.innerHTML = renderOptimizedDefaultCalendarHTML(optimizedSnapshot)
-  } else if (canPatchMonthSelectionOnly(optimizedCtx.lastSnapshot, optimizedSnapshot)) {
-    optimizedPhase = 'patch'
-    patchMonthSelectionOnly(
-      optimizedCtx.host,
-      optimizedCtx.lastSnapshot,
-      optimizedSnapshot,
-      optimizedCtx.managedContentMounts,
-    )
-  } else {
-    clearManagedCalendarContent(optimizedCtx.managedContentMounts)
-    clearManagedCalendarMount(optimizedCtx.managedHeaderMount)
-    optimizedCtx.managedHeaderMount = null
-    optimizedCtx.host.innerHTML = renderOptimizedDefaultCalendarHTML(optimizedSnapshot)
-  }
 
-  if (optimizedPhase === 'html') {
-    syncManagedCalendarContent(
-      optimizedCtx.host,
-      optimizedCtx.managedContentMounts,
+    const host = document.createElement('span')
+    host.style.display = 'contents'
+    optimizedCtx.host = host
+    optimizedCtx.eventsAttached = false
+    optimizedCtx.lastSnapshot = null
+    ensureHostEvents()
+
+    host.innerHTML = renderOptimizedDefaultCalendarHTML(optimizedSnapshot)
+    syncManagedCalendarContent(host, optimizedCtx.managedContentMounts, optimizedSnapshot)
+    optimizedCtx.managedHeaderMount = syncManagedCalendarHeaderContent(
+      host,
+      optimizedCtx.managedHeaderMount,
       optimizedSnapshot,
     )
-  }
-  optimizedCtx.managedHeaderMount = syncManagedCalendarHeaderContent(
-    optimizedCtx.host,
-    optimizedCtx.managedHeaderMount,
-    optimizedSnapshot,
-  )
-  optimizedCtx.lastSnapshot = optimizedSnapshot
-  emitCalendarRenderProfile(onRenderProfile, renderProfile, currentMode, optimizedPhase)
-  return { __rue_host_node: optimizedCtx.host } as any
+    optimizedCtx.lastSnapshot = optimizedSnapshot
+    emitCalendarRenderProfile(onRenderProfile, renderProfile, currentMode, 'html')
+    return host
+  })
 }
 
 /** Cally web component 容器 */

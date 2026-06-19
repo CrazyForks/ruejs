@@ -55,7 +55,7 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
 setReactiveScheduling('sync')
 
 const calendarPageSource = readFileSync(`${process.cwd()}/app/pages/design/Calendar.tsx`, 'utf8')
-const legacyCalendarPreviewSource = readFileSync(
+const calendarPreviewSource = readFileSync(
   `${process.cwd()}/app/pages/design/calendar/LegacyCalendarPreviews.tsx`,
   'utf8',
 )
@@ -144,8 +144,8 @@ describe('Calendar actual page', () => {
     expect(calendarPageSource).toContain('title="Cally date picker example"')
     expect(calendarPageSource).toContain('title="Pikaday input example"')
     expect(calendarPageSource).not.toContain('加载预览')
-    expect(legacyCalendarPreviewSource).toContain('Loading Cally...')
-    expect(legacyCalendarPreviewSource).toContain('Loading Pikaday...')
-    expect(legacyCalendarPreviewSource).toContain('输入框已挂上真实 Pikaday 实例')
+    expect(calendarPreviewSource).toContain('Loading Cally...')
+    expect(calendarPreviewSource).toContain('Loading Pikaday...')
+    expect(calendarPreviewSource).toContain('输入框已挂上真实 Pikaday 实例')
   })
 })

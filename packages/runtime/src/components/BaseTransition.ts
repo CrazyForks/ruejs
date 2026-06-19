@@ -3,10 +3,10 @@
 - 设计目标：统一封装进入/离开的过渡行为，兼容 CSS 类名驱动与 JS 钩子接管两种模式。
 - 阶段语义：分为 enter/leave/appear 三类阶段；每一阶段包含 from/active/to 三个子状态，用于控制类名增删。
 - 时间确定：通过 inferType 推断是 transition 还是 animation，再结合 resolveDuration 计算最终时长；若用户显式提供 duration，则优先使用。
-- 事件流转：通过 emitted(props) 派发生命周期事件（before/after-appear/enter/leave），便于外部监听。
+- 事件流转：通过 useEmit(props) 派发生命周期事件（before/after-appear/enter/leave），便于外部监听。
 - 可扩展性：用户可覆盖类名或提供 onEnter/onLeave/onAppear 钩子，自行控制动画并在结束时调用 done()。
 */
-import { emitted } from '../vapor-runtime'
+import { useEmit } from '../vapor-runtime'
 import {
   type TransitionPhase,
   type TransitionType,
@@ -115,7 +115,7 @@ function getPhaseClasses(name: string, props: BaseTransitionProps, phase: Transi
 export function createTransitionRunner(props: BaseTransitionProps) {
   const name = props.name || 'rue'
   const css = props.css !== false
-  const em = emitted(props)
+  const em = useEmit(props)
 
   /** 执行进入/出现过渡 */
   function runEnter(el: HTMLElement, phase: TransitionPhase = 'enter', onDone?: () => void) {

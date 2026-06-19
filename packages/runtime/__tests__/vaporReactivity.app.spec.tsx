@@ -432,7 +432,7 @@ const StableMixedChild = (props: { slot: any; children?: any[] }) => {
 
 const StableMixedParent = () => {
   const tick = ref(0)
-  const legacyChild = <em data-testid="stable-mixed-legacy">legacy</em>
+  const stableChild = <em data-testid="stable-mixed-child">child</em>
   const stableNode = document.createElement('strong')
   stableNode.dataset.testid = 'stable-mixed-node'
   stableNode.textContent = 'bridge'
@@ -455,7 +455,7 @@ const StableMixedParent = () => {
       button.textContent = String(tick.value)
       renderAnchor(
         <StableMixedChild slot={makeStableNode()}>
-          {legacyChild}
+          {stableChild}
           {makeStableNode() as any}
         </StableMixedChild>,
         root,

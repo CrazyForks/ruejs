@@ -5,7 +5,8 @@ render：容器级渲染桥接
 这样可以避免 JS 回调重入时直接可变借用内部 Rue。
 */
 use super::WasmRue;
-use super::input::CompatEntryPolicy;
+use super::input::InputEntryPolicy;
+use crate::runtime::error_strings;
 use crate::runtime::js_adapter::JsDomAdapter;
 use crate::runtime::types::MountInput;
 use wasm_bindgen::JsValue;
@@ -21,8 +22,8 @@ impl WasmRue {
 
     #[wasm_bindgen(js_name = "render")]
     /// 渲染入口：
-    /// - 默认接受 tagged mount handle、portable handle、host-node bridge
-    /// - 不接受 compat raw array/raw node/vnode/function-component 输入
+    /// - 默认接受 tagged mount handle、portable handle
+    /// - 不接受 raw array/raw node/object-tree/function-component 输入
     pub fn render_wasm(&self, input_value: JsValue, container: JsValue) {
         #[cfg(feature = "dev")]
         {
@@ -39,15 +40,13 @@ impl WasmRue {
             }
         }
         let Some(input) =
-            self.mount_input_from_input(&input_value, CompatEntryPolicy::DefaultSurfaceOnly)
+            self.mount_input_from_input(&input_value, InputEntryPolicy::DefaultSurfaceOnly)
         else {
             let should_report_error = !input_value.is_null() && !input_value.is_undefined();
             if should_report_error {
                 #[cfg(feature = "dev")]
                 {
-                    crate::log::warning(
-                        "Rue runtime: render input not supported on the default path",
-                    );
+                    crate::log::warning(error_strings::UNSUPPORTED_RENDER_INPUT);
                 }
             }
 
@@ -58,9 +57,7 @@ impl WasmRue {
 
             if let Ok(mut inner) = self.inner.try_borrow_mut() {
                 if should_report_error {
-                    inner.handle_error(JsValue::from_str(
-                        "Rue runtime: render input not supported on the default path",
-                    ));
+                    inner.handle_error(JsValue::from_str(error_strings::UNSUPPORTED_RENDER_INPUT));
                 }
                 let mut container_value = container.clone();
                 inner.clear_container((&mut container_value).into());

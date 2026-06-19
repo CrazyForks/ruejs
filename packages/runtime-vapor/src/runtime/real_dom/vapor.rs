@@ -1,7 +1,7 @@
 /*
 Vapor 子树挂载
 
-处理默认主路径中的 Vapor/host-node bridge：
+处理默认主路径中的 Vapor：
 - 直接复用已由 JS/Vapor 侧创建的宿主节点或片段节点
 - 若存在 setup，则在专属 effect scope 中执行，确保卸载时可统一清理
 - 将 cleanup bucket 与 scope id 写入 mounted snapshot，交给生命周期层释放
@@ -10,37 +10,18 @@ use super::super::Rue;
 use super::super::types::{
     MountInput, MountedSubtreeState, MountedVaporSubtree, MountedVaporSubtreeType,
 };
-#[cfg(feature = "compat")]
-use super::compat_vapor_wrapper::setup_return_uses_legacy_vapor_wrapper;
 use crate::reactive::core::{create_effect_scope, pop_effect_scope, push_effect_scope};
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::shared_runtime_bridge;
-use crate::runtime::transport;
-use js_sys::{Function, Object, Reflect};
+use js_sys::{Function, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 
 impl<A: DomAdapter> Rue<A>
 where
     A::Element: From<JsValue> + Into<JsValue> + Clone,
 {
-    /// 解析 setup 返回对象：提取其中的 `__rue_host_node` bridge（若存在）
-    pub(super) fn parse_vapor_with_setup_return(&self, ret: &JsValue) -> Option<A::Element> {
-        if ret.is_object() {
-            let obj = Object::from(ret.clone());
-            let host = transport::host_node_value(&obj);
-            if !host.is_undefined() && !host.is_null() {
-                // setup 返回 bridge wrapper 时，真正要挂载的是 wrapper 内部的 host node。
-                // wrapper 自身只作为运输壳，不应进入 mounted snapshot。
-                let el: A::Element = host.into();
-                return Some(el);
-            }
-        }
-        None
-    }
-
     /// Vapor setup 主路径由编译器直接返回可挂载块根节点，这里保留该薄协议。
     ///
-    /// 与组件默认返回面不同，setup 不要求额外包成 host-node bridge；
     /// 只要返回值本身就是宿主节点/片段节点，就直接把它视为可挂载元素。
     pub(super) fn coerce_setup_return_to_element(&self, ret: &JsValue) -> A::Element {
         ret.clone().into()
@@ -100,6 +81,7 @@ where
         host: Some(host),
         key: input.key.clone(),
         fragment_nodes,
+        props: input.props.clone(),
         cleanup_bucket: input.mount_cleanup_bucket.clone(),
         effect_scope_id: input.mount_effect_scope_id,
     }))
@@ -108,6 +90,27 @@ where
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn vapor_with_setup_no_adapter<A: DomAdapter>(rue: &mut Rue<A>) -> Option<MountedSubtreeState<A>> {
     rue.handle_error(JsValue::from_str("runtime:mount VaporWithSetup fallback no adapter"));
+    None
+}
+
+fn is_mountable_setup_return(ret: &JsValue) -> bool {
+    if !ret.is_object() {
+        return true;
+    }
+
+    let node_type =
+        Reflect::get(ret, &JsValue::from_str("nodeType")).unwrap_or(JsValue::UNDEFINED).as_f64();
+    if matches!(node_type, Some(1.0 | 3.0 | 11.0)) {
+        return true;
+    }
+
+    Reflect::get(ret, &JsValue::from_str("tag")).unwrap_or(JsValue::UNDEFINED).as_string().is_some()
+}
+
+fn unsupported_setup_return<A: DomAdapter>(rue: &mut Rue<A>) -> Option<MountedSubtreeState<A>> {
+    rue.handle_error(JsValue::from_str(
+        "Unsupported object returns are no longer accepted for vapor setup",
+    ));
     None
 }
 
@@ -129,6 +132,7 @@ where
             host: Some(existing_host),
             key: input.key.clone(),
             fragment_nodes,
+            props: input.props.clone(),
             cleanup_bucket: input.mount_cleanup_bucket.clone(),
             effect_scope_id: input.mount_effect_scope_id,
         }));
@@ -161,29 +165,9 @@ where
 
         match ret {
             Ok(ret) => {
-                if let Some(el) = rue.parse_vapor_with_setup_return(&ret) {
-                    // bridge wrapper 返回：提取 host 后仍要把 owner scope 绑定回 host。
-                    rue.set_owner_scope_on_element(Some(scope_id), &el);
-                    let fragment_nodes = rue.fragment_nodes_for_element(&el);
-                    return Some(MountedSubtreeState::Vapor(MountedVaporSubtree {
-                        r#type: MountedVaporSubtreeType::VaporWithSetup(f.clone()),
-                        host: Some(el),
-                        key: input.key.clone(),
-                        fragment_nodes,
-                        cleanup_bucket: input.mount_cleanup_bucket.clone(),
-                        effect_scope_id: Some(scope_id),
-                    }));
+                if !is_mountable_setup_return(&ret) {
+                    return unsupported_setup_return(rue);
                 }
-
-                #[cfg(feature = "compat")]
-                if setup_return_uses_legacy_vapor_wrapper(&ret) {
-                    let error = JsValue::from_str(
-                        "Unsupported object returns are no longer accepted for vapor setup on the default path. Return a raw node, fragment, or mount handle instead.",
-                    );
-                    rue.handle_error(error.clone());
-                    return None;
-                }
-
                 // 编译器生成的 Vapor setup 默认直接 `return _root`，这里继续接受该块根节点。
                 let el: A::Element = rue.coerce_setup_return_to_element(&ret);
                 rue.set_owner_scope_on_element(Some(scope_id), &el);
@@ -193,6 +177,7 @@ where
                     host: Some(el),
                     key: input.key.clone(),
                     fragment_nodes,
+                    props: input.props.clone(),
                     cleanup_bucket: input.mount_cleanup_bucket.clone(),
                     effect_scope_id: Some(scope_id),
                 }));
@@ -211,6 +196,7 @@ where
                         host: Some(el),
                         key: input.key.clone(),
                         fragment_nodes,
+                        props: input.props.clone(),
                         cleanup_bucket: input.mount_cleanup_bucket.clone(),
                         effect_scope_id: Some(scope_id),
                     }));
@@ -230,6 +216,7 @@ where
         host: Some(el),
         key: input.key.clone(),
         fragment_nodes: Vec::new(),
+        props: input.props.clone(),
         cleanup_bucket: input.mount_cleanup_bucket.clone(),
         effect_scope_id: input.mount_effect_scope_id,
     }))
@@ -331,12 +318,8 @@ mod tests {
         children.push(&second);
         set_prop(&fragment, "children", children.into());
 
-        let bridge = Object::new();
-        set_prop(&bridge, "__rue_host_node", first.clone());
-        let parsed = rue.parse_vapor_with_setup_return(&bridge.into()).unwrap();
-        assert!(js_sys::Object::is(&parsed.clone().into(), &first));
-
-        rue.set_owner_scope_on_element(Some(33), &parsed);
+        let first_el: JsValue = first.clone();
+        rue.set_owner_scope_on_element(Some(33), &first_el);
         assert_eq!(
             Reflect::get(&first, &JsValue::from_str("__rue_effect_scope_id")).unwrap().as_f64(),
             Some(33.0),
@@ -369,8 +352,6 @@ mod tests {
     #[wasm_bindgen_test]
     fn vapor_helpers_cover_no_adapter_and_noop_branch_edges() {
         let rue = Rue::<JsDomAdapter>::new();
-        assert!(rue.parse_vapor_with_setup_return(&JsValue::from_str("plain")).is_none());
-        assert!(rue.parse_vapor_with_setup_return(&Object::new().into()).is_none());
         assert!(rue.fragment_nodes_for_element(&host("not-fragment")).is_empty());
         rue.set_owner_scope_on_element(None, &host("noop"));
 

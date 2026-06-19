@@ -48,11 +48,11 @@ describe('normalizeRenderable', () => {
   })
 
   it('flags plain object inputs as unsupported default objects', () => {
-    const legacyObject = { type: 'div', props: null, children: [] }
-    const single = normalizeRenderable(legacyObject)
-    const nested = normalizeRenderable(['ok', legacyObject])
+    const unsupportedObject = { type: 'div', props: null, children: [] }
+    const single = normalizeRenderable(unsupportedObject)
+    const nested = normalizeRenderable(['ok', unsupportedObject])
 
-    expect(single).toEqual({ kind: 'unsupported-object', value: legacyObject })
-    expect(nested).toEqual({ kind: 'unsupported-object', value: legacyObject })
+    expect(single).toEqual({ kind: 'unsupported-object', value: unsupportedObject })
+    expect(nested).toEqual({ kind: 'unsupported-object', value: unsupportedObject })
   })
 })

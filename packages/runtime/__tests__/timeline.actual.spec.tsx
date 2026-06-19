@@ -24,7 +24,7 @@ afterEach(() => {
 })
 
 describe('Timeline actual page', () => {
-  it('keeps legacy timeline demos alongside enhanced API sections', async () => {
+  it('keeps timeline demos alongside enhanced API sections', async () => {
     expect(timelinePageSource).toContain('Timeline 时间线')
     expect(timelinePageSource).toContain('增强能力')
     expect(timelinePageSource).toContain('API')

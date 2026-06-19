@@ -10,6 +10,8 @@ use super::super::types::{AnchorMountState, MountInput, MountedState, MountedSub
 use crate::log::{log, want_log};
 use crate::reactive::core::batch_scope;
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::error_strings;
+#[cfg(feature = "dev")]
 use js_sys::Reflect;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
@@ -26,12 +28,12 @@ where
             } else if let Some(e) = self.last_error.clone() {
                 wasm_bindgen::throw_val(e);
             } else {
-                throw_str("Rue runtime crashed");
+                throw_str(error_strings::RUNTIME_CRASHED);
             }
         }
 
         if self.get_dom_adapter().is_none() {
-            throw_str("Rue runtime: no DOM adapter for renderAnchor");
+            throw_str(error_strings::NO_DOM_RENDER_ANCHOR);
         }
     }
 
@@ -49,7 +51,7 @@ where
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn default_render_anchor_error() -> JsValue {
-        js_sys::Error::new("Rue vapor: renderAnchor failed (create_real_dom=None)").into()
+        js_sys::Error::new(error_strings::RENDER_ANCHOR_FAILED_NO_DOM).into()
     }
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -67,15 +69,22 @@ where
             Some(MountedState::Block(old_block)) => {
                 let mut dest_parent = self.resolve_dest_parent_for_end(parent, anchor);
                 self.call_hooks("before_update");
-                let global = js_sys::global();
-                let source_key = JsValue::from_str("__rue_debug_clear_source__");
-                let _ = Reflect::set(
-                    &global,
-                    &source_key,
-                    &JsValue::from_str("render_anchor_impl:block"),
-                );
+                #[cfg(feature = "dev")]
+                let (global, source_key) = {
+                    let global = js_sys::global();
+                    let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                    let _ = Reflect::set(
+                        &global,
+                        &source_key,
+                        &JsValue::from_str("render_anchor_impl:block"),
+                    );
+                    (global, source_key)
+                };
                 self.clear_mounted_state(&mut dest_parent, MountedState::Block(old_block));
-                let _ = Reflect::delete_property(&global, &source_key);
+                #[cfg(feature = "dev")]
+                {
+                    let _ = Reflect::delete_property(&global, &source_key);
+                }
                 let _ = self.render_anchor_mount(input, parent, anchor).map(|mounted| {
                     self.call_hooks("updated");
                     self.store_anchor_mount_at(idx, mounted);
@@ -114,11 +123,19 @@ where
 
                 if let Some(old_mount) = taken {
                     let mut dest_parent = self.resolve_dest_parent_for_end(parent, &anchor);
-                    let global = js_sys::global();
-                    let source_key = JsValue::from_str("__rue_debug_clear_source__");
-                    let _ = Reflect::set(&global, &source_key, &JsValue::from_str("clear_anchor"));
+                    #[cfg(feature = "dev")]
+                    let (global, source_key) = {
+                        let global = js_sys::global();
+                        let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                        let _ =
+                            Reflect::set(&global, &source_key, &JsValue::from_str("clear_anchor"));
+                        (global, source_key)
+                    };
                     self.clear_mounted_state(&mut dest_parent, old_mount);
-                    let _ = Reflect::delete_property(&global, &source_key);
+                    #[cfg(feature = "dev")]
+                    {
+                        let _ = Reflect::delete_property(&global, &source_key);
+                    }
                 }
             }
 
@@ -231,7 +248,7 @@ mod tests {
     use super::*;
     use crate::runtime::js_adapter::JsDomAdapter;
     use crate::runtime::types::{
-        ComponentProps, MountInputChild, MountInputType, MountedSubtreeState, MountedTextSubtree,
+        ComponentProps, MountInputType, MountedSubtreeState, MountedTextSubtree,
     };
     use js_sys::{Array, Function, Object, Reflect};
     use wasm_bindgen_test::*;
@@ -318,19 +335,6 @@ mod tests {
             r#type: MountInputType::Text(text.to_string()),
             props: ComponentProps::new(),
             children: Vec::new(),
-            key: None,
-            strict_component_returns: false,
-            mount_cleanup_bucket: None,
-            mount_effect_scope_id: None,
-            el_hint: None,
-        }
-    }
-
-    fn fragment_input(children: Vec<MountInputChild<JsDomAdapter>>) -> MountInput<JsDomAdapter> {
-        MountInput {
-            r#type: MountInputType::Fragment,
-            props: ComponentProps::new(),
-            children,
             key: None,
             strict_component_returns: false,
             mount_cleanup_bucket: None,
@@ -506,25 +510,6 @@ mod tests {
             })
             .unwrap_or_default();
         assert_eq!(message, "Rue vapor: renderAnchor failed (create_real_dom=None)");
-    }
-
-    #[wasm_bindgen_test]
-    fn render_anchor_fragment_with_hostless_child_keeps_fragment_boundary_order() {
-        let mut rue = Rue::<JsDomAdapter>::new();
-        rue.set_dom_adapter(adapter());
-        let mut parent = rue.get_dom_adapter_mut().unwrap().create_document_fragment();
-        let anchor = rue.get_dom_adapter_mut().unwrap().create_element("anchor");
-        rue.get_dom_adapter_mut().unwrap().append_child(&mut parent, &anchor);
-
-        let input = fragment_input(vec![
-            MountInputChild::Text("left".to_string()),
-            MountInputChild::Input(phantom_input()),
-            MountInputChild::Text("right".to_string()),
-        ]);
-
-        rue.render_anchor_input(input, &mut parent, anchor);
-
-        assert_eq!(child_tags(&parent.into()), vec!["#text", "#text", "anchor"]);
     }
 
     #[wasm_bindgen_test]

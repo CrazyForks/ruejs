@@ -16,6 +16,7 @@ import * as TransitionUtils from './transitionUtils'
 type TransitionGroupChildInput = unknown
 
 const renderedTransitionGroupContainers = new WeakSet<HTMLElement>()
+const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
 
 /** TransitionGroup 组件属性，面向 keyed 多子节点列表。 */
 export type TransitionGroupProps = PropsWithChildren<
@@ -59,8 +60,13 @@ const readTransitionGroupKey = (child: unknown): string => {
     return ''
   }
 
-  const key =
-    (child as { key?: unknown; props?: { key?: unknown } }).key ?? (child as any).props?.key
+  const record = child as {
+    key?: unknown
+    props?: { key?: unknown }
+    [RUE_ELEMENT_HEAD_RECORD]?: { key?: unknown; props?: { key?: unknown } }
+  }
+  const headRecord = record[RUE_ELEMENT_HEAD_RECORD]
+  const key = record.key ?? record.props?.key ?? headRecord?.key ?? headRecord?.props?.key
   return key == null ? '' : String(key)
 }
 
@@ -74,6 +80,7 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
   const containerRef = useRef<HTMLElement>()
   const ctx = useSetup(() => ({
     firstRender: true,
+    prevKeys: [] as string[],
     renderVersion: null as symbol | null,
   }))
 
@@ -115,6 +122,7 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
   }
 
   onUnmounted(() => {
+    ctx.prevKeys = []
     ctx.renderVersion = null
   })
 
@@ -126,10 +134,14 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
   const prevElementsByKey: Map<string, HTMLElement> = new Map()
   const prevRects: Map<string, DOMRect> = new Map()
   const prevContainer = containerRef.current
+  const prevKeys = ctx.prevKeys.slice()
   if (prevContainer) {
-    collectDirectElements(prevContainer).forEach(el => {
-      const key = el.getAttribute('data-rue-key')
+    collectDirectElements(prevContainer).forEach((el, index) => {
+      const key = el.getAttribute('data-rue-key') ?? prevKeys[index] ?? ''
       if (!key) return
+      if (!el.hasAttribute('data-rue-key')) {
+        el.setAttribute('data-rue-key', key)
+      }
       prevElementsByKey.set(key, el)
       prevRects.set(key, el.getBoundingClientRect())
     })
@@ -160,6 +172,8 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
 
     const isFirstRender =
       instanceFirstRender &&
+      !prevContainer &&
+      prevKeys.length === 0 &&
       prevElementsByKey.size === 0 &&
       existingKeys.size === 0 &&
       !renderedTransitionGroupContainers.has(container)
@@ -201,9 +215,9 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
       el.style.transform = `translate(${dx}px, ${dy}px)`
       el.style.transition = 'transform 0s'
       TransitionUtils.forceReflow(el)
+      TransitionUtils.addClass(el, moveClass)
       el.style.transform = ''
       el.style.transition = ''
-      TransitionUtils.addClass(el, moveClass)
 
       const type = curProps.type ?? TransitionUtils.inferType(el)
       const stylesTimeout = Math.max(
@@ -229,6 +243,7 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
     })
 
     renderedTransitionGroupContainers.add(container)
+    ctx.prevKeys = nextKeys.slice()
   })
 
   ctx.firstRender = false

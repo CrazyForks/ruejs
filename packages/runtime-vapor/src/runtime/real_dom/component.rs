@@ -91,13 +91,8 @@ where
         crate::set_current_instance(host.clone().into());
         rue.mount_from_input(&sub_input, parent_context)
     } else if ret.is_object() {
-        #[cfg(feature = "compat")]
         let error = JsValue::from_str(
-            "Unsupported object returns are no longer accepted on the default component path. Return a raw node, fragment, or mount handle instead.",
-        );
-        #[cfg(not(feature = "compat"))]
-        let error = JsValue::from_str(
-            "Unsupported object returns are no longer accepted on the default component path. Return a host-node bridge, portable handle, or mount handle instead.",
+            "Unsupported object returns are no longer accepted on the default component path. Return a portable handle or mount handle instead.",
         );
         rue.handle_error(error.clone());
         None
@@ -108,6 +103,7 @@ where
             host: Some(el),
             key: None,
             fragment_nodes: Vec::new(),
+            props: super::super::types::ComponentProps::new(),
             cleanup_bucket: None,
             effect_scope_id: None,
         }))

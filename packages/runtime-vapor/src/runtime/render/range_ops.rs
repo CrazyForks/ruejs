@@ -382,6 +382,7 @@ mod tests {
             host: Some(host),
             key: None,
             fragment_nodes: Vec::new(),
+            props: Default::default(),
             cleanup_bucket: None,
             effect_scope_id: None,
         }))

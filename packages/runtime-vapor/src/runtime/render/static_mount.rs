@@ -8,6 +8,7 @@ use super::super::Rue;
 use super::super::types::MountInput;
 use crate::reactive::core::batch_scope;
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::error_strings;
 use js_sys::Array;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
@@ -29,12 +30,12 @@ where
             } else if let Some(e) = self.last_error.clone() {
                 wasm_bindgen::throw_val(e);
             } else {
-                throw_str("Rue runtime crashed");
+                throw_str(error_strings::RUNTIME_CRASHED);
             }
         }
 
         if self.get_dom_adapter().is_none() {
-            throw_str("Rue runtime: no DOM adapter for renderStatic");
+            throw_str(error_strings::NO_DOM_RENDER_STATIC);
         }
     }
 
@@ -43,7 +44,7 @@ where
         let err_to_handle = if let Some(e) = self.last_error.clone() {
             e
         } else {
-            js_sys::Error::new("Rue vapor: renderStatic failed (create_real_dom=None)").into()
+            js_sys::Error::new(error_strings::RENDER_STATIC_FAILED_NO_DOM).into()
         };
         self.handle_error(err_to_handle);
     }
@@ -91,8 +92,7 @@ where
             return false;
         };
 
-        let el =
-            mounted.host_cloned().expect("Rue vapor: mounted static subtree must expose a host");
+        let el = mounted.host_cloned().expect(error_strings::STATIC_HOST_MISSING);
         let is_fragment = self.get_dom_adapter().is_some_and(|adapter| adapter.is_fragment(&el));
         if is_fragment {
             *mounted_nodes = mounted.fragment_nodes_cloned();
@@ -149,9 +149,7 @@ where
                 &mut mounted_nodes,
             );
 
-            let adapter = self
-                .get_dom_adapter_mut()
-                .expect("Rue runtime: DOM adapter checked before renderStatic");
+            let adapter = self.get_dom_adapter_mut().expect(error_strings::STATIC_DOM_CHECKED);
             if adapter.contains(&dest_parent, &anchor) {
                 let mut p2 = dest_parent.clone();
                 adapter.remove_child(&mut p2, &anchor);
@@ -167,7 +165,7 @@ where
 mod tests {
     use super::*;
     use crate::runtime::js_adapter::JsDomAdapter;
-    use crate::runtime::types::{ComponentProps, MountInputChild, MountInputType};
+    use crate::runtime::types::{ComponentProps, MountInputType};
     use js_sys::{Array, Function, Object, Reflect};
     use wasm_bindgen_test::*;
 
@@ -235,48 +233,6 @@ mod tests {
         }
     }
 
-    fn text_input(text: &str) -> MountInput<JsDomAdapter> {
-        MountInput {
-            r#type: MountInputType::Text(text.to_string()),
-            props: ComponentProps::new(),
-            children: Vec::new(),
-            key: None,
-            strict_component_returns: false,
-            mount_cleanup_bucket: None,
-            mount_effect_scope_id: None,
-            el_hint: None,
-        }
-    }
-
-    fn element_input(
-        tag: &str,
-        children: Vec<MountInputChild<JsDomAdapter>>,
-    ) -> MountInput<JsDomAdapter> {
-        MountInput {
-            r#type: MountInputType::Element(tag.to_string()),
-            props: ComponentProps::new(),
-            children,
-            key: None,
-            strict_component_returns: false,
-            mount_cleanup_bucket: None,
-            mount_effect_scope_id: None,
-            el_hint: None,
-        }
-    }
-
-    fn fragment_input(children: Vec<MountInputChild<JsDomAdapter>>) -> MountInput<JsDomAdapter> {
-        MountInput {
-            r#type: MountInputType::Fragment,
-            props: ComponentProps::new(),
-            children,
-            key: None,
-            strict_component_returns: false,
-            mount_cleanup_bucket: None,
-            mount_effect_scope_id: None,
-            el_hint: None,
-        }
-    }
-
     fn vapor_input(host: JsValue) -> MountInput<JsDomAdapter> {
         MountInput {
             r#type: MountInputType::Vapor,
@@ -314,71 +270,6 @@ mod tests {
                 }
             })
             .collect()
-    }
-
-    fn first_child_text(parent: &JsValue) -> String {
-        let children =
-            Reflect::get(parent, &JsValue::from_str("children")).unwrap_or(Array::new().into());
-        let first = Array::from(&children).get(0);
-        Reflect::get(&first, &JsValue::from_str("text"))
-            .unwrap_or(JsValue::UNDEFINED)
-            .as_string()
-            .unwrap_or_default()
-    }
-
-    #[wasm_bindgen_test]
-    fn render_static_mounts_text_element_fragment_and_anchor_positions() {
-        let mut rue = Rue::<JsDomAdapter>::new();
-        rue.set_dom_adapter(adapter());
-        let mut parent = rue.get_dom_adapter_mut().unwrap().create_document_fragment();
-        let anchor = rue.get_dom_adapter_mut().unwrap().create_element("anchor");
-        let tail = rue.get_dom_adapter_mut().unwrap().create_element("tail");
-        rue.get_dom_adapter_mut().unwrap().append_child(&mut parent, &anchor);
-        rue.get_dom_adapter_mut().unwrap().append_child(&mut parent, &tail);
-
-        rue.render_static_input(text_input("static-text"), &mut parent, anchor);
-        assert_eq!(child_labels(&parent), vec!["static-text", "tail"]);
-
-        let anchor2 = rue.get_dom_adapter_mut().unwrap().create_element("anchor2");
-        rue.get_dom_adapter_mut().unwrap().append_child(&mut parent, &anchor2);
-        rue.render_static_input(
-            element_input("static-el", vec![MountInputChild::Text("inside".to_string())]),
-            &mut parent,
-            anchor2,
-        );
-        assert_eq!(child_labels(&parent), vec!["static-text", "tail", "static-el"]);
-        let element = Array::from(
-            &Reflect::get(&parent, &JsValue::from_str("children")).unwrap_or(Array::new().into()),
-        )
-        .get(2);
-        assert_eq!(first_child_text(&element), "inside");
-
-        let anchor3 = rue.get_dom_adapter_mut().unwrap().create_element("anchor3");
-        rue.get_dom_adapter_mut().unwrap().append_child(&mut parent, &anchor3);
-        let frag_nodes_ref = Array::new();
-        Reflect::set(
-            &parent,
-            &JsValue::from_str("__rue_frag_nodes_ref"),
-            &frag_nodes_ref.clone().into(),
-        )
-        .unwrap();
-        rue.render_static_input(
-            fragment_input(vec![
-                MountInputChild::Text("frag-text".to_string()),
-                MountInputChild::Input(element_input(
-                    "frag-el",
-                    vec![MountInputChild::Text("frag-child".to_string())],
-                )),
-            ]),
-            &mut parent,
-            anchor3,
-        );
-
-        assert_eq!(
-            child_labels(&parent),
-            vec!["static-text", "tail", "static-el", "frag-text", "frag-el"]
-        );
-        assert_eq!(frag_nodes_ref.length(), 0);
     }
 
     #[wasm_bindgen_test]

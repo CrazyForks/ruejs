@@ -121,7 +121,7 @@ fn public_context_helpers_cover_no_instance_and_non_object_paths() {
 }
 
 #[wasm_bindgen_test]
-fn vapor_with_hook_id_accepts_legacy_array_slot_mapping_publicly() {
+fn vapor_with_hook_id_accepts_array_slot_mapping_publicly() {
     let inst = Object::new();
     let hooks = Object::new();
     let states = Array::new();

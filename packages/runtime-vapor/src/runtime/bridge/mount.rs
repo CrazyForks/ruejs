@@ -5,10 +5,6 @@ mount：应用级挂载入口
 与 render(input, container) 不同，mount 代表一棵应用的生命周期边界，因此需要管理 root scope 清理。
 */
 use super::WasmRue;
-#[cfg(not(feature = "compat"))]
-use crate::runtime::dom_adapter::DomAdapter;
-#[cfg(not(feature = "compat"))]
-use crate::runtime::types::ComponentProps;
 use crate::runtime::types::{MountInput, MountInputType};
 use js_sys::{Function, Object};
 use wasm_bindgen::JsCast;
@@ -54,7 +50,7 @@ impl WasmRue {
     fn try_call_app_and_render(&self, app: &JsValue, cont: &JsValue) -> bool {
         // 这里传给 app 的 props 目前是空对象：
         // - 通常会传入 props + children
-        // - Rust/wasm 这层目前主要是兼容 “app(props) -> MountInput/raw node/handle” 的签名
+        // - Rust/wasm 这层目前主要支持 “app(props) -> MountInput/raw node/handle” 的签名
         //
         // 关键点：app 函数内部通常会“读取响应式数据”（signal/ref/computed 等）。
         // 在 mount_wasm 中我们会把 try_call_app_and_render 包进 create_effect 里，
@@ -78,8 +74,7 @@ impl WasmRue {
                     }
                 }
                 // 将 app 的返回值交给 render_wasm：
-                // - 默认路径接受 host-node bridge / portable handle / tagged mount handle
-                // - compat 构建额外接受 raw DOM node / fragment array 等旧输入
+                // - 默认路径接受 portable handle / tagged mount handle
                 // - render_wasm 会解析成 MountInput 并入队，随后通过 Promise.then 异步 flush
                 self.render_wasm(v, cont.clone());
                 return true;
@@ -88,33 +83,10 @@ impl WasmRue {
         false
     }
 
-    /// 渲染一个空 Fragment 到容器，用于无 app 场景
+    /// 渲染一个空文本节点到容器，用于无 app 场景
     fn render_empty_fragment_to(&self, cont: &JsValue) {
-        let input = {
-            #[cfg(feature = "compat")]
-            {
-                MountInput::new_normalized(MountInputType::Fragment, Default::default(), vec![])
-            }
-
-            #[cfg(not(feature = "compat"))]
-            {
-                let mut inner = self.inner.borrow_mut();
-                let Some(adapter) = inner.get_dom_adapter_mut() else {
-                    return;
-                };
-                let fragment = adapter.create_document_fragment();
-                MountInput {
-                    r#type: MountInputType::Vapor,
-                    props: ComponentProps::new(),
-                    children: vec![],
-                    key: None,
-                    strict_component_returns: false,
-                    mount_cleanup_bucket: None,
-                    mount_effect_scope_id: None,
-                    el_hint: Some(fragment),
-                }
-            }
-        };
+        let input =
+            MountInput::new_normalized(MountInputType::Fragment, Default::default(), vec![]);
 
         self.pending_render.borrow_mut().push((input, cont.clone()));
         self.schedule_flush();
@@ -161,7 +133,7 @@ impl WasmRue {
             // 保存 scope_id 用于 unmount 清理
             *self.root_effect_scope.borrow_mut() = Some(scope_id);
             // root_effect 和 root_effect_closure 不再用于主应用执行，
-            // 但保留这些字段以备将来使用或兼容性。
+            // 但保留这些字段以备将来使用。
             // 这里显式设置为 None。
             *self.root_effect.borrow_mut() = None;
             *self.root_effect_closure.borrow_mut() = None;

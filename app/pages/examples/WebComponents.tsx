@@ -1,10 +1,10 @@
 import {
   useCustomElement,
-  emitted,
   type FC,
   onMounted,
   onUnmounted,
   ref,
+  useEmit,
   useHost,
   useRef,
   useShadowRoot,
@@ -384,7 +384,7 @@ const LightSignalMeta: FC = () => {
 const ShadowConsole: FC<Record<string, unknown>> = props => {
   const host = useHost()
   const shadowRoot = useShadowRoot()
-  const emit = emitted(props as any)
+  const emit = useEmit(props as any)
   const mountId = resolveShadowMountId(host)
 
   const count = Number(props.count ?? 0)
@@ -477,7 +477,7 @@ const ShadowConsole: FC<Record<string, unknown>> = props => {
 }
 
 const LightSignal: FC<Record<string, unknown>> = props => {
-  const emit = emitted(props as any)
+  const emit = useEmit(props as any)
   const label = String(props.label ?? 'Light DOM signal')
   const tone = String(props.tone ?? 'teal')
 
@@ -532,12 +532,12 @@ registerCustomElement(SHADOW_TAG, ShadowConsoleElement)
 registerCustomElement(LIGHT_TAG, LightSignalElement)
 
 const demoCode = [
-  "import { useCustomElement, emitted, useHost, useShadowRoot } from '@rue-js/rue'",
+  "import { useCustomElement, useEmit, useHost, useShadowRoot } from '@rue-js/rue'",
   '',
   'const ShadowConsole = props => {',
   '  const host = useHost()',
   '  const shadowRoot = useShadowRoot()',
-  '  const emit = emitted(props)',
+  '  const emit = useEmit(props)',
   '',
   '  return (',
   '    <article>',

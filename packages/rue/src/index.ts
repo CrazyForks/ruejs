@@ -104,8 +104,8 @@ export {
   mount,
   /** 安装 Rue 插件，并把参数透传给插件 install。 */
   use,
-  /** 从组件 props 中提取 emit 事件调用器。 */
-  emitted,
+  /** 从组件 props 中创建 emit 事件调用器。 */
+  useEmit,
   /** 声明 Vapor setup 渲染块。 */
   vapor,
   /** 将任意 renderable 输入标准化为运行时可挂载结构。 */

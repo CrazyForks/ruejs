@@ -14,6 +14,8 @@ use super::super::types::{
 use crate::log::{log, want_log};
 use crate::reactive::core::batch_scope;
 use crate::runtime::dom_adapter::DomAdapter;
+use crate::runtime::error_strings;
+#[cfg(feature = "dev")]
 use js_sys::Reflect;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::throw_str;
@@ -36,18 +38,18 @@ where
             } else if let Some(e) = self.last_error.clone() {
                 wasm_bindgen::throw_val(e);
             } else {
-                throw_str("Rue runtime crashed");
+                throw_str(error_strings::RUNTIME_CRASHED);
             }
         }
 
         if self.get_dom_adapter().is_none() || self.dom_adapter.is_none() {
-            throw_str("Rue runtime: no DOM adapter for render");
+            throw_str(error_strings::NO_DOM_RENDER);
         }
     }
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn missing_render_mount_adapter<T>() -> T {
-        throw_str("Rue runtime: no DOM adapter for render mount");
+        throw_str(error_strings::NO_DOM_RENDER_MOUNT);
     }
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -79,7 +81,7 @@ where
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn default_render_container_error() -> JsValue {
-        js_sys::Error::new("Rue vapor: render failed (create_real_dom=None)").into()
+        js_sys::Error::new(error_strings::RENDER_FAILED_NO_DOM).into()
     }
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -108,12 +110,22 @@ where
                 };
 
                 if let Some(old_mount) = taken {
-                    let global = js_sys::global();
-                    let source_key = JsValue::from_str("__rue_debug_clear_source__");
-                    let _ =
-                        Reflect::set(&global, &source_key, &JsValue::from_str("clear_container"));
+                    #[cfg(feature = "dev")]
+                    let (global, source_key) = {
+                        let global = js_sys::global();
+                        let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                        let _ = Reflect::set(
+                            &global,
+                            &source_key,
+                            &JsValue::from_str("clear_container"),
+                        );
+                        (global, source_key)
+                    };
                     self.clear_mounted_state(container, old_mount);
-                    let _ = Reflect::delete_property(&global, &source_key);
+                    #[cfg(feature = "dev")]
+                    {
+                        let _ = Reflect::delete_property(&global, &source_key);
+                    }
                 }
             }
 
@@ -183,15 +195,22 @@ where
                             entry.store_mount(mounted);
                         } else {
                             self.call_hooks("before_update");
-                            let global = js_sys::global();
-                            let source_key = JsValue::from_str("__rue_debug_clear_source__");
-                            let _ = Reflect::set(
-                                &global,
-                                &source_key,
-                                &JsValue::from_str("render_impl:block"),
-                            );
+                            #[cfg(feature = "dev")]
+                            let (global, source_key) = {
+                                let global = js_sys::global();
+                                let source_key = JsValue::from_str("__rue_debug_clear_source__");
+                                let _ = Reflect::set(
+                                    &global,
+                                    &source_key,
+                                    &JsValue::from_str("render_impl:block"),
+                                );
+                                (global, source_key)
+                            };
                             self.clear_mounted_state(container, MountedState::Block(old_block));
-                            let _ = Reflect::delete_property(&global, &source_key);
+                            #[cfg(feature = "dev")]
+                            {
+                                let _ = Reflect::delete_property(&global, &source_key);
+                            }
                             let mounted = self.render_container_mount(input, container);
                             self.store_block_replacement_mount(idx, mounted);
                         }

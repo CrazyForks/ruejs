@@ -1176,6 +1176,8 @@ const Transfer: FC<TransferProps<any>> = ({
   const leftPanelHostRef = useRef<HTMLElement>()
   const operationsHostRef = useRef<HTMLElement>()
   const rightPanelHostRef = useRef<HTMLElement>()
+  const initialManagedRenderScheduledRef = useRef(false)
+  const pendingSearchFocusRef = useRef<TransferDirection | null>(null)
 
   const normalizedItems = normalizeDataSource(dataSource, rowKey, render)
   const itemMap = new Map(normalizedItems.map(item => [item.keyText, item]))
@@ -1280,6 +1282,37 @@ const Transfer: FC<TransferProps<any>> = ({
     }
   }
 
+  const focusSearchInput = (direction: TransferDirection) => {
+    const refInput = direction === 'left' ? leftSearchInputRef.current : rightSearchInputRef.current
+    const panelHost = direction === 'left' ? leftPanelHostRef.current : rightPanelHostRef.current
+    const input =
+      refInput && refInput.isConnected
+        ? refInput
+        : (panelHost?.querySelector('input[type="text"]') as HTMLInputElement | null | undefined)
+    if (!input) return false
+    if (direction === 'left') {
+      leftSearchInputRef.current = input
+    } else {
+      rightSearchInputRef.current = input
+    }
+    input.focus()
+    if (typeof document !== 'undefined' && document.activeElement === input) {
+      pendingSearchFocusRef.current = null
+      return true
+    }
+    return false
+  }
+
+  const requestSearchInputFocus = (direction: TransferDirection) => {
+    pendingSearchFocusRef.current = direction
+    queueMicrotask(() => {
+      if (focusSearchInput(direction)) return
+      setTimeout(() => {
+        focusSearchInput(direction)
+      }, 0)
+    })
+  }
+
   const runManagedRenderCallback = <T,>(region: TransferDirection, runner: () => T) => {
     const previousRegion = activeManagedRenderRef.current
     activeManagedRenderRef.current = region
@@ -1338,11 +1371,15 @@ const Transfer: FC<TransferProps<any>> = ({
           onSearchInput: (value: string) => handleSearchInput('left', value),
           assignSearchInputRef: (element: HTMLInputElement | null) => {
             leftSearchInputRef.current = element ?? undefined
+            if (element && pendingSearchFocusRef.current === 'left') {
+              requestSearchInputFocus('left')
+            }
           },
           searchComposingRef: leftSearchComposingRef,
           runManagedRenderCallback: <T,>(runner: () => T) =>
             runManagedRenderCallback('left', runner),
           setCurrentPage: (nextPage: number) => {
+            requestSearchInputFocus('left')
             leftPageRef.value = nextPage
           },
         }),
@@ -1382,11 +1419,15 @@ const Transfer: FC<TransferProps<any>> = ({
           onSearchInput: (value: string) => handleSearchInput('right', value),
           assignSearchInputRef: (element: HTMLInputElement | null) => {
             rightSearchInputRef.current = element ?? undefined
+            if (element && pendingSearchFocusRef.current === 'right') {
+              requestSearchInputFocus('right')
+            }
           },
           searchComposingRef: rightSearchComposingRef,
           runManagedRenderCallback: <T,>(runner: () => T) =>
             runManagedRenderCallback('right', runner),
           setCurrentPage: (nextPage: number) => {
+            requestSearchInputFocus('right')
             rightPageRef.value = nextPage
           },
         }),
@@ -1429,6 +1470,16 @@ const Transfer: FC<TransferProps<any>> = ({
         }, 0)
       })
     }
+
+    const pendingSearchFocus = pendingSearchFocusRef.current
+    if (pendingSearchFocus) {
+      queueMicrotask(() => {
+        if (focusSearchInput(pendingSearchFocus)) return
+        setTimeout(() => {
+          focusSearchInput(pendingSearchFocus)
+        }, 0)
+      })
+    }
   }
 
   onMounted(() => {
@@ -1455,6 +1506,13 @@ const Transfer: FC<TransferProps<any>> = ({
       renderManagedRegions()
     },
   )
+
+  if (!initialManagedRenderScheduledRef.current) {
+    initialManagedRenderScheduledRef.current = true
+    queueMicrotask(() => {
+      renderManagedRegions()
+    })
+  }
 
   const commitSelectedKeys = (
     nextSelectedKeys: TransferKey[],

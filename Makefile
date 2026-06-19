@@ -1,18 +1,18 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 SOURCE_DIRS := app $(sort $(wildcard packages/*))
-CLOC_EXCLUDE_DIRS := node_modules,target,dist,coverage,.turbo,.vite,.next,pkg,pkg-node,pkg-node-reactive,pkg-node-vapor,pkg-vapor
+CLOC_EXCLUDE_DIRS := node_modules,target,dist,coverage,.turbo,.vite,.next,pkg,pkg-node
 CLOC_INCLUDE_EXT := ts,tsx,js,jsx,mjs,cjs,rs,css,scss,less,html
 
 .PHONY: dev build app-build cloc deploy-site
 
 dev:
 	cd $(ROOT)/packages/swc-plugin-rue && npm run build
-	cd $(ROOT)/packages/runtime-vapor && npm run build-dev && npm run build-vapor-dev
+	cd $(ROOT)/packages/runtime-vapor && npm run build-dev
 	cd $(ROOT) && npm run app-dev
 
 build:
 	cd $(ROOT)/packages/swc-plugin-rue && npm run build
-	cd $(ROOT)/packages/runtime-vapor && npm run build && npm run build-vapor
+	cd $(ROOT)/packages/runtime-vapor && npm run build
 	cd $(ROOT) && npm run app-build
 
 app-build:

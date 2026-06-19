@@ -3,9 +3,9 @@
 /*
 Vapor 专用运行时出口概述
 - 使用 @rue-js/runtime-vapor/vapor 创建轻量 runtime，面向 Vapor 编译产物。
-- 只暴露 Vapor 路径需要的 createComponent、renderBetween、renderAnchor、生命周期和 emitted。
+- 只暴露 Vapor 路径需要的 createComponent、renderBetween、renderAnchor、生命周期和 useEmit。
 - 与默认 runtime 共享 DOMAdapter、context replay 约束、renderable bridge 和 cleanup 生命周期。
-- portable component / vapor setup 都会附加 repeatable factory，确保同一 vnode 可在多次挂载时重新物化。
+- portable component / vapor setup 都会附加 repeatable factory，确保同一 mountHandle 可在多次挂载时重新物化。
 */
 
 import { createRue as createRueWasm } from '@rue-js/runtime-vapor/vapor'
@@ -25,13 +25,23 @@ import {
   withParentContextProps,
 } from './context'
 import {
+  addEventListener,
   appendChild,
+  applyRef,
   createComment,
   createDocumentFragment,
+  createElement as createDOMElement,
   getDOMAdapter,
   getParentNode,
   hasActiveTextControlWithin,
   scheduleTrackedTextControlRestoreWithin,
+  setAttribute,
+  setChecked,
+  setClassName,
+  setDisabled,
+  setInnerHTML,
+  setStyle,
+  setValue,
   settextContent,
 } from './dom'
 import type { DomElementLike, DomNodeLike } from './dom'
@@ -52,14 +62,18 @@ import type {
   VaporSetupResult,
 } from './rue'
 import { onErrorCaptured } from './error-capture'
+import {
+  updateKeepAlivePropsFromPreviousHandle,
+  withKeepAlivePropsRegistrationTarget,
+} from './components/keepAlivePropsBridge'
 
 getDOMAdapter()
 
 const renderOwnerByRangeStart = new WeakMap<object, unknown>()
 const renderOwnerByAnchor = new WeakMap<object, unknown>()
-const lastCompatAnchorValueByAnchor = new WeakMap<object, unknown>()
-const compatMountHandleOwner = Object.freeze({ __rue_compat_mount_handle_owner: true })
-const pendingCompatAnchorRenders = new WeakMap<
+const lastMountHandleAnchorValueByAnchor = new WeakMap<object, unknown>()
+const mountHandleOwner = Object.freeze({ __rue_mount_handle_owner: true })
+const pendingAnchorHandleRenders = new WeakMap<
   object,
   { parent: DomElementLike; value: RenderableInput }
 >()
@@ -82,6 +96,7 @@ const COMPAT_SUSPENSE_TYPE = Symbol.for(`${COMPAT_SYMBOL_SCOPE}.suspense`)
 export const RUE_SSR_PENDING_ASYNC_COMPONENT_KEY = '__rue_ssr_pending_async_component__'
 let componentTypeIdentitySeed = 0
 const classComponentAdapterCache = new WeakMap<Function, ComponentInstance<any>>()
+const componentReturnAdapterCache = new WeakMap<Function, ComponentInstance<any>>()
 const keepAliveHookTargetComponentCache = new WeakMap<
   object,
   WeakMap<Function, ComponentInstance<any>>
@@ -468,7 +483,7 @@ const registerPendingAsyncDependency = (thenable: PromiseLike<unknown>) => {
   pending.push(Promise.resolve(thenable).catch(() => undefined))
 }
 
-const resolveCompatLazyComponent = <P = {}>(
+const resolveRenderableLazyComponent = <P = {}>(
   type: unknown,
 ): ComponentInstance<P> | null | undefined => {
   if (
@@ -671,15 +686,15 @@ const createRepeatableResolvedComponentHandle = <P = {}>(
   const nextProps = replayMountAwareValue(props) as ComponentProps | null
   const hookTarget = readKeepAliveHookTarget(metadataSource)
   const mountedComponentType = resolveKeepAliveHookTargetComponent(componentType, hookTarget)
-  const vnode = {
+  const mountHandle = {
     [RUE_PORTABLE_COMPONENT_TYPE_KEY]: mountedComponentType,
     props: nextProps,
   } as RenderableOutput
-  const nextVnode = copyPortableMountHandleMetadata(
+  const nextMountHandle = copyPortableMountHandleMetadata(
     metadataSource,
-    markAnchorRemountableMountHandle(mountedComponentType, nextProps, [], vnode),
+    markAnchorRemountableMountHandle(mountedComponentType, nextProps, [], mountHandle),
   )
-  return attachRepeatableMountFactory(nextVnode, () =>
+  return attachRepeatableMountFactory(nextMountHandle, () =>
     createRepeatableResolvedComponentHandle(componentType, props, metadataSource),
   )
 }
@@ -693,35 +708,164 @@ const createRepeatableComponentHandle = <P = {}>(
   return createRepeatableResolvedComponentHandle(componentType, props)
 }
 
+const isEventPropName = (name: string) =>
+  name.length > 2 && name.startsWith('on') && /[A-Z]/.test(name[2] ?? '')
+
+const toEventName = (name: string) => name.slice(2).toLowerCase()
+
+const normalizeDomAttributeName = (name: string) =>
+  name === 'className' ? 'class' : name === 'htmlFor' ? 'for' : name
+
+const extractDangerouslySetInnerHTML = (value: unknown) =>
+  value && typeof value === 'object' && '__html' in (value as Record<string, unknown>)
+    ? (value as Record<string, unknown>).__html
+    : undefined
+
+const applyDomElementProps = (el: DomElementLike, props: ComponentProps | null) => {
+  if (!props) return false
+
+  let hasInnerHTML = false
+  for (const [key, value] of Object.entries(props)) {
+    if (key === 'children' || key === 'key' || value === undefined || value === null) {
+      continue
+    }
+    if (key === 'ref') {
+      applyRef(el, value)
+      continue
+    }
+    if (isEventPropName(key)) {
+      if (typeof value === 'function') {
+        addEventListener(el, toEventName(key), value)
+      }
+      continue
+    }
+    if (key === 'className') {
+      setClassName(el, value)
+      continue
+    }
+    if (key === 'style') {
+      setStyle(el, value)
+      continue
+    }
+    if (key === 'dangerouslySetInnerHTML') {
+      const html = extractDangerouslySetInnerHTML(value)
+      if (html !== undefined && html !== null) {
+        setInnerHTML(el, String(html))
+        hasInnerHTML = true
+      }
+      continue
+    }
+    if (key === 'value') {
+      setValue(el, value)
+      continue
+    }
+    if (key === 'checked') {
+      setChecked(el, !!value)
+      continue
+    }
+    if (key === 'disabled') {
+      setDisabled(el, !!value)
+      continue
+    }
+    if (key === 'tabIndex') {
+      ;(el as any).tabIndex = value
+      continue
+    }
+    if (value === false) {
+      continue
+    }
+    setAttribute(el, normalizeDomAttributeName(key), value === true ? 'true' : value)
+  }
+
+  return hasInnerHTML
+}
+
+const mountDomElementChildren = (parent: DomElementLike, children: ChildInput[]) => {
+  children.forEach(child => {
+    if (child === null || child === undefined || typeof child === 'boolean') return
+    const anchor = createComment('rue:element:anchor')
+    appendChild(parent, anchor)
+    renderAnchor(child as RenderableInput, parent, anchor)
+  })
+}
+
+const createDomElementMountHandle = (
+  type: string,
+  props: ComponentProps | null,
+  children: ChildInput[],
+): RenderableOutput =>
+  createRepeatableVaporHandle(parentContext => {
+    const root =
+      type === 'fragment'
+        ? (createDocumentFragment() as DomElementLike)
+        : (createDOMElement(type, parentContext) as DomElementLike)
+    const hasInnerHTML = type === 'fragment' ? false : applyDomElementProps(root, props)
+    if (!hasInnerHTML) {
+      mountDomElementChildren(root, children)
+    }
+    return root
+  })
+
 const createRepeatableElementHandle = <P = {}>(
   type: string | ComponentInstance<P>,
   props: ComponentProps | null,
   children: ChildInput[],
   finalize?: (
-    vnode: RenderableOutput,
+    mountHandle: RenderableOutput,
     nextProps: ComponentProps | null,
     nextChildren: ChildInput[],
   ) => RenderableOutput,
 ): RenderableOutput => {
   const nextProps = replayMountAwareValue(props) as ComponentProps | null
   const nextChildren = replayMountAwareValue(children) as ChildInput[]
-  const vnode = getRueRuntime().createElement(
-    type,
-    nextProps,
-    nextChildren as any,
-  ) as RenderableOutput
-  const nextVnode = finalize ? finalize(vnode, nextProps, nextChildren) : vnode
-  return attachRepeatableMountFactory(nextVnode, () =>
+  const mountHandle =
+    typeof type === 'string'
+      ? createDomElementMountHandle(type, nextProps, nextChildren)
+      : (getRueRuntime().createElement(type, nextProps, nextChildren as any) as RenderableOutput)
+  const nextMountHandle = finalize ? finalize(mountHandle, nextProps, nextChildren) : mountHandle
+  return attachRepeatableMountFactory(nextMountHandle, () =>
     createRepeatableElementHandle(type, props, children, finalize),
   )
 }
 
 /** 解析可挂载组件类型，并复用 class component 适配器保持组件身份稳定。 */
+const normalizeComponentRenderOutput = (value: RenderableOutput): RenderableOutput => {
+  if (Array.isArray(value)) {
+    return createRepeatableFragmentHandle(value as unknown[])
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return createRepeatableFragmentHandle([value])
+  }
+  return value
+}
+
+const createComponentReturnAdapter = <P>(component: ComponentInstance<P>): ComponentInstance<P> => {
+  const cached = componentReturnAdapterCache.get(component as unknown as Function)
+  if (cached) {
+    return cached as ComponentInstance<P>
+  }
+
+  const adapter = ((props: ComponentProps) =>
+    normalizeComponentRenderOutput(component(props as any))) as unknown as ComponentInstance<P> &
+    Record<string, unknown>
+
+  try {
+    Object.defineProperty(adapter, 'name', {
+      configurable: true,
+      value: (component as unknown as Function).name,
+    })
+  } catch {}
+
+  componentReturnAdapterCache.set(component as unknown as Function, adapter)
+  return adapter
+}
+
 const resolveRenderableComponent = <P = {}>(type: ComponentInstance<P>): ComponentInstance<P> => {
   const resolvedType = resolveClientReferenceComponentType(type)
-  return isClassComponentType<P & { children?: any }>(resolvedType)
+  const renderableType = isClassComponentType<P & { children?: any }>(resolvedType)
     ? (createClassComponentAdapter(resolvedType) as ComponentInstance<P>)
     : resolvedType
+  return createComponentReturnAdapter(renderableType)
 }
 
 const createRepeatableVaporHandle = (
@@ -864,7 +1008,7 @@ const markAnchorRemountableMountHandle = <P = {}>(
   type: string | ComponentInstance<P>,
   props: ComponentProps | null,
   normalizedChildren: ChildInput[],
-  vnode: RenderableOutput,
+  mountHandle: RenderableOutput,
 ) => {
   const effectiveChildren = getEffectiveChildren(props, normalizedChildren)
   const hasDomNodeLikeChildren = effectiveChildren.some(child => containsDomNodeLikeInput(child))
@@ -884,15 +1028,15 @@ const markAnchorRemountableMountHandle = <P = {}>(
   if (
     typeof type === 'function' &&
     shouldUseComponentChildrenAnchor &&
-    vnode &&
-    typeof vnode === 'object'
+    mountHandle &&
+    typeof mountHandle === 'object'
   ) {
-    ;(vnode as Record<string, unknown>)[RUE_COMPONENT_CHILDREN_KEY] = true
+    ;(mountHandle as Record<string, unknown>)[RUE_COMPONENT_CHILDREN_KEY] = true
   }
-  if (shouldForceRemount && vnode && typeof vnode === 'object') {
-    ;(vnode as Record<string, unknown>)[RUE_FORCE_REMOUNT_ANCHOR_KEY] = true
+  if (shouldForceRemount && mountHandle && typeof mountHandle === 'object') {
+    ;(mountHandle as Record<string, unknown>)[RUE_FORCE_REMOUNT_ANCHOR_KEY] = true
   }
-  return vnode
+  return mountHandle
 }
 
 const assertDefaultChildren = (props: ComponentProps | null, children: ChildInput[]) => {
@@ -996,8 +1140,8 @@ export const createComponent = <P = {}>(
         type,
         elementProps,
         normalizedChildren,
-        (vnode, nextProps, nextChildren) =>
-          markAnchorRemountableMountHandle(type, nextProps, nextChildren, vnode),
+        (mountHandle, nextProps, nextChildren) =>
+          markAnchorRemountableMountHandle(type, nextProps, nextChildren, mountHandle),
       ),
     )
   }
@@ -1006,9 +1150,9 @@ export const createComponent = <P = {}>(
     return props?.children ?? null
   }
 
-  const compatLazyComponent = resolveCompatLazyComponent<P>(type)
-  if (compatLazyComponent !== undefined) {
-    return compatLazyComponent ? createComponent(compatLazyComponent, props) : null
+  const renderableLazyComponent = resolveRenderableLazyComponent<P>(type)
+  if (renderableLazyComponent !== undefined) {
+    return renderableLazyComponent ? createComponent(renderableLazyComponent, props) : null
   }
 
   const contextualProps = withParentContextProps(
@@ -1029,7 +1173,7 @@ export const renderBetween = (
   end: DomNodeLike,
 ) => {
   const normalizedValue = normalizeMountHandleSingletonInput(value)
-  const compatValue = createFreshMountHandle(normalizedValue)
+  const mountHandleValue = createFreshMountHandle(normalizedValue)
   const targetParent = resolveBetweenTargetParent(parent, start, end)
   if (!targetParent) {
     syncRenderableOwner(renderOwnerByRangeStart, start as object, undefined)
@@ -1057,11 +1201,11 @@ export const renderBetween = (
   }
 
   const prevOwner = renderOwnerByRangeStart.get(start as object)
-  if (prevOwner === compatMountHandleOwner) {
+  if (prevOwner === mountHandleOwner) {
     getRueRuntime().renderBetween(null, targetParent, start, end)
   }
-  syncRenderableOwner(renderOwnerByRangeStart, start as object, compatMountHandleOwner)
-  return getRueRuntime().renderBetween(compatValue, targetParent, start, end)
+  syncRenderableOwner(renderOwnerByRangeStart, start as object, mountHandleOwner)
+  return getRueRuntime().renderBetween(mountHandleValue, targetParent, start, end)
 }
 
 /** 在尾锚点前渲染 Vapor 或默认 renderable 内容。 */
@@ -1071,12 +1215,12 @@ const renderAnchorUntracked = (
   anchor: DomNodeLike,
 ) => {
   const normalizedValue = normalizeMountHandleSingletonInput(value)
-  const compatValue = createFreshMountHandle(normalizedValue)
-  pendingCompatAnchorRenders.delete(anchor as object)
+  const mountHandleValue = createFreshMountHandle(normalizedValue)
+  pendingAnchorHandleRenders.delete(anchor as object)
   const targetParent = resolveAnchorTargetParent(parent, anchor)
   if (!targetParent) {
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, undefined)
-    lastCompatAnchorValueByAnchor.delete(anchor as object)
+    lastMountHandleAnchorValueByAnchor.delete(anchor as object)
     return
   }
 
@@ -1088,7 +1232,7 @@ const renderAnchorUntracked = (
     !hasOwnerCleanupBucket(prevOwner) &&
     updatePrimitiveAnchorRenderable(prevOwner, primitiveText)
   ) {
-    lastCompatAnchorValueByAnchor.delete(anchor as object)
+    lastMountHandleAnchorValueByAnchor.delete(anchor as object)
     scheduleTrackedTextControlRestoreWithin(targetParent)
     return
   }
@@ -1098,7 +1242,7 @@ const renderAnchorUntracked = (
     if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
       getRueRuntime().renderAnchor(null, targetParent, anchor)
     }
-    lastCompatAnchorValueByAnchor.delete(anchor as object)
+    lastMountHandleAnchorValueByAnchor.delete(anchor as object)
     const owner = mountNormalizedRenderableToTarget(
       analysis.value,
       {
@@ -1130,63 +1274,112 @@ const renderAnchorUntracked = (
       : undefined
   const hasPortableComponent = typeof componentType === 'function'
   const componentName = typeof componentType === 'function' ? componentType.name : ''
-  const shouldPreserveCompatChildrenInstance =
+  const shouldPreserveComponentChildrenInstance =
     componentName === 'KeepAlive' ||
     (!shouldForceRemount && hasActiveTextControlWithin(targetParent))
-  const shouldTrackCompatMountOwner = hasPortableComponent || hasComponentChildren || hasVaporSetup
-  const shouldRemountCompatChildren =
-    prevOwner === compatMountHandleOwner &&
+  const shouldTrackMountHandleOwner = hasPortableComponent || hasComponentChildren || hasVaporSetup
+  const shouldRemountComponentChildren =
+    prevOwner === mountHandleOwner &&
     (shouldForceRemount ||
       hasVaporSetup ||
-      (hasComponentChildren && !shouldPreserveCompatChildrenInstance))
-  const lastCompatValue = lastCompatAnchorValueByAnchor.get(anchor as object)
-  const shouldSkipCompatComponentRender =
-    prevOwner === compatMountHandleOwner &&
+      (hasComponentChildren && !shouldPreserveComponentChildrenInstance))
+  const lastMountHandleValue = lastMountHandleAnchorValueByAnchor.get(anchor as object)
+  const shouldSkipComponentHandleRender =
+    prevOwner === mountHandleOwner &&
     hasPortableComponent &&
-    !shouldRemountCompatChildren &&
-    reactiveUntrack(() => areEquivalentPortableComponentHandles(lastCompatValue, normalizedValue))
-  if (shouldSkipCompatComponentRender) {
-    lastCompatAnchorValueByAnchor.set(anchor as object, normalizedValue)
+    !shouldRemountComponentChildren &&
+    reactiveUntrack(() =>
+      areEquivalentPortableComponentHandles(lastMountHandleValue, normalizedValue),
+    )
+  const shouldPatchKeepAliveProps =
+    prevOwner === mountHandleOwner &&
+    hasPortableComponent &&
+    !shouldForceRemount &&
+    componentName === 'KeepAlive' &&
+    updateKeepAlivePropsFromPreviousHandle(lastMountHandleValue, normalizedValue)
+  if (shouldPatchKeepAliveProps) {
+    lastMountHandleAnchorValueByAnchor.set(anchor as object, normalizedValue)
     scheduleTrackedTextControlRestoreWithin(targetParent)
     return
   }
-  if (!shouldRemountCompatChildren) {
-    if (!shouldTrackCompatMountOwner) {
+  const shouldRemountTimePicker =
+    prevOwner === mountHandleOwner &&
+    hasPortableComponent &&
+    !shouldForceRemount &&
+    (componentName === 'TimePicker' ||
+      componentName === 'TimePickerComponent' ||
+      componentName === 'TimePickerRoot') &&
+    !reactiveUntrack(() =>
+      areEquivalentPortableComponentHandles(lastMountHandleValue, normalizedValue),
+    )
+  if (shouldRemountTimePicker) {
+    getRueRuntime().renderAnchor(null, targetParent, anchor)
+    syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
+    const result = getRueRuntime().renderAnchor(mountHandleValue, targetParent, anchor)
+    lastMountHandleAnchorValueByAnchor.set(anchor as object, mountHandleValue)
+    scheduleTrackedTextControlRestoreWithin(targetParent)
+    return result
+  }
+  if (shouldSkipComponentHandleRender) {
+    lastMountHandleAnchorValueByAnchor.set(anchor as object, normalizedValue)
+    scheduleTrackedTextControlRestoreWithin(targetParent)
+    return
+  }
+  if (!shouldRemountComponentChildren) {
+    if (!shouldTrackMountHandleOwner) {
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, normalizedValue as unknown)
-      const result = getRueRuntime().renderAnchor(compatValue, targetParent, anchor)
-      lastCompatAnchorValueByAnchor.set(anchor as object, normalizedValue)
+      const result = getRueRuntime().renderAnchor(mountHandleValue, targetParent, anchor)
+      lastMountHandleAnchorValueByAnchor.set(anchor as object, normalizedValue)
       scheduleTrackedTextControlRestoreWithin(targetParent)
       return result
     }
-    syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
-    const result = getRueRuntime().renderAnchor(compatValue, targetParent, anchor)
-    lastCompatAnchorValueByAnchor.set(anchor as object, normalizedValue)
+    syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
+    const result =
+      componentName === 'KeepAlive'
+        ? withKeepAlivePropsRegistrationTarget(mountHandleValue, () =>
+            getRueRuntime().renderAnchor(mountHandleValue, targetParent, anchor),
+          )
+        : getRueRuntime().renderAnchor(mountHandleValue, targetParent, anchor)
+    lastMountHandleAnchorValueByAnchor.set(anchor as object, mountHandleValue)
     scheduleTrackedTextControlRestoreWithin(targetParent)
     return result
   }
 
-  pendingCompatAnchorRenders.set(anchor as object, {
+  pendingAnchorHandleRenders.set(anchor as object, {
     parent: targetParent,
     value: normalizedValue,
   })
   queueMicrotask(() => {
-    const pending = pendingCompatAnchorRenders.get(anchor as object)
+    const pending = pendingAnchorHandleRenders.get(anchor as object)
     if (!pending) {
       return
     }
-    pendingCompatAnchorRenders.delete(anchor as object)
+    pendingAnchorHandleRenders.delete(anchor as object)
 
     const mountedParent = resolveAnchorTargetParent(pending.parent, anchor)
     if (!mountedParent) {
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, undefined)
-      lastCompatAnchorValueByAnchor.delete(anchor as object)
+      lastMountHandleAnchorValueByAnchor.delete(anchor as object)
       return
     }
 
     getRueRuntime().renderAnchor(null, mountedParent, anchor)
-    syncRenderableOwner(renderOwnerByAnchor, anchor as object, compatMountHandleOwner)
-    getRueRuntime().renderAnchor(createFreshMountHandle(pending.value), mountedParent, anchor)
-    lastCompatAnchorValueByAnchor.set(anchor as object, pending.value)
+    syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
+    const pendingMountHandleValue = createFreshMountHandle(pending.value)
+    const pendingComponentType =
+      !!pending.value && typeof pending.value === 'object'
+        ? (pending.value as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
+        : undefined
+    const pendingComponentName =
+      typeof pendingComponentType === 'function' ? pendingComponentType.name : ''
+    if (pendingComponentName === 'KeepAlive') {
+      withKeepAlivePropsRegistrationTarget(pendingMountHandleValue, () => {
+        getRueRuntime().renderAnchor(pendingMountHandleValue, mountedParent, anchor)
+      })
+    } else {
+      getRueRuntime().renderAnchor(pendingMountHandleValue, mountedParent, anchor)
+    }
+    lastMountHandleAnchorValueByAnchor.set(anchor as object, pendingMountHandleValue)
     scheduleTrackedTextControlRestoreWithin(mountedParent)
   })
 }
@@ -1249,15 +1442,12 @@ export const __rueActivateRange = (start: DomNodeLike) => {
 export const __rueDeactivateRange = (start: DomNodeLike) => {
   getRueRuntime()?.__rueDeactivateRange?.(start)
 }
-/** 根据 props 生成事件发射器，并兼容 Custom Element emit bridge。 */
-export const emitted = (props: ComponentProps) => {
+/** 根据 props 生成组件事件发射器，并兼容 Custom Element emit bridge。 */
+export const useEmit = (props: ComponentProps) => {
   const baseEmit = getRueRuntime().emitted(props)
   const bridge = resolveCustomElementEmitBridge(props)
-  if (!bridge) {
-    return baseEmit
-  }
   return (eventName: string, ...args: unknown[]) => {
-    baseEmit(eventName, ...args)
-    bridge(eventName, args)
+    baseEmit(eventName, args)
+    bridge?.(eventName, args)
   }
 }

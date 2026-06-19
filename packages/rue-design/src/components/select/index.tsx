@@ -5,7 +5,7 @@ Select 组件概述
 - 支持 options / fieldNames / placeholder / allowClear / status / variant / 多选上限等增强能力，同时继续兼容原有 children 写法。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
+import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
 
 /** SelectColor 语义色类型。 */
 export type SelectColor =
@@ -458,6 +458,7 @@ const renderDataOptions = (
   options: SelectOptionData[],
   fieldNames?: SelectFieldNames,
   path = 'option',
+  selectedValues?: Set<string>,
 ): any[] => {
   return options.map((option, index) => {
     const optionPath = `${path}-${index}`
@@ -477,7 +478,7 @@ const renderDataOptions = (
           className={className}
           title={title}
         >
-          {renderDataOptions(nestedOptions, fieldNames, optionPath)}
+          {renderDataOptions(nestedOptions, fieldNames, optionPath, selectedValues)}
         </optgroup>
       )
     }
@@ -492,6 +493,7 @@ const renderDataOptions = (
         disabled={disabled}
         title={title}
         className={className}
+        {...(selectedValues?.has(String(value)) ? { selected: true } : {})}
       >
         {label ?? value}
       </option>
@@ -884,6 +886,7 @@ const SelectRoot: FC<SelectProps> = ({
     normalizeSelectValues(value !== undefined ? value : defaultValue),
   )
   const compactResolvedOptions = ref<SelectResolvedOption[]>(resolveCompactOptions())
+  const selectElementRef = useRef<HTMLSelectElement>()
   let previousSelectedValues = compactSelectedValues.value.slice()
   const hasShellDecorators =
     prefix !== undefined ||
@@ -894,7 +897,10 @@ const SelectRoot: FC<SelectProps> = ({
     !!loading ||
     suffixIcon !== undefined
   const useShell = useCompactMultiple || (hasShellDecorators && !shouldRenderListbox)
-  const renderedOptions = hasOptions ? renderDataOptions(options!, fieldNames) : children
+  const nativeSelectedValues = normalizeSelectValues(value !== undefined ? value : defaultValue)
+  const renderedOptions = hasOptions
+    ? renderDataOptions(options!, fieldNames, 'option', new Set(nativeSelectedValues))
+    : children
   const loadingOptionContent = loadingText ?? '正在加载...'
   const emptyOptionContent = notFoundContent ?? '暂无可选项'
   const compactPlaceholder = placeholder ?? 'Select options'
@@ -973,6 +979,14 @@ const SelectRoot: FC<SelectProps> = ({
     }
   }
 
+  const syncNativeSelectionFromProps = () => {
+    const sourceValue = value !== undefined ? value : defaultValue
+    if (sourceValue === undefined) {
+      return
+    }
+    syncSelectionToDom(normalizeSelectValues(sourceValue))(selectElementRef.current ?? null)
+  }
+
   const syncSelectionFromProps = () => {
     const sourceValue = value !== undefined ? value : defaultValue
     if (sourceValue === undefined) {
@@ -986,6 +1000,10 @@ const SelectRoot: FC<SelectProps> = ({
 
   const syncSelectedSnapshot = () => {
     previousSelectedValues = compactSelectedValues.value.slice()
+  }
+
+  const assignSelectElementRef = (element: HTMLSelectElement | null) => {
+    selectElementRef.current = element ?? undefined
   }
 
   const findSelectFromEvent = (event: Event) => {
@@ -1162,6 +1180,9 @@ const SelectRoot: FC<SelectProps> = ({
 
   onMounted(() => {
     syncSelectionFromProps()
+    syncNativeSelectionFromProps()
+    queueMicrotask(syncNativeSelectionFromProps)
+    setTimeout(syncNativeSelectionFromProps, 0)
     syncSelectedSnapshot()
 
     if (typeof window === 'undefined') return
@@ -1192,6 +1213,7 @@ const SelectRoot: FC<SelectProps> = ({
     () => value,
     () => {
       syncSelectionFromProps()
+      syncNativeSelectionFromProps()
       syncSelectedSnapshot()
     },
     { immediate: true },
@@ -1201,6 +1223,7 @@ const SelectRoot: FC<SelectProps> = ({
     () => defaultValue,
     () => {
       syncSelectionFromProps()
+      syncNativeSelectionFromProps()
       syncSelectedSnapshot()
     },
   )
@@ -1210,6 +1233,7 @@ const SelectRoot: FC<SelectProps> = ({
     () => {
       compactResolvedOptions.value = resolveCompactOptions()
       syncSelectionFromProps()
+      syncNativeSelectionFromProps()
       syncSelectedSnapshot()
     },
   )
@@ -1218,6 +1242,7 @@ const SelectRoot: FC<SelectProps> = ({
     () => children,
     () => {
       syncSelectionFromProps()
+      syncNativeSelectionFromProps()
       syncSelectedSnapshot()
     },
   )
@@ -1264,6 +1289,7 @@ const SelectRoot: FC<SelectProps> = ({
       aria-hidden={getCompactSelectAttrs().ariaHidden}
       aria-busy={loading ? 'true' : undefined}
       className={getSelectClassName()}
+      ref={assignSelectElementRef}
       onChange={handleChange}
     >
       {!getUseCompactMultiple() &&

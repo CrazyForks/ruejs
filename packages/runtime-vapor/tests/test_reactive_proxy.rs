@@ -507,64 +507,6 @@ fn props_reactive_nested_array_length_accessible() {
     assert_eq!(len, 2.0);
 }
 
-/// propsReactive 应保持 host-node renderable prop 为原始对象，避免渲染桥接对象被二次代理后失真。
-#[wasm_bindgen_test]
-fn props_reactive_keeps_host_node_prop_raw() {
-    let host_node = Object::new();
-    Reflect::set(&host_node, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
-
-    let renderable_owner = Object::new();
-    Reflect::set(
-        &renderable_owner,
-        &JsValue::from_str("__rue_host_node"),
-        &host_node.clone().into(),
-    )
-    .unwrap();
-
-    let props_obj = Object::new();
-    Reflect::set(&props_obj, &JsValue::from_str("header"), &renderable_owner).unwrap();
-    Reflect::set(&props_obj, &JsValue::from_str("children"), &Array::new().into()).unwrap();
-
-    let props = props_reactive_js(props_obj.into(), Some(true));
-    let header = Reflect::get(&props, &JsValue::from_str("header")).unwrap();
-
-    assert!(js_sys::Object::is(&header, &renderable_owner.clone().into()));
-
-    let is_reactive = Reflect::get(&header, &JsValue::from_str("__isReactive__"))
-        .unwrap_or(JsValue::FALSE)
-        .as_bool()
-        .unwrap_or(false);
-    assert!(!is_reactive);
-
-    let bridged_host = Reflect::get(&header, &JsValue::from_str("__rue_host_node")).unwrap();
-    assert!(js_sys::Object::is(&bridged_host, &host_node.into()));
-}
-
-/// shallow_equal_prop 对可挂载值采用 host-node / DOM identity 优先，而不是旧的对象桥接结构判等。
-#[wasm_bindgen_test]
-fn shallow_equal_prop_prefers_host_node_identity() {
-    let host = Object::new();
-    Reflect::set(&host, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
-
-    let left = Object::new();
-    Reflect::set(&left, &JsValue::from_str("__rue_host_node"), &host.clone().into()).unwrap();
-    Reflect::set(&left, &JsValue::from_str("type"), &JsValue::from_str("legacy-a")).unwrap();
-
-    let right = Object::new();
-    Reflect::set(&right, &JsValue::from_str("__rue_host_node"), &host.clone().into()).unwrap();
-    Reflect::set(&right, &JsValue::from_str("type"), &JsValue::from_str("legacy-b")).unwrap();
-
-    assert!(shallow_equal_prop(&left.clone().into(), &right.clone().into()));
-
-    let other_host = Object::new();
-    Reflect::set(&other_host, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
-    let third = Object::new();
-    Reflect::set(&third, &JsValue::from_str("__rue_host_node"), &other_host.clone().into())
-        .unwrap();
-
-    assert!(!shallow_equal_prop(&left.into(), &third.into()));
-}
-
 /// shallow_equal_prop 需要把 tagged mount handle 视作 renderable identity，
 /// 这样 props.children 在 bare handle 与单元素数组之间来回归一化时不会被误判为变更。
 #[wasm_bindgen_test]

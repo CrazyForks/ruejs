@@ -1,15 +1,15 @@
 /*
 默认挂载协议运输层
 
-runtime-vapor 默认主路径不再把完整 JS vnode 树作为数据货币，而是：
+runtime-vapor 默认主路径不再把完整 JS 对象树作为数据货币，而是：
 1. createElement/vapor/portable bridge 先生成 MountInput
 2. MountInput 写入线程局部注册表，返回轻量 mount handle
 3. render/renderAnchor/renderBetween 消费 handle，再还原 MountInput 进入渲染队列
 
-这样做可以降低跨 wasm 边界的对象形态复杂度，也让 compat 旧协议集中在少数入口转换。
+这样做可以降低跨 wasm 边界的对象形态复杂度，并让入口协议集中在默认 handle/portable 两类。
 */
 use super::globals::MOUNT_INPUT_REGISTRY;
-use super::vnode_helpers::props_from_value as shared_props_from_value;
+use super::input_props::props_from_value as shared_props_from_value;
 use super::{
     ComponentProps, DomAdapter, JsDomAdapter, MountInput, MountInputChild, MountInputType, Rue,
 };
@@ -26,7 +26,7 @@ pub(crate) enum DefaultMountHandleStorePolicy {
 }
 
 pub(crate) struct DefaultMountHandle {
-    #[cfg_attr(not(all(feature = "compat", feature = "dev")), allow(dead_code))]
+    #[allow(dead_code)]
     pub(crate) id: u32,
     pub(crate) value: JsValue,
 }
@@ -136,66 +136,6 @@ fn empty_mount_input<A: DomAdapter>(r#type: MountInputType<A>) -> MountInput<A> 
     }
 }
 
-pub(crate) fn host_node_value(obj: &Object) -> JsValue {
-    Reflect::get(obj, &JsValue::from_str("__rue_host_node")).unwrap_or(JsValue::UNDEFINED)
-}
-
-#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-pub(crate) fn raw_object_to_vnode_props<A: DomAdapter>(
-    rue: &Rue<A>,
-    el: &A::Element,
-) -> ComponentProps
-where
-    A::Element: Into<JsValue> + Clone,
-{
-    let mut props = ComponentProps::new();
-
-    if let Some(adapter) = rue.get_dom_adapter() {
-        if adapter.is_fragment(el) {
-            // Fragment 的宿主节点本身可能不是最终 DOM 子节点；记录 children 快照，
-            // 后续替换/卸载才能精确删除这一组真实节点。
-            let nodes = adapter.collect_fragment_children(el);
-            let arr = js_sys::Array::new();
-            for node in nodes.into_iter() {
-                let value: JsValue = node.into();
-                arr.push(&value);
-            }
-            props.insert("__fragNodes".to_string(), arr.clone().into());
-
-            let el_js: JsValue = el.clone().into();
-            let _ = Reflect::set(&el_js, &JsValue::from_str("__rue_frag_nodes_ref"), &arr);
-        }
-    }
-
-    props
-}
-
-pub(crate) fn element_value_to_vapor_input<A: DomAdapter>(
-    rue: &Rue<A>,
-    source: &Object,
-    element_value: JsValue,
-) -> MountInput<A>
-where
-    A::Element: From<JsValue> + Into<JsValue> + Clone,
-{
-    let el: A::Element = element_value.into();
-    with_source_metadata(
-        source,
-        MountInput {
-            // raw host node / host-node bridge 在默认协议里被视作 Vapor 节点：
-            // runtime 不重新创建它，只负责把它纳入 mounted snapshot 与生命周期体系。
-            r#type: MountInputType::<A>::Vapor,
-            props: raw_object_to_vnode_props(rue, &el),
-            children: vec![],
-            key: None,
-            strict_component_returns: false,
-            mount_cleanup_bucket: None,
-            mount_effect_scope_id: None,
-            el_hint: Some(el),
-        },
-    )
-}
-
 pub(crate) fn portable_component_input<A: DomAdapter>(obj: &Object) -> Option<MountInput<A>> {
     // portable component 是默认主路径允许跨层传递的轻量对象：
     // { __rue_component_type: renderFn, props }。
@@ -249,13 +189,11 @@ where
     MountInput {
         r#type: match input.r#type {
             MountInputType::<JsDomAdapter>::Text(text) => MountInputType::<A>::Text(text),
-            #[cfg(feature = "compat")]
             MountInputType::<JsDomAdapter>::Fragment => MountInputType::<A>::Fragment,
             MountInputType::<JsDomAdapter>::Vapor => MountInputType::<A>::Vapor,
             MountInputType::<JsDomAdapter>::VaporWithSetup(f) => {
                 MountInputType::<A>::VaporWithSetup(f)
             }
-            #[cfg(feature = "compat")]
             MountInputType::<JsDomAdapter>::Element(tag) => MountInputType::<A>::Element(tag),
             MountInputType::<JsDomAdapter>::Component(f) => MountInputType::<A>::Component(f),
             MountInputType::<JsDomAdapter>::_Phantom(_) => {
@@ -291,46 +229,24 @@ where
     take_default_mount_input(input_value).map(convert_mount_input_from_js_dom::<A>)
 }
 
-fn default_object_candidate_input<A: DomAdapter>(
-    rue: &Rue<A>,
-    obj: &Object,
-) -> Option<MountInput<A>>
+fn default_object_candidate_input<A: DomAdapter>(obj: &Object) -> Option<MountInput<A>>
 where
-    A::Element: From<JsValue> + Into<JsValue> + Clone,
+    A::Element: From<JsValue>,
 {
     // 默认对象输入按“最明确、成本最低”的顺序识别：
     // 1. mount handle：直接从注册表取回
     // 2. portable object：组件/Vapor 的轻量跨层表示
-    // 3. host-node bridge：已有真实节点，转成 Vapor 输入
-    default_handle_input(&JsValue::from(obj.clone()))
-        .or_else(|| portable_object_input::<A>(obj))
-        .or_else(|| host_node_object_input(rue, obj))
-}
-
-pub(crate) fn host_node_object_input<A: DomAdapter>(
-    rue: &Rue<A>,
-    obj: &Object,
-) -> Option<MountInput<A>>
-where
-    A::Element: From<JsValue> + Into<JsValue> + Clone,
-{
-    let host = host_node_value(obj);
-    if host.is_undefined() || host.is_null() {
-        return None;
-    }
-
-    // host-node bridge 的 source 对象仍可能携带清理元信息，所以不能只返回 host。
-    Some(element_value_to_vapor_input(rue, obj, host))
+    default_handle_input(&JsValue::from(obj.clone())).or_else(|| portable_object_input::<A>(obj))
 }
 
 pub(crate) fn default_object_input<A: DomAdapter>(
-    rue: &Rue<A>,
+    _rue: &Rue<A>,
     obj: &Object,
 ) -> Option<MountInput<A>>
 where
-    A::Element: From<JsValue> + Into<JsValue> + Clone,
+    A::Element: From<JsValue>,
 {
-    Some(with_source_metadata(obj, default_object_candidate_input(rue, obj)?))
+    Some(with_source_metadata(obj, default_object_candidate_input(obj)?))
 }
 
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -364,112 +280,6 @@ mod tests {
             mount_effect_scope_id: None,
             el_hint: None,
         }
-    }
-
-    fn full_adapter() -> JsDomAdapter {
-        let adapter = Object::new();
-        let methods = [
-            ("createElement", "tag", "return { tag, children: [] }"),
-            ("createTextNode", "text", "return { tag: '#text', text }"),
-            ("createDocumentFragment", "", "return { tag: 'fragment', children: [] }"),
-            ("isFragment", "el", "return !!el && el.tag === 'fragment'"),
-            ("collectFragmentChildren", "el", "return Array.from(el && el.children || [])"),
-            ("setTextContent", "el,text", "el.text = text"),
-            (
-                "appendChild",
-                "parent, child",
-                "parent.children = parent.children || []; parent.children.push(child)",
-            ),
-            (
-                "insertBefore",
-                "parent, child, before",
-                "parent.children = parent.children || []; parent.children.push(child)",
-            ),
-            (
-                "removeChild",
-                "parent, child",
-                "parent.children = (parent.children || []).filter(x => x !== child)",
-            ),
-            (
-                "contains",
-                "parent, child",
-                "return parent === child || (parent.children || []).includes(child)",
-            ),
-            ("setClassName", "el,value", "el.class = value"),
-            ("patchStyle", "el,oldStyle,newStyle", "el.style = newStyle"),
-            ("setInnerHTML", "el,html", "el.children = []; el.text = html"),
-            ("setValue", "el,value", "el.value = value"),
-            ("setChecked", "el,value", "el.checked = !!value"),
-            ("setDisabled", "el,value", "el.disabled = !!value"),
-            ("clearRef", "ref", "return"),
-            ("applyRef", "el,ref", "return"),
-            ("setAttribute", "el,key,value", "el[key] = value"),
-            ("removeAttribute", "el,key", "delete el[key]"),
-            ("getTagName", "el", "return el.tag || ''"),
-            ("addEventListener", "el,event,handler", "return"),
-            ("removeEventListener", "el,event,handler", "return"),
-            ("hasValueProperty", "el", "return 'value' in el"),
-            ("isSelectMultiple", "el", "return !!el.multiple"),
-            ("querySelector", "selector", "return null"),
-        ];
-        for (name, args, body) in methods {
-            Reflect::set(
-                &adapter,
-                &JsValue::from_str(name),
-                &Function::new_with_args(args, body).into(),
-            )
-            .unwrap();
-        }
-        JsDomAdapter::new(adapter.into())
-    }
-
-    #[wasm_bindgen_test]
-    fn raw_object_props_handles_missing_adapter_and_non_fragment() {
-        let rue: Rue<JsDomAdapter> = Rue::new();
-        let host = Object::new();
-        let props = raw_object_to_vnode_props(&rue, &host.clone().into());
-        assert!(props.is_empty());
-    }
-
-    #[wasm_bindgen_test]
-    fn raw_object_props_records_fragment_children_with_adapter() {
-        let mut rue: Rue<JsDomAdapter> = Rue::new();
-        rue.set_dom_adapter(full_adapter());
-        let fragment = Object::new();
-        Reflect::set(&fragment, &JsValue::from_str("tag"), &JsValue::from_str("fragment")).unwrap();
-        let child = Object::new();
-        let children = js_sys::Array::new();
-        children.push(&child);
-        Reflect::set(&fragment, &JsValue::from_str("children"), &children).unwrap();
-
-        let props = raw_object_to_vnode_props(&rue, &fragment.clone().into());
-
-        let frag_nodes = props.get("__fragNodes").expect("fragment nodes");
-        assert_eq!(js_sys::Array::from(frag_nodes).length(), 1);
-        assert_eq!(
-            js_sys::Array::from(
-                &Reflect::get(&fragment, &JsValue::from_str("__rue_frag_nodes_ref")).unwrap()
-            )
-            .length(),
-            1
-        );
-    }
-
-    #[wasm_bindgen_test]
-    fn raw_object_props_with_adapter_ignores_non_fragment_hosts() {
-        let mut rue: Rue<JsDomAdapter> = Rue::new();
-        rue.set_dom_adapter(full_adapter());
-        let host = Object::new();
-        Reflect::set(&host, &JsValue::from_str("tag"), &JsValue::from_str("section")).unwrap();
-
-        let props = raw_object_to_vnode_props(&rue, &host.clone().into());
-
-        assert!(props.get("__fragNodes").is_none());
-        assert!(
-            Reflect::get(&host, &JsValue::from_str("__rue_frag_nodes_ref"))
-                .unwrap_or(JsValue::UNDEFINED)
-                .is_undefined()
-        );
     }
 
     #[wasm_bindgen_test]
@@ -533,17 +343,6 @@ mod tests {
         let missing_object_handle = Object::new();
         assert!(default_handle_input::<JsDomAdapter>(&missing_object_handle.into()).is_none());
 
-        #[cfg(feature = "compat")]
-        {
-            let fragment = store_default_mount_input(
-                mount_input(MountInputType::Fragment),
-                DefaultMountHandleStorePolicy::Append,
-            );
-            let converted =
-                default_handle_input::<JsDomAdapter>(&fragment.value).expect("fragment input");
-            assert!(matches!(converted.r#type, MountInputType::Fragment));
-        }
-
         let mut component =
             mount_input(MountInputType::Component(Function::new_no_args("return null").into()));
         component
@@ -596,14 +395,10 @@ mod tests {
             .expect("component input");
         assert!(matches!(component_input.r#type, MountInputType::Component(_)));
 
-        let host = Object::new();
-        Reflect::set(&host, &JsValue::from_str("tag"), &JsValue::from_str("host")).unwrap();
-        let bridge = Object::new();
-        Reflect::set(&bridge, &JsValue::from_str("__rue_host_node"), &host).unwrap();
-        let host_input =
-            default_input::<JsDomAdapter>(&rue, &bridge.clone().into()).expect("host bridge input");
-        assert!(matches!(host_input.r#type, MountInputType::Vapor));
-        assert!(host_input.props.is_empty());
+        let unsupported = Object::new();
+        Reflect::set(&unsupported, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0))
+            .unwrap();
+        assert!(default_input::<JsDomAdapter>(&rue, &unsupported.clone().into()).is_none());
     }
 
     #[wasm_bindgen_test]

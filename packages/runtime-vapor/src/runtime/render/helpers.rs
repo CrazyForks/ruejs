@@ -29,6 +29,7 @@ fn has_native_contains_method(value: &JsValue) -> bool {
         .is_some_and(|contains| contains.is_function())
 }
 
+#[cfg(any(feature = "dev", test))]
 fn debug_record_sidebar_compaction(kind: &str, host: &JsValue) {
     let host_class = Reflect::get(host, &JsValue::from_str("className"))
         .unwrap_or(JsValue::UNDEFINED)
@@ -271,11 +272,16 @@ where
             if keep {
                 kept.push(entry);
             } else if let Some(mount) = entry.take_mount() {
-                let (lifecycle, host, _fragment_nodes) = mount.into_dom_identity();
-                if let Some(host) = host {
-                    let host_js: JsValue = host.into();
-                    debug_record_sidebar_compaction("anchor", &host_js);
+                let (lifecycle, host, _fragment_nodes, _props) = mount.into_dom_identity();
+                #[cfg(any(feature = "dev", test))]
+                {
+                    if let Some(host) = host {
+                        let host_js: JsValue = host.into();
+                        debug_record_sidebar_compaction("anchor", &host_js);
+                    }
                 }
+                #[cfg(not(any(feature = "dev", test)))]
+                let _ = host;
                 self.invoke_before_unmount_record(&lifecycle);
                 self.invoke_unmounted_record(&lifecycle);
             }
@@ -401,8 +407,8 @@ where
         }
 
         // 这里不能简单 `retain`：
-        // - `retain` 的闭包只拿到 `&(start, vnode_opt)` 的不可变引用；
-        // - 我们需要在“丢弃 entry”时把 `vnode_opt` move 出来并执行卸载钩子；
+        // - `retain` 的闭包只拿到 `&(start, mount_opt)` 的不可变引用；
+        // - 我们需要在“丢弃 entry”时把 `mount_opt` move 出来并执行卸载钩子；
         // 所以使用 `take + for` 的方式把所有 entry 搬出来处理，再回填保留项。
         let adapter_owned = self.get_dom_adapter().cloned();
         let drained = std::mem::take(&mut self.range_map);
@@ -464,11 +470,16 @@ where
                 //   清理 watchEffect/createEffect 注册的副作用；
                 // - 也能让组件的 `unmounted` 正常执行，清理事件/定时器等资源。
                 if let Some(mount) = entry.take_mount() {
-                    let (lifecycle, host, _fragment_nodes) = mount.into_dom_identity();
-                    if let Some(host) = host {
-                        let host_js: JsValue = host.into();
-                        debug_record_sidebar_compaction("range", &host_js);
+                    let (lifecycle, host, _fragment_nodes, _props) = mount.into_dom_identity();
+                    #[cfg(any(feature = "dev", test))]
+                    {
+                        if let Some(host) = host {
+                            let host_js: JsValue = host.into();
+                            debug_record_sidebar_compaction("range", &host_js);
+                        }
                     }
+                    #[cfg(not(any(feature = "dev", test)))]
+                    let _ = host;
                     // 为什么这个代码会影响切换路由后组件的生命周期无法恢复了。
                     // 说明：在丢弃过期区间前调用卸载钩子，确保 Vapor scope 与副作用得到释放，
                     // 否则切换场景中旧副作用残留会导致生命周期异常与资源泄漏。
@@ -887,8 +898,7 @@ mod tests {
         let mut parent = node("parent", 1.0);
         let host = node("old-host", 1.0);
         set_parent(&host, &parent);
-        let render =
-            Function::new_no_args("return { type: 'span', props: {}, children: ['next'] }");
+        let render = Function::new_no_args("return 'next'");
         let old = component_patch_state(&render, host);
         let input = MountInput::new_normalized(
             MountInputType::Component(render.into()),

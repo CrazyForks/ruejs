@@ -59,7 +59,7 @@ const logOwnerCleanupDebug = (owner: unknown, bucket: CleanupCallback[]) => {
     hasMountId: !!cleanupOwner && '__rue_mount_id' in cleanupOwner,
     hasPortableComponentType: !!cleanupOwner && '__rue_component_type' in cleanupOwner,
     hasVaporSetup: !!cleanupOwner && '__rue_vapor_setup' in cleanupOwner,
-    hasCompatMountOwner: !!cleanupOwner && '__rue_compat_mount_handle_owner' in cleanupOwner,
+    hasMountHandleOwner: !!cleanupOwner && '__rue_mount_handle_owner' in cleanupOwner,
     hasComponentChildren: !!cleanupOwner && '__rue_component_children' in cleanupOwner,
     stack: String(new Error().stack ?? ''),
   })

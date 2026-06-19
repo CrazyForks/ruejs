@@ -2538,6 +2538,13 @@ const TreeRoot: FC<InternalTreeProps> = ({
     renderRue(renderTreeBodyContent(), bodyHost)
   }
 
+  function assignBodyHostRef(element: HTMLElement | null) {
+    bodyHostRef.current = element
+    if (element) {
+      syncTreeBodyDom()
+    }
+  }
+
   onMounted(syncTreeBodyDom)
   onUnmounted(() => {
     removeDocumentMouseDragListeners()
@@ -2559,6 +2566,8 @@ const TreeRoot: FC<InternalTreeProps> = ({
       scheduleTreeBodyDomSync()
     },
   )
+
+  scheduleTreeBodyDomSync()
 
   return (
     <section
@@ -2604,7 +2613,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
           joinClassName('grid gap-0.5', componentSize.bodyPadding, componentSize.textClass),
           classNames?.body,
         )}
-        ref={bodyHostRef}
+        ref={assignBodyHostRef}
         data-rue-tree-body="true"
         style={{ ...bodyViewportStyle, ...styles?.body }}
         onScroll={handleBodyScroll}

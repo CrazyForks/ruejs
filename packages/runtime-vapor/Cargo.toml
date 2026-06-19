@@ -24,9 +24,8 @@ wasm-bindgen-futures = "0.4"
 cc = "1"
 
 [features]
-default = ["runtime", "compat"]
+default = ["runtime"]
 runtime = []
-compat = ["runtime"]
 dom = []
 log = []
 dev = []

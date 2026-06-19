@@ -64,7 +64,7 @@ const ExternalTextBridge: FC<{ to: HTMLElement; label: string }> = props => {
 }
 
 describe('Teleport renderable boundary', () => {
-  it('mounts compat child content into the target from an anchored parent', async () => {
+  it('mounts renderable child content into the target from an anchored parent', async () => {
     const host = document.createElement('div')
     const targetA = document.createElement('div')
 

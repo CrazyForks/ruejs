@@ -111,9 +111,9 @@ describe('vapor entry interop', () => {
     expect(container.querySelector('[data-testid="anchor-child"]')?.textContent).toBe('child')
   })
 
-  it('mounts multiple compat component children through the vapor renderAnchor entry', async () => {
+  it('mounts multiple component children through the vapor renderAnchor entry', async () => {
     const container = document.createElement('div')
-    const anchor = document.createComment('multi-compat-anchor')
+    const anchor = document.createComment('multi-renderable-anchor')
 
     document.body.appendChild(container)
     container.append(anchor)

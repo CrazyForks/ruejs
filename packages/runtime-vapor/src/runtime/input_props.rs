@@ -1,19 +1,14 @@
 /*
-render input/props 辅助转换
+render input props 辅助转换
 
-集中处理 JS props、children 与 compat render object 到 MountInput 的转换。
-默认主路径只需要 props/children 的基础工具；启用 compat 时才会解析旧式 type/props/children 结构。
+集中处理 JS props 与 children 到 ComponentProps 的转换。
+旧式 type/props/children 对象输入解析已经删除。
 */
-#[cfg(feature = "compat")]
-use super::DomAdapter;
-use super::types::ComponentProps;
-#[cfg(feature = "compat")]
-use super::types::{FRAGMENT, MountInput, MountInputChild, MountInputType};
+use super::dom_adapter::DomAdapter;
+use super::types::{ComponentProps, FRAGMENT, MountInput, MountInputChild, MountInputType};
 use crate::reactive::context::CONTEXT_PARENT_INSTANCE_PROP;
-#[cfg(feature = "compat")]
 use js_sys::Function;
 use js_sys::{Array, Object, Reflect};
-#[cfg(feature = "compat")]
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
@@ -54,31 +49,22 @@ pub(crate) fn props_with_children(props: &JsValue, children: &JsValue) -> Compon
     props_map
 }
 
-#[cfg(feature = "compat")]
-#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 pub(crate) fn effective_children(children: &JsValue, props_map: &ComponentProps) -> JsValue {
     if Array::is_array(children) {
         let arr = Array::from(children);
         if arr.length() == 0 {
-            match props_map.get("children") {
-                Some(value) => value.clone(),
-                None => children.clone(),
-            }
+            props_map.get("children").cloned().unwrap_or_else(|| children.clone())
         } else {
             children.clone()
         }
     } else if children.is_undefined() || children.is_null() {
-        match props_map.get("children") {
-            Some(value) => value.clone(),
-            None => children.clone(),
-        }
+        props_map.get("children").cloned().unwrap_or_else(|| children.clone())
     } else {
         children.clone()
     }
 }
 
-#[cfg(feature = "compat")]
-pub(crate) fn compat_type_to_input_type<A: DomAdapter>(
+pub(crate) fn input_type_from_tag<A: DomAdapter>(
     type_tag: &JsValue,
     props_map: &ComponentProps,
     fallback_unknown_element: Option<&str>,
@@ -87,15 +73,11 @@ pub(crate) fn compat_type_to_input_type<A: DomAdapter>(
         Some(if tag == FRAGMENT {
             MountInputType::<A>::Fragment
         } else if tag == "vapor" {
-            if let Some(setup) = props_map.get("setup") {
-                if let Some(func) = setup.dyn_ref::<Function>() {
-                    MountInputType::<A>::VaporWithSetup(func.clone().into())
-                } else {
-                    MountInputType::<A>::Vapor
-                }
-            } else {
-                MountInputType::<A>::Vapor
-            }
+            props_map
+                .get("setup")
+                .and_then(|setup| setup.dyn_ref::<Function>())
+                .map(|func| MountInputType::<A>::VaporWithSetup(func.clone().into()))
+                .unwrap_or(MountInputType::<A>::Vapor)
         } else {
             MountInputType::<A>::Element(tag)
         })
@@ -106,9 +88,7 @@ pub(crate) fn compat_type_to_input_type<A: DomAdapter>(
     }
 }
 
-#[cfg(feature = "compat")]
-#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-pub(crate) fn compat_input_from_values<A, F>(
+pub(crate) fn input_from_values<A, F>(
     type_tag: &JsValue,
     props_value: &JsValue,
     children_value: &JsValue,
@@ -121,54 +101,12 @@ where
 {
     let props = props_with_children(props_value, children_value);
     let effective = effective_children(children_value, &props);
-    let r#type = compat_type_to_input_type::<A>(type_tag, &props, fallback_unknown_element)?;
+    let r#type = input_type_from_tag::<A>(type_tag, &props, fallback_unknown_element)?;
 
     Some(MountInput::new_normalized(r#type, props, children_from_value(&effective)))
 }
 
-#[cfg(feature = "compat")]
-#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-pub(crate) fn compat_object_to_input<A, TypeGuard, F>(
-    input_value: &JsValue,
-    fallback_unknown_element: Option<&str>,
-    type_guard: TypeGuard,
-    children_from_value: F,
-) -> Option<MountInput<A>>
-where
-    A: DomAdapter,
-    TypeGuard: FnOnce(&JsValue) -> bool,
-    F: FnOnce(&JsValue) -> Vec<MountInputChild<A>>,
-{
-    if !input_value.is_object() {
-        return None;
-    }
-
-    let obj = Object::from(input_value.clone());
-    let type_value = Reflect::get(&obj, &JsValue::from_str("type")).unwrap_or(JsValue::UNDEFINED);
-    if type_value.is_undefined() || type_value.is_null() || !type_guard(&type_value) {
-        return None;
-    }
-
-    let props_value = Reflect::get(&obj, &JsValue::from_str("props")).unwrap_or(JsValue::UNDEFINED);
-    let children_value =
-        Reflect::get(&obj, &JsValue::from_str("children")).unwrap_or(JsValue::UNDEFINED);
-    let mut input = match compat_input_from_values::<A, _>(
-        &type_value,
-        &props_value,
-        &children_value,
-        fallback_unknown_element,
-        children_from_value,
-    ) {
-        Some(input) => input,
-        None => return None,
-    };
-    input.attach_mount_metadata_from_source(&obj);
-    Some(input)
-}
-
-#[cfg(feature = "compat")]
-#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-pub(crate) fn compat_children_from_value<A, F>(
+pub(crate) fn children_from_value<A, F>(
     value: &JsValue,
     mut input_from_value: F,
 ) -> Vec<MountInputChild<A>>
@@ -176,7 +114,7 @@ where
     A: DomAdapter,
     F: FnMut(&JsValue) -> Option<MountInput<A>>,
 {
-    fn push_compat_child_value<A, F>(
+    fn push_child_value<A, F>(
         item: JsValue,
         child_vec: &mut Vec<MountInputChild<A>>,
         input_from_value: &mut F,
@@ -187,7 +125,7 @@ where
         if Array::is_array(&item) {
             let nested = Array::from(&item);
             for index in 0..nested.length() {
-                push_compat_child_value(nested.get(index), child_vec, input_from_value);
+                push_child_value(nested.get(index), child_vec, input_from_value);
             }
             return;
         }
@@ -204,10 +142,6 @@ where
     }
 
     let mut child_vec = Vec::new();
-    push_compat_child_value(value.clone(), &mut child_vec, &mut input_from_value);
+    push_child_value(value.clone(), &mut child_vec, &mut input_from_value);
     child_vec
 }
-
-#[cfg(test)]
-#[path = "vnode_helpers_tests.rs"]
-mod tests;

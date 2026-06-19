@@ -61,7 +61,7 @@ describe('patch_children_keyed anchor isolation', () => {
     expect(container.querySelector('#code-panel')?.textContent).toBe('Code panel')
   })
 
-  it('keeps preview/code branches exclusive for unkeyed vnode siblings', async () => {
+  it('keeps preview/code branches exclusive for unkeyed renderable siblings', async () => {
     const active = ref<'preview' | 'code'>('preview')
 
     const CodePanel: FC<{ code: string }> = props =>

@@ -443,7 +443,7 @@ const Empty = (({
       <img
         src={mergedImage}
         alt={resolveAltText(mergedDescription, imageAlt)}
-        draggable={false}
+        draggable="false"
         className="block h-auto w-full object-contain"
       />
     ) : mergedImage === DefaultPresentedImage || mergedImage === SimplePresentedImage ? (

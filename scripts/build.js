@@ -130,16 +130,6 @@ async function ensureRuntimeVaporBuilt(targets) {
       label: 'node package',
       command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node'],
     },
-    {
-      filePath: path.resolve('packages/runtime-vapor/pkg-node-reactive/rue_runtime_vapor.js'),
-      label: 'node reactive package',
-      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node-reactive'],
-    },
-    {
-      filePath: path.resolve('packages/runtime-vapor/pkg-node-vapor/rue_runtime_vapor.js'),
-      label: 'node vapor package',
-      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node-vapor'],
-    },
   ]
 
   for (const artifact of requiredArtifacts) {

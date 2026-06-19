@@ -363,32 +363,6 @@ async fn wasm_render_clears_container_on_null_without_error() {
     assert_eq!(errors.length(), 0);
 }
 
-#[wasm_bindgen_test(async)]
-async fn wasm_render_rejects_raw_vnode_object_input() {
-    let adapter = make_adapter();
-    let rue = createRue(adapter.clone());
-    let container = js_obj();
-
-    let children = Array::new();
-    children.push(&JsValue::from_str("A"));
-
-    let props = Object::new();
-    let _ = Reflect::set(&props, &JsValue::from_str("className"), &JsValue::from_str("raw"));
-
-    let vnode = Object::new();
-    let _ = Reflect::set(&vnode, &JsValue::from_str("type"), &JsValue::from_str("div"));
-    let _ = Reflect::set(&vnode, &JsValue::from_str("props"), &props);
-    let _ = Reflect::set(&vnode, &JsValue::from_str("children"), &children.into());
-
-    rue.render_wasm(vnode.into(), container.clone());
-    tick().await;
-
-    let children =
-        Reflect::get(&container, &JsValue::from_str("children")).unwrap_or(Array::new().into());
-    let children: Array = children.unchecked_into();
-    assert_eq!(children.length(), 0);
-}
-
 #[wasm_bindgen_test]
 fn create_rue_sets_global_dom_adapter() {
     let adapter = make_adapter();
@@ -411,7 +385,7 @@ async fn wasm_render_rejects_raw_function_component_input_on_container_entry() {
         &JsValue::from_f64(0.0),
     );
     let fc = Function::new_no_args(
-        "globalThis._renderFcCount = (globalThis._renderFcCount||0) + 1; return { type: 'div', props: {}, children: ['x'] }",
+        "globalThis._renderFcCount = (globalThis._renderFcCount||0) + 1; return 'unused'",
     );
 
     rue.render_wasm(fc.into(), container.clone());
@@ -442,7 +416,7 @@ async fn wasm_render_between_rejects_raw_function_component_input() {
         &JsValue::from_f64(0.0),
     );
     let fc = Function::new_no_args(
-        "globalThis._betweenFcCount = (globalThis._betweenFcCount||0) + 1; return { type: 'div', props: { className: 'between-ok' }, children: ['B'] }",
+        "globalThis._betweenFcCount = (globalThis._betweenFcCount||0) + 1; return 'unused'",
     );
 
     rue.render_between_wasm(fc.into(), parent.clone(), start.clone(), end.clone());
@@ -568,10 +542,11 @@ async fn wasm_render_static_reports_unsupported_default_surface_input() {
     let (parent, _start, anchor) = setup_range(&adapter);
     let errors = attach_error_collector(&rue);
 
-    let raw_vnode = Object::new();
-    let _ = Reflect::set(&raw_vnode, &JsValue::from_str("type"), &JsValue::from_str("div"));
+    let unsupported_object = Object::new();
+    let _ =
+        Reflect::set(&unsupported_object, &JsValue::from_str("kind"), &JsValue::from_str("raw"));
 
-    rue.render_static_wasm(raw_vnode.into(), parent, anchor);
+    rue.render_static_wasm(unsupported_object.into(), parent, anchor);
     tick().await;
 
     assert_eq!(errors.length(), 1);
@@ -605,7 +580,7 @@ async fn wasm_vapor_wasm_renders_host_element() {
 }
 
 #[wasm_bindgen_test(async)]
-async fn wasm_vapor_wasm_rejects_legacy_vapor_wrapper_return() {
+async fn wasm_vapor_wasm_rejects_unsupported_object_return() {
     let adapter = make_adapter();
     let rue = createRue(adapter.clone());
     let container = js_obj();
@@ -618,9 +593,7 @@ async fn wasm_vapor_wasm_rejects_legacy_vapor_wrapper_return() {
     rue.on_error(on_error.as_ref().clone().into());
     on_error.forget();
 
-    let setup = Function::new_no_args(
-        "return { vaporElement: { tag: 'span', children: [], nodeType: 1 } }",
-    );
+    let setup = Function::new_no_args("return { kind: 'unsupported-object' }");
     let id = rue.vapor_wasm(setup.into());
     rue.render_wasm(id, container.clone());
     tick().await;

@@ -1,58 +1,27 @@
 /*
 Mounted snapshot 类型体系
 
-渲染完成后，runtime 不只需要 DOM 节点，还需要一份“可更新、可卸载”的状态快照：
-- host/fragment_nodes：定位真实 DOM
-- key/type：判断下一次 patch 是否可复用
-- lifecycle record：统一执行 cleanup bucket、effect scope 与组件 hooks
-- comp_subtree/inst_index：组件更新时复用实例并递归 patch 子树
-
-这份 snapshot 是 render、patch、replace、unmount 之间共享的核心数据结构。
+仅保留默认 Text / Vapor / Component 路径。旧 Element/Fragment patch snapshot 已删除。
 */
 use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
 
-#[cfg(feature = "compat")]
-use super::ComponentProps;
-use super::MountInputType;
-#[cfg(feature = "compat")]
-use super::compat_state::{
-    MountedCompatLifecycleKind, MountedCompatPatchKind, MountedCompatPatchState,
-    MountedCompatRootState,
-};
-#[cfg(feature = "compat")]
-use super::{compat_lifecycle, compat_patch_root, compat_subtree};
+use super::{ComponentProps, MountInputType};
 
 #[derive(Clone)]
 pub(crate) enum MountLifecycleKind {
     Other,
     Vapor,
-    #[cfg(feature = "compat")]
-    Compat(MountedCompatLifecycleKind),
     Component,
 }
 
 impl MountLifecycleKind {
     pub(crate) fn invokes_mount_owned_resources_before_unmount(&self) -> bool {
-        match self {
-            Self::Other | Self::Vapor => true,
-            Self::Component => false,
-            #[cfg(feature = "compat")]
-            Self::Compat(kind) => {
-                compat_lifecycle::lifecycle_invokes_mount_owned_resources_before_unmount(kind)
-            }
-        }
+        matches!(self, Self::Other | Self::Vapor)
     }
 
     pub(crate) fn recurses_before_unmount_children(&self) -> bool {
-        match self {
-            Self::Component => true,
-            Self::Other | Self::Vapor => false,
-            #[cfg(feature = "compat")]
-            Self::Compat(kind) => {
-                compat_lifecycle::lifecycle_recurses_before_unmount_children(kind)
-            }
-        }
+        matches!(self, Self::Component)
     }
 
     pub(crate) fn invokes_component_before_unmount(&self) -> bool {
@@ -60,12 +29,7 @@ impl MountLifecycleKind {
     }
 
     pub(crate) fn recurses_unmounted_children(&self) -> bool {
-        match self {
-            Self::Component => true,
-            Self::Other | Self::Vapor => false,
-            #[cfg(feature = "compat")]
-            Self::Compat(kind) => compat_lifecycle::lifecycle_recurses_unmounted_children(kind),
-        }
+        matches!(self, Self::Component)
     }
 
     pub(crate) fn invokes_component_unmounted(&self) -> bool {
@@ -80,9 +44,7 @@ pub(crate) struct MountLifecycleRecord {
     pub effect_scope_id: Option<usize>,
     pub component_before_unmount_hooks: Vec<JsValue>,
     pub component_unmounted_hooks: Vec<JsValue>,
-    /// KeepAlive range 重新激活时触发的组件级 hooks。
     pub component_activated_hooks: Vec<JsValue>,
-    /// KeepAlive range 移入缓存容器时触发的组件级 hooks。
     pub component_deactivated_hooks: Vec<JsValue>,
     pub component_inst_index: Option<usize>,
     pub children: Vec<MountLifecycleRecord>,
@@ -91,13 +53,12 @@ pub(crate) struct MountLifecycleRecord {
 pub(crate) struct MountedBlock<A: DomAdapter> {
     pub host: Option<A::Element>,
     pub fragment_nodes: Vec<A::Element>,
+    pub props: ComponentProps,
     pub lifecycle: MountLifecycleRecord,
 }
 
 #[derive(Clone)]
 pub(crate) enum MountedPatchSubtreeType {
-    #[cfg(feature = "compat")]
-    Compat,
     Component(JsValue),
 }
 
@@ -122,6 +83,7 @@ pub(crate) struct MountedVaporSubtree<A: DomAdapter> {
     pub host: Option<A::Element>,
     pub key: Option<String>,
     pub fragment_nodes: Vec<A::Element>,
+    pub props: ComponentProps,
     pub cleanup_bucket: Option<JsValue>,
     pub effect_scope_id: Option<usize>,
 }
@@ -129,29 +91,15 @@ pub(crate) struct MountedVaporSubtree<A: DomAdapter> {
 #[derive(Clone)]
 pub(crate) struct MountedPatchSubtree<A: DomAdapter> {
     pub r#type: MountedPatchSubtreeType,
-    #[cfg(feature = "compat")]
-    pub compat: MountedCompatPatchState<A>,
     pub el: Option<A::Element>,
     pub key: Option<String>,
     pub fragment_nodes: Vec<A::Element>,
     pub component_before_unmount_hooks: Vec<JsValue>,
     pub component_unmounted_hooks: Vec<JsValue>,
-    /// 当前组件子树缓存激活时需要触发的 activated hooks。
     pub component_activated_hooks: Vec<JsValue>,
-    /// 当前组件子树缓存停用时需要触发的 deactivated hooks。
     pub component_deactivated_hooks: Vec<JsValue>,
     pub comp_subtree: Option<Box<MountedSubtreeState<A>>>,
     pub comp_inst_index: Option<usize>,
-}
-
-#[cfg(feature = "compat")]
-#[derive(Clone)]
-#[allow(dead_code)]
-pub(crate) enum MountedSubtreeChild<A: DomAdapter> {
-    Subtree(MountedSubtreeState<A>),
-    Text(String),
-    Bool(bool),
-    Null,
 }
 
 #[derive(Clone)]
@@ -173,8 +121,6 @@ pub(crate) struct MountedComponent<A: DomAdapter> {
 
 pub(crate) enum MountedState<A: DomAdapter> {
     Block(MountedBlock<A>),
-    #[cfg(feature = "compat")]
-    Compat(MountedCompatRootState<A>),
     Component(MountedComponent<A>),
 }
 
@@ -194,26 +140,6 @@ pub(crate) struct RangeMountState<A: DomAdapter> {
     pub mounted: Option<MountedState<A>>,
 }
 
-impl MountedPatchSubtreeType {
-    #[cfg(not(feature = "compat"))]
-    pub(crate) fn matches_input_type<A: DomAdapter>(&self, input_type: &MountInputType<A>) -> bool {
-        match (self, input_type) {
-            (Self::Component(old_render), MountInputType::Component(new_render)) => {
-                old_render.eq(new_render)
-            }
-            (Self::Component(_), _) => false,
-        }
-    }
-
-    #[cfg(not(feature = "compat"))]
-    #[cfg(feature = "dev")]
-    pub fn debug_name(&self) -> String {
-        match self {
-            Self::Component(_) => "Component".to_string(),
-        }
-    }
-}
-
 impl MountedVaporSubtreeType {
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(crate) fn matches_input_type<A: DomAdapter>(&self, input_type: &MountInputType<A>) -> bool {
@@ -229,20 +155,6 @@ impl MountedVaporSubtreeType {
         match self {
             Self::Vapor => "Vapor".to_string(),
             Self::VaporWithSetup(_) => "VaporWithSetup".to_string(),
-        }
-    }
-}
-
-#[cfg(feature = "compat")]
-impl<A: DomAdapter> MountedSubtreeChild<A>
-where
-    A::Element: Clone,
-{
-    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-    pub fn lifecycle_record(&self) -> Option<MountLifecycleRecord> {
-        match self {
-            Self::Subtree(subtree) => Some(subtree.lifecycle_record()),
-            Self::Text(_) | Self::Bool(_) | Self::Null => None,
         }
     }
 }
@@ -286,14 +198,8 @@ where
     #[cfg(feature = "dev")]
     pub fn component_render_fn(&self) -> Option<&JsValue> {
         match self {
-            #[cfg(not(feature = "compat"))]
             Self::Patch(node) => match &node.r#type {
                 MountedPatchSubtreeType::Component(render_fn) => Some(render_fn),
-            },
-            #[cfg(feature = "compat")]
-            Self::Patch(node) => match &node.r#type {
-                MountedPatchSubtreeType::Component(render_fn) => Some(render_fn),
-                MountedPatchSubtreeType::Compat => None,
             },
             _ => None,
         }
@@ -349,7 +255,33 @@ impl<A: DomAdapter> MountedPatchSubtree<A>
 where
     A::Element: Clone,
 {
-    fn component_lifecycle_record(&self) -> MountLifecycleRecord {
+    pub fn new_component(
+        render_fn: JsValue,
+        el: Option<A::Element>,
+        key: Option<String>,
+        fragment_nodes: Vec<A::Element>,
+        component_before_unmount_hooks: Vec<JsValue>,
+        component_unmounted_hooks: Vec<JsValue>,
+        component_activated_hooks: Vec<JsValue>,
+        component_deactivated_hooks: Vec<JsValue>,
+        comp_subtree: Option<Box<MountedSubtreeState<A>>>,
+        comp_inst_index: Option<usize>,
+    ) -> Self {
+        Self {
+            r#type: MountedPatchSubtreeType::Component(render_fn),
+            el,
+            key,
+            fragment_nodes,
+            component_before_unmount_hooks,
+            component_unmounted_hooks,
+            component_activated_hooks,
+            component_deactivated_hooks,
+            comp_subtree,
+            comp_inst_index,
+        }
+    }
+
+    pub fn lifecycle_record(&self) -> MountLifecycleRecord {
         MountLifecycleRecord {
             kind: MountLifecycleKind::Component,
             cleanup_bucket: None,
@@ -367,171 +299,35 @@ where
         }
     }
 
-    #[cfg(feature = "compat")]
-    pub fn new_compat(
-        kind: MountedCompatPatchKind,
-        props: ComponentProps,
-        children: Vec<MountedSubtreeChild<A>>,
-        el: Option<A::Element>,
-        key: Option<String>,
-        fragment_nodes: Vec<A::Element>,
-        mount_cleanup_bucket: Option<JsValue>,
-        mount_effect_scope_id: Option<usize>,
-    ) -> Self {
-        Self {
-            r#type: MountedPatchSubtreeType::Compat,
-            compat: MountedCompatPatchState::new(
-                kind,
-                props,
-                children,
-                mount_cleanup_bucket,
-                mount_effect_scope_id,
-            ),
-            el,
-            key,
-            fragment_nodes,
-            component_before_unmount_hooks: Vec::new(),
-            component_unmounted_hooks: Vec::new(),
-            component_activated_hooks: Vec::new(),
-            component_deactivated_hooks: Vec::new(),
-            comp_subtree: None,
-            comp_inst_index: None,
+    pub(crate) fn matches_input_type(&self, input_type: &MountInputType<A>) -> bool {
+        match (&self.r#type, input_type) {
+            (
+                MountedPatchSubtreeType::Component(old_render),
+                MountInputType::Component(new_render),
+            ) => old_render.eq(new_render),
+            (MountedPatchSubtreeType::Component(_), _) => false,
         }
     }
 
-    pub fn new_component(
-        render_fn: JsValue,
-        el: Option<A::Element>,
-        key: Option<String>,
-        fragment_nodes: Vec<A::Element>,
-        component_before_unmount_hooks: Vec<JsValue>,
-        component_unmounted_hooks: Vec<JsValue>,
-        component_activated_hooks: Vec<JsValue>,
-        component_deactivated_hooks: Vec<JsValue>,
-        comp_subtree: Option<Box<MountedSubtreeState<A>>>,
-        comp_inst_index: Option<usize>,
-    ) -> Self {
-        Self {
-            r#type: MountedPatchSubtreeType::Component(render_fn),
-            #[cfg(feature = "compat")]
-            compat: MountedCompatPatchState::empty(),
-            el,
-            key,
-            fragment_nodes,
-            component_before_unmount_hooks,
-            component_unmounted_hooks,
-            component_activated_hooks,
-            component_deactivated_hooks,
-            comp_subtree,
-            comp_inst_index,
-        }
-    }
-
-    #[cfg(not(feature = "compat"))]
-    pub fn lifecycle_record(&self) -> MountLifecycleRecord {
-        self.component_lifecycle_record()
-    }
-
-    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-    fn into_component_root_state(self, lifecycle: MountLifecycleRecord) -> MountedState<A> {
-        match self.r#type {
-            MountedPatchSubtreeType::Component(render_fn) => {
-                MountedState::Component(MountedComponent {
-                    render_fn,
-                    key: self.key,
-                    host: self.el,
-                    fragment_nodes: self.fragment_nodes,
-                    subtree: self.comp_subtree,
-                    inst_index: self.comp_inst_index,
-                    lifecycle,
-                })
-            }
-            #[cfg(feature = "compat")]
-            MountedPatchSubtreeType::Compat => {
-                unreachable!("compat patch roots must be handled by compat_root_state")
-            }
+    #[cfg(feature = "dev")]
+    pub fn debug_name(&self) -> String {
+        match &self.r#type {
+            MountedPatchSubtreeType::Component(_) => "Component".to_string(),
         }
     }
 
     pub fn into_root_state(self) -> MountedState<A> {
         let lifecycle = self.lifecycle_record();
-        #[cfg(feature = "compat")]
-        if let Some(kind) = compat_patch_root::patch_root_kind(&self) {
-            return compat_patch_root::into_patch_root_state(self, kind, lifecycle);
-        }
-
-        self.into_component_root_state(lifecycle)
-    }
-
-    #[cfg(feature = "compat")]
-    pub fn lifecycle_record(&self) -> MountLifecycleRecord {
-        if let Some(record) = compat_lifecycle::patch_lifecycle_record(self) {
-            return record;
-        }
-
-        self.component_lifecycle_record()
-    }
-
-    #[cfg(feature = "compat")]
-    pub(crate) fn matches_input_type(&self, input_type: &MountInputType<A>) -> bool {
-        compat_subtree::patch_subtree_matches_input_type(self, input_type)
-    }
-
-    #[cfg(not(feature = "compat"))]
-    pub(crate) fn matches_input_type(&self, input_type: &MountInputType<A>) -> bool {
-        self.r#type.matches_input_type(input_type)
-    }
-
-    #[cfg(feature = "compat")]
-    #[cfg(feature = "dev")]
-    pub fn debug_name(&self) -> String {
-        compat_subtree::patch_subtree_debug_name(self)
-    }
-
-    #[cfg(not(feature = "compat"))]
-    #[cfg(feature = "dev")]
-    pub fn debug_name(&self) -> String {
-        self.r#type.debug_name()
-    }
-
-    #[cfg(feature = "compat")]
-    pub fn compat_props(&self) -> &ComponentProps {
-        &self.compat.props
-    }
-
-    #[cfg(feature = "compat")]
-    pub fn compat_kind(&self) -> Option<&MountedCompatPatchKind> {
-        self.compat.kind.as_ref()
-    }
-
-    #[cfg(feature = "compat")]
-    pub fn compat_children_mut(&mut self) -> &mut [MountedSubtreeChild<A>] {
-        self.compat.children.as_mut_slice()
-    }
-
-    #[cfg(feature = "compat")]
-    pub fn replace_compat_patch_inputs(
-        &mut self,
-        props: ComponentProps,
-        children: Vec<MountedSubtreeChild<A>>,
-    ) {
-        self.compat.props = props;
-        self.compat.children = children;
-    }
-
-    #[cfg(feature = "compat")]
-    pub fn set_compat_mount_metadata(
-        &mut self,
-        cleanup_bucket: Option<JsValue>,
-        effect_scope_id: Option<usize>,
-    ) {
-        self.compat.mount_cleanup_bucket = cleanup_bucket;
-        self.compat.mount_effect_scope_id = effect_scope_id;
-    }
-
-    #[cfg(feature = "compat")]
-    pub fn set_compat_patch_kind(&mut self, kind: MountedCompatPatchKind) {
-        self.compat.kind = Some(kind);
+        let MountedPatchSubtreeType::Component(render_fn) = self.r#type;
+        MountedState::Component(MountedComponent {
+            render_fn,
+            key: self.key,
+            host: self.el,
+            fragment_nodes: self.fragment_nodes,
+            subtree: self.comp_subtree,
+            inst_index: self.comp_inst_index,
+            lifecycle,
+        })
     }
 }
 
@@ -559,19 +355,8 @@ impl<A: DomAdapter> MountedState<A>
 where
     A::Element: Clone,
 {
-    #[cfg(not(feature = "compat"))]
     pub fn into_patch_state(self) -> Option<MountedSubtreeState<A>> {
         match self {
-            Self::Component(component) => Some(component.into_patch_state()),
-            Self::Block(_) => None,
-        }
-    }
-
-    #[cfg(feature = "compat")]
-    #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-    pub fn into_patch_state(self) -> Option<MountedSubtreeState<A>> {
-        match self {
-            Self::Compat(root) => Some(compat_patch_root::compat_root_into_patch_state(root)),
             Self::Component(component) => Some(component.into_patch_state()),
             Self::Block(_) => None,
         }
@@ -582,11 +367,13 @@ where
             MountedSubtreeState::Text(text) => Self::Block(MountedBlock {
                 host: text.host.clone(),
                 fragment_nodes: Vec::new(),
+                props: ComponentProps::new(),
                 lifecycle: MountedSubtreeState::Text(text).lifecycle_record(),
             }),
             MountedSubtreeState::Vapor(vapor) => Self::Block(MountedBlock {
                 host: vapor.host.clone(),
                 fragment_nodes: vapor.fragment_nodes.clone(),
+                props: vapor.props.clone(),
                 lifecycle: MountedSubtreeState::Vapor(vapor).lifecycle_record(),
             }),
             MountedSubtreeState::Patch(node) => node.into_root_state(),
@@ -595,40 +382,30 @@ where
 }
 
 impl<A: DomAdapter> MountedState<A> {
-    /// 获取 mounted 子树的生命周期快照，供 KeepAlive 按 range 重放 activated/deactivated。
     pub fn lifecycle_record(&self) -> MountLifecycleRecord {
         match self {
             Self::Block(block) => block.lifecycle.clone(),
-            #[cfg(feature = "compat")]
-            Self::Compat(root) => compat_patch_root::compat_root_lifecycle_record(root),
             Self::Component(component) => component.lifecycle.clone(),
         }
     }
 
-    pub fn into_dom_identity(self) -> (MountLifecycleRecord, Option<A::Element>, Vec<A::Element>) {
+    pub fn into_dom_identity(
+        self,
+    ) -> (MountLifecycleRecord, Option<A::Element>, Vec<A::Element>, ComponentProps) {
         match self {
-            Self::Block(block) => (block.lifecycle, block.host, block.fragment_nodes),
-            #[cfg(feature = "compat")]
-            Self::Compat(root) => compat_patch_root::compat_root_into_dom_identity(root),
-            Self::Component(component) => {
-                (component.lifecycle, component.host, component.fragment_nodes)
-            }
+            Self::Block(block) => (block.lifecycle, block.host, block.fragment_nodes, block.props),
+            Self::Component(component) => (
+                component.lifecycle,
+                component.host,
+                component.fragment_nodes,
+                ComponentProps::new(),
+            ),
         }
     }
 
-    #[cfg(not(feature = "compat"))]
     pub fn into_lifecycle(self) -> MountLifecycleRecord {
         match self {
             Self::Block(block) => block.lifecycle,
-            Self::Component(component) => component.lifecycle,
-        }
-    }
-
-    #[cfg(feature = "compat")]
-    pub fn into_lifecycle(self) -> MountLifecycleRecord {
-        match self {
-            Self::Block(block) => block.lifecycle,
-            Self::Compat(root) => compat_patch_root::compat_root_into_lifecycle(root),
             Self::Component(component) => component.lifecycle,
         }
     }
@@ -689,77 +466,5 @@ impl<A: DomAdapter> RangeMountState<A> {
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub fn clear(&mut self) {
         self.mounted = None;
-    }
-}
-
-#[cfg(test)]
-mod plan999_mounted_tests {
-    use super::*;
-    use crate::runtime::js_adapter::JsDomAdapter;
-    use js_sys::Function;
-    use wasm_bindgen_test::*;
-
-    fn lifecycle() -> MountLifecycleRecord {
-        MountLifecycleRecord {
-            kind: MountLifecycleKind::Other,
-            cleanup_bucket: None,
-            effect_scope_id: None,
-            component_before_unmount_hooks: Vec::new(),
-            component_unmounted_hooks: Vec::new(),
-            component_activated_hooks: Vec::new(),
-            component_deactivated_hooks: Vec::new(),
-            component_inst_index: None,
-            children: Vec::new(),
-        }
-    }
-
-    fn block_state(host: JsValue) -> MountedState<JsDomAdapter> {
-        MountedState::Block(MountedBlock {
-            host: Some(host),
-            fragment_nodes: Vec::new(),
-            lifecycle: lifecycle(),
-        })
-    }
-
-    #[wasm_bindgen_test]
-    fn mounted_vapor_type_mismatch_and_plain_child_lifecycle_edges() {
-        let vapor_setup = MountedVaporSubtreeType::VaporWithSetup(Function::new_no_args("").into());
-        let text_input = MountInputType::<JsDomAdapter>::Text("text".to_string());
-        assert!(!vapor_setup.matches_input_type(&text_input));
-
-        let text_child = MountedSubtreeChild::<JsDomAdapter>::Text("child".to_string());
-        let bool_child = MountedSubtreeChild::<JsDomAdapter>::Bool(false);
-        let null_child = MountedSubtreeChild::<JsDomAdapter>::Null;
-        assert!(text_child.lifecycle_record().is_none());
-        assert!(bool_child.lifecycle_record().is_none());
-        assert!(null_child.lifecycle_record().is_none());
-    }
-
-    #[wasm_bindgen_test]
-    fn mounted_state_block_patch_none_and_anchor_range_clear_edges() {
-        let host = JsValue::from_str("host");
-        let block = block_state(host.clone());
-        assert!(block.into_patch_state().is_none());
-
-        let mut anchor =
-            AnchorMountState::new(JsValue::from_str("anchor"), block_state(host.clone()));
-        assert!(anchor.mounted.is_some());
-        anchor.clear();
-        assert!(anchor.mounted.is_none());
-        anchor.store_mount(block_state(host.clone()));
-        assert!(anchor.take_mount().is_some());
-        assert!(anchor.take_mount().is_none());
-
-        let mut range = RangeMountState::new(
-            JsValue::from_str("start"),
-            JsValue::from_str("end"),
-            block_state(host),
-        );
-        assert!(range.mounted.is_some());
-        range.clear();
-        assert!(range.mounted.is_none());
-        range.store_mount(block_state(JsValue::from_str("next")));
-        assert!(range.take_mount().is_some());
-        assert!(range.take_mount().is_none());
     }
 }

@@ -219,7 +219,7 @@ const inputStatus = ref<'error' | undefined>(undefined)
 const helperText = ref('可直接手写时间，输入 HH:mm:ss 后按 Enter 或失焦提交')
 
 <TimePicker
-  value={value.value}
+  value={value}
   allowClear
   status={inputStatus.value}
   onInput={event => {
@@ -263,7 +263,7 @@ const formatCode = `const rhythm = ref('13:30')
 const lounge = ref('8:15 pm')
 
 <TimePicker
-  value={rhythm.value}
+  value={rhythm}
   format="HH:mm"
   minuteStep={15}
   onChange={nextValue => {
@@ -272,7 +272,7 @@ const lounge = ref('8:15 pm')
 />
 
 <TimePicker
-  value={lounge.value}
+  value={lounge}
   format="h:mm a"
   use12Hours
   hourStep={2}
@@ -286,7 +286,7 @@ const confirmCode = `const committed = ref('11:00:00')
 const preview = ref('预览：11:00:00')
 
 <TimePicker
-  value={committed.value}
+  value={committed}
   needConfirm
   showNow
   renderExtraFooter={() => <span>下一个同步窗口将在 11:30 开始</span>}
@@ -319,7 +319,7 @@ const disabledTime = selection => ({
 })
 
 <TimePicker
-  value={review.value}
+  value={review}
   hideDisabledOptions
   disabledTime={disabledTime}
   onChange={nextValue => {
@@ -330,7 +330,7 @@ const disabledTime = selection => ({
 const rangeCode = `const range = ref<[string | null, string | null]>(['09:00:00', '18:30:00'])
 
 <TimePicker.RangePicker
-  value={range.value}
+  value={range}
   order
   allowClear
   placeholder={['开始排练', '结束排练']}
@@ -342,7 +342,7 @@ const rangeCode = `const range = ref<[string | null, string | null]>(['09:00:00'
 const manualCode = `const manual = ref('21:15:00')
 
 <TimePicker
-  value={manual.value}
+  value={manual}
   allowClear
   addonBefore="UTC+8"
   renderExtraFooter={() => <span>支持直接输入 21:45:00 这类格式化字符串</span>}
@@ -371,7 +371,7 @@ export const BasicControlledPreview: FC<BasicControlledPreviewProps> = ({
     <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
       <div className="rounded-[1.5rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200/55 p-5">
         <TimePicker
-          value={basicValue.value}
+          value={basicValue}
           allowClear
           hourStep={hourStep}
           minuteStep={minuteStep}
@@ -386,8 +386,9 @@ export const BasicControlledPreview: FC<BasicControlledPreviewProps> = ({
               return
             }
             if (isStrictTimeValue(nextText)) {
+              basicValue.value = nextText
               basicInputStatus.value = undefined
-              basicHelperText.value = '手写格式正确，提交后同步受控值'
+              basicHelperText.value = '手写格式正确，已同步受控值'
               return
             }
             basicInputStatus.value = 'error'
@@ -444,7 +445,7 @@ const FormatPreview: FC = () => {
       <div className="rounded-2xl border border-base-300 bg-base-100 p-5">
         <div className="mb-3 text-sm font-medium">24 小时制节奏块</div>
         <TimePicker
-          value={rhythmValue.value}
+          value={rhythmValue}
           format="HH:mm"
           minuteStep={15}
           onChange={nextValue => {
@@ -456,7 +457,7 @@ const FormatPreview: FC = () => {
       <div className="rounded-2xl border border-base-300 bg-base-100 p-5">
         <div className="mb-3 text-sm font-medium">12 小时制 lounge 模式</div>
         <TimePicker
-          value={loungeValue.value}
+          value={loungeValue}
           format="h:mm a"
           use12Hours
           hourStep={2}
@@ -479,7 +480,7 @@ const ConfirmPreview: FC = () => {
     <div className="grid gap-6 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
       <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5">
         <TimePicker
-          value={committedValue.value}
+          value={committedValue}
           needConfirm
           showNow
           renderExtraFooter={() => <span>下一个同步窗口将在 11:30 开始</span>}
@@ -512,7 +513,7 @@ const DisabledPreview: FC = () => {
     <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
       <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5">
         <TimePicker
-          value={disabledValue.value}
+          value={disabledValue}
           hideDisabledOptions
           disabledTime={disabledSchedule}
           onChange={nextValue => {
@@ -545,7 +546,7 @@ const RangePreview: FC = () => {
   return (
     <div className="rounded-[1.5rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200/45 p-5">
       <TimePicker.RangePicker
-        value={rangeValue.value}
+        value={rangeValue}
         order
         allowClear
         placeholder={['开始排练', '结束排练']}
@@ -575,7 +576,7 @@ const ManualPreview: FC = () => {
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
       <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5">
         <TimePicker
-          value={manualValue.value}
+          value={manualValue}
           allowClear
           addonBefore="UTC+8"
           renderExtraFooter={() => <span>支持直接输入 21:45:00 这类格式化字符串</span>}

@@ -29,6 +29,7 @@ import {
 import type { DomElementLike, DomNodeLike } from '../dom'
 import { signal, watchEffect } from '../reactivity'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
+import { registerKeepAlivePropsUpdater } from './keepAlivePropsBridge'
 
 /** KeepAlive 的 include/exclude 匹配模式。 */
 export type KeepAliveMatchPattern = string | RegExp | Array<string | RegExp>
@@ -304,12 +305,19 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     appendChild(container, start)
     appendChild(container, end)
 
+    const propsSig = signal(snapshotKeepAliveProps(props), {}, true)
+    const updateProps = (nextProps: unknown) => {
+      propsSig.set(snapshotKeepAliveProps((nextProps ?? {}) as KeepAliveProps))
+    }
+    registerKeepAlivePropsUpdater(props, updateProps)
+
     return {
       container,
       start,
       end,
       storage: createDocumentFragment() as DomElementLike,
-      propsSig: signal(snapshotKeepAliveProps(props), {}, true),
+      propsSig,
+      updateProps,
       cache: new Map<unknown, CacheEntry>(),
       activeEntry: null as CacheEntry | null,
       effect: null as ReturnType<typeof watchEffect> | null,
@@ -397,11 +405,13 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     markKeepAliveHookTarget(child, entry)
     globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = entry
     renderBetween(child, parent, entry.start, entry.end)
-    setTimeout(() => {
-      if (globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] === entry) {
-        globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = prevHookTarget
-      }
-    }, 0)
+    queueMicrotask(() => {
+      queueMicrotask(() => {
+        if (globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] === entry) {
+          globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = prevHookTarget
+        }
+      })
+    })
   }
 
   /** 异步触发 activated，等待 renderBetween 完成内部 mount/patch 队列。 */
@@ -647,7 +657,8 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
 
   return vapor(() => {
     prepareContainerForRender()
-    ctx.propsSig.set(snapshotKeepAliveProps(props))
+    registerKeepAlivePropsUpdater(props, ctx.updateProps)
+    ctx.updateProps(props)
     return ctx.container as any
   })
 }

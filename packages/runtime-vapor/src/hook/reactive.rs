@@ -10,7 +10,6 @@ use wasm_bindgen::prelude::*;
 use crate::reactive::context::{get_current_instance, with_hook_slot};
 use crate::reactive::signal::create_reactive as create_reactive_impl;
 
-const RUE_HOST_NODE_KEY: &str = "__rue_host_node";
 const RUE_MOUNT_HANDLE_KEY: &str = "__rue_mount_id";
 const PORTABLE_COMPONENT_TYPE_KEY: &str = "__rue_component_type";
 const PORTABLE_PROPS_KEY: &str = "props";
@@ -38,11 +37,6 @@ fn renderable_identity(v: &JsValue) -> Option<JsValue> {
     }
 
     let obj: Object = v.clone().unchecked_into();
-    let host_node = get_object_field(&obj, RUE_HOST_NODE_KEY);
-    if !host_node.is_undefined() && !host_node.is_null() {
-        return Some(host_node);
-    }
-
     let mount_handle_id = get_object_field(&obj, RUE_MOUNT_HANDLE_KEY);
     if !mount_handle_id.is_undefined() && !mount_handle_id.is_null() {
         return Some(mount_handle_id);
@@ -219,7 +213,7 @@ fn is_plain_object_like(value: &JsValue) -> bool {
 
 // props / children 的浅相等判断：
 // - 普通情况下退化为 Object.is；
-// - 特别处理 Renderable / Renderable 数组的场景，优先用 DOM/host-node identity 来比；
+// - 特别处理 Renderable / Renderable 数组的场景，优先用 DOM identity 来比；
 // - 主要用于 propsReactive / sync_props_children，避免无意义更新。
 pub fn shallow_equal_prop(a: &JsValue, b: &JsValue) -> bool {
     if js_sys::Object::is(a, b) {
@@ -369,10 +363,6 @@ mod tests {
     fn shallow_equal_prop_covers_renderable_and_portable_edges() {
         let host = Object::new();
         Reflect::set(&host, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
-
-        let host_bridge_a = object_with("__rue_host_node", host.clone().into());
-        let host_bridge_b = object_with("__rue_host_node", host.clone().into());
-        assert!(shallow_equal_prop(&host_bridge_a, &host_bridge_b));
 
         let nodes_a = Array::new();
         nodes_a.push(&host.clone().into());

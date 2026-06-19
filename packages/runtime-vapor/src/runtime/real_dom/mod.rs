@@ -9,12 +9,9 @@ use super::Rue;
 use super::types::{MountInput, MountInputType, MountedSubtreeState};
 use crate::runtime::dom_adapter::DomAdapter;
 use wasm_bindgen::JsValue;
-#[cfg(feature = "compat")]
-mod compat_mount;
-#[cfg(feature = "compat")]
-mod compat_vapor_wrapper;
 pub(crate) mod component;
 pub(crate) mod convert;
+mod element;
 pub(crate) mod helpers;
 mod text;
 mod vapor;
@@ -30,21 +27,17 @@ where
 {
     match &input.r#type {
         MountInputType::Text(_) => text::mount_text(rue, input),
+        MountInputType::Fragment => element::mount_fragment(rue, input, parent_context),
         MountInputType::Vapor => vapor::mount_vapor(rue, input),
         MountInputType::VaporWithSetup(setup) => {
             vapor::mount_vapor_with_setup(rue, input, setup, parent_context)
         }
+        MountInputType::Element(tag) => element::mount_element(rue, input, tag, parent_context),
         MountInputType::Component(render_fn) => {
             component::mount_component(rue, input, render_fn, parent_context)
         }
-        #[cfg(feature = "compat")]
-        MountInputType::Fragment | MountInputType::Element(_) | MountInputType::_Phantom(_) => {
-            std::hint::black_box(&input.r#type);
-            None
-        }
-        #[cfg(not(feature = "compat"))]
         MountInputType::_Phantom(_) => {
-            std::hint::black_box(&input.key);
+            std::hint::black_box(&input.r#type);
             None
         }
     }
@@ -157,20 +150,6 @@ mod tests {
             Some(MountedSubtreeState::Text(_))
         ));
 
-        #[cfg(feature = "compat")]
-        {
-            let fragment =
-                MountInput::new_normalized(MountInputType::Fragment, ComponentProps::new(), vec![]);
-            assert!(mount_core_input(&mut rue, std::hint::black_box(&fragment), None).is_none());
-
-            let element = MountInput::new_normalized(
-                MountInputType::Element("compat-el".to_string()),
-                ComponentProps::new(),
-                vec![],
-            );
-            assert!(mount_core_input(&mut rue, std::hint::black_box(&element), None).is_none());
-        }
-
         let phantom = MountInput {
             r#type: MountInputType::_Phantom(std::marker::PhantomData),
             props: ComponentProps::new(),
@@ -196,24 +175,6 @@ mod tests {
         let mounted = rue.mount_from_input(&input, None);
         assert!(mounted.is_none());
         assert!(rue.get_dom_adapter_mut().is_none());
-    }
-
-    #[cfg(feature = "compat")]
-    #[wasm_bindgen_test]
-    fn mount_core_input_covers_compat_noop_arms_directly() {
-        let mut rue = Rue::<JsDomAdapter>::new();
-        rue.set_dom_adapter(make_adapter());
-
-        let fragment =
-            MountInput::new_normalized(MountInputType::Fragment, ComponentProps::new(), Vec::new());
-        assert!(mount_core_input(&mut rue, std::hint::black_box(&fragment), None).is_none());
-
-        let element = MountInput::new_normalized(
-            MountInputType::Element("compat-el".to_string()),
-            ComponentProps::new(),
-            Vec::new(),
-        );
-        assert!(mount_core_input(&mut rue, std::hint::black_box(&element), None).is_none());
     }
 
     #[wasm_bindgen_test]
@@ -309,14 +270,6 @@ where
             return None;
         }
 
-        #[cfg(feature = "compat")]
-        {
-            return compat_mount::mount_compat_input(self, input, parent_context);
-        }
-
-        #[cfg(not(feature = "compat"))]
-        {
-            mount_core_input(self, input, parent_context)
-        }
+        mount_core_input(self, input, parent_context)
     }
 }

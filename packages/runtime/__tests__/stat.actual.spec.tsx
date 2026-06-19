@@ -33,7 +33,7 @@ afterEach(() => {
 })
 
 describe('Stat actual page', () => {
-  it('keeps legacy demos and API module together on the page', async () => {
+  it('keeps demos and API module together on the page', async () => {
     const container = mountContainer()
     resetActiveRuntime()
     render(<StatPage />, container)

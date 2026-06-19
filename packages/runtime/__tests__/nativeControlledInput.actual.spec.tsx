@@ -95,7 +95,7 @@ const ProviderControlledInputCase: FC = () => {
   )
 }
 
-describe('native controlled input through compat children shell', () => {
+describe('native controlled input through renderable children shell', () => {
   it('preserves the active input element while typing ASCII', async () => {
     const container = mountContainer()
     render(<ControlledInputCase />, container)

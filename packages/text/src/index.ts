@@ -1209,7 +1209,7 @@ export default function text(options: TextOptions = {}): PluginOption[] {
       }
     }
 
-    for (const packageDir of ['pkg-node', 'pkg-node-reactive', 'pkg-node-vapor']) {
+    for (const packageDir of ['pkg-node']) {
       const runtimeFile = path.join(runtimeVaporDir, packageDir, 'rue_runtime_vapor.js')
       if (fs.existsSync(runtimeFile)) {
         registerRueServerRuntimeAlias(runtimeFile, runtimeFile)

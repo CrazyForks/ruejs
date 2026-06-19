@@ -91,11 +91,10 @@ describe('Rating actual page', () => {
     })
 
     const semanticDemo = () => findDemo(container, '# Semantic rating') as HTMLElement | null
-    const legacyAdvancedDemo = () =>
-      findDemo(container, '# Legacy clear and half') as HTMLElement | null
+    const advancedDemo = () => findDemo(container, '# Legacy clear and half') as HTMLElement | null
 
     expect(semanticDemo()).not.toBeNull()
-    expect(legacyAdvancedDemo()).not.toBeNull()
+    expect(advancedDemo()).not.toBeNull()
 
     const fourStar = semanticDemo()!.querySelector(
       'button[data-rating-index="3"]',
@@ -106,55 +105,55 @@ describe('Rating actual page', () => {
       expect(semanticDemo()!.textContent).toContain('当前评分：4')
     })
 
-    const clear = legacyAdvancedDemo()!.querySelector(
-      'input[aria-label="clear"]',
-    ) as HTMLInputElement
+    const clear = advancedDemo()!.querySelector('input[aria-label="clear"]') as HTMLInputElement
     clear.checked = true
     clear.dispatchEvent(new Event('change', { bubbles: true }))
 
     await waitForContent(() => {
-      const updatedLegacyDemo = legacyAdvancedDemo() as HTMLElement | null
-      expect(updatedLegacyDemo!.textContent).toContain('当前评分：clear')
-      expect(updatedLegacyDemo!.querySelectorAll('.rating').length).toBe(2)
+      const updatedAdvancedDemo = advancedDemo() as HTMLElement | null
+      expect(updatedAdvancedDemo!.textContent).toContain('当前评分：clear')
+      expect(updatedAdvancedDemo!.querySelectorAll('.rating').length).toBe(2)
       expect(
-        updatedLegacyDemo!.querySelectorAll('.rating')[0]?.querySelectorAll('input[type="radio"]')
+        updatedAdvancedDemo!.querySelectorAll('.rating')[0]?.querySelectorAll('input[type="radio"]')
           .length,
       ).toBe(6)
       expect(
-        updatedLegacyDemo!.querySelectorAll('.rating')[1]?.querySelectorAll('input[type="radio"]')
+        updatedAdvancedDemo!.querySelectorAll('.rating')[1]?.querySelectorAll('input[type="radio"]')
           .length,
       ).toBe(11)
-      expect(updatedLegacyDemo!.querySelectorAll('.rating')[1]?.className).toContain('rating-half')
-      expect(updatedLegacyDemo!.querySelector('input.mask.mask-star-2')?.className).toContain(
+      expect(updatedAdvancedDemo!.querySelectorAll('.rating')[1]?.className).toContain(
+        'rating-half',
+      )
+      expect(updatedAdvancedDemo!.querySelector('input.mask.mask-star-2')?.className).toContain(
         'opacity-[0.35]',
       )
       const clearableItems = Array.from(
-        updatedLegacyDemo!.querySelectorAll<HTMLInputElement>(
+        updatedAdvancedDemo!.querySelectorAll<HTMLInputElement>(
           'input[name="rating-clearable"].mask.mask-star-2',
         ),
       )
       expect(clearableItems.every(item => item.classList.contains('opacity-[0.35]'))).toBe(true)
       expect(
         (
-          updatedLegacyDemo!.querySelector(
+          updatedAdvancedDemo!.querySelector(
             'input[name="rating-clearable"][aria-label="clear"]',
           ) as HTMLInputElement
         ).checked,
       ).toBe(true)
     })
 
-    const halfFourPointFive = legacyAdvancedDemo()!.querySelector(
+    const halfFourPointFive = advancedDemo()!.querySelector(
       'input[name="rating-half"][value="4.5"]',
     ) as HTMLInputElement
     halfFourPointFive.checked = true
     halfFourPointFive.dispatchEvent(new Event('change', { bubbles: true }))
 
     await waitForContent(() => {
-      const updatedLegacyDemo = legacyAdvancedDemo() as HTMLElement | null
+      const updatedAdvancedDemo = advancedDemo() as HTMLElement | null
       const halfItems = Array.from(
-        updatedLegacyDemo!.querySelectorAll<HTMLInputElement>('input[name="rating-half"].mask'),
+        updatedAdvancedDemo!.querySelectorAll<HTMLInputElement>('input[name="rating-half"].mask'),
       )
-      expect(updatedLegacyDemo!.textContent).toContain('当前评分：4.5')
+      expect(updatedAdvancedDemo!.textContent).toContain('当前评分：4.5')
       expect(halfItems).toHaveLength(10)
       expect(halfItems.map(item => item.classList.contains('opacity-100'))).toEqual([
         true,
@@ -172,14 +171,14 @@ describe('Rating actual page', () => {
       expect(halfItems[8]?.checked).toBe(true)
     })
 
-    await click(findTabButton(legacyAdvancedDemo()!, 'JSX代码'))
-    const legacyDemoInCode = legacyAdvancedDemo() as HTMLElement | null
-    expect(legacyDemoInCode!.querySelectorAll('input[type="radio"]').length).toBe(0)
+    await click(findTabButton(advancedDemo()!, 'JSX代码'))
+    const advancedDemoInCode = advancedDemo() as HTMLElement | null
+    expect(advancedDemoInCode!.querySelectorAll('input[type="radio"]').length).toBe(0)
 
-    await click(findTabButton(legacyDemoInCode!, '预览'))
+    await click(findTabButton(advancedDemoInCode!, '预览'))
 
     await waitForContent(() => {
-      const restored = legacyAdvancedDemo() as HTMLElement | null
+      const restored = advancedDemo() as HTMLElement | null
       expect(restored!.querySelectorAll('.rating').length).toBe(2)
       expect(
         restored!.querySelectorAll('.rating')[0]?.querySelectorAll('input[type="radio"]').length,

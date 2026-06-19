@@ -16,11 +16,14 @@ use crate::reactive::core::{
 };
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::shared_runtime_bridge;
-use js_sys::{Array, Function, Object, Promise, Reflect};
+#[cfg(any(feature = "dev", test))]
+use js_sys::Array;
+use js_sys::{Function, Object, Promise, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 
+#[cfg(any(feature = "dev", test))]
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn debug_record_component_patch(record: &Object) {
     let global = js_sys::global();
@@ -471,13 +474,8 @@ where
             Some(input)
         } else if ret.is_object() {
             // 默认组件路径拒绝未知对象返回，避免把普通数据误当 DOM/handle。
-            #[cfg(feature = "compat")]
             let error = JsValue::from_str(
-                "Unsupported object returns are no longer accepted on the default component path. Return a raw node, fragment, or mount handle instead.",
-            );
-            #[cfg(not(feature = "compat"))]
-            let error = JsValue::from_str(
-                "Unsupported object returns are no longer accepted on the default component path. Return a host-node bridge, portable handle, or mount handle instead.",
+                "Unsupported object returns are no longer accepted on the default component path. Return a portable handle or mount handle instead.",
             );
             self.handle_error(error.clone());
             None
@@ -563,50 +561,54 @@ where
 
                 if let Some(a) = self.get_dom_adapter_mut() {
                     if let Some(ref el_old) = old.el {
-                        let old_el_js: JsValue = el_old.clone().into();
-                        let old_class = Reflect::get(&old_el_js, &JsValue::from_str("className"))
-                            .unwrap_or(JsValue::UNDEFINED);
-                        let old_class_string = old_class.as_string().unwrap_or_default();
-                        if old_class_string.contains("sidebar-playground") {
-                            let record = Object::new();
-                            let dest_parent_js: JsValue = dest_parent.clone().into();
-                            let new_el_js: JsValue = el_new.clone().into();
-                            let anchor_value = match anchor_opt.clone() {
-                                Some(anchor) => anchor.into(),
-                                None => JsValue::NULL,
-                            };
-                            let _ = Reflect::set(
-                                &record,
-                                &JsValue::from_str("instIndex"),
-                                &old.comp_inst_index
-                                    .map(|idx| JsValue::from_f64(idx as f64))
-                                    .unwrap_or(JsValue::NULL),
-                            );
-                            let _ = Reflect::set(
-                                &record,
-                                &JsValue::from_str("oldClass"),
-                                &JsValue::from_str(&old_class_string),
-                            );
-                            let _ = Reflect::set(
-                                &record,
-                                &JsValue::from_str("parentClass"),
-                                &Reflect::get(&dest_parent_js, &JsValue::from_str("className"))
-                                    .unwrap_or(JsValue::UNDEFINED),
-                            );
-                            let _ = Reflect::set(
-                                &record,
-                                &JsValue::from_str("newClass"),
-                                &Reflect::get(&new_el_js, &JsValue::from_str("className"))
-                                    .unwrap_or(JsValue::UNDEFINED),
-                            );
-                            let _ = Reflect::set(
-                                &record,
-                                &JsValue::from_str("anchorPresent"),
-                                &JsValue::from_bool(
-                                    !anchor_value.is_null() && !anchor_value.is_undefined(),
-                                ),
-                            );
-                            debug_record_component_patch(&record);
+                        #[cfg(any(feature = "dev", test))]
+                        {
+                            let old_el_js: JsValue = el_old.clone().into();
+                            let old_class =
+                                Reflect::get(&old_el_js, &JsValue::from_str("className"))
+                                    .unwrap_or(JsValue::UNDEFINED);
+                            let old_class_string = old_class.as_string().unwrap_or_default();
+                            if old_class_string.contains("sidebar-playground") {
+                                let record = Object::new();
+                                let dest_parent_js: JsValue = dest_parent.clone().into();
+                                let new_el_js: JsValue = el_new.clone().into();
+                                let anchor_value = match anchor_opt.clone() {
+                                    Some(anchor) => anchor.into(),
+                                    None => JsValue::NULL,
+                                };
+                                let _ = Reflect::set(
+                                    &record,
+                                    &JsValue::from_str("instIndex"),
+                                    &old.comp_inst_index
+                                        .map(|idx| JsValue::from_f64(idx as f64))
+                                        .unwrap_or(JsValue::NULL),
+                                );
+                                let _ = Reflect::set(
+                                    &record,
+                                    &JsValue::from_str("oldClass"),
+                                    &JsValue::from_str(&old_class_string),
+                                );
+                                let _ = Reflect::set(
+                                    &record,
+                                    &JsValue::from_str("parentClass"),
+                                    &Reflect::get(&dest_parent_js, &JsValue::from_str("className"))
+                                        .unwrap_or(JsValue::UNDEFINED),
+                                );
+                                let _ = Reflect::set(
+                                    &record,
+                                    &JsValue::from_str("newClass"),
+                                    &Reflect::get(&new_el_js, &JsValue::from_str("className"))
+                                        .unwrap_or(JsValue::UNDEFINED),
+                                );
+                                let _ = Reflect::set(
+                                    &record,
+                                    &JsValue::from_str("anchorPresent"),
+                                    &JsValue::from_bool(
+                                        !anchor_value.is_null() && !anchor_value.is_undefined(),
+                                    ),
+                                );
+                                debug_record_component_patch(&record);
+                            }
                         }
                         if a.contains(&dest_parent, el_old) {
                             let mut p2 = dest_parent.clone();

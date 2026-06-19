@@ -57,7 +57,7 @@ const SlotHost: FC = () => {
 }
 
 const EventEmitter: FC<Record<string, unknown>> = props => {
-  const emit = runtimeMain.emitted(props as any)
+  const emit = runtimeMain.useEmit(props as any)
 
   return (
     <button data-testid="emit-btn" onClick={() => emit('change', 42, 'ok')}>

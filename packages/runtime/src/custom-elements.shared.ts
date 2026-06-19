@@ -1,7 +1,7 @@
 /*
 Custom Element 共享协议概述
 - 自定义元素包装层通过隐藏 prop 注入 emit bridge。
-- rue.ts / vapor-runtime.ts 的 emitted() 会读取该 bridge，把组件 emit 同步为 DOM CustomEvent。
+- rue.ts / vapor-runtime.ts 的 useEmit() 会读取该 bridge，把组件 emit 同步为 DOM CustomEvent。
 */
 
 /** 注入到组件 props 上的自定义元素 emit bridge 隐藏字段名。 */

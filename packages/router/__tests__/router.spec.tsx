@@ -90,6 +90,37 @@ describe('rue router', () => {
     })
   })
 
+  it('preserves query strings in history while matching routes by pathname', async () => {
+    const router = createRouter({
+      history: createMemoryHistory('/products?tab=all'),
+      routes: [
+        { path: '/', name: 'home', component: EmptyPage },
+        { path: '/products', name: 'products', component: EmptyPage },
+        { path: '/products/:id(\\d+)', name: 'product-detail', component: EmptyPage },
+      ],
+    })
+
+    expect(router.currentPath.get()).toBe('/products')
+    expect(router.route.get()?.name).toBe('products')
+    expect(router.history.location()).toBe('/products?tab=all')
+
+    await expect(router.push('/products?q=router&tab=router&page=1')).resolves.toBeUndefined()
+
+    expect(router.currentPath.get()).toBe('/products')
+    expect(router.route.get()?.name).toBe('products')
+    expect(router.history.location()).toBe('/products?q=router&tab=router&page=1')
+
+    const duplicated = await router.push('/products?q=router&tab=router&page=1')
+    expect(isNavigationFailure(duplicated, NavigationFailureType.duplicated)).toBe(true)
+
+    await expect(router.push('/products/42?preview=1#details')).resolves.toBeUndefined()
+
+    expect(router.currentPath.get()).toBe('/products/42')
+    expect(router.route.get()?.name).toBe('product-detail')
+    expect(router.route.get()?.params).toEqual({ id: '42' })
+    expect(router.history.location()).toBe('/products/42?preview=1#details')
+  })
+
   it('reports duplicated and aborted navigation failures through guards', async () => {
     const events: string[] = []
     const router = createRouter({
@@ -213,6 +244,9 @@ describe('rue router', () => {
         <RouterLink data-testid="home-link" to="/" replace>
           Home
         </RouterLink>
+        <RouterLink data-testid="home-query-link" to="/?panel=search">
+          Home Query
+        </RouterLink>
         <RouterView />
       </main>
     )
@@ -263,6 +297,25 @@ describe('rue router', () => {
     await flushRender()
 
     expect(router.currentPath.get()).toBe('/')
+    expect(container.querySelector('[data-testid="page"]')?.textContent).toBe('Home')
+
+    const homeQueryLink = container.querySelector(
+      '[data-testid="home-query-link"]',
+    ) as HTMLAnchorElement
+    expect(homeQueryLink.getAttribute('href')).toBe('/?panel=search')
+
+    homeQueryLink.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        button: 0,
+        cancelable: true,
+      }),
+    )
+    await router.isReady()
+    await flushRender()
+
+    expect(router.currentPath.get()).toBe('/')
+    expect(router.history.location()).toBe('/?panel=search')
     expect(container.querySelector('[data-testid="page"]')?.textContent).toBe('Home')
   })
 })

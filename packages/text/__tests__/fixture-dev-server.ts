@@ -21,7 +21,7 @@ const SERVER_RENDERER_REQUIRED_FILES = [
   'dist/server-renderer.cjs.js',
   'dist/server-renderer.cjs.prod.js',
 ] as const
-const RUNTIME_VAPOR_PACKAGE_DIRS = ['pkg', 'pkg-node', 'pkg-node-reactive', 'pkg-node-vapor']
+const RUNTIME_VAPOR_PACKAGE_DIRS = ['pkg', 'pkg-node']
 const RUNTIME_VAPOR_REQUIRED_FILES = [
   'package.json',
   'rue_runtime_vapor.js',

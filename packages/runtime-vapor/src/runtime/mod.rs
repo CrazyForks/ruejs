@@ -12,7 +12,9 @@ Runtime 模块出口
 mod bridge;
 mod core;
 mod dom_adapter;
+mod error_strings;
 mod globals;
+mod input_props;
 mod instance;
 mod js_adapter;
 mod props;
@@ -23,7 +25,6 @@ mod render_patch;
 mod shared_runtime_bridge;
 mod transport;
 mod types;
-mod vnode_helpers;
 
 pub use bridge::{WasmRue, createRue};
 pub use core::Rue;
@@ -34,7 +35,7 @@ pub use instance::*;
 pub use js_adapter::JsDomAdapter;
 pub use props::*;
 pub use types::{
-    ComponentProps, FC, FRAGMENT, MountInput, MountInputChild, MountInputType, PropsWithChildren,
+    ComponentProps, FC, MountInput, MountInputChild, MountInputType, PropsWithChildren,
 };
 
 #[doc(hidden)]

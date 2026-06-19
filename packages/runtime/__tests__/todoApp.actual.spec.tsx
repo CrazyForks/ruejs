@@ -377,7 +377,7 @@ describe('TodoApp actual page', () => {
     expect(Number.isNaN(new Date(addedTodo?.createdAt ?? '').getTime())).toBe(false)
   })
 
-  it('migrates legacy createdAt labels from localStorage and preserves fallback order', async () => {
+  it('migrates createdAt labels from localStorage and preserves fallback order', async () => {
     localStorage.setItem(
       TODO_STORAGE_KEY,
       JSON.stringify({

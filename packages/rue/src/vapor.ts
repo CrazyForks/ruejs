@@ -193,6 +193,8 @@ export {
   nextTick,
   /** 配置响应式调度策略，例如同步、微任务或帧调度。 */
   setReactiveScheduling,
+  /** 从组件 props 中创建 emit 事件调用器。 */
+  useEmit,
   /** 在响应式 flush 后运行并追踪依赖的 watch effect。 */
   watchPostEffect,
   /** 动态组件入口，根据 is/component 参数选择实际组件。 */

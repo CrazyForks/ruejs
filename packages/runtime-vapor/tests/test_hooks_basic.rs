@@ -83,7 +83,7 @@ fn use_memo_caches_until_deps_change() {
 }
 
 #[wasm_bindgen_test]
-fn use_memo_empty_deps_reuses_jsx_like_object_value() {
+fn use_memo_empty_deps_reuses_object_value() {
     let inst = Object::new();
     set_current_instance(inst.clone().into());
 
@@ -91,10 +91,9 @@ fn use_memo_empty_deps_reuses_jsx_like_object_value() {
     let hits2 = hits.clone();
     let factory = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
         *hits2.borrow_mut() += 1;
-        let vnode = Object::new();
-        Reflect::set(&vnode, &JsValue::from_str("type"), &JsValue::from_str("span")).unwrap();
-        Reflect::set(&vnode, &JsValue::from_str("props"), &Object::new()).unwrap();
-        vnode.into()
+        let value = Object::new();
+        Reflect::set(&value, &JsValue::from_str("kind"), &JsValue::from_str("memo")).unwrap();
+        value.into()
     }) as Box<dyn FnMut() -> JsValue>);
     let f: Function = factory.as_ref().clone().unchecked_into();
 

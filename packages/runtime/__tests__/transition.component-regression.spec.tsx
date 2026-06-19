@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   _$vaporKeyedList,
@@ -14,6 +14,14 @@ import {
   vapor,
   watchEffect,
 } from '../src'
+import {
+  _$createComponent,
+  _$vaporWithKey,
+  renderAnchor as renderVaporAnchor,
+  vapor as vaporRuntime,
+  watchEffect as watchVaporEffect,
+} from '../src/vapor'
+import * as TransitionUtils from '../src/components/transitionUtils'
 import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
@@ -32,6 +40,7 @@ afterEach(() => {
     render(null as any, container)
   }
   mountedContainers.length = 0
+  vi.restoreAllMocks()
   document.body.innerHTML = ''
 })
 
@@ -438,6 +447,176 @@ describe('built-in transition component regressions', () => {
     expect(
       container
         .querySelector('[data-testid="head-item-6"]')
+        ?.classList.contains('fade-enter-active'),
+    ).toBe(true)
+  })
+
+  it('keeps the FLIP transform applied while enabling the move transition class', async () => {
+    const moveTransforms: string[] = []
+    const originalAddClass = TransitionUtils.addClass
+
+    vi.spyOn(TransitionUtils, 'addClass').mockImplementation((el, cls) => {
+      if (cls === 'fade-move') {
+        moveTransforms.push(el.style.transform)
+      }
+      originalAddClass(el, cls)
+    })
+
+    const rect = (top: number): DOMRect =>
+      ({
+        x: 0,
+        y: top,
+        width: 100,
+        height: 16,
+        top,
+        right: 100,
+        bottom: top + 16,
+        left: 0,
+        toJSON: () => ({}),
+      }) as DOMRect
+
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: Element) {
+        if (this instanceof HTMLElement && this.tagName === 'LI' && this.parentElement) {
+          const siblings = Array.from(this.parentElement.children).filter(
+            child => child instanceof HTMLElement && !child.hasAttribute('data-rue-leaving'),
+          )
+          return rect(siblings.indexOf(this) * 24)
+        }
+        return rect(0)
+      },
+    )
+
+    const Example = () => {
+      const setupState = _$vaporWithHookId('useSetup:transition-group-move-order:0', () =>
+        useSetup(() => ({
+          items: ref<number[]>([1, 2, 3]),
+        })),
+      ) as { items: { value: number[] } }
+
+      return vapor(() => {
+        const root = document.createElement('section')
+        const button = document.createElement('button')
+        const anchor = document.createComment('transition-group-move-anchor')
+
+        button.id = 'reverse-move'
+        button.textContent = 'reverse'
+        button.addEventListener('click', () => {
+          setupState.items.value = setupState.items.value.slice().reverse()
+        })
+
+        root.append(button, anchor)
+
+        watchEffect(() => {
+          renderAnchor(
+            <TransitionGroup tag="ul" name="fade" type="transition" duration={1000}>
+              {setupState.items.value.map(item => (
+                <li data-testid={`move-item-${item}`} key={item}>
+                  {item}
+                </li>
+              ))}
+            </TransitionGroup>,
+            root,
+            anchor,
+          )
+        })
+
+        return root
+      })
+    }
+
+    const container = mountTestContainer()
+
+    render(<Example />, container)
+    await flush()
+
+    ;(container.querySelector('#reverse-move') as HTMLButtonElement).click()
+    await flush()
+
+    expect(Array.from(container.querySelectorAll('li'), el => el.textContent)).toEqual([
+      '3',
+      '2',
+      '1',
+    ])
+    expect(moveTransforms.some(value => value.startsWith('translate('))).toBe(true)
+  })
+
+  it('animates a compiled-style TransitionGroup insert', async () => {
+    const Example = () => {
+      const setupState = _$vaporWithHookId('useSetup:compiled-transition-group:0', () =>
+        useSetup(() => ({
+          items: ref<number[]>([1, 2, 3]),
+          nextId: ref(4),
+        })),
+      ) as { items: { value: number[] }; nextId: { value: number } }
+
+      return vaporRuntime(() => {
+        const root = document.createElement('section')
+        const button = document.createElement('button')
+        const anchor = document.createComment('compiled-transition-group-anchor')
+
+        button.id = 'compiled-insert'
+        button.textContent = 'insert compiled'
+        button.addEventListener('click', () => {
+          const nextItems = setupState.items.value.slice()
+          nextItems.splice(0, 0, setupState.nextId.value)
+          setupState.items.value = nextItems
+          setupState.nextId.value += 1
+        })
+
+        root.append(button, anchor)
+
+        watchVaporEffect(() => {
+          const slot = _$createComponent(TransitionGroup, {
+            tag: 'ul',
+            name: 'fade',
+            type: 'transition',
+            duration: 1000,
+            children: setupState.items.value.map(item =>
+              _$vaporWithKey(
+                vaporRuntime(() => {
+                  const fragment = document.createDocumentFragment()
+                  const li = document.createElement('li')
+                  li.dataset.testid = `compiled-item-${item}`
+                  li.setAttribute('key', String(item))
+                  li.textContent = String(item)
+                  fragment.appendChild(li)
+                  return fragment as any
+                }),
+                item,
+              ),
+            ),
+          })
+          renderVaporAnchor(slot, root as any, anchor as any)
+        })
+
+        return root as any
+      })
+    }
+
+    const container = mountTestContainer()
+
+    render(<Example />, container)
+    await flush()
+
+    expect(Array.from(container.querySelectorAll('li'), el => el.textContent)).toEqual([
+      '1',
+      '2',
+      '3',
+    ])
+
+    ;(container.querySelector('#compiled-insert') as HTMLButtonElement).click()
+    await flush()
+
+    expect(Array.from(container.querySelectorAll('li'), el => el.textContent)).toEqual([
+      '4',
+      '1',
+      '2',
+      '3',
+    ])
+    expect(
+      container
+        .querySelector('[data-testid="compiled-item-4"]')
         ?.classList.contains('fade-enter-active'),
     ).toBe(true)
   })

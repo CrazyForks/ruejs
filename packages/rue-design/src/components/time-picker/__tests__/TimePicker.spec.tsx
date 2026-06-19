@@ -243,7 +243,7 @@ describe('TimePicker', () => {
         <div>
           <TimePicker
             {...fastPickerProps}
-            value={currentValue.value}
+            value={currentValue}
             needConfirm
             data-testid="controlled-confirm-picker"
           />
@@ -367,7 +367,7 @@ describe('TimePicker', () => {
         return (
           <TimePicker
             {...fastPickerProps}
-            value={currentValue.value}
+            value={currentValue}
             onChange={nextValue => {
               currentValue.value = nextValue ?? ''
               handleChange(nextValue)
@@ -478,7 +478,7 @@ describe('TimePicker', () => {
           <div>
             <TimePicker
               {...fastPickerProps}
-              value={currentValue.value}
+              value={currentValue}
               onChange={(nextValue, timeString) => {
                 currentValue.value = nextValue ?? ''
                 liveValue.value = timeString || '未选择'
@@ -556,7 +556,7 @@ describe('TimePicker', () => {
           <div>
             <TimePicker
               {...fastPickerProps}
-              value={currentValue.value}
+              value={currentValue}
               onChange={(nextValue, timeString) => {
                 currentValue.value = nextValue ?? ''
                 liveValue.value = timeString || '未选择'
@@ -622,7 +622,7 @@ describe('TimePicker', () => {
           <div>
             <TimePicker
               {...fastPickerProps}
-              value={currentValue.value}
+              value={currentValue}
               onChange={(nextValue, timeString) => {
                 currentValue.value = nextValue ?? ''
                 liveValue.value = timeString || '未选择'
@@ -691,7 +691,7 @@ describe('TimePicker', () => {
             <TimePicker
               {...fastPickerProps}
               secondStep={30}
-              value={currentValue.value}
+              value={currentValue}
               onChange={(nextValue, timeString) => {
                 currentValue.value = nextValue ?? ''
                 liveValue.value = timeString || '未选择'
@@ -759,7 +759,7 @@ describe('TimePicker', () => {
           <div>
             <TimePicker
               {...fastPickerProps}
-              value={currentValue.value}
+              value={currentValue}
               onInput={event => {
                 liveValue.value =
                   ((event.target as HTMLInputElement | null)?.value ?? '').trim() || '未选择'
@@ -1054,7 +1054,7 @@ describe('TimePicker', () => {
           <div>
             <TimePicker.RangePicker
               {...fastPickerProps}
-              value={rangeValue.value}
+              value={rangeValue}
               allowClear
               onChange={nextValues => {
                 rangeValue.value = nextValues

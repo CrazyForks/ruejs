@@ -19,7 +19,7 @@ const RUE_CONTEXT_PROVIDER_PROPS_MARKER = '__rue_context_provider_props__'
 const RUE_PORTABLE_COMPONENT_TYPE_PROP = '__rue_component_type'
 const RUE_PORTABLE_PROPS_PROP = 'props'
 const RUE_REPEATABLE_MOUNT_FACTORY_PROP = '__rue_repeatable_mount_factory__'
-const TEXT_COMPAT_CONTEXT_VALUE_STACK_KEY = Symbol.for('text.compatContextValueStack')
+const TEXT_CONTEXT_VALUE_STACK_KEY = Symbol.for('text.contextValueStack')
 
 type ContextualComponent = (props: Record<string, unknown>) => unknown
 
@@ -91,11 +91,11 @@ const asContextCarrier = (value: unknown): ContextCarrier | null => {
   return value as ContextCarrier
 }
 
-const readTextCompatContextValue = <T>(
+const readTextContextValue = <T>(
   context: RueContext<T>,
 ): { found: true; value: T } | { found: false } => {
-  const stack = (globalThis as { [TEXT_COMPAT_CONTEXT_VALUE_STACK_KEY]?: unknown })[
-    TEXT_COMPAT_CONTEXT_VALUE_STACK_KEY
+  const stack = (globalThis as { [TEXT_CONTEXT_VALUE_STACK_KEY]?: unknown })[
+    TEXT_CONTEXT_VALUE_STACK_KEY
   ]
   if (!Array.isArray(stack)) return { found: false }
 
@@ -343,9 +343,9 @@ export const createContext = <T>(defaultValue: T): RueContext<T> => {
 
 /** 从当前组件 owner 向上查找 context 值，未命中时返回默认值。 */
 export const useContext = <T>(context: RueContext<T>): T => {
-  const textCompatProvided = readTextCompatContextValue(context)
-  if (textCompatProvided.found) {
-    return textCompatProvided.value
+  const textProvided = readTextContextValue(context)
+  if (textProvided.found) {
+    return textProvided.value
   }
 
   let currentInstance = getCurrentInstance()

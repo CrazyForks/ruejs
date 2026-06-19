@@ -86,14 +86,14 @@ impl WasmRue {
                 let mut queue = self.pending_render.borrow_mut();
                 if queue.is_empty() { None } else { Some(queue.remove(0)) }
             };
-            if let Some((vnode_r, cont_r)) = r {
+            if let Some((input_r, cont_r)) = r {
                 match self.inner.try_borrow_mut() {
                     Ok(mut inner_r) => {
                         let mut cr = cont_r.clone();
-                        inner_r.render_input(vnode_r, (&mut cr).into());
+                        inner_r.render_input(input_r, (&mut cr).into());
                     }
                     Err(_) => {
-                        self.pending_render.borrow_mut().push((vnode_r, cont_r));
+                        self.pending_render.borrow_mut().push((input_r, cont_r));
                         break;
                     }
                 }
@@ -103,8 +103,8 @@ impl WasmRue {
                 let mut queue = self.pending_between.borrow_mut();
                 if queue.is_empty() { None } else { Some(queue.remove(0)) }
             };
-            if let Some((vnode_b, p_b, s_b, e_b)) = b {
-                if self.process_between_item(vnode_b, p_b, s_b, e_b) {
+            if let Some((input_b, p_b, s_b, e_b)) = b {
+                if self.process_between_item(input_b, p_b, s_b, e_b) {
                     continue;
                 }
                 break;
@@ -113,8 +113,8 @@ impl WasmRue {
                 let mut queue = self.pending_anchor.borrow_mut();
                 if queue.is_empty() { None } else { Some(queue.remove(0)) }
             };
-            if let Some((vnode_a, p_a, anchor_a)) = a {
-                if self.process_anchor_item(vnode_a, p_a, anchor_a) {
+            if let Some((input_a, p_a, anchor_a)) = a {
+                if self.process_anchor_item(input_a, p_a, anchor_a) {
                     continue;
                 }
                 break;
@@ -123,8 +123,8 @@ impl WasmRue {
                 let mut queue = self.pending_static.borrow_mut();
                 if queue.is_empty() { None } else { Some(queue.remove(0)) }
             };
-            if let Some((vnode_s, p_s, a_s)) = s {
-                if self.process_static_item(vnode_s, p_s, a_s) {
+            if let Some((input_s, p_s, a_s)) = s {
+                if self.process_static_item(input_s, p_s, a_s) {
                     continue;
                 }
                 break;
@@ -136,7 +136,7 @@ impl WasmRue {
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn process_between_item(
         &self,
-        vnode: MountInput<JsDomAdapter>,
+        input: MountInput<JsDomAdapter>,
         parent: JsValue,
         start: JsValue,
         end: JsValue,
@@ -145,7 +145,7 @@ impl WasmRue {
             Ok(mut inner) => {
                 let mut parent_ref = parent.clone();
                 inner.render_between_input(
-                    vnode,
+                    input,
                     (&mut parent_ref).into(),
                     start.into(),
                     end.into(),
@@ -153,7 +153,7 @@ impl WasmRue {
                 true
             }
             Err(_) => {
-                self.pending_between.borrow_mut().push((vnode, parent, start, end));
+                self.pending_between.borrow_mut().push((input, parent, start, end));
                 false
             }
         }
@@ -162,18 +162,18 @@ impl WasmRue {
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn process_anchor_item(
         &self,
-        vnode: MountInput<JsDomAdapter>,
+        input: MountInput<JsDomAdapter>,
         parent: JsValue,
         anchor: JsValue,
     ) -> bool {
         match self.inner.try_borrow_mut() {
             Ok(mut inner) => {
                 let mut parent_ref = parent.clone();
-                inner.render_anchor_input(vnode, (&mut parent_ref).into(), anchor.into());
+                inner.render_anchor_input(input, (&mut parent_ref).into(), anchor.into());
                 true
             }
             Err(_) => {
-                self.pending_anchor.borrow_mut().push((vnode, parent, anchor));
+                self.pending_anchor.borrow_mut().push((input, parent, anchor));
                 false
             }
         }
@@ -182,18 +182,18 @@ impl WasmRue {
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn process_static_item(
         &self,
-        vnode: MountInput<JsDomAdapter>,
+        input: MountInput<JsDomAdapter>,
         parent: JsValue,
         anchor: JsValue,
     ) -> bool {
         match self.inner.try_borrow_mut() {
             Ok(mut inner) => {
                 let mut parent_ref = parent.clone();
-                inner.render_static_input(vnode, (&mut parent_ref).into(), anchor.into());
+                inner.render_static_input(input, (&mut parent_ref).into(), anchor.into());
                 true
             }
             Err(_) => {
-                self.pending_static.borrow_mut().push((vnode, parent, anchor));
+                self.pending_static.borrow_mut().push((input, parent, anchor));
                 false
             }
         }

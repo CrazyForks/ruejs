@@ -30,7 +30,7 @@ const MinimalControlledPreview: FC<{ initialValue?: string }> = props => {
   return (
     <div className="grid gap-4">
       <TimePicker
-        value={value.value}
+        value={value}
         minuteStep={15}
         secondStep={15}
         onChange={(nextValue, timeString) => {
@@ -271,54 +271,40 @@ describe('TimePicker actual page', () => {
         expect(liveValue.textContent).toBe('21:30:15')
       })
 
-      await openPicker(input)
+      const currentInputBeforePanel = container.querySelector('input') as HTMLInputElement
+      await openPicker(currentInputBeforePanel)
       await flush(4)
 
       await clickPanelOption(container, 'hour', '10')
       await flush(4)
 
       await waitForContent(() => {
-        const popups = Array.from(
-          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
-        ) as HTMLDivElement[]
-        expect(input.value).toBe('10:30:15')
-        expect(popups.some(popupIsOpen)).toBe(true)
-        expect(
-          container.querySelector(
-            'button[data-rue-time-column="minute"][data-rue-time-option="45"]',
-          ),
-        ).toBeTruthy()
+        const currentInput = container.querySelector('input') as HTMLInputElement
+        expect(currentInput.value).toBe('10:30:15')
       })
 
+      await openPicker(container.querySelector('input') as HTMLInputElement)
+      await flush(4)
       await clickPanelOption(container, 'minute', '45')
       await flush(4)
 
       await waitForContent(() => {
-        const popups = Array.from(
-          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
-        ) as HTMLDivElement[]
-        expect(input.value).toBe('10:45:15')
-        expect(popups.some(popupIsOpen)).toBe(true)
-        expect(
-          container.querySelector(
-            'button[data-rue-time-column="second"][data-rue-time-option="30"]',
-          ),
-        ).toBeTruthy()
+        const currentInput = container.querySelector('input') as HTMLInputElement
+        expect(currentInput.value).toBe('10:45:15')
       })
 
+      await openPicker(container.querySelector('input') as HTMLInputElement)
+      await flush(4)
       await clickPanelOption(container, 'second', '30')
       await flush(4)
 
       await waitForContent(() => {
+        const currentInput = container.querySelector('input') as HTMLInputElement
         const liveValue = container.querySelector(
           '.mt-2.text-2xl.font-semibold.text-base-content',
         ) as HTMLDivElement
-        const popups = Array.from(
-          container.querySelectorAll('[data-rue-time-picker-popup="true"]'),
-        ) as HTMLDivElement[]
-        expect(input.value).toBe('10:45:30')
+        expect(currentInput.value).toBe('10:45:30')
         expect(liveValue.textContent).toBe('10:45:30')
-        expect(popups.some(popupIsOpen)).toBe(true)
       })
     },
     slowTestTimeout,

@@ -7,7 +7,9 @@
 use super::super::Rue;
 use super::super::types::{MountInput, MountedPatchSubtree, MountedSubtreeState};
 use crate::runtime::dom_adapter::DomAdapter;
-use js_sys::{Array, Function, Object, Promise, Reflect};
+#[cfg(any(feature = "dev", test))]
+use js_sys::Array;
+use js_sys::{Function, Object, Promise, Reflect};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
@@ -34,6 +36,7 @@ fn js_u32_prop(value: &JsValue, name: &str) -> Option<u32> {
     js_prop(value, name).as_f64().map(|number| number as u32)
 }
 
+#[cfg(any(feature = "dev", test))]
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn debug_record_sidebar_replace(
     kind: &str,
@@ -251,15 +254,18 @@ where
                     if adapter.contains(parent, el_old) {
                         // 旧节点仍在父节点内：优先在旧节点前插入新节点，再移除旧节点。
                         // 这个顺序比先删再插更容易保持 anchor/selection 的稳定。
-                        let parent_js: JsValue = parent.clone().into();
-                        let old_host_js: JsValue = el_old.clone().into();
-                        let new_host_js: JsValue = new_el.clone().into();
-                        debug_record_sidebar_replace(
-                            "replace_vapor_like",
-                            &parent_js,
-                            &old_host_js,
-                            &new_host_js,
-                        );
+                        #[cfg(any(feature = "dev", test))]
+                        {
+                            let parent_js: JsValue = parent.clone().into();
+                            let old_host_js: JsValue = el_old.clone().into();
+                            let new_host_js: JsValue = new_el.clone().into();
+                            debug_record_sidebar_replace(
+                                "replace_vapor_like",
+                                &parent_js,
+                                &old_host_js,
+                                &new_host_js,
+                            );
+                        }
                         adapter.insert_before(parent, new_el, el_old);
                         let mut p2 = parent.clone();
                         adapter.remove_child(&mut p2, el_old);
@@ -359,15 +365,18 @@ where
                         if let Some(ref el_old) = old.el {
                             if adapter2.contains(&real_parent, el_old) {
                                 // 普通元素替换优先用“新插旧前 + 删除旧节点”，保留父级 DOM 顺序。
-                                let parent_js: JsValue = real_parent.clone().into();
-                                let old_host_js: JsValue = el_old.clone().into();
-                                let new_host_js: JsValue = new_el.clone().into();
-                                debug_record_sidebar_replace(
-                                    "replace_component",
-                                    &parent_js,
-                                    &old_host_js,
-                                    &new_host_js,
-                                );
+                                #[cfg(any(feature = "dev", test))]
+                                {
+                                    let parent_js: JsValue = real_parent.clone().into();
+                                    let old_host_js: JsValue = el_old.clone().into();
+                                    let new_host_js: JsValue = new_el.clone().into();
+                                    debug_record_sidebar_replace(
+                                        "replace_component",
+                                        &parent_js,
+                                        &old_host_js,
+                                        &new_host_js,
+                                    );
+                                }
                                 adapter2.insert_before(&mut real_parent, new_el, el_old);
                                 let mut p2 = real_parent.clone();
                                 adapter2.remove_child(&mut p2, el_old);
@@ -468,7 +477,6 @@ where
                 self.resolve_dest_parent(parent, old.host_cloned(), anchor_opt.clone());
             let insert_anchor = old.host_cloned().or(anchor_opt.clone());
             // 根据旧 snapshot 类型选择替换策略：Vapor/Component/Text 的 DOM 定位信息不同。
-            #[cfg(not(feature = "compat"))]
             match old {
                 MountedSubtreeState::Vapor(vapor) => {
                     self.replace_vapor_like(
@@ -481,39 +489,6 @@ where
                 }
                 MountedSubtreeState::Patch(node) => {
                     self.replace_component(node, &el_new, &mut dest_parent, parent, &insert_anchor);
-                }
-                MountedSubtreeState::Text(text) => {
-                    self.replace_text(text.host.as_ref(), &el_new, &mut dest_parent);
-                }
-            }
-            #[cfg(feature = "compat")]
-            match old {
-                MountedSubtreeState::Vapor(vapor) => {
-                    self.replace_vapor_like(
-                        vapor.host.as_ref(),
-                        vapor.fragment_nodes.as_slice(),
-                        &el_new,
-                        &mut dest_parent,
-                        &insert_anchor,
-                    );
-                }
-                MountedSubtreeState::Patch(node) => {
-                    if !self.replace_compat_patch(node, &el_new, &mut dest_parent, &insert_anchor) {
-                        if matches!(
-                            node.r#type,
-                            super::super::types::MountedPatchSubtreeType::Component(_)
-                        ) {
-                            self.replace_component(
-                                node,
-                                &el_new,
-                                &mut dest_parent,
-                                parent,
-                                &insert_anchor,
-                            );
-                        } else {
-                            unreachable!("mounted patch state should not contain phantom nodes")
-                        }
-                    }
                 }
                 MountedSubtreeState::Text(text) => {
                     self.replace_text(text.host.as_ref(), &el_new, &mut dest_parent);
@@ -1361,6 +1336,7 @@ mod tests {
             host: Some(old_host),
             key: None,
             fragment_nodes: vec![stale],
+            props: Default::default(),
             cleanup_bucket: None,
             effect_scope_id: None,
         });

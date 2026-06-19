@@ -355,7 +355,7 @@ describe('render entry Renderable bridge', () => {
     expect(parentB.querySelectorAll('strong')).toHaveLength(1)
   })
 
-  it('rejects inline compat child objects while building default handles', () => {
+  it('rejects inline unsupported child objects while building default handles', () => {
     expect(() =>
       h('fragment', null, { type: 'strong', props: {}, children: ['A'] } as any),
     ).toThrow(/Unsupported object inputs are no longer accepted/)
@@ -780,7 +780,7 @@ describe('render entry Renderable bridge', () => {
     expect(parent.textContent).toBe('')
   })
 
-  it('updates a compat fragment inside renderAnchor', async () => {
+  it('updates a mount-handle fragment inside renderAnchor', async () => {
     const parent = document.createElement('div')
     const anchor = document.createComment('anchor')
 

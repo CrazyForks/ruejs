@@ -15,15 +15,8 @@ mod common;
 
 use common::{make_vapor_only_adapter, setup_container, tick};
 
-fn host_bridge(tag: &str) -> JsValue {
-    let host = Object::new();
-    Reflect::set(&host, &JsValue::from_str("tag"), &JsValue::from_str(tag)).unwrap();
-    Reflect::set(&host, &JsValue::from_str("children"), &Array::new().into()).unwrap();
-    Reflect::set(&host, &JsValue::from_str("nodeType"), &JsValue::from_f64(1.0)).unwrap();
-
-    let bridge = Object::new();
-    Reflect::set(&bridge, &JsValue::from_str("__rue_host_node"), &host.into()).unwrap();
-    bridge.into()
+fn primitive_host(tag: &str) -> JsValue {
+    JsValue::from_str(tag)
 }
 
 #[wasm_bindgen_test]
@@ -535,7 +528,7 @@ async fn render_triggered_hook_receives_signal_event_and_can_dispose_effect_befo
         *handle_slot_for_component.borrow_mut() = Some(handle);
         effect_cb.forget();
 
-        host_bridge("triggered-child")
+        primitive_host("triggered-child")
     })
         as Box<dyn FnMut(JsValue) -> JsValue>);
 
@@ -580,7 +573,7 @@ async fn render_debug_owner_without_triggered_hooks_still_schedules_effect() {
         let _handle = create_effect(effect_cb.as_ref().clone().into(), None);
         effect_cb.forget();
 
-        host_bridge("unhooked-debug-owner")
+        primitive_host("unhooked-debug-owner")
     })
         as Box<dyn FnMut(JsValue) -> JsValue>);
 

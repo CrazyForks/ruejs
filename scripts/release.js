@@ -209,20 +209,7 @@ async function ensureRuntimeVaporBuilt() {
     __dirname,
     '../packages/runtime-vapor/pkg-node/rue_runtime_vapor.js',
   )
-  const runtimeVaporReactiveEntry = path.resolve(
-    __dirname,
-    '../packages/runtime-vapor/pkg-node-reactive/rue_runtime_vapor.js',
-  )
-  const runtimeVaporVaporEntry = path.resolve(
-    __dirname,
-    '../packages/runtime-vapor/pkg-node-vapor/rue_runtime_vapor.js',
-  )
-  if (
-    fs.existsSync(runtimeVaporBrowserEntry) &&
-    fs.existsSync(runtimeVaporEntry) &&
-    fs.existsSync(runtimeVaporReactiveEntry) &&
-    fs.existsSync(runtimeVaporVaporEntry)
-  ) {
+  if (fs.existsSync(runtimeVaporBrowserEntry) && fs.existsSync(runtimeVaporEntry)) {
     return
   }
 
@@ -230,8 +217,6 @@ async function ensureRuntimeVaporBuilt() {
   if (shouldRunValidationCommands) {
     await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build'])
     await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node'])
-    await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node-reactive'])
-    await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node-vapor'])
   } else {
     console.log(`Skipped (dry run)`)
   }

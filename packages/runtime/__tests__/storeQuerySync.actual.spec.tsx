@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { attachRouter, createRouter, RouterView } from '@rue-js/router'
+import { attachRouter, createRouter, createWebHistory, RouterView } from '@rue-js/router'
 
 import StoreQuerySyncPage from '../../../app/pages/examples/StoreQuerySync'
 import { render, setReactiveScheduling } from '../src'
@@ -33,6 +33,16 @@ const clickByText = async (root: ParentNode, label: string) => {
 
   expect(button).toBeTruthy()
   button?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+  await flush()
+}
+
+const clickLinkByText = async (root: ParentNode, label: string) => {
+  const link = Array.from(root.querySelectorAll('a')).find(
+    current => current.textContent?.trim() === label,
+  ) as HTMLAnchorElement | undefined
+
+  expect(link).toBeTruthy()
+  link?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }))
   await flush()
 }
 
@@ -84,6 +94,45 @@ describe('StoreQuerySync actual page', () => {
       expect(content).toContain('replaceState')
       expect(content).toContain('search=(空)')
       expect(content).toContain('tab=all')
+    })
+  })
+
+  it('keeps the page rendered when a preset RouterLink updates only query params', async () => {
+    ;(globalThis as any).__rue_active = (globalThis as any).__rue
+    window.history.replaceState(null, '', '/examples/store-query-sync')
+
+    const Empty = () => null
+    const router = createRouter({
+      history: createWebHistory(),
+      routes: [
+        { path: '/', component: Empty as any },
+        { path: '/examples/store-query-sync', component: StoreQuerySyncPage as any },
+      ],
+    })
+    attachRouter(router)
+
+    const container = mountContainer()
+    render(<RouterView />, container)
+
+    await waitForContent(() => {
+      const content = container.textContent ?? ''
+      expect(content).toContain('Store Query Sync 与 URL 状态')
+      expect(content).toContain('Router 预设')
+      expect(content).toContain('tab=all')
+    })
+
+    await clickLinkByText(container, 'Router 预设')
+
+    await waitForContent(() => {
+      const content = container.textContent ?? ''
+      expect(window.location.pathname).toBe('/examples/store-query-sync')
+      expect(window.location.search).toContain('q=router')
+      expect(window.location.search).toContain('tab=router')
+      expect(content).toContain('Store Query Sync 与 URL 状态')
+      expect(content).toContain('筛选结果')
+      expect(content).toContain('search=router')
+      expect(content).toContain('tab=router')
+      expect(content).toContain('Router 历史模式拆解')
     })
   })
 })
