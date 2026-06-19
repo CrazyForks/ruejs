@@ -17,6 +17,7 @@ const rootPkg = require(path.resolve(rootDir, 'package.json'))
 
 const defaultFormats = ['esm-bundler', 'cjs']
 const enumCachePath = path.resolve(rootDir, 'temp/enum.json')
+const RUE_BUILD_TRANSFORM_TIMEOUT_MS = 60000
 const treeShakenDeps = ['source-map-js', '@babel/parser', 'estree-walker', 'entities/lib/decode.js']
 const nodeBuiltinNames = new Set([
   ...builtinModules,
@@ -316,7 +317,10 @@ function createViteConfig(request) {
       enumPlugin,
       createLiteralReplacePlugin(resolveReplaceValues(request, enumDefines)),
       request.enableRueVaporTransform
-        ? VitePluginRue({ include: [`/packages/${request.packageInfo.target}/`] })
+        ? VitePluginRue({
+            include: [`/packages/${request.packageInfo.target}/`],
+            transformTimeoutMs: RUE_BUILD_TRANSFORM_TIMEOUT_MS,
+          })
         : null,
       request.prod && shouldSwcMinify(request.format) ? createSwcMinifyPlugin() : null,
     ].filter(Boolean),
