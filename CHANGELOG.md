@@ -1,3 +1,10 @@
+## [0.5.8](https://github.com/hunzhiwange/ruejs/compare/v0.5.7...v0.5.8) (2026-06-19)
+
+
+### Features
+
+* 删除兼容层 ([17a832c](https://github.com/hunzhiwange/ruejs/commit/17a832c03c791690b1fb29bf93cfd16bd32ba853))
+
 ## [0.5.7](https://github.com/hunzhiwange/ruejs/compare/v0.5.6...v0.5.7) (2026-06-18)
 
 
