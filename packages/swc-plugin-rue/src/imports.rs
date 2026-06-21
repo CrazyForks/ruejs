@@ -109,6 +109,7 @@ const AUTO_INJECTED_VALUE_IMPORTS: &[&str] = &[
     "renderBetween",
     "untrack",
     "watchEffect",
+    "getCurrentInstance",
     "useMemo",
     "computed",
     "useSetup",
@@ -145,6 +146,7 @@ impl RuntimeUseCollector {
                 "_$setValue",
                 "_$setChecked",
                 "_$setDisabled",
+                "_$setProperty",
                 "_$spreadAttributes",
             ])
             .collect();

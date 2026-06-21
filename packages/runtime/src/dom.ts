@@ -5,6 +5,8 @@
 - CURRENT_ADAPTER：保存当前适配器，支持运行时替换；通过 globalThis.__rue_dom 暴露统一代理。
 - 工具函数导出：对适配器方法进行薄封装，便于以函数式调用和 tree-shaking。
 */
+import { CUSTOM_ELEMENT_SYNC_PROPS_KEY } from './custom-elements.shared'
+
 /** Rue DOMAdapter 使用的最小节点形态。 */
 export interface DomNodeLike {
   /** 当前节点的下一个兄弟节点。 */
@@ -1154,6 +1156,52 @@ export const setAttribute = (el: DomElementLike, name: string, value: any) =>
 /** 移除属性（便捷函数） */
 export const removeAttribute = (el: DomElementLike, name: string) =>
   getCurrentDOMAdapter().removeAttribute(el, name)
+
+const isCustomElementLike = (el: DomElementLike) => {
+  const tagName = (el as { tagName?: unknown }).tagName
+  return typeof tagName === 'string' && tagName.includes('-')
+}
+
+const isObjectOrFunctionValue = (value: unknown) =>
+  (typeof value === 'object' || typeof value === 'function') && value != null
+
+const shouldUseDomProperty = (el: DomElementLike, key: string, value: unknown) => {
+  if (!isCustomElementLike(el)) {
+    return false
+  }
+  if (key === 'props' || key === '__rue_slots' || key.startsWith('__rue_context_')) {
+    return true
+  }
+  if (key in (el as object)) {
+    return true
+  }
+  return isObjectOrFunctionValue(value)
+}
+
+const notifyCustomElementPropertyChanged = (el: DomElementLike) => {
+  const sync = (el as Record<string, unknown>)[CUSTOM_ELEMENT_SYNC_PROPS_KEY]
+  if (typeof sync === 'function') {
+    sync.call(el)
+  }
+}
+
+/** 设置 DOM property；Rue Custom Element 会同步收集最新 property props。 */
+export const setProperty = (el: DomElementLike, name: string, value: any) => {
+  const target = el as Record<string, unknown>
+  if (value === undefined || value === null || value === false) {
+    try {
+      delete target[name]
+    } catch {
+      target[name] = undefined
+    }
+    notifyCustomElementPropertyChanged(el)
+    return
+  }
+
+  target[name] = value
+  notifyCustomElementPropertyChanged(el)
+}
+
 /** 添加事件监听（便捷函数） */
 export const addEventListener = (
   el: DomElementLike,
@@ -1211,6 +1259,10 @@ const normalizeAttributeName = (name: string) =>
 
 const removeSpreadAttribute = (el: DomElementLike, key: string, value: any) => {
   if (key === 'children' || key === 'key' || key === 'ref') return
+  if (shouldUseDomProperty(el, key, value)) {
+    setProperty(el, key, undefined)
+    return
+  }
   if (isEventPropName(key) && typeof value === 'function') {
     removeEventListener(el, toEventName(key), value)
     return
@@ -1253,6 +1305,10 @@ const setSpreadAttribute = (el: DomElementLike, key: string, value: any, previou
     if (typeof value === 'function' && previous !== value) {
       addEventListener(el, eventName, value)
     }
+    return
+  }
+  if (shouldUseDomProperty(el, key, value) || shouldUseDomProperty(el, key, previous)) {
+    setProperty(el, key, value)
     return
   }
   if (value === undefined || value === null || value === false) {

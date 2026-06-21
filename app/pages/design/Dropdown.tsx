@@ -119,7 +119,7 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'trigger',
-    description: '控制打开方式，支持 hover、click、contextMenu；默认更接近成熟组件库的 hover。',
+    description: '控制打开方式，支持 hover、click、contextMenu；默认使用 hover。',
     type: "'hover' | 'click' | 'contextMenu' | Array<...>",
     defaultValue: "'hover'",
   },
@@ -144,19 +144,19 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'arrow / overlayClassName / overlayStyle',
-    description: '保留 Rue 当前视觉基底，同时提供箭头与面板层定制。',
+    description: '使用 Rue 当前视觉基底，同时提供箭头与面板层定制。',
     type: 'boolean / string / style object',
     defaultValue: 'false / - / -',
   },
   {
     prop: 'align / direction / hover / forceOpen / forceClose',
-    description: '原有 daisyUI 风格能力继续保留，适合原生结构或静态布局演示。',
-    type: '兼容属性',
+    description: '基础 daisyUI 风格能力展示，适合原生结构或静态布局演示。',
+    type: '扩展属性',
     defaultValue: '-',
   },
   {
     prop: 'children + Dropdown.Trigger / Dropdown.Content',
-    description: '旧的 compound 结构继续可用；当你不想走数据驱动时，仍可手写原生内容。',
+    description: '基础的 compound 结构继续可用；当你不想走数据驱动时，仍可手写原生内容。',
     type: 'any',
     defaultValue: '-',
   },
@@ -189,7 +189,7 @@ const menuApiRows: ApiRow[] = [
   },
   {
     prop: 'closeOnClick',
-    description: '点击菜单项后是否自动关闭；命令菜单推荐保留默认 true，筛选面板常见设为 false。',
+    description: '点击菜单项后是否自动关闭；命令菜单推荐保持默认 true，筛选面板常见设为 false。',
     type: 'boolean',
     defaultValue: 'true',
   },
@@ -251,10 +251,10 @@ const DropdownPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Dropdown 下拉菜单</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue 的 Dropdown 现在同时支持两条路径：一条是保留当前视觉风格与 daisyUI
-          原生结构的兼容写法；另一条是更贴近业务组件习惯的增强 API，直接支持{' '}
-          <code>menu / items</code>、<code>trigger</code>、<code>placement</code>、<code>open</code>
-          、<code>popupRender</code> 和右键菜单。
+          Rue 的 Dropdown 现在同时支持两条路径：一条是保持当前视觉风格与 daisyUI
+          原生结构的写法；另一条是更贴近业务组件习惯的语义 API，直接支持 <code>menu / items</code>、
+          <code>trigger</code>、<code>placement</code>、<code>open</code>、<code>popupRender</code>{' '}
+          和右键菜单。
         </p>
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
@@ -269,9 +269,9 @@ const DropdownPage: FC = () => {
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-secondary">
-              daisyUI 原始写法
+              daisyUI 自由组合写法
             </div>
-            <div className="mt-2 text-sm font-medium">原始写法可用</div>
+            <div className="mt-2 text-sm font-medium">自由组合写法可用</div>
             <p className="mt-2 text-sm opacity-70">
               <code>details</code>、<code>popover</code>、<code>focus</code>、位置类和 modifier
               都没有删除。
@@ -279,7 +279,7 @@ const DropdownPage: FC = () => {
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-accent">
-              交互补齐
+              交互补充
             </div>
             <div className="mt-2 text-sm font-medium">受控、右键、可选中、自定义面板</div>
             <p className="mt-2 text-sm opacity-70">
@@ -291,11 +291,11 @@ const DropdownPage: FC = () => {
         <h2>何时使用</h2>
         <ul>
           <li>需要一个轻量命令面板，把 3 到 8 个动作收纳到按钮、头像或行内入口后面。</li>
-          <li>希望保留 Rue 当前 dropdown 视觉风格，但把 API 提升到更接近成熟组件库的层级。</li>
+          <li>适合使用 Rue 当前 dropdown 视觉风格，同时使用更完整的菜单 API。</li>
           <li>既要支持原生 HTML 结构，也要支持数据驱动菜单、受控状态和右键上下文菜单。</li>
         </ul>
 
-        <h2>推荐增强 API</h2>
+        <h2>推荐语义 API</h2>
 
         <PreviewBlock
           title="推荐：命令菜单"
@@ -556,7 +556,7 @@ const filterKeys = ref(['mentions', 'comment']);
 </Dropdown>`}
         />
 
-        <h2>兼容原生结构</h2>
+        <h2>支持原生结构</h2>
 
         <PreviewBlock
           title="Dropdown using details and summary"
@@ -830,7 +830,7 @@ const filterKeys = ref(['mentions', 'comment']);
             想做业务菜单、用户菜单、右键菜单时，优先用 <code>menu</code> 或 <code>items</code>。
           </li>
           <li>
-            想保留完全原生的 HTML 结构时，继续使用 <code>Dropdown.Trigger</code> +{' '}
+            想保持完全原生的 HTML 结构时，可以使用 <code>Dropdown.Trigger</code> +{' '}
             <code>Dropdown.Content</code>，或直接写 details / summary。
           </li>
           <li>
@@ -839,7 +839,7 @@ const filterKeys = ref(['mentions', 'comment']);
           </li>
           <li>
             需要在面板里追加说明、底部操作区或二次确认按钮时，使用 <code>popupRender</code>{' '}
-            包住原始内容。
+            包住基础内容。
           </li>
         </ul>
       </div>

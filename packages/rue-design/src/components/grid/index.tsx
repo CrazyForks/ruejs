@@ -304,7 +304,7 @@ const normalizeColConfig = (value?: GridColResponsive) => {
 
 /**
  * Col 的基础配置来自顶层 props，断点配置按 xs -> xxl 逐步覆盖。
- * 这样能复刻 antd Col 在不同 viewport 下的优先级规则。
+ * 这样能保留常见栅格列在不同 viewport 下的优先级规则。
  */
 const resolveColConfig = (props: GridColProps, width: number): GridColConfig => {
   const resolved: GridColConfig = {
@@ -339,7 +339,7 @@ const spanToPercent = (span?: number) => {
 }
 
 /**
- * 与 antd flex 语义保持一致：
+ * 与常见 flex 简写语义保持一致：
  * - number: 等比分配剩余空间
  * - 具体长度: 视为固定 basis
  * - auto / none: 使用常见 flex 简写
@@ -439,7 +439,7 @@ const buildColStyle = (config: GridColConfig) => {
  * Row 负责整个栅格行的布局上下文：
  * 1. 解析 gutter 的水平/垂直值。
  * 2. 把 gutter 通过负 margin 下沉给 Col padding。
- * 3. 暴露与 antd 一致的主轴/交叉轴对齐语义。
+ * 3. 暴露常见的主轴/交叉轴对齐语义。
  */
 const Row: FC<GridRowProps> = ({
   gutter,

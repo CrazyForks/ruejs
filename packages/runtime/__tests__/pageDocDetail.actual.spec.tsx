@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { attachRouter, createRouter } from '@rue-js/router'
-import { ref } from '@rue-js/rue'
+import { attachRouter, createRouter, RouterView } from '@rue-js/router'
 
 import { render, setReactiveScheduling } from '../src'
 import PageDocDetail from '../../../app/pages/site/PageDocDetail'
@@ -49,27 +48,22 @@ describe('PageDocDetail actual page', () => {
     })
     attachRouter(router)
 
-    const path = ref('sponsor/index')
-    const App = () => <PageDocDetail params={{ path: path.value }} />
-
     const container = mountContainer()
-    render(<App />, container)
+    render(<RouterView />, container)
 
     await waitForContent(() => {
       expect(container.querySelector('#doc-body')?.textContent).toContain('Sponsor')
       expect(container.querySelector('#doc-body')?.textContent).toContain('Alpha sponsor copy.')
     }, 100)
 
-    history.setPath('/page/partners/index')
-    path.value = 'partners/index'
+    await router.push('/page/partners/index')
 
     await waitForContent(() => {
       expect(container.querySelector('#doc-body')?.textContent).toContain('Partners')
       expect(container.querySelector('#doc-body')?.textContent).toContain('Partner listing copy.')
     }, 100)
 
-    history.setPath('/page/sponsor/index')
-    path.value = 'sponsor/index'
+    await router.push('/page/sponsor/index')
 
     await waitForContent(() => {
       expect(container.querySelector('#doc-body')?.textContent).toContain('Sponsor')

@@ -703,7 +703,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('_$spreadAttributes')
     expect(code).toContain('__rue_props.render(__rue_phase2_runtime.get())')
-    expect(code).toContain('const __slot = content.get();')
+    expect(code).toContain('const __slot = contextContent.get();')
     expect(code).toContain('style: __rue_phase2_mergedStyle.get()')
     expect(code).not.toContain("setAttribute('style'")
     expect(code).not.toContain('setAttribute("style"')

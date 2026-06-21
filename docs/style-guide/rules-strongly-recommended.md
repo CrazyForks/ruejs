@@ -1,9 +1,5 @@
 # 优先级 B 规则：强烈推荐 {#priority-b-rules-strongly-recommended}
 
-::: warning 注意
-此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/hunzhiwange/ruejs/docs/issues/new)。
-:::
-
 这些规则已被发现在大多数项目中提高可读性和/或开发者体验。如果你违反它们，你的代码仍然可以运行，但违规应该很少且有充分的理由。
 
 ## 组件文件 {#component-files}
@@ -16,13 +12,13 @@
 <h3>Bad</h3>
 
 ```js
-app.component('TodoList', {
+export function TodoList() {
   // ...
-})
+}
 
-app.component('TodoItem', {
+export function TodoItem() {
   // ...
-})
+}
 ```
 
 </div>
@@ -46,9 +42,9 @@ components/
 
 ## 组件文件名大小写 {#component-filename-casing}
 
-**单文件组件的文件名应始终使用 PascalCase 或始终使用 kebab-case。**
+**组件文件名应始终使用 PascalCase。**
 
-PascalCase 在代码编辑器中配合自动补全效果最好，因为它与我们在 JS(X) 和模板中引用组件的方式一致。然而，在不区分大小写的文件系统上，混合大小写的文件名有时会产生问题，这就是为什么 kebab-case 也是完全可以接受的。
+PascalCase 在代码编辑器中配合自动补全效果最好，因为它与我们在 JSX / TSX 中引用组件的方式一致。
 
 <div class="style-example style-example-bad">
 <h3>Bad</h3>
@@ -63,6 +59,11 @@ components/
 |- myComponent.jsx
 ```
 
+```
+components/
+|- my-component.jsx
+```
+
 </div>
 
 <div class="style-example style-example-good">
@@ -71,11 +72,6 @@ components/
 ```
 components/
 |- MyComponent.jsx
-```
-
-```
-components/
-|- my-component.jsx
 ```
 
 </div>
@@ -99,19 +95,14 @@ components/
 
 - 在编辑器中按字母顺序组织时，应用的基础组件都列在一起，使它们更容易识别。
 
-- 由于组件名称应始终是多词的，这种约定防止你不得不为简单组件包装器选择任意前缀（例如 `MyButton`、`VueButton`）。
+- 由于组件名称应始终是多词的，这种约定防止你不得不为简单组件包装器选择任意前缀（例如 `MyButton`、`RueButton`）。
 
-- 由于这些组件使用如此频繁，你可能希望简单地将它们设为全局而不是到处导入。前缀使这可以通过 Webpack 实现：
+- 由于这些组件使用如此频繁，你可能希望从统一入口导出它们，或在确实需要字符串动态解析时通过 `useApp(...).component()` 注册到运行时名称表。统一前缀会让这类批量组织更容易保持清晰：
 
-  ```js
-  const requireComponent = require.context('./src', true, /Base[A-Z]\w+\.(jsx|js)$/)
-  requireComponent.keys().forEach(function (fileName) {
-    let baseComponentConfig = requireComponent(fileName)
-    baseComponentConfig = baseComponentConfig.default || baseComponentConfig
-    const baseComponentName =
-      baseComponentConfig.name || fileName.replace(/^.+\//, '').replace(/\.\w+$/, '')
-    app.component(baseComponentName, baseComponentConfig)
-  })
+  ```tsx
+  export { BaseButton } from './BaseButton'
+  export { BaseTable } from './BaseTable'
+  export { BaseIcon } from './BaseIcon'
   ```
 
   :::
@@ -122,7 +113,7 @@ components/
 ```
 components/
 |- MyButton.jsx
-|- VueTable.jsx
+|- DataTable.jsx
 |- Icon.jsx
 ```
 
@@ -335,16 +326,15 @@ components/
 
 </div>
 
-## 模板中的组件名称大小写 {#component-name-casing-in-templates}
+## JSX / TSX 中的组件名称大小写 {#component-name-casing-in-templates}
 
-**在大多数项目中，组件名称在 JSX 中应始终使用 PascalCase。**
+**组件名称在 JSX / TSX 中应始终使用 PascalCase。**
 
-PascalCase 相比 kebab-case 有一些优点：
+PascalCase 有一些优点：
 
-- 编辑器可以在模板中自动补全组件名称，因为 PascalCase 也用于 JavaScript。
-- `<MyComponent>` 比 `<my-component>` 在视觉上与单字 HTML 元素的区别更明显，因为有两个字符差异（两个大写字母），而不是只有一个（连字符）。
-
-如果你已经在 kebab-case 上投入了大量精力，与 HTML 约定保持一致并能够在所有项目中使用相同的大小写可能比上面列出的优点更重要。在这些情况下，**到处使用 kebab-case 也是可以接受的。**
+- 编辑器可以在 JSX / TSX 中自动补全组件名称，因为 PascalCase 也用于 JavaScript。
+- `<MyComponent>` 比 `<my-component>` 在视觉上与原生 HTML 元素或自定义元素的区别更明显。
+- 在 JSX / TSX 中，小写或短横线标签会按原生元素 / 自定义元素处理，而不是按导入的 Rue 组件处理。
 
 <div class="style-example style-example-bad">
 <h3>Bad</h3>
@@ -363,6 +353,13 @@ PascalCase 相比 kebab-case 有一些优点：
 ;<myComponent />
 ```
 
+```jsx
+{
+  /* 在 JSX 中 */
+}
+;<my-component />
+```
+
 </div>
 
 <div class="style-example style-example-good">
@@ -375,15 +372,6 @@ PascalCase 相比 kebab-case 有一些优点：
 ;<MyComponent />
 ```
 
-OR
-
-```jsx
-{
-  /* 到处使用 */
-}
-;<my-component />
-```
-
 </div>
 
 ## JS/JSX 中的组件名称大小写 {#component-name-casing-in-js-jsx}
@@ -391,34 +379,24 @@ OR
 **JS/JSX 中的组件名称应始终使用 PascalCase。**
 
 ::: details 详细解释
-在 JavaScript 中，PascalCase 是类和原型构造函数的约定——本质上，任何可以有不同实例的东西。Vue 组件也有实例，因此使用 PascalCase 也是有意义的。作为额外的好处，在 JSX（和模板）中使用 PascalCase 允许代码读者更容易区分组件和 HTML 元素。
+在 JavaScript 中，PascalCase 是类和原型构造函数的约定——本质上，任何可以有不同实例的东西。Rue 组件也有实例，因此使用 PascalCase 也是有意义的。作为额外的好处，在 JSX / TSX 中使用 PascalCase 允许代码读者更容易区分组件和 HTML 元素。
 :::
 
 <div class="style-example style-example-bad">
 <h3>Bad</h3>
 
-```js
-app.component('myComponent', {
+```tsx
+const myComponent = () => {
   // ...
-})
+}
 ```
 
-```js
+```tsx
 import myComponent from './MyComponent.jsx'
 ```
 
-```js
-export default {
-  name: 'myComponent',
-  // ...
-}
-```
-
-```js
-export default {
-  name: 'my-component',
-  // ...
-}
+```tsx
+useApp(App).component('myComponent', MyComponent)
 ```
 
 </div>
@@ -426,27 +404,18 @@ export default {
 <div class="style-example style-example-good">
 <h3>Good</h3>
 
-```js
-app.component('MyComponent', {
+```tsx
+const MyComponent = () => {
   // ...
-})
+}
 ```
 
-```js
-app.component('my-component', {
-  // ...
-})
-```
-
-```js
+```tsx
 import MyComponent from './MyComponent.jsx'
 ```
 
-```js
-export default {
-  name: 'MyComponent',
-  // ...
-}
+```tsx
+useApp(App).component('MyComponent', MyComponent)
 ```
 
 </div>
@@ -483,14 +452,12 @@ components/
 
 **声明时 Prop 名称应始终使用 camelCase。**
 
-<div class="options-api">
-
 <div class="style-example style-example-bad">
 <h3>Bad</h3>
 
-```js
-props: {
-  'greeting-text': String
+```tsx
+type Props = {
+  'greeting-text': string
 }
 ```
 
@@ -499,39 +466,11 @@ props: {
 <div class="style-example style-example-good">
 <h3>Good</h3>
 
-```js
-props: {
-  greetingText: String
+```tsx
+type Props = {
+  greetingText: string
 }
 ```
-
-</div>
-
-</div>
-
-<div class="composition-api">
-
-<div class="style-example style-example-bad">
-<h3>Bad</h3>
-
-```js
-const props = defineProps({
-  'greeting-text': String,
-})
-```
-
-</div>
-
-<div class="style-example style-example-good">
-<h3>Good</h3>
-
-```js
-const props = defineProps({
-  greetingText: String,
-})
-```
-
-</div>
 
 </div>
 
@@ -601,23 +540,6 @@ const props = defineProps({
 }
 ```
 
-<div class="options-api">
-
-```js
-// 复杂表达式已移至计算属性
-computed: {
-  normalizedFullName() {
-    return this.fullName.split(' ')
-      .map(word => word[0].toUpperCase() + word.slice(1))
-      .join(' ')
-  }
-}
-```
-
-</div>
-
-<div class="composition-api">
-
 ```js
 // 复杂表达式已移至计算属性
 const normalizedFullName = computed(() =>
@@ -627,8 +549,6 @@ const normalizedFullName = computed(() =>
     .join(' '),
 )
 ```
-
-</div>
 
 </div>
 
@@ -657,24 +577,6 @@ const normalizedFullName = computed(() =>
 <div class="style-example style-example-bad">
 <h3>Bad</h3>
 
-<div class="options-api">
-
-```js
-computed: {
-  price() {
-    const basePrice = this.manufactureCost / (1 - this.profitMargin)
-    return (
-      basePrice -
-      basePrice * (this.discountPercent || 0)
-    )
-  }
-}
-```
-
-</div>
-
-<div class="composition-api">
-
 ```js
 const price = computed(() => {
   const basePrice = manufactureCost.value / (1 - profitMargin.value)
@@ -684,32 +586,8 @@ const price = computed(() => {
 
 </div>
 
-</div>
-
 <div class="style-example style-example-good">
 <h3>Good</h3>
-
-<div class="options-api">
-
-```js
-computed: {
-  basePrice() {
-    return this.manufactureCost / (1 - this.profitMargin)
-  },
-
-  discount() {
-    return this.basePrice * (this.discountPercent || 0)
-  },
-
-  finalPrice() {
-    return this.basePrice - this.discount
-  }
-}
-```
-
-</div>
-
-<div class="composition-api">
 
 ```js
 const basePrice = computed(() => manufactureCost.value / (1 - profitMargin.value))
@@ -718,8 +596,6 @@ const discount = computed(() => basePrice.value * (discountPercent.value || 0))
 
 const finalPrice = computed(() => basePrice.value - discount.value)
 ```
-
-</div>
 
 </div>
 
@@ -755,29 +631,19 @@ const finalPrice = computed(() => basePrice.value - discount.value)
 
 </div>
 
-## 指令简写 {#directive-shorthands}
+## 指令写法一致性 {#directive-shorthands}
 
-**指令简写（`:` 代表 `v-bind:`，`@` 代表 `v-on:`，`#` 代表 `v-slot:`）应该始终使用或从不使用。**
+**在同一个组件中，事件和动态属性应保持同一种写法。**
 
 <div class="style-example style-example-bad">
 <h3>Bad</h3>
 
 ```jsx
-<input v-bind:value="newTodoText" placeholder="newTodoInstructions" />
+<input value={newTodoText.value} placeholder="newTodoInstructions" />
 ```
 
 ```jsx
-<input v-on:input="onInput" onFocus="onFocus" />
-```
-
-```jsx
-<template v-slot:header>
-  <h1>Here might be a page title</h1>
-</template>
-
-<template slot="footer">
-  <p>Here's some contact info</p>
-</template>
+<input r-on:input="onInput($event)" onFocus={onFocus} />
 ```
 
 </div>
@@ -786,19 +652,15 @@ const finalPrice = computed(() => basePrice.value - discount.value)
 <h3>Good</h3>
 
 ```jsx
-<input value="newTodoText" placeholder="newTodoInstructions" />
+<input value={newTodoText.value} placeholder={newTodoInstructions.value} />
 ```
 
 ```jsx
-<input v-bind:value="newTodoText" v-bind:placeholder="newTodoInstructions" />
+<input onInput={onInput} onFocus={onFocus} />
 ```
 
 ```jsx
-<input onInput="onInput" onFocus="onFocus" />
-```
-
-```jsx
-<input v-on:input="onInput" v-on:focus="onFocus" />
+<input r-on:input="onInput($event)" r-on:focus="onFocus($event)" />
 ```
 
 </div>

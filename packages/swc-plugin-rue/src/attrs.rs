@@ -102,6 +102,48 @@ fn is_string_boolean_attr(name: &str) -> bool {
     name.starts_with("data-") || name.starts_with("aria-")
 }
 
+fn is_custom_element_opening(opening: &JSXOpeningElement) -> bool {
+    match &opening.name {
+        JSXElementName::Ident(id) => crate::custom_element::is_custom_element_tag(id.sym.as_ref()),
+        _ => false,
+    }
+}
+
+fn should_emit_custom_element_property(name: &str, inner: &Expr) -> bool {
+    if name == "props" || name == "__rue_slots" || name.starts_with("__rue_context_") {
+        return true;
+    }
+
+    matches!(unwrap_expr(inner), Expr::Object(_) | Expr::Array(_) | Expr::Arrow(_) | Expr::Fn(_))
+}
+
+fn emit_dynamic_property(stmts: &mut Vec<Stmt>, target: &Ident, name: &str, inner: &Expr) {
+    let value = match inner {
+        Expr::Member(_) | Expr::Ident(_) => {
+            Expr::Paren(ParenExpr { span: DUMMY_SP, expr: Box::new(inner.clone()) })
+        }
+        _ => inner.clone(),
+    };
+    let set_prop =
+        call_ident("_$setProperty", vec![Expr::Ident(target.clone()), string_expr(name), value]);
+    let arrow = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            stmts: vec![Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(set_prop) })],
+        })),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    let watch = call_ident("watchEffect", vec![arrow]);
+    stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
+}
+
 fn try_emit_static_expr_attr(
     stmts: &mut Vec<Stmt>,
     target: &Ident,
@@ -209,6 +251,7 @@ fn try_emit_static_expr_attr(
 /// - 事件：不使用 watch，而是运行时监听最新 handler 引用，避免重复绑定。
 pub fn emit_attrs_for(stmts: &mut Vec<Stmt>, target: &Ident, opening: &JSXOpeningElement) {
     log::debug(&format!("attrs: start count={}", opening.attrs.len()));
+    let is_custom_element = is_custom_element_opening(opening);
     for a in &opening.attrs {
         if let JSXAttrOrSpread::SpreadElement(spread) = a {
             let spread_expr = Expr::Paren(ParenExpr { span: DUMMY_SP, expr: spread.expr.clone() });
@@ -299,6 +342,10 @@ pub fn emit_attrs_for(stmts: &mut Vec<Stmt>, target: &Ident, opening: &JSXOpenin
                 Some(JSXAttrValue::JSXExprContainer(ec)) => {
                     if let JSXExpr::Expr(expr) = &ec.expr {
                         let inner = unwrap_expr(expr.as_ref());
+                        if is_custom_element && should_emit_custom_element_property(&name, inner) {
+                            emit_dynamic_property(stmts, target, &name, inner);
+                            continue;
+                        }
                         if try_emit_static_expr_attr(stmts, target, &name, inner) {
                             continue;
                         }

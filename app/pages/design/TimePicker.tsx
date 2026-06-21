@@ -613,8 +613,8 @@ const TimePickerPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>TimePicker 时间选择器</h1>
         <p className="text-sm mt-3 mb-3">
-          TimePicker 把 Rue 现有输入基座升级成可输入、可弹层选择、可范围组合的时间录入组件。
-          视觉仍然沿用 Rue 的输入气质，但能力面扩展到步进、12 小时制、禁用时间、确认式提交与
+          TimePicker 把 Rue 当前输入基座组织成可输入、可弹层选择、可范围组合的时间录入组件。
+          视觉仍然使用 Rue 的输入气质，但能力面扩展到步进、12 小时制、禁用时间、确认式提交与
           RangePicker。
         </p>
         <div className="not-prose mb-4 flex flex-wrap gap-2">
@@ -642,7 +642,7 @@ const TimePickerPage: FC = () => {
 
         <PreviewBlock
           title="尺寸、状态与变体"
-          summary="沿用 Rue Input 的 size、status、variant 语义，不需要再记一套单独的外观 API。"
+          summary="使用 Rue Input 的 size、status、variant 语义，不需要再记一套单独的外观 API。"
           tab={tabAppearance}
           code={appearanceCode}
           preview={() => (
@@ -691,7 +691,7 @@ const TimePickerPage: FC = () => {
 
         <PreviewBlock
           title="手输、清空与附加块"
-          summary="TimePicker 不是只能点面板；保留直接输入的效率，同时把附加时区、说明和清空动作整合进来。"
+          summary="TimePicker 不是只能点面板；保持直接输入的效率，同时把附加时区、说明和清空动作整合进来。"
           tab={tabManual}
           code={manualCode}
           preview={ManualPreview}
@@ -699,7 +699,7 @@ const TimePickerPage: FC = () => {
 
         <h2 id="time-picker-api">API</h2>
         <p>
-          Rue 的 TimePicker 把输入和弹层合在同一个语义面里，因此既保留了手输效率，也补上了接近
+          Rue 的 TimePicker 把输入和弹层合在同一个语义面里，因此既保持了手输效率，也补上了接近
           完整的核心能力层。
         </p>
 

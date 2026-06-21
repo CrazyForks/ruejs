@@ -1,69 +1,37 @@
 # 优先级 C 规则：推荐 {#priority-c-rules-recommended}
 
-::: warning 注意
-此风格指南需要审查。如果你有任何问题或建议，请[提交 issue](https://github.com/hunzhiwange/ruejs/docs/issues/new)。
-:::
-
 当存在多个同样好的选项时，可以任意选择以确保一致性。在这些规则中，我们描述了每个可接受的选项并建议一个默认选择。这意味着你可以在自己的代码库中自由选择不同的选项，只要你保持一致并有充分的理由。请一定要有充分的理由！通过适应社区标准，你将：
 
 1. 训练你的大脑更轻松地解析你遇到的大多数社区代码
 2. 能够复制和粘贴大多数社区代码示例而无需修改
 3. 经常发现新员工已经习惯了你喜欢的编码风格，至少在 Rue 方面
 
-## 组件/实例选项顺序 {#component-instance-options-order}
+## 组件源码顺序 {#component-source-order}
 
-**组件/实例选项应始终有序排列。**
+**组件内部的相关代码应保持稳定顺序。**
 
-这是我们推荐的组件选项默认顺序。它们分为类别，因此你将知道在哪里添加来自插件的新属性。
+这是我们推荐的函数组件源码顺序。它们分为类别，因此你将知道在哪里添加新的状态、派生值和事件处理逻辑。
 
-1. **全局感知**（需要组件之外的知识）
-   - `name`
+1. **类型与常量**
+   - props 类型
+   - 组件私有常量
 
-2. **模板编译器选项**（改变模板编译方式）
-   - `compilerOptions`
+2. **响应式状态**
+   - `ref`
+   - `reactive`
+   - `signal`
 
-3. **模板依赖**（模板中使用的资源）
-   - `components`
-   - `directives`
-
-4. **组合**（将属性合并到选项中）
-   - `extends`
-   - `mixins`
-
-5. **接口**（组件的接口）
-   - `inheritAttrs`
-   - `props`
-   - `emits`
-
-6. **组合式 API**（使用组合式 API 的入口点）
-   - `setup`
-
-7. **本地状态**（本地响应式属性）
-   - `data`
+3. **派生状态**
    - `computed`
+   - 由响应式状态派生的普通变量
 
-8. **事件**（由响应式事件触发的回调）
-   - `watch`
-   - 生命周期事件（按调用顺序）
-     - `beforeCreate`
-     - `created`
-     - `beforeMount`
-     - `mounted`
-     - `beforeUpdate`
-     - `updated`
-     - `activated`
-     - `deactivated`
-     - `beforeUnmount`
-     - `unmounted`
-     - `errorCaptured`
-     - `renderTracked`
-     - `renderTriggered`
+4. **事件与副作用**
+   - 事件处理函数
+   - `watch` / `watchEffect`
+   - 生命周期钩子
 
-9. **非响应式属性**（独立于响应式系统的实例属性）
-   - `methods`
-
-10. **渲染**（组件输出的声明式描述）
-    - `template`/`render`
+5. **渲染输出**
+   - `return <... />`
 
 ## 元素属性顺序 {#element-attribute-order}
 
@@ -113,90 +81,16 @@
 
 当组件开始感觉拥挤或难以阅读时，在多行属性之间添加空格可以使它们更容易再次浏览。在某些编辑器中，如 Vim，这样的格式化选项还可以使它们更容易用键盘导航。
 
-<div class="options-api">
-
 <div class="style-example style-example-bad">
 <h3>Bad</h3>
 
-```js
-props: {
-  value: {
-    type: String,
-    required: true
-  },
-
-  focused: {
-    type: Boolean,
-    default: false
-  },
-
-  label: String,
-  icon: String
-},
-
-computed: {
-  formattedValue() {
-    // ...
-  },
-
-  inputClasses() {
-    // ...
-  }
+```tsx
+type Props = {
+  value: string
+  focused?: boolean
+  label?: string
+  icon?: string
 }
-```
-
-</div>
-
-<div class="style-example style-example-good">
-<h3>Good</h3>
-
-```js
-// 没有空格也可以，只要组件
-// 仍然易于阅读和导航。
-props: {
-  value: {
-    type: String,
-    required: true
-  },
-  focused: {
-    type: Boolean,
-    default: false
-  },
-  label: String,
-  icon: String
-},
-computed: {
-  formattedValue() {
-    // ...
-  },
-  inputClasses() {
-    // ...
-  }
-}
-```
-
-</div>
-
-</div>
-
-<div class="composition-api">
-
-<div class="style-example style-example-bad">
-<h3>Bad</h3>
-
-```js
-defineProps({
-  value: {
-    type: String,
-    required: true,
-  },
-  focused: {
-    type: Boolean,
-    default: false,
-  },
-  label: String,
-  icon: String,
-})
 const formattedValue = computed(() => {
   // ...
 })
@@ -210,21 +104,13 @@ const inputClasses = computed(() => {
 <div class="style-example style-example-good">
 <h3>Good</h3>
 
-```js
-defineProps({
-  value: {
-    type: String,
-    required: true,
-  },
-
-  focused: {
-    type: Boolean,
-    default: false,
-  },
-
-  label: String,
-  icon: String,
-})
+```tsx
+type Props = {
+  value: string
+  focused?: boolean
+  label?: string
+  icon?: string
+}
 
 const formattedValue = computed(() => {
   // ...
@@ -233,66 +119,6 @@ const formattedValue = computed(() => {
 const inputClasses = computed(() => {
   // ...
 })
-```
-
-</div>
-
-</div>
-
-## 单文件组件顶层元素顺序 {#single-file-component-top-level-element-order}
-
-**单文件组件应始终一致地排列 `<script>`、`<Template>` 和 `<style>` 标签，`<style>` 放在最后，因为其他两个中至少一个是始终必需的。**
-
-<div class="style-example style-example-bad">
-<h3>Bad</h3>
-
-```jsx [ComponentX.jsx]
-<style>{/* ... */}</style>
-<script>{/* ... */}</script>
-<Template>...</template>
-```
-
-```jsx [ComponentA.jsx]
-<script>{/* ... */}</script>
-<Template>...</template>
-<style>{/* ... */}</style>
-```
-
-```jsx [ComponentB.jsx]
-<Template>...</template>
-<script>{/* ... */}</script>
-<style>{/* ... */}</style>
-```
-
-</div>
-
-<div class="style-example style-example-good">
-<h3>Good</h3>
-
-```jsx [ComponentA.jsx]
-<script>{/* ... */}</script>
-<Template>...</template>
-<style>{/* ... */}</style>
-```
-
-```jsx [ComponentB.jsx]
-<script>{/* ... */}</script>
-<Template>...</template>
-<style>{/* ... */}</style>
-```
-
-或
-
-```jsx [ComponentA.jsx]
-<Template>...</template>
-<script>{/* ... */}</script>
-<style>{/* ... */}</style>
-```
-
-```jsx [ComponentB.jsx]
-<Template>...</template>
-<script>{/* ... */}</script>
-<style>{/* ... */}</style>
 ```
 
 </div>

@@ -28,7 +28,7 @@ const AsyncComp = useComponent(() => import('./components/MyComponent.tsx'))
 
 生成的 `AsyncComp` 是一个包装器组件，仅在页面上实际渲染时才调用加载器函数。此外，它会将任何 props 和插槽传递给内部组件，因此你可以使用异步包装器无缝替换原始组件，同时实现懒加载。
 
-与常规组件一样，异步组件可以使用 `app.component()` [全局注册](/guide/guide/components/registration#global-registration)：
+与常规组件一样，异步组件可以使用 `app.component()` [注册到运行时名称表](/guide/guide/components/registration#global-registration)：
 
 ```tsx
 app.component(
@@ -98,7 +98,7 @@ const AsyncUserPanel = useComponent({
 })
 ```
 
-当前实现还有几个和 Vue 文档常见写法相关、但值得明确说明的细节：
+当前实现还有几个和常见异步组件写法相关、但值得明确说明的细节：
 
 - `loader` 的成功结果既可以是组件本身，也可以是 `import()` 返回的 `{ default }` 模块对象。
 - 如果指定了 `loadingComponent` 但未设置 `delay`，默认延迟是 `200ms`；如果加载在这之前完成，就不会渲染 loading。
@@ -110,7 +110,89 @@ const AsyncUserPanel = useComponent({
 
 ## 懒加载水合 {#lazy-hydration}
 
-Rue 当前实现尚未提供 `hydrateOnIdle`、`hydrateOnVisible`、`hydrateOnMediaQuery`、`hydrateOnInteraction` 或自定义 hydration strategy 这类 API，因此这些选项目前不能作为 `useComponent()` 的一部分使用。
+Rue 的异步组件可以通过 `hydrate` 选项控制客户端何时激活组件。服务端渲染时，`loader` 仍会立即执行并参与 SSR pending 收集；客户端渲染时，传入的策略会决定何时启动异步组件。
+
+内置策略需要按需导入：
+
+```tsx
+import {
+  hydrateOnIdle,
+  hydrateOnInteraction,
+  hydrateOnMediaQuery,
+  hydrateOnVisible,
+  useComponent,
+} from '@rue-js/rue'
+```
+
+### 空闲时水合 {#hydrate-on-idle}
+
+```tsx
+const AsyncComp = useComponent({
+  loader: () => import('./Comp.tsx'),
+  hydrate: hydrateOnIdle(5000),
+})
+```
+
+`hydrateOnIdle()` 会通过 `requestIdleCallback` 激活组件；参数是可选的最大等待时间，默认 `10000ms`。
+
+### 可见时水合 {#hydrate-on-visible}
+
+```tsx
+const AsyncComp = useComponent({
+  loader: () => import('./Comp.tsx'),
+  hydrate: hydrateOnVisible({ rootMargin: '100px' }),
+})
+```
+
+`hydrateOnVisible()` 使用 `IntersectionObserver` 监听组件根元素，也可以传入标准的 observer options。
+
+### 媒体查询命中时水合 {#hydrate-on-media-query}
+
+```tsx
+const AsyncComp = useComponent({
+  loader: () => import('./Comp.tsx'),
+  hydrate: hydrateOnMediaQuery('(min-width: 768px)'),
+})
+```
+
+### 交互时水合 {#hydrate-on-interaction}
+
+```tsx
+const AsyncComp = useComponent({
+  loader: () => import('./Comp.tsx'),
+  hydrate: hydrateOnInteraction(['click', 'focus']),
+})
+```
+
+触发水合的事件会在组件完成加载后重放一次，适合按钮、菜单、折叠面板这类首个交互很重要的组件。
+
+### 自定义策略 {#custom-hydration-strategy}
+
+```tsx
+import { useComponent, type HydrationStrategy } from '@rue-js/rue'
+
+const hydrateOnSignal: HydrationStrategy = (hydrate, forEachElement) => {
+  const controller = new AbortController()
+
+  forEachElement(el => {
+    el.addEventListener('mouseenter', () => hydrate(), {
+      once: true,
+      signal: controller.signal,
+    })
+  })
+
+  return () => {
+    controller.abort()
+  }
+}
+
+const AsyncComp = useComponent({
+  loader: () => import('./Comp.tsx'),
+  hydrate: hydrateOnSignal,
+})
+```
+
+`forEachElement()` 会遍历异步组件当前可用的根元素；策略可以在合适时机调用 `hydrate()`，也可以返回清理函数用于卸载前移除监听器或 observer。
 
 ## 与 Suspense 一起使用 {#using-with-suspense}
 

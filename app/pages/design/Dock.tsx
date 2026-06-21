@@ -159,7 +159,7 @@ const dockApiRows: ApiRow[] = [
   },
   {
     prop: 'activeIndex',
-    description: '兼容旧版的受控索引写法',
+    description: '支持基础的受控索引写法',
     type: 'number',
     defaultValue: '-',
   },
@@ -183,7 +183,7 @@ const dockApiRows: ApiRow[] = [
   },
   {
     prop: 'onChange',
-    description: '索引变化回调，保留兼容签名，同时附带上下文',
+    description: '索引变化回调，保持回调签名，同时附带上下文',
     type: '(index, context) => void',
     defaultValue: '-',
   },
@@ -222,7 +222,7 @@ const dockItemApiRows: ApiRow[] = [
   },
   {
     prop: 'href / target / rel',
-    description: '链接语义；target="_blank" 时会自动补齐 rel',
+    description: '链接语义；target="_blank" 时会自动补充 rel',
     type: 'string',
     defaultValue: '-',
   },
@@ -279,7 +279,7 @@ const itemsSchemaRows: ApiRow[] = [
   },
   {
     prop: 'disabled',
-    description: '禁用当前项，保留当前视觉但阻止交互',
+    description: '禁用当前项，保持当前视觉但阻止交互',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -304,21 +304,21 @@ const DockDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Dock 底部栏</h1>
         <p className="text-sm mt-3 mb-3">
-          Dock 用来承载移动端底部导航和轻量操作入口。当前版本保持 Rue
-          自己的视觉基底，同时补上更顺手的导航 API：可以继续用 <code>activeIndex</code>
+          Dock 用来承载移动端底部导航和轻量操作入口。当前组件保持 Rue
+          自己的视觉基底，同时补上更顺手的导航 API：可以用 <code>activeIndex</code>
           ，也可以切到更语义化的 <code>activeKey</code> /<code>onSelect</code> 模式。
         </p>
 
         <h2>何时使用</h2>
         <ul>
           <li>需要一个固定在底部的轻量导航，让用户在 3 到 5 个主入口之间快速切换。</li>
-          <li>需要同时兼容老的索引式控制和新的 key 式控制。</li>
+          <li>需要同时支持基础的索引式控制和新的 key 式控制。</li>
           <li>需要在同一套视觉里混合按钮、链接、禁用项和自定义 children。</li>
         </ul>
 
         <ExampleBlock
           title="基础导航"
-          summary="保留原来的基础 Dock 演示，继续使用 activeIndex 控制。"
+          summary="展示基础 Dock 演示，可以使用 activeIndex 控制。"
           tab={tabBasic}
           preview={() => (
             <DockStage>
@@ -397,7 +397,7 @@ const DockDemo: FC = () => {
 
         <ExampleBlock
           title="组合写法与根节点"
-          summary="继续支持 Dock.Item / Dock.Label 组合；当需要更细粒度结构时，children 写法更直接。"
+          summary="支持 Dock.Item / Dock.Label 组合；当需要更细粒度结构时，children 写法更直接。"
           tab={tabComposition}
           preview={() => (
             <div className="space-y-4">
@@ -466,7 +466,7 @@ const DockDemo: FC = () => {
 
         <ExampleBlock
           title="尺寸体系"
-          summary="保留原来的 xs / sm / md / lg / xl 演示，并把它们重组到一个尺寸对照区。"
+          summary="展示 xs / sm / md / lg / xl 演示，并把它们重组到一个尺寸对照区。"
           tab={tabSizes}
           preview={() => (
             <div className="grid gap-4 xl:grid-cols-2">
@@ -546,7 +546,7 @@ const DockDemo: FC = () => {
 
         <ExampleBlock
           title="自定义外观"
-          summary="保留原来的自定义色示例。Dock 不强行定义额外主题 API，仍然优先通过 className 融入业务表面层。"
+          summary="展示自定义色示例。Dock 不强行定义额外主题 API，仍然优先通过 className 融入业务表面层。"
           tab={tabCustom}
           preview={() => (
             <DockStage>
@@ -595,7 +595,7 @@ const DockDemo: FC = () => {
 
         <ExampleBlock
           title="Dock 自动渲染（items 数组）"
-          summary="保留原来的 items 数组示例，并升级为 key 驱动、默认值和项级类名都可直接声明。"
+          summary="展示 items 数组示例，并组织为 key 驱动、默认值和项级类名都可直接声明。"
           tab={tabAuto}
           preview={() => (
             <div className="space-y-4">
@@ -658,7 +658,7 @@ const DockDemo: FC = () => {
               <code>items + activeKey + onSelect</code>：适合页面导航
             </div>
             <div>
-              <code>items + activeIndex + onChange</code>：适合兼容旧代码
+              <code>items + activeIndex + onChange</code>：适合支持项目代码
             </div>
             <div>
               <code>children + Dock.Item</code>：适合复杂结构和混合根节点
@@ -675,7 +675,7 @@ const DockDemo: FC = () => {
         <p>
           新页面建议优先用 <code>activeKey</code>
           ，因为它更贴近导航语义，也更方便和路由、菜单数据对齐。
-          如果你当前已经是索引式状态，继续使用 <code>activeIndex</code> 也没有问题。
+          如果你当前已经是索引式状态，可以使用 <code>activeIndex</code> 也没有问题。
         </p>
 
         <h3>什么时候用 items，什么时候用 Dock.Item？</h3>

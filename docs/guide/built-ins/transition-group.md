@@ -14,10 +14,6 @@
 
 - CSS 过渡类将应用于列表中的单个元素，**而不是** 应用于组/容器本身。
 
-:::tip
-当在 [DOM 内模板](/guide/guide/essentials/component-basics#in-dom-template-parsing-caveats) 中使用时，它应该引用为 `<transition-group>`。
-:::
-
 ## 进入/离开过渡 (Enter / Leave Transitions) {#enter-leave-transitions}
 
 以下是对 `v-for` 列表应用进入/离开过渡的示例：

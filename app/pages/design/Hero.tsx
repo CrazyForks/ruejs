@@ -219,7 +219,7 @@ const HeroPage: FC = () => {
           Description / Actions 负责最常见的文案骨架，剩下的局部视觉继续交给 className 微调。
         </p>
         <p className={'mt-0 mb-4 text-sm'}>
-          没有可以直接对照的同名标准组件，所以这次的增强重点放在组合能力和语义 API 上：保留 Rue
+          没有可以直接对照的同名标准组件，所以组件重点覆盖组合能力和语义 API 上：使用 Rue
           自己的视觉语言，但把高频搭建动作从页面里收回到组件里。
         </p>
 
@@ -740,7 +740,7 @@ const HeroPage: FC = () => {
             <h2 className={'text-2xl font-semibold'}>API</h2>
             <p className={'text-sm opacity-70'}>
               推荐把外层背景和高度交给 Hero Root，把布局交给 Hero.Content，把标题、描述和 CTA
-              交给语义子组件。这样页面里仍然可以继续用 className 微调，但不会反复重写同一套结构。
+              交给语义子组件。这样页面里仍然可以用 className 微调，但不会反复重写同一套结构。
             </p>
           </section>
 

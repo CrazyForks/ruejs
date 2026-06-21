@@ -4,14 +4,14 @@ Theme 组件概述
 - 额外挂载 Provider、主题算法、token 计算工具。
 - Provider 通过 data-theme 与 CSS 变量做“作用域主题岛”，不依赖运行时 context，也能支持嵌套继承。
 */
-import type { FC } from '@rue-js/rue'
+import { createContext, createElement, useContext, type FC } from '@rue-js/rue'
 
 type ThemeInputType = 'checkbox' | 'radio'
 type ThemeAppearance = 'light' | 'dark'
 type ThemeDensity = 'default' | 'compact'
 type ThemeProviderTag = 'article' | 'div' | 'section' | 'span'
 
-interface ThemeStyleRecord {
+export interface ThemeStyleRecord {
   [key: string]: string | number | undefined
 }
 
@@ -176,6 +176,41 @@ export interface ThemeTokenOverride {
 /** ThemeAlgorithm 类型。 */
 export type ThemeAlgorithm = (token: ThemeDesignToken) => ThemeDesignToken
 
+/** ThemeCssVarConfig 接口。 */
+export interface ThemeCssVarConfig {
+  /** CSS 变量别名前缀，例如 rue 会额外生成 --rue-color-primary。 */
+  prefix?: string
+  /** 当前主题变量的稳定 key，可用于多主题静态抽取。 */
+  key?: string
+}
+
+/** ThemeResolvedCssVarConfig 接口。 */
+export interface ThemeResolvedCssVarConfig {
+  /** 是否生成 CSS variables。 */
+  enabled: boolean
+  /** CSS 变量别名前缀。 */
+  prefix?: string
+  /** 当前主题变量的稳定 key。 */
+  key?: string
+}
+
+/** ThemeCssVar 类型。 */
+export type ThemeCssVar = boolean | ThemeCssVarConfig
+
+/** ThemeComponentAlgorithm 类型。 */
+export type ThemeComponentAlgorithm = boolean | ThemeAlgorithm | readonly ThemeAlgorithm[]
+
+/** ThemeComponentTokenOverride 接口。 */
+export interface ThemeComponentTokenOverride extends ThemeTokenOverride {
+  /** 组件级 token 是否参与算法派生，true 时复用全局 algorithm，也可传入组件专属算法。 */
+  algorithm?: ThemeComponentAlgorithm
+  /** 当前组件 token 写入 CSS variables 时使用的选择器。 */
+  selector?: string
+}
+
+/** ThemeComponentsConfig 类型。 */
+export type ThemeComponentsConfig = Record<string, ThemeComponentTokenOverride>
+
 /** ThemeConfig 配置对象。 */
 export interface ThemeConfig {
   /** theme 配置项。 */
@@ -184,8 +219,30 @@ export interface ThemeConfig {
   token?: ThemeTokenOverride
   /** algorithm 配置项。 */
   algorithm?: ThemeAlgorithm | readonly ThemeAlgorithm[]
+  /** components 配置项。 */
+  components?: ThemeComponentsConfig
+  /** inherit 配置项。 */
+  inherit?: boolean
+  /** cssVar 配置项。 */
+  cssVar?: ThemeCssVar
+  /** hashed 配置项。 */
+  hashed?: boolean
+  /** zeroRuntime 配置项。 */
+  zeroRuntime?: boolean
   /** baseToken 配置项。 */
   baseToken?: ThemeDesignToken
+}
+
+/** ThemeExtractStyleOptions 接口。 */
+export interface ThemeExtractStyleOptions {
+  /** 根变量输出的选择器，默认使用当前 scopeId。 */
+  selector?: string
+  /** 强制指定 scopeId，适合和 cssVar.key 配套做静态 CSS。 */
+  scopeId?: string
+  /** 是否包含根变量规则。 */
+  includeRoot?: boolean
+  /** 是否包含组件级变量规则。 */
+  includeComponents?: boolean
 }
 
 /** ThemeTokenRuntime 接口。 */
@@ -198,6 +255,53 @@ export interface ThemeTokenRuntime {
   token: ThemeDesignToken
   /** cssVariables 配置项。 */
   cssVariables: ThemeStyleRecord
+  /** cssVar 配置项。 */
+  cssVar: ThemeResolvedCssVarConfig
+  /** components 配置项。 */
+  components: Record<string, ThemeDesignToken>
+  /** componentCssVariables 配置项。 */
+  componentCssVariables: Record<string, ThemeStyleRecord>
+  /** componentStyleText 配置项。 */
+  componentStyleText: string
+  /** 当前主题作用域的稳定标识。 */
+  scopeId: string
+  /** 当前主题作用域的 hash class。 */
+  hashId: string
+  /** hashed 配置项。 */
+  hashed: boolean
+  /** zeroRuntime 配置项。 */
+  zeroRuntime: boolean
+}
+
+/** ThemeTokenTuple 类型。 */
+export type ThemeTokenTuple = [ThemeTokenRuntime, ThemeDesignToken, string]
+
+/** ThemeUseTokenResult 接口。 */
+export interface ThemeUseTokenResult {
+  /** 完整运行时信息。 */
+  runtime: ThemeTokenRuntime
+  /** 当前最终 token。 */
+  token: ThemeDesignToken
+  /** 当前主题作用域的 hash class。 */
+  hashId: string
+}
+
+/** ThemeNamespace 接口。 */
+export interface ThemeNamespace {
+  /** compactAlgorithm 配置项。 */
+  compactAlgorithm: ThemeAlgorithm
+  /** darkAlgorithm 配置项。 */
+  darkAlgorithm: ThemeAlgorithm
+  /** defaultAlgorithm 配置项。 */
+  defaultAlgorithm: ThemeAlgorithm
+  /** defaultSeed 配置项。 */
+  defaultSeed: ThemeDesignToken
+  /** extractStyle 配置项。 */
+  extractStyle: (config?: ThemeConfig, options?: ThemeExtractStyleOptions) => string
+  /** getDesignToken 配置项。 */
+  getDesignToken: (config?: ThemeConfig) => ThemeDesignToken
+  /** useToken 配置项。 */
+  useToken: (config?: ThemeConfig) => ThemeUseTokenResult
 }
 
 /** ThemeProviderProps 组件属性。 */
@@ -434,6 +538,9 @@ const defaultConfig: ThemeConfig = {
   theme: 'default',
 }
 
+const ThemeRuntimeContext = createContext<ThemeTokenRuntime | undefined>(undefined)
+const ThemeRuntimeProvider = ThemeRuntimeContext.Provider
+
 /** clone Theme Token 的内部工具函数。 */
 const cloneThemeToken = (token: ThemeDesignToken): ThemeDesignToken => {
   return {
@@ -478,10 +585,89 @@ const normalizeAlgorithmList = (algorithm?: ThemeConfig['algorithm']) => {
   return Array.isArray(algorithm) ? [...algorithm] : [algorithm]
 }
 
+/** 归一化 CSS Var 标识符的内部工具函数。 */
+const normalizeCssVarIdentifier = (value: string) => {
+  return (
+    value
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'rue'
+  )
+}
+
+/** 归一化 Css Var Config 的内部工具函数。 */
+const resolveCssVarConfig = (cssVar?: ThemeCssVar): ThemeResolvedCssVarConfig => {
+  if (cssVar === false) {
+    return { enabled: false }
+  }
+  if (cssVar && typeof cssVar === 'object') {
+    return {
+      enabled: true,
+      key: cssVar.key ? normalizeCssVarIdentifier(cssVar.key) : undefined,
+      prefix: cssVar.prefix ? normalizeCssVarIdentifier(cssVar.prefix) : undefined,
+    }
+  }
+  return { enabled: true }
+}
+
+/** 归一化 Component Name 的内部工具函数。 */
+const normalizeComponentName = (componentName: string) => {
+  return componentName
+    .trim()
+    .replace(/[-_\s]+/g, '')
+    .toLowerCase()
+}
+
+/** clone Component Config 的内部工具函数。 */
+const stripComponentConfig = (config?: ThemeComponentTokenOverride): ThemeTokenOverride => {
+  if (!config) return {}
+  const { algorithm: _algorithm, selector: _selector, ...tokenOverride } = config
+  return tokenOverride
+}
+
+/** 查找 Component Config 的内部工具函数。 */
+const findComponentConfig = (
+  components: ThemeComponentsConfig | undefined,
+  componentName: string,
+) => {
+  if (!components) return undefined
+  if (components[componentName]) return components[componentName]
+
+  const normalizedName = normalizeComponentName(componentName)
+  return Object.entries(components).find(
+    ([name]) => normalizeComponentName(name) === normalizedName,
+  )?.[1]
+}
+
+/** 查找 Runtime Component Token 的内部工具函数。 */
+const findRuntimeComponentToken = (
+  runtime: ThemeTokenRuntime | undefined,
+  componentName: string,
+) => {
+  if (!runtime) return undefined
+  if (runtime.components[componentName]) return runtime.components[componentName]
+
+  const normalizedName = normalizeComponentName(componentName)
+  return Object.entries(runtime.components).find(
+    ([name]) => normalizeComponentName(name) === normalizedName,
+  )?.[1]
+}
+
+/** 归一化 Component Algorithm List 的内部工具函数。 */
+const normalizeComponentAlgorithmList = (
+  componentAlgorithm: ThemeComponentAlgorithm | undefined,
+  globalAlgorithmList: ThemeAlgorithm[],
+) => {
+  if (componentAlgorithm === true) return [...globalAlgorithmList]
+  if (componentAlgorithm === false || componentAlgorithm === undefined) return []
+  return Array.isArray(componentAlgorithm) ? [...componentAlgorithm] : [componentAlgorithm]
+}
+
 /** 解析 Theme Name 的内部工具函数。 */
-const resolveThemeName = (config?: ThemeConfig) => {
+const resolveThemeName = (config?: ThemeConfig, inheritedToken?: ThemeDesignToken) => {
   if (config?.theme) return config.theme
   if (config?.baseToken?.themeName) return config.baseToken.themeName
+  if (inheritedToken?.themeName) return inheritedToken.themeName
   return defaultConfig.theme ?? 'default'
 }
 
@@ -492,6 +678,32 @@ const buildPresetToken = (themeName: string) => {
   const mergedToken = preset ? mergeThemeToken(baseToken, preset) : baseToken
   mergedToken.themeName = themeName
   return mergedToken
+}
+
+/** 构建 Theme Token 上下文的内部工具函数。 */
+const createThemeTokenContext = (config?: ThemeConfig, inheritedRuntime?: ThemeTokenRuntime) => {
+  const shouldInherit = config?.inherit !== false
+  const inheritedToken = shouldInherit ? inheritedRuntime?.token : undefined
+  const themeName = resolveThemeName(config, inheritedToken)
+  const baseToken = config?.baseToken
+    ? cloneThemeToken(config.baseToken)
+    : inheritedToken && !config?.theme
+      ? cloneThemeToken(inheritedToken)
+      : buildPresetToken(themeName)
+  baseToken.themeName = themeName
+
+  const algorithmList = normalizeAlgorithmList(config?.algorithm)
+  const derivedToken = algorithmList.reduce(
+    (currentToken, algorithm) => algorithm(currentToken),
+    baseToken,
+  )
+  const mergedToken = mergeThemeToken(derivedToken, config?.token)
+
+  return {
+    algorithmList,
+    baseToken,
+    token: defaultAlgorithm(mergedToken),
+  }
 }
 
 /** default Algorithm 的内部工具函数。 */
@@ -557,25 +769,74 @@ const compactAlgorithm: ThemeAlgorithm = inputToken => {
 
 /** 读取 Design Token 的内部工具函数。 */
 const getDesignToken = (config?: ThemeConfig) => {
-  const themeName = resolveThemeName(config)
-  const baseToken = config?.baseToken
-    ? cloneThemeToken(config.baseToken)
-    : buildPresetToken(themeName)
-  baseToken.themeName = themeName
+  return createThemeTokenContext(config).token
+}
 
-  const algorithmList = normalizeAlgorithmList(config?.algorithm)
-  const derivedToken = algorithmList.reduce(
-    (currentToken, algorithm) => algorithm(currentToken),
-    baseToken,
+/** 读取 Component Design Token 的内部工具函数。 */
+const getComponentDesignToken = (
+  componentName: string,
+  config?: ThemeConfig,
+  context = createThemeTokenContext(config),
+  inheritedRuntime?: ThemeTokenRuntime,
+) => {
+  const componentConfig = findComponentConfig(config?.components, componentName)
+  if (!componentConfig) return cloneThemeToken(context.token)
+
+  const componentTokenOverride = stripComponentConfig(componentConfig)
+  const inheritedComponentToken =
+    config?.inherit === false
+      ? undefined
+      : findRuntimeComponentToken(inheritedRuntime, componentName)
+  const componentAlgorithmList = normalizeComponentAlgorithmList(
+    componentConfig.algorithm,
+    context.algorithmList,
   )
-  const mergedToken = mergeThemeToken(derivedToken, config?.token)
 
-  return defaultAlgorithm(mergedToken)
+  if (componentAlgorithmList.length === 0) {
+    return defaultAlgorithm(
+      mergeThemeToken(inheritedComponentToken ?? context.token, componentTokenOverride),
+    )
+  }
+
+  const componentSeedToken = mergeThemeToken(
+    mergeThemeToken(context.baseToken, config?.token),
+    componentTokenOverride,
+  )
+  const componentDerivedToken = componentAlgorithmList.reduce(
+    (currentToken, algorithm) => algorithm(currentToken),
+    componentSeedToken,
+  )
+  return defaultAlgorithm(componentDerivedToken)
+}
+
+/** 读取 Components Design Token 的内部工具函数。 */
+const getComponentsDesignToken = (
+  config?: ThemeConfig,
+  context = createThemeTokenContext(config),
+  inheritedRuntime?: ThemeTokenRuntime,
+) => {
+  return Object.keys(config?.components ?? {}).reduce<Record<string, ThemeDesignToken>>(
+    (componentTokens, componentName) => {
+      componentTokens[componentName] = getComponentDesignToken(
+        componentName,
+        config,
+        context,
+        inheritedRuntime,
+      )
+      return componentTokens
+    },
+    {},
+  )
 }
 
 /** 创建 Css Variables 的内部工具函数。 */
-const createCssVariables = (token: ThemeDesignToken): ThemeStyleRecord => {
-  return {
+const createCssVariables = (
+  token: ThemeDesignToken,
+  cssVar: ThemeResolvedCssVarConfig = resolveCssVarConfig(),
+): ThemeStyleRecord => {
+  if (!cssVar.enabled) return {}
+
+  const variables: ThemeStyleRecord = {
     '--color-primary': token.colors.primary,
     '--color-primary-content': token.colors.primaryContent,
     '--color-secondary': token.colors.secondary,
@@ -617,17 +878,82 @@ const createCssVariables = (token: ThemeDesignToken): ThemeStyleRecord => {
     '--rue-theme-shadow-md': token.shadow.md,
     '--rue-theme-shadow-lg': token.shadow.lg,
   }
+
+  if (!cssVar.prefix) return variables
+
+  return Object.entries(variables).reduce<ThemeStyleRecord>(
+    (prefixedVariables, [key, value]) => {
+      prefixedVariables[`--${cssVar.prefix}-${key.replace(/^--/, '')}`] = value
+      return prefixedVariables
+    },
+    { ...variables },
+  )
 }
 
-/** use Token 的内部工具函数。 */
-const useToken = (config?: ThemeConfig): ThemeTokenRuntime => {
-  const token = getDesignToken(config)
-  return {
-    theme: token.themeName,
-    resolvedTheme: token.resolvedThemeName,
-    token,
-    cssVariables: createCssVariables(token),
+/** 创建 Component Css Variables 的内部工具函数。 */
+const createComponentCssVariables = (
+  components: Record<string, ThemeDesignToken>,
+  cssVar: ThemeResolvedCssVarConfig = resolveCssVarConfig(),
+) => {
+  return Object.entries(components).reduce<Record<string, ThemeStyleRecord>>(
+    (componentCssVariables, [componentName, componentToken]) => {
+      componentCssVariables[componentName] = createCssVariables(componentToken, cssVar)
+      return componentCssVariables
+    },
+    {},
+  )
+}
+
+/** 稳定序列化主题对象的内部工具函数。 */
+const stableSerialize = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return `[${value.map(item => stableSerialize(item)).join(',')}]`
   }
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stableSerialize(item)}`)
+      .join(',')}}`
+  }
+  if (typeof value === 'function') {
+    return `[function:${(value as { name?: string }).name || 'anonymous'}]`
+  }
+  return JSON.stringify(value)
+}
+
+/** hash String 的内部工具函数。 */
+const hashString = (value: string) => {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36)
+}
+
+/** 创建 Theme Scope Id 的内部工具函数。 */
+const createThemeScopeId = (
+  token: ThemeDesignToken,
+  componentCssVariables: Record<string, ThemeStyleRecord>,
+  cssVar: ThemeResolvedCssVarConfig = resolveCssVarConfig(),
+) => {
+  if (cssVar.key) {
+    return `rue-${cssVar.key}`
+  }
+  return `rue-${hashString(stableSerialize({ componentCssVariables, token }))}`
+}
+
+/** 创建 Theme Hash Id 的内部工具函数。 */
+const createThemeHashId = (
+  token: ThemeDesignToken,
+  componentCssVariables: Record<string, ThemeStyleRecord>,
+  cssVar: ThemeResolvedCssVarConfig = resolveCssVarConfig(),
+  hashed = true,
+) => {
+  if (!hashed) return ''
+  if (cssVar.key) return `rue-theme-${cssVar.key}`
+  return `rue-theme-${hashString(stableSerialize({ componentCssVariables, token }))}`
 }
 
 /** merge Class Name 的内部工具函数。 */
@@ -671,6 +997,174 @@ const mergeStyleInput = (baseStyle: ThemeStyleRecord, extraStyle?: ThemeStyleRec
   return `${serializedBaseStyle}; ${serializedExtraStyle}`
 }
 
+const defaultComponentSelectors: Readonly<Record<string, string>> = {
+  Alert: '.alert',
+  Avatar: '.avatar',
+  Badge: '.badge',
+  Button: '.btn',
+  Card: '.card',
+  Checkbox: '.checkbox',
+  Fieldset: '.fieldset',
+  Input: '.input, .textarea, .select',
+  Kbd: '.kbd',
+  Link: '.link',
+  Menu: '.menu',
+  Navbar: '.navbar',
+  Progress: '.progress',
+  Radio: '.radio',
+  Select: '.select',
+  Stat: '.stat',
+  Steps: '.steps',
+  Table: '.table',
+  Tabs: '.tabs, .tab',
+  Textarea: '.textarea',
+  Toggle: '.toggle',
+}
+
+/** 转换为组件类名的内部工具函数。 */
+const toComponentClassName = (componentName: string) => {
+  const kebabName = componentName
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/[\s_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase()
+  return kebabName.replace(/[^a-z0-9_-]+/g, '-') || 'custom'
+}
+
+/** escape CSS Attribute Value 的内部工具函数。 */
+const escapeCssAttributeValue = (value: string) => {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
+/** resolve Component Selector 的内部工具函数。 */
+const resolveComponentSelector = (componentName: string, config?: ThemeComponentTokenOverride) => {
+  if (config?.selector) return config.selector
+
+  const normalizedName = normalizeComponentName(componentName)
+  const defaultSelectorEntry = Object.entries(defaultComponentSelectors).find(
+    ([name]) => normalizeComponentName(name) === normalizedName,
+  )
+  if (defaultSelectorEntry) return defaultSelectorEntry[1]
+
+  return `.rue-theme-component-${toComponentClassName(componentName)}`
+}
+
+/** 创建 Component Style Text 的内部工具函数。 */
+const createComponentStyleText = (
+  scopeId: string,
+  componentCssVariables: Record<string, ThemeStyleRecord>,
+  components?: ThemeComponentsConfig,
+) => {
+  const scopeSelector = `[data-rue-theme-scope="${escapeCssAttributeValue(scopeId)}"]`
+
+  return Object.entries(componentCssVariables)
+    .map(([componentName, cssVariables]) => {
+      const selector = resolveComponentSelector(componentName, components?.[componentName])
+      const declarations = serializeStyleRecord(cssVariables)
+      if (!selector || !declarations) return ''
+      return `${scopeSelector}:where(${selector}), ${scopeSelector} :where(${selector}) { ${declarations}; }`
+    })
+    .filter(Boolean)
+    .join('\n')
+}
+
+/** 创建 Root Style Text 的内部工具函数。 */
+const createRootStyleText = (
+  selector: string,
+  token: ThemeDesignToken,
+  cssVariables: ThemeStyleRecord,
+) => {
+  const declarations = serializeStyleRecord({
+    colorScheme: token.colorScheme,
+    color: token.colors.baseContent,
+    ...cssVariables,
+  })
+  return declarations ? `${selector} { ${declarations}; }` : ''
+}
+
+/** 创建 Theme Runtime 的内部工具函数。 */
+const createThemeRuntime = (
+  config?: ThemeConfig,
+  inheritedRuntime?: ThemeTokenRuntime,
+  scopeIdOverride?: string,
+): ThemeTokenRuntime => {
+  const shouldInherit = config?.inherit !== false
+  const tokenContext = createThemeTokenContext(config, inheritedRuntime)
+  const token = tokenContext.token
+  const cssVar = resolveCssVarConfig(config?.cssVar)
+  const ownComponents = getComponentsDesignToken(config, tokenContext, inheritedRuntime)
+  const components = shouldInherit
+    ? { ...inheritedRuntime?.components, ...ownComponents }
+    : ownComponents
+  const componentCssVariables = createComponentCssVariables(components, cssVar)
+  const ownComponentCssVariables = createComponentCssVariables(ownComponents, cssVar)
+  const scopeId = scopeIdOverride ?? createThemeScopeId(token, componentCssVariables, cssVar)
+  const zeroRuntime = config?.zeroRuntime === true
+  const hashed = config?.hashed !== false
+  const hashId = createThemeHashId(token, componentCssVariables, cssVar, hashed)
+
+  return {
+    theme: token.themeName,
+    resolvedTheme: token.resolvedThemeName,
+    token,
+    cssVariables: createCssVariables(token, cssVar),
+    cssVar,
+    components,
+    componentCssVariables,
+    componentStyleText: zeroRuntime
+      ? ''
+      : createComponentStyleText(scopeId, ownComponentCssVariables, config?.components),
+    scopeId,
+    hashId,
+    hashed,
+    zeroRuntime,
+  }
+}
+
+/** use Token 的内部工具函数。 */
+const useToken = (config?: ThemeConfig): ThemeTokenRuntime => {
+  const inheritedRuntime = useContext(ThemeRuntimeContext)
+  return createThemeRuntime(config, inheritedRuntime)
+}
+
+/** use Token Tuple 的内部工具函数。 */
+const useTokenTuple = (config?: ThemeConfig): ThemeTokenTuple => {
+  const runtime = useToken(config)
+  return [runtime, runtime.token, runtime.hashId]
+}
+
+/** use Theme Namespace Token 的内部工具函数。 */
+const useThemeToken = (config?: ThemeConfig): ThemeUseTokenResult => {
+  const runtime = useToken(config)
+  return {
+    runtime,
+    token: runtime.token,
+    hashId: runtime.hashId,
+  }
+}
+
+/** 读取 Css Variables 的内部工具函数。 */
+const getCssVariables = (config?: ThemeConfig) => {
+  const runtime = createThemeRuntime(config)
+  return runtime.cssVariables
+}
+
+/** 抽取 Theme Style 的内部工具函数。 */
+const extractStyle = (config?: ThemeConfig, options?: ThemeExtractStyleOptions) => {
+  const runtime = createThemeRuntime(config, undefined, options?.scopeId)
+  const selector =
+    options?.selector ?? `[data-rue-theme-scope="${escapeCssAttributeValue(runtime.scopeId)}"]`
+  return [
+    options?.includeRoot === false
+      ? ''
+      : createRootStyleText(selector, runtime.token, runtime.cssVariables),
+    options?.includeComponents === false ? '' : runtime.componentStyleText,
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
 /** 主题控制输入：继续映射到 daisyUI 的 theme-controller 类。 */
 const ThemeInput: FC<ThemeControllerProps> = ({ type = 'checkbox', theme, className, ...rest }) => {
   const resolvedValue = theme ?? rest.value
@@ -696,6 +1190,11 @@ const ThemeProvider: FC<ThemeProviderProps> = ({
   theme,
   token,
   algorithm,
+  components,
+  inherit,
+  cssVar,
+  hashed,
+  zeroRuntime,
   baseToken,
   ref: forwardedRef,
   ...rest
@@ -704,9 +1203,22 @@ const ThemeProvider: FC<ThemeProviderProps> = ({
     theme,
     token,
     algorithm,
+    components,
+    inherit,
+    cssVar,
+    hashed,
+    zeroRuntime,
     baseToken,
   })
   const content = render ? render(runtime) : children
+  const scopedContent = runtime.componentStyleText ? (
+    <>
+      <style data-rue-theme-components={runtime.scopeId}>{runtime.componentStyleText}</style>
+      {content}
+    </>
+  ) : (
+    content
+  )
   const mergedStyle = mergeStyleInput(
     {
       colorScheme: runtime.token.colorScheme,
@@ -722,50 +1234,90 @@ const ThemeProvider: FC<ThemeProviderProps> = ({
   const commonProps = {
     ...rest,
     ref: applyRef,
-    className: mergeClassName('rue-theme-scope', className),
+    className: mergeClassName(
+      runtime.hashId ? `rue-theme-scope ${runtime.hashId}` : 'rue-theme-scope',
+      className,
+    ),
     style: mergedStyle,
     'data-theme': runtime.resolvedTheme,
     'data-rue-theme': runtime.theme,
     'data-rue-appearance': runtime.token.appearance,
     'data-rue-density': runtime.token.density,
+    'data-rue-theme-scope': runtime.scopeId,
+    'data-rue-theme-hashed': runtime.hashed ? 'true' : 'false',
+    'data-rue-theme-css-var': runtime.cssVar.enabled ? 'true' : 'false',
+    'data-rue-theme-css-var-key': runtime.cssVar.key,
+    'data-rue-theme-zero-runtime': runtime.zeroRuntime ? 'true' : 'false',
   }
+
+  const contextContent = createElement(
+    ThemeRuntimeProvider as FC<{ value: ThemeTokenRuntime; children?: any }>,
+    { value: runtime },
+    scopedContent,
+  )
 
   if (as === 'section') {
-    return <section {...commonProps}>{content}</section>
+    return <section {...commonProps}>{contextContent}</section>
   }
   if (as === 'article') {
-    return <article {...commonProps}>{content}</article>
+    return <article {...commonProps}>{contextContent}</article>
   }
   if (as === 'span') {
-    return <span {...commonProps}>{content}</span>
+    return <span {...commonProps}>{contextContent}</span>
   }
 
-  return <div {...commonProps}>{content}</div>
+  return <div {...commonProps}>{contextContent}</div>
 }
 
 type ThemeControllerCompound = FC<ThemeControllerProps> & {
+  ConfigProvider: FC<ThemeProviderProps>
   Provider: FC<ThemeProviderProps>
   compactAlgorithm: ThemeAlgorithm
   darkAlgorithm: ThemeAlgorithm
   defaultAlgorithm: ThemeAlgorithm
   defaultConfig: ThemeConfig
   defaultSeed: ThemeDesignToken
+  extractStyle: (config?: ThemeConfig, options?: ThemeExtractStyleOptions) => string
+  getComponentDesignToken: (componentName: string, config?: ThemeConfig) => ThemeDesignToken
+  getCssVariables: (config?: ThemeConfig) => ThemeStyleRecord
   getDesignToken: (config?: ThemeConfig) => ThemeDesignToken
   presets: Readonly<Record<string, ThemeTokenOverride>>
+  theme: ThemeNamespace
   useToken: (config?: ThemeConfig) => ThemeTokenRuntime
+  useTokenTuple: (config?: ThemeConfig) => ThemeTokenTuple
+}
+
+const ConfigProvider = ThemeProvider
+
+const theme: ThemeNamespace = {
+  compactAlgorithm,
+  darkAlgorithm,
+  defaultAlgorithm,
+  defaultSeed,
+  extractStyle,
+  getDesignToken,
+  useToken: useThemeToken,
 }
 
 const ThemeController: ThemeControllerCompound = Object.assign(ThemeInput, {
+  ConfigProvider,
   Provider: ThemeProvider,
   compactAlgorithm,
   darkAlgorithm,
   defaultAlgorithm,
   defaultConfig,
   defaultSeed,
+  extractStyle,
+  getComponentDesignToken,
+  getCssVariables,
   getDesignToken,
   presets: themePresets,
+  theme,
   useToken,
+  useTokenTuple,
 })
+
+export { ConfigProvider, theme }
 
 /** 默认导出主题组件。 */
 export default ThemeController

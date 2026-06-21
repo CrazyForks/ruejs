@@ -132,6 +132,10 @@ const flatRoutes: RouteRecordRaw[] = [
     path: '/jsx/template',
     component: useComponent(() => import('../pages/jsx/TemplateDemo')),
   },
+  {
+    path: '/jsx/scoped-style',
+    component: useComponent(() => import('../pages/jsx/ScopedStyle')),
+  },
   { path: '/jsx/fragments', component: useComponent(() => import('../pages/jsx/Fragments')) },
   { path: '/jsx/children', component: useComponent(() => import('../pages/jsx/Children')) },
   { path: '/jsx/components', component: useComponent(() => import('../pages/jsx/Components')) },
@@ -142,6 +146,10 @@ const flatRoutes: RouteRecordRaw[] = [
   {
     path: '/jsx/suspense',
     component: useComponent(() => import('../pages/jsx/SuspenseDemo')),
+  },
+  {
+    path: '/jsx/async-hydration',
+    component: useComponent(() => import('../pages/jsx/AsyncHydrationDemo')),
   },
   {
     path: '/jsx/keep-alive',
@@ -187,6 +195,10 @@ const flatRoutes: RouteRecordRaw[] = [
     component: useComponent(() => import('../pages/examples/TriggerRef')),
   },
   {
+    path: '/examples/custom-ref',
+    component: useComponent(() => import('../pages/examples/CustomRef')),
+  },
+  {
     path: '/examples/on-activated',
     component: useComponent(() => import('../pages/examples/OnActivatedDemo')),
   },
@@ -208,8 +220,16 @@ const flatRoutes: RouteRecordRaw[] = [
     component: useComponent(() => import('../pages/examples/WatchPostEffect')),
   },
   {
+    path: '/examples/watch-sync-effect',
+    component: useComponent(() => import('../pages/examples/WatchSyncEffect')),
+  },
+  {
     path: '/examples/on-watcher-cleanup',
     component: useComponent(() => import('../pages/examples/OnWatcherCleanup')),
+  },
+  {
+    path: '/examples/effect-scope',
+    component: useComponent(() => import('../pages/examples/EffectScope')),
   },
   {
     path: '/examples/on-scope-dispose',
@@ -324,6 +344,10 @@ const flatRoutes: RouteRecordRaw[] = [
     component: useComponent(() => import('../pages/examples/SimpleComponent')),
   },
   {
+    path: '/examples/global-component-registration',
+    component: useComponent(() => import('../pages/examples/GlobalComponentRegistration')),
+  },
+  {
     path: '/examples/on-error-captured',
     component: useComponent(() => import('../pages/examples/OnErrorCaptured')),
   },
@@ -342,6 +366,10 @@ const flatRoutes: RouteRecordRaw[] = [
   {
     path: '/examples/web-components',
     component: useComponent(() => import('../pages/examples/WebComponents')),
+  },
+  {
+    path: '/examples/web-components-lab',
+    component: useComponent(() => import('../pages/examples/WebComponentFeatureLab')),
   },
   {
     path: '/examples/fetching-data',
@@ -443,6 +471,10 @@ const flatRoutes: RouteRecordRaw[] = [
     component: useComponent(() => import('../pages/examples/SVGSharedNamespace')),
   },
   { path: '/examples/modal', component: useComponent(() => import('../pages/examples/Modal')) },
+  {
+    path: '/examples/transition-mode',
+    component: useComponent(() => import('../pages/examples/TransitionMode')),
+  },
   {
     path: '/examples/list-transition',
     component: useComponent(() => import('../pages/examples/ListTransition')),

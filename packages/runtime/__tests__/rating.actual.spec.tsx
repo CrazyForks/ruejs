@@ -79,7 +79,7 @@ afterEach(() => {
 describe('Rating actual page', () => {
   it('renders rating demos, updates rating state, and restores preview after code toggle', async () => {
     previewState.enabledTitles.add('Semantic rating')
-    previewState.enabledTitles.add('Legacy clear and half')
+    previewState.enabledTitles.add('Clear and half')
 
     const container = mountContainer()
     resetActiveRuntime()
@@ -91,7 +91,7 @@ describe('Rating actual page', () => {
     })
 
     const semanticDemo = () => findDemo(container, '# Semantic rating') as HTMLElement | null
-    const advancedDemo = () => findDemo(container, '# Legacy clear and half') as HTMLElement | null
+    const advancedDemo = () => findDemo(container, '# Clear and half') as HTMLElement | null
 
     expect(semanticDemo()).not.toBeNull()
     expect(advancedDemo()).not.toBeNull()

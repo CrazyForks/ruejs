@@ -144,7 +144,7 @@ const BasicShowcase: FC = () => {
             controls={false}
             suffix="pts"
           />
-          <Fieldset.Label as="p">只保留纯输入体验，适合和自定义操作条组合。</Fieldset.Label>
+          <Fieldset.Label as="p">只保持纯输入体验，适合和自定义操作条组合。</Fieldset.Label>
         </Fieldset>
 
         <Fieldset>
@@ -156,16 +156,14 @@ const BasicShowcase: FC = () => {
             changeOnBlur={false}
             suffix="ms"
           />
-          <Fieldset.Label as="p">
-            关闭 blur 归一化时，区间外值会继续保留到业务层处理。
-          </Fieldset.Label>
+          <Fieldset.Label as="p">关闭 blur 归一化时，区间外值会展示到业务层处理。</Fieldset.Label>
         </Fieldset>
 
         <Fieldset>
           <Fieldset.Legend>不可用态</Fieldset.Legend>
           <InputNumber className="w-full" defaultValue={24} disabled prefix="QTY" />
           <Fieldset.Label as="p">
-            禁用时自动收起加减控件，保留 Rue Input 的静态视觉。
+            禁用时自动收起加减控件，使用 Rue Input 的静态视觉。
           </Fieldset.Label>
         </Fieldset>
       </div>
@@ -267,7 +265,7 @@ const FormatterShowcase: FC = () => {
         </div>
         <p className="mt-4 mb-0 text-base-content/65">
           formatter 负责展示层，parser 负责回到数值层。这样可以在不使用原生 number input
-          的前提下，保留货币、百分比和本地化格式。
+          的前提下，保持货币、百分比和本地化格式。
         </p>
         <div className="mt-4 rounded-box bg-base-200/70 p-4">
           折扣后预算：
@@ -323,7 +321,7 @@ const PrecisionShowcase: FC = () => {
           <div className="flex items-center justify-between gap-3">
             <span>String mode</span>
             <Badge outline={true} size="sm">
-              保留 4 位小数
+              保持 4 位小数
             </Badge>
           </div>
           <div className="mt-4 text-2xl font-semibold text-base-content">
@@ -481,7 +479,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'allowClear',
-    description: '沿用 Rue Input 的清空按钮能力，清空后会回传 null。',
+    description: '使用 Rue Input 的清空按钮能力，清空后会回传 null。',
     type: 'boolean | { clearIcon?: any }',
     defaultValue: 'false',
   },
@@ -512,9 +510,9 @@ const InputNumberPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>InputNumber 数字输入</h1>
         <p className="text-sm mt-3 mb-3">
-          InputNumber 建在 Rue 现有的 Input 视觉壳层之上：保持
+          InputNumber 建在 Rue 当前的 Input 视觉壳层之上：保持
           prefix、suffix、addon、状态和变体都还是同一套审美，但把数值输入真正需要的
-          formatter、parser、precision、步进按钮、键盘和滚轮能力一次补齐。
+          formatter、parser、precision、步进按钮、键盘和滚轮能力一次覆盖。
         </p>
 
         <h2>何时使用</h2>
@@ -707,7 +705,7 @@ const lastStep = ref('等待操作')
 
         <PreviewBlock
           title="Sizes"
-          summary="沿用 Rue Input 的尺寸体系，包括 large 别名。"
+          summary="使用 Rue Input 的尺寸体系，包括 large 别名。"
           tab={tabSizes}
           preview={() => <SizeShowcase />}
           code={`<InputNumber size="xs" defaultValue={8} suffix="xs" />

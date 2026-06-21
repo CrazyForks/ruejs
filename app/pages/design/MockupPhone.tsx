@@ -149,7 +149,7 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'children',
-    description: '经典 compound 模式内容，通常与 MockupPhone.Camera / Display 搭配使用',
+    description: '组合 compound 模式内容，通常与 MockupPhone.Camera / Display 搭配使用',
     type: 'any',
     defaultValue: '-',
   },
@@ -158,7 +158,7 @@ const rootApiRows: ApiRow[] = [
 const partApiRows: ApiRow[] = [
   {
     prop: 'MockupPhone.Camera',
-    description: '摄像头部件，保留原始结构，可自定义 className 和 attrs',
+    description: '摄像头部件，展示基础结构，可自定义 className 和 attrs',
     type: 'FC<MockupPhonePartProps>',
     defaultValue: '-',
   },
@@ -191,9 +191,9 @@ const MockupPhonePage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Mockup Phone 手机外框</h1>
         <p className="text-sm mt-3 mb-3">
-          MockupPhone 继续保留 Rue 原本的 compound 结构，同时补上一层更顺手的根级 API：可以直接声明
+          MockupPhone 可以使用 Rue 基础的 compound 结构，同时补上一层更顺手的根级 API：可以直接声明
           <code>display</code>、<code>size</code>、<code>color</code> 和 <code>camera</code>
-          ，在快速搭 demo 时不用每次都手写完整骨架。
+          ，在快速搭示例 时不用每次都手写完整骨架。
         </p>
 
         <h2>何时使用</h2>
@@ -296,7 +296,7 @@ const MockupPhonePage: FC = () => {
 
         <ExampleBlock
           title="iPhone mockup"
-          summary="保留原来的 compound 写法，适合你想显式控制摄像头和显示区结构的时候。"
+          summary="展示 compound 写法，适合你想显式控制摄像头和显示区结构的时候。"
           tab={tabBasic}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -320,7 +320,7 @@ const MockupPhonePage: FC = () => {
 
         <ExampleBlock
           title="With color and wallpaper"
-          summary="原有壁纸 demo 继续保留，同时说明 className 仍然是最高自由度的扩展入口。"
+          summary="基础壁纸示例 展示，同时说明 className 仍然是最高自由度的扩展入口。"
           tab={tabWallpaper}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -364,7 +364,7 @@ const MockupPhonePage: FC = () => {
                           children: (
                             <div>
                               <div className="text-xs opacity-60">{item.size}</div>
-                              <div className="mt-2 text-sm font-semibold">Rue Demo</div>
+                              <div className="mt-2 text-sm font-semibold">Rue 示例</div>
                             </div>
                           ),
                         }}
@@ -392,7 +392,7 @@ const MockupPhonePage: FC = () => {
       children: (
         <div>
           <div className="text-xs opacity-60">{item.size}</div>
-          <div className="mt-2 text-sm font-semibold">Rue Demo</div>
+          <div className="mt-2 text-sm font-semibold">Rue 示例</div>
         </div>
       ),
     }}
@@ -446,7 +446,7 @@ const MockupPhonePage: FC = () => {
                         <div className="rounded-2xl bg-base-200 p-3">
                           <div className="text-sm font-medium">Notes</div>
                           <div className="mt-1 text-xs opacity-70">
-                            保留 compound，同时用 display 简写快速搭状态屏。
+                            保持 compound，同时用 display 简写快速搭状态屏。
                           </div>
                         </div>
                         <div className="rounded-2xl bg-base-200 p-3">
@@ -502,7 +502,7 @@ const MockupPhonePage: FC = () => {
         <div className="rounded-2xl bg-base-200 p-3">
           <div className="text-sm font-medium">Notes</div>
           <div className="mt-1 text-xs opacity-70">
-            保留 compound，同时用 display 简写快速搭状态屏。
+            保持 compound，同时用 display 简写快速搭状态屏。
           </div>
         </div>
         <div className="rounded-2xl bg-base-200 p-3">
@@ -735,7 +735,7 @@ const MockupPhonePage: FC = () => {
         />
 
         <h2 id="mockup-phone-api">API</h2>
-        <p>MockupPhone 现在支持“根级简写模式”和“经典 compound 模式”两套写法。</p>
+        <p>MockupPhone 现在支持“根级简写模式”和“组合 compound 模式”两套写法。</p>
 
         <h3>MockupPhone</h3>
         <ApiTable rows={rootApiRows} />
@@ -763,10 +763,10 @@ const MockupPhonePage: FC = () => {
 
         <h2>FAQ</h2>
 
-        <h3>什么时候用 display，什么时候继续写 MockupPhone.Display？</h3>
+        <h3>什么时候用 display，什么时候可以写 MockupPhone.Display？</h3>
         <p>
           如果只是想快速搭一个手机画面，优先用 <code>display</code>
-          。如果你需要自己决定显示区里的完整节点树，或者已经在复用旧 demo，继续用
+          。如果你需要自己决定显示区里的完整节点树，或者已经在复用基础示例，可以用
           <code>MockupPhone.Camera</code> 和 <code>MockupPhone.Display</code> 会更直观。
         </p>
 

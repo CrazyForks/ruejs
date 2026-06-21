@@ -68,7 +68,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'ghost',
-    description: '兼容旧用法，等价于 variant="ghost"',
+    description: '支持基础用法，等价于 variant="ghost"',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -272,7 +272,7 @@ const AutoSizePreview: FC = () => {
 
 const RecipeTextareaPreview: FC = () => {
   const review = ref(
-    '先说结论：这版交互更顺了。\n\n1. 清空和字数提示都更直观。\n2. 自动高度适合写中短文。',
+    '先说结论：交互反馈更清晰了。\n\n1. 清空和字数提示都更直观。\n2. 自动高度适合写中短文。',
   )
 
   return (
@@ -328,21 +328,21 @@ const TextareaPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Textarea 文本域</h1>
         <p className="text-sm mt-3 mb-3">
-          Textarea 不再只是原生 <code>textarea</code> 的样式壳。当前版本保留 Rue 的视觉基底，
-          同时补齐了更适合真实输入场景的语义 API，比如 <code>status</code>、<code>allowClear</code>
+          Textarea 不再只是原生 <code>textarea</code> 的样式壳。当前组件使用 Rue 的视觉基底，
+          同时提供了更适合真实输入场景的语义 API，比如 <code>status</code>、<code>allowClear</code>
           、<code>showCount</code>、<code>autoSize</code> 和 <code>resize</code>。
         </p>
 
         <h2>何时使用</h2>
         <ul>
-          <li>需要输入评论、备注、描述等多行文本，并希望保留 Rue 的基础视觉风格。</li>
+          <li>需要输入评论、备注、描述等多行文本，并希望使用 Rue 的基础视觉风格。</li>
           <li>需要把状态提示、字数统计、清空操作和自动高度作为统一组件能力复用。</li>
-          <li>需要在轻量样式包装之外，再获得更顺手的交互语义和 demo 参考。</li>
+          <li>需要在轻量样式包装之外，再获得更顺手的交互语义和示例 参考。</li>
         </ul>
 
         <ExampleBlock
           title="基础用法"
-          summary="保留原有受控输入示例，并把当前输入内容直接展示出来。"
+          summary="展示基础受控输入示例，并把当前输入内容直接展示出来。"
           tab={tabBasic}
           preview={() => <BasicTextareaPreview />}
           code={`const value = ref('Rue Design\\nMultiline input')
@@ -446,7 +446,7 @@ const TextareaPage: FC = () => {
 
         <ExampleBlock
           title="颜色色板"
-          summary="保留原有颜色示例，继续沿用 Rue 的主题色体系。"
+          summary="使用颜色示例，使用 Rue 的主题色体系。"
           tab={tabColors}
           preview={() => (
             <div className="grid w-full max-w-md gap-4">
@@ -467,7 +467,7 @@ const TextareaPage: FC = () => {
 
         <ExampleBlock
           title="尺寸体系"
-          summary="保留原有 xs 到 xl 示例，并补充 small / middle / large 别名。"
+          summary="展示基础 xs 到 xl 示例，并补充 small / middle / large 别名。"
           tab={tabSizes}
           preview={() => (
             <div className="grid w-full max-w-md gap-4">
@@ -494,7 +494,7 @@ const TextareaPage: FC = () => {
 
         <ExampleBlock
           title="禁用与只读"
-          summary="保留原有 disabled 示例，并补一组只读场景。"
+          summary="展示基础 disabled 示例，并补一组只读场景。"
           tab={tabDisabled}
           preview={() => (
             <div className="grid w-full max-w-xl gap-4">
@@ -522,7 +522,7 @@ const TextareaPage: FC = () => {
           summary="把 Filled、自动高度、清空和字数统计组合起来，就能快速搭出真实输入区。"
           tab={tabRecipe}
           preview={() => <RecipeTextareaPreview />}
-          code={`const review = ref('先说结论：这版交互更顺了。')
+          code={`const review = ref('先说结论：交互反馈更清晰了。')
 
 <Textarea
   value={review.value}
@@ -539,7 +539,7 @@ const TextareaPage: FC = () => {
         />
 
         <h2 id="textarea-api">API</h2>
-        <p>下面列出当前页面新增或重点推荐使用的 Textarea API。</p>
+        <p>下面列出当前页面重点推荐使用的 Textarea API。</p>
 
         <ApiTable rows={apiRows} />
 

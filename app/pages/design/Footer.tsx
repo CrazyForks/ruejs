@@ -230,7 +230,7 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'children',
-    description: '传入后沿用原始自定义结构，保持对旧写法的兼容',
+    description: '传入后使用基础自定义结构，保持对基础写法的支持',
     type: 'any',
     defaultValue: '-',
   },
@@ -299,21 +299,21 @@ const FooterDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Footer 页脚</h1>
         <p className="text-sm mt-3 mb-3">
-          Footer 现在同时支持两种组织方式：可以继续像以前一样直接写 <code>nav</code>、
-          <code>aside</code> 和 自定义 class，也可以改用 <code>brand</code>、<code>sections</code>{' '}
-          与 <code>Footer.Section</code>
+          Footer 现在同时支持两种组织方式：可以继续像直接写 <code>nav</code>、<code>aside</code> 和
+          自定义 class，也可以改用 <code>brand</code>、<code>sections</code> 与{' '}
+          <code>Footer.Section</code>
           这组结构化 API，把品牌区、链接列和表单区拆开表达。
         </p>
 
         <h2>何时使用</h2>
         <ul>
           <li>需要组织品牌信息、导航链接、社交入口或版权声明。</li>
-          <li>希望保留 Rue 当前的 footer 视觉风格，同时减少重复的页脚模板代码。</li>
+          <li>希望使用 Rue 当前的 footer 视觉风格，同时减少重复的页脚模板代码。</li>
         </ul>
 
         <ExampleBlock
           title="推荐：结构化列布局"
-          summary="把最常见的三列 footer 改成 sections 数据驱动，仍然保留原来的视觉类名和响应式方向。"
+          summary="把最常见的三列 footer 改成 sections 数据驱动，仍然提供当前视觉类名和响应式方向。"
           tab={tabRecommended}
           preview={() => (
             <Footer
@@ -416,7 +416,7 @@ const FooterDemo: FC = () => {
 
         <ExampleBlock
           title="Footer（默认纵向，sm 起横向）"
-          summary="原始基础 demo 继续保留，这里改用 sections 表达同一个场景。"
+          summary="基础示例 展示，这里改用 sections 表达同一个场景。"
           tab={tabBasic}
           preview={() => (
             <Footer
@@ -429,7 +429,7 @@ const FooterDemo: FC = () => {
 
         <ExampleBlock
           title="Footer with a logo section"
-          summary="保留品牌区场景；推荐用 brand + sections，把品牌说明和导航列拆开。"
+          summary="展示品牌区场景；推荐用 brand + sections，把品牌说明和导航列拆开。"
           tab={tabLogo}
           preview={() => (
             <Footer
@@ -465,7 +465,7 @@ const FooterDemo: FC = () => {
 
         <ExampleBlock
           title="Footer with a form"
-          summary="保留订阅表单场景；自定义 section 可直接切换成 form 根节点。"
+          summary="展示订阅表单场景；自定义 section 可直接切换成 form 根节点。"
           tab={tabForm}
           preview={() => (
             <Footer
@@ -519,7 +519,7 @@ const FooterDemo: FC = () => {
 
         <ExampleBlock
           title="Footer with logo and social icons"
-          summary="保留品牌加社交图标场景；图标区适合通过 content 自定义。"
+          summary="展示品牌加社交图标场景；图标区适合通过 content 自定义。"
           tab={tabSocial}
           preview={() => (
             <Footer
@@ -577,7 +577,7 @@ const FooterDemo: FC = () => {
 
         <ExampleBlock
           title="Footer with links and social icons"
-          summary="保留原来的混合场景；这里继续用 children 自由拼装，展示兼容分支。"
+          summary="展示混合场景；这里可以用 children 自由拼装，展示组合分支。"
           tab={tabLinks}
           preview={() => (
             <Footer className="p-10 bg-base-300 text-base-content rounded sm:footer-horizontal">
@@ -635,7 +635,7 @@ const FooterDemo: FC = () => {
 
         <ExampleBlock
           title="Links and social icons (two rows)"
-          summary="保留两行链接矩阵；用 sections 组合数据，继续交给 className 控制布局。"
+          summary="展示两行链接矩阵；用 sections 组合数据，继续交给 className 控制布局。"
           tab={tabLinks2}
           preview={() => (
             <Footer
@@ -656,7 +656,7 @@ const FooterDemo: FC = () => {
 
         <ExampleBlock
           title="Centered footer with logo and social icons"
-          summary="保留居中品牌场景；这里演示 center + 复合内容的组合。"
+          summary="展示居中品牌场景；这里演示 center + 复合内容的组合。"
           tab={tabCenteredBrand}
           preview={() => (
             <Footer
@@ -707,7 +707,7 @@ const FooterDemo: FC = () => {
 
         <ExampleBlock
           title="Centered footer with social icons"
-          summary="保留居中导航与版权场景；继续展示旧的 children 兼容写法。"
+          summary="展示居中导航与版权场景；展示基础的 children 写法。"
           tab={tabCentered}
           preview={() => (
             <Footer className="p-10 bg-base-200 text-base-content rounded footer-horizontal" center>
@@ -755,7 +755,7 @@ const FooterDemo: FC = () => {
 
         <ExampleBlock
           title="Two footer"
-          summary="双层 footer 场景继续保留；下半部分可配合 bordered 或直接沿用原类名。"
+          summary="双层 footer 场景展示；下半部分可配合 bordered 或直接使用原类名。"
           tab={tabTwo}
           preview={() => (
             <div className="w-full">
@@ -808,7 +808,7 @@ const FooterDemo: FC = () => {
         />
 
         <h2 id="footer-api">API</h2>
-        <p>当前页展示的是增强后的 Footer API，旧的 children 写法仍然可用。</p>
+        <p>当前页展示的是语义化的 Footer API，基础的 children 写法仍然可用。</p>
 
         <h3>Footer</h3>
         <ApiTable rows={rootApiRows} />
@@ -837,7 +837,7 @@ const FooterDemo: FC = () => {
 
         <h2>FAQ</h2>
 
-        <h3>什么时候用 sections，什么时候继续写 children？</h3>
+        <h3>什么时候用 sections，什么时候可以写 children？</h3>
         <p>
           列结构比较规则时，优先用 <code>sections</code>
           ，维护成本更低；如果某一列需要完全自定义布局，或者你已经有现成的
@@ -851,11 +851,11 @@ const FooterDemo: FC = () => {
           <code>items</code> 会更省代码。
         </p>
 
-        <h3>direction 和 center 还需要保留吗？</h3>
+        <h3>direction 和 center 还需要保持吗？</h3>
         <p>
-          需要。它们仍然是最轻量的布局开关，适合和现有的 <code>sm:footer-horizontal</code>、
+          需要。它们仍然是最轻量的布局开关，适合和当前的 <code>sm:footer-horizontal</code>、
           <code>footer-center</code>
-          类名习惯一起工作，不会破坏旧页面的视觉结果。
+          类名习惯一起工作，不会破坏项目页面的视觉结果。
         </p>
       </div>
     </SidebarPlayground>

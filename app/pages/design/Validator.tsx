@@ -162,7 +162,7 @@ const UsernameRulePreview: FC = () => {
 const validatorApiRows: ApiRow[] = [
   {
     prop: 'appearance',
-    description: '自动补齐 input、select、textarea、checkbox、toggle 这些宿主类名',
+    description: '自动补充 input、select、textarea、checkbox、toggle 这些宿主类名',
     type: `'input' | 'select' | 'textarea' | 'checkbox' | 'toggle'`,
     defaultValue: '-',
   },
@@ -174,7 +174,7 @@ const validatorApiRows: ApiRow[] = [
   },
   {
     prop: 'className',
-    description: '追加自定义类名，旧写法仍可继续手动传入 input / select / textarea',
+    description: '追加自定义类名，基础写法仍可继续手动传入 input / select / textarea',
     type: 'string',
     defaultValue: '-',
   },
@@ -308,7 +308,7 @@ const ValidatorPage: FC = () => {
         <h1>Validator 校验辅助</h1>
         <p className="text-sm mt-3 mb-3">
           Validator 仍然只负责把浏览器原生校验结果映射成 Rue
-          当前的表单视觉，不引入额外校验引擎。原有的
+          当前的表单视觉，不引入额外校验引擎。基础的
           <code>className=&quot;input validator&quot;</code>
           写法继续可用，但现在也可以直接通过
           <code>appearance</code>、<code>size</code>、<code>status</code> 和<code>Field</code>
@@ -322,7 +322,7 @@ const ValidatorPage: FC = () => {
             </div>
           </div>
           <div>
-            <div className="font-medium text-base-content">语义外观补齐</div>
+            <div className="font-medium text-base-content">语义外观补充</div>
             <div className="mt-1 opacity-70">
               用 appearance 直接映射 input、select、toggle 等宿主风格。
             </div>
@@ -364,7 +364,7 @@ const ValidatorPage: FC = () => {
 
         <ExampleBlock
           title="Different validator hosts"
-          summary="保留原有 select 和 textarea 场景，并补上 checkbox / toggle 这种同样依赖 validator 的宿主。"
+          summary="展示基础 select 和 textarea 场景，并补上 checkbox / toggle 这种同样依赖 validator 的宿主。"
           tab={tabHosts}
           preview={() => (
             <div className="grid w-full max-w-4xl gap-4 md:grid-cols-2">
@@ -642,7 +642,7 @@ const syncNativeInvalid = (event: Event) => {
 
         <ExampleBlock
           title="Form recipe"
-          summary="把原有散装 demo 融合成一个更接近真实业务的登录表单，同时保持 Validator 只负责视觉反馈。"
+          summary="把基础散装示例 融合成一个更接近真实业务的登录表单，同时保持 Validator 只负责视觉反馈。"
           tab={tabForm}
           preview={() => (
             <form

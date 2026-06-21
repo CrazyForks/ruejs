@@ -118,7 +118,7 @@ export const App: FC = () => {
 
 ```tsx
 import { createRouter, createWebHistory, type RouteRecordRaw } from '@rue-js/router'
-import { createApp } from '@rue-js/rue'
+import { useApp } from '@rue-js/rue'
 import Home from './views/Home'
 import About from './views/About'
 
@@ -132,9 +132,7 @@ const router = createRouter({
   routes,
 })
 
-const app = createApp(App)
-app.use(router)
-app.mount('#app')
+useApp(App).use(router).mount('#app')
 ```
 
 在组件中使用路由：

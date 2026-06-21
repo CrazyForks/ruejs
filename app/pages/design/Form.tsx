@@ -1251,7 +1251,7 @@ const DynamicListShowcase: FC = () => {
                 {
                   validator: (_rule, value) => {
                     if (!Array.isArray(value) || value.length < 2) {
-                      return '至少保留 2 名审批成员，才适合真实协作流程。'
+                      return '至少保持 2 名审批成员，才适合真实协作流程。'
                     }
                     return undefined
                   },
@@ -1614,7 +1614,7 @@ const formApiRows: ApiRow[] = [
   },
   {
     prop: 'preserve',
-    description: '字段卸载后是否保留值，常用于条件区域和分页表单。',
+    description: '字段卸载后是否保持值，常用于条件区域和分页表单。',
     type: 'boolean',
     defaultValue: 'true',
   },
@@ -1713,7 +1713,7 @@ const formItemApiRows: ApiRow[] = [
   },
   {
     prop: 'noStyle',
-    description: '只保留字段绑定能力，不输出额外布局壳层。',
+    description: '只保持字段绑定能力，不输出额外布局壳层。',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -1825,7 +1825,7 @@ const usageCards = [
       'Rue 当前 runtime 下，推荐始终显式持有并传递 form 实例。页面级按钮、摘要卡片、提交动作也都围绕这一个实例展开。',
     items: [
       '优先 Form.useForm()',
-      'render(form) 里把 form 继续传给 Item / List',
+      'render(form) 里把 form 可以传给 Item / List',
       '不要依赖隐式祖先解析',
     ],
   },
@@ -1915,7 +1915,7 @@ const FormPage: FC = () => {
         <div className="not-prose rounded-[1.5rem] border border-base-300 bg-base-100 p-6 text-sm leading-7 text-base-content/75 shadow-sm">
           当前 Rue runtime 下，推荐通过 <code>Form.useForm()</code> 或{' '}
           <code>{'render={form => <Form.Item form={form} name="title" />}'}</code> 显式持有并传递{' '}
-          <code>form</code>。 下面所有 demo
+          <code>form</code>。 下面所有示例
           都按这个稳定路径组织，不再依赖隐式祖先解析；你也会在示例里反复看到几条关键规则：
           `initialValues` 优先于子字段默认值，`Checkbox` 要切到 `checked` 语义，`dependencies` 和
           `shouldUpdate` 分工不同。
@@ -2361,7 +2361,7 @@ const FormPage: FC = () => {
                 {
                   validator: (_rule, value) => {
                     if (!Array.isArray(value) || value.length < 2) {
-                      return '至少保留 2 名审批成员，才适合真实协作流程。'
+                      return '至少保持 2 名审批成员，才适合真实协作流程。'
                     }
                     return undefined
                   },
@@ -2814,7 +2814,7 @@ const FormPage: FC = () => {
 
         <PreviewBlock
           title="Advanced search"
-          summary="把高级搜索表单整理成 Rue 版本：网格字段、独立按钮区、统一实例驱动。"
+          summary="把高级搜索表单整理成 Rue 实现：网格字段、独立按钮区、统一实例驱动。"
           tab={tabInline}
           preview={() => <InlineFiltersShowcase />}
           code={`const [form] = Form.useForm()
@@ -2853,7 +2853,7 @@ const FormPage: FC = () => {
         <h2>使用说明</h2>
         <p>
           下面这些说明不是泛泛而谈，而是把表单里最容易踩坑、同时又和 Rue
-          当前实现强相关的部分抽出来。先看这些规则，再回头看上面的 demo，理解会快很多。
+          当前组件强相关的部分抽出来。先看这些规则，再回头看上面的示例，理解会快很多。
         </p>
 
         <section className="not-prose my-8 grid gap-4 lg:grid-cols-2">

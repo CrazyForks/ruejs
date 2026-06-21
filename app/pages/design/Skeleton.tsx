@@ -615,7 +615,7 @@ const SkeletonPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Skeleton 骨架屏</h1>
         <p className="mt-3 mb-3 text-sm">
-          Skeleton 用于展示加载中的占位内容。这次增强保留 Rue 现有的原子骨架视觉，同时补齐更接近
+          Skeleton 用于展示加载中的占位内容。组件使用 Rue 当前的原子骨架视觉，同时补充更接近
           成熟业务骨架屏的组合 API、元素级用法和更细的语义定制入口。
         </p>
 
@@ -629,20 +629,20 @@ const SkeletonPage: FC = () => {
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-primary">
-              保留旧 demo
+              整合基础示例
             </div>
             <div className="mt-2 text-sm font-medium">基础方块、圆形内容、文本行都还在</div>
             <p className="mt-2 text-sm opacity-70">
-              原有 Rue 示例不删除，只是按“原子骨架 / 组合骨架 / 元素 API”重组。
+              基础 Rue 示例不删除，只是按“原子骨架 / 组合骨架 / 元素 API”重组。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-secondary">
-              增强 API
+              语义 API
             </div>
             <div className="mt-2 text-sm font-medium">组合骨架、独立元素、列表加载一套打通</div>
             <p className="mt-2 text-sm opacity-70">
-              沿用 avatar/title/paragraph/loading/round，并补上语义槽位 classNames/styles。
+              使用 avatar/title/paragraph/loading/round，并补上语义槽位 classNames/styles。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
@@ -650,7 +650,7 @@ const SkeletonPage: FC = () => {
               保持 Rue 风格
             </div>
             <p className="mt-2 text-sm opacity-70">
-              依旧用 Rue 当前 daisyUI 底色，只做布局能力和 demo 丰富度增强。
+              仍然用 Rue 当前 daisyUI 底色，只做布局能力和示例 丰富度增强。
             </p>
           </div>
         </div>
@@ -658,7 +658,7 @@ const SkeletonPage: FC = () => {
         <div className="not-prose mt-8 space-y-2">
           <h2 className="text-2xl font-semibold">原子骨架</h2>
           <p className="text-sm text-base-content/70">
-            这些用法保留现有 demo，适合直接拼局部占位或自定义布局骨架。
+            这些用法保持当前示例，适合直接拼局部占位或自定义布局骨架。
           </p>
         </div>
 
@@ -930,7 +930,7 @@ const listLoading = ref(true)
         <div className="not-prose mt-10 space-y-2">
           <h2 className="text-2xl font-semibold">元素 API</h2>
           <p className="text-sm text-base-content/70">
-            提供一组 Button / Avatar / Input / Image / Node 示范，但保留 Rue 自己的视觉基底。
+            提供一组 Button / Avatar / Input / Image / Node 示范，但使用 Rue 自己的视觉基底。
           </p>
         </div>
 
@@ -967,9 +967,9 @@ const NodeIcon = () => (
         <div className="not-prose mt-12 space-y-4">
           <h2 className="text-2xl font-semibold">API</h2>
           <p className="text-sm text-base-content/70">
-            根组件提供常见的组合式参数，同时继续兼容 Rue 原本的原子骨架写法。新增的{' '}
+            根组件提供常见的组合式参数，同时支持 Rue 基础的原子骨架写法。
             <code>rootClassName</code>、<code>classNames</code> 和 <code>styles</code>{' '}
-            用来只改局部槽位，不影响整棵骨架的默认结构。
+            可用于只改局部槽位，不影响整棵骨架的默认结构。
           </p>
         </div>
 

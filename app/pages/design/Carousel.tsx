@@ -239,7 +239,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'autoplaySpeed / interval',
-    description: '控制自动播放节奏，保留 `interval` 兼容写法',
+    description: '控制自动播放节奏，保持 `interval` 写法',
     type: 'number',
     defaultValue: '3000',
   },
@@ -546,29 +546,29 @@ const CarouselDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Carousel 跑马灯</h1>
         <p className="mt-3 mb-3 text-sm">
-          Rue 的 Carousel 现在兼顾两类能力：一类延续 daisyUI
-          的滚动式视觉布局，保留多宽度、垂直、full-bleed 这些旧 demo；另一类补齐了成熟轮播组件常见的
-          arrows、dots、fade、dotPlacement 与方法控制。
+          Rue 的 Carousel 现在兼顾两类能力：一类使用 daisyUI
+          的滚动式视觉布局，保持多宽度、垂直、full-bleed
+          这些基础示例；另一类提供了成熟轮播组件常见的 arrows、dots、fade、dotPlacement 与方法控制。
         </p>
 
         <div className="not-prose my-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-base-content/50">Layout</div>
-            <div className="mt-2 text-lg font-semibold">保留 Rue 原有滚动感</div>
+            <div className="mt-2 text-lg font-semibold">使用 Rue 基础滚动感</div>
             <p className="mt-2 text-sm text-base-content/70">
               `align`、`direction`、宽度类与 full-bleed 布局仍可直接复用。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-base-content/50">Control</div>
-            <div className="mt-2 text-lg font-semibold">补齐 dots / arrows / methods</div>
+            <div className="mt-2 text-lg font-semibold">补充 dots / arrows / methods</div>
             <p className="mt-2 text-sm text-base-content/70">
               支持 built-in arrows、dot placement、`apiRef` 方法与外部按钮编排。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-base-content/50">Effects</div>
-            <div className="mt-2 text-lg font-semibold">新增 fade 与 progress dots</div>
+            <div className="mt-2 text-lg font-semibold">Fade 与 progress dots</div>
             <p className="mt-2 text-sm text-base-content/70">
               既能做内容轮播，也能做更偏产品展示或运营 banner 的切换样式。
             </p>
@@ -577,7 +577,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="Snap 对齐总览"
-          summary="融合旧的 Snap to start / center / end 三个 demo，保留 Rue 的滚动对齐视觉。"
+          summary="融合基础的 Snap to start / center / end 三个示例，使用 Rue 的滚动对齐视觉。"
           tab={tabSnap}
           code={snapCode}
           preview={() => (
@@ -606,7 +606,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="布局宽度总览"
-          summary="融合旧的 full width、half width 与 full-bleed 三个 demo，用同一套 Carousel 结构呈现不同密度。"
+          summary="融合基础的 full width、half width 与 full-bleed 三个示例，用同一套 Carousel 结构呈现不同密度。"
           tab={tabWidth}
           code={widthCode}
           preview={() => (
@@ -641,7 +641,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="基础与垂直布局"
-          summary="保留旧的基础水平居中、Vertical carousel 与垂直方向 demo，但按使用意图重新排成一个 block。"
+          summary="展示基础水平居中、Vertical carousel 与垂直方向示例，但按使用意图重新排成一个 block。"
           tab={tabVertical}
           code={verticalCode}
           preview={() => (
@@ -681,7 +681,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="导航按钮与反向自动播放"
-          summary="把旧的 next/prev buttons 与 auto left demo 融合为更完整的 arrows 场景，同时保留 Rue 的大图视觉。"
+          summary="把基础的 next/prev buttons 与 auto leftDemo 融合为更完整的 arrows 场景，同时使用 Rue 的大图视觉。"
           tab={tabArrows}
           code={arrowsCode}
           preview={() => (
@@ -717,7 +717,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="Carousel with indicator buttons"
-          summary="保留旧的 indicator buttons 场景，但切换改为稳定的 `apiRef.goTo`，按钮和 dots 会同步当前 slide。"
+          summary="展示 indicator buttons 场景，但切换改为稳定的 `apiRef.goTo`，按钮和 dots 会同步当前 slide。"
           tab={tabIndicators}
           code={indicatorCode}
           preview={() => (
@@ -750,7 +750,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="受控切换 / API 方法"
-          summary="旧的“受控切换” demo 在 Rue 设计页里改成方法编排：外部按钮控制轮播，组件通过 `onIndexChange` 回写当前索引。"
+          summary="基础的“受控切换”示例 在 Rue 设计页里改成方法编排：外部按钮控制轮播，组件通过 `onIndexChange` 回写当前索引。"
           tab={tabApi}
           code={apiControlCode}
           preview={() => (
@@ -785,7 +785,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="自动播放与进度 dots"
-          summary="保留旧的自动播放循环 demo，同时补一个进度型 progress dots 场景。"
+          summary="展示自动播放循环示例，同时补一个进度型 progress dots 场景。"
           tab={tabAutoplay}
           code={autoplayCode}
           preview={() => (
@@ -814,7 +814,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="效果与位置增强"
-          summary="新增 fade、top dots 和 end dots。这里保持 Rue 的底色，但能力组织更偏成熟业务组件的写法。"
+          summary="支持 fade、top dots 和 end dots，在 Rue 的底色上覆盖常见轮播展示方式。"
           tab={tabEffects}
           code={effectCode}
           preview={() => (
@@ -850,7 +850,7 @@ const CarouselDemo: FC = () => {
 
         <ExampleBlock
           title="Carousel 通过数据渲染（数组，组件内部）"
-          summary="保留原来的 items 数组模式，并加上 arrows 与 dots，让它更接近真正的产品组件用法。"
+          summary="展示 items 数组模式，并加上 arrows 与 dots，让它更接近真正的产品组件用法。"
           tab={tabItems}
           code={itemsCode}
           preview={() => (

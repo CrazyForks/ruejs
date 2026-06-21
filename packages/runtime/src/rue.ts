@@ -42,6 +42,7 @@ import {
   setClassName,
   setDisabled,
   setInnerHTML,
+  setProperty,
   setStyle,
   setValue,
   settextContent,
@@ -1076,6 +1077,27 @@ const extractDangerouslySetInnerHTML = (value: unknown) =>
     ? (value as Record<string, unknown>).__html
     : undefined
 
+const isCustomElementLike = (el: DomElementLike) => {
+  const tagName = (el as { tagName?: unknown }).tagName
+  return typeof tagName === 'string' && tagName.includes('-')
+}
+
+const isObjectOrFunctionValue = (value: unknown) =>
+  (typeof value === 'object' || typeof value === 'function') && value != null
+
+const shouldUseDomProperty = (el: DomElementLike, key: string, value: unknown) => {
+  if (!isCustomElementLike(el)) {
+    return false
+  }
+  if (key === 'props' || key === '__rue_slots' || key.startsWith('__rue_context_')) {
+    return true
+  }
+  if (key in (el as object)) {
+    return true
+  }
+  return isObjectOrFunctionValue(value)
+}
+
 const applyDomElementProps = (el: DomElementLike, props: ComponentProps | null) => {
   if (!props) return false
 
@@ -1126,6 +1148,10 @@ const applyDomElementProps = (el: DomElementLike, props: ComponentProps | null) 
       ;(el as any).tabIndex = value
       continue
     }
+    if (shouldUseDomProperty(el, key, value)) {
+      setProperty(el, key, value)
+      continue
+    }
     if (value === false) {
       continue
     }
@@ -1155,6 +1181,9 @@ const createDomElementMountHandle = (
         ? (createDocumentFragment() as DomElementLike)
         : (createDOMElement(type, parentContext) as DomElementLike)
     const hasInnerHTML = type === 'fragment' ? false : applyDomElementProps(root, props)
+    if (type.includes('-')) {
+      setProperty(root, '__rue_context_parent_instance__', getCurrentInstance())
+    }
     if (!hasInnerHTML) {
       mountDomElementChildren(root, children)
     }

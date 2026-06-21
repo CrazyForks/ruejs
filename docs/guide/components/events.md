@@ -4,7 +4,7 @@
 
 ## 触发和监听事件 {#emitting-and-listening-to-events}
 
-在 Rue 中，组件通过回调 props 来与父组件通信。这与 Vue 的 `$emit` 不同，Rue 使用更直接的回调函数方式：
+在 Rue 中，组件通过回调 props 来与父组件通信，使用直接的回调函数方式：
 
 ```tsx
 // MyButton.tsx
@@ -118,7 +118,7 @@ function MyComponent({ onSubmit }: MyComponentProps) {
 }
 ```
 
-更多详情：[为组件事件添加类型](@todo) <sup class="vt-badge ts" />
+更多详情：[为组件事件添加类型](/guide/guide/typescript/composition-api#typing-component-emits) <sup class="vt-badge ts" />
 
 虽然可选，但建议定义所有回调 props 以便更好地记录组件应该如何工作。这也允许 Rue 从 [透传属性](/guide/guide/components/attrs) 中排除已知的监听器，避免由第三方代码手动分派的 DOM 事件引起的边界情况。
 
@@ -158,22 +158,22 @@ function MyComponent({ onClick, onSubmit }: MyComponentProps) {
 }
 ```
 
-## 使用 emitted 函数（高级） {#using-emitted-function}
+## 使用 useEmit 函数（高级） {#using-useemit-function}
 
-对于更复杂的场景，Rue 提供了 `emitted` 辅助函数：
+对于需要动态事件名或需要同时兼容 Custom Element 事件桥接的场景，Rue 提供了 `useEmit` 辅助函数：
 
 ```tsx
-import { emitted } from '@rue-js/rue'
+import { useEmit } from '@rue-js/rue'
 
 interface MyComponentProps {
   onSubmit?: (payload: { email: string; password: string }) => void
 }
 
 function MyComponent(props: MyComponentProps) {
-  const emit = emitted(props, ['onSubmit'])
+  const emit = useEmit(props)
 
   function submitForm(email: string, password: string) {
-    emit('onSubmit', { email, password })
+    emit('submit', { email, password })
   }
 
   return <button onClick={() => submitForm('test@test.com', 'password')}>Submit</button>
@@ -181,5 +181,5 @@ function MyComponent(props: MyComponentProps) {
 ```
 
 :::warning
-`emitted()` 主要用于与 Vue 兼容的场景或需要动态事件名的情况。推荐使用直接的回调 props 方式。
+`useEmit()` 主要用于需要动态事件名或运行时桥接的场景。普通组件通信仍推荐使用直接的回调 props 方式。
 :::

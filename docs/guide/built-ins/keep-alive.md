@@ -4,17 +4,17 @@
 
 ## 基本用法 (Basic Usage) {#basic-usage}
 
-在组件基础章节中，我们介绍了 [动态组件](/guide/guide/essentials/component-basics#dynamic-components) 的语法，使用特殊的 `<Dynamic>` 组件：
+在组件基础章节中，我们介绍了 [动态组件](/guide/guide/essentials/component-basics#dynamic-components) 的语法，使用 `Component` 运行时组件：
 
 ```tsx
 import { useState } from '@rue-js/rue'
-import { Dynamic } from '@rue-js/rue'
+import { Component } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
 const App: FC = () => {
   const [activeComponent, setActiveComponent] = useState('ComponentA')
 
-  return <Dynamic component={activeComponent} />
+  return <Component is={activeComponent} />
 }
 ```
 
@@ -28,7 +28,7 @@ const App: FC = () => {
 
 ```tsx
 import { useState } from '@rue-js/rue'
-import { Dynamic, KeepAlive } from '@rue-js/rue'
+import { Component, KeepAlive } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
 const App: FC = () => {
@@ -36,17 +36,13 @@ const App: FC = () => {
 
   return (
     <KeepAlive>
-      <Dynamic component={activeComponent} />
+      <Component is={activeComponent} />
     </KeepAlive>
   )
 }
 ```
 
 现在，状态将在组件切换之间持久化：
-
-:::tip
-当在 [DOM 内模板](/guide/guide/essentials/component-basics#in-dom-template-parsing-caveats) 中使用时，它应该引用为 `<keep-alive>`。
-:::
 
 ## 包含 / 排除 (Include / Exclude) {#include-exclude}
 
@@ -57,21 +53,21 @@ const App: FC = () => {
   /* 逗号分隔的字符串 */
 }
 ;<KeepAlive include="a,b">
-  <Dynamic component={view} />
+  <Component is={view} />
 </KeepAlive>
 
 {
   /* 正则表达式 */
 }
 ;<KeepAlive include={/a|b/}>
-  <Dynamic component={view} />
+  <Component is={view} />
 </KeepAlive>
 
 {
   /* 数组 */
 }
 ;<KeepAlive include={['a', 'b']}>
-  <Dynamic component={view} />
+  <Component is={view} />
 </KeepAlive>
 ```
 
@@ -83,7 +79,7 @@ const App: FC = () => {
 
 ```tsx
 <KeepAlive max={10}>
-  <Dynamic component={activeComponent} />
+  <Component is={activeComponent} />
 </KeepAlive>
 ```
 

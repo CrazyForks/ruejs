@@ -91,7 +91,7 @@ const galleryEntries: GalleryEntry[] = [
     title: 'Northern Drift',
     label: 'motion',
     badgeClassName: 'badge-primary',
-    summary: '保留原有单图 3D 结构，并给画廊增加统一的标题与标签层。',
+    summary: '展示基础单图 3D 结构，并给画廊增加统一的标题与标签层。',
     src: 'https://img.daisyui.com/images/stock/card-1.webp?x',
   },
   {
@@ -160,7 +160,7 @@ const surfaceWrapperCode = [
   '>',
   '  <img',
   '    src="https://img.daisyui.com/images/stock/card-2.webp?x"',
-  '    alt="surface wrapper demo"',
+  '    alt="surface wrapperDemo"',
   '  />',
   '  <figcaption className="space-y-2 px-5 py-4">',
   '    <div className="text-xs uppercase tracking-[0.24em] opacity-50">Surface wrapper</div>',
@@ -270,8 +270,8 @@ const Hover3DDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Hover 3D 悬浮 3D</h1>
         <p className="text-sm mt-3 mb-3">
-          Hover 3D 负责把第一层内容面板变成一个会随着鼠标位置倾斜的 3D surface。现在除了保留原有的 8
-          个命中区，也补齐了链接语义、surface wrapper 与根节点属性透传。
+          Hover 3D 负责把第一层内容面板变成一个会随着鼠标位置倾斜的 3D surface。现在除了展示基础的 8
+          个命中区，也提供了链接语义、surface wrapper 与根节点属性透传。
         </p>
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
@@ -279,7 +279,7 @@ const Hover3DDemo: FC = () => {
             <span className="badge badge-primary badge-outline">结构</span>
             <div className="mt-4 text-3xl font-semibold tracking-tight">1 + 8</div>
             <p className="m-0 mt-2 text-sm leading-6 opacity-70">
-              第一层是倾斜面板，后 8 层由组件自动补齐 hover zones。
+              第一层是倾斜面板，后 8 层由组件自动补充 hover zones。
             </p>
           </div>
           <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-sm">
@@ -312,7 +312,7 @@ const Hover3DDemo: FC = () => {
 
         <ExampleBlock
           title="基础图片悬浮"
-          summary="保留原有图片 demo，用最直接的 1 + 8 结构工作。"
+          summary="展示基础图片示例，用最直接的 1 + 8 结构工作。"
           tab={tabBasic}
           code={basicImageCode}
         >
@@ -330,7 +330,7 @@ const Hover3DDemo: FC = () => {
 
         <ExampleBlock
           title="整卡点击"
-          summary="保留原有整卡链接 demo，并改成只传 href 就能得到链接根节点。"
+          summary="展示基础整卡链接示例，并改成只传 href 就能得到链接根节点。"
           tab={tabLink}
           code={linkedCardCode}
         >
@@ -384,7 +384,7 @@ const Hover3DDemo: FC = () => {
             >
               <img
                 src="https://img.daisyui.com/images/stock/card-2.webp?x"
-                alt="surface wrapper demo"
+                alt="surface wrapperDemo"
               />
               <figcaption className="space-y-2 px-5 py-4">
                 <div className="text-xs uppercase tracking-[0.24em] opacity-50">
@@ -399,7 +399,7 @@ const Hover3DDemo: FC = () => {
 
         <ExampleBlock
           title="画廊矩阵"
-          summary="保留原有多图 demo，并补上统一的排版、标题和标签信息。"
+          summary="展示基础多图示例，并补上统一的排版、标题和标签信息。"
           tab={tabGallery}
           code={galleryCode}
         >

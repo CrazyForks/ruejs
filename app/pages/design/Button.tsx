@@ -393,7 +393,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'type',
-    description: '视觉类型，直接替代旧的 variant 语义',
+    description: '视觉类型，直接替代基础的 variant 语义',
     type: `'solid' | 'filled' | 'outlined' | 'dashed' | 'text' | 'link'`,
     defaultValue: `'solid'`,
   },
@@ -508,7 +508,7 @@ const ButtonDemo: FC = () => {
 
         <ExampleBlock
           title="响应式尺寸"
-          summary="把原来的响应式按钮演示保留回来，统一改成 size + className 的方式。"
+          summary="把基础的响应式按钮演示保持回来，统一改成 size + className 的方式。"
           tab={tabResponsive}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -526,7 +526,7 @@ const ButtonDemo: FC = () => {
 
         <ExampleBlock
           title="颜色色板"
-          summary="原来的颜色演示继续保留，但统一改成 color 语义。"
+          summary="颜色演示展示，但统一改成 color 语义。"
           tab={tabPalette}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -562,7 +562,7 @@ const ButtonDemo: FC = () => {
 
         <ExampleBlock
           title="风格矩阵"
-          summary="把原来的 soft、outline、dash 演示融合成统一的 type 展示。"
+          summary="把基础的 soft、outline、dash 演示融合成统一的 type 展示。"
           tab={tabVariants}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -1118,7 +1118,7 @@ const lastAction = ref('未触发')
 
         <ExampleBlock
           title="状态与布局"
-          summary="把原来的 active、disabled、wide、block 示例也融合到当前页面。"
+          summary="把基础的 active、disabled、wide、block 示例也融合到当前页面。"
           tab={tabStates}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -1168,7 +1168,7 @@ const lastAction = ref('未触发')
 
         <ExampleBlock
           title="根节点与表单行为"
-          summary="默认渲染 button，同时保留链接根节点、div 根节点和表单行为示例。"
+          summary="默认渲染 button，同时保持链接根节点、div 根节点和表单行为示例。"
           tab={tabFormLink}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -1273,7 +1273,7 @@ const lastAction = ref('未触发')
 
         <ExampleBlock
           title="登录按钮"
-          summary="把原来的 provider 登录按钮演示融合回来，统一改成 icon + block + className 的新 API 写法。"
+          summary="把基础的 provider 登录按钮演示融合回来，统一改成 icon + block + className 的新 API 写法。"
           tab={tabLogin}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -1348,9 +1348,8 @@ const lastAction = ref('未触发')
 
         <h3>loading 对象里的 delay 会生效吗？</h3>
         <p>
-          当前版本已经支持 <code>loading</code> 的对象写法和自定义 <code>icon</code>。
-          <code>delay</code>
-          字段已保留在配置结构里，后续如果补充延迟显示策略，可以直接在现有接口上继续扩展。
+          当前组件支持 <code>loading</code> 的对象写法和自定义 <code>icon</code>。<code>delay</code>
+          字段已保持在配置结构里，后续如果补充延迟显示策略，可以直接在当前接口上继续扩展。
         </p>
 
         <h3>Button.Group 会覆盖子按钮哪些属性？</h3>

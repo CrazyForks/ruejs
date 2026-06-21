@@ -14,8 +14,16 @@ const AsyncActivityPanel = useComponent(() =>
   delayImport(() => import('./suspense/AsyncActivityPanel'), 1400),
 )
 
+const AsyncNestedDefaultActivityPanel = useComponent(() =>
+  delayImport(() => import('./suspense/AsyncActivityPanel'), 2600),
+)
+
+const AsyncNestedSuspensibleActivityPanel = useComponent(() =>
+  delayImport(() => import('./suspense/AsyncActivityPanel'), 2800),
+)
+
 const AsyncLocalActivityPanel = useComponent(
-  () => delayImport(() => import('./suspense/AsyncActivityPanel'), 1800),
+  () => delayImport(() => import('./suspense/AsyncActivityPanel'), 3200),
   {
     loading: () => (
       <div className="rounded-box border border-dashed border-info/40 bg-info/10 p-4 text-sm">
@@ -27,19 +35,76 @@ const AsyncLocalActivityPanel = useComponent(
   },
 )
 
-const BoundaryFallback: FC<{ title: string; detail: string }> = props => (
-  <div className="rounded-box border border-dashed border-base-300 bg-base-200 p-4">
+const fallbackToneClasses = {
+  primary: {
+    root: 'border-primary/35 bg-primary/10',
+    spinner: 'text-primary',
+  },
+  accent: {
+    root: 'border-accent/35 bg-accent/10',
+    spinner: 'text-accent',
+  },
+  warning: {
+    root: 'border-warning/45 bg-warning/10',
+    spinner: 'text-warning',
+  },
+  info: {
+    root: 'border-info/40 bg-info/10',
+    spinner: 'text-info',
+  },
+}
+
+const BoundaryFallback: FC<{
+  title: string
+  detail: string
+  tone?: keyof typeof fallbackToneClasses
+}> = props => {
+  const tone = fallbackToneClasses[props.tone ?? 'primary']
+
+  return (
+    <div className={`rounded-box border border-dashed p-4 ${tone.root}`}>
+      <div className="flex items-center gap-3">
+        <span className={`loading loading-spinner loading-md ${tone.spinner}`}></span>
+        <div>
+          <div className="font-semibold">{props.title}</div>
+          <div className="text-sm opacity-70">{props.detail}</div>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="skeleton h-24 rounded-box"></div>
+        <div className="skeleton h-24 rounded-box"></div>
+      </div>
+    </div>
+  )
+}
+
+const InnerFallback: FC<{ title: string; detail: string }> = props => (
+  <div className="rounded-box border-2 border-warning/50 bg-warning/10 p-4">
+    <div className="mb-2 inline-flex rounded-field border border-warning/40 px-2 py-1 text-xs font-semibold text-warning">
+      内层 fallback 可见
+    </div>
     <div className="flex items-center gap-3">
-      <span className="loading loading-spinner loading-md text-primary"></span>
+      <span className="loading loading-dots loading-md text-warning"></span>
       <div>
         <div className="font-semibold">{props.title}</div>
         <div className="text-sm opacity-70">{props.detail}</div>
       </div>
     </div>
-    <div className="mt-4 grid gap-3 md:grid-cols-2">
-      <div className="skeleton h-24 rounded-box"></div>
-      <div className="skeleton h-24 rounded-box"></div>
+  </div>
+)
+
+const NestedOuterFrame: FC<{ title: string; badge: string; children?: unknown }> = props => (
+  <div className="rounded-box border-2 border-success/45 bg-success/10 p-4">
+    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <div className="font-semibold">{props.title}</div>
+        <div className="text-sm opacity-70">
+          这块绿色区域代表外层 children。是否被替换，是两个场景最明显的区别。
+        </div>
+      </div>
+      <span className="badge badge-success badge-outline">{props.badge}</span>
     </div>
+    <div className="rounded-box border border-base-300 bg-base-100/70 p-3">{props.children}</div>
   </div>
 )
 
@@ -79,21 +144,60 @@ const AsyncActivityPanel = useComponent(() =>
   resolveAfter(ActivityPanel, 1400),
 );
 
+const AsyncNestedDefaultActivityPanel = useComponent(() =>
+  resolveAfter(ActivityPanel, 2600),
+);
+
+const AsyncNestedSuspensibleActivityPanel = useComponent(() =>
+  resolveAfter(ActivityPanel, 2800),
+);
+
 const AsyncLocalActivityPanel = useComponent(
-  () => resolveAfter(ActivityPanel, 1800),
+  () => resolveAfter(ActivityPanel, 3200),
   {
     loading: () => <div>本地 loading</div>,
     suspensible: false,
   },
 );
 
+const NestedOuterFrame: FC<{ title: string; children?: unknown }> = props => (
+  <div className="rounded-box border-2 border-success/45 bg-success/10 p-4">
+    <strong>{props.title}</strong>
+    <div>绿色外层区域是否还在，是两个嵌套场景最明显的区别。</div>
+    <div className="mt-3">{props.children}</div>
+  </div>
+);
+
 export default function Demo() {
   return (
-    <Suspense fallback={<div>统一 fallback 正在加载</div>}>
-      <AsyncRevenuePanel period="Q2" />
-      <AsyncActivityPanel title="统一边界内的活动流" />
-      <AsyncLocalActivityPanel title="本地 loading 控制的活动流" />
-    </Suspense>
+    <>
+      <Suspense fallback={<div>统一 fallback 正在加载</div>}>
+        <AsyncRevenuePanel period="Q2" />
+        <AsyncActivityPanel title="统一边界内的活动流" />
+      </Suspense>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Suspense fallback={<div>默认父级 fallback（不会显示）</div>}>
+          <NestedOuterFrame title="默认：外层绿色框仍然可见">
+            <Suspense fallback={<div>默认：内层 fallback 正在加载</div>}>
+              <AsyncNestedDefaultActivityPanel title="默认异步内容已解析" />
+            </Suspense>
+          </NestedOuterFrame>
+        </Suspense>
+
+        <Suspense fallback={<div>父级 fallback 接管整块外层内容</div>}>
+          <NestedOuterFrame title="开启 suspensible：加载时这块会被替换">
+            <Suspense suspensible fallback={<div>内层 fallback 会被父级覆盖</div>}>
+              <AsyncNestedSuspensibleActivityPanel title="交给父边界的活动流" />
+            </Suspense>
+          </NestedOuterFrame>
+        </Suspense>
+      </div>
+
+      <Suspense fallback={<div>不会显示的外层 fallback</div>}>
+        <AsyncLocalActivityPanel title="本地 loading 控制的活动流" />
+      </Suspense>
+    </>
   );
 }`
 
@@ -132,8 +236,8 @@ const SuspenseDemo: FC = () => {
               <div>
                 <h2 className="text-xl font-semibold">1. 一个边界等待多个异步组件</h2>
                 <p className="text-sm opacity-75">
-                  两个子组件都通过 useComponent 动态导入；任意一个未完成时，Suspense 显示同一个
-                  fallback。
+                  逻辑：useComponent 默认会把 pending promise 登记到最近的 Suspense；边界收集到任意
+                  pending 后显示 fallback，等全部 resolve 后再恢复 children。
                 </p>
               </div>
 
@@ -156,10 +260,82 @@ const SuspenseDemo: FC = () => {
 
             <section className="space-y-3">
               <div>
-                <h2 className="text-xl font-semibold">2. 退出 Suspense 控制</h2>
+                <h2 className="text-xl font-semibold">2. 内层边界交给父 Suspense</h2>
                 <p className="text-sm opacity-75">
-                  useComponent 设置 suspensible: false 后，即使外层有 Suspense，也会使用组件自己的
-                  loading。
+                  左边是默认嵌套：外层绿色框还在，只显示黄色的内层 fallback。右边开启
+                  suspensible：内层 pending 被继续登记到父边界，绿色外层框会整块被父级 fallback
+                  替换。
+                </p>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-semibold">默认：内层自己处理</h3>
+                    <span className="badge badge-warning badge-outline">外层框保持可见</span>
+                  </div>
+                  <Suspense
+                    fallback={
+                      <BoundaryFallback
+                        title="默认父级 fallback"
+                        detail="这个 fallback 不会显示，因为内层边界已经接住 pending"
+                        tone="info"
+                      />
+                    }
+                  >
+                    <NestedOuterFrame title="默认嵌套边界" badge="外层 children 仍在">
+                      <Suspense
+                        fallback={
+                          <InnerFallback
+                            title="默认：内层 fallback 正在加载"
+                            detail="只有内部插槽被替换，绿色外层框没有消失"
+                          />
+                        }
+                      >
+                        <AsyncNestedDefaultActivityPanel title="默认异步内容已解析" />
+                      </Suspense>
+                    </NestedOuterFrame>
+                  </Suspense>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-semibold">开启：交给父级接管</h3>
+                    <span className="badge badge-accent badge-outline">外层框会被替换</span>
+                  </div>
+                  <Suspense
+                    fallback={
+                      <BoundaryFallback
+                        title="父级 fallback 接管整块外层内容"
+                        detail="右侧绿色外层框加载期间不可见，因为 pending 被转发给父边界"
+                        tone="accent"
+                      />
+                    }
+                  >
+                    <NestedOuterFrame title="开启 suspensible 的嵌套边界" badge="resolved 后才出现">
+                      <Suspense
+                        suspensible
+                        fallback={
+                          <InnerFallback
+                            title="内层 fallback 会被父级覆盖"
+                            detail="开启 suspensible 后，这个黄色 fallback 不会出现在可见区域"
+                          />
+                        }
+                      >
+                        <AsyncNestedSuspensibleActivityPanel title="交给父边界的活动流" />
+                      </Suspense>
+                    </NestedOuterFrame>
+                  </Suspense>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <div>
+                <h2 className="text-xl font-semibold">3. 退出 Suspense 控制</h2>
+                <p className="text-sm opacity-75">
+                  逻辑：这是组件级开关。useComponent 设置 suspensible: false 后不会向最近边界登记
+                  pending，因此外层 fallback 不会显示，组件自己的 loading 负责占位。
                 </p>
               </div>
 

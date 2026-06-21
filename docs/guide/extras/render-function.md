@@ -101,7 +101,7 @@ const MultiRoot: FC = () => [h('div', 'one'), h('div', 'two'), h('div', 'three')
 ```
 
 :::tip
-如果你在旧文档或旧代码里见到 `return () => ...`，那通常对应的是更接近 Vue `setup()` 的写法，不是 Rue 当前推荐的 `FC` 组件签名。
+如果你在旧文档或旧代码里见到 `return () => ...`，那通常对应的是早期 `setup()` 风格写法，不是 Rue 当前推荐的 `FC` 组件签名。
 :::
 
 如果组件不需要额外状态，也可以直接写成普通函数：
@@ -149,7 +149,7 @@ const output = <div id={dynamicId}>hello, {userName}</div>
 Rue 的 JSX 与 React JSX 有两点最容易混淆的区别：
 
 - 你可以直接使用 `class` 和 `for`，无需改写成 `className` 或 `htmlFor`
-- 组件 children 最终会落到 `props.children` 或显式命名 props，而不是默认套入一层 Vue 风格的 `slots` 上下文
+- 组件 children 最终会落到 `props.children` 或显式命名 props，而不是默认套入额外的 `slots` 上下文
 
 Rue 当前的 JSX 编译也默认服务于 Block / Vapor 路径，因此即便你写的是 JSX，编译结果也会优先落到当前的 Renderable / Block 执行模型。
 
@@ -176,9 +176,9 @@ Rue 当前的 JSX 编译也默认服务于 Block / Vapor 路径，因此即便�
 
 模板：
 
-```vue-html
+```tsx
 <div>
-  <div v-if="ok">yes</div>
+  <div v-if={ok.value}>yes</div>
   <span v-else>no</span>
 </div>
 ```
@@ -203,10 +203,10 @@ const App: FC = () => {
 
 模板：
 
-```vue-html
+```tsx
 <ul>
-  <li v-for="{ id, text } in items" :key="id">
-    {{ text }}
+  <li v-for="{ id, text } in items.value" key={id}>
+    {text}
   </li>
 </ul>
 ```
@@ -293,13 +293,14 @@ h('input', {
 <input onClickCapture={() => {}} onKeyupOnce={() => {}} onMouseoverOnceCapture={() => {}} />
 ```
 
-其他修饰符可以配合 [`withModifiers`](/api/api/render-function#withmodifiers) 使用：
+其他修饰符可以直接写在处理器中，或在 TSX 模板中使用 `v-on` / `r-on` 事件指令：
 
 ```tsx
-import { withModifiers } from '@rue-js/rue'
-
 h('div', {
-  onClick: withModifiers(() => {}, ['self']),
+  onClick(event) {
+    if (event.target !== event.currentTarget) return
+    // ...
+  },
 })
 ```
 
@@ -308,7 +309,7 @@ h('div', {
 要为组件创建输出，传给 `h()` 的第一个参数应该是组件本身：
 
 ```tsx
-import Foo from './Foo.vue'
+import Foo from './Foo.tsx'
 import Bar from './Bar.tsx'
 
 function render() {

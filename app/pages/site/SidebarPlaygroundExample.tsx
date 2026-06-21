@@ -73,6 +73,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/simple-component',
         },
         {
+          id: 'global-component-registration',
+          title: 'useApp().component 注册',
+          href: '/examples/global-component-registration',
+        },
+        {
           id: 'reactive-props-destructure',
           title: 'Reactive Props Destructure',
           href: '/examples/reactive-props-destructure',
@@ -91,6 +96,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           id: 'web-components',
           title: '原生 Web Components',
           href: '/examples/web-components',
+        },
+        {
+          id: 'web-components-lab',
+          title: 'Web Components 分项测试',
+          href: '/examples/web-components-lab',
         },
       ],
     },
@@ -180,6 +190,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/jsx/template',
         },
         {
+          id: 'scoped-style',
+          title: 'Scoped Style 组件作用域样式',
+          href: '/jsx/scoped-style',
+        },
+        {
           id: 'fragments',
           title: 'Fragments（<> … </>）',
           href: '/jsx/fragments',
@@ -199,6 +214,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           id: 'suspense',
           title: 'Suspense 异步边界',
           href: '/jsx/suspense',
+        },
+        {
+          id: 'async-hydration',
+          title: '异步组件懒水合',
+          href: '/jsx/async-hydration',
         },
         { id: 'events', title: '事件处理', href: '/jsx/events' },
         {
@@ -280,6 +300,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/trigger-ref',
         },
         {
+          id: 'custom-ref',
+          title: 'customRef 自定义 ref',
+          href: '/examples/custom-ref',
+        },
+        {
           id: 'on-activated',
           title: 'onActivated 缓存生命周期',
           href: '/examples/on-activated',
@@ -321,9 +346,19 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/watch-post-effect',
         },
         {
+          id: 'watch-sync-effect',
+          title: 'watchSyncEffect 同步防线',
+          href: '/examples/watch-sync-effect',
+        },
+        {
           id: 'on-watcher-cleanup',
           title: 'onWatcherCleanup 请求清理',
           href: '/examples/on-watcher-cleanup',
+        },
+        {
+          id: 'effect-scope',
+          title: 'effectScope 批量停止',
+          href: '/examples/effect-scope',
         },
         {
           id: 'on-scope-dispose',
@@ -428,6 +463,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/svg-shared-namespace',
         },
         { id: 'modal', title: '带过渡动效的模态框', href: '/examples/modal' },
+        {
+          id: 'transition-mode',
+          title: 'Transition mode',
+          href: '/examples/transition-mode',
+        },
         {
           id: 'child-to-parent-notify',
           title: '子调父方法',

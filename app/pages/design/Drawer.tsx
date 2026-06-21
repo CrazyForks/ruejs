@@ -24,7 +24,7 @@ const placementLabels: Record<DrawerPlacement, string> = {
 const apiRows: ApiRow[] = [
   {
     prop: 'children',
-    description: '抽屉主体内容；增强模式下渲染在 body 区域，compound 模式下保留原结构',
+    description: '抽屉主体内容；语义模式下渲染在 body 区域，compound 模式下保持原结构',
     type: 'any',
     defaultValue: '-',
   },
@@ -36,7 +36,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'defaultOpen',
-    description: '增强模式下的非受控初始打开状态',
+    description: '语义模式下的非受控初始打开状态',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -48,7 +48,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'end',
-    description: 'compound 模式的原有右侧抽屉写法，兼容现有 drawer-end 习惯',
+    description: 'compound 模式的基础右侧抽屉写法，支持当前 drawer-end 习惯',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -72,7 +72,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'keyboard',
-    description: '是否允许按 Esc 关闭增强模式抽屉',
+    description: '是否允许按 Esc 关闭语义模式抽屉',
     type: 'boolean',
     defaultValue: 'true',
   },
@@ -96,13 +96,13 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'open',
-    description: '增强模式的受控显隐；compound 模式下仍兼容 drawer-open 类名行为',
+    description: '语义模式的受控显隐；compound 模式下仍支持 drawer-open 类名行为',
     type: 'boolean',
     defaultValue: 'false',
   },
   {
     prop: 'placement',
-    description: '增强模式抽屉方向，支持四个边缘打开',
+    description: '语义模式抽屉方向，支持四个边缘打开',
     type: '`left` | `right` | `top` | `bottom`',
     defaultValue: '`right`',
   },
@@ -114,7 +114,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'title',
-    description: '增强模式标题栏标题',
+    description: '语义模式标题栏标题',
     type: 'any',
     defaultValue: '-',
   },
@@ -223,7 +223,7 @@ const PlacementBody: FC<{ placement: DrawerPlacement }> = ({ placement }) => {
         <li className="list-row">
           <div className="text-xs uppercase tracking-[0.2em] opacity-50">01</div>
           <div>
-            <div className="font-medium">保留当前页面状态</div>
+            <div className="font-medium">保持当前页面状态</div>
             <div className="text-sm opacity-70">适合预览、表单补录、二级任务。</div>
           </div>
         </li>
@@ -312,7 +312,7 @@ const DrawerPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Drawer 抽屉侧栏</h1>
         <p className="text-sm mt-3 mb-3">
-          DrawerSidebar 现在保留了 Rue 原本的 daisyUI compound
+          DrawerSidebar 现在保持了 Rue 基础的 daisyUI compound
           结构，同时补上更贴近成熟业务抽屉组件的
           受控能力：四向打开、预设尺寸、标题栏扩展、底部操作区、Skeleton loading、mask
           配置与当前容器内联渲染。
@@ -320,8 +320,8 @@ const DrawerPage: FC = () => {
 
         <div className="alert alert-soft alert-info not-prose mt-6">
           <span>
-            两种模式继续并存：<strong>compound 模式</strong> 适合原始 daisyUI drawer 结构；
-            <strong>增强模式</strong> 适合详情、表单、预览和二级任务面板。
+            两种模式继续并存：<strong>compound 模式</strong> 适合基础 daisyUI drawer 结构；
+            <strong>语义模式</strong> 适合详情、表单、预览和二级任务面板。
           </span>
         </div>
 
@@ -329,14 +329,14 @@ const DrawerPage: FC = () => {
         <ul>
           <li>需要在当前页面上下文内完成编辑、预览、审批或补录，不想跳转路由。</li>
           <li>需要比 Popover 更重的承载能力，但又不适合用 Modal 打断整个页面流程。</li>
-          <li>已经使用 compound drawer 结构，希望平滑升级而不重写旧代码。</li>
+          <li>已经使用 compound drawer 结构，希望平滑升级而不重写项目代码。</li>
         </ul>
 
-        <h2>Compound 结构兼容</h2>
+        <h2>Compound 结构支持</h2>
 
         <PreviewBlock
           title="Drawer sidebar"
-          summary="保留最原始的 daisyUI drawer 结构，适合继续沿用 Toggle / Content / Side / Overlay。"
+          summary="展示最基础的 daisyUI drawer 结构，适合使用 Toggle / Content / Side / Overlay。"
           tab={tabs.basic}
           preview={
             <div className="card bg-base-100 shadow-sm">
@@ -380,7 +380,7 @@ const DrawerPage: FC = () => {
 
         <PreviewBlock
           title="Navbar menu for desktop plus sidebar drawer for mobile"
-          summary="保留原来的响应式导航用法，桌面端显示横向菜单，移动端切换为侧栏。"
+          summary="展示响应式导航用法，桌面端显示横向菜单，移动端切换为侧栏。"
           tab={tabs.navbar}
           preview={
             <div className="card bg-base-100 shadow-sm">
@@ -451,7 +451,7 @@ const DrawerPage: FC = () => {
 
         <PreviewBlock
           title="Responsive sidebar always visible on large screen"
-          summary="大屏常驻、小屏抽屉，继续兼容 lg:drawer-open 这类原始类名能力。"
+          summary="大屏常驻、小屏抽屉，支持 lg:drawer-open 这类基础类名能力。"
           tab={tabs.responsive}
           preview={
             <div className="card bg-base-100 shadow-sm">
@@ -490,7 +490,7 @@ const DrawerPage: FC = () => {
 
         <PreviewBlock
           title="Responsive collapsible icon only drawer sidebar"
-          summary="继续保留图标折叠侧栏的写法，适合后台信息架构导航。"
+          summary="展示图标折叠侧栏的写法，适合后台信息架构导航。"
           tab={tabs.collapsible}
           preview={
             <div className="card bg-base-100 shadow-sm">
@@ -578,7 +578,7 @@ const DrawerPage: FC = () => {
 
         <PreviewBlock
           title="Drawer sidebar that opens from right side"
-          summary="旧的 end 写法继续有效，适合快速保持既有代码兼容。"
+          summary="基础的 end 写法继续有效，适合快速保持项目代码支持。"
           tab={tabs.right}
           preview={
             <div className="card bg-base-100 shadow-sm">
@@ -615,11 +615,11 @@ const DrawerPage: FC = () => {
 </DrawerSidebar>`}
         />
 
-        <h2>增强模式</h2>
+        <h2>语义模式</h2>
 
         <PreviewBlock
           title="Controlled drawer with title, extra and footer"
-          summary="直接传 open/title/footer 进入增强模式，默认会以页面级抽屉打开，更贴近常见业务抽屉的使用方式。"
+          summary="直接传 open/title/footer 进入语义模式，默认会以页面级抽屉打开，更贴近常见业务抽屉的使用方式。"
           tab={tabs.controlled}
           preview={
             <div className="card bg-base-100 shadow-sm">
@@ -815,7 +815,7 @@ const open = ref(false)
                     title="发布任务"
                     extra={
                       <button type="button" className="btn btn-ghost btn-xs">
-                        历史版本
+                        基础形态
                       </button>
                     }
                     footer={
@@ -869,7 +869,7 @@ const size = ref<DrawerSizeValue>('default')
 
         <PreviewBlock
           title="Loading and close placement"
-          summary="增强模式内置 Skeleton loading，并支持把关闭按钮放到标题栏起始位置；默认仍会以页面级抽屉打开。"
+          summary="语义模式内置 Skeleton loading，并支持把关闭按钮放到标题栏起始位置；默认仍会以页面级抽屉打开。"
           tab={tabs.loading}
           preview={
             <div className="card bg-base-100 shadow-sm">
@@ -979,8 +979,8 @@ const size = ref<DrawerSizeValue>('default')
 
         <h2>API</h2>
         <p className="text-sm mt-3 mb-3">
-          旧的 <code>Toggle</code>、<code>Content</code>、<code>Side</code>、<code>Overlay</code>{' '}
-          子组件全部保留。 下面的表格重点列出增强模式新增或更值得直接使用的顶层 API。
+          基础的 <code>Toggle</code>、<code>Content</code>、<code>Side</code>、<code>Overlay</code>{' '}
+          子组件全部保持。下面的表格重点列出语义模式下更值得直接使用的顶层 API。
         </p>
 
         <ApiTable rows={apiRows} />

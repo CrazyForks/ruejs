@@ -99,7 +99,7 @@ const MinimalMentionsFixture: FC = () => (
       <div className="rounded-box border border-dashed border-base-300 bg-base-100/80 p-4 text-sm text-base-content/70">
         <div className="mb-3 font-medium text-base-content">候选项设计</div>
         <p className="m-0">
-          这里没有照搬 ant-design 的面板视觉，而是保留 Rue 更轻、更卡片化的输入体验。
+          这里没有照搬特定组件库的面板视觉，而是保留 Rue 更轻、更卡片化的输入体验。
         </p>
       </div>
     </div>

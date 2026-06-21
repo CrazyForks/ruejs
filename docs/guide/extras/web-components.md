@@ -64,13 +64,13 @@ module.exports = {
 
 由于 DOM 属性只能是字符串，我们需要将复杂数据作为 DOM 属性传递给自定义元素。在自定义元素上设置 props 时，Rue 3 会自动使用 `in` 运算符检查 DOM 属性是否存在，如果键存在，则会优先将值设置为 DOM 属性。这意味着，在大多数情况下，如果自定义元素遵循[推荐的最佳实践](https://web.dev/custom-elements-best-practices/)，你不需要考虑这个问题。
 
-然而，可能存在数据必须作为 DOM 属性传递，但自定义元素未正确定义/反映属性的罕见情况（导致 `in` 检查失败）。在这种情况下，你可以使用 `.prop` 修饰符强制将 `v-bind` 绑定设置为 DOM 属性：
+然而，可能存在数据必须作为 DOM 属性传递，但自定义元素未正确定义/反映属性的罕见情况（导致 `in` 检查失败）。在这种情况下，你可以在创建元素后直接设置对应 DOM 属性：
 
-```vue-html
-<my-element :user.prop="{ name: 'jack' }"></my-element>
+```js
+const el = document.createElement('my-element')
+el.user = { name: 'jack' }
 
-<!-- 等效的简写 -->
-<my-element .user="{ name: 'jack' }"></my-element>
+document.body.appendChild(el)
 ```
 
 ## 使用 Rue 构建自定义元素 {#building-custom-elements-with-rue}
@@ -81,7 +81,7 @@ module.exports = {
 
 Rue 当前提供一个最小但可用的 `useCustomElement()` 包装器，用于把 Rue 组件注册为原生 Custom Element。它返回一个扩展 `HTMLElement` 的构造函数：
 
-```vue-html
+```html
 <my-rue-element></my-rue-element>
 ```
 
@@ -137,15 +137,17 @@ document.body.appendChild(el)
 
 #### 事件 {#events}
 
-- 组件内部通过 `emitted(props)` 发出的事件，会在宿主元素上桥接为同名 `CustomEvent`。
+- 组件内部通过 `useEmit(props)` 发出的事件，会在宿主元素上桥接为同名 `CustomEvent`。
 - 事件参数会按原顺序放到 `event.detail` 数组里。
 - 桥接事件使用 `bubbles: true` 和 `composed: true`，因此可以用 `el.addEventListener(...)` 在宿主或外层节点上监听。
 
 #### 插槽 {#slots}
 
-- 在 `shadowRoot: true` 模式下，组件中的原生 `<Slot>` 会直接使用浏览器的原生 slot 分发。
+- 在 `shadowRoot: true` 模式下，组件中的原生 `<slot>` 会直接使用浏览器的原生 slot 分发。
 - 命名插槽继续使用原生 `slot` 属性，例如 `<div slot="named">...</div>`。
 - `shadowRoot: false` 时没有原生 shadow DOM slot 投影。
+- 如果自定义元素由 Rue 父组件渲染，可以使用 Rue 的 scoped slot 协议：函数 children 会进入默认 `__rue_slots.default`，`<Template slot="name">...</Template>` 会进入对应命名 slot。自定义元素内部用 `<Slot source={props} name="name" props={...}>` 读取即可。
+- Rue 父树中的 `createContext()` Provider 会跨 Rue 自定义元素边界透传，元素内部组件可直接 `useContext()`。
 
 #### 支持的选项 {#app-level-config}
 
@@ -154,11 +156,36 @@ document.body.appendChild(el)
 - `nonce`：为注入的 `<style>` 标签设置 `nonce`。
 - `configureApp`：可拿到 `useApp()` 返回值以安装插件或追加应用级配置。
 
-#### 当前限制 {#events}
+#### Custom Element 构建 {#custom-element-build}
 
-- 还没有 `this.$host`。
-- 还没有作用域插槽，也没有跨自定义元素边界的专用 Context 透传语义。
-- 还没有单文件组件的 custom-element 专用构建链路；如果你要注入样式，请显式通过 `styles` 选项传入。
+`@rue-js/vite-plugin-rue` 提供 `customElement()` 配置生成器，用于构建自定义元素库入口：
+
+```ts [vite.config.ts]
+import { defineConfig } from 'vite'
+import { customElement } from '@rue-js/vite-plugin-rue'
+
+export default defineConfig(
+  customElement({
+    entry: 'src/elements.ts',
+    name: 'MyRueElements',
+    externalRue: true,
+  }),
+)
+```
+
+它会启用 Rue TSX/Vapor 转换，并把 Vite build 配成 library mode。`externalRue: true` 适合宿主页面已经提供 Rue runtime 的库；如果要把 runtime 打进元素包里，可以省略该选项。
+
+样式仍通过 `useCustomElement(..., { styles })` 注入。常见做法是用 Vite 的 inline CSS 导入：
+
+```ts [src/elements.ts]
+import styles from './panel.css?inline'
+import { useCustomElement } from '@rue-js/rue'
+import Panel from './Panel'
+
+export const PanelElement = useCustomElement(Panel, {
+  styles: [styles],
+})
+```
 
 ### Rue 自定义元素库技巧 {#tips-for-a-rue-custom-elements-library}
 
@@ -185,19 +212,19 @@ export function register() {
 }
 ```
 
-消费者可以在 Rue 文件中使用这些元素：
+消费者可以在 Rue 组件中使用这些元素：
 
-```vue
-<script setup>
+```tsx
+import { type FC } from '@rue-js/rue'
 import { register } from 'path/to/elements.js'
-register()
-</script>
 
-<Template>
-  <my-foo ...>
-    <my-bar ...></my-bar>
+register()
+
+const App: FC = () => (
+  <my-foo data-kind="demo">
+    <my-bar data-kind="nested" />
   </my-foo>
-</Template>
+)
 ```
 
 或在任何其他框架中，如使用 JSX 的框架，并使用自定义名称：
@@ -219,17 +246,18 @@ export function MyComponent() {
 
 ### 基于 Rue 的 Web 组件与 TypeScript {#web-components-and-typescript}
 
-编写 Rue SFC 模板时，你可能希望[类型检查](/guide/guide/scaling-up/tooling#typescript)你的 Rue 组件，包括那些定义为自定义元素的组件。
+在 Rue TSX 组件中使用自定义元素时，你可能希望[类型检查](/guide/guide/scaling-up/tooling#typescript)这些元素的属性和事件。
 
-自定义元素使用浏览器内置 API 全局注册，默认情况下在 Rue 模板中使用它们时没有类型推断。要为注册为自定义元素的 Rue 组件提供类型支持，我们可以通过扩充 [`GlobalComponents` 接口](https://github.com/@rue-js/ruejs/language-tools/wiki/Global-Component-Types)来注册全局组件类型以在 Rue 模板中进行类型检查（JSX 用户可以改为扩充 [JSX.IntrinsicElements](https://www.typescriptlang.org/docs/handbook/jsx.html#intrinsic-elements) 类型，此处未展示）。
+自定义元素使用浏览器内置 API 全局注册，默认情况下在 TSX 中使用它们时没有类型推断。要提供类型支持，可以扩充 [JSX.IntrinsicElements](https://www.typescriptlang.org/docs/handbook/jsx.html#intrinsic-elements)。
 
 以下是如何为使用 Rue 制作的自定义元素定义类型：
 
 ```typescript
 import { useCustomElement } from '@rue-js/rue'
+import type { HTMLAttributes } from '@rue-js/rue'
 
 // 导入 Rue 组件。
-import SomeComponent from './src/components/SomeComponent.ce.rue'
+import SomeComponent from './src/components/SomeComponent'
 
 // 将 Rue 组件转换为自定义元素类。
 export const SomeElement = useCustomElement(SomeComponent)
@@ -237,21 +265,21 @@ export const SomeElement = useCustomElement(SomeComponent)
 // 记住在浏览器中注册元素类。
 customElements.define('some-element', SomeElement)
 
-// 将新元素类型添加到 Rue 的 GlobalComponents 类型。
+// 将新元素类型添加到 JSX 标签类型。
 declare module '@rue-js/rue' {
-  interface GlobalComponents {
-    // 确保在此处传入 Rue 组件类型
-    //（SomeComponent，*不是* SomeElement）。
-    // 自定义元素名称中需要短横线，
-    // 因此在此处使用带短横线的元素名称。
-    'some-element': typeof SomeComponent
+  namespace JSX {
+    interface IntrinsicElements {
+      'some-element': HTMLAttributes & {
+        label?: string
+      }
+    }
   }
 }
 ```
 
 ## 非 Rue Web 组件与 TypeScript {#non-rue-web-components-and-typescript}
 
-以下是推荐的在不是用 Rue 构建的自定义元素的 SFC 模板中启用类型检查的方法。
+以下是推荐的在不是用 Rue 构建的自定义元素上启用 TSX 类型检查的方法。
 
 :::tip 注意
 这是一种可能的实现方式，但根据用于创建自定义元素的框架，它可能会有所不同。
@@ -267,7 +295,7 @@ export class SomeElement extends HTMLElement {
 
   lorem: boolean = false
 
-  // 此方法不应暴露给模板类型。
+  // 此方法不应暴露给 JSX 属性类型。
   someMethod() {
     /* ... */
   }
@@ -279,13 +307,12 @@ export class SomeElement extends HTMLElement {
 customElements.define('some-element', SomeElement)
 
 // 这是 SomeElement 的属性列表，将被选中用于
-// 框架模板中的类型检查（例如 Rue SFC 模板）。其他
-// 属性将不被暴露。
+// TSX 类型检查。其他属性将不被暴露。
 export type SomeElementAttributes = 'foo' | 'bar'
 
 // 定义 SomeElement 调度的事件类型。
 export type SomeElementEvents = {
-  'apple-fell': AppleFellEvent
+  onAppleFell?: (event: AppleFellEvent) => void
 }
 
 export class AppleFellEvent extends Event {
@@ -298,102 +325,75 @@ export class AppleFellEvent extends Event {
 让我们创建一个类型辅助工具，用于在 Rue 中轻松注册自定义元素类型定义：
 
 ```ts [some-lib/src/DefineCustomElement.ts]
+import type { HTMLAttributes } from '@rue-js/rue'
+
 // 我们可以为需要定义的每个元素重用此类型辅助工具。
 type DefineCustomElement<
   ElementType extends HTMLElement,
-  Events extends EventMap = {},
   SelectedAttributes extends keyof ElementType = keyof ElementType,
-> = new () => ElementType & {
-  // 使用 $props 定义暴露给模板类型检查的属性。Rue
-  // 专门从 `$props` 类型读取 prop 定义。注意，我们
-  // 将元素的 props 与全局 HTML props 和 Rue 的特殊
-  // props 组合在一起。
-  /** @deprecated 不要在自定义元素 ref 上使用 $props 属性，
-    这仅用于模板 prop 类型。 */
-  $props: HTMLAttributes & Partial<Pick<ElementType, SelectedAttributes>> & PublicProps
-
-  // 使用 $emit 专门定义事件类型。Rue 专门从
-  // `$emit` 类型读取事件类型。注意 `$emit` 期望的特定
-  // 格式，我们将 `Events` 映射到它。
-  /** @deprecated 不要在自定义元素 ref 上使用 $emit 属性，
-    这仅用于模板事件类型。 */
-  $emit: RueEmit<Events>
-}
-
-type EventMap = {
-  [event: string]: Event
-}
-
-// 这将 EventMap 映射到 Rue 的 $emit 类型期望的格式。
-type RueEmit<T extends EventMap> = EmitFn<{
-  [K in keyof T]: (event: T[K]) => void
-}>
+  EventProps = {},
+> = HTMLAttributes &
+  Partial<Pick<ElementType, SelectedAttributes>> &
+  EventProps & {
+    ref?: ElementType
+  }
 ```
 
 :::tip 注意
-我们将 `$props` 和 `$emit` 标记为已弃用，以便当我们获得对自定义元素的 `ref` 时不会被诱惑使用这些属性，因为这些属性仅用于自定义元素的模板类型检查。这些属性实际上不存在于自定义元素实例上。
+事件 prop 名称需要与项目中的 JSX 事件命名约定保持一致。上面的示例把原生 `"apple-fell"` 事件映射为 `onAppleFell` prop。
 :::
 
-使用类型辅助工具，我们现在可以选择应在 Rue 模板中暴露进行类型检查的 JS 属性：
+使用类型辅助工具，我们现在可以选择应在 TSX 中暴露进行类型检查的 JS 属性：
 
-```ts [some-lib/src/SomeElement.rue.ts]
+```ts [some-lib/src/SomeElement.rue-jsx.ts]
 import { SomeElement, SomeElementAttributes, SomeElementEvents } from './SomeElement.js'
-import type { Component } from '@rue-js/rue'
 import type { DefineCustomElement } from './DefineCustomElement'
 
-// 将新元素类型添加到 Rue 的 GlobalComponents 类型。
+// 将新元素类型添加到 JSX 标签类型。
 declare module '@rue-js/rue' {
-  interface GlobalComponents {
-    'some-element': DefineCustomElement<SomeElement, SomeElementAttributes, SomeElementEvents>
+  namespace JSX {
+    interface IntrinsicElements {
+      'some-element': DefineCustomElement<SomeElement, SomeElementAttributes, SomeElementEvents>
+    }
   }
 }
 ```
 
-假设 `some-lib` 将其源 TypeScript 文件构建到 `dist/` 文件夹中。`some-lib` 的用户然后可以导入 `SomeElement` 并在 Rue SFC 中使用它，如下所示：
+假设 `some-lib` 将其源 TypeScript 文件构建到 `dist/` 文件夹中。`some-lib` 的用户然后可以导入 `SomeElement` 并在 Rue TSX 组件中使用它，如下所示：
 
-```vue [SomeElementImpl.vue]
-<script lang="ts">
+```tsx [SomeElementImpl.tsx]
 // 这将创建并向浏览器注册元素。
 import 'some-lib/dist/SomeElement.js'
 
 // 使用 TypeScript 和 Rue 的用户还应导入
 // Rue 特定的类型定义（其他框架的用户可能
 // 导入其他框架特定的类型定义）。
-import type {} from 'some-lib/dist/SomeElement.rue.js'
+import type {} from 'some-lib/dist/SomeElement.rue-jsx.js'
 
-import { onMounted, useRef } from '@rue-js/rue'
+import { onMount, useRef } from '@rue-js/rue'
 
 const el = useRef<SomeElement>()
 
-onMounted(() => {
+onMount(() => {
   console.log(el.current!.foo, el.current!.bar, el.current!.lorem, el.current!.someMethod())
-
-  // 不要使用这些 props，它们是 `undefined`
-  // IDE 会显示它们被划线
-  el.current!.$props
-  el.current!.$emit
 })
-</script>
 
-<Template>
-  <!-- 现在我们可以使用元素并进行类型检查： -->
-  <some-element
-    :ref="el"
-    :foo="456"
-    :blah="'hello'"
-    @apple-fell="
-      event => {
+export function SomeElementImpl() {
+  return (
+    <some-element
+      ref={el}
+      foo={456}
+      onAppleFell={event => {
         // `event` 的类型在此处被推断为 `AppleFellEvent`
-      }
-    "
-  ></some-element>
-</Template>
+      }}
+    />
+  )
+}
 ```
 
 如果元素没有类型定义，属性和事件的类型可以以更手动的方式定义：
 
-```vue [SomeElementImpl.vue]
-<script setup lang="ts">
+```tsx [SomeElementImpl.tsx]
 // 假设 `some-lib` 是没有类型定义的纯 JS，
 // 且 TypeScript 无法推断类型：
 import { SomeElement } from 'some-lib'
@@ -401,25 +401,27 @@ import { SomeElement } from 'some-lib'
 // 我们将使用与之前相同的类型辅助工具。
 import { DefineCustomElement } from './DefineCustomElement'
 
-type SomeElementProps = { foo?: number; bar?: string }
-type SomeElementEvents = { 'apple-fell': AppleFellEvent }
+type SomeElementInstance = HTMLElement & { foo?: number; bar?: string }
+type SomeElementAttributes = 'foo' | 'bar'
+type SomeElementEvents = { onAppleFell?: (event: AppleFellEvent) => void }
 interface AppleFellEvent extends Event {
   /* ... */
 }
 
-// 将新元素类型添加到 Rue 的 GlobalComponents 类型。
+// 将新元素类型添加到 JSX 标签类型。
 declare module '@rue-js/rue' {
-  interface GlobalComponents {
-    'some-element': DefineCustomElement<SomeElementProps, SomeElementEvents>
+  namespace JSX {
+    interface IntrinsicElements {
+      'some-element': DefineCustomElement<
+        SomeElementInstance,
+        SomeElementAttributes,
+        SomeElementEvents
+      >
+    }
   }
 }
 
 // ... 与之前相同，使用对元素的引用 ...
-</script>
-
-<Template>
-  <!-- ... 与之前相同，在模板中使用元素 ... -->
-</Template>
 ```
 
 自定义元素作者不应自动从其库中导出框架特定的自定义元素类型定义，例如不应从也导出库其余部分的 `index.ts` 文件中导出它们，否则用户将遇到意外的模块扩充错误。用户应导入他们需要的框架特定的类型定义文件。

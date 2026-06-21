@@ -13,6 +13,7 @@ const RUE_CONTEXT_VALUE_STORE_PROP = '__rue_context_value_store__'
 const RUE_CONTEXT_LINKED_INSTANCE_PROP = '__rue_context_linked_instance__'
 const RUE_CONTEXT_OWNER_PARENT_PROP = '__rue_context_owner_parent__'
 const RUE_CONTEXT_PARENT_INSTANCE_PROP = '__rue_context_parent_instance__'
+const RUE_CONTEXT_PRESERVE_PARENT_INSTANCE_PROP = '__rue_context_preserve_parent_instance__'
 const RUE_CONTEXT_PROVIDER_MARKER = '__rue_context_provider__'
 const RUE_CONTEXT_PROVIDER_CONTEXT_PROP = '__rue_context_provider_context__'
 const RUE_CONTEXT_PROVIDER_PROPS_MARKER = '__rue_context_provider_props__'
@@ -35,6 +36,7 @@ type ContextCarrier = {
   [RUE_CONTEXT_LINKED_INSTANCE_PROP]?: unknown
   [RUE_CONTEXT_OWNER_PARENT_PROP]?: unknown
   [RUE_CONTEXT_PARENT_INSTANCE_PROP]?: unknown
+  [RUE_CONTEXT_PRESERVE_PARENT_INSTANCE_PROP]?: boolean
   [RUE_CONTEXT_PROVIDER_PROPS_MARKER]?: boolean
 }
 
@@ -90,6 +92,8 @@ const asContextCarrier = (value: unknown): ContextCarrier | null => {
   if (!isObjectLike(value)) return null
   return value as ContextCarrier
 }
+
+const isCustomElementTag = (value: unknown) => typeof value === 'string' && value.includes('-')
 
 const readTextContextValue = <T>(
   context: RueContext<T>,
@@ -160,6 +164,17 @@ export const copyParentContextProp = <T extends Record<string, unknown>>(
   return target
 }
 
+/** 标记 props 中已有的 parent context 指针应跨 Custom Element root 保留。 */
+export const preserveParentContextProps = <T extends Record<string, unknown>>(props: T): T => {
+  const carrier = asContextCarrier(props)
+  if (!carrier || carrier[RUE_CONTEXT_PARENT_INSTANCE_PROP] == null) {
+    return props
+  }
+
+  carrier[RUE_CONTEXT_PRESERVE_PARENT_INSTANCE_PROP] = true
+  return props
+}
+
 const getContextValueStore = (instance: unknown, createIfMissing = false) => {
   const carrier = asContextCarrier(instance)
   if (!carrier) return null
@@ -190,27 +205,29 @@ const getContextValueStore = (instance: unknown, createIfMissing = false) => {
   return nextStore
 }
 
-const getParentContextInstance = (instance: unknown) => {
+const getParentContextCandidates = (instance: unknown) => {
   const carrier = asContextCarrier(instance)
+  const candidates: unknown[] = []
+  const pushCandidate = (candidate: unknown) => {
+    if (candidate == null || candidate === instance || candidates.includes(candidate)) {
+      return
+    }
+    candidates.push(candidate)
+  }
 
   // 祖先优先级：
   // 1. runtime-vapor bridge 维护的 owner parent；
   // 2. JSX / repeatable handle 透传下来的 parent-instance；
   // 3. propsRO 上的兼容字段，给老路径和 portable handle 回放兜底。
   // 这里显式避开 self-loop，防止 bridge 或兼容 props 把自己再次指回自己。
-  const ownerParent = carrier?.[RUE_CONTEXT_OWNER_PARENT_PROP]
-  if (ownerParent != null && ownerParent !== instance) {
-    return ownerParent
-  }
-  const directParent = carrier?.[RUE_CONTEXT_PARENT_INSTANCE_PROP]
-  if (directParent != null && directParent !== instance) {
-    return directParent
-  }
+  pushCandidate(carrier?.[RUE_CONTEXT_OWNER_PARENT_PROP])
+  pushCandidate(carrier?.[RUE_CONTEXT_PARENT_INSTANCE_PROP])
   const props = carrier?.propsRO
-  if (!props || typeof props !== 'object') {
-    return null
+  if (props && typeof props === 'object') {
+    pushCandidate(props[RUE_CONTEXT_OWNER_PARENT_PROP])
+    pushCandidate(props[RUE_CONTEXT_PARENT_INSTANCE_PROP])
   }
-  return props[RUE_CONTEXT_OWNER_PARENT_PROP] ?? props[RUE_CONTEXT_PARENT_INSTANCE_PROP] ?? null
+  return candidates
 }
 
 /** 为组件 props 附加当前 owner 指针，让子组件可沿运行时链路查找 context。 */
@@ -218,7 +235,7 @@ export const withParentContextProps = <T extends Record<string, unknown> | null>
   type: string | ContextualComponent,
   props: T,
 ): T => {
-  if (typeof type !== 'function') {
+  if (typeof type !== 'function' && !isCustomElementTag(type)) {
     return props
   }
 
@@ -228,6 +245,17 @@ export const withParentContextProps = <T extends Record<string, unknown> | null>
   }
 
   if (props && props[RUE_CONTEXT_PARENT_INSTANCE_PROP] === parentInstance) {
+    if (isContextProviderComponent(type)) {
+      markContextProviderProps(props)
+    }
+    return props
+  }
+
+  if (
+    props &&
+    props[RUE_CONTEXT_PRESERVE_PARENT_INSTANCE_PROP] === true &&
+    props[RUE_CONTEXT_PARENT_INSTANCE_PROP] != null
+  ) {
     if (isContextProviderComponent(type)) {
       markContextProviderProps(props)
     }
@@ -348,12 +376,16 @@ export const useContext = <T>(context: RueContext<T>): T => {
     return textProvided.value
   }
 
-  let currentInstance = getCurrentInstance()
+  const pendingInstances: unknown[] = [getCurrentInstance()]
   const visited = new Set<unknown>()
 
   // owner parent / parent-instance 是运行时链路，理论上不应成环；
   // 但这里仍保留 visited 保护，避免 bridge 或兼容 props 出错时把 useContext 卡死在循环里。
-  while (currentInstance && !visited.has(currentInstance)) {
+  while (pendingInstances.length > 0) {
+    const currentInstance = pendingInstances.pop()
+    if (!currentInstance || visited.has(currentInstance)) {
+      continue
+    }
     visited.add(currentInstance)
     const store = getContextValueStore(currentInstance)
 
@@ -361,7 +393,10 @@ export const useContext = <T>(context: RueContext<T>): T => {
       return store.get(context as RueContext<unknown>) as T
     }
 
-    currentInstance = getParentContextInstance(currentInstance)
+    const parents = getParentContextCandidates(currentInstance)
+    for (let i = parents.length - 1; i >= 0; i -= 1) {
+      pendingInstances.push(parents[i])
+    }
   }
 
   return context.defaultValue

@@ -449,7 +449,7 @@ const StatusDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Status 状态列表</h1>
         <p className="text-sm mt-3 mb-3">
-          Status 现在既能保留 Rue 原来的状态点写法，也能像轻量 Badge 一样包裹内容，统一承载
+          Status 现在既能使用 Rue 基础的状态点写法，也能像轻量 Badge 一样包裹内容，统一承载
           dot、count、text、 overflowCount 和 offset。不传 children 时，它会自动切到独立的
           label/badge 模式；传入 children 后，则变成右上角角标。
         </p>
@@ -457,12 +457,12 @@ const StatusDemo: FC = () => {
         <h2>何时使用</h2>
         <ul>
           <li>需要一个很轻的状态点，表达在线、同步中、告警、错误这类语义状态。</li>
-          <li>想在现有内容右上角挂 dot、count 或文案角标，但又不想引入更重的 Badge 结构。</li>
+          <li>想在当前内容右上角挂 dot、count 或文案角标，但又不想引入更重的 Badge 结构。</li>
         </ul>
 
         <ExampleBlock
           title="基础状态与语义"
-          summary="保留最基础的状态点体验，同时支持用 status 或 color 直接表达语义。"
+          summary="展示最基础的状态点体验，同时支持用 status 或 color 直接表达语义。"
           tab={tabBasic}
           preview={BasicStatusPreview}
           code={BASIC_CODE}
@@ -521,7 +521,7 @@ const StatusDemo: FC = () => {
           <div className="mt-2 grid gap-2 md:grid-cols-2">
             <div>不传 children 适合单独状态点、带文案的 label，以及独立数字/点状提示。</div>
             <div>
-              传 children 适合给按钮、卡片、入口块挂角标，并继续使用 count、dot、offset 等能力。
+              传 children 适合给按钮、卡片、入口块挂角标，并可以使用 count、dot、offset 等能力。
             </div>
           </div>
         </div>

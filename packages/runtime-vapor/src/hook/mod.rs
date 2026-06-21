@@ -25,6 +25,8 @@ pub mod use_effect;
 pub use use_effect::use_effect;
 pub mod computed;
 pub use computed::computed_js;
+pub mod custom_ref;
+pub use custom_ref::custom_ref_js;
 pub mod is_reactive;
 pub use is_reactive::{is_proxy, is_reactive};
 pub mod is_ref;

@@ -59,7 +59,7 @@ whenDepsChange(update)
 
 我们不能像示例中那样真正跟踪局部变量的读写。在普通 JavaScript 中没有这样做的机制。然而，我们**可以**做的是拦截**对象属性**的读写。
 
-在 JavaScript 中有两种拦截属性访问的方式：[getter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get#description) / [setter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/set#description) 和 [Proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy)。Rue 2 由于浏览器支持限制而专门使用 getter / setter。在 Rue 3 中，Proxy 用于响应式对象，getter / setter 用于 refs。以下是一些说明它们工作原理的伪代码：
+在 JavaScript 中有两种拦截属性访问的方式：[getter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get#description) / [setter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/set#description) 和 [Proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy)。Rue 的响应式对象使用 Proxy，refs 使用 getter / setter。以下是一些说明它们工作原理的伪代码：
 
 ```js{4,9,17,22}
 function reactive(obj) {
@@ -190,12 +190,6 @@ count.value++
 ```
 
 事实上，这与 Rue 组件如何保持状态和 DOM 同步非常接近——每个组件实例创建一个响应式 effect 来渲染和更新 DOM。当然，Rue 组件使用比 `innerHTML` 更高效的方式来更新 DOM。这在[渲染机制](/guide/guide/extras/rendering-mechanism)中讨论。
-
-<div class="options-api">
-
-`ref()`、`computed()` 和 `watchEffect()` API 都是 Composition API 的一部分。如果你到目前为止只使用 Options API 的 Rue，你会注意到 Composition API 更接近于 Rue 底层响应式系统的工作方式。事实上，在 Rue 3 中，Options API 是在 Composition API 之上实现的。组件实例 (`this`) 上的所有属性访问都会触发 getter / setter 进行响应式跟踪，而 `watch` 和 `computed` 等选项在内部调用其 Composition API 等效项。
-
-</div>
 
 ## 运行时与编译时响应式 {#runtime-vs-compile-time-reactivity}
 
@@ -398,7 +392,7 @@ export function useMachine<T>(options: T) {
 - [Preact Signals](https://preactjs.com/guide/v10/signals/)
 - [Qwik Signals](https://qwik.builder.io/docs/components/state/#usesignal)
 
-从根本上讲，signals 与 Rue refs 是同一种响应式原语。它是一个值容器，在访问时提供依赖跟踪，在修改时触发副作用。这种基于响应式原语的范式在前端世界中并不是一个特别新的概念：它可以追溯到十多年前的实现，如 [Knockout observables](https://knockoutjs.com/documentation/observables.html) 和 [Meteor Tracker](https://docs.meteor.com/api/tracker.html)。Rue Options API 和 React 状态管理库 [MobX](https://mobx.js.org/) 也基于相同的原理，但将原语隐藏在对象属性后面。
+从根本上讲，signals 与 Rue refs 是同一种响应式原语。它是一个值容器，在访问时提供依赖跟踪，在修改时触发副作用。这种基于响应式原语的范式在前端世界中并不是一个特别新的概念：它可以追溯到十多年前的实现，如 [Knockout observables](https://knockoutjs.com/documentation/observables.html) 和 [Meteor Tracker](https://docs.meteor.com/api/tracker.html)。React 状态管理库 [MobX](https://mobx.js.org/) 也基于相同的原理，但将原语隐藏在对象属性后面。
 
 虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。Rue 当前默认已经把编译期知识下沉到 Block / Vapor 渲染路径中，并通过[编译器知情的 Block / Vapor](/guide/guide/extras/rendering-mechanism#compiler-informed-block-vapor)把更新收敛到更小的动态边界。
 

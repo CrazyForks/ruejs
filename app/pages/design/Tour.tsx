@@ -473,7 +473,7 @@ const BasicWorkspacePreview: FC = () => {
                 点击 Basic 后，会依次讲解 Upload、Save 和更多操作。
               </div>
             </div>
-            <span className="badge badge-outline badge-sm px-3 py-3">Code Demo</span>
+            <span className="badge badge-outline badge-sm px-3 py-3">Code 示例</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -763,7 +763,7 @@ const CustomActionsPreview: FC = () => {
       target: () => summaryRef.current,
       title: '把封面和主题一起做强',
       description:
-        '默认样式延续 Rue 的轻卡片语言，但你也可以切到 primary，让产品引导更像一个任务流。',
+        '默认样式使用 Rue 的轻卡片语言，但你也可以切到 primary，让产品引导更像一个任务流。',
       placement: 'bottomLeft' as const,
       cover: (
         <div className="h-20 rounded-[1.25rem] bg-gradient-to-br from-cyan-300 via-sky-500 to-indigo-700" />
@@ -930,7 +930,7 @@ const TourPage: FC = () => {
           语言，不直接照搬现成面板样式。
         </p>
         <p className="text-sm mt-3 mb-3">
-          这次补齐的不只是静态外观，而是完整执行逻辑：围绕真实 DOM target
+          Tour 覆盖的不只是静态外观，也包含完整执行逻辑：围绕真实 DOM target
           做高亮、自动定位、切步滚动、非模态展示，以及自定义 indicator 和底部 actions。
         </p>
 

@@ -94,10 +94,6 @@ export const MouseComponent: FC = () => {
 }
 ```
 
-<div class="demo">
-  鼠标位置在：{{ x }}, {{ y }}
-</div>
-
 如我们所见，核心逻辑保持完全相同——我们所需要做的只是将其移到一个外部函数中，并返回应该暴露的状态。就像在组件内部一样，你可以在 composables 中使用完整的 [Composition API 函数](/api/api/index#composition-api)。现在，相同的 `useMouse()` 功能可以在任何组件中使用。
 
 composables 更酷的一点是，你还可以嵌套它们：一个 composable 函数可以调用一个或多个其他 composable 函数。这使我们能够使用小的、独立的单元来组合复杂的逻辑，类似于我们使用组件来组合整个应用。事实上，这就是为什么我们决定将使这种模式成为可能的 API 集合称为 Composition API。

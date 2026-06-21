@@ -77,7 +77,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'destroyOnHidden',
-    description: '关闭后是否卸载浮层内容；默认保留 DOM 并切换可见状态，适合轻操作卡片。',
+    description: '关闭后是否卸载浮层内容；默认保持 DOM 并切换可见状态，适合轻操作卡片。',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -152,8 +152,8 @@ const PopoverPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Popover 气泡卡片</h1>
         <p className="text-sm mt-3 mb-3">
-          Popover 用来承载比 Tooltip 更完整的信息块和轻操作。Rue 版本延续了当前的轻卡片视觉，
-          同时补齐 <code>title</code>、<code>content</code>、<code>overlay</code>、触发方式、
+          Popover 用来承载比 Tooltip 更完整的信息块和轻操作。Rue 实现采用当前的轻卡片视觉， 同时补充{' '}
+          <code>title</code>、<code>content</code>、<code>overlay</code>、触发方式、
           定位、箭头和受控开合等核心能力。
         </p>
         <p className="text-sm text-base-content/70">

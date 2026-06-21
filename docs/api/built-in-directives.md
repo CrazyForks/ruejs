@@ -1,6 +1,6 @@
 # 内置指令 {#built-in-directives}
 
-Rue 使用 JSX/TSX 作为主要模板语法，同时在编译阶段支持一组面向 JSX 的内置指令。大多数指令都同时提供 `v-` 和 `r-` 前缀，两者语义相同：`v-` 方便迁移 Vue 心智模型，`r-` 更贴近 Rue 命名。
+Rue 使用 JSX/TSX 作为主要模板语法，同时在编译阶段支持一组面向 JSX 的内置指令。大多数指令都同时提供 `v-` 和 `r-` 前缀，两者语义相同；`r-` 更贴近 Rue 命名。
 
 指令值可以使用 JSX 表达式，也可以在部分指令上使用字符串表达式：
 
@@ -364,7 +364,7 @@ JSX 等价写法：
 
 ## `v-slot` {#v-slot}
 
-Rue 组件通常通过 JSX 子元素、render props 或显式的 `slot` 属性表达插槽内容。对于 TSX，优先使用组件约定，而不是 Vue SFC 风格的 `v-slot`。
+Rue 组件通常通过 JSX 子元素、render props 或显式的 `slot` 属性表达插槽内容。对于 TSX，优先使用组件约定，而不是 `v-slot`。
 
 ```tsx
 <Panel>

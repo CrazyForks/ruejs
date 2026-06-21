@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { h, type FC } from '@rue-js/rue'
+import { h, useComponent, type FC } from '@rue-js/rue'
 import {
   attachRouter,
   createMemoryHistory,
@@ -78,5 +78,20 @@ describe('server renderToString', () => {
     await router.isReady()
 
     await expect(renderToString(RouterView)).resolves.toContain('<h1>Lazy SSR route</h1>')
+  })
+
+  it('ignores lazy hydration strategies while rendering async components on the server', async () => {
+    const hydrateStrategy = vi.fn(() => {
+      throw new Error('SSR should not install client hydration strategies.')
+    })
+    const LazyPanel = useComponent({
+      loader: async () => ({
+        default: () => h('h1', null, 'Lazy hydration SSR route'),
+      }),
+      hydrate: hydrateStrategy,
+    })
+
+    await expect(renderToString(LazyPanel)).resolves.toContain('<h1>Lazy hydration SSR route</h1>')
+    expect(hydrateStrategy).not.toHaveBeenCalled()
   })
 })

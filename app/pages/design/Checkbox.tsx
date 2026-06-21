@@ -79,7 +79,7 @@ const newsletterOptions: NewsletterOption[] = [
   {
     label: '实验功能灰度',
     value: 'labs',
-    hint: '体验 Rue 新特性与迁移提案。',
+    hint: '体验 Rue 新特性与路线提案。',
   },
   {
     label: '线下活动预告',
@@ -193,7 +193,7 @@ const groupCode = `const value = ref(['design-system'])
     {
       label: '实验功能灰度',
       value: 'labs',
-      title: '体验 Rue 新特性与迁移提案。',
+      title: '体验 Rue 新特性与路线提案。',
       className: 'items-center rounded-box border border-base-300 bg-base-100 px-4 py-3 [&>span:first-child]:pt-0 [&>span:last-child]:pt-1 [&>span:last-child]:leading-none',
     },
     {
@@ -652,7 +652,7 @@ const CheckboxPage: FC = () => {
 
         <div className="alert alert-soft mt-6 text-sm">
           <span>
-            Rue 在保留 daisyUI 视觉类名的基础上，为 Checkbox 增加了更完整的受控状态、半选态和 Group
+            Rue 在使用 daisyUI 视觉类名的基础上，为 Checkbox 增加了更完整的受控状态、半选态和 Group
             能力。
           </span>
         </div>
@@ -666,7 +666,7 @@ const CheckboxPage: FC = () => {
 
         <ExampleBlock
           title="Checkbox"
-          summary="保留原有基础用法，并支持 children 作为可点击说明区。"
+          summary="展示基础用法，并支持 children 作为可点击说明区。"
           tab={tabBasic}
           preview={() => (
             <div className={previewCardClassName}>
@@ -680,7 +680,7 @@ const CheckboxPage: FC = () => {
 
         <ExampleBlock
           title="With fieldset and label"
-          summary="保留原有 fieldset 场景，适合设置页或表单分区。"
+          summary="展示基础 fieldset 场景，适合设置页或表单分区。"
           tab={tabFieldset}
           preview={() => (
             <div className={previewCardClassName}>
@@ -717,7 +717,7 @@ const CheckboxPage: FC = () => {
 
         <ExampleBlock
           title="Sizes"
-          summary="延续 Rue 当前的尺寸体系。"
+          summary="使用 Rue 当前的尺寸体系。"
           tab={tabSizes}
           preview={() => (
             <div className={previewCardClassName}>
@@ -737,7 +737,7 @@ const CheckboxPage: FC = () => {
 
         <ExampleBlock
           title="Colors"
-          summary="颜色语义保持与现有 Rue 主题一致。"
+          summary="颜色语义保持与当前 Rue 主题一致。"
           tab={tabColors}
           preview={() => (
             <div className={previewCardClassName}>
@@ -779,7 +779,7 @@ const CheckboxPage: FC = () => {
 
         <ExampleBlock
           title="Indeterminate"
-          summary="保留原有半选态场景，但改成组件级 prop，不再需要手动操作 ref。"
+          summary="展示基础半选态场景，但改成组件级 prop，不再需要手动操作 ref。"
           tab={tabIndeterminate}
           preview={() => (
             <div className={previewCardClassName}>
@@ -835,7 +835,7 @@ const CheckboxPage: FC = () => {
 
         <ExampleBlock
           title="Checkbox with custom colors"
-          summary="保留原有自定义颜色能力，便于做品牌化演示。"
+          summary="展示基础自定义颜色能力，便于做品牌化演示。"
           tab={tabCustomColors}
           preview={() => (
             <div className={previewCardClassName}>
@@ -852,8 +852,7 @@ const CheckboxPage: FC = () => {
 
         <h2 className="mt-12">API</h2>
         <p className="text-sm text-base-content/70">
-          为了兼容旧用法，className 仍然作用在原生 input 上；如果需要控制包裹层，请使用
-          rootClassName 和 rootStyle。
+          className 默认作用在原生 input 上；需要控制包裹层时，请使用 rootClassName 和 rootStyle。
         </p>
 
         <h3 className="mt-6">Checkbox</h3>

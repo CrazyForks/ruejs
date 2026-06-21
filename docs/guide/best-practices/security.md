@@ -6,28 +6,26 @@
 
 虽然发现新漏洞的情况很少见，但我们还建议始终使用最新版本的 Rue 及其官方配套库，以确保您的应用尽可能安全。
 
-## 规则第1条：永远不要使用不受信任的模板 (Rule No.1: Never Use Non-trusted Templates) {#rule-no-1-never-use-non-trusted-templates}
+## 规则第1条：永远不要执行不受信任的内容 (Rule No.1: Never Execute Non-trusted Content) {#rule-no-1-never-use-non-trusted-templates}
 
-使用 Rue 时最基本的安全规则是 **永远不要使用不受信任的内容作为组件模板**。这样做等同于允许在应用中执行任意 JavaScript - 更糟糕的是，如果在服务器端渲染期间执行代码，可能会导致服务器被入侵。此类用法的示例：
+使用 Rue 时最基本的安全规则是 **永远不要把不受信任的内容当作组件代码或原始 HTML 执行**。这样做等同于允许在应用中执行任意 JavaScript 或注入任意标记。此类用法的示例：
 
 ```tsx
 // 永远不要这样做！
-import { createApp } from '@rue-js/rue'
+import { type FC, useApp } from '@rue-js/rue'
 
-const app = createApp({
-  template: `<div>${userProvidedString}</div>`, // 永远不要这样做
-})
+const UnsafeContent: FC = () => <div dangerouslySetInnerHTML={{ __html: userProvidedString }} />
 
-app.mount('#app')
+useApp(UnsafeContent).mount('#app')
 ```
 
-Rue 模板被编译成 JavaScript，模板内的表达式将作为渲染过程的一部分执行。虽然表达式是针对特定渲染上下文评估的，但由于潜在全局执行环境的复杂性，Rue 这样的框架在不产生不切实际的性能开销的情况下，完全保护您免受潜在恶意代码执行的影响是不切实际的。完全避免此类问题的最直接方法是确保 Rue 模板的内容始终受信任且完全由您控制。
+Rue 组件最终会运行 JavaScript 并操作 DOM。由于潜在全局执行环境和浏览器 DOM API 的复杂性，Rue 这样的框架在不产生不切实际的性能开销的情况下，完全保护您免受潜在恶意内容执行的影响是不切实际的。完全避免此类问题的最直接方法是确保组件代码与原始 HTML 内容始终受信任且完全由您控制。
 
 ## Rue 如何保护您 (What Rue Does to Protect You) {#what-rue-does-to-protect-you}
 
 ### HTML 内容 (HTML Content) {#html-content}
 
-无论是使用模板还是渲染函数，内容都会自动转义。这意味着在此模板中：
+默认情况下，JSX 文本内容会自动转义。这意味着在此组件中：
 
 ```tsx
 <h1>{userProvidedString}</h1>
@@ -49,7 +47,7 @@ Rue 模板被编译成 JavaScript，模板内的表达式将作为渲染过程�
 
 ### 属性绑定 (Attribute Bindings) {#attribute-bindings}
 
-同样，动态属性绑定也会自动转义。这意味着在此模板中：
+同样，动态属性绑定也会自动转义。这意味着在此 JSX 中：
 
 ```tsx
 <h1 title={userProvidedString}>hello</h1>
@@ -94,7 +92,7 @@ Rue 模板被编译成 JavaScript，模板内的表达式将作为渲染过程�
   ```
 
 :::warning 警告
-用户提供的 HTML 永远不能被认为 100% 安全，除非它在沙盒化的 iframe 中，或者在只有编写该 HTML 的用户才能接触到的应用部分中。此外，允许用户编写自己的 Rue 模板也会带来类似的危险。
+用户提供的 HTML 永远不能被认为 100% 安全，除非它在沙盒化的 iframe 中，或者在只有编写该 HTML 的用户才能接触到的应用部分中。此外，允许用户编写并执行自己的 Rue 组件代码也会带来类似的危险。
 :::
 
 ### URL 注入 (URL Injection) {#url-injection}

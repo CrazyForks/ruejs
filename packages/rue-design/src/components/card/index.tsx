@@ -315,7 +315,7 @@ const Figure: FC<CardPartProps> = ({ className, style, children, ...rest }) => {
 
 /**
  * Grid 子卡片用于信息概览、快捷入口等密集场景。
- * hoverable 默认开启，保持与 antd Card.Grid 类似的交互预期。
+ * hoverable 默认开启，保持可交互网格卡片的常见预期。
  */
 const Grid: FC<CardGridProps> = ({ className, style, hoverable = true, children, ...rest }) => {
   let cls = 'rue-card-grid block bg-base-100/70 p-5'

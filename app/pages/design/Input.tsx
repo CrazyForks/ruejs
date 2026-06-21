@@ -71,7 +71,7 @@ const inputApiRows: ApiRow[] = [
   },
   {
     prop: 'color',
-    description: '沿用 Rue 当前色阶，也可和 status 分开表达视觉语义',
+    description: '使用 Rue 当前色阶，也可和 status 分开表达视觉语义',
     type: `'default' | 'neutral' | 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'`,
     defaultValue: `'default'`,
   },
@@ -340,7 +340,7 @@ const TextAreaShowcase: FC = () => {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Input.TextArea
-        placeholder="记录本次改动"
+        placeholder="记录改动说明"
         rows={4}
         allowClear={true}
         showCount={true}
@@ -462,7 +462,7 @@ const InputPage: FC = () => {
           title="TextArea"
           tab={tabTextArea}
           preview={() => <TextAreaShowcase />}
-          code={`<Input.TextArea placeholder="记录本次改动" rows={4} allowClear={true} showCount={true} maxLength={120} />
+          code={`<Input.TextArea placeholder="记录改动说明" rows={4} allowClear={true} showCount={true} maxLength={120} />
 
 <Input.TextArea
   placeholder="自动撑高的说明文本"
@@ -574,7 +574,7 @@ const InputPage: FC = () => {
         />
 
         <h2 id="input-api">API</h2>
-        <p>这里保留 Rue 的颜色和壳层语义，同时把最常用的 Input 家族能力集中到一个命名空间里。</p>
+        <p>这里使用 Rue 的颜色和壳层语义，同时把最常用的 Input 家族能力集中到一个命名空间里。</p>
 
         <h3>Input</h3>
         <ApiTable rows={inputApiRows} />

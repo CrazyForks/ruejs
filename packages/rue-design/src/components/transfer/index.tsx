@@ -1,8 +1,8 @@
 /*
 Transfer 组件概述
 - 提供接近成熟组件库的双栏穿梭能力，覆盖受控 / 非受控、搜索、分页、单向模式与自定义渲染。
-- 视觉上延续 Rue 当前的轻量卡片语言，不直接照搬 ant-design，而是以 badge / card / btn / checkbox 语义重组交互。
-- 数据模型保持 `dataSource + targetKeys + selectedKeys` 主线，便于和 antd Transfer 的使用心智保持一致。
+- 视觉上延续 Rue 当前的轻量卡片语言，不直接照搬特定组件库，而是以 badge / card / btn / checkbox 语义重组交互。
+- 数据模型保持 `dataSource + targetKeys + selectedKeys` 主线，便于延续常见穿梭框组件的使用心智。
 */
 import type { FC } from '@rue-js/rue'
 import { h, onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'

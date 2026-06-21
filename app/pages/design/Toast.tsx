@@ -319,7 +319,7 @@ const itemApiRows: ApiRow[] = [
   },
   {
     prop: 'showIcon',
-    description: '关闭默认图标渲染，只保留文字和操作区',
+    description: '关闭默认图标渲染，只保持文字和操作区',
     type: 'boolean',
     defaultValue: 'true',
   },
@@ -573,14 +573,14 @@ const ToastPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Toast 轻提示</h1>
         <p className="text-sm mt-3 mb-3">
-          这次 Toast 不再只有一个“放 alert 的定位壳”。根容器依旧负责 placement、stack 和 inset，
+          Toast 根容器负责 placement、stack 和 inset。根容器仍然负责 placement、stack 和 inset，
           但单条提示现在可以直接用 <code>Toast.Item</code> 写出接近 message
           的反馈体验：类型、标题、说明、
-          操作区、关闭按钮、自动关闭与悬停暂停都已经补齐；现在还可以像常见 message API 一样通过
+          操作区、关闭按钮、自动关闭与悬停暂停都已经补充；现在还可以像常见 message API 一样通过
           <code>Toast.useMessage()</code> 拿到 <code>messageApi</code> 和 <code>contextHolder</code>
           ， 在业务按钮、异步流程和页面局部容器里直接按 key
           推送、更新和销毁消息；默认会弹到全局页面层， 只有显式传{' '}
-          <code>getContainer=&#123;false&#125;</code> 时才会留在当前 box 里，同时仍然保留 Rue
+          <code>getContainer=&#123;false&#125;</code> 时才会留在当前 box 里，同时仍然使用 Rue
           自己更轻、更靠近页面内容的视觉语气。
         </p>
 
@@ -588,18 +588,18 @@ const ToastPage: FC = () => {
         <ul>
           <li>需要在页面局部提供轻量反馈，但不想上升成全局通知系统。</li>
           <li>
-            希望像 message 一样直接描述成功、失败、加载、警告这些状态，又想保留更贴近 Rue
+            希望像 message 一样直接描述成功、失败、加载、警告这些状态，又想保持更贴近 Rue
             的视觉风格。
           </li>
           <li>希望在事件处理函数里直接触发反馈，而不是先把消息数组提升到页面状态。</li>
           <li>
-            既要兼容旧的 alert 容器写法，也想在业务里直接拿到可关闭、可自动关闭的单条提示能力。
+            既要支持基础的 alert 容器写法，也想在业务里直接拿到可关闭、可自动关闭的单条提示能力。
           </li>
         </ul>
 
         <ExampleBlock
           title="Message-like items"
-          summary="最直接的增强用法：把内容交给 Toast.Item，根容器继续负责定位和堆叠。"
+          summary="最直接的语义用法：把内容交给 Toast.Item，根容器继续负责定位和堆叠。"
           tab={tabs.items}
           preview={() => (
             <DemoSurface minHeight="19rem">
@@ -674,7 +674,7 @@ const ToastPage: FC = () => {
 
         <ExampleBlock
           title="Controlled and auto close"
-          summary="受控关闭适合和外部状态联动；自动关闭则补齐了 message 常用的短时反馈体验，并支持 hover 暂停。"
+          summary="受控关闭适合和外部状态联动；自动关闭则提供了 message 常用的短时反馈体验，并支持 hover 暂停。"
           tab={tabs.controlled}
           preview={() => <ControlledAutoClosePreview />}
           code={controlledAutoCloseCode}
@@ -852,15 +852,15 @@ const ToastPage: FC = () => {
 </Toast>`}
         />
 
-        <h2>兼容旧写法</h2>
+        <h2>支持基础写法</h2>
         <p className="text-sm mt-2 mb-4">
-          旧的“Toast 只做容器、里面继续放 alert 或自定义节点”的使用方式完全保留。下面这些原有 demo
+          基础的“Toast 只做容器、里面继续放 alert 或自定义节点”的使用方式完整提供。下面这些基础示例
           都还在，只是按新的能力层次重新归组了。
         </p>
 
         <ExampleBlock
           title="Toast with alert inside"
-          summary="保留原始基础示例，Toast 本体只包一层定位容器，内部内容完全由你决定。"
+          summary="展示基础示例，Toast 本体只包一层定位容器，内部内容完全由你决定。"
           tab={tabs.basic}
           preview={() => (
             <DemoSurface>
@@ -886,7 +886,7 @@ const ToastPage: FC = () => {
 
         <ExampleBlock
           title="Toast placements"
-          summary="placement 九宫格别名和 horizontal / vertical 兼容层仍然都可用，旧布局 API 不需要迁移。"
+          summary="placement 九宫格别名和 horizontal / vertical 支持层仍然都可用，基础布局 API 不需要额外改造。"
           tab={tabs.placements}
           preview={() => (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -925,7 +925,7 @@ const ToastPage: FC = () => {
 
         <ExampleBlock
           title="Stacked toasts"
-          summary="原来的多条堆叠示例继续保留，同时和横向、倒序这些布局控制一起展示。"
+          summary="基础的多条堆叠示例展示，同时和横向、倒序这些布局控制一起展示。"
           tab={tabs.stacked}
           preview={() => (
             <div className="grid gap-4 xl:grid-cols-2">

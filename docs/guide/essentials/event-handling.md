@@ -108,35 +108,33 @@ const Form: FC = () => {
 
 在事件处理器中调用 `event.preventDefault()` 或 `event.stopPropagation()` 是非常常见的需求。虽然我们可以很容易地在方法中做到这一点，但如果方法能够纯粹关于数据逻辑而不必处理 DOM 事件细节，那会更好。
 
-Rue 提供了一些工具函数来处理常见的事件修饰需求：
+Rue 的事件指令可以直接声明这些常见修饰需求：
 
 ```tsx
-import { withModifiers } from '@rue-js/rue'
-
 // 阻止事件冒泡
-<button onClick={withModifiers(() => doThis(), ['stop'])}>
+<button v-on:click-stop="doThis">
   点击
 </button>
 
 // 阻止默认行为
-<form onSubmit={withModifiers(onSubmit, ['prevent'])}>
+<form v-on:submit-prevent="onSubmit">
   {/* ... */}
 </form>
 
 // 修饰符可以链式使用
-<a onClick={withModifiers(() => doThat(), ['stop', 'prevent'])}>
+<a v-on:click-stop-prevent="doThat">
   链接
 </a>
 
 // 仅当 event.target 是元素本身时才触发处理器
 // 即不是来自子元素
-<div onClick={withModifiers(() => doThat(), ['self'])}>
+<div v-on:click-self="doThat">
   {/* ... */}
 </div>
 ```
 
 ::: tip
-使用修饰符时顺序很重要，因为相关代码以相同顺序生成。因此 `withModifiers(fn, ['prevent', 'self'])` 会阻止元素本身及其子元素的默认行为，而 `withModifiers(fn, ['self', 'prevent'])` 只会阻止元素本身的默认行为。
+使用修饰符时顺序很重要，因为相关代码以相同顺序生成。因此 `v-on:click-prevent-self` 会阻止元素本身及其子元素的默认行为，而 `v-on:click-self-prevent` 只会阻止元素本身的默认行为。
 :::
 
 `.capture`、`.once` 和 `.passive` 修饰符镜像 [原生 `addEventListener` 方法的选项](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#options)：
@@ -150,7 +148,7 @@ import { withModifiers } from '@rue-js/rue'
 </div>
 
 // 点击事件最多触发一次
-<a onClick={withModifiers(() => doThis(), ['once'])}>
+<a v-on:click-once="doThis">
   链接
 </a>
 ```

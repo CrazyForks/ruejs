@@ -206,13 +206,13 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'variant',
-    description: '输入框视觉变体，沿用 Rue 当前表单体系',
+    description: '输入框视觉变体，使用 Rue 当前表单体系',
     type: `'outlined' | 'filled' | 'ghost' | 'borderless' | 'underlined'`,
     defaultValue: `'outlined'`,
   },
   {
     prop: 'Mentions.getMentions',
-    description: '静态 helper，用于从已有文本里提取 mentions 结果',
+    description: '静态 helper，用于从现成文本里提取 mentions 结果',
     type: '(value: string, config?: { prefix?: string | string[]; split?: string }) => Array<{ prefix: string; value: string }>',
     defaultValue: '-',
   },
@@ -310,7 +310,7 @@ const sizeText = ref('宽 0 / 高 0')
 const statusCode = `<Mentions status="warning" defaultValue="@ops 这个请求需要补充审批单" />
 <Mentions status="error" variant="filled" defaultValue="@nano 这里还有缺失字段" />
 <Mentions variant="borderless" defaultValue="#docs-refresh 更适合嵌入式布局" />
-<Mentions variant="underlined" defaultValue="@lin 只保留下边界" />`
+<Mentions variant="underlined" defaultValue="@lin 只保持下边界" />`
 
 const parserCode = `const value = ref('@sakura #release-notes @lin')
 
@@ -376,7 +376,7 @@ const BasicMentionsPreview: FC = () => {
         <div className="rounded-box border border-dashed border-base-300 bg-base-100/80 p-4 text-sm text-base-content/70">
           <div className="mb-3 font-medium text-base-content">候选项设计</div>
           <p className="m-0">
-            这里没有照搬其它组件库的面板视觉，而是保留 Rue
+            这里没有照搬其它组件库的面板视觉，而是使用 Rue
             更轻、更卡片化的输入体验，候选项支持头像块、角色说明与团队信息。
           </p>
         </div>
@@ -490,7 +490,7 @@ const AsyncMentionsPreview: FC = () => {
             <code>用 searchDebounce 控制请求频率，再配合 filterOption=false 接远程搜索。</code>
           </pre>
           <pre data-prefix="$">
-            <code>loading 会保留输入可编辑，同时把面板切到轻量加载态。</code>
+            <code>loading 会保持输入可编辑，同时把面板切到轻量加载态。</code>
           </pre>
           <pre data-prefix="$">
             <code>请求完成后直接替换 options，即可复用同一套面板和键盘行为。</code>
@@ -628,8 +628,8 @@ const MentionsPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Mentions 提及输入</h1>
         <p className="text-sm mt-3 mb-3">
-          Mentions 用于在一段多行文本里快速插入成员、标签或任务代号。这次实现不是简单包一层
-          textarea，而是一次性补齐 Rue 里真正够用的核心能力：prefix
+          Mentions 用于在一段多行文本里快速插入成员、标签或任务代号。Mentions 不是简单包一层
+          textarea，而是一次性覆盖 Rue 里真正够用的核心能力：prefix
           识别、候选面板、键盘选择、异步检索、placement、allowClear、autoSize、状态与变体，同时保持
           Rue 自己的表单视觉节奏。
         </p>
@@ -637,7 +637,7 @@ const MentionsPage: FC = () => {
         <div className="not-prose mt-8 space-y-2">
           <h2 className="text-2xl font-semibold">核心交互</h2>
           <p className="text-sm text-base-content/70">
-            先把最常见的三类场景补齐：基础插入、多 trigger token 和远程搜索。
+            先把最常见的三类场景补充：基础插入、多 trigger token 和远程搜索。
           </p>
         </div>
 
@@ -717,13 +717,13 @@ const MentionsPage: FC = () => {
                 />
                 <Mentions
                   variant="underlined"
-                  defaultValue="@lin 只保留下边界"
+                  defaultValue="@lin 只保持下边界"
                   options={baseMentionOptions}
                   rows={4}
                 />
                 <Mentions
                   readOnly
-                  defaultValue="@mika 只读状态下仍然保留排版和内容展示。"
+                  defaultValue="@mika 只读状态下仍然提供排版和内容展示。"
                   options={baseMentionOptions}
                   rows={4}
                 />
@@ -771,7 +771,7 @@ const MentionsPage: FC = () => {
         <div className="not-prose mt-10 space-y-4">
           <h2 className="text-2xl font-semibold">API</h2>
           <p className="text-sm text-base-content/70">
-            下表聚焦这次 Mentions 增强后最重要的属性。原生 textarea 的
+            下表聚焦 Mentions 的关键属性。原生 textarea 的
             rows、placeholder、maxLength、name、required 等属性仍会继续透传。
           </p>
           <ApiTable rows={apiRows} />

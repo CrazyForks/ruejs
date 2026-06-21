@@ -63,8 +63,28 @@ export {
   _$createDocumentFragment,
   /** 编译器 helper：向父节点追加子节点。 */
   _$appendChild,
+  /** 响应式信号句柄。 */
+  type SignalHandle,
+  /** watcher 刷新时机。 */
+  type WatchFlush,
+  /** watchEffect 选项。 */
+  type WatchEffectOptions,
+  /** watch 选项。 */
+  type WatchOptions,
+  /** watch 回调。 */
+  type WatchCallback,
+  /** customRef 工厂函数类型。 */
+  type CustomRefFactory,
+  /** 单个侦听来源。 */
+  type WatchSource,
+  /** 多源侦听来源。 */
+  type WatchMultiSource,
+  /** 当前活动 effect scope 的公开句柄。 */
+  type EffectScope,
   /** 创建响应式副作用，依赖变化时自动重新执行。 */
   effect,
+  /** 创建 effect scope，可批量停止其中创建的 computed/watch/effect。 */
+  effectScope,
   /** 批量执行响应式写入，减少重复调度。 */
   batch,
   /** 在当前 effect 中注册清理回调。 */
@@ -109,6 +129,8 @@ export {
   signal,
   /** 创建 ref-like 可写值。 */
   ref,
+  /** 创建自定义 ref，显式控制依赖收集和触发时机。 */
+  customRef,
   /** 创建浅层 ref，只追踪 value 替换。 */
   shallowRef,
   /** 手动触发 ref 的 value 订阅者。 */
@@ -181,6 +203,8 @@ export {
   _$setChecked,
   /** 编译器 helper：设置表单元素 disabled。 */
   _$setDisabled,
+  /** 编译器 helper：设置 DOM property。 */
+  _$setProperty,
   /** 编译器 helper：批量透传 JSX spread 属性。 */
   _$spreadAttributes,
   /** 在组件 setup 阶段初始化并缓存值。 */
@@ -197,6 +221,8 @@ export {
   useEmit,
   /** 在响应式 flush 后运行并追踪依赖的 watch effect。 */
   watchPostEffect,
+  /** 响应式变更时同步运行并追踪依赖的 watch effect。 */
+  watchSyncEffect,
   /** 动态组件入口，根据 is/component 参数选择实际组件。 */
   Component,
   /** Component 动态组件的属性类型。 */
@@ -215,6 +241,8 @@ export {
   type TemplateProps,
   /** 单元素进入和离开过渡组件。 */
   Transition,
+  /** Transition 子节点切换时进入/离开的编排模式。 */
+  type TransitionMode,
   /** Transition 组件属性，封装进入和离开动画配置。 */
   type TransitionProps,
 } from '@rue-js/runtime/vapor'

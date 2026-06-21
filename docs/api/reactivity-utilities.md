@@ -1,14 +1,29 @@
 # 响应式 API：工具 {#reactivity-api-utilities}
 
-## isRef() {#isref} @todo
+## isRef() {#isref}
 
-当前 Rue 运行时尚未提供 `isRef()`。
+检查某个值是否为 Rue ref。
 
-- **状态**
+- **类型**
 
-  本节保留为规划占位。Rue 后续如果提供该能力，会优先按照自身运行时对象模型设计，而不是直接照搬 Vue 的类型守卫签名。
+  ```ts
+  function isRef<T = any>(value: unknown): value is { value: T }
+  ```
 
-  当前如果只是想把值规范化为普通值，应优先使用 [`unref()`](#unref) 或 [`toValue()`](#tovalue)。
+- **示例**
+
+  ```ts
+  import { computed, isRef, ref } from '@rue-js/rue'
+
+  const count = ref(1)
+  const doubled = computed(() => count.value * 2)
+
+  isRef(count) // true
+  isRef(doubled) // true
+  isRef(1) // false
+  ```
+
+  如果只是想把值规范化为普通值，应优先使用 [`unref()`](#unref) 或 [`toValue()`](#tovalue)。
 
 ## unref() {#unref}
 
@@ -85,9 +100,9 @@
   在组合式函数中规范化参数：
 
   ```ts
-  import type { MaybeRefOrGetter } from '@rue-js/rue'
+  type ValueSource<T> = T | { value: T } | (() => T)
 
-  function useFeature(id: MaybeRefOrGetter<number>) {
+  function useFeature(id: ValueSource<number>) {
     watch(
       () => toValue(id),
       id => {

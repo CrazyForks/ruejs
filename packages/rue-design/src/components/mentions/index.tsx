@@ -2,7 +2,7 @@
 Mentions 组件概述
 - 以 textarea 为输入基座，补齐 mentions 场景常用的触发词识别、候选面板、键盘导航与插入替换。
 - 保持 Rue 当前表单视觉体系：尺寸、状态、变体、allowClear、autoSize 与原生 textarea 语义继续兼容。
-- API 参考 ant-design Mentions 的核心能力，但不引入额外依赖与 portal，便于在 Rue 设计页直接演示与复用。
+- API 参考成熟 mentions 组件的核心能力，但不引入额外依赖与 portal，便于在 Rue 设计页直接演示与复用。
 */
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'

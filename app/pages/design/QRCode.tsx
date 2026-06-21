@@ -559,7 +559,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'className / rootClassName / style',
-    description: '根节点样式增强，保留与 Rue Design 其他组件一致的入口。',
+    description: '根节点样式增强，保持与 Rue Design 其他组件一致的入口。',
     type: 'string / string / object',
     defaultValue: '-',
   },
@@ -578,9 +578,8 @@ const QRCodeDesign: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>QRCode 二维码</h1>
         <p>
-          Rue QRCode 这次直接补齐成一个可用组件：保持 Rue 自己的表面语言，不照搬其他组件库
-          的视觉，但把 canvas / svg、纠错等级、中心
-          logo、状态遮罩、下载示例和语义化样式入口一次性补上。
+          Rue QRCode 提供可用组件：保持 Rue 自己的表面语言，不照搬其他组件库 的视觉，但把 canvas /
+          svg、纠错等级、中心 logo、状态遮罩、下载示例和语义化样式入口一次性补上。
         </p>
         <p className="text-sm opacity-75">
           组件源码保持 TSX 形态，不写预转换标记，让 Rue
@@ -592,7 +591,7 @@ const QRCodeDesign: FC = () => {
             <div className="text-xs uppercase tracking-[0.2em] text-base-content/45">
               Compiler Friendly
             </div>
-            <div className="mt-2 text-base font-semibold">保留 TSX 源码直编</div>
+            <div className="mt-2 text-base font-semibold">展示 TSX 源码直编</div>
             <p className="mt-2 mb-0 text-sm text-base-content/68">
               没有额外的预转换头，让组件继续走 Rue 自己的编译优化路径。
             </p>
@@ -610,7 +609,7 @@ const QRCodeDesign: FC = () => {
             <div className="text-xs uppercase tracking-[0.2em] text-base-content/45">
               Style Hooks
             </div>
-            <div className="mt-2 text-base font-semibold">保留 classNames / styles</div>
+            <div className="mt-2 text-base font-semibold">展示 classNames / styles</div>
             <p className="mt-2 mb-0 text-sm text-base-content/68">
               业务页既能快速直接用，也能按语义槽位做表面微调。
             </p>
@@ -619,7 +618,7 @@ const QRCodeDesign: FC = () => {
 
         <PreviewBlock
           title="基础实时值"
-          summary="保留最常见的二维码输入联动场景：外部维护 value，组件只专注编码和渲染。"
+          summary="展示最常见的二维码输入联动场景：外部维护 value，组件只专注编码和渲染。"
           tab={basicTab}
           code={basicCode}
           preview={() => <BasicValuePreview />}
@@ -635,7 +634,7 @@ const QRCodeDesign: FC = () => {
 
         <PreviewBlock
           title="配色、边框与语义样式"
-          summary="延续 Rue 的圆角卡面语言，同时保留 classNames / styles 扩展位。"
+          summary="使用 Rue 的圆角卡面语言，同时保持 classNames / styles 扩展位。"
           tab={appearanceTab}
           code={appearanceCode}
           preview={() => (

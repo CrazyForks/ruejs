@@ -170,7 +170,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'imageStyle / imageAlt',
-    description: '控制插画容器样式与 img 的 alt 文案，兼容字符串图片场景。',
+    description: '控制插画容器样式与 img 的 alt 文案，支持字符串图片场景。',
     type: 'any / string',
     defaultValue: '- / empty',
   },
@@ -195,7 +195,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'className / rootClassName / style',
-    description: '根节点扩展类名和样式，rootClassName 便于兼容旧代码中的根节点类名分工。',
+    description: '根节点扩展类名和样式，rootClassName 便于支持项目代码中的根节点类名分工。',
     type: 'string / string / any',
     defaultValue: '-',
   },
@@ -383,7 +383,7 @@ const embeddedCode = `import { Button, Empty } from '@rue-js/design'
       size="sm"
       variant="soft"
       image={false}
-      description="这里也可以只保留文案与动作区，不一定强制带插画。"
+      description="这里也可以只保持文案与动作区，不一定强制带插画。"
       classNames={{
         root: 'border-0 bg-transparent px-0 py-2 shadow-none',
         footer: 'justify-start',
@@ -406,12 +406,12 @@ const EmptyDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Empty 空状态</h1>
         <p className="text-sm mt-3 mb-3">
-          Empty 用来承接列表、筛选、面板和工作流中的无数据状态。它保留了 Rue
-          一贯的轻量卡片语言，同时补齐了空状态组件最核心的 image、description、children
+          Empty 用来承接列表、筛选、面板和工作流中的无数据状态。它保持了 Rue
+          一贯的轻量卡片语言，同时提供了空状态组件最核心的 image、description、children
           和预设插画能力。
         </p>
         <p className="text-sm opacity-75">
-          这次不是在旧实现上打补丁，而是补了一个真正可复用的组件：默认插画适合页面主体，simple
+          组件提供可复用的空态表达：默认插画适合页面主体，simple
           插画适合嵌入式空态，语义插槽则方便你在卡片、筛选器、列表面板里继续细调样式。
         </p>
 
@@ -530,7 +530,7 @@ const EmptyDemo: FC = () => {
                   size="sm"
                   variant="soft"
                   image={false}
-                  description="这里也可以只保留文案与动作区，不一定强制带插画。"
+                  description="这里也可以只保持文案与动作区，不一定强制带插画。"
                   classNames={{
                     root: 'border-0 bg-transparent px-0 py-2 shadow-none',
                     footer: 'justify-start',
@@ -551,7 +551,7 @@ const EmptyDemo: FC = () => {
 
         <h2>API</h2>
         <p className="text-sm opacity-75">
-          保留易迁移的属性组织方式，同时补一层更贴近 Rue 页面编排的尺寸、变体和语义插槽。
+          保持易接入的属性组织方式，同时补一层更贴近 Rue 页面编排的尺寸、变体和语义插槽。
         </p>
         <ApiTable rows={apiRows} />
 

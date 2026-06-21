@@ -169,7 +169,7 @@ describe('Table', () => {
     expect(tds).toEqual(['A', 'B'])
   })
 
-  it('emits antd-like sorter payloads when clicking sortable headers', async () => {
+  it('emits compatible sorter payloads when clicking sortable headers', async () => {
     const c = mountContainer()
     const changes: any[] = []
     const dataSource = [
@@ -761,7 +761,7 @@ describe('Table', () => {
     expect(tr.classList.contains('hover:bg-red-200')).toBe(true)
   })
 
-  it('supports bordered, loading, locale text, and antd size aliases', async () => {
+  it('supports bordered, loading, locale text, and common size aliases', async () => {
     const c = mountContainer()
     resetActiveRuntime()
     render(

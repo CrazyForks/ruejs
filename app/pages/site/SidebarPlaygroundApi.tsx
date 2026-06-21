@@ -89,7 +89,6 @@ export const SECTIONS_BY_TYPE: Record<'api', SidebarSection[]> = {
           href: '/api/api/reactivity-utilities',
         },
         { id: 'api/render-function', title: '渲染函数', href: '/api/api/render-function' },
-        { id: 'api/utility-types', title: '工具类型', href: '/api/api/utility-types' },
       ],
     },
   ],

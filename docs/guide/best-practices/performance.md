@@ -83,7 +83,7 @@ const App: FC = () => {
 }
 ```
 
-对于使用 Rue Router 的应用，强烈建议对路由组件使用懒加载。Rue Router 对懒加载有显式支持，与 `lazy` 分开。详情请参阅 [懒加载路由](https://router.vuejs.org/guide/advanced/lazy-loading.html)。
+对于使用 Rue Router 的应用，强烈建议对路由组件使用懒加载。Rue Router 对懒加载有显式支持，与 `lazy` 分开。
 
 ## 更新优化 (Update Optimizations) {#update-optimizations}
 

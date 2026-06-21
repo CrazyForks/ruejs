@@ -82,7 +82,7 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'className / style / zIndex',
-    description: '保留 Toast 根容器能力，适合把消息嵌进局部面板、工作台或 demo 盒子。',
+    description: '提供 Toast 根容器能力，适合把消息嵌进局部面板、工作台或示例盒子。',
     type: 'string / object / number | string',
     defaultValue: '-',
   },
@@ -103,7 +103,7 @@ const itemApiRows: ApiRow[] = [
   },
   {
     prop: 'variant / icon / showIcon',
-    description: '复用 Rue 现有轻提示视觉语气，并允许覆盖默认图标。',
+    description: '复用 Rue 当前轻提示视觉语气，并允许覆盖默认图标。',
     type: "'soft' | 'solid' | 'outline' / any / boolean",
     defaultValue: "'soft' / 自动判断",
   },
@@ -115,7 +115,7 @@ const itemApiRows: ApiRow[] = [
   },
   {
     prop: 'action / closable / closeIcon',
-    description: '补齐轻量操作区与关闭按钮，适合回撤、查看详情或静默关闭。',
+    description: '补充轻量操作区与关闭按钮，适合回撤、查看详情或静默关闭。',
     type: 'any / boolean / any',
     defaultValue: '- / false / -',
   },
@@ -155,7 +155,7 @@ const instanceApiRows: ApiRow[] = [
   },
   {
     prop: 'success / info / warning / error / loading',
-    description: '快捷方法兼容 content、duration、onClose 三参数，也支持直接传配置对象。',
+    description: '快捷方法支持 content、duration、onClose 三参数，也支持直接传配置对象。',
     type: '(...args) => MessageHandle',
     defaultValue: '-',
   },
@@ -355,7 +355,7 @@ const MessageUseMessagePreview: FC = () => {
             </button>
           </div>
           <div className="absolute inset-x-4 bottom-4 rounded-[1rem] border border-base-300 bg-base-100/85 px-4 py-3 text-sm text-base-content/70 backdrop-blur">
-            点击上方按钮后，消息会留在当前 demo 盒子内，并继续支持同 key 更新与局部销毁。
+            点击上方按钮后，消息会留在当前示例盒子内，并支持同 key 更新与局部销毁。
           </div>
         </>
       }
@@ -473,8 +473,8 @@ const MessagePage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Message 全局提示</h1>
         <p>
-          Rue 现在把原先散在 Toast 里的 message-like 体验收敛成真正的 Message 组件：保留 Rue
-          更轻、更贴近页面内容的视觉语气，但把消息组件常用的执行逻辑一次补齐，包含 静态
+          Rue 现在把原先散在 Toast 里的 message-like 体验收敛成真正的 Message 组件：使用 Rue
+          更轻、更贴近页面内容的视觉语气，但把消息组件常用的执行逻辑一次覆盖，包含 静态
           open、语义快捷方法、useMessage、局部 holder、按 key 更新、maxCount、Promise-like close
           handle 和全局 config。
         </p>
@@ -502,22 +502,22 @@ const MessagePage: FC = () => {
             </div>
             <div className="mt-2 text-base font-semibold">Rue 的轻浮层，而不是通知卡片</div>
             <p className="mt-2 mb-0 text-sm text-base-content/68">
-              继续沿用 Rue 的轻提示语言，但把 content、icon、action、closable 都开放给业务层。
+              使用 Rue 的轻提示语言，但把 content、icon、action、closable 都开放给业务层。
             </p>
           </div>
         </div>
 
         <h2>何时使用</h2>
         <ul>
-          <li>需要比 Toast 更明确的 message API，但又不想把反馈升级成 Notification 卡片。</li>
+          <li>需要比 Toast 更明确的 message API，但又不想把反馈组织成 Notification 卡片。</li>
           <li>希望在按钮事件或异步流程里直接触发成功、失败、加载、警告等短反馈。</li>
           <li>同一条消息需要按 key 从“处理中”更新到“完成”，并限制最大同时显示数量。</li>
-          <li>希望保留 Rue 自己的轻量视觉，同时补齐成熟 message 组件的执行逻辑。</li>
+          <li>希望使用 Rue 自己的轻量视觉，同时补充成熟 message 组件的执行逻辑。</li>
         </ul>
 
         <PreviewBlock
           title="声明式消息栈"
-          summary="把原先 Toast 里的 message-like demo 收敛到真正的 Message / Message.Item API。"
+          summary="把原先 Toast 里的 message-likeDemo 收敛到真正的 Message / Message.Item API。"
           tab={tabs.declarative}
           code={declarativeCode}
           preview={() => (
@@ -582,7 +582,7 @@ const MessagePage: FC = () => {
 
         <PreviewBlock
           title="Message.useMessage"
-          summary="把 contextHolder 放进当前面板后，消息就能稳定留在局部 box 内，并继续支持按 key 更新。"
+          summary="把 contextHolder 放进当前面板后，消息就能稳定留在局部 box 内，并支持按 key 更新。"
           tab={tabs.hook}
           code={hookCode}
           preview={MessageUseMessagePreview}

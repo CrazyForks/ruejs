@@ -364,7 +364,7 @@ const MockupCodePage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Mockup Code 代码外框</h1>
         <p className="text-sm mt-3 mb-3">
-          MockupCode 现在同时支持两种写法：保留原始 <code>pre + data-prefix</code>{' '}
+          MockupCode 现在同时支持两种写法：展示基础 <code>pre + data-prefix</code>{' '}
           结构，也提供更顺手的
           <code>items</code> 与 <code>MockupCode.Line</code> 语义
           API，适合终端日志、代码片段和差异对比。
@@ -431,7 +431,7 @@ const MockupCodePage: FC = () => {
 
         <ExampleBlock
           title="单行前缀"
-          summary="保留旧的原生写法，适合最简单的安装命令展示。"
+          summary="展示原生写法，适合最简单的安装命令展示。"
           tab={tabPrefix}
           preview={PrefixPreview}
           code={`<MockupCode className="w-full">
@@ -443,7 +443,7 @@ const MockupCodePage: FC = () => {
 
         <ExampleBlock
           title="多行日志"
-          summary="原有多行 demo 继续保留，适合完全透传现成结构。"
+          summary="基础多行示例 展示，适合完全透传现成结构。"
           tab={tabMulti}
           preview={MultiPreview}
           code={`<MockupCode className="w-full">
@@ -527,7 +527,7 @@ const MockupCodePage: FC = () => {
         />
 
         <h2 id="mockup-code-api">API</h2>
-        <p>当前页面展示的是增强后的根组件与行组件 API。</p>
+        <p>当前页面展示的是语义化的根组件与行组件 API。</p>
 
         <h3>MockupCode</h3>
         <ApiTable rows={rootApiRows} />
@@ -552,10 +552,10 @@ const MockupCodePage: FC = () => {
 
         <h2>FAQ</h2>
 
-        <h3>什么时候用 items，什么时候继续写原生 pre？</h3>
+        <h3>什么时候用 items，什么时候可以写原生 pre？</h3>
         <p>
           如果内容来自数组、日志流或代码生成，优先用 <code>items</code>；如果你已经有现成的
-          <code>pre + data-prefix</code> 结构，继续透传即可，不需要迁移。
+          <code>pre + data-prefix</code> 结构，继续透传即可，不需要额外改造。
         </p>
 
         <h3>highlight 和 tone 分别负责什么？</h3>

@@ -174,7 +174,7 @@ export const CallyCalendarPreview: FC = () => {
         error={error.value}
       />
       <p className="m-0 text-xs text-base-content/70">
-        当前选择：{formatSelectedDate(selectedValue.value)}。这条 demo 原样保留，用于展示原生 web
+        当前选择：{formatSelectedDate(selectedValue.value)}。这条示例 原样保持，用于展示原生 web
         component 接口。
       </p>
     </div>
@@ -263,7 +263,7 @@ export const CallyDatePickerPreview: FC = () => {
         error={error.value}
       />
       <p className="m-0 text-xs text-base-content/70">
-        点击按钮展开面板，选中日期后会自动回填并收起。这条旧 demo 同样完整保留。
+        点击按钮展开面板，选中日期后会自动回填并收起。这条基础示例 同样完整保持。
       </p>
     </div>
   )

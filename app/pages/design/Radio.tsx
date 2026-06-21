@@ -475,7 +475,7 @@ const OptionsPreview: FC = () => {
             label: (
               <span className="flex flex-col gap-1">
                 <span className="font-medium">Yearly</span>
-                <span className="text-xs text-base-content/60">当前版本暂未开放企业年付折扣。</span>
+                <span className="text-xs text-base-content/60">当前方案暂未开放企业年付折扣。</span>
               </span>
             ),
             value: 'yearly',
@@ -631,7 +631,7 @@ const RadioPage: FC = () => {
         <ul>
           <li>需要在少量、彼此可直接比较的选项中选出唯一结果。</li>
           <li>需要用配置数组快速生成单选组，而不是手写重复结构。</li>
-          <li>希望把单选项升级成按钮组或说明卡片，但仍保留 radio 的语义。</li>
+          <li>希望把单选项组织成按钮组或说明卡片，但仍保持 radio 的语义。</li>
         </ul>
 
         <p className="text-sm text-base-content/70">
@@ -641,7 +641,7 @@ const RadioPage: FC = () => {
 
         <ExampleBlock
           title="基础用法"
-          summary="保留原来的原生 radio 体验，同时让受控写法更直接。"
+          summary="展示原生 radio 体验，同时让受控写法更直接。"
           tab={tabBasic}
           preview={() => <BasicRadioPreview />}
           code={`const selected = ref('startup')
@@ -779,7 +779,7 @@ const theme = ref('classic')
 
         <ExampleBlock
           title="尺寸"
-          summary="保留原有 xs 到 xl 的尺寸层，并补充 small / middle / medium / large 别名。"
+          summary="展示基础 xs 到 xl 的尺寸层，并补充 small / middle / medium / large 别名。"
           tab={tabSizes}
           preview={() => <SizePreview />}
           code={`<Radio size="xs" checked={true} />
@@ -792,7 +792,7 @@ const theme = ref('classic')
 
         <ExampleBlock
           title="颜色"
-          summary="保留原有颜色修饰，同时能作为按钮组选中色复用。"
+          summary="使用颜色修饰，同时能作为按钮组选中色复用。"
           tab={tabColors}
           preview={() => <ColorPreview />}
           code={`<Radio color="primary" checked={true} />

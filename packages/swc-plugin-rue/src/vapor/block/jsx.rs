@@ -43,6 +43,9 @@ impl VaporTransform {
             vec![string_expr(&tag), Expr::Ident(ident("__rue_parent_context"))],
         );
         stmts.push(const_decl(root.clone(), create_root));
+        if crate::custom_element::is_custom_element_tag(&tag) {
+            crate::custom_element::emit_context_parent_property(&root, &mut stmts);
+        }
         // 编译并设置属性（包括事件、style、class、指令改写后的属性等）
         // - emit_attrs_for 内部会：
         //   - 静态属性：直接调用 `$setAttribute/$setClassName/$setStyle/...`
@@ -65,7 +68,17 @@ impl VaporTransform {
             //   - `$createTextNode` + `$appendChild`
             //   - 表达式 → `_$createTextWrapper` + `_$settextContent`（静态一次或动态 watch）
             //   - 递归构建嵌套元素或片段根
-            super::children::emit_children(self, &root, &el.children, &mut stmts);
+            let native_children = if crate::custom_element::is_custom_element_tag(&tag) {
+                crate::custom_element::extract_custom_element_slot_children(
+                    self,
+                    &root,
+                    &el.children,
+                    &mut stmts,
+                )
+            } else {
+                el.children.clone()
+            };
+            super::children::emit_children(self, &root, &native_children, &mut stmts);
         }
 
         // 返回块级结果：return _root

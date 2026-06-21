@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { attachRouter, createRouter } from '@rue-js/router'
-import { ref } from '@rue-js/rue'
+import { attachRouter, createRouter, RouterView } from '@rue-js/router'
 import { render, setReactiveScheduling } from '../src'
 import GuideDocDetail from '../../../app/pages/site/GuideDocDetail'
 import { createMemoryHistory, mountContainer, waitForContent } from './page-test-utils'
@@ -61,11 +60,8 @@ describe('GuideDocDetail actual page', () => {
     })
     attachRouter(router)
 
-    const path = ref('guide/introduction')
-    const App = () => <GuideDocDetail params={{ path: path.value }} />
-
     const container = mountContainer()
-    render(<App />, container)
+    render(<RouterView />, container)
 
     await waitForContent(() => {
       expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -74,7 +70,7 @@ describe('GuideDocDetail actual page', () => {
       expect(container.textContent).toContain('下一页：快速上手')
     })
 
-    path.value = 'guide/quick-start'
+    await router.push('/guide/guide/quick-start')
 
     await waitForContent(() => {
       expect(container.querySelector('#doc-body')?.textContent).toContain('快速上手')
@@ -82,7 +78,7 @@ describe('GuideDocDetail actual page', () => {
       expect(container.textContent).toContain('上一页：介绍')
     })
 
-    path.value = 'guide/introduction'
+    await router.push('/guide/guide/introduction')
 
     await waitForContent(() => {
       expect(container.querySelector('#doc-body')?.textContent).toContain('介绍')

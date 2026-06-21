@@ -43,25 +43,25 @@ $ bun create rue@latest
 
 如果你不确定某个选项，现在只需按回车选择 `No`。项目创建完成后，按照说明安装依赖并启动开发服务器：
 
-```sh-vue [npm]
+```sh [npm]
 $ cd {{'<your-project-name>'}}
 $ npm install
 $ npm run dev
 ```
 
-```sh-vue [pnpm]
+```sh [pnpm]
 $ cd {{'<your-project-name>'}}
 $ pnpm install
 $ pnpm run dev
 ```
 
-```sh-vue [yarn]
+```sh [yarn]
 $ cd {{'<your-project-name>'}}
 $ yarn
 $ yarn dev
 ```
 
-```sh-vue [bun]
+```sh [bun]
 $ cd {{'<your-project-name>'}}
 $ bun install
 $ bun run dev

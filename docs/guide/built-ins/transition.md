@@ -373,8 +373,7 @@ export default MyTransition
 ```css
 /*
   必要的 CSS...
-  注意：避免在这里使用 <style scoped>，因为它
-  不适用于插槽内容。
+  注意：这些选择器需要能作用到过渡内容本身。
 */
 ```
 
@@ -414,9 +413,23 @@ const App: FC = () => {
 
 在前面的示例中，进入和离开元素同时动画化，我们必须使它们 `position: absolute` 以避免当两个元素都存在于 DOM 中时产生布局问题。
 
-然而，在某些情况下这不是一个选项，或者根本不是期望的行为。我们可能希望离开元素先动画化出去，然后进入元素 **在** 离开动画完成后才插入。
+然而，在某些情况下这不是一个选项，或者根本不是期望的行为。我们可能希望离开元素先动画化出去，然后进入元素 **在** 离开动画完成后才插入。可以通过 `mode` 编排这种顺序：
 
-Rue 当前的 `<Transition>` 实现还没有提供 `mode` 来自动编排这类顺序，因此如果你需要这样的时序，需要在上层状态切换逻辑中自行处理，而不是依赖 `<Transition mode="out-in">` 这样的 API。
+```tsx
+<Transition name="fade" mode="out-in">
+  <button key={docState}>{docState}</button>
+</Transition>
+```
+
+Rue 支持以下模式：
+
+- `default`：默认行为，进入和离开同时执行。
+- `out-in`：旧节点先执行 leave，完成后再插入并进入新节点。
+- `in-out`：新节点先执行 enter，完成后再移除旧节点。
+
+:::tip
+在同类型元素之间切换时，请提供稳定且会随状态变化的 `key`，例如 `<div key={view}>...</div>`。`mode` 依赖 key 来判断这是一次子节点切换，而不是普通内容更新。
+:::
 
 ## 组件之间的过渡 (Transition Between Components) {#transition-between-components}
 
@@ -424,7 +437,7 @@ Rue 当前的 `<Transition>` 实现还没有提供 `mode` 来自动编排这类�
 
 ```tsx
 import { useState } from '@rue-js/rue'
-import { Transition, Dynamic } from '@rue-js/rue'
+import { Component, Transition } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
 const App: FC = () => {
@@ -432,7 +445,7 @@ const App: FC = () => {
 
   return (
     <Transition name="fade">
-      <Dynamic component={activeComponent} />
+      <Component is={activeComponent} />
     </Transition>
   )
 }

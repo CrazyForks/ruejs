@@ -180,7 +180,7 @@ Vitest 和基于浏览器的运行器之间的主要区别是速度和执行上�
 
 - [Nightwatch](https://nightwatchjs.org/) 是一个支持 Rue 组件测试的 E2E 测试运行器。
 
-- [WebdriverIO](https://webdriver.io/docs/component-testing/vue) 用于依赖于基于标准化自动化的原生用户交互的跨浏览器组件测试。它也可以与 Testing Library 一起使用。
+- [WebdriverIO](https://webdriver.io/docs/component-testing/) 用于依赖于基于标准化自动化的原生用户交互的跨浏览器组件测试。它也可以与 Testing Library 一起使用。
 
 ## E2E 测试 {#e2e-testing}
 

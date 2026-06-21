@@ -89,7 +89,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'onRenderProfile',
-    description: '渲染诊断回调，报告本次更新阶段、耗时、cellRender 调用次数与慢单元格',
+    description: '渲染诊断回调，报告当前更新阶段、耗时、cellRender 调用次数与慢单元格',
     type: '(event: CalendarRenderProfileEvent) => void',
     defaultValue: '-',
   },
@@ -128,7 +128,7 @@ const apiRows: ApiRow[] = [
 const exportRows: ExportRow[] = [
   {
     name: 'Calendar.Cally',
-    description: '保留原有 Cally web component 容器，适合需要 slot 导航的原生体验',
+    description: '展示基础 Cally web component 容器，适合需要 slot 导航的原生体验',
   },
   {
     name: 'Calendar.Month',
@@ -1131,7 +1131,7 @@ const CalendarDemo: FC = () => {
         <h1>Calendar 日历</h1>
         <p className="mt-3 mb-3 text-sm">
           Calendar 现在同时覆盖 Rue 原生月历面板、事项渲染、卡片式日历，以及 Cally、Pikaday
-          两条旧接入链路。
+          两条基础接入链路。
         </p>
         <div className="not-prose grid gap-3 rounded-[1.75rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200/75 p-4 shadow-sm md:grid-cols-3">
           <HeroCard
@@ -1142,12 +1142,12 @@ const CalendarDemo: FC = () => {
           <HeroCard
             badge="Render Hooks"
             title="细胞级渲染能力"
-            detail="cellRender 和 fullCellRender 可以把普通日期格升级为事项列表、容量卡或数据看板。"
+            detail="cellRender 和 fullCellRender 可以把普通日期格组织为事项列表、容量卡或数据看板。"
           />
           <HeroCard
-            badge="Legacy Friendly"
-            title="旧 demo 全部保留"
-            detail="Calendar.Cally、Calendar.Month、Calendar.PikaSingle 仍然可用，老接入方式不需要拆。"
+            badge="Composition Ready"
+            title="基础场景完整覆盖"
+            detail="Calendar.Cally、Calendar.Month、Calendar.PikaSingle 仍然可用，基础接入方式不需要拆。"
           />
         </div>
 
@@ -1191,7 +1191,7 @@ const CalendarDemo: FC = () => {
 
         <ExampleBlock
           title="Cally calendar example"
-          summary="旧的 Cally web component 日历壳层仍然原样可用。"
+          summary="基础的 Cally web component 日历壳层仍然原样可用。"
           tab={tabCallyCalendar}
           preview={CallyCalendarPreview}
           code={callyCalendarCode}
@@ -1201,7 +1201,7 @@ const CalendarDemo: FC = () => {
 
         <ExampleBlock
           title="Cally date picker example"
-          summary="旧的日期输入弹层 demo 继续保留，只把交互说明和布局重新编排。"
+          summary="基础的日期输入弹层示例 展示，只把交互说明和布局重新编排。"
           tab={tabCallyDatePicker}
           preview={CallyDatePickerPreview}
           code={callyDatePickerCode}
@@ -1211,7 +1211,7 @@ const CalendarDemo: FC = () => {
 
         <ExampleBlock
           title="Pikaday input example"
-          summary="保留原有 pika-single 输入壳层，让第三方实例继续挂载在 Rue 组件树里。"
+          summary="展示基础 pika-single 输入壳层，让第三方实例继续挂载在 Rue 组件树里。"
           tab={tabPikaday}
           preview={PikadayCalendarPreview}
           lang="html"
@@ -1228,8 +1228,8 @@ const CalendarDemo: FC = () => {
           <div>
             <h2 className="mb-2">API</h2>
             <p className="m-0 text-sm text-base-content/70">
-              默认 Calendar 面板聚焦于日历组件常见的核心交互能力，同时保留 Rue
-              自己的视觉和旧导出方式。
+              默认 Calendar 面板聚焦于日历组件常见的核心交互能力，同时使用 Rue
+              自己的视觉和基础导出方式。
             </p>
           </div>
           <ApiTable rows={apiRows} />
@@ -1237,7 +1237,7 @@ const CalendarDemo: FC = () => {
           <div>
             <h2 className="mb-2">附属导出</h2>
             <p className="m-0 text-sm text-base-content/70">
-              历史上的 Cally 与 Pikaday 接口没有删除，而是并列保留为复合导出，便于渐进迁移。
+              基础的 Cally 与 Pikaday 接口没有删除，而是并列保持为复合导出，便于按需接入。
             </p>
           </div>
           <ExportTable rows={exportRows} />

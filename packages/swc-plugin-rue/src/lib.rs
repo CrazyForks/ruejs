@@ -13,6 +13,7 @@ mod emit;
 mod vapor;
 // 功能拆分模块
 mod attrs;
+mod custom_element;
 mod element_children;
 mod element_component;
 mod element_expr;

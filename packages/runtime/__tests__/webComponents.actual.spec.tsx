@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { render, setReactiveScheduling } from '../src'
@@ -30,6 +32,11 @@ const normalize = (value: string | null | undefined) => value?.replace(/\s+/g, '
 const findDefaultSlotNode = (host: HTMLElement | null) =>
   Array.from(host?.children ?? []).find(child => !child.hasAttribute('slot')) ?? null
 
+const findShadowButton = (host: HTMLElement | null, label: string) =>
+  (Array.from(host?.shadowRoot?.querySelectorAll('button') ?? []).find(button =>
+    normalize(button.textContent).includes(label),
+  ) as HTMLButtonElement | undefined) ?? null
+
 const findEventLogText = (root: ParentNode) => {
   const heading = Array.from(root.querySelectorAll('h3')).find(
     node => normalize(node.textContent) === '事件桥接日志',
@@ -37,12 +44,34 @@ const findEventLogText = (root: ParentNode) => {
   return normalize(heading?.closest('.card-body')?.textContent)
 }
 
+const webComponentsPageSource = readFileSync(
+  `${process.cwd()}/app/pages/examples/WebComponents.tsx`,
+  'utf8',
+)
+
 afterEach(() => {
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
 describe('WebComponents actual page', () => {
+  it('keeps the code tab complete and copy-ready', () => {
+    expect(webComponentsPageSource).toContain('const demoCode = String.raw')
+    expect(webComponentsPageSource).toContain('const ShadowConsole: FC<Record<string, unknown>>')
+    expect(webComponentsPageSource).toContain('const LightSignal: FC<Record<string, unknown>>')
+    expect(webComponentsPageSource).toContain('const WebComponentsCopyableDemo: FC = () =>')
+    expect(webComponentsPageSource).toContain('shadowHost.props = shadowPropsPayload()')
+    expect(webComponentsPageSource).toContain('lightHost.props = lightPropsPayload()')
+    expect(webComponentsPageSource).toContain('onSave={handleShadowSave}')
+    expect(webComponentsPageSource).toContain('onPulse={handleShadowPulse}')
+    expect(webComponentsPageSource).toContain(
+      "offLightTap = bindCustomEvent(lightHostRef.current, 'light-tap')",
+    )
+    expect(webComponentsPageSource).toContain('<slot name="meta"></slot>')
+    expect(webComponentsPageSource).not.toContain('const demoCode = [')
+    expect(webComponentsPageSource).not.toContain('h-[420px] md:h-[720px]')
+  })
+
   it('renders shadow and light custom elements, projects slots, and bridges emitted events', async () => {
     const container = mountContainer()
     resetActiveRuntime()
@@ -77,6 +106,14 @@ describe('WebComponents actual page', () => {
       expect(normalize(shadowHost?.shadowRoot?.querySelector('.title')?.textContent)).toBe(
         'Ops Console / Native CE',
       )
+      expect(
+        normalize(shadowHost?.shadowRoot?.querySelector('[data-testid="ce-context"]')?.textContent),
+      ).toBe('Context: ops:teal')
+      expect(
+        normalize(
+          shadowHost?.shadowRoot?.querySelector('[data-testid="ce-scoped-slot"]')?.textContent,
+        ),
+      ).toBe('ops:teal / 7 / teal')
       expect(normalize(lightHost?.textContent)).toContain('0 events / 4 tags')
       expect(namedSlot).not.toBeNull()
       expect(defaultSlot).not.toBeNull()
@@ -84,7 +121,7 @@ describe('WebComponents actual page', () => {
       expect(defaultSlot?.assignedNodes()).toContain(defaultNode)
     })
 
-    await click(shadowHost?.shadowRoot?.querySelector('button.button.primary') ?? null)
+    await click(findShadowButton(shadowHost, '派发 save'))
 
     await waitForContent(() => {
       const logText = findEventLogText(container)
@@ -93,18 +130,32 @@ describe('WebComponents actual page', () => {
       expect(logText).toContain('panelTitle')
       expect(logText).toContain('Ops Console / Native CE')
       expect(logText).toContain('rootMode')
+      expect(
+        normalize(container.querySelector('[data-testid="ce-latest-event"]')?.textContent),
+      ).toContain('最近事件：shadow.save')
       expect(normalize(lightHost?.textContent)).toContain('1 events / 4 tags')
+    })
+
+    await click(findShadowButton(shadowHost, '派发 pulse'))
+
+    await waitForContent(() => {
+      const logText = findEventLogText(container)
+      expect(logText).toContain('pulse')
+      expect(
+        normalize(container.querySelector('[data-testid="ce-latest-event"]')?.textContent),
+      ).toContain('最近事件：shadow.pulse')
+      expect(normalize(lightHost?.textContent)).toContain('2 events / 4 tags')
     })
 
     await waitForContent(() => {
       expect(lightHost?.querySelector('button.lightButton')).not.toBeNull()
-      expect(normalize(lightHost?.textContent)).toContain('1 events / 4 tags')
+      expect(normalize(lightHost?.textContent)).toContain('2 events / 4 tags')
     })
 
     ;(lightHost?.querySelector('button.lightButton') as HTMLButtonElement | null)?.click()
 
     await waitForContent(() => {
-      expect(normalize(lightHost?.textContent)).toContain('2 events / 4 tags')
+      expect(normalize(lightHost?.textContent)).toContain('3 events / 4 tags')
     })
 
     await click(findTab(container, '代码'))

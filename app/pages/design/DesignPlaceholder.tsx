@@ -47,7 +47,7 @@ const DesignPlaceholder: FC<DesignPlaceholderProps> = props => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>{title.get()}</h1>
         <p className="text-sm mt-3 mb-3">
-          这个组件的菜单入口和路由已经预留，正式示例页还没有补齐。
+          这个组件的菜单入口和路由已经预留，正式示例页还没有补充。
         </p>
 
         <div role="alert" className="alert alert-soft alert-info not-prose my-6">

@@ -48,7 +48,7 @@ const App: FC = () => (
 
 注意，点击按钮时，每个按钮都维护着各自独立的 `count`。这是因为每次使用组件时，都会创建一个新的**实例**。
 
-在单文件组件中，推荐使用 `PascalCase` 标签名来区分子组件与原生 HTML 元素。
+在 JSX / TSX 中，推荐使用 `PascalCase` 标签名来区分子组件与原生 HTML 元素。
 
 虽然原生 HTML 标签名不区分大小写，因此我们可以在其中使用区分大小写的标签名，也可以使用 `/>` 来自闭合标签。
 
@@ -118,44 +118,24 @@ const posts = ref([
 const postFontSize = ref(1)
 ```
 
-可以在模板中用它来控制所有博客文章的字体大小：
+可以在 JSX 中用它来控制所有博客文章的字体大小：
 
 ```tsx
-<div style={{ fontSize: postFontSize + 'em' }}>
+<div style={{ fontSize: postFontSize.value + 'em' }}>
   <BlogPost v-for="post in posts" key={post.id} title={post.title} />
 </div>
 ```
 
-现在我们来给 `<BlogPost>` 组件的模板添加一个按钮：
+现在我们来给 `<BlogPost>` 组件添加一个按钮：
 
 ```tsx
-<div class="blog-post">
-  <h4>{{ title }}</h4>
+<div className="blog-post">
+  <h4>{title}</h4>
   <button>放大文字</button>
 </div>
 ```
 
-这个按钮目前什么都做不了——我们希望点击该按钮时，能告知父组件应该放大所有文章的文字。要解决这个问题，组件提供了一个自定义事件系统。父组件可以使用 `v-on` 监听子组件实例上的任意事件，就像监听原生 DOM 事件一样：
-
-```tsx
-<BlogPost
-  ...
-  v-on:enlarge-text="postFontSize += 0.1"
- />
-```
-
-子组件可以通过调用内置的 [**`emitted`** 方法](@todo)，传入事件名来触发事件：
-
-```tsx
-<div class="blog-post">
-  <h4>{{ title }}</h4>
-  <button v-on:click="emitted('enlarge-text')">放大文字</button>
-</div>
-```
-
-得益于 `v-on:enlarge-text="postFontSize += 0.1"` 监听器，父组件将接收到该事件并更新 `postFontSize` 的值。
-
-我们也可以让这个组件的接口更加明确。Options API 使用类型化的回调 props：
+这个按钮目前什么都做不了——我们希望点击该按钮时，能告知父组件应该放大所有文章的文字。在 Rue 中，推荐把这类子组件到父组件的通知建模成回调 prop，由父组件传入处理函数，子组件在合适的时机调用它：
 
 ```tsx [BlogPost.tsx]
 import type { FC } from '@rue-js/rue'
@@ -225,121 +205,33 @@ export default BlogPost
 
 有时，根据条件在组件之间动态切换会很有用，例如在标签页界面中：
 
-上述功能是通过 Rue 的特殊 `<Component>` 元素配合 `is` 属性实现的：
+上述功能是通过 Rue 的 `Component` 运行时组件配合 `is` prop 实现的：
 
-<div class="options-api">
+```tsx
+import { Component, ref, type FC } from '@rue-js/rue'
+import HomeTab from './HomeTab'
+import PostsTab from './PostsTab'
+import ArchiveTab from './ArchiveTab'
 
-```Rue-html
-<!-- 当 currentTab 改变时，组件也会随之改变 -->
-<Component :is="currentTab"></Component>
-```
+const tabs = {
+  HomeTab,
+  PostsTab,
+  ArchiveTab,
+}
 
-</div>
-<div class="composition-api">
+const App: FC = () => {
+  const currentTab = ref<keyof typeof tabs>('HomeTab')
 
-```Rue-html
-<!-- 当 currentTab 改变时，组件也会随之改变 -->
-<component :is="tabs[currentTab]"></component>
-```
-
-</div>
-
-在上面的示例中，传给 `:is` 的值可以是：
-
-- 已注册组件的名称字符串，或
-- 实际导入的组件对象
-
-你也可以使用 `is` 属性来创建普通 HTML 元素。
-
-当使用 `<component :is="...">` 在多个组件间切换时，被切换掉的组件将会被卸载。我们可以通过内置的 [`<KeepAlive>` 组件](/guide/guide/built-ins/keep-alive)强制不活跃的组件保持"存活"状态。
-
-## DOM 模板解析注意事项 {#in-dom-template-parsing-caveats}
-
-如果你直接在 DOM 中编写 Rue 模板，Rue 将需要从 DOM 中获取模板字符串。由于浏览器原生的 HTML 解析行为，这会导致一些注意事项。
-
-:::tip
-需要注意的是，以下限制仅适用于直接在 DOM 中编写模板的情况。以下来源的字符串模板不受此影响：
-
-- 单文件组件
-- 内联模板字符串（例如 `template: '...'`）
-- `<script type="text/x-template">`
-  :::
-
-### 大小写不敏感 {#case-insensitivity}
-
-HTML 标签和属性名是大小写不敏感的，浏览器会将所有大写字符解释为小写。这意味着当你使用 DOM 内模板时，PascalCase 的组件名以及 camelCase 的 prop 名或 `v-on` 事件名，都需要使用对应的 kebab-case（短横线分隔）形式：
-
-```js
-// JavaScript 中的 camelCase
-const BlogPost = {
-  props: ['postTitle'],
-  emits: ['updatePost'],
-  template: `
-    <h3>{{ postTitle }}</h3>
-  `,
+  return <Component is={tabs[currentTab.value]} />
 }
 ```
 
-```Rue-html
-<!-- HTML 中的 kebab-case -->
-<blog-post post-title="hello!" @update-post="onUpdatePost"></blog-post>
-```
+在上面的示例中，传给 `is` 的值可以是：
 
-### 自闭合标签 {#self-closing-tags}
+- 已注册组件的名称字符串，或
+- 实际导入的组件对象
+- 原生 HTML 标签名字符串
 
-在之前的代码示例中，我们对组件使用了自闭合标签：
-
-```Rue-html
-<MyComponent />
-```
-
-这是因为 Rue 的模板解析器将 `/>` 视为结束标签的指令，与标签类型无关。
-
-然而，在 DOM 内模板中，我们必须始终包含明确的闭合标签：
-
-```Rue-html
-<my-component></my-component>
-```
-
-这是因为 HTML 规范只允许[少数特定元素](https://html.spec.whatwg.org/multipage/syntax.html#void-elements)省略闭合标签，最常见的是 `<input>` 和 `<img>`。对于所有其他元素，如果省略闭合标签，原生 HTML 解析器会认为你从未终止起始标签。例如，以下代码片段：
-
-```Rue-html
-<my-component /> <!-- 我们打算在这里关闭标签... -->
-<span>hello</span>
-```
-
-将被解析为：
-
-```Rue-html
-<my-component>
-  <span>hello</span>
-</my-component> <!-- 但浏览器会在这里关闭它。 -->
-```
-
-### 元素放置限制 {#element-placement-restrictions}
-
-某些 HTML 元素（如 `<ul>`、`<ol>`、`<table>` 和 `<select>`）对其内部可以出现的元素有限制，而某些元素（如 `<li>`、`<tr>` 和 `<option>`）只能出现在特定的父元素中。
-
-在使用具有此类限制的元素的组件时，这会导致问题。例如：
-
-```Rue-html
-<table>
-  <blog-post-row></blog-post-row>
-</table>
-```
-
-自定义组件 `<blog-post-row>` 会被作为无效内容提升出来，导致最终渲染输出中出现错误。我们可以使用特殊的 [`is` 属性](/api/api/built-in-special-attributes#is)作为变通方案：
-
-```Rue-html
-<table>
-  <tr is="rue:blog-post-row"></tr>
-</table>
-```
-
-:::tip
-当用在原生 HTML 元素上时，`is` 的值必须加上 `rue:` 前缀，才能被解释为 Rue 组件。这是为了避免与原生[自定义内置元素](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-customized-builtin-example)产生混淆。
-:::
-
-以上就是你目前需要了解的 DOM 模板解析注意事项。还有更多内容等待学习，但首先我们建议先休息一下，自己动手尝试 Rue，构建一些有趣的东西，或者查看一些[示例](/examples/)（如果你还没有看过的话）。
+当使用 `<Component is={...} />` 在多个组件间切换时，被切换掉的组件将会被卸载。我们可以通过内置的 [`<KeepAlive>` 组件](/guide/guide/built-ins/keep-alive)强制不活跃的组件保持"存活"状态。
 
 当你对刚刚消化的知识感到熟悉之后，请继续阅读指南，深入了解组件的更多内容。

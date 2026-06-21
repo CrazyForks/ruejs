@@ -9,7 +9,7 @@
 
 Rue（发音 /ruː/）是一个用于构建用户界面的 JavaScript 框架。它建立在标准 HTML、CSS 和 JavaScript 之上，提供声明式、基于组件的编程模型，帮助你高效地开发任何复杂度的用户界面。
 
-Rue 的设计哲学借鉴了 Vue 和 React 的优点，采用 JSX/TSX 作为主要的组件编写方式，同时提供了类似 Vue 的响应式系统。
+Rue 采用 JSX/TSX 作为主要的组件编写方式，同时提供直观的响应式系统。
 
 下面是一个最小示例：
 
@@ -25,18 +25,7 @@ const App: FC = () => {
 export default App
 ```
 
-**效果**
-
-<script setup>
-import { ref } from '@rue-js/rue'
-const count = ref(0)
-</script>
-
-<div class="demo">
-  <button @click="count++">
-    计数：{{ count }}
-  </button>
-</div>
+**效果**：按钮会显示当前计数，点击后递增。
 
 上面的示例展示了 Rue 的两个核心特性：
 
@@ -80,7 +69,7 @@ Rue 支持多种编写组件的方式，让你可以根据自己的偏好选择�
 
 ### 使用 ref 和 reactive {#using-ref-and-reactive}
 
-Rue 提供了类似 Vue 的响应式 API，包括 `ref`、`reactive`，也可以使用更接近 Solid / Angular 风格的 `signal`：
+Rue 提供了直观的响应式 API，包括 `ref`、`reactive`，也可以使用 getter / setter 风格的 `signal`：
 
 ```tsx
 import { type FC, ref, reactive, computed } from '@rue-js/rue'
@@ -440,7 +429,7 @@ watchEffect(() => {
 })
 
 user.set({ id: 1, name: 'Rue' }) // equals 返回 true，不触发
-user.set({ id: 1, name: 'Rue 2' }) // 触发
+user.set({ id: 1, name: 'Rue Next' }) // 触发
 ```
 
 #### 调试与序列化
@@ -543,7 +532,6 @@ const TodoApp: FC = () => {
 | 读取值   | `count.get()`        | `count.value`          |
 | 写入值   | `count.set(newVal)`  | `count.value = newVal` |
 | 类型风格 | getter / setter 函数 | 属性访问               |
-| 灵感来源 | Solid.js / Angular   | Vue 3                  |
 | 适合场景 | 函数式编程偏好       | 属性访问偏好           |
 
 两者在响应式追踪能力上完全等价，可以在同一个项目中混合使用，按团队偏好选择即可。如果你需要路径级别的读取和更新、无依赖快照读取、函数式更新等能力，`signal` 会更灵活。
@@ -647,7 +635,7 @@ const Parent: FC = () => {
 
 所有这些 API 风格都能完全覆盖常见的使用场景。Rue 的灵活性允许你：
 
-- 如果你喜欢 Vue 风格的响应式系统，使用 `ref`、`reactive` 和 `computed`
+- 如果你喜欢属性访问风格的响应式系统，使用 `ref`、`reactive` 和 `computed`
 - 如果你熟悉 React，使用 `useState`
 - 如果你更习惯 getter / setter 风格，使用 `signal` 和 `computed`
 - 可以根据项目需要混合使用不同的 API

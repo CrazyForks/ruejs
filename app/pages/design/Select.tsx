@@ -387,7 +387,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'color',
-    description: '沿用 Rue 现有 select-<tone> 颜色层',
+    description: '使用 Rue 当前 select-<tone> 颜色层',
     type: `'neutral' | 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'`,
     defaultValue: '-',
   },
@@ -399,7 +399,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'ghost',
-    description: '兼容旧 API，等价于 variant="ghost" 的快捷写法',
+    description: '支持API，等价于 variant="ghost" 的快捷写法',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -448,7 +448,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'onDeselect',
-    description: '多选取消或单选切换掉旧值时触发，返回被移除的值与 option 信息',
+    description: '多选取消或单选切换掉原值时触发，返回被移除的值与 option 信息',
     type: '(value, option, event) => void',
     defaultValue: '-',
   },
@@ -514,7 +514,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'variant',
-    description: '选择器外观变体，补齐 filled / ghost / borderless 语义',
+    description: '选择器外观变体，补充 filled / ghost / borderless 语义',
     type: '`outlined` | `filled` | `ghost` | `borderless`',
     defaultValue: '`outlined`',
   },
@@ -557,7 +557,7 @@ const SelectPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Select 选择器</h1>
         <p className="text-sm mt-3 mb-3">
-          Select 用于从一组选项中选择一个或多个值。这次增强保留 Rue 当前的原生 select
+          Select 用于从一组选项中选择一个或多个值。组件使用 Rue 当前的原生 select
           语义：单选仍然是浏览器自己的下拉行为，mode="multiple" 默认切到紧凑下拉标签模式，而显式传入
           nativeSize 或原生 multiple 时会回到浏览器 listbox；同时补上 options
           数据源、fieldNames、allowClear、status、variant、语义回调与前后缀 shell 等更接近业务开发的
@@ -567,7 +567,7 @@ const SelectPage: FC = () => {
         <div className="not-prose mt-8 space-y-2">
           <h2 className="text-2xl font-semibold">基础能力</h2>
           <p className="text-sm text-base-content/70">
-            先保留旧的 children 写法，再把数据驱动、分组和 shell 组合能力补进来。
+            先展示 children 写法，再把数据驱动、分组和 shell 组合能力补进来。
           </p>
         </div>
 
@@ -633,9 +633,9 @@ const SelectPage: FC = () => {
                     </span>
                   </li>
                   <li className="list-row">
-                    <span className="font-medium">兼容方式</span>
+                    <span className="font-medium">支持方式</span>
                     <span className="list-col-grow text-base-content/70">
-                      保留 children，同时允许后续逐步迁移到 options。
+                      保持 children，同时允许后续切换到 options。
                     </span>
                   </li>
                 </ul>
@@ -804,7 +804,7 @@ const SelectPage: FC = () => {
         <div className="not-prose mt-10 space-y-2">
           <h2 className="text-2xl font-semibold">增强场景</h2>
           <p className="text-sm text-base-content/70">
-            新增 status、variant、紧凑多选、loading 与空态，覆盖更接近业务表单的实际需求。
+            status、variant、紧凑多选、loading 与空态覆盖常见业务表单场景。
           </p>
         </div>
 
@@ -901,7 +901,7 @@ const SelectPage: FC = () => {
                     <code>默认是紧凑下拉多选，不再自动占满垂直空间</code>
                   </pre>
                   <pre data-prefix="$">
-                    <code>已选项会以内联标签展示，并保留下拉面板勾选态</code>
+                    <code>已选项会以内联标签展示，并保持下拉面板勾选态</code>
                   </pre>
                 </div>
               </div>
@@ -967,7 +967,7 @@ const SelectPage: FC = () => {
                     }}
                   />
                   <p className="m-0 text-sm text-base-content/70">
-                    最多保留 2 项：
+                    最多保持 2 项：
                     {limitedValue.value.length
                       ? limitedValue.value.map(value => labelMap[value] ?? value).join(' / ')
                       : '无'}
@@ -1054,7 +1054,7 @@ const SelectPage: FC = () => {
         <div className="not-prose mt-10 space-y-4">
           <h2 className="text-2xl font-semibold">API</h2>
           <p className="text-sm text-base-content/70">
-            下面列出这次增强后最值得关注的 Select API。原生 select 的
+            下面列出组件后最值得关注的 Select API。原生 select 的
             name、disabled、required、multiple、onChange
             等属性仍全部透传，单选下拉也仍然由浏览器自己渲染。
           </p>

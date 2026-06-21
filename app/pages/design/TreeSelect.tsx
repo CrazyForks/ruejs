@@ -459,7 +459,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'labelInValue',
-    description: '把回填值升级为 { value, key, label, halfChecked } 结构',
+    description: '把回填值组织为 { value, key, label, halfChecked } 结构',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -526,7 +526,7 @@ const apiRows: ApiRow[] = [
   {
     prop: 'variant / status',
     description:
-      '沿用 Rue 输入类组件的视觉语义，支持 filled、borderless、underlined 与 warning/error',
+      '使用 Rue 输入类组件的视觉语义，支持 filled、borderless、underlined 与 warning/error',
     type: "'outlined' | 'filled' | 'borderless' | 'underlined' / 'warning' | 'error'",
     defaultValue: "'outlined' / -",
   },
@@ -585,9 +585,9 @@ const TreeSelectPage: FC = () => {
         <h1>TreeSelect 树选择</h1>
         <p className="text-sm mt-3 mb-3">
           TreeSelect 适合“下拉选择 +
-          树结构浏览”同时存在的输入场景，比如目录、组织架构、权限树、资源分类和发布范围。
-          这一版不照搬其他组件库的视觉，而是延续 Rue 的 input / badge / base 色阶体系，把
-          treeData、simple mode、多选、勾选、语义值、异步加载和 filled / warning 等核心面一次补齐。
+          树结构浏览”同时存在的输入场景，比如目录、组织架构、权限树、资源分类和发布范围。 视觉使用
+          Rue 的 input / badge / base 色阶体系，能力覆盖 treeData、simple mode、多选、
+          勾选、语义值、异步加载和 filled / warning 等核心场景。
         </p>
 
         <div className="not-prose mt-8 space-y-2">
@@ -627,7 +627,7 @@ const TreeSelectPage: FC = () => {
 
         <PreviewBlock
           title="Without allowClear"
-          summary="未开启 allowClear 时，只保留选择交互，不显示 selector 右侧的清空入口。"
+          summary="未开启 allowClear 时，只保持选择交互，不显示 selector 右侧的清空入口。"
           tab={tabs.noClear}
           preview={
             <div className="card border border-base-200/80 bg-base-100 shadow-sm">
@@ -777,7 +777,7 @@ const TreeSelectPage: FC = () => {
         <div className="not-prose mt-10 space-y-2">
           <h2 className="text-2xl font-semibold">高级能力</h2>
           <p className="text-sm text-base-content/70">
-            语义值、异步加载和外观变体补到位之后，TreeSelect 就能覆盖绝大多数配置类面板的核心需求。
+            语义值、异步加载和外观变体覆盖配置类面板里的常见选择场景。
           </p>
         </div>
 
@@ -845,7 +845,7 @@ const TreeSelectPage: FC = () => {
 
         <PreviewBlock
           title="Variant and Status"
-          summary="TreeSelect 也沿用 Rue 现有输入体系的 filled / warning 视觉语义。"
+          summary="TreeSelect 也使用 Rue 当前输入体系的 filled / warning 视觉语义。"
           tab={tabs.shell}
           preview={
             <div className="card border border-base-200/80 bg-base-100 shadow-sm">

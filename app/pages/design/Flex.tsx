@@ -564,12 +564,12 @@ const FlexPage = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Flex 弹性布局</h1>
         <p className="text-sm mt-3 mb-3">
-          Flex 为 Rue Design 补上一层语义化的弹性布局容器。它不为子元素额外包裹节点，继续保留
-          <code>className</code> 与 <code>style</code> 的直接组合方式，同时补齐更完整的
+          Flex 为 Rue Design 补上一层语义化的弹性布局容器。它不为子元素额外包裹节点，展示
+          <code>className</code> 与 <code>style</code> 的直接组合方式，同时补充更完整的
           的方向、对齐、换行、间距与伸缩能力。
         </p>
         <p className="text-sm mt-0 mb-4 text-base-content/70">
-          JSX 代码标签现在展示完整 demo 源码，去掉内部变换标记，复制后可以直接作为 Rue 组件起步。
+          JSX 代码标签现在展示完整示例 源码，去掉内部变换标记，复制后可以直接作为 Rue 组件起步。
         </p>
 
         <div className="text-sm flex flex-wrap gap-4">
@@ -585,7 +585,7 @@ const FlexPage = () => {
         <ul>
           <li>需要一组块级元素在横向、纵向、换行和间距之间快速切换。</li>
           <li>希望直接控制 justify、align 和 flex，而不是在业务里手写整串原子类。</li>
-          <li>需要保留 Rue 的轻量组合方式，同时使用更语义化的布局 API。</li>
+          <li>需要使用 Rue 的轻量组合方式，同时使用更语义化的布局 API。</li>
         </ul>
 
         <ExampleBlock
@@ -661,7 +661,7 @@ const FlexPage = () => {
 
         <ExampleBlock
           title="对齐方式组合"
-          summary="justify 和 align 支持常用语义，也兼容更贴近 CSS 的原生值。"
+          summary="justify 和 align 支持常用语义，也支持更贴近 CSS 的原生值。"
           tab={tabs.alignment}
           preview={() => (
             <div className="card border border-base-300 bg-base-100 shadow-sm">

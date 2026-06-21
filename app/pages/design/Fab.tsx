@@ -183,7 +183,7 @@ const mainApiRows: ApiRow[] = [
   {
     prop: 'type / color / shape',
     description:
-      '保留 Rue 自己的按钮视觉语义；type 提供 default 与 primary 快捷入口，color 支持更细粒度主题色。',
+      '使用 Rue 自己的按钮视觉语义；type 提供 default 与 primary 快捷入口，color 支持更细粒度主题色。',
     type: "'default' | 'primary' / ButtonColor / 'circle' | 'square'",
     defaultValue: "'default' / - / 自动推导",
   },
@@ -241,8 +241,8 @@ const FabPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Fab 悬浮操作按钮</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue 的 Fab 现在同时支持两类路径：一类是保留 daisyUI 的 <code>.fab</code> 结构兼容写法；
-          另一类是更贴近常见悬浮操作按钮的增强 API，直接支持 <code>items</code>、
+          Rue 的 Fab 现在同时支持两类路径：一类是使用 daisyUI 的 <code>.fab</code> 结构写法；
+          另一类是更贴近常见悬浮操作按钮的语义 API，直接支持 <code>items</code>、
           <code>trigger</code>、<code>placement</code>、<code>open</code>、<code>tooltip</code> 和{' '}
           <code>badge</code>。
         </p>
@@ -260,17 +260,17 @@ const FabPage: FC = () => {
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-secondary">
-              兼容旧 demo
+              支持基础示例
             </div>
-            <div className="mt-2 text-sm font-medium">原有 compound 结构继续可用</div>
+            <div className="mt-2 text-sm font-medium">基础 compound 结构继续可用</div>
             <p className="mt-2 text-sm opacity-70">
               <code>Fab.Trigger</code>、<code>Fab.Close</code>、<code>Fab.MainAction</code> 和
-              flower 布局全部保留。
+              flower 布局全部保持。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-accent">
-              交互补齐
+              交互补充
             </div>
             <div className="mt-2 text-sm font-medium">受控、点击外部关闭、方向展开</div>
             <p className="mt-2 text-sm opacity-70">
@@ -782,8 +782,8 @@ const FabPage: FC = () => {
           <div className="rounded-box border border-base-300 bg-base-100 p-4">
             <div className="font-medium">推荐直接用哪种写法？</div>
             <p className="mt-2 mb-0 text-sm opacity-70">
-              新业务优先用根级增强 API：单按钮只传 <code>icon</code>，菜单场景再补{' '}
-              <code>items</code> 与<code>trigger</code>。旧页面若已经依赖 <code>Fab.Trigger</code>{' '}
+              新业务优先用根级语义 API：单按钮只传 <code>icon</code>，菜单场景再补{' '}
+              <code>items</code> 与<code>trigger</code>。项目页面若已经依赖 <code>Fab.Trigger</code>{' '}
               结构，可以保持不动。
             </p>
           </div>
@@ -796,9 +796,9 @@ const FabPage: FC = () => {
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4">
-            <div className="font-medium">flower 模式适合增强 API 还是旧结构？</div>
+            <div className="font-medium">flower 模式适合语义 API 还是组合结构？</div>
             <p className="mt-2 mb-0 text-sm opacity-70">
-              两种都支持，但需要完全自定义每个节点结构时，旧的 compound
+              两种都支持，但需要完全自定义每个节点结构时，基础的 compound
               写法仍然最灵活；数据驱动更适合快速搭建统一菜单。
             </p>
           </div>

@@ -23,10 +23,24 @@ import { markBuiltinComponent } from './builtinMarkers'
 type FC<P = {}> = VaporFC<P>
 type PropsWithChildren<P = {}> = VaporPropsWithChildren<P>
 
+export type TransitionMode = 'default' | 'out-in' | 'in-out'
+
 /** Transition 组件属性，继承基础过渡配置并接收一个直接子节点。 */
-export type TransitionProps = PropsWithChildren<BaseTransitionProps>
+export type TransitionProps = PropsWithChildren<
+  BaseTransitionProps & {
+    /** 切换子节点时的进入/离开编排模式，默认同时执行。 */
+    mode?: TransitionMode
+  }
+>
 
 type TransitionChildInput = Parameters<typeof renderBetween>[0]
+type TransitionChildIdentity = {
+  kind: 'key' | 'type' | 'primitive'
+  value: unknown
+}
+
+const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
+const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
 
 const collectTransitionChildren = (
   children: unknown,
@@ -58,6 +72,47 @@ const resolveTransitionChild = (children: unknown): TransitionChildInput | null 
 const hasTransitionChild = (child: unknown): boolean =>
   child !== null && child !== undefined && child !== false
 
+const resolveTransitionChildren = (props: TransitionProps): unknown => {
+  const childFactory = (props as Record<string, unknown>).__rueTransitionChildFactory
+  return typeof childFactory === 'function' ? (childFactory as () => unknown)() : props.children
+}
+
+const resolveTransitionChildIdentity = (child: unknown): TransitionChildIdentity | null => {
+  if (!hasTransitionChild(child)) return null
+
+  if ((typeof child === 'object' || typeof child === 'function') && child != null) {
+    const record = child as {
+      key?: unknown
+      props?: { key?: unknown }
+      [RUE_PORTABLE_COMPONENT_TYPE_KEY]?: unknown
+      [RUE_ELEMENT_HEAD_RECORD]?: {
+        key?: unknown
+        props?: { key?: unknown }
+        type?: unknown
+      }
+    }
+    const headRecord = record[RUE_ELEMENT_HEAD_RECORD]
+    const key = record.key ?? record.props?.key ?? headRecord?.key ?? headRecord?.props?.key
+    if (key != null) {
+      return { kind: 'key', value: String(key) }
+    }
+
+    const type = record[RUE_PORTABLE_COMPONENT_TYPE_KEY] ?? headRecord?.type
+    if (type != null) {
+      return { kind: 'type', value: type }
+    }
+
+    return null
+  }
+
+  return { kind: 'primitive', value: typeof child }
+}
+
+const isSameTransitionChild = (
+  prev: TransitionChildIdentity | null,
+  next: TransitionChildIdentity | null,
+): boolean => !!prev && !!next && prev.kind === next.kind && Object.is(prev.value, next.value)
+
 const snapshotTransitionProps = (props: TransitionProps): TransitionProps => ({
   ...(props as Record<string, unknown>),
   children: cloneRenderableChildren(props.children),
@@ -79,8 +134,10 @@ export const Transition: FC<TransitionProps> = props => {
       endEl,
       propsSig: signal(snapshotTransitionProps(props), {}, true),
       prevShown: false,
+      currentIdentity: null as TransitionChildIdentity | null,
       firstRender: true,
       started: false,
+      renderVersion: null as symbol | null,
       effect: null as { dispose: () => void } | null,
     }
   })
@@ -100,6 +157,14 @@ export const Transition: FC<TransitionProps> = props => {
     renderBetween([], ctx.container, ctx.startEl, ctx.endEl)
   }
 
+  function removeTransitionElement(el: HTMLElement) {
+    if (el.parentNode) el.remove()
+  }
+
+  function cloneTransitionElement(el: HTMLElement): HTMLElement {
+    return el.cloneNode(true) as HTMLElement
+  }
+
   onMounted(() => {
     if (ctx.started) return
     ctx.started = true
@@ -107,38 +172,122 @@ export const Transition: FC<TransitionProps> = props => {
     ctx.effect = watchEffect(() => {
       const curProps = ctx.propsSig.get()
       const { runEnter, runLeave } = createTransitionRunner(curProps)
-      const child = resolveTransitionChild(curProps.children)
+      const currentChildren = resolveTransitionChildren(curProps)
+      const child = resolveTransitionChild(currentChildren)
       const hasChild = hasTransitionChild(child)
+      const nextIdentity = resolveTransitionChildIdentity(child)
+      const prevShown = ctx.prevShown
+      const childChanged =
+        prevShown &&
+        hasChild &&
+        ctx.currentIdentity !== null &&
+        nextIdentity !== null &&
+        !isSameTransitionChild(ctx.currentIdentity, nextIdentity)
+      const mode =
+        curProps.mode === 'out-in' || curProps.mode === 'in-out' ? curProps.mode : 'default'
       const renderVersion = Symbol('transition-render')
 
-      ;(ctx as any).renderVersion = renderVersion
+      ctx.renderVersion = renderVersion
 
-      if (hasChild) {
-        renderBetween(child as TransitionChildInput, ctx.container, ctx.startEl, ctx.endEl)
-        if (!ctx.prevShown) {
-          if (ctx.firstRender) {
-            queueMicrotask(() => {
-              if ((ctx as any).renderVersion !== renderVersion) return
-              const el = firstElementBetween()
-              if (el) runEnter(el, curProps.appear ? 'appear' : 'enter')
-            })
-          } else {
-            queueMicrotask(() => {
-              if ((ctx as any).renderVersion !== renderVersion) return
-              const el = firstElementBetween()
-              if (el) runEnter(el, 'enter')
-            })
+      const queueEnter = (phase: 'enter' | 'appear' = 'enter', onDone?: () => void) => {
+        queueMicrotask(() => {
+          if (ctx.renderVersion !== renderVersion) return
+          const el = firstElementBetween()
+          if (el) {
+            runEnter(el, phase, onDone)
+          } else if (onDone) {
+            onDone()
           }
-        }
-      } else if (ctx.prevShown) {
-        const el = firstElementBetween()
-        if (el) runLeave(el, () => clearRange())
-        else clearRange()
-      } else {
-        clearRange()
+        })
       }
 
-      ctx.prevShown = hasChild
+      const renderChild = () => {
+        renderBetween(child as TransitionChildInput, ctx.container, ctx.startEl, ctx.endEl)
+        ctx.prevShown = true
+        ctx.currentIdentity = nextIdentity
+      }
+
+      if (hasChild) {
+        if (!prevShown) {
+          renderChild()
+          if (ctx.firstRender) {
+            queueEnter(curProps.appear ? 'appear' : 'enter')
+          } else {
+            queueEnter('enter')
+          }
+        } else if (childChanged) {
+          const leavingEl = firstElementBetween()
+          if (!leavingEl) {
+            renderChild()
+            queueEnter('enter')
+          } else if (mode === 'out-in') {
+            const leavingSnapshot = cloneTransitionElement(leavingEl)
+            clearRange()
+            ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
+
+            runLeave(leavingSnapshot, () => {
+              if (ctx.renderVersion !== renderVersion) {
+                removeTransitionElement(leavingSnapshot)
+                return
+              }
+
+              renderChild()
+              queueEnter('enter')
+            })
+          } else if (mode === 'in-out') {
+            const leavingSnapshot = cloneTransitionElement(leavingEl)
+            renderChild()
+            const enteringEl = firstElementBetween()
+
+            if (enteringEl) {
+              ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
+              runEnter(enteringEl, 'enter', () => {
+                if (ctx.renderVersion !== renderVersion) {
+                  removeTransitionElement(leavingSnapshot)
+                  return
+                }
+
+                runLeave(leavingSnapshot, () => removeTransitionElement(leavingSnapshot))
+              })
+            } else {
+              ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
+              runLeave(leavingSnapshot, () => removeTransitionElement(leavingSnapshot))
+            }
+          } else {
+            const leavingSnapshot = cloneTransitionElement(leavingEl)
+            renderChild()
+            const enteringEl = firstElementBetween()
+
+            if (enteringEl) {
+              ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
+              runLeave(leavingSnapshot, () => removeTransitionElement(leavingSnapshot))
+              queueEnter('enter')
+            } else {
+              ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
+              runLeave(leavingSnapshot, () => removeTransitionElement(leavingSnapshot))
+            }
+          }
+        } else {
+          renderChild()
+        }
+      } else if (prevShown) {
+        const el = firstElementBetween()
+        ctx.prevShown = false
+        ctx.currentIdentity = null
+        if (el) {
+          const leavingSnapshot = cloneTransitionElement(el)
+          clearRange()
+          ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
+          runLeave(leavingSnapshot, () => {
+            removeTransitionElement(leavingSnapshot)
+          })
+        } else clearRange()
+      } else {
+        clearRange()
+        ctx.prevShown = false
+        ctx.currentIdentity = null
+      }
+
       ctx.firstRender = false
     })
   })

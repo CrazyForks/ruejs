@@ -1,6 +1,13 @@
 import type { FC } from '@rue-js/rue'
 import { computed, ref } from '@rue-js/rue'
-import { Button, Fieldset, Tabs, ThemeController } from '@rue-js/design'
+import {
+  Button,
+  ConfigProvider,
+  Fieldset,
+  Tabs,
+  ThemeController,
+  theme as rueTheme,
+} from '@rue-js/design'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 
@@ -87,83 +94,378 @@ const getReadableContentColor = (color: string) => {
 
 const buildScopedThemeCode = () => {
   return [
-    'const runtime = ThemeController.useToken({',
-    "  theme: 'default',",
-    '  token: {',
-    "    colors: { primary: '#2563eb', primaryContent: '#f8fafc' },",
-    "    radius: { box: '1.1rem' },",
-    '  },',
-    '})',
+    "import { Button, ThemeController } from '@rue-js/design'",
     '',
-    '<ThemeController.Provider',
-    '  theme="default"',
-    '  token={{',
-    "    colors: { primary: '#2563eb', primaryContent: '#f8fafc' },",
-    "    radius: { box: '1.1rem' },",
-    '  }}',
-    '  className="rounded-[2rem] border border-base-300 bg-base-100 p-6"',
-    '>',
-    '  <Button color="primary">Publish</Button>',
-    '</ThemeController.Provider>',
+    'export default function ScopedThemeDemo() {',
+    '  const themeConfig = {',
+    "    theme: 'default',",
+    '    token: {',
+    "      colors: { primary: '#2563eb', primaryContent: '#f8fafc' },",
+    "      radius: { box: '1.1rem' },",
+    '    },',
+    '  }',
+    '  const runtime = ThemeController.useToken(themeConfig)',
     '',
-    "runtime.token.colors.primary // '#2563eb'",
+    '  return (',
+    '    <ThemeController.Provider',
+    '      {...themeConfig}',
+    '      className="rounded-[2rem] border border-base-300 bg-base-100 p-6"',
+    '    >',
+    '      <Button color="primary">Publish</Button>',
+    '      <span>{runtime.token.colors.primary}</span>',
+    '    </ThemeController.Provider>',
+    '  )',
+    '}',
   ].join('\n')
 }
 
 const buildPresetCode = () => {
   return [
-    'const token = ThemeController.getDesignToken({',
-    "  theme: 'night',",
-    '})',
+    "import { ThemeController } from '@rue-js/design'",
     '',
-    'token.colors.primary',
-    'token.radius.box',
-    'token.shadow.md',
+    'export default function PresetSnapshotDemo() {',
+    '  const token = ThemeController.getDesignToken({',
+    "    theme: 'night',",
+    '  })',
+    '',
+    '  return (',
+    '    <dl>',
+    '      <dt>Primary</dt>',
+    '      <dd>{token.colors.primary}</dd>',
+    '      <dt>Radius</dt>',
+    '      <dd>{token.radius.box}</dd>',
+    '      <dt>Shadow</dt>',
+    '      <dd>{token.shadow.md}</dd>',
+    '    </dl>',
+    '  )',
+    '}',
   ].join('\n')
 }
 
 const buildProviderRenderCode = () => {
   return [
-    '<ThemeController.Provider',
-    '  theme="retro"',
-    '  render={(runtime) => (',
-    '    <div>',
-    '      {runtime.theme} | {runtime.token.colors.primary}',
+    "import { ThemeController } from '@rue-js/design'",
+    '',
+    'export default function ProviderRenderDemo() {',
+    '  return (',
+    '    <ThemeController.Provider',
+    '      theme="retro"',
+    '      render={(runtime) => (',
+    '        <div>',
+    '          {runtime.theme} | {runtime.token.colors.primary}',
+    '        </div>',
+    '      )}',
+    '    />',
+    '  )',
+    '}',
+  ].join('\n')
+}
+
+const buildComponentTokensCode = () => {
+  return [
+    "import { Button, ThemeController } from '@rue-js/design'",
+    '',
+    'export default function ComponentTokensDemo() {',
+    '  const config = {',
+    "    theme: 'night',",
+    '    algorithm: [ThemeController.darkAlgorithm, ThemeController.compactAlgorithm],',
+    '    components: {',
+    '      Button: {',
+    "        selector: '.btn',",
+    "        colors: { primary: '#f97316', primaryContent: '#fff7ed' },",
+    "        radius: { field: '999px' },",
+    '      },',
+    '      Card: {',
+    "        selector: '.card',",
+    "        colors: { base100: '#111827', baseContent: '#e5e7eb' },",
+    "        radius: { box: '1.8rem' },",
+    '      },',
+    '      Input: {',
+    "        selector: '.input, .textarea, .select',",
+    "        colors: { primary: '#38bdf8', base100: '#f8fafc' },",
+    '      },',
+    '      Badge: {',
+    '        algorithm: true,',
+    "        colors: { primary: '#f97316' },",
+    '      },',
+    '    },',
+    '  }',
+    "  const buttonToken = ThemeController.getComponentDesignToken('Button', config)",
+    '',
+    '  return (',
+    '    <ThemeController.Provider {...config}>',
+    '      <Button color="primary">Only Button uses orange</Button>',
+    '      <div className="card bg-base-100">Card reads Card token</div>',
+    '      <input className="input input-bordered" />',
+    '      <span>{buttonToken.colors.primary}</span>',
+    '    </ThemeController.Provider>',
+    '  )',
+    '}',
+  ].join('\n')
+}
+
+const buildNestedComponentTokenCode = () => {
+  return [
+    "import { Button, ThemeController } from '@rue-js/design'",
+    '',
+    'export default function NestedComponentThemeDemo() {',
+    '  return (',
+    '    <ThemeController.Provider',
+    '      theme="garden"',
+    '      components={{ Button: { colors: { primary: "#16a34a" } } }}',
+    '    >',
+    '      <ThemeController.Provider',
+    '        token={{ colors: { base100: "#111827", baseContent: "#f8fafc" } }}',
+    '        components={{',
+    '          Button: { colors: { primary: "#38bdf8", primaryContent: "#04161a" } },',
+    '          Alert: { selector: ".alert", colors: { info: "#38bdf8" } },',
+    '        }}',
+    '      >',
+    '        <Button color="primary">Nested Button</Button>',
+    '        <div className="alert alert-info">Nested alert</div>',
+    '      </ThemeController.Provider>',
+    '    </ThemeController.Provider>',
+    '  )',
+    '}',
+  ].join('\n')
+}
+
+const buildHashTokenCode = () => {
+  return [
+    "import { ConfigProvider, ThemeController, theme } from '@rue-js/design'",
+    '',
+    'export default function HashTokenDemo() {',
+    '  const { runtime, token, hashId } = theme.useToken({',
+    '    cssVar: { key: "brand-alpha" },',
+    '  })',
+    '  const [, tupleToken, tupleHashId] = ThemeController.useTokenTuple({',
+    '    cssVar: { key: "brand-alpha" },',
+    '  })',
+    '',
+    '  return (',
+    '    <div className="grid gap-4">',
+    '      <ConfigProvider cssVar={{ key: "brand-alpha" }}>',
+    '        <div className={hashId}>hashed scope</div>',
+    '      </ConfigProvider>',
+    '',
+    '      <ThemeController.Provider',
+    '        hashed={false}',
+    '        render={(scopedRuntime) => (',
+    '          <div>',
+    '            disabled hash: {scopedRuntime.hashId || "-"}',
+    '          </div>',
+    '        )}',
+    '      />',
+    '',
+    '      <dl>',
+    '        <dt>scopeId</dt>',
+    '        <dd>{runtime.scopeId}</dd>',
+    '        <dt>theme token</dt>',
+    '        <dd>{token.colors.primary}</dd>',
+    '        <dt>tuple token</dt>',
+    '        <dd>{tupleToken.colors.primary}</dd>',
+    '        <dt>tuple hash</dt>',
+    '        <dd>{tupleHashId}</dd>',
+    '      </dl>',
     '    </div>',
-    '  )}',
-    '/>',
+    '  )',
+    '}',
+  ].join('\n')
+}
+
+const buildCssVarExtractionCode = () => {
+  return [
+    "import { Button, ThemeController } from '@rue-js/design'",
+    '',
+    'export default function CssVarExtractionDemo() {',
+    '  const config = {',
+    '    cssVar: { key: "brand-alpha", prefix: "brand" },',
+    '    token: { colors: { primary: "#445566" } },',
+    '    components: {',
+    '      Button: { colors: { primary: "#112233" } },',
+    '    },',
+    '  }',
+    '  const css = ThemeController.extractStyle(config, {',
+    '    selector: ".brand-alpha-theme",',
+    '  })',
+    '',
+    '  return (',
+    '    <ThemeController.Provider',
+    '      {...config}',
+    '      zeroRuntime',
+    '      className="brand-alpha-theme"',
+    '    >',
+    '      <Button color="primary">Static-ready Button</Button>',
+    '      <pre>{css}</pre>',
+    '    </ThemeController.Provider>',
+    '  )',
+    '}',
   ].join('\n')
 }
 
 const buildToggleCode = () => {
-  return '<ThemeController className="toggle" value="synthwave" />'
+  return [
+    "import { ref } from '@rue-js/rue'",
+    "import { ThemeController } from '@rue-js/design'",
+    '',
+    'export default function ThemeToggleDemo() {',
+    '  const enabled = ref(false)',
+    '',
+    '  return (',
+    '    <ThemeController.Provider',
+    '      theme={enabled.value ? "synthwave" : "default"}',
+    '      className="rounded-box border border-base-300 bg-base-100 p-4 text-base-content"',
+    '    >',
+    '      <label className="flex items-center gap-3">',
+    '        <span>Default</span>',
+    '        <ThemeController',
+    '          className="toggle"',
+    '          value="synthwave"',
+    '          checked={enabled.value}',
+    '          onChange={(event) => {',
+    '            enabled.value = event.currentTarget.checked',
+    '          }}',
+    '        />',
+    '        <span>Synthwave</span>',
+    '      </label>',
+    '    </ThemeController.Provider>',
+    '  )',
+    '}',
+  ].join('\n')
 }
 
 const buildCheckboxCode = () => {
-  return '<ThemeController className="checkbox" value="synthwave" />'
+  return [
+    "import { ref } from '@rue-js/rue'",
+    "import { ThemeController } from '@rue-js/design'",
+    '',
+    'export default function ThemeCheckboxDemo() {',
+    '  const enabled = ref(false)',
+    '',
+    '  return (',
+    '    <ThemeController.Provider',
+    '      theme={enabled.value ? "synthwave" : "default"}',
+    '      className="rounded-box border border-base-300 bg-base-100 p-4 text-base-content"',
+    '    >',
+    '      <label className="flex items-center gap-3">',
+    '        <ThemeController',
+    '          className="checkbox"',
+    '          value="synthwave"',
+    '          checked={enabled.value}',
+    '          onChange={(event) => {',
+    '            enabled.value = event.currentTarget.checked',
+    '          }}',
+    '        />',
+    '        <span>Synthwave</span>',
+    '      </label>',
+    '    </ThemeController.Provider>',
+    '  )',
+    '}',
+  ].join('\n')
 }
 
 const buildSwapCode = () => {
   return [
-    '<label className="swap swap-rotate">',
-    '  <ThemeController value="synthwave" />',
-    '  <span className="swap-off">Light</span>',
-    '  <span className="swap-on">Dark</span>',
-    '</label>',
+    "import { ref } from '@rue-js/rue'",
+    "import { ThemeController } from '@rue-js/design'",
+    '',
+    'export default function ThemeSwapDemo() {',
+    '  const enabled = ref(false)',
+    '',
+    '  return (',
+    '    <ThemeController.Provider',
+    '      theme={enabled.value ? "synthwave" : "default"}',
+    '      className="rounded-box border border-base-300 bg-base-100 p-4 text-base-content"',
+    '    >',
+    '      <label className="swap swap-rotate">',
+    '        <ThemeController',
+    '          value="synthwave"',
+    '          checked={enabled.value}',
+    '          onChange={(event) => {',
+    '            enabled.value = event.currentTarget.checked',
+    '          }}',
+    '        />',
+    '        <span className="swap-off">Light</span>',
+    '        <span className="swap-on">Dark</span>',
+    '      </label>',
+    '    </ThemeController.Provider>',
+    '  )',
+    '}',
   ].join('\n')
 }
 
 const buildRadioCode = () => {
-  return '<ThemeController type="radio" name="theme-radios" className="radio radio-sm" value="retro" />'
+  return [
+    "import { ref } from '@rue-js/rue'",
+    "import { ThemeController } from '@rue-js/design'",
+    '',
+    "const radioThemes = ['default', 'retro', 'cyberpunk'] as const",
+    '',
+    'export default function ThemeRadioDemo() {',
+    "  const selectedTheme = ref<(typeof radioThemes)[number]>('default')",
+    '',
+    '  return (',
+    '    <ThemeController.Provider',
+    '      theme={selectedTheme.value}',
+    '      className="rounded-box border border-base-300 bg-base-100 p-4 text-base-content"',
+    '    >',
+    '      <fieldset className="grid gap-2">',
+    '        {radioThemes.map(theme => (',
+    '          <label key={theme} className="flex cursor-pointer items-center gap-2">',
+    '            <ThemeController',
+    '              type="radio"',
+    '              name="theme-radios"',
+    '              className="radio radio-sm"',
+    '              value={theme}',
+    '              checked={selectedTheme.value === theme}',
+    '              onChange={() => {',
+    '                selectedTheme.value = theme',
+    '              }}',
+    '            />',
+    '            <span>{theme}</span>',
+    '          </label>',
+    '        ))}',
+    '      </fieldset>',
+    '    </ThemeController.Provider>',
+    '  )',
+    '}',
+  ].join('\n')
 }
 
 const buildButtonGroupCode = () => {
   return [
-    '<div className="join join-vertical sm:join-horizontal">',
-    '  <ThemeController type="radio" name="theme-buttons" className="btn theme-controller join-item" value="default" aria-label="Default" />',
-    '  <ThemeController type="radio" name="theme-buttons" className="btn theme-controller join-item" value="night" aria-label="Night" />',
-    '  <ThemeController type="radio" name="theme-buttons" className="btn theme-controller join-item" value="coffee" aria-label="Coffee" />',
-    '</div>',
+    "import { ref } from '@rue-js/rue'",
+    "import { ThemeController } from '@rue-js/design'",
+    '',
+    "const buttonThemes = ['default', 'night', 'coffee'] as const",
+    '',
+    'export default function ThemeButtonGroupDemo() {',
+    "  const selectedTheme = ref<(typeof buttonThemes)[number]>('default')",
+    '',
+    '  return (',
+    '    <ThemeController.Provider',
+    '      theme={selectedTheme.value}',
+    '      className="rounded-box border border-base-300 bg-base-100 p-4 text-base-content"',
+    '    >',
+    '      <div className="join join-vertical sm:join-horizontal">',
+    '        {buttonThemes.map(theme => (',
+    '          <ThemeController',
+    '            key={theme}',
+    '            type="radio"',
+    '            name="theme-buttons"',
+    '            className="btn theme-controller join-item"',
+    '            value={theme}',
+    '            checked={selectedTheme.value === theme}',
+    '            onChange={() => {',
+    '              selectedTheme.value = theme',
+    '            }}',
+    '            aria-label={theme}',
+    '          />',
+    '        ))}',
+    '      </div>',
+    '    </ThemeController.Provider>',
+    '  )',
+    '}',
   ].join('\n')
 }
 
@@ -183,7 +485,7 @@ const controllerApiRows: ApiRow[] = [
   },
   {
     name: 'type',
-    description: '控制输入类型，兼容切换和单选两种主题选择方式。',
+    description: '控制输入类型，支持切换和单选两种主题选择方式。',
     type: "'checkbox' | 'radio'",
     defaultValue: "'checkbox'",
   },
@@ -210,9 +512,42 @@ const providerApiRows: ApiRow[] = [
   },
   {
     name: 'baseToken',
-    description: '从外部已有 token 继续派生，适合做二次主题生成。',
+    description: '从外部现成 token 继续派生，适合做二次主题生成。',
     type: 'ThemeDesignToken',
     defaultValue: '-',
+  },
+  {
+    name: 'components',
+    description:
+      '组件级 token 配置，按 Button、Card、Input 等组件名局部覆盖变量，可配置 selector 和组件级 algorithm。',
+    type: 'Record<string, ThemeComponentTokenOverride>',
+    defaultValue: '-',
+  },
+  {
+    name: 'cssVar',
+    description:
+      'CSS variables 配置。传 prefix 会生成别名变量，传 key 会生成稳定 scopeId，false 可关闭变量注入。',
+    type: 'boolean | { prefix?: string; key?: string }',
+    defaultValue: 'true',
+  },
+  {
+    name: 'hashed',
+    description: '控制主题作用域是否生成稳定 hash class，默认会追加到根节点。',
+    type: 'boolean',
+    defaultValue: 'true',
+  },
+  {
+    name: 'inherit',
+    description: '是否允许从父主题 runtime 继承 token 和组件级 token，嵌套 Provider 默认开启。',
+    type: 'boolean',
+    defaultValue: 'true',
+  },
+  {
+    name: 'zeroRuntime',
+    description:
+      '关闭运行时组件级 style 标签注入，配合 extractStyle 在构建期或服务端提前抽取 CSS。',
+    type: 'boolean',
+    defaultValue: 'false',
   },
   {
     name: 'children',
@@ -255,6 +590,12 @@ const providerApiRows: ApiRow[] = [
 
 const staticApiRows: ApiRow[] = [
   {
+    name: 'ConfigProvider',
+    description: 'ThemeController.Provider 的主题配置容器别名，可直接从 @rue-js/design 导入。',
+    type: 'FC<ThemeProviderProps>',
+    defaultValue: '-',
+  },
+  {
     name: 'compactAlgorithm',
     description: '把主题压缩成更高密度的控件和间距。',
     type: 'ThemeAlgorithm',
@@ -268,7 +609,7 @@ const staticApiRows: ApiRow[] = [
   },
   {
     name: 'defaultAlgorithm',
-    description: '标准 token 整理算法，负责补齐 appearance、resolvedThemeName 等派生字段。',
+    description: '标准 token 整理算法，负责补充 appearance、resolvedThemeName 等派生字段。',
     type: 'ThemeAlgorithm',
     defaultValue: '-',
   },
@@ -291,6 +632,24 @@ const staticApiRows: ApiRow[] = [
     defaultValue: '-',
   },
   {
+    name: 'getComponentDesignToken(name, config)',
+    description: '纯函数，返回某个组件在当前 ThemeConfig 下的最终组件级 token。',
+    type: '(name: string, config?: ThemeConfig) => ThemeDesignToken',
+    defaultValue: '-',
+  },
+  {
+    name: 'getCssVariables(config)',
+    description: '纯函数，返回当前主题 token 对应的 CSS variables 对象。',
+    type: '(config?: ThemeConfig) => ThemeStyleRecord',
+    defaultValue: '-',
+  },
+  {
+    name: 'extractStyle(config, options)',
+    description: '抽取根变量和组件级变量 CSS 文本，适合 zeroRuntime 或 SSR 场景。',
+    type: '(config?: ThemeConfig, options?: ThemeExtractStyleOptions) => string',
+    defaultValue: '-',
+  },
+  {
     name: 'presets',
     description: '当前内置主题预设对象，可直接复用或做差量扩展。',
     type: 'Record<string, ThemeTokenOverride>',
@@ -298,8 +657,21 @@ const staticApiRows: ApiRow[] = [
   },
   {
     name: 'useToken(config)',
-    description: '返回 theme、token 和 cssVariables，适合页面级预览、调试面板和主题生成器。',
+    description:
+      '返回 theme、token、cssVariables、components 和 componentCssVariables，适合页面级预览、调试面板和主题生成器。',
     type: '(config?: ThemeConfig) => ThemeTokenRuntime',
+    defaultValue: '-',
+  },
+  {
+    name: 'useTokenTuple(config)',
+    description: '返回主题运行时三元组：[runtime, token, hashId]。',
+    type: '(config?: ThemeConfig) => [ThemeTokenRuntime, ThemeDesignToken, string]',
+    defaultValue: '-',
+  },
+  {
+    name: 'theme.useToken(config)',
+    description: '主题命名空间入口，返回 { runtime, token, hashId }。',
+    type: '(config?: ThemeConfig) => { runtime: ThemeTokenRuntime; token: ThemeDesignToken; hashId: string }',
     defaultValue: '-',
   },
 ]
@@ -784,160 +1156,639 @@ const ThemeProviderRenderPreview: FC = () => {
   )
 }
 
-const ThemeTogglePreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
-  const isChecked = activeDemo.value === 'toggle' && activeTheme.value === 'synthwave'
+const ThemeComponentTokensPreview: FC = () => {
+  const buttonPrimary = ref('#f97316')
+  const cardRadius = ref('1.8rem')
+  const buttonContent = computed(() => getReadableContentColor(buttonPrimary.value))
+  const componentConfig = computed(() => ({
+    Button: {
+      selector: '.btn',
+      colors: {
+        primary: buttonPrimary.value,
+        primaryContent: buttonContent.get(),
+      },
+      radius: {
+        field: '999px',
+      },
+      shadow: {
+        sm: '0 12px 28px rgba(249, 115, 22, 0.28)',
+      },
+    },
+    Card: {
+      selector: '.card',
+      colors: {
+        base100: '#111827',
+        base200: '#1f2937',
+        baseContent: '#e5e7eb',
+      },
+      radius: {
+        box: cardRadius.value,
+      },
+      shadow: {
+        md: '0 26px 70px rgba(15, 23, 42, 0.45)',
+      },
+    },
+    Input: {
+      selector: '.input, .textarea, .select',
+      colors: {
+        primary: '#38bdf8',
+        base100: '#f8fafc',
+        baseContent: '#0f172a',
+      },
+      radius: {
+        field: '1.1rem',
+      },
+    },
+    Badge: {
+      algorithm: true,
+      selector: '.badge',
+      colors: {
+        primary: buttonPrimary.value,
+        primaryContent: buttonContent.get(),
+      },
+    },
+  }))
+  const runtime = computed(() =>
+    ThemeController.useToken({
+      theme: 'night',
+      algorithm: [ThemeController.darkAlgorithm, ThemeController.compactAlgorithm],
+      components: componentConfig.get(),
+    }),
+  )
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <span className="label-text">Default</span>
-      <ThemeController
-        data-testid="theme-toggle"
-        className="toggle"
-        value="synthwave"
-        checked={isChecked}
-        onChange={(event: Event) => {
-          const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
-          if (nextChecked) {
-            activeDemo.value = 'toggle'
-            activeTheme.value = 'synthwave'
-            return
-          }
-          if (activeDemo.value === 'toggle') {
-            activeDemo.value = null
-            activeTheme.value = null
-          }
-        }}
-      />
-      <span className="label-text">Synthwave</span>
-      <span className="text-sm text-base-content/70">
-        当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
-      </span>
+    <div className="grid gap-5 xl:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4 shadow-sm">
+        <h3 className="m-0 text-base font-semibold">Component Tokens</h3>
+        <p className="mt-2 text-sm opacity-70">
+          组件级 token 只写入当前 Provider 内匹配的组件选择器，Button、Card、Input
+          可以拥有各自的变量值。
+        </p>
+
+        <label className="mt-4 block rounded-[1rem] border border-base-300/70 bg-base-100/70 p-3">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] opacity-60">
+            Button Primary
+          </span>
+          <input
+            type="color"
+            value={buttonPrimary.value}
+            onInput={(event: Event) => {
+              buttonPrimary.value =
+                (event.target as HTMLInputElement | null)?.value ?? buttonPrimary.value
+            }}
+            className="h-11 w-full cursor-pointer rounded-[0.9rem] border border-base-300 bg-transparent"
+          />
+          <span className="mt-2 block font-mono text-xs">{buttonPrimary.value}</span>
+        </label>
+
+        <label className="mt-3 block rounded-[1rem] border border-base-300/70 bg-base-100/70 p-3">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] opacity-60">
+            Card Radius
+          </span>
+          <input
+            type="range"
+            min="1"
+            max="2.6"
+            step="0.05"
+            value={String(parseFloat(cardRadius.value))}
+            onInput={(event: Event) => {
+              const nextValue = (event.target as HTMLInputElement | null)?.value
+              cardRadius.value = nextValue ? `${nextValue}rem` : cardRadius.value
+            }}
+            className="range range-sm"
+          />
+          <span className="mt-2 block font-mono text-xs">{cardRadius.value}</span>
+        </label>
+      </div>
+
+      <div className="grid gap-4">
+        <ThemeController.Provider
+          theme="night"
+          algorithm={[ThemeController.darkAlgorithm, ThemeController.compactAlgorithm]}
+          components={componentConfig.get()}
+          className="rounded-[2rem] border border-base-300 bg-base-100 p-5 text-base-content shadow-[var(--rue-theme-shadow-md)]"
+          render={scopedRuntime => (
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button color="primary">Orange Button</Button>
+                  <Button color="secondary" type="outlined">
+                    Global Secondary
+                  </Button>
+                  <span className="badge badge-primary badge-lg">Badge algorithm=true</span>
+                </div>
+
+                <div className="card border border-base-300 bg-base-100 shadow-[var(--rue-theme-shadow-md)]">
+                  <div className="card-body gap-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="card-title text-lg">Card token island</h3>
+                        <p className="m-0 text-sm opacity-70">
+                          Card 单独覆盖 base 色、圆角和阴影，不影响同一 Provider 下的 Input。
+                        </p>
+                      </div>
+                      <span className="badge badge-outline">radius {cardRadius.value}</span>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <input className="input input-bordered w-full" placeholder="Input token" />
+                      <select className="select select-bordered w-full" value="token">
+                        <option value="token">Select token</option>
+                      </select>
+                    </div>
+                    <textarea
+                      className="textarea textarea-bordered w-full"
+                      placeholder="Textarea shares Input component token"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid content-start gap-3">
+                <TokenFact
+                  label="Button.primary"
+                  value={scopedRuntime.components.Button.colors.primary}
+                />
+                <TokenFact
+                  label="Button.radius"
+                  value={scopedRuntime.components.Button.radius.field}
+                />
+                <TokenFact label="Card.radius" value={scopedRuntime.components.Card.radius.box} />
+                <TokenFact
+                  label="Input.primary"
+                  value={scopedRuntime.components.Input.colors.primary}
+                />
+              </div>
+            </div>
+          )}
+        />
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <TokenFact label="scopeId" value={runtime.get().scopeId} />
+          <TokenFact
+            label="Button var"
+            value={`${runtime.get().componentCssVariables.Button['--color-primary']}`}
+          />
+          <TokenFact
+            label="Card var"
+            value={`${runtime.get().componentCssVariables.Card['--radius-box']}`}
+          />
+        </div>
+      </div>
     </div>
+  )
+}
+
+const ThemeNestedComponentTokensPreview: FC = () => {
+  return (
+    <ThemeController.Provider
+      theme="garden"
+      components={{
+        Button: {
+          colors: {
+            primary: '#16a34a',
+            primaryContent: '#f0fdf4',
+          },
+          radius: {
+            field: '1.2rem',
+          },
+        },
+      }}
+      className="rounded-[2rem] border border-base-300 bg-base-100 p-5 shadow-sm"
+    >
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="space-y-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+            Parent provider
+          </div>
+          <Button color="primary">Garden Button</Button>
+          <div className="alert alert-success">
+            <span>父级只改 Button，Alert 仍吃全局 garden token。</span>
+          </div>
+        </div>
+
+        <ThemeController.Provider
+          as="section"
+          token={{
+            colors: {
+              base100: '#111827',
+              base200: '#1f2937',
+              baseContent: '#f8fafc',
+            },
+          }}
+          components={{
+            Button: {
+              colors: {
+                primary: '#38bdf8',
+                primaryContent: '#04161a',
+              },
+              radius: {
+                field: '999px',
+              },
+            },
+            Alert: {
+              selector: '.alert',
+              colors: {
+                info: '#38bdf8',
+                infoContent: '#04161a',
+              },
+              radius: {
+                box: '1.5rem',
+              },
+            },
+          }}
+          className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-[var(--rue-theme-shadow-sm)]"
+          render={runtime => (
+            <div className="space-y-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+                Nested provider
+              </div>
+              <Button color="primary">Nested Button</Button>
+              <div className="alert alert-info">
+                <span>子 Provider 默认继承父 token，再覆盖 Button 和 Alert。</span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TokenFact
+                  label="Button.primary"
+                  value={runtime.components.Button.colors.primary}
+                />
+                <TokenFact label="Base.primary" value={runtime.token.colors.primary} />
+              </div>
+            </div>
+          )}
+        />
+      </div>
+    </ThemeController.Provider>
+  )
+}
+
+const ThemeHashTokenPreview: FC = () => {
+  const namespaceToken = rueTheme.useToken({
+    cssVar: {
+      key: 'brand-alpha',
+    },
+  })
+  const [, tupleToken, tupleHashId] = ThemeController.useTokenTuple({
+    cssVar: {
+      key: 'brand-alpha',
+    },
+  })
+  const runtime = namespaceToken.runtime
+  const token = namespaceToken.token
+  const hashId = namespaceToken.hashId
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-2">
+      <ConfigProvider
+        cssVar={{
+          key: 'brand-alpha',
+        }}
+        className="rounded-[2rem] border border-base-300 bg-base-100 p-5 shadow-sm"
+        render={scopedRuntime => (
+          <div className="space-y-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+              Hashed provider
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <span className="badge badge-primary">{scopedRuntime.hashId}</span>
+              <span className="badge badge-outline">{scopedRuntime.scopeId}</span>
+            </div>
+            <div className="rounded-[1.3rem] border border-base-300 bg-base-100 p-4">
+              <div className="font-semibold">Root class includes hashId</div>
+              <p className="m-0 mt-2 text-sm opacity-70">
+                hashed 默认开启，ConfigProvider 根节点会带上稳定 hash
+                class，方便和抽取样式或局部选择器配合。
+              </p>
+            </div>
+          </div>
+        )}
+      />
+
+      <ThemeController.Provider
+        hashed={false}
+        className="rounded-[2rem] border border-base-300 bg-base-100 p-5 shadow-sm"
+        render={scopedRuntime => (
+          <div className="space-y-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+              Tuple snapshot
+            </div>
+            <div className="grid gap-3">
+              <TokenFact label="hashId" value={hashId || '-'} />
+              <TokenFact label="scopeId" value={runtime.scopeId} />
+              <TokenFact label="theme token" value={token.colors.primary} />
+              <TokenFact label="tuple hash" value={tupleHashId || '-'} />
+              <TokenFact label="tuple token" value={tupleToken.colors.primary} />
+              <TokenFact label="hashed=false" value={scopedRuntime.hashId || '-'} />
+            </div>
+          </div>
+        )}
+      />
+    </div>
+  )
+}
+
+const ThemeCssVarExtractionPreview: FC = () => {
+  const config = {
+    cssVar: {
+      key: 'brand-alpha',
+      prefix: 'brand',
+    },
+    token: {
+      colors: {
+        primary: '#445566',
+        primaryContent: '#f8fafc',
+      },
+    },
+    components: {
+      Button: {
+        colors: {
+          primary: '#112233',
+          primaryContent: '#f8fafc',
+        },
+        radius: {
+          field: '999px',
+        },
+      },
+      Card: {
+        selector: '.brand-card',
+        colors: {
+          base100: '#f8fafc',
+          baseContent: '#0f172a',
+        },
+        radius: {
+          box: '1.5rem',
+        },
+      },
+    },
+  }
+  const runtime = ThemeController.useToken(config)
+  const extractedStyle = ThemeController.extractStyle(config, {
+    selector: '.brand-alpha-theme',
+  })
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <ThemeController.Provider
+        {...config}
+        zeroRuntime={true}
+        className="brand-alpha-theme rounded-[2rem] border border-base-300 bg-base-100 p-5 text-base-content shadow-sm"
+        render={scopedRuntime => (
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_14rem]">
+            <div className="space-y-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+                zeroRuntime provider
+              </div>
+              <div className="brand-card rounded-[var(--radius-box)] border border-base-300 bg-base-100 p-4 shadow-[var(--rue-theme-shadow-sm)]">
+                <div className="text-lg font-semibold">Static-ready variables</div>
+                <p className="m-0 mt-2 text-sm opacity-70">
+                  Provider 不再注入组件级 style 标签，但 runtime 和 extractStyle
+                  都能拿到同一份变量。
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button color="primary">Button token</Button>
+                <Button color="secondary" type="outlined">
+                  Secondary
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid content-start gap-3">
+              <TokenFact label="scopeId" value={scopedRuntime.scopeId} />
+              <TokenFact label="zeroRuntime" value={String(scopedRuntime.zeroRuntime)} />
+              <TokenFact
+                label="brand var"
+                value={`${scopedRuntime.componentCssVariables.Button['--brand-color-primary']}`}
+              />
+            </div>
+          </div>
+        )}
+      />
+
+      <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-4 shadow-sm">
+        <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+          Extracted CSS
+        </div>
+        <div className="mt-3 grid gap-3">
+          <TokenFact label="scopeId" value={runtime.scopeId} />
+          <TokenFact label="root var" value={`${runtime.cssVariables['--brand-color-primary']}`} />
+        </div>
+        <Code className="mt-4 max-h-72 overflow-auto" lang="css" code={extractedStyle} />
+      </div>
+    </div>
+  )
+}
+
+const ThemeTogglePreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
+  const isChecked = activeDemo.value === 'toggle' && activeTheme.value === 'synthwave'
+  const previewTheme = isChecked ? 'synthwave' : 'default'
+
+  return (
+    <ThemeController.Provider
+      data-testid="theme-toggle-scope"
+      theme={previewTheme}
+      className="w-full max-w-md rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-sm transition-colors"
+      render={runtime => (
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="label-text">Default</span>
+          <ThemeController
+            data-testid="theme-toggle"
+            className="toggle"
+            value="synthwave"
+            checked={isChecked}
+            onChange={(event: Event) => {
+              const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
+              if (nextChecked) {
+                activeDemo.value = 'toggle'
+                activeTheme.value = 'synthwave'
+                return
+              }
+              if (activeDemo.value === 'toggle') {
+                activeDemo.value = null
+                activeTheme.value = null
+              }
+            }}
+          />
+          <span className="label-text">Synthwave</span>
+          <span className="text-sm text-base-content/70">
+            当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
+          </span>
+          <span className="badge badge-outline">preview theme {runtime.theme}</span>
+        </div>
+      )}
+    />
   )
 }
 
 const ThemeCheckboxPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
   const isChecked = activeDemo.value === 'checkbox' && activeTheme.value === 'synthwave'
+  const previewTheme = isChecked ? 'synthwave' : 'default'
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <ThemeController
-        data-testid="theme-checkbox"
-        className="checkbox"
-        value="synthwave"
-        checked={isChecked}
-        onChange={(event: Event) => {
-          const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
-          if (nextChecked) {
-            activeDemo.value = 'checkbox'
-            activeTheme.value = 'synthwave'
-            return
-          }
-          if (activeDemo.value === 'checkbox') {
-            activeDemo.value = null
-            activeTheme.value = null
-          }
-        }}
-      />
-      <span className="text-sm text-base-content/70">
-        当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
-      </span>
-    </div>
+    <ThemeController.Provider
+      data-testid="theme-checkbox-scope"
+      theme={previewTheme}
+      className="w-full max-w-md rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-sm transition-colors"
+      render={runtime => (
+        <div className="flex flex-wrap items-center gap-3">
+          <ThemeController
+            data-testid="theme-checkbox"
+            className="checkbox"
+            value="synthwave"
+            checked={isChecked}
+            onChange={(event: Event) => {
+              const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
+              if (nextChecked) {
+                activeDemo.value = 'checkbox'
+                activeTheme.value = 'synthwave'
+                return
+              }
+              if (activeDemo.value === 'checkbox') {
+                activeDemo.value = null
+                activeTheme.value = null
+              }
+            }}
+          />
+          <span className="text-sm text-base-content/70">
+            当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
+          </span>
+          <span className="badge badge-outline">preview theme {runtime.theme}</span>
+        </div>
+      )}
+    />
   )
 }
 
 const ThemeSwapPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
   const isChecked = activeDemo.value === 'swap' && activeTheme.value === 'synthwave'
+  const previewTheme = isChecked ? 'synthwave' : 'default'
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <label className="swap swap-rotate text-base-content">
-        <ThemeController
-          data-testid="theme-swap"
-          value="synthwave"
-          checked={isChecked}
-          onChange={(event: Event) => {
-            const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
-            if (nextChecked) {
-              activeDemo.value = 'swap'
-              activeTheme.value = 'synthwave'
-              return
-            }
-            if (activeDemo.value === 'swap') {
-              activeDemo.value = null
-              activeTheme.value = null
-            }
-          }}
-        />
-        <span className="swap-off inline-flex items-center gap-2">
-          <SunIcon /> Light
-        </span>
-        <span className="swap-on inline-flex items-center gap-2">
-          <MoonIcon /> Dark
-        </span>
-      </label>
-      <span className="text-sm text-base-content/70">
-        当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
-      </span>
-    </div>
+    <ThemeController.Provider
+      data-testid="theme-swap-scope"
+      theme={previewTheme}
+      className="w-full max-w-md rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-sm transition-colors"
+      render={runtime => (
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="swap swap-rotate text-base-content">
+            <ThemeController
+              data-testid="theme-swap"
+              value="synthwave"
+              checked={isChecked}
+              onChange={(event: Event) => {
+                const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
+                if (nextChecked) {
+                  activeDemo.value = 'swap'
+                  activeTheme.value = 'synthwave'
+                  return
+                }
+                if (activeDemo.value === 'swap') {
+                  activeDemo.value = null
+                  activeTheme.value = null
+                }
+              }}
+            />
+            <span className="swap-off inline-flex items-center gap-2">
+              <SunIcon /> Light
+            </span>
+            <span className="swap-on inline-flex items-center gap-2">
+              <MoonIcon /> Dark
+            </span>
+          </label>
+          <span className="text-sm text-base-content/70">
+            当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
+          </span>
+          <span className="badge badge-outline">preview theme {runtime.theme}</span>
+        </div>
+      )}
+    />
   )
 }
 
 const ThemeRadioPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
   const selectedTheme = activeDemo.value === 'radio' ? activeTheme.value : null
+  const previewTheme = selectedTheme ?? 'default'
 
   return (
-    <Fieldset className="w-xs gap-2">
-      {['default', 'retro', 'cyberpunk'].map(theme => (
-        <label key={theme} className="flex cursor-pointer items-center gap-2">
-          <ThemeController
-            data-testid={`theme-radio-${theme}`}
-            type="radio"
-            name="theme-radios"
-            className="radio radio-sm"
-            value={theme}
-            checked={selectedTheme === theme}
-            onChange={() => {
-              activeDemo.value = 'radio'
-              activeTheme.value = theme as ThemePresetName
-            }}
-          />
-          <span>{theme}</span>
-        </label>
-      ))}
-      <p className="m-0 text-sm text-base-content/70">
-        当前 controller 值：{selectedTheme ?? '未激活'}
-      </p>
-    </Fieldset>
+    <ThemeController.Provider
+      data-testid="theme-radio-scope"
+      theme={previewTheme}
+      className="w-full max-w-md rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-sm transition-colors"
+      render={runtime => (
+        <Fieldset className="w-full gap-2">
+          {['default', 'retro', 'cyberpunk'].map(theme => {
+            const isSelected = selectedTheme === theme
+            return (
+              <label
+                key={theme}
+                className={`flex cursor-pointer items-center gap-2 rounded-box border px-3 py-2 transition-colors ${
+                  isSelected
+                    ? 'border-primary bg-primary text-primary-content'
+                    : 'border-base-300 bg-base-100 text-base-content'
+                }`}
+              >
+                <ThemeController
+                  data-testid={`theme-radio-${theme}`}
+                  type="radio"
+                  name="theme-radios"
+                  className="radio radio-sm"
+                  value={theme}
+                  checked={isSelected}
+                  onChange={() => {
+                    activeDemo.value = 'radio'
+                    activeTheme.value = theme as ThemePresetName
+                  }}
+                />
+                <span>{theme}</span>
+              </label>
+            )
+          })}
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-sm text-base-content/70">
+            <span>当前 controller 值：{selectedTheme ?? '未激活'}</span>
+            <span className="badge badge-outline">preview theme {runtime.theme}</span>
+          </div>
+        </Fieldset>
+      )}
+    />
   )
 }
 
 const ThemeButtonGroupPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
   const selectedTheme = activeDemo.value === 'buttons' ? activeTheme.value : null
+  const previewTheme = selectedTheme ?? 'default'
 
   return (
-    <div className="space-y-3">
-      <div className="join join-vertical sm:join-horizontal">
-        {['default', 'night', 'coffee'].map(theme => (
-          <ThemeController
-            key={theme}
-            type="radio"
-            name="theme-buttons"
-            value={theme}
-            checked={selectedTheme === theme}
-            onChange={() => {
-              activeDemo.value = 'buttons'
-              activeTheme.value = theme as ThemePresetName
-            }}
-            className="btn theme-controller join-item"
-            aria-label={theme}
-          />
-        ))}
-      </div>
-      <div className="text-sm text-base-content/70">
-        当前 controller 值：{selectedTheme ?? '未激活'}
-      </div>
-    </div>
+    <ThemeController.Provider
+      data-testid="theme-buttons-scope"
+      theme={previewTheme}
+      className="w-full max-w-xl rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-sm transition-colors"
+      render={runtime => (
+        <div className="space-y-3">
+          <div className="join join-vertical sm:join-horizontal">
+            {['default', 'night', 'coffee'].map(theme => (
+              <ThemeController
+                key={theme}
+                data-testid={`theme-button-${theme}`}
+                type="radio"
+                name="theme-buttons"
+                value={theme}
+                checked={selectedTheme === theme}
+                onChange={() => {
+                  activeDemo.value = 'buttons'
+                  activeTheme.value = theme as ThemePresetName
+                }}
+                className="btn theme-controller join-item"
+                aria-label={theme}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-base-content/70">
+            <span>当前 controller 值：{selectedTheme ?? '未激活'}</span>
+            <span className="badge badge-outline">preview theme {runtime.theme}</span>
+          </div>
+        </div>
+      )}
+    />
   )
 }
 
@@ -945,6 +1796,10 @@ const ThemeControllerPage: FC = () => {
   const tabWorkbench = ref<TabMode>('preview')
   const tabPresets = ref<TabMode>('preview')
   const tabRender = ref<TabMode>('preview')
+  const tabComponents = ref<TabMode>('preview')
+  const tabNestedComponents = ref<TabMode>('preview')
+  const tabHashToken = ref<TabMode>('preview')
+  const tabCssVar = ref<TabMode>('preview')
   const tabToggle = ref<TabMode>('preview')
   const tabCheckbox = ref<TabMode>('preview')
   const tabSwap = ref<TabMode>('preview')
@@ -958,15 +1813,14 @@ const ThemeControllerPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Theme 主题系统</h1>
         <p className="text-sm mt-3 mb-3">
-          目录仍然叫 theme，公共导出名继续保持 <code>ThemeController</code>，但它现在不再只是一个
-          CSS-only 的输入控件。 这一版把 Rue Theme 扩成了一个轻量主题系统：默认导出依旧兼容原有
-          controller，用来接住 daisyUI 主题切换模式；同时新增
-          <code>Provider</code>、<code>getDesignToken</code>、<code>useToken</code> 和暗色 /
-          紧凑算法，让主题可以局部作用、组合派生、按场景覆盖。
+          目录仍然叫 theme，公共导出名继续保持 <code>ThemeController</code>。它既使用 daisyUI
+          theme-controller 的输入模式，也提供轻量主题配置能力：
+          <code>Provider</code> / <code>ConfigProvider</code>、<code>theme.useToken</code>、
+          <code>getDesignToken</code> 和暗色 / 紧凑算法可以一起用于局部作用域、组合派生和场景覆盖。
         </p>
         <p className="text-sm mt-3 mb-3">
-          这套 API 参考了成熟主题系统的组织方式，但视觉仍然保留 Rue
-          当前偏轻盈、偏实验的气质：你可以把它当成一个局部主题岛生成器，而不是整站强耦合配置中心。
+          API 组织保持轻量，视觉仍然使用 Rue 当前偏轻盈、偏实验的气质：它更适合生成局部主题岛，
+          而不是把整站配置强耦合到单一入口。
         </p>
 
         <ExampleBlock
@@ -993,6 +1847,38 @@ const ThemeControllerPage: FC = () => {
           code={buildProviderRenderCode()}
         />
 
+        <ExampleBlock
+          title="Component tokens"
+          summary="组件级 token 默认只覆盖当前组件，selector 可接入现成 daisyUI/Rue class。"
+          tab={tabComponents}
+          preview={() => <ThemeComponentTokensPreview />}
+          code={buildComponentTokensCode()}
+        />
+
+        <ExampleBlock
+          title="Nested component theme"
+          summary="局部主题可以继续嵌套，子 Provider 默认继承父 token 和组件 token，再覆盖自己的局部配置。"
+          tab={tabNestedComponents}
+          preview={() => <ThemeNestedComponentTokensPreview />}
+          code={buildNestedComponentTokenCode()}
+        />
+
+        <ExampleBlock
+          title="HashId and theme.useToken"
+          summary="主题配置容器、theme.useToken、hashId、hashed=false 都可以组合使用。"
+          tab={tabHashToken}
+          preview={() => <ThemeHashTokenPreview />}
+          code={buildHashTokenCode()}
+        />
+
+        <ExampleBlock
+          title="CSS variables extraction"
+          summary="支持 cssVar.key、prefix 和 zeroRuntime，配合 extractStyle 预先抽出根变量和组件级变量。"
+          tab={tabCssVar}
+          preview={() => <ThemeCssVarExtractionPreview />}
+          code={buildCssVarExtractionCode()}
+        />
+
         <div className="not-prose mt-12 grid gap-6 rounded-[2rem] border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200/60 p-6 shadow-sm lg:grid-cols-2">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
@@ -1000,10 +1886,10 @@ const ThemeControllerPage: FC = () => {
             </div>
             <h2 className="mt-3 mb-2 text-xl font-semibold">完整的输入模式矩阵</h2>
             <p className="m-0 text-sm opacity-70">
-              下面这些示例保留了原来的 toggle、checkbox、swap、radio 四种 controller
-              写法，并额外补了按钮组模式，方便把 ThemeController 直接嵌进现有表单和筛选 UI。 由于
+              下面这些示例保持了基础的 toggle、checkbox、swap、radio 四种 controller
+              写法，并额外补了按钮组模式，方便把 ThemeController 直接嵌进当前表单和筛选 UI。 由于
               daisyUI 的 theme-controller 天生就是页面级切换器，这里额外做了单一激活控制，避免多个
-              demo 同时 checked 时互相抢占全局主题。
+              示例 同时 checked 时互相抢占全局主题。
             </p>
           </div>
           <div className="rounded-[1.5rem] border border-base-300 bg-base-100/80 p-5">
@@ -1014,12 +1900,21 @@ const ThemeControllerPage: FC = () => {
               className="mt-3"
               lang="tsx"
               code={[
-                'const token = ThemeController.getDesignToken({',
-                "  theme: 'coffee',",
-                '  algorithm: ThemeController.compactAlgorithm,',
-                '})',
+                "import { ThemeController, theme } from '@rue-js/design'",
                 '',
-                "const runtime = ThemeController.useToken({ theme: 'coffee' })",
+                'export default function ThemeQuickUseDemo() {',
+                '  const token = ThemeController.getDesignToken({',
+                "    theme: 'coffee',",
+                '    algorithm: ThemeController.compactAlgorithm,',
+                '  })',
+                "  const { runtime, hashId } = theme.useToken({ theme: 'coffee' })",
+                '',
+                '  return (',
+                '    <div className={hashId}>',
+                '      {runtime.theme} | {token.colors.primary}',
+                '    </div>',
+                '  )',
+                '}',
               ].join('\n')}
             />
           </div>
@@ -1053,7 +1948,7 @@ const ThemeControllerPage: FC = () => {
 
         <ExampleBlock
           title="Theme Controller using a swap"
-          summary="保留了原来的 swap 形式，并补上更完整的视觉提示。"
+          summary="展示了基础的 swap 形式，并补上更完整的视觉提示。"
           tab={tabSwap}
           preview={() => (
             <ThemeSwapPreview

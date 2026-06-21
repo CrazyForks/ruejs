@@ -281,7 +281,7 @@ const createEnhancedTimelineItems = () => [
     content: (
       <MilestoneCard
         title="上线校验"
-        summary="在真实流量前补齐埋点、回滚预案和发布检查单。"
+        summary="在真实流量前补充埋点、回滚预案和发布检查单。"
         badge="Week 3"
         tone="success"
       />
@@ -377,7 +377,7 @@ const snapTimelineItems = [
     content: (
       <MilestoneCard
         title="灰度上线"
-        summary="保留观察窗口和回滚钩子，让上线是一个可管理过程。"
+        summary="展示观察窗口和回滚钩子，让上线是一个可管理过程。"
         badge="03"
         tone="success"
       />
@@ -465,7 +465,7 @@ const renderManualTimeline = ({
 const timelineApiRows: ApiRow[] = [
   {
     prop: 'children',
-    description: '保留原有手写布局能力，适合完全自定义每个 li 的内容结构',
+    description: '展示基础手写布局能力，适合完全自定义每个 li 的内容结构',
     type: 'any',
     defaultValue: '-',
   },
@@ -483,7 +483,7 @@ const timelineApiRows: ApiRow[] = [
   },
   {
     prop: 'direction',
-    description: '时间线方向，保留 Rue 现有命名',
+    description: '时间线方向，使用 Rue 当前命名',
     type: 'horizontal | vertical',
     defaultValue: 'horizontal',
   },
@@ -501,7 +501,7 @@ const timelineApiRows: ApiRow[] = [
   },
   {
     prop: 'orientation',
-    description: 'direction 的别名，方便按常见业务组件的迁移写法',
+    description: 'direction 的别名，方便按常见业务组件的接入写法',
     type: 'horizontal | vertical',
     defaultValue: '-',
   },
@@ -570,7 +570,7 @@ const timelineItemApiRows: ApiRow[] = [
   },
   {
     prop: 'end',
-    description: '直接传入 end 段结构，适合沿用 Rue 原有的精细布局模式',
+    description: '直接传入 end 段结构，适合使用 Rue 基础的精细布局模式',
     type: 'TimelineItemPart',
     defaultValue: '-',
   },
@@ -588,7 +588,7 @@ const timelineItemApiRows: ApiRow[] = [
   },
   {
     prop: 'label',
-    description: 'title 的兼容别名，可用于迁移旧心智',
+    description: 'title 的别名，可用于衔接基础心智',
     type: 'any',
     defaultValue: '-',
   },
@@ -618,13 +618,13 @@ const timelineItemApiRows: ApiRow[] = [
   },
   {
     prop: 'position',
-    description: 'placement 的兼容别名，支持 left、right、start、end',
+    description: 'placement 的别名，支持 left、right、start、end',
     type: 'left | right | start | end',
     defaultValue: '-',
   },
   {
     prop: 'start',
-    description: '直接传入 start 段结构，适合保留旧 demo 的写法',
+    description: '直接传入 start 段结构，适合整合基础示例 的写法',
     type: 'TimelineItemPart',
     defaultValue: '-',
   },
@@ -865,7 +865,7 @@ const items = [
         <div className="badge badge-success badge-soft badge-sm">03</div>
         <div className="font-medium leading-5">灰度上线</div>
         <div className="text-xs leading-5 opacity-70">
-          保留观察窗口和回滚钩子，让上线是一个可管理过程。
+          保持观察窗口和回滚钩子，让上线是一个可管理过程。
         </div>
       </div>
     ),
@@ -901,8 +901,8 @@ const TimelineDemo: FC = () => {
         <h1>Timeline 时间线</h1>
         <p className="text-sm mt-3 mb-3">
           Timeline 用于按时间顺序串起一组事件、阶段或发布动作。Rue 现在同时支持手写 children
-          布局和更贴近业务组件心智的 items 数据 API；旧页里的 demo
-          标题与排列也继续保留，避免增强时把历史示例吞掉。
+          布局和更贴近业务组件心智的 items 数据 API；项目页面里的示例
+          标题与排列也展示，避免增强时把基础示例吞掉。
         </p>
 
         <div className="not-prose grid gap-4 md:grid-cols-3 my-6 lg:my-8">
@@ -924,7 +924,7 @@ const TimelineDemo: FC = () => {
             <div className="badge badge-warning badge-soft badge-sm">视觉控制</div>
             <div className="mt-3 font-medium">color、snapIcon、compact</div>
             <p className="mt-2 mb-0 text-sm leading-6 opacity-70">
-              在不改 Rue 现有视觉基调的前提下，把状态色、图标吸附和紧凑排布一起补齐。
+              在不改 Rue 当前视觉基调的前提下，把状态色、图标吸附和紧凑排布一起补充。
             </p>
           </div>
         </div>
@@ -932,13 +932,13 @@ const TimelineDemo: FC = () => {
         <div role="alert" className="alert alert-soft alert-info not-prose my-6">
           <span className="text-sm leading-6">
             连接线仍然由每个节点前后的 hr 负责；当你使用 items 时，组件会自动推断这些线条。手写
-            children 时，仍然建议显式保留 hr 以获得最稳定的布局。
+            children 时，仍然建议显式保持 hr 以获得最稳定的布局。
           </span>
         </div>
 
         <ExampleBlock
           title="Timeline 通过数据渲染（数组）"
-          summary="保留原有“外部数组 map 成 li”的用法，但示例内容更完整，适合从已有业务数据直接渲染。"
+          summary="展示基础“外部数组 map 成 li”的用法，但示例内容更完整，适合从现成业务数据直接渲染。"
           tab={tabArray}
           preview={() => (
             <div className="overflow-x-auto pb-2">
@@ -969,7 +969,7 @@ const TimelineDemo: FC = () => {
 
         <ExampleBlock
           title="Timeline 通过数据渲染（数组，组件内部）"
-          summary="如果你已经习惯 Rue 旧版的 start / middle / end 结构，现在仍然可以通过 items 直接交给组件内部渲染。"
+          summary="如果你已经习惯 Rue 基础的 start / middle / end 结构，现在仍然可以通过 items 直接交给组件内部渲染。"
           tab={tabArrayInternal}
           preview={() => (
             <div className="overflow-x-auto pb-2">
@@ -981,7 +981,7 @@ const TimelineDemo: FC = () => {
 
         <ExampleBlock
           title="reverse 与 pending"
-          summary="这是新增的数据 API 组合场景：mode 控制主内容侧，reverse 反转顺序，pending 追加等待节点。"
+          summary="通过数据 API 组合 mode、reverse 和 pending，控制内容侧、顺序和等待节点。"
           tab={tabDataApi}
           preview={() => (
             <Timeline
@@ -996,7 +996,7 @@ const TimelineDemo: FC = () => {
 
         <ExampleBlock
           title="两侧文字与图标"
-          summary="保留原始复合组件写法，适合时间标签与主内容天然分居两侧的场景。"
+          summary="展示基础复合组件写法，适合时间标签与主内容天然分居两侧的场景。"
           tab={tabBothSides}
           preview={() => renderManualTimeline({ orientation: 'horizontal' })}
           code={bothSidesCode}
@@ -1020,7 +1020,7 @@ const TimelineDemo: FC = () => {
 
         <ExampleBlock
           title="彩色线条"
-          summary="新增 color 支持会同步作用于默认圆点和连接线，让状态型时间线更清晰。"
+          summary="color 会同步作用于默认圆点和连接线，让状态型时间线更清晰。"
           tab={tabColorfulLines}
           preview={() => (
             <div className="overflow-x-auto pb-2">
@@ -1032,7 +1032,7 @@ const TimelineDemo: FC = () => {
 
         <ExampleBlock
           title="无图标"
-          summary="如果只想保留轨道和信息块，可以完全省略 middle 区域。"
+          summary="如果只想保持轨道和信息块，可以完全省略 middle 区域。"
           tab={tabNoIcons}
           preview={() => renderManualTimeline({ orientation: 'horizontal', noIcons: true })}
           code={noIconsCode}
@@ -1040,7 +1040,7 @@ const TimelineDemo: FC = () => {
 
         <ExampleBlock
           title="纵向：两侧文字与图标"
-          summary="纵向布局依旧适合记录里程碑、工单流转或调试过程。"
+          summary="纵向布局仍然适合记录里程碑、工单流转或调试过程。"
           tab={tabVBothSides}
           preview={() => renderManualTimeline({ orientation: 'vertical' })}
           code={verticalBothSidesCode}
@@ -1048,7 +1048,7 @@ const TimelineDemo: FC = () => {
 
         <ExampleBlock
           title="纵向：仅右侧"
-          summary="纵向时间线最常见的业务形态是只保留内容一侧，把主信息集中在右侧阅读。"
+          summary="纵向时间线最常见的业务形态是只保持内容一侧，把主信息集中在右侧阅读。"
           tab={tabVRightOnly}
           preview={() => renderManualTimeline({ orientation: 'vertical', bottomOnly: true })}
           code={verticalRightOnlyCode}
@@ -1094,13 +1094,13 @@ const TimelineDemo: FC = () => {
 
         <h2>增强能力</h2>
         <p className="text-sm opacity-80">
-          这一组集中放数据 API 的新增组合场景，例如 `reverse`、`pending`、`mode`
+          本节集中展示数据 API 的组合场景，例如 `reverse`、`pending`、`mode`
           等，更适合业务数据直接驱动。
         </p>
 
         <ExampleBlock
           title="reverse 与 pending"
-          summary="这是新增的数据 API 组合场景：mode 控制主内容侧，reverse 反转顺序，pending 追加等待节点。"
+          summary="通过数据 API 组合 mode、reverse 和 pending，控制内容侧、顺序和等待节点。"
           tab={tabDataApi}
           preview={() => (
             <Timeline

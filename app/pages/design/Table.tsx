@@ -402,7 +402,7 @@ const columnApiRows: ApiRow[] = [
     defaultValue: 'false',
   },
   { prop: 'children', description: '分组表头子列。', type: 'ColumnItem[]', defaultValue: '-' },
-  { prop: 'hidden', description: '隐藏列但保留配置。', type: 'boolean', defaultValue: 'false' },
+  { prop: 'hidden', description: '隐藏列但保持配置。', type: 'boolean', defaultValue: 'false' },
   {
     prop: 'onCell / onHeaderCell',
     description: '给单元格注入 className、style、colSpan、rowSpan 等属性。',
@@ -1562,19 +1562,19 @@ const TableDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Table 表格</h1>
         <p>
-          Rue Table 现在同时覆盖数据驱动表格和 daisyUI 风格的静态表格写法，保留 Rue
-          当前视觉风格，并补齐更完整的 排序、筛选、分页、选择、展开与分组表头能力。
+          Rue Table 现在同时覆盖数据驱动表格和 daisyUI 风格的静态表格写法，使用 Rue
+          当前视觉风格，并补充更完整的 排序、筛选、分页、选择、展开与分组表头能力。
         </p>
         <p>
-          可以先从基础用法进入，再根据场景查看筛选排序、选择模式、滚动布局与分组表头。静态样式写法仍然保留，可继续
+          可以先从基础用法进入，再根据场景查看筛选排序、选择模式、滚动布局与分组表头。静态样式写法仍然提供，可继续
           使用 <code>Table.Head</code>、<code>Table.Body</code> 等复合组件。
         </p>
 
         <h2>何时使用</h2>
         <ul>
           <li>需要展示结构化列表数据，并同时提供排序、筛选、分页等交互。</li>
-          <li>希望沿用 Rue / daisyUI 的表格视觉风格，但 API 更接近成熟数据表组件。</li>
-          <li>既有简单静态表格，也有复杂后台表格，想统一在一个组件里处理。</li>
+          <li>适合使用 Rue / daisyUI 的表格视觉风格，同时使用数据表式 API。</li>
+          <li>基础简单静态表格，也有复杂后台表格，想统一在一个组件里处理。</li>
         </ul>
 
         <ExampleBlock
@@ -1591,7 +1591,7 @@ const TableDemo: FC = () => {
 
         <ExampleBlock
           title="视觉风格与静态行态"
-          summary="保留原有视觉类 demo：背景、激活行、hover、zebra 与尺寸示例。"
+          summary="使用当前视觉类示例：背景、激活行、hover、zebra 与尺寸示例。"
           tab={tabVisual}
           preview={() => (
             <div className="grid gap-4 lg:grid-cols-2">
@@ -1765,7 +1765,7 @@ const TableDemo: FC = () => {
 
         <ExampleBlock
           title="多列排序（优先级组合）"
-          summary="补回多列优先级排序 demo，支持 { compare, multiple } 并按优先级组合排序。"
+          summary="补回多列优先级排序示例，支持 { compare, multiple } 并按优先级组合排序。"
           tab={tabMultipleSorter}
           preview={() => (
             <div className="space-y-4 rounded-box border border-base-300 bg-base-100 p-4">
@@ -1837,7 +1837,7 @@ const TableDemo: FC = () => {
 
         <ExampleBlock
           title="动态列显隐"
-          summary="把旧的隐藏列 demo 补回来，并用外部开关控制列可见性。"
+          summary="把基础的隐藏列示例 补回来，并用外部开关控制列可见性。"
           tab={tabColumnToggle}
           preview={() => (
             <div className="space-y-4 rounded-box border border-base-300 bg-base-100 p-4">
@@ -1867,7 +1867,7 @@ const TableDemo: FC = () => {
 
         <ExampleBlock
           title="选择模式"
-          summary="保留多选、单选、禁用项、部分禁用几类示例，并增加选择列表头与回调展示。"
+          summary="展示多选、单选、禁用项、部分禁用几类示例，并增加选择列表头与回调展示。"
           tab={tabSelection}
           preview={() => (
             <div className="grid gap-4 lg:grid-cols-2">
@@ -1969,7 +1969,7 @@ const TableDemo: FC = () => {
 
         <ExampleBlock
           title="滚动、标题、尾部与省略"
-          summary="保留滚动、title/footer、ellipsis 和滚动容器类 demo，并串成一个长表格布局场景。"
+          summary="展示滚动、title/footer、ellipsis 和滚动容器类示例，并串成一个长表格布局场景。"
           tab={tabLayout}
           preview={() => (
             <div className="rounded-box border border-base-300 bg-base-100 p-4">
@@ -1992,7 +1992,7 @@ const TableDemo: FC = () => {
 
         <ExampleBlock
           title="分组表头、隐藏列与单元格属性"
-          summary="新增分组表头，同时把隐藏列、单元格 className/style/操作列示例合并到这里。"
+          summary="分组表头示例同时覆盖隐藏列、单元格 className/style 和操作列。"
           tab={tabGrouped}
           preview={() => (
             <div className="space-y-4 rounded-box border border-base-300 bg-base-100 p-4">
@@ -2018,7 +2018,7 @@ const TableDemo: FC = () => {
 
         <ExampleBlock
           title="静态样式、Pinned Rows 与 Pinned Cols"
-          summary="原有静态样式 demo 仍然保留，适合不需要 columns/dataSource 时直接写结构。"
+          summary="基础静态样式示例 仍然提供，适合不需要 columns/dataSource 时直接写结构。"
           tab={tabStatic}
           preview={() => (
             <div className="grid gap-4 xl:grid-cols-2">
@@ -2082,7 +2082,7 @@ const TableDemo: FC = () => {
         />
 
         <h2 id="table-api">API</h2>
-        <p>当前页面只列出 Rue Table 本次增强后最常用的配置项，优先对应实际使用场景。</p>
+        <p>当前页面只列出 Rue Table 当前最常用的配置项，优先对应实际使用场景。</p>
 
         <h3>Table</h3>
         <ApiTable rows={tableApiRows} />
@@ -2100,7 +2100,7 @@ const TableDemo: FC = () => {
         <h3>数据驱动和静态结构怎么选？</h3>
         <p>
           需要排序、筛选、分页、选择、展开时优先使用 <code>columns + dataSource</code>
-          。只想快速输出结构化样式， 或需要完全手写表格结构时，继续使用复合组件写法即可。
+          。只想快速输出结构化样式， 或需要完全手写表格结构时，可以使用复合组件写法即可。
         </p>
 
         <h3>为什么筛选或排序后会回到第一页？</h3>

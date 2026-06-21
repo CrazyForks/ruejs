@@ -123,7 +123,7 @@ const collapseApiRows: ApiRow[] = [
   },
   {
     prop: 'tag',
-    description: '兼容旧写法的根标签切换',
+    description: '支持基础写法的根标签切换',
     type: "'div' | 'details'",
     defaultValue: "'div'",
   },
@@ -131,8 +131,8 @@ const collapseApiRows: ApiRow[] = [
 
 const collapseItemApiRows: ApiRow[] = [
   { prop: 'key', description: '面板唯一标识', type: 'string | number', defaultValue: '索引值' },
-  { prop: 'label', description: '标题内容，兼容 title 别名', type: 'any', defaultValue: '-' },
-  { prop: 'children', description: '面板内容，兼容 content 别名', type: 'any', defaultValue: '-' },
+  { prop: 'label', description: '标题内容，支持 title 别名', type: 'any', defaultValue: '-' },
+  { prop: 'children', description: '面板内容，支持 content 别名', type: 'any', defaultValue: '-' },
   { prop: 'description', description: '标题下方的说明文案', type: 'any', defaultValue: '-' },
   { prop: 'extra', description: '标题右侧附加区域，不触发展开', type: 'any', defaultValue: '-' },
   { prop: 'showArrow', description: '是否显示展开图标', type: 'boolean', defaultValue: '继承父级' },
@@ -174,13 +174,13 @@ const CollapseDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Collapse 折叠面板</h1>
         <p className="mt-3 mb-3 text-sm">
-          保留 Rue 原本基于 daisyUI 的视觉语言，并在此基础上补齐 `items`、accordion、
+          使用 Rue 基础基于 daisyUI 的视觉语言，并在此基础上补充 `items`、accordion、
           `activeKey`、`extra`、`description`、尺寸与图标位置等增强能力。
         </p>
 
-        <h2>增强 API</h2>
+        <h2>语义 API</h2>
         <p className="text-sm opacity-80">
-          优先面向 `items` 数据驱动用法，组织方式贴近常见业务组件，但保留 Rue 视觉风格。
+          优先面向 `items` 数据驱动用法，组织方式贴近常见业务组件，但使用 Rue 视觉风格。
         </p>
 
         <ExampleBlock
@@ -267,7 +267,7 @@ const CollapseDemo: FC = () => {
                   {
                     key: 'api',
                     label: 'API Delta',
-                    children: '列出新增属性、弃用写法与向后兼容策略。',
+                    children: '列出属性变化与使用策略。',
                   },
                   {
                     key: 'qa',
@@ -294,7 +294,7 @@ const CollapseDemo: FC = () => {
     {
       key: 'api',
       label: 'API Delta',
-      children: '列出新增属性、弃用写法与向后兼容策略。',
+      children: '列出属性变化与使用策略。',
     },
     {
       key: 'qa',
@@ -324,10 +324,10 @@ const CollapseDemo: FC = () => {
                 {
                   key: 'billing',
                   label: 'Billing Center',
-                  description: '当前模块仍在迁移，暂不开放编辑。',
+                  description: '当前模块仍在整理，暂不开放编辑。',
                   extra: <span className="badge badge-soft">Read only</span>,
                   disabled: true,
-                  children: '禁用项会保留信息展示，但不响应交互。',
+                  children: '禁用项会保持信息展示，但不响应交互。',
                 },
               ]}
             />
@@ -346,10 +346,10 @@ const CollapseDemo: FC = () => {
     {
       key: 'billing',
       label: 'Billing Center',
-      description: '当前模块仍在迁移，暂不开放编辑。',
+      description: '当前模块仍在整理，暂不开放编辑。',
       extra: <span className="badge badge-soft">Read only</span>,
       disabled: true,
-      children: '禁用项会保留信息展示，但不响应交互。',
+      children: '禁用项会保持信息展示，但不响应交互。',
     },
   ]}
 />`}
@@ -653,7 +653,7 @@ const CollapseDemo: FC = () => {
 
         <ExampleBlock
           title="Moving collapse icon to the start"
-          summary="通过 utility 类移动图标位置，并保留标题区重复点击切换能力。"
+          summary="通过 utility 类移动图标位置，并保持标题区重复点击切换能力。"
           tab={tabIconStart}
           preview={() => (
             <Collapse tabIndex={0} arrow className="bg-base-100 border border-base-300">

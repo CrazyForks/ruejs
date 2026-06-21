@@ -192,6 +192,21 @@ pub fn is_transition_group_component(el: &JSXElement) -> bool {
     }
 }
 
+pub fn is_transition_component(el: &JSXElement) -> bool {
+    match &el.opening.name {
+        JSXElementName::Ident(id) => id.sym.as_ref() == "Transition",
+        JSXElementName::JSXMemberExpr(expr) => expr.prop.sym.as_ref() == "Transition",
+        _ => false,
+    }
+}
+
+pub fn is_transition_raw_children_component(el: &JSXElement) -> bool {
+    if is_transition_group_component(el) {
+        return true;
+    }
+    is_transition_component(el)
+}
+
 fn is_static_literal_expr(e: &Expr) -> bool {
     let x = unwrap_expr(e);
     matches!(

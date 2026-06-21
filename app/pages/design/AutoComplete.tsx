@@ -294,7 +294,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'onSelect',
-    description: '确认选中建议项时触发，返回 option.value 和原始 option。',
+    description: '确认选中建议项时触发，返回 option.value 和基础 option。',
     type: '(value, option) => void',
     defaultValue: '-',
   },
@@ -330,7 +330,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'size / status / variant',
-    description: '沿用 Rue 输入体系的尺寸、警告/错误状态与视觉变体。',
+    description: '使用 Rue 输入体系的尺寸、警告/错误状态与视觉变体。',
     type: "AutoCompleteSize / 'warning' | 'error' / 'outlined' | 'filled' | 'ghost' | 'borderless' | 'underlined'",
     defaultValue: "- / - / 'outlined'",
   },
@@ -520,7 +520,7 @@ const GroupedAutoCompletePreview: FC = () => {
 
         <div className="grid gap-3">
           <div className="rounded-box border border-base-300 bg-base-100/80 p-4 text-sm text-base-content/70">
-            这里把分组查找体验折成 Rue 更轻的卡片面板：分组标题更克制，建议项仍保留描述与来源标记。
+            这里把分组查找体验折成 Rue 更轻的卡片面板：分组标题更克制，建议项仍保持描述与来源标记。
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             {['Runtime', 'Design', 'Docs'].map(section => (
@@ -595,7 +595,7 @@ const RemoteAutoCompletePreview: FC = () => {
             optionLabelProp="title"
             prefix={<SparkIcon />}
             placeholder="试试输入 route、render、mention..."
-            notFoundContent="没有命中建议，仍可保留原文本继续提交。"
+            notFoundContent="没有命中建议，仍可保持原文本继续提交。"
             onChange={text => {
               value.value = text
               if (!text.trim()) {
@@ -709,14 +709,14 @@ const AutoCompletePage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>AutoComplete 自动完成</h1>
         <p className="mt-3 mb-3 text-sm">
-          AutoComplete 用来辅助输入，而不是替代输入。这次补齐的是一个真正可用的 Rue
-          版本：基础建议、本地过滤、分组查找、受控 open、远程搜索、键盘
+          AutoComplete 用来辅助输入，而不是替代输入。组件提供 Rue
+          能力：基础建议、本地过滤、分组查找、受控 open、远程搜索、键盘
           backfill、状态/变体、allowClear，以及 popup 的语义化样式扩展。
         </p>
 
         <PreviewBlock
           title="基础用法"
-          summary="最轻的输入辅助：保留自由输入，建议项只负责帮助补全，不接管最终内容。"
+          summary="最轻的输入辅助：保持自由输入，建议项只负责帮助补全，不接管最终内容。"
           tab={basicTab}
           code={basicCode}
           preview={BasicAutoCompletePreview}
@@ -740,7 +740,7 @@ const AutoCompletePage: FC = () => {
 
         <PreviewBlock
           title="状态、变体与清空按钮"
-          summary="沿用 Rue 当前 input 的状态和视觉体系，让 AutoComplete 能和现有表单保持一致。"
+          summary="使用 Rue 当前 input 的状态和视觉体系，让 AutoComplete 能和当前表单保持一致。"
           tab={variantTab}
           code={variantCode}
           preview={VariantAutoCompletePreview}

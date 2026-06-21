@@ -1,7 +1,7 @@
 /*
 Tour 组件概述
 - 提供接近成熟组件库的分步引导能力，覆盖 target 高亮、遮罩、定位、受控/非受控步进与自定义底部操作区。
-- 视觉上延续 Rue 现有的 card / badge / btn 语言，不直接照搬 ant-design，而是保留更轻的层次与更强的场景感。
+- 视觉上延续 Rue 现有的 card / badge / btn 语言，不直接照搬特定组件库，而是保留更轻的层次与更强的场景感。
 - 实现保持单文件内聚，方便后续继续补强 semantic classNames/styles、交互细节与设计页示例。
 */
 import type { FC } from '@rue-js/rue'

@@ -243,7 +243,7 @@ const TextRotateDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Text Rotate 文本轮播</h1>
         <p className="text-sm mt-3 mb-3">
-          Text Rotate 继续专注于轮播结构本身：保留 Rue 当前的视觉和 daisyUI 的 text-rotate class
+          Text Rotate 继续专注于轮播结构本身：使用 Rue 当前的视觉和 daisyUI 的 text-rotate class
           用法。
         </p>
 
@@ -382,7 +382,7 @@ const TextRotateDemo: FC = () => {
 
         <h2>API</h2>
         <p className="text-sm opacity-80">
-          Text Rotate 现在只保留和轮播结构直接相关的 API；排版语义统一由 Typography 组件承担。
+          Text Rotate 现在只保持和轮播结构直接相关的 API；排版语义统一由 Typography 组件承担。
         </p>
         <div className="not-prose mt-4 grid gap-4 md:grid-cols-2">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
@@ -402,14 +402,14 @@ const TextRotateDemo: FC = () => {
 
         <h3 className="mt-8">TextRotate</h3>
         <p className="text-sm opacity-70">
-          根组件负责维持 daisyUI 的 text-rotate 结构，同时决定走原始 children 还是数据驱动的 items
+          根组件负责维持 daisyUI 的 text-rotate 结构，同时决定走基础 children 还是数据驱动的 items
           模式。
         </p>
         <ApiTable rows={rootApiRows} />
 
         <h3>TextRotateItem</h3>
         <p className="text-sm opacity-70">
-          items 数组中的单项既可以是普通文本，也可以升级成带链接和语义修饰的轮播项。
+          items 数组中的单项既可以是普通文本，也可以组织成带链接和语义修饰的轮播项。
         </p>
         <ApiTable rows={itemApiRows} />
       </div>

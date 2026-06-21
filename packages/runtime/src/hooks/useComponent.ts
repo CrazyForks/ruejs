@@ -31,6 +31,17 @@ const RUE_SSR_PENDING_ASYNC_COMPONENT_KEY = '__rue_ssr_pending_async_component__
 /** 异步组件加载函数，支持直接返回组件或动态 import 的 default 导出。 */
 export type AsyncComponentLoader<P = any> = () => Promise<{ default: FC<P> } | FC<P>>
 
+type HydrationElementIterator = (cb: (el: Element) => void | false) => void
+
+/** 异步组件懒水合策略。调用 hydrate 后，Rue 才会激活客户端异步组件。 */
+export type HydrationStrategy = (
+  hydrate: () => void | Promise<unknown> | null | undefined,
+  forEachElement: HydrationElementIterator,
+) => (() => void) | void
+
+/** 创建懒水合策略的工厂函数类型。 */
+export type HydrationStrategyFactory<T = void> = (options?: T) => HydrationStrategy
+
 /** 定义异步组件时的完整选项。 */
 export interface AsyncComponentOptions<P = any> {
   /** 实际的动态加载函数。 */
@@ -47,6 +58,8 @@ export interface AsyncComponentOptions<P = any> {
   suspensible?: boolean
   /** 加载失败处理器，可调用 retry 或 fail 控制后续流程。 */
   onError?: (error: Error, retry: () => void, fail: () => void, attempts: number) => any
+  /** 客户端懒水合策略；服务端渲染时仍会立即加载组件。 */
+  hydrate?: HydrationStrategy
 }
 
 /** useComponent 的兼容选项，支持新旧 loading/error 命名。 */
@@ -67,6 +80,320 @@ export interface UseComponentOptions<_P = any> {
   suspensible?: boolean
   /** 加载失败处理器，可调用 retry 或 fail 控制后续流程。 */
   onError?: (error: Error, retry: () => void, fail: () => void, attempts: number) => any
+  /** 客户端懒水合策略；服务端渲染时仍会立即加载组件。 */
+  hydrate?: HydrationStrategy
+}
+
+const requestIdle: Window['requestIdleCallback'] =
+  (globalThis as any).requestIdleCallback ?? ((cb: IdleRequestCallback) => setTimeout(cb, 1) as any)
+
+const cancelIdle: Window['cancelIdleCallback'] =
+  (globalThis as any).cancelIdleCallback ?? ((id: number) => clearTimeout(id))
+
+const isDomElement = (value: unknown): value is Element =>
+  !!value && typeof value === 'object' && (value as any).nodeType === 1
+
+const getElementWindow = (el: Element): (Window & typeof globalThis) | undefined =>
+  el.ownerDocument?.defaultView ?? (typeof window !== 'undefined' ? window : undefined)
+
+type HydrationRect = {
+  top: number
+  left: number
+  bottom: number
+  right: number
+  width: number
+  height: number
+}
+
+const getRectSize = (rect: HydrationRect) => ({
+  width: rect.width,
+  height: rect.height,
+})
+
+const parseRootMarginValue = (value: string, rootWidth: number) => {
+  const parsed = Number.parseFloat(value)
+  if (!Number.isFinite(parsed)) {
+    return 0
+  }
+
+  return value.endsWith('%') ? (parsed / 100) * rootWidth : parsed
+}
+
+const parseRootMargin = (rootMargin: string | undefined, rootWidth: number) => {
+  const tokens = (rootMargin || '0px').trim().split(/\s+/).filter(Boolean)
+  const [top = '0px', right = top, bottom = top, left = right] = tokens
+
+  return {
+    top: parseRootMarginValue(top, rootWidth),
+    right: parseRootMarginValue(right, rootWidth),
+    bottom: parseRootMarginValue(bottom, rootWidth),
+    left: parseRootMarginValue(left, rootWidth),
+  }
+}
+
+const elementIsVisibleInViewport = (el: Element, options?: IntersectionObserverInit) => {
+  if (typeof el.getBoundingClientRect !== 'function') {
+    return false
+  }
+
+  const win = getElementWindow(el)
+  if (!win) {
+    return false
+  }
+
+  const targetRect = el.getBoundingClientRect()
+  const { width: targetWidth, height: targetHeight } = getRectSize(targetRect)
+  if (targetWidth <= 0 || targetHeight <= 0) {
+    return false
+  }
+
+  const root = options?.root
+  const rootRect: HydrationRect = isDomElement(root)
+    ? root.getBoundingClientRect()
+    : {
+        top: 0,
+        left: 0,
+        bottom: win.innerHeight,
+        right: win.innerWidth,
+        width: win.innerWidth,
+        height: win.innerHeight,
+      }
+  const { width: rootWidth } = getRectSize(rootRect)
+  const margin = parseRootMargin(options?.rootMargin, rootWidth)
+
+  return (
+    targetRect.top < rootRect.bottom + margin.bottom &&
+    targetRect.bottom > rootRect.top - margin.top &&
+    targetRect.left < rootRect.right + margin.right &&
+    targetRect.right > rootRect.left - margin.left
+  )
+}
+
+/** 在浏览器空闲时触发水合，默认最多等待 10 秒。 */
+export const hydrateOnIdle =
+  (timeout = 10000): HydrationStrategy =>
+  hydrate => {
+    const id = requestIdle(
+      () => {
+        hydrate()
+      },
+      { timeout },
+    )
+
+    return () => {
+      cancelIdle(id)
+    }
+  }
+
+/** 当异步组件根元素进入视口时触发水合。 */
+export const hydrateOnVisible = (options?: IntersectionObserverInit): HydrationStrategy => {
+  return (hydrate, forEachElement) => {
+    const Observer =
+      (typeof window !== 'undefined' ? window.IntersectionObserver : undefined) ??
+      (globalThis as any).IntersectionObserver
+
+    if (typeof Observer !== 'function') {
+      hydrate()
+      return
+    }
+
+    let hydrated = false
+    let active = true
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+    const observedElements = new Set<Element>()
+    const fallbackWindows = new Set<Window & typeof globalThis>()
+
+    const observeCurrentElements = () => {
+      if (!active || hydrated) {
+        return false
+      }
+
+      let found = false
+      forEachElement(el => {
+        if (!isDomElement(el)) {
+          return
+        }
+
+        found = true
+        const win = getElementWindow(el)
+        if (win && !fallbackWindows.has(win)) {
+          fallbackWindows.add(win)
+          win.addEventListener('scroll', observeCurrentElements, {
+            capture: true,
+            passive: true,
+          })
+          win.addEventListener('resize', observeCurrentElements)
+        }
+
+        if (elementIsVisibleInViewport(el, options)) {
+          triggerHydrate()
+          return false
+        }
+
+        if (!observedElements.has(el)) {
+          observedElements.add(el)
+          observer.observe(el)
+        }
+        return undefined
+      })
+
+      return found
+    }
+
+    const cleanup = () => {
+      active = false
+      if (retryTimer) {
+        clearTimeout(retryTimer)
+        retryTimer = null
+      }
+      observer.disconnect()
+      fallbackWindows.forEach(win => {
+        win.removeEventListener('scroll', observeCurrentElements, { capture: true } as any)
+        win.removeEventListener('resize', observeCurrentElements)
+      })
+      fallbackWindows.clear()
+      observedElements.clear()
+    }
+
+    const triggerHydrate = () => {
+      if (!active || hydrated) {
+        return
+      }
+
+      hydrated = true
+      cleanup()
+      hydrate()
+    }
+
+    const observer = new Observer((entries: IntersectionObserverEntry[]) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) {
+          continue
+        }
+        triggerHydrate()
+        break
+      }
+    }, options)
+
+    if (!observeCurrentElements()) {
+      queueMicrotask(() => {
+        observeCurrentElements()
+      })
+      retryTimer = setTimeout(() => {
+        retryTimer = null
+        if (!observeCurrentElements() && observedElements.size === 0) {
+          triggerHydrate()
+        }
+      }, 0)
+    }
+
+    return cleanup
+  }
+}
+
+/** 当指定 media query 命中时触发水合。 */
+export const hydrateOnMediaQuery =
+  (query: string): HydrationStrategy =>
+  hydrate => {
+    const matchMedia =
+      (typeof window !== 'undefined' ? window.matchMedia : undefined) ??
+      (globalThis as any).matchMedia
+
+    if (typeof matchMedia !== 'function' || !query) {
+      hydrate()
+      return
+    }
+
+    const mediaQueryList = matchMedia.call(
+      typeof window !== 'undefined' ? window : globalThis,
+      query,
+    ) as MediaQueryList
+
+    if (mediaQueryList.matches) {
+      hydrate()
+      return
+    }
+
+    let cleanup = () => {}
+    const onChange = () => {
+      if (!mediaQueryList.matches) {
+        return
+      }
+      cleanup()
+      hydrate()
+    }
+
+    if (typeof mediaQueryList.addEventListener === 'function') {
+      mediaQueryList.addEventListener('change', onChange)
+      cleanup = () => {
+        mediaQueryList.removeEventListener('change', onChange)
+      }
+    } else {
+      mediaQueryList.addListener(onChange)
+      cleanup = () => {
+        mediaQueryList.removeListener(onChange)
+      }
+    }
+
+    return cleanup
+  }
+
+const cloneEventForReplay = (event: Event) => {
+  const init = {
+    bubbles: event.bubbles,
+    cancelable: event.cancelable,
+    composed: event.composed,
+  }
+
+  try {
+    return new (event as any).constructor(event.type, event)
+  } catch {
+    return new Event(event.type, init)
+  }
+}
+
+/** 当用户触发指定事件时水合，并在水合完成后重放这次事件。 */
+export const hydrateOnInteraction = (
+  interactions: keyof HTMLElementEventMap | Array<keyof HTMLElementEventMap> = [],
+): HydrationStrategy => {
+  return (hydrate, forEachElement) => {
+    const eventNames = Array.isArray(interactions) ? interactions : [interactions]
+    if (eventNames.length === 0) {
+      return
+    }
+
+    let hydrated = false
+    let cleanup = () => {}
+    const onInteraction = (event: Event) => {
+      if (hydrated) {
+        return
+      }
+      hydrated = true
+      cleanup()
+      Promise.resolve(hydrate()).finally(() => {
+        const target = event.target
+        if (target && typeof target.dispatchEvent === 'function') {
+          target.dispatchEvent(cloneEventForReplay(event))
+        }
+      })
+    }
+
+    cleanup = () => {
+      forEachElement(el => {
+        for (const eventName of eventNames) {
+          el.removeEventListener(eventName, onInteraction)
+        }
+      })
+    }
+
+    forEachElement(el => {
+      for (const eventName of eventNames) {
+        el.addEventListener(eventName, onInteraction, { once: true })
+      }
+    })
+
+    return cleanup
+  }
 }
 
 const isAsyncComponentOptions = <P = any>(
@@ -94,6 +421,7 @@ const normalizeUseComponentSource = <P = any>(
     timeout: resolvedOptions?.timeout ?? Number.POSITIVE_INFINITY,
     suspensible: resolvedOptions?.suspensible !== false,
     onError: resolvedOptions?.onError,
+    hydrate: resolvedOptions?.hydrate,
   }
 }
 
@@ -115,6 +443,65 @@ const registerServerPendingDependency = (thenable: Promise<unknown> | null | und
 const isServerRendering = () => {
   const serverRenderingCount = (globalThis as Record<string, unknown>)[SERVER_RENDERING_FLAG]
   return typeof serverRenderingCount === 'number' && serverRenderingCount > 0
+}
+
+const collectChildNodes = (node: any): unknown[] => {
+  if (!node) {
+    return []
+  }
+  if (node.childNodes && typeof node.childNodes.length === 'number') {
+    return Array.from(node.childNodes)
+  }
+  if (node.children && typeof node.children.length === 'number') {
+    return Array.from(node.children)
+  }
+  if (Array.isArray(node.children)) {
+    return node.children
+  }
+  return []
+}
+
+const forEachHydrationElement = (
+  ctx: { container: unknown; anchorEl: unknown },
+  cb: (el: Element) => void | false,
+) => {
+  let visited = false
+  const visit = (node: unknown): void | false => {
+    if (node === ctx.anchorEl) {
+      return
+    }
+    if (isDomElement(node)) {
+      visited = true
+      return cb(node)
+    }
+    for (const child of collectChildNodes(node)) {
+      if (visit(child) === false) {
+        return false
+      }
+    }
+  }
+
+  for (const child of collectChildNodes(ctx.container)) {
+    if (visit(child) === false) {
+      return
+    }
+  }
+
+  if (!visited && isDomElement(ctx.container)) {
+    cb(ctx.container)
+  }
+}
+
+const clearHydrationStrategyCleanups = (slot: any) => {
+  const cleanups = slot?.hydrationCleanups as Set<() => void> | undefined
+  if (!cleanups?.size) {
+    return
+  }
+
+  for (const cleanup of Array.from(cleanups)) {
+    cleanup()
+  }
+  cleanups.clear()
 }
 
 /** 异步组件加载 Hook
@@ -315,6 +702,8 @@ export function useComponent<P = any>(
         timeout: normalized.timeout,
         suspensible: normalized.suspensible,
         onError: normalized.onError,
+        hydrate: normalized.hydrate,
+        hydrationCleanups: new Set<() => void>(),
         promise: null as Promise<unknown> | null,
         delayTimer: null as ReturnType<typeof setTimeout> | null,
         timeoutTimer: null as ReturnType<typeof setTimeout> | null,
@@ -336,9 +725,19 @@ export function useComponent<P = any>(
       loadingVisible,
     } = slot as any
 
-    if (!(slot as any).started) {
+    const startOnce = () => {
+      if ((slot as any).started) {
+        return (slot as any).promise as Promise<unknown> | null
+      }
+
       ;(slot as any).started = true
-      start()
+      clearHydrationStrategyCleanups(slot)
+      return start()
+    }
+
+    const shouldStartImmediately = !(slot as any).hydrate || isServerRendering()
+    if (shouldStartImmediately) {
+      startOnce()
     }
 
     // 为每个 Hook 实例创建独立的容器、单锚点与 props 信号，
@@ -360,6 +759,7 @@ export function useComponent<P = any>(
         pendingSuspenseCheck: false,
         disposed: false,
         effect: null as { dispose?: () => void } | null,
+        hydrationCleanup: null as (() => void) | null,
         dispose: () => {},
       }
 
@@ -434,7 +834,10 @@ export function useComponent<P = any>(
               ...curProps,
               key: mountKey,
             })
-          } else if (hasCustomLoading && loadingVisible.get()) {
+          } else if (
+            hasCustomLoading &&
+            (((slot as any).hydrate && !(slot as any).started) || loadingVisible.get())
+          ) {
             if (suspensible && (slot as any).promise) {
               registerSuspenseDependency((slot as any).promise)
             }
@@ -468,6 +871,8 @@ export function useComponent<P = any>(
 
         ctx.effect?.dispose?.()
         ctx.effect = null
+        ctx.hydrationCleanup?.()
+        ctx.hydrationCleanup = null
       }
 
       const startRenderEffect = () =>
@@ -492,6 +897,55 @@ export function useComponent<P = any>(
       return ctx
     }
 
+    const registerHydrationStrategy = (ctx: ReturnType<typeof createRenderContext>) => {
+      const strategy = (slot as any).hydrate as HydrationStrategy | undefined
+      if (!strategy || (slot as any).started || component.get() || err.get()) {
+        return
+      }
+      if (ctx.hydrationCleanup) {
+        return
+      }
+
+      let startedDuringSetup = false
+      const hydrate = () => {
+        startedDuringSetup = true
+        return startOnce()
+      }
+
+      let rawCleanup: (() => void) | void
+      try {
+        rawCleanup = strategy(hydrate, cb => {
+          forEachHydrationElement(ctx, cb)
+        })
+      } catch (error: any) {
+        appRue.handleError(error, null)
+        startOnce()
+        return
+      }
+
+      if (typeof rawCleanup !== 'function') {
+        return
+      }
+
+      let active = true
+      const cleanup = () => {
+        if (!active) {
+          return
+        }
+        active = false
+        ;((slot as any).hydrationCleanups as Set<() => void>).delete(cleanup)
+        rawCleanup()
+      }
+
+      if (startedDuringSetup || (slot as any).started) {
+        cleanup()
+        return
+      }
+
+      ctx.hydrationCleanup = cleanup
+      ;((slot as any).hydrationCleanups as Set<() => void>).add(cleanup)
+    }
+
     const ctxHolder = useSetup(() => ({ current: createRenderContext(props) })) as {
       current: ReturnType<typeof createRenderContext>
     }
@@ -499,6 +953,10 @@ export function useComponent<P = any>(
       ctxHolder.current = createRenderContext(props)
     }
     const ctx = ctxHolder.current
+
+    if (!shouldStartImmediately) {
+      registerHydrationStrategy(ctx)
+    }
 
     onBeforeUnmount(() => {
       ctx.dispose()

@@ -139,7 +139,7 @@ const StackPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Stack 堆叠容器</h1>
         <p className="text-sm mt-3 mb-3">
-          Stack 保留 Rue 当前的 stack 视觉风格，同时把 API 补成更清晰的语义层。除了原有的
+          Stack 使用 Rue 当前的 stack 视觉风格，同时把 API 补成更清晰的语义层。除了基础的
           <code>vertical</code> 和 <code>horizontal</code>，现在还支持 <code>placement</code>{' '}
           组合定位，以及
           <code>reverse</code> 反向层级。
@@ -149,12 +149,12 @@ const StackPage: FC = () => {
         <ul>
           <li>需要把多张卡片、图片、文件封面或通知面板做成同一视觉堆叠。</li>
           <li>需要用一条属性快速切换堆叠朝向和落点，而不想反复记忆底层 class。</li>
-          <li>需要保留已有堆叠视觉，但希望额外控制最新项是否位于最上层。</li>
+          <li>需要保持当前堆叠视觉，但希望额外控制最新项是否位于最上层。</li>
         </ul>
 
         <ExampleBlock
           title="基础堆叠"
-          summary="保留原来的 3 div stack demo，作为最小可用写法。"
+          summary="展示 3 div stackDemo，作为最小可用写法。"
           tab={tabs.basic}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -182,7 +182,7 @@ const StackPage: FC = () => {
 
         <ExampleBlock
           title="图片堆叠"
-          summary="保留原来的 stacked images，用于相册封面或图库预览。"
+          summary="展示 stacked images，用于相册封面或图库预览。"
           tab={tabs.images}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -228,7 +228,7 @@ const StackPage: FC = () => {
 
         <ExampleBlock
           title="卡片堆叠"
-          summary="保留原来的 stacked cards，适合做 deck、ticket 或文件层。"
+          summary="展示 stacked cards，适合做 deck、ticket 或文件层。"
           tab={tabs.cards}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -262,7 +262,7 @@ const StackPage: FC = () => {
 
         <ExampleBlock
           title="对齐与 Placement"
-          summary="旧的 vertical / horizontal 继续可用；新增 placement 可以直接表达组合定位。"
+          summary="基础的 vertical / horizontal 继续可用；placement 可以直接表达组合定位。"
           tab={tabs.alignment}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -388,7 +388,7 @@ const StackPage: FC = () => {
 
         <ExampleBlock
           title="反向层级"
-          summary="reverse 适合把最新版本、最新消息或最新封面放在最上层。"
+          summary="reverse 适合把最当前本、最新消息或最新封面放在最上层。"
           tab={tabs.reverse}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -437,7 +437,7 @@ const StackPage: FC = () => {
 
         <ExampleBlock
           title="阴影层次"
-          summary="保留原来的 shadow 示例，适合强调卡片深度和层级关系。"
+          summary="展示 shadow 示例，适合强调卡片深度和层级关系。"
           tab={tabs.shadow}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -465,7 +465,7 @@ const StackPage: FC = () => {
 
         <ExampleBlock
           title="通知堆叠"
-          summary="保留原来的通知 demo，并结合 reverse 展示“最新一条在最上层”的常见用法。"
+          summary="展示通知示例，并结合 reverse 展示“最新一条在最上层”的常见用法。"
           tab={tabs.notifications}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -574,7 +574,7 @@ const StackPage: FC = () => {
         />
 
         <h2 id="stack-api">API</h2>
-        <p>当前页面展示的是 Stack 的完整可用 API，旧属性保留，新属性作为语义增强层补充进来。</p>
+        <p>当前页面展示的是 Stack 的完整可用 API，基础属性保持，新属性作为语义增强层补充进来。</p>
 
         <ApiTable rows={apiRows} />
 
@@ -608,7 +608,7 @@ const StackPage: FC = () => {
         <h3>已经有 vertical 和 horizontal，为什么还要加 placement？</h3>
         <p>
           <code>placement</code> 适合快速写组合定位，尤其是 <code>top-end</code>、
-          <code>bottom-start</code> 这类常见场景。 如果你已经在用旧 API，也可以继续沿用原来的{' '}
+          <code>bottom-start</code> 这类常见场景。 如果你已经在用API，也可以使用基础的{' '}
           <code>vertical</code> 和 <code>horizontal</code>。
         </p>
 

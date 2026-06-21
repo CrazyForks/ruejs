@@ -77,23 +77,17 @@
   - [指南 - 为模板 Refs 添加类型](/guide/guide/typescript/composition-api#typing-template-refs) <sup class="vt-badge ts" />
   - [指南 - 为组件模板 Refs 添加类型](/guide/guide/typescript/composition-api#typing-component-template-refs) <sup class="vt-badge ts" />
 
-## is {#is} @todo
+## is {#is}
 
-用于绑定[动态组件](/guide/guide/essentials/component-basics#dynamic-components)。
+用于在 [`<Component>`](/api/api/built-in-special-elements#component) 上选择要渲染的动态组件或元素。
 
-- **期望类型：** `string | Component`
+- **期望类型：** `string | Component | null`
 
 - **在原生元素上的使用**
 
-  当在原生 HTML 元素上使用 `is` 属性时，它将被解释为[自定义内置元素](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-customized-builtin-example)，这是一个原生 Web 平台功能。
+  当在普通原生 HTML 元素上使用 `is` 属性时，Rue 不会把它改写为动态组件语义，也不会识别 `rue:` 前缀；它只会作为普通 HTML 属性传递。原生[自定义内置元素](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-customized-builtin-example)的行为取决于浏览器支持和元素创建方式。
 
-  但是，在某些用例中，您可能需要 Rue 用 Rue 组件替换原生元素，如在[DOM 内模板解析注意事项](/guide/guide/essentials/component-basics#in-dom-template-parsing-caveats)中所述。您可以在 `is` 属性的值前加上 `rue:` 前缀，以便 Rue 将该元素作为 Rue 组件而不是自定义内置元素渲染：
-
-  ```tsx
-  <table>
-    <tr is="rue:my-row-component"></tr>
-  </table>
-  ```
+  如果需要在组件和元素之间动态切换，请使用 `<Component is={...}>`，并传入组件对象、已注册组件名或原生标签名。
 
 - **另请参阅**
   - [内置特殊元素 - `<Component>`](/api/api/built-in-special-elements#component)

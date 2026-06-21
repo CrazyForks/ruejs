@@ -68,19 +68,3 @@
   ```
 
 - **另请参阅** [指南 - 渲染函数 - 创建渲染输出](/guide/guide/extras/render-function#creating-render-output)
-
-## mergeProps() {#mergeprops} @todo
-
-Rue 当前默认主入口未公开导出 `mergeProps()`，本页不再提供过时签名。
-
-## cloneVNode() {#clonevnode} @todo
-
-Rue 当前默认主入口未公开导出 `cloneVNode()`，本页不再提供过时签名。
-
-## resolveComponent() {#resolvecomponent} @todo
-
-Rue 当前默认主入口未公开导出 `resolveComponent()`。渲染函数中的组件请直接导入使用。
-
-## withModifiers() {#withmodifiers} @todo
-
-Rue 当前默认主入口未公开导出 `withModifiers()`，本页不再提供过时签名。

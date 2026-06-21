@@ -59,7 +59,7 @@ afterEach(() => {
 })
 
 describe('Transfer', () => {
-  it('moves selected source items in uncontrolled mode and emits antd-like callbacks', async () => {
+  it('moves selected source items in uncontrolled mode and emits compatible callbacks', async () => {
     const container = mountContainer()
     const handleChange = vi.fn()
     const handleSelectChange = vi.fn()

@@ -91,7 +91,7 @@ fn jsx_attrs_has_ident(attrs: &[JSXAttrOrSpread], name: &str) -> bool {
     })
 }
 
-fn remove_jsx_attr_ident(attrs: &mut Vec<JSXAttrOrSpread>, name: &str) {
+pub(crate) fn remove_jsx_attr_ident(attrs: &mut Vec<JSXAttrOrSpread>, name: &str) {
     attrs.retain(|attr| {
         !matches!(attr, JSXAttrOrSpread::JSXAttr(JSXAttr {
             name: JSXAttrName::Ident(id),
@@ -100,7 +100,7 @@ fn remove_jsx_attr_ident(attrs: &mut Vec<JSXAttrOrSpread>, name: &str) {
     });
 }
 
-fn extract_slot_name_expr(attrs: &[JSXAttrOrSpread]) -> Option<Expr> {
+pub(crate) fn extract_slot_name_expr(attrs: &[JSXAttrOrSpread]) -> Option<Expr> {
     for attr in attrs {
         let JSXAttrOrSpread::JSXAttr(attr) = attr else {
             continue;
@@ -172,10 +172,10 @@ fn is_function_literal_expr(expr: &Expr) -> bool {
     matches!(crate::utils::unwrap_expr(expr), Expr::Arrow(_) | Expr::Fn(_))
 }
 
-struct LoweredSlotValue {
-    stmts: Vec<Stmt>,
-    expr: Expr,
-    is_function: bool,
+pub(crate) struct LoweredSlotValue {
+    pub(crate) stmts: Vec<Stmt>,
+    pub(crate) expr: Expr,
+    pub(crate) is_function: bool,
 }
 
 fn undefined_expr() -> Expr {
@@ -278,7 +278,7 @@ fn lower_expr_slot_value(vt: &mut VaporTransform, expr: &Expr) -> Option<Lowered
     }
 }
 
-fn lower_slot_value(
+pub(crate) fn lower_slot_value(
     vt: &mut VaporTransform,
     children: &[JSXElementChild],
 ) -> Option<LoweredSlotValue> {
@@ -408,7 +408,10 @@ fn lower_named_slot_element(
     Some((slot_name_expr, lowered))
 }
 
-fn lower_named_slot_expr(vt: &mut VaporTransform, expr: &Expr) -> Option<(Expr, LoweredSlotValue)> {
+pub(crate) fn lower_named_slot_expr(
+    vt: &mut VaporTransform,
+    expr: &Expr,
+) -> Option<(Expr, LoweredSlotValue)> {
     match crate::utils::unwrap_expr(expr) {
         Expr::JSXElement(jsx_el) => lower_named_slot_element(vt, jsx_el),
         Expr::Cond(CondExpr { test, cons, alt, .. }) => {
@@ -475,7 +478,7 @@ fn lower_named_slot_expr(vt: &mut VaporTransform, expr: &Expr) -> Option<(Expr, 
     }
 }
 
-fn slot_prop_name(name_expr: Expr) -> PropName {
+pub(crate) fn slot_prop_name(name_expr: Expr) -> PropName {
     match crate::utils::unwrap_expr(&name_expr) {
         Expr::Lit(Lit::Str(str_lit)) => PropName::Str(str_lit.clone()),
         _ => PropName::Computed(ComputedPropName { span: DUMMY_SP, expr: Box::new(name_expr) }),
@@ -794,6 +797,19 @@ fn build_transition_group_children_expr(
     }))
 }
 
+fn wrap_transition_child_factory(expr: Expr) -> Expr {
+    Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(expr))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    })
+}
+
 /// 处理 JSX 组件元素：
 /// - 在父节点下插入占位注释（start/end）
 /// - 若组件存在内联 children，将其改写为 children 属性传入一个原生 DocumentFragment，
@@ -805,7 +821,7 @@ fn build_transition_group_children_expr(
 /// - 渲染：`watchEffect(()=>{ renderBetween(<Comp {...props} />, parent, start, end) })`
 ///
 /// 组件 children 默认会被改写为 `children` 属性传入；
-/// `TransitionGroup` 这类依赖原始 keyed JSX children 的组件在此处保留原始 children。
+/// `Transition` / `TransitionGroup` 这类依赖原始 keyed JSX children 的组件在此处保留原始 children。
 pub(crate) fn rewrite_component_children_to_props(
     vt: &mut VaporTransform,
     comp_el: &mut JSXElement,
@@ -813,16 +829,25 @@ pub(crate) fn rewrite_component_children_to_props(
     let mut child_stmts: Vec<Stmt> = vec![];
     let mut direct_render_expr: Option<Expr> = None;
 
-    let is_transition_group = crate::utils::is_transition_group_component(comp_el);
+    let is_transition = crate::utils::is_transition_component(comp_el);
+    let needs_raw_transition_children = crate::utils::is_transition_raw_children_component(comp_el);
 
-    if !comp_el.children.is_empty() && is_transition_group {
-        // TransitionGroup 需要直接看原始 keyed children 做过渡编排；
+    if !comp_el.children.is_empty() && needs_raw_transition_children {
+        // Transition/TransitionGroup 需要直接看原始 keyed children 做过渡编排；
         // 因此这里只把 children 整体表达式塞进 prop，不走普通 slot bag lowering。
         if let Some(children_expr) = build_transition_group_children_expr(vt, &comp_el.children) {
+            let (children_prop_name, children_expr) = if is_transition {
+                ("__rueTransitionChildFactory", wrap_transition_child_factory(children_expr))
+            } else {
+                ("children", children_expr)
+            };
             let mut new_attrs = comp_el.opening.attrs.clone();
             new_attrs.push(JSXAttrOrSpread::JSXAttr(JSXAttr {
                 span: DUMMY_SP,
-                name: JSXAttrName::Ident(IdentName { span: DUMMY_SP, sym: Atom::from("children") }),
+                name: JSXAttrName::Ident(IdentName {
+                    span: DUMMY_SP,
+                    sym: Atom::from(children_prop_name),
+                }),
                 value: Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
                     span: DUMMY_SP,
                     expr: JSXExpr::Expr(Box::new(children_expr)),

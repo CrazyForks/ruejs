@@ -1,7 +1,7 @@
 /*
 TreeSelect 组件概述
-- 目标：提供接近 antd TreeSelect 的核心能力，包括树数据源、单选/多选/勾选、搜索、异步加载、展开控制与标签回填。
-- 视觉：保持 Rue 现有 daisyUI 语义类体系，用 input / badge / border / base 色阶拼出更贴近设计站的质感，而不是照搬 antd。
+- 目标：提供树选择组件的核心能力，包括树数据源、单选/多选/勾选、搜索、异步加载、展开控制与标签回填。
+- 视觉：保持 Rue 现有 daisyUI 语义类体系，用 input / badge / border / base 色阶拼出更贴近设计站的质感，而不是照搬特定组件库。
 - 策略：受控/非受控、简单数据模式、showCheckedStrategy 与语义化样式扩展都收敛在一个文件内，便于后续继续增强而不拆碎行为路径。
 */
 import type { FC } from '@rue-js/rue'

@@ -95,10 +95,10 @@ const capabilityCards = [
   },
   {
     title: 'items 数据驱动',
-    desc: 'items 支持 key、avatar 配置对象、typing、bubbleClassName 与旧别名字段，适合消息流。',
+    desc: 'items 支持 key、avatar 配置对象、typing、bubbleClassName 与别名字段，适合消息流。',
   },
   {
-    title: '复合组件保留',
+    title: '复合组件保持',
     desc: 'Chat.Bubble、Chat.Header、Chat.Footer、Chat.Image 仍然存在。',
   },
   {
@@ -198,7 +198,7 @@ const semanticMessageCode = toCode([
   '    avatarSrc="https://img.daisyui.com/images/profile/demo/batperson@192.webp"',
   '    author="You"',
   '    timestamp="09:29"',
-  '    message="把旧 demo 也整理进新的 API 页面里。"',
+  '    message="把基础示例 也整理进新的 API 页面里。"',
   '    color="primary"',
   '    footer={<span className="opacity-60">已发送</span>}',
   '  />',
@@ -252,7 +252,7 @@ const semanticItemsCode = toCode([
   '    },',
   '    author: "Rue Agent",',
   '    timestamp: "09:32",',
-  '    message: "我保留了原有 demo，只把结构收敛进更清晰的 API。",',
+  '    message: "我把基础示例，只把结构收敛进更清晰的 API。",',
   '    footer: <span className="opacity-60">Preview ready</span>,',
   '  },',
   '  {',
@@ -261,7 +261,7 @@ const semanticItemsCode = toCode([
   '    avatarSrc: "https://img.daisyui.com/images/profile/demo/batperson@192.webp",',
   '    author: "You",',
   '    timestamp: "09:33",',
-  '    message: "别删旧场景，把新 API 讲清楚。",',
+  '    message: "展示基础场景，把新 API 讲清楚。",',
   '    color: "primary",',
   '    bubbleClassName: "shadow-sm",',
   '    footer: <span className="opacity-60">Seen</span>,',
@@ -460,7 +460,7 @@ const chatApiRows: ApiRow[] = [
   },
   {
     prop: 'children',
-    description: '保留旧版组合式用法，可继续手写 Chat.Bubble、Chat.Header 等子结构。',
+    description: '提供组合式用法，可继续手写 Chat.Bubble、Chat.Header 等子结构。',
     type: 'any',
     defaultValue: '-',
   },
@@ -641,7 +641,7 @@ const ChatDemo: FC = () => {
       avatarSrc: photos.rue,
       author: 'Rue Agent',
       timestamp: '09:32',
-      message: '我保留了原有 demo，只把结构收敛进更清晰的 API。',
+      message: '我把基础示例，只把结构收敛进更清晰的 API。',
       footer: 'Preview ready',
     },
     {
@@ -650,7 +650,7 @@ const ChatDemo: FC = () => {
       avatarSrc: photos.you,
       author: 'You',
       timestamp: '09:33',
-      message: '别删旧场景，把新 API 讲清楚。',
+      message: '展示基础场景，把新 API 讲清楚。',
       color: 'primary' as const,
       bubbleClassName: 'shadow-sm',
       footer: 'Seen',
@@ -672,7 +672,7 @@ const ChatDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Chat bubble 聊天气泡</h1>
         <p className="text-sm mt-3 mb-3">
-          Chat 现在不再只是对 daisyUI 静态结构的薄封装。你可以继续使用
+          Chat 现在不再只是对 daisyUI 静态结构的薄封装。你可以使用
           <code> Chat.Bubble </code>
           这一套复合子组件，也可以直接通过
           <code> message </code>、<code>author</code>、<code>timestamp</code>、<code>avatar</code>与{' '}
@@ -720,7 +720,7 @@ const ChatDemo: FC = () => {
                   avatarSrc={photos.you}
                   author="You"
                   timestamp="09:29"
-                  message="把旧 demo 也整理进新的 API 页面里。"
+                  message="把基础示例 也整理进新的 API 页面里。"
                   color="primary"
                   footer={<span className="opacity-60">已发送</span>}
                 />
@@ -816,7 +816,7 @@ const ChatDemo: FC = () => {
 
         <ExampleBlock
           title="Chat 通过数据渲染（数组）"
-          summary="保留手动 map 的写法，适合需要在单条消息附近插入额外逻辑时使用。"
+          summary="展示手动 map 的写法，适合需要在单条消息附近插入额外逻辑时使用。"
           tab={tabArray}
           preview={() => (
             <div className="card border border-base-300 bg-base-100 shadow-sm">
@@ -845,7 +845,7 @@ const ChatDemo: FC = () => {
 
         <ExampleBlock
           title="Chat 通过数据渲染（数组，组件内部）"
-          summary="保留组件内部 items 渲染方式，适合完整消息流由上层统一组织时使用。"
+          summary="展示组件内部 items 渲染方式，适合完整消息流由上层统一组织时使用。"
           tab={tabArrayInternal}
           preview={() => (
             <div className="card border border-base-300 bg-base-100 shadow-sm">
@@ -859,7 +859,7 @@ const ChatDemo: FC = () => {
 
         <ExampleBlock
           title="Chat with image"
-          summary="保留头像消息列表场景，但用 Chat.Image 的 src 快捷写法减少样板代码。"
+          summary="展示头像消息列表场景，但用 Chat.Image 的 src 快捷写法减少样板代码。"
           tab={tabWithImage}
           preview={() => (
             <div className="card border border-base-300 bg-base-100 shadow-sm">
@@ -940,7 +940,7 @@ const ChatDemo: FC = () => {
 
         <ExampleBlock
           title="Chat Bubble with colors"
-          summary="保留所有气泡颜色场景，用来说明 color 仍然是最直接的视觉控制层。"
+          summary="展示所有气泡颜色场景，用来说明 color 仍然是最直接的视觉控制层。"
           tab={tabColors}
           preview={() => (
             <div className="card border border-base-300 bg-base-100 shadow-sm">

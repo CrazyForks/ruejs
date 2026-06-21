@@ -333,8 +333,8 @@ const MenuDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Menu 菜单</h1>
         <p className="text-sm mt-3 mb-3">
-          Menu 用于垂直或水平展示导航链接。Rue 现在同时支持经典静态结构，以及更接近成熟组件库的
-          `items / selectedKeys / openKeys / group / divider / extra` 增强 API。
+          Menu 用于垂直或水平展示导航链接。它同时支持组合静态结构，以及 `items / selectedKeys /
+          openKeys / group / divider / extra` 等数据驱动 API。
         </p>
 
         <div className="component-preview not-prose text-base-content my-6 lg:my-12">
@@ -481,7 +481,7 @@ const items = [
         </div>
         <div className="component-preview not-prose text-base-content my-6 lg:my-12">
           <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold">
-            # 推荐：组合式增强 API
+            # 推荐：组合式语义 API
           </h2>
           <p className="mb-3 text-sm text-base-content/70">
             如果你更喜欢手写 JSX 结构，可以直接使用 `Menu.SubMenu / Menu.ItemGroup / Menu.Divider`。
@@ -563,7 +563,7 @@ const openKeys = ref(['settings']);
           )}
         </div>
         <div className="my-8 rounded-box border border-base-300/60 bg-base-100 px-4 py-3 text-sm text-base-content/70 not-prose">
-          下面的示例全部保留 Rue 现有静态/原始结构写法，用于展示 daisyUI 风格能力与兼容性。
+          下面的示例全部使用 Rue 当前静态/基础结构写法，用于展示 daisyUI 风格能力与覆盖范围。
         </div>
         <div className="component-preview not-prose text-base-content my-6 lg:my-12">
           <h2 className="component-preview-title mt-2 mb-1 text-lg font-semibold"># 导航跳转</h2>

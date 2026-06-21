@@ -4,7 +4,7 @@
 
 此方法把 Rue 组件包装为原生[自定义元素](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements)类构造函数。
 
-当前实现是一个最小运行时包装器，适合把 Rue 组件注册到 `customElements` 并挂载到宿主元素或 shadow root 中。
+当前实现是一个运行时包装器，适合把 Rue 组件注册到 `customElements` 并挂载到宿主元素或 shadow root 中。
 
 - **类型**
 
@@ -47,11 +47,14 @@
   自定义元素实例的 props 目前通过两条路径传入：
   - 宿主属性会被读取并按 kebab-case -> camelCase 转成字符串 props。
   - 宿主实例上的 `props` 对象可用于传递非字符串值，例如 `el.props = { count: 1 }`。
+  - Rue 渲染自定义元素时，`props`、`__rue_slots` 以及对象 / 函数值会作为 DOM property 写入，适合传递复杂数据与 scoped slot 函数。
   - 更新后的值会被同步到同一个响应式 props 容器中，组件子树会按普通 Rue 响应式更新重新渲染，而不是整棵重挂载。
 
-  组件内部通过 `emitted(props)` 发出的事件，会在宿主元素上桥接为同名 `CustomEvent`。事件参数会按原顺序放到 `event.detail` 数组里，并以 `bubbles: true`、`composed: true` 调度。
+  组件内部通过 `useEmit(props)` 发出的事件，会在宿主元素上桥接为同名 `CustomEvent`。事件参数会按原顺序放到 `event.detail` 数组里，并以 `bubbles: true`、`composed: true` 调度。
 
-  在 `shadowRoot: true` 模式下，组件模板中的原生 `<Slot>` 会直接依赖浏览器的 slot 分发机制，从宿主 light DOM 投影内容。
+  在 `shadowRoot: true` 模式下，组件模板中的原生 `<slot>` 会直接依赖浏览器的 slot 分发机制，从宿主 light DOM 投影内容。
+
+  Rue 自定义元素也支持 Rue 的 `<Slot>` / `Template slot="name"` 协议。自定义元素由 Rue 父树渲染时，函数 children 和 `Template slot` 会被编译为 `__rue_slots` property，因此可跨自定义元素边界传递 scoped slot。若外层存在 `createContext()` Provider，内部组件可继续通过 `useContext()` 读取最近的 Provider 值。
 
   请注意，这些选项可以作为第二个参数传递，而不是作为组件本身的一部分传递：
 
@@ -102,7 +105,3 @@
 ## useShadowRoot() <sup class="vt-badge" data-text="3.5+"/> {#useshadowroot}
 
 返回当前 Rue 自定义元素的 shadow root；如果当前元素使用的是 light DOM 渲染，则返回 `null`。
-
-## this.$host <sup class="vt-badge" data-text="3.5+"/> {#this-host}
-
-当前默认入口尚未实现此 API。

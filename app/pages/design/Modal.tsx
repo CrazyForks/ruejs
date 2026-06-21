@@ -105,7 +105,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'actions',
-    description: '旧版动作区写法，会保留原有“自定义动作 + 默认关闭按钮”行为。',
+    description: '基础动作区写法，会展示基础“自定义动作 + 默认关闭按钮”行为。',
     type: 'any',
     defaultValue: '-',
   },
@@ -160,13 +160,13 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'forceRender / destroyOnHidden',
-    description: '控制关闭后是否保留内容挂载。',
+    description: '控制关闭后是否保持内容挂载。',
     type: 'boolean / boolean',
     defaultValue: 'false / true',
   },
   {
     prop: 'destroyOnClose / getContainer',
-    description: '兼容旧别名，并支持通过 Teleport 把弹层渲染到指定容器。',
+    description: '别名，并支持通过 Teleport 把弹层渲染到指定容器。',
     type: 'boolean / string | HTMLElement | (() => HTMLElement) | false',
     defaultValue: '- / false',
   },
@@ -317,7 +317,7 @@ const ActionsModalPreview: FC = () => {
           Review actions
         </Button>
         <p className="text-sm text-base-content/70">
-          可以继续使用 `actions` 兼容旧 demo，同时逐步迁移到新的 `footer` API。
+          可以使用 `actions` 支持基础示例，同时切换到新的 `footer` API。
         </p>
         <Modal
           open={actionsOpen.value}
@@ -371,7 +371,7 @@ const WideModalPreview: FC = () => {
           Open wide modal
         </Button>
         <p className="text-sm text-base-content/70">
-          通过 `className` 直接扩展 modal-box 宽度和排版，旧写法完全保留。
+          通过 `className` 直接扩展 modal-box 宽度和排版，基础写法完整提供。
         </p>
         <Modal
           open={wideOpen.value}
@@ -439,7 +439,7 @@ const AsyncModalPreview: FC = () => {
             setTimeout(() => {
               asyncLoading.value = false
               asyncOpen.value = false
-              asyncStatus.value = '发布完成，当前版本已经推送到 staging。'
+              asyncStatus.value = '发布完成，当前配置已经推送到 staging。'
             }, 1200)
           }}
         >
@@ -541,7 +541,7 @@ const ApiModalPreview: FC = () => {
       info: '这里是普通信息弹窗，默认只展示确认按钮。',
       success: '静态 success 会使用成功语义图标和确认按钮色彩。',
       warning: 'warning 适合提示潜在风险，但不一定阻断当前流程。',
-      error: 'error 适合展示失败状态，并保留用户可恢复的上下文。',
+      error: 'error 适合展示失败状态，并保持用户可恢复的上下文。',
     }
 
     Modal[type]({
@@ -584,7 +584,7 @@ const ApiModalPreview: FC = () => {
   const openRejectedConfirm = () => {
     Modal.confirm({
       title: 'Run preflight checks?',
-      content: '这个示例会在 0.7 秒后 reject，因此弹窗会保留，方便用户重试或取消。',
+      content: '这个示例会在 0.7 秒后 reject，因此弹窗会保持，方便用户重试或取消。',
       okText: '运行检查',
       cancelText: '取消',
       onOk: () => {
@@ -608,7 +608,7 @@ const ApiModalPreview: FC = () => {
       content: (
         <div className="grid gap-3 py-1 text-sm">
           <div className="rounded-box bg-base-200 p-3">
-            通过 <code>Modal.open</code> 可以直接使用通用入口，并继续传入 width、centered、
+            通过 <code>Modal.open</code> 可以直接使用通用入口，并可以传入 width、centered、
             footer、classNames 等 Modal 配置。
           </div>
           <div className="flex flex-wrap gap-2">
@@ -736,7 +736,7 @@ const KeepMountedModalPreview: FC = () => {
           Open draft modal
         </Button>
         <p className="text-sm text-base-content/70">
-          在文本框里输入内容，关闭后再次打开，未提交的草稿仍会保留。
+          在文本框里输入内容，关闭后再次打开，未提交的草稿仍会保持。
         </p>
         <Modal
           open={keepMountedOpen.value}
@@ -756,7 +756,7 @@ const KeepMountedModalPreview: FC = () => {
               defaultValue="This textarea keeps its DOM state after the modal is hidden."
             />
             <div className="alert alert-info text-sm">
-              这里禁用了遮罩点击和 ESC 关闭，只保留右上角关闭按钮，方便演示 `maskClosable` 与
+              这里禁用了遮罩点击和 ESC 关闭，只保持右上角关闭按钮，方便演示 `maskClosable` 与
               `keyboard`。
             </div>
           </div>
@@ -781,13 +781,13 @@ const ModalPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Modal 模态框</h1>
         <p className="text-sm mt-3 mb-3">
-          Modal 现在保持 Rue 自己的视觉风格，同时补齐了更完整的显隐控制、默认
+          Modal 现在保持 Rue 自己的视觉风格，同时提供了更完整的显隐控制、默认
           footer、异步确认、遮罩交互、挂载策略与 root/mask/wrapper 级别的语义化定制能力。
         </p>
 
         <ExampleBlock
           title="Controlled modal"
-          summary="保留原有受控用法：通过 `open` 和 `onClose` 管理显隐，默认 footer 会自动提供关闭按钮。"
+          summary="展示基础受控用法：通过 `open` 和 `onClose` 管理显隐，默认 footer 会自动提供关闭按钮。"
           tab={tabBasic}
           preview={ControlledModalPreview}
           code={`const basicOpen = ref(false)
@@ -839,7 +839,7 @@ const ModalPage: FC = () => {
 
         <ExampleBlock
           title="Modal with custom actions"
-          summary="旧版 `actions` 仍然可用，适合把自定义按钮组插到 footer 里，同时保留默认关闭按钮。"
+          summary="基础 `actions` 仍然可用，适合把自定义按钮组插到 footer 里，同时保持默认关闭按钮。"
           tab={tabActions}
           preview={ActionsModalPreview}
           code={`const actionsOpen = ref(false)
@@ -870,7 +870,7 @@ const ModalPage: FC = () => {
 
         <ExampleBlock
           title="Wide modal box"
-          summary="原有宽弹层示例保留，同时也可以配合 `width` 使用更偏语义化的尺寸写法。"
+          summary="基础宽弹层示例保持，同时也可以配合 `width` 使用更偏语义化的尺寸写法。"
           tab={tabWide}
           preview={WideModalPreview}
           code={`const wideOpen = ref(false)
@@ -1051,7 +1051,7 @@ Modal.destroyAll()`}
 
         <ExampleBlock
           title="Keep mounted content"
-          summary="需要在关闭后保留 DOM 状态时，可以开启 `forceRender` + `destroyOnHidden={false}`。"
+          summary="需要在关闭后保持 DOM 状态时，可以开启 `forceRender` + `destroyOnHidden={false}`。"
           tab={tabKeepMounted}
           preview={KeepMountedModalPreview}
           code={`<Modal
@@ -1072,7 +1072,7 @@ Modal.destroyAll()`}
       defaultValue="This textarea keeps its DOM state after the modal is hidden."
     />
     <div className="alert alert-info text-sm">
-      这里禁用了遮罩点击和 ESC 关闭，只保留右上角关闭按钮，方便演示 maskClosable 与 keyboard。
+      这里禁用了遮罩点击和 ESC 关闭，只保持右上角关闭按钮，方便演示 maskClosable 与 keyboard。
     </div>
   </div>
 </Modal>`}
@@ -1085,7 +1085,7 @@ Modal.destroyAll()`}
         <h2>FAQ</h2>
         <p>
           <strong>什么时候用 `actions`，什么时候用 `footer`？</strong>
-          如果你在迁移旧代码，直接继续用 `actions` 即可；新代码优先用 `footer`，它可以完全接管
+          如果你在接入项目代码，可以直接用 `actions` 即可；新代码优先用 `footer`，它可以完全接管
           footer，也可以用函数包装默认 footer。
         </p>
         <p>
@@ -1095,8 +1095,8 @@ Modal.destroyAll()`}
           <code>classNames</code>。
         </p>
         <p>
-          <strong>为什么保留 `destroyOnHidden` 默认关闭即卸载？</strong>
-          这是为了兼容 Rue 当前组件行为；当你确实需要保留 DOM 状态时，再显式开启
+          <strong>为什么保持 `destroyOnHidden` 默认关闭即卸载？</strong>
+          这是为了支持 Rue 当前组件行为；当你确实需要保持 DOM 状态时，再显式开启
           <code>forceRender</code> 与 <code>destroyOnHidden=&#123;false&#125;</code>。
         </p>
       </div>

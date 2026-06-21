@@ -126,7 +126,7 @@ const apiRows: ApiRow[] = [
   {
     prop: 'size',
     description:
-      '触发器尺寸，支持 Button 同款 xs / sm / md / lg / xl，并兼容 large / medium / small。',
+      '触发器尺寸，支持 Button 同款 xs / sm / md / lg / xl，并支持 large / medium / small。',
     type: `'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'large' | 'medium' | 'middle' | 'small'`,
     defaultValue: `'md'`,
   },
@@ -156,7 +156,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'destroyTooltipOnHide / destroyOnHidden',
-    description: '关闭后销毁弹层节点，兼容 ant 的旧别名与新属性名。',
+    description: '关闭后销毁弹层节点，支持 ant 的别名与新属性名。',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -446,7 +446,7 @@ const ColorPickerDesign: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>ColorPicker 颜色选择器</h1>
         <p>
-          Rue 的 ColorPicker 不照搬其他组件库的弹层视觉，但把核心能力补齐到足够实用：
+          Rue 的 ColorPicker 不照搬其他组件库的弹层视觉，但把核心能力补充到足够实用：
           受控与非受控、格式切换、透明度、预设色、自定义触发器和自定义面板都已经可以直接用。
         </p>
 
@@ -467,9 +467,9 @@ const ColorPickerDesign: FC = () => {
           </div>
           <div className="rounded-[1.4rem] border border-base-300 bg-gradient-to-br from-base-100 to-base-200/40 p-4 shadow-sm">
             <div className="text-sm font-medium text-base-content/55">面板重组</div>
-            <div className="mt-2 text-base font-semibold">保留默认内核，自由重组布局</div>
+            <div className="mt-2 text-base font-semibold">展示默认内核，自由重组布局</div>
             <p className="mt-2 mb-0 text-sm text-base-content/68">
-              可以继续用内建 Picker / Presets，再插入自己的说明和状态卡片。
+              可以用内建 Picker / Presets，再插入自己的说明和状态卡片。
             </p>
           </div>
         </div>
@@ -484,7 +484,7 @@ const ColorPickerDesign: FC = () => {
 
         <PreviewBlock
           title="尺寸"
-          summary="通过 size 调整触发器尺寸，支持 xs / sm / md / lg / xl，也兼容 small / middle / large 语义别名。"
+          summary="通过 size 调整触发器尺寸，支持 xs / sm / md / lg / xl，也支持 small / middle / large 语义别名。"
           tab={sizeTab}
           code={sizeCode}
           preview={SizePreview}
@@ -492,7 +492,7 @@ const ColorPickerDesign: FC = () => {
 
         <PreviewBlock
           title="格式切换与透明度"
-          summary="第一块保留 alpha 并监听格式切换；第二块关闭透明度，用更稳定的品牌色录入。"
+          summary="第一块保持 alpha 并监听格式切换；第二块关闭透明度，用更稳定的品牌色录入。"
           tab={formatTab}
           code={formatCode}
           preview={FormatAlphaPreview}

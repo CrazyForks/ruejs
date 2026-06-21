@@ -44,4 +44,31 @@ describe('Modal actual page', () => {
     )
     expect(document.body.querySelector('.modal-default-button')).not.toBeNull()
   })
+
+  it('compares normal and deferred Teleport targets that appear late', async () => {
+    const container = mountContainer()
+    render(<ModalExample />, container)
+
+    await waitForContent(() => {
+      expect(container.querySelector('#run-normal-teleport')).not.toBeNull()
+      expect(container.querySelector('#run-defer-teleport')).not.toBeNull()
+    })
+
+    await click(container.querySelector('#run-normal-teleport'))
+
+    await waitForContent(() => {
+      expect(document.querySelector('[id^="modal-normal-late-target-"]')).not.toBeNull()
+    })
+    expect(document.querySelector('[id^="modal-normal-late-target-"]')?.textContent).not.toContain(
+      'Normal payload',
+    )
+
+    await click(container.querySelector('#run-defer-teleport'))
+
+    await waitForContent(() => {
+      expect(document.querySelector('[id^="modal-defer-late-target-"]')?.textContent).toContain(
+        'Deferred payload',
+      )
+    })
+  })
 })

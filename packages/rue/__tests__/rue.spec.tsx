@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   type FC,
+  Transition,
   createContext,
   h,
   ref,
@@ -21,6 +22,10 @@ const flushRender = async () => {
   await Promise.resolve()
   await Promise.resolve()
   await new Promise(resolve => setTimeout(resolve, 0))
+}
+
+const callDone = (done: (() => void) | null) => {
+  done?.()
 }
 
 afterEach(() => {
@@ -179,5 +184,342 @@ describe('rue public package entry', () => {
     await flushRender()
 
     expect(container.querySelector('[data-testid="vapor-entry"]')?.textContent).toBe('beta')
+  })
+
+  it('runs keyed Transition switches in out-in mode', async () => {
+    const view = ref<'one' | 'two'>('one')
+    const events: string[] = []
+    let leaveDone: (() => void) | null = null
+    let enterDone: (() => void) | null = null
+
+    const readPanels = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('[data-testid="panel"]')).map(
+        panel => panel.textContent,
+      )
+
+    const App: FC = () => (
+      <Transition
+        mode="out-in"
+        css={false}
+        onEnter={(el, done) => {
+          events.push(`enter:${el.textContent}`)
+          if (el.textContent === 'two') enterDone = done
+          else done()
+        }}
+        onAfterEnter={el => {
+          events.push(`after-enter:${el.textContent}`)
+        }}
+        onLeave={(el, done) => {
+          events.push(`leave:${el.textContent}`)
+          leaveDone = done
+        }}
+        onAfterLeave={el => {
+          events.push(`after-leave:${el.textContent}`)
+        }}
+      >
+        <div key={view.value} data-testid="panel">
+          {view.value}
+        </div>
+      </Transition>
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    render(<App />, container)
+    await flushRender()
+
+    expect(events).toEqual(['enter:one', 'after-enter:one'])
+
+    view.value = 'two'
+    await flushRender()
+
+    expect(events).toEqual(['enter:one', 'after-enter:one', 'leave:one'])
+    expect(readPanels(container)).toEqual(['one'])
+    expect(enterDone).toBeNull()
+
+    callDone(leaveDone)
+    await flushRender()
+
+    expect(events).toEqual([
+      'enter:one',
+      'after-enter:one',
+      'leave:one',
+      'after-leave:one',
+      'enter:two',
+    ])
+    expect(readPanels(container)).toEqual(['two'])
+
+    callDone(enterDone)
+    await flushRender()
+
+    expect(events).toEqual([
+      'enter:one',
+      'after-enter:one',
+      'leave:one',
+      'after-leave:one',
+      'enter:two',
+      'after-enter:two',
+    ])
+  })
+
+  it('runs keyed Transition switches in in-out mode', async () => {
+    const view = ref<'one' | 'two'>('one')
+    const events: string[] = []
+    let enterDone: (() => void) | null = null
+    let leaveDone: (() => void) | null = null
+
+    const readPanels = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('[data-testid="panel"]')).map(
+        panel => panel.textContent,
+      )
+
+    const App: FC = () => (
+      <Transition
+        mode="in-out"
+        css={false}
+        onEnter={(el, done) => {
+          events.push(`enter:${el.textContent}`)
+          if (el.textContent === 'two') enterDone = done
+          else done()
+        }}
+        onAfterEnter={el => {
+          events.push(`after-enter:${el.textContent}`)
+        }}
+        onLeave={(el, done) => {
+          events.push(`leave:${el.textContent}`)
+          leaveDone = done
+        }}
+        onAfterLeave={el => {
+          events.push(`after-leave:${el.textContent}`)
+        }}
+      >
+        <div key={view.value} data-testid="panel">
+          {view.value}
+        </div>
+      </Transition>
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    render(<App />, container)
+    await flushRender()
+
+    expect(events).toEqual(['enter:one', 'after-enter:one'])
+
+    view.value = 'two'
+    await flushRender()
+
+    expect(events).toEqual(['enter:one', 'after-enter:one', 'enter:two'])
+    expect(readPanels(container)).toEqual(['two', 'one'])
+    expect(leaveDone).toBeNull()
+
+    callDone(enterDone)
+    await flushRender()
+
+    expect(events).toEqual([
+      'enter:one',
+      'after-enter:one',
+      'enter:two',
+      'after-enter:two',
+      'leave:one',
+    ])
+    expect(readPanels(container)).toEqual(['two', 'one'])
+
+    callDone(leaveDone)
+    await flushRender()
+
+    expect(events).toEqual([
+      'enter:one',
+      'after-enter:one',
+      'enter:two',
+      'after-enter:two',
+      'leave:one',
+      'after-leave:one',
+    ])
+    expect(readPanels(container)).toEqual(['two'])
+  })
+
+  it('patches same-key Transition children without running switch hooks again', async () => {
+    const identity = ref('stable')
+    const label = ref('one')
+    const events: string[] = []
+    let leaveDone: (() => void) | null = null
+
+    const App: FC = () => (
+      <Transition
+        mode="out-in"
+        css={false}
+        onEnter={(el, done) => {
+          events.push(`enter:${el.textContent}`)
+          done()
+        }}
+        onAfterEnter={el => {
+          events.push(`after-enter:${el.textContent}`)
+        }}
+        onLeave={(el, done) => {
+          events.push(`leave:${el.textContent}`)
+          leaveDone = done
+        }}
+      >
+        <div key={identity.value} data-testid="panel">
+          {label.value}
+        </div>
+      </Transition>
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    render(<App />, container)
+    await flushRender()
+
+    expect(events).toEqual(['enter:one', 'after-enter:one'])
+
+    label.value = 'two'
+    await flushRender()
+
+    expect(container.querySelector('[data-testid="panel"]')?.textContent).toBe('two')
+    expect(events).toEqual(['enter:one', 'after-enter:one'])
+    expect(leaveDone).toBeNull()
+  })
+
+  it('falls back to default Transition mode for unknown mode values', async () => {
+    const view = ref<'one' | 'two'>('one')
+    const events: string[] = []
+    let enterDone: (() => void) | null = null
+    let leaveDone: (() => void) | null = null
+
+    const readPanels = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('[data-testid="panel"]')).map(
+        panel => panel.textContent,
+      )
+
+    const App: FC = () => (
+      <Transition
+        mode={'sideways' as any}
+        css={false}
+        onEnter={(el, done) => {
+          events.push(`enter:${el.textContent}`)
+          if (el.textContent === 'two') enterDone = done
+          else done()
+        }}
+        onAfterEnter={el => {
+          events.push(`after-enter:${el.textContent}`)
+        }}
+        onLeave={(el, done) => {
+          events.push(`leave:${el.textContent}`)
+          leaveDone = done
+        }}
+        onAfterLeave={el => {
+          events.push(`after-leave:${el.textContent}`)
+        }}
+      >
+        <div key={view.value} data-testid="panel">
+          {view.value}
+        </div>
+      </Transition>
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    render(<App />, container)
+    await flushRender()
+
+    expect(events).toEqual(['enter:one', 'after-enter:one'])
+
+    view.value = 'two'
+    await flushRender()
+
+    expect(events).toEqual(['enter:one', 'after-enter:one', 'leave:one', 'enter:two'])
+    expect(readPanels(container)).toEqual(['two', 'one'])
+
+    callDone(enterDone)
+    await flushRender()
+
+    expect(events).toEqual([
+      'enter:one',
+      'after-enter:one',
+      'leave:one',
+      'enter:two',
+      'after-enter:two',
+    ])
+    expect(readPanels(container)).toEqual(['two', 'one'])
+
+    callDone(leaveDone)
+    await flushRender()
+
+    expect(events).toEqual([
+      'enter:one',
+      'after-enter:one',
+      'leave:one',
+      'enter:two',
+      'after-enter:two',
+      'after-leave:one',
+    ])
+    expect(readPanels(container)).toEqual(['two'])
+  })
+
+  it('keeps a leaving snapshot stable when a Transition child is hidden', async () => {
+    const shown = ref(true)
+    const label = ref('one')
+    const events: string[] = []
+    let leaveDone: (() => void) | null = null
+
+    const readPanels = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('[data-testid="panel"]')).map(
+        panel => panel.textContent,
+      )
+
+    const App: FC = () => (
+      <Transition
+        mode="out-in"
+        css={false}
+        onEnter={(el, done) => {
+          events.push(`enter:${el.textContent}`)
+          done()
+        }}
+        onAfterEnter={el => {
+          events.push(`after-enter:${el.textContent}`)
+        }}
+        onLeave={(el, done) => {
+          events.push(`leave:${el.textContent}`)
+          leaveDone = done
+        }}
+        onAfterLeave={el => {
+          events.push(`after-leave:${el.textContent}`)
+        }}
+      >
+        {shown.value && (
+          <div key="panel" data-testid="panel">
+            {label.value}
+          </div>
+        )}
+      </Transition>
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    render(<App />, container)
+    await flushRender()
+
+    expect(events).toEqual(['enter:one', 'after-enter:one'])
+    expect(readPanels(container)).toEqual(['one'])
+
+    shown.value = false
+    label.value = 'two'
+    await flushRender()
+
+    expect(events).toEqual(['enter:one', 'after-enter:one', 'leave:one'])
+    expect(readPanels(container)).toEqual(['one'])
+
+    callDone(leaveDone)
+    await flushRender()
+
+    expect(events).toEqual(['enter:one', 'after-enter:one', 'leave:one', 'after-leave:one'])
+    expect(readPanels(container)).toEqual([])
   })
 })

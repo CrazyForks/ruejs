@@ -166,7 +166,7 @@ const contentPanelsCode = String.raw`<Tabs
             </li>
             <li className="list-row">
               <div className="font-medium">16:20</div>
-              <div className="list-col-grow text-sm opacity-75">补齐埋点与告警配置。</div>
+              <div className="list-col-grow text-sm opacity-75">补充埋点与告警配置。</div>
             </li>
             <li className="list-row">
               <div className="font-medium">18:40</div>
@@ -377,7 +377,7 @@ const tabsApiRows: ApiRow[] = [
   },
   {
     prop: 'size',
-    description: '标签尺寸，兼容 xs 到 xl 以及 small / middle / large 别名。',
+    description: '标签尺寸，支持 xs 到 xl 以及 small / middle / large 别名。',
     type: 'TabsSize',
     defaultValue: "'md'",
   },
@@ -573,8 +573,8 @@ const TabsDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Tabs 选项卡</h1>
         <p className="text-sm mt-3 mb-3">
-          Tabs 现在除了保留 Rue 当前的 box / border / lift
-          视觉，还补齐了内容面板、默认激活项、额外操作区、居中、垂直摆放和 editable-card 等更完整的
+          Tabs 现在除了使用 Rue 当前的 box / border / lift
+          视觉，还提供了内容面板、默认激活项、额外操作区、居中、垂直摆放和 editable-card 等更完整的
           API。
         </p>
 
@@ -582,7 +582,7 @@ const TabsDemo: FC = () => {
         <ul>
           <li>需要在同一信息区域里切换多个视图、状态面板或设置分组时。</li>
           <li>
-            既想保留 daisyUI 的 box / border / lift
+            既想使用 daisyUI 的 box / border / lift
             视觉，又需要受控、垂直摆放、额外操作区或可编辑标签头时。
           </li>
         </ul>
@@ -758,7 +758,7 @@ const TabsDemo: FC = () => {
                           <li className="list-row">
                             <div className="font-medium">16:20</div>
                             <div className="list-col-grow text-sm opacity-75">
-                              补齐埋点与告警配置。
+                              补充埋点与告警配置。
                             </div>
                           </li>
                           <li className="list-row">
@@ -1124,7 +1124,7 @@ const TabsDemo: FC = () => {
               <code>activeKey + onChange</code> 适合和路由、筛选条件、外部状态统一联动。
             </div>
             <div>
-              <code>defaultActiveKey</code> 适合静态文档、局部 demo 或无需外部接管的轻交互场景。
+              <code>defaultActiveKey</code> 适合静态文档、局部示例 或无需外部接管的轻交互场景。
             </div>
             <div>
               复杂标签头优先用 <code>icon</code> + 文本 <code>label</code>{' '}
@@ -1159,9 +1159,9 @@ const TabsDemo: FC = () => {
 
         <h3>为什么复杂 label 建议拆成 icon 和文本？</h3>
         <p>
-          当前实现会给 <code>label</code> 包一层文本容器。为了避免复杂节点在运行时被串成
+          当前组件会给 <code>label</code> 包一层文本容器。为了避免复杂节点在运行时被串成
           <code>[object Object]</code>，推荐把徽标、点状状态这类前缀放到 <code>icon</code>
-          ，把主要文案保留在
+          ，把主要文案保持在
           <code>label</code>。
         </p>
       </div>

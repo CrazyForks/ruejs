@@ -67,13 +67,13 @@ const BlogPost: FC<BlogPostProps> = ({ title, likes = 0 }) => {
 
 这不仅记录了组件的接口，还会在使用组件时提供类型检查。我们将在本节后面讨论更多关于 [prop 验证](#prop-validation) 的细节。
 
-更多详情：[为组件 Props 添加类型](@todo) <sup class="vt-badge ts" />
+更多详情：[为组件 Props 添加类型](/guide/guide/typescript/composition-api#typing-component-props) <sup class="vt-badge ts" />
 
 ## Props 传递细节 {#prop-passing-details}
 
 ### Props 名称大小写 {#prop-name-casing}
 
-我们使用 camelCase 声明长 prop 名称，因为这可以避免在使用它们作为属性键时需要引号，并且允许我们在模板表达式中直接引用它们，因为它们是有效的 JavaScript 标识符：
+我们使用 camelCase 声明长 prop 名称，因为这可以避免在使用它们作为属性键时需要引号，并且允许我们在 TSX 表达式中直接引用它们，因为它们是有效的 JavaScript 标识符：
 
 ```tsx
 interface MyComponentProps {
@@ -93,14 +93,14 @@ function Parent() {
 }
 ```
 
-我们尽可能使用 [PascalCase 命名组件标签](/guide/guide/components/registration#component-name-casing)，因为它通过区分 Rue 组件和原生元素提高了模板的可读性。
+我们尽可能使用 [PascalCase 命名组件标签](/guide/guide/components/registration#component-name-casing)，因为它通过区分 Rue 组件和原生元素提高了 JSX 的可读性。
 
 ### 静态与动态 Props {#static-vs-dynamic-props}
 
 到目前为止，你已经看到 props 作为静态值传递，例如：
 
 ```tsx
-<BlogPost title="My journey with Vue" />
+<BlogPost title="My journey with Rue" />
 ```
 
 你也可以使用表达式动态赋值：
@@ -172,7 +172,7 @@ function Parent() {
 ```tsx
 const post = {
   id: 1,
-  title: 'My Journey with Vue',
+  title: 'My Journey with Rue',
 }
 ```
 
@@ -244,7 +244,7 @@ function MyComponent(props: MyComponentProps) {
 
 ### 改变 Object / Array Props {#mutating-object-array-props}
 
-当对象和数组作为 props 传递时，虽然子组件不能改变 prop 绑定，但它**可以**改变对象或数组的嵌套属性。这是因为 JavaScript 中的对象和数组是通过引用传递的，Vue 阻止这种改变是不合理的。
+当对象和数组作为 props 传递时，虽然子组件不能改变 prop 绑定，但它**可以**改变对象或数组的嵌套属性。这是因为 JavaScript 中的对象和数组是通过引用传递的，框架很难合理阻止这种改变。
 
 这种改变的主要缺点是它允许子组件以一种对父组件不明显的方式影响父组件状态，可能使未来的数据流更难推理。作为最佳实践，你应该避免这种改变，除非父组件和子组件在设计上是紧密耦合的。在大多数情况下，子组件应该 [触发事件](/guide/guide/components/events) 让父组件执行改变。
 

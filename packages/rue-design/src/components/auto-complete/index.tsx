@@ -1,7 +1,7 @@
 /*
 AutoComplete 组件概述
 - 面向“输入辅助”而不是“受限选择”，允许用户自由输入，同时在输入过程中提供分组建议、键盘导航与清空能力。
-- API 参考 ant-design AutoComplete 的核心心智，覆盖 options、受控 open、本地过滤、backfill、popupRender 与语义化 classNames/styles。
+- API 参考成熟输入建议组件的核心心智，覆盖 options、受控 open、本地过滤、backfill、popupRender 与语义化 classNames/styles。
 - 视觉上延续 Rue 当前 input 体系，不引入预转换文件头，交由编译器参与 TSX 优化。
 */
 import type { FC } from '@rue-js/rue'

@@ -247,7 +247,7 @@ const state = reactive({ count })
 console.log(state.count.value) // 0
 state.count.value = 1
 
-const books = reactive([ref('Vue 3 Guide')])
+const books = reactive([ref('Rue Guide')])
 console.log(books[0].value)
 
 const map = reactive(new Map([['count', ref(0)]]))

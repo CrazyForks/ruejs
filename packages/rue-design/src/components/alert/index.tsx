@@ -1,7 +1,7 @@
 /*
 Alert 组件概述
 - 在 daisyUI 的 alert 视觉基础上，补齐更完整的 Rue 语义 API。
-- 兼容旧版 variant/outline/dash/soft 写法，并吸收 antd 常用的 type、message、description、closable 等能力。
+- 兼容旧版 variant/outline/dash/soft 写法，并补齐常用的 type、message、description、closable 等能力。
 - 组件默认保持轻量结构；只有在出现标题、描述、图标、操作区时才渲染增强布局。
 */
 import type { FC } from '@rue-js/rue'

@@ -1,8 +1,8 @@
 /*
 Descriptions 组件概述
-- 对齐 antd Descriptions 的核心心智，支持 items 与 Descriptions.Item 两套写法。
+- 支持描述列表组件的核心心智，兼容 items 与 Descriptions.Item 两套写法。
 - 能力覆盖标题区、边框模式、纵向布局、响应式列数、span/fill 与语义化样式扩展。
-- 视觉保持 Rue 当前偏柔和的卡片式信息呈现，不直接复刻 antd 的表格外观。
+- 视觉保持 Rue 当前偏柔和的卡片式信息呈现，不直接复刻特定组件库的表格外观。
 */
 import type { FC } from '@rue-js/rue'
 import {

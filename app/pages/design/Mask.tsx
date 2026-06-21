@@ -86,7 +86,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'tone',
-    description: '给非图片宿主补齐背景与前景色，方便做头像牌、数字徽记和内容卡片',
+    description: '给非图片宿主补充背景与前景色，方便做头像牌、数字徽记和内容卡片',
     type: `'base' | 'neutral' | 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'`,
     defaultValue: '-',
   },
@@ -193,13 +193,13 @@ const MaskPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Mask 形状裁切</h1>
         <p className="text-sm mt-3 mb-3">
-          Mask 现在不只是原始 class 的薄封装。它保留 Rue
+          Mask 现在不只是基础 class 的薄封装。它使用 Rue
           的轻量视觉路线，同时补上尺寸、fit、tone、ring 与交互态这些更适合实际页面搭建的语义化能力。
         </p>
 
         <ExampleBlock
           title="Core shapes"
-          summary="保留原有基础形状示例，并统一到更整洁的卡片布局里。"
+          summary="展示基础形状示例，并统一到更整洁的卡片布局里。"
           tab={tabShapes}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -230,7 +230,7 @@ const MaskPage: FC = () => {
 
         <ExampleBlock
           title="Star variants"
-          summary="保留星形与粗星形示例，增加 ring 和 hover，适合头像墙或精选内容。"
+          summary="展示星形与粗星形示例，增加 ring 和 hover，适合头像墙或精选内容。"
           tab={tabStars}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -256,7 +256,7 @@ const MaskPage: FC = () => {
 
         <ExampleBlock
           title="Triangle variants"
-          summary="保留四向三角形示例，并通过统一尺寸让方向差异更好观察。"
+          summary="展示四向三角形示例，并通过统一尺寸让方向差异更好观察。"
           tab={tabTriangles}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -283,7 +283,7 @@ const MaskPage: FC = () => {
 
         <ExampleBlock
           title="Half modifiers and arbitrary host"
-          summary="保留 half modifier 与任意宿主演示，并补上 start / end 语义别名。"
+          summary="展示 half modifier 与任意宿主演示，并补上 start / end 语义别名。"
           tab={tabHalf}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -345,7 +345,7 @@ const MaskPage: FC = () => {
 
         <ExampleBlock
           title="Semantic sizes"
-          summary="新增尺寸别名，常见头像和封面尺寸不再需要每次都手写宽高 class。"
+          summary="尺寸别名适合常见头像和封面场景，不必每次都手写宽高 class。"
           tab={tabSize}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -372,7 +372,7 @@ const MaskPage: FC = () => {
 
         <ExampleBlock
           title="Fit modes"
-          summary="新增 fit 语义，宽图、竖图和封面图都能直接得到明确的裁切策略。"
+          summary="fit 语义让宽图、竖图和封面图都能直接得到明确的裁切策略。"
           tab={tabFit}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -405,7 +405,7 @@ const MaskPage: FC = () => {
 
         <ExampleBlock
           title="Tone surfaces"
-          summary="新增 tone、ring、shadow 组合后，Mask 也能承担数字徽记、内容牌和亮点卡片的职责。"
+          summary="tone、ring、shadow 组合后，Mask 也能承担数字徽记、内容牌和亮点卡片的职责。"
           tab={tabTone}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">

@@ -57,6 +57,11 @@ h(Transition, {
      * 默认值：false
      */
     appear?: boolean
+    /**
+     * 切换 keyed 子节点时的进入/离开编排模式。
+     * 默认值：'default'，进入和离开同时执行。
+     */
+    mode?: 'default' | 'out-in' | 'in-out'
 
     /**
      * 用于自定义过渡类的属性。
@@ -103,7 +108,7 @@ h(Transition, {
 
 - **详情**
 
-  当前实现不支持 `mode`；当子节点发生切换时，不会额外编排 `out-in` / `in-out` 这样的时序。
+  `mode` 用于 keyed 子节点切换：默认同时执行进入和离开；`out-in` 会等待旧节点完成离开后再插入新节点；`in-out` 会等待新节点完成进入后再移除旧节点。
 
 - **示例**
 
@@ -293,8 +298,8 @@ h(Transition, {
      */
     disabled?: boolean
     /**
-     * 当前类型中已保留该属性，但运行时尚未使用它。
-     * 传入 `defer` 目前不会改变目标解析时机。
+     * 将目标解析延迟到当前挂载 / 更新完成后的微任务。
+     * 适合目标元素在 Teleport 后面才渲染的场景。
      */
     defer?: boolean
   }
@@ -305,6 +310,8 @@ h(Transition, {
   实际使用时应始终提供 `to`。如果目标未解析成功，当前实现不会回退到原位置渲染，而是不会输出传送内容。
 
   当 `disabled` 为 `true` 时，内容会直接渲染在组件当前位置；切回 `false` 后，同一段内容会被移动到目标容器。
+
+  当 `defer` 为 `true` 时，`to` 目标会延迟到当前挂载 / 更新完成后的微任务再解析。目标仍然需要在同一轮更新内出现；如果微任务执行时仍未解析成功，则不会输出传送内容。
 
 - **示例**
 
@@ -324,6 +331,15 @@ h(Transition, {
   </Teleport>
   ```
 
+  延迟解析目标：
+
+  ```tsx
+  <Teleport to="#later-target" defer>
+    <div>这个节点会在目标挂载后传送过去。</div>
+  </Teleport>
+  <div id="later-target" />
+  ```
+
 - **另请参阅** [指南 - Teleport](/guide/guide/built-ins/teleport)
 
 ## `<Suspense>` <sup class="vt-badge experimental" /> {#suspense}
@@ -336,6 +352,7 @@ h(Transition, {
   interface SuspenseProps {
     fallback?: unknown
     timeout?: string | number
+    suspensible?: boolean
     onPending?: () => void
     onResolve?: () => void
     onFallback?: () => void
@@ -357,7 +374,9 @@ h(Transition, {
 
   `timeout` 控制的是：当组件已经显示过一次内容、随后又进入 pending 时，要等待多久才从旧内容切换到 `fallback`。`timeout={0}` 表示立即显示 `fallback`。
 
-  当前实现的 `<Suspense>` 本身**不支持** `suspensible` prop；如果你需要让异步组件退出 Suspense 控制，应在 `useComponent()` 上设置 `suspensible: false`。
+  在嵌套 Suspense 中，内层边界默认自己处理捕获到的异步依赖。给内层边界传 `suspensible` 后，它会把 pending 状态继续登记到父 Suspense 边界，由父级 fallback 接管整段嵌套内容。
+
+  如果你需要让某个异步组件完全退出 Suspense 控制，应在 `useComponent()` 上设置 `suspensible: false`。
 
 - **示例**
 

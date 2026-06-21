@@ -86,7 +86,7 @@ const shortcutExamples = [
   },
   {
     label: '全局搜索',
-    description: '保留 Rue 的键帽视觉，同时让组合表达更直接。',
+    description: '使用 Rue 的键帽视觉，同时让组合表达更直接。',
     keys: ['⌘', '⇧', 'F'],
   },
   {
@@ -187,7 +187,7 @@ const KbdDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Kbd 键盘提示</h1>
         <p className="text-sm mt-3 mb-3">
-          Kbd 继续保留 Rue 当前的键帽视觉风格，并补上更适合实际场景的组合键 API。现在既可以继续写
+          Kbd 可以使用 Rue 当前的键帽视觉风格，并补上更适合实际场景的组合键 API。现在既可以写
           <code>{` <Kbd>K</Kbd> `}</code>，也可以直接用 <code>items</code> 或 <code>Kbd.Group</code>
           组织快捷键序列。
         </p>
@@ -195,8 +195,8 @@ const KbdDemo: FC = () => {
         <h2>何时使用</h2>
         <ul>
           <li>需要展示单个按键、组合键或快捷键列表。</li>
-          <li>希望继续使用 Rue 当前键帽视觉，但让组合表达更语义化、更容易复用。</li>
-          <li>需要在设计页里同时保留静态示例和更贴近真实产品的快捷键场景。</li>
+          <li>希望可以使用 Rue 当前键帽视觉，但让组合表达更语义化、更容易复用。</li>
+          <li>需要在设计页里同时保持静态示例和更贴近真实产品的快捷键场景。</li>
         </ul>
 
         <ExampleBlock
@@ -314,7 +314,7 @@ const KbdDemo: FC = () => {
         <ExampleBlock
           key="sizes"
           title="尺寸体系"
-          summary="保留原有 size demo，并额外补上更顺手的语义尺寸别名。"
+          summary="展示基础 sizeDemo，并额外补上更顺手的语义尺寸别名。"
           tab={tabSizes}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -360,7 +360,7 @@ const KbdDemo: FC = () => {
         <ExampleBlock
           key="inline"
           title="文本内嵌"
-          summary="保留原有 in text demo，用于行文中的单键强调。"
+          summary="展示基础 in textDemo，用于行文中的单键强调。"
           tab={tabInline}
           preview={() => (
             <span>
@@ -373,7 +373,7 @@ const KbdDemo: FC = () => {
         <ExampleBlock
           key="basic"
           title="基础单键"
-          summary="保留原有基础 demo，兼容写法完全不变。"
+          summary="展示基础示例，写法完全不变。"
           tab={tabBasic}
           preview={() => <Kbd>K</Kbd>}
           code={`<Kbd>K</Kbd>`}
@@ -382,7 +382,7 @@ const KbdDemo: FC = () => {
         <ExampleBlock
           key="legacy-combo"
           title="组合键"
-          summary="保留原有 key combination demo，并与新 API 共存。"
+          summary="展示基础 key combinationDemo，并与新 API 共存。"
           tab={tabLegacyCombo}
           preview={() => (
             <div className="flex items-center gap-2">
@@ -395,7 +395,7 @@ const KbdDemo: FC = () => {
         <ExampleBlock
           key="function"
           title="功能键"
-          summary="保留原有 function keys demo。"
+          summary="展示基础 function keysDemo。"
           tab={tabFunction}
           preview={() => (
             <div className="flex gap-2 items-center">
@@ -414,7 +414,7 @@ const KbdDemo: FC = () => {
         <ExampleBlock
           key="keyboard"
           title="完整键盘"
-          summary="保留原有 full keyboard demo，说明 Kbd 仍然适合自由布局。"
+          summary="展示基础 full keyboardDemo，说明 Kbd 仍然适合自由布局。"
           tab={tabKeyboard}
           preview={() => (
             <div className="overflow-x-auto">
@@ -443,7 +443,7 @@ const KbdDemo: FC = () => {
         <ExampleBlock
           key="arrows"
           title="方向键"
-          summary="保留原有 arrow keys demo。"
+          summary="展示基础 arrow keysDemo。"
           tab={tabArrows}
           preview={() => (
             <div>
@@ -493,7 +493,7 @@ const KbdDemo: FC = () => {
 
         <h3>什么时候用 children，什么时候用 items？</h3>
         <p>
-          单个键帽或完全自定义布局时，继续用 <code>children</code>{' '}
+          单个键帽或完全自定义布局时，可以用 <code>children</code>{' '}
           最直接；需要表达标准组合键时，优先用
           <code>items</code> 或 <code>Kbd.Combo</code>，维护成本更低。
         </p>
@@ -507,7 +507,7 @@ const KbdDemo: FC = () => {
 
         <h3>完整键盘这种自由布局还支持吗？</h3>
         <p>
-          支持。Kbd 本质上仍然是轻量键帽组件，增强 API
+          支持。Kbd 本质上仍然是轻量键帽组件，语义 API
           只是补充组合键表达，不会限制你自由排布完整键盘。
         </p>
       </div>

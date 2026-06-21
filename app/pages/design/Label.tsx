@@ -134,7 +134,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'label',
-    description: '字段标题。传入后会自动生成标题行，并保留控件包装在下方。',
+    description: '字段标题。传入后会自动生成标题行，并保持控件包装在下方。',
     type: 'any',
     defaultValue: '-',
   },
@@ -264,7 +264,7 @@ const compoundRows: ApiRow[] = [
   {
     prop: 'Label.Floating',
     description:
-      'floating-label 模式。保留 children 写法，也支持 caption、description、text、help、error 的字段级快捷写法。',
+      'floating-label 模式。保持 children 写法，也支持 caption、description、text、help、error 的字段级快捷写法。',
     type: 'FC<FloatingLabelProps>',
     defaultValue: '-',
   },
@@ -297,19 +297,19 @@ const LabelPage: FC = () => {
         <p className="text-sm mt-3 mb-3">
           Label 现在既可以继续做 input / select
           的轻量包装，也可以直接承载字段标题、说明、反馈状态、尺寸和前后缀。 floating-label
-          模式继续保留，并补上字段级说明能力。
+          模式展示，并补上字段级说明能力。
         </p>
 
         <h2>何时使用</h2>
         <ul>
           <li>需要把输入控件、前后缀和字段说明组合成一个一致的表单单元。</li>
           <li>需要对 input、select、textarea 使用同一组 size、status、help 和 error 语义。</li>
-          <li>需要保留 daisyUI 的 input / select / floating-label 视觉，同时减少重复标记。</li>
+          <li>需要使用 daisyUI 的 input / select / floating-label 视觉，同时减少重复标记。</li>
         </ul>
 
         <ExampleBlock
           title="Label for input"
-          summary="保留原来的 input 包装写法：Label.Text 放在控件前面。"
+          summary="展示 input 包装写法：Label.Text 放在控件前面。"
           tab={tabInput}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -375,7 +375,7 @@ const LabelPage: FC = () => {
 
         <ExampleBlock
           title="Label for date input"
-          summary="原有日期输入 demo 保留，仍然是最轻量的包装。"
+          summary="基础日期输入示例 保持，仍然是最轻量的包装。"
           tab={tabDate}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -493,7 +493,7 @@ const LabelPage: FC = () => {
 
         <ExampleBlock
           title="前后缀快捷写法"
-          summary="prefix 和 suffix 可以减少重复的 Label.Text，也仍然保留手动组合能力。"
+          summary="prefix 和 suffix 可以减少重复的 Label.Text，也仍然提供手动组合能力。"
           tab={tabAffix}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -586,7 +586,7 @@ const LabelPage: FC = () => {
 
         <ExampleBlock
           title="Floating Label"
-          summary="原有 Floating 复合写法保留，FloatingText 不会追加 label class。"
+          summary="基础 Floating 复合写法保持，FloatingText 不会追加 label class。"
           tab={tabFloating}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -606,7 +606,7 @@ const LabelPage: FC = () => {
 
         <ExampleBlock
           title="Floating Label with Different Sizes"
-          summary="原有尺寸 demo 保留，尺寸继续由内部 input 的 className 控制。"
+          summary="尺寸示例 保持，尺寸继续由内部 input 的 className 控制。"
           tab={tabFloatingSizes}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">

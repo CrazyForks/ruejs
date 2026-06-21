@@ -153,7 +153,7 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'children',
-    description: '传入子节点后优先使用旧的组合式结构',
+    description: '传入子节点后优先使用组合式结构',
     type: 'any',
     defaultValue: '-',
   },
@@ -162,13 +162,13 @@ const rootApiRows: ApiRow[] = [
 const compoundApiRows: ApiRow[] = [
   {
     prop: 'Diff.Item1',
-    description: '左侧内容区，兼容 role、tabIndex、label 和 style',
+    description: '左侧内容区，支持 role、tabIndex、label 和 style',
     type: 'component',
     defaultValue: '-',
   },
   {
     prop: 'Diff.Item2',
-    description: '右侧内容区，兼容 role、tabIndex、label 和 style',
+    description: '右侧内容区，支持 role、tabIndex、label 和 style',
     type: 'component',
     defaultValue: '-',
   },
@@ -180,7 +180,7 @@ const compoundApiRows: ApiRow[] = [
   },
   {
     prop: 'tabIndex',
-    description: '旧结构模式下继续透传到根节点',
+    description: '组合结构模式下继续透传到根节点',
     type: 'number',
     defaultValue: '-',
   },
@@ -265,8 +265,7 @@ const DiffDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Diff 对比</h1>
         <p className="text-sm mt-3 mb-3">
-          Diff 现在除了保留原来的组合式结构，还补上一套更顺手的快捷
-          API。可以直接传内容和位置值，也可以继续用
+          Diff 现在除了保持组合式结构，还补上一套更顺手的快捷 API。可以直接传内容和位置值，也可以用
           <code>Diff.Item1</code>、<code>Diff.Item2</code>、<code>Diff.Resizer</code> 自己拼装。
         </p>
 
@@ -451,7 +450,7 @@ const DiffDemo: FC = () => {
 
         <ExampleBlock
           title="只读模式"
-          summary="disabled 会保留当前可视结果，但不再允许拖动，适合说明文档、快照回顾或固定审稿视角。"
+          summary="disabled 会保持当前可视结果，但不再允许拖动，适合说明文档、快照回顾或固定审稿视角。"
           tab={tabReadonly}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -587,7 +586,7 @@ const DiffDemo: FC = () => {
 
         <ExampleBlock
           title="文本对比"
-          summary="增强 API 不是替代，而是补齐。"
+          summary="语义 API 不是替代，而是补充。"
           tab={tabLegacyText}
           preview={() => (
             <Diff className="rounded-field aspect-16/9" tabIndex={0}>
@@ -630,11 +629,11 @@ const DiffDemo: FC = () => {
           <div className="font-semibold">模式选择建议</div>
           <div className="mt-2 grid gap-2 md:grid-cols-2">
             <div>
-              <code>item1 / item2</code> 适合快速搭 demo、做受控联动、补标签和默认手柄内容。
+              <code>item1 / item2</code> 适合快速搭示例、做受控联动、补标签和默认手柄内容。
             </div>
             <div>
               <code>children + Diff.Item1 / Item2 / Resizer</code>{' '}
-              适合保留旧结构，或自己完全掌控内部布局。
+              适合保持组合结构，或自己完全掌控内部布局。
             </div>
           </div>
         </div>
@@ -644,7 +643,7 @@ const DiffDemo: FC = () => {
         <h3>快捷模式和组合式模式怎么选？</h3>
         <p>
           如果你只是想比较两个内容块，优先用 <code>item1</code> 和 <code>item2</code>
-          。如果你已经有现成结构， 或者需要完全接管内部节点顺序，就继续用旧的组合式写法。
+          。如果你已经有现成结构， 或者需要完全接管内部节点顺序，就可以用组合式写法。
         </p>
 
         <h3>value 和 defaultValue 有什么区别？</h3>
@@ -655,7 +654,7 @@ const DiffDemo: FC = () => {
 
         <h3>传了 children 之后 value 还会生效吗？</h3>
         <p>
-          当前版本里，<code>children</code> 会切换到组合式模式，因此 <code>value</code>、
+          当前组件里，<code>children</code> 会切换到组合式模式，因此 <code>value</code>、
           <code>defaultValue</code>
           这些快捷模式能力不会接管内部布局。需要受控拖动时，优先使用 <code>item1</code> /{' '}
           <code>item2</code>。

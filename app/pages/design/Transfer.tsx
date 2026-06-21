@@ -247,7 +247,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'oneWay',
-    description: '切到单向模式，只保留向右加入按钮，并在右列提供移出能力。',
+    description: '切到单向模式，只保持向右加入按钮，并在右列提供移出能力。',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -573,7 +573,7 @@ const TransferDesign: FC = () => {
             </div>
             <div className="mt-2 text-base font-semibold">搜索、分页、单向搬运</div>
             <p className="mt-2 mb-0 text-sm text-base-content/68">
-              适合大列表，也支持只保留向右加入的发布流。
+              适合大列表，也支持只保持向右加入的发布流。
             </p>
           </div>
           <div className="rounded-[1.4rem] border border-base-300 bg-gradient-to-br from-base-100 to-base-200/40 p-4 shadow-sm">
@@ -684,7 +684,7 @@ const TransferDesign: FC = () => {
 
         <PreviewBlock
           title="单向模式与禁用项"
-          summary="适合发布清单、开关方案或只允许逐步加入的流程；右侧保留移出能力。"
+          summary="适合发布清单、开关方案或只允许逐步加入的流程；右侧保持移出能力。"
           tab={oneWayTab}
           code={oneWayCode}
           preview={() => (

@@ -51,9 +51,13 @@ describe('SuspenseDemo actual page', () => {
 
     expect(container.textContent).toContain('Suspense 异步边界')
     expect(container.textContent).toContain('正在加载销售看板')
+    expect(container.textContent).toContain('默认：内层 fallback 正在加载')
+    expect(container.textContent).toContain('父级 fallback 接管整块外层内容')
     expect(container.textContent).toContain('本地 loading：这个异步组件设置了 suspensible: false')
     expect(container.textContent).not.toContain('这个 fallback 不会接管下面的组件')
     expect(container.textContent).not.toContain('¥ 342,800')
+    expect(container.textContent).not.toContain('默认异步内容已解析')
+    expect(container.textContent).not.toContain('交给父边界的活动流')
 
     await vi.advanceTimersByTimeAsync(1750)
     await flush(6)
@@ -61,10 +65,23 @@ describe('SuspenseDemo actual page', () => {
     expect(container.textContent).toContain('¥ 342,800')
     expect(container.textContent).toContain('统一边界内的活动流')
     expect(container.textContent).not.toContain('正在加载销售看板')
+    expect(container.textContent).toContain('默认：内层 fallback 正在加载')
+    expect(container.textContent).toContain('父级 fallback 接管整块外层内容')
+    expect(container.textContent).not.toContain('默认异步内容已解析')
+    expect(container.textContent).not.toContain('交给父边界的活动流')
     expect(container.textContent).toContain('本地 loading：这个异步组件设置了 suspensible: false')
     expect(container.textContent).not.toContain('这个 fallback 不会接管下面的组件')
 
-    await vi.advanceTimersByTimeAsync(100)
+    await vi.advanceTimersByTimeAsync(1100)
+    await flush(6)
+
+    expect(container.textContent).toContain('默认异步内容已解析')
+    expect(container.textContent).toContain('交给父边界的活动流')
+    expect(container.textContent).not.toContain('默认：内层 fallback 正在加载')
+    expect(container.textContent).not.toContain('父级 fallback 接管整块外层内容')
+    expect(container.textContent).toContain('本地 loading：这个异步组件设置了 suspensible: false')
+
+    await vi.advanceTimersByTimeAsync(400)
     await flush(6)
 
     expect(container.textContent).not.toContain(

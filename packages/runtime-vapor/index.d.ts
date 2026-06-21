@@ -1,5 +1,7 @@
 export * from './pkg/rue_runtime_vapor'
 export {
+  /** 创建 effect scope，可批量停止其中创建的 computed/watch/effect。 */
+  effectScope,
   /** 读取当前活动 effect scope。 */
   getCurrentScope,
   /** 判断值是否为 Rue ref 或 computed ref。 */
@@ -22,8 +24,26 @@ export {
   toRefs,
   /** 手动触发 ref/shallowRef 的 value 订阅者。 */
   triggerRef,
+  /** 支持 flush 选项的通用 watch。 */
+  watch,
+  /** 支持 flush 选项的 watchEffect。 */
+  watchEffect,
   /** 在响应式 flush 后运行并追踪依赖的 watch effect。 */
   watchPostEffect,
+  /** 响应式变更时同步运行并追踪依赖的 watch effect。 */
+  watchSyncEffect,
+  /** watcher 刷新时机。 */
+  type WatchFlush,
+  /** watchEffect 选项。 */
+  type WatchEffectOptions,
+  /** watch 选项。 */
+  type WatchOptions,
+  /** 侦听来源。 */
+  type WatchSource,
+  /** 多源侦听来源。 */
+  type WatchMultiSource,
+  /** watch 回调。 */
+  type WatchCallback,
   /** 渲染依赖调试事件。 */
   type DebuggerEvent,
   /** 渲染依赖调试回调。 */
@@ -38,6 +58,7 @@ export {
 import * as runtimeVapor from './pkg/rue_runtime_vapor'
 
 declare const _default: typeof runtimeVapor & {
+  effectScope: typeof import('./reactive').effectScope
   getCurrentScope: typeof import('./reactive').getCurrentScope
   isRef: typeof import('./reactive').isRef
   isReadonly: typeof import('./reactive').isReadonly
@@ -49,6 +70,9 @@ declare const _default: typeof runtimeVapor & {
   toRef: typeof import('./reactive').toRef
   toRefs: typeof import('./reactive').toRefs
   triggerRef: typeof import('./reactive').triggerRef
+  watch: typeof import('./reactive').watch
+  watchEffect: typeof import('./reactive').watchEffect
   watchPostEffect: typeof import('./reactive').watchPostEffect
+  watchSyncEffect: typeof import('./reactive').watchSyncEffect
 }
 export default _default

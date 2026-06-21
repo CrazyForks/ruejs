@@ -136,7 +136,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'description / tip',
-    description: '加载说明文案，tip 作为兼容别名',
+    description: '加载说明文案，tip 作为别名',
     type: 'any',
     defaultValue: '-',
   },
@@ -160,13 +160,13 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'style',
-    description: '兼容旧版动效写法；传入对象或普通 CSS 字符串时作为根元素内联样式',
+    description: '支持基础动效写法；传入对象或普通 CSS 字符串时作为根元素内联样式',
     type: `'spinner' | 'dots' | 'ring' | 'ball' | 'bars' | 'infinity' | object | string`,
     defaultValue: `'spinner'`,
   },
   {
     prop: 'indicatorStyle / variant / type',
-    description: '显式指定 daisyUI loading 动效，优先级高于 style 字符串兼容写法',
+    description: '显式指定 daisyUI loading 动效，优先级高于 style 字符串写法',
     type: `'spinner' | 'dots' | 'ring' | 'ball' | 'bars' | 'infinity'`,
     defaultValue: `'spinner'`,
   },
@@ -302,7 +302,7 @@ const LoadingPage: FC = () => {
 
         <ExampleBlock
           title="Description"
-          summary="description 会与指示器组合，tip 仍作为别名保留。"
+          summary="description 会与指示器组合，tip 仍作为别名保持。"
           tab={tabDescription}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -455,7 +455,7 @@ const LoadingPage: FC = () => {
 
         <ExampleBlock
           title="Fullscreen"
-          summary="fullscreen 会创建全屏遮罩；这个 demo 点击遮罩即可关闭。"
+          summary="fullscreen 会创建全屏遮罩；这个示例 点击遮罩即可关闭。"
           tab={tabFullscreen}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">

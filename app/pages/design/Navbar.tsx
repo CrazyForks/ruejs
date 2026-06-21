@@ -227,7 +227,7 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'children',
-    description: '经典组合模式；传入后优先按 children 渲染',
+    description: '组合组合模式；传入后优先按 children 渲染',
     type: 'any',
     defaultValue: '-',
   },
@@ -347,14 +347,14 @@ const NavbarPage: FC = () => {
         <h1>Navbar 导航栏</h1>
         <p className="text-sm mt-3 mb-3">
           Navbar 仍然保持 Rue 当前的视觉基础和 daisyUI
-          的布局骨架，但补齐了更适合真实项目的语义插槽、 数据驱动项和布局控制能力。
+          的布局骨架，但提供了更适合真实项目的语义插槽、 数据驱动项和布局控制能力。
         </p>
 
         <h2>何时使用</h2>
         <ul>
           <li>需要一个轻量的头部布局容器，用来放品牌、导航入口、搜索框和用户操作。</li>
-          <li>希望保留 Rue 当前的视觉风格，但把常见头部结构改成更好复用的 API。</li>
-          <li>既要支持快速搭建推荐用法，也要兼容原来的 children + Start/Center/End 手写布局。</li>
+          <li>希望使用 Rue 当前的视觉风格，但把常见头部结构改成更好复用的 API。</li>
+          <li>既要支持快速搭建推荐用法，也要支持基础的 children + Start/Center/End 手写布局。</li>
         </ul>
 
         <ExampleBlock
@@ -531,10 +531,10 @@ const NavbarPage: FC = () => {
 />`}
         />
 
-        <h2>经典 demo</h2>
+        <h2>组合示例</h2>
         <p>
-          下面这几组示例保留了原有写法，只做了页面重组，方便继续对照 Start / Center / End
-          的经典组合方式。
+          下面这几组示例保持了基础写法，只做了页面重组，方便继续对照 Start / Center / End
+          的组合组合方式。
         </p>
 
         <ExampleBlock
@@ -557,7 +557,7 @@ const NavbarPage: FC = () => {
 
         <ExampleBlock
           title="标题与图标"
-          summary="保留经典的 Start + End 组合。"
+          summary="展示组合的 Start + End 组合。"
           tab={tabTitleAndIcon}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -631,7 +631,7 @@ const NavbarPage: FC = () => {
 
         <ExampleBlock
           title="菜单与子菜单"
-          summary="继续保留菜单容器和 details 子菜单的经典演示。"
+          summary="展示菜单容器和 details 子菜单的组合演示。"
           tab={tabMenu}
           preview={() => (
             <div className="card bg-base-100 shadow-sm mb-32">
@@ -687,7 +687,7 @@ const NavbarPage: FC = () => {
 
         <ExampleBlock
           title="搜索框与头像下拉"
-          summary="保留搜索、头像和下拉菜单混排的经典结构。"
+          summary="展示搜索、头像和下拉菜单混排的组合结构。"
           tab={tabSearch}
           preview={() => (
             <div className="card bg-base-100 shadow-sm mb-32">
@@ -762,7 +762,7 @@ const NavbarPage: FC = () => {
         />
 
         <h2 id="navbar-api">API</h2>
-        <p>Navbar 现在同时支持推荐的语义插槽模式，以及原有的组合模式。</p>
+        <p>Navbar 现在同时支持推荐的语义插槽模式，以及组合模式。</p>
 
         <h3>Navbar</h3>
         <ApiTable rows={rootApiRows} />
@@ -777,7 +777,7 @@ const NavbarPage: FC = () => {
           <h3 className="mt-0 mb-3 text-base font-semibold">双模式说明</h3>
           <div className="grid gap-3 text-sm md:grid-cols-2">
             <div>
-              <code>children + Navbar.Start/Center/End</code>: 适合完全手写布局，兼容旧 demo。
+              <code>children + Navbar.Start/Center/End</code>: 适合完全手写布局，支持基础示例。
             </div>
             <div>
               <code>brand / start / center / end / actions / items</code>:
@@ -798,7 +798,7 @@ const NavbarPage: FC = () => {
 
         <h3>children 和 items 同时传时谁优先？</h3>
         <p>
-          当前实现会优先渲染 <code>children</code>。这样可以保证旧代码迁移时不被新属性打断，
+          当前组件会优先渲染 <code>children</code>。这样可以保证项目代码接入时不被新属性打断，
           也能让组合模式保持完全可控。
         </p>
 

@@ -1,8 +1,8 @@
 /*
 Layout 组件概述
-- 提供接近 ant-design Layout 的复合容器：Layout / Header / Sider / Content / Footer。
+- 提供常见后台布局所需的复合容器：Layout / Header / Sider / Content / Footer。
 - 保留 Rue 现有的 className + style 组合方式，并补齐 Sider 的 collapsible、breakpoint、trigger、collapsedWidth 等核心能力。
-- 默认视觉延续 Rue 的轻量面板体系：柔和边框、圆角、半透明底色与可叠加的 utility class，而不是照搬 antd 的纯蓝壳子。
+- 默认视觉延续 Rue 的轻量面板体系：柔和边框、圆角、半透明底色与可叠加的 utility class，而不是照搬特定组件库的外观。
 */
 import type { FC } from '@rue-js/rue'
 import { onMounted, onUnmounted, ref, watch } from '@rue-js/rue'

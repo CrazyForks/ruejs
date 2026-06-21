@@ -71,14 +71,14 @@
   triggerRef(shallow)
   ```
 
-## customRef() {#customref} @todo
+## customRef() {#customref}
 
-创建一个显式控制其依赖追踪和更新触发的自定义 ref。
+创建一个显式控制依赖追踪和更新触发时机的自定义 ref。
 
 - **类型**
 
   ```ts
-  function customRef<T>(factory: CustomRefFactory<T>): Ref<T>
+  function customRef<T>(factory: CustomRefFactory<T>): { value: T }
 
   type CustomRefFactory<T> = (
     track: () => void,
@@ -91,34 +91,33 @@
 
 - **详情**
 
-  `customRef()` 期望一个工厂函数，该函数接收 `track` 和 `trigger` 函数作为参数，并应返回一个带有 `get` 和 `set` 方法的对象。
+  `customRef()` 接收一个工厂函数。工厂函数会拿到 `track` 和 `trigger`，并返回 `.value` 的 `get` / `set` 实现。
 
-  一般来说，`track()` 应在 `get()` 内部调用，`trigger()` 应在 `set()` 内部调用。然而，你可以完全控制它们何时应该被调用，或者是否应该被调用。
+  通常应在 `get()` 中调用 `track()` 来收集依赖，在合适的更新时机调用 `trigger()` 来通知订阅者。`set()` 不会自动触发更新，这让你可以实现防抖、节流、外部状态同步等更精细的行为。
 
 - **示例**
 
-  创建一个防抖 ref，仅在最新 set 调用后的一定超时后才更新值：
+  创建一个防抖 ref，仅在最新 set 调用后的一定超时后才触发依赖更新：
 
   ```js
   import { customRef } from '@rue-js/rue'
 
   export function useDebouncedRef(value, delay = 200) {
     let timeout
-    return customRef((track, trigger) => {
-      return {
-        get() {
-          track()
-          return value
-        },
-        set(newValue) {
-          clearTimeout(timeout)
-          timeout = setTimeout(() => {
-            value = newValue
-            trigger()
-          }, delay)
-        },
-      }
-    })
+
+    return customRef((track, trigger) => ({
+      get() {
+        track()
+        return value
+      },
+      set(nextValue) {
+        clearTimeout(timeout)
+        timeout = setTimeout(() => {
+          value = nextValue
+          trigger()
+        }, delay)
+      },
+    }))
   }
   ```
 
@@ -126,14 +125,9 @@
 
   ```js
   import { useDebouncedRef } from './debouncedRef'
+
   const text = useDebouncedRef('hello')
   ```
-
-  :::warning 谨慎使用
-  使用 customRef 时，我们应该注意其 getter 的返回值，特别是在每次运行 getter 时生成新对象数据类型的情况下。这会影响父子组件之间的关系，当这样的 customRef 作为 prop 传递时。
-
-  父组件的渲染函数可能因不同响应式状态的更改而被触发。在重新渲染期间，我们的 customRef 值被重新评估，返回一个新的对象数据类型作为子组件的 prop。这个 prop 与子组件中的上一个值进行比较，由于它们不同，customRef 的响应式依赖在子组件中被触发。同时，父组件中的响应式依赖不会运行，因为 customRef 的 setter 没有被调用，因此其依赖也没有被触发。
-  :::
 
 ## shallowReactive() {#shallowreactive}
 
@@ -236,9 +230,9 @@
   console.log(toRaw(reactiveFoo) === foo) // true
   ```
 
-## effectScope() {#effectscope} @todo
+## effectScope() {#effectscope}
 
-创建一个 effect 作用域对象，可以捕获在其中创建的响应式 effect（即 computed 和 watchers），以便这些 effect 可以一起被处置。有关此 API 的详细用例，请参阅相应的 [RFC](https://github.com/vuejs/rfcs/blob/master/active-rfcs/0041-reactivity-effect-scope.md)。
+创建一个 effect 作用域对象，可以捕获在其中创建的响应式 effect（即 computed 和 watchers），以便这些 effect 可以一起被处置。
 
 - **类型**
 
@@ -246,10 +240,14 @@
   function effectScope(detached?: boolean): EffectScope
 
   interface EffectScope {
+    readonly active: boolean
     run<T>(fn: () => T): T | undefined // 如果作用域不活动则为 undefined
     stop(): void
+    dispose(): void
   }
   ```
+
+  默认创建的 scope 会关联到当前活动 scope，父 scope 停止时会一并停止子 scope。传入 `true` 会创建 detached scope，使其不随当前父 scope 自动停止。
 
 - **示例**
 
@@ -268,7 +266,7 @@
   scope.stop()
   ```
 
-## getCurrentScope() {#getcurrentscope} @todo
+## getCurrentScope() {#getcurrentscope}
 
 如果存在，返回当前活动的 [effect 作用域](#effectscope)。
 
@@ -282,9 +280,9 @@
 
 在当前活动的 [effect 作用域](#effectscope)上注册一个处置回调。当关联的 effect 作用域停止时，将调用回调。
 
-此方法可用作 `onUnmounted` 的可重用组合式函数的非组件耦合替代，因为每个 Vue 组件的 `setup()` 函数也在 effect 作用域中调用。
+此方法可用作 `onUnmounted` 的可重用组合式函数的非组件耦合替代，因为每个 Rue 组件的初始化逻辑也在 effect 作用域中调用。
 
-如果此函数在没有活动 effect 作用域的情况下被调用，将抛出警告。在版本中，可以通过将 `true` 作为第二个参数传递来抑制此警告。
+如果此函数在没有活动 effect 作用域的情况下被调用，将输出警告。可以通过将 `true` 作为第二个参数传递来抑制此警告。
 
 - **类型**
 

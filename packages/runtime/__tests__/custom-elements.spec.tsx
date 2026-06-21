@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as runtimeMain from '@rue-js/runtime'
 import * as rueMain from '@rue-js/rue'
 import type { FC } from '../src'
+import { RUE_SLOT_BAG_PROP } from '../src/components/Slot'
 import { waitForContent } from './page-test-utils'
 
 runtimeMain.setReactiveScheduling('sync')
@@ -63,6 +64,42 @@ const EventEmitter: FC<Record<string, unknown>> = props => {
     <button data-testid="emit-btn" onClick={() => emit('change', 42, 'ok')}>
       emit
     </button>
+  )
+}
+
+const ThemeContext = runtimeMain.createContext('fallback-theme')
+
+const ContextSlotConsumer: FC<Record<string, unknown>> = props => {
+  const theme = runtimeMain.useContext(ThemeContext)
+  const Slot = runtimeMain.Slot
+
+  return (
+    <section data-testid="context-slot-consumer">
+      <p data-testid="theme-value">{theme}</p>
+      <Slot source={props} name="row" props={{ label: theme }}>
+        <span data-testid="row-fallback">missing row</span>
+      </Slot>
+      <Slot source={props}>
+        <span data-testid="default-fallback">missing default</span>
+      </Slot>
+    </section>
+  )
+}
+
+const PropertyProbe: FC<Record<string, unknown>> = props => {
+  const payload = props.payload as { label?: string; count?: number } | undefined
+  const onPing = props.onPing as ((value: string) => void) | undefined
+
+  return (
+    <section data-testid="property-probe">
+      <p data-testid="payload-value">
+        {payload ? `${payload.label ?? 'none'}:${payload.count ?? 0}` : 'missing'}
+      </p>
+      <p data-testid="enabled-value">{String(props.enabled ?? 'unset')}</p>
+      <button data-testid="ping-btn" onClick={() => onPing?.('from-ce')}>
+        ping
+      </button>
+    </section>
   )
 }
 
@@ -233,6 +270,221 @@ describe('useCustomElement', () => {
     expect(event.detail).toEqual([42, 'ok'])
     expect(event.bubbles).toBe(true)
     expect(event.composed).toBe(true)
+  })
+
+  it('passes scoped slots and context across a Rue-rendered custom element boundary', async () => {
+    const tag = defineTag(runtimeMain.useCustomElement(ContextSlotConsumer, { shadowRoot: false }))
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const Parent: FC = () => (
+      <ThemeContext.Provider value="outer-theme">
+        {
+          runtimeMain.h(tag as any, {
+            props: {
+              [RUE_SLOT_BAG_PROP]: {
+                default: <i data-testid="default-slot">default from parent</i>,
+                row: ({ label }: { label: string }) => <b data-testid="row-slot">{label}</b>,
+              },
+            },
+          }) as any
+        }
+      </ThemeContext.Provider>
+    )
+
+    runtimeMain.render(runtimeMain.h(Parent, null) as any, container as any)
+    await flush()
+
+    const host = container.querySelector(tag)
+    expect(host?.querySelector('[data-testid="theme-value"]')?.textContent).toBe('outer-theme')
+    expect(host?.querySelector('[data-testid="row-slot"]')?.textContent).toBe('outer-theme')
+    expect(host?.querySelector('[data-testid="default-slot"]')?.textContent).toBe(
+      'default from parent',
+    )
+    expect(host?.querySelector('[data-testid="row-fallback"]')).toBeNull()
+    expect(host?.querySelector('[data-testid="default-fallback"]')).toBeNull()
+  })
+
+  it('renders fallback context and fallback slots when no Rue parent bridge exists', async () => {
+    const tag = defineTag(runtimeMain.useCustomElement(ContextSlotConsumer, { shadowRoot: false }))
+    const el = document.createElement(tag)
+
+    document.body.appendChild(el)
+    await flush()
+
+    expect(el.querySelector('[data-testid="theme-value"]')?.textContent).toBe('fallback-theme')
+    expect(el.querySelector('[data-testid="row-fallback"]')?.textContent).toBe('missing row')
+    expect(el.querySelector('[data-testid="default-fallback"]')?.textContent).toBe(
+      'missing default',
+    )
+  })
+
+  it('syncs complex DOM properties into mounted custom elements and clears removed values', async () => {
+    const tag = defineTag(runtimeMain.useCustomElement(PropertyProbe, { shadowRoot: false }))
+    const el = document.createElement(tag) as HTMLElement & {
+      payload?: { label?: string; count?: number }
+      enabled?: boolean
+      onPing?: (value: string) => void
+    }
+    const handler = vi.fn()
+
+    document.body.appendChild(el)
+    await flush()
+
+    expect(el.querySelector('[data-testid="payload-value"]')?.textContent).toBe('missing')
+    expect(el.querySelector('[data-testid="enabled-value"]')?.textContent).toBe('unset')
+
+    runtimeMain._$setProperty(el, 'payload', { label: 'object', count: 3 })
+    runtimeMain._$setProperty(el, 'enabled', true)
+    runtimeMain._$setProperty(el, 'onPing', handler)
+
+    await waitForContent(() => {
+      expect(el.querySelector('[data-testid="payload-value"]')?.textContent).toBe('object:3')
+      expect(el.querySelector('[data-testid="enabled-value"]')?.textContent).toBe('true')
+    })
+
+    expect(el.hasAttribute('payload')).toBe(false)
+    ;(el.querySelector('[data-testid="ping-btn"]') as HTMLButtonElement | null)?.click()
+    expect(handler).toHaveBeenCalledWith('from-ce')
+
+    runtimeMain._$setProperty(el, 'payload', null)
+    runtimeMain._$setProperty(el, 'enabled', false)
+    runtimeMain._$setProperty(el, 'onPing', undefined)
+
+    await waitForContent(() => {
+      expect(el.querySelector('[data-testid="payload-value"]')?.textContent).toBe('missing')
+      expect(el.querySelector('[data-testid="enabled-value"]')?.textContent).toBe('unset')
+    })
+    expect('payload' in el).toBe(false)
+    expect('enabled' in el).toBe(false)
+    expect('onPing' in el).toBe(false)
+  })
+
+  it('updates bridged context and scoped slot props when the Rue parent rerenders', async () => {
+    const tag = defineTag(runtimeMain.useCustomElement(ContextSlotConsumer, { shadowRoot: false }))
+    const container = document.createElement('div')
+    const theme = runtimeMain.ref('theme-a')
+    const showRow = runtimeMain.ref(true)
+    document.body.appendChild(container)
+
+    const Parent: FC = () => (
+      <section>
+        <button
+          data-testid="theme-toggle"
+          onClick={() => {
+            theme.value = theme.value === 'theme-a' ? 'theme-b' : 'theme-a'
+          }}
+        >
+          theme
+        </button>
+        <button
+          data-testid="slot-toggle"
+          onClick={() => {
+            showRow.value = !showRow.value
+          }}
+        >
+          slot
+        </button>
+        <ThemeContext.Provider value={theme.value}>
+          {
+            runtimeMain.h(tag as any, {
+              props: {
+                [RUE_SLOT_BAG_PROP]: {
+                  default: <i data-testid="default-slot">default:{theme.value}</i>,
+                  row: showRow.value
+                    ? ({ label }: { label: string }) => (
+                        <b data-testid="row-slot">
+                          {label}:{theme.value}
+                        </b>
+                      )
+                    : undefined,
+                },
+              },
+            }) as any
+          }
+        </ThemeContext.Provider>
+      </section>
+    )
+
+    runtimeMain.render(<Parent />, container as any)
+    await flush()
+
+    const findHost = () => container.querySelector(tag)
+    expect(findHost()?.querySelector('[data-testid="theme-value"]')?.textContent).toBe('theme-a')
+    expect(findHost()?.querySelector('[data-testid="row-slot"]')?.textContent).toBe(
+      'theme-a:theme-a',
+    )
+    expect(findHost()?.querySelector('[data-testid="default-slot"]')?.textContent).toBe(
+      'default:theme-a',
+    )
+
+    ;(container.querySelector('[data-testid="theme-toggle"]') as HTMLButtonElement | null)?.click()
+
+    await waitForContent(() => {
+      const host = findHost()
+      expect(host?.querySelector('[data-testid="theme-value"]')?.textContent).toBe('theme-b')
+      expect(host?.querySelector('[data-testid="row-slot"]')?.textContent).toBe('theme-b:theme-b')
+      expect(host?.querySelector('[data-testid="default-slot"]')?.textContent).toBe(
+        'default:theme-b',
+      )
+    })
+
+    ;(container.querySelector('[data-testid="slot-toggle"]') as HTMLButtonElement | null)?.click()
+
+    await waitForContent(() => {
+      const host = findHost()
+      expect(host?.querySelector('[data-testid="row-slot"]')).toBeNull()
+      expect(host?.querySelector('[data-testid="row-fallback"]')?.textContent).toBe('missing row')
+      expect(host?.querySelector('[data-testid="default-slot"]')?.textContent).toBe(
+        'default:theme-b',
+      )
+    })
+  })
+
+  it('preserves context through nested custom element boundaries', async () => {
+    const innerTag = defineTag(
+      runtimeMain.useCustomElement(ContextSlotConsumer, { shadowRoot: false }),
+    )
+    const OuterBridge: FC = () => {
+      const theme = runtimeMain.useContext(ThemeContext)
+
+      return (
+        <section data-testid="outer-bridge">
+          <p data-testid="outer-theme">{theme}</p>
+          {
+            runtimeMain.h(innerTag as any, {
+              props: {
+                [RUE_SLOT_BAG_PROP]: {
+                  row: ({ label }: { label: string }) => (
+                    <strong data-testid="nested-row">nested:{label}</strong>
+                  ),
+                },
+              },
+            }) as any
+          }
+        </section>
+      )
+    }
+    const outerTag = defineTag(runtimeMain.useCustomElement(OuterBridge, { shadowRoot: false }))
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const Parent: FC = () => (
+      <ThemeContext.Provider value="deep-theme">
+        {runtimeMain.h(outerTag as any, null) as any}
+      </ThemeContext.Provider>
+    )
+
+    runtimeMain.render(<Parent />, container as any)
+    await flush()
+
+    const outerHost = container.querySelector(outerTag)
+    const innerHost = outerHost?.querySelector(innerTag)
+    expect(outerHost?.querySelector('[data-testid="outer-theme"]')?.textContent).toBe('deep-theme')
+    expect(innerHost?.querySelector('[data-testid="theme-value"]')?.textContent).toBe('deep-theme')
+    expect(innerHost?.querySelector('[data-testid="nested-row"]')?.textContent).toBe(
+      'nested:deep-theme',
+    )
   })
 
   it('mounts custom elements inside a parent Rue render without rebinding the wasm DOM adapter', async () => {

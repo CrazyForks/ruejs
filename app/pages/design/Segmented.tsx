@@ -858,7 +858,7 @@ const SegmentedDesign: FC = () => {
         <h1>Segmented 分段选择器</h1>
         <p>
           Rue 的 Segmented 走的是更轻一点的轨道条和卡片式高亮，不照搬其他组件库
-          的视觉，但把日常最常用的那组能力一次补齐了： 受控与非受控、raw value 与对象
+          的视觉，但把日常最常用的那组能力一次覆盖了： 受控与非受控、raw value 与对象
           options、icon、block、size、round、vertical，以及语义化的 class 和 style 定制。
         </p>
 
@@ -932,7 +932,7 @@ const SegmentedDesign: FC = () => {
 
         <PreviewBlock
           title="组件 Icon 受控重渲染"
-          summary="父层每次重渲染都会重新创建 component icon options；runtime 兼容层需要保证点击切换后内容不会空白。"
+          summary="父层每次重渲染都会重新创建 component icon options；runtime 支持层需要保证点击切换后内容不会空白。"
           tab={runtimeCompatTab}
           code={runtimeCompatCode}
           preview={RuntimeCompatPreview}

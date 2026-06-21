@@ -129,7 +129,7 @@ const DynamicProgressPreview: FC = () => {
         <div className="rounded-box border border-base-300 bg-base-100 p-4 text-sm shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wide text-primary">交互建议</div>
           <p className="mt-2 mb-0 text-sm text-base-content/70">
-            用 <code>percent</code> 驱动增强模式；旧场景仍可继续传 <code>value/max</code>{' '}
+            用 <code>percent</code> 驱动语义模式；基础场景仍可可以传 <code>value/max</code>{' '}
             保持原生语义。
           </p>
         </div>
@@ -142,7 +142,7 @@ const progressApiRows: ApiRow[] = [
   {
     prop: 'percent / value + max',
     description:
-      '增强模式推荐使用 percent；旧场景仍兼容 value + max，并在简单场景下继续渲染原生 progress。',
+      '语义模式推荐使用 percent；基础场景仍支持 value + max，并在简单场景下继续渲染原生 progress。',
     type: 'number',
     defaultValue: '-',
   },
@@ -166,7 +166,7 @@ const progressApiRows: ApiRow[] = [
   },
   {
     prop: 'color / strokeColor / railColor',
-    description: '保留 Rue 语义色，也支持自定义前景色、渐变和轨道色。',
+    description: '使用 Rue 语义色，也支持自定义前景色、渐变和轨道色。',
     type: 'ProgressColor / string / string[] / { from, to, direction }',
     defaultValue: '-',
   },
@@ -237,7 +237,7 @@ const ProgressPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Progress 进度条</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue Progress 继续保留原生 <code>progress</code> 的轻量入口，同时补齐更贴近成熟业务组件
+          Rue Progress 展示原生 <code>progress</code> 的轻量入口，同时补充更贴近成熟业务组件
           的核心能力： 支持 <code>line</code>、<code>circle</code>、<code>dashboard</code>、
           <code>status</code>、<code>showInfo</code>、<code>format</code>、<code>success</code> 和{' '}
           <code>steps</code>。
@@ -246,18 +246,18 @@ const ProgressPage: FC = () => {
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-primary">
-              兼容优先
+              支持优先
             </div>
-            <div className="mt-2 text-sm font-medium">旧的 value / max 继续可用</div>
+            <div className="mt-2 text-sm font-medium">基础的 value / max 继续可用</div>
             <p className="mt-2 text-sm opacity-70">
-              最简单的用法仍直接输出原生 <code>progress</code>，已有页面不用重写。
+              最简单的用法仍直接输出原生 <code>progress</code>，项目页面不用重写。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-secondary">
-              形态补齐
+              形态补充
             </div>
-            <div className="mt-2 text-sm font-medium">line、circle、dashboard 一次补齐</div>
+            <div className="mt-2 text-sm font-medium">line、circle、dashboard 一次覆盖</div>
             <p className="mt-2 text-sm opacity-70">
               同一套 API 在不同形态间切换，便于把列表、卡片和概览页统一起来。
             </p>
@@ -541,7 +541,7 @@ const shape = ref<'line' | 'circle' | 'dashboard'>('line')
 
         <h2>API</h2>
         <p>
-          <code>Progress</code> 在简单场景下兼容原生条形写法；进入增强模式后，统一由{' '}
+          <code>Progress</code> 在简单场景下支持原生条形写法；进入语义模式后，统一由{' '}
           <code>type</code>、<code>status</code>、<code>showInfo</code>、<code>success</code> 和{' '}
           <code>steps</code> 这些属性驱动。
         </p>

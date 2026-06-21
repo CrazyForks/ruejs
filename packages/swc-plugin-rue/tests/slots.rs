@@ -183,3 +183,138 @@ const Demo: FC = () => {
     assert!(out.contains(&utils::normalize(": undefined")));
     assert!(!out.contains("_jsxDEV("));
 }
+
+#[test]
+fn lowers_custom_element_props_context_and_rue_slots_to_properties() {
+    let src = r##"
+import { type FC, Template, createContext, ref } from '@rue-js/rue'
+
+const ThemeContext = createContext('fallback')
+
+const Demo: FC = () => {
+  const count = ref(1)
+
+  return (
+    <ThemeContext.Provider value="outer">
+      <my-panel props={{ count: count.value }}>
+        <Template slot="row">
+          {({ label }) => <strong>{label}</strong>}
+        </Template>
+        {({ label }) => <em>{label}</em>}
+        <span slot="native">Native slot</span>
+      </my-panel>
+    </ThemeContext.Provider>
+  )
+}
+"##;
+
+    let out = compile(src, "custom_element_slots_context");
+
+    assert!(out.contains("getCurrentInstance"));
+    assert!(out.contains(&utils::normalize(
+        r#"_$setProperty(_el1, "__rue_context_parent_instance__", getCurrentInstance())"#,
+    )));
+    assert!(
+        out.contains(&utils::normalize(r#"_$setProperty(_el1, "props", { count: count.value })"#,))
+    );
+    assert!(out.contains("__rue_slots"));
+    assert!(out.contains(&utils::normalize(r#""row": ({ label })=>"#)));
+    assert!(out.contains(&utils::normalize(r#""default": ({ label })=>"#)));
+    assert!(out.contains(&utils::normalize(r#""slot", "native""#)));
+    assert!(out.contains("Native slot"));
+}
+
+#[test]
+fn lowers_custom_element_complex_attrs_to_properties_without_stringifying_native_attrs() {
+    let src = r##"
+import { type FC, ref } from '@rue-js/rue'
+
+const Demo: FC = () => {
+  const ready = ref(true)
+  const payload = ref({ id: 'a', label: 'Alpha' })
+
+  return (
+    <my-panel
+      props={payload.value}
+      config={{ ready: ready.value, payload: payload.value }}
+      items={[payload.value.id, ready.value]}
+      formatter={(value) => value.toUpperCase()}
+      data-id={payload.value.id}
+      disabled={ready.value}
+    />
+  )
+}
+"##;
+
+    let out = compile(src, "custom_element_complex_attrs");
+
+    assert!(out.contains(&utils::normalize(r#"_$setProperty(_root, "props", (payload.value))"#)));
+    assert!(out.contains(&utils::normalize(
+        r#"_$setProperty(_root, "config", { ready: ready.value, payload: payload.value })"#
+    )));
+    assert!(out.contains(&utils::normalize(
+        r#"_$setProperty(_root, "items", [
+          payload.value.id,
+          ready.value
+        ])"#
+    )));
+    assert!(out.contains(&utils::normalize(
+        r#"_$setProperty(_root, "formatter", (value)=>value.toUpperCase())"#
+    )));
+    assert!(out.contains(&utils::normalize(
+        r#"_$setAttribute(_root, "data-id", String((payload.value.id)))"#,
+    )));
+    assert!(out.contains(&utils::normalize(r#"_$setDisabled(_root, ready.value)"#)));
+    assert!(!out.contains(&utils::normalize("String({ ready: ready.value")));
+    assert!(!out.contains(&utils::normalize("String([payload.value.id")));
+    assert!(!out.contains(&utils::normalize("String([ payload.value.id")));
+    assert!(!out.contains(&utils::normalize("String((value)=>")));
+}
+
+#[test]
+fn keeps_custom_element_non_slot_expression_children_as_native_children() {
+    let src = r##"
+import { type FC, ref } from '@rue-js/rue'
+
+const Demo: FC = () => {
+  const items = ref(['a', 'b'])
+
+  return (
+    <my-panel>
+      {items.value.map(item => <span slot="native">{item}</span>)}
+    </my-panel>
+  )
+}
+"##;
+
+    let out = compile(src, "custom_element_native_expression_children");
+
+    assert!(!out.contains("__rue_slots"));
+    assert!(out.contains("_$vaporKeyedList"));
+    assert!(out.contains(&utils::normalize("items.value || []")));
+    assert!(out.contains(&utils::normalize(r#""slot", "native""#)));
+}
+
+#[test]
+fn lowers_custom_element_template_without_slot_to_default_rue_slot() {
+    let src = r##"
+import { type FC, Template } from '@rue-js/rue'
+
+const Demo: FC = () => (
+  <my-panel>
+    <Template>
+      <strong>Default slot</strong>
+    </Template>
+    <span slot="native">Native slot</span>
+  </my-panel>
+)
+"##;
+
+    let out = compile(src, "custom_element_default_template_slot");
+
+    assert!(out.contains("__rue_slots"));
+    assert!(out.contains(&utils::normalize(r#""default": __child"#)));
+    assert!(out.contains(&utils::normalize(r#""slot", "native""#)));
+    assert!(out.contains("Native slot"));
+    assert!(!out.contains(&utils::normalize("createComponent(Template")));
+}

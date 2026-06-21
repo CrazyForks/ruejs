@@ -112,7 +112,7 @@ const basicCode = `import { Popconfirm } from '@rue-js/design'
     description="删除后将同时移除下面的成员绑定。"
     okText="立即删除"
     okType="danger"
-    cancelText="保留分组"
+    cancelText="保持分组"
   >
     <button className="btn btn-soft btn-error">Delete group</button>
   </Popconfirm>
@@ -387,8 +387,8 @@ const PopconfirmPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Popconfirm 气泡确认框</h1>
         <p>
-          Popconfirm 适合承载“轻量但不能误触”的操作确认。Rue 版本延续当前卡片与按钮体系，
-          同时补齐了和成熟组件库一致的核心心智：受控开合、异步确认、危险操作语义、单按钮确认、
+          Popconfirm 适合承载“轻量但不能误触”的操作确认。Rue 实现采用当前卡片与按钮体系，
+          同时提供了和成熟组件库一致的核心心智：受控开合、异步确认、危险操作语义、单按钮确认、
           多触发方式与角落定位。
         </p>
 
@@ -417,7 +417,7 @@ const PopconfirmPage: FC = () => {
             </div>
             <div className="mt-2 text-base font-semibold">确认按钮会自动 loading</div>
             <p className="mt-2 mb-0 text-sm text-base-content/68">
-              返回 Promise 后保持浮层可见，适合删除、发布、迁移等异步操作。
+              返回 Promise 后保持浮层可见，适合删除、发布、同步等异步操作。
             </p>
           </div>
         </div>
@@ -443,7 +443,7 @@ const PopconfirmPage: FC = () => {
                 description="删除后将同时移除下面的成员绑定。"
                 okText="立即删除"
                 okType="danger"
-                cancelText="保留分组"
+                cancelText="保持分组"
               >
                 <button className="btn btn-soft btn-error">Delete group</button>
               </Popconfirm>

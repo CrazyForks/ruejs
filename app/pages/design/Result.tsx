@@ -214,7 +214,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'bordered',
-    description: '是否显示边框；outline 变体会强制保留边框视觉',
+    description: '是否显示边框；outline 变体会强制保持边框视觉',
     type: 'boolean',
     defaultValue: 'true',
   },
@@ -256,7 +256,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'status',
-    description: '语义状态，兼容操作结果与 403/404/500 异常页',
+    description: '语义状态，支持操作结果与 403/404/500 异常页',
     type: "'success' | 'info' | 'warning' | 'error' | 403 | 404 | 500 | '403' | '404' | '500'",
     defaultValue: 'info',
   },
@@ -290,7 +290,7 @@ const ResultDemo: FC = () => {
           更完整，也比空状态更适合承接下一步动作。
         </p>
         <p className="text-sm opacity-75">
-          这次补齐参考了成熟结果页组件的能力面，但视觉保持 Rue
+          Result 参考成熟结果页组件的能力面，视觉保持 Rue
           自己的圆角面板、柔和光晕和较轻的插画结构；除了 success、info、warning、error
           之外，也内置了 403、404、500 三种异常状态。
         </p>
@@ -305,7 +305,7 @@ const ResultDemo: FC = () => {
                 size="sm"
                 status="success"
                 title="发布成功"
-                subTitle="新版本已推送到 12 个边缘节点，预计 40 秒内完成全量刷新。"
+                subTitle="当前本已推送到 12 个边缘节点，预计 40 秒内完成全量刷新。"
               />
               <Result
                 size="sm"
@@ -334,7 +334,7 @@ const ResultDemo: FC = () => {
     size="sm"
     status="success"
     title="发布成功"
-    subTitle="新版本已推送到 12 个边缘节点，预计 40 秒内完成全量刷新。"
+    subTitle="当前本已推送到 12 个边缘节点，预计 40 秒内完成全量刷新。"
   />
   <Result
     size="sm"
@@ -508,15 +508,15 @@ const ResultDemo: FC = () => {
 
         <ExampleBlock
           title="自定义图标与无图标模式"
-          summary="你可以把 Result 用成更品牌化的完成态，也可以完全拿掉 icon，仅保留标题、动作和补充文案。"
+          summary="你可以把 Result 用成更品牌化的完成态，也可以完全拿掉 icon，仅保持标题、动作和补充文案。"
           tab={customTab}
           preview={() => (
             <div className="grid gap-5 xl:grid-cols-2">
               <Result
                 status="info"
                 icon={<RocketIcon />}
-                title="迁移任务已排定"
-                subTitle="冷数据会在凌晨窗口期分批迁移到对象存储，预计耗时 18 分钟。"
+                title="归档任务已排定"
+                subTitle="冷数据会在凌晨窗口期分批归档到对象存储，预计耗时 18 分钟。"
                 extra={<Button color="primary">查看任务看板</Button>}
                 variant="soft"
               />
@@ -545,8 +545,8 @@ ${rocketIconCode}
   <Result
     status="info"
     icon={<RocketIcon />}
-    title="迁移任务已排定"
-    subTitle="冷数据会在凌晨窗口期分批迁移到对象存储，预计耗时 18 分钟。"
+    title="归档任务已排定"
+    subTitle="冷数据会在凌晨窗口期分批归档到对象存储，预计耗时 18 分钟。"
     extra={<Button color="primary">查看任务看板</Button>}
     variant="soft"
   />
@@ -594,7 +594,7 @@ ${rocketIconCode}
                   size="sm"
                   variant="outline"
                   title="回滚未完成"
-                  subTitle="2 个节点仍在回滚旧版本，建议先暂停流量切换，待日志完全一致后再继续。"
+                  subTitle="2 个节点仍在回滚版本，建议先暂停流量切换，待日志完全一致后再继续。"
                   align="start"
                   extra={<Button type="outlined">打开故障时间线</Button>}
                 >
@@ -636,7 +636,7 @@ ${shieldWaveIconCode}
       size="sm"
       variant="outline"
       title="回滚未完成"
-      subTitle="2 个节点仍在回滚旧版本，建议先暂停流量切换，待日志完全一致后再继续。"
+      subTitle="2 个节点仍在回滚版本，建议先暂停流量切换，待日志完全一致后再继续。"
       align="start"
       extra={<Button type="outlined">打开故障时间线</Button>}
     >

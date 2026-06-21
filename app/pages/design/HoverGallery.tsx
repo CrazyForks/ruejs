@@ -283,8 +283,7 @@ const HoverGalleryDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Hover Gallery 悬浮画廊</h1>
         <p className="text-sm mt-3 mb-3">
-          Hover Gallery 适合做商品多视角缩略图。Rue 这一版把原本散落在 demo 里的结构提炼成组件
-          API：既能继续直接写
+          Hover Gallery 适合做商品多视角缩略图。组件把多图预览结构收口成稳定 API：既能直接写
           <code>children</code>，也能切到 <code>items</code>{' '}
           数据驱动，并把导览遮罩和图片层样式统一收口到组件里。
         </p>
@@ -292,8 +291,8 @@ const HoverGalleryDemo: FC = () => {
         <h2>何时使用</h2>
         <ul>
           <li>需要在商品卡片、作品集卡片里，用最轻的结构承载多张预览图。</li>
-          <li>想保留纯 CSS 的 hover 体验，但又不想在页面层重复写导览遮罩和图片映射逻辑。</li>
-          <li>同一套页面里既有静态写法，也有列表数据驱动写法，希望 API 可以平滑共存。</li>
+          <li>想保持纯 CSS 的 hover 体验，但又不想在页面层重复写导览遮罩和图片映射逻辑。</li>
+          <li>同一套页面里基础静态写法，也有列表数据驱动写法，希望 API 可以平滑共存。</li>
         </ul>
 
         <ExampleBlock
@@ -315,7 +314,7 @@ const HoverGalleryDemo: FC = () => {
 
         <ExampleBlock
           title="基础用法"
-          summary="保留原来的 children 写法。适合已经手写好图片节点的场景。"
+          summary="展示 children 写法。适合已经手写好图片节点的场景。"
           tab={tabBasic}
           preview={() => (
             <div className="flex justify-center">
@@ -361,7 +360,7 @@ const HoverGalleryDemo: FC = () => {
                   items={labeledGalleryItems}
                 />
                 <p className="m-0 text-xs opacity-70">
-                  这一组更适合做详情页的角度预览，统一的 <code>fit</code> 和{' '}
+                  这类组合更适合做详情页的角度预览，统一的 <code>fit</code> 和{' '}
                   <code>imageClassName</code> 可以把不同来源的图片先收敛到同一版式里。
                 </p>
               </div>
@@ -372,7 +371,7 @@ const HoverGalleryDemo: FC = () => {
 
         <ExampleBlock
           title="商品卡片组合"
-          summary="保留原来的卡片场景，但把图片映射交给 HoverGallery 自己处理。"
+          summary="展示卡片场景，但把图片映射交给 HoverGallery 自己处理。"
           tab={tabCard}
           preview={() => (
             <div className="flex justify-center">

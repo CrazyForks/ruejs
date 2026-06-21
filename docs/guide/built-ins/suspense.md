@@ -116,9 +116,9 @@ const App: FC = () => {
 
 ## 与其他组件结合使用 (Combining with Other Components) {#combining-with-other-components}
 
-通常希望将 `<Suspense>` 与 [`<Transition>`](/guide/guide/built-ins/transition) 和 [`<KeepAlive>`](/guide/guide/built-ins/keep-alive) 组件结合使用。不过需要注意，这里的组合能力应以 Rue 当前实现为准，而不是直接套用 Vue 文档中的全部语义。
+通常希望将 `<Suspense>` 与 [`<Transition>`](/guide/guide/built-ins/transition) 和 [`<KeepAlive>`](/guide/guide/built-ins/keep-alive) 组件结合使用。不过需要注意，这里的组合能力应以 Rue 当前实现为准。
 
-此外，这些组件通常与来自 [Rue Router](https://router.vuejs.org/) 的 `<RouterView>` 组件结合使用。
+此外，这些组件通常与来自 Rue Router 的 `<RouterView>` 组件结合使用。
 
 以下示例显示如何嵌套这些组件以使它们都按预期工作。对于更简单的组合，您可以移除不需要的组件：
 
@@ -146,7 +146,7 @@ const App: FC = () => {
 }
 ```
 
-Rue Router 内置支持使用动态导入 [懒加载组件](https://router.vuejs.org/guide/advanced/lazy-loading.html)。这些与异步组件不同，目前它们不会触发 `<Suspense>`。但是，它们仍然可以有作为后代的异步组件，这些可以以通常的方式触发 `<Suspense>`。
+Rue Router 内置支持使用动态导入懒加载组件。这些与异步组件不同，目前它们不会触发 `<Suspense>`。但是，它们仍然可以有作为后代的异步组件，这些可以以通常的方式触发 `<Suspense>`。
 
 ## 嵌套 Suspense (Nested Suspense) {#nested-suspense}
 
@@ -162,21 +162,21 @@ Rue Router 内置支持使用动态导入 [懒加载组件](https://router.vuejs
 
 `<Suspense>` 创建一个边界，将解析树中的所有异步组件，如预期的那样。但是，当我们更改 `DynamicOuter` 时，`<Suspense>` 正确地等待它，但当我们更改 `DynamicInner` 时，嵌套的 `DynamicInner` 在解析完成之前渲染一个空节点（而不是之前的节点或 fallback 插槽）。
 
-Rue 当前可以嵌套多个 `<Suspense>` 边界，但 `<Suspense>` 本身还没有实现 Vue 文档中那种通过 `suspensible` prop 把依赖处理权继续上交给父边界的行为。
-
-也就是说，下面这种写法在当前实现里并不会额外启用父子 Suspense 之间的“依赖接管”语义：
+Rue 可以嵌套多个 `<Suspense>` 边界。默认情况下，内层边界会自己处理捕获到的异步依赖；如果你希望父级边界统一接管整段嵌套内容，可以给内层边界传 `suspensible`：
 
 ```tsx
-<Suspense>
+<Suspense fallback={<div>加载页面...</div>}>
   <DynamicOuter>
-    <Suspense>
+    <Suspense suspensible fallback={<div>加载局部内容...</div>}>
       <DynamicInner />
     </Suspense>
   </DynamicOuter>
 </Suspense>
 ```
 
-如果你需要控制某个异步组件是否向最近的 Suspense 边界登记 pending 状态，当前应该通过 `useComponent({ suspensible: false })` 来做，而不是给 `<Suspense>` 传 `suspensible`。
+在这个例子中，`DynamicInner` 的 pending 状态会先被内层边界捕获，再继续登记到父级 `<Suspense>`，因此父级 fallback 可以覆盖整个 `DynamicOuter` 区域。
+
+如果你需要控制某个异步组件是否向最近的 Suspense 边界登记 pending 状态，应通过 `useComponent({ suspensible: false })` 来做。`<Suspense suspensible>` 只影响嵌套边界之间的依赖上交，不会让异步组件退出 Suspense。
 
 ---
 

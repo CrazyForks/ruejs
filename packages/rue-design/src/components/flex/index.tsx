@@ -1,6 +1,6 @@
 /*
 Flex 组件概述
-- 提供接近 antd Flex 的核心容器语义：方向、对齐、换行、间距与 flex 简写。
+- 提供常见 Flex 容器语义：方向、对齐、换行、间距与 flex 简写。
 - 保留 Rue 的轻量组合方式：不额外包裹子节点，继续支持 className 与 style 直出。
 - 同时兼容 as 与 component 两套根节点声明，便于延续现有 Rue 组件书写习惯。
 */
@@ -89,7 +89,7 @@ const mergeClassName = (base: string, className?: string) => {
 }
 
 /**
- * orientation 优先级高于 vertical，保持与 antd Flex 一致。
+ * orientation 优先级高于 vertical，保持显式属性优先。
  * 当两者都未传入时，默认沿用横向主轴。
  */
 const resolveOrientation = (orientation?: FlexOrientation, vertical?: boolean): FlexOrientation => {

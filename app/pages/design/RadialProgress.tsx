@@ -17,7 +17,7 @@ const apiRows: ApiRow[] = [
   {
     prop: 'value / percent',
     description:
-      '既兼容 DaisyUI 原本的 value 写法，也支持更接近 Progress 的 percent 写法；percent 优先级更高',
+      '既支持 DaisyUI 基础的 value 写法，也支持更接近 Progress 的 percent 写法；percent 优先级更高',
     type: 'number | string',
     defaultValue: '0',
   },
@@ -35,7 +35,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'status',
-    description: '补齐 success 和 exception 语义，默认在 100% 时自动切到 success',
+    description: '补充 success 和 exception 语义，默认在 100% 时自动切到 success',
     type: '`normal` | `success` | `exception`',
     defaultValue: '`normal`',
   },
@@ -65,7 +65,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'thickness / strokeWidth',
-    description: '继续支持 thickness，同时兼容 strokeWidth 作为别名',
+    description: '支持 thickness，同时支持 strokeWidth 作为别名',
     type: 'number | string',
     defaultValue: 'size / 10',
   },
@@ -83,7 +83,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'gapDegree / gapPlacement',
-    description: 'dashboard 缺口大小和位置控制，也兼容旧的 gapPosition',
+    description: 'dashboard 缺口大小和位置控制，也支持基础的 gapPosition',
     type: 'number / top | bottom | start | end',
     defaultValue: '75 / bottom',
   },
@@ -208,7 +208,7 @@ const RadialProgressPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Radial Progress 环形进度</h1>
         <p className="text-sm mt-3 mb-3">
-          RadialProgress 现在不再只是 DaisyUI 的静态 class 包装。它继续保留 Rue 现有的环形视觉、
+          RadialProgress 现在不再只是 DaisyUI 的静态 class 包装。它可以使用 Rue 当前的环形视觉、
           value / size / thickness 写法和 className 习惯，同时补上 percent、max、dashboard、
           success、steps、format 和 showInfo 等更接近 Progress 的能力。
         </p>
@@ -217,7 +217,7 @@ const RadialProgressPage: FC = () => {
         <ul>
           <li>需要比线性 Progress 更聚焦的单值表达，比如健康分、完成度、评分和容量水位。</li>
           <li>
-            需要保留 DaisyUI 的轻量环形观感，但又希望补齐 dashboard、success segment 和 steps
+            需要保持 DaisyUI 的轻量环形观感，但又希望补充 dashboard、success segment 和 steps
             这种行为层 API。
           </li>
           <li>需要在中心区域放置百分比、状态图标或业务文案，而不是单纯显示一个静态圆环。</li>
@@ -227,7 +227,7 @@ const RadialProgressPage: FC = () => {
 
         <PreviewBlock
           title="Radial progress"
-          summary="保留最基础的 DaisyUI 风格写法，同时支持用 value/max 直接映射到百分比。"
+          summary="展示最基础的 DaisyUI 风格写法，同时支持用 value/max 直接映射到百分比。"
           tab={tabBasic}
           preview={() => (
             <div className="flex flex-wrap items-center gap-6">
@@ -244,7 +244,7 @@ const RadialProgressPage: FC = () => {
 
         <PreviewBlock
           title="Different values"
-          summary="旧 demo 保留不动，用来快速扫一圈 0 到 100 的状态变化。"
+          summary="基础示例 保持不动，用来快速扫一圈 0 到 100 的状态变化。"
           tab={tabValues}
           preview={() => (
             <div className="flex flex-wrap items-center gap-4">
@@ -260,7 +260,7 @@ const RadialProgressPage: FC = () => {
 
         <PreviewBlock
           title="Status and formatting"
-          summary="showInfo、format 和 status 组合起来，就能把中心内容从静态百分比升级成业务状态位。"
+          summary="showInfo、format 和 status 组合起来，就能把中心内容从静态百分比组织成业务状态位。"
           tab={tabStatus}
           preview={() => (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -389,7 +389,7 @@ const RadialProgressPage: FC = () => {
 
         <PreviewBlock
           title="Custom colors"
-          summary="旧的 className 自定义方式继续保留，同时也能混用 strokeColor 和 railColor 这类更显式的 API。"
+          summary="基础的 className 自定义方式展示，同时也能混用 strokeColor 和 railColor 这类更显式的 API。"
           tab={tabColors}
           preview={() => (
             <div className="flex flex-wrap items-center gap-6">
@@ -412,7 +412,7 @@ const RadialProgressPage: FC = () => {
 
         <PreviewBlock
           title="Custom size and thickness"
-          summary="旧的 thin / thick 示例保留，同时 size 继续接受 CSS 长度，适合和布局系统联动。"
+          summary="基础的 thin / thick 示例保持，同时 size 继续接受 CSS 长度，适合和布局系统联动。"
           tab={tabSize}
           preview={() => (
             <div className="flex flex-wrap items-center gap-6">
@@ -429,7 +429,7 @@ const RadialProgressPage: FC = () => {
 
         <h2 id="radial-progress-api">API</h2>
         <p className="text-sm mt-3 mb-4">
-          RadialProgress 沿用了 DaisyUI 的尺寸和 className 心智，但把最常用的环形进度行为 API
+          RadialProgress 使用了 DaisyUI 的尺寸和 className 心智，但把最常用的环形进度行为 API
           收敛到了一个组件里。 如果你已经在用 Rue 的 Progress，这里大部分字段会有熟悉的手感。
         </p>
         <ApiTable rows={apiRows} />

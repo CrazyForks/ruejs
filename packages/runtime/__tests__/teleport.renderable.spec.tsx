@@ -64,6 +64,72 @@ const ExternalTextBridge: FC<{ to: HTMLElement; label: string }> = props => {
 }
 
 describe('Teleport renderable boundary', () => {
+  it('defers target resolution until the queued target exists', async () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+
+    const App: FC = () => {
+      queueMicrotask(() => {
+        const target = document.createElement('div')
+        target.id = 'deferred-target'
+        document.body.appendChild(target)
+      })
+
+      return h(Teleport, { to: '#deferred-target', defer: true }, h('strong', null, 'Deferred'))
+    }
+
+    render(h(App, null), host)
+
+    expect(document.querySelector('#deferred-target')).toBeNull()
+    expect(host.textContent).toBe('')
+
+    await flush()
+
+    expect(document.querySelector('#deferred-target')?.textContent).toBe('Deferred')
+    expect(host.textContent).toBe('')
+  })
+
+  it('keeps deferred renders pending until the microtask flush and uses the latest props', async () => {
+    const host = document.createElement('div')
+    const targetA = document.createElement('div')
+    const targetB = document.createElement('div')
+
+    document.body.append(host, targetA, targetB)
+
+    const to = signal<HTMLElement>(targetA)
+    const label = signal('A')
+
+    const App: FC = () =>
+      vapor(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('rue:component:anchor')
+        root.appendChild(anchor)
+
+        watchEffect(() => {
+          renderAnchor(
+            h(Teleport, { to: to.get(), defer: true }, h('strong', null, label.get())),
+            root as any,
+            anchor as any,
+          )
+        })
+
+        return root as any
+      }) as any
+
+    render(h(App, null), host)
+
+    expect(targetA.textContent).toBe('')
+    expect(targetB.textContent).toBe('')
+
+    to.set(targetB)
+    label.set('B')
+    await flush()
+
+    expect(targetA.textContent).toBe('')
+    expect(targetB.textContent).toBe('B')
+    expect(host.textContent).toBe('')
+  })
+
   it('mounts renderable child content into the target from an anchored parent', async () => {
     const host = document.createElement('div')
     const targetA = document.createElement('div')

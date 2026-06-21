@@ -34,7 +34,7 @@ pub use effect::{EffectHandle, batch, create_effect, on_cleanup, on_watcher_clea
 // 资源：基于信号驱动的异步数据加载器
 pub use resource::create_resource;
 // 信号：可订阅的可变数据容器（支持自定义等值比较）
-pub use signal::{SignalHandle, create_signal};
+pub use signal::{SignalHandle, create_custom_ref, create_signal};
 // Hook：useState
 pub use crate::hook::use_state;
 // 侦听：对函数、信号的变化进行观察并触发处理函数

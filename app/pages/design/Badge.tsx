@@ -371,7 +371,7 @@ const badgeApiRows: ApiRow[] = [
   },
   {
     prop: 'dash',
-    description: '标签模式下启用虚线风格；计数徽标也会沿用该视觉',
+    description: '标签模式下启用虚线风格；计数徽标也会使用该视觉',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -407,7 +407,7 @@ const badgeApiRows: ApiRow[] = [
   },
   {
     prop: 'outline',
-    description: '标签模式下启用描边视觉；计数徽标也会沿用该视觉',
+    description: '标签模式下启用描边视觉；计数徽标也会使用该视觉',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -526,8 +526,8 @@ const BadgeDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Badge 徽标</h1>
         <p className="text-sm mt-3 mb-3">
-          Badge 现在同时覆盖 Rue 轻标签、角标计数、状态点和 Ribbon 包裹四类场景。保留原有 daisyUI
-          风格标签写法，同时补齐常见业务中的 count、dot、showZero、offset、status 与 Badge.Ribbon
+          Badge 现在同时覆盖 Rue 轻标签、角标计数、状态点和 Ribbon 包裹四类场景。展示基础 daisyUI
+          风格标签写法，同时补充常见业务中的 count、dot、showZero、offset、status 与 Badge.Ribbon
           能力。
         </p>
 
@@ -556,7 +556,7 @@ const BadgeDemo: FC = () => {
 
         <ExampleBlock
           title="Count as indicator"
-          summary="新增 count、dot 与 text 能力后，Badge 可以直接包裹按钮、卡片或头像占位块。"
+          summary="count、dot 与 text 能力让 Badge 可以直接包裹按钮、卡片或头像占位块。"
           tab={tabs.indicator}
           preview={() => (
             <PreviewSurface>
@@ -647,7 +647,7 @@ const BadgeDemo: FC = () => {
 
         <ExampleBlock
           title="Badge.Ribbon"
-          summary="新增 Ribbon 复合组件，用于给内容块打上 Beta、新功能或促销等斜角标识。"
+          summary="Ribbon 复合组件可用于给内容块打上 Beta、新功能或促销等斜角标识。"
           tab={tabs.ribbon}
           preview={() => (
             <PreviewSurface className="overflow-visible">
@@ -676,7 +676,7 @@ const BadgeDemo: FC = () => {
 
         <ExampleBlock
           title="Badge sizes"
-          summary="保留原有尺寸层级，适合标题、列表标签和紧凑信息位。"
+          summary="使用尺寸层级，适合标题、列表标签和紧凑信息位。"
           tab={tabs.sizes}
           preview={() => (
             <PreviewSurface>
@@ -694,7 +694,7 @@ const BadgeDemo: FC = () => {
 
         <ExampleBlock
           title="Badge with colors"
-          summary="保留 Rue 当前的主题色集合，可直接作为轻量标签使用。"
+          summary="使用 Rue 当前的主题色集合，可直接作为轻量标签使用。"
           tab={tabs.colors}
           preview={() => (
             <PreviewSurface>
@@ -766,7 +766,7 @@ const BadgeDemo: FC = () => {
 
         <ExampleBlock
           title="neutral badge with outline or dash style"
-          summary="保留原有 neutral 组合示例，适合放在亮色背景之上。"
+          summary="展示基础 neutral 组合示例，适合放在亮色背景之上。"
           tab={tabs.neutral}
           preview={() => (
             <PreviewSurface>
@@ -787,7 +787,7 @@ const BadgeDemo: FC = () => {
 
         <ExampleBlock
           title="Badge ghost"
-          summary="ghost 适合嵌在复杂背景里，只保留极轻的存在感。"
+          summary="ghost 适合嵌在复杂背景里，只保持极轻的存在感。"
           tab={tabs.ghost}
           preview={() => (
             <PreviewSurface>
@@ -878,7 +878,7 @@ const BadgeDemo: FC = () => {
 
         <ExampleBlock
           title="Badge in a button"
-          summary="旧按钮内嵌标签写法仍可直接使用，适合快捷状态或数字提示。"
+          summary="按钮内嵌标签写法仍可直接使用，适合快捷状态或数字提示。"
           tab={tabs.inButton}
           preview={() => (
             <PreviewSurface>

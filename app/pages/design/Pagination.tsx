@@ -166,21 +166,21 @@ const PaginationPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Pagination 分页</h1>
         <p className="text-sm mt-3 mb-3">
-          Pagination 现在同时支持两类用法：保留原有的静态组合模式，以及更贴近业务组件习惯的
+          Pagination 现在同时支持两类用法：展示基础的静态组合模式，以及更贴近业务组件习惯的
           的数据驱动模式。 视觉仍基于 Rue 当前的 join 与 btn
-          体系，但补齐了页码计算、受控/非受控、简单模式、页容量切换、快捷跳转和自定义渲染。
+          体系，但提供了页码计算、受控/非受控、简单模式、页容量切换、快捷跳转和自定义渲染。
         </p>
 
         <h2>何时使用</h2>
         <ul>
-          <li>需要保留 Rue 现有 join + btn 分页视觉，但希望组件自己计算页码与跳转逻辑。</li>
+          <li>需要使用 Rue 当前 join + btn 分页视觉，但希望组件自己计算页码与跳转逻辑。</li>
           <li>需要受控/非受控分页、简单模式、页容量切换、快捷跳页等更完整的交互能力。</li>
-          <li>需要在静态拼装和数据驱动两种模式间切换，并逐步迁移旧用法。</li>
+          <li>需要在静态拼装和数据驱动两种模式间切换，并逐步重组用法。</li>
         </ul>
 
         <h2 className="mt-8">静态组合模式</h2>
         <p className="text-sm opacity-80">
-          适合完全自定义节点结构的场景。以下示例保留原有 compound 用法，只补齐说明与可复制代码。
+          适合完全自定义节点结构的场景。以下示例展示基础 compound 用法，只补充说明与可复制代码。
         </p>
 
         <ExampleBlock
@@ -210,7 +210,7 @@ const PaginationPage: FC = () => {
 
         <ExampleBlock
           title="Vertical pagination"
-          summary="继续沿用 `direction='vertical'`，适合侧栏步骤、目录或分段导航。"
+          summary="使用 `direction='vertical'`，适合侧栏步骤、目录或分段导航。"
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body">
@@ -262,7 +262,7 @@ const PaginationPage: FC = () => {
 
         <ExampleBlock
           title="Data driven basic"
-          summary="传入 `total` 后由组件自动计算页码；这里改成受控版本，便于在设计页直接切换和观察当前页变化。"
+          summary="传入 `total` 后由组件自动计算页码；这里改成受控形态，便于在设计页直接切换和观察当前页变化。"
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body gap-4">
@@ -364,7 +364,7 @@ const pageSize = ref(10)
 
         <ExampleBlock
           title="Simple mode"
-          summary="简洁模式只保留上一页、页码输入和下一页，适合空间紧张的工具栏。"
+          summary="简洁模式只保持上一页、页码输入和下一页，适合空间紧张的工具栏。"
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body gap-4">
@@ -508,7 +508,7 @@ const compactPageSize = ref(10)
 
         <ExampleBlock
           title="Custom item render"
-          summary="通过 `itemRender` 重写上一页、下一页或跳转项文本，保留默认交互逻辑。"
+          summary="通过 `itemRender` 重写上一页、下一页或跳转项文本，保持默认交互逻辑。"
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
               <div className="card-body gap-4">
@@ -586,14 +586,14 @@ const compactPageSize = ref(10)
             <h3 className="mb-1 text-base font-semibold">切换每页条数时会触发哪些回调？</h3>
             <p className="m-0 opacity-80">
               `onShowSizeChange` 专门用于处理页容量变更；为了保持外部状态同步，`onChange`
-              也会收到新的页码和 `pageSize`，所以受控场景通常同时兼容这两个回调。
+              也会收到新的页码和 `pageSize`，所以受控场景通常同时支持这两个回调。
             </p>
           </div>
           <div>
             <h3 className="mb-1 text-base font-semibold">如何把上一页、下一页改成业务文案？</h3>
             <p className="m-0 opacity-80">
               轻量替换可以用 `itemRender` 改写 `prev`、`next`、`jump-prev`、`jump-next`
-              的内容；如果还要替换 aria/title 文案，可以继续传 `locale`。
+              的内容；如果还要替换 aria/title 文案，可以传 `locale`。
             </p>
           </div>
         </div>

@@ -1,7 +1,9 @@
 import {
   batch,
   computed,
+  customRef,
   createEffect as effect,
+  effectScope,
   getCurrentScope,
   getCurrentInstance,
   isRef,
@@ -38,6 +40,7 @@ import {
   watchPath,
   watchPostEffect,
   watchSignal,
+  watchSyncEffect,
   withHookSlot,
   useSetup,
 } from '@rue-js/runtime-vapor/reactive'
@@ -298,11 +301,19 @@ export type {
   ObjectRef,
   SignalHandle,
   ToRefs,
+  WatchEffectOptions,
+  WatchFlush,
+  WatchCallback,
+  CustomRefFactory,
+  WatchMultiSource,
+  WatchOptions,
+  WatchSource,
 } from '@rue-js/runtime-vapor/reactive'
 
 export {
   effect,
   effect as createEffect,
+  effectScope,
   batch,
   nextTick,
   onCleanup,
@@ -318,6 +329,7 @@ export {
   watchFn,
   watchEffect,
   watchPostEffect,
+  watchSyncEffect,
   watchSignal,
   watchDeepSignal,
   watchPath,
@@ -327,6 +339,7 @@ export {
   useEffect,
   signal,
   ref,
+  customRef,
   shallowRef,
   triggerRef,
   computed,

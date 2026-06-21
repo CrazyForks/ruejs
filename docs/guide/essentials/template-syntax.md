@@ -121,7 +121,7 @@ JSX 支持在绑定中使用完整的 JavaScript 表达式：
 
 ## 条件渲染 {#conditional-rendering}
 
-Rue 支持 Vue 风格的 JSX 指令，也支持原生 JavaScript 表达式。推荐在模板结构明显时使用 `v-if` / `v-else-if` / `v-else`，在需要保留 DOM 状态、只切换可见性时使用 `v-show`。
+Rue 支持 JSX 指令，也支持原生 JavaScript 表达式。推荐在模板结构明显时使用 `v-if` / `v-else-if` / `v-else`，在需要保留 DOM 状态、只切换可见性时使用 `v-show`。
 
 ### `v-if` {#v-if}
 
@@ -235,7 +235,7 @@ const App: FC = () => {
 
 ### 事件修饰符 {#event-modifiers}
 
-虽然 JSX 不直接支持 Vue 的事件修饰符，但你可以手动实现相同的功能：
+虽然 JSX 不直接支持模板事件修饰符，但你可以手动实现相同的功能：
 
 ```tsx
 // 相当于 @click.prevent

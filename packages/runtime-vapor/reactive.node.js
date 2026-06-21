@@ -109,6 +109,23 @@ const createPostEffectScheduler = options => {
   }
 }
 
+/** 创建同步 watcher 调度器，绕过默认 microtask/frame 合并。 */
+const createSyncEffectScheduler = options => {
+  const userScheduler =
+    options && typeof options === 'object' && typeof options.scheduler === 'function'
+      ? options.scheduler
+      : undefined
+
+  return run => {
+    if (userScheduler) {
+      userScheduler(run)
+      return
+    }
+
+    run()
+  }
+}
+
 /** 将传入 options 复制一份并替换为 post flush scheduler。 */
 const withPostEffectScheduler = options => {
   const normalized = options && typeof options === 'object' ? { ...options } : {}
@@ -116,9 +133,60 @@ const withPostEffectScheduler = options => {
   return normalized
 }
 
+/** 将传入 options 复制一份并替换为 sync flush scheduler。 */
+const withSyncEffectScheduler = options => {
+  const normalized = options && typeof options === 'object' ? { ...options } : {}
+  normalized.scheduler = createSyncEffectScheduler(options)
+  return normalized
+}
+
+const getFlushOption = options =>
+  options && typeof options === 'object' ? Reflect.get(options, 'flush') : undefined
+
+const withFlushScheduler = options => {
+  const flush = getFlushOption(options)
+  if (flush === 'post') {
+    return withPostEffectScheduler(options)
+  }
+  if (flush === 'sync') {
+    return withSyncEffectScheduler(options)
+  }
+  return options
+}
+
 /** watchEffect 的 post flush 变体，用于 DOM 更新完成后读取布局/文本。 */
 export const watchPostEffect = (cb, options) =>
   reactiveRuntime.createEffect(cb, withPostEffectScheduler(options))
+
+/** watchEffect 的 sync flush 变体，用于响应式变更时同步运行。 */
+export const watchSyncEffect = (cb, options) =>
+  reactiveRuntime.watchEffect(cb, withSyncEffectScheduler(options))
+
+/** 支持 Vue 风格 flush 选项的 watchEffect。 */
+export const watchEffect = (cb, options) => {
+  const flush = getFlushOption(options)
+  if (flush === 'post') {
+    return watchPostEffect(cb, options)
+  }
+  if (flush === 'sync') {
+    return watchSyncEffect(cb, options)
+  }
+  return reactiveRuntime.watchEffect(cb, options)
+}
+
+const normalizeWatchSource = source => {
+  if (Array.isArray(source)) {
+    return source.map(normalizeWatchSource)
+  }
+  if (isRef(source)) {
+    return () => source.value
+  }
+  return source
+}
+
+/** 支持 Vue 风格 flush 选项的通用 watch。 */
+export const watch = (source, handler, options) =>
+  reactiveRuntime.watch(normalizeWatchSource(source), handler, withFlushScheduler(options))
 
 /** 在当前 watcher 上注册失效清理函数，旧 runtime 下退回 onCleanup。 */
 export const onWatcherCleanup = (cleanupFn, failSilently) => {
@@ -133,6 +201,10 @@ export const onWatcherCleanup = (cleanupFn, failSilently) => {
   }
 }
 
+/** 在当前 effect scope 停止时注册清理函数。 */
+export const onScopeDispose = (cleanupFn, failSilently) =>
+  reactiveRuntime.onScopeDispose(cleanupFn, failSilently)
+
 /** 等待响应式 flush 与 post flush 队列完成，可选执行回调。 */
 export const nextTick = callback => {
   const promise =
@@ -146,6 +218,11 @@ const getCurrentEffectScopeId =
   typeof reactiveRuntime.__rueGetCurrentEffectScope === 'function'
     ? reactiveRuntime.__rueGetCurrentEffectScope
     : () => undefined
+
+const createEffectScopeId =
+  typeof reactiveRuntime.__rueCreateDetachedEffectScope === 'function'
+    ? reactiveRuntime.__rueCreateDetachedEffectScope.bind(reactiveRuntime)
+    : undefined
 
 const disposeEffectScope =
   typeof reactiveRuntime.__rueDisposeEffectScope === 'function'
@@ -625,6 +702,20 @@ const getScopeHandle = id => {
 /** 读取当前活动 effect scope。 */
 export const getCurrentScope = () => getScopeHandle(getCurrentEffectScopeId())
 
+/** 创建 effect scope，可批量停止其中创建的 computed/watch/effect。 */
+export const effectScope = (detached = false) => {
+  const scope = getScopeHandle(createEffectScopeId?.())
+  if (!scope) {
+    throw new Error('effectScope() requires effect scope support from @rue-js/runtime-vapor.')
+  }
+
+  if (!detached) {
+    onScopeDispose(() => scope.stop(), true)
+  }
+
+  return scope
+}
+
 /** createReactive 包装：保留 runtime 行为并记录 readonly fallback 标记。 */
 export const createReactive = (initial, options) => {
   const value = reactiveRuntime.createReactive(initial, options)
@@ -670,6 +761,12 @@ export const shallowRef = (initial, options, force_global) => {
 /** 手动触发 ref/shallowRef 的 value 订阅者。 */
 export const triggerRef = ref => {
   if (!ref || typeof ref !== 'object') {
+    return
+  }
+
+  const customTrigger = Reflect.get(ref, '__rue_trigger_ref__')
+  if (typeof customTrigger === 'function') {
+    customTrigger.call(ref)
     return
   }
 
@@ -726,12 +823,14 @@ export default {
   computed,
   createComputed,
   createReactive,
+  effectScope,
   getCurrentScope,
   isRef,
   isReadonly,
   nextTick,
   onWatcherCleanup,
   onRenderTracked,
+  onScopeDispose,
   propsReactive,
   reactive,
   readonly,
@@ -740,7 +839,10 @@ export default {
   toRef,
   toRefs,
   triggerRef,
+  watch,
+  watchEffect,
   watchPostEffect,
+  watchSyncEffect,
 }
 
 export const {
@@ -750,12 +852,13 @@ export const {
   createEffect,
   createRef,
   createResource,
+  createCustomRef,
   createSignal,
+  customRef,
   getCurrentInstance,
   isProxy,
   isReactive,
   onCleanup,
-  onScopeDispose,
   ref,
   setCurrentInstance,
   setReactiveScheduling,
@@ -773,9 +876,7 @@ export const {
   useSignal,
   useState,
   vaporWithHookId,
-  watch,
   watchDeepSignal,
-  watchEffect,
   watchFn,
   watchPath,
   watchSignal,

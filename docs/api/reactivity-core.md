@@ -358,13 +358,49 @@
   - [指南 - 侦听器](/guide/guide/essentials/watchers#watcheffect)
   - [指南 - 侦听器调试](/guide/guide/extras/reactivity-in-depth#watcher-debugging)
 
-## watchPostEffect() {#watchposteffect} @todo
+## watchPostEffect() {#watchposteffect}
 
 带有 `flush: 'post'` 选项的 [`watchEffect()`](#watcheffect) 别名。
 
-## watchSyncEffect() {#watchsynceffect} @todo
+## watchSyncEffect() {#watchsynceffect}
 
 带有 `flush: 'sync'` 选项的 [`watchEffect()`](#watcheffect) 别名。
+
+- **类型**
+
+  ```ts
+  function watchSyncEffect(
+    effect: () => void,
+    options?: {
+      scheduler?: (run: () => void) => void
+    },
+  ): WatchHandle
+  ```
+
+- **详情**
+
+  `watchSyncEffect()` 会立即运行一次传入的 effect，并在其追踪到的响应式依赖发生变化时同步重新运行。它等价于使用 `flush: 'sync'` 的 `watchEffect()`。
+
+  同步 effect 不会等待组件更新队列或下一轮响应式 flush，因此适合处理必须立刻失效的轻量状态，例如缓存标记或简单布尔值。对于可能在同一个调用栈中连续变化的数据，例如数组或批量对象更新，应谨慎使用同步侦听器，以避免重复运行带来的性能开销或中间状态观察。
+
+- **示例**
+
+  ```js
+  import { ref, watchSyncEffect } from '@rue-js/rue'
+
+  const count = ref(0)
+
+  watchSyncEffect(() => {
+    console.log(count.value)
+  })
+
+  count.value++
+  // effect 会在本次响应式写入后同步重新运行
+  ```
+
+- **另请参阅**
+  - [指南 - 同步侦听器](/guide/guide/essentials/watchers#sync-watchers)
+  - [`watchEffect()`](#watcheffect)
 
 ## watch() {#watch}
 

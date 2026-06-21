@@ -332,6 +332,66 @@ fn rewrites_transition_group_children_maps_keys_and_nested_returns() {
 }
 
 #[test]
+fn rewrites_transition_children_with_keys_for_mode_switches() {
+    let mut vt = new_vt();
+    let mut host = parse_jsx_element(
+        "<Transition mode=\"out-in\"><div key={view.value}>{view.value}</div></Transition>",
+    );
+
+    let rewrite = rewrite_component_children_to_props(&mut vt, &mut host);
+    let mount = compact(&emit_expr(build_component_mount_expr(&host)));
+
+    assert!(rewrite.stmts.is_empty());
+    assert!(host.children.is_empty());
+    assert!(host.opening.self_closing);
+    assert!(mount.contains(
+        "_$createComponent(Transition,{mode:\"out-in\",__rueTransitionChildFactory:()=>_$vaporWithKey"
+    ));
+    assert!(mount.contains("view.value"));
+}
+
+#[test]
+fn rewrites_transition_conditional_children_factory_with_branch_keys() {
+    let mut vt = new_vt();
+    let mut host = parse_jsx_element(
+        "<Transition mode={mode}>{ok ? <section key=\"a\">A</section> : <section key=\"b\">B</section>}</Transition>",
+    );
+
+    let rewrite = rewrite_component_children_to_props(&mut vt, &mut host);
+    let mount = compact(&emit_expr(build_component_mount_expr(&host)));
+
+    assert!(rewrite.stmts.is_empty());
+    assert!(host.children.is_empty());
+    assert!(host.opening.self_closing);
+    assert!(mount.contains(
+        "_$createComponent(Transition,{mode:mode,__rueTransitionChildFactory:()=>ok?_$vaporWithKey"
+    ));
+    assert!(mount.contains("\"a\""), "{mount}");
+    assert!(mount.contains("\"b\""), "{mount}");
+    assert!(!mount.contains("children:"), "{mount}");
+}
+
+#[test]
+fn keeps_transition_group_on_children_prop_instead_of_transition_factory() {
+    let mut vt = new_vt();
+    let mut host = parse_jsx_element(
+        "<TransitionGroup><li key=\"a\">A</li>{ready && <li key=\"b\">B</li>}</TransitionGroup>",
+    );
+
+    let rewrite = rewrite_component_children_to_props(&mut vt, &mut host);
+    let mount = compact(&emit_expr(build_component_mount_expr(&host)));
+
+    assert!(rewrite.stmts.is_empty());
+    assert!(host.children.is_empty());
+    assert!(host.opening.self_closing);
+    assert!(mount.contains("_$createComponent(TransitionGroup,{children:["));
+    assert!(mount.contains("_$vaporWithKey"));
+    assert!(mount.contains("\"a\""), "{mount}");
+    assert!(mount.contains("\"b\""), "{mount}");
+    assert!(!mount.contains("__rueTransitionChildFactory"), "{mount}");
+}
+
+#[test]
 fn lowers_component_and_expression_slot_values_recursively() {
     let mut component_vt = new_vt();
     let single_component =

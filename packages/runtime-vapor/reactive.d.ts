@@ -71,15 +71,74 @@ export declare function onRenderTracked(callback: DebuggerHook): (() => void) | 
 export declare function onWatcherCleanup(cleanupFn: () => void, failSilently?: boolean): void
 
 /** 在当前 effect scope 停止时注册清理函数。 */
-export declare function onScopeDispose(cleanupFn: () => void): void
+export declare function onScopeDispose(cleanupFn: () => void, failSilently?: boolean): void
 
 /** 等待响应式 flush 完成，可选追加回调。 */
 export declare function nextTick<T = void>(callback?: () => T | Promise<T>): Promise<T | void>
 
+/** watcher 刷新时机；默认 pre 语义沿用 Rue 原有响应式调度。 */
+export type WatchFlush = 'pre' | 'post' | 'sync'
+
+/** watchEffect 选项。 */
+export interface WatchEffectOptions {
+  scheduler?: (run: () => void) => void
+  debounce?: number
+  flush?: WatchFlush
+}
+
+/** watch 选项。 */
+export interface WatchOptions<T = any> {
+  immediate?: boolean
+  scheduler?: (run: () => void) => void
+  equals?: (prev: T, next: T) => boolean
+  debounce?: number
+  flush?: WatchFlush
+}
+
+/** watch 回调。 */
+export type WatchCallback<T = any> = {
+  bivarianceHack(newv: T, oldv: T): void
+}['bivarianceHack']
+
+/** 单个侦听来源：信号句柄、ref-like 值或 getter 函数。 */
+export type WatchSource<T = any> = { get: () => T } | { value: T } | (() => T)
+
+/** 多源侦听来源。 */
+export type WatchMultiSource = Array<WatchSource<any> | any>
+
+/** 支持 flush 选项的 watchEffect。 */
+export declare function watchEffect(
+  cb: () => void,
+  options?: WatchEffectOptions | null,
+): EffectHandle
+
 /** 在响应式 flush 后运行并追踪依赖的 watch effect。 */
 export declare function watchPostEffect(
   cb: () => void,
-  options?: { scheduler?: (run: () => void) => void } | null,
+  options?: Pick<WatchEffectOptions, 'scheduler'> | null,
+): EffectHandle
+
+/** 响应式变更时同步运行并追踪依赖的 watch effect。 */
+export declare function watchSyncEffect(
+  cb: () => void,
+  options?: Pick<WatchEffectOptions, 'scheduler'> | null,
+): EffectHandle
+
+/** 支持 flush 选项的通用 watch。 */
+export declare function watch(
+  source: WatchMultiSource,
+  handler: WatchCallback<any[]>,
+  options?: WatchOptions<any[]> | null,
+): EffectHandle
+export declare function watch<T>(
+  source: WatchSource<T>,
+  handler: WatchCallback<T>,
+  options?: WatchOptions<T> | null,
+): EffectHandle
+export declare function watch<T>(
+  source: T,
+  handler: WatchCallback<T>,
+  options?: WatchOptions<T> | null,
 ): EffectHandle
 
 /** 当前 effect scope 的公开句柄。 */
@@ -90,12 +149,16 @@ export interface EffectScope {
   dispose(): void
 }
 
+/** 创建 effect scope，可批量停止其中创建的 computed/watch/effect。 */
+export declare function effectScope(detached?: boolean): EffectScope
+
 /** 读取当前活动 effect scope。 */
 export declare function getCurrentScope(): EffectScope | undefined
 
 import * as reactiveRuntime from './pkg/rue_runtime_vapor'
 
 declare const _default: typeof reactiveRuntime & {
+  effectScope: typeof effectScope
   getCurrentScope: typeof getCurrentScope
   isProxy: typeof isProxy
   isRef: typeof isRef
@@ -108,7 +171,10 @@ declare const _default: typeof reactiveRuntime & {
   toRef: typeof toRef
   toRefs: typeof toRefs
   triggerRef: typeof triggerRef
+  watch: typeof watch
+  watchEffect: typeof watchEffect
   watchPostEffect: typeof watchPostEffect
+  watchSyncEffect: typeof watchSyncEffect
 }
 
 export default _default

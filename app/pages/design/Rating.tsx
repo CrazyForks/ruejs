@@ -196,7 +196,7 @@ const ReadOnlyStatePreview: FC = () => {
     <div className="space-y-4 text-sm">
       <div className="space-y-2">
         <Rating defaultValue={4} readOnly={true} />
-        <p className="m-0 text-base-content/70">readOnly 保留展示，不响应交互。</p>
+        <p className="m-0 text-base-content/70">readOnly 保持展示，不响应交互。</p>
       </div>
       <div className="space-y-2">
         <Rating defaultValue={2} disabled={true} />
@@ -261,7 +261,7 @@ const LegacyBasicRatingPreview: FC = () => {
           <Rating.Item as="div" className="mask mask-star" aria-label="5 star" />
         </Rating>
         <p className="m-0 text-sm text-base-content/70">
-          保留原来的 group + item 结构，适合完全自定义 mask 或静态只读展示。
+          展示 group + item 结构，适合完全自定义 mask 或静态只读展示。
         </p>
       </div>
     </div>
@@ -588,7 +588,7 @@ const ratingApiRows: ApiRow[] = [
   },
   {
     prop: 'allowHalf',
-    description: '是否允许半星选择，兼容旧的 half 写法',
+    description: '是否允许半星选择，支持基础的 half 写法',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -606,7 +606,7 @@ const ratingApiRows: ApiRow[] = [
   },
   {
     prop: 'children',
-    description: '传入后切换到手动复合模式，保留 Rating.Item 的原始用法',
+    description: '传入后切换到手动复合模式，保持 Rating.Item 的基础用法',
     type: 'any',
     defaultValue: '-',
   },
@@ -678,7 +678,7 @@ const ratingApiRows: ApiRow[] = [
   },
   {
     prop: 'size',
-    description: '尺寸，支持 xs 到 xl，也兼容 small、default、medium、middle、large',
+    description: '尺寸，支持 xs 到 xl，也支持 small、default、medium、middle、large',
     type: 'string',
     defaultValue: 'md',
   },
@@ -717,7 +717,7 @@ const itemApiRows: ApiRow[] = [
   },
   {
     prop: 'hidden',
-    description: '是否追加 rating-hidden，用于保留老的手动清空能力',
+    description: '是否追加 rating-hidden，用于展示基础手动清空能力',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -747,8 +747,8 @@ const RatingPage: FC = () => {
         <h1>Rating 评分</h1>
         <p className="mt-3 mb-3 text-sm">
           Rating 现在有两条使用路径：默认使用语义化 API，直接获得 count、value /
-          defaultValue、allowClear、allowHalf、tooltips 和自定义字符；需要完全沿用 daisyUI mask
-          结构时，仍然可以继续使用 Rating.Item 复合写法。
+          defaultValue、allowClear、allowHalf、tooltips 和自定义字符；需要完全使用 daisyUI mask
+          结构时，仍然可以使用 Rating.Item 复合写法。
         </p>
 
         <PreviewBlock
@@ -838,7 +838,7 @@ const RatingPage: FC = () => {
         />
 
         <PreviewBlock
-          title="Legacy composition"
+          title="Composition mode"
           tab={tabLegacyBasic}
           preview={() => <LegacyBasicRatingPreview />}
           code={codeBlock([
@@ -858,7 +858,7 @@ const RatingPage: FC = () => {
         />
 
         <PreviewBlock
-          title="Legacy mask gallery"
+          title="Mask gallery"
           tab={tabLegacyMasks}
           preview={() => <LegacyMaskGalleryPreview />}
           code={codeBlock([
@@ -883,7 +883,7 @@ const RatingPage: FC = () => {
         />
 
         <PreviewBlock
-          title="Legacy clear and half"
+          title="Clear and half"
           tab={tabLegacyAdvanced}
           preview={() => <LegacyClearAndHalfPreview />}
           code={codeBlock([

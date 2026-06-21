@@ -45,13 +45,15 @@ describe('JSX index actual page', () => {
     await waitForContent(() => {
       const links = Array.from(container.querySelectorAll('a')) as HTMLAnchorElement[]
       expect(container.textContent).toContain('React JSX 语法目录')
-      expect(links).toHaveLength(26)
+      expect(links).toHaveLength(28)
       expect(normalize(links[0]?.textContent)).toBe('基础元素与自闭合标签')
       expect(links[0]?.getAttribute('href')).toBe('/jsx/basic-elements')
       expect(normalize(links[15]?.textContent)).toBe('v-for / r-for 指令')
       expect(links[15]?.getAttribute('href')).toBe('/jsx/v-for-r-for')
-      expect(normalize(links[25]?.textContent)).toBe('Refs 基础')
-      expect(links[25]?.getAttribute('href')).toBe('/jsx/refs')
+      expect(normalize(links[23]?.textContent)).toBe('异步组件懒水合')
+      expect(links[23]?.getAttribute('href')).toBe('/jsx/async-hydration')
+      expect(normalize(links[27]?.textContent)).toBe('Refs 基础')
+      expect(links[27]?.getAttribute('href')).toBe('/jsx/refs')
     })
 
     const firstLink = container.querySelector('a[href="/jsx/basic-elements"]')

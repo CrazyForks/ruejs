@@ -183,7 +183,7 @@ const globalSections: DemoSection[] = [
     points: [
       '回到原位后恢复普通流布局。',
       '默认语义就是 window。',
-      '局部容器需求再显式传 target。',
+      '局部滚动容器场景再显式传 target。',
     ],
   },
 ]
@@ -206,11 +206,11 @@ const monitorSections: DemoSection[] = [
     id: 'prototype',
     eyebrow: 'Track B',
     title: 'Prototype Review',
-    summary: '工具条吸附后，仍然保留原有宽度和左侧坐标，适合栅格内部的过滤器和子导航。',
+    summary: '工具条吸附后，仍然展示基础宽度和左侧坐标，适合栅格内部的过滤器和子导航。',
     metric: 'Stable Width',
     points: [
       '固定态自动同步 left / width / height。',
-      '退出 fixed 时会主动清理旧的内联定位样式。',
+      '退出 fixed 时会主动清理基础的内联定位样式。',
       '不会把行为泄露到其他组件。',
     ],
   },
@@ -220,7 +220,7 @@ const monitorSections: DemoSection[] = [
     title: 'Closeout',
     summary: '这一段用于拉长容器高度，确保滚动过程中可以多次观察进入和退出固定态。',
     metric: 'Toggle',
-    points: ['和普通 div 一样使用。', '没有强依赖额外运行时包装。', '保留编译器参与优化空间。'],
+    points: ['和普通 div 一样使用。', '没有强依赖额外运行时包装。', '保持编译器参与优化空间。'],
   },
 ]
 
@@ -229,7 +229,7 @@ const threadItems: MessageItem[] = [
     id: 'msg-1',
     author: 'Lina',
     role: 'Research',
-    text: '先把本轮访谈的三个核心异议归并成一个摘要卡，底部回复区保留在阅读终点附近。',
+    text: '先把本轮访谈的三个核心异议归并成一个摘要卡，底部回复区保持在阅读终点附近。',
     time: '09:10',
   },
   {
@@ -250,21 +250,21 @@ const threadItems: MessageItem[] = [
     id: 'msg-4',
     author: 'Theo',
     role: 'Ops',
-    text: '底部吸附最适合评论框、批量提交条或者移动端的确认操作区，这次一起补齐。',
+    text: '底部吸附最适合评论框、批量提交条或者移动端的确认操作区，直接支持。',
     time: '10:03',
   },
   {
     id: 'msg-5',
     author: 'Mika',
     role: 'QA',
-    text: '我们还需要验证 fixed 释放时旧的内联 style 会不会残留，这类问题在行为组件里很常见。',
+    text: '我们还需要验证 fixed 释放时基础的内联 style 会不会残留，这类问题在行为组件里很常见。',
     time: '10:18',
   },
   {
     id: 'msg-6',
     author: 'Cole',
     role: 'Release',
-    text: '如果 target 不传，就默认监听 window；但 demo 里最好还是用局部面板，避免预览互相干扰。',
+    text: '如果 target 不传，就默认监听 window；但示例 里最好还是用局部面板，避免预览互相干扰。',
     time: '10:36',
   },
 ]
@@ -662,9 +662,9 @@ const AffixPage: FC = () => {
         <h1>Affix 固钉</h1>
         <p>
           Rue 的 Affix 是一个纯行为组件：它不替 child
-          决定外观，只负责在合适的滚动边界上把节点吸附到顶部或底部。 这次补齐了 top / bottom
-          偏移、自定义 target、状态回调，以及 root 与 fixed 两层样式钩子，API
-          尽量保持直观，视觉仍然交给 Rue 自己的内容块来完成。
+          决定外观，只负责在合适的滚动边界上把节点吸附到顶部或底部。 支持 top / bottom 偏移、自定义
+          target、状态回调，以及 root 与 fixed 两层样式钩子，API 尽量保持直观，视觉仍然交给 Rue
+          自己的内容块来完成。
         </p>
 
         <div className="not-prose mt-6 grid gap-3 md:grid-cols-3">

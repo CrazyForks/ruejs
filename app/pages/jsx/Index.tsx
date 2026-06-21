@@ -60,6 +60,9 @@ const Index: FC = () => (
             <RouterLink to="/jsx/template">Template 无包装容器</RouterLink>
           </li>
           <li>
+            <RouterLink to="/jsx/scoped-style">Scoped Style 组件作用域样式</RouterLink>
+          </li>
+          <li>
             <RouterLink to="/jsx/fragments">
               Fragments（<>children</>）
             </RouterLink>
@@ -75,6 +78,9 @@ const Index: FC = () => (
           </li>
           <li>
             <RouterLink to="/jsx/suspense">Suspense 异步边界</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/jsx/async-hydration">异步组件懒水合</RouterLink>
           </li>
           <li>
             <RouterLink to="/jsx/keep-alive">KeepAlive 缓存组件</RouterLink>

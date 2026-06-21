@@ -233,7 +233,7 @@ const headingApiRows: ApiRow[] = [
   },
   {
     prop: 'underline / delete / strong / italic',
-    description: '继续支持强调、删除和斜体等排版修饰。',
+    description: '支持强调、删除和斜体等排版修饰。',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -260,7 +260,7 @@ const TypographyDemo: FC = () => {
           <code>Title</code>、<code>Paragraph</code> 这组复合 API。
         </p>
         <p className="text-sm mb-3 opacity-80">
-          它保留 Rue 当前轻量、类名直连的风格，同时也成为 Text Rotate 等组件的语义文本底座。
+          它使用 Rue 当前轻量、类名直连的风格，同时也成为 Text Rotate 等组件的语义文本底座。
         </p>
 
         <DemoBlock
@@ -382,7 +382,7 @@ const TypographyDemo: FC = () => {
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-sm font-medium">Text / Link</div>
             <p className="mt-2 text-sm opacity-70">
-              这一组偏内联表达，适合补 tone、强调状态、代码语义和链接能力。
+              这组组件偏内联表达，适合补 tone、强调状态、代码语义和链接能力。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">

@@ -276,9 +276,8 @@ const FilterPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Filter 筛选器</h1>
         <p className="text-sm mt-3 mb-3">
-          Filter 继续沿用 Rue 当前的 <code>filter + btn</code> 视觉风格，在此基础上补了一层更顺手的
-          API： 可以继续使用 <code>Filter.Item</code> / <code>Filter.Reset</code>{' '}
-          组合写法，也可以直接用
+          Filter 使用 Rue 当前的 <code>filter + btn</code> 视觉风格，在此基础上补了一层更顺手的
+          API： 可以使用 <code>Filter.Item</code> / <code>Filter.Reset</code> 组合写法，也可以直接用
           <code>items</code>、<code>value</code>、<code>onChange</code> 组织整组筛选。
         </p>
 
@@ -286,7 +285,7 @@ const FilterPage: FC = () => {
         <ul>
           <li>需要一排轻量筛选按钮，并保持 Rue 当前视觉。</li>
           <li>需要同时覆盖表单重置、即时切换和多选标签场景。</li>
-          <li>需要在保留旧 compound 写法的同时，逐步切换到数据驱动写法。</li>
+          <li>需要在展示基础 compound 写法的同时，逐步切换到数据驱动写法。</li>
         </ul>
 
         <h2>推荐用法</h2>
@@ -462,7 +461,7 @@ const items = [
         />
 
         <h2 id="filter-api">API</h2>
-        <p>当前页面展示的是增强后的 Filter API；旧的 compound 写法仍然可用。</p>
+        <p>当前页面展示的是语义化的 Filter API；基础的 compound 写法仍然可用。</p>
 
         <h3>Filter</h3>
         <ApiTable rows={filterApiRows} />
@@ -483,7 +482,7 @@ const items = [
 
         <h3>为什么推荐使用 label 而不是只写 aria-label？</h3>
         <p>
-          旧写法保留 <code>aria-label</code>，但增强 API 下优先推荐 <code>label</code>，这样在
+          基础写法保持 <code>aria-label</code>，但语义 API 下优先推荐 <code>label</code>，这样在
           <code>items</code> 模式里既能声明按钮文案，也更方便推导默认 <code>value</code>。
         </p>
 

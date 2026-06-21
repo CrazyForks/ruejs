@@ -113,7 +113,7 @@ const indicatorApiRows: ApiRow[] = [
   },
   {
     prop: 'style',
-    description: '容器样式，保留原生 style 透传',
+    description: '容器样式，保持原生 style 透传',
     type: 'Record<string, any> | string',
     defaultValue: '-',
   },
@@ -140,7 +140,7 @@ const indicatorItemApiRows: ApiRow[] = [
   },
   {
     prop: 'offset',
-    description: '在既有 anchor 基础上微调角标位置，格式为 [x, y]',
+    description: '在基础 anchor 基础上微调角标位置，格式为 [x, y]',
     type: '[number | string, number | string]',
     defaultValue: '-',
   },
@@ -182,20 +182,20 @@ const IndicatorPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Indicator 指示器</h1>
         <p className="text-sm mt-3 mb-3">
-          Indicator 负责把状态点、徽标、按钮或任意轻量信息悬挂到内容边缘。Rue
-          这一版在保留原有复合写法的同时，补齐了
+          Indicator 负责把状态点、徽标、按钮或任意轻量信息悬挂到内容边缘。组件展示基础复合写法，
+          并提供
           <code> placement </code>、<code> offset </code>，以及 <code> item / items </code>
           这组三件套，方便快速搭角标而不必每次都手写一个 <code>Indicator.Item</code>。
         </p>
         <div className="not-prose grid gap-3 rounded-box border border-base-300 bg-base-100 p-4 md:grid-cols-3">
           <div className="rounded-box bg-base-200/70 p-4">
-            <div className="text-sm font-medium">兼容旧用法</div>
+            <div className="text-sm font-medium">支持基础用法</div>
             <p className="m-0 mt-2 text-sm text-base-content/70">
-              horizontal 和 vertical 仍然可直接使用，旧 demo 不需要回退。
+              horizontal 和 vertical 仍然可直接使用，基础示例 不需要回退。
             </p>
           </div>
           <div className="rounded-box bg-base-200/70 p-4">
-            <div className="text-sm font-medium">新增快捷模式</div>
+            <div className="text-sm font-medium">快捷模式</div>
             <p className="m-0 mt-2 text-sm text-base-content/70">
               一个角标用 item，多角标用 items，页面模板代码可以明显收缩。
             </p>
@@ -210,7 +210,7 @@ const IndicatorPage: FC = () => {
 
         <ExampleBlock
           title="Status indicator"
-          summary="最轻量的状态提醒，保留原始复合写法。"
+          summary="最轻量的状态提醒，展示基础复合写法。"
           tab={tabStatus}
           preview={() => (
             <Indicator>
@@ -270,7 +270,7 @@ const IndicatorPage: FC = () => {
 
         <ExampleBlock
           title="A button as an indicator for a card"
-          summary="兼容旧的 vertical 写法，适合把操作按钮悬挂在卡片边缘。"
+          summary="支持基础的 vertical 写法，适合把操作按钮悬挂在卡片边缘。"
           tab={tabCard}
           preview={() => (
             <Indicator className="mx-10 my-6">

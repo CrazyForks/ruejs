@@ -41,6 +41,8 @@ const MODEL_DIRECTIVE_SAFE_PREFIX = '__rue_model__'
 const MODEL_DIRECTIVE_SAFE_MODIFIERS_MARKER = '__mods__'
 /** v-model 支持的原始修饰符。 */
 const rawModelModifierNames = new Set(['trim', 'number', 'lazy'])
+/** JSX scoped style 生成的 DOM 作用域属性名前缀。 */
+const RUE_SCOPED_STYLE_ATTR_PREFIX = 'data-rue-scope-'
 /** v-on / @ 支持识别为修饰符的常见 token。 */
 const directiveModifierNames = new Set([
   'stop',
@@ -1029,6 +1031,926 @@ const lowerModelDirectiveAttributes = code => {
   return swc.printSync(ast, {}).code
 }
 
+/** 为 scoped style 生成稳定、短小的作用域 id。 */
+const hashScopedStyleId = value => {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(36)
+}
+
+const isFunctionLikeNode = node =>
+  node?.type === 'FunctionDeclaration' ||
+  node?.type === 'FunctionExpression' ||
+  node?.type === 'ArrowFunctionExpression'
+
+const isNativeJsxElementOpening = opening => {
+  if (!opening || opening.name?.type !== 'Identifier') {
+    return false
+  }
+
+  const name = getJsxNameText(opening.name)
+  return !!name && /^[a-z]/.test(name)
+}
+
+const isScopedStyleAttr = attr => {
+  if (attr?.type !== 'JSXAttribute' || getJsxAttrNameText(attr.name) !== 'scoped') {
+    return false
+  }
+
+  if (!attr.value) {
+    return true
+  }
+
+  if (attr.value.type === 'StringLiteral') {
+    return attr.value.value.toLowerCase() !== 'false'
+  }
+
+  if (attr.value.type === 'JSXExpressionContainer') {
+    const expr = attr.value.expression
+    if (expr?.type === 'BooleanLiteral') {
+      return expr.value
+    }
+    if (expr?.type === 'StringLiteral') {
+      return expr.value.toLowerCase() !== 'false'
+    }
+  }
+
+  return true
+}
+
+const isScopedStyleElement = node =>
+  node?.type === 'JSXElement' &&
+  getJsxNameText(node.opening?.name).toLowerCase() === 'style' &&
+  node.opening.attributes.some(isScopedStyleAttr)
+
+const readStaticStyleCss = element => {
+  let css = ''
+
+  for (const child of element.children ?? []) {
+    if (child.type === 'JSXText') {
+      css += child.value
+      continue
+    }
+
+    if (child.type !== 'JSXExpressionContainer') {
+      return null
+    }
+
+    const expr = child.expression
+    if (!expr || expr.type === 'JSXEmptyExpression') {
+      continue
+    }
+
+    if (expr.type === 'StringLiteral') {
+      css += expr.value
+      continue
+    }
+
+    if (expr.type === 'TemplateLiteral' && expr.expressions.length === 0) {
+      css += expr.quasis.map(quasi => quasi.cooked ?? quasi.raw ?? '').join('')
+      continue
+    }
+
+    return null
+  }
+
+  return css
+}
+
+const parseStyleChildrenFromCss = css => {
+  const helperSource = `const __rue_scoped_style = <style>{${JSON.stringify(css)}}</style>`
+  const helperAst = swc.parseSync(helperSource, {
+    syntax: 'typescript',
+    tsx: true,
+    target: 'es2020',
+  })
+  return helperAst.body[0].declarations[0].init.children
+}
+
+const buildScopedStyleVarsSource = bindings =>
+  `{${bindings
+    .map(binding => `${JSON.stringify(binding.name)}: (${binding.expression})`)
+    .join(', ')}}`
+
+const buildScopedStyleStringAppendSource = bindings =>
+  bindings
+    .map(binding => `${JSON.stringify(`${binding.name}: `)} + String(${binding.expression})`)
+    .join(' + "; " + ')
+
+const mergeScopedStyleVarsInOpening = (opening, bindings) => {
+  if (bindings.length === 0) {
+    return false
+  }
+
+  const existingStyle = findJsxAttr(opening, ['style'])
+  const varsObjectSource = buildScopedStyleVarsSource(bindings)
+  let attrSource
+
+  if (!existingStyle) {
+    attrSource = `style={${varsObjectSource}}`
+  } else {
+    const existingStyleSource = getJsxAttrValueSource(existingStyle) ?? 'undefined'
+    const styleStringSource = buildScopedStyleStringAppendSource(bindings)
+    attrSource = `style={typeof (${existingStyleSource}) === "string" ? [(${existingStyleSource}), ${styleStringSource}].filter(Boolean).join("; ") : { ...(${existingStyleSource} || {}), ...${varsObjectSource} }}`
+  }
+
+  const generatedAttrs = parseOpeningAttributeNodes(getJsxNameText(opening.name), [attrSource])
+  opening.attributes = opening.attributes
+    .filter(attr => attr !== existingStyle)
+    .concat(generatedAttrs)
+  return true
+}
+
+const addScopeAttributeToOpening = (opening, scopeAttrName) => {
+  if (findJsxAttr(opening, [scopeAttrName])) {
+    return false
+  }
+
+  const generatedAttrs = parseOpeningAttributeNodes(getJsxNameText(opening.name), [
+    `${scopeAttrName}=""`,
+  ])
+  opening.attributes = opening.attributes.concat(generatedAttrs)
+  return true
+}
+
+const findMatchingParen = (source, openIndex) => {
+  let quote = null
+  let escape = false
+  let depth = 0
+
+  for (let index = openIndex; index < source.length; index += 1) {
+    const ch = source[index]
+
+    if (quote) {
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (ch === '\\') {
+        escape = true
+        continue
+      }
+      if (ch === quote) {
+        quote = null
+      }
+      continue
+    }
+
+    if (ch === '"' || ch === "'" || ch === '`') {
+      quote = ch
+      continue
+    }
+
+    if (ch === '(') {
+      depth += 1
+      continue
+    }
+
+    if (ch === ')') {
+      depth -= 1
+      if (depth === 0) {
+        return index
+      }
+    }
+  }
+
+  return -1
+}
+
+const normalizeCssVBindExpression = raw => {
+  const trimmed = raw.trim()
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim()
+  }
+  return trimmed
+}
+
+const transformCssVBind = (css, scopeId) => {
+  if (!css.includes('v-bind(')) {
+    return { css, bindings: [] }
+  }
+
+  let output = ''
+  let index = 0
+  const bindingsByExpression = new Map()
+
+  while (index < css.length) {
+    const bindIndex = css.indexOf('v-bind(', index)
+    if (bindIndex === -1) {
+      output += css.slice(index)
+      break
+    }
+
+    const openIndex = bindIndex + 'v-bind'.length
+    const closeIndex = findMatchingParen(css, openIndex)
+    if (closeIndex === -1) {
+      output += css.slice(index)
+      break
+    }
+
+    const expression = normalizeCssVBindExpression(css.slice(openIndex + 1, closeIndex))
+    if (!expression) {
+      output += css.slice(index, closeIndex + 1)
+      index = closeIndex + 1
+      continue
+    }
+
+    let binding = bindingsByExpression.get(expression)
+    if (!binding) {
+      binding = {
+        expression,
+        name: `--rue-v-bind-${scopeId}-${hashScopedStyleId(expression)}`,
+      }
+      bindingsByExpression.set(expression, binding)
+    }
+
+    output += `${css.slice(index, bindIndex)}var(${binding.name})`
+    index = closeIndex + 1
+  }
+
+  return { css: output, bindings: [...bindingsByExpression.values()] }
+}
+
+const findNextCssBlockStart = (css, start) => {
+  let quote = null
+  let escape = false
+  let lineComment = false
+  let blockComment = false
+  let parenDepth = 0
+  let bracketDepth = 0
+
+  for (let index = start; index < css.length; index += 1) {
+    const ch = css[index]
+    const next = css[index + 1]
+
+    if (lineComment) {
+      if (ch === '\n') lineComment = false
+      continue
+    }
+
+    if (blockComment) {
+      if (ch === '*' && next === '/') {
+        blockComment = false
+        index += 1
+      }
+      continue
+    }
+
+    if (quote) {
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (ch === '\\') {
+        escape = true
+        continue
+      }
+      if (ch === quote) {
+        quote = null
+      }
+      continue
+    }
+
+    if (ch === '/' && next === '/') {
+      lineComment = true
+      index += 1
+      continue
+    }
+
+    if (ch === '/' && next === '*') {
+      blockComment = true
+      index += 1
+      continue
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      continue
+    }
+
+    if (ch === '(') parenDepth += 1
+    else if (ch === ')' && parenDepth > 0) parenDepth -= 1
+    else if (ch === '[') bracketDepth += 1
+    else if (ch === ']' && bracketDepth > 0) bracketDepth -= 1
+    else if (ch === '{' && parenDepth === 0 && bracketDepth === 0) return index
+  }
+
+  return -1
+}
+
+const findMatchingCssBrace = (css, openIndex) => {
+  let quote = null
+  let escape = false
+  let lineComment = false
+  let blockComment = false
+  let depth = 0
+
+  for (let index = openIndex; index < css.length; index += 1) {
+    const ch = css[index]
+    const next = css[index + 1]
+
+    if (lineComment) {
+      if (ch === '\n') lineComment = false
+      continue
+    }
+
+    if (blockComment) {
+      if (ch === '*' && next === '/') {
+        blockComment = false
+        index += 1
+      }
+      continue
+    }
+
+    if (quote) {
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (ch === '\\') {
+        escape = true
+        continue
+      }
+      if (ch === quote) {
+        quote = null
+      }
+      continue
+    }
+
+    if (ch === '/' && next === '/') {
+      lineComment = true
+      index += 1
+      continue
+    }
+
+    if (ch === '/' && next === '*') {
+      blockComment = true
+      index += 1
+      continue
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      continue
+    }
+
+    if (ch === '{') {
+      depth += 1
+      continue
+    }
+
+    if (ch === '}') {
+      depth -= 1
+      if (depth === 0) {
+        return index
+      }
+    }
+  }
+
+  return -1
+}
+
+const splitCssSelectorList = selectorList => {
+  const parts = []
+  let start = 0
+  let quote = null
+  let escape = false
+  let parenDepth = 0
+  let bracketDepth = 0
+
+  for (let index = 0; index < selectorList.length; index += 1) {
+    const ch = selectorList[index]
+
+    if (quote) {
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (ch === '\\') {
+        escape = true
+        continue
+      }
+      if (ch === quote) {
+        quote = null
+      }
+      continue
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      continue
+    }
+
+    if (ch === '(') parenDepth += 1
+    else if (ch === ')' && parenDepth > 0) parenDepth -= 1
+    else if (ch === '[') bracketDepth += 1
+    else if (ch === ']' && bracketDepth > 0) bracketDepth -= 1
+    else if (ch === ',' && parenDepth === 0 && bracketDepth === 0) {
+      parts.push(selectorList.slice(start, index))
+      start = index + 1
+    }
+  }
+
+  parts.push(selectorList.slice(start))
+  return parts
+}
+
+const findLastTopLevelCombinator = selector => {
+  let quote = null
+  let escape = false
+  let parenDepth = 0
+  let bracketDepth = 0
+  let last = -1
+
+  for (let index = 0; index < selector.length; index += 1) {
+    const ch = selector[index]
+
+    if (quote) {
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (ch === '\\') {
+        escape = true
+        continue
+      }
+      if (ch === quote) {
+        quote = null
+      }
+      continue
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      continue
+    }
+
+    if (ch === '(') parenDepth += 1
+    else if (ch === ')' && parenDepth > 0) parenDepth -= 1
+    else if (ch === '[') bracketDepth += 1
+    else if (ch === ']' && bracketDepth > 0) bracketDepth -= 1
+    else if (parenDepth === 0 && bracketDepth === 0 && /[\s>+~]/.test(ch)) {
+      last = index
+    }
+  }
+
+  return last
+}
+
+const findFirstTopLevelPseudo = selector => {
+  let quote = null
+  let escape = false
+  let parenDepth = 0
+  let bracketDepth = 0
+
+  for (let index = 0; index < selector.length; index += 1) {
+    const ch = selector[index]
+
+    if (quote) {
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (ch === '\\') {
+        escape = true
+        continue
+      }
+      if (ch === quote) {
+        quote = null
+      }
+      continue
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      continue
+    }
+
+    if (ch === '(') parenDepth += 1
+    else if (ch === ')' && parenDepth > 0) parenDepth -= 1
+    else if (ch === '[') bracketDepth += 1
+    else if (ch === ']' && bracketDepth > 0) bracketDepth -= 1
+    else if (ch === ':' && parenDepth === 0 && bracketDepth === 0) {
+      return index
+    }
+  }
+
+  return -1
+}
+
+const findTopLevelFunctionalPseudo = (selector, names) => {
+  let quote = null
+  let escape = false
+  let parenDepth = 0
+  let bracketDepth = 0
+
+  for (let index = 0; index < selector.length; index += 1) {
+    const ch = selector[index]
+
+    if (quote) {
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (ch === '\\') {
+        escape = true
+        continue
+      }
+      if (ch === quote) {
+        quote = null
+      }
+      continue
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      continue
+    }
+
+    if (ch === '[') {
+      bracketDepth += 1
+      continue
+    }
+    if (ch === ']' && bracketDepth > 0) {
+      bracketDepth -= 1
+      continue
+    }
+    if (ch === '(') {
+      parenDepth += 1
+      continue
+    }
+    if (ch === ')' && parenDepth > 0) {
+      parenDepth -= 1
+      continue
+    }
+
+    if (parenDepth !== 0 || bracketDepth !== 0) {
+      continue
+    }
+
+    for (const name of names) {
+      if (!selector.startsWith(`${name}(`, index)) {
+        continue
+      }
+
+      const openIndex = index + name.length
+      const closeIndex = findMatchingParen(selector, openIndex)
+      if (closeIndex !== -1) {
+        return {
+          name,
+          start: index,
+          end: closeIndex + 1,
+          inner: selector.slice(openIndex + 1, closeIndex),
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+const findTopLevelDeepCombinator = selector => {
+  let quote = null
+  let escape = false
+  let parenDepth = 0
+  let bracketDepth = 0
+
+  for (let index = 0; index < selector.length; index += 1) {
+    const ch = selector[index]
+
+    if (quote) {
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (ch === '\\') {
+        escape = true
+        continue
+      }
+      if (ch === quote) {
+        quote = null
+      }
+      continue
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      continue
+    }
+
+    if (ch === '(') parenDepth += 1
+    else if (ch === ')' && parenDepth > 0) parenDepth -= 1
+    else if (ch === '[') bracketDepth += 1
+    else if (ch === ']' && bracketDepth > 0) bracketDepth -= 1
+
+    if (parenDepth !== 0 || bracketDepth !== 0) {
+      continue
+    }
+
+    for (const token of ['>>>', '/deep/', '::v-deep']) {
+      if (selector.startsWith(token, index)) {
+        return { start: index, end: index + token.length }
+      }
+    }
+  }
+
+  return null
+}
+
+const joinScopedSelectorParts = (before, inner, after, scopeAttrName) => {
+  const scopedBefore = before ? appendScopeToSelector(before, scopeAttrName) : `[${scopeAttrName}]`
+  const innerSelectors = splitCssSelectorList(inner)
+    .map(selector => selector.trim())
+    .filter(Boolean)
+  const suffix = after.trim()
+
+  if (innerSelectors.length === 0) {
+    return scopedBefore
+  }
+
+  return innerSelectors
+    .map(selector => [scopedBefore, selector, suffix].filter(Boolean).join(' '))
+    .join(',')
+}
+
+const appendScopeToSelector = (selector, scopeAttrName) => {
+  const attrSelector = `[${scopeAttrName}]`
+  const lastCombinator = findLastTopLevelCombinator(selector)
+  const head = selector.slice(0, lastCombinator + 1)
+  const compound = selector.slice(lastCombinator + 1)
+
+  if (!compound.trim()) {
+    return `${selector}${attrSelector}`
+  }
+
+  const leading = compound.match(/^\s*/)?.[0] ?? ''
+  const trailing = compound.match(/\s*$/)?.[0] ?? ''
+  let body = compound.slice(leading.length, compound.length - trailing.length)
+
+  if (body === '*') {
+    body = attrSelector
+    return `${head}${leading}${body}${trailing}`
+  }
+
+  const pseudoIndex = findFirstTopLevelPseudo(body)
+  const insertionIndex = pseudoIndex === -1 ? body.length : pseudoIndex
+  return `${head}${leading}${body.slice(0, insertionIndex)}${attrSelector}${body.slice(insertionIndex)}${trailing}`
+}
+
+const scopeSingleSelector = (selector, scopeAttrName) => {
+  const leading = selector.match(/^\s*/)?.[0] ?? ''
+  const trailing = selector.match(/\s*$/)?.[0] ?? ''
+  const body = selector.slice(leading.length, selector.length - trailing.length)
+
+  if (!body) {
+    return selector
+  }
+
+  const globalPseudo = findTopLevelFunctionalPseudo(body, [':global', '::v-global'])
+  if (
+    globalPseudo &&
+    !body.slice(0, globalPseudo.start).trim() &&
+    !body.slice(globalPseudo.end).trim()
+  ) {
+    return `${leading}${globalPseudo.inner}${trailing}`
+  }
+
+  const deepPseudo = findTopLevelFunctionalPseudo(body, [':deep', '::v-deep'])
+  if (deepPseudo) {
+    return `${leading}${joinScopedSelectorParts(
+      body.slice(0, deepPseudo.start).trim(),
+      deepPseudo.inner,
+      body.slice(deepPseudo.end).trim(),
+      scopeAttrName,
+    )}${trailing}`
+  }
+
+  const slottedPseudo = findTopLevelFunctionalPseudo(body, [':slotted', '::v-slotted'])
+  if (slottedPseudo) {
+    return `${leading}${joinScopedSelectorParts(
+      body.slice(0, slottedPseudo.start).trim(),
+      slottedPseudo.inner,
+      body.slice(slottedPseudo.end).trim(),
+      scopeAttrName,
+    )}${trailing}`
+  }
+
+  const deepCombinator = findTopLevelDeepCombinator(body)
+  if (deepCombinator) {
+    return `${leading}${joinScopedSelectorParts(
+      body.slice(0, deepCombinator.start).trim(),
+      body.slice(deepCombinator.end).trim(),
+      '',
+      scopeAttrName,
+    )}${trailing}`
+  }
+
+  return `${leading}${appendScopeToSelector(body, scopeAttrName)}${trailing}`
+}
+
+const scopeSelectorList = (selectorList, scopeAttrName) =>
+  splitCssSelectorList(selectorList)
+    .map(selector => scopeSingleSelector(selector, scopeAttrName))
+    .join(',')
+
+const shouldScopeNestedAtRule = prelude =>
+  /^@(media|supports|container|layer)\b/i.test(prelude.trim())
+
+const shouldPreserveAtRule = prelude =>
+  /^@(?:-webkit-)?keyframes\b/i.test(prelude.trim()) ||
+  /^@(font-face|page|property|counter-style)\b/i.test(prelude.trim())
+
+const scopeCssText = (css, scopeAttrName) => {
+  let output = ''
+  let index = 0
+
+  while (index < css.length) {
+    const openIndex = findNextCssBlockStart(css, index)
+    if (openIndex === -1) {
+      output += css.slice(index)
+      break
+    }
+
+    const closeIndex = findMatchingCssBrace(css, openIndex)
+    if (closeIndex === -1) {
+      output += css.slice(index)
+      break
+    }
+
+    const prelude = css.slice(index, openIndex)
+    const body = css.slice(openIndex + 1, closeIndex)
+    const trimmedPrelude = prelude.trim()
+
+    if (trimmedPrelude.startsWith('@')) {
+      const nextBody =
+        shouldScopeNestedAtRule(trimmedPrelude) && !shouldPreserveAtRule(trimmedPrelude)
+          ? scopeCssText(body, scopeAttrName)
+          : body
+      output += `${prelude}{${nextBody}}`
+    } else {
+      output += `${scopeSelectorList(prelude, scopeAttrName)}{${body}}`
+    }
+
+    index = closeIndex + 1
+  }
+
+  return output
+}
+
+const processScopedStyleOwner = (owner, { id, nextScopeIndex, processedStyles, skipFunctions }) => {
+  const entries = []
+
+  const collect = node => {
+    if (!node || typeof node !== 'object') {
+      return
+    }
+
+    if (node !== owner && skipFunctions && isFunctionLikeNode(node)) {
+      return
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) collect(item)
+      return
+    }
+
+    if (isScopedStyleElement(node) && !processedStyles.has(node)) {
+      const css = readStaticStyleCss(node)
+      if (css != null) {
+        entries.push({ element: node, css })
+      }
+    }
+
+    for (const value of Object.values(node)) {
+      if (value && typeof value === 'object') {
+        collect(value)
+      }
+    }
+  }
+
+  collect(owner)
+
+  if (entries.length === 0) {
+    return false
+  }
+
+  const scopeIndex = nextScopeIndex.value
+  nextScopeIndex.value += 1
+  const scopeId = hashScopedStyleId(
+    `${id || 'rue-scoped-style'}\n${scopeIndex}\n${entries.map(entry => entry.css).join('\n')}`,
+  )
+  const scopeAttrName = `${RUE_SCOPED_STYLE_ATTR_PREFIX}${scopeId}`
+
+  const cssVarBindings = []
+
+  for (const entry of entries) {
+    const boundCss = transformCssVBind(entry.css, scopeId)
+    cssVarBindings.push(...boundCss.bindings)
+    entry.element.opening.attributes = entry.element.opening.attributes.filter(
+      attr => !isScopedStyleAttr(attr),
+    )
+    entry.element.children = parseStyleChildrenFromCss(scopeCssText(boundCss.css, scopeAttrName))
+    processedStyles.add(entry.element)
+  }
+
+  const addScopeAttrs = node => {
+    if (!node || typeof node !== 'object') {
+      return
+    }
+
+    if (node !== owner && skipFunctions && isFunctionLikeNode(node)) {
+      return
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) addScopeAttrs(item)
+      return
+    }
+
+    if (
+      node.type === 'JSXElement' &&
+      isNativeJsxElementOpening(node.opening) &&
+      getJsxNameText(node.opening.name).toLowerCase() !== 'style'
+    ) {
+      addScopeAttributeToOpening(node.opening, scopeAttrName)
+      mergeScopedStyleVarsInOpening(node.opening, cssVarBindings)
+    }
+
+    for (const value of Object.values(node)) {
+      if (value && typeof value === 'object') {
+        addScopeAttrs(value)
+      }
+    }
+  }
+
+  addScopeAttrs(owner)
+  return true
+}
+
+const transformScopedStyle = (code, id = '') => {
+  if (!code.includes('<style') || !code.includes('scoped')) {
+    return code
+  }
+
+  let ast
+  try {
+    ast = swc.parseSync(code, { syntax: 'typescript', tsx: true, target: 'es2020' })
+  } catch {
+    return code
+  }
+
+  const state = {
+    id,
+    nextScopeIndex: { value: 0 },
+    processedStyles: new WeakSet(),
+  }
+  let changed = false
+
+  const visitFunctions = node => {
+    if (!node || typeof node !== 'object') {
+      return
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) visitFunctions(item)
+      return
+    }
+
+    if (isFunctionLikeNode(node)) {
+      changed =
+        processScopedStyleOwner(node, {
+          ...state,
+          skipFunctions: true,
+        }) || changed
+    }
+
+    for (const value of Object.values(node)) {
+      if (value && typeof value === 'object') {
+        visitFunctions(value)
+      }
+    }
+  }
+
+  visitFunctions(ast)
+  changed =
+    processScopedStyleOwner(ast, {
+      ...state,
+      skipFunctions: true,
+    }) || changed
+
+  if (!changed) {
+    return code
+  }
+
+  return swc.printSync(ast, {}).code
+}
+
 /** 判断前一个字符是否允许开启 JSX 属性名。 */
 const isJsxAttrBoundary = ch => ch == null || /[\s<]/.test(ch)
 
@@ -1378,9 +2300,10 @@ const runSwcTransformInline = async ({ code, pluginPath, isProduction }) => {
 }
 
 /** 执行 Rue 指令预处理和 v-model 降级，供 Vite 与静态编译 API 共用。 */
-const preprocessRueSource = code => {
+const preprocessRueSource = (code, id = '') => {
   const preprocessed = rewriteDirectiveAttributes(code)
-  return lowerModelDirectiveAttributes(preprocessed)
+  const loweredModel = lowerModelDirectiveAttributes(preprocessed)
+  return transformScopedStyle(loweredModel, id)
 }
 
 /**
@@ -1407,7 +2330,7 @@ export async function compileRueStatic(code, options = {}) {
 
   let loweredModel
   try {
-    loweredModel = preprocessRueSource(code)
+    loweredModel = preprocessRueSource(code, id)
   } catch (error) {
     throw createStageError({
       id,
@@ -1439,6 +2362,112 @@ export async function compileRueStatic(code, options = {}) {
       error,
       hint: 'The static compiler uses the same Rue SWC wasm plugin as the Vite transform.',
     })
+  }
+}
+
+const RUE_CUSTOM_ELEMENT_EXTERNALS = [
+  '@rue-js/rue',
+  '@rue-js/runtime',
+  '@rue-js/runtime/vapor',
+  '@rue-js/runtime-vapor',
+  '@rue-js/runtime-vapor/reactive',
+  '@rue-js/runtime-vapor/vapor',
+]
+
+const RUE_CUSTOM_ELEMENT_GLOBALS = {
+  '@rue-js/rue': 'Rue',
+  '@rue-js/runtime': 'RueRuntime',
+  '@rue-js/runtime/vapor': 'RueRuntimeVapor',
+  '@rue-js/runtime-vapor': 'RueRuntimeVapor',
+  '@rue-js/runtime-vapor/reactive': 'RueRuntimeVaporReactive',
+  '@rue-js/runtime-vapor/vapor': 'RueRuntimeVapor',
+}
+
+const normalizePluginList = plugins => {
+  if (!plugins) {
+    return []
+  }
+  return Array.isArray(plugins) ? plugins.flat().filter(Boolean) : [plugins]
+}
+
+const mergeRueExternals = existing => {
+  if (!existing) {
+    return RUE_CUSTOM_ELEMENT_EXTERNALS
+  }
+  if (typeof existing === 'function') {
+    return (source, importer, isResolved) =>
+      RUE_CUSTOM_ELEMENT_EXTERNALS.includes(source) || existing(source, importer, isResolved)
+  }
+  const existingList = Array.isArray(existing) ? existing : [existing]
+  return [...existingList, ...RUE_CUSTOM_ELEMENT_EXTERNALS]
+}
+
+const withRueGlobals = output => {
+  const applyGlobals = current => ({
+    ...current,
+    globals: {
+      ...RUE_CUSTOM_ELEMENT_GLOBALS,
+      ...(current ?? {}).globals,
+    },
+  })
+
+  return Array.isArray(output) ? output.map(applyGlobals) : applyGlobals(output)
+}
+
+/**
+ * 创建 Rue Custom Element 库的 Vite 配置。
+ *
+ * @param {Object} options 配置项。
+ * @param {string|string[]|Record<string,string>} options.entry library entry。
+ * @param {string} [options.name] UMD/IIFE 全局名。
+ * @param {string|Function} [options.fileName] 输出文件名。
+ * @param {string[]} [options.formats] Vite library formats，默认 ['es']。
+ * @param {boolean} [options.externalRue] 是否 externalize Rue runtime。
+ * @param {Object} [options.rue] 传给 VitePluginRue 的选项。
+ * @param {Object} [options.vite] 额外 Vite 配置，会被合并进返回值。
+ * @returns {import('vite').UserConfig}
+ */
+export function customElement(options = {}) {
+  const {
+    entry,
+    name = 'RueCustomElements',
+    fileName = 'rue-custom-elements',
+    formats = ['es'],
+    externalRue = false,
+    rue = {},
+    vite = {},
+  } = options
+
+  if (!entry) {
+    throw new Error('customElement() requires an entry option.')
+  }
+
+  const userBuild = vite.build ?? {}
+  const userRollupOptions = userBuild.rollupOptions ?? {}
+  const userLib = userBuild.lib && typeof userBuild.lib === 'object' ? userBuild.lib : {}
+
+  return {
+    ...vite,
+    plugins: [VitePluginRue(rue), ...normalizePluginList(vite.plugins)],
+    build: {
+      target: 'es2020',
+      cssCodeSplit: false,
+      ...userBuild,
+      lib: {
+        entry,
+        name,
+        fileName,
+        formats,
+        ...userLib,
+      },
+      rollupOptions: {
+        ...userRollupOptions,
+        external: externalRue
+          ? mergeRueExternals(userRollupOptions.external)
+          : userRollupOptions.external,
+        output: externalRue ? withRueGlobals(userRollupOptions.output) : userRollupOptions.output,
+      },
+    },
   }
 }
 
@@ -1576,7 +2605,7 @@ export default function VitePluginRue(options = {}) {
     try {
       // 第一阶段先把 JSX parser 无法识别的指令属性改写成安全属性名，
       // 第二阶段借助 SWC AST 将 v-model 安全属性降级成普通 JSX 属性。
-      loweredModel = preprocessRueSource(code)
+      loweredModel = preprocessRueSource(code, id)
     } catch (error) {
       throw createStageError({
         id,

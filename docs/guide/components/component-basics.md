@@ -53,8 +53,8 @@ import { BlogPost } from './BlogPost'
 function App() {
   return (
     <div>
-      <BlogPost title="My journey with Vue" />
-      <BlogPost title="Blogging with Vue" />
+      <BlogPost title="My journey with Rue" />
+      <BlogPost title="Blogging with Rue" />
     </div>
   )
 }

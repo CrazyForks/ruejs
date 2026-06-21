@@ -27,7 +27,7 @@
 如果使用自定义设置，请确保：
 
 1. `rue` 解析为 `rue.runtime.esm-bundler.js`。
-2. [编译时功能标志](@todo) 已正确配置。
+2. 编译时功能标志已按当前构建工具的生产默认值正确配置。
 3. <code>process.env<wbr>.NODE_ENV</code> 在构建期间替换为 `"production"`。
 
 其他参考：
@@ -37,24 +37,23 @@
 
 ## 跟踪运行时错误 (Tracking Runtime Errors) {#tracking-runtime-errors}
 
-可以使用 [应用级错误处理程序](/api/api/application#app-config-errorhandler) 向跟踪服务报告错误：
+可以使用 `onError()` 向跟踪服务报告错误：
 
 ```tsx
-import { createApp } from '@rue-js/rue'
+import { onError, useApp, useError } from '@rue-js/rue'
 
-const app = createApp(App)
+useError({ console: true })
 
-app.config.errorHandler = (err, instance, info) => {
+onError((err, instance) => {
   // 向跟踪服务报告错误
   console.error('Rue Error:', err)
   console.error('Component:', instance)
-  console.error('Error Info:', info)
 
   // 发送到错误跟踪服务
   // sentry.captureException(err)
-}
+})
 
-app.mount('#app')
+useApp(App).mount('#app')
 ```
 
 [Sentry](https://docs.sentry.io/platforms/javascript/) 和 [Bugsnag](https://docs.bugsnag.com/platforms/javascript/) 等服务也提供 JavaScript 应用集成。

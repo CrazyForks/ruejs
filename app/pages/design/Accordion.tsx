@@ -109,7 +109,7 @@ const faqEntries: FaqEntry[] = [
 const capabilityCards = [
   {
     title: 'Children 组合',
-    desc: '保留 Accordion.Title / Accordion.Content，用于局部定制标题和内容。',
+    desc: '保持 Accordion.Title / Accordion.Content，用于局部定制标题和内容。',
   },
   {
     title: 'Items 驱动',
@@ -121,7 +121,7 @@ const capabilityCards = [
   },
   {
     title: '两种语义',
-    desc: '默认 radio 风格适合单开；details 适合保留可搜索内容与原生语义。',
+    desc: '默认 radio 风格适合单开；details 适合保持可搜索内容与原生语义。',
   },
 ]
 
@@ -399,7 +399,7 @@ const AccordionDemo: FC = () => {
       description: '把 API、交互和回归验证收敛到同一轮里',
       extra: 'In progress',
       content:
-        'Ship the smallest useful slice first, then expand demos and tests around the verified behavior instead of guessing a broad design up front.',
+        'Ship the smallest useful slice first, then expandDemos and tests around the verified behavior instead of guessing a broad design up front.',
     },
     {
       key: 'ship',
@@ -435,7 +435,7 @@ const AccordionDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Accordion 手风琴</h1>
         <p className="text-sm mt-3 mb-3">
-          Accordion 现在保留 Rue 原本的轻量视觉风格，但 API 不再只是静态包装。你可以继续用
+          Accordion 现在使用 Rue 基础的轻量视觉风格，但 API 不再只是静态包装。你可以用
           <code> Accordion.Title </code>和<code> Accordion.Content </code>
           组合单个面板，也可以直接用
           <code> items </code>
@@ -468,7 +468,7 @@ const AccordionDemo: FC = () => {
 
         <ExampleBlock
           title="Accordion using radio inputs"
-          summary="保留单开分组，同时额外开启 collapsible，方便在文档页里反复点按查看开合状态。"
+          summary="展示单开分组，同时额外开启 collapsible，方便在文档页里反复点按查看开合状态。"
           tab={tabRadio}
           preview={() => renderFaqGroup('accordion-radio-demo', { collapsible: true })}
           code={`<Accordion className="bg-base-100 border border-base-300" name="accordion-radio-demo" defaultOpen collapsible>
@@ -493,7 +493,7 @@ const AccordionDemo: FC = () => {
 
         <ExampleBlock
           title="Accordion using details"
-          summary="保留 details 结构，适合需要原生语义和浏览器搜索能力的内容区。"
+          summary="展示 details 结构，适合需要原生语义和浏览器搜索能力的内容区。"
           tab={tabDetails}
           preview={() => renderFaqGroup('accordion-details-demo', { use: 'details' })}
           code={`<Accordion use="details" className="bg-base-100 border border-base-300" name="accordion-details-demo" defaultOpen>
@@ -582,7 +582,7 @@ const items = [
     title: 'Build feature slice',
     description: '把 API、交互和回归验证收敛到同一轮里',
     extra: 'In progress',
-    content: 'Ship the smallest useful slice first, then expand demos and tests around the verified behavior instead of guessing a broad design up front.',
+    content: 'Ship the smallest useful slice first, then expandDemos and tests around the verified behavior instead of guessing a broad design up front.',
   },
   {
     key: 'ship',
@@ -610,7 +610,7 @@ const items = [
 
         <ExampleBlock
           title="Multiple open panels"
-          summary="新增 multiple 与 defaultOpenKeys，可同时展开多个项；同一 API 也能配合 collapsible 做可收起单项。"
+          summary="multiple 与 defaultOpenKeys 可同时展开多个项；同一 API 也能配合 collapsible 做可收起单项。"
           tab={tabMultiple}
           preview={() => (
             <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
@@ -646,7 +646,7 @@ const items = [
                       {
                         key: 'rollback',
                         title: 'Rollback checklist',
-                        description: '保留快速回滚路径，避免线上排障时再找人',
+                        description: '提供快速回滚路径，避免线上排障时再找人',
                         extra: 'Ops',
                         content:
                           'Keep a minimal rollback playbook near the release notes so the on-call engineer can act without extra context switching.',
@@ -660,7 +660,7 @@ const items = [
                   <div>
                     <h3 className="m-0 text-base font-semibold">Single but collapsible</h3>
                     <p className="mt-2 mb-0 text-sm opacity-70">
-                      不想强制保留一个展开项时，可以给 children 模式加 <code>collapsible</code>。
+                      不想强制保持一个展开项时，可以给 children 模式加 <code>collapsible</code>。
                     </p>
                   </div>
                   <Accordion
@@ -704,7 +704,7 @@ const items = [
     {
       key: 'rollback',
       title: 'Rollback checklist',
-      description: '保留快速回滚路径，避免线上排障时再找人',
+      description: '提供快速回滚路径，避免线上排障时再找人',
       extra: 'Ops',
       content: 'Keep a minimal rollback playbook near the release notes so the on-call engineer can act without extra context switching.',
     },
@@ -721,7 +721,7 @@ const items = [
 
         <ExampleBlock
           title="Rich item metadata"
-          summary="新增 description、extra 和 disabled，适合后台列表、规则说明和版本发布面板。"
+          summary="description、extra 和 disabled 适合后台列表、规则说明和版本发布面板。"
           tab={tabRich}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -796,7 +796,7 @@ const items = [
 
         <ExampleBlock
           title="Accordion with arrow icon"
-          summary="保留 arrow 指示样式，并开启 collapsible，方便直接验证箭头开合反馈。"
+          summary="展示 arrow 指示样式，并开启 collapsible，方便直接验证箭头开合反馈。"
           tab={tabArrow}
           preview={() =>
             renderFaqGroup('accordion-arrow-demo', { icon: 'arrow', collapsible: true })
@@ -823,7 +823,7 @@ const items = [
 
         <ExampleBlock
           title="Accordion with plus/minus icon"
-          summary="保留 plus/minus 方案，并开启 collapsible，方便直接验证开合反馈。"
+          summary="展示 plus/minus 方案，并开启 collapsible，方便直接验证开合反馈。"
           tab={tabPlus}
           preview={() => renderFaqGroup('accordion-plus-demo', { icon: 'plus', collapsible: true })}
           code={`<Accordion icon="plus" className="bg-base-100 border border-base-300" name="accordion-plus-demo" defaultOpen collapsible>
@@ -848,7 +848,7 @@ const items = [
 
         <ExampleBlock
           title="Using Accordion and Join together"
-          summary="保留 join 组合方式，并开启 collapsible，方便连续边框场景下反复验证开合。"
+          summary="展示 join 组合方式，并开启 collapsible，方便连续边框场景下反复验证开合。"
           tab={tabJoin}
           preview={() => (
             <div className="join join-vertical bg-base-100">
@@ -893,7 +893,7 @@ const items = [
 
         <ExampleBlock
           title="Accordion using items array (radio)"
-          summary="保留 items 数组写法，并开启 collapsible，方便直接验证数据驱动下的收起逻辑。"
+          summary="展示 items 数组写法，并开启 collapsible，方便直接验证数据驱动下的收起逻辑。"
           tab={tabArrayRadio}
           preview={() => (
             <Accordion
@@ -920,7 +920,7 @@ const items = [
 
         <ExampleBlock
           title="Accordion using items array (details)"
-          summary="保留原来的 details + items 组合；现在它也能继续叠加 description、extra 和 disabled。"
+          summary="展示 details + items 组合；现在它也能继续叠加 description、extra 和 disabled。"
           tab={tabArrayDetails}
           preview={() => (
             <Accordion
@@ -948,7 +948,7 @@ const items = [
         <h2 id="accordion-api">API</h2>
         <p>
           Accordion 现在分成两套用法：children 模式适合局部排版，items 模式适合数据驱动和受控状态。
-          两套模式共用同一套视觉类名，因此迁移旧示例时通常只需要把结构收敛到更清晰的语义层。
+          两套模式共用同一套视觉类名，因此重组示例时通常只需要把结构收敛到更清晰的语义层。
         </p>
 
         <h3>Accordion Props</h3>

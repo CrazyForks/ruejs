@@ -359,7 +359,7 @@ const TogglePage: FC = () => {
           更适合通知、同步、权限和偏好设置。
         </p>
         <p className="text-sm text-base-content/70">
-          Rue 继续沿用现有 toggle 视觉类，并补齐了 Switch 常见的受控/非受控、状态文案、loading
+          Rue 使用当前 toggle 视觉类，并提供了 Switch 常见的受控/非受控、状态文案、loading
           和设置项布局能力。
         </p>
 

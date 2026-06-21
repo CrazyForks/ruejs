@@ -132,7 +132,7 @@ const SparkIcon = () => (
 const breadcrumbApiRows: ApiRow[] = [
   {
     prop: 'children',
-    description: '保留旧的组合式写法，适合手工控制节点结构',
+    description: '提供组合式写法，适合手工控制节点结构',
     type: 'any',
     defaultValue: '-',
   },
@@ -163,7 +163,7 @@ const breadcrumbApiRows: ApiRow[] = [
   },
   {
     prop: 'routes',
-    description: 'items 的兼容别名，能力一致',
+    description: 'items 的别名，能力一致',
     type: 'ReadonlyArray<BreadcrumbsDataItem>',
     defaultValue: '-',
   },
@@ -188,7 +188,7 @@ const itemApiRows: ApiRow[] = [
   { prop: 'icon', description: '前置图标', type: 'any', defaultValue: '-' },
   {
     prop: 'label / title',
-    description: '显示内容，title 为推荐字段，label 兼容旧写法',
+    description: '显示内容，title 为推荐字段，label 支持基础写法',
     type: 'any',
     defaultValue: '-',
   },
@@ -227,7 +227,7 @@ const itemApiRows: ApiRow[] = [
 const itemComponentRows: ApiRow[] = [
   {
     prop: 'children',
-    description: '手工传入内容，保留旧 demo 的组织方式',
+    description: '手工传入内容，整合基础示例 的组织方式',
     type: 'any',
     defaultValue: '-',
   },
@@ -384,7 +384,7 @@ const BreadcrumbsDemo: FC = () => {
             <span className="badge badge-primary badge-soft">推荐 items</span>
             <span className="badge badge-secondary badge-soft">支持 itemRender</span>
             <span className="badge badge-accent badge-soft">支持 menu</span>
-            <span className="badge badge-neutral badge-soft">保留 children</span>
+            <span className="badge badge-neutral badge-soft">展示 children</span>
           </div>
           <ul className="mt-4 space-y-2 text-sm text-base-content/75">
             <li>默认分隔符继续保持 Rue 当前的箭头视觉，不改成斜杠样式。</li>
@@ -392,7 +392,7 @@ const BreadcrumbsDemo: FC = () => {
               推荐使用 items：可组合 title、label、path、params、current、menu 和独立 separator
               item。
             </li>
-            <li>children 与 Breadcrumbs.Item 仍然保留，适合在设计稿里手工控制单个节点。</li>
+            <li>children 与 Breadcrumbs.Item 仍然提供，适合在设计稿里手工控制单个节点。</li>
           </ul>
         </div>
 
@@ -543,7 +543,7 @@ const BreadcrumbsDemo: FC = () => {
           <div>
             <h2 className="m-0 text-lg font-semibold"># API</h2>
             <p className="mt-2 text-sm text-base-content/65">
-              items 是推荐入口；Breadcrumbs.Item 更适合保留原有手工结构时逐步迁移。
+              items 是推荐入口；Breadcrumbs.Item 更适合展示基础手工结构时逐步接入。
             </p>
           </div>
           <ApiTable title="Breadcrumbs" rows={breadcrumbApiRows} />

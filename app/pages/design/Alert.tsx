@@ -147,7 +147,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'children',
-    description: '自定义内容插槽，保留原始组合式写法',
+    description: '自定义内容插槽，展示基础组合式写法',
     type: 'any',
     defaultValue: '-',
   },
@@ -157,7 +157,7 @@ const apiRows: ApiRow[] = [
   { prop: 'closeText', description: '以文本替代默认关闭图标', type: 'any', defaultValue: '-' },
   {
     prop: 'color',
-    description: 'Rue 风格语义色别名，兼容现有 demo',
+    description: 'Rue 风格语义色别名，支持当前示例',
     type: "'default' | 'info' | 'success' | 'warning' | 'error'",
     defaultValue: '-',
   },
@@ -172,7 +172,7 @@ const apiRows: ApiRow[] = [
   { prop: 'icon', description: '自定义图标', type: 'any', defaultValue: '-' },
   {
     prop: 'message',
-    description: '标题别名，兼容常见业务组件里的 message 写法',
+    description: '标题别名，支持常见业务组件里的 message 写法',
     type: 'any',
     defaultValue: '-',
   },
@@ -200,7 +200,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'variant',
-    description: '保留 Rue 原有语义类型写法',
+    description: '使用 Rue 基础语义类型写法',
     type: "'info' | 'success' | 'warning' | 'error'",
     defaultValue: '-',
   },
@@ -213,13 +213,13 @@ const AlertDemo: FC = () => {
         <h1>Alert 警告</h1>
         <p className="text-sm mt-3 mb-3">Alert 用于向用户传达重要状态、操作结果与系统提醒。</p>
         <p className="text-sm opacity-75">
-          这次增强保留了 Rue 现有的 alert、语义色、soft、outline、dash 与响应式组合方式，同时补齐了
+          组件保持了 Rue 当前的 alert、语义色、soft、outline、dash 与响应式组合方式，同时提供了
           type、color、title、description、icon、action、closable、banner 等常用能力。
         </p>
 
         <ExampleBlock
           title="基础用法"
-          summary="保留原始组合式写法：你仍然可以手动放入图标、文本与任意自定义内容。"
+          summary="展示基础组合式写法：你仍然可以手动放入图标、文本与任意自定义内容。"
           tab={tabBasic}
           preview={() => (
             <div className="card bg-base-100 shadow">
@@ -241,7 +241,7 @@ const AlertDemo: FC = () => {
 
         <ExampleBlock
           title="语义类型与别名"
-          summary="融合原来的 Info、Success、Warning、Error demo，同时展示 variant、color、type 三种入口。"
+          summary="融合基础的 Info、Success、Warning、ErrorDemo，同时展示 variant、color、type 三种入口。"
           tab={tabTones}
           preview={() => (
             <div className="card bg-base-100 shadow">
@@ -277,7 +277,7 @@ const AlertDemo: FC = () => {
 
         <ExampleBlock
           title="样式组合"
-          summary="保留原来的 soft、outline、dash 三组 demo，但按增强后的 API 一次性整理成一个区块。"
+          summary="展示 soft、outline、dash 三组示例，但按语义化的 API 一次性整理成一个区块。"
           tab={tabStyles}
           preview={() => (
             <div className="card bg-base-100 shadow">
@@ -354,7 +354,7 @@ const AlertDemo: FC = () => {
 
         <ExampleBlock
           title="操作区与响应式布局"
-          summary="保留原来的按钮 + 响应式布局 demo，同时把操作区收敛到 action API。"
+          summary="展示按钮 + 响应式布局示例，同时把操作区收敛到 action API。"
           tab={tabResponsive}
           preview={() => (
             <div className="card bg-base-100 shadow">
@@ -402,7 +402,7 @@ const AlertDemo: FC = () => {
 
         <ExampleBlock
           title="标题与描述"
-          summary="把原来手写的标题描述 demo 升级为 title 和 description API，同时保留右侧动作按钮。"
+          summary="把手写的标题描述示例组织为 title 和 description API，同时保持右侧动作按钮。"
           tab={tabMessage}
           preview={() => (
             <div className="card bg-base-100 shadow">
@@ -428,7 +428,7 @@ const AlertDemo: FC = () => {
 
         <ExampleBlock
           title="可关闭与 closeText"
-          summary="新增 closable、closeText、afterClose 等能力，适合一次性通知、操作反馈和可忽略提醒。"
+          summary="closable、closeText、afterClose 适合一次性通知、操作反馈和可忽略提醒。"
           tab={tabClosable}
           preview={() => (
             <div className="card bg-base-100 shadow">
@@ -467,7 +467,7 @@ const AlertDemo: FC = () => {
 
         <ExampleBlock
           title="横幅与自定义图标"
-          summary="新增 banner、showIcon 与 icon API，适合系统级公告与品牌化通知。"
+          summary="banner、showIcon 与 icon API 适合系统级公告与品牌化通知。"
           tab={tabBanner}
           preview={() => (
             <div className="card bg-base-100 shadow">
@@ -515,7 +515,7 @@ const AlertDemo: FC = () => {
         <div className="my-10">
           <h2>API</h2>
           <p className="text-sm opacity-75">
-            新版 Alert 同时兼容 Rue 旧用法与常见业务组件心智，下面列出当前建议使用的核心属性。
+            当前 Alert 同时支持 Rue 基础用法与常见业务组件心智，下面列出当前建议使用的核心属性。
           </p>
           <ApiTable rows={apiRows} />
         </div>

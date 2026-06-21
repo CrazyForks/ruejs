@@ -45,6 +45,7 @@ export {
   setValue as _$setValue,
   setChecked as _$setChecked,
   setDisabled as _$setDisabled,
+  setProperty as _$setProperty,
   spreadAttributes as _$spreadAttributes,
 } from './dom'
 
@@ -63,12 +64,21 @@ export { Component, type DynamicComponentProps } from './components/Component'
 export { KeepAlive, type KeepAliveMatchPattern, type KeepAliveProps } from './components/KeepAlive'
 export { Suspense, type SuspenseProps } from './components/Suspense'
 export { Template, type TemplateProps } from './components/Template'
-export { Transition, type TransitionProps } from './components/Transition'
+export { Transition, type TransitionMode, type TransitionProps } from './components/Transition'
 export { createContext, useContext, type RueContext, type ContextProviderProps } from './context'
 
 export {
   type SignalHandle,
+  type WatchEffectOptions,
+  type WatchFlush,
+  type WatchCallback,
+  type CustomRefFactory,
+  type WatchMultiSource,
+  type WatchOptions,
+  type WatchSource,
+  type EffectScope,
   createEffect as effect,
+  effectScope,
   batch,
   nextTick,
   onCleanup,
@@ -83,6 +93,7 @@ export {
   watchFn,
   watchEffect,
   watchPostEffect,
+  watchSyncEffect,
   watchSignal,
   watchDeepSignal,
   watchPath,
@@ -92,6 +103,7 @@ export {
   useEffect,
   signal,
   ref,
+  customRef,
   shallowRef,
   triggerRef,
   toRef,

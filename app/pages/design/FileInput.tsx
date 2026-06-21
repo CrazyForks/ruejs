@@ -94,7 +94,7 @@ const apiRows: ApiRow[] = [
   {
     prop: 'color / variant / size / ghost',
     description:
-      '`color` 对齐 Rue Design 语义色；`variant` 作为旧版颜色写法继续兼容。不传增强 API 时仍直接渲染原生 input。',
+      '`color` 对齐 Rue Design 语义色；`variant` 作为颜色写法支持。不传语义 API 时仍直接渲染原生 input。',
     type: 'FileInputColor / FileInputVariant / FileInputSize / boolean',
     defaultValue: '-',
   },
@@ -131,13 +131,13 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'maxCount / multiple / directory',
-    description: '限制数量、开启多选或目录选择；`maxCount=1` 时自动保留最新文件。',
+    description: '限制数量、开启多选或目录选择；`maxCount=1` 时自动保持最新文件。',
     type: 'number / boolean / boolean',
     defaultValue: '-',
   },
   {
     prop: 'onChange / onPreview / onRemove',
-    description: '增强模式下返回 Upload 风格的列表信息，便于业务侧接管上传、预览和删除确认。',
+    description: '语义模式下返回 Upload 风格的列表信息，便于业务侧接管上传、预览和删除确认。',
     type: 'function',
     defaultValue: '-',
   },
@@ -149,7 +149,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'rootClassName / triggerClassName / listClassName / itemClassName',
-    description: '增强模式的根容器、触发区、列表和单项样式入口。',
+    description: '语义模式的根容器、触发区、列表和单项样式入口。',
     type: 'string',
     defaultValue: '-',
   },
@@ -234,17 +234,17 @@ const FileInputDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>File Input 文件选择</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue File Input 继续保留原始 <code>file-input</code> 样式入口，同时补齐更常用的
+          Rue File Input 展示基础 <code>file-input</code> 样式入口，同时补充更常用的
           文件列表、拖拽、图片卡片、受控/非受控和选择前校验能力。
         </p>
 
         <div className="not-prose mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-primary">
-              兼容优先
+              支持优先
             </div>
             <p className="mt-2 mb-0 text-sm text-base-content/70">
-              不传增强 API 时，仍然直出原生文件输入框。
+              不传语义 API 时，仍然直出原生文件输入框。
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
@@ -623,7 +623,7 @@ const fileList = ref([])
           API
         </h2>
         <p className="text-sm mt-3 mb-4">
-          增强模式尽量贴近 Upload 的核心组织方式，但仍然保留 Rue 的视觉和更轻的心智负担。
+          语义模式尽量贴近 Upload 的核心组织方式，但仍然使用 Rue 的视觉和更轻的心智负担。
         </p>
         <ApiTable rows={apiRows} />
 
@@ -644,10 +644,10 @@ const fileList = ref([])
             </p>
           </div>
           <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <div className="text-sm font-medium">旧项目需要迁移吗？</div>
+            <div className="text-sm font-medium">当前项目需要调整吗？</div>
             <p className="mt-2 mb-0 text-sm text-base-content/70">
-              不需要。旧的 <code>variant / size / ghost / disabled</code>{' '}
-              写法继续可用，按需渐进切换到增强模式即可。
+              不需要。基础的 <code>variant / size / ghost / disabled</code>{' '}
+              写法继续可用，按需切换到语义模式即可。
             </p>
           </div>
         </div>

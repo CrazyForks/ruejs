@@ -115,7 +115,7 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'inline',
-    description: '把容器从 fixed 改为 absolute，适合嵌进卡片、工作台或 demo 盒子中。',
+    description: '把容器从 fixed 改为 absolute，适合嵌进卡片、工作台或示例盒子中。',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -148,7 +148,7 @@ const rootApiRows: ApiRow[] = [
 const itemApiRows: ApiRow[] = [
   {
     prop: 'title / message',
-    description: '主标题字段；保留 message 别名，同时支持更语义化的 title。',
+    description: '主标题字段；保持 message 别名，同时支持更语义化的 title。',
     type: 'any',
     defaultValue: '-',
   },
@@ -160,7 +160,7 @@ const itemApiRows: ApiRow[] = [
   },
   {
     prop: 'actions / btn',
-    description: '底部操作区，保留 btn 兼容别名，适合放按钮、badge 或链接。',
+    description: '底部操作区，保持 btn 别名，适合放按钮、badge 或链接。',
     type: 'any',
     defaultValue: '-',
   },
@@ -529,8 +529,8 @@ const NotificationPage: FC = () => {
         <h1>Notification 通知提醒框</h1>
         <p>
           Rue 现在补上了独立的 Notification 组件，不再只能借 Toast 或 Stack 手工拼通知卡片。
-          这次增强保持 Rue 自己更轻、更贴近页面内容的视觉语气，同时把通知组件
-          常用的执行逻辑一次补齐：静态 open、语义快捷方法、按 key 更新、全局配置、局部 holder、六向
+          组件保持 Rue 自己更轻、更贴近页面内容的视觉语气，同时把通知组件
+          常用的执行逻辑一次覆盖：静态 open、语义快捷方法、按 key 更新、全局配置、局部 holder、六向
           placement、关闭按钮、自动关闭和进度条都已经可以直接使用。
         </p>
 
@@ -563,12 +563,12 @@ const NotificationPage: FC = () => {
           <li>需要比 Toast 更完整的通知语义和更稳定的实例管理。</li>
           <li>希望在事件处理函数里直接触发全局或局部通知，而不是手动维护通知数组。</li>
           <li>同一条通知需要按 key 从“处理中”更新到“成功”或“失败”。</li>
-          <li>需要保留现有静态通知卡片 demo，同时把它升级成真实可执行的组件 API。</li>
+          <li>需要保持当前静态通知卡片示例，同时把它组织成真实可执行的组件 API。</li>
         </ul>
 
         <PreviewBlock
           title="通知堆叠"
-          summary="保留原来 Stack 页面里的通知卡片 demo，但现在直接由 Notification.Item 承载内容语义。"
+          summary="展示Stack 页面里的通知卡片示例，但现在直接由 Notification.Item 承载内容语义。"
           tab={tabs.stacked}
           code={stackedCode}
           preview={() => (
@@ -603,7 +603,7 @@ const NotificationPage: FC = () => {
 
         <PreviewBlock
           title="语义类型、操作区与进度条"
-          summary="保留 Rue 的卡片感，但 message/title、actions/btn、progress、closable 等能力都已经补齐。"
+          summary="使用 Rue 的卡片感，但 message/title、actions/btn、progress、closable 等能力都已经补充。"
           tab={tabs.rich}
           code={richCode}
           preview={() => (
@@ -647,7 +647,7 @@ const NotificationPage: FC = () => {
 
         <PreviewBlock
           title="六向定位"
-          summary="声明式容器既可以挂在页面层，也可以通过 inline 嵌进任意面板或 demo 盒子。"
+          summary="声明式容器既可以挂在页面层，也可以通过 inline 嵌进任意面板或示例盒子。"
           tab={tabs.placement}
           code={placementCode}
           preview={() => (
@@ -675,7 +675,7 @@ const NotificationPage: FC = () => {
 
         <PreviewBlock
           title="useNotification 局部容器与按 key 更新"
-          summary="通过实例模式把通知约束在当前 demo 盒子里，方便工作台和局部面板使用。"
+          summary="通过实例模式把通知约束在当前示例盒子里，方便工作台和局部面板使用。"
           tab={tabs.hook}
           code={hookCode}
           preview={() => <NotificationHookDemo />}

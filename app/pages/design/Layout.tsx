@@ -51,7 +51,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'Sider.collapsedWidth',
-    description: '收起态宽度；传 0 时会切到零宽模式，保留浮动 trigger。',
+    description: '收起态宽度；传 0 时会切到零宽模式，保持浮动 trigger。',
     type: 'number | string',
     defaultValue: '80',
   },
@@ -582,9 +582,8 @@ const LayoutPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Layout 布局</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue 原来没有成体系的 Layout。现在这一组组件把页面骨架、双栏工作台、可折叠侧栏和响应式 rail
-          一次补齐，API 覆盖 Layout / Sider 这组核心能力，但视觉仍然沿用 Rue 现在的 柔和面板、圆角和
-          utility class 组合方式。
+          Layout 用于组织页面骨架、双栏工作台、可折叠侧栏和响应式 rail。API 覆盖 Layout / Sider
+          这组核心能力，视觉仍然使用 Rue 当前的柔和面板、圆角和 utility class 组合方式。
         </p>
 
         <h2>何时使用</h2>
@@ -769,7 +768,7 @@ const LayoutPage: FC = () => {
 
         <PreviewBlock
           title="Responsive zero-width sider"
-          summary="breakpoint + collapsedWidth=0 会切到零宽模式，并保留浮动 trigger。"
+          summary="breakpoint + collapsedWidth=0 会切到零宽模式，并保持浮动 trigger。"
           tab={tabResponsive}
           preview={ResponsiveSiderPreview}
           code={responsiveCode}
@@ -836,7 +835,7 @@ const LayoutPage: FC = () => {
         <h2 id="layout-api">API</h2>
         <p className="text-sm mt-3 mb-4">
           Layout 的目标不是替代 Flex，而是把页面级骨架和带状态的 Sider 收敛成一套更稳定的基础设施。
-          如果只是做局部排版，继续用 Flex / Grid；如果要组织页面结构、导航和补充侧栏，就切到
+          如果只是做局部排版，可以用 Flex / Grid；如果要组织页面结构、导航和补充侧栏，就切到
           Layout。
         </p>
         <ApiTable rows={apiRows} />

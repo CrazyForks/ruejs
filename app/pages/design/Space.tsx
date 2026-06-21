@@ -80,7 +80,7 @@ const spaceApiRows: ApiRow[] = [
   },
   {
     prop: 'direction',
-    description: '主轴方向，保留 horizontal / vertical 两种布局。',
+    description: '主轴方向，保持 horizontal / vertical 两种布局。',
     type: `'horizontal' | 'vertical'`,
     defaultValue: `'horizontal'`,
   },
@@ -362,9 +362,9 @@ const SpacePage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Space 间距容器</h1>
         <p className="text-sm mt-3 mb-3">
-          Space 现在不再只是“自己写 gap”的占位组件，而是补成了一个完整的布局原语。它保留 Rue
+          Space 现在不再只是“自己写 gap”的占位组件，而是补成了一个完整的布局原语。它使用 Rue
           自己干净直接的视觉，不抢内容本身的风头，同时把常用的水平/垂直编排、对齐、换行、分隔符和
-          Compact 紧凑组合一次补齐。
+          Compact 紧凑组合一次覆盖。
         </p>
 
         <h2>何时使用</h2>
@@ -427,7 +427,7 @@ const SpacePage: FC = () => {
 
         <PreviewBlock
           title="尺寸与自定义 Gap"
-          summary="延续 small / middle / large 预设，也支持 tuple 间距覆盖列距与行距。"
+          summary="使用 small / middle / large 预设，也支持 tuple 间距覆盖列距与行距。"
           tab={tabs.size}
           code={sizeCode}
           preview={
@@ -707,7 +707,7 @@ const SpacePage: FC = () => {
         <h2 className="mt-10">Space.Compact API</h2>
         <p className="text-sm opacity-70">
           Space.Compact 对应的是 compact 语义：它负责把控件压成连续组，默认不提供
-          gap；如果你要的是普通留白，请继续使用 Space。
+          gap；如果你要的是普通留白，请可以使用 Space。
         </p>
         <ApiTable rows={compactApiRows} />
       </div>

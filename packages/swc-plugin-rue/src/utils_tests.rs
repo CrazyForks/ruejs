@@ -62,9 +62,20 @@ fn unwraps_ts_wrappers_and_detects_component_like_elements() {
     assert!(!is_component(&parse_jsx_element("<dialog />").opening.name));
     assert!(is_component(&parse_jsx_element("<Dialog.Header />").opening.name));
     assert!(is_builtin_fragment_element(&parse_jsx_element("<Fragment />")));
+    assert!(is_transition_component(&parse_jsx_element("<Transition />")));
+    assert!(is_transition_component(&parse_jsx_element("<UI.Transition />")));
+    assert!(!is_transition_component(&parse_jsx_element("<TransitionGroup />")));
+    assert!(!is_transition_component(&parse_jsx_element("<UI.Transitions />")));
+    assert!(!is_transition_component(&parse_jsx_element("<Transition.Item />")));
     assert!(is_transition_group_component(&parse_jsx_element("<TransitionGroup />")));
     assert!(is_transition_group_component(&parse_jsx_element("<UI.TransitionGroup />")));
     assert!(!is_transition_group_component(&parse_jsx_element("<UI.Panel />")));
+    assert!(is_transition_raw_children_component(&parse_jsx_element("<Transition />")));
+    assert!(is_transition_raw_children_component(&parse_jsx_element("<UI.Transition />")));
+    assert!(is_transition_raw_children_component(&parse_jsx_element("<TransitionGroup />")));
+    assert!(!is_transition_raw_children_component(&parse_jsx_element("<UI.Transitions />")));
+    assert!(!is_transition_raw_children_component(&parse_jsx_element("<Transition.Item />")));
+    assert!(!is_transition_raw_children_component(&parse_jsx_element("<UI.Panel />")));
 }
 
 #[test]
@@ -136,6 +147,7 @@ fn detects_static_component_shortcuts() {
     assert!(!is_static_component_children_ident(&parse_jsx_element("<Card {...props} />")));
 
     assert!(!is_transition_group_component(&parse_jsx_element("<svg:path />")));
+    assert!(!is_transition_raw_children_component(&parse_jsx_element("<svg:path />")));
 }
 
 #[test]

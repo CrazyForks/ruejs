@@ -376,12 +376,12 @@ const RangePage: FC = () => {
         <h1>Range Slider 范围选择</h1>
         <p className="mt-3 mb-3 text-sm">
           Range 仍然坚持原生 <code>input type="range"</code>{' '}
-          的语义，但不再只是一条裸滑杆。现在可以直接在组件层补齐标题、提示、刻度、值展示和语义回调，设计页也按能力分层重新组织。
+          的语义，但不再只是一条裸滑杆。现在可以直接在组件层补充标题、提示、刻度、值展示和语义回调，设计页也按能力分层重新组织。
         </p>
 
         <ExampleBlock
           title="Range"
-          summary="保留原来的最小兼容写法；如果你只想要一个原生滑杆，API 仍然保持直接。"
+          summary="展示最小写法；如果你只想要一个原生滑杆，API 仍然保持直接。"
           tab={tabBasic}
           preview={() => <RangeValuePreview />}
           code={`<Range min={0} max={100} value={40} />`}
@@ -419,7 +419,7 @@ const RangePage: FC = () => {
 
         <ExampleBlock
           title="With steps and measure"
-          summary="旧 demo 保留，但把刻度线和标签收进 marks，减少样板代码。"
+          summary="基础示例 保持，但把刻度线和标签收进 marks，减少样板代码。"
           tab={tabSteps}
           preview={() => <RangeStepsPreview />}
           code={`<Range
@@ -440,7 +440,7 @@ const RangePage: FC = () => {
 
         <ExampleBlock
           title="Range colors"
-          summary="保留原有颜色矩阵，同时展示增强 API 与原有颜色类可以自然叠加。"
+          summary="使用颜色矩阵，同时展示语义 API 与颜色类可以自然叠加。"
           tab={tabColors}
           preview={() => <RangeColorsPreview />}
           code={`const colors = ['neutral', 'primary', 'secondary', 'accent', 'success', 'warning', 'info', 'error'] as const
@@ -463,7 +463,7 @@ const RangePage: FC = () => {
 
         <ExampleBlock
           title="Sizes"
-          summary="保留 xs 到 xl 的原始尺寸，同时补上 small / medium / large 三个别名，方便和其他组件对齐。"
+          summary="展示 xs 到 xl 的基础尺寸，同时补上 small / medium / large 三个别名，方便和其他组件对齐。"
           tab={tabSizes}
           preview={() => (
             <div className="space-y-6">
@@ -524,7 +524,7 @@ const committedSeats = ref(12)
 
         <ExampleBlock
           title="Range with custom color and no fill"
-          summary="原来的自定义 CSS 变量方案继续可用；增强 API 不会挡住底层变量覆写。"
+          summary="基础的自定义 CSS 变量方案继续可用；语义 API 不会挡住底层变量覆写。"
           tab={tabCustom}
           preview={() => <RangeCustomPreview />}
           code={`<Range

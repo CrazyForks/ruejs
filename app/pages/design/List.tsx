@@ -244,7 +244,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'items',
-    description: '兼容旧版 Rue 数据结构，支持 item、row、cols',
+    description: '支持基础 Rue 数据结构，支持 item、row、cols',
     type: 'ListDataItem[]',
     defaultValue: '-',
   },
@@ -527,13 +527,13 @@ const ListDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>List 列表</h1>
         <p className="text-sm mt-3 mb-3">
-          列表用于以行或网格的形式展示同类信息。Rue 的 List 保留 daisyUI 的轻量视觉，并补充
+          列表用于以行或网格的形式展示同类信息。Rue 的 List 使用 daisyUI 的轻量视觉，并补充
           dataSource、renderItem、Meta、actions、extra、分页、加载和空态等能力。
         </p>
 
         <ExampleBlock
           title="List（第二列默认填充剩余空间）"
-          summary="保留原始组合式写法，适合快速拼装一组紧凑行。"
+          summary="展示基础组合式写法，适合快速拼装一组紧凑行。"
           tab={tabBasic}
           code={basicCode}
           preview={() => (
@@ -592,7 +592,7 @@ const ListDemo: FC = () => {
 
         <ExampleBlock
           title="List 通过数据渲染（数组）"
-          summary="保留旧 demo 的手动 map 方式，适合完全掌控每一行结构。"
+          summary="整合基础示例 的手动 map 方式，适合完全掌控每一行结构。"
           tab={tabManualArray}
           code={manualArrayCode}
           preview={() => (
@@ -673,7 +673,7 @@ const ListDemo: FC = () => {
 
         <ExampleBlock
           title="dataSource 与 renderItem"
-          summary="新增数据源驱动的列表 API，适合业务列表统一从数据源渲染。"
+          summary="数据源驱动的列表 API 适合业务列表统一从数据源渲染。"
           tab={tabDataSource}
           code={dataSourceCode}
           preview={() => (

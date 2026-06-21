@@ -33,6 +33,16 @@ export type {
   FC,
   /** 组件实例类型，当前与函数组件保持一致。 */
   ComponentInstance,
+  /** 异步组件 loader 函数类型。 */
+  AsyncComponentLoader,
+  /** useComponent 对象写法的异步组件配置类型。 */
+  AsyncComponentOptions,
+  /** useComponent 第二参数兼容配置类型。 */
+  UseComponentOptions,
+  /** 异步组件懒水合策略类型。 */
+  HydrationStrategy,
+  /** 异步组件懒水合策略工厂类型。 */
+  HydrationStrategyFactory,
   /** Rue 应用实例类型，代表 createRue 创建的运行时对象。 */
   Rue,
   /** Vapor setup 函数的返回结果，通常是可挂载的 DOM-like 节点。 */
@@ -59,10 +69,26 @@ export type {
   BaseTransitionProps,
   /** Transition 组件属性，封装进入和离开动画配置。 */
   TransitionProps,
+  /** Transition 子节点切换时进入/离开的编排模式。 */
+  TransitionMode,
   /** TransitionGroup 组件属性，用于列表元素过渡。 */
   TransitionGroupProps,
   /** 响应式信号句柄，提供 value/get/set 等读写能力。 */
   SignalHandle,
+  /** watcher 刷新时机。 */
+  WatchFlush,
+  /** watchEffect 选项。 */
+  WatchEffectOptions,
+  /** watch 选项。 */
+  WatchOptions,
+  /** watch 回调。 */
+  WatchCallback,
+  /** customRef 工厂函数类型。 */
+  CustomRefFactory,
+  /** 单个侦听来源。 */
+  WatchSource,
+  /** 多源侦听来源。 */
+  WatchMultiSource,
   /** 对象属性 ref 句柄，value 与源对象属性保持同步。 */
   ObjectRef,
   /** 将对象每个属性映射为 ref 句柄的结果类型。 */
@@ -182,6 +208,8 @@ export {
   TransitionGroup,
   /** 创建响应式副作用，依赖变化时自动重新执行。 */
   effect,
+  /** 创建 effect scope，可批量停止其中创建的 computed/watch/effect。 */
+  effectScope,
   /** 批量执行响应式写入，减少重复调度。 */
   batch,
   /** 在当前 effect 中注册清理回调。 */
@@ -208,6 +236,8 @@ export {
   watchEffect,
   /** 在响应式 flush 后运行并追踪依赖的 watch effect。 */
   watchPostEffect,
+  /** 响应式变更时同步运行并追踪依赖的 watch effect。 */
+  watchSyncEffect,
   /** 监听单个 signal/ref 的值变化。 */
   watchSignal,
   /** 深度监听 signal/ref 中对象结构的变化。 */
@@ -228,6 +258,8 @@ export {
   signal,
   /** 创建 ref-like 可写值。 */
   ref,
+  /** 创建自定义 ref，显式控制依赖收集和触发时机。 */
+  customRef,
   /** 创建浅层 ref，只追踪 value 替换。 */
   shallowRef,
   /** 手动触发 ref 的 value 订阅者。 */
@@ -264,6 +296,14 @@ export {
   useError,
   /** 按名称或加载器解析组件，支持异步组件。 */
   useComponent,
+  /** 在浏览器空闲时激活异步组件。 */
+  hydrateOnIdle,
+  /** 当异步组件根元素进入视口时激活。 */
+  hydrateOnVisible,
+  /** 当指定 media query 命中时激活异步组件。 */
+  hydrateOnMediaQuery,
+  /** 当用户触发指定事件时激活异步组件。 */
+  hydrateOnInteraction,
   /** 基于依赖数组缓存计算结果。 */
   useMemo,
   /** 基于依赖数组缓存回调函数。 */

@@ -241,7 +241,7 @@ const formatterCode = `<Stat className="shadow">
     value={1280}
     prefix="API"
     formatter={value => \`\${value} req/s\`}
-    desc="formatter 适合把原始值映射成业务文案"
+    desc="formatter 适合把基础值映射成业务文案"
   />
   <Stat.Item>
     <Stat.Title>Storage</Stat.Title>
@@ -447,7 +447,7 @@ const itemApiRows: ApiRow[] = [
   },
   {
     prop: 'precision',
-    description: '数字精度，不传则保留原始小数',
+    description: '数字精度，不传则展示基础小数',
     type: 'number',
     defaultValue: '-',
   },
@@ -527,13 +527,13 @@ const StatDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Stat 统计</h1>
         <p className="text-sm mt-3 mb-3">
-          Stat 用于在一个块中展示数字与数据。这一轮增强保持 Rue 现有的 daisyUI
-          视觉语气，同时补上更接近常见统计组件的数值格式化、前后缀、loading 与 timer 能力。
+          Stat 用于在一个块中展示数字与数据。组件保持 Rue 当前的 daisyUI
+          视觉语气，同时提供数值格式化、前后缀、loading 与 timer 能力。
         </p>
 
         <h2>功能概览</h2>
         <ul>
-          <li>支持 children 组合写法、items 数据驱动、图标头像、居中/纵向/响应式 demo。</li>
+          <li>支持 children 组合写法、items 数据驱动、图标头像、居中/纵向/响应式示例。</li>
           <li>
             支持 `Stat.Item` 语义化属性写法，常见场景不必再手写 `Stat.Title / Stat.Value /
             Stat.Desc`。
@@ -546,7 +546,7 @@ const StatDemo: FC = () => {
 
         <ExampleBlock
           title="基础用法"
-          summary="保留原始复合组件写法，适合完全自定义结构。"
+          summary="展示基础复合组件写法，适合完全自定义结构。"
           tab={tabBasic}
           code={basicCode}
           preview={() => (
@@ -562,7 +562,7 @@ const StatDemo: FC = () => {
 
         <ExampleBlock
           title="数据驱动"
-          summary="原有 items 数组能力保留，并自动兼容新的 value/prefix/loading 等增强属性。"
+          summary="基础 items 数组能力保持，并自动支持新的 value/prefix/loading 等增强属性。"
           tab={tabItems}
           code={itemsCode}
           preview={() => <Stat items={statItems} className="shadow" />}
@@ -607,7 +607,7 @@ const StatDemo: FC = () => {
                 value={1280}
                 prefix="API"
                 formatter={value => `${value} req/s`}
-                desc="formatter 适合把原始值映射成业务文案"
+                desc="formatter 适合把基础值映射成业务文案"
               />
               <Stat.Item>
                 <Stat.Title>Storage</Stat.Title>
@@ -642,7 +642,7 @@ const StatDemo: FC = () => {
 
         <ExampleBlock
           title="Timer / Countdown"
-          summary="`Stat.Timer` 提供常见统计组件里的核心计时能力，`Stat.Countdown` 作为倒计时别名保留。"
+          summary="`Stat.Timer` 提供常见统计组件里的核心计时能力，`Stat.Countdown` 作为倒计时别名保持。"
           tab={tabTimer}
           code={timerCode}
           preview={() => (
@@ -667,7 +667,7 @@ const StatDemo: FC = () => {
 
         <ExampleBlock
           title="带图标或头像"
-          summary="保留旧 demo，用于展示 figure 区的图标与头像承载能力。"
+          summary="整合基础示例，用于展示 figure 区的图标与头像承载能力。"
           tab={tabWithIcons}
           code={iconsCode}
           preview={() => (
@@ -709,7 +709,7 @@ const StatDemo: FC = () => {
 
         <ExampleBlock
           title="组合统计卡"
-          summary="保留旧版多列指标卡示例，适合运营面板和概览页。"
+          summary="展示基础多列指标卡示例，适合运营面板和概览页。"
           tab={tabGroup}
           code={groupCode}
           preview={() => (
@@ -744,7 +744,7 @@ const StatDemo: FC = () => {
 
         <ExampleBlock
           title="居中布局"
-          summary="保留 `center` 演示，适合居中对齐的仪表盘摘要。"
+          summary="展示 `center` 演示，适合居中对齐的仪表盘摘要。"
           tab={tabCentered}
           code={centeredCode}
           preview={() => (
@@ -770,7 +770,7 @@ const StatDemo: FC = () => {
 
         <ExampleBlock
           title="纵向布局"
-          summary="保留 `direction='vertical'`，用于窄容器中的信息堆叠。"
+          summary="展示 `direction='vertical'`，用于窄容器中的信息堆叠。"
           tab={tabVertical}
           code={verticalCode}
           preview={() => (
@@ -796,7 +796,7 @@ const StatDemo: FC = () => {
 
         <ExampleBlock
           title="响应式布局"
-          summary="保留旧版 responsive 示例，小屏纵向，大屏横向。"
+          summary="展示基础 responsive 示例，小屏纵向，大屏横向。"
           tab={tabResponsive}
           code={responsiveCode}
           preview={() => (
@@ -822,7 +822,7 @@ const StatDemo: FC = () => {
 
         <ExampleBlock
           title="带操作按钮"
-          summary="保留旧版按钮操作区示例，说明 Actions 仍可承载任意交互节点。"
+          summary="展示基础按钮操作区示例，说明 Actions 仍可承载任意交互节点。"
           tab={tabActions}
           code={actionsCode}
           preview={() => (

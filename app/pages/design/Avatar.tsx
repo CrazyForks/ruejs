@@ -156,7 +156,7 @@ const avatarApiRows: ApiRow[] = [
   },
   {
     prop: 'children',
-    description: '文字、图标、fallback，或旧版自定义内容插槽',
+    description: '文字、图标、fallback，或基础自定义内容插槽',
     type: 'RenderOutput',
     defaultValue: '-',
   },
@@ -224,7 +224,7 @@ const avatarApiRows: ApiRow[] = [
 const avatarGroupApiRows: ApiRow[] = [
   {
     prop: 'children',
-    description: '手写 Avatar 子节点，保留原始组合方式',
+    description: '手写 Avatar 子节点，展示基础组合方式',
     type: 'RenderOutput',
     defaultValue: '-',
   },
@@ -331,11 +331,11 @@ const AvatarDemo: FC = () => {
         <p className="mt-3 mb-3 text-sm">
           头像用于在界面中展示个人、团队或品牌的缩略信息。Rue 版 Avatar 现在既支持
           <code>src / icon / text / size / shape / onError</code>
-          这类语义 API，也保留原本基于 daisyUI 的自由组合方式。
+          这类语义 API，也展示基础基于 daisyUI 的自由组合方式。
         </p>
 
         <div className="not-prose mt-4 rounded-box border border-base-300 bg-base-100 p-4 text-sm leading-6 text-base-content">
-          <div className="font-semibold">这次增强补了什么</div>
+          <div className="font-semibold">组件补了什么</div>
           <ul className="mt-2 list-disc pl-5">
             <li>语义化头像：图片、图标、文字、颜色、尺寸、形状都能直接声明。</li>
             <li>图片失败回退：默认回到 icon、text 或 children；返回 false 可阻止回退。</li>
@@ -489,9 +489,9 @@ const AvatarDemo: FC = () => {
 />`}
         />
 
-        <h2 className="mt-10">兼容旧版组合方式</h2>
+        <h2 className="mt-10">支持组合方式</h2>
         <p>
-          下面这些 demo 来自 Rue 之前的 Avatar 页面，保留了原始的 children
+          下面这些示例 来自 Rue 之前的 Avatar 页面，保持了基础的 children
           插槽写法，用来说明升级后仍然可以继续拼 daisyUI 原子类。
         </p>
 
@@ -856,7 +856,7 @@ const AvatarDemo: FC = () => {
         />
 
         <h2 className="mt-12">API</h2>
-        <p>Avatar 现在既能作为语义化组件使用，也能继续承载原始 children 插槽。</p>
+        <p>Avatar 现在既能作为语义化组件使用，也能继续承载基础 children 插槽。</p>
         <ApiTable rows={avatarApiRows} />
 
         <h3 className="mt-8">Avatar.Group</h3>

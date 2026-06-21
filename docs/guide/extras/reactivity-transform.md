@@ -16,35 +16,37 @@
 
 [Rue 响应式转换](https://github.com/@rue-js/ruejs/core/tree/main/packages/reactivity-transform)是一个编译时转换，允许我们编写这样的代码：
 
-```vue
-<script setup lang="ts">
-let count = $ref(0)
+```tsx
+const Counter = () => {
+  let count = $ref(0)
 
-console.log(count)
+  console.log(count)
 
-function increment() {
-  count++
+  const increment = () => {
+    count++
+  }
+
+  return <button onClick={increment}>{count}</button>
 }
-</script>
-
-<Template>
-  <button @click="increment">{{ count }}</button>
-</Template>
 ```
 
 这里的 `$ref()` 方法是一个**编译时宏**：它不是一个会在运行时实际调用的方法。相反，Rue 编译器使用它作为提示，将生成的 `count` 变量视为**响应式变量**。
 
-响应式变量可以像普通变量一样被访问和重新赋值，但这些操作被编译成带有 `.value` 的 refs。例如，上述组件的 `<script>` 部分被编译成：
+响应式变量可以像普通变量一样被访问和重新赋值，但这些操作被编译成带有 `.value` 的 refs。例如，上述组件逻辑会被编译成：
 
-```js{5,8}
+```tsx{4,9,12}
 import { ref } from '@rue-js/rue'
 
-let count = ref(0)
+const Counter = () => {
+  let count = ref(0)
 
-console.log(count.value)
+  console.log(count.value)
 
-function increment() {
-  count.value++
+  const increment = () => {
+    count.value++
+  }
+
+  return <button onClick={increment}>{count.value}</button>
 }
 ```
 
@@ -164,7 +166,7 @@ const Child: FC<Props> = __rue_props => {
 }
 ```
 
-这个转换发生在编译阶段，不需要你手动引入 `defineProps()` 或额外宏。需要注意的是，如果要把解构后的 prop 作为响应式源传给 `watch()`，请使用 getter 形式：
+这个转换发生在编译阶段，不需要你手动引入额外宏。需要注意的是，如果要把解构后的 prop 作为响应式源传给 `watch()`，请使用 getter 形式：
 
 ```ts
 watch(
@@ -272,16 +274,16 @@ function useMouse() {
 `$$()` 适用于解构的 props，因为它们也是响应式变量。编译器将使用 `toRef` 来高效地转换它：
 
 ```ts
-const { count } = defineProps<{ count: number }>()
-
-passAsRef($$(count))
+const Counter: FC<{ count: number }> = ({ count }) => {
+  passAsRef($$(count))
+}
 ```
 
 编译为：
 
-```js
-setup(props) {
-  const __props_count = toRef(props, 'count')
+```tsx
+const Counter: FC<{ count: number }> = __rue_props => {
+  const __props_count = toRef(__rue_props, 'count')
   passAsRef(__props_count)
 }
 ```
@@ -290,7 +292,7 @@ setup(props) {
 
 Rue 为这些宏提供类型定义（全局可用），所有类型都将按预期工作。与标准 TypeScript 语义没有不兼容性，因此语法将与所有现有工具一起工作。
 
-这也意味着宏可以在任何允许有效 JS / TS 的文件中工作——不仅仅是在 Rue SFC 中。
+这也意味着宏可以在任何允许有效 JS / TS 的文件中工作——不仅仅是在特定的 Rue 文件形态中。
 
 由于宏是全局可用的，它们的类型需要显式引用（例如在 `env.d.ts` 文件中）：
 
@@ -309,8 +311,8 @@ Rue 为这些宏提供类型定义（全局可用），所有类型都将按预�
 ### Vite {#vite}
 
 - 需要 `@vitejs/plugin-rue@>=2.0.0`
-- 适用于 SFC 和 js(x)/ts(x) 文件。在应用转换之前会对文件执行快速使用检查，因此对于不使用宏的文件应该没有性能开销。
-- 注意 `reactivityTransform` 现在是插件根级选项，而不是嵌套在 `script.refSugar` 中，因为它影响的不仅仅是 SFC。
+- 适用于 Rue 文件和 js(x)/ts(x) 文件。在应用转换之前会对文件执行快速使用检查，因此对于不使用宏的文件应该没有性能开销。
+- 注意 `reactivityTransform` 现在是插件根级选项，而不是嵌套在 `script.refSugar` 中，因为它影响的不仅仅是某一种文件形态。
 
 ```js [vite.config.js]
 export default {
@@ -324,7 +326,7 @@ export default {
 
 ### `rue-cli` {#rue-cli}
 
-- 目前仅影响 SFC
+- 目前仅影响 Rue 文件
 - 需要 `rue-loader@>=17.0.0`
 
 ```js [rue.config.js]
@@ -345,7 +347,7 @@ module.exports = {
 
 ### 纯 `webpack` + `rue-loader` {#plain-webpack-rue-loader}
 
-- 目前仅影响 SFC
+- 目前仅影响 Rue 文件
 - 需要 `rue-loader@>=17.0.0`
 
 ```js [webpack.config.js]

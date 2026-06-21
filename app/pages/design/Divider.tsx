@@ -103,7 +103,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'variant',
-    description: '兼容旧版颜色写法，同时支持 solid / dashed / dotted 线型。',
+    description: '支持颜色写法，同时支持 solid / dashed / dotted 线型。',
     type: "tone | 'solid' | 'dashed' | 'dotted'",
     defaultValue: 'solid',
   },
@@ -133,7 +133,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'placement',
-    description: '兼容旧版 start / end 文本位置。',
+    description: '支持基础 start / end 文本位置。',
     type: "'start' | 'end'",
     defaultValue: '-',
   },
@@ -151,13 +151,13 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'vertical / type',
-    description: 'vertical 是 orientation="vertical" 的快捷写法；type 作为同义别名保留。',
+    description: 'vertical 是 orientation="vertical" 的快捷写法；type 作为同义别名保持。',
     type: "boolean | 'horizontal' | 'vertical'",
     defaultValue: '-',
   },
   {
     prop: 'direction',
-    description: '兼容 Rue 旧写法；在横向布局中常用 direction="horizontal" 切换为纵向视觉。',
+    description: '支持 Rue 基础写法；在横向布局中常用 direction="horizontal" 切换为纵向视觉。',
     type: "'vertical' | 'horizontal'",
     defaultValue: '-',
   },
@@ -183,12 +183,12 @@ const DividerDemo: FC = () => {
         <h1>Divider 分隔线</h1>
         <p className="text-sm mt-3 mb-3">
           分隔线（Divider）用于在内容之间建立轻量层级。Rue
-          保留原有视觉风格，并补充了更完整的文本位置、线型和垂直分隔能力。
+          使用当前视觉风格，并补充了更完整的文本位置、线型和垂直分隔能力。
         </p>
 
         <ExampleBlock
           title="Divider"
-          summary="基础分隔线，保留现有默认用法。"
+          summary="基础分隔线，保持当前默认用法。"
           tab={tabBasic}
           preview={() => (
             <div className="flex w-full flex-col">
@@ -208,7 +208,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Divider horizontal"
-          summary="保留 Rue 旧版 direction 用法，在横向布局中展示纵向分隔。"
+          summary="使用 Rue 基础 direction 用法，在横向布局中展示纵向分隔。"
           tab={tabHorizontal}
           preview={() => (
             <div className="flex w-full">
@@ -244,7 +244,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Responsive Divider"
-          summary="继续支持通过 className 结合响应式类切换方向。"
+          summary="支持通过 className 结合响应式类切换方向。"
           tab={tabResponsive}
           preview={() => (
             <div className="flex w-full flex-col lg:flex-row">
@@ -262,7 +262,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Divider with colors"
-          summary="现有颜色能力保留，同时推荐新写法使用 color。"
+          summary="当前颜色能力保持，同时推荐新写法使用 color。"
           tab={tabColors}
           preview={() => (
             <div className="flex w-full flex-col">
@@ -294,7 +294,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Divider in different positions"
-          summary="保留旧版 placement 用法，也可改用 titlePlacement。"
+          summary="展示基础 placement 用法，也可改用 titlePlacement。"
           tab={tabPositionsV}
           preview={() => (
             <div className="flex w-full flex-col">
@@ -312,7 +312,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Divider in different positions (horizontal)"
-          summary="在横向布局中，文本位置仍可配合旧版 direction 使用。"
+          summary="在横向布局中，文本位置仍可配合基础 direction 使用。"
           tab={tabPositionsH}
           preview={() => (
             <div className="flex w-full justify-center h-52">
@@ -334,7 +334,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Line Variants"
-          summary="新增实线、虚线、点线三种线型，并兼容 dashed 快捷写法。"
+          summary="支持实线、虚线、点线三种线型，并支持 dashed 快捷写法。"
           tab={tabLineVariants}
           preview={() => (
             <div className="flex w-full flex-col">
@@ -358,7 +358,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Plain Text"
-          summary="新增 plain，让分隔文字从强调标题过渡为更轻的正文说明。"
+          summary="plain 可以让分隔文字从强调标题过渡为更轻的正文说明。"
           tab={tabPlain}
           preview={() => (
             <div className="flex w-full flex-col">
@@ -380,7 +380,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Vertical Orientation API"
-          summary="新增更通用的 orientation / vertical API，适合行内分隔，不展示 children。"
+          summary="orientation / vertical API 适合行内分隔，不展示 children。"
           tab={tabVerticalApi}
           preview={() => (
             <div className="flex flex-wrap items-center gap-3 rounded-box border border-base-300 bg-base-100 px-4 py-5">
@@ -406,7 +406,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Title Placement And Margin"
-          summary="新增 titlePlacement 与 orientationMargin，可更精细地控制文字和边缘的距离。"
+          summary="titlePlacement 与 orientationMargin 可更精细地控制文字和边缘的距离。"
           tab={tabMargin}
           preview={() => (
             <div className="flex w-full flex-col">
@@ -428,7 +428,7 @@ const DividerDemo: FC = () => {
 
         <ExampleBlock
           title="Custom Style"
-          summary="新增 style / contentStyle / contentClassName，便于保持 Rue 基础视觉下的局部定制。"
+          summary="style / contentStyle / contentClassName 便于保持 Rue 基础视觉下的局部定制。"
           tab={tabCustom}
           preview={() => (
             <div className="flex w-full flex-col gap-2 rounded-box bg-base-200/40 p-4">
@@ -478,7 +478,7 @@ const DividerDemo: FC = () => {
         <div className="my-10">
           <h2>API</h2>
           <p className="text-sm opacity-70 mt-2">
-            新版 Divider 同时兼容 Rue 旧写法与更语义化的新 API，便于渐进迁移。
+            当前 Divider 同时支持 Rue 基础写法与更语义化的新 API，便于按需接入。
           </p>
           <ApiTable rows={apiRows} />
         </div>

@@ -19,8 +19,10 @@ import { useSetup } from '@rue-js/runtime-vapor/reactive'
 import { appendChild, createComment, createElement as createDomElement } from './dom'
 import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,
+  CUSTOM_ELEMENT_SYNC_PROPS_KEY,
   type CustomElementEmitBridge,
 } from './custom-elements.shared'
+import { preserveParentContextProps } from './context'
 import { useApp } from './hooks/useApp'
 
 /** useCustomElement 的包装配置。 */
@@ -390,6 +392,7 @@ export function useCustomElement<P = Record<string, unknown>>(
           void propsVersion.value
           runWithRuntime(runtime, () => {
             const props = { ...(getPropsState<P>(host) ?? ({} as Partial<P>)) }
+            preserveParentContextProps(props as Record<string, unknown>)
             const child = createRueElement(ScopedResolvedComponent as any, props as any)
             renderAnchor(child as any, root as any, anchor as any)
           })
@@ -444,6 +447,10 @@ export function useCustomElement<P = Record<string, unknown>>(
 
     set props(value: Partial<P>) {
       setPropsBag(this, value)
+      syncPropsState(this)
+    }
+
+    [CUSTOM_ELEMENT_SYNC_PROPS_KEY]() {
       syncPropsState(this)
     }
 

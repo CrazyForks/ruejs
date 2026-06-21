@@ -259,8 +259,8 @@ const MockupBrowserPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Mockup Browser 浏览器外框</h1>
         <p className="text-sm mt-3 mb-3">
-          MockupBrowser 保留 Rue
-          当前的浏览器外框视觉，同时补上推荐写法所需的地址栏、内容区和快捷工具栏 API。 原始 children
+          MockupBrowser 使用 Rue
+          当前的浏览器外框视觉，同时补上推荐写法所需的地址栏、内容区和快捷工具栏 API。 基础 children
           组合方式依然可用，适合需要完全自定义结构的场景。
         </p>
 
@@ -268,7 +268,7 @@ const MockupBrowserPage: FC = () => {
         <ul>
           <li>需要展示网页、管理台、嵌入式预览或静态产品截图，并且希望外层有统一的浏览器语义。</li>
           <li>希望快速落一个带地址栏的浏览器框，用少量 props 搭出完整演示。</li>
-          <li>需要保留对工具栏和内容区的完全控制，继续使用原始组合模式。</li>
+          <li>需要保持对工具栏和内容区的完全控制，可以使用基础组合模式。</li>
         </ul>
 
         <ExampleBlock
@@ -316,7 +316,7 @@ const MockupBrowserPage: FC = () => {
                           <div className="badge badge-primary badge-outline">In review</div>
                         </div>
                         <p className="mt-3 mb-0 text-sm opacity-75">
-                          用增强后的快捷 API 组织浏览器壳层，同时把真实页面内容直接塞进内容区。
+                          用语义化的快捷 API 组织浏览器壳层，同时把真实页面内容直接塞进内容区。
                         </p>
                       </div>
                       <div className="grid gap-4 md:grid-cols-3">
@@ -377,7 +377,7 @@ const MockupBrowserPage: FC = () => {
           <div className="badge badge-primary badge-outline">In review</div>
         </div>
         <p className="mt-3 mb-0 text-sm opacity-75">
-          用增强后的快捷 API 组织浏览器壳层，同时把真实页面内容直接塞进内容区。
+          用语义化的快捷 API 组织浏览器壳层，同时把真实页面内容直接塞进内容区。
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
@@ -401,7 +401,7 @@ const MockupBrowserPage: FC = () => {
 
         <ExampleBlock
           title="browser mockup with border"
-          summary="保留原有 demo，不改变旧的 children + Toolbar 组织方式。"
+          summary="展示基础示例，不改变基础的 children + Toolbar 组织方式。"
           tab={tabBorder}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -430,7 +430,7 @@ const MockupBrowserPage: FC = () => {
 
         <ExampleBlock
           title="browser mockup with background color"
-          summary="保留原有背景色 demo，继续支持最原始的手写结构。"
+          summary="展示基础背景色示例，支持最基础的手写结构。"
           tab={tabBackground}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -496,7 +496,7 @@ const MockupBrowserPage: FC = () => {
                     <div className="rounded-box border border-base-300 bg-base-100 p-4">
                       <div className="text-lg font-semibold">Mockup Browser</div>
                       <p className="mt-3 mb-0 text-sm opacity-75">
-                        工具栏仍然保留原始组合能力，但通过 start / end 把常见布局槽位做得更顺手。
+                        工具栏仍然展示基础组合能力，但通过 start / end 把常见布局槽位做得更顺手。
                       </p>
                     </div>
                   </MockupBrowser.Content>
@@ -535,7 +535,7 @@ const MockupBrowserPage: FC = () => {
     <div className="rounded-box border border-base-300 bg-base-100 p-4">
       <div className="text-lg font-semibold">Mockup Browser</div>
       <p className="mt-3 mb-0 text-sm opacity-75">
-        工具栏仍然保留原始组合能力，但通过 start / end 把常见布局槽位做得更顺手。
+        工具栏仍然展示基础组合能力，但通过 start / end 把常见布局槽位做得更顺手。
       </p>
     </div>
   </MockupBrowser.Content>
@@ -612,7 +612,7 @@ const MockupBrowserPage: FC = () => {
 
         <ExampleBlock
           title="内容容器"
-          summary="Content 用来统一处理上边框、背景色和内边距，避免每个 demo 都手写一遍。"
+          summary="Content 用来统一处理上边框、背景色和内边距，避免每个示例 都手写一遍。"
           tab={tabContent}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -653,7 +653,7 @@ const MockupBrowserPage: FC = () => {
     <div className="rounded-box border border-base-300 bg-base-100 p-4">
       <div className="text-xs uppercase tracking-[0.24em] opacity-60">May</div>
       <div className="mt-2 text-base font-semibold">Component refresh</div>
-      <p className="mt-2 mb-0 text-sm opacity-75">Mockup Browser 新增地址栏和内容区语义 API。</p>
+      <p className="mt-2 mb-0 text-sm opacity-75">Mockup Browser 提供地址栏和内容区语义 API。</p>
     </div>
     <div className="rounded-box border border-dashed border-base-300 p-4">
       <div className="text-xs uppercase tracking-[0.24em] opacity-60">Next</div>
@@ -779,7 +779,7 @@ const MockupBrowserPage: FC = () => {
         />
 
         <h2 id="mockup-browser-api">API</h2>
-        <p>MockupBrowser 现在支持推荐快捷模式和原始组合模式两套写法。</p>
+        <p>MockupBrowser 现在支持推荐快捷模式和基础组合模式两套写法。</p>
 
         <h3>MockupBrowser</h3>
         <ApiTable rows={rootApiRows} />
@@ -806,7 +806,7 @@ const MockupBrowserPage: FC = () => {
               <code>Toolbar + AddressBar + Content</code> 适合需要细粒度控制的页面
             </div>
             <div>
-              旧的手写 <code>Toolbar</code> 结构仍然完全可用
+              基础的手写 <code>Toolbar</code> 结构仍然完全可用
             </div>
           </div>
         </div>
@@ -821,11 +821,11 @@ const MockupBrowserPage: FC = () => {
           <code>MockupBrowser.Content</code>。
         </p>
 
-        <h3>原来的 demo 写法会失效吗？</h3>
+        <h3>基础示例 写法会失效吗？</h3>
         <p>
-          不会。原来的 <code>children + MockupBrowser.Toolbar</code> 结构仍然保留；当前页面里的
+          不会。基础的 <code>children + MockupBrowser.Toolbar</code> 结构仍然提供；当前页面里的
           “browser mockup with border” 和 “browser mockup with background color”
-          就是旧写法的直接保留版。
+          就是基础写法的直接保持版。
         </p>
 
         <h3>Content 和根节点上的 contentClassName 有什么区别？</h3>

@@ -154,7 +154,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'variant',
-    description: 'Rue 视觉色，继续映射到 link-* 类名，兼容旧用法。',
+    description: 'Rue 视觉色，继续映射到 link-* 类名，支持基础用法。',
     type: "'neutral' | 'primary' | 'secondary' | 'accent' | 'success' | 'info' | 'warning' | 'error'",
     defaultValue: '-',
   },
@@ -240,7 +240,7 @@ const LinkDemo: FC = () => {
   const editableLabel = ref('Roadmap draft')
   const editableInline = ref('Click text to edit')
   const editableNotes = ref(
-    '第一阶段：补齐 Link API\n第二阶段：整理设计页示例\n第三阶段：补充 FAQ 与测试',
+    '第一阶段：补充 Link API\n第二阶段：整理设计页示例\n第三阶段：补充 FAQ 与测试',
   )
   const expandToggleCount = ref(0)
   const ellipsisDetected = ref(false)
@@ -250,7 +250,7 @@ const LinkDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Link 链接</h1>
         <p className="text-sm mt-3 mb-3">
-          Link 仍然以 Rue 的 link 视觉类为基底，同时补齐更像 Typography.Link 的文本链接能力：
+          Link 仍然以 Rue 的 link 视觉类为基底，同时补充更像 Typography.Link 的文本链接能力：
           安全外链、路由跳转、省略、复制、编辑、禁用与内联文本修饰。
         </p>
 
@@ -258,12 +258,12 @@ const LinkDemo: FC = () => {
         <ul>
           <li>需要普通文本链接、外链或 Rue Router 内部跳转。</li>
           <li>需要在正文里附带复制、编辑、省略或强调语义。</li>
-          <li>需要保留 link/link-* 视觉体系，但希望 API 更接近成熟 Typography 组件。</li>
+          <li>适合保持 link/link-* 视觉体系，同时使用 Typography 式文本操作 API。</li>
         </ul>
 
         <ExampleBlock
           title="基础用法"
-          summary="保留原来的 Click me、正文链接、RouterLink 与 href/target 示例，并统一到一个预览里。"
+          summary="展示 Click me、正文链接、RouterLink 与 href/target 示例，并统一到一个预览里。"
           tab={tabBasic}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -298,7 +298,7 @@ const LinkDemo: FC = () => {
 
         <ExampleBlock
           title="颜色与 Hover"
-          summary="旧的 Primary/Secondary/Accent/Success/Info/Warning/Error 与 hover 示例都保留，并用数组组织。"
+          summary="基础的 Primary/Secondary/Accent/Success/Info/Warning/Error 与 hover 示例都保持，并用数组组织。"
           tab={tabPalette}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -342,7 +342,7 @@ const LinkDemo: FC = () => {
 
         <ExampleBlock
           title="Typography 文本能力"
-          summary="新增 type 与常见文本修饰，适合正文里的语义化链接。"
+          summary="type 与常见文本修饰适合正文里的语义化链接。"
           tab={tabTypography}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -416,7 +416,7 @@ const LinkDemo: FC = () => {
 
         <ExampleBlock
           title="可展开省略与后缀"
-          summary="新增 suffix、expandable、collapsible、symbol、onExpand 与 onEllipsis，更接近成熟 Typography 组件的摘要场景。"
+          summary="suffix、expandable、collapsible、symbol、onExpand 与 onEllipsis 适合长链接摘要场景。"
           tab={tabExpandable}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -485,7 +485,7 @@ const LinkDemo: FC = () => {
 
         <ExampleBlock
           title="复制与编辑"
-          summary="copyable 与 editable 借鉴 Typography 的操作入口，新增多行 autoSize 编辑，更适合文档标题、备注和链接摘要。"
+          summary="copyable 与 editable 提供文本操作入口，多行 autoSize 编辑适合文档标题、备注和链接摘要。"
           tab={tabCopyEdit}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -568,7 +568,7 @@ const LinkDemo: FC = () => {
 
         <ExampleBlock
           title="事件、阻止跳转与禁用"
-          summary="保留原来的 onClick 与 preventDefault 示例，并补一个 disabled 状态。"
+          summary="展示 onClick 与 preventDefault 示例，并补一个 disabled 状态。"
           tab={tabEvents}
           preview={() => (
             <div className="card bg-base-100 shadow-sm">
@@ -658,7 +658,7 @@ const LinkDemo: FC = () => {
               什么时候用 `variant`，什么时候用 `type`？
             </h3>
             <p className="m-0 opacity-80">
-              `variant` 更接近 Rue 原本的 `link-*` 视觉色板；`type`
+              `variant` 更接近 Rue 基础的 `link-*` 视觉色板；`type`
               更偏正文语义色，适合在文案里表达弱化、成功、警告、危险等状态。
             </p>
           </div>

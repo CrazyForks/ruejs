@@ -7,10 +7,11 @@ Suspense 组件概述
 */
 
 import rue, { type FC, onBeforeUnmount, type PropsWithChildren, renderBetween, vapor } from '../rue'
-import { appendChild, createComment, createElement } from '../dom'
+import { appendChild, createComment, createElement, getParentNode } from '../dom'
 import { signal, watchEffect } from '../reactivity'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
 import {
+  getCurrentSuspenseBoundary,
   isSuspenseThenable,
   RUE_SUSPENSE_COMPONENT_MARKER,
   RUE_SUSPENSE_BOUNDARY_KEY,
@@ -25,6 +26,8 @@ export interface SuspenseProps extends PropsWithChildren<Record<string, unknown>
   fallback?: unknown
   /** 已有 resolved 内容时，延迟显示 fallback 的毫秒数。 */
   timeout?: number | string
+  /** 是否把内层边界捕获的 pending 状态继续登记到父 Suspense 边界。 */
+  suspensible?: boolean
   /** 进入 pending 状态时触发。 */
   onPending?: () => void
   /** pending 完成并显示内容时触发。 */
@@ -77,6 +80,7 @@ const callSuspenseHook = (hook: unknown) => {
 /** 为异步子树提供 pending 捕获、fallback 渲染和 resolved 内容恢复。 */
 export const Suspense: FC<SuspenseProps> = props => {
   const ctx = useSetup(() => {
+    const parentBoundary = getCurrentSuspenseBoundary()
     const container = createElement('div') as HTMLElement
     if (container && container.style && typeof container.style === 'object') {
       container.style.display = 'contents'
@@ -133,6 +137,7 @@ export const Suspense: FC<SuspenseProps> = props => {
 
     return {
       boundary,
+      parentBoundary,
       container,
       stagingHost,
       startEl,
@@ -171,6 +176,44 @@ export const Suspense: FC<SuspenseProps> = props => {
 
   const triggerRetry = () => {
     ctx.retrySig.set(ctx.retrySig.get() + 1)
+  }
+
+  const findParentBoundary = () => {
+    let node: any = getParentNode(ctx.container)
+    while (node) {
+      const boundary = node[RUE_SUSPENSE_BOUNDARY_KEY] as SuspenseBoundary | undefined
+      if (boundary && boundary !== ctx.boundary) {
+        ctx.parentBoundary = boundary
+        return boundary
+      }
+      node = getParentNode(node)
+    }
+
+    if (ctx.parentBoundary && ctx.parentBoundary !== ctx.boundary) {
+      return ctx.parentBoundary
+    }
+
+    return null
+  }
+
+  const registerParentDependency = (thenable: PromiseLike<unknown>, curProps: SuspenseProps) => {
+    if (!curProps.suspensible) {
+      return
+    }
+
+    const parentBoundary = findParentBoundary()
+    if (parentBoundary) {
+      parentBoundary.register(thenable)
+      return
+    }
+
+    queueMicrotask(() => {
+      if (!ctx.propsSig.get().suspensible || !ctx.pendingThenables.has(thenable)) {
+        return
+      }
+
+      findParentBoundary()?.register(thenable)
+    })
   }
 
   const trackThenable = (thenable: PromiseLike<unknown>) => {
@@ -310,11 +353,13 @@ export const Suspense: FC<SuspenseProps> = props => {
 
   ctx.boundary.register = thenable => {
     const tracked = trackThenable(thenable)
+    const curProps = ctx.propsSig.get()
+    if (tracked) {
+      registerParentDependency(thenable, curProps)
+    }
     if (!tracked && ctx.status === 'pending') {
       return
     }
-
-    const curProps = ctx.propsSig.get()
 
     if (ctx.status !== 'pending') {
       ctx.status = 'pending'
@@ -352,7 +397,10 @@ export const Suspense: FC<SuspenseProps> = props => {
           throw thrown
         }
 
-        trackThenable(thrown)
+        const tracked = trackThenable(thrown)
+        if (tracked) {
+          registerParentDependency(thrown, curProps)
+        }
         if (ctx.status !== 'pending') {
           ctx.status = 'pending'
           callSuspenseHook(curProps.onPending)

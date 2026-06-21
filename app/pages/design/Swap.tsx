@@ -131,7 +131,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'flip / rotate',
-    description: '兼容原有布尔写法',
+    description: '支持基础布尔写法',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -190,14 +190,14 @@ const SwapPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Swap 切换容器</h1>
         <p className="text-sm mt-3 mb-3">
-          Swap 继续保留 Rue 原本的视觉风格和 compound 结构，但现在补上了更顺手的状态 API。
+          Swap 可以使用 Rue 当前视觉风格和 compound 结构，但现在补上了更顺手的状态 API。
           你可以继续手写 checkbox，也可以直接用 <code>checked</code>、<code>defaultChecked</code>、
           <code>indeterminate</code> 和 <code>onCheckedChange</code> 让组件自己生成隐藏输入。
         </p>
 
         <h2>何时使用</h2>
         <ul>
-          <li>需要在两个内容之间做轻量切换，同时复用 Rue 现有的 swap 视觉和动效。</li>
+          <li>需要在两个内容之间做轻量切换，同时复用 Rue 当前的 swap 视觉和动效。</li>
           <li>需要图标切换、文案切换、菜单开合、主题切换这类“一进一出”的状态表达。</li>
           <li>需要 mixed/indeterminate 这类第三态，但又不想手动维护隐藏 checkbox。</li>
         </ul>
@@ -404,8 +404,8 @@ const SwapPage: FC = () => {
 </Swap>`}
         />
 
-        <h2>经典 demo</h2>
-        <p>下面这些示例全部保留原始写法，适合对照 swap 的底层结构和 class mode 使用方式。</p>
+        <h2>组合示例</h2>
+        <p>下面这些示例全部保持自由组合写法，适合对照 swap 的底层结构和 class mode 使用方式。</p>
 
         <PreviewBlock
           title="Swap text"
@@ -591,9 +591,7 @@ const SwapPage: FC = () => {
         />
 
         <h2 id="swap-api">API</h2>
-        <p>
-          推荐优先使用 props 驱动模式；如果你已经有自己的隐藏 checkbox，也可以继续沿用原始结构。
-        </p>
+        <p>推荐优先使用 props 驱动模式；如果你已经有自己的隐藏 checkbox，也可以使用基础结构。</p>
         <ApiTable rows={apiRows} />
 
         <div className="not-prose mt-6 rounded-box border border-base-300 bg-base-100 p-4">
@@ -629,8 +627,8 @@ const SwapPage: FC = () => {
 
         <h3>effect 和 rotate / flip 应该怎么选？</h3>
         <p>
-          新代码优先用 <code>effect</code>，表达更集中；老代码继续使用 <code>rotate</code> 或{' '}
-          <code>flip</code> 也兼容。
+          新代码优先用 <code>effect</code>，表达更集中；项目代码可以使用 <code>rotate</code> 或{' '}
+          <code>flip</code> 也支持。
         </p>
       </div>
     </SidebarPlayground>

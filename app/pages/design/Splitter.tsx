@@ -16,7 +16,7 @@ const defaultTriptychSizes = [180, 260, 160]
 const apiRows: ApiRow[] = [
   {
     prop: 'orientation / layout / vertical',
-    description: '控制分割方向；推荐用 orientation，vertical 作为兼容别名保留。',
+    description: '控制分割方向；推荐用 orientation，vertical 作为别名保持。',
     type: "'horizontal' | 'vertical' / boolean",
     defaultValue: "'horizontal'",
   },
@@ -58,7 +58,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'Splitter.Panel resizable',
-    description: '禁用相邻分隔柄的拖拽能力，但保留布局结构。',
+    description: '禁用相邻分隔柄的拖拽能力，但保持布局结构。',
     type: 'boolean',
     defaultValue: 'true',
   },
@@ -528,7 +528,7 @@ const SplitterPage: FC = () => {
         <h1>Splitter 分割面板</h1>
         <p className="text-sm mt-3 mb-3">
           Splitter 在 Rue
-          里不是一条简单的分隔线，而是一套适合工作台、配置台和双栏内容区的布局行为层。 它保留 Rue
+          里不是一条简单的分隔线，而是一套适合工作台、配置台和双栏内容区的布局行为层。 它使用 Rue
           Design 当前的柔和卡片气质和 3px 分隔条视觉，同时补上可拖拽、受控尺寸、垂直布局、lazy
           拖拽和双击重置这些常用能力。
         </p>
@@ -544,7 +544,7 @@ const SplitterPage: FC = () => {
 
         <h2>推荐用法</h2>
         <p className="text-sm mt-3 mb-4">
-          下面每个 JSX 示例都保留了完整结构，方便直接复制到页面组件里使用。
+          下面每个 JSX 示例都保持了完整结构，方便直接复制到页面组件里使用。
         </p>
 
         <PreviewBlock
@@ -563,7 +563,7 @@ const SplitterPage: FC = () => {
                 </Pane>
               </Splitter.Panel>
               <Splitter.Panel>
-                <Pane title="Editor" subtitle="右侧保留完整内容区，适合表单、文档或分析结果。">
+                <Pane title="Editor" subtitle="右侧保持完整内容区，适合表单、文档或分析结果。">
                   <div className="rounded-box border border-dashed border-base-300 bg-base-200/50 p-4 text-sm leading-7 text-base-content/70">
                     这里是主工作区。拖动中间的 handle，可以把左右空间分配给导航和正文。
                   </div>
@@ -589,7 +589,7 @@ const SplitterPage: FC = () => {
           preview={() => (
             <Splitter orientation="vertical" style={{ height: 520 }}>
               <Splitter.Panel defaultSize="32%" min="10%">
-                <Pane title="Summary" subtitle="顶部保留关键指标和状态总览。">
+                <Pane title="Summary" subtitle="顶部保持关键指标和状态总览。">
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="rounded-box bg-success/12 p-3 text-sm">Success 18</div>
                     <div className="rounded-box bg-warning/12 p-3 text-sm">Queued 4</div>

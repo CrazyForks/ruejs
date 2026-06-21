@@ -6,7 +6,7 @@
 
 有时组件模板的一部分在逻辑上属于它，但从视觉角度来看，它应该显示在 DOM 的其他位置，甚至可能在 Rue 应用之外。
 
-最常见的例子是构建全屏模态框时。理想情况下，我们希望模态框的按钮代码和模态框本身都写在同一个单文件组件中，因为它们都与模态框的打开/关闭状态相关。但这意味着模态框将与按钮一起渲染，深深地嵌套在应用的 DOM 层次结构中。通过 CSS 定位模态框时这可能会产生一些棘手的问题。
+最常见的例子是构建全屏模态框时。理想情况下，我们希望模态框的按钮代码和模态框本身都写在同一个组件中，因为它们都与模态框的打开/关闭状态相关。但这意味着模态框将与按钮一起渲染，深深地嵌套在应用的 DOM 层次结构中。通过 CSS 定位模态框时这可能会产生一些棘手的问题。
 
 考虑以下 HTML 结构：
 
@@ -96,7 +96,7 @@ const MyModal: FC = () => {
 您可以将 `<Teleport>` 与 [`<Transition>`](/guide/guide/built-ins/transition) 结合使用来创建动画模态框 - 参见 [示例](/examples/#modal)。
 
 :::tip
-传送门 `to` 目标必须在 `<Teleport>` 组件挂载时已经存在于 DOM 中。理想情况下，这应该是整个 Rue 应用之外的元素。如果目标是 Rue 渲染的另一个元素，您需要确保该元素在 `<Teleport>` 之前挂载。
+默认情况下，传送门 `to` 目标必须在 `<Teleport>` 组件挂载时已经存在于 DOM 中。理想情况下，这应该是整个 Rue 应用之外的元素。如果目标是 Rue 渲染的另一个元素，并且会在 `<Teleport>` 后面才挂载，可以使用 `defer`。
 :::
 
 ## 与组件一起使用 (Using with Components) {#using-with-components}
@@ -139,11 +139,19 @@ const MyModal: FC = () => {
 </div>
 ```
 
-## 关于 `defer` {#deferred-teleport}
+## 延迟解析目标 {#deferred-teleport}
 
-`TeleportProps` 类型里目前仍然保留了 `defer` 字段，但当前运行时实现还没有实际使用它。也就是说，传入 `defer` 现在**不会**延迟目标解析，也不能让 Teleport 等待后面才出现的目标容器。
+`defer` 会把目标解析推迟到当前挂载 / 更新完成后的微任务。它适合目标容器由同一轮 Rue 更新创建，但在模板顺序上位于 `<Teleport>` 后面的情况：
 
-因此，当前使用 `<Teleport>` 时仍然应该保证目标元素在 Teleport 挂载前就已经存在于 DOM 中。
+```tsx
+<Teleport to="#late-target" defer>
+  <div>传送内容</div>
+</Teleport>
+
+<div id="late-target" />
+```
+
+`defer` 只等待同一轮更新结束，不会持续轮询目标。如果微任务执行时目标仍然不存在，传送内容不会输出；下一次 Teleport 的 props 或 children 更新时会再次尝试解析。
 
 ---
 

@@ -32,7 +32,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'content / overlay / title / tip',
-    description: '提示内容入口，支持文本、JSX 节点、函数返回值，并兼容旧的 tip 写法。',
+    description: '提示内容入口，支持文本、JSX 节点、函数返回值，并支持基础的 tip 写法。',
     type: 'any',
     defaultValue: '-',
   },
@@ -44,7 +44,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'disabled',
-    description: '禁用 Tooltip，仅保留包裹结构，不显示提示内容。',
+    description: '禁用 Tooltip，仅保持包裹结构，不显示提示内容。',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -111,7 +111,7 @@ const ForceOpenPreview: FC = () => {
       >
         {controlledOpen.value ? 'Hide controlled tooltip' : 'Show controlled tooltip'}
       </button>
-      <Tooltip title="包一层 span 可兼容禁用按钮" placement="bottom">
+      <Tooltip title="包一层 span 可支持禁用按钮" placement="bottom">
         <span className="inline-flex">
           <button className="btn btn-disabled" disabled={true}>
             Disabled button
@@ -135,7 +135,7 @@ const TooltipPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Tooltip 提示框</h1>
         <p className="text-sm mt-3 mb-3">
-          Tooltip 现在既保留 Rue 原本轻量、包裹式的视觉习惯，也补上更完整的语义 API。你可以继续使用
+          Tooltip 现在既使用 Rue 基础轻量、包裹式的视觉习惯，也补上更完整的语义 API。你可以使用
           <code>tip</code> 和 <code>Tooltip.Content</code>，也可以切到 <code>title</code>、
           <code>overlay</code>、受控显示、 自定义颜色和语义化样式扩展。
         </p>
@@ -397,7 +397,7 @@ const TooltipPage: FC = () => {
     {controlledOpen.value ? 'Hide controlled tooltip' : 'Show controlled tooltip'}
   </button>
 
-  <Tooltip title="包一层 span 可兼容禁用按钮" placement="bottom">
+  <Tooltip title="包一层 span 可支持禁用按钮" placement="bottom">
     <span className="inline-flex">
       <button className="btn btn-disabled" disabled={true}>
         Disabled button

@@ -117,7 +117,7 @@ const rootApiRows: ApiRow[] = [
   },
   {
     prop: 'variant',
-    description: '容器表现层，保留 Rue 当前视觉风格',
+    description: '容器表现层，使用 Rue 当前视觉风格',
     type: `'default' | 'soft' | 'outlined'`,
     defaultValue: `'default'`,
   },
@@ -201,19 +201,19 @@ const itemApiRows: ApiRow[] = [
 const partApiRows: ApiRow[] = [
   {
     prop: 'Fieldset.Legend',
-    description: '保留原有 legend 组合写法，并新增 aside 右侧辅助信息',
+    description: '展示基础 legend 组合写法，并支持 aside 右侧辅助信息',
     type: 'component',
     defaultValue: '-',
   },
   {
     prop: 'Fieldset.Label',
-    description: '保留 label / p / span，并新增 div 与 tone',
+    description: '支持 label / p / span / div 与 tone',
     type: 'component',
     defaultValue: '-',
   },
   {
     prop: 'Fieldset.Item',
-    description: '新增复合字段项，适合复用字段布局与提示文案',
+    description: '复合字段项，适合复用字段布局与提示文案',
     type: 'component',
     defaultValue: '-',
   },
@@ -234,7 +234,7 @@ const FieldsetPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Fieldset 字段集</h1>
         <p className="text-sm mt-3 mb-3">
-          Fieldset 现在同时支持两类用法：保留原有的 <code>Fieldset.Legend</code> /{' '}
+          Fieldset 现在同时支持两类用法：展示基础的 <code>Fieldset.Legend</code> /{' '}
           <code>Fieldset.Label</code> 组合写法，也补上更适合表单场景的结构化 props 与{' '}
           <code>Fieldset.Item</code>。
         </p>
@@ -243,7 +243,7 @@ const FieldsetPage: FC = () => {
         <ul>
           <li>需要把一组相关输入控件组织成一个明确的表单区块。</li>
           <li>需要同时表达标题、说明、字段提示、操作区和错误态。</li>
-          <li>希望小表单走结构化 props，大表单继续保留原有 JSX 组合写法。</li>
+          <li>希望小表单走结构化 props，大表单展示基础 JSX 组合写法。</li>
         </ul>
 
         <ExampleBlock
@@ -314,7 +314,7 @@ const FieldsetPage: FC = () => {
 
         <ExampleBlock
           title="Fieldset.Item 复合字段"
-          summary="当字段布局更复杂时，继续用 children 组合，但把重复行收敛到 Fieldset.Item。"
+          summary="当字段布局更复杂时，可以用 children 组合，但把重复行收敛到 Fieldset.Item。"
           tab={tabItem}
           preview={() => (
             <Fieldset variant="soft" tone="neutral" size="large" className="w-full max-w-2xl">
@@ -449,7 +449,7 @@ const FieldsetPage: FC = () => {
 
         <ExampleBlock
           title="Fieldset fieldset-legend and label"
-          summary="原始基础示例保持不变，继续展示最轻量的组合写法。"
+          summary="基础示例保持不变，展示最轻量的组合写法。"
           tab={tabBasic}
           preview={() => (
             <Fieldset className="w-xs rounded-box bg-base-100 p-4 shadow-sm">
@@ -467,7 +467,7 @@ const FieldsetPage: FC = () => {
 
         <ExampleBlock
           title="Fieldset with background and border"
-          summary="继续保留手动 className 覆盖方式，和新 variant 可以自由混用。"
+          summary="展示手动 className 覆盖方式，和新 variant 可以自由混用。"
           tab={tabBorder}
           preview={() => (
             <Fieldset className="w-xs rounded-box border border-base-300 bg-base-200 p-4">
@@ -485,7 +485,7 @@ const FieldsetPage: FC = () => {
 
         <ExampleBlock
           title="Fieldset with multiple inputs"
-          summary="原有多输入框示例保留，适合对比 items 写法和纯 JSX 写法。"
+          summary="基础多输入框示例保持，适合对比 items 写法和纯 JSX 写法。"
           tab={tabMultiple}
           preview={() => (
             <Fieldset className="w-xs rounded-box border border-base-300 bg-base-200 p-4">
@@ -511,7 +511,7 @@ const FieldsetPage: FC = () => {
 
         <ExampleBlock
           title="Fieldset with multiple join items"
-          summary="原有 join 场景保留，适合放紧凑操作条或搜索表单。"
+          summary="基础 join 场景保持，适合放紧凑操作条或搜索表单。"
           tab={tabJoin}
           preview={() => (
             <Fieldset className="w-xs rounded-box border border-base-300 bg-base-200 p-4">
@@ -533,7 +533,7 @@ const FieldsetPage: FC = () => {
 
         <ExampleBlock
           title="Login form with fieldset"
-          summary="登录表单示例继续保留，能直接对照增强后的推荐结构。"
+          summary="登录表单示例展示，能直接对照推荐结构。"
           tab={tabLogin}
           preview={() => (
             <Fieldset className="w-xs rounded-box border border-base-300 bg-base-200 p-4">
@@ -558,7 +558,7 @@ const FieldsetPage: FC = () => {
         />
 
         <h2 id="fieldset-api">API</h2>
-        <p>当前页面展示的是增强后的完整可用 API，同时保留原有 children 组合写法。</p>
+        <p>当前页面展示的是语义化的完整可用 API，同时展示基础 children 组合写法。</p>
 
         <h3>Fieldset</h3>
         <ApiTable rows={rootApiRows} />
@@ -579,7 +579,7 @@ const FieldsetPage: FC = () => {
               <code>Fieldset.Item</code> 适合沉淀复用字段行
             </div>
             <div>
-              <code>children + Legend/Label</code> 继续兼容原有写法
+              <code>children + Legend/Label</code> 支持基础写法
             </div>
             <div>
               <code>variant / tone / invalid</code> 用来表达区块层级和状态
@@ -591,7 +591,7 @@ const FieldsetPage: FC = () => {
 
         <h3>结构化 props 和 children 可以同时用吗？</h3>
         <p>
-          当前实现里，<code>children</code> 仍然是最高优先级。想走推荐写法时使用 <code>legend</code>
+          当前组件里，<code>children</code> 仍然是最高优先级。想走推荐写法时使用 <code>legend</code>
           、<code>description</code>、<code>items</code>；想自由拼装时继续直接写{' '}
           <code>children</code>。
         </p>
@@ -605,7 +605,7 @@ const FieldsetPage: FC = () => {
 
         <h3>variant 和手写 className 会冲突吗？</h3>
         <p>
-          不会。<code>variant</code> 只是给出一套推荐容器样式，仍然可以继续叠加现有的
+          不会。<code>variant</code> 只是给出一套推荐容器样式，仍然可以继续叠加当前的
           <code>rounded-box</code>、<code>border</code>、<code>bg-*</code> 等类名做局部覆盖。
         </p>
       </div>

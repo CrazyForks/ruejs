@@ -205,13 +205,13 @@ const cardApiRows: ApiRow[] = [
   },
   {
     prop: 'border / bordered',
-    description: '旧版边框别名，等价于追加 card-border',
+    description: '基础边框别名，等价于追加 card-border',
     type: 'boolean',
     defaultValue: 'false',
   },
   {
     prop: 'className',
-    description: '根节点类名，保留与 daisyUI 类直接混用的能力',
+    description: '根节点类名，保持与 daisyUI 类直接混用的能力',
     type: 'string',
     defaultValue: '-',
   },
@@ -223,7 +223,7 @@ const cardApiRows: ApiRow[] = [
   },
   {
     prop: 'dash',
-    description: '旧版虚线边框开关，追加 card-dash',
+    description: '基础虚线边框开关，追加 card-dash',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -253,7 +253,7 @@ const cardApiRows: ApiRow[] = [
   },
   {
     prop: 'imageFull',
-    description: '沿用 daisyUI image-full，适合封面做背景图',
+    description: '使用 daisyUI image-full，适合封面做背景图',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -271,7 +271,7 @@ const cardApiRows: ApiRow[] = [
   },
   {
     prop: 'side',
-    description: '沿用 daisyUI card-side，让 figure 进入横向布局',
+    description: '使用 daisyUI card-side，让 figure 进入横向布局',
     type: 'boolean',
     defaultValue: 'false',
   },
@@ -543,7 +543,7 @@ const contentCode = `<div className="grid gap-6 lg:grid-cols-3">
 </div>`
 
 const appearanceCode = `<div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-  <Card variant="outlined" className="bg-base-100"><Card.Body><Card.Title>Outlined</Card.Title><p className="text-sm opacity-75">经典描边信息卡。</p></Card.Body></Card>
+  <Card variant="outlined" className="bg-base-100"><Card.Body><Card.Title>Outlined</Card.Title><p className="text-sm opacity-75">组合描边信息卡。</p></Card.Body></Card>
   <Card variant="dashed" className="bg-base-100"><Card.Body><Card.Title>Dashed</Card.Title><p className="text-sm opacity-75">适合空态和引导。</p></Card.Body></Card>
   <Card className="bg-primary text-primary-content"><Card.Body><Card.Title>Brand Surface</Card.Title><p className="text-sm opacity-85">品牌色卡片。</p></Card.Body></Card>
   <Card className="bg-neutral text-neutral-content"><Card.Body className="items-center text-center"><Card.Title>Cookies!</Card.Title><p className="text-sm opacity-85">居中内容与反差色适合提醒面板。</p></Card.Body></Card>
@@ -571,7 +571,7 @@ const mediaCode = `<div className="grid gap-6 xl:grid-cols-2">
     <figure className="px-10 pt-10"><img src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp" alt="Shoes" className="rounded-box" /></figure>
     <Card.Body className="items-center text-center">
       <Card.Title>Centered Card</Card.Title>
-      <p className="text-sm opacity-75">保留居中内容与额外留白的旧示例。</p>
+      <p className="text-sm opacity-75">展示居中内容与额外留白的基础示例。</p>
       <Card.Actions><Button color="primary">Buy Now</Button></Card.Actions>
     </Card.Body>
   </Card>
@@ -628,13 +628,13 @@ const CardDemo: FC = () => {
           Card 用于把内容、媒体、操作和状态浓缩进一块易读的表面里。
         </p>
         <p className="text-sm my-3 opacity-75">
-          这一轮增强保留了 Rue 当前的视觉语气和 daisyUI class
-          直连能力，同时补上更接近业务组件的头部、封面、操作栏、Meta、Grid、loading 和 tabs API。
+          组件使用 Rue 当前的视觉语气和 daisyUI class
+          直连能力，同时提供头部、封面、操作栏、Meta、Grid、loading 和 tabs API。
         </p>
 
         <ExampleBlock
           title="语义化 API"
-          summary="优先展示新增加的 title、extra、cover、actions、hoverable 组合写法。"
+          summary="展示 title、extra、cover、actions、hoverable 组合写法。"
           tab={tabSemantic}
           code={semanticCode}
           preview={() => (
@@ -701,7 +701,7 @@ const CardDemo: FC = () => {
 
         <ExampleBlock
           title="复合子组件"
-          summary="Body / Title / Actions / Figure 继续保留，适合手工拼装自定义结构。"
+          summary="Body / Title / Actions / Figure 展示，适合手工拼装自定义结构。"
           tab={tabCompound}
           code={compoundCode}
           preview={() => (
@@ -906,7 +906,7 @@ const CardDemo: FC = () => {
 
         <ExampleBlock
           title="Pricing Card"
-          summary="保留原有定价卡片示例，作为信息密度更高的业务组合案例。"
+          summary="展示基础定价卡片示例，作为信息密度更高的业务组合案例。"
           tab={tabPricing}
           code={pricingCode}
           preview={() => (
@@ -937,7 +937,7 @@ const CardDemo: FC = () => {
 
         <ExampleBlock
           title="Card Sizes"
-          summary="保留 xs ~ xl 的旧示例，同时补上更贴近业务语境的说明文案。"
+          summary="展示 xs ~ xl 的基础示例，同时补上更贴近业务语境的说明文案。"
           tab={tabSizes}
           code={sizesCode}
           preview={() => (
@@ -980,7 +980,7 @@ const CardDemo: FC = () => {
 
         <ExampleBlock
           title="内容组合"
-          summary="保留 badge、纯内容卡片、顶部动作卡三种旧布局，并改成同一组内容编排能力展示。"
+          summary="展示 badge、纯内容卡片、顶部动作卡三种基础布局，并改成同一组内容编排能力展示。"
           tab={tabContent}
           code={contentCode}
           preview={() => (
@@ -1033,7 +1033,7 @@ const CardDemo: FC = () => {
 
         <ExampleBlock
           title="边框、颜色与层次"
-          summary="保留 border、dash、品牌色、深色居中卡片等旧示例，同时补入 inner 变体。"
+          summary="展示 border、dash、品牌色、深色居中卡片等基础示例，同时补入 inner 变体。"
           tab={tabAppearance}
           code={appearanceCode}
           preview={() => (
@@ -1042,7 +1042,7 @@ const CardDemo: FC = () => {
                 <Card.Body>
                   <Card.Title>Outlined</Card.Title>
                   <p className="text-sm leading-6 opacity-75">
-                    经典描边信息卡，适合列表页和设置页。
+                    组合描边信息卡，适合列表页和设置页。
                   </p>
                 </Card.Body>
               </Card>
@@ -1057,7 +1057,7 @@ const CardDemo: FC = () => {
               <Card className="bg-primary text-primary-content shadow-sm">
                 <Card.Body>
                   <Card.Title>Brand Surface</Card.Title>
-                  <p className="text-sm leading-6 opacity-90">保留原有的品牌色卡片用法。</p>
+                  <p className="text-sm leading-6 opacity-90">展示基础的品牌色卡片用法。</p>
                   <Card.Actions className="justify-end">
                     <Button>Buy Now</Button>
                   </Card.Actions>
@@ -1087,7 +1087,7 @@ const CardDemo: FC = () => {
 
         <ExampleBlock
           title="媒体布局"
-          summary="保留顶部图片、底部图片、居中留白、图片覆盖四种旧媒体布局。"
+          summary="展示顶部图片、底部图片、居中留白、图片覆盖四种媒体布局。"
           tab={tabMedia}
           code={mediaCode}
           preview={() => (
@@ -1123,7 +1123,7 @@ const CardDemo: FC = () => {
                 </figure>
                 <Card.Body className="items-center text-center">
                   <Card.Title>Centered Card</Card.Title>
-                  <p className="text-sm leading-6 opacity-75">保留原有居中内容与额外留白的写法。</p>
+                  <p className="text-sm leading-6 opacity-75">展示基础居中内容与额外留白的写法。</p>
                   <Card.Actions>
                     <Button color="primary">Buy Now</Button>
                   </Card.Actions>
@@ -1151,7 +1151,7 @@ const CardDemo: FC = () => {
 
         <ExampleBlock
           title="横向布局"
-          summary="保留 side 和响应式横向布局两种旧示例，适合媒体摘要和推荐位。"
+          summary="展示 side 和响应式横向布局两种基础示例，适合媒体摘要和推荐位。"
           tab={tabHorizontal}
           code={horizontalCode}
           preview={() => (
@@ -1219,7 +1219,7 @@ const CardDemo: FC = () => {
               Card.Body / Card.Title / Card.Actions / Card.Figure
             </div>
             <p className="mt-2 mb-0 opacity-75">
-              这四个子组件保持和旧版一样的职责：当你想完全接管布局顺序时，继续直接拼结构即可；当你只想快速生成头部、封面和操作区时，再切到根组件的语义化
+              这四个子组件保持和基础一样的职责：当你想完全接管布局顺序时，继续直接拼结构即可；当你只想快速生成头部、封面和操作区时，再切到根组件的语义化
               props。
             </p>
           </div>

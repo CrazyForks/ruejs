@@ -29,7 +29,7 @@
 
 ### 响应式：工具 {#reactivity-utilities}
 
-- [isRef()（规划中）](/api/api/reactivity-utilities#isref)
+- [isRef()](/api/api/reactivity-utilities#isref)
 - [unref()](/api/api/reactivity-utilities#unref)
 - [toRef()](/api/api/reactivity-utilities#toref)
 - [toValue()](/api/api/reactivity-utilities#tovalue)
@@ -42,12 +42,12 @@
 
 - [shallowRef()](/api/api/reactivity-advanced#shallowref)
 - [triggerRef()](/api/api/reactivity-advanced#triggerref)
-- [customRef()（规划中）](/api/api/reactivity-advanced#customref)
+- [customRef()](/api/api/reactivity-advanced#customref)
 - [shallowReactive()](/api/api/reactivity-advanced#shallowreactive)
 - [shallowReadonly()](/api/api/reactivity-advanced#shallowreadonly)
 - [toRaw()](/api/api/reactivity-advanced#toraw)
-- [effectScope()（规划中）](/api/api/reactivity-advanced#effectscope)
-- [getCurrentScope()（规划中）](/api/api/reactivity-advanced#getcurrentscope)
+- [effectScope()](/api/api/reactivity-advanced#effectscope)
+- [getCurrentScope()](/api/api/reactivity-advanced#getcurrentscope)
 - [onScopeDispose()](/api/api/reactivity-advanced#onscopedispose)
 
 ### 生命周期钩子 {#lifecycle-hooks}
@@ -92,5 +92,4 @@
 ## 高级 API {#advanced-apis}
 
 - [渲染函数](/api/api/render-function)
-- [TypeScript 工具类型](/api/api/utility-types)
 - [自定义元素](/api/api/custom-elements)

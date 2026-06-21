@@ -91,7 +91,7 @@ const showcaseCards: ShowcaseCard[] = [
     stat: 'P2 recovered',
     coverHeight: '8.75rem',
     tags: ['recover', 'timeline'],
-    bullets: ['根因已定位到旧路径清理时机', 'e2e 回归已补', '等待发布窗口'],
+    bullets: ['根因已定位到当前路径清理时机', 'e2e 回归已补', '等待发布窗口'],
   },
   {
     id: 'release-wall',
@@ -117,11 +117,11 @@ const showcaseCards: ShowcaseCard[] = [
     id: 'field-notes',
     section: 'field notes',
     title: 'Field Notes',
-    summary: '当卡片里既有长文本，也有标签和列表时，瀑布流比等高行列更省空间。',
+    summary: '当卡片里基础长文本，也有标签和列表时，瀑布流比等高行列更省空间。',
     stat: '14 snippets',
     coverHeight: '9.25rem',
     tags: ['notes', 'docs', 'handoff'],
-    bullets: ['记录 swc import 边界', '补仓库记忆说明', '统一 demo 代码片段'],
+    bullets: ['记录 swc import 边界', '补仓库记忆说明', '统一示例 代码片段'],
   },
   {
     id: 'launch-kit',
@@ -131,7 +131,7 @@ const showcaseCards: ShowcaseCard[] = [
     stat: 'Ready to ship',
     coverHeight: '7rem',
     tags: ['go-live', 'cta'],
-    bullets: ['设计页已补齐', '包导出待发布'],
+    bullets: ['设计页已补充', '包导出待发布'],
   },
 ]
 
@@ -150,7 +150,7 @@ const releaseCards: ReleaseCard[] = [
     track: 'app',
     owner: 'Qiao',
     title: 'Sidebar Navigation Pass',
-    summary: '把设计站条目补齐到 layout 分组，减少新组件只能靠手敲 hash 路径访问的问题。',
+    summary: '把设计站条目补充到 layout 分组，减少新组件只能靠手敲 hash 路径访问的问题。',
     checkpoints: ['route', 'sidebar'],
   },
   {
@@ -206,7 +206,7 @@ const shelfCards: ShelfCard[] = [
     id: 'migration-note',
     collection: 'migration',
     title: 'Migration Note',
-    summary: '迁移说明文档往往正文偏长，很适合放在 pinned 卡旁边形成高低错落。',
+    summary: '说明文档往往正文偏长，很适合放在 pinned 卡旁边形成高低错落。',
     labels: ['upgrade', 'runtime', 'guide'],
     pinned: true,
   },
@@ -275,7 +275,7 @@ const masonryApiRows: ApiRow[] = [
   },
   {
     prop: 'className / style',
-    description: '根容器样式扩展，继续保留 Rue 一贯的类名直连方式。',
+    description: '根容器样式扩展，可以使用 Rue 一贯的类名直连方式。',
     type: 'string / Record<string, any>',
     defaultValue: '-',
   },
@@ -371,7 +371,7 @@ const dataCode = [
   "    track: 'app',",
   "    owner: 'Qiao',",
   "    title: 'Sidebar Navigation Pass',",
-  "    summary: '把设计站条目补齐到 layout 分组，减少新组件只能靠手敲路径访问的问题。',",
+  "    summary: '把设计站条目补充到 layout 分组，减少新组件只能靠手敲路径访问的问题。',",
   "    checkpoints: ['route', 'sidebar'],",
   '  },',
   ']',
@@ -423,7 +423,7 @@ const shellCode = [
   "    id: 'migration-note',",
   "    collection: 'migration',",
   "    title: 'Migration Note',",
-  "    summary: '迁移说明文档往往正文偏长，很适合放在 pinned 卡旁边形成高低错落。',",
+  "    summary: '说明文档往往正文偏长，很适合放在 pinned 卡旁边形成高低错落。',",
   "    labels: ['upgrade', 'runtime', 'guide'],",
   '    pinned: true,',
   '  },',
@@ -631,7 +631,7 @@ const MasonryPage: FC = () => {
         <p className="text-sm mt-3 mb-3">
           Masonry 是一个偏布局层的 Rue Design 组件。它不强绑定任何卡片视觉，而是把不同高度的内容块
           组织成更紧凑的瀑布流；同时把固定列数、响应式列数、基于最小列宽的 auto-fit，以及 items /
-          renderItem 这几条常见使用路径一次补齐。
+          renderItem 这几条常见使用路径一次覆盖。
         </p>
 
         <h2>何时使用</h2>
@@ -707,7 +707,7 @@ const MasonryPage: FC = () => {
 
         <PreviewBlock
           title="Items and renderItem"
-          summary="数据驱动模式适合 release wall、活动 feed 和任何已有列表数据的摘要面板。"
+          summary="数据驱动模式适合 release wall、活动 feed 和任何现成列表数据的摘要面板。"
           tab={tabData}
           preview={() => (
             <div className="rounded-box border border-base-300 bg-base-200/35 p-4 md:p-5">
@@ -781,7 +781,7 @@ const MasonryPage: FC = () => {
         <h2 id="masonry-api">API</h2>
         <p className="text-sm mt-3 mb-4">
           Masonry 的设计目标是做一个足够轻的布局容器：它只关心列数、间距和 item
-          wrapper，卡片视觉、交互和业务内容继续交给你已有的 Rue 组件或业务样式。
+          wrapper，卡片视觉、交互和业务内容继续交给你现成的 Rue 组件或业务样式。
         </p>
         <ApiTable rows={masonryApiRows} />
       </div>

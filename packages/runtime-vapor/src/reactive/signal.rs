@@ -35,8 +35,25 @@ use crate::reactive::core::{
     emit_render_triggered_for_effect, schedule_effect_run, sync_effect_render_debug_owner,
 };
 
+const RUE_REF_FLAG: &str = "__rue_ref__";
+const RUE_TRIGGER_REF_KEY: &str = "__rue_trigger_ref__";
+
 thread_local! {
     static NEXT_SIGNAL_DEBUG_ID: RefCell<usize> = RefCell::new(1);
+}
+
+fn define_hidden_property(target: &Object, key: &str, value: &JsValue, configurable: bool) {
+    let descriptor = Object::new();
+    Reflect::set(&descriptor, &JsValue::from_str("value"), value).ok();
+    Reflect::set(&descriptor, &JsValue::from_str("enumerable"), &JsValue::FALSE).ok();
+    Reflect::set(
+        &descriptor,
+        &JsValue::from_str("configurable"),
+        &JsValue::from_bool(configurable),
+    )
+    .ok();
+    Reflect::set(&descriptor, &JsValue::from_str("writable"), &JsValue::FALSE).ok();
+    let _ = Object::define_property(target, &JsValue::from_str(key), &descriptor);
 }
 
 const SHARED_BRIDGE_KEY: &str = "__rue_runtime_vapor_shared_bridge";
@@ -971,6 +988,77 @@ pub fn create_ref(initial: JsValue, options: Option<JsValue>) -> JsValue {
     proxy
 }
 
+/// 创建自定义 ref：由用户工厂显式控制 value 读取时的依赖收集与写入后的触发时机。
+#[wasm_bindgen(js_name = createCustomRef)]
+pub fn create_custom_ref(factory: Function) -> JsValue {
+    let dep_root = Object::new();
+    Reflect::set(&dep_root, &JsValue::from_str("value"), &JsValue::UNDEFINED).ok();
+    let dep = create_signal(dep_root.into(), None);
+
+    let dep_for_track = dep.clone();
+    let track = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        let _ = dep_for_track.get_path_js(JsValue::from_str("value"));
+    }) as Box<dyn FnMut()>);
+
+    let dep_for_trigger = dep.clone();
+    let trigger = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        dep_for_trigger.trigger_path_js(JsValue::from_str("value"));
+    }) as Box<dyn FnMut()>);
+
+    let definition = match factory.call2(&JsValue::NULL, track.as_ref(), trigger.as_ref()) {
+        Ok(value) => value,
+        Err(error) => wasm_bindgen::throw_val(error),
+    };
+
+    let definition = if definition.is_object() { definition } else { Object::new().into() };
+    let getter = Reflect::get(&definition, &JsValue::from_str("get"))
+        .unwrap_or(JsValue::UNDEFINED)
+        .dyn_into::<Function>()
+        .ok();
+    let setter = Reflect::get(&definition, &JsValue::from_str("set"))
+        .unwrap_or(JsValue::UNDEFINED)
+        .dyn_into::<Function>()
+        .ok();
+
+    let custom_ref = Object::new();
+    define_hidden_property(&custom_ref, RUE_REF_FLAG, &JsValue::TRUE, false);
+    define_hidden_property(&custom_ref, RUE_TRIGGER_REF_KEY, trigger.as_ref(), true);
+
+    let getter_receiver = definition.clone();
+    let value_getter = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        if let Some(getter) = getter.as_ref() {
+            return match getter.call0(&getter_receiver) {
+                Ok(value) => value,
+                Err(error) => wasm_bindgen::throw_val(error),
+            };
+        }
+        JsValue::UNDEFINED
+    }) as Box<dyn FnMut() -> JsValue>);
+
+    let setter_receiver = definition;
+    let value_setter = wasm_bindgen::closure::Closure::wrap(Box::new(move |value: JsValue| {
+        if let Some(setter) = setter.as_ref() {
+            if let Err(error) = setter.call1(&setter_receiver, &value) {
+                wasm_bindgen::throw_val(error);
+            }
+        }
+    }) as Box<dyn FnMut(JsValue)>);
+
+    let value_descriptor = Object::new();
+    Reflect::set(&value_descriptor, &JsValue::from_str("get"), value_getter.as_ref()).ok();
+    Reflect::set(&value_descriptor, &JsValue::from_str("set"), value_setter.as_ref()).ok();
+    Reflect::set(&value_descriptor, &JsValue::from_str("enumerable"), &JsValue::TRUE).ok();
+    Reflect::set(&value_descriptor, &JsValue::from_str("configurable"), &JsValue::TRUE).ok();
+    let _ = Object::define_property(&custom_ref, &JsValue::from_str("value"), &value_descriptor);
+
+    track.forget();
+    trigger.forget();
+    value_getter.forget();
+    value_setter.forget();
+
+    custom_ref.into()
+}
+
 /// 创建 Reactive：返回一个对象/数组的响应式代理（深/浅、只读可选）
 ///
 /// 用法（JavaScript / TypeScript）：
@@ -1820,6 +1908,19 @@ export function createSignal<T = any>(
  * ```
  */
 export function createRef<T = any>(initial: T): SignalHandle<T>;
+
+export type CustomRefFactory<T> = (
+  track: () => void,
+  trigger: () => void,
+) => {
+  get: () => T
+  set: (value: T) => void
+}
+
+/**
+ * 创建自定义 ref：工厂函数可以显式控制依赖收集与触发时机。
+ */
+export function createCustomRef<T = any>(factory: CustomRefFactory<T>): { value: T };
 
 /**
  * 创建 Reactive：返回一个对象/数组的响应式代理（深/浅、只读可选）

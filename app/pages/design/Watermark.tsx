@@ -590,7 +590,7 @@ const WatermarkPage: FC = () => {
         <h1>Watermark 水印</h1>
         <p className="mt-3 mb-3 text-sm">
           Rue 的 Watermark 不照搬其他组件库的视觉，而是把能力落成更适合当前设计站点的轻量覆盖层。
-          你可以直接给任意容器加文字或图片水印，同时保留按钮、卡片、统计区这些内容本身的交互。
+          你可以直接给任意容器加文字或图片水印，同时保持按钮、卡片、统计区这些内容本身的交互。
         </p>
 
         <h2>何时使用</h2>
@@ -926,7 +926,7 @@ const WatermarkPage: FC = () => {
 
         <PreviewBlock
           title="Custom controls"
-          summary="把可调 demo 落到 Rue 风格里，用 Range 的按帧更新快速调整排版参数。"
+          summary="把可调示例 落到 Rue 风格里，用 Range 的按帧更新快速调整排版参数。"
           tab={tabs.custom}
           preview={<WatermarkCustomControlsDemo />}
           code={customControlsCode}

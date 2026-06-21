@@ -1,10 +1,14 @@
 import {
   useCustomElement,
+  createContext,
+  Slot,
+  Template,
   type FC,
   onMounted,
   onUnmounted,
   ref,
   useEmit,
+  useContext,
   useHost,
   useRef,
   useShadowRoot,
@@ -21,6 +25,12 @@ type DemoEvent = {
   at: string
 }
 
+type BridgeSlotProps = {
+  channel: string
+  count: number
+  accent: string
+}
+
 const shadowConfigureRuns = ref(0)
 const lightConfigureRuns = ref(0)
 const shadowMounts = ref(0)
@@ -35,6 +45,7 @@ const lightMountIdByHost = new WeakMap<HTMLElement, number>()
 const SHADOW_NONCE = 'rue-demo-nonce'
 const SHADOW_TAG = 'rue-shadow-console'
 const LIGHT_TAG = 'rue-light-signal'
+const BridgeContext = createContext('provider:missing')
 
 const shadowStyles = [
   `
@@ -214,6 +225,29 @@ const shadowStyles = [
       color: rgba(226, 232, 240, 0.6);
     }
 
+    .bridgeBox {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bridgeContext {
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(226, 232, 240, 0.86);
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .bridgeSlot {
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: var(--accent-soft);
+      color: white;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
     .footer {
       margin-top: 16px;
       display: flex;
@@ -384,6 +418,7 @@ const LightSignalMeta: FC = () => {
 const ShadowConsole: FC<Record<string, unknown>> = props => {
   const host = useHost()
   const shadowRoot = useShadowRoot()
+  const bridgeChannel = useContext(BridgeContext)
   const emit = useEmit(props as any)
   const mountId = resolveShadowMountId(host)
 
@@ -465,6 +500,22 @@ const ShadowConsole: FC<Record<string, unknown>> = props => {
           <p className="slotTitle">默认 Slot</p>
           <slot></slot>
         </section>
+
+        <section className="panel">
+          <p className="slotTitle">Rue scoped slot / Context</p>
+          <div className="bridgeBox">
+            <div className="bridgeContext" data-testid="ce-context">
+              Context: {bridgeChannel}
+            </div>
+            <Slot
+              source={props}
+              name="badge"
+              props={{ channel: bridgeChannel, count, accent } satisfies BridgeSlotProps}
+            >
+              <span data-testid="ce-scoped-fallback">等待外层 scoped slot</span>
+            </Slot>
+          </div>
+        </section>
       </div>
 
       <footer className="footer">
@@ -531,56 +582,462 @@ const registerCustomElement = (tag: string, ctor: CustomElementConstructor) => {
 registerCustomElement(SHADOW_TAG, ShadowConsoleElement)
 registerCustomElement(LIGHT_TAG, LightSignalElement)
 
-const demoCode = [
-  "import { useCustomElement, useEmit, useHost, useShadowRoot } from '@rue-js/rue'",
-  '',
-  'const ShadowConsole = props => {',
-  '  const host = useHost()',
-  '  const shadowRoot = useShadowRoot()',
-  '  const emit = useEmit(props)',
-  '',
-  '  return (',
-  '    <article>',
-  '      <h2>{props.panelTitle ?? "Shadow console"}</h2>',
-  '      <p>{host?.tagName.toLowerCase()} / {shadowRoot ? "shadow" : "light"}</p>',
-  '      <button onClick={() => emit("save", { count: props.count, tags: props.tags })}>',
-  '        emit save',
-  '      </button>',
-  '      <slot name="meta"></slot>',
-  '      <slot></slot>',
-  '    </article>',
-  '  )',
-  '}',
-  '',
-  'const ShadowConsoleElement = useCustomElement(ShadowConsole, {',
-  "  styles: [':host { display:block }', '.frame { border-radius:24px }'],",
-  '  nonce: "rue-demo-nonce",',
-  '  configureApp() {',
-  '    console.log("configureApp runs once per host instance")',
-  '  },',
-  '})',
-  '',
-  'const LightSignalElement = useCustomElement(LightSignal, {',
-  '  shadowRoot: false,',
-  "  styles: ['.lightShell { display:grid }'],",
-  '})',
-  '',
-  'customElements.define("rue-shadow-console", ShadowConsoleElement)',
-  'customElements.define("rue-light-signal", LightSignalElement)',
-  '',
-  'const shadowHost = document.querySelector("rue-shadow-console")',
-  'shadowHost.setAttribute("panel-title", "Ops Console")',
-  'shadowHost.props = {',
-  '  count: 7,',
-  '  tags: ["shadow", "events", "slots"],',
-  '  config: { compact: false, preset: "ops" },',
-  '  busy: true,',
-  '}',
-  '',
-  'shadowHost.addEventListener("save", event => {',
-  '  console.log((event as CustomEvent).detail)',
-  '})',
-].join('\n')
+const demoCode = String.raw`import {
+  createContext,
+  Slot,
+  Template,
+  type FC,
+  onMounted,
+  onUnmounted,
+  ref,
+  useContext,
+  useCustomElement,
+  useEmit,
+  useHost,
+  useRef,
+  useShadowRoot,
+} from '@rue-js/rue'
+
+type AccentTone = 'teal' | 'amber' | 'rose'
+type DemoHostElement = HTMLElement & { props?: Record<string, unknown> }
+type BridgeSlotProps = {
+  channel: string
+  count: number
+  accent: string
+}
+
+const SHADOW_NONCE = 'rue-demo-nonce'
+const SHADOW_TAG = 'rue-shadow-console'
+const LIGHT_TAG = 'rue-light-signal'
+const BridgeContext = createContext('provider:missing')
+
+const shadowStyles = [
+  [
+    ':host { display: block; color: #e5eef3; font-family: ui-sans-serif, system-ui, sans-serif; }',
+    '.frame { background: linear-gradient(135deg, #0f172a, #111827 60%, #1f2937); border: 1px solid rgba(148, 163, 184, 0.22); border-radius: 24px; padding: 20px; box-shadow: 0 20px 45px rgba(15, 23, 42, 0.24); overflow: hidden; }',
+    ".frame[data-busy='yes'] { box-shadow: 0 24px 52px rgba(225, 29, 72, 0.26); }",
+    ".frame[data-accent='teal'] { --accent: #2dd4bf; --accent-soft: rgba(45, 212, 191, 0.16); }",
+    ".frame[data-accent='amber'] { --accent: #f59e0b; --accent-soft: rgba(245, 158, 11, 0.16); }",
+    ".frame[data-accent='rose'] { --accent: #fb7185; --accent-soft: rgba(251, 113, 133, 0.16); }",
+    '.hero { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: space-between; }',
+    '.eyebrow { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(226, 232, 240, 0.72); }',
+    '.title { margin: 0; font-size: 28px; line-height: 1.1; color: white; }',
+    '.subtitle { margin: 8px 0 0; color: rgba(226, 232, 240, 0.84); font-size: 13px; }',
+    '.actions { display: flex; flex-wrap: wrap; gap: 10px; }',
+    '.button { appearance: none; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: white; padding: 10px 14px; font-size: 13px; cursor: pointer; }',
+    '.button.primary { background: var(--accent); color: #04111b; border-color: transparent; font-weight: 700; }',
+    '.grid { margin-top: 18px; display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }',
+    '.frame.compact .grid { grid-template-columns: 1fr; }',
+    '.panel { border: 1px solid rgba(148, 163, 184, 0.16); background: rgba(15, 23, 42, 0.48); border-radius: 18px; padding: 14px; }',
+    '.metricValue { font-size: 44px; font-weight: 800; color: white; line-height: 1; }',
+    '.metricLabel { margin-top: 4px; font-size: 12px; color: rgba(226, 232, 240, 0.76); }',
+    '.meter { margin-top: 14px; height: 10px; border-radius: 999px; background: rgba(148, 163, 184, 0.18); overflow: hidden; }',
+    '.meterFill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), white); }',
+    '.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }',
+    '.chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 6px 10px; font-size: 12px; background: var(--accent-soft); color: white; border: 1px solid rgba(255, 255, 255, 0.12); }',
+    '.chip.muted { background: rgba(148, 163, 184, 0.18); color: rgba(226, 232, 240, 0.76); }',
+    '.slotTitle { margin: 0 0 10px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(226, 232, 240, 0.6); }',
+    '.bridgeBox { display: grid; gap: 10px; }',
+    '.bridgeContext, .bridgeSlot { border-radius: 14px; padding: 10px 12px; color: white; font-size: 12px; border: 1px solid rgba(255, 255, 255, 0.14); }',
+    '.bridgeContext { background: rgba(255, 255, 255, 0.08); }',
+    '.bridgeSlot { background: var(--accent-soft); }',
+    '.footer { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: rgba(226, 232, 240, 0.7); }',
+  ].join('\n'),
+  [
+    "::slotted([slot='meta']) { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 12px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.08); font-size: 12px; color: white; }",
+    '::slotted(*) { color: inherit; }',
+  ].join('\n'),
+]
+
+const lightStyles = [
+  [
+    ':host { display: block; }',
+    '.lightShell { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; border-radius: 20px; padding: 14px 16px; border: 1px solid rgba(15, 23, 42, 0.08); background: white; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08); }',
+    '.lightShell.tone-teal { border-color: rgba(13, 148, 136, 0.2); background: linear-gradient(135deg, rgba(240, 253, 250, 0.96), white); }',
+    '.lightShell.tone-amber { border-color: rgba(217, 119, 6, 0.2); background: linear-gradient(135deg, rgba(255, 251, 235, 0.96), white); }',
+    '.lightShell.tone-rose { border-color: rgba(225, 29, 72, 0.18); background: linear-gradient(135deg, rgba(255, 241, 242, 0.98), white); }',
+    '.lightTitle { margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; }',
+    '.lightMeta { margin-top: 4px; font-size: 12px; color: rgba(15, 23, 42, 0.64); }',
+    '.lightValue { font-size: 13px; font-weight: 700; color: #334155; }',
+    '.lightButton { appearance: none; border: 0; border-radius: 999px; background: #0f172a; color: white; padding: 8px 12px; cursor: pointer; font-size: 12px; }',
+  ].join('\n'),
+]
+
+const parseTagInput = (value: string) =>
+  value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+
+const readRecordProp = (value: unknown) =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined
+
+const readLightMetric = (props: Record<string, unknown>, key: string) =>
+  Number(readRecordProp(props.metrics)?.[key] ?? 0)
+
+const toneToLight = (accent: AccentTone) => accent
+
+const ShadowConsole: FC<Record<string, unknown>> = props => {
+  const host = useHost()
+  const shadowRoot = useShadowRoot()
+  const bridgeChannel = useContext(BridgeContext)
+  const emit = useEmit(props as any)
+
+  const count = Number(props.count ?? 0)
+  const accent = String(props.accent ?? 'teal')
+  const panelTitle = String(props.panelTitle ?? 'Shadow console')
+  const tags = Array.isArray(props.tags) ? (props.tags as string[]) : []
+  const busy = props.busy === true
+  const compact = readRecordProp(props.config)?.compact === true
+  const preset = String(readRecordProp(props.config)?.preset ?? 'manual')
+  const meterWidth = Math.max(8, Math.min(count * 9, 100)) + '%'
+
+  return (
+    <article
+      className={'frame' + (compact ? ' compact' : '')}
+      data-accent={accent}
+      data-busy={busy ? 'yes' : 'no'}
+    >
+      <header className="hero">
+        <div>
+          <p className="eyebrow">Shadow Root / Slot / CustomEvent</p>
+          <h2 className="title">{panelTitle}</h2>
+          <p className="subtitle">
+            {host?.tagName.toLowerCase() ?? 'unknown-host'} /{' '}
+            {shadowRoot ? 'shadow-root 已开启' : 'light-dom'}
+          </p>
+        </div>
+        <div className="actions">
+          <button
+            type="button"
+            className="button primary"
+            onClick={() => {
+              emit(
+                'save',
+                { panelTitle, count, tags, busy },
+                { rootMode: shadowRoot ? 'shadow' : 'light' },
+              )
+            }}
+          >
+            派发 save
+          </button>
+          <button
+            type="button"
+            className="button"
+            onClick={() => {
+              emit('pulse', count + 1, accent)
+            }}
+          >
+            派发 pulse
+          </button>
+        </div>
+      </header>
+
+      <div className="grid">
+        <section className="panel">
+          <div className="metricValue">{count}</div>
+          <div className="metricLabel">来自宿主 el.props.count</div>
+          <div className="meter">
+            <div className="meterFill" style={{ width: meterWidth }}></div>
+          </div>
+          <div className="chips">
+            {tags.length ? (
+              tags.map(tag => (
+                <span key={tag} className="chip">
+                  {tag}
+                </span>
+              ))
+            ) : (
+              <span className="chip muted">暂无 tags</span>
+            )}
+          </div>
+        </section>
+
+        <section className="panel">
+          <p className="slotTitle">命名 Slot</p>
+          <slot name="meta"></slot>
+          <div style={{ height: '12px' }}></div>
+          <p className="slotTitle">默认 Slot</p>
+          <slot></slot>
+        </section>
+
+        <section className="panel">
+          <p className="slotTitle">Rue scoped slot / Context</p>
+          <div className="bridgeBox">
+            <div className="bridgeContext">Context: {bridgeChannel}</div>
+            <Slot
+              source={props}
+              name="badge"
+              props={{ channel: bridgeChannel, count, accent } satisfies BridgeSlotProps}
+            >
+              <span>等待外层 scoped slot</span>
+            </Slot>
+          </div>
+        </section>
+      </div>
+
+      <footer className="footer">
+        <span>preset: {preset}</span>
+        <span>{busy ? '后台同步中' : '空闲'}</span>
+        <span>{compact ? 'compact on' : 'compact off'}</span>
+      </footer>
+    </article>
+  )
+}
+
+const LightSignalMeta: FC = () => {
+  const host = useHost()
+  const shadowRoot = useShadowRoot()
+
+  return (
+    <p className="lightMeta">
+      {host?.tagName.toLowerCase() ?? 'unknown-host'} / {shadowRoot ? 'shadow-root' : 'light-dom'}
+    </p>
+  )
+}
+
+const LightSignal: FC<Record<string, unknown>> = props => {
+  const emit = useEmit(props as any)
+  const label = String(props.label ?? 'Light DOM signal')
+  const tone = String(props.tone ?? 'teal')
+
+  return (
+    <div className={'lightShell tone-' + tone}>
+      <div>
+        <p className="lightTitle">{label}</p>
+        <LightSignalMeta />
+      </div>
+      <div className="lightValue">
+        {readLightMetric(props, 'events')} events / {readLightMetric(props, 'tags')} tags
+      </div>
+      <button
+        type="button"
+        className="lightButton"
+        onClick={() => {
+          emit('light-tap', {
+            label,
+            events: readLightMetric(props, 'events'),
+            tags: readLightMetric(props, 'tags'),
+          })
+        }}
+      >
+        emit
+      </button>
+    </div>
+  )
+}
+
+const ShadowConsoleElement = useCustomElement(ShadowConsole, {
+  styles: shadowStyles,
+  nonce: SHADOW_NONCE,
+  configureApp() {
+    console.log('shadow custom element app configured')
+  },
+})
+
+const LightSignalElement = useCustomElement(LightSignal, {
+  shadowRoot: false,
+  styles: lightStyles,
+  configureApp() {
+    console.log('light custom element app configured')
+  },
+})
+
+const registerCustomElement = (tag: string, ctor: CustomElementConstructor) => {
+  if (typeof customElements !== 'undefined' && !customElements.get(tag)) {
+    customElements.define(tag, ctor)
+  }
+}
+
+registerCustomElement(SHADOW_TAG, ShadowConsoleElement)
+registerCustomElement(LIGHT_TAG, LightSignalElement)
+
+const WebComponentsCopyableDemo: FC = () => {
+  const panelTitle = ref('Ops Console / Native CE')
+  const accent = ref<AccentTone>('teal')
+  const count = ref(7)
+  const tagInput = ref('shadow, events, slots, props')
+  const busy = ref(false)
+  const compact = ref(false)
+  const eventLog = ref('等待 CustomEvent')
+
+  const shadowHostRef = useRef<DemoHostElement>()
+  const lightHostRef = useRef<DemoHostElement>()
+
+  const shadowPropsPayload = () => ({
+    count: count.value,
+    tags: parseTagInput(tagInput.value),
+    config: { compact: compact.value, preset: 'ops' },
+    busy: busy.value,
+  })
+
+  const lightPropsPayload = () => ({
+    metrics: {
+      events: eventLog.value === '等待 CustomEvent' ? 0 : 1,
+      tags: parseTagInput(tagInput.value).length,
+      busy: busy.value,
+    },
+  })
+
+  const syncHosts = () => {
+    const shadowHost = shadowHostRef.current
+    if (shadowHost) {
+      shadowHost.setAttribute('panel-title', panelTitle.value)
+      shadowHost.setAttribute('accent', accent.value)
+      shadowHost.props = shadowPropsPayload()
+    }
+
+    const lightHost = lightHostRef.current
+    if (lightHost) {
+      lightHost.setAttribute('label', 'Light DOM signal')
+      lightHost.setAttribute('tone', toneToLight(accent.value))
+      lightHost.props = lightPropsPayload()
+    }
+  }
+
+  const handleShadowSave = (event: Event) => {
+    eventLog.value = JSON.stringify((event as CustomEvent).detail, null, 2)
+    syncHosts()
+  }
+
+  const handleShadowPulse = (event: Event) => {
+    eventLog.value = JSON.stringify((event as CustomEvent).detail, null, 2)
+    syncHosts()
+  }
+
+  const bindCustomEvent = (el: DemoHostElement | undefined, name: string) => {
+    if (!el) {
+      return () => {}
+    }
+
+    const handler = (event: Event) => {
+      eventLog.value = JSON.stringify((event as CustomEvent).detail, null, 2)
+      syncHosts()
+    }
+
+    el.addEventListener(name, handler as EventListener)
+    return () => {
+      el.removeEventListener(name, handler as EventListener)
+    }
+  }
+
+  onMounted(() => {
+    let offLightTap = () => {}
+
+    Promise.resolve().then(() => {
+      syncHosts()
+      offLightTap = bindCustomEvent(lightHostRef.current, 'light-tap')
+    })
+
+    onUnmounted(() => {
+      offLightTap()
+    })
+  })
+
+  return (
+    <BridgeContext.Provider value={'ops:' + accent.value}>
+      <div className="space-y-4">
+        <label>
+          panel-title
+          <input
+            value={panelTitle.value}
+            onInput={(event: Event) => {
+              panelTitle.value = (event.target as HTMLInputElement).value
+              syncHosts()
+            }}
+          />
+        </label>
+
+        <label>
+          tags
+          <input
+            value={tagInput.value}
+            onInput={(event: Event) => {
+              tagInput.value = (event.target as HTMLInputElement).value
+              syncHosts()
+            }}
+          />
+        </label>
+
+        <label>
+          count
+          <input
+            type="range"
+            min="1"
+            max="15"
+            value={count.value}
+            onInput={(event: Event) => {
+              count.value = Number((event.target as HTMLInputElement).value)
+              syncHosts()
+            }}
+          />
+        </label>
+
+        <label>
+          busy
+          <input
+            type="checkbox"
+            checked={busy.value}
+            onChange={(event: Event) => {
+              busy.value = (event.target as HTMLInputElement).checked
+              syncHosts()
+            }}
+          />
+        </label>
+
+        <label>
+          compact
+          <input
+            type="checkbox"
+            checked={compact.value}
+            onChange={(event: Event) => {
+              compact.value = (event.target as HTMLInputElement).checked
+              syncHosts()
+            }}
+          />
+        </label>
+
+        <select
+          value={accent.value}
+          onChange={(event: Event) => {
+            accent.value = (event.target as HTMLSelectElement).value as AccentTone
+            syncHosts()
+          }}
+        >
+          <option value="teal">teal</option>
+          <option value="amber">amber</option>
+          <option value="rose">rose</option>
+        </select>
+
+        <rue-shadow-console
+          ref={shadowHostRef}
+          onSave={handleShadowSave}
+          onPulse={handleShadowPulse}
+        >
+          <div slot="meta">SLA 99.99%</div>
+
+          <p>
+            默认 slot 里的内容仍由外层 Rue 页面控制，并由浏览器完成原生 slot 分发。
+          </p>
+
+          <Template slot="badge">
+            {(({ channel, count, accent }: BridgeSlotProps) => (
+              <strong>
+                {channel} / {count} / {accent}
+              </strong>
+            )) as any}
+          </Template>
+        </rue-shadow-console>
+
+        <rue-light-signal ref={lightHostRef}></rue-light-signal>
+
+        <pre>{eventLog.value}</pre>
+      </div>
+    </BridgeContext.Provider>
+  )
+}
+
+export default WebComponentsCopyableDemo`
 
 const WebComponents: FC = () => {
   const activeTab = ref<'preview' | 'code'>('preview')
@@ -689,6 +1146,14 @@ const WebComponents: FC = () => {
     scheduleDiagnostics()
   }
 
+  const handleShadowSave = (event: Event) => {
+    pushEvent('shadow', 'save', (event as CustomEvent).detail)
+  }
+
+  const handleShadowPulse = (event: Event) => {
+    pushEvent('shadow', 'pulse', (event as CustomEvent).detail)
+  }
+
   const bindCustomEvent = (
     el: DemoHostElement | undefined,
     name: string,
@@ -773,23 +1238,17 @@ const WebComponents: FC = () => {
   }
 
   onMounted(() => {
-    let offSave = () => {}
-    let offPulse = () => {}
     let offLight = () => {}
 
     Promise.resolve().then(() => {
       syncHosts()
 
-      offSave = bindCustomEvent(shadowHostRef.current, 'save', 'shadow')
-      offPulse = bindCustomEvent(shadowHostRef.current, 'pulse', 'shadow')
       offLight = bindCustomEvent(lightHostRef.current, 'light-tap', 'light')
 
       scheduleDiagnostics()
     })
 
     onUnmounted(() => {
-      offSave()
-      offPulse()
       offLight()
     })
   })
@@ -1009,27 +1468,54 @@ const WebComponents: FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <rue-shadow-console ref={shadowHostRef}>
-                    <div slot="meta">
-                      <span className="status status-success"></span>
-                      <span>{metaBadge.value}</span>
-                    </div>
-
-                    <div className="space-y-3 text-sm text-base-content/80">
-                      <p>{slotNote.value}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {parseTagInput(tagInput.value).map(tag => (
-                          <span key={tag} className="badge badge-outline">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </rue-shadow-console>
-
-                  <rue-light-signal ref={lightHostRef}></rue-light-signal>
+                <div
+                  className={`alert ${eventLog.value.length ? 'alert-success' : 'alert-soft'} py-3`}
+                  data-testid="ce-latest-event"
+                >
+                  <span>
+                    {eventLog.value.length
+                      ? `最近事件：${eventLog.value[0].source}.${eventLog.value[0].name} · ${eventLog.value[0].at}`
+                      : '等待自定义元素事件'}
+                  </span>
                 </div>
+
+                <BridgeContext.Provider value={`${activePreset.value}:${accent.value}`}>
+                  <div className="space-y-4">
+                    <rue-shadow-console
+                      ref={shadowHostRef}
+                      onSave={handleShadowSave}
+                      onPulse={handleShadowPulse}
+                    >
+                      <div slot="meta">
+                        <span className="status status-success"></span>
+                        <span>{metaBadge.value}</span>
+                      </div>
+
+                      <div className="space-y-3 text-sm text-base-content/80">
+                        <p>{slotNote.value}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {parseTagInput(tagInput.value).map(tag => (
+                            <span key={tag} className="badge badge-outline">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Template slot="badge">
+                        {
+                          (({ channel, count, accent }: BridgeSlotProps) => (
+                            <div className="bridgeSlot" data-testid="ce-scoped-slot">
+                              {channel} / {count} / {accent}
+                            </div>
+                          )) as any
+                        }
+                      </Template>
+                    </rue-shadow-console>
+
+                    <rue-light-signal ref={lightHostRef}></rue-light-signal>
+                  </div>
+                </BridgeContext.Provider>
               </div>
             </div>
 
@@ -1128,9 +1614,9 @@ const WebComponents: FC = () => {
       </div>
 
       <div className={activeTab.value === 'code' ? 'mt-4' : 'hidden'}>
-        <div className="card bg-base-100 shadow overflow-auto h-[420px] md:h-[720px]">
+        <div className="card bg-base-100 shadow overflow-auto">
           <div className="card-body p-0">
-            <Code className="h-full" lang="tsx" code={demoCode} />
+            <Code lang="tsx" code={demoCode} />
           </div>
         </div>
       </div>

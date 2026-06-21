@@ -111,7 +111,7 @@ const basicSections: StorySection[] = [
     id: 'rhythm',
     eyebrow: 'Chapter 02',
     title: '内容节奏',
-    summary: '每段都带一组短卡片，方便在 demo 里快速看到滚动命中与视觉反馈。',
+    summary: '每段都带一组短卡片，方便在示例 里快速看到滚动命中与视觉反馈。',
     points: [
       '段落标题支持任意 renderable。',
       '可以挂描述文字，适合多层说明。',
@@ -197,7 +197,7 @@ const horizontalSections: StorySection[] = [
     title: 'Schema',
     summary: '这里开始进入实现细节，补充的 Schema Notes 小节不会单独占一个顶部入口。',
     points: [
-      '`getCurrentAnchor` 接收滚动命中的原始 href。',
+      '`getCurrentAnchor` 接收滚动命中的基础 href。',
       '可以把多个实际 section 映射到同一个展示入口。',
       '用于简化顶部导航颗粒度。',
     ],
@@ -208,7 +208,7 @@ const horizontalSections: StorySection[] = [
     id: 'schema-notes',
     eyebrow: 'Flow 02B',
     title: 'Schema Notes',
-    summary: '这个补充段不出现在顶部导航里，但滚动进入它时仍然沿用 Schema 的高亮。',
+    summary: '这个补充段不出现在顶部导航里，但滚动进入它时仍然使用 Schema 的高亮。',
     points: [
       '适合把补充说明、FAQ、边界条件并回父级入口。',
       '不会额外占一个横向导航位。',
@@ -371,7 +371,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'affix / offsetTop',
-    description: '是否吸附以及吸附偏移，Rue 版本用 sticky 语义实现。',
+    description: '是否吸附以及吸附偏移，Rue 实现用 sticky 语义实现。',
     type: 'boolean / number',
     defaultValue: 'true / 0',
   },
@@ -407,7 +407,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'children / Anchor.Link',
-    description: '保留结构化 children 回退；在 Rue 编译参与模式下，增强滚动高亮请优先使用 items。',
+    description: '提供结构化 children 回退；在 Rue 编译参与模式下，增强滚动高亮请优先使用 items。',
     type: 'any',
     defaultValue: '-',
   },
@@ -504,7 +504,7 @@ const AnchorPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Anchor 锚点导航</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue 版 Anchor 保留锚点导航的核心能力：items、滚动激活、局部容器、受控高亮与横向模式；
+          Rue 版 Anchor 保持锚点导航的核心能力：items、滚动激活、局部容器、受控高亮与横向模式；
           视觉上换成更适合 Rue 站点的卡片式导航，不直接复制细线目录样式。
         </p>
 

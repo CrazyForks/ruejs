@@ -600,9 +600,9 @@ const reset = () => {
   <div className="rounded-box border border-dashed border-base-300 bg-base-100/80 p-4 text-sm text-base-content/70">
     基础行为：先单击 alpha.ts，再按住 Shift 单击 epsilon.ts，alpha.ts 到 epsilon.ts 都会选中。
     <div className="mt-2">
-      append / replace 只影响已有额外非连续选择是否保留：先单击 beta.ts，再按住 Cmd / Ctrl 单击 epsilon.ts，最后按住 Shift 单击 delta.ts。
+      append / replace 只影响当前额外非连续选择是否保持：先单击 beta.ts，再按住 Cmd / Ctrl 单击 epsilon.ts，最后按住 Shift 单击 delta.ts。
     </div>
-    <div className="mt-2">append 会保留 beta.ts；replace 只保留 delta.ts 到 epsilon.ts 这一段。</div>
+    <div className="mt-2">append 会保持 beta.ts；replace 只保持 delta.ts 到 epsilon.ts 这一段。</div>
   </div>
 
   <div className="grid gap-4 xl:grid-cols-2">
@@ -887,7 +887,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'allowSearch / searchValue / filterTreeNode',
-    description: '提供内置搜索输入和过滤逻辑，命中后会保留祖先链路。',
+    description: '提供内置搜索输入和过滤逻辑，命中后会保持祖先链路。',
     type: 'boolean / string / boolean | ((inputValue, node) => boolean)',
     defaultValue: 'false / - / true',
   },
@@ -1242,9 +1242,9 @@ const TreeDesign: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Tree 树控件</h1>
         <p>
-          Rue 的 Tree 补上了独立树组件这块空白：保留 TreeView 示例里递归数据直改的灵活性，同时把
-          树控件常用的展开、选中、勾选、简单模式、异步加载和自定义标题一次补齐。 视觉上继续沿用 Rue
-          现有的卡片、badge 和 base 色阶体系，不照搬其他组件库的外观。
+          Rue 的 Tree 补上了独立树组件这块空白：保持 TreeView 示例里递归数据直改的灵活性，同时把
+          树控件常用的展开、选中、勾选、简单模式、异步加载和自定义标题一次覆盖。 视觉上使用 Rue
+          当前的卡片、badge 和 base 色阶体系，不照搬其他组件库的外观。
         </p>
 
         <div className="not-prose mt-6 grid gap-3 md:grid-cols-3">
@@ -1445,7 +1445,7 @@ const TreeDesign: FC = () => {
 
         <PreviewBlock
           title="shift append vs shift replace"
-          summary="Shift 的基础语义是先选一个节点，再 Shift 选另一个节点，中间连续区间都会选中；append / replace 只决定已有额外选择是否保留。"
+          summary="Shift 的基础语义是先选一个节点，再 Shift 选另一个节点，中间连续区间都会选中；append / replace 只决定当前额外选择是否保持。"
           tab={tabs.directoryRange}
           code={directoryRangeCode}
           preview={
@@ -1456,11 +1456,11 @@ const TreeDesign: FC = () => {
                   都会选中。
                 </div>
                 <div className="mt-2">
-                  append / replace 只影响已有额外非连续选择是否保留：重置后先单击 beta.ts，再按住
+                  append / replace 只影响当前额外非连续选择是否保持：重置后先单击 beta.ts，再按住
                   Cmd / Ctrl 单击 epsilon.ts，最后按住 Shift 单击 delta.ts。
                 </div>
                 <div className="mt-2">
-                  append 会保留 beta.ts；replace 只保留 delta.ts 到 epsilon.ts 这一段。
+                  append 会保持 beta.ts；replace 只保持 delta.ts 到 epsilon.ts 这一段。
                 </div>
                 <button
                   type="button"
@@ -1477,7 +1477,7 @@ const TreeDesign: FC = () => {
                     <div>
                       <div className="text-sm font-semibold">rangeSelect=&quot;append&quot;</div>
                       <div className="text-xs text-base-content/55">
-                        保留原先的非连续选择，再并入新的 shift 区间。
+                        保持原先的非连续选择，再并入新的 shift 区间。
                       </div>
                     </div>
                     <span className="badge badge-outline badge-sm">append</span>
@@ -1514,7 +1514,7 @@ const TreeDesign: FC = () => {
                     <div>
                       <div className="text-sm font-semibold">rangeSelect=&quot;replace&quot;</div>
                       <div className="text-xs text-base-content/55">
-                        只保留新的 shift 区间，旧的非连续选择会被替换掉。
+                        只保持新的 shift 区间，基础的非连续选择会被替换掉。
                       </div>
                     </div>
                     <span className="badge badge-primary badge-outline badge-sm">replace</span>
@@ -1674,7 +1674,7 @@ const TreeDesign: FC = () => {
 
         <PreviewBlock
           title="Simple Mode + Search"
-          summary="扁平数据直入后，内置搜索会保留命中节点的祖先链，不会把层级上下文切断。"
+          summary="扁平数据直入后，内置搜索会保持命中节点的祖先链，不会把层级上下文切断。"
           tab={tabs.simple}
           code={simpleModeCode}
           preview={
@@ -1918,8 +1918,8 @@ const TreeDesign: FC = () => {
         />
 
         <PreviewBlock
-          title="保留原始递归 Demo"
-          summary="旧的 TreeView 行为没有删掉，只是并进 design 页面里，方便对比“直接改数据”这类递归写法。"
+          title="展示基础递归 示例"
+          summary="基础的 TreeView 行为没有删掉，只是并进 design 页面里，方便对比“直接改数据”这类递归写法。"
           tab={tabs.legacy}
           code={legacyCode}
           preview={

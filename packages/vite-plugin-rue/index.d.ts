@@ -1,4 +1,4 @@
-import type { Plugin } from 'vite'
+import type { Plugin, UserConfig } from 'vite'
 
 /** 传给 Rue 转换执行器的完整上下文。 */
 export interface RueTransformExecutorPayload {
@@ -40,8 +40,29 @@ export interface RueStaticCompileOptions {
   includeHeader?: boolean
 }
 
+/** Rue Custom Element library build 配置项。 */
+export interface RueCustomElementBuildOptions {
+  /** Vite library entry，通常是注册或导出 custom elements 的入口。 */
+  entry: string | string[] | Record<string, string>
+  /** UMD/IIFE 全局名，默认 RueCustomElements。 */
+  name?: string
+  /** 输出文件名，默认 rue-custom-elements。 */
+  fileName?: string | ((format: string, entryName: string) => string)
+  /** Vite library formats，默认 ['es']。 */
+  formats?: Array<'es' | 'cjs' | 'umd' | 'iife'>
+  /** 是否把 Rue runtime 标记为外部依赖。 */
+  externalRue?: boolean
+  /** 传给 Rue Vite 插件的选项。 */
+  rue?: RueVitePluginOptions
+  /** 额外 Vite 配置，会与 custom element library 默认值合并。 */
+  vite?: UserConfig
+}
+
 /** 在 Vite 之外静态编译 Rue TSX/JSX，适用于 SSG、离线代码生成和测试脚本。 */
 export function compileRueStatic(code: string, options?: RueStaticCompileOptions): Promise<string>
+
+/** 创建面向 Rue Custom Element library 的 Vite 配置。 */
+export function customElement(options: RueCustomElementBuildOptions): UserConfig
 
 /** 创建 Rue 的 Vite 插件，用于在 Vite transform 阶段编译 Rue TSX/JSX。 */
 export default function VitePluginRue(options?: RueVitePluginOptions): Plugin

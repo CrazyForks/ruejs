@@ -49,7 +49,7 @@ Rue 本身是用 TypeScript 编写的，并提供一流的 TypeScript 支持。�
 
 - 我们已经在 IDE 中的单独进程中运行类型检查，因此开发者体验变慢的成本根本不是一个好的权衡。
 
-如果你当前通过 Rue CLI 使用 Rue 3 + TypeScript，我们强烈建议迁移到 Vite。我们也在研究启用仅转译 TS 支持的 CLI 选项，以便你可以根据场景切换到 `rue-tsc`（SFC）或 `tsgo`（纯 TS/TSX）进行类型检查。
+如果你当前通过 Rue CLI 使用 Rue 3 + TypeScript，我们强烈建议迁移到 Vite。我们也在研究启用仅转译 TS 支持的 CLI 选项，以便你可以根据场景切换到 `rue-tsc` 或 `tsgo` 进行类型检查。
 
 ## 一般使用说明 {#general-usage-notes}
 
@@ -106,31 +106,9 @@ const App: FC = defineComponent({
 `defineComponent()` 也为用纯 JavaScript 定义的组件启用类型推断。
 :::
 
-### 在单文件组件中使用 {#usage-in-single-file-components}
+### 与 TSX 一起使用 {#usage-with-tsx}
 
-要在 SFC 中使用 TypeScript，请向 `<script>` 标签添加 `lang="ts"` 属性。当存在 `lang="ts"` 时，所有模板表达式也享有更严格的类型检查。
-
-```vue
-<script lang="ts">
-import { defineComponent } from '@rue-js/rue'
-import type { FC } from '@rue-js/rue'
-
-const App: FC = defineComponent({
-  data() {
-    return {
-      count: 1,
-    }
-  },
-})
-</script>
-
-<Template>
-  <!-- 启用类型检查和自动完成 -->
-  {{ count.toFixed(2) }}
-</Template>
-```
-
-如果你的项目主要使用 TSX，那么更常见的写法是直接在组件函数中声明响应式状态：
+Rue 支持使用 JSX / TSX 编写组件。直接在组件函数中声明响应式状态时，TypeScript 可以对表达式、props 和事件回调提供完整的类型检查：
 
 ```tsx
 import { type FC, ref } from '@rue-js/rue'
@@ -142,42 +120,22 @@ const Counter: FC = () => {
 }
 ```
 
-### 模板中的 TypeScript {#typescript-in-templates}
+详细信息在[渲染函数与 JSX](/guide/guide/extras/render-function#jsx-tsx)指南中介绍。
 
-当使用 `<script lang="ts">` 时，`<Template>` 也支持在绑定表达式中使用 TypeScript。这在需要在模板表达式中执行类型转换的情况下很有用。
+### JSX 表达式中的 TypeScript {#typescript-in-jsx}
 
-这里有一个有点做作的例子：
+JSX 表达式遵循标准 TypeScript 语义。这在需要执行类型缩窄或类型转换时很有用。
 
-```vue
-<script lang="ts">
+```tsx
 let x: string | number = 1
-</script>
-
-<Template>
-  <!-- 错误，因为 x 可能是字符串 -->
-  {{ x.toFixed(2) }}
-</Template>
 ```
 
 这可以通过内联类型转换来解决：
 
-```vue{6}
-<script lang="ts">
+```tsx
 let x: string | number = 1
-</script>
-
-<Template>
-  {{ (x as number).toFixed(2) }}
-</template>
+;<div>{(x as number).toFixed(2)}</div>
 ```
-
-:::tip
-如果使用 Rue CLI 或基于 webpack 的设置，模板表达式中的 TypeScript 需要 `rue-loader@^16.8.0`。
-:::
-
-### 与 TSX 一起使用 {#usage-with-tsx}
-
-Rue 还支持使用 JSX / TSX 编写组件。详细信息在[渲染函数与 JSX](/guide/guide/extras/render-function#jsx-tsx)指南中介绍。
 
 ## 泛型组件 {#generic-components}
 

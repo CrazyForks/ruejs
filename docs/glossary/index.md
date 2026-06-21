@@ -147,20 +147,6 @@ Rue 模板编译器识别那些静态渲染片段，在初始渲染期间缓存�
 
 - [指南 - 渲染机制 - 静态缓存](/guide/guide/extras/rendering-mechanism#cache-static)
 
-## DOM 内模板 {#in-dom-template}
-
-有多种方法可以为组件指定模板。在大多数情况下，模板作为字符串提供。
-
-*DOM 内模板*这个术语指的是模板以 DOM 节点的形式提供，而不是字符串的情况。Rue 然后使用 `innerHTML` 将 DOM 节点转换为模板字符串。
-
-通常，DOM 内模板从直接写在页面 HTML 中的 HTML 标记开始。浏览器然后将其解析为 DOM 节点，Rue 使用它们来读取 `innerHTML`。
-
-更多详情请参见：
-
-- [指南 - 创建应用 - DOM 内根组件模板](/guide/guide/essentials/application#in-dom-root-component-template)
-- [指南 - 组件基础 - DOM 内模板解析注意事项](/guide/guide/essentials/component-basics#in-dom-template-parsing-caveats)
-- [选项：渲染 - template](@todo)
-
 ## Context 注入 {#inject}
 
 参见 [context](#context)。

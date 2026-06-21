@@ -145,7 +145,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'size',
-    description: '控制间距与字号，兼容 small/default/middle/large 以及 sm/md/lg。',
+    description: '控制间距与字号，支持 small/default/middle/large 以及 sm/md/lg。',
     type: 'DescriptionsSize',
     defaultValue: "'default'",
   },
@@ -292,7 +292,7 @@ const DescriptionsDesign: FC = () => {
             </div>
             <div className="mt-2 text-base font-semibold">items 与 Item 都可用</div>
             <p className="mt-2 mb-0 text-sm text-base-content/68">
-              兼容数组声明，也能保留 JSX 结构化书写。
+              支持数组声明，也能保持 JSX 结构化书写。
             </p>
           </div>
           <div className="rounded-[1.4rem] border border-base-300 bg-gradient-to-br from-base-100 to-base-200/40 p-4 shadow-sm">

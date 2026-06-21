@@ -2,8 +2,8 @@
 /* oxlint-disable eslint/no-unused-vars -- Rue's transformed TSX in this file leaves helper usage opaque to oxlint. */
 /*
 Tree 组件概述
-- 目标：补齐 Rue Design 缺失的树形组件，覆盖展开、选择、勾选、异步加载，并继续向 antd Tree 的目录树、拖拽和虚拟滚动能力靠拢。
-- 视觉：延续 Rue 当前卡片化和 badge / border 语义，不照搬 ant-design 的视觉实现。
+- 目标：补齐 Rue Design 缺失的树形组件，覆盖展开、选择、勾选、异步加载，并继续完善目录树、拖拽和虚拟滚动能力。
+- 视觉：延续 Rue 当前卡片化和 badge / border 语义，不照搬特定组件库的视觉实现。
 - 实现：保持手写 TSX 结构，避免被 Vite 阶段重复 Vapor-transform。
 */
 import type { FC } from '@rue-js/rue'

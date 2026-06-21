@@ -44,6 +44,9 @@ pub fn emit_create_element(
     let create_el =
         call_ident("_$createElement", vec![string_expr(tag), Expr::Ident(parent.clone())]);
     stmts.push(const_decl(el_ident.clone(), create_el));
+    if crate::custom_element::is_custom_element_tag(tag) {
+        crate::custom_element::emit_context_parent_property(&el_ident, stmts);
+    }
     // 2) 插入到父节点：来源 emit::append_child 封装
     //    - 原因：抽象原生 DOM API，便于批量插入/移动优化与跨环境适配
     stmts.push(append_child(parent.clone(), Expr::Ident(el_ident.clone())));

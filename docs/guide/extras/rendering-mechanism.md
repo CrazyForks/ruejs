@@ -63,11 +63,11 @@ Rue 的核心优势在于同时掌控编译器与运行时。编译器可以提�
 
 模板中不含动态绑定的片段，会在编译阶段被提升、缓存或折叠成可复用的静态结构。这样更新时无需重新创建这些节点，也无需再次遍历它们。
 
-```vue-html{2-3}
+```tsx{2-3}
 <div>
   <div>foo</div>
   <div>bar</div>
-  <div>{{ dynamic }}</div>
+  <div>{dynamic.value}</div>
 </div>
 ```
 
@@ -77,10 +77,10 @@ Rue 的核心优势在于同时掌控编译器与运行时。编译器可以提�
 
 对于有动态绑定的节点，编译器会把“究竟什么会变”编码进产物，例如文本、class、style、属性或稳定片段。运行时据此直接走对应的更新路径。
 
-```vue-html
-<div :class="{ active }"></div>
-<input :id="id" :value="value">
-<div>{{ dynamic }}</div>
+```tsx
+<div class={active.value ? 'active' : ''}></div>
+<input id={id.value} value={value.value} />
+<div>{dynamic.value}</div>
 ```
 
 这类提示让运行时可以把更新收敛为“改 class”“改 value”“改 text”这样的定点操作。

@@ -107,7 +107,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'format',
-    description: '按常见倒计时组件的格式拆分时间段，支持 `[]` 保留字面量。',
+    description: '按常见倒计时组件的格式拆分时间段，支持 `[]` 保持字面量。',
     type: 'string',
     defaultValue: 'HH:mm:ss',
   },
@@ -235,7 +235,7 @@ const CountdownDemo: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Countdown 倒计时</h1>
         <p className="text-sm mt-3 mb-3">
-          现在既能继续使用 `Countdown.Value` / `items` 进行静态拼装，也能直接传入目标时间并通过
+          现在既能可以使用 `Countdown.Value` / `items` 进行静态拼装，也能直接传入目标时间并通过
           `format`、`onChange`、`onFinish` 驱动完整倒计时。
         </p>
 
@@ -368,7 +368,7 @@ const lastRemaining = ref(10_000)
 
         <h2>组合方式</h2>
         <p className="text-sm">
-          这一组保留 Rue 原有的组合式示例，用于展示 `Countdown.Value` 与 `items` 的自由排布能力。
+          这组示例使用 Rue 组合式写法，用于展示 `Countdown.Value` 与 `items` 的自由排布能力。
         </p>
 
         <ExampleBlock

@@ -31,7 +31,7 @@ export interface TeleportProps {
   to?: string | HTMLElement
   /** 为 true 时禁用传送，内容留在原位置渲染。 */
   disabled?: boolean
-  /** 预留延迟解析目标的兼容属性。 */
+  /** 为 true 时将目标解析延迟到当前挂载/更新完成后的微任务。 */
   defer?: boolean
   /** 需要传送的子内容。 */
   children?: any
@@ -77,6 +77,7 @@ export const Teleport: FC<TeleportProps> = props => {
       propsSig: signal(snapshotTeleportProps(props), {}, true),
       target: null as HTMLElement | null,
       started: false,
+      deferVersion: 0,
       effect: null as { dispose: () => void } | null,
     }
   })
@@ -139,40 +140,66 @@ export const Teleport: FC<TeleportProps> = props => {
     }
   }
 
+  const cancelDeferredRender = () => {
+    ctx.deferVersion += 1
+  }
+
+  const applyTeleportState = (curProps: TeleportProps) => {
+    const disabled = !!curProps.disabled
+    const nextTarget = disabled ? null : resolveTarget(curProps.to)
+
+    if (disabled) {
+      if (ctx.target) {
+        clearTargetRange(ctx.target)
+        detachTargetAnchors()
+        ctx.target = null
+      }
+      render(toRenderable(curProps.children) as any, ctx.container)
+      return
+    }
+
+    clearLocalRange()
+
+    if (nextTarget !== ctx.target) {
+      if (ctx.target) {
+        clearTargetRange(ctx.target)
+        detachTargetAnchors()
+      }
+      ctx.target = nextTarget
+    }
+
+    renderTargetChildren(ctx.target, curProps.children)
+  }
+
+  const scheduleDeferredRender = (curProps: TeleportProps) => {
+    clearLocalRange()
+    const version = ++ctx.deferVersion
+
+    queueMicrotask(() => {
+      if (!ctx.started || version !== ctx.deferVersion) return
+      applyTeleportState(curProps)
+    })
+  }
+
   onMounted(() => {
     if (ctx.started) return
     ctx.started = true
 
     ctx.effect = watchEffect(() => {
       const curProps = ctx.propsSig.get()
-      const disabled = !!curProps.disabled
-      const nextTarget = disabled ? null : resolveTarget(curProps.to)
 
-      if (disabled) {
-        if (ctx.target) {
-          clearTargetRange(ctx.target)
-          detachTargetAnchors()
-          ctx.target = null
-        }
-        render(toRenderable(curProps.children) as any, ctx.container)
+      if (curProps.defer && !curProps.disabled) {
+        scheduleDeferredRender(curProps)
         return
       }
 
-      clearLocalRange()
-
-      if (nextTarget !== ctx.target) {
-        if (ctx.target) {
-          clearTargetRange(ctx.target)
-          detachTargetAnchors()
-        }
-        ctx.target = nextTarget
-      }
-
-      renderTargetChildren(ctx.target, curProps.children)
+      cancelDeferredRender()
+      applyTeleportState(curProps)
     })
   })
 
   onUnmounted(() => {
+    cancelDeferredRender()
     if (ctx.effect) {
       ctx.effect.dispose()
       ctx.effect = null

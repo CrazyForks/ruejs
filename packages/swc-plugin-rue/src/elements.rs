@@ -62,12 +62,22 @@ pub fn build_element(
         if has_dangerously { "skip (dangerouslySetInnerHTML)" } else { "emit" }
     ));
     if !has_dangerously {
+        let native_children = if crate::custom_element::is_custom_element_tag(&tag) {
+            crate::custom_element::extract_custom_element_slot_children(
+                vt,
+                &el_ident,
+                &jsx_el.children,
+                stmts,
+            )
+        } else {
+            jsx_el.children.clone()
+        };
         // 子节点统一走 element_children，覆盖文本/表达式/片段/嵌套元素等情况：
         // - 文本：`$createTextNode` + `$appendChild` 或规范化后跳过/修剪
         // - 表达式容器：`$createTextWrapper` → `$settextContent`（静态一次或动态 watch）
         // - 片段：以 DocumentFragment 作为根递归处理
         // - 嵌套元素：递归调用 build_element
-        crate::element_children::emit_element_children(vt, &el_ident, &jsx_el.children, stmts);
+        crate::element_children::emit_element_children(vt, &el_ident, &native_children, stmts);
     }
 }
 

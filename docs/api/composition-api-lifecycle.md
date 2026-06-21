@@ -21,7 +21,7 @@
 
   - 其自身的 DOM 树已创建并插入到父容器中。注意，只有当应用的根容器也在文档中时，它才保证组件的 DOM 树在文档中。
 
-  这个钩子通常用于执行需要访问组件渲染 DOM 的副作用，或用于在[服务器渲染应用](@todo)中将 DOM 相关代码限制在客户端。
+  这个钩子通常用于执行需要访问组件渲染 DOM 的副作用，或用于在服务器渲染应用中将 DOM 相关代码限制在客户端。
 
   **此钩子在服务器端渲染期间不会被调用。**
 
@@ -140,7 +140,7 @@
 
 - **详情**
 
-  此钩子可用于在 Vue 更新 DOM 之前访问 DOM 状态。在此钩子中修改组件状态也是安全的。
+  此钩子可用于在 Rue 更新 DOM 之前访问 DOM 状态。在此钩子中修改组件状态也是安全的。
 
   **此钩子在服务器端渲染期间不会被调用。**
 
@@ -160,7 +160,7 @@
 
   **此钩子在服务器端渲染期间不会被调用。**
 
-## onErrorCaptured() {#onerrorcaptured} @todo
+## onErrorCaptured() {#onerrorcaptured}
 
 注册一个钩子，在从后代组件捕获到传播的错误时调用。
 
@@ -205,7 +205,7 @@
 
   - `errorCaptured` 钩子可以返回 `false` 来阻止错误进一步传播。这实质上是说"此错误已处理，应忽略"。它将阻止为此错误调用任何额外的 `errorCaptured` 钩子或 `app.config.errorHandler`。
 
-## onRenderTracked() {#onrendertracked} @todo
+## onRenderTracked() {#onrendertracked}
 
 注册一个调试钩子，在组件的渲染 effect 追踪到响应式依赖时调用。
 
@@ -228,7 +228,7 @@
 
 - **另请参阅** [深入响应式系统](/guide/guide/extras/reactivity-in-depth)
 
-## onRenderTriggered() {#onrendertriggered} @todo
+## onRenderTriggered() {#onrendertriggered}
 
 注册一个调试钩子，在响应式依赖触发组件的渲染 effect 重新运行时调用。
 
@@ -321,4 +321,4 @@
   })
   ```
 
-- **另请参阅** [服务器端渲染](@todo)
+- **另请参阅** `@rue-js/server-renderer`

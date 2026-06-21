@@ -105,7 +105,7 @@ const apiRows: ApiRow[] = [
   },
   {
     prop: 'bodyClassName',
-    description: '内容区 className；启用增强模式时作用在自动生成的 Body 上',
+    description: '内容区 className；启用语义模式时作用在自动生成的 Body 上',
     type: 'string',
     defaultValue: '-',
   },
@@ -165,7 +165,7 @@ const MockupWindowPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Mockup Window 窗口外框</h1>
         <p className="text-sm mt-3 mb-3">
-          MockupWindow 继续保留 Rue 原本的静态窗口外壳视觉，同时补了一层更顺手的结构化 API。
+          MockupWindow 可以使用 Rue 基础的静态窗口外壳视觉，同时补了一层更顺手的结构化 API。
           既可以继续直接写 children，也可以用 title、toolbar、actions
           快速搭一个带头部和底部操作区的展示窗口。
         </p>
@@ -173,7 +173,7 @@ const MockupWindowPage: FC = () => {
         <h2>何时使用</h2>
         <ul>
           <li>需要模拟一个系统窗口、面板或预览壳层，用来承载展示内容。</li>
-          <li>希望保留 Rue 现有 mockup-window 视觉，但不想每次都手写头部、内容区和底部操作区。</li>
+          <li>希望使用 Rue 当前 mockup-window 视觉，但不想每次都手写头部、内容区和底部操作区。</li>
           <li>需要同时兼顾推荐用法和完全手动拼装的低层布局能力。</li>
         </ul>
 
@@ -430,7 +430,7 @@ const MockupWindowPage: FC = () => {
 
         <ExampleBlock
           title="window mockup with border"
-          summary="保留原有经典 demo，不改动原始 children 透传写法。"
+          summary="使用组合示例，不改动基础 children 透传写法。"
           tab={tabBorder}
           code={`<MockupWindow className="border border-base-300 w-full">
   <div className="grid place-content-center border-t border-base-300 h-80">Hello!</div>
@@ -452,7 +452,7 @@ const MockupWindowPage: FC = () => {
 
         <ExampleBlock
           title="window mockup with background color"
-          summary="原有背景版本也继续保留，适合最简单的展示壳层。"
+          summary="基础背景形态也展示，适合最简单的展示壳层。"
           tab={tabBackground}
           code={`<MockupWindow className="bg-base-100 border border-base-300 w-full">
   <div className="grid place-content-center h-80">Hello!</div>
@@ -471,7 +471,7 @@ const MockupWindowPage: FC = () => {
         </ExampleBlock>
 
         <h2 id="mockup-window-api">API</h2>
-        <p>MockupWindow 同时支持“旧的 children 直出模式”和“新的结构化窗口模式”。</p>
+        <p>MockupWindow 同时支持“基础的 children 直出模式”和“新的结构化窗口模式”。</p>
 
         <ApiTable rows={apiRows} />
 

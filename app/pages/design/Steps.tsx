@@ -188,7 +188,7 @@ const stepsApiRows: ApiRow[] = [
   {
     prop: 'direction / orientation',
     description:
-      '设置整体朝向；支持沿用 Rue 旧的 direction 写法，也支持更通用的 orientation 别名。',
+      '设置整体朝向；支持使用 Rue 基础的 direction 写法，也支持更通用的 orientation 别名。',
     type: "'horizontal' | 'vertical'",
     defaultValue: '-',
   },
@@ -252,7 +252,7 @@ const stepApiRows: ApiRow[] = [
   },
   {
     prop: 'icon',
-    description: '自定义步骤图标；继续支持旧的 <Steps.Icon /> 插槽写法。',
+    description: '自定义步骤图标；支持基础的 <Steps.Icon /> 插槽写法。',
     type: 'any',
     defaultValue: '-',
   },
@@ -296,7 +296,7 @@ const StepsPage: FC = () => {
       <div className="max-w-none prose prose-sm md:prose-base">
         <h1>Steps 步骤条</h1>
         <p className="text-sm mt-3 mb-3">
-          Rue Steps 继续保留 daisyUI 的轻量视觉风格，同时补齐更贴近成熟业务组件的数据驱动 API： 支持{' '}
+          Rue Steps 展示 daisyUI 的轻量视觉风格，同时补充更贴近成熟业务组件的数据驱动 API： 支持{' '}
           <code>items</code>、<code>current</code>、<code>status</code>、<code>progressDot</code>、
           <code>onChange</code>，以及单步级别的 <code>title</code>、<code>description</code>、
           <code>subTitle</code> 和 <code>icon</code>。
@@ -307,7 +307,7 @@ const StepsPage: FC = () => {
             <div className="text-xs font-semibold uppercase tracking-wide text-primary">双模式</div>
             <div className="mt-2 text-sm font-medium">children / items 都可用</div>
             <p className="mt-2 text-sm opacity-70">
-              老的 <code>Steps.Step</code> 和 <code>Steps.Icon</code>{' '}
+              基础的 <code>Steps.Step</code> 和 <code>Steps.Icon</code>{' '}
               不变，新场景可直接传入数据数组。
             </p>
           </div>
@@ -326,13 +326,13 @@ const StepsPage: FC = () => {
             </div>
             <div className="mt-2 text-sm font-medium">支持标题、副标题、描述和进度点</div>
             <p className="mt-2 text-sm opacity-70">
-              适合把原本只能写一行文本的步骤条，扩展成更完整的流程说明区。
+              适合把基础只能写一行文本的步骤条，扩展成更完整的流程说明区。
             </p>
           </div>
         </div>
 
         <h2>基础布局</h2>
-        <p>这一组示例保留 Rue 原有 demo，用来展示最基础的横向、纵向和响应式排列方式。</p>
+        <p>这组示例使用 Rue 基础示例，用来展示最基础的横向、纵向和响应式排列方式。</p>
 
         <PreviewBlock
           title="Horizontal"
@@ -404,7 +404,7 @@ const StepsPage: FC = () => {
         />
 
         <h2>视觉定制</h2>
-        <p>这一组仍然保留当前 Rue 的静态能力，包括自定义 icon、data-content、语义色和滚动容器。</p>
+        <p>这组示例展示当前 Rue 的静态能力，包括自定义 icon、data-content、语义色和滚动容器。</p>
 
         <PreviewBlock
           title="With custom content in step-icon"
@@ -558,10 +558,10 @@ const StepsPage: FC = () => {
 </div>`}
         />
 
-        <h2>增强 API</h2>
+        <h2>语义 API</h2>
         <p>
-          下面这些示例展示的是本次补齐的语义层能力，目标是让 Rue Steps
-          在不丢失现有风格的前提下更接近常见业务组件的使用体验。
+          下面这些示例展示的是这些的语义层能力，目标是让 Rue Steps
+          在不丢失当前风格的前提下更接近常见业务组件的使用体验。
         </p>
 
         <PreviewBlock
@@ -740,7 +740,7 @@ const StepsPage: FC = () => {
                       description: 'Align scope with design and engineering.',
                     },
                     {
-                      title: 'Build demo',
+                      title: 'BuildDemo',
                       description: 'Create a stakeholder-ready flow.',
                     },
                     {
@@ -764,7 +764,7 @@ const StepsPage: FC = () => {
       description: 'Align scope with design and engineering.',
     },
     {
-      title: 'Build demo',
+      title: 'BuildDemo',
       description: 'Create a stakeholder-ready flow.',
     },
     {

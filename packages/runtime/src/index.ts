@@ -54,6 +54,7 @@ export {
   setValue as _$setValue,
   setChecked as _$setChecked,
   setDisabled as _$setDisabled,
+  setProperty as _$setProperty,
   spreadAttributes as _$spreadAttributes,
   getTagName as _$getTagName,
 } from './dom'
@@ -68,7 +69,7 @@ export {
 // 稳定 hook id 辅助直接来自 runtime-vapor reactive。
 export { vaporWithHookId as _$vaporWithHookId } from '@rue-js/runtime-vapor/reactive'
 
-export { Transition, type TransitionProps } from './components/Transition'
+export { Transition, type TransitionMode, type TransitionProps } from './components/Transition'
 export { TransitionGroup, type TransitionGroupProps } from './components/TransitionGroup'
 
 // 响应式 API：透传 runtime-vapor reactive，并扩展 Suspense-aware createResource。
@@ -79,8 +80,14 @@ export { useApp } from './hooks/useApp'
 export { useError } from './hooks/useError'
 export {
   useComponent,
+  hydrateOnIdle,
+  hydrateOnVisible,
+  hydrateOnMediaQuery,
+  hydrateOnInteraction,
   type AsyncComponentLoader,
   type AsyncComponentOptions,
+  type HydrationStrategy,
+  type HydrationStrategyFactory,
   type UseComponentOptions,
 } from './hooks/useComponent'
 
