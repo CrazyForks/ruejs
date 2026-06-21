@@ -94,4 +94,32 @@ describe('server renderToString', () => {
     await expect(renderToString(LazyPanel)).resolves.toContain('<h1>Lazy hydration SSR route</h1>')
     expect(hydrateStrategy).not.toHaveBeenCalled()
   })
+
+  it('keeps the server DOM adapter active across overlapping async SSR renders', async () => {
+    let resolveFirst!: (value: { default: FC }) => void
+    let resolveSecond!: (value: { default: FC }) => void
+    const FirstPanel = useComponent({
+      loader: () =>
+        new Promise<{ default: FC }>(resolve => {
+          resolveFirst = resolve
+        }),
+    })
+    const SecondPanel = useComponent({
+      loader: () =>
+        new Promise<{ default: FC }>(resolve => {
+          resolveSecond = resolve
+        }),
+    })
+
+    const firstRender = renderToString(FirstPanel)
+    await Promise.resolve()
+    const secondRender = renderToString(SecondPanel)
+    await Promise.resolve()
+
+    resolveFirst({ default: () => h('h1', null, 'First SSR panel') })
+    await expect(firstRender).resolves.toContain('<h1>First SSR panel</h1>')
+
+    resolveSecond({ default: () => h('h1', null, 'Second SSR panel') })
+    await expect(secondRender).resolves.toContain('<h1>Second SSR panel</h1>')
+  })
 })

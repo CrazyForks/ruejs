@@ -37,6 +37,8 @@ const VOID_TAGS = new Set([
 const BOOLEAN_ATTRIBUTES = new Set(['checked', 'disabled', 'multiple', 'readonly', 'selected'])
 const SERVER_RENDERING_FLAG = '__rue_is_server_rendering__'
 const RUE_SSR_PENDING_ASYNC_COMPONENT_KEY = '__rue_ssr_pending_async_component__'
+const SERVER_RENDERING_BASE_ADAPTER_KEY = '__rue_server_rendering_base_adapter__'
+const SERVER_RENDERING_ADAPTER_STACK_KEY = '__rue_server_rendering_adapter_stack__'
 const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
 const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
 const RUE_PORTABLE_PROPS_KEY = 'props'
@@ -334,6 +336,60 @@ export class ServerDOMAdapter implements DOMAdapter {
       ref(null)
     } else if (ref && typeof ref === 'object' && 'current' in ref) {
       ref.current = undefined
+    }
+  }
+}
+
+const getServerRenderingCount = (globalRecord: Record<string, unknown>) => {
+  const count = globalRecord[SERVER_RENDERING_FLAG]
+  return typeof count === 'number' && count > 0 ? count : 0
+}
+
+// SSR renders can overlap; keep a server adapter installed until every scope exits.
+const enterServerDOMAdapterScope = (adapter: DOMAdapter) => {
+  const globalRecord = globalThis as Record<string, unknown>
+  const previousServerRenderingCount = getServerRenderingCount(globalRecord)
+
+  if (previousServerRenderingCount === 0) {
+    globalRecord[SERVER_RENDERING_BASE_ADAPTER_KEY] = getDOMAdapter()
+  }
+
+  const adapterStack = Array.isArray(globalRecord[SERVER_RENDERING_ADAPTER_STACK_KEY])
+    ? (globalRecord[SERVER_RENDERING_ADAPTER_STACK_KEY] as DOMAdapter[])
+    : []
+  if (adapterStack.length === 0) {
+    globalRecord[SERVER_RENDERING_ADAPTER_STACK_KEY] = adapterStack
+  }
+  adapterStack.push(adapter)
+
+  setDOMAdapter(adapter)
+  globalRecord[SERVER_RENDERING_FLAG] = previousServerRenderingCount + 1
+
+  return () => {
+    const currentStack = Array.isArray(globalRecord[SERVER_RENDERING_ADAPTER_STACK_KEY])
+      ? (globalRecord[SERVER_RENDERING_ADAPTER_STACK_KEY] as DOMAdapter[])
+      : []
+    const adapterIndex = currentStack.lastIndexOf(adapter)
+    if (adapterIndex >= 0) {
+      currentStack.splice(adapterIndex, 1)
+    }
+
+    const nextServerRenderingCount = Math.max(0, getServerRenderingCount(globalRecord) - 1)
+    if (nextServerRenderingCount > 0) {
+      globalRecord[SERVER_RENDERING_FLAG] = nextServerRenderingCount
+      const nextAdapter = currentStack[currentStack.length - 1]
+      if (nextAdapter && getDOMAdapter() === adapter) {
+        setDOMAdapter(nextAdapter)
+      }
+      return
+    }
+
+    delete globalRecord[SERVER_RENDERING_FLAG]
+    delete globalRecord[SERVER_RENDERING_ADAPTER_STACK_KEY]
+    const baseAdapter = globalRecord[SERVER_RENDERING_BASE_ADAPTER_KEY] as DOMAdapter | undefined
+    delete globalRecord[SERVER_RENDERING_BASE_ADAPTER_KEY]
+    if (baseAdapter) {
+      setDOMAdapter(baseAdapter)
     }
   }
 }
@@ -840,16 +896,10 @@ export const renderToString = async (
   input: RenderableInput | ComponentInstance<any>,
   options: RenderToStringOptions = {},
 ) => {
-  const previousAdapter = getDOMAdapter()
   const adapter = new ServerDOMAdapter()
   const globalRecord = globalThis as Record<string, unknown>
-  const previousServerRenderingCount =
-    typeof globalRecord[SERVER_RENDERING_FLAG] === 'number'
-      ? (globalRecord[SERVER_RENDERING_FLAG] as number)
-      : 0
+  const leaveServerDOMAdapterScope = enterServerDOMAdapterScope(adapter)
 
-  setDOMAdapter(adapter)
-  globalRecord[SERVER_RENDERING_FLAG] = previousServerRenderingCount + 1
   try {
     const createRenderValue = () => {
       const value =
@@ -882,28 +932,18 @@ export const renderToString = async (
     }
     return serializeServerNodeChildren(adapter.root, options)
   } finally {
-    const currentServerRenderingCount =
-      typeof globalRecord[SERVER_RENDERING_FLAG] === 'number'
-        ? (globalRecord[SERVER_RENDERING_FLAG] as number)
-        : 0
-    if (currentServerRenderingCount > 1) {
-      globalRecord[SERVER_RENDERING_FLAG] = currentServerRenderingCount - 1
-    } else {
-      delete globalRecord[SERVER_RENDERING_FLAG]
-    }
-    setDOMAdapter(previousAdapter)
+    leaveServerDOMAdapterScope()
   }
 }
 
 /** Run arbitrary server-side renderable creation with a ServerDOMAdapter installed. */
 export const runWithServerDOMAdapter = async <T>(runner: () => T | Promise<T>): Promise<T> => {
-  const previousAdapter = getDOMAdapter()
   const adapter = new ServerDOMAdapter()
-  setDOMAdapter(adapter)
+  const leaveServerDOMAdapterScope = enterServerDOMAdapterScope(adapter)
 
   try {
     return await runner()
   } finally {
-    setDOMAdapter(previousAdapter)
+    leaveServerDOMAdapterScope()
   }
 }
