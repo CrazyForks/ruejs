@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/hunzhiwange/ruejs/compare/v0.6.0...v0.7.0) (2026-06-21)
+
+
+### Features
+
+* 更新版本,系统整体清理遗留需求 ([51bcde4](https://github.com/hunzhiwange/ruejs/commit/51bcde4a9204e30e9080123e002e589983ce8aad))
+
 # [0.6.0](https://github.com/hunzhiwange/ruejs/compare/v0.5.9...v0.6.0) (2026-06-19)
 
 ## [0.5.9](https://github.com/hunzhiwange/ruejs/compare/v0.5.8...v0.5.9) (2026-06-19)
