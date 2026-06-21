@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { h, useComponent, type FC } from '@rue-js/rue'
+import { h, renderAnchor, signal, useComponent, vapor, watchEffect, type FC } from '@rue-js/rue'
+import { _$appendChild, _$createComment, _$createElement } from '@rue-js/runtime'
 import {
   attachRouter,
   createMemoryHistory,
@@ -121,5 +122,31 @@ describe('server renderToString', () => {
 
     resolveSecond({ default: () => h('h1', null, 'Second SSR panel') })
     await expect(secondRender).resolves.toContain('<h1>Second SSR panel</h1>')
+  })
+
+  it('disposes server render effects before restoring the browser DOM adapter', async () => {
+    const label = signal('before', {}, true)
+    let runs = 0
+    const App: FC = () =>
+      vapor(() => {
+        const container = _$createElement('div')
+        const anchor = _$createComment('late-ssr-update')
+        _$appendChild(container, anchor)
+
+        watchEffect(() => {
+          runs += 1
+          renderAnchor(h('span', null, label.get()), container, anchor)
+        })
+
+        return container
+      }) as any
+
+    await expect(renderToString(App)).resolves.toContain('<span>before</span>')
+
+    label.set('after')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(runs).toBe(1)
   })
 })

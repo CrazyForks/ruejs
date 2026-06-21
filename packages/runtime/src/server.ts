@@ -892,6 +892,11 @@ const serializeServerNodeChildren = (
   options: RenderToStringOptions = {},
 ): string => node.childNodes.map(child => serializeServerNode(child, options)).join('')
 
+const flushServerRenderMicrotasks = async () => {
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
 export const renderToString = async (
   input: RenderableInput | ComponentInstance<any>,
   options: RenderToStringOptions = {},
@@ -911,10 +916,7 @@ export const renderToString = async (
     let shouldRender = true
     for (let i = 0; i < 8; i += 1) {
       if (shouldRender) {
-        adapter.root.childNodes.forEach(child => {
-          child.parentNode = null
-        })
-        adapter.root.childNodes = []
+        render(null as RenderableInput, adapter.root)
         const renderValue = createRenderValue()
         render(renderValue as RenderableInput, adapter.root)
         shouldRender = false
@@ -928,11 +930,16 @@ export const renderToString = async (
         shouldRender = true
         continue
       }
-      await Promise.resolve()
+      await flushServerRenderMicrotasks()
     }
     return serializeServerNodeChildren(adapter.root, options)
   } finally {
-    leaveServerDOMAdapterScope()
+    try {
+      render(null as RenderableInput, adapter.root)
+      await flushServerRenderMicrotasks()
+    } finally {
+      leaveServerDOMAdapterScope()
+    }
   }
 }
 
