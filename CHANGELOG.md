@@ -1,3 +1,10 @@
+# [0.8.0](https://github.com/hunzhiwange/ruejs/compare/v0.7.2...v0.8.0) (2026-06-27)
+
+
+### Features
+
+* 类似 Astro岛屿架构基础支持 ([4889a3f](https://github.com/hunzhiwange/ruejs/commit/4889a3f613d3b00a7f9f36099b32f85c8b6cec7c))
+
 ## [0.7.2](https://github.com/hunzhiwange/ruejs/compare/v0.7.1...v0.7.2) (2026-06-21)
 
 ## [0.7.1](https://github.com/hunzhiwange/ruejs/compare/v0.7.0...v0.7.1) (2026-06-21)
