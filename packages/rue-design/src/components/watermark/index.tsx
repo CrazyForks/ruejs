@@ -393,7 +393,7 @@ const resolveTextColorFromBackground = (
 
 /** 解析默认 Text Color 的内部工具函数。 */
 const resolveDefaultTextColor = (element: HTMLElement | null) => {
-  if (!element || typeof window === 'undefined') {
+  if (!element || typeof window === 'undefined' || !(element instanceof window.Element)) {
     return DEFAULT_DARK_TEXT_COLOR
   }
 

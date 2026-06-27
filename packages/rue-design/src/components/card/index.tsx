@@ -444,7 +444,7 @@ const Card: FC<CardProps> = ({
       disabled: item.disabled,
       className: item.className,
     })) ?? []
-  const normalizedActions = actions ?? []
+  const hasActions = Array.isArray(actions) && actions.length > 0
   const uncontrolledActiveKey = ref(defaultActiveTabKey ?? normalizedTabItems[0]?.key ?? '')
   const mergedActiveKey =
     activeTabKey ?? uncontrolledActiveKey.value ?? normalizedTabItems[0]?.key ?? ''
@@ -453,7 +453,7 @@ const Card: FC<CardProps> = ({
     extra != null ||
     cover != null ||
     !!loading ||
-    normalizedActions.length > 0 ||
+    hasActions ||
     normalizedTabItems.length > 0 ||
     tabBarExtraContent != null
 
@@ -577,7 +577,7 @@ const Card: FC<CardProps> = ({
             </div>
           ) : null}
 
-          {normalizedActions.length ? (
+          {hasActions ? (
             <ul
               className={appendClassName(
                 'rue-card-actions border-base-300/80 flex divide-x divide-base-300/80 border-t bg-base-200/40',
@@ -585,7 +585,7 @@ const Card: FC<CardProps> = ({
               )}
               style={actionsStyle}
             >
-              {normalizedActions.map((action, index) => (
+              {actions.map((action, index) => (
                 <li key={`action-${index}`} className="flex-1">
                   <div className="flex h-full items-center justify-center px-4 py-3 text-sm">
                     <RenderableValue value={action} />

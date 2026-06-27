@@ -378,7 +378,7 @@ const Carousel: FC<CarouselProps> = ({
   const getRenderedSlides = () => {
     const track = trackElement
     if (!track) return [] as HTMLElement[]
-    return Array.from(track.children).filter(
+    return Array.from(track.children ?? []).filter(
       (node): node is HTMLElement => node instanceof HTMLElement,
     )
   }
@@ -399,9 +399,9 @@ const Carousel: FC<CarouselProps> = ({
   const restartDotProgress = () => {
     if (!mergedShowDotDuration) return
     const root = rootElement
-    if (!root) return
+    if (!root || typeof root.querySelector !== 'function') return
     const progress = root.querySelector<HTMLElement>('[data-rue-carousel-dot-progress="active"]')
-    if (!progress) return
+    if (!progress?.style) return
     progress.style.transition = 'none'
     progress.style.transform = 'scaleX(0)'
     requestAnimationFrame(() => {
@@ -765,7 +765,7 @@ const Carousel: FC<CarouselProps> = ({
     if (typeof window !== 'undefined' && resizeHandler) {
       window.addEventListener('resize', resizeHandler)
     }
-    if (rootElement && loadHandler) {
+    if (rootElement && loadHandler && typeof rootElement.addEventListener === 'function') {
       rootElement.addEventListener('load', loadHandler, true)
     }
   })
@@ -776,7 +776,7 @@ const Carousel: FC<CarouselProps> = ({
     if (typeof window !== 'undefined' && resizeHandler) {
       window.removeEventListener('resize', resizeHandler)
     }
-    if (rootElement && loadHandler) {
+    if (rootElement && loadHandler && typeof rootElement.removeEventListener === 'function') {
       rootElement.removeEventListener('load', loadHandler, true)
     }
     clearForwardedRef(forwardedRef, api)

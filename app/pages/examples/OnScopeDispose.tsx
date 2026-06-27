@@ -19,12 +19,14 @@ const ScopedTimer: FC<ScopedTimerProps> = props => {
   const ticks = ref(0)
   const startedAt = formatTime()
 
-  const timer = setInterval(() => {
-    ticks.value += 1
-  }, 1000)
+  const timer = import.meta.env.SSR
+    ? undefined
+    : setInterval(() => {
+        ticks.value += 1
+      }, 1000)
 
   onScopeDispose(() => {
-    clearInterval(timer)
+    if (timer !== undefined) clearInterval(timer)
     props.onDispose(`清理 timer：运行 ${ticks.value} 次，开始于 ${startedAt}`)
   })
 
@@ -61,12 +63,14 @@ const ScopedTimer: FC<ScopedTimerProps> = props => {
   const ticks = ref(0);
   const startedAt = new Date().toLocaleTimeString();
 
-  const timer = setInterval(() => {
-    ticks.value += 1;
-  }, 1000);
+  const timer = import.meta.env.SSR
+    ? undefined
+    : setInterval(() => {
+        ticks.value += 1;
+      }, 1000);
 
   onScopeDispose(() => {
-    clearInterval(timer);
+    if (timer !== undefined) clearInterval(timer);
     props.onDispose(\`清理 timer：运行 \${ticks.value} 次，开始于 \${startedAt}\`);
   });
 

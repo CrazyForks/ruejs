@@ -79,6 +79,18 @@
       "import": "./dist/rue.server-renderer.esm-bundler.js",
       "require": "./dist/rue.server-renderer.cjs.js"
     },
+    "./island": {
+      "types": "./src/island.ts",
+      "node": {
+        "production": "./dist/rue.island.cjs.prod.js",
+        "development": "./dist/rue.island.cjs.js",
+        "default": "./dist/rue.island.cjs.js"
+      },
+      "development": "./src/island.ts",
+      "module": "./dist/rue.island.esm-bundler.js",
+      "import": "./dist/rue.island.esm-bundler.js",
+      "require": "./dist/rue.island.cjs.js"
+    },
     "./jsx-runtime": {
       "types": "./jsx-runtime/index.d.ts",
       "import": "./jsx-runtime/index.mjs",
@@ -129,6 +141,14 @@
       {
         "entry": "src/vapor.ts",
         "filename": "rue.vapor",
+        "formats": [
+          "esm-bundler",
+          "cjs"
+        ]
+      },
+      {
+        "entry": "src/island.ts",
+        "filename": "rue.island",
         "formats": [
           "esm-bundler",
           "cjs"

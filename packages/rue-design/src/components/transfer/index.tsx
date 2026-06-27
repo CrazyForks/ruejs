@@ -456,7 +456,11 @@ const normalizeDataSource = <RecordType,>(
 
 /** 解析 Titles 的内部工具函数。 */
 const resolveTitles = (titles?: any[], localeTitles?: any[]) => {
-  const resolved = titles ?? localeTitles ?? defaultLocale.titles
+  const resolved = Array.isArray(titles)
+    ? titles
+    : Array.isArray(localeTitles)
+      ? localeTitles
+      : defaultLocale.titles
   return [resolved[0] ?? defaultLocale.titles[0], resolved[1] ?? defaultLocale.titles[1]]
 }
 
@@ -734,7 +738,13 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
   setCurrentPage,
 }) => {
   const sideIndex = direction === 'left' ? 0 : 1
-  const filteredItems = filterItems(rawItems, searchValue, direction, filterOption)
+  const safeRawItems = Array.isArray(rawItems) ? rawItems : []
+  const safeSideSelectedKeys = Array.isArray(sideSelectedKeys) ? sideSelectedKeys : []
+  const safeSelectAllLabels = Array.isArray(selectAllLabels) ? selectAllLabels : []
+  const safeSizeConfig = sizeConfig ?? resolveSizeConfig()
+  const safeLocale = { ...defaultLocale, ...mergedLocale }
+  const safeSearchComposingRef = searchComposingRef ?? { current: false }
+  const filteredItems = filterItems(safeRawItems, searchValue, direction, filterOption)
   const pagedItems = paginateItems(filteredItems, currentPage, paginationPageSize)
 
   const visibleItems = pagedItems.items
@@ -742,7 +752,7 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
     .filter(item => !disabled && !item.disabled)
     .map(item => item.key)
   const visibleSelectedCount = visibleSelectableKeys.filter(key =>
-    hasKey(sideSelectedKeys, key),
+    hasKey(safeSideSelectedKeys, key),
   ).length
   const visibleAllSelected =
     visibleSelectableKeys.length > 0 && visibleSelectedCount === visibleSelectableKeys.length
@@ -777,20 +787,20 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
       description: item.description,
       searchText: item.searchText,
     })),
-    selectedKeys: sideSelectedKeys,
+    selectedKeys: safeSideSelectedKeys,
     searchValue,
     onItemSelect,
     onItemSelectAll,
   }
 
-  const selectionBadge = resolveSelectAllLabel(selectAllLabels[sideIndex], {
+  const selectionBadge = resolveSelectAllLabel(safeSelectAllLabels[sideIndex], {
     selectedCount: visibleSelectedCount,
     totalCount: visibleSelectableKeys.length,
   })
 
   const panelClassName = appendClassName(
     appendClassName(
-      `relative overflow-hidden rounded-[1.35rem] border border-base-300/70 bg-gradient-to-b from-base-100 via-base-100 to-base-200/35 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.35)] ${sizeConfig.panelMinHeightClass}`,
+      `relative overflow-hidden rounded-[1.35rem] border border-base-300/70 bg-gradient-to-b from-base-100 via-base-100 to-base-200/35 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.35)] ${safeSizeConfig.panelMinHeightClass}`,
       resolveStatusClassName(status),
     ),
     classNames?.panel,
@@ -804,7 +814,7 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
   const defaultListContent = visibleItems.length ? (
     <ul role="listbox" aria-multiselectable="true" className="space-y-2">
       {visibleItems.map(item => {
-        const checked = hasKey(sideSelectedKeys, item.key)
+        const checked = hasKey(safeSideSelectedKeys, item.key)
         const removable = oneWay && direction === 'right' && !disabled && !item.disabled
 
         return (
@@ -813,7 +823,7 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
               className={appendClassName(
                 appendClassName(
                   appendClassName(
-                    `flex w-full items-start gap-3 rounded-2xl border border-base-300/75 bg-base-100/80 ${sizeConfig.itemClass} transition duration-200 ease-out hover:border-base-300 hover:bg-base-100 hover:shadow-sm`,
+                    `flex w-full items-start gap-3 rounded-2xl border border-base-300/75 bg-base-100/80 ${safeSizeConfig.itemClass} transition duration-200 ease-out hover:border-base-300 hover:bg-base-100 hover:shadow-sm`,
                     checked
                       ? 'border-primary/45 bg-primary/6 shadow-[0_14px_28px_-24px_rgba(59,130,246,0.75)]'
                       : '',
@@ -827,7 +837,7 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
               <span className="shrink-0 pt-0.5">
                 <input
                   type="checkbox"
-                  className={resolveCheckboxClassName(sizeConfig.checkboxSize)}
+                  className={resolveCheckboxClassName(safeSizeConfig.checkboxSize)}
                   checked={checked}
                   disabled={disabled || item.disabled}
                   onChange={(event: Event) =>
@@ -850,7 +860,7 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
                   <button
                     type="button"
                     className="btn btn-ghost btn-xs -mt-1 -mr-1 rounded-full text-base-content/55 hover:text-base-content"
-                    aria-label={String(mergedLocale.remove)}
+                    aria-label={String(safeLocale.remove)}
                     onClick={(event: MouseEvent) => {
                       event.preventDefault()
                       event.stopPropagation()
@@ -891,7 +901,7 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
             />
           </svg>
         </div>
-        <div>{resolveNotFoundContent(mergedLocale.notFoundContent, direction)}</div>
+        <div>{resolveNotFoundContent(safeLocale.notFoundContent, direction)}</div>
       </div>
     </div>
   )
@@ -924,7 +934,7 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
                     if (element) element.indeterminate = visiblePartiallySelected
                   }}
                   type="checkbox"
-                  className={resolveCheckboxClassName(sizeConfig.checkboxSize)}
+                  className={resolveCheckboxClassName(safeSizeConfig.checkboxSize)}
                   checked={visibleAllSelected}
                   disabled={disabled || visibleSelectableKeys.length === 0}
                   aria-label={`${String(title)}全选`}
@@ -941,10 +951,10 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
               {title}
             </h3>
             <span className="badge badge-ghost badge-sm rounded-full px-2.5">
-              {sideSelectedKeys.length}/{rawItems.length}{' '}
-              {resolveUnitLabel(rawItems.length, mergedLocale)}
+              {safeSideSelectedKeys.length}/{safeRawItems.length}{' '}
+              {resolveUnitLabel(safeRawItems.length, safeLocale)}
             </span>
-            {filteredItems.length !== rawItems.length ? (
+            {filteredItems.length !== safeRawItems.length ? (
               <span className="text-xs text-base-content/55">匹配 {filteredItems.length}</span>
             ) : null}
           </div>
@@ -962,7 +972,7 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
                 disabled={disabled}
                 onClick={() => onItemSelectAll(filteredSelectableKeys, true)}
               >
-                {mergedLocale.selectAll}
+                {safeLocale.selectAll}
               </button>
               <button
                 type="button"
@@ -970,23 +980,23 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
                 disabled={disabled}
                 onClick={() => {
                   const invertedKeys = filteredSelectableKeys.filter(
-                    key => !hasKey(sideSelectedKeys, key),
+                    key => !hasKey(safeSideSelectedKeys, key),
                   )
                   onReplaceSideSelection([
-                    ...removeKeys(sideSelectedKeys, filteredSelectableKeys),
+                    ...removeKeys(safeSideSelectedKeys, filteredSelectableKeys),
                     ...invertedKeys,
                   ])
                 }}
               >
-                {mergedLocale.selectInvert}
+                {safeLocale.selectInvert}
               </button>
               <button
                 type="button"
                 className="btn btn-ghost btn-xs min-h-0 rounded-full px-2"
-                disabled={disabled || sideSelectedKeys.length === 0}
-                onClick={() => onItemSelectAll(sideSelectedKeys, false)}
+                disabled={disabled || safeSideSelectedKeys.length === 0}
+                onClick={() => onItemSelectAll(safeSideSelectedKeys, false)}
               >
-                {mergedLocale.clearSelection}
+                {safeLocale.clearSelection}
               </button>
             </>
           ) : null}
@@ -997,7 +1007,7 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
               disabled={disabled || removableSelectedKeys.length === 0}
               onClick={() => onMoveItems('left', removableSelectedKeys)}
             >
-              {mergedLocale.removeSelected}
+              {safeLocale.removeSelected}
             </button>
           ) : null}
         </div>
@@ -1025,18 +1035,18 @@ const TransferManagedPanel: FC<TransferManagedPanelProps> = ({
               value={searchValue}
               placeholder={sharedSearchPlaceholder}
               className={appendClassName(
-                `grow bg-transparent ${sizeConfig.inputClass}`,
+                `grow bg-transparent ${safeSizeConfig.inputClass}`,
                 'border-none px-0 outline-none',
               )}
               onCompositionStart={() => {
-                searchComposingRef.current = true
+                safeSearchComposingRef.current = true
               }}
               onCompositionEnd={(event: Event) => {
-                searchComposingRef.current = false
+                safeSearchComposingRef.current = false
                 onSearchInput((event.currentTarget as HTMLInputElement).value)
               }}
               onInput={(event: Event) =>
-                searchComposingRef.current
+                safeSearchComposingRef.current
                   ? undefined
                   : onSearchInput((event.currentTarget as HTMLInputElement).value)
               }
@@ -1161,6 +1171,10 @@ const Transfer: FC<TransferProps<any>> = ({
   const searchConfig = normalizeSearchConfig(showSearch)
   const paginationConfig = normalizePagination(pagination)
   const sizeConfig = resolveSizeConfig(size)
+  const readUncontrolledTargetKeys = () =>
+    Array.isArray(uncontrolledTargetKeysRef.value) ? uncontrolledTargetKeysRef.value : []
+  const readUncontrolledSelectedKeys = () =>
+    Array.isArray(uncontrolledSelectedKeysRef.value) ? uncontrolledSelectedKeysRef.value : []
 
   const uncontrolledTargetKeysRef = ref(uniqKeys(defaultTargetKeys ?? targetKeys))
   const uncontrolledSelectedKeysRef = ref(uniqKeys(defaultSelectedKeys ?? selectedKeys))
@@ -1180,10 +1194,17 @@ const Transfer: FC<TransferProps<any>> = ({
   const pendingSearchFocusRef = useRef<TransferDirection | null>(null)
 
   const normalizedItems = normalizeDataSource(dataSource, rowKey, render)
-  const itemMap = new Map(normalizedItems.map(item => [item.keyText, item]))
+  const readNormalizedItems = () => (Array.isArray(normalizedItems) ? normalizedItems : [])
+  const itemMap = new Map(readNormalizedItems().map(item => [item.keyText, item]))
 
-  const mergedActions = actions ?? operations ?? ['加入', '移出']
-  const mergedTitles = resolveTitles(titles, mergedLocale.titles)
+  const mergedActions = Array.isArray(actions)
+    ? actions
+    : Array.isArray(operations)
+      ? operations
+      : ['加入', '移出']
+  const [sourceTitle, targetTitle] = resolveTitles(titles, mergedLocale.titles)
+  const moveRightLabel = mergedActions[0] ?? defaultLocale.selectAll
+  const moveLeftLabel = mergedActions[1] ?? defaultLocale.remove
   const sharedSearchPlaceholder = searchConfig.placeholder || String(mergedLocale.searchPlaceholder)
   const customListRenderer =
     typeof renderList === 'function'
@@ -1195,14 +1216,14 @@ const Transfer: FC<TransferProps<any>> = ({
 
   const getTransferStateSnapshot = () => {
     const mergedTargetKeys = (
-      targetKeys !== undefined ? uniqKeys(targetKeys) : uncontrolledTargetKeysRef.value
+      targetKeys !== undefined ? uniqKeys(targetKeys) : readUncontrolledTargetKeys()
     ).filter(key => itemMap.has(toKeyText(key)))
     const targetKeySet = new Set(mergedTargetKeys.map(toKeyText))
     const mergedSelectedKeys = (
-      selectedKeys !== undefined ? uniqKeys(selectedKeys) : uncontrolledSelectedKeysRef.value
+      selectedKeys !== undefined ? uniqKeys(selectedKeys) : readUncontrolledSelectedKeys()
     ).filter(key => itemMap.has(toKeyText(key)))
     const selectedPartitions = partitionSelectedKeys(mergedSelectedKeys, targetKeySet, itemMap)
-    const sourceItems = normalizedItems.filter(item => !targetKeySet.has(item.keyText))
+    const sourceItems = readNormalizedItems().filter(item => !targetKeySet.has(item.keyText))
     const targetItems = mergedTargetKeys
       .map(key => itemMap.get(toKeyText(key)))
       .filter(Boolean) as NormalizedTransferItem<any>[]
@@ -1357,7 +1378,7 @@ const Transfer: FC<TransferProps<any>> = ({
           searchEnabled: searchConfig.enabled,
           sizeConfig,
           mergedLocale,
-          title: mergedTitles[0],
+          title: sourceTitle,
           sharedSearchPlaceholder,
           customListRenderer,
           getTransferStateSnapshot,
@@ -1405,7 +1426,7 @@ const Transfer: FC<TransferProps<any>> = ({
           searchEnabled: searchConfig.enabled,
           sizeConfig,
           mergedLocale,
-          title: mergedTitles[1],
+          title: targetTitle,
           sharedSearchPlaceholder,
           customListRenderer,
           getTransferStateSnapshot,
@@ -1488,7 +1509,9 @@ const Transfer: FC<TransferProps<any>> = ({
 
   watch(
     () => [
-      normalizedItems.map(item => item.keyText).join('|'),
+      readNormalizedItems()
+        .map(item => item.keyText)
+        .join('|'),
       uncontrolledTargetKeysRef.value.map(toKeyText).join('|'),
       uncontrolledSelectedKeysRef.value.map(toKeyText).join('|'),
       targetKeys ? uniqKeys(targetKeys).map(toKeyText).join('|') : '',
@@ -1682,18 +1705,8 @@ const Transfer: FC<TransferProps<any>> = ({
         ),
         style: { ...styles?.operations, ...operationStyle },
       },
-      renderOperationButton(
-        'right',
-        mergedActions[0] ?? defaultLocale.selectAll,
-        disabled || !canMoveRight,
-      ),
-      !oneWay
-        ? renderOperationButton(
-            'left',
-            mergedActions[1] ?? defaultLocale.remove,
-            disabled || !canMoveLeft,
-          )
-        : null,
+      renderOperationButton('right', moveRightLabel, disabled || !canMoveRight),
+      !oneWay ? renderOperationButton('left', moveLeftLabel, disabled || !canMoveLeft) : null,
     )
   }
 

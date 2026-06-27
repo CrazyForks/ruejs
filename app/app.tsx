@@ -6,16 +6,16 @@
 */
 import { type FC, useApp, useError } from '@rue-js/rue'
 import { I18nProvider } from '@rue-js/i18n'
-import { RouterView, useRoute } from '@rue-js/router'
+import { RouterView, type HistoryLike, useRoute } from '@rue-js/router'
 import i18n from './i18n'
-import router from './router'
+import { createAppRouter } from './router'
 import SiteLayout from './pages/site/components/Layout'
 
-// 开发阶段显示 overlay，生产环境仅保留控制台输出
-useError({ overlay: import.meta.env.DEV, console: true })
+// 开发阶段显示 overlay，生产环境与 SSR 仅保留控制台输出
+useError({ overlay: import.meta.env.DEV && !import.meta.env.SSR, console: true })
 
 /** 根应用组件：提供布局与路由视图 */
-const RootApp: FC = () => {
+export const RootApp: FC = () => {
   const route = useRoute()
 
   const isRustLayers = route.get()?.path === '/rust-layers'
@@ -33,5 +33,14 @@ const RootApp: FC = () => {
   )
 }
 
+export const createRueSiteApp = (history?: HistoryLike) => {
+  const router = createAppRouter(history)
+  const app = useApp(RootApp).use(router).use(i18n)
+
+  return { app, router }
+}
+
 // 创建并挂载应用，安装路由
-useApp(RootApp).use(router).use(i18n).mount('#app')
+if (!import.meta.env.SSR) {
+  createRueSiteApp().app.mount('#app')
+}

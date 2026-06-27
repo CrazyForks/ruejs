@@ -1,403 +1,466 @@
 import { useComponent } from '@rue-js/rue'
-import { createRouter, createWebHistory, type RouteRecordRaw } from '@rue-js/router'
+import {
+  createRouter,
+  createWebHistory,
+  useAsyncRouteComponent,
+  type HistoryLike,
+  type RouteComponentLoader,
+  type RouteRecordRaw,
+} from '@rue-js/router'
 import { routerDemoLabEnabled } from '../pages/examples/router-demo/state'
+
+const routeComponent = (loader: RouteComponentLoader) =>
+  import.meta.env.SSR ? useAsyncRouteComponent(loader) : useComponent(loader)
 
 const loadRouterDemoScene = () => import('../pages/examples/router-demo/RouterDemoScene')
 
-const AsyncRouterDemoGuideShell = useComponent(async () => ({
+const AsyncRouterDemoGuideShell = routeComponent(async () => ({
   default: (await loadRouterDemoScene()).RouterDemoGuideShell,
 }))
 
-const AsyncRouterDemoTopicPage = useComponent(async () => ({
+const AsyncRouterDemoTopicPage = routeComponent(async () => ({
   default: (await loadRouterDemoScene()).RouterDemoTopicPage,
 }))
 
-const AsyncRouterDemoLabPage = useComponent(async () => ({
+const AsyncRouterDemoLabPage = routeComponent(async () => ({
   default: (await loadRouterDemoScene()).RouterDemoLabPage,
 }))
 
-const AsyncDesignRouteLayout = useComponent(async () => ({
+const AsyncDesignRouteLayout = routeComponent(async () => ({
   default: (await import('../pages/site/SidebarPlaygroundDesign')).DesignRouteLayout,
 }))
 
-const AsyncExamplesRouteLayout = useComponent(async () => ({
+const AsyncExamplesRouteLayout = routeComponent(async () => ({
   default: (await import('../pages/site/SidebarPlaygroundExample')).ExamplesRouteLayout,
 }))
 
-const AsyncGuideRouteLayout = useComponent(async () => ({
+const AsyncGuideRouteLayout = routeComponent(async () => ({
   default: (await import('../pages/site/SidebarPlaygroundGuide')).GuideRouteLayout,
 }))
 
-const AsyncApiRouteLayout = useComponent(async () => ({
+const AsyncApiRouteLayout = routeComponent(async () => ({
   default: (await import('../pages/site/SidebarPlaygroundApi')).ApiRouteLayout,
 }))
 
 const flatRoutes: RouteRecordRaw[] = [
-  { path: '/jsx', component: useComponent(() => import('../pages/jsx/Index')) },
+  { path: '/jsx', component: routeComponent(() => import('../pages/jsx/Index')) },
   {
     path: '/jsx/basic-elements',
-    component: useComponent(() => import('../pages/jsx/BasicElements')),
+    component: routeComponent(() => import('../pages/jsx/BasicElements')),
   },
-  { path: '/jsx/expressions', component: useComponent(() => import('../pages/jsx/Expressions')) },
+  { path: '/jsx/expressions', component: routeComponent(() => import('../pages/jsx/Expressions')) },
   {
     path: '/jsx/attributes-and-props',
-    component: useComponent(() => import('../pages/jsx/AttributesAndProps')),
+    component: routeComponent(() => import('../pages/jsx/AttributesAndProps')),
   },
-  { path: '/design/space', component: useComponent(() => import('../pages/design/Space')) },
+  { path: '/design/space', component: routeComponent(() => import('../pages/design/Space')) },
   {
     path: '/design/auto-complete',
-    component: useComponent(() => import('../pages/design/AutoComplete')),
+    component: routeComponent(() => import('../pages/design/AutoComplete')),
   },
-  { path: '/design/select', component: useComponent(() => import('../pages/design/Select')) },
-  { path: '/design/tree', component: useComponent(() => import('../pages/design/Tree')) },
+  { path: '/design/select', component: routeComponent(() => import('../pages/design/Select')) },
+  { path: '/design/tree', component: routeComponent(() => import('../pages/design/Tree')) },
   {
     path: '/design/tree-select',
-    component: useComponent(() => import('../pages/design/TreeSelect')),
+    component: routeComponent(() => import('../pages/design/TreeSelect')),
   },
   {
     path: '/design/time-picker',
-    component: useComponent(() => import('../pages/design/TimePicker')),
+    component: routeComponent(() => import('../pages/design/TimePicker')),
   },
   {
     path: '/design/color-picker',
-    component: useComponent(() => import('../pages/design/ColorPicker')),
+    component: routeComponent(() => import('../pages/design/ColorPicker')),
   },
   {
     path: '/design/descriptions',
-    component: useComponent(() => import('../pages/design/Descriptions')),
+    component: routeComponent(() => import('../pages/design/Descriptions')),
   },
-  { path: '/design/qr-code', component: useComponent(() => import('../pages/design/QRCode')) },
-  { path: '/design/segmented', component: useComponent(() => import('../pages/design/Segmented')) },
-  { path: '/design/transfer', component: useComponent(() => import('../pages/design/Transfer')) },
-  { path: '/design/tour', component: useComponent(() => import('../pages/design/Tour')) },
+  { path: '/design/qr-code', component: routeComponent(() => import('../pages/design/QRCode')) },
+  {
+    path: '/design/segmented',
+    component: routeComponent(() => import('../pages/design/Segmented')),
+  },
+  { path: '/design/transfer', component: routeComponent(() => import('../pages/design/Transfer')) },
+  { path: '/design/tour', component: routeComponent(() => import('../pages/design/Tour')) },
   {
     path: '/design/skeleton',
-    component: useComponent(() => import('../pages/design/Skeleton')),
+    component: routeComponent(() => import('../pages/design/Skeleton')),
   },
-  { path: '/design/flex', component: useComponent(() => import('../pages/design/Flex')) },
-  { path: '/design/splitter', component: useComponent(() => import('../pages/design/Splitter')) },
-  { path: '/design/stack', component: useComponent(() => import('../pages/design/Stack')) },
-  { path: '/design/steps', component: useComponent(() => import('../pages/design/Steps')) },
-  { path: '/design/swap', component: useComponent(() => import('../pages/design/Swap')) },
-  { path: '/jsx/spread-props', component: useComponent(() => import('../pages/jsx/SpreadProps')) },
+  { path: '/design/flex', component: routeComponent(() => import('../pages/design/Flex')) },
+  { path: '/design/splitter', component: routeComponent(() => import('../pages/design/Splitter')) },
+  { path: '/design/stack', component: routeComponent(() => import('../pages/design/Stack')) },
+  { path: '/design/steps', component: routeComponent(() => import('../pages/design/Steps')) },
+  { path: '/design/swap', component: routeComponent(() => import('../pages/design/Swap')) },
+  {
+    path: '/jsx/spread-props',
+    component: routeComponent(() => import('../pages/jsx/SpreadProps')),
+  },
   {
     path: '/jsx/conditional-rendering',
-    component: useComponent(() => import('../pages/jsx/ConditionalRendering')),
+    component: routeComponent(() => import('../pages/jsx/ConditionalRendering')),
   },
   {
     path: '/jsx/v-if-r-if',
-    component: useComponent(() => import('../pages/jsx/VIfAndRIf')),
+    component: routeComponent(() => import('../pages/jsx/VIfAndRIf')),
   },
   {
     path: '/jsx/v-show-r-show',
-    component: useComponent(() => import('../pages/jsx/VShowAndRShow')),
+    component: routeComponent(() => import('../pages/jsx/VShowAndRShow')),
   },
   {
     path: '/jsx/v-pre-r-pre',
-    component: useComponent(() => import('../pages/jsx/VPreAndRPre')),
+    component: routeComponent(() => import('../pages/jsx/VPreAndRPre')),
   },
   {
     path: '/jsx/v-once-r-once',
-    component: useComponent(() => import('../pages/jsx/VOnceAndROnce')),
+    component: routeComponent(() => import('../pages/jsx/VOnceAndROnce')),
   },
   {
     path: '/jsx/v-memo-r-memo',
-    component: useComponent(() => import('../pages/jsx/VMemoAndRMemo')),
+    component: routeComponent(() => import('../pages/jsx/VMemoAndRMemo')),
   },
   {
     path: '/jsx/v-text-r-text',
-    component: useComponent(() => import('../pages/jsx/VTextAndRText')),
+    component: routeComponent(() => import('../pages/jsx/VTextAndRText')),
   },
   {
     path: '/jsx/v-html-r-html',
-    component: useComponent(() => import('../pages/jsx/VHtmlAndRHtml')),
+    component: routeComponent(() => import('../pages/jsx/VHtmlAndRHtml')),
   },
   {
     path: '/jsx/v-on-r-on',
-    component: useComponent(() => import('../pages/jsx/VOnAndROn')),
+    component: routeComponent(() => import('../pages/jsx/VOnAndROn')),
   },
   {
     path: '/jsx/v-model-r-model',
-    component: useComponent(() => import('../pages/jsx/VModelAndRModel')),
+    component: routeComponent(() => import('../pages/jsx/VModelAndRModel')),
   },
   {
     path: '/jsx/lists-and-keys',
-    component: useComponent(() => import('../pages/jsx/ListsAndKeys')),
+    component: routeComponent(() => import('../pages/jsx/ListsAndKeys')),
   },
   {
     path: '/jsx/v-for-r-for',
-    component: useComponent(() => import('../pages/jsx/VForAndRFor')),
+    component: routeComponent(() => import('../pages/jsx/VForAndRFor')),
   },
   {
     path: '/jsx/template',
-    component: useComponent(() => import('../pages/jsx/TemplateDemo')),
+    component: routeComponent(() => import('../pages/jsx/TemplateDemo')),
   },
   {
     path: '/jsx/scoped-style',
-    component: useComponent(() => import('../pages/jsx/ScopedStyle')),
+    component: routeComponent(() => import('../pages/jsx/ScopedStyle')),
   },
-  { path: '/jsx/fragments', component: useComponent(() => import('../pages/jsx/Fragments')) },
-  { path: '/jsx/children', component: useComponent(() => import('../pages/jsx/Children')) },
-  { path: '/jsx/components', component: useComponent(() => import('../pages/jsx/Components')) },
+  { path: '/jsx/fragments', component: routeComponent(() => import('../pages/jsx/Fragments')) },
+  { path: '/jsx/children', component: routeComponent(() => import('../pages/jsx/Children')) },
+  { path: '/jsx/components', component: routeComponent(() => import('../pages/jsx/Components')) },
   {
     path: '/jsx/dynamic-component',
-    component: useComponent(() => import('../pages/jsx/DynamicComponent')),
+    component: routeComponent(() => import('../pages/jsx/DynamicComponent')),
   },
   {
     path: '/jsx/suspense',
-    component: useComponent(() => import('../pages/jsx/SuspenseDemo')),
+    component: routeComponent(() => import('../pages/jsx/SuspenseDemo')),
   },
   {
     path: '/jsx/async-hydration',
-    component: useComponent(() => import('../pages/jsx/AsyncHydrationDemo')),
+    component: routeComponent(() => import('../pages/jsx/AsyncHydrationDemo')),
   },
   {
     path: '/jsx/keep-alive',
-    component: useComponent(() => import('../pages/jsx/KeepAliveDemo')),
+    component: routeComponent(() => import('../pages/jsx/KeepAliveDemo')),
   },
-  { path: '/jsx/events', component: useComponent(() => import('../pages/jsx/Events')) },
+  { path: '/jsx/events', component: routeComponent(() => import('../pages/jsx/Events')) },
   {
     path: '/jsx/controlled-inputs',
-    component: useComponent(() => import('../pages/jsx/ControlledInputs')),
+    component: routeComponent(() => import('../pages/jsx/ControlledInputs')),
   },
-  { path: '/jsx/refs', component: useComponent(() => import('../pages/jsx/Refs')) },
+  { path: '/jsx/refs', component: routeComponent(() => import('../pages/jsx/Refs')) },
   {
     path: '/examples/hello-world',
-    component: useComponent(() => import('../pages/examples/HelloWorld')),
+    component: routeComponent(() => import('../pages/examples/HelloWorld')),
   },
   {
     path: '/examples/on-deactivated',
-    component: useComponent(() => import('../pages/examples/OnDeactivated')),
+    component: routeComponent(() => import('../pages/examples/OnDeactivated')),
   },
   {
     path: '/examples/reactive-counter',
-    component: useComponent(() => import('../pages/examples/ReactiveCounter')),
+    component: routeComponent(() => import('../pages/examples/ReactiveCounter')),
   },
   // 响应式工具 API 示例，保持与侧边栏中 ref/reactive 相关条目顺序一致。
   {
     path: '/examples/to-refs',
-    component: useComponent(() => import('../pages/examples/ToRefs')),
+    component: routeComponent(() => import('../pages/examples/ToRefs')),
   },
   {
     path: '/examples/to-ref',
-    component: useComponent(() => import('../pages/examples/ToRef')),
+    component: routeComponent(() => import('../pages/examples/ToRef')),
   },
   {
     path: '/examples/is-ref',
-    component: useComponent(() => import('../pages/examples/IsRef')),
+    component: routeComponent(() => import('../pages/examples/IsRef')),
   },
   {
     path: '/examples/shallow-ref',
-    component: useComponent(() => import('../pages/examples/ShallowRef')),
+    component: routeComponent(() => import('../pages/examples/ShallowRef')),
   },
   {
     path: '/examples/trigger-ref',
-    component: useComponent(() => import('../pages/examples/TriggerRef')),
+    component: routeComponent(() => import('../pages/examples/TriggerRef')),
   },
   {
     path: '/examples/custom-ref',
-    component: useComponent(() => import('../pages/examples/CustomRef')),
+    component: routeComponent(() => import('../pages/examples/CustomRef')),
   },
   {
     path: '/examples/on-activated',
-    component: useComponent(() => import('../pages/examples/OnActivatedDemo')),
+    component: routeComponent(() => import('../pages/examples/OnActivatedDemo')),
   },
   {
     path: '/examples/is-proxy',
-    component: useComponent(() => import('../pages/examples/IsProxy')),
+    component: routeComponent(() => import('../pages/examples/IsProxy')),
   },
   {
     path: '/examples/is-readonly',
-    component: useComponent(() => import('../pages/examples/IsReadonly')),
+    component: routeComponent(() => import('../pages/examples/IsReadonly')),
   },
   {
     path: '/examples/next-tick',
-    component: useComponent(() => import('../pages/examples/NextTick')),
+    component: routeComponent(() => import('../pages/examples/NextTick')),
   },
   // 调度、scope 与渲染调试 API 示例，集中注册便于文档站按能力分组维护。
   {
     path: '/examples/watch-post-effect',
-    component: useComponent(() => import('../pages/examples/WatchPostEffect')),
+    component: routeComponent(() => import('../pages/examples/WatchPostEffect')),
   },
   {
     path: '/examples/watch-sync-effect',
-    component: useComponent(() => import('../pages/examples/WatchSyncEffect')),
+    component: routeComponent(() => import('../pages/examples/WatchSyncEffect')),
   },
   {
     path: '/examples/on-watcher-cleanup',
-    component: useComponent(() => import('../pages/examples/OnWatcherCleanup')),
+    component: routeComponent(() => import('../pages/examples/OnWatcherCleanup')),
   },
   {
     path: '/examples/effect-scope',
-    component: useComponent(() => import('../pages/examples/EffectScope')),
+    component: routeComponent(() => import('../pages/examples/EffectScope')),
   },
   {
     path: '/examples/on-scope-dispose',
-    component: useComponent(() => import('../pages/examples/OnScopeDispose')),
+    component: routeComponent(() => import('../pages/examples/OnScopeDispose')),
   },
   {
     path: '/examples/get-current-scope',
-    component: useComponent(() => import('../pages/examples/GetCurrentScope')),
+    component: routeComponent(() => import('../pages/examples/GetCurrentScope')),
   },
   {
     path: '/examples/render-counter',
-    component: useComponent(() => import('../pages/examples/RenderCounter')),
+    component: routeComponent(() => import('../pages/examples/RenderCounter')),
   },
   {
     path: '/examples/on-render-tracked',
-    component: useComponent(() => import('../pages/examples/OnRenderTracked')),
+    component: routeComponent(() => import('../pages/examples/OnRenderTracked')),
   },
   {
     path: '/examples/on-render-triggered',
-    component: useComponent(() => import('../pages/examples/OnRenderTriggered')),
+    component: routeComponent(() => import('../pages/examples/OnRenderTriggered')),
   },
   {
     path: '/examples/use-state-counter',
-    component: useComponent(() => import('../pages/examples/UseStateCounter')),
+    component: routeComponent(() => import('../pages/examples/UseStateCounter')),
   },
   {
     path: '/examples/basic-todo-list',
-    component: useComponent(() => import('../pages/examples/BasicTodoList')),
+    component: routeComponent(() => import('../pages/examples/BasicTodoList')),
   },
   {
     path: '/examples/editable-user-profile',
-    component: useComponent(() => import('../pages/examples/EditableUserProfile')),
+    component: routeComponent(() => import('../pages/examples/EditableUserProfile')),
   },
   {
     path: '/examples/map-list-rendering',
-    component: useComponent(() => import('../pages/examples/MapListRendering')),
+    component: routeComponent(() => import('../pages/examples/MapListRendering')),
   },
   {
     path: '/examples/react-style-conditional',
-    component: useComponent(() => import('../pages/examples/ReactStyleConditional')),
+    component: routeComponent(() => import('../pages/examples/ReactStyleConditional')),
   },
   {
     path: '/examples/child-to-parent-notify',
-    component: useComponent(() => import('../pages/examples/ChildToParentNotify')),
+    component: routeComponent(() => import('../pages/examples/ChildToParentNotify')),
   },
   {
     path: '/examples/parent-child-counter-control',
-    component: useComponent(() => import('../pages/examples/ParentChildCounterControl')),
+    component: routeComponent(() => import('../pages/examples/ParentChildCounterControl')),
   },
   {
     path: '/examples/component-v-model',
-    component: useComponent(() => import('../pages/examples/ComponentVModel')),
+    component: routeComponent(() => import('../pages/examples/ComponentVModel')),
   },
   {
     path: '/examples/named-v-model',
-    component: useComponent(() => import('../pages/examples/NamedVModel')),
+    component: routeComponent(() => import('../pages/examples/NamedVModel')),
   },
   {
     path: '/examples/component-emit',
-    component: useComponent(() => import('../pages/examples/ComponentEmit')),
+    component: routeComponent(() => import('../pages/examples/ComponentEmit')),
   },
   {
     path: '/examples/use-state-array',
-    component: useComponent(() => import('../pages/examples/UseStateArray')),
+    component: routeComponent(() => import('../pages/examples/UseStateArray')),
   },
   {
     path: '/examples/use-state-object',
-    component: useComponent(() => import('../pages/examples/UseStateObject')),
+    component: routeComponent(() => import('../pages/examples/UseStateObject')),
   },
   {
     path: '/examples/local-counter',
-    component: useComponent(() => import('../pages/examples/LocalCounter')),
+    component: routeComponent(() => import('../pages/examples/LocalCounter')),
   },
   {
     path: '/examples/local-todo-list',
-    component: useComponent(() => import('../pages/examples/LocalTodoList')),
+    component: routeComponent(() => import('../pages/examples/LocalTodoList')),
   },
   {
     path: '/examples/hello-children',
-    component: useComponent(() => import('../pages/examples/HelloChildren')),
+    component: routeComponent(() => import('../pages/examples/HelloChildren')),
   },
   {
     path: '/examples/basic-children-box',
-    component: useComponent(() => import('../pages/examples/BasicChildrenBox')),
+    component: routeComponent(() => import('../pages/examples/BasicChildrenBox')),
   },
   {
     path: '/examples/nested-children-box',
-    component: useComponent(() => import('../pages/examples/NestedChildrenBox')),
+    component: routeComponent(() => import('../pages/examples/NestedChildrenBox')),
   },
   {
     path: '/examples/layout-children',
-    component: useComponent(() => import('../pages/examples/LayoutChildren')),
+    component: routeComponent(() => import('../pages/examples/LayoutChildren')),
   },
   {
     path: '/examples/handling-input',
-    component: useComponent(() => import('../pages/examples/HandlingInput')),
+    component: routeComponent(() => import('../pages/examples/HandlingInput')),
   },
   {
     path: '/examples/attribute-bindings',
-    component: useComponent(() => import('../pages/examples/AttributeBindings')),
+    component: routeComponent(() => import('../pages/examples/AttributeBindings')),
   },
   {
     path: '/examples/conditionals-and-loops',
-    component: useComponent(() => import('../pages/examples/ConditionalsAndLoops')),
+    component: routeComponent(() => import('../pages/examples/ConditionalsAndLoops')),
   },
   {
     path: '/examples/form-bindings',
-    component: useComponent(() => import('../pages/examples/FormBindings')),
+    component: routeComponent(() => import('../pages/examples/FormBindings')),
   },
   {
     path: '/examples/simple-component',
-    component: useComponent(() => import('../pages/examples/SimpleComponent')),
+    component: routeComponent(() => import('../pages/examples/SimpleComponent')),
   },
   {
     path: '/examples/global-component-registration',
-    component: useComponent(() => import('../pages/examples/GlobalComponentRegistration')),
+    component: routeComponent(() => import('../pages/examples/GlobalComponentRegistration')),
   },
   {
     path: '/examples/on-error-captured',
-    component: useComponent(() => import('../pages/examples/OnErrorCaptured')),
+    component: routeComponent(() => import('../pages/examples/OnErrorCaptured')),
   },
   {
     path: '/examples/reactive-props-destructure',
-    component: useComponent(() => import('../pages/examples/ReactivePropsDestructure')),
+    component: routeComponent(() => import('../pages/examples/ReactivePropsDestructure')),
   },
   {
     path: '/examples/props-setup-boundary',
-    component: useComponent(() => import('../pages/examples/PropsSetupBoundary')),
+    component: routeComponent(() => import('../pages/examples/PropsSetupBoundary')),
   },
   {
     path: '/examples/slots',
-    component: useComponent(() => import('../pages/examples/Slots')),
+    component: routeComponent(() => import('../pages/examples/Slots')),
   },
   {
     path: '/examples/web-components',
-    component: useComponent(() => import('../pages/examples/WebComponents')),
+    component: routeComponent(() => import('../pages/examples/WebComponents')),
   },
   {
     path: '/examples/web-components-lab',
-    component: useComponent(() => import('../pages/examples/WebComponentFeatureLab')),
+    component: routeComponent(() => import('../pages/examples/WebComponentFeatureLab')),
   },
   {
     path: '/examples/fetching-data',
-    component: useComponent(() => import('../pages/examples/FetchingData')),
+    component: routeComponent(() => import('../pages/examples/FetchingData')),
   },
   {
     path: '/examples/on-server-prefetch',
-    component: useComponent(() => import('../pages/examples/OnServerPrefetch')),
+    component: routeComponent(() => import('../pages/examples/OnServerPrefetch')),
   },
   {
     path: '/examples/resources',
-    component: useComponent(() => import('../pages/examples/ResourceDemo')),
+    component: routeComponent(() => import('../pages/examples/ResourceDemo')),
   },
   {
     path: '/examples/resources-jsx',
-    component: useComponent(() => import('../pages/examples/ResourceJSX')),
+    component: routeComponent(() => import('../pages/examples/ResourceJSX')),
+  },
+  {
+    path: '/examples/rue-islands',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
+  },
+  {
+    path: '/examples/rue-islands/load',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
+  },
+  {
+    path: '/examples/rue-islands/idle',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
+  },
+  {
+    path: '/examples/rue-islands/visible',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
+  },
+  {
+    path: '/examples/rue-islands/media',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
+  },
+  {
+    path: '/examples/rue-islands/interaction',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
+  },
+  {
+    path: '/examples/rue-islands/none',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: {
+      clientRuntime: false,
+    },
+  },
+  {
+    path: '/examples/rue-islands/only',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
+  },
+  {
+    path: '/examples/rue-islands/props',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
+  },
+  {
+    path: '/examples/rue-islands/manifest',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
+  },
+  {
+    path: '/examples/rue-islands/compiler',
+    component: routeComponent(() => import('../pages/examples/RueIslands')),
   },
   {
     path: '/examples/context',
-    component: useComponent(() => import('../pages/examples/Context')),
+    component: routeComponent(() => import('../pages/examples/Context')),
   },
   {
     path: '/examples/i18n-switcher',
-    component: useComponent(() => import('../pages/examples/I18nSwitcher')),
+    component: routeComponent(() => import('../pages/examples/I18nSwitcher')),
   },
   {
     path: '/examples/router-demo',
-    component: useComponent(() => import('../pages/examples/RouterDemo')),
+    component: routeComponent(() => import('../pages/examples/RouterDemo')),
     meta: { demo: 'router', surface: 'examples' },
     children: [
       {
@@ -444,196 +507,215 @@ const flatRoutes: RouteRecordRaw[] = [
   },
   {
     path: '/examples/todo-app',
-    component: useComponent(() => import('../pages/examples/TodoApp')),
+    component: routeComponent(() => import('../pages/examples/TodoApp')),
   },
   {
     path: '/examples/markdown-editor',
-    component: useComponent(() => import('../pages/examples/MarkdownEditor')),
+    component: routeComponent(() => import('../pages/examples/MarkdownEditor')),
   },
   {
     path: '/examples/sort-filter-grid',
-    component: useComponent(() => import('../pages/examples/SortFilterGrid')),
+    component: routeComponent(() => import('../pages/examples/SortFilterGrid')),
   },
   {
     path: '/examples/store-query-sync',
-    component: useComponent(() => import('../pages/examples/StoreQuerySync')),
+    component: routeComponent(() => import('../pages/examples/StoreQuerySync')),
   },
   {
     path: '/examples/tree-view',
-    component: useComponent(() => import('../pages/examples/TreeView')),
+    component: routeComponent(() => import('../pages/examples/TreeView')),
   },
   {
     path: '/examples/svg-graph',
-    component: useComponent(() => import('../pages/examples/SVGGraph')),
+    component: routeComponent(() => import('../pages/examples/SVGGraph')),
   },
   {
     path: '/examples/svg-shared-namespace',
-    component: useComponent(() => import('../pages/examples/SVGSharedNamespace')),
+    component: routeComponent(() => import('../pages/examples/SVGSharedNamespace')),
   },
-  { path: '/examples/modal', component: useComponent(() => import('../pages/examples/Modal')) },
+  { path: '/examples/modal', component: routeComponent(() => import('../pages/examples/Modal')) },
   {
     path: '/examples/transition-mode',
-    component: useComponent(() => import('../pages/examples/TransitionMode')),
+    component: routeComponent(() => import('../pages/examples/TransitionMode')),
   },
   {
     path: '/examples/list-transition',
-    component: useComponent(() => import('../pages/examples/ListTransition')),
+    component: routeComponent(() => import('../pages/examples/ListTransition')),
   },
-  { path: '/design/button', component: useComponent(() => import('../pages/design/Button')) },
-  { path: '/design/anchor', component: useComponent(() => import('../pages/design/Anchor')) },
-  { path: '/design/affix', component: useComponent(() => import('../pages/design/Affix')) },
+  { path: '/design/button', component: routeComponent(() => import('../pages/design/Button')) },
+  { path: '/design/anchor', component: routeComponent(() => import('../pages/design/Anchor')) },
+  { path: '/design/affix', component: routeComponent(() => import('../pages/design/Affix')) },
   {
     path: '/design/typography',
-    component: useComponent(() => import('../pages/design/Typography')),
+    component: routeComponent(() => import('../pages/design/Typography')),
   },
-  { path: '/design/tabs', component: useComponent(() => import('../pages/design/Tabs')) },
-  { path: '/design/alert', component: useComponent(() => import('../pages/design/Alert')) },
-  { path: '/design/result', component: useComponent(() => import('../pages/design/Result')) },
-  { path: '/design/empty', component: useComponent(() => import('../pages/design/Empty')) },
-  { path: '/design/card', component: useComponent(() => import('../pages/design/Card')) },
-  { path: '/design/calendar', component: useComponent(() => import('../pages/design/Calendar')) },
-  { path: '/design/collapse', component: useComponent(() => import('../pages/design/Collapse')) },
-  { path: '/design/countdown', component: useComponent(() => import('../pages/design/Countdown')) },
+  { path: '/design/tabs', component: routeComponent(() => import('../pages/design/Tabs')) },
+  { path: '/design/alert', component: routeComponent(() => import('../pages/design/Alert')) },
+  { path: '/design/result', component: routeComponent(() => import('../pages/design/Result')) },
+  { path: '/design/empty', component: routeComponent(() => import('../pages/design/Empty')) },
+  { path: '/design/card', component: routeComponent(() => import('../pages/design/Card')) },
+  { path: '/design/calendar', component: routeComponent(() => import('../pages/design/Calendar')) },
+  { path: '/design/collapse', component: routeComponent(() => import('../pages/design/Collapse')) },
+  {
+    path: '/design/countdown',
+    component: routeComponent(() => import('../pages/design/Countdown')),
+  },
   {
     path: '/design/descriptions',
-    component: useComponent(() => import('../pages/design/Descriptions')),
+    component: routeComponent(() => import('../pages/design/Descriptions')),
   },
   {
     path: '/design/hover-gallery',
-    component: useComponent(() => import('../pages/design/HoverGallery')),
+    component: routeComponent(() => import('../pages/design/HoverGallery')),
   },
-  { path: '/design/kbd', component: useComponent(() => import('../pages/design/Kbd')) },
-  { path: '/design/list', component: useComponent(() => import('../pages/design/List')) },
-  { path: '/design/table', component: useComponent(() => import('../pages/design/Table')) },
-  { path: '/design/chat', component: useComponent(() => import('../pages/design/Chat')) },
-  { path: '/design/checkbox', component: useComponent(() => import('../pages/design/Checkbox')) },
-  { path: '/design/badge', component: useComponent(() => import('../pages/design/Badge')) },
-  { path: '/design/divider', component: useComponent(() => import('../pages/design/Divider')) },
-  { path: '/design/diff', component: useComponent(() => import('../pages/design/Diff')) },
-  { path: '/design/carousel', component: useComponent(() => import('../pages/design/Carousel')) },
-  { path: '/design/dropdown', component: useComponent(() => import('../pages/design/Dropdown')) },
-  { path: '/design/fab', component: useComponent(() => import('../pages/design/Fab')) },
-  { path: '/design/modal', component: useComponent(() => import('../pages/design/Modal')) },
-  { path: '/design/footer', component: useComponent(() => import('../pages/design/Footer')) },
-  { path: '/design/fieldset', component: useComponent(() => import('../pages/design/Fieldset')) },
-  { path: '/design/form', component: useComponent(() => import('../pages/design/Form')) },
+  { path: '/design/kbd', component: routeComponent(() => import('../pages/design/Kbd')) },
+  { path: '/design/list', component: routeComponent(() => import('../pages/design/List')) },
+  { path: '/design/table', component: routeComponent(() => import('../pages/design/Table')) },
+  { path: '/design/chat', component: routeComponent(() => import('../pages/design/Chat')) },
+  { path: '/design/checkbox', component: routeComponent(() => import('../pages/design/Checkbox')) },
+  { path: '/design/badge', component: routeComponent(() => import('../pages/design/Badge')) },
+  { path: '/design/divider', component: routeComponent(() => import('../pages/design/Divider')) },
+  { path: '/design/diff', component: routeComponent(() => import('../pages/design/Diff')) },
+  { path: '/design/carousel', component: routeComponent(() => import('../pages/design/Carousel')) },
+  { path: '/design/dropdown', component: routeComponent(() => import('../pages/design/Dropdown')) },
+  { path: '/design/fab', component: routeComponent(() => import('../pages/design/Fab')) },
+  { path: '/design/modal', component: routeComponent(() => import('../pages/design/Modal')) },
+  { path: '/design/footer', component: routeComponent(() => import('../pages/design/Footer')) },
+  { path: '/design/fieldset', component: routeComponent(() => import('../pages/design/Fieldset')) },
+  { path: '/design/form', component: routeComponent(() => import('../pages/design/Form')) },
   {
     path: '/design/file-input',
-    component: useComponent(() => import('../pages/design/FileInput')),
+    component: routeComponent(() => import('../pages/design/FileInput')),
   },
-  { path: '/design/filter', component: useComponent(() => import('../pages/design/Filter')) },
-  { path: '/design/grid', component: useComponent(() => import('../pages/design/Grid')) },
-  { path: '/design/masonry', component: useComponent(() => import('../pages/design/Masonry')) },
-  { path: '/design/drawer', component: useComponent(() => import('../pages/design/Drawer')) },
-  { path: '/design/hero', component: useComponent(() => import('../pages/design/Hero')) },
-  { path: '/design/indicator', component: useComponent(() => import('../pages/design/Indicator')) },
-  { path: '/design/input', component: useComponent(() => import('../pages/design/Input')) },
+  { path: '/design/filter', component: routeComponent(() => import('../pages/design/Filter')) },
+  { path: '/design/grid', component: routeComponent(() => import('../pages/design/Grid')) },
+  { path: '/design/masonry', component: routeComponent(() => import('../pages/design/Masonry')) },
+  { path: '/design/drawer', component: routeComponent(() => import('../pages/design/Drawer')) },
+  { path: '/design/hero', component: routeComponent(() => import('../pages/design/Hero')) },
+  {
+    path: '/design/indicator',
+    component: routeComponent(() => import('../pages/design/Indicator')),
+  },
+  { path: '/design/input', component: routeComponent(() => import('../pages/design/Input')) },
   {
     path: '/design/input-number',
-    component: useComponent(() => import('../pages/design/InputNumber')),
+    component: routeComponent(() => import('../pages/design/InputNumber')),
   },
-  { path: '/design/join', component: useComponent(() => import('../pages/design/Join')) },
-  { path: '/design/layout', component: useComponent(() => import('../pages/design/Layout')) },
-  { path: '/design/label', component: useComponent(() => import('../pages/design/Label')) },
-  { path: '/design/loading', component: useComponent(() => import('../pages/design/Loading')) },
-  { path: '/design/mask', component: useComponent(() => import('../pages/design/Mask')) },
+  { path: '/design/join', component: routeComponent(() => import('../pages/design/Join')) },
+  { path: '/design/layout', component: routeComponent(() => import('../pages/design/Layout')) },
+  { path: '/design/label', component: routeComponent(() => import('../pages/design/Label')) },
+  { path: '/design/loading', component: routeComponent(() => import('../pages/design/Loading')) },
+  { path: '/design/mask', component: routeComponent(() => import('../pages/design/Mask')) },
   {
     path: '/design/mockup-browser',
-    component: useComponent(() => import('../pages/design/MockupBrowser')),
+    component: routeComponent(() => import('../pages/design/MockupBrowser')),
   },
   {
     path: '/design/mockup-code',
-    component: useComponent(() => import('../pages/design/MockupCode')),
+    component: routeComponent(() => import('../pages/design/MockupCode')),
   },
   {
     path: '/design/mockup-phone',
-    component: useComponent(() => import('../pages/design/MockupPhone')),
+    component: routeComponent(() => import('../pages/design/MockupPhone')),
   },
   {
     path: '/design/mockup-window',
-    component: useComponent(() => import('../pages/design/MockupWindow')),
+    component: routeComponent(() => import('../pages/design/MockupWindow')),
   },
-  { path: '/design/navbar', component: useComponent(() => import('../pages/design/Navbar')) },
+  { path: '/design/navbar', component: routeComponent(() => import('../pages/design/Navbar')) },
   {
     path: '/design/pagination',
-    component: useComponent(() => import('../pages/design/Pagination')),
+    component: routeComponent(() => import('../pages/design/Pagination')),
   },
-  { path: '/design/accordion', component: useComponent(() => import('../pages/design/Accordion')) },
-  { path: '/design/avatar', component: useComponent(() => import('../pages/design/Avatar')) },
-  { path: '/design/hover-3d', component: useComponent(() => import('../pages/design/Hover3D')) },
-  { path: '/design/timeline', component: useComponent(() => import('../pages/design/Timeline')) },
+  {
+    path: '/design/accordion',
+    component: routeComponent(() => import('../pages/design/Accordion')),
+  },
+  { path: '/design/avatar', component: routeComponent(() => import('../pages/design/Avatar')) },
+  { path: '/design/hover-3d', component: routeComponent(() => import('../pages/design/Hover3D')) },
+  { path: '/design/timeline', component: routeComponent(() => import('../pages/design/Timeline')) },
   {
     path: '/design/text-rotate',
-    component: useComponent(() => import('../pages/design/TextRotate')),
+    component: routeComponent(() => import('../pages/design/TextRotate')),
   },
-  { path: '/design/status', component: useComponent(() => import('../pages/design/Status')) },
-  { path: '/design/stat', component: useComponent(() => import('../pages/design/Stat')) },
-  { path: '/design/progress', component: useComponent(() => import('../pages/design/Progress')) },
+  { path: '/design/status', component: routeComponent(() => import('../pages/design/Status')) },
+  { path: '/design/stat', component: routeComponent(() => import('../pages/design/Stat')) },
+  { path: '/design/progress', component: routeComponent(() => import('../pages/design/Progress')) },
   {
     path: '/design/radial-progress',
-    component: useComponent(() => import('../pages/design/RadialProgress')),
+    component: routeComponent(() => import('../pages/design/RadialProgress')),
   },
-  { path: '/design/radio', component: useComponent(() => import('../pages/design/Radio')) },
-  { path: '/design/range', component: useComponent(() => import('../pages/design/Range')) },
-  { path: '/design/rating', component: useComponent(() => import('../pages/design/Rating')) },
+  { path: '/design/radio', component: routeComponent(() => import('../pages/design/Radio')) },
+  { path: '/design/range', component: routeComponent(() => import('../pages/design/Range')) },
+  { path: '/design/rating', component: routeComponent(() => import('../pages/design/Rating')) },
   {
     path: '/design/breadcrumbs',
-    component: useComponent(() => import('../pages/design/Breadcrumbs')),
+    component: routeComponent(() => import('../pages/design/Breadcrumbs')),
   },
-  { path: '/design/link', component: useComponent(() => import('../pages/design/Link')) },
-  { path: '/design/dock', component: useComponent(() => import('../pages/design/Dock')) },
-  { path: '/design/menu', component: useComponent(() => import('../pages/design/Menu')) },
-  { path: '/design/mentions', component: useComponent(() => import('../pages/design/Mentions')) },
-  { path: '/design/textarea', component: useComponent(() => import('../pages/design/Textarea')) },
+  { path: '/design/link', component: routeComponent(() => import('../pages/design/Link')) },
+  { path: '/design/dock', component: routeComponent(() => import('../pages/design/Dock')) },
+  { path: '/design/menu', component: routeComponent(() => import('../pages/design/Menu')) },
+  { path: '/design/mentions', component: routeComponent(() => import('../pages/design/Mentions')) },
+  { path: '/design/textarea', component: routeComponent(() => import('../pages/design/Textarea')) },
   {
     path: '/design/theme-controller',
-    component: useComponent(() => import('../pages/design/ThemeController')),
+    component: routeComponent(() => import('../pages/design/ThemeController')),
   },
   {
     path: '/design/message',
-    component: useComponent(() => import('../pages/design/Message')),
+    component: routeComponent(() => import('../pages/design/Message')),
   },
   {
     path: '/design/notification',
-    component: useComponent(() => import('../pages/design/Notification')),
+    component: routeComponent(() => import('../pages/design/Notification')),
   },
-  { path: '/design/toast', component: useComponent(() => import('../pages/design/Toast')) },
-  { path: '/design/toggle', component: useComponent(() => import('../pages/design/Toggle')) },
+  { path: '/design/toast', component: routeComponent(() => import('../pages/design/Toast')) },
+  { path: '/design/toggle', component: routeComponent(() => import('../pages/design/Toggle')) },
   {
     path: '/design/popconfirm',
-    component: useComponent(() => import('../pages/design/Popconfirm')),
+    component: routeComponent(() => import('../pages/design/Popconfirm')),
   },
-  { path: '/design/popover', component: useComponent(() => import('../pages/design/Popover')) },
-  { path: '/design/tooltip', component: useComponent(() => import('../pages/design/Tooltip')) },
-  { path: '/design/watermark', component: useComponent(() => import('../pages/design/Watermark')) },
-  { path: '/design/validator', component: useComponent(() => import('../pages/design/Validator')) },
+  { path: '/design/popover', component: routeComponent(() => import('../pages/design/Popover')) },
+  { path: '/design/tooltip', component: routeComponent(() => import('../pages/design/Tooltip')) },
+  {
+    path: '/design/watermark',
+    component: routeComponent(() => import('../pages/design/Watermark')),
+  },
+  {
+    path: '/design/validator',
+    component: routeComponent(() => import('../pages/design/Validator')),
+  },
   {
     path: '/design/:slug',
-    component: useComponent(() => import('../pages/design/DesignPlaceholder')),
+    component: routeComponent(() => import('../pages/design/DesignPlaceholder')),
   },
-  { path: '/e2e/tdz', component: useComponent(() => import('../pages/e2e/TDZMemo')) },
+  { path: '/e2e/tdz', component: routeComponent(() => import('../pages/e2e/TDZMemo')) },
   {
     path: '/e2e/router-unmount-a',
-    component: useComponent(() => import('../pages/e2e/RouterUnmountProbeA')),
+    component: routeComponent(() => import('../pages/e2e/RouterUnmountProbeA')),
   },
   {
     path: '/e2e/router-unmount-b',
-    component: useComponent(() => import('../pages/e2e/RouterUnmountProbeB')),
+    component: routeComponent(() => import('../pages/e2e/RouterUnmountProbeB')),
   },
-  { path: '/', component: useComponent(() => import('../pages/site/SiteHome')) },
-  { path: '/textjs', component: useComponent(() => import('../pages/TextJs')) },
+  { path: '/', component: routeComponent(() => import('../pages/site/SiteHome')) },
+  { path: '/textjs', component: routeComponent(() => import('../pages/TextJs')) },
+  { path: '/settings', component: routeComponent(() => import('../pages/site/SiteSettings')) },
   {
     path: '/guide/:path(.*)',
-    component: useComponent(() => import('../pages/site/GuideDocDetail')),
+    component: routeComponent(() => import('../pages/site/GuideDocDetail')),
   },
-  { path: '/api/:path(.*)', component: useComponent(() => import('../pages/site/ApiDocDetail')) },
-  { path: '/page/:path(.*)', component: useComponent(() => import('../pages/site/PageDocDetail')) },
-  { path: '/plugins', component: useComponent(() => import('../pages/site/PluginsIndex')) },
-  { path: '/page', component: useComponent(() => import('../pages/site/DocsIndex')) },
-  { path: '/report-data1', component: useComponent(() => import('../pages/report-data1/index')) },
+  { path: '/api/:path(.*)', component: routeComponent(() => import('../pages/site/ApiDocDetail')) },
+  {
+    path: '/page/:path(.*)',
+    component: routeComponent(() => import('../pages/site/PageDocDetail')),
+  },
+  { path: '/plugins', component: routeComponent(() => import('../pages/site/PluginsIndex')) },
+  { path: '/page', component: routeComponent(() => import('../pages/site/DocsIndex')) },
+  { path: '/report-data1', component: routeComponent(() => import('../pages/report-data1/index')) },
   {
     path: '/report-bi-arch',
-    component: useComponent(() => import('../pages/report-bi-arch/index')),
+    component: routeComponent(() => import('../pages/report-bi-arch/index')),
   },
 ]
 
@@ -698,7 +780,7 @@ const foldSidebarPlaygroundRoutes = (
   ]
 }
 
-const routes = foldSidebarPlaygroundRoutes(flatRoutes, [
+export const routes = foldSidebarPlaygroundRoutes(flatRoutes, [
   {
     path: '/design',
     component: AsyncDesignRouteLayout,
@@ -727,7 +809,8 @@ const routes = foldSidebarPlaygroundRoutes(flatRoutes, [
   },
 ])
 
-export default createRouter({
-  history: createWebHistory(),
-  routes: routes,
-})
+export const createAppRouter = (history: HistoryLike = createWebHistory()) =>
+  createRouter({
+    history,
+    routes,
+  })

@@ -717,6 +717,349 @@ const syncSelectValueAfterMutation = (parent: any, child?: any) => {
   }
 }
 
+const RUE_HYDRATED_ADOPTED_NODE = '__rue_hydrated_adopted'
+const RUE_HYDRATED_ADOPTED_TARGET = '__rue_hydrated_adopted_target'
+const hydratedAdoptedRemovalSuppressions = new WeakSet<object>()
+const pendingHydratedAdoptedRemovals = new WeakMap<object, Set<any>>()
+const hydratedNodeEventListeners = new WeakMap<object, Map<string, Set<DOMEventHandler>>>()
+const hydratedEventTransferTargets = new WeakMap<object, Set<any>>()
+
+const resolveHydratedAdoptedTarget = <T>(node: T): T => {
+  let current: any = node
+  let depth = 0
+  while (current?.[RUE_HYDRATED_ADOPTED_TARGET] && depth < 20) {
+    current = current[RUE_HYDRATED_ADOPTED_TARGET]
+    depth += 1
+  }
+  return current as T
+}
+
+const recordHydratedEventListener = (el: any, eventName: string, listener: DOMEventHandler) => {
+  if (!el || typeof listener !== 'function') {
+    return
+  }
+  let events = hydratedNodeEventListeners.get(el)
+  if (!events) {
+    events = new Map()
+    hydratedNodeEventListeners.set(el, events)
+  }
+  let listeners = events.get(eventName)
+  if (!listeners) {
+    listeners = new Set()
+    events.set(eventName, listeners)
+  }
+  listeners.add(listener)
+}
+
+const forgetHydratedEventListener = (el: any, eventName: string, listener: DOMEventHandler) => {
+  const events = el ? hydratedNodeEventListeners.get(el) : undefined
+  const listeners = events?.get(eventName)
+  if (!listeners) {
+    return
+  }
+  listeners.delete(listener)
+  if (listeners.size === 0) {
+    events!.delete(eventName)
+  }
+  if (events!.size === 0) {
+    hydratedNodeEventListeners.delete(el)
+  }
+}
+
+const addNativeDOMEventListener = (el: any, eventName: string, listener: DOMEventHandler) => {
+  const boundListener = bindEventHandlerToCurrentRuntime(listener)
+  const options = boundListener?.__rue_options
+  if (options !== undefined) {
+    el.addEventListener(eventName, boundListener, options)
+    return
+  }
+  el.addEventListener(eventName, boundListener)
+}
+
+const removeNativeDOMEventListener = (el: any, eventName: string, listener: DOMEventHandler) => {
+  const boundListener = getBoundEventHandlerForRemoval(listener)
+  const options = boundListener?.__rue_options
+  if (options !== undefined) {
+    el.removeEventListener(eventName, boundListener, options)
+    return
+  }
+  el.removeEventListener(eventName, boundListener)
+}
+
+const transferHydratedEventListeners = (oldNode: any, newNode: any) => {
+  if (!oldNode || !newNode || oldNode === newNode) {
+    return
+  }
+  const events = hydratedNodeEventListeners.get(newNode)
+  if (!events) {
+    return
+  }
+
+  let targets = hydratedEventTransferTargets.get(newNode)
+  if (!targets) {
+    targets = new Set()
+    hydratedEventTransferTargets.set(newNode, targets)
+  }
+  targets.add(oldNode)
+
+  for (const [eventName, listeners] of events) {
+    for (const listener of listeners) {
+      addNativeDOMEventListener(oldNode, eventName, listener)
+      recordHydratedEventListener(oldNode, eventName, listener)
+    }
+  }
+}
+
+const sameNodeShape = (oldNode: any, newNode: any) =>
+  !!oldNode &&
+  !!newNode &&
+  oldNode.nodeType === newNode.nodeType &&
+  (oldNode.nodeType !== 1 || oldNode.tagName === newNode.tagName)
+
+const syncElementAttributes = (oldNode: any, newNode: any) => {
+  if (oldNode.nodeType !== 1 || typeof oldNode.getAttributeNames !== 'function') {
+    return
+  }
+  for (const name of oldNode.getAttributeNames()) {
+    if (!newNode.hasAttribute(name)) {
+      oldNode.removeAttribute(name)
+    }
+  }
+  for (const name of newNode.getAttributeNames()) {
+    oldNode.setAttribute(name, newNode.getAttribute(name))
+  }
+}
+
+const syncElementDomProperties = (oldNode: any, newNode: any) => {
+  if (oldNode.nodeType !== 1 || newNode.nodeType !== 1) {
+    return
+  }
+  if ('value' in oldNode && 'value' in newNode) {
+    const nextValue = newNode.value ?? ''
+    if (String(oldNode.value ?? '') !== String(nextValue)) {
+      oldNode.value = nextValue
+    }
+  }
+  if ('checked' in oldNode && 'checked' in newNode) {
+    oldNode.checked = !!newNode.checked
+  }
+  if ('disabled' in oldNode && 'disabled' in newNode) {
+    oldNode.disabled = !!newNode.disabled
+  }
+}
+
+const markHydratedAdoptedNode = (node: any) => {
+  if (node) {
+    node[RUE_HYDRATED_ADOPTED_NODE] = true
+  }
+}
+
+const isMorphableHydratedChild = (oldNode: any, newNode: any) => {
+  if (!sameNodeShape(oldNode, newNode)) {
+    return false
+  }
+  if (oldNode?.[RUE_HYDRATED_ADOPTED_NODE]) {
+    return true
+  }
+  return oldNode.nodeType === 1 || oldNode.nodeType === 3
+}
+
+const findMatchingHydratedChild = (parent: any, newChild: any, before: any) => {
+  let current = before
+  while (current) {
+    if (isMorphableHydratedChild(current, newChild)) {
+      return current
+    }
+    current = current.nextSibling
+  }
+  return null
+}
+
+const isRueRuntimeAnchorComment = (node: any) =>
+  node?.nodeType === 8 && String(node.nodeValue ?? '').startsWith('rue:')
+
+const previousNonAnchorSibling = (node: any) => {
+  let current = node?.previousSibling ?? null
+  while (isRueRuntimeAnchorComment(current)) {
+    current = current.previousSibling
+  }
+  return current
+}
+
+const morphHydratedNode = (oldNode: any, newNode: any) => {
+  if (oldNode === newNode) {
+    return true
+  }
+  if (!isMorphableHydratedChild(oldNode, newNode)) {
+    return false
+  }
+
+  markHydratedAdoptedNode(oldNode)
+  newNode[RUE_HYDRATED_ADOPTED_TARGET] = oldNode
+  if (oldNode.nodeType === 1) {
+    syncElementAttributes(oldNode, newNode)
+    syncElementDomProperties(oldNode, newNode)
+    transferHydratedEventListeners(oldNode, newNode)
+    morphHydratedElementChildren(oldNode, newNode)
+  } else {
+    oldNode.textContent = newNode.textContent ?? ''
+  }
+  hydratedAdoptedRemovalSuppressions.add(oldNode)
+  return true
+}
+
+const pairHydratedAnchorsWithExistingChildren = (oldNode: any, anchors: any[]) => {
+  let cursor = oldNode.firstChild
+  for (const anchor of anchors) {
+    while (isRueRuntimeAnchorComment(cursor)) {
+      cursor = cursor.nextSibling
+    }
+    if (!cursor) {
+      oldNode.appendChild(anchor)
+      continue
+    }
+
+    const paired = cursor
+    const next = paired.nextSibling
+    markHydratedAdoptedNode(paired)
+    oldNode.insertBefore(anchor, next)
+    cursor = next
+  }
+
+  while (cursor) {
+    const next = cursor.nextSibling
+    if (!isRueRuntimeAnchorComment(cursor)) {
+      oldNode.removeChild(cursor)
+    }
+    cursor = next
+  }
+}
+
+const morphHydratedElementChildren = (oldNode: any, newNode: any) => {
+  const newChildren = Array.from(newNode.childNodes ?? []) as any[]
+  if (newChildren.length > 0 && newChildren.every(isRueRuntimeAnchorComment)) {
+    pairHydratedAnchorsWithExistingChildren(oldNode, newChildren)
+    return
+  }
+  let cursor = oldNode.firstChild
+  for (const newChild of newChildren) {
+    if (cursor === newChild) {
+      const adopted = findMatchingHydratedChild(oldNode, newChild, cursor.nextSibling)
+      if (adopted && morphHydratedNode(adopted, newChild)) {
+        oldNode.insertBefore(adopted, cursor)
+        oldNode.removeChild(newChild)
+        cursor = adopted.nextSibling
+        continue
+      }
+      cursor = cursor.nextSibling
+      continue
+    }
+
+    if (morphHydratedNode(cursor, newChild)) {
+      cursor = cursor.nextSibling
+      continue
+    }
+
+    const adopted = findMatchingHydratedChild(oldNode, newChild, cursor)
+    if (adopted && morphHydratedNode(adopted, newChild)) {
+      oldNode.insertBefore(adopted, cursor)
+      cursor = adopted.nextSibling
+      continue
+    }
+
+    oldNode.insertBefore(newChild, cursor)
+    cursor = newChild.nextSibling
+  }
+
+  while (cursor) {
+    const next = cursor.nextSibling
+    oldNode.removeChild(cursor)
+    cursor = next
+  }
+}
+
+const tryMorphHydratedAdoptedNode = (oldNode: any, newNode: any) => {
+  if (oldNode === newNode) {
+    return false
+  }
+  if (!oldNode?.[RUE_HYDRATED_ADOPTED_NODE]) {
+    return false
+  }
+  return morphHydratedNode(oldNode, newNode)
+}
+
+const findHydratedReplacementSibling = (parent: any, oldNode: any) => {
+  if (!parent || !oldNode?.[RUE_HYDRATED_ADOPTED_NODE]) {
+    return null
+  }
+  for (const node of Array.from(parent.childNodes ?? []) as any[]) {
+    if (
+      node !== oldNode &&
+      !node?.[RUE_HYDRATED_ADOPTED_NODE] &&
+      node.nodeType === oldNode.nodeType &&
+      (node.nodeType !== 1 || node.tagName === oldNode.tagName)
+    ) {
+      return node
+    }
+  }
+  return null
+}
+
+const findHydratedAdoptedDescendant = (node: any): any => {
+  if (!node) return null
+  if (node[RUE_HYDRATED_ADOPTED_NODE]) return node
+  for (const child of Array.from(node.childNodes ?? []) as any[]) {
+    const found = findHydratedAdoptedDescendant(child)
+    if (found) return found
+  }
+  return null
+}
+
+const findHydratedAdoptedSiblingFor = (parent: any, newNode: any) => {
+  if (!parent || !newNode) return null
+  for (const node of Array.from(parent.childNodes ?? []) as any[]) {
+    if (
+      node !== newNode &&
+      node?.[RUE_HYDRATED_ADOPTED_NODE] &&
+      node.nodeType === newNode.nodeType &&
+      (node.nodeType !== 1 || node.tagName === newNode.tagName)
+    ) {
+      return node
+    }
+  }
+  return null
+}
+
+const takePendingHydratedRemoval = (parent: any, newNode: any) => {
+  const pending = parent ? pendingHydratedAdoptedRemovals.get(parent) : undefined
+  if (!pending) {
+    return null
+  }
+  for (const oldNode of Array.from(pending)) {
+    if (sameNodeShape(oldNode, newNode)) {
+      pending.delete(oldNode)
+      if (pending.size === 0) {
+        pendingHydratedAdoptedRemovals.delete(parent)
+      }
+      return oldNode
+    }
+  }
+  return null
+}
+
+const queueHydratedAdoptedRemoval = (parent: any, child: any) => {
+  let pending = pendingHydratedAdoptedRemovals.get(parent)
+  if (!pending) {
+    pending = new Set()
+    pendingHydratedAdoptedRemovals.set(parent, pending)
+  }
+  if (pending.has(child)) {
+    return true
+  }
+  pending.add(child)
+  return true
+}
+
 /** 基于浏览器 document 的默认 DOMAdapter 实现。 */
 export class BrowserDOMAdapter implements DOMAdapter {
   /** 注释节点：委托原生 document.createComment */
@@ -770,6 +1113,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 设置行内样式：支持字符串/对象，null/undefined 清空 */
   setStyle(el: DomElementLike, style: string | Partial<CSSStyleDeclaration> | null | undefined) {
+    el = resolveHydratedAdoptedTarget(el)
     if (typeof style === 'string') {
       ;(el as any).setAttribute('style', style)
     } else if (style && typeof style === 'object') {
@@ -780,6 +1124,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 文本内容：空值/布尔值写空，其余转字符串 */
   settextContent(el: DomNodeLike, val: any) {
+    el = resolveHydratedAdoptedTarget(el)
     ;(el as any).textContent = val == null || typeof val === 'boolean' ? '' : String(val)
   }
   /** 创建文档片段：用于批量插入提升性能 */
@@ -788,25 +1133,84 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 追加子节点：parent.appendChild(child) */
   appendChild(parent: DomNodeLike, child: DomNodeLike) {
+    parent = resolveHydratedAdoptedTarget(parent)
+    child = resolveHydratedAdoptedTarget(child)
     if (!parent) {
       return child as any
     }
 
+    const adopted = findHydratedAdoptedSiblingFor(parent as any, child as any)
+    if (adopted && tryMorphHydratedAdoptedNode(adopted, child as any)) {
+      syncSelectValueAfterMutation(parent as any, adopted)
+      return adopted as any
+    }
+    const pending = takePendingHydratedRemoval(parent as any, child as any)
+    if (pending && tryMorphHydratedAdoptedNode(pending, child as any)) {
+      syncSelectValueAfterMutation(parent as any, pending)
+      return pending as any
+    }
     ;(parent as any).appendChild(child)
     syncSelectValueAfterMutation(parent as any, child as any)
     return child as any
   }
   /** 移除子节点：parent.removeChild(child) */
   removeChild(parent: DomNodeLike, child: DomNodeLike) {
+    parent = resolveHydratedAdoptedTarget(parent)
+    child = resolveHydratedAdoptedTarget(child)
+    if (child && hydratedAdoptedRemovalSuppressions.delete(child as object)) {
+      return
+    }
+    const replacement = findHydratedReplacementSibling(parent as any, child as any)
+    if (replacement && tryMorphHydratedAdoptedNode(child as any, replacement)) {
+      ;(parent as any).removeChild(replacement)
+      hydratedAdoptedRemovalSuppressions.delete(child as object)
+      syncSelectValueAfterMutation(parent as any, child as any)
+      return
+    }
+    if ((child as any)?.[RUE_HYDRATED_ADOPTED_NODE] && queueHydratedAdoptedRemoval(parent, child)) {
+      return
+    }
     ;(parent as any).removeChild(child)
   }
   /** 插入子节点：parent.insertBefore(child, ref) */
   insertBefore(parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null) {
+    parent = resolveHydratedAdoptedTarget(parent)
+    child = resolveHydratedAdoptedTarget(child)
+    ref = ref ? resolveHydratedAdoptedTarget(ref) : ref
+    const paired = ref ? previousNonAnchorSibling(ref as any) : null
+    if (paired?.[RUE_HYDRATED_ADOPTED_NODE]) {
+      if (tryMorphHydratedAdoptedNode(paired, child as any)) {
+        syncSelectValueAfterMutation(parent as any, paired)
+        return
+      }
+      ;(parent as any).removeChild(paired)
+    }
+    const adopted = findHydratedAdoptedSiblingFor(parent as any, child as any)
+    if (adopted && adopted !== ref && tryMorphHydratedAdoptedNode(adopted, child as any)) {
+      syncSelectValueAfterMutation(parent as any, adopted)
+      return
+    }
+    const pending = takePendingHydratedRemoval(parent as any, child as any)
+    if (pending && tryMorphHydratedAdoptedNode(pending, child as any)) {
+      syncSelectValueAfterMutation(parent as any, pending)
+      return
+    }
+    if (ref && tryMorphHydratedAdoptedNode(ref, child)) {
+      syncSelectValueAfterMutation(parent as any, ref as any)
+      return
+    }
     ;(parent as any).insertBefore(child, ref)
     syncSelectValueAfterMutation(parent as any, child as any)
   }
   /** 替换子节点：parent.replaceChild(newChild, oldChild) */
   replaceChild(parent: DomNodeLike, newChild: DomNodeLike, oldChild: DomNodeLike) {
+    parent = resolveHydratedAdoptedTarget(parent)
+    newChild = resolveHydratedAdoptedTarget(newChild)
+    oldChild = resolveHydratedAdoptedTarget(oldChild)
+    if (tryMorphHydratedAdoptedNode(oldChild, newChild)) {
+      syncSelectValueAfterMutation(parent as any, oldChild as any)
+      return
+    }
     ;(parent as any).replaceChild(newChild, oldChild)
     syncSelectValueAfterMutation(parent as any, newChild as any)
   }
@@ -816,42 +1220,51 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 设置属性：值统一转字符串 */
   setAttribute(el: DomElementLike, name: string, value: any) {
+    el = resolveHydratedAdoptedTarget(el)
     ;(el as any).setAttribute(name, String(value))
   }
   /** 移除属性 */
   removeAttribute(el: DomElementLike, name: string) {
+    el = resolveHydratedAdoptedTarget(el)
     ;(el as any).removeAttribute(name)
   }
   /** 添加事件监听：支持由 listener.__rue_options 携带的原生监听选项 */
   addEventListener(el: DomElementLike, eventName: string, listener: DOMEventHandler) {
+    el = resolveHydratedAdoptedTarget(el)
     if (typeof listener !== 'function') {
       return
     }
 
-    const boundListener = bindEventHandlerToCurrentRuntime(listener)
-    const options = boundListener?.__rue_options
-    if (options !== undefined) {
-      ;(el as any).addEventListener(eventName, boundListener, options)
-      return
+    addNativeDOMEventListener(el as any, eventName, listener)
+    recordHydratedEventListener(el as any, eventName, listener)
+    const targets = hydratedEventTransferTargets.get(el as object)
+    if (targets) {
+      for (const target of targets) {
+        addNativeDOMEventListener(target, eventName, listener)
+        recordHydratedEventListener(target, eventName, listener)
+      }
     }
-    ;(el as any).addEventListener(eventName, boundListener)
   }
   /** 移除事件监听：移除时复用 listener.__rue_options 里的 capture 信息 */
   removeEventListener(el: DomElementLike, eventName: string, listener: DOMEventHandler) {
+    el = resolveHydratedAdoptedTarget(el)
     if (typeof listener !== 'function') {
       return
     }
 
-    const boundListener = getBoundEventHandlerForRemoval(listener)
-    const options = boundListener?.__rue_options
-    if (options !== undefined) {
-      ;(el as any).removeEventListener(eventName, boundListener, options)
-      return
+    removeNativeDOMEventListener(el as any, eventName, listener)
+    forgetHydratedEventListener(el as any, eventName, listener)
+    const targets = hydratedEventTransferTargets.get(el as object)
+    if (targets) {
+      for (const target of targets) {
+        removeNativeDOMEventListener(target, eventName, listener)
+        forgetHydratedEventListener(target, eventName, listener)
+      }
     }
-    ;(el as any).removeEventListener(eventName, boundListener)
   }
   /** 设置类名：SVG 用属性 'class'，HTML 用 className；null/undefined 会清空 */
   setClassName(el: DomElementLike, value: any) {
+    el = resolveHydratedAdoptedTarget(el)
     const className = value == null ? '' : String(value)
     if ((el as any) instanceof SVGElement) {
       ;(el as any).setAttribute('class', className)
@@ -861,6 +1274,10 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 设置 innerHTML：仅 HTMLElement 生效 */
   setInnerHTML(el: DomElementLike, html: string) {
+    el = resolveHydratedAdoptedTarget(el)
+    if (html === '' && findHydratedAdoptedDescendant(el as any)) {
+      return
+    }
     ;(el as any as HTMLElement).innerHTML = html
   }
   /** 样式增量补丁：移除旧键，批量赋新样式 */
@@ -869,6 +1286,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
     oldStyle: Partial<CSSStyleDeclaration> | undefined,
     newStyle: Partial<CSSStyleDeclaration> | undefined,
   ) {
+    el = resolveHydratedAdoptedTarget(el)
     const prev = oldStyle || {}
     const next = newStyle || {}
     for (const k of Object.keys(prev)) {
@@ -878,6 +1296,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 设置表单值：兼容 select[multiple]、select 与可写 value 元素 */
   setValue(el: DomElementLike, value: any) {
+    el = resolveHydratedAdoptedTarget(el)
     const anyEl = el as any
     const tag = (anyEl.tagName || '').toUpperCase()
     if (tag === 'SELECT') {
@@ -915,6 +1334,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 设置选中状态：优先属性，其次属性开关 */
   setChecked(el: DomElementLike, checked: boolean) {
+    el = resolveHydratedAdoptedTarget(el)
     const anyEl = el as any
     if (anyEl.checked !== undefined) {
       anyEl.checked = checked
@@ -925,6 +1345,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 设置禁用状态：优先属性，其次属性开关 */
   setDisabled(el: DomElementLike, disabled: boolean) {
+    el = resolveHydratedAdoptedTarget(el)
     const anyEl = el as any
     if (anyEl.disabled !== undefined) {
       anyEl.disabled = disabled
@@ -935,10 +1356,13 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 获取标签名：返回原生 tagName */
   getTagName(el: DomElementLike) {
+    el = resolveHydratedAdoptedTarget(el)
     return (el as any as HTMLElement).tagName
   }
   /** 包含关系判断：优先原生 contains，缺省 false */
   contains(parent: DomNodeLike, child: DomNodeLike) {
+    parent = resolveHydratedAdoptedTarget(parent)
+    child = resolveHydratedAdoptedTarget(child)
     if (!parent) {
       return false
     }
@@ -947,15 +1371,18 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 父节点获取：不存在返回 null */
   getParentNode(node: DomNodeLike) {
+    node = resolveHydratedAdoptedTarget(node)
     return (node as any).parentNode || null
   }
   /** 是否为文档片段：nodeType === 11 */
   isFragment(node: DomNodeLike) {
+    node = resolveHydratedAdoptedTarget(node)
     if (!node) return false
     return (node as any).nodeType === 11
   }
   /** 片段子节点收集：Fragment 返回所有子节点，否则返回自身 */
   collectFragmentChildren(node: DomNodeLike) {
+    node = resolveHydratedAdoptedTarget(node)
     if (this.isFragment(node)) {
       return Array.from((node as any as DocumentFragment).childNodes) as any
     }
@@ -963,6 +1390,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 应用 ref：函数立即调用，对象写入 current */
   applyRef(el: DomElementLike, ref: any) {
+    el = resolveHydratedAdoptedTarget(el)
     if (typeof ref === 'function') {
       ;(ref as Function)(el)
     } else if (ref && typeof ref === 'object' && 'current' in ref) {
@@ -1257,8 +1685,17 @@ const toEventName = (name: string) => name.slice(2).toLowerCase()
 const normalizeAttributeName = (name: string) =>
   name === 'className' ? 'class' : name === 'htmlFor' ? 'for' : name
 
+const extractDangerouslySetInnerHTML = (value: unknown) =>
+  value && typeof value === 'object' && '__html' in (value as Record<string, unknown>)
+    ? (value as Record<string, unknown>).__html
+    : undefined
+
 const removeSpreadAttribute = (el: DomElementLike, key: string, value: any) => {
   if (key === 'children' || key === 'key' || key === 'ref') return
+  if (key === 'dangerouslySetInnerHTML') {
+    setInnerHTML(el, '')
+    return
+  }
   if (shouldUseDomProperty(el, key, value)) {
     setProperty(el, key, undefined)
     return
@@ -1297,6 +1734,15 @@ const removeSpreadAttribute = (el: DomElementLike, key: string, value: any) => {
 
 const setSpreadAttribute = (el: DomElementLike, key: string, value: any, previous: any) => {
   if (key === 'children' || key === 'key' || key === 'ref') return
+  if (key === 'dangerouslySetInnerHTML') {
+    const html = extractDangerouslySetInnerHTML(value)
+    if (html !== undefined && html !== null) {
+      setInnerHTML(el, String(html))
+    } else if (previous !== undefined && previous !== null) {
+      setInnerHTML(el, '')
+    }
+    return
+  }
   if (isEventPropName(key)) {
     const eventName = toEventName(key)
     if (typeof previous === 'function' && previous !== value) {
@@ -1488,6 +1934,29 @@ export const spreadAttributes = (
   record.signature = createSpreadSignature(keys)
 
   applySpreadAttributes(el, state, mergeSpreadAttributeRecords(state.records))
+}
+
+/** 将一组 DOM props 应用到已有元素上，供 hydration / 手动接管路径复用。 */
+export const applyDomProps = (
+  el: DomElementLike,
+  props: Record<string, any> | null | undefined,
+  previous?: Record<string, any> | null | undefined,
+) => {
+  const next = props && typeof props === 'object' ? props : {}
+  const prev = previous && typeof previous === 'object' ? previous : {}
+
+  Object.keys(prev).forEach(key => {
+    if (!(key in next)) {
+      removeSpreadAttribute(el, key, prev[key])
+    }
+  })
+
+  Object.keys(next).forEach(key => {
+    const value = next[key]
+    if (prev[key] !== value) {
+      setSpreadAttribute(el, key, value, prev[key])
+    }
+  })
 }
 /** 判断包含关系（便捷函数） */
 export const contains = (parent: DomNodeLike, child: DomNodeLike) =>

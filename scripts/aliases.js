@@ -30,12 +30,14 @@ for (const dir of dirs) {
   if (!nonSrcPackages.includes(dir)) {
     entries.push({ find: key, replacement: resolveEntryForPkg(dir) })
 
-    const vaporEntry = resolveSubEntryForPkg(dir, 'vapor')
-    if (existsSync(vaporEntry)) {
-      entries.push({
-        find: new RegExp(`^@rue-js/${dir}/vapor$`),
-        replacement: vaporEntry,
-      })
+    for (const subEntry of ['vapor', 'island']) {
+      const entry = resolveSubEntryForPkg(dir, subEntry)
+      if (existsSync(entry)) {
+        entries.push({
+          find: new RegExp(`^@rue-js/${dir}/${subEntry}$`),
+          replacement: entry,
+        })
+      }
     }
   }
 }

@@ -1,166 +1,12 @@
-import { type FC, useComponent, useState, watch } from '@rue-js/rue'
+import { type FC, useComponent } from '@rue-js/rue'
 import { useI18n } from '@rue-js/i18n'
 import { RouterLink } from '@rue-js/router'
-import { resolveLocale } from '../../../i18n'
 
 const DocSearchBox = useComponent(() => import('../DocSearchBox'))
-
-const DEFAULT_THEME = 'luxury'
-
-const themes = [
-  'light',
-  'dark',
-  'cupcake',
-  'bumblebee',
-  'emerald',
-  'corporate',
-  'synthwave',
-  'retro',
-  'cyberpunk',
-  'valentine',
-  'halloween',
-  'garden',
-  'forest',
-  'aqua',
-  'lofi',
-  'pastel',
-  'fantasy',
-  'wireframe',
-  'black',
-  'luxury',
-  'dracula',
-  'cmyk',
-  'autumn',
-  'business',
-  'acid',
-  'lemonade',
-  'night',
-  'coffee',
-  'winter',
-  'dim',
-  'nord',
-  'sunset',
-] as const
-
-const resolveTheme = (value: string | null) => {
-  if (value && themes.includes(value as (typeof themes)[number])) {
-    return value
-  }
-
-  return DEFAULT_THEME
-}
-
-const localeOptions = [
-  { value: 'zh-CN', label: '中文' },
-  { value: 'en', label: 'English' },
-] as const
-
-const ThemePicker: FC = () => {
-  const { _ } = useI18n()
-  const [theme, setTheme] = useState<string>(() => {
-    return resolveTheme(localStorage.getItem('rue.theme'))
-  })
-
-  const syncTheme = () => {
-    localStorage.setItem('rue.theme', theme.value)
-    document.documentElement.setAttribute('data-theme', theme.value)
-  }
-
-  watch(() => theme.value, syncTheme, { immediate: true })
-
-  const labels: Record<string, string> = {
-    light: _('亮色'),
-    dark: _('暗色'),
-    cupcake: _('纸杯蛋糕'),
-    bumblebee: _('大黄蜂'),
-    emerald: _('祖母绿'),
-    corporate: _('企业'),
-    synthwave: _('合成波'),
-    retro: _('复古'),
-    cyberpunk: _('赛博朋克'),
-    valentine: _('情人节'),
-    halloween: _('万圣节'),
-    garden: _('花园'),
-    forest: _('森林'),
-    aqua: _('海洋蓝'),
-    lofi: _('低保真'),
-    pastel: _('粉彩'),
-    fantasy: _('奇幻'),
-    wireframe: _('线框'),
-    black: _('黑色'),
-    luxury: _('奢华'),
-    dracula: _('德古拉'),
-    cmyk: _('CMYK'),
-    autumn: _('秋天'),
-    business: _('商务'),
-    acid: _('酸性'),
-    lemonade: _('柠檬水'),
-    night: _('夜间'),
-    coffee: _('咖啡'),
-    winter: _('冬季'),
-    dim: _('昏暗'),
-    nord: _('北欧'),
-    sunset: _('日落'),
-  }
-  return (
-    <>
-      <select
-        aria-label={_('切换主题')}
-        className="select select-bordered select-sm bg-transparent"
-        value={theme.value}
-        onChange={(e: Event) => {
-          const nextTheme = resolveTheme((e.currentTarget as HTMLSelectElement).value)
-          setTheme(nextTheme)
-          localStorage.setItem('rue.theme', nextTheme)
-          document.documentElement.setAttribute('data-theme', nextTheme)
-        }}
-      >
-        {themes.map(name => (
-          <option key={name} value={name}>
-            {labels[name] ? `${labels[name]} (${name})` : name}
-          </option>
-        ))}
-      </select>
-    </>
-  )
-}
-
-const LanguagePicker: FC = () => {
-  const { _, locale, setLocale } = useI18n()
-
-  const syncLocale = () => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    const nextLocale = resolveLocale(locale.value)
-    window.localStorage.setItem('rue.locale', nextLocale)
-    document.documentElement.setAttribute('lang', nextLocale)
-  }
-
-  watch(() => locale.value, syncLocale, { immediate: true })
-
-  return (
-    <select
-      aria-label={_('切换语言')}
-      className="select select-bordered select-sm w-28 md:w-32 bg-transparent"
-      value={locale.value}
-      onChange={(e: Event) => {
-        setLocale(resolveLocale((e.currentTarget as HTMLSelectElement).value))
-      }}
-    >
-      {localeOptions.map(option => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-  )
-}
+const shouldRenderClientWidgets = !import.meta.env.SSR
 
 const Header: FC = () => {
   const { _ } = useI18n()
-  const [open, setOpen] = useState<string | null>(null)
 
   return (
     <header className="site-header fixed top-0 left-0 right-0 z-50 w-full">
@@ -174,54 +20,41 @@ const Header: FC = () => {
               {_('后悔药 Rue.js')}
             </span>
           </RouterLink>
-          <DocSearchBox />
+          {shouldRenderClientWidgets ? <DocSearchBox /> : null}
         </div>
-        <div className="navbar-center hidden md:flex">
+        <nav className="navbar-center hidden md:flex" aria-label={_('主导航')}>
           <ul className="menu menu-horizontal px-1 text-sm">
             <li>
               <RouterLink to="/" className="btn btn-ghost btn-sm">
                 {_('首页')}
               </RouterLink>
             </li>
-            <li
-              className={`dropdown relative ${open.value === 'docs' ? 'dropdown-open' : ''}`}
-              onMouseEnter={() => setOpen('docs')}
-              onMouseLeave={() => setOpen(null)}
-            >
-              <a className="btn btn-ghost btn-sm">{_('文档')}</a>
-              <ul
-                className="dropdown-content menu bg-base-100 rounded-box z-50 w-35 p-2 shadow dropdown-panel top-full left-1/2 -translate-x-1/2 text-center"
-                onMouseLeave={() => setOpen(null)}
+            <li className="site-nav-dropdown relative">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm site-nav-trigger"
+                aria-haspopup="menu"
               >
+                {_('文档')}
+              </button>
+              <ul className="site-nav-submenu menu bg-base-100 rounded-box z-50 w-35 p-2 dropdown-panel text-center">
                 <li>
-                  <RouterLink to="/guide/guide/introduction" onMouseDown={() => setOpen(null)}>
-                    {_('深度指南')}
-                  </RouterLink>
+                  <RouterLink to="/guide/guide/introduction">{_('深度指南')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/examples/hello-world" onMouseDown={() => setOpen(null)}>
-                    {_('实战例子')}
-                  </RouterLink>
+                  <RouterLink to="/examples/hello-world">{_('实战例子')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/guide/guide/quick-start" onMouseDown={() => setOpen(null)}>
-                    {_('快速上手')}
-                  </RouterLink>
+                  <RouterLink to="/guide/guide/quick-start">{_('快速上手')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/routing" onMouseDown={() => setOpen(null)}>
-                    {_('路由指南')}
-                  </RouterLink>
+                  <RouterLink to="/page/routing">{_('路由指南')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/glossary/index" onMouseDown={() => setOpen(null)}>
-                    {_('术语表')}
-                  </RouterLink>
+                  <RouterLink to="/page/glossary/index">{_('术语表')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/error-reference/index" onMouseDown={() => setOpen(null)}>
-                    {_('错误代码参考')}
-                  </RouterLink>
+                  <RouterLink to="/page/error-reference/index">{_('错误代码参考')}</RouterLink>
                 </li>
               </ul>
             </li>
@@ -230,87 +63,61 @@ const Header: FC = () => {
                 API
               </RouterLink>
             </li>
-            <li
-              className={`dropdown relative ${open.value === 'ecosystem' ? 'dropdown-open' : ''}`}
-              onMouseEnter={() => setOpen('ecosystem')}
-              onMouseLeave={() => setOpen(null)}
-            >
-              <a className="btn btn-ghost btn-sm">{_('生态')}</a>
-              <ul
-                className="dropdown-content menu bg-base-100 rounded-box z-50 w-35 p-2 shadow dropdown-panel top-full left-1/2 -translate-x-1/2 text-center"
-                onMouseLeave={() => setOpen(null)}
+            <li className="site-nav-dropdown relative">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm site-nav-trigger"
+                aria-haspopup="menu"
               >
+                {_('生态')}
+              </button>
+              <ul className="site-nav-submenu menu bg-base-100 rounded-box z-50 w-35 p-2 dropdown-panel text-center">
                 <li>
-                  <RouterLink to="/page/partners/index" onMouseDown={() => setOpen(null)}>
-                    {_('合作伙伴')}
-                  </RouterLink>
+                  <RouterLink to="/page/partners/index">{_('合作伙伴')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/plugins" onMouseDown={() => setOpen(null)}>
-                    {_('插件')}
-                  </RouterLink>
+                  <RouterLink to="/plugins">{_('插件')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/design/button" onMouseDown={() => setOpen(null)}>
-                    {_('组件库')}
-                  </RouterLink>
+                  <RouterLink to="/design/button">{_('组件库')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/guide/scaling-up/tooling" onMouseDown={() => setOpen(null)}>
-                    {_('工具链')}
-                  </RouterLink>
+                  <RouterLink to="/page/guide/scaling-up/tooling">{_('工具链')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/textjs" onMouseDown={() => setOpen(null)}>
-                    Text.js
-                  </RouterLink>
+                  <RouterLink to="/textjs">Text.js</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/ecosystem/newsletters" onMouseDown={() => setOpen(null)}>
-                    {_('新闻简报')}
-                  </RouterLink>
+                  <RouterLink to="/page/ecosystem/newsletters">{_('新闻简报')}</RouterLink>
                 </li>
               </ul>
             </li>
-            <li
-              className={`dropdown relative ${open.value === 'about' ? 'dropdown-open' : ''}`}
-              onMouseEnter={() => setOpen('about')}
-              onMouseLeave={() => setOpen(null)}
-            >
-              <a className="btn btn-ghost btn-sm">{_('关于')}</a>
-              <ul
-                className="dropdown-content menu bg-base-100 rounded-box z-50 w-35 p-2 shadow dropdown-panel top-full left-1/2 -translate-x-1/2 text-center"
-                onMouseLeave={() => setOpen(null)}
+            <li className="site-nav-dropdown relative">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm site-nav-trigger"
+                aria-haspopup="menu"
               >
+                {_('关于')}
+              </button>
+              <ul className="site-nav-submenu menu bg-base-100 rounded-box z-50 w-35 p-2 dropdown-panel text-center">
                 <li>
-                  <RouterLink to="/page/about/faq" onMouseDown={() => setOpen(null)}>
-                    {_('常见问题')}
-                  </RouterLink>
+                  <RouterLink to="/page/about/faq">{_('常见问题')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/about/team" onMouseDown={() => setOpen(null)}>
-                    {_('团队')}
-                  </RouterLink>
+                  <RouterLink to="/page/about/team">{_('团队')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/about/releases" onMouseDown={() => setOpen(null)}>
-                    {_('版本发布')}
-                  </RouterLink>
+                  <RouterLink to="/page/about/releases">{_('版本发布')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/about/community-guide" onMouseDown={() => setOpen(null)}>
-                    {_('社区指南')}
-                  </RouterLink>
+                  <RouterLink to="/page/about/community-guide">{_('社区指南')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/about/coc" onMouseDown={() => setOpen(null)}>
-                    {_('行为规范')}
-                  </RouterLink>
+                  <RouterLink to="/page/about/coc">{_('行为规范')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/about/privacy" onMouseDown={() => setOpen(null)}>
-                    {_('隐私政策')}
-                  </RouterLink>
+                  <RouterLink to="/page/about/privacy">{_('隐私政策')}</RouterLink>
                 </li>
               </ul>
             </li>
@@ -325,12 +132,11 @@ const Header: FC = () => {
               </RouterLink>
             </li>
           </ul>
-        </div>
+        </nav>
         <div className="navbar-end gap-2 items-center">
-          <LanguagePicker />
-          <div className="hidden md:block">
-            <ThemePicker />
-          </div>
+          <RouterLink to="/settings" className="btn btn-ghost btn-sm">
+            {_('设置')}
+          </RouterLink>
         </div>
       </div>
     </header>

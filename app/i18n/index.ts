@@ -42,11 +42,7 @@ export const resolveLocale = (value: string | null | undefined): SupportedLocale
 }
 
 const getInitialLocale = (): SupportedLocale => {
-  if (typeof window === 'undefined') {
-    return DEFAULT_LOCALE
-  }
-
-  return resolveLocale(window.localStorage.getItem('rue.locale'))
+  return DEFAULT_LOCALE
 }
 
 const i18n = createI18n({

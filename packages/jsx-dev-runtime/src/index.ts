@@ -77,5 +77,13 @@ export namespace JSX {
   }
   export interface IntrinsicAttributes {
     key?: string | number
+    'client:load'?: boolean | ''
+    'client:idle'?: boolean | ''
+    'client:visible'?: boolean | ''
+    'client:media'?: string | boolean
+    'client:interaction'?: string | string[] | boolean
+    'client:none'?: boolean | ''
+    'client:only'?: boolean | ''
+    fallback?: any
   }
 }

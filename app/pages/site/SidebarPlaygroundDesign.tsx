@@ -1,6 +1,7 @@
-import { type FC, onUnmounted, useRef, useState } from '@rue-js/rue'
+import { type FC, onUnmounted, useRef } from '@rue-js/rue'
 import { RouterView } from '@rue-js/router'
 import { extend } from '@rue-js/shared'
+import { resolveStaticRenderPath, useStaticRenderContext } from '../../staticRenderContext'
 import {
   type SidebarSection,
   createPersistentSidebarPlayground,
@@ -12,6 +13,14 @@ const readCurrentHashPath = (): string => {
     return hash.slice(1) || '/'
   }
   return hash || globalThis.location?.pathname || ''
+}
+
+const useInitialCurrentPath = (): string => {
+  const staticRenderContext = useStaticRenderContext()
+
+  return import.meta.env.SSR
+    ? resolveStaticRenderPath(staticRenderContext?.url)
+    : readCurrentHashPath()
 }
 
 const withDesignHrefs = (sections: SidebarSection[]): SidebarSection[] => {
@@ -515,17 +524,16 @@ const SidebarPlayground: FC = props => {
     return <>{props.children}</>
   }
 
-  const [initialCurrentPath] = useState(readCurrentHashPath)
+  const initialCurrentPath = useInitialCurrentPath()
 
   return (
-    <BaseSidebarPlayground currentPath={initialCurrentPath.value}>
-      {props.children}
-    </BaseSidebarPlayground>
+    <BaseSidebarPlayground currentPath={initialCurrentPath}>{props.children}</BaseSidebarPlayground>
   )
 }
 
 export const DesignRouteLayout: FC = () => {
   const registeredRef = useRef(false)
+  const initialCurrentPath = useInitialCurrentPath()
 
   if (!registeredRef.current) {
     registeredRef.current = true
@@ -542,7 +550,9 @@ export const DesignRouteLayout: FC = () => {
   })
 
   return (
-    <RouteSidebarPlayground>
+    <RouteSidebarPlayground
+      currentPath={import.meta.env.SSR && initialCurrentPath ? initialCurrentPath : undefined}
+    >
       <RouterView />
     </RouteSidebarPlayground>
   )

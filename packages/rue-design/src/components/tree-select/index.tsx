@@ -1527,8 +1527,13 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     node: TreeSelectNormalizedNode,
     loadedKeySet: Set<string> = getLoadedKeySet(),
   ) => {
+    const safeLoadedKeySet =
+      loadedKeySet && typeof loadedKeySet.has === 'function' ? loadedKeySet : new Set<string>()
     return (
-      !!loadData && !node.isLeaf && node.children.length === 0 && !loadedKeySet.has(node.valueKey)
+      !!loadData &&
+      !node.isLeaf &&
+      node.children.length === 0 &&
+      !safeLoadedKeySet.has(node.valueKey)
     )
   }
 
@@ -1715,7 +1720,11 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
         activeTree.byValueKey,
         !!treeCheckStrictly,
       )
-      const currentlyChecked = currentSelection.derivedCheckState.checkedKeys.has(node.valueKey)
+      const checkedKeys = currentSelection.derivedCheckState.checkedKeys
+      const currentlyChecked =
+        checkedKeys && typeof checkedKeys.has === 'function'
+          ? checkedKeys.has(node.valueKey)
+          : false
 
       if (treeCheckStrictly) {
         if (currentlyChecked) {
@@ -2038,6 +2047,16 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     void renderVersion.value
     return getLoadedKeySet()
   })
+  const readVisibleNodes = () => visibleNodes.get() ?? []
+  const readSelectionState = () => selectionState.get() ?? getSelectionSnapshot()
+  const readExpandedKeySet = () => {
+    const keySet = expandedKeySetState.get()
+    return keySet && typeof keySet.has === 'function' ? keySet : new Set<string>()
+  }
+  const readLoadedKeySet = () => {
+    const keySet = loadedKeySetState.get()
+    return keySet && typeof keySet.has === 'function' ? keySet : new Set<string>()
+  }
 
   return (
     <div
@@ -2209,9 +2228,9 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
             }
           }}
         >
-          {visibleNodes.get().length ? (
-            visibleNodes.get().map(({ node, matched }) => {
-              const selection = selectionState.get()
+          {readVisibleNodes().length ? (
+            readVisibleNodes().map(({ node, matched }) => {
+              const selection = readSelectionState()
               const state = selection.derivedCheckState.stateMap[node.valueKey] ?? {
                 checked: false,
                 halfChecked: false,
@@ -2223,9 +2242,9 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
               const halfChecked = treeCheckable ? state.halfChecked : false
               const expanded = mergedSearchValueState.get()
                 ? true
-                : expandedKeySetState.get().has(node.valueKey)
+                : readExpandedKeySet().has(node.valueKey)
               const loadingNode = loadingNodeKeys.value.includes(node.valueKey)
-              const canExpand = canExpandNode(node, loadedKeySetState.get())
+              const canExpand = canExpandNode(node, readLoadedKeySet())
               const checkboxDisabled =
                 mergedDisabled || node.disabled || node.disableCheckbox || !node.checkable
               const label = treeTitleRender

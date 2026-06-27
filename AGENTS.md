@@ -2,6 +2,19 @@
 
 Rue 是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发体验，同时提供默认 Block / Vapor 渲染路径、响应式能力、路由和基于 Rust / WebAssembly 的运行时扩展。
 
+## 工作流
+
+1. 搜索与理解
+   - Rust 代码导航优先使用 `./skills/rustcodegraph/SKILL.md` skill；未索引、文档/配置或图未覆盖时使用 `rg` 与文件读取。
+   - 实现前用代码搜索验证假设。
+2. 定义范围
+   - 明确当前任务的修改边界，不顺手改无关模块。
+3. 最小实现
+   - 沿用现有模式；当复制小段局部逻辑更清晰时允许复制。
+4. 风险匹配验证
+   - 文档变更做轻量检查。
+   - 代码或高风险变更执行相关检查与聚焦场景。
+
 ## Monorepo Overview
 
 - **Core Framework**: `packages/rue`, `packages/runtime`, `packages/shared`, `packages/jsx-runtime`, `packages/jsx-dev-runtime`

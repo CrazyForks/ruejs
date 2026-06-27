@@ -1,7 +1,7 @@
 import { type FC, computed, useState, watch, useEffect, useRef } from '@rue-js/rue'
 import { useRoute } from '@rue-js/router'
 import SidebarPlayground from './SidebarPlaygroundPage'
-import { loadCachedDocHtml } from './docDetailCache'
+import { loadCachedDocHtml, readStaticDocHtmlByRoute } from './docDetailCache'
 
 function getContext(): {
   uiBase: string
@@ -20,7 +20,6 @@ type PageDocDetailProps = {
 
 const PageDocDetail: FC<PageDocDetailProps> = props => {
   const route = useRoute()
-  const [html, setHtml] = useState<string>('')
   const [_results, _setResults] = useState<{ id: string; title: string; snippet: string }[]>([])
   const routeSegment = computed<string>(() => {
     const propPath = props.params?.path as string | undefined
@@ -39,6 +38,7 @@ const PageDocDetail: FC<PageDocDetailProps> = props => {
     const seg = routeSegment.get()
     return seg ? `${context.uiBase}/${seg}` : ''
   })
+  const [html, setHtml] = useState<string>(() => readStaticDocHtmlByRoute(currentPath.get()))
 
   useEffect(() => {
     const routeWatch = watch(

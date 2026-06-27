@@ -1,5 +1,6 @@
-import { type FC, useState } from '@rue-js/rue'
+import { type FC } from '@rue-js/rue'
 import { RouterView, useRoute } from '@rue-js/router'
+import { resolveStaticRenderPath, useStaticRenderContext } from '../../staticRenderContext'
 import {
   createPersistentSidebarPlayground,
   type SidebarSection,
@@ -11,6 +12,14 @@ const readCurrentHashPath = (): string => {
     return hash.slice(1) || '/'
   }
   return hash || globalThis.location?.pathname || ''
+}
+
+const useInitialCurrentPath = (): string => {
+  const staticRenderContext = useStaticRenderContext()
+
+  return import.meta.env.SSR
+    ? resolveStaticRenderPath(staticRenderContext?.url)
+    : readCurrentHashPath()
 }
 
 const isTestEnvironment = (): boolean => {
@@ -257,6 +266,61 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           id: 'resources-jsx',
           title: '资源（纯 JSX）',
           href: '/examples/resources-jsx',
+        },
+        {
+          id: 'rue-islands',
+          title: 'Rue Islands 总览',
+          href: '/examples/rue-islands',
+        },
+        {
+          id: 'rue-islands-load',
+          title: 'Island：client:load',
+          href: '/examples/rue-islands/load',
+        },
+        {
+          id: 'rue-islands-idle',
+          title: 'Island：client:idle',
+          href: '/examples/rue-islands/idle',
+        },
+        {
+          id: 'rue-islands-visible',
+          title: 'Island：client:visible',
+          href: '/examples/rue-islands/visible',
+        },
+        {
+          id: 'rue-islands-media',
+          title: 'Island：client:media',
+          href: '/examples/rue-islands/media',
+        },
+        {
+          id: 'rue-islands-interaction',
+          title: 'Island：client:interaction',
+          href: '/examples/rue-islands/interaction',
+        },
+        {
+          id: 'rue-islands-none',
+          title: 'Island：client:none',
+          href: '/examples/rue-islands/none',
+        },
+        {
+          id: 'rue-islands-only',
+          title: 'Island：client:only',
+          href: '/examples/rue-islands/only',
+        },
+        {
+          id: 'rue-islands-props',
+          title: 'Island：安全 Props',
+          href: '/examples/rue-islands/props',
+        },
+        {
+          id: 'rue-islands-manifest',
+          title: 'Island：Manifest Props',
+          href: '/examples/rue-islands/manifest',
+        },
+        {
+          id: 'rue-islands-compiler',
+          title: 'Island：client:* 编译',
+          href: '/examples/rue-islands/compiler',
         },
         {
           id: 'context',
@@ -596,18 +660,22 @@ const SidebarPlayground: FC<SidebarPlaygroundProps> = props => {
     return <>{props.children}</>
   }
 
-  const [initialCurrentPath] = useState(readCurrentHashPath)
+  const initialCurrentPath = useInitialCurrentPath()
 
   return (
-    <BaseSidebarPlayground currentPath={props.currentPath ?? initialCurrentPath.value}>
+    <BaseSidebarPlayground currentPath={props.currentPath ?? initialCurrentPath}>
       {props.children}
     </BaseSidebarPlayground>
   )
 }
 
 export const ExamplesRouteLayout: FC = () => {
+  const initialCurrentPath = useInitialCurrentPath()
+
   return (
-    <RouteSidebarPlayground>
+    <RouteSidebarPlayground
+      currentPath={import.meta.env.SSR && initialCurrentPath ? initialCurrentPath : undefined}
+    >
       <RouterView />
     </RouteSidebarPlayground>
   )

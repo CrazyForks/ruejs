@@ -313,7 +313,7 @@ const LoadingRoot: FC<LoadingProps> = props => {
   }
 
   const revealDelayTarget = () => {
-    if (delayTargetElement) {
+    if (delayTargetElement?.classList) {
       delayTargetElement.classList.remove('opacity-0')
     }
   }

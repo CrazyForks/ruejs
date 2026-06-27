@@ -415,6 +415,9 @@ const Status: FC<StatusProps> = ({
   const presetTone = isStatusTone(mergedColor) ? mergedColor : undefined
   const customColor = typeof mergedColor === 'string' && !presetTone ? mergedColor : undefined
   const toneClasses = resolveToneClasses(presetTone)
+  const toneDotClass = toneClasses?.dotClass ?? ''
+  const toneBadgeClass = toneClasses?.badgeClass ?? 'bg-neutral text-neutral-content'
+  const toneTextClass = toneClasses?.textClass ?? 'text-base-content'
   const displayCount = dot ? '' : normalizeCount(count, overflowCount)
   const isZeroCount = displayCount === 0 || displayCount === '0'
   const ignoreCount = !hasExplicitCount || (isZeroCount && !showZero)
@@ -446,7 +449,7 @@ const Status: FC<StatusProps> = ({
         rootClassName={mergeClassNames(
           'status',
           resolvedSize ? `status-${resolvedSize}` : undefined,
-          toneClasses.dotClass,
+          toneDotClass,
           processingClassName,
         )}
         rootStyle={customColor ? { backgroundColor: customColor, color: customColor } : undefined}
@@ -472,7 +475,7 @@ const Status: FC<StatusProps> = ({
           <span className="indicator inline-flex align-middle">
             <StatusDot
               size={size}
-              dotClass={toneClasses.dotClass}
+              dotClass={toneDotClass}
               processingClassName={processingClassName}
               className="indicator-item ring-2 ring-base-100 shadow-sm"
               style={indicatorOffsetStyle}
@@ -489,7 +492,7 @@ const Status: FC<StatusProps> = ({
                 <span className="inline-flex items-center gap-2">
                   <StatusDot
                     size={size}
-                    dotClass={toneClasses.dotClass}
+                    dotClass={toneDotClass}
                     processingClassName={processingClassName}
                     className="shrink-0"
                     customColor={customColor}
@@ -516,7 +519,7 @@ const Status: FC<StatusProps> = ({
       >
         <StatusDot
           size={size}
-          dotClass={toneClasses.dotClass}
+          dotClass={toneDotClass}
           processingClassName={processingClassName}
           customColor={customColor}
         />
@@ -524,7 +527,7 @@ const Status: FC<StatusProps> = ({
           <StatusText
             text={text}
             usesTone={usesStatusLabelMode}
-            textClass={toneClasses.textClass}
+            textClass={toneTextClass}
             customColor={customColor}
           />
         ) : null}
@@ -549,7 +552,7 @@ const Status: FC<StatusProps> = ({
           <span className="indicator inline-flex align-middle">
             <StatusCount
               size={size}
-              badgeClass={toneClasses.badgeClass}
+              badgeClass={toneBadgeClass}
               className="indicator-item"
               style={indicatorOffsetStyle}
               title={indicatorTitle}
@@ -566,7 +569,7 @@ const Status: FC<StatusProps> = ({
                 <span className="inline-flex items-center gap-2">
                   <StatusDot
                     size={size}
-                    dotClass={toneClasses.dotClass}
+                    dotClass={toneDotClass}
                     processingClassName={processingClassName}
                     className="shrink-0"
                     customColor={customColor}
@@ -593,7 +596,7 @@ const Status: FC<StatusProps> = ({
       >
         <StatusCount
           size={size}
-          badgeClass={toneClasses.badgeClass}
+          badgeClass={toneBadgeClass}
           title={indicatorTitle}
           customColor={customColor}
           displayCount={displayCount}
@@ -602,7 +605,7 @@ const Status: FC<StatusProps> = ({
           <StatusText
             text={text}
             usesTone={usesStatusLabelMode}
-            textClass={toneClasses.textClass}
+            textClass={toneTextClass}
             customColor={customColor}
           />
         ) : null}
@@ -623,7 +626,7 @@ const Status: FC<StatusProps> = ({
         {showAsDot ? (
           <StatusDot
             size={size}
-            dotClass={toneClasses.dotClass}
+            dotClass={toneDotClass}
             processingClassName={processingClassName}
             className="indicator-item ring-2 ring-base-100 shadow-sm"
             style={indicatorOffsetStyle}
@@ -633,7 +636,7 @@ const Status: FC<StatusProps> = ({
         ) : !ignoreCount ? (
           <StatusCount
             size={size}
-            badgeClass={toneClasses.badgeClass}
+            badgeClass={toneBadgeClass}
             className="indicator-item ring-2 ring-base-100"
             style={indicatorOffsetStyle}
             title={indicatorTitle}
@@ -647,7 +650,7 @@ const Status: FC<StatusProps> = ({
         <StatusText
           text={text}
           usesTone={usesStatusLabelMode}
-          textClass={toneClasses.textClass}
+          textClass={toneTextClass}
           customColor={customColor}
         />
       ) : null}

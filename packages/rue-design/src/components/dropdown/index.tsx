@@ -670,8 +670,17 @@ const Dropdown: FC<DropdownProps> = ({
   let overlayElement: HTMLElement | null = null
   const isControlled = open !== undefined
 
+  const hasElementDom = (element: HTMLElement | null): element is HTMLElement =>
+    !!element && typeof element.setAttribute === 'function'
+
   const syncOverlayDom = (visible = currentOpen.value || !!forceOpen) => {
-    if (!overlayElement) return
+    if (!hasElementDom(overlayElement) || !overlayElement.style) return
+    if (
+      typeof overlayElement.style.setProperty !== 'function' ||
+      typeof overlayElement.style.removeProperty !== 'function'
+    ) {
+      return
+    }
     if (visible && contextPosition.value) {
       const safePosition = getSafeContextOverlayPosition(contextPosition.value, overlayElement)
       overlayElement.style.position = 'fixed'
@@ -700,10 +709,10 @@ const Dropdown: FC<DropdownProps> = ({
 
   const syncDropdownDom = (nextOpen: boolean) => {
     const nextVisible = !!forceOpen || nextOpen
-    if (rootElement) {
+    if (rootElement?.classList) {
       rootElement.classList.toggle('dropdown-open', nextVisible)
     }
-    if (triggerElement) {
+    if (hasElementDom(triggerElement)) {
       triggerElement.setAttribute('aria-expanded', nextOpen ? 'true' : 'false')
     }
     syncOverlayDom(nextVisible)

@@ -378,7 +378,7 @@ const Root: FC<TooltipProps> = ({
     (hasCustomColor ||
       !isPrimitiveTooltipContent(resolvedContent) ||
       !!bodyClassName ||
-      Object.keys(bodyStyle).length > 0)
+      Object.keys(bodyStyle ?? {}).length > 0)
   const useDataTip = hasContent && !useBodyNode && isPrimitiveTooltipContent(resolvedContent)
   const manualOnly = !allowHover && !allowFocus
   const shouldForceHidden = !disabled && (open === false || (!currentOpen && manualOnly))
@@ -484,7 +484,7 @@ const Root: FC<TooltipProps> = ({
       <div
         id={bodyId}
         className={mergeClassNames('tooltip-content', bodyClassName)}
-        style={Object.keys(bodyFinalStyle).length > 0 ? bodyFinalStyle : undefined}
+        style={Object.keys(bodyFinalStyle ?? {}).length > 0 ? bodyFinalStyle : undefined}
       >
         {resolvedContent}
       </div>

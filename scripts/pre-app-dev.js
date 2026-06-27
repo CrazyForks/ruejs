@@ -9,6 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
 const runtimeVaporRoot = path.resolve(__dirname, '../packages/runtime-vapor')
 const runtimeVaporBuildInputs = ['src', 'Cargo.toml', 'Cargo.lock']
+const shouldBuildNodeRuntime = process.argv.includes('--node-runtime')
 
 const generateDocsSearchIndex = () => {
   const result = spawnSync('node', ['scripts/generate-doc-search-index.js'], {
@@ -75,6 +76,20 @@ const requiredBuilds = [
       'pkg/rue_runtime_vapor_bg.wasm',
     ],
   },
+  ...(shouldBuildNodeRuntime
+    ? [
+        {
+          file: 'pkg-node/rue_runtime_vapor_bg.wasm',
+          script: 'build-node',
+          requiresDebugInfo: false,
+          outputs: [
+            'pkg-node/rue_runtime_vapor.js',
+            'pkg-node/rue_runtime_vapor_bg.wasm',
+            'pkg-node/package.json',
+          ],
+        },
+      ]
+    : []),
 ]
 
 const missingOrStaleBuilds = requiredBuilds.filter(({ outputs, requiresDebugInfo }) => {

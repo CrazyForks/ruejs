@@ -4,7 +4,7 @@ Collapse 组件概述
 - 新增 items 驱动的分组折叠能力，支持受控/非受控、手风琴、额外信息与尺寸等增强 API。
 */
 import type { FC } from '@rue-js/rue'
-import { computed, ref } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 
 let collapseGroupSeed = 0
 
@@ -485,9 +485,11 @@ const Collapse: FC<CollapseProps> = ({
   const uncontrolledOpenKeys = ref(
     resolveItemsDefaultOpenKeys(normalizedItems, defaultActiveKey, accordion),
   )
-  const getCurrentOpenKeys = () =>
-    activeKey !== undefined ? normalizeOpenKeys(activeKey, accordion) : uncontrolledOpenKeys.value
-  const currentOpenKeys = computed(() => getCurrentOpenKeys())
+  const getCurrentOpenKeys = () => {
+    const keys =
+      activeKey !== undefined ? normalizeOpenKeys(activeKey, accordion) : uncontrolledOpenKeys.value
+    return Array.isArray(keys) ? keys : []
+  }
 
   if (hasItems) {
     const groupName = generatedGroupName.value
@@ -538,7 +540,7 @@ const Collapse: FC<CollapseProps> = ({
           const itemShowArrow = item.showArrow ?? hasManagedIcon
           const itemCollapsible =
             disabled || item.disabled ? 'disabled' : (item.collapsible ?? collapsible ?? 'header')
-          const itemOpen = currentOpenKeys.get().some(key => key === item.key)
+          const itemOpen = getCurrentOpenKeys().some(key => key === item.key)
           const hasHeaderMeta = item.description != null || item.extra != null
           const iconOffsetClassName = hasHeaderMeta ? 'pt-1' : 'mt-0.5'
           const panelSurfaceClass = resolvePanelSurfaceClass(resolvedBordered, ghost)

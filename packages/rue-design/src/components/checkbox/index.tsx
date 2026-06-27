@@ -410,7 +410,7 @@ const Group: FC<CheckboxGroupProps> = ({
   const syncChildInputs = () => {
     const root = instance.root
     const selectedSet = new Set(readCurrentValue().map(serializeValue))
-    if (!root) return
+    if (!root || typeof root.querySelectorAll !== 'function') return
 
     root
       .querySelectorAll<HTMLInputElement>('input[type="checkbox"][data-rue-checkbox-input="true"]')

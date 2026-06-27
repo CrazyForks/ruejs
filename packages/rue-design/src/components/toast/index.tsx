@@ -541,6 +541,8 @@ const useToastMessage = (options: ToastUseMessageOptions = {}) => {
       ctx.viewportElement = viewportElement
     }
 
+    if (typeof target.appendChild !== 'function') return null
+
     if (ctx.viewportElement.parentElement !== target) {
       target.appendChild(ctx.viewportElement)
     }

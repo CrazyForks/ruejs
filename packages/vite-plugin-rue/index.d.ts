@@ -1,5 +1,29 @@
 import type { Plugin, UserConfig } from 'vite'
 
+export type RueIslandHydrationStrategy =
+  | 'load'
+  | 'idle'
+  | 'visible'
+  | 'media'
+  | 'interaction'
+  | 'none'
+  | 'only'
+
+export interface RueIslandManifestEntry {
+  id: string
+  component: string
+  entry?: string
+  exportName?: string
+  hydrate: RueIslandHydrationStrategy
+  media?: string
+  interaction?: string | string[]
+}
+
+export type RueIslandManifest = Record<string, RueIslandManifestEntry>
+
+/** Virtual module id that exposes the current Rue island manifest. */
+export const RUE_ISLAND_MANIFEST_ID: 'virtual:rue-island-manifest'
+
 /** 传给 Rue 转换执行器的完整上下文。 */
 export interface RueTransformExecutorPayload {
   /** 待转换的 TSX/JSX 源码。 */

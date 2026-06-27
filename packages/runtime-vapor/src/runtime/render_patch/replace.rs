@@ -14,6 +14,8 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 
+const RUE_HYDRATED_ADOPTED_NODE: &str = "__rue_hydrated_adopted";
+
 #[derive(Clone)]
 struct ReplaceFocusSnapshot {
     path: Vec<u32>,
@@ -34,6 +36,66 @@ fn js_string_prop(value: &JsValue, name: &str) -> Option<String> {
 
 fn js_u32_prop(value: &JsValue, name: &str) -> Option<u32> {
     js_prop(value, name).as_f64().map(|number| number as u32)
+}
+
+fn js_bool_prop(value: &JsValue, name: &str) -> bool {
+    js_prop(value, name).as_bool().unwrap_or(false)
+}
+
+fn is_hydrated_adopted_host(value: &JsValue) -> bool {
+    js_bool_prop(value, RUE_HYDRATED_ADOPTED_NODE)
+}
+
+fn try_adopt_hydrated_replacement<A: DomAdapter>(
+    adapter: &mut A,
+    parent: &mut A::Element,
+    old_host: &A::Element,
+    new_el: &A::Element,
+) -> bool
+where
+    A::Element: Clone + Into<JsValue>,
+{
+    let old_js: JsValue = old_host.clone().into();
+    if !is_hydrated_adopted_host(&old_js) {
+        return false;
+    }
+
+    let new_js: JsValue = new_el.clone().into();
+    if normalized_tag_name(&old_js) != normalized_tag_name(&new_js) {
+        return false;
+    }
+    if !adapter.contains(parent, old_host) {
+        return false;
+    }
+
+    adapter.insert_before(parent, new_el, old_host);
+    let mut p2 = parent.clone();
+    adapter.remove_child(&mut p2, old_host);
+    true
+}
+
+fn replace_mounted_root_host<A: DomAdapter>(
+    mounted: &mut MountedSubtreeState<A>,
+    host: &A::Element,
+) where
+    A::Element: Clone,
+{
+    match mounted {
+        MountedSubtreeState::Text(text) => {
+            text.host = Some(host.clone());
+        }
+        MountedSubtreeState::Vapor(vapor) => {
+            vapor.host = Some(host.clone());
+            vapor.fragment_nodes.clear();
+        }
+        MountedSubtreeState::Patch(node) => {
+            node.el = Some(host.clone());
+            node.fragment_nodes.clear();
+            if let Some(subtree) = node.comp_subtree.as_deref_mut() {
+                replace_mounted_root_host(subtree, host);
+            }
+        }
+    }
 }
 
 #[cfg(any(feature = "dev", test))]
@@ -477,6 +539,21 @@ where
                 self.resolve_dest_parent(parent, old.host_cloned(), anchor_opt.clone());
             let insert_anchor = old.host_cloned().or(anchor_opt.clone());
             // 根据旧 snapshot 类型选择替换策略：Vapor/Component/Text 的 DOM 定位信息不同。
+            if let Some(old_host) = old.host_cloned() {
+                if let Some(adapter) = self.get_dom_adapter_mut() {
+                    if try_adopt_hydrated_replacement(
+                        adapter,
+                        &mut dest_parent,
+                        &old_host,
+                        &el_new,
+                    ) {
+                        let mut next_mounted = mounted;
+                        replace_mounted_root_host(&mut next_mounted, &old_host);
+                        *old = next_mounted;
+                        return;
+                    }
+                }
+            }
             match old {
                 MountedSubtreeState::Vapor(vapor) => {
                     self.replace_vapor_like(

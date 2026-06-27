@@ -756,10 +756,11 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('const currentOpenKeys = _$vaporWithHookId("computed:')
-    expect(code).toContain('currentOpenKeys.get().some')
+    expect(code).toContain('getCurrentOpenKeys().some')
     expect(code).toContain('const __slot = extra;')
     expect(code).not.toMatch(/_\$settextContent\([^;]+extra\)/)
+    expect(code).not.toContain('const currentOpenKeys = _$vaporWithHookId("computed:')
+    expect(code).not.toContain('currentOpenKeys.get().some')
     expect(code).not.toContain('currentOpenKeys.some')
   })
 
@@ -1062,9 +1063,11 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('const currentValues = _$vaporWithHookId("computed:')
+    expect(code).toContain('getCurrentValues().some')
     expect(code).toContain('_$vaporKeyedList')
     expect(code).toContain('_$setChecked')
+    expect(code).not.toContain('const currentValues = _$vaporWithHookId("computed:')
+    expect(code).not.toContain('currentValues.get().some')
     expect(code).not.toContain('@rue-js/jsx-dev-runtime')
     expect(code).not.toContain('_$vaporBindUseRef')
     expect(code).not.toContain('useRef')

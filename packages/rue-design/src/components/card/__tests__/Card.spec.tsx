@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h } from '@rue-js/rue'
 import { render, setReactiveScheduling } from '@rue-js/rue'
+import { renderToString } from '@rue-js/server-renderer'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 import Card from '../index'
 
@@ -11,6 +12,17 @@ afterEach(() => {
 })
 
 describe('Card', () => {
+  it('server-renders semantic structure without actions', async () => {
+    const html = await renderToString(
+      h(Card, { title: 'SSR Card', className: 'bg-base-100' }, h('p', null, 'Server body')),
+    )
+
+    expect(html).toContain('SSR Card')
+    expect(html).toContain('Server body')
+    expect(html).toContain('card-body')
+    expect(html).not.toContain('rue-card-actions')
+  })
+
   it('renders with base class and legacy class props', async () => {
     const c = mountContainer()
     render(

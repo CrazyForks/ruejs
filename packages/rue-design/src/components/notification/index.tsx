@@ -638,6 +638,10 @@ const NotificationItem: FC<NotificationItemProps> = ({
   const resolvedTitle = title ?? message
   const resolvedActions = actions ?? btn
   const resolvedClosable = resolveClosable(closable, closeIcon)
+  const resolvedClosableEnabled = !!resolvedClosable?.enabled
+  const resolvedClosableLabel = resolvedClosable?.label ?? '关闭通知'
+  const resolvedClosableIcon = resolvedClosable?.icon
+  const resolvedClosableOnClose = resolvedClosable?.onClose
   const resolvedShowIcon = showIcon ?? (icon !== undefined || type !== undefined)
   const resolvedIcon = resolvedShowIcon ? (icon ?? renderDefaultIcon(type)) : null
   const notificationMarker = providedNotificationMarker ?? 'true'
@@ -689,7 +693,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
     syncItemDom(false)
     if (!isControlled) uncontrolledOpen.value = false
     const meta = { source, event }
-    if (source === 'close' && resolvedClosable.onClose) resolvedClosable.onClose(meta)
+    if (source === 'close' && resolvedClosableOnClose) resolvedClosableOnClose(meta)
     if (onOpenChange) onOpenChange(false, meta)
     if (onClose) onClose(meta)
   }
@@ -848,10 +852,10 @@ const NotificationItem: FC<NotificationItemProps> = ({
                   </div>
                 ) : null}
               </div>
-              {resolvedClosable.enabled ? (
+              {resolvedClosableEnabled ? (
                 <button
                   type="button"
-                  aria-label={resolvedClosable.label}
+                  aria-label={resolvedClosableLabel}
                   className={mergeClassNames(
                     'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl transition',
                     toneStyles.close,
@@ -861,7 +865,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
                   onClick={(event: MouseEvent) => requestClose('close', event)}
                 >
                   <NotificationSlot>
-                    {resolvedClosable.icon ?? <CloseIcon className="h-4 w-4" />}
+                    {resolvedClosableIcon ?? <CloseIcon className="h-4 w-4" />}
                   </NotificationSlot>
                 </button>
               ) : null}
@@ -1084,6 +1088,7 @@ export const useNotification = (options: NotificationUseOptions = {}) => {
       element.dataset.rueNotificationViewport = 'true'
       store.viewportElement = element
     }
+    if (typeof target.appendChild !== 'function') return null
     if (store.viewportElement.parentNode !== target) target.appendChild(store.viewportElement)
     return store.viewportElement
   }
@@ -1186,6 +1191,7 @@ const ensureGlobalViewport = () => {
     element.dataset.rueNotificationGlobalViewport = 'true'
     globalViewportElement = element
   }
+  if (typeof target.appendChild !== 'function') return null
   if (globalViewportElement.parentNode !== target) target.appendChild(globalViewportElement)
   return globalViewportElement
 }

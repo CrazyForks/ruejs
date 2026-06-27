@@ -63,6 +63,18 @@
       "import": "./dist/runtime.vapor.esm-bundler.js",
       "require": "./dist/runtime.vapor.cjs.js"
     },
+    "./island": {
+      "types": "./src/island.ts",
+      "node": {
+        "production": "./dist/runtime.island.cjs.prod.js",
+        "development": "./dist/runtime.island.cjs.js",
+        "default": "./dist/runtime.island.cjs.js"
+      },
+      "development": "./src/island.ts",
+      "module": "./dist/runtime.island.esm-bundler.js",
+      "import": "./dist/runtime.island.esm-bundler.js",
+      "require": "./dist/runtime.island.cjs.js"
+    },
     "./dom": {
       "types": "./src/dom.ts"
     },
@@ -97,6 +109,14 @@
       {
         "entry": "src/vapor.ts",
         "filename": "runtime.vapor",
+        "formats": [
+          "esm-bundler",
+          "cjs"
+        ]
+      },
+      {
+        "entry": "src/island.ts",
+        "filename": "runtime.island",
         "formats": [
           "esm-bundler",
           "cjs"

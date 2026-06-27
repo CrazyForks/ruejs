@@ -23,6 +23,8 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 
+const RUE_HYDRATED_ADOPTED_NODE: &str = "__rue_hydrated_adopted";
+
 #[cfg(any(feature = "dev", test))]
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn debug_record_component_patch(record: &Object) {
@@ -77,6 +79,10 @@ fn js_string_prop(value: &JsValue, name: &str) -> Option<String> {
 
 fn js_u32_prop(value: &JsValue, name: &str) -> Option<u32> {
     js_prop(value, name).as_f64().map(|number| number as u32)
+}
+
+fn js_bool_prop(value: &JsValue, name: &str) -> bool {
+    js_prop(value, name).as_bool().unwrap_or(false)
 }
 
 fn normalized_tag_name(value: &JsValue) -> Option<String> {
@@ -170,6 +176,60 @@ fn focus_target_matches(snapshot: &ReplaceFocusSnapshot, target: &JsValue) -> bo
     }
 
     true
+}
+
+fn is_hydrated_adopted_host(value: &JsValue) -> bool {
+    js_bool_prop(value, RUE_HYDRATED_ADOPTED_NODE)
+}
+
+fn try_adopt_hydrated_replacement<A: DomAdapter>(
+    adapter: &mut A,
+    parent: &mut A::Element,
+    old_host: &A::Element,
+    new_el: &A::Element,
+) -> bool
+where
+    A::Element: Clone + Into<JsValue>,
+{
+    let old_js: JsValue = old_host.clone().into();
+    if !is_hydrated_adopted_host(&old_js) {
+        return false;
+    }
+
+    let new_js: JsValue = new_el.clone().into();
+    if normalized_tag_name(&old_js) != normalized_tag_name(&new_js) {
+        return false;
+    }
+    if !adapter.contains(parent, old_host) {
+        return false;
+    }
+
+    adapter.insert_before(parent, new_el, old_host);
+    let mut p2 = parent.clone();
+    adapter.remove_child(&mut p2, old_host);
+    true
+}
+
+fn replace_mounted_root_host<A: DomAdapter>(mounted: &mut MountedSubtreeState<A>, host: &A::Element)
+where
+    A::Element: Clone,
+{
+    match mounted {
+        MountedSubtreeState::Text(text) => {
+            text.host = Some(host.clone());
+        }
+        MountedSubtreeState::Vapor(vapor) => {
+            vapor.host = Some(host.clone());
+            vapor.fragment_nodes.clear();
+        }
+        MountedSubtreeState::Patch(node) => {
+            node.el = Some(host.clone());
+            node.fragment_nodes.clear();
+            if let Some(subtree) = node.comp_subtree.as_deref_mut() {
+                replace_mounted_root_host(subtree, host);
+            }
+        }
+    }
 }
 
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -551,7 +611,7 @@ where
                 }
             }
             Some(old_sub.clone())
-        } else if let Some(mounted_subtree) = self.mount_from_input(&new_sub, Some(parent)) {
+        } else if let Some(mut mounted_subtree) = self.mount_from_input(&new_sub, Some(parent)) {
             // 旧组件 snapshot 没有子树时，先挂载新子树，再按旧 el/anchor 位置插回 DOM。
             if let Some(el_new) = mounted_subtree.host_cloned() {
                 let anchor_opt = self.current_anchor.clone();
@@ -560,6 +620,7 @@ where
                 self.clear_fragment_nodes(&mut dest_parent, &old.fragment_nodes);
 
                 if let Some(a) = self.get_dom_adapter_mut() {
+                    let mut adopted_old_host = false;
                     if let Some(ref el_old) = old.el {
                         #[cfg(any(feature = "dev", test))]
                         {
@@ -610,19 +671,24 @@ where
                                 debug_record_component_patch(&record);
                             }
                         }
-                        if a.contains(&dest_parent, el_old) {
+                        if try_adopt_hydrated_replacement(a, &mut dest_parent, el_old, &el_new) {
+                            replace_mounted_root_host(&mut mounted_subtree, el_old);
+                            adopted_old_host = true;
+                        } else if a.contains(&dest_parent, el_old) {
                             let mut p2 = dest_parent.clone();
                             a.remove_child(&mut p2, el_old);
                         }
                     }
-                    if let Some(anchor) = anchor_opt {
-                        if a.contains(&dest_parent, &anchor) {
-                            a.insert_before(&mut dest_parent, &el_new, &anchor);
+                    if !adopted_old_host {
+                        if let Some(anchor) = anchor_opt {
+                            if a.contains(&dest_parent, &anchor) {
+                                a.insert_before(&mut dest_parent, &el_new, &anchor);
+                            } else {
+                                a.append_child(&mut dest_parent, &el_new);
+                            }
                         } else {
                             a.append_child(&mut dest_parent, &el_new);
                         }
-                    } else {
-                        a.append_child(&mut dest_parent, &el_new);
                     }
                 }
             }
@@ -798,6 +864,21 @@ mod component_plan999_tests {
             ComponentProps::new(),
             Vec::new(),
         )
+    }
+
+    fn vapor_input_with_el(el: JsValue) -> MountInput<JsDomAdapter> {
+        let mut input =
+            MountInput::new_normalized(MountInputType::Vapor, ComponentProps::new(), Vec::new());
+        input.el_hint = Some(el);
+        input
+    }
+
+    fn mark_hydrated_adopted(node: &JsValue) {
+        Reflect::set(node, &JsValue::from_str(RUE_HYDRATED_ADOPTED_NODE), &JsValue::TRUE).unwrap();
+    }
+
+    fn children_array(node: &JsValue) -> Array {
+        Array::from(&Reflect::get(node, &JsValue::from_str("children")).unwrap())
     }
 
     fn call_adapter0(adapter_js: &JsValue, name: &str) -> JsValue {
@@ -1202,6 +1283,122 @@ mod component_plan999_tests {
             &JsValue::from_str("__rue_debug_component_patch_enabled__"),
         )
         .unwrap();
+    }
+
+    #[wasm_bindgen_test]
+    fn component_mount_or_patch_subtree_adopts_hydrated_old_host_snapshot() {
+        let (adapter, adapter_js) = make_adapter();
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(adapter);
+
+        let mut parent = call_adapter0(&adapter_js, "createDocumentFragment");
+        let old_el = node("button");
+        let new_el = node("button");
+        mark_hydrated_adopted(&old_el);
+        append_child(&adapter_js, &parent, &old_el);
+
+        let render = Function::new_no_args("return null");
+        let mut old = MountedPatchSubtree::new_component(
+            render.into(),
+            Some(old_el.clone()),
+            None,
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            None,
+            Some(11),
+        );
+
+        let mounted = rue
+            .comp_mount_or_patch_subtree(&mut old, &mut parent, vapor_input_with_el(new_el.clone()))
+            .expect("hydrated vapor subtree should mount");
+
+        let host: JsValue = mounted.host_cloned().unwrap().into();
+        assert!(Object::is(&host, &old_el));
+        assert!(!Object::is(&host, &new_el));
+        let MountedSubtreeState::Vapor(vapor) = mounted else {
+            panic!("expected vapor subtree");
+        };
+        let vapor_host: JsValue = vapor.host.unwrap().into();
+        assert!(Object::is(&vapor_host, &old_el));
+        assert!(vapor.fragment_nodes.is_empty());
+    }
+
+    #[wasm_bindgen_test]
+    fn component_mount_or_patch_subtree_replaces_when_hydrated_old_tag_mismatches() {
+        let (adapter, adapter_js) = make_adapter();
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(adapter);
+
+        let mut parent = call_adapter0(&adapter_js, "createDocumentFragment");
+        let old_el = node("section");
+        let new_el = node("button");
+        mark_hydrated_adopted(&old_el);
+        append_child(&adapter_js, &parent, &old_el);
+
+        let render = Function::new_no_args("return null");
+        let mut old = MountedPatchSubtree::new_component(
+            render.into(),
+            Some(old_el.clone()),
+            None,
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            None,
+            None,
+        );
+
+        let mounted = rue
+            .comp_mount_or_patch_subtree(&mut old, &mut parent, vapor_input_with_el(new_el.clone()))
+            .expect("mismatched vapor subtree should still mount");
+
+        let host: JsValue = mounted.host_cloned().unwrap().into();
+        assert!(Object::is(&host, &new_el));
+        assert!(!Object::is(&host, &old_el));
+        let children = children_array(&parent);
+        assert_eq!(children.length(), 1);
+        assert!(Object::is(&children.get(0), &new_el));
+    }
+
+    #[wasm_bindgen_test]
+    fn component_mount_or_patch_subtree_does_not_adopt_detached_hydrated_old_host() {
+        let (adapter, adapter_js) = make_adapter();
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(adapter);
+
+        let mut parent = call_adapter0(&adapter_js, "createDocumentFragment");
+        let old_el = node("button");
+        let new_el = node("button");
+        mark_hydrated_adopted(&old_el);
+
+        let render = Function::new_no_args("return null");
+        let mut old = MountedPatchSubtree::new_component(
+            render.into(),
+            Some(old_el.clone()),
+            None,
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            None,
+            None,
+        );
+
+        let mounted = rue
+            .comp_mount_or_patch_subtree(&mut old, &mut parent, vapor_input_with_el(new_el.clone()))
+            .expect("detached hydrated old host should not block mounting");
+
+        let host: JsValue = mounted.host_cloned().unwrap().into();
+        assert!(Object::is(&host, &new_el));
+        assert!(!Object::is(&host, &old_el));
+        let children = children_array(&parent);
+        assert_eq!(children.length(), 1);
+        assert!(Object::is(&children.get(0), &new_el));
     }
 
     #[wasm_bindgen_test]

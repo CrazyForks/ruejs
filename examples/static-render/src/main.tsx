@@ -3,7 +3,7 @@ import {
   createMemoryHistory,
   createRouter,
   createWebHistory,
-  defineAsyncRouteComponent,
+  useAsyncRouteComponent,
   type HistoryLike,
   type RouteRecordRaw,
 } from '@rue-js/router'
@@ -15,22 +15,22 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: defineAsyncRouteComponent(() => import('./pages/Home')),
+    component: useAsyncRouteComponent(() => import('./pages/Home')),
   },
   {
     path: '/about',
     name: 'about',
-    component: defineAsyncRouteComponent(() => import('./pages/About')),
+    component: useAsyncRouteComponent(() => import('./pages/About')),
   },
   {
     path: '/counter',
     name: 'counter',
-    component: defineAsyncRouteComponent(() => import('./pages/Counter')),
+    component: useAsyncRouteComponent(() => import('./pages/Counter')),
   },
   {
     path: '/:path(.*)',
     name: 'not-found',
-    component: defineAsyncRouteComponent(() => import('./pages/NotFound')),
+    component: useAsyncRouteComponent(() => import('./pages/NotFound')),
     meta: { status: 404 },
   },
 ]

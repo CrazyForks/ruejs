@@ -851,14 +851,17 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
   }
 
   const resolvePasswordShellElement = (trigger?: HTMLElement | null) => {
-    return (trigger ?? visibilityButtonElement)?.closest(
-      '[data-rue-input-shell="true"]',
-    ) as HTMLElement | null
+    const source = trigger ?? visibilityButtonElement
+    if (typeof source?.closest !== 'function') return null
+    return source.closest('[data-rue-input-shell="true"]') as HTMLElement | null
   }
 
   const resolvePasswordInputElement = (trigger?: HTMLElement | null) => {
     const shellElement = resolvePasswordShellElement(trigger)
-    const element = shellElement?.querySelector('input') as HTMLInputElement | null
+    const element =
+      typeof shellElement?.querySelector === 'function'
+        ? (shellElement.querySelector('input') as HTMLInputElement | null)
+        : null
     return element ?? inputElement
   }
 
@@ -874,18 +877,30 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
         lastUncontrolledValue = valueSnapshot
         element.value = valueSnapshot
       }
-      element.type = nextVisible ? 'text' : 'password'
+      if ('type' in element) {
+        element.type = nextVisible ? 'text' : 'password'
+      }
     }
     const shellElement = resolvePasswordShellElement(trigger)
     const buttonElement =
-      (shellElement?.querySelector(
-        '[data-rue-password-toggle="true"]',
-      ) as HTMLButtonElement | null) ?? visibilityButtonElement
+      (typeof shellElement?.querySelector === 'function'
+        ? (shellElement.querySelector(
+            '[data-rue-password-toggle="true"]',
+          ) as HTMLButtonElement | null)
+        : null) ?? visibilityButtonElement
     if (buttonElement) {
       visibilityButtonElement = buttonElement
-      buttonElement.setAttribute('aria-label', nextVisible ? 'Hide password' : 'Show password')
-      const visibleIcon = buttonElement.querySelector('[data-rue-password-visible-icon="true"]')
-      const hiddenIcon = buttonElement.querySelector('[data-rue-password-hidden-icon="true"]')
+      if (typeof buttonElement.setAttribute === 'function') {
+        buttonElement.setAttribute('aria-label', nextVisible ? 'Hide password' : 'Show password')
+      }
+      const visibleIcon =
+        typeof buttonElement.querySelector === 'function'
+          ? buttonElement.querySelector('[data-rue-password-visible-icon="true"]')
+          : null
+      const hiddenIcon =
+        typeof buttonElement.querySelector === 'function'
+          ? buttonElement.querySelector('[data-rue-password-hidden-icon="true"]')
+          : null
       if (visibleIcon instanceof HTMLElement) {
         visibleIcon.style.display = nextVisible ? 'inline-flex' : 'none'
       }
@@ -901,7 +916,9 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
     }
     const shellElement = resolvePasswordShellElement(trigger)
     const syncId = String(++passwordVisibilitySyncSeed)
-    shellElement?.setAttribute('data-rue-password-visibility-sync-id', syncId)
+    if (typeof shellElement?.setAttribute === 'function') {
+      shellElement.setAttribute('data-rue-password-visibility-sync-id', syncId)
+    }
     const element = resolvePasswordInputElement(trigger)
     const valueSnapshot = element?.value ?? null
     if (element) {
@@ -909,7 +926,9 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
     }
     currentVisible = nextVisible
     if (inputElement) {
-      inputElement.type = nextVisible ? 'text' : 'password'
+      if ('type' in inputElement) {
+        inputElement.type = nextVisible ? 'text' : 'password'
+      }
     }
     if (!isControlled) {
       uncontrolledVisible.value = nextVisible
@@ -921,6 +940,7 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
     queueMicrotask(() => {
       if (
         shellElement &&
+        typeof shellElement.getAttribute === 'function' &&
         shellElement.getAttribute('data-rue-password-visibility-sync-id') !== syncId
       ) {
         return
@@ -930,6 +950,7 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
     setTimeout(() => {
       if (
         shellElement &&
+        typeof shellElement.getAttribute === 'function' &&
         shellElement.getAttribute('data-rue-password-visibility-sync-id') !== syncId
       ) {
         return

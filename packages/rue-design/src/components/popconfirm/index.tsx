@@ -578,12 +578,12 @@ const Popconfirm: FC<PopconfirmProps> = ({
 
   const setRootElement = (element: HTMLElement | null) => {
     if (rootElement === element) return
-    if (rootElement) {
+    if (rootElement && typeof rootElement.removeEventListener === 'function') {
       rootElement.removeEventListener('focusin', handleNativeFocusIn)
       rootElement.removeEventListener('focusout', handleNativeFocusOut)
     }
     rootElement = element
-    if (rootElement) {
+    if (rootElement && typeof rootElement.addEventListener === 'function') {
       rootElement.addEventListener('focusin', handleNativeFocusIn)
       rootElement.addEventListener('focusout', handleNativeFocusOut)
     }

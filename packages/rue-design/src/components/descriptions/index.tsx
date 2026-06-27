@@ -649,6 +649,8 @@ const Descriptions: FC<DescriptionsProps> = ({
   const tableHostRef = useRef<HTMLElement | null>(null)
   const rawChildren = resolveDefaultSlotChildren(slotSource, children)
   const headerSizeConfig = resolveSizeConfig(size)
+  const headerTitleClassName =
+    headerSizeConfig?.titleClassName ?? resolveSizeConfig().titleClassName
 
   const scheduleCollectedItemsSync = () => {
     Promise.resolve().then(() => {
@@ -971,7 +973,7 @@ const Descriptions: FC<DescriptionsProps> = ({
             <div
               className={joinClassName(
                 'font-semibold tracking-[0.01em] text-base-content',
-                headerSizeConfig.titleClassName,
+                headerTitleClassName,
                 classNames?.title,
               )}
               style={styles?.title}

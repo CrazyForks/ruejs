@@ -1,7 +1,7 @@
 import { type FC, useState, watch, computed, useEffect, useRef } from '@rue-js/rue'
 import { RouterLink, useRoute } from '@rue-js/router'
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlaygroundApi'
-import { loadCachedDocHtml } from './docDetailCache'
+import { loadCachedDocHtml, readStaticDocHtmlByRoute } from './docDetailCache'
 
 // 从 SidebarPlayground 的 SECTIONS_BY_TYPE 派生 DOCS_META，用于上一页/下一页
 type MenuItem = { id: string; title: string; href?: string; children?: MenuItem[] }
@@ -33,7 +33,6 @@ type ApiDocDetailProps = {
 
 const ApiDocDetail: FC<ApiDocDetailProps> = props => {
   const route = useRoute()
-  const [html, setHtml] = useState<string>('')
   const [_results, _setResults] = useState<{ id: string; title: string; snippet: string }[]>([])
   const routeSegment = computed<string>(() => {
     const propPath = props.params?.path as string | undefined
@@ -52,6 +51,7 @@ const ApiDocDetail: FC<ApiDocDetailProps> = props => {
     const seg = routeSegment.get()
     return seg ? `${context.uiBase}/${seg}` : ''
   })
+  const [html, setHtml] = useState<string>(() => readStaticDocHtmlByRoute(currentPath.get()))
 
   const DOCS_META = computed(() => {
     return SECTIONS_BY_TYPE['api'].flatMap(sec => flatten(sec.items))

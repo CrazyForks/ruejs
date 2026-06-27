@@ -40,6 +40,18 @@
       "import": "./dist/server-renderer.esm-bundler.js",
       "require": "./index.js"
     },
+    "./island": {
+      "types": "./src/island.ts",
+      "node": {
+        "production": "./dist/server-renderer.island.cjs.prod.js",
+        "development": "./dist/server-renderer.island.cjs.js",
+        "default": "./dist/server-renderer.island.cjs.js"
+      },
+      "development": "./src/island.ts",
+      "module": "./dist/server-renderer.island.esm-bundler.js",
+      "import": "./dist/server-renderer.island.esm-bundler.js",
+      "require": "./dist/server-renderer.island.cjs.js"
+    },
     "./*": "./*"
   },
   "scripts": {
@@ -56,6 +68,16 @@
     "formats": [
       "esm-bundler",
       "cjs"
+    ],
+    "subEntries": [
+      {
+        "entry": "src/island.ts",
+        "filename": "server-renderer.island",
+        "formats": [
+          "esm-bundler",
+          "cjs"
+        ]
+      }
     ]
   }
 }

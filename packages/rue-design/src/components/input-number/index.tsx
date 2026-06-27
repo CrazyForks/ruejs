@@ -726,13 +726,17 @@ const InputNumberSuffix: FC<InputNumberSuffixProps> = ({
   onMouseStepStart,
   onClickStep,
 }) => {
+  const resolvedVisualConfig = visualConfig ?? resolveControlVisualConfig()
+
   return (
-    <span className={mergeClassName('inline-flex items-center', visualConfig.suffixClassName)}>
+    <span
+      className={mergeClassName('inline-flex items-center', resolvedVisualConfig.suffixClassName)}
+    >
       {suffix}
       {showControls ? (
         <InputNumberControls
           controlsConfig={controlsConfig}
-          visualConfig={visualConfig}
+          visualConfig={resolvedVisualConfig}
           onPointerStepStart={onPointerStepStart}
           onMouseStepStart={onMouseStepStart}
           onClickStep={onClickStep}
@@ -1127,8 +1131,10 @@ const InputNumber: FC<InputNumberProps> = ({
   const controlsConfig = controls && typeof controls === 'object' ? controls : undefined
   const showControls = controls !== false && !disabled && !readOnly
   const controlVisualConfig = computed(() => resolveControlVisualConfig(size))
-  const currentBounds = resolvedBounds.get()
-  const currentStepValue = stepValue.get()
+  const currentBounds = resolvedBounds.get() ?? resolveBounds(min, max)
+  const currentMin = currentBounds?.min ?? Number.MIN_SAFE_INTEGER
+  const currentMax = currentBounds?.max ?? Number.MAX_SAFE_INTEGER
+  const currentStepValue = stepValue.get() ?? resolveStep(step)
   const clearable = !!allowClear
   const clearConfig = allowClear && typeof allowClear === 'object' ? allowClear : undefined
   const usesShell = prefix !== undefined || suffix !== undefined || showControls || clearable
@@ -1255,8 +1261,8 @@ const InputNumber: FC<InputNumberProps> = ({
             : rawInputClassName
         }
         role="spinbutton"
-        aria-valuemin={String(currentBounds.min)}
-        aria-valuemax={String(currentBounds.max)}
+        aria-valuemin={String(currentMin)}
+        aria-valuemax={String(currentMax)}
         value={displayText}
         aria-valuenow={ariaValueNow.get()}
         aria-valuetext={ariaValueText.get()}

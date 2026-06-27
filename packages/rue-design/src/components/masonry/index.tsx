@@ -360,7 +360,9 @@ const resolveColumnCount = ({
     const gapPx = toPixels(columnGap, element) ?? 0
     const containerWidth =
       element?.clientWidth ||
-      element?.getBoundingClientRect().width ||
+      (typeof element?.getBoundingClientRect === 'function'
+        ? element.getBoundingClientRect().width
+        : undefined) ||
       viewportWidth ||
       BREAKPOINT_MIN_WIDTH.xl
 

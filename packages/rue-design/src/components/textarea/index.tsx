@@ -301,7 +301,7 @@ const Textarea: FC<TextareaProps> = ({
   }
 
   const syncClearButtonVisibility = () => {
-    if (!clearButtonElementRef.current) return
+    if (!clearButtonElementRef.current?.classList) return
     clearButtonElementRef.current.classList.toggle('hidden', currentLength() <= 0 || !!disabled)
   }
 

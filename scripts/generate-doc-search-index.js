@@ -331,7 +331,7 @@ const writeIfChanged = async (filePath, content) => {
 }
 
 const index = await buildIndex()
-const content = `${JSON.stringify(index)}\n`
+const content = `${JSON.stringify(index, null, 2)}\n`
 const changed = await writeIfChanged(outputFile, content)
 
 console.log(

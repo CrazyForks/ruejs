@@ -80,8 +80,9 @@ class ServerNode implements DomNodeLike {
     if (!this.parentNode) {
       return null
     }
-    const index = this.parentNode.childNodes.indexOf(this)
-    return index === -1 ? null : (this.parentNode.childNodes[index + 1] ?? null)
+    const siblings = getMutableServerChildNodes(this.parentNode)
+    const index = siblings.indexOf(this)
+    return index === -1 ? null : (siblings[index + 1] ?? null)
   }
 }
 
@@ -143,6 +144,26 @@ export class ServerFragmentNode extends ServerNode implements DomFragmentLike {
   constructor() {
     super(11)
   }
+}
+
+const getMutableServerChildNodes = (node: ServerNode): ServerNode[] => {
+  const childNodes = node.childNodes
+  if (Array.isArray(childNodes)) {
+    return childNodes
+  }
+
+  const normalized = Array.from((childNodes ?? []) as ArrayLike<ServerNode>)
+  try {
+    node.childNodes = normalized
+  } catch {
+    Object.defineProperty(node, 'childNodes', {
+      value: normalized,
+      configurable: true,
+      writable: true,
+    })
+  }
+
+  return normalized
 }
 
 export interface RenderToStringOptions {
@@ -217,11 +238,12 @@ export class ServerDOMAdapter implements DOMAdapter {
       ;(el as ServerTextNode).textContent = text
       return
     }
-    ;(el as ServerNode).childNodes.forEach(child => {
+    const childNodes = getMutableServerChildNodes(el as ServerNode)
+    childNodes.forEach(child => {
       child.parentNode = null
     })
-    ;(el as ServerNode).childNodes = [new ServerTextNode(text)]
-    ;(el as ServerNode).childNodes[0].parentNode = el as ServerNode
+    childNodes.splice(0, childNodes.length, new ServerTextNode(text))
+    childNodes[0].parentNode = el as ServerNode
   }
 
   createDocumentFragment() {
@@ -242,16 +264,13 @@ export class ServerDOMAdapter implements DOMAdapter {
 
   replaceChild(parent: DomNodeLike, newChild: DomNodeLike, oldChild: DomNodeLike) {
     const targetParent = parent as ServerNode
-    const oldIndex = targetParent.childNodes.indexOf(oldChild as ServerNode)
+    const childNodes = getMutableServerChildNodes(targetParent)
+    const oldIndex = childNodes.indexOf(oldChild as ServerNode)
     if (oldIndex === -1) {
       return
     }
     removeServerChild(targetParent, oldChild as ServerNode)
-    insertServerChild(
-      targetParent,
-      newChild as ServerNode,
-      targetParent.childNodes[oldIndex] ?? null,
-    )
+    insertServerChild(targetParent, newChild as ServerNode, childNodes[oldIndex] ?? null)
   }
 
   querySelector() {
@@ -667,10 +686,6 @@ function normalizeServerProtocolRenderable(value: unknown): unknown {
     }
   }
 
-  if (isRuePortableVaporHandle(value)) {
-    return normalizeServerProtocolRenderable(value[RUE_PORTABLE_VAPOR_SETUP_KEY](null))
-  }
-
   const headRecord = readRueElementHeadRecord(value)
   if (headRecord) {
     const { children, props } = normalizeServerProtocolProps(headRecord.props)
@@ -685,6 +700,10 @@ function normalizeServerProtocolRenderable(value: unknown): unknown {
     if (typeof type === 'string') {
       return createServerNodeFromProtocolElement(type, props, childList)
     }
+  }
+
+  if (isRuePortableVaporHandle(value)) {
+    return normalizeServerProtocolRenderable(value[RUE_PORTABLE_VAPOR_SETUP_KEY](null))
   }
 
   if (!isServerProtocolElement(value)) {
@@ -753,11 +772,12 @@ const syncStyleAttribute = (node: ServerElementNode) => {
 }
 
 const removeServerChild = (parent: ServerNode, child: ServerNode) => {
-  const index = parent.childNodes.indexOf(child)
+  const childNodes = getMutableServerChildNodes(parent)
+  const index = childNodes.indexOf(child)
   if (index === -1) {
     return
   }
-  parent.childNodes.splice(index, 1)
+  childNodes.splice(index, 1)
   child.parentNode = null
 }
 
@@ -825,7 +845,7 @@ const cloneExternalDomNode = (node: unknown): ServerNode => {
 const insertServerChild = (parent: ServerNode, child: unknown, ref: ServerNode | null) => {
   const serverChild = cloneExternalDomNode(child)
   if (serverChild.nodeType === 11) {
-    const moving = [...serverChild.childNodes]
+    const moving = [...getMutableServerChildNodes(serverChild)]
     for (const fragmentChild of moving) {
       insertServerChild(parent, fragmentChild, ref)
     }
@@ -836,9 +856,10 @@ const insertServerChild = (parent: ServerNode, child: unknown, ref: ServerNode |
     removeServerChild(serverChild.parentNode, serverChild)
   }
 
-  const refIndex = ref ? parent.childNodes.indexOf(ref) : -1
-  const insertIndex = refIndex === -1 ? parent.childNodes.length : refIndex
-  parent.childNodes.splice(insertIndex, 0, serverChild)
+  const childNodes = getMutableServerChildNodes(parent)
+  const refIndex = ref ? childNodes.indexOf(ref) : -1
+  const insertIndex = refIndex === -1 ? childNodes.length : refIndex
+  childNodes.splice(insertIndex, 0, serverChild)
   serverChild.parentNode = parent
 }
 

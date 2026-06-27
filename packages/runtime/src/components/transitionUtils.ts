@@ -16,12 +16,14 @@ export type TransitionPhase = 'enter' | 'leave' | 'appear'
 /** 为元素添加类（支持空格分隔的多个类） */
 export function addClass(el: HTMLElement, cls?: string) {
   if (!cls) return
+  if (!el.classList) return
   cls.split(/\s+/).forEach(c => c && el.classList.add(c))
 }
 
 /** 为元素移除类（支持空格分隔的多个类） */
 export function removeClass(el: HTMLElement, cls?: string) {
   if (!cls) return
+  if (!el.classList) return
   cls.split(/\s+/).forEach(c => c && el.classList.remove(c))
 }
 
@@ -51,8 +53,9 @@ export function nextFrame(fn: () => void) {
 
 /** 强制触发布局计算（用于确保过渡起点生效） */
 export function forceReflow(el?: HTMLElement): number {
-  const targetDocument = el ? el.ownerDocument! : document
-  return targetDocument.body.offsetHeight
+  const targetDocument =
+    el?.ownerDocument ?? (typeof document !== 'undefined' ? document : undefined)
+  return targetDocument?.body?.offsetHeight ?? 0
 }
 
 /** 将 CSS 时间字符串转换为毫秒总和（支持逗号分段） */
@@ -146,6 +149,10 @@ export function whenTransitionEnds(
   cb: () => void,
 ) {
   if (!type || timeout === 0) {
+    cb()
+    return
+  }
+  if (typeof el.addEventListener !== 'function' || typeof el.removeEventListener !== 'function') {
     cb()
     return
   }

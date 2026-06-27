@@ -454,7 +454,7 @@ const Fab: FC<FabProps> = props => {
   let rootElement: HTMLDivElement | null = null
 
   const syncMenuDom = (nextOpen: boolean) => {
-    if (!rootElement || !isMenuMode) return
+    if (!rootElement || !isMenuMode || typeof rootElement.querySelector !== 'function') return
     const triggerButton = rootElement.querySelector('[aria-expanded]') as HTMLElement | null
     const panel = rootElement.querySelector('[data-rue-fab-panel="true"]') as HTMLElement | null
     if (triggerButton) {
@@ -465,10 +465,10 @@ const Fab: FC<FabProps> = props => {
       const closeIconElement = triggerButton.querySelector(
         '[data-rue-fab-close-icon="true"]',
       ) as HTMLElement | null
-      openIconElement?.classList.toggle('hidden', nextOpen)
-      closeIconElement?.classList.toggle('hidden', !nextOpen)
+      openIconElement?.classList?.toggle('hidden', nextOpen)
+      closeIconElement?.classList?.toggle('hidden', !nextOpen)
     }
-    if (panel) {
+    if (panel?.classList) {
       panel.setAttribute('aria-hidden', nextOpen ? 'false' : 'true')
       panel.classList.toggle('pointer-events-auto', nextOpen)
       panel.classList.toggle('opacity-100', nextOpen)

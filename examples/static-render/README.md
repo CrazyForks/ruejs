@@ -31,4 +31,4 @@ Routes:
 - `/about`
 - `/counter`
 
-Each route component is lazy-loaded with `defineAsyncRouteComponent`.
+Each route component is lazy-loaded with `useAsyncRouteComponent`.

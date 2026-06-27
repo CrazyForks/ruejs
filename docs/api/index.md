@@ -14,6 +14,11 @@
 - [nextTick()](/api/api/general#nexttick)
 - [useComponent()](/api/api/general#usecomponent)
 
+### 组件实例 {#component-instance}
+
+- [ComponentInstance](/api/api/component-instance#componentinstance)
+- [getCurrentInstance()](/api/api/component-instance#getcurrentinstance)
+
 ## 组合式 API {#composition-api}
 
 ### 响应式：核心 {#reactivity-core}

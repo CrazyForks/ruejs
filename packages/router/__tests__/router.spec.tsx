@@ -9,7 +9,7 @@ import {
   RouterView,
   createMemoryHistory,
   createRouter,
-  defineAsyncRouteComponent,
+  useAsyncRouteComponent,
   isNavigationFailure,
   type RouteRecord,
   useRoute,
@@ -186,7 +186,7 @@ describe('rue router', () => {
     let loadCount = 0
     let resolveLazyPage: ((value: { default: FC }) => void) | undefined
 
-    const LazyPage = defineAsyncRouteComponent(() => {
+    const LazyPage = useAsyncRouteComponent(() => {
       loadCount += 1
 
       return new Promise(resolve => {
@@ -218,6 +218,44 @@ describe('rue router', () => {
     await router.push('/lazy')
 
     expect(loadCount).toBe(1)
+  })
+
+  it('cancels stale lazy route navigations before they commit', async () => {
+    let resolveSlowPage: ((value: { default: FC }) => void) | undefined
+
+    const SlowPage = useAsyncRouteComponent(
+      () =>
+        new Promise(resolve => {
+          resolveSlowPage = resolve
+        }),
+    )
+
+    const router = createRouter({
+      history: createMemoryHistory('/'),
+      routes: [
+        { path: '/', component: EmptyPage },
+        { path: '/slow', component: SlowPage },
+        { path: '/fast', component: EmptyPage },
+      ],
+    })
+
+    const slowNavigation = router.push('/slow')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(router.currentPath.get()).toBe('/')
+
+    await expect(router.push('/fast')).resolves.toBeUndefined()
+    expect(router.currentPath.get()).toBe('/fast')
+
+    resolveSlowPage?.({ default: EmptyPage })
+
+    const slowFailure = await slowNavigation
+    expect(isNavigationFailure(slowFailure, NavigationFailureType.cancelled)).toBe(true)
+    expect(slowFailure?.to?.path).toBe('/slow')
+    expect(slowFailure?.from?.path).toBe('/')
+    expect(router.currentPath.get()).toBe('/fast')
+    expect(router.history.location()).toBe('/fast')
   })
 
   it('renders RouterView and navigates with RouterLink inside an app', async () => {

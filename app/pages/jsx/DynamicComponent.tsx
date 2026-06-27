@@ -164,7 +164,9 @@ const Demo: FC = () => {
 export default Demo;`
 
 const DynamicComponent: FC = () => {
-  ensureDynamicDemoComponentsRegistered()
+  if (!import.meta.env.SSR) {
+    ensureDynamicDemoComponentsRegistered()
+  }
 
   const activeTab = ref<'preview' | 'code'>('preview')
   const renderTarget = ref<RenderTarget>('native')
@@ -201,6 +203,13 @@ const DynamicComponent: FC = () => {
       title: '状态切换',
       detail: '这里的 is 已从原生标签切到另一个组件定义',
     }
+  }
+  const resolveRegistryType = () => {
+    if (import.meta.env.SSR) {
+      return registryTarget.value === 'metric' ? RegisteredMetric : RegisteredNotice
+    }
+
+    return registryTarget.value === 'metric' ? 'RegisteredMetric' : 'RegisteredNotice'
   }
 
   return (
@@ -351,7 +360,7 @@ const DynamicComponent: FC = () => {
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
                 <div className="rounded-box border border-dashed border-base-300 p-4 min-h-40">
                   <Component
-                    is={registryTarget.value === 'metric' ? 'RegisteredMetric' : 'RegisteredNotice'}
+                    is={resolveRegistryType()}
                     title="运行时注册"
                     value="CardView"
                     detail={

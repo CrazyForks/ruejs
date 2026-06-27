@@ -1,7 +1,6 @@
 import {
   type FC,
   computed,
-  nextTick,
   onMounted,
   onUnmounted,
   ref,
@@ -126,13 +125,27 @@ const useOptionalRoute = () => {
   }
 }
 
-const isTestEnvironment = (): boolean => {
-  return (
-    import.meta.env?.MODE === 'test' ||
-    import.meta.env?.VITEST === true ||
-    import.meta.env?.VITEST === 'true' ||
-    !!(globalThis as any).vitest
-  )
+const normalizeCurrentPath = (path: string) => {
+  if (!path) {
+    return ''
+  }
+
+  const normalized = path.startsWith('/') ? path : `/${path}`
+  return normalized.length > 1 ? normalized.replace(/\/+$/g, '') : normalized
+}
+
+const readCurrentLocationPath = () => {
+  const location = globalThis.location
+  if (!location) {
+    return ''
+  }
+
+  const hash = location.hash || ''
+  if (hash.startsWith('#')) {
+    return normalizeCurrentPath(hash.slice(1) || '/')
+  }
+
+  return normalizeCurrentPath(location.pathname || '')
 }
 
 const renderRouterAnchorProps = (href: string, enabled: boolean) => {
@@ -162,40 +175,48 @@ const updateSidebarActiveLinks = (root: HTMLElement, activePath: string) => {
 
 const SidebarItemsList: FC<{
   items: SidebarItem[]
-  activePath: string
+  getActivePath: () => string
   useRouterLinks: boolean
 }> = props => {
   return (
     <>
-      {props.items.map(item => (
-        <li key={item.id}>
-          {item.children && item.children.length ? (
-            <div>
-              <div className="px-3 py-2 font-medium text-base-content/80">{item.title}</div>
-              <ul className="menu menu-sm bg-transparent rounded-box w-full">
-                <SidebarItemsList
-                  items={item.children}
-                  activePath={props.activePath}
-                  useRouterLinks={props.useRouterLinks}
-                />
-              </ul>
-            </div>
-          ) : item.href ? (
-            <a
-              {...renderRouterAnchorProps(item.href, props.useRouterLinks)}
-              className={`${props.activePath === item.href ? 'active' : ''} w-full`}
-              aria-current={props.activePath === item.href ? 'page' : undefined}
-              data-rue-sidebar-href={item.href}
-            >
-              {item.title}
-            </a>
-          ) : (
-            <span className="block w-full cursor-default rounded-btn px-3 py-2 text-base-content/45">
-              {item.title}
-            </span>
-          )}
-        </li>
-      ))}
+      {props.items.map(item => {
+        const isItemActive = () => props.getActivePath() === item.href
+        const anchorProps = item.href
+          ? renderRouterAnchorProps(item.href, props.useRouterLinks)
+          : null
+
+        return (
+          <li key={item.id}>
+            {item.children && item.children.length ? (
+              <div>
+                <div className="px-3 py-2 font-medium text-base-content/80">{item.title}</div>
+                <ul className="menu menu-sm bg-transparent rounded-box w-full">
+                  <SidebarItemsList
+                    items={item.children}
+                    getActivePath={props.getActivePath}
+                    useRouterLinks={props.useRouterLinks}
+                  />
+                </ul>
+              </div>
+            ) : item.href ? (
+              <a
+                href={anchorProps?.href}
+                onClick={anchorProps?.onClick}
+                aria-current={isItemActive() ? 'page' : undefined}
+                className={`${isItemActive() ? 'active' : ''} w-full`}
+                data-rue-sidebar-href={item.href}
+              >
+                {item.title}
+              </a>
+            ) : (
+              <span className="block w-full cursor-default rounded-btn px-3 py-2 text-base-content/45">
+                {item.title}
+              </span>
+            )}
+          </li>
+        )
+      })}
     </>
   )
 }
@@ -213,16 +234,17 @@ export const createPersistentSidebarPlayground = ({
   const SidebarPlaygroundNavigation: FC<SidebarPlaygroundProps> = props => {
     const route = useOptionalRoute()
     const navRef = useRef<HTMLElement>()
-    const activePathRef = useRef('')
     const activeWatcherRef = useRef<{ dispose?: () => void } | undefined>()
     const currentPath = computed(() => {
       if (props.currentPath !== undefined) {
-        return props.currentPath
+        return normalizeCurrentPath(props.currentPath)
       }
       if (!fallbackToRoute || !route) {
         return ''
       }
-      return ((route.get() as any)?.path || '') as string
+
+      const routePath = normalizeCurrentPath(((route.get() as any)?.path || '') as string)
+      return routePath || readCurrentLocationPath()
     })
     const [searchQuery, setSearchQuery] = useState(() => sharedSearchQuery ?? '')
     const searchComposingRef = useRef(false)
@@ -242,7 +264,7 @@ export const createPersistentSidebarPlayground = ({
     const openSections = ref<Record<string, boolean>>(resolveInitialOpenSections())
 
     const toggleSection = (id: string) => {
-      const current = openSections.value
+      const current = openSections.value ?? resolveInitialOpenSections()
       const nextValue = !current[id]
       const next = extend(current, { [id]: nextValue })
       sharedOpenSections = next
@@ -295,7 +317,6 @@ export const createPersistentSidebarPlayground = ({
     const isSearchActive = computed(() => normalizedSearchQuery.get().length > 0)
 
     const applyActivePath = (nextPath: string) => {
-      activePathRef.current = nextPath
       if (navRef.current) {
         updateSidebarActiveLinks(navRef.current, nextPath)
       }
@@ -312,6 +333,17 @@ export const createPersistentSidebarPlayground = ({
       activeWatcherRef.current = undefined
     })
 
+    const renderedSections = filteredSections.get() ?? preparedSections
+    const renderedTotalItemCount =
+      visibleTotalItemCount.get() ??
+      countPreparedSidebarItems(preparedSections.flatMap(section => section.items))
+    const renderedSearchActive = isSearchActive.get() ?? false
+    const getRenderedActivePath = () => currentPath.get() ?? ''
+    const getRenderedSectionItemCount = (section: PreparedSidebarSection) => {
+      const counts = visibleSectionItemCounts.get()
+      return counts?.[section.id] ?? section.itemCount
+    }
+
     return (
       <aside className="w-full">
         <div className="sticky top-20">
@@ -323,9 +355,7 @@ export const createPersistentSidebarPlayground = ({
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <span className="text-sm text-base-content/70">总条目</span>
-                  <span className="badge badge-neutral badge-lg">
-                    {visibleTotalItemCount.get()}
-                  </span>
+                  <span className="badge badge-neutral badge-lg">{renderedTotalItemCount}</span>
                 </div>
                 <label className="mt-3 block">
                   <span className="sr-only">搜索目录条目</span>
@@ -362,12 +392,14 @@ export const createPersistentSidebarPlayground = ({
                 </label>
               </div>
             ) : null}
-            {filteredSections.get().length ? (
-              filteredSections.get().map(section => (
+            {renderedSections.length ? (
+              renderedSections.map(section => (
                 <div
                   key={section.id}
                   className={`collapse collapse-arrow bg-base-100 rounded-box shadow w-full ${
-                    openSections.value[section.id] || isSearchActive.get() ? 'collapse-open' : ''
+                    (openSections.value?.[section.id] ?? true) || renderedSearchActive
+                      ? 'collapse-open'
+                      : ''
                   }`}
                 >
                   <button
@@ -378,7 +410,7 @@ export const createPersistentSidebarPlayground = ({
                       <span className="flex items-center justify-between gap-3 pr-6">
                         <span>{section.title}</span>
                         <span className="badge badge-ghost badge-sm shrink-0">
-                          {visibleSectionItemCounts.get()[section.id]}
+                          {getRenderedSectionItemCount(section)}
                         </span>
                       </span>
                     ) : (
@@ -389,7 +421,7 @@ export const createPersistentSidebarPlayground = ({
                     <ul className="menu menu-sm bg-transparent rounded-box w-full">
                       <SidebarItemsList
                         items={section.items}
-                        activePath={activePathRef.current ?? ''}
+                        getActivePath={getRenderedActivePath}
                         useRouterLinks={!!route}
                       />
                     </ul>
@@ -409,10 +441,6 @@ export const createPersistentSidebarPlayground = ({
 
   const SidebarPlayground: FC<SidebarPlaygroundProps> = props => {
     const contentRef = useRef<HTMLElement>()
-    const [navigationReady, setNavigationReady] = useState(isTestEnvironment())
-    const navigationFrameRef = useRef<number | undefined>()
-    const navigationTimerRef = useRef<number | undefined>()
-    const navigationDisposedRef = useRef(false)
     const rootClassName = [
       'sidebar-playground',
       wrapperClassName,
@@ -425,63 +453,10 @@ export const createPersistentSidebarPlayground = ({
       .filter(Boolean)
       .join(' ')
 
-    onMounted(() => {
-      navigationDisposedRef.current = false
-      if (isTestEnvironment()) {
-        return
-      }
-
-      void nextTick(() => {
-        if (navigationDisposedRef.current) {
-          return
-        }
-
-        if (typeof window === 'undefined') {
-          setNavigationReady(true)
-          return
-        }
-
-        const revealNavigation = () => {
-          navigationTimerRef.current = undefined
-          if (!navigationDisposedRef.current) {
-            setNavigationReady(true)
-          }
-        }
-
-        if (typeof window.requestAnimationFrame !== 'function') {
-          navigationTimerRef.current = window.setTimeout(revealNavigation, 0)
-          return
-        }
-
-        navigationFrameRef.current = window.requestAnimationFrame(() => {
-          navigationFrameRef.current = undefined
-          navigationTimerRef.current = window.setTimeout(revealNavigation, 0)
-        })
-      })
-    })
-
-    onUnmounted(() => {
-      navigationDisposedRef.current = true
-
-      if (typeof window !== 'undefined') {
-        if (navigationFrameRef.current != null) {
-          window.cancelAnimationFrame(navigationFrameRef.current)
-        }
-        if (navigationTimerRef.current != null) {
-          window.clearTimeout(navigationTimerRef.current)
-        }
-      }
-
-      navigationFrameRef.current = undefined
-      navigationTimerRef.current = undefined
-    })
-
     return (
       <div className={rootClassName}>
-        <div className="md:w-45 shrink-0" aria-hidden={navigationReady.value ? undefined : 'true'}>
-          {navigationReady.value ? (
-            <SidebarPlaygroundNavigation currentPath={props.currentPath} />
-          ) : null}
+        <div className="md:w-45 shrink-0">
+          <SidebarPlaygroundNavigation currentPath={props.currentPath} />
         </div>
         <article ref={contentRef} class="component-preview min-w-0">
           {props.children}

@@ -2,6 +2,22 @@ import { mdToHtml } from './docMarkdown'
 
 const docHtmlCache = new Map<string, string>()
 const docPendingCache = new Map<string, Promise<string>>()
+const staticDocHtmlByRouteKey = '__RUE_STATIC_DOC_HTML_BY_ROUTE__'
+
+const normalizeStaticDocRoute = (route: string) => {
+  const withoutHash = route.split('#')[0]
+  const withoutSearch = withoutHash.split('?')[0]
+  const normalized = withoutSearch.startsWith('/') ? withoutSearch : `/${withoutSearch}`
+  return normalized.length > 1 ? normalized.replace(/\/+$/g, '') : '/'
+}
+
+export const readStaticDocHtmlByRoute = (route: string) => {
+  const staticDocHtmlByRoute = (globalThis as any)[staticDocHtmlByRouteKey] as
+    | Record<string, unknown>
+    | undefined
+  const html = staticDocHtmlByRoute?.[normalizeStaticDocRoute(route)]
+  return typeof html === 'string' ? html : ''
+}
 
 export const createDocDetailUrl = (base: string, seg: string) => {
   return import.meta.env.DEV

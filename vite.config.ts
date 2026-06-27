@@ -66,6 +66,8 @@ const vitestProjects = [
 
 export default defineConfig(({ command }) => {
   const isVitest = process.env.VITEST === 'true' || process.env.VITEST === '1'
+  let docsOutDir = path.resolve(__dirname, 'dist')
+  let shouldCopyDocs = true
 
   return {
     plugins: [
@@ -79,9 +81,19 @@ export default defineConfig(({ command }) => {
       {
         name: 'copy-docs',
         apply: 'build',
+        configResolved: config => {
+          docsOutDir = path.isAbsolute(config.build.outDir)
+            ? config.build.outDir
+            : path.resolve(config.root, config.build.outDir)
+          shouldCopyDocs = !config.build.ssr
+        },
         closeBundle: async () => {
+          if (!shouldCopyDocs) {
+            return
+          }
+
           const src = path.resolve(__dirname, 'docs')
-          const dest = path.resolve(__dirname, 'dist/docs')
+          const dest = path.resolve(docsOutDir, 'docs')
           const copy = async (src: string, dest: string) => {
             await fs.mkdir(dest, { recursive: true })
             const items = await fs.readdir(src, { withFileTypes: true })

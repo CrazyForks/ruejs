@@ -5,7 +5,7 @@ Filter 组件概述
 - 数据驱动模式直接通过 JSX 输出完整 input 属性，适配 Vapor 深编译路径。
 */
 import type { FC } from '@rue-js/rue'
-import { computed, ref, watch } from '@rue-js/rue'
+import { ref, watch } from '@rue-js/rue'
 
 /** FilterMode 类型。 */
 export type FilterMode = 'form' | 'div'
@@ -377,6 +377,7 @@ const Filter: FC<FilterProps> = ({
 }) => {
   const Component = as as any
   const normalizedItems = normalizeItems(items)
+  const readNormalizedItems = () => (Array.isArray(normalizedItems) ? normalizedItems : [])
   const resolvedType: FilterInputType = multiple ? 'checkbox' : (type ?? 'radio')
   const generatedName = ref(`rue-filter-${++filterNameSeed}`)
   const resolvedName = name ?? (resolvedType === 'radio' ? generatedName.value : undefined)
@@ -385,12 +386,13 @@ const Filter: FC<FilterProps> = ({
   const uncontrolledValues = ref<FilterValue[]>(defaultValues)
   const controlledMode = ref(value !== undefined)
   const isControlled = () => controlledMode.value
-  const getCurrentValues = () =>
-    isControlled() ? controlledValues.value : uncontrolledValues.value
-  const currentValues = computed(() => getCurrentValues())
+  const getCurrentValues = () => {
+    const values = isControlled() ? controlledValues.value : uncontrolledValues.value
+    return Array.isArray(values) ? values : []
+  }
   const hasValue = (itemValue: FilterValue | undefined) =>
     itemValue !== undefined &&
-    currentValues.get().some(current => serializeValue(current) === serializeValue(itemValue))
+    getCurrentValues().some(current => serializeValue(current) === serializeValue(itemValue))
 
   const emitChange = (
     nextValues: FilterValue[],
@@ -466,7 +468,7 @@ const Filter: FC<FilterProps> = ({
   }
 
   const handleGroupClick = (event: Event) => {
-    if (normalizedItems.length === 0) return
+    if (readNormalizedItems().length === 0) return
     const target = event.target as HTMLElement | null
     if (
       !target ||
@@ -571,7 +573,7 @@ const Filter: FC<FilterProps> = ({
     ...(leadingResetProps
       ? [{ kind: 'reset' as const, mode: resolvedResetMode, reset: leadingResetProps }]
       : []),
-    ...normalizedItems.map((item, index) => ({ kind: 'item' as const, item, index })),
+    ...readNormalizedItems().map((item, index) => ({ kind: 'item' as const, item, index })),
     ...(trailingResetProps
       ? [{ kind: 'reset' as const, mode: 'form' as const, reset: trailingResetProps }]
       : []),
@@ -608,7 +610,7 @@ const Filter: FC<FilterProps> = ({
       data-rue-filter-mode={as}
       data-rue-filter-type={resolvedType}
     >
-      {normalizedItems.length > 0 ? (
+      {readNormalizedItems().length > 0 ? (
         <>
           {managedEntries.map(entry =>
             entry.kind === 'reset' ? (

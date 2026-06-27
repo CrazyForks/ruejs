@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": "docs",
-  "files": 90,
+  "files": 91,
   "blocks": [
     {
       "id": "about/coc:0",
@@ -4943,6 +4943,237 @@
       "searchText": "内置特殊元素 / 另请参阅 - 指南 - 条件渲染中的 - 指南 - 列表渲染中的 - 指南 - 具名插槽 api/built-in-special-elements"
     },
     {
+      "id": "api/component-instance:0",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#component-instance",
+      "title": "组件实例",
+      "sectionTitle": "组件实例",
+      "type": "heading",
+      "text": "组件实例",
+      "searchText": "组件实例 组件实例 组件实例 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:1",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#component-instance",
+      "title": "组件实例",
+      "sectionTitle": "组件实例",
+      "type": "paragraph",
+      "text": "Rue 当前的组件模型以 JSX / TSX 函数组件为主。公共 API 中出现的\"组件实例\"通常指可被渲染器消费的组件函数类型，而不是一个可随意读写的公开代理对象。",
+      "searchText": "组件实例 组件实例 rue 当前的组件模型以 jsx / tsx 函数组件为主。公共 api 中出现的\"组件实例\"通常指可被渲染器消费的组件函数类型，而不是一个可随意读写的公开代理对象。 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:2",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#componentinstance",
+      "title": "组件实例",
+      "sectionTitle": "ComponentInstance",
+      "type": "heading",
+      "text": "ComponentInstance",
+      "searchText": "组件实例 componentinstance componentinstance api/component-instance"
+    },
+    {
+      "id": "api/component-instance:3",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#componentinstance",
+      "title": "组件实例",
+      "sectionTitle": "ComponentInstance",
+      "type": "list",
+      "text": "类型",
+      "searchText": "组件实例 componentinstance 类型 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:4",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#componentinstance",
+      "title": "组件实例",
+      "sectionTitle": "ComponentInstance",
+      "type": "code",
+      "text": "type FC<P = {}> = (props: PropsWithChildren<P>) => RenderableOutput type ComponentInstance<P = {}> = FC<P>",
+      "searchText": "组件实例 componentinstance type fc<p = {}> = (props: propswithchildren<p>) => renderableoutput type componentinstance<p = {}> = fc<p> api/component-instance"
+    },
+    {
+      "id": "api/component-instance:5",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#componentinstance",
+      "title": "组件实例",
+      "sectionTitle": "ComponentInstance",
+      "type": "list",
+      "text": "详情",
+      "searchText": "组件实例 componentinstance 详情 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:6",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#componentinstance",
+      "title": "组件实例",
+      "sectionTitle": "ComponentInstance",
+      "type": "paragraph",
+      "text": "ComponentInstance 是 Rue 对组件入口的类型别名。它可用于 useApp() 的根组件、app.component() 注册的全局组件、 动态组件以及手写渲染函数中的组件参数。",
+      "searchText": "组件实例 componentinstance componentinstance 是 rue 对组件入口的类型别名。它可用于 useapp() 的根组件、app.component() 注册的全局组件、 动态组件以及手写渲染函数中的组件参数。 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:7",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#componentinstance",
+      "title": "组件实例",
+      "sectionTitle": "ComponentInstance",
+      "type": "paragraph",
+      "text": "组件通过 props 接收外部输入，并返回可渲染内容。状态、生命周期和上下文能力应通过 ref()、useState()、onMounted()、createContext() 等组合式 API 表达，而不是依赖公开实例对象上的可变字段。",
+      "searchText": "组件实例 componentinstance 组件通过 props 接收外部输入，并返回可渲染内容。状态、生命周期和上下文能力应通过 ref()、usestate()、onmounted()、createcontext() 等组合式 api 表达，而不是依赖公开实例对象上的可变字段。 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:8",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#componentinstance",
+      "title": "组件实例",
+      "sectionTitle": "ComponentInstance",
+      "type": "paragraph",
+      "text": "如果你需要从父组件命令式访问 DOM 或子组件暴露的能力，优先使用 useRef() 保存元素或组件引用；如果需要跨层级共享状态，优先使用 Context API。",
+      "searchText": "组件实例 componentinstance 如果你需要从父组件命令式访问 dom 或子组件暴露的能力，优先使用 useref() 保存元素或组件引用；如果需要跨层级共享状态，优先使用 context api。 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:9",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#componentinstance",
+      "title": "组件实例",
+      "sectionTitle": "ComponentInstance",
+      "type": "list",
+      "text": "示例",
+      "searchText": "组件实例 componentinstance 示例 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:10",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#componentinstance",
+      "title": "组件实例",
+      "sectionTitle": "ComponentInstance",
+      "type": "code",
+      "text": "import { type ComponentInstance, useApp } from '@rue-js/rue' type GreetingProps = { name: string } const Greeting: ComponentInstance<GreetingProps> = props => { return <p>Hello {props.name}</p> } const App: ComponentInstance = () => { return <Greeting name=\"Rue\" /> } useApp(App).mount('#app')",
+      "searchText": "组件实例 componentinstance import { type componentinstance, useapp } from '@rue-js/rue' type greetingprops = { name: string } const greeting: componentinstance<greetingprops> = props => { return <p>hello {props.name}</p> } const app: componentinstance = () => { return <greeting name=\"rue\" /> } useapp(app).mount('#app') api/component-instance"
+    },
+    {
+      "id": "api/component-instance:11",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#getcurrentinstance",
+      "title": "组件实例",
+      "sectionTitle": "getCurrentInstance()",
+      "type": "heading",
+      "text": "getCurrentInstance()",
+      "searchText": "组件实例 getcurrentinstance() getcurrentinstance() api/component-instance"
+    },
+    {
+      "id": "api/component-instance:12",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#getcurrentinstance",
+      "title": "组件实例",
+      "sectionTitle": "getCurrentInstance()",
+      "type": "paragraph",
+      "text": "返回当前同步组件上下文中的内部 hook host。",
+      "searchText": "组件实例 getcurrentinstance() 返回当前同步组件上下文中的内部 hook host。 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:13",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#getcurrentinstance",
+      "title": "组件实例",
+      "sectionTitle": "getCurrentInstance()",
+      "type": "list",
+      "text": "类型",
+      "searchText": "组件实例 getcurrentinstance() 类型 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:14",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#getcurrentinstance",
+      "title": "组件实例",
+      "sectionTitle": "getCurrentInstance()",
+      "type": "code",
+      "text": "type HookHost = | (Record<string, any> & { __hooks?: { states: any[] index: number __forcedIndex?: number } }) | null | undefined function getCurrentInstance(): HookHost",
+      "searchText": "组件实例 getcurrentinstance() type hookhost = | (record<string, any> & { __hooks?: { states: any[] index: number __forcedindex?: number } }) | null | undefined function getcurrentinstance(): hookhost api/component-instance"
+    },
+    {
+      "id": "api/component-instance:15",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#getcurrentinstance",
+      "title": "组件实例",
+      "sectionTitle": "getCurrentInstance()",
+      "type": "list",
+      "text": "详情",
+      "searchText": "组件实例 getcurrentinstance() 详情 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:16",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#getcurrentinstance",
+      "title": "组件实例",
+      "sectionTitle": "getCurrentInstance()",
+      "type": "paragraph",
+      "text": "getCurrentInstance() 主要服务于运行时、编译产物和少量高级调试场景。它只在组件同步执行、生命周期注册或运行时设置了当前实例的阶段有意义；跨过异步边界后，当前实例可能已经被清空。",
+      "searchText": "组件实例 getcurrentinstance() getcurrentinstance() 主要服务于运行时、编译产物和少量高级调试场景。它只在组件同步执行、生命周期注册或运行时设置了当前实例的阶段有意义；跨过异步边界后，当前实例可能已经被清空。 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:17",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#getcurrentinstance",
+      "title": "组件实例",
+      "sectionTitle": "getCurrentInstance()",
+      "type": "paragraph",
+      "text": "应用代码通常不需要直接读取这个对象。若目标是组件通信，请优先使用 props、事件、Context 或模板 ref；若目标是清理副作用，请使用 onScopeDispose()、onUnmounted() 或 watcher 自带的清理回调。",
+      "searchText": "组件实例 getcurrentinstance() 应用代码通常不需要直接读取这个对象。若目标是组件通信，请优先使用 props、事件、context 或模板 ref；若目标是清理副作用，请使用 onscopedispose()、onunmounted() 或 watcher 自带的清理回调。 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:18",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#getcurrentinstance",
+      "title": "组件实例",
+      "sectionTitle": "getCurrentInstance()",
+      "type": "list",
+      "text": "示例",
+      "searchText": "组件实例 getcurrentinstance() 示例 api/component-instance"
+    },
+    {
+      "id": "api/component-instance:19",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#getcurrentinstance",
+      "title": "组件实例",
+      "sectionTitle": "getCurrentInstance()",
+      "type": "code",
+      "text": "import { getCurrentInstance, onMounted } from '@rue-js/rue' export const DebugCurrentInstance = () => { const instance = getCurrentInstance() onMounted(() => { console.debug('mounted with instance', instance) }) return <div>Debug current instance</div> }",
+      "searchText": "组件实例 getcurrentinstance() import { getcurrentinstance, onmounted } from '@rue-js/rue' export const debugcurrentinstance = () => { const instance = getcurrentinstance() onmounted(() => { console.debug('mounted with instance', instance) }) return <div>debug current instance</div> } api/component-instance"
+    },
+    {
+      "id": "api/component-instance:20",
+      "docId": "api/component-instance",
+      "route": "/api/api/component-instance",
+      "href": "/api/api/component-instance#getcurrentinstance",
+      "title": "组件实例",
+      "sectionTitle": "getCurrentInstance()",
+      "type": "list",
+      "text": "另请参阅 - 组合式 API：生命周期钩子 - 组合式 API：辅助函数 - Context API",
+      "searchText": "组件实例 getcurrentinstance() 另请参阅 - 组合式 api：生命周期钩子 - 组合式 api：辅助函数 - context api api/component-instance"
+    },
+    {
       "id": "api/composition-api-dependency-injection:0",
       "docId": "api/composition-api-dependency-injection",
       "route": "/api/api/composition-api-dependency-injection",
@@ -7509,6 +7740,28 @@
       "id": "api/index:7",
       "docId": "api/index",
       "route": "/api/api/index",
+      "href": "/api/api/index#component-instance",
+      "title": "API 参考",
+      "sectionTitle": "组件实例",
+      "type": "heading",
+      "text": "组件实例",
+      "searchText": "api 参考 组件实例 组件实例 api/index"
+    },
+    {
+      "id": "api/index:8",
+      "docId": "api/index",
+      "route": "/api/api/index",
+      "href": "/api/api/index#component-instance",
+      "title": "API 参考",
+      "sectionTitle": "组件实例",
+      "type": "list",
+      "text": "ComponentInstance getCurrentInstance()",
+      "searchText": "api 参考 组件实例 componentinstance getcurrentinstance() api/index"
+    },
+    {
+      "id": "api/index:9",
+      "docId": "api/index",
+      "route": "/api/api/index",
       "href": "/api/api/index#composition-api",
       "title": "API 参考",
       "sectionTitle": "组合式 API",
@@ -7517,7 +7770,7 @@
       "searchText": "api 参考 组合式 api 组合式 api api/index"
     },
     {
-      "id": "api/index:8",
+      "id": "api/index:10",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#reactivity-core",
@@ -7528,7 +7781,7 @@
       "searchText": "api 参考 响应式：核心 响应式：核心 api/index"
     },
     {
-      "id": "api/index:9",
+      "id": "api/index:11",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#reactivity-core",
@@ -7539,7 +7792,7 @@
       "searchText": "api 参考 响应式：核心 ref() computed() reactive() readonly() watcheffect() watchposteffect() watchsynceffect() watch() api/index"
     },
     {
-      "id": "api/index:10",
+      "id": "api/index:12",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#reactivity-utilities",
@@ -7550,7 +7803,7 @@
       "searchText": "api 参考 响应式：工具 响应式：工具 api/index"
     },
     {
-      "id": "api/index:11",
+      "id": "api/index:13",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#reactivity-utilities",
@@ -7561,7 +7814,7 @@
       "searchText": "api 参考 响应式：工具 isref() unref() toref() tovalue() torefs() isproxy() isreactive() isreadonly() api/index"
     },
     {
-      "id": "api/index:12",
+      "id": "api/index:14",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#reactivity-advanced",
@@ -7572,7 +7825,7 @@
       "searchText": "api 参考 响应式：进阶 响应式：进阶 api/index"
     },
     {
-      "id": "api/index:13",
+      "id": "api/index:15",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#reactivity-advanced",
@@ -7583,7 +7836,7 @@
       "searchText": "api 参考 响应式：进阶 shallowref() triggerref() customref() shallowreactive() shallowreadonly() toraw() effectscope() getcurrentscope() onscopedispose() api/index"
     },
     {
-      "id": "api/index:14",
+      "id": "api/index:16",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#lifecycle-hooks",
@@ -7594,7 +7847,7 @@
       "searchText": "api 参考 生命周期钩子 生命周期钩子 api/index"
     },
     {
-      "id": "api/index:15",
+      "id": "api/index:17",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#lifecycle-hooks",
@@ -7605,7 +7858,7 @@
       "searchText": "api 参考 生命周期钩子 onmounted() onupdated() onunmounted() onbeforemount() onbeforeupdate() onbeforeunmount() onerrorcaptured() onrendertracked() onrendertriggered() onactivated() ondeactivated() onserverprefetch() api/index"
     },
     {
-      "id": "api/index:16",
+      "id": "api/index:18",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#built-in-components",
@@ -7616,7 +7869,7 @@
       "searchText": "api 参考 内置组件 内置组件 api/index"
     },
     {
-      "id": "api/index:17",
+      "id": "api/index:19",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#built-in-components",
@@ -7627,7 +7880,7 @@
       "searchText": "api 参考 内置组件 transition transitiongroup keepalive teleport suspense api/index"
     },
     {
-      "id": "api/index:18",
+      "id": "api/index:20",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#built-in-directives",
@@ -7638,7 +7891,7 @@
       "searchText": "api 参考 内置指令 内置指令 api/index"
     },
     {
-      "id": "api/index:19",
+      "id": "api/index:21",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#built-in-directives",
@@ -7649,7 +7902,7 @@
       "searchText": "api 参考 内置指令 v-text v-html v-show v-if v-else v-else-if v-for v-on v-model v-slot v-pre v-once v-memo api/index"
     },
     {
-      "id": "api/index:20",
+      "id": "api/index:22",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#advanced-apis",
@@ -7660,7 +7913,7 @@
       "searchText": "api 参考 高级 api 高级 api api/index"
     },
     {
-      "id": "api/index:21",
+      "id": "api/index:23",
       "docId": "api/index",
       "route": "/api/api/index",
       "href": "/api/api/index#advanced-apis",

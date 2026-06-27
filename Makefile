@@ -3,7 +3,7 @@ SOURCE_DIRS := app $(sort $(wildcard packages/*))
 CLOC_EXCLUDE_DIRS := node_modules,target,dist,coverage,.turbo,.vite,.next,pkg,pkg-node
 CLOC_INCLUDE_EXT := ts,tsx,js,jsx,mjs,cjs,rs,css,scss,less,html
 
-.PHONY: dev build app-build cloc deploy-site
+.PHONY: dev build app-build app-static-build cloc deploy-site deploy-static-site
 
 dev:
 	cd $(ROOT)/packages/swc-plugin-rue && npm run build
@@ -17,6 +17,9 @@ build:
 
 app-build:
 	cd $(ROOT) && npm run app-build
+
+app-static-build:
+	cd $(ROOT) && npm run app-static-build
 
 cloc:
 	@command -v cloc >/dev/null || { echo "cloc is required. Install it first."; exit 1; }
@@ -34,3 +37,6 @@ cloc:
 
 deploy-site: app-build
 	@COMMIT_MESSAGE="$(MSG)" $(ROOT)/scripts/deploy-site-public.sh
+
+deploy-static-site: app-static-build
+	@COMMIT_MESSAGE="$(MSG)" $(ROOT)/scripts/deploy-static-site-public.sh

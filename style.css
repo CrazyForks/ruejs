@@ -380,7 +380,8 @@ pre.shiki code,
 }
 
 /* 头部导航交互：暗色下更清晰的悬停背景与过渡 */
-.site-header nav a {
+.site-header nav a,
+.site-header nav button {
   color: hsl(var(--bc));
   transition:
     color 0.2s ease,
@@ -389,7 +390,8 @@ pre.shiki code,
   border-radius: 10px;
 }
 
-.site-header nav a:hover {
+.site-header nav a:hover,
+.site-header nav button:hover {
   background-color: rgba(99, 102, 241, 0.08);
 }
 
@@ -399,57 +401,50 @@ pre.shiki code,
   border-radius: 14px;
 }
 
-/* 顶部导航下拉：纯 CSS 保持子菜单悬停与轻微延迟隐藏 */
-.site-header .dropdown {
+/* 顶部导航下拉：绕开 DaisyUI dropdown 状态，完全用 CSS hover/focus 控制 */
+.site-header .site-nav-dropdown {
   position: relative;
 }
 
-/* 统一采用可见性与透明度控制，而不是 display 切换 */
-.site-header .dropdown .dropdown-content {
-  display: none;
+/* 保持 block，靠 opacity/visibility/pointer-events 控制展开与消失 */
+.site-header .site-nav-submenu {
+  display: block;
   position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  border-left: 0;
   overflow: visible;
+  box-shadow: 10px 14px 28px -22px rgba(0, 0, 0, 0.32);
+  clip-path: inset(0 -2rem -2rem 0 round 14px);
+  transform: translateX(-50%) translateY(0.25rem) scale(0.98);
+  transform-origin: top center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.16s ease,
+    visibility 0.16s ease,
+    transform 0.16s ease;
 }
 
-.site-header .dropdown .dropdown-content::before {
-  content: '';
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-bottom: 12px solid rgba(0, 0, 0, 0.12);
-  pointer-events: none;
-  z-index: 51;
-}
-
-.site-header .dropdown .dropdown-content::after {
-  content: '';
-  position: absolute;
-  top: -11px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 11px solid transparent;
-  border-right: 11px solid transparent;
-  border-bottom: 11px solid hsl(var(--b1));
-  pointer-events: none;
-  z-index: 52;
+/* DaisyUI .menu 会给嵌套 ul 自动画左侧竖线，顶部下拉不需要这条线 */
+.site-header .site-nav-dropdown > .site-nav-submenu::before,
+.site-header .site-nav-dropdown > .site-nav-submenu::after {
+  content: none !important;
+  display: none !important;
 }
 
 /* 触发区或子菜单自身被悬停时均保持展开 */
-.site-header .dropdown:hover .dropdown-content,
-.site-header .dropdown:focus-within .dropdown-content,
-.site-header .dropdown .dropdown-content:hover {
-  display: block;
+.site-header .site-nav-dropdown:hover > .site-nav-submenu,
+.site-header .site-nav-dropdown:focus-within > .site-nav-submenu {
+  transform: translateX(-50%) translateY(0) scale(1);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 /* 一级菜单右侧箭头，指向二级菜单（纯 CSS） */
-.site-header .dropdown > a::after {
+.site-header .site-nav-trigger::after {
   content: '';
   display: inline-block;
   margin-left: 6px;
@@ -465,55 +460,23 @@ pre.shiki code,
   vertical-align: middle;
 }
 
-.site-header .dropdown:hover > a::after,
-.site-header .dropdown:focus-within > a::after {
+.site-header .site-nav-dropdown:hover > .site-nav-trigger::after,
+.site-header .site-nav-dropdown:focus-within > .site-nav-trigger::after {
   transform: rotate(180deg);
   opacity: 0.7;
 }
 
 /* 顶部与二级菜单之间的悬停桥接区域，避免移入间隙时折叠 */
-.site-header .dropdown::before {
+.site-header .site-nav-dropdown::before {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(100% - 4px);
-  height: 0;
+  top: 100%;
+  height: 0.75rem;
   background: transparent;
   z-index: 50;
   pointer-events: auto;
-  transition: height 0.15s ease;
-}
-
-/* 一级菜单底部的弱化指示箭头，指向二级菜单 */
-.site-header .dropdown::after {
-  content: '';
-  position: absolute;
-  top: calc(100% + 0px);
-  left: 50%;
-  transform: translate(-50%, 0) scale(0.92);
-  width: 50px;
-  height: 18px;
-  border-radius: 9999px;
-  background: transparent;
-  box-shadow: none;
-  opacity: 0;
-  z-index: 51;
-  pointer-events: auto;
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
-}
-
-.site-header .dropdown:hover::after,
-.site-header .dropdown:focus-within::after {
-  opacity: 0;
-  transform: translate(-50%, 0) scale(1);
-}
-
-.site-header .dropdown:hover::before,
-.site-header .dropdown:focus-within::before {
-  height: 16px;
 }
 
 .component-preview .preview {

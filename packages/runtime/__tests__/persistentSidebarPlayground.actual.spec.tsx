@@ -68,6 +68,22 @@ describe('persistentSidebarPlayground actual', () => {
       expect(getTabsLink()?.classList.contains('active')).toBe(true)
       expect(getTabsLink()?.getAttribute('aria-current')).toBe('page')
     })
+
+    expect(getButtonLink()?.getAttribute('href')).toBe('/design/button')
+    getButtonLink()?.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        button: 0,
+        cancelable: true,
+      }),
+    )
+    await router.isReady()
+
+    await waitForContent(() => {
+      expect(router.currentPath.get()).toBe('/design/button')
+      expect(getButtonLink()?.classList.contains('active')).toBe(true)
+      expect(getTabsLink()?.classList.contains('active')).toBe(false)
+    })
   })
 
   it('filters sidebar items by english ids and chinese titles while updating visible counts', async () => {

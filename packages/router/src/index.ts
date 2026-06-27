@@ -438,7 +438,7 @@ const loadRouteComponents = (route: Route) =>
     () => undefined,
   )
 
-export const defineAsyncRouteComponent = (loader: RouteComponentLoader): LazyRouteComponent => {
+export const useAsyncRouteComponent = (loader: RouteComponentLoader): LazyRouteComponent => {
   const AsyncRouteComponent = ((props: any) => {
     const resolved = AsyncRouteComponent.__rue_route_resolved
     return resolved ? h(resolved, props) : null
@@ -1202,6 +1202,15 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     }
 
     await loadRouteComponents(resolution.route)
+    if (isStaleNavigation(requestId)) {
+      const failure = createNavigationFailure(
+        NavigationFailureType.cancelled,
+        resolution.route,
+        from,
+      )
+      runAfterGuards(resolution.route, from, failure)
+      return failure
+    }
 
     const navigationPromise = new Promise<NavigationFailure | undefined>(resolve => {
       pendingNavigation = {
@@ -1236,6 +1245,23 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     throw new Error('No route matched path ' + currentPath.get())
   }
   const route = signal<Route>(matchRoute, {}, true)
+
+  const refreshRouteAfterPreload = (loadedRoute: Route) => {
+    if (!loadedRoute || route.get() !== loadedRoute) {
+      return
+    }
+
+    route.set({ ...loadedRoute })
+  }
+
+  const preloadAndRefreshRoute = async (targetRoute: Route) => {
+    await loadRouteComponents(targetRoute)
+    refreshRouteAfterPreload(targetRoute)
+  }
+
+  if (hasPendingLazyRouteComponents(matchRoute)) {
+    readyPromise = preloadAndRefreshRoute(matchRoute)
+  }
 
   if (initialRouteState.href !== getCurrentHistoryHref()) {
     options.history.replace(initialRouteState.href)
@@ -1315,6 +1341,16 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
 
       if (resolution.path !== p) {
         await loadRouteComponents(resolution.route)
+        if (isStaleNavigation(requestId)) {
+          const failure = createNavigationFailure(
+            NavigationFailureType.cancelled,
+            resolution.route,
+            from,
+          )
+          runAfterGuards(resolution.route, from, failure)
+          return
+        }
+
         pendingNavigation = {
           id: requestId,
           path: resolution.path,
@@ -1328,6 +1364,16 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       }
 
       await loadRouteComponents(resolution.route)
+      if (isStaleNavigation(requestId)) {
+        const failure = createNavigationFailure(
+          NavigationFailureType.cancelled,
+          resolution.route,
+          from,
+        )
+        runAfterGuards(resolution.route, from, failure)
+        return
+      }
+
       commitNavigation(resolution.path, resolution.route, from)
     })()
   })
@@ -1337,7 +1383,11 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     route,
     push: (p: RouteLocationRaw) => navigate(p, 'push'),
     replace: (p: RouteLocationRaw) => navigate(p, 'replace'),
-    isReady: () => readyPromise.then(() => loadRouteComponents(route.get())),
+    isReady: () =>
+      readyPromise.then(() => {
+        const currentRoute = route.get()
+        return preloadAndRefreshRoute(currentRoute)
+      }),
     back: () => {
       // 优先使用 HistoryLike.back；否则退回到全局 history
       if (options.history.back) return options.history.back()
@@ -1454,7 +1504,10 @@ export const RouterView: FC = () => {
   const depth = useContext(RouterViewDepthContext)
 
   if (__SSR__ && isRueServerRendering()) {
-    const r = useRouter()
+    const r = __activeRouter
+    if (!r) {
+      return null
+    }
     const data = r.route.get()
     const record = data?.matched?.[depth] || null
 
@@ -1482,6 +1535,7 @@ export const RouterView: FC = () => {
     appendChild(container, anchorEl)
     let previousRecord: RouteRecord | null = null
     let previousParams: RouteParams | null = null
+    let previousResolvedComponent: FC<any> | null | undefined = null
 
     watchEffect(() => {
       // route 是 signal，需要在 effect 中读取以订阅导航变化。
@@ -1494,6 +1548,7 @@ export const RouterView: FC = () => {
         if (!record || !data || !record.component) {
           previousRecord = null
           previousParams = null
+          previousResolvedComponent = null
           renderAnchor(null as any, parent, anchorEl)
           return
         }
@@ -1504,12 +1559,18 @@ export const RouterView: FC = () => {
           previousRecord,
           previousParams,
         )
-        if (previousRecord === record && previousParams === recordParams) {
-          // 记录和当前层参数均未变化时保留原块，避免组件被重挂载。
+        const resolvedComponent = resolveRouteComponent(record.component)
+        if (
+          previousRecord === record &&
+          previousParams === recordParams &&
+          previousResolvedComponent === resolvedComponent
+        ) {
+          // 记录、当前层参数和懒组件解析结果均未变化时保留原块，避免组件被重挂载。
           return
         }
         previousRecord = record
         previousParams = recordParams
+        previousResolvedComponent = resolvedComponent
 
         renderAnchor(
           createRouteComponentBlock(record.component, recordParams, depth + 1) as any,
@@ -1589,11 +1650,20 @@ const routerLinkOnClick = (e: MouseEvent, to: unknown, replace?: unknown) => {
 }
 
 const RouterLinkImpl: FC<RouterLinkProps> = props => {
-  const r = useRouter()
   const to = (props as any).to as RouteLocationRaw
   const replace = !!(props as any).replace
   const { children, to: _to, replace: _replace, ...rest } = props as any
+  const childList = Array.isArray(children)
+    ? (children as any[])
+    : children != null
+      ? [children]
+      : []
 
+  if (__SSR__ && isRueServerRendering()) {
+    return h('a', { href: routerLinkHref(to), ...rest }, ...childList)
+  }
+
+  const r = useRouter()
   const click = (e: MouseEvent) => {
     // 组件路径下使用上下文 Router，避免多个应用共存时误用活动 Router。
     if (
@@ -1610,12 +1680,6 @@ const RouterLinkImpl: FC<RouterLinkProps> = props => {
     const nav = replace ? r.replace : r.push
     void nav(to)
   }
-
-  const childList = Array.isArray(children)
-    ? (children as any[])
-    : children != null
-      ? [children]
-      : []
 
   // children 归一化为数组后透传给 h，其他属性直接落到最终的 a 元素上。
   return h('a', { href: routerLinkHref(to), onClick: click, ...rest }, ...childList)

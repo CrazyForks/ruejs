@@ -696,7 +696,7 @@ const Group: FC<RadioGroupProps> = ({
 
   const syncChildInputs = () => {
     const root = instance.root
-    if (!root) return
+    if (!root || typeof root.querySelectorAll !== 'function') return
 
     const selectedSerializedValue =
       readCurrentValue() !== undefined

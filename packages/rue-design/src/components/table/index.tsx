@@ -1376,11 +1376,12 @@ const Table: FC<TableProps> = props => {
       draftValues: any[],
       depth = 0,
     ): any[] => {
-      return items.flatMap(item => {
-        const checked = draftValues.includes(item.value)
+      const safeDraftValues = Array.isArray(draftValues) ? draftValues : []
+      return (Array.isArray(items) ? items : []).flatMap(item => {
+        const checked = safeDraftValues.includes(item.value)
         const childNodes =
           Array.isArray(item.children) && item.children.length > 0
-            ? renderDefaultFilterItems(item.children, column, leafKey, draftValues, depth + 1)
+            ? renderDefaultFilterItems(item.children, column, leafKey, safeDraftValues, depth + 1)
             : []
         const labelNode = (
           <label
@@ -1401,7 +1402,7 @@ const Table: FC<TableProps> = props => {
                 if (column.filterMultiple === false) {
                   nextValues = input.checked ? [item.value] : []
                 } else {
-                  const nextSet = new Set(draftValues)
+                  const nextSet = new Set(safeDraftValues)
                   if (input.checked) nextSet.add(item.value)
                   else nextSet.delete(item.value)
                   nextValues = Array.from(nextSet)
@@ -1421,13 +1422,15 @@ const Table: FC<TableProps> = props => {
       leafKey: string,
       column: ColumnItem,
       visible: boolean,
-      draftValues: any[],
-      menuItems: FilterItem[],
+      draftValues: any[] | undefined,
+      menuItems: FilterItem[] | undefined,
     ) => {
+      const safeDraftValues = Array.isArray(draftValues) ? draftValues : []
+      const safeMenuItems = Array.isArray(menuItems) ? menuItems : []
       if (typeof column.filterDropdown === 'function') {
         return column.filterDropdown({
           setSelectedKeys: (selectedKeys: any[]) => setDraftFilterValues(leafKey, selectedKeys),
-          selectedKeys: draftValues,
+          selectedKeys: safeDraftValues,
           confirm: (options?: FilterConfirmOptions) =>
             confirmFilterValues(leafKey, column, options),
           clearFilters: (options?: FilterClearOptions) =>
@@ -1456,8 +1459,10 @@ const Table: FC<TableProps> = props => {
             />
           ) : null}
           <div className="max-h-56 space-y-2 overflow-auto">
-            {renderDefaultFilterItems(menuItems, column, leafKey, draftValues)}
-            {menuItems.length === 0 ? <div className="text-sm opacity-60">暂无匹配项</div> : null}
+            {renderDefaultFilterItems(safeMenuItems, column, leafKey, safeDraftValues)}
+            {safeMenuItems.length === 0 ? (
+              <div className="text-sm opacity-60">暂无匹配项</div>
+            ) : null}
           </div>
           {column.filterOnClose === false ? null : (
             <div className="mt-3 flex justify-end gap-2">

@@ -6,7 +6,14 @@ Suspense 组件概述
 - 容器策略：使用 display: contents 容器和起止锚点维护稳定区间，不额外产生布局盒。
 */
 
-import rue, { type FC, onBeforeUnmount, type PropsWithChildren, renderBetween, vapor } from '../rue'
+import rue, {
+  type FC,
+  h,
+  onBeforeUnmount,
+  type PropsWithChildren,
+  renderBetween,
+  vapor,
+} from '../rue'
 import { appendChild, createComment, createElement, getParentNode } from '../dom'
 import { signal, watchEffect } from '../reactivity'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
@@ -79,6 +86,13 @@ const callSuspenseHook = (hook: unknown) => {
 
 /** 为异步子树提供 pending 捕获、fallback 渲染和 resolved 内容恢复。 */
 export const Suspense: FC<SuspenseProps> = props => {
+  if (isServerRendering()) {
+    const children = toRenderable(props.children)
+    return Array.isArray(children)
+      ? h('fragment', null, ...children)
+      : h('fragment', null, children as any)
+  }
+
   const ctx = useSetup(() => {
     const parentBoundary = getCurrentSuspenseBoundary()
     const container = createElement('div') as HTMLElement
@@ -422,10 +436,6 @@ export const Suspense: FC<SuspenseProps> = props => {
     renderBetween([] as any, ctx.contentContainer, ctx.contentStartEl, ctx.contentEndEl)
     renderBetween([] as any, ctx.fallbackContainer, ctx.fallbackStartEl, ctx.fallbackEndEl)
   })
-
-  if (isServerRendering()) {
-    return ctx.container as any
-  }
 
   return vapor(() => {
     if (ctx.lastProps !== props) {

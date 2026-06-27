@@ -740,6 +740,24 @@ export function useComponent<P = any>(
       startOnce()
     }
 
+    if (isServerRendering()) {
+      const e = err.get()
+      if (e) {
+        return h(ErrorComp, { error: e })
+      }
+
+      const comp = component.get()
+      if (comp) {
+        return h(comp as FC<P>, props)
+      }
+
+      registerServerPendingDependency((slot as any).promise)
+      if (hasCustomLoading && loadingVisible.get()) {
+        return h(Loading, {})
+      }
+      return null
+    }
+
     // 为每个 Hook 实例创建独立的容器、单锚点与 props 信号，
     // 同一 loader 下仅共享“加载状态”，但不共享渲染区间与副作用。
     const createRenderContext = (initialProps: any) => {
@@ -961,10 +979,6 @@ export function useComponent<P = any>(
     onBeforeUnmount(() => {
       ctx.dispose()
     })
-
-    if (isServerRendering()) {
-      return ctx.container as any
-    }
 
     const handle = vapor(() => {
       // 将 props 写入信号以驱动渲染，并把稳定容器直接暴露给 Vapor 渲染管线

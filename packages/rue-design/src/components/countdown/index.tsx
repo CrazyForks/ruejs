@@ -230,6 +230,13 @@ const syncValueElement = (
   digits: number | undefined,
   ariaLive: CountdownAriaLive,
 ) => {
+  if (
+    !element.style ||
+    typeof element.style.setProperty !== 'function' ||
+    typeof element.setAttribute !== 'function'
+  ) {
+    return
+  }
   element.style.setProperty('--value', String(value))
   if (digits != null) {
     element.style.setProperty('--digits', String(digits))
@@ -335,7 +342,7 @@ const Countdown: FC<CountdownProps> = ({
 
     if (!rootElement || !active) return
 
-    Array.from(rootElement.children).forEach(element => {
+    Array.from(rootElement.children ?? []).forEach(element => {
       const valueElement = element as HTMLElement
       const tokenIndex = Number(valueElement.dataset.countdownTokenIndex)
       const token = tokens[tokenIndex]

@@ -26,6 +26,19 @@ const DEFAULT_TRANSFORM_TIMEOUT_MS = 5000
 const TRANSFORM_WORKER_PATH = requireFromHere.resolve('./transform-worker.mjs')
 /** 暂时跳过二次转换的 rue-design 组件目录名。 */
 const RUE_DESIGN_PATH_SKIPPED_COMPONENTS = new Set(['calendar', 'time-picker'])
+/** Rue island manifest virtual module id. */
+export const RUE_ISLAND_MANIFEST_ID = 'virtual:rue-island-manifest'
+const RESOLVED_RUE_ISLAND_MANIFEST_ID = `\0${RUE_ISLAND_MANIFEST_ID}`
+const CLIENT_DIRECTIVE_NAMESPACE = 'client'
+const CLIENT_DIRECTIVE_STRATEGIES = new Set([
+  'load',
+  'idle',
+  'visible',
+  'media',
+  'interaction',
+  'none',
+  'only',
+])
 
 /** 判断字符是否可作为 JSX 标签名开头。 */
 const isAlpha = ch => /[A-Za-z]/.test(ch)
@@ -675,6 +688,232 @@ const getJsxAttrValueSource = attr => {
   }
 
   return null
+}
+
+const getStaticJsxAttrValue = attr => {
+  if (!attr?.value) {
+    return true
+  }
+
+  if (attr.value.type === 'StringLiteral') {
+    return attr.value.value
+  }
+
+  if (attr.value.type === 'JSXExpressionContainer') {
+    const expr = attr.value.expression
+    if (!expr || expr.type === 'JSXEmptyExpression') {
+      return true
+    }
+    if (expr.type === 'StringLiteral') {
+      return expr.value
+    }
+    if (expr.type === 'BooleanLiteral') {
+      return expr.value
+    }
+    if (expr.type === 'ArrayExpression') {
+      const values = []
+      for (const element of expr.elements ?? []) {
+        const item = element?.expression ?? element
+        if (item?.type !== 'StringLiteral') {
+          return null
+        }
+        values.push(item.value)
+      }
+      return values
+    }
+  }
+
+  return null
+}
+
+const getJsxBaseIdentifierName = name => {
+  if (!name) {
+    return ''
+  }
+  if (name.type === 'Identifier') {
+    return name.value
+  }
+  if (name.type === 'JSXMemberExpression') {
+    return getJsxBaseIdentifierName(name.object)
+  }
+  if (name.type === 'JSXNamespacedName') {
+    return getJsxNameText(name.namespace || name.ns)
+  }
+  return ''
+}
+
+const hashRueIslandId = value => {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(36)
+}
+
+const normalizeModuleId = id => id.split('?')[0]
+
+const getImportBindingManifest = ast => {
+  const bindings = new Map()
+  for (const item of ast.body ?? []) {
+    if (item.type !== 'ImportDeclaration') {
+      continue
+    }
+
+    const source = item.source?.value
+    if (typeof source !== 'string') {
+      continue
+    }
+
+    for (const specifier of item.specifiers ?? []) {
+      if (specifier.type === 'ImportDefaultSpecifier') {
+        bindings.set(specifier.local.value, {
+          component: source,
+          exportName: 'default',
+        })
+        continue
+      }
+
+      if (specifier.type === 'ImportSpecifier') {
+        const imported = specifier.imported?.value ?? specifier.local.value
+        bindings.set(specifier.local.value, {
+          component: source,
+          exportName: imported,
+        })
+        continue
+      }
+
+      if (specifier.type === 'ImportNamespaceSpecifier') {
+        bindings.set(specifier.local.value, {
+          component: source,
+          exportName: '*',
+        })
+      }
+    }
+  }
+  return bindings
+}
+
+const parseClientDirectiveAttrName = name => {
+  if (!name.startsWith(`${CLIENT_DIRECTIVE_NAMESPACE}:`)) {
+    return null
+  }
+
+  const strategy = name.slice(CLIENT_DIRECTIVE_NAMESPACE.length + 1)
+  if (!CLIENT_DIRECTIVE_STRATEGIES.has(strategy)) {
+    return null
+  }
+  return strategy
+}
+
+const getClientDirectiveStrategy = opening => {
+  let selected = null
+  for (const attr of opening.attributes ?? []) {
+    if (attr.type !== 'JSXAttribute') {
+      continue
+    }
+    const strategy = parseClientDirectiveAttrName(getJsxAttrNameText(attr.name))
+    if (!strategy) {
+      continue
+    }
+    if (selected) {
+      throw new Error(
+        `Only one client:* directive is allowed on <${getJsxNameText(opening.name)}> in Rue islands.`,
+      )
+    }
+    selected = { strategy, attr }
+  }
+  return selected
+}
+
+const createRueIslandMetadata = (opening, directive, id, importBindings, index) => {
+  const tagName = getJsxNameText(opening.name)
+  const baseName = getJsxBaseIdentifierName(opening.name)
+  const imported = importBindings.get(baseName)
+  const normalizedId = normalizeModuleId(id)
+  const spanKey = `${opening.span?.start ?? index}:${opening.span?.end ?? index}`
+  const hydrate = directive.strategy
+  const directiveValue = getStaticJsxAttrValue(directive.attr)
+  const entry = {
+    id: `rue-${hashRueIslandId(`${normalizedId}:${spanKey}:${tagName}:${index}`)}`,
+    component: imported?.component ?? normalizedId,
+    entry: hydrate === 'none' ? undefined : (imported?.component ?? normalizedId),
+    exportName: imported?.exportName ?? tagName,
+    hydrate,
+  }
+
+  if (hydrate === 'media') {
+    if (typeof directiveValue === 'string') {
+      entry.media = directiveValue
+    }
+  } else if (hydrate === 'interaction') {
+    if (typeof directiveValue === 'string' || Array.isArray(directiveValue)) {
+      entry.interaction = directiveValue
+    }
+  }
+
+  return entry
+}
+
+const transformClientDirectiveAttributes = (code, id = '') => {
+  if (!code.includes('client:')) {
+    return { code, islands: [] }
+  }
+
+  let ast
+  try {
+    ast = swc.parseSync(code, { syntax: 'typescript', tsx: true, target: 'es2020' })
+  } catch {
+    return { code, islands: [] }
+  }
+
+  const importBindings = getImportBindingManifest(ast)
+  const islands = []
+  let changed = false
+
+  const visit = node => {
+    if (!node || typeof node !== 'object') {
+      return
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        visit(item)
+      }
+      return
+    }
+
+    if (node.type === 'JSXOpeningElement') {
+      const directive = getClientDirectiveStrategy(node)
+      if (directive) {
+        islands.push(createRueIslandMetadata(node, directive, id, importBindings, islands.length))
+        node.attributes = node.attributes.filter(
+          attr =>
+            attr.type !== 'JSXAttribute' ||
+            !parseClientDirectiveAttrName(getJsxAttrNameText(attr.name)),
+        )
+        changed = true
+      }
+    }
+
+    for (const value of Object.values(node)) {
+      if (!value || typeof value !== 'object') {
+        continue
+      }
+      visit(value)
+    }
+  }
+
+  visit(ast)
+
+  if (!changed) {
+    return { code, islands: [] }
+  }
+
+  return {
+    code: swc.printSync(ast, {}).code,
+    islands,
+  }
 }
 
 /** 在 opening element 中查找第一个命中的 JSX 属性。 */
@@ -2330,7 +2569,8 @@ export async function compileRueStatic(code, options = {}) {
 
   let loweredModel
   try {
-    loweredModel = preprocessRueSource(code, id)
+    const clientDirectiveResult = transformClientDirectiveAttributes(code, id)
+    loweredModel = preprocessRueSource(clientDirectiveResult.code, id)
   } catch (error) {
     throw createStageError({
       id,
@@ -2567,6 +2807,26 @@ export default function VitePluginRue(options = {}) {
   // 默认始终使用 worker 转换，确保 dev/build 阶段都能通过超时保护终止卡住的编译。
   let activeTransformExecutor = transformExecutor
   let isProductionTransform = process.env.NODE_ENV === 'production'
+  const islandManifestByModule = new Map()
+
+  const updateIslandManifest = (id, islands) => {
+    const normalizedId = normalizeModuleId(id)
+    if (islands.length === 0) {
+      islandManifestByModule.delete(normalizedId)
+      return
+    }
+    islandManifestByModule.set(normalizedId, islands)
+  }
+
+  const createIslandManifestModule = () => {
+    const manifest = {}
+    for (const islands of islandManifestByModule.values()) {
+      for (const island of islands) {
+        manifest[island.id] = island
+      }
+    }
+    return `export const manifest = ${JSON.stringify(manifest, null, 2)};\nexport default manifest;\n`
+  }
 
   /**
    * 判断文件是否命中 include/exclude 规则。
@@ -2602,10 +2862,13 @@ export default function VitePluginRue(options = {}) {
    */
   const transformWithSwcPlugin = async (code, id, pluginPath) => {
     let loweredModel
+    let islands = []
     try {
       // 第一阶段先把 JSX parser 无法识别的指令属性改写成安全属性名，
       // 第二阶段借助 SWC AST 将 v-model 安全属性降级成普通 JSX 属性。
-      loweredModel = preprocessRueSource(code, id)
+      const clientDirectiveResult = transformClientDirectiveAttributes(code, id)
+      islands = clientDirectiveResult.islands
+      loweredModel = preprocessRueSource(clientDirectiveResult.code, id)
     } catch (error) {
       throw createStageError({
         id,
@@ -2633,7 +2896,10 @@ export default function VitePluginRue(options = {}) {
       if (hasReactivePropsDestructureRewrite(normalizedOut)) {
         headers.push(RUE_REACTIVE_PROPS_DESTRUCTURE_HEADER)
       }
-      return `${headers.join('\n')}\n${normalizedOut}`
+      return {
+        code: `${headers.join('\n')}\n${normalizedOut}`,
+        islands,
+      }
     } catch (error) {
       if (isRueTransformError(error)) {
         throw error
@@ -2659,6 +2925,18 @@ export default function VitePluginRue(options = {}) {
      * @returns {boolean} 是否应用插件。
      */
     apply: (_config, { command: _command }) => true,
+    resolveId(id) {
+      if (id === RUE_ISLAND_MANIFEST_ID) {
+        return RESOLVED_RUE_ISLAND_MANIFEST_ID
+      }
+      return null
+    },
+    load(id) {
+      if (id === RESOLVED_RUE_ISLAND_MANIFEST_ID) {
+        return createIslandManifestModule()
+      }
+      return null
+    },
     /**
      * Vite 转换钩子：对命中的 TSX/JSX 模块执行 Rue 编译。
      * @param {string} code 源码。
@@ -2693,14 +2971,15 @@ export default function VitePluginRue(options = {}) {
       }
 
       // 无输出或无变化时跳过
-      if (!out || out === code) return null
+      if (!out || out.code === code) return null
+      updateIslandManifest(id, out.islands)
 
       // 调试日志：提示已转换模块
-      if (debug && out && out !== code) {
+      if (debug && out.code && out.code !== code) {
         console.log(`[rue-vapor] transformed: ${id}`)
       }
       // 返回转换后的代码与空映射
-      return { code: out, map: null }
+      return { code: out.code, map: null }
     },
     /** Vite 配置解析完成钩子：默认执行器保持 worker 隔离，避免 build 阶段同步卡住。 */
     configResolved(config) {

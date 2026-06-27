@@ -1,5 +1,6 @@
-import { type FC, useState } from '@rue-js/rue'
+import { type FC } from '@rue-js/rue'
 import { RouterView, useRoute } from '@rue-js/router'
+import { resolveStaticRenderPath, useStaticRenderContext } from '../../staticRenderContext'
 import {
   createPersistentSidebarPlayground,
   type SidebarSection,
@@ -11,6 +12,14 @@ const readCurrentHashPath = (): string => {
     return hash.slice(1) || '/'
   }
   return hash || globalThis.location?.pathname || ''
+}
+
+const useInitialCurrentPath = (): string => {
+  const staticRenderContext = useStaticRenderContext()
+
+  return import.meta.env.SSR
+    ? resolveStaticRenderPath(staticRenderContext?.url)
+    : readCurrentHashPath()
 }
 
 const SIDEBAR_LAYOUT_META = 'guide'
@@ -315,18 +324,22 @@ const SidebarPlayground: FC<SidebarPlaygroundProps> = props => {
     return <>{props.children}</>
   }
 
-  const [initialCurrentPath] = useState(readCurrentHashPath)
+  const initialCurrentPath = useInitialCurrentPath()
 
   return (
-    <BaseSidebarPlayground currentPath={props.currentPath ?? initialCurrentPath.value}>
+    <BaseSidebarPlayground currentPath={props.currentPath ?? initialCurrentPath}>
       {props.children}
     </BaseSidebarPlayground>
   )
 }
 
 export const GuideRouteLayout: FC = () => {
+  const initialCurrentPath = useInitialCurrentPath()
+
   return (
-    <RouteSidebarPlayground>
+    <RouteSidebarPlayground
+      currentPath={import.meta.env.SSR && initialCurrentPath ? initialCurrentPath : undefined}
+    >
       <RouterView />
     </RouteSidebarPlayground>
   )

@@ -6,6 +6,7 @@ import { type CodeProps } from './CodeShared'
 
 function shouldUsePlainCodeBlock(): boolean {
   return (
+    import.meta.env?.SSR === true ||
     import.meta.env?.MODE === 'test' ||
     import.meta.env?.VITEST === true ||
     import.meta.env?.VITEST === 'true' ||

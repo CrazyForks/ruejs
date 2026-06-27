@@ -1,8 +1,12 @@
+import { existsSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { attachRouter, createRouter, RouterView } from '@rue-js/router'
 import { render, setReactiveScheduling } from '../src'
 import ApiDocDetail from '../../../app/pages/site/ApiDocDetail'
+import { SECTIONS_BY_TYPE } from '../../../app/pages/site/SidebarPlaygroundApi'
 import { createMemoryHistory, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundApi', async () => {
@@ -20,6 +24,24 @@ vi.mock('../../../app/pages/site/SidebarPlaygroundApi', async () => {
 
 setReactiveScheduling('sync')
 
+type ApiSidebarItem = {
+  id: string
+  href?: string
+  children?: ApiSidebarItem[]
+}
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
+
+const flattenLinkedDocIds = (items: ApiSidebarItem[]): string[] => {
+  return items.flatMap(item => {
+    if (item.children?.length) {
+      return flattenLinkedDocIds(item.children)
+    }
+
+    return item.href ? [item.id] : []
+  })
+}
+
 afterEach(() => {
   document.body.innerHTML = ''
   vi.unstubAllGlobals()
@@ -27,6 +49,14 @@ afterEach(() => {
 })
 
 describe('ApiDocDetail actual page', () => {
+  it('keeps every linked api sidebar entry backed by a markdown document', () => {
+    const missingDocIds = SECTIONS_BY_TYPE.api
+      .flatMap(section => flattenLinkedDocIds(section.items))
+      .filter(id => !existsSync(resolve(repoRoot, 'docs', `${id}.md`)))
+
+    expect(missingDocIds).toEqual([])
+  })
+
   it('reuses cached html when revisiting the same api route', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
