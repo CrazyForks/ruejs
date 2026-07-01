@@ -1,6 +1,6 @@
 {
   "name": "@rue-js/runtime",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "@rue-js/runtime",
   "keywords": [
     "rue"
@@ -76,7 +76,16 @@
       "require": "./dist/runtime.island.cjs.js"
     },
     "./dom": {
-      "types": "./src/dom.ts"
+      "types": "./src/dom.ts",
+      "node": {
+        "production": "./dist/runtime.dom.cjs.prod.js",
+        "development": "./dist/runtime.dom.cjs.js",
+        "default": "./dist/runtime.dom.cjs.js"
+      },
+      "development": "./src/dom.ts",
+      "module": "./dist/runtime.dom.esm-bundler.js",
+      "import": "./dist/runtime.dom.esm-bundler.js",
+      "require": "./dist/runtime.dom.cjs.js"
     },
     "./*": "./*"
   },
@@ -117,6 +126,14 @@
       {
         "entry": "src/island.ts",
         "filename": "runtime.island",
+        "formats": [
+          "esm-bundler",
+          "cjs"
+        ]
+      },
+      {
+        "entry": "src/dom.ts",
+        "filename": "runtime.dom",
         "formats": [
           "esm-bundler",
           "cjs"
