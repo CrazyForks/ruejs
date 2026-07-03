@@ -19,7 +19,6 @@
     "declaration": true,
     "outDir": "./dist",
     "paths": {
-      "markdown-it": ["./app/types/markdown-it.d.ts"],
       "@shikijs/langs/*": ["./app/types/shikijs-lang.d.ts"],
       "@shikijs/themes/*": ["./app/types/shikijs-theme.d.ts"],
       "@rue-js/rue": ["./packages/rue/src"],

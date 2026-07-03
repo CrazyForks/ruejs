@@ -1,9 +1,9 @@
 import { type FC, ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
-import MarkdownIt from 'markdown-it'
+import { markdownToHtml } from 'satteri'
 
-const md = new MarkdownIt({ html: true, linkify: true, breaks: true })
+const renderMarkdown = (source: string) => markdownToHtml(source).html
 
 function debounce<T extends (...args: any[]) => void>(fn: T, wait = 100) {
   let t: number | undefined
@@ -52,9 +52,9 @@ const MarkdownEditor: FC = () => {
                 className="h-full"
                 lang="tsx"
                 code={`import { type FC, ref } from '@rue-js/rue';
-import MarkdownIt from 'markdown-it';
+import { markdownToHtml } from 'satteri';
 
-const md = new MarkdownIt({ html: true, linkify: true, breaks: true });
+const renderMarkdown = (source: string) => markdownToHtml(source).html;
 
 function debounce<T extends (...args: any[]) => void>(fn: T, wait = 100) {
   let t: number | undefined;
@@ -78,7 +78,7 @@ const MarkdownEditor: FC = () => {
           />
           <div
             className="p-4 overflow-auto"
-            dangerouslySetInnerHTML={{ __html: md.render(input.value) }}
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(input.value) }}
           />
         </div>
       </div>
@@ -103,7 +103,7 @@ export default MarkdownEditor;`}
                 />
                 <div
                   className="p-4 overflow-auto"
-                  dangerouslySetInnerHTML={{ __html: md.render(input.value) }}
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(input.value) }}
                 />
               </div>
             </div>

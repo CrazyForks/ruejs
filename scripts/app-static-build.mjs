@@ -3,6 +3,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'vite'
+import { defineMdastPlugin, markdownToHtml } from 'satteri'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = path.resolve(root, 'dist_static')
@@ -21,14 +22,14 @@ const routeSnapshotOutDir = path.resolve(ssrOutDir, '.route-snapshots')
 const staticRenderReportFile = path.resolve(outDir, 'static-render-report.json')
 const staticRenderErrorLogFile = path.resolve(outDir, 'static-render-errors.log')
 const codeBlockRe = /<pre><code class="language-([^"]*)">([\s\S]*?)<\/code><\/pre>/g
+const containerDirectiveMarkerRe = /^([ ]{0,3}:{3,})[ \t]+(tip|info|warning|danger)(?=\s|$)/gm
 const externalModuleScriptRe =
   /\n?[ \t]*<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["'][^"']+["'])[^>]*>\s*<\/script>/gi
 const modulePreloadLinkRe = /\n?[ \t]*<link\b(?=[^>]*\brel=["']modulepreload["'])[^>]*\/?>/gi
 const themeInitScriptRe =
   /\n?[ \t]*<script\b(?![^>]*\bsrc=)[^>]*>[\s\S]*?localStorage\.getItem\(["']rue\.theme["']\)[\s\S]*?<\/script>/i
 const allowedLangs = new Set(['html', 'css', 'ts', 'tsx', 'rust', 'js', 'javascript', 'typescript'])
-let markdownParser = null
-let markdownParserPromise = null
+const docContainerDirectives = new Set(['tip', 'info', 'warning', 'danger'])
 let highlightContext = null
 let highlightContextPromise = null
 
@@ -46,54 +47,53 @@ const routeToFile = route => {
   return path.join(outDir, normalized.slice(1), 'index.html')
 }
 
-const createMarkdownParser = async () => {
-  const [
-    markdownItModule,
-    anchorModule,
-    containerModule,
-    attrsModule,
-    tasklistsModule,
-    footnoteModule,
-  ] = await Promise.all([
-    import('markdown-it'),
-    import('markdown-it-anchor'),
-    import('markdown-it-container'),
-    import('markdown-it-attrs'),
-    import('markdown-it-task-lists'),
-    import('markdown-it-footnote'),
-  ])
+const docContainerDirectivePlugin = defineMdastPlugin({
+  name: 'rue-doc-container-directives',
+  containerDirective(node, ctx) {
+    if (!docContainerDirectives.has(node.name)) {
+      ctx.report({
+        message: `Unsupported container directive "${node.name}" was ignored.`,
+        node,
+        severity: 'warning',
+      })
+      return
+    }
 
-  const parser = new markdownItModule.default({
-    html: true,
-    typographer: true,
-  })
+    const hProperties = {}
+    const classNames = [node.name]
 
-  parser.use(anchorModule.default)
-  parser.use(tasklistsModule.default)
-  parser.use(footnoteModule.default)
-  parser.use(attrsModule.default)
-  parser.use(containerModule.default, 'tip')
-  parser.use(containerModule.default, 'info')
-  parser.use(containerModule.default, 'warning')
-  parser.use(containerModule.default, 'danger')
+    for (const [key, value] of Object.entries(node.attributes ?? {})) {
+      if (value == null) {
+        continue
+      }
+      if (key === 'class') {
+        classNames.push(...value.split(/\s+/).filter(Boolean))
+        continue
+      }
+      hProperties[key] = value
+    }
 
-  return parser
-}
+    hProperties.className = classNames
 
-const ensureMarkdownParser = async () => {
-  if (markdownParser) {
-    return markdownParser
-  }
-
-  if (!markdownParserPromise) {
-    markdownParserPromise = createMarkdownParser().then(parser => {
-      markdownParser = parser
-      return parser
+    ctx.setProperty(node, 'data', {
+      ...node.data,
+      hName: 'div',
+      hProperties,
     })
-  }
+  },
+})
 
-  return markdownParserPromise
+const markdownOptions = {
+  features: {
+    headingAttributes: true,
+    directive: true,
+    smartPunctuation: true,
+  },
+  mdastPlugins: [docContainerDirectivePlugin],
 }
+
+const normalizeContainerDirectiveMarkers = source =>
+  source.replace(containerDirectiveMarkerRe, '$1$2')
 
 const createHighlightContext = async () => {
   const [
@@ -169,8 +169,8 @@ const normalizeLanguage = lang => {
 }
 
 const mdToHtml = async markdown => {
-  const parser = await ensureMarkdownParser()
-  let html = parser.render(markdown)
+  const result = await markdownToHtml(normalizeContainerDirectiveMarkers(markdown), markdownOptions)
+  let html = result.html
   const blocks = [...html.matchAll(codeBlockRe)]
 
   if (blocks.length === 0) {

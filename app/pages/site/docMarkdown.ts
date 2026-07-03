@@ -1,7 +1,4 @@
-type MarkdownParser = {
-  render(source: string): string
-  use(plugin: unknown, ...args: unknown[]): MarkdownParser
-}
+import { defineMdastPlugin, markdownToHtml, type CompileOptions } from 'satteri'
 
 type HighlightContext = {
   highlighter: any
@@ -9,6 +6,7 @@ type HighlightContext = {
 }
 
 const CODE_BLOCK_RE = /<pre><code class="language-([^"]*)">([\s\S]*?)<\/code><\/pre>/g
+const CONTAINER_DIRECTIVE_MARKER_RE = /^([ ]{0,3}:{3,})[ \t]+(tip|info|warning|danger)(?=\s|$)/gm
 const ALLOWED_LANGS = new Set([
   'html',
   'css',
@@ -19,65 +17,58 @@ const ALLOWED_LANGS = new Set([
   'javascript',
   'typescript',
 ])
+const DOC_CONTAINER_DIRECTIVES = new Set(['tip', 'info', 'warning', 'danger'])
 
-let markdownParser: MarkdownParser | null = null
-let markdownParserPromise: Promise<MarkdownParser> | null = null
 let highlightContext: HighlightContext | null = null
 let highlightContextPromise: Promise<HighlightContext> | null = null
 
-const createMarkdownParser = async (): Promise<MarkdownParser> => {
-  const [
-    markdownItModule,
-    anchorModule,
-    containerModule,
-    attrsModule,
-    tasklistsModule,
-    footnoteModule,
-  ] = await Promise.all([
-    import('markdown-it'),
-    import('markdown-it-anchor'),
-    import('markdown-it-container'),
-    import('markdown-it-attrs'),
-    import('markdown-it-task-lists'),
-    import('markdown-it-footnote'),
-  ])
+const docContainerDirectivePlugin = defineMdastPlugin({
+  name: 'rue-doc-container-directives',
+  containerDirective(node, ctx) {
+    if (!DOC_CONTAINER_DIRECTIVES.has(node.name)) {
+      ctx.report({
+        message: `Unsupported container directive "${node.name}" was ignored.`,
+        node,
+        severity: 'warning',
+      })
+      return
+    }
 
-  const MarkdownIt = markdownItModule.default as new (options: {
-    html: boolean
-    typographer: boolean
-  }) => MarkdownParser
+    const hProperties: Record<string, string | string[]> = {}
+    const classNames = [node.name]
 
-  const parser = new MarkdownIt({
-    html: true,
-    typographer: true,
-  })
+    for (const [key, value] of Object.entries(node.attributes ?? {})) {
+      if (value == null) {
+        continue
+      }
+      if (key === 'class') {
+        classNames.push(...value.split(/\s+/).filter(Boolean))
+        continue
+      }
+      hProperties[key] = value
+    }
 
-  parser.use(anchorModule.default)
-  parser.use(tasklistsModule.default)
-  parser.use(footnoteModule.default)
-  parser.use(attrsModule.default)
-  parser.use(containerModule.default, 'tip')
-  parser.use(containerModule.default, 'info')
-  parser.use(containerModule.default, 'warning')
-  parser.use(containerModule.default, 'danger')
+    hProperties.className = classNames
 
-  return parser
-}
-
-const ensureMarkdownParser = async () => {
-  if (markdownParser) {
-    return markdownParser
-  }
-
-  if (!markdownParserPromise) {
-    markdownParserPromise = createMarkdownParser().then(parser => {
-      markdownParser = parser
-      return parser
+    ctx.setProperty(node, 'data', {
+      ...node.data,
+      hName: 'div',
+      hProperties,
     })
-  }
+  },
+})
 
-  return markdownParserPromise
-}
+const markdownOptions = {
+  features: {
+    headingAttributes: true,
+    directive: true,
+    smartPunctuation: true,
+  },
+  mdastPlugins: [docContainerDirectivePlugin],
+} satisfies CompileOptions
+
+const normalizeContainerDirectiveMarkers = (source: string) =>
+  source.replace(CONTAINER_DIRECTIVE_MARKER_RE, '$1$2')
 
 const createHighlightContext = async (): Promise<HighlightContext> => {
   const [
@@ -153,8 +144,8 @@ const normalizeLanguage = (lang: string) => {
 }
 
 export async function mdToHtml(markdown: string): Promise<string> {
-  const parser = await ensureMarkdownParser()
-  let html = parser.render(markdown)
+  const result = await markdownToHtml(normalizeContainerDirectiveMarkers(markdown), markdownOptions)
+  let html = result.html
   const blocks = [...html.matchAll(CODE_BLOCK_RE)]
 
   if (blocks.length === 0) {

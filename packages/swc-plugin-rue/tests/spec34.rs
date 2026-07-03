@@ -11,18 +11,7 @@ fn transforms_spec34() {
 import { type FC, useEffect, useState } from '@rue-js/rue'
 import { RouterLink, useRoute } from '@rue-js/router'
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlayground'
-// @ts-ignore
-// @ts-expect-error
-import MarkdownIt from 'markdown-it'
-import anchor from 'markdown-it-anchor'
-// @ts-expect-error
-import container from 'markdown-it-container'
-// @ts-expect-error
-import attrs from 'markdown-it-attrs'
-// @ts-expect-error
-import tasklists from 'markdown-it-task-lists'
-// @ts-expect-error
-import footnote from 'markdown-it-footnote'
+import { defineMdastPlugin, markdownToHtml } from 'satteri'
 
 // 从 SidebarPlayground 的 SECTIONS_BY_TYPE 派生 DOCS_META，用于上一页/下一页
 type MenuItem = { id: string; title: string; href?: string; children?: MenuItem[] }
@@ -50,29 +39,62 @@ function getContext(pathname: string): {
   return { sidebarType, uiBase, docBase }
 }
 
-let __mdParser: MarkdownIt | null = null
-async function ensureMd() {
-  if (!__mdParser) {
-    const md = new MarkdownIt({
-      html: true,
-      typographer: true,
+const CODE_BLOCK_RE = /<pre><code class="language-([^"]*)">([\s\S]*?)<\/code><\/pre>/g
+const CONTAINER_DIRECTIVE_MARKER_RE = /^([\x20]{0,3}:{3,})[\x20\t]+(tip|info|warning|danger)(?=\s|$)/gm
+const DOC_CONTAINER_DIRECTIVES = new Set(['tip', 'info', 'warning', 'danger'])
+
+const docContainerDirectivePlugin = defineMdastPlugin({
+  name: 'rue-doc-container-directives',
+  containerDirective(node, ctx) {
+    if (!DOC_CONTAINER_DIRECTIVES.has(node.name)) {
+      ctx.report({
+        message: `Unsupported container directive "${node.name}" was ignored.`,
+        node,
+        severity: 'warning',
+      })
+      return
+    }
+
+    const hProperties: Record<string, string | string[]> = {}
+    const classNames = [node.name]
+
+    for (const [key, value] of Object.entries(node.attributes ?? {})) {
+      if (value == null) {
+        continue
+      }
+      if (key === 'class') {
+        classNames.push(...value.split(/\s+/).filter(Boolean))
+        continue
+      }
+      hProperties[key] = value
+    }
+
+    hProperties.className = classNames
+
+    ctx.setProperty(node, 'data', {
+      ...(node.data ?? {}),
+      hName: 'div',
+      hProperties,
     })
-    md.use(anchor)
-    md.use(tasklists)
-    md.use(footnote)
-    md.use(attrs)
-    md.use(container, 'tip')
-    md.use(container, 'info')
-    md.use(container, 'warning')
-    md.use(container, 'danger')
-    __mdParser = md
-  }
+  },
+})
+
+const markdownOptions = {
+  features: {
+    headingAttributes: true,
+    directive: true,
+    smartPunctuation: true,
+  },
+  mdastPlugins: [docContainerDirectivePlugin],
 }
-async function mdToHtml(md: string): Promise<string> {
-  await ensureMd()
-  let html = __mdParser!.render(md)
-  const re = /<pre><code class="language-([^"]*)">([\s\S]*?)<\/code><\/pre>/g
-  const blocks = [...html.matchAll(re)]
+
+const normalizeContainerDirectiveMarkers = (source: string) =>
+  source.replace(CONTAINER_DIRECTIVE_MARKER_RE, '$1$2')
+
+async function mdToHtml(markdown: string): Promise<string> {
+  const result = await markdownToHtml(normalizeContainerDirectiveMarkers(markdown), markdownOptions)
+  let html = result.html
+  const blocks = [...html.matchAll(CODE_BLOCK_RE)]
   if (!blocks.length) return html
   for (const m of blocks) {
     const lang = (m[1] || 'txt').trim() || 'txt'
@@ -167,12 +189,7 @@ export default DocDetail
 import { type FC } from '@rue-js/rue';
 import { RouterLink, useRoute } from '@rue-js/router';
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlayground';
-import MarkdownIt from 'markdown-it';
-import anchor from 'markdown-it-anchor';
-import container from 'markdown-it-container';
-import attrs from 'markdown-it-attrs';
-import tasklists from 'markdown-it-task-lists';
-import footnote from 'markdown-it-footnote';
+import { defineMdastPlugin, markdownToHtml } from 'satteri';
 type MenuItem = {
     id: string;
     title: string;
@@ -218,30 +235,63 @@ function getContext(pathname: string): {
         docBase
     };
 }
-let __mdParser: MarkdownIt | null = null;
-async function ensureMd() {
-    if (!__mdParser) {
-        const md = new MarkdownIt({
-            html: true,
-            typographer: true
+const CODE_BLOCK_RE = /<pre><code class="language-([^"]*)">([\s\S]*?)<\/code><\/pre>/g;
+const CONTAINER_DIRECTIVE_MARKER_RE = /^([\x20]{0,3}:{3,})[\x20\t]+(tip|info|warning|danger)(?=\s|$)/gm;
+const DOC_CONTAINER_DIRECTIVES = new Set([
+    'tip',
+    'info',
+    'warning',
+    'danger'
+]);
+const docContainerDirectivePlugin = defineMdastPlugin({
+    name: 'rue-doc-container-directives',
+    containerDirective (node, ctx) {
+        if (!DOC_CONTAINER_DIRECTIVES.has(node.name)) {
+            ctx.report({
+                message: `Unsupported container directive "${node.name}" was ignored.`,
+                node,
+                severity: 'warning'
+            });
+            return;
+        }
+        const hProperties: Record<string, string | string[]> = {};
+        const classNames = [
+            node.name
+        ];
+        for (const [key, value] of Object.entries(node.attributes ?? {})){
+            if (value == null) {
+                continue;
+            }
+            if (key === 'class') {
+                classNames.push(...value.split(/\s+/).filter(Boolean));
+                continue;
+            }
+            hProperties[key] = value;
+        }
+        hProperties.className = classNames;
+        ctx.setProperty(node, 'data', {
+            ...(node.data ?? {}),
+            hName: 'div',
+            hProperties
         });
-        md.use(anchor);
-        md.use(tasklists);
-        md.use(footnote);
-        md.use(attrs);
-        md.use(container, 'tip');
-        md.use(container, 'info');
-        md.use(container, 'warning');
-        md.use(container, 'danger');
-        __mdParser = md;
     }
-}
-async function mdToHtml(md: string): Promise<string> {
-    await ensureMd();
-    let html = __mdParser!.render(md);
-    const re = /<pre><code class="language-([^"]*)">([\s\S]*?)<\/code><\/pre>/g;
+});
+const markdownOptions = {
+    features: {
+        headingAttributes: true,
+        directive: true,
+        smartPunctuation: true
+    },
+    mdastPlugins: [
+        docContainerDirectivePlugin
+    ]
+};
+const normalizeContainerDirectiveMarkers = (source: string)=>source.replace(CONTAINER_DIRECTIVE_MARKER_RE, '$1$2');
+async function mdToHtml(markdown: string): Promise<string> {
+    const result = await markdownToHtml(normalizeContainerDirectiveMarkers(markdown), markdownOptions);
+    let html = result.html;
     const blocks = [
-        ...html.matchAll(re)
+        ...html.matchAll(CODE_BLOCK_RE)
     ];
     if (!blocks.length) return html;
     for (const m of blocks){

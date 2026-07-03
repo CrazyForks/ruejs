@@ -9,9 +9,9 @@ mod utils;
 fn transforms_spec13() {
     let src = r##"
 import { FC, ref } from '@rue-js/rue';
-import MarkdownIt from 'markdown-it';
+import { markdownToHtml } from 'satteri';
 
-const md = new MarkdownIt({ html: true, linkify: true, breaks: true });
+const renderMarkdown = (source: string) => markdownToHtml(source).html;
 
 function debounce<T extends (...args: any[]) => void>(fn: T, wait = 100) {
   let t: number | undefined;
@@ -34,8 +34,8 @@ const MarkdownEditor: FC = () => {
             onInput={update}
           />
           <div
-            className="p-4 overflow-auto prose prose-sm"
-            dangerouslySetInnerHTML={{ __html: md.render(input.value) }}
+            className="p-4 overflow-auto"
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(input.value) }}
           />
         </div>
       </div>
@@ -52,12 +52,8 @@ export default MarkdownEditor;
 
     let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createElement, _$appendChild, watchEffect, _$addEventListener, _$setClassName, _$setInnerHTML, _$setValue } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
-import MarkdownIt from 'markdown-it';
-const md = new MarkdownIt({
-    html: true,
-    linkify: true,
-    breaks: true
-});
+import { markdownToHtml } from 'satteri';
+const renderMarkdown = (source: string)=>markdownToHtml(source).html;
 function debounce<T extends (...args: any[]) => void>(fn: T, wait = 100) {
     let t: number | undefined;
     return (...args: Parameters<T>)=>{
@@ -77,36 +73,35 @@ const MarkdownEditor: FC = ()=>{
             };
         }));
     const { input: input, update: update } = _$useSetup;
-    return vapor(()=>{
-        const _root = _$createElement("div");
+    return vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "card bg-base-100 shadow");
-        const _el1 = _$createElement("div");
+        const _el1 = _$createElement("div", _root);
         _$appendChild(_root, _el1);
         _$setClassName(_el1, "card-body grid gap-4");
-        const _el2 = _$createElement("div");
+        const _el2 = _$createElement("div", _el1);
         _$appendChild(_el1, _el2);
         _$setClassName(_el2, "grid grid-cols-2 gap-0 h-[360px] md:h-[560px] rounded-xl overflow-hidden ring-1 ring-black/5");
-        const _el3 = _$createElement("textarea");
+        const _el3 = _$createElement("textarea", _el2);
         _$appendChild(_el2, _el3);
         _$setClassName(_el3, "textarea textarea-bordered rounded-none border-r");
         watchEffect(()=>{
             _$setValue(_el3, input.value);
         });
         _$addEventListener(_el3, "input", (update));
-        const _el4 = _$createElement("div");
+        const _el4 = _$createElement("div", _el2);
         _$appendChild(_el2, _el4);
-        _$setClassName(_el4, "p-4 overflow-auto prose prose-sm");
+        _$setClassName(_el4, "p-4 overflow-auto");
         watchEffect(()=>{
             const __obj = ({
-                __html: md.render(input.value)
+                __html: renderMarkdown(input.value)
             });
             _$setInnerHTML(_el4, __obj && "__html" in __obj ? __obj.__html : "");
         });
         return _root;
     });
 };
-export default MarkdownEditor;
-"##;
+export default MarkdownEditor;"##;
 
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();

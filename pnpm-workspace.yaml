@@ -5,6 +5,11 @@ packages:
 nodeLinker: hoisted
 autoInstallPeers: false
 
+supportedArchitectures:
+  cpu:
+    - current
+    - wasm32
+
 allowBuilds:
   '@parcel/watcher': true
   '@swc/core': false
@@ -47,3 +52,6 @@ onlyBuiltDependencies:
   - 'unrs-resolver'
   - 'workerd'
   - '@rue-js/jsx-dev-runtime'
+
+patchedDependencies:
+  '@bruits/satteri-wasm32-wasi@0.9.4': patches/@bruits__satteri-wasm32-wasi@0.9.4.patch

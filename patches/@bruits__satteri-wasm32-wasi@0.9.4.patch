@@ -1,0 +1,13 @@
+diff --git a/satteri_napi.wasi-browser.js b/satteri_napi.wasi-browser.js
+index 6624bc6ce9dca34685a71193dfcf565b39610ff9..5d86cf56812b1ce56a2a7fb9d4518d8c0834fc8a 100644
+--- a/satteri_napi.wasi-browser.js
++++ b/satteri_napi.wasi-browser.js
+@@ -32,7 +32,7 @@ const {
+   asyncWorkPoolSize: 4,
+   wasi: __wasi,
+   onCreateWorker() {
+-    const worker = new Worker(new URL('@bruits/satteri-wasm32-wasi/wasi-worker-browser.mjs', import.meta.url), {
++    const worker = new Worker(new URL('./wasi-worker-browser.mjs', import.meta.url), {
+       type: 'module',
+     })
+ 
