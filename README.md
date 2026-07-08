@@ -1,33 +1,33 @@
-# 后悔药 Rue.js
+# Rue.js
 
 [![Website](https://img.shields.io/badge/website-ruejs.huododo.com-0f766e)](https://ruejs.huododo.com)
 [![npm version](https://img.shields.io/npm/v/%40rue-js%2Frue.svg?style=flat)](https://www.npmjs.com/package/@rue-js/rue)
 [![Build and Test](https://github.com/hunzhiwange/ruejs/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/hunzhiwange/ruejs/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Rue.js（发音 /ruː/，中文名后悔药.js）是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发体验，同时提供默认细粒度响应式渲染路径、路由、基于 Rust / WebAssembly 的运行时扩展，以及 Rust 实现的响应式系统与原生 DOM 编译能力。
+Rue.js (pronounced /ruː/) is a lightweight frontend framework for JSX/TSX. It focuses on a simple and intuitive development experience while providing a default fine-grained reactive rendering path, routing, Rust/WebAssembly-based runtime extensions, and a Rust-powered reactive system with native DOM compilation capabilities.
 
-它适合希望保留 React 风格 JSX 开发方式，同时获得 Vue 式响应式 API 与更贴近真实 DOM 更新模型的项目。
+It is designed for projects that want to keep a React-style JSX development workflow while gaining Vue-like reactive APIs and a DOM update model that stays closer to the real DOM.
 
-## 特性
+## Features
 
-- 轻量、直观的 API，适合渐进式接入
-- 默认细粒度响应式渲染路径，围绕真实 DOM 做最小更新
-- JSX / TSX 一等支持，无需额外模板语法
-- 类似 Vue 的响应式 API，支持 `ref`、`reactive`、`computed`
-- 提供基于 Rust / WebAssembly 的运行时，可扩展编译渲染能力
-- 提供 Rust 实现的响应式系统，覆盖信号、依赖追踪与调度能力
-- 提供 Rust / Wasm 原生 DOM 编译器，将 JSX 转换为更贴近真实 DOM 的产物
-- 官方路由、设计组件库与构建插件协同工作
-- 提供 `@rue-js/runtime-vapor` 与 `@rue-js/swc-plugin-rue` Rust 侧核心能力
+- Lightweight, intuitive APIs that are easy to adopt incrementally
+- A default fine-grained reactive rendering path that performs minimal updates against the real DOM
+- First-class JSX/TSX support without an additional template syntax
+- Vue-like reactive APIs, including `ref`, `reactive`, and `computed`
+- A Rust/WebAssembly-based runtime for extensible compile-time and rendering capabilities
+- A Rust-powered reactive system covering signals, dependency tracking, and scheduling
+- A Rust/Wasm native DOM compiler that transforms JSX into output closer to the real DOM
+- Official routing, design component library, and build plugins that work together
+- Rust-side core capabilities through `@rue-js/runtime-vapor` and `@rue-js/swc-plugin-rue`
 
-## 快速开始
+## Quick Start
 
-Rue 提供官方脚手架，也支持接入现有 Vite 项目。
+Rue provides an official scaffolding tool and can also be added to an existing Vite project.
 
-### 创建新项目
+### Create a New Project
 
-前置条件：Node.js >= 22.12.0
+Prerequisite: Node.js >= 22.12.0
 
 ```sh
 pnpm create rue@latest
@@ -36,7 +36,7 @@ bun create rue@latest
 yarn dlx create-rue@latest
 ```
 
-进入项目后安装依赖并启动开发服务器：
+After entering the project, install dependencies and start the development server:
 
 ```sh
 cd your-project-name
@@ -44,13 +44,13 @@ pnpm install
 pnpm run dev
 ```
 
-### 接入现有项目
+### Add Rue to an Existing Project
 
 ```sh
 pnpm add @rue-js/rue @rue-js/router
 ```
 
-在 Vite 配置中启用 Rue 的 JSX：
+Enable Rue JSX in your Vite config:
 
 ```ts
 // vite.config.ts
@@ -61,9 +61,9 @@ export default defineConfig({
 })
 ```
 
-## 示例
+## Example
 
-下面是一个最小 Rue 应用示例：
+Here is a minimal Rue application:
 
 ```tsx
 import { type FC, ref, useApp, useError } from '@rue-js/rue'
@@ -71,14 +71,14 @@ import { type FC, ref, useApp, useError } from '@rue-js/rue'
 const Counter: FC = () => {
   const count = ref(0)
 
-  return <button onClick={() => count.value++}>点击次数：{count.value}</button>
+  return <button onClick={() => count.value++}>Count: {count.value}</button>
 }
 
 useError({ overlay: true, console: true })
 useApp(Counter).mount('#app')
 ```
 
-如果你需要页面级路由，可以继续接入 `@rue-js/router`：
+If you need page-level routing, add `@rue-js/router`:
 
 ```ts
 import { useComponent } from '@rue-js/rue'
@@ -93,32 +93,32 @@ export default createRouter({
 })
 ```
 
-## 文档
+## Documentation
 
-- [介绍](./docs/intro.md)
-- [安装](./docs/installation.md)
-- [快速开始](./docs/getting-started.md)
-- [路由](./docs/routing.md)
-- [指南](./docs/guide)
+- [Introduction](./docs/intro.md)
+- [Installation](./docs/installation.md)
+- [Getting Started](./docs/getting-started.md)
+- [Routing](./docs/routing.md)
+- [Guide](./docs/guide)
 - [API](./docs/api)
 
-仓库中也包含可直接运行的文档站与示例页面，位于 [app](./app) 和 [app/pages](./app/pages) 下。
+This repository also includes a runnable documentation site and example pages under [app](./app) and [app/pages](./app/pages).
 
 ## Packages
 
-这是一个基于 pnpm workspace 的 monorepo，主要包包括：
+This is a pnpm workspace-based monorepo. The main packages include:
 
-- `@rue-js/rue`：框架核心与 JSX 入口
-- `@rue-js/router`：官方路由
-- `@rue-js/runtime-vapor`：Rust / WebAssembly 运行时实现
-- `@rue-js/design`：设计系统与组件库
-- `@rue-js/vite-plugin-rue`：Vite 集成
-- `@rue-js/swc-plugin-rue`：SWC JSX 转换插件
-- `@rue-js/jsx-runtime` / `@rue-js/jsx-dev-runtime`：JSX 运行时入口
+- `@rue-js/rue`: framework core and JSX entry point
+- `@rue-js/router`: official router
+- `@rue-js/runtime-vapor`: Rust/WebAssembly runtime implementation
+- `@rue-js/design`: design system and component library
+- `@rue-js/vite-plugin-rue`: Vite integration
+- `@rue-js/swc-plugin-rue`: SWC JSX transform plugin
+- `@rue-js/jsx-runtime` / `@rue-js/jsx-dev-runtime`: JSX runtime entry points
 
-## 本地开发
+## Local Development
 
-本仓库使用 `pnpm` 管理依赖。
+This repository uses `pnpm` to manage dependencies.
 
 ```sh
 make dev
@@ -129,7 +129,7 @@ pnpm run app-preview
 pnpm run dev
 ```
 
-常用命令：
+Common commands:
 
 ```sh
 pnpm run build
@@ -138,24 +138,24 @@ pnpm run check
 pnpm run release-check
 ```
 
-如果你在开发 `runtime-vapor`，还可以进入对应包执行 Rust / Wasm 相关命令：
+If you are working on `runtime-vapor`, you can also enter the package and run Rust/Wasm-related commands:
 
 ```sh
 cd packages/runtime-vapor
 npm test
 ```
 
-## 贡献
+## Contributing
 
-欢迎通过 Issue 和 Pull Request 参与 Rue 的开发。提交改动前，建议至少运行以下检查：
+Issues and pull requests are welcome. Before submitting changes, we recommend running at least the following checks:
 
 ```sh
 pnpm run check
 pnpm run test
 ```
 
-如果改动涉及构建、发布或 Wasm 运行时，请补充对应包级验证。
+If your changes involve build, release, or the Wasm runtime, please add the corresponding package-level verification.
 
-## 许可证
+## License
 
 [MIT](./LICENSE)
