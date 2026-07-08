@@ -233,7 +233,7 @@ export type TextConfig = {
   cacheComponents?: boolean
   /**
    * Enables source maps while generating static pages.
-   * Helps with errors during the prerender phase in `ruetext build`.
+   * Helps with errors during the prerender phase in `text build`.
    * Defaults to `true`. Set to `false` to disable.
    */
   enablePrerenderSourceMaps?: boolean
@@ -683,7 +683,7 @@ async function loadConfigViaCjsTempCopy(
 ): Promise<TextConfig> {
   const dir = path.dirname(configPath)
   // Hidden + uniquely-named to avoid clashing with user files or being picked
-  // up by text.js's own config scanner if a concurrent ruetext dev is running.
+  // up by text.js's own config scanner if a concurrent text dev is running.
   const tmpPath = path.join(dir, `.text-text-config.${process.pid}.${Date.now()}.cjs`)
   fs.copyFileSync(configPath, tmpPath)
   try {
@@ -707,7 +707,7 @@ async function loadConfigViaCjsTempCopy(
  * to CJS constructs (`require`, `module.exports`), falls back to `createRequire`
  * so common CJS plugin wrappers (textra, @text/mdx, etc.) still work, including
  * `text.config.js` files written in CJS syntax inside a `"type": "module"`
- * package (the common shape after `ruetext init`).
+ * package (the common shape after `text init`).
  */
 export async function loadTextConfig(
   root: string,

@@ -1,7 +1,7 @@
 /**
  * Production server for text.
  *
- * Serves the built output from `ruetext build`. Handles:
+ * Serves the built output from `text build`. Handles:
  * - Static asset serving from client build output
  * - Pages Router: SSR rendering + API route handling
  * - App Router: RSC/SSR rendering, route handlers, server actions
@@ -105,7 +105,7 @@ export type ProdServerOptions = {
   noCompression?: boolean
   /**
    * Narrow startup context for callers that need a more precise log line.
-   * Omitted for normal `ruetext start` so the existing production-server output
+   * Omitted for normal `text start` so the existing production-server output
    * remains stable.
    */
   purpose?: 'prerender'
@@ -928,7 +928,7 @@ export async function startProdServer(options: ProdServerOptions = {}) {
 
   if (!isAppRouter && serverEntryPath === null) {
     console.error(`[text] No build output found in ${outDir}`)
-    console.error('Run `ruetext build` first.')
+    console.error('Run `text build` first.')
     process.exit(1)
   }
 
@@ -967,7 +967,7 @@ function createNodeExecutionContext(): ExecutionContextLike {
     waitUntil(promise: Promise<unknown>) {
       // Node doesn't provide a Workers lifecycle, but we still attach a
       // rejection handler so background waitUntil work doesn't surface as an
-      // unhandled rejection when a Worker-style entry is used with ruetext start.
+      // unhandled rejection when a Worker-style entry is used with text start.
       void Promise.resolve(promise).catch(() => {})
     },
     passThroughOnException() {},

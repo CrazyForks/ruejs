@@ -14,8 +14,8 @@ Text.js 是 Rue 生态中的全栈应用框架包。它面向已经熟悉 Next.j
 - 支持 Rue JSX / TSX、服务端渲染与客户端交互
 - 支持 React Server Components 风格的服务端组件工作流
 - 支持 `middleware.ts`、API routes、redirects、rewrites、headers 等应用级能力
-- 内置 `ruetext dev`、`ruetext build`、`ruetext start`、`ruetext deploy` 等 CLI 命令
-- 可通过 `ruetext deploy` 部署到 Cloudflare Workers
+- 内置 `text dev`、`text build`、`text start`、`text deploy` 等 CLI 命令
+- 可通过 `text deploy` 部署到 Cloudflare Workers
 - 提供兼容 Next.js 常见入口的 shims，例如 `text/navigation`、`text/link`、`text/image`、`text/headers`、`text/cache`
 
 ## 安装
@@ -31,10 +31,10 @@ pnpm add @rue-js/text @rue-js/rue vite
 ```json
 {
   "scripts": {
-    "dev": "ruetext dev",
-    "build": "ruetext build",
-    "start": "ruetext start",
-    "deploy": "ruetext deploy"
+    "dev": "text dev",
+    "build": "text build",
+    "start": "text start",
+    "deploy": "text deploy"
   }
 }
 ```
@@ -95,20 +95,20 @@ export function GET() {
 ## CLI
 
 ```sh
-ruetext dev       # 启动开发服务器
-ruetext build     # 构建生产产物
-ruetext start     # 启动生产服务器
-ruetext preview   # ruetext start 的别名
-ruetext deploy    # 部署到 Cloudflare Workers
-ruetext typegen   # 生成 App Router 路由类型
-ruetext lint      # 调用项目中的 eslint / oxlint
-ruetext check     # 检查 Text.js 兼容性
-ruetext init      # 初始化部署相关配置
+text dev       # 启动开发服务器
+text build     # 构建生产产物
+text start     # 启动生产服务器
+text preview   # text start 的别名
+text deploy    # 部署到 Cloudflare Workers
+text typegen   # 生成 App Router 路由类型
+text lint      # 调用项目中的 eslint / oxlint
+text check     # 检查 Text.js 兼容性
+text init      # 初始化部署相关配置
 ```
 
 ## 配置
 
-Text.js 支持通过项目配置文件定义路由、部署与运行时行为。默认情况下可以直接从 `app/` 或 `pages/` 目录启动；需要更细的控制时，可以在项目中添加 Text.js 配置文件，并配合 `ruetext init` / `ruetext deploy` 生成 Cloudflare Workers 相关配置。
+Text.js 支持通过项目配置文件定义路由、部署与运行时行为。默认情况下可以直接从 `app/` 或 `pages/` 目录启动；需要更细的控制时，可以在项目中添加 Text.js 配置文件，并配合 `text init` / `text deploy` 生成 Cloudflare Workers 相关配置。
 
 也可以显式在 Vite 配置中使用插件：
 

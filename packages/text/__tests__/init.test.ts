@@ -201,19 +201,19 @@ describe('generateViteConfig', () => {
 // ─── Unit Tests: addScripts ──────────────────────────────────────────────────
 
 describe('addScripts', () => {
-  it('adds dev:ruetext, build:ruetext, and start:ruetext scripts', () => {
+  it('adds dev:text, build:text, and start:text scripts', () => {
     setupProject(tmpDir, { router: 'app' })
 
     const added = addScripts(tmpDir, 3001)
 
-    expect(added).toContain('dev:ruetext')
-    expect(added).toContain('build:ruetext')
-    expect(added).toContain('start:ruetext')
+    expect(added).toContain('dev:text')
+    expect(added).toContain('build:text')
+    expect(added).toContain('start:text')
 
     const pkg = readPkg(tmpDir) as { scripts: Record<string, string> }
-    expect(pkg.scripts['dev:ruetext']).toBe('ruetext dev --port 3001')
-    expect(pkg.scripts['build:ruetext']).toBe('ruetext build')
-    expect(pkg.scripts['start:ruetext']).toBe('ruetext start')
+    expect(pkg.scripts['dev:text']).toBe('text dev --port 3001')
+    expect(pkg.scripts['build:text']).toBe('text build')
+    expect(pkg.scripts['start:text']).toBe('text start')
   })
 
   it('uses custom port', () => {
@@ -222,23 +222,23 @@ describe('addScripts', () => {
     addScripts(tmpDir, 4000)
 
     const pkg = readPkg(tmpDir) as { scripts: Record<string, string> }
-    expect(pkg.scripts['dev:ruetext']).toBe('ruetext dev --port 4000')
+    expect(pkg.scripts['dev:text']).toBe('text dev --port 4000')
   })
 
   it('does not overwrite existing scripts', () => {
     setupProject(tmpDir, {
       router: 'app',
-      extraPkg: { scripts: { 'dev:ruetext': 'custom-command' } },
+      extraPkg: { scripts: { 'dev:text': 'custom-command' } },
     })
 
     const added = addScripts(tmpDir, 3001)
 
-    expect(added).not.toContain('dev:ruetext')
-    expect(added).toContain('build:ruetext')
-    expect(added).toContain('start:ruetext')
+    expect(added).not.toContain('dev:text')
+    expect(added).toContain('build:text')
+    expect(added).toContain('start:text')
 
     const pkg = readPkg(tmpDir) as { scripts: Record<string, string> }
-    expect(pkg.scripts['dev:ruetext']).toBe('custom-command')
+    expect(pkg.scripts['dev:text']).toBe('custom-command')
   })
 
   it('creates scripts object if missing', () => {
@@ -246,9 +246,9 @@ describe('addScripts', () => {
 
     const added = addScripts(tmpDir, 3001)
 
-    expect(added).toContain('dev:ruetext')
+    expect(added).toContain('dev:text')
     const pkg = readPkg(tmpDir) as { scripts: Record<string, string> }
-    expect(pkg.scripts['dev:ruetext']).toBeDefined()
+    expect(pkg.scripts['dev:text']).toBeDefined()
   })
 
   it('returns empty array when no package.json', () => {
@@ -370,43 +370,43 @@ describe('init — basic functionality', () => {
     expect(result.addedTypeModule).toBe(false)
   })
 
-  it('adds dev:ruetext, build:ruetext, and start:ruetext scripts', async () => {
+  it('adds dev:text, build:text, and start:text scripts', async () => {
     setupProject(tmpDir, { router: 'app' })
 
     const { result } = await runInit(tmpDir)
 
-    expect(result.addedScripts).toContain('dev:ruetext')
-    expect(result.addedScripts).toContain('build:ruetext')
-    expect(result.addedScripts).toContain('start:ruetext')
+    expect(result.addedScripts).toContain('dev:text')
+    expect(result.addedScripts).toContain('build:text')
+    expect(result.addedScripts).toContain('start:text')
 
     const pkg = readPkg(tmpDir) as { scripts: Record<string, string> }
-    expect(pkg.scripts['dev:ruetext']).toBe('ruetext dev --port 3001')
-    expect(pkg.scripts['build:ruetext']).toBe('ruetext build')
-    expect(pkg.scripts['start:ruetext']).toBe('ruetext start')
+    expect(pkg.scripts['dev:text']).toBe('text dev --port 3001')
+    expect(pkg.scripts['build:text']).toBe('text build')
+    expect(pkg.scripts['start:text']).toBe('text start')
   })
 
-  it('uses custom port in dev:ruetext script', async () => {
+  it('uses custom port in dev:text script', async () => {
     setupProject(tmpDir, { router: 'app' })
 
     await runInit(tmpDir, { port: 4000 })
 
     const pkg = readPkg(tmpDir) as { scripts: Record<string, string> }
-    expect(pkg.scripts['dev:ruetext']).toBe('ruetext dev --port 4000')
+    expect(pkg.scripts['dev:text']).toBe('text dev --port 4000')
   })
 
   it('does not overwrite existing scripts', async () => {
     setupProject(tmpDir, {
       router: 'app',
-      extraPkg: { scripts: { 'dev:ruetext': 'custom-command' } },
+      extraPkg: { scripts: { 'dev:text': 'custom-command' } },
     })
 
     const { result } = await runInit(tmpDir)
 
-    expect(result.addedScripts).not.toContain('dev:ruetext')
-    expect(result.addedScripts).toContain('build:ruetext')
+    expect(result.addedScripts).not.toContain('dev:text')
+    expect(result.addedScripts).toContain('build:text')
 
     const pkg = readPkg(tmpDir) as { scripts: Record<string, string> }
-    expect(pkg.scripts['dev:ruetext']).toBe('custom-command')
+    expect(pkg.scripts['dev:text']).toBe('custom-command')
   })
 })
 
@@ -615,9 +615,9 @@ describe('init — guard rails', () => {
     // ESM migration should still happen
     expect(result.addedTypeModule).toBe(true)
     // Scripts should still be added
-    expect(result.addedScripts).toContain('dev:ruetext')
-    expect(result.addedScripts).toContain('build:ruetext')
-    expect(result.addedScripts).toContain('start:ruetext')
+    expect(result.addedScripts).toContain('dev:text')
+    expect(result.addedScripts).toContain('build:text')
+    expect(result.addedScripts).toContain('start:text')
     // But vite config should be skipped
     expect(result.generatedViteConfig).toBe(false)
     expect(result.skippedViteConfig).toBe(true)

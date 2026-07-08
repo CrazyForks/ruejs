@@ -2022,7 +2022,7 @@ export default function text(options: TextOptions = {}): PluginOption[] {
             // `emitFile`. The asset is subsequently stripped from the
             // bundle by Vite's `vite:asset` generateBundle hook because
             // `emitAssets` is false — leaving Node's ESM loader to crash
-            // on the unresolvable import the first time `ruetext start`
+            // on the unresolvable import the first time `text start`
             // imports the SSR entry:
             //
             //   Error [ERR_MODULE_NOT_FOUND]: Cannot find module
@@ -4570,7 +4570,7 @@ export default function text(options: TextOptions = {}): PluginOption[] {
     // Write text-server.json to dist/server/ with a per-build prerender secret.
     // The prerender secret is used by prod-server.ts to authenticate requests to
     // the internal /__text/prerender/* endpoints, which are only reachable during
-    // the prerender phase of `ruetext build`. A new secret is generated on every
+    // the prerender phase of `text build`. A new secret is generated on every
     // build so it rotates with every deployment.
     //
     // The secret is generated once at plugin creation time so that both the rsc

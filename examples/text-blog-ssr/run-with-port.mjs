@@ -7,7 +7,7 @@ const [command, preferredPortRaw, ...extraArgs] = process.argv.slice(2)
 const root = path.dirname(fileURLToPath(import.meta.url))
 
 if (!command || !preferredPortRaw) {
-  console.error('Usage: node run-with-port.mjs <ruetext-command> <preferred-port> [args...]')
+  console.error('Usage: node run-with-port.mjs <text-command> <preferred-port> [args...]')
   process.exit(1)
 }
 
@@ -69,7 +69,7 @@ const env = {
     .join(path.delimiter),
 }
 
-const child = spawn('ruetext', [command, ...extraArgs, '--port', String(port)], {
+const child = spawn('text', [command, ...extraArgs, '--port', String(port)], {
   env,
   stdio: 'inherit',
   shell: process.platform === 'win32',

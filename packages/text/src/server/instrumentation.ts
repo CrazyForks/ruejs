@@ -209,7 +209,7 @@ export function reportRequestError(
 
   // On Cloudflare Workers, register with ctx.waitUntil() so the isolate
   // stays alive until the report completes (e.g. Sentry HTTP request).
-  // On Node.js (dev or ruetext start), getRequestExecutionContext() returns
+  // On Node.js (dev or text start), getRequestExecutionContext() returns
   // null — fire-and-forget is fine because the process doesn't die.
   getRequestExecutionContext()?.waitUntil(promise)
 

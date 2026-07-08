@@ -8,7 +8,7 @@ export default function HomePage() {
         <p className="eyebrow">Static export demo</p>
         <h1>Pre-render a small knowledge base</h1>
         <p>
-          Every page in this example can be emitted as static HTML during `ruetext build`, including
+          Every page in this example can be emitted as static HTML during `text build`, including
           the dynamic guide routes below.
         </p>
       </section>

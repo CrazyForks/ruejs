@@ -331,7 +331,7 @@ describe('formatAlreadyRunningError', () => {
       cwd: '/path/to/project',
       lockfilePath: '/path/to/project/.text/dev/lock.json',
     })
-    expect(msg).toContain('Another ruetext dev server is already running')
+    expect(msg).toContain('Another text dev server is already running')
     expect(msg).toContain('- Local:        http://localhost:3000')
     expect(msg).toContain('- PID:          12345')
     expect(msg).toContain('- Dir:          /path/to/project')

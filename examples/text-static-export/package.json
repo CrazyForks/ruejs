@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "ruetext dev --port 3030",
-    "build": "ruetext build",
+    "dev": "text dev --port 3030",
+    "build": "text build",
     "start": "node serve-static.mjs dist/client 3031",
     "preview": "node serve-static.mjs dist/client 3031"
   },

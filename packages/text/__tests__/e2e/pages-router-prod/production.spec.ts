@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 /**
  * Production build E2E tests for Pages Router.
  *
- * These tests run against `ruetext build` + `ruetext start` output,
+ * These tests run against `text build` + `text start` output,
  * NOT the dev server. The production server is started on port 4175
  * via the webServer config in playwright.config.ts.
  */

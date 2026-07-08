@@ -1,7 +1,7 @@
 /**
- * CLI argument parser for the ruetext CLI.
+ * CLI argument parser for the text CLI.
  *
- * Parses flags for `ruetext dev`, `ruetext start`, `ruetext build`, etc.
+ * Parses flags for `text dev`, `text start`, `text build`, etc.
  * Validates that value-taking flags (`--port`, `--hostname`) have actual values
  * rather than silently consuming the text flag or returning NaN/undefined.
  */
@@ -87,7 +87,7 @@ export function parsePositiveIntegerArg(raw: string, flag: string): number {
  *
  * Handles both `--flag value` and `--flag=value` forms for value-taking flags.
  *
- * Used by `ruetext dev`, `build`, `start`, `lint`, `check`, and `init` commands.
+ * Used by `text dev`, `build`, `start`, `lint`, `check`, and `init` commands.
  * The `deploy` command uses `parseDeployArgs` (a `node:util` wrapper) for its
  * own flag set including `--env`, `--skip-build`, etc.
  */

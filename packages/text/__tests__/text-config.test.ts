@@ -44,7 +44,7 @@ describe('invalid config files', () => {
 })
 
 describe('loadTextConfig with CJS text.config.js under type:module', () => {
-  // Real-world shape from the Text.js deploy suite: `ruetext init` flips
+  // Real-world shape from the Text.js deploy suite: `text init` flips
   // package.json to `"type": "module"`, but the test fixture's
   // `text.config.js` is still written in CJS (module.exports + require).
   // text must load it as CJS instead of forcing the project to rewrite the

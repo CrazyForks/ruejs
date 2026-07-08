@@ -2,12 +2,12 @@
  * Dev server lock file.
  *
  * Writes the running dev server's PID, port, and URL into a lock file at
- * `<root>/.text/dev/lock.json`. When a second `ruetext dev` process starts in
+ * `<root>/.text/dev/lock.json`. When a second `text dev` process starts in
  * the same project directory, it reads the lock file and either fails with an
  * actionable error or, if the previous process is dead, takes over the lock.
  *
  * This is especially useful for AI coding agents, which frequently attempt to
- * start `ruetext dev` without knowing a server is already running.
+ * start `text dev` without knowing a server is already running.
  *
  * Ported behaviorally from Text.js:
  *   https://github.com/vercel/next.js/blob/canary/packages/text/src/build/lockfile.ts
@@ -147,10 +147,10 @@ export function formatAlreadyRunningError(opts: FormatErrorOptions): string {
   if (!existing) {
     // Defensive fallback. Not reachable from tryAcquireLockfile today.
     return [
-      'Another ruetext dev server appears to be running in this directory.',
+      'Another text dev server appears to be running in this directory.',
       '',
       `Stale lock file: ${path.relative(cwd, lockfilePath)}`,
-      'Remove it manually if no server is running, then re-run `ruetext dev`.',
+      'Remove it manually if no server is running, then re-run `text dev`.',
     ].join('\n')
   }
 
@@ -158,7 +158,7 @@ export function formatAlreadyRunningError(opts: FormatErrorOptions): string {
     process.platform === 'win32' ? `taskkill /PID ${existing.pid} /F` : `kill ${existing.pid}`
 
   return [
-    'Another ruetext dev server is already running.',
+    'Another text dev server is already running.',
     '',
     `- Local:        ${existing.appUrl}`,
     `- PID:          ${existing.pid}`,
@@ -259,7 +259,7 @@ export function tryAcquireLockfile(opts: AcquireOptions): AcquireResult {
   // (event loop drained, explicit process.exit(), or after the default
   // SIGINT/SIGTERM handlers terminate the process). It does NOT fire on
   // uncaught exceptions or hard crashes (SIGKILL), which is fine: the text
-  // `ruetext dev` will detect the dead PID and take over the stale lock.
+  // `text dev` will detect the dead PID and take over the stale lock.
   //
   // If a future caller installs a custom signal handler that swallows
   // SIGINT/SIGTERM without exiting, the lock would leak — also fine, same

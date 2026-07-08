@@ -10,22 +10,22 @@ export default function Page() {
 // package.json
 {
   "scripts": {
-    "dev": "ruetext dev",
-    "build": "ruetext build",
-    "start": "ruetext start",
-    "deploy": "ruetext deploy"
+    "dev": "text dev",
+    "build": "text build",
+    "start": "text start",
+    "deploy": "text deploy"
   }
 }`
 
-const cliCode = `ruetext dev       # 启动开发服务器
-ruetext build     # 构建生产产物
-ruetext start     # 启动生产服务器
-ruetext preview   # ruetext start 的别名
-ruetext deploy    # 部署到 Cloudflare Workers
-ruetext typegen   # 生成 App Router 路由类型
-ruetext lint      # 调用项目中的 eslint / oxlint
-ruetext init      # 初始化部署相关配置
-ruetext check     # 检查 Text.js 兼容性`
+const cliCode = `text dev       # 启动开发服务器
+text build     # 构建生产产物
+text start     # 启动生产服务器
+text preview   # text start 的别名
+text deploy    # 部署到 Cloudflare Workers
+text typegen   # 生成 App Router 路由类型
+text lint      # 调用项目中的 eslint / oxlint
+text init      # 初始化部署相关配置
+text check     # 检查 Text.js 兼容性`
 
 const routerCode = `// app/blog/[slug]/page.tsx
 export default function BlogPage({ params }: { params: { slug: string } }) {
@@ -106,7 +106,7 @@ const metrics = [
   {
     value: 'Workers',
     label: '边缘部署',
-    description: '通过 ruetext deploy 输出 Cloudflare Workers 应用。',
+    description: '通过 text deploy 输出 Cloudflare Workers 应用。',
   },
 ] as const
 
@@ -169,7 +169,7 @@ const demos = [
     title: 'Static Export Demo',
     label: 'examples/text-static-export',
     description:
-      '一个知识库静态导出示例，通过 output: "export" 在 ruetext build 时预渲染全部路由，包括动态 guide 页面。',
+      '一个知识库静态导出示例，通过 output: "export" 在 text build 时预渲染全部路由，包括动态 guide 页面。',
     commands:
       'pnpm --dir examples/text-static-export dev\npnpm --dir examples/text-static-export build\npnpm --dir examples/text-static-export start',
     href: 'https://github.com/hunzhiwange/ruejs/tree/main/examples/text-static-export',
@@ -300,7 +300,7 @@ const TextJs: FC = () => {
           <div className="border-b border-base-300 px-5 py-4">
             <h2 className="text-xl font-semibold text-base-content">CLI 与部署</h2>
             <p className="mt-2 text-sm text-base-content/65">
-              ruetext 命令负责开发、构建、检查、类型生成和 Cloudflare Workers 部署。
+              text 命令负责开发、构建、检查、类型生成和 Cloudflare Workers 部署。
             </p>
           </div>
           <Code className="h-[300px]" lang="sh" code={cliCode} />

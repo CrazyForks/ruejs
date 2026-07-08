@@ -256,7 +256,7 @@ describe('emitStandaloneOutput', () => {
         root: appRoot,
         outDir: path.join(appRoot, 'dist'),
       }),
-    ).toThrow('Run ruetext build first.')
+    ).toThrow('Run text build first.')
   })
 
   it('falls back when package.json is hidden by exports map', () => {

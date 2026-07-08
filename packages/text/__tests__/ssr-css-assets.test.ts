@@ -86,7 +86,7 @@ describe('SSR build emits CSS assets referenced by SSR chunks', () => {
       ).toBeDefined()
       // Without emitAssets: true the SSR build silently strips CSS asset
       // files, leaving dangling `import "<hash>.css"` statements that
-      // crash `ruetext start` with ERR_MODULE_NOT_FOUND.
+      // crash `text start` with ERR_MODULE_NOT_FOUND.
       expect(
         ssrEnv!.build.emitAssets,
         'SSR environment must enable emitAssets so CSS imports in SSR chunks resolve at runtime',

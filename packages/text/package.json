@@ -17,7 +17,7 @@
     "directory": "packages/text"
   },
   "bin": {
-    "ruetext": "dist/cli.js"
+    "text": "dist/cli.js"
   },
   "files": [
     "dist"

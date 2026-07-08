@@ -1,5 +1,5 @@
 /**
- * ruetext check — compatibility scanner for Text.js apps
+ * text check — compatibility scanner for Text.js apps
  *
  * Scans an existing Text.js app and produces a compatibility report
  * showing what will work, what needs changes, and an overall score.
@@ -599,7 +599,7 @@ export function checkConventions(root: string): CheckItem[] {
       items.push({
         name: 'Missing "type": "module" in package.json',
         status: 'unsupported',
-        detail: 'required for Vite — ruetext init will add it automatically',
+        detail: 'required for Vite — text init will add it automatically',
       })
     }
   }
@@ -832,7 +832,7 @@ export function formatReport(result: CheckResult, opts?: { calledFromInit?: bool
   if (!opts?.calledFromInit) {
     lines.push('')
     lines.push('  \x1b[1mRecommended text steps:\x1b[0m')
-    lines.push(`    Run \x1b[36mruetext init\x1b[0m to set up your project automatically`)
+    lines.push(`    Run \x1b[36mtext init\x1b[0m to set up your project automatically`)
     lines.push('')
     lines.push('  Or manually:')
     lines.push(`    1. Add \x1b[36m"type": "module"\x1b[0m to package.json`)

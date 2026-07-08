@@ -741,7 +741,7 @@ describe('checkConventions', () => {
     const typeModule = items.find(i => i.name.includes('"type": "module"'))
     expect(typeModule).toBeDefined()
     expect(typeModule?.status).toBe('unsupported')
-    expect(typeModule?.detail).toContain('ruetext init')
+    expect(typeModule?.detail).toContain('text init')
   })
 
   it('does not flag type:module when present', () => {
@@ -1133,7 +1133,7 @@ describe('formatReport', () => {
     const report = formatReport(result)
 
     expect(report).toContain('Recommended text steps')
-    expect(report).toContain('ruetext init')
+    expect(report).toContain('text init')
     expect(report).toContain('Or manually')
     expect(report).toContain('"type": "module"')
     expect(report).toContain('@rue-js/vite-plugin-rue')

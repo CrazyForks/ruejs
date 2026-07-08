@@ -4222,7 +4222,7 @@ describe('Production Pages Router SSR streaming', () => {
   it('streams Pages SSR responses incrementally in production with br compression', async () => {
     // Parity target: Text.js streams Node responses via sendResponse() ->
     // pipeToNodeResponse() instead of buffering the full HTML first, while
-    // still leaving compression enabled under ruetext start.
+    // still leaving compression enabled under text start.
     // https://raw.githubusercontent.com/vercel/text.js/canary/packages/text/src/server/send-response.ts
     // https://raw.githubusercontent.com/vercel/text.js/canary/packages/text/src/server/pipe-readable.ts
     const response = await captureStreamedResponse(`${prodUrl}/streaming-ssr`, {

@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * ruetext CLI — command-line runner for Text.js apps
+ * text CLI — command-line runner for Text.js apps
  *
- *   ruetext dev     Start development server (Vite)
- *   ruetext build   Build for production
- *   ruetext start   Start production server
- *   ruetext preview Start production server (alias of start)
- *   ruetext deploy  Deploy to Cloudflare Workers
- *   ruetext typegen Generate App Router route helper types
- *   ruetext lint    Run linter (delegates to eslint/oxlint)
+ *   text dev     Start development server (Vite)
+ *   text build   Build for production
+ *   text start   Start production server
+ *   text preview Start production server (alias of start)
+ *   text deploy  Deploy to Cloudflare Workers
+ *   text typegen Generate App Router route helper types
+ *   text lint    Run linter (delegates to eslint/oxlint)
  *
  * Automatically configures Vite with the text plugin — no vite.config.ts
  * needed for most Text.js apps.
@@ -290,8 +290,8 @@ function buildViteConfig(overrides: Record<string, unknown> = {}, logger?: impor
  * file containing `require()` calls — calls that fail on Node 22 when
  * targeting pure-ESM packages like `@cloudflare/vite-plugin`.
  *
- * This mirrors what `ruetext init` does, but is applied lazily at dev/build
- * time for projects that were set up before `ruetext init` added the step, or
+ * This mirrors what `text init` does, but is applied lazily at dev/build
+ * time for projects that were set up before `text init` added the step, or
  * that were migrated manually.
  */
 function applyViteConfigCompatibility(root: string): void {
@@ -304,7 +304,7 @@ function applyViteConfigCompatibility(root: string): void {
   if (result.addedTypeModule) {
     console.warn(
       `  [text] Added "type": "module" to package.json (required for Vite ESM config loading).\n` +
-        `  Run \`ruetext init\` to review all project configuration.`,
+        `  Run \`text init\` to review all project configuration.`,
     )
   }
 }
@@ -330,7 +330,7 @@ async function dev() {
   const port = parsed.port ?? 3000
   const host = parsed.hostname ?? 'localhost'
 
-  // Acquire the dev lock file. If another live `ruetext dev` is running in this
+  // Acquire the dev lock file. If another live `text dev` is running in this
   // directory, print an actionable error (PID + URL) and exit. This is
   // especially useful for AI coding agents, which frequently attempt to start
   // a dev server without knowing one is already running.
@@ -373,7 +373,7 @@ async function dev() {
     lockfile = acquired.lockfile
   }
 
-  console.log(`\n  ruetext dev  (Vite ${getViteVersion()})\n`)
+  console.log(`\n  text dev  (Vite ${getViteVersion()})\n`)
 
   const config = buildViteConfig({
     server: { port, host },
@@ -456,7 +456,7 @@ async function buildApp() {
   const withBuildBundlerOptions = (bundlerOptions: Record<string, unknown>) =>
     viteMajorVersion >= 8 ? { rolldownOptions: bundlerOptions } : { rollupOptions: bundlerOptions }
 
-  console.log(`\n  ruetext build  (Vite ${getViteVersion()})\n`)
+  console.log(`\n  text build  (Vite ${getViteVersion()})\n`)
 
   const root = process.cwd()
   const isApp = hasAppDir()
@@ -621,7 +621,7 @@ async function buildApp() {
   if (resolvedTextConfig.output === 'export') {
     console.log('\n  Build complete. Serve `dist/client` with any static file server.\n')
   } else {
-    console.log('\n  Build complete. Run `ruetext start` to start the production server.\n')
+    console.log('\n  Build complete. Run `text start` to start the production server.\n')
   }
   process.exit(0)
 }
@@ -655,7 +655,7 @@ async function lint() {
   const parsed = parseArgs(rawArgs)
   if (parsed.help) return printHelp('lint')
 
-  console.log(`\n  ruetext lint\n`)
+  console.log(`\n  text lint\n`)
 
   // Try oxlint first (fast), fall back to eslint
   const cwd = process.cwd()
@@ -716,7 +716,7 @@ async function deployCommand() {
   if (parsed.help) return printHelp('deploy')
 
   await loadVite()
-  console.log(`\n  ruetext deploy  (Vite ${getViteVersion()})\n`)
+  console.log(`\n  text deploy  (Vite ${getViteVersion()})\n`)
 
   await runDeploy({
     root: process.cwd(),
@@ -739,7 +739,7 @@ async function check() {
   if (parsed.help) return printHelp('check')
 
   const root = process.cwd()
-  console.log(`\n  ruetext check\n`)
+  console.log(`\n  text check\n`)
   console.log('  Scanning project...\n')
 
   const result = runCheck(root)
@@ -770,7 +770,7 @@ async function initCommand() {
   const parsed = parseArgs(rawArgs)
   if (parsed.help) return printHelp('init')
 
-  console.log(`\n  ruetext init\n`)
+  console.log(`\n  text init\n`)
 
   // Parse init-specific flags
   const port = parsed.port ?? 3001
@@ -790,9 +790,9 @@ async function initCommand() {
 function printHelp(cmd?: string) {
   if (cmd === 'dev') {
     console.log(`
-  ruetext dev - Start development server
+  text dev - Start development server
 
-  Usage: ruetext dev [options]
+  Usage: text dev [options]
 
   Options:
     -p, --port <port>        Port to listen on (default: 3000)
@@ -805,9 +805,9 @@ function printHelp(cmd?: string) {
 
   if (cmd === 'build') {
     console.log(`
-  ruetext build - Build for production
+  text build - Build for production
 
-  Usage: ruetext build [options]
+  Usage: text build [options]
 
   Automatically detects App Router (app/) or Pages Router (pages/) and
   runs the appropriate multi-environment build via Vite.
@@ -816,7 +816,7 @@ function printHelp(cmd?: string) {
   Options:
     --verbose            Show full Vite/Rollup build output (suppressed by default)
     --prerender-all      Pre-render discovered routes after building (future releases
-                         will serve these files in ruetext start)
+                         will serve these files in text start)
     --prerender-concurrency <count>
                          Maximum number of routes to pre-render in parallel
     --precompress        Precompress static assets at build time (.br, .gz, .zst)
@@ -827,13 +827,13 @@ function printHelp(cmd?: string) {
 
   if (cmd === 'start' || cmd === 'preview') {
     console.log(`
-  ruetext ${cmd} - ${cmd === 'preview' ? 'Preview production build' : 'Start production server'}
+  text ${cmd} - ${cmd === 'preview' ? 'Preview production build' : 'Start production server'}
 
-  Usage: ruetext ${cmd} [options]
+  Usage: text ${cmd} [options]
 
-  Serves the output from \`ruetext build\`. Supports SSR, static files,
+  Serves the output from \`text build\`. Supports SSR, static files,
   compression, and all middleware.
-  \`ruetext preview\` is an alias of \`ruetext start\` for Vite-style scripts.
+  \`text preview\` is an alias of \`text start\` for Vite-style scripts.
   For output: "standalone", you can also run: node dist/standalone/server.js
 
   Options:
@@ -846,9 +846,9 @@ function printHelp(cmd?: string) {
 
   if (cmd === 'deploy') {
     console.log(`
-  ruetext deploy - Deploy to Cloudflare Workers
+  text deploy - Deploy to Cloudflare Workers
 
-  Usage: ruetext deploy [options]
+  Usage: text deploy [options]
 
   One-command deployment to Cloudflare Workers. Automatically:
     - Detects App Router or Pages Router
@@ -882,23 +882,23 @@ function printHelp(cmd?: string) {
   CLOUDFLARE_API_TOKEN environment variable with Zone.Analytics read permission.
 
   Examples:
-    ruetext deploy                              Build and deploy to production
-    ruetext deploy --preview                    Deploy to a preview URL
-    ruetext deploy --env staging                Deploy using wrangler env.staging
-    ruetext deploy --dry-run                    See what files would be generated
-    ruetext deploy --name my-app                Deploy with a custom Worker name
-    ruetext deploy --experimental-tpr           Enable TPR during deploy
-    ruetext deploy --experimental-tpr --tpr-coverage 95   Cover 95% of traffic
-    ruetext deploy --experimental-tpr --tpr-limit 500     Cap at 500 pages
+    text deploy                              Build and deploy to production
+    text deploy --preview                    Deploy to a preview URL
+    text deploy --env staging                Deploy using wrangler env.staging
+    text deploy --dry-run                    See what files would be generated
+    text deploy --name my-app                Deploy with a custom Worker name
+    text deploy --experimental-tpr           Enable TPR during deploy
+    text deploy --experimental-tpr --tpr-coverage 95   Cover 95% of traffic
+    text deploy --experimental-tpr --tpr-limit 500     Cap at 500 pages
 `)
     return
   }
 
   if (cmd === 'check') {
     console.log(`
-  ruetext check - Scan Text.js app for compatibility
+  text check - Scan Text.js app for compatibility
 
-  Usage: ruetext check [options]
+  Usage: text check [options]
 
   Scans your Text.js project and produces a compatibility report showing
   which imports, config options, libraries, and conventions are supported,
@@ -912,34 +912,34 @@ function printHelp(cmd?: string) {
 
   if (cmd === 'init') {
     console.log(`
-  ruetext init - Migrate a Text.js project to run under Text.js
+  text init - Migrate a Text.js project to run under Text.js
 
-  Usage: ruetext init [options]
+  Usage: text init [options]
 
   One-command migration: installs dependencies, configures ESM,
   generates vite.config.ts, and adds npm scripts. Your Text.js
   setup continues to work alongside text.
 
   Options:
-    -p, --port <port>    Dev server port for the ruetext script (default: 3001)
+    -p, --port <port>    Dev server port for the text script (default: 3001)
     --skip-check         Skip the compatibility check step
     --force              Overwrite existing vite.config.ts
     -h, --help           Show this help
 
   Examples:
-    ruetext init                   Migrate with defaults
-    ruetext init -p 4000           Use port 4000 for dev:ruetext
-    ruetext init --force           Overwrite existing vite.config.ts
-    ruetext init --skip-check      Skip the compatibility report
+    text init                   Migrate with defaults
+    text init -p 4000           Use port 4000 for dev:text
+    text init --force           Overwrite existing vite.config.ts
+    text init --skip-check      Skip the compatibility report
 `)
     return
   }
 
   if (cmd === 'typegen') {
     console.log(`
-  ruetext typegen - Generate App Router route helper types
+  text typegen - Generate App Router route helper types
 
-  Usage: ruetext typegen [directory] [options]
+  Usage: text typegen [directory] [options]
 
   Generates Text-compatible global route helpers for App Router projects:
   PageProps, LayoutProps, and RouteContext. Output is written to
@@ -953,9 +953,9 @@ function printHelp(cmd?: string) {
 
   if (cmd === 'lint') {
     console.log(`
-  ruetext lint - Run linter
+  text lint - Run linter
 
-  Usage: ruetext lint [options]
+  Usage: text lint [options]
 
   Delegates to your project's eslint (with eslint-config-text) or oxlint.
   If neither is installed, suggests how to add one.
@@ -967,9 +967,9 @@ function printHelp(cmd?: string) {
   }
 
   console.log(`
-  ruetext v${VERSION} - Run Text.js apps on Vite
+  text v${VERSION} - Run Text.js apps on Vite
 
-  Usage: ruetext <command> [options]
+  Usage: text <command> [options]
 
   Commands:
     dev      Start development server
@@ -987,25 +987,25 @@ function printHelp(cmd?: string) {
     --version      Show version
 
   Examples:
-    ruetext dev                  Start dev server on port 3000
-    ruetext dev -p 4000          Start dev server on port 4000
-    ruetext build                Build for production
-    ruetext typegen              Generate route helper types
-    ruetext start                Start production server
-    ruetext preview              Preview production build
-    ruetext deploy               Deploy to Cloudflare Workers
-    ruetext init                 Migrate a Text.js project
-    ruetext check                Check compatibility
-    ruetext lint                 Run linter
+    text dev                  Start dev server on port 3000
+    text dev -p 4000          Start dev server on port 4000
+    text build                Build for production
+    text typegen              Generate route helper types
+    text start                Start production server
+    text preview              Preview production build
+    text deploy               Deploy to Cloudflare Workers
+    text init                 Migrate a Text.js project
+    text check                Check compatibility
+    text lint                 Run linter
 
-  No vite.config.ts needed — just run \`ruetext dev\` in your Text.js project.
+  No vite.config.ts needed — just run \`text dev\` in your Text.js project.
 `)
 }
 
 // ─── Entry ────────────────────────────────────────────────────────────────────
 
 if (command === '--version' || command === '-v') {
-  console.log(`ruetext v${VERSION}`)
+  console.log(`text v${VERSION}`)
   process.exit(0)
 }
 

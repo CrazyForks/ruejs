@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node run-with-port.mjs dev 3020",
-    "build": "ruetext build",
+    "build": "text build",
     "start": "node run-with-port.mjs start 3021",
     "preview": "node run-with-port.mjs preview 3021"
   },

@@ -1,13 +1,13 @@
 /**
- * ruetext init — one-command project migration for Text.js apps.
+ * text init — one-command project migration for Text.js apps.
  *
  * Automates the steps needed to run a Text.js app under text:
  *
- *   1. Run `ruetext check` to show compatibility report
+ *   1. Run `text check` to show compatibility report
  *   2. Install dependencies (vite and App Router plugin support)
  *   3. Add "type": "module" to package.json
  *   4. Rename CJS config files to .cjs
- *   5. Add ruetext scripts to package.json
+ *   5. Add text scripts to package.json
  *   6. Generate vite.config.ts
  *   7. Update .gitignore to include /dist/
  *   8. Print summary
@@ -76,7 +76,7 @@ export default defineConfig({
 // ─── Script Addition ─────────────────────────────────────────────────────────
 
 /**
- * Add ruetext scripts to package.json without overwriting existing scripts.
+ * Add text scripts to package.json without overwriting existing scripts.
  * Returns the list of script names that were added.
  */
 export function addScripts(root: string, port: number): string[] {
@@ -93,19 +93,19 @@ export function addScripts(root: string, port: number): string[] {
 
     const added: string[] = []
 
-    if (!pkg.scripts['dev:ruetext']) {
-      pkg.scripts['dev:ruetext'] = `ruetext dev --port ${port}`
-      added.push('dev:ruetext')
+    if (!pkg.scripts['dev:text']) {
+      pkg.scripts['dev:text'] = `text dev --port ${port}`
+      added.push('dev:text')
     }
 
-    if (!pkg.scripts['build:ruetext']) {
-      pkg.scripts['build:ruetext'] = 'ruetext build'
-      added.push('build:ruetext')
+    if (!pkg.scripts['build:text']) {
+      pkg.scripts['build:text'] = 'text build'
+      added.push('build:text')
     }
 
-    if (!pkg.scripts['start:ruetext']) {
-      pkg.scripts['start:ruetext'] = 'ruetext start'
-      added.push('start:ruetext')
+    if (!pkg.scripts['start:text']) {
+      pkg.scripts['start:text'] = 'text start'
+      added.push('start:text')
     }
 
     if (added.length > 0) {
@@ -261,7 +261,7 @@ export async function init(options: InitOptions): Promise<InitResult> {
 
   // ── Step 7: Print summary ──────────────────────────────────────────────
 
-  console.log('  ruetext init complete!\n')
+  console.log('  text init complete!\n')
 
   if (missingDeps.length > 0) {
     console.log(`    \u2713 Added ${missingDeps.join(', ')} to devDependencies`)
@@ -287,9 +287,9 @@ export async function init(options: InitOptions): Promise<InitResult> {
 
   console.log(`
   Text steps:
-    ${pmName} run dev:ruetext    Start the Text.js dev server
-    ${pmName} run build:ruetext  Build production output
-    ${pmName} run start:ruetext  Start Text.js production server
+    ${pmName} run dev:text    Start the Text.js dev server
+    ${pmName} run build:text  Build production output
+    ${pmName} run start:text  Start Text.js production server
     ${pmName} run dev           Start Text.js (still works as before)
 `)
 

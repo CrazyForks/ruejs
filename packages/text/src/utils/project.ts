@@ -1,5 +1,5 @@
 /**
- * Shared project utilities — used by both `ruetext init` and `ruetext deploy`.
+ * Shared project utilities — used by both `text init` and `text deploy`.
  *
  * These functions detect and modify project configuration without touching
  * any Text.js source files, config files, or tsconfig.json.
@@ -76,8 +76,8 @@ export function renameCJSConfigs(root: string): Array<[string, string]> {
 /**
  * Ensure the project is configured for ESM before Vite loads vite.config.ts.
  *
- * This mirrors what `ruetext init` does, but is applied lazily at dev/build
- * time for projects that were set up before `ruetext init` added the step.
+ * This mirrors what `text init` does, but is applied lazily at dev/build
+ * time for projects that were set up before `text init` added the step.
  *
  * Side effects: may rename `.js` CJS config files to `.cjs` and add
  * `"type": "module"` to package.json.

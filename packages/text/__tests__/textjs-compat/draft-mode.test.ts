@@ -165,7 +165,7 @@ describe('Text.js compat: draft-mode', () => {
   // must be tracked as dynamic.
   //
   // Ported from Text.js: test/e2e/app-dir/draft-mode/draft-mode.test.ts
-  // ("should not generate rand when draft mode disabled during ruetext start").
+  // ("should not generate rand when draft mode disabled during text start").
   // Source: .textjs-ref/packages/text/src/server/request/draft-mode.ts (trackDynamicDraftMode).
 
   it('draftMode() does NOT mark dynamic usage on its own (allows static prerender)', async () => {

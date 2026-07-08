@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 const BASE = 'http://localhost:4175'
 
 test.describe('Pages Router Production — Interactive', () => {
-  // NOTE: Pages Router production build (ruetext build + ruetext start) does not
+  // NOTE: Pages Router production build (text build + text start) does not
   // currently hydrate client components — interactive useState/onClick don't work.
   // The SSR HTML renders correctly, but client JS bundles aren't loaded.
   // This is a known gap — production hydration only works on Cloudflare Workers
