@@ -19383,7 +19383,7 @@
       "sectionTitle": "属性继承",
       "type": "code",
       "text": "interface MyButtonProps { children?: React.ReactNode } function MyButton({ children, ...attrs }: MyButtonProps & JSX.HTMLAttributes<HTMLButtonElement>) { return <button {...attrs}>{children}</button> }",
-      "searchText": "透传属性 属性继承 interface mybuttonprops { children?: xreactx.reactnode } function mybutton({ children, ...attrs }: mybuttonprops & jsx.htmlattributes<htmlbuttonelement>) { return <button {...attrs}>{children}</button> } guide/components/attrs"
+      "searchText": "透传属性 属性继承 interface mybuttonprops { children?: react.reactnode } function mybutton({ children, ...attrs }: mybuttonprops & jsx.htmlattributes<htmlbuttonelement>) { return <button {...attrs}>{children}</button> } guide/components/attrs"
     },
     {
       "id": "guide/components/attrs:6",
@@ -19592,7 +19592,7 @@
       "sectionTitle": "嵌套组件继承",
       "type": "code",
       "text": "// MyButton 的模板，简单地渲染另一个组件 interface MyButtonProps { children?: React.ReactNode } function MyButton({ children, ...attrs }: MyButtonProps) { return <BaseButton {...attrs}>{children}</BaseButton> }",
-      "searchText": "透传属性 嵌套组件继承 // mybutton 的模板，简单地渲染另一个组件 interface mybuttonprops { children?: xreactx.reactnode } function mybutton({ children, ...attrs }: mybuttonprops) { return <basebutton {...attrs}>{children}</basebutton> } guide/components/attrs"
+      "searchText": "透传属性 嵌套组件继承 // mybutton 的模板，简单地渲染另一个组件 interface mybuttonprops { children?: react.reactnode } function mybutton({ children, ...attrs }: mybuttonprops) { return <basebutton {...attrs}>{children}</basebutton> } guide/components/attrs"
     },
     {
       "id": "guide/components/attrs:25",
@@ -19669,7 +19669,7 @@
       "sectionTitle": "禁用属性继承",
       "type": "code",
       "text": "interface MyButtonProps { children?: React.ReactNode className?: string } function MyButton({ children, className }: MyButtonProps) { // 显式只使用 className，其他属性被忽略 return <button class={className}>{children}</button> }",
-      "searchText": "透传属性 禁用属性继承 interface mybuttonprops { children?: xreactx.reactnode classname?: string } function mybutton({ children, classname }: mybuttonprops) { // 显式只使用 classname，其他属性被忽略 return <button class={classname}>{children}</button> } guide/components/attrs"
+      "searchText": "透传属性 禁用属性继承 interface mybuttonprops { children?: react.reactnode classname?: string } function mybutton({ children, classname }: mybuttonprops) { // 显式只使用 classname，其他属性被忽略 return <button class={classname}>{children}</button> } guide/components/attrs"
     },
     {
       "id": "guide/components/attrs:32",
@@ -19702,7 +19702,7 @@
       "sectionTitle": "禁用属性继承",
       "type": "code",
       "text": "interface MyButtonProps { children?: React.ReactNode } function MyButton({ children, ...attrs }: MyButtonProps & JSX.HTMLAttributes<HTMLButtonElement>) { return ( <div class=\"btn-wrapper\"> <button class=\"btn\" {...attrs}> {children} </button> </div> ) }",
-      "searchText": "透传属性 禁用属性继承 interface mybuttonprops { children?: xreactx.reactnode } function mybutton({ children, ...attrs }: mybuttonprops & jsx.htmlattributes<htmlbuttonelement>) { return ( <div class=\"btn-wrapper\"> <button class=\"btn\" {...attrs}> {children} </button> </div> ) } guide/components/attrs"
+      "searchText": "透传属性 禁用属性继承 interface mybuttonprops { children?: react.reactnode } function mybutton({ children, ...attrs }: mybuttonprops & jsx.htmlattributes<htmlbuttonelement>) { return ( <div class=\"btn-wrapper\"> <button class=\"btn\" {...attrs}> {children} </button> </div> ) } guide/components/attrs"
     },
     {
       "id": "guide/components/attrs:35",
@@ -19779,7 +19779,7 @@
       "sectionTitle": "在多个根节点上的属性继承",
       "type": "code",
       "text": "interface CustomLayoutProps { children?: React.ReactNode } function CustomLayout({ children, ...attrs }: CustomLayoutProps & JSX.HTMLAttributes<HTMLElement>) { return ( <> <header>...</header> <main {...attrs}>{children}</main> <footer>...</footer> </> ) }",
-      "searchText": "透传属性 在多个根节点上的属性继承 interface customlayoutprops { children?: xreactx.reactnode } function customlayout({ children, ...attrs }: customlayoutprops & jsx.htmlattributes<htmlelement>) { return ( <> <header>...</header> <main {...attrs}>{children}</main> <footer>...</footer> </> ) } guide/components/attrs"
+      "searchText": "透传属性 在多个根节点上的属性继承 interface customlayoutprops { children?: react.reactnode } function customlayout({ children, ...attrs }: customlayoutprops & jsx.htmlattributes<htmlelement>) { return ( <> <header>...</header> <main {...attrs}>{children}</main> <footer>...</footer> </> ) } guide/components/attrs"
     },
     {
       "id": "guide/components/attrs:42",
@@ -19834,7 +19834,7 @@
       "sectionTitle": "在 JavaScript 中访问透传属性",
       "type": "code",
       "text": "interface MyButtonProps { children?: React.ReactNode } function MyButton({ children, ...attrs }: MyButtonProps & JSX.HTMLAttributes<HTMLButtonElement>) { // 透传属性在 attrs 对象中 console.log(attrs) return <button {...attrs}>{children}</button> }",
-      "searchText": "透传属性 在 javascript 中访问透传属性 interface mybuttonprops { children?: xreactx.reactnode } function mybutton({ children, ...attrs }: mybuttonprops & jsx.htmlattributes<htmlbuttonelement>) { // 透传属性在 attrs 对象中 console.log(attrs) return <button {...attrs}>{children}</button> } guide/components/attrs"
+      "searchText": "透传属性 在 javascript 中访问透传属性 interface mybuttonprops { children?: react.reactnode } function mybutton({ children, ...attrs }: mybuttonprops & jsx.htmlattributes<htmlbuttonelement>) { // 透传属性在 attrs 对象中 console.log(attrs) return <button {...attrs}>{children}</button> } guide/components/attrs"
     },
     {
       "id": "guide/components/attrs:47",
@@ -19889,7 +19889,7 @@
       "sectionTitle": "在 JavaScript 中访问透传属性",
       "type": "code",
       "text": "interface MyButtonProps { children?: React.ReactNode } function MyButton({ children, ...attrs }: MyButtonProps & JSX.HTMLAttributes<HTMLButtonElement>) { // 访问特定的透传属性 const { class: className, onClick, id } = attrs console.log('Class:', className) console.log('ID:', id) return ( <button class={className} onClick={onClick} id={id}> {children} </button> ) }",
-      "searchText": "透传属性 在 javascript 中访问透传属性 interface mybuttonprops { children?: xreactx.reactnode } function mybutton({ children, ...attrs }: mybuttonprops & jsx.htmlattributes<htmlbuttonelement>) { // 访问特定的透传属性 const { class: classname, onclick, id } = attrs console.log('class:', classname) console.log('id:', id) return ( <button class={classname} onclick={onclick} id={id}> {children} </button> ) } guide/components/attrs"
+      "searchText": "透传属性 在 javascript 中访问透传属性 interface mybuttonprops { children?: react.reactnode } function mybutton({ children, ...attrs }: mybuttonprops & jsx.htmlattributes<htmlbuttonelement>) { // 访问特定的透传属性 const { class: classname, onclick, id } = attrs console.log('class:', classname) console.log('id:', id) return ( <button class={classname} onclick={onclick} id={id}> {children} </button> ) } guide/components/attrs"
     },
     {
       "id": "guide/components/component-basics:0",
@@ -20120,7 +20120,7 @@
       "sectionTitle": "使用插槽",
       "type": "code",
       "text": "// AlertBox.tsx interface AlertBoxProps { children?: React.ReactNode } function AlertBox({ children }: AlertBoxProps) { return ( <div class=\"alert-box\"> <strong>Error!</strong> <br /> {children} </div> ) }",
-      "searchText": "组件基础 使用插槽 // alertbox.tsx interface alertboxprops { children?: xreactx.reactnode } function alertbox({ children }: alertboxprops) { return ( <div class=\"alert-box\"> <strong>error!</strong> <br /> {children} </div> ) } guide/components/component-basics"
+      "searchText": "组件基础 使用插槽 // alertbox.tsx interface alertboxprops { children?: react.reactnode } function alertbox({ children }: alertboxprops) { return ( <div class=\"alert-box\"> <strong>error!</strong> <br /> {children} </div> ) } guide/components/component-basics"
     },
     {
       "id": "guide/components/component-basics:21",
@@ -22100,7 +22100,7 @@
       "sectionTitle": "插槽内容和出口",
       "type": "code",
       "text": "function FancyButton({ children }: { children?: React.ReactNode }) { return ( <button class=\"fancy-btn\"> {children} {/* 插槽出口 */} </button> ) }",
-      "searchText": "插槽 插槽内容和出口 function fancybutton({ children }: { children?: xreactx.reactnode }) { return ( <button class=\"fancy-btn\"> {children} {/* 插槽出口 */} </button> ) } guide/components/slots"
+      "searchText": "插槽 插槽内容和出口 function fancybutton({ children }: { children?: react.reactnode }) { return ( <button class=\"fancy-btn\"> {children} {/* 插槽出口 */} </button> ) } guide/components/slots"
     },
     {
       "id": "guide/components/slots:8",
@@ -22342,7 +22342,7 @@
       "sectionTitle": "后备内容",
       "type": "code",
       "text": "interface SubmitButtonProps { children?: React.ReactNode } function SubmitButton({ children }: SubmitButtonProps) { return <button type=\"submit\">{children}</button> }",
-      "searchText": "插槽 后备内容 interface submitbuttonprops { children?: xreactx.reactnode } function submitbutton({ children }: submitbuttonprops) { return <button type=\"submit\">{children}</button> } guide/components/slots"
+      "searchText": "插槽 后备内容 interface submitbuttonprops { children?: react.reactnode } function submitbutton({ children }: submitbuttonprops) { return <button type=\"submit\">{children}</button> } guide/components/slots"
     },
     {
       "id": "guide/components/slots:34",
@@ -22496,7 +22496,7 @@
       "sectionTitle": "具名插槽",
       "type": "code",
       "text": "function BaseLayout({ header, children, footer, }: { header?: React.ReactNode children?: React.ReactNode footer?: React.ReactNode }) { return ( <div class=\"container\"> <header>{header}</header> <main>{children}</main> <footer>{footer}</footer> </div> ) }",
-      "searchText": "插槽 具名插槽 function baselayout({ header, children, footer, }: { header?: xreactx.reactnode children?: xreactx.reactnode footer?: xreactx.reactnode }) { return ( <div class=\"container\"> <header>{header}</header> <main>{children}</main> <footer>{footer}</footer> </div> ) } guide/components/slots"
+      "searchText": "插槽 具名插槽 function baselayout({ header, children, footer, }: { header?: react.reactnode children?: react.reactnode footer?: react.reactnode }) { return ( <div class=\"container\"> <header>{header}</header> <main>{children}</main> <footer>{footer}</footer> </div> ) } guide/components/slots"
     },
     {
       "id": "guide/components/slots:50",
@@ -22694,7 +22694,7 @@
       "sectionTitle": "条件插槽",
       "type": "code",
       "text": "interface CardProps { header?: React.ReactNode footer?: React.ReactNode children?: React.ReactNode } function Card({ header, footer, children }: CardProps) { return ( <div class=\"card\"> {header && <div class=\"card-header\">{header}</div>} {children && <div class=\"card-content\">{children}</div>} {footer && <div class=\"card-footer\">{footer}</div>} </div> ) }",
-      "searchText": "插槽 条件插槽 interface cardprops { header?: xreactx.reactnode footer?: xreactx.reactnode children?: xreactx.reactnode } function card({ header, footer, children }: cardprops) { return ( <div class=\"card\"> {header && <div class=\"card-header\">{header}</div>} {children && <div class=\"card-content\">{children}</div>} {footer && <div class=\"card-footer\">{footer}</div>} </div> ) } guide/components/slots"
+      "searchText": "插槽 条件插槽 interface cardprops { header?: react.reactnode footer?: react.reactnode children?: react.reactnode } function card({ header, footer, children }: cardprops) { return ( <div class=\"card\"> {header && <div class=\"card-header\">{header}</div>} {children && <div class=\"card-content\">{children}</div>} {footer && <div class=\"card-footer\">{footer}</div>} </div> ) } guide/components/slots"
     },
     {
       "id": "guide/components/slots:70",
@@ -22804,7 +22804,7 @@
       "sectionTitle": "作用域插槽",
       "type": "code",
       "text": "// <MyComponent> 模板 interface MyComponentProps { children?: (slotProps: { text: string; count: number }) => React.ReactNode } function MyComponent({ children }: MyComponentProps) { const greetingMessage = 'hello' return <div>{children?.({ text: greetingMessage, count: 1 })}</div> }",
-      "searchText": "插槽 作用域插槽 // <mycomponent> 模板 interface mycomponentprops { children?: (slotprops: { text: string; count: number }) => xreactx.reactnode } function mycomponent({ children }: mycomponentprops) { const greetingmessage = 'hello' return <div>{children?.({ text: greetingmessage, count: 1 })}</div> } guide/components/slots"
+      "searchText": "插槽 作用域插槽 // <mycomponent> 模板 interface mycomponentprops { children?: (slotprops: { text: string; count: number }) => react.reactnode } function mycomponent({ children }: mycomponentprops) { const greetingmessage = 'hello' return <div>{children?.({ text: greetingmessage, count: 1 })}</div> } guide/components/slots"
     },
     {
       "id": "guide/components/slots:80",
@@ -22969,7 +22969,7 @@
       "sectionTitle": "具名作用域插槽",
       "type": "code",
       "text": "interface MyComponentProps { header?: (props: { message: string }) => React.ReactNode footer?: React.ReactNode children?: (props: { message: string }) => React.ReactNode } function MyComponent({ header, footer, children }: MyComponentProps) { return ( <div> <header>{header?.({ message: 'hello' })}</header> <main>{children?.({ message: 'world' })}</main> <footer>{footer}</footer> </div> ) }",
-      "searchText": "插槽 具名作用域插槽 interface mycomponentprops { header?: (props: { message: string }) => xreactx.reactnode footer?: xreactx.reactnode children?: (props: { message: string }) => xreactx.reactnode } function mycomponent({ header, footer, children }: mycomponentprops) { return ( <div> <header>{header?.({ message: 'hello' })}</header> <main>{children?.({ message: 'world' })}</main> <footer>{footer}</footer> </div> ) } guide/components/slots"
+      "searchText": "插槽 具名作用域插槽 interface mycomponentprops { header?: (props: { message: string }) => react.reactnode footer?: react.reactnode children?: (props: { message: string }) => react.reactnode } function mycomponent({ header, footer, children }: mycomponentprops) { return ( <div> <header>{header?.({ message: 'hello' })}</header> <main>{children?.({ message: 'world' })}</main> <footer>{footer}</footer> </div> ) } guide/components/slots"
     },
     {
       "id": "guide/components/slots:97",
@@ -23035,7 +23035,7 @@
       "sectionTitle": "Fancy List 示例",
       "type": "code",
       "text": "interface FancyListProps { apiUrl: string perPage: number children: (item: { body: string; username: string; likes: number }) => React.ReactNode } function FancyList({ apiUrl, perPage, children }: FancyListProps) { const items = ref([]) // 加载数据... return ( <ul> {items.value.map(item => ( <li key={item.id}>{children(item)}</li> ))} </ul> ) }",
-      "searchText": "插槽 fancy list 示例 interface fancylistprops { apiurl: string perpage: number children: (item: { body: string; username: string; likes: number }) => xreactx.reactnode } function fancylist({ apiurl, perpage, children }: fancylistprops) { const items = ref([]) // 加载数据... return ( <ul> {items.value.map(item => ( <li key={item.id}>{children(item)}</li> ))} </ul> ) } guide/components/slots"
+      "searchText": "插槽 fancy list 示例 interface fancylistprops { apiurl: string perpage: number children: (item: { body: string; username: string; likes: number }) => react.reactnode } function fancylist({ apiurl, perpage, children }: fancylistprops) { const items = ref([]) // 加载数据... return ( <ul> {items.value.map(item => ( <li key={item.id}>{children(item)}</li> ))} </ul> ) } guide/components/slots"
     },
     {
       "id": "guide/components/slots:104",
@@ -23101,7 +23101,7 @@
       "sectionTitle": "无渲染组件",
       "type": "code",
       "text": "interface MouseTrackerProps { children: (state: { x: number; y: number }) => React.ReactNode } function MouseTracker({ children }: MouseTrackerProps) { const x = ref(0) const y = ref(0) function updatePosition(e: MouseEvent) { x.value = e.pageX y.value = e.pageY } onMounted(() => { window.addEventListener('mousemove', updatePosition) }) onUnmounted(() => { window.removeEventListener('mousemove', updatePosition) }) return <>{children({ x: x.value, y: y.value })}</> }",
-      "searchText": "插槽 无渲染组件 interface mousetrackerprops { children: (state: { x: number; y: number }) => xreactx.reactnode } function mousetracker({ children }: mousetrackerprops) { const x = ref(0) const y = ref(0) function updateposition(e: mouseevent) { x.value = e.pagex y.value = e.pagey } onmounted(() => { window.addeventlistener('mousemove', updateposition) }) onunmounted(() => { window.removeeventlistener('mousemove', updateposition) }) return <>{children({ x: x.value, y: y.value })}</> } guide/components/slots"
+      "searchText": "插槽 无渲染组件 interface mousetrackerprops { children: (state: { x: number; y: number }) => react.reactnode } function mousetracker({ children }: mousetrackerprops) { const x = ref(0) const y = ref(0) function updateposition(e: mouseevent) { x.value = e.pagex y.value = e.pagey } onmounted(() => { window.addeventlistener('mousemove', updateposition) }) onunmounted(() => { window.removeeventlistener('mousemove', updateposition) }) return <>{children({ x: x.value, y: y.value })}</> } guide/components/slots"
     },
     {
       "id": "guide/components/slots:111",
@@ -30130,7 +30130,7 @@
       "sectionTitle": "JSX 语法",
       "type": "paragraph",
       "text": "Rue 使用 JSX 作为其模板语法。如果你熟悉 React，你已经掌握了大部分知识。本页介绍 Rue 的 JSX 语法及其与 React JSX 的异同。",
-      "searchText": "jsx 语法 jsx 语法 rue 使用 jsx 作为其模板语法。如果你熟悉 xreactx，你已经掌握了大部分知识。本页介绍 rue 的 jsx 语法及其与 xreactx jsx 的异同。 guide/essentials/template-syntax"
+      "searchText": "jsx 语法 jsx 语法 rue 使用 jsx 作为其模板语法。如果你熟悉 react，你已经掌握了大部分知识。本页介绍 rue 的 jsx 语法及其与 react jsx 的异同。 guide/essentials/template-syntax"
     },
     {
       "id": "guide/essentials/template-syntax:2",
@@ -32374,7 +32374,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "heading",
       "text": "与 React Hooks 的比较",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 与 xreactx hooks 的比较 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 与 react hooks 的比较 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:20",
@@ -32385,7 +32385,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "paragraph",
       "text": "Composition API 提供了与 React Hooks 相同级别的逻辑组合能力，但有一些重要的区别。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 composition api 提供了与 xreactx hooks 相同级别的逻辑组合能力，但有一些重要的区别。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 composition api 提供了与 react hooks 相同级别的逻辑组合能力，但有一些重要的区别。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:21",
@@ -32396,7 +32396,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "paragraph",
       "text": "React Hooks 在每次组件更新时都会重复调用。这产生了许多可能让即使是经验丰富的 React 开发者也感到困惑的注意事项。它还导致可能影响开发体验的性能优化问题。以下是一些例子：",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 xreactx hooks 在每次组件更新时都会重复调用。这产生了许多可能让即使是经验丰富的 xreactx 开发者也感到困惑的注意事项。它还导致可能影响开发体验的性能优化问题。以下是一些例子： guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 react hooks 在每次组件更新时都会重复调用。这产生了许多可能让即使是经验丰富的 react 开发者也感到困惑的注意事项。它还导致可能影响开发体验的性能优化问题。以下是一些例子： guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:22",
@@ -32407,7 +32407,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "list",
       "text": "Hooks 对调用顺序敏感，不能是条件性的。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 hooks 对调用顺序敏感，不能是条件性的。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 hooks 对调用顺序敏感，不能是条件性的。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:23",
@@ -32418,7 +32418,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "list",
       "text": "在 React 组件中声明的变量可以被 hook 闭包捕获，如果开发者未能传入正确的依赖数组，就会变成\"陈旧的\"。这导致 React 开发者依赖额外的静态规则来确保传入正确的依赖。然而，这类规则往往不够智能，过度补偿正确性，这导致在遇到边缘情况时不必要的失效和头痛。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 在 xreactx 组件中声明的变量可以被 hook 闭包捕获，如果开发者未能传入正确的依赖数组，就会变成\"陈旧的\"。这导致 xreactx 开发者依赖额外的静态规则来确保传入正确的依赖。然而，这类规则往往不够智能，过度补偿正确性，这导致在遇到边缘情况时不必要的失效和头痛。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 在 react 组件中声明的变量可以被 hook 闭包捕获，如果开发者未能传入正确的依赖数组，就会变成\"陈旧的\"。这导致 react 开发者依赖额外的静态规则来确保传入正确的依赖。然而，这类规则往往不够智能，过度补偿正确性，这导致在遇到边缘情况时不必要的失效和头痛。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:24",
@@ -32429,7 +32429,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "list",
       "text": "昂贵的计算需要使用 useMemo，这再次需要手动传入正确的依赖数组。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 昂贵的计算需要使用 usememo，这再次需要手动传入正确的依赖数组。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 昂贵的计算需要使用 usememo，这再次需要手动传入正确的依赖数组。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:25",
@@ -32440,7 +32440,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "list",
       "text": "传递给子组件的事件处理程序默认会导致不必要的子更新，需要显式的 useCallback 作为优化。这几乎总是需要的，并且再次需要正确的依赖数组。忽视这一点会导致默认情况下的过度渲染应用，并可能在未意识到的情况下造成性能问题。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 传递给子组件的事件处理程序默认会导致不必要的子更新，需要显式的 usecallback 作为优化。这几乎总是需要的，并且再次需要正确的依赖数组。忽视这一点会导致默认情况下的过度渲染应用，并可能在未意识到的情况下造成性能问题。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 传递给子组件的事件处理程序默认会导致不必要的子更新，需要显式的 usecallback 作为优化。这几乎总是需要的，并且再次需要正确的依赖数组。忽视这一点会导致默认情况下的过度渲染应用，并可能在未意识到的情况下造成性能问题。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:26",
@@ -32451,7 +32451,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "list",
       "text": "陈旧闭包问题与 Concurrent 特性相结合，使得很难推断一段 hooks 代码何时运行，并使处理应该在渲染之间持久化的可变状态（通过 useRef）变得繁琐。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 陈旧闭包问题与 concurrent 特性相结合，使得很难推断一段 hooks 代码何时运行，并使处理应该在渲染之间持久化的可变状态（通过 useref）变得繁琐。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 陈旧闭包问题与 concurrent 特性相结合，使得很难推断一段 hooks 代码何时运行，并使处理应该在渲染之间持久化的可变状态（通过 useref）变得繁琐。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:27",
@@ -32462,7 +32462,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "blockquote",
       "text": "注意：一些与记忆化相关的上述问题可以通过编译器优化解决。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 注意：一些与记忆化相关的上述问题可以通过编译器优化解决。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 注意：一些与记忆化相关的上述问题可以通过编译器优化解决。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:28",
@@ -32473,7 +32473,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "paragraph",
       "text": "相比之下，Rue Composition API：",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 相比之下，rue composition api： guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 相比之下，rue composition api： guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:29",
@@ -32484,7 +32484,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "list",
       "text": "组件的组合式逻辑通常只在初始化阶段执行一次。这使得代码更符合习惯用法的 JavaScript 使用直觉，因为不必担心陈旧的闭包。Composition API 调用也对调用顺序不敏感，可以是条件性的。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 组件的组合式逻辑通常只在初始化阶段执行一次。这使得代码更符合习惯用法的 javascript 使用直觉，因为不必担心陈旧的闭包。composition api 调用也对调用顺序不敏感，可以是条件性的。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 组件的组合式逻辑通常只在初始化阶段执行一次。这使得代码更符合习惯用法的 javascript 使用直觉，因为不必担心陈旧的闭包。composition api 调用也对调用顺序不敏感，可以是条件性的。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:30",
@@ -32495,7 +32495,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "list",
       "text": "Rue 的运行时响应式系统自动收集计算属性和 watchers 中使用的响应式依赖，因此无需手动声明依赖。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 rue 的运行时响应式系统自动收集计算属性和 watchers 中使用的响应式依赖，因此无需手动声明依赖。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 rue 的运行时响应式系统自动收集计算属性和 watchers 中使用的响应式依赖，因此无需手动声明依赖。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:31",
@@ -32506,7 +32506,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "list",
       "text": "无需手动缓存回调函数以避免不必要的子更新。总的来说，Rue 的细粒度响应式系统确保子组件只在需要时才更新。手动子更新优化很少是 Rue 开发者需要担心的问题。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 无需手动缓存回调函数以避免不必要的子更新。总的来说，rue 的细粒度响应式系统确保子组件只在需要时才更新。手动子更新优化很少是 rue 开发者需要担心的问题。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 无需手动缓存回调函数以避免不必要的子更新。总的来说，rue 的细粒度响应式系统确保子组件只在需要时才更新。手动子更新优化很少是 rue 开发者需要担心的问题。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:32",
@@ -32517,7 +32517,7 @@
       "sectionTitle": "与 React Hooks 的比较",
       "type": "paragraph",
       "text": "我们承认 React Hooks 的创意，它是 Composition API 的主要灵感来源。然而，上述问题确实存在于其设计中，我们注意到 Rue 的响应式模型恰好提供了一种绕过它们的方法。",
-      "searchText": "composition api 常见问题 与 xreactx hooks 的比较 我们承认 xreactx hooks 的创意，它是 composition api 的主要灵感来源。然而，上述问题确实存在于其设计中，我们注意到 rue 的响应式模型恰好提供了一种绕过它们的方法。 guide/extras/composition-api-faq"
+      "searchText": "composition api 常见问题 与 react hooks 的比较 我们承认 react hooks 的创意，它是 composition api 的主要灵感来源。然而，上述问题确实存在于其设计中，我们注意到 rue 的响应式模型恰好提供了一种绕过它们的方法。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/reactivity-in-depth:0",
@@ -33441,7 +33441,7 @@
       "sectionTitle": "与 Signals 的连接",
       "type": "paragraph",
       "text": "从根本上讲，signals 与 Rue refs 是同一种响应式原语。它是一个值容器，在访问时提供依赖跟踪，在修改时触发副作用。这种基于响应式原语的范式在前端世界中并不是一个特别新的概念：它可以追溯到十多年前的实现，如 Knockout observables 和 Meteor Tracker。React 状态管理库 MobX 也基于相同的原理，但将原语隐藏在对象属性后面。",
-      "searchText": "深入响应式系统 与 signals 的连接 从根本上讲，signals 与 rue refs 是同一种响应式原语。它是一个值容器，在访问时提供依赖跟踪，在修改时触发副作用。这种基于响应式原语的范式在前端世界中并不是一个特别新的概念：它可以追溯到十多年前的实现，如 knockout observables 和 meteor tracker。xreactx 状态管理库 mobx 也基于相同的原理，但将原语隐藏在对象属性后面。 guide/extras/reactivity-in-depth"
+      "searchText": "深入响应式系统 与 signals 的连接 从根本上讲，signals 与 rue refs 是同一种响应式原语。它是一个值容器，在访问时提供依赖跟踪，在修改时触发副作用。这种基于响应式原语的范式在前端世界中并不是一个特别新的概念：它可以追溯到十多年前的实现，如 knockout observables 和 meteor tracker。react 状态管理库 mobx 也基于相同的原理，但将原语隐藏在对象属性后面。 guide/extras/reactivity-in-depth"
     },
     {
       "id": "guide/extras/reactivity-in-depth:88",
@@ -33451,8 +33451,8 @@
       "title": "深入响应式系统",
       "sectionTitle": "与 Signals 的连接",
       "type": "paragraph",
-      "text": "虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。Rue 当前默认已经把编译期知识下沉到 Block / Vapor 渲染路径中，并通过编译器知情的 Block / Vapor把更新收敛到更小的动态边界。",
-      "searchText": "深入响应式系统 与 signals 的连接 虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。rue 当前默认已经把编译期知识下沉到 block / vapor 渲染路径中，并通过编译器知情的 block / vapor把更新收敛到更小的动态边界。 guide/extras/reactivity-in-depth"
+      "text": "虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。Rue 的组件、响应式 API 与默认渲染路径都共享这套细粒度依赖追踪；编译器会把结构信息下沉到运行时，并通过编译器知情的渲染路径把更新收敛到更小的动态边界。",
+      "searchText": "深入响应式系统 与 signals 的连接 虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。rue 的组件、响应式 api 与默认渲染路径都共享这套细粒度依赖追踪；编译器会把结构信息下沉到运行时，并通过编译器知情的渲染路径把更新收敛到更小的动态边界。 guide/extras/reactivity-in-depth"
     },
     {
       "id": "guide/extras/reactivity-in-depth:89",
@@ -35179,7 +35179,7 @@
       "sectionTitle": "JSX / TSX",
       "type": "paragraph",
       "text": "Rue 的 JSX 与 React JSX 有两点最容易混淆的区别：",
-      "searchText": "渲染函数与 jsx jsx / tsx rue 的 jsx 与 xreactx jsx 有两点最容易混淆的区别： guide/extras/render-function"
+      "searchText": "渲染函数与 jsx jsx / tsx rue 的 jsx 与 react jsx 有两点最容易混淆的区别： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:34",
@@ -35981,8 +35981,8 @@
       "title": "渲染机制",
       "sectionTitle": "渲染机制",
       "type": "paragraph",
-      "text": "Rue 当前默认的渲染机制是 Block / Vapor。模板与 JSX 在编译阶段会尽量直接降到可执行的 Renderable / Block 指令，运行时围绕 DOM 锚点、区间和响应式副作用做最小更新。",
-      "searchText": "渲染机制 渲染机制 rue 当前默认的渲染机制是 block / vapor。模板与 jsx 在编译阶段会尽量直接降到可执行的 renderable / block 指令，运行时围绕 dom 锚点、区间和响应式副作用做最小更新。 guide/extras/rendering-mechanism"
+      "text": "Rue 当前默认的渲染机制建立在细粒度响应式系统之上。模板与 JSX 在编译阶段会尽量直接降到可执行的 Renderable / Block 指令，运行时围绕 DOM 锚点、区间和响应式副作用做最小更新。",
+      "searchText": "渲染机制 渲染机制 rue 当前默认的渲染机制建立在细粒度响应式系统之上。模板与 jsx 在编译阶段会尽量直接降到可执行的 renderable / block 指令，运行时围绕 dom 锚点、区间和响应式副作用做最小更新。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:2",
@@ -36001,10 +36001,10 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
       "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认 Block / Vapor",
+      "sectionTitle": "公开渲染输出与默认路径",
       "type": "heading",
-      "text": "公开渲染输出与默认 Block / Vapor",
-      "searchText": "渲染机制 公开渲染输出与默认 block / vapor 公开渲染输出与默认 block / vapor guide/extras/rendering-mechanism"
+      "text": "公开渲染输出与默认路径",
+      "searchText": "渲染机制 公开渲染输出与默认路径 公开渲染输出与默认路径 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:5",
@@ -36012,10 +36012,10 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
       "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认 Block / Vapor",
+      "sectionTitle": "公开渲染输出与默认路径",
       "type": "paragraph",
       "text": "如果你从旧版本或其他框架迁移过来，最容易混淆的一点是：",
-      "searchText": "渲染机制 公开渲染输出与默认 block / vapor 如果你从旧版本或其他框架迁移过来，最容易混淆的一点是： guide/extras/rendering-mechanism"
+      "searchText": "渲染机制 公开渲染输出与默认路径 如果你从旧版本或其他框架迁移过来，最容易混淆的一点是： guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:6",
@@ -36023,10 +36023,10 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
       "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认 Block / Vapor",
+      "sectionTitle": "公开渲染输出与默认路径",
       "type": "list",
-      "text": "Rue 仍然允许你手写 h() 或 JSX 历史文档里仍可能看到旧的公开对象术语 但 Rue 默认编译产物已经优先走 Block / Vapor / Renderable 路径",
-      "searchText": "渲染机制 公开渲染输出与默认 block / vapor rue 仍然允许你手写 h() 或 jsx 历史文档里仍可能看到旧的公开对象术语 但 rue 默认编译产物已经优先走 block / vapor / renderable 路径 guide/extras/rendering-mechanism"
+      "text": "Rue 仍然允许你手写 h() 或 JSX 历史文档里仍可能看到旧的公开对象术语 但 Rue 默认编译产物已经优先走细粒度 Renderable / Block 路径",
+      "searchText": "渲染机制 公开渲染输出与默认路径 rue 仍然允许你手写 h() 或 jsx 历史文档里仍可能看到旧的公开对象术语 但 rue 默认编译产物已经优先走细粒度 renderable / block 路径 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:7",
@@ -36034,10 +36034,10 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
       "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认 Block / Vapor",
+      "sectionTitle": "公开渲染输出与默认路径",
       "type": "paragraph",
       "text": "在默认路径中，编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 DOM 操作的渲染计划。",
-      "searchText": "渲染机制 公开渲染输出与默认 block / vapor 在默认路径中，编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 dom 操作的渲染计划。 guide/extras/rendering-mechanism"
+      "searchText": "渲染机制 公开渲染输出与默认路径 在默认路径中，编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 dom 操作的渲染计划。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:8",
@@ -36045,10 +36045,10 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
       "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认 Block / Vapor",
+      "sectionTitle": "公开渲染输出与默认路径",
       "type": "paragraph",
       "text": "只有在以下情况，你才会明显接触到历史对象桥接/compat 语义：",
-      "searchText": "渲染机制 公开渲染输出与默认 block / vapor 只有在以下情况，你才会明显接触到历史对象桥接/compat 语义： guide/extras/rendering-mechanism"
+      "searchText": "渲染机制 公开渲染输出与默认路径 只有在以下情况，你才会明显接触到历史对象桥接/compat 语义： guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:9",
@@ -36056,10 +36056,10 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
       "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认 Block / Vapor",
+      "sectionTitle": "公开渲染输出与默认路径",
       "type": "list",
       "text": "你在手写渲染函数 你在桥接历史库或老 helper 你在迁移已经被删除的 compat 子路径与旧 helper",
-      "searchText": "渲染机制 公开渲染输出与默认 block / vapor 你在手写渲染函数 你在桥接历史库或老 helper 你在迁移已经被删除的 compat 子路径与旧 helper guide/extras/rendering-mechanism"
+      "searchText": "渲染机制 公开渲染输出与默认路径 你在手写渲染函数 你在桥接历史库或老 helper 你在迁移已经被删除的 compat 子路径与旧 helper guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:10",
@@ -36175,45 +36175,45 @@
       "id": "guide/extras/rendering-mechanism:20",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-block-vapor",
+      "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
       "title": "渲染机制",
-      "sectionTitle": "编译器知情的 Block / Vapor",
+      "sectionTitle": "编译器知情的渲染路径",
       "type": "heading",
-      "text": "编译器知情的 Block / Vapor",
-      "searchText": "渲染机制 编译器知情的 block / vapor 编译器知情的 block / vapor guide/extras/rendering-mechanism"
+      "text": "编译器知情的渲染路径",
+      "searchText": "渲染机制 编译器知情的渲染路径 编译器知情的渲染路径 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:22",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-block-vapor",
+      "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
       "title": "渲染机制",
-      "sectionTitle": "编译器知情的 Block / Vapor",
+      "sectionTitle": "编译器知情的渲染路径",
       "type": "paragraph",
       "text": "Rue 的核心优势在于同时掌控编译器与运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；运行时则只执行这些已经被压缩过的信息。",
-      "searchText": "渲染机制 编译器知情的 block / vapor rue 的核心优势在于同时掌控编译器与运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；运行时则只执行这些已经被压缩过的信息。 guide/extras/rendering-mechanism"
+      "searchText": "渲染机制 编译器知情的渲染路径 rue 的核心优势在于同时掌控编译器与运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；运行时则只执行这些已经被压缩过的信息。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:23",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-block-vapor",
+      "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
       "title": "渲染机制",
-      "sectionTitle": "编译器知情的 Block / Vapor",
+      "sectionTitle": "编译器知情的渲染路径",
       "type": "paragraph",
-      "text": "旧文档里把这类优化描述成“编译器知情的整树协调模型”。今天更准确的说法是：Rue 会把编译期知识直接下沉到 Block / Vapor 运行时，让更新路径尽量接近真实 DOM 变更本身。",
-      "searchText": "渲染机制 编译器知情的 block / vapor 旧文档里把这类优化描述成“编译器知情的整树协调模型”。今天更准确的说法是：rue 会把编译期知识直接下沉到 block / vapor 运行时，让更新路径尽量接近真实 dom 变更本身。 guide/extras/rendering-mechanism"
+      "text": "旧文档里把这类优化描述成“编译器知情的整树协调模型”。今天更准确的说法是：Rue 会把编译期知识直接下沉到默认渲染运行时，让更新路径尽量接近真实 DOM 变更本身。",
+      "searchText": "渲染机制 编译器知情的渲染路径 旧文档里把这类优化描述成“编译器知情的整树协调模型”。今天更准确的说法是：rue 会把编译期知识直接下沉到默认渲染运行时，让更新路径尽量接近真实 dom 变更本身。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:24",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-block-vapor",
+      "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
       "title": "渲染机制",
-      "sectionTitle": "编译器知情的 Block / Vapor",
+      "sectionTitle": "编译器知情的渲染路径",
       "type": "paragraph",
       "text": "下面这些优化依旧存在，只是它们服务的对象已经不是“整树对象 diff”，而是“编译后可直接执行的渲染计划”。",
-      "searchText": "渲染机制 编译器知情的 block / vapor 下面这些优化依旧存在，只是它们服务的对象已经不是“整树对象 diff”，而是“编译后可直接执行的渲染计划”。 guide/extras/rendering-mechanism"
+      "searchText": "渲染机制 编译器知情的渲染路径 下面这些优化依旧存在，只是它们服务的对象已经不是“整树对象 diff”，而是“编译后可直接执行的渲染计划”。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:25",
@@ -36575,8 +36575,8 @@
       "title": "Rue 与 Web 组件",
       "sectionTitle": "在 Rue 中使用自定义元素",
       "type": "paragraph",
-      "text": "Rue 在 Custom Elements Everywhere 测试中获得了完美的 100% 分数。在 Rue 应用程序中消费自定义元素在很大程度上与使用原生 HTML 元素相同，但有一些需要注意的地方：",
-      "searchText": "rue 与 web 组件 在 rue 中使用自定义元素 rue 在 custom elements everywhere 测试中获得了完美的 100% 分数。在 rue 应用程序中消费自定义元素在很大程度上与使用原生 html 元素相同，但有一些需要注意的地方： guide/extras/web-components"
+      "text": "在 Rue 应用程序中消费自定义元素在很大程度上与使用原生 HTML 元素相同，但有一些需要注意的地方：",
+      "searchText": "rue 与 web 组件 在 rue 中使用自定义元素 在 rue 应用程序中消费自定义元素在很大程度上与使用原生 html 元素相同，但有一些需要注意的地方： guide/extras/web-components"
     },
     {
       "id": "guide/extras/web-components:5",
@@ -37775,7 +37775,7 @@
       "sectionTitle": "使用 useState",
       "type": "paragraph",
       "text": "如果你更喜欢 React 风格的 API，Rue 也提供了 useState：",
-      "searchText": "简介 使用 usestate 如果你更喜欢 xreactx 风格的 api，rue 也提供了 usestate： guide/introduction"
+      "searchText": "简介 使用 usestate 如果你更喜欢 react 风格的 api，rue 也提供了 usestate： guide/introduction"
     },
     {
       "id": "guide/introduction:28",
@@ -38402,7 +38402,7 @@
       "sectionTitle": "选择哪种方式？",
       "type": "list",
       "text": "如果你喜欢属性访问风格的响应式系统，使用 ref、reactive 和 computed 如果你熟悉 React，使用 useState 如果你更习惯 getter / setter 风格，使用 signal 和 computed 可以根据项目需要混合使用不同的 API",
-      "searchText": "简介 选择哪种方式？ 如果你喜欢属性访问风格的响应式系统，使用 ref、reactive 和 computed 如果你熟悉 xreactx，使用 usestate 如果你更习惯 getter / setter 风格，使用 signal 和 computed 可以根据项目需要混合使用不同的 api guide/introduction"
+      "searchText": "简介 选择哪种方式？ 如果你喜欢属性访问风格的响应式系统，使用 ref、reactive 和 computed 如果你熟悉 react，使用 usestate 如果你更习惯 getter / setter 风格，使用 signal 和 computed 可以根据项目需要混合使用不同的 api guide/introduction"
     },
     {
       "id": "guide/introduction:85",
@@ -38435,7 +38435,7 @@
       "sectionTitle": "选择哪种方式？",
       "type": "list",
       "text": "如果你计划构建完整的应用程序，推荐使用 ref + reactive + JSX 如果你从 React 迁移过来，useState 可以帮你更快上手",
-      "searchText": "简介 选择哪种方式？ 如果你计划构建完整的应用程序，推荐使用 ref + reactive + jsx 如果你从 xreactx 迁移过来，usestate 可以帮你更快上手 guide/introduction"
+      "searchText": "简介 选择哪种方式？ 如果你计划构建完整的应用程序，推荐使用 ref + reactive + jsx 如果你从 react 迁移过来，usestate 可以帮你更快上手 guide/introduction"
     },
     {
       "id": "guide/migration/renderable-default:0",
@@ -38823,29 +38823,29 @@
       "searchText": "快速开始 创建 rue 应用 创建 rue 应用 guide/quick-start"
     },
     {
-      "id": "guide/quick-start:2",
-      "docId": "guide/quick-start",
-      "route": "/guide/guide/quick-start",
-      "href": "/guide/guide/quick-start#creating-a-rue-application",
-      "title": "快速开始",
-      "sectionTitle": "创建 Rue 应用",
-      "type": "paragraph",
-      "text": ":::tip 前置条件",
-      "searchText": "快速开始 创建 rue 应用 :::tip 前置条件 guide/quick-start"
-    },
-    {
       "id": "guide/quick-start:3",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
       "title": "快速开始",
       "sectionTitle": "创建 Rue 应用",
-      "type": "list",
-      "text": "熟悉命令行 安装 Node.js 版本 >=22.12.0` :::",
-      "searchText": "快速开始 创建 rue 应用 熟悉命令行 安装 node.js 版本 >=22.12.0` ::: guide/quick-start"
+      "type": "paragraph",
+      "text": "前置条件",
+      "searchText": "快速开始 创建 rue 应用 前置条件 guide/quick-start"
     },
     {
       "id": "guide/quick-start:4",
+      "docId": "guide/quick-start",
+      "route": "/guide/guide/quick-start",
+      "href": "/guide/guide/quick-start#creating-a-rue-application",
+      "title": "快速开始",
+      "sectionTitle": "创建 Rue 应用",
+      "type": "list",
+      "text": "熟悉命令行 安装 Node.js 版本 &gt;=22.12.0",
+      "searchText": "快速开始 创建 rue 应用 熟悉命令行 安装 node.js 版本 &gt;=22.12.0 guide/quick-start"
+    },
+    {
+      "id": "guide/quick-start:6",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -38856,7 +38856,7 @@
       "searchText": "快速开始 创建 rue 应用 在本节中，我们将介绍如何在本地机器上搭建一个 rue 单页应用。创建的项目将使用基于 vite 的构建设置，并允许我们使用 jsx/tsx 编写组件。 guide/quick-start"
     },
     {
-      "id": "guide/quick-start:5",
+      "id": "guide/quick-start:7",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -38867,7 +38867,7 @@
       "searchText": "快速开始 创建 rue 应用 确保你已安装最新版本的 node.js，并且当前工作目录是你打算创建项目的目录。在命令行中运行以下命令（不带 $ 符号）： guide/quick-start"
     },
     {
-      "id": "guide/quick-start:6",
+      "id": "guide/quick-start:8",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -38878,7 +38878,7 @@
       "searchText": "快速开始 创建 rue 应用 $ npm create rue@latest guide/quick-start"
     },
     {
-      "id": "guide/quick-start:7",
+      "id": "guide/quick-start:9",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -38889,7 +38889,7 @@
       "searchText": "快速开始 创建 rue 应用 $ pnpm create rue@latest guide/quick-start"
     },
     {
-      "id": "guide/quick-start:8",
+      "id": "guide/quick-start:10",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -38900,7 +38900,7 @@
       "searchText": "快速开始 创建 rue 应用 # 对于 yarn (v1+) $ yarn create rue # 对于 yarn modern (v2+) $ yarn create rue@latest # 对于 yarn ^v4.11 $ yarn dlx create-rue@latest guide/quick-start"
     },
     {
-      "id": "guide/quick-start:9",
+      "id": "guide/quick-start:11",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -38911,7 +38911,7 @@
       "searchText": "快速开始 创建 rue 应用 $ bun create rue@latest guide/quick-start"
     },
     {
-      "id": "guide/quick-start:10",
+      "id": "guide/quick-start:12",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -38922,18 +38922,18 @@
       "searchText": "快速开始 创建 rue 应用 此命令将安装并执行 create-rue，即官方的 rue 项目脚手架工具。你将看到几个可选功能的提示，例如 typescript 和测试支持： guide/quick-start"
     },
     {
-      "id": "guide/quick-start:11",
+      "id": "guide/quick-start:13",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
       "title": "快速开始",
       "sectionTitle": "创建 Rue 应用",
-      "type": "paragraph",
-      "text": "✔ 项目名称: … &lt;your-project-name&gt; 正在 ./&lt;your-project-name&gt; 中搭建项目... 完成。",
-      "searchText": "快速开始 创建 rue 应用 ✔ 项目名称: … &lt;your-project-name&gt; 正在 ./&lt;your-project-name&gt; 中搭建项目... 完成。 guide/quick-start"
+      "type": "code",
+      "text": "✔ 项目名称: … <your-project-name> 正在 ./<your-project-name> 中搭建项目... 完成。",
+      "searchText": "快速开始 创建 rue 应用 ✔ 项目名称: … <your-project-name> 正在 ./<your-project-name> 中搭建项目... 完成。 guide/quick-start"
     },
     {
-      "id": "guide/quick-start:12",
+      "id": "guide/quick-start:14",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -38944,28 +38944,6 @@
       "searchText": "快速开始 创建 rue 应用 如果你不确定某个选项，现在只需按回车选择 no。项目创建完成后，按照说明安装依赖并启动开发服务器： guide/quick-start"
     },
     {
-      "id": "guide/quick-start:13",
-      "docId": "guide/quick-start",
-      "route": "/guide/guide/quick-start",
-      "href": "/guide/guide/quick-start#creating-a-rue-application",
-      "title": "快速开始",
-      "sectionTitle": "创建 Rue 应用",
-      "type": "code",
-      "text": "$ cd {{'<your-project-name>'}} $ npm install $ npm run dev",
-      "searchText": "快速开始 创建 rue 应用 $ cd {{'<your-project-name>'}} $ npm install $ npm run dev guide/quick-start"
-    },
-    {
-      "id": "guide/quick-start:14",
-      "docId": "guide/quick-start",
-      "route": "/guide/guide/quick-start",
-      "href": "/guide/guide/quick-start#creating-a-rue-application",
-      "title": "快速开始",
-      "sectionTitle": "创建 Rue 应用",
-      "type": "code",
-      "text": "$ cd {{'<your-project-name>'}} $ pnpm install $ pnpm run dev",
-      "searchText": "快速开始 创建 rue 应用 $ cd {{'<your-project-name>'}} $ pnpm install $ pnpm run dev guide/quick-start"
-    },
-    {
       "id": "guide/quick-start:15",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
@@ -38973,8 +38951,8 @@
       "title": "快速开始",
       "sectionTitle": "创建 Rue 应用",
       "type": "code",
-      "text": "$ cd {{'<your-project-name>'}} $ yarn $ yarn dev",
-      "searchText": "快速开始 创建 rue 应用 $ cd {{'<your-project-name>'}} $ yarn $ yarn dev guide/quick-start"
+      "text": "$ cd <your-project-name> $ npm install $ npm run dev",
+      "searchText": "快速开始 创建 rue 应用 $ cd <your-project-name> $ npm install $ npm run dev guide/quick-start"
     },
     {
       "id": "guide/quick-start:16",
@@ -38984,11 +38962,33 @@
       "title": "快速开始",
       "sectionTitle": "创建 Rue 应用",
       "type": "code",
-      "text": "$ cd {{'<your-project-name>'}} $ bun install $ bun run dev",
-      "searchText": "快速开始 创建 rue 应用 $ cd {{'<your-project-name>'}} $ bun install $ bun run dev guide/quick-start"
+      "text": "$ cd <your-project-name> $ pnpm install $ pnpm run dev",
+      "searchText": "快速开始 创建 rue 应用 $ cd <your-project-name> $ pnpm install $ pnpm run dev guide/quick-start"
     },
     {
       "id": "guide/quick-start:17",
+      "docId": "guide/quick-start",
+      "route": "/guide/guide/quick-start",
+      "href": "/guide/guide/quick-start#creating-a-rue-application",
+      "title": "快速开始",
+      "sectionTitle": "创建 Rue 应用",
+      "type": "code",
+      "text": "$ cd <your-project-name> $ yarn $ yarn dev",
+      "searchText": "快速开始 创建 rue 应用 $ cd <your-project-name> $ yarn $ yarn dev guide/quick-start"
+    },
+    {
+      "id": "guide/quick-start:18",
+      "docId": "guide/quick-start",
+      "route": "/guide/guide/quick-start",
+      "href": "/guide/guide/quick-start#creating-a-rue-application",
+      "title": "快速开始",
+      "sectionTitle": "创建 Rue 应用",
+      "type": "code",
+      "text": "$ cd <your-project-name> $ bun install $ bun run dev",
+      "searchText": "快速开始 创建 rue 应用 $ cd <your-project-name> $ bun install $ bun run dev guide/quick-start"
+    },
+    {
+      "id": "guide/quick-start:19",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -38999,7 +38999,7 @@
       "searchText": "快速开始 创建 rue 应用 现在你应该已经运行了你的第一个 rue 项目！请注意，生成项目中的示例组件是使用 jsx/tsx 编写的。以下是一些额外的提示： guide/quick-start"
     },
     {
-      "id": "guide/quick-start:18",
+      "id": "guide/quick-start:20",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -39010,7 +39010,7 @@
       "searchText": "快速开始 创建 rue 应用 推荐的 ide 配置是 visual studio code。如果你使用其他编辑器，请查看 ide 支持部分。 更多工具细节，包括与后端框架的集成，在 工具指南 中讨论。 要了解有关底层构建工具 vite 的更多信息，请查看 vite 文档。 如果你选择使用 typescript，请查看 typescript 使用指南。 guide/quick-start"
     },
     {
-      "id": "guide/quick-start:19",
+      "id": "guide/quick-start:21",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -39021,7 +39021,7 @@
       "searchText": "快速开始 创建 rue 应用 当你准备将应用部署到生产环境时，运行以下命令： guide/quick-start"
     },
     {
-      "id": "guide/quick-start:20",
+      "id": "guide/quick-start:22",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -39032,7 +39032,7 @@
       "searchText": "快速开始 创建 rue 应用 $ npm run build guide/quick-start"
     },
     {
-      "id": "guide/quick-start:21",
+      "id": "guide/quick-start:23",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -39043,7 +39043,7 @@
       "searchText": "快速开始 创建 rue 应用 $ pnpm run build guide/quick-start"
     },
     {
-      "id": "guide/quick-start:22",
+      "id": "guide/quick-start:24",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -39054,7 +39054,7 @@
       "searchText": "快速开始 创建 rue 应用 $ yarn build guide/quick-start"
     },
     {
-      "id": "guide/quick-start:23",
+      "id": "guide/quick-start:25",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -39065,7 +39065,7 @@
       "searchText": "快速开始 创建 rue 应用 $ bun run build guide/quick-start"
     },
     {
-      "id": "guide/quick-start:24",
+      "id": "guide/quick-start:26",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -39076,7 +39076,7 @@
       "searchText": "快速开始 创建 rue 应用 这将在项目的 ./dist 目录中创建你的应用的生产就绪构建。查看生产部署指南以了解有关将应用部署到生产环境的更多信息。 guide/quick-start"
     },
     {
-      "id": "guide/quick-start:25",
+      "id": "guide/quick-start:27",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -39087,7 +39087,7 @@
       "searchText": "快速开始 创建 rue 应用 如果你直接在浏览器中打开上述 index.html，你会发现它会抛出错误，因为 es 模块无法在 file:// 协议上工作，这是浏览器打开本地文件时使用的协议。 guide/quick-start"
     },
     {
-      "id": "guide/quick-start:26",
+      "id": "guide/quick-start:28",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -39098,7 +39098,7 @@
       "searchText": "快速开始 创建 rue 应用 出于安全原因，es 模块只能在 http:// 协议上工作，这是浏览器打开网页时使用的协议。为了让 es 模块在我们的本地机器上工作，我们需要通过本地 http 服务器在 http:// 协议上提供 index.html。 guide/quick-start"
     },
     {
-      "id": "guide/quick-start:27",
+      "id": "guide/quick-start:29",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#creating-a-rue-application",
@@ -39109,7 +39109,7 @@
       "searchText": "快速开始 创建 rue 应用 要启动本地 http 服务器，首先确保你已安装 node.js，然后在 html 文件所在的目录中从命令行运行 npx serve。你也可以使用任何其他能够提供具有正确 mime 类型的静态文件的 http 服务器。 guide/quick-start"
     },
     {
-      "id": "guide/quick-start:28",
+      "id": "guide/quick-start:30",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#next-steps",
@@ -39120,7 +39120,7 @@
       "searchText": "快速开始 下一步 下一步 guide/quick-start"
     },
     {
-      "id": "guide/quick-start:29",
+      "id": "guide/quick-start:31",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#next-steps",
@@ -39131,7 +39131,7 @@
       "searchText": "快速开始 下一步 如果你跳过了简介，我们强烈建议在继续阅读文档的其余部分之前先阅读它。 guide/quick-start"
     },
     {
-      "id": "guide/quick-start:30",
+      "id": "guide/quick-start:32",
       "docId": "guide/quick-start",
       "route": "/guide/guide/quick-start",
       "href": "/guide/guide/quick-start#next-steps",
@@ -39931,7 +39931,7 @@
       "sectionTitle": "vs. React Hooks",
       "type": "heading",
       "text": "vs. React Hooks",
-      "searchText": "可复用性 - composables vs. xreactx hooks vs. xreactx hooks guide/reusability/composables"
+      "searchText": "可复用性 - composables vs. react hooks vs. react hooks guide/reusability/composables"
     },
     {
       "id": "guide/reusability/composables:72",
@@ -39942,7 +39942,7 @@
       "sectionTitle": "vs. React Hooks",
       "type": "paragraph",
       "text": "如果你有 React 经验，你可能会注意到这与自定义 React hooks 非常相似。Composition API 部分受到 React hooks 的启发，Rue composables 确实在逻辑组合能力方面与 React hooks 相似。然而，Rue composables 基于 Rue 的细粒度响应式系统，这与 React hooks 的执行模型根本不同。",
-      "searchText": "可复用性 - composables vs. xreactx hooks 如果你有 xreactx 经验，你可能会注意到这与自定义 xreactx hooks 非常相似。composition api 部分受到 xreactx hooks 的启发，rue composables 确实在逻辑组合能力方面与 xreactx hooks 相似。然而，rue composables 基于 rue 的细粒度响应式系统，这与 xreactx hooks 的执行模型根本不同。 guide/reusability/composables"
+      "searchText": "可复用性 - composables vs. react hooks 如果你有 react 经验，你可能会注意到这与自定义 react hooks 非常相似。composition api 部分受到 react hooks 的启发，rue composables 确实在逻辑组合能力方面与 react hooks 相似。然而，rue composables 基于 rue 的细粒度响应式系统，这与 react hooks 的执行模型根本不同。 guide/reusability/composables"
     },
     {
       "id": "guide/reusability/composables:73",
@@ -42394,8 +42394,8 @@
       "title": "工具链",
       "sectionTitle": "Vite",
       "type": "code",
-      "text": "$ npm create vite@latest my-rue-app $ cd my-rue-app $ npm i @rue-js/runtime @rue-js/vite-plugin-rue",
-      "searchText": "工具链 vite $ npm create vite@latest my-rue-app $ cd my-rue-app $ npm i @rue-js/runtime @rue-js/vite-plugin-rue guide/scaling-up/tooling"
+      "text": "$ npm create vite@latest my-rue-app $ cd my-rue-app $ npm install @rue-js/runtime @rue-js/vite-plugin-rue",
+      "searchText": "工具链 vite $ npm create vite@latest my-rue-app $ cd my-rue-app $ npm install @rue-js/runtime @rue-js/vite-plugin-rue guide/scaling-up/tooling"
     },
     {
       "id": "guide/scaling-up/tooling:6",
@@ -42537,8 +42537,8 @@
       "title": "工具链",
       "sectionTitle": "TypeScript",
       "type": "list",
-      "text": "Rue 原生支持 TS，推荐在 CI 中执行类型检查 在本仓库可使用脚本进行类型检查：",
-      "searchText": "工具链 typescript rue 原生支持 ts，推荐在 ci 中执行类型检查 在本仓库可使用脚本进行类型检查： guide/scaling-up/tooling"
+      "text": "Rue 原生支持 TS，推荐在 CI 中执行类型检查 常见脚本命令如下；在本仓库开发时请优先使用 pnpm",
+      "searchText": "工具链 typescript rue 原生支持 ts，推荐在 ci 中执行类型检查 常见脚本命令如下；在本仓库开发时请优先使用 pnpm guide/scaling-up/tooling"
     },
     {
       "id": "guide/scaling-up/tooling:19",
@@ -42548,11 +42548,44 @@
       "title": "工具链",
       "sectionTitle": "TypeScript",
       "type": "code",
-      "text": "$ pnpm check",
-      "searchText": "工具链 typescript $ pnpm check guide/scaling-up/tooling"
+      "text": "$ npm run check",
+      "searchText": "工具链 typescript $ npm run check guide/scaling-up/tooling"
     },
     {
       "id": "guide/scaling-up/tooling:20",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-typescript",
+      "title": "工具链",
+      "sectionTitle": "TypeScript",
+      "type": "code",
+      "text": "$ pnpm run check",
+      "searchText": "工具链 typescript $ pnpm run check guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:21",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-typescript",
+      "title": "工具链",
+      "sectionTitle": "TypeScript",
+      "type": "code",
+      "text": "$ yarn check",
+      "searchText": "工具链 typescript $ yarn check guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:22",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-typescript",
+      "title": "工具链",
+      "sectionTitle": "TypeScript",
+      "type": "code",
+      "text": "$ bun run check",
+      "searchText": "工具链 typescript $ bun run check guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:23",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-测试",
@@ -42563,51 +42596,62 @@
       "searchText": "工具链 测试 测试 guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:21",
-      "docId": "guide/scaling-up/tooling",
-      "route": "/guide/guide/scaling-up/tooling",
-      "href": "/guide/guide/scaling-up/tooling#-测试",
-      "title": "工具链",
-      "sectionTitle": "测试",
-      "type": "list",
-      "text": "单元与组件测试使用 Vitest，与 Vite 深度整合 运行方式：",
-      "searchText": "工具链 测试 单元与组件测试使用 vitest，与 vite 深度整合 运行方式： guide/scaling-up/tooling"
-    },
-    {
-      "id": "guide/scaling-up/tooling:22",
-      "docId": "guide/scaling-up/tooling",
-      "route": "/guide/guide/scaling-up/tooling",
-      "href": "/guide/guide/scaling-up/tooling#-测试",
-      "title": "工具链",
-      "sectionTitle": "测试",
-      "type": "code",
-      "text": "$ pnpm test",
-      "searchText": "工具链 测试 $ pnpm test guide/scaling-up/tooling"
-    },
-    {
-      "id": "guide/scaling-up/tooling:23",
-      "docId": "guide/scaling-up/tooling",
-      "route": "/guide/guide/scaling-up/tooling",
-      "href": "/guide/guide/scaling-up/tooling#-测试",
-      "title": "工具链",
-      "sectionTitle": "测试",
-      "type": "code",
-      "text": "$ pnpm test-unit",
-      "searchText": "工具链 测试 $ pnpm test-unit guide/scaling-up/tooling"
-    },
-    {
       "id": "guide/scaling-up/tooling:24",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-测试",
       "title": "工具链",
       "sectionTitle": "测试",
-      "type": "code",
-      "text": "$ pnpm test-coverage",
-      "searchText": "工具链 测试 $ pnpm test-coverage guide/scaling-up/tooling"
+      "type": "list",
+      "text": "单元与组件测试使用 Vitest，与 Vite 深度整合 常用测试脚本包括全部测试、单元测试与覆盖率",
+      "searchText": "工具链 测试 单元与组件测试使用 vitest，与 vite 深度整合 常用测试脚本包括全部测试、单元测试与覆盖率 guide/scaling-up/tooling"
     },
     {
       "id": "guide/scaling-up/tooling:25",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-测试",
+      "title": "工具链",
+      "sectionTitle": "测试",
+      "type": "code",
+      "text": "$ npm run test $ npm run test-unit $ npm run test-coverage",
+      "searchText": "工具链 测试 $ npm run test $ npm run test-unit $ npm run test-coverage guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:26",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-测试",
+      "title": "工具链",
+      "sectionTitle": "测试",
+      "type": "code",
+      "text": "$ pnpm run test $ pnpm run test-unit $ pnpm run test-coverage",
+      "searchText": "工具链 测试 $ pnpm run test $ pnpm run test-unit $ pnpm run test-coverage guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:27",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-测试",
+      "title": "工具链",
+      "sectionTitle": "测试",
+      "type": "code",
+      "text": "$ yarn test $ yarn test-unit $ yarn test-coverage",
+      "searchText": "工具链 测试 $ yarn test $ yarn test-unit $ yarn test-coverage guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:28",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-测试",
+      "title": "工具链",
+      "sectionTitle": "测试",
+      "type": "code",
+      "text": "$ bun run test $ bun run test-unit $ bun run test-coverage",
+      "searchText": "工具链 测试 $ bun run test $ bun run test-unit $ bun run test-coverage guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:29",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-测试",
@@ -42618,7 +42662,7 @@
       "searchText": "工具链 测试 如需端到端测试，可结合 cypress；rue 与 vite 的构建产物便于在真实环境下验证。 guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:26",
+      "id": "guide/scaling-up/tooling:30",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-代码质量",
@@ -42629,7 +42673,7 @@
       "searchText": "工具链 代码质量 代码质量 guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:27",
+      "id": "guide/scaling-up/tooling:31",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-代码质量",
@@ -42640,7 +42684,7 @@
       "searchText": "工具链 代码质量 rue 推荐使用快速现代的静态检查工具： guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:28",
+      "id": "guide/scaling-up/tooling:32",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-代码质量",
@@ -42651,7 +42695,7 @@
       "searchText": "工具链 代码质量 使用 oxlint 进行代码检查 配合 simple-git-hooks 与 lint-staged 在提交前自动处理改动 guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:29",
+      "id": "guide/scaling-up/tooling:33",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-代码质量",
@@ -42662,29 +42706,51 @@
       "searchText": "工具链 代码质量 在本仓库的相关脚本： guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:30",
+      "id": "guide/scaling-up/tooling:34",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-代码质量",
       "title": "工具链",
       "sectionTitle": "代码质量",
       "type": "code",
-      "text": "$ pnpm oxlint",
-      "searchText": "工具链 代码质量 $ pnpm oxlint guide/scaling-up/tooling"
+      "text": "$ npm run oxlint $ npm run oxlint-fix",
+      "searchText": "工具链 代码质量 $ npm run oxlint $ npm run oxlint-fix guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:31",
+      "id": "guide/scaling-up/tooling:35",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-代码质量",
       "title": "工具链",
       "sectionTitle": "代码质量",
       "type": "code",
-      "text": "$ pnpm oxlint-fix",
-      "searchText": "工具链 代码质量 $ pnpm oxlint-fix guide/scaling-up/tooling"
+      "text": "$ pnpm run oxlint $ pnpm run oxlint-fix",
+      "searchText": "工具链 代码质量 $ pnpm run oxlint $ pnpm run oxlint-fix guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:32",
+      "id": "guide/scaling-up/tooling:36",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-代码质量",
+      "title": "工具链",
+      "sectionTitle": "代码质量",
+      "type": "code",
+      "text": "$ yarn oxlint $ yarn oxlint-fix",
+      "searchText": "工具链 代码质量 $ yarn oxlint $ yarn oxlint-fix guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:37",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-代码质量",
+      "title": "工具链",
+      "sectionTitle": "代码质量",
+      "type": "code",
+      "text": "$ bun run oxlint $ bun run oxlint-fix",
+      "searchText": "工具链 代码质量 $ bun run oxlint $ bun run oxlint-fix guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:38",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-代码质量",
@@ -42695,7 +42761,7 @@
       "searchText": "工具链 代码质量 如果团队有既定的检查与格式化方案，也可按规范自行接入。 guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:33",
+      "id": "guide/scaling-up/tooling:39",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-格式化",
@@ -42706,7 +42772,7 @@
       "searchText": "工具链 格式化 格式化 guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:34",
+      "id": "guide/scaling-up/tooling:40",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-格式化",
@@ -42717,7 +42783,7 @@
       "searchText": "工具链 格式化 推荐使用 oxfmt 对代码与文档进行统一格式化 也可采用 prettier 按需配置 guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:35",
+      "id": "guide/scaling-up/tooling:41",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-格式化",
@@ -42728,29 +42794,51 @@
       "searchText": "工具链 格式化 相关脚本： guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:36",
+      "id": "guide/scaling-up/tooling:42",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-格式化",
       "title": "工具链",
       "sectionTitle": "格式化",
       "type": "code",
-      "text": "$ pnpm format",
-      "searchText": "工具链 格式化 $ pnpm format guide/scaling-up/tooling"
+      "text": "$ npm run format $ npm run format-check",
+      "searchText": "工具链 格式化 $ npm run format $ npm run format-check guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:37",
+      "id": "guide/scaling-up/tooling:43",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-格式化",
       "title": "工具链",
       "sectionTitle": "格式化",
       "type": "code",
-      "text": "$ pnpm format-check",
-      "searchText": "工具链 格式化 $ pnpm format-check guide/scaling-up/tooling"
+      "text": "$ pnpm run format $ pnpm run format-check",
+      "searchText": "工具链 格式化 $ pnpm run format $ pnpm run format-check guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:38",
+      "id": "guide/scaling-up/tooling:44",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-格式化",
+      "title": "工具链",
+      "sectionTitle": "格式化",
+      "type": "code",
+      "text": "$ yarn format $ yarn format-check",
+      "searchText": "工具链 格式化 $ yarn format $ yarn format-check guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:45",
+      "docId": "guide/scaling-up/tooling",
+      "route": "/guide/guide/scaling-up/tooling",
+      "href": "/guide/guide/scaling-up/tooling#-格式化",
+      "title": "工具链",
+      "sectionTitle": "格式化",
+      "type": "code",
+      "text": "$ bun run format $ bun run format-check",
+      "searchText": "工具链 格式化 $ bun run format $ bun run format-check guide/scaling-up/tooling"
+    },
+    {
+      "id": "guide/scaling-up/tooling:46",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-底层包与生态",
@@ -42761,7 +42849,7 @@
       "searchText": "工具链 底层包与生态 底层包与生态 guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:39",
+      "id": "guide/scaling-up/tooling:47",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-底层包与生态",
@@ -42772,7 +42860,7 @@
       "searchText": "工具链 底层包与生态 以下包在 rue 项目中常用： guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:40",
+      "id": "guide/scaling-up/tooling:48",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-底层包与生态",
@@ -42783,7 +42871,7 @@
       "searchText": "工具链 底层包与生态 @rue-js/runtime：rue 运行时核心 @rue-js/shared：通用工具与类型 @rue-js/vite-plugin-rue：rue 与 vite 集成的官方插件 @rue-js/router：路由能力 @rue-js/jsx-runtime：jsx 相关运行时支持 @rue-js/runtime-vapor：针对特定运行模式的优化实现 guide/scaling-up/tooling"
     },
     {
-      "id": "guide/scaling-up/tooling:41",
+      "id": "guide/scaling-up/tooling:49",
       "docId": "guide/scaling-up/tooling",
       "route": "/guide/guide/scaling-up/tooling",
       "href": "/guide/guide/scaling-up/tooling#-底层包与生态",
@@ -44132,8 +44220,8 @@
       "title": "Rue 介绍",
       "sectionTitle": "Rue 介绍",
       "type": "list",
-      "text": "轻量、直观：简洁的 API 设计，快速上手 Block / Vapor 默认渲染：编译产物优先走 Renderable / Block 路径，运行时围绕真实 DOM 做最小更新 易用的路由与组件：内置路由系统，灵活的组件机制 响应式系统：直观的响应式 API，支持 ref、reactive、computed JSX/TSX 支持：使用 JSX 语法编写组件，无需学习模板语法",
-      "searchText": "rue 介绍 rue 介绍 轻量、直观：简洁的 api 设计，快速上手 block / vapor 默认渲染：编译产物优先走 renderable / block 路径，运行时围绕真实 dom 做最小更新 易用的路由与组件：内置路由系统，灵活的组件机制 响应式系统：直观的响应式 api，支持 ref、reactive、computed jsx/tsx 支持：使用 jsx 语法编写组件，无需学习模板语法 intro"
+      "text": "轻量、直观：简洁的 API 设计，快速上手 细粒度响应式默认渲染：编译产物优先走 Renderable / Block 路径，运行时围绕真实 DOM 做最小更新 易用的路由与组件：内置路由系统，灵活的组件机制 响应式系统：直观的响应式 API，支持 ref、reactive、computed，并贯穿组件与渲染更新 JSX/TSX 支持：使用 JSX 语法编写组件，无需学习模板语法",
+      "searchText": "rue 介绍 rue 介绍 轻量、直观：简洁的 api 设计，快速上手 细粒度响应式默认渲染：编译产物优先走 renderable / block 路径，运行时围绕真实 dom 做最小更新 易用的路由与组件：内置路由系统，灵活的组件机制 响应式系统：直观的响应式 api，支持 ref、reactive、computed，并贯穿组件与渲染更新 jsx/tsx 支持：使用 jsx 语法编写组件，无需学习模板语法 intro"
     },
     {
       "id": "intro:3",

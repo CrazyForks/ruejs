@@ -82,7 +82,7 @@ const Header: FC = () => {
                   <RouterLink to="/design/button">{_('组件库')}</RouterLink>
                 </li>
                 <li>
-                  <RouterLink to="/page/guide/scaling-up/tooling">{_('工具链')}</RouterLink>
+                  <RouterLink to="/guide/guide/scaling-up/tooling">{_('工具链')}</RouterLink>
                 </li>
                 <li>
                   <RouterLink to="/textjs">Text.js</RouterLink>

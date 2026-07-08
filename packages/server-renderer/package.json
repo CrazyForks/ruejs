@@ -52,6 +52,12 @@
       "import": "./dist/server-renderer.island.esm-bundler.js",
       "require": "./dist/server-renderer.island.cjs.js"
     },
+    "./static": {
+      "types": "./src/static.d.ts",
+      "development": "./src/static.mjs",
+      "module": "./dist/server-renderer.static.esm-bundler.js",
+      "import": "./src/static.mjs"
+    },
     "./*": "./*"
   },
   "scripts": {
@@ -62,6 +68,14 @@
   },
   "dependencies": {
     "@rue-js/runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "jsdom": "^29.1.1"
+  },
+  "peerDependenciesMeta": {
+    "jsdom": {
+      "optional": true
+    }
   },
   "buildOptions": {
     "name": "RueServerRenderer",
@@ -76,6 +90,13 @@
         "formats": [
           "esm-bundler",
           "cjs"
+        ]
+      },
+      {
+        "entry": "src/static.mjs",
+        "filename": "server-renderer.static",
+        "formats": [
+          "esm-bundler"
         ]
       }
     ]

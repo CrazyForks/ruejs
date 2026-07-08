@@ -1,6 +1,7 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createStaticRouteHtml, renderStaticRoutes } from '@rue-js/server-renderer/static'
 import { build, createServer } from 'vite'
 import {
   createRueExampleAliases,
@@ -12,6 +13,8 @@ import { findAvailablePort } from '../shared/ports.mjs'
 const root = path.dirname(fileURLToPath(import.meta.url))
 const distDir = path.resolve(root, 'dist')
 const clientDir = path.resolve(distDir, 'client')
+
+const normalizeTemplateForStaticHtml = template => template.replace('<!--app-html-->', '')
 
 const createConfig = ({ ssr = false } = {}) => ({
   root,
@@ -26,6 +29,17 @@ const createConfig = ({ ssr = false } = {}) => ({
   define: createRueExampleDefine({ dev: false, ssr }),
 })
 
+const assertStaticRenderSucceeded = result => {
+  if (result.summary.fatalFailures === 0) {
+    return
+  }
+
+  const failure = result.snapshotFailures[0]
+  const detail =
+    failure?.ssrError instanceof Error ? failure.ssrError.message : String(failure?.ssrError)
+  throw new Error(`Static render failed for ${failure?.route || 'unknown route'}: ${detail}`)
+}
+
 await rm(distDir, { recursive: true, force: true })
 
 await build({
@@ -39,7 +53,9 @@ await build({
   },
 })
 
-const template = await readFile(path.resolve(clientDir, 'index.html'), 'utf-8')
+const template = normalizeTemplateForStaticHtml(
+  await readFile(path.resolve(clientDir, 'index.html'), 'utf-8'),
+)
 const hmrPort = await findAvailablePort(process.env.STATIC_RENDER_HMR_PORT || 24678)
 const vite = await createServer({
   ...createConfig({ ssr: true }),
@@ -53,15 +69,15 @@ const vite = await createServer({
 
 try {
   const serverEntry = await vite.ssrLoadModule('/src/entry-server.tsx')
+  const result = await renderStaticRoutes({
+    routes: serverEntry.staticRoutes,
+    outDir: clientDir,
+    concurrency: 1,
+    renderRoute: ({ route }) => serverEntry.render(route),
+    renderHtml: ({ html }) => createStaticRouteHtml(template, html),
+  })
 
-  for (const route of serverEntry.staticRoutes) {
-    const html = await serverEntry.render(route)
-    const file = route === '/' ? 'index.html' : `${route.replace(/^\//, '')}/index.html`
-    const outputPath = path.resolve(clientDir, file)
-
-    await mkdir(path.dirname(outputPath), { recursive: true })
-    await writeFile(outputPath, template.replace('<!--app-html-->', html))
-  }
+  assertStaticRenderSucceeded(result)
 } finally {
   await vite.close()
 }

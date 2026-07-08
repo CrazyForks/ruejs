@@ -1,21 +1,54 @@
 import { configDefaults, defineConfig } from 'vitest/config'
 import path from 'node:path'
 import fs from 'node:fs/promises'
+import { pathToFileURL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import VitePluginRue from '@rue-js/vite-plugin-rue'
+import { mdxToJs, type MdxCompileOptions } from 'satteri'
 import { resolve } from 'node:path'
+import type { Plugin } from 'vite'
 import wasm from 'vite-plugin-wasm'
 // import { DevTools } from '@vitejs/devtools'
 
 const rootDir = resolve(__dirname)
 const testMaxWorkers = Number.parseInt(process.env.VITEST_MAX_WORKERS ?? '4', 10)
 
+const createSatteriMdxPlugin = (options: Pick<MdxCompileOptions, 'development'> = {}): Plugin => ({
+  name: 'rue:satteri-mdx',
+  enforce: 'pre',
+  async transform(source, id) {
+    const [filePath, query = ''] = id.split('?', 2)
+    if (!filePath.endsWith('.mdx') || query === 'raw') {
+      return null
+    }
+
+    const result = await mdxToJs(source, {
+      jsxImportSource: '@rue-js',
+      fileURL: pathToFileURL(filePath),
+      features: {
+        headingAttributes: true,
+        directive: true,
+        smartPunctuation: true,
+      },
+      ...options,
+    })
+
+    return {
+      code: result.code,
+      map: null,
+    }
+  },
+})
+
 const vitestProjects = [
   {
     extends: true as const,
     test: {
       name: 'unit',
-      include: ['packages/**/__tests__/*.{test,spec}.{js,ts,jsx,tsx,mjs,cjs}'],
+      include: [
+        'packages/**/__tests__/*.{test,spec}.{js,ts,jsx,tsx,mjs,cjs}',
+        'scripts/__tests__/*.{test,spec}.{js,ts,jsx,tsx,mjs,cjs}',
+      ],
       exclude: [
         ...configDefaults.exclude,
         '**/e2e/**',
@@ -74,6 +107,7 @@ export default defineConfig(({ command }) => {
       // !isVitest && DevTools(),
       wasm(),
       tailwindcss() as any,
+      createSatteriMdxPlugin({ development: command === 'serve' && !isVitest }),
       VitePluginRue({
         debug: command === 'serve' && !isVitest,
         transformTimeoutMs: command === 'build' ? 60000 : undefined,
@@ -120,7 +154,7 @@ export default defineConfig(({ command }) => {
       // Keep this explicit so the build path doesn't depend on Vite's implicit
       // minifier default when toolchain internals change.
       minify: true,
-      rollupOptions: {
+      rolldownOptions: {
         input: {
           main: path.resolve(__dirname, 'index.html'),
         },

@@ -1,7 +1,13 @@
-import { type FC, useState, watch, computed, useEffect, useRef } from '@rue-js/rue'
+import { Component, type FC, useState, watch, computed, useEffect, useRef } from '@rue-js/rue'
 import { RouterLink, useRoute } from '@rue-js/router'
+import { readStaticRenderRoute, useStaticRenderContext } from '../../staticRenderContext'
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlaygroundApi'
-import { loadCachedDocHtml, readStaticDocHtmlByRoute } from './docDetailCache'
+import {
+  type DocDetailContent,
+  loadCachedDocContent,
+  readStaticDocContentByRoute,
+} from './docDetailCache'
+import { readDocRouteSegment } from './docRouteSegment'
 
 // 从 SidebarPlayground 的 SECTIONS_BY_TYPE 派生 DOCS_META，用于上一页/下一页
 type MenuItem = { id: string; title: string; href?: string; children?: MenuItem[] }
@@ -33,25 +39,43 @@ type ApiDocDetailProps = {
 
 const ApiDocDetail: FC<ApiDocDetailProps> = props => {
   const route = useRoute()
+  const staticRenderContext = useStaticRenderContext()
   const [_results, _setResults] = useState<{ id: string; title: string; snippet: string }[]>([])
-  const routeSegment = computed<string>(() => {
-    const propPath = props.params?.path as string | undefined
-    if (propPath) {
-      return propPath
-    }
-    const routePath = ((route.get() as any)?.params?.path as string | undefined)?.trim()
-    if (routePath) {
-      return routePath
-    }
-    return ''
-  })
   const context = getContext()
+  const routeSegment = computed<string>(() => {
+    const routeData = route.get() as any
+    return readDocRouteSegment({
+      propPath: props.params?.path,
+      routePath: routeData?.params?.path as string | undefined,
+      currentRoutePath: routeData?.path as string | undefined,
+      staticRenderUrl: staticRenderContext?.url || readStaticRenderRoute(),
+      uiBase: context.uiBase,
+    })
+  })
   const requestVersionRef = useRef(0)
   const currentPath = computed<string>(() => {
     const seg = routeSegment.get()
     return seg ? `${context.uiBase}/${seg}` : ''
   })
-  const [html, setHtml] = useState<string>(() => readStaticDocHtmlByRoute(currentPath.get()))
+  const initialContent = readStaticDocContentByRoute(currentPath.get())
+  const initialMdxComponent = initialContent.type === 'mdx' ? initialContent.Component : null
+  const mdxComponentRef = useRef<FC | null>(initialMdxComponent)
+  const [docContentType, setDocContentType] = useState<DocDetailContent['type']>(
+    initialContent.type,
+  )
+  const [html, setHtml] = useState(initialContent.type === 'html' ? initialContent.html : '')
+  const setRenderedDocContent = (content: DocDetailContent) => {
+    if (content.type === 'mdx') {
+      mdxComponentRef.current = content.Component
+      setHtml('')
+      setDocContentType('mdx')
+      return
+    }
+
+    mdxComponentRef.current = null
+    setHtml(content.html)
+    setDocContentType('html')
+  }
 
   const DOCS_META = computed(() => {
     return SECTIONS_BY_TYPE['api'].flatMap(sec => flatten(sec.items))
@@ -78,21 +102,24 @@ const ApiDocDetail: FC<ApiDocDetailProps> = props => {
         const currentRequest = (requestVersionRef.current ?? 0) + 1
         requestVersionRef.current = currentRequest
         if (!seg) {
-          setHtml('')
+          setRenderedDocContent({ type: 'html', html: '' })
           return
         }
         try {
-          const out = await loadCachedDocHtml('api', context.docBase, seg)
+          const out = await loadCachedDocContent('api', context.docBase, seg)
           if (currentRequest !== requestVersionRef.current) {
             return
           }
-          setHtml(out)
+          setRenderedDocContent(out)
         } catch {
           if (currentRequest !== requestVersionRef.current) {
             return
           }
 
-          setHtml(`<p class="text-base-content/70">加载文档失败</p>`)
+          setRenderedDocContent({
+            type: 'html',
+            html: `<p class="text-base-content/70">加载文档失败</p>`,
+          })
         }
       },
       { immediate: true },
@@ -120,14 +147,24 @@ const ApiDocDetail: FC<ApiDocDetailProps> = props => {
     }
   }, [])
 
+  const readMdxComponent = () => {
+    return docContentType.value === 'mdx' ? mdxComponentRef.current : null
+  }
+
   return (
     <SidebarPlayground currentPath={currentPath.get()}>
       <div>
-        <div
-          className="max-w-none prose prose-sm md:prose-base"
-          id="doc-body"
-          dangerouslySetInnerHTML={{ __html: html.value }}
-        ></div>
+        {readMdxComponent() ? (
+          <div className="max-w-none prose prose-sm md:prose-base" id="doc-body">
+            <Component is={readMdxComponent()} />
+          </div>
+        ) : (
+          <div
+            className="max-w-none prose prose-sm md:prose-base"
+            id="doc-body"
+            dangerouslySetInnerHTML={{ __html: html.value }}
+          ></div>
+        )}
         {currentIndex.get() >= 0 && (
           <div className="mt-8 flex justify-between">
             {prev.get() ? (

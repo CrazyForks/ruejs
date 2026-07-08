@@ -6,7 +6,7 @@
 
 ## 在 Rue 中使用自定义元素 {#using-custom-elements-in-rue}
 
-Rue [在 Custom Elements Everywhere 测试中获得了完美的 100% 分数](https://custom-elements-everywhere.com/libraries/rue/results/results.html)。在 Rue 应用程序中消费自定义元素在很大程度上与使用原生 HTML 元素相同，但有一些需要注意的地方：
+在 Rue 应用程序中消费自定义元素在很大程度上与使用原生 HTML 元素相同，但有一些需要注意的地方：
 
 ### 跳过组件解析 {#skipping-component-resolution}
 

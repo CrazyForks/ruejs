@@ -4,9 +4,15 @@ export type StaticRenderContextValue = {
   url: string
 }
 
+export const staticRenderRouteKey = '__RUE_STATIC_RENDER_ROUTE__'
 export const StaticRenderContext = createContext<StaticRenderContextValue | null>(null)
 
 export const useStaticRenderContext = () => useContext(StaticRenderContext)
+
+export const readStaticRenderRoute = () => {
+  const route = (globalThis as Record<string, unknown>)[staticRenderRouteKey]
+  return typeof route === 'string' ? route : ''
+}
 
 export const resolveStaticRenderPath = (url: string | null | undefined) => {
   if (!url) {

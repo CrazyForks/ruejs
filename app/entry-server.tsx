@@ -3,7 +3,7 @@ import { h, type FC } from '@rue-js/rue'
 import { renderToString } from '@rue-js/server-renderer'
 import { RootApp } from './app'
 import { createAppRouter, routes } from './router'
-import { StaticRenderContext } from './staticRenderContext'
+import { StaticRenderContext, staticRenderRouteKey } from './staticRenderContext'
 
 const trimSlashes = (value: string) => value.replace(/^\/+|\/+$/g, '')
 
@@ -69,5 +69,17 @@ export const render = async (url: string) => {
   await router.isReady()
   attachRouter(router)
 
-  return renderToString(StaticRootApp)
+  const globalScope = globalThis as Record<string, unknown>
+  const previousStaticRenderRoute = globalScope[staticRenderRouteKey]
+  globalScope[staticRenderRouteKey] = url
+
+  try {
+    return await renderToString(StaticRootApp)
+  } finally {
+    if (previousStaticRenderRoute === undefined) {
+      delete globalScope[staticRenderRouteKey]
+    } else {
+      globalScope[staticRenderRouteKey] = previousStaticRenderRoute
+    }
+  }
 }

@@ -1,3 +1,5 @@
+import { CodeTab, CodeTabs } from '../../../app/pages/site/DocCodeTabs'
+
 # 工具链
 
 ## 项目搭建
@@ -8,29 +10,44 @@
 
 使用 Vite 创建新项目，并接入 Rue：
 
-```sh [npm]
+<CodeTabs ariaLabel="使用 Vite 创建 Rue 项目">
+  <CodeTab value="npm" label="npm">
+
+```sh
 $ npm create vite@latest my-rue-app
 $ cd my-rue-app
-$ npm i @rue-js/runtime @rue-js/vite-plugin-rue
+$ npm install @rue-js/runtime @rue-js/vite-plugin-rue
 ```
 
-```sh [pnpm]
+  </CodeTab>
+  <CodeTab value="pnpm" label="pnpm">
+
+```sh
 $ pnpm create vite@latest my-rue-app
 $ cd my-rue-app
 $ pnpm add @rue-js/runtime @rue-js/vite-plugin-rue
 ```
 
-```sh [yarn]
+  </CodeTab>
+  <CodeTab value="yarn" label="yarn">
+
+```sh
 $ yarn create vite my-rue-app
 $ cd my-rue-app
 $ yarn add @rue-js/runtime @rue-js/vite-plugin-rue
 ```
 
-```sh [bun]
+  </CodeTab>
+  <CodeTab value="bun" label="bun">
+
+```sh
 $ bun create vite my-rue-app
 $ cd my-rue-app
 $ bun add @rue-js/runtime @rue-js/vite-plugin-rue
 ```
+
+  </CodeTab>
+</CodeTabs>
 
 在 `vite.config.ts` 中启用 Rue 插件：
 
@@ -63,28 +80,82 @@ export default defineConfig({
 ## TypeScript
 
 - Rue 原生支持 TS，推荐在 CI 中执行类型检查
-- 在本仓库可使用脚本进行类型检查：
+- 常见脚本命令如下；在本仓库开发时请优先使用 `pnpm`
 
-```sh [pnpm]
-$ pnpm check
+<CodeTabs ariaLabel="运行类型检查">
+  <CodeTab value="npm" label="npm">
+
+```sh
+$ npm run check
 ```
+
+  </CodeTab>
+  <CodeTab value="pnpm" label="pnpm">
+
+```sh
+$ pnpm run check
+```
+
+  </CodeTab>
+  <CodeTab value="yarn" label="yarn">
+
+```sh
+$ yarn check
+```
+
+  </CodeTab>
+  <CodeTab value="bun" label="bun">
+
+```sh
+$ bun run check
+```
+
+  </CodeTab>
+</CodeTabs>
 
 ## 测试
 
 - 单元与组件测试使用 [Vitest](https://vitest.dev/)，与 Vite 深度整合
-- 运行方式：
+- 常用测试脚本包括全部测试、单元测试与覆盖率
 
-```sh [全部]
-$ pnpm test
+<CodeTabs ariaLabel="运行测试脚本">
+  <CodeTab value="npm" label="npm">
+
+```sh
+$ npm run test
+$ npm run test-unit
+$ npm run test-coverage
 ```
 
-```sh [单元测试]
-$ pnpm test-unit
+  </CodeTab>
+  <CodeTab value="pnpm" label="pnpm">
+
+```sh
+$ pnpm run test
+$ pnpm run test-unit
+$ pnpm run test-coverage
 ```
 
-```sh [覆盖率]
-$ pnpm test-coverage
+  </CodeTab>
+  <CodeTab value="yarn" label="yarn">
+
+```sh
+$ yarn test
+$ yarn test-unit
+$ yarn test-coverage
 ```
+
+  </CodeTab>
+  <CodeTab value="bun" label="bun">
+
+```sh
+$ bun run test
+$ bun run test-unit
+$ bun run test-coverage
+```
+
+  </CodeTab>
+</CodeTabs>
 
 如需端到端测试，可结合 Cypress；Rue 与 Vite 的构建产物便于在真实环境下验证。
 
@@ -97,13 +168,40 @@ Rue 推荐使用快速现代的静态检查工具：
 
 在本仓库的相关脚本：
 
-```sh [检查]
-$ pnpm oxlint
+<CodeTabs ariaLabel="运行代码质量脚本">
+  <CodeTab value="npm" label="npm">
+
+```sh
+$ npm run oxlint
+$ npm run oxlint-fix
 ```
 
-```sh [自动修复]
-$ pnpm oxlint-fix
+  </CodeTab>
+  <CodeTab value="pnpm" label="pnpm">
+
+```sh
+$ pnpm run oxlint
+$ pnpm run oxlint-fix
 ```
+
+  </CodeTab>
+  <CodeTab value="yarn" label="yarn">
+
+```sh
+$ yarn oxlint
+$ yarn oxlint-fix
+```
+
+  </CodeTab>
+  <CodeTab value="bun" label="bun">
+
+```sh
+$ bun run oxlint
+$ bun run oxlint-fix
+```
+
+  </CodeTab>
+</CodeTabs>
 
 如果团队有既定的检查与格式化方案，也可按规范自行接入。
 
@@ -114,13 +212,40 @@ $ pnpm oxlint-fix
 
 相关脚本：
 
-```sh [格式化]
-$ pnpm format
+<CodeTabs ariaLabel="运行格式化脚本">
+  <CodeTab value="npm" label="npm">
+
+```sh
+$ npm run format
+$ npm run format-check
 ```
 
-```sh [校验]
-$ pnpm format-check
+  </CodeTab>
+  <CodeTab value="pnpm" label="pnpm">
+
+```sh
+$ pnpm run format
+$ pnpm run format-check
 ```
+
+  </CodeTab>
+  <CodeTab value="yarn" label="yarn">
+
+```sh
+$ yarn format
+$ yarn format-check
+```
+
+  </CodeTab>
+  <CodeTab value="bun" label="bun">
+
+```sh
+$ bun run format
+$ bun run format-check
+```
+
+  </CodeTab>
+</CodeTabs>
 
 ## 底层包与生态
 

@@ -18,6 +18,11 @@ declare var __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: boolean
 
 declare module '*.tsx' {}
 
+declare module '*.mdx' {
+  const Component: import('@rue-js/rue').FC
+  export default Component
+}
+
 declare module '*?raw' {
   const source: string
   export default source

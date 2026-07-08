@@ -667,18 +667,19 @@ export default HelloWorld`}
         </p>
       </section>
 
-      {/* Vapor 模式变异：源代码与编译输出对照 */}
+      {/* 原生 DOM 编译：源代码与编译输出对照 */}
       <section className="max-w-[1100px] mx-auto mt-12">
-        <h2 className="text-2xl font-semibold mb-2">Vapor 渲染路径：更贴近真实 DOM 更新模型</h2>
+        <h2 className="text-2xl font-semibold mb-2">细粒度响应式：更贴近真实 DOM 更新模型</h2>
         <p className="text-gray-600">
-          Rue 提供默认 Block / Vapor 渲染路径，Vapor 适合需要更高性能、细粒度更新的区域。
+          Rue
+          的组件、状态和默认渲染路径都建立在细粒度响应式系统之上，依赖变化后只接管受影响的更新边界。
         </p>
         <p className="text-gray-600">
-          结合 Rust 实现的响应式系统、Rust / Wasm 运行时与原生 DOM 编译能力，Vapor 会把 JSX
-          转换为更贴近真实 DOM 的产物。
+          结合 Rust 实现的响应式系统、Rust / Wasm 运行时与原生 DOM 编译能力，JSX
+          会被转换为更贴近真实 DOM 的产物。
         </p>
         <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
-          {/* 左栏：原始代码（@vapor） */}
+          {/* 左栏：原始 JSX */}
           <div className="card bg-base-100 border overflow-auto h-[360px] md:h-[510px]">
             <Code
               className="h-full"
@@ -731,7 +732,7 @@ const HelloWorld: FC = () => (
 export default HelloWorld`}
             />
           </div>
-          {/* 右栏：编译后的 Vapor 原生 DOM 输出 */}
+          {/* 右栏：编译后的原生 DOM 输出 */}
           <div className="card bg-base-100 border p-0 overflow-auto h-[360px] md:h-[510px]">
             <Code
               className="h-full"

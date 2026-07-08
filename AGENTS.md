@@ -5,7 +5,7 @@ Rue 是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发�
 ## 工作流
 
 1. 搜索与理解
-   - Rust 代码导航优先使用 `./skills/rustcodegraph/SKILL.md` skill；未索引、文档/配置或图未覆盖时使用 `rg` 与文件读取。
+   - 代码导航优先使用 `./skills/rustcodegraph/SKILL.md` skill；未索引、文档/配置或图未覆盖时使用 `rg` 与文件读取。
    - 实现前用代码搜索验证假设。
 2. 定义范围
    - 明确当前任务的修改边界，不顺手改无关模块。

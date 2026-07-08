@@ -38,13 +38,6 @@ describe('GuideDocDetail actual page', () => {
         }
       }
 
-      if (url.includes('/docs/guide/quick-start.md')) {
-        return {
-          ok: true,
-          text: async () => '# 快速上手\n\n第二篇内容。\n',
-        }
-      }
-
       return {
         ok: false,
         text: async () => '',
@@ -73,8 +66,8 @@ describe('GuideDocDetail actual page', () => {
     await router.push('/guide/guide/quick-start')
 
     await waitForContent(() => {
-      expect(container.querySelector('#doc-body')?.textContent).toContain('快速上手')
-      expect(container.querySelector('#doc-body')?.textContent).toContain('第二篇内容。')
+      expect(container.querySelector('#doc-body')?.textContent).toContain('快速开始')
+      expect(container.querySelector('#doc-body')?.textContent).toContain('创建 Rue 应用')
       expect(container.textContent).toContain('上一页：介绍')
     })
 
@@ -88,6 +81,6 @@ describe('GuideDocDetail actual page', () => {
     const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
 
     expect(requestedUrls.filter(url => url.includes('/docs/guide/introduction.md'))).toHaveLength(1)
-    expect(requestedUrls.filter(url => url.includes('/docs/guide/quick-start.md'))).toHaveLength(1)
+    expect(requestedUrls.filter(url => url.includes('/docs/guide/quick-start.md'))).toHaveLength(0)
   })
 })

@@ -1,10 +1,10 @@
 # 渲染机制 {#rendering-mechanism}
 
-Rue 当前默认的渲染机制是 Block / Vapor。模板与 JSX 在编译阶段会尽量直接降到可执行的 Renderable / Block 指令，运行时围绕 DOM 锚点、区间和响应式副作用做最小更新。
+Rue 当前默认的渲染机制建立在细粒度响应式系统之上。模板与 JSX 在编译阶段会尽量直接降到可执行的 Renderable / Block 指令，运行时围绕 DOM 锚点、区间和响应式副作用做最小更新。
 
 这并不意味着文档里完全不会再出现旧的公开对象术语。`h()` 和少量迁移说明仍会提到它们，用来解释历史上的手写渲染输出；但 Rue 的默认主入口已经不再提供 compat 子路径，也不再接受旧的 compat helper。
 
-## 公开渲染输出与默认 Block / Vapor {#public-render-output}
+## 公开渲染输出与默认路径 {#public-render-output}
 
 <span id="virtual-dom"></span>
 
@@ -12,7 +12,7 @@ Rue 当前默认的渲染机制是 Block / Vapor。模板与 JSX 在编译阶段
 
 - Rue 仍然允许你手写 `h()` 或 JSX
 - 历史文档里仍可能看到旧的公开对象术语
-- 但 Rue 默认编译产物已经优先走 Block / Vapor / Renderable 路径
+- 但 Rue 默认编译产物已经优先走细粒度 Renderable / Block 路径
 
 在默认路径中，编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 DOM 操作的渲染计划。
 
@@ -49,13 +49,14 @@ Rue 依然支持手写渲染函数，但默认推荐模板或普通 JSX，原因
 
 如果你需要手写 `h()` 或维护旧的渲染桥接，请把它们视为显式边界，而不是默认开发路径。相关写法见 [渲染函数与 JSX](/guide/guide/extras/render-function)，迁移事项见 [默认 Block / Vapor 路径迁移](/guide/guide/migration/renderable-default)。
 
-## 编译器知情的 Block / Vapor {#compiler-informed-block-vapor}
+## 编译器知情的渲染路径 {#compiler-informed-rendering}
 
 <span id="compiler-informed-virtual-dom"></span>
+<span id="compiler-informed-block-vapor"></span>
 
 Rue 的核心优势在于同时掌控编译器与运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；运行时则只执行这些已经被压缩过的信息。
 
-旧文档里把这类优化描述成“编译器知情的整树协调模型”。今天更准确的说法是：Rue 会把编译期知识直接下沉到 Block / Vapor 运行时，让更新路径尽量接近真实 DOM 变更本身。
+旧文档里把这类优化描述成“编译器知情的整树协调模型”。今天更准确的说法是：Rue 会把编译期知识直接下沉到默认渲染运行时，让更新路径尽量接近真实 DOM 变更本身。
 
 下面这些优化依旧存在，只是它们服务的对象已经不是“整树对象 diff”，而是“编译后可直接执行的渲染计划”。
 

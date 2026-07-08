@@ -394,7 +394,7 @@ export function useMachine<T>(options: T) {
 
 从根本上讲，signals 与 Rue refs 是同一种响应式原语。它是一个值容器，在访问时提供依赖跟踪，在修改时触发副作用。这种基于响应式原语的范式在前端世界中并不是一个特别新的概念：它可以追溯到十多年前的实现，如 [Knockout observables](https://knockoutjs.com/documentation/observables.html) 和 [Meteor Tracker](https://docs.meteor.com/api/tracker.html)。React 状态管理库 [MobX](https://mobx.js.org/) 也基于相同的原理，但将原语隐藏在对象属性后面。
 
-虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。Rue 当前默认已经把编译期知识下沉到 Block / Vapor 渲染路径中，并通过[编译器知情的 Block / Vapor](/guide/guide/extras/rendering-mechanism#compiler-informed-block-vapor)把更新收敛到更小的动态边界。
+虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。Rue 的组件、响应式 API 与默认渲染路径都共享这套细粒度依赖追踪；编译器会把结构信息下沉到运行时，并通过[编译器知情的渲染路径](/guide/guide/extras/rendering-mechanism#compiler-informed-rendering)把更新收敛到更小的动态边界。
 
 这也是 Rue 响应式系统与运行时结合的关键点：响应式依赖不只是决定“重新执行哪段代码”，还决定“重新接管哪个 block、哪个区间、哪个 DOM 边界”。
 \*\*\* Add File: /Users/Shared/work/dir/data/codes/rue/docs/guide/migration/renderable-default.md

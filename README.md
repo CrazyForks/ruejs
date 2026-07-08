@@ -5,17 +5,17 @@
 [![Build and Test](https://github.com/hunzhiwange/ruejs/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/hunzhiwange/ruejs/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Rue.js（发音 /ruː/，中文名后悔药.js）是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发体验，同时提供默认 Block / Vapor 渲染路径、路由、基于 Rust / WebAssembly 的运行时扩展，以及 Rust 实现的响应式系统与原生 DOM 编译能力。
+Rue.js（发音 /ruː/，中文名后悔药.js）是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发体验，同时提供默认细粒度响应式渲染路径、路由、基于 Rust / WebAssembly 的运行时扩展，以及 Rust 实现的响应式系统与原生 DOM 编译能力。
 
 它适合希望保留 React 风格 JSX 开发方式，同时获得 Vue 式响应式 API 与更贴近真实 DOM 更新模型的项目。
 
 ## 特性
 
 - 轻量、直观的 API，适合渐进式接入
-- 默认 Block / Vapor 渲染路径，围绕真实 DOM 做最小更新
+- 默认细粒度响应式渲染路径，围绕真实 DOM 做最小更新
 - JSX / TSX 一等支持，无需额外模板语法
 - 类似 Vue 的响应式 API，支持 `ref`、`reactive`、`computed`
-- 提供基于 Rust / WebAssembly 的运行时，可扩展 Vapor 渲染能力
+- 提供基于 Rust / WebAssembly 的运行时，可扩展编译渲染能力
 - 提供 Rust 实现的响应式系统，覆盖信号、依赖追踪与调度能力
 - 提供 Rust / Wasm 原生 DOM 编译器，将 JSX 转换为更贴近真实 DOM 的产物
 - 官方路由、设计组件库与构建插件协同工作
