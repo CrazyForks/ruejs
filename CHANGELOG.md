@@ -1,3 +1,11 @@
+## [0.8.2](https://github.com/hunzhiwange/ruejs/compare/v0.8.1...v0.8.2) (2026-07-08)
+
+
+### Features
+
+* move markdown-it to satteri ([386927a](https://github.com/hunzhiwange/ruejs/commit/386927a559a91d8c0a96cb9c85e2fa7cd2ca833e))
+* new version ([1e77562](https://github.com/hunzhiwange/ruejs/commit/1e775622b3ee48d5e0f29e3a9b15ea672ae55e3a))
+
 ## [0.8.1](https://github.com/hunzhiwange/ruejs/compare/v0.8.0...v0.8.1) (2026-07-01)
 
 # [0.8.0](https://github.com/hunzhiwange/ruejs/compare/v0.7.2...v0.8.0) (2026-06-27)
