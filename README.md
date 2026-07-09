@@ -1,5 +1,7 @@
 # Rue.js
 
+> The Wasm Framework For Native DOM
+
 Languages: English | [简体中文](./README.zh-CN.md)
 
 [![Website](https://img.shields.io/badge/website-ruejs.huododo.com-0f766e)](https://ruejs.huododo.com)
@@ -21,6 +23,7 @@ It is designed for projects that want to keep a React-style JSX development work
 - A Rust-powered reactive system covering signals, dependency tracking, and scheduling
 - A Rust/Wasm native DOM compiler that transforms JSX into output closer to the real DOM
 - Official routing, design component library, and build plugins that work together
+- Text.js full-stack application framework for App Router, SSR, API routes, and Workers deployment
 - Rust-side core capabilities through `@rue-js/runtime-vapor` and `@rue-js/swc-plugin-rue`
 
 ## Quick Start
@@ -95,6 +98,12 @@ export default createRouter({
 })
 ```
 
+## Text.js
+
+Text.js is the full-stack application framework in the Rue ecosystem. Built on Vite, Rue, RSC, and file-system routing, it brings App Router, Pages Router, SSR, static generation, API routes, middleware, and Cloudflare Workers deployment into one lightweight workflow.
+
+It is designed for developers familiar with the Next.js application model while keeping Rue's JSX/TSX runtime and Vite-first tooling path. Common CLI commands include `text dev`, `text build`, `text deploy`, `text typegen`, and `text check`.
+
 ## Documentation
 
 - [Introduction](./docs/intro.md)
@@ -112,6 +121,7 @@ This is a pnpm workspace-based monorepo. The main packages include:
 
 - `@rue-js/rue`: framework core and JSX entry point
 - `@rue-js/router`: official router
+- `@rue-js/text`: Text.js full-stack application framework and CLI
 - `@rue-js/runtime-vapor`: Rust/WebAssembly runtime implementation
 - `@rue-js/design`: design system and component library
 - `@rue-js/vite-plugin-rue`: Vite integration

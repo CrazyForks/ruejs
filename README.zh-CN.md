@@ -1,5 +1,7 @@
 # 后悔药 Rue.js
 
+> The Wasm Framework For Native DOM
+
 语言：[English](./README.md) | 简体中文
 
 [![Website](https://img.shields.io/badge/website-ruejs.huododo.com-0f766e)](https://ruejs.huododo.com)
@@ -21,6 +23,7 @@ Rue.js（发音 /ruː/，中文名后悔药.js）是一个面向 JSX/TSX 的轻�
 - 提供 Rust 实现的响应式系统，覆盖信号、依赖追踪与调度能力
 - 提供 Rust / Wasm 原生 DOM 编译器，将 JSX 转换为更贴近真实 DOM 的产物
 - 官方路由、设计组件库与构建插件协同工作
+- 提供 Text.js 全栈应用框架，覆盖 App Router、SSR、API 路由与 Workers 部署
 - 提供 `@rue-js/runtime-vapor` 与 `@rue-js/swc-plugin-rue` Rust 侧核心能力
 
 ## 快速开始
@@ -95,6 +98,12 @@ export default createRouter({
 })
 ```
 
+## Text.js
+
+Text.js 是 Rue 生态中的全栈应用框架。它基于 Vite、Rue、RSC 与文件系统路由，把 App Router、Pages Router、SSR、静态生成、API 路由、中间件和 Cloudflare Workers 部署整合成一条轻量开发路径。
+
+它面向已经熟悉 Next.js 应用模型的开发者，同时保留 Rue 的 JSX / TSX 运行时与 Vite-first 工具链。常用 CLI 命令包括 `text dev`、`text build`、`text deploy`、`text typegen` 和 `text check`。
+
 ## 文档
 
 - [介绍](./docs/intro.md)
@@ -112,6 +121,7 @@ export default createRouter({
 
 - `@rue-js/rue`：框架核心与 JSX 入口
 - `@rue-js/router`：官方路由
+- `@rue-js/text`：Text.js 全栈应用框架与 CLI
 - `@rue-js/runtime-vapor`：Rust / WebAssembly 运行时实现
 - `@rue-js/design`：设计系统与组件库
 - `@rue-js/vite-plugin-rue`：Vite 集成
