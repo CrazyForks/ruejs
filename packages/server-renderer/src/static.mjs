@@ -5,11 +5,8 @@ import { createServer } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const modulePreloadLinkRe = /\n?[ \t]*<link\b(?=[^>]*\brel\s*=\s*["']modulepreload["'])[^>]*\/?>/gi
-const moduleScriptRe =
-  /\n?[ \t]*<script\b(?=[^>]*\btype\s*=\s*["']module["'])[^>]*>[\s\S]*?<\/script>/gi
-const rueThemeInitScriptRe =
-  /\n?[ \t]*<script\b(?![^>]*\bsrc\s*=)[^>]*>[\s\S]*?localStorage\.getItem\(["']rue\.theme["']\)[\s\S]*?<\/script>/gi
+const linkTagRe = /\n?[ \t]*<link\b[^>]*\/?>/gi
+const scriptTagRe = /\n?[ \t]*<script\b[^>]*>[\s\S]*?<\/script>/gi
 
 const defaultStaticRenderHtml = '<!doctype html><html><body><div id="app"></div></body></html>'
 const defaultStaticRenderBaseUrl = 'http://127.0.0.1'
@@ -449,16 +446,50 @@ export const staticRouteToOutputFile = (route, outDir) => {
   return isInsideDir(resolvedOutDir, outputFile) ? outputFile : null
 }
 
-export const stripStaticClientRuntime = html => {
-  return String(html)
-    .replace(modulePreloadLinkRe, '')
-    .replace(moduleScriptRe, '')
-    .replace(rueThemeInitScriptRe, '')
+const readHtmlAttribute = (tag, name) => {
+  const match = new RegExp(
+    `(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`,
+    'i',
+  ).exec(tag)
+  return match?.[1] ?? match?.[2] ?? match?.[3] ?? null
 }
 
-export const createStaticRouteHtml = (template, appHtml, { includeClientRuntime = true } = {}) => {
+const normalizeClientRuntimeAssets = clientRuntimeAssets => {
+  if (
+    clientRuntimeAssets == null ||
+    typeof clientRuntimeAssets === 'string' ||
+    typeof clientRuntimeAssets[Symbol.iterator] !== 'function'
+  ) {
+    throw new TypeError('clientRuntimeAssets must be an iterable of asset URLs')
+  }
+
+  return new Set([...clientRuntimeAssets].map(asset => String(asset)))
+}
+
+export const stripStaticClientRuntime = (html, clientRuntimeAssets) => {
+  const assets = normalizeClientRuntimeAssets(clientRuntimeAssets)
+  return String(html)
+    .replace(linkTagRe, tag =>
+      readHtmlAttribute(tag, 'rel')?.toLowerCase().split(/\s+/).includes('modulepreload') &&
+      assets.has(readHtmlAttribute(tag, 'href'))
+        ? ''
+        : tag,
+    )
+    .replace(scriptTagRe, tag =>
+      readHtmlAttribute(tag, 'type')?.toLowerCase() === 'module' &&
+      assets.has(readHtmlAttribute(tag, 'src'))
+        ? ''
+        : tag,
+    )
+}
+
+export const createStaticRouteHtml = (
+  template,
+  appHtml,
+  { includeClientRuntime = true, clientRuntimeAssets } = {},
+) => {
   const html = String(template).replace('<div id="app"></div>', `<div id="app">${appHtml}</div>`)
-  return includeClientRuntime ? html : stripStaticClientRuntime(html)
+  return includeClientRuntime ? html : stripStaticClientRuntime(html, clientRuntimeAssets)
 }
 
 export const runWithStaticRenderDom = async (route, callback, options = {}) => {

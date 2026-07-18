@@ -29,13 +29,16 @@ afterEach(async () => {
 describe('@rue-js/server-renderer/static', () => {
   it('normalizes static route output and strips client runtime', () => {
     const outDir = path.resolve('/tmp/rue-static-out')
+    const clientRuntimeAssets = ['/assets/app.js', '/assets/runtime.js']
     const template = `<!doctype html>
 <html>
   <head>
-    <link rel="modulepreload" crossorigin href="/assets/app.js">
+    <link rel="modulepreload" crossorigin href="/assets/runtime.js">
+    <link href='/assets/user-module.js' rel='modulepreload'>
     <link rel="stylesheet" href="/assets/app.css">
     <script>localStorage.getItem("rue.theme")</script>
-    <script type="module" crossorigin src="/assets/app.js"></script>
+    <script crossorigin src="/assets/app.js" type="module"></script>
+    <script src='/assets/user-module.js' type='module'></script>
   </head>
   <body>
     <div id="app"></div>
@@ -45,7 +48,9 @@ describe('@rue-js/server-renderer/static', () => {
 
     const html = createStaticRouteHtml(template, '<main>Rue static</main>', {
       includeClientRuntime: false,
+      clientRuntimeAssets,
     })
+    const strippedTemplate = stripStaticClientRuntime(template, clientRuntimeAssets)
 
     expect(normalizeStaticRoute('docs/guide/?q=render#intro')).toBe('/docs/guide')
     expect(normalizeStaticRoute('/')).toBe('/')
@@ -54,14 +59,32 @@ describe('@rue-js/server-renderer/static', () => {
       path.join(outDir, 'docs/guide/index.html'),
     )
     expect(staticRouteToOutputFile('/', outDir)).toBe(path.join(outDir, 'index.html'))
-    expect(stripStaticClientRuntime(template)).not.toContain('type="module"')
+    expect(strippedTemplate).not.toContain('/assets/app.js')
+    expect(strippedTemplate).not.toContain('/assets/runtime.js')
+    expect(strippedTemplate).toContain("href='/assets/user-module.js' rel='modulepreload'")
+    expect(strippedTemplate).toContain("src='/assets/user-module.js' type='module'")
     expect(html).toContain('<div id="app"><main>Rue static</main></div>')
     expect(html).toContain('<link rel="stylesheet" href="/assets/app.css">')
     expect(html).toContain('<script nomodule src="/legacy.js"></script>')
-    expect(html).not.toContain('rel="modulepreload"')
-    expect(html).not.toContain('type="module"')
-    expect(html).not.toContain('localStorage.getItem("rue.theme")')
+    expect(html).toContain("href='/assets/user-module.js' rel='modulepreload'")
+    expect(html).toContain("src='/assets/user-module.js' type='module'")
+    expect(html).toContain('localStorage.getItem("rue.theme")')
+    expect(html).not.toContain('/assets/app.js')
+    expect(html).not.toContain('/assets/runtime.js')
     expect(html).not.toContain('data-theme="luxury"')
+  })
+
+  it('requires an explicit client runtime asset set when stripping the runtime', () => {
+    // @ts-expect-error verify the runtime guard for a missing client runtime asset set
+    expect(() => stripStaticClientRuntime('<script type="module" src="/app.js"></script>')).toThrow(
+      /clientRuntimeAssets/,
+    )
+    expect(() =>
+      // @ts-expect-error verify the runtime guard for an invalid zero-JS configuration
+      createStaticRouteHtml('<div id="app"></div>', '<main>Rue static</main>', {
+        includeClientRuntime: false,
+      }),
+    ).toThrow(/clientRuntimeAssets/)
   })
 
   it('resolves preview files without escaping the static directory', async () => {

@@ -33,9 +33,15 @@ export type StaticRouteOutputFileCallback = (
 
 export type StaticRouteRenderValueInput = string | StaticRouteRenderValue
 
-export interface CreateStaticRouteHtmlOptions {
-  includeClientRuntime?: boolean
-}
+export type CreateStaticRouteHtmlOptions =
+  | {
+      includeClientRuntime?: true
+      clientRuntimeAssets?: readonly string[] | ReadonlySet<string>
+    }
+  | {
+      includeClientRuntime: false
+      clientRuntimeAssets: readonly string[] | ReadonlySet<string>
+    }
 
 export interface RunWithStaticRenderDomOptions {
   html?: string
@@ -226,7 +232,10 @@ export declare const normalizeStaticRoute: (route: unknown) => string | null
 
 export declare const staticRouteToOutputFile: (route: unknown, outDir: string) => string | null
 
-export declare const stripStaticClientRuntime: (html: string) => string
+export declare const stripStaticClientRuntime: (
+  html: string,
+  clientRuntimeAssets: readonly string[] | ReadonlySet<string>,
+) => string
 
 export declare const createStaticRouteHtml: (
   template: string,

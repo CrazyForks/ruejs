@@ -57,12 +57,15 @@ describe('app static build MDX documents', () => {
   })
 
   it('strips client runtime only for Markdown static-doc output', () => {
+    const clientRuntimeAssets = new Set(['/assets/main.js', '/assets/runtime.js'])
     const template = `<!doctype html>
 <html>
   <head>
-    <link rel="modulepreload" href="/assets/main.js">
+    <link rel="modulepreload" href="/assets/runtime.js">
+    <link rel="modulepreload" href="/assets/user-module.js">
     <script>localStorage.getItem("rue.theme")</script>
     <script type="module" src="/assets/main.js"></script>
+    <script type="module" src="/assets/user-module.js"></script>
   </head>
   <body><div id="app"></div></body>
 </html>`
@@ -73,6 +76,7 @@ describe('app static build MDX documents', () => {
       'static-doc',
       '/guide/guide/static-doc',
       new Set(),
+      clientRuntimeAssets,
     )
     const mdxHtml = createRouteHtml(
       template,
@@ -80,17 +84,21 @@ describe('app static build MDX documents', () => {
       'ssr-prerender',
       '/guide/guide/interactive-doc',
       new Set(),
+      clientRuntimeAssets,
     )
 
     expect(markdownHtml).toContain('<main>Markdown content</main>')
-    expect(markdownHtml).toContain('data-theme="luxury"')
-    expect(markdownHtml).not.toContain('modulepreload')
-    expect(markdownHtml).not.toContain('type="module"')
-    expect(markdownHtml).not.toContain('rue.theme')
+    expect(markdownHtml).toContain('rue.theme')
+    expect(markdownHtml).toContain('/assets/user-module.js')
+    expect(markdownHtml).not.toContain('/assets/main.js')
+    expect(markdownHtml).not.toContain('/assets/runtime.js')
 
     expect(mdxHtml).toContain('<main>MDX content</main>')
     expect(mdxHtml).toContain('modulepreload')
     expect(mdxHtml).toContain('type="module"')
     expect(mdxHtml).toContain('rue.theme')
+    expect(mdxHtml).toContain('/assets/main.js')
+    expect(mdxHtml).toContain('/assets/runtime.js')
+    expect(mdxHtml).toContain('/assets/user-module.js')
   })
 })

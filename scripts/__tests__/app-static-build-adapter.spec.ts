@@ -6,7 +6,12 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { classifyDocRoute, createDocRouteSourceMap, createRouteHtml } from '../app-static-build.mjs'
+import {
+  classifyDocRoute,
+  collectClientRuntimeAssets,
+  createDocRouteSourceMap,
+  createRouteHtml,
+} from '../app-static-build.mjs'
 import { findDocSources } from '../doc-source-utils.mjs'
 import { resolveStaticPreviewFile } from '@rue-js/server-renderer/static'
 
@@ -30,6 +35,54 @@ afterEach(async () => {
 })
 
 describe('app static build adapter', () => {
+  it('collects the client entry static chunk closure using the resolved base URL', () => {
+    const entryFile = path.resolve('/project/app/app.tsx')
+    const bundle = {
+      'assets/main.js': {
+        type: 'chunk',
+        fileName: 'assets/main.js',
+        facadeModuleId: path.resolve('/project/index.html'),
+        moduleIds: [path.resolve('/project/index.html'), `${entryFile}?rue-entry`],
+        imports: ['assets/runtime.js'],
+        dynamicImports: ['assets/lazy.js'],
+      },
+      'assets/runtime.js': {
+        type: 'chunk',
+        fileName: 'assets/runtime.js',
+        facadeModuleId: null,
+        imports: ['assets/shared.js'],
+        dynamicImports: [],
+      },
+      'assets/shared.js': {
+        type: 'chunk',
+        fileName: 'assets/shared.js',
+        facadeModuleId: null,
+        imports: [],
+        dynamicImports: [],
+      },
+      'assets/lazy.js': {
+        type: 'chunk',
+        fileName: 'assets/lazy.js',
+        facadeModuleId: null,
+        imports: [],
+        dynamicImports: [],
+      },
+      'assets/main.css': {
+        type: 'asset',
+        fileName: 'assets/main.css',
+      },
+    }
+
+    expect([...collectClientRuntimeAssets(bundle, entryFile, '/docs/')].sort()).toEqual([
+      '/docs/assets/main.js',
+      '/docs/assets/runtime.js',
+      '/docs/assets/shared.js',
+    ])
+    expect(() => collectClientRuntimeAssets(bundle, '/project/app/missing.tsx', '/')).toThrow(
+      /client entry chunk/i,
+    )
+  })
+
   it('classifies docs routes from a real docs source map', async () => {
     const docsDir = await createTempDir('rue-app-static-docs-')
     await writeTempFile(docsDir, 'guide/static-doc.md', '# Static document\n')
@@ -57,13 +110,16 @@ describe('app static build adapter', () => {
   })
 
   it('keeps the app HTML wrapper policy for static docs and zero-JS routes', () => {
+    const clientRuntimeAssets = new Set(['/assets/app.js', '/assets/runtime.js'])
     const template = `<!doctype html>
 <html lang="en">
   <head>
-    <link rel="modulepreload" crossorigin href="/assets/app.js">
+    <link rel="modulepreload" crossorigin href="/assets/runtime.js">
+    <link rel="modulepreload" href="/assets/user-module.js">
     <link rel="stylesheet" href="/assets/app.css">
     <script>localStorage.getItem("rue.theme")</script>
     <script type="module" crossorigin src="/assets/app.js"></script>
+    <script type="module" src="/assets/user-module.js"></script>
   </head>
   <body>
     <div id="app"></div>
@@ -77,6 +133,7 @@ describe('app static build adapter', () => {
       'static-doc',
       '/guide/guide/static-doc',
       new Set(),
+      clientRuntimeAssets,
     )
     const zeroJsSsrHtml = createRouteHtml(
       template,
@@ -84,6 +141,7 @@ describe('app static build adapter', () => {
       'ssr-prerender',
       '/guide/guide/interactive-doc?tab=pnpm',
       new Set(['/guide/guide/interactive-doc']),
+      clientRuntimeAssets,
     )
     const interactiveHtml = createRouteHtml(
       template,
@@ -91,25 +149,31 @@ describe('app static build adapter', () => {
       'ssr-prerender',
       '/guide/guide/interactive-doc',
       new Set(),
+      clientRuntimeAssets,
     )
 
     expect(staticDocHtml).toContain('<div id="app"><main>Static markdown</main></div>')
-    expect(staticDocHtml).toContain('<html lang="en" data-theme="luxury">')
+    expect(staticDocHtml).toContain('<html lang="en">')
     expect(staticDocHtml).toContain('<link rel="stylesheet" href="/assets/app.css">')
     expect(staticDocHtml).toContain('<script nomodule src="/legacy.js"></script>')
-    expect(staticDocHtml).not.toContain('rel="modulepreload"')
-    expect(staticDocHtml).not.toContain('type="module"')
-    expect(staticDocHtml).not.toContain('rue.theme')
+    expect(staticDocHtml).toContain('rue.theme')
+    expect(staticDocHtml).toContain('/assets/user-module.js')
+    expect(staticDocHtml).not.toContain('/assets/app.js')
+    expect(staticDocHtml).not.toContain('/assets/runtime.js')
 
     expect(zeroJsSsrHtml).toContain('<main>SSR without client runtime</main>')
-    expect(zeroJsSsrHtml).toContain('data-theme="luxury"')
-    expect(zeroJsSsrHtml).not.toContain('type="module"')
+    expect(zeroJsSsrHtml).toContain('rue.theme')
+    expect(zeroJsSsrHtml).toContain('/assets/user-module.js')
+    expect(zeroJsSsrHtml).not.toContain('/assets/app.js')
+    expect(zeroJsSsrHtml).not.toContain('/assets/runtime.js')
 
     expect(interactiveHtml).toContain('<main>Interactive SSR</main>')
     expect(interactiveHtml).toContain('rel="modulepreload"')
     expect(interactiveHtml).toContain('type="module"')
     expect(interactiveHtml).toContain('rue.theme')
-    expect(interactiveHtml).not.toContain('data-theme="luxury"')
+    expect(interactiveHtml).toContain('/assets/app.js')
+    expect(interactiveHtml).toContain('/assets/runtime.js')
+    expect(interactiveHtml).toContain('/assets/user-module.js')
   })
 
   it('resolves preview files without escaping the static output directory', async () => {

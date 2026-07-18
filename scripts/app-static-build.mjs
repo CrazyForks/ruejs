@@ -26,6 +26,7 @@ const ssrOutDir = path.resolve(tempDir, 'ssr')
 const buildLockDir = path.resolve(tempRootDir, 'app-static-build.lock')
 const buildLockOwnerFile = path.resolve(buildLockDir, 'owner.json')
 const viteConfigFile = path.resolve(root, 'vite.config.ts')
+const clientEntryFile = path.resolve(root, 'app/app.tsx')
 const serverEntryFile = path.resolve(root, 'app/entry-server.tsx')
 const serverBundleFile = path.resolve(ssrOutDir, 'entry-server.mjs')
 const clientTemplateFile = path.resolve(ssrOutDir, 'client-template.html')
@@ -364,14 +365,65 @@ const acquireAppStaticBuildLock = async () => {
   }
 }
 
-const applyStaticThemeFallback = html => {
-  return html.replace(/<html\b([^>]*)>/i, (match, attrs) => {
-    if (/\bdata-theme=/.test(attrs)) {
-      return match
-    }
+const resolveClientEntryModuleId = value => {
+  if (typeof value !== 'string' || value.length === 0) return null
+  return path.resolve(value.replace(/[?#].*$/, ''))
+}
 
-    return `<html${attrs} data-theme="luxury">`
-  })
+const createBuiltAssetUrl = (base, fileName) => {
+  const normalizedBase = String(base || '/')
+  const separator = normalizedBase.endsWith('/') ? '' : '/'
+  return `${normalizedBase}${separator}${String(fileName).replace(/^\/+/, '')}`
+}
+
+export const collectClientRuntimeAssets = (bundle, entryFile, base = '/') => {
+  const normalizedEntryFile = path.resolve(entryFile)
+  const entryChunk = Object.values(bundle).find(
+    output =>
+      output?.type === 'chunk' &&
+      (resolveClientEntryModuleId(output.facadeModuleId) === normalizedEntryFile ||
+        output.moduleIds?.some(
+          moduleId => resolveClientEntryModuleId(moduleId) === normalizedEntryFile,
+        )),
+  )
+
+  if (!entryChunk) {
+    throw new Error(`Could not find the client entry chunk for ${normalizedEntryFile}`)
+  }
+
+  const assets = new Set()
+  const visited = new Set()
+
+  const visitChunk = fileName => {
+    if (visited.has(fileName)) return
+    visited.add(fileName)
+
+    const chunk = bundle[fileName]
+    if (!chunk || chunk.type !== 'chunk') return
+
+    assets.add(createBuiltAssetUrl(base, chunk.fileName))
+    for (const importedFile of chunk.imports) {
+      visitChunk(importedFile)
+    }
+  }
+
+  visitChunk(entryChunk.fileName)
+  return assets
+}
+
+const createClientRuntimeAssetCollectorPlugin = (entryFile, onAssets) => {
+  let base = '/'
+
+  return {
+    name: 'rue:collect-client-runtime-assets',
+    apply: 'build',
+    configResolved(config) {
+      base = config.base
+    },
+    generateBundle(_outputOptions, bundle) {
+      onAssets(collectClientRuntimeAssets(bundle, entryFile, base))
+    },
+  }
 }
 
 const normalizeClientRuntimeMode = value => {
@@ -399,10 +451,22 @@ const shouldIncludeClientRuntime = (renderKind, route, zeroJsRoutes) => {
   return renderKind !== 'static-doc'
 }
 
-export const createRouteHtml = (template, appHtml, renderKind, route, zeroJsRoutes) => {
+export const createRouteHtml = (
+  template,
+  appHtml,
+  renderKind,
+  route,
+  zeroJsRoutes,
+  clientRuntimeAssets,
+) => {
   const includeClientRuntime = shouldIncludeClientRuntime(renderKind, route, zeroJsRoutes)
-  const html = createStaticRouteHtml(template, appHtml, { includeClientRuntime })
-  return includeClientRuntime ? html : applyStaticThemeFallback(html)
+  return createStaticRouteHtml(
+    template,
+    appHtml,
+    includeClientRuntime
+      ? { includeClientRuntime: true }
+      : { includeClientRuntime: false, clientRuntimeAssets },
+  )
 }
 
 const renderRouteInChild = (route, routeIndex) => {
@@ -499,6 +563,7 @@ const renderRoutes = async (
   _render,
   zeroJsRoutes = new Set(),
   docSourcesByDocId = new Map(),
+  clientRuntimeAssets,
 ) => {
   let zeroJs = 0
 
@@ -528,7 +593,7 @@ const renderRoutes = async (
         zeroJs += 1
       }
 
-      return createRouteHtml(template, html, renderKind, route, zeroJsRoutes)
+      return createRouteHtml(template, html, renderKind, route, zeroJsRoutes, clientRuntimeAssets)
     },
   })
 
@@ -558,8 +623,15 @@ const runAppStaticBuild = async () => {
   try {
     await removeGeneratedDir(outDir)
 
+    let clientRuntimeAssets = null
+
     await build({
       configFile: viteConfigFile,
+      plugins: [
+        createClientRuntimeAssetCollectorPlugin(clientEntryFile, assets => {
+          clientRuntimeAssets = assets
+        }),
+      ],
       build: {
         outDir,
         emptyOutDir: true,
@@ -567,6 +639,10 @@ const runAppStaticBuild = async () => {
     })
 
     const template = await readFile(path.resolve(outDir, 'index.html'), 'utf-8')
+
+    if (!clientRuntimeAssets) {
+      throw new Error('The client build did not produce a Rue client runtime asset graph')
+    }
 
     await build({
       configFile: viteConfigFile,
@@ -609,7 +685,14 @@ const runAppStaticBuild = async () => {
         ssrErrors,
         staticDocs,
         zeroJs,
-      } = await renderRoutes(template, routes, serverEntry.render, zeroJsRoutes, docSourcesByDocId)
+      } = await renderRoutes(
+        template,
+        routes,
+        serverEntry.render,
+        zeroJsRoutes,
+        docSourcesByDocId,
+        clientRuntimeAssets,
+      )
 
       const reportFiles = await writeAppStaticRenderReport({
         result,
