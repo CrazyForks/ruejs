@@ -1,36 +1,15 @@
-import { type FC, computed, onUnmounted, renderAnchor, vapor, watchEffect } from '@rue-js/rue'
+import { type FC, computed, renderAnchor, vapor, watchEffect } from '@rue-js/rue'
 import { RouterLink, useRoute } from '@rue-js/router'
-import {
-  RUE_ISLAND_PROPS_SCRIPT_TYPE,
-  serializeIslandProps,
-  startRueIslandLoader,
-  type RueIslandClientModule,
-  type RueIslandHydrationStrategy,
-  type RueIslandManifest,
-} from '@rue-js/rue/island'
 import { manifest as compilerManifest } from 'virtual:rue-island-manifest'
 import { CompilerDirectiveFixture } from './rue-islands/CompilerDirectiveFixture'
-
-type IslandModuleLoader = () => Promise<RueIslandClientModule>
-
-const islandModules: Record<string, IslandModuleLoader> = {
-  'rue-islands/load-counter': () => import('./rue-islands/islands/LoadCounter') as any,
-  'rue-islands/idle-panel': () => import('./rue-islands/islands/IdlePanel') as any,
-  'rue-islands/visible-panel': () => import('./rue-islands/islands/VisiblePanel') as any,
-  'rue-islands/media-panel': () => import('./rue-islands/islands/MediaPanel') as any,
-  'rue-islands/interaction-button': () => import('./rue-islands/islands/InteractionButton') as any,
-  'rue-islands/only-widget': () => import('./rue-islands/islands/OnlyWidget') as any,
-  'rue-islands/props-panel': () => import('./rue-islands/islands/PropsPanel') as any,
-  'rue-islands/manifest-panel': () => import('./rue-islands/islands/ManifestPanel') as any,
-}
-
-const resolveIslandModule = (specifier: string) => {
-  const loader = islandModules[specifier]
-  if (!loader) {
-    throw new Error(`No Rue island example module registered for ${specifier}.`)
-  }
-  return loader()
-}
+import IdlePanel from './rue-islands/islands/IdlePanel'
+import InteractionButton from './rue-islands/islands/InteractionButton'
+import LoadCounter from './rue-islands/islands/LoadCounter'
+import ManifestPanel from './rue-islands/islands/ManifestPanel'
+import MediaPanel from './rue-islands/islands/MediaPanel'
+import OnlyWidget from './rue-islands/islands/OnlyWidget'
+import PropsPanel from './rue-islands/islands/PropsPanel'
+import VisiblePanel from './rue-islands/islands/VisiblePanel'
 
 type PageKey =
   | 'overview'
@@ -50,23 +29,8 @@ type IslandPage = {
   path: string
   title: string
   summary: string
-  manifest?: RueIslandManifest
   render: () => ReturnType<FC>
 }
-
-type RueIslandProps = {
-  id: string
-  component: string
-  entry?: string
-  hydrate?: RueIslandHydrationStrategy
-  props?: unknown
-  media?: string
-  interaction?: string | string[]
-  children?: unknown
-}
-
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 const routeItems: Array<{ path: string; label: string }> = [
   { path: '/examples/rue-islands', label: 'Overview' },
@@ -92,41 +56,6 @@ const ServerPanel: FC<{ kind: string; title: string; detail: string }> = props =
     <p className="mt-2 text-sm opacity-75">{props.detail}</p>
   </div>
 )
-
-const RueIsland: FC<RueIslandProps> = props => {
-  const hydrate = props.hydrate ?? 'load'
-  const shouldEmitProps = props.props !== undefined && hydrate !== 'none'
-  const islandAttrs: Record<string, unknown> = {
-    'data-rue-id': props.id,
-    'data-rue-component': props.component,
-    'data-rue-hydrate': hydrate,
-    className: 'block',
-  }
-  const interaction = Array.isArray(props.interaction)
-    ? props.interaction.join(',')
-    : props.interaction
-
-  if (hydrate !== 'none') {
-    islandAttrs['data-rue-entry'] = props.entry ?? props.component
-  }
-  if (props.media) {
-    islandAttrs['data-rue-media'] = props.media
-  }
-  if (interaction) {
-    islandAttrs['data-rue-interaction'] = interaction
-  }
-
-  return (
-    <rue-island {...islandAttrs}>
-      {props.children}
-      {shouldEmitProps && (
-        <script type={RUE_ISLAND_PROPS_SCRIPT_TYPE} data-rue-props={props.id}>
-          {serializeIslandProps(props.props)}
-        </script>
-      )}
-    </rue-island>
-  )
-}
 
 const codeBlock = (value: string) => (
   <pre className="rounded-box overflow-auto bg-neutral p-4 text-sm text-neutral-content">
@@ -162,32 +91,14 @@ const pages: IslandPage[] = [
     path: '/examples/rue-islands/load',
     title: 'client:load',
     summary: 'SSR HTML 立即可见，页面加载后 island 立刻接管交互。',
-    render: () => (
-      <RueIsland
-        id="load-counter"
-        component="rue-islands/load-counter"
-        hydrate="load"
-        props={{ initial: 3, label: 'Load counter' }}
-      >
-        <ServerPanel kind="client:load" title="Server count: 3" detail="这里会被计数器接管。" />
-      </RueIsland>
-    ),
+    render: () => <LoadCounter client:load initial={3} label="Load counter" />,
   },
   {
     key: 'idle',
     path: '/examples/rue-islands/idle',
     title: 'client:idle',
     summary: '通过 requestIdleCallback 延后非关键 island 的模块加载。',
-    render: () => (
-      <RueIsland
-        id="idle-panel"
-        component="rue-islands/idle-panel"
-        hydrate="idle"
-        props={{ task: 'Deferred analytics panel' }}
-      >
-        <ServerPanel kind="client:idle" title="Waiting for idle" detail="idle 前保持 SSR HTML。" />
-      </RueIsland>
-    ),
+    render: () => <IdlePanel client:idle={{ timeout: 500 }} task="Deferred analytics panel" />,
   },
   {
     key: 'visible',
@@ -201,18 +112,7 @@ const pages: IslandPage[] = [
             继续向下滚动，观察下方 island 进入视口后才加载。
           </p>
         </section>
-        <RueIsland
-          id="visible-panel"
-          component="rue-islands/visible-panel"
-          hydrate="visible"
-          props={{ label: 'Visible panel' }}
-        >
-          <ServerPanel
-            kind="client:visible"
-            title="Below the fold"
-            detail="Intersection 后接管。"
-          />
-        </RueIsland>
+        <VisiblePanel client:visible={{ rootMargin: '200px' }} label="Visible panel" />
       </div>
     ),
   },
@@ -221,65 +121,22 @@ const pages: IslandPage[] = [
     path: '/examples/rue-islands/media',
     title: 'client:media',
     summary: '视口宽度达到 900px 后才 hydrate。',
-    render: () => (
-      <RueIsland
-        id="media-panel"
-        component="rue-islands/media-panel"
-        hydrate="media"
-        media="(min-width: 900px)"
-        props={{ query: '(min-width: 900px)' }}
-      >
-        <ServerPanel
-          kind="client:media"
-          title="Waiting for media query"
-          detail="调整窗口宽度试试。"
-        />
-      </RueIsland>
-    ),
+    render: () => <MediaPanel client:media="(min-width: 900px)" query="(min-width: 900px)" />,
   },
   {
     key: 'interaction',
     path: '/examples/rue-islands/interaction',
     title: 'client:interaction',
     summary: '点击 SSR 按钮后加载 island，并把触发事件传给 hydrate 上下文。',
-    render: () => (
-      <RueIsland
-        id="interaction-button"
-        component="rue-islands/interaction-button"
-        hydrate="interaction"
-        interaction="click"
-        props={{ label: 'Open interactive control' }}
-      >
-        <button
-          type="button"
-          className="btn btn-outline btn-primary h-auto min-h-24 justify-start p-5 text-left"
-        >
-          <span>
-            <span className="block text-xs font-bold uppercase tracking-wide opacity-80">
-              client:interaction
-            </span>
-            <span className="mt-1 block">Click to hydrate</span>
-          </span>
-        </button>
-      </RueIsland>
-    ),
+    render: () => <InteractionButton client:interaction="click" label="Open interactive control" />,
   },
   {
     key: 'none',
     path: '/examples/rue-islands/none',
-    title: 'client:none',
-    summary: '保留 SSR HTML，不发送这个 island 的 JS。',
+    title: '默认静态（client:none）',
+    summary: '省略 client:* 即只输出 HTML；client:none 只是显式同义写法。',
     render: () => (
-      <RueIsland id="static-copy" component="rue-islands/static-copy" hydrate="none">
-        <article
-          className="rounded-box border border-base-300 bg-base-100 p-5"
-          data-example-state="static"
-        >
-          <p className="text-xs font-bold uppercase tracking-wide text-primary">client:none</p>
-          <h2 className="mt-2 text-2xl font-semibold">Zero JavaScript island</h2>
-          <p className="mt-2 text-sm opacity-75">这个区域只保留服务端 HTML。</p>
-        </article>
-      </RueIsland>
+      <ManifestPanel client:none headline="Zero JavaScript component" source="SSR HTML only" />
     ),
   },
   {
@@ -288,18 +145,17 @@ const pages: IslandPage[] = [
     title: 'client:only',
     summary: '服务端只输出 fallback，客户端加载后渲染真实组件。',
     render: () => (
-      <RueIsland
-        id="only-widget"
-        component="rue-islands/only-widget"
-        hydrate="only"
-        props={{ label: 'Browser-only widget' }}
-      >
-        <ServerPanel
-          kind="client:only"
-          title="Loading browser-only widget"
-          detail="没有 SSR 组件 HTML。"
-        />
-      </RueIsland>
+      <OnlyWidget
+        client:only
+        label="Browser-only widget"
+        fallback={
+          <ServerPanel
+            kind="client:only"
+            title="Loading browser-only widget"
+            detail="没有 SSR 组件 HTML。"
+          />
+        }
+      />
     ),
   },
   {
@@ -308,54 +164,29 @@ const pages: IslandPage[] = [
     title: '安全 Props 序列化',
     summary: '验证 Date、URL 和 HTML 敏感字符串的 script-safe JSON 传递。',
     render: () => (
-      <RueIsland
-        id="props-panel"
-        component="rue-islands/props-panel"
-        hydrate="load"
-        props={{
-          title: 'Typed props restored',
-          createdAt: new Date('2026-06-22T08:00:00.000Z'),
-          docsUrl: new URL('https://example.com/rue/islands?mode=props'),
-          unsafeText: '</script><img src=x onerror=alert(1)>',
-        }}
-      >
-        <ServerPanel
-          kind="props"
-          title="Server-safe payload"
-          detail="JSON script 会安全转义敏感文本。"
-        />
-      </RueIsland>
+      <PropsPanel
+        client:load
+        title="Typed props restored"
+        createdAt={new Date('2026-06-22T08:00:00.000Z')}
+        docsUrl={new URL('https://example.com/rue/islands?mode=props')}
+        unsafeText="</script><img src=x onerror=alert(1)>"
+      />
     ),
   },
   {
     key: 'manifest',
     path: '/examples/rue-islands/manifest',
-    title: 'Manifest Props',
-    summary: '不内联 props script，entry 与 props 都从 loader manifest 提供。',
-    manifest: {
-      'manifest-panel': {
-        component: 'rue-islands/manifest-panel',
-        entry: 'rue-islands/manifest-panel',
-        hydrate: 'load',
-        props: serializeIslandProps({
-          headline: 'Manifest-provided props',
-          source: 'RueIslandManifest',
-        }),
-      },
-    },
+    title: '编译器 Manifest',
+    summary: '直接 import 与 client:* 会生成稳定描述符、manifest 和动态 import registry。',
     render: () => (
-      <rue-island
-        data-rue-id="manifest-panel"
-        data-rue-component="rue-islands/manifest-panel"
-        data-rue-hydrate="load"
-        className="block"
-      >
-        <ServerPanel
-          kind="manifest"
-          title="Inline props omitted"
-          detail="loader manifest 提供 props 和 entry。"
+      <div className="grid gap-4">
+        <ManifestPanel
+          client:load
+          headline="Compiler-generated manifest"
+          source="virtual:rue-island-manifest"
         />
-      </rue-island>
+        {codeBlock(JSON.stringify(compilerManifest, null, 2))}
+      </div>
     ),
   },
   {
@@ -420,8 +251,6 @@ const SidebarFrame: FC<{ page: IslandPage; currentPath: string }> = props => (
 
 const RueIslands: FC = () => {
   const route = useRoute()
-  let cleanup: (() => void) | undefined
-  let installVersion = 0
 
   const currentPath = computed(() => {
     const routeData = route.get() as any
@@ -437,11 +266,6 @@ const RueIslands: FC = () => {
     return renderPage(currentPage.get(), path) as any
   }
 
-  onUnmounted(() => {
-    cleanup?.()
-    cleanup = undefined
-  })
-
   return vapor(() => {
     const root = document.createDocumentFragment()
     const anchor = document.createComment('rue:islands-example')
@@ -453,30 +277,6 @@ const RueIslands: FC = () => {
       const parent = (anchor.parentNode || root) as any
 
       renderAnchor(renderPage(page, path) as any, parent, anchor as any)
-
-      if (import.meta.env.SSR) {
-        return
-      }
-
-      const version = ++installVersion
-      queueMicrotask(() => {
-        if (version !== installVersion) {
-          return
-        }
-        cleanup?.()
-        const pageRoot = document.querySelector(`[data-rue-islands-page="${page.key}"]`)
-        cleanup = startRueIslandLoader({
-          root: pageRoot ?? document,
-          manifest: page.manifest,
-          resolveModule: resolveIslandModule,
-          onError(error, island) {
-            island.setAttribute('data-example-state', 'error')
-            island.innerHTML = `<pre class="rounded-box overflow-auto bg-error p-4 text-error-content">${escapeHtml(
-              String(error instanceof Error ? error.stack || error.message : error),
-            )}</pre>`
-          },
-        })
-      })
     })
 
     return root as any

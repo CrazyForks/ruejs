@@ -65,6 +65,15 @@ import {
   withKeepAlivePropsRegistrationTarget,
 } from './components/keepAlivePropsBridge'
 import { copyBuiltinComponentMarker, getBuiltinComponentName } from './components/builtinMarkers'
+import {
+  isRueIslandDescriptor,
+  isRueServerIslandDescriptor,
+  RUE_ISLAND_PROPS_SCRIPT_TYPE,
+  RUE_SERVER_ISLAND_SSR_BRIDGE,
+  serializeIslandProps,
+  type RueIslandDescriptor,
+  type RueServerIslandDescriptor,
+} from './island-protocol'
 
 getDOMAdapter()
 
@@ -1316,7 +1325,94 @@ const createRepeatableFragmentHandle = (children: unknown[]): RenderableOutput =
     return root
   })
 
+const createIslandDescriptorMountHandle = (descriptor: RueIslandDescriptor): RenderableOutput =>
+  createRepeatableVaporHandle(parentContext => {
+    const hydrate = descriptor.metadata.hydrate ?? 'load'
+    const root =
+      hydrate === 'none'
+        ? (createDocumentFragment() as DomElementLike)
+        : (createDOMElement('rue-island', parentContext) as DomElementLike)
+
+    if (hydrate !== 'none') {
+      setAttribute(root, 'data-rue-id', descriptor.metadata.id)
+      setAttribute(root, 'data-rue-component', descriptor.metadata.id)
+      setAttribute(root, 'data-rue-entry', descriptor.metadata.id)
+      setAttribute(root, 'data-rue-hydrate', hydrate)
+      if (descriptor.metadata.media) {
+        setAttribute(root, 'data-rue-media', descriptor.metadata.media)
+      }
+      if (descriptor.metadata.interaction) {
+        setAttribute(
+          root,
+          'data-rue-interaction',
+          Array.isArray(descriptor.metadata.interaction)
+            ? descriptor.metadata.interaction.join(',')
+            : descriptor.metadata.interaction,
+        )
+      }
+      if (descriptor.metadata.timeout !== undefined) {
+        setAttribute(root, 'data-rue-timeout', String(descriptor.metadata.timeout))
+      }
+      if (descriptor.metadata.rootMargin) {
+        setAttribute(root, 'data-rue-root-margin', descriptor.metadata.rootMargin)
+      }
+    }
+
+    const content =
+      hydrate === 'only'
+        ? descriptor.fallback
+        : createElement(descriptor.component, descriptor.props)
+    if (content !== undefined && content !== null) {
+      const anchor = createComment('rue:island:content')
+      appendChild(root, anchor)
+      renderAnchor(content as RenderableInput, root, anchor)
+    }
+
+    if (hydrate !== 'none') {
+      const propsScript = createDOMElement('script', root) as DomElementLike
+      setAttribute(propsScript, 'type', RUE_ISLAND_PROPS_SCRIPT_TYPE)
+      setAttribute(propsScript, 'data-rue-props', descriptor.metadata.id)
+      settextContent(propsScript, serializeIslandProps(descriptor.props))
+      appendChild(root, propsScript)
+    }
+    return root
+  })
+
+const createServerIslandDescriptorMountHandle = (
+  descriptor: RueServerIslandDescriptor,
+): RenderableOutput =>
+  createRepeatableVaporHandle(() => {
+    const bridge = (globalThis as Record<PropertyKey, unknown>)[RUE_SERVER_ISLAND_SSR_BRIDGE]
+    if (typeof bridge !== 'function') {
+      throw new Error(
+        'Rue server island descriptors can only render inside renderToString() with serverIslands configured.',
+      )
+    }
+    return (bridge as (value: RueServerIslandDescriptor) => unknown)(descriptor) as VaporSetupResult
+  })
+
+const normalizeIslandDescriptorHandles = (value: unknown): unknown => {
+  if (isRueIslandDescriptor(value)) {
+    return createIslandDescriptorMountHandle(value)
+  }
+  if (isRueServerIslandDescriptor(value)) {
+    return createServerIslandDescriptorMountHandle(value)
+  }
+  if (!Array.isArray(value)) {
+    return value
+  }
+
+  let changed = false
+  const normalized = value.map(item => {
+    const next = normalizeIslandDescriptorHandles(item)
+    if (next !== item) changed = true
+    return next
+  })
+  return changed ? normalized : value
+}
+
 const normalizeMountHandleSingletonInput = (value: unknown): unknown => {
+  value = normalizeIslandDescriptorHandles(value)
   if (!Array.isArray(value)) {
     return value
   }
@@ -1547,7 +1643,21 @@ export const createComponent = <P = {}>(
 /** 渲染到容器；支持默认 renderable 和 Wasm mount handle 两条路径。 */
 export const render = (value: RenderableInput, container: DomElementLike) => {
   return withRenderEntryGuard('render', 'container', container as object, () => {
-    const analysis = analyzeDefaultRenderableInput(value)
+    if (value == null) {
+      const globalRecord = globalThis as typeof globalThis & Record<string, unknown>
+      const registry = globalRecord.__rue_container_cleanups__ as
+        | WeakMap<object, Set<() => void>>
+        | undefined
+      const cleanups = registry?.get(container as object)
+      if (cleanups) {
+        registry?.delete(container as object)
+        for (const cleanup of cleanups) {
+          cleanup()
+        }
+      }
+    }
+    const normalizedValue = normalizeMountHandleSingletonInput(value)
+    const analysis = analyzeDefaultRenderableInput(normalizedValue)
     if (analysis.kind === 'renderable') {
       clearMountHandleContainerAnchor(container)
       const prevOwner = renderOwnerByContainer.get(container as object)
@@ -1566,7 +1676,6 @@ export const render = (value: RenderableInput, container: DomElementLike) => {
       return
     }
 
-    const normalizedValue = normalizeMountHandleSingletonInput(value)
     const mountHandleValue = createFreshMountHandle(normalizedValue)
     const shouldUseContainerAnchorHandle =
       !!normalizedValue &&

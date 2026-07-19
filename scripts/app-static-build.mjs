@@ -27,6 +27,7 @@ const buildLockDir = path.resolve(tempRootDir, 'app-static-build.lock')
 const buildLockOwnerFile = path.resolve(buildLockDir, 'owner.json')
 const viteConfigFile = path.resolve(root, 'vite.config.ts')
 const clientEntryFile = path.resolve(root, 'app/app.tsx')
+const islandClientEntryFile = path.resolve(root, 'app/entry-islands.ts')
 const serverEntryFile = path.resolve(root, 'app/entry-server.tsx')
 const serverBundleFile = path.resolve(ssrOutDir, 'entry-server.mjs')
 const clientTemplateFile = path.resolve(ssrOutDir, 'client-template.html')
@@ -367,7 +368,8 @@ const acquireAppStaticBuildLock = async () => {
 
 const resolveClientEntryModuleId = value => {
   if (typeof value !== 'string' || value.length === 0) return null
-  return path.resolve(value.replace(/[?#].*$/, ''))
+  const normalized = value.replace(/^\0/, '').replace(/[?#].*$/, '')
+  return normalized.startsWith('virtual:') ? normalized : path.resolve(normalized)
 }
 
 const createBuiltAssetUrl = (base, fileName) => {
@@ -376,8 +378,11 @@ const createBuiltAssetUrl = (base, fileName) => {
   return `${normalizedBase}${separator}${String(fileName).replace(/^\/+/, '')}`
 }
 
-export const collectClientRuntimeAssets = (bundle, entryFile, base = '/') => {
-  const normalizedEntryFile = path.resolve(entryFile)
+const collectClientEntryAssets = (bundle, entryFile, base) => {
+  const normalizedEntryFile = resolveClientEntryModuleId(entryFile)
+  if (!normalizedEntryFile) {
+    throw new TypeError('client entry must be a non-empty module ID')
+  }
   const entryChunk = Object.values(bundle).find(
     output =>
       output?.type === 'chunk' &&
@@ -408,10 +413,29 @@ export const collectClientRuntimeAssets = (bundle, entryFile, base = '/') => {
   }
 
   visitChunk(entryChunk.fileName)
-  return assets
+  return {
+    entry: createBuiltAssetUrl(base, entryChunk.fileName),
+    assets,
+  }
 }
 
-const createClientRuntimeAssetCollectorPlugin = (entryFile, onAssets) => {
+export const collectClientRuntimeAssets = (bundle, entries, base = '/') => {
+  if (typeof entries === 'string') {
+    return collectClientEntryAssets(bundle, entries, base).assets
+  }
+  if (!entries || typeof entries !== 'object' || Array.isArray(entries)) {
+    throw new TypeError('client entries must be a module ID or a named entry record')
+  }
+
+  return Object.fromEntries(
+    Object.entries(entries).map(([name, entryFile]) => [
+      name,
+      collectClientEntryAssets(bundle, entryFile, base),
+    ]),
+  )
+}
+
+const createClientRuntimeAssetCollectorPlugin = (entries, onAssets) => {
   let base = '/'
 
   return {
@@ -421,7 +445,7 @@ const createClientRuntimeAssetCollectorPlugin = (entryFile, onAssets) => {
       base = config.base
     },
     generateBundle(_outputOptions, bundle) {
-      onAssets(collectClientRuntimeAssets(bundle, entryFile, base))
+      onAssets(collectClientRuntimeAssets(bundle, entries, base))
     },
   }
 }
@@ -444,29 +468,23 @@ const normalizeRouteSet = values => {
   return new Set(values.map(normalizeRoute).filter(Boolean))
 }
 
-const shouldIncludeClientRuntime = (renderKind, route, zeroJsRoutes) => {
-  if (clientRuntimeMode === 'always') return true
-  if (clientRuntimeMode === 'never') return false
-  if (zeroJsRoutes.has(normalizeRoute(route))) return false
-  return renderKind !== 'static-doc'
+const resolveRouteClientMode = (appHtml, route, appClientRoutes) => {
+  if (clientRuntimeMode === 'always') return 'app'
+  if (clientRuntimeMode === 'never') return 'none'
+  if (appClientRoutes.has(normalizeRoute(route))) return 'app'
+  return /<rue-island(?:\s|>)/i.test(appHtml) ? 'islands' : 'none'
 }
 
 export const createRouteHtml = (
   template,
   appHtml,
-  renderKind,
+  _renderKind,
   route,
-  zeroJsRoutes,
-  clientRuntimeAssets,
+  appClientRoutes,
+  clientEntries,
 ) => {
-  const includeClientRuntime = shouldIncludeClientRuntime(renderKind, route, zeroJsRoutes)
-  return createStaticRouteHtml(
-    template,
-    appHtml,
-    includeClientRuntime
-      ? { includeClientRuntime: true }
-      : { includeClientRuntime: false, clientRuntimeAssets },
-  )
+  const clientMode = resolveRouteClientMode(appHtml, route, appClientRoutes)
+  return createStaticRouteHtml(template, appHtml, { clientMode, clientEntries })
 }
 
 const renderRouteInChild = (route, routeIndex) => {
@@ -561,9 +579,9 @@ const renderRoutes = async (
   template,
   routes,
   _render,
-  zeroJsRoutes = new Set(),
+  appClientRoutes = new Set(),
   docSourcesByDocId = new Map(),
-  clientRuntimeAssets,
+  clientEntries,
 ) => {
   let zeroJs = 0
 
@@ -589,11 +607,11 @@ const renderRoutes = async (
         result.renderKind ||
         (kind === 'ssr' ? 'ssr-prerender' : kind === 'snapshot' ? 'static-snapshot' : kind)
 
-      if (!shouldIncludeClientRuntime(renderKind, route, zeroJsRoutes)) {
+      if (resolveRouteClientMode(html, route, appClientRoutes) === 'none') {
         zeroJs += 1
       }
 
-      return createRouteHtml(template, html, renderKind, route, zeroJsRoutes, clientRuntimeAssets)
+      return createRouteHtml(template, html, renderKind, route, appClientRoutes, clientEntries)
     },
   })
 
@@ -623,24 +641,33 @@ const runAppStaticBuild = async () => {
   try {
     await removeGeneratedDir(outDir)
 
-    let clientRuntimeAssets = null
+    let clientEntries = null
 
     await build({
       configFile: viteConfigFile,
       plugins: [
-        createClientRuntimeAssetCollectorPlugin(clientEntryFile, assets => {
-          clientRuntimeAssets = assets
-        }),
+        createClientRuntimeAssetCollectorPlugin(
+          { app: clientEntryFile, islands: islandClientEntryFile },
+          assets => {
+            clientEntries = assets
+          },
+        ),
       ],
       build: {
         outDir,
         emptyOutDir: true,
+        rolldownOptions: {
+          input: {
+            main: path.resolve(root, 'index.html'),
+            islands: islandClientEntryFile,
+          },
+        },
       },
     })
 
     const template = await readFile(path.resolve(outDir, 'index.html'), 'utf-8')
 
-    if (!clientRuntimeAssets) {
+    if (!clientEntries) {
       throw new Error('The client build did not produce a Rue client runtime asset graph')
     }
 
@@ -666,7 +693,7 @@ const runAppStaticBuild = async () => {
     try {
       const serverEntry = await import(`${pathToFileURL(serverBundleFile).href}?t=${Date.now()}`)
       const staticRoutes = Array.isArray(serverEntry.staticRoutes) ? serverEntry.staticRoutes : []
-      const zeroJsRoutes = normalizeRouteSet(serverEntry.zeroJsRoutes)
+      const appClientRoutes = normalizeRouteSet(serverEntry.appClientRoutes)
       const docRoutes = await readSearchIndexRoutes()
       const docSourcesByDocId = await loadDocRouteSourceMap()
       const routes = [
@@ -689,9 +716,9 @@ const runAppStaticBuild = async () => {
         template,
         routes,
         serverEntry.render,
-        zeroJsRoutes,
+        appClientRoutes,
         docSourcesByDocId,
-        clientRuntimeAssets,
+        clientEntries,
       )
 
       const reportFiles = await writeAppStaticRenderReport({

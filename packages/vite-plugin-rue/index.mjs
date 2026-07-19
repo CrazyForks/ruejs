@@ -9,7 +9,9 @@
 - 超时策略：开发转换默认放入 worker 线程，超时后终止 worker，避免 Vite 会话被阻塞。
 */
 import swc from '@swc/core'
+import fs from 'node:fs/promises'
 import { createRequire } from 'node:module'
+import path from 'node:path'
 import { Worker } from 'node:worker_threads'
 
 /** 当前 ESM 模块内使用的 require，用于解析 wasm 插件与 worker 文件路径。 */
@@ -29,6 +31,12 @@ const RUE_DESIGN_PATH_SKIPPED_COMPONENTS = new Set(['calendar', 'time-picker'])
 /** Rue island manifest virtual module id. */
 export const RUE_ISLAND_MANIFEST_ID = 'virtual:rue-island-manifest'
 const RESOLVED_RUE_ISLAND_MANIFEST_ID = `\0${RUE_ISLAND_MANIFEST_ID}`
+export const RUE_ISLAND_REGISTRY_ID = 'virtual:rue-island-registry'
+const RESOLVED_RUE_ISLAND_REGISTRY_ID = `\0${RUE_ISLAND_REGISTRY_ID}`
+export const RUE_ISLAND_CLIENT_ID = 'virtual:rue-island-client'
+const RESOLVED_RUE_ISLAND_CLIENT_ID = `\0${RUE_ISLAND_CLIENT_ID}`
+export const RUE_SERVER_ISLAND_REGISTRY_ID = 'virtual:rue-server-island-registry'
+const RESOLVED_RUE_SERVER_ISLAND_REGISTRY_ID = `\0${RUE_SERVER_ISLAND_REGISTRY_ID}`
 const CLIENT_DIRECTIVE_NAMESPACE = 'client'
 const CLIENT_DIRECTIVE_STRATEGIES = new Set([
   'load',
@@ -726,6 +734,70 @@ const getStaticJsxAttrValue = attr => {
   return null
 }
 
+const getStaticObjectPropertyName = key => {
+  if (key?.type === 'Identifier' || key?.type === 'StringLiteral') return key.value
+  return null
+}
+
+const getStaticOptionValue = value => {
+  if (value?.type === 'StringLiteral' || value?.type === 'NumericLiteral') return value.value
+  if (
+    value?.type === 'UnaryExpression' &&
+    value.operator === '-' &&
+    value.argument?.type === 'NumericLiteral'
+  ) {
+    return -value.argument.value
+  }
+  return undefined
+}
+
+const parseStaticDirectiveOptions = (opening, directive, id) => {
+  const strategy = directive.strategy
+  if (strategy !== 'idle' && strategy !== 'visible') return {}
+  const value = directive.attr.value
+  if (!value) return {}
+  const expression = value.type === 'JSXExpressionContainer' ? value.expression : null
+  if (expression?.type === 'BooleanLiteral' && expression.value === true) return {}
+
+  const fail = reason => {
+    throw new Error(
+      `Invalid client:${strategy} options in ${normalizeModuleId(id)} <${getJsxNameText(opening.name)}>: ${reason}.`,
+    )
+  }
+  if (!expression || expression.type !== 'ObjectExpression') {
+    return fail('expected a statically analyzable object')
+  }
+  if (expression.properties.length !== 1 || expression.properties[0].type !== 'KeyValueProperty') {
+    return fail('expected exactly one supported option')
+  }
+
+  const property = expression.properties[0]
+  const name = getStaticObjectPropertyName(property.key)
+  const staticValue = getStaticOptionValue(property.value)
+  if (strategy === 'idle') {
+    if (
+      name !== 'timeout' ||
+      typeof staticValue !== 'number' ||
+      !Number.isFinite(staticValue) ||
+      staticValue < 0
+    ) {
+      return fail('timeout must be a finite non-negative number')
+    }
+    return { timeout: staticValue }
+  }
+
+  const rootMarginPattern =
+    /^\s*-?(?:\d+(?:\.\d+)?|\.\d+)(?:px|%)(?:\s+-?(?:\d+(?:\.\d+)?|\.\d+)(?:px|%)){0,3}\s*$/
+  if (
+    name !== 'rootMargin' ||
+    typeof staticValue !== 'string' ||
+    !rootMarginPattern.test(staticValue)
+  ) {
+    return fail('rootMargin must contain one to four static px or % lengths')
+  }
+  return { rootMargin: staticValue.trim().replace(/\s+/g, ' ') }
+}
+
 const getJsxBaseIdentifierName = name => {
   if (!name) {
     return ''
@@ -794,6 +866,88 @@ const getImportBindingManifest = ast => {
   return bindings
 }
 
+const collectIdentifierNames = ast => {
+  const names = new Set()
+  const visit = (node, jsxChild = false) => {
+    if (!node || typeof node !== 'object') return
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item)
+      return
+    }
+    if (node.type === 'Identifier' && typeof node.value === 'string') {
+      names.add(node.value)
+    }
+    for (const value of Object.values(node)) {
+      if (value && typeof value === 'object') visit(value)
+    }
+  }
+  visit(ast)
+  return names
+}
+
+const getRueIslandDescriptorHelperLocal = ast => {
+  for (const item of ast.body ?? []) {
+    if (item.type !== 'ImportDeclaration' || item.source?.value !== '@rue-js/runtime/island') {
+      continue
+    }
+    for (const specifier of item.specifiers ?? []) {
+      if (
+        specifier.type === 'ImportSpecifier' &&
+        (specifier.imported?.value ?? specifier.local?.value) === 'createRueIslandDescriptor'
+      ) {
+        return specifier.local.value
+      }
+    }
+  }
+
+  const names = collectIdentifierNames(ast)
+  const base = '__rueCreateIslandDescriptor'
+  let local = base
+  let suffix = 1
+  while (names.has(local)) {
+    local = `${base}${suffix}`
+    suffix += 1
+  }
+  return local
+}
+
+const injectRueIslandDescriptorHelper = (ast, local) => {
+  let target = null
+  for (const item of ast.body ?? []) {
+    if (item.type === 'ImportDeclaration' && item.source?.value === '@rue-js/runtime/island') {
+      target = item
+      break
+    }
+  }
+
+  const parsedImport = swc.parseSync(
+    `import { createRueIslandDescriptor as ${local} } from '@rue-js/runtime/island'`,
+    { syntax: 'typescript', target: 'es2020' },
+  ).body[0]
+
+  if (target) {
+    const alreadyImported = target.specifiers.some(
+      specifier =>
+        specifier.type === 'ImportSpecifier' &&
+        (specifier.imported?.value ?? specifier.local?.value) === 'createRueIslandDescriptor',
+    )
+    if (!alreadyImported) {
+      target.specifiers.push(parsedImport.specifiers[0])
+    }
+    return
+  }
+
+  let insertionIndex = 0
+  while (
+    insertionIndex < ast.body.length &&
+    ast.body[insertionIndex].type === 'ExpressionStatement' &&
+    ast.body[insertionIndex].expression?.type === 'StringLiteral'
+  ) {
+    insertionIndex += 1
+  }
+  ast.body.splice(insertionIndex, 0, parsedImport)
+}
+
 const parseClientDirectiveAttrName = name => {
   if (!name.startsWith(`${CLIENT_DIRECTIVE_NAMESPACE}:`)) {
     return null
@@ -834,12 +988,14 @@ const createRueIslandMetadata = (opening, directive, id, importBindings, index) 
   const spanKey = `${opening.span?.start ?? index}:${opening.span?.end ?? index}`
   const hydrate = directive.strategy
   const directiveValue = getStaticJsxAttrValue(directive.attr)
+  const schedulerOptions = parseStaticDirectiveOptions(opening, directive, id)
   const entry = {
     id: `rue-${hashRueIslandId(`${normalizedId}:${spanKey}:${tagName}:${index}`)}`,
     component: imported?.component ?? normalizedId,
     entry: hydrate === 'none' ? undefined : (imported?.component ?? normalizedId),
     exportName: imported?.exportName ?? tagName,
     hydrate,
+    ...schedulerOptions,
   }
 
   if (hydrate === 'media') {
@@ -853,6 +1009,99 @@ const createRueIslandMetadata = (opening, directive, id, importBindings, index) 
   }
 
   return entry
+}
+
+const createExpressionFromSource = source => {
+  const parsed = swc.parseSync(`const __rueIslandExpression = (${source})`, {
+    syntax: 'typescript',
+    tsx: true,
+    target: 'es2020',
+  })
+  return parsed.body[0].declarations[0].init
+}
+
+const printJsxChildrenSource = children => {
+  if (!children || children.length === 0) return null
+  const parsed = swc.parseSync('const __rueIslandChildren = <></>', {
+    syntax: 'typescript',
+    tsx: true,
+    target: 'es2020',
+  })
+  const fragment = parsed.body[0].declarations[0].init
+  fragment.children = children
+  return printExprSource(fragment)
+}
+
+const readJsxAttributeValueSource = attr => {
+  if (!attr.value) return 'true'
+  if (attr.value.type === 'StringLiteral') return JSON.stringify(attr.value.value)
+  if (attr.value.type === 'JSXExpressionContainer') {
+    if (!attr.value.expression || attr.value.expression.type === 'JSXEmptyExpression') return null
+    return printExprSource(attr.value.expression)
+  }
+  return printExprSource(attr.value)
+}
+
+const createIslandDescriptorExpression = (element, directive, metadata, helperLocal) => {
+  const props = []
+  let fallbackSource = null
+
+  for (const attr of element.opening.attributes ?? []) {
+    if (attr.type === 'SpreadElement') {
+      const source = printExprSource(attr.arguments)
+      if (source) props.push(`...(${source})`)
+      continue
+    }
+    if (attr.type !== 'JSXAttribute') continue
+
+    const name = getJsxAttrNameText(attr.name)
+    if (parseClientDirectiveAttrName(name)) continue
+
+    const valueSource = readJsxAttributeValueSource(attr)
+    if (valueSource == null) continue
+    if (directive.strategy === 'only' && name === 'fallback') {
+      fallbackSource = valueSource
+      continue
+    }
+    props.push(`${JSON.stringify(name)}: ${valueSource}`)
+  }
+
+  const childrenSource = printJsxChildrenSource(element.children)
+  if (childrenSource) {
+    props.push(`children: ${childrenSource}`)
+  }
+
+  const fields = [
+    `component: ${getJsxNameText(element.opening.name)}`,
+    `props: { ${props.join(', ')} }`,
+  ]
+  if (fallbackSource) fields.push(`fallback: ${fallbackSource}`)
+  fields.push(`metadata: ${JSON.stringify(metadata)}`)
+
+  return createExpressionFromSource(`${helperLocal}({ ${fields.join(', ')} })`)
+}
+
+const getClientDirectiveSpread = opening => {
+  for (const attr of opening.attributes ?? []) {
+    if (attr.type !== 'SpreadElement') continue
+    const source = printExprSource(attr.arguments)
+    if (source?.includes('client:')) return attr
+  }
+  return null
+}
+
+const assertSupportedIslandTarget = (opening, imported, id) => {
+  const tagName = getJsxNameText(opening.name)
+  const location = `${normalizeModuleId(id)} <${tagName}>`
+  if (opening.name?.type === 'JSXMemberExpression' || opening.name?.type === 'JSXNamespacedName') {
+    throw new Error(`Rue client islands do not support namespace or member targets at ${location}.`)
+  }
+  if (/^[a-z]/.test(tagName)) {
+    throw new Error(`Rue client islands cannot target a native element at ${location}.`)
+  }
+  if (!imported || imported.exportName === '*') {
+    throw new Error(`Rue client islands require a direct default or named import at ${location}.`)
+  }
 }
 
 const transformClientDirectiveAttributes = (code, id = '') => {
@@ -870,41 +1119,75 @@ const transformClientDirectiveAttributes = (code, id = '') => {
   const importBindings = getImportBindingManifest(ast)
   const islands = []
   let changed = false
+  let descriptorCount = 0
+  const helperLocal = getRueIslandDescriptorHelperLocal(ast)
 
-  const visit = node => {
+  const visit = (node, jsxChild = false) => {
     if (!node || typeof node !== 'object') {
-      return
+      return node
     }
 
     if (Array.isArray(node)) {
-      for (const item of node) {
-        visit(item)
-      }
-      return
+      return node.map(item => visit(item, jsxChild))
     }
 
-    if (node.type === 'JSXOpeningElement') {
-      const directive = getClientDirectiveStrategy(node)
-      if (directive) {
-        islands.push(createRueIslandMetadata(node, directive, id, importBindings, islands.length))
-        node.attributes = node.attributes.filter(
-          attr =>
-            attr.type !== 'JSXAttribute' ||
-            !parseClientDirectiveAttrName(getJsxAttrNameText(attr.name)),
-        )
-        changed = true
+    for (const [key, value] of Object.entries(node)) {
+      if (value && typeof value === 'object' && key !== 'span') {
+        const childContext =
+          key === 'children' && (node.type === 'JSXElement' || node.type === 'JSXFragment')
+        node[key] = visit(value, childContext)
       }
     }
 
-    for (const value of Object.values(node)) {
-      if (!value || typeof value !== 'object') {
-        continue
-      }
-      visit(value)
+    if (node.type !== 'JSXElement') return node
+
+    const tagName = getJsxNameText(node.opening.name)
+    if (getClientDirectiveSpread(node.opening)) {
+      throw new Error(
+        `Rue client directives cannot be supplied through a spread at ${normalizeModuleId(id)} <${tagName}>.`,
+      )
+    }
+
+    const directive = getClientDirectiveStrategy(node.opening)
+    if (!directive) return node
+
+    node.opening.attributes = node.opening.attributes.filter(
+      attr =>
+        attr.type !== 'JSXAttribute' ||
+        !parseClientDirectiveAttrName(getJsxAttrNameText(attr.name)),
+    )
+    changed = true
+
+    if (directive.strategy === 'none') {
+      return node
+    }
+
+    const baseName = getJsxBaseIdentifierName(node.opening.name)
+    const imported = importBindings.get(baseName)
+    assertSupportedIslandTarget(node.opening, imported, id)
+    const metadata = createRueIslandMetadata(
+      node.opening,
+      directive,
+      id,
+      importBindings,
+      islands.length,
+    )
+    islands.push(metadata)
+    descriptorCount += 1
+    const expression = createIslandDescriptorExpression(node, directive, metadata, helperLocal)
+    if (!jsxChild) return expression
+    return {
+      type: 'JSXExpressionContainer',
+      span: node.span,
+      expression,
     }
   }
 
-  visit(ast)
+  ast = visit(ast)
+
+  if (descriptorCount > 0) {
+    injectRueIslandDescriptorHelper(ast, helperLocal)
+  }
 
   if (!changed) {
     return { code, islands: [] }
@@ -914,6 +1197,215 @@ const transformClientDirectiveAttributes = (code, id = '') => {
     code: swc.printSync(ast, {}).code,
     islands,
   }
+}
+
+const getRueServerIslandDescriptorHelperLocal = ast => {
+  for (const item of ast.body ?? []) {
+    if (item.type !== 'ImportDeclaration' || item.source?.value !== '@rue-js/runtime/island') {
+      continue
+    }
+    for (const specifier of item.specifiers ?? []) {
+      if (
+        specifier.type === 'ImportSpecifier' &&
+        (specifier.imported?.value ?? specifier.local?.value) === 'createRueServerIslandDescriptor'
+      ) {
+        return specifier.local.value
+      }
+    }
+  }
+
+  const names = collectIdentifierNames(ast)
+  const base = '__rueCreateServerIslandDescriptor'
+  let local = base
+  let suffix = 1
+  while (names.has(local)) {
+    local = `${base}${suffix}`
+    suffix += 1
+  }
+  return local
+}
+
+const injectRueServerIslandDescriptorHelper = (ast, local) => {
+  let target = null
+  for (const item of ast.body ?? []) {
+    if (item.type === 'ImportDeclaration' && item.source?.value === '@rue-js/runtime/island') {
+      target = item
+      break
+    }
+  }
+
+  const parsedImport = swc.parseSync(
+    `import { createRueServerIslandDescriptor as ${local} } from '@rue-js/runtime/island'`,
+    { syntax: 'typescript', target: 'es2020' },
+  ).body[0]
+  if (target) {
+    target.specifiers.push(parsedImport.specifiers[0])
+    return
+  }
+
+  let insertionIndex = 0
+  while (
+    insertionIndex < ast.body.length &&
+    ast.body[insertionIndex].type === 'ExpressionStatement' &&
+    ast.body[insertionIndex].expression?.type === 'StringLiteral'
+  ) {
+    insertionIndex += 1
+  }
+  ast.body.splice(insertionIndex, 0, parsedImport)
+}
+
+const getServerDeferDirective = opening =>
+  (opening.attributes ?? []).find(
+    attr => attr.type === 'JSXAttribute' && getJsxAttrNameText(attr.name) === 'server:defer',
+  ) ?? null
+
+const assertSupportedServerIslandTarget = (opening, imported, id) => {
+  const tagName = getJsxNameText(opening.name)
+  const location = `${normalizeModuleId(id)} <${tagName}>`
+  if (opening.name?.type === 'JSXMemberExpression' || opening.name?.type === 'JSXNamespacedName') {
+    throw new Error(`Rue server islands do not support namespace or member targets at ${location}.`)
+  }
+  if (/^[a-z]/.test(tagName)) {
+    throw new Error(`Rue server islands cannot target a native element at ${location}.`)
+  }
+  if (!imported || imported.exportName === '*') {
+    throw new Error(`Rue server islands require a direct default or named import at ${location}.`)
+  }
+}
+
+const createServerIslandDescriptorExpression = (element, id, helperLocal) => {
+  const props = []
+  let fallbackSource = 'null'
+  for (const attr of element.opening.attributes ?? []) {
+    if (attr.type === 'SpreadElement') {
+      const source = printExprSource(attr.arguments)
+      if (source) props.push(`...(${source})`)
+      continue
+    }
+    if (attr.type !== 'JSXAttribute') continue
+    const name = getJsxAttrNameText(attr.name)
+    if (name === 'server:defer') continue
+    const valueSource = readJsxAttributeValueSource(attr)
+    if (valueSource == null) continue
+    if (name === 'fallback') {
+      fallbackSource = valueSource
+      continue
+    }
+    props.push(`${JSON.stringify(name)}: ${valueSource}`)
+  }
+
+  const childrenSource = printJsxChildrenSource(element.children)
+  if (childrenSource) props.push(`children: ${childrenSource}`)
+  return createExpressionFromSource(
+    `${helperLocal}({ id: ${JSON.stringify(id)}, props: { ${props.join(', ')} }, fallback: ${fallbackSource} })`,
+  )
+}
+
+const createServerIslandFallbackExpression = element => {
+  const fallback = (element.opening.attributes ?? []).find(
+    attr => attr.type === 'JSXAttribute' && getJsxAttrNameText(attr.name) === 'fallback',
+  )
+  if (!fallback) return createExpressionFromSource('null')
+  const source = readJsxAttributeValueSource(fallback)
+  return createExpressionFromSource(source ?? 'null')
+}
+
+const collectRuntimeIdentifierNames = ast => {
+  const names = new Set()
+  const visit = node => {
+    if (!node || typeof node !== 'object') return
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item)
+      return
+    }
+    if (node.type === 'ImportDeclaration') return
+    if (node.type === 'Identifier' && typeof node.value === 'string') names.add(node.value)
+    for (const [key, value] of Object.entries(node)) {
+      if (key !== 'span' && value && typeof value === 'object') visit(value)
+    }
+  }
+  visit(ast)
+  return names
+}
+
+const removeUnusedServerIslandImports = (ast, deferredBindings) => {
+  const referenced = collectRuntimeIdentifierNames(ast)
+  ast.body = ast.body.filter(item => {
+    if (item.type !== 'ImportDeclaration') return true
+    item.specifiers = (item.specifiers ?? []).filter(specifier => {
+      const local = specifier.local?.value
+      return !deferredBindings.has(local) || referenced.has(local)
+    })
+    return item.specifiers.length > 0
+  })
+}
+
+const transformServerDirectiveAttributes = (code, id = '', serverGraph = false) => {
+  if (!code.includes('server:defer')) return { code, serverIslands: [] }
+
+  let ast
+  try {
+    ast = swc.parseSync(code, { syntax: 'typescript', tsx: true, target: 'es2020' })
+  } catch {
+    return { code, serverIslands: [] }
+  }
+
+  const importBindings = getImportBindingManifest(ast)
+  const helperLocal = getRueServerIslandDescriptorHelperLocal(ast)
+  const serverIslands = []
+  const deferredBindings = new Set()
+  let changed = false
+  let descriptorCount = 0
+
+  const visit = (node, jsxChild = false) => {
+    if (!node || typeof node !== 'object') return node
+    if (Array.isArray(node)) return node.map(item => visit(item, jsxChild))
+
+    for (const [key, value] of Object.entries(node)) {
+      if (value && typeof value === 'object' && key !== 'span') {
+        const childContext =
+          key === 'children' && (node.type === 'JSXElement' || node.type === 'JSXFragment')
+        node[key] = visit(value, childContext)
+      }
+    }
+    if (node.type !== 'JSXElement') return node
+
+    const directive = getServerDeferDirective(node.opening)
+    if (!directive) return node
+    const tagName = getJsxNameText(node.opening.name)
+    if (getClientDirectiveStrategy(node.opening)) {
+      throw new Error(
+        `Rue server:defer cannot be combined with client:* at ${normalizeModuleId(id)} <${tagName}>.`,
+      )
+    }
+
+    const baseName = getJsxBaseIdentifierName(node.opening.name)
+    const imported = importBindings.get(baseName)
+    assertSupportedServerIslandTarget(node.opening, imported, id)
+    const islandId = `rue-server-${hashRueIslandId(
+      `${normalizeModuleId(id)}:${imported.component}:${imported.exportName}`,
+    )}`
+    serverIslands.push({
+      id: islandId,
+      component: imported.component,
+      exportName: imported.exportName,
+    })
+    deferredBindings.add(baseName)
+    changed = true
+
+    const expression = serverGraph
+      ? createServerIslandDescriptorExpression(node, islandId, helperLocal)
+      : createServerIslandFallbackExpression(node)
+    if (serverGraph) descriptorCount += 1
+    if (!jsxChild) return expression
+    return { type: 'JSXExpressionContainer', span: node.span, expression }
+  }
+
+  ast = visit(ast)
+  removeUnusedServerIslandImports(ast, deferredBindings)
+  if (descriptorCount > 0) injectRueServerIslandDescriptorHelper(ast, helperLocal)
+  if (!changed) return { code, serverIslands: [] }
+  return { code: swc.printSync(ast, {}).code, serverIslands }
 }
 
 /** 在 opening element 中查找第一个命中的 JSX 属性。 */
@@ -2569,7 +3061,8 @@ export async function compileRueStatic(code, options = {}) {
 
   let loweredModel
   try {
-    const clientDirectiveResult = transformClientDirectiveAttributes(code, id)
+    const serverDirectiveResult = transformServerDirectiveAttributes(code, id, false)
+    const clientDirectiveResult = transformClientDirectiveAttributes(serverDirectiveResult.code, id)
     loweredModel = preprocessRueSource(clientDirectiveResult.code, id)
   } catch (error) {
     throw createStageError({
@@ -2807,7 +3300,9 @@ export default function VitePluginRue(options = {}) {
   // 默认始终使用 worker 转换，确保 dev/build 阶段都能通过超时保护终止卡住的编译。
   let activeTransformExecutor = transformExecutor
   let isProductionTransform = process.env.NODE_ENV === 'production'
+  let projectRoot = process.cwd()
   const islandManifestByModule = new Map()
+  const serverIslandRegistryByModule = new Map()
 
   const updateIslandManifest = (id, islands) => {
     const normalizedId = normalizeModuleId(id)
@@ -2816,6 +3311,15 @@ export default function VitePluginRue(options = {}) {
       return
     }
     islandManifestByModule.set(normalizedId, islands)
+  }
+
+  const updateServerIslandRegistry = (id, islands) => {
+    const normalizedId = normalizeModuleId(id)
+    if (islands.length === 0) {
+      serverIslandRegistryByModule.delete(normalizedId)
+      return
+    }
+    serverIslandRegistryByModule.set(normalizedId, islands)
   }
 
   const createIslandManifestModule = () => {
@@ -2828,6 +3332,78 @@ export default function VitePluginRue(options = {}) {
     return `export const manifest = ${JSON.stringify(manifest, null, 2)};\nexport default manifest;\n`
   }
 
+  const normalizeRegistryImportSource = (source, ownerId) => {
+    if (!source.startsWith('.')) return source.replace(/\\/g, '/')
+    return path.resolve(path.dirname(normalizeModuleId(ownerId)), source).replace(/\\/g, '/')
+  }
+
+  const getSortedIslandRegistryEntries = () => {
+    const entries = []
+    for (const [ownerId, islands] of islandManifestByModule.entries()) {
+      for (const island of islands) {
+        entries.push({
+          ...island,
+          importSource: normalizeRegistryImportSource(island.component, ownerId),
+        })
+      }
+    }
+    return entries.sort((left, right) => left.id.localeCompare(right.id))
+  }
+
+  const createIslandRegistryModule = () => {
+    const entries = getSortedIslandRegistryEntries()
+    const importers = entries
+      .map(entry => {
+        const selectedExport =
+          entry.exportName === 'default'
+            ? 'module.default'
+            : `module[${JSON.stringify(entry.exportName)}]`
+        return `  ${JSON.stringify(entry.id)}: async () => {\n    const module = await import(${JSON.stringify(entry.importSource)})\n    return { ...module, default: ${selectedExport} }\n  }`
+      })
+      .join(',\n')
+    return `export const islandImporters = {\n${importers}\n};\nexport const resolveRueIslandModule = id => {\n  const importer = islandImporters[id];\n  if (!importer) throw new Error(\`Unknown Rue island descriptor: \${id}\`);\n  return importer();\n};\nexport default islandImporters;\n`
+  }
+
+  const createServerIslandRegistryModule = () => {
+    const entries = []
+    for (const [ownerId, islands] of serverIslandRegistryByModule.entries()) {
+      for (const island of islands) {
+        entries.push({
+          ...island,
+          importSource: normalizeRegistryImportSource(island.component, ownerId),
+        })
+      }
+    }
+    entries.sort((left, right) => left.id.localeCompare(right.id))
+    const uniqueEntries = Array.from(new Map(entries.map(entry => [entry.id, entry])).values())
+    const importers = uniqueEntries
+      .map(entry => {
+        const selectedExport =
+          entry.exportName === 'default'
+            ? 'module.default'
+            : `module[${JSON.stringify(entry.exportName)}]`
+        return `  ${JSON.stringify(entry.id)}: async () => {\n    const module = await import(${JSON.stringify(entry.importSource)})\n    return { ...module, default: ${selectedExport} }\n  }`
+      })
+      .join(',\n')
+    return `export const serverIslandImporters = {\n${importers}\n};\nexport const resolveRueServerIslandModule = id => {\n  const importer = serverIslandImporters[id];\n  if (!importer) throw new Error(\`Unknown Rue server island descriptor: \${id}\`);\n  return importer();\n};\nexport default serverIslandImporters;\n`
+  }
+
+  const createIslandClientModule =
+    () => `import { startRueIslandLoader } from '@rue-js/runtime/island';
+import { manifest } from ${JSON.stringify(RUE_ISLAND_MANIFEST_ID)};
+import { resolveRueIslandModule } from ${JSON.stringify(RUE_ISLAND_REGISTRY_ID)};
+
+const hydrationManifest = Object.fromEntries(
+  Object.entries(manifest).map(([id, entry]) => [id, { ...entry, entry: id }]),
+);
+
+export const startRueIslands = (options = {}) => startRueIslandLoader({
+  ...options,
+  manifest: options.manifest ?? hydrationManifest,
+  resolveModule: options.resolveModule ?? (id => resolveRueIslandModule(id)),
+});
+`
+
   /**
    * 判断文件是否命中 include/exclude 规则。
    * @param {string} id 模块路径。
@@ -2837,6 +3413,38 @@ export default function VitePluginRue(options = {}) {
     if (exclude.some(x => id.includes(x))) return false
     if (include.length === 0) return true
     return include.some(x => id.includes(x))
+  }
+
+  const excludedScanDirectories = new Set(['node_modules', 'dist', 'coverage', 'temp', 'tmp'])
+
+  const scanIslandSourceFiles = async (directory, files) => {
+    const entries = await fs.readdir(directory, { withFileTypes: true })
+    entries.sort((left, right) => left.name.localeCompare(right.name))
+    for (const entry of entries) {
+      const filename = path.join(directory, entry.name)
+      if (entry.isDirectory()) {
+        if (entry.name.startsWith('.') || excludedScanDirectories.has(entry.name)) continue
+        await scanIslandSourceFiles(filename, files)
+        continue
+      }
+      if (!entry.isFile() || !/\.(?:tsx|jsx)$/.test(entry.name) || !isIncluded(filename)) continue
+      files.push(filename)
+    }
+  }
+
+  const preIndexIslandSources = async addWatchFile => {
+    islandManifestByModule.clear()
+    serverIslandRegistryByModule.clear()
+    const files = []
+    await scanIslandSourceFiles(projectRoot, files)
+    for (const filename of files) {
+      addWatchFile?.(filename)
+      const code = await fs.readFile(filename, 'utf8')
+      const serverResult = transformServerDirectiveAttributes(code, filename, true)
+      const clientResult = transformClientDirectiveAttributes(serverResult.code, filename)
+      updateServerIslandRegistry(filename, serverResult.serverIslands)
+      updateIslandManifest(filename, clientResult.islands)
+    }
   }
 
   /** 判断当前模块是否属于暂时跳过二次转换的 rue-design 组件源码。 */
@@ -2860,13 +3468,19 @@ export default function VitePluginRue(options = {}) {
    * @param {string} pluginPath SWC wasm 插件路径。
    * @returns {Promise<string>} 转换后的源码，包含 Rue 转换头标记。
    */
-  const transformWithSwcPlugin = async (code, id, pluginPath) => {
+  const transformWithSwcPlugin = async (code, id, pluginPath, serverGraph) => {
     let loweredModel
     let islands = []
+    let serverIslands = []
     try {
       // 第一阶段先把 JSX parser 无法识别的指令属性改写成安全属性名，
       // 第二阶段借助 SWC AST 将 v-model 安全属性降级成普通 JSX 属性。
-      const clientDirectiveResult = transformClientDirectiveAttributes(code, id)
+      const serverDirectiveResult = transformServerDirectiveAttributes(code, id, serverGraph)
+      serverIslands = serverDirectiveResult.serverIslands
+      const clientDirectiveResult = transformClientDirectiveAttributes(
+        serverDirectiveResult.code,
+        id,
+      )
       islands = clientDirectiveResult.islands
       loweredModel = preprocessRueSource(clientDirectiveResult.code, id)
     } catch (error) {
@@ -2899,6 +3513,7 @@ export default function VitePluginRue(options = {}) {
       return {
         code: `${headers.join('\n')}\n${normalizedOut}`,
         islands,
+        serverIslands,
       }
     } catch (error) {
       if (isRueTransformError(error)) {
@@ -2925,17 +3540,56 @@ export default function VitePluginRue(options = {}) {
      * @returns {boolean} 是否应用插件。
      */
     apply: (_config, { command: _command }) => true,
-    resolveId(id) {
+    async buildStart() {
+      await preIndexIslandSources(file => this.addWatchFile?.(file))
+    },
+    resolveId(id, _importer, resolveOptions) {
       if (id === RUE_ISLAND_MANIFEST_ID) {
         return RESOLVED_RUE_ISLAND_MANIFEST_ID
       }
+      if (id === RUE_ISLAND_REGISTRY_ID) {
+        return RESOLVED_RUE_ISLAND_REGISTRY_ID
+      }
+      if (id === RUE_ISLAND_CLIENT_ID) {
+        return RESOLVED_RUE_ISLAND_CLIENT_ID
+      }
+      if (id === RUE_SERVER_ISLAND_REGISTRY_ID) {
+        const environmentName = this.environment?.name
+        const serverGraph =
+          resolveOptions?.ssr === true ||
+          environmentName === 'ssr' ||
+          environmentName === 'server' ||
+          environmentName === 'rsc'
+        return serverGraph ? RESOLVED_RUE_SERVER_ISLAND_REGISTRY_ID : null
+      }
       return null
     },
-    load(id) {
+    load(id, loadOptions) {
       if (id === RESOLVED_RUE_ISLAND_MANIFEST_ID) {
         return createIslandManifestModule()
       }
+      if (id === RESOLVED_RUE_ISLAND_REGISTRY_ID) {
+        return createIslandRegistryModule()
+      }
+      if (id === RESOLVED_RUE_ISLAND_CLIENT_ID) {
+        return createIslandClientModule()
+      }
+      if (id === RESOLVED_RUE_SERVER_ISLAND_REGISTRY_ID) {
+        const environmentName = this.environment?.name
+        const serverGraph =
+          loadOptions?.ssr === true ||
+          environmentName === 'ssr' ||
+          environmentName === 'server' ||
+          environmentName === 'rsc'
+        return serverGraph ? createServerIslandRegistryModule() : null
+      }
       return null
+    },
+    watchChange(id, change) {
+      if (change.event === 'delete') {
+        updateIslandManifest(id, [])
+        updateServerIslandRegistry(id, [])
+      }
     },
     /**
      * Vite 转换钩子：对命中的 TSX/JSX 模块执行 Rue 编译。
@@ -2943,7 +3597,7 @@ export default function VitePluginRue(options = {}) {
      * @param {string} id 模块路径。
      * @returns {Promise<{code:string,map:null}|null>} 转换结果或 null 跳过。
      */
-    async transform(code, id) {
+    async transform(code, id, transformOptions) {
       // RSC server graphs need to preserve server-component/client-reference boundaries.
       // Browser and SSR environments still receive the normal Rue Vapor transform.
       if (this.environment?.name === 'rsc') return null
@@ -2963,16 +3617,20 @@ export default function VitePluginRue(options = {}) {
       // 已包含 RUE 头标记则直接跳过
       if (code.startsWith(RUE_TRANSFORM_HEADER)) return null
       const base = code
+      const environmentName = this.environment?.name
+      const serverGraph =
+        transformOptions?.ssr === true || environmentName === 'ssr' || environmentName === 'server'
 
       let out = null
       // 若找到 wasm 插件路径，则执行转换
       if (process.env.RUE_SWC_PLUGIN) {
-        out = await transformWithSwcPlugin(base, id, process.env.RUE_SWC_PLUGIN)
+        out = await transformWithSwcPlugin(base, id, process.env.RUE_SWC_PLUGIN, serverGraph)
       }
 
       // 无输出或无变化时跳过
       if (!out || out.code === code) return null
       updateIslandManifest(id, out.islands)
+      updateServerIslandRegistry(id, out.serverIslands)
 
       // 调试日志：提示已转换模块
       if (debug && out.code && out.code !== code) {
@@ -2984,6 +3642,7 @@ export default function VitePluginRue(options = {}) {
     /** Vite 配置解析完成钩子：默认执行器保持 worker 隔离，避免 build 阶段同步卡住。 */
     configResolved(config) {
       isProductionTransform = config.command === 'build' || process.env.NODE_ENV === 'production'
+      projectRoot = config.root ? path.resolve(config.root) : process.cwd()
       activeTransformExecutor = transformExecutor
     },
   }

@@ -43,6 +43,8 @@ export interface KeepAliveProps extends PropsWithChildren<Record<string, unknown
   exclude?: KeepAliveMatchPattern
   /** 最大缓存数量，超出后按 LRU 淘汰。 */
   max?: number | string
+  /** @internal 供 RouterView 在外层 range 移除前主动清理离线缓存。 */
+  __rueRegisterDispose?: (dispose: () => void) => void
 }
 
 type KeepAliveChildInput = Parameters<typeof renderBetween>[0]
@@ -532,6 +534,22 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     }
   }
 
+  const disposeAllEntries = () => {
+    ctx.effect?.dispose()
+    ctx.effect = null
+
+    const entries = new Set<CacheEntry>(ctx.cache.values())
+    if (ctx.activeEntry) {
+      entries.add(ctx.activeEntry)
+      ctx.activeEntry = null
+    }
+
+    ctx.cache.clear()
+    for (const entry of entries) {
+      unmountEntry(entry)
+    }
+  }
+
   const pruneByPattern = (curProps: KeepAliveProps) => {
     for (const [key, entry] of Array.from(ctx.cache.entries())) {
       const descriptor = {
@@ -553,6 +571,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
   }
 
   const reconcile = (curProps: KeepAliveProps) => {
+    curProps.__rueRegisterDispose?.(disposeAllEntries)
     pruneByPattern(curProps)
 
     const child = getSingleChild(curProps.children)
@@ -640,21 +659,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     })
   })
 
-  onBeforeUnmount(() => {
-    ctx.effect?.dispose()
-    ctx.effect = null
-
-    const entries = new Set<CacheEntry>(ctx.cache.values())
-    if (ctx.activeEntry) {
-      entries.add(ctx.activeEntry)
-      ctx.activeEntry = null
-    }
-
-    ctx.cache.clear()
-    for (const entry of entries) {
-      unmountEntry(entry)
-    }
-  })
+  onBeforeUnmount(disposeAllEntries)
 
   return vapor(() => {
     prepareContainerForRender()

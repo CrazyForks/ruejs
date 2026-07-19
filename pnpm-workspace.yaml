@@ -1,6 +1,7 @@
 packages:
   - 'packages/*'
   - 'examples/text-*'
+  - 'examples/server-islands'
 
 nodeLinker: hoisted
 autoInstallPeers: false

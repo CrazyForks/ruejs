@@ -17,8 +17,9 @@ const router = createRouter({
   history: createWebHashHistory(),
   routes: [
     { path: '/', component: Home },
-    { path: '/docs/:id(\\d+)', component: DocDetail }, // 命名参数 + 正则
+    { path: '/docs/:id(\\d+)', component: DocDetail, persist: true }, // 命名参数 + 状态保持
   ],
+  viewTransitions: true,
 })
 
 const RootApp: FC = () => (
@@ -37,12 +38,12 @@ useApp(RootApp).use(router).mount('#app')
 ## 历史模式
 
 - `createWebHashHistory()`：基于 `location.hash` 的浏览器历史实现。无 `#` 时会自动跳转到 `#/`，并标准化位置字符串。
-- `push('/path')` 与 `replace('/path')` 会更新 `hash`，并主动触发 `hashchange` 事件，确保响应式状态立即同步。
+- `push('/path')` 与 `replace('/path')` 会更新 `hash`，并向 Router 同步标记 `push` / `replace` 来源；浏览器回退与前进标记为 `pop`。
 - `router.push()` 与 `router.replace()` 返回 Promise；成功时结果为 `undefined`，被取消、竞争掉或重复导航时会返回导航失败对象。
 
 ## 路由记录与参数匹配
 
-- 路由记录类型：`{ path, name?, component?, redirect?, children?, meta?, beforeEnter? }`
+- 路由记录类型：`{ path, name?, component?, redirect?, children?, meta?, beforeEnter?, persist?, persistKey? }`
 - 路径可包含命名参数与可选正则：`/users/:id(\\d+)`、`/docs/:slug`
 - 匹配时会将捕获到的参数解码并传递给组件的 `props.params`
 
@@ -136,6 +137,8 @@ const App: FC = () => (
 - `RouterLink` 渲染为 `<a>` 元素，默认拦截左键点击并执行导航
 - `to` 可传路径字符串，或 `{ path }`、`{ name, params }` 形式的对象；`replace` 为 `true` 时使用替换而非新增历史记录
 - 其他传入的属性会透传给渲染的 `<a>`（例如 `className`）
+- 默认在 hover / focus 时预取命中路由的懒组件；`prefetch` 可设为 `false | 'hover' | 'tap' | 'viewport' | 'load'`
+- Data Saver、2g 或 slow-2g 下，hover / viewport / load 会自动降级为 tap，避免浪费带宽
 
 示例：
 
@@ -145,12 +148,14 @@ const App: FC = () => (
   守卫章节
 </RouterLink>
 <RouterLink to="/settings" replace>返回设置</RouterLink>
+<RouterLink to="/reports" prefetch="viewport">报表</RouterLink>
 ```
 
 ## 运行时 API
 
 - `useRouter()`：获取当前上下文的 Router（容器优先，其次为活动路由）
 - `useRoute()`：获取当前路由匹配结果的信号（`SignalHandle<Route>`）
+- `router.prefetch(to)`：只解析目标并加载 matched 懒组件，不运行守卫、不写 history、不提交导航
 
 示例：
 
@@ -162,6 +167,61 @@ const Current: FC = () => {
   return <div>当前路径：{route.get()?.path}</div>
 }
 ```
+
+## 导航生命周期与可访问性
+
+Router 会在 `document` 上发出稳定的 DOM 事件：
+
+- `rue:before-navigation`：守卫与懒组件准备之前
+- `rue:after-navigation`：成功提交后，或失败结束时；失败细节在 `event.detail.failure`
+- `rue:page-load`：新 RouterView DOM 刷新、滚动处理和播报完成后
+
+detail 包含 `{ to, from, type, failure? }`，其中 `type` 为 `push | replace | pop`。成功导航会更新隐藏的 `aria-live="assertive"` route announcer；只有当用户没有聚焦交互元素时，Router 才会聚焦新的 `main` 区域。
+
+## 滚动恢复
+
+默认情况下，新 push / replace 导航回到顶部，pop 导航恢复之前保存的位置，URL hash 优先定位到解码后的 `id` 或 `name` 元素。可用 `scrollBehavior` 覆盖：
+
+```tsx
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to?.meta.preserveScroll) return false
+    return { left: 0, top: 0 }
+  },
+})
+```
+
+回调可返回 `false`、`{ left, top, behavior? }`、CSS 选择器、DOM 元素或 Promise。
+
+## 视图过渡
+
+`viewTransitions` 默认关闭。启用后，Router 只把通过守卫且完成懒加载的成功提交放入 `document.startViewTransition()` 回调。不支持 API、API 抛错或用户启用 reduced motion 时会直接提交。
+
+```tsx
+createRouter({
+  history: createWebHistory(),
+  routes,
+  viewTransitions: true,
+  // 如确有特殊需求，可覆盖默认的 reduced-motion 保护：
+  // viewTransitions: { skipWhenReducedMotion: false },
+})
+```
+
+## 路由状态保持
+
+为路由记录声明 `persist: true` 后，RouterView 会通过 KeepAlive 保留该页面的组件实例与 DOM 区间。返回时本地 state 不会重置，但新的 route params 会更新到原实例。
+
+```tsx
+const routes = [
+  { path: '/editor/:id', component: EditorPage, persist: true },
+  { path: '/preview/:id', component: PreviewPage, persist: true, persistKey: 'preview' },
+]
+```
+
+`persistKey` 用于显式稳定缓存身份；默认使用编译后的完整路由路径。普通嵌套布局在 child route 切换时本就不会重挂载，不必额外标记 `persist`。
 
 ## 导航守卫
 

@@ -42,6 +42,8 @@ const AsyncApiRouteLayout = routeComponent(async () => ({
   default: (await import('../pages/site/SidebarPlaygroundApi')).ApiRouteLayout,
 }))
 
+const islandRouteMeta = { clientMode: 'none' as const }
+
 const flatRoutes: RouteRecordRaw[] = [
   { path: '/jsx', component: routeComponent(() => import('../pages/jsx/Index')) },
   {
@@ -406,49 +408,57 @@ const flatRoutes: RouteRecordRaw[] = [
   {
     path: '/examples/rue-islands',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/rue-islands/load',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/rue-islands/idle',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/rue-islands/visible',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/rue-islands/media',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/rue-islands/interaction',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/rue-islands/none',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
-    meta: {
-      clientRuntime: false,
-    },
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/rue-islands/only',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/rue-islands/props',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/rue-islands/manifest',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/rue-islands/compiler',
     component: routeComponent(() => import('../pages/examples/RueIslands')),
+    meta: islandRouteMeta,
   },
   {
     path: '/examples/context',
@@ -698,9 +708,21 @@ const flatRoutes: RouteRecordRaw[] = [
     path: '/e2e/router-unmount-b',
     component: routeComponent(() => import('../pages/e2e/RouterUnmountProbeB')),
   },
-  { path: '/', component: routeComponent(() => import('../pages/site/SiteHome')) },
-  { path: '/textjs', component: routeComponent(() => import('../pages/TextJs')) },
-  { path: '/settings', component: routeComponent(() => import('../pages/site/SiteSettings')) },
+  {
+    path: '/',
+    component: routeComponent(() => import('../pages/site/SiteHome')),
+    meta: { clientMode: 'app' },
+  },
+  {
+    path: '/textjs',
+    component: routeComponent(() => import('../pages/TextJs')),
+    meta: { clientMode: 'app' },
+  },
+  {
+    path: '/settings',
+    component: routeComponent(() => import('../pages/site/SiteSettings')),
+    meta: { clientMode: 'app' },
+  },
   {
     path: '/guide/:path(.*)',
     component: routeComponent(() => import('../pages/site/GuideDocDetail')),
@@ -710,12 +732,25 @@ const flatRoutes: RouteRecordRaw[] = [
     path: '/page/:path(.*)',
     component: routeComponent(() => import('../pages/site/PageDocDetail')),
   },
-  { path: '/plugins', component: routeComponent(() => import('../pages/site/PluginsIndex')) },
-  { path: '/page', component: routeComponent(() => import('../pages/site/DocsIndex')) },
-  { path: '/report-data1', component: routeComponent(() => import('../pages/report-data1/index')) },
+  {
+    path: '/plugins',
+    component: routeComponent(() => import('../pages/site/PluginsIndex')),
+    meta: { clientMode: 'app' },
+  },
+  {
+    path: '/page',
+    component: routeComponent(() => import('../pages/site/DocsIndex')),
+    meta: { clientMode: 'app' },
+  },
+  {
+    path: '/report-data1',
+    component: routeComponent(() => import('../pages/report-data1/index')),
+    meta: { clientMode: 'app' },
+  },
   {
     path: '/report-bi-arch',
     component: routeComponent(() => import('../pages/report-bi-arch/index')),
+    meta: { clientMode: 'app' },
   },
 ]
 
@@ -723,6 +758,7 @@ type SidebarRouteGroup = {
   path: string
   component: RouteRecordRaw['component']
   layoutId: string
+  clientMode?: 'none' | 'app'
   redirect?: RouteRecordRaw['redirect']
 }
 
@@ -774,6 +810,7 @@ const foldSidebarPlaygroundRoutes = (
       component: group.component,
       meta: {
         sidebarPlaygroundLayout: group.layoutId,
+        ...(group.clientMode ? { clientMode: group.clientMode } : {}),
       },
       children: childRoutes,
     })),
@@ -785,17 +822,20 @@ export const routes = foldSidebarPlaygroundRoutes(flatRoutes, [
     path: '/design',
     component: AsyncDesignRouteLayout,
     layoutId: 'design',
+    clientMode: 'app',
     redirect: '/design/button',
   },
   {
     path: '/examples',
     component: AsyncExamplesRouteLayout,
     layoutId: 'examples',
+    clientMode: 'app',
   },
   {
     path: '/jsx',
     component: AsyncExamplesRouteLayout,
     layoutId: 'examples',
+    clientMode: 'app',
   },
   {
     path: '/guide',

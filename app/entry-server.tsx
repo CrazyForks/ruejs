@@ -21,35 +21,39 @@ const isConcreteRoutePath = (path: string) => {
 
 type StaticRouteInfo = {
   staticRoutes: Set<string>
-  zeroJsRoutes: Set<string>
+  appClientRoutes: Set<string>
 }
 
 const createStaticRouteInfo = (): StaticRouteInfo => ({
   staticRoutes: new Set(),
-  zeroJsRoutes: new Set(),
+  appClientRoutes: new Set(),
 })
 
-const isClientRuntimeDisabled = (route: RouteRecordRaw, inherited: boolean) =>
-  inherited || route.meta?.clientRuntime === false
+type RouteClientMode = 'none' | 'app'
+
+const resolveClientMode = (route: RouteRecordRaw, inherited: RouteClientMode) => {
+  const mode = route.meta?.clientMode
+  return mode === 'app' || mode === 'none' ? mode : inherited
+}
 
 const collectStaticRouteInfo = (
   routeRecords: readonly RouteRecordRaw[],
   parentPath = '',
   output = createStaticRouteInfo(),
-  clientRuntimeDisabled = false,
+  clientMode: RouteClientMode = 'none',
 ) => {
   for (const route of routeRecords) {
     const path = joinRoutePath(parentPath, route.path)
-    const nextClientRuntimeDisabled = isClientRuntimeDisabled(route, clientRuntimeDisabled)
+    const nextClientMode = resolveClientMode(route, clientMode)
 
     if (isConcreteRoutePath(path)) {
       output.staticRoutes.add(path)
-      if (nextClientRuntimeDisabled) {
-        output.zeroJsRoutes.add(path)
+      if (nextClientMode === 'app') {
+        output.appClientRoutes.add(path)
       }
     }
     if (route.children?.length) {
-      collectStaticRouteInfo(route.children, path, output, nextClientRuntimeDisabled)
+      collectStaticRouteInfo(route.children, path, output, nextClientMode)
     }
   }
   return output
@@ -58,7 +62,7 @@ const collectStaticRouteInfo = (
 const staticRouteInfo = collectStaticRouteInfo(routes)
 
 export const staticRoutes = [...staticRouteInfo.staticRoutes].sort()
-export const zeroJsRoutes = [...staticRouteInfo.zeroJsRoutes].sort()
+export const appClientRoutes = [...staticRouteInfo.appClientRoutes].sort()
 
 export const render = async (url: string) => {
   const router = createAppRouter(createMemoryHistory('/'))

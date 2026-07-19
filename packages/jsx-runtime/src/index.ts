@@ -67,6 +67,12 @@ export const jsxs = jsx
 export const jsxDEV = jsx
 
 export namespace JSX {
+  export interface RueClientIdleOptions {
+    timeout: number
+  }
+  export interface RueClientVisibleOptions {
+    rootMargin: string
+  }
   export type Element = any
   export interface ElementClass {
     $props: {}
@@ -80,12 +86,13 @@ export namespace JSX {
   export interface IntrinsicAttributes {
     key?: string | number
     'client:load'?: boolean | ''
-    'client:idle'?: boolean | ''
-    'client:visible'?: boolean | ''
+    'client:idle'?: boolean | '' | RueClientIdleOptions
+    'client:visible'?: boolean | '' | RueClientVisibleOptions
     'client:media'?: string | boolean
     'client:interaction'?: string | string[] | boolean
     'client:none'?: boolean | ''
     'client:only'?: boolean | ''
+    'server:defer'?: boolean | ''
     fallback?: any
   }
 }

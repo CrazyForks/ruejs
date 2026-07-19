@@ -19,44 +19,19 @@ import {
   type DomNodeLike,
   type DomTextLike,
 } from './dom'
+import {
+  RUE_ISLAND_ELEMENT,
+  RUE_ISLAND_PROPS_SCRIPT_TYPE,
+  deserializeIslandProps,
+  escapeIslandAttribute,
+  serializeIslandProps,
+  type RueIslandHtmlOptions,
+  type RueIslandHydrationStrategy,
+  type RueIslandManifest,
+  type RueIslandManifestEntry,
+} from './island-protocol'
 
-export const RUE_ISLAND_ELEMENT = 'rue-island'
-export const RUE_ISLAND_PROPS_SCRIPT_TYPE = 'application/json'
-
-export type RueIslandHydrationStrategy =
-  | 'load'
-  | 'idle'
-  | 'visible'
-  | 'media'
-  | 'interaction'
-  | 'none'
-  | 'only'
-
-export interface RueIslandManifestEntry {
-  id?: string
-  component: string
-  entry?: string
-  exportName?: string
-  hydrate?: RueIslandHydrationStrategy
-  props?: string
-  media?: string
-  interaction?: string | string[]
-}
-
-export type RueIslandManifest = Record<string, RueIslandManifestEntry>
-
-export interface RueIslandHtmlOptions {
-  id: string
-  component: string
-  entry?: string
-  exportName?: string
-  hydrate?: RueIslandHydrationStrategy
-  props?: unknown
-  html?: string
-  fallback?: string
-  media?: string
-  interaction?: string | string[]
-}
+export * from './island-protocol'
 
 export interface HydrateRootOptions {
   replace?: boolean
@@ -100,13 +75,17 @@ export interface RueIslandLoaderOptions {
   onError?: (error: unknown, island: Element, manifest?: RueIslandManifestEntry) => void
 }
 
-const RUE_SERIALIZED_TYPE_KEY = '__rueType'
-const RUE_SERIALIZED_VALUE_KEY = 'value'
+export interface RueIslandLifecycleDetail {
+  id: string
+  strategy: RueIslandHydrationStrategy
+}
+
 const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
 const TEXT_HEAD_RECORD = Symbol.for('text.head.record')
 const RUE_HYDRATION_ROOT_ANCHOR = 'rue:hydrate:anchor'
 const RUE_HYDRATED_ADOPTED_NODE = '__rue_hydrated_adopted'
 const loadedIslandCleanups = new WeakMap<Element, () => void>()
+const activeIslandLoaders = new WeakMap<ParentNode, () => void>()
 
 let islandIdSeed = 0
 
@@ -126,118 +105,6 @@ export const createRueIslandId = (prefix = 'rue-island') => {
   return `${prefix}-${islandIdSeed.toString(36)}`
 }
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> => {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-  const prototype = Object.getPrototypeOf(value)
-  return prototype === Object.prototype || prototype === null
-}
-
-const toSerializableValue = (value: unknown, seen: WeakSet<object>, path: string): unknown => {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
-    return value
-  }
-
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) {
-      throw new TypeError(`Rue island props cannot serialize non-finite number at ${path}.`)
-    }
-    return value
-  }
-
-  if (value === undefined) {
-    throw new TypeError(`Rue island props cannot serialize undefined at ${path}.`)
-  }
-
-  if (typeof value === 'bigint' || typeof value === 'function' || typeof value === 'symbol') {
-    throw new TypeError(`Rue island props cannot serialize ${typeof value} at ${path}.`)
-  }
-
-  if (value instanceof Date) {
-    if (Number.isNaN(value.getTime())) {
-      throw new TypeError(`Rue island props cannot serialize invalid Date at ${path}.`)
-    }
-    return {
-      [RUE_SERIALIZED_TYPE_KEY]: 'Date',
-      [RUE_SERIALIZED_VALUE_KEY]: value.toISOString(),
-    }
-  }
-
-  if (typeof URL !== 'undefined' && value instanceof URL) {
-    return {
-      [RUE_SERIALIZED_TYPE_KEY]: 'URL',
-      [RUE_SERIALIZED_VALUE_KEY]: value.href,
-    }
-  }
-
-  if (typeof value !== 'object' || value === null) {
-    return value
-  }
-
-  if (seen.has(value)) {
-    throw new TypeError(`Rue island props cannot serialize circular reference at ${path}.`)
-  }
-  seen.add(value)
-
-  if (Array.isArray(value)) {
-    const serialized = value.map((item, index) =>
-      toSerializableValue(item, seen, `${path}[${index}]`),
-    )
-    seen.delete(value)
-    return serialized
-  }
-
-  if (!isPlainObject(value)) {
-    const ctor = (value as { constructor?: { name?: string } }).constructor?.name || 'object'
-    throw new TypeError(`Rue island props cannot serialize ${ctor} instance at ${path}.`)
-  }
-
-  const serialized: Record<string, unknown> = {}
-  for (const [key, entry] of Object.entries(value)) {
-    serialized[key] = toSerializableValue(entry, seen, `${path}.${key}`)
-  }
-  seen.delete(value)
-  return serialized
-}
-
-const fromSerializableValue = (_key: string, value: unknown) => {
-  if (!isPlainObject(value)) {
-    return value
-  }
-
-  const type = value[RUE_SERIALIZED_TYPE_KEY]
-  const raw = value[RUE_SERIALIZED_VALUE_KEY]
-  if (type === 'Date' && typeof raw === 'string') {
-    return new Date(raw)
-  }
-  if (type === 'URL' && typeof raw === 'string') {
-    return new URL(raw)
-  }
-  return value
-}
-
-export const escapeIslandJson = (json: string) =>
-  json
-    .replace(/&/g, '\\u0026')
-    .replace(/</g, '\\u003C')
-    .replace(/>/g, '\\u003E')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029')
-
-export const escapeIslandAttribute = (value: string) =>
-  String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-
-export const serializeIslandProps = (value: unknown) =>
-  escapeIslandJson(JSON.stringify(toSerializableValue(value, new WeakSet(), '$')))
-
-export const deserializeIslandProps = (serialized: string): ComponentProps =>
-  JSON.parse(serialized || '{}', fromSerializableValue) as ComponentProps
-
 const renderAttrs = (attrs: Record<string, string | undefined>) =>
   Object.entries(attrs)
     .filter((entry): entry is [string, string] => entry[1] !== undefined)
@@ -256,6 +123,8 @@ export const createIslandContainerHtml = (options: RueIslandHtmlOptions) => {
     'data-rue-interaction': Array.isArray(options.interaction)
       ? options.interaction.join(',')
       : options.interaction,
+    'data-rue-timeout': options.timeout === undefined ? undefined : String(options.timeout),
+    'data-rue-root-margin': options.rootMargin,
   })
   const body = hydrate === 'only' ? (options.fallback ?? '') : (options.html ?? '')
   const propsScript =
@@ -1122,17 +991,22 @@ const onDocumentReady = (cb: () => void) => {
   }
 }
 
-const requestIdle = (cb: () => void) => {
+const requestIdle = (cb: () => void, timeout?: number) => {
   const win = typeof window !== 'undefined' ? window : undefined
-  const request = win?.requestIdleCallback ?? ((callback: () => void) => setTimeout(callback, 1))
-  const cancel = win?.cancelIdleCallback ?? ((id: number) => clearTimeout(id))
-  const id = request(cb)
+  const request = win?.requestIdleCallback
+  const id = request
+    ? request(cb, timeout === undefined ? undefined : { timeout })
+    : setTimeout(cb, 1)
   return () => {
-    cancel(id as number)
+    if (request) {
+      win?.cancelIdleCallback?.(id as number)
+    } else {
+      clearTimeout(id as number)
+    }
   }
 }
 
-const scheduleVisible = (island: Element, cb: () => void) => {
+const scheduleVisible = (island: Element, cb: () => void, rootMargin?: string) => {
   const win = island.ownerDocument?.defaultView ?? (typeof window !== 'undefined' ? window : null)
   const Observer = win?.IntersectionObserver ?? globalThis.IntersectionObserver
   if (typeof Observer !== 'function') {
@@ -1140,12 +1014,15 @@ const scheduleVisible = (island: Element, cb: () => void) => {
     return () => {}
   }
 
-  const observer = new Observer(entries => {
-    if (entries.some(entry => entry.isIntersecting)) {
-      observer.disconnect()
-      cb()
-    }
-  })
+  const observer = new Observer(
+    entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        observer.disconnect()
+        cb()
+      }
+    },
+    rootMargin ? { rootMargin } : undefined,
+  )
   observer.observe(island)
   return () => {
     observer.disconnect()
@@ -1226,6 +1103,13 @@ const scheduleInteraction = (
   return cleanup
 }
 
+const readNonNegativeNumberAttribute = (island: Element, name: string) => {
+  const raw = island.getAttribute(name)
+  if (raw == null || raw.trim() === '') return undefined
+  const value = Number(raw)
+  return Number.isFinite(value) && value >= 0 ? value : undefined
+}
+
 const scheduleIslandHydration = (
   island: Element,
   strategy: RueIslandHydrationStrategy,
@@ -1234,9 +1118,16 @@ const scheduleIslandHydration = (
 ) => {
   switch (strategy) {
     case 'idle':
-      return requestIdle(() => hydrate())
+      return requestIdle(
+        () => hydrate(),
+        manifest?.timeout ?? readNonNegativeNumberAttribute(island, 'data-rue-timeout'),
+      )
     case 'visible':
-      return scheduleVisible(island, () => hydrate())
+      return scheduleVisible(
+        island,
+        () => hydrate(),
+        manifest?.rootMargin ?? island.getAttribute('data-rue-root-margin') ?? undefined,
+      )
     case 'media':
       return scheduleMedia(
         manifest?.media ?? island.getAttribute('data-rue-media') ?? undefined,
@@ -1256,6 +1147,25 @@ const scheduleIslandHydration = (
   }
 }
 
+const dispatchIslandLifecycleEvent = (
+  island: Element,
+  type: 'rue:before-hydrate' | 'rue:hydrate' | 'rue:error',
+  detail: RueIslandLifecycleDetail,
+) => {
+  const EventConstructor = island.ownerDocument?.defaultView?.CustomEvent ?? globalThis.CustomEvent
+  if (typeof EventConstructor !== 'function') return
+  island.dispatchEvent(new EventConstructor(type, { bubbles: true, detail }))
+}
+
+const isIslandWithinRoot = (island: Element, root: ParentNode | undefined) => {
+  if (!root) return island.isConnected
+  if (root === island) return true
+  return typeof (root as ParentNode & { contains?: (node: Node) => boolean }).contains ===
+    'function'
+    ? (root as ParentNode & { contains: (node: Node) => boolean }).contains(island)
+    : island.isConnected
+}
+
 export const registerRueIsland = (
   island: Element,
   options: RueIslandLoaderOptions = {},
@@ -1268,22 +1178,29 @@ export const registerRueIsland = (
   const manifest = getIslandManifestEntry(island, options.manifest)
   const strategy = getIslandHydrationStrategy(island, manifest)
   const specifier = getIslandSpecifier(island, manifest)
+  const detail: RueIslandLifecycleDetail = {
+    id: island.getAttribute('data-rue-id') ?? manifest?.id ?? '',
+    strategy,
+  }
+  let active = true
   let hydrated = false
-  let cleanup = () => {}
+  let scheduleCleanup = () => {}
 
   const runHydration = (replayEvent?: Event) => {
-    if (hydrated || strategy === 'none') {
+    if (hydrated || strategy === 'none' || !active || !isIslandWithinRoot(island, options.root)) {
       return
     }
 
     hydrated = true
-    cleanup()
+    scheduleCleanup()
     island.setAttribute('data-rue-status', 'loading')
+    dispatchIslandLifecycleEvent(island, 'rue:before-hydrate', detail)
 
     const load = options.resolveModule ?? defaultResolveModule
     Promise.resolve(load(specifier, island, manifest))
-      .then(module =>
-        mountRueIsland(
+      .then(module => {
+        if (!active || !isIslandWithinRoot(island, options.root)) return undefined
+        return mountRueIsland(
           island,
           module,
           {
@@ -1294,14 +1211,18 @@ export const registerRueIsland = (
             replayEvent,
           },
           options.hydrateRoot ?? hydrateRoot,
-        ),
-      )
+        )
+      })
       .then(() => {
+        if (!active || !isIslandWithinRoot(island, options.root)) return
         island.setAttribute('data-rue-status', 'hydrated')
+        dispatchIslandLifecycleEvent(island, 'rue:hydrate', detail)
         replayInteractionEvent(island, replayEvent)
       })
       .catch(error => {
+        if (!active || !isIslandWithinRoot(island, options.root)) return
         island.setAttribute('data-rue-status', 'error')
+        dispatchIslandLifecycleEvent(island, 'rue:error', detail)
         if (options.onError) {
           options.onError(error, island, manifest)
           return
@@ -1312,12 +1233,21 @@ export const registerRueIsland = (
       })
   }
 
-  cleanup = scheduleIslandHydration(island, strategy, manifest, runHydration)
+  scheduleCleanup = scheduleIslandHydration(island, strategy, manifest, runHydration)
   const unregister = () => {
-    cleanup()
+    if (!active) return
+    active = false
+    scheduleCleanup()
     loadedIslandCleanups.delete(island)
   }
   loadedIslandCleanups.set(island, unregister)
+  if (strategy === 'none') {
+    queueMicrotask(() => {
+      if (active && isIslandWithinRoot(island, options.root)) {
+        dispatchIslandLifecycleEvent(island, 'rue:hydrate', detail)
+      }
+    })
+  }
   return unregister
 }
 
@@ -1329,13 +1259,99 @@ export const startRueIslandLoader = (options: RueIslandLoaderOptions = {}) => {
     return () => {}
   }
 
-  const cleanups = Array.from(root.querySelectorAll(RUE_ISLAND_ELEMENT))
-    .map(island => registerRueIsland(island, options))
-    .filter((cleanup): cleanup is () => void => typeof cleanup === 'function')
+  activeIslandLoaders.get(root)?.()
 
-  return () => {
-    for (const cleanup of cleanups) {
+  let active = true
+  const registered = new Map<Element, () => void>()
+  const terminalStatuses = new Set(['hydrated', 'static', 'error'])
+
+  const getIslandsInSubtree = (node: ParentNode | Element) => {
+    const islands: Element[] = []
+    if ((node as Element).nodeType === 1 && (node as Element).matches?.(RUE_ISLAND_ELEMENT)) {
+      islands.push(node as Element)
+    }
+    if (typeof node.querySelectorAll === 'function') {
+      islands.push(...Array.from(node.querySelectorAll(RUE_ISLAND_ELEMENT)))
+    }
+    return islands
+  }
+
+  const canRegister = (island: Element) => {
+    let ancestor = island.parentElement?.closest(RUE_ISLAND_ELEMENT)
+    while (ancestor && isIslandWithinRoot(ancestor, root)) {
+      const status = ancestor.getAttribute('data-rue-status')
+      if (!status || !terminalStatuses.has(status)) return false
+      ancestor = ancestor.parentElement?.closest(RUE_ISLAND_ELEMENT)
+    }
+    return true
+  }
+
+  const registerCandidate = (island: Element) => {
+    if (
+      !active ||
+      registered.has(island) ||
+      loadedIslandCleanups.has(island) ||
+      !isIslandWithinRoot(island, root) ||
+      !canRegister(island)
+    ) {
+      return
+    }
+    const cleanup = registerRueIsland(island, { ...options, root })
+    if (cleanup) registered.set(island, cleanup)
+  }
+
+  const scan = (node: ParentNode | Element) => {
+    for (const island of getIslandsInSubtree(node)) registerCandidate(island)
+  }
+
+  const unregisterSubtree = (node: ParentNode | Element) => {
+    for (const island of getIslandsInSubtree(node)) {
+      const cleanup = registered.get(island)
+      if (!cleanup) continue
       cleanup()
+      registered.delete(island)
     }
   }
+
+  const onAncestorComplete = (event: Event) => {
+    if (!active || !(event.target instanceof Element)) return
+    scan(event.target)
+  }
+  ;(root as ParentNode & EventTarget).addEventListener?.('rue:hydrate', onAncestorComplete)
+  ;(root as ParentNode & EventTarget).addEventListener?.('rue:error', onAncestorComplete)
+
+  const ownerWindow =
+    (root as Node).ownerDocument?.defaultView ??
+    ((root as Document).defaultView || (typeof window !== 'undefined' ? window : null))
+  const Observer = ownerWindow?.MutationObserver ?? globalThis.MutationObserver
+  const observer =
+    typeof Observer === 'function'
+      ? new Observer(records => {
+          for (const record of records) {
+            for (const removed of Array.from(record.removedNodes)) {
+              unregisterSubtree(removed as ParentNode)
+            }
+            for (const added of Array.from(record.addedNodes)) {
+              scan(added as ParentNode)
+            }
+          }
+        })
+      : null
+  observer?.observe(root as Node, { childList: true, subtree: true })
+  scan(root)
+
+  const stop = () => {
+    if (!active) return
+    active = false
+    observer?.disconnect()
+    ;(root as ParentNode & EventTarget).removeEventListener?.('rue:hydrate', onAncestorComplete)
+    ;(root as ParentNode & EventTarget).removeEventListener?.('rue:error', onAncestorComplete)
+    for (const cleanup of registered.values()) cleanup()
+    registered.clear()
+    if (activeIslandLoaders.get(root) === stop) {
+      activeIslandLoaders.delete(root)
+    }
+  }
+  activeIslandLoaders.set(root, stop)
+  return stop
 }

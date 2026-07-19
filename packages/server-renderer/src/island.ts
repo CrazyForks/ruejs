@@ -5,8 +5,12 @@ Rue server-renderer island entry
   loader and server markup helpers share one protocol definition.
 */
 export {
+  RUE_ISLAND_DESCRIPTOR,
   RUE_ISLAND_ELEMENT,
   RUE_ISLAND_PROPS_SCRIPT_TYPE,
+  RUE_SERVER_ISLAND_DESCRIPTOR,
+  createRueIslandDescriptor,
+  createRueServerIslandDescriptor,
   createRueIslandId,
   createIslandContainerHtml,
   deserializeIslandProps,
@@ -14,7 +18,12 @@ export {
   escapeIslandJson,
   serializeIslandProps,
   type RueIslandHtmlOptions,
+  type RueIslandDescriptor,
+  type RueIslandDescriptorMetadata,
+  type RueIslandDescriptorOptions,
   type RueIslandHydrationStrategy,
   type RueIslandManifest,
   type RueIslandManifestEntry,
+  type RueServerIslandDescriptor,
+  type RueServerIslandDescriptorOptions,
 } from '@rue-js/runtime/island'

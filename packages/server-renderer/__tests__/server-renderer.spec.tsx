@@ -11,6 +11,7 @@ import {
   _$setClassName,
 } from '@rue-js/runtime'
 import * as runtimeServer from '@rue-js/runtime/server'
+import { renderAnchor as renderVaporAnchor, vapor } from '@rue-js/runtime/vapor'
 
 import {
   renderToString,
@@ -21,6 +22,7 @@ import {
   ServerFragmentNode,
   ServerTextNode,
 } from '../src'
+import { createRueIslandDescriptor, createRueServerIslandDescriptor } from '../src/island'
 
 describe('rue server-renderer', () => {
   it('re-exports the runtime server renderer APIs', () => {
@@ -51,6 +53,163 @@ describe('rue server-renderer', () => {
     ).resolves.toBe(
       '<section class="hero" data-title="Rue &quot;SSR&quot; &amp; &lt;friends&gt;" style="color: red; background-color: white"><h1>Rue "SSR" &amp; &lt;friends&gt;</h1><p>Rue &lt;SSR&gt; &amp; friends</p><input disabled value="ready"></section>',
     )
+  })
+
+  it('renders a client island descriptor as safe SSR HTML and protocol data', async () => {
+    const Panel: FC<{ label: string }> = props => <button>{props.label}</button>
+    const dangerousLabel = '</script><img src=x onerror=alert(1)>'
+    const App: FC = () =>
+      createRueIslandDescriptor({
+        component: Panel,
+        props: { label: dangerousLabel },
+        metadata: {
+          id: 'panel-visible',
+          component: '/src/private/Panel.tsx',
+          exportName: 'default',
+          hydrate: 'visible',
+        },
+      }) as any
+
+    const html = await renderToString(App)
+
+    expect(html).toContain('<rue-island')
+    expect(html).toContain('data-rue-id="panel-visible"')
+    expect(html).toContain('data-rue-component="panel-visible"')
+    expect(html).toContain('data-rue-entry="panel-visible"')
+    expect(html).toContain('data-rue-hydrate="visible"')
+    expect(html).not.toContain('/src/private/Panel.tsx')
+    expect(html).toContain('<button>&lt;/script&gt;&lt;img src=x onerror=alert(1)&gt;</button>')
+    expect(html).toContain('type="application/json"')
+    expect(html).toContain('data-rue-props="panel-visible"')
+    expect(html).toContain('\\u003C/script\\u003E')
+    expect(html).not.toContain('</script><img')
+  })
+
+  it('renders client:only fallback without executing the server component', async () => {
+    let componentCalls = 0
+    const BrowserOnly: FC = () => {
+      componentCalls += 1
+      return <strong>browser implementation</strong>
+    }
+    const App: FC = () =>
+      createRueIslandDescriptor({
+        component: BrowserOnly,
+        props: { enabled: true },
+        fallback: <p>Loading browser widget</p>,
+        metadata: {
+          id: 'browser-only',
+          component: '/src/private/BrowserOnly.tsx',
+          exportName: 'default',
+          hydrate: 'only',
+        },
+      }) as any
+
+    const html = await renderToString(App)
+
+    expect(componentCalls).toBe(0)
+    expect(html).toContain('data-rue-hydrate="only"')
+    expect(html).toContain('<p>Loading browser widget</p>')
+    expect(html).not.toContain('browser implementation')
+    expect(html).toContain('data-rue-props="browser-only"')
+  })
+
+  it('renders a deferred server island as a GET fallback without a component reference', async () => {
+    const descriptor = createRueServerIslandDescriptor({
+      id: 'account-report',
+      props: { accountId: 'a-1' },
+      fallback: <p>Loading report</p>,
+    })
+    const encodeCalls: unknown[] = []
+
+    const html = await renderToString(descriptor as any, {
+      serverIslands: {
+        endpoint: '/_rue/server-island',
+        encode: async payload => {
+          encodeCalls.push(payload)
+          return { v: 1, id: 'account-report', iv: 'fixed-iv', data: 'fixed-cipher' }
+        },
+      },
+    })
+
+    expect('component' in descriptor).toBe(false)
+    expect(encodeCalls).toEqual([{ id: 'account-report', props: { accountId: 'a-1' } }])
+    expect(html).toContain('<rue-server-island')
+    expect(html).toContain('data-rue-server-island="account-report"')
+    expect(html).toContain('data-rue-method="GET"')
+    expect(html).toContain('data-rue-url="/_rue/server-island?payload=')
+    expect(html).toContain('<p>Loading report</p>')
+    expect(html).not.toContain('application/json')
+  })
+
+  it('uses a script-safe POST payload when the complete GET URL exceeds its byte budget', async () => {
+    const descriptor = createRueServerIslandDescriptor({
+      id: 'large-report',
+      props: { query: 'x'.repeat(100) },
+      fallback: <p>Loading large report</p>,
+    })
+
+    const html = await renderToString(descriptor as any, {
+      serverIslands: {
+        endpoint: '/_rue/server-island',
+        maxGetUrlLength: 40,
+        encode: async () => ({
+          v: 1,
+          id: 'large-report',
+          iv: 'fixed-iv',
+          data: '</script><img src=x onerror=alert(1)>',
+        }),
+      },
+    })
+
+    expect(html).toContain('data-rue-method="POST"')
+    expect(html).toContain('data-rue-endpoint="/_rue/server-island"')
+    expect(html).toContain('type="application/json"')
+    expect(html).toContain('data-rue-server-island-payload')
+    expect(html).toContain('\\u003C/script\\u003E')
+    expect(html).not.toContain('</script><img')
+    expect(html).toContain('<p>Loading large report</p>')
+  })
+
+  it('rejects deferred server islands when serverIslands is not configured', async () => {
+    const descriptor = createRueServerIslandDescriptor({
+      id: 'missing-config',
+      fallback: <p>Loading</p>,
+    })
+
+    await expect(renderToString(descriptor as any)).rejects.toThrow(
+      /serverIslands.*required.*server:defer/i,
+    )
+  })
+
+  it('renders a server descriptor produced inside a compiled-shape Vapor subtree', async () => {
+    const App: FC = () =>
+      vapor(() => {
+        const root = _$createElement('section')
+        const anchor = _$createComment('compiled-server-island')
+        _$appendChild(root, anchor)
+        renderVaporAnchor(
+          createRueServerIslandDescriptor({
+            id: 'compiled-panel',
+            props: { accountId: 'a-1' },
+            fallback: <p>Compiled fallback</p>,
+          }) as any,
+          root as any,
+          anchor as any,
+        )
+        return root as any
+      }) as any
+
+    const html = await renderToString(App, {
+      serverIslands: {
+        endpoint: '/_rue/server-island',
+        encode: async payload => ({ v: 1, id: payload.id, iv: 'iv', ciphertext: 'cipher' }),
+      },
+    })
+
+    expect(html).toContain('<section>')
+    expect(html).toContain('data-rue-server-island="compiled-panel"')
+    expect(html).toContain('data-rue-method="GET"')
+    expect(html).toContain('<p>Compiled fallback</p>')
   })
 
   it('renders explicit boolean data and aria attributes as stable string booleans', async () => {

@@ -14,6 +14,17 @@ import {
   type ComponentProps,
   type RenderableInput,
 } from './rue'
+import {
+  RUE_ISLAND_DESCRIPTOR,
+  RUE_ISLAND_PROPS_SCRIPT_TYPE,
+  RUE_SERVER_ISLAND_SSR_BRIDGE,
+  escapeIslandJson,
+  isRueIslandDescriptor,
+  isRueServerIslandDescriptor,
+  serializeIslandProps,
+  type RueIslandDescriptor,
+  type RueServerIslandDescriptor,
+} from './island-protocol'
 
 type ServerNodeType = 1 | 3 | 8 | 11
 
@@ -171,7 +182,34 @@ export interface RenderToStringOptions {
   props?: ComponentProps | null
   /** 是否保留 comment 节点，默认不输出。 */
   includeComments?: boolean
+  /** `server:defer` 请求协议；只有包含服务端岛时才需要配置。 */
+  serverIslands?: RenderToStringServerIslandsOptions
 }
+
+export interface RueServerIslandEncodePayload {
+  id: string
+  props: ComponentProps
+}
+
+export interface RenderToStringServerIslandsOptions {
+  /** 浏览器加载延迟片段时请求的 handler 地址。 */
+  endpoint: string
+  /** 将 registry id 与 props 编码为不透明、可验证的请求 token。 */
+  encode: (payload: RueServerIslandEncodePayload) => unknown | Promise<unknown>
+  /** 完整 GET URL 的 UTF-8 字节预算，默认 2048。 */
+  maxGetUrlLength?: number
+}
+
+type ServerIslandTokenState =
+  | { status: 'pending'; promise: Promise<void> }
+  | { status: 'resolved'; token: unknown }
+
+interface ServerIslandRenderContext {
+  options?: RenderToStringServerIslandsOptions
+  tokens: Map<string, ServerIslandTokenState>
+}
+
+const serverIslandRenderContexts = new WeakMap<DOMAdapter, ServerIslandRenderContext>()
 
 export class ServerDOMAdapter implements DOMAdapter {
   readonly root = new ServerElementNode('rue-ssr-root')
@@ -525,6 +563,9 @@ function createFreshServerRenderable(value: unknown): unknown {
   if (value === null) {
     return value
   }
+  if (isRueIslandDescriptor(value) || isRueServerIslandDescriptor(value)) {
+    return value
+  }
 
   const factory = (value as Record<string, unknown>)[RUE_REPEATABLE_MOUNT_FACTORY_KEY]
   if (typeof factory === 'function') {
@@ -648,9 +689,140 @@ function createServerNodeFromProtocolElement(
   return node
 }
 
+function createServerNodeFromIslandDescriptor(descriptor: RueIslandDescriptor): unknown {
+  const hydrate = descriptor.metadata.hydrate ?? 'load'
+  if (hydrate === 'none') {
+    return normalizeServerProtocolRenderable(createElement(descriptor.component, descriptor.props))
+  }
+
+  const id = descriptor.metadata.id
+  const node = new ServerElementNode('rue-island')
+  setServerElementProp(node, 'data-rue-id', id)
+  setServerElementProp(node, 'data-rue-component', id)
+  setServerElementProp(node, 'data-rue-entry', id)
+  setServerElementProp(node, 'data-rue-hydrate', hydrate)
+  if (descriptor.metadata.media) {
+    setServerElementProp(node, 'data-rue-media', descriptor.metadata.media)
+  }
+  if (descriptor.metadata.interaction) {
+    setServerElementProp(
+      node,
+      'data-rue-interaction',
+      Array.isArray(descriptor.metadata.interaction)
+        ? descriptor.metadata.interaction.join(',')
+        : descriptor.metadata.interaction,
+    )
+  }
+  if (descriptor.metadata.timeout !== undefined) {
+    setServerElementProp(node, 'data-rue-timeout', descriptor.metadata.timeout)
+  }
+  if (descriptor.metadata.rootMargin) {
+    setServerElementProp(node, 'data-rue-root-margin', descriptor.metadata.rootMargin)
+  }
+
+  const content =
+    hydrate === 'only' ? descriptor.fallback : createElement(descriptor.component, descriptor.props)
+  if (content !== undefined) {
+    appendNormalizedServerChild(node, content)
+  }
+
+  const propsScript = new ServerElementNode('script')
+  setServerElementProp(propsScript, 'type', RUE_ISLAND_PROPS_SCRIPT_TYPE)
+  setServerElementProp(propsScript, 'data-rue-props', id)
+  appendNormalizedServerChild(propsScript, serializeIslandProps(descriptor.props))
+  insertServerChild(node, propsScript, null)
+  return node
+}
+
+const getUtf8ByteLength = (value: string) => new TextEncoder().encode(value).byteLength
+
+function createServerNodeFromServerIslandDescriptor(
+  descriptor: RueServerIslandDescriptor,
+): unknown {
+  const context = serverIslandRenderContexts.get(getDOMAdapter())
+  const options = context?.options
+  if (!context || !options) {
+    throw new Error(
+      'RenderToStringOptions.serverIslands is required when rendering server:defer islands.',
+    )
+  }
+  if (!options.endpoint) {
+    throw new Error('RenderToStringOptions.serverIslands.endpoint must be a non-empty string.')
+  }
+  if (typeof options.encode !== 'function') {
+    throw new Error('RenderToStringOptions.serverIslands.encode must be a function.')
+  }
+
+  const serializedProps = serializeIslandProps(descriptor.props)
+  const cacheKey = `${descriptor.id}\u0000${serializedProps}`
+  let state = context.tokens.get(cacheKey)
+  if (!state) {
+    const payload = { id: descriptor.id, props: descriptor.props }
+    const pendingState: ServerIslandTokenState = {
+      status: 'pending',
+      promise: Promise.resolve(),
+    }
+    pendingState.promise = Promise.resolve(options.encode(payload)).then(token => {
+      context.tokens.set(cacheKey, { status: 'resolved', token })
+    })
+    state = pendingState
+    context.tokens.set(cacheKey, state)
+  }
+
+  if (state.status === 'pending') {
+    const globalRecord = globalThis as Record<string, unknown>
+    const pending = (globalRecord[RUE_SSR_PENDING_ASYNC_COMPONENT_KEY] ??= []) as Promise<unknown>[]
+    if (!pending.includes(state.promise)) pending.push(state.promise)
+  }
+
+  const node = new ServerElementNode('rue-server-island')
+  setServerElementProp(node, 'data-rue-server-island', descriptor.id)
+  if (descriptor.fallback !== undefined) {
+    appendNormalizedServerChild(node, descriptor.fallback)
+  }
+
+  if (state.status === 'pending') {
+    return node
+  }
+
+  const payloadJson = JSON.stringify(state.token)
+  if (payloadJson === undefined) {
+    throw new TypeError('Rue server island encode() must return a JSON-serializable token.')
+  }
+  const querySeparator = options.endpoint.includes('?') ? '&' : '?'
+  const requestUrl = `${options.endpoint}${querySeparator}payload=${encodeURIComponent(payloadJson)}`
+  const maxGetUrlLength = options.maxGetUrlLength ?? 2048
+  if (!Number.isFinite(maxGetUrlLength) || maxGetUrlLength <= 0) {
+    throw new TypeError('RenderToStringOptions.serverIslands.maxGetUrlLength must be positive.')
+  }
+
+  if (getUtf8ByteLength(requestUrl) <= maxGetUrlLength) {
+    setServerElementProp(node, 'data-rue-method', 'GET')
+    setServerElementProp(node, 'data-rue-url', requestUrl)
+    return node
+  }
+
+  setServerElementProp(node, 'data-rue-method', 'POST')
+  setServerElementProp(node, 'data-rue-endpoint', options.endpoint)
+  const payloadScript = new ServerElementNode('script')
+  setServerElementProp(payloadScript, 'type', RUE_ISLAND_PROPS_SCRIPT_TYPE)
+  setServerElementProp(payloadScript, 'data-rue-server-island-payload', true)
+  appendNormalizedServerChild(payloadScript, escapeIslandJson(payloadJson))
+  insertServerChild(node, payloadScript, null)
+  return node
+}
+
 function normalizeServerProtocolRenderable(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(item => normalizeServerProtocolRenderable(item))
+  }
+
+  if (isRueIslandDescriptor(value)) {
+    return createServerNodeFromIslandDescriptor(value)
+  }
+
+  if (isRueServerIslandDescriptor(value)) {
+    return createServerNodeFromServerIslandDescriptor(value)
   }
 
   if (isRuePortableComponentHandle(value)) {
@@ -924,7 +1096,15 @@ export const renderToString = async (
 ) => {
   const adapter = new ServerDOMAdapter()
   const globalRecord = globalThis as Record<string, unknown>
+  const globalSymbolRecord = globalThis as Record<PropertyKey, unknown>
+  const previousServerIslandBridge = globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE]
+  globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE] = createServerNodeFromServerIslandDescriptor
   const leaveServerDOMAdapterScope = enterServerDOMAdapterScope(adapter)
+  const serverIslandContext: ServerIslandRenderContext = {
+    options: options.serverIslands,
+    tokens: new Map(),
+  }
+  serverIslandRenderContexts.set(adapter, serverIslandContext)
 
   try {
     const createRenderValue = () => {
@@ -959,6 +1139,12 @@ export const renderToString = async (
       render(null as RenderableInput, adapter.root)
       await flushServerRenderMicrotasks()
     } finally {
+      serverIslandRenderContexts.delete(adapter)
+      if (previousServerIslandBridge === undefined) {
+        delete globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE]
+      } else {
+        globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE] = previousServerIslandBridge
+      }
       leaveServerDOMAdapterScope()
     }
   }

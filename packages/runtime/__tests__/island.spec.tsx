@@ -4,7 +4,13 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { h, renderAnchor, signal, vapor, type FC } from '@rue-js/runtime'
 import {
+  renderAnchor as renderVaporAnchor,
+  vapor as createVaporHandle,
+} from '@rue-js/runtime/vapor'
+import {
+  RUE_ISLAND_DESCRIPTOR,
   createIslandContainerHtml,
+  createRueIslandDescriptor,
   deserializeIslandProps,
   hydrateRoot,
   mountRueIsland,
@@ -16,11 +22,94 @@ import {
 import { flush, waitForContent } from './page-test-utils'
 
 describe('Rue island runtime', () => {
+  it('creates a shared island descriptor without executing its component', () => {
+    const componentCalls: string[] = []
+    const Component: FC<{ label: string }> = props => {
+      componentCalls.push(props.label)
+      return h('p', null, props.label)
+    }
+    const props = { label: 'shared descriptor' }
+    const fallback = h('p', null, 'loading')
+
+    const descriptor = createRueIslandDescriptor({
+      component: Component,
+      props,
+      fallback,
+      metadata: {
+        id: 'shared-counter',
+        component: '/src/SharedCounter.tsx',
+        exportName: 'default',
+        hydrate: 'visible',
+      },
+    })
+
+    expect(descriptor[RUE_ISLAND_DESCRIPTOR]).toBe(true)
+    expect(descriptor.component).toBe(Component)
+    expect(descriptor.props).toBe(props)
+    expect(descriptor.fallback).toBe(fallback)
+    expect(descriptor.metadata).toEqual({
+      id: 'shared-counter',
+      component: '/src/SharedCounter.tsx',
+      exportName: 'default',
+      hydrate: 'visible',
+    })
+    expect(componentCalls).toEqual([])
+  })
+
+  it('mounts island descriptors produced inside default and Vapor subtrees', () => {
+    const Component: FC<{ label: string }> = props => h('button', null, props.label)
+    const createDescriptor = (id: string) =>
+      createRueIslandDescriptor({
+        component: Component,
+        props: { label: id },
+        metadata: { id, component: `/src/${id}.tsx`, hydrate: 'load' },
+      })
+
+    const mountDescriptor = (
+      id: string,
+      createHandle: typeof vapor,
+      renderHandle: typeof renderAnchor,
+    ) => {
+      const host = document.createElement('section')
+      const hostAnchor = document.createComment('host')
+      host.appendChild(hostAnchor)
+      const handle = createHandle(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('descriptor')
+        root.appendChild(anchor)
+        renderHandle(createDescriptor(id) as any, root as any, anchor as any)
+        return root as any
+      })
+      renderHandle(handle as any, host as any, hostAnchor as any)
+      return host
+    }
+
+    for (const host of [
+      mountDescriptor('default-descriptor', vapor, renderAnchor),
+      mountDescriptor('vapor-descriptor', createVaporHandle, renderVaporAnchor),
+    ]) {
+      const island = host.querySelector('rue-island')
+      expect(island?.getAttribute('data-rue-hydrate')).toBe('load')
+      expect(island?.querySelector('button')?.textContent).toBe(island?.getAttribute('data-rue-id'))
+      expect(island?.querySelector('script[data-rue-props]')).not.toBeNull()
+    }
+  })
+
   it('serializes props into script-safe JSON and restores typed values', () => {
     const serialized = serializeIslandProps({
       title: '</script><img src=x onerror=alert(1)>',
       createdAt: new Date('2026-06-22T00:00:00.000Z'),
       url: new URL('https://example.com/rue?x=1'),
+      bigint: 9007199254740993n,
+      limits: [Infinity, -Infinity],
+      matcher: /rue-(island|server)/giu,
+      map: new Map<unknown, unknown>([
+        ['strategies', new Set(['load', 'visible'])],
+        [7, { nested: true }],
+      ]),
+      bytes: new Uint8Array([0, 127, 255]),
+      words: new Uint16Array([0, 1024, 65535]),
+      dwords: new Uint32Array([0, 65536, 4294967295]),
     })
 
     expect(serialized).not.toContain('</script>')
@@ -32,6 +121,19 @@ describe('Rue island runtime', () => {
     expect((props.createdAt as Date).toISOString()).toBe('2026-06-22T00:00:00.000Z')
     expect(props.url).toBeInstanceOf(URL)
     expect(String(props.url)).toBe('https://example.com/rue?x=1')
+    expect(props.bigint).toBe(9007199254740993n)
+    expect(props.limits).toEqual([Infinity, -Infinity])
+    expect(props.matcher).toBeInstanceOf(RegExp)
+    expect((props.matcher as RegExp).source).toBe('rue-(island|server)')
+    expect((props.matcher as RegExp).flags).toBe('giu')
+    expect(props.map).toBeInstanceOf(Map)
+    expect((props.map as Map<unknown, unknown>).get('strategies')).toEqual(
+      new Set(['load', 'visible']),
+    )
+    expect((props.map as Map<unknown, unknown>).get(7)).toEqual({ nested: true })
+    expect(props.bytes).toEqual(new Uint8Array([0, 127, 255]))
+    expect(props.words).toEqual(new Uint16Array([0, 1024, 65535]))
+    expect(props.dwords).toEqual(new Uint32Array([0, 65536, 4294967295]))
   })
 
   it('rejects unsupported or unsafe prop values instead of silently serializing them', () => {
@@ -44,10 +146,16 @@ describe('Rue island runtime', () => {
     expect(() => serializeIslandProps({ value: undefined })).toThrow(/undefined/)
     expect(() => serializeIslandProps({ value: () => {} })).toThrow(/function/)
     expect(() => serializeIslandProps({ value: Symbol('x') })).toThrow(/symbol/)
-    expect(() => serializeIslandProps({ value: BigInt(1) })).toThrow(/bigint/)
     expect(() => serializeIslandProps({ value: Number.NaN })).toThrow(/non-finite/)
     expect(() => serializeIslandProps(circular)).toThrow(/circular/)
     expect(() => serializeIslandProps({ value: new CustomValue() })).toThrow(/CustomValue/)
+    expect(() => serializeIslandProps({ __rueType: 'Map', value: [] })).toThrow(/reserved/)
+    expect(() => deserializeIslandProps('{"__rueType":"Map","value":{"not":"entries"}}')).toThrow(
+      /invalid Map/i,
+    )
+    expect(() =>
+      deserializeIslandProps('{"__rueType":"ArbitraryClass","value":"payload"}'),
+    ).toThrow(/unknown serialized type/i)
   })
 
   it('emits island HTML with protocol attributes and a props script', () => {
@@ -56,6 +164,8 @@ describe('Rue island runtime', () => {
       component: '/src/Counter.tsx',
       entry: '/assets/Counter.js',
       hydrate: 'visible',
+      rootMargin: '200px',
+      timeout: 500,
       props: { count: 1 },
       html: '<button>1</button>',
     })
@@ -64,6 +174,8 @@ describe('Rue island runtime', () => {
     expect(html).toContain('data-rue-id="r1"')
     expect(html).toContain('data-rue-component="/src/Counter.tsx"')
     expect(html).toContain('data-rue-hydrate="visible"')
+    expect(html).toContain('data-rue-root-margin="200px"')
+    expect(html).toContain('data-rue-timeout="500"')
     expect(html).toContain('<button>1</button>')
     expect(html).toContain('type="application/json"')
     expect(html).toContain('"count":1')
@@ -563,16 +675,19 @@ describe('Rue island runtime', () => {
       component: '/src/Idle.tsx',
       entry: '/src/Idle.tsx',
       hydrate: 'idle',
+      timeout: 500,
       html: '<p>idle server</p>',
     })
 
     const originalRequestIdle = window.requestIdleCallback
     const originalCancelIdle = window.cancelIdleCallback
     let idleCallback: (() => void) | null = null
-    ;(window as any).requestIdleCallback = vi.fn((cb: () => void) => {
-      idleCallback = cb
-      return 7
-    })
+    ;(window as any).requestIdleCallback = vi.fn(
+      (cb: () => void, _options?: IdleRequestOptions) => {
+        idleCallback = cb
+        return 7
+      },
+    )
     ;(window as any).cancelIdleCallback = vi.fn()
 
     try {
@@ -592,6 +707,9 @@ describe('Rue island runtime', () => {
         expect(document.body.textContent).toContain('idle hydrated')
       })
       expect(resolveModule).toHaveBeenCalledTimes(1)
+      expect(window.requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), {
+        timeout: 500,
+      })
     } finally {
       window.requestIdleCallback = originalRequestIdle
       window.cancelIdleCallback = originalCancelIdle
@@ -650,6 +768,7 @@ describe('Rue island runtime', () => {
       component: '/src/Visible.tsx',
       entry: '/src/Visible.tsx',
       hydrate: 'visible',
+      rootMargin: '200px 10%',
       html: '<p>visible server</p>',
     })
 
@@ -659,8 +778,12 @@ describe('Rue island runtime', () => {
       observe = vi.fn()
       disconnect = vi.fn()
 
-      constructor(callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
+      constructor(
+        callback: (entries: Array<{ isIntersecting: boolean }>) => void,
+        options?: IntersectionObserverInit,
+      ) {
         observerCallback = callback
+        expect(options).toEqual({ rootMargin: '200px 10%' })
       }
     }
 
@@ -742,5 +865,152 @@ describe('Rue island runtime', () => {
     await waitForContent(() => {
       expect(document.body.textContent).toContain('Run:click')
     })
+  })
+
+  it('emits a sanitized lifecycle error before invoking onError', async () => {
+    document.body.innerHTML = createIslandContainerHtml({
+      id: 'broken',
+      component: '/src/Broken.tsx',
+      entry: '/src/Broken.tsx',
+      hydrate: 'load',
+    })
+    const island = document.querySelector('rue-island')!
+    const events: Array<{ type: string; detail: any }> = []
+    for (const type of ['rue:before-hydrate', 'rue:error']) {
+      island.addEventListener(type, event => {
+        events.push({ type, detail: (event as CustomEvent).detail })
+      })
+    }
+    const onError = vi.fn()
+
+    registerRueIsland(island, {
+      resolveModule: async () => {
+        throw new Error('module failed')
+      },
+      onError,
+    })
+
+    await waitForContent(() => {
+      expect(island.getAttribute('data-rue-status')).toBe('error')
+    })
+    expect(events).toEqual([
+      { type: 'rue:before-hydrate', detail: { id: 'broken', strategy: 'load' } },
+      { type: 'rue:error', detail: { id: 'broken', strategy: 'load' } },
+    ])
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), island, undefined)
+  })
+
+  it('observes dynamically inserted islands and invalidates removed or stopped work', async () => {
+    let resolveModulePromise!: (module: any) => void
+    const pendingModule = new Promise<any>(resolve => {
+      resolveModulePromise = resolve
+    })
+    const mount = vi.fn()
+    const resolveModule = vi.fn(() => pendingModule)
+    const stop = startRueIslandLoader({ resolveModule })
+
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      createIslandContainerHtml({
+        id: 'dynamic',
+        component: '/src/Dynamic.tsx',
+        entry: '/src/Dynamic.tsx',
+        hydrate: 'load',
+        html: '<p>dynamic server</p>',
+      }),
+    )
+    await waitForContent(() => {
+      expect(resolveModule).toHaveBeenCalledTimes(1)
+    })
+
+    document.querySelector('rue-island[data-rue-id="dynamic"]')?.remove()
+    await flush()
+    resolveModulePromise({ mount })
+    await flush(6)
+    expect(mount).not.toHaveBeenCalled()
+
+    stop()
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      createIslandContainerHtml({
+        id: 'after-stop',
+        component: '/src/AfterStop.tsx',
+        entry: '/src/AfterStop.tsx',
+        hydrate: 'load',
+      }),
+    )
+    await flush(6)
+    expect(resolveModule).toHaveBeenCalledTimes(1)
+  })
+
+  it('hydrates nested islands parent-first and emits stable lifecycle events', async () => {
+    let resolveParent!: (module: any) => void
+    const parentModule = new Promise<any>(resolve => {
+      resolveParent = resolve
+    })
+    const order: string[] = []
+    const details: any[] = []
+    document.body.innerHTML = `
+      <rue-island data-rue-id="parent" data-rue-entry="parent" data-rue-hydrate="load">
+        <section>
+          parent server
+          <rue-island data-rue-id="child" data-rue-entry="child" data-rue-hydrate="load">
+            child server
+          </rue-island>
+        </section>
+      </rue-island>
+    `
+    for (const type of ['rue:before-hydrate', 'rue:hydrate', 'rue:error']) {
+      document.addEventListener(type, event => {
+        const customEvent = event as CustomEvent
+        const target = event.target as Element
+        order.push(`${type}:${target.getAttribute('data-rue-id')}`)
+        details.push(customEvent.detail)
+      })
+    }
+
+    const resolveModule = vi.fn((specifier: string) => {
+      order.push(`load:${specifier}`)
+      if (specifier === 'parent') return parentModule
+      return Promise.resolve({
+        mount: () => {
+          order.push('mount:child')
+        },
+      })
+    })
+    const stop = startRueIslandLoader({ resolveModule })
+
+    await flush(6)
+    expect(resolveModule).toHaveBeenCalledTimes(1)
+    expect(order).toEqual(['rue:before-hydrate:parent', 'load:parent'])
+
+    resolveParent({
+      mount: () => {
+        order.push('mount:parent')
+      },
+    })
+    await waitForContent(() => {
+      expect(resolveModule).toHaveBeenCalledTimes(2)
+      expect(order).toContain('rue:hydrate:child')
+    })
+
+    expect(order).toEqual([
+      'rue:before-hydrate:parent',
+      'load:parent',
+      'mount:parent',
+      'rue:hydrate:parent',
+      'rue:before-hydrate:child',
+      'load:child',
+      'mount:child',
+      'rue:hydrate:child',
+    ])
+    expect(details).toEqual([
+      { id: 'parent', strategy: 'load' },
+      { id: 'parent', strategy: 'load' },
+      { id: 'child', strategy: 'load' },
+      { id: 'child', strategy: 'load' },
+    ])
+    expect(details.every(detail => !('props' in detail))).toBe(true)
+    stop()
   })
 })

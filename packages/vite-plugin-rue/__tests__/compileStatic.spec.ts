@@ -23,4 +23,18 @@ describe('compileRueStatic', () => {
     expect(code).toContain('_$createElement("main"')
     expect(code).not.toContain('<main')
   })
+
+  it('compiles client directives through the shared island descriptor helper', async () => {
+    const code = await compileRueStatic(
+      `
+        import Counter from './Counter'
+        export const App = () => <Counter client:load count={1} />
+      `,
+      { id: '/virtual/static-island.tsx', production: false },
+    )
+
+    expect(code).toContain('createRueIslandDescriptor')
+    expect(code).toContain('component: Counter')
+    expect(code).not.toContain('client:load')
+  })
 })

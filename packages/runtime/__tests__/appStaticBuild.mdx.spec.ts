@@ -56,8 +56,17 @@ describe('app static build MDX documents', () => {
     expect(classifyDocRoute('/guide/guide/missing-doc', sourceMap)).toBeNull()
   })
 
-  it('strips client runtime only for Markdown static-doc output', () => {
-    const clientRuntimeAssets = new Set(['/assets/main.js', '/assets/runtime.js'])
+  it('strips Rue client entries from Markdown and non-island MDX output', () => {
+    const clientEntries = {
+      app: {
+        entry: '/assets/main.js',
+        assets: new Set(['/assets/main.js', '/assets/runtime.js']),
+      },
+      islands: {
+        entry: '/assets/islands.js',
+        assets: new Set(['/assets/islands.js', '/assets/island-runtime.js']),
+      },
+    }
     const template = `<!doctype html>
 <html>
   <head>
@@ -76,7 +85,7 @@ describe('app static build MDX documents', () => {
       'static-doc',
       '/guide/guide/static-doc',
       new Set(),
-      clientRuntimeAssets,
+      clientEntries,
     )
     const mdxHtml = createRouteHtml(
       template,
@@ -84,7 +93,7 @@ describe('app static build MDX documents', () => {
       'ssr-prerender',
       '/guide/guide/interactive-doc',
       new Set(),
-      clientRuntimeAssets,
+      clientEntries,
     )
 
     expect(markdownHtml).toContain('<main>Markdown content</main>')
@@ -94,11 +103,10 @@ describe('app static build MDX documents', () => {
     expect(markdownHtml).not.toContain('/assets/runtime.js')
 
     expect(mdxHtml).toContain('<main>MDX content</main>')
-    expect(mdxHtml).toContain('modulepreload')
-    expect(mdxHtml).toContain('type="module"')
     expect(mdxHtml).toContain('rue.theme')
-    expect(mdxHtml).toContain('/assets/main.js')
-    expect(mdxHtml).toContain('/assets/runtime.js')
     expect(mdxHtml).toContain('/assets/user-module.js')
+    expect(mdxHtml).not.toContain('/assets/main.js')
+    expect(mdxHtml).not.toContain('/assets/runtime.js')
+    expect(mdxHtml).not.toContain('/assets/islands.js')
   })
 })

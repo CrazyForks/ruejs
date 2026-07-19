@@ -8,16 +8,17 @@
  * - RouterView 依据 matched 链和嵌套深度渲染组件，RouterLink 则提供声明式导航入口。
  */
 import {
+  Component,
+  KeepAlive,
   type FC,
-  type BlockInstance,
   createContext,
   h,
   signal,
   getCurrentContainer,
-  type RenderTarget,
   type SignalHandle,
-  render,
   renderAnchor,
+  onBeforeUnmount,
+  onUnmounted,
   untrack,
   useContext,
   vapor,
@@ -28,10 +29,30 @@ import {
   appendChild,
   createComment,
   createElement as createDomElement,
-  insertBefore,
-  removeChild,
   setStyle,
 } from '@rue-js/runtime/dom'
+import {
+  bindRoutePrefetchTrigger,
+  shouldPrefetchRouteForEvent,
+  type RoutePrefetchStrategy,
+} from './prefetch'
+import {
+  dispatchAfterNavigation,
+  dispatchBeforeNavigation,
+  scheduleNavigationPageLoad,
+  shouldManageNavigationFocus,
+  type NavigationLifecycleType,
+} from './navigation-lifecycle'
+import { createRouterScrollManager, type RouterScrollBehavior } from './scroll'
+import {
+  createRouterViewTransitionRunner,
+  type RouterViewTransitionsConfig,
+} from './view-transitions'
+
+export type { RoutePrefetchStrategy } from './prefetch'
+export type { NavigationLifecycleDetail, NavigationLifecycleType } from './navigation-lifecycle'
+export type { RouterScrollBehavior, RouterScrollPosition, RouterScrollResult } from './scroll'
+export type { RouterViewTransitionsConfig, RouterViewTransitionsOptions } from './view-transitions'
 
 /** 可同步或异步返回的值，主要用于导航守卫。 */
 type Awaitable<T> = T | Promise<T>
@@ -111,6 +132,10 @@ export type RouteRecord = {
   meta?: RouteMeta
   /** 路由独享前置守卫，执行顺序在全局 beforeEach 之后。 */
   beforeEnter?: NavigationGuard
+  /** 离开该记录时缓存页面实例与 DOM，返回时恢复本地状态。 */
+  persist?: boolean
+  /** 持久化缓存键；默认使用编译后的完整路由路径。 */
+  persistKey?: string
 }
 
 /** 公开的原始路由记录别名，保留给外部类型语义使用。 */
@@ -186,6 +211,8 @@ export type Router = {
   push: (p: RouteLocationRaw) => Promise<NavigationFailure | undefined>
   /** 替换当前历史记录并导航到目标位置。 */
   replace: (p: RouteLocationRaw) => Promise<NavigationFailure | undefined>
+  /** 解析目标位置并预加载命中的懒路由组件，不执行守卫、导航或历史写入。 */
+  prefetch: (p: RouteLocationRaw) => Promise<void>
   /** 等待当前导航队列完成，SSR 中通常在 push(url) 后调用。 */
   isReady: () => Promise<void>
   /** 后退一步，优先委托给 HistoryLike.back。 */
@@ -211,7 +238,7 @@ export type HistoryLike = {
   /** 替换当前位置，并负责通知 listen 订阅者。 */
   replace: (p: string) => void
   /** 订阅底层位置变化，用于驱动 Router 的响应式信号。 */
-  listen: (cb: () => void) => void
+  listen: (cb: (source?: NavigationLifecycleType) => void) => void
   /** 可选的后退能力，Web 环境通常委托给 `window.history.back()`。 */
   back?: () => void
   /** 可选的 href 生成能力，RouterLink 会用它生成 `<a href>`。 */
@@ -222,6 +249,34 @@ export type HistoryLike = {
 const __routerByContainer = new WeakMap<HTMLElement, Router>()
 // RouterLink 的编译快路径会通过实例级 resolver 把 to 转为路径。
 const __routerResolvePathByInstance = new WeakMap<Router, (to: RouteLocationRaw) => string>()
+const __routerPersistKeysByInstance = new WeakMap<Router, string[]>()
+const RUE_CONTAINER_CLEANUPS_KEY = '__rue_container_cleanups__'
+
+const registerRouterContainerCleanup = (container: object | null, cleanup: () => void) => {
+  if (!container) {
+    return () => {}
+  }
+  const globalRecord = globalThis as typeof globalThis & Record<string, unknown>
+  let registry = globalRecord[RUE_CONTAINER_CLEANUPS_KEY] as
+    | WeakMap<object, Set<() => void>>
+    | undefined
+  if (!registry) {
+    registry = new WeakMap()
+    globalRecord[RUE_CONTAINER_CLEANUPS_KEY] = registry
+  }
+  let cleanups = registry.get(container)
+  if (!cleanups) {
+    cleanups = new Set()
+    registry.set(container, cleanups)
+  }
+  cleanups.add(cleanup)
+  return () => {
+    cleanups?.delete(cleanup)
+    if (cleanups?.size === 0) {
+      registry?.delete(container)
+    }
+  }
+}
 let __activeRouter: Router | null = null
 // 嵌套 RouterView 使用 depth context 定位 matched 链上的对应记录。
 const RouterViewDepthContext = createContext(0)
@@ -236,6 +291,9 @@ type CompiledRouteRecord = Omit<RouteRecord, 'children'> & {
   _fullPath: string
   _c: { re: RegExp; keys: string[] }
 }
+
+const resolveRoutePersistKey = (record: RouteRecord) =>
+  record.persistKey || (record as Partial<CompiledRouteRecord>)._fullPath || record.path
 
 /** 一条可匹配分支，record 是末端记录，matched 是父到子的完整链。 */
 type RouteBranch = {
@@ -262,9 +320,12 @@ type NavigationResolution =
 type PendingNavigation = {
   id: number
   path: string
+  href: string
   route: Route
   from: Route
   notify: boolean
+  navigationType: NavigationLifecycleType
+  manageFocus: boolean
   resolve?: (result: NavigationFailure | undefined) => void
 }
 
@@ -481,9 +542,12 @@ export const createWebHashHistory = () => {
     return s || '/'
   }
   // 注册 hashchange 事件监听（浏览器环境）
-  const listen = (cb: () => void) => {
-    if (g && g.addEventListener) g.addEventListener('hashchange', cb)
+  const listeners = new Set<(source?: NavigationLifecycleType) => void>()
+  const notify = (source: NavigationLifecycleType) => {
+    listeners.forEach(listener => listener(source))
   }
+  if (g && g.addEventListener) g.addEventListener('hashchange', () => notify('pop'))
+  const listen = (cb: (source?: NavigationLifecycleType) => void) => listeners.add(cb)
   return {
     location: loc,
     push: (p: string) => {
@@ -493,10 +557,7 @@ export const createWebHashHistory = () => {
         // 兼容传入 '#/path' 或 '/path' 两种形式
         g.location.hash = next
       }
-      if (g && g.dispatchEvent && g.HashChangeEvent) {
-        // 主动触发事件，确保响应式链路立刻更新
-        g.dispatchEvent(new g.HashChangeEvent('hashchange'))
-      }
+      notify('push')
     },
     replace: (p: string) => {
       const next = normalize(p)
@@ -506,9 +567,7 @@ export const createWebHashHistory = () => {
         // 使用 location.replace 避免新增历史栈记录
         g.location.replace(href)
       }
-      if (g && g.dispatchEvent && g.HashChangeEvent) {
-        g.dispatchEvent(new g.HashChangeEvent('hashchange'))
-      }
+      notify('replace')
     },
     listen,
     back: () => {
@@ -527,10 +586,12 @@ export const createWebHashHistory = () => {
  */
 export const createMemoryHistory = (initialPath = '/') => {
   let current = normalizeRouteLocationHref(initialPath)
-  const listeners = new Set<() => void>()
+  let index = 0
+  const entries = [current]
+  const listeners = new Set<(source?: NavigationLifecycleType) => void>()
 
-  const notify = () => {
-    listeners.forEach(listener => listener())
+  const notify = (source: NavigationLifecycleType) => {
+    listeners.forEach(listener => listener(source))
   }
 
   return {
@@ -539,16 +600,26 @@ export const createMemoryHistory = (initialPath = '/') => {
       const next = normalizeRouteLocationHref(p)
       if (next === current) return
       current = next
-      notify()
+      entries.splice(index + 1)
+      entries.push(next)
+      index = entries.length - 1
+      notify('push')
     },
     replace: (p: string) => {
       const next = normalizeRouteLocationHref(p)
       if (next === current) return
       current = next
-      notify()
+      entries[index] = next
+      notify('replace')
     },
-    listen: (cb: () => void) => {
+    listen: (cb: (source?: NavigationLifecycleType) => void) => {
       listeners.add(cb)
+    },
+    back: () => {
+      if (index === 0) return
+      index -= 1
+      current = entries[index]
+      notify('pop')
     },
     createHref: (p: string) => normalizeRouteLocationHref(p),
   } as HistoryLike
@@ -570,14 +641,12 @@ export const createWebHistory = () => {
     const hash = g && g.location ? String(g.location.hash || '') : ''
     return `${pathname || '/'}${search}${hash}`
   }
-  const listen = (cb: () => void) => {
-    if (g && g.addEventListener) g.addEventListener('popstate', cb)
+  const listeners = new Set<(source?: NavigationLifecycleType) => void>()
+  const notify = (source: NavigationLifecycleType) => {
+    listeners.forEach(listener => listener(source))
   }
-  const notify = () => {
-    if (g && g.dispatchEvent && g.PopStateEvent) {
-      g.dispatchEvent(new g.PopStateEvent('popstate'))
-    }
-  }
+  if (g && g.addEventListener) g.addEventListener('popstate', () => notify('pop'))
+  const listen = (cb: (source?: NavigationLifecycleType) => void) => listeners.add(cb)
   return {
     location: loc,
     push: (p: string) => {
@@ -588,7 +657,7 @@ export const createWebHistory = () => {
       } else if (g && g.location) {
         g.location.pathname = next
       }
-      notify()
+      notify('push')
     },
     replace: (p: string) => {
       const next = normalize(p)
@@ -598,7 +667,7 @@ export const createWebHistory = () => {
       } else if (g && g.location && typeof g.location.replace === 'function') {
         g.location.replace(next)
       }
-      notify()
+      notify('replace')
     },
     listen,
     back: () => {
@@ -615,7 +684,14 @@ export const createWebHistory = () => {
  * 变化来同步 currentPath/route 信号。push/replace 的异步结果会在守卫和底层
  * history 通知完成后结算。
  */
-export const createRouter = (options: { history: HistoryLike; routes: RouteRecord[] }): Router => {
+export type RouterOptions = {
+  history: HistoryLike
+  routes: RouteRecord[]
+  scrollBehavior?: RouterScrollBehavior
+  viewTransitions?: RouterViewTransitionsConfig
+}
+
+export const createRouter = (options: RouterOptions): Router => {
   const compilePath = (path: string) => {
     // 将 `/users/:id(\\d+)` 这类模式编译成完整正则，同时记录捕获组对应的参数名。
     const keys: string[] = []
@@ -765,6 +841,13 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
 
   const compiled = compileRecords(options.routes)
   const branches = collectBranches(compiled)
+  const persistKeys = Array.from(
+    new Set(
+      branches.flatMap(branch =>
+        branch.matched.filter(record => record.persist).map(resolveRoutePersistKey),
+      ),
+    ),
+  )
 
   const match = (path: string): Route => {
     // 按声明顺序匹配分支，命中后提取 params，并合并 matched 链上的 meta。
@@ -830,6 +913,9 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   let pendingNavigation: PendingNavigation | null = null
   let navigationRequestId = 0
   let readyPromise: Promise<void> = Promise.resolve()
+  const scrollManager = createRouterScrollManager(options.scrollBehavior)
+  const runViewTransition = createRouterViewTransitionRunner(options.viewTransitions)
+  let committedHistoryHref = initialRouteState.href
 
   const createNavigationFailure = (
     type: NavigationFailureType,
@@ -842,6 +928,16 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     for (let i = 0; i < afterGuards.length; i++) {
       afterGuards[i](to, from, failure)
     }
+  }
+
+  const finishNavigation = (
+    to: Route,
+    from: Route,
+    navigationType: NavigationLifecycleType,
+    failure?: AfterEachFailure,
+  ) => {
+    runAfterGuards(to, from, failure)
+    dispatchAfterNavigation({ to, from, type: navigationType, failure })
   }
 
   const isStaleNavigation = (requestId: number) => requestId !== navigationRequestId
@@ -1062,12 +1158,27 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       record => isLazyRouteComponent(record.component) && !record.component.__rue_route_resolved,
     )
 
-  const commitNavigation = (path: string, nextRoute: Route, from: Route) => {
-    // 状态提交集中在这里，保证 currentPath/route 和 afterEach 的顺序稳定。
-    currentPath.set(path)
-    route.set(nextRoute)
-    runAfterGuards(nextRoute, from)
-  }
+  const commitNavigation = (
+    path: string,
+    href: string,
+    nextRoute: Route,
+    from: Route,
+    navigationType: NavigationLifecycleType,
+    manageFocus: boolean,
+  ) =>
+    runViewTransition(() => {
+      // 状态提交集中在这里，保证 currentPath/route 和 afterEach 的顺序稳定。
+      currentPath.set(path)
+      route.set(nextRoute)
+      committedHistoryHref = href
+      finishNavigation(nextRoute, from, navigationType)
+      scheduleNavigationPageLoad(
+        { to: nextRoute, from, type: navigationType },
+        manageFocus,
+        () => route.get() === nextRoute,
+        () => scrollManager.scroll({ to: nextRoute, from, type: navigationType, href }),
+      )
+    })
 
   const getCurrentHistoryHref = () => normalizeRouteLocationHref(options.history.location())
 
@@ -1085,11 +1196,18 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
 
     pendingNavigation = null
 
-    if (nextPending.notify) {
-      commitNavigation(nextPending.path, nextPending.route, nextPending.from)
-    }
+    const commitPromise = nextPending.notify
+      ? commitNavigation(
+          nextPending.path,
+          nextPending.href,
+          nextPending.route,
+          nextPending.from,
+          nextPending.navigationType,
+          nextPending.manageFocus,
+        )
+      : Promise.resolve()
 
-    nextPending.resolve?.(undefined)
+    void commitPromise.then(() => nextPending.resolve?.(undefined))
     return true
   }
 
@@ -1100,14 +1218,21 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     from: Route,
     requestId: number,
     method: 'push' | 'replace',
+    manageFocus: boolean,
   ) => {
-    pendingNavigation = {
-      id: requestId,
-      path,
-      route: nextRoute,
-      from,
-      notify: true,
-    }
+    const navigationPromise = new Promise<NavigationFailure | undefined>(resolve => {
+      pendingNavigation = {
+        id: requestId,
+        path,
+        href,
+        route: nextRoute,
+        from,
+        notify: true,
+        navigationType: method,
+        manageFocus,
+        resolve,
+      }
+    })
 
     options.history[method](href)
 
@@ -1116,11 +1241,20 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     }
 
     if (pendingNavigation?.id === requestId) {
+      const unresolvedPending = pendingNavigation
       pendingNavigation = null
-      commitNavigation(path, nextRoute, from)
+      void commitNavigation(path, href, nextRoute, from, method, manageFocus).then(() =>
+        unresolvedPending.resolve?.(undefined),
+      )
     }
 
-    return undefined
+    const currentReadyPromise = navigationPromise.then(() => undefined)
+    readyPromise = currentReadyPromise
+    return navigationPromise.finally(() => {
+      if (readyPromise === currentReadyPromise) {
+        readyPromise = Promise.resolve()
+      }
+    })
   }
 
   const navigate = async (
@@ -1130,6 +1264,13 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     // 编程式导航先解析和跑守卫，只有 allow 后才委托给 history 修改地址。
     const from = route.get()
     const requestId = ++navigationRequestId
+    const manageFocus = shouldManageNavigationFocus()
+    scrollManager.save(committedHistoryHref)
+    let lifecycleTarget: Route = null
+    try {
+      lifecycleTarget = match(resolveLocation(rawPath).path)
+    } catch {}
+    dispatchBeforeNavigation({ to: lifecycleTarget, from, type: method })
 
     if (beforeGuards.length === 0) {
       const syncResolution = resolveNavigationSync(rawPath, from)
@@ -1140,7 +1281,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
 
       if (canCommitSync) {
         if (syncResolution.kind === 'error') {
-          runAfterGuards(syncResolution.route, from, syncResolution.error)
+          finishNavigation(syncResolution.route, from, method, syncResolution.error)
           throw syncResolution.error
         }
 
@@ -1153,7 +1294,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
             syncResolution.route,
             from,
           )
-          runAfterGuards(syncResolution.route, from, failure)
+          finishNavigation(syncResolution.route, from, method, failure)
           return failure
         }
 
@@ -1164,6 +1305,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
           from,
           requestId,
           method,
+          manageFocus,
         )
       }
     }
@@ -1171,7 +1313,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     const resolution = await resolveNavigation(rawPath, from, requestId)
 
     if (resolution.kind === 'error') {
-      runAfterGuards(resolution.route, from, resolution.error)
+      finishNavigation(resolution.route, from, method, resolution.error)
       throw resolution.error
     }
 
@@ -1181,13 +1323,13 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
         resolution.route,
         from,
       )
-      runAfterGuards(resolution.route, from, failure)
+      finishNavigation(resolution.route, from, method, failure)
       return failure
     }
 
     if (resolution.kind === 'abort') {
       const failure = createNavigationFailure(NavigationFailureType.aborted, resolution.route, from)
-      runAfterGuards(resolution.route, from, failure)
+      finishNavigation(resolution.route, from, method, failure)
       return failure
     }
 
@@ -1197,7 +1339,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
         resolution.route,
         from,
       )
-      runAfterGuards(resolution.route, from, failure)
+      finishNavigation(resolution.route, from, method, failure)
       return failure
     }
 
@@ -1208,7 +1350,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
         resolution.route,
         from,
       )
-      runAfterGuards(resolution.route, from, failure)
+      finishNavigation(resolution.route, from, method, failure)
       return failure
     }
 
@@ -1216,9 +1358,12 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       pendingNavigation = {
         id: requestId,
         path: resolution.path,
+        href: resolution.href,
         route: resolution.route,
         from,
         notify: true,
+        navigationType: method,
+        manageFocus,
         resolve,
       }
 
@@ -1268,9 +1413,10 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   }
 
   // 监听浏览器前进/后退或 history 主动通知，并走同一套导航解析流程。
-  options.history.listen(() => {
+  options.history.listen(source => {
     void (async () => {
       const rawLocation = options.history.location()
+      const rawHref = normalizeRouteLocationHref(rawLocation)
       const p = normalizeRouteLocationPath(rawLocation)
 
       if (settlePendingNavigation()) {
@@ -1278,16 +1424,24 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
       }
 
       // 去重：避免重复设置导致无意义的通知
-      if (p === currentPath.get()) {
+      if (rawHref === committedHistoryHref) {
         return
       }
 
       const from = route.get()
       const requestId = ++navigationRequestId
+      const navigationType = source ?? 'pop'
+      const manageFocus = shouldManageNavigationFocus()
+      scrollManager.save(committedHistoryHref)
+      let lifecycleTarget: Route = null
+      try {
+        lifecycleTarget = match(resolveLocation(rawLocation).path)
+      } catch {}
+      dispatchBeforeNavigation({ to: lifecycleTarget, from, type: navigationType })
       const resolution = await resolveNavigation(rawLocation, from, requestId)
 
       if (resolution.kind === 'error') {
-        runAfterGuards(resolution.route, from, resolution.error)
+        finishNavigation(resolution.route, from, navigationType, resolution.error)
 
         if (!from) {
           return
@@ -1296,9 +1450,12 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
         pendingNavigation = {
           id: requestId,
           path: from.path,
+          href: from.path,
           route: from,
           from,
           notify: false,
+          navigationType: 'pop',
+          manageFocus: false,
         }
         options.history.replace(from.path)
         settlePendingNavigation()
@@ -1311,7 +1468,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
           resolution.route,
           from,
         )
-        runAfterGuards(resolution.route, from, failure)
+        finishNavigation(resolution.route, from, navigationType, failure)
         return
       }
 
@@ -1325,14 +1482,17 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
           resolution.route,
           from,
         )
-        runAfterGuards(resolution.route, from, failure)
+        finishNavigation(resolution.route, from, navigationType, failure)
 
         pendingNavigation = {
           id: requestId,
           path: from.path,
+          href: from.path,
           route: from,
           from,
           notify: false,
+          navigationType: 'pop',
+          manageFocus: false,
         }
         options.history.replace(from.path)
         settlePendingNavigation()
@@ -1347,16 +1507,19 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
             resolution.route,
             from,
           )
-          runAfterGuards(resolution.route, from, failure)
+          finishNavigation(resolution.route, from, navigationType, failure)
           return
         }
 
         pendingNavigation = {
           id: requestId,
           path: resolution.path,
+          href: resolution.href,
           route: resolution.route,
           from,
           notify: true,
+          navigationType,
+          manageFocus,
         }
         options.history.replace(resolution.href)
         settlePendingNavigation()
@@ -1370,11 +1533,18 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
           resolution.route,
           from,
         )
-        runAfterGuards(resolution.route, from, failure)
+        finishNavigation(resolution.route, from, navigationType, failure)
         return
       }
 
-      commitNavigation(resolution.path, resolution.route, from)
+      await commitNavigation(
+        resolution.path,
+        resolution.href,
+        resolution.route,
+        from,
+        navigationType,
+        manageFocus,
+      )
     })()
   })
 
@@ -1383,6 +1553,15 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
     route,
     push: (p: RouteLocationRaw) => navigate(p, 'push'),
     replace: (p: RouteLocationRaw) => navigate(p, 'replace'),
+    prefetch: async (p: RouteLocationRaw) => {
+      const resolution = resolveNavigationSync(p, route.get())
+      if (resolution.kind === 'error') {
+        throw resolution.error
+      }
+      if (resolution.kind === 'allow') {
+        await loadRouteComponents(resolution.route)
+      }
+    },
     isReady: () =>
       readyPromise.then(() => {
         const currentRoute = route.get()
@@ -1418,6 +1597,7 @@ export const createRouter = (options: { history: HistoryLike; routes: RouteRecor
   }
 
   __routerResolvePathByInstance.set(router, (to: RouteLocationRaw) => resolveLocation(to).href)
+  __routerPersistKeysByInstance.set(router, persistKeys)
 
   return router
 }
@@ -1430,69 +1610,44 @@ export const useRouter = (): Router => {
   return r
 }
 
-const insertNodeAtTarget = (target: RenderTarget, node: any) => {
-  // RouterView 通过 renderAnchor 接入不同挂载目标，这里统一处理真实 DOM 插入位置。
-  switch (target.kind) {
-    case 'container':
-      appendChild(target.container as any, node)
-      return
-    case 'between':
-      insertBefore(target.parent as any, node, target.end as any)
-      return
-    case 'anchor':
-    case 'static':
-      insertBefore(target.parent as any, node, target.anchor as any)
-      return
-  }
+type RouteViewContentProps = {
+  component: FC<any>
+  params: RouteParams
+  nextDepth: number
 }
 
-const createRouteComponentBlock = (
-  component: RouteRecord['component'],
-  params: RouteParams,
-  nextDepth: number,
-): BlockInstance => {
-  // 每个路由组件块都包一层 display: contents 的宿主节点，便于卸载时清理整段渲染。
-  let host: any = null
-
-  return {
-    kind: 'block',
-    mount(target) {
-      const routeHost = createDomElement('span') as any
-      setStyle(routeHost, { display: 'contents' } as any)
-      host = routeHost
-      insertNodeAtTarget(target, routeHost)
-
-      const resolvedComponent = resolveRouteComponent(component)
-
-      if (!resolvedComponent) {
-        render(null as any, routeHost as any)
-        return
-      }
-
-      const routeContent = h(
-        RouterViewDepthContext.Provider as any,
-        { value: nextDepth },
-        h(resolvedComponent, { params }) as any,
-      ) as any
-
-      render(routeContent, routeHost as any)
-    },
-    unmount() {
-      if (!host) {
-        return
-      }
-
-      render(null as any, host as any)
-
-      const parent = host.parentNode
-      if (parent) {
-        removeChild(parent as any, host as any)
-      }
-
-      host = null
-    },
-  }
+type RouteParamsState = {
+  source: SignalHandle<RouteParams>
+  proxy: RouteParams
 }
+
+const createRouteParamsState = (params: RouteParams): RouteParamsState => {
+  const source = signal(params, {}, true)
+  const proxy = new Proxy({} as RouteParams, {
+    get: (_target, key) => source.get()[key as string],
+    has: (_target, key) => key in source.get(),
+    ownKeys: () => Reflect.ownKeys(source.get()),
+    getOwnPropertyDescriptor: (_target, key) => {
+      if (!(key in source.get())) {
+        return undefined
+      }
+      return {
+        configurable: true,
+        enumerable: true,
+        value: source.get()[key as string],
+        writable: false,
+      }
+    },
+  })
+  return { source, proxy }
+}
+
+const RouteViewContent: FC<RouteViewContentProps> = ({ component, params, nextDepth }) =>
+  h(
+    RouterViewDepthContext.Provider as any,
+    { value: nextDepth },
+    h(component, { params }) as any,
+  ) as any
 
 /**
  * 路由视图组件。
@@ -1502,6 +1657,7 @@ const createRouteComponentBlock = (
  */
 export const RouterView: FC = () => {
   const depth = useContext(RouterViewDepthContext)
+  const ownerContainer = getCurrentContainer() as object | null
 
   if (__SSR__ && isRueServerRendering()) {
     const r = __activeRouter
@@ -1527,8 +1683,9 @@ export const RouterView: FC = () => {
     return h(RouterViewDepthContext.Provider as any, { value: depth + 1 }, routeContent) as any
   }
 
-  const { container } = useSetup(() => {
+  const view = useSetup(() => {
     const r = useRouter()
+    const persistKeys = __routerPersistKeysByInstance.get(r) ?? []
     const container = createDomElement('span') as any
     setStyle(container, { display: 'contents' } as any)
     const anchorEl = createComment('rue-router-view-anchor') as any
@@ -1536,8 +1693,12 @@ export const RouterView: FC = () => {
     let previousRecord: RouteRecord | null = null
     let previousParams: RouteParams | null = null
     let previousResolvedComponent: FC<any> | null | undefined = null
+    let disposeKeepAlive = () => {}
+    const paramsByRouteKey = new Map<string, RouteParamsState>()
+    const contentByRouteKey = new Map<string, { component: FC<any>; content: unknown }>()
+    let disposed = false
 
-    watchEffect(() => {
+    const routeEffect = watchEffect(() => {
       // route 是 signal，需要在 effect 中读取以订阅导航变化。
       const data = r.route.get()
       const record = data?.matched?.[depth] || null
@@ -1560,6 +1721,21 @@ export const RouterView: FC = () => {
           previousParams,
         )
         const resolvedComponent = resolveRouteComponent(record.component)
+        if (!resolvedComponent) {
+          previousRecord = record
+          previousParams = recordParams
+          previousResolvedComponent = resolvedComponent
+          renderAnchor(null as any, parent, anchorEl)
+          return
+        }
+        const routeKey = resolveRoutePersistKey(record)
+        let paramsState = paramsByRouteKey.get(routeKey)
+        if (!paramsState) {
+          paramsState = createRouteParamsState(recordParams)
+          paramsByRouteKey.set(routeKey, paramsState)
+        } else {
+          paramsState.source.set(recordParams)
+        }
         if (
           previousRecord === record &&
           previousParams === recordParams &&
@@ -1572,26 +1748,76 @@ export const RouterView: FC = () => {
         previousParams = recordParams
         previousResolvedComponent = resolvedComponent
 
+        let cachedContent = contentByRouteKey.get(routeKey)
+        if (!cachedContent || cachedContent.component !== resolvedComponent) {
+          cachedContent = {
+            component: resolvedComponent,
+            content: h(Component as any, {
+              is: RouteViewContent,
+              key: routeKey,
+              component: resolvedComponent,
+              params: paramsState.proxy,
+              nextDepth: depth + 1,
+            }),
+          }
+          contentByRouteKey.set(routeKey, cachedContent)
+        }
         renderAnchor(
-          createRouteComponentBlock(record.component, recordParams, depth + 1) as any,
+          h(
+            KeepAlive as any,
+            {
+              include: persistKeys,
+              __rueRegisterDispose: (dispose: () => void) => {
+                disposeKeepAlive = dispose
+              },
+            },
+            cachedContent.content as any,
+          ) as any,
           parent,
           anchorEl,
         )
       })
     })
 
-    return { container }
+    return {
+      container,
+      dispose() {
+        if (disposed) {
+          return
+        }
+        disposed = true
+        routeEffect.dispose()
+        disposeKeepAlive()
+        disposeKeepAlive = () => {}
+        const parent = (anchorEl as any).parentNode || container
+        renderAnchor(null as any, parent, anchorEl)
+        paramsByRouteKey.clear()
+        contentByRouteKey.clear()
+      },
+    }
   })
 
-  return vapor(() => container)
+  let unregisterContainerCleanup = () => {}
+  const disposeView = () => {
+    unregisterContainerCleanup()
+    view.dispose()
+  }
+  unregisterContainerCleanup = registerRouterContainerCleanup(ownerContainer, disposeView)
+  onBeforeUnmount(disposeView)
+  return vapor(() => view.container)
 }
 
-type RouterLinkProps = { to: RouteLocationRaw; replace?: boolean } & Record<string, unknown>
+type RouterLinkProps = {
+  to: RouteLocationRaw
+  replace?: boolean
+  prefetch?: RoutePrefetchStrategy
+} & Record<string, unknown>
 
 /** RouterLink 暴露给编译快路径的静态能力。 */
 type RouterLinkFastPath = FC<RouterLinkProps> & {
   __rueHref: (to: unknown) => string
   __rueOnClick: (e: MouseEvent, to: unknown, replace?: unknown) => void
+  __rueOnPrefetch: (e: Event, to: unknown, prefetch?: unknown) => void
 }
 
 const resolveRouterLocationPath = (router: Router | null, to: unknown) => {
@@ -1649,10 +1875,33 @@ const routerLinkOnClick = (e: MouseEvent, to: unknown, replace?: unknown) => {
   routerLinkNavigate(to, replace)
 }
 
+const routerLinkOnPrefetch = (e: Event, to: unknown, prefetch?: unknown) => {
+  if (!shouldPrefetchRouteForEvent(e.type, prefetch as RoutePrefetchStrategy | undefined)) {
+    return
+  }
+  const router = __activeRouter
+  if (!router) {
+    return
+  }
+  void router.prefetch(to as RouteLocationRaw).catch(() => {})
+}
+
 const RouterLinkImpl: FC<RouterLinkProps> = props => {
   const to = (props as any).to as RouteLocationRaw
   const replace = !!(props as any).replace
-  const { children, to: _to, replace: _replace, ...rest } = props as any
+  const prefetch = (props as any).prefetch as RoutePrefetchStrategy | undefined
+  const {
+    children,
+    to: _to,
+    replace: _replace,
+    prefetch: _prefetch,
+    ref: userRef,
+    onPointerEnter: userPointerEnter,
+    onFocus: userFocus,
+    onPointerDown: userPointerDown,
+    onTouchStart: userTouchStart,
+    ...rest
+  } = props as any
   const childList = Array.isArray(children)
     ? (children as any[])
     : children != null
@@ -1664,6 +1913,42 @@ const RouterLinkImpl: FC<RouterLinkProps> = props => {
   }
 
   const r = useRouter()
+  let clearPrefetchTrigger = () => {}
+  let linkElement: Element | null = null
+  const runPrefetch = () => {
+    void r.prefetch(to).catch(() => {})
+  }
+  const setUserRef = (value: Element | null) => {
+    if (typeof userRef === 'function') {
+      userRef(value)
+    } else if (userRef && typeof userRef === 'object' && 'current' in userRef) {
+      userRef.current = value ?? undefined
+    }
+  }
+  const linkRef = (element: Element | null) => {
+    clearPrefetchTrigger()
+    clearPrefetchTrigger = () => {}
+    linkElement = element
+    setUserRef(element)
+    if (element) {
+      clearPrefetchTrigger = bindRoutePrefetchTrigger(element, prefetch, runPrefetch)
+    }
+  }
+  const prefetchOn = (event: Event, userHandler: unknown) => {
+    if (typeof userHandler === 'function') {
+      userHandler(event)
+    }
+    if (!event.defaultPrevented && shouldPrefetchRouteForEvent(event.type, prefetch)) {
+      runPrefetch()
+    }
+  }
+  onUnmounted(() => {
+    clearPrefetchTrigger()
+    if (linkElement) {
+      setUserRef(null)
+      linkElement = null
+    }
+  })
   const click = (e: MouseEvent) => {
     // 组件路径下使用上下文 Router，避免多个应用共存时误用活动 Router。
     if (
@@ -1682,7 +1967,20 @@ const RouterLinkImpl: FC<RouterLinkProps> = props => {
   }
 
   // children 归一化为数组后透传给 h，其他属性直接落到最终的 a 元素上。
-  return h('a', { href: routerLinkHref(to), onClick: click, ...rest }, ...childList)
+  return h(
+    'a',
+    {
+      href: routerLinkHref(to),
+      onClick: click,
+      ref: linkRef,
+      onPointerEnter: (event: Event) => prefetchOn(event, userPointerEnter),
+      onFocus: (event: Event) => prefetchOn(event, userFocus),
+      onPointerDown: (event: Event) => prefetchOn(event, userPointerDown),
+      onTouchStart: (event: Event) => prefetchOn(event, userTouchStart),
+      ...rest,
+    },
+    ...childList,
+  )
 }
 
 /**
@@ -1694,6 +1992,7 @@ const RouterLinkImpl: FC<RouterLinkProps> = props => {
 export const RouterLink = Object.assign(RouterLinkImpl, {
   __rueHref: routerLinkHref,
   __rueOnClick: routerLinkOnClick,
+  __rueOnPrefetch: routerLinkOnPrefetch,
 }) as RouterLinkFastPath
 
 /** 获取当前路由匹配结果的响应式信号。 */

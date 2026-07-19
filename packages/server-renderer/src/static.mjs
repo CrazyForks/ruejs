@@ -466,6 +466,52 @@ const normalizeClientRuntimeAssets = clientRuntimeAssets => {
   return new Set([...clientRuntimeAssets].map(asset => String(asset)))
 }
 
+const normalizeStaticClientEntry = (entry, name) => {
+  if (!entry || typeof entry !== 'object') {
+    throw new TypeError(`clientEntries.${name} must describe a client entry`)
+  }
+
+  const entryUrl = String(entry.entry || '')
+  if (!entryUrl) {
+    throw new TypeError(`clientEntries.${name}.entry must be a non-empty asset URL`)
+  }
+
+  const assets = normalizeClientRuntimeAssets(entry.assets)
+  assets.add(entryUrl)
+  return { entry: entryUrl, assets }
+}
+
+const normalizeStaticClientEntries = clientEntries => {
+  if (!clientEntries || typeof clientEntries !== 'object') {
+    throw new TypeError('clientEntries must contain app and islands client entries')
+  }
+
+  return {
+    app: normalizeStaticClientEntry(clientEntries.app, 'app'),
+    islands: normalizeStaticClientEntry(clientEntries.islands, 'islands'),
+  }
+}
+
+const escapeHtmlAttribute = value =>
+  String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+const injectStaticClientEntry = (html, entry) => {
+  const tags = [...entry.assets]
+    .filter(asset => asset !== entry.entry)
+    .sort()
+    .map(asset => `<link rel="modulepreload" crossorigin href="${escapeHtmlAttribute(asset)}">`)
+  tags.push(`<script type="module" crossorigin src="${escapeHtmlAttribute(entry.entry)}"></script>`)
+
+  const block = tags.map(tag => `    ${tag}`).join('\n')
+  return /<\/head\s*>/i.test(html)
+    ? html.replace(/<\/head\s*>/i, `${block}\n  </head>`)
+    : `${html}\n${tags.join('\n')}`
+}
+
 export const stripStaticClientRuntime = (html, clientRuntimeAssets) => {
   const assets = normalizeClientRuntimeAssets(clientRuntimeAssets)
   return String(html)
@@ -483,12 +529,24 @@ export const stripStaticClientRuntime = (html, clientRuntimeAssets) => {
     )
 }
 
-export const createStaticRouteHtml = (
-  template,
-  appHtml,
-  { includeClientRuntime = true, clientRuntimeAssets } = {},
-) => {
+export const createStaticRouteHtml = (template, appHtml, options = {}) => {
   const html = String(template).replace('<div id="app"></div>', `<div id="app">${appHtml}</div>`)
+
+  if ('clientMode' in options || 'clientEntries' in options) {
+    const clientMode = options.clientMode || 'app'
+    if (clientMode !== 'none' && clientMode !== 'islands' && clientMode !== 'app') {
+      throw new TypeError('clientMode must be one of none, islands, or app')
+    }
+
+    const clientEntries = normalizeStaticClientEntries(options.clientEntries)
+    const ownedAssets = new Set([...clientEntries.app.assets, ...clientEntries.islands.assets])
+    const strippedHtml = stripStaticClientRuntime(html, ownedAssets)
+    return clientMode === 'none'
+      ? strippedHtml
+      : injectStaticClientEntry(strippedHtml, clientEntries[clientMode])
+  }
+
+  const { includeClientRuntime = true, clientRuntimeAssets } = options
   return includeClientRuntime ? html : stripStaticClientRuntime(html, clientRuntimeAssets)
 }
 

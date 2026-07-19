@@ -9,6 +9,7 @@ import {
 } from '@rue-js/router'
 
 import {
+  onMounted,
   onUnmounted,
   ref,
   render,
@@ -82,6 +83,138 @@ const OtherRoute: FC = () => <section data-testid="route-other">other</section>
 const slowTestTimeout = 40_000
 
 describe('RouterView renderable boundary', () => {
+  it('preserves persist route state while non-persist routes reset', async () => {
+    const persistMounted = vi.fn()
+    const persistUnmounted = vi.fn()
+    const plainMounted = vi.fn()
+
+    const PersistCounter: FC = () => {
+      const [count, setCount] = useState(0)
+      onMounted(persistMounted)
+      onUnmounted(persistUnmounted)
+      return (
+        <button
+          data-testid="persist-counter"
+          onClick={() => setCount(value => void (value.value += 1))}
+        >
+          persist:{count.value}
+        </button>
+      )
+    }
+    const PlainCounter: FC = () => {
+      const [count, setCount] = useState(0)
+      onMounted(plainMounted)
+      return (
+        <button
+          data-testid="plain-counter"
+          onClick={() => setCount(value => void (value.value += 1))}
+        >
+          plain:{count.value}
+        </button>
+      )
+    }
+    const router = createRouter({
+      history: createMemoryHistory('/persist'),
+      routes: [
+        { path: '/persist', component: PersistCounter, persist: true },
+        { path: '/plain', component: PlainCounter },
+        { path: '/other', component: OtherRoute },
+      ],
+    })
+    attachRouter(router)
+    const container = mountTestContainer()
+    render(<RouterView />, container)
+    await flush()
+
+    container
+      .querySelector('[data-testid="persist-counter"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await router.push('/plain')
+    await flush()
+    container
+      .querySelector('[data-testid="plain-counter"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await router.push('/other')
+    await flush()
+    await router.push('/plain')
+    await flush()
+    expect(container.querySelector('[data-testid="plain-counter"]')?.textContent).toBe('plain:0')
+
+    await router.push('/persist')
+    await flush()
+    expect(container.querySelector('[data-testid="persist-counter"]')?.textContent).toBe(
+      'persist:1',
+    )
+    expect(persistMounted).toHaveBeenCalledTimes(1)
+    expect(persistUnmounted).not.toHaveBeenCalled()
+    expect(plainMounted).toHaveBeenCalledTimes(2)
+  })
+
+  it('updates params on a reactivated persist record without remounting it', async () => {
+    const mounted = vi.fn()
+    const User: FC<{ params: { id: string } }> = ({ params }) => {
+      const [count, setCount] = useState(0)
+      onMounted(mounted)
+      return (
+        <button
+          data-testid="persist-user"
+          onClick={() => setCount(value => void (value.value += 1))}
+        >
+          user:{params.id}:{count.value}
+        </button>
+      )
+    }
+    const router = createRouter({
+      history: createMemoryHistory('/users/1'),
+      routes: [
+        { path: '/users/:id', component: User, persist: true },
+        { path: '/other', component: OtherRoute },
+      ],
+    })
+    attachRouter(router)
+    const container = mountTestContainer()
+    render(<RouterView />, container)
+    await flush()
+    container
+      .querySelector('[data-testid="persist-user"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await router.push('/other')
+    await flush()
+    await router.push('/users/2')
+    await flush()
+
+    expect(container.querySelector('[data-testid="persist-user"]')?.textContent).toBe('user:2:1')
+    expect(mounted).toHaveBeenCalledTimes(1)
+  })
+
+  it('cleans cached persist routes when the root RouterView unmounts', async () => {
+    const unmounted = vi.fn()
+    const Cached: FC = () => {
+      onUnmounted(unmounted)
+      return <div>cached</div>
+    }
+    const router = createRouter({
+      history: createMemoryHistory('/cached'),
+      routes: [
+        { path: '/cached', component: Cached, persist: true, persistKey: 'cached-page' },
+        { path: '/other', component: OtherRoute },
+      ],
+    })
+    attachRouter(router)
+    const container = mountTestContainer()
+    render(<RouterView />, container)
+    await flush()
+    await router.push('/other')
+    await flush()
+    expect(unmounted).not.toHaveBeenCalled()
+
+    render(null as any, container)
+    await flush()
+    await flush()
+    expect(container.innerHTML).toBe('')
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
   it('updates same-component params and clears old route content across switches', async () => {
     window.location.hash = '#/users/1'
 

@@ -67,6 +67,16 @@ fn rejects_non_router_link_spread_onclick_and_children_attrs() {
 
     let children_attr_el = parse_jsx_element("<RouterLink to=\"/docs\" children={slot} />");
     assert!(rewrite_router_link_fast_path(&children_attr_el).is_none());
+
+    let viewport_el = parse_jsx_element("<RouterLink to=\"/docs\" prefetch=\"viewport\" />");
+    assert!(rewrite_router_link_fast_path(&viewport_el).is_none());
+
+    let dynamic_prefetch_el = parse_jsx_element("<RouterLink to=\"/docs\" prefetch={strategy} />");
+    assert!(rewrite_router_link_fast_path(&dynamic_prefetch_el).is_none());
+
+    let custom_prefetch_event_el =
+        parse_jsx_element("<RouterLink to=\"/docs\" onPointerEnter={handlePrefetch} />");
+    assert!(rewrite_router_link_fast_path(&custom_prefetch_event_el).is_none());
 }
 
 #[test]
@@ -87,7 +97,32 @@ fn rewrites_router_link_with_static_attrs_and_children_to_anchor() {
         rendered.contains(&normalize("onClick={(e)=>RouterLink.__rueOnClick(e, \"/docs\", true)}"))
     );
     assert!(rendered.contains(&normalize("className=\"active\"")));
+    assert!(rendered.contains(&normalize(
+        "onPointerEnter={(e)=>RouterLink.__rueOnPrefetch(e, \"/docs\", \"hover\")}"
+    )));
+    assert!(rendered.contains(&normalize(
+        "onPointerDown={(e)=>RouterLink.__rueOnPrefetch(e, \"/docs\", \"hover\")}"
+    )));
     assert!(rendered.contains(">Docs</a>"));
+}
+
+#[test]
+fn rewrites_tap_and_disabled_prefetch_without_leaking_the_prop() {
+    let tap = parse_jsx_element("<RouterLink to=\"/tap\" prefetch=\"tap\" />");
+    let tap_rendered = normalize(&emit_expr(Expr::JSXElement(Box::new(
+        rewrite_router_link_fast_path(&tap).expect("tap rewrite"),
+    ))));
+    assert!(tap_rendered.contains(&normalize(
+        "onPointerDown={(e)=>RouterLink.__rueOnPrefetch(e, \"/tap\", \"tap\")}"
+    )));
+    assert!(!tap_rendered.contains("prefetch="));
+
+    let disabled = parse_jsx_element("<RouterLink to=\"/off\" prefetch={false} />");
+    let disabled_rendered = normalize(&emit_expr(Expr::JSXElement(Box::new(
+        rewrite_router_link_fast_path(&disabled).expect("disabled rewrite"),
+    ))));
+    assert!(!disabled_rendered.contains("__rueOnPrefetch"));
+    assert!(!disabled_rendered.contains("prefetch="));
 }
 
 #[test]

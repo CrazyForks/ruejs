@@ -85,6 +85,12 @@ const App: FC = () => {
 
 对于使用 Rue Router 的应用，强烈建议对路由组件使用懒加载。Rue Router 对懒加载有显式支持，与 `lazy` 分开。
 
+### 用客户端岛减少首屏 JavaScript {#client-islands}
+
+对于以内容为主、只有局部交互的页面，优先使用[客户端岛屿](/guide/guide/extras/islands)，而不是加载完整 SPA 入口。无 `client:*` 的页面会保持零 Rue JS；有岛的页面只加载小型启动器，并在对应策略触发时下载组件 chunk。需要完整客户端路由和全局状态的页面再显式选择 `meta.clientMode: 'app'`。
+
+主题初始化、埋点等业务内联脚本不由岛资源模式管理。应让它们保持独立、短小，并避免把应用主入口伪装成普通用户脚本来绕过资源所有权判断。
+
 ## 更新优化 (Update Optimizations) {#update-optimizations}
 
 ### Props 稳定性 (Props Stability) {#props-stability}

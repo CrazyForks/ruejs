@@ -33,14 +33,36 @@ export type StaticRouteOutputFileCallback = (
 
 export type StaticRouteRenderValueInput = string | StaticRouteRenderValue
 
+export type StaticClientMode = 'none' | 'islands' | 'app'
+
+export interface StaticClientEntryAssets {
+  entry: string
+  assets: readonly string[] | ReadonlySet<string>
+}
+
+export interface StaticClientEntries {
+  app: StaticClientEntryAssets
+  islands: StaticClientEntryAssets
+}
+
 export type CreateStaticRouteHtmlOptions =
+  | {
+      clientMode: StaticClientMode
+      clientEntries: StaticClientEntries
+      includeClientRuntime?: never
+      clientRuntimeAssets?: never
+    }
   | {
       includeClientRuntime?: true
       clientRuntimeAssets?: readonly string[] | ReadonlySet<string>
+      clientMode?: never
+      clientEntries?: never
     }
   | {
       includeClientRuntime: false
       clientRuntimeAssets: readonly string[] | ReadonlySet<string>
+      clientMode?: never
+      clientEntries?: never
     }
 
 export interface RunWithStaticRenderDomOptions {

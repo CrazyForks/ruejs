@@ -17,12 +17,23 @@ export interface RueIslandManifestEntry {
   hydrate: RueIslandHydrationStrategy
   media?: string
   interaction?: string | string[]
+  timeout?: number
+  rootMargin?: string
 }
 
 export type RueIslandManifest = Record<string, RueIslandManifestEntry>
 
 /** Virtual module id that exposes the current Rue island manifest. */
 export const RUE_ISLAND_MANIFEST_ID: 'virtual:rue-island-manifest'
+
+/** Virtual module id that maps descriptor ids to statically analyzable dynamic imports. */
+export const RUE_ISLAND_REGISTRY_ID: 'virtual:rue-island-registry'
+
+/** Virtual module id that exports the explicit Rue island browser starter. */
+export const RUE_ISLAND_CLIENT_ID: 'virtual:rue-island-client'
+
+/** Server-only virtual module that maps deferred descriptor ids to dynamic imports. */
+export const RUE_SERVER_ISLAND_REGISTRY_ID: 'virtual:rue-server-island-registry'
 
 /** 传给 Rue 转换执行器的完整上下文。 */
 export interface RueTransformExecutorPayload {

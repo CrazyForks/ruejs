@@ -105,6 +105,18 @@ const CachedPanel = () => {
 }
 ```
 
+## 与 RouterView 配合 {#router-view-persist}
+
+`@rue-js/router` 已在 RouterView 内部复用同一套 KeepAlive range 缓存。无需手动包装 RouterView，只需在路由记录上声明：
+
+```tsx
+const routes = [{ path: '/workspace/:id', component: Workspace, persist: true }]
+```
+
+离开后页面实例、表单值和岛内状态会保留；以新 params 返回同一记录时，已缓存实例会收到新参数而不重新 mount。默认缓存 key 是完整路由路径，也可声明 `persistKey`。根应用卸载时，活动与离线缓存都会一起清理。
+
+此能力保留的是 Rue SPA Router 中的路由组件。它不会像跨文档 DOM 匹配器那样，按任意 HTML 元素名称在两个文档之间搬运节点。
+
 ---
 
 **相关**

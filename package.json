@@ -30,6 +30,7 @@
     "example:text-static-export:build": "pnpm --dir examples/text-static-export build",
     "example:text-static-export:start": "pnpm --dir examples/text-static-export start",
     "example:vite-express-ssr": "node examples/vite-express-ssr/server.mjs",
+    "example:server-islands:dev": "pnpm --dir examples/server-islands dev",
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
     "build-dts": "tsgo -p tsconfig.build.json --noCheck && node scripts/build-dts.js",

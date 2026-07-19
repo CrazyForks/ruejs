@@ -1,8 +1,228 @@
 {
   "version": 1,
   "source": "docs",
-  "files": 91,
+  "files": 94,
   "blocks": [
+    {
+      "id": "about/astro-islands-alignment:0",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#astro-islands-alignment",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "Rue 与 Astro Islands 对齐基线",
+      "type": "heading",
+      "text": "Rue 与 Astro Islands 对齐基线",
+      "searchText": "rue 与 astro islands 对齐基线 rue 与 astro islands 对齐基线 rue 与 astro islands 对齐基线 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:1",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#astro-islands-alignment",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "Rue 与 Astro Islands 对齐基线",
+      "type": "paragraph",
+      "text": "本页把 Astro 5 固定为 Rue 客户端岛的兼容基线，同时单独记录 Astro latest 的变化。上游网页只用于人工审计；CI 只运行本地冻结契约，不依赖外网。",
+      "searchText": "rue 与 astro islands 对齐基线 rue 与 astro islands 对齐基线 本页把 astro 5 固定为 rue 客户端岛的兼容基线，同时单独记录 astro latest 的变化。上游网页只用于人工审计；ci 只运行本地冻结契约，不依赖外网。 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:2",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#astro-islands-alignment",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "Rue 与 Astro Islands 对齐基线",
+      "type": "list",
+      "text": "固定基线：Astro 5 latest 审计结果：Astro 7 文档站 人工审计日期：2026-07-18 本地核心证据：packages/vite-plugin-rue/tests/islands.build.spec.ts、packages/runtime/tests/island.spec.tsx、packages/server-renderer/tests/server-island.integration.spec.tsx",
+      "searchText": "rue 与 astro islands 对齐基线 rue 与 astro islands 对齐基线 固定基线：astro 5 latest 审计结果：astro 7 文档站 人工审计日期：2026-07-18 本地核心证据：packages/vite-plugin-rue/tests/islands.build.spec.ts、packages/runtime/tests/island.spec.tsx、packages/server-renderer/tests/server-island.integration.spec.tsx about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:3",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#astro-islands-alignment",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "Rue 与 Astro Islands 对齐基线",
+      "type": "paragraph",
+      "text": "官方入口：",
+      "searchText": "rue 与 astro islands 对齐基线 rue 与 astro islands 对齐基线 官方入口： about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:4",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#astro-islands-alignment",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "Rue 与 Astro Islands 对齐基线",
+      "type": "list",
+      "text": "Astro 5 升级指南 模板指令参考 Prefetch View transitions 与 ClientRouter Server islands",
+      "searchText": "rue 与 astro islands 对齐基线 rue 与 astro islands 对齐基线 astro 5 升级指南 模板指令参考 prefetch view transitions 与 clientrouter server islands about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:5",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#client-islands-matrix",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "客户端岛矩阵",
+      "type": "heading",
+      "text": "客户端岛矩阵",
+      "searchText": "rue 与 astro islands 对齐基线 客户端岛矩阵 客户端岛矩阵 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:6",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#client-islands-matrix",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "客户端岛矩阵",
+      "type": "table",
+      "text": "| 能力 | Astro 5 基线 | Rue 状态 | Astro latest 审计 | 本地证据 | | --- | --- | --- | --- | --- | | 默认静态 HTML | 无 client: 不发送组件 JS | 支持 | 未发现语义变化 | islands.build.spec.ts static page | | client:load | 页面加载后水合 | 支持 | 未发现语义变化 | build fixture + runtime scheduler | | client:idle | idle 调度，支持 timeout | 支持 | current docs 仍保留 timeout | directive 与 runtime tests | | client:visible | 可见时水合，支持 rootMargin | 支持 | current docs 仍保留 rootMargin | directive 与 runtime tests | | client:media | media query 命中时水合 | 支持 | 未发现语义变化 | compiler/runtime tests | | client:only | 跳过组件 SSR并显示 fallback | 支持；Rue 不需要框架名 | current docs 仍要求 Astro renderer 名称 | real build only page | | 可序列化 props | Map/Set/RegExp/Date/BigInt/URL/typed arrays/Infinity 等 | 支持同一白名单并严格拒绝非法输入 | current server-islands docs 仍列出该集合 | serializer tests | | 嵌套岛 | 独立边界，避免父子抢占 | 支持父终态后启动子岛 | 未发现客户端指令变化 | nested build/runtime tests | | 按岛动态 chunk | renderer 组件按岛加载 | 支持字面量 dynamic import registry | 未发现语义变化 | bundle moduleIds/dynamicImports 断言 | | 精确脚本所有权 | 框架脚本与用户脚本分离 | 支持 none/islands/app 精确构建图 | Astro 5 起声明的 按原样输出 | static adapter/build tests |",
+      "searchText": "rue 与 astro islands 对齐基线 客户端岛矩阵 | 能力 | astro 5 基线 | rue 状态 | astro latest 审计 | 本地证据 | | --- | --- | --- | --- | --- | | 默认静态 html | 无 client: 不发送组件 js | 支持 | 未发现语义变化 | islands.build.spec.ts static page | | client:load | 页面加载后水合 | 支持 | 未发现语义变化 | build fixture + runtime scheduler | | client:idle | idle 调度，支持 timeout | 支持 | current docs 仍保留 timeout | directive 与 runtime tests | | client:visible | 可见时水合，支持 rootmargin | 支持 | current docs 仍保留 rootmargin | directive 与 runtime tests | | client:media | media query 命中时水合 | 支持 | 未发现语义变化 | compiler/runtime tests | | client:only | 跳过组件 ssr并显示 fallback | 支持；rue 不需要框架名 | current docs 仍要求 astro renderer 名称 | real build only page | | 可序列化 props | map/set/regexp/date/bigint/url/typed arrays/infinity 等 | 支持同一白名单并严格拒绝非法输入 | current server-islands docs 仍列出该集合 | serializer tests | | 嵌套岛 | 独立边界，避免父子抢占 | 支持父终态后启动子岛 | 未发现客户端指令变化 | nested build/runtime tests | | 按岛动态 chunk | renderer 组件按岛加载 | 支持字面量 dynamic import registry | 未发现语义变化 | bundle moduleids/dynamicimports 断言 | | 精确脚本所有权 | 框架脚本与用户脚本分离 | 支持 none/islands/app 精确构建图 | astro 5 起声明的 按原样输出 | static adapter/build tests | about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:7",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#rue-extensions",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "Rue 扩展",
+      "type": "heading",
+      "text": "Rue 扩展",
+      "searchText": "rue 与 astro islands 对齐基线 rue 扩展 rue 扩展 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:8",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#rue-extensions",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "Rue 扩展",
+      "type": "paragraph",
+      "text": "Rue 保留 client:interaction，允许用一个事件名或静态事件数组触发水合，并在完成后重放首次交互。Astro 可以通过自定义 client directive 扩展调度，但没有同名内置指令。",
+      "searchText": "rue 与 astro islands 对齐基线 rue 扩展 rue 保留 client:interaction，允许用一个事件名或静态事件数组触发水合，并在完成后重放首次交互。astro 可以通过自定义 client directive 扩展调度，但没有同名内置指令。 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:9",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#rue-extensions",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "Rue 扩展",
+      "type": "paragraph",
+      "text": "Rue 也接受 client:none 作为显式语法；它等价于完全省略 client:，不会生成 descriptor、manifest 条目或客户端 chunk。",
+      "searchText": "rue 与 astro islands 对齐基线 rue 扩展 rue 也接受 client:none 作为显式语法；它等价于完全省略 client:，不会生成 descriptor、manifest 条目或客户端 chunk。 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:10",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#navigation-persistence-matrix",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "导航与状态保持矩阵",
+      "type": "heading",
+      "text": "导航与状态保持矩阵",
+      "searchText": "rue 与 astro islands 对齐基线 导航与状态保持矩阵 导航与状态保持矩阵 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:11",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#navigation-persistence-matrix",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "导航与状态保持矩阵",
+      "type": "paragraph",
+      "text": "Astro 5 把 重命名为 ，功能本身未变；它拦截 MPA 页面导航并获取、交换新文档。Rue 复用已有 SPA Router，不交换 HTML 文档。两者对齐的是用户可观察契约，不是导航引擎实现。",
+      "searchText": "rue 与 astro islands 对齐基线 导航与状态保持矩阵 astro 5 把 重命名为 ，功能本身未变；它拦截 mpa 页面导航并获取、交换新文档。rue 复用已有 spa router，不交换 html 文档。两者对齐的是用户可观察契约，不是导航引擎实现。 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:12",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#navigation-persistence-matrix",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "导航与状态保持矩阵",
+      "type": "table",
+      "text": "| 能力 | Astro 5 / latest | Rue 状态 | 边界 | | --- | --- | --- | --- | | 链接预取 | hover / tap / viewport / load，慢网降级 | 支持同四策略与 Data Saver / 2g 降级 | Astro 预取页面文档；Rue 预取 matched 懒路由 chunk | | 编程式预取 | astro:prefetch | router.prefetch(to) | Rue API 不运行守卫或提交导航 | | 导航生命周期 | preparation / swap / page-load 五事件 | before-navigation / after-navigation / page-load 三事件 | Rue 不暴露文档 swap 阶段，因为没有 MPA DOM swap | | 可访问性 | route announcement、reduced-motion | assertive announcer、保守聚焦、reduced-motion 降级 | Rue page-load 在 DOM 和滚动稳定后发出 | | 视图过渡 | ClientRouter 在 swap 回调内运行 View Transition，带 fallback | 可选的同文档 startViewTransition 提交 | Rue 旧浏览器直接提交，不模拟 Astro animate fallback | | 滚动 | 文档 swap 期间恢复 | push 顶部、pop 保存位置、hash、自定义策略 | Rue 只处理 SPA Router 记录 | | 状态保持 | transition:persist 可保留对应 HTML 元素或岛，默认用新 props 重渲染 | RouteRecord.persist 通过 KeepAlive 保留页面/岛状态并更新 params | Rue 不支持任意跨文档元素匹配；嵌套布局天然保持 |",
+      "searchText": "rue 与 astro islands 对齐基线 导航与状态保持矩阵 | 能力 | astro 5 / latest | rue 状态 | 边界 | | --- | --- | --- | --- | | 链接预取 | hover / tap / viewport / load，慢网降级 | 支持同四策略与 data saver / 2g 降级 | astro 预取页面文档；rue 预取 matched 懒路由 chunk | | 编程式预取 | astro:prefetch | router.prefetch(to) | rue api 不运行守卫或提交导航 | | 导航生命周期 | preparation / swap / page-load 五事件 | before-navigation / after-navigation / page-load 三事件 | rue 不暴露文档 swap 阶段，因为没有 mpa dom swap | | 可访问性 | route announcement、reduced-motion | assertive announcer、保守聚焦、reduced-motion 降级 | rue page-load 在 dom 和滚动稳定后发出 | | 视图过渡 | clientrouter 在 swap 回调内运行 view transition，带 fallback | 可选的同文档 startviewtransition 提交 | rue 旧浏览器直接提交，不模拟 astro animate fallback | | 滚动 | 文档 swap 期间恢复 | push 顶部、pop 保存位置、hash、自定义策略 | rue 只处理 spa router 记录 | | 状态保持 | transition:persist 可保留对应 html 元素或岛，默认用新 props 重渲染 | routerecord.persist 通过 keepalive 保留页面/岛状态并更新 params | rue 不支持任意跨文档元素匹配；嵌套布局天然保持 | about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:13",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#server-islands-matrix",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "服务端岛矩阵",
+      "type": "heading",
+      "text": "服务端岛矩阵",
+      "searchText": "rue 与 astro islands 对齐基线 服务端岛矩阵 服务端岛矩阵 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:14",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#server-islands-matrix",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "服务端岛矩阵",
+      "type": "table",
+      "text": "| 能力 | Astro 5 / latest | Rue 状态 | Rue 边界与证据 | | --- | --- | --- | --- | | server:defer | 延迟直接导入组件，主页面立即输出 fallback | 支持 | compiler server-directive tests；Rue 使用 fallback prop，不使用 Astro named slot | | 独立请求 | 每个岛从专用 endpoint 独立取 HTML | 支持 | dependency-free server loader tests | | props 加密 | props 加密后传给 endpoint | 支持 AES-GCM-256、严格 serializer 与过期时间 | server-island codec/handler tests | | GET / POST 切换 | 完整 URL 超过 2048 bytes 时改 POST | 支持，默认预算 2048，可由 adapter 调小 | renderer GET/POST tests | | 个性化上下文 | endpoint 可读取 cookie；URL 是岛 endpoint 而非原页面 | 支持标准 Request | integration test 只通过 cookie 注入用户名 | | 密钥复用 | 滚动部署、多区域或缓存旧 HTML 时复用稳定 key | 支持外部 32-byte key | Rue v1 无 key ID，轮换需协调切换和清旧 shell | | 嵌套客户端岛 | 返回 HTML 可继续包含 client islands | 支持 | integration test 达到 data-rue-status=\"hydrated\" | | 平台 adapter | server islands 依赖 SSR adapter | 提供协议原语和 Node + Vite 示例 | 宿主负责路由、认证、headers、secret 与部署 |",
+      "searchText": "rue 与 astro islands 对齐基线 服务端岛矩阵 | 能力 | astro 5 / latest | rue 状态 | rue 边界与证据 | | --- | --- | --- | --- | | server:defer | 延迟直接导入组件，主页面立即输出 fallback | 支持 | compiler server-directive tests；rue 使用 fallback prop，不使用 astro named slot | | 独立请求 | 每个岛从专用 endpoint 独立取 html | 支持 | dependency-free server loader tests | | props 加密 | props 加密后传给 endpoint | 支持 aes-gcm-256、严格 serializer 与过期时间 | server-island codec/handler tests | | get / post 切换 | 完整 url 超过 2048 bytes 时改 post | 支持，默认预算 2048，可由 adapter 调小 | renderer get/post tests | | 个性化上下文 | endpoint 可读取 cookie；url 是岛 endpoint 而非原页面 | 支持标准 request | integration test 只通过 cookie 注入用户名 | | 密钥复用 | 滚动部署、多区域或缓存旧 html 时复用稳定 key | 支持外部 32-byte key | rue v1 无 key id，轮换需协调切换和清旧 shell | | 嵌套客户端岛 | 返回 html 可继续包含 client islands | 支持 | integration test 达到 data-rue-status=\"hydrated\" | | 平台 adapter | server islands 依赖 ssr adapter | 提供协议原语和 node + vite 示例 | 宿主负责路由、认证、headers、secret 与部署 | about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:15",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#server-islands-matrix",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "服务端岛矩阵",
+      "type": "paragraph",
+      "text": "部署与缓存细节见服务端岛屿。",
+      "searchText": "rue 与 astro islands 对齐基线 服务端岛矩阵 部署与缓存细节见服务端岛屿。 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:16",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#separate-plans",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "分属其他计划",
+      "type": "heading",
+      "text": "分属其他计划",
+      "searchText": "rue 与 astro islands 对齐基线 分属其他计划 分属其他计划 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:17",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#separate-plans",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "分属其他计划",
+      "type": "table",
+      "text": "| Astro 能力 | Rue 当前结论 | 对齐归属 | | --- | --- | --- | | 多框架 renderer 与 client:only=\"react\" 等提示 | 不支持；Rue 岛只加载 Rue 组件 | 范围外，除非未来引入 renderer 插件协议 | | 自定义 client directives API | 尚未公开注册 API | 客户端岛后续增强 | | Astro prefetch() 的 eagerness / Speculation Rules 选项 | Rue 尚未暴露 | 导航后续增强 | | 任意 MPA HTML 元素的 transition:persist 匹配 | Rue 仅缓存类型化路由记录 | 范围外，除非未来引入文档 swap 引擎 | | server island key ID 与无中断多 key 解密窗口 | v1 envelope 尚未携带 key ID | 服务端岛后续增强 |",
+      "searchText": "rue 与 astro islands 对齐基线 分属其他计划 | astro 能力 | rue 当前结论 | 对齐归属 | | --- | --- | --- | | 多框架 renderer 与 client:only=\"react\" 等提示 | 不支持；rue 岛只加载 rue 组件 | 范围外，除非未来引入 renderer 插件协议 | | 自定义 client directives api | 尚未公开注册 api | 客户端岛后续增强 | | astro prefetch() 的 eagerness / speculation rules 选项 | rue 尚未暴露 | 导航后续增强 | | 任意 mpa html 元素的 transition:persist 匹配 | rue 仅缓存类型化路由记录 | 范围外，除非未来引入文档 swap 引擎 | | server island key id 与无中断多 key 解密窗口 | v1 envelope 尚未携带 key id | 服务端岛后续增强 | about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:18",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#audit-rules",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "审计规则",
+      "type": "heading",
+      "text": "审计规则",
+      "searchText": "rue 与 astro islands 对齐基线 审计规则 审计规则 about/astro-islands-alignment"
+    },
+    {
+      "id": "about/astro-islands-alignment:19",
+      "docId": "about/astro-islands-alignment",
+      "route": "/page/about/astro-islands-alignment",
+      "href": "/page/about/astro-islands-alignment#audit-rules",
+      "title": "Rue 与 Astro Islands 对齐基线",
+      "sectionTitle": "审计规则",
+      "type": "list",
+      "text": "每次 Astro major 发布后人工检查以上五个官方入口，并更新 latest 列和审计日期。 Astro 5 列保持冻结；只有 Rue 明确提高最低兼容基线时才修改。 支持项必须有本地自动化证据；只有网页描述、没有契约测试的能力标为“不支持”或“另计划”。 CI 不请求 Astro 文档。上游链接失效不会阻塞 Rue 构建，但下一次人工审计必须修正链接。 真实构建测试必须继续验证：静态零 JS、岛启动器闭包、组件动态 chunk、only fallback、嵌套顺序和用户脚本保留。",
+      "searchText": "rue 与 astro islands 对齐基线 审计规则 每次 astro major 发布后人工检查以上五个官方入口，并更新 latest 列和审计日期。 astro 5 列保持冻结；只有 rue 明确提高最低兼容基线时才修改。 支持项必须有本地自动化证据；只有网页描述、没有契约测试的能力标为“不支持”或“另计划”。 ci 不请求 astro 文档。上游链接失效不会阻塞 rue 构建，但下一次人工审计必须修正链接。 真实构建测试必须继续验证：静态零 js、岛启动器闭包、组件动态 chunk、only fallback、嵌套顺序和用户脚本保留。 about/astro-islands-alignment"
+    },
     {
       "id": "about/coc:0",
       "docId": "about/coc",
@@ -14439,6 +14659,39 @@
       "id": "guide/best-practices/performance:31",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
+      "href": "/guide/guide/best-practices/performance#client-islands",
+      "title": "性能 (Performance)",
+      "sectionTitle": "用客户端岛减少首屏 JavaScript",
+      "type": "heading",
+      "text": "用客户端岛减少首屏 JavaScript",
+      "searchText": "性能 (performance) 用客户端岛减少首屏 javascript 用客户端岛减少首屏 javascript guide/best-practices/performance"
+    },
+    {
+      "id": "guide/best-practices/performance:32",
+      "docId": "guide/best-practices/performance",
+      "route": "/guide/guide/best-practices/performance",
+      "href": "/guide/guide/best-practices/performance#client-islands",
+      "title": "性能 (Performance)",
+      "sectionTitle": "用客户端岛减少首屏 JavaScript",
+      "type": "paragraph",
+      "text": "对于以内容为主、只有局部交互的页面，优先使用客户端岛屿，而不是加载完整 SPA 入口。无 client: 的页面会保持零 Rue JS；有岛的页面只加载小型启动器，并在对应策略触发时下载组件 chunk。需要完整客户端路由和全局状态的页面再显式选择 meta.clientMode: 'app'。",
+      "searchText": "性能 (performance) 用客户端岛减少首屏 javascript 对于以内容为主、只有局部交互的页面，优先使用客户端岛屿，而不是加载完整 spa 入口。无 client: 的页面会保持零 rue js；有岛的页面只加载小型启动器，并在对应策略触发时下载组件 chunk。需要完整客户端路由和全局状态的页面再显式选择 meta.clientmode: 'app'。 guide/best-practices/performance"
+    },
+    {
+      "id": "guide/best-practices/performance:33",
+      "docId": "guide/best-practices/performance",
+      "route": "/guide/guide/best-practices/performance",
+      "href": "/guide/guide/best-practices/performance#client-islands",
+      "title": "性能 (Performance)",
+      "sectionTitle": "用客户端岛减少首屏 JavaScript",
+      "type": "paragraph",
+      "text": "主题初始化、埋点等业务内联脚本不由岛资源模式管理。应让它们保持独立、短小，并避免把应用主入口伪装成普通用户脚本来绕过资源所有权判断。",
+      "searchText": "性能 (performance) 用客户端岛减少首屏 javascript 主题初始化、埋点等业务内联脚本不由岛资源模式管理。应让它们保持独立、短小，并避免把应用主入口伪装成普通用户脚本来绕过资源所有权判断。 guide/best-practices/performance"
+    },
+    {
+      "id": "guide/best-practices/performance:34",
+      "docId": "guide/best-practices/performance",
+      "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#update-optimizations",
       "title": "性能 (Performance)",
       "sectionTitle": "更新优化 (Update Optimizations)",
@@ -14447,7 +14700,7 @@
       "searchText": "性能 (performance) 更新优化 (update optimizations) 更新优化 (update optimizations) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:32",
+      "id": "guide/best-practices/performance:35",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14458,7 +14711,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) props 稳定性 (props stability) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:33",
+      "id": "guide/best-practices/performance:36",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14469,7 +14722,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) 在 rue 中，子组件只有在接收到的至少一个 props 发生变化时才会更新。考虑以下示例： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:34",
+      "id": "guide/best-practices/performance:37",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14480,7 +14733,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) // 不理想的方式 list.map(item => <listitem key={item.id} id={item.id} activeid={activeid} />) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:35",
+      "id": "guide/best-practices/performance:38",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14491,7 +14744,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) 在 组件内部，它使用其 id 和 activeid props 来确定它是否是当前活动项。虽然这可行，但问题是每当 activeid 变化时，列表中的 每个 都必须更新！ guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:36",
+      "id": "guide/best-practices/performance:39",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14502,7 +14755,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) 理想情况下，只有活动状态发生变化的项才应该更新。我们可以通过将活动状态计算移到父组件中，并让 直接接受 active prop 来实现： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:37",
+      "id": "guide/best-practices/performance:40",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14513,7 +14766,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) // 更好的方式 list.map(item => <listitem key={item.id} id={item.id} active={item.id === activeid} />) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:38",
+      "id": "guide/best-practices/performance:41",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14524,7 +14777,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) 现在，对于大多数组件，当 activeid 变化时，active prop 将保持不变，因此它们不再需要更新。一般来说，想法是保持传递给子组件的 props 尽可能稳定。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:39",
+      "id": "guide/best-practices/performance:42",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-memo",
@@ -14535,7 +14788,7 @@
       "searchText": "性能 (performance) 使用 memo 优化 (using memo) 使用 memo 优化 (using memo) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:40",
+      "id": "guide/best-practices/performance:43",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-memo",
@@ -14546,7 +14799,7 @@
       "searchText": "性能 (performance) 使用 memo 优化 (using memo) rue 提供了 memo 工具来帮助优化组件重渲染。您可以使用它来记忆化组件或值： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:41",
+      "id": "guide/best-practices/performance:44",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-memo",
@@ -14557,7 +14810,7 @@
       "searchText": "性能 (performance) 使用 memo 优化 (using memo) import { memo, usememo } from '@rue-js/rue' import type { fc } from '@rue-js/rue' // 记忆化组件 const expensivecomponent: fc<{ data: data }> = memo(({ data }) => { return <div>{/* 昂贵的渲染 */}</div> }) // 在组件内部记忆化值 const mycomponent: fc = () => { const expensivevalue = usememo(() => { return computeexpensivevalue(deps) }, [deps]) return <div>{expensivevalue}</div> } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:42",
+      "id": "guide/best-practices/performance:45",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14568,7 +14821,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 计算稳定性 (computed stability) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:43",
+      "id": "guide/best-practices/performance:46",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14579,7 +14832,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 使用 usememo 时，只有当计算值从前一个值发生变化时，rue 才会触发更新。例如，以下 iseven 计算只在返回值从 true 变为 false 或反之亦然时触发效果： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:44",
+      "id": "guide/best-practices/performance:47",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14590,7 +14843,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) import { usememo, usestate, useeffect } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const mycomponent: fc = () => { const [count, setcount] = usestate(0) const iseven = usememo(() => count % 2 === 0, [count]) useeffect(() => { console.log(iseven) }, [iseven]) // 只在 iseven 变化时触发 // 不会触发新的日志，因为计算值保持 `true` // count: 2, 4 都不会触发 return <div>{count}</div> } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:45",
+      "id": "guide/best-practices/performance:48",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14601,7 +14854,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 这减少了不必要的效果触发，但如果计算每次计算都创建一个新对象，则不起作用： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:46",
+      "id": "guide/best-practices/performance:49",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14612,7 +14865,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) const computedobj = usememo(() => { return { iseven: count % 2 === 0, } }, [count]) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:47",
+      "id": "guide/best-practices/performance:50",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14623,7 +14876,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 因为每次都创建一个新对象，所以新值在技术上总是与旧值不同。即使 iseven 属性保持不变，rue 也无法知道，除非它对旧值和新值执行深度比较。这样的比较可能很昂贵，可能不值得。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:48",
+      "id": "guide/best-practices/performance:51",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14634,7 +14887,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 相反，我们可以通过手动比较新值和旧值来优化，如果知道没有任何变化，则条件性地返回旧值： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:49",
+      "id": "guide/best-practices/performance:52",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14645,7 +14898,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) const computedobj = usememo( oldvalue => { const newvalue = { iseven: count % 2 === 0, } if (oldvalue && oldvalue.iseven === newvalue.iseven) { return oldvalue } return newvalue }, [count], ) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:50",
+      "id": "guide/best-practices/performance:53",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14656,7 +14909,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 注意，您应该在比较和返回旧值之前始终执行完整的计算，以便在每次运行时收集相同的依赖项。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:51",
+      "id": "guide/best-practices/performance:54",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#general-optimizations",
@@ -14667,7 +14920,7 @@
       "searchText": "性能 (performance) 一般优化 (general optimizations) 一般优化 (general optimizations) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:52",
+      "id": "guide/best-practices/performance:55",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#general-optimizations",
@@ -14678,7 +14931,7 @@
       "searchText": "性能 (performance) 一般优化 (general optimizations) 以下提示影响页面加载和更新性能。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:53",
+      "id": "guide/best-practices/performance:56",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14689,7 +14942,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 虚拟化大型列表 (virtualize large lists) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:54",
+      "id": "guide/best-practices/performance:57",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14700,7 +14953,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 所有前端应用中最常见的性能问题之一是渲染大型列表。无论框架多么高性能，渲染包含数千个项目的列表 都会 很慢，因为浏览器需要处理大量的 dom 节点。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:55",
+      "id": "guide/best-practices/performance:58",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14711,7 +14964,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 然而，我们不一定需要预先渲染所有这些节点。在大多数情况下，用户的屏幕大小只能显示我们大型列表的一小部分。我们可以通过 列表虚拟化 大大提高性能，该技术只渲染大型列表中当前在视口内或靠近视口的项目。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:56",
+      "id": "guide/best-practices/performance:59",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14722,7 +14975,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 实现列表虚拟化并不容易，幸运的是有现有的社区库可以直接使用： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:57",
+      "id": "guide/best-practices/performance:60",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14733,7 +14986,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) react-window react-virtualized @tanstack/react-virtual guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:58",
+      "id": "guide/best-practices/performance:61",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14744,7 +14997,7 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:59",
+      "id": "guide/best-practices/performance:62",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14755,7 +15008,7 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) rue 的响应式系统默认是深度的。虽然这使得状态管理直观，但当数据大小很大时，它确实会产生一定程度的开销，因为每次属性访问都会触发执行依赖跟踪的代理陷阱。这通常在处理深层嵌套对象的大型数组时变得明显，其中单个渲染需要访问 100,000 多个属性，因此它应该只影响非常特定的用例。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:60",
+      "id": "guide/best-practices/performance:63",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14766,7 +15019,7 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) rue 确实提供了一个逃生口，通过使用浅层状态选择退出深度响应式。浅层 api 创建仅在根级别具有响应式的状态，并暴露所有未更改的嵌套对象。这使嵌套属性访问保持快速，代价是我们现在必须将所有嵌套对象视为不可变的，并且更新只能通过替换根状态来触发： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:61",
+      "id": "guide/best-practices/performance:64",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14777,7 +15030,7 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) import { usestate } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const mycomponent: fc = () => { const [shallowarray, setshallowarray] = usestate(() => [ /* 大量深层对象 */ ]) // 这不会触发更新... const handlepush = () => { shallowarray.push(newobject) } // 这会： const handleadd = () => { setshallowarray([...shallowarray, newobject]) } return <div>{/* ... */}</div> } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:62",
+      "id": "guide/best-practices/performance:65",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#avoid-unnecessary-component-abstractions",
@@ -14788,7 +15041,7 @@
       "searchText": "性能 (performance) 避免不必要的组件抽象 (avoid unnecessary component abstractions) 避免不必要的组件抽象 (avoid unnecessary component abstractions) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:63",
+      "id": "guide/best-practices/performance:66",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#avoid-unnecessary-component-abstractions",
@@ -14799,7 +15052,7 @@
       "searchText": "性能 (performance) 避免不必要的组件抽象 (avoid unnecessary component abstractions) 有时我们可能会创建 无渲染组件 或高阶组件（即使用额外 props 渲染其他组件的组件）以获得更好的抽象或代码组织。虽然这没有错，但请记住，组件实例比纯 dom 节点昂贵得多，由于抽象模式创建太多组件实例会产生性能成本。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:64",
+      "id": "guide/best-practices/performance:67",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#avoid-unnecessary-component-abstractions",
@@ -14810,7 +15063,7 @@
       "searchText": "性能 (performance) 避免不必要的组件抽象 (avoid unnecessary component abstractions) 请注意，只减少几个实例不会有明显的效果，所以如果组件在应用中只渲染几次，请不要担心。考虑这种优化的最佳场景再次是大型列表。想象一下 100 个项目的列表，其中每个项目组件包含许多子组件。在这里删除一个不必要的组件抽象可能会导致数百个组件实例的减少。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:65",
+      "id": "guide/best-practices/performance:68",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#rue-specific-performance-tips",
@@ -14821,7 +15074,7 @@
       "searchText": "性能 (performance) rue 特定的性能提示 (rue-specific performance tips) rue 特定的性能提示 (rue-specific performance tips) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:66",
+      "id": "guide/best-practices/performance:69",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-the-key-attribute",
@@ -14832,7 +15085,7 @@
       "searchText": "性能 (performance) 使用 key 属性 (using the key attribute) 使用 key 属性 (using the key attribute) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:67",
+      "id": "guide/best-practices/performance:70",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-the-key-attribute",
@@ -14843,7 +15096,7 @@
       "searchText": "性能 (performance) 使用 key 属性 (using the key attribute) 在渲染列表时，始终使用稳定且唯一的 key 属性： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:68",
+      "id": "guide/best-practices/performance:71",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-the-key-attribute",
@@ -14854,7 +15107,7 @@
       "searchText": "性能 (performance) 使用 key 属性 (using the key attribute) // 好的做法 items.map(item => <div key={item.id}>{item.name}</div>) // 避免 - 使用索引作为 key 可能导致性能问题 items.map((item, index) => <div key={index}>{item.name}</div>) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:69",
+      "id": "guide/best-practices/performance:72",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#lazy-load-non-critical-components",
@@ -14865,7 +15118,7 @@
       "searchText": "性能 (performance) 延迟加载非关键组件 (lazy load non-critical components) 延迟加载非关键组件 (lazy load non-critical components) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:70",
+      "id": "guide/best-practices/performance:73",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#lazy-load-non-critical-components",
@@ -14876,7 +15129,7 @@
       "searchText": "性能 (performance) 延迟加载非关键组件 (lazy load non-critical components) 对于不需要立即显示的组件，使用 lazy 进行延迟加载： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:71",
+      "id": "guide/best-practices/performance:74",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#lazy-load-non-critical-components",
@@ -14887,7 +15140,7 @@
       "searchText": "性能 (performance) 延迟加载非关键组件 (lazy load non-critical components) import { lazy, suspense } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const heavycomponent = lazy(() => import('./heavycomponent')) const app: fc = () => { return ( <suspense fallback={<div>加载中...</div>}> <heavycomponent /> </suspense> ) } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:72",
+      "id": "guide/best-practices/performance:75",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#optimize-event-handlers",
@@ -14898,7 +15151,7 @@
       "searchText": "性能 (performance) 优化事件处理程序 (optimize event handlers) 优化事件处理程序 (optimize event handlers) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:73",
+      "id": "guide/best-practices/performance:76",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#optimize-event-handlers",
@@ -14909,7 +15162,7 @@
       "searchText": "性能 (performance) 优化事件处理程序 (optimize event handlers) 使用 usecallback 来记忆化事件处理程序，避免不必要的子组件重渲染： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:74",
+      "id": "guide/best-practices/performance:77",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#optimize-event-handlers",
@@ -16364,34 +16617,89 @@
       "id": "guide/built-ins/keep-alive:22",
       "docId": "guide/built-ins/keep-alive",
       "route": "/guide/guide/built-ins/keep-alive",
-      "href": "/guide/guide/built-ins/keep-alive#lifecycle-of-cached-instance",
+      "href": "/guide/guide/built-ins/keep-alive#router-view-persist",
       "title": "KeepAlive",
-      "sectionTitle": "缓存实例的生命周期 (Lifecycle of Cached Instance)",
-      "type": "paragraph",
-      "text": "---",
-      "searchText": "keepalive 缓存实例的生命周期 (lifecycle of cached instance) --- guide/built-ins/keep-alive"
+      "sectionTitle": "与 RouterView 配合",
+      "type": "heading",
+      "text": "与 RouterView 配合",
+      "searchText": "keepalive 与 routerview 配合 与 routerview 配合 guide/built-ins/keep-alive"
     },
     {
       "id": "guide/built-ins/keep-alive:23",
       "docId": "guide/built-ins/keep-alive",
       "route": "/guide/guide/built-ins/keep-alive",
-      "href": "/guide/guide/built-ins/keep-alive#lifecycle-of-cached-instance",
+      "href": "/guide/guide/built-ins/keep-alive#router-view-persist",
       "title": "KeepAlive",
-      "sectionTitle": "缓存实例的生命周期 (Lifecycle of Cached Instance)",
+      "sectionTitle": "与 RouterView 配合",
       "type": "paragraph",
-      "text": "相关",
-      "searchText": "keepalive 缓存实例的生命周期 (lifecycle of cached instance) 相关 guide/built-ins/keep-alive"
+      "text": "@rue-js/router 已在 RouterView 内部复用同一套 KeepAlive range 缓存。无需手动包装 RouterView，只需在路由记录上声明：",
+      "searchText": "keepalive 与 routerview 配合 @rue-js/router 已在 routerview 内部复用同一套 keepalive range 缓存。无需手动包装 routerview，只需在路由记录上声明： guide/built-ins/keep-alive"
     },
     {
       "id": "guide/built-ins/keep-alive:24",
       "docId": "guide/built-ins/keep-alive",
       "route": "/guide/guide/built-ins/keep-alive",
-      "href": "/guide/guide/built-ins/keep-alive#lifecycle-of-cached-instance",
+      "href": "/guide/guide/built-ins/keep-alive#router-view-persist",
       "title": "KeepAlive",
-      "sectionTitle": "缓存实例的生命周期 (Lifecycle of Cached Instance)",
+      "sectionTitle": "与 RouterView 配合",
+      "type": "code",
+      "text": "const routes = [ { path: '/workspace/:id', component: Workspace, persist: true }, ]",
+      "searchText": "keepalive 与 routerview 配合 const routes = [ { path: '/workspace/:id', component: workspace, persist: true }, ] guide/built-ins/keep-alive"
+    },
+    {
+      "id": "guide/built-ins/keep-alive:25",
+      "docId": "guide/built-ins/keep-alive",
+      "route": "/guide/guide/built-ins/keep-alive",
+      "href": "/guide/guide/built-ins/keep-alive#router-view-persist",
+      "title": "KeepAlive",
+      "sectionTitle": "与 RouterView 配合",
+      "type": "paragraph",
+      "text": "离开后页面实例、表单值和岛内状态会保留；以新 params 返回同一记录时，已缓存实例会收到新参数而不重新 mount。默认缓存 key 是完整路由路径，也可声明 persistKey。根应用卸载时，活动与离线缓存都会一起清理。",
+      "searchText": "keepalive 与 routerview 配合 离开后页面实例、表单值和岛内状态会保留；以新 params 返回同一记录时，已缓存实例会收到新参数而不重新 mount。默认缓存 key 是完整路由路径，也可声明 persistkey。根应用卸载时，活动与离线缓存都会一起清理。 guide/built-ins/keep-alive"
+    },
+    {
+      "id": "guide/built-ins/keep-alive:26",
+      "docId": "guide/built-ins/keep-alive",
+      "route": "/guide/guide/built-ins/keep-alive",
+      "href": "/guide/guide/built-ins/keep-alive#router-view-persist",
+      "title": "KeepAlive",
+      "sectionTitle": "与 RouterView 配合",
+      "type": "paragraph",
+      "text": "此能力保留的是 Rue SPA Router 中的路由组件。它不会像跨文档 DOM 匹配器那样，按任意 HTML 元素名称在两个文档之间搬运节点。",
+      "searchText": "keepalive 与 routerview 配合 此能力保留的是 rue spa router 中的路由组件。它不会像跨文档 dom 匹配器那样，按任意 html 元素名称在两个文档之间搬运节点。 guide/built-ins/keep-alive"
+    },
+    {
+      "id": "guide/built-ins/keep-alive:27",
+      "docId": "guide/built-ins/keep-alive",
+      "route": "/guide/guide/built-ins/keep-alive",
+      "href": "/guide/guide/built-ins/keep-alive#router-view-persist",
+      "title": "KeepAlive",
+      "sectionTitle": "与 RouterView 配合",
+      "type": "paragraph",
+      "text": "---",
+      "searchText": "keepalive 与 routerview 配合 --- guide/built-ins/keep-alive"
+    },
+    {
+      "id": "guide/built-ins/keep-alive:28",
+      "docId": "guide/built-ins/keep-alive",
+      "route": "/guide/guide/built-ins/keep-alive",
+      "href": "/guide/guide/built-ins/keep-alive#router-view-persist",
+      "title": "KeepAlive",
+      "sectionTitle": "与 RouterView 配合",
+      "type": "paragraph",
+      "text": "相关",
+      "searchText": "keepalive 与 routerview 配合 相关 guide/built-ins/keep-alive"
+    },
+    {
+      "id": "guide/built-ins/keep-alive:29",
+      "docId": "guide/built-ins/keep-alive",
+      "route": "/guide/guide/built-ins/keep-alive",
+      "href": "/guide/guide/built-ins/keep-alive#router-view-persist",
+      "title": "KeepAlive",
+      "sectionTitle": "与 RouterView 配合",
       "type": "list",
       "text": "API 参考",
-      "searchText": "keepalive 缓存实例的生命周期 (lifecycle of cached instance) api 参考 guide/built-ins/keep-alive"
+      "searchText": "keepalive 与 routerview 配合 api 参考 guide/built-ins/keep-alive"
     },
     {
       "id": "guide/built-ins/suspense:0",
@@ -32520,6 +32828,424 @@
       "searchText": "composition api 常见问题 与 react hooks 的比较 我们承认 react hooks 的创意，它是 composition api 的主要灵感来源。然而，上述问题确实存在于其设计中，我们注意到 rue 的响应式模型恰好提供了一种绕过它们的方法。 guide/extras/composition-api-faq"
     },
     {
+      "id": "guide/extras/islands:0",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#client-islands",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "客户端岛屿 (Client Islands)",
+      "type": "heading",
+      "text": "客户端岛屿 (Client Islands)",
+      "searchText": "客户端岛屿 (client islands) 客户端岛屿 (client islands) 客户端岛屿 (client islands) guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:1",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#client-islands",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "客户端岛屿 (Client Islands)",
+      "type": "paragraph",
+      "text": "Rue 的岛屿架构默认发送静态 HTML。只有带 client: 的直接导入组件才会生成浏览器入口；一个页面没有岛，也没有显式 clientMode: 'app' 时，静态构建不会注入 Rue JavaScript。",
+      "searchText": "客户端岛屿 (client islands) 客户端岛屿 (client islands) rue 的岛屿架构默认发送静态 html。只有带 client: 的直接导入组件才会生成浏览器入口；一个页面没有岛，也没有显式 clientmode: 'app' 时，静态构建不会注入 rue javascript。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:2",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#client-islands",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "客户端岛屿 (Client Islands)",
+      "type": "paragraph",
+      "text": "这也意味着普通内联脚本不会被岛屿构建器删除。例如用于在首屏绘制前读取 localStorage 并设置主题的 会原样保留。构建器只增删 Rue 构建图精确拥有的 type=\"module\" 脚本和 modulepreload 链接。",
+      "searchText": "客户端岛屿 (client islands) 客户端岛屿 (client islands) 这也意味着普通内联脚本不会被岛屿构建器删除。例如用于在首屏绘制前读取 localstorage 并设置主题的 会原样保留。构建器只增删 rue 构建图精确拥有的 type=\"module\" 脚本和 modulepreload 链接。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:3",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#basic-usage",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "基本用法",
+      "type": "heading",
+      "text": "基本用法",
+      "searchText": "客户端岛屿 (client islands) 基本用法 基本用法 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:4",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#basic-usage",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "基本用法",
+      "type": "paragraph",
+      "text": "组件必须来自当前文件中的直接默认导入或命名导入：",
+      "searchText": "客户端岛屿 (client islands) 基本用法 组件必须来自当前文件中的直接默认导入或命名导入： guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:5",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#basic-usage",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "基本用法",
+      "type": "code",
+      "text": "import Counter from './Counter' import { SearchBox } from './SearchBox' export const Page = () => ( <main> <h1>服务端 HTML 默认不水合</h1> <Counter client:load initial={1} /> <SearchBox client:visible={{ rootMargin: '200px' }} /> </main> )",
+      "searchText": "客户端岛屿 (client islands) 基本用法 import counter from './counter' import { searchbox } from './searchbox' export const page = () => ( <main> <h1>服务端 html 默认不水合</h1> <counter client:load initial={1} /> <searchbox client:visible={{ rootmargin: '200px' }} /> </main> ) guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:6",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#basic-usage",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "基本用法",
+      "type": "paragraph",
+      "text": "编译器会生成岛描述符、SSR 边界、序列化 props 和静态可分析的动态 import registry。应用不需要手写 manifest，也不需要调用 startRueIslandLoader()；岛模式的静态入口会启动 loader。",
+      "searchText": "客户端岛屿 (client islands) 基本用法 编译器会生成岛描述符、ssr 边界、序列化 props 和静态可分析的动态 import registry。应用不需要手写 manifest，也不需要调用 startrueislandloader()；岛模式的静态入口会启动 loader。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:7",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#basic-usage",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "基本用法",
+      "type": "paragraph",
+      "text": "省略指令就是静态组件：",
+      "searchText": "客户端岛屿 (client islands) 基本用法 省略指令就是静态组件： guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:8",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#basic-usage",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "基本用法",
+      "type": "code",
+      "text": "import LegalNotice from './LegalNotice' export const Page = () => <LegalNotice />",
+      "searchText": "客户端岛屿 (client islands) 基本用法 import legalnotice from './legalnotice' export const page = () => <legalnotice /> guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:9",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#basic-usage",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "基本用法",
+      "type": "paragraph",
+      "text": "client:none 是显式同义写法，不生成岛描述符或客户端模块：",
+      "searchText": "客户端岛屿 (client islands) 基本用法 client:none 是显式同义写法，不生成岛描述符或客户端模块： guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:10",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#basic-usage",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "基本用法",
+      "type": "code",
+      "text": "<LegalNotice client:none />",
+      "searchText": "客户端岛屿 (client islands) 基本用法 <legalnotice client:none /> guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:11",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#hydration-strategies",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "水合策略",
+      "type": "heading",
+      "text": "水合策略",
+      "searchText": "客户端岛屿 (client islands) 水合策略 水合策略 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:12",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#hydration-strategies",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "水合策略",
+      "type": "table",
+      "text": "| 指令 | 触发时机 | 可选参数 | | --- | --- | --- | | client:load | 页面就绪后立即加载并水合 | 无 | | client:idle | requestIdleCallback | { timeout: 500 } | | client:visible | 进入 IntersectionObserver 观察范围 | { rootMargin: '200px 10%' } | | client:media | CSS media query 命中 | 字符串，例如 \"(min-width: 900px)\" | | client:interaction | 首个指定交互发生 | 事件名或静态事件名数组 | | client:only | 客户端立即渲染，不执行组件 SSR | fallback prop | | client:none | 不生成客户端岛 | 无 |",
+      "searchText": "客户端岛屿 (client islands) 水合策略 | 指令 | 触发时机 | 可选参数 | | --- | --- | --- | | client:load | 页面就绪后立即加载并水合 | 无 | | client:idle | requestidlecallback | { timeout: 500 } | | client:visible | 进入 intersectionobserver 观察范围 | { rootmargin: '200px 10%' } | | client:media | css media query 命中 | 字符串，例如 \"(min-width: 900px)\" | | client:interaction | 首个指定交互发生 | 事件名或静态事件名数组 | | client:only | 客户端立即渲染，不执行组件 ssr | fallback prop | | client:none | 不生成客户端岛 | 无 | guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:13",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#hydration-strategies",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "水合策略",
+      "type": "paragraph",
+      "text": "client:idle 只接受一个静态 timeout 字段，值必须是非负有限数字。client:visible 只接受一个静态 rootMargin 字段，格式为一至四个 px 或 % 长度。动态变量和其他字段会在编译期报错。",
+      "searchText": "客户端岛屿 (client islands) 水合策略 client:idle 只接受一个静态 timeout 字段，值必须是非负有限数字。client:visible 只接受一个静态 rootmargin 字段，格式为一至四个 px 或 % 长度。动态变量和其他字段会在编译期报错。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:14",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#hydration-strategies",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "水合策略",
+      "type": "code",
+      "text": "<Analytics client:idle={{ timeout: 1000 }} /> <Gallery client:visible={{ rootMargin: '300px 0px' }} /> <Menu client:interaction={['pointerdown', 'focus']} />",
+      "searchText": "客户端岛屿 (client islands) 水合策略 <analytics client:idle={{ timeout: 1000 }} /> <gallery client:visible={{ rootmargin: '300px 0px' }} /> <menu client:interaction={['pointerdown', 'focus']} /> guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:15",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#client-only-fallback",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "仅客户端组件与 fallback",
+      "type": "heading",
+      "text": "仅客户端组件与 fallback",
+      "searchText": "客户端岛屿 (client islands) 仅客户端组件与 fallback 仅客户端组件与 fallback guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:16",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#client-only-fallback",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "仅客户端组件与 fallback",
+      "type": "paragraph",
+      "text": "client:only 不在服务端执行组件，只输出 fallback：",
+      "searchText": "客户端岛屿 (client islands) 仅客户端组件与 fallback client:only 不在服务端执行组件，只输出 fallback： guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:17",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#client-only-fallback",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "仅客户端组件与 fallback",
+      "type": "code",
+      "text": "import Map from './Map' export const Page = () => ( <Map client:only zoom={12} fallback={<div className=\"skeleton\">地图加载中</div>} /> )",
+      "searchText": "客户端岛屿 (client islands) 仅客户端组件与 fallback import map from './map' export const page = () => ( <map client:only zoom={12} fallback={<div classname=\"skeleton\">地图加载中</div>} /> ) guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:18",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#client-only-fallback",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "仅客户端组件与 fallback",
+      "type": "paragraph",
+      "text": "fallback 不会进入客户端 props。组件模块加载完成后，loader 用真正的客户端组件替换 fallback。",
+      "searchText": "客户端岛屿 (client islands) 仅客户端组件与 fallback fallback 不会进入客户端 props。组件模块加载完成后，loader 用真正的客户端组件替换 fallback。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:19",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#props-serialization",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "Props 序列化",
+      "type": "heading",
+      "text": "Props 序列化",
+      "searchText": "客户端岛屿 (client islands) props 序列化 props 序列化 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:20",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#props-serialization",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "Props 序列化",
+      "type": "paragraph",
+      "text": "支持的值包括：纯对象、数组、string、number、boolean、null、Date、URL、Map、Set、RegExp、BigInt、正负 Infinity、Uint8Array、Uint16Array 和 Uint32Array。",
+      "searchText": "客户端岛屿 (client islands) props 序列化 支持的值包括：纯对象、数组、string、number、boolean、null、date、url、map、set、regexp、bigint、正负 infinity、uint8array、uint16array 和 uint32array。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:21",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#props-serialization",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "Props 序列化",
+      "type": "paragraph",
+      "text": "函数、Symbol、undefined、NaN、循环引用、任意 class 实例以及包含保留字段 rueType 的普通对象会直接报错，不会静默丢失。序列化结果会转义 < 等 script 敏感字符，避免提前闭合 props script。",
+      "searchText": "客户端岛屿 (client islands) props 序列化 函数、symbol、undefined、nan、循环引用、任意 class 实例以及包含保留字段 ruetype 的普通对象会直接报错，不会静默丢失。序列化结果会转义 < 等 script 敏感字符，避免提前闭合 props script。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:22",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#compiler-restrictions",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "编译限制",
+      "type": "heading",
+      "text": "编译限制",
+      "searchText": "客户端岛屿 (client islands) 编译限制 编译限制 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:23",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#compiler-restrictions",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "编译限制",
+      "type": "paragraph",
+      "text": "为了让 Vite 在构建时生成稳定的按岛 chunk，client: 只能用于直接导入的组件。以下写法会报错：",
+      "searchText": "客户端岛屿 (client islands) 编译限制 为了让 vite 在构建时生成稳定的按岛 chunk，client: 只能用于直接导入的组件。以下写法会报错： guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:24",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#compiler-restrictions",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "编译限制",
+      "type": "list",
+      "text": "当前文件声明的局部组件； 动态选择的组件变量； namespace 或成员表达式，例如 ； 原生元素，例如 ； 把 client: 藏在 spread 属性中。",
+      "searchText": "客户端岛屿 (client islands) 编译限制 当前文件声明的局部组件； 动态选择的组件变量； namespace 或成员表达式，例如 ； 原生元素，例如 ； 把 client: 藏在 spread 属性中。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:25",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#compiler-restrictions",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "编译限制",
+      "type": "paragraph",
+      "text": "这些限制让 registry 使用字面量 import()，避免把所有组件打进全局入口。",
+      "searchText": "客户端岛屿 (client islands) 编译限制 这些限制让 registry 使用字面量 import()，避免把所有组件打进全局入口。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:26",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#nested-islands",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "嵌套、连续岛与生命周期",
+      "type": "heading",
+      "text": "嵌套、连续岛与生命周期",
+      "searchText": "客户端岛屿 (client islands) 嵌套、连续岛与生命周期 嵌套、连续岛与生命周期 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:27",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#nested-islands",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "嵌套、连续岛与生命周期",
+      "type": "paragraph",
+      "text": "同级岛各自调度。嵌套岛会等待最近父岛进入 hydrated 或 error 终态后再开始，避免父子同时修改同一片 SSR DOM。loader 也会观察动态插入和移除的子树：移除未完成的岛会取消后续挂载，停止 loader 会清理 observer 与调度器。",
+      "searchText": "客户端岛屿 (client islands) 嵌套、连续岛与生命周期 同级岛各自调度。嵌套岛会等待最近父岛进入 hydrated 或 error 终态后再开始，避免父子同时修改同一片 ssr dom。loader 也会观察动态插入和移除的子树：移除未完成的岛会取消后续挂载，停止 loader 会清理 observer 与调度器。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:28",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#nested-islands",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "嵌套、连续岛与生命周期",
+      "type": "paragraph",
+      "text": "岛边界会冒泡以下事件，detail 只包含可公开的 id 和 strategy：",
+      "searchText": "客户端岛屿 (client islands) 嵌套、连续岛与生命周期 岛边界会冒泡以下事件，detail 只包含可公开的 id 和 strategy： guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:29",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#nested-islands",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "嵌套、连续岛与生命周期",
+      "type": "list",
+      "text": "rue:before-hydrate rue:hydrate rue:error",
+      "searchText": "客户端岛屿 (client islands) 嵌套、连续岛与生命周期 rue:before-hydrate rue:hydrate rue:error guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:30",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#nested-islands",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "嵌套、连续岛与生命周期",
+      "type": "paragraph",
+      "text": "错误对象、组件源码路径和内部 chunk URL不会放入 DOM 事件。应用可以用 onError 记录错误或展示自己的回退 UI。",
+      "searchText": "客户端岛屿 (client islands) 嵌套、连续岛与生命周期 错误对象、组件源码路径和内部 chunk url不会放入 dom 事件。应用可以用 onerror 记录错误或展示自己的回退 ui。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:31",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#page-resource-modes",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "页面资源模式",
+      "type": "heading",
+      "text": "页面资源模式",
+      "searchText": "客户端岛屿 (client islands) 页面资源模式 页面资源模式 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:32",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#page-resource-modes",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "页面资源模式",
+      "type": "paragraph",
+      "text": "静态输出分为三档：",
+      "searchText": "客户端岛屿 (client islands) 页面资源模式 静态输出分为三档： guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:33",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#page-resource-modes",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "页面资源模式",
+      "type": "list",
+      "text": "none：SSR HTML 中没有岛，也没有显式应用模式；不注入 Rue JS。 islands：SSR HTML 含 ；只注入岛启动器的静态依赖，组件仍按需动态加载。 app：路由显式设置 meta.clientMode: 'app'；保留完整 SPA 入口。",
+      "searchText": "客户端岛屿 (client islands) 页面资源模式 none：ssr html 中没有岛，也没有显式应用模式；不注入 rue js。 islands：ssr html 含 ；只注入岛启动器的静态依赖，组件仍按需动态加载。 app：路由显式设置 meta.clientmode: 'app'；保留完整 spa 入口。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:34",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#page-resource-modes",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "页面资源模式",
+      "type": "paragraph",
+      "text": "业务 、nomodule、CSS、主题内联脚本和非 Rue modulepreload 不参与这三档切换。",
+      "searchText": "客户端岛屿 (client islands) 页面资源模式 业务 、nomodule、css、主题内联脚本和非 rue modulepreload 不参与这三档切换。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:35",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#troubleshooting",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "错误排查",
+      "type": "heading",
+      "text": "错误排查",
+      "searchText": "客户端岛屿 (client islands) 错误排查 错误排查 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:36",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#troubleshooting",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "错误排查",
+      "type": "paragraph",
+      "text": "如果岛停在 loading，先确认组件是直接导入并且构建产物包含对应动态 chunk。如果岛进入 error，监听 rue:error 并在 loader 的 onError 中记录原始错误。若页面完全不需要交互，移除 client:，不要用空的水合函数模拟静态内容。",
+      "searchText": "客户端岛屿 (client islands) 错误排查 如果岛停在 loading，先确认组件是直接导入并且构建产物包含对应动态 chunk。如果岛进入 error，监听 rue:error 并在 loader 的 onerror 中记录原始错误。若页面完全不需要交互，移除 client:，不要用空的水合函数模拟静态内容。 guide/extras/islands"
+    },
+    {
+      "id": "guide/extras/islands:37",
+      "docId": "guide/extras/islands",
+      "route": "/guide/guide/extras/islands",
+      "href": "/guide/guide/extras/islands#troubleshooting",
+      "title": "客户端岛屿 (Client Islands)",
+      "sectionTitle": "错误排查",
+      "type": "paragraph",
+      "text": "真实发布契约位于 packages/vite-plugin-rue/tests/islands.build.spec.ts，它会构建 static、load、only 和 nested fixture，并检查脚本所有权与 chunk 边界。",
+      "searchText": "客户端岛屿 (client islands) 错误排查 真实发布契约位于 packages/vite-plugin-rue/tests/islands.build.spec.ts，它会构建 static、load、only 和 nested fixture，并检查脚本所有权与 chunk 边界。 guide/extras/islands"
+    },
+    {
       "id": "guide/extras/reactivity-in-depth:0",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
@@ -36357,6 +37083,369 @@
       "type": "paragraph",
       "text": "显式 compat 子路径已经删除。默认主入口也不再保留 compat-only helper。新代码应优先沿用模板、普通 JSX、props.children 与 render prop 等 Rue 当前主路径；旧的手写渲染 helper 则需要直接重写为默认 Renderable / raw node / mount handle 方案。",
       "searchText": "渲染机制 compat 与迁移边界 显式 compat 子路径已经删除。默认主入口也不再保留 compat-only helper。新代码应优先沿用模板、普通 jsx、props.children 与 render prop 等 rue 当前主路径；旧的手写渲染 helper 则需要直接重写为默认 renderable / raw node / mount handle 方案。 guide/extras/rendering-mechanism"
+    },
+    {
+      "id": "guide/extras/server-islands:0",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#server-islands",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "服务端岛屿 (Server Islands)",
+      "type": "heading",
+      "text": "服务端岛屿 (Server Islands)",
+      "searchText": "服务端岛屿 (server islands) 服务端岛屿 (server islands) 服务端岛屿 (server islands) guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:1",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#server-islands",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "服务端岛屿 (Server Islands)",
+      "type": "paragraph",
+      "text": "服务端岛屿把动态或个性化组件从主页面 SSR 中拆出。主响应立即输出静态页面和 fallback；浏览器随后向独立端点请求该组件的 HTML。它适合用户头像、账户摘要、库存和推荐等不应阻塞或降低整页缓存能力的区域。",
+      "searchText": "服务端岛屿 (server islands) 服务端岛屿 (server islands) 服务端岛屿把动态或个性化组件从主页面 ssr 中拆出。主响应立即输出静态页面和 fallback；浏览器随后向独立端点请求该组件的 html。它适合用户头像、账户摘要、库存和推荐等不应阻塞或降低整页缓存能力的区域。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:2",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#server-islands",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "服务端岛屿 (Server Islands)",
+      "type": "paragraph",
+      "text": "Rue 的 server:defer 以 Astro server islands 为行为基线，但仍需要宿主平台显式接好 handler、密钥和请求上下文。",
+      "searchText": "服务端岛屿 (server islands) 服务端岛屿 (server islands) rue 的 server:defer 以 astro server islands 为行为基线，但仍需要宿主平台显式接好 handler、密钥和请求上下文。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:3",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#basic-usage",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "基本用法",
+      "type": "heading",
+      "text": "基本用法",
+      "searchText": "服务端岛屿 (server islands) 基本用法 基本用法 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:4",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#basic-usage",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "基本用法",
+      "type": "paragraph",
+      "text": "延迟组件必须来自当前文件的直接默认或命名 import：",
+      "searchText": "服务端岛屿 (server islands) 基本用法 延迟组件必须来自当前文件的直接默认或命名 import： guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:5",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#basic-usage",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "基本用法",
+      "type": "code",
+      "text": "import UserPanel from './UserPanel' export const Page = () => ( <main> <h1>可缓存的页面主体</h1> <UserPanel server:defer layout=\"compact\" fallback={<p aria-busy=\"true\">正在加载账户…</p>} /> </main> )",
+      "searchText": "服务端岛屿 (server islands) 基本用法 import userpanel from './userpanel' export const page = () => ( <main> <h1>可缓存的页面主体</h1> <userpanel server:defer layout=\"compact\" fallback={<p aria-busy=\"true\">正在加载账户…</p>} /> </main> ) guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:6",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#basic-usage",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "基本用法",
+      "type": "paragraph",
+      "text": "server:defer 不能和任何 client: 同时放在同一组件上。编译器会生成只包含 registry ID、props 和 fallback 的服务端描述符，并把组件放进仅 SSR graph 可导入的 virtual:rue-server-island-registry。如果组件 import 没有其他引用，浏览器 graph 会完全移除它。",
+      "searchText": "服务端岛屿 (server islands) 基本用法 server:defer 不能和任何 client: 同时放在同一组件上。编译器会生成只包含 registry id、props 和 fallback 的服务端描述符，并把组件放进仅 ssr graph 可导入的 virtual:rue-server-island-registry。如果组件 import 没有其他引用，浏览器 graph 会完全移除它。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:7",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#basic-usage",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "基本用法",
+      "type": "paragraph",
+      "text": "fallback 是 Rue 的 fallback prop；Astro 使用名为 fallback 的 slot。两者的用户可观察时序相同：主 HTML 只有 fallback，独立请求成功后才替换内容。",
+      "searchText": "服务端岛屿 (server islands) 基本用法 fallback 是 rue 的 fallback prop；astro 使用名为 fallback 的 slot。两者的用户可观察时序相同：主 html 只有 fallback，独立请求成功后才替换内容。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:8",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#adapter-contract",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "接入组成",
+      "type": "heading",
+      "text": "接入组成",
+      "searchText": "服务端岛屿 (server islands) 接入组成 接入组成 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:9",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#adapter-contract",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "接入组成",
+      "type": "paragraph",
+      "text": "平台 adapter 需要完成三件事：",
+      "searchText": "服务端岛屿 (server islands) 接入组成 平台 adapter 需要完成三件事： guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:10",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#adapter-contract",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "接入组成",
+      "type": "list",
+      "text": "主 SSR 给 renderToString() 配置 endpoint 和加密回调。 endpoint 使用 createServerIslandHandler()，并通过编译器 registry 只解析允许的组件。 浏览器入口显式调用 startRueServerIslandLoader()。",
+      "searchText": "服务端岛屿 (server islands) 接入组成 主 ssr 给 rendertostring() 配置 endpoint 和加密回调。 endpoint 使用 createserverislandhandler()，并通过编译器 registry 只解析允许的组件。 浏览器入口显式调用 startrueserverislandloader()。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:11",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#adapter-contract",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "接入组成",
+      "type": "code",
+      "text": "import { renderToString } from '@rue-js/server-renderer' import { createServerIslandHandler, encodeServerIslandPayload, } from '@rue-js/server-renderer/server-island' const html = await renderToString(App, { serverIslands: { endpoint: '/_rue/server-island', encode: payload => encodeServerIslandPayload({ ...payload, expiresAt: Date.now() + 5 * 60_000, key, }), }, }) const handler = createServerIslandHandler({ key, resolve: async id => (await resolveRueServerIslandModule(id)).default, render: ({ component, props, request }) => { const session = authenticate(request) return renderToString(component, { props: { ...props, session } }) }, })",
+      "searchText": "服务端岛屿 (server islands) 接入组成 import { rendertostring } from '@rue-js/server-renderer' import { createserverislandhandler, encodeserverislandpayload, } from '@rue-js/server-renderer/server-island' const html = await rendertostring(app, { serverislands: { endpoint: '/_rue/server-island', encode: payload => encodeserverislandpayload({ ...payload, expiresat: date.now() + 5 * 60_000, key, }), }, }) const handler = createserverislandhandler({ key, resolve: async id => (await resolverueserverislandmodule(id)).default, render: ({ component, props, request }) => { const session = authenticate(request) return rendertostring(component, { props: { ...props, session } }) }, }) guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:12",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#adapter-contract",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "接入组成",
+      "type": "code",
+      "text": "import { startRueServerIslandLoader } from '@rue-js/runtime/server-island' startRueServerIslandLoader()",
+      "searchText": "服务端岛屿 (server islands) 接入组成 import { startrueserverislandloader } from '@rue-js/runtime/server-island' startrueserverislandloader() guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:13",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#adapter-contract",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "接入组成",
+      "type": "paragraph",
+      "text": "完整 Node + Vite bridge 见 examples/server-islands/，运行：",
+      "searchText": "服务端岛屿 (server islands) 接入组成 完整 node + vite bridge 见 examples/server-islands/，运行： guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:14",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#adapter-contract",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "接入组成",
+      "type": "code",
+      "text": "pnpm run example:server-islands:dev",
+      "searchText": "服务端岛屿 (server islands) 接入组成 pnpm run example:server-islands:dev guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:15",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#adapter-contract",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "接入组成",
+      "type": "paragraph",
+      "text": "示例中的 cookie 只是 adapter 职责演示，不是认证实现。",
+      "searchText": "服务端岛屿 (server islands) 接入组成 示例中的 cookie 只是 adapter 职责演示，不是认证实现。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:16",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#get-post-caching",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "GET、POST 与缓存",
+      "type": "heading",
+      "text": "GET、POST 与缓存",
+      "searchText": "服务端岛屿 (server islands) get、post 与缓存 get、post 与缓存 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:17",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#get-post-caching",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "GET、POST 与缓存",
+      "type": "paragraph",
+      "text": "Rue 按完整 URL 的 UTF-8 字节数选择请求：不超过 maxGetUrlLength（默认 2048）时使用 GET，超过后改用 JSON POST。props 在两条路径中都先经过严格序列化，再封装为 AES-GCM-256 密文；HTML 不包含明文 props。",
+      "searchText": "服务端岛屿 (server islands) get、post 与缓存 rue 按完整 url 的 utf-8 字节数选择请求：不超过 maxgeturllength（默认 2048）时使用 get，超过后改用 json post。props 在两条路径中都先经过严格序列化，再封装为 aes-gcm-256 密文；html 不包含明文 props。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:18",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#get-post-caching",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "GET、POST 与缓存",
+      "type": "table",
+      "text": "| 请求 | 适用 | 缓存建议 | | --- | --- | --- | | GET | 小型 props；完整 URL 不超过预算 | 只有结果确实公开且 cache key 完整时才设 public；个性化输出通常用 private, no-store | | POST | 大型 props | 不依赖浏览器或共享缓存；尽量缩小 props，避免大对象和数组 |",
+      "searchText": "服务端岛屿 (server islands) get、post 与缓存 | 请求 | 适用 | 缓存建议 | | --- | --- | --- | | get | 小型 props；完整 url 不超过预算 | 只有结果确实公开且 cache key 完整时才设 public；个性化输出通常用 private, no-store | | post | 大型 props | 不依赖浏览器或共享缓存；尽量缩小 props，避免大对象和数组 | guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:19",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#get-post-caching",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "GET、POST 与缓存",
+      "type": "paragraph",
+      "text": "handler 返回个性化 HTML 时，adapter 应明确设置 Cache-Control: private, no-store。如果响应依赖 cookie，还应设置 Vary: Cookie，但不要把 Vary 当作认证或防泄漏机制。只有与用户无关的岛才适合共享缓存。",
+      "searchText": "服务端岛屿 (server islands) get、post 与缓存 handler 返回个性化 html 时，adapter 应明确设置 cache-control: private, no-store。如果响应依赖 cookie，还应设置 vary: cookie，但不要把 vary 当作认证或防泄漏机制。只有与用户无关的岛才适合共享缓存。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:20",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#get-post-caching",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "GET、POST 与缓存",
+      "type": "paragraph",
+      "text": "AES-GCM 每次编码都会使用新 IV，因此即使 props 相同，加密 URL 也可能不同；这增强了 nonce 安全性，但会降低按 URL 命中缓存的概率。",
+      "searchText": "服务端岛屿 (server islands) get、post 与缓存 aes-gcm 每次编码都会使用新 iv，因此即使 props 相同，加密 url 也可能不同；这增强了 nonce 安全性，但会降低按 url 命中缓存的概率。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:21",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#key-management",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "密钥与多实例部署",
+      "type": "heading",
+      "text": "密钥与多实例部署",
+      "searchText": "服务端岛屿 (server islands) 密钥与多实例部署 密钥与多实例部署 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:22",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#key-management",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "密钥与多实例部署",
+      "type": "list",
+      "text": "密钥必须是恰好 32 字节的 AES-GCM-256 key，存放在 secret manager 或部署环境中，不能写入源码、HTML、日志或浏览器 bundle。 页面生成实例和 server-island handler 必须使用同一把 key。滚动发布、多区域、多实例和 CDN 缓存场景尤其需要共享稳定 key。 当前 v1 envelope 没有 key ID。轮换时应协调切换，并让旧 shell 的 CDN TTL 与 payload expiresAt 足够短；必要时先清除旧 HTML，再停用旧 key。 解密失败、过期、未知 registry ID 和超限请求只返回稳定的 400/410/404/413，不回显密文、props 或模块路径。",
+      "searchText": "服务端岛屿 (server islands) 密钥与多实例部署 密钥必须是恰好 32 字节的 aes-gcm-256 key，存放在 secret manager 或部署环境中，不能写入源码、html、日志或浏览器 bundle。 页面生成实例和 server-island handler 必须使用同一把 key。滚动发布、多区域、多实例和 cdn 缓存场景尤其需要共享稳定 key。 当前 v1 envelope 没有 key id。轮换时应协调切换，并让旧 shell 的 cdn ttl 与 payload expiresat 足够短；必要时先清除旧 html，再停用旧 key。 解密失败、过期、未知 registry id 和超限请求只返回稳定的 400/410/404/413，不回显密文、props 或模块路径。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:23",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#request-security",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "请求上下文与安全边界",
+      "type": "heading",
+      "text": "请求上下文与安全边界",
+      "searchText": "服务端岛屿 (server islands) 请求上下文与安全边界 请求上下文与安全边界 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:24",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#request-security",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "请求上下文与安全边界",
+      "type": "paragraph",
+      "text": "服务端岛运行在自己的 endpoint 请求中，request.url 指向 /rue/server-island，不是原页面 URL。cookie 和请求 header 应从 handler 收到的标准 Request 读取；需要原页面信息时，显式传递最小 props，或在可信场景读取并校验 Referer。不要信任客户端自行补充的用户 ID、权限或模块名。",
+      "searchText": "服务端岛屿 (server islands) 请求上下文与安全边界 服务端岛运行在自己的 endpoint 请求中，request.url 指向 /rue/server-island，不是原页面 url。cookie 和请求 header 应从 handler 收到的标准 request 读取；需要原页面信息时，显式传递最小 props，或在可信场景读取并校验 referer。不要信任客户端自行补充的用户 id、权限或模块名。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:25",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#request-security",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "请求上下文与安全边界",
+      "type": "paragraph",
+      "text": "编译器 registry 是 allowlist：handler 只接受构建时生成的 ID，并动态导入对应服务端组件。不要实现“把 URL 中模块路径直接 import”的 resolver。",
+      "searchText": "服务端岛屿 (server islands) 请求上下文与安全边界 编译器 registry 是 allowlist：handler 只接受构建时生成的 id，并动态导入对应服务端组件。不要实现“把 url 中模块路径直接 import”的 resolver。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:26",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#request-security",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "请求上下文与安全边界",
+      "type": "paragraph",
+      "text": "POST body 默认限制为 64 KiB；合法 payload 还会校验协议版本、ID、AES-GCM 附加数据、序列化白名单和过期时间。函数、Symbol、undefined、NaN、循环引用和任意 class 实例不会被编码。",
+      "searchText": "服务端岛屿 (server islands) 请求上下文与安全边界 post body 默认限制为 64 kib；合法 payload 还会校验协议版本、id、aes-gcm 附加数据、序列化白名单和过期时间。函数、symbol、undefined、nan、循环引用和任意 class 实例不会被编码。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:27",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#request-security",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "请求上下文与安全边界",
+      "type": "paragraph",
+      "text": "浏览器 loader 只接受 response.ok 且 content-type 为 text/html 的响应。请求期间保留 fallback；失败写入 data-rue-status=\"error\" 而不插入服务端错误页。节点被移除或 loader cleanup 时会 abort，迟到响应不能写 DOM。",
+      "searchText": "服务端岛屿 (server islands) 请求上下文与安全边界 浏览器 loader 只接受 response.ok 且 content-type 为 text/html 的响应。请求期间保留 fallback；失败写入 data-rue-status=\"error\" 而不插入服务端错误页。节点被移除或 loader cleanup 时会 abort，迟到响应不能写 dom。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:28",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#csp",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "CSP",
+      "type": "heading",
+      "text": "CSP",
+      "searchText": "服务端岛屿 (server islands) csp csp guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:29",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#csp",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "CSP",
+      "type": "paragraph",
+      "text": "loader 应作为外部 type=\"module\" 入口交付，并由 script-src 允许该静态资源源。POST token 使用 script[type=\"application/json\"] 保存数据，但它不执行代码，也不要求 unsafe-inline。如果部署平台或 CSP 审计器对所有 script 元素要求 nonce，请由 adapter 给协议数据节点和模块入口统一注入合适策略；不要为此放宽到 unsafe-inline。",
+      "searchText": "服务端岛屿 (server islands) csp loader 应作为外部 type=\"module\" 入口交付，并由 script-src 允许该静态资源源。post token 使用 script[type=\"application/json\"] 保存数据，但它不执行代码，也不要求 unsafe-inline。如果部署平台或 csp 审计器对所有 script 元素要求 nonce，请由 adapter 给协议数据节点和模块入口统一注入合适策略；不要为此放宽到 unsafe-inline。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:30",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#csp",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "CSP",
+      "type": "paragraph",
+      "text": "服务端返回的 HTML 仍属于可信渲染输出。组件中插入原始 HTML 时必须自行消毒；加密 props 只防止泄露和篡改，不会把不可信 HTML 变安全。",
+      "searchText": "服务端岛屿 (server islands) csp 服务端返回的 html 仍属于可信渲染输出。组件中插入原始 html 时必须自行消毒；加密 props 只防止泄露和篡改，不会把不可信 html 变安全。 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:31",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#nested-client-islands",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "与客户端岛组合",
+      "type": "heading",
+      "text": "与客户端岛组合",
+      "searchText": "服务端岛屿 (server islands) 与客户端岛组合 与客户端岛组合 guide/extras/server-islands"
+    },
+    {
+      "id": "guide/extras/server-islands:32",
+      "docId": "guide/extras/server-islands",
+      "route": "/guide/guide/extras/server-islands",
+      "href": "/guide/guide/extras/server-islands#nested-client-islands",
+      "title": "服务端岛屿 (Server Islands)",
+      "sectionTitle": "与客户端岛组合",
+      "type": "paragraph",
+      "text": "服务端响应可以包含普通 。startRueServerIslandLoader() 原子替换 fallback 后，现有客户端岛 MutationObserver 会发现新节点并按 client: 策略水合。两个 loader 相互独立：只需要服务端 HTML 的页面不必加载组件 hydration runtime。",
+      "searchText": "服务端岛屿 (server islands) 与客户端岛组合 服务端响应可以包含普通 。startrueserverislandloader() 原子替换 fallback 后，现有客户端岛 mutationobserver 会发现新节点并按 client: 策略水合。两个 loader 相互独立：只需要服务端 html 的页面不必加载组件 hydration runtime。 guide/extras/server-islands"
     },
     {
       "id": "guide/extras/ways-of-using-rue:0",
@@ -44352,8 +45441,8 @@
       "title": "路由",
       "sectionTitle": "路由",
       "type": "code",
-      "text": "import { type FC, useApp } from '@rue-js/rue' import { createRouter, createWebHashHistory, RouterView, RouterLink } from '@rue-js/router' const router = createRouter({ history: createWebHashHistory(), routes: [ { path: '/', component: Home }, { path: '/docs/:id(\\\\d+)', component: DocDetail }, // 命名参数 + 正则 ], }) const RootApp: FC = () => ( <div> <nav className=\"space-x-2\"> <RouterLink to=\"/\">首页</RouterLink> <RouterLink to=\"/docs/123\">文档 123</RouterLink> </nav> <RouterView /> </div> ) useApp(RootApp).use(router).mount('#app')",
-      "searchText": "路由 路由 import { type fc, useapp } from '@rue-js/rue' import { createrouter, createwebhashhistory, routerview, routerlink } from '@rue-js/router' const router = createrouter({ history: createwebhashhistory(), routes: [ { path: '/', component: home }, { path: '/docs/:id(\\\\d+)', component: docdetail }, // 命名参数 + 正则 ], }) const rootapp: fc = () => ( <div> <nav classname=\"space-x-2\"> <routerlink to=\"/\">首页</routerlink> <routerlink to=\"/docs/123\">文档 123</routerlink> </nav> <routerview /> </div> ) useapp(rootapp).use(router).mount('#app') routing"
+      "text": "import { type FC, useApp } from '@rue-js/rue' import { createRouter, createWebHashHistory, RouterView, RouterLink } from '@rue-js/router' const router = createRouter({ history: createWebHashHistory(), routes: [ { path: '/', component: Home }, { path: '/docs/:id(\\\\d+)', component: DocDetail, persist: true }, // 命名参数 + 状态保持 ], viewTransitions: true, }) const RootApp: FC = () => ( <div> <nav className=\"space-x-2\"> <RouterLink to=\"/\">首页</RouterLink> <RouterLink to=\"/docs/123\">文档 123</RouterLink> </nav> <RouterView /> </div> ) useApp(RootApp).use(router).mount('#app')",
+      "searchText": "路由 路由 import { type fc, useapp } from '@rue-js/rue' import { createrouter, createwebhashhistory, routerview, routerlink } from '@rue-js/router' const router = createrouter({ history: createwebhashhistory(), routes: [ { path: '/', component: home }, { path: '/docs/:id(\\\\d+)', component: docdetail, persist: true }, // 命名参数 + 状态保持 ], viewtransitions: true, }) const rootapp: fc = () => ( <div> <nav classname=\"space-x-2\"> <routerlink to=\"/\">首页</routerlink> <routerlink to=\"/docs/123\">文档 123</routerlink> </nav> <routerview /> </div> ) useapp(rootapp).use(router).mount('#app') routing"
     },
     {
       "id": "routing:5",
@@ -44374,8 +45463,8 @@
       "title": "路由",
       "sectionTitle": "历史模式",
       "type": "list",
-      "text": "createWebHashHistory()：基于 location.hash 的浏览器历史实现。无 # 时会自动跳转到 #/，并标准化位置字符串。 push('/path') 与 replace('/path') 会更新 hash，并主动触发 hashchange 事件，确保响应式状态立即同步。 router.push() 与 router.replace() 返回 Promise；成功时结果为 undefined，被取消、竞争掉或重复导航时会返回导航失败对象。",
-      "searchText": "路由 历史模式 createwebhashhistory()：基于 location.hash 的浏览器历史实现。无 # 时会自动跳转到 #/，并标准化位置字符串。 push('/path') 与 replace('/path') 会更新 hash，并主动触发 hashchange 事件，确保响应式状态立即同步。 router.push() 与 router.replace() 返回 promise；成功时结果为 undefined，被取消、竞争掉或重复导航时会返回导航失败对象。 routing"
+      "text": "createWebHashHistory()：基于 location.hash 的浏览器历史实现。无 # 时会自动跳转到 #/，并标准化位置字符串。 push('/path') 与 replace('/path') 会更新 hash，并向 Router 同步标记 push / replace 来源；浏览器回退与前进标记为 pop。 router.push() 与 router.replace() 返回 Promise；成功时结果为 undefined，被取消、竞争掉或重复导航时会返回导航失败对象。",
+      "searchText": "路由 历史模式 createwebhashhistory()：基于 location.hash 的浏览器历史实现。无 # 时会自动跳转到 #/，并标准化位置字符串。 push('/path') 与 replace('/path') 会更新 hash，并向 router 同步标记 push / replace 来源；浏览器回退与前进标记为 pop。 router.push() 与 router.replace() 返回 promise；成功时结果为 undefined，被取消、竞争掉或重复导航时会返回导航失败对象。 routing"
     },
     {
       "id": "routing:7",
@@ -44396,8 +45485,8 @@
       "title": "路由",
       "sectionTitle": "路由记录与参数匹配",
       "type": "list",
-      "text": "路由记录类型：{ path, name?, component?, redirect?, children?, meta?, beforeEnter? } 路径可包含命名参数与可选正则：/users/:id(\\\\d+)、/docs/:slug 匹配时会将捕获到的参数解码并传递给组件的 props.params",
-      "searchText": "路由 路由记录与参数匹配 路由记录类型：{ path, name?, component?, redirect?, children?, meta?, beforeenter? } 路径可包含命名参数与可选正则：/users/:id(\\\\d+)、/docs/:slug 匹配时会将捕获到的参数解码并传递给组件的 props.params routing"
+      "text": "路由记录类型：{ path, name?, component?, redirect?, children?, meta?, beforeEnter?, persist?, persistKey? } 路径可包含命名参数与可选正则：/users/:id(\\\\d+)、/docs/:slug 匹配时会将捕获到的参数解码并传递给组件的 props.params",
+      "searchText": "路由 路由记录与参数匹配 路由记录类型：{ path, name?, component?, redirect?, children?, meta?, beforeenter?, persist?, persistkey? } 路径可包含命名参数与可选正则：/users/:id(\\\\d+)、/docs/:slug 匹配时会将捕获到的参数解码并传递给组件的 props.params routing"
     },
     {
       "id": "routing:9",
@@ -44572,8 +45661,8 @@
       "title": "路由",
       "sectionTitle": "链接导航：RouterLink",
       "type": "list",
-      "text": "RouterLink 渲染为 元素，默认拦截左键点击并执行导航 to 可传路径字符串，或 { path }、{ name, params } 形式的对象；replace 为 true 时使用替换而非新增历史记录 其他传入的属性会透传给渲染的 （例如 className）",
-      "searchText": "路由 链接导航：routerlink routerlink 渲染为 元素，默认拦截左键点击并执行导航 to 可传路径字符串，或 { path }、{ name, params } 形式的对象；replace 为 true 时使用替换而非新增历史记录 其他传入的属性会透传给渲染的 （例如 classname） routing"
+      "text": "RouterLink 渲染为 元素，默认拦截左键点击并执行导航 to 可传路径字符串，或 { path }、{ name, params } 形式的对象；replace 为 true 时使用替换而非新增历史记录 其他传入的属性会透传给渲染的 （例如 className） 默认在 hover / focus 时预取命中路由的懒组件；prefetch 可设为 false | 'hover' | 'tap' | 'viewport' | 'load' Data Saver、2g 或 slow-2g 下，hover / viewport / load 会自动降级为 tap，避免浪费带宽",
+      "searchText": "路由 链接导航：routerlink routerlink 渲染为 元素，默认拦截左键点击并执行导航 to 可传路径字符串，或 { path }、{ name, params } 形式的对象；replace 为 true 时使用替换而非新增历史记录 其他传入的属性会透传给渲染的 （例如 classname） 默认在 hover / focus 时预取命中路由的懒组件；prefetch 可设为 false | 'hover' | 'tap' | 'viewport' | 'load' data saver、2g 或 slow-2g 下，hover / viewport / load 会自动降级为 tap，避免浪费带宽 routing"
     },
     {
       "id": "routing:25",
@@ -44594,8 +45683,8 @@
       "title": "路由",
       "sectionTitle": "链接导航：RouterLink",
       "type": "code",
-      "text": "<RouterLink to=\"/posts/42\" className=\"btn\">查看文章</RouterLink> <RouterLink to={{ name: 'guide-topic', params: { section: 'router', topic: 'guards' } }}> 守卫章节 </RouterLink> <RouterLink to=\"/settings\" replace>返回设置</RouterLink>",
-      "searchText": "路由 链接导航：routerlink <routerlink to=\"/posts/42\" classname=\"btn\">查看文章</routerlink> <routerlink to={{ name: 'guide-topic', params: { section: 'router', topic: 'guards' } }}> 守卫章节 </routerlink> <routerlink to=\"/settings\" replace>返回设置</routerlink> routing"
+      "text": "<RouterLink to=\"/posts/42\" className=\"btn\">查看文章</RouterLink> <RouterLink to={{ name: 'guide-topic', params: { section: 'router', topic: 'guards' } }}> 守卫章节 </RouterLink> <RouterLink to=\"/settings\" replace>返回设置</RouterLink> <RouterLink to=\"/reports\" prefetch=\"viewport\">报表</RouterLink>",
+      "searchText": "路由 链接导航：routerlink <routerlink to=\"/posts/42\" classname=\"btn\">查看文章</routerlink> <routerlink to={{ name: 'guide-topic', params: { section: 'router', topic: 'guards' } }}> 守卫章节 </routerlink> <routerlink to=\"/settings\" replace>返回设置</routerlink> <routerlink to=\"/reports\" prefetch=\"viewport\">报表</routerlink> routing"
     },
     {
       "id": "routing:27",
@@ -44616,8 +45705,8 @@
       "title": "路由",
       "sectionTitle": "运行时 API",
       "type": "list",
-      "text": "useRouter()：获取当前上下文的 Router（容器优先，其次为活动路由） useRoute()：获取当前路由匹配结果的信号（SignalHandle）",
-      "searchText": "路由 运行时 api userouter()：获取当前上下文的 router（容器优先，其次为活动路由） useroute()：获取当前路由匹配结果的信号（signalhandle） routing"
+      "text": "useRouter()：获取当前上下文的 Router（容器优先，其次为活动路由） useRoute()：获取当前路由匹配结果的信号（SignalHandle） router.prefetch(to)：只解析目标并加载 matched 懒组件，不运行守卫、不写 history、不提交导航",
+      "searchText": "路由 运行时 api userouter()：获取当前上下文的 router（容器优先，其次为活动路由） useroute()：获取当前路由匹配结果的信号（signalhandle） router.prefetch(to)：只解析目标并加载 matched 懒组件，不运行守卫、不写 history、不提交导航 routing"
     },
     {
       "id": "routing:29",
@@ -44645,6 +45734,171 @@
       "id": "routing:31",
       "docId": "routing",
       "route": "/page/routing",
+      "href": "/page/routing#-导航生命周期与可访问性",
+      "title": "路由",
+      "sectionTitle": "导航生命周期与可访问性",
+      "type": "heading",
+      "text": "导航生命周期与可访问性",
+      "searchText": "路由 导航生命周期与可访问性 导航生命周期与可访问性 routing"
+    },
+    {
+      "id": "routing:32",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-导航生命周期与可访问性",
+      "title": "路由",
+      "sectionTitle": "导航生命周期与可访问性",
+      "type": "paragraph",
+      "text": "Router 会在 document 上发出稳定的 DOM 事件：",
+      "searchText": "路由 导航生命周期与可访问性 router 会在 document 上发出稳定的 dom 事件： routing"
+    },
+    {
+      "id": "routing:33",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-导航生命周期与可访问性",
+      "title": "路由",
+      "sectionTitle": "导航生命周期与可访问性",
+      "type": "list",
+      "text": "rue:before-navigation：守卫与懒组件准备之前 rue:after-navigation：成功提交后，或失败结束时；失败细节在 event.detail.failure rue:page-load：新 RouterView DOM 刷新、滚动处理和播报完成后",
+      "searchText": "路由 导航生命周期与可访问性 rue:before-navigation：守卫与懒组件准备之前 rue:after-navigation：成功提交后，或失败结束时；失败细节在 event.detail.failure rue:page-load：新 routerview dom 刷新、滚动处理和播报完成后 routing"
+    },
+    {
+      "id": "routing:34",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-导航生命周期与可访问性",
+      "title": "路由",
+      "sectionTitle": "导航生命周期与可访问性",
+      "type": "paragraph",
+      "text": "detail 包含 { to, from, type, failure? }，其中 type 为 push | replace | pop。成功导航会更新隐藏的 aria-live=\"assertive\" route announcer；只有当用户没有聚焦交互元素时，Router 才会聚焦新的 main 区域。",
+      "searchText": "路由 导航生命周期与可访问性 detail 包含 { to, from, type, failure? }，其中 type 为 push | replace | pop。成功导航会更新隐藏的 aria-live=\"assertive\" route announcer；只有当用户没有聚焦交互元素时，router 才会聚焦新的 main 区域。 routing"
+    },
+    {
+      "id": "routing:35",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-滚动恢复",
+      "title": "路由",
+      "sectionTitle": "滚动恢复",
+      "type": "heading",
+      "text": "滚动恢复",
+      "searchText": "路由 滚动恢复 滚动恢复 routing"
+    },
+    {
+      "id": "routing:36",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-滚动恢复",
+      "title": "路由",
+      "sectionTitle": "滚动恢复",
+      "type": "paragraph",
+      "text": "默认情况下，新 push / replace 导航回到顶部，pop 导航恢复之前保存的位置，URL hash 优先定位到解码后的 id 或 name 元素。可用 scrollBehavior 覆盖：",
+      "searchText": "路由 滚动恢复 默认情况下，新 push / replace 导航回到顶部，pop 导航恢复之前保存的位置，url hash 优先定位到解码后的 id 或 name 元素。可用 scrollbehavior 覆盖： routing"
+    },
+    {
+      "id": "routing:37",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-滚动恢复",
+      "title": "路由",
+      "sectionTitle": "滚动恢复",
+      "type": "code",
+      "text": "const router = createRouter({ history: createWebHistory(), routes, scrollBehavior(to, from, savedPosition) { if (savedPosition) return savedPosition if (to?.meta.preserveScroll) return false return { left: 0, top: 0 } }, })",
+      "searchText": "路由 滚动恢复 const router = createrouter({ history: createwebhistory(), routes, scrollbehavior(to, from, savedposition) { if (savedposition) return savedposition if (to?.meta.preservescroll) return false return { left: 0, top: 0 } }, }) routing"
+    },
+    {
+      "id": "routing:38",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-滚动恢复",
+      "title": "路由",
+      "sectionTitle": "滚动恢复",
+      "type": "paragraph",
+      "text": "回调可返回 false、{ left, top, behavior? }、CSS 选择器、DOM 元素或 Promise。",
+      "searchText": "路由 滚动恢复 回调可返回 false、{ left, top, behavior? }、css 选择器、dom 元素或 promise。 routing"
+    },
+    {
+      "id": "routing:39",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-视图过渡",
+      "title": "路由",
+      "sectionTitle": "视图过渡",
+      "type": "heading",
+      "text": "视图过渡",
+      "searchText": "路由 视图过渡 视图过渡 routing"
+    },
+    {
+      "id": "routing:40",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-视图过渡",
+      "title": "路由",
+      "sectionTitle": "视图过渡",
+      "type": "paragraph",
+      "text": "viewTransitions 默认关闭。启用后，Router 只把通过守卫且完成懒加载的成功提交放入 document.startViewTransition() 回调。不支持 API、API 抛错或用户启用 reduced motion 时会直接提交。",
+      "searchText": "路由 视图过渡 viewtransitions 默认关闭。启用后，router 只把通过守卫且完成懒加载的成功提交放入 document.startviewtransition() 回调。不支持 api、api 抛错或用户启用 reduced motion 时会直接提交。 routing"
+    },
+    {
+      "id": "routing:41",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-视图过渡",
+      "title": "路由",
+      "sectionTitle": "视图过渡",
+      "type": "code",
+      "text": "createRouter({ history: createWebHistory(), routes, viewTransitions: true, // 如确有特殊需求，可覆盖默认的 reduced-motion 保护： // viewTransitions: { skipWhenReducedMotion: false }, })",
+      "searchText": "路由 视图过渡 createrouter({ history: createwebhistory(), routes, viewtransitions: true, // 如确有特殊需求，可覆盖默认的 reduced-motion 保护： // viewtransitions: { skipwhenreducedmotion: false }, }) routing"
+    },
+    {
+      "id": "routing:42",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-路由状态保持",
+      "title": "路由",
+      "sectionTitle": "路由状态保持",
+      "type": "heading",
+      "text": "路由状态保持",
+      "searchText": "路由 路由状态保持 路由状态保持 routing"
+    },
+    {
+      "id": "routing:43",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-路由状态保持",
+      "title": "路由",
+      "sectionTitle": "路由状态保持",
+      "type": "paragraph",
+      "text": "为路由记录声明 persist: true 后，RouterView 会通过 KeepAlive 保留该页面的组件实例与 DOM 区间。返回时本地 state 不会重置，但新的 route params 会更新到原实例。",
+      "searchText": "路由 路由状态保持 为路由记录声明 persist: true 后，routerview 会通过 keepalive 保留该页面的组件实例与 dom 区间。返回时本地 state 不会重置，但新的 route params 会更新到原实例。 routing"
+    },
+    {
+      "id": "routing:44",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-路由状态保持",
+      "title": "路由",
+      "sectionTitle": "路由状态保持",
+      "type": "code",
+      "text": "const routes = [ { path: '/editor/:id', component: EditorPage, persist: true }, { path: '/preview/:id', component: PreviewPage, persist: true, persistKey: 'preview' }, ]",
+      "searchText": "路由 路由状态保持 const routes = [ { path: '/editor/:id', component: editorpage, persist: true }, { path: '/preview/:id', component: previewpage, persist: true, persistkey: 'preview' }, ] routing"
+    },
+    {
+      "id": "routing:45",
+      "docId": "routing",
+      "route": "/page/routing",
+      "href": "/page/routing#-路由状态保持",
+      "title": "路由",
+      "sectionTitle": "路由状态保持",
+      "type": "paragraph",
+      "text": "persistKey 用于显式稳定缓存身份；默认使用编译后的完整路由路径。普通嵌套布局在 child route 切换时本就不会重挂载，不必额外标记 persist。",
+      "searchText": "路由 路由状态保持 persistkey 用于显式稳定缓存身份；默认使用编译后的完整路由路径。普通嵌套布局在 child route 切换时本就不会重挂载，不必额外标记 persist。 routing"
+    },
+    {
+      "id": "routing:46",
+      "docId": "routing",
+      "route": "/page/routing",
       "href": "/page/routing#-导航守卫",
       "title": "路由",
       "sectionTitle": "导航守卫",
@@ -44653,7 +45907,7 @@
       "searchText": "路由 导航守卫 导航守卫 routing"
     },
     {
-      "id": "routing:32",
+      "id": "routing:47",
       "docId": "routing",
       "route": "/page/routing",
       "href": "/page/routing#-导航守卫",
@@ -44664,7 +45918,7 @@
       "searchText": "路由 导航守卫 router.beforeeach()：注册全局前置守卫 route.beforeenter：注册路由独享守卫 router.aftereach()：注册导航结束后的后置钩子，第三个参数会拿到失败结果或错误对象 守卫可返回同步值或 promise 守卫返回 false 会取消导航；返回字符串或 location 对象会重定向到新地址 可通过 isnavigationfailure() 与 navigationfailuretype 判断 push/replace 的失败结果 守卫直接 throw 或返回 rejected promise 时，push/replace 会 reject，同一次导航的 aftereach 会收到该错误对象 routing"
     },
     {
-      "id": "routing:33",
+      "id": "routing:48",
       "docId": "routing",
       "route": "/page/routing",
       "href": "/page/routing#-导航守卫",
@@ -44675,7 +45929,7 @@
       "searchText": "路由 导航守卫 示例： routing"
     },
     {
-      "id": "routing:34",
+      "id": "routing:49",
       "docId": "routing",
       "route": "/page/routing",
       "href": "/page/routing#-导航守卫",
@@ -44686,7 +45940,7 @@
       "searchText": "路由 导航守卫 import { createrouter, createwebhashhistory, isnavigationfailure, navigationfailuretype, } from '@rue-js/router' const router = createrouter({ history: createwebhashhistory(), routes: [ { path: '/login', component: loginpage }, { path: '/admin', component: adminpage, meta: { requiresauth: true }, beforeenter: to => { if (to?.meta.requiresauth && !hasadminrole()) { return '/login' } }, }, ], }) router.beforeeach(to => { if (to?.meta.requiresauth && !isauthenticated()) { return { name: 'login' } } }) router.aftereach((to, from, failure) => { console.log('navigated:', from?.path, '->', to?.path, failure) }) const result = await router.push('/admin') if (isnavigationfailure(result, navigationfailuretype.aborted)) { console.log('navigation aborted') } routing"
     },
     {
-      "id": "routing:35",
+      "id": "routing:50",
       "docId": "routing",
       "route": "/page/routing",
       "href": "/page/routing#-在应用中使用",
@@ -44697,7 +45951,7 @@
       "searchText": "路由 在应用中使用 在应用中使用 routing"
     },
     {
-      "id": "routing:36",
+      "id": "routing:51",
       "docId": "routing",
       "route": "/page/routing",
       "href": "/page/routing#-在应用中使用",
@@ -44708,7 +45962,7 @@
       "searchText": "路由 在应用中使用 在应用入口创建并挂载，安装路由作为插件 routing"
     },
     {
-      "id": "routing:37",
+      "id": "routing:52",
       "docId": "routing",
       "route": "/page/routing",
       "href": "/page/routing#-在应用中使用",
@@ -44719,7 +45973,7 @@
       "searchText": "路由 在应用中使用 示例应用入口： routing"
     },
     {
-      "id": "routing:38",
+      "id": "routing:53",
       "docId": "routing",
       "route": "/page/routing",
       "href": "/page/routing#-在应用中使用",
@@ -44730,7 +45984,7 @@
       "searchText": "路由 在应用中使用 import { type fc, useapp } from '@rue-js/rue' import { routerview } from '@rue-js/router' import router from './router' import sitelayout from './pages/site/components/layout' const rootapp: fc = () => ( <sitelayout> <routerview /> </sitelayout> ) useapp(rootapp).use(router).mount('#app') routing"
     },
     {
-      "id": "routing:39",
+      "id": "routing:54",
       "docId": "routing",
       "route": "/page/routing",
       "href": "/page/routing#-最佳实践",
@@ -44741,7 +45995,7 @@
       "searchText": "路由 最佳实践 最佳实践 routing"
     },
     {
-      "id": "routing:40",
+      "id": "routing:55",
       "docId": "routing",
       "route": "/page/routing",
       "href": "/page/routing#-最佳实践",

@@ -75,6 +75,13 @@
       "import": "./dist/runtime.island.esm-bundler.js",
       "require": "./dist/runtime.island.cjs.js"
     },
+    "./server-island": {
+      "types": "./src/server-island.ts",
+      "development": "./src/server-island.ts",
+      "module": "./dist/runtime.server-island.esm-bundler.js",
+      "import": "./dist/runtime.server-island.esm-bundler.js",
+      "require": "./dist/runtime.server-island.cjs.js"
+    },
     "./dom": {
       "types": "./src/dom.ts",
       "node": {
@@ -126,6 +133,14 @@
       {
         "entry": "src/island.ts",
         "filename": "runtime.island",
+        "formats": [
+          "esm-bundler",
+          "cjs"
+        ]
+      },
+      {
+        "entry": "src/server-island.ts",
+        "filename": "runtime.server-island",
         "formats": [
           "esm-bundler",
           "cjs"

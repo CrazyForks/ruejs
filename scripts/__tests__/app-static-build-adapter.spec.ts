@@ -35,7 +35,7 @@ afterEach(async () => {
 })
 
 describe('app static build adapter', () => {
-  it('collects the client entry static chunk closure using the resolved base URL', () => {
+  it('collects independent named client entry closures using the resolved base URL', () => {
     const entryFile = path.resolve('/project/app/app.tsx')
     const bundle = {
       'assets/main.js': {
@@ -67,15 +67,43 @@ describe('app static build adapter', () => {
         imports: [],
         dynamicImports: [],
       },
+      'assets/islands.js': {
+        type: 'chunk',
+        fileName: 'assets/islands.js',
+        facadeModuleId: '\0virtual:rue-island-client',
+        moduleIds: ['\0virtual:rue-island-client'],
+        imports: ['assets/island-runtime.js', 'assets/shared.js'],
+        dynamicImports: [],
+      },
+      'assets/island-runtime.js': {
+        type: 'chunk',
+        fileName: 'assets/island-runtime.js',
+        facadeModuleId: null,
+        imports: [],
+        dynamicImports: [],
+      },
       'assets/main.css': {
         type: 'asset',
         fileName: 'assets/main.css',
       },
     }
 
-    expect([...collectClientRuntimeAssets(bundle, entryFile, '/docs/')].sort()).toEqual([
+    const graphs = collectClientRuntimeAssets(
+      bundle,
+      { app: entryFile, islands: 'virtual:rue-island-client' },
+      '/docs/',
+    )
+
+    expect(graphs.app.entry).toBe('/docs/assets/main.js')
+    expect([...graphs.app.assets].sort()).toEqual([
       '/docs/assets/main.js',
       '/docs/assets/runtime.js',
+      '/docs/assets/shared.js',
+    ])
+    expect(graphs.islands.entry).toBe('/docs/assets/islands.js')
+    expect([...graphs.islands.assets].sort()).toEqual([
+      '/docs/assets/island-runtime.js',
+      '/docs/assets/islands.js',
       '/docs/assets/shared.js',
     ])
     expect(() => collectClientRuntimeAssets(bundle, '/project/app/missing.tsx', '/')).toThrow(
@@ -109,12 +137,22 @@ describe('app static build adapter', () => {
     expect(classifyDocRoute('/guide/bad%00doc', sourceMap)).toBeNull()
   })
 
-  it('keeps the app HTML wrapper policy for static docs and zero-JS routes', () => {
-    const clientRuntimeAssets = new Set(['/assets/app.js', '/assets/runtime.js'])
+  it('injects exact none/islands/app graphs while preserving user-owned head assets', () => {
+    const clientEntries = {
+      app: {
+        entry: '/assets/app.js',
+        assets: new Set(['/assets/app.js', '/assets/runtime.js', '/assets/shared.js']),
+      },
+      islands: {
+        entry: '/assets/islands.js',
+        assets: new Set(['/assets/islands.js', '/assets/island-runtime.js', '/assets/shared.js']),
+      },
+    }
     const template = `<!doctype html>
 <html lang="en">
   <head>
     <link rel="modulepreload" crossorigin href="/assets/runtime.js">
+    <link rel="modulepreload" crossorigin href="/assets/shared.js">
     <link rel="modulepreload" href="/assets/user-module.js">
     <link rel="stylesheet" href="/assets/app.css">
     <script>localStorage.getItem("rue.theme")</script>
@@ -127,53 +165,58 @@ describe('app static build adapter', () => {
   </body>
 </html>`
 
-    const staticDocHtml = createRouteHtml(
+    const noneHtml = createRouteHtml(
       template,
       '<main>Static markdown</main>',
       'static-doc',
       '/guide/guide/static-doc',
       new Set(),
-      clientRuntimeAssets,
+      clientEntries,
     )
-    const zeroJsSsrHtml = createRouteHtml(
+    const islandsHtml = createRouteHtml(
       template,
-      '<main>SSR without client runtime</main>',
+      '<main><rue-island data-rue-id="counter"></rue-island></main>',
       'ssr-prerender',
       '/guide/guide/interactive-doc?tab=pnpm',
-      new Set(['/guide/guide/interactive-doc']),
-      clientRuntimeAssets,
+      new Set(),
+      clientEntries,
     )
-    const interactiveHtml = createRouteHtml(
+    const appHtml = createRouteHtml(
       template,
       '<main>Interactive SSR</main>',
       'ssr-prerender',
       '/guide/guide/interactive-doc',
-      new Set(),
-      clientRuntimeAssets,
+      new Set(['/guide/guide/interactive-doc']),
+      clientEntries,
     )
 
-    expect(staticDocHtml).toContain('<div id="app"><main>Static markdown</main></div>')
-    expect(staticDocHtml).toContain('<html lang="en">')
-    expect(staticDocHtml).toContain('<link rel="stylesheet" href="/assets/app.css">')
-    expect(staticDocHtml).toContain('<script nomodule src="/legacy.js"></script>')
-    expect(staticDocHtml).toContain('rue.theme')
-    expect(staticDocHtml).toContain('/assets/user-module.js')
-    expect(staticDocHtml).not.toContain('/assets/app.js')
-    expect(staticDocHtml).not.toContain('/assets/runtime.js')
+    for (const html of [noneHtml, islandsHtml, appHtml]) {
+      expect(html).toContain('<html lang="en">')
+      expect(html).toContain('<link rel="stylesheet" href="/assets/app.css">')
+      expect(html).toContain('<script nomodule src="/legacy.js"></script>')
+      expect(html).toContain('rue.theme')
+      expect(html).toContain('/assets/user-module.js')
+    }
 
-    expect(zeroJsSsrHtml).toContain('<main>SSR without client runtime</main>')
-    expect(zeroJsSsrHtml).toContain('rue.theme')
-    expect(zeroJsSsrHtml).toContain('/assets/user-module.js')
-    expect(zeroJsSsrHtml).not.toContain('/assets/app.js')
-    expect(zeroJsSsrHtml).not.toContain('/assets/runtime.js')
+    expect(noneHtml).toContain('<div id="app"><main>Static markdown</main></div>')
+    expect(noneHtml).not.toContain('/assets/app.js')
+    expect(noneHtml).not.toContain('/assets/runtime.js')
+    expect(noneHtml).not.toContain('/assets/islands.js')
+    expect(noneHtml).not.toContain('/assets/shared.js')
 
-    expect(interactiveHtml).toContain('<main>Interactive SSR</main>')
-    expect(interactiveHtml).toContain('rel="modulepreload"')
-    expect(interactiveHtml).toContain('type="module"')
-    expect(interactiveHtml).toContain('rue.theme')
-    expect(interactiveHtml).toContain('/assets/app.js')
-    expect(interactiveHtml).toContain('/assets/runtime.js')
-    expect(interactiveHtml).toContain('/assets/user-module.js')
+    expect(islandsHtml).toContain('<rue-island data-rue-id="counter">')
+    expect(islandsHtml).not.toContain('/assets/app.js')
+    expect(islandsHtml).not.toContain('/assets/runtime.js')
+    expect(islandsHtml).toContain('/assets/islands.js')
+    expect(islandsHtml).toContain('/assets/island-runtime.js')
+    expect(islandsHtml).toContain('/assets/shared.js')
+
+    expect(appHtml).toContain('<main>Interactive SSR</main>')
+    expect(appHtml).toContain('/assets/app.js')
+    expect(appHtml).toContain('/assets/runtime.js')
+    expect(appHtml).toContain('/assets/shared.js')
+    expect(appHtml).not.toContain('/assets/islands.js')
+    expect(appHtml).not.toContain('/assets/island-runtime.js')
   })
 
   it('resolves preview files without escaping the static output directory', async () => {
