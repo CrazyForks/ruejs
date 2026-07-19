@@ -25,7 +25,7 @@ const RUE_VITE_PLUGIN_NAME = '@rue-js/vite-plugin-rue'
 /** 默认转换超时时间，避免异常输入让开发服务器长时间无响应。 */
 const DEFAULT_TRANSFORM_TIMEOUT_MS = 5000
 /** 限制 Vite 并发 transform 时同时创建的 SWC worker 数量。 */
-const DEFAULT_TRANSFORM_CONCURRENCY = 4
+const DEFAULT_TRANSFORM_CONCURRENCY = 8
 /** 执行 SWC 转换的 worker 入口文件路径。 */
 const TRANSFORM_WORKER_PATH = requireFromHere.resolve('./transform-worker.mjs')
 /** 暂时跳过二次转换的 rue-design 组件目录名。 */
@@ -3323,7 +3323,7 @@ const runSwcTransformInWorker = ({ code, id, pluginPath, timeoutMs, isProduction
  * @param {string[]} [options.exclude] 排除路径关键字，任一命中则跳过。
  * @param {boolean} [options.debug] 是否输出转换调试日志。
  * @param {number} [options.transformTimeoutMs] SWC 转换超时时间，单位为毫秒。
- * @param {number} [options.transformConcurrency] 同时执行的 SWC 转换数，默认 4。
+ * @param {number} [options.transformConcurrency] 同时执行的 SWC 转换数，默认 8。
  * @param {(payload: { code: string, id: string, pluginPath: string, timeoutMs: number }) => Promise<string> | string} [options.transformExecutor] 自定义转换执行器，主要用于测试。
  * @returns {import('vite').Plugin} Vite 插件对象。
  */
