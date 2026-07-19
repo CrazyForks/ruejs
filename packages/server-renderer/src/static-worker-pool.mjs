@@ -1,9 +1,19 @@
 import { fork } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const defaultWorkerFile = path.resolve(process.cwd(), 'scripts/app-static-render-worker.mjs')
+const defaultWorkerUrl = new URL('../src/static-worker.mjs', import.meta.url)
+const defaultWorkerPathname = decodeURIComponent(defaultWorkerUrl.pathname)
+const defaultWorkerFile = (() => {
+  if (defaultWorkerUrl.protocol === 'file:') return fileURLToPath(defaultWorkerUrl)
+  if (existsSync(defaultWorkerPathname)) return defaultWorkerPathname
+
+  return path.resolve(process.cwd(), defaultWorkerPathname.replace(/^\/+/, ''))
+})()
 const defaultOutputLimit = 12000
+const defaultStartupTimeoutMs = 30000
 
 const parsePositiveInteger = (value, fallback, label) => {
   const parsed = Number(value)
@@ -23,7 +33,7 @@ const assertPath = (value, label) => {
 const limitOutput = (value, maxLength) =>
   value.length <= maxLength ? value : `${value.slice(0, maxLength)}\n... truncated ...`
 
-export const createAppStaticRenderWorkerPool = options => {
+export const createServerBundleRenderPool = options => {
   if (!options || typeof options !== 'object' || Array.isArray(options)) {
     throw new TypeError('options must be an object.')
   }
@@ -34,6 +44,7 @@ export const createAppStaticRenderWorkerPool = options => {
     maxOutputLength = defaultOutputLimit,
     serverBundleFile,
     size = 1,
+    startupTimeoutMs = defaultStartupTimeoutMs,
     timeoutMs = 30000,
     workerFile = defaultWorkerFile,
   } = options
@@ -42,6 +53,11 @@ export const createAppStaticRenderWorkerPool = options => {
   assertPath(workerFile, 'workerFile')
   const workerCount = parsePositiveInteger(size, undefined, 'size')
   const taskTimeoutMs = parsePositiveInteger(timeoutMs, undefined, 'timeoutMs')
+  const startupTimeout = parsePositiveInteger(
+    startupTimeoutMs,
+    defaultStartupTimeoutMs,
+    'startupTimeoutMs',
+  )
   const outputLimit = parsePositiveInteger(maxOutputLength, defaultOutputLimit, 'maxOutputLength')
 
   const workers = new Set()
@@ -64,6 +80,17 @@ export const createAppStaticRenderWorkerPool = options => {
     if (!task || task.settled) return
     task.settled = true
     task.reject(error)
+  }
+
+  const failPoolStartup = error => {
+    if (closing || fatalError) return
+    fatalError = error
+    for (const task of taskQueue.splice(0)) rejectTask(task, fatalError)
+    for (const worker of workers) {
+      clearTimeout(worker.startupTimer)
+      worker.stopping = true
+      worker.child.kill('SIGKILL')
+    }
   }
 
   const resolveTask = async task => {
@@ -109,7 +136,7 @@ export const createAppStaticRenderWorkerPool = options => {
         id: task.id,
         route: task.route,
         outputFile: task.outputFile,
-        docHtmlFile: task.docHtmlFile,
+        renderOptions: task.renderOptions,
       },
       error => {
         if (!error || worker.task !== task) return
@@ -123,7 +150,7 @@ export const createAppStaticRenderWorkerPool = options => {
   }
 
   const spawnWorker = () => {
-    if (closing) return null
+    if (closing || fatalError) return null
     const child = fork(path.resolve(workerFile), [path.resolve(serverBundleFile)], {
       cwd,
       env: {
@@ -131,6 +158,7 @@ export const createAppStaticRenderWorkerPool = options => {
         ...env,
       },
       execArgv: [],
+      serialization: 'advanced',
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     })
     const worker = {
@@ -140,7 +168,14 @@ export const createAppStaticRenderWorkerPool = options => {
       task: null,
       stdout: '',
       stderr: '',
+      startupTimer: null,
     }
+    worker.startupTimer = setTimeout(() => {
+      if (worker.ready || worker.stopping) return
+      failPoolStartup(
+        new Error(`Static render worker did not become ready within ${startupTimeout}ms`),
+      )
+    }, startupTimeout)
     workers.add(worker)
 
     child.stdout.on('data', chunk => {
@@ -153,6 +188,7 @@ export const createAppStaticRenderWorkerPool = options => {
     child.on('message', message => {
       if (!message || typeof message !== 'object') return
       if (message.type === 'ready') {
+        clearTimeout(worker.startupTimer)
         worker.ready = true
         dispatch(worker)
         return
@@ -168,6 +204,7 @@ export const createAppStaticRenderWorkerPool = options => {
     })
 
     child.on('error', error => {
+      if (!worker.ready) failPoolStartup(error)
       if (worker.task) {
         clearTimeout(worker.task.timer)
         rejectTask(worker.task, error)
@@ -176,6 +213,7 @@ export const createAppStaticRenderWorkerPool = options => {
     })
 
     child.on('exit', (code, signal) => {
+      clearTimeout(worker.startupTimer)
       const exitedBeforeReady = !worker.ready && !worker.stopping
       const idleIndex = idleWorkers.indexOf(worker)
       if (idleIndex >= 0) idleWorkers.splice(idleIndex, 1)
@@ -186,15 +224,7 @@ export const createAppStaticRenderWorkerPool = options => {
         worker.task = null
       }
 
-      if (exitedBeforeReady && !fatalError) {
-        fatalError = createWorkerExitError(worker, code, signal)
-        for (const task of taskQueue.splice(0)) rejectTask(task, fatalError)
-        for (const sibling of workers) {
-          sibling.stopping = true
-          sibling.child.kill('SIGKILL')
-        }
-      }
-
+      if (exitedBeforeReady) failPoolStartup(createWorkerExitError(worker, code, signal))
       if (!closing && !fatalError) spawnWorker()
       settleCloseIfDone()
     })
@@ -207,14 +237,23 @@ export const createAppStaticRenderWorkerPool = options => {
   }
 
   return {
-    render({ docHtmlFile, label = 'SSR', outputFile, route, timeoutMs: renderTimeoutMs }) {
+    render({
+      baseUrl,
+      extraGlobals,
+      html,
+      installCanvasShim,
+      installObserverShims,
+      label = 'SSR',
+      outputFile,
+      route,
+      timeoutMs: renderTimeoutMs,
+    }) {
       if (closing) {
         return Promise.reject(new Error('Static render worker pool is closed.'))
       }
       if (fatalError) return Promise.reject(fatalError)
       assertPath(route, 'route')
       assertPath(outputFile, 'outputFile')
-      if (docHtmlFile !== undefined) assertPath(docHtmlFile, 'docHtmlFile')
       const timeout = parsePositiveInteger(renderTimeoutMs, taskTimeoutMs, 'timeoutMs')
 
       return new Promise((resolve, reject) => {
@@ -222,9 +261,15 @@ export const createAppStaticRenderWorkerPool = options => {
           id: ++nextTaskId,
           route,
           outputFile: path.resolve(outputFile),
-          docHtmlFile: docHtmlFile ? path.resolve(docHtmlFile) : undefined,
           label,
           timeoutMs: timeout,
+          renderOptions: {
+            baseUrl,
+            extraGlobals,
+            html,
+            installCanvasShim,
+            installObserverShims,
+          },
           resolve,
           reject,
           settled: false,
@@ -246,6 +291,7 @@ export const createAppStaticRenderWorkerPool = options => {
       const closeError = new Error('Static render worker pool closed before the task completed.')
       for (const task of taskQueue.splice(0)) rejectTask(task, closeError)
       for (const worker of workers) {
+        clearTimeout(worker.startupTimer)
         const idleIndex = idleWorkers.indexOf(worker)
         if (idleIndex >= 0) idleWorkers.splice(idleIndex, 1)
         if (worker.task) {
@@ -254,12 +300,12 @@ export const createAppStaticRenderWorkerPool = options => {
           worker.task = null
           worker.stopping = true
           worker.child.kill('SIGKILL')
-        } else if (worker.child.connected) {
-          worker.stopping = true
-          worker.child.send({ type: 'shutdown' })
-        } else {
+        } else if (!worker.ready || !worker.child.connected) {
           worker.stopping = true
           worker.child.kill('SIGKILL')
+        } else {
+          worker.stopping = true
+          worker.child.send({ type: 'shutdown' })
         }
       }
       settleCloseIfDone()

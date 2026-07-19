@@ -5,6 +5,8 @@ import { createServer } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
+export { createServerBundleRenderPool } from './static-worker-pool.mjs'
+
 const linkTagRe = /\n?[ \t]*<link\b[^>]*\/?>/gi
 const scriptTagRe = /\n?[ \t]*<script\b[^>]*>[\s\S]*?<\/script>/gi
 
@@ -732,29 +734,22 @@ export const snapshotClientRoute = async options => {
   )
 }
 
-export const renderServerBundleRoute = async options => {
+export const renderServerEntryRoute = async options => {
   assertObjectOptions(options, 'options')
 
-  const { serverBundleFile, route, outputFile, ...domOptions } = options
-  assertStringPath(serverBundleFile, 'serverBundleFile')
+  const { render, route, outputFile, ...domOptions } = options
   assertStringPath(outputFile, 'outputFile')
+  if (typeof render !== 'function') {
+    throw new Error('SSR bundle does not export render(route).')
+  }
 
   const normalizedRoute = assertStaticRoute(route)
-  const resolvedServerBundleFile = path.resolve(serverBundleFile)
   const resolvedOutputFile = path.resolve(outputFile)
 
   return runWithStaticRenderDom(
     normalizedRoute,
     async () => {
-      const serverEntry = await importStaticServerBundle(
-        pathToFileURL(resolvedServerBundleFile).href,
-      )
-
-      if (typeof serverEntry.render !== 'function') {
-        throw new Error('SSR bundle does not export render(route).')
-      }
-
-      const html = await serverEntry.render(normalizedRoute)
+      const html = await render(normalizedRoute)
       await mkdir(path.dirname(resolvedOutputFile), { recursive: true })
       await writeFile(resolvedOutputFile, html)
 
@@ -766,6 +761,21 @@ export const renderServerBundleRoute = async options => {
     },
     domOptions,
   )
+}
+
+export const renderServerBundleRoute = async options => {
+  assertObjectOptions(options, 'options')
+
+  const { serverBundleFile, ...renderOptions } = options
+  assertStringPath(serverBundleFile, 'serverBundleFile')
+  const serverEntry = await importStaticServerBundle(
+    pathToFileURL(path.resolve(serverBundleFile)).href,
+  )
+
+  return renderServerEntryRoute({
+    ...renderOptions,
+    render: serverEntry.render,
+  })
 }
 
 export const runWithStaticConcurrency = async (tasks, concurrency = tasks.length || 1) => {

@@ -45155,8 +45155,8 @@
       "title": "使用 Rue 与 TypeScript",
       "sectionTitle": "泛型组件",
       "type": "code",
-      "text": "interface ListProps<T> { items: T[] renderItem: (item: T) => JSX.Element } function List<T>({ items, renderItem }: ListProps<T>) { return <ul>{items.map(item => <li>{renderItem(item)}</li>)}</ul> }",
-      "searchText": "使用 rue 与 typescript 泛型组件 interface listprops<t> { items: t[] renderitem: (item: t) => jsx.element } function list<t>({ items, renderitem }: listprops<t>) { return <ul>{items.map(item => <li>{renderitem(item)}</li>)}</ul> } guide/typescript/overview"
+      "text": "interface ListProps<T> { items: T[] renderItem: (item: T) => JSX.Element } function List<T>({ items, renderItem }: ListProps<T>) { return ( <ul> {items.map(item => ( <li>{renderItem(item)}</li> ))} </ul> ) }",
+      "searchText": "使用 rue 与 typescript 泛型组件 interface listprops<t> { items: t[] renderitem: (item: t) => jsx.element } function list<t>({ items, renderitem }: listprops<t>) { return ( <ul> {items.map(item => ( <li>{renderitem(item)}</li> ))} </ul> ) } guide/typescript/overview"
     },
     {
       "id": "guide/typescript/overview:43",

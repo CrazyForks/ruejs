@@ -2,10 +2,11 @@
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { renderServerBundleRoute } from '@rue-js/server-renderer/static'
+import { renderServerBundleRoute, renderServerEntryRoute } from '@rue-js/server-renderer/static'
 
 const tempDirs: string[] = []
 const tempRoot = path.join(process.cwd(), 'temp')
@@ -23,6 +24,45 @@ afterEach(async () => {
 })
 
 describe('@rue-js/server-renderer/static server route rendering', () => {
+  it('renders multiple routes from one preloaded server entry without leaking globals', async () => {
+    const root = await createTempDir()
+    const bundleFile = path.join(root, 'server-entry.mjs')
+    const evaluationFile = path.join(root, 'evaluations.log')
+    const firstOutputFile = path.join(root, 'dist/first/index.html')
+    const secondOutputFile = path.join(root, 'dist/second/index.html')
+
+    await writeFile(
+      bundleFile,
+      `
+import { appendFileSync } from 'node:fs'
+
+appendFileSync(${JSON.stringify(evaluationFile)}, 'loaded\\n')
+
+export const render = async route =>
+  '<main>' + route + ':' + (globalThis.__RUE_STATIC_TEST_VALUE__ ?? 'none') + '</main>'
+`,
+    )
+
+    const serverEntry = await import(pathToFileURL(bundleFile).href)
+
+    await renderServerEntryRoute({
+      render: serverEntry.render,
+      route: '/first',
+      outputFile: firstOutputFile,
+      extraGlobals: { __RUE_STATIC_TEST_VALUE__: 'first-only' },
+    })
+    await renderServerEntryRoute({
+      render: serverEntry.render,
+      route: '/second',
+      outputFile: secondOutputFile,
+    })
+
+    await expect(readFile(evaluationFile, 'utf-8')).resolves.toBe('loaded\n')
+    await expect(readFile(firstOutputFile, 'utf-8')).resolves.toBe('<main>/first:first-only</main>')
+    await expect(readFile(secondOutputFile, 'utf-8')).resolves.toBe('<main>/second:none</main>')
+    expect(globalThis).not.toHaveProperty('__RUE_STATIC_TEST_VALUE__')
+  })
+
   it('renders a server bundle route inside static DOM', async () => {
     const root = await createTempDir()
     const bundleFile = path.join(root, 'server-entry.mjs')

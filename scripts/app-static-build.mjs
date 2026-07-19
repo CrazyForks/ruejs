@@ -1,9 +1,10 @@
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'vite'
 import { defineMdastPlugin, markdownToHtml } from 'satteri'
 import {
+  createServerBundleRenderPool,
   createStaticRouteHtml,
   formatStaticError,
   normalizeStaticRoute,
@@ -12,7 +13,6 @@ import {
   staticRouteToOutputFile,
   writeStaticRenderReport as writeCommonStaticRenderReport,
 } from '@rue-js/server-renderer/static'
-import { createAppStaticRenderWorkerPool } from './app-static-render-worker-pool.mjs'
 import { findDocSources } from './doc-source-utils.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -33,7 +33,6 @@ const docsClientEntryFile = path.resolve(root, 'app/entry-docs.ts')
 const serverEntryFile = path.resolve(root, 'app/entry-server.tsx')
 const serverBundleFile = path.resolve(ssrOutDir, 'entry-server.mjs')
 const clientTemplateFile = path.resolve(ssrOutDir, 'client-template.html')
-const routeWorkerFile = path.resolve(root, 'scripts/app-static-render-worker.mjs')
 const routeSnapshotFile = path.resolve(root, 'scripts/app-static-snapshot-route.mjs')
 const routeRenderOutDir = path.resolve(ssrOutDir, '.route-renders')
 const routeSnapshotOutDir = path.resolve(ssrOutDir, '.route-snapshots')
@@ -43,6 +42,7 @@ const codeBlockRe = /<pre><code class="language-([^"]*)">([\s\S]*?)<\/code><\/pr
 const containerDirectiveMarkerRe = /^([ ]{0,3}:{3,})[ \t]+(tip|info|warning|danger)(?=\s|$)/gm
 const allowedLangs = new Set(['html', 'css', 'ts', 'tsx', 'rust', 'js', 'javascript', 'typescript'])
 const docContainerDirectives = new Set(['tip', 'info', 'warning', 'danger'])
+const staticDocHtmlByRouteKey = '__RUE_STATIC_DOC_HTML_BY_ROUTE__'
 let highlightContext = null
 let highlightContextPromise = null
 
@@ -309,6 +309,28 @@ const removeGeneratedDir = dir =>
     maxRetries: 5,
     retryDelay: 100,
   })
+
+export const cleanupAppStaticBuildTempDirs = async ({
+  tempRootDir: cleanupRootDir = tempRootDir,
+  keepDir = tempDir,
+} = {}) => {
+  let entries
+  try {
+    entries = await readdir(cleanupRootDir, { withFileTypes: true })
+  } catch (error) {
+    if (error?.code === 'ENOENT') return
+    throw error
+  }
+
+  const resolvedKeepDir = path.resolve(keepDir)
+  await Promise.all(
+    entries
+      .filter(entry => entry.name.startsWith('app-static-build-'))
+      .map(entry => path.resolve(cleanupRootDir, entry.name))
+      .filter(entryPath => entryPath !== resolvedKeepDir)
+      .map(removeGeneratedDir),
+  )
+}
 
 export const createAppStaticRouteProgressReporter = ({
   concurrency,
@@ -589,15 +611,14 @@ export const createAppStaticRouteRenderers = ({
       })
     },
 
-    async renderStaticDoc(route, routeIndex, docHtml) {
-      const docHtmlFile = path.join(renderOutDir, `${routeIndex}.doc.html`)
-      const outputFile = path.join(renderOutDir, `${routeIndex}.html`)
-      await mkdir(renderOutDir, { recursive: true })
-      await writeFile(docHtmlFile, docHtml)
-
+    renderStaticDoc(route, routeIndex, docHtml) {
       return pool.render({
-        docHtmlFile,
-        outputFile,
+        extraGlobals: {
+          [staticDocHtmlByRouteKey]: {
+            [normalizeRoute(route)]: docHtml,
+          },
+        },
+        outputFile: path.join(renderOutDir, `${routeIndex}.html`),
         route,
         timeoutMs: routeRenderTimeoutMs,
         label: 'Static document SSR',
@@ -609,13 +630,12 @@ export const createAppStaticRouteRenderers = ({
 }
 
 export const runAppStaticRouteStage = async ({
-  createPool = createAppStaticRenderWorkerPool,
+  createPool = createServerBundleRenderPool,
   poolOptions = {
     cwd: root,
     serverBundleFile,
     size: routeRenderConcurrency,
     timeoutMs: routeRenderTimeoutMs,
-    workerFile: routeWorkerFile,
   },
   run,
 }) => {
@@ -749,6 +769,7 @@ const runAppStaticBuild = async () => {
   const releaseBuildLock = await acquireAppStaticBuildLock()
 
   try {
+    await cleanupAppStaticBuildTempDirs()
     await removeGeneratedDir(outDir)
 
     let clientEntries = null

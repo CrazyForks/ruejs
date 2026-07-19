@@ -1,21 +1,14 @@
-import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import {
-  formatStaticError,
-  normalizeStaticRoute,
-  renderServerBundleRoute,
-  runWithStaticRenderDom,
-} from '@rue-js/server-renderer/static'
+import { formatStaticError, renderServerEntryRoute, runWithStaticRenderDom } from './static.mjs'
 
 const [serverBundleFile] = process.argv.slice(2)
-const staticDocHtmlByRouteKey = '__RUE_STATIC_DOC_HTML_BY_ROUTE__'
 let activeTask = null
 let closing = false
 
 if (!serverBundleFile || typeof process.send !== 'function') {
-  console.error('Usage: fork scripts/app-static-render-worker.mjs <server-bundle>')
+  console.error('Usage: fork static-worker.mjs <server-bundle>')
   process.exit(1)
 }
 
@@ -37,24 +30,16 @@ const finishClosing = () => {
   if (process.connected) process.disconnect()
 }
 
-const renderTask = async message => {
-  const { docHtmlFile, id, outputFile, route } = message
+const renderTask = async (message, render) => {
+  const { id, outputFile, renderOptions = {}, route } = message
   activeTask = id
 
   try {
-    const extraGlobals = {}
-    if (docHtmlFile) {
-      const docHtml = await readFile(path.resolve(docHtmlFile), 'utf-8')
-      extraGlobals[staticDocHtmlByRouteKey] = {
-        [normalizeStaticRoute(route)]: docHtml,
-      }
-    }
-
-    await renderServerBundleRoute({
-      serverBundleFile,
+    await renderServerEntryRoute({
+      ...renderOptions,
+      render,
       route,
       outputFile,
-      extraGlobals,
     })
     await send({ type: 'result', id, ok: true })
   } catch (error) {
@@ -63,6 +48,11 @@ const renderTask = async message => {
     activeTask = null
     finishClosing()
   }
+}
+
+const serverEntry = await import(pathToFileURL(path.resolve(serverBundleFile)).href)
+if (typeof serverEntry.render !== 'function') {
+  throw new Error('SSR bundle does not export render(route).')
 }
 
 process.on('message', message => {
@@ -86,16 +76,12 @@ process.on('message', message => {
     return
   }
 
-  void renderTask(message)
+  void renderTask(message, serverEntry.render)
 })
 
 process.on('disconnect', () => {
   process.exitCode = 0
 })
 
-const serverEntry = await import(pathToFileURL(path.resolve(serverBundleFile)).href)
-if (typeof serverEntry.render !== 'function') {
-  throw new Error('SSR bundle does not export render(route).')
-}
 await runWithStaticRenderDom('/', () => undefined)
 await send({ type: 'ready' })

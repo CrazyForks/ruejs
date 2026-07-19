@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -13,6 +13,7 @@ import {
   createAppStaticRouteRenderers,
   createDocRouteSourceMap,
   createRouteHtml,
+  cleanupAppStaticBuildTempDirs,
   isProcessAlive,
   runAppStaticRouteStage,
 } from '../app-static-build.mjs'
@@ -81,14 +82,18 @@ describe('app static build adapter', () => {
     expect(pool.render).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        docHtmlFile: path.join(renderOutDir, '2.doc.html'),
+        extraGlobals: {
+          __RUE_STATIC_DOC_HTML_BY_ROUTE__: {
+            '/docs': '<article>docs</article>',
+          },
+        },
         label: 'Static document SSR',
         route: '/docs',
       }),
     )
-    await expect(readFile(path.join(renderOutDir, '2.doc.html'), 'utf-8')).resolves.toBe(
-      '<article>docs</article>',
-    )
+    await expect(stat(path.join(renderOutDir, '2.doc.html'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
     expect(snapshotRoute).toHaveBeenCalledOnce()
     expect(snapshotRoute).toHaveBeenCalledWith('/fallback', 3)
   })
@@ -134,6 +139,22 @@ describe('app static build adapter', () => {
       }),
     ).toBe(true)
     expect(isProcessAlive(0)).toBe(false)
+  })
+
+  it('cleans stale app static build directories before a new build', async () => {
+    const tempRootDir = await createTempDir('rue-app-static-cleanup-')
+    const staleDir = path.join(tempRootDir, 'app-static-build-123-stale')
+    const secondStaleDir = path.join(tempRootDir, 'app-static-build-456-stale')
+    const keepDir = path.join(tempRootDir, 'app-static-build-789-current')
+    const unrelatedDir = path.join(tempRootDir, 'other-task')
+    await Promise.all([staleDir, secondStaleDir, keepDir, unrelatedDir].map(dir => mkdir(dir)))
+
+    await cleanupAppStaticBuildTempDirs({ tempRootDir, keepDir })
+
+    await expect(stat(staleDir)).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(stat(secondStaleDir)).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(stat(keepDir)).resolves.toBeDefined()
+    await expect(stat(unrelatedDir)).resolves.toBeDefined()
   })
 
   it('collects independent named client entry closures using the resolved base URL', () => {

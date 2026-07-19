@@ -147,7 +147,13 @@ interface ListProps<T> {
 }
 
 function List<T>({ items, renderItem }: ListProps<T>) {
-  return <ul>{items.map(item => <li>{renderItem(item)}</li>)}</ul>
+  return (
+    <ul>
+      {items.map(item => (
+        <li>{renderItem(item)}</li>
+      ))}
+    </ul>
+  )
 }
 ```
 

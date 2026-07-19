@@ -33,6 +33,8 @@ export type StaticRouteOutputFileCallback = (
 
 export type StaticRouteCompleteCallback = (progress: StaticRouteProgress) => void
 
+export type StaticServerRenderFunction = (route: string) => string | Promise<string>
+
 export type StaticRouteRenderValueInput = string | StaticRouteRenderValue
 
 export type StaticClientMode = 'none' | 'islands' | 'app' | (string & {})
@@ -114,6 +116,12 @@ export interface StaticRouteRenderValue {
 
 export interface RenderServerBundleRouteOptions extends RunWithStaticRenderDomOptions {
   serverBundleFile: string
+  route: string
+  outputFile: string
+}
+
+export interface RenderServerEntryRouteOptions extends RunWithStaticRenderDomOptions {
+  render: StaticServerRenderFunction
   route: string
   outputFile: string
 }
@@ -272,6 +280,33 @@ export interface RenderStaticRouteInChildOptions {
   maxOutputLength?: number
 }
 
+export interface ServerBundleRenderPoolOptions {
+  serverBundleFile: string
+  size?: number
+  timeoutMs?: number
+  startupTimeoutMs?: number
+  maxOutputLength?: number
+  cwd?: string
+  env?: Record<string, string | undefined>
+  workerFile?: string
+}
+
+export interface ServerBundleRenderTaskOptions extends Omit<
+  RunWithStaticRenderDomOptions,
+  'baseUrl'
+> {
+  route: string
+  outputFile: string
+  baseUrl?: string
+  label?: string
+  timeoutMs?: number
+}
+
+export interface ServerBundleRenderPool {
+  render(options: ServerBundleRenderTaskOptions): Promise<string>
+  close(): Promise<void>
+}
+
 export declare const normalizeStaticRoute: (route: unknown) => string | null
 
 export declare const staticRouteToOutputFile: (route: unknown, outDir: string) => string | null
@@ -295,6 +330,10 @@ export declare const runWithStaticRenderDom: <T>(
 
 export declare const renderServerBundleRoute: (
   options: RenderServerBundleRouteOptions,
+) => Promise<RenderServerBundleRouteResult>
+
+export declare const renderServerEntryRoute: (
+  options: RenderServerEntryRouteOptions,
 ) => Promise<RenderServerBundleRouteResult>
 
 export declare const waitForStaticAppHtml: (
@@ -336,3 +375,7 @@ export declare const writeStaticRenderReport: (
 export declare const renderStaticRouteInChild: (
   options: RenderStaticRouteInChildOptions,
 ) => Promise<string>
+
+export declare const createServerBundleRenderPool: (
+  options: ServerBundleRenderPoolOptions,
+) => ServerBundleRenderPool
