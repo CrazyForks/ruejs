@@ -1093,6 +1093,12 @@ fn chain_promise_callback(promise: Promise, callback: Function) -> Promise {
 #[wasm_bindgen(js_name = nextTick)]
 pub fn next_tick(cb: Option<Function>) -> Promise {
     let promise = if has_pending_flush() {
+        // nextTick is also a progress boundary. A frame-scheduled drain may belong to a browser
+        // window that has already been closed (for example, a persistent SSR worker replacing
+        // its JSDOM between routes). Queueing a microtask drain here makes the pending flush
+        // independent of that stale host callback. A later rAF/timeout callback is harmless
+        // because drain_pending_effects tolerates an empty queue.
+        schedule_pending_effects_drain_microtask();
         create_flush_waiter_promise()
     } else {
         Promise::resolve(&JsValue::UNDEFINED)

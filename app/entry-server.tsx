@@ -1,5 +1,5 @@
 import { attachRouter, createMemoryHistory, type RouteRecordRaw } from '@rue-js/router'
-import { h, type FC } from '@rue-js/rue'
+import { h, setReactiveScheduling, type FC } from '@rue-js/rue'
 import { renderToString } from '@rue-js/server-renderer'
 import { RootApp } from './app'
 import { createAppRouter, routes } from './router'
@@ -61,15 +61,21 @@ const collectStaticRouteInfo = (
 
 const staticRouteInfo = collectStaticRouteInfo(routes)
 
+// Static SSR has no visual frame boundary. Keeping its reactive work on microtasks also avoids
+// retaining request-scoped JSDOM requestAnimationFrame callbacks between persistent worker tasks.
+setReactiveScheduling('microtask')
+
 export const staticRoutes = [...staticRouteInfo.staticRoutes].sort()
 export const appClientRoutes = [...staticRouteInfo.appClientRoutes].sort()
 
 export const render = async (url: string) => {
-  const router = createAppRouter(createMemoryHistory('/'))
+  // Initialize the memory history at the requested URL instead of navigating from `/`.
+  // A programmatic navigation schedules browser-only page-load work (scroll/focus) that can
+  // outlive the per-route JSDOM in a persistent static-render worker.
+  const router = createAppRouter(createMemoryHistory(url))
   const StaticRootApp: FC = () =>
     h(StaticRenderContext.Provider as any, { value: { url } }, h(RootApp, null))
 
-  await router.push(url)
   await router.isReady()
   attachRouter(router)
 

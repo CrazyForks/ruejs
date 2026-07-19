@@ -59,6 +59,8 @@ export interface RueVitePluginOptions {
   debug?: boolean
   /** SWC 转换超时时间，单位为毫秒；小于等于 0 时表示不启用超时保护。 */
   transformTimeoutMs?: number
+  /** 同时执行的 SWC 转换数量，默认 4；用于限制 Vite 并发创建的 compiler worker。 */
+  transformConcurrency?: number
   /** 自定义转换执行器，主要用于测试或接入外部隔离执行环境。 */
   transformExecutor?: (payload: RueTransformExecutorPayload) => Promise<string> | string
 }

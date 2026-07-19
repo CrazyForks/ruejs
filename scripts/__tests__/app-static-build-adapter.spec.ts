@@ -105,6 +105,9 @@ describe('app static build adapter', () => {
     await expect(runAppStaticRouteStage({ createPool, run: async pool => pool })).resolves.toEqual({
       close,
     })
+    expect(createPool).toHaveBeenCalledWith(
+      expect.objectContaining({ maxTaskRetries: 1, maxTasksPerWorker: 16 }),
+    )
     expect(close).toHaveBeenCalledOnce()
 
     close.mockClear()

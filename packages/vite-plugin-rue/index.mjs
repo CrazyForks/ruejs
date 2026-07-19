@@ -24,6 +24,8 @@ const RUE_REACTIVE_PROPS_DESTRUCTURE_HEADER = '/* RUE_REACTIVE_PROPS_DESTRUCTURE
 const RUE_VITE_PLUGIN_NAME = '@rue-js/vite-plugin-rue'
 /** 默认转换超时时间，避免异常输入让开发服务器长时间无响应。 */
 const DEFAULT_TRANSFORM_TIMEOUT_MS = 5000
+/** 限制 Vite 并发 transform 时同时创建的 SWC worker 数量。 */
+const DEFAULT_TRANSFORM_CONCURRENCY = 4
 /** 执行 SWC 转换的 worker 入口文件路径。 */
 const TRANSFORM_WORKER_PATH = requireFromHere.resolve('./transform-worker.mjs')
 /** 暂时跳过二次转换的 rue-design 组件目录名。 */
@@ -2989,6 +2991,37 @@ const withTransformTimeout = (task, { id, timeoutMs }) => {
   })
 }
 
+/** 创建一个轻量任务队列，避免 Vite 为每个并发模块同时创建独立 worker。 */
+const createTransformLimiter = concurrency => {
+  const parsedConcurrency = Number(concurrency)
+  const limit =
+    Number.isInteger(parsedConcurrency) && parsedConcurrency > 0
+      ? parsedConcurrency
+      : DEFAULT_TRANSFORM_CONCURRENCY
+  const queue = []
+  let activeTasks = 0
+
+  const drain = () => {
+    while (activeTasks < limit && queue.length > 0) {
+      const task = queue.shift()
+      activeTasks += 1
+      Promise.resolve()
+        .then(task.run)
+        .then(task.resolve, task.reject)
+        .finally(() => {
+          activeTasks -= 1
+          drain()
+        })
+    }
+  }
+
+  return run =>
+    new Promise((resolve, reject) => {
+      queue.push({ reject, resolve, run })
+      drain()
+    })
+}
+
 /** 将 worker 线程传回的可序列化错误恢复为 Error 对象。 */
 const deserializeWorkerError = rawError => {
   const error = new Error(getErrorMessage(rawError))
@@ -3290,6 +3323,7 @@ const runSwcTransformInWorker = ({ code, id, pluginPath, timeoutMs, isProduction
  * @param {string[]} [options.exclude] 排除路径关键字，任一命中则跳过。
  * @param {boolean} [options.debug] 是否输出转换调试日志。
  * @param {number} [options.transformTimeoutMs] SWC 转换超时时间，单位为毫秒。
+ * @param {number} [options.transformConcurrency] 同时执行的 SWC 转换数，默认 4。
  * @param {(payload: { code: string, id: string, pluginPath: string, timeoutMs: number }) => Promise<string> | string} [options.transformExecutor] 自定义转换执行器，主要用于测试。
  * @returns {import('vite').Plugin} Vite 插件对象。
  */
@@ -3299,12 +3333,14 @@ export default function VitePluginRue(options = {}) {
     exclude = [],
     debug = false,
     transformTimeoutMs = DEFAULT_TRANSFORM_TIMEOUT_MS,
+    transformConcurrency = DEFAULT_TRANSFORM_CONCURRENCY,
     transformExecutor = runSwcTransformInWorker,
   } = options
   // 默认始终使用 worker 转换，确保 dev/build 阶段都能通过超时保护终止卡住的编译。
   let activeTransformExecutor = transformExecutor
   let isProductionTransform = process.env.NODE_ENV === 'production'
   let projectRoot = process.cwd()
+  const scheduleTransform = createTransformLimiter(transformConcurrency)
   const islandManifestByModule = new Map()
   const serverIslandRegistryByModule = new Map()
 
@@ -3498,15 +3534,17 @@ export const startRueIslands = (options = {}) => startRueIslandLoader({
 
     try {
       // 第三阶段执行真正的 Rue SWC wasm 转换，并保留超时保护。
-      const out = await withTransformTimeout(
-        activeTransformExecutor({
-          code: loweredModel,
-          id,
-          pluginPath,
-          timeoutMs: transformTimeoutMs,
-          isProduction: isProductionTransform,
-        }),
-        { id, timeoutMs: transformTimeoutMs },
+      const out = await scheduleTransform(() =>
+        withTransformTimeout(
+          activeTransformExecutor({
+            code: loweredModel,
+            id,
+            pluginPath,
+            timeoutMs: transformTimeoutMs,
+            isProduction: isProductionTransform,
+          }),
+          { id, timeoutMs: transformTimeoutMs },
+        ),
       )
       const normalizedOut = preserveRscDirectivePrologue(code, out)
       // 输出标记用于幂等判断；响应式 props 解构标记用于测试和诊断。

@@ -20,16 +20,37 @@ const createFixture = async () => {
   const root = await createTempDir()
   const bundleFile = path.join(root, 'server-entry.mjs')
   const loadLogFile = path.join(root, 'bundle-loads.log')
+  const crashOnceMarker = path.join(root, 'crash-once.marker')
+  const hangOnceMarker = path.join(root, 'hang-once.marker')
   await writeFile(
     bundleFile,
     `
-import { appendFile } from 'node:fs/promises'
+import { access, appendFile, writeFile } from 'node:fs/promises'
 
 await appendFile(${JSON.stringify(loadLogFile)}, process.pid + '\\n')
 
 export const render = async route => {
   if (route === '/hang') {
     await new Promise(() => {})
+  }
+
+  if (route === '/crash-once') {
+    try {
+      await access(${JSON.stringify(crashOnceMarker)})
+    } catch {
+      await writeFile(${JSON.stringify(crashOnceMarker)}, 'crashed')
+      process.exit(1)
+      await new Promise(() => {})
+    }
+  }
+
+  if (route === '/hang-once') {
+    try {
+      await access(${JSON.stringify(hangOnceMarker)})
+    } catch {
+      await writeFile(${JSON.stringify(hangOnceMarker)}, 'hung')
+      await new Promise(() => {})
+    }
   }
 
   const docs = globalThis.__RUE_STATIC_DOC_HTML_BY_ROUTE__ || {}
@@ -108,6 +129,80 @@ describe('@rue-js/server-renderer/static server bundle render pool', () => {
       await expect(
         pool.render({ route: '/recovered', outputFile: path.join(root, 'recovered.html') }),
       ).resolves.toContain('data-route="/recovered"')
+    } finally {
+      await pool.close()
+    }
+
+    const workerPids = (await readFile(loadLogFile, 'utf-8')).trim().split('\n')
+    expect(workerPids).toHaveLength(2)
+    expect(new Set(workerPids).size).toBe(2)
+  }, 60_000)
+
+  it('retries a task in a fresh worker after the active worker exits', async () => {
+    const { root, bundleFile, loadLogFile } = await createFixture()
+    const pool = createServerBundleRenderPool({
+      maxTaskRetries: 1,
+      size: 1,
+      serverBundleFile: bundleFile,
+      timeoutMs: 5000,
+    })
+
+    try {
+      await expect(
+        pool.render({
+          route: '/crash-once',
+          outputFile: path.join(root, 'crash-once.html'),
+        }),
+      ).resolves.toContain('data-route="/crash-once"')
+    } finally {
+      await pool.close()
+    }
+
+    const workerPids = (await readFile(loadLogFile, 'utf-8')).trim().split('\n')
+    expect(workerPids).toHaveLength(2)
+    expect(new Set(workerPids).size).toBe(2)
+  }, 60_000)
+
+  it('retries a timed out task in a fresh worker', async () => {
+    const { root, bundleFile, loadLogFile } = await createFixture()
+    const pool = createServerBundleRenderPool({
+      maxTaskRetries: 1,
+      size: 1,
+      serverBundleFile: bundleFile,
+      timeoutMs: 1500,
+    })
+
+    try {
+      await expect(
+        pool.render({
+          route: '/hang-once',
+          outputFile: path.join(root, 'hang-once.html'),
+        }),
+      ).resolves.toContain('data-route="/hang-once"')
+    } finally {
+      await pool.close()
+    }
+
+    const workerPids = (await readFile(loadLogFile, 'utf-8')).trim().split('\n')
+    expect(workerPids).toHaveLength(2)
+    expect(new Set(workerPids).size).toBe(2)
+  }, 60_000)
+
+  it('recycles a worker after it reaches the configured task limit', async () => {
+    const { root, bundleFile, loadLogFile } = await createFixture()
+    const pool = createServerBundleRenderPool({
+      maxTasksPerWorker: 2,
+      size: 1,
+      serverBundleFile: bundleFile,
+      timeoutMs: 5000,
+    })
+
+    try {
+      for (const route of ['/first', '/second', '/third']) {
+        await expect(
+          pool.render({ route, outputFile: path.join(root, `${route.slice(1)}.html`) }),
+        ).resolves.toContain(`data-route="${route}"`)
+      }
     } finally {
       await pool.close()
     }

@@ -286,6 +286,8 @@ export interface ServerBundleRenderPoolOptions {
   timeoutMs?: number
   startupTimeoutMs?: number
   maxOutputLength?: number
+  maxTaskRetries?: number
+  maxTasksPerWorker?: number
   cwd?: string
   env?: Record<string, string | undefined>
   workerFile?: string

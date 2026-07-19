@@ -24,6 +24,15 @@ const parsePositiveInteger = (value, fallback, label) => {
   return parsed
 }
 
+const parseNonNegativeInteger = (value, fallback, label) => {
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    if (fallback !== undefined) return fallback
+    throw new TypeError(`${label} must be a non-negative integer.`)
+  }
+  return parsed
+}
+
 const assertPath = (value, label) => {
   if (typeof value !== 'string' || value.length === 0) {
     throw new TypeError(`${label} must be a non-empty string.`)
@@ -42,6 +51,8 @@ export const createServerBundleRenderPool = options => {
     cwd = process.cwd(),
     env = {},
     maxOutputLength = defaultOutputLimit,
+    maxTaskRetries = 0,
+    maxTasksPerWorker,
     serverBundleFile,
     size = 1,
     startupTimeoutMs = defaultStartupTimeoutMs,
@@ -59,6 +70,11 @@ export const createServerBundleRenderPool = options => {
     'startupTimeoutMs',
   )
   const outputLimit = parsePositiveInteger(maxOutputLength, defaultOutputLimit, 'maxOutputLength')
+  const taskRetryLimit = parseNonNegativeInteger(maxTaskRetries, 0, 'maxTaskRetries')
+  const workerTaskLimit =
+    maxTasksPerWorker === undefined
+      ? Number.POSITIVE_INFINITY
+      : parsePositiveInteger(maxTasksPerWorker, undefined, 'maxTasksPerWorker')
 
   const workers = new Set()
   const idleWorkers = []
@@ -88,6 +104,15 @@ export const createServerBundleRenderPool = options => {
     for (const task of taskQueue.splice(0)) rejectTask(task, fatalError)
     for (const worker of workers) {
       clearTimeout(worker.startupTimer)
+      if (worker.task) {
+        clearTimeout(worker.task.timer)
+        rejectTask(worker.task, fatalError)
+        worker.task = null
+      }
+      if (worker.reservedTask) {
+        rejectTask(worker.reservedTask, fatalError)
+        worker.reservedTask = null
+      }
       worker.stopping = true
       worker.child.kill('SIGKILL')
     }
@@ -111,23 +136,56 @@ export const createServerBundleRenderPool = options => {
     return new Error(`Static render worker exited with code ${code}.`)
   }
 
+  const preserveTaskForFreshWorker = (worker, error) => {
+    const task = worker.task
+    if (!task) return
+    clearTimeout(task.timer)
+    worker.task = null
+
+    if (!closing && task.retryCount < taskRetryLimit) {
+      task.retryCount += 1
+      worker.reservedTask = task
+      return
+    }
+
+    rejectTask(task, error)
+  }
+
+  const stopFailedWorker = worker => {
+    worker.stopping = true
+    worker.child.kill('SIGKILL')
+  }
+
+  const retireWorker = worker => {
+    worker.stopping = true
+    if (!worker.child.connected) {
+      worker.child.kill('SIGKILL')
+      return
+    }
+    worker.child.send({ type: 'shutdown' }, error => {
+      if (error) worker.child.kill('SIGKILL')
+    })
+  }
+
   const dispatch = worker => {
     if (closing || worker.stopping || !worker.ready || worker.task) return
-    const task = taskQueue.shift()
+    const task = worker.reservedTask || taskQueue.shift()
     if (!task) {
       if (!idleWorkers.includes(worker)) idleWorkers.push(worker)
       return
     }
+    worker.reservedTask = null
 
     worker.task = task
     worker.stdout = ''
     worker.stderr = ''
     task.timer = setTimeout(() => {
       if (worker.task !== task) return
-      rejectTask(task, new Error(`${task.label} timed out after ${task.timeoutMs}ms`))
-      worker.task = null
-      worker.stopping = true
-      worker.child.kill('SIGKILL')
+      preserveTaskForFreshWorker(
+        worker,
+        new Error(`${task.label} timed out after ${task.timeoutMs}ms`),
+      )
+      stopFailedWorker(worker)
     }, task.timeoutMs)
 
     worker.child.send(
@@ -140,16 +198,13 @@ export const createServerBundleRenderPool = options => {
       },
       error => {
         if (!error || worker.task !== task) return
-        clearTimeout(task.timer)
-        rejectTask(task, error)
-        worker.task = null
-        worker.stopping = true
-        worker.child.kill('SIGKILL')
+        preserveTaskForFreshWorker(worker, error)
+        stopFailedWorker(worker)
       },
     )
   }
 
-  const spawnWorker = () => {
+  const spawnWorker = (reservedTask = null) => {
     if (closing || fatalError) return null
     const child = fork(path.resolve(workerFile), [path.resolve(serverBundleFile)], {
       cwd,
@@ -166,6 +221,8 @@ export const createServerBundleRenderPool = options => {
       ready: false,
       stopping: false,
       task: null,
+      reservedTask,
+      completedTasks: 0,
       stdout: '',
       stderr: '',
       startupTimer: null,
@@ -198,34 +255,50 @@ export const createServerBundleRenderPool = options => {
       const task = worker.task
       clearTimeout(task.timer)
       worker.task = null
+      worker.completedTasks += 1
       if (message.ok) void resolveTask(task)
       else rejectTask(task, new Error(message.error || `${task.label} failed.`))
-      dispatch(worker)
-    })
-
-    child.on('error', error => {
-      if (!worker.ready) failPoolStartup(error)
-      if (worker.task) {
-        clearTimeout(worker.task.timer)
-        rejectTask(worker.task, error)
-        worker.task = null
+      if (!message.ok || worker.completedTasks >= workerTaskLimit) {
+        retireWorker(worker)
+      } else {
+        dispatch(worker)
       }
     })
 
-    child.on('exit', (code, signal) => {
+    child.on('error', error => {
+      if (!worker.ready) {
+        failPoolStartup(error)
+        return
+      }
+      if (worker.task) {
+        preserveTaskForFreshWorker(worker, error)
+      }
+      stopFailedWorker(worker)
+    })
+
+    // `close` fires after stdout/stderr have closed, while `exit` may run before their final
+    // chunks are delivered. Waiting for `close` preserves the actual worker exception instead
+    // of degrading it to an unhelpful "exited with code 1" message.
+    child.on('close', (code, signal) => {
       clearTimeout(worker.startupTimer)
       const exitedBeforeReady = !worker.ready && !worker.stopping
       const idleIndex = idleWorkers.indexOf(worker)
       if (idleIndex >= 0) idleWorkers.splice(idleIndex, 1)
       workers.delete(worker)
       if (worker.task) {
-        clearTimeout(worker.task.timer)
-        rejectTask(worker.task, createWorkerExitError(worker, code, signal))
-        worker.task = null
+        preserveTaskForFreshWorker(worker, createWorkerExitError(worker, code, signal))
       }
 
-      if (exitedBeforeReady) failPoolStartup(createWorkerExitError(worker, code, signal))
-      if (!closing && !fatalError) spawnWorker()
+      const retryTask = worker.reservedTask
+      worker.reservedTask = null
+
+      if (exitedBeforeReady) {
+        const startupError = createWorkerExitError(worker, code, signal)
+        if (retryTask) rejectTask(retryTask, startupError)
+        failPoolStartup(startupError)
+      }
+      if (!closing && !fatalError) spawnWorker(retryTask)
+      else if (retryTask) rejectTask(retryTask, fatalError || new Error('Worker pool is closing.'))
       settleCloseIfDone()
     })
 
@@ -272,6 +345,7 @@ export const createServerBundleRenderPool = options => {
           },
           resolve,
           reject,
+          retryCount: 0,
           settled: false,
           timer: null,
         }
@@ -298,6 +372,11 @@ export const createServerBundleRenderPool = options => {
           clearTimeout(worker.task.timer)
           rejectTask(worker.task, closeError)
           worker.task = null
+          worker.stopping = true
+          worker.child.kill('SIGKILL')
+        } else if (worker.reservedTask) {
+          rejectTask(worker.reservedTask, closeError)
+          worker.reservedTask = null
           worker.stopping = true
           worker.child.kill('SIGKILL')
         } else if (!worker.ready || !worker.child.connected) {

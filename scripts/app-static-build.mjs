@@ -292,12 +292,22 @@ const parsePositiveInteger = (value, fallback) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
 }
 
+const parseNonNegativeInteger = (value, fallback) => {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback
+}
+
 const routeRenderTimeoutMs = parsePositiveInteger(process.env.APP_STATIC_RENDER_TIMEOUT_MS, 8000)
 const routeSnapshotTimeoutMs = parsePositiveInteger(
   process.env.APP_STATIC_SNAPSHOT_TIMEOUT_MS,
   12000,
 )
 const routeRenderConcurrency = parsePositiveInteger(process.env.APP_STATIC_RENDER_CONCURRENCY, 4)
+const routeRenderRetries = parseNonNegativeInteger(process.env.APP_STATIC_RENDER_RETRIES, 1)
+const routeWorkerMaxTasks = parsePositiveInteger(
+  process.env.APP_STATIC_RENDER_MAX_TASKS_PER_WORKER,
+  16,
+)
 const buildLockStaleMs = parsePositiveInteger(
   process.env.APP_STATIC_BUILD_LOCK_STALE_MS,
   30 * 60 * 1000,
@@ -633,6 +643,8 @@ export const runAppStaticRouteStage = async ({
   createPool = createServerBundleRenderPool,
   poolOptions = {
     cwd: root,
+    maxTaskRetries: routeRenderRetries,
+    maxTasksPerWorker: routeWorkerMaxTasks,
     serverBundleFile,
     size: routeRenderConcurrency,
     timeoutMs: routeRenderTimeoutMs,

@@ -262,6 +262,47 @@ async fn next_tick_waits_for_merged_microtask_flush() {
 }
 
 #[wasm_bindgen_test(async)]
+/// nextTick 必须主动推进 frame flush，避免宿主窗口关闭并取消 rAF/timeout 后永久等待。
+async fn next_tick_forces_stalled_frame_flush_to_progress() {
+    let global = js_sys::global();
+    let window = Object::new();
+    Reflect::set(
+        &window,
+        &JsValue::from_str("requestAnimationFrame"),
+        &Function::new_with_args("cb", "return 1;"),
+    )
+    .unwrap();
+    Reflect::set(
+        &window,
+        &JsValue::from_str("setTimeout"),
+        &Function::new_with_args("cb,ms", "return 2;"),
+    )
+    .unwrap();
+    Reflect::set(&global, &JsValue::from_str("window"), &window).unwrap();
+
+    set_reactive_scheduling("frame");
+    let sig = create_signal(JsValue::from_f64(0.0), None);
+    let hits = Rc::new(RefCell::new(0));
+    let hits_for_effect = hits.clone();
+    let sig_for_effect = sig.clone();
+    let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *hits_for_effect.borrow_mut() += 1;
+        let _ = sig_for_effect.get_js();
+    }) as Box<dyn FnMut()>);
+    let _effect = create_effect(cb.as_ref().clone().into(), None);
+
+    sig.set_js(JsValue::from_f64(1.0));
+    assert_eq!(*hits.borrow(), 1);
+
+    JsFuture::from(next_tick(None)).await.unwrap();
+    assert_eq!(*hits.borrow(), 2);
+
+    Reflect::delete_property(&global, &JsValue::from_str("window")).unwrap();
+    set_reactive_scheduling("microtask");
+    cb.forget();
+}
+
+#[wasm_bindgen_test(async)]
 async fn next_tick_created_inside_flush_waits_for_that_flush_to_finish() {
     set_reactive_scheduling("microtask");
     let sig = create_signal(JsValue::from_f64(0.0), None);

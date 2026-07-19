@@ -49,6 +49,64 @@ const invokeConfigResolved = (plugin: ReturnType<typeof createPlugin>) => {
 }
 
 describe('vite-plugin-rue transform failure handling', () => {
+  it('limits concurrent compiler workers so Vite cannot start one worker per module', async () => {
+    const source = `
+      import { type FC } from '@rue-js/rue'
+
+      const Demo: FC = () => <section>ok</section>
+
+      export default Demo
+    `
+    const releases: Array<() => void> = []
+    let activeTransforms = 0
+    let startedTransforms = 0
+    let resolveFirstTwo!: () => void
+    let resolveThird!: () => void
+    const firstTwoStarted = new Promise<void>(resolve => {
+      resolveFirstTwo = resolve
+    })
+    const thirdStarted = new Promise<void>(resolve => {
+      resolveThird = resolve
+    })
+    const plugin = createPlugin({
+      transformConcurrency: 2,
+      transformTimeoutMs: 0,
+      transformExecutor: payload =>
+        new Promise(resolve => {
+          activeTransforms += 1
+          startedTransforms += 1
+          if (startedTransforms === 2) resolveFirstTwo()
+          if (startedTransforms === 3) resolveThird()
+          releases.push(() => {
+            activeTransforms -= 1
+            resolve(payload.code)
+          })
+        }),
+    } as RueVitePluginOptions)
+    const transformHook = plugin.transform
+    if (!transformHook) throw new Error('transform hook is required')
+    const runTransform = (name: string) =>
+      typeof transformHook === 'function'
+        ? transformHook.call({} as any, source, fixtureId(name))
+        : transformHook.handler.call({} as any, source, fixtureId(name))
+
+    const pending = [runTransform('LimitedA'), runTransform('LimitedB'), runTransform('LimitedC')]
+
+    await firstTwoStarted
+    await Promise.resolve()
+    expect(startedTransforms).toBe(2)
+    expect(activeTransforms).toBe(2)
+
+    releases.shift()?.()
+    await thirdStarted
+    expect(startedTransforms).toBe(3)
+    expect(activeTransforms).toBe(2)
+
+    for (const release of releases) release()
+    await Promise.all(pending)
+    expect(activeTransforms).toBe(0)
+  })
+
   it('surfaces invalid TSX as a readable SWC transform error', async () => {
     const source = `
       import { type FC } from '@rue-js/rue'

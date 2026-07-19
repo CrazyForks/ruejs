@@ -5,6 +5,7 @@ import {
   jsx,
   jsxs,
   renderAnchor,
+  setReactiveScheduling,
   signal,
   Suspense,
   TransitionGroup,
@@ -329,5 +330,30 @@ describe('server renderToString', () => {
     await Promise.resolve()
 
     expect(runs).toBe(1)
+  })
+
+  it('waits for frame-scheduled reactive updates before serializing SSR output', async () => {
+    setReactiveScheduling('frame')
+
+    try {
+      const App: FC = () =>
+        vapor(() => {
+          const container = _$createElement('div')
+          const anchor = _$createComment('frame-ssr-update')
+          const label = signal('before', {}, true)
+          _$appendChild(container, anchor)
+
+          watchEffect(() => {
+            renderAnchor(h('span', null, label.get()), container, anchor)
+          })
+          label.set('after')
+
+          return container
+        }) as any
+
+      await expect(renderToString(App)).resolves.toContain('<span>after</span>')
+    } finally {
+      setReactiveScheduling('sync')
+    }
   })
 })

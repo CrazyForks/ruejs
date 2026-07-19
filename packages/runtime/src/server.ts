@@ -1,3 +1,5 @@
+import { nextTick } from '@rue-js/runtime-vapor/reactive'
+
 import {
   getDOMAdapter,
   setDOMAdapter,
@@ -1086,7 +1088,7 @@ const serializeServerNodeChildren = (
 ): string => node.childNodes.map(child => serializeServerNode(child, options)).join('')
 
 const flushServerRenderMicrotasks = async () => {
-  await Promise.resolve()
+  await nextTick()
   await Promise.resolve()
 }
 
