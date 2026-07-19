@@ -2,8 +2,16 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { h, renderAnchor, signal, vapor, type FC } from '@rue-js/runtime'
 import {
+  createComponent as createDefaultComponent,
+  h,
+  renderAnchor,
+  signal,
+  vapor,
+  type FC,
+} from '@rue-js/runtime'
+import {
+  _$createComponent as createVaporComponent,
   renderAnchor as renderVaporAnchor,
   vapor as createVaporHandle,
 } from '@rue-js/runtime/vapor'
@@ -92,6 +100,86 @@ describe('Rue island runtime', () => {
       expect(island?.getAttribute('data-rue-hydrate')).toBe('load')
       expect(island?.querySelector('button')?.textContent).toBe(island?.getAttribute('data-rue-id'))
       expect(island?.querySelector('script[data-rue-props]')).not.toBeNull()
+    }
+  })
+
+  it('accepts island descriptors as component children without accepting arbitrary objects', () => {
+    const IslandContent: FC<{ label: string }> = props => h('button', null, props.label)
+    const Frame: FC = props => h('section', { 'data-frame': true }, props.children)
+    const createDescriptor = (id: string) =>
+      createRueIslandDescriptor({
+        component: IslandContent,
+        props: { label: id },
+        metadata: { id, component: `/src/${id}.tsx`, hydrate: 'load' },
+      })
+
+    const cases = [
+      {
+        id: 'default-child-descriptor',
+        createComponent: createDefaultComponent,
+        render: renderAnchor,
+      },
+      {
+        id: 'vapor-child-descriptor',
+        createComponent: createVaporComponent,
+        render: renderVaporAnchor,
+      },
+    ]
+
+    for (const testCase of cases) {
+      const host = document.createElement('div')
+      const anchor = document.createComment(testCase.id)
+      host.appendChild(anchor)
+      const handle = testCase.createComponent(Frame, {
+        children: createDescriptor(testCase.id) as any,
+      })
+      testCase.render(handle as any, host as any, anchor as any)
+
+      const island = host.querySelector('rue-island')
+      expect(island?.getAttribute('data-rue-id')).toBe(testCase.id)
+      expect(island?.querySelector('button')?.textContent).toBe(testCase.id)
+      expect(() =>
+        testCase.createComponent(Frame, { children: { arbitrary: true } as any }),
+      ).toThrow(/Unsupported object inputs are no longer accepted/)
+    }
+  })
+
+  it('renders component handles used as client:only fallbacks', () => {
+    const ClientContent: FC = () => h('button', null, 'client')
+    const Fallback: FC<{ label: string }> = props => h('p', null, props.label)
+    const Frame: FC = props => h('section', null, props.children)
+    const cases = [
+      {
+        id: 'default-only-fallback',
+        createComponent: createDefaultComponent,
+        render: renderAnchor,
+      },
+      {
+        id: 'vapor-only-fallback',
+        createComponent: createVaporComponent,
+        render: renderVaporAnchor,
+      },
+    ]
+
+    for (const testCase of cases) {
+      const host = document.createElement('div')
+      const anchor = document.createComment(testCase.id)
+      host.appendChild(anchor)
+      const descriptor = createRueIslandDescriptor({
+        component: ClientContent,
+        props: {},
+        fallback: testCase.createComponent(Fallback, { label: testCase.id }),
+        metadata: {
+          id: testCase.id,
+          component: `/src/${testCase.id}.tsx`,
+          hydrate: 'only',
+        },
+      })
+      const handle = testCase.createComponent(Frame, { children: descriptor as any })
+
+      testCase.render(handle as any, host as any, anchor as any)
+
+      expect(host.querySelector('rue-island p')?.textContent).toBe(testCase.id)
     }
   })
 

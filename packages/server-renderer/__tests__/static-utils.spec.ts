@@ -87,6 +87,46 @@ describe('@rue-js/server-renderer/static', () => {
     ).toThrow(/clientRuntimeAssets/)
   })
 
+  it('composes named client entries without removing user-owned modules', () => {
+    const template = `<!doctype html>
+<html>
+  <head>
+    <link rel="modulepreload" crossorigin href="/assets/app-runtime.js">
+    <link rel="modulepreload" crossorigin href="/assets/shared.js">
+    <script type="module" crossorigin src="/assets/app.js"></script>
+    <script type="module" src="/assets/user-module.js"></script>
+  </head>
+  <body><div id="app"></div></body>
+</html>`
+    const clientEntries = {
+      app: {
+        entry: '/assets/app.js',
+        assets: new Set(['/assets/app.js', '/assets/app-runtime.js', '/assets/shared.js']),
+      },
+      islands: {
+        entry: '/assets/islands.js',
+        assets: new Set(['/assets/islands.js', '/assets/shared.js']),
+      },
+      docs: {
+        entry: '/assets/docs.js',
+        assets: new Set(['/assets/docs.js', '/assets/shared.js']),
+      },
+    }
+
+    const html = createStaticRouteHtml(template, '<main>Interactive docs</main>', {
+      clientModes: ['islands', 'docs'],
+      clientEntries,
+    })
+
+    expect(html).toContain('<main>Interactive docs</main>')
+    expect(html).toContain('src="/assets/islands.js"')
+    expect(html).toContain('src="/assets/docs.js"')
+    expect(html.match(/href="\/assets\/shared\.js"/g)).toHaveLength(1)
+    expect(html).not.toContain('/assets/app.js')
+    expect(html).not.toContain('/assets/app-runtime.js')
+    expect(html).toContain('src="/assets/user-module.js"')
+  })
+
   it('resolves preview files without escaping the static directory', async () => {
     const root = await createTempDir()
     const staticDir = path.join(root, 'static')

@@ -72,6 +72,23 @@ const loadVirtual = async (plugin: any, id: string) => {
 }
 
 describe('vite-plugin-rue island registry', () => {
+  it('keeps pre-indexed descriptor ids stable when the same source is transformed again', async () => {
+    const { root, src } = createFixture()
+    const plugin = createPlugin(root)
+    plugin.configResolved?.({ command: 'build', root })
+    await callHook(plugin.buildStart, { addWatchFile() {} })
+
+    const manifestBeforeTransform = await loadVirtual(plugin, RUE_ISLAND_MANIFEST_ID)
+    const loadId = manifestBeforeTransform.match(/"(rue-[^"]+)":\s*\{[^}]*"hydrate":\s*"load"/)?.[1]
+    expect(loadId).toBeTruthy()
+
+    const page = path.join(src, 'Page.tsx')
+    const source = fs.readFileSync(page, 'utf8')
+    const transformed = await callHook(plugin.transform, {}, source, page)
+
+    expect(String(transformed?.code ?? '')).toContain(`"id": "${loadId}"`)
+  })
+
   it('pre-indexes direct imports before virtual modules load and emits deterministic importers', async () => {
     const { root, src } = createFixture()
     const plugin = createPlugin(root)

@@ -1,4 +1,5 @@
-import { type FC, useRef, useState } from '@rue-js/rue'
+import { type FC, useRef } from '@rue-js/rue'
+import { installDocCodeTabsEnhancer } from './docCodeTabsEnhancer'
 
 type CodeTabProps = {
   value: string
@@ -16,6 +17,10 @@ type CodeTabModel = {
 }
 
 let codeTabsIdSeed = 0
+
+if (!import.meta.env.SSR && typeof document !== 'undefined') {
+  installDocCodeTabsEnhancer(document)
+}
 
 const toChildrenArray = (children: unknown): unknown[] => {
   if (Array.isArray(children)) {
@@ -63,17 +68,12 @@ export const CodeTabs: FC<CodeTabsProps> = props => {
   }
 
   const tabs = readCodeTabs(props.children)
-  const initialValue = tabs[0]?.value ?? ''
-  const [activeValue, setActiveValue] = useState(initialValue)
-  const selectedValue = tabs.some(tab => tab.value === activeValue.value)
-    ? activeValue.value
-    : initialValue
 
   return (
-    <div className="doc-code-tabs my-5">
+    <div className="doc-code-tabs my-5" data-rue-doc-code-tabs="">
       <div className="tabs tabs-boxed w-fit" role="tablist" aria-label={props.ariaLabel ?? 'Code'}>
-        {tabs.map(tab => {
-          const selected = tab.value === selectedValue
+        {tabs.map((tab, index) => {
+          const selected = index === 0
           const tabId = `${idRef.current}-tab-${toDomIdPart(tab.value)}`
           const panelId = `${idRef.current}-panel-${toDomIdPart(tab.value)}`
 
@@ -86,15 +86,14 @@ export const CodeTabs: FC<CodeTabsProps> = props => {
               aria-selected={selected}
               aria-controls={panelId}
               tabIndex={selected ? 0 : -1}
-              onClick={() => setActiveValue(tab.value)}
             >
               {tab.label}
             </button>
           )
         })}
       </div>
-      {tabs.map(tab => {
-        const selected = tab.value === selectedValue
+      {tabs.map((tab, index) => {
+        const selected = index === 0
         const idPart = toDomIdPart(tab.value)
 
         return (

@@ -482,14 +482,21 @@ const normalizeStaticClientEntry = (entry, name) => {
 }
 
 const normalizeStaticClientEntries = clientEntries => {
-  if (!clientEntries || typeof clientEntries !== 'object') {
-    throw new TypeError('clientEntries must contain app and islands client entries')
+  if (!clientEntries || typeof clientEntries !== 'object' || Array.isArray(clientEntries)) {
+    throw new TypeError('clientEntries must be a named client entry record')
   }
 
-  return {
-    app: normalizeStaticClientEntry(clientEntries.app, 'app'),
-    islands: normalizeStaticClientEntry(clientEntries.islands, 'islands'),
+  const entries = Object.fromEntries(
+    Object.entries(clientEntries).map(([name, entry]) => [
+      name,
+      normalizeStaticClientEntry(entry, name),
+    ]),
+  )
+  if (Object.keys(entries).length === 0) {
+    throw new TypeError('clientEntries must contain at least one named client entry')
   }
+
+  return entries
 }
 
 const escapeHtmlAttribute = value =>
@@ -499,12 +506,19 @@ const escapeHtmlAttribute = value =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
 
-const injectStaticClientEntry = (html, entry) => {
-  const tags = [...entry.assets]
-    .filter(asset => asset !== entry.entry)
+const injectStaticClientEntries = (html, entries) => {
+  const entryUrls = new Set(entries.map(entry => entry.entry))
+  const assets = new Set(entries.flatMap(entry => [...entry.assets]))
+  const tags = [...assets]
+    .filter(asset => !entryUrls.has(asset))
     .sort()
     .map(asset => `<link rel="modulepreload" crossorigin href="${escapeHtmlAttribute(asset)}">`)
-  tags.push(`<script type="module" crossorigin src="${escapeHtmlAttribute(entry.entry)}"></script>`)
+  tags.push(
+    ...entries.map(
+      entry =>
+        `<script type="module" crossorigin src="${escapeHtmlAttribute(entry.entry)}"></script>`,
+    ),
+  )
 
   const block = tags.map(tag => `    ${tag}`).join('\n')
   return /<\/head\s*>/i.test(html)
@@ -532,18 +546,36 @@ export const stripStaticClientRuntime = (html, clientRuntimeAssets) => {
 export const createStaticRouteHtml = (template, appHtml, options = {}) => {
   const html = String(template).replace('<div id="app"></div>', `<div id="app">${appHtml}</div>`)
 
-  if ('clientMode' in options || 'clientEntries' in options) {
-    const clientMode = options.clientMode || 'app'
-    if (clientMode !== 'none' && clientMode !== 'islands' && clientMode !== 'app') {
-      throw new TypeError('clientMode must be one of none, islands, or app')
+  if ('clientMode' in options || 'clientModes' in options || 'clientEntries' in options) {
+    const clientEntries = normalizeStaticClientEntries(options.clientEntries)
+    const rawModes = 'clientModes' in options ? options.clientModes : [options.clientMode || 'app']
+    if (
+      rawModes == null ||
+      typeof rawModes === 'string' ||
+      typeof rawModes[Symbol.iterator] !== 'function'
+    ) {
+      throw new TypeError('clientModes must be an iterable of named client entry modes')
     }
 
-    const clientEntries = normalizeStaticClientEntries(options.clientEntries)
-    const ownedAssets = new Set([...clientEntries.app.assets, ...clientEntries.islands.assets])
+    const modes = [...new Set([...rawModes].map(mode => String(mode)))]
+    if (modes.includes('none') && modes.length > 1) {
+      throw new TypeError('client mode "none" cannot be combined with named client entries')
+    }
+    const selectedModes = modes.filter(mode => mode !== 'none')
+    for (const mode of selectedModes) {
+      if (!clientEntries[mode]) {
+        throw new TypeError(`client mode "${mode}" has no matching client entry`)
+      }
+    }
+
+    const ownedAssets = new Set(Object.values(clientEntries).flatMap(entry => [...entry.assets]))
     const strippedHtml = stripStaticClientRuntime(html, ownedAssets)
-    return clientMode === 'none'
+    return selectedModes.length === 0
       ? strippedHtml
-      : injectStaticClientEntry(strippedHtml, clientEntries[clientMode])
+      : injectStaticClientEntries(
+          strippedHtml,
+          selectedModes.map(mode => clientEntries[mode]),
+        )
   }
 
   const { includeClientRuntime = true, clientRuntimeAssets } = options

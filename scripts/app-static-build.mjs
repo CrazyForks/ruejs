@@ -28,6 +28,7 @@ const buildLockOwnerFile = path.resolve(buildLockDir, 'owner.json')
 const viteConfigFile = path.resolve(root, 'vite.config.ts')
 const clientEntryFile = path.resolve(root, 'app/app.tsx')
 const islandClientEntryFile = path.resolve(root, 'app/entry-islands.ts')
+const docsClientEntryFile = path.resolve(root, 'app/entry-docs.ts')
 const serverEntryFile = path.resolve(root, 'app/entry-server.tsx')
 const serverBundleFile = path.resolve(ssrOutDir, 'entry-server.mjs')
 const clientTemplateFile = path.resolve(ssrOutDir, 'client-template.html')
@@ -308,7 +309,18 @@ const removeGeneratedDir = dir =>
     retryDelay: 100,
   })
 
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+export const isProcessAlive = (pid, signalProcess = process.kill) => {
+  if (!Number.isInteger(pid) || pid <= 0) {
+    return false
+  }
+
+  try {
+    signalProcess(pid, 0)
+    return true
+  } catch (error) {
+    return error?.code !== 'ESRCH'
+  }
+}
 
 const releaseAppStaticBuildLock = async lockOwnerId => {
   try {
@@ -323,11 +335,57 @@ const releaseAppStaticBuildLock = async lockOwnerId => {
   }
 }
 
+const prepareAppStaticBuildLock = async () => {
+  try {
+    const owner = JSON.parse(await readFile(buildLockOwnerFile, 'utf-8'))
+    if (isProcessAlive(owner.pid)) {
+      return owner
+    }
+
+    await releaseAppStaticBuildLock(owner.id)
+    return null
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw error
+    }
+  }
+
+  try {
+    const lockStat = await stat(buildLockDir)
+    if (Date.now() - lockStat.mtimeMs > buildLockStaleMs) {
+      await removeGeneratedDir(buildLockDir)
+      return null
+    }
+
+    return { pid: null, startedAt: null }
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw error
+    }
+    return null
+  }
+}
+
+const createAppStaticBuildLockError = owner => {
+  if (Number.isInteger(owner?.pid) && owner.pid > 0) {
+    return new Error(
+      `Another app static build is already running (PID ${owner.pid}, started ${owner.startedAt || 'at an unknown time'}).`,
+    )
+  }
+
+  return new Error('Another app static build is initializing; retry after it has finished.')
+}
+
 const acquireAppStaticBuildLock = async () => {
   const lockOwnerId = buildRunId
   await mkdir(tempRootDir, { recursive: true })
 
-  while (true) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const existingOwner = await prepareAppStaticBuildLock()
+    if (existingOwner) {
+      throw createAppStaticBuildLockError(existingOwner)
+    }
+
     try {
       await mkdir(buildLockDir)
       await writeFile(
@@ -348,22 +406,9 @@ const acquireAppStaticBuildLock = async () => {
         throw error
       }
     }
-
-    try {
-      const lockStat = await stat(buildLockDir)
-      if (Date.now() - lockStat.mtimeMs > buildLockStaleMs) {
-        await removeGeneratedDir(buildLockDir)
-        continue
-      }
-    } catch (error) {
-      if (error?.code !== 'ENOENT') {
-        throw error
-      }
-      continue
-    }
-
-    await delay(100)
   }
+
+  throw createAppStaticBuildLockError(await prepareAppStaticBuildLock())
 }
 
 const resolveClientEntryModuleId = value => {
@@ -468,11 +513,15 @@ const normalizeRouteSet = values => {
   return new Set(values.map(normalizeRoute).filter(Boolean))
 }
 
-const resolveRouteClientMode = (appHtml, route, appClientRoutes) => {
-  if (clientRuntimeMode === 'always') return 'app'
-  if (clientRuntimeMode === 'never') return 'none'
-  if (appClientRoutes.has(normalizeRoute(route))) return 'app'
-  return /<rue-island(?:\s|>)/i.test(appHtml) ? 'islands' : 'none'
+const resolveRouteClientModes = (appHtml, route, appClientRoutes) => {
+  if (clientRuntimeMode === 'always') return ['app']
+  if (clientRuntimeMode === 'never') return []
+  if (appClientRoutes.has(normalizeRoute(route))) return ['app']
+
+  const modes = []
+  if (/<rue-island(?:\s|>)/i.test(appHtml)) modes.push('islands')
+  if (/\sdata-rue-doc-code-tabs(?:\s|=|>)/i.test(appHtml)) modes.push('docs')
+  return modes
 }
 
 export const createRouteHtml = (
@@ -483,8 +532,8 @@ export const createRouteHtml = (
   appClientRoutes,
   clientEntries,
 ) => {
-  const clientMode = resolveRouteClientMode(appHtml, route, appClientRoutes)
-  return createStaticRouteHtml(template, appHtml, { clientMode, clientEntries })
+  const clientModes = resolveRouteClientModes(appHtml, route, appClientRoutes)
+  return createStaticRouteHtml(template, appHtml, { clientModes, clientEntries })
 }
 
 const renderRouteInChild = (route, routeIndex) => {
@@ -607,7 +656,7 @@ const renderRoutes = async (
         result.renderKind ||
         (kind === 'ssr' ? 'ssr-prerender' : kind === 'snapshot' ? 'static-snapshot' : kind)
 
-      if (resolveRouteClientMode(html, route, appClientRoutes) === 'none') {
+      if (resolveRouteClientModes(html, route, appClientRoutes).length === 0) {
         zeroJs += 1
       }
 
@@ -647,7 +696,7 @@ const runAppStaticBuild = async () => {
       configFile: viteConfigFile,
       plugins: [
         createClientRuntimeAssetCollectorPlugin(
-          { app: clientEntryFile, islands: islandClientEntryFile },
+          { app: clientEntryFile, islands: islandClientEntryFile, docs: docsClientEntryFile },
           assets => {
             clientEntries = assets
           },
@@ -660,6 +709,7 @@ const runAppStaticBuild = async () => {
           input: {
             main: path.resolve(root, 'index.html'),
             islands: islandClientEntryFile,
+            docs: docsClientEntryFile,
           },
         },
       },

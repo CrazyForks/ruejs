@@ -645,6 +645,10 @@ const replayMountAwareValue = (value: unknown): unknown => {
     return value
   }
 
+  if (isRueIslandDescriptor(value) || isRueServerIslandDescriptor(value)) {
+    return value
+  }
+
   if (isMountHandle(value)) {
     return createFreshMountHandle(value)
   }
@@ -1170,7 +1174,7 @@ const markAnchorRemountableMountHandle = <P = {}>(
 
 const assertDefaultChildren = (props: ComponentProps | null, children: ChildInput[]) => {
   for (const child of getEffectiveChildren(props, children)) {
-    analyzeDefaultRenderableInput(child)
+    analyzeDefaultRenderableInput(normalizeIslandDescriptorHandles(child))
   }
 }
 

@@ -980,12 +980,14 @@ const getClientDirectiveStrategy = opening => {
   return selected
 }
 
-const createRueIslandMetadata = (opening, directive, id, importBindings, index) => {
+const createRueIslandMetadata = (opening, directive, id, importBindings, index, spanBase = 0) => {
   const tagName = getJsxNameText(opening.name)
   const baseName = getJsxBaseIdentifierName(opening.name)
   const imported = importBindings.get(baseName)
   const normalizedId = normalizeModuleId(id)
-  const spanKey = `${opening.span?.start ?? index}:${opening.span?.end ?? index}`
+  const spanKey = `${
+    typeof opening.span?.start === 'number' ? opening.span.start - spanBase : index
+  }:${typeof opening.span?.end === 'number' ? opening.span.end - spanBase : index}`
   const hydrate = directive.strategy
   const directiveValue = getStaticJsxAttrValue(directive.attr)
   const schedulerOptions = parseStaticDirectiveOptions(opening, directive, id)
@@ -1117,6 +1119,7 @@ const transformClientDirectiveAttributes = (code, id = '') => {
   }
 
   const importBindings = getImportBindingManifest(ast)
+  const spanBase = typeof ast.span?.start === 'number' ? ast.span.start : 0
   const islands = []
   let changed = false
   let descriptorCount = 0
@@ -1171,6 +1174,7 @@ const transformClientDirectiveAttributes = (code, id = '') => {
       id,
       importBindings,
       islands.length,
+      spanBase,
     )
     islands.push(metadata)
     descriptorCount += 1

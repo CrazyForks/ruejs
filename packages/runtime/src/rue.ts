@@ -983,6 +983,10 @@ const replayMountAwareValue = (value: unknown): unknown => {
     return value
   }
 
+  if (isRueIslandDescriptor(value) || isRueServerIslandDescriptor(value)) {
+    return value
+  }
+
   if (isMountHandle(value)) {
     return createFreshMountHandle(value)
   }
@@ -1566,7 +1570,7 @@ const resolveCreateElementType = <P = {}>(type: string | ComponentInstance<P>) =
 
 const assertDefaultChildren = (props: ComponentProps | null, children: ChildInput[]) => {
   for (const child of getEffectiveChildren(props, children)) {
-    analyzeDefaultRenderableInput(child)
+    analyzeDefaultRenderableInput(normalizeIslandDescriptorHandles(child))
   }
 }
 

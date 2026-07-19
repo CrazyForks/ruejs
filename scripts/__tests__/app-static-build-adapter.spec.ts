@@ -11,6 +11,7 @@ import {
   collectClientRuntimeAssets,
   createDocRouteSourceMap,
   createRouteHtml,
+  isProcessAlive,
 } from '../app-static-build.mjs'
 import { findDocSources } from '../doc-source-utils.mjs'
 import { resolveStaticPreviewFile } from '@rue-js/server-renderer/static'
@@ -35,6 +36,28 @@ afterEach(async () => {
 })
 
 describe('app static build adapter', () => {
+  it('detects whether a static build lock owner process is still alive', () => {
+    expect(
+      isProcessAlive(42, (pid, signal) => {
+        expect(pid).toBe(42)
+        expect(signal).toBe(0)
+      }),
+    ).toBe(true)
+
+    expect(
+      isProcessAlive(42, () => {
+        throw Object.assign(new Error('missing process'), { code: 'ESRCH' })
+      }),
+    ).toBe(false)
+
+    expect(
+      isProcessAlive(42, () => {
+        throw Object.assign(new Error('permission denied'), { code: 'EPERM' })
+      }),
+    ).toBe(true)
+    expect(isProcessAlive(0)).toBe(false)
+  })
+
   it('collects independent named client entry closures using the resolved base URL', () => {
     const entryFile = path.resolve('/project/app/app.tsx')
     const bundle = {
@@ -137,7 +160,7 @@ describe('app static build adapter', () => {
     expect(classifyDocRoute('/guide/bad%00doc', sourceMap)).toBeNull()
   })
 
-  it('injects exact none/islands/app graphs while preserving user-owned head assets', () => {
+  it('injects exact none/islands/docs/app graphs while preserving user-owned head assets', () => {
     const clientEntries = {
       app: {
         entry: '/assets/app.js',
@@ -146,6 +169,10 @@ describe('app static build adapter', () => {
       islands: {
         entry: '/assets/islands.js',
         assets: new Set(['/assets/islands.js', '/assets/island-runtime.js', '/assets/shared.js']),
+      },
+      docs: {
+        entry: '/assets/docs.js',
+        assets: new Set(['/assets/docs.js', '/assets/docs-runtime.js', '/assets/shared.js']),
       },
     }
     const template = `<!doctype html>
@@ -189,8 +216,24 @@ describe('app static build adapter', () => {
       new Set(['/guide/guide/interactive-doc']),
       clientEntries,
     )
+    const docsHtml = createRouteHtml(
+      template,
+      '<main><div data-rue-doc-code-tabs>Tabs</div></main>',
+      'ssr-prerender',
+      '/guide/guide/quick-start',
+      new Set(),
+      clientEntries,
+    )
+    const composedHtml = createRouteHtml(
+      template,
+      '<main><rue-island></rue-island><div data-rue-doc-code-tabs>Tabs</div></main>',
+      'ssr-prerender',
+      '/guide/guide/islands-and-tabs',
+      new Set(),
+      clientEntries,
+    )
 
-    for (const html of [noneHtml, islandsHtml, appHtml]) {
+    for (const html of [noneHtml, islandsHtml, docsHtml, composedHtml, appHtml]) {
       expect(html).toContain('<html lang="en">')
       expect(html).toContain('<link rel="stylesheet" href="/assets/app.css">')
       expect(html).toContain('<script nomodule src="/legacy.js"></script>')
@@ -203,6 +246,7 @@ describe('app static build adapter', () => {
     expect(noneHtml).not.toContain('/assets/runtime.js')
     expect(noneHtml).not.toContain('/assets/islands.js')
     expect(noneHtml).not.toContain('/assets/shared.js')
+    expect(noneHtml).not.toContain('/assets/docs.js')
 
     expect(islandsHtml).toContain('<rue-island data-rue-id="counter">')
     expect(islandsHtml).not.toContain('/assets/app.js')
@@ -210,6 +254,21 @@ describe('app static build adapter', () => {
     expect(islandsHtml).toContain('/assets/islands.js')
     expect(islandsHtml).toContain('/assets/island-runtime.js')
     expect(islandsHtml).toContain('/assets/shared.js')
+    expect(islandsHtml).not.toContain('/assets/docs.js')
+
+    expect(docsHtml).toContain('data-rue-doc-code-tabs')
+    expect(docsHtml).toContain('/assets/docs.js')
+    expect(docsHtml).toContain('/assets/docs-runtime.js')
+    expect(docsHtml).toContain('/assets/shared.js')
+    expect(docsHtml).not.toContain('/assets/app.js')
+    expect(docsHtml).not.toContain('/assets/islands.js')
+
+    expect(composedHtml).toContain('/assets/islands.js')
+    expect(composedHtml).toContain('/assets/island-runtime.js')
+    expect(composedHtml).toContain('/assets/docs.js')
+    expect(composedHtml).toContain('/assets/docs-runtime.js')
+    expect(composedHtml.match(/href="\/assets\/shared\.js"/g)).toHaveLength(1)
+    expect(composedHtml).not.toContain('/assets/app.js')
 
     expect(appHtml).toContain('<main>Interactive SSR</main>')
     expect(appHtml).toContain('/assets/app.js')
@@ -217,6 +276,8 @@ describe('app static build adapter', () => {
     expect(appHtml).toContain('/assets/shared.js')
     expect(appHtml).not.toContain('/assets/islands.js')
     expect(appHtml).not.toContain('/assets/island-runtime.js')
+    expect(appHtml).not.toContain('/assets/docs.js')
+    expect(appHtml).not.toContain('/assets/docs-runtime.js')
   })
 
   it('resolves preview files without escaping the static output directory', async () => {
