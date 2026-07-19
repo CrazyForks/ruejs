@@ -870,7 +870,7 @@ const getImportBindingManifest = ast => {
 
 const collectIdentifierNames = ast => {
   const names = new Set()
-  const visit = (node, jsxChild = false) => {
+  const visit = node => {
     if (!node || typeof node !== 'object') return
     if (Array.isArray(node)) {
       for (const item of node) visit(item)

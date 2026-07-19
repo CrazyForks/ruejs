@@ -16,22 +16,10 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 
-use crate::reactive::core::{ComputedState, Signal, schedule_effect_run};
-use crate::reactive::effect::create_effect;
-use crate::reactive::signal::{SignalHandle, collect_affected_subscribers, next_signal_debug_id};
-
-#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-fn collect_computed_dirty_subscribers(handle: &SignalHandle) -> Vec<usize> {
-    let mut inner = handle.inner.borrow_mut();
-    let Some(computed) = inner.computed.as_mut() else {
-        return Vec::new();
-    };
-    if computed.dirty {
-        return Vec::new();
-    }
-    computed.dirty = true;
-    collect_affected_subscribers(&mut inner, None)
-}
+use crate::reactive::core::{ComputedState, Signal};
+use crate::reactive::effect::{bind_effect_to_computed, create_effect};
+use crate::reactive::graph::create_computed_node;
+use crate::reactive::signal::{SignalHandle, next_signal_debug_id};
 
 /// 创建计算属性
 /// - 参数：可为函数 `() => any`，或对象 `{ get: () => any }`
@@ -116,14 +104,13 @@ pub fn create_computed(arg: JsValue) -> SignalHandle {
     } else {
         None
     };
+    let graph_node = create_computed_node();
     let sig = SignalHandle {
         inner: std::rc::Rc::new(std::cell::RefCell::new(Signal {
+            graph_node,
             debug_id: next_signal_debug_id(),
             value: JsValue::UNDEFINED,
-            subs: Default::default(),
-            // computed 最终也表现为一个可被路径读取的 signal，
-            // 因此这里与普通 signal 保持同样的数据结构，避免下游路径订阅逻辑分叉。
-            path_subs: Default::default(),
+            path_nodes: Default::default(),
             equals: None,
             setter: setter_opt,
             computed: Some(ComputedState {
@@ -146,31 +133,18 @@ pub fn create_computed(arg: JsValue) -> SignalHandle {
             computed.dirty = false;
         }) as Box<dyn FnMut()>)
     };
-    let mark_dirty_scheduler = {
-        let handle = sig.clone();
-        Closure::wrap(Box::new(move |_run: JsValue| {
-            let to_run = collect_computed_dirty_subscribers(&handle);
-            for id in to_run {
-                schedule_effect_run(id);
-            }
-            JsValue::UNDEFINED
-        }) as Box<dyn FnMut(JsValue) -> JsValue>)
-    };
     let f_js: JsValue = eval_fn.as_ref().clone();
     let func: Function = f_js.dyn_into().unwrap();
-    let scheduler_js: JsValue = mark_dirty_scheduler.as_ref().clone();
-    let scheduler_fn: Function = scheduler_js.dyn_into().unwrap();
     let opts = Object::new();
-    let _ = Reflect::set(&opts, &JsValue::from_str("scheduler"), &scheduler_fn);
     let _ = Reflect::set(&opts, &JsValue::from_str("lazy"), &JsValue::from_bool(true));
     let eh = create_effect(func, Some(opts.into()));
+    bind_effect_to_computed(&eh, graph_node, std::rc::Rc::downgrade(&sig.inner));
     {
         let mut inner = sig.inner.borrow_mut();
         let computed = inner.computed.as_mut().expect("computed signal state must exist");
         computed.effect_id = Some(eh.id);
     }
     eval_fn.forget();
-    mark_dirty_scheduler.forget();
     sig
 }
 

@@ -14,6 +14,7 @@ pub mod computed;
 pub mod context;
 pub mod core;
 pub mod effect;
+pub(crate) mod graph;
 pub mod resource;
 pub mod signal;
 pub mod watch;

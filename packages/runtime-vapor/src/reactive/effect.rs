@@ -25,15 +25,20 @@
 
 // 暴露 `EffectHandle` 以在 JS 侧控制副作用生命周期，并提供批量更新机制。
 use js_sys::{Function, Reflect};
+use std::cell::RefCell;
+use std::rc::Weak;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 
 use crate::reactive::core::{
-    CURRENT_EFFECT, CURRENT_UNTRACKED_HANDLER_EFFECT, EFFECTS, Effect, NEXT_EFFECT_ID,
+    CURRENT_EFFECT, CURRENT_UNTRACKED_HANDLER_EFFECT, EFFECTS, Effect, NEXT_EFFECT_ID, Signal,
     current_effect_scope, current_render_debug_owner, dispatch_error_captured, dispose_effect,
     is_watcher_effect, register_effect_in_scope, run_effect,
+};
+use crate::reactive::graph::{
+    NodeId, bind_computed_node, create_effect_node, remove_reactive_node,
 };
 
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -143,6 +148,7 @@ pub fn create_effect(cb: Function, options: Option<JsValue>) -> EffectHandle {
     // - 当该 Vapor 子树卸载（before_unmount）时，会 dispose 掉 scope，从而统一清理这些 effect。
     let scope_id = current_effect_scope();
     let render_debug_owner = current_render_debug_owner();
+    let graph_node = create_effect_node(id);
     let mut scheduler: Option<Function> = None;
     let mut lazy = false;
     if let Some(opts) = options {
@@ -175,6 +181,8 @@ pub fn create_effect(cb: Function, options: Option<JsValue>) -> EffectHandle {
         m.borrow_mut().insert(
             id,
             Effect {
+                graph_node,
+                computed_signal: None,
                 cb: cb.clone(),
                 cleanups: Vec::new(),
                 disposed: false,
@@ -204,6 +212,25 @@ pub fn create_effect(cb: Function, options: Option<JsValue>) -> EffectHandle {
         }
     }
     EffectHandle { id }
+}
+
+pub(crate) fn bind_effect_to_computed(
+    handle: &EffectHandle,
+    graph_node: NodeId,
+    signal: Weak<RefCell<Signal>>,
+) {
+    let old_node = EFFECTS.with(|effects| {
+        let mut effects = effects.borrow_mut();
+        let effect = effects.get_mut(&handle.id)?;
+        let old_node = effect.graph_node;
+        effect.graph_node = graph_node;
+        effect.computed_signal = Some(signal);
+        Some(old_node)
+    });
+    if let Some(old_node) = old_node {
+        remove_reactive_node(old_node);
+        bind_computed_node(graph_node, handle.id);
+    }
 }
 
 /// 在当前运行的副作用上注册清理函数

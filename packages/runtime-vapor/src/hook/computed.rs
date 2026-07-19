@@ -12,7 +12,8 @@ use crate::reactive::context::{
     get_current_instance, with_current_instance_hook_scope, with_hook_slot,
 };
 use crate::reactive::core::schedule_effect_run;
-use crate::reactive::signal::{SignalHandle, collect_affected_subscribers};
+use crate::reactive::graph::invalidate_computed_node;
+use crate::reactive::signal::SignalHandle;
 
 thread_local! {
     static COMPUTED_HANDLE_REGISTRY: std::cell::RefCell<Vec<SignalHandle>> = std::cell::RefCell::new(Vec::new());
@@ -73,15 +74,16 @@ fn make_dynamic_computed_arg(holder: &Object, writable: bool) -> JsValue {
 
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 fn mark_computed_dirty(handle: &SignalHandle) {
-    let to_run = {
+    let graph_node = {
         let mut inner = handle.inner.borrow_mut();
+        let graph_node = inner.graph_node;
         let Some(computed) = inner.computed.as_mut() else {
             return;
         };
         computed.dirty = true;
-        computed.initialized = false;
-        collect_affected_subscribers(&mut inner, None)
+        graph_node
     };
+    let to_run = invalidate_computed_node(graph_node);
     for id in to_run {
         schedule_effect_run(id);
     }
@@ -246,8 +248,7 @@ mod tests {
         let computed = create_computed(Function::new_no_args("return 2").into());
         computed.get_js();
         {
-            let mut inner = computed.inner.borrow_mut();
-            inner.subs.push(usize::MAX - 1);
+            let inner = computed.inner.borrow();
             let state = inner.computed.as_ref().expect("computed state");
             assert!(!state.dirty);
             assert!(state.initialized);
@@ -257,7 +258,7 @@ mod tests {
         let inner = computed.inner.borrow();
         let state = inner.computed.as_ref().expect("computed state");
         assert!(state.dirty);
-        assert!(!state.initialized);
+        assert!(state.initialized);
     }
 }
 

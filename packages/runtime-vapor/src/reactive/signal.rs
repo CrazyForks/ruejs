@@ -16,23 +16,25 @@
   从而避免不必要的副作用触发。
 
 订阅收集：
-- 在 `get()` 读取时，如果存在当前运行的副作用（`CURRENT_EFFECT`），会把其 id 加入订阅集合 `subs`。
-  这种“隐式收集”方式简洁高效，使用体验类似现代前端的自动依赖跟踪。
-- 对 `getPath()` / reactive proxy 的嵌套字段读取，则额外记录到 `path_subs`，让更新只命中真正访问过的分支。
+- `get()` 与 `getPath()` 都通过当前活跃的图 subscriber 建立双向 Link。
+- reactive proxy 的嵌套字段读取使用独立路径节点，仅命中真正访问过的分支。
 */
 
 use js_sys::{Array, Object};
 use js_sys::{Function, Reflect};
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
 use crate::reactive::core::{
-    CURRENT_EFFECT, EFFECTS, Effect, Signal, create_render_triggered_event,
-    emit_render_triggered_for_effect, schedule_effect_run, sync_effect_render_debug_owner,
+    CURRENT_EFFECT, Signal, create_render_triggered_event, emit_render_triggered_for_effect,
+    schedule_effect_run, sync_effect_render_debug_owner,
+};
+use crate::reactive::graph::{
+    computed_node_needs_update, create_dependency_node, dependency_subscriber_count,
+    propagate_dependency, remove_reactive_node, track_dependency,
 };
 
 const RUE_REF_FLAG: &str = "__rue_ref__";
@@ -240,13 +242,6 @@ pub fn signal_from_proxy(proxy: &JsValue) -> Option<JsValue> {
     Some(sig_v)
 }
 
-#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-fn subscribe_effect_id(subs: &mut Vec<usize>, id: usize) {
-    if !subs.contains(&id) {
-        subs.push(id);
-    }
-}
-
 fn should_skip_effect_subscription(signal: &Signal, effect_id: usize) -> bool {
     signal
         .computed
@@ -332,73 +327,50 @@ fn path_key(path: &Array) -> String {
     parts.join("/")
 }
 
-fn retain_active_subscribers(
-    subs: &mut Vec<usize>,
-    effects: &HashMap<usize, Effect>,
-    seen: &mut HashSet<usize>,
-    to_run: &mut Vec<usize>,
-) {
-    let mut retained = HashSet::new();
-    subs.retain(|id| {
-        if effects.get(id).is_some() && retained.insert(*id) {
-            if seen.insert(*id) {
-                to_run.push(*id);
-            }
-            true
-        } else {
-            false
-        }
-    });
-}
-
 pub(crate) fn collect_affected_subscribers(
     signal: &mut Signal,
     changed_path: Option<&Array>,
 ) -> Vec<usize> {
-    let mut to_run: Vec<usize> = Vec::new();
-    let mut seen: HashSet<usize> = HashSet::new();
-
-    EFFECTS.with(|m| {
-        let effects = m.borrow();
-        // 根订阅永远都要保留：显式调用 get() 或订阅整个对象的 effect 仍应在任意变更时被唤醒。
-        retain_active_subscribers(&mut signal.subs, &effects, &mut seen, &mut to_run);
-
-        let raw_keys: Vec<String> = match changed_path {
-            None => signal.path_subs.keys().cloned().collect(),
-            Some(path) => {
-                // 路径更新需要命中三类订阅：
-                // 1. 变化路径本身（例如改 `user.name`，读取 `user.name` 的 effect 要更新）
-                // 2. 变化路径的后代（例如整体替换 `user`，读取 `user.name` 的 effect 也要更新）
-                // 3. 根订阅（上面已处理）
-                // 注意：这里不再自动唤醒祖先路径订阅。
-                // 对 fine-grained 场景来说，读取了 `user` / `children` 的 effect
-                // 不应因 `user.name` / `children.2.children` 这类更深层变更而整体重跑。
-                let changed_key = path_key(path);
-                let mut keys = vec![changed_key.clone()];
-                let descendant_prefix = format!("{}/", changed_key);
-                for key in signal.path_subs.keys() {
-                    if key.starts_with(&descendant_prefix) {
-                        keys.push(key.clone());
-                    }
-                }
-                keys
-            }
-        };
-
-        for key in raw_keys {
-            if let Some(subs) = signal.path_subs.get_mut(&key) {
-                retain_active_subscribers(subs, &effects, &mut seen, &mut to_run);
-            }
+    // 先 propagate 所有命中节点，再由调用方调度 effect。根与路径
+    // 同时命中时，PENDING/WATCHING flags 会在图中自然去重。
+    let mut dependency_nodes = vec![signal.graph_node];
+    let candidate_keys: Vec<String> = match changed_path {
+        None => signal.path_nodes.keys().cloned().collect(),
+        Some(path) => {
+            let changed_key = path_key(path);
+            let descendant_prefix = format!("{}/", changed_key);
+            signal
+                .path_nodes
+                .keys()
+                .filter(|key| **key == changed_key || key.starts_with(&descendant_prefix))
+                .cloned()
+                .collect()
         }
-    });
+    };
 
-    signal.path_subs.retain(|_, subs| !subs.is_empty());
+    for key in candidate_keys {
+        let Some(node) = signal.path_nodes.get(&key).copied() else {
+            continue;
+        };
+        if dependency_subscriber_count(node) == 0 {
+            signal.path_nodes.remove(&key);
+            remove_reactive_node(node);
+        } else {
+            dependency_nodes.push(node);
+        }
+    }
+
+    let mut to_run = Vec::new();
+    for node in dependency_nodes {
+        to_run.extend(propagate_dependency(node));
+    }
     to_run
 }
 
 #[cfg(feature = "dev")]
 fn total_signal_subscriber_count(signal: &Signal) -> usize {
-    signal.subs.len() + signal.path_subs.values().map(|subs| subs.len()).sum::<usize>()
+    dependency_subscriber_count(signal.graph_node)
+        + signal.path_nodes.values().map(|node| dependency_subscriber_count(*node)).sum::<usize>()
 }
 
 /// 信号句柄
@@ -445,22 +417,21 @@ fn total_signal_subscriber_count(signal: &Signal) -> usize {
 impl SignalHandle {
     pub(crate) fn ensure_computed_current(&self) {
         let effect_id = {
-            let mut inner = self.inner.borrow_mut();
-            let Some(computed) = inner.computed.as_mut() else {
+            let inner = self.inner.borrow();
+            let Some(computed) = inner.computed.as_ref() else {
                 return;
             };
-            if computed.evaluating || (computed.initialized && !computed.dirty) {
+            if computed.evaluating
+                || (computed.initialized
+                    && !computed.dirty
+                    && !computed_node_needs_update(inner.graph_node))
+            {
                 return;
             }
-            computed.evaluating = true;
             computed.effect_id.expect("computed effect id must be initialized")
         };
 
         crate::reactive::core::run_effect(effect_id);
-
-        let mut inner = self.inner.borrow_mut();
-        let computed = inner.computed.as_mut().expect("computed signal state must exist");
-        computed.evaluating = false;
     }
 
     /// 便于调试：`JSON.stringify(signal)` 时返回内部值
@@ -535,13 +506,14 @@ impl SignalHandle {
         self.ensure_computed_current();
         CURRENT_EFFECT.with(|c| {
             if let Some(id) = *c.borrow() {
-                // 将当前运行的副作用 id 加入订阅集合，形成“读取即订阅”的依赖关系
-                let mut inner = self.inner.borrow_mut();
-                if should_skip_effect_subscription(&inner, id) {
-                    return;
+                let graph_node = {
+                    let inner = self.inner.borrow();
+                    (!should_skip_effect_subscription(&inner, id)).then_some(inner.graph_node)
+                };
+                if let Some(graph_node) = graph_node {
+                    track_dependency(graph_node);
+                    sync_effect_render_debug_owner(id);
                 }
-                subscribe_effect_id(&mut inner.subs, id);
-                sync_effect_render_debug_owner(id);
             }
         });
         // 返回当前信号值（不改变值，仅建立订阅）
@@ -655,19 +627,18 @@ impl SignalHandle {
         let arr = normalize_path_to_array(&path);
         CURRENT_EFFECT.with(|c| {
             if let Some(id) = *c.borrow() {
-                // 路径读取只订阅“这条路径”本身；空路径才退化为根订阅。
-                // 这正是 SVGGraph 那类场景需要的粒度：读 `stats.3.value` 不该把整个 `stats` 根都订上。
                 let mut inner = self.inner.borrow_mut();
                 if should_skip_effect_subscription(&inner, id) {
                     return;
                 }
-                if arr.length() == 0 {
-                    subscribe_effect_id(&mut inner.subs, id);
+                let dependency = if arr.length() == 0 || inner.computed.is_some() {
+                    // computed 路径读取订阅 computed 节点本身，以便先做增量校验。
+                    inner.graph_node
                 } else {
                     let key = path_key(&arr);
-                    let subs = inner.path_subs.entry(key).or_default();
-                    subscribe_effect_id(subs, id);
-                }
+                    *inner.path_nodes.entry(key).or_insert_with(create_dependency_node)
+                };
+                track_dependency(dependency);
                 sync_effect_render_debug_owner(id);
             }
         });
@@ -878,10 +849,10 @@ fn sync_proxy_target_snapshot(target: &JsValue, latest: &JsValue) {
 fn make_signal(initial: JsValue, equals: Option<Function>) -> SignalHandle {
     SignalHandle {
         inner: Rc::new(RefCell::new(Signal {
+            graph_node: create_dependency_node(),
             debug_id: next_signal_debug_id(),
             value: initial,
-            subs: Default::default(),
-            path_subs: Default::default(),
+            path_nodes: Default::default(),
             equals,
             setter: None,
             computed: None,
@@ -1515,7 +1486,6 @@ fn make_proxy(sig: SignalHandle, path: Array, readonly_flag: bool, shallow_flag:
 mod tests {
     use super::*;
     use crate::reactive::core::{ComputedState, EFFECTS, Effect, Signal};
-    use std::collections::HashMap;
     use wasm_bindgen_test::*;
 
     fn reset_effect_entries(ids: &[usize]) {
@@ -1594,13 +1564,16 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn signal_private_collect_subscribers_prunes_missing_entries_and_dedupes_active_effects() {
+    fn signal_private_collect_subscribers_dedupes_root_and_path_links() {
         reset_effect_entries(&[91_001, 91_002]);
+        let effect_node = crate::reactive::graph::create_effect_node(91_002);
         EFFECTS.with(|effects| {
             let mut effects = effects.borrow_mut();
             effects.insert(
                 91_002,
                 Effect {
+                    graph_node: effect_node,
+                    computed_signal: None,
                     cb: Function::new_no_args("return"),
                     cleanups: Vec::new(),
                     disposed: false,
@@ -1618,13 +1591,22 @@ mod tests {
         descendant_path.push(&JsValue::from_str("user"));
         descendant_path.push(&JsValue::from_str("name"));
 
+        let root_node = create_dependency_node();
+        let path_node = create_dependency_node();
+        let descendant_node = create_dependency_node();
+        let tracking = crate::reactive::graph::begin_node_tracking(effect_node).unwrap();
+        track_dependency(root_node);
+        track_dependency(path_node);
+        track_dependency(descendant_node);
+        crate::reactive::graph::end_node_tracking(effect_node, tracking);
+
         let mut signal = Signal {
+            graph_node: root_node,
             debug_id: next_signal_debug_id(),
             value: Object::new().into(),
-            subs: vec![91_002, 91_002, 91_003],
-            path_subs: HashMap::from([
-                (path_key(&path), vec![91_002]),
-                (path_key(&descendant_path), vec![91_002, 91_003]),
+            path_nodes: std::collections::HashMap::from([
+                (path_key(&path), path_node),
+                (path_key(&descendant_path), descendant_node),
             ]),
             equals: None,
             setter: None,
@@ -1633,21 +1615,22 @@ mod tests {
 
         let affected = collect_affected_subscribers(&mut signal, Some(&path));
         assert_eq!(affected, vec![91_002]);
-        assert_eq!(signal.subs, vec![91_002]);
-        assert_eq!(signal.path_subs.get(&path_key(&path)).cloned(), Some(vec![91_002]));
-        assert_eq!(signal.path_subs.get(&path_key(&descendant_path)).cloned(), Some(vec![91_002]));
+        assert_eq!(dependency_subscriber_count(root_node), 1);
+        assert_eq!(dependency_subscriber_count(path_node), 1);
+        assert_eq!(dependency_subscriber_count(descendant_node), 1);
 
         reset_effect_entries(&[91_002]);
+        remove_reactive_node(effect_node);
     }
 
     #[wasm_bindgen_test]
     fn signal_private_readonly_marker_covers_computed_setter_shapes() {
         let readonly = SignalHandle {
             inner: Rc::new(RefCell::new(Signal {
+                graph_node: create_dependency_node(),
                 debug_id: next_signal_debug_id(),
                 value: JsValue::UNDEFINED,
-                subs: Vec::new(),
-                path_subs: HashMap::new(),
+                path_nodes: Default::default(),
                 equals: None,
                 setter: None,
                 computed: Some(ComputedState {
@@ -1662,10 +1645,10 @@ mod tests {
 
         let writable = SignalHandle {
             inner: Rc::new(RefCell::new(Signal {
+                graph_node: create_dependency_node(),
                 debug_id: next_signal_debug_id(),
                 value: JsValue::UNDEFINED,
-                subs: Vec::new(),
-                path_subs: HashMap::new(),
+                path_nodes: Default::default(),
                 equals: None,
                 setter: Some(Function::new_no_args("return")),
                 computed: Some(ComputedState {

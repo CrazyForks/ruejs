@@ -17,7 +17,6 @@ import {
   type RenderableInput,
 } from './rue'
 import {
-  RUE_ISLAND_DESCRIPTOR,
   RUE_ISLAND_PROPS_SCRIPT_TYPE,
   RUE_SERVER_ISLAND_SSR_BRIDGE,
   escapeIslandJson,

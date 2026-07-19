@@ -460,7 +460,8 @@ const acquireAppStaticBuildLock = async () => {
 
 const resolveClientEntryModuleId = value => {
   if (typeof value !== 'string' || value.length === 0) return null
-  const normalized = value.replace(/^\0/, '').replace(/[?#].*$/, '')
+  const unwrapped = value.charCodeAt(0) === 0 ? value.slice(1) : value
+  const normalized = unwrapped.replace(/[?#].*$/, '')
   return normalized.startsWith('virtual:') ? normalized : path.resolve(normalized)
 }
 

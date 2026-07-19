@@ -29,12 +29,18 @@
 use js_sys::{Array, Function, JSON, Object, Promise, Reflect, Set};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::throw_val;
+
+use crate::reactive::graph::{
+    NodeId, begin_node_tracking, commit_computed_node, computed_node_needs_update,
+    end_node_tracking, mark_node_clean, pending_computed_effects, remove_reactive_node,
+    subscriber_needs_run,
+};
 
 thread_local! {
     // 所有已注册的副作用，以自增 id 作为键
@@ -105,6 +111,8 @@ thread_local! {
 /// disposed: 标记为已销毁后不再运行
 /// scheduler: 可选自定义调度器，接受一个可调用的运行函数并自行安排时机
 pub(crate) struct Effect {
+    pub(crate) graph_node: NodeId,
+    pub(crate) computed_signal: Option<Weak<RefCell<Signal>>>,
     pub(crate) cb: Function,
     pub(crate) cleanups: Vec<Function>,
     pub(crate) disposed: bool,
@@ -491,17 +499,20 @@ pub fn on_scope_dispose(cleanup: Function, fail_silently: Option<bool>) {
 /// - 最后执行 cleanups，保证资源（订阅/定时器等）被释放
 pub(crate) fn dispose_effect(id: usize) {
     remove_pending_effect(id);
-    let (cleanups, existed) = EFFECTS.with(|m| {
+    let (cleanups, graph_node, existed) = EFFECTS.with(|m| {
         let mut map = m.borrow_mut();
         if let Some(mut e) = map.remove(&id) {
             e.disposed = true;
-            (std::mem::take(&mut e.cleanups), true)
+            (std::mem::take(&mut e.cleanups), Some(e.graph_node), true)
         } else {
-            (Vec::new(), false)
+            (Vec::new(), None, false)
         }
     });
     if !existed {
         return;
+    }
+    if let Some(graph_node) = graph_node {
+        remove_reactive_node(graph_node);
     }
     #[cfg(feature = "dev")]
     {
@@ -574,17 +585,25 @@ pub fn dispose_effect_scope_wasm(scope_id: usize) {
 
 /// 信号实体
 /// value: 当前值（JsValue）
-/// subs: 订阅该信号的副作用 id 集合
-/// path_subs: 按“规范化路径”分桶的订阅集合，用来避免读取某个叶子字段时把整棵根 signal 一起订阅
+/// path_nodes: 按“规范化路径”分配的图依赖节点
 /// equals: 可选的等值比较函数（(prev, next) -> bool），返回 true 表示相等（不触发）
 pub(crate) struct Signal {
+    pub(crate) graph_node: NodeId,
     pub(crate) debug_id: usize,
     pub(crate) value: JsValue,
-    pub(crate) subs: Vec<usize>,
-    pub(crate) path_subs: HashMap<String, Vec<usize>>,
+    pub(crate) path_nodes: HashMap<String, NodeId>,
     pub(crate) equals: Option<Function>,
     pub(crate) setter: Option<Function>,
     pub(crate) computed: Option<ComputedState>,
+}
+
+impl Drop for Signal {
+    fn drop(&mut self) {
+        remove_reactive_node(self.graph_node);
+        for node in self.path_nodes.values().copied() {
+            remove_reactive_node(node);
+        }
+    }
 }
 
 /// run_effect 借用缩小与重入安全
@@ -598,13 +617,84 @@ pub(crate) struct Signal {
 /// - 执行过程中设置 `CURRENT_EFFECT` 以便 Signal 读取进行依赖收集
 /// - 支持嵌套 effect：内部 effect 运行结束后，恢复外层的 `CURRENT_EFFECT`
 pub(crate) fn run_effect(id: usize) {
+    let Some((graph_node, computed_signal)) = EFFECTS.with(|effects| {
+        effects
+            .borrow()
+            .get(&id)
+            .filter(|effect| !effect.disposed)
+            .map(|effect| (effect.graph_node, effect.computed_signal.clone()))
+    }) else {
+        return;
+    };
+
+    if let Some(computed_signal) = computed_signal {
+        if computed_node_needs_update(graph_node) {
+            run_computed_effect(id, graph_node, &computed_signal);
+        }
+        return;
+    }
+
+    for (computed_node, computed_id) in pending_computed_effects(graph_node) {
+        let computed_signal = EFFECTS.with(|effects| {
+            effects.borrow().get(&computed_id).and_then(|effect| effect.computed_signal.clone())
+        });
+        if let Some(computed_signal) = computed_signal {
+            run_computed_effect(computed_id, computed_node, &computed_signal);
+        } else {
+            mark_node_clean(computed_node);
+        }
+    }
+
+    if !subscriber_needs_run(graph_node) {
+        mark_node_clean(graph_node);
+        return;
+    }
+    run_effect_body(id);
+}
+
+fn run_computed_effect(id: usize, graph_node: NodeId, signal: &Weak<RefCell<Signal>>) -> bool {
+    let Some(signal) = signal.upgrade() else {
+        mark_node_clean(graph_node);
+        return false;
+    };
+    let (old_value, initialized) = {
+        let mut signal = signal.borrow_mut();
+        let old_value = signal.value.clone();
+        let Some(computed) = signal.computed.as_mut() else {
+            mark_node_clean(graph_node);
+            return false;
+        };
+        if computed.evaluating {
+            return false;
+        }
+        computed.evaluating = true;
+        (old_value, computed.initialized)
+    };
+
+    run_effect_body(id);
+
+    let changed = {
+        let mut signal = signal.borrow_mut();
+        let value = signal.value.clone();
+        if let Some(computed) = signal.computed.as_mut() {
+            computed.evaluating = false;
+            computed.initialized = true;
+            computed.dirty = false;
+        }
+        !initialized || !Object::is(&old_value, &value)
+    };
+    commit_computed_node(graph_node, changed);
+    changed
+}
+
+fn run_effect_body(id: usize) {
     // 取出需要的信息与清理函数，缩小可变借用作用域，避免在回调执行期间发生可变重入借用导致 panic
     let maybe = EFFECTS.with(|m| {
         let mut map = m.borrow_mut();
         if let Some(e) = map.get_mut(&id).filter(|effect| !effect.disposed) {
             let cleans = std::mem::take(&mut e.cleanups);
             let cb = e.cb.clone();
-            Some((cleans, cb))
+            Some((cleans, cb, e.graph_node))
         } else {
             None
         }
@@ -612,7 +702,7 @@ pub(crate) fn run_effect(id: usize) {
     if maybe.is_none() {
         return;
     }
-    let (cleanups, cb) = maybe.unwrap();
+    let (cleanups, cb, graph_node) = maybe.unwrap();
 
     #[cfg(feature = "dev")]
     {
@@ -634,6 +724,7 @@ pub(crate) fn run_effect(id: usize) {
     // 导致外层渲染 effect 失去订阅（界面不再随信号变化重新渲染）。
     let prev_effect = CURRENT_EFFECT.with(|c| c.borrow().clone());
     CURRENT_EFFECT.with(|c| *c.borrow_mut() = Some(id));
+    let graph_tracking = begin_node_tracking(graph_node);
     let scope_id = EFFECTS.with(|m| m.borrow().get(&id).and_then(|e| e.scope_id));
     if let Some(sid) = scope_id {
         push_effect_scope(sid);
@@ -654,6 +745,9 @@ pub(crate) fn run_effect(id: usize) {
     }
     // 执行结束后恢复上一层副作用（支持嵌套 effect 场景），即便当前回调抛错也不能把上下文留脏。
     CURRENT_EFFECT.with(|c| *c.borrow_mut() = prev_effect);
+    if let Some(graph_tracking) = graph_tracking {
+        end_node_tracking(graph_node, graph_tracking);
+    }
     if let Err(err) = ret {
         let msg_js: js_sys::JsString =
             JSON::stringify(&err).unwrap_or(JsValue::from_str("<unstringifiable>").into());
@@ -927,10 +1021,10 @@ pub(crate) fn schedule_effect_run(id: usize) {
     // - 也使得 schedule_effect_run_default 的队列状态更干净
     remove_pending_effect(id);
     // 是否已由自定义调度器处理
-    let scheduler =
-        EFFECTS.with(|m| m.borrow().get(&id).and_then(|effect| effect.scheduler.clone()));
+    let scheduled_effect = EFFECTS
+        .with(|m| m.borrow().get(&id).map(|effect| (effect.scheduler.clone(), effect.graph_node)));
     let mut handled = false;
-    if let Some(s) = scheduler {
+    if let Some((Some(s), graph_node)) = scheduled_effect {
         #[cfg(feature = "dev")]
         {
             if crate::log::want_log("debug", "reactive:schedule custom") {
@@ -944,6 +1038,9 @@ pub(crate) fn schedule_effect_run(id: usize) {
         let run_fn: Function = run_closure.as_ref().clone().unchecked_into();
         let _ = s.call1(&JsValue::NULL, &run_fn);
         run_closure.forget();
+        // Rue custom schedulers are notification callbacks and may defer or omit the runner.
+        // Re-arm the graph node after notifying them so later source changes remain observable.
+        mark_node_clean(graph_node);
         handled = true;
     }
     if !handled {
