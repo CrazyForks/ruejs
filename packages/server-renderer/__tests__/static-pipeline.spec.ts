@@ -27,6 +27,51 @@ afterEach(async () => {
 })
 
 describe('@rue-js/server-renderer/static route pipeline', () => {
+  it('reports completion progress for every terminal route result', async () => {
+    const root = await createTempDir()
+    const progress: Array<{
+      completedRoutes: number
+      totalRoutes: number
+      route: string
+      routeIndex: number
+      kind: string
+    }> = []
+
+    await renderStaticRoutes({
+      routes: ['/slow-ssr', '/static', '/snapshot', '/failed'],
+      outDir: path.join(root, 'dist'),
+      concurrency: 2,
+      preRenderRoute: async ({ route }) =>
+        route === '/static' ? { html: '<main>Static</main>' } : null,
+      renderRoute: async ({ route }) => {
+        if (route === '/slow-ssr') {
+          await delay(20)
+          return '<main>SSR</main>'
+        }
+        throw new Error(`SSR failed for ${route}`)
+      },
+      snapshotRoute: async ({ route }) => {
+        if (route === '/snapshot') {
+          return '<main>Snapshot</main>'
+        }
+        throw new Error(`Snapshot failed for ${route}`)
+      },
+      onRouteComplete: event => {
+        progress.push(event)
+      },
+    })
+
+    expect(progress.map(event => event.completedRoutes)).toEqual([1, 2, 3, 4])
+    expect(progress.every(event => event.totalRoutes === 4)).toBe(true)
+    expect(progress.map(event => event.routeIndex).sort((a, b) => a - b)).toEqual([0, 1, 2, 3])
+    expect(Object.fromEntries(progress.map(event => [event.route, event.kind]))).toEqual({
+      '/slow-ssr': 'ssr',
+      '/static': 'static',
+      '/snapshot': 'snapshot',
+      '/failed': 'failed',
+    })
+  })
+
   it('renders routes with snapshot fallback and reports failures', async () => {
     const root = await createTempDir()
     const outDir = path.join(root, 'dist')

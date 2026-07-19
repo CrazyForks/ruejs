@@ -33,7 +33,7 @@
     "example:server-islands:dev": "pnpm --dir examples/server-islands dev",
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
-    "build-dts": "tsgo -p tsconfig.build.json --noCheck && node scripts/build-dts.js",
+    "build-dts": "tsc -p tsconfig.build.json --noCheck && node scripts/build-dts.js",
     "test-dts": "pnpm run build-dts",
     "ensure-runtime-vapor-build": "node scripts/ensure-runtime-vapor-build.js",
     "clean": "rimraf --glob packages/*/dist temp",
@@ -41,7 +41,7 @@
     "size-global": "node scripts/build.js rue runtime -f global -p --size",
     "size-esm-runtime": "node scripts/build.js rue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime shared -f esm-bundler",
-    "check": "tsgo --incremental --noEmit",
+    "check": "tsc --incremental --noEmit",
     "check:text": "pnpm --dir packages/text check",
     "check:compat-cleanup": "node scripts/check-compat-cleanup.js",
     "oxlint": "oxlint -c ./.oxlintrc.json . packages/text",
@@ -110,7 +110,6 @@
     "@types/animejs": "^3.1.13",
     "@types/express": "^5.0.6",
     "@types/node": "^25.6.2",
-    "@typescript/native-preview": "beta",
     "@vitejs/devtools": "^0.3.1",
     "@vitest/coverage-v8": "4.1.5",
     "better-sqlite3": "^12.10.0",
@@ -120,7 +119,6 @@
     "conventional-changelog": "^7.2.0",
     "conventional-changelog-angular": "^8.3.1",
     "daisyui": "^5.5.19",
-    "dts-bundle-generator": "^9.5.1",
     "enquirer": "^2.4.1",
     "express": "^5.2.1",
     "jsdom": "^29.1.1",
@@ -139,7 +137,7 @@
     "swc-plugin-jsx-css-modules": "^0.3.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.1",
-    "typescript": "^6.0.3",
+    "typescript": "7.0.2",
     "validator": "^13.15.35",
     "vite": "catalog:",
     "vite-plugin-wasm": "^3.6.0",
@@ -164,7 +162,7 @@
       "kysely": "0.28.17"
     },
     "patchedDependencies": {
-      "@bruits/satteri-wasm32-wasi@0.9.4": "patches/@bruits__satteri-wasm32-wasi@0.9.4.patch"
+      "@bruits/satteri-wasm32-wasi@0.9.5": "patches/@bruits__satteri-wasm32-wasi@0.9.5.patch"
     }
   }
 }

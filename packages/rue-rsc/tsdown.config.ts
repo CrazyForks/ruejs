@@ -17,10 +17,11 @@ export default defineConfig({
     'src/utils/encryption-runtime.ts',
   ],
   format: ['esm'],
-  // TODO: specify explicitly
-  inlineOnly: false,
   fixedExtension: false,
-  external: [/^virtual:/],
+  deps: {
+    onlyBundle: false,
+    neverBundle: [/^virtual:/],
+  },
   dts: {
     sourcemap: process.argv.slice(2).includes('--sourcemap'),
   },

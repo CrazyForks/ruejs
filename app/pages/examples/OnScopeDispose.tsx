@@ -14,6 +14,11 @@ type ScopedTimerProps = {
 /** 生成示例中展示的本地时间文本。 */
 const formatTime = () => new Date().toLocaleTimeString()
 
+const isServerRendering = () => {
+  const count = (globalThis as Record<string, unknown>).__rue_is_server_rendering__
+  return typeof count === 'number' && count > 0
+}
+
 /** 带 interval 的子组件，卸载时通过 onScopeDispose 清理。 */
 const ScopedTimer: FC<ScopedTimerProps> = props => {
   const ticks = ref(0)
@@ -27,6 +32,7 @@ const ScopedTimer: FC<ScopedTimerProps> = props => {
 
   onScopeDispose(() => {
     if (timer !== undefined) clearInterval(timer)
+    if (isServerRendering()) return
     props.onDispose(`清理 timer：运行 ${ticks.value} 次，开始于 ${startedAt}`)
   })
 

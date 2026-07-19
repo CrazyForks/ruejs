@@ -44737,11 +44737,66 @@
       "title": "使用 Rue 与 TypeScript",
       "sectionTitle": "项目设置",
       "type": "paragraph",
-      "text": "create-rue，官方项目脚手架工具，提供用于脚手架基于 Vite 的、支持 TypeScript 的 Rue 项目的选项。",
-      "searchText": "使用 rue 与 typescript 项目设置 create-rue，官方项目脚手架工具，提供用于脚手架基于 vite 的、支持 typescript 的 rue 项目的选项。 guide/typescript/overview"
+      "text": "create-rue 是创建 Vite + Rue 项目的官方脚手架，并提供 TypeScript 选项：",
+      "searchText": "使用 rue 与 typescript 项目设置 create-rue 是创建 vite + rue 项目的官方脚手架，并提供 typescript 选项： guide/typescript/overview"
     },
     {
       "id": "guide/typescript/overview:5",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#project-setup",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "项目设置",
+      "type": "code",
+      "text": "npm create rue@latest",
+      "searchText": "使用 rue 与 typescript 项目设置 npm create rue@latest guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:6",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#project-setup",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "项目设置",
+      "type": "paragraph",
+      "text": "如果要在现有的 Vite + TypeScript 项目中接入 Rue，可以安装 Rue 及其 Vite 插件：",
+      "searchText": "使用 rue 与 typescript 项目设置 如果要在现有的 vite + typescript 项目中接入 rue，可以安装 rue 及其 vite 插件： guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:7",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#project-setup",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "项目设置",
+      "type": "code",
+      "text": "pnpm add @rue-js/rue pnpm add -D @rue-js/vite-plugin-rue typescript",
+      "searchText": "使用 rue 与 typescript 项目设置 pnpm add @rue-js/rue pnpm add -d @rue-js/vite-plugin-rue typescript guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:8",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#project-setup",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "项目设置",
+      "type": "paragraph",
+      "text": "然后在 Vite 配置中启用 Rue 的 JSX / TSX 转换：",
+      "searchText": "使用 rue 与 typescript 项目设置 然后在 vite 配置中启用 rue 的 jsx / tsx 转换： guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:9",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#project-setup",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "项目设置",
+      "type": "code",
+      "text": "import { defineConfig } from 'vite' import rue from '@rue-js/vite-plugin-rue' export default defineConfig({ plugins: [rue()], })",
+      "searchText": "使用 rue 与 typescript 项目设置 import { defineconfig } from 'vite' import rue from '@rue-js/vite-plugin-rue' export default defineconfig({ plugins: [rue()], }) guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:10",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#overview",
@@ -44752,7 +44807,7 @@
       "searchText": "使用 rue 与 typescript 概述 概述 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:6",
+      "id": "guide/typescript/overview:11",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#overview",
@@ -44763,7 +44818,7 @@
       "searchText": "使用 rue 与 typescript 概述 使用基于 vite 的设置，开发服务器和打包器仅进行转译，不执行任何类型检查。这确保即使使用 typescript，vite 开发服务器也能保持极快的速度。 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:7",
+      "id": "guide/typescript/overview:12",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#overview",
@@ -44774,18 +44829,18 @@
       "searchText": "使用 rue 与 typescript 概述 在开发期间，我们建议依赖良好的 ide 设置来获取类型错误的即时反馈。 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:8",
+      "id": "guide/typescript/overview:13",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#overview",
       "title": "使用 Rue 与 TypeScript",
       "sectionTitle": "概述",
       "type": "list",
-      "text": "对于 TS/TSX 项目，以及本仓库当前的命令行类型检查脚本，我们统一使用 tsgo。你可以在并行于 Vite 开发服务器的情况下在监视模式下运行 rue-tsc，或使用像 vite-plugin-checker 这样的 Vite 插件，它在单独的 worker 线程中运行检查。",
-      "searchText": "使用 rue 与 typescript 概述 对于 ts/tsx 项目，以及本仓库当前的命令行类型检查脚本，我们统一使用 tsgo。你可以在并行于 vite 开发服务器的情况下在监视模式下运行 rue-tsc，或使用像 vite-plugin-checker 这样的 vite 插件，它在单独的 worker 线程中运行检查。 guide/typescript/overview"
+      "text": "对于 TS/TSX 项目，本仓库使用 TypeScript 7 的 tsc 进行类型检查。你可以运行 tsc --noEmit 做一次检查，或在 Vite 开发服务器之外运行 tsc --noEmit --watch 持续检查。",
+      "searchText": "使用 rue 与 typescript 概述 对于 ts/tsx 项目，本仓库使用 typescript 7 的 tsc 进行类型检查。你可以运行 tsc --noemit 做一次检查，或在 vite 开发服务器之外运行 tsc --noemit --watch 持续检查。 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:9",
+      "id": "guide/typescript/overview:14",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#ide-support",
@@ -44796,7 +44851,7 @@
       "searchText": "使用 rue 与 typescript ide 支持 ide 支持 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:10",
+      "id": "guide/typescript/overview:15",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#ide-support",
@@ -44807,7 +44862,7 @@
       "searchText": "使用 rue 与 typescript ide 支持 visual studio code（vs code）因其出色的 typescript 开箱即用支持而强烈推荐。 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:11",
+      "id": "guide/typescript/overview:16",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#ide-support",
@@ -44818,7 +44873,7 @@
       "searchText": "使用 rue 与 typescript ide 支持 webstorm 也为 typescript 提供开箱即用支持。 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:12",
+      "id": "guide/typescript/overview:17",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
@@ -44829,62 +44884,73 @@
       "searchText": "使用 rue 与 typescript 配置 tsconfig.json 配置 tsconfig.json guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:13",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "配置 tsconfig.json",
-      "type": "paragraph",
-      "text": "通过 create-rue 脚手架的项目包含预配置的 tsconfig.json。基本配置抽象在 rue-tsconfig 包中。在项目内部，我们使用项目引用来确保在不同环境中运行的代码（例如应用代码和测试代码应有不同的全局变量）具有正确的类型。",
-      "searchText": "使用 rue 与 typescript 配置 tsconfig.json 通过 create-rue 脚手架的项目包含预配置的 tsconfig.json。基本配置抽象在 rue-tsconfig 包中。在项目内部，我们使用项目引用来确保在不同环境中运行的代码（例如应用代码和测试代码应有不同的全局变量）具有正确的类型。 guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:14",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "配置 tsconfig.json",
-      "type": "paragraph",
-      "text": "手动配置 tsconfig.json 时，一些值得注意的选项包括：",
-      "searchText": "使用 rue 与 typescript 配置 tsconfig.json 手动配置 tsconfig.json 时，一些值得注意的选项包括： guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:15",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "配置 tsconfig.json",
-      "type": "list",
-      "text": "compilerOptions.isolatedModules 设置为 true，因为 Vite 使用 esbuild 转译 TypeScript，并受限于单文件转译。compilerOptions.verbatimModuleSyntax 是 isolatedModules 的超集，也是一个不错的选择——这是 rue-tsconfig 使用的。",
-      "searchText": "使用 rue 与 typescript 配置 tsconfig.json compileroptions.isolatedmodules 设置为 true，因为 vite 使用 esbuild 转译 typescript，并受限于单文件转译。compileroptions.verbatimmodulesyntax 是 isolatedmodules 的超集，也是一个不错的选择——这是 rue-tsconfig 使用的。 guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:16",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "配置 tsconfig.json",
-      "type": "list",
-      "text": "如果你在构建工具中配置了解析器别名，例如 create-rue 项目中默认配置的 @/ 别名，你也需要通过 compilerOptions.paths 为 TypeScript 配置它。",
-      "searchText": "使用 rue 与 typescript 配置 tsconfig.json 如果你在构建工具中配置了解析器别名，例如 create-rue 项目中默认配置的 @/ 别名，你也需要通过 compileroptions.paths 为 typescript 配置它。 guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:17",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "配置 tsconfig.json",
-      "type": "list",
-      "text": "如果你打算将 TSX 与 Rue 一起使用，将 compilerOptions.jsx 设置为 \"preserve\"，并将 compilerOptions.jsxImportSource 设置为 \"@rue-js/rue\"。",
-      "searchText": "使用 rue 与 typescript 配置 tsconfig.json 如果你打算将 tsx 与 rue 一起使用，将 compileroptions.jsx 设置为 \"preserve\"，并将 compileroptions.jsximportsource 设置为 \"@rue-js/rue\"。 guide/typescript/overview"
-    },
-    {
       "id": "guide/typescript/overview:18",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "配置 tsconfig.json",
+      "type": "paragraph",
+      "text": "下面是一份适合 Rue TSX 项目的基础配置：",
+      "searchText": "使用 rue 与 typescript 配置 tsconfig.json 下面是一份适合 rue tsx 项目的基础配置： guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:19",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "配置 tsconfig.json",
+      "type": "code",
+      "text": "{ \"compilerOptions\": { \"target\": \"ES2022\", \"module\": \"ESNext\", \"moduleResolution\": \"bundler\", \"jsx\": \"react-jsx\", \"jsxImportSource\": \"@rue-js\", \"strict\": true, \"isolatedModules\": true, \"noEmit\": true, \"types\": [\"vite/client\"] }, \"include\": [\"src\"] }",
+      "searchText": "使用 rue 与 typescript 配置 tsconfig.json { \"compileroptions\": { \"target\": \"es2022\", \"module\": \"esnext\", \"moduleresolution\": \"bundler\", \"jsx\": \"react-jsx\", \"jsximportsource\": \"@rue-js\", \"strict\": true, \"isolatedmodules\": true, \"noemit\": true, \"types\": [\"vite/client\"] }, \"include\": [\"src\"] } guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:20",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "配置 tsconfig.json",
+      "type": "paragraph",
+      "text": "其中需要特别注意：",
+      "searchText": "使用 rue 与 typescript 配置 tsconfig.json 其中需要特别注意： guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:21",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "配置 tsconfig.json",
+      "type": "list",
+      "text": "compilerOptions.jsx 应设为 \"react-jsx\"，并将 compilerOptions.jsxImportSource 设为 \"@rue-js\"，让 TypeScript 使用 Rue 提供的 JSX runtime 和类型声明。",
+      "searchText": "使用 rue 与 typescript 配置 tsconfig.json compileroptions.jsx 应设为 \"react-jsx\"，并将 compileroptions.jsximportsource 设为 \"@rue-js\"，让 typescript 使用 rue 提供的 jsx runtime 和类型声明。 guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:22",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "配置 tsconfig.json",
+      "type": "list",
+      "text": "compilerOptions.isolatedModules 建议设为 true，以便尽早发现不适用于 Vite 单文件转换流程的写法。",
+      "searchText": "使用 rue 与 typescript 配置 tsconfig.json compileroptions.isolatedmodules 建议设为 true，以便尽早发现不适用于 vite 单文件转换流程的写法。 guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:23",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "配置 tsconfig.json",
+      "type": "list",
+      "text": "如果你在 Vite 中配置了解析器别名，也需要通过 compilerOptions.paths 为 TypeScript 配置对应的路径。",
+      "searchText": "使用 rue 与 typescript 配置 tsconfig.json 如果你在 vite 中配置了解析器别名，也需要通过 compileroptions.paths 为 typescript 配置对应的路径。 guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:24",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
@@ -44895,81 +44961,15 @@
       "searchText": "使用 rue 与 typescript 配置 tsconfig.json 另请参阅： guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:19",
+      "id": "guide/typescript/overview:25",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#configuring-tsconfig-json",
       "title": "使用 Rue 与 TypeScript",
       "sectionTitle": "配置 tsconfig.json",
       "type": "list",
-      "text": "官方 TypeScript 编译器选项文档 esbuild TypeScript 编译注意事项",
-      "searchText": "使用 rue 与 typescript 配置 tsconfig.json 官方 typescript 编译器选项文档 esbuild typescript 编译注意事项 guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:20",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#note-on-rue-cli-and-ts-loader",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "关于 Rue CLI 和 ts-loader 的说明",
-      "type": "heading",
-      "text": "关于 Rue CLI 和 ts-loader 的说明",
-      "searchText": "使用 rue 与 typescript 关于 rue cli 和 ts-loader 的说明 关于 rue cli 和 ts-loader 的说明 guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:21",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#note-on-rue-cli-and-ts-loader",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "关于 Rue CLI 和 ts-loader 的说明",
-      "type": "paragraph",
-      "text": "在基于 webpack 的设置（如 Rue CLI）中，通常将类型检查作为模块转换管道的一部分执行，例如使用 ts-loader。然而，这不是一个干净的解决方案，因为类型系统需要整个模块图的知识来执行类型检查。单个模块的转换步骤根本不是完成此任务的正确位置。它导致以下问题：",
-      "searchText": "使用 rue 与 typescript 关于 rue cli 和 ts-loader 的说明 在基于 webpack 的设置（如 rue cli）中，通常将类型检查作为模块转换管道的一部分执行，例如使用 ts-loader。然而，这不是一个干净的解决方案，因为类型系统需要整个模块图的知识来执行类型检查。单个模块的转换步骤根本不是完成此任务的正确位置。它导致以下问题： guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:22",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#note-on-rue-cli-and-ts-loader",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "关于 Rue CLI 和 ts-loader 的说明",
-      "type": "list",
-      "text": "ts-loader 只能对转换后的代码进行类型检查。这与我们在 IDE、tsgo 或 rue-tsc 看到的错误不一致，后者直接映射回源代码。",
-      "searchText": "使用 rue 与 typescript 关于 rue cli 和 ts-loader 的说明 ts-loader 只能对转换后的代码进行类型检查。这与我们在 ide、tsgo 或 rue-tsc 看到的错误不一致，后者直接映射回源代码。 guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:23",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#note-on-rue-cli-and-ts-loader",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "关于 Rue CLI 和 ts-loader 的说明",
-      "type": "list",
-      "text": "类型检查可能很慢。当它与代码转换在同一线程/进程中执行时，会显著影响整个应用程序的构建速度。",
-      "searchText": "使用 rue 与 typescript 关于 rue cli 和 ts-loader 的说明 类型检查可能很慢。当它与代码转换在同一线程/进程中执行时，会显著影响整个应用程序的构建速度。 guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:24",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#note-on-rue-cli-and-ts-loader",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "关于 Rue CLI 和 ts-loader 的说明",
-      "type": "list",
-      "text": "我们已经在 IDE 中的单独进程中运行类型检查，因此开发者体验变慢的成本根本不是一个好的权衡。",
-      "searchText": "使用 rue 与 typescript 关于 rue cli 和 ts-loader 的说明 我们已经在 ide 中的单独进程中运行类型检查，因此开发者体验变慢的成本根本不是一个好的权衡。 guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:25",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#note-on-rue-cli-and-ts-loader",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "关于 Rue CLI 和 ts-loader 的说明",
-      "type": "paragraph",
-      "text": "如果你当前通过 Rue CLI 使用 Rue 3 + TypeScript，我们强烈建议迁移到 Vite。我们也在研究启用仅转译 TS 支持的 CLI 选项，以便你可以根据场景切换到 rue-tsc 或 tsgo 进行类型检查。",
-      "searchText": "使用 rue 与 typescript 关于 rue cli 和 ts-loader 的说明 如果你当前通过 rue cli 使用 rue 3 + typescript，我们强烈建议迁移到 vite。我们也在研究启用仅转译 ts 支持的 cli 选项，以便你可以根据场景切换到 rue-tsc 或 tsgo 进行类型检查。 guide/typescript/overview"
+      "text": "官方 TypeScript 编译器选项文档 Vite 的 TypeScript 说明",
+      "searchText": "使用 rue 与 typescript 配置 tsconfig.json 官方 typescript 编译器选项文档 vite 的 typescript 说明 guide/typescript/overview"
     },
     {
       "id": "guide/typescript/overview:26",
@@ -44986,92 +44986,48 @@
       "id": "guide/typescript/overview:27",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#definecomponent",
+      "href": "/guide/guide/typescript/overview#typing-function-components",
       "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "defineComponent()",
+      "sectionTitle": "函数组件与 Props 类型",
       "type": "heading",
-      "text": "defineComponent()",
-      "searchText": "使用 rue 与 typescript definecomponent() definecomponent() guide/typescript/overview"
+      "text": "函数组件与 Props 类型",
+      "searchText": "使用 rue 与 typescript 函数组件与 props 类型 函数组件与 props 类型 guide/typescript/overview"
     },
     {
       "id": "guide/typescript/overview:28",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#definecomponent",
+      "href": "/guide/guide/typescript/overview#typing-function-components",
       "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "defineComponent()",
+      "sectionTitle": "函数组件与 Props 类型",
       "type": "paragraph",
-      "text": "为了让 TypeScript 正确推断组件选项内部的类型，我们需要使用 defineComponent() 定义组件：",
-      "searchText": "使用 rue 与 typescript definecomponent() 为了让 typescript 正确推断组件选项内部的类型，我们需要使用 definecomponent() 定义组件： guide/typescript/overview"
+      "text": "Rue 组件是普通的 TSX 函数。使用 FC 可以声明组件的 props，并直接获得参数和 JSX 调用处的类型检查：",
+      "searchText": "使用 rue 与 typescript 函数组件与 props 类型 rue 组件是普通的 tsx 函数。使用 fc 可以声明组件的 props，并直接获得参数和 jsx 调用处的类型检查： guide/typescript/overview"
     },
     {
       "id": "guide/typescript/overview:29",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#definecomponent",
+      "href": "/guide/guide/typescript/overview#typing-function-components",
       "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "defineComponent()",
+      "sectionTitle": "函数组件与 Props 类型",
       "type": "code",
-      "text": "import { defineComponent } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const App: FC = defineComponent({ // 启用类型推断 props: { name: String, msg: { type: String, required: true }, }, data() { return { count: 1, } }, mounted() { this.name // 类型: string | undefined this.msg // 类型: string this.count // 类型: number }, })",
-      "searchText": "使用 rue 与 typescript definecomponent() import { definecomponent } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const app: fc = definecomponent({ // 启用类型推断 props: { name: string, msg: { type: string, required: true }, }, data() { return { count: 1, } }, mounted() { this.name // 类型: string | undefined this.msg // 类型: string this.count // 类型: number }, }) guide/typescript/overview"
+      "text": "import { type FC, ref } from '@rue-js/rue' interface CounterProps { label: string initialValue?: number } const Counter: FC<CounterProps> = ({ label, initialValue = 0 }) => { const count = ref(initialValue) return ( <button onClick={() => count.value++}> {label}: {count.value} </button> ) }",
+      "searchText": "使用 rue 与 typescript 函数组件与 props 类型 import { type fc, ref } from '@rue-js/rue' interface counterprops { label: string initialvalue?: number } const counter: fc<counterprops> = ({ label, initialvalue = 0 }) => { const count = ref(initialvalue) return ( <button onclick={() => count.value++}> {label}: {count.value} </button> ) } guide/typescript/overview"
     },
     {
       "id": "guide/typescript/overview:30",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#definecomponent",
+      "href": "/guide/guide/typescript/overview#typing-function-components",
       "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "defineComponent()",
+      "sectionTitle": "函数组件与 Props 类型",
       "type": "paragraph",
-      "text": "如果你仍然需要显式声明运行时 props 选项，defineComponent() 也能为这些选项提供类型推断：",
-      "searchText": "使用 rue 与 typescript definecomponent() 如果你仍然需要显式声明运行时 props 选项，definecomponent() 也能为这些选项提供类型推断： guide/typescript/overview"
+      "text": "更多 props、事件回调和 DOM 引用的类型写法见 TypeScript 与 Composition API。",
+      "searchText": "使用 rue 与 typescript 函数组件与 props 类型 更多 props、事件回调和 dom 引用的类型写法见 typescript 与 composition api。 guide/typescript/overview"
     },
     {
       "id": "guide/typescript/overview:31",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#definecomponent",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "defineComponent()",
-      "type": "code",
-      "text": "import { defineComponent } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const App: FC = defineComponent({ // 启用类型推断 props: { message: String, }, mounted() { this.message // 类型: string | undefined }, })",
-      "searchText": "使用 rue 与 typescript definecomponent() import { definecomponent } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const app: fc = definecomponent({ // 启用类型推断 props: { message: string, }, mounted() { this.message // 类型: string | undefined }, }) guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:32",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#definecomponent",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "defineComponent()",
-      "type": "paragraph",
-      "text": "另请参阅：",
-      "searchText": "使用 rue 与 typescript definecomponent() 另请参阅： guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:33",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#definecomponent",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "defineComponent()",
-      "type": "list",
-      "text": "关于 webpack Treeshaking 的说明 defineComponent 的类型测试",
-      "searchText": "使用 rue 与 typescript definecomponent() 关于 webpack treeshaking 的说明 definecomponent 的类型测试 guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:34",
-      "docId": "guide/typescript/overview",
-      "route": "/guide/guide/typescript/overview",
-      "href": "/guide/guide/typescript/overview#definecomponent",
-      "title": "使用 Rue 与 TypeScript",
-      "sectionTitle": "defineComponent()",
-      "type": "paragraph",
-      "text": ":::tip defineComponent() 也为用纯 JavaScript 定义的组件启用类型推断。 :::",
-      "searchText": "使用 rue 与 typescript definecomponent() :::tip definecomponent() 也为用纯 javascript 定义的组件启用类型推断。 ::: guide/typescript/overview"
-    },
-    {
-      "id": "guide/typescript/overview:35",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#usage-with-tsx",
@@ -45082,7 +45038,7 @@
       "searchText": "使用 rue 与 typescript 与 tsx 一起使用 与 tsx 一起使用 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:36",
+      "id": "guide/typescript/overview:32",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#usage-with-tsx",
@@ -45093,7 +45049,7 @@
       "searchText": "使用 rue 与 typescript 与 tsx 一起使用 rue 支持使用 jsx / tsx 编写组件。直接在组件函数中声明响应式状态时，typescript 可以对表达式、props 和事件回调提供完整的类型检查： guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:37",
+      "id": "guide/typescript/overview:33",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#usage-with-tsx",
@@ -45104,7 +45060,7 @@
       "searchText": "使用 rue 与 typescript 与 tsx 一起使用 import { type fc, ref } from '@rue-js/rue' const counter: fc = () => { const count = ref(1) return <div>{count.value.tofixed(2)}</div> } guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:38",
+      "id": "guide/typescript/overview:34",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#usage-with-tsx",
@@ -45115,7 +45071,7 @@
       "searchText": "使用 rue 与 typescript 与 tsx 一起使用 详细信息在渲染函数与 jsx指南中介绍。 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:39",
+      "id": "guide/typescript/overview:35",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#typescript-in-jsx",
@@ -45126,7 +45082,7 @@
       "searchText": "使用 rue 与 typescript jsx 表达式中的 typescript jsx 表达式中的 typescript guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:40",
+      "id": "guide/typescript/overview:36",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#typescript-in-jsx",
@@ -45137,7 +45093,7 @@
       "searchText": "使用 rue 与 typescript jsx 表达式中的 typescript jsx 表达式遵循标准 typescript 语义。这在需要执行类型缩窄或类型转换时很有用。 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:41",
+      "id": "guide/typescript/overview:37",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#typescript-in-jsx",
@@ -45148,7 +45104,7 @@
       "searchText": "使用 rue 与 typescript jsx 表达式中的 typescript let x: string | number = 1 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:42",
+      "id": "guide/typescript/overview:38",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#typescript-in-jsx",
@@ -45159,7 +45115,7 @@
       "searchText": "使用 rue 与 typescript jsx 表达式中的 typescript 这可以通过内联类型转换来解决： guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:43",
+      "id": "guide/typescript/overview:39",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#typescript-in-jsx",
@@ -45170,7 +45126,7 @@
       "searchText": "使用 rue 与 typescript jsx 表达式中的 typescript let x: string | number = 1 ;<div>{(x as number).tofixed(2)}</div> guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:44",
+      "id": "guide/typescript/overview:40",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#generic-components",
@@ -45181,18 +45137,29 @@
       "searchText": "使用 rue 与 typescript 泛型组件 泛型组件 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:45",
+      "id": "guide/typescript/overview:41",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#generic-components",
       "title": "使用 Rue 与 TypeScript",
       "sectionTitle": "泛型组件",
       "type": "paragraph",
-      "text": "泛型组件在渲染函数 / JSX 组件中受支持，详见 defineComponent() 的函数签名。",
-      "searchText": "使用 rue 与 typescript 泛型组件 泛型组件在渲染函数 / jsx 组件中受支持，详见 definecomponent() 的函数签名。 guide/typescript/overview"
+      "text": "泛型组件可以直接使用 TypeScript 的泛型函数定义：",
+      "searchText": "使用 rue 与 typescript 泛型组件 泛型组件可以直接使用 typescript 的泛型函数定义： guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:46",
+      "id": "guide/typescript/overview:42",
+      "docId": "guide/typescript/overview",
+      "route": "/guide/guide/typescript/overview",
+      "href": "/guide/guide/typescript/overview#generic-components",
+      "title": "使用 Rue 与 TypeScript",
+      "sectionTitle": "泛型组件",
+      "type": "code",
+      "text": "interface ListProps<T> { items: T[] renderItem: (item: T) => JSX.Element } function List<T>({ items, renderItem }: ListProps<T>) { return <ul>{items.map(item => <li>{renderItem(item)}</li>)}</ul> }",
+      "searchText": "使用 rue 与 typescript 泛型组件 interface listprops<t> { items: t[] renderitem: (item: t) => jsx.element } function list<t>({ items, renderitem }: listprops<t>) { return <ul>{items.map(item => <li>{renderitem(item)}</li>)}</ul> } guide/typescript/overview"
+    },
+    {
+      "id": "guide/typescript/overview:43",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#api-specific-recipes",
@@ -45203,7 +45170,7 @@
       "searchText": "使用 rue 与 typescript api 特定配方 api 特定配方 guide/typescript/overview"
     },
     {
-      "id": "guide/typescript/overview:47",
+      "id": "guide/typescript/overview:44",
       "docId": "guide/typescript/overview",
       "route": "/guide/guide/typescript/overview",
       "href": "/guide/guide/typescript/overview#api-specific-recipes",

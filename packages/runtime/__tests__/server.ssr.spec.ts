@@ -7,6 +7,7 @@ import {
   renderAnchor,
   signal,
   Suspense,
+  TransitionGroup,
   useComponent,
   vapor,
   watchEffect,
@@ -74,6 +75,18 @@ describe('server renderToString', () => {
     const App: FC = () => h(Wrapper, null, h('h1', null, 'Nested SSR child'))
 
     await expect(renderToString(App)).resolves.toBe('<article><h1>Nested SSR child</h1></article>')
+  })
+
+  it('renders TransitionGroup children without running browser DOM effects', async () => {
+    const App: FC = () =>
+      h(
+        TransitionGroup,
+        { tag: 'ul', name: 'list' },
+        h('li', { key: 'first' }, 'First'),
+        h('li', { key: 'second' }, 'Second'),
+      )
+
+    await expect(renderToString(App)).resolves.toBe('<ul><li>First</li><li>Second</li></ul>')
   })
 
   it('renders JSX children passed through another component during SSR', async () => {

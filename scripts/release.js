@@ -375,9 +375,9 @@ async function runReleaseCheckTypecheckIfNeeded() {
     return
   }
 
-  step('\nRunning tsgo check...')
+  step('\nRunning TypeScript check...')
   if (shouldRunValidationCommands) {
-    await run('pnpm', ['exec', 'tsgo', '--incremental', '--noEmit'])
+    await run('pnpm', ['exec', 'tsc', '--incremental', '--noEmit'])
     await runReleaseCheckTextTypecheck()
   } else {
     console.log(`Skipped (dry run)`)

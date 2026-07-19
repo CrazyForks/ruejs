@@ -3,6 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
+import daisyUICalendarStyles from 'daisyui/components/calendar/object.js'
 import VitePluginRue from '@rue-js/vite-plugin-rue'
 import { mdxToJs, type MdxCompileOptions } from 'satteri'
 import { resolve } from 'node:path'
@@ -36,6 +37,30 @@ const createSatteriMdxPlugin = (options: Pick<MdxCompileOptions, 'development'> 
     return {
       code: result.code,
       map: null,
+    }
+  },
+})
+
+const asCssRule = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined
+
+// daisyUI 5.6.18 emits `::part(day):hover:not(selected, today)`, which is not a
+// valid CSS shadow-parts selector. Keep the intended hover treatment and
+// explicitly restore the more specific Cally part states before Tailwind emits CSS.
+const fixDaisyUICallyCss = (): Plugin => ({
+  name: 'rue:fix-daisyui-cally-css',
+  config() {
+    const calendar = asCssRule(daisyUICalendarStyles)
+    const cally = asCssRule(asCssRule(calendar?.['.cally'])?.['@layer daisyui.l1.l2.l3'])
+    const dayHover = asCssRule(cally?.['::part(day):hover'])
+    const hoverDeclarations = asCssRule(dayHover?.['&:not(selected, today)'])
+    const todayDeclarations = asCssRule(cally?.['::part(button day today)'])
+    const selectedDeclarations = asCssRule(cally?.['::part(selected)'])
+
+    if (cally && hoverDeclarations && todayDeclarations && selectedDeclarations) {
+      cally['::part(day):hover'] = { ...hoverDeclarations }
+      cally['::part(button day today):hover'] = { ...todayDeclarations }
+      cally['::part(day selected):hover'] = { ...selectedDeclarations }
     }
   },
 })
@@ -106,6 +131,7 @@ export default defineConfig(({ command }) => {
     plugins: [
       // !isVitest && DevTools(),
       wasm(),
+      fixDaisyUICallyCss(),
       tailwindcss() as any,
       createSatteriMdxPlugin({ development: command === 'serve' && !isVitest }),
       VitePluginRue({

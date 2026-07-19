@@ -306,6 +306,16 @@ const installStaticCanvasShim = window => {
   canvasProto.toDataURL = () => 'data:image/png;base64,'
 }
 
+const installStaticScrollShim = window => {
+  for (const method of ['scroll', 'scrollBy', 'scrollTo']) {
+    Object.defineProperty(window, method, {
+      value() {},
+      configurable: true,
+      writable: true,
+    })
+  }
+}
+
 const installStaticRenderGlobals = (window, snapshots, options = {}) => {
   const globals = {
     window,
@@ -411,6 +421,8 @@ const installStaticRenderGlobals = (window, snapshots, options = {}) => {
   if (options.installCanvasShim !== false) {
     installStaticCanvasShim(window)
   }
+
+  installStaticScrollShim(window)
 
   if (options.extraGlobals && typeof options.extraGlobals === 'object') {
     for (const [key, value] of Object.entries(options.extraGlobals)) {
@@ -885,6 +897,7 @@ export const renderStaticRoutes = async options => {
 
   const {
     concurrency,
+    onRouteComplete,
     outDir,
     preRenderRoute,
     renderHtml = defaultRenderStaticRouteHtml,
@@ -915,11 +928,16 @@ export const renderStaticRoutes = async options => {
     assertFunctionOption(resolveOutputFile, 'resolveOutputFile')
   }
 
+  if (onRouteComplete !== undefined) {
+    assertFunctionOption(onRouteComplete, 'onRouteComplete')
+  }
+
   const resolvedOutDir = path.resolve(outDir)
   const routeItems = normalizeStaticRouteItems(routes)
   const routeResults = Array.from({ length: routeItems.length })
   const ssrFailures = []
   const snapshotFailures = []
+  let completedRoutes = 0
   const summary = {
     totalRoutes: routeItems.length,
     staticRendered: 0,
@@ -931,92 +949,106 @@ export const renderStaticRoutes = async options => {
   }
 
   const tasks = routeItems.map(routeItem => async () => {
-    const baseContext = {
-      ...routeItem,
-      outDir: resolvedOutDir,
-    }
-    const outputFile = await resolveStaticRoutePipelineOutputFile(
-      baseContext,
-      resolvedOutDir,
-      resolveOutputFile,
-    )
-    const context = {
-      ...baseContext,
-      outputFile,
-    }
+    try {
+      const baseContext = {
+        ...routeItem,
+        outDir: resolvedOutDir,
+      }
+      const outputFile = await resolveStaticRoutePipelineOutputFile(
+        baseContext,
+        resolvedOutDir,
+        resolveOutputFile,
+      )
+      const context = {
+        ...baseContext,
+        outputFile,
+      }
 
-    if (preRenderRoute) {
-      const preRendered = await preRenderRoute(context)
+      if (preRenderRoute) {
+        const preRendered = await preRenderRoute(context)
 
-      if (preRendered !== undefined && preRendered !== null && preRendered !== false) {
-        routeResults[routeItem.routeIndex] = await renderAndWriteStaticRoute({
-          context,
-          kind: 'static',
-          label: 'preRenderRoute',
-          renderHtml,
-          renderValue: preRendered,
+        if (preRendered !== undefined && preRendered !== null && preRendered !== false) {
+          routeResults[routeItem.routeIndex] = await renderAndWriteStaticRoute({
+            context,
+            kind: 'static',
+            label: 'preRenderRoute',
+            renderHtml,
+            renderValue: preRendered,
+          })
+          summary.staticRendered += 1
+          return
+        }
+      }
+
+      if (shouldPrerenderRoute && !(await shouldPrerenderRoute(context))) {
+        routeResults[routeItem.routeIndex] = createStaticRouteReportResult({
+          kind: 'skipped',
+          outputFile,
+          route: routeItem.route,
+          routeIndex: routeItem.routeIndex,
         })
-        summary.staticRendered += 1
+        summary.skipped += 1
         return
       }
-    }
-
-    if (shouldPrerenderRoute && !(await shouldPrerenderRoute(context))) {
-      routeResults[routeItem.routeIndex] = createStaticRouteReportResult({
-        kind: 'skipped',
-        outputFile,
-        route: routeItem.route,
-        routeIndex: routeItem.routeIndex,
-      })
-      summary.skipped += 1
-      return
-    }
-
-    try {
-      routeResults[routeItem.routeIndex] = await renderAndWriteStaticRoute({
-        context,
-        kind: 'ssr',
-        label: 'renderRoute',
-        renderHtml,
-        renderValue: await renderRoute(context),
-      })
-      summary.ssrRendered += 1
-    } catch (error) {
-      summary.ssrFailures += 1
-      ssrFailures.push({
-        error,
-        outputFile,
-        route: routeItem.route,
-        routeIndex: routeItem.routeIndex,
-      })
 
       try {
-        if (!snapshotRoute) {
-          throw new Error('snapshotRoute must be a function to recover failed SSR routes.')
-        }
-
         routeResults[routeItem.routeIndex] = await renderAndWriteStaticRoute({
           context,
-          kind: 'snapshot',
-          label: 'snapshotRoute',
+          kind: 'ssr',
+          label: 'renderRoute',
           renderHtml,
-          renderValue: await snapshotRoute(context),
+          renderValue: await renderRoute(context),
         })
-        summary.staticSnapshots += 1
-      } catch (snapshotError) {
-        summary.fatalFailures += 1
-        snapshotFailures.push({
+        summary.ssrRendered += 1
+      } catch (error) {
+        summary.ssrFailures += 1
+        ssrFailures.push({
+          error,
           outputFile,
           route: routeItem.route,
           routeIndex: routeItem.routeIndex,
-          snapshotError,
-          ssrError: error,
         })
-        routeResults[routeItem.routeIndex] = createStaticRouteReportResult({
-          kind: 'failed',
-          outputFile,
-          route: routeItem.route,
-          routeIndex: routeItem.routeIndex,
+
+        try {
+          if (!snapshotRoute) {
+            throw new Error('snapshotRoute must be a function to recover failed SSR routes.')
+          }
+
+          routeResults[routeItem.routeIndex] = await renderAndWriteStaticRoute({
+            context,
+            kind: 'snapshot',
+            label: 'snapshotRoute',
+            renderHtml,
+            renderValue: await snapshotRoute(context),
+          })
+          summary.staticSnapshots += 1
+        } catch (snapshotError) {
+          summary.fatalFailures += 1
+          snapshotFailures.push({
+            outputFile,
+            route: routeItem.route,
+            routeIndex: routeItem.routeIndex,
+            snapshotError,
+            ssrError: error,
+          })
+          routeResults[routeItem.routeIndex] = createStaticRouteReportResult({
+            kind: 'failed',
+            outputFile,
+            route: routeItem.route,
+            routeIndex: routeItem.routeIndex,
+          })
+        }
+      }
+    } finally {
+      const result = routeResults[routeItem.routeIndex]
+      if (result && onRouteComplete) {
+        completedRoutes += 1
+        onRouteComplete({
+          completedRoutes,
+          totalRoutes: routeItems.length,
+          route: result.route,
+          routeIndex: result.routeIndex,
+          kind: result.kind,
         })
       }
     }

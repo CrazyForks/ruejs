@@ -97,7 +97,6 @@
     "./*": "./*"
   },
   "dependencies": {
-    "@rue-js/rue": "workspace:*",
     "@rue-js/runtime-vapor": "workspace:*",
     "@rue-js/shared": "workspace:*",
     "csstype": "^3.2.3"

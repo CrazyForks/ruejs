@@ -3,7 +3,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { renderServerBundleRoute } from '@rue-js/server-renderer/static'
 
@@ -18,6 +18,7 @@ const createTempDir = async () => {
 }
 
 afterEach(async () => {
+  vi.restoreAllMocks()
   await Promise.all(tempDirs.splice(0).map(dir => rm(dir, { recursive: true, force: true })))
 })
 
@@ -86,5 +87,29 @@ export const render = async route => {
       }),
     ).rejects.toThrow('SSR bundle does not export render(route).')
     expect(globalThis).not.toHaveProperty('notRender')
+  })
+
+  it('provides no-op scrolling methods without JSDOM not-implemented errors', async () => {
+    const root = await createTempDir()
+    const bundleFile = path.join(root, 'server-entry.mjs')
+    const outputFile = path.join(root, 'dist/index.html')
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await writeFile(
+      bundleFile,
+      `
+export const render = async () => {
+  window.scroll(0, 10)
+  window.scrollBy(0, 10)
+  window.scrollTo(0, 0)
+  return '<main>scrolled</main>'
+}
+`,
+    )
+
+    await expect(
+      renderServerBundleRoute({ serverBundleFile: bundleFile, route: '/', outputFile }),
+    ).resolves.toMatchObject({ outputFile })
+    expect(consoleError).not.toHaveBeenCalled()
   })
 })

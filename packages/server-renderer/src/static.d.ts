@@ -31,6 +31,8 @@ export type StaticRouteOutputFileCallback = (
   context: Omit<StaticRoutePipelineContext, 'outputFile'>,
 ) => string | Promise<string>
 
+export type StaticRouteCompleteCallback = (progress: StaticRouteProgress) => void
+
 export type StaticRouteRenderValueInput = string | StaticRouteRenderValue
 
 export type StaticClientMode = 'none' | 'islands' | 'app' | (string & {})
@@ -163,6 +165,15 @@ export interface RenderStaticRoutesOptions {
   shouldPrerenderRoute?: StaticRouteShouldPrerenderCallback
   renderHtml?: StaticRouteHtmlCallback
   resolveOutputFile?: StaticRouteOutputFileCallback
+  onRouteComplete?: StaticRouteCompleteCallback
+}
+
+export interface StaticRouteProgress {
+  completedRoutes: number
+  totalRoutes: number
+  route: string
+  routeIndex: number
+  kind: StaticRouteRenderKind
 }
 
 export interface StaticRouteResult {

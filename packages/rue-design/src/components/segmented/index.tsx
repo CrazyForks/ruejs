@@ -179,6 +179,11 @@ const serializeValue = (value: unknown) => {
   return `${typeof value}:${String(value)}`
 }
 
+const isServerRendering = () => {
+  const count = (globalThis as Record<string, unknown>).__rue_is_server_rendering__
+  return typeof count === 'number' && count > 0
+}
+
 /** 判断 Option Object 的内部工具函数。 */
 const isOptionObject = <ValueType,>(
   option: unknown,
@@ -453,6 +458,7 @@ const Segmented: FC<SegmentedProps<any>> = props => {
   }
 
   const scheduleSyncDom = () => {
+    if (isServerRendering()) return
     if (typeof queueMicrotask === 'function') queueMicrotask(flushManagedDomSync)
     else Promise.resolve().then(flushManagedDomSync)
   }
@@ -566,6 +572,7 @@ const Segmented: FC<SegmentedProps<any>> = props => {
   }
 
   onMounted(() => {
+    if (isServerRendering()) return
     connectResizeObserver(rootRef.current ?? null)
     scheduleSyncDom()
   })

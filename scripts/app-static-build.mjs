@@ -12,6 +12,7 @@ import {
   staticRouteToOutputFile,
   writeStaticRenderReport as writeCommonStaticRenderReport,
 } from '@rue-js/server-renderer/static'
+import { createAppStaticRenderWorkerPool } from './app-static-render-worker-pool.mjs'
 import { findDocSources } from './doc-source-utils.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -32,7 +33,7 @@ const docsClientEntryFile = path.resolve(root, 'app/entry-docs.ts')
 const serverEntryFile = path.resolve(root, 'app/entry-server.tsx')
 const serverBundleFile = path.resolve(ssrOutDir, 'entry-server.mjs')
 const clientTemplateFile = path.resolve(ssrOutDir, 'client-template.html')
-const routeRendererFile = path.resolve(root, 'scripts/app-static-render-route.mjs')
+const routeWorkerFile = path.resolve(root, 'scripts/app-static-render-worker.mjs')
 const routeSnapshotFile = path.resolve(root, 'scripts/app-static-snapshot-route.mjs')
 const routeRenderOutDir = path.resolve(ssrOutDir, '.route-renders')
 const routeSnapshotOutDir = path.resolve(ssrOutDir, '.route-snapshots')
@@ -266,7 +267,7 @@ export const classifyDocRoute = (route, docSourcesByDocId) => {
   return null
 }
 
-const renderStaticDocRoute = async (route, routeIndex, docSourcesByDocId) => {
+const renderStaticDocRoute = async (route, routeIndex, docSourcesByDocId, renderStaticDoc) => {
   const classification = classifyDocRoute(route, docSourcesByDocId)
 
   if (!classification || classification.renderKind !== 'static-doc') {
@@ -276,7 +277,7 @@ const renderStaticDocRoute = async (route, routeIndex, docSourcesByDocId) => {
   try {
     const markdown = await readFile(classification.filePath, 'utf-8')
     const docHtml = await mdToHtml(markdown)
-    return await renderStaticDocInChild(route, routeIndex, docHtml)
+    return await renderStaticDoc(route, routeIndex, docHtml)
   } catch {
     return null
   }
@@ -308,6 +309,20 @@ const removeGeneratedDir = dir =>
     maxRetries: 5,
     retryDelay: 100,
   })
+
+export const createAppStaticRouteProgressReporter = ({
+  concurrency,
+  totalRoutes,
+  writeLine = console.log,
+}) => {
+  writeLine(
+    `[app-static-build] Rendering ${totalRoutes} static route(s) with ${concurrency} SSR worker(s)...`,
+  )
+
+  return ({ completedRoutes, totalRoutes: currentTotal, kind, route }) => {
+    writeLine(`[app-static-build] [${completedRoutes}/${currentTotal}] ${kind} ${route}`)
+  }
+}
 
 export const isProcessAlive = (pid, signalProcess = process.kill) => {
   if (!Number.isInteger(pid) || pid <= 0) {
@@ -536,39 +551,6 @@ export const createRouteHtml = (
   return createStaticRouteHtml(template, appHtml, { clientModes, clientEntries })
 }
 
-const renderRouteInChild = (route, routeIndex) => {
-  const outputFile = path.join(routeRenderOutDir, `${routeIndex}.html`)
-  return renderStaticRouteInChild({
-    scriptFile: routeRendererFile,
-    args: [serverBundleFile, route],
-    outputFile,
-    route,
-    timeoutMs: routeRenderTimeoutMs,
-    label: 'SSR',
-    cwd: root,
-  })
-}
-
-const renderStaticDocInChild = async (route, routeIndex, docHtml) => {
-  const docHtmlFile = path.join(routeRenderOutDir, `${routeIndex}.doc.html`)
-  const outputFile = path.join(routeRenderOutDir, `${routeIndex}.html`)
-  await mkdir(routeRenderOutDir, { recursive: true })
-  await writeFile(docHtmlFile, docHtml)
-
-  return renderStaticRouteInChild({
-    scriptFile: routeRendererFile,
-    args: [serverBundleFile, route],
-    outputFile,
-    route,
-    timeoutMs: routeRenderTimeoutMs,
-    label: 'Static document SSR',
-    cwd: root,
-    env: {
-      APP_STATIC_RENDER_DOC_HTML_FILE: docHtmlFile,
-    },
-  })
-}
-
 const snapshotRouteInChild = (route, routeIndex) => {
   const outputFile = path.join(routeSnapshotOutDir, `${routeIndex}.html`)
   return renderStaticRouteInChild({
@@ -583,6 +565,73 @@ const snapshotRouteInChild = (route, routeIndex) => {
       APP_STATIC_CLIENT_TEMPLATE_FILE: clientTemplateFile,
     },
   })
+}
+
+export const createAppStaticRouteRenderers = ({
+  pool,
+  renderOutDir = routeRenderOutDir,
+  snapshotRoute = snapshotRouteInChild,
+}) => {
+  if (!pool || typeof pool.render !== 'function') {
+    throw new TypeError('pool.render must be a function.')
+  }
+  if (typeof snapshotRoute !== 'function') {
+    throw new TypeError('snapshotRoute must be a function.')
+  }
+
+  return {
+    renderRoute(route, routeIndex) {
+      return pool.render({
+        outputFile: path.join(renderOutDir, `${routeIndex}.html`),
+        route,
+        timeoutMs: routeRenderTimeoutMs,
+        label: 'SSR',
+      })
+    },
+
+    async renderStaticDoc(route, routeIndex, docHtml) {
+      const docHtmlFile = path.join(renderOutDir, `${routeIndex}.doc.html`)
+      const outputFile = path.join(renderOutDir, `${routeIndex}.html`)
+      await mkdir(renderOutDir, { recursive: true })
+      await writeFile(docHtmlFile, docHtml)
+
+      return pool.render({
+        docHtmlFile,
+        outputFile,
+        route,
+        timeoutMs: routeRenderTimeoutMs,
+        label: 'Static document SSR',
+      })
+    },
+
+    snapshotRoute,
+  }
+}
+
+export const runAppStaticRouteStage = async ({
+  createPool = createAppStaticRenderWorkerPool,
+  poolOptions = {
+    cwd: root,
+    serverBundleFile,
+    size: routeRenderConcurrency,
+    timeoutMs: routeRenderTimeoutMs,
+    workerFile: routeWorkerFile,
+  },
+  run,
+}) => {
+  if (typeof createPool !== 'function') {
+    throw new TypeError('createPool must be a function.')
+  }
+  if (typeof run !== 'function') {
+    throw new TypeError('run must be a function.')
+  }
+
+  const pool = createPool(poolOptions)
+  try {
+    return await run(pool)
+  } finally {
+    await pool.close()
+  }
 }
 
 const writeAppStaticRenderReport = async ({ result, routes, zeroJs }) => {
@@ -631,8 +680,14 @@ const renderRoutes = async (
   appClientRoutes = new Set(),
   docSourcesByDocId = new Map(),
   clientEntries,
+  workerPool,
 ) => {
   let zeroJs = 0
+  const routeRenderers = createAppStaticRouteRenderers({ pool: workerPool })
+  const reportProgress = createAppStaticRouteProgressReporter({
+    concurrency: routeRenderConcurrency,
+    totalRoutes: routes.length,
+  })
 
   await Promise.all([
     mkdir(routeRenderOutDir, { recursive: true }),
@@ -645,12 +700,18 @@ const renderRoutes = async (
     concurrency: routeRenderConcurrency,
     resolveOutputFile: ({ route }) => staticRouteToOutputFile(route, outDir),
     preRenderRoute: async ({ route, routeIndex }) => {
-      const html = await renderStaticDocRoute(route, routeIndex, docSourcesByDocId)
+      const html = await renderStaticDocRoute(
+        route,
+        routeIndex,
+        docSourcesByDocId,
+        routeRenderers.renderStaticDoc,
+      )
       return html ? { html, renderKind: 'static-doc' } : null
     },
     shouldPrerenderRoute: ({ route }) => shouldPrerenderRoute(route),
-    renderRoute: ({ route, routeIndex }) => renderRouteInChild(route, routeIndex),
-    snapshotRoute: ({ route, routeIndex }) => snapshotRouteInChild(route, routeIndex),
+    renderRoute: ({ route, routeIndex }) => routeRenderers.renderRoute(route, routeIndex),
+    snapshotRoute: ({ route, routeIndex }) => routeRenderers.snapshotRoute(route, routeIndex),
+    onRouteComplete: reportProgress,
     renderHtml: ({ html, kind, result, route }) => {
       const renderKind =
         result.renderKind ||
@@ -752,68 +813,75 @@ const runAppStaticBuild = async () => {
         .filter(route => !route.startsWith('/e2e/'))
         .sort()
 
-      const {
-        clientFallback,
-        fatalErrors,
-        rendered,
-        result,
-        skipped,
-        snapshotted,
-        ssrErrors,
-        staticDocs,
-        zeroJs,
-      } = await renderRoutes(
-        template,
-        routes,
-        serverEntry.render,
-        appClientRoutes,
-        docSourcesByDocId,
-        clientEntries,
-      )
+      await runAppStaticRouteStage({
+        run: async workerPool => {
+          const {
+            clientFallback,
+            fatalErrors,
+            rendered,
+            result,
+            skipped,
+            snapshotted,
+            ssrErrors,
+            staticDocs,
+            zeroJs,
+          } = await renderRoutes(
+            template,
+            routes,
+            serverEntry.render,
+            appClientRoutes,
+            docSourcesByDocId,
+            clientEntries,
+            workerPool,
+          )
 
-      const reportFiles = await writeAppStaticRenderReport({
-        result,
-        routes,
-        zeroJs,
+          const reportFiles = await writeAppStaticRenderReport({
+            result,
+            routes,
+            zeroJs,
+          })
+
+          if (ssrErrors.length) {
+            console.warn(
+              `[app-static-build] ${ssrErrors.length} route(s) used the build-time static DOM snapshot after SSR failed:`,
+            )
+            for (const { route, error } of ssrErrors.slice(0, 10)) {
+              console.warn(`  ${route}: ${formatStaticError(error).split('\n')[0]}`)
+            }
+            if (ssrErrors.length > 10) {
+              console.warn(`  ... ${ssrErrors.length - 10} more route(s) omitted`)
+            }
+          }
+
+          if (reportFiles) {
+            console.warn(
+              `[app-static-build] Full static render report: ${path.relative(process.cwd(), reportFiles.reportFile)}`,
+            )
+            console.warn(
+              `[app-static-build] Full static render errors: ${path.relative(process.cwd(), reportFiles.errorLogFile)}`,
+            )
+          }
+
+          if (fatalErrors.length) {
+            console.error(
+              `[app-static-build] ${fatalErrors.length} route(s) could not be statically rendered:`,
+            )
+            for (const { route, snapshotError } of fatalErrors.slice(0, 10)) {
+              console.error(`  ${route}: ${formatStaticError(snapshotError).split('\n')[0]}`)
+            }
+            if (fatalErrors.length > 10) {
+              console.error(`  ... ${fatalErrors.length - 10} more route(s) omitted`)
+            }
+            throw new Error(
+              `Static build failed with ${fatalErrors.length} client fallback route(s).`,
+            )
+          }
+
+          console.log(
+            `Static app built at ${path.relative(process.cwd(), outDir)} (${staticDocs} static docs, ${zeroJs} zero-JS pages, ${rendered} SSR prerendered, ${snapshotted} static snapshots, ${clientFallback} client fallback, ${skipped} skipped SSR)`,
+          )
+        },
       })
-
-      if (ssrErrors.length) {
-        console.warn(
-          `[app-static-build] ${ssrErrors.length} route(s) used the build-time static DOM snapshot after SSR failed:`,
-        )
-        for (const { route, error } of ssrErrors.slice(0, 10)) {
-          console.warn(`  ${route}: ${formatStaticError(error).split('\n')[0]}`)
-        }
-        if (ssrErrors.length > 10) {
-          console.warn(`  ... ${ssrErrors.length - 10} more route(s) omitted`)
-        }
-      }
-
-      if (reportFiles) {
-        console.warn(
-          `[app-static-build] Full static render report: ${path.relative(process.cwd(), reportFiles.reportFile)}`,
-        )
-        console.warn(
-          `[app-static-build] Full static render errors: ${path.relative(process.cwd(), reportFiles.errorLogFile)}`,
-        )
-      }
-
-      if (fatalErrors.length) {
-        console.error(
-          `[app-static-build] ${fatalErrors.length} route(s) could not be statically rendered:`,
-        )
-        for (const { route, snapshotError } of fatalErrors.slice(0, 10)) {
-          console.error(`  ${route}: ${formatStaticError(snapshotError).split('\n')[0]}`)
-        }
-        if (fatalErrors.length > 10) {
-          console.error(`  ... ${fatalErrors.length - 10} more route(s) omitted`)
-        }
-        throw new Error(`Static build failed with ${fatalErrors.length} client fallback route(s).`)
-      }
-
-      console.log(
-        `Static app built at ${path.relative(process.cwd(), outDir)} (${staticDocs} static docs, ${zeroJs} zero-JS pages, ${rendered} SSR prerendered, ${snapshotted} static snapshots, ${clientFallback} client fallback, ${skipped} skipped SSR)`,
-      )
     } finally {
       await removeGeneratedDir(tempDir)
     }

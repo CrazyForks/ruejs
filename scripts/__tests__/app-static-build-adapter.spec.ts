@@ -1,17 +1,20 @@
 // @vitest-environment jsdom
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   classifyDocRoute,
   collectClientRuntimeAssets,
+  createAppStaticRouteProgressReporter,
+  createAppStaticRouteRenderers,
   createDocRouteSourceMap,
   createRouteHtml,
   isProcessAlive,
+  runAppStaticRouteStage,
 } from '../app-static-build.mjs'
 import { findDocSources } from '../doc-source-utils.mjs'
 import { resolveStaticPreviewFile } from '@rue-js/server-renderer/static'
@@ -36,6 +39,81 @@ afterEach(async () => {
 })
 
 describe('app static build adapter', () => {
+  it('reports the route-stage start and every completed route', () => {
+    const lines: string[] = []
+    const reportProgress = createAppStaticRouteProgressReporter({
+      concurrency: 2,
+      totalRoutes: 3,
+      writeLine: line => lines.push(line),
+    })
+
+    reportProgress({ completedRoutes: 1, totalRoutes: 3, kind: 'static', route: '/guide' })
+    reportProgress({ completedRoutes: 2, totalRoutes: 3, kind: 'ssr', route: '/examples' })
+    reportProgress({ completedRoutes: 3, totalRoutes: 3, kind: 'failed', route: '/broken' })
+
+    expect(lines).toEqual([
+      '[app-static-build] Rendering 3 static route(s) with 2 SSR worker(s)...',
+      '[app-static-build] [1/3] static /guide',
+      '[app-static-build] [2/3] ssr /examples',
+      '[app-static-build] [3/3] failed /broken',
+    ])
+  })
+
+  it('uses one pool for SSR and static docs while keeping snapshots one-shot', async () => {
+    const renderOutDir = await createTempDir('rue-app-static-renderers-')
+    const pool = {
+      render: vi.fn(async ({ route }: { route: string }) => `<main>${route}</main>`),
+    }
+    const snapshotRoute = vi.fn(async () => '<main>snapshot</main>')
+    const renderers = createAppStaticRouteRenderers({ pool, renderOutDir, snapshotRoute })
+
+    await expect(renderers.renderRoute('/ssr', 1)).resolves.toBe('<main>/ssr</main>')
+    await expect(renderers.renderStaticDoc('/docs', 2, '<article>docs</article>')).resolves.toBe(
+      '<main>/docs</main>',
+    )
+    await expect(renderers.snapshotRoute('/fallback', 3)).resolves.toBe('<main>snapshot</main>')
+
+    expect(pool.render).toHaveBeenCalledTimes(2)
+    expect(pool.render).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ label: 'SSR', route: '/ssr' }),
+    )
+    expect(pool.render).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        docHtmlFile: path.join(renderOutDir, '2.doc.html'),
+        label: 'Static document SSR',
+        route: '/docs',
+      }),
+    )
+    await expect(readFile(path.join(renderOutDir, '2.doc.html'), 'utf-8')).resolves.toBe(
+      '<article>docs</article>',
+    )
+    expect(snapshotRoute).toHaveBeenCalledOnce()
+    expect(snapshotRoute).toHaveBeenCalledWith('/fallback', 3)
+  })
+
+  it('always closes the route-stage worker pool', async () => {
+    const close = vi.fn(async () => undefined)
+    const createPool = vi.fn(() => ({ close }))
+
+    await expect(runAppStaticRouteStage({ createPool, run: async pool => pool })).resolves.toEqual({
+      close,
+    })
+    expect(close).toHaveBeenCalledOnce()
+
+    close.mockClear()
+    await expect(
+      runAppStaticRouteStage({
+        createPool,
+        run: async () => {
+          throw new Error('route stage failed')
+        },
+      }),
+    ).rejects.toThrow('route stage failed')
+    expect(close).toHaveBeenCalledOnce()
+  })
+
   it('detects whether a static build lock owner process is still alive', () => {
     expect(
       isProcessAlive(42, (pid, signal) => {

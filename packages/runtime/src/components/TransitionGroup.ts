@@ -19,6 +19,11 @@ type TransitionGroupChildInput = unknown
 const renderedTransitionGroupContainers = new WeakSet<HTMLElement>()
 const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
 
+const isServerRendering = () => {
+  const count = (globalThis as Record<string, unknown>).__rue_is_server_rendering__
+  return typeof count === 'number' && count > 0
+}
+
 /** TransitionGroup 组件属性，面向 keyed 多子节点列表。 */
 export type TransitionGroupProps = PropsWithChildren<
   BaseTransitionProps & {
@@ -84,6 +89,14 @@ export const TransitionGroup: FC<TransitionGroupProps> = props => {
     prevKeys: [] as string[],
     renderVersion: null as symbol | null,
   }))
+
+  if (isServerRendering()) {
+    const containerTag = (props.tag || 'span') as any
+    const containerProps = props.tag
+      ? { ref: containerRef }
+      : { ref: containerRef, style: 'display: contents' }
+    return h(containerTag, containerProps as any, props.children as any)
+  }
 
   const collectDirectElements = (container: HTMLElement): HTMLElement[] =>
     Array.from(container.children).filter(

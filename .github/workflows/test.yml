@@ -146,7 +146,7 @@ jobs:
       - name: Build @rue-js/runtime-vapor (wasm)
         run: pnpm --filter @rue-js/runtime-vapor build
 
-      - name: Run tsgo type check
+      - name: Run TypeScript type check
         run: pnpm run check
 
       - name: Run @rue-js/text package check

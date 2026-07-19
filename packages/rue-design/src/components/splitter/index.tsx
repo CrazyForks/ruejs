@@ -124,6 +124,11 @@ const PANEL_CONFIG_ATTRIBUTES = new Set([
   'data-rue-splitter-resizable',
 ])
 
+const isServerRendering = () => {
+  const count = (globalThis as Record<string, unknown>).__rue_is_server_rendering__
+  return typeof count === 'number' && count > 0
+}
+
 /** clamp 的内部工具函数。 */
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
@@ -750,6 +755,7 @@ const SplitterRoot: FC<SplitterProps> = ({
   }
 
   const scheduleSyncFromRender = () => {
+    if (isServerRendering()) return
     if (state.pendingSync) return
     state.pendingSync = true
 
@@ -867,6 +873,7 @@ const SplitterRoot: FC<SplitterProps> = ({
   }
 
   onMounted(() => {
+    if (isServerRendering()) return
     state.mountedRootElement = state.rootElement
     syncPanelsFromDom(false)
 
