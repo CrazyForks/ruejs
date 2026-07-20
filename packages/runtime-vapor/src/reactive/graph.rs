@@ -16,8 +16,8 @@
 //!   代际 Arena，销毁组件 scope 后可重用槽位，陈旧 ID 也不会误访问新节点。
 //! - 原库在图节点中保存强类型 signal/computed/effect 上下文；Rue 的值与 JS 回调
 //!   仍由 `core.rs` / `signal.rs` 管理，本文件只负责拓扑、版本和状态。
-//! - 原库的 `propagate` / `check_dirty` 是指针栈机；Rue 使用 `VecDeque` 传播，
-//!   再通过版本号和 computed 后序遍历完成增量校验。
+//! - 原库的 `propagate` / `check_dirty` 是指针栈机；Rue 使用局部 `VecDeque` 传播，
+//!   再通过版本号和沿 Link 直接执行的 computed 后序遍历完成增量校验。
 //! - batch、microtask、frame、custom scheduler 和 effect scope 保留在 Rue 原有调度层，
 //!   本图只返回稳定且去重的 effect id。
 //!
@@ -79,7 +79,7 @@
 //! 延迟 scheduler 遇到陈旧 id 时都可以安全 no-op。
 
 use std::cell::RefCell;
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 use std::ops::{BitAnd, BitOr, BitOrAssign, Not};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -458,13 +458,19 @@ impl Graph {
 
     /// 按“上游先、下游后”的后序顺序收集待校验 computed。
     ///
-    /// `seen` 只用于拓扑遍历，不是触发期 effect id 去重；effect 去重由节点 flags 完成。
-    pub(crate) fn pending_computed_effects(&self, sub: NodeId) -> Vec<(NodeId, usize)> {
+    /// 遍历期间借用 `RECURSED` 作为 visited 标记，结束后统一清除；effect 去重仍由 PENDING/WATCHING 完成。
+    pub(crate) fn pending_computed_effects(&mut self, sub: NodeId) -> Vec<(NodeId, usize)> {
         let mut output = Vec::new();
-        let mut seen = HashSet::new();
         let mut stack = Vec::new();
-        for dependency in self.dependencies(sub).into_iter().rev() {
-            stack.push((dependency, false));
+
+        // 从尾部向头部压栈，弹出时仍按 getter 的原始读取顺序处理依赖。
+        let mut link = self.node(sub).and_then(|node| node.deps_tail);
+        while let Some(link_id) = link {
+            let Some(edge) = self.link_ref(link_id).copied() else {
+                break;
+            };
+            stack.push((edge.dep, false));
+            link = edge.prev_dep;
         }
 
         while let Some((node_id, expanded)) = stack.pop() {
@@ -481,15 +487,30 @@ impl Graph {
                 output.push((node_id, effect_id));
                 continue;
             }
-            if !seen.insert(node_id) {
+            if node.flags.intersects(Flags::RECURSED) {
                 continue;
             }
+            if let Some(node) = self.node_mut(node_id) {
+                node.flags |= Flags::RECURSED;
+            }
             stack.push((node_id, true));
-            for dependency in self.dependencies(node_id).into_iter().rev() {
-                stack.push((dependency, false));
+
+            let mut link = self.node(node_id).and_then(|node| node.deps_tail);
+            while let Some(link_id) = link {
+                let Some(edge) = self.link_ref(link_id).copied() else {
+                    break;
+                };
+                stack.push((edge.dep, false));
+                link = edge.prev_dep;
             }
         }
 
+        // visited 标记必须保留到整次遍历结束，才能对跨分支共享的 computed 去重。
+        for (node_id, _) in &output {
+            if let Some(node) = self.node_mut(*node_id) {
+                node.flags.remove(Flags::RECURSED);
+            }
+        }
         output
     }
 
@@ -537,6 +558,7 @@ impl Graph {
         self.nodes.remove(id, |id| (id.index, id.generation)).is_some()
     }
 
+    #[cfg(test)]
     pub(crate) fn dependencies(&self, sub: NodeId) -> Vec<NodeId> {
         let mut dependencies = Vec::new();
         let mut link = self.node(sub).and_then(|node| node.deps_head);
@@ -764,7 +786,7 @@ pub(crate) fn commit_computed_node(node: NodeId, changed: bool) {
 }
 
 pub(crate) fn pending_computed_effects(node: NodeId) -> Vec<(NodeId, usize)> {
-    REACTIVE_GRAPH.with(|graph| graph.borrow().pending_computed_effects(node))
+    REACTIVE_GRAPH.with(|graph| graph.borrow_mut().pending_computed_effects(node))
 }
 
 pub(crate) fn subscriber_needs_run(node: NodeId) -> bool {
@@ -782,6 +804,57 @@ pub(crate) fn remove_reactive_node(node: NodeId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::hint::black_box;
+    use std::time::Instant;
+
+    fn legacy_pending_computed_effects(graph: &Graph, sub: NodeId) -> Vec<(NodeId, usize)> {
+        let mut output = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        let mut stack = Vec::new();
+        for dependency in graph.dependencies(sub).into_iter().rev() {
+            stack.push((dependency, false));
+        }
+
+        while let Some((node_id, expanded)) = stack.pop() {
+            let Some(node) = graph.node(node_id) else {
+                continue;
+            };
+            let NodeKind::Computed(effect_id) = node.kind else {
+                continue;
+            };
+            if !node.flags.intersects(Flags::DIRTY | Flags::PENDING) {
+                continue;
+            }
+            if expanded {
+                output.push((node_id, effect_id));
+                continue;
+            }
+            if !seen.insert(node_id) {
+                continue;
+            }
+            stack.push((node_id, true));
+            for dependency in graph.dependencies(node_id).into_iter().rev() {
+                stack.push((dependency, false));
+            }
+        }
+        output
+    }
+
+    fn measure_legacy_pending(graph: &Graph, sub: NodeId, iterations: usize) -> u128 {
+        let started = Instant::now();
+        for _ in 0..iterations {
+            black_box(legacy_pending_computed_effects(graph, sub));
+        }
+        started.elapsed().as_nanos()
+    }
+
+    fn measure_link_walk_pending(graph: &mut Graph, sub: NodeId, iterations: usize) -> u128 {
+        let started = Instant::now();
+        for _ in 0..iterations {
+            black_box(graph.pending_computed_effects(sub));
+        }
+        started.elapsed().as_nanos()
+    }
 
     #[test]
     fn graph_reuses_links_and_purges_stale_tail() {
@@ -846,6 +919,53 @@ mod tests {
         let effect = graph.add_node(NodeKind::Effect(42));
         assert!(graph.connect(previous, effect));
         assert_eq!(graph.propagate(source), vec![42]);
+    }
+
+    /// 手动运行的图层 A/B 微基准，不进入常规测试时间。
+    ///
+    /// 运行：`cargo test --release --lib benchmark_pending_computed_link_walk -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn benchmark_pending_computed_link_walk() {
+        let mut graph = Graph::default();
+        let source = graph.add_node(NodeKind::Dependency);
+        let mut previous = source;
+        for effect_id in 0..100 {
+            let computed = graph.add_node(NodeKind::Computed(effect_id));
+            assert!(graph.connect(previous, computed));
+            graph.mark_clean(computed);
+            previous = computed;
+        }
+        let effect = graph.add_node(NodeKind::Effect(100));
+        assert!(graph.connect(previous, effect));
+        assert_eq!(graph.propagate(source), vec![100]);
+
+        const ITERATIONS: usize = 5_000;
+        const ROUNDS: usize = 7;
+        let mut legacy_samples = Vec::with_capacity(ROUNDS);
+        let mut link_walk_samples = Vec::with_capacity(ROUNDS);
+
+        for round in 0..ROUNDS {
+            // 交替执行顺序，降低温度和系统调度对某一实现的固定偏置。
+            if round % 2 == 0 {
+                legacy_samples.push(measure_legacy_pending(&graph, effect, ITERATIONS));
+                link_walk_samples.push(measure_link_walk_pending(&mut graph, effect, ITERATIONS));
+            } else {
+                link_walk_samples.push(measure_link_walk_pending(&mut graph, effect, ITERATIONS));
+                legacy_samples.push(measure_legacy_pending(&graph, effect, ITERATIONS));
+            }
+        }
+
+        legacy_samples.sort_unstable();
+        link_walk_samples.sort_unstable();
+        let legacy = legacy_samples[ROUNDS / 2] as f64 / ITERATIONS as f64;
+        let link_walk = link_walk_samples[ROUNDS / 2] as f64 / ITERATIONS as f64;
+        println!(
+            "pending-computed depth=100 legacy={legacy:.1}ns link-walk={link_walk:.1}ns change={:.2}%",
+            (link_walk - legacy) / legacy * 100.0
+        );
+        assert_eq!(graph.pending_computed_effects(effect).len(), 100);
+        assert_eq!(legacy_pending_computed_effects(&graph, effect).len(), 100);
     }
 
     #[test]
