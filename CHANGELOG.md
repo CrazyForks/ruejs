@@ -1,3 +1,19 @@
+## [0.8.4](https://github.com/hunzhiwange/ruejs/compare/v0.8.3...v0.8.4) (2026-07-21)
+
+
+### Features
+
+* 优化信号架构 ([a67200d](https://github.com/hunzhiwange/ruejs/commit/a67200dc5d95c7a8be72507a01eaf8eabfe22926))
+* 修复响应式错误 ([5d8fdea](https://github.com/hunzhiwange/ruejs/commit/5d8fdeaf52e3b9e2fa4dbf2aa93f694de619dbad))
+* 岛屿架构优化 ([b052231](https://github.com/hunzhiwange/ruejs/commit/b052231b881bd4ad0936e9d6b5b57ab6f3afca2e))
+* 岛屿架构优化 ([d1f455b](https://github.com/hunzhiwange/ruejs/commit/d1f455b44584cdf665c3c7247f1be0c6eb278f88))
+* 岛屿架构优化，静态化，升级 TypeScript 7 ([696a3f6](https://github.com/hunzhiwange/ruejs/commit/696a3f6c38a182f2ee7d9d6f6425719c77dfd9c2))
+* 持久 SSR worker、IPC、超时回收、异常补位和关闭逻辑已下沉到框架 ([a15e333](https://github.com/hunzhiwange/ruejs/commit/a15e3336b2e6eb5306c0e19d588361d8d3589d87))
+* 新的响应式架构 ([2ef2aff](https://github.com/hunzhiwange/ruejs/commit/2ef2aff0930b03ac018b22e6072b4478d9616379))
+* 水合架构优化 ([1889dd7](https://github.com/hunzhiwange/ruejs/commit/1889dd76d37e76236b806af5b233ff35ee4332c6))
+* 限制 Vite 并发 transform 时同时创建的 SWC worker 数量由4修改为8 ([be72f86](https://github.com/hunzhiwange/ruejs/commit/be72f86d48e82fb71210e115840e344816eaf6e1))
+* 静态打包修复 ([970707e](https://github.com/hunzhiwange/ruejs/commit/970707e9d5365963bc97c0fa3dd79cd875437397))
+
 ## [0.8.3](https://github.com/hunzhiwange/ruejs/compare/v0.8.2...v0.8.3) (2026-07-08)
 
 ## [0.8.2](https://github.com/hunzhiwange/ruejs/compare/v0.8.1...v0.8.2) (2026-07-08)
