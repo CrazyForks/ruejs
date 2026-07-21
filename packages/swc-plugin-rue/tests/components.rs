@@ -74,6 +74,10 @@ const Components: FC = ()=>vapor((__rue_parent_context)=>{
             _$setAttribute(_el2, "href", String(RouterLink.__rueHref("/jsx")));
         });
         _$addEventListener(_el2, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
+        _$addEventListener(_el2, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el2, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el2, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el2, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
         _$setClassName(_el2, "text-blue-600 hover:underline");
         _$appendChild(_el2, _$createTextNode("返回目录"));
         return _root;

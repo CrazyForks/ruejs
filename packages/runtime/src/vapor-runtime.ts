@@ -34,6 +34,7 @@ import {
   getDOMAdapter,
   getParentNode,
   hasActiveTextControlWithin,
+  removeChild,
   scheduleTrackedTextControlRestoreWithin,
   setAttribute,
   setChecked,
@@ -82,14 +83,66 @@ getDOMAdapter()
 
 const renderOwnerByRangeStart = new WeakMap<object, unknown>()
 const renderOwnerByAnchor = new WeakMap<object, unknown>()
+const runtimeByAnchor = new WeakMap<object, any>()
+const mountedNodesByAnchor = new WeakMap<object, DomNodeLike[]>()
 const lastMountHandleAnchorValueByAnchor = new WeakMap<object, unknown>()
 const mountHandleOwner = Object.freeze({ __rue_mount_handle_owner: true })
 const pendingAnchorHandleRenders = new WeakMap<
   object,
-  { parent: DomElementLike; value: RenderableInput }
+  { parent: DomElementLike; value: RenderableInput; runtime: any }
 >()
 const RUE_FORCE_REMOUNT_ANCHOR_KEY = '__rue_force_remount_anchor'
 const RUE_COMPONENT_CHILDREN_KEY = '__rue_component_children'
+
+const readAnchorParentChildren = (parent: DomElementLike): DomNodeLike[] => {
+  const candidate = parent as unknown as {
+    childNodes?: ArrayLike<DomNodeLike>
+    children?: ArrayLike<DomNodeLike>
+  }
+  return Array.from(candidate.childNodes ?? candidate.children ?? [])
+}
+
+const renderOwnedAnchorMount = (
+  runtime: any,
+  value: unknown,
+  parent: DomElementLike,
+  anchor: DomNodeLike,
+  replacePrevious = false,
+) => {
+  const anchorKey = anchor as object
+  const before = readAnchorParentChildren(parent)
+  const result = runtime.renderAnchor(value, parent, anchor)
+  let after = readAnchorParentChildren(parent)
+  const previous = mountedNodesByAnchor.get(anchorKey) ?? []
+  const added = after.filter(node => node !== anchor && !before.includes(node))
+  if (replacePrevious && added.length > 0) {
+    for (const node of previous) {
+      if (getParentNode(node) === parent) {
+        removeChild(parent, node)
+      }
+    }
+    after = readAnchorParentChildren(parent)
+  }
+  const owned = after.filter(
+    node => node !== anchor && (previous.includes(node) || !before.includes(node)),
+  )
+  if (owned.length > 0) {
+    mountedNodesByAnchor.set(anchorKey, owned)
+  } else {
+    mountedNodesByAnchor.delete(anchorKey)
+  }
+  return result
+}
+
+const clearOwnedAnchorNodes = (parent: DomElementLike, anchor: DomNodeLike) => {
+  const anchorKey = anchor as object
+  for (const node of mountedNodesByAnchor.get(anchorKey) ?? []) {
+    if (getParentNode(node) === parent) {
+      removeChild(parent, node)
+    }
+  }
+  mountedNodesByAnchor.delete(anchorKey)
+}
 const RUE_MOUNT_ID_KEY = '__rue_mount_id'
 const RUE_KEEP_ALIVE_HOOK_TARGET_KEY = '__rue_keep_alive_hook_target__'
 const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
@@ -1347,11 +1400,16 @@ const renderAnchorUntracked = (
   parent: DomElementLike,
   anchor: DomNodeLike,
 ) => {
+  const anchorKey = anchor as object
+  const anchorRuntime = runtimeByAnchor.get(anchorKey) ?? getRueRuntime()
+  runtimeByAnchor.set(anchorKey, anchorRuntime)
   const normalizedValue = normalizeMountHandleSingletonInput(value)
   const mountHandleValue = createFreshMountHandle(normalizedValue)
   pendingAnchorHandleRenders.delete(anchor as object)
   const targetParent = resolveAnchorTargetParent(parent, anchor)
   if (!targetParent) {
+    runtimeByAnchor.delete(anchorKey)
+    mountedNodesByAnchor.delete(anchorKey)
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, undefined)
     lastMountHandleAnchorValueByAnchor.delete(anchor as object)
     return
@@ -1373,8 +1431,10 @@ const renderAnchorUntracked = (
   const analysis = analyzeDefaultRenderableInput(normalizedValue)
   if (analysis.kind === 'renderable') {
     if (prevOwner && !isDirectRenderableOwner(prevOwner)) {
-      getRueRuntime().renderAnchor(null, targetParent, anchor)
+      anchorRuntime.renderAnchor(null, targetParent, anchor)
+      clearOwnedAnchorNodes(targetParent, anchor)
     }
+    mountedNodesByAnchor.delete(anchorKey)
     lastMountHandleAnchorValueByAnchor.delete(anchor as object)
     const owner = mountNormalizedRenderableToTarget(
       analysis.value,
@@ -1446,9 +1506,10 @@ const renderAnchorUntracked = (
       areEquivalentPortableComponentHandles(lastMountHandleValue, normalizedValue),
     )
   if (shouldRemountTimePicker) {
-    getRueRuntime().renderAnchor(null, targetParent, anchor)
+    anchorRuntime.renderAnchor(null, targetParent, anchor)
+    clearOwnedAnchorNodes(targetParent, anchor)
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
-    const result = getRueRuntime().renderAnchor(mountHandleValue, targetParent, anchor)
+    const result = renderOwnedAnchorMount(anchorRuntime, mountHandleValue, targetParent, anchor)
     lastMountHandleAnchorValueByAnchor.set(anchor as object, mountHandleValue)
     scheduleTrackedTextControlRestoreWithin(targetParent)
     return result
@@ -1461,18 +1522,29 @@ const renderAnchorUntracked = (
   if (!shouldRemountComponentChildren) {
     if (!shouldTrackMountHandleOwner) {
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, normalizedValue as unknown)
-      const result = getRueRuntime().renderAnchor(mountHandleValue, targetParent, anchor)
+      const result = renderOwnedAnchorMount(anchorRuntime, mountHandleValue, targetParent, anchor)
+      if (normalizedValue == null) {
+        clearOwnedAnchorNodes(targetParent, anchor)
+      }
       lastMountHandleAnchorValueByAnchor.set(anchor as object, normalizedValue)
       scheduleTrackedTextControlRestoreWithin(targetParent)
       return result
     }
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
+    const previousKey = readPortableComponentProps(lastMountHandleValue)?.key
+    const nextKey = readPortableComponentProps(normalizedValue)?.key
     const result =
       componentName === 'KeepAlive'
         ? withKeepAlivePropsRegistrationTarget(mountHandleValue, () =>
-            getRueRuntime().renderAnchor(mountHandleValue, targetParent, anchor),
+            renderOwnedAnchorMount(anchorRuntime, mountHandleValue, targetParent, anchor),
           )
-        : getRueRuntime().renderAnchor(mountHandleValue, targetParent, anchor)
+        : renderOwnedAnchorMount(
+            anchorRuntime,
+            mountHandleValue,
+            targetParent,
+            anchor,
+            prevOwner === mountHandleOwner && !Object.is(previousKey, nextKey),
+          )
     lastMountHandleAnchorValueByAnchor.set(anchor as object, mountHandleValue)
     scheduleTrackedTextControlRestoreWithin(targetParent)
     return result
@@ -1481,6 +1553,7 @@ const renderAnchorUntracked = (
   pendingAnchorHandleRenders.set(anchor as object, {
     parent: targetParent,
     value: normalizedValue,
+    runtime: anchorRuntime,
   })
   queueMicrotask(() => {
     const pending = pendingAnchorHandleRenders.get(anchor as object)
@@ -1496,7 +1569,8 @@ const renderAnchorUntracked = (
       return
     }
 
-    getRueRuntime().renderAnchor(null, mountedParent, anchor)
+    pending.runtime.renderAnchor(null, mountedParent, anchor)
+    clearOwnedAnchorNodes(mountedParent, anchor)
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
     const pendingMountHandleValue = createFreshMountHandle(pending.value)
     const pendingComponentType =
@@ -1506,10 +1580,10 @@ const renderAnchorUntracked = (
     const pendingComponentName = getBuiltinComponentName(pendingComponentType)
     if (pendingComponentName === 'KeepAlive') {
       withKeepAlivePropsRegistrationTarget(pendingMountHandleValue, () => {
-        getRueRuntime().renderAnchor(pendingMountHandleValue, mountedParent, anchor)
+        renderOwnedAnchorMount(pending.runtime, pendingMountHandleValue, mountedParent, anchor)
       })
     } else {
-      getRueRuntime().renderAnchor(pendingMountHandleValue, mountedParent, anchor)
+      renderOwnedAnchorMount(pending.runtime, pendingMountHandleValue, mountedParent, anchor)
     }
     lastMountHandleAnchorValueByAnchor.set(anchor as object, pendingMountHandleValue)
     scheduleTrackedTextControlRestoreWithin(mountedParent)

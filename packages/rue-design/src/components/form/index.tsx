@@ -2028,9 +2028,9 @@ const FormRoot: FC<FormProps> = ({
   }) as Record<string, unknown>
   const internalFormRef = useRef<InternalFormInstance>()
   const rootElementRef = useRef<HTMLElement | null>(null)
+  const contentHostRef = useRef<HTMLElement | null>(null)
   const subscriptionFormRef = useRef<InternalFormInstance | undefined>(undefined)
   const unsubscribeRenderRef = useRef<(() => void) | null>(null)
-  const [renderVersion, setRenderVersion] = useState(0, { kind: 'ref' })
 
   if (!internalFormRef.current) {
     internalFormRef.current = (form as InternalFormInstance | undefined) ?? createFormInstance()
@@ -2039,8 +2039,6 @@ const FormRoot: FC<FormProps> = ({
   const resolvedForm = ((form as InternalFormInstance | undefined) ??
     internalFormRef.current) as InternalFormInstance
   const initializedNow = resolvedForm.__INTERNAL__.ensureInitialized(initialValues)
-  // Keep render-prop consumers subscribed when they read values through the form instance.
-  const formVersionSnapshot = resolvedForm.__INTERNAL__.version.value
 
   resolvedForm.__INTERNAL__.setRuntimeOptions({
     name,
@@ -2061,7 +2059,7 @@ const FormRoot: FC<FormProps> = ({
     unsubscribeRenderRef.current?.()
     subscriptionFormRef.current = resolvedForm
     unsubscribeRenderRef.current = resolvedForm.__INTERNAL__.subscribe(() => {
-      setRenderVersion(renderVersion.value + 1)
+      queueMicrotask(renderManagedContent)
     })
   }
 
@@ -2072,9 +2070,14 @@ const FormRoot: FC<FormProps> = ({
   }
 
   onMounted(() => {
+    renderManagedContent()
     if (initializedNow) {
       resolvedForm.__INTERNAL__.emitUpdate()
     }
+  })
+
+  onUpdated(() => {
+    renderManagedContent()
   })
 
   onCleanup(() => {
@@ -2084,8 +2087,6 @@ const FormRoot: FC<FormProps> = ({
   })
 
   const resolveContent = () => {
-    void formVersionSnapshot
-
     return typeof render === 'function' ? (
       <>{render(resolvedForm)}</>
     ) : typeof children === 'function' &&
@@ -2096,7 +2097,30 @@ const FormRoot: FC<FormProps> = ({
     )
   }
 
-  const content = resolveContent()
+  const hasRenderConsumer =
+    typeof render === 'function' ||
+    (typeof children === 'function' && (children as { kind?: unknown }).kind !== 'block-factory')
+  let pendingManagedContent = hasRenderConsumer ? resolveContent() : undefined
+
+  const renderManagedContent = () => {
+    if (contentHostRef.current) {
+      renderRue(pendingManagedContent ?? resolveContent(), contentHostRef.current)
+      pendingManagedContent = undefined
+    }
+  }
+
+  const assignContentHost = (element: HTMLElement | null) => {
+    contentHostRef.current = element
+    if (element) {
+      renderManagedContent()
+    }
+  }
+
+  const content = hasRenderConsumer ? (
+    <span ref={assignContentHost} style={{ display: 'contents' }} />
+  ) : (
+    resolveContent()
+  )
 
   if (component === false) {
     return content
@@ -2119,59 +2143,24 @@ const FormRoot: FC<FormProps> = ({
   }
 
   if (component === 'form') {
-    return (
-      <form {...rootProps}>
-        {(() => {
-          void renderVersion.value
-          return resolveContent()
-        })()}
-      </form>
-    )
+    return <form {...rootProps}>{content}</form>
   }
 
   if (component === 'div') {
-    return (
-      <div {...rootProps}>
-        {(() => {
-          void renderVersion.value
-          return resolveContent()
-        })()}
-      </div>
-    )
+    return <div {...rootProps}>{content}</div>
   }
 
   if (component === 'section') {
-    return (
-      <section {...rootProps}>
-        {(() => {
-          void renderVersion.value
-          return resolveContent()
-        })()}
-      </section>
-    )
+    return <section {...rootProps}>{content}</section>
   }
 
   if (typeof component === 'string') {
-    return h(
-      component,
-      rootProps,
-      (() => {
-        void renderVersion.value
-        return resolveContent()
-      })(),
-    )
+    return h(component, rootProps, content)
   }
 
   const Component = component as any
 
-  return (
-    <Component {...rootProps}>
-      {(() => {
-        void renderVersion.value
-        return resolveContent()
-      })()}
-    </Component>
-  )
+  return <Component {...rootProps}>{content}</Component>
 }
 
 type FormCompound = FC<FormProps> & {

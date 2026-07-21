@@ -117,6 +117,10 @@ const ConditionalRendering: FC = ()=>vapor((__rue_parent_context)=>{
             _$setAttribute(_el20, "href", String(RouterLink.__rueHref("/jsx")));
         });
         _$addEventListener(_el20, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
+        _$addEventListener(_el20, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el20, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el20, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el20, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
         _$setClassName(_el20, "text-blue-600 hover:underline");
         _$appendChild(_el20, _$createTextNode("返回目录"));
         return _root;

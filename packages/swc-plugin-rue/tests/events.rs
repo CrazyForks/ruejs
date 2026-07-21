@@ -287,6 +287,10 @@ const Events: FC = ()=>{
         _$setAttribute(_el24, "href", String(RouterLink.__rueHref("/jsx")));
         });
         _$addEventListener(_el24, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
+        _$addEventListener(_el24, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el24, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el24, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el24, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
         _$setClassName(_el24, "text-blue-600 hover:underline");
         _$appendChild(_el24, _$createTextNode("返回目录"));
         return _root;

@@ -399,6 +399,10 @@ const DocDetail: FC = ()=>{
                                 _$setAttribute(_el3, "href", String(RouterLink.__rueHref(`${uiBase}/${prev.id}`)));
                             });
                             _$addEventListener(_el3, "click", ((e)=>RouterLink.__rueOnClick(e, `${uiBase}/${prev.id}`, false)));
+                            _$addEventListener(_el3, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${prev.id}`, "hover")));
+                            _$addEventListener(_el3, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${prev.id}`, "hover")));
+                            _$addEventListener(_el3, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${prev.id}`, "hover")));
+                            _$addEventListener(_el3, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${prev.id}`, "hover")));
                             _$setClassName(_el3, "btn btn-outline btn-sm");
                             _$appendChild(_el3, _$createTextNode("← 上一页："));
                             const _list1 = _$createComment("rue:slot:anchor");
@@ -428,6 +432,10 @@ const DocDetail: FC = ()=>{
                                 _$setAttribute(_el5, "href", String(RouterLink.__rueHref(`${uiBase}/${next.id}`)));
                             });
                             _$addEventListener(_el5, "click", ((e)=>RouterLink.__rueOnClick(e, `${uiBase}/${next.id}`, false)));
+                            _$addEventListener(_el5, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
+                            _$addEventListener(_el5, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
+                            _$addEventListener(_el5, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
+                            _$addEventListener(_el5, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
                             _$setClassName(_el5, "btn btn-outline btn-sm");
                             _$appendChild(_el5, _$createTextNode("下一页："));
                             const _list3 = _$createComment("rue:slot:anchor");

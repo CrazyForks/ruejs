@@ -632,6 +632,11 @@ export const createMemoryHistory = (initialPath = '/') => {
  */
 export const createWebHistory = () => {
   const g = globalThis as any
+  const notifyHistoryChange = () => {
+    if (typeof g?.dispatchEvent === 'function' && typeof g?.Event === 'function') {
+      g.dispatchEvent(new g.Event('rue:history-change'))
+    }
+  }
   const normalize = (path: string) => {
     return normalizeRouteLocationHref(path)
   }
@@ -654,6 +659,7 @@ export const createWebHistory = () => {
       if (next === loc()) return
       if (g && g.history && typeof g.history.pushState === 'function') {
         g.history.pushState(null, '', next)
+        notifyHistoryChange()
       } else if (g && g.location) {
         g.location.pathname = next
       }
@@ -664,6 +670,7 @@ export const createWebHistory = () => {
       if (next === loc()) return
       if (g && g.history && typeof g.history.replaceState === 'function') {
         g.history.replaceState(null, '', next)
+        notifyHistoryChange()
       } else if (g && g.location && typeof g.location.replace === 'function') {
         g.location.replace(next)
       }
@@ -1748,22 +1755,25 @@ export const RouterView: FC = () => {
         previousParams = recordParams
         previousResolvedComponent = resolvedComponent
 
-        let cachedContent = contentByRouteKey.get(routeKey)
-        if (!cachedContent || cachedContent.component !== resolvedComponent) {
-          cachedContent = {
-            component: resolvedComponent,
-            content: h(Component as any, {
-              is: RouteViewContent,
-              key: routeKey,
+        const routeContent = h(Component as any, {
+          is: RouteViewContent,
+          key: routeKey,
+          component: resolvedComponent,
+          params: paramsState.proxy,
+          nextDepth: depth + 1,
+        }) as any
+
+        let renderedContent = routeContent
+        if (persistKeys.length > 0) {
+          let cachedContent = contentByRouteKey.get(routeKey)
+          if (!cachedContent || cachedContent.component !== resolvedComponent) {
+            cachedContent = {
               component: resolvedComponent,
-              params: paramsState.proxy,
-              nextDepth: depth + 1,
-            }),
+              content: routeContent,
+            }
+            contentByRouteKey.set(routeKey, cachedContent)
           }
-          contentByRouteKey.set(routeKey, cachedContent)
-        }
-        renderAnchor(
-          h(
+          renderedContent = h(
             KeepAlive as any,
             {
               include: persistKeys,
@@ -1772,10 +1782,9 @@ export const RouterView: FC = () => {
               },
             },
             cachedContent.content as any,
-          ) as any,
-          parent,
-          anchorEl,
-        )
+          ) as any
+        }
+        renderAnchor(renderedContent, parent, anchorEl)
       })
     })
 

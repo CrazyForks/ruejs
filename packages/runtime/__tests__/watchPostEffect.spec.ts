@@ -6,6 +6,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
+  computed,
   nextTick,
   setReactiveScheduling,
   signal,
@@ -21,6 +22,25 @@ afterEach(() => {
 })
 
 describe('watchPostEffect', () => {
+  it('tracks computed refs through the public watch wrapper', () => {
+    setReactiveScheduling('sync')
+    const source = signal(1, {}, true)
+    const doubled = computed(() => source.get() * 2)
+    const seen: number[] = []
+
+    watch(
+      doubled,
+      value => {
+        seen.push(value)
+      },
+      { immediate: true },
+    )
+
+    source.set(2)
+
+    expect(seen).toEqual([2, 4])
+  })
+
   it('runs after regular reactive effects have updated DOM', async () => {
     setReactiveScheduling('microtask')
 

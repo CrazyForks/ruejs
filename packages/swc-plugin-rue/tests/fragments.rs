@@ -57,6 +57,10 @@ const Fragments: FC = ()=>vapor((__rue_parent_context)=>{
             _$setAttribute(_el4, "href", String(RouterLink.__rueHref("/jsx")));
         });
         _$addEventListener(_el4, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
+        _$addEventListener(_el4, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el4, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el4, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el4, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
         _$setClassName(_el4, "text-blue-600 hover:underline");
         _$appendChild(_el4, _$createTextNode("返回目录"));
         return _root;

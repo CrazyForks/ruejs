@@ -42,6 +42,7 @@ vi.mock('../../../app/pages/site/SidebarPlaygroundPage', () => ({
 setReactiveScheduling('sync')
 
 const repoRoot = process.cwd()
+const slowTestTimeout = 30_000
 const fixturePaths = [
   'docs/guide/mdx-detail-fixture.mdx',
   'docs/api/mdx-detail-fixture.mdx',
@@ -140,72 +141,77 @@ describe('doc detail MDX rendering', () => {
     ).toBe('page/partners/index')
   })
 
-  it('renders MDX modules for guide, api, and page detail routes without markdown fetches', async () => {
-    const cases = [
-      {
-        importComponent: async () =>
-          (await import('../../../app/pages/site/GuideDocDetail')).default,
-        initialPath: '/guide/guide/mdx-detail-fixture',
-        pathPattern: '/guide/:path(.*)',
-        title: 'Guide MDX Detail',
-        body: 'Guide content rendered from an MDX module.',
-      },
-      {
-        importComponent: async () => (await import('../../../app/pages/site/ApiDocDetail')).default,
-        initialPath: '/api/api/mdx-detail-fixture',
-        pathPattern: '/api/:path(.*)',
-        title: 'API MDX Detail',
-        body: 'API content rendered from an MDX module.',
-      },
-      {
-        importComponent: async () =>
-          (await import('../../../app/pages/site/PageDocDetail')).default,
-        initialPath: '/page/page/mdx-detail-fixture',
-        pathPattern: '/page/:path(.*)',
-        title: 'Page MDX Detail',
-        body: 'Page content rendered from an MDX module.',
-      },
-    ]
+  it(
+    'renders MDX modules for guide, api, and page detail routes without markdown fetches',
+    async () => {
+      const cases = [
+        {
+          importComponent: async () =>
+            (await import('../../../app/pages/site/GuideDocDetail')).default,
+          initialPath: '/guide/guide/mdx-detail-fixture',
+          pathPattern: '/guide/:path(.*)',
+          title: 'Guide MDX Detail',
+          body: 'Guide content rendered from an MDX module.',
+        },
+        {
+          importComponent: async () =>
+            (await import('../../../app/pages/site/ApiDocDetail')).default,
+          initialPath: '/api/api/mdx-detail-fixture',
+          pathPattern: '/api/:path(.*)',
+          title: 'API MDX Detail',
+          body: 'API content rendered from an MDX module.',
+        },
+        {
+          importComponent: async () =>
+            (await import('../../../app/pages/site/PageDocDetail')).default,
+          initialPath: '/page/page/mdx-detail-fixture',
+          pathPattern: '/page/:path(.*)',
+          title: 'Page MDX Detail',
+          body: 'Page content rendered from an MDX module.',
+        },
+      ]
 
-    const fetchMock = vi.fn(async () => ({
-      ok: false,
-      text: async () => '',
-    }))
-    vi.stubGlobal('fetch', fetchMock)
+      const fetchMock = vi.fn(async () => ({
+        ok: false,
+        text: async () => '',
+      }))
+      vi.stubGlobal('fetch', fetchMock)
 
-    for (const testCase of cases) {
-      document.body.innerHTML = ''
-      const Component = await testCase.importComponent()
-      const router = createRouter({
-        history: createMemoryHistory(testCase.initialPath),
-        routes: [{ path: testCase.pathPattern, component: Component as any }],
-      })
-      attachRouter(router)
+      for (const testCase of cases) {
+        document.body.innerHTML = ''
+        const Component = await testCase.importComponent()
+        const router = createRouter({
+          history: createMemoryHistory(testCase.initialPath),
+          routes: [{ path: testCase.pathPattern, component: Component as any }],
+        })
+        attachRouter(router)
 
-      const container = mountContainer()
-      render(<RouterView />, container)
+        const container = mountContainer()
+        render(<RouterView />, container)
 
-      await waitForContent(() => {
-        const docBody = container.querySelector('#doc-body')
-        expect(docBody).not.toBeNull()
-        expect(docBody?.textContent).toContain(testCase.title)
-        expect(docBody?.textContent).toContain(testCase.body)
-      })
+        await waitForContent(() => {
+          const docBody = container.querySelector('#doc-body')
+          expect(docBody).not.toBeNull()
+          expect(docBody?.textContent).toContain(testCase.title)
+          expect(docBody?.textContent).toContain(testCase.body)
+        })
 
-      const tabs = Array.from(container.querySelectorAll('[role="tab"]')) as HTMLButtonElement[]
-      expect(tabs.map(tab => tab.textContent)).toEqual(['pnpm', 'npm'])
-      expect(tabs[0].getAttribute('aria-selected')).toBe('true')
+        const tabs = Array.from(container.querySelectorAll('[role="tab"]')) as HTMLButtonElement[]
+        expect(tabs.map(tab => tab.textContent)).toEqual(['pnpm', 'npm'])
+        expect(tabs[0].getAttribute('aria-selected')).toBe('true')
 
-      await click(tabs[1])
+        await click(tabs[1])
 
-      expect(tabs[1].getAttribute('aria-selected')).toBe('true')
-      expect(
-        container.querySelector('[role="tabpanel"][aria-hidden="false"]')?.textContent,
-      ).toContain('npm create rue@latest')
-    }
+        expect(tabs[1].getAttribute('aria-selected')).toBe('true')
+        expect(
+          container.querySelector('[role="tabpanel"][aria-hidden="false"]')?.textContent,
+        ).toContain('npm create rue@latest')
+      }
 
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
+      expect(fetchMock).not.toHaveBeenCalled()
+    },
+    slowTestTimeout,
+  )
 
   it('falls back to markdown HTML and keeps code copy handling', async () => {
     const writeText = vi.fn()

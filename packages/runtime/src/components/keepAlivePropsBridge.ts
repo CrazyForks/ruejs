@@ -20,7 +20,8 @@ export const registerKeepAlivePropsUpdater = (props: unknown, update: KeepAliveP
   if (propsObject) {
     updaterByProps.set(propsObject, update)
   }
-  for (const target of registrationTargets) {
+  const target = registrationTargets[registrationTargets.length - 1]
+  if (target) {
     if (target.props) {
       updaterByProps.set(target.props, update)
     }

@@ -649,7 +649,7 @@ impl Graph {
         }
         if let Some(node) = self.node_mut(sub) {
             node.deps_tail = Some(link);
-            if node.deps_head.is_none() {
+            if prev_dep.is_none() {
                 node.deps_head = Some(link);
             }
         }
@@ -877,6 +877,27 @@ mod tests {
         assert_eq!(graph.link_count(), 1);
         assert_eq!(graph.dependencies(effect), vec![first]);
         assert_eq!(graph.subscriber_count(first), 1);
+        assert_eq!(graph.subscriber_count(second), 0);
+    }
+
+    #[test]
+    fn graph_replaces_the_first_dependency_without_leaving_a_stale_head() {
+        let mut graph = Graph::default();
+        let first = graph.add_node(NodeKind::Dependency);
+        let second = graph.add_node(NodeKind::Dependency);
+        let effect = graph.add_node(NodeKind::Effect(7));
+
+        let outer = graph.begin_tracking(effect).unwrap();
+        assert!(graph.track(first));
+        graph.end_tracking(effect, outer);
+
+        let outer = graph.begin_tracking(effect).unwrap();
+        assert!(graph.track(second));
+        graph.end_tracking(effect, outer);
+
+        assert_eq!(graph.dependencies(effect), vec![second]);
+        assert!(graph.remove_node(effect));
+        assert_eq!(graph.link_count(), 0);
         assert_eq!(graph.subscriber_count(second), 0);
     }
 

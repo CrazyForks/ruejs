@@ -844,11 +844,12 @@ export const createQuerySync = (options: QuerySyncPluginOptions): StorePlugin =>
   }
 
   const ensureListener = () => {
-    // 有至少一个有效绑定时才注册 popstate 监听。
+    // 同时监听浏览器回退和 Router 的程序化 History API 导航。
     if (!canUseBrowser() || listening) {
       return
     }
     browser.addEventListener?.('popstate', handlePopState)
+    browser.addEventListener?.('rue:history-change', handlePopState)
     listening = true
   }
 
@@ -858,6 +859,7 @@ export const createQuerySync = (options: QuerySyncPluginOptions): StorePlugin =>
       return
     }
     browser.removeEventListener?.('popstate', handlePopState)
+    browser.removeEventListener?.('rue:history-change', handlePopState)
     listening = false
     clearScheduledFlush()
   }

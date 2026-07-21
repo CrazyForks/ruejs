@@ -100,6 +100,10 @@ export const scheduleNavigationPageLoad = (
     if (!isCurrent()) {
       return
     }
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+    if (!isCurrent()) {
+      return
+    }
     const announcer = ensureRouteAnnouncer()
     if (announcer) {
       announcer.textContent = getAnnouncementText(detail.to)

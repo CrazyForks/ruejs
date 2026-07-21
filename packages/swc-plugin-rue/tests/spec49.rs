@@ -101,6 +101,10 @@ const About: FC<{
             _$setAttribute(_el3, "href", String(RouterLink.__rueHref("/page/about/faq")));
         });
         _$addEventListener(_el3, "click", ((e)=>RouterLink.__rueOnClick(e, "/page/about/faq", false)));
+        _$addEventListener(_el3, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/faq", "hover")));
+        _$addEventListener(_el3, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/faq", "hover")));
+        _$addEventListener(_el3, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/faq", "hover")));
+        _$addEventListener(_el3, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/faq", "hover")));
         _$addEventListener(_el3, "mousedown", (()=>setOpen(false)));
         _$appendChild(_el3, _$createTextNode("常见问题"));
         const _el4 = _$createElement("li");
@@ -111,6 +115,10 @@ const About: FC<{
             _$setAttribute(_el5, "href", String(RouterLink.__rueHref("/page/about/team")));
         });
         _$addEventListener(_el5, "click", ((e)=>RouterLink.__rueOnClick(e, "/page/about/team", false)));
+        _$addEventListener(_el5, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/team", "hover")));
+        _$addEventListener(_el5, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/team", "hover")));
+        _$addEventListener(_el5, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/team", "hover")));
+        _$addEventListener(_el5, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/team", "hover")));
         _$addEventListener(_el5, "mousedown", (()=>setOpen(false)));
         _$appendChild(_el5, _$createTextNode("团队"));
         const _el6 = _$createElement("li");
@@ -121,6 +129,10 @@ const About: FC<{
             _$setAttribute(_el7, "href", String(RouterLink.__rueHref("/page/about/releases")));
         });
         _$addEventListener(_el7, "click", ((e)=>RouterLink.__rueOnClick(e, "/page/about/releases", false)));
+        _$addEventListener(_el7, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/releases", "hover")));
+        _$addEventListener(_el7, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/releases", "hover")));
+        _$addEventListener(_el7, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/releases", "hover")));
+        _$addEventListener(_el7, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/releases", "hover")));
         _$addEventListener(_el7, "mousedown", (()=>setOpen(false)));
         _$appendChild(_el7, _$createTextNode("版本发布"));
         const _el8 = _$createElement("li");
@@ -131,6 +143,10 @@ const About: FC<{
             _$setAttribute(_el9, "href", String(RouterLink.__rueHref("/page/about/community-guide")));
         });
         _$addEventListener(_el9, "click", ((e)=>RouterLink.__rueOnClick(e, "/page/about/community-guide", false)));
+        _$addEventListener(_el9, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/community-guide", "hover")));
+        _$addEventListener(_el9, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/community-guide", "hover")));
+        _$addEventListener(_el9, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/community-guide", "hover")));
+        _$addEventListener(_el9, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/community-guide", "hover")));
         _$addEventListener(_el9, "mousedown", (()=>setOpen(false)));
         _$appendChild(_el9, _$createTextNode("社区指南"));
         const _el10 = _$createElement("li");
@@ -141,6 +157,10 @@ const About: FC<{
             _$setAttribute(_el11, "href", String(RouterLink.__rueHref("/page/about/coc")));
         });
         _$addEventListener(_el11, "click", ((e)=>RouterLink.__rueOnClick(e, "/page/about/coc", false)));
+        _$addEventListener(_el11, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/coc", "hover")));
+        _$addEventListener(_el11, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/coc", "hover")));
+        _$addEventListener(_el11, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/coc", "hover")));
+        _$addEventListener(_el11, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/coc", "hover")));
         _$addEventListener(_el11, "mousedown", (()=>setOpen(false)));
         watchEffect(()=>{
             _$setAttribute(_el11, "hello", String(()=>console.log('hello')));
@@ -154,6 +174,10 @@ const About: FC<{
             _$setAttribute(_el13, "href", String(RouterLink.__rueHref("/page/about/privacy")));
         });
         _$addEventListener(_el13, "click", ((e)=>RouterLink.__rueOnClick(e, "/page/about/privacy", false)));
+        _$addEventListener(_el13, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/privacy", "hover")));
+        _$addEventListener(_el13, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/privacy", "hover")));
+        _$addEventListener(_el13, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/privacy", "hover")));
+        _$addEventListener(_el13, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/privacy", "hover")));
         _$addEventListener(_el13, "mousedown", (()=>setOpen(false)));
         _$appendChild(_el13, _$createTextNode("隐私政策"));
         const _el14 = _$createElement("li");
@@ -164,6 +188,10 @@ const About: FC<{
             _$setAttribute(_el15, "href", String(RouterLink.__rueHref("/page/about/number")));
         });
         _$addEventListener(_el15, "click", ((e)=>RouterLink.__rueOnClick(e, "/page/about/number", false)));
+        _$addEventListener(_el15, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/number", "hover")));
+        _$addEventListener(_el15, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/number", "hover")));
+        _$addEventListener(_el15, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/number", "hover")));
+        _$addEventListener(_el15, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/number", "hover")));
         _$addEventListener(_el15, "mousedown", (()=>setOpen(false)));
         const _el16 = _$createTextWrapper(_el15);
         _$appendChild(_el15, _el16);
@@ -176,6 +204,10 @@ const About: FC<{
             _$setAttribute(_el18, "href", String(RouterLink.__rueHref("/page/about/expr")));
         });
         _$addEventListener(_el18, "click", ((e)=>RouterLink.__rueOnClick(e, "/page/about/expr", false)));
+        _$addEventListener(_el18, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/expr", "hover")));
+        _$addEventListener(_el18, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/expr", "hover")));
+        _$addEventListener(_el18, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/expr", "hover")));
+        _$addEventListener(_el18, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/expr", "hover")));
         _$addEventListener(_el18, "mousedown", (()=>setOpen(false)));
         const _el19 = _$createTextWrapper(_el18);
         _$appendChild(_el18, _el19);
@@ -190,6 +222,10 @@ const About: FC<{
             _$setAttribute(_el21, "href", String(RouterLink.__rueHref("/page/about/template")));
         });
         _$addEventListener(_el21, "click", ((e)=>RouterLink.__rueOnClick(e, "/page/about/template", false)));
+        _$addEventListener(_el21, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/template", "hover")));
+        _$addEventListener(_el21, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/template", "hover")));
+        _$addEventListener(_el21, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/template", "hover")));
+        _$addEventListener(_el21, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/template", "hover")));
         _$addEventListener(_el21, "mousedown", (()=>setOpen(false)));
         const _el22 = _$createTextWrapper(_el21);
         _$appendChild(_el21, _el22);
@@ -204,6 +240,10 @@ const About: FC<{
             _$setAttribute(_el24, "href", String(RouterLink.__rueHref("/page/about/cond")));
         });
         _$addEventListener(_el24, "click", ((e)=>RouterLink.__rueOnClick(e, "/page/about/cond", false)));
+        _$addEventListener(_el24, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/cond", "hover")));
+        _$addEventListener(_el24, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/cond", "hover")));
+        _$addEventListener(_el24, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/cond", "hover")));
+        _$addEventListener(_el24, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/page/about/cond", "hover")));
         _$addEventListener(_el24, "mousedown", (()=>setOpen(false)));
         const _el25 = _$createTextWrapper(_el24);
         _$appendChild(_el24, _el25);

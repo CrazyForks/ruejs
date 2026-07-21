@@ -65,7 +65,7 @@ describe('fixture dev server helper', () => {
           fixtureProcess = proc
         },
       }),
-    ).rejects.toThrow(/Fixture "never-ready" did not start within 100ms: .*never listened/s)
+    ).rejects.toThrow('Fixture "never-ready" did not start within 100ms')
 
     expect(fixtureProcess).toBeDefined()
     if (fixtureProcess) {

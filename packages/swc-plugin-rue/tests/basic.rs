@@ -71,6 +71,10 @@ const BasicElements: FC = ()=>vapor((__rue_parent_context)=>{
             _$setAttribute(_el8, "href", String(RouterLink.__rueHref("/jsx")));
         });
         _$addEventListener(_el8, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
+        _$addEventListener(_el8, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el8, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el8, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el8, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
         _$setClassName(_el8, "text-blue-600 hover:underline");
         _$appendChild(_el8, _$createTextNode("返回目录"));
         return _root;
@@ -168,6 +172,10 @@ const Expressions: FC = ()=>vapor((__rue_parent_context)=>{
             _$setAttribute(_el10, "href", String(RouterLink.__rueHref("/jsx")));
         });
         _$addEventListener(_el10, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
+        _$addEventListener(_el10, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el10, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el10, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
+        _$addEventListener(_el10, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
         _$setClassName(_el10, "text-blue-600 hover:underline");
         _$appendChild(_el10, _$createTextNode("返回目录"));
         return _root;

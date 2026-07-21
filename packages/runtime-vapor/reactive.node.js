@@ -179,7 +179,7 @@ const normalizeWatchSource = source => {
     return source.map(normalizeWatchSource)
   }
   if (isRef(source)) {
-    return () => source.value
+    return () => (typeof source.get === 'function' ? source.get() : source.value)
   }
   return source
 }
