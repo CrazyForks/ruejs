@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": "docs",
-  "files": 94,
+  "files": 92,
   "blocks": [
     {
       "id": "about/astro-islands-alignment:0",
@@ -653,215 +653,6 @@
       "searchText": "社区指南 翻译文档 希望此刻你正以自己偏好的语言阅读这句话。如果不是，你愿意帮助我们实现这个目标吗？ about/community-guide"
     },
     {
-      "id": "about/compat-policy:0",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-compat-策略与发布清单",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "Compat 策略与发布清单",
-      "type": "heading",
-      "text": "Compat 策略与发布清单",
-      "searchText": "compat 策略与发布清单 compat 策略与发布清单 compat 策略与发布清单 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:1",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-compat-策略与发布清单",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "Compat 策略与发布清单",
-      "type": "paragraph",
-      "text": "本页用于说明 Rue 当前对历史 compat / 旧桥接协议的最终策略，以及涉及这类 breaking removal 时的发布检查项。",
-      "searchText": "compat 策略与发布清单 compat 策略与发布清单 本页用于说明 rue 当前对历史 compat / 旧桥接协议的最终策略，以及涉及这类 breaking removal 时的发布检查项。 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:2",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-当前策略",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "当前策略",
-      "type": "heading",
-      "text": "当前策略",
-      "searchText": "compat 策略与发布清单 当前策略 当前策略 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:3",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-当前策略",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "当前策略",
-      "type": "paragraph",
-      "text": "Rue 默认渲染路径已经完全围绕 Block / Vapor / Renderable-first 组织。显式 compat 子路径已作为 breaking change 删除：",
-      "searchText": "compat 策略与发布清单 当前策略 rue 默认渲染路径已经完全围绕 block / vapor / renderable-first 组织。显式 compat 子路径已作为 breaking change 删除： about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:4",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-当前策略",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "当前策略",
-      "type": "list",
-      "text": "@rue-js/runtime/compat @rue-js/rue/compat",
-      "searchText": "compat 策略与发布清单 当前策略 @rue-js/runtime/compat @rue-js/rue/compat about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:5",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-当前策略",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "当前策略",
-      "type": "paragraph",
-      "text": "同时移除的历史 helper 包括：",
-      "searchText": "compat 策略与发布清单 当前策略 同时移除的历史 helper 包括： about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:6",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-当前策略",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "当前策略",
-      "type": "list",
-      "text": "$vaporCreateVNode renderCompat renderBetweenCompat renderAnchorCompat renderStaticCompat",
-      "searchText": "compat 策略与发布清单 当前策略 $vaporcreatevnode rendercompat renderbetweencompat renderanchorcompat renderstaticcompat about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:7",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-当前策略",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "当前策略",
-      "type": "paragraph",
-      "text": "这意味着 compat 不再是“继续保留一个迁移周期的显式边界”，而是已经完成删除的旧协议。",
-      "searchText": "compat 策略与发布清单 当前策略 这意味着 compat 不再是“继续保留一个迁移周期的显式边界”，而是已经完成删除的旧协议。 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:8",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-迁移原则",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "迁移原则",
-      "type": "heading",
-      "text": "迁移原则",
-      "searchText": "compat 策略与发布清单 迁移原则 迁移原则 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:9",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-迁移原则",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "迁移原则",
-      "type": "paragraph",
-      "text": "旧代码需要直接改写为默认路径能力，而不是继续寻找新的 compat 导入点：",
-      "searchText": "compat 策略与发布清单 迁移原则 旧代码需要直接改写为默认路径能力，而不是继续寻找新的 compat 导入点： about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:10",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-迁移原则",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "迁移原则",
-      "type": "list",
-      "text": "默认内容优先使用 children、render prop、callback props。 直接返回 raw node / fragment / mount handle，而不是继续手写旧桥接对象。 使用默认 render、renderBetween、renderAnchor、renderStatic，不要再包一层 compat render helper。 组件库内部若仍有历史桥接层，应在本轮升级中一并删除，而不是继续向应用层暴露兼容协议。",
-      "searchText": "compat 策略与发布清单 迁移原则 默认内容优先使用 children、render prop、callback props。 直接返回 raw node / fragment / mount handle，而不是继续手写旧桥接对象。 使用默认 render、renderbetween、renderanchor、renderstatic，不要再包一层 compat render helper。 组件库内部若仍有历史桥接层，应在本轮升级中一并删除，而不是继续向应用层暴露兼容协议。 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:11",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-发布清单",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "发布清单",
-      "type": "heading",
-      "text": "发布清单",
-      "searchText": "compat 策略与发布清单 发布清单 发布清单 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:12",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-发布清单",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "发布清单",
-      "type": "paragraph",
-      "text": "当一次改动涉及历史 compat / 旧桥接 helper 的删除时，发布前至少检查下面这些项：",
-      "searchText": "compat 策略与发布清单 发布清单 当一次改动涉及历史 compat / 旧桥接 helper 的删除时，发布前至少检查下面这些项： about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:13",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-发布清单",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "发布清单",
-      "type": "list",
-      "text": "package exports、dist 与 d.ts 产物里已不存在 compat 子路径。 默认主入口不再暴露 compat-only helper，也不再暗示存在替代 compat 导入。 迁移文档明确把旧 helper 标记为 breaking removal，并给出默认路径写法。 focused regression 覆盖默认 render 入口、Teleport / Transition / async component 等敏感边界。 发布说明明确写出受影响导入路径、删除的 helper 名称，以及推荐替代模式。",
-      "searchText": "compat 策略与发布清单 发布清单 package exports、dist 与 d.ts 产物里已不存在 compat 子路径。 默认主入口不再暴露 compat-only helper，也不再暗示存在替代 compat 导入。 迁移文档明确把旧 helper 标记为 breaking removal，并给出默认路径写法。 focused regression 覆盖默认 render 入口、teleport / transition / async component 等敏感边界。 发布说明明确写出受影响导入路径、删除的 helper 名称，以及推荐替代模式。 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:14",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-对库作者的建议",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "对库作者的建议",
-      "type": "heading",
-      "text": "对库作者的建议",
-      "searchText": "compat 策略与发布清单 对库作者的建议 对库作者的建议 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:15",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-对库作者的建议",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "对库作者的建议",
-      "type": "paragraph",
-      "text": "如果你维护的是组件库、指令库或预编译产物，请优先遵循以下策略：",
-      "searchText": "compat 策略与发布清单 对库作者的建议 如果你维护的是组件库、指令库或预编译产物，请优先遵循以下策略： about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:16",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-对库作者的建议",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "对库作者的建议",
-      "type": "list",
-      "text": "不要再依赖 compat 子路径或历史桥接 helper。 在 peer 依赖中声明最低运行时版本，避免旧运行时消费新产物时出现隐式不兼容。 尽量把新代码迁到 props.children、render prop、显式命名 props 等默认路径。",
-      "searchText": "compat 策略与发布清单 对库作者的建议 不要再依赖 compat 子路径或历史桥接 helper。 在 peer 依赖中声明最低运行时版本，避免旧运行时消费新产物时出现隐式不兼容。 尽量把新代码迁到 props.children、render prop、显式命名 props 等默认路径。 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:17",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-当前结论",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "当前结论",
-      "type": "heading",
-      "text": "当前结论",
-      "searchText": "compat 策略与发布清单 当前结论 当前结论 about/compat-policy"
-    },
-    {
-      "id": "about/compat-policy:18",
-      "docId": "about/compat-policy",
-      "route": "/page/about/compat-policy",
-      "href": "/page/about/compat-policy#-当前结论",
-      "title": "Compat 策略与发布清单",
-      "sectionTitle": "当前结论",
-      "type": "list",
-      "text": "compat 子路径已移除。 默认主入口继续保持 Renderable-first。 新代码不应继续依赖历史桥接 helper 或显式 compat 层。",
-      "searchText": "compat 策略与发布清单 当前结论 compat 子路径已移除。 默认主入口继续保持 renderable-first。 新代码不应继续依赖历史桥接 helper 或显式 compat 层。 about/compat-policy"
-    },
-    {
       "id": "about/faq:0",
       "docId": "about/faq",
       "route": "/page/about/faq",
@@ -1221,8 +1012,8 @@
       "title": "发布与版本",
       "sectionTitle": "发布与版本",
       "type": "paragraph",
-      "text": "完整的历史发布记录可在项目的变更日志（CHANGELOG）中查看。发布说明会涵盖新特性、修复、潜在不兼容项以及迁移建议。",
-      "searchText": "发布与版本 发布与版本 完整的历史发布记录可在项目的变更日志（changelog）中查看。发布说明会涵盖新特性、修复、潜在不兼容项以及迁移建议。 about/releases"
+      "text": "完整的历史发布记录可在项目的变更日志（CHANGELOG）中查看。发布说明会涵盖新特性、修复与重要调整。",
+      "searchText": "发布与版本 发布与版本 完整的历史发布记录可在项目的变更日志（changelog）中查看。发布说明会涵盖新特性、修复与重要调整。 about/releases"
     },
     {
       "id": "about/releases:3",
@@ -1254,8 +1045,8 @@
       "title": "发布与版本",
       "sectionTitle": "发布节奏",
       "type": "list",
-      "text": "修补版本（patch）：按需发布，集中解决缺陷与小型改进 小版本（minor）：引入新特性并提升体验，通常间隔数月；在正式发布前会经历 beta 预发布阶段 大版本（major）：提前预告并展开早期讨论，随后进入 alpha / beta 等预发布阶段，以充分收集反馈与完善迁移文档",
-      "searchText": "发布与版本 发布节奏 修补版本（patch）：按需发布，集中解决缺陷与小型改进 小版本（minor）：引入新特性并提升体验，通常间隔数月；在正式发布前会经历 beta 预发布阶段 大版本（major）：提前预告并展开早期讨论，随后进入 alpha / beta 等预发布阶段，以充分收集反馈与完善迁移文档 about/releases"
+      "text": "修补版本（patch）：按需发布，集中解决缺陷与小型改进 小版本（minor）：引入新特性并提升体验，通常间隔数月；在正式发布前会经历 beta 预发布阶段 大版本（major）：提前预告并展开早期讨论，随后进入 alpha / beta 等预发布阶段，以充分收集反馈",
+      "searchText": "发布与版本 发布节奏 修补版本（patch）：按需发布，集中解决缺陷与小型改进 小版本（minor）：引入新特性并提升体验，通常间隔数月；在正式发布前会经历 beta 预发布阶段 大版本（major）：提前预告并展开早期讨论，随后进入 alpha / beta 等预发布阶段，以充分收集反馈 about/releases"
     },
     {
       "id": "about/releases:6",
@@ -1327,72 +1118,6 @@
       "id": "about/releases:12",
       "docId": "about/releases",
       "route": "/page/about/releases",
-      "href": "/page/about/releases#-预编译产物与旧运行时的兼容性",
-      "title": "发布与版本",
-      "sectionTitle": "预编译产物与旧运行时的兼容性",
-      "type": "heading",
-      "text": "预编译产物与旧运行时的兼容性",
-      "searchText": "发布与版本 预编译产物与旧运行时的兼容性 预编译产物与旧运行时的兼容性 about/releases"
-    },
-    {
-      "id": "about/releases:13",
-      "docId": "about/releases",
-      "route": "/page/about/releases",
-      "href": "/page/about/releases#-预编译产物与旧运行时的兼容性",
-      "title": "发布与版本",
-      "sectionTitle": "预编译产物与旧运行时的兼容性",
-      "type": "paragraph",
-      "text": "较新的 Rue 编译器（小版本）可能生成对旧运行时（较早小版本）不完全兼容的代码。对于应用开发者，编译器与运行时版本通常一致，因此影响有限；但对库作者而言，如果你分发的是预编译的组件或指令代码，被更旧版本的运行时消费时可能出现行为差异。此时建议在包的 peer 依赖中明确最低要求的小版本。",
-      "searchText": "发布与版本 预编译产物与旧运行时的兼容性 较新的 rue 编译器（小版本）可能生成对旧运行时（较早小版本）不完全兼容的代码。对于应用开发者，编译器与运行时版本通常一致，因此影响有限；但对库作者而言，如果你分发的是预编译的组件或指令代码，被更旧版本的运行时消费时可能出现行为差异。此时建议在包的 peer 依赖中明确最低要求的小版本。 about/releases"
-    },
-    {
-      "id": "about/releases:14",
-      "docId": "about/releases",
-      "route": "/page/about/releases",
-      "href": "/page/about/releases#-默认渲染路径与-compat-删除",
-      "title": "发布与版本",
-      "sectionTitle": "默认渲染路径与 compat 删除",
-      "type": "heading",
-      "text": "默认渲染路径与 compat 删除",
-      "searchText": "发布与版本 默认渲染路径与 compat 删除 默认渲染路径与 compat 删除 about/releases"
-    },
-    {
-      "id": "about/releases:15",
-      "docId": "about/releases",
-      "route": "/page/about/releases",
-      "href": "/page/about/releases#-默认渲染路径与-compat-删除",
-      "title": "发布与版本",
-      "sectionTitle": "默认渲染路径与 compat 删除",
-      "type": "paragraph",
-      "text": "Rue 当前默认渲染路径已经切到 Block / Vapor / Renderable-first。与此同时，显式 compat 子路径也已经作为 breaking change 删除。也就是说：",
-      "searchText": "发布与版本 默认渲染路径与 compat 删除 rue 当前默认渲染路径已经切到 block / vapor / renderable-first。与此同时，显式 compat 子路径也已经作为 breaking change 删除。也就是说： about/releases"
-    },
-    {
-      "id": "about/releases:16",
-      "docId": "about/releases",
-      "route": "/page/about/releases",
-      "href": "/page/about/releases#-默认渲染路径与-compat-删除",
-      "title": "发布与版本",
-      "sectionTitle": "默认渲染路径与 compat 删除",
-      "type": "list",
-      "text": "主入口默认描述的是当前渲染路径 @rue-js/runtime/compat 与 @rue-js/rue/compat 已不存在 \\$vaporCreateVNode 与 renderCompat 系列 helper 已移除 默认公开 helper 会继续围绕 MountInput / mounted snapshot 组织，而不是继续扩大历史桥接对象契约",
-      "searchText": "发布与版本 默认渲染路径与 compat 删除 主入口默认描述的是当前渲染路径 @rue-js/runtime/compat 与 @rue-js/rue/compat 已不存在 \\$vaporcreatevnode 与 rendercompat 系列 helper 已移除 默认公开 helper 会继续围绕 mountinput / mounted snapshot 组织，而不是继续扩大历史桥接对象契约 about/releases"
-    },
-    {
-      "id": "about/releases:17",
-      "docId": "about/releases",
-      "route": "/page/about/releases",
-      "href": "/page/about/releases#-默认渲染路径与-compat-删除",
-      "title": "发布与版本",
-      "sectionTitle": "默认渲染路径与 compat 删除",
-      "type": "paragraph",
-      "text": "如果你维护的是旧的手写渲染 helper、历史 render-function 桥接或预编译产物，请直接改写到默认路径，而不是继续寻找 compat 替代导入。当前迁移指引见 默认 Block / Vapor 路径迁移。",
-      "searchText": "发布与版本 默认渲染路径与 compat 删除 如果你维护的是旧的手写渲染 helper、历史 render-function 桥接或预编译产物，请直接改写到默认路径，而不是继续寻找 compat 替代导入。当前迁移指引见 默认 block / vapor 路径迁移。 about/releases"
-    },
-    {
-      "id": "about/releases:18",
-      "docId": "about/releases",
-      "route": "/page/about/releases",
       "href": "/page/about/releases#-预发布版本",
       "title": "发布与版本",
       "sectionTitle": "预发布版本",
@@ -1401,7 +1126,7 @@
       "searchText": "发布与版本 预发布版本 预发布版本 about/releases"
     },
     {
-      "id": "about/releases:19",
+      "id": "about/releases:13",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#-预发布版本",
@@ -1412,7 +1137,7 @@
       "searchText": "发布与版本 预发布版本 小版本通常会经历若干次 beta 预发布；大版本则会经历 alpha 与 beta 阶段。rue 也可能通过 npm 标签（如 next / beta）提供早期构建用于集成与稳定性测试。 about/releases"
     },
     {
-      "id": "about/releases:20",
+      "id": "about/releases:14",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#-预发布版本",
@@ -1423,51 +1148,7 @@
       "searchText": "发布与版本 预发布版本 预发布版本仅用于验证与收集反馈，请勿在生产环境使用。预发布之间可能出现破坏性变更，若需要试用请固定到确切版本号并关注发布说明。 about/releases"
     },
     {
-      "id": "about/releases:21",
-      "docId": "about/releases",
-      "route": "/page/about/releases",
-      "href": "/page/about/releases#-弃用策略",
-      "title": "发布与版本",
-      "sectionTitle": "弃用策略",
-      "type": "heading",
-      "text": "弃用策略",
-      "searchText": "发布与版本 弃用策略 弃用策略 about/releases"
-    },
-    {
-      "id": "about/releases:22",
-      "docId": "about/releases",
-      "route": "/page/about/releases",
-      "href": "/page/about/releases#-弃用策略",
-      "title": "发布与版本",
-      "sectionTitle": "弃用策略",
-      "type": "paragraph",
-      "text": "Rue 会在小版本中逐步引入更好的替代方案，并将旧特性标记为“弃用”。被弃用的能力在当前主版本中仍可使用，但会在下一个主版本移除。我们会在发布说明中注明弃用条目与迁移路径。",
-      "searchText": "发布与版本 弃用策略 rue 会在小版本中逐步引入更好的替代方案，并将旧特性标记为“弃用”。被弃用的能力在当前主版本中仍可使用，但会在下一个主版本移除。我们会在发布说明中注明弃用条目与迁移路径。 about/releases"
-    },
-    {
-      "id": "about/releases:23",
-      "docId": "about/releases",
-      "route": "/page/about/releases",
-      "href": "/page/about/releases#-弃用策略",
-      "title": "发布与版本",
-      "sectionTitle": "弃用策略",
-      "type": "paragraph",
-      "text": "对涉及默认渲染路径、compat 子路径、预编译产物边界的调整，发布说明会明确包含以下信息：",
-      "searchText": "发布与版本 弃用策略 对涉及默认渲染路径、compat 子路径、预编译产物边界的调整，发布说明会明确包含以下信息： about/releases"
-    },
-    {
-      "id": "about/releases:24",
-      "docId": "about/releases",
-      "route": "/page/about/releases",
-      "href": "/page/about/releases#-弃用策略",
-      "title": "发布与版本",
-      "sectionTitle": "弃用策略",
-      "type": "list",
-      "text": "主入口是否发生默认语义变化 已删除的 compat 命名或旧 helper 是否被重新引入 旧 helper / 旧导入路径的替代写法 库作者在 peer 依赖和预编译产物上的最低版本要求",
-      "searchText": "发布与版本 弃用策略 主入口是否发生默认语义变化 已删除的 compat 命名或旧 helper 是否被重新引入 旧 helper / 旧导入路径的替代写法 库作者在 peer 依赖和预编译产物上的最低版本要求 about/releases"
-    },
-    {
-      "id": "about/releases:25",
+      "id": "about/releases:15",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#-rfc-流程",
@@ -1478,7 +1159,7 @@
       "searchText": "发布与版本 rfc 流程 rfc 流程 about/releases"
     },
     {
-      "id": "about/releases:26",
+      "id": "about/releases:16",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#-rfc-流程",
@@ -1489,7 +1170,7 @@
       "searchText": "发布与版本 rfc 流程 具有较大 api 面或重要架构变更的提案，会进入 rfc（征求意见） 流程。我们通过公开讨论确保演进路径清晰、风险可控，并邀请社区参与设计反馈。相关讨论通常在 rue 的 github 仓库提案与讨论区进行。 about/releases"
     },
     {
-      "id": "about/releases:27",
+      "id": "about/releases:17",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1500,7 +1181,7 @@
       "searchText": "发布与版本 实验性特性 实验性特性 about/releases"
     },
     {
-      "id": "about/releases:28",
+      "id": "about/releases:18",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1511,7 +1192,7 @@
       "searchText": "发布与版本 实验性特性 部分能力会在稳定版文档中出现，但标注为“实验性”。这类特性通常已经在纸面设计（或 rfc）上解决了主要问题，但仍缺少真实项目规模使用的反馈。实验性特性应在可控范围内试用，并预期在任意发布类型中可能发生变更。 about/releases"
     },
     {
-      "id": "about/releases:29",
+      "id": "about/releases:19",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1522,7 +1203,7 @@
       "searchText": "发布与版本 实验性特性 --- about/releases"
     },
     {
-      "id": "about/releases:30",
+      "id": "about/releases:20",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1533,7 +1214,7 @@
       "searchText": "发布与版本 实验性特性 在本仓库中，你可以使用以下脚本管理版本与发布说明： about/releases"
     },
     {
-      "id": "about/releases:31",
+      "id": "about/releases:21",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1544,7 +1225,7 @@
       "searchText": "发布与版本 实验性特性 $ pnpm changelog about/releases"
     },
     {
-      "id": "about/releases:32",
+      "id": "about/releases:22",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1555,7 +1236,7 @@
       "searchText": "发布与版本 实验性特性 $ pnpm release about/releases"
     },
     {
-      "id": "about/releases:33",
+      "id": "about/releases:23",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -11334,50 +11015,6 @@
       "searchText": "快速上手 快速上手 import { createrouter } from '@rue-js/router' import home from '../pages/home' import about from '../pages/about' export default createrouter({ history: 'hash', routes: [ { path: '/', component: home }, { path: '/about', component: about }, ], }) getting-started"
     },
     {
-      "id": "getting-started:7",
-      "docId": "getting-started",
-      "route": "/page/getting-started",
-      "href": "/page/getting-started#-关于默认渲染路径",
-      "title": "快速上手",
-      "sectionTitle": "关于默认渲染路径",
-      "type": "heading",
-      "text": "关于默认渲染路径",
-      "searchText": "快速上手 关于默认渲染路径 关于默认渲染路径 getting-started"
-    },
-    {
-      "id": "getting-started:8",
-      "docId": "getting-started",
-      "route": "/page/getting-started",
-      "href": "/page/getting-started#-关于默认渲染路径",
-      "title": "快速上手",
-      "sectionTitle": "关于默认渲染路径",
-      "type": "paragraph",
-      "text": "Rue 当前默认会把模板和 JSX 编译成 Block / Vapor 导向的渲染产物。大多数应用不需要手写历史渲染 helper，也不需要感知任何 compat 层。",
-      "searchText": "快速上手 关于默认渲染路径 rue 当前默认会把模板和 jsx 编译成 block / vapor 导向的渲染产物。大多数应用不需要手写历史渲染 helper，也不需要感知任何 compat 层。 getting-started"
-    },
-    {
-      "id": "getting-started:9",
-      "docId": "getting-started",
-      "route": "/page/getting-started",
-      "href": "/page/getting-started#-关于默认渲染路径",
-      "title": "快速上手",
-      "sectionTitle": "关于默认渲染路径",
-      "type": "paragraph",
-      "text": "如果你在迁移历史代码，并且还在使用旧的手写渲染 helper，需要直接改写到默认 Renderable / children / raw node 路径。显式 compat 子路径已经删除，不再提供过渡导入。",
-      "searchText": "快速上手 关于默认渲染路径 如果你在迁移历史代码，并且还在使用旧的手写渲染 helper，需要直接改写到默认 renderable / children / raw node 路径。显式 compat 子路径已经删除，不再提供过渡导入。 getting-started"
-    },
-    {
-      "id": "getting-started:10",
-      "docId": "getting-started",
-      "route": "/page/getting-started",
-      "href": "/page/getting-started#-关于默认渲染路径",
-      "title": "快速上手",
-      "sectionTitle": "关于默认渲染路径",
-      "type": "paragraph",
-      "text": "迁移细节见 默认 Block / Vapor 路径迁移。",
-      "searchText": "快速上手 关于默认渲染路径 迁移细节见 默认 block / vapor 路径迁移。 getting-started"
-    },
-    {
       "id": "glossary/index:0",
       "docId": "glossary/index",
       "route": "/page/glossary/index",
@@ -12782,8 +12419,8 @@
       "title": "术语表",
       "sectionTitle": "渲染函数",
       "type": "paragraph",
-      "text": "渲染函数是组件中生成渲染输出的部分。模板或 JSX 可以被编译成更接近 Block / Vapor / Renderable 的产物，而手写渲染函数则通过 h() 等 API 显式描述输出边界。",
-      "searchText": "术语表 渲染函数 渲染函数是组件中生成渲染输出的部分。模板或 jsx 可以被编译成更接近 block / vapor / renderable 的产物，而手写渲染函数则通过 h() 等 api 显式描述输出边界。 glossary/index"
+      "text": "渲染函数是组件中生成渲染输出的部分。模板或 JSX 可以被编译成更接近 Renderable / Block 的产物，而手写渲染函数则通过 h() 等 API 显式描述输出边界。",
+      "searchText": "术语表 渲染函数 渲染函数是组件中生成渲染输出的部分。模板或 jsx 可以被编译成更接近 renderable / block 的产物，而手写渲染函数则通过 h() 等 api 显式描述输出边界。 glossary/index"
     },
     {
       "id": "glossary/index:128",
@@ -34177,8 +33814,8 @@
       "title": "深入响应式系统",
       "sectionTitle": "与 Signals 的连接",
       "type": "paragraph",
-      "text": "虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。Rue 的组件、响应式 API 与默认渲染路径都共享这套细粒度依赖追踪；编译器会把结构信息下沉到运行时，并通过编译器知情的渲染路径把更新收敛到更小的动态边界。",
-      "searchText": "深入响应式系统 与 signals 的连接 虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。rue 的组件、响应式 api 与默认渲染路径都共享这套细粒度依赖追踪；编译器会把结构信息下沉到运行时，并通过编译器知情的渲染路径把更新收敛到更小的动态边界。 guide/extras/reactivity-in-depth"
+      "text": "虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。Rue 的组件、响应式 API 与渲染路径都共享这套细粒度依赖追踪；编译器会把结构信息下沉到运行时，并通过编译器知情的渲染路径把更新收敛到更小的动态边界。",
+      "searchText": "深入响应式系统 与 signals 的连接 虽然不是某物有资格成为 signals 的必要特征，但如今这个概念经常与通过细粒度订阅执行更新的渲染模型一起讨论。rue 的组件、响应式 api 与渲染路径都共享这套细粒度依赖追踪；编译器会把结构信息下沉到运行时，并通过编译器知情的渲染路径把更新收敛到更小的动态边界。 guide/extras/reactivity-in-depth"
     },
     {
       "id": "guide/extras/reactivity-in-depth:89",
@@ -34188,363 +33825,11 @@
       "title": "深入响应式系统",
       "sectionTitle": "与 Signals 的连接",
       "type": "paragraph",
-      "text": "这也是 Rue 响应式系统与运行时结合的关键点：响应式依赖不只是决定“重新执行哪段代码”，还决定“重新接管哪个 block、哪个区间、哪个 DOM 边界”。 \\\\\\ Add File: /Users/Shared/work/dir/data/codes/rue/docs/guide/migration/renderable-default.md",
-      "searchText": "深入响应式系统 与 signals 的连接 这也是 rue 响应式系统与运行时结合的关键点：响应式依赖不只是决定“重新执行哪段代码”，还决定“重新接管哪个 block、哪个区间、哪个 dom 边界”。 \\\\\\ add file: /users/shared/work/dir/data/codes/rue/docs/guide/migration/renderable-default.md guide/extras/reactivity-in-depth"
+      "text": "这也是 Rue 响应式系统与运行时结合的关键点：响应式依赖不只是决定“重新执行哪段代码”，还决定“重新接管哪个 block、哪个区间、哪个 DOM 边界”。",
+      "searchText": "深入响应式系统 与 signals 的连接 这也是 rue 响应式系统与运行时结合的关键点：响应式依赖不只是决定“重新执行哪段代码”，还决定“重新接管哪个 block、哪个区间、哪个 dom 边界”。 guide/extras/reactivity-in-depth"
     },
     {
       "id": "guide/extras/reactivity-in-depth:90",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-默认-block-vapor-路径迁移",
-      "title": "深入响应式系统",
-      "sectionTitle": "默认 Block / Vapor 路径迁移",
-      "type": "heading",
-      "text": "默认 Block / Vapor 路径迁移",
-      "searchText": "深入响应式系统 默认 block / vapor 路径迁移 默认 block / vapor 路径迁移 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:91",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-默认-block-vapor-路径迁移",
-      "title": "深入响应式系统",
-      "sectionTitle": "默认 Block / Vapor 路径迁移",
-      "type": "paragraph",
-      "text": "Rue 当前默认的编译与运行时路径已经是 Block / Vapor / Renderable-first。对大多数应用来说，这只是内部实现升级，你仍然写模板或普通 JSX；但如果你维护的是旧的手写渲染 helper、库级桥接层或预编译产物，这一页就是你需要的迁移清单。",
-      "searchText": "深入响应式系统 默认 block / vapor 路径迁移 rue 当前默认的编译与运行时路径已经是 block / vapor / renderable-first。对大多数应用来说，这只是内部实现升级，你仍然写模板或普通 jsx；但如果你维护的是旧的手写渲染 helper、库级桥接层或预编译产物，这一页就是你需要的迁移清单。 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:92",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-谁需要关注这次迁移",
-      "title": "深入响应式系统",
-      "sectionTitle": "谁需要关注这次迁移",
-      "type": "heading",
-      "text": "谁需要关注这次迁移",
-      "searchText": "深入响应式系统 谁需要关注这次迁移 谁需要关注这次迁移 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:93",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-谁需要关注这次迁移",
-      "title": "深入响应式系统",
-      "sectionTitle": "谁需要关注这次迁移",
-      "type": "paragraph",
-      "text": "下面这些场景需要显式检查：",
-      "searchText": "深入响应式系统 谁需要关注这次迁移 下面这些场景需要显式检查： guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:94",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-谁需要关注这次迁移",
-      "title": "深入响应式系统",
-      "sectionTitle": "谁需要关注这次迁移",
-      "type": "list",
-      "text": "你从默认主入口导入过旧的手写渲染 helper 你手写过依赖旧渲染输出内部字段的渲染 helper 你分发的是预编译后的组件、指令或运行时桥接代码 你在库内部手动拼接 children / slot 对象以模拟旧渲染路径",
-      "searchText": "深入响应式系统 谁需要关注这次迁移 你从默认主入口导入过旧的手写渲染 helper 你手写过依赖旧渲染输出内部字段的渲染 helper 你分发的是预编译后的组件、指令或运行时桥接代码 你在库内部手动拼接 children / slot 对象以模拟旧渲染路径 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:95",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-谁需要关注这次迁移",
-      "title": "深入响应式系统",
-      "sectionTitle": "谁需要关注这次迁移",
-      "type": "paragraph",
-      "text": "如果你的应用只是写模板、普通 JSX、FC 组件和响应式状态，通常无需改动。",
-      "searchText": "深入响应式系统 谁需要关注这次迁移 如果你的应用只是写模板、普通 jsx、fc 组件和响应式状态，通常无需改动。 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:96",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-需要修改的导入",
-      "title": "深入响应式系统",
-      "sectionTitle": "需要修改的导入",
-      "type": "heading",
-      "text": "需要修改的导入",
-      "searchText": "深入响应式系统 需要修改的导入 需要修改的导入 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:97",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-需要修改的导入",
-      "title": "深入响应式系统",
-      "sectionTitle": "需要修改的导入",
-      "type": "paragraph",
-      "text": "默认主入口和显式 compat 子路径都已经不再提供这类 helper。历史导入现在都需要直接改写为默认 Renderable / children / raw node 路径，而不是切到新的 compat 导入。",
-      "searchText": "深入响应式系统 需要修改的导入 默认主入口和显式 compat 子路径都已经不再提供这类 helper。历史导入现在都需要直接改写为默认 renderable / children / raw node 路径，而不是切到新的 compat 导入。 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:98",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-推荐迁移方式",
-      "title": "深入响应式系统",
-      "sectionTitle": "推荐迁移方式",
-      "type": "heading",
-      "text": "推荐迁移方式",
-      "searchText": "深入响应式系统 推荐迁移方式 推荐迁移方式 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:99",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-1-新代码不要继续扩历史桥接边界",
-      "title": "深入响应式系统",
-      "sectionTitle": "新代码不要继续扩历史桥接边界",
-      "type": "heading",
-      "text": "新代码不要继续扩历史桥接边界",
-      "searchText": "深入响应式系统 新代码不要继续扩历史桥接边界 新代码不要继续扩历史桥接边界 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:100",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-1-新代码不要继续扩历史桥接边界",
-      "title": "深入响应式系统",
-      "sectionTitle": "新代码不要继续扩历史桥接边界",
-      "type": "paragraph",
-      "text": "新组件优先使用：",
-      "searchText": "深入响应式系统 新代码不要继续扩历史桥接边界 新组件优先使用： guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:101",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-1-新代码不要继续扩历史桥接边界",
-      "title": "深入响应式系统",
-      "sectionTitle": "新代码不要继续扩历史桥接边界",
-      "type": "list",
-      "text": "模板 普通 JSX props.children render prop / callback props",
-      "searchText": "深入响应式系统 新代码不要继续扩历史桥接边界 模板 普通 jsx props.children render prop / callback props guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:102",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-1-新代码不要继续扩历史桥接边界",
-      "title": "深入响应式系统",
-      "sectionTitle": "新代码不要继续扩历史桥接边界",
-      "type": "paragraph",
-      "text": "如果仍有历史桥接文件，请在这轮升级里直接重写，不要继续保留 compat 壳层。",
-      "searchText": "深入响应式系统 新代码不要继续扩历史桥接边界 如果仍有历史桥接文件，请在这轮升级里直接重写，不要继续保留 compat 壳层。 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:103",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-2-不要继续依赖旧渲染输出内部结构",
-      "title": "深入响应式系统",
-      "sectionTitle": "不要继续依赖旧渲染输出内部结构",
-      "type": "heading",
-      "text": "不要继续依赖旧渲染输出内部结构",
-      "searchText": "深入响应式系统 不要继续依赖旧渲染输出内部结构 不要继续依赖旧渲染输出内部结构 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:104",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-2-不要继续依赖旧渲染输出内部结构",
-      "title": "深入响应式系统",
-      "sectionTitle": "不要继续依赖旧渲染输出内部结构",
-      "type": "paragraph",
-      "text": "Rue 公开的历史渲染输出别名仍然存在，但它现在只是显式边界上的兼容说法。请不要继续假设所有输出都具备稳定的 type / props / children / patchFlag 内部布局。",
-      "searchText": "深入响应式系统 不要继续依赖旧渲染输出内部结构 rue 公开的历史渲染输出别名仍然存在，但它现在只是显式边界上的兼容说法。请不要继续假设所有输出都具备稳定的 type / props / children / patchflag 内部布局。 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:105",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-2-不要继续依赖旧渲染输出内部结构",
-      "title": "深入响应式系统",
-      "sectionTitle": "不要继续依赖旧渲染输出内部结构",
-      "type": "paragraph",
-      "text": "如果你仍在维护旧的对象形态桥接，请在迁移时直接删除这层桥接，而不是继续让业务组件感知它。",
-      "searchText": "深入响应式系统 不要继续依赖旧渲染输出内部结构 如果你仍在维护旧的对象形态桥接，请在迁移时直接删除这层桥接，而不是继续让业务组件感知它。 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:106",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-3-子内容优先建模成-children-render-prop",
-      "title": "深入响应式系统",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "heading",
-      "text": "子内容优先建模成 children / render prop",
-      "searchText": "深入响应式系统 子内容优先建模成 children / render prop 子内容优先建模成 children / render prop guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:107",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-3-子内容优先建模成-children-render-prop",
-      "title": "深入响应式系统",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "paragraph",
-      "text": "对默认内容，直接传 children。",
-      "searchText": "深入响应式系统 子内容优先建模成 children / render prop 对默认内容，直接传 children。 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:108",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-3-子内容优先建模成-children-render-prop",
-      "title": "深入响应式系统",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "code",
-      "text": "<Card>body</Card>",
-      "searchText": "深入响应式系统 子内容优先建模成 children / render prop <card>body</card> guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:109",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-3-子内容优先建模成-children-render-prop",
-      "title": "深入响应式系统",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "paragraph",
-      "text": "对作用域插槽，直接传函数：",
-      "searchText": "深入响应式系统 子内容优先建模成 children / render prop 对作用域插槽，直接传函数： guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:110",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-3-子内容优先建模成-children-render-prop",
-      "title": "深入响应式系统",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "code",
-      "text": "<List>{item => <span>{item.label}</span>}</List>",
-      "searchText": "深入响应式系统 子内容优先建模成 children / render prop <list>{item => <span>{item.label}</span>}</list> guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:111",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-3-子内容优先建模成-children-render-prop",
-      "title": "深入响应式系统",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "paragraph",
-      "text": "对具名内容，优先使用显式 props，而不是继续拼 slot 对象：",
-      "searchText": "深入响应式系统 子内容优先建模成 children / render prop 对具名内容，优先使用显式 props，而不是继续拼 slot 对象： guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:112",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-3-子内容优先建模成-children-render-prop",
-      "title": "深入响应式系统",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "code",
-      "text": "<Layout footer={({ text }) => <small>{text}</small>}>body</Layout>",
-      "searchText": "深入响应式系统 子内容优先建模成 children / render prop <layout footer={({ text }) => <small>{text}</small>}>body</layout> guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:113",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-库作者还需要检查什么",
-      "title": "深入响应式系统",
-      "sectionTitle": "库作者还需要检查什么",
-      "type": "heading",
-      "text": "库作者还需要检查什么",
-      "searchText": "深入响应式系统 库作者还需要检查什么 库作者还需要检查什么 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:114",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-库作者还需要检查什么",
-      "title": "深入响应式系统",
-      "sectionTitle": "库作者还需要检查什么",
-      "type": "list",
-      "text": "编译器与运行时请保持同一小版本线 如果你分发预编译产物，请在 peer 依赖中声明最低运行时版本 如果你内部还有历史桥接文件，请在升级时一并改写，而不是继续保留 compat 壳层",
-      "searchText": "深入响应式系统 库作者还需要检查什么 编译器与运行时请保持同一小版本线 如果你分发预编译产物，请在 peer 依赖中声明最低运行时版本 如果你内部还有历史桥接文件，请在升级时一并改写，而不是继续保留 compat 壳层 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:115",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-compat-的当前状态",
-      "title": "深入响应式系统",
-      "sectionTitle": "compat 的当前状态",
-      "type": "heading",
-      "text": "compat 的当前状态",
-      "searchText": "深入响应式系统 compat 的当前状态 compat 的当前状态 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:116",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-compat-的当前状态",
-      "title": "深入响应式系统",
-      "sectionTitle": "compat 的当前状态",
-      "type": "paragraph",
-      "text": "显式 compat 子路径已经删除。历史 helper、render-function 桥接和预编译产物都需要直接迁到默认路径，而不是继续保留任何兼容壳层。",
-      "searchText": "深入响应式系统 compat 的当前状态 显式 compat 子路径已经删除。历史 helper、render-function 桥接和预编译产物都需要直接迁到默认路径，而不是继续保留任何兼容壳层。 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:117",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-compat-的当前状态",
-      "title": "深入响应式系统",
-      "sectionTitle": "compat 的当前状态",
-      "type": "paragraph",
-      "text": "迁移方向只有四类：",
-      "searchText": "深入响应式系统 compat 的当前状态 迁移方向只有四类： guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:118",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-compat-的当前状态",
-      "title": "深入响应式系统",
-      "sectionTitle": "compat 的当前状态",
-      "type": "list",
-      "text": "直接传 children 直接传 render prop / callback props 直接返回 raw node / fragment / mount handle 直接使用默认 render 入口",
-      "searchText": "深入响应式系统 compat 的当前状态 直接传 children 直接传 render prop / callback props 直接返回 raw node / fragment / mount handle 直接使用默认 render 入口 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:119",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-迁移后的判断标准",
-      "title": "深入响应式系统",
-      "sectionTitle": "迁移后的判断标准",
-      "type": "heading",
-      "text": "迁移后的判断标准",
-      "searchText": "深入响应式系统 迁移后的判断标准 迁移后的判断标准 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:120",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-迁移后的判断标准",
-      "title": "深入响应式系统",
-      "sectionTitle": "迁移后的判断标准",
-      "type": "paragraph",
-      "text": "完成迁移后，你的代码应尽量符合下面这些特征：",
-      "searchText": "深入响应式系统 迁移后的判断标准 完成迁移后，你的代码应尽量符合下面这些特征： guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:121",
-      "docId": "guide/extras/reactivity-in-depth",
-      "route": "/guide/guide/extras/reactivity-in-depth",
-      "href": "/guide/guide/extras/reactivity-in-depth#-迁移后的判断标准",
-      "title": "深入响应式系统",
-      "sectionTitle": "迁移后的判断标准",
-      "type": "list",
-      "text": "新组件不再从默认主入口期待 compat-only helper 业务组件不用感知旧渲染输出内部字段 children / render prop / callback props 取代旧的手写 slot 对象桥接 历史桥接文件已经完成重写，而不是继续保留 compat 壳层",
-      "searchText": "深入响应式系统 迁移后的判断标准 新组件不再从默认主入口期待 compat-only helper 业务组件不用感知旧渲染输出内部字段 children / render prop / callback props 取代旧的手写 slot 对象桥接 历史桥接文件已经完成重写，而不是继续保留 compat 壳层 guide/extras/reactivity-in-depth"
-    },
-    {
-      "id": "guide/extras/reactivity-in-depth:122",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#api-design-trade-offs",
@@ -34555,7 +33840,7 @@
       "searchText": "深入响应式系统 api 设计权衡 api 设计权衡 guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:123",
+      "id": "guide/extras/reactivity-in-depth:91",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#api-design-trade-offs",
@@ -34566,7 +33851,7 @@
       "searchText": "深入响应式系统 api 设计权衡 preact 和 qwik 的 signals 设计与 rue 的 shallowref 非常相似：三者都通过 .value 属性提供可变接口。我们将重点讨论 solid 和 angular signals。 guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:124",
+      "id": "guide/extras/reactivity-in-depth:92",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#solid-signals",
@@ -34577,7 +33862,7 @@
       "searchText": "深入响应式系统 solid signals solid signals guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:125",
+      "id": "guide/extras/reactivity-in-depth:93",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#solid-signals",
@@ -34588,7 +33873,7 @@
       "searchText": "深入响应式系统 solid signals solid 的 createsignal() api 设计强调读/写分离。signals 被暴露为只读的 getter 和单独的 setter： guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:126",
+      "id": "guide/extras/reactivity-in-depth:94",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#solid-signals",
@@ -34599,7 +33884,7 @@
       "searchText": "深入响应式系统 solid signals const [count, setcount] = createsignal(0) count() // 访问值 setcount(1) // 更新值 guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:127",
+      "id": "guide/extras/reactivity-in-depth:95",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#solid-signals",
@@ -34610,7 +33895,7 @@
       "searchText": "深入响应式系统 solid signals 注意 count signal 可以在没有 setter 的情况下传递下去。这确保了除非 setter 也被显式暴露，否则状态永远不会被突变。这种安全保证是否证明更冗长的语法是值得的，可能取决于项目的要求和个人品味——但如果你喜欢这种 api 风格，你可以在 rue 中轻松复制它： guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:128",
+      "id": "guide/extras/reactivity-in-depth:96",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#solid-signals",
@@ -34621,7 +33906,7 @@
       "searchText": "深入响应式系统 solid signals import { shallowref, triggerref } from '@rue-js/rue' export function createsignal<t>(value: t, options?: { equals?: boolean }) { const r = shallowref(value) const get = () => r.value const set = (v: t | ((prev: t) => t)) => { r.value = typeof v === 'function' ? (v as (prev: t) => t)(r.value) : v if (options?.equals === false) triggerref(r) } return [get, set] as const } guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:129",
+      "id": "guide/extras/reactivity-in-depth:97",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#angular-signals",
@@ -34632,7 +33917,7 @@
       "searchText": "深入响应式系统 angular signals angular signals guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:130",
+      "id": "guide/extras/reactivity-in-depth:98",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#angular-signals",
@@ -34643,7 +33928,7 @@
       "searchText": "深入响应式系统 angular signals angular 正在通过放弃脏检查并引入其自己的响应式原语实现来进行一些根本性改变。angular signal api 看起来像这样： guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:131",
+      "id": "guide/extras/reactivity-in-depth:99",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#angular-signals",
@@ -34654,7 +33939,7 @@
       "searchText": "深入响应式系统 angular signals const count = signal(0) count() // 访问值 count.set(1) // 设置新值 count.update(v => v + 1) // 基于前值更新 guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:132",
+      "id": "guide/extras/reactivity-in-depth:100",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#angular-signals",
@@ -34665,7 +33950,7 @@
       "searchText": "深入响应式系统 angular signals 同样，我们可以在 rue 中轻松复制 api： guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:133",
+      "id": "guide/extras/reactivity-in-depth:101",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#angular-signals",
@@ -34676,7 +33961,7 @@
       "searchText": "深入响应式系统 angular signals import { shallowref } from '@rue-js/rue' export function signal<t>(initialvalue: t) { const r = shallowref(initialvalue) const s = () => r.value s.set = (value: t) => { r.value = value } s.update = (updater: (prev: t) => t) => { r.value = updater(r.value) } return s } guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:134",
+      "id": "guide/extras/reactivity-in-depth:102",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#angular-signals",
@@ -34687,7 +33972,7 @@
       "searchText": "深入响应式系统 angular signals 与 rue refs 相比，solid 和 angular 的基于 getter 的 api 风格在 rue 组件中使用时提供了一些有趣的权衡： guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:135",
+      "id": "guide/extras/reactivity-in-depth:103",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#angular-signals",
@@ -34698,7 +33983,7 @@
       "searchText": "深入响应式系统 angular signals () 比 .value 稍微不那么冗长，但更新值更冗长。 没有 ref 解包：访问值总是需要 ()。这使得值访问在任何地方都是一致的。这也意味着你可以将原始 signals 作为组件 props 传递下去。 guide/extras/reactivity-in-depth"
     },
     {
-      "id": "guide/extras/reactivity-in-depth:136",
+      "id": "guide/extras/reactivity-in-depth:104",
       "docId": "guide/extras/reactivity-in-depth",
       "route": "/guide/guide/extras/reactivity-in-depth",
       "href": "/guide/guide/extras/reactivity-in-depth#angular-signals",
@@ -35563,8 +34848,8 @@
       "title": "渲染函数与 JSX",
       "sectionTitle": "渲染函数与 JSX",
       "type": "paragraph",
-      "text": "Rue 依然支持手写渲染函数，但它们现在更适合作为显式边界来使用：例如可复用库组件、极动态 UI，或迁移旧的手写渲染 helper。对绝大多数应用代码来说，模板和普通 JSX 仍然是首选，因为它们会在编译阶段直接生成 Block / Vapor 导向的渲染产物。",
-      "searchText": "渲染函数与 jsx 渲染函数与 jsx rue 依然支持手写渲染函数，但它们现在更适合作为显式边界来使用：例如可复用库组件、极动态 ui，或迁移旧的手写渲染 helper。对绝大多数应用代码来说，模板和普通 jsx 仍然是首选，因为它们会在编译阶段直接生成 block / vapor 导向的渲染产物。 guide/extras/render-function"
+      "text": "Rue 依然支持手写渲染函数，但它们更适合作为显式边界来使用：例如基础组件或极动态 UI。对绝大多数应用代码来说，模板和普通 JSX 仍然是首选，因为它们会在编译阶段直接生成更精确的渲染产物。",
+      "searchText": "渲染函数与 jsx 渲染函数与 jsx rue 依然支持手写渲染函数，但它们更适合作为显式边界来使用：例如基础组件或极动态 ui。对绝大多数应用代码来说，模板和普通 jsx 仍然是首选，因为它们会在编译阶段直接生成更精确的渲染产物。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:2",
@@ -35574,8 +34859,8 @@
       "title": "渲染函数与 JSX",
       "sectionTitle": "渲染函数与 JSX",
       "type": "blockquote",
-      "text": "如果你还没建立 Rue 当前默认渲染路径的整体图景，请先阅读渲染机制。",
-      "searchText": "渲染函数与 jsx 渲染函数与 jsx 如果你还没建立 rue 当前默认渲染路径的整体图景，请先阅读渲染机制。 guide/extras/render-function"
+      "text": "如果你还没建立 Rue 渲染机制的整体图景，请先阅读渲染机制。",
+      "searchText": "渲染函数与 jsx 渲染函数与 jsx 如果你还没建立 rue 渲染机制的整体图景，请先阅读渲染机制。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:3",
@@ -35607,8 +34892,8 @@
       "title": "渲染函数与 JSX",
       "sectionTitle": "创建渲染输出",
       "type": "paragraph",
-      "text": "为兼容旧链接，这里保留了历史锚点。需要注意的是：h() 创建的是公开渲染输出；在当前默认路径中，编译器通常会直接生成 Renderable / Block，而不是在每个节点上都显式调用 h()。",
-      "searchText": "渲染函数与 jsx 创建渲染输出 为兼容旧链接，这里保留了历史锚点。需要注意的是：h() 创建的是公开渲染输出；在当前默认路径中，编译器通常会直接生成 renderable / block，而不是在每个节点上都显式调用 h()。 guide/extras/render-function"
+      "text": "h() 创建的是公开渲染输出。编译器通常会直接生成 Renderable / Block，而不是在每个节点上都显式调用 h()。",
+      "searchText": "渲染函数与 jsx 创建渲染输出 h() 创建的是公开渲染输出。编译器通常会直接生成 renderable / block，而不是在每个节点上都显式调用 h()。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:7",
@@ -35640,8 +34925,8 @@
       "title": "渲染函数与 JSX",
       "sectionTitle": "创建渲染输出",
       "type": "list",
-      "text": "手写渲染函数 包装高度动态的子树 与历史渲染 helper 或迁移中的桥接层对接",
-      "searchText": "渲染函数与 jsx 创建渲染输出 手写渲染函数 包装高度动态的子树 与历史渲染 helper 或迁移中的桥接层对接 guide/extras/render-function"
+      "text": "手写渲染函数 包装高度动态的子树 构造需要手动组合的渲染输出",
+      "searchText": "渲染函数与 jsx 创建渲染输出 手写渲染函数 包装高度动态的子树 构造需要手动组合的渲染输出 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:10",
@@ -35926,8 +35211,8 @@
       "title": "渲染函数与 JSX",
       "sectionTitle": "JSX / TSX",
       "type": "paragraph",
-      "text": "Rue 当前的 JSX 编译也默认服务于 Block / Vapor 路径，因此即便你写的是 JSX，编译结果也会优先落到当前的 Renderable / Block 执行模型。",
-      "searchText": "渲染函数与 jsx jsx / tsx rue 当前的 jsx 编译也默认服务于 block / vapor 路径，因此即便你写的是 jsx，编译结果也会优先落到当前的 renderable / block 执行模型。 guide/extras/render-function"
+      "text": "Rue 的 JSX 编译会优先落到当前的 Renderable / Block 执行模型。",
+      "searchText": "渲染函数与 jsx jsx / tsx rue 的 jsx 编译会优先落到当前的 renderable / block 执行模型。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:36",
@@ -36707,88 +35992,33 @@
       "title": "渲染机制",
       "sectionTitle": "渲染机制",
       "type": "paragraph",
-      "text": "Rue 当前默认的渲染机制建立在细粒度响应式系统之上。模板与 JSX 在编译阶段会尽量直接降到可执行的 Renderable / Block 指令，运行时围绕 DOM 锚点、区间和响应式副作用做最小更新。",
-      "searchText": "渲染机制 渲染机制 rue 当前默认的渲染机制建立在细粒度响应式系统之上。模板与 jsx 在编译阶段会尽量直接降到可执行的 renderable / block 指令，运行时围绕 dom 锚点、区间和响应式副作用做最小更新。 guide/extras/rendering-mechanism"
+      "text": "Rue 的渲染机制建立在细粒度响应式系统之上。模板与 JSX 在编译阶段会尽量直接降到可执行的 Renderable / Block 指令，运行时围绕 DOM 锚点、区间和响应式副作用做最小更新。",
+      "searchText": "渲染机制 渲染机制 rue 的渲染机制建立在细粒度响应式系统之上。模板与 jsx 在编译阶段会尽量直接降到可执行的 renderable / block 指令，运行时围绕 dom 锚点、区间和响应式副作用做最小更新。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:2",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#rendering-mechanism",
+      "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
       "title": "渲染机制",
-      "sectionTitle": "渲染机制",
-      "type": "paragraph",
-      "text": "这并不意味着文档里完全不会再出现旧的公开对象术语。h() 和少量迁移说明仍会提到它们，用来解释历史上的手写渲染输出；但 Rue 的默认主入口已经不再提供 compat 子路径，也不再接受旧的 compat helper。",
-      "searchText": "渲染机制 渲染机制 这并不意味着文档里完全不会再出现旧的公开对象术语。h() 和少量迁移说明仍会提到它们，用来解释历史上的手写渲染输出；但 rue 的默认主入口已经不再提供 compat 子路径，也不再接受旧的 compat helper。 guide/extras/rendering-mechanism"
+      "sectionTitle": "公开渲染输出",
+      "type": "heading",
+      "text": "公开渲染输出",
+      "searchText": "渲染机制 公开渲染输出 公开渲染输出 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:3",
+      "id": "guide/extras/rendering-mechanism:4",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
       "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认路径",
-      "type": "heading",
-      "text": "公开渲染输出与默认路径",
-      "searchText": "渲染机制 公开渲染输出与默认路径 公开渲染输出与默认路径 guide/extras/rendering-mechanism"
+      "sectionTitle": "公开渲染输出",
+      "type": "paragraph",
+      "text": "Rue 允许你手写 h() 或 JSX。编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 DOM 操作的渲染计划。",
+      "searchText": "渲染机制 公开渲染输出 rue 允许你手写 h() 或 jsx。编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 dom 操作的渲染计划。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:5",
-      "docId": "guide/extras/rendering-mechanism",
-      "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
-      "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认路径",
-      "type": "paragraph",
-      "text": "如果你从旧版本或其他框架迁移过来，最容易混淆的一点是：",
-      "searchText": "渲染机制 公开渲染输出与默认路径 如果你从旧版本或其他框架迁移过来，最容易混淆的一点是： guide/extras/rendering-mechanism"
-    },
-    {
-      "id": "guide/extras/rendering-mechanism:6",
-      "docId": "guide/extras/rendering-mechanism",
-      "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
-      "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认路径",
-      "type": "list",
-      "text": "Rue 仍然允许你手写 h() 或 JSX 历史文档里仍可能看到旧的公开对象术语 但 Rue 默认编译产物已经优先走细粒度 Renderable / Block 路径",
-      "searchText": "渲染机制 公开渲染输出与默认路径 rue 仍然允许你手写 h() 或 jsx 历史文档里仍可能看到旧的公开对象术语 但 rue 默认编译产物已经优先走细粒度 renderable / block 路径 guide/extras/rendering-mechanism"
-    },
-    {
-      "id": "guide/extras/rendering-mechanism:7",
-      "docId": "guide/extras/rendering-mechanism",
-      "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
-      "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认路径",
-      "type": "paragraph",
-      "text": "在默认路径中，编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 DOM 操作的渲染计划。",
-      "searchText": "渲染机制 公开渲染输出与默认路径 在默认路径中，编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 dom 操作的渲染计划。 guide/extras/rendering-mechanism"
-    },
-    {
-      "id": "guide/extras/rendering-mechanism:8",
-      "docId": "guide/extras/rendering-mechanism",
-      "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
-      "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认路径",
-      "type": "paragraph",
-      "text": "只有在以下情况，你才会明显接触到历史对象桥接/compat 语义：",
-      "searchText": "渲染机制 公开渲染输出与默认路径 只有在以下情况，你才会明显接触到历史对象桥接/compat 语义： guide/extras/rendering-mechanism"
-    },
-    {
-      "id": "guide/extras/rendering-mechanism:9",
-      "docId": "guide/extras/rendering-mechanism",
-      "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#public-render-output",
-      "title": "渲染机制",
-      "sectionTitle": "公开渲染输出与默认路径",
-      "type": "list",
-      "text": "你在手写渲染函数 你在桥接历史库或老 helper 你在迁移已经被删除的 compat 子路径与旧 helper",
-      "searchText": "渲染机制 公开渲染输出与默认路径 你在手写渲染函数 你在桥接历史库或老 helper 你在迁移已经被删除的 compat 子路径与旧 helper guide/extras/rendering-mechanism"
-    },
-    {
-      "id": "guide/extras/rendering-mechanism:10",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#render-pipeline",
@@ -36799,7 +36029,7 @@
       "searchText": "渲染机制 渲染管道 渲染管道 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:11",
+      "id": "guide/extras/rendering-mechanism:6",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#render-pipeline",
@@ -36810,7 +36040,7 @@
       "searchText": "渲染机制 渲染管道 在高层次上，当 rue 组件挂载和更新时，会发生以下事情： guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:12",
+      "id": "guide/extras/rendering-mechanism:7",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#render-pipeline",
@@ -36821,7 +36051,7 @@
       "searchText": "渲染机制 渲染管道 编译：模板或 jsx 被编译成 block / renderable 导向的输出。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。 挂载：运行时执行编译产物，创建真实 dom、插入锚点、建立区间边界，并在执行过程中收集相关响应式依赖。 更新：依赖变更后，只重新执行受影响的 block / effect。运行时直接更新对应 dom 节点、区间或组件边界。 清理：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 dom 区间一并释放。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:13",
+      "id": "guide/extras/rendering-mechanism:8",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#render-pipeline",
@@ -36832,7 +36062,7 @@
       "searchText": "渲染机制 渲染管道 可以把它理解成一条线性的管道：源码先被编译成带有更新提示和边界信息的输出，运行时再据此完成初次挂载、按需更新以及最终清理。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:14",
+      "id": "guide/extras/rendering-mechanism:9",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
@@ -36843,7 +36073,7 @@
       "searchText": "渲染机制 模板与渲染函数 模板与渲染函数 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:15",
+      "id": "guide/extras/rendering-mechanism:10",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
@@ -36854,18 +36084,18 @@
       "searchText": "渲染机制 模板与渲染函数 rue 依然支持手写渲染函数，但默认推荐模板或普通 jsx，原因和以前不同了： guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:16",
+      "id": "guide/extras/rendering-mechanism:11",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
       "title": "渲染机制",
       "sectionTitle": "模板与渲染函数",
       "type": "list",
-      "text": "它们更接近 HTML 与组件声明，适合大多数应用代码。 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而直接生成更高效的 Block / Vapor 输出。 它们不需要你手动维护旧桥接对象细节，也更不容易意外依赖内部字段。",
-      "searchText": "渲染机制 模板与渲染函数 它们更接近 html 与组件声明，适合大多数应用代码。 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而直接生成更高效的 block / vapor 输出。 它们不需要你手动维护旧桥接对象细节，也更不容易意外依赖内部字段。 guide/extras/rendering-mechanism"
+      "text": "它们更接近 HTML 与组件声明，适合大多数应用代码。 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而直接生成更高效的 Block 输出。 它们不需要你手动维护底层渲染对象细节，也更不容易意外依赖内部字段。",
+      "searchText": "渲染机制 模板与渲染函数 它们更接近 html 与组件声明，适合大多数应用代码。 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而直接生成更高效的 block 输出。 它们不需要你手动维护底层渲染对象细节，也更不容易意外依赖内部字段。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:17",
+      "id": "guide/extras/rendering-mechanism:12",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
@@ -36876,29 +36106,29 @@
       "searchText": "渲染机制 模板与渲染函数 手写渲染函数仍然有价值，尤其适合： guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:18",
+      "id": "guide/extras/rendering-mechanism:13",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
       "title": "渲染机制",
       "sectionTitle": "模板与渲染函数",
       "type": "list",
-      "text": "高度动态的可复用组件 需要精确控制 children / render prop 的库代码 迁移中的旧 helper 或预编译产物桥接",
-      "searchText": "渲染机制 模板与渲染函数 高度动态的可复用组件 需要精确控制 children / render prop 的库代码 迁移中的旧 helper 或预编译产物桥接 guide/extras/rendering-mechanism"
+      "text": "高度动态的可复用组件 需要精确控制 children / render prop 的基础组件",
+      "searchText": "渲染机制 模板与渲染函数 高度动态的可复用组件 需要精确控制 children / render prop 的基础组件 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:19",
+      "id": "guide/extras/rendering-mechanism:14",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
       "title": "渲染机制",
       "sectionTitle": "模板与渲染函数",
       "type": "paragraph",
-      "text": "如果你需要手写 h() 或维护旧的渲染桥接，请把它们视为显式边界，而不是默认开发路径。相关写法见 渲染函数与 JSX，迁移事项见 默认 Block / Vapor 路径迁移。",
-      "searchText": "渲染机制 模板与渲染函数 如果你需要手写 h() 或维护旧的渲染桥接，请把它们视为显式边界，而不是默认开发路径。相关写法见 渲染函数与 jsx，迁移事项见 默认 block / vapor 路径迁移。 guide/extras/rendering-mechanism"
+      "text": "如果你需要手写 h()，请把它视为显式边界，而不是默认开发路径。相关写法见 渲染函数与 JSX。",
+      "searchText": "渲染机制 模板与渲染函数 如果你需要手写 h()，请把它视为显式边界，而不是默认开发路径。相关写法见 渲染函数与 jsx。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:20",
+      "id": "guide/extras/rendering-mechanism:15",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
@@ -36909,7 +36139,7 @@
       "searchText": "渲染机制 编译器知情的渲染路径 编译器知情的渲染路径 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:22",
+      "id": "guide/extras/rendering-mechanism:17",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
@@ -36920,29 +36150,29 @@
       "searchText": "渲染机制 编译器知情的渲染路径 rue 的核心优势在于同时掌控编译器与运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；运行时则只执行这些已经被压缩过的信息。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:23",
+      "id": "guide/extras/rendering-mechanism:18",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
       "title": "渲染机制",
       "sectionTitle": "编译器知情的渲染路径",
       "type": "paragraph",
-      "text": "旧文档里把这类优化描述成“编译器知情的整树协调模型”。今天更准确的说法是：Rue 会把编译期知识直接下沉到默认渲染运行时，让更新路径尽量接近真实 DOM 变更本身。",
-      "searchText": "渲染机制 编译器知情的渲染路径 旧文档里把这类优化描述成“编译器知情的整树协调模型”。今天更准确的说法是：rue 会把编译期知识直接下沉到默认渲染运行时，让更新路径尽量接近真实 dom 变更本身。 guide/extras/rendering-mechanism"
+      "text": "Rue 会把编译期知识直接下沉到渲染运行时，让更新路径尽量接近真实 DOM 变更本身。",
+      "searchText": "渲染机制 编译器知情的渲染路径 rue 会把编译期知识直接下沉到渲染运行时，让更新路径尽量接近真实 dom 变更本身。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:24",
+      "id": "guide/extras/rendering-mechanism:19",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
       "title": "渲染机制",
       "sectionTitle": "编译器知情的渲染路径",
       "type": "paragraph",
-      "text": "下面这些优化依旧存在，只是它们服务的对象已经不是“整树对象 diff”，而是“编译后可直接执行的渲染计划”。",
-      "searchText": "渲染机制 编译器知情的渲染路径 下面这些优化依旧存在，只是它们服务的对象已经不是“整树对象 diff”，而是“编译后可直接执行的渲染计划”。 guide/extras/rendering-mechanism"
+      "text": "下面这些优化服务于编译后可直接执行的渲染计划。",
+      "searchText": "渲染机制 编译器知情的渲染路径 下面这些优化服务于编译后可直接执行的渲染计划。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:25",
+      "id": "guide/extras/rendering-mechanism:20",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36953,7 +36183,7 @@
       "searchText": "渲染机制 静态提升 静态提升 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:26",
+      "id": "guide/extras/rendering-mechanism:21",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36964,7 +36194,7 @@
       "searchText": "渲染机制 静态提升 模板中不含动态绑定的片段，会在编译阶段被提升、缓存或折叠成可复用的静态结构。这样更新时无需重新创建这些节点，也无需再次遍历它们。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:27",
+      "id": "guide/extras/rendering-mechanism:22",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36975,7 +36205,7 @@
       "searchText": "渲染机制 静态提升 <div> <div>foo</div> <div>bar</div> <div>{dynamic.value}</div> </div> guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:28",
+      "id": "guide/extras/rendering-mechanism:23",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36986,7 +36216,7 @@
       "searchText": "渲染机制 静态提升 在这个例子里，只有 dynamic 所在的片段需要参与更新；静态节点会在初次挂载后尽量复用。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:29",
+      "id": "guide/extras/rendering-mechanism:24",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36997,7 +36227,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 patch 标记与精准更新 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:30",
+      "id": "guide/extras/rendering-mechanism:25",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -37008,7 +36238,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 对于有动态绑定的节点，编译器会把“究竟什么会变”编码进产物，例如文本、class、style、属性或稳定片段。运行时据此直接走对应的更新路径。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:31",
+      "id": "guide/extras/rendering-mechanism:26",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -37019,7 +36249,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 <div class={active.value ? 'active' : ''}></div> <input id={id.value} value={value.value} /> <div>{dynamic.value}</div> guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:32",
+      "id": "guide/extras/rendering-mechanism:27",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -37030,7 +36260,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 这类提示让运行时可以把更新收敛为“改 class”“改 value”“改 text”这样的定点操作。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:33",
+      "id": "guide/extras/rendering-mechanism:28",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -37041,7 +36271,7 @@
       "searchText": "渲染机制 树扁平化与区间更新 树扁平化与区间更新 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:34",
+      "id": "guide/extras/rendering-mechanism:29",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -37052,7 +36282,7 @@
       "searchText": "渲染机制 树扁平化与区间更新 编译器会把真正可能变化的后代节点提取出来，以 block 或区间边界的方式组织。这样组件更新时，运行时通常只需要遍历动态段，而不是重新访问整个静态子树。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:35",
+      "id": "guide/extras/rendering-mechanism:30",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -37061,28 +36291,6 @@
       "type": "paragraph",
       "text": "遇到 v-if、v-for、Teleport、Transition 之类结构性边界时，Rue 会把它们当作独立的 block / range 处理，并通过锚点定位插入、移动和清理范围。",
       "searchText": "渲染机制 树扁平化与区间更新 遇到 v-if、v-for、teleport、transition 之类结构性边界时，rue 会把它们当作独立的 block / range 处理，并通过锚点定位插入、移动和清理范围。 guide/extras/rendering-mechanism"
-    },
-    {
-      "id": "guide/extras/rendering-mechanism:36",
-      "docId": "guide/extras/rendering-mechanism",
-      "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#-compat-与迁移边界",
-      "title": "渲染机制",
-      "sectionTitle": "compat 与迁移边界",
-      "type": "heading",
-      "text": "compat 与迁移边界",
-      "searchText": "渲染机制 compat 与迁移边界 compat 与迁移边界 guide/extras/rendering-mechanism"
-    },
-    {
-      "id": "guide/extras/rendering-mechanism:37",
-      "docId": "guide/extras/rendering-mechanism",
-      "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#-compat-与迁移边界",
-      "title": "渲染机制",
-      "sectionTitle": "compat 与迁移边界",
-      "type": "paragraph",
-      "text": "显式 compat 子路径已经删除。默认主入口也不再保留 compat-only helper。新代码应优先沿用模板、普通 JSX、props.children 与 render prop 等 Rue 当前主路径；旧的手写渲染 helper 则需要直接重写为默认 Renderable / raw node / mount handle 方案。",
-      "searchText": "渲染机制 compat 与迁移边界 显式 compat 子路径已经删除。默认主入口也不再保留 compat-only helper。新代码应优先沿用模板、普通 jsx、props.children 与 render prop 等 rue 当前主路径；旧的手写渲染 helper 则需要直接重写为默认 renderable / raw node / mount handle 方案。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/server-islands:0",
@@ -39525,369 +38733,6 @@
       "type": "list",
       "text": "如果你计划构建完整的应用程序，推荐使用 ref + reactive + JSX 如果你从 React 迁移过来，useState 可以帮你更快上手",
       "searchText": "简介 选择哪种方式？ 如果你计划构建完整的应用程序，推荐使用 ref + reactive + jsx 如果你从 react 迁移过来，usestate 可以帮你更快上手 guide/introduction"
-    },
-    {
-      "id": "guide/migration/renderable-default:0",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-默认-block-vapor-路径迁移",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "默认 Block / Vapor 路径迁移",
-      "type": "heading",
-      "text": "默认 Block / Vapor 路径迁移",
-      "searchText": "默认 block / vapor 路径迁移 默认 block / vapor 路径迁移 默认 block / vapor 路径迁移 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:1",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-默认-block-vapor-路径迁移",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "默认 Block / Vapor 路径迁移",
-      "type": "paragraph",
-      "text": "Rue 当前默认的编译与运行时路径已经是 Block / Vapor / Renderable-first。对大多数应用来说，这只是内部实现升级，你仍然写模板或普通 JSX；但如果你维护的是旧的手写渲染 helper、库级桥接层或预编译产物，这一页就是你需要的迁移清单。",
-      "searchText": "默认 block / vapor 路径迁移 默认 block / vapor 路径迁移 rue 当前默认的编译与运行时路径已经是 block / vapor / renderable-first。对大多数应用来说，这只是内部实现升级，你仍然写模板或普通 jsx；但如果你维护的是旧的手写渲染 helper、库级桥接层或预编译产物，这一页就是你需要的迁移清单。 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:2",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-谁需要关注这次迁移",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "谁需要关注这次迁移",
-      "type": "heading",
-      "text": "谁需要关注这次迁移",
-      "searchText": "默认 block / vapor 路径迁移 谁需要关注这次迁移 谁需要关注这次迁移 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:3",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-谁需要关注这次迁移",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "谁需要关注这次迁移",
-      "type": "paragraph",
-      "text": "下面这些场景需要显式检查：",
-      "searchText": "默认 block / vapor 路径迁移 谁需要关注这次迁移 下面这些场景需要显式检查： guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:4",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-谁需要关注这次迁移",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "谁需要关注这次迁移",
-      "type": "list",
-      "text": "你从默认主入口导入过 $vaporCreateVNode 你手写过依赖旧渲染输出内部字段的渲染 helper 你分发的是预编译后的组件、指令或运行时桥接代码 你在库内部手动拼接 children / slot 对象以模拟旧渲染路径",
-      "searchText": "默认 block / vapor 路径迁移 谁需要关注这次迁移 你从默认主入口导入过 $vaporcreatevnode 你手写过依赖旧渲染输出内部字段的渲染 helper 你分发的是预编译后的组件、指令或运行时桥接代码 你在库内部手动拼接 children / slot 对象以模拟旧渲染路径 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:5",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-谁需要关注这次迁移",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "谁需要关注这次迁移",
-      "type": "paragraph",
-      "text": "如果你的应用只是写模板、普通 JSX、FC 组件和响应式状态，通常无需改动。",
-      "searchText": "默认 block / vapor 路径迁移 谁需要关注这次迁移 如果你的应用只是写模板、普通 jsx、fc 组件和响应式状态，通常无需改动。 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:6",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-需要修改的导入",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "需要修改的导入",
-      "type": "heading",
-      "text": "需要修改的导入",
-      "searchText": "默认 block / vapor 路径迁移 需要修改的导入 需要修改的导入 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:7",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-需要修改的导入",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "需要修改的导入",
-      "type": "paragraph",
-      "text": "默认主入口和显式 compat 子路径都已经不再提供这类 helper。历史导入现在属于 breaking removal：",
-      "searchText": "默认 block / vapor 路径迁移 需要修改的导入 默认主入口和显式 compat 子路径都已经不再提供这类 helper。历史导入现在属于 breaking removal： guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:8",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-需要修改的导入",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "需要修改的导入",
-      "type": "code",
-      "text": "import { _$vaporCreateVNode } from '@rue-js/runtime' import { _$vaporCreateVNode as createCompatVNode } from '@rue-js/rue' import { _$vaporCreateVNode } from '@rue-js/runtime/compat' import { _$vaporCreateVNode as createCompatVNode } from '@rue-js/rue/compat'",
-      "searchText": "默认 block / vapor 路径迁移 需要修改的导入 import { _$vaporcreatevnode } from '@rue-js/runtime' import { _$vaporcreatevnode as createcompatvnode } from '@rue-js/rue' import { _$vaporcreatevnode } from '@rue-js/runtime/compat' import { _$vaporcreatevnode as createcompatvnode } from '@rue-js/rue/compat' guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:9",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-需要修改的导入",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "需要修改的导入",
-      "type": "paragraph",
-      "text": "以上导入都需要删除，而不是改到新的 compat 路径。",
-      "searchText": "默认 block / vapor 路径迁移 需要修改的导入 以上导入都需要删除，而不是改到新的 compat 路径。 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:10",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-推荐迁移方式",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "推荐迁移方式",
-      "type": "heading",
-      "text": "推荐迁移方式",
-      "searchText": "默认 block / vapor 路径迁移 推荐迁移方式 推荐迁移方式 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:11",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-1-新代码不要继续扩历史桥接边界",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "新代码不要继续扩历史桥接边界",
-      "type": "heading",
-      "text": "新代码不要继续扩历史桥接边界",
-      "searchText": "默认 block / vapor 路径迁移 新代码不要继续扩历史桥接边界 新代码不要继续扩历史桥接边界 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:12",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-1-新代码不要继续扩历史桥接边界",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "新代码不要继续扩历史桥接边界",
-      "type": "paragraph",
-      "text": "新组件优先使用：",
-      "searchText": "默认 block / vapor 路径迁移 新代码不要继续扩历史桥接边界 新组件优先使用： guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:13",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-1-新代码不要继续扩历史桥接边界",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "新代码不要继续扩历史桥接边界",
-      "type": "list",
-      "text": "模板 普通 JSX props.children render prop / callback props",
-      "searchText": "默认 block / vapor 路径迁移 新代码不要继续扩历史桥接边界 模板 普通 jsx props.children render prop / callback props guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:14",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-1-新代码不要继续扩历史桥接边界",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "新代码不要继续扩历史桥接边界",
-      "type": "paragraph",
-      "text": "如果还存在历史 helper，请在升级时直接改写，不要继续保留 compat 壳层。",
-      "searchText": "默认 block / vapor 路径迁移 新代码不要继续扩历史桥接边界 如果还存在历史 helper，请在升级时直接改写，不要继续保留 compat 壳层。 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:15",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-2-不要继续依赖旧渲染输出内部结构",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "不要继续依赖旧渲染输出内部结构",
-      "type": "heading",
-      "text": "不要继续依赖旧渲染输出内部结构",
-      "searchText": "默认 block / vapor 路径迁移 不要继续依赖旧渲染输出内部结构 不要继续依赖旧渲染输出内部结构 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:16",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-2-不要继续依赖旧渲染输出内部结构",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "不要继续依赖旧渲染输出内部结构",
-      "type": "paragraph",
-      "text": "历史文档里仍可能看到旧的公开对象术语，但默认主入口的公开输入口径已经围绕 RenderableOutput 组织。请不要继续假设所有输出都具备稳定的 type / props / children / patchFlag 内部布局。",
-      "searchText": "默认 block / vapor 路径迁移 不要继续依赖旧渲染输出内部结构 历史文档里仍可能看到旧的公开对象术语，但默认主入口的公开输入口径已经围绕 renderableoutput 组织。请不要继续假设所有输出都具备稳定的 type / props / children / patchflag 内部布局。 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:17",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-2-不要继续依赖旧渲染输出内部结构",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "不要继续依赖旧渲染输出内部结构",
-      "type": "paragraph",
-      "text": "如果你仍在维护旧桥接对象，请把这层桥接改写为默认 Renderable / children / raw node 模式，而不是继续向业务组件透出旧结构。",
-      "searchText": "默认 block / vapor 路径迁移 不要继续依赖旧渲染输出内部结构 如果你仍在维护旧桥接对象，请把这层桥接改写为默认 renderable / children / raw node 模式，而不是继续向业务组件透出旧结构。 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:18",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-3-子内容优先建模成-children-render-prop",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "heading",
-      "text": "子内容优先建模成 children / render prop",
-      "searchText": "默认 block / vapor 路径迁移 子内容优先建模成 children / render prop 子内容优先建模成 children / render prop guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:19",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-3-子内容优先建模成-children-render-prop",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "paragraph",
-      "text": "对默认内容，直接传 children。",
-      "searchText": "默认 block / vapor 路径迁移 子内容优先建模成 children / render prop 对默认内容，直接传 children。 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:20",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-3-子内容优先建模成-children-render-prop",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "code",
-      "text": "<Card>body</Card>",
-      "searchText": "默认 block / vapor 路径迁移 子内容优先建模成 children / render prop <card>body</card> guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:21",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-3-子内容优先建模成-children-render-prop",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "paragraph",
-      "text": "对作用域插槽，直接传函数：",
-      "searchText": "默认 block / vapor 路径迁移 子内容优先建模成 children / render prop 对作用域插槽，直接传函数： guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:22",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-3-子内容优先建模成-children-render-prop",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "code",
-      "text": "<List>{item => <span>{item.label}</span>}</List>",
-      "searchText": "默认 block / vapor 路径迁移 子内容优先建模成 children / render prop <list>{item => <span>{item.label}</span>}</list> guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:23",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-3-子内容优先建模成-children-render-prop",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "paragraph",
-      "text": "对具名内容，优先使用显式 props，而不是继续拼 slot 对象：",
-      "searchText": "默认 block / vapor 路径迁移 子内容优先建模成 children / render prop 对具名内容，优先使用显式 props，而不是继续拼 slot 对象： guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:24",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-3-子内容优先建模成-children-render-prop",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "子内容优先建模成 children / render prop",
-      "type": "code",
-      "text": "<Layout footer={({ text }) => <small>{text}</small>}>body</Layout>",
-      "searchText": "默认 block / vapor 路径迁移 子内容优先建模成 children / render prop <layout footer={({ text }) => <small>{text}</small>}>body</layout> guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:25",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-库作者还需要检查什么",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "库作者还需要检查什么",
-      "type": "heading",
-      "text": "库作者还需要检查什么",
-      "searchText": "默认 block / vapor 路径迁移 库作者还需要检查什么 库作者还需要检查什么 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:26",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-库作者还需要检查什么",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "库作者还需要检查什么",
-      "type": "list",
-      "text": "编译器与运行时请保持同一小版本线 如果你分发预编译产物，请在 peer 依赖中声明最低运行时版本 如果你内部还有历史桥接文件，请在升级时一并改写，而不是继续保留 compat 壳层",
-      "searchText": "默认 block / vapor 路径迁移 库作者还需要检查什么 编译器与运行时请保持同一小版本线 如果你分发预编译产物，请在 peer 依赖中声明最低运行时版本 如果你内部还有历史桥接文件，请在升级时一并改写，而不是继续保留 compat 壳层 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:27",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-compat-的当前状态",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "compat 的当前状态",
-      "type": "heading",
-      "text": "compat 的当前状态",
-      "searchText": "默认 block / vapor 路径迁移 compat 的当前状态 compat 的当前状态 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:28",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-compat-的当前状态",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "compat 的当前状态",
-      "type": "paragraph",
-      "text": "显式 compat 子路径已经删除。迁移方向不是“换一个 compat 导入”，而是直接回到默认路径能力：",
-      "searchText": "默认 block / vapor 路径迁移 compat 的当前状态 显式 compat 子路径已经删除。迁移方向不是“换一个 compat 导入”，而是直接回到默认路径能力： guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:29",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-compat-的当前状态",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "compat 的当前状态",
-      "type": "list",
-      "text": "直接传 children 直接传 render prop / callback props 直接返回 raw node / fragment / mount handle 直接使用默认 render 入口",
-      "searchText": "默认 block / vapor 路径迁移 compat 的当前状态 直接传 children 直接传 render prop / callback props 直接返回 raw node / fragment / mount handle 直接使用默认 render 入口 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:30",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-迁移后的判断标准",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "迁移后的判断标准",
-      "type": "heading",
-      "text": "迁移后的判断标准",
-      "searchText": "默认 block / vapor 路径迁移 迁移后的判断标准 迁移后的判断标准 guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:31",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-迁移后的判断标准",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "迁移后的判断标准",
-      "type": "paragraph",
-      "text": "完成迁移后，你的代码应尽量符合下面这些特征：",
-      "searchText": "默认 block / vapor 路径迁移 迁移后的判断标准 完成迁移后，你的代码应尽量符合下面这些特征： guide/migration/renderable-default"
-    },
-    {
-      "id": "guide/migration/renderable-default:32",
-      "docId": "guide/migration/renderable-default",
-      "route": "/guide/guide/migration/renderable-default",
-      "href": "/guide/guide/migration/renderable-default#-迁移后的判断标准",
-      "title": "默认 Block / Vapor 路径迁移",
-      "sectionTitle": "迁移后的判断标准",
-      "type": "list",
-      "text": "新组件不再从默认主入口期待 compat-only helper 业务组件不用感知旧渲染输出内部字段 children / render prop / callback props 取代旧的手写 slot 对象桥接 历史桥接文件已经完成重写，而不是继续保留 compat 壳层",
-      "searchText": "默认 block / vapor 路径迁移 迁移后的判断标准 新组件不再从默认主入口期待 compat-only helper 业务组件不用感知旧渲染输出内部字段 children / render prop / callback props 取代旧的手写 slot 对象桥接 历史桥接文件已经完成重写，而不是继续保留 compat 壳层 guide/migration/renderable-default"
     },
     {
       "id": "guide/quick-start:0",
@@ -45287,8 +44132,8 @@
       "title": "Rue 介绍",
       "sectionTitle": "Rue 介绍",
       "type": "paragraph",
-      "text": "对于绝大多数应用代码，你只需要写模板或普通 JSX。只有在迁移旧的手写渲染逻辑时，才需要查看历史渲染术语与迁移说明。相关说明见 默认 Block / Vapor 路径迁移。",
-      "searchText": "rue 介绍 rue 介绍 对于绝大多数应用代码，你只需要写模板或普通 jsx。只有在迁移旧的手写渲染逻辑时，才需要查看历史渲染术语与迁移说明。相关说明见 默认 block / vapor 路径迁移。 intro"
+      "text": "对于绝大多数应用代码，你只需要写模板或普通 JSX。Rue 会把组件、响应式状态与渲染更新串成一条直观的开发路径。",
+      "searchText": "rue 介绍 rue 介绍 对于绝大多数应用代码，你只需要写模板或普通 jsx。rue 会把组件、响应式状态与渲染更新串成一条直观的开发路径。 intro"
     },
     {
       "id": "intro:4",

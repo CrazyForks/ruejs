@@ -619,6 +619,7 @@ fn expr_is_phase2_nonlowerable(expr: &Expr) -> bool {
                     | "shallowRef"
                     | "toRef"
                     | "toRefs"
+                    | "useEmit"
                     | "useSetup"
             )
         }),
@@ -1539,48 +1540,86 @@ fn apply_phase2_props_derived_const_lowering(
         stmt.visit_mut_with(&mut post_return_rewriter);
     }
 
-    let mut rewritten_stmts = Vec::with_capacity(block.stmts.len() + alias_idents.len());
-    for (stmt_idx, mut stmt) in std::mem::take(&mut block.stmts).into_iter().enumerate() {
-        let mut alias_decls = Vec::new();
-
-        if stmt_idx < ret_idx
-            && let Stmt::Decl(Decl::Var(var)) = &mut stmt
+    let mut rewritten_stmts = Vec::with_capacity(block.stmts.len() + alias_idents.len() * 2);
+    for (stmt_idx, stmt) in std::mem::take(&mut block.stmts).into_iter().enumerate() {
+        let Stmt::Decl(Decl::Var(mut var)) = stmt else {
+            rewritten_stmts.push(stmt);
+            continue;
+        };
+        let has_derived_decl = stmt_idx < ret_idx
             && var.kind == VarDeclKind::Const
-        {
-            for decl in &mut var.decls {
+            && var.decls.iter().any(|decl| {
                 let Pat::Ident(binding) = &decl.name else {
-                    continue;
+                    return false;
                 };
-                let name = binding.id.sym.to_string();
-                if !derived_names.contains(&name) {
-                    continue;
-                }
-
-                if let Some(init) = decl.init.take() {
-                    decl.init = Some(Box::new(wrap_expr_in_computed(*init)));
-                }
-
-                let Some(alias_ident) = alias_idents.get(&name).cloned() else {
-                    continue;
-                };
-
-                alias_decls.push(Stmt::Decl(Decl::Var(Box::new(VarDecl {
-                    span: DUMMY_SP,
-                    kind: VarDeclKind::Const,
-                    declare: false,
-                    decls: vec![VarDeclarator {
-                        span: DUMMY_SP,
-                        name: Pat::Ident(BindingIdent { id: alias_ident, type_ann: None }),
-                        init: Some(Box::new(Expr::Ident(binding.id.clone()))),
-                        definite: false,
-                    }],
-                    ctxt: SyntaxContext::empty(),
-                }))));
-            }
+                derived_names.contains(binding.id.sym.as_ref())
+            });
+        if !has_derived_decl {
+            rewritten_stmts.push(Stmt::Decl(Decl::Var(var)));
+            continue;
         }
 
-        rewritten_stmts.push(stmt);
-        rewritten_stmts.extend(alias_decls);
+        let span = var.span;
+        let kind = var.kind;
+        let declare = var.declare;
+        let ctxt = var.ctxt;
+        for mut decl in std::mem::take(&mut var.decls) {
+            let derived_binding = match &decl.name {
+                Pat::Ident(binding) if derived_names.contains(binding.id.sym.as_ref()) => {
+                    Some(binding.id.clone())
+                }
+                _ => None,
+            };
+            let should_prime = derived_binding.is_some()
+                && decl
+                    .init
+                    .as_deref()
+                    .is_some_and(|init| matches!(crate::utils::unwrap_expr(init), Expr::Call(_)));
+
+            if derived_binding.is_some()
+                && let Some(init) = decl.init.take()
+            {
+                decl.init = Some(Box::new(wrap_expr_in_computed(*init)));
+            }
+
+            rewritten_stmts.push(Stmt::Decl(Decl::Var(Box::new(VarDecl {
+                span,
+                kind,
+                declare,
+                decls: vec![decl],
+                ctxt,
+            }))));
+
+            let Some(binding_ident) = derived_binding else {
+                continue;
+            };
+
+            if should_prime {
+                // Calls are eager in source JavaScript. Prime the computed at the same lexical
+                // point so lowering keeps side effects and thrown errors in their original order.
+                rewritten_stmts.push(Stmt::Expr(ExprStmt {
+                    span: DUMMY_SP,
+                    expr: Box::new(value_member_expr(binding_ident.clone())),
+                }));
+            }
+
+            let name = binding_ident.sym.to_string();
+            let Some(alias_ident) = alias_idents.get(&name).cloned() else {
+                continue;
+            };
+            rewritten_stmts.push(Stmt::Decl(Decl::Var(Box::new(VarDecl {
+                span: DUMMY_SP,
+                kind: VarDeclKind::Const,
+                declare: false,
+                decls: vec![VarDeclarator {
+                    span: DUMMY_SP,
+                    name: Pat::Ident(BindingIdent { id: alias_ident, type_ann: None }),
+                    init: Some(Box::new(Expr::Ident(binding_ident))),
+                    definite: false,
+                }],
+                ctxt: SyntaxContext::empty(),
+            }))));
+        }
     }
 
     block.stmts = rewritten_stmts;

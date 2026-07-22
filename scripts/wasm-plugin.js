@@ -214,6 +214,7 @@ async function generateSyncWasmModuleCode(wasmFilePath) {
 export function createRollupWasmPlugin() {
   return {
     name: 'rue-sync-wasm',
+    enforce: 'pre',
     /** @param {string} id */
     async load(id) {
       if (!id.toLowerCase().endsWith('.wasm')) {

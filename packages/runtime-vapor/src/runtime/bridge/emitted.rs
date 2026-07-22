@@ -41,21 +41,10 @@ impl WasmRue {
                 crate::log::log("debug", "runtime:emitted");
             }
         }
-        // 尝试只读借用 inner：若失败则返回一个空操作回调
-        let inner = match self.inner.try_borrow() {
-            Ok(i) => i,
-            Err(_) => {
-                let cb = wasm_bindgen::closure::Closure::wrap(Box::new(
-                    move |_evt: JsValue, _args: JsValue| {},
-                )
-                    as Box<dyn FnMut(JsValue, JsValue)>);
-                return cb.into_js_value();
-            }
-        };
         // props 归一化为 ComponentProps 映射
         let props_map = props_map_from_value(&props);
-        // 创建 emitter，并将其捕获到闭包的环境中
-        let mut emitter = inner.emitted(&props_map);
+        // emitter 只依赖 props 快照，不需要借用正在执行渲染的 runtime。
+        let mut emitter = crate::runtime::render_lifecycle::emitted_for_props(&props_map);
         let cb =
             wasm_bindgen::closure::Closure::wrap(Box::new(move |evt: JsValue, args: JsValue| {
                 let name = evt.as_string().unwrap_or_default();
@@ -85,15 +74,24 @@ mod tests {
     use super::*;
 
     #[wasm_bindgen_test]
-    fn emitted_returns_noop_when_runtime_is_already_borrowed() {
+    fn emitted_works_when_runtime_is_already_borrowed() {
         let rue = createRue(JsValue::UNDEFINED);
+        let calls = Array::new();
+        let calls_for_handler = calls.clone();
+        let handler = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+            calls_for_handler.push(&JsValue::TRUE);
+        }) as Box<dyn FnMut()>);
+        let props = Object::new();
+        Reflect::set(&props, &JsValue::from_str("onSave"), handler.as_ref()).unwrap();
         let borrow = rue.inner.borrow_mut();
-        let emitter: Function = rue.emitted_wasm(Object::new().into()).unchecked_into();
+        let emitter: Function = rue.emitted_wasm(props.into()).unchecked_into();
 
         emitter
-            .call2(&JsValue::UNDEFINED, &JsValue::from_str("save"), &JsValue::UNDEFINED)
+            .call2(&JsValue::UNDEFINED, &JsValue::from_str("save"), &Array::new().into())
             .unwrap();
+        assert_eq!(calls.length(), 1);
         drop(borrow);
+        handler.forget();
     }
 
     #[wasm_bindgen_test]

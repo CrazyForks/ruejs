@@ -18,6 +18,40 @@ use js_sys::{Array, Function, Promise};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
+pub(super) fn emitted_for_props(props: &ComponentProps) -> Box<dyn FnMut(String, Vec<JsValue>)> {
+    let props = props.clone();
+    Box::new(move |evt: String, args: Vec<JsValue>| {
+        // 同时支持 onMyEvent 与 onmyevent 两种 prop 命名，兼容不同编译/手写风格。
+        let lower = format!("on{}", evt.to_lowercase());
+        let mut camel = String::from("on");
+        for part in evt.split(|c| c == '-' || c == '_' || c == ' ') {
+            if part.is_empty() {
+                continue;
+            }
+            let mut it = part.chars();
+            if let Some(f) = it.next() {
+                camel.push_str(&f.to_uppercase().to_string());
+                let rest: String = it.collect();
+                camel.push_str(&rest);
+            }
+        }
+        let mut names: Vec<String> = Vec::new();
+        names.push(camel.clone());
+        names.push(lower);
+        for name in names.iter() {
+            if let Some(handler) = props.get(name) {
+                if let Some(func) = handler.dyn_ref::<Function>() {
+                    let arr = Array::new();
+                    for a in args.iter() {
+                        arr.push(a);
+                    }
+                    let _ = func.apply(&JsValue::UNDEFINED, &arr.into());
+                }
+            }
+        }
+    })
+}
+
 impl<A: DomAdapter> Rue<A>
 where
     A::Element: Clone,
@@ -383,41 +417,7 @@ where
     /// 事件发射器：根据 props 中 onXxx/onxxx 找到处理器并调用
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub fn emitted(&self, _props: &ComponentProps) -> Box<dyn FnMut(String, Vec<JsValue>)> {
-        let props = _props.clone();
-        Box::new(move |evt: String, args: Vec<JsValue>| {
-            // 同时支持 onMyEvent 与 onmyevent 两种 prop 命名，兼容不同编译/手写风格。
-            let lower = format!("on{}", evt.to_lowercase());
-            let mut camel = String::from("on");
-            for part in evt.split(|c| c == '-' || c == '_' || c == ' ') {
-                if part.is_empty() {
-                    continue;
-                }
-                let mut it = part.chars();
-                if let Some(f) = it.next() {
-                    camel.push_str(&f.to_uppercase().to_string());
-                    let rest: String = it.collect();
-                    camel.push_str(&rest);
-                }
-            }
-            let mut names: Vec<String> = Vec::new();
-            names.push(camel.clone());
-            if lower != camel {
-                names.push(lower.clone());
-            } else {
-                names.push(lower.clone());
-            }
-            for name in names.iter() {
-                if let Some(handler) = props.get(name) {
-                    if let Some(func) = handler.dyn_ref::<Function>() {
-                        let arr = Array::new();
-                        for a in args.iter() {
-                            arr.push(a);
-                        }
-                        let _ = func.apply(&JsValue::UNDEFINED, &arr.into());
-                    }
-                }
-            }
-        })
+        emitted_for_props(_props)
     }
 
     /// Vapor 构建辅助：调用 setup 生成默认 MountInput。

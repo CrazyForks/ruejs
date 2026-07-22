@@ -1,6 +1,6 @@
 # Rue
 
-Rue 是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发体验，同时提供默认 Block / Vapor 渲染路径、响应式能力、路由和基于 Rust / WebAssembly 的运行时扩展。
+Rue 是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发体验，同时提供响应式能力、路由和基于 Rust / WebAssembly 的运行时扩展。
 
 ## 工作流
 
@@ -21,7 +21,7 @@ Rue 是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发�
 - **Rendering / Runtime**: `packages/runtime-vapor` 提供 Rust / Wasm 侧运行时实现
 - **Ecosystem**: `packages/router`, `packages/vite-plugin-rue`, `packages/swc-plugin-rue`, `packages/rue-design`
 - **Docs / App**: `docs/` 为文档内容，`app/` 为站点与示例页面
-- **Build Tooling**: `scripts/` 包含构建、发布、兼容性检查和 Wasm 相关脚本
+- **Build Tooling**: `scripts/` 包含构建、发布和 Wasm 相关脚本
 
 ## Common Commands
 
@@ -29,7 +29,7 @@ Rue 是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发�
 - `pnpm run dev`: 启动 Rue 开发流程
 - `pnpm run build`: 构建核心包
 - `pnpm run check`: 运行 TypeScript 检查
-- `pnpm run test`: 运行兼容性检查和 Vitest
+- `pnpm run test`: 运行 Vitest
 - `pnpm run test-unit`: 仅运行单元测试
 - `pnpm run test-e2e`: 构建后运行 E2E 测试
 - `pnpm run release-check`: 发布前检查

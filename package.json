@@ -1,6 +1,6 @@
 {
   "name": "rue-site",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "private": true,
   "description": "",
   "keywords": [],
@@ -141,6 +141,7 @@
     "validator": "^13.15.35",
     "vite": "catalog:",
     "vite-plugin-wasm": "^3.6.0",
+    "vite-plus": "catalog:",
     "vitest": "4.1.5"
   },
   "simple-git-hooks": {

@@ -85,12 +85,22 @@ function assertServerIslandId(id: unknown): asserts id is string {
 const isCryptoKey = (value: unknown): value is CryptoKey =>
   typeof CryptoKey !== 'undefined' && value instanceof CryptoKey
 
+const toCryptoBufferSource = (bytes: Uint8Array): Uint8Array<ArrayBuffer> => {
+  const BufferConstructor = (
+    globalThis as typeof globalThis & {
+      Buffer?: { from(value: Uint8Array): Uint8Array<ArrayBuffer> }
+    }
+  ).Buffer
+  // Node 22 WebCrypto rejects typed arrays created in a JSDOM realm.
+  return BufferConstructor ? BufferConstructor.from(bytes) : new Uint8Array(bytes)
+}
+
 const resolveCryptoKey = async (key: ServerIslandKey, usage: KeyUsage) => {
   if (key instanceof Uint8Array) {
     if (key.byteLength !== 32) {
       throw new TypeError('Rue server island keys must be an exact 32-byte Uint8Array.')
     }
-    return crypto.subtle.importKey('raw', new Uint8Array(key).buffer, { name: 'AES-GCM' }, false, [
+    return crypto.subtle.importKey('raw', toCryptoBufferSource(key), { name: 'AES-GCM' }, false, [
       usage,
     ])
   }
@@ -173,12 +183,14 @@ export const encodeServerIslandPayload = async (
   const ciphertext = await crypto.subtle.encrypt(
     {
       name: 'AES-GCM',
-      iv,
-      additionalData: createAdditionalData(RUE_SERVER_ISLAND_PAYLOAD_VERSION, options.id),
+      iv: toCryptoBufferSource(iv),
+      additionalData: toCryptoBufferSource(
+        createAdditionalData(RUE_SERVER_ISLAND_PAYLOAD_VERSION, options.id),
+      ),
       tagLength: 128,
     },
     key,
-    plaintext,
+    toCryptoBufferSource(plaintext),
   )
   return {
     v: RUE_SERVER_ISLAND_PAYLOAD_VERSION,
@@ -199,12 +211,12 @@ export const decodeServerIslandPayload = async (
     plaintext = await crypto.subtle.decrypt(
       {
         name: 'AES-GCM',
-        iv: base64UrlToBytes(envelope.iv),
-        additionalData: createAdditionalData(envelope.v, envelope.id),
+        iv: toCryptoBufferSource(base64UrlToBytes(envelope.iv)),
+        additionalData: toCryptoBufferSource(createAdditionalData(envelope.v, envelope.id)),
         tagLength: 128,
       },
       key,
-      base64UrlToBytes(envelope.ciphertext),
+      toCryptoBufferSource(base64UrlToBytes(envelope.ciphertext)),
     )
   } catch {
     throw new ServerIslandPayloadError()

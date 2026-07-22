@@ -74,10 +74,8 @@ where
     true
 }
 
-fn replace_mounted_root_host<A: DomAdapter>(
-    mounted: &mut MountedSubtreeState<A>,
-    host: &A::Element,
-) where
+fn replace_mounted_root_host<A: DomAdapter>(mounted: &mut MountedSubtreeState<A>, host: &A::Element)
+where
     A::Element: Clone,
 {
     match mounted {
@@ -541,12 +539,8 @@ where
             // 根据旧 snapshot 类型选择替换策略：Vapor/Component/Text 的 DOM 定位信息不同。
             if let Some(old_host) = old.host_cloned() {
                 if let Some(adapter) = self.get_dom_adapter_mut() {
-                    if try_adopt_hydrated_replacement(
-                        adapter,
-                        &mut dest_parent,
-                        &old_host,
-                        &el_new,
-                    ) {
+                    if try_adopt_hydrated_replacement(adapter, &mut dest_parent, &old_host, &el_new)
+                    {
                         let mut next_mounted = mounted;
                         replace_mounted_root_host(&mut next_mounted, &old_host);
                         *old = next_mounted;

@@ -14,12 +14,6 @@ const sharedArgs = [
   '!packages/**/pkg/**',
   '-g',
   '!packages/**/pkg-node/**',
-  '-g',
-  '!docs/about/compat-policy.md',
-  '-g',
-  '!docs/about/releases.md',
-  '-g',
-  '!docs/guide/migration/renderable-default.md',
 ]
 
 const checks = [

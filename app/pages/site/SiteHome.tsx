@@ -671,8 +671,7 @@ export default HelloWorld`}
       <section className="max-w-[1100px] mx-auto mt-12">
         <h2 className="text-2xl font-semibold mb-2">细粒度响应式：更贴近真实 DOM 更新模型</h2>
         <p className="text-gray-600">
-          Rue
-          的组件、状态和默认渲染路径都建立在细粒度响应式系统之上，依赖变化后只接管受影响的更新边界。
+          Rue 的组件、状态和渲染路径都建立在细粒度响应式系统之上，依赖变化后只接管受影响的更新边界。
         </p>
         <p className="text-gray-600">
           结合 Rust 实现的响应式系统、Rust / Wasm 运行时与原生 DOM 编译能力，JSX

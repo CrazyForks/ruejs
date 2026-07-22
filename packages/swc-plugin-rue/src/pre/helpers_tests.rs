@@ -201,6 +201,62 @@ fn lowers_derived_consts_through_helper_aliases_in_functions() {
 }
 
 #[test]
+fn eagerly_primes_lowered_call_expressions_in_source_order() {
+    let mut fn_decl = parse_fn_decl(
+        "function Comp(props) { const initialized = store.ensureInitialized(props.initialValues), marker = mark(), resolved = store.resolve(props.value); onMounted(() => use(initialized)); return <div>{initialized}{resolved}</div>; }",
+    );
+    assert!(lower_props_derived_consts_in_function(&mut fn_decl.function));
+
+    let rendered = compact(&emit_stmts(vec![Stmt::Decl(Decl::Fn(fn_decl))]));
+    let initialized_decl = rendered
+        .find("constinitialized=computed(()=>store.ensureInitialized(props.initialValues));")
+        .unwrap_or_else(|| panic!("initialized computed declaration: {rendered}"));
+    let initialized_prime = rendered[initialized_decl..]
+        .find("initialized.get();")
+        .map(|offset| initialized_decl + offset)
+        .expect("initialized eager read");
+    let marker_decl = rendered.find("constmarker=mark();").expect("marker declaration");
+    let resolved_decl = rendered
+        .find("constresolved=computed(()=>store.resolve(props.value));")
+        .expect("resolved computed declaration");
+    let resolved_prime = rendered[resolved_decl..]
+        .find("resolved.get();")
+        .map(|offset| resolved_decl + offset)
+        .expect("resolved eager read");
+
+    assert!(initialized_decl < initialized_prime);
+    assert!(initialized_prime < marker_decl);
+    assert!(marker_decl < resolved_decl);
+    assert!(resolved_decl < resolved_prime);
+}
+
+#[test]
+fn keeps_non_call_phase2_values_lazy() {
+    let mut fn_decl = parse_fn_decl(
+        "function Comp(props) { const value = props.count + 1; return <div>{value}</div>; }",
+    );
+    assert!(lower_props_derived_consts_in_function(&mut fn_decl.function));
+
+    let rendered = compact(&emit_stmts(vec![Stmt::Decl(Decl::Fn(fn_decl))]));
+    assert!(
+        rendered.contains("constvalue=computed(()=>props.count+1);const__rue_phase2_value=value;"),
+        "{rendered}"
+    );
+}
+
+#[test]
+fn keeps_use_emit_initializer_eager_and_outside_phase2_computed() {
+    let mut fn_decl = parse_fn_decl(
+        "function Comp(props) { const emit = useEmit(props); return <button onClick={() => emit('change')} />; }",
+    );
+    assert!(!lower_props_derived_consts_in_function(&mut fn_decl.function));
+
+    let rendered = compact(&emit_stmts(vec![Stmt::Decl(Decl::Fn(fn_decl))]));
+    assert!(rendered.contains("constemit=useEmit(props);"), "{rendered}");
+    assert!(!rendered.contains("computed(()=>useEmit(props))"), "{rendered}");
+}
+
+#[test]
 fn wraps_object_literals_in_computed_arrow_expr_bodies() {
     let rendered =
         normalize(&emit_expr(wrap_expr_in_computed(parse_expr("({ x: source.value })", false))));

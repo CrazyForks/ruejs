@@ -1,8 +1,8 @@
 # 渲染函数与 JSX {#render-functions-jsx}
 
-Rue 依然支持手写渲染函数，但它们现在更适合作为显式边界来使用：例如可复用库组件、极动态 UI，或迁移旧的手写渲染 helper。对绝大多数应用代码来说，模板和普通 JSX 仍然是首选，因为它们会在编译阶段直接生成 Block / Vapor 导向的渲染产物。
+Rue 依然支持手写渲染函数，但它们更适合作为显式边界来使用：例如基础组件或极动态 UI。对绝大多数应用代码来说，普通 JSX 仍然是首选，因为它们会在编译阶段直接生成更精确的渲染产物。
 
-> 如果你还没建立 Rue 当前默认渲染路径的整体图景，请先阅读[渲染机制](/guide/guide/extras/rendering-mechanism)。
+> 如果你还没建立 Rue 渲染机制的整体图景，请先阅读[渲染机制](/guide/guide/extras/rendering-mechanism)。
 
 ## 基本用法 {#basic-usage}
 
@@ -10,7 +10,7 @@ Rue 依然支持手写渲染函数，但它们现在更适合作为显式边界�
 
 <span id="creating-vnodes"></span>
 
-为兼容旧链接，这里保留了历史锚点。需要注意的是：`h()` 创建的是公开渲染输出；在当前默认路径中，编译器通常会直接生成 Renderable / Block，而不是在每个节点上都显式调用 `h()`。
+`h()` 创建的是公开渲染输出。编译器通常会直接生成 Renderable / Block，而不是在每个节点上都显式调用 `h()`。
 
 ```tsx
 import { h } from '@rue-js/rue'
@@ -24,7 +24,7 @@ const output = h('div', { id: 'foo', class: 'bar' }, [
 
 - 手写渲染函数
 - 包装高度动态的子树
-- 与历史渲染 helper 或迁移中的桥接层对接
+- 构造需要手动组合的渲染输出
 
 `h()` 的参数保持灵活：
 
@@ -151,7 +151,7 @@ Rue 的 JSX 与 React JSX 有两点最容易混淆的区别：
 - 你可以直接使用 `class` 和 `for`，无需改写成 `className` 或 `htmlFor`
 - 组件 children 最终会落到 `props.children` 或显式命名 props，而不是默认套入额外的 `slots` 上下文
 
-Rue 当前的 JSX 编译也默认服务于 Block / Vapor 路径，因此即便你写的是 JSX，编译结果也会优先落到当前的 Renderable / Block 执行模型。
+Rue 的 JSX 编译会优先落到当前的 Renderable / Block 执行模型。
 
 ### JSX 类型推断 {#jsx-type-inference}
 
