@@ -1,6 +1,6 @@
 {
   "name": "rue-site",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "private": true,
   "description": "",
   "keywords": [],
@@ -41,7 +41,7 @@
     "size-global": "node scripts/build.js rue runtime -f global -p --size",
     "size-esm-runtime": "node scripts/build.js rue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime shared -f esm-bundler",
-    "size-runtime": "node scripts/runtime-size-audit.js",
+    "size-runtime": "pnpm --filter @rue-js/runtime-vapor run build && node scripts/runtime-size-audit.js",
     "check": "tsc --incremental --noEmit",
     "check:text": "pnpm --dir packages/text check",
     "check:compat-cleanup": "node scripts/check-compat-cleanup.js",

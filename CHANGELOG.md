@@ -1,3 +1,10 @@
+## [0.8.6](https://github.com/doyouhaobaby/rue/compare/v0.8.5...v0.8.6) (2026-08-13)
+
+
+### Features
+
+* 优化打包体验 ([3b22774](https://github.com/doyouhaobaby/rue/commit/3b227744bdccf84baf99e625838dc06eb6bb70ba))
+
 ## [0.8.5](https://github.com/hunzhiwange/ruejs/compare/v0.8.4...v0.8.5) (2026-07-22)
 
 ## [0.8.4](https://github.com/hunzhiwange/ruejs/compare/v0.8.3...v0.8.4) (2026-07-21)
