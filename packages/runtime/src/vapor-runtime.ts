@@ -78,6 +78,7 @@ import {
   type RueIslandDescriptor,
   type RueServerIslandDescriptor,
 } from './island-protocol'
+import { resolveActiveRuntime } from './runtime-context'
 
 getDOMAdapter()
 
@@ -214,8 +215,11 @@ const ensureVaporRuntime = () => {
   return vaporGlobal[RUE_VAPOR_RUNTIME_KEY]
 }
 
+/** 获取或创建 Vapor 专用 runtime，供 Vapor 应用控制器复用。 */
+export const getVaporRuntime = () => ensureVaporRuntime()
+
 const getRue = () =>
-  vaporGlobal.__rue_active || vaporGlobal[RUE_VAPOR_PREFERRED_RUNTIME_KEY] || ensureVaporRuntime()
+  resolveActiveRuntime(() => vaporGlobal[RUE_VAPOR_PREFERRED_RUNTIME_KEY] || ensureVaporRuntime())
 
 const getRueRuntime = (): any => getRue()
 

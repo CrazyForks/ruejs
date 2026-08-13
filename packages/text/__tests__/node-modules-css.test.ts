@@ -83,7 +83,7 @@ describe('node_modules CSS import (Pages Router)', () => {
     await fs.writeFile(path.join(fakeCssDir, 'styles.css'), `.fake-css-lib { color: red; }`)
     await fs.writeFile(
       path.join(fakeCssDir, 'index.js'),
-      `import "./styles.css";\nexport function FakeComponent() { return "fake-css-lib-rendered"; }\n`,
+      `import "./styles.css";\nexport const fakeCssLibRendered = "fake-css-lib-rendered";\n`,
     )
 
     const fakeCssModuleDir = path.join(nmDir, 'fake-css-module-lib')
@@ -103,7 +103,7 @@ describe('node_modules CSS import (Pages Router)', () => {
     )
     await fs.writeFile(
       path.join(fakeCssModuleDir, 'index.js'),
-      `import classes from "./styles.module.css";\nexport const styles = classes;\nexport function ModComponent() { return "fake-css-module-rendered"; }\n`,
+      `import classes from "./styles.module.css";\nexport const styles = classes;\nexport const fakeCssModuleRendered = "fake-css-module-rendered";\n`,
     )
 
     // Pages Router structure
@@ -112,15 +112,15 @@ describe('node_modules CSS import (Pages Router)', () => {
 
     await fs.writeFile(
       path.join(pagesDir, 'index.tsx'),
-      `import { FakeComponent } from "fake-css-lib";
-import { ModComponent } from "fake-css-module-lib";
+      `import { fakeCssLibRendered } from "fake-css-lib";
+import { fakeCssModuleRendered } from "fake-css-module-lib";
 
 export default function Page() {
   return (
     <div>
       <h1 id="nm-css-test">node-modules-css-pages-works</h1>
-      <p>{FakeComponent()}</p>
-      <p>{ModComponent()}</p>
+      <p>{fakeCssLibRendered}</p>
+      <p>{fakeCssModuleRendered}</p>
     </div>
   );
 }`,

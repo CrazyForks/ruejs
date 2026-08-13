@@ -423,6 +423,7 @@ async function runTestsIfNeeded() {
       await ensureRuntimeVaporBuilt()
       await run('pnpm', ['run', 'test', '--run'])
       await runReleaseVerificationPackageTests()
+      await run('pnpm', ['run', 'size-runtime', '--', '--check'])
     } else {
       console.log(`Skipped (dry run)`)
     }

@@ -219,6 +219,8 @@ export {
   setReactiveScheduling,
   /** 从组件 props 中创建 emit 事件调用器。 */
   useEmit,
+  /** 创建绑定 Vapor runtime 的应用控制器。 */
+  useApp,
   /** 在响应式 flush 后运行并追踪依赖的 watch effect。 */
   watchPostEffect,
   /** 响应式变更时同步运行并追踪依赖的 watch effect。 */
@@ -227,6 +229,12 @@ export {
   Component,
   /** Component 动态组件的属性类型。 */
   type DynamicComponentProps,
+  /** 缓存动态组件实例，保留组件状态。 */
+  KeepAlive,
+  /** KeepAlive include/exclude 匹配规则。 */
+  type KeepAliveMatchPattern,
+  /** KeepAlive 组件属性。 */
+  type KeepAliveProps,
   /** Rue context 对象，包含 Provider 与默认值。 */
   type RueContext,
   /** Context Provider 组件属性，负责向子树传递 context 值。 */
@@ -245,4 +253,8 @@ export {
   type TransitionMode,
   /** Transition 组件属性，封装进入和离开动画配置。 */
   type TransitionProps,
+  /** 列表元素进入、离开和移动过渡组件。 */
+  TransitionGroup,
+  /** TransitionGroup 组件属性。 */
+  type TransitionGroupProps,
 } from '@rue-js/runtime/vapor'

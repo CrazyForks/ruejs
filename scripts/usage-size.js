@@ -3,22 +3,12 @@ import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { minify } from '@swc/core'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
+import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import pico from 'picocolors'
 import { build } from 'vite'
 import wasm from 'vite-plugin-wasm'
 import { formatBytes } from './format-bytes.js'
-
-const {
-  values: { write },
-} = parseArgs({
-  options: {
-    write: {
-      type: 'boolean',
-      default: false,
-    },
-  },
-})
 
 const sizeDir = path.resolve('temp/size')
 const entry = path.resolve('./packages/rue/dist/rue.runtime.esm-bundler.js')
@@ -44,17 +34,17 @@ const presets = [
   },
 ]
 
-main()
-
 /**
  * Main function that initiates the bundling process for the presets
+ *
+ * @param {boolean} write
  */
-async function main() {
+async function main(write) {
   console.log()
   /** @type {Promise<{name: string, size: number, gzip: number, brotli: number}>[]} */
   const tasks = []
   for (const preset of presets) {
-    tasks.push(generateBundle(preset))
+    tasks.push(generateBundle(preset, write))
   }
   const results = await Promise.all(tasks)
 
@@ -79,9 +69,10 @@ async function main() {
  * Generates a bundle for a given preset
  *
  * @param {Preset} preset - The preset to generate the bundle for
+ * @param {boolean} write - Whether to save the generated bundle
  * @returns {Promise<{name: string, size: number, gzip: number, brotli: number}>} - The result of the bundling process
  */
-async function generateBundle(preset) {
+async function generateBundle(preset, write) {
   const entryFile = path.resolve(sizeDir, `${sanitizePresetName(preset.name)}.entry.mjs`)
   const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
 
@@ -120,16 +111,7 @@ async function generateBundle(preset) {
       throw new Error(`failed to generate usage-size bundle for ${preset.name}`)
     }
 
-    const minified = (
-      await minify(bundled, {
-        module: true,
-        toplevel: true,
-      })
-    ).code
-
-    const size = minified.length
-    const gzip = gzipSync(minified).length
-    const brotli = brotliCompressSync(minified).length
+    const { min: size, gzip, brotli } = await measureBundleCode(bundled)
 
     if (write) {
       await writeFile(path.resolve(sizeDir, preset.name + '.js'), bundled)
@@ -147,6 +129,37 @@ async function generateBundle(preset) {
 }
 
 /**
+ * Measure original and minified JavaScript as bytes.
+ *
+ * @param {string} rawCode
+ * @param {string} minifiedCode
+ */
+export function measureCodeSizes(rawCode, minifiedCode) {
+  return {
+    raw: Buffer.byteLength(rawCode),
+    min: Buffer.byteLength(minifiedCode),
+    gzip: gzipSync(minifiedCode).byteLength,
+    brotli: brotliCompressSync(minifiedCode).byteLength,
+  }
+}
+
+/**
+ * Minify a JavaScript bundle with the same settings used by the size tools.
+ *
+ * @param {string} bundled
+ */
+export async function measureBundleCode(bundled) {
+  const minified = (
+    await minify(bundled, {
+      module: true,
+      toplevel: true,
+    })
+  ).code
+
+  return measureCodeSizes(bundled, minified)
+}
+
+/**
  * @param {string} name
  */
 function sanitizePresetName(name) {
@@ -156,4 +169,21 @@ function sanitizePresetName(name) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'entry'
   )
+}
+
+const moduleFile = import.meta.url.startsWith('file:') ? fileURLToPath(import.meta.url) : ''
+const isMain = process.argv[1] && moduleFile && path.resolve(process.argv[1]) === moduleFile
+
+if (isMain) {
+  const {
+    values: { write },
+  } = parseArgs({
+    options: {
+      write: {
+        type: 'boolean',
+        default: false,
+      },
+    },
+  })
+  await main(write)
 }

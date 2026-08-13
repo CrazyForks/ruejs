@@ -1,7 +1,28 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h, render, setReactiveScheduling, Suspense, useComponent, type FC } from '../src'
+import {
+  h,
+  render,
+  renderAnchor,
+  setReactiveScheduling,
+  signal,
+  Suspense,
+  useComponent,
+  vapor,
+  watchEffect,
+  type FC,
+} from '../src'
 
 type AsyncLabelModule = { default: FC<{ label: string }> }
+
+const createDeferredModule = () => {
+  let resolve!: (value: AsyncLabelModule) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<AsyncLabelModule>((nextResolve, nextReject) => {
+    resolve = nextResolve
+    reject = nextReject
+  })
+  return { promise, resolve, reject }
+}
 
 setReactiveScheduling('sync')
 
@@ -170,5 +191,72 @@ describe('Suspense', () => {
 
     expect(container.querySelector('#outer-fallback')).toBeNull()
     expect(container.querySelector('#nested-resolved')?.textContent).toBe('Nested')
+  })
+
+  it('ignores stale pending completion and settlement after unmount', async () => {
+    const stale = createDeferredModule()
+    const current = createDeferredModule()
+    const StaleAsync = useComponent<{ label: string }>(() => stale.promise)
+    const CurrentAsync = useComponent<{ label: string }>(() => current.promise)
+    const onResolve = vi.fn()
+    const active = signal<'stale' | 'current'>('stale')
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const Harness: FC = () =>
+      vapor(() => {
+        const root = document.createElement('section')
+        const anchor = document.createComment('suspense-generation')
+        root.appendChild(anchor)
+        watchEffect(() => {
+          const currentGeneration = active.get()
+          renderAnchor(
+            h(
+              Suspense,
+              {
+                fallback: h(
+                  'span',
+                  { id: `${currentGeneration}-fallback` },
+                  `${currentGeneration} loading`,
+                ),
+                onResolve,
+              },
+              currentGeneration === 'stale'
+                ? h(StaleAsync, { label: 'Stale' })
+                : h(CurrentAsync, { label: 'Current' }),
+            ),
+            root,
+            anchor,
+          )
+        })
+        return root
+      }) as any
+
+    render(h(Harness, null), container)
+    await flushSuspense()
+    expect(container.querySelector('#stale-fallback')).not.toBeNull()
+
+    active.set('current')
+    await flushSuspense()
+
+    current.resolve({
+      default: props => h('section', { id: 'current-resolved' }, props.label),
+    })
+    await flushSuspense()
+
+    expect(container.querySelector('#current-fallback')).toBeNull()
+    expect(container.querySelector('#current-resolved')?.textContent).toBe('Current')
+    expect(onResolve).toHaveBeenCalledTimes(1)
+
+    render(null as any, container)
+    await flushSuspense()
+    stale.resolve({
+      default: props => h('section', { id: 'stale-resolved' }, props.label),
+    })
+    await flushSuspense()
+
+    expect(container.childNodes).toHaveLength(0)
+    expect(container.querySelector('#stale-resolved')).toBeNull()
+    expect(onResolve).toHaveBeenCalledTimes(1)
   })
 })

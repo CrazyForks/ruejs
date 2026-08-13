@@ -1309,6 +1309,10 @@ export default function text(options: TextOptions = {}): PluginOption[] {
     })
   }
 
+  let appRouteTypeGeneration: Promise<void> | null = null
+  let appRouteTypeGenerationPending = false
+  let appRouteTypeGenerationClosing = false
+
   // Auto-register Rue's native RSC plugin when App Router is detected.
   // Check eagerly at call time using the same heuristic as config().
   // Must mirror the full detection logic: check {base}/app then {base}/src/app.
@@ -3151,9 +3155,17 @@ export default function text(options: TextOptions = {}): PluginOption[] {
         }
       },
 
+      async closeBundle() {
+        appRouteTypeGenerationClosing = true
+        while (appRouteTypeGeneration) {
+          await appRouteTypeGeneration
+        }
+      },
+
       configureServer(server: ViteDevServer) {
         // Watch route files for additions/removals to invalidate route cache.
         const pageExtensions = fileMatcher.extensionRegex
+        appRouteTypeGenerationClosing = false
 
         // Build a long-lived ModuleRunner for loading all Pages Router modules
         // (middleware, API routes, SSR page rendering) on every request.
@@ -3217,9 +3229,6 @@ export default function text(options: TextOptions = {}): PluginOption[] {
           invalidateRootParamsModule()
         }
 
-        let appRouteTypeGeneration: Promise<void> | null = null
-        let appRouteTypeGenerationPending = false
-
         function warnRouteTypeGenerationFailure(error: unknown) {
           server.config.logger.warn(
             `[text] Failed to regenerate route types: ${
@@ -3269,7 +3278,11 @@ export default function text(options: TextOptions = {}): PluginOption[] {
           if (hasPagesDir && filePath.startsWith(pagesDir) && pageExtensions.test(filePath)) {
             invalidateRouteCache(pagesDir)
           }
-          if (hasAppDir && shouldInvalidateAppRouteFile(appDir, filePath, fileMatcher)) {
+          if (
+            !appRouteTypeGenerationClosing &&
+            hasAppDir &&
+            shouldInvalidateAppRouteFile(appDir, filePath, fileMatcher)
+          ) {
             invalidateAppRoutingModules()
             regenerateAppRouteTypes()
           }
@@ -3278,7 +3291,11 @@ export default function text(options: TextOptions = {}): PluginOption[] {
           if (hasPagesDir && filePath.startsWith(pagesDir) && pageExtensions.test(filePath)) {
             invalidateRouteCache(pagesDir)
           }
-          if (hasAppDir && shouldInvalidateAppRouteFile(appDir, filePath, fileMatcher)) {
+          if (
+            !appRouteTypeGenerationClosing &&
+            hasAppDir &&
+            shouldInvalidateAppRouteFile(appDir, filePath, fileMatcher)
+          ) {
             invalidateAppRoutingModules()
             regenerateAppRouteTypes()
           }

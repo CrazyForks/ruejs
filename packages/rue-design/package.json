@@ -18,7 +18,12 @@
   },
   "files": [
     "index.js",
-    "dist"
+    "dist/*.js",
+    "dist/*.d.ts",
+    "dist/components",
+    "dist/__types/src/index.d.ts",
+    "dist/__types/src/components/*/index.d.ts",
+    "dist/__types/src/components/qr-code/encoder.d.ts"
   ],
   "sideEffects": false,
   "main": "index.js",
@@ -28,7 +33,7 @@
   "exports": {
     ".": {
       "types": "./dist/rue-design.d.ts",
-      "development": "./src/index.ts",
+      "development": "./dist/rue-design.esm-bundler.js",
       "node": {
         "production": "./dist/rue-design.cjs.prod.js",
         "development": "./dist/rue-design.cjs.js",
@@ -38,7 +43,13 @@
       "import": "./dist/rue-design.esm-bundler.js",
       "require": "./index.js"
     },
-    "./*": "./*"
+    "./*": {
+      "types": "./dist/__types/src/components/*/index.d.ts",
+      "development": "./dist/components/esm/*.js",
+      "import": "./dist/components/esm/*.js",
+      "module": "./dist/components/esm/*.js",
+      "require": "./dist/components/cjs/*.js"
+    }
   },
   "dependencies": {
     "@rue-js/router": "workspace:*",

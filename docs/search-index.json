@@ -1012,8 +1012,8 @@
       "title": "发布与版本",
       "sectionTitle": "发布与版本",
       "type": "paragraph",
-      "text": "完整的历史发布记录可在项目的变更日志（CHANGELOG）中查看。发布说明会涵盖新特性、修复与重要调整。",
-      "searchText": "发布与版本 发布与版本 完整的历史发布记录可在项目的变更日志（changelog）中查看。发布说明会涵盖新特性、修复与重要调整。 about/releases"
+      "text": "完整的历史发布记录可在项目的变更日志（CHANGELOG）中查看。发布说明会涵盖新特性、修复、潜在不兼容项以及迁移建议。",
+      "searchText": "发布与版本 发布与版本 完整的历史发布记录可在项目的变更日志（changelog）中查看。发布说明会涵盖新特性、修复、潜在不兼容项以及迁移建议。 about/releases"
     },
     {
       "id": "about/releases:3",
@@ -1045,8 +1045,8 @@
       "title": "发布与版本",
       "sectionTitle": "发布节奏",
       "type": "list",
-      "text": "修补版本（patch）：按需发布，集中解决缺陷与小型改进 小版本（minor）：引入新特性并提升体验，通常间隔数月；在正式发布前会经历 beta 预发布阶段 大版本（major）：提前预告并展开早期讨论，随后进入 alpha / beta 等预发布阶段，以充分收集反馈",
-      "searchText": "发布与版本 发布节奏 修补版本（patch）：按需发布，集中解决缺陷与小型改进 小版本（minor）：引入新特性并提升体验，通常间隔数月；在正式发布前会经历 beta 预发布阶段 大版本（major）：提前预告并展开早期讨论，随后进入 alpha / beta 等预发布阶段，以充分收集反馈 about/releases"
+      "text": "修补版本（patch）：按需发布，集中解决缺陷与小型改进 小版本（minor）：引入新特性并提升体验，通常间隔数月；在正式发布前会经历 beta 预发布阶段 大版本（major）：提前预告并展开早期讨论，随后进入 alpha / beta 等预发布阶段，以充分收集反馈与完善迁移文档",
+      "searchText": "发布与版本 发布节奏 修补版本（patch）：按需发布，集中解决缺陷与小型改进 小版本（minor）：引入新特性并提升体验，通常间隔数月；在正式发布前会经历 beta 预发布阶段 大版本（major）：提前预告并展开早期讨论，随后进入 alpha / beta 等预发布阶段，以充分收集反馈与完善迁移文档 about/releases"
     },
     {
       "id": "about/releases:6",
@@ -1151,6 +1151,28 @@
       "id": "about/releases:15",
       "docId": "about/releases",
       "route": "/page/about/releases",
+      "href": "/page/about/releases#-弃用策略",
+      "title": "发布与版本",
+      "sectionTitle": "弃用策略",
+      "type": "heading",
+      "text": "弃用策略",
+      "searchText": "发布与版本 弃用策略 弃用策略 about/releases"
+    },
+    {
+      "id": "about/releases:16",
+      "docId": "about/releases",
+      "route": "/page/about/releases",
+      "href": "/page/about/releases#-弃用策略",
+      "title": "发布与版本",
+      "sectionTitle": "弃用策略",
+      "type": "paragraph",
+      "text": "Rue 会在小版本中逐步引入更好的替代方案，并将旧特性标记为“弃用”。被弃用的能力在当前主版本中仍可使用，但会在下一个主版本移除。我们会在发布说明中注明弃用条目与迁移路径。",
+      "searchText": "发布与版本 弃用策略 rue 会在小版本中逐步引入更好的替代方案，并将旧特性标记为“弃用”。被弃用的能力在当前主版本中仍可使用，但会在下一个主版本移除。我们会在发布说明中注明弃用条目与迁移路径。 about/releases"
+    },
+    {
+      "id": "about/releases:17",
+      "docId": "about/releases",
+      "route": "/page/about/releases",
       "href": "/page/about/releases#-rfc-流程",
       "title": "发布与版本",
       "sectionTitle": "RFC 流程",
@@ -1159,7 +1181,7 @@
       "searchText": "发布与版本 rfc 流程 rfc 流程 about/releases"
     },
     {
-      "id": "about/releases:16",
+      "id": "about/releases:18",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#-rfc-流程",
@@ -1170,7 +1192,7 @@
       "searchText": "发布与版本 rfc 流程 具有较大 api 面或重要架构变更的提案，会进入 rfc（征求意见） 流程。我们通过公开讨论确保演进路径清晰、风险可控，并邀请社区参与设计反馈。相关讨论通常在 rue 的 github 仓库提案与讨论区进行。 about/releases"
     },
     {
-      "id": "about/releases:17",
+      "id": "about/releases:19",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1181,7 +1203,7 @@
       "searchText": "发布与版本 实验性特性 实验性特性 about/releases"
     },
     {
-      "id": "about/releases:18",
+      "id": "about/releases:20",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1192,7 +1214,7 @@
       "searchText": "发布与版本 实验性特性 部分能力会在稳定版文档中出现，但标注为“实验性”。这类特性通常已经在纸面设计（或 rfc）上解决了主要问题，但仍缺少真实项目规模使用的反馈。实验性特性应在可控范围内试用，并预期在任意发布类型中可能发生变更。 about/releases"
     },
     {
-      "id": "about/releases:19",
+      "id": "about/releases:21",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1203,7 +1225,7 @@
       "searchText": "发布与版本 实验性特性 --- about/releases"
     },
     {
-      "id": "about/releases:20",
+      "id": "about/releases:22",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1214,7 +1236,7 @@
       "searchText": "发布与版本 实验性特性 在本仓库中，你可以使用以下脚本管理版本与发布说明： about/releases"
     },
     {
-      "id": "about/releases:21",
+      "id": "about/releases:23",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1225,7 +1247,7 @@
       "searchText": "发布与版本 实验性特性 $ pnpm changelog about/releases"
     },
     {
-      "id": "about/releases:22",
+      "id": "about/releases:24",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -1236,7 +1258,7 @@
       "searchText": "发布与版本 实验性特性 $ pnpm release about/releases"
     },
     {
-      "id": "about/releases:23",
+      "id": "about/releases:25",
       "docId": "about/releases",
       "route": "/page/about/releases",
       "href": "/page/about/releases#experimental-features",
@@ -34848,8 +34870,8 @@
       "title": "渲染函数与 JSX",
       "sectionTitle": "渲染函数与 JSX",
       "type": "paragraph",
-      "text": "Rue 依然支持手写渲染函数，但它们更适合作为显式边界来使用：例如基础组件或极动态 UI。对绝大多数应用代码来说，模板和普通 JSX 仍然是首选，因为它们会在编译阶段直接生成更精确的渲染产物。",
-      "searchText": "渲染函数与 jsx 渲染函数与 jsx rue 依然支持手写渲染函数，但它们更适合作为显式边界来使用：例如基础组件或极动态 ui。对绝大多数应用代码来说，模板和普通 jsx 仍然是首选，因为它们会在编译阶段直接生成更精确的渲染产物。 guide/extras/render-function"
+      "text": "Rue 依然支持手写渲染函数，但它们更适合作为显式边界来使用：例如基础组件或极动态 UI。对绝大多数应用代码来说，普通 JSX 仍然是首选，因为它们会在编译阶段直接生成更精确的渲染产物。",
+      "searchText": "渲染函数与 jsx 渲染函数与 jsx rue 依然支持手写渲染函数，但它们更适合作为显式边界来使用：例如基础组件或极动态 ui。对绝大多数应用代码来说，普通 jsx 仍然是首选，因为它们会在编译阶段直接生成更精确的渲染产物。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:2",

@@ -16,6 +16,8 @@ setReactiveScheduling('sync')
 
 afterEach(() => {
   document.body.innerHTML = ''
+  vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 const flush = async () => {
@@ -118,5 +120,87 @@ describe('Transition renderable boundary', () => {
     await flush()
 
     expect(container.querySelector('strong')).toBeNull()
+  })
+
+  it.each(['default', 'out-in', 'in-out'] as const)(
+    'cancels a stale enter during a rapid %s mode switch',
+    async mode => {
+      const visible = signal(false)
+      const onAfterEnter = vi.fn()
+      const onEnterCancelled = vi.fn()
+      let finishEnter = () => {}
+
+      const Harness: FC = () =>
+        vapor(() => {
+          const root = document.createElement('section')
+          const anchor = document.createComment('transition-mode-anchor')
+          root.appendChild(anchor)
+
+          watchEffect(() => {
+            renderAnchor(
+              <Transition
+                mode={mode}
+                css={false}
+                onEnter={(_el, done) => {
+                  finishEnter = done
+                }}
+                onAfterEnter={onAfterEnter}
+                onEnterCancelled={onEnterCancelled}
+                onLeave={(_el, done) => done()}
+              >
+                {visible.get() ? createTransitionChild(mode) : null}
+              </Transition>,
+              root,
+              anchor,
+            )
+          })
+
+          return root
+        }) as any
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      render(<Harness />, container)
+      await flush()
+
+      visible.set(true)
+      await flush()
+      visible.set(false)
+      await flush()
+      finishEnter()
+
+      expect(onEnterCancelled).toHaveBeenCalledTimes(1)
+      expect(onAfterEnter).not.toHaveBeenCalled()
+      expect(container.querySelector('strong')).toBeNull()
+    },
+  )
+
+  it('cancels an active enter when Transition is unmounted', async () => {
+    const onAfterEnter = vi.fn()
+    const onEnterCancelled = vi.fn()
+    let finishEnter = () => {}
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    render(
+      <Transition
+        css={false}
+        onEnter={(_el, done) => {
+          finishEnter = done
+        }}
+        onAfterEnter={onAfterEnter}
+        onEnterCancelled={onEnterCancelled}
+      >
+        <strong>active</strong>
+      </Transition>,
+      container,
+    )
+    await flush()
+
+    render(null as any, container)
+    finishEnter()
+
+    expect(onEnterCancelled).toHaveBeenCalledTimes(1)
+    expect(onAfterEnter).not.toHaveBeenCalled()
   })
 })

@@ -211,6 +211,31 @@ describe('generateRouteTypes', () => {
     })
   })
 
+  it('waits for pending route type generation when the dev server closes', async () => {
+    await withTempProject(async root => {
+      await writeProjectFile(root, 'app/layout.tsx', EMPTY_LAYOUT)
+      await writeProjectFile(root, 'app/page.tsx', EMPTY_PAGE)
+
+      const server = await createServer({
+        root,
+        logLevel: 'silent',
+        plugins: [text({ appDir: root })],
+      })
+
+      const generatedPath = path.join(root, '.text', 'types', 'routes.d.ts')
+      await eventually(async () => {
+        expect(await readFile(generatedPath, 'utf-8')).toContain('type PageRoute = "/";')
+      })
+
+      const closingPage = path.join(root, 'app/closing/page.tsx')
+      await writeProjectFile(root, 'app/closing/page.tsx', EMPTY_PAGE)
+      server.watcher.emit('add', closingPage)
+      await server.close()
+
+      expect(await readFile(generatedPath, 'utf-8')).toContain('type PageRoute = "/" | "/closing";')
+    })
+  })
+
   it('does not block dev server startup when initial route type generation fails', async () => {
     await withTempProject(async root => {
       await writeProjectFile(root, 'app/layout.tsx', EMPTY_LAYOUT)

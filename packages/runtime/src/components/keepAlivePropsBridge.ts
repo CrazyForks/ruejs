@@ -2,17 +2,19 @@ type KeepAlivePropsUpdater = (props: unknown) => void
 
 const updaterByProps = new WeakMap<object, KeepAlivePropsUpdater>()
 const updaterByHandle = new WeakMap<object, KeepAlivePropsUpdater>()
-const registrationTargets: Array<{
-  handle: object | null
-  props: object | null
-}> = []
+type RegistrationTarget = [handle: object, props: object | null]
+const registrationTargets: RegistrationTarget[] = []
 
 const toObject = (value: unknown): object | null =>
   (typeof value === 'object' || typeof value === 'function') && value !== null ? value : null
 
-const readPropsObject = (handle: unknown): object | null => {
-  const record = toObject(handle) as Record<string, unknown> | null
-  return record ? toObject(record.props) : null
+const readPropsObject = (handle: object) => toObject((handle as Record<string, unknown>).props)
+
+const removeRegistrationTarget = (target: RegistrationTarget) => {
+  const index = registrationTargets.indexOf(target)
+  if (index >= 0) {
+    registrationTargets.splice(index, 1)
+  }
 }
 
 export const registerKeepAlivePropsUpdater = (props: unknown, update: KeepAlivePropsUpdater) => {
@@ -22,47 +24,32 @@ export const registerKeepAlivePropsUpdater = (props: unknown, update: KeepAliveP
   }
   const target = registrationTargets[registrationTargets.length - 1]
   if (target) {
-    if (target.props) {
-      updaterByProps.set(target.props, update)
+    if (target[1]) {
+      updaterByProps.set(target[1], update)
     }
-    if (target.handle) {
-      updaterByHandle.set(target.handle, update)
-    }
+    updaterByHandle.set(target[0], update)
   }
 }
 
 export const withKeepAlivePropsRegistrationTarget = <T>(handle: unknown, callback: () => T): T => {
-  const nextTarget = readPropsObject(handle)
   const nextHandle = toObject(handle)
-  if (!nextTarget && !nextHandle) {
+  if (!nextHandle) {
     return callback()
   }
 
-  const target = {
-    handle: nextHandle,
-    props: nextTarget,
-  }
+  const target: RegistrationTarget = [nextHandle, readPropsObject(nextHandle)]
   registrationTargets.push(target)
   let completed = false
   try {
     const result = callback()
     completed = true
-    const restore = () => {
-      const index = registrationTargets.indexOf(target)
-      if (index >= 0) {
-        registrationTargets.splice(index, 1)
-      }
-    }
     queueMicrotask(() => {
-      queueMicrotask(restore)
+      queueMicrotask(() => removeRegistrationTarget(target))
     })
     return result
   } finally {
     if (!completed) {
-      const index = registrationTargets.indexOf(target)
-      if (index >= 0) {
-        registrationTargets.splice(index, 1)
-      }
+      removeRegistrationTarget(target)
     }
   }
 }
@@ -71,20 +58,21 @@ export const updateKeepAlivePropsFromPreviousHandle = (
   previousHandle: unknown,
   nextHandle: unknown,
 ) => {
-  const previousProps = readPropsObject(previousHandle)
-  if (!previousProps) {
+  const previousHandleObject = toObject(previousHandle)
+  if (!previousHandleObject) {
     return false
   }
 
-  const previousHandleObject = toObject(previousHandle)
+  const previousProps = readPropsObject(previousHandleObject)
   const update =
-    updaterByProps.get(previousProps) ??
-    (previousHandleObject ? updaterByHandle.get(previousHandleObject) : undefined)
+    (previousProps ? updaterByProps.get(previousProps) : undefined) ??
+    updaterByHandle.get(previousHandleObject)
   if (!update) {
     return false
   }
 
-  const nextProps = readPropsObject(nextHandle)
+  const nextHandleObject = toObject(nextHandle)
+  const nextProps = nextHandleObject ? readPropsObject(nextHandleObject) : null
   update(nextProps ?? {})
   if (nextProps) {
     updaterByProps.set(nextProps, update)

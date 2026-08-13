@@ -34,6 +34,9 @@ describe('Text.js compat: app-css', () => {
   }, 60_000)
 
   afterAll(async () => {
+    // Dev-mode RSC CSS resources are loaded asynchronously after the response
+    // stream finishes; let those imports settle before disconnecting Vite.
+    await new Promise(resolve => setTimeout(resolve, 100))
     await server?.close()
   })
 

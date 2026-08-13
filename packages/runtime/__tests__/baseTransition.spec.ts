@@ -89,4 +89,54 @@ describe('createTransitionRunner', () => {
     expect(onAfterLeave).toHaveBeenCalledWith(el)
     expect(onDone).toHaveBeenCalledTimes(1)
   })
+
+  it('completes a user-controlled phase only once', () => {
+    const el = document.createElement('div')
+    const onAfterEnter = vi.fn()
+    const onDone = vi.fn()
+    let finishEnter = () => {}
+
+    const { runEnter } = createTransitionRunner({
+      css: false,
+      onEnter: (_el, done) => {
+        finishEnter = done
+      },
+      onAfterEnter,
+    })
+
+    runEnter(el, 'enter', onDone)
+    finishEnter()
+    finishEnter()
+
+    expect(onAfterEnter).toHaveBeenCalledTimes(1)
+    expect(onDone).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels a pending phase and prevents its deferred class switch and completion', () => {
+    vi.useFakeTimers()
+
+    const el = document.createElement('div')
+    const onAfterEnter = vi.fn()
+    const onEnterCancelled = vi.fn()
+    const onDone = vi.fn()
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(() => 1)
+
+    const { runEnter } = createTransitionRunner({
+      name: 'fade',
+      type: 'transition',
+      duration: 100,
+      onAfterEnter,
+      onEnterCancelled,
+    })
+
+    const phase = runEnter(el, 'enter', onDone)
+    phase.cancel()
+    vi.runAllTimers()
+
+    expect(Array.from(el.classList)).toEqual([])
+    expect(onEnterCancelled).toHaveBeenCalledTimes(1)
+    expect(onAfterEnter).not.toHaveBeenCalled()
+    expect(onDone).not.toHaveBeenCalled()
+  })
 })

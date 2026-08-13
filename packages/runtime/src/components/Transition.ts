@@ -14,7 +14,11 @@ import {
   type PropsWithChildren as VaporPropsWithChildren,
 } from '../rue'
 import { signal, watchEffect } from '../reactivity'
-import { type BaseTransitionProps, createTransitionRunner } from './BaseTransition'
+import {
+  type BaseTransitionProps,
+  type TransitionPhaseControl,
+  createTransitionRunner,
+} from './BaseTransition'
 import { createElement, createComment, appendChild } from '../dom'
 import type { DomNodeLike } from '../dom'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
@@ -119,7 +123,7 @@ const snapshotTransitionProps = (props: TransitionProps): TransitionProps => ({
 })
 
 /** Transition 组件：为区间内首个元素应用过渡 */
-export const Transition: FC<TransitionProps> = props => {
+export const Transition: FC<TransitionProps> = /*#__PURE__*/ markBuiltinComponent(props => {
   const ctx = useSetup(() => {
     const container = createElement('span') as HTMLElement
     container.style.display = 'contents'
@@ -136,8 +140,9 @@ export const Transition: FC<TransitionProps> = props => {
       prevShown: false,
       currentIdentity: null as TransitionChildIdentity | null,
       firstRender: true,
-      started: false,
-      renderVersion: null as symbol | null,
+      renderVersion: null as object | null,
+      activePhases: new Set<TransitionPhaseControl>(),
+      snapshots: new Set<HTMLElement>(),
       effect: null as { dispose: () => void } | null,
     }
   })
@@ -152,23 +157,14 @@ export const Transition: FC<TransitionProps> = props => {
     return null
   }
 
-  /** 清空区间内容 */
-  function clearRange() {
-    renderBetween([], ctx.container, ctx.startEl, ctx.endEl)
-  }
-
-  function removeTransitionElement(el: HTMLElement) {
-    if (el.parentNode) el.remove()
-  }
-
-  function cloneTransitionElement(el: HTMLElement): HTMLElement {
-    return el.cloneNode(true) as HTMLElement
+  function cancelActiveTransitions() {
+    ctx.activePhases.forEach(phase => phase.cancel())
+    ctx.activePhases.clear()
+    ctx.snapshots.forEach(el => el.remove())
+    ctx.snapshots.clear()
   }
 
   onMounted(() => {
-    if (ctx.started) return
-    ctx.started = true
-
     ctx.effect = watchEffect(() => {
       const curProps = ctx.propsSig.get()
       const { runEnter, runLeave } = createTransitionRunner(curProps)
@@ -178,26 +174,34 @@ export const Transition: FC<TransitionProps> = props => {
       const nextIdentity = resolveTransitionChildIdentity(child)
       const prevShown = ctx.prevShown
       const childChanged =
-        prevShown &&
-        hasChild &&
-        ctx.currentIdentity !== null &&
-        nextIdentity !== null &&
-        !isSameTransitionChild(ctx.currentIdentity, nextIdentity)
-      const mode =
-        curProps.mode === 'out-in' || curProps.mode === 'in-out' ? curProps.mode : 'default'
-      const renderVersion = Symbol('transition-render')
+        prevShown && hasChild && !isSameTransitionChild(ctx.currentIdentity, nextIdentity)
+      const mode = curProps.mode
+      const renderVersion = {}
 
+      cancelActiveTransitions()
       ctx.renderVersion = renderVersion
+
+      const trackPhase = (
+        start: (done: () => void) => TransitionPhaseControl,
+        onDone?: () => void,
+      ) => {
+        let phase: TransitionPhaseControl | undefined
+        let finished = false
+        phase = start(() => {
+          finished = true
+          if (phase) ctx.activePhases.delete(phase)
+          if (onDone) onDone()
+        })
+        if (!finished) ctx.activePhases.add(phase)
+      }
 
       const queueEnter = (phase: 'enter' | 'appear' = 'enter', onDone?: () => void) => {
         queueMicrotask(() => {
           if (ctx.renderVersion !== renderVersion) return
           const el = firstElementBetween()
           if (el) {
-            runEnter(el, phase, onDone)
-          } else if (onDone) {
-            onDone()
-          }
+            trackPhase(done => runEnter(el, phase, done), onDone)
+          } else if (onDone) onDone()
         })
       }
 
@@ -207,85 +211,82 @@ export const Transition: FC<TransitionProps> = props => {
         ctx.currentIdentity = nextIdentity
       }
 
+      const swapToSnapshot = (el: HTMLElement) => {
+        const snapshot = el.cloneNode(true) as HTMLElement
+        ctx.container.insertBefore(snapshot, ctx.endEl as any)
+        ctx.snapshots.add(snapshot)
+        return snapshot
+      }
+
+      const leaveSnapshot = (snapshot: HTMLElement, onDone?: () => void) =>
+        trackPhase(
+          done => runLeave(snapshot, done),
+          () => {
+            ctx.snapshots.delete(snapshot)
+            snapshot.remove()
+            if (onDone) onDone()
+          },
+        )
+
       if (hasChild) {
         if (!prevShown) {
           renderChild()
-          if (ctx.firstRender) {
-            queueEnter(curProps.appear ? 'appear' : 'enter')
-          } else {
-            queueEnter('enter')
-          }
+          queueEnter(ctx.firstRender && curProps.appear ? 'appear' : 'enter')
         } else if (childChanged) {
           const leavingEl = firstElementBetween()
           if (!leavingEl) {
             renderChild()
             queueEnter('enter')
           } else if (mode === 'out-in') {
-            const leavingSnapshot = cloneTransitionElement(leavingEl)
-            clearRange()
+            const leavingSnapshot = leavingEl.cloneNode(true) as HTMLElement
+            renderBetween([], ctx.container, ctx.startEl, ctx.endEl)
             ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
-
-            runLeave(leavingSnapshot, () => {
-              if (ctx.renderVersion !== renderVersion) {
-                removeTransitionElement(leavingSnapshot)
-                return
-              }
-
+            ctx.snapshots.add(leavingSnapshot)
+            leaveSnapshot(leavingSnapshot, () => {
+              if (ctx.renderVersion !== renderVersion) return
               renderChild()
               queueEnter('enter')
             })
           } else if (mode === 'in-out') {
-            const leavingSnapshot = cloneTransitionElement(leavingEl)
             renderChild()
+            const leavingSnapshot = swapToSnapshot(leavingEl)
             const enteringEl = firstElementBetween()
 
             if (enteringEl) {
-              ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
-              runEnter(enteringEl, 'enter', () => {
-                if (ctx.renderVersion !== renderVersion) {
-                  removeTransitionElement(leavingSnapshot)
-                  return
-                }
-
-                runLeave(leavingSnapshot, () => removeTransitionElement(leavingSnapshot))
-              })
+              trackPhase(
+                done => runEnter(enteringEl, 'enter', done),
+                () => {
+                  if (ctx.renderVersion !== renderVersion) {
+                    ctx.snapshots.delete(leavingSnapshot)
+                    leavingSnapshot.remove()
+                    return
+                  }
+                  leaveSnapshot(leavingSnapshot)
+                },
+              )
             } else {
-              ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
-              runLeave(leavingSnapshot, () => removeTransitionElement(leavingSnapshot))
+              leaveSnapshot(leavingSnapshot)
             }
           } else {
-            const leavingSnapshot = cloneTransitionElement(leavingEl)
             renderChild()
-            const enteringEl = firstElementBetween()
-
-            if (enteringEl) {
-              ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
-              runLeave(leavingSnapshot, () => removeTransitionElement(leavingSnapshot))
-              queueEnter('enter')
-            } else {
-              ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
-              runLeave(leavingSnapshot, () => removeTransitionElement(leavingSnapshot))
-            }
+            const leavingSnapshot = swapToSnapshot(leavingEl)
+            leaveSnapshot(leavingSnapshot)
+            queueEnter('enter')
           }
         } else {
           renderChild()
         }
-      } else if (prevShown) {
-        const el = firstElementBetween()
+      } else {
+        const el = prevShown ? firstElementBetween() : null
         ctx.prevShown = false
         ctx.currentIdentity = null
         if (el) {
-          const leavingSnapshot = cloneTransitionElement(el)
-          clearRange()
-          ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
-          runLeave(leavingSnapshot, () => {
-            removeTransitionElement(leavingSnapshot)
-          })
-        } else clearRange()
-      } else {
-        clearRange()
-        ctx.prevShown = false
-        ctx.currentIdentity = null
+          const snapshot = el.cloneNode(true) as HTMLElement
+          renderBetween([], ctx.container, ctx.startEl, ctx.endEl)
+          ctx.container.insertBefore(snapshot, ctx.endEl as any)
+          ctx.snapshots.add(snapshot)
+          leaveSnapshot(snapshot)
+        } else renderBetween([], ctx.container, ctx.startEl, ctx.endEl)
       }
 
       ctx.firstRender = false
@@ -293,17 +294,16 @@ export const Transition: FC<TransitionProps> = props => {
   })
 
   onUnmounted(() => {
+    ctx.renderVersion = null
+    cancelActiveTransitions()
     if (ctx.effect) {
       ctx.effect.dispose()
       ctx.effect = null
     }
-    ctx.started = false
   })
 
   return vapor(() => {
     ctx.propsSig.set(snapshotTransitionProps(props))
     return ctx.container
   })
-}
-
-markBuiltinComponent(Transition, 'Transition')
+}, 'Transition')

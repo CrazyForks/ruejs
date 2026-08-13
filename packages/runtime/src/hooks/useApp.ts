@@ -6,34 +6,12 @@
 - 容器规范化：支持字符串选择器与元素容器，统一转为 DomElementLike。
 - 生命周期：提供 use/mount/unmount 三个方法管理应用，链式调用更便捷。
 */
-import rue, {
-  FC,
-  ComponentInstance,
-  RenderableOutput,
-  Rue,
-  getMarkedRuntimeDOMBridge,
-  markRuntimeDOMBridge,
-  runWithRuntime,
-} from '../rue'
+import rue from '../rue'
+import type { FC, ComponentInstance, RenderableOutput, Rue } from '../rue'
 import { registerRuntimeComponent } from '../component-registry'
-import { BrowserDOMAdapter, setDOMAdapter } from '../dom'
 import type { DomElementLike } from '../dom'
 import { querySelector, settextContent, setAttribute } from '../dom'
-
-const ensureRuntimeDOMBridge = (runtime: Rue) => {
-  if (typeof (runtime as any)?.setDOMAdapter !== 'function') {
-    return
-  }
-  if (!(globalThis as any).__rue_dom) {
-    setDOMAdapter(new BrowserDOMAdapter())
-  }
-  const bridge = (globalThis as any).__rue_dom
-  if (getMarkedRuntimeDOMBridge(runtime) === bridge) {
-    return
-  }
-  ;(runtime as any).setDOMAdapter(bridge)
-  markRuntimeDOMBridge(runtime, bridge)
-}
+import { ensureRuntimeDOMBridge, runWithRuntime } from '../runtime-context'
 
 /** 创建应用管理器
  * @param AppOrOptions 组件或 {setup, render} 配置

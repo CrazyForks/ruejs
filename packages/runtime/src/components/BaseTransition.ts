@@ -75,6 +75,11 @@ export interface BaseTransitionProps {
   onAppearCancelled?: (el: HTMLElement) => void
 }
 
+/** 单个过渡阶段的最小控制句柄；取消只清理该阶段，不触发完成回调。 */
+export interface TransitionPhaseControl {
+  cancel: () => void
+}
+
 /** 属性详解与行为说明：
  * - name：类名前缀，默认 'rue'；例如 enter-from 类为 `${name}-enter-from`
  * - type：显式指定过渡类型（'transition' 或 'animation'），影响结束事件与时长解析
@@ -117,96 +122,76 @@ export function createTransitionRunner(props: BaseTransitionProps) {
   const css = props.css !== false
   const em = useEmit(props)
 
-  /** 执行进入/出现过渡 */
-  function runEnter(el: HTMLElement, phase: TransitionPhase = 'enter', onDone?: () => void) {
+  function runPhase(
+    el: HTMLElement,
+    phase: TransitionPhase,
+    onDone?: () => void,
+  ): TransitionPhaseControl {
     const cls = getPhaseClasses(name, props, phase)
+    const entering = phase !== 'leave'
+    let active = true
+    let stopFrame = () => {}
+    let stopEnd = () => {}
 
-    // 钩子与事件：进入前
-    if (props.onBeforeEnter) props.onBeforeEnter(el)
-    if (phase === 'appear' && props.onBeforeAppear) props.onBeforeAppear(el)
-    em(phase === 'appear' ? 'before-appear' : 'before-enter')
+    const emitPhaseEvent = (stage: 'before' | 'after') => {
+      if (phase === 'appear') em(`${stage}-enter`, el)
+      em(`${stage}-${phase}`, el)
+    }
+
+    const cleanup = () => {
+      stopFrame()
+      stopEnd()
+      if (css) {
+        removeClass(el, cls.from)
+        removeClass(el, cls.active)
+        removeClass(el, cls.to)
+      }
+    }
+
+    const done = () => {
+      if (!active) return
+      active = false
+      cleanup()
+      emitPhaseEvent('after')
+      if (onDone) onDone()
+    }
+
+    const cancel = () => {
+      if (!active) return
+      active = false
+      cleanup()
+      em(`${phase}-cancelled`, el)
+    }
+
+    emitPhaseEvent('before')
 
     if (css) {
-      // CSS 类切换序列：
-      // 1) 增加 from/active，确保初始状态与过渡属性就位
       addClass(el, cls.from)
       addClass(el, cls.active)
-      // 2) 强制重排，使浏览器应用 from 状态
       forceReflow(el)
-      // 3) 下一帧切换到 to，触发过渡
-      nextFrame(() => {
+      stopFrame = nextFrame(() => {
         removeClass(el, cls.from)
         addClass(el, cls.to)
       })
     }
 
-    // 过渡类型与时长解析：
-    const type = props.type ?? inferType(el)
-    const timeout = resolveDuration(el, props.type, props.duration, phase)
+    const userHook = phase === 'appear' ? props.onAppear : entering ? props.onEnter : props.onLeave
 
-    const done = () => {
-      // 清理类名并派发完成事件
-      if (css) {
-        removeClass(el, cls.active)
-        removeClass(el, cls.to)
-      }
-      if (props.onAfterEnter) props.onAfterEnter(el)
-      if (phase === 'appear' && props.onAfterAppear) props.onAfterAppear(el)
-      em(phase === 'appear' ? 'after-appear' : 'after-enter')
-      if (onDone) onDone()
-    }
-
-    if (props.onEnter || (phase === 'appear' && props.onAppear)) {
-      // JS 钩子接管：由用户控制动画并在结束时调用 done()
-      const userHook = phase === 'appear' ? props.onAppear! : props.onEnter!
+    if (userHook) {
       userHook(el, done)
     } else {
-      // CSS/原生事件驱动：监听 transitionend/animationend 或超时兜底
-      whenTransitionEnds(el, type ?? null, timeout, done)
+      const type = props.type ?? inferType(el)
+      const timeout = resolveDuration(el, props.type, props.duration, phase)
+      stopEnd = whenTransitionEnds(el, type ?? null, timeout, done)
     }
+
+    return { cancel }
   }
 
-  /** 执行离开过渡 */
-  function runLeave(el: HTMLElement, onDone?: () => void) {
-    const cls = getPhaseClasses(name, props, 'leave')
+  const runEnter = (el: HTMLElement, phase: TransitionPhase = 'enter', onDone?: () => void) =>
+    runPhase(el, phase, onDone)
 
-    // 钩子与事件：离开前
-    if (props.onBeforeLeave) props.onBeforeLeave(el)
-    em('before-leave')
-
-    if (css) {
-      // CSS 类切换序列：同 enter
-      addClass(el, cls.from)
-      addClass(el, cls.active)
-      forceReflow(el)
-      nextFrame(() => {
-        removeClass(el, cls.from)
-        addClass(el, cls.to)
-      })
-    }
-
-    const type = props.type ?? inferType(el)
-    const timeout = resolveDuration(el, props.type, props.duration, 'leave')
-
-    const done = () => {
-      // 清理类名并派发完成事件
-      if (css) {
-        removeClass(el, cls.active)
-        removeClass(el, cls.to)
-      }
-      if (props.onAfterLeave) props.onAfterLeave(el)
-      em('after-leave')
-      if (onDone) onDone()
-    }
-
-    if (props.onLeave) {
-      // JS 钩子接管
-      props.onLeave(el, done)
-    } else {
-      // CSS/原生事件驱动
-      whenTransitionEnds(el, type ?? null, timeout, done)
-    }
-  }
+  const runLeave = (el: HTMLElement, onDone?: () => void) => runPhase(el, 'leave', onDone)
 
   return { runEnter, runLeave }
 }

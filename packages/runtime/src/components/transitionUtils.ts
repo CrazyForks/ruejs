@@ -34,8 +34,10 @@ export function removeClass(el: HTMLElement, cls?: string) {
  * 会导致 enter-from 在整个过渡周期里都来不及切到 enter-to。
  * 这里保留“跨帧执行”的语义，但只依赖一次 RAF，并用定时器保证不会晚于正常动画时长。
  */
-export function nextFrame(fn: () => void) {
+export function nextFrame(fn: () => void): () => void {
   let called = false
+  let frame = 0
+  let timer: ReturnType<typeof setTimeout> | undefined
   const run = () => {
     if (called) return
     called = true
@@ -43,12 +45,17 @@ export function nextFrame(fn: () => void) {
   }
 
   if (typeof requestAnimationFrame === 'function') {
-    requestAnimationFrame(run)
-    setTimeout(run, 34)
-    return
+    frame = requestAnimationFrame(run)
+    timer = setTimeout(run, 34)
+  } else {
+    timer = setTimeout(run, 16)
   }
 
-  setTimeout(run, 16)
+  return () => {
+    called = true
+    if (frame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame)
+    if (timer !== undefined) clearTimeout(timer)
+  }
 }
 
 /** 强制触发布局计算（用于确保过渡起点生效） */
@@ -147,30 +154,38 @@ export function whenTransitionEnds(
   type: TransitionType | null,
   timeout: number,
   cb: () => void,
-) {
+): () => void {
   if (!type || timeout === 0) {
     cb()
-    return
+    return () => {}
   }
   if (typeof el.addEventListener !== 'function' || typeof el.removeEventListener !== 'function') {
     cb()
-    return
+    return () => {}
   }
   let called = false
   const endEvent = type === 'transition' ? 'transitionend' : 'animationend'
+  let timer: ReturnType<typeof setTimeout>
   const onEnd = (e: Event) => {
     if (called) return
     if (e.target !== el) return
     called = true
     el.removeEventListener(endEvent, onEnd)
+    clearTimeout(timer)
     cb()
   }
   el.addEventListener(endEvent, onEnd)
   // 超时兜底：即使事件未触发也能确保回调被调用，+50ms 偏移用于规避时间舍入误差
-  setTimeout(() => {
+  timer = setTimeout(() => {
     if (called) return
     called = true
     el.removeEventListener(endEvent, onEnd)
     cb()
   }, timeout + 50)
+  return () => {
+    if (called) return
+    called = true
+    clearTimeout(timer)
+    el.removeEventListener(endEvent, onEnd)
+  }
 }

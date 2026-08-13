@@ -621,6 +621,7 @@ describe('App Router entry templates', () => {
     expect(globalsImportIndex).toBeGreaterThanOrEqual(0)
     expect(firstUserImportIndex).toBeGreaterThanOrEqual(0)
     expect(globalsImportIndex).toBeLessThan(firstUserImportIndex)
+    expect(code).toContain('/server-globals.js?text-server-entry')
   })
 
   it('generateRscEntry fails with a path-specific error when a static metadata file cannot be read', () => {

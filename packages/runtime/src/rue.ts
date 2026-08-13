@@ -74,6 +74,9 @@ import {
   type RueIslandDescriptor,
   type RueServerIslandDescriptor,
 } from './island-protocol'
+import { markRuntimeDOMBridge, resolveActiveRuntime, setPreferredRuntime } from './runtime-context'
+
+export { getMarkedRuntimeDOMBridge, markRuntimeDOMBridge, runWithRuntime } from './runtime-context'
 
 getDOMAdapter()
 
@@ -134,7 +137,6 @@ type SharedRuntimeBridge = {
   getCurrentRenderOwner?(): unknown
 }
 
-const runtimeDOMBridgeByInstance = new WeakMap<object, unknown>()
 const runtimeErrorHandlers = new WeakMap<object, Set<(error: any, instance?: any) => void>>()
 const RUE_MOUNT_ID_KEY = '__rue_mount_id'
 const RUE_KEEP_ALIVE_HOOK_TARGET_KEY = '__rue_keep_alive_hook_target__'
@@ -142,7 +144,6 @@ const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
 const RUE_PORTABLE_COMPONENT_ID_KEY = '__rue_component_type_id'
 const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
 const RUE_VAPOR_SETUP_HANDLE_KEY = '__rue_vapor_setup_handle'
-const RUE_VAPOR_PREFERRED_RUNTIME_KEY = '__rue_vapor_preferred'
 const RUE_JS_ERROR_BRIDGE_KEY = '__rue_js_error_bridge_installed'
 const RUE_CONTEXT_OWNER_PARENT_PROP = '__rue_context_owner_parent__'
 const RUE_CONTEXT_PARENT_INSTANCE_PROP = '__rue_context_parent_instance__'
@@ -425,46 +426,6 @@ const installRuntimeErrorBridge = <T>(runtime: T): T => {
   return runtime
 }
 
-/** 读取指定 runtime 已绑定的 DOM bridge。 */
-export const getMarkedRuntimeDOMBridge = (runtime: unknown) => {
-  if (!canTrackRuntime(runtime)) {
-    return undefined
-  }
-  return runtimeDOMBridgeByInstance.get(runtime)
-}
-
-/** 标记指定 runtime 已同步到某个 DOM bridge。 */
-export const markRuntimeDOMBridge = (runtime: unknown, bridge: unknown) => {
-  if (!canTrackRuntime(runtime)) {
-    return
-  }
-  runtimeDOMBridgeByInstance.set(runtime, bridge)
-}
-
-/** 临时切换当前激活 runtime，并在 runner 结束后恢复。 */
-export const runWithRuntime = <T>(runtime: unknown, runner: () => T): T => {
-  if (!canTrackRuntime(runtime)) {
-    return runner()
-  }
-
-  const globalRecord = globalThis as typeof globalThis & {
-    __rue_active?: unknown
-  }
-  const hadActiveRuntime = Object.prototype.hasOwnProperty.call(globalRecord, '__rue_active')
-  const prevRuntime = globalRecord.__rue_active
-
-  globalRecord.__rue_active = runtime
-  try {
-    return runner()
-  } finally {
-    if (hadActiveRuntime) {
-      globalRecord.__rue_active = prevRuntime
-    } else {
-      delete globalRecord.__rue_active
-    }
-  }
-}
-
 const getSharedRuntimeBridge = () =>
   (
     globalThis as typeof globalThis & {
@@ -484,9 +445,9 @@ const rue: any = installRuntimeErrorBridge(
     ((globalThis as any).__rue = createRueWasm(initialDOMBridge))) as any,
 )
 markRuntimeDOMBridge(rue, initialDOMBridge)
-;(globalThis as any)[RUE_VAPOR_PREFERRED_RUNTIME_KEY] = rue
+setPreferredRuntime(rue)
 /** 获取激活的 Rue 实例：优先 __rue_active，其次默认 __rue */
-const getRue = () => (globalThis as any).__rue_active || (globalThis as any).__rue
+const getRue = () => resolveActiveRuntime(() => (globalThis as any).__rue)
 
 const renderOwnerByContainer = new WeakMap<object, unknown>()
 const mountHandleContainerAnchorByContainer = new WeakMap<object, DomNodeLike>()

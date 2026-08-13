@@ -13,6 +13,56 @@ import wasm from 'vite-plugin-wasm'
 
 const rootDir = resolve(__dirname)
 const testMaxWorkers = Number.parseInt(process.env.VITEST_MAX_WORKERS ?? '4', 10)
+const rueClientChunkByPackage = new Map([
+  ['@rue-js/i18n', 'rue-i18n'],
+  ['@rue-js/jsx-dev-runtime', 'rue-runtime'],
+  ['@rue-js/jsx-runtime', 'rue-runtime'],
+  ['@rue-js/router', 'rue-router'],
+  ['@rue-js/rue', 'rue-runtime'],
+  ['@rue-js/runtime', 'rue-runtime'],
+  ['@rue-js/runtime-vapor', 'rue-runtime'],
+  ['@rue-js/shared', 'rue-runtime'],
+  ['@rue-js/store', 'rue-store'],
+])
+
+const rueClientSourceChunks = [
+  ['i18n', 'rue-i18n'],
+  ['jsx-dev-runtime', 'rue-runtime'],
+  ['jsx-runtime', 'rue-runtime'],
+  ['router', 'rue-router'],
+  ['rue', 'rue-runtime'],
+  ['runtime', 'rue-runtime'],
+  ['runtime-vapor', 'rue-runtime'],
+  ['shared', 'rue-runtime'],
+  ['store', 'rue-store'],
+].map(([packageDir, chunkName]) => [
+  `${path.resolve(rootDir, 'packages', packageDir).replaceAll('\\', '/')}/`,
+  chunkName,
+])
+
+const getRueClientChunk = (id: string) => {
+  const normalizedId = id.replaceAll('\\', '/')
+  const sourceChunk = rueClientSourceChunks.find(([sourceDir]) =>
+    normalizedId.startsWith(sourceDir),
+  )
+
+  if (sourceChunk) {
+    return sourceChunk[1]
+  }
+
+  const nodeModulesIndex = normalizedId.lastIndexOf('/node_modules/')
+  if (nodeModulesIndex === -1) {
+    return null
+  }
+
+  const modulePath = normalizedId.slice(nodeModulesIndex + '/node_modules/'.length)
+  if (!modulePath.startsWith('@rue-js/')) {
+    return null
+  }
+
+  const packageName = modulePath.split('/', 2).join('/')
+  return rueClientChunkByPackage.get(packageName) ?? null
+}
 
 const createSatteriMdxPlugin = (options: Pick<MdxCompileOptions, 'development'> = {}): Plugin => ({
   name: 'rue:satteri-mdx',
@@ -122,12 +172,13 @@ const vitestProjects = [
   },
 ]
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, isSsrBuild }) => {
   const isVitest = process.env.VITEST === 'true' || process.env.VITEST === '1'
   let docsOutDir = path.resolve(__dirname, 'dist')
   let shouldCopyDocs = true
 
   return {
+    base: command === 'build' ? './' : '/',
     plugins: [
       // !isVitest && DevTools(),
       wasm(),
@@ -185,6 +236,20 @@ export default defineConfig(({ command }) => {
           main: path.resolve(__dirname, 'index.html'),
         },
         devtools: {}, // enable devtools mode
+        output: isSsrBuild
+          ? undefined
+          : {
+              codeSplitting: {
+                groups: [
+                  {
+                    includeDependenciesRecursively: false,
+                    name(id) {
+                      return getRueClientChunk(id)
+                    },
+                  },
+                ],
+              },
+            },
       },
     },
     test: {

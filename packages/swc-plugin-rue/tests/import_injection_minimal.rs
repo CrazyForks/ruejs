@@ -67,6 +67,33 @@ const Demo: FC = () => {
 }
 
 #[test]
+fn rewrites_use_app_to_vapor_entry() {
+    let src = r##"
+import { type FC, ref, useApp } from '@rue-js/rue';
+
+const count = ref(0);
+const App: FC = () => <button>{count.value}</button>;
+
+useApp(App).mount('#app');
+"##;
+
+    let (program, cm) = utils::parse(src, "rewrite-use-app.tsx");
+    let program = apply(program);
+    let out = utils::strip_marker(&utils::emit(program, cm));
+    let normalized = utils::normalize(&out);
+    let first_line = out.lines().next().unwrap_or_default();
+
+    assert!(first_line.contains("from \"@rue-js/rue/vapor\""));
+    assert!(first_line.contains("ref"));
+    assert!(first_line.contains("useApp"));
+    assert!(normalized.contains(&utils::normalize("import { type FC } from '@rue-js/rue';")));
+    assert!(
+        !normalized
+            .contains(&utils::normalize("import { type FC, ref, useApp } from '@rue-js/rue';",))
+    );
+}
+
+#[test]
 fn keeps_unsafe_root_values_and_moves_safe_values() {
     let src = r##"
 import { type FC, TransitionGroup, ref } from '@rue-js/rue';

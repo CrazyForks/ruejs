@@ -33,8 +33,10 @@ type AppRouteGraph = {
 let cachedGraph: AppRouteGraph | null = null
 let cachedAppDir: string | null = null
 let cachedPageExtensionsKey: string | null = null
+let cacheGeneration = 0
 
 export function invalidateAppRouteCache(): void {
+  cacheGeneration++
   cachedGraph = null
   cachedAppDir = null
   cachedPageExtensionsKey = null
@@ -58,10 +60,16 @@ export async function appRouteGraph(
     return cachedGraph
   }
 
+  const generation = cacheGeneration
   const graph = await buildAppRouteGraph(appDir, matcher)
-  cachedGraph = graph
-  cachedAppDir = appDir
-  cachedPageExtensionsKey = pageExtensionsKey
+  // A watcher event may invalidate the route cache while the asynchronous
+  // directory scan is in flight. Do not let that stale scan repopulate the
+  // cache; the queued regeneration must perform a fresh scan instead.
+  if (generation === cacheGeneration) {
+    cachedGraph = graph
+    cachedAppDir = appDir
+    cachedPageExtensionsKey = pageExtensionsKey
+  }
   return graph
 }
 

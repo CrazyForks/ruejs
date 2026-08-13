@@ -106,6 +106,93 @@ const getInputValue = (host: HTMLElement, name: string) => {
 }
 
 describe('KeepAlive renderable boundary', () => {
+  it('transitions each range once and clears active and cached ranges on dispose', async () => {
+    const host = document.createElement('div')
+    const active = signal('A')
+    const revision = signal(0)
+    const lifecycle: string[] = []
+    const unmounted: string[] = []
+    let dispose = () => {}
+    document.body.appendChild(host)
+
+    const Panel: FC<{ name: string; revision: number }> = props => {
+      onActivated(() => lifecycle.push(`${props.name}:activated`))
+      onDeactivated(() => lifecycle.push(`${props.name}:deactivated`))
+      onUnmounted(() => unmounted.push(props.name))
+      return (
+        <div data-testid={`panel-${props.name}`} data-revision={props.revision}>
+          {props.name}
+        </div>
+      )
+    }
+
+    const views: Record<string, FC<{ revision: number }>> = {
+      A: props => <Panel name="A" revision={props.revision} />,
+      B: props => <Panel name="B" revision={props.revision} />,
+    }
+
+    const App: FC = () =>
+      vapor(() => {
+        const root = document.createDocumentFragment()
+        const anchor = document.createComment('keep-alive-anchor')
+        root.appendChild(anchor)
+
+        watchEffect(() => {
+          const activeName = active.get()
+          renderAnchor(
+            <KeepAlive __rueRegisterDispose={next => (dispose = next)}>
+              <Component is={views[activeName]} key={activeName} revision={revision.get()} />
+            </KeepAlive>,
+            root as any,
+            anchor as any,
+          )
+        })
+
+        return root as any
+      }) as any
+
+    render(<App />, host)
+    await flush()
+    const panelA = host.querySelector('[data-testid="panel-A"]')
+
+    revision.set(1)
+    await flush()
+    expect(host.querySelector('[data-testid="panel-A"]')).toBe(panelA)
+    expect(lifecycle).toEqual(['A:activated'])
+
+    active.set('B')
+    await flush()
+    const panelB = host.querySelector('[data-testid="panel-B"]')
+    active.set('A')
+    await flush()
+
+    expect(host.querySelector('[data-testid="panel-A"]')).toBe(panelA)
+    expect(lifecycle).toEqual([
+      'A:activated',
+      'A:deactivated',
+      'B:activated',
+      'B:deactivated',
+      'A:activated',
+    ])
+
+    dispose()
+    dispose()
+    await flush()
+
+    expect(lifecycle).toEqual([
+      'A:activated',
+      'A:deactivated',
+      'B:activated',
+      'B:deactivated',
+      'A:activated',
+      'A:deactivated',
+    ])
+    expect(unmounted.sort()).toEqual(['A', 'B'])
+    expect(panelA?.isConnected).toBe(false)
+    expect(panelB?.isConnected).toBe(false)
+    expect(host.querySelector('[data-testid^="panel-"]')).toBeNull()
+  })
+
   it('keeps keyed dynamic component state when switching through Component', async () => {
     const host = document.createElement('div')
     const active = signal('A')

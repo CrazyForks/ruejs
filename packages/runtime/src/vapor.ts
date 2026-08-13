@@ -29,6 +29,8 @@ export {
   createComponent as _$createComponent,
 } from './vapor-runtime'
 
+export { useVaporApp as useApp } from './hooks/useVaporApp'
+
 export {
   createComment as _$createComment,
   createTextNode as _$createTextNode,
@@ -61,10 +63,15 @@ export {
 
 export { Slot, type SlotBag, type SlotProps, type SlotValue } from './components/Slot'
 export { Component, type DynamicComponentProps } from './components/Component'
-export { KeepAlive, type KeepAliveMatchPattern, type KeepAliveProps } from './components/KeepAlive'
-export { Suspense, type SuspenseProps } from './components/Suspense'
+export { KeepAlive } from './components/KeepAlive'
+export type { KeepAliveMatchPattern, KeepAliveProps } from './components/KeepAlive'
+export { Suspense } from './components/Suspense'
+export type { SuspenseProps } from './components/Suspense'
 export { Template, type TemplateProps } from './components/Template'
-export { Transition, type TransitionMode, type TransitionProps } from './components/Transition'
+export { Transition } from './components/Transition'
+export type { TransitionMode, TransitionProps } from './components/Transition'
+export { TransitionGroup } from './components/TransitionGroup'
+export type { TransitionGroupProps } from './components/TransitionGroup'
 export { createContext, useContext, type RueContext, type ContextProviderProps } from './context'
 
 export {

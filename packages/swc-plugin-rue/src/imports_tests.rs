@@ -89,12 +89,13 @@ fn converts_named_import_specs_for_ident_and_string_exports() {
 fn ensure_runtime_imports_moves_safe_root_values_and_marks_used_root_types() {
     let out = ensure_and_emit(
         r#"
-import RueDefault, { FC, createApp, ref as localRef, watchEffect } from '@rue-js/rue';
+import RueDefault, { FC, createApp, ref as localRef, useApp, watchEffect } from '@rue-js/rue';
 import { vapor } from '@rue-js/rue/vapor';
 
 type View = FC;
 const state = localRef(0);
 watchEffect(() => state.value);
+useApp(View).mount('#app');
 _$createElement;
 "#,
     );
@@ -102,6 +103,7 @@ _$createElement;
     assert!(out.contains("@rue-js/rue/vapor"));
     assert!(out.contains("vapor"));
     assert!(out.contains("refaslocalRef"));
+    assert!(out.contains("useApp"));
     assert!(out.contains("watchEffect"));
     assert!(out.contains("_$createElement"));
     assert!(out.contains("importRueDefault,{typeFC,createApp}from"));

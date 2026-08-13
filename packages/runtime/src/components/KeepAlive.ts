@@ -55,10 +55,9 @@ type CacheEntry = {
   start: DomNodeLike
   end: DomNodeLike
   cacheable: boolean
-  disposed: boolean
   justActivated: boolean
-  /** 当前缓存 range 是否在活动 DOM 区间中。 */
-  isActive: boolean
+  /** 0=离线缓存，1=活动，2=已释放。 */
+  state: 0 | 1 | 2
   /** JS 快路径收集到的 activated 回调；为空时回退给 Wasm mounted snapshot。 */
   activatedHooks: Set<() => void>
   /** JS 快路径收集到的 deactivated 回调；为空时回退给 Wasm mounted snapshot。 */
@@ -150,14 +149,6 @@ const setKeepAliveRangeMarkers = (entry: CacheEntry, cached: boolean) => {
     node = next
   }
 }
-
-const cloneRenderable = (value: unknown): unknown =>
-  Array.isArray(value) ? value.map(cloneRenderable) : value
-
-const snapshotKeepAliveProps = (props: KeepAliveProps): KeepAliveProps => ({
-  ...(props as Record<string, unknown>),
-  children: cloneRenderable(props.children) as KeepAliveProps['children'],
-})
 
 const pushFlattenedChildren = (value: unknown, target: unknown[]) => {
   if (Array.isArray(value)) {
@@ -277,8 +268,6 @@ const shouldCache = (descriptor: ChildDescriptor, props: KeepAliveProps) => {
   return true
 }
 
-const isSameKey = (left: unknown, right: unknown) => Object.is(left, right)
-
 const createKeepAliveContainer = () => {
   const container = createElement('span') as DomElementLike
   setStyle(container, { display: 'contents' })
@@ -298,7 +287,7 @@ const removeEntryAnchors = (entry: CacheEntry) => {
 }
 
 /** 缓存直接子组件 DOM range，切换时移动到离线片段而不是销毁。 */
-export const KeepAlive: FC<KeepAliveProps> = props => {
+export const KeepAlive: FC<KeepAliveProps> = /*#__PURE__*/ markBuiltinComponent(props => {
   const ctx = useSetup(() => {
     const container = createKeepAliveContainer()
 
@@ -308,9 +297,9 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     appendChild(container, start)
     appendChild(container, end)
 
-    const propsSig = signal(snapshotKeepAliveProps(props), {}, true)
+    const propsSig = signal(props, {}, true)
     const updateProps = (nextProps: unknown) => {
-      propsSig.set(snapshotKeepAliveProps((nextProps ?? {}) as KeepAliveProps))
+      propsSig.set((nextProps ?? {}) as KeepAliveProps)
     }
     registerKeepAlivePropsUpdater(props, updateProps)
 
@@ -330,10 +319,6 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
   const getActiveParent = () => (getParentNode(ctx.end) as DomElementLike | null) ?? ctx.container
 
   const moveRange = (entry: CacheEntry, target: DomNodeLike, before: DomNodeLike | null) => {
-    if (entry.disposed) {
-      return
-    }
-
     const currentParent = getParentNode(entry.start)
     if (!currentParent) {
       return
@@ -360,7 +345,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     appendChild(nextContainer, ctx.start)
     if (
       ctx.activeEntry &&
-      !ctx.activeEntry.disposed &&
+      ctx.activeEntry.state !== 2 &&
       getParentNode(ctx.activeEntry.start) !== ctx.storage
     ) {
       moveRange(ctx.activeEntry, nextContainer, null)
@@ -368,13 +353,6 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     appendChild(nextContainer, ctx.end)
 
     ctx.container = nextContainer
-  }
-
-  const moveEntryToStorage = (entry: CacheEntry) => {
-    if (getParentNode(entry.start) !== ctx.storage) {
-      moveRange(entry, ctx.storage, null)
-    }
-    setKeepAliveRangeMarkers(entry, entry.cacheable && !entry.disposed)
   }
 
   const createEntry = (descriptor: ChildDescriptor, cacheable: boolean): CacheEntry => {
@@ -391,9 +369,8 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
       start,
       end,
       cacheable,
-      disposed: false,
       justActivated: false,
-      isActive: false,
+      state: 0,
       activatedHooks: new Set(),
       deactivatedHooks: new Set(),
     }
@@ -421,7 +398,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
   const notifyActivated = (entry: CacheEntry) => {
     queueMicrotask(() => {
       queueMicrotask(() => {
-        if (!entry.disposed && entry.isActive) {
+        if (entry.state === 1) {
           for (const hook of entry.activatedHooks) {
             hook()
           }
@@ -437,30 +414,43 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
   const notifyDeactivated = (entry: CacheEntry) => {
     queueMicrotask(() => {
       queueMicrotask(() => {
-        if (!entry.disposed) {
-          for (const hook of entry.deactivatedHooks) {
-            hook()
-          }
-          if (entry.deactivatedHooks.size === 0) {
-            __rueDeactivateRange(entry.start)
-          }
+        for (const hook of entry.deactivatedHooks) {
+          hook()
+        }
+        if (entry.deactivatedHooks.size === 0) {
+          __rueDeactivateRange(entry.start)
         }
       })
     })
   }
 
-  const unmountEntry = (entry: CacheEntry) => {
-    if (entry.disposed) {
+  const transitionEntry = (entry: CacheEntry, state: 0 | 1 | 2) => {
+    const previousState = entry.state
+    if (previousState === state || previousState === 2) {
       return
     }
 
-    moveEntryToStorage(entry)
-    if (entry.isActive) {
-      entry.isActive = false
+    if (state === 1) {
+      moveRange(entry, getActiveParent(), ctx.end)
+      setKeepAliveRangeMarkers(entry, false)
+      entry.state = 1
+      entry.justActivated = true
+      notifyActivated(entry)
+      return
+    }
+
+    if (getParentNode(entry.start) !== ctx.storage) {
+      moveRange(entry, ctx.storage, null)
+    }
+    entry.state = state
+    setKeepAliveRangeMarkers(entry, state === 0 && entry.cacheable)
+    if (previousState === 1) {
       notifyDeactivated(entry)
     }
-    entry.disposed = true
-    setKeepAliveRangeMarkers(entry, false)
+
+    if (state === 0) {
+      return
+    }
 
     const parent = getParentNode(entry.start) as DomElementLike | null
     if (parent && getParentNode(entry.end) === parent) {
@@ -473,64 +463,29 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     }
   }
 
-  const deactivateEntry = (entry: CacheEntry) => {
-    if (entry.cacheable && !entry.disposed) {
-      moveEntryToStorage(entry)
-      if (entry.isActive) {
-        entry.isActive = false
-        notifyDeactivated(entry)
-      }
-      return
-    }
-
-    unmountEntry(entry)
-  }
-
-  const activateEntry = (entry: CacheEntry) => {
-    if (entry.disposed) {
-      return
-    }
-
-    moveRange(entry, getActiveParent(), ctx.end)
-    setKeepAliveRangeMarkers(entry, false)
-    if (!entry.isActive) {
-      entry.isActive = true
-      entry.justActivated = true
-      notifyActivated(entry)
-    }
-  }
-
-  const touchEntry = (entry: CacheEntry) => {
-    if (!entry.cacheable || !ctx.cache.has(entry.key)) {
-      return
-    }
-
+  const cacheEntry = (entry: CacheEntry) => {
     ctx.cache.delete(entry.key)
+    if (!entry.cacheable) {
+      return
+    }
     ctx.cache.set(entry.key, entry)
   }
 
   const pruneOldestEntries = (max: number) => {
     while (ctx.cache.size > max) {
-      const oldest = ctx.cache.keys().next().value
-      const entry = ctx.cache.get(oldest)
-      if (!entry) {
-        ctx.cache.delete(oldest)
-        continue
-      }
-
-      if (ctx.activeEntry === entry && ctx.cache.size === 1) {
-        entry.cacheable = false
-        ctx.cache.delete(oldest)
-        break
-      }
+      const [oldest, entry] = ctx.cache.entries().next().value as [unknown, CacheEntry]
+      ctx.cache.delete(oldest)
 
       if (ctx.activeEntry === entry) {
-        touchEntry(entry)
+        if (ctx.cache.size === 0) {
+          entry.cacheable = false
+          break
+        }
+        ctx.cache.set(oldest, entry)
         continue
       }
 
-      ctx.cache.delete(oldest)
-      unmountEntry(entry)
+      transitionEntry(entry, 2)
     }
   }
 
@@ -546,7 +501,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
 
     ctx.cache.clear()
     for (const entry of entries) {
-      unmountEntry(entry)
+      transitionEntry(entry, 2)
     }
   }
 
@@ -565,7 +520,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
       ctx.cache.delete(key)
       entry.cacheable = false
       if (ctx.activeEntry !== entry) {
-        unmountEntry(entry)
+        transitionEntry(entry, 2)
       }
     }
   }
@@ -577,7 +532,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     const child = getSingleChild(curProps.children)
     if (!child) {
       if (ctx.activeEntry) {
-        deactivateEntry(ctx.activeEntry)
+        transitionEntry(ctx.activeEntry, ctx.activeEntry.cacheable ? 0 : 2)
         ctx.activeEntry = null
       }
       return
@@ -587,7 +542,7 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     const cacheable = shouldCache(descriptor, curProps)
     const max = normalizeMax(curProps.max)
 
-    if (ctx.activeEntry && isSameKey(ctx.activeEntry.key, descriptor.key)) {
+    if (ctx.activeEntry && Object.is(ctx.activeEntry.key, descriptor.key)) {
       const entry = ctx.activeEntry
       entry.name = descriptor.name
       entry.cacheable = cacheable
@@ -595,14 +550,9 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
         setKeepAliveRangeMarkers(entry, false)
       }
 
-      if (cacheable) {
-        ctx.cache.set(entry.key, entry)
-        touchEntry(entry)
-      } else {
-        ctx.cache.delete(entry.key)
-      }
+      cacheEntry(entry)
 
-      activateEntry(entry)
+      transitionEntry(entry, 1)
       if (entry.justActivated) {
         entry.justActivated = false
       } else {
@@ -613,13 +563,13 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     }
 
     if (ctx.activeEntry) {
-      deactivateEntry(ctx.activeEntry)
+      transitionEntry(ctx.activeEntry, ctx.activeEntry.cacheable ? 0 : 2)
       ctx.activeEntry = null
     }
 
     let nextEntry = cacheable ? ctx.cache.get(descriptor.key) : undefined
 
-    if (nextEntry?.disposed) {
+    if (nextEntry?.state === 2) {
       ctx.cache.delete(descriptor.key)
       nextEntry = undefined
     }
@@ -629,20 +579,17 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     if (nextEntry) {
       nextEntry.name = descriptor.name
       nextEntry.cacheable = true
-      activateEntry(nextEntry)
-      touchEntry(nextEntry)
+      transitionEntry(nextEntry, 1)
+      cacheEntry(nextEntry)
     } else {
       nextEntry = createEntry(descriptor, cacheable)
-      if (cacheable) {
-        ctx.cache.set(descriptor.key, nextEntry)
-        touchEntry(nextEntry)
-      }
+      cacheEntry(nextEntry)
     }
 
     ctx.activeEntry = nextEntry
     if (!reusedCachedEntry) {
       renderEntry(nextEntry, descriptor.child)
-      nextEntry.isActive = true
+      nextEntry.state = 1
       nextEntry.justActivated = true
       notifyActivated(nextEntry)
     }
@@ -667,6 +614,4 @@ export const KeepAlive: FC<KeepAliveProps> = props => {
     ctx.updateProps(props)
     return ctx.container as any
   })
-}
-
-markBuiltinComponent(KeepAlive, 'KeepAlive')
+}, 'KeepAlive')

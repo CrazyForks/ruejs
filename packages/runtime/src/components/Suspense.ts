@@ -44,7 +44,7 @@ export interface SuspenseProps extends PropsWithChildren<Record<string, unknown>
 }
 
 type SuspenseChildInput = Parameters<typeof renderBetween>[0]
-type SuspenseStatus = 'initial' | 'pending' | 'resolved'
+type SuspenseStatus = 'initial' | 'pending' | 'fallback' | 'resolved'
 
 const SERVER_RENDERING_FLAG = '__rue_is_server_rendering__'
 const RUE_SUSPENSE_STAGING_KEY = '__rue_suspense_staging'
@@ -85,374 +85,327 @@ const callSuspenseHook = (hook: unknown) => {
 }
 
 /** 为异步子树提供 pending 捕获、fallback 渲染和 resolved 内容恢复。 */
-export const Suspense: FC<SuspenseProps> = props => {
-  if (isServerRendering()) {
-    const children = toRenderable(props.children)
-    return Array.isArray(children)
-      ? h('fragment', null, ...children)
-      : h('fragment', null, children as any)
-  }
-
-  const ctx = useSetup(() => {
-    const parentBoundary = getCurrentSuspenseBoundary()
-    const container = createElement('div') as HTMLElement
-    if (container && container.style && typeof container.style === 'object') {
-      container.style.display = 'contents'
+export const Suspense: FC<SuspenseProps> = /*#__PURE__*/ markBuiltinComponent(
+  props => {
+    if (isServerRendering()) {
+      const children = toRenderable(props.children)
+      return Array.isArray(children)
+        ? h('fragment', null, ...children)
+        : h('fragment', null, children as any)
     }
 
-    const stagingHost = createElement('div') as HTMLElement & {
-      attachShadow?: (init: ShadowRootInit) => ShadowRoot
-    }
-    if (stagingHost && stagingHost.style && typeof stagingHost.style === 'object') {
-      stagingHost.style.display = 'none'
-    }
-    ;(stagingHost as any)[RUE_SUSPENSE_STAGING_KEY] = true
-    const stagingRoot =
-      typeof stagingHost.attachShadow === 'function'
-        ? ((stagingHost.attachShadow({ mode: 'open' }) as unknown as HTMLElement) ?? stagingHost)
-        : stagingHost
-
-    const boundary: SuspenseBoundary = {
-      id: Symbol('rue-suspense-boundary'),
-      register: () => {},
-    }
-    ;(container as any)[RUE_SUSPENSE_BOUNDARY_KEY] = boundary
-
-    const startEl = createComment('rue-suspense-start')
-    const endEl = createComment('rue-suspense-end')
-    appendChild(container, stagingHost)
-    appendChild(container, startEl)
-    appendChild(container, endEl)
-
-    const contentContainer = createElement('div') as HTMLElement
-    if (contentContainer && contentContainer.style && typeof contentContainer.style === 'object') {
-      contentContainer.style.display = 'contents'
-    }
-    ;(contentContainer as any)[RUE_SUSPENSE_BOUNDARY_KEY] = boundary
-    const contentStartEl = createComment('rue-suspense-content-start')
-    const contentEndEl = createComment('rue-suspense-content-end')
-    appendChild(contentContainer, contentStartEl)
-    appendChild(contentContainer, contentEndEl)
-    appendChild(stagingRoot as any, contentContainer)
-
-    const fallbackContainer = createElement('div') as HTMLElement
-    if (
-      fallbackContainer &&
-      fallbackContainer.style &&
-      typeof fallbackContainer.style === 'object'
-    ) {
-      fallbackContainer.style.display = 'contents'
-    }
-    const fallbackStartEl = createComment('rue-suspense-fallback-start')
-    const fallbackEndEl = createComment('rue-suspense-fallback-end')
-    appendChild(fallbackContainer, fallbackStartEl)
-    appendChild(fallbackContainer, fallbackEndEl)
-    appendChild(stagingRoot as any, fallbackContainer)
-
-    return {
-      boundary,
-      parentBoundary,
-      container,
-      stagingHost,
-      startEl,
-      endEl,
-      contentContainer,
-      contentStartEl,
-      contentEndEl,
-      fallbackContainer,
-      fallbackStartEl,
-      fallbackEndEl,
-      propsSig: signal(snapshotSuspenseProps(props), {}, true),
-      lastProps: props,
-      lastFallback: undefined as unknown,
-      fallbackReady: false,
-      contentMounted: false,
-      contentVisible: false,
-      retrySig: signal(0, {}, true),
-      status: 'initial' as SuspenseStatus,
-      pendingId: 0,
-      showId: 0,
-      hadPending: false,
-      hasResolvedContent: false,
-      showingFallback: false,
-      pendingThenables: new Set<PromiseLike<unknown>>(),
-      fallbackTimer: null as ReturnType<typeof setTimeout> | null,
-      effect: null as ReturnType<typeof watchEffect> | null,
-    }
-  })
-
-  const clearFallbackTimer = () => {
-    if (ctx.fallbackTimer) {
-      clearTimeout(ctx.fallbackTimer)
-      ctx.fallbackTimer = null
-    }
-  }
-
-  const triggerRetry = () => {
-    ctx.retrySig.set(ctx.retrySig.get() + 1)
-  }
-
-  const findParentBoundary = () => {
-    let node: any = getParentNode(ctx.container)
-    while (node) {
-      const boundary = node[RUE_SUSPENSE_BOUNDARY_KEY] as SuspenseBoundary | undefined
-      if (boundary && boundary !== ctx.boundary) {
-        ctx.parentBoundary = boundary
-        return boundary
+    const ctx = useSetup(() => {
+      const parentBoundary = getCurrentSuspenseBoundary()
+      const container = createElement('div') as HTMLElement
+      if (container && container.style && typeof container.style === 'object') {
+        container.style.display = 'contents'
       }
-      node = getParentNode(node)
+
+      const stagingHost = createElement('div') as HTMLElement & {
+        attachShadow?: (init: ShadowRootInit) => ShadowRoot
+      }
+      if (stagingHost && stagingHost.style && typeof stagingHost.style === 'object') {
+        stagingHost.style.display = 'none'
+      }
+      ;(stagingHost as any)[RUE_SUSPENSE_STAGING_KEY] = true
+      const stagingRoot =
+        typeof stagingHost.attachShadow === 'function'
+          ? ((stagingHost.attachShadow({ mode: 'open' }) as unknown as HTMLElement) ?? stagingHost)
+          : stagingHost
+
+      const boundary: SuspenseBoundary = {
+        id: Symbol('rue-suspense-boundary'),
+        register: () => {},
+      }
+      ;(container as any)[RUE_SUSPENSE_BOUNDARY_KEY] = boundary
+
+      const startEl = createComment('rue-suspense-start')
+      const endEl = createComment('rue-suspense-end')
+      appendChild(container, stagingHost)
+      appendChild(container, startEl)
+      appendChild(container, endEl)
+
+      const contentContainer = createElement('div') as HTMLElement
+      if (
+        contentContainer &&
+        contentContainer.style &&
+        typeof contentContainer.style === 'object'
+      ) {
+        contentContainer.style.display = 'contents'
+      }
+      ;(contentContainer as any)[RUE_SUSPENSE_BOUNDARY_KEY] = boundary
+      const contentStartEl = createComment('rue-suspense-content-start')
+      const contentEndEl = createComment('rue-suspense-content-end')
+      appendChild(contentContainer, contentStartEl)
+      appendChild(contentContainer, contentEndEl)
+      appendChild(stagingRoot as any, contentContainer)
+
+      return {
+        boundary,
+        parentBoundary,
+        container,
+        stagingHost,
+        startEl,
+        endEl,
+        contentContainer,
+        contentStartEl,
+        contentEndEl,
+        propsSig: signal(snapshotSuspenseProps(props), {}, true),
+        lastProps: props,
+        contentMounted: false,
+        contentVisible: false,
+        retrySig: signal(0, {}, true),
+        status: 'initial' as SuspenseStatus,
+        generation: 0,
+        active: true,
+        pendingThenables: new Set<PromiseLike<unknown>>(),
+        fallbackTimer: null as ReturnType<typeof setTimeout> | null,
+        effect: null as ReturnType<typeof watchEffect> | null,
+      }
+    })
+
+    const clearFallbackTimer = () => {
+      if (ctx.fallbackTimer) {
+        clearTimeout(ctx.fallbackTimer)
+        ctx.fallbackTimer = null
+      }
     }
 
-    if (ctx.parentBoundary && ctx.parentBoundary !== ctx.boundary) {
-      return ctx.parentBoundary
+    const triggerRetry = (generation: number) => {
+      if (!ctx.active || ctx.generation !== generation) {
+        return
+      }
+      ctx.retrySig.set(ctx.retrySig.get() + 1)
     }
 
-    return null
-  }
+    const findParentBoundary = () => {
+      let node: any = getParentNode(ctx.container)
+      while (node) {
+        const boundary = node[RUE_SUSPENSE_BOUNDARY_KEY] as SuspenseBoundary | undefined
+        if (boundary && boundary !== ctx.boundary) {
+          ctx.parentBoundary = boundary
+          return boundary
+        }
+        node = getParentNode(node)
+      }
 
-  const registerParentDependency = (thenable: PromiseLike<unknown>, curProps: SuspenseProps) => {
-    if (!curProps.suspensible) {
-      return
+      if (ctx.parentBoundary && ctx.parentBoundary !== ctx.boundary) {
+        return ctx.parentBoundary
+      }
+
+      return null
     }
 
-    const parentBoundary = findParentBoundary()
-    if (parentBoundary) {
-      parentBoundary.register(thenable)
-      return
-    }
-
-    queueMicrotask(() => {
-      if (!ctx.propsSig.get().suspensible || !ctx.pendingThenables.has(thenable)) {
+    const registerParentDependency = (thenable: PromiseLike<unknown>, curProps: SuspenseProps) => {
+      if (!curProps.suspensible) {
         return
       }
 
-      findParentBoundary()?.register(thenable)
-    })
-  }
-
-  const trackThenable = (thenable: PromiseLike<unknown>) => {
-    if (ctx.pendingThenables.has(thenable)) {
-      return false
-    }
-
-    ctx.pendingThenables.add(thenable)
-    Promise.resolve(thenable).then(
-      () => {
-        ctx.pendingThenables.delete(thenable)
-        triggerRetry()
-      },
-      error => {
-        ctx.pendingThenables.delete(thenable)
-        ;(rue as any).handleError?.(error, null)
-        triggerRetry()
-      },
-    )
-    return true
-  }
-
-  const collectRangeNodes = (start: unknown, end: unknown, clone: boolean) => {
-    const nodes: unknown[] = []
-    let node = (start as any).nextSibling
-
-    while (node && node !== end) {
-      const next = node.nextSibling
-      if (clone && typeof node.cloneNode === 'function') {
-        nodes.push(node.cloneNode(true))
-      } else {
-        nodes.push(node)
+      const parentBoundary = findParentBoundary()
+      if (parentBoundary) {
+        parentBoundary.register(thenable)
+        return
       }
-      node = next
-    }
 
-    return nodes
-  }
-
-  const collectFallbackClones = () =>
-    collectRangeNodes(ctx.fallbackStartEl, ctx.fallbackEndEl, true)
-
-  const collectContentNodes = () => collectRangeNodes(ctx.contentStartEl, ctx.contentEndEl, false)
-
-  const ensureFallbackMaterialized = (curProps: SuspenseProps) => {
-    if (ctx.lastFallback === curProps.fallback) {
-      return
-    }
-
-    ctx.lastFallback = curProps.fallback
-    ctx.fallbackReady = false
-    renderBetween(
-      toRenderable(curProps.fallback) as any,
-      ctx.fallbackContainer,
-      ctx.fallbackStartEl,
-      ctx.fallbackEndEl,
-    )
-    queueMicrotask(() => {
-      ctx.fallbackReady = true
-      if (ctx.status === 'pending') {
-        renderFallback(ctx.propsSig.get(), ctx.pendingId)
-      }
-    })
-  }
-
-  const renderFallback = (curProps: SuspenseProps, pendingId: number) => {
-    if (ctx.status !== 'pending' || ctx.pendingId !== pendingId) {
-      return
-    }
-
-    if (!ctx.showingFallback) {
-      ctx.showingFallback = true
-      callSuspenseHook(curProps.onFallback)
-    }
-    const fallbackClones = ctx.fallbackReady ? collectFallbackClones() : []
-    if (fallbackClones.length > 0) {
-      ctx.contentVisible = false
-      renderBetween(fallbackClones as any, ctx.container, ctx.startEl, ctx.endEl)
-      return
-    }
-    if (!ctx.fallbackReady) {
-      queueMicrotask(() => renderFallback(ctx.propsSig.get(), pendingId))
-      return
-    }
-    ctx.contentVisible = false
-    renderBetween(toRenderable(curProps.fallback) as any, ctx.container, ctx.startEl, ctx.endEl)
-  }
-
-  const showContent = (curProps: SuspenseProps) => {
-    if (ctx.contentVisible) {
-      return
-    }
-    if (ctx.pendingThenables.size > 0) {
-      return
-    }
-
-    clearFallbackTimer()
-    const wasPending = ctx.status === 'pending' || ctx.hadPending
-    const contentNodes = collectContentNodes()
-    renderBetween(contentNodes as any, ctx.container, ctx.startEl, ctx.endEl)
-    ctx.status = 'resolved'
-    ctx.hasResolvedContent = true
-    ctx.showingFallback = false
-    ctx.contentVisible = true
-    ctx.hadPending = false
-    if (wasPending) {
-      callSuspenseHook(curProps.onResolve)
-    }
-  }
-
-  const scheduleShowContent = (curProps: SuspenseProps) => {
-    const showId = ++ctx.showId
-    queueMicrotask(() => {
+      const generation = ctx.generation
       queueMicrotask(() => {
-        if (ctx.showId !== showId) {
+        if (
+          !ctx.active ||
+          ctx.generation !== generation ||
+          !ctx.propsSig.get().suspensible ||
+          !ctx.pendingThenables.has(thenable)
+        ) {
           return
         }
-        showContent(curProps)
+
+        findParentBoundary()?.register(thenable)
       })
-    })
-  }
-
-  const scheduleFallback = (curProps: SuspenseProps, pendingId: number) => {
-    clearFallbackTimer()
-
-    const timeout = normalizeTimeout(curProps.timeout)
-    if (ctx.hasResolvedContent && timeout > 0) {
-      ctx.fallbackTimer = setTimeout(() => {
-        ctx.fallbackTimer = null
-        renderFallback(ctx.propsSig.get(), pendingId)
-      }, timeout)
-      return
     }
 
-    renderFallback(curProps, pendingId)
-  }
-
-  ctx.boundary.register = thenable => {
-    const tracked = trackThenable(thenable)
-    const curProps = ctx.propsSig.get()
-    if (tracked) {
-      registerParentDependency(thenable, curProps)
-    }
-    if (!tracked && ctx.status === 'pending') {
-      return
-    }
-
-    if (ctx.status !== 'pending') {
-      ctx.status = 'pending'
-      callSuspenseHook(curProps.onPending)
-    }
-
-    ctx.hadPending = true
-    ctx.showId += 1
-    ctx.pendingId += 1
-    scheduleFallback(curProps, ctx.pendingId)
-  }
-
-  if (!ctx.effect) {
-    ctx.effect = watchEffect(() => {
-      ctx.retrySig.get()
-      const curProps = ctx.propsSig.get()
-      ensureFallbackMaterialized(curProps)
-
-      try {
-        if (!ctx.contentMounted) {
-          withSuspenseBoundary(ctx.boundary, () => {
-            renderBetween(
-              toRenderable(curProps.children) as any,
-              ctx.contentContainer,
-              ctx.contentStartEl,
-              ctx.contentEndEl,
-            )
-          })
-          ctx.contentMounted = true
-        }
-        scheduleShowContent(curProps)
-      } catch (thrown) {
-        if (!isSuspenseThenable(thrown)) {
-          ;(rue as any).handleError?.(thrown, null)
-          throw thrown
-        }
-
-        const tracked = trackThenable(thrown)
-        if (tracked) {
-          registerParentDependency(thrown, curProps)
-        }
-        if (ctx.status !== 'pending') {
-          ctx.status = 'pending'
-          callSuspenseHook(curProps.onPending)
-        }
-        ctx.pendingId += 1
-        scheduleFallback(curProps, ctx.pendingId)
+    const trackThenable = (thenable: PromiseLike<unknown>) => {
+      if (ctx.pendingThenables.has(thenable)) {
+        return false
       }
-    })
-  }
 
-  onBeforeUnmount(() => {
-    clearFallbackTimer()
-    delete (ctx.container as any)[RUE_SUSPENSE_BOUNDARY_KEY]
-    delete (ctx.contentContainer as any)[RUE_SUSPENSE_BOUNDARY_KEY]
-    ctx.effect?.dispose?.()
-    ctx.effect = null
-    ctx.pendingThenables.clear()
-    renderBetween([] as any, ctx.container, ctx.startEl, ctx.endEl)
-    renderBetween([] as any, ctx.contentContainer, ctx.contentStartEl, ctx.contentEndEl)
-    renderBetween([] as any, ctx.fallbackContainer, ctx.fallbackStartEl, ctx.fallbackEndEl)
-  })
-
-  return vapor(() => {
-    if (ctx.lastProps !== props) {
-      ctx.lastProps = props
-      ctx.contentMounted = false
-      ctx.contentVisible = false
-      ctx.showId += 1
-      ctx.propsSig.set(snapshotSuspenseProps(props))
+      const generation = ctx.generation
+      ctx.pendingThenables.add(thenable)
+      Promise.resolve(thenable).then(
+        () => {
+          if (!ctx.active || ctx.generation !== generation) {
+            return
+          }
+          ctx.pendingThenables.delete(thenable)
+          triggerRetry(generation)
+        },
+        error => {
+          if (!ctx.active || ctx.generation !== generation) {
+            return
+          }
+          ctx.pendingThenables.delete(thenable)
+          ;(rue as any).handleError?.(error, null)
+          triggerRetry(generation)
+        },
+      )
+      return true
     }
-    return ctx.container as any
-  })
-}
 
-Object.defineProperty(Suspense, RUE_SUSPENSE_COMPONENT_MARKER, {
-  configurable: false,
-  enumerable: false,
-  value: true,
-})
+    const collectContentNodes = () => {
+      const nodes: unknown[] = []
+      let node = (ctx.contentStartEl as any).nextSibling
 
-markBuiltinComponent(Suspense, 'Suspense')
+      while (node && node !== ctx.contentEndEl) {
+        const next = node.nextSibling
+        nodes.push(node)
+        node = next
+      }
+
+      return nodes
+    }
+
+    const renderFallback = (curProps: SuspenseProps, generation: number) => {
+      if (
+        !ctx.active ||
+        ctx.generation !== generation ||
+        (ctx.status !== 'pending' && ctx.status !== 'fallback')
+      ) {
+        return
+      }
+
+      if (ctx.status === 'pending') {
+        ctx.status = 'fallback'
+        callSuspenseHook(curProps.onFallback)
+      }
+      ctx.contentVisible = false
+      renderBetween(toRenderable(curProps.fallback) as any, ctx.container, ctx.startEl, ctx.endEl)
+    }
+
+    const showContent = (curProps: SuspenseProps, generation: number) => {
+      if (
+        !ctx.active ||
+        ctx.generation !== generation ||
+        ctx.contentVisible ||
+        ctx.pendingThenables.size > 0
+      ) {
+        return
+      }
+
+      clearFallbackTimer()
+      const wasPending = ctx.status === 'pending' || ctx.status === 'fallback'
+      const contentNodes = collectContentNodes()
+      renderBetween(contentNodes as any, ctx.container, ctx.startEl, ctx.endEl)
+      ctx.status = 'resolved'
+      ctx.contentVisible = true
+      if (wasPending) {
+        callSuspenseHook(curProps.onResolve)
+      }
+    }
+
+    const scheduleShowContent = (curProps: SuspenseProps) => {
+      const generation = ctx.generation
+      queueMicrotask(() => {
+        queueMicrotask(() => {
+          showContent(curProps, generation)
+        })
+      })
+    }
+
+    const scheduleFallback = (curProps: SuspenseProps, generation: number, hadContent: boolean) => {
+      clearFallbackTimer()
+
+      const timeout = normalizeTimeout(curProps.timeout)
+      if (hadContent && timeout > 0) {
+        ctx.fallbackTimer = setTimeout(() => {
+          ctx.fallbackTimer = null
+          renderFallback(ctx.propsSig.get(), generation)
+        }, timeout)
+        return
+      }
+
+      renderFallback(curProps, generation)
+    }
+
+    ctx.boundary.register = thenable => {
+      const tracked = trackThenable(thenable)
+      const curProps = ctx.propsSig.get()
+      if (tracked) {
+        registerParentDependency(thenable, curProps)
+      }
+      if (!tracked) {
+        return
+      }
+
+      if (ctx.status !== 'pending' && ctx.status !== 'fallback') {
+        const hadContent = ctx.contentVisible
+        ctx.status = 'pending'
+        callSuspenseHook(curProps.onPending)
+        scheduleFallback(curProps, ctx.generation, hadContent)
+      }
+    }
+
+    if (!ctx.effect) {
+      ctx.effect = watchEffect(() => {
+        ctx.retrySig.get()
+        const curProps = ctx.propsSig.get()
+
+        try {
+          if (!ctx.contentMounted) {
+            withSuspenseBoundary(ctx.boundary, () => {
+              renderBetween(
+                toRenderable(curProps.children) as any,
+                ctx.contentContainer,
+                ctx.contentStartEl,
+                ctx.contentEndEl,
+              )
+            })
+            ctx.contentMounted = true
+          }
+          scheduleShowContent(curProps)
+        } catch (thrown) {
+          if (!isSuspenseThenable(thrown)) {
+            ;(rue as any).handleError?.(thrown, null)
+            throw thrown
+          }
+
+          const tracked = trackThenable(thrown)
+          if (tracked) {
+            registerParentDependency(thrown, curProps)
+          }
+          if (ctx.status !== 'pending' && ctx.status !== 'fallback') {
+            const hadContent = ctx.contentVisible
+            ctx.status = 'pending'
+            callSuspenseHook(curProps.onPending)
+            scheduleFallback(curProps, ctx.generation, hadContent)
+          }
+        }
+      })
+    }
+
+    onBeforeUnmount(() => {
+      ctx.active = false
+      ctx.generation += 1
+      clearFallbackTimer()
+      delete (ctx.container as any)[RUE_SUSPENSE_BOUNDARY_KEY]
+      delete (ctx.contentContainer as any)[RUE_SUSPENSE_BOUNDARY_KEY]
+      ctx.effect?.dispose?.()
+      ctx.effect = null
+      ctx.pendingThenables.clear()
+      renderBetween([] as any, ctx.container, ctx.startEl, ctx.endEl)
+      renderBetween([] as any, ctx.contentContainer, ctx.contentStartEl, ctx.contentEndEl)
+    })
+
+    return vapor(() => {
+      if (ctx.lastProps !== props) {
+        ctx.lastProps = props
+        ctx.generation += 1
+        clearFallbackTimer()
+        ctx.pendingThenables.clear()
+        ctx.contentMounted = false
+        ctx.status = 'initial'
+        ctx.propsSig.set(snapshotSuspenseProps(props))
+      }
+      return ctx.container as any
+    })
+  },
+  'Suspense',
+  RUE_SUSPENSE_COMPONENT_MARKER,
+)

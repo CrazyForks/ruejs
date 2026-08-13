@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "build": {
+    "mode": "production",
+    "target": "es2020",
+    "minifier": "@swc/core"
+  },
+  "presets": {
+    "vapor-core": {
+      "name": "vapor-core",
+      "input": [
+        {
+          "entry": "@rue-js/rue/vapor",
+          "imports": ["vapor"]
+        }
+      ],
+      "buildMode": "production",
+      "raw": 671723,
+      "min": 516363,
+      "gzip": 206477,
+      "brotli": 170654,
+      "deltaFromVaporCore": null,
+      "sources": {
+        "defaultRuntime": false,
+        "vaporRuntime": true,
+        "both": false,
+        "modules": ["packages/runtime/dist/runtime.vapor.esm-bundler.js"]
+      }
+    },
+    "vapor-app": {
+      "name": "vapor-app",
+      "input": [
+        {
+          "entry": "@rue-js/rue/vapor",
+          "imports": ["vapor", "useApp"]
+        }
+      ],
+      "buildMode": "production",
+      "raw": 675686,
+      "min": 517520,
+      "gzip": 206888,
+      "brotli": 171021,
+      "deltaFromVaporCore": null,
+      "sources": {
+        "defaultRuntime": false,
+        "vaporRuntime": true,
+        "both": false,
+        "modules": ["packages/runtime/dist/runtime.vapor.esm-bundler.js"]
+      }
+    },
+    "keep-alive": {
+      "name": "keep-alive",
+      "input": [
+        {
+          "entry": "@rue-js/rue/vapor",
+          "imports": ["vapor"]
+        },
+        {
+          "entry": "@rue-js/rue",
+          "imports": ["KeepAlive"]
+        }
+      ],
+      "buildMode": "production",
+      "raw": 799372,
+      "min": 561350,
+      "gzip": 219479,
+      "brotli": 174146,
+      "deltaFromVaporCore": {
+        "raw": 127649,
+        "min": 44987,
+        "gzip": 13002,
+        "brotli": 3492
+      },
+      "sources": {
+        "defaultRuntime": true,
+        "vaporRuntime": true,
+        "both": true,
+        "modules": [
+          "packages/runtime/dist/runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js"
+        ]
+      }
+    },
+    "suspense": {
+      "name": "suspense",
+      "input": [
+        {
+          "entry": "@rue-js/rue/vapor",
+          "imports": ["vapor"]
+        },
+        {
+          "entry": "@rue-js/rue",
+          "imports": ["Suspense"]
+        }
+      ],
+      "buildMode": "production",
+      "raw": 796606,
+      "min": 560919,
+      "gzip": 219257,
+      "brotli": 174145,
+      "deltaFromVaporCore": {
+        "raw": 124883,
+        "min": 44556,
+        "gzip": 12780,
+        "brotli": 3491
+      },
+      "sources": {
+        "defaultRuntime": true,
+        "vaporRuntime": true,
+        "both": true,
+        "modules": [
+          "packages/runtime/dist/runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js"
+        ]
+      }
+    },
+    "transition": {
+      "name": "transition",
+      "input": [
+        {
+          "entry": "@rue-js/rue/vapor",
+          "imports": ["vapor"]
+        },
+        {
+          "entry": "@rue-js/rue",
+          "imports": ["Transition"]
+        }
+      ],
+      "buildMode": "production",
+      "raw": 802050,
+      "min": 562413,
+      "gzip": 219833,
+      "brotli": 174564,
+      "deltaFromVaporCore": {
+        "raw": 130327,
+        "min": 46050,
+        "gzip": 13356,
+        "brotli": 3910
+      },
+      "sources": {
+        "defaultRuntime": true,
+        "vaporRuntime": true,
+        "both": true,
+        "modules": [
+          "packages/runtime/dist/runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js"
+        ]
+      }
+    },
+    "transition-group": {
+      "name": "transition-group",
+      "input": [
+        {
+          "entry": "@rue-js/rue/vapor",
+          "imports": ["vapor"]
+        },
+        {
+          "entry": "@rue-js/rue",
+          "imports": ["TransitionGroup"]
+        }
+      ],
+      "buildMode": "production",
+      "raw": 798736,
+      "min": 561671,
+      "gzip": 219873,
+      "brotli": 174234,
+      "deltaFromVaporCore": {
+        "raw": 127013,
+        "min": 45308,
+        "gzip": 13396,
+        "brotli": 3580
+      },
+      "sources": {
+        "defaultRuntime": true,
+        "vaporRuntime": true,
+        "both": true,
+        "modules": [
+          "packages/runtime/dist/runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js"
+        ]
+      }
+    },
+    "all-builtins": {
+      "name": "all-builtins",
+      "input": [
+        {
+          "entry": "@rue-js/rue/vapor",
+          "imports": ["vapor"]
+        },
+        {
+          "entry": "@rue-js/rue",
+          "imports": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"]
+        }
+      ],
+      "buildMode": "production",
+      "raw": 832759,
+      "min": 575632,
+      "gzip": 223641,
+      "brotli": 178203,
+      "deltaFromVaporCore": {
+        "raw": 161036,
+        "min": 59269,
+        "gzip": 17164,
+        "brotli": 7549
+      },
+      "sources": {
+        "defaultRuntime": true,
+        "vaporRuntime": true,
+        "both": true,
+        "modules": [
+          "packages/runtime/dist/runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js"
+        ]
+      }
+    }
+  }
+}

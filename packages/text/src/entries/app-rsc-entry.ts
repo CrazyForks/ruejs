@@ -221,7 +221,7 @@ async function __loadPrerenderPagesRoutes() {
     : ''
 
   return `
-import ${JSON.stringify(serverGlobalsPath)};
+import ${JSON.stringify(`${serverGlobalsPath}?text-server-entry`)};
 import {
   renderAppRscPayloadToReadableStream as _renderAppRscPayloadToReadableStream,
   decodeProgressiveAction,

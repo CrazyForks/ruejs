@@ -1,10 +1,14 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const isWin = process.platform === 'win32'
+const scriptDir = dirname(fileURLToPath(import.meta.url))
+const packageDir = join(scriptDir, '..')
 const runnerBinaryName = isWin ? 'wasm-bindgen-test-runner.exe' : 'wasm-bindgen-test-runner'
+const wasmBindgenBinaryName = isWin ? 'wasm-bindgen.exe' : 'wasm-bindgen'
 const args = process.argv.slice(2)
 
 if (args.length === 0) {
@@ -187,6 +191,42 @@ function ensureWasmPack() {
   }
 }
 
+function readLockedWasmBindgenVersion() {
+  const lockfile = readFileSync(join(packageDir, 'Cargo.lock'), 'utf8')
+  const packageBlocks = lockfile.split(/\n\[\[package\]\]\n/)
+  for (const block of packageBlocks) {
+    if (/^name = "wasm-bindgen"$/m.test(block)) {
+      return block.match(/^version = "([^"]+)"$/m)?.[1]
+    }
+  }
+  return undefined
+}
+
+function ensureLockedWasmBindgen() {
+  const version = readLockedWasmBindgenVersion()
+  if (!version) {
+    console.error('[runtime-vapor] Cargo.lock does not contain wasm-bindgen.')
+    process.exit(1)
+  }
+
+  const installRoot = join(packageDir, 'target', `wasm-bindgen-cli-${version}-locked`)
+  const binary = join(installRoot, 'bin', wasmBindgenBinaryName)
+  if (!existsSync(binary)) {
+    console.log(`[runtime-vapor] Installing locked wasm-bindgen-cli ${version}...`)
+    const installResult = run(
+      'cargo',
+      ['install', 'wasm-bindgen-cli', '--version', version, '--locked', '--root', installRoot],
+      { stdio: 'inherit' },
+    )
+    if (installResult.error || installResult.status !== 0) {
+      console.error('[runtime-vapor] Failed to install the locked wasm-bindgen CLI.')
+      process.exit(installResult.status ?? 1)
+    }
+  }
+
+  return join(installRoot, 'bin')
+}
+
 if (isNodeTest(args)) {
   const runner = findWasmBindgenTestRunner()
   if (runner) {
@@ -209,7 +249,14 @@ if (isNodeTest(args)) {
 
 ensureWasmPack()
 
-const execResult = run('wasm-pack', normalizeWasmPackArgs(args), { stdio: 'inherit' })
+const lockedWasmBindgenBin = ensureLockedWasmBindgen()
+const execResult = run('wasm-pack', normalizeWasmPackArgs(args), {
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    PATH: `${lockedWasmBindgenBin}${isWin ? ';' : ':'}${process.env.PATH ?? ''}`,
+  },
+})
 if (execResult.error) {
   console.error('[runtime-vapor] Failed to execute wasm-pack.')
   process.exit(1)

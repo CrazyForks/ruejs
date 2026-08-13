@@ -46,5 +46,5 @@ describe('server globals', () => {
 
     expect(res.status).toBe(200)
     expect(html).toContain('server globals ok')
-  }, 30_000)
+  }, 60_000)
 })

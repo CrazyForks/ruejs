@@ -38,8 +38,8 @@ useApp(RootApp).use(router).mount('#app')
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$setClassName } from "@rue-js/rue/vapor";
-import { type FC, useError, useApp } from '@rue-js/rue';
+import { useApp, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$setClassName } from "@rue-js/rue/vapor";
+import { type FC, useError } from '@rue-js/rue';
 import { RouterView } from '@rue-js/router';
 import router from './router';
 useError({

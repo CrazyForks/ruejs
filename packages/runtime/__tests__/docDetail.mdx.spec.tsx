@@ -42,7 +42,10 @@ vi.mock('../../../app/pages/site/SidebarPlaygroundPage', () => ({
 setReactiveScheduling('sync')
 
 const repoRoot = process.cwd()
-const slowTestTimeout = 30_000
+// Compiling three MDX route modules is CPU-heavy and competes with the rest of
+// the release suite's workers. Keep this scoped to the integration case rather
+// than raising Vitest's global timeout.
+const slowTestTimeout = 120_000
 const fixturePaths = [
   'docs/guide/mdx-detail-fixture.mdx',
   'docs/api/mdx-detail-fixture.mdx',

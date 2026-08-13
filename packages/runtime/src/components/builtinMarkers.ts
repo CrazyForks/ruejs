@@ -10,12 +10,20 @@ export const RUE_BUILTIN_COMPONENT_KEY = Symbol.for('rue.builtin-component')
 export const markBuiltinComponent = <T extends Function>(
   component: T,
   name: RueBuiltinComponentName,
+  booleanMarker?: PropertyKey,
 ): T => {
   Object.defineProperty(component, RUE_BUILTIN_COMPONENT_KEY, {
     value: name,
     enumerable: false,
     configurable: true,
   })
+  if (booleanMarker !== undefined) {
+    Object.defineProperty(component, booleanMarker, {
+      value: true,
+      enumerable: false,
+      configurable: false,
+    })
+  }
   return component
 }
 

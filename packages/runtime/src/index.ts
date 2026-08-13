@@ -20,8 +20,10 @@ export { createContext, useContext, type RueContext, type ContextProviderProps }
 // 内置组件：slot、动态组件、缓存、异步、模板、传送和过渡能力。
 export { Slot, type SlotBag, type SlotProps, type SlotValue } from './components/Slot'
 export { Component, type DynamicComponentProps } from './components/Component'
-export { KeepAlive, type KeepAliveMatchPattern, type KeepAliveProps } from './components/KeepAlive'
-export { Suspense, type SuspenseProps } from './components/Suspense'
+export { KeepAlive } from './components/KeepAlive'
+export type { KeepAliveMatchPattern, KeepAliveProps } from './components/KeepAlive'
+export { Suspense } from './components/Suspense'
+export type { SuspenseProps } from './components/Suspense'
 export { Template, type TemplateProps } from './components/Template'
 export { Teleport, type TeleportProps } from './components/Teleport'
 export { createTransitionRunner, type BaseTransitionProps } from './components/BaseTransition'
@@ -69,8 +71,10 @@ export {
 // 稳定 hook id 辅助直接来自 runtime-vapor reactive。
 export { vaporWithHookId as _$vaporWithHookId } from '@rue-js/runtime-vapor/reactive'
 
-export { Transition, type TransitionMode, type TransitionProps } from './components/Transition'
-export { TransitionGroup, type TransitionGroupProps } from './components/TransitionGroup'
+export { Transition } from './components/Transition'
+export type { TransitionMode, TransitionProps } from './components/Transition'
+export { TransitionGroup } from './components/TransitionGroup'
+export type { TransitionGroupProps } from './components/TransitionGroup'
 
 // 响应式 API：透传 runtime-vapor reactive，并扩展 Suspense-aware createResource。
 export * from './reactivity'

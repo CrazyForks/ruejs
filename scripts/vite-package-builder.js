@@ -1,8 +1,9 @@
 import { builtinModules, createRequire } from 'node:module'
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { minify as minifySwc } from '@swc/core'
+import MagicString from 'magic-string'
 import { build } from 'vite'
 import VitePluginRue from '../packages/vite-plugin-rue/index.mjs'
 import { entries } from './aliases.js'
@@ -16,6 +17,10 @@ const rootDir = path.resolve(__dirname, '..')
 const rootPkg = require(path.resolve(rootDir, 'package.json'))
 
 const defaultFormats = ['esm-bundler', 'cjs']
+const subpathFormatOutputDirs = {
+  'esm-bundler': 'esm',
+  cjs: 'cjs',
+}
 const enumCachePath = path.resolve(rootDir, 'temp/enum.json')
 const RUE_BUILD_TRANSFORM_TIMEOUT_MS = 60000
 const treeShakenDeps = ['source-map-js', '@babel/parser', 'estree-walker', 'entities/lib/decode.js']
@@ -92,6 +97,8 @@ export async function buildDistributionPackage(
       }
     }
   }
+
+  requests.push(...resolveSubpathBuildRequests(packageInfo, formatFilter, sourceMap))
 
   for (const request of requests) {
     await build(createViteConfig(request))
@@ -188,6 +195,104 @@ function resolvePreserveModuleInput(packageInfo) {
   })
 
   return entries
+}
+
+function isPathWithin(parentDir, candidatePath) {
+  const relativePath = path.relative(parentDir, candidatePath)
+  return (
+    relativePath !== '' &&
+    relativePath !== '..' &&
+    !relativePath.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relativePath)
+  )
+}
+
+function resolveSubpathBuildRequests(packageInfo, formatFilter, sourceMap) {
+  const subpathOptions = packageInfo.packageOptions.subpathEntries
+  if (subpathOptions == null) {
+    return []
+  }
+  if (
+    typeof subpathOptions !== 'object' ||
+    Array.isArray(subpathOptions) ||
+    typeof subpathOptions.source !== 'string' ||
+    subpathOptions.source.length === 0
+  ) {
+    throw new Error('buildOptions.subpathEntries.source must be a non-empty string')
+  }
+
+  const sourceDir = path.resolve(packageInfo.packageDir, subpathOptions.source)
+  if (!isPathWithin(packageInfo.packageDir, sourceDir)) {
+    throw new Error('buildOptions.subpathEntries.source must stay within the package directory')
+  }
+  if (!existsSync(sourceDir) || !statSync(sourceDir).isDirectory()) {
+    throw new Error(`Component subpath source directory does not exist: ${subpathOptions.source}`)
+  }
+  if (!isPathWithin(realpathSync(packageInfo.packageDir), realpathSync(sourceDir))) {
+    throw new Error('buildOptions.subpathEntries.source must stay within the package directory')
+  }
+
+  const configuredFormats = subpathOptions.formats || Object.keys(subpathFormatOutputDirs)
+  if (!Array.isArray(configuredFormats) || configuredFormats.length === 0) {
+    throw new Error('buildOptions.subpathEntries.formats must be a non-empty array')
+  }
+  for (const format of configuredFormats) {
+    if (!subpathFormatOutputDirs[format]) {
+      throw new Error(`Unsupported component subpath format: ${format}`)
+    }
+  }
+
+  const entryFiles = {}
+  for (const entry of readdirSync(sourceDir, { withFileTypes: true }).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )) {
+    if (!entry.isDirectory() || entry.name === '__tests__') {
+      continue
+    }
+
+    const entryDir = path.resolve(sourceDir, entry.name)
+    const entryFile = ['index.ts', 'index.tsx']
+      .map(fileName => path.resolve(entryDir, fileName))
+      .find(filePath => existsSync(filePath) && statSync(filePath).isFile())
+    if (entryFile) {
+      entryFiles[entry.name] = entryFile
+    }
+  }
+
+  if (Object.keys(entryFiles).length === 0) {
+    throw new Error(`No component subpath entries found in: ${subpathOptions.source}`)
+  }
+
+  const formats = formatFilter
+    ? configuredFormats.filter(format => formatFilter.includes(format))
+    : configuredFormats
+
+  return formats.map(format => {
+    const request = createDistributionRequest(
+      packageInfo,
+      {
+        fileName: packageInfo.fileName,
+        globalName: packageInfo.packageOptions.name,
+        formats: [format],
+        isMain: false,
+      },
+      format,
+      false,
+      sourceMap,
+    )
+
+    return {
+      ...request,
+      kind: 'subpath',
+      entryFiles,
+      preserveModules: false,
+      outputDir: path.resolve(
+        packageInfo.packageDir,
+        'dist/components',
+        subpathFormatOutputDirs[format],
+      ),
+    }
+  })
 }
 
 function createDistributionRequest(packageInfo, buildEntry, format, prod, sourceMap) {
@@ -302,6 +407,7 @@ function needsProdVariant(format) {
 
 function createViteConfig(request) {
   const preserveModules = request.preserveModules === true
+  const multiEntry = request.kind === 'subpath'
   const enumPluginResult =
     !preserveModules && existsSync(enumCachePath) ? inlineEnums() : [null, {}]
   const [enumPlugin, enumDefines] = enumPluginResult
@@ -316,6 +422,7 @@ function createViteConfig(request) {
       createRollupWasmPlugin(),
       enumPlugin,
       createLiteralReplacePlugin(resolveReplaceValues(request, enumDefines)),
+      request.packageInfo.target === 'rue-design' ? createPureCompoundComponentPlugin() : null,
       request.enableRueVaporTransform
         ? VitePluginRue({
             include: [`/packages/${request.packageInfo.target}/`],
@@ -334,13 +441,15 @@ function createViteConfig(request) {
       target: 'es2020',
       minify: request.prod,
       sourcemap: request.sourceMap,
-      outDir: path.resolve(request.packageInfo.packageDir, 'dist'),
-      emptyOutDir: false,
+      outDir: request.outputDir || path.resolve(request.packageInfo.packageDir, 'dist'),
+      emptyOutDir: multiEntry,
       watch: request.watch ? {} : null,
       lib: {
-        entry: preserveModules
-          ? resolvePreserveModuleInput(request.packageInfo)
-          : path.resolve(request.packageInfo.packageDir, request.entryFile),
+        entry: multiEntry
+          ? request.entryFiles
+          : preserveModules
+            ? resolvePreserveModuleInput(request.packageInfo)
+            : path.resolve(request.packageInfo.packageDir, request.entryFile),
         name: request.buildEntry.globalName || request.packageInfo.packageOptions.name,
         formats: [request.viteFormat],
       },
@@ -354,13 +463,15 @@ function createViteConfig(request) {
               ? request.buildEntry.globalName || request.packageInfo.packageOptions.name
               : undefined,
           esModule: request.viteFormat === 'cjs',
-          entryFileNames: preserveModules ? '[name].js' : `${request.outputFileBase}.js`,
-          chunkFileNames: preserveModules
-            ? '_chunks/[name]-[hash].js'
-            : `${request.outputFileBase}-[name]-[hash].js`,
+          entryFileNames:
+            preserveModules || multiEntry ? '[name].js' : `${request.outputFileBase}.js`,
+          chunkFileNames:
+            preserveModules || multiEntry
+              ? '_chunks/[name]-[hash].js'
+              : `${request.outputFileBase}-[name]-[hash].js`,
           assetFileNames: assetInfo => {
             const extension = path.extname(assetInfo.name || '') || '.asset'
-            return preserveModules
+            return preserveModules || multiEntry
               ? 'assets/[name]-[hash][extname]'
               : `${request.outputFileBase}-[name]-[hash]${extension}`
           },
@@ -371,6 +482,41 @@ function createViteConfig(request) {
             : undefined,
         },
       },
+    },
+  }
+}
+
+function createPureCompoundComponentPlugin() {
+  const componentSourceDir = `${path
+    .resolve(rootDir, 'packages/rue-design/src/components')
+    .replaceAll('\\', '/')}/`
+  const compoundAssignment = /^((?:const|let|var)\s+[^=\r\n]+?=\s*)Object\.assign\(/gm
+
+  return {
+    name: 'rue-design-pure-compound-components',
+    enforce: 'post',
+    transform(code, id) {
+      const normalizedId = id.split('?', 1)[0].replaceAll('\\', '/')
+      if (!normalizedId.startsWith(componentSourceDir)) {
+        return null
+      }
+
+      let magic = null
+      for (const match of code.matchAll(compoundAssignment)) {
+        const objectAssignOffset = match[0].lastIndexOf('Object.assign(')
+        if (match.index == null || objectAssignOffset < 0) continue
+
+        magic ||= new MagicString(code)
+        const insertionPoint = match.index + objectAssignOffset
+        magic.appendLeft(insertionPoint, '/* @__PURE__ */ ')
+      }
+
+      return magic
+        ? {
+            code: magic.toString(),
+            map: null,
+          }
+        : null
     },
   }
 }

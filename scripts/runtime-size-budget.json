@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "presets": {
+    "vapor-core": {
+      "measurement": "absolute",
+      "max": {
+        "min": 516320,
+        "gzip": 206468
+      },
+      "forbidDefaultRuntime": true,
+      "forbidBuiltins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"],
+      "forbidSSRRenderer": true
+    },
+    "vapor-app": {
+      "measurement": "absolute",
+      "max": {
+        "min": 517480,
+        "gzip": 206880
+      },
+      "forbidDefaultRuntime": true,
+      "forbidSSRRenderer": true
+    },
+    "keep-alive": {
+      "measurement": "deltaFromVaporCore",
+      "max": {
+        "min": 44750,
+        "gzip": 12950
+      },
+      "forbidSSRRenderer": true
+    },
+    "suspense": {
+      "measurement": "deltaFromVaporCore",
+      "max": {
+        "min": 44150,
+        "gzip": 12670
+      },
+      "forbidSSRRenderer": true
+    },
+    "transition": {
+      "measurement": "deltaFromVaporCore",
+      "max": {
+        "min": 46020,
+        "gzip": 13340
+      },
+      "forbidSSRRenderer": true
+    },
+    "transition-group": {
+      "measurement": "deltaFromVaporCore",
+      "max": {
+        "min": 45270,
+        "gzip": 13386
+      },
+      "forbidSSRRenderer": true
+    },
+    "all-builtins": {
+      "measurement": "deltaFromVaporCore",
+      "max": {
+        "min": 58600,
+        "gzip": 17000
+      },
+      "forbidSSRRenderer": true
+    }
+  }
+}

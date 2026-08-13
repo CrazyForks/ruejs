@@ -2646,8 +2646,9 @@ type TreeCompoundComponent = FC<TreeProps> & {
   DirectoryTree: FC<DirectoryTreeProps>
 }
 
-const Tree = TreeRoot as TreeCompoundComponent
-Tree.DirectoryTree = DirectoryTree
+const Tree: TreeCompoundComponent = Object.assign(TreeRoot, {
+  DirectoryTree,
+})
 
 /** 默认导出树组件。 */
 export default Tree
