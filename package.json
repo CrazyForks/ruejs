@@ -1,6 +1,6 @@
 {
   "name": "rue-site",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "private": true,
   "description": "",
   "keywords": [],
@@ -36,7 +36,7 @@
     "build-dts": "tsc -p tsconfig.build.json --noCheck && node scripts/build-dts.js",
     "test-dts": "pnpm run build-dts",
     "ensure-runtime-vapor-build": "node scripts/ensure-runtime-vapor-build.js",
-    "prepare-unit-test-artifacts": "pnpm run ensure-runtime-vapor-build && node scripts/build.js '^shared$' '^runtime$' '^server-renderer$' '^rue$' '^rue-design$' -f esm-bundler,cjs -t",
+    "prepare-unit-test-artifacts": "pnpm run ensure-runtime-vapor-build && node scripts/build.js '^shared$' '^runtime$' '^server-renderer$' '^rue$' '^rue-design$' -f esm-bundler,esm-bundler-runtime,cjs -t",
     "clean": "rimraf --glob packages/*/dist temp",
     "size": "run-s \"size-*\" && node scripts/usage-size.js",
     "size-global": "node scripts/build.js rue runtime -f global -p --size",
