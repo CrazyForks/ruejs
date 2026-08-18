@@ -40,7 +40,7 @@ import { type FC, h } from '@rue-js/rue';
 const Hello: FC = (props)=>{
     return vapor(()=>{
         const _root = _$createElement("div");
-        _$appendChild(_root, _$createTextNode("1"));
+        _$appendChild(_root, _$createTextNode("1 "));
         const _el1 = _$createElement("span");
         _$appendChild(_root, _el1);
         const _list1 = _$createComment("rue:children:anchor");

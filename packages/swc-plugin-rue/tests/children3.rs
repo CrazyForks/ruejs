@@ -85,7 +85,7 @@ const Children: FC = ()=>vapor((__rue_parent_context)=>{
             _$appendChild(_root, _list3);
             const __child2 = vapor(()=>{
                 const _root = _$createDocumentFragment();
-                _$appendChild(_root, _$createTextNode("内部1"));
+                _$appendChild(_root, _$createTextNode("内部1 "));
                 const _el6 = _$createElement("span", _root);
                 _$appendChild(_root, _el6);
                 _$appendChild(_el6, _$createTextNode("内部1-子元素"));
@@ -100,7 +100,7 @@ const Children: FC = ()=>vapor((__rue_parent_context)=>{
             _$appendChild(_root, _list5);
             const __child3 = vapor(()=>{
                 const _root = _$createDocumentFragment();
-                _$appendChild(_root, _$createTextNode("内部1"));
+                _$appendChild(_root, _$createTextNode("内部1 "));
                 const _el7 = _$createElement("span", _root);
                 _$appendChild(_root, _el7);
                 _$appendChild(_el7, _$createTextNode("内部2-子元素"));

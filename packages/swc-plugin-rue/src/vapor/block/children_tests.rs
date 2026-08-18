@@ -91,6 +91,21 @@ fn vapor_block_children_emits_trimmed_text_and_flattens_nested_fragments() {
 }
 
 #[test]
+fn vapor_block_children_preserves_text_spacing_around_nested_elements() {
+    let frag = parse_fragment(
+        "<>\n  一套基于 <a>RueJS</a> 与浏览器 Office\n  内核构建的轻量工作台。\n</>",
+    );
+    let mut vt = new_vt();
+    let mut stmts = Vec::new();
+
+    emit_children(&mut vt, &crate::emit::ident("root"), &frag.children, &mut stmts);
+
+    let raw = emit_stmts(stmts);
+    assert!(raw.contains("_$createTextNode(\"一套基于 \")"));
+    assert!(raw.contains("_$createTextNode(\" 与浏览器 Office 内核构建的轻量工作台。\")"));
+}
+
+#[test]
 fn vapor_block_children_skips_block_whitespace_text() {
     let frag = parse_fragment("<>\n    \n</>");
     let mut vt = new_vt();

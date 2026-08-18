@@ -45,6 +45,18 @@ pub fn normalize_text(s: &str) -> String {
 
 use swc_core::ecma::ast::*;
 
+fn is_content_neighbor(child: Option<&JSXElementChild>) -> bool {
+    match child {
+        Some(JSXElementChild::JSXText(text)) => !normalize_text(&text.value).trim().is_empty(),
+        Some(
+            JSXElementChild::JSXExprContainer(_)
+            | JSXElementChild::JSXElement(_)
+            | JSXElementChild::JSXFragment(_),
+        ) => true,
+        _ => false,
+    }
+}
+
 /// 计算某个 JSX 文本节点的最终内容
 /// - 参数：
 ///   - children：同级子节点数组，用于判断前后邻居类型与上下文
@@ -53,10 +65,10 @@ use swc_core::ecma::ast::*;
 /// - 返回：Some(最终要插入的文本) 或 None（不插入文本节点）
 ///
 /// 规则说明：
-/// - 若 txt 仅由空白构成：仅在“前后均存在文本或表达式邻居”的行内拼接场景插入一个空格
+/// - 若 txt 仅由空白构成：仅在前后均存在可渲染内容邻居的拼接场景插入一个空格
 /// - 若 txt 含可见字符：
-///   - 在行内拼接（前或后邻居为文本/表达式）时原样保留，以避免破坏“© {year} Rue.js”等意图
-///   - 在块级边界（无文本/表达式邻居）时，进行首尾修剪，避免无意义的行首/行尾空白
+///   - 在内容拼接（前或后邻居为文本/表达式/元素/片段）时原样保留，以避免破坏“© {year} Rue.js”等意图
+///   - 在内容边界外时进行首尾修剪，避免无意义的行首/行尾空白
 ///   - 若相邻存在“纯空白邻居”（如 {' '}），则进一步对当前文本的首/尾进行对应方向的修剪
 pub fn compute_jsx_text_content(
     children: &[JSXElementChild],
@@ -67,17 +79,10 @@ pub fn compute_jsx_text_content(
     let prev = if i > 0 { Some(&children[i - 1]) } else { None };
     let next = if i + 1 < children.len() { Some(&children[i + 1]) } else { None };
 
-    // 邻居是否为“可见文本或表达式容器”，用于判定行内拼接场景
-    let prev_texty = match prev {
-        Some(JSXElementChild::JSXText(tt)) => !normalize_text(&tt.value).trim().is_empty(),
-        Some(JSXElementChild::JSXExprContainer(_)) => true,
-        _ => false,
-    };
-    let next_texty = match next {
-        Some(JSXElementChild::JSXText(tt)) => !normalize_text(&tt.value).trim().is_empty(),
-        Some(JSXElementChild::JSXExprContainer(_)) => true,
-        _ => false,
-    };
+    // 元素和片段也会切分 JSX 文本节点，必须与文本/表达式一样作为内容邻居，
+    // 否则 `text <a>link</a> text` 中链接两侧的明确空格会被误删。
+    let prev_texty = is_content_neighbor(prev);
+    let next_texty = is_content_neighbor(next);
 
     // 邻居是否为“纯空白”或 `{' '}` 形式，触发方向性修剪
     let prev_ws_neighbor = match prev {
@@ -116,8 +121,10 @@ pub fn compute_jsx_text_content(
     };
 
     if is_ws_only {
-        // 仅在行内拼接时插入一个空格；否则不插入空白节点
-        if prev_texty && next_texty {
+        let is_inline_whitespace = matches!(children.get(i), Some(JSXElementChild::JSXText(text))
+            if !text.value.contains(['\n', '\r']));
+        // 保留同一行内容之间明确写出的空格；丢弃元素间仅用于排版的换行和缩进。
+        if is_inline_whitespace && prev_texty && next_texty {
             return Some(" ".to_string());
         }
         return None;

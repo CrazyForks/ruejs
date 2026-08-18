@@ -78,6 +78,51 @@ fn keeps_inline_spacing_around_expression_neighbors() {
 }
 
 #[test]
+fn keeps_spacing_at_jsx_element_boundaries() {
+    let fragment = parse_fragment(
+        "<>\n  一套基于 <a>RueJS</a> 与浏览器 Office\n  内核构建的轻量工作台。\n</>",
+    );
+    let children = &fragment.children;
+
+    let JSXElementChild::JSXText(before_link) = &children[0] else {
+        panic!("expected text before link");
+    };
+    let JSXElementChild::JSXText(after_link) = &children[2] else {
+        panic!("expected text after link");
+    };
+
+    assert_eq!(
+        compute_jsx_text_content(children, 0, &normalize_text(&before_link.value)),
+        Some("一套基于 ".to_string())
+    );
+    assert_eq!(
+        compute_jsx_text_content(children, 2, &normalize_text(&after_link.value)),
+        Some(" 与浏览器 Office 内核构建的轻量工作台。".to_string())
+    );
+}
+
+#[test]
+fn keeps_inline_but_drops_multiline_whitespace_between_elements() {
+    let inline = parse_fragment("<><span /> <span /></>");
+    let JSXElementChild::JSXText(inline_gap) = &inline.children[1] else {
+        panic!("expected inline whitespace between elements");
+    };
+    assert_eq!(
+        compute_jsx_text_content(&inline.children, 1, &normalize_text(&inline_gap.value)),
+        Some(" ".to_string())
+    );
+
+    let multiline = parse_fragment("<>\n  <span />\n  <span />\n</>");
+    let JSXElementChild::JSXText(multiline_gap) = &multiline.children[2] else {
+        panic!("expected multiline whitespace between elements");
+    };
+    assert_eq!(
+        compute_jsx_text_content(&multiline.children, 2, &normalize_text(&multiline_gap.value),),
+        None
+    );
+}
+
+#[test]
 fn collapses_or_drops_whitespace_only_nodes_by_context() {
     let inline = parse_fragment("<>{left}   {right}</>");
     let JSXElementChild::JSXText(inline_gap) = &inline.children[1] else {

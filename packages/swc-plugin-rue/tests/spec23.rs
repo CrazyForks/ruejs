@@ -49,7 +49,6 @@ const OrCases: FC = ()=>{
             });
             untrack(()=>renderAnchor(__slot, _root, _list1));
         });
-        _$appendChild(_root, _$createTextNode(" "));
         const _list2 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list2);
         watchEffect(()=>{

@@ -347,7 +347,7 @@ const About: FC = ()=>{
         const _el52 = _$createElement("p");
         _$appendChild(_el50, _el52);
         _$setClassName(_el52, "text-sm text-base-content/70");
-        _$appendChild(_el52, _$createTextNode("使用 HTML 实体"));
+        _$appendChild(_el52, _$createTextNode("使用 HTML 实体 "));
         const _el53 = _$createElement("code");
         _$appendChild(_el52, _el53);
         _$setClassName(_el53, "bg-base-200 px-1 rounded");
@@ -375,7 +375,7 @@ const About: FC = ()=>{
         const _el60 = _$createElement("p");
         _$appendChild(_el58, _el60);
         _$setClassName(_el60, "text-sm text-base-content/70");
-        _$appendChild(_el60, _$createTextNode("通过 CSS 的"));
+        _$appendChild(_el60, _$createTextNode("通过 CSS 的 "));
         const _el61 = _$createElement("code");
         _$appendChild(_el60, _el61);
         _$setClassName(_el61, "bg-base-200 px-1 rounded");
@@ -502,6 +502,7 @@ const About: FC = ()=>{
         _$appendChild(_el92, _el93);
         _$setClassName(_el93, "inline-block bg-primary/20 px-3 py-2");
         _$appendChild(_el93, _$createTextNode("Box A"));
+        _$appendChild(_el92, _$createTextNode(" "));
         const _el94 = _$createElement("span");
         _$appendChild(_el92, _el94);
         _$setClassName(_el94, "inline-block bg-primary/20 px-3 py-2");

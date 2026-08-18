@@ -420,7 +420,6 @@ const DocDetail: FC = ()=>{
                         });
                         untrack(()=>renderAnchor(__slot, _el2, _list2));
                     });
-                    _$appendChild(_el2, _$createTextNode(" "));
                     const _list4 = _$createComment("rue:slot:anchor");
                     _$appendChild(_el2, _list4);
                     watchEffect(()=>{

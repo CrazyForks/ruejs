@@ -132,7 +132,6 @@ const ReactConditionalDemo: FC = ()=>{
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list2));
         });
-        _$appendChild(_root, _$createTextNode(" "));
         const _list3 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list3);
         watchEffect(()=>{

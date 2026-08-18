@@ -88,6 +88,21 @@ fn emits_inline_space_and_trims_block_text_children() {
 }
 
 #[test]
+fn preserves_text_spacing_around_nested_elements() {
+    let mut vt = new_vt();
+    let el = parse_jsx_element(
+        "<p>\n  一套基于 <a>RueJS</a> 与浏览器 Office\n  内核构建的轻量工作台。\n</p>",
+    );
+    let mut stmts = Vec::new();
+
+    emit_element_children(&mut vt, &crate::emit::ident("root"), &el.children, &mut stmts);
+
+    let raw = emit_stmts(stmts);
+    assert!(raw.contains("_$createTextNode(\"一套基于 \")"));
+    assert!(raw.contains("_$createTextNode(\" 与浏览器 Office 内核构建的轻量工作台。\")"));
+}
+
+#[test]
 fn dispatches_fragment_expr_nested_element_and_ignores_spread_children() {
     let mut vt = new_vt();
     vt.el_tag_by_ident.insert("root".to_string(), "div".to_string());
