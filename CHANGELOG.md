@@ -1,3 +1,10 @@
+## [0.8.9](https://github.com/hunzhiwange/ruejs/compare/v0.8.8...v0.8.9) (2026-08-19)
+
+
+### Bug Fixes
+
+* 修复编译器空白策略逻辑错误 ([4717f0b](https://github.com/hunzhiwange/ruejs/commit/4717f0b1c28404cd74e8fcadae9e00b1a56e570f))
+
 ## [0.8.6](https://github.com/doyouhaobaby/rue/compare/v0.8.5...v0.8.6) (2026-08-13)
 
 

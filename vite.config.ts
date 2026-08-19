@@ -6,12 +6,11 @@ import tailwindcss from '@tailwindcss/vite'
 import daisyUICalendarStyles from 'daisyui/components/calendar/object.js'
 import VitePluginRue from '@rue-js/vite-plugin-rue'
 import { mdxToJs, type MdxCompileOptions } from 'satteri'
-import { resolve } from 'node:path'
 import type { Plugin } from 'vite'
 import wasm from 'vite-plugin-wasm'
 // import { DevTools } from '@vitejs/devtools'
 
-const rootDir = resolve(__dirname)
+const rootDir = import.meta.dirname
 const testMaxWorkers = Number.parseInt(process.env.VITEST_MAX_WORKERS ?? '4', 10)
 const rueClientChunkByPackage = new Map([
   ['@rue-js/i18n', 'rue-i18n'],
@@ -174,7 +173,7 @@ const vitestProjects = [
 
 export default defineConfig(({ command, isSsrBuild }) => {
   const isVitest = process.env.VITEST === 'true' || process.env.VITEST === '1'
-  let docsOutDir = path.resolve(__dirname, 'dist')
+  let docsOutDir = path.resolve(rootDir, 'dist')
   let shouldCopyDocs = true
 
   return {
@@ -187,7 +186,7 @@ export default defineConfig(({ command, isSsrBuild }) => {
       createSatteriMdxPlugin({ development: command === 'serve' && !isVitest }),
       VitePluginRue({
         debug: command === 'serve' && !isVitest,
-        transformTimeoutMs: command === 'build' ? 60000 : undefined,
+        transformTimeoutMs: command === 'build' || isVitest ? 60000 : undefined,
       }),
       {
         name: 'copy-docs',
@@ -203,7 +202,7 @@ export default defineConfig(({ command, isSsrBuild }) => {
             return
           }
 
-          const src = path.resolve(__dirname, 'docs')
+          const src = path.resolve(rootDir, 'docs')
           const dest = path.resolve(docsOutDir, 'docs')
           const copy = async (src: string, dest: string) => {
             await fs.mkdir(dest, { recursive: true })
@@ -233,7 +232,7 @@ export default defineConfig(({ command, isSsrBuild }) => {
       minify: true,
       rolldownOptions: {
         input: {
-          main: path.resolve(__dirname, 'index.html'),
+          main: path.resolve(rootDir, 'index.html'),
         },
         devtools: {}, // enable devtools mode
         output: isSsrBuild

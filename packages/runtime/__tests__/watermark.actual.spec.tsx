@@ -23,6 +23,13 @@ const setEnabledPreviews = (...titles: string[]) => {
   ).__RUE_TEST_ENABLED_DESIGN_PREVIEWS__ = new Set(titles)
 }
 
+const findRangeOutput = (container: HTMLElement, labelText: string) => {
+  const label = Array.from(container.querySelectorAll('label')).find(
+    candidate => candidate.textContent?.trim() === labelText,
+  )
+  return label?.closest('[data-rue-range-root="true"]')?.querySelector('output') ?? null
+}
+
 afterEach(() => {
   delete (globalThis as { __RUE_TEST_ENABLED_DESIGN_PREVIEWS__?: Set<string> })
     .__RUE_TEST_ENABLED_DESIGN_PREVIEWS__
@@ -54,7 +61,7 @@ describe('Watermark actual page', () => {
       const updatedDemo = findDemo(container, '# Custom controls') as HTMLElement
 
       expect(updatedDemo.textContent).toContain('Shared with Partner')
-      expect(updatedDemo.textContent).toContain('Rotate -8')
+      expect(findRangeOutput(updatedDemo, 'Rotate')?.textContent).toBe('-8')
       expect(updatedDemo.textContent).toContain('z-index 10')
     })
 
@@ -69,7 +76,7 @@ describe('Watermark actual page', () => {
         '[data-rue-watermark-root="true"]',
       ) as HTMLElement
 
-      expect(updatedDemo.textContent).toContain('Rotate 35')
+      expect(findRangeOutput(updatedDemo, 'Rotate')?.textContent).toBe('35')
       expect(watermarkRoot.style.getPropertyValue('--rue-watermark-image')).toContain(
         encodeURIComponent('rotate(35'),
       )

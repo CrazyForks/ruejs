@@ -35,8 +35,8 @@ catalog:
   'magic-string': ^0.30.21
   'next': ^16.2.7
   'source-map-js': ^1.2.1
-  'vite': ^8.1.5
-  'vite-plus': ^0.2.5
+  'vite': ^8.2.1
+  'vite-plus': ^0.2.9
   'vite-plugin-commonjs': ^0.10.4
   'vite-tsconfig-paths': ^6.1.1
   'web-vitals': ^4.2.4
