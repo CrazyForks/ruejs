@@ -40,6 +40,7 @@ export {
   settextContent as _$settextContent,
   createDocumentFragment as _$createDocumentFragment,
   appendChild as _$appendChild,
+  insertBefore as _$insertBefore,
   setAttribute as _$setAttribute,
   addEventListener as _$addEventListener,
   setClassName as _$setClassName,

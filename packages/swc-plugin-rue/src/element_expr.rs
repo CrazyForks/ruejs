@@ -365,11 +365,33 @@ fn is_non_ref_member_expr(inner: &Expr) -> bool {
     }
 }
 
+fn member_root_ident(member: &MemberExpr) -> Option<&Ident> {
+    let mut current = crate::utils::unwrap_expr(member.obj.as_ref());
+    loop {
+        match current {
+            Expr::Ident(ident) => return Some(ident),
+            Expr::Member(parent) => {
+                current = crate::utils::unwrap_expr(parent.obj.as_ref());
+            }
+            _ => return None,
+        }
+    }
+}
+
+fn is_plain_local_member_expr(vt: &VaporTransform, inner: &Expr) -> bool {
+    let Expr::Member(member) = inner else {
+        return false;
+    };
+    member_root_ident(member)
+        .map(|ident| vt.current_plain_local_names().contains(ident.sym.as_ref()))
+        .unwrap_or(false)
+}
+
 fn is_text_coercion_call_name(name: &str) -> bool {
     matches!(name, "String" | "Number" | "Boolean" | "BigInt" | "Date" | "parseInt" | "parseFloat")
 }
 
-fn is_accessor_get_call_expr(call: &CallExpr) -> bool {
+pub(crate) fn is_accessor_get_call_expr(call: &CallExpr) -> bool {
     if !call.args.is_empty() {
         return false;
     }
@@ -480,7 +502,9 @@ fn contains_nested_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> 
                 !vt.current_plain_local_names().contains(name)
             }
         }
-        Expr::Member(_) => is_non_ref_member_expr(unwrapped),
+        Expr::Member(_) => {
+            !is_plain_local_member_expr(vt, unwrapped) && is_non_ref_member_expr(unwrapped)
+        }
         Expr::Call(call) => is_opaque_renderable_call_expr(call),
         Expr::Cond(CondExpr { cons, alt, .. }) => {
             contains_nested_opaque_renderable_expr(vt, cons.as_ref())
@@ -517,7 +541,9 @@ fn contains_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> bool {
                 !vt.current_plain_local_names().contains(name)
             }
         }
-        Expr::Member(_) => is_non_ref_member_expr(unwrapped),
+        Expr::Member(_) => {
+            !is_plain_local_member_expr(vt, unwrapped) && is_non_ref_member_expr(unwrapped)
+        }
         Expr::Call(call) => is_opaque_renderable_call_expr(call),
         Expr::Cond(CondExpr { cons, alt, .. }) => {
             contains_nested_opaque_renderable_expr(vt, cons.as_ref())

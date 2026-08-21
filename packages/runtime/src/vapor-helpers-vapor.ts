@@ -7,6 +7,7 @@ Vapor 运行时辅助概述
 */
 import { onBeforeUnmount, renderBetween } from './vapor-runtime'
 import {
+  effectScope,
   getCurrentInstance,
   signal,
   toRaw,
@@ -58,7 +59,7 @@ export type VaporListItemRange = {
   start?: DomNodeLike
   /** 条目结束锚点；单根模式下也是尾锚点。 */
   end: DomNodeLike
-  /** 停止该条目 render effect 的清理函数。 */
+  /** 停止该条目拥有的响应式 effect。 */
   stop?: () => void
   /** 是否使用单根锚点优化。 */
   singleRoot?: boolean
@@ -68,6 +69,8 @@ export type VaporListItemRange = {
   renderState?: ReturnType<typeof signal<{ item: any; index: number; rawIdentity: unknown }>>
   /** trackIndex=false 时复用的稳定 item proxy。 */
   stableItem?: unknown
+  /** primitive 同 key 更新时重建 directRoot 行。 */
+  remount?: (item: any, index: number) => void
 }
 
 const systemModifierNames = ['ctrl', 'shift', 'alt', 'meta'] as const
@@ -352,6 +355,8 @@ export const vaporKeyedList = <T>(args: {
   singleRoot?: boolean
   /** 是否把 index 变化视为需要刷新结构。 */
   trackIndex?: boolean
+  /** renderItem 是否直接挂载行根，不注册内层 renderAnchor。 */
+  directRoot?: boolean
   /** 渲染单个条目的回调。 */
   renderItem: (item: T, parent: any, start: any, end: any, idx?: number) => void
 }) => {
@@ -365,6 +370,7 @@ export const vaporKeyedList = <T>(args: {
     renderItem,
     singleRoot = false,
     trackIndex = true,
+    directRoot = false,
   } = args
   const nextElements = new Map<any, VaporListItemRange>()
   const syncEffectOptions = {
@@ -591,14 +597,19 @@ export const vaporKeyedList = <T>(args: {
         {},
         true,
       )
+      if (!trackIndex && isObjectLike(nextItem)) {
+        range.stableItem = createStableItemProxy(range.current)
+      }
+
+      if (range.singleRoot && range.stableItem) {
+        return undefined
+      }
+
       range.renderState = signal(
         { item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity },
         {},
         true,
       )
-      if (!trackIndex && isObjectLike(nextItem)) {
-        range.stableItem = createStableItemProxy(range.current)
-      }
       return range.renderState
     }
 
@@ -607,6 +618,10 @@ export const vaporKeyedList = <T>(args: {
     const indexChanged = prev.index !== nextIndex
     if (rawChanged || indexChanged) {
       range.current.set({ item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity })
+    }
+
+    if (range.singleRoot && range.stableItem && isObjectLike(nextItem)) {
+      return undefined
     }
 
     if (!range.renderState) {
@@ -626,6 +641,89 @@ export const vaporKeyedList = <T>(args: {
     }
 
     return range.renderState
+  }
+
+  const mountDirectRootRange = (
+    entry: VaporListItemRange,
+    item: T,
+    index: number,
+    itemParent: DomNodeLike,
+    end: DomNodeLike,
+  ) => {
+    const mount = (nextItem: T, nextIndex: number) => {
+      const scope = effectScope()
+      scope.run(() => {
+        untrack(() => {
+          renderItem(
+            (entry.stableItem as T | undefined) ?? nextItem,
+            itemParent as any,
+            end,
+            end,
+            nextIndex,
+          )
+        })
+      })
+      entry.stop = () => scope.stop()
+    }
+
+    entry.remount = (nextItem, nextIndex) => {
+      entry.stop?.()
+      const previousRoot = (end as any).previousSibling as DomNodeLike | null
+      if (previousRoot && contains(itemParent, previousRoot) && !isListMarker(previousRoot)) {
+        removeChild(itemParent, previousRoot)
+      }
+      mount(nextItem, nextIndex)
+    }
+    mount(item, index)
+  }
+
+  // 空列表的安全直挂行先在各自的小 Fragment 中 O(1) 组装，
+  // 再顺序 append 到一个批量 Fragment。这样既避免在不断增长的
+  // child list 中逐行查找尾锚点，又使真实父节点只发生一次插入。
+  if (
+    elements.size === 0 &&
+    items.length > 0 &&
+    singleRoot &&
+    !trackIndex &&
+    directRoot &&
+    items.every(isObjectLike)
+  ) {
+    const batch = createDocumentFragment()
+
+    for (let index = 0; index < items.length; index += 1) {
+      const item = items[index]
+      const key = nextKeys[index]
+      const itemParent = createDocumentFragment()
+      const end = createComment('rue:list:item:anchor')
+      appendChild(itemParent, end)
+
+      const entry: VaporListItemRange = { end, singleRoot: true }
+      syncCurrentItem(entry, item, index)
+      const scope = effectScope()
+      scope.run(() => {
+        untrack(() => {
+          renderItem(entry.stableItem as T, itemParent as any, end, end, index)
+        })
+      })
+      entry.stop = () => scope.stop()
+      appendChild(batch, itemParent)
+      nextElements.set(key, entry)
+    }
+
+    if (before && contains(targetParent, before as any)) {
+      insertBefore(targetParent, batch, before as any)
+    } else {
+      appendChild(targetParent, batch)
+    }
+
+    elements.clear()
+    nextKeys.forEach(key => {
+      const range = nextElements.get(key)
+      if (range) {
+        elements.set(key, range)
+      }
+    })
+    return elements
   }
 
   const resolveStartNode = (range: VaporListItemRange) => {
@@ -654,19 +752,31 @@ export const vaporKeyedList = <T>(args: {
         insertBefore(targetParent, end, cursor as any)
         const entry: VaporListItemRange = { end, singleRoot: true }
         const renderState = syncCurrentItem(entry, item, index)
-        const stop = watchEffect(() => {
-          const next = renderState.get()
-          untrack(() => {
-            renderItem(
-              (entry.stableItem as T | undefined) ?? next.item,
-              targetParent as any,
-              end,
-              end,
-              next.index,
-            )
+        if (directRoot) {
+          mountDirectRootRange(entry, item, index, targetParent, end)
+        } else if (renderState) {
+          const stop = watchEffect(() => {
+            const next = renderState.get()
+            untrack(() => {
+              renderItem(
+                (entry.stableItem as T | undefined) ?? next.item,
+                targetParent as any,
+                end,
+                end,
+                next.index,
+              )
+            })
+          }, syncEffectOptions)
+          entry.stop = () => stop.dispose()
+        } else {
+          const scope = effectScope()
+          scope.run(() => {
+            untrack(() => {
+              renderItem(entry.stableItem as T, targetParent as any, end, end, index)
+            })
           })
-        }, syncEffectOptions)
-        entry.stop = () => stop.dispose()
+          entry.stop = () => scope.stop()
+        }
         range = entry
       } else {
         start = createComment('rue:list:item:start')
@@ -674,7 +784,7 @@ export const vaporKeyedList = <T>(args: {
         insertBefore(targetParent, end, cursor as any)
         insertBefore(targetParent, start, end)
         const entry: VaporListItemRange = { start, end }
-        const renderState = syncCurrentItem(entry, item, index)
+        const renderState = syncCurrentItem(entry, item, index)!
         const stop = watchEffect(() => {
           const next = renderState.get()
           untrack(() => {
@@ -691,7 +801,18 @@ export const vaporKeyedList = <T>(args: {
         range = entry
       }
     } else {
+      const previous = range.current ? untrack(() => range!.current!.get()) : undefined
+      const shouldRemountDirectRoot =
+        directRoot &&
+        range.singleRoot &&
+        !range.stableItem &&
+        !!range.remount &&
+        !!previous &&
+        (previous.rawIdentity !== getRawIdentity(item) || (trackIndex && previous.index !== index))
       syncCurrentItem(range, item, index)
+      if (shouldRemountDirectRoot) {
+        range.remount!(item, index)
+      }
       end = range.end
     }
 

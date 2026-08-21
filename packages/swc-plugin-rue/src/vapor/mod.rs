@@ -7,6 +7,7 @@ use std::collections::HashSet;
 
 use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
+use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 /*
 Vapor 深编译转换器说明：
@@ -111,6 +112,176 @@ pub(crate) fn flatten_once_watch_effects(stmts: &mut Vec<Stmt>) {
         }
     }
     *stmts = next;
+}
+
+/// 将安全列表行中原本分散的绑定 effect 合并为一个行级 effect。
+///
+/// 每个原 effect 的 body 都保留在独立块作用域中，避免属性/slot emission
+/// 复用 `__slot`、`__obj` 等临时名时发生声明冲突。合并后的 watcher 放到
+/// DOM 创建语句之后，确保所有目标节点在首次同步运行前已经存在。
+pub(crate) fn coalesce_list_row_binding_effects(stmts: &mut Vec<Stmt>) {
+    collapse_sole_list_row_text_wrappers(stmts);
+
+    let mut retained = Vec::with_capacity(stmts.len());
+    let mut effect_blocks = Vec::new();
+
+    for stmt in std::mem::take(stmts) {
+        if let Some(body) = watch_effect_body(&stmt) {
+            effect_blocks.push(Stmt::Block(BlockStmt {
+                span: DUMMY_SP,
+                ctxt: swc_core::common::SyntaxContext::empty(),
+                stmts: body,
+            }));
+        } else {
+            retained.push(stmt);
+        }
+    }
+
+    if effect_blocks.is_empty() {
+        *stmts = retained;
+        return;
+    }
+
+    let arrow = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: DUMMY_SP,
+            ctxt: swc_core::common::SyntaxContext::empty(),
+            stmts: effect_blocks,
+        })),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: swc_core::common::SyntaxContext::empty(),
+    });
+    let watch = crate::emit::call_ident("watchEffect", vec![arrow]);
+    retained.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
+    *stmts = retained;
+}
+
+fn call_ident_name(call: &CallExpr) -> Option<&str> {
+    let Callee::Expr(callee) = &call.callee else {
+        return None;
+    };
+    let Expr::Ident(ident) = callee.as_ref() else {
+        return None;
+    };
+    Some(ident.sym.as_ref())
+}
+
+fn text_wrapper_decl(stmt: &Stmt) -> Option<(Id, Ident)> {
+    let Stmt::Decl(Decl::Var(var)) = stmt else {
+        return None;
+    };
+    let [decl] = var.decls.as_slice() else {
+        return None;
+    };
+    let Pat::Ident(wrapper) = &decl.name else {
+        return None;
+    };
+    let Expr::Call(call) = decl.init.as_deref()? else {
+        return None;
+    };
+    if call_ident_name(call) != Some("_$createTextWrapper") {
+        return None;
+    }
+    let [parent] = call.args.as_slice() else {
+        return None;
+    };
+    let Expr::Ident(parent) = parent.expr.as_ref() else {
+        return None;
+    };
+    Some((wrapper.id.to_id(), parent.clone()))
+}
+
+fn append_child_idents(stmt: &Stmt) -> Option<(Id, Id)> {
+    let Stmt::Expr(expr_stmt) = stmt else {
+        return None;
+    };
+    let Expr::Call(call) = expr_stmt.expr.as_ref() else {
+        return None;
+    };
+    if call_ident_name(call) != Some("_$appendChild") {
+        return None;
+    }
+    let [parent, child] = call.args.as_slice() else {
+        return None;
+    };
+    let Expr::Ident(parent) = parent.expr.as_ref() else {
+        return None;
+    };
+    let Expr::Ident(child) = child.expr.as_ref() else {
+        return None;
+    };
+    Some((parent.to_id(), child.to_id()))
+}
+
+fn append_child_parent(stmt: &Stmt) -> Option<Id> {
+    let Stmt::Expr(expr_stmt) = stmt else {
+        return None;
+    };
+    let Expr::Call(call) = expr_stmt.expr.as_ref() else {
+        return None;
+    };
+    if call_ident_name(call) != Some("_$appendChild") {
+        return None;
+    }
+    let parent = call.args.first()?;
+    let Expr::Ident(parent) = parent.expr.as_ref() else {
+        return None;
+    };
+    Some(parent.to_id())
+}
+
+struct ReplaceSoleTextWrappers<'a> {
+    parents: &'a std::collections::HashMap<Id, Ident>,
+}
+
+impl VisitMut for ReplaceSoleTextWrappers<'_> {
+    fn visit_mut_ident(&mut self, ident: &mut Ident) {
+        if let Some(parent) = self.parents.get(&ident.to_id()) {
+            *ident = parent.clone();
+        }
+    }
+}
+
+/// 安全 direct-root 列表行中，如果某个元素唯一追加的子节点就是动态文本
+/// wrapper，则直接更新父元素的 textContent。混合静态文本、多动态文本和嵌套
+/// 元素仍保留 wrapper，避免 textContent 更新清掉相邻节点或事件监听器。
+fn collapse_sole_list_row_text_wrappers(stmts: &mut Vec<Stmt>) {
+    let wrappers: std::collections::HashMap<Id, Ident> =
+        stmts.iter().filter_map(text_wrapper_decl).collect();
+    if wrappers.is_empty() {
+        return;
+    }
+
+    let mut append_counts = std::collections::HashMap::<Id, usize>::new();
+    for parent in stmts.iter().filter_map(append_child_parent) {
+        *append_counts.entry(parent).or_default() += 1;
+    }
+
+    let eligible: std::collections::HashMap<Id, Ident> = wrappers
+        .into_iter()
+        .filter(|(_, parent)| append_counts.get(&parent.to_id()) == Some(&1))
+        .collect();
+    if eligible.is_empty() {
+        return;
+    }
+
+    stmts.retain(|stmt| {
+        if let Some((wrapper, _)) = text_wrapper_decl(stmt) {
+            return !eligible.contains_key(&wrapper);
+        }
+        if let Some((_, child)) = append_child_idents(stmt) {
+            return !eligible.contains_key(&child);
+        }
+        true
+    });
+
+    let mut replacer = ReplaceSoleTextWrappers { parents: &eligible };
+    stmts.visit_mut_with(&mut replacer);
 }
 
 fn watch_effect_body(stmt: &Stmt) -> Option<Vec<Stmt>> {

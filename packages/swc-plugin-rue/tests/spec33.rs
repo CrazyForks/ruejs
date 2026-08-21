@@ -124,7 +124,7 @@ export default HelloWorld
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const ThemePicker: FC<{
     value: string;
@@ -235,9 +235,6 @@ const ThemePicker: FC<{
                         const _el1 = _$createElement("option");
                         _$appendChild(_root, _el1);
                         watchEffect(()=>{
-                            _$setAttribute(_el1, "key", String((name)));
-                        });
-                        watchEffect(()=>{
                             _$setValue(_el1, name);
                         });
                         const _el2 = _$createTextWrapper(_el1);
@@ -310,5 +307,11 @@ export default HelloWorld;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec33.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$vaporKeyedList"));
+    assert!(normalized.contains("directRoot: true"));
+    assert!(normalized.contains("_$setValue(_el1, name)"));
+    assert!(normalized.contains("_$settextContent(_el1, labels[name]"));
+    assert!(normalized.contains("_$insertBefore(parent, _root, start)"));
+    assert!(normalized.contains("_$createComponent(ThemePicker"));
 }

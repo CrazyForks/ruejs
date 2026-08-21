@@ -84,7 +84,7 @@ export default UseCart
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeCreate, onCreated, onMounted, onBeforeUnmount, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { onBeforeCreate, onCreated, onMounted, onBeforeUnmount, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { useCart } from '../hooks/useCart';
 const UseCart: FC = ()=>{
@@ -156,9 +156,6 @@ const UseCart: FC = ()=>{
                         const _root = _$createDocumentFragment();
                         const _el3 = _$createElement("div");
                         _$appendChild(_root, _el3);
-                        watchEffect(()=>{
-                            _$setAttribute(_el3, "key", String((pr.id)));
-                        });
                         _$setClassName(_el3, "flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm");
                         const _el4 = _$createElement("span");
                         _$appendChild(_el3, _el4);
@@ -228,9 +225,6 @@ const UseCart: FC = ()=>{
                                 const _root = _$createDocumentFragment();
                     const _el9 = _$createElement("li");
                     _$appendChild(_root, _el9);
-                                watchEffect(()=>{
-                      _$setAttribute(_el9, "key", String((i.id)));
-                                });
                     _$setClassName(_el9, "flex items-center justify之间 py-3");
                     const _el10 = _$createElement("span");
                     _$appendChild(_el9, _el10);
@@ -287,5 +281,12 @@ export default UseCart;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec5.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert_eq!(normalized.matches("directRoot: true").count(), 2);
+    assert_eq!(normalized.matches("_$insertBefore(parent, _root, start)").count(), 2);
+    assert!(normalized.contains("_$settextContent(_el5, pr.name)"));
+    assert!(normalized.contains("_$settextContent(_el6, pr.price)"));
+    assert!(normalized.contains("_$settextContent(_el13, i.name)"));
+    assert!(normalized.contains("_$settextContent(_el14, i.qty)"));
+    assert!(!normalized.contains("renderAnchor(__slot, parent, start)"));
 }

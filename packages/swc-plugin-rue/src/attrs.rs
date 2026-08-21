@@ -284,6 +284,9 @@ pub fn emit_attrs_for(stmts: &mut Vec<Stmt>, target: &Ident, opening: &JSXOpenin
         {
             let name = n.sym.to_string();
             log::debug(&format!("attrs: handle name={}", name));
+            if name == "key" {
+                continue;
+            }
             match &attr.value {
                 Some(JSXAttrValue::Str(s)) => {
                     if name == "className" {

@@ -3,7 +3,7 @@ use swc_plugin_rue::apply;
 mod utils;
 
 #[test]
-fn lowers_single_root_native_list_items_to_render_anchor() {
+fn lowers_safe_single_root_native_list_items_to_direct_mount() {
     let src = r##"
 import { type FC } from '@rue-js/rue';
 
@@ -21,7 +21,9 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
     assert!(out.contains(&utils::normalize("singleRoot: true")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));
+    assert!(out.contains(&utils::normalize("directRoot: true")));
+    assert!(out.contains(&utils::normalize("_$insertBefore(parent, _root, start)")));
+    assert!(!out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));
     assert!(!out.contains(&utils::normalize("renderBetween(__slot, parent, start, end)")));
 }
 
@@ -152,5 +154,7 @@ const Page: FC<{ todos: Array<{ id: number; text: string; completed: boolean }>;
 
     assert!(out.contains(&utils::normalize("singleRoot: true")));
     assert!(out.contains(&utils::normalize("trackIndex: false")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));
+    assert!(out.contains(&utils::normalize("directRoot: true")));
+    assert!(out.contains(&utils::normalize("_$insertBefore(parent, _root, start)")));
+    assert!(!out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));
 }

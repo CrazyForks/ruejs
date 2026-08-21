@@ -131,18 +131,14 @@ export default FetchingData;
             "const __slot = item.author && item.author.html_url ? vapor(()=>{"
         ))
     );
-    assert!(normalized.contains(&normalize(
-      "const __slot = (item.commit.author.name); untrack(()=>renderAnchor(__slot, _el19, _list6));"
-    )));
-    assert!(normalized.contains(&normalize(
-      "const __slot = (item.commit.author.name); untrack(()=>renderAnchor(__slot, _el20, _list7));"
-    )));
+    assert!(normalized.contains(&normalize("_$settextContent(_el20, item.commit.author.name);")));
+    assert!(normalized.contains(&normalize("_$settextContent(_el22, item.commit.author.name);")));
     assert!(normalized.contains(&normalize("_$settextContent(_el9, currentBranch.value);")));
     assert!(normalized.contains(&normalize("_$settextContent(_el13, item.sha.slice(0, 7));")));
     assert!(normalized.contains(&normalize(
       "const __slot = truncate(item.commit.message); untrack(()=>renderAnchor(__slot, _el15, _list5));"
     )));
     assert!(normalized.contains(&normalize(
-      "const __slot = formatDate(item.commit.author.date); untrack(()=>renderAnchor(__slot, _el22, _list9));"
+      "const __slot = formatDate(item.commit.author.date); untrack(()=>renderAnchor(__slot, _el24, _list7));"
     )));
 }

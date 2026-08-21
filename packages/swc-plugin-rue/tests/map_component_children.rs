@@ -51,11 +51,9 @@ export default Demo;
     assert!(normalized.contains(&normalize("const __child")));
     assert!(normalized.contains(&normalize("const _root = _$createDocumentFragment();")));
     assert!(normalized.contains(&normalize("_$setClassName(_el1, \"badge\");")));
-    assert!(normalized.contains(&normalize("const __slot = (item.placement);")));
-    assert!(normalized.contains("renderAnchor(__slot, _el1, _list"));
-    assert!(normalized.contains(&normalize("const _el2 = _$createElement(\"section\"")));
-    assert!(normalized.contains(&normalize("const __slot = (item.title);")));
-    assert!(normalized.contains("renderAnchor(__slot, _el2, _list"));
+    assert!(normalized.contains(&normalize("_$settextContent(_el2, item.placement);")));
+    assert!(normalized.contains(&normalize("const _el3 = _$createElement(\"section\"")));
+    assert!(normalized.contains(&normalize("_$settextContent(_el4, item.title);")));
     assert!(normalized.contains(&normalize("const __slot = _$createComponent(Surface, {")));
     assert!(normalized.contains("children: __child"));
     assert!(

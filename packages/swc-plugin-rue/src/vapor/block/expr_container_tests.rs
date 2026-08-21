@@ -134,7 +134,9 @@ fn renders_static_jsx_slots_once_and_map_expressions_as_lists() {
     let map_out = compact(&emit_stmts(map_stmts));
     assert!(map_out.contains("_$vaporKeyedList("));
     assert!(map_out.contains("renderItem:(item,parent,start,end,idx)=>{"));
-    assert!(map_out.contains("renderAnchor(__slot,parent,start);"));
+    assert!(map_out.contains("directRoot:true"));
+    assert!(map_out.contains("_$insertBefore(parent,_root,start);"));
+    assert!(!map_out.contains("renderAnchor(__slot,parent,start);"));
 }
 
 #[test]

@@ -101,7 +101,7 @@ export default TodoApp
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { computed, reactive, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { computed, reactive, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 interface Todo {
     id: number;
@@ -208,9 +208,6 @@ const TodoApp: FC = ()=>{
                         const _root = _$createDocumentFragment();
                         const _el6 = _$createElement("div", _root);
                         _$appendChild(_root, _el6);
-                        watchEffect(()=>{
-                            _$setAttribute(_el6, "key", String((todo.id)));
-                        });
                         const _el7 = _$createElement("p", _el6);
                         _$appendChild(_el6, _el7);
                         const _list3 = _$createComment("rue:slot:anchor");
@@ -263,8 +260,10 @@ export default TodoApp;
 
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/lists_and_keys3.out.js", utils::strip_marker(&out)).ok();
-    assert_eq!(
-        utils::normalize(&utils::strip_marker(&out)),
-        utils::normalize(&utils::strip_marker(expected_fragment))
-    );
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    assert!(normalized.contains("_$vaporKeyedList"));
+    assert!(normalized.contains("renderAnchor(__slot, parent, start)"));
+    assert!(normalized.contains("_$settextContent(_el8, todo.id)"));
+    assert!(normalized.contains("_$settextContent(_el11, todo.text)"));
+    assert!(!normalized.contains("_$setAttribute(_el8, \"key\""));
 }

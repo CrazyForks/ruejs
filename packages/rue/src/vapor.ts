@@ -63,6 +63,8 @@ export {
   _$createDocumentFragment,
   /** 编译器 helper：向父节点追加子节点。 */
   _$appendChild,
+  /** 编译器 helper：在指定锚点前插入子节点或片段。 */
+  _$insertBefore,
   /** 响应式信号句柄。 */
   type SignalHandle,
   /** watcher 刷新时机。 */

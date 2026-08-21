@@ -73,9 +73,6 @@ const ListsAndKeys: FC = ()=>vapor((__rue_parent_context)=>{
                         const _root = _$createDocumentFragment();
                         const _el3 = _$createElement("li", _root);
                         _$appendChild(_root, _el3);
-                        watchEffect(()=>{
-                            _$setAttribute(_el3, "key", String((item)));
-                        });
                         const _el4 = _$createTextWrapper(_el3);
                         _$appendChild(_el3, _el4);
                         watchEffect(()=>{

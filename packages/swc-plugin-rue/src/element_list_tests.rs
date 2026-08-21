@@ -493,9 +493,15 @@ fn inlines_external_reactive_prefixes_for_direct_list_items() {
 
     let out = compact(&emit_stmts(stmts));
     assert!(out.contains("getKey:(item,idx)=>external.value+item.id"));
-    assert!(out.contains("const__slot=vapor(()=>{"));
-    assert!(out.contains("_$setAttribute(_el1,\"key\",String(external.value+item.id))"));
-    assert!(out.contains("_$settextContent(_el2,(external.value+item.id)+suffix.get())"));
+    assert!(out.contains("directRoot:true"), "{out}");
+    assert_eq!(
+        out.matches("watchEffect(").count(),
+        2,
+        "safe external accessor reads should share the merged row binding effect: {out}"
+    );
+    assert!(!out.contains("renderAnchor("), "{out}");
+    assert!(!out.contains(",\"key\","));
+    assert!(out.contains("_$settextContent(_el1,(external.value+item.id)+suffix.get())"), "{out}");
     assert!(
         !out.contains("constrowKey=external.value+item.id;constlabel=rowKey+suffix.get();const_el")
     );
@@ -765,25 +771,19 @@ fn covers_list_render_key_wrappers_rest_params_and_root_parent() {
         )),
         normalize("row.id;"),
     );
-    assert_eq!(
-        normalize(&emit_expr(
-            extract_render_root_key_expr(&parse_expr(
-                "vapor(() => { const _root = _$createElement('li'); watchEffect(() => { _$setAttribute(_root, 'key', String(row.id)); }); return _root; })",
-                false,
-            ))
-            .expect("vapor block key"),
-        )),
-        normalize("row.id;"),
+    assert!(
+        extract_render_root_key_expr(&parse_expr(
+            "vapor(() => { const _root = _$createElement('li'); watchEffect(() => { _$setAttribute(_root, 'key', String(row.id)); }); return _root; })",
+            false,
+        ))
+        .is_none()
     );
-    assert_eq!(
-        normalize(&emit_expr(
-            extract_render_root_key_expr(&parse_expr(
-                "_$vaporWithHookId('slot', () => { const _root = _$createElement('li'); watchEffect(() => { _$setAttribute(_root, 'key', row.id); }); return _root; })",
-                false,
-            ))
-            .expect("hook block key"),
-        )),
-        normalize("row.id;"),
+    assert!(
+        extract_render_root_key_expr(&parse_expr(
+            "_$vaporWithHookId('slot', () => { const _root = _$createElement('li'); watchEffect(() => { _$setAttribute(_root, 'key', row.id); }); return _root; })",
+            false,
+        ))
+        .is_none()
     );
     assert!(extract_render_root_key_expr(&parse_expr("vapor(notArrow)", false)).is_none());
     assert!(extract_render_root_key_expr(&parse_expr("vapor(() => value)", false)).is_none());
@@ -803,7 +803,9 @@ fn covers_list_render_key_wrappers_rest_params_and_root_parent() {
     assert!(try_build_list_from_map(&mut root_vt, &ident("_root"), &root_call, &mut root_stmts));
     let root_out = compact(&emit_stmts(root_stmts));
     assert!(root_out.contains("parent:_list1.parentNode"));
-    assert!(root_out.contains("renderAnchor(__slot,parent,start);"));
+    assert!(root_out.contains("directRoot:true"));
+    assert!(root_out.contains("_$insertBefore(parent,_root,start);"));
+    assert!(!root_out.contains("renderAnchor(__slot,parent,start);"));
 
     let mut rest_vt = new_vt();
     let rest_call = parse_call("rows.map((...rest) => <li>{rest.length}</li>)", true);
@@ -1213,7 +1215,7 @@ fn hardens_list_callback_param_and_block_fallback_edges() {
     assert!(conditional_out.contains("renderBetween(__slot,parent,start,end);"));
     assert!(conditional_out.contains("item.ok?"));
     assert!(conditional_out.contains("item.id"));
-    assert!(conditional_out.contains("item.fallback"));
+    assert!(!conditional_out.contains("item.fallback"));
 }
 
 #[test]
@@ -1511,7 +1513,7 @@ fn hardens_direct_native_map_with_prefixes_fragments_and_alias_keys() {
     let fragment_out = compact(&emit_stmts(fragment_stmts));
     assert!(fragment_out.contains("_$createDocumentFragment"));
     assert!(fragment_out.contains("getKey:(row,idx)=>idx"), "{fragment_out}");
-    assert!(fragment_out.contains("_$setAttribute(_el1,\"key\",String((row.id)))"));
+    assert!(!fragment_out.contains(",\"key\","));
     assert!(fragment_out.contains("renderAnchor(__slot,parent,start);"));
 }
 
@@ -1528,7 +1530,7 @@ fn hardens_array_destructured_list_aliases_and_index_key_fallbacks() {
 
     assert!(out.contains("getKey:(item,index)=>item[0]"), "{out}");
     assert!(out.contains("consttext=item[1].toUpperCase();"), "{out}");
-    assert!(out.contains("String((item[0]))"), "{out}");
+    assert!(!out.contains(",\"key\","), "{out}");
     assert!(out.contains("renderAnchor(__slot,parent,start);"), "{out}");
 
     let mut nested_fragment_vt = new_vt();
@@ -1544,7 +1546,7 @@ fn hardens_array_destructured_list_aliases_and_index_key_fallbacks() {
     let nested_fragment_out = compact(&emit_stmts(nested_fragment_stmts));
     assert!(nested_fragment_out.contains("_$createDocumentFragment"));
     assert!(nested_fragment_out.contains("getKey:(row,idx)=>idx"));
-    assert!(nested_fragment_out.contains("row.id"));
+    assert!(!nested_fragment_out.contains(",\"key\","));
 }
 
 #[test]
@@ -1676,8 +1678,8 @@ fn hardens_keyed_list_computed_alias_keys_and_external_prefix_blocks() {
 
     let out = compact(&emit_stmts(stmts));
     assert!(out.contains("getKey:(item,index)=>item[kind]??external.value"), "{out}");
-    assert!(out.contains("String(item[kind]??external.value)"), "{out}");
-    assert!(out.contains("const__slot=item.title||String(index);"), "{out}");
+    assert!(!out.contains(",\"key\","), "{out}");
+    assert!(out.contains("item.title||String(index)"), "{out}");
     assert!(out.contains("renderAnchor(__slot,parent,start);"), "{out}");
 
     let non_alias_prefix = parse_arrow_block(
@@ -1763,7 +1765,7 @@ fn hardens_block_direct_native_map_generated_key_scan_and_prefixes() {
     assert!(out.contains("getKey:(row,idx)=>row.id"), "{out}");
     assert!(out.contains("constlabel=row.label;"), "{out}");
     assert!(out.contains("_$createElement(\"li\",_root)"), "{out}");
-    assert!(out.contains("_$setAttribute(_el1,\"key\",String((row.id)))"), "{out}");
+    assert!(!out.contains(",\"key\","), "{out}");
 }
 
 #[test]
@@ -1898,19 +1900,21 @@ fn hardens_list_assignment_param_fallback_alias_and_wrapped_block_key_edges() {
     );
     assert!(fallback_out.contains("return<Fallbackkey={item.title}/>;"), "{fallback_out}");
 
-    let vapor_block_key = extract_render_root_key_expr(&parse_expr(
-        "vapor(() => { watchEffect(() => { _$setAttribute(root, \"key\", String(row.fromBlock)); }); return root; })",
-        false,
-    ))
-    .expect("vapor block generated key");
-    assert_eq!(compact(&emit_expr(vapor_block_key)), "row.fromBlock;");
+    assert!(
+        extract_render_root_key_expr(&parse_expr(
+            "vapor(() => { watchEffect(() => { _$setAttribute(root, \"key\", String(row.fromBlock)); }); return root; })",
+            false,
+        ))
+        .is_none()
+    );
 
-    let hook_block_key = extract_render_root_key_expr(&parse_expr(
-        "_$vaporWithHookId('memo:1', () => { watchEffect(() => { _$setAttribute(root, \"key\", String(row.fromHook)); }); return root; })",
-        false,
-    ))
-    .expect("hook block generated key");
-    assert_eq!(compact(&emit_expr(hook_block_key)), "row.fromHook;");
+    assert!(
+        extract_render_root_key_expr(&parse_expr(
+            "_$vaporWithHookId('memo:1', () => { watchEffect(() => { _$setAttribute(root, \"key\", String(row.fromHook)); }); return root; })",
+            false,
+        ))
+        .is_none()
+    );
 }
 
 #[test]
@@ -1936,12 +1940,7 @@ fn hardens_defaulted_destructured_params_native_key_scan_and_empty_block_slots()
         "{defaulted_out}"
     );
     assert!(defaulted_out.contains("((item===undefined?fallback:item).label)"), "{defaulted_out}");
-    assert!(
-        defaulted_out.contains(
-            "_$setAttribute(_el1,\"key\",String(((item===undefined?fallback:item).id)));"
-        ),
-        "{defaulted_out}"
-    );
+    assert!(!defaulted_out.contains(",\"key\","), "{defaulted_out}");
 
     let mut native_vt = new_vt();
     let native_call = parse_call(
@@ -2021,12 +2020,7 @@ fn hardens_defaulted_array_aliases_and_complex_member_bases() {
         defaulted_out.contains("((item===undefined?fallback:item)[1].label)"),
         "{defaulted_out}"
     );
-    assert!(
-        defaulted_out.contains(
-            "_$setAttribute(_el1,\"key\",String(((item===undefined?fallback:item)[0])));"
-        ),
-        "{defaulted_out}"
-    );
+    assert!(!defaulted_out.contains(",\"key\","), "{defaulted_out}");
 
     let pat = parse_arrow_param("({ id, meta: [first] }) => id");
     let mut alias_exprs = HashMap::new();
@@ -2155,10 +2149,7 @@ fn hardens_wrapped_render_key_extraction_and_defaulted_object_params() {
     let out = compact(&emit_stmts(stmts));
     assert!(out.contains("getKey:(item,index)=>(item===undefined?fallback:item).id"), "{out}");
     assert!(out.contains("((item===undefined?fallback:item).label)"), "{out}");
-    assert!(
-        out.contains("_$setAttribute(_el1,\"key\",String(((item===undefined?fallback:item).id)));"),
-        "{out}"
-    );
+    assert!(!out.contains(",\"key\","), "{out}");
 }
 
 #[test]
@@ -2226,4 +2217,189 @@ fn hardens_remaining_wrapped_key_noops_and_assign_param_edges() {
     ));
     let block_slot_out = compact(&emit_stmts(block_slot_stmts));
     assert!(block_slot_out.contains("renderBetween(__slot,parent,start,end);"), "{block_slot_out}");
+}
+
+#[test]
+fn native_key_is_structural_metadata_only() {
+    let mut native_vt = new_vt();
+    let native_call =
+        parse_call("rows.map(row => <tr key={row.id}><td>{row.label}</td></tr>)", true);
+    let mut native_stmts = Vec::new();
+
+    assert!(try_build_list_from_map(
+        &mut native_vt,
+        &ident("root"),
+        &native_call,
+        &mut native_stmts,
+    ));
+    let native_out = compact(&emit_stmts(native_stmts));
+    assert!(native_out.contains("getKey:(row,idx)=>row.id"), "{native_out}");
+    assert!(!native_out.contains(",\"key\","), "{native_out}");
+
+    let mut component_vt = new_vt();
+    let component_call = parse_call("rows.map(row => <Row key={row.id} />)", true);
+    let mut component_stmts = Vec::new();
+
+    assert!(try_build_list_from_map(
+        &mut component_vt,
+        &ident("root"),
+        &component_call,
+        &mut component_stmts,
+    ));
+    let component_out = compact(&emit_stmts(component_stmts));
+    assert!(component_out.contains("getKey:(row,idx)=>row.id"), "{component_out}");
+    assert!(component_out.contains("key:row.id"), "{component_out}");
+
+    let mut unkeyed_vt = new_vt();
+    let unkeyed_call = parse_call("rows.map(row => <tr>{row.label}</tr>)", true);
+    let mut unkeyed_stmts = Vec::new();
+
+    assert!(try_build_list_from_map(
+        &mut unkeyed_vt,
+        &ident("root"),
+        &unkeyed_call,
+        &mut unkeyed_stmts,
+    ));
+    let unkeyed_out = compact(&emit_stmts(unkeyed_stmts));
+    assert!(unkeyed_out.contains("getKey:(row,idx)=>idx"), "{unkeyed_out}");
+}
+
+#[test]
+fn coalesces_safe_native_row_bindings() {
+    let mut vt = new_vt();
+    let call = parse_call(
+        "rows.map(row => <tr key={row.id} className={row.id === selected.value ? 'danger' : ''}><td>{row.id}</td><td>{row.label}</td></tr>)",
+        true,
+    );
+    let mut stmts = Vec::new();
+
+    assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(out.contains("singleRoot:true"), "{out}");
+    assert!(out.contains("directRoot:true"), "{out}");
+    assert_eq!(
+        out.matches("watchEffect(").count(),
+        2,
+        "safe row should emit the list effect plus one merged row binding effect: {out}"
+    );
+    assert!(
+        out.contains("_$setClassName(")
+            && out.contains("selected.value")
+            && out.contains("row.id")
+            && out.contains("row.label"),
+        "merged effect must retain external and item-local reads: {out}"
+    );
+    assert!(
+        out.contains("_$settextContent("),
+        "item-local text should use direct text writes: {out}"
+    );
+    assert!(
+        out.contains("_$insertBefore(parent,_root,start)"),
+        "safe row should mount its prepared fragment directly into the list range: {out}"
+    );
+    assert_eq!(
+        out.matches("renderAnchor(").count(),
+        0,
+        "safe row should not register a per-row runtime anchor mount: {out}"
+    );
+}
+
+#[test]
+fn coalesces_safe_native_row_signal_get_bindings() {
+    let mut vt = new_vt();
+    let call = parse_call(
+        "rows.get().map(row => <tr key={row.id} className={row.id === selected.get() ? 'danger' : ''}><td>{row.id}</td><td>{row.label}</td></tr>)",
+        true,
+    );
+    let mut stmts = Vec::new();
+
+    assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(out.contains("directRoot:true"), "{out}");
+    assert_eq!(
+        out.matches("watchEffect(").count(),
+        2,
+        "signal getter row should emit the list effect plus one merged binding effect: {out}"
+    );
+    assert!(out.contains("selected.get()"), "{out}");
+    assert!(!out.contains("_$createTextWrapper("), "{out}");
+    assert!(!out.contains("renderAnchor("), "{out}");
+}
+
+#[test]
+fn preserves_text_wrappers_for_mixed_row_content() {
+    let mut vt = new_vt();
+    let call = parse_call(
+        "rows.map(row => <tr key={row.id}><td>id: {row.id}</td><td>{row.id}{row.label}</td></tr>)",
+        true,
+    );
+    let mut stmts = Vec::new();
+
+    assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(out.contains("directRoot:true"), "safe row should retain the direct-root path: {out}");
+    assert_eq!(
+        out.matches("_$createTextWrapper(").count(),
+        3,
+        "mixed or adjacent text bindings need wrappers so textContent updates preserve siblings: {out}"
+    );
+}
+
+#[test]
+fn keeps_unsafe_list_row_bindings_on_conservative_paths() {
+    let cases = [
+        (
+            "spread",
+            "rows.map(row => <tr key={row.id} {...row.attrs}><td>{row.label}</td></tr>)",
+            "_$spreadAttributes",
+        ),
+        (
+            "ref",
+            "rows.map(row => <tr key={row.id} ref={row.ref} title={row.id}><td>{row.label}</td></tr>)",
+            "_$vaporBindUseRef",
+        ),
+        (
+            "conditional",
+            "rows.map(row => <tr key={row.id}>{row.visible ? <td>{row.label}</td> : null}</tr>)",
+            "renderAnchor",
+        ),
+        (
+            "component",
+            "rows.map(row => <tr key={row.id}><Row label={row.label} /></tr>)",
+            "_$createComponent",
+        ),
+        (
+            "complex-call",
+            "rows.map(row => <tr key={row.id} title={format(row.label)}><td>{row.label}</td></tr>)",
+            "format(row.label)",
+        ),
+        (
+            "get-with-args",
+            "rows.map(row => <tr key={row.id} title={store.get(row.id)}><td>{row.label}</td></tr>)",
+            "store.get(row.id)",
+        ),
+        (
+            "nested-get-call",
+            "rows.map(row => <tr key={row.id} title={createStore().get()}><td>{row.label}</td></tr>)",
+            "createStore().get()",
+        ),
+    ];
+
+    for (name, source, expected) in cases {
+        let mut vt = new_vt();
+        let call = parse_call(source, true);
+        let mut stmts = Vec::new();
+
+        assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
+        let out = compact(&emit_stmts(stmts));
+
+        assert!(out.contains(expected), "{name} fallback lost expected code: {out}");
+        assert!(
+            out.matches("watchEffect(").count() >= 2,
+            "{name} fallback must retain its independent watcher(s): {out}"
+        );
+    }
 }

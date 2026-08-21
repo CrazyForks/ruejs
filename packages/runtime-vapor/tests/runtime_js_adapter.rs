@@ -154,13 +154,14 @@ fn make_working_adapter() -> JsDomAdapter {
     JsDomAdapter::new(obj.into())
 }
 
-fn replace_adapter_method(adapter: &JsDomAdapter, key: &str, value: JsValue) {
+fn rebuild_adapter_with_method(adapter: &JsDomAdapter, key: &str, value: JsValue) -> JsDomAdapter {
     let inner: JsValue = adapter.clone().into();
     Reflect::set(&inner, &JsValue::from_str(key), &value).unwrap();
+    JsDomAdapter::new(inner)
 }
 
-fn remove_adapter_method(adapter: &JsDomAdapter, key: &str) {
-    replace_adapter_method(adapter, key, JsValue::UNDEFINED);
+fn rebuild_adapter_without_method(adapter: &JsDomAdapter, key: &str) -> JsDomAdapter {
+    rebuild_adapter_with_method(adapter, key, JsValue::UNDEFINED)
 }
 
 fn adapter_object(tag: &str) -> JsValue {
@@ -231,8 +232,8 @@ macro_rules! missing_method_panics {
         #[wasm_bindgen_test]
         #[should_panic]
         fn $name() {
-            let mut adapter = make_working_adapter();
-            remove_adapter_method(&adapter, $method);
+            let adapter = make_working_adapter();
+            let mut adapter = rebuild_adapter_without_method(&adapter, $method);
             call_adapter_method(&mut adapter, $method);
         }
     };
@@ -243,8 +244,12 @@ macro_rules! nullish_return_panics {
         #[wasm_bindgen_test]
         #[should_panic]
         fn $name() {
-            let mut adapter = make_working_adapter();
-            replace_adapter_method(&adapter, $method, Function::new_with_args($args, $body).into());
+            let adapter = make_working_adapter();
+            let mut adapter = rebuild_adapter_with_method(
+                &adapter,
+                $method,
+                Function::new_with_args($args, $body).into(),
+            );
             call_adapter_method(&mut adapter, $method);
         }
     };
@@ -920,7 +925,7 @@ fn js_adapter_value_key_and_children_conversion_edges() {
 fn js_adapter_nullish_falsey_and_direct_replace_child_edges() {
     let mut adapter = make_working_adapter();
 
-    replace_adapter_method(
+    adapter = rebuild_adapter_with_method(
         &adapter,
         "isFragment",
         Function::new_with_args("el", "return 'not-bool'").into(),
@@ -928,7 +933,7 @@ fn js_adapter_nullish_falsey_and_direct_replace_child_edges() {
     let child = adapter_object("child");
     assert!(!adapter.is_fragment(&child));
 
-    replace_adapter_method(
+    adapter = rebuild_adapter_with_method(
         &adapter,
         "contains",
         Function::new_with_args("p,c", "return 'not-bool'").into(),
@@ -942,34 +947,34 @@ fn js_adapter_nullish_falsey_and_direct_replace_child_edges() {
     let div = adapter_object("div");
     assert!(!adapter.is_select_multiple(&div));
 
-    replace_adapter_method(
+    adapter = rebuild_adapter_with_method(
         &adapter,
         "getTagName",
         Function::new_with_args("el", "return 42").into(),
     );
     assert_eq!(adapter.get_tag_name(&div), "");
 
-    replace_adapter_method(
+    adapter = rebuild_adapter_with_method(
         &adapter,
         "querySelector",
         Function::new_with_args("sel", "return null").into(),
     );
     assert!(adapter.query_selector("#null").is_none());
 
-    replace_adapter_method(
+    adapter = rebuild_adapter_with_method(
         &adapter,
         "getParentNode",
         Function::new_with_args("el", "return undefined").into(),
     );
     assert!(adapter.get_parent_node(&child).is_none());
-    remove_adapter_method(&adapter, "getParentNode");
+    adapter = rebuild_adapter_without_method(&adapter, "getParentNode");
     assert!(adapter.get_parent_node(&child).is_none());
     Reflect::set(&child, &JsValue::from_str("parentNode"), &JsValue::NULL).unwrap();
     assert!(adapter.get_parent_node(&child).is_none());
 
     Reflect::set(&js_sys::global(), &JsValue::from_str("_replaceDirectLog"), &Array::new())
         .unwrap();
-    replace_adapter_method(
+    adapter = rebuild_adapter_with_method(
         &adapter,
         "replaceChild",
         Function::new_with_args(
@@ -993,7 +998,7 @@ fn js_adapter_set_inner_html_nullish_targets_are_noops() {
     Reflect::set(&js_sys::global(), &JsValue::from_str("_innerHtmlLog"), &Array::new()).unwrap();
     Reflect::set(&js_sys::global(), &JsValue::from_str("_childOpLog"), &Array::new()).unwrap();
     let mut adapter = make_working_adapter();
-    replace_adapter_method(
+    adapter = rebuild_adapter_with_method(
         &adapter,
         "setInnerHTML",
         Function::new_with_args(
@@ -1002,17 +1007,17 @@ fn js_adapter_set_inner_html_nullish_targets_are_noops() {
         )
         .into(),
     );
-    replace_adapter_method(
+    adapter = rebuild_adapter_with_method(
         &adapter,
         "appendChild",
         Function::new_with_args("p,c", "globalThis._childOpLog.push('append')").into(),
     );
-    replace_adapter_method(
+    adapter = rebuild_adapter_with_method(
         &adapter,
         "insertBefore",
         Function::new_with_args("p,c,b", "globalThis._childOpLog.push('insert')").into(),
     );
-    replace_adapter_method(
+    adapter = rebuild_adapter_with_method(
         &adapter,
         "removeChild",
         Function::new_with_args("p,c", "globalThis._childOpLog.push('remove')").into(),
@@ -1049,8 +1054,8 @@ fn js_adapter_set_inner_html_nullish_targets_are_noops() {
 #[wasm_bindgen_test]
 #[should_panic]
 fn js_adapter_propagates_call0_throw() {
-    let mut adapter = make_working_adapter();
-    replace_adapter_method(
+    let adapter = make_working_adapter();
+    let mut adapter = rebuild_adapter_with_method(
         &adapter,
         "createDocumentFragment",
         Function::new_no_args("throw new Error('call0 boom')").into(),
@@ -1062,7 +1067,7 @@ fn js_adapter_propagates_call0_throw() {
 #[should_panic]
 fn js_adapter_propagates_call1_throw() {
     let adapter = make_working_adapter();
-    replace_adapter_method(
+    let adapter = rebuild_adapter_with_method(
         &adapter,
         "isFragment",
         Function::new_with_args("el", "throw new Error('call1 boom')").into(),
@@ -1074,8 +1079,8 @@ fn js_adapter_propagates_call1_throw() {
 #[wasm_bindgen_test]
 #[should_panic]
 fn js_adapter_propagates_call2_throw() {
-    let mut adapter = make_working_adapter();
-    replace_adapter_method(
+    let adapter = make_working_adapter();
+    let mut adapter = rebuild_adapter_with_method(
         &adapter,
         "setTextContent",
         Function::new_with_args("el,text", "throw new Error('call2 boom')").into(),
@@ -1087,8 +1092,8 @@ fn js_adapter_propagates_call2_throw() {
 #[wasm_bindgen_test]
 #[should_panic]
 fn js_adapter_propagates_call3_throw() {
-    let mut adapter = make_working_adapter();
-    replace_adapter_method(
+    let adapter = make_working_adapter();
+    let mut adapter = rebuild_adapter_with_method(
         &adapter,
         "setAttribute",
         Function::new_with_args("el,k,v", "throw new Error('call3 boom')").into(),

@@ -84,7 +84,11 @@ export default Demo;
     assert!(out.contains("_$vaporKeyedList"));
     assert!(out.contains("Array.isArray(__rue_v_for_source)"));
     assert!(out.contains("Object.entries(__rue_v_for_source == null ? {} : __rue_v_for_source)"));
-    assert!(out.contains("renderAnchor") || out.contains("renderBetween"));
+    assert!(
+        out.contains("renderAnchor")
+            || out.contains("renderBetween")
+            || out.contains("_$insertBefore")
+    );
 }
 
 #[test]

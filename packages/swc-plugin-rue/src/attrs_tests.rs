@@ -336,3 +336,21 @@ fn emits_string_boolean_attrs_and_skips_empty_expr_attrs() {
     assert!(!out.contains("data-id"));
     assert!(!out.contains("inert"));
 }
+
+#[test]
+fn native_key_is_structural_metadata_only() {
+    let target = ident("el");
+    let opening = parse_jsx_opening("<div key={row.id} title={row.title} />");
+    let mut stmts = Vec::new();
+
+    emit_attrs_for(&mut stmts, &target, &opening);
+
+    let out = normalize(&emit_stmts(stmts));
+    assert!(!out.contains("\"key\""), "native key must not become a DOM attribute: {out}");
+    assert!(
+        out.contains(&normalize(
+            "watchEffect(()=>{ _$setAttribute(el, \"title\", String((row.title))); })"
+        )),
+        "ordinary native attributes must still be emitted: {out}"
+    );
+}

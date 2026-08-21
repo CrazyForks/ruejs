@@ -566,6 +566,144 @@ fn is_native_single_root_jsx_element(el: &JSXElement) -> bool {
     }
 }
 
+struct UnsafeRowBindingExpr {
+    found: bool,
+}
+
+impl Visit for UnsafeRowBindingExpr {
+    fn visit_call_expr(&mut self, call: &CallExpr) {
+        if crate::element_expr::is_accessor_get_call_expr(call) {
+            // Rue signal/computed accessors expose reactive reads as a zero-argument
+            // `.get()`. The compiler already recognizes this shape as an accessor in
+            // expression children, so it is safe to keep it when deciding whether a
+            // native list row can merge its bindings. Still visit the receiver: a
+            // nested call such as `createStore().get()` must remain conservative.
+            call.visit_children_with(self);
+        } else {
+            self.found = true;
+        }
+    }
+
+    fn visit_new_expr(&mut self, _expr: &NewExpr) {
+        self.found = true;
+    }
+
+    fn visit_assign_expr(&mut self, _expr: &AssignExpr) {
+        self.found = true;
+    }
+
+    fn visit_update_expr(&mut self, _expr: &UpdateExpr) {
+        self.found = true;
+    }
+
+    fn visit_await_expr(&mut self, _expr: &AwaitExpr) {
+        self.found = true;
+    }
+
+    fn visit_yield_expr(&mut self, _expr: &YieldExpr) {
+        self.found = true;
+    }
+
+    fn visit_arrow_expr(&mut self, _expr: &ArrowExpr) {
+        self.found = true;
+    }
+
+    fn visit_fn_expr(&mut self, _expr: &FnExpr) {
+        self.found = true;
+    }
+
+    fn visit_tagged_tpl(&mut self, _expr: &TaggedTpl) {
+        self.found = true;
+    }
+
+    fn visit_jsx_element(&mut self, _expr: &JSXElement) {
+        self.found = true;
+    }
+
+    fn visit_jsx_fragment(&mut self, _expr: &JSXFragment) {
+        self.found = true;
+    }
+}
+
+fn is_safe_row_binding_expr(expr: &Expr) -> bool {
+    let mut visitor = UnsafeRowBindingExpr { found: false };
+    expr.visit_with(&mut visitor);
+    !visitor.found
+}
+
+fn expr_reads_any_name(expr: &Expr, names: &std::collections::HashSet<String>) -> bool {
+    let mut collector = IdentUseCollector { names, found: false };
+    expr.visit_with(&mut collector);
+    collector.found
+}
+
+fn is_event_attr_name(name: &str) -> bool {
+    name.starts_with("on") && name.chars().nth(2).map(|c| c.is_uppercase()).unwrap_or(false)
+}
+
+fn is_safe_native_row_children(
+    children: &[JSXElementChild],
+    row_local_names: &std::collections::HashSet<String>,
+) -> bool {
+    children.iter().all(|child| match child {
+        JSXElementChild::JSXText(_) => true,
+        JSXElementChild::JSXElement(element) => {
+            is_safe_native_row_element(element, row_local_names)
+        }
+        JSXElementChild::JSXFragment(fragment) => {
+            is_safe_native_row_children(&fragment.children, row_local_names)
+        }
+        JSXElementChild::JSXExprContainer(container) => match &container.expr {
+            JSXExpr::JSXEmptyExpr(_) => true,
+            JSXExpr::Expr(expr) => {
+                let inner = utils::unwrap_expr(expr.as_ref());
+                !crate::element_expr::contains_jsx_in_expr(inner)
+                    && is_safe_row_binding_expr(inner)
+                    && (crate::utils::is_static_empty_like(inner)
+                        || crate::utils::is_static_text_literal(inner)
+                        || expr_reads_any_name(inner, row_local_names))
+            }
+        },
+        JSXElementChild::JSXSpreadChild(_) => false,
+    })
+}
+
+fn is_safe_native_row_element(
+    element: &JSXElement,
+    row_local_names: &std::collections::HashSet<String>,
+) -> bool {
+    if crate::utils::is_component(&element.opening.name)
+        || crate::utils::is_builtin_fragment_element(element)
+    {
+        return false;
+    }
+
+    let attrs_are_safe = element.opening.attrs.iter().all(|attr| match attr {
+        JSXAttrOrSpread::SpreadElement(_) => false,
+        JSXAttrOrSpread::JSXAttr(attr) => {
+            let JSXAttrName::Ident(name) = &attr.name else {
+                return false;
+            };
+            let name = name.sym.as_ref();
+            if matches!(name, "ref" | "dangerouslySetInnerHTML") {
+                return false;
+            }
+            if name == "key" || is_event_attr_name(name) {
+                return true;
+            }
+            match &attr.value {
+                Some(JSXAttrValue::JSXExprContainer(container)) => match &container.expr {
+                    JSXExpr::JSXEmptyExpr(_) => true,
+                    JSXExpr::Expr(expr) => is_safe_row_binding_expr(expr.as_ref()),
+                },
+                _ => true,
+            }
+        }
+    });
+
+    attrs_are_safe && is_safe_native_row_children(&element.children, row_local_names)
+}
+
 fn collect_meaningful_fragment_children(children: &[JSXElementChild]) -> Vec<&JSXElementChild> {
     let mut meaningful = Vec::new();
     for child in children {
@@ -628,6 +766,7 @@ fn extract_jsx_element_key_expr(jsx_el: &JSXElement) -> Option<Expr> {
     None
 }
 
+#[cfg(test)]
 fn extract_arrow_body_expr(body: &BlockStmtOrExpr) -> Option<&Expr> {
     match body {
         BlockStmtOrExpr::Expr(expr) => Some(crate::utils::unwrap_expr(expr.as_ref())),
@@ -642,6 +781,7 @@ fn extract_arrow_body_expr(body: &BlockStmtOrExpr) -> Option<&Expr> {
     }
 }
 
+#[cfg(test)]
 fn extract_key_expr_from_root_attr_effect(stmts: &[Stmt], root_ident: &Ident) -> Option<Expr> {
     for stmt in stmts {
         let Stmt::Expr(expr_stmt) = stmt else {
@@ -718,6 +858,7 @@ fn extract_key_expr_from_root_attr_effect(stmts: &[Stmt], root_ident: &Ident) ->
     None
 }
 
+#[cfg(test)]
 fn extract_returned_root_key_expr_from_block(stmts: &[Stmt]) -> Option<Expr> {
     for stmt in stmts.iter().rev() {
         let Stmt::Return(ReturnStmt { arg: Some(expr), .. }) = stmt else {
@@ -741,6 +882,17 @@ fn call_callee_ident_name(call: &CallExpr) -> Option<&str> {
     Some(ident.sym.as_ref())
 }
 
+fn extract_arrow_body_key_expr(body: &BlockStmtOrExpr) -> Option<Expr> {
+    match body {
+        BlockStmtOrExpr::Expr(expr) => extract_render_root_key_expr(expr.as_ref()),
+        BlockStmtOrExpr::BlockStmt(block) => {
+            let mut return_exprs = Vec::new();
+            collect_return_exprs_in_block(block, &mut return_exprs);
+            return_exprs.iter().find_map(extract_render_root_key_expr)
+        }
+    }
+}
+
 fn extract_render_root_key_expr(expr: &Expr) -> Option<Expr> {
     match crate::utils::unwrap_expr(expr) {
         Expr::JSXElement(jsx_el) => extract_jsx_element_key_expr(jsx_el),
@@ -759,30 +911,14 @@ fn extract_render_root_key_expr(expr: &Expr) -> Option<Expr> {
                 let Expr::Arrow(arrow) = crate::utils::unwrap_expr(first.expr.as_ref()) else {
                     return None;
                 };
-                if let Some(body_expr) = extract_arrow_body_expr(&arrow.body)
-                    && let Some(key_expr) = extract_render_root_key_expr(body_expr)
-                {
-                    return Some(key_expr);
-                }
-                if let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() {
-                    return extract_returned_root_key_expr_from_block(&block.stmts);
-                }
-                None
+                extract_arrow_body_key_expr(&arrow.body)
             }
             Some("_$vaporWithHookId") => {
                 let runner = call.args.get(1)?;
                 let Expr::Arrow(arrow) = crate::utils::unwrap_expr(runner.expr.as_ref()) else {
                     return None;
                 };
-                if let Some(body_expr) = extract_arrow_body_expr(&arrow.body)
-                    && let Some(key_expr) = extract_render_root_key_expr(body_expr)
-                {
-                    return Some(key_expr);
-                }
-                if let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() {
-                    return extract_returned_root_key_expr_from_block(&block.stmts);
-                }
-                None
+                extract_arrow_body_key_expr(&arrow.body)
             }
             _ => None,
         },
@@ -1055,6 +1191,7 @@ pub(crate) fn try_build_list_from_map(
             };
 
             let mut use_single_root_anchor = false;
+            let mut use_direct_root_mount = false;
             let track_index = params.len() >= 2;
 
             // renderItem(item, start, end)
@@ -1166,6 +1303,11 @@ pub(crate) fn try_build_list_from_map(
                         }
                         let render_item_local_names =
                             vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
+                        let row_local_names = render_item_local_names.iter().cloned().collect();
+                        let coalesce_row_bindings = use_single_root_anchor
+                            && !track_index
+                            && render_item_prefix_stmts.is_empty()
+                            && is_safe_native_row_element(jsx_el, &row_local_names);
                         let (renderable_locals, plain_locals) = collect_render_item_local_scopes(
                             vt,
                             &render_item_prefix_stmts,
@@ -1174,81 +1316,103 @@ pub(crate) fn try_build_list_from_map(
                         vt.push_renderable_local_scope(renderable_locals);
                         vt.push_plain_local_scope(plain_locals);
                         build_element(vt, jsx_el, &child_root.clone(), &mut child_body);
+                        if coalesce_row_bindings {
+                            use_direct_root_mount = true;
+                            crate::vapor::coalesce_list_row_binding_effects(&mut child_body);
+                        }
                         vt.pop_plain_local_scope();
                         vt.pop_renderable_local_scope();
-                        if let Some(key_expr) =
-                            extract_key_expr_from_root_attr_effect(&child_body, &child_root)
-                        {
-                            item_key_expr = key_expr;
-                        }
-                        child_body.push(return_root(child_root.clone()));
-                        let arrow_setup = Expr::Arrow(ArrowExpr {
-                            span: DUMMY_SP,
-                            params: vec![],
-                            body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+                        if coalesce_row_bindings {
+                            // 安全单根行已由列表 helper 的 item effectScope 统一持有。
+                            // 直接将组装好的 Fragment 插到行锚点前，避免再为每行
+                            // 注册一个 renderAnchor mount；后者的线性 anchor_map 查找会使
+                            // 10k 初始挂载再次退化为 O(n²)。
+                            render_item_stmts.extend(child_body);
+                            render_item_stmts.push(Stmt::Expr(ExprStmt {
                                 span: DUMMY_SP,
-                                ctxt: SyntaxContext::empty(),
-                                stmts: child_body,
-                            })),
-                            is_async: false,
-                            is_generator: false,
-                            type_params: None,
-                            return_type: None,
-                            ctxt: SyntaxContext::empty(),
-                        });
-                        let child_vapor_expr = call_ident("vapor", vec![arrow_setup]);
-                        let render_item_call = if use_single_root_anchor {
-                            Expr::Call(CallExpr {
-                                span: DUMMY_SP,
-                                callee: Callee::Expr(Box::new(Expr::Ident(ident("renderAnchor")))),
-                                args: vec![
-                                    ExprOrSpread {
-                                        spread: None,
-                                        expr: Box::new(Expr::Ident(ident("__slot"))),
-                                    },
-                                    ExprOrSpread {
-                                        spread: None,
-                                        expr: Box::new(Expr::Ident(parent_param_ident.clone())),
-                                    },
-                                    ExprOrSpread {
-                                        spread: None,
-                                        expr: Box::new(Expr::Ident(start_param_ident.clone())),
-                                    },
-                                ],
-                                type_args: None,
-                                ctxt: SyntaxContext::empty(),
-                            })
+                                expr: Box::new(call_ident(
+                                    "_$insertBefore",
+                                    vec![
+                                        Expr::Ident(parent_param_ident.clone()),
+                                        Expr::Ident(child_root),
+                                        Expr::Ident(start_param_ident.clone()),
+                                    ],
+                                )),
+                            }));
                         } else {
-                            Expr::Call(CallExpr {
+                            child_body.push(return_root(child_root.clone()));
+                            let arrow_setup = Expr::Arrow(ArrowExpr {
                                 span: DUMMY_SP,
-                                callee: Callee::Expr(Box::new(Expr::Ident(ident("renderBetween")))),
-                                args: vec![
-                                    ExprOrSpread {
-                                        spread: None,
-                                        expr: Box::new(Expr::Ident(ident("__slot"))),
-                                    },
-                                    ExprOrSpread {
-                                        spread: None,
-                                        expr: Box::new(Expr::Ident(parent_param_ident.clone())),
-                                    },
-                                    ExprOrSpread {
-                                        spread: None,
-                                        expr: Box::new(Expr::Ident(start_param_ident.clone())),
-                                    },
-                                    ExprOrSpread {
-                                        spread: None,
-                                        expr: Box::new(Expr::Ident(end_param_ident.clone())),
-                                    },
-                                ],
-                                type_args: None,
+                                params: vec![],
+                                body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+                                    span: DUMMY_SP,
+                                    ctxt: SyntaxContext::empty(),
+                                    stmts: child_body,
+                                })),
+                                is_async: false,
+                                is_generator: false,
+                                type_params: None,
+                                return_type: None,
                                 ctxt: SyntaxContext::empty(),
-                            })
-                        };
-                        render_item_stmts.push(const_decl(ident("__slot"), child_vapor_expr));
-                        render_item_stmts.push(Stmt::Expr(ExprStmt {
-                            span: DUMMY_SP,
-                            expr: Box::new(render_item_call),
-                        }));
+                            });
+                            let child_vapor_expr = call_ident("vapor", vec![arrow_setup]);
+                            let render_item_call = if use_single_root_anchor {
+                                Expr::Call(CallExpr {
+                                    span: DUMMY_SP,
+                                    callee: Callee::Expr(Box::new(Expr::Ident(ident(
+                                        "renderAnchor",
+                                    )))),
+                                    args: vec![
+                                        ExprOrSpread {
+                                            spread: None,
+                                            expr: Box::new(Expr::Ident(ident("__slot"))),
+                                        },
+                                        ExprOrSpread {
+                                            spread: None,
+                                            expr: Box::new(Expr::Ident(parent_param_ident.clone())),
+                                        },
+                                        ExprOrSpread {
+                                            spread: None,
+                                            expr: Box::new(Expr::Ident(start_param_ident.clone())),
+                                        },
+                                    ],
+                                    type_args: None,
+                                    ctxt: SyntaxContext::empty(),
+                                })
+                            } else {
+                                Expr::Call(CallExpr {
+                                    span: DUMMY_SP,
+                                    callee: Callee::Expr(Box::new(Expr::Ident(ident(
+                                        "renderBetween",
+                                    )))),
+                                    args: vec![
+                                        ExprOrSpread {
+                                            spread: None,
+                                            expr: Box::new(Expr::Ident(ident("__slot"))),
+                                        },
+                                        ExprOrSpread {
+                                            spread: None,
+                                            expr: Box::new(Expr::Ident(parent_param_ident.clone())),
+                                        },
+                                        ExprOrSpread {
+                                            spread: None,
+                                            expr: Box::new(Expr::Ident(start_param_ident.clone())),
+                                        },
+                                        ExprOrSpread {
+                                            spread: None,
+                                            expr: Box::new(Expr::Ident(end_param_ident.clone())),
+                                        },
+                                    ],
+                                    type_args: None,
+                                    ctxt: SyntaxContext::empty(),
+                                })
+                            };
+                            render_item_stmts.push(const_decl(ident("__slot"), child_vapor_expr));
+                            render_item_stmts.push(Stmt::Expr(ExprStmt {
+                                span: DUMMY_SP,
+                                expr: Box::new(render_item_call),
+                            }));
+                        }
                     }
                 } else if let Expr::JSXFragment(frag) = inner_ret {
                     // direct vapor 快路径：
@@ -1593,6 +1757,12 @@ pub(crate) fn try_build_list_from_map(
                         },
                     ))));
                 }
+            }
+            if use_direct_root_mount {
+                keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("directRoot")),
+                    value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
+                }))));
             }
 
             keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {

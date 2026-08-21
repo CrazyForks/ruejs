@@ -122,7 +122,7 @@ export default ListTransitionExample
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$vaporWithKey, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$vaporWithKey, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC, TransitionGroup } from '@rue-js/rue';
 const ListTransitionExample: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
@@ -254,9 +254,6 @@ const ListTransitionExample: FC = ()=>{
                 const _el9 = _$createElement("li");
                 _$appendChild(_root, _el9);
                 _$setClassName(_el9, "item px-3 py-2 rounded-md border border-base-200 bg-base-100 shadow-sm");
-                watchEffect(()=>{
-                    _$setAttribute(_el9, "key", String((item)));
-                });
                 const _el10 = _$createElement("span");
                 _$appendChild(_el9, _el10);
                 _$setClassName(_el10, "text-base-content");

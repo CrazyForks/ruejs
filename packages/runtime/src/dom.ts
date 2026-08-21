@@ -720,6 +720,8 @@ const syncSelectValueAfterMutation = (parent: any, child?: any) => {
 const RUE_HYDRATED_ADOPTED_NODE = '__rue_hydrated_adopted'
 const RUE_HYDRATED_ADOPTED_TARGET = '__rue_hydrated_adopted_target'
 const hydratedAdoptedRemovalSuppressions = new WeakSet<object>()
+const hydratedAdoptedParents = new WeakSet<object>()
+const freshDomParents = new WeakSet<object>()
 const pendingHydratedAdoptedRemovals = new WeakMap<object, Set<any>>()
 const hydratedNodeEventListeners = new WeakMap<object, Map<string, Set<DOMEventHandler>>>()
 const hydratedEventTransferTargets = new WeakMap<object, Set<any>>()
@@ -851,6 +853,9 @@ const syncElementDomProperties = (oldNode: any, newNode: any) => {
 const markHydratedAdoptedNode = (node: any) => {
   if (node) {
     node[RUE_HYDRATED_ADOPTED_NODE] = true
+    if (node.parentNode && typeof node.parentNode === 'object') {
+      hydratedAdoptedParents.add(node.parentNode)
+    }
   }
 }
 
@@ -1017,6 +1022,9 @@ const findHydratedAdoptedDescendant = (node: any): any => {
 
 const findHydratedAdoptedSiblingFor = (parent: any, newNode: any) => {
   if (!parent || !newNode) return null
+  if (freshDomParents.has(parent) && !hydratedAdoptedParents.has(parent)) {
+    return null
+  }
   for (const node of Array.from(parent.childNodes ?? []) as any[]) {
     if (
       node !== newNode &&
@@ -1072,11 +1080,12 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 元素节点：非冲突 SVG 标签直接走 createElementNS，共享标签依赖父上下文决定 namespace */
   createElement(tag: string, parent?: DomElementLike | null) {
-    return (
+    const element =
       SVG_TAGS.has(tag) || (SVG_CONTEXTUAL_TAGS.has(tag) && isSVGNamespaceParent(parent))
         ? document.createElementNS(SVG_NS, tag)
         : document.createElement(tag)
-    ) as any
+    freshDomParents.add(element)
+    return element as any
   }
   /**
    * 文本包装器。
@@ -1129,7 +1138,9 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 创建文档片段：用于批量插入提升性能 */
   createDocumentFragment() {
-    return document.createDocumentFragment() as any
+    const fragment = document.createDocumentFragment()
+    freshDomParents.add(fragment)
+    return fragment as any
   }
   /** 追加子节点：parent.appendChild(child) */
   appendChild(parent: DomNodeLike, child: DomNodeLike) {
@@ -1149,7 +1160,12 @@ export class BrowserDOMAdapter implements DOMAdapter {
       syncSelectValueAfterMutation(parent as any, pending)
       return pending as any
     }
+    const carriesHydratedAdoptedChild =
+      !!(child as any)?.[RUE_HYDRATED_ADOPTED_NODE] || hydratedAdoptedParents.has(child as object)
     ;(parent as any).appendChild(child)
+    if (carriesHydratedAdoptedChild && typeof parent === 'object') {
+      hydratedAdoptedParents.add(parent as object)
+    }
     syncSelectValueAfterMutation(parent as any, child as any)
     return child as any
   }
@@ -1199,7 +1215,12 @@ export class BrowserDOMAdapter implements DOMAdapter {
       syncSelectValueAfterMutation(parent as any, ref as any)
       return
     }
+    const carriesHydratedAdoptedChild =
+      !!(child as any)?.[RUE_HYDRATED_ADOPTED_NODE] || hydratedAdoptedParents.has(child as object)
     ;(parent as any).insertBefore(child, ref)
+    if (carriesHydratedAdoptedChild && typeof parent === 'object') {
+      hydratedAdoptedParents.add(parent as object)
+    }
     syncSelectValueAfterMutation(parent as any, child as any)
   }
   /** 替换子节点：parent.replaceChild(newChild, oldChild) */

@@ -278,9 +278,6 @@ const FormBindings: FC = ()=>{
                         const _root = _$createDocumentFragment();
                         const _el15 = _$createElement("label");
                         _$appendChild(_root, _el15);
-                        watchEffect(()=>{
-                            _$setAttribute(_el15, "key", String((name)));
-                        });
                         _$setClassName(_el15, "inline-flex items-center gap-2");
                         const _el16 = _$createElement("input");
                         _$appendChild(_el15, _el16);

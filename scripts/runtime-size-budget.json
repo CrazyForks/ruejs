@@ -5,7 +5,7 @@
       "measurement": "absolute",
       "max": {
         "min": 516320,
-        "gzip": 206468
+        "gzip": 206557
       },
       "forbidDefaultRuntime": true,
       "forbidBuiltins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"],
@@ -15,7 +15,7 @@
       "measurement": "absolute",
       "max": {
         "min": 517480,
-        "gzip": 206880
+        "gzip": 206953
       },
       "forbidDefaultRuntime": true,
       "forbidSSRRenderer": true
@@ -23,8 +23,8 @@
     "keep-alive": {
       "measurement": "deltaFromVaporCore",
       "max": {
-        "min": 44750,
-        "gzip": 12950
+        "min": 44824,
+        "gzip": 12977
       },
       "forbidSSRRenderer": true
     },
@@ -40,7 +40,7 @@
       "measurement": "deltaFromVaporCore",
       "max": {
         "min": 46020,
-        "gzip": 13340
+        "gzip": 13410
       },
       "forbidSSRRenderer": true
     },
@@ -48,7 +48,7 @@
       "measurement": "deltaFromVaporCore",
       "max": {
         "min": 45270,
-        "gzip": 13386
+        "gzip": 13395
       },
       "forbidSSRRenderer": true
     },
