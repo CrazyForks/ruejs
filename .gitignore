@@ -39,6 +39,7 @@ src/vite-plugin-rue/rue_transform/target/
 .vat/
 temp/
 target/
+!packages/text/__tests__/fixtures/app-basic/app/textjs-compat/prefetch-test/target/
 *.wasm
 /vibewindow/
 packages/runtime-vapor/pkg/

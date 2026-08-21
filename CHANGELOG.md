@@ -1,3 +1,10 @@
+## [0.8.10](https://github.com/hunzhiwange/ruejs/compare/v0.8.9...v0.8.10) (2026-08-21)
+
+
+### Features
+
+* 大幅度优化大量数据下的性能 ([9eb3d23](https://github.com/hunzhiwange/ruejs/commit/9eb3d23d2560ccb75b4d500ba3451f0d410abc16))
+
 ## [0.8.9](https://github.com/hunzhiwange/ruejs/compare/v0.8.8...v0.8.9) (2026-08-19)
 
 
