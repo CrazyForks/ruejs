@@ -6,7 +6,7 @@
 - 容器规范化：支持字符串选择器与元素容器，统一转为 DomElementLike。
 - 生命周期：提供 use/mount/unmount 三个方法管理应用，链式调用更便捷。
 */
-import rue from '../rue'
+import { createRue } from '../rue'
 import type { FC, ComponentInstance, RenderableOutput, Rue } from '../rue'
 import { registerRuntimeComponent } from '../component-registry'
 import type { DomElementLike } from '../dom'
@@ -30,7 +30,7 @@ export function useApp(
   runtime?: Rue,
 ) {
   let containerRef: DomElementLike | null = null
-  const appRue = (runtime as any) || (rue as any)
+  const appRue = (runtime as any) || createRue()
   ensureRuntimeDOMBridge(appRue)
 
   // 统一包装 App 为 FC

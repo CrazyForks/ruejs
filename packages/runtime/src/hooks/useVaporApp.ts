@@ -1,6 +1,6 @@
 /*
 Vapor 应用管理 Hook 概述
-- 复用 Vapor runtime 单例，不静态引用默认 rue.ts。
+- 每个应用默认创建独立 Vapor runtime，也允许显式传入 runtime。
 - 保持 use/component/mount/unmount 同步链式 API 与默认 useApp 一致。
 - 挂载期间切换活动 runtime，使动态组件注册和 Vapor helper 命中同一实例。
 */
@@ -8,9 +8,9 @@ Vapor 应用管理 Hook 概述
 import { registerRuntimeComponent } from '../component-registry'
 import { querySelector, setAttribute, settextContent } from '../dom'
 import type { DomElementLike } from '../dom'
-import { ensureRuntimeDOMBridge, runWithRuntime, setPreferredRuntime } from '../runtime-context'
+import { ensureRuntimeDOMBridge, runWithRuntime } from '../runtime-context'
 import type { ComponentInstance, FC, RenderableOutput, Rue } from '../rue'
-import { getVaporRuntime } from '../vapor-runtime'
+import { createVaporRuntime } from '../vapor-runtime'
 
 /** 创建绑定 Vapor runtime 的应用管理器。 */
 export function useVaporApp(
@@ -23,9 +23,8 @@ export function useVaporApp(
   runtime?: Rue,
 ) {
   let containerRef: DomElementLike | null = null
-  const appRue = (runtime as any) || getVaporRuntime()
+  const appRue = (runtime as any) || createVaporRuntime()
   ensureRuntimeDOMBridge(appRue)
-  setPreferredRuntime(appRue)
 
   const App: ComponentInstance =
     typeof AppOrOptions === 'function'

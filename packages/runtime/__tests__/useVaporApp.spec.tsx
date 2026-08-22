@@ -17,7 +17,7 @@ afterEach(() => {
 })
 
 describe('Vapor useApp', () => {
-  it('uses one Vapor runtime for plugins, component registration, mount, and unmount', async () => {
+  it('uses an isolated Vapor runtime for plugins, registration, mount, and unmount', async () => {
     const host = document.createElement('div')
     const install = vi.fn()
     let renderRuntime: unknown
@@ -37,14 +37,13 @@ describe('Vapor useApp', () => {
 
     const app = useApp(App).use({ install }).component('Registered', Registered)
 
-    expect(resolveRuntimeComponent((globalThis as any).__rue_vapor, 'Registered')).toBe(Registered)
-
     app.mount(host)
     await flushRender()
 
     expect(install).toHaveBeenCalledTimes(1)
-    expect(renderRuntime).toBe((globalThis as any).__rue_vapor)
+    expect(renderRuntime).not.toBe((globalThis as any).__rue_vapor)
     expect(renderRuntime).not.toBe((globalThis as any).__rue)
+    expect(resolveRuntimeComponent(renderRuntime, 'Registered')).toBe(Registered)
     expect(host.hasAttribute('data-rue-app')).toBe(true)
     expect(host.querySelector('[data-testid="registered"]')?.textContent).toBe('vapor app')
 
@@ -52,5 +51,42 @@ describe('Vapor useApp', () => {
     await flushRender()
 
     expect(host.textContent).toBe('')
+  })
+
+  it('does not share the root runtime between app instances', async () => {
+    const firstHost = document.createElement('div')
+    const secondHost = document.createElement('div')
+    const renderRuntimes: unknown[] = []
+
+    document.body.append(firstHost, secondHost)
+
+    const createRoot = (label: string) => () => {
+      renderRuntimes.push((globalThis as any).__rue_active)
+      return vapor(() => {
+        const node = document.createElement('div')
+        node.textContent = label
+        return node as any
+      })
+    }
+
+    const firstApp = useApp(createRoot('first'))
+    const secondApp = useApp(createRoot('second'))
+
+    firstApp.mount(firstHost)
+    secondApp.mount(secondHost)
+    await flushRender()
+
+    expect(renderRuntimes).toHaveLength(2)
+    expect(renderRuntimes[0]).not.toBe(renderRuntimes[1])
+    expect(firstHost.textContent).toBe('first')
+    expect(secondHost.textContent).toBe('second')
+
+    secondApp.unmount()
+    await flushRender()
+
+    expect(firstHost.textContent).toBe('first')
+    expect(secondHost.textContent).toBe('')
+
+    firstApp.unmount()
   })
 })

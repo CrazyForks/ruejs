@@ -211,11 +211,21 @@ type VaporGlobalRecord = typeof globalThis & {
 }
 
 const vaporGlobal = globalThis as VaporGlobalRecord
+/** 创建绑定当前 DOM bridge 的独立 Vapor runtime。 */
+export const createVaporRuntime = () => {
+  const bridge = vaporGlobal.__rue_dom
+  const runtime = createRueWasm(bridge)
+  if (getMarkedRuntimeDOMBridge(runtime) !== bridge) {
+    markRuntimeDOMBridge(runtime, bridge)
+  }
+  return runtime
+}
+
 const ensureVaporRuntime = () => {
   const bridge = vaporGlobal.__rue_dom
   const runtime =
     vaporGlobal[RUE_VAPOR_RUNTIME_KEY] ||
-    (vaporGlobal[RUE_VAPOR_RUNTIME_KEY] = createRueWasm(bridge))
+    (vaporGlobal[RUE_VAPOR_RUNTIME_KEY] = createVaporRuntime())
   if (getMarkedRuntimeDOMBridge(runtime) !== bridge) {
     markRuntimeDOMBridge(runtime, bridge)
   }
