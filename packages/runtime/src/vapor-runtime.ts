@@ -78,7 +78,11 @@ import {
   type RueIslandDescriptor,
   type RueServerIslandDescriptor,
 } from './island-protocol'
-import { resolveActiveRuntime } from './runtime-context'
+import {
+  getMarkedRuntimeDOMBridge,
+  markRuntimeDOMBridge,
+  resolveActiveRuntime,
+} from './runtime-context'
 
 getDOMAdapter()
 
@@ -207,12 +211,15 @@ type VaporGlobalRecord = typeof globalThis & {
 }
 
 const vaporGlobal = globalThis as VaporGlobalRecord
-const initialDOMBridge = vaporGlobal.__rue_dom
-
 const ensureVaporRuntime = () => {
-  vaporGlobal[RUE_VAPOR_RUNTIME_KEY] =
-    vaporGlobal[RUE_VAPOR_RUNTIME_KEY] || createRueWasm(initialDOMBridge)
-  return vaporGlobal[RUE_VAPOR_RUNTIME_KEY]
+  const bridge = vaporGlobal.__rue_dom
+  const runtime =
+    vaporGlobal[RUE_VAPOR_RUNTIME_KEY] ||
+    (vaporGlobal[RUE_VAPOR_RUNTIME_KEY] = createRueWasm(bridge))
+  if (getMarkedRuntimeDOMBridge(runtime) !== bridge) {
+    markRuntimeDOMBridge(runtime, bridge)
+  }
+  return runtime
 }
 
 /** 获取或创建 Vapor 专用 runtime，供 Vapor 应用控制器复用。 */

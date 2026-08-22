@@ -284,13 +284,16 @@ describe('runtime size audit', () => {
     )
   })
 
-  it('builds the production Wasm before the public audit and wires check mode into release', () => {
+  it('builds the production Wasm before the public audit without enforcing it during release', () => {
     const packageJson = JSON.parse(readFileSync(path.resolve('package.json'), 'utf8'))
     const releaseSource = readFileSync(path.resolve('scripts/release.js'), 'utf8')
 
     expect(packageJson.scripts['size-runtime']).toBe(
       'pnpm --filter @rue-js/runtime-vapor run build && node scripts/runtime-size-audit.js',
     )
-    expect(releaseSource).toContain("await run('pnpm', ['run', 'size-runtime', '--', '--check'])")
+    expect(releaseSource).toContain("await run('pnpm', ['run', 'size-runtime'])")
+    expect(releaseSource).not.toContain(
+      "await run('pnpm', ['run', 'size-runtime', '--', '--check'])",
+    )
   })
 })

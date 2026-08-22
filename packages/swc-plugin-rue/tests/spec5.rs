@@ -284,9 +284,13 @@ export default UseCart;
     let normalized = normalize(&strip_marker(&out));
     assert_eq!(normalized.matches("directRoot: true").count(), 2);
     assert_eq!(normalized.matches("_$insertBefore(parent, _root, start)").count(), 2);
-    assert!(normalized.contains("_$settextContent(_el5, pr.name)"));
-    assert!(normalized.contains("_$settextContent(_el6, pr.price)"));
-    assert!(normalized.contains("_$settextContent(_el13, i.name)"));
-    assert!(normalized.contains("_$settextContent(_el14, i.qty)"));
+    assert!(normalized.contains("const _$rowBindingNext0 = pr.name"));
+    assert!(normalized.contains("_$settextContent(_el5, _$rowBindingNext0)"));
+    assert!(normalized.contains("const _$rowBindingNext1 = pr.price"));
+    assert!(normalized.contains("_$settextContent(_el6, _$rowBindingNext1)"));
+    assert!(normalized.contains("const _$rowBindingNext0 = i.name"));
+    assert!(normalized.contains("_$settextContent(_el13, _$rowBindingNext0)"));
+    assert!(normalized.contains("const _$rowBindingNext1 = i.qty"));
+    assert!(normalized.contains("_$settextContent(_el14, _$rowBindingNext1)"));
     assert!(!normalized.contains("renderAnchor(__slot, parent, start)"));
 }

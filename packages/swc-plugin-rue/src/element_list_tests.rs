@@ -501,7 +501,8 @@ fn inlines_external_reactive_prefixes_for_direct_list_items() {
     );
     assert!(!out.contains("renderAnchor("), "{out}");
     assert!(!out.contains(",\"key\","));
-    assert!(out.contains("_$settextContent(_el1,(external.value+item.id)+suffix.get())"), "{out}");
+    assert!(out.contains("const_$rowBindingNext0=(external.value+item.id)+suffix.get()"), "{out}");
+    assert!(out.contains("_$settextContent(_el1,_$rowBindingNext0)"), "{out}");
     assert!(
         !out.contains("constrowKey=external.value+item.id;constlabel=rowKey+suffix.get();const_el")
     );
@@ -2293,6 +2294,26 @@ fn coalesces_safe_native_row_bindings() {
     assert!(
         out.contains("_$settextContent("),
         "item-local text should use direct text writes: {out}"
+    );
+    assert_eq!(
+        out.matches("Object.is(").count(),
+        3,
+        "class and both direct-text setters need independent equality guards: {out}"
+    );
+    assert_eq!(
+        out.matches("let_$rowBindingInitialized").count(),
+        3,
+        "each guarded binding needs row-local initialization state: {out}"
+    );
+    assert_eq!(
+        out.matches("let_$rowBindingValue").count(),
+        3,
+        "each guarded binding needs its own row-local cached value: {out}"
+    );
+    assert_eq!(
+        out.matches("_$rowBindingInitialized").count(),
+        9,
+        "each guard must read, initialize, and persist its own initialization flag: {out}"
     );
     assert!(
         out.contains("_$insertBefore(parent,_root,start)"),

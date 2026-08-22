@@ -105,6 +105,39 @@ export const vaporKeyedList = <T>(args: {
   const syncEffectOptions = {
     scheduler: (run: () => void) => run(),
   }
+  const getReactiveLocation = (value: unknown) => {
+    if ((typeof value !== 'object' && typeof value !== 'function') || value == null) {
+      return undefined
+    }
+    try {
+      const signal = (value as any).__signal__
+      const path = (value as any).__rue_path__
+      return signal && Array.isArray(path) ? { signal, path } : undefined
+    } catch {
+      return undefined
+    }
+  }
+  const hasSameReactiveLocation = (previous: unknown, next: unknown) => {
+    const previousLocation = getReactiveLocation(previous)
+    const nextLocation = getReactiveLocation(next)
+    if (!previousLocation || !nextLocation) return previousLocation === nextLocation
+    if (previousLocation.signal !== nextLocation.signal) return false
+    return (
+      previousLocation.path.length === nextLocation.path.length &&
+      previousLocation.path.every((segment: unknown, index: number) =>
+        Object.is(segment, nextLocation.path[index]),
+      )
+    )
+  }
+  const currentStateOptions = {
+    equals: (
+      previous: { item: T; index: number; rawIdentity: unknown },
+      next: { item: T; index: number; rawIdentity: unknown },
+    ) =>
+      previous.rawIdentity === next.rawIdentity &&
+      hasSameReactiveLocation(previous.item, next.item) &&
+      (!trackIndex || previous.index === next.index),
+  }
 
   const resolveTargetParent = () => {
     if (parent) {
@@ -135,6 +168,8 @@ export const vaporKeyedList = <T>(args: {
   if (!targetParent) {
     return elements
   }
+
+  const oldEntries = Array.from(elements.entries())
 
   const isListMarker = (node: DomNodeLike | null | undefined) => {
     if (!node) {
@@ -264,7 +299,7 @@ export const vaporKeyedList = <T>(args: {
     if (!range.current) {
       range.current = signal(
         { item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity },
-        {},
+        currentStateOptions,
         true,
       )
       if (!trackIndex && isObjectLike(nextItem)) {
@@ -286,7 +321,7 @@ export const vaporKeyedList = <T>(args: {
     const prev = untrack(() => range.current!.get())
     const rawChanged = prev.rawIdentity !== nextRawIdentity
     const indexChanged = prev.index !== nextIndex
-    if (rawChanged || indexChanged) {
+    if (prev.item !== nextItem || rawChanged || indexChanged) {
       range.current.set({ item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity })
     }
 
@@ -313,6 +348,25 @@ export const vaporKeyedList = <T>(args: {
     return range.renderState
   }
 
+  const releaseRange = (range: VaporListItemRange, disposeState: boolean) => {
+    const stop = range.stop
+    if (stop) {
+      stop()
+      if (range.stop === stop) {
+        range.stop = undefined
+      }
+    }
+
+    if (!disposeState) {
+      return
+    }
+
+    range.current = undefined
+    range.renderState = undefined
+    range.stableItem = undefined
+    range.remount = undefined
+  }
+
   const mountDirectRootRange = (
     entry: VaporListItemRange,
     item: T,
@@ -337,7 +391,7 @@ export const vaporKeyedList = <T>(args: {
     }
 
     entry.remount = (nextItem, nextIndex) => {
-      entry.stop?.()
+      releaseRange(entry, false)
       const previousRoot = (end as any).previousSibling as DomNodeLike | null
       if (previousRoot && contains(itemParent, previousRoot) && !isListMarker(previousRoot)) {
         removeChild(itemParent, previousRoot)
@@ -401,127 +455,267 @@ export const vaporKeyedList = <T>(args: {
       : range.end
   }
 
-  let cursor: DomNodeLike | null = before as any
-
-  for (let index = items.length - 1; index >= 0; index -= 1) {
-    const item = items[index]
-    const key = getKey(item, index)
-    let range = elements.get(key)
-    let start: DomNodeLike
-    let end: DomNodeLike
-
-    if (!range) {
-      if (singleRoot) {
-        end = createComment('rue:list:item:anchor')
-        insertBefore(targetParent, end, cursor as any)
-        const entry: VaporListItemRange = { end, singleRoot: true }
-        const renderState = syncCurrentItem(entry, item, index)
-        if (directRoot) {
-          mountDirectRootRange(entry, item, index, targetParent, end)
-        } else if (renderState) {
-          const stop = watchEffect(() => {
-            const next = renderState.get()
-            untrack(() => {
-              renderItem(
-                (entry.stableItem as T | undefined) ?? next.item,
-                targetParent as any,
-                end,
-                end,
-                next.index,
-              )
-            })
-          }, syncEffectOptions)
-          entry.stop = () => stop.dispose()
-        } else {
-          const scope = effectScope()
-          scope.run(() => {
-            untrack(() => {
-              renderItem(entry.stableItem as T, targetParent as any, end, end, index)
-            })
-          })
-          entry.stop = () => scope.stop()
-        }
-        range = entry
-      } else {
-        start = createComment('rue:list:item:start')
-        end = createComment('rue:list:item:end')
-        insertBefore(targetParent, end, cursor as any)
-        insertBefore(targetParent, start, end)
-        const entry: VaporListItemRange = { start, end }
-        const renderState = syncCurrentItem(entry, item, index)!
+  const mountRange = (item: T, index: number, cursor: DomNodeLike | null) => {
+    if (singleRoot) {
+      const end = createComment('rue:list:item:anchor')
+      insertBefore(targetParent, end, cursor as any)
+      const entry: VaporListItemRange = { end, singleRoot: true }
+      const renderState = syncCurrentItem(entry, item, index)
+      if (directRoot) {
+        mountDirectRootRange(entry, item, index, targetParent, end)
+      } else if (renderState) {
         const stop = watchEffect(() => {
           const next = renderState.get()
           untrack(() => {
             renderItem(
               (entry.stableItem as T | undefined) ?? next.item,
               targetParent as any,
-              start,
+              end,
               end,
               next.index,
             )
           })
         }, syncEffectOptions)
         entry.stop = () => stop.dispose()
-        range = entry
+      } else {
+        const scope = effectScope()
+        scope.run(() => {
+          untrack(() => {
+            renderItem(entry.stableItem as T, targetParent as any, end, end, index)
+          })
+        })
+        entry.stop = () => scope.stop()
       }
-    } else {
-      const previous = range.current ? untrack(() => range!.current!.get()) : undefined
-      const shouldRemountDirectRoot =
-        directRoot &&
-        range.singleRoot &&
-        !range.stableItem &&
-        !!range.remount &&
-        !!previous &&
-        (previous.rawIdentity !== getRawIdentity(item) || (trackIndex && previous.index !== index))
-      syncCurrentItem(range, item, index)
-      if (shouldRemountDirectRoot) {
-        range.remount!(item, index)
-      }
-      end = range.end
+      return entry
     }
 
-    const blockStart = resolveStartNode(range)
-
-    if ((end as any).nextSibling !== cursor && cursor !== blockStart) {
-      const block = createDocumentFragment()
-      let node: DomNodeLike | null = blockStart
-      while (node) {
-        const next: DomNodeLike | null = (node as any).nextSibling
-        appendChild(block, node)
-        if (node === end) break
-        node = next
-      }
-      const cursorIsChild = !!cursor && contains(targetParent, cursor as any)
-      if (cursorIsChild) insertBefore(targetParent, block, cursor as any)
-      else appendChild(targetParent, block)
-    }
-
-    nextElements.set(key, range!)
-    cursor = blockStart
+    const start = createComment('rue:list:item:start')
+    const end = createComment('rue:list:item:end')
+    insertBefore(targetParent, end, cursor as any)
+    insertBefore(targetParent, start, end)
+    const entry: VaporListItemRange = { start, end }
+    const renderState = syncCurrentItem(entry, item, index)!
+    const stop = watchEffect(() => {
+      const next = renderState.get()
+      untrack(() => {
+        renderItem(
+          (entry.stableItem as T | undefined) ?? next.item,
+          targetParent as any,
+          start,
+          end,
+          next.index,
+        )
+      })
+    }, syncEffectOptions)
+    entry.stop = () => stop.dispose()
+    return entry
   }
 
-  elements.forEach((range, key) => {
-    if (!nextElements.has(key)) {
-      const nodesToRemove: DomNodeLike[] = []
-      const removeStart = resolveStartNode(range)
-      let node: DomNodeLike | null = removeStart
-      while (node) {
-        nodesToRemove.push(node)
-        if (node === range.end) break
-        node = ((node as any).nextSibling as DomNodeLike | null) || null
-      }
+  const syncRange = (range: VaporListItemRange, item: T, index: number) => {
+    const previous = range.current ? untrack(() => range.current!.get()) : undefined
+    const shouldRemountDirectRoot =
+      directRoot &&
+      range.singleRoot &&
+      !range.stableItem &&
+      !!range.remount &&
+      !!previous &&
+      (previous.rawIdentity !== getRawIdentity(item) || (trackIndex && previous.index !== index))
+    syncCurrentItem(range, item, index)
+    if (shouldRemountDirectRoot) {
+      range.remount!(item, index)
+    }
+  }
 
-      if (range.stop) range.stop()
+  const nextKeys = Array.from({ length: items.length }, () => undefined as any)
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const key = getKey(items[index], index)
+    nextKeys[index] = key
+    const range = elements.get(key)
+    if (range) syncRange(range, items[index], index)
+  }
 
-      for (const staleNode of nodesToRemove) {
-        if (contains(targetParent as any, staleNode as any)) {
-          removeChild(targetParent as any, staleNode as any)
-        }
+  const removeRange = (range: VaporListItemRange) => {
+    const nodesToRemove: DomNodeLike[] = []
+    let node: DomNodeLike | null = resolveStartNode(range)
+    while (node) {
+      nodesToRemove.push(node)
+      if (node === range.end) break
+      node = ((node as any).nextSibling as DomNodeLike | null) || null
+    }
+
+    releaseRange(range, true)
+    for (const staleNode of nodesToRemove) {
+      if (contains(targetParent as any, staleNode as any)) {
+        removeChild(targetParent as any, staleNode as any)
       }
     }
-  })
+  }
+
+  const moveRange = (range: VaporListItemRange, cursor: DomNodeLike | null) => {
+    const blockStart = resolveStartNode(range)
+    if ((range.end as any).nextSibling === cursor || cursor === blockStart) {
+      return
+    }
+
+    const block = createDocumentFragment()
+    let node: DomNodeLike | null = blockStart
+    while (node) {
+      const next: DomNodeLike | null = (node as any).nextSibling
+      appendChild(block, node)
+      if (node === range.end) break
+      node = next
+    }
+    const cursorIsChild = !!cursor && contains(targetParent, cursor as any)
+    if (cursorIsChild) insertBefore(targetParent, block, cursor as any)
+    else appendChild(targetParent, block)
+  }
+
+  const findStableIndexes = (oldIndexes: number[]) => {
+    const predecessors = Array.from({ length: oldIndexes.length }, () => -1)
+    const tails: number[] = []
+
+    oldIndexes.forEach((oldIndex, index) => {
+      if (oldIndex < 0) return
+      let low = 0
+      let high = tails.length
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2)
+        if (oldIndexes[tails[middle]] < oldIndex) low = middle + 1
+        else high = middle
+      }
+      if (low > 0) predecessors[index] = tails[low - 1]
+      if (low === tails.length) tails.push(index)
+      else tails[low] = index
+    })
+
+    const stableIndexes = new Set<number>()
+    let stableIndex: number | undefined = tails[tails.length - 1]
+    while (stableIndex !== undefined) {
+      stableIndexes.add(stableIndex)
+      const predecessor: number = predecessors[stableIndex]
+      stableIndex = predecessor >= 0 ? predecessor : undefined
+    }
+    return stableIndexes
+  }
+
+  const hasDuplicateNextKeys = new Set(nextKeys).size !== nextKeys.length
+  if (hasDuplicateNextKeys) {
+    let cursor: DomNodeLike | null = before as any
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+      const key = nextKeys[index]
+      let range = elements.get(key)
+      if (!range) {
+        range = mountRange(items[index], index, cursor)
+      } else {
+        moveRange(range, cursor)
+      }
+      nextElements.set(key, range)
+      cursor = resolveStartNode(range)
+    }
+
+    elements.forEach((range, key) => {
+      if (!nextElements.has(key)) removeRange(range)
+    })
+    elements.clear()
+    nextKeys.forEach(key => {
+      const range = nextElements.get(key)
+      if (range) elements.set(key, range)
+    })
+    return elements
+  }
+
+  const nextRanges: Array<VaporListItemRange | undefined> = Array.from(
+    { length: items.length },
+    () => undefined,
+  )
+  let oldStart = 0
+  let oldEnd = oldEntries.length - 1
+  let nextStart = 0
+  let nextEnd = items.length - 1
+
+  while (
+    oldStart <= oldEnd &&
+    nextStart <= nextEnd &&
+    oldEntries[oldStart][0] === nextKeys[nextStart]
+  ) {
+    const range = oldEntries[oldStart][1]
+    nextRanges[nextStart] = range
+    oldStart += 1
+    nextStart += 1
+  }
+  while (
+    oldStart <= oldEnd &&
+    nextStart <= nextEnd &&
+    oldEntries[oldEnd][0] === nextKeys[nextEnd]
+  ) {
+    const range = oldEntries[oldEnd][1]
+    nextRanges[nextEnd] = range
+    oldEnd -= 1
+    nextEnd -= 1
+  }
+
+  if (nextStart > nextEnd) {
+    for (let index = oldStart; index <= oldEnd; index += 1) removeRange(oldEntries[index][1])
+  } else if (oldStart > oldEnd) {
+    let cursor = nextRanges[nextEnd + 1]
+      ? resolveStartNode(nextRanges[nextEnd + 1]!)
+      : (before as DomNodeLike | null)
+    for (let index = nextEnd; index >= nextStart; index -= 1) {
+      const range = mountRange(items[index], index, cursor)
+      nextRanges[index] = range
+      cursor = resolveStartNode(range)
+    }
+  } else {
+    const oldIndexByKey = new Map<any, number>()
+    for (let index = oldStart; index <= oldEnd; index += 1) {
+      oldIndexByKey.set(oldEntries[index][0], index)
+    }
+
+    const middleOldIndexes: number[] = []
+    const reusedOldIndexes = new Set<number>()
+    for (let index = nextStart; index <= nextEnd; index += 1) {
+      const oldIndex = oldIndexByKey.get(nextKeys[index])
+      if (oldIndex === undefined) {
+        middleOldIndexes.push(-1)
+        continue
+      }
+      const range = oldEntries[oldIndex][1]
+      nextRanges[index] = range
+      middleOldIndexes.push(oldIndex)
+      reusedOldIndexes.add(oldIndex)
+    }
+
+    for (let index = oldStart; index <= oldEnd; index += 1) {
+      if (!reusedOldIndexes.has(index)) removeRange(oldEntries[index][1])
+    }
+
+    const stableIndexes = findStableIndexes(middleOldIndexes)
+    let cursor = nextRanges[nextEnd + 1]
+      ? resolveStartNode(nextRanges[nextEnd + 1]!)
+      : (before as DomNodeLike | null)
+    for (let index = nextEnd; index >= nextStart; index -= 1) {
+      let range = nextRanges[index]
+      const middleIndex = index - nextStart
+      if (!range) {
+        range = mountRange(items[index], index, cursor)
+        nextRanges[index] = range
+      } else {
+        const isStable = stableIndexes.has(middleIndex)
+        const blockStart = resolveStartNode(range)
+        const isConnected =
+          contains(targetParent as any, blockStart as any) &&
+          contains(targetParent as any, range.end as any)
+        if (!isStable || !isConnected) moveRange(range, cursor)
+      }
+      cursor = resolveStartNode(range)
+    }
+  }
+
   elements.clear()
-  nextElements.forEach((range, key) => elements.set(key, range))
+  nextKeys.forEach((key, index) => {
+    const range = nextRanges[index]
+    if (range) elements.set(key, range)
+  })
   return elements
 }
 

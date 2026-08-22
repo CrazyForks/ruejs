@@ -5,9 +5,10 @@
 - 维护 Vapor helper 使用的 preferred runtime，但不反向依赖默认 rue.ts。
 */
 
-import { BrowserDOMAdapter, setDOMAdapter } from './dom'
+import { BrowserDOMAdapter, registerDOMBridgeConsumer, setDOMAdapter } from './dom'
 
 const runtimeDOMBridgeByInstance = new WeakMap<object, unknown>()
+const registeredDOMBridgeConsumers = new WeakSet<object>()
 
 const canTrackRuntime = (runtime: unknown): runtime is object =>
   (typeof runtime === 'object' || typeof runtime === 'function') && runtime != null
@@ -45,10 +46,14 @@ export const getMarkedRuntimeDOMBridge = (runtime: unknown) => {
 export const markRuntimeDOMBridge = (runtime: unknown, bridge: unknown) => {
   if (canTrackRuntime(runtime)) {
     runtimeDOMBridgeByInstance.set(runtime, bridge)
+    if (!registeredDOMBridgeConsumers.has(runtime)) {
+      registeredDOMBridgeConsumers.add(runtime)
+      registerDOMBridgeConsumer(runtime)
+    }
   }
 }
 
-/** 确保 runtime 使用当前 Browser DOM bridge。 */
+/** 确保 runtime 使用当前 DOM bridge。 */
 export const ensureRuntimeDOMBridge = (runtime: unknown) => {
   const runtimeWithDOM = runtime as { setDOMAdapter?: (bridge: unknown) => void } | null | undefined
   if (typeof runtimeWithDOM?.setDOMAdapter !== 'function') {

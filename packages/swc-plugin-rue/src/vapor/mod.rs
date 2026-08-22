@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::visit::{VisitMut, VisitMutWith};
+use swc_core::ecma::visit::{Visit, VisitMut, VisitMutWith, VisitWith};
 
 /*
 Vapor 深编译转换器说明：
@@ -122,11 +122,22 @@ pub(crate) fn flatten_once_watch_effects(stmts: &mut Vec<Stmt>) {
 pub(crate) fn coalesce_list_row_binding_effects(stmts: &mut Vec<Stmt>) {
     collapse_sole_list_row_text_wrappers(stmts);
 
+    let mut used_names = RowBindingIdentCollector::default();
+    stmts.visit_with(&mut used_names);
+
     let mut retained = Vec::with_capacity(stmts.len());
     let mut effect_blocks = Vec::new();
+    let mut binding_decls = Vec::new();
+    let mut binding_index = 0;
 
     for stmt in std::mem::take(stmts) {
         if let Some(body) = watch_effect_body(&stmt) {
+            let body = guard_row_binding_setter(
+                body,
+                &mut binding_decls,
+                &mut used_names.names,
+                &mut binding_index,
+            );
             effect_blocks.push(Stmt::Block(BlockStmt {
                 span: DUMMY_SP,
                 ctxt: swc_core::common::SyntaxContext::empty(),
@@ -141,6 +152,8 @@ pub(crate) fn coalesce_list_row_binding_effects(stmts: &mut Vec<Stmt>) {
         *stmts = retained;
         return;
     }
+
+    retained.extend(binding_decls);
 
     let arrow = Expr::Arrow(ArrowExpr {
         span: DUMMY_SP,
@@ -159,6 +172,137 @@ pub(crate) fn coalesce_list_row_binding_effects(stmts: &mut Vec<Stmt>) {
     let watch = crate::emit::call_ident("watchEffect", vec![arrow]);
     retained.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
     *stmts = retained;
+}
+
+#[derive(Default)]
+struct RowBindingIdentCollector {
+    names: HashSet<String>,
+}
+
+impl Visit for RowBindingIdentCollector {
+    fn visit_ident(&mut self, ident: &Ident) {
+        self.names.insert(ident.sym.to_string());
+    }
+}
+
+fn guard_row_binding_setter(
+    body: Vec<Stmt>,
+    binding_decls: &mut Vec<Stmt>,
+    used_names: &mut HashSet<String>,
+    binding_index: &mut usize,
+) -> Vec<Stmt> {
+    let [Stmt::Expr(expr_stmt)] = body.as_slice() else {
+        return body;
+    };
+    let Expr::Call(call) = expr_stmt.expr.as_ref() else {
+        return body;
+    };
+    if !matches!(call_ident_name(call), Some("_$setClassName" | "_$settextContent"))
+        || call.args.len() != 2
+        || call.args.iter().any(|arg| arg.spread.is_some())
+    {
+        return body;
+    }
+
+    let (value_ident, initialized_ident, next_ident) = loop {
+        let index = *binding_index;
+        *binding_index += 1;
+        let value_ident = crate::emit::ident(&format!("_$rowBindingValue{index}"));
+        let initialized_ident = crate::emit::ident(&format!("_$rowBindingInitialized{index}"));
+        let next_ident = crate::emit::ident(&format!("_$rowBindingNext{index}"));
+        if [&value_ident, &initialized_ident, &next_ident]
+            .iter()
+            .all(|ident| !used_names.contains(ident.sym.as_ref()))
+        {
+            used_names.extend([
+                value_ident.sym.to_string(),
+                initialized_ident.sym.to_string(),
+                next_ident.sym.to_string(),
+            ]);
+            break (value_ident, initialized_ident, next_ident);
+        }
+    };
+
+    binding_decls.push(let_decl(value_ident.clone(), None));
+    binding_decls.push(let_decl(
+        initialized_ident.clone(),
+        Some(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: false }))),
+    ));
+
+    let next_value = call.args[1].expr.as_ref().clone();
+    let mut guarded_call = call.clone();
+    guarded_call.args[1].expr = Box::new(Expr::Ident(next_ident.clone()));
+
+    let same_value = crate::emit::call_member(
+        crate::emit::ident("Object"),
+        "is",
+        vec![Expr::Ident(value_ident.clone()), Expr::Ident(next_ident.clone())],
+    );
+    let should_write = Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::LogicalOr,
+        left: Box::new(Expr::Unary(UnaryExpr {
+            span: DUMMY_SP,
+            op: UnaryOp::Bang,
+            arg: Box::new(Expr::Ident(initialized_ident.clone())),
+        })),
+        right: Box::new(Expr::Unary(UnaryExpr {
+            span: DUMMY_SP,
+            op: UnaryOp::Bang,
+            arg: Box::new(same_value),
+        })),
+    });
+
+    vec![
+        crate::emit::const_decl(next_ident.clone(), next_value),
+        Stmt::If(IfStmt {
+            span: DUMMY_SP,
+            test: Box::new(should_write),
+            cons: Box::new(Stmt::Block(BlockStmt {
+                span: DUMMY_SP,
+                ctxt: swc_core::common::SyntaxContext::empty(),
+                stmts: vec![
+                    Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: Box::new(Expr::Call(guarded_call)),
+                    }),
+                    assign_ident_stmt(value_ident, Expr::Ident(next_ident)),
+                    assign_ident_stmt(
+                        initialized_ident,
+                        Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })),
+                    ),
+                ],
+            })),
+            alt: None,
+        }),
+    ]
+}
+
+fn let_decl(name: Ident, init: Option<Expr>) -> Stmt {
+    Stmt::Decl(Decl::Var(Box::new(VarDecl {
+        span: DUMMY_SP,
+        ctxt: swc_core::common::SyntaxContext::empty(),
+        kind: VarDeclKind::Let,
+        declare: false,
+        decls: vec![VarDeclarator {
+            span: DUMMY_SP,
+            name: Pat::Ident(BindingIdent { id: name, type_ann: None }),
+            init: init.map(Box::new),
+            definite: false,
+        }],
+    })))
+}
+
+fn assign_ident_stmt(target: Ident, value: Expr) -> Stmt {
+    Stmt::Expr(ExprStmt {
+        span: DUMMY_SP,
+        expr: Box::new(Expr::Assign(AssignExpr {
+            span: DUMMY_SP,
+            op: AssignOp::Assign,
+            left: AssignTarget::Simple(SimpleAssignTarget::Ident(target.into())),
+            right: Box::new(value),
+        })),
+    })
 }
 
 fn call_ident_name(call: &CallExpr) -> Option<&str> {

@@ -393,6 +393,52 @@ describe.each(variants)('$name js-framework-benchmark list', ({ name, App, keyed
   })
 })
 
+describe('keyed js-framework-benchmark DOM writes', () => {
+  it('only mutates changed row bindings for select and partial update', async () => {
+    const container = mountContainer()
+    render(<KeyedBenchmark runCount={20} />, container)
+    await click(container.querySelector('#run'))
+
+    const mutationTarget = container.querySelector('tbody')
+    expect(mutationTarget).not.toBeNull()
+    const mutations: MutationRecord[] = []
+    const observer = new MutationObserver(records => mutations.push(...records))
+    observer.observe(mutationTarget!, {
+      attributes: true,
+      characterData: true,
+      childList: true,
+      subtree: true,
+    })
+
+    const rows = rowElements(container)
+    await click(rows[0].querySelector('[data-action="select"]'))
+
+    expect(mutations).toHaveLength(1)
+    expect(mutations[0]).toMatchObject({ type: 'attributes', attributeName: 'class' })
+    expect(mutations[0]?.target).toBe(rows[0])
+
+    mutations.length = 0
+    await click(rows[1].querySelector('[data-action="select"]'))
+
+    expect(mutations).toHaveLength(2)
+    expect(
+      mutations.every(record => record.type === 'attributes' && record.attributeName === 'class'),
+    ).toBe(true)
+    expect(new Set(mutations.map(record => record.target))).toEqual(new Set([rows[0], rows[1]]))
+
+    mutations.length = 0
+    await click(container.querySelector('#update'))
+    observer.disconnect()
+
+    expect(mutations).toHaveLength(2)
+    expect(mutations.every(record => record.type === 'childList')).toBe(true)
+    expect(mutations.map(record => (record.target as Element).textContent).sort()).toEqual([
+      'big blue house !!!',
+      'pretty red table !!!',
+    ])
+  })
+})
+
 describe.each(signalVariants)(
   '$name native-signal js-framework-benchmark list',
   ({ name, App }) => {

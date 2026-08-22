@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { computed, ref, render, setReactiveScheduling, type FC } from '../src'
+import { computed, ref, render, setReactiveScheduling, signal, type FC } from '../src'
 import { click, mountContainer, waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
@@ -27,6 +27,81 @@ const readRowIds = (container: HTMLElement) =>
   )
 
 describe('keyed-list external state regression', () => {
+  it('stops cleared row bindings across recreate cycles while new rows still respond', async () => {
+    const bindingRuns = new Map<string, number>()
+
+    const Demo: FC = () => {
+      const rows = ref<DemoRow[]>([])
+      const externalTick = signal(0, {}, true)
+      let generation = 0
+
+      const createRows = () => {
+        generation += 1
+        rows.value = [
+          { id: 'a', title: `Alpha ${generation}`, status: 'todo' },
+          { id: 'b', title: `Beta ${generation}`, status: 'done' },
+        ]
+      }
+      const readBinding = (row: DemoRow) => {
+        bindingRuns.set(row.title, (bindingRuns.get(row.title) ?? 0) + 1)
+        return `${row.title}:${externalTick.get()}`
+      }
+
+      return (
+        <div>
+          <button data-testid="create" onClick={createRows}>
+            Create
+          </button>
+          <button data-testid="clear" onClick={() => (rows.value = [])}>
+            Clear
+          </button>
+          <button data-testid="tick" onClick={() => externalTick.set(externalTick.get() + 1)}>
+            Tick
+          </button>
+          <ul>
+            {rows.value.map(row => (
+              <li key={row.id} data-testid="keyed-row" data-row-id={row.id}>
+                {readBinding(row)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+
+    const container = mountContainer()
+    render(<Demo />, container)
+    const retiredRuns = new Map<string, number>()
+
+    for (let generation = 1; generation <= 3; generation += 1) {
+      await click(container.querySelector('[data-testid="create"]'))
+      expect(readRowIds(container)).toEqual(['a', 'b'])
+      expect(container.querySelector('[data-testid="keyed-row"]')?.textContent).toBe(
+        `Alpha ${generation}:${generation - 1}`,
+      )
+
+      await click(container.querySelector('[data-testid="clear"]'))
+      expect(readRowIds(container)).toEqual([])
+      retiredRuns.set(`Alpha ${generation}`, bindingRuns.get(`Alpha ${generation}`)!)
+      retiredRuns.set(`Beta ${generation}`, bindingRuns.get(`Beta ${generation}`)!)
+
+      await click(container.querySelector('[data-testid="tick"]'))
+      retiredRuns.forEach((runs, title) => {
+        expect(bindingRuns.get(title)).toBe(runs)
+      })
+    }
+
+    await click(container.querySelector('[data-testid="create"]'))
+    const liveRuns = bindingRuns.get('Alpha 4')!
+    await click(container.querySelector('[data-testid="tick"]'))
+
+    retiredRuns.forEach((runs, title) => {
+      expect(bindingRuns.get(title)).toBe(runs)
+    })
+    expect(bindingRuns.get('Alpha 4')).toBe(liveRuns + 1)
+    expect(container.querySelector('[data-row-id="a"]')?.textContent).toBe('Alpha 4:4')
+  })
+
   it('updates keyed rows when an external computed selection changes', async () => {
     const Demo: FC = () => {
       const activeId = ref('a')

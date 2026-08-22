@@ -695,20 +695,28 @@ export const scheduleTrackedTextControlRestoreWithin = (
   enqueueMicrotask(() => attemptRestore(attempts))
 }
 
-const syncSelectValueAfterMutation = (parent: any, child?: any) => {
+const syncSelectValueForMutationParent = (parent: any) => {
   if (parent && typeof parent.tagName === 'string') {
     const parentTag = parent.tagName.toUpperCase()
     if (parentTag === 'SELECT') {
       syncPendingSelectValue(parent)
-      return
+      return true
     }
     if (parentTag === 'OPTGROUP') {
       const owner = getSelectOwner(parent)
       if (owner) {
         syncPendingSelectValue(owner)
-        return
       }
+      return true
     }
+  }
+
+  return false
+}
+
+const syncSelectValueAfterMutation = (parent: any, child?: any) => {
+  if (syncSelectValueForMutationParent(parent)) {
+    return
   }
 
   const owner = getSelectOwner(child)
@@ -725,6 +733,33 @@ const freshDomParents = new WeakSet<object>()
 const pendingHydratedAdoptedRemovals = new WeakMap<object, Set<any>>()
 const hydratedNodeEventListeners = new WeakMap<object, Map<string, Set<DOMEventHandler>>>()
 const hydratedEventTransferTargets = new WeakMap<object, Set<any>>()
+
+const canUseFreshDOMMutationPath = (parent: any, ...nodes: any[]) => {
+  if (
+    !parent ||
+    typeof parent !== 'object' ||
+    !freshDomParents.has(parent) ||
+    hydratedAdoptedParents.has(parent) ||
+    parent[RUE_HYDRATED_ADOPTED_NODE] ||
+    parent[RUE_HYDRATED_ADOPTED_TARGET]
+  ) {
+    return false
+  }
+
+  for (const node of nodes) {
+    if (
+      node &&
+      typeof node === 'object' &&
+      (node[RUE_HYDRATED_ADOPTED_NODE] ||
+        node[RUE_HYDRATED_ADOPTED_TARGET] ||
+        hydratedAdoptedParents.has(node))
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
 
 const resolveHydratedAdoptedTarget = <T>(node: T): T => {
   let current: any = node
@@ -1144,6 +1179,12 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 追加子节点：parent.appendChild(child) */
   appendChild(parent: DomNodeLike, child: DomNodeLike) {
+    if (canUseFreshDOMMutationPath(parent, child)) {
+      ;(parent as any).appendChild(child)
+      syncSelectValueForMutationParent(parent)
+      return child as any
+    }
+
     parent = resolveHydratedAdoptedTarget(parent)
     child = resolveHydratedAdoptedTarget(child)
     if (!parent) {
@@ -1171,6 +1212,11 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 移除子节点：parent.removeChild(child) */
   removeChild(parent: DomNodeLike, child: DomNodeLike) {
+    if (canUseFreshDOMMutationPath(parent, child)) {
+      ;(parent as any).removeChild(child)
+      return
+    }
+
     parent = resolveHydratedAdoptedTarget(parent)
     child = resolveHydratedAdoptedTarget(child)
     if (child && hydratedAdoptedRemovalSuppressions.delete(child as object)) {
@@ -1190,6 +1236,12 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 插入子节点：parent.insertBefore(child, ref) */
   insertBefore(parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null) {
+    if (canUseFreshDOMMutationPath(parent, child, ref)) {
+      ;(parent as any).insertBefore(child, ref)
+      syncSelectValueForMutationParent(parent)
+      return
+    }
+
     parent = resolveHydratedAdoptedTarget(parent)
     child = resolveHydratedAdoptedTarget(child)
     ref = ref ? resolveHydratedAdoptedTarget(ref) : ref
@@ -1225,6 +1277,12 @@ export class BrowserDOMAdapter implements DOMAdapter {
   }
   /** 替换子节点：parent.replaceChild(newChild, oldChild) */
   replaceChild(parent: DomNodeLike, newChild: DomNodeLike, oldChild: DomNodeLike) {
+    if (canUseFreshDOMMutationPath(parent, newChild, oldChild)) {
+      ;(parent as any).replaceChild(newChild, oldChild)
+      syncSelectValueForMutationParent(parent)
+      return
+    }
+
     parent = resolveHydratedAdoptedTarget(parent)
     newChild = resolveHydratedAdoptedTarget(newChild)
     oldChild = resolveHydratedAdoptedTarget(oldChild)
@@ -1429,9 +1487,15 @@ export class BrowserDOMAdapter implements DOMAdapter {
 }
 
 const RUE_DOM_ADAPTER_GLOBAL_KEY = '__rue_dom_adapter__'
+const RUE_DOM_BRIDGE_CONSUMERS_GLOBAL_KEY = '__rue_dom_bridge_consumers__'
+
+type DOMBridgeConsumer = object & {
+  setDOMAdapter?: (bridge: GlobalDOMBridge) => void
+}
 
 type RueDOMGlobalRecord = typeof globalThis & {
   [RUE_DOM_ADAPTER_GLOBAL_KEY]?: DOMAdapter
+  [RUE_DOM_BRIDGE_CONSUMERS_GLOBAL_KEY]?: Set<WeakRef<DOMBridgeConsumer>>
 }
 
 const domGlobal = globalThis as RueDOMGlobalRecord
@@ -1480,56 +1544,81 @@ type GlobalDOMBridge = {
   querySelector: (selector: string) => DomElementLike | null
 }
 
-const createGlobalDOMBridge = (): GlobalDOMBridge => ({
-  createElement: (tag: string, parent?: DomElementLike | null) =>
-    getCurrentDOMAdapter().createElement(tag, parent),
-  createTextNode: (data: string) => getCurrentDOMAdapter().createTextNode(data),
-  createDocumentFragment: () => getCurrentDOMAdapter().createDocumentFragment(),
-  isFragment: (node: DomNodeLike) => getCurrentDOMAdapter().isFragment(node),
-  collectFragmentChildren: (node: DomNodeLike) =>
-    getCurrentDOMAdapter().collectFragmentChildren(node),
-  setTextContent: (el: DomNodeLike, val: any) => getCurrentDOMAdapter().settextContent(el, val),
-  appendChild: (parent: DomNodeLike, child: DomNodeLike) =>
-    getCurrentDOMAdapter().appendChild(parent, child),
-  insertBefore: (parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null) =>
-    getCurrentDOMAdapter().insertBefore(parent, child, ref),
-  removeChild: (parent: DomNodeLike, child: DomNodeLike) =>
-    getCurrentDOMAdapter().removeChild(parent, child),
-  contains: (parent: DomNodeLike, child: DomNodeLike) =>
-    getCurrentDOMAdapter().contains(parent, child),
-  setClassName: (el: DomElementLike, value: string) =>
-    getCurrentDOMAdapter().setClassName(el, value),
-  patchStyle: (
-    el: DomElementLike,
-    oldStyle: Record<string, string>,
-    newStyle: Record<string, string>,
-  ) => getCurrentDOMAdapter().patchStyle(el, oldStyle as any, newStyle as any),
-  setInnerHTML: (el: DomElementLike, html: string) => getCurrentDOMAdapter().setInnerHTML(el, html),
-  setValue: (el: DomElementLike, value: any) => getCurrentDOMAdapter().setValue(el, value),
-  setChecked: (el: DomElementLike, checked: boolean) =>
-    getCurrentDOMAdapter().setChecked(el, checked),
-  setDisabled: (el: DomElementLike, disabled: boolean) =>
-    getCurrentDOMAdapter().setDisabled(el, disabled),
-  clearRef: (ref: any) => getCurrentDOMAdapter().clearRef(ref),
-  applyRef: (el: DomElementLike, ref: any) => getCurrentDOMAdapter().applyRef(el, ref),
-  setAttribute: (el: DomElementLike, name: string, value: any) =>
-    getCurrentDOMAdapter().setAttribute(el, name, value),
-  removeAttribute: (el: DomElementLike, name: string) =>
-    getCurrentDOMAdapter().removeAttribute(el, name),
-  getTagName: (el: DomElementLike) => getCurrentDOMAdapter().getTagName(el),
-  addEventListener: (el: DomElementLike, eventName: string, listener: DOMEventHandler) =>
-    getCurrentDOMAdapter().addEventListener(el, eventName, listener),
-  removeEventListener: (el: DomElementLike, eventName: string, listener: DOMEventHandler) =>
-    getCurrentDOMAdapter().removeEventListener(el, eventName, listener),
-  hasValueProperty: (el: DomElementLike) => (el as any).value !== undefined,
-  isSelectMultiple: (el: DomElementLike) =>
-    (getCurrentDOMAdapter().getTagName(el) || '').toUpperCase() === 'SELECT' &&
-    !!(el as any).multiple,
-  querySelector: (selector: string) => getCurrentDOMAdapter().querySelector(selector),
-})
+const getDOMBridgeConsumers = () => (domGlobal[RUE_DOM_BRIDGE_CONSUMERS_GLOBAL_KEY] ??= new Set())
+
+// Wasm caches bridge function references. Keep those functions adapter-specific for the hot path,
+// then rebind each live runtime only when the host adapter actually changes.
+export const registerDOMBridgeConsumer = (consumer: DOMBridgeConsumer) => {
+  const consumers = getDOMBridgeConsumers()
+  for (const consumerRef of consumers) {
+    const registeredConsumer = consumerRef.deref()
+    if (!registeredConsumer) {
+      consumers.delete(consumerRef)
+    } else if (registeredConsumer === consumer) {
+      return
+    }
+  }
+  consumers.add(new WeakRef(consumer))
+}
+
+const syncDOMBridgeConsumers = (bridge: GlobalDOMBridge) => {
+  const consumers = getDOMBridgeConsumers()
+  for (const consumerRef of consumers) {
+    const consumer = consumerRef.deref()
+    if (!consumer) {
+      consumers.delete(consumerRef)
+      continue
+    }
+    consumer.setDOMAdapter?.(bridge)
+  }
+}
+
+const createGlobalDOMBridge = (): GlobalDOMBridge => {
+  const adapter = getCurrentDOMAdapter()
+  return {
+    createElement: (tag: string, parent?: DomElementLike | null) =>
+      adapter.createElement(tag, parent),
+    createTextNode: (data: string) => adapter.createTextNode(data),
+    createDocumentFragment: () => adapter.createDocumentFragment(),
+    isFragment: (node: DomNodeLike) => adapter.isFragment(node),
+    collectFragmentChildren: (node: DomNodeLike) => adapter.collectFragmentChildren(node),
+    setTextContent: (el: DomNodeLike, val: any) => adapter.settextContent(el, val),
+    appendChild: (parent: DomNodeLike, child: DomNodeLike) => adapter.appendChild(parent, child),
+    insertBefore: (parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null) =>
+      adapter.insertBefore(parent, child, ref),
+    removeChild: (parent: DomNodeLike, child: DomNodeLike) => adapter.removeChild(parent, child),
+    contains: (parent: DomNodeLike, child: DomNodeLike) => adapter.contains(parent, child),
+    setClassName: (el: DomElementLike, value: string) => adapter.setClassName(el, value),
+    patchStyle: (
+      el: DomElementLike,
+      oldStyle: Record<string, string>,
+      newStyle: Record<string, string>,
+    ) => adapter.patchStyle(el, oldStyle as any, newStyle as any),
+    setInnerHTML: (el: DomElementLike, html: string) => adapter.setInnerHTML(el, html),
+    setValue: (el: DomElementLike, value: any) => adapter.setValue(el, value),
+    setChecked: (el: DomElementLike, checked: boolean) => adapter.setChecked(el, checked),
+    setDisabled: (el: DomElementLike, disabled: boolean) => adapter.setDisabled(el, disabled),
+    clearRef: (ref: any) => adapter.clearRef(ref),
+    applyRef: (el: DomElementLike, ref: any) => adapter.applyRef(el, ref),
+    setAttribute: (el: DomElementLike, name: string, value: any) =>
+      adapter.setAttribute(el, name, value),
+    removeAttribute: (el: DomElementLike, name: string) => adapter.removeAttribute(el, name),
+    getTagName: (el: DomElementLike) => adapter.getTagName(el),
+    addEventListener: (el: DomElementLike, eventName: string, listener: DOMEventHandler) =>
+      adapter.addEventListener(el, eventName, listener),
+    removeEventListener: (el: DomElementLike, eventName: string, listener: DOMEventHandler) =>
+      adapter.removeEventListener(el, eventName, listener),
+    hasValueProperty: (el: DomElementLike) => (el as any).value !== undefined,
+    isSelectMultiple: (el: DomElementLike) =>
+      (adapter.getTagName(el) || '').toUpperCase() === 'SELECT' && !!(el as any).multiple,
+    querySelector: (selector: string) => adapter.querySelector(selector),
+  }
+}
 
 const syncGlobalDOMBridge = () => {
-  ;(globalThis as any).__rue_dom = createGlobalDOMBridge()
+  const bridge = createGlobalDOMBridge()
+  ;(globalThis as any).__rue_dom = bridge
+  return bridge
 }
 
 /** 设置当前 DOM 适配器
@@ -1539,7 +1628,7 @@ const syncGlobalDOMBridge = () => {
 export const setDOMAdapter = (adapter: DOMAdapter) => {
   setCurrentDOMAdapter(adapter)
   // 在全局注入轻量代理，便于调试与非模块环境访问
-  syncGlobalDOMBridge()
+  syncDOMBridgeConsumers(syncGlobalDOMBridge())
 }
 /** 获取当前 DOM 适配器
  * @returns 当前的 DOMAdapter 实例

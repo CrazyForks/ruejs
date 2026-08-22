@@ -311,7 +311,12 @@ export default HelloWorld;
     assert!(normalized.contains("_$vaporKeyedList"));
     assert!(normalized.contains("directRoot: true"));
     assert!(normalized.contains("_$setValue(_el1, name)"));
-    assert!(normalized.contains("_$settextContent(_el1, labels[name]"));
+    assert!(
+        normalized.contains(
+            "const _$rowBindingNext0 = labels[name] ? `${labels[name]} (${name})` : name"
+        )
+    );
+    assert!(normalized.contains("_$settextContent(_el1, _$rowBindingNext0)"));
     assert!(normalized.contains("_$insertBefore(parent, _root, start)"));
     assert!(normalized.contains("_$createComponent(ThemePicker"));
 }
