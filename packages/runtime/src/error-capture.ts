@@ -35,6 +35,10 @@ type ErrorCapturedHookSlot = {
   handler?: ErrorCapturedHook
 }
 
+type ErrorCaptureRuntimeBridge = {
+  activateEffectOwnerTracking?(): void
+}
+
 /** 已经走过 errorCaptured 冒泡的 Error 对象，用于避免全局桥接重复派发。 */
 const dispatchedErrors = new WeakSet<object>()
 
@@ -130,6 +134,13 @@ export const onErrorCaptured = (fn: ErrorCapturedHook) => {
     slot.registered.forEach(handlers => {
       handlers.add(slot.handler!)
     })
+    if (slot.registered.length > 0) {
+      ;(
+        globalThis as typeof globalThis & {
+          __rue_runtime_vapor_shared_bridge?: ErrorCaptureRuntimeBridge
+        }
+      ).__rue_runtime_vapor_shared_bridge?.activateEffectOwnerTracking?.()
+    }
   }
 
   return () => {

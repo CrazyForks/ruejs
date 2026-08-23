@@ -9,7 +9,6 @@ const RUE_RENDER_TRIGGERED_HOOKS_KEY = '__rue_render_triggered_hooks'
 const RUE_CONTEXT_OWNER_PARENT_KEY = '__rue_context_owner_parent__'
 const RUE_REF_FLAG = '__rue_ref__'
 const RUE_SIGNAL_RENDER_TRACKING_PATCHED = Symbol.for('rue.signal.renderTrackingPatched')
-const RUE_SIGNAL_WRAPPER_REGISTRY_KEY = Symbol.for('rue.signal.wrapperRegistry')
 const RUE_SIGNAL_ID_KEY = '__rue_signal_id__'
 
 const effectRenderOwnerById = new Map()
@@ -243,79 +242,44 @@ export const __rueDisposeEffectScope = id => {
 const isObjectLike = value =>
   (typeof value === 'object' || typeof value === 'function') && value != null
 
-const signalWrapperRegistry = (() => {
-  const existing = globalThis[RUE_SIGNAL_WRAPPER_REGISTRY_KEY]
-  if (existing instanceof Map) {
-    return existing
-  }
-  const registry = new Map()
-  Object.defineProperty(globalThis, RUE_SIGNAL_WRAPPER_REGISTRY_KEY, {
-    value: registry,
-    enumerable: false,
-    configurable: true,
-  })
-  return registry
-})()
+const signalWrapperRegistry = new Map()
+const hasWeakRef = typeof WeakRef === 'function'
 
-const toSignalWrapperRef = signal => (typeof WeakRef === 'function' ? new WeakRef(signal) : signal)
-
-const resolveSignalWrapperRef = ref =>
-  typeof WeakRef === 'function' && ref instanceof WeakRef ? ref.deref() : ref
+const resolveSignalWrapperRef = ref => ref?.deref?.() ?? ref
 
 const rememberSignalWrapper = signal => {
-  if (!isObjectLike(signal)) {
-    return
+  const id = signal[RUE_SIGNAL_ID_KEY]
+  if (Number.isInteger(id) && resolveSignalWrapperRef(signalWrapperRegistry.get(id)) !== signal) {
+    signalWrapperRegistry.set(id, hasWeakRef ? new WeakRef(signal) : signal)
   }
+  return signal
+}
+
+/** 创建 SignalHandle 时一次性登记 canonical wrapper，避免依赖读取 patch。 */
+export const createSignal = (...args) =>
+  rememberSignalWrapper(reactiveRuntime.createSignal(...args))
+
+/** signal hook 同样在返回句柄时登记 canonical wrapper。 */
+export const signal = (...args) => rememberSignalWrapper(reactiveRuntime.signal(...args))
+
+const resolveCanonicalSignalTarget = target => {
   try {
-    const id = Reflect.get(signal, RUE_SIGNAL_ID_KEY)
-    if (Number.isInteger(id)) {
-      if (resolveSignalWrapperRef(signalWrapperRegistry.get(id)) !== signal) {
-        signalWrapperRegistry.set(id, toSignalWrapperRef(signal))
-      }
+    const signalId = target[RUE_SIGNAL_ID_KEY]
+    const canonicalTarget = resolveSignalWrapperRef(signalWrapperRegistry.get(signalId))
+    if (!canonicalTarget) {
+      signalWrapperRegistry.delete(signalId)
     }
+    return canonicalTarget
   } catch {}
 }
 
-const resolveCanonicalSignalTarget = target => {
-  if (!isObjectLike(target)) {
-    return undefined
-  }
-
-  let signalId
+export const normalizeRenderTriggeredEvent = event => {
   try {
-    signalId = Reflect.get(target, RUE_SIGNAL_ID_KEY)
-  } catch {
-    signalId = undefined
-  }
-
-  if (!Number.isInteger(signalId)) {
-    return undefined
-  }
-
-  const canonicalTarget = resolveSignalWrapperRef(signalWrapperRegistry.get(signalId))
-  if (!canonicalTarget) {
-    signalWrapperRegistry.delete(signalId)
-    return undefined
-  }
-
-  return canonicalTarget
-}
-
-const normalizeRenderTriggeredEvent = event => {
-  if (!isObjectLike(event)) {
-    return event
-  }
-
-  const canonicalTarget = resolveCanonicalSignalTarget(Reflect.get(event, 'target'))
-  if (!canonicalTarget) {
-    return event
-  }
-  if (Reflect.get(event, 'target') === canonicalTarget) {
-    return event
-  }
-
-  try {
-    Reflect.set(event, 'target', canonicalTarget)
+    const target = event.target
+    const canonicalTarget = resolveCanonicalSignalTarget(target)
+    if (canonicalTarget && target !== canonicalTarget) {
+      event.target = canonicalTarget
+    }
   } catch {}
   return event
 }
@@ -629,7 +593,6 @@ const patchSignalRenderTracking = runtime => {
   })
 }
 
-patchSignalRenderTracking(reactiveRuntime)
 installRenderTriggeredBridge()
 
 /** 注册当前组件的 renderTracked 调试钩子，返回取消注册函数。 */
@@ -642,6 +605,8 @@ export const onRenderTracked = callback => {
     return undefined
   }
   hooks.push(callback)
+  globalThis.__rue_runtime_vapor_shared_bridge?.activateEffectOwnerTracking?.()
+  patchSignalRenderTracking(reactiveRuntime)
   return () => {
     const index = hooks.indexOf(callback)
     if (index >= 0) {
@@ -819,6 +784,7 @@ const runtimeWithShallowRef = {
   ...reactiveRuntime,
   __rueCurrentEffectId,
   computed,
+  createSignal,
   createComputed,
   createReactive,
   effectScope,
@@ -835,6 +801,7 @@ const runtimeWithShallowRef = {
   readonly,
   shallowRef,
   shallowReadonly,
+  signal,
   toRef,
   toRefs,
   triggerRef,

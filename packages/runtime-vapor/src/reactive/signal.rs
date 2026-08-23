@@ -30,7 +30,8 @@ use wasm_bindgen::prelude::*;
 
 use crate::reactive::core::{
     CURRENT_EFFECT, Signal, create_render_triggered_event, emit_render_triggered_for_effect,
-    schedule_effect_run, sync_effect_render_debug_owner,
+    is_effect_owner_tracking_active, is_render_triggered_debug_active, schedule_effect_run,
+    sync_effect_render_debug_owner,
 };
 use crate::reactive::graph::{
     computed_node_needs_update, create_dependency_node, dependency_subscriber_count,
@@ -155,8 +156,10 @@ impl SignalHandle {
             return;
         }
 
+        let render_triggered_active = is_render_triggered_debug_active();
         let mut signal = self.inner.borrow_mut();
-        let old_root = signal.value.clone();
+        let old_root =
+            if render_triggered_active { signal.value.clone() } else { JsValue::UNDEFINED };
         let changed = if let Some(eq) = &signal.equals {
             let res = eq.call2(&JsValue::NULL, &signal.value, &v).unwrap_or(JsValue::FALSE);
             !res.as_bool().unwrap_or(false)
@@ -186,44 +189,44 @@ impl SignalHandle {
         }
 
         let changed_path = changed_path.filter(|path| path.length() > 0);
-        // 复制变更路径，后续构造 renderTriggered 事件时还需要读取 key/path。
-        let changed_path_snapshot = changed_path.cloned();
         let to_run = collect_affected_subscribers(&mut signal, changed_path);
         drop(signal);
 
         for id in to_run {
-            // renderTriggered 事件尽量对齐 Vue：嵌套路径更新时 target 指向父对象，key 指向末段。
-            let (target, key, old_value, new_value) = match changed_path_snapshot.as_ref() {
-                Some(path) if path.length() > 0 => {
-                    let parent_path = Array::new();
-                    for index in 0..path.length().saturating_sub(1) {
-                        parent_path.push(&path.get(index));
+            if render_triggered_active {
+                // renderTriggered 事件尽量对齐 Vue：嵌套路径更新时 target 指向父对象，key 指向末段。
+                let (target, key, old_value, new_value) = match changed_path {
+                    Some(path) if path.length() > 0 => {
+                        let parent_path = Array::new();
+                        for index in 0..path.length().saturating_sub(1) {
+                            parent_path.push(&path.get(index));
+                        }
+                        (
+                            get_at_path(&v, &parent_path),
+                            path.get(path.length() - 1),
+                            get_at_path(&old_root, path),
+                            get_at_path(&v, path),
+                        )
                     }
-                    (
-                        get_at_path(&v, &parent_path),
-                        path.get(path.length() - 1),
-                        get_at_path(&old_root, path),
-                        get_at_path(&v, path),
-                    )
+                    _ => (
+                        JsValue::from(self.clone()),
+                        JsValue::from_str("value"),
+                        old_root.clone(),
+                        v.clone(),
+                    ),
+                };
+                let event = create_render_triggered_event(
+                    id,
+                    target,
+                    "set",
+                    key,
+                    old_value,
+                    new_value,
+                    changed_path,
+                );
+                if !emit_render_triggered_for_effect(id, &event) {
+                    emit_shared_render_triggered_for_effect(id, &event);
                 }
-                _ => (
-                    JsValue::from(self.clone()),
-                    JsValue::from_str("value"),
-                    old_root.clone(),
-                    v.clone(),
-                ),
-            };
-            let event = create_render_triggered_event(
-                id,
-                target,
-                "set",
-                key,
-                old_value,
-                new_value,
-                changed_path_snapshot.as_ref(),
-            );
-            if !emit_render_triggered_for_effect(id, &event) {
-                emit_shared_render_triggered_for_effect(id, &event);
             }
             schedule_effect_run(id);
         }
@@ -512,7 +515,9 @@ impl SignalHandle {
                 };
                 if let Some(graph_node) = graph_node {
                     track_dependency(graph_node);
-                    sync_effect_render_debug_owner(id);
+                    if is_effect_owner_tracking_active() {
+                        sync_effect_render_debug_owner(id);
+                    }
                 }
             }
         });
@@ -639,7 +644,9 @@ impl SignalHandle {
                     *inner.path_nodes.entry(key).or_insert_with(create_dependency_node)
                 };
                 track_dependency(dependency);
-                sync_effect_render_debug_owner(id);
+                if is_effect_owner_tracking_active() {
+                    sync_effect_render_debug_owner(id);
+                }
             }
         });
         // 读取当前根，并按路径逐级取值

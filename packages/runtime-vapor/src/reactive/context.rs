@@ -23,7 +23,7 @@ use crate::DomAdapter;
 #[cfg(feature = "dev")]
 use crate::log::{log, want_log};
 #[cfg(feature = "runtime")]
-use crate::reactive::core::register_render_triggered_hook;
+use crate::reactive::core::{activate_render_triggered_debug, register_render_triggered_hook};
 use crate::reactive::core::{
     create_detached_effect_scope, dispatch_error_captured, dispose_effect_scope, pop_effect_scope,
     push_effect_scope, suppress_render_debug_tracking,
@@ -200,7 +200,9 @@ pub(crate) fn register_current_instance_render_triggered_hook(hook: JsValue) {
     let Some(inst) = CURRENT_INSTANCE.with(|c| c.borrow().clone()) else {
         return;
     };
-    register_render_triggered_hook(&inst, hook);
+    if register_render_triggered_hook(&inst, hook) {
+        activate_render_triggered_debug();
+    }
 }
 
 #[cfg(feature = "runtime")]

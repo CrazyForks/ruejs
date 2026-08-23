@@ -100,9 +100,8 @@ thread_local! {
     pub(crate) static EFFECT_SCOPES_CLEANUPS: RefCell<HashMap<usize, Vec<Function>>> = RefCell::new(HashMap::new());
     // 当前组件 render owner 栈，create_effect 会记录栈顶以支持 onRenderTriggered。
     pub(crate) static RENDER_DEBUG_OWNER_STACK: RefCell<Vec<JsValue>> = RefCell::new(Vec::new());
-    // Hook 初始化等内部读取会临时增加抑制深度，避免被调试钩子误认为 render 依赖。
-    pub(crate) static RENDER_DEBUG_SUPPRESS_DEPTH: RefCell<usize> = RefCell::new(0);
-
+    // bit 0: renderTriggered 激活；bit 1: effect owner 归属激活；bit 2 起记录抑制深度。
+    static RENDER_DEBUG_STATE: Cell<usize> = Cell::new(0);
 }
 
 /// 副作用实体
@@ -161,14 +160,14 @@ pub fn end_render_debug_owner_wasm() {
 /// 临时关闭 render 调试依赖归属，避免 Hook 初始化读写污染 onRenderTracked/onRenderTriggered。
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
 pub(crate) fn suppress_render_debug_tracking<T>(runner: impl FnOnce() -> T) -> T {
-    RENDER_DEBUG_SUPPRESS_DEPTH.with(|depth| {
-        *depth.borrow_mut() += 1;
+    RENDER_DEBUG_STATE.with(|state| {
+        state.set(state.get() + 4);
     });
     let out = runner();
-    RENDER_DEBUG_SUPPRESS_DEPTH.with(|depth| {
-        let mut value = depth.borrow_mut();
-        if *value > 0 {
-            *value -= 1;
+    RENDER_DEBUG_STATE.with(|state| {
+        let value = state.get();
+        if value >= 4 {
+            state.set(value - 4);
         }
     });
     out
@@ -176,7 +175,7 @@ pub(crate) fn suppress_render_debug_tracking<T>(runner: impl FnOnce() -> T) -> T
 
 /// 返回当前可绑定的 render 调试 owner；抑制期间返回 None。
 pub(crate) fn current_render_debug_owner() -> Option<JsValue> {
-    let suppressed = RENDER_DEBUG_SUPPRESS_DEPTH.with(|depth| *depth.borrow() > 0);
+    let suppressed = RENDER_DEBUG_STATE.with(|state| state.get() >= 4);
     if suppressed {
         return None;
     }
@@ -203,11 +202,35 @@ pub(crate) fn sync_effect_render_debug_owner(effect_id: usize) {
     });
 }
 
+/// 当前 JS realm 是否已成功登记过 onRenderTriggered。
+#[inline(always)]
+pub(crate) fn is_render_triggered_debug_active() -> bool {
+    RENDER_DEBUG_STATE.with(|state| state.get() & 1 != 0)
+}
+
+/// 单向激活 renderTriggered 调试链路；激活后不再反向关闭。
+#[inline(always)]
+pub(crate) fn activate_render_triggered_debug() {
+    RENDER_DEBUG_STATE.with(|state| state.set(state.get() | 1));
+}
+
+/// 任一 render 调试或错误捕获能力启用时，effect 才需要记录组件 owner。
+#[inline(always)]
+pub(crate) fn is_effect_owner_tracking_active() -> bool {
+    RENDER_DEBUG_STATE.with(|state| state.get() & 3 != 0)
+}
+
+/// errorCaptured/onRenderTracked 首次成功注册后单向激活 effect owner 记录。
+#[wasm_bindgen(js_name = __rueActivateEffectOwnerTracking, skip_typescript)]
+pub fn activate_effect_owner_tracking() {
+    RENDER_DEBUG_STATE.with(|state| state.set(state.get() | 2));
+}
+
 /// 在组件 owner 上登记 renderTriggered 回调列表。
 #[cfg(feature = "runtime")]
-pub(crate) fn register_render_triggered_hook(owner: &JsValue, hook: JsValue) {
+pub(crate) fn register_render_triggered_hook(owner: &JsValue, hook: JsValue) -> bool {
     if !owner.is_object() || !hook.is_function() {
-        return;
+        return false;
     }
 
     let hooks = Reflect::get(owner, &JsValue::from_str(RENDER_TRIGGERED_HOOKS_KEY))
@@ -216,10 +239,15 @@ pub(crate) fn register_render_triggered_hook(owner: &JsValue, hook: JsValue) {
         Array::from(&hooks)
     } else {
         let next = Array::new();
-        let _ = Reflect::set(owner, &JsValue::from_str(RENDER_TRIGGERED_HOOKS_KEY), &next);
+        if Reflect::set(owner, &JsValue::from_str(RENDER_TRIGGERED_HOOKS_KEY), &next).ok()
+            != Some(true)
+        {
+            return false;
+        }
         next
     };
     hooks.push(&hook);
+    true
 }
 
 /// 根据 effect 创建时记录的 owner 派发 renderTriggered 调试事件。
@@ -1251,6 +1279,28 @@ mod tests {
     use super::*;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
+
+    #[wasm_bindgen_test]
+    fn render_triggered_debug_gate_defaults_off_and_activation_is_idempotent() {
+        RENDER_DEBUG_STATE.with(|state| state.set(state.get() & !1));
+
+        assert!(!is_render_triggered_debug_active());
+        activate_render_triggered_debug();
+        assert!(is_render_triggered_debug_active());
+        activate_render_triggered_debug();
+        assert!(is_render_triggered_debug_active());
+    }
+
+    #[wasm_bindgen_test]
+    fn effect_owner_tracking_activation_is_idempotent() {
+        RENDER_DEBUG_STATE.with(|state| state.set(state.get() & !3));
+
+        assert!(!is_effect_owner_tracking_active());
+        activate_effect_owner_tracking();
+        assert!(is_effect_owner_tracking_active());
+        activate_effect_owner_tracking();
+        assert!(is_effect_owner_tracking_active());
+    }
 
     #[wasm_bindgen_test]
     fn chain_promise_callback_falls_back_when_then_is_missing_or_throws() {

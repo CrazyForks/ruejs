@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   nextTick,
+  onRenderTracked,
   onRenderTriggered,
   ref,
   render,
@@ -92,5 +93,58 @@ describe('onRenderTriggered', () => {
       oldValue: 0,
       newValue: 1,
     })
+  })
+
+  it('keeps tracked and triggered events coherent for a nested signal path', async () => {
+    setReactiveScheduling('sync')
+    const state = signal({ profile: { name: 'A' } })
+    const trackedEvents: any[] = []
+    const triggeredEvents: any[] = []
+
+    const Demo: FC = () => {
+      onRenderTracked(event => {
+        trackedEvents.push(event)
+      })
+      onRenderTriggered(event => {
+        triggeredEvents.push(event)
+      })
+
+      return (
+        <button type="button" onClick={() => state.setPath(['profile', 'name'], 'B')}>
+          {state.getPath(['profile', 'name'])}
+        </button>
+      )
+    }
+
+    const container = document.createElement('div')
+    render(<Demo />, container)
+
+    const button = container.querySelector('button') as HTMLButtonElement
+    expect(button.textContent).toBe('A')
+    expect(
+      trackedEvents.some(
+        event =>
+          event.target === state &&
+          event.type === 'get' &&
+          Array.isArray(event.key) &&
+          event.key.join('.') === 'profile.name',
+      ),
+    ).toBe(true)
+
+    trackedEvents.length = 0
+    button.click()
+    await nextTick()
+
+    expect(button.textContent).toBe('B')
+    expect(trackedEvents.some(event => event.target === state && event.type === 'get')).toBe(true)
+    expect(triggeredEvents).toContainEqual(
+      expect.objectContaining({
+        type: 'set',
+        key: 'name',
+        oldValue: 'A',
+        newValue: 'B',
+        path: ['profile', 'name'],
+      }),
+    )
   })
 })

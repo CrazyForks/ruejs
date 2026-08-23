@@ -7,11 +7,13 @@ import {
   computed,
   createComputed,
   createReactive,
+  createSignal,
   effectScope,
   getCurrentScope,
   isRef,
   isReadonly,
   nextTick,
+  normalizeRenderTriggeredEvent,
   onRenderTracked,
   onWatcherCleanup,
   propsReactive,
@@ -19,6 +21,7 @@ import {
   readonly,
   shallowRef,
   shallowReadonly,
+  signal,
   toRef,
   toRefs,
   triggerRef,
@@ -29,7 +32,7 @@ import {
 } from './reactive.js'
 
 installSharedBridge(runtimeVapor)
-const createRue = wrapCreateRue(runtimeVapor.createRue)
+const createRue = wrapCreateRue(runtimeVapor.createRue, normalizeRenderTriggeredEvent)
 
 const {
   EffectHandle,
@@ -40,7 +43,6 @@ const {
   createRef,
   createResource,
   createCustomRef,
-  createSignal,
   customRef,
   getCurrentInstance,
   isProxy,
@@ -51,7 +53,6 @@ const {
   setCurrentInstance,
   setReactiveScheduling,
   shallowReactive,
-  signal,
   toRaw,
   toValue,
   unref,
@@ -78,6 +79,7 @@ export default {
   computed,
   createComputed,
   createReactive,
+  createSignal,
   createRue,
   effectScope,
   getCurrentScope,
@@ -90,6 +92,7 @@ export default {
   readonly,
   shallowRef,
   shallowReadonly,
+  signal,
   toRef,
   toRefs,
   triggerRef,

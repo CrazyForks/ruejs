@@ -2,8 +2,6 @@ const RUE_JS_ERROR_BRIDGE_KEY = '__rue_js_error_bridge_installed'
 const RUE_JS_ERROR_HANDLERS_KEY = '__rue_js_error_handlers'
 const RUE_RUNTIME_ENTRY_WRAP_KEY = '__rue_runtime_vapor_entry_wrapped__'
 const RUE_WASM_TRAP_ERROR_NAME = 'RueWasmTrapError'
-const RUE_SIGNAL_WRAPPER_REGISTRY_KEY = Symbol.for('rue.signal.wrapperRegistry')
-const RUE_SIGNAL_ID_KEY = '__rue_signal_id__'
 const RUE_RENDER_TRIGGERED_HOOKS_KEY = '__rue_render_triggered_hooks'
 const RUE_PENDING_ENTRY_ERROR_KEY = '__rue_pending_entry_error__'
 const RUE_ACTIVE_ENTRY_DEPTH_KEY = '__rue_active_entry_depth__'
@@ -11,101 +9,37 @@ const RUE_ACTIVE_ENTRY_DEPTH_KEY = '__rue_active_entry_depth__'
 const canTrackRuntime = runtime =>
   (typeof runtime === 'object' || typeof runtime === 'function') && runtime != null
 
-const signalWrapperRegistry = (() => {
-  const existing = globalThis[RUE_SIGNAL_WRAPPER_REGISTRY_KEY]
-  if (existing instanceof Map) {
-    return existing
-  }
-  const registry = new Map()
-  Object.defineProperty(globalThis, RUE_SIGNAL_WRAPPER_REGISTRY_KEY, {
-    value: registry,
-    enumerable: false,
-    configurable: true,
-  })
-  return registry
-})()
-
 const getErrorShape = error => (error && typeof error === 'object' ? error : null)
-
-const resolveSignalWrapperRef = ref =>
-  typeof WeakRef === 'function' && ref instanceof WeakRef ? ref.deref() : ref
-
-const normalizeRenderTriggeredEvent = event => {
-  if (!event || typeof event !== 'object') {
-    return event
-  }
-
-  let signalId
-  try {
-    signalId = Reflect.get(Reflect.get(event, 'target'), RUE_SIGNAL_ID_KEY)
-  } catch {
-    signalId = undefined
-  }
-
-  if (!Number.isInteger(signalId)) {
-    return event
-  }
-
-  const canonicalTarget = resolveSignalWrapperRef(signalWrapperRegistry.get(signalId))
-  if (!canonicalTarget) {
-    signalWrapperRegistry.delete(signalId)
-    return event
-  }
-  if (Reflect.get(event, 'target') === canonicalTarget) {
-    return event
-  }
-
-  try {
-    Reflect.set(event, 'target', canonicalTarget)
-  } catch {}
-  return event
-}
 
 const isObjectLike = value =>
   (typeof value === 'object' || typeof value === 'function') && value != null
 
-const currentSharedRenderOwner = () => {
-  const bridge = globalThis.__rue_runtime_vapor_shared_bridge
-  if (!bridge || typeof bridge.getCurrentRenderOwner !== 'function') {
-    return undefined
-  }
-  return bridge.getCurrentRenderOwner()
-}
-
-const ensureRenderTriggeredHooks = owner => {
-  if (!isObjectLike(owner)) {
-    return undefined
-  }
-  const existing = owner[RUE_RENDER_TRIGGERED_HOOKS_KEY]
-  if (Array.isArray(existing)) {
-    return existing
-  }
-  const hooks = []
-  Object.defineProperty(owner, RUE_RENDER_TRIGGERED_HOOKS_KEY, {
-    value: hooks,
-    enumerable: false,
-    configurable: true,
-  })
-  return hooks
-}
+const currentSharedRenderOwner = () =>
+  globalThis.__rue_runtime_vapor_shared_bridge?.getCurrentRenderOwner?.()
 
 const registerSharedRenderTriggeredHook = callback => {
   const owner = currentSharedRenderOwner()
-  const hooks = ensureRenderTriggeredHooks(owner)
-  if (!hooks) {
+  if (!isObjectLike(owner)) {
     return undefined
+  }
+  let hooks = owner[RUE_RENDER_TRIGGERED_HOOKS_KEY]
+  if (!Array.isArray(hooks)) {
+    hooks = []
+    Object.defineProperty(owner, RUE_RENDER_TRIGGERED_HOOKS_KEY, {
+      value: hooks,
+      enumerable: false,
+      configurable: true,
+    })
   }
   hooks.push(callback)
   const bridge = globalThis.__rue_runtime_vapor_shared_bridge
-  if (bridge && isObjectLike(owner)) {
-    bridge.__rue_render_triggered_owner = owner
-  }
+  bridge.__rue_render_triggered_owner = owner
   return () => {
     const index = hooks.indexOf(callback)
     if (index >= 0) {
       hooks.splice(index, 1)
     }
-    if (bridge?.__rue_render_triggered_owner === owner && hooks.length === 0) {
+    if (bridge?.__rue_render_triggered_owner === owner && !hooks.length) {
       bridge.__rue_render_triggered_owner = undefined
     }
   }
@@ -364,7 +298,7 @@ const wrapRuntimeEntryMethod = (runtime, methodName) => {
   }
 }
 
-const wrapRenderTriggeredHook = runtime => {
+const wrapRenderTriggeredHook = (runtime, normalizeRenderTriggeredEvent) => {
   const original = runtime.onRenderTriggered
   if (typeof original !== 'function') {
     return
@@ -379,6 +313,7 @@ const wrapRenderTriggeredHook = runtime => {
     if (!isObjectLike(currentInstance)) {
       const dispose = registerSharedRenderTriggeredHook(normalizedCallback)
       if (dispose) {
+        runtime.__rtd?.()
         return dispose
       }
     }
@@ -386,7 +321,7 @@ const wrapRenderTriggeredHook = runtime => {
   }
 }
 
-export const wrapCreateRue = rawCreateRue => adapter => {
+export const wrapCreateRue = (rawCreateRue, normalizeRenderTriggeredEvent) => adapter => {
   const runtime = installRuntimeErrorBridge(rawCreateRue(adapter))
   if (!canTrackRuntime(runtime) || runtime[RUE_RUNTIME_ENTRY_WRAP_KEY]) {
     return runtime
@@ -395,7 +330,7 @@ export const wrapCreateRue = rawCreateRue => adapter => {
   for (const methodName of ['mount', 'render', 'renderAnchor', 'renderBetween', 'renderStatic']) {
     wrapRuntimeEntryMethod(runtime, methodName)
   }
-  wrapRenderTriggeredHook(runtime)
+  wrapRenderTriggeredHook(runtime, normalizeRenderTriggeredEvent)
 
   runtime[RUE_RUNTIME_ENTRY_WRAP_KEY] = true
   return runtime

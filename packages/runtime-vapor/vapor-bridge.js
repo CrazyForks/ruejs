@@ -166,6 +166,9 @@ export const installSharedBridge = sharedRuntime => {
     getCurrentRenderOwner() {
       return renderOwnerStack.length > 0 ? renderOwnerStack[renderOwnerStack.length - 1] : undefined
     },
+    activateEffectOwnerTracking() {
+      sharedRuntime.__rueActivateEffectOwnerTracking?.()
+    },
     propsReactive(initial) {
       return sharedRuntime.propsReactive(initial, true)
     },

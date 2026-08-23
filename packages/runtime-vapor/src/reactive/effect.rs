@@ -35,7 +35,7 @@ use wasm_bindgen::prelude::*;
 use crate::reactive::core::{
     CURRENT_EFFECT, CURRENT_UNTRACKED_HANDLER_EFFECT, EFFECTS, Effect, NEXT_EFFECT_ID, Signal,
     current_effect_scope, current_render_debug_owner, dispatch_error_captured, dispose_effect,
-    is_watcher_effect, register_effect_in_scope, run_effect,
+    is_effect_owner_tracking_active, is_watcher_effect, register_effect_in_scope, run_effect,
 };
 use crate::reactive::graph::{
     NodeId, bind_computed_node, create_effect_node, remove_reactive_node,
@@ -147,7 +147,8 @@ pub fn create_effect(cb: Function, options: Option<JsValue>) -> EffectHandle {
     //   都会自动归属到该 Vapor 子树。
     // - 当该 Vapor 子树卸载（before_unmount）时，会 dispose 掉 scope，从而统一清理这些 effect。
     let scope_id = current_effect_scope();
-    let render_debug_owner = current_render_debug_owner();
+    let render_debug_owner =
+        if is_effect_owner_tracking_active() { current_render_debug_owner() } else { None };
     let graph_node = create_effect_node(id);
     let mut scheduler: Option<Function> = None;
     let mut lazy = false;

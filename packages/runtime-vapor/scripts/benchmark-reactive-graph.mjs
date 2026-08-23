@@ -69,6 +69,37 @@ const runScenario = scenario => {
   return result
 }
 
+const createNoRenderTrackedHooks = () => {
+  const iterations = 100_000
+  const source = createSignal(0)
+  let getters = 0
+  let effects = 0
+  let sequence = 0
+  const handle = createEffect(() => {
+    effects += 1
+    getters += 1
+    source.get()
+  })
+  const update = () => source.set(++sequence)
+  return {
+    name: 'noRenderTrackedHooks',
+    topology: { width: 1, depth: 0, renderTrackedHook: false },
+    iterations,
+    warmup: () => {
+      for (let index = 0; index < 1_000; index += 1) update()
+    },
+    run: () => {
+      for (let index = 0; index < iterations; index += 1) update()
+    },
+    resetCounts: () => {
+      getters = 0
+      effects = 0
+    },
+    counts: () => ({ getters, effects }),
+    dispose: () => handle.dispose(),
+  }
+}
+
 const createDeepChain = () => {
   // Rue's current JS/Wasm computed callback stack overflows above roughly 200 layers.
   // Keep the before/after timing sample valid; the optimized engine has separate 1000-node tests.
@@ -288,6 +319,7 @@ const options = parseArgs(process.argv.slice(2))
 setReactiveScheduling('sync')
 
 const scenarios = {
+  noRenderTrackedHooks: runScenario(createNoRenderTrackedHooks()),
   deepChain: runScenario(createDeepChain()),
   wideGraph: runScenario(createWideGraph()),
   diamondGraph: runScenario(createDiamondGraph()),
