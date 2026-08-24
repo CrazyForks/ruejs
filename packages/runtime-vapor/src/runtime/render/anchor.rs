@@ -5,7 +5,9 @@ anchor_map 以 anchor 节点作为稳定定位点，记录其前方当前挂载�
 再次渲染同一 anchor 时可以走 patch；输入类型/key 变化时则替换整棵子树。
 */
 use super::super::Rue;
-use super::super::types::{AnchorMountState, MountInput, MountedState, MountedSubtreeState};
+use super::super::types::{
+    AnchorMountState, MountInput, MountedState, MountedSubtreeState, OwnedMountToken,
+};
 #[cfg(feature = "dev")]
 use crate::log::{log, want_log};
 use crate::reactive::core::batch_scope;
@@ -57,12 +59,12 @@ where
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn render_existing_anchor_entry(
         &mut self,
-        idx: usize,
         taken: Option<MountedState<A>>,
         input: &MountInput<A>,
         parent: &mut A::Element,
         anchor: &A::Element,
-    ) where
+    ) -> Option<MountedState<A>>
+    where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         match taken {
@@ -85,23 +87,81 @@ where
                 {
                     let _ = Reflect::delete_property(&global, &source_key);
                 }
-                let _ = self.render_anchor_mount(input, parent, anchor).map(|mounted| {
+                self.render_anchor_mount(input, parent, anchor).map(|mounted| {
                     self.call_hooks("updated");
-                    self.store_anchor_mount_at(idx, mounted);
-                });
+                    mounted
+                })
             }
             Some(old_mount) => {
                 let mut parent_clone = parent.clone();
-                let mounted = self.patch_root_mounted_state(old_mount, input, &mut parent_clone);
-                self.store_anchor_mount_at(idx, mounted);
+                Some(self.patch_root_mounted_state(old_mount, input, &mut parent_clone))
             }
-            None => {
-                let mounted = self.render_anchor_mount(input, parent, anchor);
-                if let Some(mounted) = mounted {
-                    self.store_anchor_mount_at(idx, mounted);
-                }
-            }
+            None => self.render_anchor_mount(input, parent, anchor),
         }
+    }
+
+    fn find_owned_anchor_index(&self, token: OwnedMountToken, anchor: &A::Element) -> Option<usize>
+    where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        let anchor_js: JsValue = anchor.clone().into();
+        self.owned_mount_slot(token)?.anchors.iter().position(|entry| {
+            let candidate: JsValue = entry.anchor.clone().into();
+            js_sys::Object::is(&candidate, &anchor_js)
+        })
+    }
+
+    fn clear_owned_anchor(
+        &mut self,
+        token: OwnedMountToken,
+        parent: &mut A::Element,
+        anchor: &A::Element,
+    ) where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let Some(index) = self.find_owned_anchor_index(token, anchor) else {
+            return;
+        };
+        let mounted = self
+            .owned_mount_slot_mut(token)
+            .and_then(|slot| slot.anchors.get_mut(index))
+            .and_then(|entry| entry.take_mount());
+        if let Some(mounted) = mounted {
+            let mut dest_parent = self.resolve_dest_parent_for_end(parent, anchor);
+            self.clear_mounted_state(&mut dest_parent, mounted);
+        }
+    }
+
+    fn render_owned_anchor_impl(
+        &mut self,
+        token: OwnedMountToken,
+        input: &MountInput<A>,
+        parent: &mut A::Element,
+        anchor: A::Element,
+    ) where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        self.current_anchor = Some(anchor.clone());
+        self.call_hooks("before_mount");
+        if let Some(index) = self.find_owned_anchor_index(token, &anchor) {
+            self.prepare_owned_anchor_update(token, index);
+            let taken = self
+                .owned_mount_slot_mut(token)
+                .and_then(|slot| slot.anchors.get_mut(0))
+                .and_then(|entry| entry.take_mount());
+            if let Some(mounted) = self.render_existing_anchor_entry(taken, input, parent, &anchor)
+                && let Some(slot) = self.owned_mount_slot_mut(token)
+                && let Some(entry) = slot.anchors.get_mut(0)
+            {
+                entry.store_mount(mounted);
+            }
+        } else if let Some(mounted) = self.render_anchor_mount(input, parent, &anchor)
+            && let Some(slot) = self.owned_mount_slot_mut(token)
+        {
+            slot.anchors.push(AnchorMountState::new(anchor, mounted));
+        }
+        self.mark_current_owned_mount_pending();
+        self.current_anchor = None;
     }
 
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
@@ -110,6 +170,11 @@ where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         self.ensure_anchor_runtime_ready();
+
+        if let Some(token) = self.current_owned_mount() {
+            self.clear_owned_anchor(token, parent, &anchor);
+            return;
+        }
 
         batch_scope(|| {
             self.current_anchor = Some(anchor.clone());
@@ -169,6 +234,11 @@ where
     {
         self.ensure_anchor_runtime_ready();
 
+        if let Some(token) = self.current_owned_mount() {
+            batch_scope(|| self.render_owned_anchor_impl(token, input, parent, anchor));
+            return;
+        }
+
         batch_scope(|| {
             self.current_anchor = Some(anchor.clone());
             self.call_hooks("before_mount");
@@ -185,7 +255,11 @@ where
                     let entry = self.anchor_map.get_mut(idx).unwrap();
                     entry.take_mount()
                 };
-                self.render_existing_anchor_entry(idx, taken, input, parent, &anchor);
+                if let Some(mounted) =
+                    self.render_existing_anchor_entry(taken, input, parent, &anchor)
+                {
+                    self.store_anchor_mount_at(idx, mounted);
+                }
             } else {
                 #[cfg(feature = "dev")]
                 {
@@ -197,7 +271,7 @@ where
                     }
                 }
                 if let Some(mounted) = self.render_anchor_mount(input, parent, &anchor) {
-                    self.anchor_map.push(AnchorMountState::new(anchor, mounted));
+                    self.push_anchor_entry(AnchorMountState::new(anchor, mounted));
                 }
             }
 

@@ -7,7 +7,16 @@ Teleport 组件概述
 - 依赖追踪：通过内部 signal + watchEffect 监听 props 变化，统一处理目标切换与 children 更新。
 */
 
-import { type FC, h, onMounted, onUnmounted, render, renderBetween, vapor } from '../rue'
+import {
+  captureOwnedMountContinuation,
+  type FC,
+  h,
+  onMounted,
+  onUnmounted,
+  render,
+  renderBetween,
+  vapor,
+} from '../rue'
 import { signal, watchEffect } from '../reactivity'
 import {
   appendChild,
@@ -24,6 +33,7 @@ import {
 } from '../dom'
 import type { DomElementLike, DomNodeLike } from '../dom'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
+import { registerAsyncExternalPropsUpdater } from './asyncExternalPropsBridge'
 
 /** Teleport 组件属性。 */
 export interface TeleportProps {
@@ -67,6 +77,7 @@ const toRenderable = (children: unknown) => {
 /** 将子内容渲染到指定 DOM 目标，并在卸载时清理目标区间。 */
 export const Teleport: FC<TeleportProps> = props => {
   const ctx = useSetup(() => {
+    const ownedMountContinuation = captureOwnedMountContinuation()
     const container = createElement('span') as HTMLElement
     setStyle(container, { display: 'contents' })
 
@@ -79,7 +90,13 @@ export const Teleport: FC<TeleportProps> = props => {
       started: false,
       deferVersion: 0,
       effect: null as { dispose: () => void } | null,
+      ownedMountContinuation,
     }
+  })
+  const runOwned = (run: () => void) =>
+    ctx.ownedMountContinuation ? ctx.ownedMountContinuation.run(run) : (run(), true)
+  registerAsyncExternalPropsUpdater(props, next => {
+    ctx.propsSig.set(snapshotTeleportProps((next ?? {}) as TeleportProps))
   })
 
   const clearLocalRange = () => {
@@ -88,7 +105,7 @@ export const Teleport: FC<TeleportProps> = props => {
 
   const clearTargetRange = (target: HTMLElement | null) => {
     if (!target) return
-    renderBetween([], target, ctx.targetStart, ctx.targetEnd)
+    runOwned(() => renderBetween([], target, ctx.targetStart, ctx.targetEnd))
   }
 
   const detachTargetAnchors = () => {
@@ -130,7 +147,9 @@ export const Teleport: FC<TeleportProps> = props => {
     if (!target) return
 
     ensureTargetAnchors(target)
-    renderBetween(toRenderable(children) as any, target, ctx.targetStart, ctx.targetEnd)
+    runOwned(() =>
+      renderBetween(toRenderable(children) as any, target, ctx.targetStart, ctx.targetEnd),
+    )
 
     if (!hasContentBetween()) {
       const fallback = createElement('span') as DomElementLike

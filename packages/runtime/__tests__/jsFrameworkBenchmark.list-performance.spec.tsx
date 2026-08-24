@@ -382,6 +382,7 @@ describe.each(variants)('$name js-framework-benchmark list', ({ name, App, keyed
     console.info(
       `[rue benchmark baseline] ${name} create${perfRowCount}: ${elapsedMs.toFixed(1)}ms`,
     )
+    expect(elapsedMs).toBeLessThan(30_000)
     expect(rows).toHaveLength(perfRowCount)
     expect(rowId(rows[0])).toBe('1')
     expect(rowLabel(rows[0])).toBe('pretty red table')
@@ -390,6 +391,8 @@ describe.each(variants)('$name js-framework-benchmark list', ({ name, App, keyed
     expect(rowLabel(rows[lastIndex])).toBe(
       `${adjectives[lastIndex % adjectives.length]} ${colours[lastIndex % colours.length]} ${nouns[lastIndex % nouns.length]}`,
     )
+    await click(container.querySelector('#clear'))
+    expect(rowElements(container)).toHaveLength(0)
   })
 })
 
@@ -477,6 +480,7 @@ describe.each(signalVariants)(
       console.info(
         `[rue benchmark native signal] ${name} create${perfRowCount}: ${elapsedMs.toFixed(1)}ms`,
       )
+      expect(elapsedMs).toBeLessThan(30_000)
       expect(rows).toHaveLength(perfRowCount)
       expect(rowId(rows[0])).toBe('1')
       expect(rowLabel(rows[0])).toBe('pretty red table')
@@ -485,6 +489,8 @@ describe.each(signalVariants)(
       expect(rowLabel(rows[lastIndex])).toBe(
         `${adjectives[lastIndex % adjectives.length]} ${colours[lastIndex % colours.length]} ${nouns[lastIndex % nouns.length]}`,
       )
+      await click(container.querySelector('#clear'))
+      expect(rowElements(container)).toHaveLength(0)
     })
   },
 )

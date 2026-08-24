@@ -262,8 +262,9 @@ export default TodoApp;
     std::fs::write("target/vapor_outputs/lists_and_keys3.out.js", utils::strip_marker(&out)).ok();
     let normalized = utils::normalize(&utils::strip_marker(&out));
     assert!(normalized.contains("_$vaporKeyedList"));
-    assert!(normalized.contains("renderAnchor(__slot, parent, start)"));
-    assert!(normalized.contains("_$settextContent(_el8, todo.id)"));
-    assert!(normalized.contains("_$settextContent(_el11, todo.text)"));
+    assert!(normalized.contains("directRoot: true"));
+    assert!(normalized.contains("_$insertBefore(parent, _root, start)"));
+    assert!(normalized.contains("_$rowBindingNext0 = todo.id"));
+    assert!(normalized.contains("_$rowBindingNext3 = todo.text"));
     assert!(!normalized.contains("_$setAttribute(_el8, \"key\""));
 }

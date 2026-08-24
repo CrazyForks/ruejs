@@ -11,7 +11,7 @@ use super::super::types::{
 use crate::reactive::core::{create_effect_scope, dispose_effect_scope};
 use crate::reactive::signal::signal_from_proxy;
 use crate::runtime::dom_adapter::DomAdapter;
-use js_sys::{Array, Function, Object, Reflect};
+use js_sys::{Array, Function, Object, Reflect, WeakMap};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
@@ -20,13 +20,36 @@ const RANGE_MAP_COMPACT_STEP: usize = 64;
 const RUE_KEEP_ALIVE_RANGE_KEY: &str = "__rue_keep_alive_range__";
 
 fn next_compact_threshold(len: usize, step: usize) -> usize {
-    len.saturating_add(step).max(step)
+    len.saturating_mul(2).max(step)
 }
 
 fn has_native_contains_method(value: &JsValue) -> bool {
     Reflect::get(value, &JsValue::from_str("contains"))
         .ok()
         .is_some_and(|contains| contains.is_function())
+}
+
+pub(super) fn set_native_identity_index(index: &WeakMap, value: &JsValue, position: usize) {
+    if !has_native_contains_method(value) {
+        return;
+    }
+    index.set(&Object::from(value.clone()), &JsValue::from_f64(position as f64));
+}
+
+fn native_identity_index(index: &WeakMap, value: &JsValue) -> (bool, Option<usize>) {
+    let key = Object::from(value.clone());
+    if !index.has(&key) {
+        return (false, None);
+    }
+    let raw = index.get(&key);
+    let position = raw.as_f64().and_then(|value| {
+        if value.is_finite() && value >= 0.0 && value.fract() == 0.0 && value <= usize::MAX as f64 {
+            Some(value as usize)
+        } else {
+            None
+        }
+    });
+    (true, position)
 }
 
 #[cfg(any(feature = "dev", test))]
@@ -221,11 +244,21 @@ where
 
         let adapter_owned = self.get_dom_adapter().cloned();
         let drained = std::mem::take(&mut self.anchor_map);
+        let next_identity_index = WeakMap::new();
+        self.anchor_identity_index = next_identity_index.clone();
+        self.anchor_identity_indexed_len = 0;
+        #[cfg(any(feature = "dev", test))]
+        {
+            self.anchor_compact_entry_visits =
+                self.anchor_compact_entry_visits.saturating_add(drained.len());
+            self.anchor_compact_trigger_lengths.push(drained.len());
+        }
         let mut kept: Vec<AnchorMountState<A>> = Vec::with_capacity(drained.len());
 
         for mut entry in drained.into_iter() {
             let av: JsValue = entry.anchor.clone().into();
             if is_keep_alive_range_start(&av) {
+                set_native_identity_index(&next_identity_index, &av, kept.len());
                 kept.push(entry);
                 continue;
             }
@@ -243,6 +276,7 @@ where
                     })
                 };
                 if matches_current {
+                    set_native_identity_index(&next_identity_index, &av, kept.len());
                     kept.push(entry);
                     continue;
                 }
@@ -270,6 +304,7 @@ where
             };
 
             if keep {
+                set_native_identity_index(&next_identity_index, &av, kept.len());
                 kept.push(entry);
             } else if let Some(mount) = entry.take_mount() {
                 let (lifecycle, host, _fragment_nodes, _props) = mount.into_dom_identity();
@@ -288,6 +323,8 @@ where
         }
 
         self.anchor_map = kept;
+        self.anchor_identity_index = next_identity_index;
+        self.anchor_identity_indexed_len = self.anchor_map.len();
         self.anchor_map_next_compact_at =
             next_compact_threshold(self.anchor_map.len(), ANCHOR_MAP_COMPACT_STEP);
     }
@@ -412,12 +449,22 @@ where
         // 所以使用 `take + for` 的方式把所有 entry 搬出来处理，再回填保留项。
         let adapter_owned = self.get_dom_adapter().cloned();
         let drained = std::mem::take(&mut self.range_map);
+        let next_identity_index = WeakMap::new();
+        self.range_identity_index = next_identity_index.clone();
+        self.range_identity_indexed_len = 0;
         let original_len = drained.len();
+        #[cfg(any(feature = "dev", test))]
+        {
+            self.range_compact_entry_visits =
+                self.range_compact_entry_visits.saturating_add(original_len);
+            self.range_compact_trigger_lengths.push(original_len);
+        }
         let mut kept: Vec<RangeMountState<A>> = Vec::with_capacity(original_len);
 
         for mut entry in drained.into_iter() {
             let sv: JsValue = entry.start.clone().into();
             if is_keep_alive_range_start(&sv) {
+                set_native_identity_index(&next_identity_index, &sv, kept.len());
                 kept.push(entry);
                 continue;
             }
@@ -463,6 +510,7 @@ where
             };
 
             if keep {
+                set_native_identity_index(&next_identity_index, &sv, kept.len());
                 kept.push(entry);
             } else {
                 // 关键：丢弃 range 前必须触发卸载生命周期。
@@ -501,6 +549,8 @@ where
         }
 
         self.range_map = kept;
+        self.range_identity_index = next_identity_index;
+        self.range_identity_indexed_len = self.range_map.len();
         self.range_map_next_compact_at =
             next_compact_threshold(self.range_map.len(), RANGE_MAP_COMPACT_STEP);
     }
@@ -604,34 +654,162 @@ where
         None
     }
 
-    /// 在单锚点映射中查找与目标 anchor 等价的记录下标
+    /// 在 Vec 被测试支架或异常恢复路径直接改写后重建 anchor 弱索引。
+    fn rebuild_anchor_identity_index(&mut self)
+    where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        let next = WeakMap::new();
+        #[cfg(any(feature = "dev", test))]
+        {
+            self.anchor_compact_entry_visits =
+                self.anchor_compact_entry_visits.saturating_add(self.anchor_map.len());
+        }
+        for (position, entry) in self.anchor_map.iter().enumerate() {
+            let anchor: JsValue = entry.anchor.clone().into();
+            set_native_identity_index(&next, &anchor, position);
+        }
+        self.anchor_identity_index = next;
+        self.anchor_identity_indexed_len = self.anchor_map.len();
+    }
+
+    /// 在 Vec 被测试支架或异常恢复路径直接改写后重建 range 弱索引。
+    fn rebuild_range_identity_index(&mut self)
+    where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        let next = WeakMap::new();
+        #[cfg(any(feature = "dev", test))]
+        {
+            self.range_compact_entry_visits =
+                self.range_compact_entry_visits.saturating_add(self.range_map.len());
+        }
+        for (position, entry) in self.range_map.iter().enumerate() {
+            let start: JsValue = entry.start.clone().into();
+            set_native_identity_index(&next, &start, position);
+        }
+        self.range_identity_index = next;
+        self.range_identity_indexed_len = self.range_map.len();
+    }
+
+    /// 追加 anchor entry 并同步弱身份索引。
+    pub(crate) fn push_anchor_entry(&mut self, entry: AnchorMountState<A>)
+    where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        if self.anchor_identity_indexed_len != self.anchor_map.len() {
+            self.rebuild_anchor_identity_index();
+        }
+        let position = self.anchor_map.len();
+        let anchor: JsValue = entry.anchor.clone().into();
+        self.anchor_map.push(entry);
+        set_native_identity_index(&self.anchor_identity_index, &anchor, position);
+        self.anchor_identity_indexed_len = self.anchor_map.len();
+    }
+
+    /// 追加 range entry 并同步弱身份索引。
+    pub(crate) fn push_range_entry(&mut self, entry: RangeMountState<A>)
+    where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        if self.range_identity_indexed_len != self.range_map.len() {
+            self.rebuild_range_identity_index();
+        }
+        let position = self.range_map.len();
+        let start: JsValue = entry.start.clone().into();
+        self.range_map.push(entry);
+        set_native_identity_index(&self.range_identity_index, &start, position);
+        self.range_identity_indexed_len = self.range_map.len();
+    }
+
+    /// 在单锚点映射中查找与目标 anchor 等价的记录下标。
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(super) fn find_anchor_index(&mut self, anchor: &A::Element) -> Option<usize>
     where
         <A as DomAdapter>::Element: Into<JsValue>,
     {
+        if self.anchor_identity_indexed_len != self.anchor_map.len() {
+            self.rebuild_anchor_identity_index();
+        }
         if self.anchor_map.is_empty() {
             return None;
         }
         let target_js: JsValue = anchor.clone().into();
         let target_has_native_contains = has_native_contains_method(&target_js);
+        if target_has_native_contains {
+            let (indexed, candidate) =
+                native_identity_index(&self.anchor_identity_index, &target_js);
+            #[cfg(any(feature = "dev", test))]
+            let mut visits = 0usize;
+            if let Some(position) = candidate {
+                #[cfg(any(feature = "dev", test))]
+                {
+                    visits = 1;
+                }
+                if self.anchor_map.get(position).is_some_and(|entry| {
+                    let indexed_anchor: JsValue = entry.anchor.clone().into();
+                    Object::is(&indexed_anchor, &target_js)
+                }) {
+                    #[cfg(any(feature = "dev", test))]
+                    {
+                        self.anchor_identity_lookup_visits =
+                            self.anchor_identity_lookup_visits.saturating_add(visits);
+                    }
+                    return Some(position);
+                }
+            }
+            if indexed {
+                self.rebuild_anchor_identity_index();
+                let (_, repaired) = native_identity_index(&self.anchor_identity_index, &target_js);
+                if let Some(position) = repaired {
+                    #[cfg(any(feature = "dev", test))]
+                    {
+                        visits = visits.saturating_add(1);
+                    }
+                    if self.anchor_map.get(position).is_some_and(|entry| {
+                        let indexed_anchor: JsValue = entry.anchor.clone().into();
+                        Object::is(&indexed_anchor, &target_js)
+                    }) {
+                        #[cfg(any(feature = "dev", test))]
+                        {
+                            self.anchor_identity_lookup_visits =
+                                self.anchor_identity_lookup_visits.saturating_add(visits);
+                        }
+                        return Some(position);
+                    }
+                }
+            }
+            #[cfg(any(feature = "dev", test))]
+            {
+                self.anchor_identity_lookup_visits =
+                    self.anchor_identity_lookup_visits.saturating_add(visits);
+            }
+            return None;
+        }
+        let mut visits = 0usize;
+        let mut found = None;
         for (i, entry) in self.anchor_map.iter().enumerate() {
+            visits = visits.saturating_add(1);
             let av: JsValue = entry.anchor.clone().into();
             if js_sys::Object::is(&av, &target_js) {
-                return Some(i);
-            }
-            if target_has_native_contains {
-                continue;
+                found = Some(i);
+                break;
             }
             if let Some(adapter) = self.get_dom_adapter() {
                 if adapter.contains(&entry.anchor, anchor)
                     && adapter.contains(anchor, &entry.anchor)
                 {
-                    return Some(i);
+                    found = Some(i);
+                    break;
                 }
             }
         }
-        None
+        #[cfg(any(feature = "dev", test))]
+        {
+            self.anchor_identity_lookup_visits =
+                self.anchor_identity_lookup_visits.saturating_add(visits);
+        }
+        found
     }
 
     /// 在区间映射中查找以 start 为起点的记录下标
@@ -645,6 +823,9 @@ where
     where
         <A as DomAdapter>::Element: Into<JsValue>,
     {
+        if self.range_identity_indexed_len != self.range_map.len() {
+            self.rebuild_range_identity_index();
+        }
         if self.range_map.is_empty() {
             return None;
         }
@@ -652,21 +833,78 @@ where
         // 只在非 DOM adapter 上保留 contains fallback，避免首屏构建时对 range_map 做 O(N²) DOM contains。
         let target_js: JsValue = start.clone().into();
         let target_has_native_contains = has_native_contains_method(&target_js);
+        if target_has_native_contains {
+            let (indexed, candidate) =
+                native_identity_index(&self.range_identity_index, &target_js);
+            #[cfg(any(feature = "dev", test))]
+            let mut visits = 0usize;
+            if let Some(position) = candidate {
+                #[cfg(any(feature = "dev", test))]
+                {
+                    visits = 1;
+                }
+                if self.range_map.get(position).is_some_and(|entry| {
+                    let indexed_start: JsValue = entry.start.clone().into();
+                    Object::is(&indexed_start, &target_js)
+                }) {
+                    #[cfg(any(feature = "dev", test))]
+                    {
+                        self.range_identity_lookup_visits =
+                            self.range_identity_lookup_visits.saturating_add(visits);
+                    }
+                    return Some(position);
+                }
+            }
+            if indexed {
+                self.rebuild_range_identity_index();
+                let (_, repaired) = native_identity_index(&self.range_identity_index, &target_js);
+                if let Some(position) = repaired {
+                    #[cfg(any(feature = "dev", test))]
+                    {
+                        visits = visits.saturating_add(1);
+                    }
+                    if self.range_map.get(position).is_some_and(|entry| {
+                        let indexed_start: JsValue = entry.start.clone().into();
+                        Object::is(&indexed_start, &target_js)
+                    }) {
+                        #[cfg(any(feature = "dev", test))]
+                        {
+                            self.range_identity_lookup_visits =
+                                self.range_identity_lookup_visits.saturating_add(visits);
+                        }
+                        return Some(position);
+                    }
+                }
+            }
+            #[cfg(any(feature = "dev", test))]
+            {
+                self.range_identity_lookup_visits =
+                    self.range_identity_lookup_visits.saturating_add(visits);
+            }
+            return None;
+        }
+        let mut visits = 0usize;
+        let mut found = None;
         for (i, entry) in self.range_map.iter().enumerate() {
+            visits = visits.saturating_add(1);
             let sv: JsValue = entry.start.clone().into();
             if js_sys::Object::is(&sv, &target_js) {
-                return Some(i);
-            }
-            if target_has_native_contains {
-                continue;
+                found = Some(i);
+                break;
             }
             if let Some(adapter) = self.get_dom_adapter() {
                 if adapter.contains(&entry.start, start) && adapter.contains(start, &entry.start) {
-                    return Some(i);
+                    found = Some(i);
+                    break;
                 }
             }
         }
-        None
+        #[cfg(any(feature = "dev", test))]
+        {
+            self.range_identity_lookup_visits =
+                self.range_identity_lookup_visits.saturating_add(visits);
+        }
+        found
     }
 
     /// 获取当前渲染容器（若存在）
@@ -963,9 +1201,113 @@ mod tests {
         assert_eq!(ANCHOR_MAP_COMPACT_STEP, 64);
         assert_eq!(RANGE_MAP_COMPACT_STEP, 64);
         assert_eq!(next_compact_threshold(0, ANCHOR_MAP_COMPACT_STEP), 64);
-        assert_eq!(next_compact_threshold(1, ANCHOR_MAP_COMPACT_STEP), 65);
+        assert_eq!(next_compact_threshold(1, ANCHOR_MAP_COMPACT_STEP), 64);
         assert_eq!(next_compact_threshold(64, ANCHOR_MAP_COMPACT_STEP), 128);
         assert_eq!(next_compact_threshold(usize::MAX, ANCHOR_MAP_COMPACT_STEP), usize::MAX);
+    }
+
+    #[wasm_bindgen_test]
+    fn native_anchor_range_total_lookup_and_compact_visits_stay_linear() {
+        const ENTRY_COUNT: usize = 10_000;
+        let mut rue = Rue::<JsDomAdapter>::new();
+        rue.set_dom_adapter(alias_adapter());
+        let anchor_host = node("anchor-host", 1.0);
+        let range_host = node("range-host", 1.0);
+        let range_end = node("range-end", 8.0);
+
+        for i in 0..ENTRY_COUNT {
+            let anchor = node(&format!("anchor-{i}"), 8.0);
+            set_bool(&anchor, "isConnected", true);
+            set_native_contains_method(&anchor);
+            rue.push_anchor_entry(AnchorMountState::new(anchor, block_state(anchor_host.clone())));
+            rue.maybe_compact_anchor_map_preserving(None);
+
+            let start = node(&format!("start-{i}"), 8.0);
+            set_bool(&start, "isConnected", true);
+            set_native_contains_method(&start);
+            rue.push_range_entry(RangeMountState::new(
+                start,
+                range_end.clone(),
+                block_state(range_host.clone()),
+            ));
+            rue.maybe_compact_range_map();
+        }
+
+        let anchor_after_small: Vec<usize> = rue
+            .anchor_compact_trigger_lengths
+            .iter()
+            .copied()
+            .filter(|len| *len > ANCHOR_MAP_COMPACT_STEP)
+            .collect();
+        let range_after_small: Vec<usize> = rue
+            .range_compact_trigger_lengths
+            .iter()
+            .copied()
+            .filter(|len| *len > RANGE_MAP_COMPACT_STEP)
+            .collect();
+        let expected_geometric = vec![128, 256, 512, 1024, 2048, 4096, 8192];
+
+        rue.anchor_identity_lookup_visits = 0;
+        rue.range_identity_lookup_visits = 0;
+        let last_anchor = rue.anchor_map.last().unwrap().anchor.clone();
+        let last_start = rue.range_map.last().unwrap().start.clone();
+        let missing_anchor = node("missing-anchor", 8.0);
+        set_native_contains_method(&missing_anchor);
+        let missing_start = node("missing-start", 8.0);
+        set_native_contains_method(&missing_start);
+
+        assert_eq!(rue.find_anchor_index(&last_anchor), Some(ENTRY_COUNT - 1));
+        assert_eq!(rue.find_anchor_index(&missing_anchor), None);
+        assert_eq!(rue.find_range_index(&last_start), Some(ENTRY_COUNT - 1));
+        assert_eq!(rue.find_range_index(&missing_start), None);
+
+        let lookup_visits =
+            rue.anchor_identity_lookup_visits.saturating_add(rue.range_identity_lookup_visits);
+        let compact_visits =
+            rue.anchor_compact_entry_visits.saturating_add(rue.range_compact_entry_visits);
+        assert!(
+            lookup_visits <= 4
+                && compact_visits <= ENTRY_COUNT * 4
+                && anchor_after_small == expected_geometric
+                && range_after_small == expected_geometric,
+            "lookup visits={lookup_visits}, compact visits={compact_visits}, anchor triggers={:?}, range triggers={:?}",
+            &anchor_after_small[..anchor_after_small.len().min(10)],
+            &range_after_small[..range_after_small.len().min(10)],
+        );
+
+        let first_anchor = rue.anchor_map.first().unwrap().anchor.clone();
+        let first_start = rue.range_map.first().unwrap().start.clone();
+        rue.anchor_identity_index
+            .set(&Object::from(first_anchor.clone()), &JsValue::from_f64((ENTRY_COUNT - 1) as f64));
+        rue.range_identity_index
+            .set(&Object::from(first_start.clone()), &JsValue::from_f64((ENTRY_COUNT - 1) as f64));
+        assert_eq!(rue.find_anchor_index(&first_anchor), Some(0));
+        assert_eq!(rue.find_range_index(&first_start), Some(0));
+
+        rue.anchor_map.clear();
+        rue.range_map.clear();
+        assert_eq!(rue.find_anchor_index(&first_anchor), None);
+        assert_eq!(rue.find_range_index(&first_start), None);
+
+        let mut fallback = Rue::<JsDomAdapter>::new();
+        fallback.set_dom_adapter(alias_adapter());
+        for i in 0..128 {
+            fallback.push_anchor_entry(AnchorMountState::new(
+                alias_node("anchor", &format!("anchor-{i}")),
+                block_state(anchor_host.clone()),
+            ));
+            fallback.push_range_entry(RangeMountState::new(
+                alias_node("start", &format!("range-{i}")),
+                range_end.clone(),
+                block_state(range_host.clone()),
+            ));
+        }
+        let fallback_anchor = alias_node("anchor", "anchor-127");
+        let fallback_start = alias_node("start", "range-127");
+        assert_eq!(fallback.find_anchor_index(&fallback_anchor), Some(127));
+        assert_eq!(fallback.find_range_index(&fallback_start), Some(127));
+        assert_eq!(fallback.anchor_identity_lookup_visits, 128);
+        assert_eq!(fallback.range_identity_lookup_visits, 128);
     }
 
     #[wasm_bindgen_test]
@@ -1329,7 +1671,7 @@ mod tests {
 
         assert_eq!(rue.anchor_map.len(), 1);
         assert!(rue.find_anchor_index(&live_anchor).is_some());
-        assert_eq!(rue.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP + 1);
+        assert_eq!(rue.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP);
     }
 
     #[wasm_bindgen_test]
@@ -1447,7 +1789,7 @@ mod tests {
 
         assert_eq!(adapter_rue.anchor_map.len(), 1);
         assert!(adapter_rue.find_anchor_index(&adapter_entry).is_some());
-        assert_eq!(adapter_rue.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP + 1);
+        assert_eq!(adapter_rue.anchor_map_next_compact_at, ANCHOR_MAP_COMPACT_STEP);
     }
 
     #[wasm_bindgen_test]

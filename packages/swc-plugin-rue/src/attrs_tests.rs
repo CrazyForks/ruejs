@@ -282,8 +282,8 @@ fn emits_dynamic_ref_and_controlled_input_attrs() {
     emit_attrs_for(&mut stmts, &target, &opening);
 
     let out = normalize(&emit_stmts(stmts));
-    assert!(out.contains(&normalize("const el_ref_stop = _$vaporBindUseRef(el, ()=>(inputRef));")));
-    assert!(out.contains(&normalize("onBeforeUnmount(()=>{ el_ref_stop(); })")));
+    assert!(out.contains(&normalize("_$vaporBindUseRef(el, ()=>(inputRef));")));
+    assert!(!out.contains("onBeforeUnmount"));
     assert!(out.contains(&normalize("watchEffect(()=>{ _$setValue(el, form.value); })")));
     assert!(out.contains(&normalize("watchEffect(()=>{ _$setDisabled(el, form.disabled); })")));
     assert!(out.contains(&normalize("watchEffect(()=>{ _$setChecked(el, !!(form.checked)); })")));

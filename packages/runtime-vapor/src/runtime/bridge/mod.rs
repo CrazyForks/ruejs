@@ -8,9 +8,10 @@ use crate::reactive::core::dispose_effect_scope;
 use crate::reactive::effect::EffectHandle;
 use crate::runtime::core::Rue;
 use crate::runtime::js_adapter::JsDomAdapter;
-use crate::runtime::types::MountInput;
-use js_sys::Promise;
+use crate::runtime::types::{MountInput, OwnedMountToken};
+use js_sys::{Function, Object, Promise, Reflect};
 use std::cell::RefCell;
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
@@ -49,6 +50,9 @@ pub use create_rue::createRue;
 #[wasm_bindgen]
 pub struct WasmRue {
     inner: RefCell<Rue<JsDomAdapter>>,
+    // JS 回调可能在 inner 被可变借用期间重入查询 owned mount 状态。
+    // 单独镜像 collector 栈，避免 RefCell trap，同时保持查询语义准确。
+    owned_mount_collectors: RefCell<Vec<OwnedMountToken>>,
     // 最近一次渲染/挂载的容器引用（JS 值克隆）：
     // - 供 getCurrentContainer() 之类的 API 使用
     // - 也便于在某些错误/兜底路径下找到“当前容器上下文”
@@ -69,6 +73,96 @@ pub struct WasmRue {
 }
 
 impl WasmRue {
+    fn owned_mount_token_to_js(token: OwnedMountToken) -> JsValue {
+        let value = Object::new();
+        let _ = Reflect::set(
+            &value,
+            &JsValue::from_str("__rue_owned_mount_slot"),
+            &JsValue::from_f64(token.slot as f64),
+        );
+        let _ = Reflect::set(
+            &value,
+            &JsValue::from_str("__rue_owned_mount_generation"),
+            &JsValue::from_str(&token.generation.to_string()),
+        );
+        value.into()
+    }
+
+    fn owned_mount_token_from_js(value: &JsValue) -> Option<OwnedMountToken> {
+        if !value.is_object() {
+            return None;
+        }
+        let slot =
+            Reflect::get(value, &JsValue::from_str("__rue_owned_mount_slot")).ok()?.as_f64()?;
+        let generation = Reflect::get(value, &JsValue::from_str("__rue_owned_mount_generation"))
+            .ok()?
+            .as_string()?
+            .parse::<u64>()
+            .ok()?;
+        if !slot.is_finite() || slot < 0.0 || generation < 1 || slot.fract() != 0.0 {
+            return None;
+        }
+        Some(OwnedMountToken { slot: slot as usize, generation: generation as u64 })
+    }
+
+    fn flush_component_mounted(
+        &self,
+        pending: Vec<crate::runtime::types::PendingComponentMounted<JsDomAdapter>>,
+    ) {
+        for item in pending {
+            let Some((context, collectors)) =
+                self.inner.try_borrow_mut().ok().and_then(|mut inner| {
+                    let context = inner.begin_pending_component_mounted(&item)?;
+                    Some((context, inner.current_owned_collectors.clone()))
+                })
+            else {
+                continue;
+            };
+            *self.owned_mount_collectors.borrow_mut() = collectors;
+            let hooks = context.hooks.clone();
+            let host = context.host.clone();
+            let mut hook_error = None;
+            for hook in hooks {
+                if let Some(func) = hook.dyn_ref::<Function>()
+                    && let Err(error) = func.call0(&JsValue::UNDEFINED)
+                {
+                    hook_error.get_or_insert(error);
+                }
+                let alive = self
+                    .inner
+                    .try_borrow()
+                    .map(|inner| inner.pending_component_mounted_is_alive(&item))
+                    .unwrap_or(false);
+                if !alive {
+                    break;
+                }
+            }
+            let collectors = if let Ok(mut inner) = self.inner.try_borrow_mut() {
+                inner.finish_pending_component_mounted(&item, context);
+                Some(inner.current_owned_collectors.clone())
+            } else {
+                None
+            };
+            if let Some(collectors) = collectors {
+                *self.owned_mount_collectors.borrow_mut() = collectors;
+            }
+            if let Some(error) = hook_error {
+                let captured = crate::runtime::shared_runtime_bridge::dispatch_error_captured(
+                    &error,
+                    &host,
+                    "component mounted",
+                );
+                if let Ok(mut inner) = self.inner.try_borrow_mut() {
+                    if captured {
+                        inner.last_error = Some(error);
+                    } else {
+                        inner.handle_error(error);
+                    }
+                }
+            }
+        }
+    }
+
     /// 处理挂起的渲染队列：render 优先，其次 renderBetween，最后 renderStatic
     ///
     /// 若借用失败（重入），将任务放回队列并终止本次处理
@@ -229,7 +323,6 @@ impl WasmRue {
         if !self.has_pending() {
             return;
         }
-
         let this_ptr = self as *const WasmRue;
         let cb = WasmRue::make_process_closure(this_ptr);
         let _ = Promise::resolve(&JsValue::UNDEFINED).then(&cb);
@@ -251,6 +344,170 @@ impl WasmRue {
         }
         self.root_effect.borrow_mut().take();
         self.root_effect_closure.borrow_mut().take();
+    }
+}
+
+#[wasm_bindgen]
+impl WasmRue {
+    /// 分配并激活一个 owned collector；返回值对 JS 是不透明 token。
+    #[wasm_bindgen(js_name = "buildOwnedMount")]
+    pub fn build_owned_mount_wasm(&self) -> JsValue {
+        let Ok(mut inner) = self.inner.try_borrow_mut() else {
+            return JsValue::UNDEFINED;
+        };
+        let token = inner.build_owned_mount();
+        *self.owned_mount_collectors.borrow_mut() = inner.current_owned_collectors.clone();
+        Self::owned_mount_token_to_js(token)
+    }
+
+    /// 完成 build/update collector。token 不是当前栈顶或 generation 已过期时拒绝。
+    #[wasm_bindgen(js_name = "commitMounted")]
+    pub fn commit_owned_mount_wasm(&self, token: JsValue, defer_mounted: Option<bool>) -> bool {
+        let Some(token) = Self::owned_mount_token_from_js(&token) else {
+            return false;
+        };
+        self.process_queues();
+        let (committed, pending, collectors) = self
+            .inner
+            .try_borrow_mut()
+            .map(|mut inner| {
+                let committed = inner.commit_owned_mount(token);
+                let pending = if committed && defer_mounted != Some(true) {
+                    inner.take_committed_component_mounted(token)
+                } else {
+                    Vec::new()
+                };
+                (committed, pending, Some(inner.current_owned_collectors.clone()))
+            })
+            .unwrap_or((false, Vec::new(), None));
+        if let Some(collectors) = collectors {
+            *self.owned_mount_collectors.borrow_mut() = collectors;
+        }
+        self.flush_component_mounted(pending);
+        self.process_queues();
+        committed
+    }
+
+    #[wasm_bindgen(js_name = "flushMounted")]
+    pub fn flush_owned_mount_mounted_wasm(&self, token: JsValue) -> bool {
+        let Some(token) = Self::owned_mount_token_from_js(&token) else {
+            return false;
+        };
+        let (alive, pending) = self
+            .inner
+            .try_borrow_mut()
+            .map(|mut inner| {
+                let alive = inner.owned_mount_slot(token).is_some();
+                let pending = inner.take_committed_component_mounted(token);
+                (alive, pending)
+            })
+            .unwrap_or((false, Vec::new()));
+        self.flush_component_mounted(pending);
+        alive
+    }
+
+    /// 激活既有 token 进行同 owner 更新，并先递归回收上一代 child token。
+    #[wasm_bindgen(js_name = "updateOwnedMount")]
+    pub fn update_owned_mount_wasm(&self, token: JsValue) -> bool {
+        let Some(token) = Self::owned_mount_token_from_js(&token) else {
+            return false;
+        };
+        self.process_queues();
+        let (updated, collectors) = self
+            .inner
+            .try_borrow_mut()
+            .map(|mut inner| {
+                let updated = inner.begin_owned_mount_update_transitive(token);
+                (updated, Some(inner.current_owned_collectors.clone()))
+            })
+            .unwrap_or((false, None));
+        if let Some(collectors) = collectors {
+            *self.owned_mount_collectors.borrow_mut() = collectors;
+        }
+        self.process_queues();
+        updated
+    }
+
+    #[wasm_bindgen(js_name = "disposeOwnedMount")]
+    pub fn dispose_owned_mount_wasm(&self, token: JsValue) -> bool {
+        let Some(token) = Self::owned_mount_token_from_js(&token) else {
+            return false;
+        };
+        self.process_queues();
+        let (disposed, collectors) = self
+            .inner
+            .try_borrow_mut()
+            .map(|mut inner| {
+                let disposed = inner.dispose_owned_mount(token);
+                (disposed, Some(inner.current_owned_collectors.clone()))
+            })
+            .unwrap_or((false, None));
+        if let Some(collectors) = collectors {
+            *self.owned_mount_collectors.borrow_mut() = collectors;
+        }
+        self.process_queues();
+        disposed
+    }
+
+    /// abort 与 dispose 使用同一完整回滚路径，但保留独立协议阶段供调用方表达意图。
+    #[wasm_bindgen(js_name = "abortOwnedMount")]
+    pub fn abort_owned_mount_wasm(&self, token: JsValue) -> bool {
+        self.dispose_owned_mount_wasm(token)
+    }
+
+    #[wasm_bindgen(js_name = "ownedMountCount")]
+    pub fn owned_mount_count_wasm(&self) -> usize {
+        self.inner.borrow().owned_mount_count()
+    }
+
+    #[wasm_bindgen(js_name = "ownedMountEntryCount")]
+    pub fn owned_mount_entry_count_wasm(&self) -> usize {
+        self.inner.borrow().owned_mount_entry_count()
+    }
+
+    #[wasm_bindgen(js_name = "componentInstanceCount")]
+    pub fn component_instance_count_wasm(&self) -> usize {
+        self.inner.borrow().component_instance_count()
+    }
+
+    #[wasm_bindgen(js_name = "componentWrapperCount")]
+    pub fn component_wrapper_count_wasm(&self) -> usize {
+        crate::reactive::context::component_instance_wrapper_count()
+    }
+
+    #[wasm_bindgen(js_name = "pendingComponentMountedCount")]
+    pub fn pending_component_mounted_count_wasm(&self) -> usize {
+        self.inner.borrow().pending_component_mounted_count()
+    }
+
+    #[wasm_bindgen(js_name = "effectScopeCount")]
+    pub fn effect_scope_count_wasm(&self) -> usize {
+        crate::reactive::core::active_effect_scope_count()
+    }
+
+    #[wasm_bindgen(js_name = "ownedMountCollecting")]
+    pub fn owned_mount_collecting_wasm(&self) -> bool {
+        !self.owned_mount_collectors.borrow().is_empty()
+    }
+
+    #[wasm_bindgen(js_name = "currentOwnedMountToken")]
+    pub fn current_owned_mount_token_wasm(&self) -> JsValue {
+        self.owned_mount_collectors
+            .borrow()
+            .last()
+            .copied()
+            .map(Self::owned_mount_token_to_js)
+            .unwrap_or(JsValue::UNDEFINED)
+    }
+
+    #[wasm_bindgen(js_name = "globalAnchorMountCount")]
+    pub fn global_anchor_mount_count_wasm(&self) -> usize {
+        self.inner.borrow().anchor_mount_count()
+    }
+
+    #[wasm_bindgen(js_name = "globalRangeMountCount")]
+    pub fn global_range_mount_count_wasm(&self) -> usize {
+        self.inner.borrow().range_mount_count()
     }
 }
 
@@ -402,6 +659,20 @@ mod tests {
 
     async fn tick() {
         let _ = JsFuture::from(Promise::resolve(&JsValue::UNDEFINED)).await;
+    }
+
+    #[wasm_bindgen_test]
+    fn owned_mount_collecting_is_reentrant_safe() {
+        let rue = createRue(adapter_value());
+        let token = rue.build_owned_mount_wasm();
+        let borrow = rue.inner.borrow_mut();
+
+        assert!(rue.owned_mount_collecting_wasm());
+        assert!(!rue.current_owned_mount_token_wasm().is_undefined());
+
+        drop(borrow);
+        assert!(rue.commit_owned_mount_wasm(token, None));
+        assert!(!rue.owned_mount_collecting_wasm());
     }
 
     fn child_count(parent: &JsValue) -> u32 {

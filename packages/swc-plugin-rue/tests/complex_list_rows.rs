@@ -1,0 +1,410 @@
+//! Complex list-row code-generation baseline.
+//!
+//! These assertions intentionally describe the conservative paths used before
+//! owned list mounts are introduced. They are shared by the later performance
+//! work so an optimization cannot silently change the row classification.
+
+use swc_plugin_rue::apply;
+
+mod utils;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RowMountShape {
+    DirectLeaf,
+    RenderAnchor,
+    OwnedRenderBetween,
+    OwnedOpaqueRenderBetween,
+}
+
+fn transform(row: &str) -> String {
+    let source = format!(
+        r##"
+import {{ _$vaporWithKey, type FC, onMounted, onUnmounted }} from '@rue-js/rue';
+
+type Row = {{ id: number; label: string; active: boolean; attrs: Record<string, string> }};
+declare const rows: {{ value: Row[] }};
+declare const rowRef: (id: number, node: HTMLElement | null) => void;
+
+const ChildRow: FC<{{ row: Row }}> = props => {{
+  onMounted(() => void props.row.id);
+  onUnmounted(() => void props.row.id);
+  return <li data-row-id={{props.row.id}}>{{props.row.label}}</li>;
+}};
+
+const opaqueRow = (row: Row) => <li data-row-id={{row.id}}>{{row.label}}</li>;
+
+const App: FC = () => <ul>{{rows.value.map(row => ({row}))}}</ul>;
+"##
+    );
+    let (program, cm) = utils::parse(&source, "complex-list-row.tsx");
+    utils::normalize(&utils::strip_marker(&utils::emit(apply(program), cm)))
+}
+
+fn transform_source(source: &str) -> String {
+    let (program, cm) = utils::parse(source, "complex-list-row-capabilities.tsx");
+    utils::normalize(&utils::strip_marker(&utils::emit(apply(program), cm)))
+}
+
+fn assert_direct_leaf(name: &str, row: &str) {
+    let output = transform(row);
+    assert!(
+        output.contains("directRoot: true"),
+        "{name} must enter the direct-root capability: {output}"
+    );
+    assert!(
+        output.contains("_$insertBefore(parent, _root, start)"),
+        "{name} must build the row directly before its owner anchor: {output}"
+    );
+    assert!(
+        output.matches("watchEffect").count() >= 2,
+        "{name} must preserve its row watcher in addition to the list watcher: {output}"
+    );
+}
+
+fn assert_shape(name: &str, row: &str, expected: RowMountShape) {
+    let output = transform(row);
+
+    assert!(
+        output.contains("state: _map1_state"),
+        "{name} must pass one stable list state instead of a bare Map: {output}"
+    );
+    assert_eq!(
+        output.matches("_map1_state").count(),
+        2,
+        "{name} must create one state and reuse it from the list helper call: {output}"
+    );
+
+    assert!(
+        output.contains("getKey: (row, idx)=>row.id"),
+        "{name} must preserve the explicit structural key: {output}"
+    );
+    match expected {
+        RowMountShape::DirectLeaf => {
+            assert!(
+                output.contains("directRoot: true"),
+                "{name} must advertise its direct-root capability: {output}"
+            );
+            assert!(
+                output.contains("_$insertBefore(parent, _root, start)"),
+                "{name} must mount its built fragment directly: {output}"
+            );
+        }
+        RowMountShape::RenderAnchor => {
+            assert!(
+                !output.contains("directRoot: true"),
+                "{name} is structural and must not enter the direct-root path: {output}"
+            );
+            assert!(
+                output.contains("singleRoot: true"),
+                "{name} must retain the single-root range marker: {output}"
+            );
+            assert!(
+                output.contains("ownedMount: true"),
+                "{name} must advertise transitive owned-mount capability: {output}"
+            );
+            assert!(
+                output.contains("renderAnchor(__slot, parent, start)"),
+                "{name} must currently mount through renderAnchor: {output}"
+            );
+            assert!(
+                !output.contains("renderBetween(__slot, parent, start, end)"),
+                "{name} unexpectedly widened its row mount to renderBetween: {output}"
+            );
+        }
+        RowMountShape::OwnedRenderBetween => {
+            assert!(
+                !output.contains("directRoot: true"),
+                "{name} is structural and must not enter the direct-root path: {output}"
+            );
+            assert!(
+                output.contains("ownedMount: true"),
+                "{name} must delay lifecycle through its owned mount: {output}"
+            );
+            assert!(
+                output.contains("renderBetween(__slot, parent, start, end)"),
+                "{name} must mount through renderBetween: {output}"
+            );
+        }
+        RowMountShape::OwnedOpaqueRenderBetween => {
+            assert!(!output.contains("directRoot: true"), "{output}");
+            assert!(output.contains("ownedMount: true"), "{output}");
+            assert!(output.contains("opaqueRenderable: true"), "{output}");
+            assert_eq!(
+                output.matches("opaqueRow(row)").count(),
+                1,
+                "{name} must evaluate the opaque call exactly once in generated code: {output}"
+            );
+            assert!(
+                output.contains("const __slot = _$vaporWithKey(opaqueRow(row), row.id)"),
+                "{name} must classify only after storing the single evaluation: {output}"
+            );
+            assert!(output.contains("renderBetween(__slot, parent, start, end)"), "{output}");
+        }
+    }
+}
+
+#[test]
+fn spread_row_uses_direct_leaf_mount() {
+    assert_shape(
+        "spread",
+        "<li key={row.id} {...row.attrs} data-row-id={row.id}>{row.label}</li>",
+        RowMountShape::DirectLeaf,
+    );
+}
+
+#[test]
+fn leaf_spread_and_unshadowed_scalar_calls_direct_mount() {
+    assert_direct_leaf(
+        "spread",
+        "<li key={row.id} {...row.attrs} data-row-id={row.id}>{row.label}</li>",
+    );
+    assert_direct_leaf(
+        "global String",
+        "<li key={row.id} data-row-id={row.id}>{String(row.label)}</li>",
+    );
+    assert_direct_leaf(
+        "global Number",
+        "<li key={row.id} data-row-id={row.id}>{Number(row.id)}</li>",
+    );
+    assert_direct_leaf(
+        "global Boolean",
+        "<li key={row.id} data-row-id={row.id}>{Boolean(row.active)}</li>",
+    );
+}
+
+#[test]
+fn shadowed_scalar_calls_remain_conservative() {
+    let parameter_shadow = transform_source(
+        r##"
+import { type FC } from '@rue-js/rue';
+type Row = { id: number; label: string };
+declare const rows: { value: Row[] };
+const App: FC = () => <ul>{rows.value.map((row, String) => (
+  <li key={row.id}>{String(row.id)}</li>
+))}</ul>;
+"##,
+    );
+    assert!(!parameter_shadow.contains("directRoot: true"), "{parameter_shadow}");
+
+    let local_shadow = transform_source(
+        r##"
+import { type FC } from '@rue-js/rue';
+type Row = { id: number; label: string };
+declare const rows: { value: Row[] };
+declare const format: (value: number) => string;
+const App: FC = () => <ul>{rows.value.map(row => {
+  const String = format;
+  return <li key={row.id}>{String(row.id)}</li>;
+})}</ul>;
+"##,
+    );
+    assert!(!local_shadow.contains("directRoot: true"), "{local_shadow}");
+
+    let import_shadow = transform_source(
+        r##"
+import { type FC } from '@rue-js/rue';
+import { String } from './format';
+type Row = { id: number; label: string };
+declare const rows: { value: Row[] };
+const App: FC = () => <ul>{rows.value.map(row => (
+  <li key={row.id}>{String(row.id)}</li>
+))}</ul>;
+"##,
+    );
+    assert!(!import_shadow.contains("directRoot: true"), "{import_shadow}");
+}
+
+#[test]
+fn index_tracking_uses_scope_aware_references() {
+    let unused = transform_source(
+        r##"
+import { type FC } from '@rue-js/rue';
+type Row = { id: number; label: string };
+declare const rows: { value: Row[] };
+const App: FC = () => <ul>{rows.value.map((row, index) => (
+  <li key={row.id}>{row.label}</li>
+))}</ul>;
+"##,
+    );
+    assert!(unused.contains("trackIndex: false"), "{unused}");
+
+    let alias_use = transform_source(
+        r##"
+import { type FC } from '@rue-js/rue';
+type Row = { id: number; label: string };
+declare const rows: { value: Row[] };
+const App: FC = () => <ul>{rows.value.map((row, index) => {
+  const position = index;
+  return <li key={row.id}>{position}:{row.label}</li>;
+})}</ul>;
+"##,
+    );
+    assert!(!alias_use.contains("trackIndex: false"), "{alias_use}");
+
+    let closure_use = transform_source(
+        r##"
+import { type FC } from '@rue-js/rue';
+type Row = { id: number; label: string };
+declare const rows: { value: Row[] };
+const App: FC = () => <ul>{rows.value.map((row, index) => (
+  <li key={row.id} title={() => index}>{row.label}</li>
+))}</ul>;
+"##,
+    );
+    assert!(!closure_use.contains("trackIndex: false"), "{closure_use}");
+}
+
+#[test]
+fn ref_row_uses_direct_leaf_owner_cleanup() {
+    assert_shape(
+        "ref",
+        "<li key={row.id} ref={node => rowRef(row.id, node)} data-row-id={row.id}>{row.label}</li>",
+        RowMountShape::DirectLeaf,
+    );
+    let output = transform(
+        "<li key={row.id} ref={node => rowRef(row.id, node)} data-row-id={row.id}>{row.label}</li>",
+    );
+    assert!(
+        output.contains(
+            "_$vaporBindUseRef(_el1, ()=>((node)=>rowRef(row.id, node)), registerRefCleanup)"
+        ),
+        "ref row must pass its owner cleanup registrar: {output}"
+    );
+    assert!(!output.contains("onBeforeUnmount"), "{output}");
+}
+
+#[test]
+fn structural_and_component_refs_remain_conservative() {
+    assert_shape(
+        "structural ref",
+        "<li key={row.id} ref={node => rowRef(row.id, node)}>{row.active ? <strong>{row.label}</strong> : <em>{row.label}</em>}</li>",
+        RowMountShape::RenderAnchor,
+    );
+    let component =
+        transform("<ChildRow key={row.id} ref={node => rowRef(row.id, node)} row={row} />");
+    assert!(!component.contains("directRoot: true"), "{component}");
+    assert!(component.contains("renderBetween(__slot, parent, start, end)"), "{component}");
+}
+
+#[test]
+fn ref_owner_registrar_avoids_row_local_collisions() {
+    let output = transform_source(
+        r##"
+import { type FC } from '@rue-js/rue';
+type Row = { id: number; label: string };
+declare const rows: { value: Row[] };
+declare const rowRef: (id: number, node: HTMLElement | null) => void;
+const App: FC = () => <ul>{rows.value.map(row => {
+  const registerRefCleanup = row.label;
+  return <li key={row.id} ref={node => registerRefCleanup && rowRef(row.id, node)}>{row.label}</li>;
+})}</ul>;
+"##,
+    );
+    assert!(
+        output.contains("renderItem: (row, parent, start, end, idx, __rue_registerRefCleanup1)=>"),
+        "{output}"
+    );
+    assert!(
+        output.contains(", __rue_registerRefCleanup1)"),
+        "owner registrar use must match the collision-free parameter: {output}"
+    );
+}
+
+#[test]
+fn native_conditional_row_uses_render_anchor_baseline() {
+    assert_shape(
+        "native conditional",
+        "<li key={row.id} data-row-id={row.id}>{row.active ? <strong>{row.label}</strong> : <em>{row.label}</em>}</li>",
+        RowMountShape::RenderAnchor,
+    );
+}
+
+#[test]
+fn component_row_uses_render_between_baseline() {
+    assert_shape(
+        "component",
+        "<ChildRow key={row.id} row={row} />",
+        RowMountShape::OwnedRenderBetween,
+    );
+}
+
+#[test]
+fn opaque_call_row_uses_render_between_baseline() {
+    assert_shape(
+        "opaque call",
+        "_$vaporWithKey(opaqueRow(row), row.id)",
+        RowMountShape::OwnedOpaqueRenderBetween,
+    );
+}
+
+#[test]
+fn async_and_external_row_boundaries_use_explicit_owned_strategy() {
+    for (name, row) in [
+        ("Teleport", "<Teleport key={row.id} to={target}>{row.label}</Teleport>"),
+        ("Transition", "<Transition key={row.id}><li>{row.label}</li></Transition>"),
+        ("KeepAlive", "<KeepAlive key={row.id}><ChildRow row={row} /></KeepAlive>"),
+        (
+            "Suspense",
+            "<Suspense key={row.id} fallback={<span>pending</span>}><ChildRow row={row} /></Suspense>",
+        ),
+    ] {
+        let output = transform(row);
+        assert!(
+            output.contains("asyncExternalRenderable: true"),
+            "{name} must advertise its async/external owned boundary: {output}"
+        );
+        assert!(output.contains("ownedMount: true"), "{name}: {output}");
+        assert!(!output.contains("opaqueRenderable: true"), "{name}: {output}");
+        assert!(output.contains("renderBetween(__slot, parent, start, end)"), "{name}: {output}");
+    }
+}
+
+#[test]
+fn final_linear_gate_keeps_main_paths_on_explicit_mount_capabilities() {
+    let cases = [
+        ("spread", "<li key={row.id} {...row.attrs}>{row.label}</li>", "directRoot: true"),
+        (
+            "ref",
+            "<li key={row.id} ref={node => rowRef(row.id, node)}>{row.label}</li>",
+            "directRoot: true",
+        ),
+        (
+            "native structural",
+            "<li key={row.id}>{row.active ? <strong>{row.label}</strong> : <em>{row.label}</em>}</li>",
+            "ownedMount: true",
+        ),
+        ("component", "<ChildRow key={row.id} row={row} />", "ownedMount: true"),
+        ("opaque", "_$vaporWithKey(opaqueRow(row), row.id)", "opaqueRenderable: true"),
+    ];
+
+    for (name, row, capability) in cases {
+        let output = transform(row);
+        assert!(output.contains("state: _map1_state"), "{name}: {output}");
+        assert!(output.contains(capability), "{name}: {output}");
+        assert!(
+            output.contains("trackIndex: false"),
+            "{name} must reuse owners without index-triggered rebuilds: {output}"
+        );
+    }
+}
+
+#[test]
+fn multiple_list_expressions_get_independent_stable_states() {
+    let source = r##"
+import { type FC } from '@rue-js/rue';
+type Row = { id: number; label: string };
+declare const first: { value: Row[] };
+declare const second: { value: Row[] };
+const App: FC = () => <section>
+  <ul>{first.value.map(row => <li key={row.id}>{row.label}</li>)}</ul>
+  <ol>{second.value.map(row => <li key={row.id}>{row.label}</li>)}</ol>
+</section>;
+"##;
+    let (program, cm) = utils::parse(source, "multiple-complex-list-rows.tsx");
+    let output = utils::normalize(&utils::strip_marker(&utils::emit(apply(program), cm)));
+
+    assert!(output.contains("const _map1_state = { elements: _map1_elements }"), "{output}");
+    assert!(output.contains("state: _map1_state"), "{output}");
+    assert!(output.contains("const _map2_state = { elements: _map2_elements }"), "{output}");
+    assert!(output.contains("state: _map2_state"), "{output}");
+}

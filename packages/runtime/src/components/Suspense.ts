@@ -7,6 +7,7 @@ Suspense 组件概述
 */
 
 import rue, {
+  captureOwnedMountContinuation,
   type FC,
   h,
   onBeforeUnmount,
@@ -26,6 +27,7 @@ import {
   withSuspenseBoundary,
 } from './suspenseContext'
 import { markBuiltinComponent } from './builtinMarkers'
+import { registerAsyncExternalPropsUpdater } from './asyncExternalPropsBridge'
 
 /** Suspense 组件属性。 */
 export interface SuspenseProps extends PropsWithChildren<Record<string, unknown>> {
@@ -95,6 +97,7 @@ export const Suspense: FC<SuspenseProps> = /*#__PURE__*/ markBuiltinComponent(
     }
 
     const ctx = useSetup(() => {
+      const ownedMountContinuation = captureOwnedMountContinuation()
       const parentBoundary = getCurrentSuspenseBoundary()
       const container = createElement('div') as HTMLElement
       if (container && container.style && typeof container.style === 'object') {
@@ -161,7 +164,22 @@ export const Suspense: FC<SuspenseProps> = /*#__PURE__*/ markBuiltinComponent(
         pendingThenables: new Set<PromiseLike<unknown>>(),
         fallbackTimer: null as ReturnType<typeof setTimeout> | null,
         effect: null as ReturnType<typeof watchEffect> | null,
+        ownedMountContinuation,
       }
+    })
+
+    const runOwned = (run: () => void) =>
+      ctx.ownedMountContinuation ? ctx.ownedMountContinuation.run(run) : (run(), true)
+
+    registerAsyncExternalPropsUpdater(props, next => {
+      const nextProps = (next ?? {}) as SuspenseProps
+      ctx.lastProps = nextProps
+      ctx.generation += 1
+      clearFallbackTimer()
+      ctx.pendingThenables.clear()
+      ctx.contentMounted = false
+      ctx.status = 'initial'
+      ctx.propsSig.set(snapshotSuspenseProps(nextProps))
     })
 
     const clearFallbackTimer = () => {
@@ -276,7 +294,14 @@ export const Suspense: FC<SuspenseProps> = /*#__PURE__*/ markBuiltinComponent(
         callSuspenseHook(curProps.onFallback)
       }
       ctx.contentVisible = false
-      renderBetween(toRenderable(curProps.fallback) as any, ctx.container, ctx.startEl, ctx.endEl)
+      runOwned(() =>
+        renderBetween(
+          toRenderable(curProps.fallback) as any,
+          ctx.container,
+          ctx.startEl,
+          ctx.endEl,
+        ),
+      )
     }
 
     const showContent = (curProps: SuspenseProps, generation: number) => {
@@ -292,7 +317,7 @@ export const Suspense: FC<SuspenseProps> = /*#__PURE__*/ markBuiltinComponent(
       clearFallbackTimer()
       const wasPending = ctx.status === 'pending' || ctx.status === 'fallback'
       const contentNodes = collectContentNodes()
-      renderBetween(contentNodes as any, ctx.container, ctx.startEl, ctx.endEl)
+      runOwned(() => renderBetween(contentNodes as any, ctx.container, ctx.startEl, ctx.endEl))
       ctx.status = 'resolved'
       ctx.contentVisible = true
       if (wasPending) {
@@ -350,11 +375,13 @@ export const Suspense: FC<SuspenseProps> = /*#__PURE__*/ markBuiltinComponent(
         try {
           if (!ctx.contentMounted) {
             withSuspenseBoundary(ctx.boundary, () => {
-              renderBetween(
-                toRenderable(curProps.children) as any,
-                ctx.contentContainer,
-                ctx.contentStartEl,
-                ctx.contentEndEl,
+              runOwned(() =>
+                renderBetween(
+                  toRenderable(curProps.children) as any,
+                  ctx.contentContainer,
+                  ctx.contentStartEl,
+                  ctx.contentEndEl,
+                ),
               )
             })
             ctx.contentMounted = true
@@ -389,8 +416,10 @@ export const Suspense: FC<SuspenseProps> = /*#__PURE__*/ markBuiltinComponent(
       ctx.effect?.dispose?.()
       ctx.effect = null
       ctx.pendingThenables.clear()
-      renderBetween([] as any, ctx.container, ctx.startEl, ctx.endEl)
-      renderBetween([] as any, ctx.contentContainer, ctx.contentStartEl, ctx.contentEndEl)
+      runOwned(() => renderBetween([] as any, ctx.container, ctx.startEl, ctx.endEl))
+      runOwned(() =>
+        renderBetween([] as any, ctx.contentContainer, ctx.contentStartEl, ctx.contentEndEl),
+      )
     })
 
     return vapor(() => {

@@ -10,6 +10,24 @@ use crate::log;
 use crate::utils::is_static_empty_like;
 use crate::vapor::VaporTransform;
 
+pub(crate) fn is_global_scalar_constructor_name(name: &str) -> bool {
+    matches!(name, "String" | "Number" | "Boolean")
+}
+
+pub(crate) fn is_unshadowed_global_scalar_call(
+    call: &CallExpr,
+    shadowed_names: &HashSet<String>,
+) -> bool {
+    let Callee::Expr(callee) = &call.callee else {
+        return false;
+    };
+    let Expr::Ident(callee) = crate::utils::unwrap_expr(callee.as_ref()) else {
+        return false;
+    };
+    is_global_scalar_constructor_name(callee.sym.as_ref())
+        && !shadowed_names.contains(callee.sym.as_ref())
+}
+
 /*
 元素表达式改写：
 - 目标：将元素子节点中的任意表达式统一转化为可复用的插槽渲染路径；

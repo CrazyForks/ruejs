@@ -6,6 +6,7 @@ Transition 组件概述
 */
 // 参考 Vue3 的 Transition 设计思路，结合 Rue 的信号与默认区间渲染机制
 import {
+  captureOwnedMountContinuation,
   onMounted,
   onUnmounted,
   renderBetween,
@@ -23,6 +24,7 @@ import { createElement, createComment, appendChild } from '../dom'
 import type { DomNodeLike } from '../dom'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
 import { markBuiltinComponent } from './builtinMarkers'
+import { registerAsyncExternalPropsUpdater } from './asyncExternalPropsBridge'
 
 type FC<P = {}> = VaporFC<P>
 type PropsWithChildren<P = {}> = VaporPropsWithChildren<P>
@@ -125,6 +127,7 @@ const snapshotTransitionProps = (props: TransitionProps): TransitionProps => ({
 /** Transition 组件：为区间内首个元素应用过渡 */
 export const Transition: FC<TransitionProps> = /*#__PURE__*/ markBuiltinComponent(props => {
   const ctx = useSetup(() => {
+    const ownedMountContinuation = captureOwnedMountContinuation()
     const container = createElement('span') as HTMLElement
     container.style.display = 'contents'
     const startEl = createComment('rue-transition-start')
@@ -144,7 +147,15 @@ export const Transition: FC<TransitionProps> = /*#__PURE__*/ markBuiltinComponen
       activePhases: new Set<TransitionPhaseControl>(),
       snapshots: new Set<HTMLElement>(),
       effect: null as { dispose: () => void } | null,
+      ownedMountContinuation,
     }
+  })
+  const runOwned = (run: () => void) =>
+    ctx.ownedMountContinuation ? ctx.ownedMountContinuation.run(run) : (run(), true)
+  const renderTransition = (value: TransitionChildInput | never[]) =>
+    runOwned(() => renderBetween(value as any, ctx.container, ctx.startEl, ctx.endEl))
+  registerAsyncExternalPropsUpdater(props, next => {
+    ctx.propsSig.set(snapshotTransitionProps((next ?? {}) as TransitionProps))
   })
 
   /** 获取区间内第一个元素节点 */
@@ -206,7 +217,7 @@ export const Transition: FC<TransitionProps> = /*#__PURE__*/ markBuiltinComponen
       }
 
       const renderChild = () => {
-        renderBetween(child as TransitionChildInput, ctx.container, ctx.startEl, ctx.endEl)
+        renderTransition(child as TransitionChildInput)
         ctx.prevShown = true
         ctx.currentIdentity = nextIdentity
       }
@@ -239,7 +250,7 @@ export const Transition: FC<TransitionProps> = /*#__PURE__*/ markBuiltinComponen
             queueEnter('enter')
           } else if (mode === 'out-in') {
             const leavingSnapshot = leavingEl.cloneNode(true) as HTMLElement
-            renderBetween([], ctx.container, ctx.startEl, ctx.endEl)
+            renderTransition([])
             ctx.container.insertBefore(leavingSnapshot, ctx.endEl as any)
             ctx.snapshots.add(leavingSnapshot)
             leaveSnapshot(leavingSnapshot, () => {
@@ -282,11 +293,11 @@ export const Transition: FC<TransitionProps> = /*#__PURE__*/ markBuiltinComponen
         ctx.currentIdentity = null
         if (el) {
           const snapshot = el.cloneNode(true) as HTMLElement
-          renderBetween([], ctx.container, ctx.startEl, ctx.endEl)
+          renderTransition([])
           ctx.container.insertBefore(snapshot, ctx.endEl as any)
           ctx.snapshots.add(snapshot)
           leaveSnapshot(snapshot)
-        } else renderBetween([], ctx.container, ctx.startEl, ctx.endEl)
+        } else renderTransition([])
       }
 
       ctx.firstRender = false

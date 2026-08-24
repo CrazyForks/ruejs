@@ -401,7 +401,7 @@ where
             i
         } else {
             // 没有旧实例时补建一个实例，保证后续 patch/unmount 能通过 index 找回生命周期状态。
-            let new_idx = self.instance_store.len();
+            let new_idx = self.allocate_component_instance_id();
             let new_inst = super::super::instance::ComponentInternalInstance::<A> {
                 parent: None,
                 is_mounted: true,

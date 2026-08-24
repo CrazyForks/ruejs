@@ -6,7 +6,14 @@
 - 占位渲染：提供可覆盖的 Loading 与 Error 组件，满足不同产品形态的占位需求。
  * - 固定渲染：使用 vapor + renderAnchor，内部通过 display: contents 容器承载稳定锚点，既能正确卸载，又不额外产生布局盒。
 */
-import rue, { FC, h, onBeforeUnmount, renderAnchor, vapor } from '../rue'
+import rue, {
+  captureOwnedMountContinuation,
+  FC,
+  h,
+  onBeforeUnmount,
+  renderAnchor,
+  vapor,
+} from '../rue'
 import {
   appendChild,
   createComment,
@@ -582,7 +589,9 @@ export function useComponent<P = any>(
           ;(slot as any).requestId = loadId + 1
           clearPendingState()
           setErrorState(loadError)
-          appRue.handleError(loadError, null)
+          if (((slot as any).activeContexts as Set<object> | undefined)?.size) {
+            appRue.handleError(loadError, null)
+          }
         }
 
         const handleLoadError = (loadError: any) => {
@@ -710,6 +719,7 @@ export function useComponent<P = any>(
         requestId: 0,
         attempts: 0,
         started: false,
+        activeContexts: new Set<object>(),
       }
       asyncComponentCache.set(loader as any, slot)
     }
@@ -761,6 +771,7 @@ export function useComponent<P = any>(
     // 为每个 Hook 实例创建独立的容器、单锚点与 props 信号，
     // 同一 loader 下仅共享“加载状态”，但不共享渲染区间与副作用。
     const createRenderContext = (initialProps: any) => {
+      const ownedMountContinuation = captureOwnedMountContinuation()
       const container = createElement('div') as any
       if (container && container.style && typeof container.style === 'object') {
         container.style.display = 'contents'
@@ -778,8 +789,14 @@ export function useComponent<P = any>(
         disposed: false,
         effect: null as { dispose?: () => void } | null,
         hydrationCleanup: null as (() => void) | null,
+        ownedMountContinuation,
         dispose: () => {},
       }
+      const activeContexts = ((slot as any).activeContexts ??= new Set<object>()) as Set<object>
+      activeContexts.add(ctx)
+
+      const runOwned = (run: () => void) =>
+        ctx.ownedMountContinuation ? ctx.ownedMountContinuation.run(run) : (run(), true)
 
       const isStillPending = (thenable: Promise<unknown>) =>
         (slot as any).promise === thenable && !component.get() && !err.get()
@@ -819,7 +836,7 @@ export function useComponent<P = any>(
           ctx.pendingSuspenseCheck = true
           queueMicrotask(() => {
             ctx.pendingSuspenseCheck = false
-            if (!isStillPending(thenable)) {
+            if (ctx.disposed || !isStillPending(thenable)) {
               return
             }
             const mountedBoundary = findSuspenseBoundary()
@@ -868,7 +885,7 @@ export function useComponent<P = any>(
           }
         }
         untrack(() => {
-          renderAnchor(nextOutput as any, container, anchorEl as any)
+          runOwned(() => renderAnchor(nextOutput as any, container, anchorEl as any))
         })
       }
 
@@ -878,12 +895,16 @@ export function useComponent<P = any>(
         }
 
         ctx.disposed = true
+        ctx.pendingSuspenseCheck = false
+        activeContexts.delete(ctx)
 
         untrack(() => {
-          renderAnchor(
-            vapor(() => createDocumentFragment() as any),
-            container,
-            anchorEl as any,
+          runOwned(() =>
+            renderAnchor(
+              vapor(() => createDocumentFragment() as any),
+              container,
+              anchorEl as any,
+            ),
           )
         })
 

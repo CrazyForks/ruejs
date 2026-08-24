@@ -1,7 +1,9 @@
 type KeepAlivePropsUpdater = (props: unknown) => void
+type KeepAliveDisposer = () => void
 
 const updaterByProps = new WeakMap<object, KeepAlivePropsUpdater>()
 const updaterByHandle = new WeakMap<object, KeepAlivePropsUpdater>()
+const disposerByHandle = new WeakMap<object, KeepAliveDisposer>()
 type RegistrationTarget = [handle: object, props: object | null]
 const registrationTargets: RegistrationTarget[] = []
 
@@ -28,6 +30,13 @@ export const registerKeepAlivePropsUpdater = (props: unknown, update: KeepAliveP
       updaterByProps.set(target[1], update)
     }
     updaterByHandle.set(target[0], update)
+  }
+}
+
+export const registerKeepAliveDisposer = (dispose: KeepAliveDisposer) => {
+  const target = registrationTargets[registrationTargets.length - 1]
+  if (target) {
+    disposerByHandle.set(target[0], dispose)
   }
 }
 
@@ -74,8 +83,26 @@ export const updateKeepAlivePropsFromPreviousHandle = (
   const nextHandleObject = toObject(nextHandle)
   const nextProps = nextHandleObject ? readPropsObject(nextHandleObject) : null
   update(nextProps ?? {})
+  const dispose = disposerByHandle.get(previousHandleObject)
+  if (dispose && nextHandleObject) {
+    disposerByHandle.set(nextHandleObject, dispose)
+  }
   if (nextProps) {
     updaterByProps.set(nextProps, update)
   }
+  return true
+}
+
+export const disposeKeepAliveFromPreviousHandle = (previousHandle: unknown) => {
+  const previousHandleObject = toObject(previousHandle)
+  if (!previousHandleObject) {
+    return false
+  }
+  const dispose = disposerByHandle.get(previousHandleObject)
+  if (!dispose) {
+    return false
+  }
+  disposerByHandle.delete(previousHandleObject)
+  dispose()
   return true
 }

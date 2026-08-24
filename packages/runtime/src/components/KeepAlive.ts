@@ -7,6 +7,7 @@ KeepAlive 组件概述
 */
 
 import {
+  captureOwnedMountContinuation,
   type FC,
   onBeforeUnmount,
   onMounted,
@@ -29,7 +30,7 @@ import {
 import type { DomElementLike, DomNodeLike } from '../dom'
 import { signal, watchEffect } from '../reactivity'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
-import { registerKeepAlivePropsUpdater } from './keepAlivePropsBridge'
+import { registerKeepAliveDisposer, registerKeepAlivePropsUpdater } from './keepAlivePropsBridge'
 import { markBuiltinComponent } from './builtinMarkers'
 
 /** KeepAlive 的 include/exclude 匹配模式。 */
@@ -289,6 +290,7 @@ const removeEntryAnchors = (entry: CacheEntry) => {
 /** 缓存直接子组件 DOM range，切换时移动到离线片段而不是销毁。 */
 export const KeepAlive: FC<KeepAliveProps> = /*#__PURE__*/ markBuiltinComponent(props => {
   const ctx = useSetup(() => {
+    const ownedMountContinuation = captureOwnedMountContinuation()
     const container = createKeepAliveContainer()
 
     const start = createComment('rue-keep-alive-start')
@@ -313,8 +315,11 @@ export const KeepAlive: FC<KeepAliveProps> = /*#__PURE__*/ markBuiltinComponent(
       cache: new Map<unknown, CacheEntry>(),
       activeEntry: null as CacheEntry | null,
       effect: null as ReturnType<typeof watchEffect> | null,
+      ownedMountContinuation,
     }
   })
+  const runOwned = (run: () => void) =>
+    ctx.ownedMountContinuation ? ctx.ownedMountContinuation.run(run) : (run(), true)
 
   const getActiveParent = () => (getParentNode(ctx.end) as DomElementLike | null) ?? ctx.container
 
@@ -384,7 +389,7 @@ export const KeepAlive: FC<KeepAliveProps> = /*#__PURE__*/ markBuiltinComponent(
     const prevHookTarget = globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY]
     markKeepAliveHookTarget(child, entry)
     globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = entry
-    renderBetween(child, parent, entry.start, entry.end)
+    runOwned(() => renderBetween(child, parent, entry.start, entry.end))
     queueMicrotask(() => {
       queueMicrotask(() => {
         if (globalRecord[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] === entry) {
@@ -410,17 +415,19 @@ export const KeepAlive: FC<KeepAliveProps> = /*#__PURE__*/ markBuiltinComponent(
     })
   }
 
+  const runDeactivated = (entry: CacheEntry) => {
+    for (const hook of entry.deactivatedHooks) {
+      hook()
+    }
+    if (entry.deactivatedHooks.size === 0) {
+      __rueDeactivateRange(entry.start)
+    }
+  }
+
   /** 异步触发 deactivated，确保 DOM range 已经移动到缓存容器后再派发生命周期。 */
   const notifyDeactivated = (entry: CacheEntry) => {
     queueMicrotask(() => {
-      queueMicrotask(() => {
-        for (const hook of entry.deactivatedHooks) {
-          hook()
-        }
-        if (entry.deactivatedHooks.size === 0) {
-          __rueDeactivateRange(entry.start)
-        }
-      })
+      queueMicrotask(() => runDeactivated(entry))
     })
   }
 
@@ -445,7 +452,12 @@ export const KeepAlive: FC<KeepAliveProps> = /*#__PURE__*/ markBuiltinComponent(
     entry.state = state
     setKeepAliveRangeMarkers(entry, state === 0 && entry.cacheable)
     if (previousState === 1) {
-      notifyDeactivated(entry)
+      if (state === 2) {
+        // 最终 dispose 必须先完成 deactivate，再卸载缓存范围。
+        runDeactivated(entry)
+      } else {
+        notifyDeactivated(entry)
+      }
     }
 
     if (state === 0) {
@@ -454,7 +466,7 @@ export const KeepAlive: FC<KeepAliveProps> = /*#__PURE__*/ markBuiltinComponent(
 
     const parent = getParentNode(entry.start) as DomElementLike | null
     if (parent && getParentNode(entry.end) === parent) {
-      renderBetween(null as any, parent, entry.start, entry.end)
+      runOwned(() => renderBetween(null as any, parent, entry.start, entry.end))
       queueMicrotask(() => {
         queueMicrotask(() => {
           removeEntryAnchors(entry)
@@ -494,16 +506,20 @@ export const KeepAlive: FC<KeepAliveProps> = /*#__PURE__*/ markBuiltinComponent(
     ctx.effect = null
 
     const entries = new Set<CacheEntry>(ctx.cache.values())
-    if (ctx.activeEntry) {
-      entries.add(ctx.activeEntry)
-      ctx.activeEntry = null
-    }
+    const activeEntry = ctx.activeEntry
+    ctx.activeEntry = null
 
     ctx.cache.clear()
+    if (activeEntry) {
+      transitionEntry(activeEntry, 2)
+      entries.delete(activeEntry)
+    }
     for (const entry of entries) {
       transitionEntry(entry, 2)
     }
   }
+
+  registerKeepAliveDisposer(disposeAllEntries)
 
   const pruneByPattern = (curProps: KeepAliveProps) => {
     for (const [key, entry] of Array.from(ctx.cache.entries())) {

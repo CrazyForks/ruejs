@@ -393,6 +393,10 @@ pub fn create_detached_effect_scope() -> usize {
     create_effect_scope_with_parent(None)
 }
 
+pub(crate) fn active_effect_scope_count() -> usize {
+    EFFECT_SCOPES_EFFECTS.with(|scopes| scopes.borrow().len())
+}
+
 #[wasm_bindgen(js_name = "__rueCreateDetachedEffectScope")]
 pub fn create_detached_effect_scope_wasm() -> usize {
     create_detached_effect_scope()

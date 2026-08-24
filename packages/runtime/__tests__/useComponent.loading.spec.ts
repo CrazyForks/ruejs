@@ -61,6 +61,7 @@ vi.mock('../src/rue.ts', () => {
     onBeforeUnmount: (fn: () => void) => {
       onBeforeUnmountCallbacks.push(fn)
     },
+    captureOwnedMountContinuation: () => undefined,
     vapor: (setup: () => unknown) => setup(),
     renderAnchor: renderAnchorMock,
   }

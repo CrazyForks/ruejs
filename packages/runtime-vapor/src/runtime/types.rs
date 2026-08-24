@@ -24,7 +24,8 @@ mod mounted;
 pub(crate) use mounted::{
     AnchorMountState, ContainerMountState, MountLifecycleRecord, MountedPatchSubtree,
     MountedPatchSubtreeType, MountedState, MountedSubtreeState, MountedTextSubtree,
-    MountedVaporSubtree, MountedVaporSubtreeType, RangeMountState,
+    MountedVaporSubtree, MountedVaporSubtreeType, OwnedMountPhase, OwnedMountSlot, OwnedMountToken,
+    PendingComponentMounted, RangeMountState,
 };
 
 pub type ComponentProps = HashMap<String, JsValue>;

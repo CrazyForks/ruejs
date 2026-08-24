@@ -140,6 +140,57 @@ pub(crate) struct RangeMountState<A: DomAdapter> {
     pub mounted: Option<MountedState<A>>,
 }
 
+/// JS 侧只透传、不解析的 owned mount 句柄身份。
+///
+/// `slot` 允许运行时复用存储槽，`generation` 则确保复用后旧 token 不会命中新资源。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct OwnedMountToken {
+    pub slot: usize,
+    pub generation: u64,
+}
+
+#[derive(Clone)]
+pub(crate) struct PendingComponentMounted<A: DomAdapter> {
+    pub owner: OwnedMountToken,
+    pub inst_index: usize,
+    pub parent_inst_index: Option<usize>,
+    pub container: Option<A::Element>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum OwnedMountPhase {
+    Building,
+    Committed,
+}
+
+/// 一个列表行拥有的全部 Rust mounted snapshot。
+///
+/// anchor/range 分开存储，查找只扫描当前行的局部集合；嵌套列表创建的新 token
+/// 记录为 children，使 dispose/abort 能在不扫描全局 map 的情况下递归回收。
+pub(crate) struct OwnedMountSlot<A: DomAdapter> {
+    pub generation: u64,
+    pub phase: OwnedMountPhase,
+    pub anchors: Vec<AnchorMountState<A>>,
+    pub ranges: Vec<RangeMountState<A>>,
+    pub children: Vec<OwnedMountToken>,
+    pub pending_mounted: bool,
+    pub pending_component_mounted: Vec<PendingComponentMounted<A>>,
+}
+
+impl<A: DomAdapter> OwnedMountSlot<A> {
+    pub fn new(generation: u64) -> Self {
+        Self {
+            generation,
+            phase: OwnedMountPhase::Building,
+            anchors: Vec::new(),
+            ranges: Vec::new(),
+            children: Vec::new(),
+            pending_mounted: false,
+            pending_component_mounted: Vec::new(),
+        }
+    }
+}
+
 impl MountedVaporSubtreeType {
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub(crate) fn matches_input_type<A: DomAdapter>(&self, input_type: &MountInputType<A>) -> bool {

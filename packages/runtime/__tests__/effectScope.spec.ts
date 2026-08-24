@@ -15,6 +15,7 @@ import {
   watchEffect,
 } from '../src'
 import type { EffectScope } from '../src'
+import { __rueGetEffectScopeDebugState } from '@rue-js/runtime-vapor/reactive'
 
 afterEach(() => {
   setReactiveScheduling('microtask')
@@ -123,5 +124,19 @@ describe('effectScope', () => {
 
     count.set(2)
     expect(seen).toEqual([0, 1])
+  })
+
+  it('keeps stopped state on each handle without retaining stopped scope ids', () => {
+    const baseline = __rueGetEffectScopeDebugState()
+    const stopped: EffectScope[] = []
+
+    for (let index = 0; index < 100; index += 1) {
+      const scope = effectScope(true)
+      scope.stop()
+      stopped.push(scope)
+    }
+
+    expect(stopped.every(scope => scope.active === false)).toBe(true)
+    expect(__rueGetEffectScopeDebugState()).toEqual(baseline)
   })
 })

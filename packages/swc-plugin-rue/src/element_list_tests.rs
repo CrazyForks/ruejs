@@ -311,7 +311,7 @@ fn extracts_key_exprs_from_wrapped_renders_and_native_fragments() {
 }
 
 #[test]
-fn builds_keyed_list_for_expression_body_with_single_native_root_anchor() {
+fn builds_keyed_list_for_expression_body_with_direct_mount_and_index_watcher() {
     let mut vt = new_vt();
     let call =
         parse_call("items.map((item, idx) => <li key={item.id}>{idx}:{item.name}</li>)", true);
@@ -327,10 +327,115 @@ fn builds_keyed_list_for_expression_body_with_single_native_root_anchor() {
     assert!(out.contains("items:_map1_current"));
     assert!(out.contains("getKey:(item,idx)=>item.id"));
     assert!(out.contains("renderItem:(item,parent,start,end,idx)=>{"));
-    assert!(out.contains("const__slot=vapor(()=>{"));
+    assert!(out.contains("directRoot:true"));
     assert!(out.contains("_$createElement(\"li\",_root)"));
-    assert!(out.contains("renderAnchor(__slot,parent,start);"));
+    assert!(out.contains("_$insertBefore(parent,_root,start);"));
+    assert!(out.contains("watchEffect(()=>{"));
+    assert!(!out.contains("renderAnchor(__slot,parent,start);"));
     assert!(!out.contains("renderBetween(__slot,parent,start,end);"));
+}
+
+#[test]
+fn classifies_list_row_mount_capabilities_without_invalid_boolean_states() {
+    let row_names = HashSet::from(["row".to_string(), "idx".to_string()]);
+    let no_shadows = HashSet::new();
+
+    let merged_leaf = classify_list_row_mount_mode(
+        &parse_expr("<li>{row.label}</li>", true),
+        &row_names,
+        &no_shadows,
+        true,
+    );
+    assert_eq!(merged_leaf, ListRowMountMode::DirectLeaf { effects: ListRowEffectMode::Merge });
+    assert!(merged_leaf.direct_mount());
+    assert!(merged_leaf.batch_build());
+    assert!(merged_leaf.merge_effects());
+    assert!(!merged_leaf.needs_owned_mount());
+
+    for source in [
+        "<li {...row.attrs}>{row.label}</li>",
+        "<li>{String(row.label)}</li>",
+        "<li>{Number(row.id)}</li>",
+        "<li>{Boolean(row.active)}</li>",
+    ] {
+        let preserved_leaf =
+            classify_list_row_mount_mode(&parse_expr(source, true), &row_names, &no_shadows, false);
+        assert_eq!(
+            preserved_leaf,
+            ListRowMountMode::DirectLeaf { effects: ListRowEffectMode::Preserve },
+            "{source}"
+        );
+        assert!(preserved_leaf.direct_mount(), "{source}");
+        assert!(!preserved_leaf.merge_effects(), "{source}");
+    }
+
+    let string_shadow = HashSet::from(["String".to_string()]);
+    let shadowed_scalar = classify_list_row_mount_mode(
+        &parse_expr("<li>{String(row.label)}</li>", true),
+        &row_names,
+        &string_shadow,
+        false,
+    );
+    assert_eq!(shadowed_scalar, ListRowMountMode::OwnedStructural);
+    assert!(shadowed_scalar.batch_build());
+    assert!(shadowed_scalar.needs_owned_mount());
+    assert!(!shadowed_scalar.direct_mount());
+
+    assert_eq!(
+        classify_list_row_mount_mode(
+            &parse_expr("<li ref={row.ref}>{row.label}</li>", true),
+            &row_names,
+            &no_shadows,
+            false,
+        ),
+        ListRowMountMode::DirectLeaf { effects: ListRowEffectMode::Preserve },
+    );
+    assert_eq!(
+        classify_list_row_mount_mode(
+            &parse_expr("<li>{row.ok ? <b /> : <i />}</li>", true),
+            &row_names,
+            &no_shadows,
+            false,
+        ),
+        ListRowMountMode::OwnedStructural,
+    );
+
+    for source in ["<Row row={row} />", "opaqueRow(row)"] {
+        assert_eq!(
+            classify_list_row_mount_mode(&parse_expr(source, true), &row_names, &no_shadows, false,),
+            ListRowMountMode::GlobalFallback,
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn tracks_only_scope_aware_index_references_including_aliases_and_closures() {
+    fn arrow_body(source: &str) -> Box<BlockStmtOrExpr> {
+        let Expr::Arrow(arrow) = parse_expr(source, true) else {
+            panic!("expected arrow");
+        };
+        arrow.body
+    }
+
+    assert!(!callback_body_uses_name(
+        arrow_body("(row, idx) => <li>{row.label}</li>").as_ref(),
+        "idx",
+    ));
+    assert!(callback_body_uses_name(arrow_body("(row, idx) => <li>{idx}</li>").as_ref(), "idx",));
+    assert!(callback_body_uses_name(
+        arrow_body("(row, idx) => { const position = idx; return <li>{position}</li>; }").as_ref(),
+        "idx",
+    ));
+    assert!(callback_body_uses_name(
+        arrow_body("(row, idx) => <li>{(() => idx)()}</li>").as_ref(),
+        "idx",
+    ));
+    assert!(!callback_body_uses_name(
+        arrow_body("(row, idx) => { const read = (idx) => idx; return <li>{read(row.id)}</li>; }",)
+            .as_ref(),
+        "idx",
+    ));
 }
 
 #[test]
@@ -1532,6 +1637,7 @@ fn hardens_array_destructured_list_aliases_and_index_key_fallbacks() {
     assert!(out.contains("getKey:(item,index)=>item[0]"), "{out}");
     assert!(out.contains("consttext=item[1].toUpperCase();"), "{out}");
     assert!(!out.contains(",\"key\","), "{out}");
+    assert!(!out.contains("directRoot:true"), "{out}");
     assert!(out.contains("renderAnchor(__slot,parent,start);"), "{out}");
 
     let mut nested_fragment_vt = new_vt();
@@ -1681,7 +1787,10 @@ fn hardens_keyed_list_computed_alias_keys_and_external_prefix_blocks() {
     assert!(out.contains("getKey:(item,index)=>item[kind]??external.value"), "{out}");
     assert!(!out.contains(",\"key\","), "{out}");
     assert!(out.contains("item.title||String(index)"), "{out}");
-    assert!(out.contains("renderAnchor(__slot,parent,start);"), "{out}");
+    assert!(out.contains("directRoot:true"), "{out}");
+    assert!(out.contains("_$insertBefore(parent,_root,start);"), "{out}");
+    assert!(out.contains("watchEffect(()=>{"), "{out}");
+    assert!(!out.contains("renderAnchor(__slot,parent,start);"), "{out}");
 
     let non_alias_prefix = parse_arrow_block(
         "() => { const rowKey = compute(item); sideEffect(rowKey); return rowKey; }",
@@ -2250,6 +2359,7 @@ fn native_key_is_structural_metadata_only() {
     let component_out = compact(&emit_stmts(component_stmts));
     assert!(component_out.contains("getKey:(row,idx)=>row.id"), "{component_out}");
     assert!(component_out.contains("key:row.id"), "{component_out}");
+    assert!(component_out.contains("ownedMount:true"), "{component_out}");
 
     let mut unkeyed_vt = new_vt();
     let unkeyed_call = parse_call("rows.map(row => <tr>{row.label}</tr>)", true);

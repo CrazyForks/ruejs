@@ -32,10 +32,10 @@ export default ListsAndKeys;
     // - 列表锚点：rue:list:start/end 注释创建与插入
     // - 持久 Map：_mapX_elements 保存 key→片段 映射
     // - _$vaporKeyedList：传入 items/getKey/elements/parent/before/start/renderItem
-    // - renderItem：使用 renderAnchor(vapor(()=>{...}), parent, start) 渲染每项
+    // - renderItem：直接批量构建并插入，同时保留 index watcher
     // - 更新：watch 中对 elements 引用进行复用更新
     let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, _$insertBefore, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const list = [
@@ -58,35 +58,37 @@ const ListsAndKeys: FC = ()=>vapor((__rue_parent_context)=>{
         _$appendChild(_el2, _list1);
         _$appendChild(_el2, _list2);
         let _map1_elements = new Map;
+        const _map1_state = {
+            elements: _map1_elements
+        };
         watchEffect(()=>{
             const _map1_current = list || [];
             const _map1_newElements = _$vaporKeyedList({
                 items: _map1_current,
                 getKey: (item, idx)=>item,
+                state: _map1_state,
                 elements: _map1_elements,
                 parent: _el2,
                 before: _list2,
                 singleRoot: true,
+                directRoot: true,
                 start: _list1,
                 renderItem: (item, parent, start, end, idx)=>{
-                    const __slot = vapor(()=>{
-                        const _root = _$createDocumentFragment();
-                        const _el3 = _$createElement("li", _root);
-                        _$appendChild(_root, _el3);
-                        const _el4 = _$createTextWrapper(_el3);
-                        _$appendChild(_el3, _el4);
-                        watchEffect(()=>{
-                            _$settextContent(_el4, idx + 1);
-                        });
-                        _$appendChild(_el3, _$createTextNode(". "));
-                        const _el5 = _$createTextWrapper(_el3);
-                        _$appendChild(_el3, _el5);
-                        watchEffect(()=>{
-                            _$settextContent(_el5, item);
-                        });
-                        return _root;
+                    const _root = _$createDocumentFragment();
+                    const _el3 = _$createElement("li", _root);
+                    _$appendChild(_root, _el3);
+                    const _el4 = _$createTextWrapper(_el3);
+                    _$appendChild(_el3, _el4);
+                    watchEffect(()=>{
+                        _$settextContent(_el4, idx + 1);
                     });
-                    renderAnchor(__slot, parent, start);
+                    _$appendChild(_el3, _$createTextNode(". "));
+                    const _el5 = _$createTextWrapper(_el3);
+                    _$appendChild(_el3, _el5);
+                    watchEffect(()=>{
+                        _$settextContent(_el5, item);
+                    });
+                    _$insertBefore(parent, _root, start);
                 }
             });
             _map1_elements = _map1_newElements;

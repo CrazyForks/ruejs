@@ -16,6 +16,101 @@ use crate::utils::unwrap_expr;
 use super::VaporTransform;
 use crate::log;
 
+fn collect_scalar_names_from_pat(pat: &Pat, names: &mut std::collections::HashSet<String>) {
+    match pat {
+        Pat::Ident(binding) => {
+            if crate::element_expr::is_global_scalar_constructor_name(binding.id.sym.as_ref()) {
+                names.insert(binding.id.sym.to_string());
+            }
+        }
+        Pat::Array(array) => {
+            for element in array.elems.iter().flatten() {
+                collect_scalar_names_from_pat(element, names);
+            }
+        }
+        Pat::Object(object) => {
+            for prop in &object.props {
+                match prop {
+                    ObjectPatProp::Assign(prop) => {
+                        if crate::element_expr::is_global_scalar_constructor_name(
+                            prop.key.sym.as_ref(),
+                        ) {
+                            names.insert(prop.key.sym.to_string());
+                        }
+                    }
+                    ObjectPatProp::KeyValue(prop) => {
+                        collect_scalar_names_from_pat(&prop.value, names);
+                    }
+                    ObjectPatProp::Rest(prop) => {
+                        collect_scalar_names_from_pat(&prop.arg, names);
+                    }
+                }
+            }
+        }
+        Pat::Assign(assign) => collect_scalar_names_from_pat(&assign.left, names),
+        Pat::Rest(rest) => collect_scalar_names_from_pat(&rest.arg, names),
+        _ => {}
+    }
+}
+
+fn collect_scalar_names_from_stmts<'a>(
+    stmts: impl IntoIterator<Item = &'a Stmt>,
+) -> std::collections::HashSet<String> {
+    let mut names = std::collections::HashSet::new();
+    for stmt in stmts {
+        let Stmt::Decl(decl) = stmt else {
+            continue;
+        };
+        match decl {
+            Decl::Var(var) => {
+                for declarator in &var.decls {
+                    collect_scalar_names_from_pat(&declarator.name, &mut names);
+                }
+            }
+            Decl::Fn(function) => {
+                if crate::element_expr::is_global_scalar_constructor_name(
+                    function.ident.sym.as_ref(),
+                ) {
+                    names.insert(function.ident.sym.to_string());
+                }
+            }
+            Decl::Class(class) => {
+                if crate::element_expr::is_global_scalar_constructor_name(class.ident.sym.as_ref())
+                {
+                    names.insert(class.ident.sym.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+    names
+}
+
+fn collect_module_scalar_names(module: &Module) -> std::collections::HashSet<String> {
+    let mut names = collect_scalar_names_from_stmts(
+        module
+            .body
+            .iter()
+            .filter_map(|item| if let ModuleItem::Stmt(stmt) = item { Some(stmt) } else { None }),
+    );
+    for item in &module.body {
+        let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = item else {
+            continue;
+        };
+        for specifier in &import.specifiers {
+            let local = match specifier {
+                ImportSpecifier::Named(specifier) => &specifier.local,
+                ImportSpecifier::Default(specifier) => &specifier.local,
+                ImportSpecifier::Namespace(specifier) => &specifier.local,
+            };
+            if crate::element_expr::is_global_scalar_constructor_name(local.sym.as_ref()) {
+                names.insert(local.sym.to_string());
+            }
+        }
+    }
+    names
+}
+
 fn vapor_parent_param() -> Pat {
     Pat::Ident(BindingIdent { id: ident("__rue_parent_context"), type_ann: None })
 }
@@ -31,8 +126,11 @@ impl VisitMut for VaporTransform {
             block.stmts.iter(),
             &visible_renderable_locals,
         );
+        let scalar_scope = collect_scalar_names_from_stmts(block.stmts.iter());
         self.push_renderable_local_scope(scope);
+        self.push_plain_local_scope(scalar_scope);
         block.visit_mut_children_with(self);
+        self.pop_plain_local_scope();
         self.pop_renderable_local_scope();
     }
 
@@ -43,6 +141,11 @@ impl VisitMut for VaporTransform {
     /// - `return _root`
     fn visit_mut_arrow_expr(&mut self, arrow: &mut ArrowExpr) {
         log::debug("rue-swc: visit arrow_expr");
+        let mut scalar_scope = std::collections::HashSet::new();
+        for param in &arrow.params {
+            collect_scalar_names_from_pat(param, &mut scalar_scope);
+        }
+        self.push_plain_local_scope(scalar_scope);
         match &mut *arrow.body {
             BlockStmtOrExpr::Expr(expr) => {
                 let inner = unwrap_expr(expr.as_ref());
@@ -97,6 +200,17 @@ impl VisitMut for VaporTransform {
                 block.visit_mut_with(self);
             }
         }
+        self.pop_plain_local_scope();
+    }
+
+    fn visit_mut_function(&mut self, function: &mut Function) {
+        let mut scalar_scope = std::collections::HashSet::new();
+        for param in &function.params {
+            collect_scalar_names_from_pat(&param.pat, &mut scalar_scope);
+        }
+        self.push_plain_local_scope(scalar_scope);
+        function.visit_mut_children_with(self);
+        self.pop_plain_local_scope();
     }
 
     /// 将任意函数体中的 `return <JSX/>` / `return <>...</>` 转成 `return vapor(() => { ... })`
@@ -156,9 +270,12 @@ impl VisitMut for VaporTransform {
             }),
             &visible_renderable_locals,
         );
+        let scalar_scope = collect_module_scalar_names(m);
         self.push_renderable_local_scope(scope);
+        self.push_plain_local_scope(scalar_scope);
         // propagate into children first
         m.visit_mut_children_with(self);
+        self.pop_plain_local_scope();
         self.pop_renderable_local_scope();
         if !self.did_transform {
             return;

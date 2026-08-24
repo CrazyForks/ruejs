@@ -7,7 +7,7 @@ range_map 使用 start/end 两个锚点定位动态区间。
 use super::super::Rue;
 use super::super::types::{
     MountInput, MountInputType, MountedState, MountedSubtreeState, MountedVaporSubtree,
-    MountedVaporSubtreeType, RangeMountState,
+    MountedVaporSubtreeType, OwnedMountToken, RangeMountState,
 };
 #[cfg(feature = "dev")]
 use crate::log::{log, want_log};
@@ -121,11 +121,162 @@ where
         }
     }
 
+    fn find_owned_range_index(&self, token: OwnedMountToken, start: &A::Element) -> Option<usize>
+    where
+        <A as DomAdapter>::Element: Into<JsValue>,
+    {
+        let start_js: JsValue = start.clone().into();
+        self.owned_mount_slot(token)?.ranges.iter().position(|entry| {
+            let candidate: JsValue = entry.start.clone().into();
+            js_sys::Object::is(&candidate, &start_js)
+        })
+    }
+
+    fn clear_owned_range(
+        &mut self,
+        token: OwnedMountToken,
+        parent: &mut A::Element,
+        start: &A::Element,
+        end: &A::Element,
+    ) where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let Some(index) = self.find_owned_range_index(token, start) else {
+            return;
+        };
+        let mounted = self
+            .owned_mount_slot_mut(token)
+            .and_then(|slot| slot.ranges.get_mut(index))
+            .and_then(|entry| {
+                entry.end = end.clone();
+                entry.take_mount()
+            });
+        let mut dest_parent = self.resolve_dest_parent_for_end(parent, end);
+        if let Some(mounted) = mounted {
+            self.clear_mounted_state(&mut dest_parent, mounted);
+        }
+        self.clear_dom_between_anchors_owned(&mut dest_parent, start, end);
+    }
+
+    fn render_owned_between_hit(
+        &mut self,
+        token: OwnedMountToken,
+        index: usize,
+        input: &MountInput<A>,
+        parent: &mut A::Element,
+        start: A::Element,
+        end: A::Element,
+    ) where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let taken = self
+            .owned_mount_slot_mut(token)
+            .and_then(|slot| slot.ranges.get_mut(index))
+            .and_then(|entry| {
+                entry.end = end.clone();
+                entry.take_mount()
+            });
+        let mounted = match taken {
+            Some(MountedState::Block(old_block)) => {
+                let mut dest_parent = self.resolve_dest_parent_for_end(parent, &end);
+                self.clear_mounted_state(&mut dest_parent, MountedState::Block(old_block));
+                let Some(mounted) = self.mount_range_input_or_error(
+                    input,
+                    parent,
+                    error_strings::RANGE_BLOCK_HIT_FAILED_NO_DOM,
+                ) else {
+                    return self.abort_range_mount();
+                };
+                let el = self.mounted_host_for_range(&mounted);
+                self.vapor_insert_new_range(parent, &end, &el);
+                MountedState::from_subtree_root(mounted)
+            }
+            Some(old_mount) => {
+                let mut parent_clone = parent.clone();
+                self.patch_root_mounted_state(old_mount, input, &mut parent_clone)
+            }
+            None => {
+                let mut dest_parent = self.resolve_dest_parent_for_end(parent, &end);
+                self.clear_dom_between_anchors_owned(&mut dest_parent, &start, &end);
+                let Some(mounted) = self.mount_range_input_or_error(
+                    input,
+                    parent,
+                    error_strings::RANGE_EMPTY_HIT_FAILED_NO_DOM,
+                ) else {
+                    return self.abort_range_mount();
+                };
+                let el = self.mounted_host_for_range(&mounted);
+                self.vapor_insert_new_range(parent, &end, &el);
+                MountedState::from_subtree_root(mounted)
+            }
+        };
+        if let Some(slot) = self.owned_mount_slot_mut(token)
+            && let Some(entry) = slot.ranges.get_mut(index)
+        {
+            entry.end = end;
+            entry.store_mount(mounted);
+        }
+    }
+
+    fn render_owned_between_miss(
+        &mut self,
+        token: OwnedMountToken,
+        input: &MountInput<A>,
+        parent: &mut A::Element,
+        start: A::Element,
+        end: A::Element,
+    ) where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let Some(mounted) =
+            self.mount_range_input_or_error(input, parent, error_strings::RANGE_MISS_FAILED_NO_DOM)
+        else {
+            return self.abort_range_mount();
+        };
+        let el = self.mounted_host_for_range(&mounted);
+        let mut dest_parent = self.resolve_dest_parent_for_end(parent, &end);
+        self.clear_dom_between_anchors_owned(&mut dest_parent, &start, &end);
+        self.insert_range_miss_dom(&mut dest_parent, &el, &end);
+        if let Some(slot) = self.owned_mount_slot_mut(token) {
+            slot.ranges.push(RangeMountState::new(
+                start,
+                end,
+                MountedState::from_subtree_root(mounted),
+            ));
+        }
+    }
+
+    fn render_owned_between_impl(
+        &mut self,
+        token: OwnedMountToken,
+        input: &MountInput<A>,
+        parent: &mut A::Element,
+        start: A::Element,
+        end: A::Element,
+    ) where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        self.current_anchor = Some(end.clone());
+        self.call_hooks("before_mount");
+        if let Some(index) = self.find_owned_range_index(token, &start) {
+            self.render_owned_between_hit(token, index, input, parent, start, end);
+        } else {
+            self.render_owned_between_miss(token, input, parent, start, end);
+        }
+        self.mark_current_owned_mount_pending();
+        self.current_anchor = None;
+    }
+
     pub fn clear_range(&mut self, parent: &mut A::Element, start: A::Element, end: A::Element)
     where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         self.rethrow_if_crashed_for_range();
+
+        if let Some(token) = self.current_owned_mount() {
+            self.clear_owned_range(token, parent, &start, &end);
+            return;
+        }
 
         batch_scope(|| {
             self.current_anchor = Some(end.clone());
@@ -204,6 +355,11 @@ where
         <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
     {
         self.rethrow_if_crashed_for_range();
+
+        if let Some(token) = self.current_owned_mount() {
+            batch_scope(|| self.render_owned_between_impl(token, input, parent, start, end));
+            return;
+        }
 
         batch_scope(|| {
             self.current_anchor = Some(end.clone());
@@ -346,7 +502,7 @@ where
             self.clear_dom_between_anchors(&mut dest_parent, &start, &end);
             // 插入：片段走子节点插入，普通元素直接在 end 前插入
             self.insert_range_miss_dom(&mut dest_parent, &el, &end);
-            self.range_map.push(RangeMountState::new(
+            self.push_range_entry(RangeMountState::new(
                 start,
                 end,
                 MountedState::from_subtree_root(mounted),

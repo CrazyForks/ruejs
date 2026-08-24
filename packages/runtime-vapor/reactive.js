@@ -13,11 +13,18 @@ const RUE_SIGNAL_ID_KEY = '__rue_signal_id__'
 
 const effectRenderOwnerById = new Map()
 const scopeHandleCache = new Map()
-const stoppedScopeIds = new Set()
+const scopeHandleState = new WeakMap()
 const postFlushQueue = new Set()
 let isDispatchingRenderTracked = false
 let isDispatchingRenderTriggered = false
 let postFlushPending = false
+
+/** 仅供测试/开发验证 effect scope 元数据是否保持有界。 */
+export const __rueGetEffectScopeDebugState = () => ({
+  activeScopeHandles: scopeHandleCache.size,
+  cachedScopeHandles: scopeHandleCache.size,
+  stoppedScopeIds: 0,
+})
 
 // post flush 队列优先复用原生 queueMicrotask，兼容旧环境时退回 Promise microtask。
 const queueTask =
@@ -229,7 +236,11 @@ const disposeEffectScope =
 
 const markScopeStopped = id => {
   if (Number.isInteger(id)) {
-    stoppedScopeIds.add(id)
+    const handle = scopeHandleCache.get(id)
+    const state = handle ? scopeHandleState.get(handle) : undefined
+    if (state) {
+      state.active = false
+    }
     scopeHandleCache.delete(id)
   }
 }
@@ -616,35 +627,39 @@ export const onRenderTracked = callback => {
 }
 
 /** 创建 JS EffectScope 句柄，委托 Wasm scope push/pop/dispose。 */
-const createScopeHandle = id => ({
-  get active() {
-    return !stoppedScopeIds.has(id)
-  },
-  run(fn) {
-    if (typeof fn !== 'function' || stoppedScopeIds.has(id)) {
-      return undefined
-    }
+const createScopeHandle = id => {
+  const state = { active: true }
+  const handle = {
+    get active() {
+      return state.active
+    },
+    run(fn) {
+      if (typeof fn !== 'function' || !state.active) {
+        return undefined
+      }
 
-    reactiveRuntime.__ruePushEffectScope(id)
-    try {
-      return fn()
-    } finally {
-      reactiveRuntime.__ruePopEffectScope()
-    }
-  },
-  stop() {
-    if (stoppedScopeIds.has(id)) {
-      return
-    }
+      reactiveRuntime.__ruePushEffectScope(id)
+      try {
+        return fn()
+      } finally {
+        reactiveRuntime.__ruePopEffectScope()
+      }
+    },
+    stop() {
+      if (!state.active) {
+        return
+      }
 
-    stoppedScopeIds.add(id)
-    disposeEffectScope?.(id)
-    scopeHandleCache.delete(id)
-  },
-  dispose() {
-    this.stop()
-  },
-})
+      markScopeStopped(id)
+      disposeEffectScope?.(id)
+    },
+    dispose() {
+      this.stop()
+    },
+  }
+  scopeHandleState.set(handle, state)
+  return handle
+}
 
 /** 复用 scope id 对应的 JS 句柄，保持 getCurrentScope 多次读取的引用稳定。 */
 const getScopeHandle = id => {

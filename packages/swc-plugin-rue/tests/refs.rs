@@ -34,7 +34,7 @@ export default Refs;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { _$vaporWithHookId, useSetup, useRef, vapor, onBeforeUnmount, _$createElement, _$createTextNode, _$appendChild, watchEffect, _$vaporBindUseRef, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { _$vaporWithHookId, useSetup, useRef, vapor, _$createElement, _$createTextNode, _$appendChild, watchEffect, _$vaporBindUseRef, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const Refs: FC = ()=>{
@@ -59,10 +59,7 @@ const Refs: FC = ()=>{
         _$appendChild(_el1, _$createTextNode("Refs 基础"));
         const _el2 = _$createElement("input", _root);
         _$appendChild(_root, _el2);
-        const _el2_ref_stop = _$vaporBindUseRef(_el2, ()=>(inputRef));
-        onBeforeUnmount(()=>{
-            _el2_ref_stop();
-        });
+        _$vaporBindUseRef(_el2, ()=>(inputRef));
         _$setClassName(_el2, "border rounded-md px-2 py-1");
         _$setAttribute(_el2, "placeholder", "点击按钮自动聚焦");
         const _el3 = _$createElement("button", _root);

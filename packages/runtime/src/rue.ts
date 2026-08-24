@@ -10,7 +10,9 @@ Rue 运行时架构概述
 import { createRue as createRueWasm } from '@rue-js/runtime-vapor'
 import {
   getCurrentInstance,
+  getCurrentScope,
   isRef,
+  onScopeDispose,
   untrack as reactiveUntrack,
   withHookSlot,
 } from '@rue-js/runtime-vapor/reactive'
@@ -61,9 +63,14 @@ import {
 } from './components/suspenseContext'
 import { dispatchErrorCaptured, onErrorCaptured, wasErrorCapturedDispatched } from './error-capture'
 import {
+  disposeKeepAliveFromPreviousHandle,
   updateKeepAlivePropsFromPreviousHandle,
   withKeepAlivePropsRegistrationTarget,
 } from './components/keepAlivePropsBridge'
+import {
+  updateAsyncExternalPropsFromPreviousHandle,
+  withAsyncExternalPropsRegistrationTarget,
+} from './components/asyncExternalPropsBridge'
 import { copyBuiltinComponentMarker, getBuiltinComponentName } from './components/builtinMarkers'
 import {
   isRueIslandDescriptor,
@@ -449,9 +456,108 @@ setPreferredRuntime(rue)
 /** 获取激活的 Rue 实例：优先 __rue_active，其次默认 __rue */
 const getRue = () => resolveActiveRuntime(() => (globalThis as any).__rue)
 
+export type OwnedMountProtocol = {
+  buildOwnedMount(): unknown
+  commitMounted(token: unknown, deferMounted?: boolean): boolean
+  flushMounted(token: unknown): boolean
+  updateOwnedMount(token: unknown): boolean
+  disposeOwnedMount(token: unknown): boolean
+  abortOwnedMount(token: unknown): boolean
+}
+
+export type OwnedMountContinuation = {
+  /** 返回 false 表示 owner generation 已失效，调用方不得回退到全局提交。 */
+  run(run: () => void): boolean
+}
+
+type OwnedMountContinuationContext = { protocol: OwnedMountProtocol; token: unknown }
+const OWNED_MOUNT_CONTINUATION_STACK_KEY = Symbol.for('rue.owned-mount-continuation-stack')
+const getOwnedMountContinuationStack = () => {
+  const record = globalThis as typeof globalThis & {
+    [OWNED_MOUNT_CONTINUATION_STACK_KEY]?: OwnedMountContinuationContext[]
+  }
+  return (record[OWNED_MOUNT_CONTINUATION_STACK_KEY] ??= [])
+}
+
+const runInOwnedMountContinuationContext = <T>(
+  context: OwnedMountContinuationContext,
+  run: () => T,
+): T => {
+  const stack = getOwnedMountContinuationStack()
+  stack.push(context)
+  try {
+    return run()
+  } finally {
+    const index = stack.lastIndexOf(context)
+    if (index >= 0) stack.splice(index, 1)
+  }
+}
+
+export const withOwnedMountContinuationContext = <T>(
+  protocol: OwnedMountProtocol,
+  token: unknown,
+  run: () => T,
+): T => {
+  const context = { protocol, token }
+  return runInOwnedMountContinuationContext(context, run)
+}
+
+/** 捕获当前行 owner token，供 Promise/microtask 在提交前校验 generation。 */
+export const captureOwnedMountContinuation = (): OwnedMountContinuation | undefined => {
+  const stack = getOwnedMountContinuationStack()
+  const context = stack[stack.length - 1]
+  if (!context) {
+    return undefined
+  }
+  const { protocol, token } = context
+
+  return {
+    run(run) {
+      if (
+        getOwnedMountContinuationStack().some(
+          current => current.protocol === protocol && current.token === token,
+        )
+      ) {
+        run()
+        return true
+      }
+      if (!protocol.updateOwnedMount(token)) {
+        return false
+      }
+      try {
+        runInOwnedMountContinuationContext(context, run)
+        if (!protocol.commitMounted(token)) {
+          throw new Error('[rue] async owned mount commit rejected a stale token')
+        }
+        return true
+      } catch (error) {
+        protocol.abortOwnedMount(token)
+        throw error
+      }
+    },
+  }
+}
+
+/** 仅在当前后端完整实现五阶段协议时返回能力；旧后端显式走全局 fallback。 */
+export const getOwnedMountProtocol = (): OwnedMountProtocol | undefined => {
+  const runtime = getRue() as Partial<OwnedMountProtocol>
+  if (
+    typeof runtime.buildOwnedMount !== 'function' ||
+    typeof runtime.commitMounted !== 'function' ||
+    typeof runtime.flushMounted !== 'function' ||
+    typeof runtime.updateOwnedMount !== 'function' ||
+    typeof runtime.disposeOwnedMount !== 'function' ||
+    typeof runtime.abortOwnedMount !== 'function'
+  ) {
+    return undefined
+  }
+  return runtime as OwnedMountProtocol
+}
+
 const renderOwnerByContainer = new WeakMap<object, unknown>()
 const mountHandleContainerAnchorByContainer = new WeakMap<object, DomNodeLike>()
 const renderOwnerByRangeStart = new WeakMap<object, unknown>()
+const lastMountHandleRangeValueByStart = new WeakMap<object, unknown>()
 const renderOwnerByAnchor = new WeakMap<object, unknown>()
 const runtimeByAnchor = new WeakMap<object, any>()
 const mountedNodesByAnchor = new WeakMap<object, DomNodeLike[]>()
@@ -467,16 +573,26 @@ const pendingAnchorHandleRenders = new WeakMap<
   object,
   { parent: DomElementLike; value: RenderableInput; runtime: any }
 >()
+const pendingAnchorScopeCleanupRegistered = new WeakSet<object>()
 const activeRuntimeErrorCaptures: Array<(error: Error) => void> = []
 const RUE_FORCE_REMOUNT_ANCHOR_KEY = '__rue_force_remount_anchor'
 const RUE_COMPONENT_CHILDREN_KEY = '__rue_component_children'
 
 const readAnchorParentChildren = (parent: DomElementLike): DomNodeLike[] => {
   const candidate = parent as unknown as {
-    childNodes?: ArrayLike<DomNodeLike>
+    firstChild?: DomNodeLike | null
     children?: ArrayLike<DomNodeLike>
   }
-  return Array.from(candidate.childNodes ?? candidate.children ?? [])
+  if ('firstChild' in candidate) {
+    const nodes: DomNodeLike[] = []
+    let node = candidate.firstChild ?? null
+    while (node) {
+      nodes.push(node)
+      node = ((node as any).nextSibling as DomNodeLike | null) ?? null
+    }
+    return nodes
+  }
+  return Array.from(candidate.children ?? [])
 }
 
 const renderOwnedAnchorMount = (
@@ -1004,16 +1120,16 @@ const replayMountAwareValue = (value: unknown): unknown => {
     return createFreshMountHandle(value)
   }
 
-  if (!isPlainObject(value)) {
-    return value
-  }
+  return value
+}
+
+const replayMountAwareProps = (value: ComponentProps | null): ComponentProps | null => {
+  if (!isPlainObject(value)) return value
 
   let changed = false
-  // replay 的目标是“重新生成 mount handle / 子树壳对象”，不是复制 context graph。
-  // Provider props 有两个必须按引用保留的字段：
-  // 1. value：里面常常装着 ref、action、闭包，深拷贝会把 live binding 拆散；
-  // 2. __rue_context_parent_instance__：它是祖先 owner 的指针，递归 replay 会把整条 owner 链拖进复制路径，
-  //    既可能制造非常大的对象图，也会让示例页 code/preview 切换走上慢路径。
+  // Props 中只有 children 和直接的 mount handle 属于运行时拥有的可挂载结构。
+  // 普通对象（store、trace、配置等）是用户数据，必须保持引用且不能递归扫描；
+  // 否则 N 个列表行共享一个长度为 N 的对象图时会退化为 O(N²)。
   const shouldKeepValueProp = isContextProviderProps(value)
   const nextEntries = Object.entries(value).map(([key, entryValue]) => {
     const replayed =
@@ -1021,7 +1137,9 @@ const replayMountAwareValue = (value: unknown): unknown => {
         ? entryValue
         : key === '__rue_context_parent_instance__'
           ? entryValue
-          : replayMountAwareValue(entryValue)
+          : key === 'children' || isMountHandle(entryValue)
+            ? replayMountAwareValue(entryValue)
+            : entryValue
     if (replayed !== entryValue) changed = true
     return [key, replayed] as const
   })
@@ -1226,7 +1344,7 @@ const createRepeatableElementHandle = <P = {}>(
     nextChildren: ChildInput[],
   ) => RenderableOutput,
 ): RenderableOutput => {
-  const nextProps = replayMountAwareValue(props) as ComponentProps | null
+  const nextProps = replayMountAwareProps(props)
   const nextChildren = replayMountAwareValue(children) as ChildInput[]
   const mountHandle =
     typeof type === 'string'
@@ -1255,7 +1373,7 @@ const createRepeatableResolvedComponentHandle = <P = {}>(
       })
     } catch {}
   }
-  const nextProps = replayMountAwareValue(props) as ComponentProps | null
+  const nextProps = replayMountAwareProps(props)
   const hookTarget = readKeepAliveHookTarget(metadataSource)
   const mountedComponentType = resolveKeepAliveHookTargetComponent(componentType, hookTarget)
   const mountHandle = {
@@ -1738,11 +1856,13 @@ export const renderBetween = (
     const targetParent = resolveBetweenTargetParent(parent, start, end)
     if (!targetParent) {
       syncRenderableOwner(renderOwnerByRangeStart, start as object, undefined)
+      lastMountHandleRangeValueByStart.delete(start as object)
       return
     }
 
     const analysis = analyzeDefaultRenderableInput(normalizedValue)
     if (analysis.kind === 'renderable') {
+      lastMountHandleRangeValueByStart.delete(start as object)
       const prevOwner = renderOwnerByRangeStart.get(start as object)
       if (prevOwner === rangeEndAnchorOwner) {
         getRue().renderAnchor(null, targetParent, end)
@@ -1769,6 +1889,7 @@ export const renderBetween = (
       RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY in (normalizedValue as object)
 
     if (shouldUseRangeEndAnchorHandle) {
+      lastMountHandleRangeValueByStart.delete(start as object)
       const prevOwner = renderOwnerByRangeStart.get(start as object)
       if (prevOwner === mountHandleOwner) {
         getRue().renderBetween(null, targetParent, start, end)
@@ -1780,16 +1901,78 @@ export const renderBetween = (
     }
 
     const prevOwner = renderOwnerByRangeStart.get(start as object)
+    const componentType =
+      !!normalizedValue && typeof normalizedValue === 'object'
+        ? (normalizedValue as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
+        : undefined
+    const componentName = getBuiltinComponentName(componentType)
+    const lastMountHandleValue = lastMountHandleRangeValueByStart.get(start as object)
+    const isAsyncExternalComponent =
+      componentName === 'Teleport' || componentName === 'Transition' || componentName === 'Suspense'
+    if (
+      prevOwner === mountHandleOwner &&
+      isAsyncExternalComponent &&
+      updateAsyncExternalPropsFromPreviousHandle(lastMountHandleValue, normalizedValue)
+    ) {
+      lastMountHandleRangeValueByStart.set(start as object, normalizedValue)
+      return
+    }
+    if (
+      prevOwner === mountHandleOwner &&
+      componentName === 'KeepAlive' &&
+      updateKeepAlivePropsFromPreviousHandle(lastMountHandleValue, normalizedValue)
+    ) {
+      lastMountHandleRangeValueByStart.set(start as object, normalizedValue)
+      return
+    }
     if (prevOwner === rangeEndAnchorOwner) {
       getRue().renderAnchor(null, targetParent, end)
     } else if (prevOwner === mountHandleOwner) {
       getRue().renderBetween(null, targetParent, start, end)
     }
     syncRenderableOwner(renderOwnerByRangeStart, start as object, mountHandleOwner)
+    if (normalizedValue == null) {
+      lastMountHandleRangeValueByStart.delete(start as object)
+    } else {
+      lastMountHandleRangeValueByStart.set(start as object, mountHandleValue)
+    }
     return withCapturedReportedRuntimeError(() =>
-      getRue().renderBetween(mountHandleValue, targetParent, start, end),
+      componentName === 'KeepAlive'
+        ? withKeepAlivePropsRegistrationTarget(mountHandleValue, () =>
+            getRue().renderBetween(mountHandleValue, targetParent, start, end),
+          )
+        : isAsyncExternalComponent
+          ? withAsyncExternalPropsRegistrationTarget(mountHandleValue, () =>
+              getRue().renderBetween(mountHandleValue, targetParent, start, end),
+            )
+          : getRue().renderBetween(mountHandleValue, targetParent, start, end),
     )
   })
+}
+
+/**
+ * 释放同步不透明行挂在指定 range start 上的默认 renderable owner。
+ *
+ * Rust/Wasm mount handle 仍由外层 owned-mount token 释放；这里仅定向清理
+ * primitive、DOM、数组和 block 的 JS owner，避免行删除时回到全局 range 查找。
+ */
+export const disposeSynchronousOpaqueRenderable = (start: DomNodeLike) => {
+  syncRenderableOwner(renderOwnerByRangeStart, start as object, undefined)
+}
+
+/** 显式释放异步或外部宿主 fallback 的完整全局 range owner。 */
+export const disposeExternalRenderableFallback = (
+  parent: DomElementLike,
+  start: DomNodeLike,
+  end: DomNodeLike,
+) => {
+  disposeKeepAliveFromPreviousHandle(lastMountHandleRangeValueByStart.get(start as object))
+  renderBetween(null as any, parent, start, end)
+}
+
+/** owned token 最终销毁前先完成 KeepAlive deactivate/final dispose 顺序。 */
+export const prepareAsyncExternalOwnedDispose = (start: DomNodeLike) => {
+  disposeKeepAliveFromPreviousHandle(lastMountHandleRangeValueByStart.get(start as object))
 }
 /** 在单个尾锚点前渲染，可重复更新同一锚点前的内容。 */
 const renderAnchorUntracked = (
@@ -1950,11 +2133,28 @@ const renderAnchorUntracked = (
       return result
     }
 
+    if (anchorRuntime.ownedMountCollecting?.() === true) {
+      anchorRuntime.renderAnchor(null, targetParent, anchor)
+      clearOwnedAnchorNodes(targetParent, anchor)
+      syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
+      const result = renderOwnedAnchorMount(anchorRuntime, mountHandleValue, targetParent, anchor)
+      lastMountHandleAnchorValueByAnchor.set(anchor as object, mountHandleValue)
+      scheduleTrackedTextControlRestoreWithin(targetParent)
+      return result
+    }
+
     pendingAnchorHandleRenders.set(anchor as object, {
       parent: targetParent,
       value: normalizedValue,
       runtime: anchorRuntime,
     })
+    if (!pendingAnchorScopeCleanupRegistered.has(anchorKey) && getCurrentScope()?.active) {
+      pendingAnchorScopeCleanupRegistered.add(anchorKey)
+      onScopeDispose(() => {
+        pendingAnchorHandleRenders.delete(anchorKey)
+        pendingAnchorScopeCleanupRegistered.delete(anchorKey)
+      }, true)
+    }
     queueMicrotask(() => {
       const pending = pendingAnchorHandleRenders.get(anchor as object)
       if (!pending) {
@@ -1962,31 +2162,35 @@ const renderAnchorUntracked = (
       }
       pendingAnchorHandleRenders.delete(anchor as object)
 
-      const mountedParent = resolveAnchorTargetParent(pending.parent, anchor)
-      if (!mountedParent) {
-        syncRenderableOwner(renderOwnerByAnchor, anchor as object, undefined)
-        lastMountHandleAnchorValueByAnchor.delete(anchor as object)
-        return
+      const commitPendingRender = () => {
+        const mountedParent = resolveAnchorTargetParent(pending.parent, anchor)
+        if (!mountedParent) {
+          syncRenderableOwner(renderOwnerByAnchor, anchor as object, undefined)
+          lastMountHandleAnchorValueByAnchor.delete(anchor as object)
+          return
+        }
+
+        pending.runtime.renderAnchor(null, mountedParent, anchor)
+        clearOwnedAnchorNodes(mountedParent, anchor)
+        syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
+        const pendingMountHandleValue = createFreshMountHandle(pending.value)
+        const pendingComponentType =
+          !!pending.value && typeof pending.value === 'object'
+            ? (pending.value as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
+            : undefined
+        const pendingComponentName = getBuiltinComponentName(pendingComponentType)
+        if (pendingComponentName === 'KeepAlive') {
+          withKeepAlivePropsRegistrationTarget(pendingMountHandleValue, () => {
+            renderOwnedAnchorMount(pending.runtime, pendingMountHandleValue, mountedParent, anchor)
+          })
+        } else {
+          renderOwnedAnchorMount(pending.runtime, pendingMountHandleValue, mountedParent, anchor)
+        }
+        lastMountHandleAnchorValueByAnchor.set(anchor as object, pendingMountHandleValue)
+        scheduleTrackedTextControlRestoreWithin(mountedParent)
       }
 
-      pending.runtime.renderAnchor(null, mountedParent, anchor)
-      clearOwnedAnchorNodes(mountedParent, anchor)
-      syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
-      const pendingMountHandleValue = createFreshMountHandle(pending.value)
-      const pendingComponentType =
-        !!pending.value && typeof pending.value === 'object'
-          ? (pending.value as Record<string, unknown>)[RUE_PORTABLE_COMPONENT_TYPE_KEY]
-          : undefined
-      const pendingComponentName = getBuiltinComponentName(pendingComponentType)
-      if (pendingComponentName === 'KeepAlive') {
-        withKeepAlivePropsRegistrationTarget(pendingMountHandleValue, () => {
-          renderOwnedAnchorMount(pending.runtime, pendingMountHandleValue, mountedParent, anchor)
-        })
-      } else {
-        renderOwnedAnchorMount(pending.runtime, pendingMountHandleValue, mountedParent, anchor)
-      }
-      lastMountHandleAnchorValueByAnchor.set(anchor as object, pendingMountHandleValue)
-      scheduleTrackedTextControlRestoreWithin(mountedParent)
+      commitPendingRender()
     })
   })
 }

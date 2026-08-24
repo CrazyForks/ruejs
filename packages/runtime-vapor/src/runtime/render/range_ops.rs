@@ -6,8 +6,10 @@
 保持这些操作原子化，可以降低替换与清理时的边界错误。
 */
 use super::super::Rue;
-use super::super::types::MountLifecycleRecord;
+use super::super::types::{MountLifecycleRecord, OwnedMountToken};
+use super::helpers::set_native_identity_index;
 use crate::runtime::dom_adapter::DomAdapter;
+use js_sys::WeakMap;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
@@ -31,6 +33,128 @@ impl<A: DomAdapter> Rue<A>
 where
     A::Element: Clone,
 {
+    fn owned_parent_for_node(&self, node: &A::Element) -> A::Element
+    where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let node_js: JsValue = node.clone().into();
+        let parent = js_sys::Reflect::get(&node_js, &JsValue::from_str("parentNode"))
+            .unwrap_or(JsValue::UNDEFINED);
+        if parent.is_null() || parent.is_undefined() { node.clone() } else { parent.into() }
+    }
+
+    fn clear_owned_anchor_entries(
+        &mut self,
+        entries: &mut Vec<super::super::types::AnchorMountState<A>>,
+    ) where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        for entry in entries.iter_mut().rev() {
+            if let Some(mounted) = entry.take_mount() {
+                let mut parent = self.owned_parent_for_node(&entry.anchor);
+                self.clear_mounted_state(&mut parent, mounted);
+            }
+        }
+        entries.clear();
+    }
+
+    fn clear_owned_range_entries(
+        &mut self,
+        entries: &mut Vec<super::super::types::RangeMountState<A>>,
+    ) where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        for entry in entries.iter_mut().rev() {
+            let mut parent = self.owned_parent_for_node(&entry.end);
+            if let Some(mounted) = entry.take_mount() {
+                self.clear_mounted_state(&mut parent, mounted);
+            }
+            self.clear_dom_between_anchors_owned(&mut parent, &entry.start, &entry.end);
+        }
+        entries.clear();
+    }
+
+    /// 递归销毁一个 token。先销毁 child token，再按注册逆序释放本 token 的 snapshot。
+    pub(crate) fn dispose_owned_mount(&mut self, token: OwnedMountToken) -> bool
+    where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let Some(mut slot) = self.take_owned_mount_slot(token) else {
+            return false;
+        };
+        for child in slot.children.drain(..).rev() {
+            self.dispose_owned_mount(child);
+        }
+        self.clear_owned_range_entries(&mut slot.ranges);
+        self.clear_owned_anchor_entries(&mut slot.anchors);
+        true
+    }
+
+    /// update 前回收上一代嵌套 token；父槽本身保留，用于按同一 anchor/range 命中更新。
+    pub(crate) fn begin_owned_mount_update_transitive(&mut self, token: OwnedMountToken) -> bool
+    where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let children = match self.owned_mount_slot_mut(token) {
+            Some(slot) => std::mem::take(&mut slot.children),
+            None => return false,
+        };
+        for child in children.into_iter().rev() {
+            self.dispose_owned_mount(child);
+        }
+        self.begin_owned_mount_update(token)
+    }
+
+    /// OwnedStructural 当前只有一个顶层 anchor。命中它更新时，先精确回收同 token
+    /// 中其余传递式 anchor/range，避免父 block 清理后留下重复 mounted snapshot。
+    pub(crate) fn prepare_owned_anchor_update(&mut self, token: OwnedMountToken, keep_index: usize)
+    where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let Some(slot) = self.owned_mount_slot_mut(token) else {
+            return;
+        };
+        let mut anchors = std::mem::take(&mut slot.anchors);
+        let mut ranges = std::mem::take(&mut slot.ranges);
+        let kept = if keep_index < anchors.len() { Some(anchors.remove(keep_index)) } else { None };
+        self.clear_owned_range_entries(&mut ranges);
+        self.clear_owned_anchor_entries(&mut anchors);
+        if let Some(slot) = self.owned_mount_slot_mut(token) {
+            if let Some(entry) = kept {
+                slot.anchors.push(entry);
+            }
+        }
+    }
+
+    /// Owned 清理只遍历明确归属的 snapshot；DOM 边界移除不触碰全局 range_map。
+    pub(super) fn clear_dom_between_anchors_owned(
+        &mut self,
+        dest_parent: &mut A::Element,
+        start: &A::Element,
+        end: &A::Element,
+    ) where
+        <A as DomAdapter>::Element: From<JsValue> + Into<JsValue>,
+    {
+        let start_js: JsValue = start.clone().into();
+        let end_js: JsValue = end.clone().into();
+        let mut current = js_sys::Reflect::get(&start_js, &JsValue::from_str("nextSibling"))
+            .unwrap_or(JsValue::UNDEFINED);
+        while !current.is_null() && !current.is_undefined() {
+            if js_sys::Object::is(&current, &end_js) {
+                break;
+            }
+            let next = js_sys::Reflect::get(&current, &JsValue::from_str("nextSibling"))
+                .unwrap_or(JsValue::UNDEFINED);
+            let node: A::Element = current.into();
+            if let Some(adapter) = self.get_dom_adapter_mut()
+                && adapter.contains(dest_parent, &node)
+            {
+                adapter.remove_child(dest_parent, &node);
+            }
+            current = next;
+        }
+    }
+
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     fn drain_range_entries_within_root(
         &mut self,
@@ -60,10 +184,14 @@ where
         };
 
         let drained = std::mem::take(&mut self.range_map);
+        let next_identity_index = WeakMap::new();
+        self.range_identity_index = next_identity_index.clone();
+        self.range_identity_indexed_len = 0;
         let mut kept = Vec::with_capacity(drained.len());
         for mut entry in drained.into_iter() {
             let start_js: JsValue = entry.start.clone().into();
             if is_keep_alive_range_start(&start_js) {
+                set_native_identity_index(&next_identity_index, &start_js, kept.len());
                 kept.push(entry);
                 continue;
             }
@@ -76,10 +204,13 @@ where
                     continue;
                 }
             } else {
+                set_native_identity_index(&next_identity_index, &start_js, kept.len());
                 kept.push(entry);
             }
         }
         self.range_map = kept;
+        self.range_identity_index = next_identity_index;
+        self.range_identity_indexed_len = self.range_map.len();
     }
 
     /// 将新范围插入到 end 前：片段走原子化插入，普通节点直接插入
@@ -468,8 +599,14 @@ mod tests {
         let stale = node("stale");
         let end = node("end");
         set_linked_children(&parent, &[start.clone(), stale.clone(), end.clone()]);
+        Reflect::set(
+            &stale,
+            &JsValue::from_str("contains"),
+            &Function::new_with_args("node", "return node === this").into(),
+        )
+        .unwrap();
 
-        rue.range_map.push(RangeMountState::new(
+        rue.push_range_entry(RangeMountState::new(
             stale.clone(),
             end.clone(),
             mounted_vapor(stale.clone()),
@@ -480,6 +617,7 @@ mod tests {
 
         assert_eq!(tags(&parent), vec!["start", "end"]);
         assert_eq!(rue.range_map.len(), 0);
+        assert_eq!(rue.find_range_index(&stale), None);
 
         let empty_start = node("empty_start");
         let empty_end = node("empty_end");
@@ -570,16 +708,23 @@ mod tests {
         let no_contains_root = node("no_contains_root");
         let kept_start = node("kept_start");
         let kept_end = node("kept_end");
-        rue_no_contains.range_map.push(RangeMountState::new(
+        Reflect::set(
+            &kept_start,
+            &JsValue::from_str("contains"),
+            &Function::new_with_args("node", "return node === this").into(),
+        )
+        .unwrap();
+        rue_no_contains.push_range_entry(RangeMountState::new(
             kept_start.clone(),
             kept_end.clone(),
-            mounted_vapor(kept_start),
+            mounted_vapor(kept_start.clone()),
         ));
         let mut pending_unmounted = Vec::new();
 
         rue_no_contains.drain_range_entries_within_root(&no_contains_root, &mut pending_unmounted);
 
         assert_eq!(rue_no_contains.range_map.len(), 1);
+        assert_eq!(rue_no_contains.find_range_index(&kept_start), Some(0));
         assert!(pending_unmounted.is_empty());
     }
 

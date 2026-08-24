@@ -46,7 +46,7 @@ pub struct VaporTransform {
     pub el_tag_by_ident: std::collections::HashMap<String, String>,
     /// 当前可见的“renderable local” 变量名栈，用于把 bare ident child 判定为 slot 候选
     pub renderable_local_scopes: Vec<HashSet<String>>,
-    /// 当前可见的普通局部变量名栈，用于避免把列表/块内文本临时变量误判为 slot
+    /// 当前可见的普通局部变量名栈；也承载作用域内对全局标量构造器的同名遮蔽
     pub plain_local_scopes: Vec<HashSet<String>>,
 }
 
@@ -84,6 +84,13 @@ impl VaporTransform {
             names.extend(scope.iter().cloned());
         }
         names
+    }
+
+    pub(crate) fn current_scalar_constructor_shadows(&self) -> HashSet<String> {
+        self.current_plain_local_names()
+            .into_iter()
+            .filter(|name| crate::element_expr::is_global_scalar_constructor_name(name))
+            .collect()
     }
 
     pub(crate) fn push_plain_local_scope(&mut self, scope: HashSet<String>) {
@@ -172,6 +179,34 @@ pub(crate) fn coalesce_list_row_binding_effects(stmts: &mut Vec<Stmt>) {
     let watch = crate::emit::call_ident("watchEffect", vec![arrow]);
     retained.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
     *stmts = retained;
+}
+
+/// 将安全 direct-root 行里的 ref helper 绑定到当前行 owner。
+///
+/// 普通 JSX 保持二参数调用，由 runtime 登记组件卸载；只有已经通过列表行能力
+/// 分类的生成语句才会补第三个 registrar 参数。
+pub(crate) fn bind_list_row_ref_cleanups(stmts: &mut Vec<Stmt>, registrar: &Ident) -> bool {
+    struct BindRefCleanupRegistrar<'a> {
+        registrar: &'a Ident,
+        found: bool,
+    }
+
+    impl VisitMut for BindRefCleanupRegistrar<'_> {
+        fn visit_mut_call_expr(&mut self, call: &mut CallExpr) {
+            call.visit_mut_children_with(self);
+            if call_ident_name(call) == Some("_$vaporBindUseRef") && call.args.len() == 2 {
+                self.found = true;
+                call.args.push(ExprOrSpread {
+                    spread: None,
+                    expr: Box::new(Expr::Ident(self.registrar.clone())),
+                });
+            }
+        }
+    }
+
+    let mut binder = BindRefCleanupRegistrar { registrar, found: false };
+    stmts.visit_mut_with(&mut binder);
+    binder.found
 }
 
 #[derive(Default)]

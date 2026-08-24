@@ -5,10 +5,20 @@ Vapor 运行时辅助概述
 - ref 绑定：vaporBindUseRef 以响应式方式同步函数 ref / 对象 ref，并在卸载时清理。
 - Hooks ID：vaporWithHookId 通过 id -> index 映射稳定 hook 槽位，避免重渲染时索引漂移。
 */
-import { onBeforeUnmount, renderBetween } from './vapor-runtime'
+import {
+  disposeExternalRenderableFallback,
+  disposeSynchronousOpaqueRenderable,
+  getOwnedMountProtocol,
+  onBeforeUnmount,
+  prepareAsyncExternalOwnedDispose,
+  renderBetween,
+  withOwnedMountContinuationContext,
+} from './vapor-runtime'
 import {
   effectScope,
+  getCurrentScope,
   getCurrentInstance,
+  onScopeDispose,
   signal,
   toRaw,
   untrack,
@@ -53,8 +63,8 @@ export const vaporWithKey = <T>(value: T, key: unknown): T => {
   return value
 }
 
-/** keyed list 中单个条目在 DOM 中的范围和响应式状态。 */
-export type VaporListItemRange = {
+/** keyed list 中单个条目拥有的 DOM、响应式作用域和后续挂载资源。 */
+export type VaporListItemOwner = {
   /** 多根条目的起始锚点。 */
   start?: DomNodeLike
   /** 条目结束锚点；单根模式下也是尾锚点。 */
@@ -71,6 +81,101 @@ export type VaporListItemRange = {
   stableItem?: unknown
   /** primitive 同 key 更新时重建 directRoot 行。 */
   remount?: (item: any, index: number) => void
+  /** 当前一代行资源所属的 detached scope。 */
+  scope?: ReturnType<typeof effectScope>
+  /** 通用清理栈，按注册顺序的逆序执行。 */
+  cleanups: Array<() => void>
+  /** ref 专用清理容器，后续 owned ref 协议填充。 */
+  refCleanups: Array<() => void>
+  /** owned mount 专用清理容器，后续 mount 协议填充。 */
+  ownedMountCleanups: Array<() => void>
+  /** 同步不透明 direct renderable 的定向清理容器。 */
+  opaqueRenderableCleanups: Array<() => void>
+  /** Rust/Wasm owned mount 的不透明 token。 */
+  ownedMountToken?: unknown
+  /** DOM commit 前暂存的 mounted 工作。 */
+  pendingMounted: unknown[]
+  /** owner 被销毁时递增，用于拒绝过期工作。 */
+  generation: number
+  /** owner 是否已经完成幂等销毁。 */
+  disposed: boolean
+  /** owner 在列表状态 Map 中的实际索引。 */
+  mapKey?: any
+}
+
+/** @deprecated 列表项现在是完整 owner；保留旧名称兼容既有编译产物与测试。 */
+export type VaporListItemRange = VaporListItemOwner
+
+export type VaporListRefCleanupRegistrar = (cleanup: () => void) => void
+
+const stableFunctionSources = new WeakMap<Function, Function>()
+
+/** 单个列表表达式持有的稳定资源边界。 */
+export type VaporListState = {
+  elements: Map<any, VaporListItemRange>
+  readonly disposed: boolean
+  dispose(): void
+  readonly __debug: {
+    cleanupRegistrations: number
+    disposedRows: number
+  }
+}
+
+type VaporListStateSeed = {
+  elements: Map<any, VaporListItemRange>
+  disposed?: boolean
+  dispose?: () => void
+  __debug?: {
+    cleanupRegistrations: number
+    disposedRows: number
+  }
+}
+type InternalVaporListState = VaporListStateSeed & {
+  cleanupRegistered?: boolean
+  initialized?: boolean
+  pendingMountedCommits?: Array<{ token: unknown; index: number; order: number }>
+  pendingMountedCommitOrder?: number
+}
+
+const drainCleanups = (cleanups: Array<() => void>) => {
+  for (let index = cleanups.length - 1; index >= 0; index -= 1) {
+    cleanups[index]()
+  }
+  cleanups.length = 0
+}
+
+const releaseVaporListOwner = (owner: VaporListItemOwner, disposeState: boolean) => {
+  if (disposeState) {
+    if (owner.disposed) {
+      return
+    }
+    owner.disposed = true
+    owner.generation += 1
+  }
+
+  owner.pendingMounted.length = 0
+  drainCleanups(owner.opaqueRenderableCleanups)
+  drainCleanups(owner.ownedMountCleanups)
+  drainCleanups(owner.refCleanups)
+  drainCleanups(owner.cleanups)
+
+  const stop = owner.stop
+  if (stop) {
+    stop()
+    if (owner.stop === stop) {
+      owner.stop = undefined
+    }
+  }
+  owner.scope = undefined
+
+  if (!disposeState) {
+    return
+  }
+
+  owner.current = undefined
+  owner.renderState = undefined
+  owner.stableItem = undefined
+  owner.remount = undefined
 }
 
 const systemModifierNames = ['ctrl', 'shift', 'alt', 'meta'] as const
@@ -344,7 +449,9 @@ export const vaporKeyedList = <T>(args: {
   /** 从 item/index 计算稳定 key 的函数。 */
   getKey: (item: T, index: number) => any
   /** 上一次渲染留下的 key -> DOM 范围表，会被原地更新。 */
-  elements: Map<any, VaporListItemRange>
+  elements?: Map<any, VaporListItemRange>
+  /** 单个列表表达式跨更新复用的稳定资源状态。 */
+  state?: VaporListStateSeed
   /** 列表所在父节点。 */
   parent: any
   /** 整个列表的尾锚点或插入参照节点。 */
@@ -357,13 +464,27 @@ export const vaporKeyedList = <T>(args: {
   trackIndex?: boolean
   /** renderItem 是否直接挂载行根，不注册内层 renderAnchor。 */
   directRoot?: boolean
+  /** 原生结构行是否启用传递式 owned mount；缺能力或 hydration 时显式 fallback。 */
+  ownedMount?: boolean
+  /** renderItem 是否渲染一次求值后的同步不透明结果。 */
+  opaqueRenderable?: boolean
+  /** 需要取消/外部清理的内建组件；缺 owned 能力时显式释放全局 range。 */
+  asyncExternalRenderable?: boolean
   /** 渲染单个条目的回调。 */
-  renderItem: (item: T, parent: any, start: any, end: any, idx?: number) => void
+  renderItem: (
+    item: T,
+    parent: any,
+    start: any,
+    end: any,
+    idx: number,
+    registerRefCleanup: VaporListRefCleanupRegistrar,
+  ) => void
 }) => {
   const {
     items,
     getKey,
-    elements,
+    elements: legacyElements,
+    state: providedState,
     parent,
     before,
     start: listStart,
@@ -371,11 +492,94 @@ export const vaporKeyedList = <T>(args: {
     singleRoot = false,
     trackIndex = true,
     directRoot = false,
+    ownedMount = false,
+    opaqueRenderable = false,
+    asyncExternalRenderable = false,
   } = args
+  const state = (providedState ?? {
+    elements: legacyElements ?? new Map<any, VaporListItemRange>(),
+  }) as InternalVaporListState
+  const elements = state.elements ?? legacyElements ?? new Map<any, VaporListItemRange>()
+  state.elements = elements
+  if (!state.__debug) {
+    state.__debug = { cleanupRegistrations: 0, disposedRows: 0 }
+  }
+  if (!state.initialized) {
+    state.initialized = true
+    state.disposed = false
+    state.dispose = () => {
+      if (state.disposed) {
+        return
+      }
+      state.disposed = true
+      state.pendingMountedCommits?.splice(0)
+      state.pendingMountedCommitOrder = 0
+      const owners = Array.from(state.elements.values())
+      state.elements.clear()
+      state.__debug!.disposedRows += owners.length
+      for (let index = owners.length - 1; index >= 0; index -= 1) {
+        releaseVaporListOwner(owners[index], true)
+      }
+    }
+  }
+  if (!state.cleanupRegistered) {
+    const owner = getCurrentScope()
+    if (owner?.active) {
+      onScopeDispose(() => state.dispose?.(), true)
+      state.cleanupRegistered = true
+      state.__debug.cleanupRegistrations += 1
+    }
+  }
+  if (state.disposed) {
+    return elements
+  }
   const nextElements = new Map<any, VaporListItemRange>()
   const syncEffectOptions = {
     scheduler: (run: () => void) => run(),
   }
+  const createOwner = (
+    range: Pick<VaporListItemOwner, 'start' | 'end' | 'singleRoot'>,
+    mapKey: any,
+  ): VaporListItemOwner => {
+    const owner: VaporListItemOwner = {
+      ...range,
+      cleanups: [],
+      refCleanups: [],
+      ownedMountCleanups: [],
+      opaqueRenderableCleanups: [],
+      pendingMounted: [],
+      generation: 0,
+      disposed: false,
+      mapKey,
+    }
+    if (asyncExternalRenderable && ownedProtocol) {
+      owner.opaqueRenderableCleanups.push(() =>
+        prepareAsyncExternalOwnedDispose(owner.start ?? owner.end),
+      )
+    } else if (asyncExternalRenderable) {
+      owner.opaqueRenderableCleanups.push(() => {
+        const start = owner.start ?? owner.end
+        const rangeParent = getParentNode(start) ?? parent
+        if (rangeParent) {
+          disposeExternalRenderableFallback(rangeParent as any, start, owner.end)
+        }
+      })
+    } else if (opaqueRenderable) {
+      owner.opaqueRenderableCleanups.push(() =>
+        disposeSynchronousOpaqueRenderable(owner.start ?? owner.end),
+      )
+    }
+    return owner
+  }
+  const createRefCleanupRegistrar =
+    (owner: VaporListItemOwner): VaporListRefCleanupRegistrar =>
+    cleanup => {
+      if (owner.disposed) {
+        cleanup()
+        return
+      }
+      owner.refCleanups.push(cleanup)
+    }
   const getReactiveLocation = (value: unknown) => {
     if ((typeof value !== 'object' && typeof value !== 'function') || value == null) {
       return undefined
@@ -438,6 +642,64 @@ export const vaporKeyedList = <T>(args: {
 
   if (!targetParent) {
     return elements
+  }
+
+  const isHydrationFallback = () => {
+    let node: any = targetParent
+    let depth = 0
+    while (node && depth < 64) {
+      if (node.__rue_hydrated_adopted || node.__rue_hydrated_adopted_target) return true
+      node = node.parentNode
+      depth += 1
+    }
+    return false
+  }
+  const ownedProtocol = ownedMount && !isHydrationFallback() ? getOwnedMountProtocol() : undefined
+  const pendingMountedCommits = (state.pendingMountedCommits ??= [])
+  const flushPendingMountedCommits = () => {
+    pendingMountedCommits.sort(
+      (left, right) => left.index - right.index || left.order - right.order,
+    )
+    for (const pending of pendingMountedCommits.splice(0)) {
+      ownedProtocol?.flushMounted(pending.token)
+    }
+    state.pendingMountedCommitOrder = 0
+  }
+  const runWithOwnedMount = (entry: VaporListItemOwner, index: number, run: () => void) => {
+    if (!ownedProtocol) {
+      run()
+      return
+    }
+
+    const previousToken = entry.ownedMountToken
+    const token = previousToken ?? ownedProtocol.buildOwnedMount()
+    const entered = previousToken ? ownedProtocol.updateOwnedMount(token) : token != null
+    if (!entered) {
+      entry.ownedMountToken = undefined
+      run()
+      return
+    }
+
+    try {
+      withOwnedMountContinuationContext(ownedProtocol, token, run)
+      if (!ownedProtocol.commitMounted(token, true)) {
+        throw new Error('[rue] owned mount commit rejected a stale token')
+      }
+      const order = state.pendingMountedCommitOrder ?? 0
+      state.pendingMountedCommitOrder = order + 1
+      pendingMountedCommits.push({ token, index, order })
+      if (previousToken == null) {
+        entry.ownedMountToken = token
+        entry.ownedMountCleanups.push(() => {
+          ownedProtocol.disposeOwnedMount(token)
+          if (entry.ownedMountToken === token) entry.ownedMountToken = undefined
+        })
+      }
+    } catch (error) {
+      ownedProtocol.abortOwnedMount(token)
+      if (entry.ownedMountToken === token) entry.ownedMountToken = undefined
+      throw error
+    }
   }
 
   const oldEntries = Array.from(elements.entries())
@@ -521,7 +783,9 @@ export const vaporKeyedList = <T>(args: {
         const value = item?.[key as keyof typeof item]
         if (typeof value === 'function') {
           try {
-            return value.bind(item)
+            const bound = value.bind(item)
+            stableFunctionSources.set(bound, value)
+            return bound
           } catch {}
         }
         return value
@@ -592,7 +856,7 @@ export const vaporKeyedList = <T>(args: {
     const prev = untrack(() => range.current!.get())
     const rawChanged = prev.rawIdentity !== nextRawIdentity
     const indexChanged = prev.index !== nextIndex
-    if (prev.item !== nextItem || rawChanged || indexChanged) {
+    if (prev.item !== nextItem || rawChanged || (trackIndex && indexChanged)) {
       range.current.set({ item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity })
     }
 
@@ -610,7 +874,8 @@ export const vaporKeyedList = <T>(args: {
 
     const prevRender = untrack(() => range.renderState!.get())
     const shouldRefreshStructure =
-      prevRender.rawIdentity !== nextRawIdentity && !(range.stableItem && isObjectLike(nextItem))
+      prevRender.rawIdentity !== nextRawIdentity &&
+      (!(range.stableItem && isObjectLike(nextItem)) || !range.singleRoot)
 
     if (shouldRefreshStructure || (trackIndex && indexChanged)) {
       range.renderState.set({ item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity })
@@ -620,22 +885,22 @@ export const vaporKeyedList = <T>(args: {
   }
 
   const releaseRange = (range: VaporListItemRange, disposeState: boolean) => {
-    const stop = range.stop
-    if (stop) {
-      stop()
-      if (range.stop === stop) {
-        range.stop = undefined
-      }
-    }
+    releaseVaporListOwner(range, disposeState)
+  }
 
-    if (!disposeState) {
-      return
+  const runInDetachedScope = (entry: VaporListItemRange, run: () => void) => {
+    const scope = effectScope(true)
+    const stop = () => scope.stop()
+    entry.scope = scope
+    entry.stop = stop
+    try {
+      scope.run(run)
+    } catch (error) {
+      scope.stop()
+      if (entry.scope === scope) entry.scope = undefined
+      if (entry.stop === stop) entry.stop = undefined
+      throw error
     }
-
-    range.current = undefined
-    range.renderState = undefined
-    range.stableItem = undefined
-    range.remount = undefined
   }
 
   const mountDirectRootRange = (
@@ -646,8 +911,7 @@ export const vaporKeyedList = <T>(args: {
     end: DomNodeLike,
   ) => {
     const mount = (nextItem: T, nextIndex: number) => {
-      const scope = effectScope()
-      scope.run(() => {
+      runInDetachedScope(entry, () => {
         untrack(() => {
           renderItem(
             (entry.stableItem as T | undefined) ?? nextItem,
@@ -655,10 +919,10 @@ export const vaporKeyedList = <T>(args: {
             end,
             end,
             nextIndex,
+            createRefCleanupRegistrar(entry),
           )
         })
       })
-      entry.stop = () => scope.stop()
     }
 
     entry.remount = (nextItem, nextIndex) => {
@@ -672,7 +936,10 @@ export const vaporKeyedList = <T>(args: {
     mount(item, index)
   }
 
-  // 空列表的安全直挂行先在各自的小 Fragment 中 O(1) 组装，
+  const nextKeys = items.map((item, index) => getKey(item, index))
+  const hasDuplicateNextKeys = new Set(nextKeys).size !== nextKeys.length
+
+  // 空列表的安全单根行先在各自的小 Fragment 中 O(1) 组装，
   // 再顺序 append 到一个批量 Fragment。这样既避免在不断增长的
   // child list 中逐行查找尾锚点，又使真实父节点只发生一次插入。
   if (
@@ -680,29 +947,49 @@ export const vaporKeyedList = <T>(args: {
     items.length > 0 &&
     singleRoot &&
     !trackIndex &&
-    directRoot &&
+    (directRoot || ownedMount) &&
+    !hasDuplicateNextKeys &&
     items.every(isObjectLike)
   ) {
     const batch = createDocumentFragment()
 
-    for (let index = 0; index < items.length; index += 1) {
-      const item = items[index]
-      const key = getKey(item, index)
-      const itemParent = createDocumentFragment()
-      const end = createComment('rue:list:item:anchor')
-      appendChild(itemParent, end)
+    try {
+      for (let index = 0; index < items.length; index += 1) {
+        const item = items[index]
+        const key = nextKeys[index]
+        const itemParent = createDocumentFragment()
+        const end = createComment('rue:list:item:anchor')
+        appendChild(itemParent, end)
 
-      const entry: VaporListItemRange = { end, singleRoot: true }
-      syncCurrentItem(entry, item, index)
-      const scope = effectScope()
-      scope.run(() => {
-        untrack(() => {
-          renderItem(entry.stableItem as T, itemParent as any, end, end, index)
-        })
-      })
-      entry.stop = () => scope.stop()
-      appendChild(batch, itemParent)
-      nextElements.set(key, entry)
+        const entry = createOwner({ end, singleRoot: true }, key)
+        try {
+          syncCurrentItem(entry, item, index)
+          runInDetachedScope(entry, () => {
+            untrack(() => {
+              const mount = () =>
+                renderItem(
+                  entry.stableItem as T,
+                  itemParent as any,
+                  end,
+                  end,
+                  index,
+                  createRefCleanupRegistrar(entry),
+                )
+              if (directRoot) mount()
+              else runWithOwnedMount(entry, index, mount)
+            })
+          })
+        } catch (error) {
+          releaseRange(entry, true)
+          throw error
+        }
+        appendChild(batch, itemParent)
+        nextElements.set(key, entry)
+      }
+    } catch (error) {
+      nextElements.forEach(range => releaseRange(range, true))
+      nextElements.clear()
+      throw error
     }
 
     if (before && contains(targetParent, before as any)) {
@@ -713,6 +1000,7 @@ export const vaporKeyedList = <T>(args: {
 
     elements.clear()
     nextElements.forEach((range, key) => elements.set(key, range))
+    flushPendingMountedCommits()
     return elements
   }
 
@@ -721,65 +1009,92 @@ export const vaporKeyedList = <T>(args: {
       return range.start as DomNodeLike
     }
     const head = ((range.end as any).previousSibling as DomNodeLike | null) || null
-    return head && contains(targetParent as any, head as any) && !isListMarker(head)
+    return head && (head as any).parentNode === (range.end as any).parentNode && !isListMarker(head)
       ? head
       : range.end
   }
 
-  const mountRange = (item: T, index: number, cursor: DomNodeLike | null) => {
+  const mountRange = (item: T, index: number, cursor: DomNodeLike | null, mapKey: any) => {
     if (singleRoot) {
       const end = createComment('rue:list:item:anchor')
       insertBefore(targetParent, end, cursor as any)
-      const entry: VaporListItemRange = { end, singleRoot: true }
+      const entry = createOwner({ end, singleRoot: true }, mapKey)
       const renderState = syncCurrentItem(entry, item, index)
-      if (directRoot) {
-        mountDirectRootRange(entry, item, index, targetParent, end)
-      } else if (renderState) {
-        const stop = watchEffect(() => {
-          const next = renderState.get()
-          untrack(() => {
-            renderItem(
-              (entry.stableItem as T | undefined) ?? next.item,
-              targetParent as any,
-              end,
-              end,
-              next.index,
-            )
+      try {
+        if (directRoot) {
+          mountDirectRootRange(entry, item, index, targetParent, end)
+        } else if (renderState) {
+          runInDetachedScope(entry, () => {
+            watchEffect(() => {
+              const next = renderState.get()
+              const rangeParent = getParentNode(entry.end) ?? targetParent
+              untrack(() => {
+                runWithOwnedMount(entry, next.index, () =>
+                  renderItem(
+                    (entry.stableItem as T | undefined) ?? next.item,
+                    rangeParent as any,
+                    end,
+                    end,
+                    next.index,
+                    createRefCleanupRegistrar(entry),
+                  ),
+                )
+              })
+            }, syncEffectOptions)
           })
-        }, syncEffectOptions)
-        entry.stop = () => stop.dispose()
-      } else {
-        const scope = effectScope()
-        scope.run(() => {
-          untrack(() => {
-            renderItem(entry.stableItem as T, targetParent as any, end, end, index)
+        } else {
+          runInDetachedScope(entry, () => {
+            untrack(() => {
+              runWithOwnedMount(entry, index, () =>
+                renderItem(
+                  entry.stableItem as T,
+                  targetParent as any,
+                  end,
+                  end,
+                  index,
+                  createRefCleanupRegistrar(entry),
+                ),
+              )
+            })
           })
-        })
-        entry.stop = () => scope.stop()
+        }
+        return entry
+      } catch (error) {
+        removeRange(entry)
+        throw error
       }
-      return entry
     }
 
     const start = createComment('rue:list:item:start')
     const end = createComment('rue:list:item:end')
     insertBefore(targetParent, end, cursor as any)
     insertBefore(targetParent, start, end)
-    const entry: VaporListItemRange = { start, end }
+    const entry = createOwner({ start, end }, mapKey)
     const renderState = syncCurrentItem(entry, item, index)!
-    const stop = watchEffect(() => {
-      const next = renderState.get()
-      untrack(() => {
-        renderItem(
-          (entry.stableItem as T | undefined) ?? next.item,
-          targetParent as any,
-          start,
-          end,
-          next.index,
-        )
+    try {
+      runInDetachedScope(entry, () => {
+        watchEffect(() => {
+          const next = renderState.get()
+          const rangeParent = getParentNode(entry.start ?? entry.end) ?? targetParent
+          untrack(() => {
+            runWithOwnedMount(entry, next.index, () =>
+              renderItem(
+                (entry.stableItem as T | undefined) ?? next.item,
+                rangeParent as any,
+                start,
+                end,
+                next.index,
+                createRefCleanupRegistrar(entry),
+              ),
+            )
+          })
+        }, syncEffectOptions)
       })
-    }, syncEffectOptions)
-    entry.stop = () => stop.dispose()
-    return entry
+      return entry
+    } catch (error) {
+      removeRange(entry)
+      throw error
+    }
   }
 
   const syncRange = (range: VaporListItemRange, item: T, index: number) => {
@@ -797,14 +1112,6 @@ export const vaporKeyedList = <T>(args: {
     }
   }
 
-  const nextKeys = Array.from({ length: items.length }, () => undefined as any)
-  for (let index = items.length - 1; index >= 0; index -= 1) {
-    const key = getKey(items[index], index)
-    nextKeys[index] = key
-    const range = elements.get(key)
-    if (range) syncRange(range, items[index], index)
-  }
-
   const removeRange = (range: VaporListItemRange) => {
     const nodesToRemove: DomNodeLike[] = []
     let node: DomNodeLike | null = resolveStartNode(range)
@@ -814,31 +1121,14 @@ export const vaporKeyedList = <T>(args: {
       node = ((node as any).nextSibling as DomNodeLike | null) || null
     }
 
+    if (elements.get(range.mapKey) === range) elements.delete(range.mapKey)
+    if (nextElements.get(range.mapKey) === range) nextElements.delete(range.mapKey)
     releaseRange(range, true)
     for (const staleNode of nodesToRemove) {
       if (contains(targetParent as any, staleNode as any)) {
         removeChild(targetParent as any, staleNode as any)
       }
     }
-  }
-
-  const moveRange = (range: VaporListItemRange, cursor: DomNodeLike | null) => {
-    const blockStart = resolveStartNode(range)
-    if ((range.end as any).nextSibling === cursor || cursor === blockStart) {
-      return
-    }
-
-    const block = createDocumentFragment()
-    let node: DomNodeLike | null = blockStart
-    while (node) {
-      const next: DomNodeLike | null = (node as any).nextSibling
-      appendChild(block, node)
-      if (node === range.end) break
-      node = next
-    }
-    const cursorIsChild = !!cursor && contains(targetParent, cursor as any)
-    if (cursorIsChild) insertBefore(targetParent, block, cursor as any)
-    else appendChild(targetParent, block)
   }
 
   const findStableIndexes = (oldIndexes: number[]) => {
@@ -869,36 +1159,253 @@ export const vaporKeyedList = <T>(args: {
     return stableIndexes
   }
 
-  const hasDuplicateNextKeys = new Set(nextKeys).size !== nextKeys.length
   if (hasDuplicateNextKeys) {
-    let cursor: DomNodeLike | null = before as any
-    for (let index = items.length - 1; index >= 0; index -= 1) {
-      const key = nextKeys[index]
-      let range = elements.get(key)
-      if (!range) {
-        range = mountRange(items[index], index, cursor)
-      } else {
-        moveRange(range, cursor)
-      }
-      nextElements.set(key, range)
-      cursor = resolveStartNode(range)
+    for (let index = oldEntries.length - 1; index >= 0; index -= 1) {
+      removeRange(oldEntries[index][1])
     }
 
-    elements.forEach((range, key) => {
-      if (!nextElements.has(key)) removeRange(range)
-    })
+    const fallbackKeys = nextKeys.map((key, index) => ({ key, index }))
+    let cursor: DomNodeLike | null = before as any
+    try {
+      for (let index = items.length - 1; index >= 0; index -= 1) {
+        const fallbackKey = fallbackKeys[index]
+        const range = mountRange(items[index], index, cursor, fallbackKey)
+        nextElements.set(fallbackKey, range)
+        cursor = resolveStartNode(range)
+      }
+    } catch (error) {
+      const mountedOwners = Array.from(nextElements.values())
+      for (let index = mountedOwners.length - 1; index >= 0; index -= 1) {
+        removeRange(mountedOwners[index])
+      }
+      throw error
+    }
+
     elements.clear()
-    nextKeys.forEach(key => {
-      const range = nextElements.get(key)
-      if (range) elements.set(key, range)
-    })
+    nextElements.forEach((range, key) => elements.set(key, range))
+    flushPendingMountedCommits()
     return elements
+  }
+
+  // 位置列表的中间增删会表现为“同 key 前缀更新 + 尾部增删”。结构性行必须先
+  // 离开真实父节点再逐项 patch，否则插入点后的组件替换会在大 child list 上退化。
+  const sharedPrefixLength = Math.min(oldEntries.length, nextKeys.length)
+  const hasSameKeyPrefix =
+    sharedPrefixLength > 0 &&
+    Array.from({ length: sharedPrefixLength }, (_, index) => index).every(
+      index => oldEntries[index][0] === nextKeys[index],
+    )
+  if (
+    !directRoot &&
+    items.length > 0 &&
+    oldEntries.length !== items.length &&
+    hasSameKeyPrefix &&
+    before &&
+    (targetParent as any).lastChild === before
+  ) {
+    const stagedRanges = oldEntries.map(([, range]) => {
+      const nodes: DomNodeLike[] = []
+      let node: DomNodeLike | null = resolveStartNode(range)
+      while (node) {
+        nodes.push(node)
+        if (node === range.end) break
+        node = ((node as any).nextSibling as DomNodeLike | null) || null
+      }
+      return { range, nodes }
+    })
+    const firstOwnedNode = listStart ?? resolveStartNode(oldEntries[0][1])
+    let actualChildCount = 0
+    let child = (targetParent as any).firstChild as DomNodeLike | null
+    while (child) {
+      actualChildCount += 1
+      child = ((child as any).nextSibling as DomNodeLike | null) || null
+    }
+    const expectedChildCount =
+      stagedRanges.reduce((count, current) => count + current.nodes.length, 0) +
+      (listStart ? 1 : 0) +
+      1
+    const ownsCompleteParent =
+      (targetParent as any).firstChild === firstOwnedNode &&
+      actualChildCount === expectedChildCount &&
+      stagedRanges.every(current =>
+        current.nodes.every(node => (node as any).parentNode === targetParent),
+      )
+
+    if (ownsCompleteParent) {
+      const appendCurrentRanges = (batch: DomNodeLike, ranges: VaporListItemRange[]) => {
+        for (const range of ranges) {
+          let node: DomNodeLike | null = resolveStartNode(range)
+          while (node) {
+            const next: DomNodeLike | null =
+              ((node as any).nextSibling as DomNodeLike | null) || null
+            appendChild(batch, node)
+            if (node === range.end) break
+            node = next
+          }
+        }
+      }
+      const reattachOldRanges = () => {
+        const batch = createDocumentFragment()
+        if (listStart) appendChild(batch, listStart as DomNodeLike)
+        appendCurrentRanges(
+          batch,
+          stagedRanges.map(current => current.range),
+        )
+        appendChild(batch, before as DomNodeLike)
+        insertBefore(targetParent, batch, null as any)
+      }
+
+      ;(targetParent as any).textContent = ''
+      for (const current of stagedRanges) {
+        const itemParent = createDocumentFragment()
+        for (const node of current.nodes) appendChild(itemParent, node)
+      }
+
+      try {
+        for (let index = sharedPrefixLength - 1; index >= 0; index -= 1) {
+          syncRange(stagedRanges[index].range, items[index], index)
+        }
+      } catch (error) {
+        pendingMountedCommits.length = 0
+        reattachOldRanges()
+        throw error
+      }
+
+      const nextRanges = stagedRanges.slice(0, sharedPrefixLength).map(current => current.range)
+      const newlyMountedRanges: VaporListItemRange[] = []
+      try {
+        let cursor: DomNodeLike | null = null
+        for (let index = items.length - 1; index >= sharedPrefixLength; index -= 1) {
+          const range = mountRange(items[index], index, cursor, nextKeys[index])
+          newlyMountedRanges.push(range)
+          nextRanges[index] = range
+          cursor = resolveStartNode(range)
+        }
+      } catch (error) {
+        pendingMountedCommits.length = 0
+        for (let index = newlyMountedRanges.length - 1; index >= 0; index -= 1) {
+          removeRange(newlyMountedRanges[index])
+        }
+        reattachOldRanges()
+        throw error
+      }
+
+      for (let index = stagedRanges.length - 1; index >= items.length; index -= 1) {
+        releaseRange(stagedRanges[index].range, true)
+      }
+
+      const batch = createDocumentFragment()
+      if (listStart) appendChild(batch, listStart as DomNodeLike)
+      appendCurrentRanges(batch, nextRanges)
+      appendChild(batch, before as DomNodeLike)
+      insertBefore(targetParent, batch, null as any)
+
+      elements.clear()
+      nextRanges.forEach((range, index) => {
+        range.mapKey = nextKeys[index]
+        elements.set(nextKeys[index], range)
+      })
+      flushPendingMountedCommits()
+      return elements
+    }
+  }
+
+  // 同序的结构性行更新会逐行替换子树。先把每个 range 放进独立 Fragment，
+  // 让组件/opaque patch 在 O(1) 大小的父节点内完成，再一次提交回真实父节点。
+  // 这也避免 jsdom 在大列表父节点上反复维护 child index。
+  if (
+    !directRoot &&
+    items.length > 0 &&
+    oldEntries.length === items.length &&
+    oldEntries.every(([key], index) => key === nextKeys[index]) &&
+    !!before &&
+    (targetParent as any).lastChild === before &&
+    (targetParent as any).firstChild === (listStart ?? resolveStartNode(oldEntries[0][1])) &&
+    typeof (targetParent as any).textContent === 'string'
+  ) {
+    const stagedRanges = oldEntries.map(([, range]) => {
+      const nodes: DomNodeLike[] = []
+      let node: DomNodeLike | null = resolveStartNode(range)
+      while (node) {
+        nodes.push(node)
+        if (node === range.end) break
+        node = ((node as any).nextSibling as DomNodeLike | null) || null
+      }
+      return { range, nodes }
+    })
+    let actualChildCount = 0
+    let child = (targetParent as any).firstChild as DomNodeLike | null
+    while (child) {
+      actualChildCount += 1
+      child = ((child as any).nextSibling as DomNodeLike | null) || null
+    }
+    const expectedChildCount =
+      stagedRanges.reduce((count, current) => count + current.nodes.length, 0) +
+      (listStart ? 1 : 0) +
+      1
+    const ownsCompleteParent =
+      actualChildCount === expectedChildCount &&
+      stagedRanges.every(current =>
+        current.nodes.every(node => (node as any).parentNode === targetParent),
+      )
+
+    if (ownsCompleteParent) {
+      ;(targetParent as any).textContent = ''
+      for (const current of stagedRanges) {
+        const itemParent = createDocumentFragment()
+        for (const node of current.nodes) appendChild(itemParent, node)
+      }
+
+      let didFail = false
+      let updateError: unknown
+      try {
+        for (let index = items.length - 1; index >= 0; index -= 1) {
+          syncRange(stagedRanges[index].range, items[index], index)
+        }
+      } catch (error) {
+        didFail = true
+        updateError = error
+      }
+
+      const batch = createDocumentFragment()
+      if (listStart) appendChild(batch, listStart as DomNodeLike)
+      for (const { range } of stagedRanges) {
+        let node: DomNodeLike | null = resolveStartNode(range)
+        while (node) {
+          const next: DomNodeLike | null = ((node as any).nextSibling as DomNodeLike | null) || null
+          appendChild(batch, node)
+          if (node === range.end) break
+          node = next
+        }
+      }
+      appendChild(batch, before as DomNodeLike)
+      insertBefore(targetParent, batch, null as any)
+
+      if (didFail) {
+        pendingMountedCommits.length = 0
+        throw updateError
+      }
+      flushPendingMountedCommits()
+      return elements
+    }
+  }
+
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const range = elements.get(nextKeys[index])
+    if (range) syncRange(range, items[index], index)
   }
 
   const nextRanges: Array<VaporListItemRange | undefined> = Array.from(
     { length: items.length },
     () => undefined,
   )
+  const newlyMountedRanges: VaporListItemRange[] = []
+  let needsBatchMove = false
+  const mountNewRange = (item: T, index: number, cursor: DomNodeLike | null, mapKey: any) => {
+    const range = mountRange(item, index, cursor, mapKey)
+    newlyMountedRanges.push(range)
+    return range
+  }
   let oldStart = 0
   let oldEnd = oldEntries.length - 1
   let nextStart = 0
@@ -925,102 +1432,199 @@ export const vaporKeyedList = <T>(args: {
     nextEnd -= 1
   }
 
-  if (nextStart > nextEnd) {
-    for (let index = oldStart; index <= oldEnd; index += 1) removeRange(oldEntries[index][1])
-  } else if (oldStart > oldEnd) {
-    let cursor = nextRanges[nextEnd + 1]
-      ? resolveStartNode(nextRanges[nextEnd + 1]!)
-      : (before as DomNodeLike | null)
-    for (let index = nextEnd; index >= nextStart; index -= 1) {
-      const range = mountRange(items[index], index, cursor)
-      nextRanges[index] = range
-      cursor = resolveStartNode(range)
-    }
-  } else {
-    const oldIndexByKey = new Map<any, number>()
-    for (let index = oldStart; index <= oldEnd; index += 1) {
-      oldIndexByKey.set(oldEntries[index][0], index)
-    }
-
-    const middleOldIndexes: number[] = []
-    const reusedOldIndexes = new Set<number>()
-    for (let index = nextStart; index <= nextEnd; index += 1) {
-      const oldIndex = oldIndexByKey.get(nextKeys[index])
-      if (oldIndex === undefined) {
-        middleOldIndexes.push(-1)
-        continue
-      }
-      const range = oldEntries[oldIndex][1]
-      nextRanges[index] = range
-      middleOldIndexes.push(oldIndex)
-      reusedOldIndexes.add(oldIndex)
-    }
-
-    for (let index = oldStart; index <= oldEnd; index += 1) {
-      if (!reusedOldIndexes.has(index)) removeRange(oldEntries[index][1])
-    }
-
-    const stableIndexes = findStableIndexes(middleOldIndexes)
-    let cursor = nextRanges[nextEnd + 1]
-      ? resolveStartNode(nextRanges[nextEnd + 1]!)
-      : (before as DomNodeLike | null)
-    for (let index = nextEnd; index >= nextStart; index -= 1) {
-      let range = nextRanges[index]
-      const middleIndex = index - nextStart
-      if (!range) {
-        range = mountRange(items[index], index, cursor)
+  try {
+    if (nextStart > nextEnd) {
+      for (let index = oldStart; index <= oldEnd; index += 1) removeRange(oldEntries[index][1])
+    } else if (oldStart > oldEnd) {
+      let cursor = nextRanges[nextEnd + 1]
+        ? resolveStartNode(nextRanges[nextEnd + 1]!)
+        : (before as DomNodeLike | null)
+      for (let index = nextEnd; index >= nextStart; index -= 1) {
+        const range = mountNewRange(items[index], index, cursor, nextKeys[index])
         nextRanges[index] = range
-      } else {
-        const isStable = stableIndexes.has(middleIndex)
-        const blockStart = resolveStartNode(range)
-        const isConnected =
-          contains(targetParent as any, blockStart as any) &&
-          contains(targetParent as any, range.end as any)
-        if (!isStable || !isConnected) moveRange(range, cursor)
+        cursor = resolveStartNode(range)
       }
-      cursor = resolveStartNode(range)
+    } else {
+      const oldIndexByKey = new Map<any, number>()
+      for (let index = oldStart; index <= oldEnd; index += 1) {
+        oldIndexByKey.set(oldEntries[index][0], index)
+      }
+
+      const middleOldIndexes: number[] = []
+      const reusedOldIndexes = new Set<number>()
+      for (let index = nextStart; index <= nextEnd; index += 1) {
+        const oldIndex = oldIndexByKey.get(nextKeys[index])
+        if (oldIndex === undefined) {
+          middleOldIndexes.push(-1)
+          continue
+        }
+        const range = oldEntries[oldIndex][1]
+        nextRanges[index] = range
+        middleOldIndexes.push(oldIndex)
+        reusedOldIndexes.add(oldIndex)
+      }
+
+      for (let index = oldStart; index <= oldEnd; index += 1) {
+        if (!reusedOldIndexes.has(index)) removeRange(oldEntries[index][1])
+      }
+
+      const stableIndexes = findStableIndexes(middleOldIndexes)
+      let cursor = nextRanges[nextEnd + 1]
+        ? resolveStartNode(nextRanges[nextEnd + 1]!)
+        : (before as DomNodeLike | null)
+      for (let index = nextEnd; index >= nextStart; index -= 1) {
+        let range = nextRanges[index]
+        const middleIndex = index - nextStart
+        if (!range) {
+          range = mountNewRange(items[index], index, cursor, nextKeys[index])
+          nextRanges[index] = range
+        } else {
+          const isStable = stableIndexes.has(middleIndex)
+          const blockStart = resolveStartNode(range)
+          const isConnected =
+            contains(targetParent as any, blockStart as any) &&
+            contains(targetParent as any, range.end as any)
+          if (!isStable || !isConnected) needsBatchMove = true
+        }
+        cursor = resolveStartNode(range)
+      }
+    }
+  } catch (error) {
+    pendingMountedCommits.length = 0
+    for (let index = newlyMountedRanges.length - 1; index >= 0; index -= 1) {
+      removeRange(newlyMountedRanges[index])
+    }
+    throw error
+  }
+
+  if (needsBatchMove) {
+    const orderedNodes: DomNodeLike[] = []
+    let ownsCompleteParent = !!before && (targetParent as any).lastChild === before
+    const firstOwnedNode =
+      listStart ?? (oldEntries.length > 0 ? resolveStartNode(oldEntries[0][1]) : null)
+    ownsCompleteParent =
+      ownsCompleteParent && !!firstOwnedNode && (targetParent as any).firstChild === firstOwnedNode
+
+    for (const range of nextRanges) {
+      if (!range) continue
+      let node: DomNodeLike | null = resolveStartNode(range)
+      while (node) {
+        orderedNodes.push(node)
+        if ((node as any).parentNode !== targetParent) ownsCompleteParent = false
+        if (node === range.end) break
+        node = ((node as any).nextSibling as DomNodeLike | null) || null
+      }
+    }
+
+    const expectedChildCount = orderedNodes.length + (listStart ? 1 : 0) + 1
+    let actualChildCount = 0
+    let child = (targetParent as any).firstChild as DomNodeLike | null
+    while (child) {
+      actualChildCount += 1
+      child = ((child as any).nextSibling as DomNodeLike | null) || null
+    }
+    ownsCompleteParent =
+      ownsCompleteParent &&
+      typeof (targetParent as any).textContent === 'string' &&
+      actualChildCount === expectedChildCount
+
+    const batch = createDocumentFragment()
+    if (ownsCompleteParent) {
+      // jsdom stores childNodes in an array, so removing a reversed list one node at a
+      // time becomes quadratic. When this list owns the complete parent range, detach
+      // everything atomically before rebuilding the same nodes in their new order.
+      ;(targetParent as any).textContent = ''
+      if (listStart) appendChild(batch, listStart as DomNodeLike)
+      for (const node of orderedNodes) appendChild(batch, node)
+      appendChild(batch, before as DomNodeLike)
+      insertBefore(targetParent, batch, null as any)
+    } else {
+      for (const node of orderedNodes) appendChild(batch, node)
+      if (before && contains(targetParent, before as any)) {
+        insertBefore(targetParent, batch, before as any)
+      } else {
+        appendChild(targetParent, batch)
+      }
     }
   }
 
   elements.clear()
   nextKeys.forEach((key, index) => {
     const range = nextRanges[index]
-    if (range) elements.set(key, range)
+    if (range) {
+      range.mapKey = key
+      elements.set(key, range)
+    }
   })
+  flushPendingMountedCommits()
   return elements
 }
 
 /** 反应式绑定 useRef 结果，支持函数 ref 和对象 ref。 */
-export const vaporBindUseRef = (el: any, getRef: () => any) => {
+export const vaporBindUseRef = (
+  el: any,
+  getRef: () => any,
+  registerCleanup?: VaporListRefCleanupRegistrar,
+) => {
   let prev: any
-  const stop = watchEffect(() => {
-    const refValue = getRef()
-    const prevRef = prev
-    if (prevRef && prevRef !== refValue) {
-      if (typeof prevRef === 'function') {
-        prevRef(null)
-      } else if (typeof prevRef === 'object' && 'current' in prevRef) {
-        ;(prevRef as any).current = undefined
-      }
-    }
+  let hasPrev = false
+  let stop: ReturnType<typeof watchEffect> | undefined
+  let disposed = false
+
+  const isSameRef = (previous: any, next: any) => {
+    if (Object.is(previous, next)) return true
+    if (typeof previous !== 'function' || typeof next !== 'function') return false
+    const previousSource = stableFunctionSources.get(previous)
+    return previousSource !== undefined && previousSource === stableFunctionSources.get(next)
+  }
+
+  const clearRef = (refValue: any) => {
     if (typeof refValue === 'function') {
-      refValue(el)
-    } else if (typeof refValue === 'object' && 'current' in refValue) {
-      ;(refValue as any).current = el
+      refValue(null)
+    } else if (refValue && typeof refValue === 'object' && 'current' in refValue) {
+      ;(refValue as any).current = undefined
     }
-    prev = refValue
-  })
-  onBeforeUnmount(() => {
-    const prevRef = prev
-    if (prevRef) {
-      if (typeof prevRef === 'function') {
-        prevRef(null)
-      } else if (typeof prevRef === 'object' && 'current' in prevRef) {
-        ;(prevRef as any).current = undefined
+  }
+  const cleanup = () => {
+    if (disposed) return
+    disposed = true
+    const stopWatcher = stop
+    stop = undefined
+    stopWatcher?.dispose()
+    if (hasPrev) {
+      const prevRef = prev
+      hasPrev = false
+      prev = undefined
+      clearRef(prevRef)
+    }
+  }
+
+  registerCleanup?.(cleanup)
+  try {
+    const stopWatcher = watchEffect(() => {
+      const refValue = getRef()
+      if (hasPrev && isSameRef(prev, refValue)) return
+      if (hasPrev) clearRef(prev)
+      prev = refValue
+      hasPrev = true
+      if (typeof refValue === 'function') {
+        refValue(el)
+      } else if (refValue && typeof refValue === 'object' && 'current' in refValue) {
+        ;(refValue as any).current = el
       }
+    })
+    stop = stopWatcher
+    if (disposed) {
+      stop = undefined
+      stopWatcher.dispose()
     }
-  })
-  return stop
+  } catch (error) {
+    cleanup()
+    throw error
+  }
+
+  if (!registerCleanup) onBeforeUnmount(cleanup)
+  return cleanup
 }
 
 /** 以稳定 hook id 执行 runner，避免编译产物重排时 hook 槽位漂移。 */

@@ -49,6 +49,7 @@ pub fn createRue(adapter: JsValue) -> WasmRue {
     // - 仅调用 render(input, container) 不会创建 root effect
     WasmRue {
         inner: RefCell::new(rue),
+        owned_mount_collectors: RefCell::new(Vec::new()),
         last_container: RefCell::new(None),
         pending_anchor: RefCell::new(Vec::new()),
         pending_between: RefCell::new(Vec::new()),

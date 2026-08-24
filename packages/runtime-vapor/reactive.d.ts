@@ -155,6 +155,13 @@ export declare function effectScope(detached?: boolean): EffectScope
 /** 读取当前活动 effect scope。 */
 export declare function getCurrentScope(): EffectScope | undefined
 
+/** 仅供测试/开发验证 effect scope 元数据是否保持有界。 */
+export declare function __rueGetEffectScopeDebugState(): {
+  activeScopeHandles: number
+  cachedScopeHandles: number
+  stoppedScopeIds: number
+}
+
 import * as reactiveRuntime from './pkg/rue_runtime_vapor'
 
 declare const _default: typeof reactiveRuntime & {

@@ -4,7 +4,11 @@
 //! 注释采用中文高密度风格，便于团队内阅读与维护。
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::instance::ComponentInternalInstance;
-use crate::runtime::types::{AnchorMountState, ContainerMountState, RangeMountState};
+use crate::runtime::types::{
+    AnchorMountState, ContainerMountState, OwnedMountPhase, OwnedMountSlot, OwnedMountToken,
+    PendingComponentMounted, RangeMountState,
+};
+use js_sys::WeakMap;
 use std::collections::{HashMap, HashSet};
 use wasm_bindgen::JsValue;
 
@@ -20,6 +24,10 @@ where
     pub(crate) container_map: Vec<ContainerMountState<A>>,
     /// 单锚点渲染映射（anchor -> mount），用于组件等可由尾锚点定位的增量更新
     pub(crate) anchor_map: Vec<AnchorMountState<A>>,
+    /// 原生 anchor 对象到 `anchor_map` 下标的弱身份索引，不持有 DOM 强引用
+    pub(crate) anchor_identity_index: WeakMap,
+    /// 弱身份索引上次同步时对应的 Vec 长度，用于发现绕过 helper 的结构变更
+    pub(crate) anchor_identity_indexed_len: usize,
     /// 当前活跃组件实例（用于钩子、错误处理等）
     pub(crate) current_instance: Option<ComponentInternalInstance<A>>,
     /// 当前已关联的容器计数
@@ -29,15 +37,39 @@ where
     pub(crate) instance_stack: Vec<usize>,
     /// 实例存储（索引 -> 实例）
     pub(crate) instance_store: HashMap<usize, ComponentInternalInstance<A>>,
+    /// 组件实例 ID 单调分配器；实例回收后 ID 仍不复用。
+    pub(crate) next_component_instance_id: usize,
     /// 挂载完成后需要执行的队列（如 onMounted）
     #[allow(dead_code)]
     pub(crate) mounted_queue: Vec<Box<dyn FnMut()>>,
     /// 区间渲染的挂载映射（start/end -> mount）
     pub(crate) range_map: Vec<RangeMountState<A>>,
+    /// 行 owner 的局部 mounted snapshot 槽；空槽可复用，但 generation 永不复用。
+    pub(crate) owned_mount_slots: Vec<Option<OwnedMountSlot<A>>>,
+    pub(crate) owned_mount_free_slots: Vec<usize>,
+    pub(crate) next_owned_mount_generation: u64,
+    /// 可重入 collector 栈；嵌套列表 build 会自然成为父 token 的 child。
+    pub(crate) current_owned_collectors: Vec<OwnedMountToken>,
+    /// 原生 range start 对象到 `range_map` 下标的弱身份索引，不持有 DOM 强引用
+    pub(crate) range_identity_index: WeakMap,
+    /// 弱身份索引上次同步时对应的 Vec 长度，用于发现绕过 helper 的结构变更
+    pub(crate) range_identity_indexed_len: usize,
     /// 下一次触发 anchor 映射压缩的长度阈值
     pub(crate) anchor_map_next_compact_at: usize,
     /// 下一次触发 range 映射压缩的长度阈值
     pub(crate) range_map_next_compact_at: usize,
+    #[cfg(any(feature = "dev", test))]
+    pub(crate) anchor_identity_lookup_visits: usize,
+    #[cfg(any(feature = "dev", test))]
+    pub(crate) range_identity_lookup_visits: usize,
+    #[cfg(any(feature = "dev", test))]
+    pub(crate) anchor_compact_entry_visits: usize,
+    #[cfg(any(feature = "dev", test))]
+    pub(crate) range_compact_entry_visits: usize,
+    #[cfg(any(feature = "dev", test))]
+    pub(crate) anchor_compact_trigger_lengths: Vec<usize>,
+    #[cfg(any(feature = "dev", test))]
+    pub(crate) range_compact_trigger_lengths: Vec<usize>,
     /// 当前区间锚点（渲染 Between 时使用）
     pub(crate) current_anchor: Option<A::Element>,
     /// 错误处理器集合（按实例索引）
@@ -71,14 +103,35 @@ where
         Rue {
             container_map: Vec::new(),
             anchor_map: Vec::new(),
+            anchor_identity_index: WeakMap::new(),
+            anchor_identity_indexed_len: 0,
             current_instance: None,
             current_container_count: 0,
             instance_stack: Vec::new(),
             instance_store: HashMap::new(),
+            next_component_instance_id: 0,
             mounted_queue: Vec::new(),
             range_map: Vec::new(),
+            owned_mount_slots: Vec::new(),
+            owned_mount_free_slots: Vec::new(),
+            next_owned_mount_generation: 1,
+            current_owned_collectors: Vec::new(),
+            range_identity_index: WeakMap::new(),
+            range_identity_indexed_len: 0,
             anchor_map_next_compact_at: 0,
             range_map_next_compact_at: 0,
+            #[cfg(any(feature = "dev", test))]
+            anchor_identity_lookup_visits: 0,
+            #[cfg(any(feature = "dev", test))]
+            range_identity_lookup_visits: 0,
+            #[cfg(any(feature = "dev", test))]
+            anchor_compact_entry_visits: 0,
+            #[cfg(any(feature = "dev", test))]
+            range_compact_entry_visits: 0,
+            #[cfg(any(feature = "dev", test))]
+            anchor_compact_trigger_lengths: Vec::new(),
+            #[cfg(any(feature = "dev", test))]
+            range_compact_trigger_lengths: Vec::new(),
             current_anchor: None,
             error_handlers: HashSet::new(),
             current_container: None,
@@ -120,6 +173,209 @@ where
     #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
     pub fn range_mount_count(&self) -> usize {
         self.range_map.len()
+    }
+
+    pub(crate) fn owned_mount_count(&self) -> usize {
+        self.owned_mount_slots.iter().filter(|slot| slot.is_some()).count()
+    }
+
+    pub(crate) fn owned_mount_entry_count(&self) -> usize {
+        self.owned_mount_slots
+            .iter()
+            .flatten()
+            .map(|slot| slot.anchors.len() + slot.ranges.len())
+            .sum()
+    }
+
+    pub(crate) fn component_instance_count(&self) -> usize {
+        self.instance_store.len()
+    }
+
+    pub(crate) fn pending_component_mounted_count(&self) -> usize {
+        self.owned_mount_slots
+            .iter()
+            .flatten()
+            .map(|slot| slot.pending_component_mounted.len())
+            .sum()
+    }
+
+    pub(crate) fn allocate_component_instance_id(&mut self) -> usize {
+        let id = self.next_component_instance_id;
+        self.next_component_instance_id = self
+            .next_component_instance_id
+            .checked_add(1)
+            .expect("component instance id exhausted");
+        id
+    }
+
+    pub(crate) fn current_owned_mount(&self) -> Option<OwnedMountToken> {
+        self.current_owned_collectors.last().copied()
+    }
+
+    pub(crate) fn owned_mount_slot(&self, token: OwnedMountToken) -> Option<&OwnedMountSlot<A>> {
+        self.owned_mount_slots
+            .get(token.slot)
+            .and_then(Option::as_ref)
+            .filter(|slot| slot.generation == token.generation)
+    }
+
+    pub(crate) fn owned_mount_slot_mut(
+        &mut self,
+        token: OwnedMountToken,
+    ) -> Option<&mut OwnedMountSlot<A>> {
+        self.owned_mount_slots
+            .get_mut(token.slot)
+            .and_then(Option::as_mut)
+            .filter(|slot| slot.generation == token.generation)
+    }
+
+    pub(crate) fn build_owned_mount(&mut self) -> OwnedMountToken {
+        let generation = self.next_owned_mount_generation;
+        self.next_owned_mount_generation = self
+            .next_owned_mount_generation
+            .checked_add(1)
+            .expect("owned mount generation exhausted");
+        let slot = self.owned_mount_free_slots.pop().unwrap_or(self.owned_mount_slots.len());
+        let token = OwnedMountToken { slot, generation };
+        if slot == self.owned_mount_slots.len() {
+            self.owned_mount_slots.push(Some(OwnedMountSlot::new(generation)));
+        } else {
+            self.owned_mount_slots[slot] = Some(OwnedMountSlot::new(generation));
+        }
+
+        if let Some(parent) = self.current_owned_mount()
+            && let Some(parent_slot) = self.owned_mount_slot_mut(parent)
+        {
+            parent_slot.children.push(token);
+        }
+        self.current_owned_collectors.push(token);
+        token
+    }
+
+    pub(crate) fn commit_owned_mount(&mut self, token: OwnedMountToken) -> bool {
+        if self.current_owned_mount() != Some(token) {
+            return false;
+        }
+        let Some(slot) = self.owned_mount_slot_mut(token) else {
+            return false;
+        };
+        slot.phase = OwnedMountPhase::Committed;
+        slot.pending_mounted = false;
+        self.current_owned_collectors.pop();
+        if let Some(parent) = self.current_owned_mount() {
+            let pending = self
+                .owned_mount_slot_mut(token)
+                .map(|slot| std::mem::take(&mut slot.pending_component_mounted))
+                .unwrap_or_default();
+            if let Some(parent_slot) = self.owned_mount_slot_mut(parent) {
+                parent_slot.pending_component_mounted.extend(pending);
+            }
+        }
+        true
+    }
+
+    pub(crate) fn queue_current_component_mounted(
+        &mut self,
+        inst_index: usize,
+        parent_inst_index: Option<usize>,
+        container: Option<A::Element>,
+    ) -> bool {
+        let Some(owner) = self.current_owned_mount() else {
+            return false;
+        };
+        let Some(slot) = self.owned_mount_slot_mut(owner) else {
+            return false;
+        };
+        slot.pending_component_mounted.push(PendingComponentMounted {
+            owner,
+            inst_index,
+            parent_inst_index,
+            container,
+        });
+        true
+    }
+
+    pub(crate) fn take_committed_component_mounted(
+        &mut self,
+        token: OwnedMountToken,
+    ) -> Vec<PendingComponentMounted<A>>
+    where
+        A::Element: Into<JsValue>,
+    {
+        let Some(slot) = self.owned_mount_slot_mut(token) else {
+            return Vec::new();
+        };
+        if slot.phase != OwnedMountPhase::Committed {
+            return Vec::new();
+        }
+        let mut pending = std::mem::take(&mut slot.pending_component_mounted);
+        let parents: HashMap<usize, Option<usize>> =
+            pending.iter().map(|item| (item.inst_index, item.parent_inst_index)).collect();
+        let depth = |item: &PendingComponentMounted<A>| {
+            let mut depth = 0usize;
+            let mut parent = item.parent_inst_index;
+            let mut seen = HashSet::new();
+            while let Some(index) = parent
+                && seen.insert(index)
+            {
+                depth = depth.saturating_add(1);
+                parent = parents.get(&index).copied().flatten();
+            }
+            depth
+        };
+        let container_depth = |item: &PendingComponentMounted<A>| {
+            let Some(container) = item.container.as_ref() else {
+                return 0usize;
+            };
+            let mut current: JsValue = container.clone().into();
+            let mut depth = 0usize;
+            for _ in 0..64 {
+                let parent = js_sys::Reflect::get(&current, &JsValue::from_str("parentNode"))
+                    .unwrap_or(JsValue::UNDEFINED);
+                if parent.is_null() || parent.is_undefined() {
+                    break;
+                }
+                depth = depth.saturating_add(1);
+                current = parent;
+            }
+            depth
+        };
+        pending.sort_by_key(|item| {
+            (std::cmp::Reverse(container_depth(item)), std::cmp::Reverse(depth(item)))
+        });
+        pending
+    }
+
+    pub(crate) fn begin_owned_mount_update(&mut self, token: OwnedMountToken) -> bool {
+        let Some(slot) = self.owned_mount_slot(token) else {
+            return false;
+        };
+        if slot.phase != OwnedMountPhase::Committed {
+            return false;
+        }
+        self.current_owned_collectors.push(token);
+        true
+    }
+
+    pub(crate) fn mark_current_owned_mount_pending(&mut self) {
+        if let Some(token) = self.current_owned_mount()
+            && let Some(slot) = self.owned_mount_slot_mut(token)
+        {
+            slot.pending_mounted = true;
+        }
+    }
+
+    pub(crate) fn take_owned_mount_slot(
+        &mut self,
+        token: OwnedMountToken,
+    ) -> Option<OwnedMountSlot<A>> {
+        if self.owned_mount_slot(token).is_none() {
+            return None;
+        }
+        self.current_owned_collectors.retain(|active| *active != token);
+        let slot = self.owned_mount_slots[token.slot].take();
+        self.owned_mount_free_slots.push(token.slot);
+        slot
     }
 }
 
@@ -252,6 +508,7 @@ mod tests {
         assert_eq!(rue.container_mount_count(), 0);
         assert_eq!(rue.anchor_mount_count(), 0);
         assert_eq!(rue.range_mount_count(), 0);
+        assert_eq!(rue.owned_mount_count(), 0);
         assert_eq!(rue.anchor_map_next_compact_at, 0);
         assert_eq!(rue.range_map_next_compact_at, 0);
 
@@ -294,5 +551,26 @@ mod tests {
         );
         assert!(rue.current_container.is_none());
         assert!(!rue.crashed);
+    }
+
+    #[wasm_bindgen_test]
+    fn owned_mount_generation_rejects_stale_and_tracks_nested_collectors() {
+        let mut rue = Rue::<NoopAdapter>::new();
+        let parent = rue.build_owned_mount();
+        let child = rue.build_owned_mount();
+        assert_eq!(rue.current_owned_mount(), Some(child));
+        assert!(rue.commit_owned_mount(child));
+        assert_eq!(rue.current_owned_mount(), Some(parent));
+        assert!(rue.commit_owned_mount(parent));
+        assert_eq!(rue.owned_mount_count(), 2);
+
+        let old_child_slot = child.slot;
+        assert!(rue.take_owned_mount_slot(child).is_some());
+        let replacement = rue.build_owned_mount();
+        assert_eq!(replacement.slot, old_child_slot);
+        assert_ne!(replacement.generation, child.generation);
+        assert!(rue.owned_mount_slot(child).is_none());
+        assert!(!rue.commit_owned_mount(child));
+        assert!(rue.commit_owned_mount(replacement));
     }
 }

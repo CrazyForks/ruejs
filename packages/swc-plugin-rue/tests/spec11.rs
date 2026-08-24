@@ -258,6 +258,9 @@ const FormBindings: FC = ()=>{
         _$appendChild(_el14, _list1);
         _$appendChild(_el14, _list2);
         let _map1_elements = new Map;
+        const _map1_state = {
+            elements: _map1_elements
+        };
         watchEffect(()=>{
             const _map1_current = [
                 'Jack',
@@ -267,11 +270,13 @@ const FormBindings: FC = ()=>{
             const _map1_newElements = _$vaporKeyedList({
                 items: _map1_current,
                 getKey: (name, idx)=>name,
+                state: _map1_state,
                 elements: _map1_elements,
                 parent: _el14,
                 before: _list2,
                 singleRoot: true,
                 trackIndex: false,
+                ownedMount: true,
                 start: _list1,
                 renderItem: (name, parent, start, end, idx)=>{
                     const __slot = vapor(()=>{

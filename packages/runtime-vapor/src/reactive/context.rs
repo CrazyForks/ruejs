@@ -249,6 +249,34 @@ pub(crate) fn component_instance_wrapper(inst_index: usize) -> Option<JsValue> {
 }
 
 #[cfg(feature = "runtime")]
+pub(crate) fn component_instance_wrapper_count() -> usize {
+    CI_WRAPPERS.with(|wr| wr.borrow().len())
+}
+
+#[cfg(feature = "runtime")]
+pub(crate) fn release_component_instance_wrapper(inst_index: usize, host: &JsValue) {
+    let wrapper = CI_WRAPPERS.with(|wr| wr.borrow_mut().remove(&inst_index));
+    if let Some(wrapper) = wrapper
+        && wrapper.is_object()
+    {
+        let wrapper = Object::from(wrapper);
+        let _ = Reflect::set(
+            &wrapper,
+            &JsValue::from_str(CONTEXT_LINKED_INSTANCE_PROP),
+            &JsValue::UNDEFINED,
+        );
+    }
+    if host.is_object() {
+        let host = Object::from(host.clone());
+        let _ = Reflect::set(
+            &host,
+            &JsValue::from_str(CONTEXT_LINKED_INSTANCE_PROP),
+            &JsValue::UNDEFINED,
+        );
+    }
+}
+
+#[cfg(feature = "runtime")]
 #[doc(hidden)]
 pub fn coverage_touch_internal_edges() -> bool {
     use crate::runtime::{ComponentInternalInstance, JsDomAdapter, LifecycleHooks};

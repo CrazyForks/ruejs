@@ -631,6 +631,109 @@ fn is_safe_row_binding_expr(expr: &Expr) -> bool {
     !visitor.found
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ListRowEffectMode {
+    Merge,
+    Preserve,
+}
+
+/// A list row's mount shape is a closed set of valid capability combinations.
+///
+/// In particular, a row can be safe to build and insert directly while its
+/// individual watchers still need to be preserved. Keeping that state separate
+/// from `Merge` is what lets spreads and proven scalar calls avoid renderAnchor
+/// without changing their update semantics.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ListRowMountMode {
+    DirectLeaf { effects: ListRowEffectMode },
+    OwnedStructural,
+    GlobalFallback,
+}
+
+impl ListRowMountMode {
+    fn direct_mount(self) -> bool {
+        matches!(self, Self::DirectLeaf { .. })
+    }
+
+    fn batch_build(self) -> bool {
+        matches!(self, Self::DirectLeaf { .. } | Self::OwnedStructural)
+    }
+
+    fn merge_effects(self) -> bool {
+        matches!(self, Self::DirectLeaf { effects: ListRowEffectMode::Merge })
+    }
+
+    fn needs_owned_mount(self) -> bool {
+        matches!(self, Self::OwnedStructural)
+    }
+}
+
+struct UnsafeDirectLeafExpr<'a> {
+    shadowed_names: &'a std::collections::HashSet<String>,
+    found: bool,
+}
+
+impl Visit for UnsafeDirectLeafExpr<'_> {
+    fn visit_call_expr(&mut self, call: &CallExpr) {
+        if crate::element_expr::is_accessor_get_call_expr(call)
+            || crate::element_expr::is_unshadowed_global_scalar_call(call, self.shadowed_names)
+        {
+            call.visit_children_with(self);
+        } else {
+            self.found = true;
+        }
+    }
+
+    fn visit_new_expr(&mut self, _expr: &NewExpr) {
+        self.found = true;
+    }
+
+    fn visit_assign_expr(&mut self, _expr: &AssignExpr) {
+        self.found = true;
+    }
+
+    fn visit_update_expr(&mut self, _expr: &UpdateExpr) {
+        self.found = true;
+    }
+
+    fn visit_await_expr(&mut self, _expr: &AwaitExpr) {
+        self.found = true;
+    }
+
+    fn visit_yield_expr(&mut self, _expr: &YieldExpr) {
+        self.found = true;
+    }
+
+    fn visit_arrow_expr(&mut self, _expr: &ArrowExpr) {
+        self.found = true;
+    }
+
+    fn visit_fn_expr(&mut self, _expr: &FnExpr) {
+        self.found = true;
+    }
+
+    fn visit_tagged_tpl(&mut self, _expr: &TaggedTpl) {
+        self.found = true;
+    }
+
+    fn visit_jsx_element(&mut self, _expr: &JSXElement) {
+        self.found = true;
+    }
+
+    fn visit_jsx_fragment(&mut self, _expr: &JSXFragment) {
+        self.found = true;
+    }
+}
+
+fn is_direct_leaf_binding_expr(
+    expr: &Expr,
+    shadowed_names: &std::collections::HashSet<String>,
+) -> bool {
+    let mut visitor = UnsafeDirectLeafExpr { shadowed_names, found: false };
+    expr.visit_with(&mut visitor);
+    !visitor.found
+}
+
 fn expr_reads_any_name(expr: &Expr, names: &std::collections::HashSet<String>) -> bool {
     let mut collector = IdentUseCollector { names, found: false };
     expr.visit_with(&mut collector);
@@ -666,6 +769,281 @@ fn is_safe_native_row_children(
         },
         JSXElementChild::JSXSpreadChild(_) => false,
     })
+}
+
+fn is_direct_leaf_native_row_children(
+    children: &[JSXElementChild],
+    row_local_names: &std::collections::HashSet<String>,
+    shadowed_names: &std::collections::HashSet<String>,
+) -> bool {
+    children.iter().all(|child| match child {
+        JSXElementChild::JSXText(_) => true,
+        JSXElementChild::JSXElement(element) => {
+            is_direct_leaf_native_row_element(element, row_local_names, shadowed_names, false)
+        }
+        JSXElementChild::JSXFragment(fragment) => {
+            is_direct_leaf_native_row_children(&fragment.children, row_local_names, shadowed_names)
+        }
+        JSXElementChild::JSXExprContainer(container) => match &container.expr {
+            JSXExpr::JSXEmptyExpr(_) => true,
+            JSXExpr::Expr(expr) => {
+                let inner = utils::unwrap_expr(expr.as_ref());
+                !crate::element_expr::contains_jsx_in_expr(inner)
+                    && is_direct_leaf_binding_expr(inner, shadowed_names)
+                    && (crate::utils::is_static_empty_like(inner)
+                        || crate::utils::is_static_text_literal(inner)
+                        || expr_reads_any_name(inner, row_local_names))
+            }
+        },
+        JSXElementChild::JSXSpreadChild(spread) => {
+            is_direct_leaf_binding_expr(spread.expr.as_ref(), shadowed_names)
+        }
+    })
+}
+
+fn is_direct_leaf_native_row_element(
+    element: &JSXElement,
+    row_local_names: &std::collections::HashSet<String>,
+    shadowed_names: &std::collections::HashSet<String>,
+    allow_owned_ref: bool,
+) -> bool {
+    if crate::utils::is_component(&element.opening.name)
+        || crate::utils::is_builtin_fragment_element(element)
+    {
+        return false;
+    }
+
+    let attrs_are_safe = element.opening.attrs.iter().all(|attr| match attr {
+        JSXAttrOrSpread::SpreadElement(spread) => {
+            is_direct_leaf_binding_expr(spread.expr.as_ref(), shadowed_names)
+        }
+        JSXAttrOrSpread::JSXAttr(attr) => {
+            let JSXAttrName::Ident(name) = &attr.name else {
+                return false;
+            };
+            let name = name.sym.as_ref();
+            if name == "dangerouslySetInnerHTML" {
+                return false;
+            }
+            if name == "ref" {
+                return allow_owned_ref
+                    && matches!(
+                        &attr.value,
+                        Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                            expr: JSXExpr::Expr(_),
+                            ..
+                        }))
+                    );
+            }
+            if name == "key" || is_event_attr_name(name) {
+                return true;
+            }
+            match &attr.value {
+                Some(JSXAttrValue::JSXExprContainer(container)) => match &container.expr {
+                    JSXExpr::JSXEmptyExpr(_) => true,
+                    JSXExpr::Expr(expr) => {
+                        is_direct_leaf_binding_expr(expr.as_ref(), shadowed_names)
+                    }
+                },
+                _ => true,
+            }
+        }
+    });
+
+    attrs_are_safe
+        && is_direct_leaf_native_row_children(&element.children, row_local_names, shadowed_names)
+}
+
+fn classify_list_row_mount_mode(
+    expr: &Expr,
+    row_local_names: &std::collections::HashSet<String>,
+    shadowed_names: &std::collections::HashSet<String>,
+    can_merge_effects: bool,
+) -> ListRowMountMode {
+    let Expr::JSXElement(element) = utils::unwrap_expr(expr) else {
+        return ListRowMountMode::GlobalFallback;
+    };
+    if !is_native_single_root_jsx_element(element) {
+        return ListRowMountMode::GlobalFallback;
+    }
+    if is_direct_leaf_native_row_element(element, row_local_names, shadowed_names, true) {
+        return ListRowMountMode::DirectLeaf {
+            effects: if can_merge_effects {
+                ListRowEffectMode::Merge
+            } else {
+                ListRowEffectMode::Preserve
+            },
+        };
+    }
+    ListRowMountMode::OwnedStructural
+}
+
+/// 判断列表根表达式是否需要在运行时做同步 renderable 分类。
+///
+/// `_ $vaporWithKey` 只携带结构 key，实际分类必须看它的第一个参数；
+/// String/Number/Boolean 是已证明的 scalar 调用，其余调用、标识符、成员和
+/// 组合表达式都保持保守，只标记能力而不在编译期求值或复制表达式。
+fn is_synchronous_opaque_list_row_expr(expr: &Expr) -> bool {
+    let expr = utils::unwrap_expr(expr);
+    if utils::is_static_empty_like(expr) || utils::is_static_text_literal(expr) {
+        return false;
+    }
+
+    match expr {
+        Expr::Call(call) => match call_callee_ident_name(call) {
+            Some("_$vaporWithKey") => call
+                .args
+                .first()
+                .is_some_and(|arg| is_synchronous_opaque_list_row_expr(arg.expr.as_ref())),
+            Some("String" | "Number" | "Boolean") => false,
+            _ => true,
+        },
+        Expr::Ident(_) | Expr::Member(_) | Expr::Array(_) => true,
+        Expr::Cond(CondExpr { cons, alt, .. }) => {
+            is_synchronous_opaque_list_row_expr(cons.as_ref())
+                || is_synchronous_opaque_list_row_expr(alt.as_ref())
+        }
+        Expr::Bin(BinExpr { left, right, .. }) => {
+            is_synchronous_opaque_list_row_expr(left.as_ref())
+                || is_synchronous_opaque_list_row_expr(right.as_ref())
+        }
+        // await / yield and explicit async boundaries belong to task 10.
+        Expr::Await(_) | Expr::Yield(_) => false,
+        Expr::JSXElement(_) | Expr::JSXFragment(_) | Expr::Lit(_) => false,
+        _ => true,
+    }
+}
+
+/// 外部宿主或延迟生命周期组件不能隐式进入同步 owned collector。
+///
+/// 这些内建组件各自维护 target、leave、deactivate 或 pending 状态；列表 containment
+/// 无法完整表达其最终清理边界，因此保留现有全局 renderBetween 路径。
+fn is_external_renderable_boundary_element(element: &JSXElement) -> bool {
+    let name = match &element.opening.name {
+        JSXElementName::Ident(ident) => ident.sym.as_ref(),
+        JSXElementName::JSXMemberExpr(member) => member.prop.sym.as_ref(),
+        JSXElementName::JSXNamespacedName(name) => name.name.sym.as_ref(),
+    };
+    matches!(name, "Teleport" | "Transition" | "KeepAlive" | "Suspense")
+}
+
+struct ScopedNameUseCollector<'a> {
+    target: &'a str,
+    shadowed: usize,
+    found: bool,
+}
+
+impl ScopedNameUseCollector<'_> {
+    fn pat_shadows_target(&self, pat: &Pat) -> bool {
+        let mut names = std::collections::HashSet::new();
+        collect_declared_idents_from_pat(pat, &mut names);
+        names.contains(self.target)
+    }
+
+    fn with_shadow(&mut self, shadow: bool, visit: impl FnOnce(&mut Self)) {
+        if shadow {
+            self.shadowed += 1;
+        }
+        visit(self);
+        if shadow {
+            self.shadowed -= 1;
+        }
+    }
+}
+
+impl Visit for ScopedNameUseCollector<'_> {
+    fn visit_expr(&mut self, expr: &Expr) {
+        if self.found {
+            return;
+        }
+        if let Expr::Ident(ident) = expr {
+            if self.shadowed == 0 && ident.sym.as_ref() == self.target {
+                self.found = true;
+            }
+            return;
+        }
+        expr.visit_children_with(self);
+    }
+
+    fn visit_arrow_expr(&mut self, arrow: &ArrowExpr) {
+        let shadow = arrow.params.iter().any(|pat| self.pat_shadows_target(pat));
+        self.with_shadow(shadow, |this| arrow.body.visit_with(this));
+    }
+
+    fn visit_function(&mut self, function: &Function) {
+        let shadow = function.params.iter().any(|param| self.pat_shadows_target(&param.pat));
+        self.with_shadow(shadow, |this| {
+            if let Some(body) = &function.body {
+                body.visit_with(this);
+            }
+        });
+    }
+
+    fn visit_block_stmt(&mut self, block: &BlockStmt) {
+        let shadow = collect_declared_idents_in_stmts(&block.stmts).contains(self.target);
+        self.with_shadow(shadow, |this| {
+            for stmt in &block.stmts {
+                stmt.visit_with(this);
+                if this.found {
+                    break;
+                }
+            }
+        });
+    }
+
+    fn visit_var_declarator(&mut self, declarator: &VarDeclarator) {
+        if let Some(init) = &declarator.init {
+            init.visit_with(self);
+        }
+    }
+
+    fn visit_member_expr(&mut self, member: &MemberExpr) {
+        member.obj.visit_with(self);
+        if let MemberProp::Computed(prop) = &member.prop {
+            prop.expr.visit_with(self);
+        }
+    }
+
+    fn visit_prop(&mut self, prop: &Prop) {
+        match prop {
+            Prop::Shorthand(ident) => {
+                if self.shadowed == 0 && ident.sym.as_ref() == self.target {
+                    self.found = true;
+                }
+            }
+            Prop::KeyValue(prop) => {
+                if let PropName::Computed(name) = &prop.key {
+                    name.expr.visit_with(self);
+                }
+                prop.value.visit_with(self);
+            }
+            Prop::Assign(prop) => prop.value.visit_with(self),
+            Prop::Getter(prop) => {
+                if let PropName::Computed(name) = &prop.key {
+                    name.expr.visit_with(self);
+                }
+                prop.body.visit_with(self);
+            }
+            Prop::Setter(prop) => {
+                if let PropName::Computed(name) = &prop.key {
+                    name.expr.visit_with(self);
+                }
+                prop.body.visit_with(self);
+            }
+            Prop::Method(prop) => {
+                if let PropName::Computed(name) = &prop.key {
+                    name.expr.visit_with(self);
+                }
+                prop.function.visit_with(self);
+            }
+        }
+    }
+}
+
+fn callback_body_uses_name(body: &BlockStmtOrExpr, target: &str) -> bool {
+    let mut collector = ScopedNameUseCollector { target, shadowed: 0, found: false };
+    body.visit_with(&mut collector);
+    collector.found
 }
 
 fn is_safe_native_row_element(
@@ -986,10 +1364,11 @@ pub(crate) fn try_build_list_from_map(
         stmts.push(append_child(el_ident.clone(), Expr::Ident(start.clone())));
         stmts.push(append_child(el_ident.clone(), Expr::Ident(end.clone())));
 
-        // 使用 Map 键控闭包实现列表渲染与复用
-        // 先声明持久 Map：let _mapX_elements = new Map();
+        // 使用稳定列表状态持有 keyed range 与总 disposer。
+        // elements Map 继续保留原名以兼容 helper 返回值与既有调试输出。
         let map_base = vt.next_map_base();
         let elements_ident = ident(&format!("{}{}", map_base, "_elements"));
+        let state_ident = ident(&format!("{}{}", map_base, "_state"));
         // 持久化 Map，实现跨次渲染的片段复用（key -> {start,end,stop}）
         let new_map_expr = Expr::New(NewExpr {
             span: DUMMY_SP,
@@ -1011,7 +1390,17 @@ pub(crate) fn try_build_list_from_map(
             }],
         })));
         stmts.push(elements_decl);
-        log::debug("list: emitted anchors and elements Map");
+        stmts.push(const_decl(
+            state_ident.clone(),
+            Expr::Object(ObjectLit {
+                span: DUMMY_SP,
+                props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("elements")),
+                    value: Box::new(Expr::Ident(elements_ident.clone())),
+                })))],
+            }),
+        ));
+        log::debug("list: emitted anchors and stable list state");
 
         // 构造 watchEffect 箭头函数体
         let map_current = ident(&format!("{}{}", map_base, "_current"));
@@ -1034,6 +1423,7 @@ pub(crate) fn try_build_list_from_map(
         let mut parent_param_ident = ident("parent");
         let mut start_param_ident = ident("start");
         let mut end_param_ident = ident("end");
+        let mut ref_cleanup_registrar_ident = ident("registerRefCleanup");
         let mut item_alias_exprs = std::collections::HashMap::new();
         if let Expr::Arrow(ArrowExpr { params, body, .. }) = cb_expr {
             if !params.is_empty() {
@@ -1192,7 +1582,16 @@ pub(crate) fn try_build_list_from_map(
 
             let mut use_single_root_anchor = false;
             let mut use_direct_root_mount = false;
-            let track_index = params.len() >= 2;
+            let mut use_owned_mount = false;
+            let mut use_opaque_renderable = false;
+            let mut use_async_external_renderable = false;
+            let mut use_ref_cleanup_registrar = false;
+            let track_index = params.get(1).is_some_and(|param| match param {
+                Pat::Ident(binding) => {
+                    callback_body_uses_name(body.as_ref(), binding.id.sym.as_ref())
+                }
+                _ => true,
+            });
 
             // renderItem(item, start, end)
             // `_$vaporKeyedList` 的 `renderItem` 约定参数：
@@ -1211,6 +1610,11 @@ pub(crate) fn try_build_list_from_map(
                         crate::utils::is_builtin_fragment_element(jsx_el)
                             && is_single_root_native_fragment_children(&jsx_el.children);
                     if crate::utils::is_component(&jsx_el.opening.name) {
+                        // 普通组件行把 mounted snapshot 归属到行 owner；外部宿主或延迟
+                        // 生命周期内建组件保留全局路径，由组件自身的取消协议负责清理。
+                        use_async_external_renderable =
+                            is_external_renderable_boundary_element(jsx_el);
+                        use_owned_mount = true;
                         let mut component_el = (**jsx_el).clone();
                         let render_item_local_names =
                             vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
@@ -1303,11 +1707,31 @@ pub(crate) fn try_build_list_from_map(
                         }
                         let render_item_local_names =
                             vec![item_ident.sym.to_string(), idx_ident.sym.to_string()];
-                        let row_local_names = render_item_local_names.iter().cloned().collect();
-                        let coalesce_row_bindings = use_single_root_anchor
+                        let row_local_names: std::collections::HashSet<String> =
+                            render_item_local_names.iter().cloned().collect();
+                        let can_merge_row_bindings = use_single_root_anchor
                             && !track_index
                             && render_item_prefix_stmts.is_empty()
                             && is_safe_native_row_element(jsx_el, &row_local_names);
+                        let mut shadowed_names = vt.current_scalar_constructor_shadows();
+                        for param in params {
+                            collect_declared_idents_from_pat(param, &mut shadowed_names);
+                        }
+                        shadowed_names.extend(collect_declared_idents_in_stmts(
+                            &rewritten_callback_prefix_stmts,
+                        ));
+                        ref_cleanup_registrar_ident =
+                            fresh_ident_avoiding("registerRefCleanup", &shadowed_names);
+                        let row_mount_mode = classify_list_row_mount_mode(
+                            inner_ret,
+                            &row_local_names,
+                            &shadowed_names,
+                            can_merge_row_bindings,
+                        );
+                        let _can_batch_build = row_mount_mode.batch_build();
+                        use_owned_mount = row_mount_mode.needs_owned_mount();
+                        let coalesce_row_bindings = row_mount_mode.merge_effects();
+                        use_direct_root_mount = row_mount_mode.direct_mount();
                         let (renderable_locals, plain_locals) = collect_render_item_local_scopes(
                             vt,
                             &render_item_prefix_stmts,
@@ -1316,13 +1740,18 @@ pub(crate) fn try_build_list_from_map(
                         vt.push_renderable_local_scope(renderable_locals);
                         vt.push_plain_local_scope(plain_locals);
                         build_element(vt, jsx_el, &child_root.clone(), &mut child_body);
+                        if use_direct_root_mount {
+                            use_ref_cleanup_registrar = crate::vapor::bind_list_row_ref_cleanups(
+                                &mut child_body,
+                                &ref_cleanup_registrar_ident,
+                            );
+                        }
                         if coalesce_row_bindings {
-                            use_direct_root_mount = true;
                             crate::vapor::coalesce_list_row_binding_effects(&mut child_body);
                         }
                         vt.pop_plain_local_scope();
                         vt.pop_renderable_local_scope();
-                        if coalesce_row_bindings {
+                        if use_direct_root_mount {
                             // 安全单根行已由列表 helper 的 item effectScope 统一持有。
                             // 直接将组装好的 Fragment 插到行锚点前，避免再为每行
                             // 注册一个 renderAnchor mount；后者的线性 anchor_map 查找会使
@@ -1529,6 +1958,10 @@ pub(crate) fn try_build_list_from_map(
                         expr: Box::new(render_item_call),
                     }));
                 } else {
+                    if is_synchronous_opaque_list_row_expr(inner_ret) {
+                        use_owned_mount = true;
+                        use_opaque_renderable = true;
+                    }
                     let slot_expr = crate::element_expr::make_expr_for_slot(vt, inner_ret);
                     let render_item_call = Expr::Call(CallExpr {
                         span: DUMMY_SP,
@@ -1632,15 +2065,22 @@ pub(crate) fn try_build_list_from_map(
                     expr: Box::new(render_item_call),
                 }));
             }
+            let mut render_item_params = vec![
+                Pat::Ident(BindingIdent { id: item_ident.clone(), type_ann: None }),
+                Pat::Ident(BindingIdent { id: parent_param_ident.clone(), type_ann: None }),
+                Pat::Ident(BindingIdent { id: start_param_ident.clone(), type_ann: None }),
+                Pat::Ident(BindingIdent { id: end_param_ident.clone(), type_ann: None }),
+                Pat::Ident(BindingIdent { id: idx_ident.clone(), type_ann: None }),
+            ];
+            if use_ref_cleanup_registrar {
+                render_item_params.push(Pat::Ident(BindingIdent {
+                    id: ref_cleanup_registrar_ident,
+                    type_ann: None,
+                }));
+            }
             let render_item_arrow = Expr::Arrow(ArrowExpr {
                 span: DUMMY_SP,
-                params: vec![
-                    Pat::Ident(BindingIdent { id: item_ident.clone(), type_ann: None }),
-                    Pat::Ident(BindingIdent { id: parent_param_ident.clone(), type_ann: None }),
-                    Pat::Ident(BindingIdent { id: start_param_ident.clone(), type_ann: None }),
-                    Pat::Ident(BindingIdent { id: end_param_ident.clone(), type_ann: None }),
-                    Pat::Ident(BindingIdent { id: idx_ident.clone(), type_ann: None }),
-                ],
+                params: render_item_params,
                 body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
                     span: DUMMY_SP,
                     ctxt: SyntaxContext::empty(),
@@ -1728,6 +2168,10 @@ pub(crate) fn try_build_list_from_map(
                     value: Box::new(get_key_arrow),
                 }))),
                 PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("state")),
+                    value: Box::new(Expr::Ident(state_ident.clone())),
+                }))),
+                PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
                     key: PropName::Ident(ident_name("elements")),
                     value: Box::new(Expr::Ident(elements_ident.clone())),
                 }))),
@@ -1746,21 +2190,34 @@ pub(crate) fn try_build_list_from_map(
                     key: PropName::Ident(ident_name("singleRoot")),
                     value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
                 }))));
-                if !track_index {
-                    keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(
-                        KeyValueProp {
-                            key: PropName::Ident(ident_name("trackIndex")),
-                            value: Box::new(Expr::Lit(Lit::Bool(Bool {
-                                span: DUMMY_SP,
-                                value: false,
-                            }))),
-                        },
-                    ))));
-                }
+            }
+            if !track_index {
+                keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("trackIndex")),
+                    value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: false }))),
+                }))));
             }
             if use_direct_root_mount {
                 keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
                     key: PropName::Ident(ident_name("directRoot")),
+                    value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
+                }))));
+            }
+            if use_owned_mount {
+                keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("ownedMount")),
+                    value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
+                }))));
+            }
+            if use_opaque_renderable {
+                keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("opaqueRenderable")),
+                    value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
+                }))));
+            }
+            if use_async_external_renderable {
+                keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("asyncExternalRenderable")),
                     value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
                 }))));
             }

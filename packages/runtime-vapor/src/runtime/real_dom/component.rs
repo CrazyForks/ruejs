@@ -4,11 +4,15 @@
 负责创建组件实例、建立 propsRO、切换当前实例上下文、执行 render 函数，
 并把组件返回值继续挂载成子树。最后将子树包成 Patch snapshot，供后续组件 patch 复用。
 */
-use super::super::types::{MountInput, MountedPatchSubtree, MountedSubtreeState};
+use super::super::types::{
+    MountInput, MountedPatchSubtree, MountedSubtreeState, OwnedMountPhase, OwnedMountToken,
+    PendingComponentMounted,
+};
 use super::super::{ComponentInternalInstance, Rue};
 use crate::hook::reactive::props_reactive_js;
 use crate::reactive::context::{
-    CONTEXT_OWNER_PARENT_PROP, CONTEXT_PARENT_INSTANCE_PROP, set_current_instance_ci,
+    CONTEXT_LINKED_INSTANCE_PROP, CONTEXT_OWNER_PARENT_PROP, CONTEXT_PARENT_INSTANCE_PROP,
+    set_current_instance_ci,
 };
 use crate::reactive::core::{
     begin_render_debug_owner, end_render_debug_owner, pop_effect_scope, push_effect_scope,
@@ -19,6 +23,16 @@ use js_sys::{Function, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 
 type ComponentLifecycleHookSets = (Vec<JsValue>, Vec<JsValue>, Vec<JsValue>, Vec<JsValue>);
+
+pub(crate) struct ComponentMountedContext<A: DomAdapter> {
+    pub hooks: Vec<JsValue>,
+    pub host: JsValue,
+    previous_current_instance: JsValue,
+    previous_container: Option<A::Element>,
+    previous_instance_stack: Vec<usize>,
+    previous_owned_collectors: Vec<OwnedMountToken>,
+    pushed_container: bool,
+}
 
 pub(crate) fn mount_component<A: DomAdapter>(
     rue: &mut Rue<A>,
@@ -116,8 +130,31 @@ where
         return None;
     }
 
-    rue.call_hooks("mounted");
-    merge_pending_hooks(rue);
+    let parent_inst_index =
+        Reflect::get(&host_value, &JsValue::from_str(CONTEXT_OWNER_PARENT_PROP))
+            .ok()
+            .filter(JsValue::is_object)
+            .and_then(|parent| {
+                let direct = Reflect::get(&parent, &JsValue::from_str("__ci_index"))
+                    .unwrap_or(JsValue::UNDEFINED);
+                if direct.as_f64().is_some() {
+                    Some(parent)
+                } else {
+                    Reflect::get(&parent, &JsValue::from_str(CONTEXT_LINKED_INSTANCE_PROP)).ok()
+                }
+            })
+            .and_then(|parent| Reflect::get(&parent, &JsValue::from_str("__ci_index")).ok())
+            .and_then(|index| index.as_f64())
+            .map(|index| index as usize);
+    let delayed_mounted =
+        rue.queue_current_component_mounted(idx, parent_inst_index, parent_context.cloned());
+    if !delayed_mounted {
+        rue.call_hooks("mounted");
+        merge_pending_hooks(rue);
+        if let Some(inst) = rue.instance_store.get_mut(&idx) {
+            inst.is_mounted = true;
+        }
+    }
 
     // 组件级 KeepAlive hooks 与卸载 hooks 一起写入 mounted snapshot，后续按 range 递归触发。
     // mounted 回调内部也允许注册 onUnmounted，这些清理必须被纳入当前 mounted state。
@@ -229,7 +266,7 @@ where
     }
     super::helpers::reset_hook_index(&host);
 
-    let idx = rue.instance_store.len();
+    let idx = rue.allocate_component_instance_id();
     let new_inst = ComponentInternalInstance::<A> {
         parent: None,
         is_mounted: false,
@@ -250,6 +287,87 @@ where
     set_current_instance_ci(inst_ref);
 
     (host, props_ro, idx)
+}
+
+impl<A: DomAdapter> Rue<A>
+where
+    A::Element: From<JsValue> + Into<JsValue> + Clone,
+{
+    pub(crate) fn begin_pending_component_mounted(
+        &mut self,
+        pending: &PendingComponentMounted<A>,
+    ) -> Option<ComponentMountedContext<A>> {
+        let slot = self.owned_mount_slot(pending.owner)?;
+        if slot.phase != OwnedMountPhase::Committed {
+            return None;
+        }
+        let inst = self.instance_store.get(&pending.inst_index)?;
+        let hooks = inst.hooks.0.get("mounted").cloned().unwrap_or_default();
+        let host = inst.host.clone();
+        let previous_current_instance = crate::get_current_instance();
+        let previous_container = self.current_container.clone();
+        let previous_instance_stack = self.instance_stack.clone();
+        let previous_owned_collectors = self.current_owned_collectors.clone();
+
+        self.current_owned_collectors.push(pending.owner);
+        self.instance_stack.push(pending.inst_index);
+        if let Some(inst) = self.instance_store.get_mut(&pending.inst_index) {
+            set_current_instance_ci(inst);
+        }
+        shared_runtime_bridge::begin_component_render(&host);
+        let pushed_container = if let Some(container) = pending.container.as_ref() {
+            self.current_container = Some(container.clone());
+            let container_value: JsValue = container.clone().into();
+            shared_runtime_bridge::push_current_container(&container_value);
+            true
+        } else {
+            false
+        };
+
+        Some(ComponentMountedContext {
+            hooks,
+            host,
+            previous_current_instance,
+            previous_container,
+            previous_instance_stack,
+            previous_owned_collectors,
+            pushed_container,
+        })
+    }
+
+    pub(crate) fn pending_component_mounted_is_alive(
+        &self,
+        pending: &PendingComponentMounted<A>,
+    ) -> bool {
+        self.owned_mount_slot(pending.owner).is_some()
+            && self.instance_store.contains_key(&pending.inst_index)
+    }
+
+    pub(crate) fn finish_pending_component_mounted(
+        &mut self,
+        pending: &PendingComponentMounted<A>,
+        context: ComponentMountedContext<A>,
+    ) -> bool {
+        let alive = self.pending_component_mounted_is_alive(pending);
+        if alive {
+            merge_pending_hooks(self);
+            if let Some(inst) = self.instance_store.get_mut(&pending.inst_index) {
+                inst.is_mounted = true;
+            }
+        } else {
+            crate::runtime::take_pending_hooks();
+        }
+
+        if context.pushed_container {
+            shared_runtime_bridge::pop_current_container();
+        }
+        shared_runtime_bridge::end_component_render();
+        self.current_container = context.previous_container;
+        self.instance_stack = context.previous_instance_stack;
+        self.current_owned_collectors = context.previous_owned_collectors;
+        crate::set_current_instance(context.previous_current_instance);
+        alive
+    }
 }
 
 /// 合并挂起的生命周期 hooks 到当前实例

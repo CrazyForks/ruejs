@@ -10,7 +10,7 @@ mounted snapshot 会被转换成 MountLifecycleRecord，再由这里递归执行
 */
 use super::Rue;
 use super::types::{ComponentProps, MountInput, MountInputType, MountLifecycleRecord};
-use crate::reactive::context::component_instance_wrapper;
+use crate::reactive::context::{component_instance_wrapper, release_component_instance_wrapper};
 use crate::reactive::core::dispose_effect_scope;
 use crate::runtime::dom_adapter::DomAdapter;
 use crate::runtime::shared_runtime_bridge;
@@ -78,6 +78,26 @@ where
             if let Some(func) = hook.dyn_ref::<Function>() {
                 let _ = func.call0(&JsValue::UNDEFINED);
             }
+        }
+    }
+
+    fn component_hooks_or_snapshot(
+        &self,
+        inst_index: Option<usize>,
+        name: &str,
+        snapshot: &[JsValue],
+    ) -> Vec<JsValue> {
+        inst_index
+            .and_then(|index| self.instance_store.get(&index))
+            .and_then(|inst| inst.hooks.0.get(name).cloned())
+            .unwrap_or_else(|| snapshot.to_vec())
+    }
+
+    fn release_component_instance(&mut self, inst_index: usize) {
+        if let Some(inst) = self.instance_store.remove(&inst_index) {
+            release_component_instance_wrapper(inst_index, &inst.host);
+        } else {
+            release_component_instance_wrapper(inst_index, &JsValue::UNDEFINED);
         }
     }
 
@@ -298,7 +318,12 @@ where
 
         if record.kind.invokes_component_before_unmount() {
             // 组件 before_unmount 先于子树递归，便于用户在子节点仍可访问时做收尾。
-            self.call_lifecycle_hooks(&record.component_before_unmount_hooks);
+            let hooks = self.component_hooks_or_snapshot(
+                record.component_inst_index,
+                "before_unmount",
+                &record.component_before_unmount_hooks,
+            );
+            self.call_lifecycle_hooks(&hooks);
             if let Some(inst_index) = record.component_inst_index {
                 self.dispose_mounted_component_scopes(inst_index);
             }
@@ -322,7 +347,15 @@ where
         }
 
         if record.kind.invokes_component_unmounted() {
-            self.call_lifecycle_hooks(&record.component_unmounted_hooks);
+            let hooks = self.component_hooks_or_snapshot(
+                record.component_inst_index,
+                "unmounted",
+                &record.component_unmounted_hooks,
+            );
+            self.call_lifecycle_hooks(&hooks);
+            if let Some(inst_index) = record.component_inst_index {
+                self.release_component_instance(inst_index);
+            }
         }
     }
 

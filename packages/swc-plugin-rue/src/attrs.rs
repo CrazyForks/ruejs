@@ -501,7 +501,6 @@ pub fn emit_attrs_for(stmts: &mut Vec<Stmt>, target: &Ident, opening: &JSXOpenin
                                 expr: Box::new(watch),
                             }));
                         } else if name == "ref" {
-                            let stop_ident = ident(&format!("{}_ref_stop", target.sym));
                             // 将动态 ref 值封装成箭头函数（ArrowExpr）
                             // - SWC AST 中 ArrowExpr 表示 `() => expr`，这里用来“延迟求值”，保持最新的 ref
                             // - Vapor 运行时在需要时调用该函数，避免在编译期或初次绑定时就固定值
@@ -517,64 +516,14 @@ pub fn emit_attrs_for(stmts: &mut Vec<Stmt>, target: &Ident, opening: &JSXOpenin
                                 return_type: None,
                                 ctxt: SyntaxContext::empty(),
                             });
-                            // 调用 Vapor 运行时 `_$vaporBindUseRef(el, getRef)`
-                            // - 返回一个 `stop` 清理函数，负责在组件卸载时解除绑定
-                            // - 这里以 CallExpr 形式构造对运行时方法的调用
+                            // 调用 Vapor 运行时 `_$vaporBindUseRef(el, getRef)`。
+                            // helper 自己把“停止 watcher + 清空旧 ref”收敛成一个幂等 cleanup，
+                            // 普通 JSX 登记到组件；列表行会在后续 codegen 阶段补上 owner registrar。
                             let bind_call = call_ident(
                                 "_$vaporBindUseRef",
                                 vec![Expr::Ident(target.clone()), get_ref_arrow],
                             );
-                            // 以 `const _el_ref_stop = _$vaporBindUseRef(...)` 形式保存 stop
-                            // - VarDecl/VarDeclarator 组合用于声明常量并初始化
-                            let decl_stop = Stmt::Decl(Decl::Var(Box::new(VarDecl {
-                                span: DUMMY_SP,
-                                ctxt: SyntaxContext::empty(),
-                                kind: VarDeclKind::Const,
-                                declare: false,
-                                decls: vec![VarDeclarator {
-                                    span: DUMMY_SP,
-                                    name: Pat::Ident(BindingIdent {
-                                        id: stop_ident.clone(),
-                                        type_ann: None,
-                                    }),
-                                    init: Some(Box::new(bind_call)),
-                                    definite: false,
-                                }],
-                            })));
-                            // `stop()` 的调用表达式（稍后塞进卸载钩子）
-                            let call_stop = Stmt::Expr(ExprStmt {
-                                span: DUMMY_SP,
-                                expr: Box::new(Expr::Call(CallExpr {
-                                    span: DUMMY_SP,
-                                    callee: Callee::Expr(Box::new(Expr::Ident(stop_ident.clone()))),
-                                    args: vec![],
-                                    type_args: None,
-                                    ctxt: SyntaxContext::empty(),
-                                })),
-                            });
-                            // 卸载时执行 `stop()` 的箭头函数体
-                            let unmount_arrow = Expr::Arrow(ArrowExpr {
-                                span: DUMMY_SP,
-                                params: vec![],
-                                body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
-                                    span: DUMMY_SP,
-                                    ctxt: SyntaxContext::empty(),
-                                    stmts: vec![call_stop],
-                                })),
-                                is_async: false,
-                                is_generator: false,
-                                type_params: None,
-                                return_type: None,
-                                ctxt: SyntaxContext::empty(),
-                            });
-                            // 注册到运行时的生命周期钩子：`onBeforeUnmount(() => stop())`
-                            let unmount_call = call_ident("onBeforeUnmount", vec![unmount_arrow]);
-
-                            stmts.push(decl_stop);
-                            stmts.push(Stmt::Expr(ExprStmt {
-                                span: DUMMY_SP,
-                                expr: Box::new(unmount_call),
-                            }));
+                            push_expr_stmt(stmts, bind_call);
                         } else if name == "value" {
                             // 受控 `value`：
                             // - `<select multiple>`：将值规范化为数组/集合，并同步各 `<option>` 的选中态
