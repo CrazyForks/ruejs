@@ -1,3 +1,11 @@
+## [0.8.13](https://github.com/hunzhiwange/ruejs/compare/v0.8.12...v0.8.13) (2026-08-24)
+
+
+### Features
+
+* 更新复杂列表行线挂载 ([0610c59](https://github.com/hunzhiwange/ruejs/commit/0610c59b717831d1690c1afafb7827fefd0e163b))
+* 更新复杂列表行线挂载 ([806ac41](https://github.com/hunzhiwange/ruejs/commit/806ac417913474b4c062047dc78e2d715a2dbb86))
+
 ## [0.8.12](https://github.com/hunzhiwange/ruejs/compare/v0.8.11...v0.8.12) (2026-08-23)
 
 ## [0.8.11](https://github.com/hunzhiwange/ruejs/compare/v0.8.10...v0.8.11) (2026-08-22)
