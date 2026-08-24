@@ -1,27 +1,52 @@
 # Rue 复杂列表行线性挂载计划
 
-目标：采用 Solid 式行 owner，让 spread、ref、条件、组件和不透明调用列表行在保持 Rue 语义时近线性挂载、更新与清理。
+目标：以可回收的 detached 行 owner 和传递式 owned mount 消除复杂 JSX/TSX 列表的平方级挂载、更新与清理路径。
 
-范围：覆盖 SWC Vapor 列表代码生成、`vaporKeyedList` 的 keyed/non-keyed owner 复用、行级 effectScope/DOM range/mounted handle/ref cleanup、复杂 renderable 的批量 DOM commit、Rust/Wasm 保守路径身份索引，以及五类复杂行的 1k/2k/10k 回归。
+范围：覆盖 SWC Vapor 列表生成、稳定列表状态、keyed/non-keyed 行 owner、detached effectScope、ref/owned mount/组件生命周期、Rust/Wasm 身份索引与压缩调度、异步及外部 renderable 边界，以及 1k/2k/10k 复杂行验收。
 
-范围外：不改普通非列表 JSX，不改变 Rue 显式 key 与 non-keyed 位置语义，不把任意用户调用推断为纯函数，不照搬 Solid 的对象引用 key，也不以放宽超时替代复杂度修复。
+范围外：不改普通非列表 JSX 语义，不把任意用户调用推断为纯函数，不将实例引用替代 Rue 显式 key，不以放宽超时代替复杂度修复。
 
-假设：当前 `VaporListItemRange` 已保存 DOM range、item/index 状态和 stop，可演进为行 owner；可确认的平方项是逐行进入全局 `anchor_map`/`range_map` 后扫描持续增长的 Vec。现有 effectScope、mounted state 和生命周期记录可提供精确所有权。
+假设：已确认复杂行会进入全局 `anchor_map`/`range_map` Vec 扫描；现有 range、signal、effectScope、mounted snapshot 和生命周期记录可作为行 owner 与 owned handle 的基础，但必须补足历史 scope 元数据、组件实例和 pending mounted 回收。
 
 ## 设计决策
 
-- 以 Solid `mapArray` 的“每项独立 root/disposer”与 `<Index>` 的“按位置复用 owner”为参考；Rue keyed 仍使用 `getKey`，同 key 对象替换只更新 owner 的 item 槽。
-- `Map<key, VaporListItemOwner>` 是列表主状态；owner 持有稳定 item/index 槽、effectScope、DOM range、ref cleanup、嵌套 mounted handle 和待提交 mounted 生命周期。
-- 是否直接挂载、是否批量提交、是否合并 effect 是三个独立能力；spread/标量调用可直挂但无需强制合并 watcher。
-- 条件、组件和不透明 renderable 在行 owner 内创建并保存可直接更新/销毁的 mounted handle，不依赖全局 anchor/range 身份扫描。
-- 全局 anchor/range 身份索引只优化非列表及尚未迁移的保守 fallback，不作为复杂列表主架构。
+- 行 owner 使用 `effectScope(true)`；每个列表创建一个稳定 `VaporListState`，仅向外层 scope 注册一次总 disposer，不为每个历史行保留父 cleanup 闭包。本计划不引入 effect scope 的 parent 反向关系；通用父子 scope 树留作独立基础设施议题。
+- keyed 使用 `key -> owner`，non-keyed 使用 `index -> owner`；重复显式 key 保持保守路径，不进入单 Map owner 快路径。
+- 直接挂载、批量构建、effect 合并和 owned mount 是独立能力；编译器使用可验证的模式分类，不组合无效布尔状态。
+- owned mount 协议明确区分 build、commitMounted、update、dispose 和 abort，并传递捕获嵌套 render 调用。
+- 异常保证为：新建资源完全回滚、无 pending hook/脱离 DOM/句柄残留；不承诺回滚异常前已完成的旧 owner 同 key 更新。
 
 ## 架构说明
 
-- 参考：[Solid `<For>`](https://docs.solidjs.com/reference/components/for)、[`mapArray` 源码](https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts)；借鉴 owner/disposer，不复制引用身份 key。
-- keyed 复用 `key -> owner`；non-keyed 复用 `index -> owner`。只有 callback 实际使用 index 时才维护响应式 index 槽。
-- 初始行先在批量 Fragment 中按源码顺序构建，再一次写入真实父节点；Rue ref 保持创建期赋值，组件 mounted 在节点连接后提交。
-- 删除、替换、清空与异常回滚都通过 owner 逆序销毁 owned mounts、ref、effects 和 DOM range，且每项只执行一次。
+- 列表 owner 是资源主架构；全局 anchor/range 身份索引只服务非列表和显式保守 fallback。
+- identity lookup 与 compact 总工作量同时验收；compact 使用几何阈值或 stale 比例，不再每固定 64 次增长全表扫描。
+- ref 只能有一个 cleanup 归属；组件 mounted 在真实 DOM commit 后恢复实例/容器/owner/错误上下文再执行。
+- 两个 runtime helper 必须通过同输入差分测试；无法保持完整语义的异步、Teleport、Transition、KeepAlive 或 Suspense 路径必须显式 fallback。
+
+## 任务与执行顺序
+
+| 批次 | 任务 | 技术依赖 |
+| --- | --- | --- |
+| 1 | 建立复杂行基线矩阵 | 无 |
+| 2 | 建立可回收的 detached 列表作用域 | 1 |
+| 3 | 建立 Solid 式列表行 owner | 2 |
+| 4 | 索引 anchor/range 身份映射与压缩调度 | 1 |
+| 5 | 拆分列表行挂载能力 | 3 |
+| 6 | 建立 ref 行所有权与清理 | 3、5 |
+| 7 | 建立传递式 owned mount 协议 | 3、4、6 |
+| 8 | 延迟组件 mounted 并回收实例 | 7 |
+| 9 | 拥有同步不透明 renderable | 8 |
+| 10 | 处理异步与外部 renderable 边界 | 9 |
+| 11 | 固化线性性能与零残留门槛 | 1 至 10 |
+
+任务 4 的代码依赖只要求任务 1，但所有任务共享 helper、测试夹具或 release 构建产物；执行时仍按 1 至 11 串行，避免并发修改和测量污染。
+
+## 验收原则
+
+- 复杂度以 owner、DOM 写入、identity lookup、compact visits 与 registry 数量为主证据，wall-clock 只作 release 构建下的辅助门槛。
+- 所有五类主路径分别测量 mount、同 key 更新、插入、重排、删除和清空；不以一个总耗时掩盖某阶段退化。
+- 清空、外层卸载与 100 轮 churn 后，scope、handle、ref、component、pending 和外部宿主相关记录必须恢复基线。
+- 重复 key、hydration、异步或外部宿主无法安全进入 owned 快路径时必须显式 fallback，并保留语义回归。
 
 ## 开发策略
 
