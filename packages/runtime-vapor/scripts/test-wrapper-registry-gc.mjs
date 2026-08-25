@@ -6,10 +6,8 @@ import { setImmediate as waitForImmediate } from 'node:timers/promises'
 const withoutFinalizationRegistry = process.argv.includes('--without-finalization-registry')
 if (withoutFinalizationRegistry) globalThis.FinalizationRegistry = undefined
 
-const {
-  __rueGetSignalWrapperRegistryDebugState,
-  createSignal,
-} = await import('../reactive.node.js')
+const { __rueGetSignalWrapperRegistryDebugState, createSignal } =
+  await import('../reactive.node.js')
 
 assert.equal(typeof globalThis.gc, 'function', 'run this script with node --expose-gc')
 
@@ -74,5 +72,9 @@ if (!withoutFinalizationRegistry) {
   )
   process.stdout.write(fallback.stdout)
   process.stderr.write(fallback.stderr)
-  assert.equal(fallback.status, 0, 'bounded sweep fallback should pass without FinalizationRegistry')
+  assert.equal(
+    fallback.status,
+    0,
+    'bounded sweep fallback should pass without FinalizationRegistry',
+  )
 }

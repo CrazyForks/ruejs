@@ -1,3 +1,10 @@
+## [0.8.14](https://github.com/hunzhiwange/ruejs/compare/v0.8.13...v0.8.14) (2026-08-25)
+
+
+### Features
+
+* 框架性能优化 ([32c2bc8](https://github.com/hunzhiwange/ruejs/commit/32c2bc8ee290737b353701931b756f2e27a76f3b))
+
 ## [0.8.13](https://github.com/hunzhiwange/ruejs/compare/v0.8.12...v0.8.13) (2026-08-24)
 
 

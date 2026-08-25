@@ -162,7 +162,8 @@ const totalBrotliBytes = entry => {
 const weightedMedian = values => {
   const sorted = values.slice().sort((left, right) => left.value - right.value)
   const totalWeight = sorted.reduce((total, item) => total + item.weight, 0)
-  if (!(totalWeight > 0)) throw new Error('CPU weighted median requires at least one positive weight')
+  if (!(totalWeight > 0))
+    throw new Error('CPU weighted median requires at least one positive weight')
   let accumulated = 0
   for (const item of sorted) {
     accumulated += item.weight
@@ -180,7 +181,9 @@ export class PerformanceBudgetError extends Error {
   constructor(failures) {
     super(
       `Performance budget failed: ${failures
-        .map(failure => `${failure.entry} ${failure.dimension} ${failure.actual} > ${failure.limit}`)
+        .map(
+          failure => `${failure.entry} ${failure.dimension} ${failure.actual} > ${failure.limit}`,
+        )
         .join('; ')}`,
     )
     this.name = 'PerformanceBudgetError'
@@ -203,7 +206,10 @@ export const checkPerformanceBudget = (report, baseline, budget) => {
   requireSha256(report?.source?.lockfileSha256, 'source.lockfileSha256')
   requireSha256(report?.source?.vuePackageSha256, 'source.vuePackageSha256')
 
-  if (!Array.isArray(report?.source?.workspaceArtifacts) || report.source.workspaceArtifacts.length === 0) {
+  if (
+    !Array.isArray(report?.source?.workspaceArtifacts) ||
+    report.source.workspaceArtifacts.length === 0
+  ) {
     throw new Error('Performance report is missing source.workspaceArtifacts')
   }
   for (const [index, artifact] of report.source.workspaceArtifacts.entries()) {
@@ -892,7 +898,10 @@ export const runBenchmark = async options => {
         operations: OPERATION_NAMES,
       },
       results: Object.fromEntries(
-        ENTRY_NAMES.map(entryName => [entryName, { ...normalized[entryName], size: sizes[entryName] }]),
+        ENTRY_NAMES.map(entryName => [
+          entryName,
+          { ...normalized[entryName], size: sizes[entryName] },
+        ]),
       ),
       validSamples: summarizeSamples(normalized),
     }
