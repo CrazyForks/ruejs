@@ -420,6 +420,7 @@ function createViteConfig(request) {
     logLevel: 'info',
     plugins: [
       createRollupWasmPlugin(),
+      createVaporRuntimeImportPlugin(request),
       enumPlugin,
       createLiteralReplacePlugin(resolveReplaceValues(request, enumDefines)),
       request.packageInfo.target === 'rue-design' ? createPureCompoundComponentPlugin() : null,
@@ -486,6 +487,29 @@ function createViteConfig(request) {
   }
 }
 
+function isMinimalVaporBuild(request) {
+  return (
+    request.outputPlatform !== 'node' &&
+    /\.vapor(?:-core)?$/.test(request.buildEntry?.fileName ?? '')
+  )
+}
+
+function createVaporRuntimeImportPlugin(request) {
+  if (!isMinimalVaporBuild(request)) return null
+
+  return {
+    name: 'rue-vapor-single-runtime-entry',
+    transform(code) {
+      const rewritten = code
+        .replaceAll("'@rue-js/runtime-vapor/reactive'", "'@rue-js/runtime-vapor/vapor'")
+        .replaceAll('"@rue-js/runtime-vapor/reactive"', '"@rue-js/runtime-vapor/vapor"')
+        .replaceAll("'@rue-js/runtime-vapor'", "'@rue-js/runtime-vapor/vapor'")
+        .replaceAll('"@rue-js/runtime-vapor"', '"@rue-js/runtime-vapor/vapor"')
+      return rewritten === code ? null : { code: rewritten, map: null }
+    },
+  }
+}
+
 function createPureCompoundComponentPlugin() {
   const componentSourceDir = `${path
     .resolve(rootDir, 'packages/rue-design/src/components')
@@ -524,6 +548,7 @@ function createPureCompoundComponentPlugin() {
 function resolveAliasEntries(request) {
   const runtimeVaporRoot = path.resolve(rootDir, 'packages/runtime-vapor')
   const nodeRuntime = request.outputPlatform === 'node'
+  const minimalVaporRuntime = isMinimalVaporBuild(request)
 
   return [
     ...workspaceAliasEntries,
@@ -533,11 +558,21 @@ function resolveAliasEntries(request) {
     },
     {
       find: '@rue-js/runtime-vapor/reactive',
-      replacement: path.resolve(runtimeVaporRoot, nodeRuntime ? 'reactive.node.js' : 'reactive.js'),
+      replacement: path.resolve(
+        runtimeVaporRoot,
+        nodeRuntime
+          ? 'reactive.node.js'
+          : minimalVaporRuntime
+            ? 'reactive.vapor.js'
+            : 'reactive.js',
+      ),
     },
     {
       find: '@rue-js/runtime-vapor',
-      replacement: path.resolve(runtimeVaporRoot, nodeRuntime ? 'index.node.js' : 'index.js'),
+      replacement: path.resolve(
+        runtimeVaporRoot,
+        nodeRuntime ? 'index.node.js' : minimalVaporRuntime ? 'vapor.js' : 'index.js',
+      ),
     },
   ]
 }

@@ -79,6 +79,12 @@ export type VaporListItemOwner = {
   stableItem?: unknown
   /** primitive 同 key 更新时重建 directRoot 行。 */
   remount?: (item: any, index: number) => void
+  /** 编译器证明安全的单根行更新记录。 */
+  compiledRowPatch?: VaporCompiledRowPatch
+  /** compiled row 最近一次收到的原始 item。 */
+  compiledItem?: unknown
+  /** compiled row 最近一次收到的 index。 */
+  compiledIndex?: number
   /** 当前一代行资源所属的 detached scope。 */
   scope?: ReturnType<typeof effectScope>
   /** 通用清理栈，按注册顺序的逆序执行。 */
@@ -99,6 +105,12 @@ export type VaporListItemOwner = {
   disposed: boolean
   /** owner 在列表状态 Map 中的实际索引。 */
   mapKey?: any
+}
+
+/** 编译器证明安全的原生单根行更新/清理契约。 */
+export type VaporCompiledRowPatch<T = any> = {
+  patch(nextItem: T, nextIndex: number): void
+  dispose?(): void
 }
 
 /** @deprecated 列表项现在是完整 owner；保留旧名称兼容既有编译产物与测试。 */
@@ -170,10 +182,20 @@ const releaseVaporListOwner = (owner: VaporListItemOwner, disposeState: boolean)
     return
   }
 
+  const compiledRowPatch = owner.compiledRowPatch
+  owner.compiledRowPatch = undefined
+  owner.compiledItem = undefined
+  owner.compiledIndex = undefined
+  compiledRowPatch?.dispose?.()
+
   owner.current = undefined
   owner.renderState = undefined
   owner.stableItem = undefined
   owner.remount = undefined
+  owner.start = undefined
+  ;(owner as { end?: DomNodeLike }).end = undefined
+  owner.mapKey = undefined
+  owner.ownedMountToken = undefined
 }
 
 /** 基于 Key 的列表渲染与重排 */
@@ -204,6 +226,8 @@ export const vaporKeyedList = <T>(args: {
   opaqueRenderable?: boolean
   /** 需要取消/外部清理的内建组件；缺 owned 能力时显式释放全局 range。 */
   asyncExternalRenderable?: boolean
+  /** renderItem 是否返回编译器生成的原生单根行 patch 记录。 */
+  compiledRowPatch?: boolean
   /** 渲染单个条目的回调。 */
   renderItem: (
     item: T,
@@ -212,7 +236,7 @@ export const vaporKeyedList = <T>(args: {
     end: any,
     idx: number,
     registerRefCleanup: VaporListRefCleanupRegistrar,
-  ) => void
+  ) => void | VaporCompiledRowPatch<T>
 }) => {
   const {
     items,
@@ -229,6 +253,7 @@ export const vaporKeyedList = <T>(args: {
     ownedMount = false,
     opaqueRenderable = false,
     asyncExternalRenderable = false,
+    compiledRowPatch = false,
   } = args
   const state = (providedState ?? {
     elements: legacyElements ?? new Map<any, VaporListItemRange>(),
@@ -247,6 +272,7 @@ export const vaporKeyedList = <T>(args: {
       }
       state.disposed = true
       state.pendingMountedCommits?.splice(0)
+      state.pendingMountedCommits = undefined
       state.pendingMountedCommitOrder = 0
       const owners = Array.from(state.elements.values())
       state.elements.clear()
@@ -388,7 +414,16 @@ export const vaporKeyedList = <T>(args: {
     }
     return false
   }
-  const ownedProtocol = ownedMount && !isHydrationFallback() ? getOwnedMountProtocol() : undefined
+  const hydrationFallback = isHydrationFallback()
+  const ownedProtocol = ownedMount && !hydrationFallback ? getOwnedMountProtocol() : undefined
+  const canCompactDirectRoot =
+    singleRoot &&
+    directRoot &&
+    !ownedMount &&
+    !opaqueRenderable &&
+    !asyncExternalRenderable &&
+    !hydrationFallback
+  const canUseCompiledRowPatch = compiledRowPatch && canCompactDirectRoot
   const pendingMountedCommits = (state.pendingMountedCommits ??= [])
   const flushPendingMountedCommits = () => {
     pendingMountedCommits.sort(
@@ -670,8 +705,232 @@ export const vaporKeyedList = <T>(args: {
     mount(item, index)
   }
 
+  const collectInsertedNodes = (
+    itemParent: DomNodeLike,
+    previous: DomNodeLike | null,
+    before: DomNodeLike | null,
+  ) => {
+    const nodes: DomNodeLike[] = []
+    let node = previous
+      ? (((previous as any).nextSibling as DomNodeLike | null) ?? null)
+      : (((itemParent as any).firstChild as DomNodeLike | null) ?? null)
+    while (node && node !== before) {
+      nodes.push(node)
+      node = ((node as any).nextSibling as DomNodeLike | null) ?? null
+    }
+    return nodes
+  }
+
+  const getLastChild = (parent: DomNodeLike): DomNodeLike | null => {
+    const nativeLastChild = (parent as any).lastChild as DomNodeLike | null | undefined
+    if (nativeLastChild !== undefined) return nativeLastChild
+
+    const childNodes = (parent as any).childNodes as ArrayLike<DomNodeLike> | undefined
+    if (childNodes && typeof childNodes.length === 'number') {
+      return childNodes[childNodes.length - 1] ?? null
+    }
+
+    let last = ((parent as any).firstChild as DomNodeLike | null) ?? null
+    while (last && (last as any).nextSibling) {
+      last = (last as any).nextSibling as DomNodeLike
+    }
+    return last
+  }
+
+  const mountCompactDirectRootRange = (
+    item: T,
+    index: number,
+    itemParent: DomNodeLike,
+    before: DomNodeLike | null,
+    mapKey: any,
+  ) => {
+    const entry = createOwner({ end: before ?? itemParent, singleRoot: true }, mapKey)
+    syncCurrentItem(entry, item, index)
+
+    const mount = (nextItem: T, nextIndex: number, cursor: DomNodeLike | null) => {
+      const previous = cursor
+        ? ((((cursor as any).previousSibling as DomNodeLike | null) ?? null) as DomNodeLike | null)
+        : getLastChild(itemParent)
+      try {
+        runInDetachedScope(entry, () => {
+          untrack(() => {
+            renderItem(
+              (entry.stableItem as T | undefined) ?? nextItem,
+              itemParent as any,
+              cursor as any,
+              cursor as any,
+              nextIndex,
+              createRefCleanupRegistrar(entry),
+            )
+          })
+        })
+      } catch (error) {
+        for (const node of collectInsertedNodes(itemParent, previous, cursor)) {
+          if (contains(itemParent, node)) removeChild(itemParent, node)
+        }
+        throw error
+      }
+
+      const mountedNodes = collectInsertedNodes(itemParent, previous, cursor)
+      if (mountedNodes.length > 1) {
+        for (const node of mountedNodes) {
+          if (contains(itemParent, node)) removeChild(itemParent, node)
+        }
+        throw new Error('[rue] compact direct-root rows must mount exactly one DOM node')
+      }
+      return mountedNodes[0]
+    }
+
+    try {
+      const root = mount(item, index, before)
+      if (!root || entry.refCleanups.length > 0) {
+        const anchor = createComment('rue:list:item:anchor')
+        insertBefore(itemParent, anchor, before)
+        entry.start = undefined
+        entry.end = anchor
+      } else {
+        entry.start = root
+        entry.end = root
+      }
+
+      entry.remount = (nextItem, nextIndex) => {
+        releaseRange(entry, false)
+        const anchor = entry.start ? null : entry.end
+        const previousRoot = entry.start ?? ((anchor as any).previousSibling as DomNodeLike | null)
+        const cursor = anchor ?? ((previousRoot as any)?.nextSibling as DomNodeLike | null) ?? null
+        if (previousRoot && contains(itemParent, previousRoot)) {
+          removeChild(itemParent, previousRoot)
+        }
+        const nextRoot = mount(nextItem, nextIndex, cursor)
+        if (anchor) {
+          entry.start = undefined
+          entry.end = anchor
+        } else if (!nextRoot || entry.refCleanups.length > 0) {
+          const nextAnchor = createComment('rue:list:item:anchor')
+          insertBefore(itemParent, nextAnchor, cursor)
+          entry.start = undefined
+          entry.end = nextAnchor
+        } else {
+          entry.start = nextRoot
+          entry.end = nextRoot
+        }
+      }
+      return entry
+    } catch (error) {
+      releaseRange(entry, true)
+      throw error
+    }
+  }
+
+  const mountCompiledRowRange = (
+    item: T,
+    index: number,
+    itemParent: DomNodeLike,
+    before: DomNodeLike | null,
+    mapKey: any,
+  ) => {
+    const entry = createOwner({ end: before ?? itemParent, singleRoot: true }, mapKey)
+    const previous = before
+      ? ((((before as any).previousSibling as DomNodeLike | null) ?? null) as DomNodeLike | null)
+      : getLastChild(itemParent)
+
+    try {
+      const record = renderItem(
+        item,
+        itemParent as any,
+        before as any,
+        before as any,
+        index,
+        createRefCleanupRegistrar(entry),
+      )
+      const mountedNodes = collectInsertedNodes(itemParent, previous, before)
+      if (mountedNodes.length !== 1) {
+        throw new Error('[rue] compiled row records must mount exactly one DOM node')
+      }
+      if (!record || typeof record.patch !== 'function') {
+        throw new Error('[rue] compiled row renderItem must return a patch record')
+      }
+
+      entry.start = mountedNodes[0]
+      entry.end = mountedNodes[0]
+      entry.compiledRowPatch = record
+      entry.compiledItem = item
+      entry.compiledIndex = index
+      return entry
+    } catch (error) {
+      for (const node of collectInsertedNodes(itemParent, previous, before)) {
+        if (contains(itemParent, node)) removeChild(itemParent, node)
+      }
+      releaseRange(entry, true)
+      throw error
+    }
+  }
+
   const nextKeys = items.map((item, index) => getKey(item, index))
   const hasDuplicateNextKeys = new Set(nextKeys).size !== nextKeys.length
+
+  if (elements.size === 0 && items.length > 0 && canUseCompiledRowPatch && !hasDuplicateNextKeys) {
+    const batch = createDocumentFragment()
+
+    try {
+      for (let index = 0; index < items.length; index += 1) {
+        const item = items[index]
+        const key = nextKeys[index]
+        const entry = mountCompiledRowRange(item, index, batch, null, key)
+        nextElements.set(key, entry)
+      }
+    } catch (error) {
+      nextElements.forEach(range => releaseRange(range, true))
+      nextElements.clear()
+      throw error
+    }
+
+    if (before && contains(targetParent, before as any)) {
+      insertBefore(targetParent, batch, before as any)
+    } else {
+      appendChild(targetParent, batch)
+    }
+
+    elements.clear()
+    nextElements.forEach((range, key) => elements.set(key, range))
+    flushPendingMountedCommits()
+    return elements
+  }
+
+  if (
+    elements.size === 0 &&
+    items.length > 0 &&
+    canCompactDirectRoot &&
+    !trackIndex &&
+    !hasDuplicateNextKeys &&
+    items.every(isObjectLike)
+  ) {
+    const batch = createDocumentFragment()
+
+    try {
+      for (let index = 0; index < items.length; index += 1) {
+        const item = items[index]
+        const key = nextKeys[index]
+        const entry = mountCompactDirectRootRange(item, index, batch, null, key)
+        nextElements.set(key, entry)
+      }
+    } catch (error) {
+      nextElements.forEach(range => releaseRange(range, true))
+      nextElements.clear()
+      throw error
+    }
+
+    if (before && contains(targetParent, before as any)) {
+      insertBefore(targetParent, batch, before as any)
+    } else {
+      appendChild(targetParent, batch)
+    }
+
+    elements.clear()
+    nextElements.forEach((range, key) => elements.set(key, range))
+    flushPendingMountedCommits()
+    return elements
+  }
 
   // 空列表的安全单根行先在各自的小 Fragment 中 O(1) 组装，
   // 再顺序 append 到一个批量 Fragment。这样既避免在不断增长的
@@ -739,8 +998,11 @@ export const vaporKeyedList = <T>(args: {
   }
 
   const resolveStartNode = (range: VaporListItemRange) => {
+    if (range.start) {
+      return range.start
+    }
     if (!range.singleRoot) {
-      return range.start as DomNodeLike
+      return range.end
     }
     const head = ((range.end as any).previousSibling as DomNodeLike | null) || null
     return head && (head as any).parentNode === (range.end as any).parentNode && !isListMarker(head)
@@ -749,6 +1011,12 @@ export const vaporKeyedList = <T>(args: {
   }
 
   const mountRange = (item: T, index: number, cursor: DomNodeLike | null, mapKey: any) => {
+    if (canUseCompiledRowPatch) {
+      return mountCompiledRowRange(item, index, targetParent, cursor, mapKey)
+    }
+    if (canCompactDirectRoot) {
+      return mountCompactDirectRootRange(item, index, targetParent, cursor, mapKey)
+    }
     if (singleRoot) {
       const end = createComment('rue:list:item:anchor')
       insertBefore(targetParent, end, cursor as any)
@@ -832,7 +1100,14 @@ export const vaporKeyedList = <T>(args: {
   }
 
   const syncRange = (range: VaporListItemRange, item: T, index: number) => {
+    if (range.compiledRowPatch) {
+      range.compiledRowPatch.patch(item, index)
+      range.compiledItem = item
+      range.compiledIndex = index
+      return
+    }
     const previous = range.current ? untrack(() => range.current!.get()) : undefined
+    if (previous?.item === item && (!trackIndex || previous.index === index)) return
     const shouldRemountDirectRoot =
       directRoot &&
       range.singleRoot &&
@@ -1134,7 +1409,7 @@ export const vaporKeyedList = <T>(args: {
     () => undefined,
   )
   const newlyMountedRanges: VaporListItemRange[] = []
-  let needsBatchMove = false
+  const rangesToMove = new Set<VaporListItemRange>()
   const mountNewRange = (item: T, index: number, cursor: DomNodeLike | null, mapKey: any) => {
     const range = mountRange(item, index, cursor, mapKey)
     newlyMountedRanges.push(range)
@@ -1218,7 +1493,7 @@ export const vaporKeyedList = <T>(args: {
           const isConnected =
             contains(targetParent as any, blockStart as any) &&
             contains(targetParent as any, range.end as any)
-          if (!isStable || !isConnected) needsBatchMove = true
+          if (!isStable || !isConnected) rangesToMove.add(range)
         }
         cursor = resolveStartNode(range)
       }
@@ -1231,54 +1506,36 @@ export const vaporKeyedList = <T>(args: {
     throw error
   }
 
-  if (needsBatchMove) {
-    const orderedNodes: DomNodeLike[] = []
-    let ownsCompleteParent = !!before && (targetParent as any).lastChild === before
-    const firstOwnedNode =
-      listStart ?? (oldEntries.length > 0 ? resolveStartNode(oldEntries[0][1]) : null)
-    ownsCompleteParent =
-      ownsCompleteParent && !!firstOwnedNode && (targetParent as any).firstChild === firstOwnedNode
-
-    for (const range of nextRanges) {
+  if (rangesToMove.size > 0) {
+    let cursor: DomNodeLike | null = before as DomNodeLike | null
+    for (let index = nextRanges.length - 1; index >= 0; index -= 1) {
+      const range = nextRanges[index]
       if (!range) continue
-      let node: DomNodeLike | null = resolveStartNode(range)
-      while (node) {
-        orderedNodes.push(node)
-        if ((node as any).parentNode !== targetParent) ownsCompleteParent = false
-        if (node === range.end) break
-        node = ((node as any).nextSibling as DomNodeLike | null) || null
+      if (rangesToMove.has(range)) {
+        if (range.start && range.start === range.end) {
+          if (cursor && contains(targetParent, cursor as any)) {
+            insertBefore(targetParent, range.end, cursor as any)
+          } else {
+            appendChild(targetParent, range.end)
+          }
+        } else {
+          const batch = createDocumentFragment()
+          let node: DomNodeLike | null = resolveStartNode(range)
+          while (node) {
+            const next: DomNodeLike | null =
+              ((node as any).nextSibling as DomNodeLike | null) || null
+            appendChild(batch, node)
+            if (node === range.end) break
+            node = next
+          }
+          if (cursor && contains(targetParent, cursor as any)) {
+            insertBefore(targetParent, batch, cursor as any)
+          } else {
+            appendChild(targetParent, batch)
+          }
+        }
       }
-    }
-
-    const expectedChildCount = orderedNodes.length + (listStart ? 1 : 0) + 1
-    let actualChildCount = 0
-    let child = (targetParent as any).firstChild as DomNodeLike | null
-    while (child) {
-      actualChildCount += 1
-      child = ((child as any).nextSibling as DomNodeLike | null) || null
-    }
-    ownsCompleteParent =
-      ownsCompleteParent &&
-      typeof (targetParent as any).textContent === 'string' &&
-      actualChildCount === expectedChildCount
-
-    const batch = createDocumentFragment()
-    if (ownsCompleteParent) {
-      // jsdom stores childNodes in an array, so removing a reversed list one node at a
-      // time becomes quadratic. When this list owns the complete parent range, detach
-      // everything atomically before rebuilding the same nodes in their new order.
-      ;(targetParent as any).textContent = ''
-      if (listStart) appendChild(batch, listStart as DomNodeLike)
-      for (const node of orderedNodes) appendChild(batch, node)
-      appendChild(batch, before as DomNodeLike)
-      insertBefore(targetParent, batch, null as any)
-    } else {
-      for (const node of orderedNodes) appendChild(batch, node)
-      if (before && contains(targetParent, before as any)) {
-        insertBefore(targetParent, batch, before as any)
-      } else {
-        appendChild(targetParent, batch)
-      }
+      cursor = resolveStartNode(range)
     }
   }
 

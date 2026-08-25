@@ -238,11 +238,13 @@ const Demo: FC = () => {
     let out = compile(src, "list_block_scope_outer_getter_signal");
 
     assert!(out.contains("directRoot: true"), "{out}");
+    assert!(out.contains("compiledRowPatch: true"), "{out}");
     assert_eq!(
         out.matches("watchEffect(").count(),
-        2,
-        "safe getter reads should emit the list effect plus one row binding effect: {out}"
+        1,
+        "safe getter reads should run through the list-level patch effect: {out}"
     );
+    assert!(out.contains("patch: _$rowPatch"), "{out}");
     assert!(out.contains("_$settextContent("), "{out}");
     assert!(out.contains("selectedId.get() === row.id"), "{out}");
     assert!(!out.contains("renderAnchor("), "{out}");

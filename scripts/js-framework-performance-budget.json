@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "baselineWorkspaceVersion": "0.8.13",
+  "requiredEntries": ["rue", "rue-signal", "vue"],
+  "minimumValidSamples": 5,
+  "rueEntries": ["rue", "rue-signal"],
+  "cpu": {
+    "maxWeightedMedianRatio": 0.75,
+    "weights": {
+      "create1k": 1,
+      "replace1k": 1,
+      "update10th": 1,
+      "select1k": 1,
+      "swap1k": 1,
+      "remove1k": 1,
+      "create10k": 1,
+      "append1k": 1,
+      "clear1k": 1
+    }
+  },
+  "operations": {
+    "select1k": { "maxRatio": 0.4 },
+    "swap1k": { "maxRatio": 0.4 }
+  },
+  "heap": {
+    "createClear": { "maxRatio": 0.5 }
+  },
+  "size": {
+    "brotli": { "maxRatio": 0.5 }
+  },
+  "firstPaint": { "maxRatio": 0.5 },
+  "dom": {
+    "select1k": { "maxMutations": 2 },
+    "swap1k": { "maxMutations": 6 }
+  }
+}

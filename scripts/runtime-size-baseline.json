@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "build": {
     "mode": "production",
     "target": "es2020",
@@ -15,18 +15,57 @@
         }
       ],
       "buildMode": "production",
-      "raw": 672059,
-      "min": 516194,
-      "gzip": 206557,
-      "brotli": 170485,
+      "raw": 347491,
+      "min": 259680,
+      "gzip": 99586,
+      "brotli": 83394,
       "deltaFromVaporCore": null,
       "sources": {
         "defaultRuntime": false,
         "vaporRuntime": true,
         "both": false,
-        "modules": ["packages/runtime/dist/runtime.vapor.esm-bundler.js"],
+        "modules": ["packages/runtime/dist/runtime.vapor-core.esm-bundler.js"],
+        "allModules": [
+          "\u0000rolldown/runtime.js",
+          "/__vite-plugin-wasm-helper",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+          "packages/runtime-vapor/reactive.vapor.js",
+          "packages/runtime-vapor/runtime-entry-wrap.js",
+          "packages/runtime-vapor/vapor-bridge.js",
+          "packages/runtime-vapor/vapor.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
+          "temp/size/vapor-core.runtime-audit.mjs"
+        ],
+        "moduleRenderSizes": {
+          "/__vite-plugin-wasm-helper": 1137,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js": 50591,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm": 11536,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js": 2525,
+          "packages/runtime-vapor/reactive.vapor.js": 22559,
+          "packages/runtime-vapor/runtime-entry-wrap.js": 9200,
+          "packages/runtime-vapor/vapor-bridge.js": 6645,
+          "packages/runtime-vapor/vapor.js": 783,
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js": 30719,
+          "\u0000rolldown/runtime.js": 348,
+          "temp/size/vapor-core.runtime-audit.mjs": 0
+        },
         "ssrRenderer": false,
         "ssrModules": [],
+        "wasm": {
+          "instanceCount": 1,
+          "full": false,
+          "vapor": true,
+          "both": false,
+          "artifacts": [
+            {
+              "kind": "vapor",
+              "module": "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+              "sha256": "6c6140da0fe97516a12795121ac375b0ea1b0c9fe27024f206d43178afb44e35"
+            }
+          ]
+        },
         "builtins": []
       }
     },
@@ -39,18 +78,115 @@
         }
       ],
       "buildMode": "production",
-      "raw": 676022,
-      "min": 517351,
-      "gzip": 206953,
-      "brotli": 170971,
+      "raw": 469069,
+      "min": 306047,
+      "gzip": 111790,
+      "brotli": 93935,
       "deltaFromVaporCore": null,
       "sources": {
         "defaultRuntime": false,
         "vaporRuntime": true,
         "both": false,
-        "modules": ["packages/runtime/dist/runtime.vapor.esm-bundler.js"],
+        "modules": [
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js"
+        ],
+        "allModules": [
+          "\u0000rolldown/runtime.js",
+          "/__vite-plugin-wasm-helper",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+          "packages/runtime-vapor/reactive.vapor.js",
+          "packages/runtime-vapor/runtime-entry-wrap.js",
+          "packages/runtime-vapor/vapor-bridge.js",
+          "packages/runtime-vapor/vapor.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js",
+          "temp/size/vapor-app.runtime-audit.mjs"
+        ],
+        "moduleRenderSizes": {
+          "/__vite-plugin-wasm-helper": 1137,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js": 50591,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm": 11536,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js": 2525,
+          "packages/runtime-vapor/reactive.vapor.js": 22559,
+          "packages/runtime-vapor/runtime-entry-wrap.js": 9222,
+          "packages/runtime-vapor/vapor-bridge.js": 6645,
+          "packages/runtime-vapor/vapor.js": 783,
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js": 31243,
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js": 115493,
+          "\u0000rolldown/runtime.js": 348,
+          "temp/size/vapor-app.runtime-audit.mjs": 0
+        },
         "ssrRenderer": false,
         "ssrModules": [],
+        "wasm": {
+          "instanceCount": 1,
+          "full": false,
+          "vapor": true,
+          "both": false,
+          "artifacts": [
+            {
+              "kind": "vapor",
+              "module": "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+              "sha256": "6c6140da0fe97516a12795121ac375b0ea1b0c9fe27024f206d43178afb44e35"
+            }
+          ]
+        },
+        "builtins": []
+      }
+    },
+    "full-core": {
+      "name": "full-core",
+      "input": [
+        {
+          "entry": "@rue-js/rue",
+          "imports": ["ref"]
+        }
+      ],
+      "buildMode": "production",
+      "raw": 522190,
+      "min": 491885,
+      "gzip": 203186,
+      "brotli": 167206,
+      "deltaFromVaporCore": null,
+      "sources": {
+        "defaultRuntime": false,
+        "vaporRuntime": false,
+        "both": false,
+        "modules": [],
+        "allModules": [
+          "\u0000rolldown/runtime.js",
+          "/__vite-plugin-wasm-helper",
+          "packages/runtime-vapor/pkg/rue_runtime_vapor.js",
+          "packages/runtime-vapor/pkg/rue_runtime_vapor_bg.js",
+          "packages/runtime-vapor/pkg/rue_runtime_vapor_bg.wasm",
+          "temp/size/full-core.runtime-audit.mjs"
+        ],
+        "moduleRenderSizes": {
+          "/__vite-plugin-wasm-helper": 1137,
+          "packages/runtime-vapor/pkg/rue_runtime_vapor_bg.js": 34100,
+          "packages/runtime-vapor/pkg/rue_runtime_vapor_bg.wasm": 15664,
+          "packages/runtime-vapor/pkg/rue_runtime_vapor.js": 117,
+          "\u0000rolldown/runtime.js": 348,
+          "temp/size/full-core.runtime-audit.mjs": 0
+        },
+        "ssrRenderer": false,
+        "ssrModules": [],
+        "wasm": {
+          "instanceCount": 1,
+          "full": true,
+          "vapor": false,
+          "both": false,
+          "artifacts": [
+            {
+              "kind": "full",
+              "module": "packages/runtime-vapor/pkg/rue_runtime_vapor_bg.wasm",
+              "sha256": "e973c83f8b3b5e82a0b02ae9b41237f36011362a18238d0cfae6cbc2d8609f34"
+            }
+          ]
+        },
         "builtins": []
       }
     },
@@ -59,34 +195,71 @@
       "input": [
         {
           "entry": "@rue-js/rue/vapor",
-          "imports": ["vapor"]
-        },
-        {
-          "entry": "@rue-js/rue",
-          "imports": ["KeepAlive"]
+          "imports": ["vapor", "KeepAlive"]
         }
       ],
       "buildMode": "production",
-      "raw": 799444,
-      "min": 561018,
-      "gzip": 219534,
-      "brotli": 174382,
+      "raw": 490056,
+      "min": 313300,
+      "gzip": 114091,
+      "brotli": 95814,
       "deltaFromVaporCore": {
-        "raw": 127385,
-        "min": 44824,
-        "gzip": 12977,
-        "brotli": 3897
+        "raw": 142565,
+        "min": 53620,
+        "gzip": 14505,
+        "brotli": 12420
       },
       "sources": {
-        "defaultRuntime": true,
+        "defaultRuntime": false,
         "vaporRuntime": true,
-        "both": true,
+        "both": false,
         "modules": [
-          "packages/runtime/dist/runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
           "packages/runtime/dist/runtime.vapor.esm-bundler.js"
         ],
+        "allModules": [
+          "\u0000rolldown/runtime.js",
+          "/__vite-plugin-wasm-helper",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+          "packages/runtime-vapor/reactive.vapor.js",
+          "packages/runtime-vapor/runtime-entry-wrap.js",
+          "packages/runtime-vapor/vapor-bridge.js",
+          "packages/runtime-vapor/vapor.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js",
+          "temp/size/keep-alive.runtime-audit.mjs"
+        ],
+        "moduleRenderSizes": {
+          "/__vite-plugin-wasm-helper": 1137,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js": 50591,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm": 11536,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js": 2525,
+          "packages/runtime-vapor/reactive.vapor.js": 22559,
+          "packages/runtime-vapor/runtime-entry-wrap.js": 9222,
+          "packages/runtime-vapor/vapor-bridge.js": 6645,
+          "packages/runtime-vapor/vapor.js": 783,
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js": 31243,
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js": 131446,
+          "\u0000rolldown/runtime.js": 348,
+          "temp/size/keep-alive.runtime-audit.mjs": 0
+        },
         "ssrRenderer": false,
         "ssrModules": [],
+        "wasm": {
+          "instanceCount": 1,
+          "full": false,
+          "vapor": true,
+          "both": false,
+          "artifacts": [
+            {
+              "kind": "vapor",
+              "module": "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+              "sha256": "6c6140da0fe97516a12795121ac375b0ea1b0c9fe27024f206d43178afb44e35"
+            }
+          ]
+        },
         "builtins": ["KeepAlive"]
       }
     },
@@ -95,34 +268,71 @@
       "input": [
         {
           "entry": "@rue-js/rue/vapor",
-          "imports": ["vapor"]
-        },
-        {
-          "entry": "@rue-js/rue",
-          "imports": ["Suspense"]
+          "imports": ["vapor", "Suspense"]
         }
       ],
       "buildMode": "production",
-      "raw": 796348,
-      "min": 560305,
-      "gzip": 219201,
-      "brotli": 174077,
+      "raw": 487315,
+      "min": 312834,
+      "gzip": 113799,
+      "brotli": 95564,
       "deltaFromVaporCore": {
-        "raw": 124289,
-        "min": 44111,
-        "gzip": 12644,
-        "brotli": 3592
+        "raw": 139824,
+        "min": 53154,
+        "gzip": 14213,
+        "brotli": 12170
       },
       "sources": {
-        "defaultRuntime": true,
+        "defaultRuntime": false,
         "vaporRuntime": true,
-        "both": true,
+        "both": false,
         "modules": [
-          "packages/runtime/dist/runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
           "packages/runtime/dist/runtime.vapor.esm-bundler.js"
         ],
+        "allModules": [
+          "\u0000rolldown/runtime.js",
+          "/__vite-plugin-wasm-helper",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+          "packages/runtime-vapor/reactive.vapor.js",
+          "packages/runtime-vapor/runtime-entry-wrap.js",
+          "packages/runtime-vapor/vapor-bridge.js",
+          "packages/runtime-vapor/vapor.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js",
+          "temp/size/suspense.runtime-audit.mjs"
+        ],
+        "moduleRenderSizes": {
+          "/__vite-plugin-wasm-helper": 1137,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js": 50591,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm": 11536,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js": 2525,
+          "packages/runtime-vapor/reactive.vapor.js": 22559,
+          "packages/runtime-vapor/runtime-entry-wrap.js": 9222,
+          "packages/runtime-vapor/vapor-bridge.js": 6645,
+          "packages/runtime-vapor/vapor.js": 783,
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js": 31237,
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js": 128794,
+          "\u0000rolldown/runtime.js": 348,
+          "temp/size/suspense.runtime-audit.mjs": 0
+        },
         "ssrRenderer": false,
         "ssrModules": [],
+        "wasm": {
+          "instanceCount": 1,
+          "full": false,
+          "vapor": true,
+          "both": false,
+          "artifacts": [
+            {
+              "kind": "vapor",
+              "module": "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+              "sha256": "6c6140da0fe97516a12795121ac375b0ea1b0c9fe27024f206d43178afb44e35"
+            }
+          ]
+        },
         "builtins": ["Suspense"]
       }
     },
@@ -131,34 +341,71 @@
       "input": [
         {
           "entry": "@rue-js/rue/vapor",
-          "imports": ["vapor"]
-        },
-        {
-          "entry": "@rue-js/rue",
-          "imports": ["Transition"]
+          "imports": ["vapor", "Transition"]
         }
       ],
       "buildMode": "production",
-      "raw": 803095,
-      "min": 562210,
-      "gzip": 219967,
-      "brotli": 174603,
+      "raw": 494274,
+      "min": 314638,
+      "gzip": 114633,
+      "brotli": 96314,
       "deltaFromVaporCore": {
-        "raw": 131036,
-        "min": 46016,
-        "gzip": 13410,
-        "brotli": 4118
+        "raw": 146783,
+        "min": 54958,
+        "gzip": 15047,
+        "brotli": 12920
       },
       "sources": {
-        "defaultRuntime": true,
+        "defaultRuntime": false,
         "vaporRuntime": true,
-        "both": true,
+        "both": false,
         "modules": [
-          "packages/runtime/dist/runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
           "packages/runtime/dist/runtime.vapor.esm-bundler.js"
         ],
+        "allModules": [
+          "\u0000rolldown/runtime.js",
+          "/__vite-plugin-wasm-helper",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+          "packages/runtime-vapor/reactive.vapor.js",
+          "packages/runtime-vapor/runtime-entry-wrap.js",
+          "packages/runtime-vapor/vapor-bridge.js",
+          "packages/runtime-vapor/vapor.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js",
+          "temp/size/transition.runtime-audit.mjs"
+        ],
+        "moduleRenderSizes": {
+          "/__vite-plugin-wasm-helper": 1137,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js": 50591,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm": 11536,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js": 2525,
+          "packages/runtime-vapor/reactive.vapor.js": 22559,
+          "packages/runtime-vapor/runtime-entry-wrap.js": 9222,
+          "packages/runtime-vapor/vapor-bridge.js": 6645,
+          "packages/runtime-vapor/vapor.js": 783,
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js": 31237,
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js": 134859,
+          "\u0000rolldown/runtime.js": 348,
+          "temp/size/transition.runtime-audit.mjs": 0
+        },
         "ssrRenderer": false,
         "ssrModules": [],
+        "wasm": {
+          "instanceCount": 1,
+          "full": false,
+          "vapor": true,
+          "both": false,
+          "artifacts": [
+            {
+              "kind": "vapor",
+              "module": "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+              "sha256": "6c6140da0fe97516a12795121ac375b0ea1b0c9fe27024f206d43178afb44e35"
+            }
+          ]
+        },
         "builtins": ["Transition"]
       }
     },
@@ -167,34 +414,71 @@
       "input": [
         {
           "entry": "@rue-js/rue/vapor",
-          "imports": ["vapor"]
-        },
-        {
-          "entry": "@rue-js/rue",
-          "imports": ["TransitionGroup"]
+          "imports": ["vapor", "TransitionGroup"]
         }
       ],
       "buildMode": "production",
-      "raw": 799006,
-      "min": 561217,
-      "gzip": 219952,
-      "brotli": 174363,
+      "raw": 480285,
+      "min": 310899,
+      "gzip": 113369,
+      "brotli": 95165,
       "deltaFromVaporCore": {
-        "raw": 126947,
-        "min": 45023,
-        "gzip": 13395,
-        "brotli": 3878
+        "raw": 132794,
+        "min": 51219,
+        "gzip": 13783,
+        "brotli": 11771
       },
       "sources": {
-        "defaultRuntime": true,
+        "defaultRuntime": false,
         "vaporRuntime": true,
-        "both": true,
+        "both": false,
         "modules": [
-          "packages/runtime/dist/runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
           "packages/runtime/dist/runtime.vapor.esm-bundler.js"
         ],
+        "allModules": [
+          "\u0000rolldown/runtime.js",
+          "/__vite-plugin-wasm-helper",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+          "packages/runtime-vapor/reactive.vapor.js",
+          "packages/runtime-vapor/runtime-entry-wrap.js",
+          "packages/runtime-vapor/vapor-bridge.js",
+          "packages/runtime-vapor/vapor.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js",
+          "temp/size/transition-group.runtime-audit.mjs"
+        ],
+        "moduleRenderSizes": {
+          "/__vite-plugin-wasm-helper": 1137,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js": 50591,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm": 11536,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js": 2525,
+          "packages/runtime-vapor/reactive.vapor.js": 22559,
+          "packages/runtime-vapor/runtime-entry-wrap.js": 9222,
+          "packages/runtime-vapor/vapor-bridge.js": 6645,
+          "packages/runtime-vapor/vapor.js": 783,
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js": 31237,
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js": 125901,
+          "\u0000rolldown/runtime.js": 348,
+          "temp/size/transition-group.runtime-audit.mjs": 0
+        },
         "ssrRenderer": false,
         "ssrModules": [],
+        "wasm": {
+          "instanceCount": 1,
+          "full": false,
+          "vapor": true,
+          "both": false,
+          "artifacts": [
+            {
+              "kind": "vapor",
+              "module": "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+              "sha256": "6c6140da0fe97516a12795121ac375b0ea1b0c9fe27024f206d43178afb44e35"
+            }
+          ]
+        },
         "builtins": ["TransitionGroup"]
       }
     },
@@ -203,34 +487,71 @@
       "input": [
         {
           "entry": "@rue-js/rue/vapor",
-          "imports": ["vapor"]
-        },
-        {
-          "entry": "@rue-js/rue",
-          "imports": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"]
+          "imports": ["vapor", "KeepAlive", "Suspense", "Transition", "TransitionGroup"]
         }
       ],
       "buildMode": "production",
-      "raw": 830595,
-      "min": 574178,
-      "gzip": 223512,
-      "brotli": 178181,
+      "raw": 523032,
+      "min": 327062,
+      "gzip": 118245,
+      "brotli": 99621,
       "deltaFromVaporCore": {
-        "raw": 158536,
-        "min": 57984,
-        "gzip": 16955,
-        "brotli": 7696
+        "raw": 175541,
+        "min": 67382,
+        "gzip": 18659,
+        "brotli": 16227
       },
       "sources": {
-        "defaultRuntime": true,
+        "defaultRuntime": false,
         "vaporRuntime": true,
-        "both": true,
+        "both": false,
         "modules": [
-          "packages/runtime/dist/runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
           "packages/runtime/dist/runtime.vapor.esm-bundler.js"
         ],
+        "allModules": [
+          "\u0000rolldown/runtime.js",
+          "/__vite-plugin-wasm-helper",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js",
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+          "packages/runtime-vapor/reactive.vapor.js",
+          "packages/runtime-vapor/runtime-entry-wrap.js",
+          "packages/runtime-vapor/vapor-bridge.js",
+          "packages/runtime-vapor/vapor.js",
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js",
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js",
+          "temp/size/all-builtins.runtime-audit.mjs"
+        ],
+        "moduleRenderSizes": {
+          "/__vite-plugin-wasm-helper": 1137,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.js": 50591,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm": 11536,
+          "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js": 2525,
+          "packages/runtime-vapor/reactive.vapor.js": 22559,
+          "packages/runtime-vapor/runtime-entry-wrap.js": 9222,
+          "packages/runtime-vapor/vapor-bridge.js": 6645,
+          "packages/runtime-vapor/vapor.js": 783,
+          "packages/runtime/dist/runtime.vapor-core.esm-bundler.js": 31243,
+          "packages/runtime/dist/runtime.vapor.esm-bundler.js": 163147,
+          "\u0000rolldown/runtime.js": 348,
+          "temp/size/all-builtins.runtime-audit.mjs": 0
+        },
         "ssrRenderer": false,
         "ssrModules": [],
+        "wasm": {
+          "instanceCount": 1,
+          "full": false,
+          "vapor": true,
+          "both": false,
+          "artifacts": [
+            {
+              "kind": "vapor",
+              "module": "packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm",
+              "sha256": "6c6140da0fe97516a12795121ac375b0ea1b0c9fe27024f206d43178afb44e35"
+            }
+          ]
+        },
         "builtins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"]
       }
     }

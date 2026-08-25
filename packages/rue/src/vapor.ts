@@ -2,11 +2,11 @@
 Rue Vapor 入口概述
 - 面向编译后的 Vapor 渲染产物，直接导出轻量 DOM 操作、生命周期、响应式和内置组件。
 - 带 _$ 前缀的符号是编译器生成代码使用的运行时 helper，手写应用代码通常不需要直接调用。
-- 本模块只做 @rue-js/runtime/vapor 的门面转发，保持 Vapor 专用构建可以按需引用最小运行时。
+- 本模块只做 @rue-js/runtime/vapor 的门面转发，保持 Vapor 专用构建只引用 pkg-vapor 单实例运行时。
 */
+export { vapor } from '@rue-js/runtime/vapor-core'
+
 export {
-  /** 声明 Vapor setup 渲染块，并交给 Vapor 运行时挂载。 */
-  vapor,
   /** 注册组件创建前生命周期回调。 */
   onBeforeCreate,
   /** 注册组件创建后生命周期回调。 */

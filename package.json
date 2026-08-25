@@ -42,7 +42,7 @@
     "size-global": "node scripts/build.js rue runtime -f global -p --size",
     "size-esm-runtime": "node scripts/build.js rue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime shared -f esm-bundler",
-    "size-runtime": "pnpm --filter @rue-js/runtime-vapor run build && node scripts/runtime-size-audit.js",
+    "size-runtime": "pnpm --filter @rue-js/runtime-vapor run build && pnpm --filter @rue-js/runtime-vapor run build-vapor && node scripts/runtime-size-audit.js",
     "precheck": "node scripts/ensure-runtime-vapor-build.js",
     "check": "tsc --incremental --noEmit",
     "check:text": "pnpm --dir packages/text check",
@@ -66,6 +66,8 @@
     "prebench-compare": "node scripts/build.js -pf esm-browser",
     "bench": "vitest bench --project=unit --outputJson=temp/bench.json",
     "bench-compare": "vitest bench --project=unit --compare=temp/bench.json",
+    "benchmark:js-framework": "node scripts/js-framework-performance.mjs",
+    "benchmark:js-framework:check": "pnpm run benchmark:js-framework -- --compare scripts/js-framework-performance-baseline.json --budget scripts/js-framework-performance-budget.json --output temp/performance/final.json",
     "release": "node scripts/release.js",
     "release-check": "npm run oxlint-fix && npm run format && node scripts/release.js --check --skipPrompts",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
@@ -132,6 +134,7 @@
     "oxfmt": "^0.48.0",
     "oxlint": "^1.63.0",
     "picocolors": "^1.1.1",
+    "playwright-core": "^1.62.1",
     "rimraf": "^6.1.3",
     "semver": "^7.7.4",
     "serve": "^14.2.6",
@@ -146,7 +149,8 @@
     "vite": "catalog:",
     "vite-plugin-wasm": "^3.6.0",
     "vite-plus": "catalog:",
-    "vitest": "4.1.10"
+    "vitest": "4.1.10",
+    "vue": "3.5.40"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged && pnpm check",

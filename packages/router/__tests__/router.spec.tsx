@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { type FC, nextTick, useApp } from '@rue-js/rue'
+import { type FC, nextTick, onMounted, onUnmounted, ref, useApp } from '@rue-js/rue'
 
 import {
   NavigationFailureType,
@@ -355,5 +355,97 @@ describe('rue router', () => {
     expect(router.currentPath.get()).toBe('/')
     expect(router.history.location()).toBe('/?panel=search')
     expect(container.querySelector('[data-testid="page"]')?.textContent).toBe('Home')
+  })
+
+  it('keeps a rapid editor return single-mounted when the root mount is retried', async () => {
+    let resolveEditorDelay: (() => void) | undefined
+    const editorDelay = new Promise<void>(resolve => {
+      resolveEditorDelay = resolve
+    })
+    let editorMounted = 0
+    let editorUnmounted = 0
+    let editorResolved = 0
+    let openMounted = 0
+    let openRequestCount = 0
+
+    const EditorPage: FC = () => {
+      const status = ref('loading')
+
+      onMounted(() => {
+        editorMounted += 1
+        void editorDelay.then(() => {
+          editorResolved += 1
+          status.value = 'ready'
+        })
+      })
+      onUnmounted(() => {
+        editorUnmounted += 1
+      })
+
+      return <p data-testid="editor-page">Editor {status.value}</p>
+    }
+    const OpenPage: FC = () => {
+      onMounted(() => {
+        openMounted += 1
+        openRequestCount += 1
+      })
+
+      return <p data-testid="open-page">Open</p>
+    }
+    const router = createRouter({
+      history: createMemoryHistory('/editor'),
+      routes: [
+        { path: '/editor', component: () => <EditorPage /> },
+        { path: '/open', component: () => <OpenPage /> },
+      ],
+    })
+    const container = document.createElement('div')
+    const app = useApp(RouterView).use(router)
+    document.body.appendChild(container)
+
+    app.mount(container)
+    await flushRender()
+    app.mount(container)
+    await flushRender()
+
+    expect({ editorMounted, editorResolved }).toEqual({ editorMounted: 1, editorResolved: 0 })
+
+    await router.push('/open')
+    await router.isReady()
+    await flushRender()
+
+    expect({
+      openDomCount: container.querySelectorAll('[data-testid="open-page"]').length,
+      hasEditorDom: !!container.querySelector('[data-testid="editor-page"]'),
+      openMounted,
+      openRequestCount,
+      editorUnmounted,
+    }).toEqual({
+      openDomCount: 1,
+      hasEditorDom: false,
+      openMounted: 1,
+      openRequestCount: 1,
+      editorUnmounted: 1,
+    })
+
+    resolveEditorDelay?.()
+    await editorDelay
+    await flushRender()
+
+    expect({
+      editorResolved,
+      openDomCount: container.querySelectorAll('[data-testid="open-page"]').length,
+      hasEditorDom: !!container.querySelector('[data-testid="editor-page"]'),
+      openMounted,
+      openRequestCount,
+    }).toEqual({
+      editorResolved: 1,
+      openDomCount: 1,
+      hasEditorDom: false,
+      openMounted: 1,
+      openRequestCount: 1,
+    })
+
+    app.unmount()
   })
 })

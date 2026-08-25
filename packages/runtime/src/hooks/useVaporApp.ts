@@ -9,6 +9,12 @@ import { registerRuntimeComponent } from '../component-registry'
 import { querySelector, setAttribute, settextContent } from '../dom'
 import type { DomElementLike } from '../dom'
 import { ensureRuntimeDOMBridge, runWithRuntime } from '../runtime-context'
+import {
+  confirmAppContainer,
+  releaseAppContainer,
+  reserveAppContainer,
+  rollbackAppContainer,
+} from './app-container-ownership'
 import type { ComponentInstance, FC, RenderableOutput, Rue } from '../rue'
 import { createVaporRuntime } from '../vapor-runtime'
 
@@ -23,6 +29,8 @@ export function useVaporApp(
   runtime?: Rue,
 ) {
   let containerRef: DomElementLike | null = null
+  let pendingContainerRef: DomElementLike | null = null
+  const containerOwner = {}
   const appRue = (runtime as any) || createVaporRuntime()
   ensureRuntimeDOMBridge(appRue)
 
@@ -66,25 +74,58 @@ export function useVaporApp(
       if (!element) {
         return
       }
-      if ((element as any).nodeType === 1) {
-        settextContent(element, '')
+
+      const ownedContainer = containerRef || pendingContainerRef
+      if (ownedContainer) {
+        if (ownedContainer === element) return
+        throw new Error('Rue app is already mounted on a different container.')
       }
-      runWithRuntime(appRue, () => {
-        appRue.mount(App, element)
-      })
-      if ((element as any).nodeType === 1) {
-        setAttribute(element, 'data-rue-app', '')
+
+      const reservation = reserveAppContainer(element, containerOwner)
+      if (!reservation) return
+      pendingContainerRef = element
+      let runtimeMountStarted = false
+
+      try {
+        if ((element as any).nodeType === 1) {
+          settextContent(element, '')
+        }
+        runtimeMountStarted = true
+        runWithRuntime(appRue, () => {
+          appRue.mount(App, element)
+        })
+        if ((element as any).nodeType === 1) {
+          setAttribute(element, 'data-rue-app', '')
+        }
+        confirmAppContainer(reservation)
+        containerRef = element
+      } catch (error) {
+        if (runtimeMountStarted) {
+          try {
+            runWithRuntime(appRue, () => {
+              appRue.unmount(element)
+            })
+          } catch {}
+        }
+        rollbackAppContainer(reservation)
+        throw error
+      } finally {
+        if (pendingContainerRef === element) pendingContainerRef = null
       }
-      containerRef = element
     },
     unmount() {
-      if (!containerRef) {
+      const mountedContainer = containerRef
+      if (!mountedContainer) {
         return
       }
-      runWithRuntime(appRue, () => {
-        appRue.unmount(containerRef)
-      })
       containerRef = null
+      try {
+        runWithRuntime(appRue, () => {
+          appRue.unmount(mountedContainer)
+        })
+      } finally {
+        releaseAppContainer(mountedContainer, containerOwner)
+      }
     },
   }
 }

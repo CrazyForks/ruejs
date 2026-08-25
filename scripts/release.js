@@ -423,7 +423,7 @@ async function runTestsIfNeeded() {
       await ensureRuntimeVaporBuilt()
       await run('pnpm', ['run', 'test', '--run'])
       await runReleaseVerificationPackageTests()
-      // Temporarily report runtime sizes without enforcing the budget while the runtime is in development.
+      // Keep the size report visible during release, but budgets remain opt-in diagnostics.
       await run('pnpm', ['run', 'size-runtime'])
     } else {
       console.log(`Skipped (dry run)`)

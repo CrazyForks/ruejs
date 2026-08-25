@@ -17,6 +17,8 @@ import {
   version,
   type FC,
 } from '../src'
+import { vaporKeyedList as defaultVaporKeyedList } from '../src/vapor-helpers'
+import { vaporKeyedList as vaporVaporKeyedList } from '../src/vapor-helpers-vapor'
 import { flush, mountContainer } from './page-test-utils'
 
 setReactiveScheduling('sync')
@@ -395,6 +397,262 @@ describe.each(variants)('$name complex list-row baseline', variant => {
 })
 
 describe('complex list-row factor semantics', () => {
+  semanticIt.each([
+    ['default helper', defaultVaporKeyedList],
+    ['vapor helper', vaporVaporKeyedList],
+  ])('%s releases compiled row closures after churn', (_name, vaporKeyedList) => {
+    const parent = document.createElement('ul')
+    const listEnd = document.createComment('rue:list:end')
+    const state: { elements: Map<unknown, any>; dispose?: () => void } = {
+      elements: new Map(),
+    }
+    const retiredOwners: any[] = []
+    let disposedRecords = 0
+    parent.appendChild(listEnd)
+    document.body.appendChild(parent)
+
+    const renderRows = (items: ComplexRow[]) => {
+      state.elements = vaporKeyedList({
+        items,
+        getKey: item => item.id,
+        elements: state.elements,
+        state,
+        parent,
+        before: listEnd,
+        singleRoot: true,
+        trackIndex: false,
+        directRoot: true,
+        compiledRowPatch: true,
+        renderItem: (item, listParent, start, _end, index) => {
+          const row = document.createElement('li')
+          row.dataset.rowId = String(item.id)
+          row.textContent = item.label
+          ;(listParent as Node).insertBefore(row, (start as Node | null) ?? null)
+          return {
+            patch: (nextItem: ComplexRow, nextIndex: number) => {
+              row.textContent = `${nextItem.label}:${nextIndex}`
+            },
+            dispose: () => {
+              disposedRecords += 1
+              void row
+              void index
+            },
+          }
+        },
+      })
+    }
+
+    for (let round = 0; round < 100; round += 1) {
+      renderRows(buildRows(5, round * 100))
+      retiredOwners.push(...state.elements.values())
+      renderRows([])
+      expect(state.elements).toHaveLength(0)
+      expect(parent.querySelectorAll('li')).toHaveLength(0)
+    }
+
+    state.dispose?.()
+    expect(disposedRecords).toBe(500)
+    expect(
+      retiredOwners.every(
+        owner =>
+          owner.compiledRowPatch === undefined &&
+          owner.compiledItem === undefined &&
+          owner.compiledIndex === undefined &&
+          owner.start === undefined &&
+          owner.end === undefined &&
+          owner.scope === undefined &&
+          owner.stop === undefined,
+      ),
+    ).toBe(true)
+  })
+
+  semanticIt.each([
+    ['default helper', defaultVaporKeyedList],
+    ['vapor helper', vaporVaporKeyedList],
+  ])(
+    '%s keeps compiled row records on the complex-capability cleanup fallback',
+    (_name, vaporKeyedList) => {
+      const parent = document.createElement('ul')
+      const listEnd = document.createComment('rue:list:end')
+      const rows = buildRows(3)
+      const state: { elements: Map<unknown, any> } = { elements: new Map() }
+      const cleanups: number[] = []
+      const recordDisposals: number[] = []
+      parent.appendChild(listEnd)
+      document.body.appendChild(parent)
+
+      const renderRows = (items: ComplexRow[]) => {
+        state.elements = vaporKeyedList({
+          items,
+          getKey: item => item.id,
+          elements: state.elements,
+          state,
+          parent,
+          before: listEnd,
+          singleRoot: true,
+          trackIndex: false,
+          directRoot: true,
+          ownedMount: true,
+          compiledRowPatch: true,
+          renderItem: (item, listParent, start, _end, _index, registerRefCleanup) => {
+            const row = document.createElement('li')
+            row.dataset.rowId = String(item.id)
+            row.textContent = item.label
+            registerRefCleanup(() => cleanups.push(item.id))
+            ;(listParent as Node).insertBefore(row, start as Node)
+            return {
+              patch: () => {},
+              dispose: () => recordDisposals.push(item.id),
+            }
+          },
+        })
+      }
+
+      renderRows(rows)
+      expect(
+        Array.from(state.elements.values()).every(
+          range => range.compiledRowPatch === undefined && range.scope !== undefined,
+        ),
+      ).toBe(true)
+
+      renderRows([])
+      expect(cleanups.sort((left, right) => left - right)).toEqual(rows.map(row => row.id))
+      expect(recordDisposals).toEqual([])
+    },
+  )
+
+  semanticIt.each([
+    ['default helper', defaultVaporKeyedList],
+    ['vapor helper', vaporVaporKeyedList],
+  ])('%s keeps range-bound direct roots on the anchored fallback', (_name, vaporKeyedList) => {
+    const parent = document.createElement('ul')
+    const listStart = document.createComment('rue:list:start')
+    const listEnd = document.createComment('rue:list:end')
+    const rows = buildRows(4)
+    const state: { elements: Map<unknown, any> } = { elements: new Map() }
+    parent.append(listStart, listEnd)
+    document.body.appendChild(parent)
+
+    const cleanups: number[] = []
+    state.elements = vaporKeyedList({
+      items: rows,
+      getKey: item => item.id,
+      elements: state.elements,
+      state,
+      parent,
+      before: listEnd,
+      start: listStart,
+      singleRoot: true,
+      trackIndex: false,
+      directRoot: true,
+      renderItem: (item, listParent, start, _end, _index, registerRefCleanup) => {
+        const row = document.createElement('li')
+        row.dataset.rowId = String(item.id)
+        registerRefCleanup(() => cleanups.push(item.id))
+        ;(listParent as Node).insertBefore(row, start as Node)
+      },
+    })
+
+    expect(
+      Array.from(state.elements.values()).every(
+        range => range.start === undefined && range.end.nodeType === Node.COMMENT_NODE,
+      ),
+    ).toBe(true)
+    expect(
+      Array.from(parent.childNodes).filter(node => node.nodeType === Node.COMMENT_NODE),
+    ).toHaveLength(rows.length + 2)
+
+    state.elements = vaporKeyedList({
+      items: [] as ComplexRow[],
+      getKey: item => item.id,
+      elements: state.elements,
+      state,
+      parent,
+      before: listEnd,
+      start: listStart,
+      singleRoot: true,
+      trackIndex: false,
+      directRoot: true,
+      renderItem: () => {},
+    })
+    expect(cleanups.sort((left, right) => left - right)).toEqual(rows.map(row => row.id))
+  })
+
+  semanticIt.each([
+    ['default helper', defaultVaporKeyedList],
+    ['vapor helper', vaporVaporKeyedList],
+  ])('%s preserves multi-node range identity during reorder', (_name, vaporKeyedList) => {
+    const parent = document.createElement('ul')
+    const listEnd = document.createComment('rue:list:end')
+    const rows = buildRows(4)
+    const state: { elements: Map<unknown, any> } = { elements: new Map() }
+    parent.appendChild(listEnd)
+    document.body.appendChild(parent)
+
+    const renderRows = (items: ComplexRow[]) => {
+      state.elements = vaporKeyedList({
+        items,
+        getKey: item => item.id,
+        elements: state.elements,
+        state,
+        parent,
+        before: listEnd,
+        singleRoot: false,
+        trackIndex: false,
+        directRoot: false,
+        renderItem: (item, listParent, _start, end) => {
+          const label = document.createElement('li')
+          const detail = document.createElement('li')
+          label.dataset.rangePart = `${item.id}:label`
+          detail.dataset.rangePart = `${item.id}:detail`
+          label.textContent = item.label
+          detail.textContent = item.attrs.title
+          ;(listParent as Node).insertBefore(label, end as Node)
+          ;(listParent as Node).insertBefore(detail, end as Node)
+        },
+      })
+    }
+
+    renderRows(rows)
+    const initialParts = new Map(
+      Array.from(parent.querySelectorAll<HTMLLIElement>('[data-range-part]')).map(node => [
+        node.dataset.rangePart!,
+        node,
+      ]),
+    )
+    const mutations: MutationRecord[] = []
+    const observer = new MutationObserver(records => mutations.push(...records))
+    observer.observe(parent, { childList: true })
+
+    renderRows([rows[0], rows[2], rows[1], rows[3]])
+    mutations.push(...observer.takeRecords())
+    observer.disconnect()
+
+    const reorderedParts = Array.from(parent.querySelectorAll<HTMLLIElement>('[data-range-part]'))
+    expect(reorderedParts.map(node => node.dataset.rangePart)).toEqual([
+      '1:label',
+      '1:detail',
+      '3:label',
+      '3:detail',
+      '2:label',
+      '2:detail',
+      '4:label',
+      '4:detail',
+    ])
+    for (const node of reorderedParts) {
+      expect(node).toBe(initialParts.get(node.dataset.rangePart!))
+    }
+
+    const movedParts = mutations
+      .flatMap(record => Array.from(record.removedNodes))
+      .filter((node): node is HTMLLIElement => node instanceof HTMLLIElement)
+      .map(node => node.dataset.rangePart)
+      .sort()
+    expect(movedParts).toEqual(['3:detail', '3:label'])
+
+    renderRows([])
+  })
+
   semanticIt('batches native structural rows without materializing live parent children', () => {
     const { container, state } = mountVariant(KeyedConditionalRows)
     const parent = container.querySelector('ul')!

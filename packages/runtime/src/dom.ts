@@ -1487,6 +1487,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
 }
 
 const RUE_DOM_ADAPTER_GLOBAL_KEY = '__rue_dom_adapter__'
+const RUE_DEFAULT_BROWSER_DOM_ADAPTER_GLOBAL_KEY = '__rue_default_browser_dom_adapter__'
 const RUE_DOM_BRIDGE_CONSUMERS_GLOBAL_KEY = '__rue_dom_bridge_consumers__'
 
 type DOMBridgeConsumer = object & {
@@ -1495,21 +1496,81 @@ type DOMBridgeConsumer = object & {
 
 type RueDOMGlobalRecord = typeof globalThis & {
   [RUE_DOM_ADAPTER_GLOBAL_KEY]?: DOMAdapter
+  [RUE_DEFAULT_BROWSER_DOM_ADAPTER_GLOBAL_KEY]?: DOMAdapter
   [RUE_DOM_BRIDGE_CONSUMERS_GLOBAL_KEY]?: Set<WeakRef<DOMBridgeConsumer>>
 }
 
 const domGlobal = globalThis as RueDOMGlobalRecord
-const getCurrentDOMAdapter = () => domGlobal[RUE_DOM_ADAPTER_GLOBAL_KEY] ?? CURRENT_ADAPTER
-const setCurrentDOMAdapter = (adapter: DOMAdapter) => {
-  CURRENT_ADAPTER = adapter
-  domGlobal[RUE_DOM_ADAPTER_GLOBAL_KEY] = adapter
-}
+const DEFAULT_BROWSER_DOM_ADAPTER =
+  domGlobal[RUE_DEFAULT_BROWSER_DOM_ADAPTER_GLOBAL_KEY] ?? new BrowserDOMAdapter()
+domGlobal[RUE_DEFAULT_BROWSER_DOM_ADAPTER_GLOBAL_KEY] = DEFAULT_BROWSER_DOM_ADAPTER
 
 // 当前适配器：默认使用浏览器实现，可在运行时替换。
 // 使用 globalThis 保存真实 adapter，保证 runtime/server、runtime/vapor 等
 // 被打成独立 bundle 的入口在 SSR 期间仍然共享同一宿主。
-let CURRENT_ADAPTER: DOMAdapter = domGlobal[RUE_DOM_ADAPTER_GLOBAL_KEY] ?? new BrowserDOMAdapter()
+let CURRENT_ADAPTER: DOMAdapter =
+  domGlobal[RUE_DOM_ADAPTER_GLOBAL_KEY] ?? DEFAULT_BROWSER_DOM_ADAPTER
 domGlobal[RUE_DOM_ADAPTER_GLOBAL_KEY] = CURRENT_ADAPTER
+
+const getCurrentDOMAdapter = () => domGlobal[RUE_DOM_ADAPTER_GLOBAL_KEY] ?? CURRENT_ADAPTER
+type DOMHostOperationContext = {
+  adapter: DOMAdapter
+  freshBrowser: boolean
+}
+let activeDOMHostOperationContext: DOMHostOperationContext | undefined
+let domAdapterGeneration = 0
+
+const getDOMAdapterForOperation = () =>
+  activeDOMHostOperationContext?.adapter ?? getCurrentDOMAdapter()
+
+const isHydrationHostBoundary = (parent: DomNodeLike | null | undefined) => {
+  if (!parent) return false
+  if (typeof Node === 'undefined' || !(parent instanceof Node)) return true
+
+  let node: any = parent
+  let depth = 0
+  while (node && depth < 64) {
+    if (node[RUE_HYDRATED_ADOPTED_NODE] || node[RUE_HYDRATED_ADOPTED_TARGET]) return true
+    node = node.parentNode
+    depth += 1
+  }
+
+  if (freshDomParents.has(parent as object) && !hydratedAdoptedParents.has(parent as object)) {
+    return false
+  }
+  return (parent as any).firstChild != null
+}
+
+/** 在一次同步 mount/reconcile 内绑定稳定宿主操作；嵌套边界复用同一解析结果。 */
+export const withDOMHostOperations = <T>(
+  parent: DomNodeLike | null | undefined,
+  run: () => T,
+): T => {
+  if (activeDOMHostOperationContext) return run()
+
+  const adapter = getCurrentDOMAdapter()
+  const generation = domAdapterGeneration
+  const previous = activeDOMHostOperationContext
+  activeDOMHostOperationContext = {
+    adapter,
+    freshBrowser: adapter === DEFAULT_BROWSER_DOM_ADAPTER && !isHydrationHostBoundary(parent),
+  }
+
+  try {
+    return run()
+  } finally {
+    if (generation === domAdapterGeneration) {
+      activeDOMHostOperationContext = previous
+    }
+  }
+}
+
+const setCurrentDOMAdapter = (adapter: DOMAdapter) => {
+  domAdapterGeneration += 1
+  activeDOMHostOperationContext = undefined
+  CURRENT_ADAPTER = adapter
+  domGlobal[RUE_DOM_ADAPTER_GLOBAL_KEY] = adapter
+}
 
 type GlobalDOMBridge = {
   createElement: (tag: string, parent?: DomElementLike | null) => DomElementLike
@@ -1642,58 +1703,103 @@ syncGlobalDOMBridge()
 /** 创建注释节点（便捷函数）
  * @param data 注释文本
  */
-export const createComment = (data: string) => getCurrentDOMAdapter().createComment(data)
+export const createComment = (data: string) => getDOMAdapterForOperation().createComment(data)
 /** 创建文本节点（便捷函数）
  * @param data 文本内容
  */
-export const createTextNode = (data: string) => getCurrentDOMAdapter().createTextNode(data)
+export const createTextNode = (data: string) =>
+  activeDOMHostOperationContext?.freshBrowser
+    ? (document.createTextNode(data) as any)
+    : getDOMAdapterForOperation().createTextNode(data)
 /** 创建元素（便捷函数）
  * @param tag 标签名
  */
-export const createElement = (tag: string, parent?: DomElementLike | null) =>
-  getCurrentDOMAdapter().createElement(tag, resolveCreateElementParent(parent))
+export const createElement = (tag: string, parent?: DomElementLike | null) => {
+  const resolvedParent = resolveCreateElementParent(parent)
+  if (!activeDOMHostOperationContext?.freshBrowser) {
+    return getDOMAdapterForOperation().createElement(tag, resolvedParent)
+  }
+  const element =
+    SVG_TAGS.has(tag) || (SVG_CONTEXTUAL_TAGS.has(tag) && isSVGNamespaceParent(resolvedParent))
+      ? document.createElementNS(SVG_NS, tag)
+      : document.createElement(tag)
+  freshDomParents.add(element)
+  return element as any
+}
 /** 创建文本包装元素（便捷函数）
  * @param parent 父元素
  */
 export const createTextWrapper = (parent: DomElementLike) =>
-  getCurrentDOMAdapter().createTextWrapper(parent)
+  getDOMAdapterForOperation().createTextWrapper(parent)
 /** 设置行内样式（便捷函数） */
 export const setStyle = (
   el: DomElementLike,
   style: string | Partial<CSSStyleDeclaration> | null | undefined,
 ) => {
-  getCurrentDOMAdapter().setStyle(el, style)
+  getDOMAdapterForOperation().setStyle(el, style)
 }
 /** 设置节点文本内容（便捷函数） */
 export const settextContent = (el: DomNodeLike, val: any) => {
-  getCurrentDOMAdapter().settextContent(el, val)
+  if (activeDOMHostOperationContext?.freshBrowser) {
+    ;(el as any).textContent = val == null || typeof val === 'boolean' ? '' : String(val)
+    return
+  }
+  getDOMAdapterForOperation().settextContent(el, val)
 }
 /** 创建文档片段（便捷函数） */
-export const createDocumentFragment = () => getCurrentDOMAdapter().createDocumentFragment()
+export const createDocumentFragment = () => {
+  if (!activeDOMHostOperationContext?.freshBrowser) {
+    return getDOMAdapterForOperation().createDocumentFragment()
+  }
+  const fragment = document.createDocumentFragment()
+  freshDomParents.add(fragment)
+  return fragment as any
+}
 /** 追加子节点（便捷函数） */
 export const appendChild = (parent: DomNodeLike, child: DomNodeLike) => {
-  getCurrentDOMAdapter().appendChild(parent, child)
+  if (activeDOMHostOperationContext?.freshBrowser) {
+    ;(parent as any).appendChild(child)
+    syncSelectValueForMutationParent(parent)
+    return
+  }
+  getDOMAdapterForOperation().appendChild(parent, child)
 }
 /** 移除子节点（便捷函数） */
 export const removeChild = (parent: DomNodeLike, child: DomNodeLike) => {
-  getCurrentDOMAdapter().removeChild(parent, child)
+  getDOMAdapterForOperation().removeChild(parent, child)
 }
 /** 插入子节点（便捷函数） */
 export const insertBefore = (parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null) => {
-  getCurrentDOMAdapter().insertBefore(parent, child, ref)
+  if (activeDOMHostOperationContext?.freshBrowser) {
+    ;(parent as any).insertBefore(child, ref)
+    syncSelectValueForMutationParent(parent)
+    return
+  }
+  getDOMAdapterForOperation().insertBefore(parent, child, ref)
 }
 /** 替换子节点（便捷函数） */
 export const replaceChild = (parent: DomNodeLike, newChild: DomNodeLike, oldChild: DomNodeLike) => {
-  getCurrentDOMAdapter().replaceChild(parent, newChild, oldChild)
+  getDOMAdapterForOperation().replaceChild(parent, newChild, oldChild)
 }
 /** 选择器查询（便捷函数） */
-export const querySelector = (selector: string) => getCurrentDOMAdapter().querySelector(selector)
+export const querySelector = (selector: string) =>
+  getDOMAdapterForOperation().querySelector(selector)
 /** 设置属性（便捷函数） */
-export const setAttribute = (el: DomElementLike, name: string, value: any) =>
-  getCurrentDOMAdapter().setAttribute(el, name, value)
+export const setAttribute = (el: DomElementLike, name: string, value: any) => {
+  if (activeDOMHostOperationContext?.freshBrowser) {
+    ;(el as any).setAttribute(name, String(value))
+    return
+  }
+  getDOMAdapterForOperation().setAttribute(el, name, value)
+}
 /** 移除属性（便捷函数） */
-export const removeAttribute = (el: DomElementLike, name: string) =>
-  getCurrentDOMAdapter().removeAttribute(el, name)
+export const removeAttribute = (el: DomElementLike, name: string) => {
+  if (activeDOMHostOperationContext?.freshBrowser) {
+    ;(el as any).removeAttribute(name)
+    return
+  }
+  getDOMAdapterForOperation().removeAttribute(el, name)
+}
 
 const isCustomElementLike = (el: DomElementLike) => {
   const tagName = (el as { tagName?: unknown }).tagName
@@ -1745,30 +1851,37 @@ export const addEventListener = (
   el: DomElementLike,
   eventName: string,
   listener: DOMEventHandler,
-) => getCurrentDOMAdapter().addEventListener(el, eventName, listener)
+) => getDOMAdapterForOperation().addEventListener(el, eventName, listener)
 /** 移除事件监听（便捷函数） */
 export const removeEventListener = (
   el: DomElementLike,
   eventName: string,
   listener: DOMEventHandler,
-) => getCurrentDOMAdapter().removeEventListener(el, eventName, listener)
+) => getDOMAdapterForOperation().removeEventListener(el, eventName, listener)
 /** 设置类名（便捷函数） */
-export const setClassName = (el: DomElementLike, value: any) =>
-  getCurrentDOMAdapter().setClassName(el, value)
+export const setClassName = (el: DomElementLike, value: any) => {
+  if (activeDOMHostOperationContext?.freshBrowser) {
+    const className = value == null ? '' : String(value)
+    if (el instanceof SVGElement) (el as any).setAttribute('class', className)
+    else (el as any as HTMLElement).className = className
+    return
+  }
+  getDOMAdapterForOperation().setClassName(el, value)
+}
 /** 设置 innerHTML（便捷函数） */
 export const setInnerHTML = (el: DomElementLike, html: string) =>
-  getCurrentDOMAdapter().setInnerHTML(el, html)
+  getDOMAdapterForOperation().setInnerHTML(el, html)
 /** 设置表单值（便捷函数） */
 export const setValue = (el: DomElementLike, value: any) =>
-  getCurrentDOMAdapter().setValue(el, value)
+  getDOMAdapterForOperation().setValue(el, value)
 /** 设置选中状态（便捷函数） */
 export const setChecked = (el: DomElementLike, checked: boolean) =>
-  getCurrentDOMAdapter().setChecked(el, checked)
+  getDOMAdapterForOperation().setChecked(el, checked)
 /** 设置禁用状态（便捷函数） */
 export const setDisabled = (el: DomElementLike, disabled: boolean) =>
-  getCurrentDOMAdapter().setDisabled(el, disabled)
+  getDOMAdapterForOperation().setDisabled(el, disabled)
 /** 获取标签名（便捷函数） */
-export const getTagName = (el: DomElementLike) => getCurrentDOMAdapter().getTagName(el)
+export const getTagName = (el: DomElementLike) => getDOMAdapterForOperation().getTagName(el)
 
 type SpreadAttributesRecord = {
   keys: string[]
@@ -2070,24 +2183,25 @@ export const applyDomProps = (
 }
 /** 判断包含关系（便捷函数） */
 export const contains = (parent: DomNodeLike, child: DomNodeLike) =>
-  getCurrentDOMAdapter().contains(parent, child)
+  getDOMAdapterForOperation().contains(parent, child)
 /** 获取父节点（便捷函数） */
-export const getParentNode = (node: DomNodeLike) => getCurrentDOMAdapter().getParentNode(node)
+export const getParentNode = (node: DomNodeLike) => getDOMAdapterForOperation().getParentNode(node)
 /** 样式增量补丁（便捷函数） */
 export const patchStyle = (
   el: DomElementLike,
   oldStyle: Partial<CSSStyleDeclaration> | undefined,
   newStyle: Partial<CSSStyleDeclaration> | undefined,
-) => getCurrentDOMAdapter().patchStyle(el, oldStyle, newStyle)
+) => getDOMAdapterForOperation().patchStyle(el, oldStyle, newStyle)
 /** 判断是否为片段（便捷函数） */
-export const isFragment = (node: DomNodeLike) => getCurrentDOMAdapter().isFragment(node)
+export const isFragment = (node: DomNodeLike) => getDOMAdapterForOperation().isFragment(node)
 /** 收集片段子节点（便捷函数） */
 export const collectFragmentChildren = (node: DomNodeLike) =>
-  getCurrentDOMAdapter().collectFragmentChildren(node)
+  getDOMAdapterForOperation().collectFragmentChildren(node)
 /** 应用 ref（便捷函数） */
-export const applyRef = (el: DomElementLike, ref: any) => getCurrentDOMAdapter().applyRef(el, ref)
+export const applyRef = (el: DomElementLike, ref: any) =>
+  getDOMAdapterForOperation().applyRef(el, ref)
 /** 清理 ref（便捷函数） */
-export const clearRef = (ref: any) => getCurrentDOMAdapter().clearRef(ref)
+export const clearRef = (ref: any) => getDOMAdapterForOperation().clearRef(ref)
 
 /** DOM 事件监听选项，兼容 capture boolean 和标准 AddEventListenerOptions。 */
 export type DOMEventListenerOptions = boolean | AddEventListenerOptions | undefined

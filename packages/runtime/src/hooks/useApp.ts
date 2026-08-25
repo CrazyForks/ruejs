@@ -12,6 +12,12 @@ import { registerRuntimeComponent } from '../component-registry'
 import type { DomElementLike } from '../dom'
 import { querySelector, settextContent, setAttribute } from '../dom'
 import { ensureRuntimeDOMBridge, runWithRuntime } from '../runtime-context'
+import {
+  confirmAppContainer,
+  releaseAppContainer,
+  reserveAppContainer,
+  rollbackAppContainer,
+} from './app-container-ownership'
 
 /** 创建应用管理器
  * @param AppOrOptions 组件或 {setup, render} 配置
@@ -30,6 +36,8 @@ export function useApp(
   runtime?: Rue,
 ) {
   let containerRef: DomElementLike | null = null
+  let pendingContainerRef: DomElementLike | null = null
+  const containerOwner = {}
   const appRue = (runtime as any) || createRue()
   ensureRuntimeDOMBridge(appRue)
 
@@ -79,26 +87,59 @@ export function useApp(
     mount(container: string | DomElementLike) {
       const el = normalizeContainer(container)
       if (!el) return
-      if ((el as any).nodeType === 1) {
-        // 清空容器文本内容，避免遗留内容干扰渲染
-        settextContent(el, '')
+
+      const ownedContainer = containerRef || pendingContainerRef
+      if (ownedContainer) {
+        if (ownedContainer === el) return
+        throw new Error('Rue app is already mounted on a different container.')
       }
-      // 执行挂载：将 App 渲染到容器
-      runWithRuntime(appRue, () => {
-        appRue.mount(App, el)
-      })
-      // 为容器打标记，便于调试或样式定位
-      if ((el as any).nodeType === 1) setAttribute(el, 'data-rue-app', '')
-      containerRef = el
+
+      const reservation = reserveAppContainer(el, containerOwner)
+      if (!reservation) return
+      pendingContainerRef = el
+      let runtimeMountStarted = false
+
+      try {
+        if ((el as any).nodeType === 1) {
+          // 清空容器文本内容，避免遗留内容干扰渲染
+          settextContent(el, '')
+        }
+        // 执行挂载：将 App 渲染到容器
+        runtimeMountStarted = true
+        runWithRuntime(appRue, () => {
+          appRue.mount(App, el)
+        })
+        // 为容器打标记，便于调试或样式定位
+        if ((el as any).nodeType === 1) setAttribute(el, 'data-rue-app', '')
+        confirmAppContainer(reservation)
+        containerRef = el
+      } catch (error) {
+        if (runtimeMountStarted) {
+          try {
+            runWithRuntime(appRue, () => {
+              appRue.unmount(el)
+            })
+          } catch {}
+        }
+        rollbackAppContainer(reservation)
+        throw error
+      } finally {
+        if (pendingContainerRef === el) pendingContainerRef = null
+      }
     },
     /** 从上一次 mount 的容器卸载应用并释放容器引用。 */
     unmount() {
-      if (containerRef) {
-        // 执行卸载，释放容器引用
-        runWithRuntime(appRue, () => {
-          appRue.unmount(containerRef)
-        })
+      const mountedContainer = containerRef
+      if (mountedContainer) {
         containerRef = null
+        try {
+          // 执行卸载，释放容器引用
+          runWithRuntime(appRue, () => {
+            appRue.unmount(mountedContainer)
+          })
+        } finally {
+          releaseAppContainer(mountedContainer, containerOwner)
+        }
       }
     },
   }

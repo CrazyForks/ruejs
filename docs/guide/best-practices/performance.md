@@ -30,6 +30,26 @@ Rue 旨在在大多数常见用例中具有良好的性能，无需太多手动�
 - [Chrome DevTools 性能面板](https://developer.chrome.com/docs/devtools/evaluate-performance/)
 - Rue DevTools 扩展也提供性能分析功能。
 
+## 全链路性能预算 (End-to-End Performance Budgets) {#end-to-end-performance-budgets}
+
+Rue 将列表结构、CPU、内存、生产体积和首屏采样分成两层手动预算验证。结构与产物来源先由确定性测试和 size audit 检查；随后才在同一台机器、同一个 Chromium 版本上，将多轮中位数与仓库保存的基线比较。机器计时不能跨机器直接比较，Vue 结果用于同场景对照，也不是替换 Rue 历史基线的预算来源。发布流程只输出 runtime size 报告，不执行 `--check` 或浏览器性能预算，预算失败不会阻止发布。
+
+标准 keyed 列表行只有在编译器能证明它是同步、原生、单根 DOM 行，并且 class、文本和属性绑定可生成局部 patch 时，才进入 compiled-row 快路径。该路径由一个列表 effect 批量扫描，行记录保存 DOM、原始 item、patch 和 dispose；相等值不会重复写 DOM，简单行也不创建逐行 signal、proxy、scope 或注释锚点。
+
+组件行、多根行、异步或不透明 renderable、结构指令、需要逐行 ref/生命周期所有权的内容，以及 hydration 无法安全采用的形状，会保留 range/owner fallback。fallback 以语义完整性为优先，不应为了命中性能预算而改写成手工 DOM benchmark 特例。应用代码若把外部依赖隐藏在普通成员调用中，编译器同样会选择 fallback；可证明安全的直接 `selected.value` 或 `selected.get()` 读取才能进入 compiled-row patch。
+
+从仓库根目录复现完整检查：
+
+```bash
+pnpm exec vitest run --project unit scripts/__tests__/js-framework-performance.spec.ts scripts/__tests__/runtime-size-audit.spec.ts
+pnpm run size-runtime -- --check
+pnpm run benchmark:js-framework -- --compare scripts/js-framework-performance-baseline.json --budget scripts/js-framework-performance-budget.json --output temp/performance/final.json
+```
+
+浏览器命令会先重建 workspace 的 Rue 产物和 Vapor 专用 Wasm，验证版本、workspace 解析路径、lockfile 与构建产物 SHA-256 在采样前后保持一致，然后运行 1 轮预热和 5 轮有效采样。报告中的 `results.rue`、`results.rue-signal` 和 `results.vue` 分别代表 Rue ref、Rue native signal 和 Vue 等价实现；`budget.entries` 给出 Rue 相对 0.8.13 基线的 CPU、select/swap、create-clear heap、Brotli 与 first-paint 比率。`validSamples` 必须满足预算中的最小样本数，缺失 Vue、版本、hash 或样本都会使命令非零退出。
+
+`pnpm run size-runtime -- --check` 单独审计发布入口的模块图。Vapor preset 必须只加载一个 `pkg-vapor` Wasm，不能同时保留完整 Wasm、默认 runtime、SSR renderer 或未使用的内置组件；完整 runtime preset 则必须只加载完整 Wasm。`scripts/runtime-size-baseline.json` 是可审查的当前产物记录，真正判定超限的是独立的 `scripts/runtime-size-budget.json`，因此更新 baseline 不会自动放宽预算。
+
 ## 页面加载优化 (Page Load Optimizations) {#page-load-optimizations}
 
 有许多与框架无关的方面可以优化页面加载性能 - 查看 [此 web.dev 指南](https://web.dev/fast/) 以获取全面的总结。在这里，我们将主要关注 Rue 特定的技术。

@@ -2,8 +2,9 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { useApp as useDefaultApp, type FC } from '../src'
 import { resolveRuntimeComponent } from '../src/component-registry'
-import { useApp, vapor } from '../src/vapor'
+import { onMounted, onUnmounted, useApp, vapor } from '../src/vapor'
 
 const flushRender = async () => {
   await Promise.resolve()
@@ -16,7 +17,148 @@ afterEach(() => {
   delete (globalThis as any).__rue_active
 })
 
+const createTrackedRoot = (label: string, lifecycle: string[]) => () => {
+  lifecycle.push(`${label}:render`)
+  onMounted(() => lifecycle.push(`${label}:mounted`))
+  onUnmounted(() => lifecycle.push(`${label}:unmounted`))
+  return vapor(() => {
+    const node = document.createElement('main')
+    node.dataset.owner = label
+    node.textContent = label
+    return node as any
+  })
+}
+
 describe('Vapor useApp', () => {
+  it('treats mounting the same app on the same container as an idempotent no-op', async () => {
+    const host = document.createElement('div')
+    const lifecycle: string[] = []
+    const app = useApp(createTrackedRoot('vapor', lifecycle))
+    document.body.appendChild(host)
+
+    app.mount(host)
+    await flushRender()
+    app.mount(host)
+    await flushRender()
+
+    expect(lifecycle).toEqual(['vapor:render', 'vapor:mounted'])
+    expect(host.querySelector('[data-owner="vapor"]')?.textContent).toBe('vapor')
+
+    app.unmount()
+    await flushRender()
+    app.unmount()
+    await flushRender()
+
+    expect(lifecycle).toEqual(['vapor:render', 'vapor:mounted', 'vapor:unmounted'])
+    expect(host.textContent).toBe('')
+  })
+
+  it('rejects moving a mounted Vapor app without changing either DOM tree', async () => {
+    const firstHost = document.createElement('div')
+    const secondHost = document.createElement('div')
+    const lifecycle: string[] = []
+    const app = useApp(createTrackedRoot('vapor', lifecycle))
+    secondHost.textContent = 'untouched'
+    document.body.append(firstHost, secondHost)
+
+    app.mount(firstHost)
+    await flushRender()
+
+    expect(() => app.mount(secondHost)).toThrowError(
+      'Rue app is already mounted on a different container.',
+    )
+    await flushRender()
+
+    expect(lifecycle).toEqual(['vapor:render', 'vapor:mounted'])
+    expect(firstHost.querySelector('[data-owner="vapor"]')?.textContent).toBe('vapor')
+    expect(secondHost.textContent).toBe('untouched')
+
+    app.unmount()
+  })
+
+  it('shares ownership with the default entry and allows takeover after unmount', async () => {
+    const host = document.createElement('div')
+    const DefaultRoot: FC = () => <main data-owner="default">default</main>
+    const defaultApp = useDefaultApp(DefaultRoot)
+    const vaporApp = useApp(createTrackedRoot('vapor', []))
+    document.body.appendChild(host)
+
+    defaultApp.mount(host)
+    await flushRender()
+
+    expect(() => vaporApp.mount(host)).toThrowError(
+      'Rue container is already mounted by another app.',
+    )
+    expect(host.querySelector('[data-owner="default"]')?.textContent).toBe('default')
+
+    defaultApp.unmount()
+    await flushRender()
+    vaporApp.mount(host)
+    await flushRender()
+
+    expect(host.querySelector('[data-owner="vapor"]')?.textContent).toBe('vapor')
+
+    vaporApp.unmount()
+  })
+
+  it('rolls back shared ownership when Vapor mount throws', async () => {
+    const host = document.createElement('div')
+    const failedApp = useApp(() =>
+      vapor(() => {
+        throw new Error('vapor root mount failed')
+      }),
+    )
+    const recoveredApp = useDefaultApp(() => <main data-owner="recovered">recovered</main>)
+    document.body.appendChild(host)
+
+    expect(() => failedApp.mount(host)).toThrowError('vapor root mount failed')
+    await flushRender()
+    expect(host.textContent).toBe('')
+
+    recoveredApp.mount(host)
+    await flushRender()
+
+    expect(host.querySelector('[data-owner="recovered"]')?.textContent).toBe('recovered')
+
+    recoveredApp.unmount()
+  })
+
+  it('makes a reentrant unmount a no-op and releases ownership once', async () => {
+    const host = document.createElement('div')
+    const lifecycle: string[] = []
+    let app: ReturnType<typeof useApp>
+    const Root = () => {
+      lifecycle.push('vapor:render')
+      onMounted(() => lifecycle.push('vapor:mounted'))
+      onUnmounted(() => {
+        lifecycle.push('vapor:unmounted')
+        app.unmount()
+      })
+      return vapor(() => {
+        const node = document.createElement('main')
+        node.textContent = 'vapor'
+        return node as any
+      })
+    }
+    app = useApp(Root)
+    const nextApp = useDefaultApp(() => <main data-owner="next">next</main>)
+    document.body.appendChild(host)
+
+    app.mount(host)
+    await flushRender()
+    app.unmount()
+    await flushRender()
+
+    expect(lifecycle).toEqual(['vapor:render', 'vapor:mounted', 'vapor:unmounted'])
+    expect(host.textContent).toBe('')
+
+    nextApp.mount(host)
+    await flushRender()
+    expect(host.querySelector('[data-owner="next"]')?.textContent).toBe('next')
+
+    nextApp.unmount()
+  })
+
   it('uses an isolated Vapor runtime for plugins, registration, mount, and unmount', async () => {
     const host = document.createElement('div')
     const install = vi.fn()

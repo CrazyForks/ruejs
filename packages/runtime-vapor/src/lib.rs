@@ -1,5 +1,7 @@
 #![cfg_attr(wasm_bindgen_unstable_test_coverage, feature(coverage_attribute))]
 #![allow(ambiguous_glob_reexports)]
+#[cfg(all(feature = "runtime", feature = "vapor"))]
+compile_error!("the runtime and vapor features produce mutually exclusive wasm artifacts");
 /*
 入口模块：导出日志与响应式能力
 

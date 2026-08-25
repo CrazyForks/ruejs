@@ -87,6 +87,35 @@ function isNodeTest(rawArgs) {
   )
 }
 
+function validateVaporArtifactArgs(rawArgs) {
+  const outDirIndex = rawArgs.findIndex(arg => arg === '--out-dir')
+  const outDir = outDirIndex >= 0 ? rawArgs[outDirIndex + 1] : undefined
+  const hasVaporOutDir = outDir === 'pkg-vapor' || rawArgs.includes('--out-dir=pkg-vapor')
+  if (!hasVaporOutDir) {
+    return
+  }
+
+  const normalized = normalizeWasmPackArgs(rawArgs)
+  const featureIndex = normalized.findIndex(arg => arg === '--features')
+  const features =
+    featureIndex >= 0
+      ? (normalized[featureIndex + 1] ?? '').split(',')
+      : (normalized.find(arg => arg.startsWith('--features=')) ?? '')
+          .slice('--features='.length)
+          .split(',')
+
+  if (!normalized.includes('--no-default-features') || !features.includes('vapor')) {
+    console.error(
+      '[runtime-vapor] pkg-vapor must be built with --no-default-features --features vapor.',
+    )
+    process.exit(1)
+  }
+  if (features.includes('runtime')) {
+    console.error('[runtime-vapor] pkg-vapor cannot include the complete runtime feature.')
+    process.exit(1)
+  }
+}
+
 function versionScore(value) {
   const match = value.match(/wasm-bindgen-cargo-install-(\d+)\.(\d+)\.(\d+)/)
   if (!match) {
@@ -247,6 +276,7 @@ if (isNodeTest(args)) {
   }
 }
 
+validateVaporArtifactArgs(args)
 ensureWasmPack()
 
 const lockedWasmBindgenBin = ensureLockedWasmBindgen()

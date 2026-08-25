@@ -599,10 +599,11 @@ fn inlines_external_reactive_prefixes_for_direct_list_items() {
     let out = compact(&emit_stmts(stmts));
     assert!(out.contains("getKey:(item,idx)=>external.value+item.id"));
     assert!(out.contains("directRoot:true"), "{out}");
+    assert!(out.contains("compiledRowPatch:true"), "{out}");
     assert_eq!(
         out.matches("watchEffect(").count(),
-        2,
-        "safe external accessor reads should share the merged row binding effect: {out}"
+        1,
+        "safe external accessor reads should run through the list-level patch effect: {out}"
     );
     assert!(!out.contains("renderAnchor("), "{out}");
     assert!(!out.contains(",\"key\","));
@@ -2389,11 +2390,13 @@ fn coalesces_safe_native_row_bindings() {
 
     assert!(out.contains("singleRoot:true"), "{out}");
     assert!(out.contains("directRoot:true"), "{out}");
+    assert!(out.contains("compiledRowPatch:true"), "{out}");
     assert_eq!(
         out.matches("watchEffect(").count(),
-        2,
-        "safe row should emit the list effect plus one merged row binding effect: {out}"
+        1,
+        "safe row should emit only the list effect: {out}"
     );
+    assert!(out.contains("return{patch:"), "safe row must return a patch record: {out}");
     assert!(
         out.contains("_$setClassName(")
             && out.contains("selected.value")
@@ -2449,11 +2452,13 @@ fn coalesces_safe_native_row_signal_get_bindings() {
     let out = compact(&emit_stmts(stmts));
 
     assert!(out.contains("directRoot:true"), "{out}");
+    assert!(out.contains("compiledRowPatch:true"), "{out}");
     assert_eq!(
         out.matches("watchEffect(").count(),
-        2,
-        "signal getter row should emit the list effect plus one merged binding effect: {out}"
+        1,
+        "signal getter row should emit only the list effect: {out}"
     );
+    assert!(out.contains("return{patch:"), "signal row must return a patch record: {out}");
     assert!(out.contains("selected.get()"), "{out}");
     assert!(!out.contains("_$createTextWrapper("), "{out}");
     assert!(!out.contains("renderAnchor("), "{out}");
@@ -2528,6 +2533,10 @@ fn keeps_unsafe_list_row_bindings_on_conservative_paths() {
         let out = compact(&emit_stmts(stmts));
 
         assert!(out.contains(expected), "{name} fallback lost expected code: {out}");
+        assert!(
+            !out.contains("compiledRowPatch:true"),
+            "{name} fallback must not opt into compiled row records: {out}"
+        );
         assert!(
             out.matches("watchEffect(").count() >= 2,
             "{name} fallback must retain its independent watcher(s): {out}"

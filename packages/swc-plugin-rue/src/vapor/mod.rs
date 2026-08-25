@@ -121,12 +121,17 @@ pub(crate) fn flatten_once_watch_effects(stmts: &mut Vec<Stmt>) {
     *stmts = next;
 }
 
-/// 将安全列表行中原本分散的绑定 effect 合并为一个行级 effect。
+/// 将安全列表行中原本分散的绑定 effect 编译为一个无 owner 的 patch。
 ///
 /// 每个原 effect 的 body 都保留在独立块作用域中，避免属性/slot emission
-/// 复用 `__slot`、`__obj` 等临时名时发生声明冲突。合并后的 watcher 放到
-/// DOM 创建语句之后，确保所有目标节点在首次同步运行前已经存在。
-pub(crate) fn coalesce_list_row_binding_effects(stmts: &mut Vec<Stmt>) {
+/// 复用 `__slot`、`__obj` 等临时名时发生声明冲突。patch 会更新 renderItem
+/// 参数绑定，使事件闭包与 DOM 绑定都能读取同 key 的最新对象；首次挂载也调用
+/// 同一个 patch，后续由列表级 effect 批量调用。
+pub(crate) fn coalesce_list_row_binding_effects(
+    stmts: &mut Vec<Stmt>,
+    item_ident: &Ident,
+    index_ident: &Ident,
+) -> Option<Ident> {
     collapse_sole_list_row_text_wrappers(stmts);
 
     let mut used_names = RowBindingIdentCollector::default();
@@ -157,18 +162,51 @@ pub(crate) fn coalesce_list_row_binding_effects(stmts: &mut Vec<Stmt>) {
 
     if effect_blocks.is_empty() {
         *stmts = retained;
-        return;
+        return None;
     }
 
     retained.extend(binding_decls);
 
-    let arrow = Expr::Arrow(ArrowExpr {
+    let (patch_ident, next_item_ident, next_index_ident) = loop {
+        let patch_ident = crate::emit::ident("_$rowPatch");
+        let next_item_ident = crate::emit::ident("_$rowNextItem");
+        let next_index_ident = crate::emit::ident("_$rowNextIndex");
+        if [&patch_ident, &next_item_ident, &next_index_ident]
+            .iter()
+            .all(|ident| !used_names.names.contains(ident.sym.as_ref()))
+        {
+            break (patch_ident, next_item_ident, next_index_ident);
+        }
+
+        let suffix = binding_index;
+        binding_index += 1;
+        let patch_ident = crate::emit::ident(&format!("_$rowPatch{suffix}"));
+        let next_item_ident = crate::emit::ident(&format!("_$rowNextItem{suffix}"));
+        let next_index_ident = crate::emit::ident(&format!("_$rowNextIndex{suffix}"));
+        if [&patch_ident, &next_item_ident, &next_index_ident]
+            .iter()
+            .all(|ident| !used_names.names.contains(ident.sym.as_ref()))
+        {
+            break (patch_ident, next_item_ident, next_index_ident);
+        }
+    };
+
+    let mut patch_stmts = vec![
+        assign_ident_stmt(item_ident.clone(), Expr::Ident(next_item_ident.clone())),
+        assign_ident_stmt(index_ident.clone(), Expr::Ident(next_index_ident.clone())),
+    ];
+    patch_stmts.extend(effect_blocks);
+
+    let patch_arrow = Expr::Arrow(ArrowExpr {
         span: DUMMY_SP,
-        params: vec![],
+        params: vec![
+            Pat::Ident(BindingIdent { id: next_item_ident, type_ann: None }),
+            Pat::Ident(BindingIdent { id: next_index_ident, type_ann: None }),
+        ],
         body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
             span: DUMMY_SP,
             ctxt: swc_core::common::SyntaxContext::empty(),
-            stmts: effect_blocks,
+            stmts: patch_stmts,
         })),
         is_async: false,
         is_generator: false,
@@ -176,9 +214,16 @@ pub(crate) fn coalesce_list_row_binding_effects(stmts: &mut Vec<Stmt>) {
         return_type: None,
         ctxt: swc_core::common::SyntaxContext::empty(),
     });
-    let watch = crate::emit::call_ident("watchEffect", vec![arrow]);
-    retained.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
+    retained.push(crate::emit::const_decl(patch_ident.clone(), patch_arrow));
+    retained.push(Stmt::Expr(ExprStmt {
+        span: DUMMY_SP,
+        expr: Box::new(crate::emit::call_ident(
+            patch_ident.sym.as_ref(),
+            vec![Expr::Ident(item_ident.clone()), Expr::Ident(index_ident.clone())],
+        )),
+    }));
     *stmts = retained;
+    Some(patch_ident)
 }
 
 /// 将安全 direct-root 行里的 ref helper 绑定到当前行 owner。
@@ -232,10 +277,12 @@ fn guard_row_binding_setter(
     let Expr::Call(call) = expr_stmt.expr.as_ref() else {
         return body;
     };
-    if !matches!(call_ident_name(call), Some("_$setClassName" | "_$settextContent"))
-        || call.args.len() != 2
-        || call.args.iter().any(|arg| arg.spread.is_some())
-    {
+    let value_arg_index = match call_ident_name(call) {
+        Some("_$setClassName" | "_$settextContent") if call.args.len() == 2 => 1,
+        Some("_$setAttribute") if call.args.len() == 3 => 2,
+        _ => return body,
+    };
+    if call.args.iter().any(|arg| arg.spread.is_some()) {
         return body;
     }
 
@@ -264,9 +311,9 @@ fn guard_row_binding_setter(
         Some(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: false }))),
     ));
 
-    let next_value = call.args[1].expr.as_ref().clone();
+    let next_value = call.args[value_arg_index].expr.as_ref().clone();
     let mut guarded_call = call.clone();
-    guarded_call.args[1].expr = Box::new(Expr::Ident(next_ident.clone()));
+    guarded_call.args[value_arg_index].expr = Box::new(Expr::Ident(next_ident.clone()));
 
     let same_value = crate::emit::call_member(
         crate::emit::ident("Object"),

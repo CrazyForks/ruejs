@@ -1,4 +1,6 @@
 // @ts-check
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -32,6 +34,13 @@ const vaporAppInput = Object.freeze({
 })
 
 /** @param {ReadonlyArray<string>} imports */
+const vaporEntryInput = imports =>
+  Object.freeze({
+    entry: '@rue-js/rue/vapor',
+    imports: Object.freeze(imports),
+  })
+
+/** @param {ReadonlyArray<string>} imports */
 const rootInput = imports =>
   Object.freeze({
     entry: '@rue-js/rue',
@@ -46,31 +55,31 @@ export const RUNTIME_SIZE_PRESETS = Object.freeze([
     input: Object.freeze([vaporAppInput]),
     builtin: false,
   }),
+  Object.freeze({ name: 'full-core', input: Object.freeze([rootInput(['ref'])]), builtin: false }),
   Object.freeze({
     name: 'keep-alive',
-    input: Object.freeze([vaporInput, rootInput(['KeepAlive'])]),
+    input: Object.freeze([vaporEntryInput(['vapor', 'KeepAlive'])]),
     builtin: true,
   }),
   Object.freeze({
     name: 'suspense',
-    input: Object.freeze([vaporInput, rootInput(['Suspense'])]),
+    input: Object.freeze([vaporEntryInput(['vapor', 'Suspense'])]),
     builtin: true,
   }),
   Object.freeze({
     name: 'transition',
-    input: Object.freeze([vaporInput, rootInput(['Transition'])]),
+    input: Object.freeze([vaporEntryInput(['vapor', 'Transition'])]),
     builtin: true,
   }),
   Object.freeze({
     name: 'transition-group',
-    input: Object.freeze([vaporInput, rootInput(['TransitionGroup'])]),
+    input: Object.freeze([vaporEntryInput(['vapor', 'TransitionGroup'])]),
     builtin: true,
   }),
   Object.freeze({
     name: 'all-builtins',
     input: Object.freeze([
-      vaporInput,
-      rootInput(['KeepAlive', 'Suspense', 'Transition', 'TransitionGroup']),
+      vaporEntryInput(['vapor', 'KeepAlive', 'Suspense', 'Transition', 'TransitionGroup']),
     ]),
     builtin: true,
   }),
@@ -164,8 +173,7 @@ export function checkRuntimeSizeBudget(report, budget) {
       continue
     }
 
-    for (const dimension of ['min', 'gzip']) {
-      const limit = presetBudget.max?.[dimension]
+    for (const [dimension, limit] of Object.entries(presetBudget.max ?? {})) {
       const actual = measurement[dimension]
       if (typeof limit !== 'number' || typeof actual !== 'number' || actual > limit) {
         failures.push({
@@ -175,6 +183,44 @@ export function checkRuntimeSizeBudget(report, budget) {
           limit: typeof limit === 'number' ? limit : 'missing',
         })
       }
+    }
+
+    const wasm = preset.sources?.wasm
+    if (presetBudget.requiredWasm && !wasm?.[presetBudget.requiredWasm]) {
+      failures.push({
+        preset: presetName,
+        dimension: 'sources.wasm.required',
+        actual: wasm?.instanceCount ?? 'missing',
+        limit: presetBudget.requiredWasm,
+      })
+    }
+    if (
+      typeof presetBudget.maxWasmInstances === 'number' &&
+      (typeof wasm?.instanceCount !== 'number' ||
+        wasm.instanceCount > presetBudget.maxWasmInstances)
+    ) {
+      failures.push({
+        preset: presetName,
+        dimension: 'sources.wasm.instanceCount',
+        actual: wasm?.instanceCount ?? 'missing',
+        limit: presetBudget.maxWasmInstances,
+      })
+    }
+    if (presetBudget.forbidFullWasm && wasm?.full) {
+      failures.push({
+        preset: presetName,
+        dimension: 'sources.wasm.full',
+        actual: wasm.both ? 'full+vapor' : 'full',
+        limit: 'forbidden',
+      })
+    }
+    if (presetBudget.forbidVaporWasm && wasm?.vapor) {
+      failures.push({
+        preset: presetName,
+        dimension: 'sources.wasm.vapor',
+        actual: wasm.both ? 'full+vapor' : 'vapor',
+        limit: 'forbidden',
+      })
     }
 
     if (presetBudget.forbidDefaultRuntime && preset.sources?.defaultRuntime) {
@@ -226,7 +272,24 @@ export { measureCodeSizes }
  *   min: number,
  *   gzip: number,
  *   brotli: number,
- *   sources: {defaultRuntime: boolean, vaporRuntime: boolean, both: boolean, modules: string[], builtins?: string[], ssrRenderer: boolean, ssrModules: string[]}
+ *   sources: {
+ *     defaultRuntime: boolean,
+ *     vaporRuntime: boolean,
+ *     both: boolean,
+ *     modules: string[],
+ *     allModules?: string[],
+ *     moduleRenderSizes?: Record<string, number>,
+ *     builtins?: string[],
+ *     ssrRenderer: boolean,
+ *     ssrModules: string[],
+ *     wasm?: {
+ *       instanceCount: number,
+ *       full: boolean,
+ *       vapor: boolean,
+ *       both: boolean,
+ *       artifacts: Array<{kind: string, module: string, sha256: string}>
+ *     }
+ *   }
  * }>} measurements
  */
 export function createAuditReport(measurements) {
@@ -263,7 +326,7 @@ export function createAuditReport(measurements) {
   )
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     build: {
       mode: 'production',
       target: 'es2020',
@@ -304,27 +367,53 @@ function normalizeModuleId(id) {
 /**
  * @param {string[]} moduleIds
  * @param {string} code
+ * @param {Record<string, {renderedLength: number}>} renderedModules
  */
-function detectRuntimeSources(moduleIds, code) {
+function detectRuntimeSources(moduleIds, code, renderedModules) {
   const normalized = [...new Set(moduleIds.map(normalizeModuleId))].sort()
   const defaultPattern =
     /(?:^|\/)packages\/(?:rue\/dist\/rue\.runtime|runtime\/(?:dist\/runtime\.esm-bundler|src\/rue))\.(?:js|ts)$/
   const vaporPattern =
-    /(?:^|\/)packages\/(?:rue\/dist\/rue\.vapor|runtime\/(?:dist\/runtime\.vapor\.esm-bundler|src\/vapor-runtime))\.(?:js|ts)$/
+    /(?:^|\/)packages\/(?:rue\/dist\/rue\.vapor|runtime\/(?:dist\/runtime\.vapor(?:-core)?\.esm-bundler|src\/vapor(?:-runtime|-core)))\.(?:js|ts)$/
   const ssrRendererPattern =
     /(?:^|\/)packages\/(?:rue\/(?:dist\/rue\.server-renderer\.esm-bundler\.js|src\/server-renderer\.ts)|runtime\/(?:dist\/runtime\.server\.esm-bundler\.js|src\/server\.ts)|server-renderer\/(?:dist\/server-renderer\.esm-bundler\.js|src\/index\.ts))$/
   const modules = normalized.filter(id => defaultPattern.test(id) || vaporPattern.test(id))
   const defaultRuntime = modules.some(id => defaultPattern.test(id))
   const vaporRuntime = modules.some(id => vaporPattern.test(id))
   const ssrModules = normalized.filter(id => ssrRendererPattern.test(id))
+  const wasmModules = normalized.filter(id =>
+    /(?:^|\/)packages\/runtime-vapor\/pkg(?:-vapor)?\/rue_runtime_vapor_bg\.wasm$/.test(id),
+  )
+  const wasmArtifacts = wasmModules.map(module => ({
+    kind: module.includes('/pkg-vapor/') ? 'vapor' : 'full',
+    module,
+    sha256: createHash('sha256')
+      .update(readFileSync(path.resolve(projectRoot, module)))
+      .digest('hex'),
+  }))
+  const fullWasm = wasmArtifacts.some(artifact => artifact.kind === 'full')
+  const vaporWasm = wasmArtifacts.some(artifact => artifact.kind === 'vapor')
 
   return {
     defaultRuntime,
     vaporRuntime,
     both: defaultRuntime && vaporRuntime,
     modules,
+    allModules: normalized,
+    moduleRenderSizes: Object.fromEntries(
+      Object.entries(renderedModules)
+        .map(([id, info]) => [normalizeModuleId(id), info.renderedLength])
+        .sort((left, right) => String(left[0]).localeCompare(String(right[0]))),
+    ),
     ssrRenderer: ssrModules.length > 0,
     ssrModules,
+    wasm: {
+      instanceCount: wasmArtifacts.length,
+      full: fullWasm,
+      vapor: vaporWasm,
+      both: fullWasm && vaporWasm,
+      artifacts: wasmArtifacts,
+    },
     builtins: Object.entries(builtinSignatures)
       .filter(([, signatures]) => signatures.some(signature => code.includes(signature)))
       .map(([name]) => name),
@@ -379,7 +468,7 @@ async function buildPreset(preset) {
       input: preset.input,
       buildMode: /** @type {'production'} */ ('production'),
       ...sizes,
-      sources: detectRuntimeSources(bundled.moduleIds, bundled.code),
+      sources: detectRuntimeSources(bundled.moduleIds, bundled.code, bundled.modules),
     }
   } finally {
     await rm(entryFile, { force: true })
@@ -457,11 +546,15 @@ async function main(options) {
         : result.sources.vaporRuntime
           ? 'vapor'
           : 'unknown'
+    const wasmArtifacts = result.sources.wasm?.artifacts ?? []
+    const wasmLabel = wasmArtifacts
+      .map(artifact => `${artifact.kind}:${artifact.sha256.slice(0, 12)}`)
+      .join(',')
     console.log(
       `${pico.green(pico.bold(result.name))} - ` +
         `raw:${formatBytes(result.raw)} / min:${formatBytes(result.min)} / ` +
         `gzip:${formatBytes(result.gzip)} / brotli:${formatBytes(result.brotli)} / ` +
-        `sources:${sourceLabel}`,
+        `sources:${sourceLabel} / wasm:${result.sources.wasm?.instanceCount ?? 0}[${wasmLabel}]`,
     )
   }
 }

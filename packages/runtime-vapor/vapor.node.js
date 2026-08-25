@@ -11,4 +11,5 @@ installSharedBridge(sharedRuntime)
 
 export const createRue = wrapCreateRue(vaporRuntime.createRue)
 
+export * from './reactive.node.js'
 export default buildDefaultExport(sharedRuntime, createRue)

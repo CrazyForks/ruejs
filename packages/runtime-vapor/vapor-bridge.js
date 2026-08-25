@@ -1,6 +1,10 @@
 const RUE_SHARED_RENDER_SCOPE_KEY = '__rue_shared_render_scope_id'
 const RUE_SHARED_VAPOR_SCOPE_KEY = '__rue_shared_vapor_scope_id'
 const RUE_CONTEXT_OWNER_PARENT_KEY = '__rue_context_owner_parent__'
+const RUE_RUNTIME_IDENTITY_KEY = '__rue_runtime_vapor_identity__'
+
+const getRuntimeIdentity = sharedRuntime =>
+  sharedRuntime?.SignalHandle ?? sharedRuntime?.WasmRue ?? sharedRuntime?.createSignal
 
 const asBridgeOwner = value => {
   if ((typeof value !== 'object' && typeof value !== 'function') || value == null) {
@@ -24,6 +28,13 @@ const disposeScopeKey = (sharedRuntime, owner, key) => {
 export const installSharedBridge = sharedRuntime => {
   const existing = globalThis.__rue_runtime_vapor_shared_bridge
   if (existing) {
+    const existingIdentity = existing[RUE_RUNTIME_IDENTITY_KEY]
+    const nextIdentity = getRuntimeIdentity(sharedRuntime)
+    if (existingIdentity && nextIdentity && existingIdentity !== nextIdentity) {
+      throw new Error(
+        '[rue] full and vapor Wasm instances cannot be evaluated together; use one runtime entry per bundle.',
+      )
+    }
     return existing
   }
 
@@ -177,6 +188,10 @@ export const installSharedBridge = sharedRuntime => {
       return typeof dispatch === 'function' && dispatch(error, instance, info) === true
     },
   }
+
+  Object.defineProperty(bridge, RUE_RUNTIME_IDENTITY_KEY, {
+    value: getRuntimeIdentity(sharedRuntime),
+  })
 
   globalThis.__rue_runtime_vapor_shared_bridge = bridge
   return bridge

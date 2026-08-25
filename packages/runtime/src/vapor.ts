@@ -5,8 +5,9 @@ Vapor 入口公共出口概述
 - 响应式 API 直接透传 runtime-vapor/reactive，createResource 继续使用 runtime 包装以支持 Suspense。
 */
 
+export { vapor } from './vapor-core'
+
 export {
-  vapor,
   onBeforeCreate,
   onCreated,
   onBeforeMount,
@@ -133,6 +134,6 @@ export {
   useRef,
   unref,
   setReactiveScheduling,
-} from '@rue-js/runtime-vapor/reactive'
+} from '@rue-js/runtime-vapor/vapor'
 
 export { createResource } from './reactivity'

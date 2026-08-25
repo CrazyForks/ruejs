@@ -27,40 +27,31 @@ describe('runtime size audit', () => {
         input: [{ entry: '@rue-js/rue/vapor', imports: ['vapor', 'useApp'] }],
       },
       {
+        name: 'full-core',
+        input: [{ entry: '@rue-js/rue', imports: ['ref'] }],
+      },
+      {
         name: 'keep-alive',
-        input: [
-          { entry: '@rue-js/rue/vapor', imports: ['vapor'] },
-          { entry: '@rue-js/rue', imports: ['KeepAlive'] },
-        ],
+        input: [{ entry: '@rue-js/rue/vapor', imports: ['vapor', 'KeepAlive'] }],
       },
       {
         name: 'suspense',
-        input: [
-          { entry: '@rue-js/rue/vapor', imports: ['vapor'] },
-          { entry: '@rue-js/rue', imports: ['Suspense'] },
-        ],
+        input: [{ entry: '@rue-js/rue/vapor', imports: ['vapor', 'Suspense'] }],
       },
       {
         name: 'transition',
-        input: [
-          { entry: '@rue-js/rue/vapor', imports: ['vapor'] },
-          { entry: '@rue-js/rue', imports: ['Transition'] },
-        ],
+        input: [{ entry: '@rue-js/rue/vapor', imports: ['vapor', 'Transition'] }],
       },
       {
         name: 'transition-group',
-        input: [
-          { entry: '@rue-js/rue/vapor', imports: ['vapor'] },
-          { entry: '@rue-js/rue', imports: ['TransitionGroup'] },
-        ],
+        input: [{ entry: '@rue-js/rue/vapor', imports: ['vapor', 'TransitionGroup'] }],
       },
       {
         name: 'all-builtins',
         input: [
-          { entry: '@rue-js/rue/vapor', imports: ['vapor'] },
           {
-            entry: '@rue-js/rue',
-            imports: ['KeepAlive', 'Suspense', 'Transition', 'TransitionGroup'],
+            entry: '@rue-js/rue/vapor',
+            imports: ['vapor', 'KeepAlive', 'Suspense', 'Transition', 'TransitionGroup'],
           },
         ],
       },
@@ -81,6 +72,13 @@ describe('runtime size audit', () => {
         modules: [],
         ssrRenderer: false,
         ssrModules: [],
+        wasm: {
+          instanceCount: 1,
+          full: preset.name === 'full-core',
+          vapor: preset.name !== 'full-core',
+          both: false,
+          artifacts: [],
+        },
       },
     }))
 
@@ -88,7 +86,7 @@ describe('runtime size audit', () => {
 
     expect(Object.keys(report)).toEqual(['schemaVersion', 'build', 'presets'])
     expect(report).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       build: {
         mode: 'production',
         target: 'es2020',
@@ -116,16 +114,16 @@ describe('runtime size audit', () => {
     expect(report.presets['vapor-core'].deltaFromVaporCore).toBeNull()
     expect(report.presets['vapor-app'].deltaFromVaporCore).toBeNull()
     expect(report.presets['keep-alive'].deltaFromVaporCore).toEqual({
-      raw: 200,
-      min: 160,
-      gzip: 100,
-      brotli: 80,
+      raw: 300,
+      min: 240,
+      gzip: 150,
+      brotli: 120,
     })
     expect(report.presets['all-builtins'].deltaFromVaporCore).toEqual({
-      raw: 600,
-      min: 480,
-      gzip: 300,
-      brotli: 240,
+      raw: 700,
+      min: 560,
+      gzip: 350,
+      brotli: 280,
     })
   })
 
@@ -200,6 +198,20 @@ describe('runtime size audit', () => {
             builtins: [],
             ssrRenderer: false,
             ssrModules: [],
+            wasm: {
+              instanceCount: 2,
+              full: true,
+              vapor: true,
+              both: true,
+              artifacts: [
+                { kind: 'full', module: 'packages/runtime-vapor/pkg/a.wasm', sha256: 'full' },
+                {
+                  kind: 'vapor',
+                  module: 'packages/runtime-vapor/pkg-vapor/a.wasm',
+                  sha256: 'vapor',
+                },
+              ],
+            },
           },
         },
       },
@@ -209,6 +221,9 @@ describe('runtime size audit', () => {
         'vapor-core': {
           measurement: 'absolute',
           max: { min: 1000, gzip: 500 },
+          requiredWasm: 'vapor',
+          maxWasmInstances: 1,
+          forbidFullWasm: true,
         },
       },
     }
@@ -227,6 +242,18 @@ describe('runtime size audit', () => {
             dimension: 'gzip',
             actual: 501,
             limit: 500,
+          }),
+          expect.objectContaining({
+            preset: 'vapor-core',
+            dimension: 'sources.wasm.instanceCount',
+            actual: 2,
+            limit: 1,
+          }),
+          expect.objectContaining({
+            preset: 'vapor-core',
+            dimension: 'sources.wasm.full',
+            actual: 'full+vapor',
+            limit: 'forbidden',
           }),
         ],
       }),
@@ -284,16 +311,14 @@ describe('runtime size audit', () => {
     )
   })
 
-  it('builds the production Wasm before the public audit without enforcing it during release', () => {
+  it('builds both Wasm artifacts for release reporting without enforcing the size budget', () => {
     const packageJson = JSON.parse(readFileSync(path.resolve('package.json'), 'utf8'))
     const releaseSource = readFileSync(path.resolve('scripts/release.js'), 'utf8')
 
     expect(packageJson.scripts['size-runtime']).toBe(
-      'pnpm --filter @rue-js/runtime-vapor run build && node scripts/runtime-size-audit.js',
+      'pnpm --filter @rue-js/runtime-vapor run build && pnpm --filter @rue-js/runtime-vapor run build-vapor && node scripts/runtime-size-audit.js',
     )
     expect(releaseSource).toContain("await run('pnpm', ['run', 'size-runtime'])")
-    expect(releaseSource).not.toContain(
-      "await run('pnpm', ['run', 'size-runtime', '--', '--check'])",
-    )
+    expect(releaseSource).not.toContain("['run', 'size-runtime', '--', '--check']")
   })
 })

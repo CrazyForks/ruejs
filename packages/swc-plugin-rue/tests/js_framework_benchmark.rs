@@ -7,7 +7,7 @@ use swc_plugin_rue::apply;
 
 mod utils;
 
-const MAX_RENDER_ITEM_EFFECTS: usize = 1;
+const MAX_RENDER_ITEM_EFFECTS: usize = 0;
 
 fn transform_benchmark_row() -> String {
     let source = r##"
@@ -56,7 +56,11 @@ const App: FC = () => {
     <table className="table table-hover table-striped test-data">
       <tbody>
         {rows.value.map((row) => (
-          <tr key={row.id} className={row.id === selected.value ? 'danger' : ''}>
+          <tr
+            key={row.id}
+            data-row-id={row.id}
+            className={row.id === selected.value ? 'danger' : ''}
+          >
             <td className="col-md-1">{row.id}</td>
             <td className="col-md-4">
               <a onClick={() => select(row.id)}>{row.label}</a>
@@ -94,7 +98,11 @@ const App: FC = () => {
     <table className="table table-hover table-striped test-data">
       <tbody>
         {rows.get().map((row) => (
-          <tr key={row.id} className={row.id === selected.get() ? 'danger' : ''}>
+          <tr
+            key={row.id}
+            data-row-id={row.id}
+            className={row.id === selected.get() ? 'danger' : ''}
+          >
             <td className="col-md-1">{row.id}</td>
             <td className="col-md-4"><a>{row.label}</a></td>
             <td className="col-md-6"></td>
@@ -143,6 +151,14 @@ fn benchmark_row_codegen_stays_within_effect_budget() {
         "benchmark row must mount through the direct-root list path without per-text wrapper elements: {output}"
     );
     assert!(
+        output.contains("compiledRowPatch: true"),
+        "benchmark row must opt into the runtime compiled-row protocol: {output}"
+    );
+    assert!(
+        output.contains("return { patch:"),
+        "benchmark renderItem must return a compiled patch record: {output}"
+    );
+    assert!(
         output.contains("_$settextContent("),
         "benchmark row-local text must use direct text writes instead of renderAnchor wrappers: {output}"
     );
@@ -158,6 +174,10 @@ fn benchmark_row_codegen_stays_within_effect_budget() {
         render_item_effects <= MAX_RENDER_ITEM_EFFECTS,
         "benchmark renderItem emitted {render_item_effects} watchEffect calls; expected at most {MAX_RENDER_ITEM_EFFECTS} (total including the list entry effect: {total_effects})"
     );
+    assert!(
+        output.contains("Object.is("),
+        "compiled class/text/attribute bindings must guard equal DOM writes: {output}"
+    );
 }
 
 #[test]
@@ -171,6 +191,14 @@ fn signal_benchmark_row_uses_the_same_direct_root_budget() {
     assert!(
         output.contains("directRoot: true"),
         "signal.get() bindings must retain the direct-root list path: {output}"
+    );
+    assert!(
+        output.contains("compiledRowPatch: true"),
+        "signal.get() rows must opt into the compiled-row protocol: {output}"
+    );
+    assert!(
+        output.contains("return { patch:"),
+        "signal.get() renderItem must return a compiled patch record: {output}"
     );
     assert!(
         output.contains("selected.get()"),

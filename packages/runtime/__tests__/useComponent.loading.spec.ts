@@ -99,8 +99,10 @@ vi.mock('../src/reactivity/index.ts', () => {
   }
 })
 
-vi.mock('@rue-js/runtime-vapor/reactive', () => {
+vi.mock('@rue-js/runtime-vapor/reactive', async importOriginal => {
+  const actual = await importOriginal<typeof import('@rue-js/runtime-vapor/reactive')>()
   return {
+    ...actual,
     __rueDisposeHookScopeForInstance: vi.fn(),
     __rueCreateDetachedEffectScope: vi.fn(() => 1),
     __ruePushEffectScope: vi.fn(),
@@ -124,6 +126,7 @@ afterEach(() => {
   onBeforeUnmountCallbacks.length = 0
   activeEffect = null
   vi.useRealTimers()
+  Reflect.deleteProperty(globalThis, '__rue_runtime_vapor_shared_bridge')
   vi.resetModules()
 })
 

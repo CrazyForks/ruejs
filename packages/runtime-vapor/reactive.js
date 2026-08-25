@@ -255,13 +255,71 @@ const isObjectLike = value =>
 
 const signalWrapperRegistry = new Map()
 const hasWeakRef = typeof WeakRef === 'function'
+const signalWrapperFinalizer =
+  hasWeakRef && typeof FinalizationRegistry === 'function'
+    ? new FinalizationRegistry(({ id, token }) => {
+        const entry = signalWrapperRegistry.get(id)
+        if (entry?.token === token) signalWrapperRegistry.delete(id)
+      })
+    : undefined
+let signalWrapperRegistrationsSinceSweep = 0
+let signalWrapperSweepIterator
 
-const resolveSignalWrapperRef = ref => ref?.deref?.() ?? ref
+const resolveSignalWrapperRef = entry =>
+  entry ? (hasWeakRef ? entry.ref.deref() : entry.ref) : undefined
+
+const sweepDeadSignalWrappers = budget => {
+  signalWrapperSweepIterator ??= signalWrapperRegistry.entries()
+  let visited = 0
+  while (visited < budget) {
+    const next = signalWrapperSweepIterator.next()
+    if (next.done) {
+      signalWrapperSweepIterator = undefined
+      break
+    }
+    visited += 1
+    const [id, entry] = next.value
+    if (!resolveSignalWrapperRef(entry) && signalWrapperRegistry.get(id) === entry) {
+      signalWrapperFinalizer?.unregister(entry.token)
+      signalWrapperRegistry.delete(id)
+    }
+  }
+}
+
+const scheduleSignalWrapperSweep = () => {
+  if (!hasWeakRef) return
+  signalWrapperRegistrationsSinceSweep += 1
+  const trigger = Math.max(256, Math.ceil(signalWrapperRegistry.size / 4))
+  if (signalWrapperRegistrationsSinceSweep < trigger) return
+  signalWrapperRegistrationsSinceSweep = 0
+  sweepDeadSignalWrappers(Math.max(256, Math.ceil(signalWrapperRegistry.size / 2)))
+}
+
+/** 仅供 GC/内存回归脚本读取 wrapper registry 的存活情况。 */
+export const __rueGetSignalWrapperRegistryDebugState = () => {
+  let liveWrappers = 0
+  for (const entry of signalWrapperRegistry.values()) {
+    if (resolveSignalWrapperRef(entry)) liveWrappers += 1
+  }
+  return {
+    registryKeys: signalWrapperRegistry.size,
+    liveWrappers,
+    hasFinalizationRegistry: !!signalWrapperFinalizer,
+  }
+}
 
 const rememberSignalWrapper = signal => {
   const id = signal[RUE_SIGNAL_ID_KEY]
   if (Number.isInteger(id) && resolveSignalWrapperRef(signalWrapperRegistry.get(id)) !== signal) {
-    signalWrapperRegistry.set(id, hasWeakRef ? new WeakRef(signal) : signal)
+    const previousEntry = signalWrapperRegistry.get(id)
+    if (previousEntry) signalWrapperFinalizer?.unregister(previousEntry.token)
+    const token = {}
+    signalWrapperRegistry.set(id, {
+      ref: hasWeakRef ? new WeakRef(signal) : signal,
+      token,
+    })
+    signalWrapperFinalizer?.register(signal, { id, token }, token)
+    scheduleSignalWrapperSweep()
   }
   return signal
 }
@@ -276,8 +334,10 @@ export const signal = (...args) => rememberSignalWrapper(reactiveRuntime.signal(
 const resolveCanonicalSignalTarget = target => {
   try {
     const signalId = target[RUE_SIGNAL_ID_KEY]
-    const canonicalTarget = resolveSignalWrapperRef(signalWrapperRegistry.get(signalId))
-    if (!canonicalTarget) {
+    const entry = signalWrapperRegistry.get(signalId)
+    const canonicalTarget = resolveSignalWrapperRef(entry)
+    if (!canonicalTarget && signalWrapperRegistry.get(signalId) === entry) {
+      signalWrapperFinalizer?.unregister(entry?.token)
       signalWrapperRegistry.delete(signalId)
     }
     return canonicalTarget

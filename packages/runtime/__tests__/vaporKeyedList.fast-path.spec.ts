@@ -307,7 +307,7 @@ const exerciseCommonDiffOperations = (vaporKeyedList: ListHelper) => {
   const fourth = { id: 4, label: 'Delta', className: 'new' }
   render([updatedFirst, updatedSecond, updatedThird, fourth])
 
-  expect(insertBefore).toHaveBeenCalledTimes(2)
+  expect(insertBefore).toHaveBeenCalledTimes(1)
   expect(appendChild).not.toHaveBeenCalled()
   expect(removeChild).not.toHaveBeenCalled()
   expect(Array.from(parent.querySelectorAll('[data-id]')).slice(0, 3)).toEqual([
@@ -321,7 +321,7 @@ const exerciseCommonDiffOperations = (vaporKeyedList: ListHelper) => {
 
   expect(insertBefore).not.toHaveBeenCalled()
   expect(appendChild).not.toHaveBeenCalled()
-  expect(removeChild).toHaveBeenCalledTimes(2)
+  expect(removeChild).toHaveBeenCalledTimes(1)
   expect(Array.from(parent.querySelectorAll('[data-id]'))).toEqual([firstRow, secondRow, thirdRow])
 
   resetOperationCounts()

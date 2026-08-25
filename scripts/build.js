@@ -126,6 +126,11 @@ async function ensureRuntimeVaporBuilt(targets) {
       command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build'],
     },
     {
+      filePath: path.resolve('packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js'),
+      label: 'minimal vapor package',
+      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build-vapor'],
+    },
+    {
       filePath: path.resolve('packages/runtime-vapor/pkg-node/rue_runtime_vapor.js'),
       label: 'node package',
       command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node'],

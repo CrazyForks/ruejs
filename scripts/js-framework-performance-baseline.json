@@ -1,0 +1,432 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-25T04:04:48.458Z",
+  "source": {
+    "workspaceVersion": "0.8.13",
+    "packageVersion": "0.8.13",
+    "packagePath": "/Users/Shared/work/dir/data/codes/ruejs/packages/rue/package.json",
+    "lockfileSha256": "ecef7cee4a9d84871e5dec70433b8e74317d03058ccfc99085f8630f7edf4f72",
+    "javascriptSha256": ["0a8e3b82aeae6ed599489c159f5d34b714e07682ec895aa89c7fffd47e3530d9"],
+    "wasmSha256": ["e973c83f8b3b5e82a0b02ae9b41237f36011362a18238d0cfae6cbc2d8609f34"],
+    "workspaceArtifacts": [
+      {
+        "path": "packages/shared/dist/shared.esm-bundler.js",
+        "sha256": "b8b740ed9d13c15ee14ad54983718383ccd32a22f43b47c8768181e76399a57c"
+      },
+      {
+        "path": "packages/runtime/dist/runtime.esm-bundler.js",
+        "sha256": "5f80bdc81f4679acb29fe333c311bc779a6e51df56f87e88bb096fb07020840a"
+      },
+      {
+        "path": "packages/runtime/dist/runtime.vapor.esm-bundler.js",
+        "sha256": "aae9c1bc5d7cbd2aa8a94116f29d42b140cc99a421a89a0db1e3da9da29ccbbe"
+      },
+      {
+        "path": "packages/rue/dist/rue.esm-bundler.js",
+        "sha256": "2fb58a90201bd5b06b5caef28960bc03e0e06ef274ea7a8150f9699e2375325b"
+      },
+      {
+        "path": "packages/rue/dist/rue.vapor.esm-bundler.js",
+        "sha256": "dbe6bf127b1b2655cea4acd98e178e6dd339678f11b3883680b53b8667dd7a96"
+      },
+      {
+        "path": "packages/runtime-vapor/pkg/rue_runtime_vapor_bg.wasm",
+        "sha256": "e973c83f8b3b5e82a0b02ae9b41237f36011362a18238d0cfae6cbc2d8609f34"
+      }
+    ],
+    "chromeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "chromeVersion": "148.0.7778.97",
+    "gitCommit": "c43fc13e1c333ff0262d9de537346d8003bb7436",
+    "validation": {
+      "version": "0.8.13",
+      "packagePath": "/Users/Shared/work/dir/data/codes/ruejs/packages/rue/package.json",
+      "artifactCount": 6,
+      "hashesStable": true
+    }
+  },
+  "configuration": {
+    "warmupRounds": 1,
+    "measuredRounds": 5,
+    "entries": ["rue", "rue-signal"],
+    "operations": [
+      "create1k",
+      "replace1k",
+      "update10th",
+      "select1k",
+      "swap1k",
+      "remove1k",
+      "create10k",
+      "append1k",
+      "clear1k"
+    ]
+  },
+  "results": {
+    "rue": {
+      "cpu": {
+        "create1k": {
+          "medianMs": 55.699999928474426,
+          "validSamples": 5,
+          "samplesMs": [
+            55, 55.60000002384186, 55.699999928474426, 57.10000002384186, 57.299999952316284
+          ]
+        },
+        "replace1k": {
+          "medianMs": 251.29999995231628,
+          "validSamples": 5,
+          "samplesMs": [
+            248.89999997615814, 251.29999995231628, 251.29999995231628, 256.2000000476837,
+            259.7000000476837
+          ]
+        },
+        "update10th": {
+          "medianMs": 7.899999976158142,
+          "validSamples": 5,
+          "samplesMs": [
+            7.700000047683716, 7.799999952316284, 7.899999976158142, 7.899999976158142, 8.5
+          ]
+        },
+        "select1k": {
+          "medianMs": 2.1999999284744263,
+          "validSamples": 5,
+          "samplesMs": [
+            1.9000000953674316, 2.100000023841858, 2.1999999284744263, 2.600000023841858,
+            2.600000023841858
+          ]
+        },
+        "swap1k": {
+          "medianMs": 4.600000023841858,
+          "validSamples": 5,
+          "samplesMs": [
+            4.199999928474426, 4.300000071525574, 4.600000023841858, 4.700000047683716, 5
+          ]
+        },
+        "remove1k": {
+          "medianMs": 1.899999976158142,
+          "validSamples": 5,
+          "samplesMs": [
+            1.7000000476837158, 1.899999976158142, 1.899999976158142, 1.899999976158142,
+            1.899999976158142
+          ]
+        },
+        "create10k": {
+          "medianMs": 425.2000000476837,
+          "validSamples": 5,
+          "samplesMs": [
+            420.39999997615814, 423.60000002384186, 425.2000000476837, 435.60000002384186, 447.5
+          ]
+        },
+        "append1k": {
+          "medianMs": 239.79999995231628,
+          "validSamples": 5,
+          "samplesMs": [
+            232.5, 236.39999997615814, 239.79999995231628, 244.30000007152557, 247.30000007152557
+          ]
+        },
+        "clear1k": {
+          "medianMs": 7.700000047683716,
+          "validSamples": 5,
+          "samplesMs": [
+            7.600000023841858, 7.600000023841858, 7.700000047683716, 8.100000023841858,
+            8.600000023841858
+          ]
+        }
+      },
+      "dom": {
+        "create1k": {
+          "medianMutations": 1001,
+          "validSamples": 5,
+          "samples": [1001, 1001, 1001, 1001, 1001]
+        },
+        "replace1k": {
+          "medianMutations": 5000,
+          "validSamples": 5,
+          "samples": [5000, 5000, 5000, 5000, 5000]
+        },
+        "update10th": {
+          "medianMutations": 302,
+          "validSamples": 5,
+          "samples": [302, 302, 302, 302, 302]
+        },
+        "select1k": {
+          "medianMutations": 1000,
+          "validSamples": 5,
+          "samples": [1000, 1000, 1000, 1000, 1000]
+        },
+        "swap1k": {
+          "medianMutations": 2,
+          "validSamples": 5,
+          "samples": [2, 2, 2, 2, 2]
+        },
+        "remove1k": {
+          "medianMutations": 2,
+          "validSamples": 5,
+          "samples": [2, 2, 2, 2, 2]
+        },
+        "create10k": {
+          "medianMutations": 10001,
+          "validSamples": 5,
+          "samples": [10001, 10001, 10001, 10001, 10001]
+        },
+        "append1k": {
+          "medianMutations": 4002,
+          "validSamples": 5,
+          "samples": [4002, 4002, 4002, 4002, 4002]
+        },
+        "clear1k": {
+          "medianMutations": 2000,
+          "validSamples": 5,
+          "samples": [2000, 2000, 2000, 2000, 2000]
+        }
+      },
+      "heap": {
+        "ready": {
+          "medianBytes": 48193224,
+          "validSamples": 5,
+          "samplesBytes": [48189672, 48192708, 48193224, 48195276, 48230500]
+        },
+        "create1k": {
+          "medianBytes": 50955524,
+          "validSamples": 5,
+          "samplesBytes": [50948368, 50954440, 50955524, 50956820, 50957396]
+        },
+        "createClear": {
+          "medianBytes": 49785380,
+          "validSamples": 5,
+          "samplesBytes": [49778224, 49784156, 49785380, 49787048, 49787252]
+        }
+      },
+      "firstPaint": {
+        "medianMs": 80,
+        "validSamples": 5,
+        "samplesMs": [68, 76, 80, 80, 84]
+      },
+      "size": {
+        "javascript": [
+          {
+            "path": "temp/js-framework-performance/dist/assets/index-F5vJgGiO.js",
+            "rawBytes": 160084,
+            "brotliBytes": 31908,
+            "sha256": "0a8e3b82aeae6ed599489c159f5d34b714e07682ec895aa89c7fffd47e3530d9"
+          }
+        ],
+        "wasm": [
+          {
+            "path": "temp/js-framework-performance/dist/assets/rue_runtime_vapor_bg-BWQ8R1VE.wasm",
+            "rawBytes": 351164,
+            "brotliBytes": 122476,
+            "sha256": "e973c83f8b3b5e82a0b02ae9b41237f36011362a18238d0cfae6cbc2d8609f34"
+          }
+        ]
+      }
+    },
+    "rue-signal": {
+      "cpu": {
+        "create1k": {
+          "medianMs": 50.5,
+          "validSamples": 5,
+          "samplesMs": [48.60000002384186, 49.5, 50.5, 50.60000002384186, 50.700000047683716]
+        },
+        "replace1k": {
+          "medianMs": 241.60000002384186,
+          "validSamples": 5,
+          "samplesMs": [
+            239.79999995231628, 241.39999997615814, 241.60000002384186, 242.70000004768372,
+            253.29999995231628
+          ]
+        },
+        "update10th": {
+          "medianMs": 6,
+          "validSamples": 5,
+          "samplesMs": [5, 5.699999928474426, 6, 6.100000023841858, 6.400000095367432]
+        },
+        "select1k": {
+          "medianMs": 1.7999999523162842,
+          "validSamples": 5,
+          "samplesMs": [
+            1.7000000476837158, 1.7999999523162842, 1.7999999523162842, 1.8000000715255737,
+            2.100000023841858
+          ]
+        },
+        "swap1k": {
+          "medianMs": 4.399999976158142,
+          "validSamples": 5,
+          "samplesMs": [
+            4.199999928474426, 4.300000071525574, 4.399999976158142, 4.5, 4.600000023841858
+          ]
+        },
+        "remove1k": {
+          "medianMs": 1.899999976158142,
+          "validSamples": 5,
+          "samplesMs": [1.899999976158142, 1.899999976158142, 1.899999976158142, 2, 2]
+        },
+        "create10k": {
+          "medianMs": 387.5,
+          "validSamples": 5,
+          "samplesMs": [377.5, 383.39999997615814, 387.5, 399.39999997615814, 405.10000002384186]
+        },
+        "append1k": {
+          "medianMs": 232.10000002384186,
+          "validSamples": 5,
+          "samplesMs": [230.29999995231628, 231.5, 232.10000002384186, 232.5, 238]
+        },
+        "clear1k": {
+          "medianMs": 7.399999976158142,
+          "validSamples": 5,
+          "samplesMs": [
+            7.199999928474426, 7.200000047683716, 7.399999976158142, 7.600000023841858,
+            7.600000023841858
+          ]
+        }
+      },
+      "dom": {
+        "create1k": {
+          "medianMutations": 1,
+          "validSamples": 5,
+          "samples": [1, 1, 1, 1, 1]
+        },
+        "replace1k": {
+          "medianMutations": 4000,
+          "validSamples": 5,
+          "samples": [4000, 4000, 4000, 4000, 4000]
+        },
+        "update10th": {
+          "medianMutations": 302,
+          "validSamples": 5,
+          "samples": [302, 302, 302, 302, 302]
+        },
+        "select1k": {
+          "medianMutations": 1000,
+          "validSamples": 5,
+          "samples": [1000, 1000, 1000, 1000, 1000]
+        },
+        "swap1k": {
+          "medianMutations": 2,
+          "validSamples": 5,
+          "samples": [2, 2, 2, 2, 2]
+        },
+        "remove1k": {
+          "medianMutations": 2,
+          "validSamples": 5,
+          "samples": [2, 2, 2, 2, 2]
+        },
+        "create10k": {
+          "medianMutations": 1,
+          "validSamples": 5,
+          "samples": [1, 1, 1, 1, 1]
+        },
+        "append1k": {
+          "medianMutations": 4002,
+          "validSamples": 5,
+          "samples": [4002, 4002, 4002, 4002, 4002]
+        },
+        "clear1k": {
+          "medianMutations": 2000,
+          "validSamples": 5,
+          "samples": [2000, 2000, 2000, 2000, 2000]
+        }
+      },
+      "heap": {
+        "ready": {
+          "medianBytes": 48047928,
+          "validSamples": 5,
+          "samplesBytes": [48026428, 48038768, 48047928, 48048440, 48058812]
+        },
+        "create1k": {
+          "medianBytes": 50870024,
+          "validSamples": 5,
+          "samplesBytes": [50868652, 50870016, 50870024, 50870660, 50871148]
+        },
+        "createClear": {
+          "medianBytes": 49703228,
+          "validSamples": 5,
+          "samplesBytes": [49701112, 49702972, 49703228, 49703368, 49703856]
+        }
+      },
+      "firstPaint": {
+        "medianMs": 52,
+        "validSamples": 5,
+        "samplesMs": [48, 48, 52, 56, 60]
+      },
+      "size": {
+        "javascript": [
+          {
+            "path": "temp/js-framework-performance/dist/assets/index-F5vJgGiO.js",
+            "rawBytes": 160084,
+            "brotliBytes": 31908,
+            "sha256": "0a8e3b82aeae6ed599489c159f5d34b714e07682ec895aa89c7fffd47e3530d9"
+          }
+        ],
+        "wasm": [
+          {
+            "path": "temp/js-framework-performance/dist/assets/rue_runtime_vapor_bg-BWQ8R1VE.wasm",
+            "rawBytes": 351164,
+            "brotliBytes": 122476,
+            "sha256": "e973c83f8b3b5e82a0b02ae9b41237f36011362a18238d0cfae6cbc2d8609f34"
+          }
+        ]
+      }
+    }
+  },
+  "validSamples": {
+    "rue": {
+      "cpu": {
+        "create1k": 5,
+        "replace1k": 5,
+        "update10th": 5,
+        "select1k": 5,
+        "swap1k": 5,
+        "remove1k": 5,
+        "create10k": 5,
+        "append1k": 5,
+        "clear1k": 5
+      },
+      "dom": {
+        "create1k": 5,
+        "replace1k": 5,
+        "update10th": 5,
+        "select1k": 5,
+        "swap1k": 5,
+        "remove1k": 5,
+        "create10k": 5,
+        "append1k": 5,
+        "clear1k": 5
+      },
+      "heap": {
+        "ready": 5,
+        "create1k": 5,
+        "createClear": 5
+      },
+      "firstPaint": 5
+    },
+    "rue-signal": {
+      "cpu": {
+        "create1k": 5,
+        "replace1k": 5,
+        "update10th": 5,
+        "select1k": 5,
+        "swap1k": 5,
+        "remove1k": 5,
+        "create10k": 5,
+        "append1k": 5,
+        "clear1k": 5
+      },
+      "dom": {
+        "create1k": 5,
+        "replace1k": 5,
+        "update10th": 5,
+        "select1k": 5,
+        "swap1k": 5,
+        "remove1k": 5,
+        "create10k": 5,
+        "append1k": 5,
+        "clear1k": 5
+      },
+      "heap": {
+        "ready": 5,
+        "create1k": 5,
+        "createClear": 5
+      },
+      "firstPaint": 5
+    }
+  }
+}

@@ -16,7 +16,7 @@ import {
   onScopeDispose,
   untrack as reactiveUntrack,
   withHookSlot,
-} from '@rue-js/runtime-vapor/reactive'
+} from '@rue-js/runtime-vapor/vapor'
 import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,
   type CustomElementEmitBridge,
@@ -47,6 +47,7 @@ import {
   setStyle,
   setValue,
   settextContent,
+  withDOMHostOperations,
 } from './dom'
 import type { DomElementLike, DomNodeLike } from './dom'
 import { mountNormalizedRenderableToTarget, type DirectRenderableOwner } from './renderable-bridge'
@@ -90,8 +91,6 @@ import {
   markRuntimeDOMBridge,
   resolveActiveRuntime,
 } from './runtime-context'
-
-getDOMAdapter()
 
 const renderOwnerByRangeStart = new WeakMap<object, unknown>()
 const lastMountHandleRangeValueByStart = new WeakMap<object, unknown>()
@@ -231,6 +230,7 @@ type VaporGlobalRecord = typeof globalThis & {
 const vaporGlobal = globalThis as VaporGlobalRecord
 /** 创建绑定当前 DOM bridge 的独立 Vapor runtime。 */
 export const createVaporRuntime = () => {
+  getDOMAdapter()
   const bridge = vaporGlobal.__rue_dom
   const runtime = createRueWasm(bridge)
   if (getMarkedRuntimeDOMBridge(runtime) !== bridge) {
@@ -1128,7 +1128,7 @@ const createRepeatableVaporHandle = (
     return runWithKeepAliveHookTarget(hookTarget, () => {
       const didPush = bridge?.beginVaporScope(owner) ?? false
       try {
-        return setup(parentContext)
+        return withDOMHostOperations(parentContext, () => setup(parentContext))
       } finally {
         bridge?.endVaporScope(didPush)
       }

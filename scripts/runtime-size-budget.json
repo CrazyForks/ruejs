@@ -1,12 +1,16 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "presets": {
     "vapor-core": {
       "measurement": "absolute",
       "max": {
         "min": 516320,
-        "gzip": 206557
+        "gzip": 206557,
+        "brotli": 85242
       },
+      "requiredWasm": "vapor",
+      "maxWasmInstances": 1,
+      "forbidFullWasm": true,
       "forbidDefaultRuntime": true,
       "forbidBuiltins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"],
       "forbidSSRRenderer": true
@@ -17,47 +21,77 @@
         "min": 517480,
         "gzip": 206953
       },
+      "requiredWasm": "vapor",
+      "maxWasmInstances": 1,
+      "forbidFullWasm": true,
       "forbidDefaultRuntime": true,
+      "forbidSSRRenderer": true
+    },
+    "full-core": {
+      "measurement": "absolute",
+      "max": {
+        "min": 516320,
+        "gzip": 206557,
+        "brotli": 170485
+      },
+      "requiredWasm": "full",
+      "maxWasmInstances": 1,
+      "forbidVaporWasm": true,
       "forbidSSRRenderer": true
     },
     "keep-alive": {
       "measurement": "deltaFromVaporCore",
       "max": {
-        "min": 44824,
-        "gzip": 12977
+        "min": 53620,
+        "gzip": 14505
       },
+      "requiredWasm": "vapor",
+      "maxWasmInstances": 1,
+      "forbidFullWasm": true,
       "forbidSSRRenderer": true
     },
     "suspense": {
       "measurement": "deltaFromVaporCore",
       "max": {
-        "min": 44150,
-        "gzip": 12670
+        "min": 53154,
+        "gzip": 14213
       },
+      "requiredWasm": "vapor",
+      "maxWasmInstances": 1,
+      "forbidFullWasm": true,
       "forbidSSRRenderer": true
     },
     "transition": {
       "measurement": "deltaFromVaporCore",
       "max": {
-        "min": 46020,
-        "gzip": 13410
+        "min": 54958,
+        "gzip": 15047
       },
+      "requiredWasm": "vapor",
+      "maxWasmInstances": 1,
+      "forbidFullWasm": true,
       "forbidSSRRenderer": true
     },
     "transition-group": {
       "measurement": "deltaFromVaporCore",
       "max": {
-        "min": 45270,
-        "gzip": 13395
+        "min": 51219,
+        "gzip": 13783
       },
+      "requiredWasm": "vapor",
+      "maxWasmInstances": 1,
+      "forbidFullWasm": true,
       "forbidSSRRenderer": true
     },
     "all-builtins": {
       "measurement": "deltaFromVaporCore",
       "max": {
-        "min": 58600,
-        "gzip": 17000
+        "min": 67382,
+        "gzip": 18659
       },
+      "requiredWasm": "vapor",
+      "maxWasmInstances": 1,
+      "forbidFullWasm": true,
       "forbidSSRRenderer": true
     }
   }

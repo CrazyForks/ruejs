@@ -1586,6 +1586,7 @@ pub(crate) fn try_build_list_from_map(
             let mut use_opaque_renderable = false;
             let mut use_async_external_renderable = false;
             let mut use_ref_cleanup_registrar = false;
+            let mut compiled_row_patch_ident = None;
             let track_index = params.get(1).is_some_and(|param| match param {
                 Pat::Ident(binding) => {
                     callback_body_uses_name(body.as_ref(), binding.id.sym.as_ref())
@@ -1747,7 +1748,12 @@ pub(crate) fn try_build_list_from_map(
                             );
                         }
                         if coalesce_row_bindings {
-                            crate::vapor::coalesce_list_row_binding_effects(&mut child_body);
+                            compiled_row_patch_ident =
+                                crate::vapor::coalesce_list_row_binding_effects(
+                                    &mut child_body,
+                                    &item_ident,
+                                    &idx_ident,
+                                );
                         }
                         vt.pop_plain_local_scope();
                         vt.pop_renderable_local_scope();
@@ -1768,6 +1774,20 @@ pub(crate) fn try_build_list_from_map(
                                     ],
                                 )),
                             }));
+                            if let Some(patch_ident) = compiled_row_patch_ident.as_ref() {
+                                render_item_stmts.push(Stmt::Return(ReturnStmt {
+                                    span: DUMMY_SP,
+                                    arg: Some(Box::new(Expr::Object(ObjectLit {
+                                        span: DUMMY_SP,
+                                        props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(
+                                            KeyValueProp {
+                                                key: PropName::Ident(ident_name("patch")),
+                                                value: Box::new(Expr::Ident(patch_ident.clone())),
+                                            },
+                                        )))],
+                                    }))),
+                                }));
+                            }
                         } else {
                             child_body.push(return_root(child_root.clone()));
                             let arrow_setup = Expr::Arrow(ArrowExpr {
@@ -2200,6 +2220,12 @@ pub(crate) fn try_build_list_from_map(
             if use_direct_root_mount {
                 keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
                     key: PropName::Ident(ident_name("directRoot")),
+                    value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
+                }))));
+            }
+            if compiled_row_patch_ident.is_some() {
+                keyed_list_props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("compiledRowPatch")),
                     value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
                 }))));
             }
