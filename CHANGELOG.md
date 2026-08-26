@@ -1,3 +1,10 @@
+## [0.8.15](https://github.com/hunzhiwange/ruejs/compare/v0.8.14...v0.8.15) (2026-08-26)
+
+
+### Features
+
+* 框架性能优化，将运行时 rust 迁移到 JS ([c20ab06](https://github.com/hunzhiwange/ruejs/commit/c20ab06cc3e21fe4af0971d40c0b6b9cb7b76ea8))
+
 ## [0.8.14](https://github.com/hunzhiwange/ruejs/compare/v0.8.13...v0.8.14) (2026-08-25)
 
 

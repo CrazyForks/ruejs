@@ -1,6 +1,6 @@
 {
   "name": "@rue-js/runtime-vapor",
-  "version": "0.8.14",
+  "version": "0.8.15",
   "description": "Rue JavaScript runtime backed by a Rust/WebAssembly reactive graph kernel",
   "keywords": [
     "rue",
