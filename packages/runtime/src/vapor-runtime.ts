@@ -8,7 +8,7 @@ Vapor 专用运行时出口概述
 - portable component / vapor setup 都会附加 repeatable factory，确保同一 mountHandle 可在多次挂载时重新物化。
 */
 
-import { createRue as createRueWasm } from '@rue-js/runtime-vapor/vapor'
+import { createRue as createRueRuntime } from '@rue-js/runtime-vapor/vapor'
 import {
   getCurrentInstance,
   getCurrentScope,
@@ -90,6 +90,7 @@ import {
   getMarkedRuntimeDOMBridge,
   markRuntimeDOMBridge,
   resolveActiveRuntime,
+  runWithRuntime,
 } from './runtime-context'
 
 const renderOwnerByRangeStart = new WeakMap<object, unknown>()
@@ -232,7 +233,7 @@ const vaporGlobal = globalThis as VaporGlobalRecord
 export const createVaporRuntime = () => {
   getDOMAdapter()
   const bridge = vaporGlobal.__rue_dom
-  const runtime = createRueWasm(bridge)
+  const runtime = createRueRuntime(bridge)
   if (getMarkedRuntimeDOMBridge(runtime) !== bridge) {
     markRuntimeDOMBridge(runtime, bridge)
   }
@@ -1677,6 +1678,8 @@ const renderAnchorUntracked = (
       hasVaporSetup ||
       (hasComponentChildren && !shouldPreserveComponentChildrenInstance))
   const lastMountHandleValue = lastMountHandleAnchorValueByAnchor.get(anchor as object)
+  const previousKey = readPortableComponentProps(lastMountHandleValue)?.key
+  const nextKey = readPortableComponentProps(normalizedValue)?.key
   const shouldSkipComponentHandleRender =
     prevOwner === mountHandleOwner &&
     hasPortableComponent &&
@@ -1731,8 +1734,6 @@ const renderAnchorUntracked = (
       return result
     }
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
-    const previousKey = readPortableComponentProps(lastMountHandleValue)?.key
-    const nextKey = readPortableComponentProps(normalizedValue)?.key
     const result =
       componentName === 'KeepAlive'
         ? withKeepAlivePropsRegistrationTarget(mountHandleValue, () =>
@@ -1750,7 +1751,8 @@ const renderAnchorUntracked = (
     return result
   }
 
-  if (anchorRuntime.ownedMountCollecting?.() === true) {
+  // key 变化是替换边界：旧子树必须先失效，不能等到微任务后再让嵌套 effect 停止。
+  if (anchorRuntime.ownedMountCollecting?.() === true || !Object.is(previousKey, nextKey)) {
     anchorRuntime.renderAnchor(null, targetParent, anchor)
     clearOwnedAnchorNodes(targetParent, anchor)
     syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
@@ -1807,7 +1809,7 @@ const renderAnchorUntracked = (
       scheduleTrackedTextControlRestoreWithin(mountedParent)
     }
 
-    commitPendingRender()
+    runWithRuntime(pending.runtime, commitPendingRender)
   })
 }
 

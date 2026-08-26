@@ -702,7 +702,18 @@ const vaporKeyedListImpl = <T>(args: {
   }
   const runWithOwnedMount = (entry: VaporListItemOwner, index: number, run: () => void) => {
     if (!ownedProtocol) {
-      run()
+      if (!hydrationFallback) {
+        run()
+        return
+      }
+      const key = Symbol.for('rue.owned-mount-hydration-fallback-depth')
+      const record = globalThis as typeof globalThis & Record<PropertyKey, any>
+      record[key] = Number(record[key] ?? 0) + 1
+      try {
+        run()
+      } finally {
+        record[key] = Math.max(0, Number(record[key] ?? 1) - 1)
+      }
       return
     }
 
@@ -767,7 +778,7 @@ const vaporKeyedListImpl = <T>(args: {
     while (isObjectLike(current) && !seen.has(current)) {
       seen.add(current)
 
-      let next = current
+      let next: unknown = current
 
       try {
         const raw = untrack(() => toRaw(current as any))

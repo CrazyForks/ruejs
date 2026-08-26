@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "ES2021.WeakRef"],
+    "allowJs": false,
+    "checkJs": false,
+    "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "useUnknownInCatchVariables": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": [
+    "./*.ts",
+    "./js-reactive/**/*.ts",
+    "./js-runtime/**/*.ts",
+    "./runtime-vapor-env.d.ts"
+  ],
+  "exclude": ["./pkg-*", "./scripts", "./src", "./tests"]
+}

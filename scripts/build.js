@@ -121,14 +121,9 @@ async function ensureRuntimeVaporBuilt(targets) {
 
   const requiredArtifacts = [
     {
-      filePath: path.resolve('packages/runtime-vapor/pkg/rue_runtime_vapor.js'),
-      label: 'bundler package',
-      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build'],
-    },
-    {
       filePath: path.resolve('packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js'),
-      label: 'minimal vapor package',
-      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build-vapor'],
+      label: 'canonical browser package',
+      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build'],
     },
     {
       filePath: path.resolve('packages/runtime-vapor/pkg-node/rue_runtime_vapor.js'),

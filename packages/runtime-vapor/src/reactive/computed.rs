@@ -16,10 +16,31 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 
-use crate::reactive::core::{ComputedState, Signal};
+use crate::reactive::core::{ComputedState, Signal, schedule_effect_run};
 use crate::reactive::effect::{bind_effect_to_computed, create_effect};
-use crate::reactive::graph::create_computed_node;
+use crate::reactive::graph::{create_computed_node, invalidate_computed_node};
 use crate::reactive::signal::{SignalHandle, next_signal_debug_id};
+
+/// Mark one computed handle dirty and notify its downstream subscribers.
+///
+/// This is intentionally narrower than exposing graph nodes or scheduler controls to JS: the
+/// JavaScript computed Hook only needs to refresh a cached getter after its render-time closure
+/// changes. Plain signals are rejected without mutating their value or subscriptions.
+pub(crate) fn invalidate_computed(handle: &SignalHandle) -> bool {
+    let graph_node = {
+        let mut inner = handle.inner.borrow_mut();
+        let graph_node = inner.graph_node;
+        let Some(computed) = inner.computed.as_mut() else {
+            return false;
+        };
+        computed.dirty = true;
+        graph_node
+    };
+    for effect_id in invalidate_computed_node(graph_node) {
+        schedule_effect_run(effect_id);
+    }
+    true
+}
 
 /// 创建计算属性
 /// - 参数：可为函数 `() => any`，或对象 `{ get: () => any }`

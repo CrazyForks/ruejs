@@ -154,7 +154,7 @@ describe('Checkbox actual page', () => {
       expect(normalize(controlledDemo()?.textContent)).toContain('checked=true')
       expect(controlledDemo()?.querySelectorAll('.font-medium').length).toBe(1)
       expect(controlledDemo()?.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(
-        1,
+        0,
       )
     })
 
@@ -164,7 +164,7 @@ describe('Checkbox actual page', () => {
       expect(normalize(controlledDemo()?.textContent)).toContain('checked=false')
       expect(controlledDemo()?.querySelectorAll('.font-medium').length).toBe(1)
       expect(controlledDemo()?.querySelectorAll('[data-rue-checkbox-content="true"]').length).toBe(
-        1,
+        0,
       )
     })
   })

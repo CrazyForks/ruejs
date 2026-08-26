@@ -1,7 +1,4 @@
 #![cfg_attr(wasm_bindgen_unstable_test_coverage, feature(coverage_attribute))]
-#![allow(ambiguous_glob_reexports)]
-#[cfg(all(feature = "runtime", feature = "vapor"))]
-compile_error!("the runtime and vapor features produce mutually exclusive wasm artifacts");
 /*
 入口模块：导出日志与响应式能力
 
@@ -15,22 +12,14 @@ Rust 提示：
 */
 // `reactive` 提供 Signal/Effect/Computed/Watch/Resource 等特性
 // `log` 提供运行时日志（支持 localStorage 配置）
-pub mod hook;
 #[cfg(feature = "log")]
 pub mod log;
 #[cfg(not(feature = "log"))]
 #[path = "log_disabled.rs"]
 pub mod log;
 pub mod reactive;
-#[cfg(feature = "runtime")]
-pub mod runtime;
-#[cfg(not(feature = "runtime"))]
-#[path = "runtime_stub.rs"]
-pub mod runtime;
 // 便捷导出：直接将 reactive 内的公共 API 暴露到顶层
-pub use hook::*;
 pub use reactive::*;
-pub use runtime::*;
 
 // Keep minicov linked for wasm coverage builds that use `-Zno-profiler-runtime`.
 #[allow(unexpected_cfgs)]

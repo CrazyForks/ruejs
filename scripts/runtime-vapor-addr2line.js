@@ -8,7 +8,7 @@ const rootDir = path.resolve(__dirname, '..')
 
 const DEFAULT_WASM_PATH = path.resolve(
   rootDir,
-  'packages/runtime-vapor/pkg/rue_runtime_vapor_bg.wasm',
+  'packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm',
 )
 
 const usage = () => {
@@ -18,7 +18,7 @@ const usage = () => {
       '  pnpm runtime-vapor-addr2line -- 0x2547b 0x39e4b',
       '  pnpm runtime-vapor-addr2line -- --stack "RuntimeError: unreachable\\n at ...:0x2547b"',
       '  pnpm runtime-vapor-addr2line -- --stack-file ./stack.txt',
-      '  pnpm runtime-vapor-addr2line -- --wasm packages/runtime-vapor/pkg/rue_runtime_vapor_bg.wasm 0x2547b',
+      '  pnpm runtime-vapor-addr2line -- --wasm packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm 0x2547b',
     ].join('\n'),
   )
 }

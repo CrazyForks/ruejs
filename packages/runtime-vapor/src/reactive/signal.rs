@@ -437,6 +437,13 @@ impl SignalHandle {
         crate::reactive::core::run_effect(effect_id);
     }
 
+    /// Narrow bridge used by the JavaScript computed Hook when a reused slot receives a new
+    /// getter closure. It only invalidates computed handles and leaves plain signals untouched.
+    #[wasm_bindgen(js_name = "__rueInvalidateComputed", skip_typescript)]
+    pub fn invalidate_computed_js(&self) -> bool {
+        crate::reactive::computed::invalidate_computed(self)
+    }
+
     /// 便于调试：`JSON.stringify(signal)` 时返回内部值
     #[wasm_bindgen(js_name = toJSON)]
     pub fn to_json(&self) -> JsValue {

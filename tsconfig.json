@@ -34,7 +34,7 @@
       "@rue-js/vite-plugin-rue": ["./packages/vite-plugin-rue/index.mjs"],
       "@rue-js/shared": ["./packages/shared/src"],
       "@rue-js/design": ["./packages/rue-design/src"],
-      "@rue-js/runtime-vapor": ["./packages/runtime-vapor/pkg/rue_runtime_vapor.d.ts"],
+      "@rue-js/runtime-vapor": ["./packages/runtime-vapor/index.d.ts"],
       "@rue-js/runtime-vapor/reactive": ["./packages/runtime-vapor/reactive.d.ts"],
       "@rue-js/runtime-vapor/vapor": ["./packages/runtime-vapor/vapor.d.ts"]
     },
@@ -47,6 +47,7 @@
     "app/**/*",
     "tailwind.config.ts",
     "packages/global.d.ts",
+    "packages/runtime-vapor/runtime-vapor-env.d.ts",
     "packages/rue/env.d.ts",
     "packages/*/src",
     "packages/*/__tests__",

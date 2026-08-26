@@ -1,4 +1,5 @@
 use js_sys::Function;
+use js_sys::Promise;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;
@@ -54,5 +55,37 @@ fn nested_effect_restores_outer_current_effect() {
     assert_eq!(*outer_hits.borrow(), 2);
     assert_eq!(*inner_hits.borrow(), 2);
 
+    outer_cb.forget();
+}
+
+#[wasm_bindgen_test(async)]
+/// 内层 effect 写入外层依赖时不得同步重入尚未返回的外层 JS closure。
+async fn nested_effect_defers_active_ancestor_reentry() {
+    set_reactive_scheduling("sync");
+    let outer_signal = create_signal(JsValue::from_f64(0.0), None);
+    let outer_hits = Rc::new(RefCell::new(0));
+    let outer_hits_clone = outer_hits.clone();
+    let signal_for_outer = outer_signal.clone();
+
+    let outer_cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *outer_hits_clone.borrow_mut() += 1;
+        let value = signal_for_outer.get_js().as_f64().unwrap_or_default();
+        if value == 0.0 {
+            let signal_for_inner = signal_for_outer.clone();
+            let inner_cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+                signal_for_inner.set_js(JsValue::from_f64(1.0));
+            }) as Box<dyn FnMut()>);
+            let inner_fn: Function = inner_cb.as_ref().clone().into();
+            let _inner_effect = create_effect(inner_fn, None);
+            inner_cb.forget();
+        }
+    }) as Box<dyn FnMut()>);
+
+    let outer_fn: Function = outer_cb.as_ref().clone().into();
+    let _outer_effect = create_effect(outer_fn, None);
+    assert_eq!(*outer_hits.borrow(), 1);
+
+    wasm_bindgen_futures::JsFuture::from(Promise::resolve(&JsValue::UNDEFINED)).await.unwrap();
+    assert_eq!(*outer_hits.borrow(), 2);
     outer_cb.forget();
 }

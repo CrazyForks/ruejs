@@ -299,10 +299,6 @@ const defaultLocale: Required<TransferLocale> = {
   removeSelected: '移出已选',
 }
 
-/** TRANSFER_REENTRANT_RENDER_ERROR 内部常量。 */
-const TRANSFER_REENTRANT_RENDER_ERROR =
-  'Reentrant render detected on the same target. This usually means render logic triggered a nested render or state update while that target was already rendering.'
-
 /** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
   if (!base) return className ?? ''
@@ -1190,7 +1186,6 @@ const Transfer: FC<TransferProps<any>> = ({
   const leftPanelHostRef = useRef<HTMLElement>()
   const operationsHostRef = useRef<HTMLElement>()
   const rightPanelHostRef = useRef<HTMLElement>()
-  const initialManagedRenderScheduledRef = useRef(false)
   const pendingSearchFocusRef = useRef<TransferDirection | null>(null)
 
   const normalizedItems = normalizeDataSource(dataSource, rowKey, render)
@@ -1260,33 +1255,6 @@ const Transfer: FC<TransferProps<any>> = ({
     status,
     classNames,
     styles,
-  }
-
-  const reportManagedRenderMutationError = (mutation: string) => {
-    const activeRegion = activeManagedRenderRef.current ?? 'unknown'
-    const error = new Error(
-      `${TRANSFER_REENTRANT_RENDER_ERROR} Transfer blocked ${mutation} while the ${activeRegion} managed region was rendering.`,
-    )
-    const globalRuntime = globalThis as {
-      __rue_active?: { handleError?: (error: Error, instance?: any) => void }
-      __rue_vapor_preferred?: { handleError?: (error: Error, instance?: any) => void }
-      __rue?: { handleError?: (error: Error, instance?: any) => void }
-    }
-    const runtimes = Array.from(
-      new Set([
-        globalRuntime.__rue_active,
-        globalRuntime.__rue_vapor_preferred,
-        globalRuntime.__rue,
-      ]),
-    )
-
-    runtimes.forEach(runtime => {
-      try {
-        runtime?.handleError?.(error, null)
-      } catch {
-        // Ignore secondary error reporting failures and preserve the original error.
-      }
-    })
   }
 
   const renderManagedTarget = (
@@ -1530,19 +1498,12 @@ const Transfer: FC<TransferProps<any>> = ({
     },
   )
 
-  if (!initialManagedRenderScheduledRef.current) {
-    initialManagedRenderScheduledRef.current = true
-    queueMicrotask(() => {
-      renderManagedRegions()
-    })
-  }
-
   const commitSelectedKeys = (
     nextSelectedKeys: TransferKey[],
     nextTargetKeys = getTransferStateSnapshot().mergedTargetKeys,
   ) => {
     if (activeManagedRenderRef.current) {
-      reportManagedRenderMutationError('selection mutation')
+      // renderList 只负责投影输出；渲染期间触发选择写入时保持为无副作用操作。
       return
     }
 

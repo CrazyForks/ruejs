@@ -20,7 +20,7 @@ assert.equal(
   'importing reactive.node.js without a renderTracked hook must preserve SignalHandle.getPath',
 )
 
-reactiveRuntime.setCurrentInstance(undefined)
+reactiveFacade.setCurrentInstance(undefined)
 assert.equal(reactiveFacade.onRenderTracked(undefined), undefined)
 assert.equal(
   reactiveFacade.onRenderTracked(() => {}),
@@ -30,7 +30,7 @@ assert.equal(signalPrototype.get, originalGet)
 assert.equal(signalPrototype.getPath, originalGetPath)
 
 const owner = {}
-reactiveRuntime.setCurrentInstance(owner)
+reactiveFacade.setCurrentInstance(owner)
 const stopFirst = reactiveFacade.onRenderTracked(() => {})
 assert.equal(typeof stopFirst, 'function')
 assert.notEqual(signalPrototype.get, originalGet)
@@ -45,6 +45,6 @@ assert.equal(signalPrototype.getPath, patchedGetPath)
 
 stopFirst()
 stopSecond()
-reactiveRuntime.setCurrentInstance(undefined)
+reactiveFacade.setCurrentInstance(undefined)
 
 console.log('renderTracked read gating probe passed')

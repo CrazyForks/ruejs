@@ -66,7 +66,8 @@ describe('Swap actual page', () => {
       ).toBe(true)
     })
 
-    await click(findTabButton(textDemo!, 'JSX代码'))
+    const textDemoBeforeCode = findDemo(container, '# Swap text') as HTMLElement | null
+    await click(findTabButton(textDemoBeforeCode!, 'JSX代码'))
     const textDemoInCode = findDemo(container, '# Swap text') as HTMLElement | null
     expect(textDemoInCode!.querySelectorAll('.swap').length).toBe(0)
 

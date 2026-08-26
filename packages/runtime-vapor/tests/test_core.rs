@@ -1,8 +1,6 @@
-use js_sys::{Array, Function, Object, Promise, Reflect};
+use js_sys::{Function, Object, Promise, Reflect};
 use rue_runtime_vapor::{
-    EffectHandle, batch, create_computed, create_effect, create_signal, createRue,
-    get_current_instance, next_tick, set_current_instance, set_reactive_scheduling, use_setup,
-    with_hook_slot,
+    batch, create_computed, create_effect, create_signal, next_tick, set_reactive_scheduling,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -10,14 +8,6 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
 use wasm_bindgen_test::*;
-
-mod common;
-
-use common::{make_vapor_only_adapter, setup_container, tick};
-
-fn primitive_host(tag: &str) -> JsValue {
-    JsValue::from_str(tag)
-}
 
 #[wasm_bindgen_test]
 /// 同步调度：副作用在 set 后立即执行（无微任务延迟）。
@@ -38,6 +28,35 @@ fn scheduling_sync_runs_immediately() {
     sig.set_js(JsValue::from_f64(1.0));
     assert_eq!(*hits.borrow(), 2);
     cb.forget();
+}
+
+#[wasm_bindgen_test]
+/// sync 模式下兄弟订阅 effect 仍应立即运行，只有当前栈上的自身/祖先需要延迟。
+fn scheduling_sync_runs_other_subscriber_immediately() {
+    set_reactive_scheduling("sync");
+    let source = create_signal(JsValue::from_f64(0.0), None);
+    let sibling_hits = Rc::new(RefCell::new(0));
+    let sibling_hits_clone = sibling_hits.clone();
+    let source_for_sibling = source.clone();
+
+    let sibling_cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        let _ = source_for_sibling.get_js();
+        *sibling_hits_clone.borrow_mut() += 1;
+    }) as Box<dyn FnMut()>);
+    let sibling_fn: Function = sibling_cb.as_ref().clone().into();
+    let _sibling_effect = create_effect(sibling_fn, None);
+
+    let source_for_outer = source.clone();
+    let outer_cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        source_for_outer.set_js(JsValue::from_f64(1.0));
+    }) as Box<dyn FnMut()>);
+    let outer_fn: Function = outer_cb.as_ref().clone().into();
+    let _outer_effect = create_effect(outer_fn, None);
+
+    assert_eq!(*sibling_hits.borrow(), 2);
+
+    sibling_cb.forget();
+    outer_cb.forget();
 }
 
 #[wasm_bindgen_test(async)]
@@ -514,131 +533,6 @@ fn scheduler_run_after_dispose_is_ignored_and_dispose_is_idempotent() {
     Reflect::delete_property(&js_sys::global(), &JsValue::from_str("__rue_deferred_effect_run"))
         .unwrap();
     cb.forget();
-}
-
-#[wasm_bindgen_test(async)]
-async fn render_triggered_hook_receives_signal_event_and_can_dispose_effect_before_schedule() {
-    set_reactive_scheduling("sync");
-    let adapter = make_vapor_only_adapter();
-    let rue = Rc::new(createRue(adapter.clone()));
-    let container = setup_container(&adapter);
-    let sig = create_signal(JsValue::from_f64(0.0), None);
-    let events = Array::new();
-    Reflect::set(&js_sys::global(), &JsValue::from_str("__rue_render_events"), &events).unwrap();
-
-    let handle_slot = Rc::new(RefCell::new(None::<EffectHandle>));
-    let rue_for_component = rue.clone();
-    let sig_for_component = sig.clone();
-    let handle_slot_for_component = handle_slot.clone();
-    let component = wasm_bindgen::closure::Closure::wrap(Box::new(move |_props: JsValue| {
-        let slot_for_hook = handle_slot_for_component.clone();
-        let hook = wasm_bindgen::closure::Closure::wrap(Box::new(move |event: JsValue| {
-            let record = Array::new();
-            record.push(&Reflect::get(&event, &JsValue::from_str("type")).unwrap());
-            record.push(&Reflect::get(&event, &JsValue::from_str("oldValue")).unwrap());
-            record.push(&Reflect::get(&event, &JsValue::from_str("newValue")).unwrap());
-            let stored: Array =
-                Reflect::get(&js_sys::global(), &JsValue::from_str("__rue_render_events"))
-                    .unwrap()
-                    .unchecked_into();
-            stored.push(&record);
-            if let Some(handle) = slot_for_hook.borrow_mut().take() {
-                handle.dispose_js();
-            }
-        }) as Box<dyn FnMut(JsValue)>);
-        let hook_fn: Function = hook.as_ref().clone().unchecked_into();
-        rue_for_component.on_render_triggered(hook_fn.clone().into());
-        rue_for_component.on_render_triggered(Function::new_no_args("return undefined").into());
-        rue_for_component.on_render_triggered(JsValue::from_str("not-a-hook"));
-        let wrapper = get_current_instance();
-        let owner =
-            Reflect::get(&wrapper, &JsValue::from_str("__rue_context_linked_instance__")).unwrap();
-        let owner_hooks = Array::new();
-        owner_hooks.push(&hook_fn);
-        owner_hooks.push(&JsValue::from_str("not-a-function"));
-        owner_hooks.push(&Function::new_no_args("return undefined").into());
-        Reflect::set(&owner, &JsValue::from_str("__rue_render_triggered_hooks"), &owner_hooks)
-            .unwrap();
-        hook.forget();
-
-        let sig_for_effect = sig_for_component.clone();
-        let effect_cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-            let _ = sig_for_effect.get_js();
-        }) as Box<dyn FnMut()>);
-        let handle = create_effect(effect_cb.as_ref().clone().into(), None);
-        *handle_slot_for_component.borrow_mut() = Some(handle);
-        effect_cb.forget();
-
-        primitive_host("triggered-child")
-    })
-        as Box<dyn FnMut(JsValue) -> JsValue>);
-
-    let handle = rue.create_component_wasm(component.as_ref().clone().into(), JsValue::UNDEFINED);
-    rue.render_wasm(handle, container);
-    tick().await;
-
-    sig.set_js(JsValue::from_f64(1.0));
-    tick().await;
-
-    let stored: Array = Reflect::get(&js_sys::global(), &JsValue::from_str("__rue_render_events"))
-        .unwrap()
-        .unchecked_into();
-    assert_eq!(stored.length(), 1);
-    let first: Array = stored.get(0).unchecked_into();
-    assert_eq!(first.get(0).as_string().unwrap(), "set");
-    assert_eq!(first.get(1).as_f64(), Some(0.0));
-    assert_eq!(first.get(2).as_f64(), Some(1.0));
-
-    Reflect::delete_property(&js_sys::global(), &JsValue::from_str("__rue_render_events")).unwrap();
-    component.forget();
-}
-
-#[wasm_bindgen_test(async)]
-async fn render_debug_owner_without_triggered_hooks_still_schedules_effect() {
-    set_reactive_scheduling("sync");
-    let adapter = make_vapor_only_adapter();
-    let rue = Rc::new(createRue(adapter.clone()));
-    let container = setup_container(&adapter);
-    let sig = create_signal(JsValue::from_f64(0.0), None);
-    let hits = Rc::new(RefCell::new(0));
-
-    let sig_for_component = sig.clone();
-    let hits_for_component = hits.clone();
-    let component = wasm_bindgen::closure::Closure::wrap(Box::new(move |_props: JsValue| {
-        let sig_for_effect = sig_for_component.clone();
-        let hits_for_effect = hits_for_component.clone();
-        let effect_cb = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-            *hits_for_effect.borrow_mut() += 1;
-            let _ = sig_for_effect.get_js();
-        }) as Box<dyn FnMut()>);
-        let _handle = create_effect(effect_cb.as_ref().clone().into(), None);
-        effect_cb.forget();
-
-        primitive_host("unhooked-debug-owner")
-    })
-        as Box<dyn FnMut(JsValue) -> JsValue>);
-
-    let handle = rue.create_component_wasm(component.as_ref().clone().into(), JsValue::UNDEFINED);
-    rue.render_wasm(handle, container);
-    tick().await;
-    assert_eq!(*hits.borrow(), 1);
-
-    sig.set_js(JsValue::from_f64(1.0));
-    assert_eq!(*hits.borrow(), 2);
-    component.forget();
-}
-
-#[wasm_bindgen_test]
-fn with_hook_slot_suppresses_render_debug_tracking_and_restores_depth() {
-    let instance = Object::new();
-    set_current_instance(instance.into());
-    let factory = Function::new_no_args("return { value: 'slot' }");
-    let value = with_hook_slot(factory);
-    assert!(value.is_object());
-    let setup = Function::new_no_args("return { ready: true }");
-    let setup_value = use_setup(setup);
-    assert!(setup_value.is_object());
-    set_current_instance(JsValue::UNDEFINED);
 }
 
 #[wasm_bindgen_test(async)]

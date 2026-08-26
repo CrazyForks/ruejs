@@ -80,7 +80,6 @@ describe('Splitter actual page', () => {
       const restoredHandle = restoredDemo!.querySelector(
         '[data-rue-splitter-handle="0"]',
       ) as HTMLElement
-
       expect(restoredDemo).not.toBeNull()
       expect(restoredDemo!.textContent).not.toContain('[object Object]')
       expect(restoredHandle.className).toContain('pointer-events-auto')

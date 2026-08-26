@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const runtimeVaporRoot = path.join(rootDir, 'packages/runtime-vapor')
 const textRuntimeVaporDist = path.join(rootDir, 'packages/text/dist/runtime-vapor')
-const runtimeVaporPackageDirs = ['pkg', 'pkg-node']
+const runtimeVaporPackageDirs = ['pkg-vapor', 'pkg-node']
 
 await Promise.all(
   runtimeVaporPackageDirs.map(async dir => {

@@ -742,16 +742,21 @@ describe('built-in transition component regressions', () => {
     render(<Example />, container)
     await flush()
 
+    const runtime = (globalThis as any).__rue_active ?? (globalThis as any).__rue
+    const mountedComponentCount = runtime.componentInstanceCount()
+
     expect(document.body.querySelector('#modal-panel')).toBeNull()
 
     ;(container.querySelector('#open') as HTMLButtonElement).click()
     await waitForContent(() => {
       expect(document.body.querySelector('#modal-panel')?.textContent).toBe('hello modal')
     })
+    expect(runtime.componentInstanceCount()).toBe(mountedComponentCount)
 
     ;(document.body.querySelector('#modal-mask') as HTMLDivElement).click()
     await waitForContent(() => {
       expect(document.body.querySelector('#modal-panel')).toBeNull()
     })
+    expect(runtime.componentInstanceCount()).toBe(mountedComponentCount)
   })
 })

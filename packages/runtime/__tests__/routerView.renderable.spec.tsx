@@ -33,6 +33,8 @@ import SidebarPlaygroundGuide, {
   GuideRouteLayout,
 } from '../../../app/pages/site/SidebarPlaygroundGuide'
 import UseStateCounterDemo from '../../../app/pages/examples/home-demos/UseStateCounterDemo'
+import { createAppRouter } from '../../../app/router'
+import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
 
@@ -246,6 +248,32 @@ describe('RouterView renderable boundary', () => {
     expect(container.querySelectorAll('[data-testid="route-other"]').length).toBe(1)
   })
 
+  it('replays a stable route result when switching away and back', async () => {
+    const stableRouteResult = <section data-testid="stable-route">stable</section>
+    const StableRoute: FC = () => stableRouteResult
+    const router = createRouter({
+      history: createMemoryHistory('/stable'),
+      routes: [
+        { path: '/stable', component: StableRoute },
+        { path: '/other', component: OtherRoute },
+      ],
+    })
+    attachRouter(router)
+    const container = mountTestContainer()
+
+    render(<RouterView />, container)
+    await flush()
+    expect(container.querySelector('[data-testid="stable-route"]')?.textContent).toBe('stable')
+
+    await router.push('/other')
+    await flush()
+    expect(container.querySelector('[data-testid="route-other"]')?.textContent).toBe('other')
+
+    await router.push('/stable')
+    await flush()
+    expect(container.querySelector('[data-testid="stable-route"]')?.textContent).toBe('stable')
+  })
+
   it('fires route component onUnmounted when switching away', async () => {
     window.location.hash = '#/tracked'
 
@@ -425,6 +453,40 @@ describe('RouterView renderable boundary', () => {
 
       render(null as any, container)
     }
+  })
+
+  it('restores async leaf content while switching across real sidebar route layouts', async () => {
+    setReactiveScheduling('sync')
+    const router = createAppRouter(createMemoryHistory('/'))
+    attachRouter(router)
+
+    const container = mountTestContainer()
+    render(<RouterView />, container)
+
+    await waitForContent(() => {
+      expect(container.textContent).toContain('Framework For Native DOM')
+    })
+
+    await router.push('/examples/hello-world')
+    await waitForContent(() => {
+      expect(container.querySelector('.sidebar-playground')).toBeTruthy()
+      expect(container.textContent).toContain('你好，世界（移植自 Vue）')
+    }, 400)
+
+    await router.push('/guide/guide/quick-start')
+    await waitForContent(() => {
+      expect(container.querySelector('.sidebar-playground')).toBeTruthy()
+      expect(container.querySelector('#doc-body')?.textContent).toContain('快速开始')
+      expect(container.querySelector('#doc-body')?.textContent).toContain('创建 Rue 应用')
+      expect(container.textContent).not.toContain('你好，世界（移植自 Vue）')
+    }, 400)
+
+    await router.push('/examples/hello-world')
+    await waitForContent(() => {
+      expect(container.querySelector('.sidebar-playground')).toBeTruthy()
+      expect(container.textContent).toContain('你好，世界（移植自 Vue）')
+      expect(container.querySelector('#doc-body')).toBeNull()
+    }, 400)
   })
 
   it('keeps lazy route page interactions reactive through a preview shell', async () => {

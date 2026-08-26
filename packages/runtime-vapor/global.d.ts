@@ -1,0 +1,102 @@
+export {}
+
+declare global {
+  const __TEST__: boolean
+
+  type RuntimeVaporErrorHandler = (error: unknown, instance?: unknown) => unknown
+  type RuntimeVaporRenderTriggeredHook = (event: unknown) => unknown
+
+  interface RuntimeVaporRenderOwner {
+    __rue_context_owner_parent__?: RuntimeVaporRenderOwner
+    __rue_render_triggered_hooks?: RuntimeVaporRenderTriggeredHook[]
+    __rue_shared_render_scope_id?: number
+    __rue_shared_vapor_scope_id?: number
+  }
+
+  interface RuntimeVaporSharedRuntime {
+    SignalHandle?: unknown
+    createSignal?: unknown
+    __rueActivateEffectOwnerTracking?(): void
+    __rueActivateRenderTriggered?(): void
+    __rueBeginRenderDebugOwner?(owner: RuntimeVaporRenderOwner): void
+    __rueCreateDetachedEffectScope(): number
+    __rueDisposeEffectScope(scopeId: number): void
+    __rueDisposeHookScopeForInstance?(instance: RuntimeVaporRenderOwner): void
+    __rueEndRenderDebugOwner?(): void
+    __rueGetCurrentEffectScope?(): unknown
+    __ruePopEffectScope(): void
+    __ruePushEffectScope(scopeId: number): void
+    getCurrentInstance?(): unknown
+    propsReactive?(initial: unknown, forceGlobal: boolean): unknown
+    setCurrentInstance?(instance: unknown): void
+  }
+
+  interface RuntimeVaporSharedBridge {
+    __rue_runtime_vapor_identity__?: unknown
+    __rue_render_triggered_dispatch_installed__?: boolean
+    __rue_render_triggered_owner?: unknown
+    activateEffectOwnerTracking?(): void
+    activateRenderTriggered?(): void
+    beginComponentRender?(instance: unknown): unknown
+    beginVaporScope(owner: unknown): boolean
+    dispatchErrorCaptured?(...args: unknown[]): unknown
+    dispatchRenderTriggeredForEffect?(...args: unknown[]): unknown
+    disposeComponent(instance: unknown): void
+    disposeVaporScope(owner: unknown): void
+    endComponentRender?(instance?: unknown): unknown
+    endVaporScope(didPush: boolean): void
+    getCurrentContainer?(): unknown
+    getCurrentRenderOwner?(): unknown
+    popCurrentContainer?(): unknown
+    propsReactive?(initial: unknown): unknown
+    pushCurrentContainer?(container: unknown): unknown
+    registerSharedRuntime(runtime: RuntimeVaporSharedRuntime): void
+  }
+
+  type InstalledRuntimeVaporSharedBridge = Omit<
+    RuntimeVaporSharedBridge,
+    | '__rue_render_triggered_owner'
+    | 'activateEffectOwnerTracking'
+    | 'activateRenderTriggered'
+    | 'beginComponentRender'
+    | 'dispatchErrorCaptured'
+    | 'endComponentRender'
+    | 'getCurrentContainer'
+    | 'getCurrentRenderOwner'
+    | 'popCurrentContainer'
+    | 'pushCurrentContainer'
+  > & {
+    __rue_render_triggered_owner?: RuntimeVaporRenderOwner
+    activateEffectOwnerTracking(): void
+    activateRenderTriggered(): void
+    beginComponentRender(instance: unknown): void
+    dispatchErrorCaptured(error: unknown, instance: unknown, info: string): boolean
+    endComponentRender(): void
+    getCurrentContainer(): unknown
+    getCurrentRenderOwner(): RuntimeVaporRenderOwner | undefined
+    popCurrentContainer(): void
+    pushCurrentContainer(container: unknown): void
+  }
+
+  interface RuntimeVaporEntryPrivateFields {
+    __rue_active_entry_depth__?: number
+    __rue_js_error_bridge_installed?: boolean
+    __rue_js_error_handlers?: Set<RuntimeVaporErrorHandler>
+    __rue_pending_entry_error__?: unknown
+    __rue_runtime_vapor_entry_wrapped__?: boolean
+    __rueHandleComponentError?: (error: unknown) => never
+  }
+
+  var __rue_dispatch_error_captured:
+    | ((error: unknown, instance?: unknown, info?: string) => boolean)
+    | undefined
+  var __rue_runtime_vapor_backend_test_hook__:
+    | ((details: {
+        kernel: 'pkg-node' | 'pkg-vapor'
+        entry: 'browser:full' | 'browser:vapor' | 'node:full' | 'node:vapor'
+        hooks: 'js'
+        runtime: 'js'
+      }) => void)
+    | undefined
+  var __rue_runtime_vapor_shared_bridge: RuntimeVaporSharedBridge | undefined
+}

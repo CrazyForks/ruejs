@@ -26,7 +26,7 @@
 1. Vite 将 `src/app.tsx` 打包为 `dist/ssr-entry.js`，供 Rust / `deno_core` 做 SSR。
 2. Vite 将 `src/client.tsx` 打包为 `dist/client.js`，供浏览器或 WebView 做交互。
 3. `@rue-js/vite-plugin-rue` 执行 Rue JSX 编译转换。
-4. `vite-plugin-wasm` 内联真实的 `packages/runtime-vapor/pkg/rue_runtime_vapor_bg.wasm`。
+4. `vite-plugin-wasm` 内联真实的 `packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm`。
 5. SWC 对最终 JS chunk 做压缩和变量名压缩。
 6. 构建阶段生成 `client.js.gz` 和 `ssr-entry.js.gz`。
 7. Cargo 将 SSR bundle、client bundle、gzip client asset 嵌入 Rust 二进制。

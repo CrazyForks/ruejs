@@ -8,7 +8,22 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
 const runtimeVaporRoot = path.resolve(__dirname, '../packages/runtime-vapor')
+const { RUNTIME_TYPESCRIPT_AUXILIARY_DECLARATIONS, RUNTIME_TYPESCRIPT_TARGETS } = await import(
+  path.resolve(runtimeVaporRoot, 'scripts/emit-typescript-runtime.mjs')
+)
+const runtimeTypeScriptTargets = /** @type {string[]} */ (RUNTIME_TYPESCRIPT_TARGETS)
+const runtimeTypeScriptAuxiliaryDeclarations = /** @type {string[]} */ (
+  RUNTIME_TYPESCRIPT_AUXILIARY_DECLARATIONS
+)
 const runtimeVaporBuildInputs = ['src', 'Cargo.toml', 'Cargo.lock']
+const runtimeVaporTypeScriptInputs = [
+  'tsconfig.json',
+  'runtime-vapor-env.d.ts',
+  'global.d.ts',
+  'scripts/emit-typescript-runtime.mjs',
+  ...runtimeTypeScriptTargets.map(target => target.replace(/\.js$/, '.ts')),
+  ...runtimeTypeScriptAuxiliaryDeclarations.map(output => output.replace(/\.d\.ts$/, '.ts')),
+]
 const shouldBuildNodeRuntime = process.argv.includes('--node-runtime')
 
 const generateDocsSearchIndex = () => {
@@ -48,6 +63,13 @@ const runtimeVaporInputMtimeMs = runtimeVaporBuildInputs.reduce((latestMtimeMs, 
   const entryPath = path.resolve(runtimeVaporRoot, entry)
   return Math.max(latestMtimeMs, getLatestMtimeMs(entryPath))
 }, 0)
+const runtimeVaporTypeScriptInputMtimeMs = runtimeVaporTypeScriptInputs.reduce(
+  (latestMtimeMs, entry) => {
+    const entryPath = path.resolve(runtimeVaporRoot, entry)
+    return Math.max(latestMtimeMs, getLatestMtimeMs(entryPath))
+  },
+  0,
+)
 
 /** @param {string} wasmFilePath */
 const wasmHasDebugInfo = wasmFilePath => {
@@ -67,13 +89,33 @@ const wasmHasDebugInfo = wasmFilePath => {
 
 const requiredBuilds = [
   {
-    file: 'pkg/rue_runtime_vapor_bg.wasm',
+    file: 'index.js',
+    script: 'build-ts',
+    requiresDebugInfo: false,
+    inputMtimeMs: runtimeVaporTypeScriptInputMtimeMs,
+    outputs: [
+      'index.js',
+      'index.d.ts',
+      'index.node.js',
+      'js-reactive/types.d.ts',
+      'reactive.js',
+      'reactive.d.ts',
+      'reactive.node.js',
+      'reactive.vapor.js',
+      'vapor.js',
+      'vapor.d.ts',
+      'vapor.node.js',
+    ],
+  },
+  {
+    file: 'pkg-vapor/rue_runtime_vapor_bg.wasm',
     script: 'build-profiling',
     requiresDebugInfo: true,
+    inputMtimeMs: runtimeVaporInputMtimeMs,
     outputs: [
-      'pkg/rue_runtime_vapor.js',
-      'pkg/rue_runtime_vapor_bg.js',
-      'pkg/rue_runtime_vapor_bg.wasm',
+      'pkg-vapor/rue_runtime_vapor.js',
+      'pkg-vapor/rue_runtime_vapor_bg.js',
+      'pkg-vapor/rue_runtime_vapor_bg.wasm',
     ],
   },
   ...(shouldBuildNodeRuntime
@@ -82,6 +124,7 @@ const requiredBuilds = [
           file: 'pkg-node/rue_runtime_vapor_bg.wasm',
           script: 'build-node',
           requiresDebugInfo: false,
+          inputMtimeMs: runtimeVaporInputMtimeMs,
           outputs: [
             'pkg-node/rue_runtime_vapor.js',
             'pkg-node/rue_runtime_vapor_bg.wasm',
@@ -92,25 +135,27 @@ const requiredBuilds = [
     : []),
 ]
 
-const missingOrStaleBuilds = requiredBuilds.filter(({ outputs, requiresDebugInfo }) => {
-  const resolvedOutputs = outputs.map(file => path.resolve(runtimeVaporRoot, file))
-  if (resolvedOutputs.some(file => !fs.existsSync(file))) {
-    return true
-  }
+const missingOrStaleBuilds = requiredBuilds.filter(
+  ({ outputs, requiresDebugInfo, inputMtimeMs }) => {
+    const resolvedOutputs = outputs.map(file => path.resolve(runtimeVaporRoot, file))
+    if (resolvedOutputs.some(file => !fs.existsSync(file))) {
+      return true
+    }
 
-  if (
-    requiresDebugInfo &&
-    !wasmHasDebugInfo(path.resolve(runtimeVaporRoot, outputs[outputs.length - 1] ?? ''))
-  ) {
-    return true
-  }
+    if (
+      requiresDebugInfo &&
+      !wasmHasDebugInfo(path.resolve(runtimeVaporRoot, outputs[outputs.length - 1] ?? ''))
+    ) {
+      return true
+    }
 
-  const oldestOutputMtimeMs = resolvedOutputs.reduce((oldestMtimeMs, file) => {
-    return Math.min(oldestMtimeMs, fs.statSync(file).mtimeMs)
-  }, Number.POSITIVE_INFINITY)
+    const oldestOutputMtimeMs = resolvedOutputs.reduce((oldestMtimeMs, file) => {
+      return Math.min(oldestMtimeMs, fs.statSync(file).mtimeMs)
+    }, Number.POSITIVE_INFINITY)
 
-  return oldestOutputMtimeMs < runtimeVaporInputMtimeMs
-})
+    return oldestOutputMtimeMs < inputMtimeMs
+  },
+)
 
 if (!missingOrStaleBuilds.length) {
   process.exit(0)

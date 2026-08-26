@@ -81,7 +81,12 @@ import {
   type RueIslandDescriptor,
   type RueServerIslandDescriptor,
 } from './island-protocol'
-import { markRuntimeDOMBridge, resolveActiveRuntime, setPreferredRuntime } from './runtime-context'
+import {
+  markRuntimeDOMBridge,
+  resolveActiveRuntime,
+  runWithRuntime,
+  setPreferredRuntime,
+} from './runtime-context'
 
 export { getMarkedRuntimeDOMBridge, markRuntimeDOMBridge, runWithRuntime } from './runtime-context'
 
@@ -684,6 +689,7 @@ const DEFAULT_UNSUPPORTED_OBJECT_INPUT_ERROR =
   'Unsupported object inputs are no longer accepted on the default @rue-js/runtime entry.'
 const DEFAULT_REENTRANT_RENDER_ERROR =
   'Reentrant render detected on the same target. This usually means render logic triggered a nested render or state update while that target was already rendering.'
+const LIFECYCLE_CLEANUP_DEPTH_KEY = Symbol.for('rue.lifecycle-cleanup-depth')
 
 const isObjectLike = (value: unknown): value is object =>
   (typeof value === 'object' || typeof value === 'function') && value != null
@@ -850,6 +856,9 @@ const withRenderEntryGuard = <T>(
 
   const activeEntry = activeRenderEntryByTarget.get(target)
   if (activeEntry) {
+    if (Number((globalThis as any)[LIFECYCLE_CLEANUP_DEPTH_KEY] ?? 0) > 0) {
+      return runner()
+    }
     const error = createReentrantRenderError(
       entryName,
       targetKind,
@@ -1166,7 +1175,7 @@ const resolveComponentPropsWithChildren = (
   }
 
   const nextProps = props ? { ...props } : ({} as ComponentProps)
-  nextProps.children = effectiveChildren.length === 1 ? effectiveChildren[0] : effectiveChildren
+  nextProps.children = effectiveChildren
   // children 合并会新建一层 props 壳；Provider marker 必须继续跟过去，
   // 否则后续 replay 看不出这是 context provider props，又会重新递归进 value。
   copyContextProviderPropsMarker(props, nextProps)
@@ -2060,6 +2069,8 @@ const renderAnchorUntracked = (
         hasVaporSetup ||
         (hasComponentChildren && !shouldPreserveComponentChildrenInstance))
     const lastMountHandleValue = lastMountHandleAnchorValueByAnchor.get(anchor as object)
+    const previousKey = readPortableComponentProps(lastMountHandleValue)?.key
+    const nextKey = readPortableComponentProps(normalizedValue)?.key
     const shouldSkipComponentHandleRender =
       prevOwner === mountHandleOwner &&
       hasPortableComponent &&
@@ -2114,8 +2125,6 @@ const renderAnchorUntracked = (
         return result
       }
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
-      const previousKey = readPortableComponentProps(lastMountHandleValue)?.key
-      const nextKey = readPortableComponentProps(normalizedValue)?.key
       const result =
         componentName === 'KeepAlive'
           ? withKeepAlivePropsRegistrationTarget(mountHandleValue, () =>
@@ -2133,7 +2142,8 @@ const renderAnchorUntracked = (
       return result
     }
 
-    if (anchorRuntime.ownedMountCollecting?.() === true) {
+    // key 变化是替换边界：旧子树必须先失效，不能等到微任务后再让嵌套 effect 停止。
+    if (anchorRuntime.ownedMountCollecting?.() === true || !Object.is(previousKey, nextKey)) {
       anchorRuntime.renderAnchor(null, targetParent, anchor)
       clearOwnedAnchorNodes(targetParent, anchor)
       syncRenderableOwner(renderOwnerByAnchor, anchor as object, mountHandleOwner)
@@ -2190,7 +2200,7 @@ const renderAnchorUntracked = (
         scheduleTrackedTextControlRestoreWithin(mountedParent)
       }
 
-      commitPendingRender()
+      runWithRuntime(pending.runtime, commitPendingRender)
     })
   })
 }

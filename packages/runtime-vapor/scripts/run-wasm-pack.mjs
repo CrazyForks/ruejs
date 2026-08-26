@@ -87,11 +87,16 @@ function isNodeTest(rawArgs) {
   )
 }
 
-function validateVaporArtifactArgs(rawArgs) {
+function validateBrowserArtifactArgs(rawArgs) {
   const outDirIndex = rawArgs.findIndex(arg => arg === '--out-dir')
   const outDir = outDirIndex >= 0 ? rawArgs[outDirIndex + 1] : undefined
-  const hasVaporOutDir = outDir === 'pkg-vapor' || rawArgs.includes('--out-dir=pkg-vapor')
-  if (!hasVaporOutDir) {
+  const hasLegacyBrowserOutDir = outDir === 'pkg' || rawArgs.includes('--out-dir=pkg')
+  if (hasLegacyBrowserOutDir) {
+    console.error('[runtime-vapor] pkg was removed; browser builds must use canonical pkg-vapor.')
+    process.exit(1)
+  }
+  const hasBrowserOutDir = outDir === 'pkg-vapor' || rawArgs.includes('--out-dir=pkg-vapor')
+  if (!hasBrowserOutDir) {
     return
   }
 
@@ -104,14 +109,12 @@ function validateVaporArtifactArgs(rawArgs) {
           .slice('--features='.length)
           .split(',')
 
-  if (!normalized.includes('--no-default-features') || !features.includes('vapor')) {
-    console.error(
-      '[runtime-vapor] pkg-vapor must be built with --no-default-features --features vapor.',
-    )
+  if (!normalized.includes('--no-default-features')) {
+    console.error('[runtime-vapor] pkg-vapor must be built with --no-default-features.')
     process.exit(1)
   }
-  if (features.includes('runtime')) {
-    console.error('[runtime-vapor] pkg-vapor cannot include the complete runtime feature.')
+  if (features.includes('runtime') || features.includes('vapor')) {
+    console.error('[runtime-vapor] removed runtime/vapor Cargo features cannot be enabled.')
     process.exit(1)
   }
 }
@@ -276,7 +279,7 @@ if (isNodeTest(args)) {
   }
 }
 
-validateVaporArtifactArgs(args)
+validateBrowserArtifactArgs(args)
 ensureWasmPack()
 
 const lockedWasmBindgenBin = ensureLockedWasmBindgen()

@@ -295,6 +295,7 @@ const createSuspenseAwareHandle = <T>(
 
 /** Rue 响应式信号句柄、effect scope 与调试事件类型。 */
 export type {
+  ComputedHandle,
   DebuggerEvent,
   DebuggerHook,
   EffectScope,

@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { brotliCompressSync } from 'node:zlib'
 
 import { describe, expect, it } from 'vitest'
@@ -53,7 +54,9 @@ const buildRuntimeBundle = async (name: string, source: string) => {
       /packages\/runtime-vapor\/pkg(?:-vapor)?\/rue_runtime_vapor_bg\.wasm$/.test(id),
     )
     const wasmArtifacts = wasmModules.map(filePath => ({
-      kind: filePath.includes('/pkg-vapor/') ? ('vapor' as const) : ('full' as const),
+      kind: filePath.includes('/pkg-vapor/')
+        ? ('canonical-browser' as const)
+        : ('legacy-full-browser' as const),
       module: path.relative(projectRoot, filePath).split(path.sep).join('/'),
       sha256: createHash('sha256').update(readFileSync(filePath)).digest('hex'),
     }))
@@ -70,65 +73,38 @@ const importBundle = async (code: string) => {
   return import(url)
 }
 
-const publicFunctionExports = [
+const canonicalGraphFunctionExports = [
   '__rueActivateEffectOwnerTracking',
+  '__rueActivateRenderTriggered',
   '__rueBeginRenderDebugOwner',
   '__rueCreateDetachedEffectScope',
   '__rueCurrentEffectId',
   '__rueDisposeEffectScope',
-  '__rueDisposeHookScopeForInstance',
   '__rueEndRenderDebugOwner',
   '__rueGetCurrentEffectScope',
   '__ruePopEffectScope',
   '__ruePushEffectScope',
   'batch',
-  'computed',
   'createComputed',
   'createCustomRef',
   'createEffect',
   'createReactive',
   'createRef',
   'createResource',
-  'createRue',
   'createSignal',
-  'customRef',
-  'getCurrentInstance',
-  'isProxy',
-  'isReactive',
-  'isReadonly',
-  'isRef',
   'nextTick',
   'onCleanup',
   'onScopeDispose',
   'onWatcherCleanup',
-  'propsReactive',
-  'reactive',
-  'readonly',
-  'ref',
-  'setCurrentInstance',
   'setReactiveScheduling',
-  'shallowReactive',
-  'shallowReadonly',
-  'signal',
-  'toRaw',
   'toValue',
-  'unref',
   'untrack',
-  'useCallback',
-  'useEffect',
-  'useMemo',
-  'useRef',
-  'useSetup',
-  'useSignal',
-  'useState',
-  'vaporWithHookId',
   'watch',
   'watchDeepSignal',
   'watchEffect',
   'watchFn',
   'watchPath',
   'watchSignal',
-  'withHookSlot',
 ].sort()
 
 const completeRuntimeMethodExports = [
@@ -178,7 +154,7 @@ const completeRuntimeMethodExports = [
   'wasmrue_use',
 ]
 
-const readWasm = (artifactDir: 'pkg' | 'pkg-vapor') => {
+const readWasm = (artifactDir: 'pkg-vapor') => {
   const filePath = path.resolve(runtimeVaporDir, artifactDir, 'rue_runtime_vapor_bg.wasm')
   const bytes = readFileSync(filePath)
   const module = new WebAssembly.Module(bytes)
@@ -203,31 +179,33 @@ const instantiateWithRealImportShape = (module: WebAssembly.Module) => {
 }
 
 describe('@rue-js/runtime-vapor build artifacts', () => {
-  it('builds a minimal vapor wasm artifact with an explicit export surface', () => {
+  it('imports every generated Node condition entry with matching public exports', async () => {
+    const [full, reactive, vapor] = await Promise.all(
+      ['index.node.js', 'reactive.node.js', 'vapor.node.js'].map(
+        file => import(pathToFileURL(path.resolve(runtimeVaporDir, file)).href),
+      ),
+    )
+
+    expect(full.createRue).toBeTypeOf('function')
+    expect(reactive.signal).toBeTypeOf('function')
+    expect(vapor.createRue).toBeTypeOf('function')
+    expect(full.signal).toBe(reactive.signal)
+    expect(vapor.signal).toBe(reactive.signal)
+  })
+
+  it('builds one canonical browser graph kernel without Rust Runtime or Hook exports', () => {
     const cargoManifest = readFileSync(path.resolve(runtimeVaporDir, 'Cargo.toml'), 'utf8')
     const packageManifest = JSON.parse(
       readFileSync(path.resolve(runtimeVaporDir, 'package.json'), 'utf8'),
     )
     const releaseBuildScript = readFileSync(path.resolve(projectRoot, 'scripts/build.js'), 'utf8')
-    expect(cargoManifest).toMatch(/^default = \["runtime"\]$/m)
-    expect(cargoManifest).toMatch(/^vapor = \[\]$/m)
-    expect(packageManifest.scripts['build-vapor']).toContain(
-      '--out-dir pkg-vapor --no-default-features --features vapor',
-    )
-    expect(releaseBuildScript).toContain("label: 'minimal vapor package'")
-    expect(releaseBuildScript).toContain("'@rue-js/runtime-vapor', 'run', 'build-vapor'")
-
-    const full = readWasm('pkg')
-    const fullExportNames = WebAssembly.Module.exports(full.module).map(({ name }) => name)
-    const fullSizes = {
-      raw: full.bytes.byteLength,
-      brotli: brotliCompressSync(full.bytes).byteLength,
-    }
-    console.info('[runtime-vapor artifact] full', {
-      exports: fullExportNames,
-      ...fullSizes,
-    })
-    expect(fullExportNames).toEqual(expect.arrayContaining(completeRuntimeMethodExports))
+    expect(cargoManifest).toMatch(/^default = \[\]$/m)
+    expect(cargoManifest).not.toMatch(/^runtime = /m)
+    expect(cargoManifest).not.toMatch(/^vapor = /m)
+    expect(packageManifest.files).not.toContain('pkg')
+    expect(packageManifest.scripts.build).toContain('--out-dir pkg-vapor')
+    expect(releaseBuildScript).not.toContain('packages/runtime-vapor/pkg/rue_runtime_vapor.js')
+    expect(releaseBuildScript).toContain("label: 'canonical browser package'")
 
     const vapor = readWasm('pkg-vapor')
     const instance = instantiateWithRealImportShape(vapor.module)
@@ -255,14 +233,13 @@ describe('@rue-js/runtime-vapor build artifacts', () => {
     })
 
     expect(Object.keys(instance.exports)).toEqual(vaporExportNames)
-    expect(vaporFunctionExports).toEqual(publicFunctionExports)
-    expect(vaporRuntimeMethods).toEqual(['wasmrue_mount', 'wasmrue_vapor'])
+    expect(vaporFunctionExports).toEqual(canonicalGraphFunctionExports)
+    expect(vaporRuntimeMethods).toEqual([])
     expect(vaporExportNames.filter(name => completeRuntimeMethodExports.includes(name))).toEqual([])
-    expect(vaporSizes.raw).toBeLessThan(fullSizes.raw * 0.7)
-    expect(vaporSizes.brotli).toBeLessThan(fullSizes.brotli * 0.7)
+    expect(vaporExportNames.some(name => name.includes('wasmrue'))).toBe(false)
   })
 
-  it('keeps full and vapor bundles on distinct single Wasm artifacts and exposes mixed graphs', async () => {
+  it('uses the same canonical browser Wasm artifact for full, vapor, and mixed bundles', async () => {
     const full = await buildRuntimeBundle(
       'full-entry',
       `export { createRue, signal } from ${JSON.stringify(fullEntry)}`,
@@ -291,20 +268,27 @@ describe('@rue-js/runtime-vapor build artifacts', () => {
     })
 
     expect(full.wasmArtifacts).toEqual([
-      expect.objectContaining({ kind: 'full', module: expect.stringContaining('/pkg/') }),
+      expect.objectContaining({
+        kind: 'canonical-browser',
+        module: expect.stringContaining('/pkg-vapor/'),
+      }),
     ])
     expect(vapor.wasmArtifacts).toEqual([
-      expect.objectContaining({ kind: 'vapor', module: expect.stringContaining('/pkg-vapor/') }),
+      expect.objectContaining({
+        kind: 'canonical-browser',
+        module: expect.stringContaining('/pkg-vapor/'),
+      }),
     ])
-    expect(mixed.wasmArtifacts.map(({ kind }) => kind).sort()).toEqual(['full', 'vapor'])
-    expect(new Set(mixed.wasmArtifacts.map(({ sha256 }) => sha256)).size).toBe(2)
+    expect(mixed.wasmArtifacts).toHaveLength(1)
+    expect(mixed.wasmArtifacts[0]).toEqual(full.wasmArtifacts[0])
+    expect(mixed.wasmArtifacts[0]).toEqual(vapor.wasmArtifacts[0])
   })
 
-  it('shares ref, signal, effect scope, and createRue through the vapor Wasm instance', async () => {
+  it('uses a JavaScript createRue shell with the vapor Wasm reactive kernel', async () => {
     const bundle = await buildRuntimeBundle(
       'vapor-instance',
       `import { createRue } from ${JSON.stringify(vaporEntry)}\n` +
-        `import { WasmRue, SignalHandle, effectScope, nextTick, onScopeDispose, signal, watchEffect } from ${JSON.stringify(vaporReactiveEntry)}\n` +
+        `import { SignalHandle, effectScope, nextTick, onScopeDispose, signal, watchEffect } from ${JSON.stringify(vaporReactiveEntry)}\n` +
         `export async function exercise() {\n` +
         `  const runtime = createRue(undefined)\n` +
         `  const source = signal(1)\n` +
@@ -320,27 +304,38 @@ describe('@rue-js/runtime-vapor build artifacts', () => {
         `  scope.stop()\n` +
         `  source.set(3)\n` +
         `  await nextTick()\n` +
-        `  return { runtimeMatches: runtime instanceof WasmRue, signalMatches: source instanceof SignalHandle, seen, disposed }\n` +
+        `  return { runtimeIsJavaScriptShell: Object.getPrototypeOf(runtime) === Object.prototype, signalMatches: source instanceof SignalHandle, seen, disposed }\n` +
         `}`,
     )
     const runtime = await importBundle(bundle.code)
 
     expect(await runtime.exercise()).toEqual({
-      runtimeMatches: true,
+      runtimeIsJavaScriptShell: true,
       signalMatches: true,
       seen: [1, 2],
       disposed: 1,
     })
   })
 
-  it('rejects a bundle that evaluates full and vapor runtime instances together', async () => {
+  it('runs full and vapor entries together over one interoperable reactive graph', async () => {
     const mixed = await buildRuntimeBundle(
       'mixed-instance',
-      `import { createRue as createFullRue } from ${JSON.stringify(fullEntry)}\n` +
-        `import { createRue as createVaporRue } from ${JSON.stringify(vaporEntry)}\n` +
-        `export { createFullRue, createVaporRue }`,
+      `import { createEffect, createRue as createFullRue, signal } from ${JSON.stringify(fullEntry)}\n` +
+        `import { createRue as createVaporRue, nextTick } from ${JSON.stringify(vaporEntry)}\n` +
+        `export async function exercise() {\n` +
+        `  const full = createFullRue(undefined)\n` +
+        `  const vapor = createVaporRue(undefined)\n` +
+        `  const source = signal(1)\n` +
+        `  const seen = []\n` +
+        `  const effect = createEffect(() => seen.push(source.get()))\n` +
+        `  source.set(2)\n` +
+        `  await nextTick()\n` +
+        `  effect.dispose()\n` +
+        `  return { fullIsJs: Object.getPrototypeOf(full) === Object.prototype, vaporIsJs: Object.getPrototypeOf(vapor) === Object.prototype, seen }\n` +
+        `}`,
     )
+    const runtime = await importBundle(mixed.code)
 
-    await expect(importBundle(mixed.code)).rejects.toThrow(/full and vapor Wasm instances/i)
+    expect(await runtime.exercise()).toEqual({ fullIsJs: true, vaporIsJs: true, seen: [1, 2] })
   })
 })

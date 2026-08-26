@@ -117,23 +117,47 @@ describe('useApp mount ownership', () => {
 
   it('rolls back the root and ownership when the root component throws during mount', async () => {
     const host = document.createElement('div')
+    const isolatedHost = document.createElement('div')
     let shouldThrow = true
     let renderCount = 0
+    const mountError = new Error('root mount failed')
     const Root: FC = () => {
       renderCount += 1
-      if (shouldThrow) throw new Error('root mount failed')
+      if (shouldThrow) throw mountError
       return <main>not rendered</main>
     }
     const failedApp = useApp(Root)
     const recoveredApp = useApp(() => <main data-owner="recovered">recovered</main>)
-    document.body.appendChild(host)
+    document.body.append(host, isolatedHost)
 
     expect(() => failedApp.mount(host)).toThrowError('root mount failed')
     await flushRender()
     expect(host.textContent).toBe('')
+    expect(host.hasAttribute('data-rue-app')).toBe(false)
     shouldThrow = false
-    expect(() => recoveredApp.mount(host)).toThrowError('root mount failed')
+
+    let ownerRetryError: unknown
+    try {
+      failedApp.mount(host)
+    } catch (error) {
+      ownerRetryError = error
+    }
+    expect(ownerRetryError).toBe(mountError)
+
+    let competingAppError: unknown
+    try {
+      recoveredApp.mount(host)
+    } catch (error) {
+      competingAppError = error
+    }
+    expect(competingAppError).toBe(mountError)
     expect(renderCount).toBe(1)
     expect(host.textContent).toBe('')
+
+    recoveredApp.mount(isolatedHost)
+    await flushRender()
+    expect(isolatedHost.querySelector('[data-owner="recovered"]')?.textContent).toBe('recovered')
+
+    recoveredApp.unmount()
   })
 })

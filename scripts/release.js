@@ -203,17 +203,25 @@ const releaseCheckSnapshots = isCheckOnly
 async function ensureRuntimeVaporBuilt() {
   const runtimeVaporBrowserEntry = path.resolve(
     __dirname,
-    '../packages/runtime-vapor/pkg/rue_runtime_vapor.js',
+    '../packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js',
   )
   const runtimeVaporEntry = path.resolve(
     __dirname,
     '../packages/runtime-vapor/pkg-node/rue_runtime_vapor.js',
   )
+  step('\nChecking and generating @rue-js/runtime-vapor TypeScript artifacts...')
+  if (shouldRunValidationCommands) {
+    await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'check-ts'])
+    await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-ts'])
+  } else {
+    console.log(`Skipped (dry run)`)
+  }
+
   if (fs.existsSync(runtimeVaporBrowserEntry) && fs.existsSync(runtimeVaporEntry)) {
     return
   }
 
-  step('\nBuilding @rue-js/runtime-vapor...')
+  step('\nBuilding @rue-js/runtime-vapor Wasm artifacts...')
   if (shouldRunValidationCommands) {
     await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build'])
     await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node'])

@@ -163,6 +163,33 @@ fn computed_is_lazy_and_uses_dirty_cache() {
 }
 
 #[wasm_bindgen_test]
+fn computed_invalidation_primitive_marks_dirty_without_eager_recompute() {
+    set_reactive_scheduling("sync");
+    let getter_hits = Rc::new(RefCell::new(0));
+    let getter_hits_for_getter = getter_hits.clone();
+    let getter = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *getter_hits_for_getter.borrow_mut() += 1;
+        JsValue::from_f64(*getter_hits_for_getter.borrow() as f64)
+    }) as Box<dyn FnMut() -> JsValue>);
+    let getter_fn: Function = getter.as_ref().clone().into();
+    let derived = create_computed(getter_fn.into());
+    getter.forget();
+
+    assert_eq!(derived.get_js().as_f64(), Some(1.0));
+    assert_eq!(*getter_hits.borrow(), 1);
+    assert!(derived.invalidate_computed_js());
+    assert_eq!(*getter_hits.borrow(), 1);
+    assert_eq!(derived.get_js().as_f64(), Some(2.0));
+    assert_eq!(*getter_hits.borrow(), 2);
+    assert_eq!(derived.get_js().as_f64(), Some(2.0));
+    assert_eq!(*getter_hits.borrow(), 2);
+
+    let plain = create_signal(JsValue::from_f64(1.0), None);
+    assert!(!plain.invalidate_computed_js());
+    assert_eq!(plain.get_js().as_f64(), Some(1.0));
+}
+
+#[wasm_bindgen_test]
 fn computed_invalid_inputs_and_peek_paths_return_stable_undefined() {
     set_reactive_scheduling("sync");
     let missing_get = js_sys::Object::new();

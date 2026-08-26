@@ -49,6 +49,8 @@ thread_local! {
     pub(crate) static NEXT_EFFECT_ID: RefCell<usize> = RefCell::new(1);
     // 当前正在执行的副作用 id，用于依赖收集（Signal 读取时订阅到该 id）
     pub(crate) static CURRENT_EFFECT: RefCell<Option<usize>> = RefCell::new(None);
+    // 当前调用栈上正在执行的副作用，用于在 sync 模式下阻止自身或祖先 effect 重入。
+    static ACTIVE_EFFECTS: RefCell<Vec<usize>> = RefCell::new(Vec::new());
     // errorCaptured handler 运行期间，信号修复不应同步重入刚失败的 effect。
     pub(crate) static ERROR_CAPTURE_EFFECT: RefCell<Option<usize>> = RefCell::new(None);
     // watch handler 在“无依赖收集”模式下执行时，仍允许 on_cleanup 把清理函数挂到外层 effect。
@@ -157,34 +159,9 @@ pub fn end_render_debug_owner_wasm() {
     end_render_debug_owner();
 }
 
-/// 临时关闭 render 调试依赖归属，避免 Hook 初始化读写污染 onRenderTracked/onRenderTriggered。
-#[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-pub(crate) fn suppress_render_debug_tracking<T>(runner: impl FnOnce() -> T) -> T {
-    RENDER_DEBUG_STATE.with(|state| {
-        state.set(state.get() + 4);
-    });
-    let out = runner();
-    RENDER_DEBUG_STATE.with(|state| {
-        let value = state.get();
-        if value >= 4 {
-            state.set(value - 4);
-        }
-    });
-    out
-}
-
 /// 返回当前可绑定的 render 调试 owner；抑制期间返回 None。
 pub(crate) fn current_render_debug_owner() -> Option<JsValue> {
-    let suppressed = RENDER_DEBUG_STATE.with(|state| state.get() >= 4);
-    if suppressed {
-        return None;
-    }
-    let stacked = RENDER_DEBUG_OWNER_STACK.with(|stack| stack.borrow().last().cloned());
-    if stacked.is_some() {
-        return stacked;
-    }
-    let instance = crate::reactive::context::get_current_instance();
-    if instance.is_object() || instance.is_function() { Some(instance) } else { None }
+    RENDER_DEBUG_OWNER_STACK.with(|stack| stack.borrow().last().cloned())
 }
 
 /// 在依赖收集时把当前 render owner 同步到 effect。
@@ -202,15 +179,67 @@ pub(crate) fn sync_effect_render_debug_owner(effect_id: usize) {
     });
 }
 
+fn render_owners_are_related(left: &JsValue, right: &JsValue) -> bool {
+    let parent_key = JsValue::from_str(RENDER_DEBUG_OWNER_PARENT_KEY);
+    let descends_from = |descendant: &JsValue, ancestor: &JsValue| {
+        let mut current = descendant.clone();
+        for _ in 0..64 {
+            let parent = Reflect::get(&current, &parent_key).unwrap_or(JsValue::UNDEFINED);
+            if !parent.is_object() || Object::is(&parent, &current) {
+                return false;
+            }
+            if Object::is(&parent, ancestor) {
+                return true;
+            }
+            current = parent;
+        }
+        false
+    };
+
+    descends_from(left, right) || descends_from(right, left)
+}
+
+/// 当前 effect 跨组件 owner 或父子 owner 嵌套触发时，不能同步穿插进外层渲染事务。
+fn has_active_effect_from_different_render_owner(effect_id: usize) -> bool {
+    let active_ids = ACTIVE_EFFECTS.with(|active| active.borrow().clone());
+    if active_ids.is_empty() {
+        return false;
+    }
+
+    EFFECTS.with(|effects| {
+        let effects = effects.borrow();
+        let Some(target_owner) =
+            effects.get(&effect_id).and_then(|effect| effect.render_debug_owner.as_ref())
+        else {
+            return false;
+        };
+        let props_key = JsValue::from_str("propsRO");
+        let target_is_component = Reflect::has(target_owner, &props_key).unwrap_or(false);
+
+        active_ids.iter().any(|active_id| {
+            effects
+                .get(active_id)
+                .and_then(|effect| effect.render_debug_owner.as_ref())
+                .is_some_and(|active_owner| {
+                    let owners_differ = !Object::is(active_owner, target_owner);
+                    owners_differ
+                        && (target_is_component
+                            || Reflect::has(active_owner, &props_key).unwrap_or(false)
+                            || render_owners_are_related(active_owner, target_owner))
+                })
+        })
+    })
+}
+
 /// 当前 JS realm 是否已成功登记过 onRenderTriggered。
 #[inline(always)]
 pub(crate) fn is_render_triggered_debug_active() -> bool {
     RENDER_DEBUG_STATE.with(|state| state.get() & 1 != 0)
 }
 
-/// 单向激活 renderTriggered 调试链路；激活后不再反向关闭。
-#[inline(always)]
-pub(crate) fn activate_render_triggered_debug() {
+/// 单向激活 renderTriggered 调试链路；保留给 graph 内核测试与调试事件派发。
+#[wasm_bindgen(js_name = __rueActivateRenderTriggered, skip_typescript)]
+pub fn activate_render_triggered_debug() {
     RENDER_DEBUG_STATE.with(|state| state.set(state.get() | 1));
 }
 
@@ -224,30 +253,6 @@ pub(crate) fn is_effect_owner_tracking_active() -> bool {
 #[wasm_bindgen(js_name = __rueActivateEffectOwnerTracking, skip_typescript)]
 pub fn activate_effect_owner_tracking() {
     RENDER_DEBUG_STATE.with(|state| state.set(state.get() | 2));
-}
-
-/// 在组件 owner 上登记 renderTriggered 回调列表。
-#[cfg(feature = "runtime")]
-pub(crate) fn register_render_triggered_hook(owner: &JsValue, hook: JsValue) -> bool {
-    if !owner.is_object() || !hook.is_function() {
-        return false;
-    }
-
-    let hooks = Reflect::get(owner, &JsValue::from_str(RENDER_TRIGGERED_HOOKS_KEY))
-        .unwrap_or(JsValue::UNDEFINED);
-    let hooks = if Array::is_array(&hooks) {
-        Array::from(&hooks)
-    } else {
-        let next = Array::new();
-        if Reflect::set(owner, &JsValue::from_str(RENDER_TRIGGERED_HOOKS_KEY), &next).ok()
-            != Some(true)
-        {
-            return false;
-        }
-        next
-    };
-    hooks.push(&hook);
-    true
 }
 
 /// 根据 effect 创建时记录的 owner 派发 renderTriggered 调试事件。
@@ -391,10 +396,6 @@ pub fn create_effect_scope() -> usize {
 
 pub fn create_detached_effect_scope() -> usize {
     create_effect_scope_with_parent(None)
-}
-
-pub(crate) fn active_effect_scope_count() -> usize {
-    EFFECT_SCOPES_EFFECTS.with(|scopes| scopes.borrow().len())
 }
 
 #[wasm_bindgen(js_name = "__rueCreateDetachedEffectScope")]
@@ -735,6 +736,7 @@ fn run_effect_body(id: usize) {
         return;
     }
     let (cleanups, cb, graph_node) = maybe.unwrap();
+    ACTIVE_EFFECTS.with(|active| active.borrow_mut().push(id));
 
     #[cfg(feature = "dev")]
     {
@@ -761,17 +763,7 @@ fn run_effect_body(id: usize) {
     if let Some(sid) = scope_id {
         push_effect_scope(sid);
     }
-    let effect_owner =
-        EFFECTS.with(|m| m.borrow().get(&id).and_then(|effect| effect.render_debug_owner.clone()));
-    let prev_instance = effect_owner.as_ref().map(|owner| {
-        let prev = crate::reactive::context::get_current_instance();
-        crate::reactive::context::set_current_instance(owner.clone());
-        prev
-    });
     let ret = cb.call0(&JsValue::NULL);
-    if let Some(prev) = prev_instance {
-        crate::reactive::context::set_current_instance(prev);
-    }
     if scope_id.is_some() {
         let _ = pop_effect_scope();
     }
@@ -780,6 +772,10 @@ fn run_effect_body(id: usize) {
     if let Some(graph_tracking) = graph_tracking {
         end_node_tracking(graph_node, graph_tracking);
     }
+    ACTIVE_EFFECTS.with(|active| {
+        let popped = active.borrow_mut().pop();
+        debug_assert_eq!(popped, Some(id));
+    });
     if let Err(err) = ret {
         let msg_js: js_sys::JsString =
             JSON::stringify(&err).unwrap_or(JsValue::from_str("<unstringifiable>").into());
@@ -1079,23 +1075,22 @@ pub(crate) fn schedule_effect_run(id: usize) {
         SCHEDULING_MODE.with(|m| {
             let mode = *m.borrow();
             if mode == 1 {
-                // 避免副作用内部触发自身的直接重入
-                let is_self = CURRENT_EFFECT.with(|c| match *c.borrow() {
-                    Some(cur) if cur == id => true,
-                    _ => false,
-                }) || ERROR_CAPTURE_EFFECT
-                    .with(|current| *current.borrow() == Some(id));
-                if is_self {
+                // 兄弟 effect 保持 sync 语义；只有目标 effect 已在当前调用栈上时延迟，
+                // 避免自身/祖先重入覆盖尚未提交的 mounted 快照。
+                let is_reentrant = ACTIVE_EFFECTS.with(|active| active.borrow().contains(&id))
+                    || has_active_effect_from_different_render_owner(id)
+                    || ERROR_CAPTURE_EFFECT.with(|current| *current.borrow() == Some(id));
+                if is_reentrant {
                     #[cfg(feature = "dev")]
                     {
-                        if crate::log::want_log("debug", "reactive:schedule avoid_self") {
+                        if crate::log::want_log("debug", "reactive:schedule avoid_nested") {
                             crate::log::log(
                                 "debug",
-                                &format!("reactive:schedule avoid_self id={}", id),
+                                &format!("reactive:schedule avoid_nested id={}", id),
                             );
                         }
                     }
-                    // 在自身重入时切换到默认微任务，避免无限递归
+                    // 在嵌套调度时切换到默认微任务，保持当前 effect 的执行原子性。
                     schedule_effect_run_default(id);
                 } else {
                     #[cfg(feature = "dev")]

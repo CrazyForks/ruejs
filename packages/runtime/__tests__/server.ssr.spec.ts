@@ -4,7 +4,9 @@ import {
   h,
   jsx,
   jsxs,
+  onServerPrefetch,
   renderAnchor,
+  runServerPrefetch,
   setReactiveScheduling,
   signal,
   Suspense,
@@ -38,6 +40,42 @@ import { renderToString } from '@rue-js/server-renderer'
 import { renderToString as renderToStringFromRue } from '@rue-js/rue/server-renderer'
 
 describe('server renderToString', () => {
+  it('aggregates asynchronous server-prefetch hooks in registration order', async () => {
+    const events: string[] = []
+    let resolveFirst!: () => void
+    let resolveSecond!: () => void
+    const first = new Promise<void>(resolve => {
+      resolveFirst = resolve
+    })
+    const second = new Promise<void>(resolve => {
+      resolveSecond = resolve
+    })
+
+    onServerPrefetch(async () => {
+      events.push('first:start')
+      await first
+      events.push('first:end')
+      return 'first'
+    })
+    onServerPrefetch(async () => {
+      events.push('second:start')
+      await second
+      events.push('second:end')
+      return 'second'
+    })
+
+    const pending = runServerPrefetch()
+    expect(events).toEqual(['first:start', 'second:start'])
+
+    resolveSecond()
+    await Promise.resolve()
+    expect(events).toEqual(['first:start', 'second:start', 'second:end'])
+
+    resolveFirst()
+    await expect(pending).resolves.toEqual(['first', 'second'])
+    expect(events).toEqual(['first:start', 'second:start', 'second:end', 'first:end'])
+  })
+
   it('renders text and escapes html-sensitive characters', async () => {
     await expect(renderToString('Rue <SSR> & friends')).resolves.toBe(
       'Rue &lt;SSR&gt; &amp; friends',

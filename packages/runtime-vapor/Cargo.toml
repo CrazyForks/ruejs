@@ -2,7 +2,7 @@
 name = "rue-runtime-vapor"
 version = "0.0.1"
 edition = "2024"
-description = "Rue runtime implemented in Rust and compiled to WebAssembly"
+description = "Rue reactive graph kernel compiled to WebAssembly"
 repository = "https://github.com/hunzhiwange/ruejs/tree/main/packages/runtime-vapor"
 license = "MIT"
 
@@ -24,10 +24,7 @@ wasm-bindgen-futures = "0.4"
 cc = "1"
 
 [features]
-default = ["runtime"]
-runtime = []
-vapor = []
-dom = []
+default = []
 log = []
 dev = []
 wasm-coverage = ["dep:minicov"]

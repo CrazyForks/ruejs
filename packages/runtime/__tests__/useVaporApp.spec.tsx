@@ -195,6 +195,39 @@ describe('Vapor useApp', () => {
     expect(host.textContent).toBe('')
   })
 
+  it('installs plugins in registration order and preserves duplicate registrations', async () => {
+    const host = document.createElement('div')
+    const events: string[] = []
+    const firstPlugin = {
+      install(app: unknown, options: unknown[]) {
+        events.push(`first:${String(app)}:${options.join(',')}`)
+      },
+    }
+    const secondPlugin = {
+      install(_app: unknown, options: unknown[]) {
+        events.push(`second:${options.join(',')}`)
+      },
+    }
+    const app = useApp(createTrackedRoot('plugins', events))
+      .use(firstPlugin, ['one'])
+      .use(secondPlugin, ['two', 'three'])
+      .use(firstPlugin, ['repeat'])
+    document.body.appendChild(host)
+
+    app.mount(host)
+    await flushRender()
+
+    expect(events).toEqual([
+      'first:undefined:one',
+      'second:two,three',
+      'first:undefined:repeat',
+      'plugins:render',
+      'plugins:mounted',
+    ])
+
+    app.unmount()
+  })
+
   it('does not share the root runtime between app instances', async () => {
     const firstHost = document.createElement('div')
     const secondHost = document.createElement('div')
