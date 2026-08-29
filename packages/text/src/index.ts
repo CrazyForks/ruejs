@@ -1078,6 +1078,29 @@ export default function text(options: TextOptions = {}): PluginOption[] {
   // Shim alias map — populated in config(), used by resolveId() for .js variants
   let textShimMap: Record<string, string> = {}
   const nodeRuntimeRequire = createRequire(import.meta.url)
+  const resolveRueEsmRuntime = (specifier: string) => {
+    const parts = specifier.split('/')
+    const packageName = specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]
+    const subpathParts = parts.slice(specifier.startsWith('@') ? 2 : 1)
+    const exportKey = subpathParts.length ? `./${subpathParts.join('/')}` : '.'
+    const packageDir = nodeRuntimeRequire.resolve
+      .paths(packageName)
+      ?.map(searchPath => path.join(searchPath, packageName))
+      .find(candidate => fs.existsSync(path.join(candidate, 'package.json')))
+    if (!packageDir) return null
+
+    try {
+      const manifest = JSON.parse(
+        fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8'),
+      ) as { exports?: Record<string, string | Record<string, string>> }
+      const entry = manifest.exports?.[exportKey]
+      const target =
+        typeof entry === 'string' ? entry : (entry?.module ?? entry?.import ?? entry?.default)
+      return target ? path.resolve(packageDir, target) : null
+    } catch {
+      return null
+    }
+  }
   const rueServerRuntimeAliases = new Map<string, string>()
   const pagesServerRuntimeAliases = new Map<string, string>()
   const rueClientRuntimeAliases = new Map<string, string>()
@@ -1147,7 +1170,10 @@ export default function text(options: TextOptions = {}): PluginOption[] {
   }
   for (const specifier of RUE_NODE_RUNTIME_EXTERNALS) {
     try {
-      registerRueServerRuntimeAlias(specifier, nodeRuntimeRequire.resolve(specifier))
+      registerRueServerRuntimeAlias(
+        specifier,
+        resolveRueEsmRuntime(specifier) ?? nodeRuntimeRequire.resolve(specifier),
+      )
     } catch {}
   }
   for (const specifier of compactStringEntries(RSC_RUE_NODE_EXTERNALS)) {

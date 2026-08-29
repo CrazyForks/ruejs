@@ -30,51 +30,51 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "development": "./src/index.ts",
       "module": "./dist/runtime.esm-bundler.js",
-      "import": "./dist/runtime.esm-bundler.js"
+      "import": "./dist/runtime.esm-bundler.js",
+      "development": "./src/index.ts"
     },
     "./server": {
       "types": "./src/server.ts",
-      "development": "./src/server.ts",
       "module": "./dist/runtime.server.esm-bundler.js",
-      "import": "./dist/runtime.server.esm-bundler.js"
+      "import": "./dist/runtime.server.esm-bundler.js",
+      "development": "./src/server.ts"
     },
     "./vapor": {
       "types": "./src/vapor.ts",
-      "development": "./src/vapor.ts",
       "module": "./dist/runtime.vapor.esm-bundler.js",
-      "import": "./dist/runtime.vapor.esm-bundler.js"
+      "import": "./dist/runtime.vapor.esm-bundler.js",
+      "development": "./src/vapor.ts"
     },
     "./compiled": {
       "types": "./src/compiled.ts",
-      "development": "./src/compiled.ts",
       "module": "./dist/runtime.compiled.esm-bundler.js",
-      "import": "./dist/runtime.compiled.esm-bundler.js"
+      "import": "./dist/runtime.compiled.esm-bundler.js",
+      "development": "./src/compiled.ts"
     },
     "./vapor-core": {
       "types": "./src/vapor-core.ts",
-      "development": "./src/vapor-core.ts",
       "module": "./dist/runtime.vapor-core.esm-bundler.js",
-      "import": "./dist/runtime.vapor-core.esm-bundler.js"
+      "import": "./dist/runtime.vapor-core.esm-bundler.js",
+      "development": "./src/vapor-core.ts"
     },
     "./island": {
       "types": "./src/island.ts",
-      "development": "./src/island.ts",
       "module": "./dist/runtime.island.esm-bundler.js",
-      "import": "./dist/runtime.island.esm-bundler.js"
+      "import": "./dist/runtime.island.esm-bundler.js",
+      "development": "./src/island.ts"
     },
     "./server-island": {
       "types": "./src/server-island.ts",
-      "development": "./src/server-island.ts",
       "module": "./dist/runtime.server-island.esm-bundler.js",
-      "import": "./dist/runtime.server-island.esm-bundler.js"
+      "import": "./dist/runtime.server-island.esm-bundler.js",
+      "development": "./src/server-island.ts"
     },
     "./dom": {
       "types": "./src/dom.ts",
-      "development": "./src/dom.ts",
       "module": "./dist/runtime.dom.esm-bundler.js",
-      "import": "./dist/runtime.dom.esm-bundler.js"
+      "import": "./dist/runtime.dom.esm-bundler.js",
+      "development": "./src/dom.ts"
     },
     "./*": "./*"
   },

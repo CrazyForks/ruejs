@@ -17,8 +17,8 @@ if (!existsSync(tempDtsRoot)) {
   process.exit(1)
 }
 
-const packages = readdirSync(tempDtsRoot).filter(pkg =>
-  existsSync(`./${tempDtsRoot}/${pkg}/src/index.d.ts`),
+const packages = readdirSync(tempDtsRoot).filter(
+  pkg => pkg !== 'runtime-vapor' && existsSync(`./${tempDtsRoot}/${pkg}/src/index.d.ts`),
 )
 const targets = process.env.TARGETS ? process.env.TARGETS.split(',') : null
 const targetPackages = targets ? packages.filter(pkg => targets.includes(pkg)) : packages

@@ -287,6 +287,8 @@ export const emitTypeScriptRuntime = async ({
   try {
     compileToDirectory(runtimeDir, outputDir, relativeSources)
 
+    await rm(path.resolve(runtimeDir, 'dist/__types'), { recursive: true, force: true })
+
     const outputFiles = []
     for (const target of targets) {
       const relativeSource = sourceForTarget(target)
