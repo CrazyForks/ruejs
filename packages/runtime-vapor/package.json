@@ -1,6 +1,6 @@
 {
   "name": "@rue-js/runtime-vapor",
-  "version": "0.8.20",
+  "version": "0.8.21",
   "description": "Rue JavaScript runtime backed by a strict TypeScript reactive graph kernel",
   "keywords": [
     "reactivity",
