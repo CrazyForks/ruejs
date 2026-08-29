@@ -1,3 +1,11 @@
+## [0.8.17](https://github.com/hunzhiwange/ruejs/compare/v0.8.16...v0.8.17) (2026-08-29)
+
+
+### Features
+
+* 架构调整，只支持 esm ([242a05f](https://github.com/hunzhiwange/ruejs/commit/242a05ff75b19ee4a3ba638c0a011ee1665fb3d4))
+* 清理 esm ([c87eb6e](https://github.com/hunzhiwange/ruejs/commit/c87eb6e38d09060b31a0afb6230402c1216cf40b))
+
 ## [0.8.16](https://github.com/hunzhiwange/ruejs/compare/v0.8.15...v0.8.16) (2026-08-29)
 
 
