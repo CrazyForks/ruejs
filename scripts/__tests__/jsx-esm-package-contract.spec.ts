@@ -59,7 +59,7 @@ const resolveEsm = (specifier: string) =>
     [
       '--input-type=module',
       '--eval',
-      `process.stdout.write(import.meta.resolve(${JSON.stringify(specifier)}))`,
+      `import { realpathSync } from 'node:fs'; import { fileURLToPath, pathToFileURL } from 'node:url'; process.stdout.write(pathToFileURL(realpathSync(fileURLToPath(import.meta.resolve(${JSON.stringify(specifier)})))).href)`,
     ],
     { cwd: projectRoot, encoding: 'utf8' },
   )
