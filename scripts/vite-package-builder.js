@@ -16,10 +16,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
 const rootPkg = require(path.resolve(rootDir, 'package.json'))
 
-const defaultFormats = ['esm-bundler', 'cjs']
+const defaultFormats = ['esm-bundler']
 const subpathFormatOutputDirs = {
   'esm-bundler': 'esm',
-  cjs: 'cjs',
 }
 const enumCachePath = path.resolve(rootDir, 'temp/enum.json')
 const RUE_BUILD_TRANSFORM_TIMEOUT_MS = 60000
@@ -55,12 +54,12 @@ const workspaceAliasEntries = [
 const viteFormatMap = {
   'esm-bundler': 'es',
   'esm-browser': 'es',
-  cjs: 'cjs',
   global: 'iife',
   'esm-bundler-runtime': 'es',
   'esm-browser-runtime': 'es',
   'global-runtime': 'iife',
 }
+const supportedPackageFormats = new Set(Object.keys(viteFormatMap))
 
 /**
  * @param {string} target
@@ -116,10 +115,16 @@ export async function watchPackageTarget(
 
 function splitFormats(rawFormats) {
   if (!rawFormats) return null
-  return rawFormats
+  const formats = rawFormats
     .split(',')
     .map(format => format.trim())
     .filter(Boolean)
+  for (const format of formats) {
+    if (!supportedPackageFormats.has(format)) {
+      throw new Error(`Unsupported package format: ${format}`)
+    }
+  }
+  return formats
 }
 
 function resolvePackageInfo(target) {
@@ -296,20 +301,15 @@ function resolveSubpathBuildRequests(packageInfo, formatFilter, sourceMap) {
 }
 
 function createDistributionRequest(packageInfo, buildEntry, format, prod, sourceMap) {
-  const viteFormat = viteFormatMap[format]
-  if (!viteFormat) {
-    throw new Error(`Unsupported package format: ${format}`)
-  }
+  const viteFormat = resolveViteFormat(format)
 
-  const outputPlatform = viteFormat === 'cjs' ? 'node' : 'browser'
   const isBundlerESMBuild = /esm-bundler/.test(format)
   const isBrowserESMBuild = /esm-browser/.test(format)
-  const isCJSBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
   const browserBuild =
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
     !packageInfo.packageOptions.enableNonBrowserBranches
-  const externalize = isCJSBuild || isBundlerESMBuild
+  const externalize = isBundlerESMBuild
 
   return {
     kind: 'distribution',
@@ -320,11 +320,10 @@ function createDistributionRequest(packageInfo, buildEntry, format, prod, source
     prod,
     sourceMap,
     externalize,
-    outputPlatform,
+    outputPlatform: 'browser',
     browserBuild,
     isBundlerESMBuild,
     isBrowserESMBuild,
-    isCJSBuild,
     isGlobalBuild,
     entryFile: resolveEntryFile(buildEntry, format),
     outputFileBase: resolveOutputFileBase(buildEntry.fileName, format, prod),
@@ -335,11 +334,9 @@ function createDistributionRequest(packageInfo, buildEntry, format, prod, source
 }
 
 function createWatchRequest(packageInfo, format, prod, inlineDeps) {
-  const viteFormat = format.startsWith('global') ? 'iife' : format === 'cjs' ? 'cjs' : 'es'
-  const outputPlatform = viteFormat === 'cjs' ? 'node' : 'browser'
+  const viteFormat = resolveViteFormat(format)
   const isBundlerESMBuild = /esm-bundler/.test(format)
   const isBrowserESMBuild = /esm-browser/.test(format)
-  const isCJSBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
   const browserBuild =
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
@@ -357,12 +354,11 @@ function createWatchRequest(packageInfo, format, prod, inlineDeps) {
     viteFormat,
     prod,
     sourceMap: true,
-    externalize: !inlineDeps && (isCJSBuild || isBundlerESMBuild),
-    outputPlatform,
+    externalize: !inlineDeps && isBundlerESMBuild,
+    outputPlatform: 'browser',
     browserBuild,
     isBundlerESMBuild,
     isBrowserESMBuild,
-    isCJSBuild,
     isGlobalBuild,
     entryFile: path.resolve(packageInfo.packageDir, 'src/index.ts'),
     outputFileBase: `${packageInfo.target === 'rue-compat' ? 'rue' : packageInfo.target}.${format}${prod ? '.prod' : ''}`,
@@ -370,6 +366,14 @@ function createWatchRequest(packageInfo, format, prod, inlineDeps) {
     preserveModules: false,
     watch: true,
   }
+}
+
+function resolveViteFormat(format) {
+  const viteFormat = viteFormatMap[format]
+  if (!viteFormat) {
+    throw new Error(`Unsupported package format: ${format}`)
+  }
+  return viteFormat
 }
 
 function resolveEntryFile(buildEntry, format) {
@@ -386,8 +390,6 @@ function resolveOutputFileBase(fileName, format, prod) {
       return `${fileName}.esm-bundler`
     case 'esm-browser':
       return `${fileName}.esm-browser${prodSuffix}`
-    case 'cjs':
-      return `${fileName}.cjs${prodSuffix}`
     case 'global':
       return `${fileName}.global${prodSuffix}`
     case 'esm-bundler-runtime':
@@ -402,7 +404,7 @@ function resolveOutputFileBase(fileName, format, prod) {
 }
 
 function needsProdVariant(format) {
-  return format === 'cjs' || /^(global|esm-browser)(-runtime)?$/.test(format)
+  return /^(global|esm-browser)(-runtime)?$/.test(format)
 }
 
 function createViteConfig(request) {
@@ -463,7 +465,6 @@ function createViteConfig(request) {
             request.viteFormat === 'iife'
               ? request.buildEntry.globalName || request.packageInfo.packageOptions.name
               : undefined,
-          esModule: request.viteFormat === 'cjs',
           entryFileNames:
             preserveModules || multiEntry ? '[name].js' : `${request.outputFileBase}.js`,
           chunkFileNames:
@@ -590,7 +591,6 @@ function resolveDefineValues(request) {
     __GLOBAL__: String(request.isGlobalBuild),
     __ESM_BUNDLER__: String(request.isBundlerESMBuild),
     __ESM_BROWSER__: String(request.isBrowserESMBuild),
-    __CJS__: String(request.isCJSBuild),
     __SSR__: String(!request.isGlobalBuild),
     __COMPAT__: 'false',
     __FEATURE_SUSPENSE__: 'true',
@@ -658,7 +658,7 @@ function createExternalPredicate(request) {
 }
 
 function shouldSwcMinify(format) {
-  return format === 'cjs' || /^(global|esm-browser)(-runtime)?$/.test(format)
+  return /^(global|esm-browser)(-runtime)?$/.test(format)
 }
 
 function normalizeTemplateLiteralNewlines(code) {

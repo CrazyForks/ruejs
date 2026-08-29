@@ -74,17 +74,16 @@ const corePackageInputs = [
 ].map(targetPath => path.resolve(rootDir, targetPath))
 
 const corePackageArtifacts = [
-  'packages/shared/dist/shared.cjs.js',
-  'packages/runtime/dist/runtime.cjs.js',
+  'packages/shared/dist/shared.esm-bundler.js',
+  'packages/runtime/dist/runtime.esm-bundler.js',
   'packages/runtime/dist/runtime.esm-browser.js',
-  'packages/server-renderer/dist/server-renderer.cjs.js',
-  'packages/jsx-runtime/dist/jsx-runtime.cjs.js',
-  'packages/jsx-dev-runtime/dist/jsx-dev-runtime.cjs.js',
-  'packages/rue/dist/rue.cjs.js',
-  'packages/rue/dist/rue.cjs.prod.js',
+  'packages/server-renderer/dist/server-renderer.esm-bundler.js',
+  'packages/jsx-runtime/dist/jsx-runtime.esm-bundler.js',
+  'packages/jsx-dev-runtime/dist/jsx-dev-runtime.esm-bundler.js',
+  'packages/rue/dist/rue.esm-bundler.js',
   'packages/rue/dist/rue.runtime.esm-browser.js',
-  'packages/rue/dist/rue.server-renderer.cjs.js',
-  'packages/rue/dist/rue.vapor.cjs.js',
+  'packages/rue/dist/rue.server-renderer.esm-bundler.js',
+  'packages/rue/dist/rue.vapor.esm-bundler.js',
 ].map(targetPath => path.resolve(rootDir, targetPath))
 
 if (artifactNeedsBuild(corePackageArtifacts, corePackageInputs)) {
@@ -98,7 +97,7 @@ if (artifactNeedsBuild(corePackageArtifacts, corePackageInputs)) {
     '^jsx-dev-runtime$',
     '^rue$',
     '--formats',
-    'cjs,esm-bundler,esm-browser,esm-browser-runtime',
+    'esm-bundler,esm-browser,esm-browser-runtime',
   ])
 }
 

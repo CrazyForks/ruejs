@@ -20,6 +20,7 @@
     "index.js",
     "dist"
   ],
+  "type": "module",
   "sideEffects": false,
   "main": "index.js",
   "module": "dist/store.esm-bundler.js",
@@ -28,25 +29,21 @@
     ".": {
       "types": "./dist/store.d.ts",
       "development": "./src/index.ts",
-      "node": {
-        "production": "./dist/store.cjs.prod.js",
-        "development": "./dist/store.cjs.js",
-        "default": "./index.js"
-      },
       "module": "./dist/store.esm-bundler.js",
-      "import": "./dist/store.esm-bundler.js",
-      "require": "./index.js"
+      "import": "./dist/store.esm-bundler.js"
     },
     "./*": "./*"
   },
   "dependencies": {
     "@rue-js/rue": "workspace:*"
   },
+  "engines": {
+    "node": ">=22.22.0"
+  },
   "buildOptions": {
     "name": "RueStoreCore",
     "formats": [
-      "esm-bundler",
-      "cjs"
+      "esm-bundler"
     ]
   }
 }

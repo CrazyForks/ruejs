@@ -25,6 +25,7 @@
     "dist/__types/src/components/*/index.d.ts",
     "dist/__types/src/components/qr-code/encoder.d.ts"
   ],
+  "type": "module",
   "sideEffects": false,
   "main": "index.js",
   "module": "dist/rue-design.esm-bundler.js",
@@ -34,21 +35,13 @@
     ".": {
       "types": "./dist/rue-design.d.ts",
       "development": "./dist/rue-design.esm-bundler.js",
-      "node": {
-        "production": "./dist/rue-design.cjs.prod.js",
-        "development": "./dist/rue-design.cjs.js",
-        "default": "./index.js"
-      },
       "module": "./dist/rue-design.esm-bundler.js",
-      "import": "./dist/rue-design.esm-bundler.js",
-      "require": "./index.js"
+      "import": "./dist/rue-design.esm-bundler.js"
     },
     "./*": {
       "types": "./dist/__types/src/components/*/index.d.ts",
-      "development": "./dist/components/esm/*.js",
       "import": "./dist/components/esm/*.js",
-      "module": "./dist/components/esm/*.js",
-      "require": "./dist/components/cjs/*.js"
+      "default": "./dist/components/esm/*.js"
     }
   },
   "dependencies": {
@@ -60,19 +53,20 @@
   "devDependencies": {
     "@types/trusted-types": "^2.0.7"
   },
+  "engines": {
+    "node": ">=22.22.0"
+  },
   "buildOptions": {
     "name": "RueRuntimeDOM",
     "formats": [
       "esm-bundler",
       "esm-browser",
-      "cjs",
       "global"
     ],
     "subpathEntries": {
       "source": "src/components",
       "formats": [
-        "esm-bundler",
-        "cjs"
+        "esm-bundler"
       ]
     }
   }

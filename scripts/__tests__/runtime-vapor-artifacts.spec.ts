@@ -154,7 +154,7 @@ describe('@rue-js/runtime-vapor build artifacts', () => {
     expect(runtimeManifest.buildOptions.subEntries).toContainEqual({
       entry: 'src/compiled.ts',
       filename: 'runtime.compiled',
-      formats: ['esm-bundler', 'cjs'],
+      formats: ['esm-bundler'],
     })
     expect(rueManifest.exports['./compiled']).toMatchObject({
       types: './src/compiled.ts',
@@ -164,7 +164,7 @@ describe('@rue-js/runtime-vapor build artifacts', () => {
     expect(rueManifest.buildOptions.subEntries).toContainEqual({
       entry: 'src/compiled.ts',
       filename: 'rue.compiled',
-      formats: ['esm-bundler', 'cjs'],
+      formats: ['esm-bundler'],
     })
 
     const compiled = await buildRuntimeBundle(

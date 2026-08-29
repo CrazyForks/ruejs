@@ -264,7 +264,7 @@
     }
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.22.0"
   },
   "buildOptions": {
     "name": "RueText",

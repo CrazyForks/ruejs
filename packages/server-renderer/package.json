@@ -23,6 +23,7 @@
     "dist",
     "src"
   ],
+  "type": "module",
   "sideEffects": false,
   "main": "index.js",
   "module": "dist/server-renderer.esm-bundler.js",
@@ -30,45 +31,27 @@
   "exports": {
     ".": {
       "types": "./src/index.d.ts",
-      "node": {
-        "production": "./dist/server-renderer.cjs.prod.js",
-        "development": "./dist/server-renderer.cjs.js",
-        "default": "./index.js"
-      },
       "development": "./src/index.ts",
       "module": "./dist/server-renderer.esm-bundler.js",
-      "import": "./dist/server-renderer.esm-bundler.js",
-      "require": "./index.js"
+      "import": "./dist/server-renderer.esm-bundler.js"
     },
     "./island": {
       "types": "./src/island.ts",
-      "node": {
-        "production": "./dist/server-renderer.island.cjs.prod.js",
-        "development": "./dist/server-renderer.island.cjs.js",
-        "default": "./dist/server-renderer.island.cjs.js"
-      },
       "development": "./src/island.ts",
       "module": "./dist/server-renderer.island.esm-bundler.js",
-      "import": "./dist/server-renderer.island.esm-bundler.js",
-      "require": "./dist/server-renderer.island.cjs.js"
+      "import": "./dist/server-renderer.island.esm-bundler.js"
     },
     "./server-island": {
       "types": "./src/server-island.ts",
-      "node": {
-        "production": "./dist/server-renderer.server-island.cjs.prod.js",
-        "development": "./dist/server-renderer.server-island.cjs.js",
-        "default": "./dist/server-renderer.server-island.cjs.js"
-      },
       "development": "./src/server-island.ts",
       "module": "./dist/server-renderer.server-island.esm-bundler.js",
-      "import": "./dist/server-renderer.server-island.esm-bundler.js",
-      "require": "./dist/server-renderer.server-island.cjs.js"
+      "import": "./dist/server-renderer.server-island.esm-bundler.js"
     },
     "./static": {
       "types": "./src/static.d.ts",
       "development": "./src/static.mjs",
       "module": "./dist/server-renderer.static.esm-bundler.js",
-      "import": "./src/static.mjs"
+      "import": "./dist/server-renderer.static.esm-bundler.js"
     },
     "./*": "./*"
   },
@@ -89,27 +72,27 @@
       "optional": true
     }
   },
+  "engines": {
+    "node": ">=22.22.0"
+  },
   "buildOptions": {
     "name": "RueServerRenderer",
     "formats": [
-      "esm-bundler",
-      "cjs"
+      "esm-bundler"
     ],
     "subEntries": [
       {
         "entry": "src/island.ts",
         "filename": "server-renderer.island",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {
         "entry": "src/server-island.ts",
         "filename": "server-renderer.server-island",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {

@@ -21,6 +21,7 @@
     "dist",
     "src"
   ],
+  "type": "module",
   "sideEffects": false,
   "main": "index.js",
   "module": "dist/jsx-runtime.esm-bundler.js",
@@ -29,25 +30,21 @@
     ".": {
       "types": "./src/index.ts",
       "development": "./src/index.ts",
-      "node": {
-        "production": "./dist/jsx-runtime.cjs.prod.js",
-        "development": "./dist/jsx-runtime.cjs.js",
-        "default": "./index.js"
-      },
       "module": "./dist/jsx-runtime.esm-bundler.js",
-      "import": "./dist/jsx-runtime.esm-bundler.js",
-      "require": "./index.js"
+      "import": "./dist/jsx-runtime.esm-bundler.js"
     },
     "./*": "./*"
   },
   "dependencies": {
     "@rue-js/rue": "workspace:*"
   },
+  "engines": {
+    "node": ">=22.22.0"
+  },
   "buildOptions": {
     "name": "RueJsxDevRuntimeCore",
     "formats": [
-      "esm-bundler",
-      "cjs"
+      "esm-bundler"
     ]
   }
 }

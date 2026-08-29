@@ -42,6 +42,7 @@ describe('Rue Design package contract', () => {
 
   beforeAll(async () => {
     vi.stubGlobal('document', { body: { innerHTML: '' } })
+    execFileSync('pnpm', ['run', 'build-dts'], { cwd: projectRoot, stdio: 'pipe' })
     await mkdir(tempRoot, { recursive: true })
     consumerDir = await mkdtemp(path.resolve(tempRoot, 'rue-design-package-contract-'))
     fixtureDirs.push(consumerDir)
@@ -95,16 +96,13 @@ describe('Rue Design package contract', () => {
         'dist/components/esm/button.js',
         'dist/components/esm/input-number.js',
         'dist/components/esm/color-picker.js',
-        'dist/components/cjs/button.js',
-        'dist/components/cjs/input-number.js',
-        'dist/components/cjs/color-picker.js',
         'dist/__types/src/components/button/index.d.ts',
         'dist/__types/src/components/input-number/index.d.ts',
         'dist/__types/src/components/color-picker/index.d.ts',
       ]),
     )
     expect(packedFiles.some(file => file.startsWith('dist/components/esm/_chunks/'))).toBe(true)
-    expect(packedFiles.some(file => file.startsWith('dist/components/cjs/_chunks/'))).toBe(true)
+    expect(packedFiles.some(file => file.startsWith('dist/components/cjs/'))).toBe(false)
     expect(packedFiles.some(file => file.startsWith('src/'))).toBe(false)
     expect(packedFiles.some(file => /(?:^|\/)__tests__(?:\/|$)|\.(?:spec|test)\./.test(file))).toBe(
       false,
@@ -142,27 +140,31 @@ describe('Rue Design package contract', () => {
     ).resolves.toBeDefined()
   })
 
-  it('resolves root and representative CommonJS subpaths and rejects unknown subpaths', () => {
-    const resolveFromPlainNode = (specifier: string) =>
+  it('resolves root and representative ESM subpaths and rejects unknown subpaths', () => {
+    const resolveFromEsmNode = (specifier: string) =>
       execFileSync(
         process.execPath,
-        ['-e', `process.stdout.write(require.resolve(${JSON.stringify(specifier)}))`],
+        [
+          '--input-type=module',
+          '-e',
+          `import { accessSync } from 'node:fs'; import { fileURLToPath } from 'node:url'; const resolved = fileURLToPath(import.meta.resolve(${JSON.stringify(specifier)})); accessSync(resolved); process.stdout.write(resolved)`,
+        ],
         { cwd: consumerDir, encoding: 'utf8', stdio: 'pipe' },
       )
 
-    expect(resolveFromPlainNode('@rue-js/design')).toBe(
-      path.resolve(installedPackageDir, 'index.js'),
+    expect(resolveFromEsmNode('@rue-js/design')).toBe(
+      path.resolve(installedPackageDir, 'dist/rue-design.esm-bundler.js'),
     )
-    expect(resolveFromPlainNode('@rue-js/design/button')).toBe(
-      path.resolve(installedPackageDir, 'dist/components/cjs/button.js'),
+    expect(resolveFromEsmNode('@rue-js/design/button')).toBe(
+      path.resolve(installedPackageDir, 'dist/components/esm/button.js'),
     )
-    expect(resolveFromPlainNode('@rue-js/design/input-number')).toBe(
-      path.resolve(installedPackageDir, 'dist/components/cjs/input-number.js'),
+    expect(resolveFromEsmNode('@rue-js/design/input-number')).toBe(
+      path.resolve(installedPackageDir, 'dist/components/esm/input-number.js'),
     )
-    expect(resolveFromPlainNode('@rue-js/design/color-picker')).toBe(
-      path.resolve(installedPackageDir, 'dist/components/cjs/color-picker.js'),
+    expect(resolveFromEsmNode('@rue-js/design/color-picker')).toBe(
+      path.resolve(installedPackageDir, 'dist/components/esm/color-picker.js'),
     )
-    expect(() => resolveFromPlainNode('@rue-js/design/not-a-component')).toThrow()
+    expect(() => resolveFromEsmNode('@rue-js/design/not-a-component')).toThrow()
   })
 
   it('type-checks root and representative subpath default, named, and type exports', async () => {

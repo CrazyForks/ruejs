@@ -68,7 +68,6 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       __BROWSER__: JSON.stringify(isClient),
-      __CJS__: 'false',
       __COMPAT__: 'true',
       __DEV__: 'false',
       __ESM_BROWSER__: JSON.stringify(isClient),

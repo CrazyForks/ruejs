@@ -22,5 +22,8 @@
     "@rue-js/vite-plugin-rue": "workspace:*",
     "@swc/core": "^1.15.33",
     "vite": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.22.0"
   }
 }

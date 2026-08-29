@@ -17,10 +17,7 @@ const TEXT_PACKAGE_SELF_LINKS = [
   path.join(TEXT_PACKAGE_ROOT, 'node_modules', '@rue-js', 'text'),
 ] as const
 const SERVER_RENDERER_PACKAGE_ROOT = path.resolve(TEXT_PACKAGE_ROOT, '../server-renderer')
-const SERVER_RENDERER_REQUIRED_FILES = [
-  'dist/server-renderer.cjs.js',
-  'dist/server-renderer.cjs.prod.js',
-] as const
+const SERVER_RENDERER_REQUIRED_FILES = ['dist/server-renderer.esm-bundler.js'] as const
 const RUNTIME_VAPOR_PACKAGE_ENTRIES = ['package.json', 'dist'] as const
 const RUNTIME_VAPOR_REQUIRED_FILES = [
   'package.json',
@@ -160,7 +157,7 @@ async function ensureServerRendererArtifacts(): Promise<void> {
       path.join(REPO_ROOT, 'scripts/build.js'),
       'server-renderer',
       '-f',
-      'cjs',
+      'esm-bundler',
     ])
   } finally {
     await releaseLock()

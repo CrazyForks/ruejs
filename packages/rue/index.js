@@ -1,7 +1,1 @@
-'use strict'
-
-if (process.env.NODE_ENV === 'production') {
-  module.exports = require('./dist/rue.cjs.prod.js')
-} else {
-  module.exports = require('./dist/rue.cjs.js')
-}
+export * from './dist/rue.esm-bundler.js'

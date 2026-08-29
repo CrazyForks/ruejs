@@ -1,6 +1,4 @@
-import fs from 'node:fs/promises'
-import path from 'node:path'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { attachRouter, createRouter, RouterView } from '@rue-js/router'
 import { render, setReactiveScheduling } from '../src'
@@ -41,76 +39,15 @@ vi.mock('../../../app/pages/site/SidebarPlaygroundPage', () => ({
 
 setReactiveScheduling('sync')
 
-const repoRoot = process.cwd()
 // Compiling three MDX route modules is CPU-heavy and competes with the rest of
 // the release suite's workers. Keep this scoped to the integration case rather
 // than raising Vitest's global timeout.
 const slowTestTimeout = 120_000
-const fixturePaths = [
-  'docs/guide/mdx-detail-fixture.mdx',
-  'docs/api/mdx-detail-fixture.mdx',
-  'docs/page/mdx-detail-fixture.mdx',
-]
-
-const mdxFixtureSource = (
-  title: string,
-  body: string,
-) => `import { CodeTab, CodeTabs } from '../../app/pages/site/DocCodeTabs'
-
-# ${title}
-
-${body}
-
-<CodeTabs ariaLabel="Package manager commands">
-  <CodeTab value="pnpm" label="pnpm">
-
-\`\`\`sh
-pnpm create rue@latest
-\`\`\`
-
-  </CodeTab>
-  <CodeTab value="npm" label="npm">
-
-\`\`\`sh
-npm create rue@latest
-\`\`\`
-
-  </CodeTab>
-</CodeTabs>
-`
-
-const writeMdxFixtures = async () => {
-  const sources = [
-    mdxFixtureSource('Guide MDX Detail', 'Guide content rendered from an MDX module.'),
-    mdxFixtureSource('API MDX Detail', 'API content rendered from an MDX module.'),
-    mdxFixtureSource('Page MDX Detail', 'Page content rendered from an MDX module.'),
-  ]
-
-  await Promise.all(
-    fixturePaths.map(async (relativePath, index) => {
-      const filePath = path.join(repoRoot, relativePath)
-      await fs.mkdir(path.dirname(filePath), { recursive: true })
-      await fs.writeFile(filePath, sources[index], 'utf8')
-    }),
-  )
-}
-
-const removeMdxFixtures = async () => {
-  await Promise.all(
-    fixturePaths.map(relativePath => fs.rm(path.join(repoRoot, relativePath), { force: true })),
-  )
-}
-
-beforeEach(async () => {
-  await removeMdxFixtures()
-  await writeMdxFixtures()
-})
 
 afterEach(async () => {
   document.body.innerHTML = ''
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
-  await removeMdxFixtures()
 })
 
 describe('doc detail MDX rendering', () => {

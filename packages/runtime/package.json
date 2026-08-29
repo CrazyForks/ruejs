@@ -21,6 +21,7 @@
     "dist",
     "src"
   ],
+  "type": "module",
   "sideEffects": false,
   "main": "index.js",
   "module": "dist/runtime.esm-bundler.js",
@@ -29,94 +30,51 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "node": {
-        "production": "./dist/runtime.cjs.prod.js",
-        "development": "./dist/runtime.cjs.js",
-        "default": "./index.js"
-      },
       "development": "./src/index.ts",
       "module": "./dist/runtime.esm-bundler.js",
-      "import": "./dist/runtime.esm-bundler.js",
-      "require": "./index.js"
+      "import": "./dist/runtime.esm-bundler.js"
     },
     "./server": {
       "types": "./src/server.ts",
-      "node": {
-        "production": "./dist/runtime.server.cjs.prod.js",
-        "development": "./dist/runtime.server.cjs.js",
-        "default": "./dist/runtime.server.cjs.js"
-      },
       "development": "./src/server.ts",
       "module": "./dist/runtime.server.esm-bundler.js",
-      "import": "./dist/runtime.server.esm-bundler.js",
-      "require": "./dist/runtime.server.cjs.js"
+      "import": "./dist/runtime.server.esm-bundler.js"
     },
     "./vapor": {
       "types": "./src/vapor.ts",
-      "node": {
-        "production": "./dist/runtime.vapor.cjs.prod.js",
-        "development": "./dist/runtime.vapor.cjs.js",
-        "default": "./dist/runtime.vapor.cjs.js"
-      },
       "development": "./src/vapor.ts",
       "module": "./dist/runtime.vapor.esm-bundler.js",
-      "import": "./dist/runtime.vapor.esm-bundler.js",
-      "require": "./dist/runtime.vapor.cjs.js"
+      "import": "./dist/runtime.vapor.esm-bundler.js"
     },
     "./compiled": {
       "types": "./src/compiled.ts",
-      "node": {
-        "production": "./dist/runtime.compiled.cjs.prod.js",
-        "development": "./dist/runtime.compiled.cjs.js",
-        "default": "./dist/runtime.compiled.cjs.js"
-      },
       "development": "./src/compiled.ts",
       "module": "./dist/runtime.compiled.esm-bundler.js",
-      "import": "./dist/runtime.compiled.esm-bundler.js",
-      "require": "./dist/runtime.compiled.cjs.js"
+      "import": "./dist/runtime.compiled.esm-bundler.js"
     },
     "./vapor-core": {
       "types": "./src/vapor-core.ts",
-      "node": {
-        "production": "./dist/runtime.vapor-core.cjs.prod.js",
-        "development": "./dist/runtime.vapor-core.cjs.js",
-        "default": "./dist/runtime.vapor-core.cjs.js"
-      },
       "development": "./src/vapor-core.ts",
       "module": "./dist/runtime.vapor-core.esm-bundler.js",
-      "import": "./dist/runtime.vapor-core.esm-bundler.js",
-      "require": "./dist/runtime.vapor-core.cjs.js"
+      "import": "./dist/runtime.vapor-core.esm-bundler.js"
     },
     "./island": {
       "types": "./src/island.ts",
-      "node": {
-        "production": "./dist/runtime.island.cjs.prod.js",
-        "development": "./dist/runtime.island.cjs.js",
-        "default": "./dist/runtime.island.cjs.js"
-      },
       "development": "./src/island.ts",
       "module": "./dist/runtime.island.esm-bundler.js",
-      "import": "./dist/runtime.island.esm-bundler.js",
-      "require": "./dist/runtime.island.cjs.js"
+      "import": "./dist/runtime.island.esm-bundler.js"
     },
     "./server-island": {
       "types": "./src/server-island.ts",
       "development": "./src/server-island.ts",
       "module": "./dist/runtime.server-island.esm-bundler.js",
-      "import": "./dist/runtime.server-island.esm-bundler.js",
-      "require": "./dist/runtime.server-island.cjs.js"
+      "import": "./dist/runtime.server-island.esm-bundler.js"
     },
     "./dom": {
       "types": "./src/dom.ts",
-      "node": {
-        "production": "./dist/runtime.dom.cjs.prod.js",
-        "development": "./dist/runtime.dom.cjs.js",
-        "default": "./dist/runtime.dom.cjs.js"
-      },
       "development": "./src/dom.ts",
       "module": "./dist/runtime.dom.esm-bundler.js",
-      "import": "./dist/runtime.dom.esm-bundler.js",
-      "require": "./dist/runtime.dom.cjs.js"
+      "import": "./dist/runtime.dom.esm-bundler.js"
     },
     "./*": "./*"
   },
@@ -128,12 +86,14 @@
   "devDependencies": {
     "@types/trusted-types": "^2.0.7"
   },
+  "engines": {
+    "node": ">=22.22.0"
+  },
   "buildOptions": {
     "name": "RueRuntimeDOM",
     "formats": [
       "esm-bundler",
       "esm-browser",
-      "cjs",
       "global"
     ],
     "subEntries": [
@@ -141,56 +101,49 @@
         "entry": "src/server.ts",
         "filename": "runtime.server",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {
         "entry": "src/vapor.ts",
         "filename": "runtime.vapor",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {
         "entry": "src/compiled.ts",
         "filename": "runtime.compiled",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {
         "entry": "src/vapor-core.ts",
         "filename": "runtime.vapor-core",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {
         "entry": "src/island.ts",
         "filename": "runtime.island",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {
         "entry": "src/server-island.ts",
         "filename": "runtime.server-island",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {
         "entry": "src/dom.ts",
         "filename": "runtime.dom",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       }
     ]

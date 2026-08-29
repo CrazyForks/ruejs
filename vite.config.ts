@@ -7,7 +7,6 @@ import daisyUICalendarStyles from 'daisyui/components/calendar/object.js'
 import VitePluginRue from '@rue-js/vite-plugin-rue'
 import { mdxToJs, type MdxCompileOptions } from 'satteri'
 import type { Plugin } from 'vite'
-// import { DevTools } from '@vitejs/devtools'
 
 const rootDir = import.meta.dirname
 const testMaxWorkers = Number.parseInt(process.env.VITEST_MAX_WORKERS ?? '4', 10)
@@ -178,7 +177,6 @@ export default defineConfig(({ command, isSsrBuild }) => {
   return {
     base: command === 'build' ? './' : '/',
     plugins: [
-      // !isVitest && DevTools(),
       fixDaisyUICallyCss(),
       tailwindcss() as any,
       createSatteriMdxPlugin({ development: command === 'serve' && !isVitest }),
@@ -284,7 +282,6 @@ export default defineConfig(({ command, isSsrBuild }) => {
       __GLOBAL__: false,
       __ESM_BUNDLER__: true,
       __ESM_BROWSER__: false,
-      __CJS__: true,
       __SSR__: true,
       __FEATURE_OPTIONS_API__: true,
       __FEATURE_SUSPENSE__: true,

@@ -71,7 +71,7 @@ describe('Rue Design component subpath build', () => {
     ).rejects.toThrow(/must stay within the package directory/i)
   })
 
-  it('builds first-level component entries once per supported format', async () => {
+  it('builds first-level component entries as ESM only', async () => {
     await mkdir(tempRoot, { recursive: true })
     const fixtureDir = await mkdtemp(path.resolve(tempRoot, 'rue-design-subpath-build-'))
     fixtureDirs.push(fixtureDir)
@@ -83,10 +83,10 @@ describe('Rue Design component subpath build', () => {
         name: '@rue-js/design-subpath-fixture',
         buildOptions: {
           filename: 'design-subpath-fixture',
-          formats: ['esm-bundler', 'cjs'],
+          formats: ['esm-bundler'],
           subpathEntries: {
             source: 'src/components',
-            formats: ['esm-bundler', 'cjs'],
+            formats: ['esm-bundler'],
           },
         },
       }),
@@ -122,7 +122,7 @@ describe('Rue Design component subpath build', () => {
     const target = path.relative(path.resolve(projectRoot, 'packages'), fixtureDir)
     await buildDistributionPackage(target, {
       env: 'development',
-      formats: 'esm-bundler,cjs',
+      formats: 'esm-bundler',
     })
 
     const distDir = path.resolve(fixtureDir, 'dist')
@@ -131,33 +131,21 @@ describe('Rue Design component subpath build', () => {
       expect.arrayContaining([
         'components/esm/button.js',
         'components/esm/card.js',
-        'components/cjs/button.js',
-        'components/cjs/card.js',
         'design-subpath-fixture.esm-bundler.js',
-        'design-subpath-fixture.cjs.js',
       ]),
     )
     expect(outputFiles.some(file => file.startsWith('components/esm/_chunks/'))).toBe(true)
-    expect(outputFiles.some(file => file.startsWith('components/cjs/_chunks/'))).toBe(true)
+    expect(outputFiles.some(file => file.startsWith('components/cjs/'))).toBe(false)
     expect(outputFiles.some(file => /(?:__tests__|\.spec\.|internal)/.test(file))).toBe(false)
 
     const esmButton = await readFile(path.resolve(distDir, 'components/esm/button.js'), 'utf8')
     const esmCard = await readFile(path.resolve(distDir, 'components/esm/card.js'), 'utf8')
-    const cjsButton = await readFile(path.resolve(distDir, 'components/cjs/button.js'), 'utf8')
-    const cjsCard = await readFile(path.resolve(distDir, 'components/cjs/card.js'), 'utf8')
 
     expect(esmButton).toContain('button-marker')
     expect(esmButton).not.toContain('card-marker')
     expect(esmCard).toContain('card-marker')
     expect(esmCard).not.toContain('button-marker')
-    expect(cjsButton).toContain('button-marker')
-    expect(cjsButton).not.toContain('card-marker')
-    expect(cjsCard).toContain('card-marker')
-    expect(cjsCard).not.toContain('button-marker')
-
     expect(() => parse(esmButton, { sourceType: 'module' })).not.toThrow()
     expect(() => parse(esmCard, { sourceType: 'module' })).not.toThrow()
-    expect(() => parse(cjsButton, { sourceType: 'script' })).not.toThrow()
-    expect(() => parse(cjsCard, { sourceType: 'script' })).not.toThrow()
   })
 })

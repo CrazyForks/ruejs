@@ -8,7 +8,7 @@ const packagesToCheck = ['shared']
 let allFilesPresent = true
 
 for (const pkg of packagesToCheck) {
-  if (!fs.existsSync(new URL(`../packages/${pkg}/dist/${pkg}.cjs.js`, import.meta.url))) {
+  if (!fs.existsSync(new URL(`../packages/${pkg}/dist/${pkg}.esm-bundler.js`, import.meta.url))) {
     allFilesPresent = false
     break
   }

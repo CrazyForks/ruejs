@@ -17,13 +17,11 @@
   },
   "files": [
     "index.js",
-    "index.mjs",
     "dist",
     "src",
-    "jsx-runtime",
-    "jsx-dev-runtime",
     "jsx.d.ts"
   ],
+  "type": "module",
   "main": "index.js",
   "module": "dist/rue.runtime.esm-bundler.js",
   "types": "dist/rue.d.ts",
@@ -32,86 +30,33 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "node": {
-        "import": "./index.mjs",
-        "require": {
-          "production": "./dist/rue.cjs.prod.js",
-          "development": "./dist/rue.cjs.js",
-          "default": "./index.js"
-        },
-        "default": "./index.js"
-      },
       "development": "./src/index.ts",
-      "import": {
-        "node": "./index.mjs",
-        "default": "./dist/rue.runtime.esm-bundler.js"
-      },
-      "require": {
-        "node": {
-          "production": "./dist/rue.cjs.prod.js",
-          "development": "./dist/rue.cjs.js",
-          "default": "./index.js"
-        },
-        "default": "./index.js"
-      }
+      "module": "./dist/rue.runtime.esm-bundler.js",
+      "import": "./dist/rue.runtime.esm-bundler.js"
     },
     "./vapor": {
       "types": "./src/vapor.ts",
-      "node": {
-        "production": "./dist/rue.vapor.cjs.prod.js",
-        "development": "./dist/rue.vapor.cjs.js",
-        "default": "./dist/rue.vapor.cjs.js"
-      },
       "development": "./src/vapor.ts",
       "module": "./dist/rue.vapor.esm-bundler.js",
-      "import": "./dist/rue.vapor.esm-bundler.js",
-      "require": "./dist/rue.vapor.cjs.js"
+      "import": "./dist/rue.vapor.esm-bundler.js"
     },
     "./compiled": {
       "types": "./src/compiled.ts",
-      "node": {
-        "production": "./dist/rue.compiled.cjs.prod.js",
-        "development": "./dist/rue.compiled.cjs.js",
-        "default": "./dist/rue.compiled.cjs.js"
-      },
       "development": "./src/compiled.ts",
       "module": "./dist/rue.compiled.esm-bundler.js",
-      "import": "./dist/rue.compiled.esm-bundler.js",
-      "require": "./dist/rue.compiled.cjs.js"
+      "import": "./dist/rue.compiled.esm-bundler.js"
     },
     "./server-renderer": {
       "types": "./src/server-renderer.ts",
-      "node": {
-        "production": "./dist/rue.server-renderer.cjs.prod.js",
-        "development": "./dist/rue.server-renderer.cjs.js",
-        "default": "./dist/rue.server-renderer.cjs.js"
-      },
       "development": "./src/server-renderer.ts",
       "module": "./dist/rue.server-renderer.esm-bundler.js",
-      "import": "./dist/rue.server-renderer.esm-bundler.js",
-      "require": "./dist/rue.server-renderer.cjs.js"
+      "import": "./dist/rue.server-renderer.esm-bundler.js"
     },
     "./island": {
       "types": "./src/island.ts",
-      "node": {
-        "production": "./dist/rue.island.cjs.prod.js",
-        "development": "./dist/rue.island.cjs.js",
-        "default": "./dist/rue.island.cjs.js"
-      },
       "development": "./src/island.ts",
       "module": "./dist/rue.island.esm-bundler.js",
-      "import": "./dist/rue.island.esm-bundler.js",
-      "require": "./dist/rue.island.cjs.js"
-    },
-    "./jsx-runtime": {
-      "types": "./jsx-runtime/index.d.ts",
-      "import": "./jsx-runtime/index.mjs",
-      "require": "./jsx-runtime/index.js"
-    },
-    "./jsx-dev-runtime": {
-      "types": "./jsx-runtime/index.d.ts",
-      "import": "./jsx-runtime/index.mjs",
-      "require": "./jsx-runtime/index.js"
+      "import": "./dist/rue.island.esm-bundler.js"
     },
     "./jsx": "./jsx.d.ts",
     "./dist/*": "./dist/*",
@@ -130,12 +75,14 @@
       "optional": true
     }
   },
+  "engines": {
+    "node": ">=22.22.0"
+  },
   "buildOptions": {
     "name": "rue",
     "formats": [
       "esm-bundler",
       "esm-bundler-runtime",
-      "cjs",
       "global",
       "global-runtime",
       "esm-browser",
@@ -146,32 +93,28 @@
         "entry": "src/server-renderer.ts",
         "filename": "rue.server-renderer",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {
         "entry": "src/vapor.ts",
         "filename": "rue.vapor",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {
         "entry": "src/compiled.ts",
         "filename": "rue.compiled",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       },
       {
         "entry": "src/island.ts",
         "filename": "rue.island",
         "formats": [
-          "esm-bundler",
-          "cjs"
+          "esm-bundler"
         ]
       }
     ]

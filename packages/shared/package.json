@@ -21,6 +21,7 @@
     "dist",
     "src"
   ],
+  "type": "module",
   "sideEffects": false,
   "main": "index.js",
   "module": "dist/shared.esm-bundler.js",
@@ -29,21 +30,17 @@
     ".": {
       "types": "./src/index.ts",
       "development": "./src/index.ts",
-      "node": {
-        "production": "./dist/shared.cjs.prod.js",
-        "development": "./dist/shared.cjs.js",
-        "default": "./index.js"
-      },
       "module": "./dist/shared.esm-bundler.js",
-      "import": "./dist/shared.esm-bundler.js",
-      "require": "./index.js"
+      "import": "./dist/shared.esm-bundler.js"
     },
     "./*": "./*"
   },
+  "engines": {
+    "node": ">=22.22.0"
+  },
   "buildOptions": {
     "formats": [
-      "esm-bundler",
-      "cjs"
+      "esm-bundler"
     ]
   }
 }
