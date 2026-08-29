@@ -1,3 +1,10 @@
+## [0.8.16](https://github.com/hunzhiwange/ruejs/compare/v0.8.15...v0.8.16) (2026-08-29)
+
+
+### Features
+
+* 更新新版本,优化架构 ([30f631e](https://github.com/hunzhiwange/ruejs/commit/30f631e139f28a5e5de3f1be96ac0a1bb56808ca))
+
 ## [0.8.15](https://github.com/hunzhiwange/ruejs/compare/v0.8.14...v0.8.15) (2026-08-26)
 
 
